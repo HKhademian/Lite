@@ -54,25 +54,25 @@ usesIntArithmetic := fn(items: Items): Bool {
 
 /** Emits portable C11 guards that reject overflow before evaluating a signed operation. */
 emitIntArithmeticHelpers := fn(items: Items, source: String, prefix: String): Unit {
-    if not usesIntArithmetic(items) { return; }
+    if not usesIntArithmetic(items) and not usesIntDivision(items) { return; }
     namePrefix := if prefix == "" { "" } else { prefix + ":" };
     outputLine("static const size_t lt_int_lines[] = {" + lineStartCodes(source) + "};");
     outputLine("static const char *lt_int_source = " + textLiteralCode(namePrefix) + ";");
-    outputLine("static _Noreturn void lt_int_fault(size_t at) {");
+    outputLine("static _Noreturn void lt_int_fault(size_t at, const char *message) {");
     outputLine("    size_t line = 0;");
     outputLine("    while (line + 1 < sizeof(lt_int_lines) / sizeof(lt_int_lines[0]) && lt_int_lines[line + 1] <= at) { line += 1; }");
-    outputLine("    fprintf(stderr, \"%s%zu:%zu: ArithmeticPanic: integer outside Int range\\n\", lt_int_source, line + 1, at - lt_int_lines[line] + 1);");
+    outputLine("    fprintf(stderr, \"%s%zu:%zu: ArithmeticPanic: %s\\n\", lt_int_source, line + 1, at - lt_int_lines[line] + 1, message);");
     outputLine("    exit(1);");
     outputLine("}");
     if usesIntHelper(items, "lt_checked_add(") {
         outputLine("static int64_t lt_checked_add(int64_t left, int64_t right, size_t at) {");
-        outputLine("    if ((right > 0 && left > INT64_MAX - right) || (right < 0 && left < INT64_MIN - right)) { lt_int_fault(at); }");
+        outputLine("    if ((right > 0 && left > INT64_MAX - right) || (right < 0 && left < INT64_MIN - right)) { lt_int_fault(at, \"integer outside Int range\"); }");
         outputLine("    return left + right;");
         outputLine("}");
     }
     if usesIntHelper(items, "lt_checked_subtract(") {
         outputLine("static int64_t lt_checked_subtract(int64_t left, int64_t right, size_t at) {");
-        outputLine("    if ((right < 0 && left > INT64_MAX + right) || (right > 0 && left < INT64_MIN + right)) { lt_int_fault(at); }");
+        outputLine("    if ((right < 0 && left > INT64_MAX + right) || (right > 0 && left < INT64_MIN + right)) { lt_int_fault(at, \"integer outside Int range\"); }");
         outputLine("    return left - right;");
         outputLine("}");
     }
@@ -80,17 +80,17 @@ emitIntArithmeticHelpers := fn(items: Items, source: String, prefix: String): Un
         outputLine("static int64_t lt_checked_multiply(int64_t left, int64_t right, size_t at) {");
         outputLine("    if (left == 0 || right == 0) { return 0; }");
         outputLine("    if (left > 0) {");
-        outputLine("        if (right > 0) { if (left > INT64_MAX / right) { lt_int_fault(at); } }");
-        outputLine("        else if (right < INT64_MIN / left) { lt_int_fault(at); }");
+        outputLine("        if (right > 0) { if (left > INT64_MAX / right) { lt_int_fault(at, \"integer outside Int range\"); } }");
+        outputLine("        else if (right < INT64_MIN / left) { lt_int_fault(at, \"integer outside Int range\"); }");
         outputLine("    } else if (right > 0) {");
-        outputLine("        if (left < INT64_MIN / right) { lt_int_fault(at); }");
-        outputLine("    } else if (right < INT64_MAX / left) { lt_int_fault(at); }");
+        outputLine("        if (left < INT64_MIN / right) { lt_int_fault(at, \"integer outside Int range\"); }");
+        outputLine("    } else if (right < INT64_MAX / left) { lt_int_fault(at, \"integer outside Int range\"); }");
         outputLine("    return left * right;");
         outputLine("}");
     }
     if usesIntHelper(items, "lt_checked_negate(") {
         outputLine("static int64_t lt_checked_negate(int64_t value, size_t at) {");
-        outputLine("    if (value == INT64_MIN) { lt_int_fault(at); }");
+        outputLine("    if (value == INT64_MIN) { lt_int_fault(at, \"integer outside Int range\"); }");
         outputLine("    return -value;");
         outputLine("}");
     }
@@ -120,55 +120,40 @@ usesStringConcat := fn(items: Items): Bool {
     usesIntHelper(items, "lite_concat(")
 }
 
-/** Emits the checked truncating int64_t division helper. */
+/** Emits positioned portable division, guarding undefined C arithmetic. */
 emitIntDivideHelper := fn(): Unit {
-    outputLine("static int64_t lite_divide_int(int64_t left, int64_t right) {");
-    outputLine("    if (right == 0) {");
-    outputLine("        fprintf(stderr, \"ArithmeticPanic: division by zero in integer expression\\n\");");
-    outputLine("        exit(1);");
-    outputLine("    }");
-    outputLine("    if (left == INT64_MIN && right == -1) {");
-    outputLine("        fprintf(stderr, \"ArithmeticPanic: integer expression outside signed 64-bit range\\n\");");
-    outputLine("        exit(1);");
-    outputLine("    }");
+    outputLine("static int64_t lite_divide_int(int64_t left, int64_t right, size_t at) {");
+    outputLine("    if (right == 0) { lt_int_fault(at, \"division by zero\"); }");
+    outputLine("    if (left == INT64_MIN && right == -1) { lt_int_fault(at, \"integer outside Int range\"); }");
     outputLine("    return left / right;");
     outputLine("}");
     outputLine("");
 }
 
-/** Emits the checked int64_t remainder helper. */
+/** Emits positioned remainder, returning zero before C MIN%-1 would be undefined. */
 emitIntRemainderHelper := fn(): Unit {
-    outputLine("static int64_t lite_remainder_int(int64_t left, int64_t right) {");
-    outputLine("    if (right == 0) {");
-    outputLine("        fprintf(stderr, \"ArithmeticPanic: remainder by zero in integer expression\\n\");");
-    outputLine("        exit(1);");
-    outputLine("    }");
-    outputLine("    if (left == INT64_MIN && right == -1) {");
-    outputLine("        fprintf(stderr, \"ArithmeticPanic: integer expression outside signed 64-bit range\\n\");");
-    outputLine("        exit(1);");
-    outputLine("    }");
+    outputLine("static int64_t lite_remainder_int(int64_t left, int64_t right, size_t at) {");
+    outputLine("    if (right == 0) { lt_int_fault(at, \"remainder by zero\"); }");
+    outputLine("    if (left == INT64_MIN && right == -1) { return 0; }");
     outputLine("    return left % right;");
     outputLine("}");
     outputLine("");
 }
 
-/** Emits the checked int64_t floor-division helper. */
+/** Emits positioned portable floor division, evaluating its operands once. */
 emitIntFloorDivideHelper := fn(): Unit {
-    outputLine("static int64_t lite_floor_divide_int(int64_t left, int64_t right) {");
-    outputLine("    const int64_t quotient = lite_divide_int(left, right);");
+    outputLine("static int64_t lite_floor_divide_int(int64_t left, int64_t right, size_t at) {");
+    outputLine("    const int64_t quotient = lite_divide_int(left, right, at);");
     outputLine("    const int64_t remainder = left % right;");
     outputLine("    return remainder != 0 && ((remainder < 0) != (right < 0)) ? quotient - 1 : quotient;");
     outputLine("}");
     outputLine("");
 }
 
-/** Emits the checked int64_t floor-modulo helper. */
+/** Emits positioned floor modulo with a defined signed-minimum path. */
 emitIntFloorModuloHelper := fn(): Unit {
-    outputLine("static int64_t lite_floor_modulo_int(int64_t left, int64_t right) {");
-    outputLine("    if (right == 0) {");
-    outputLine("        fprintf(stderr, \"ArithmeticPanic: modulo by zero in integer expression\\n\");");
-    outputLine("        exit(1);");
-    outputLine("    }");
+    outputLine("static int64_t lite_floor_modulo_int(int64_t left, int64_t right, size_t at) {");
+    outputLine("    if (right == 0) { lt_int_fault(at, \"modulo by zero\"); }");
     outputLine("    if (left == INT64_MIN && right == -1) { return 0; }");
     outputLine("    const int64_t remainder = left % right;");
     outputLine("    return remainder != 0 && ((remainder < 0) != (right < 0)) ? remainder + right : remainder;");

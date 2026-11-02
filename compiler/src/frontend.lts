@@ -1494,13 +1494,13 @@ parseBinary := fn(source: String, position: Int, prefix: String, locals: List<Lo
                     else { "(" + left.code + " " + operator.text + " " + right.code + ")" };
                 left = intParsed(code, folded, true, right.next);
             } else if operator.text == "/" {
-                left = intParsed(intDivideCode(left.code, right.code), 0, false, right.next);
+                left = intParsed(intDivideCode(left.code, right.code, operatorPosition), 0, false, right.next);
             } else if operator.text == "%" {
-                left = intParsed(intRemainderCode(left.code, right.code), 0, false, right.next);
+                left = intParsed(intRemainderCode(left.code, right.code, operatorPosition), 0, false, right.next);
             } else if operator.text == ":/" {
-                left = intParsed(intFloorDivideCode(left.code, right.code), 0, false, right.next);
+                left = intParsed(intFloorDivideCode(left.code, right.code, operatorPosition), 0, false, right.next);
             } else if operator.text == ":%" {
-                left = intParsed(intFloorModuloCode(left.code, right.code), 0, false, right.next);
+                left = intParsed(intFloorModuloCode(left.code, right.code, operatorPosition), 0, false, right.next);
             } else {
                 runtimeCode := if operator.text == "+" { intAddCode(left.code, right.code, operatorPosition) }
                     else if operator.text == "-" { intSubtractCode(left.code, right.code, operatorPosition) }

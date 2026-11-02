@@ -27,6 +27,9 @@ checkBool("int divide min", false, intDivide(intMin(), -1).ok);
 remainder := intRemainder(-7, 2);
 checkInt("int remainder", -1, remainder.value);
 checkBool("int remainder zero", false, intRemainder(1, 0).ok);
+minimumRemainder := intRemainder(intMin(), -1);
+checkBool("int remainder minimum valid", true, minimumRemainder.ok);
+checkInt("int remainder minimum", 0, minimumRemainder.value);
 
 floor := intFloorDivide(-7, 2);
 checkInt("int floor divide", -4, floor.value);

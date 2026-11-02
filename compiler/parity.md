@@ -309,6 +309,54 @@ editor groups, both 93-case corpus comparisons and all 95 canonical target
 executions pass. Full existing-feature parity, run/check migration and the native
 C compiler ladder remain pending; T00 is still required.
 
+## Positioned integer division family
+
+Dynamic `/`, `%`, `:/` and `:%` now use the same positioned ArithmeticPanic
+path as addition/subtraction/multiplication/negation. Zero-divisor messages match
+the reference exactly: division, remainder or modulo by zero. MIN/-1 division
+and floor division fault with `integer outside Int range`; MIN%-1 and MIN:%-1
+are valid zero results. The shared core remainder helper and constant folder
+also admit that representable result. C guards its otherwise undefined MIN/-1
+division/remainder before executing them. Hygienic source-offset temporaries
+sequence every integer binary helper's operands once, from left to right.
+
+The differential tests cover the 13-value signed boundary matrix, ten fault
+expressions (including nested competing faults), exact Unicode logical names
+and CRLF columns, TS call effects, earlier output and untaken dynamic branches.
+The existing remainder/floor canonical cases gain dynamic MIN/-1 remainders.
+Fourteen native programs pass strict C11 compilation and undefined-behavior
+sanitizers with exact status/stdout/stderr comparisons.
+
+Current TS S is 171273 bytes, SHA-256
+`5957b6aceb411bdc2e234e526cda941b4863ab8520ac402ecc43688ab2b0a271`.
+Three generated compiler generations match, 310973 bytes, SHA-256
+`625bee56643e91b2836a6d5b3660a28f0e3a6cb0efa28b66fbd175e2d68ac8f9`.
+The TS-hosted C emitter is 281923 bytes, SHA-256
+`a0e02fcafc53fd24b22e9cd1272d278de6c12c54b6ccf0c522b65d93c6a01ccf`,
+from 157990 bytes of C source, SHA-256
+`3c42fcffb4d087e1083f640738ff015e209f1f615679f4699d975c27d5876bb6`.
+The [generated-only ladder](reports/2026-11-02-division-ladder.json) records
+builder identities, reproduction and validation.
+
+The [refreshed inventory](reports/current-t00-t11-inventory.md) has 71/162
+matching cases and 91 remaining; 21 original failures are now closed, with no
+original passing case regressing. Two accepted-source diagnostic differences
+remain, both bounds faults. Dead constant arithmetic/short-circuit folding and
+wider numeric semantics remain separate gaps.
+
+The [five-pair speed check](reports/2026-11-02-division-performance.json) uses
+identical inputs and alternating fresh processes. Compiler-phase medians are
+922.5 → 922.8 ms for the same current S, and 95.6 → 102.4 ms for 1,000 output
+statements. Corrected generated code intentionally changes some artifacts; the
+output-only workload retains exact bytes. This records the extra scan cost,
+not a speedup; helper discovery is the next optimization topic.
+
+Strict host/seed checks pass. All 255 full tests pass with zero skips in 52.3 s;
+fast passes 244 with eleven expected skips. Both 93-case corpus comparisons,
+all 95 verifier executions and all nine editor groups pass. A combined-feature
+C probe found that a multi-value output call can print a prefix before a later
+argument faults; the reproducer is tracked separately in [the gap list](gaps.md).
+
 ## Rule
 
 For one Lite source at a time, starting with the compiler corpus and then S:

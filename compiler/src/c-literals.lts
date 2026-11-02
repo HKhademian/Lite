@@ -83,42 +83,45 @@ floorModCode := fn(left: String, right: String): String {
     "(" + left + " % " + right + " + ((((" + left + " % " + right + ") != 0) && (((" + left + " % " + right + ") < 0) != (" + right + " < 0))) ? " + right + " : 0))"
 }
 
+/** Emits a positioned Int helper call with operands evaluated once, from left to right. */
+intBinaryCallCode := fn(name: String, left: String, right: String, position: Int): String {
+    id := intText(position);
+    "(lt_arg_left_" + id + " = " + left + ", lt_arg_right_" + id + " = " + right + ", " + name + "(lt_arg_left_" + id + ", lt_arg_right_" + id + ", " + id + "))"
+}
+
 /** Emits a checked int64_t truncating division call. */
-intDivideCode := fn(left: String, right: String): String {
-    "lite_divide_int(" + left + ", " + right + ")"
+intDivideCode := fn(left: String, right: String, position: Int): String {
+    intBinaryCallCode("lite_divide_int", left, right, position)
 }
 
 /** Emits a checked int64_t remainder call. */
-intRemainderCode := fn(left: String, right: String): String {
-    "lite_remainder_int(" + left + ", " + right + ")"
+intRemainderCode := fn(left: String, right: String, position: Int): String {
+    intBinaryCallCode("lite_remainder_int", left, right, position)
 }
 
 /** Emits a checked int64_t floor-division call. */
-intFloorDivideCode := fn(left: String, right: String): String {
-    "lite_floor_divide_int(" + left + ", " + right + ")"
+intFloorDivideCode := fn(left: String, right: String, position: Int): String {
+    intBinaryCallCode("lite_floor_divide_int", left, right, position)
 }
 
 /** Emits a checked int64_t floor-modulo call. */
-intFloorModuloCode := fn(left: String, right: String): String {
-    "lite_floor_modulo_int(" + left + ", " + right + ")"
+intFloorModuloCode := fn(left: String, right: String, position: Int): String {
+    intBinaryCallCode("lite_floor_modulo_int", left, right, position)
 }
 
 /** Emits checked Int64 addition, evaluating both operands once in source order. */
 intAddCode := fn(left: String, right: String, position: Int): String {
-    id := intText(position);
-    "(lt_arg_left_" + id + " = " + left + ", lt_arg_right_" + id + " = " + right + ", lt_checked_add(lt_arg_left_" + id + ", lt_arg_right_" + id + ", " + id + "))"
+    intBinaryCallCode("lt_checked_add", left, right, position)
 }
 
 /** Emits checked Int64 subtraction, evaluating both operands once in source order. */
 intSubtractCode := fn(left: String, right: String, position: Int): String {
-    id := intText(position);
-    "(lt_arg_left_" + id + " = " + left + ", lt_arg_right_" + id + " = " + right + ", lt_checked_subtract(lt_arg_left_" + id + ", lt_arg_right_" + id + ", " + id + "))"
+    intBinaryCallCode("lt_checked_subtract", left, right, position)
 }
 
 /** Emits checked Int64 multiplication, evaluating both operands once in source order. */
 intMultiplyCode := fn(left: String, right: String, position: Int): String {
-    id := intText(position);
-    "(lt_arg_left_" + id + " = " + left + ", lt_arg_right_" + id + " = " + right + ", lt_checked_multiply(lt_arg_left_" + id + ", lt_arg_right_" + id + ", " + id + "))"
+    intBinaryCallCode("lt_checked_multiply", left, right, position)
 }
 
 /** Emits checked Int64 negation, evaluating the operand once. */

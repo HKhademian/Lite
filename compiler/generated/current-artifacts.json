@@ -1,8 +1,8 @@
 {
-  "note": "Current exact artifacts after checked dynamic Int64 addition, subtraction, multiplication and negation. P0 and earlier checkpoint records remain historical.",
+  "note": "Current exact artifacts after positioned Int64 division-family faults and defined MIN%-1 remainders. Historical records remain unchanged.",
   "recorded": "2026-11-02",
-  "sourceSha256": "e9764d147082ef2f95583adddd3100305b00b966bd7a7852d7a0d56449fd00ab",
-  "compilerSha256": "de37c5be4c981847fbfc0895ac9af027451e07ddc267952638fb8d18ee7e3767",
+  "sourceSha256": "5957b6aceb411bdc2e234e526cda941b4863ab8520ac402ecc43688ab2b0a271",
+  "compilerSha256": "625bee56643e91b2836a6d5b3660a28f0e3a6cb0efa28b66fbd175e2d68ac8f9",
   "programCases": 55,
   "rejectedCases": 38,
   "artifacts": [
@@ -291,14 +291,14 @@
     {
       "name": "mutable-counter-loop",
       "source": "001-007-mutable-counter-loop.lts",
-      "ts": "sha256:ed1c2da2b19011e82cce4a9f1c3c667edfad1de15ce82fb9d399f618e48da83d",
-      "c": "sha256:449b1ce70de06d06558cfc0489db38d5ae7755525a5774e860f8f1a2d7083419"
+      "ts": "sha256:6c16c6a7165629289391427401b5a99e654d098b755e302127647d128418c15c",
+      "c": "sha256:e750d1ea7ea87ff2d27ee5cf6234c91c47a0ea9f242a61fb97b62b601f372bff"
     },
     {
       "name": "nested-if-in-loop",
       "source": "001-007-nested-if-in-loop.lts",
-      "ts": "sha256:2d3c23a07576801737528a1505f7195786d40545d933780e0c7a1124d3c5819b",
-      "c": "sha256:056ea4f6a1cebc053cf198fc1d5ce137f9e20b9194a70b6b859c5a548be98f23"
+      "ts": "sha256:5345e4242b7a0c1409463c37658bc5bfe347f3e71d9faccb8c0f499b1197b60b",
+      "c": "sha256:4db939813b296c30240d94d7139aa95c784e4f3fd60e106aeebf48e4493d1553"
     },
     {
       "name": "not-precedence",
@@ -309,8 +309,8 @@
     {
       "name": "report-in-loop",
       "source": "001-007-report-in-loop.lts",
-      "ts": "sha256:d0a2d01c8e76172504780befd0409ae3f13d4d0bbdb85ff6fabab182879996c5",
-      "c": "sha256:4e7dac660048a90ca056e943948b2818811b5bcdc5dc3eb4f009adb5eaa73e91"
+      "ts": "sha256:187f01996912951c76172cfdf1ffabfbde6ecb25f238f2d3a6f70ebcbc52203d",
+      "c": "sha256:211883b55588ac6753754c74b7db2b58eb3af0ca4078659110fd10d162bb4dba"
     },
     {
       "name": "string-equality-if",
@@ -321,14 +321,14 @@
     {
       "name": "runtime-division",
       "source": "001-009-runtime-division.lts",
-      "ts": "sha256:06d36da31ed6480fd75ff0ce183f12b20077239d9926e73b8578e09bf34531c2",
-      "c": "sha256:d736ed09462fa56f309da1c4481f4acb1f91a272c2eab8f43b6313acf2a0352f"
+      "ts": "sha256:4c5a55a0a909fe5691e5d3141c7449d16be791152bae0852be8b08b66e59b34c",
+      "c": "sha256:4741c71cda1f2d14db72498e720369354828eb163576b332d69d10fc2b7ba05c"
     },
     {
       "name": "runtime-remainder",
       "source": "001-009-runtime-remainder.lts",
-      "ts": "sha256:2f887b810d49363851f94f8109441ba2cdf137c95bb2e67ae128007955225648",
-      "c": "sha256:92ca2815d9a3849c64f5619c115b6ef4cb4c4ec4b90f0fb93ea7f1beef609bbc"
+      "ts": "sha256:e3a745d331890a3c4fa8b220cc5f0b0c2ed32f278eaa544aebc53b6d454d70e9",
+      "c": "sha256:f46e1cfebca3b9af4803e5e1fc775f5a718e8204dbb418545c8dce0bd849a383"
     },
     {
       "name": "runtime-string-concat",

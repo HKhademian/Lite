@@ -2,7 +2,7 @@
 
 Runtime environment details omitted for privacy.
 
-T11 identity: `de37c5be4c981847fbfc0895ac9af027451e07ddc267952638fb8d18ee7e3767`. The preserved artifact passed its separate strict TypeScript check.
+T11 identity: `625bee56643e91b2836a6d5b3660a28f0e3a6cb0efa28b66fbd175e2d68ac8f9`. The preserved artifact passed its separate strict TypeScript check.
 
 This is the current measured support inventory, not acceptance of new language features. Dated historical inventories remain unchanged.
 
@@ -20,15 +20,15 @@ This is the current measured support inventory, not acceptance of new language f
 - feature: 37; 22 matches tested behavior; 15 T11 rejects source.
 - example: 19; 10 matches tested behavior; 9 T11 rejects source.
 - sample: 20; 11 matches tested behavior; 9 T11 rejects source.
-- probe: 78; 19 matches tested behavior; 56 T11 rejects source; 3 runtime diagnostic differs.
+- probe: 78; 20 matches tested behavior; 56 T11 rejects source; 2 runtime diagnostic differs.
 - library-test: 8; 8 matches tested behavior.
 - trackedSourceFiles: 209.
 - Showcases: none currently implemented.
 
 ## Progress since the original inventory
 
-- 20 formerly failing cases now match; 0 formerly matching cases regress. Case identity includes kind and id.
-- 70/162 executed source cases match; 92 still fail. These are case counts, not distinct missing features or an overall completion percentage.
+- 21 formerly failing cases now match; 0 formerly matching cases regress. Case identity includes kind and id.
+- 71/162 executed source cases match; 91 still fail. These are case counts, not distinct missing features or an overall completion percentage.
 - Native C, compile-only sources and run/check migration have separate gates in [the live gap tracker](../gaps.md).
 
 Closed original cases:
@@ -46,6 +46,7 @@ Closed original cases:
 - probe: numeric.dynamic-subtract-overflow
 - probe: numeric.dynamic-multiply-overflow
 - probe: numeric.dynamic-negate-overflow
+- probe: numeric.dynamic-divide-fault
 - probe: input.integer
 - probe: input.float
 - probe: input.line
@@ -129,8 +130,7 @@ Closed original cases:
 - **numeric.dynamic-subtract-overflow — matches tested behavior.** Runtime Int64 subtraction overflow faults
 - **numeric.dynamic-multiply-overflow — matches tested behavior.** Runtime Int64 multiplication overflow faults
 - **numeric.dynamic-negate-overflow — matches tested behavior.** Runtime Int64 negation overflow faults
-- **numeric.dynamic-divide-fault — runtime diagnostic differs.** Runtime division fault and diagnostic contract
-  boundary: T00 status 1, stdout ""; T11 status 1, stdout "".
+- **numeric.dynamic-divide-fault — matches tested behavior.** Runtime division fault and diagnostic contract
 - **input.integer — matches tested behavior.** Prompted inputInt and token consumption
 - **input.float — matches tested behavior.** inputFloat parsing
 - **input.line — matches tested behavior.** inputLine and shared input cursor

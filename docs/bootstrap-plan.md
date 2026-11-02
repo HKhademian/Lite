@@ -98,6 +98,11 @@ targets, with exact source-positioned runtime overflow faults. Its
 the current source and three identical compiler generations. Division-family
 behavior, wider numeric types and the remaining feature/native gates stay separate.
 
+Dynamic integer division/remainder now match exact positioned faults in both
+generated targets, and MIN%-1 returns zero without undefined C arithmetic.
+The [division-family ledger](../compiler/parity.md#positioned-integer-division-family) records
+the seed refresh, differential coverage and paired speed measurements.
+
 ## Historical P0 baseline, 2026-11-01
 
 The counts and implementation limits below describe P0, not the current compiler.

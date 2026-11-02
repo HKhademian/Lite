@@ -3,7 +3,7 @@
   "kind": "feature",
   "source": {
     "file": "int-floor.lts",
-    "hash": "sha256:05dbcfde1995848553ca267247e300e423347bdddbd9202707bc8941bee42f50"
+    "hash": "sha256:f3884764143f48973e59eaf0d1c6e17410ca9e101e6ab350ba2064f243bc7d9c"
   },
   "features": [
     "int.floor"
@@ -18,8 +18,8 @@
     {
       "name": "all-signs",
       "stdout": {
-        "text": "2\n-3\n-3\n2\n1\n2\n-2\n-1\n",
-        "hash": "sha256:9da0cb2926291a3311f598542d22ecae78b4d52ed8a066af317a0ff57139c9bc"
+        "text": "2\n-3\n-3\n2\n1\n2\n-2\n-1\n0\n",
+        "hash": "sha256:01a4db9f11c07b55b709b8b474e2f6e3328b0ae826aec439d9f2db7e5a2695a3"
       },
       "exitCode": 0
     }

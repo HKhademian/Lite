@@ -2290,13 +2290,13 @@ test('restricted compiler lowers dynamic Int division and remainder with checked
     'outputLine(7 / c, 7 % c, 7 :/ c, 7 :% c);',
     'var m := -9223372036854775808;',
     'var n := -1;',
-    'outputLine(m :% n);',
+    'outputLine(m % n, m :% n);',
   ].join('\n');
   const ts = runCompiler(tsManifestPath, source);
   assert.equal(ts.code, 0, ts.errors);
   assert.deepEqual(runTsArtifact(ts.output), {
     phase: 'run', status: 0, signal: null,
-    stdout: Buffer.from('-3 -1 -4 1\n3 -1 3 -1\n-3 1 -4 -1\n0\n'), stderr: Buffer.alloc(0),
+    stdout: Buffer.from('-3 -1 -4 1\n3 -1 3 -1\n-3 1 -4 -1\n0 0\n'), stderr: Buffer.alloc(0),
   });
 });
 
@@ -2326,20 +2326,22 @@ test('restricted compiler lowers dynamic Int division and remainder to runnable 
     phase: 'run', status: 0, signal: null,
     stdout: Buffer.from('-3 -1 -4 1\n3 -1 3 -1\n-3 1 -4 -1\n0\n'), stderr: Buffer.alloc(0),
   });
-  for (const [faultSource, message] of [
-    ['var x := 1; var y := 0; outputLine(x / y);', 'ArithmeticPanic: division by zero in integer expression\n'],
-    ['var x := 1; var y := 0; outputLine(x % y);', 'ArithmeticPanic: remainder by zero in integer expression\n'],
-    ['var x := 1; var y := 0; outputLine(x :/ y);', 'ArithmeticPanic: division by zero in integer expression\n'],
-    ['var x := 1; var y := 0; outputLine(x :% y);', 'ArithmeticPanic: modulo by zero in integer expression\n'],
-    ['var x := -9223372036854775808; outputLine(x / -1);', 'ArithmeticPanic: integer expression outside signed 64-bit range\n'],
-    ['var x := -9223372036854775808; outputLine(x % -1);', 'ArithmeticPanic: integer expression outside signed 64-bit range\n'],
-    ['var x := -9223372036854775808; outputLine(x :/ -1);', 'ArithmeticPanic: integer expression outside signed 64-bit range\n'],
-  ] as const) {
-    const faulting = runCompiler(cManifestPath, faultSource);
-    assert.equal(faulting.code, 0, faulting.errors);
-    assert.deepEqual(runCArtifact(faulting.output), {
-      phase: 'run', status: 1, signal: null, stdout: Buffer.alloc(0), stderr: Buffer.from(message),
-    });
+  for (const source of [
+    'var x := 1; var y := 0; outputLine(x / y);',
+    'var x := 1; var y := 0; outputLine(x % y);',
+    'var x := 1; var y := 0; outputLine(x :/ y);',
+    'var x := 1; var y := 0; outputLine(x :% y);',
+    'var x := -9223372036854775808; outputLine(x / -1);',
+    'var x := -9223372036854775808; outputLine(x :/ -1);',
+  ]) {
+    const compiled = runCompiler(cManifestPath, source);
+    assert.equal(compiled.code, 0, compiled.errors);
+    const actual = runCArtifact(compiled.output);
+    const expected = runText(source);
+    assert.equal(expected.status, 1, source);
+    assert.equal(actual.phase, 'run');
+    assert.equal(actual.signal, null);
+    assert.deepEqual({ status: actual.status, stdout: actual.stdout, stderr: actual.stderr }, expected, source);
   }
 });
 
@@ -2413,22 +2415,22 @@ test('restricted compiler lowers dynamic String concatenation to runnable C', co
 });
 
 test('restricted compiler division faults preserve zero divisor and minimum/-1 status and stderr', () => {
-  for (const [source, message] of [
-    ['var x := 1; var y := 0; outputLine(x / y);', 'ArithmeticPanic: division by zero in integer expression'],
-    ['var x := 1; var y := 0; outputLine(x % y);', 'ArithmeticPanic: remainder by zero in integer expression'],
-    ['var x := 1; var y := 0; outputLine(x :/ y);', 'ArithmeticPanic: division by zero in integer expression'],
-    ['var x := 1; var y := 0; outputLine(x :% y);', 'ArithmeticPanic: modulo by zero in integer expression'],
-    ['var x := -9223372036854775808; outputLine(x / -1);', 'ArithmeticPanic: integer expression outside signed 64-bit range'],
-    ['var x := -9223372036854775808; outputLine(x % -1);', 'ArithmeticPanic: integer expression outside signed 64-bit range'],
-    ['var x := -9223372036854775808; outputLine(x :/ -1);', 'ArithmeticPanic: integer expression outside signed 64-bit range'],
-  ] as const) {
-    const ts = runCompiler(tsManifestPath, source);
-    assert.equal(ts.code, 0, ts.errors);
-    const tsRun = runTsArtifact(ts.output);
-    assert.equal(tsRun.phase, 'run');
-    assert.notEqual(tsRun.status, 0, source);
-    assert.equal(tsRun.stdout.toString('utf8'), '', source);
-    assert.match(tsRun.stderr.toString('utf8'), new RegExp(message), source);
+  for (const source of [
+    'var x := 1; var y := 0; outputLine(x / y);',
+    'var x := 1; var y := 0; outputLine(x % y);',
+    'var x := 1; var y := 0; outputLine(x :/ y);',
+    'var x := 1; var y := 0; outputLine(x :% y);',
+    'var x := -9223372036854775808; outputLine(x / -1);',
+    'var x := -9223372036854775808; outputLine(x :/ -1);',
+  ]) {
+    const compiled = runCompiler(tsManifestPath, source);
+    assert.equal(compiled.code, 0, compiled.errors);
+    const actual = runTsArtifact(compiled.output);
+    const expected = runText(source);
+    assert.equal(expected.status, 1, source);
+    assert.equal(actual.phase, 'run');
+    assert.equal(actual.signal, null);
+    assert.deepEqual({ status: actual.status, stdout: actual.stdout, stderr: actual.stderr }, expected, source);
   }
 });
 test('Lite-written TS and C compilers lower String values and multi-value reports deterministically', () => {

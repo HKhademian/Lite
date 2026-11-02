@@ -296,7 +296,7 @@ test('report is no longer a builtin and temporary I/O rejects invalid signatures
 });
 
 /** Boundary/sign combinations with every representable result retained for differential execution. */
-function int64BoundaryProgram(): string {
+function int64BoundaryProgram(division = false): string {
   const min = -(1n << 63n), max = (1n << 63n) - 1n;
   const values = [min, min + 1n, -3037000500n, -3037000499n, -2n, -1n, 0n, 1n, 2n, 3037000499n, 3037000500n, max - 1n, max];
   const lines: string[] = [];
@@ -306,6 +306,11 @@ function int64BoundaryProgram(): string {
     lines.push(`var ${a} := ${left}; var ${b} := ${right};`);
     for (const [operator, result] of [['+', left + right], ['-', left - right], ['*', left * right]] as const) {
       if (result >= min && result <= max) lines.push(`outputLine(${a} ${operator} ${b});`);
+    }
+    if (division && right !== 0n) {
+      const quotient = left / right;
+      if (quotient >= min && quotient <= max) lines.push(`outputLine(${a} / ${b}, ${a} :/ ${b});`);
+      lines.push(`outputLine(${a} % ${b}, ${a} :% ${b});`);
     }
     index += 1;
   }
@@ -359,6 +364,54 @@ test('generated TS checks Int64 boundaries, exact faults and operand evaluation 
   const run = runTsArtifact(emitted.stdout.toString());
   const reference = runText(effects);
   assert.deepEqual({ status: run.status, stdout: run.stdout, stderr: run.stderr }, reference);
+});
+
+const divisionFaultExpressions = ['hi / zero', 'hi % zero', 'hi :/ zero', 'hi :% zero', 'lo / -1', 'lo :/ -1',
+  '(hi / zero) + (lo % zero)', '(lo % zero) + (hi / zero)', '(hi + 1) / zero', 'lo / (hi + 1)'];
+
+/** Keeps the same logical name, Unicode and CRLF positions on both runtime paths. */
+function divisionFaultSource(expression: string): string {
+  return '/* 🙂 */ outputLine("before");\r\nvar hi := 9223372036854775807; var lo := -9223372036854775808; var zero := 0;\r\noutputLine(' + expression + ');';
+}
+
+test('generated TS division family matches boundary values, fault positions and call effects', () => {
+  for (const source of [int64BoundaryProgram(true), 'var n := -9223372036854775808; outputLine(n % -1, n :% -1, -9223372036854775808 % -1);',
+    'touch := fn(n: Int): Int { outputLine("arg", n); n } outputLine(touch(-7) / touch(2), touch(-7) % touch(2), touch(-7) :/ touch(2), touch(-7) :% touch(2));',
+    'var x := 1; var z := 0; var flag := false; outputLine(flag and (x / z > 0)); if flag { outputLine(x % z); }']) {
+    const emitted = compileTs({ text: source });
+    assert.equal(emitted.status, 0, emitted.stderr.toString());
+    const result = runTsArtifact(emitted.stdout.toString()), expected = runText(source);
+    assert.equal(result.phase, 'run', result.stdout.toString() + result.stderr.toString());
+    assert.equal(result.signal, null);
+    assert.deepEqual({ status: result.status, stdout: result.stdout, stderr: result.stderr }, expected);
+  }
+  const branches = divisionFaultExpressions.map((expression, index) => `${index === 0 ? 'if' : 'else if'} pick == ${index} { outputLine(${expression}); }`).join('\n');
+  const source = '/* 🙂 */ outputLine("before");\r\npick := inputInt();\r\nvar hi := 9223372036854775807; var lo := -9223372036854775808; var zero := 0;\r\n' + branches;
+  const name = 'division سلام🙂.lts', emitted = compileTs({ text: source, name });
+  assert.equal(emitted.status, 0, emitted.stderr.toString());
+  withTsArtifact(emitted.stdout.toString(), run => {
+    for (const [index, expression] of divisionFaultExpressions.entries()) {
+      const expected = runText(source, { name, stdin: String(index) }), actual = run({ stdin: String(index) });
+      assert.equal(expected.status, 1); assert.equal(actual.phase, 'run'); assert.equal(actual.signal, null);
+      assert.deepEqual({ status: actual.status, stdout: actual.stdout, stderr: actual.stderr }, expected, expression);
+    }
+  });
+});
+
+test('portable C11 division family preserves defined minimum remainders and nested fault order', context => {
+  if (process.env['LITE_SKIP_NATIVE'] === '1') { context.skip('LITE_SKIP_NATIVE=1'); return; }
+  const valid = int64BoundaryProgram(true), artifact = compileTarget('c', { text: valid });
+  assert.equal(artifact.status, 0, artifact.stderr.toString());
+  const result = runCArtifact(artifact.stdout.toString()), reference = runText(valid);
+  assert.equal(result.phase, 'run', result.stdout.toString() + result.stderr.toString());
+  assert.deepEqual({ status: result.status, stdout: result.stdout, stderr: result.stderr }, reference);
+  for (const expression of divisionFaultExpressions) {
+    const text = divisionFaultSource(expression), name = 'division سلام🙂.lts', emitted = compileTarget('c', { text, name });
+    assert.equal(emitted.status, 0, emitted.stderr.toString());
+    const expected = runText(text, { name }), actual = runCArtifact(emitted.stdout.toString());
+    assert.equal(expected.status, 1); assert.equal(actual.phase, 'run'); assert.equal(actual.signal, null);
+    assert.deepEqual({ status: actual.status, stdout: actual.stdout, stderr: actual.stderr }, expected, expression);
+  }
 });
 
 test('portable C11 checks Int64 boundaries and sequences nested faults left to right', context => {

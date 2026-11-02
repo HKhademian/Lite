@@ -216,7 +216,11 @@ negation now check overflow in both targets and preserve exact positioned
 ArithmeticPanic diagnostics, prior output and status. Portable C11 guards reject
 overflow before evaluating signed arithmetic; operand temporaries preserve
 left-to-right nested faults. Constant folding and division-family behavior are
-unchanged by this [refresh](parity.md#checked-int64-arithmetic). Function syntax,
+unchanged by that [refresh](parity.md#checked-int64-arithmetic). The subsequent
+[division-family slice](parity.md#positioned-integer-division-family) matches
+positioned runtime faults and makes MIN%-1 a valid zero result. C checks both
+division overflow and zero before evaluating the operation; all integer helper
+operands evaluate once from left to right. Function syntax,
 tuple values, list values and total value `if` expressions are
 emitted as runnable TS; the C path rejects them with a clear status-2
 diagnostic. List values lower to TS arrays and a checked `lite$listAt` helper;

@@ -9,7 +9,7 @@ This tracker covers the T00 replacement goal, including newly discovered flaws.
 
 The [current inventory](reports/current-t00-t11-inventory.md) and
 [raw observations](reports/current-t00-t11-inventory.json) use the checked Int64
-seed `de37c5be…`. All inputs compile/check against the current reference, both
+seed `625bee56…`. All inputs compile/check against the current reference, both
 execution paths use identical anonymous diagnostic naming, and raw-byte input
 probes follow the real CLI's lazy strict UTF-8 decoding. Historical reports stay
 unchanged. Refresh with `node compiler/scripts/t00-t11-inventory.ts --large-sources`.
@@ -17,11 +17,11 @@ unchanged. Refresh with `node compiler/scripts/t00-t11-inventory.ts --large-sour
 - Canonical features: 22/37 match; 15 rejected.
 - Examples: 10/19 match; 9 rejected.
 - Implemented samples: 11/20 match; 9 rejected.
-- Isolated boundary probes: 19/78 match; 56 rejected, 3 diagnostic differences.
+- Isolated boundary probes: 20/78 match; 56 rejected, 2 diagnostic differences.
 - Library tests: 8/8 match. All 209 tracked Lite sources are accounted for;
   compile-only acceptance is distinguished from executed parity.
-- Total executed source cases: 70/162 match, 92 still fail. Compared with the
-  original inventory, 20 previously failing cases now match and none regress.
+- Total executed source cases: 71/162 match, 91 still fail. Compared with the
+  original inventory, 21 previously failing cases now match and none regress.
   A new temporary-I/O case accounts for the additional matching case.
 
 These counts describe measured programs. Several failing cases share one cause;
@@ -40,14 +40,16 @@ migration are additional work, so this is not an overall completion percentage.
 - [x] Check dynamic Int64 addition, subtraction, multiplication and negation in
   TS and portable C11, with exact overflow faults and evaluation order.
 
-## Remaining topics
+## Topic queue
 
 Work the next applicable topic, verify its interacting features, regenerate
 seeds when needed, record speed measurements, and commit before independent work.
 Keep dependencies explicit; split a topic further when its contracts warrant it.
 
-- [ ] **Integer division family:** exact positioned faults, MIN/-1 remainders,
-  single evaluation and left-to-right fault ordering on TS/C. Next slice.
+- [x] **Integer division family:** exact positioned faults, MIN/-1 remainders,
+  single evaluation and left-to-right fault ordering on TS/C.
+- [ ] **Helper-scan performance:** collect needed target helpers once per
+  program; verify exact artifacts and paired throughput. Next slice.
 - [ ] **Bounds faults:** exact text/list diagnostics and retained output.
 - [ ] **Comparisons:** parenthesized inequality, chains and single evaluation.
 - [ ] **Script and lexical forms:** empty scripts, optional final semicolons,
@@ -82,6 +84,9 @@ Keep dependencies explicit; split a topic further when its contracts warrant it.
   including inputWord; preserve the selected six-helper public contract.
 - [ ] **C target parity:** functions, aggregates/copies, text/input, control
   flow and complete runtime/memory support. Audit TS-only acceptance explicitly.
+- [ ] **C output argument faults:** `var zero := 0;
+  outputLine("prefix", 1 / zero);` must evaluate arguments before printing any
+  part of the call. C currently prints `prefix ` before the fault; T00/TS do not.
 - [ ] **Native C ladder:** C11, historical-node equality and cross-host fixed
   points, strict native compilation, boundary cases and clean rebuilds.
 - [ ] **Consumers:** generated check/run and remaining regression consumers,
@@ -107,3 +112,14 @@ measurements. The checked-arithmetic checkpoint passes all 253 full tests with
 zero skips in 54.6 s, both 93-case target comparisons, all 95 canonical target
 executions, nine editor groups, strict host/seed checking and native overflow
 sanitizer probes. This inventory-only refresh changes no compiler code.
+
+Division-family slice: 71/162 cases now match; only the two bounds diagnostic
+probes differ among accepted programs. The [paired speed report](reports/2026-11-02-division-performance.json)
+records the same source at 922.5 → 922.8 ms median self-compilation, and the
+1,000-output workload at 95.6 → 102.4 ms (five paired samples, compiler phase).
+The extra scan cost is recorded for the next performance slice; no speedup is
+claimed here. MIN%-1 now returns zero in the shared core and both generated
+targets; division faults match source names, positions, streams and status.
+The final stable-snapshot full gate passes all 255 tests, with zero skips, in
+52.3 s; fast is 244 pass/11 expected skips. Strict host/seeds, both 93-case
+corpus comparisons, 95 verifier executions and nine editor groups also pass.

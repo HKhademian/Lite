@@ -13,7 +13,12 @@ Current components:
 - Igniter: **0.1.0-alpha.38**
 - VS Code extension: **0.1.1**
 - Verification corpus: 37 features, 19 examples, 20 samples, 77 scenarios, 95 target executions
-- Tests: 236 interpreter groups, 13 compiler-host groups, 4 policy/tooling groups and 9 editor grammar groups
+- Tests: 236 interpreter groups, 15 compiler-host groups, 4 policy/tooling groups and 9 editor grammar groups
+
+Dynamic integer division/remainder now match exact positioned faults in both
+generated targets, and MIN%-1 returns zero without undefined C arithmetic.
+The [division-family ledger](../compiler/parity.md#positioned-integer-division-family) records
+the seed refresh, differential coverage and paired speed measurements.
 
 Unreleased checked-arithmetic parity, 2026-11-02: generated TS and portable C11
 now check dynamic Int64 addition, subtraction, multiplication and negation,

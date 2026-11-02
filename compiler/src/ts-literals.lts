@@ -80,23 +80,23 @@ floorModCode := fn(left: String, right: String): String {
 }
 
 /** Emits a checked truncating BigInt division call. */
-intDivideCode := fn(left: String, right: String): String {
-    "lite$divideInt(" + left + ", " + right + ")"
+intDivideCode := fn(left: String, right: String, position: Int): String {
+    "lite$divideInt(" + left + ", " + right + ", " + intText(position) + ")"
 }
 
 /** Emits a checked BigInt remainder call. */
-intRemainderCode := fn(left: String, right: String): String {
-    "lite$remainderInt(" + left + ", " + right + ")"
+intRemainderCode := fn(left: String, right: String, position: Int): String {
+    "lite$remainderInt(" + left + ", " + right + ", " + intText(position) + ")"
 }
 
 /** Emits a checked BigInt floor-division call. */
-intFloorDivideCode := fn(left: String, right: String): String {
-    "lite$floorDivideInt(" + left + ", " + right + ")"
+intFloorDivideCode := fn(left: String, right: String, position: Int): String {
+    "lite$floorDivideInt(" + left + ", " + right + ", " + intText(position) + ")"
 }
 
 /** Emits a checked BigInt floor-modulo call. */
-intFloorModuloCode := fn(left: String, right: String): String {
-    "lite$floorModuloInt(" + left + ", " + right + ")"
+intFloorModuloCode := fn(left: String, right: String, position: Int): String {
+    "lite$floorModuloInt(" + left + ", " + right + ", " + intText(position) + ")"
 }
 
 /** Emits checked Int64 addition, evaluating both operands once in source order. */

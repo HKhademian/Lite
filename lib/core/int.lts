@@ -44,10 +44,10 @@ intDivide := fn(left: Int, right: Int): (value: Int, ok: Bool) {
     (value = left / right, ok = true)
 }
 
-/** Checked truncating signed remainder; `ok` is false on zero or the signed-minimum overflow. */
+/** Checked truncating signed remainder; the minimum/-1 result is zero, with no overflowing quotient evaluation. */
 intRemainder := fn(left: Int, right: Int): (value: Int, ok: Bool) {
     if right == 0 { return (value = 0, ok = false); }
-    if left == intMin() and right == -1 { return (value = 0, ok = false); }
+    if left == intMin() and right == -1 { return (value = 0, ok = true); }
     (value = left % right, ok = true)
 }
 

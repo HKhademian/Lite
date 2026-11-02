@@ -1,19 +1,19 @@
 # Generated bootstrap seeds
 
 `T11.ts` is the current generated compiler after the
-[checked Int64 refresh](../parity.md#checked-int64-arithmetic). Its exact source/builder
+[division-family refresh](../parity.md#positioned-integer-division-family). Its exact source/builder
 identities are in [seed.ts](seed.ts). Three generated generations are byte-identical:
-310891 bytes, SHA-256 `de37c5be…`. The refresh starts from the
+310973 bytes, SHA-256 `625bee56…`. The refresh starts from the
 previous generated seed, compiles unchanged current S at each generation, and
-does not need T00 execution. The [ladder record](../reports/2026-11-02-int64-ladder.json)
+does not need T00 execution. The [ladder record](../reports/2026-11-02-division-ladder.json)
 preserves the recipe, previous seed revision and transitional artifact
 hashes. Historical T00-built ladder identities remain in the parity ledger.
 
 `c-emitter.ts` is the current Lite C emitter compiled by the refreshed TS seed.
-It is 283282 bytes, SHA-256 `b6f54e8e…`; C source
-SHA-256 `e70525a5…`, builder SHA-256 `de37c5be…`.
+It is 281923 bytes, SHA-256 `a0e02fca…`; C source
+SHA-256 `3c42fcff…`, builder SHA-256 `625bee56…`.
 Its metadata is in [c-seed.ts](c-seed.ts). It supports admitted scalar output
-forms and checked dynamic Int64 addition, subtraction, multiplication and negation;
+forms and checked dynamic Int64 arithmetic, including positioned division-family faults;
 it still rejects unsupported input/aggregate forms explicitly. It is a
 TS-hosted C emitter, not the pending native C11 compiler or a native fixed point.
 
