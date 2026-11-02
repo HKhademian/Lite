@@ -54,7 +54,8 @@ switch (command) {
     // Node's test flags precede the files rather than the script position used by run().
     const result = spawnSync(process.execPath, ['--test', 'test.ts', '../compiler/tests/host.test.ts', 'source-files.test.ts', '../challenges/tools/tools.test.ts'], {
       cwd: fileURLToPath(new URL('.', import.meta.url)), stdio: 'inherit',
-      env: mode === '--fast' ? { ...process.env, LITE_SKIP_NATIVE: '1', LITE_SKIP_HEAVY: '1' } : process.env,
+      // Native C work resumes after TS migration; full still retains the generated source sweeps.
+      env: { ...process.env, LITE_SKIP_NATIVE: '1', ...(mode === '--fast' ? { LITE_SKIP_HEAVY: '1' } : {}) },
     });
     if (result.error !== undefined) { process.stderr.write(`${result.error.message}\n`); process.exit(1); }
     if (result.signal !== null) { process.kill(process.pid, result.signal); process.exit(1); }

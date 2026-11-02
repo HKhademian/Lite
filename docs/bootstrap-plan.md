@@ -820,7 +820,7 @@ Use the existing visible commands:
 | Command | Use |
 |---|---|
 | `./lite test --fast` | Fast local gate; target under 30 s; skips native C and the full-S lexer sweep |
-| `./lite test` / `./lite test --full` | Full local gate, including native C |
+| `./lite test` / `./lite test --full` | Full current regressions/generated sweeps; native C deferred |
 | `./lite verify --all` | All feature/example/sample scenarios and targets |
 | `./lite check file.lts` | Source check |
 | `./lite compile [--target ts] file.lts` | Generated TS compiler; C deferred |

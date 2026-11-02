@@ -95,6 +95,15 @@ systems or bit-identical binaries across different toolchains. Current runner
 labels are fixed OS generations; the exact installed compiler is recorded for
 each build. Compiler source regeneration is checked byte for byte.
 
+## Migration CI
+
+The ordinary test workflow now smoke-tests a source archive without T00:
+strictly check Lite source, compile it to TS, and execute that artifact. Native
+C packaging/execution is deferred from this migration gate, as are native lanes
+in public lite test. The separate tagged-release workflow and historical C
+packaging commands remain preserved for the post-migration release work; no
+release was created by this change.
+
 ## Bootstrap from an extracted release
 
 Check the downloaded assets before extraction, using `sha256sum -c SHA256SUMS`

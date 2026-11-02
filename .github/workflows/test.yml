@@ -51,17 +51,16 @@ jobs:
         working-directory: editors/vscode
         run: npm test
 
-      - name: Igniter release packaging smoke test
+      - name: Generated TS artifact smoke test without T00
         run: |
           node --test compiler/scripts/release-streams.test.ts
-          node compiler/scripts/release.ts prepare .cache/release-smoke
-          node compiler/scripts/release.ts native .cache/native-smoke .cache/release-smoke
-          mkdir -p .cache/extracted-release
-          tar -xf .cache/release-smoke/*-igniter.tar.gz -C .cache/extracted-release
-          cd .cache/extracted-release
+          mkdir -p .cache/ts-smoke
+          git archive HEAD | tar -x -C .cache/ts-smoke
+          cd .cache/ts-smoke
           test ! -e .git
           test ! -e igniter/node_modules
-          test "$(./lite run igniter/tests/compiler/001-001-report-int-42.lts)" = 42
-          ./litec --target c igniter/tests/compiler/001-001-report-int-42.lts > hello.c
-          cc -std=c11 -Wall -Wextra -Werror hello.c -o hello
-          test "$(./hello)" = 42
+          rm igniter/lite.ts
+          ln -s "$GITHUB_WORKSPACE/igniter/node_modules" igniter/node_modules
+          ./lite check igniter/tests/compiler/001-001-report-int-42.lts
+          ./lite compile igniter/tests/compiler/001-001-report-int-42.lts > hello.ts
+          test "$(node compiler/entry.ts hello.ts)" = 42

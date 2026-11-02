@@ -148,7 +148,7 @@ Run tests through the CLI:
 
 ```sh
 ./lite test --fast   # no native C lane or full-S lexer sweep
-./lite test          # full local gate; cached native builds
+./lite test          # full current regressions and generated source sweeps; C deferred
 ```
 
 The root [lite launcher](../lite) links to the executable TypeScript entry
