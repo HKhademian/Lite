@@ -25,7 +25,7 @@ this igniter's supported language. The refreshed T11/T12/T13 fixed point covers
 the bootstrap subset; full existing T00 feature parity and the native C ladder
 remain pending. The [text-cache benchmark](../benchmark/reports/2026-11-02-text-cache.md)
 records 668 ms median self-compilation after eliminating repeated whole-source
-code-point copies. The current test suite has 236 interpreter groups, 26
+code-point copies. The current test suite has 236 interpreter groups, 27
 compiler-host groups and 4 policy/tooling groups, with 9 separate editor grammar groups.
 
 Generated TS now preserves nested report effects and left-to-right report
@@ -940,3 +940,9 @@ TS/C; initializers retain the previous value and later uses obey the new type
 and mutation permissions. Corpus: 67 programs/26 rejections; all 66 older
 artifact pairs remain identical. Inventory: 88/164 match, 76 remain, with no
 regressions. See the [shadowing evidence](../compiler/parity.md#sequential-value-bindings).
+
+Generated expression items now evaluate silently, empty separators are accepted,
+and trailing separators retain checked function results. Unit tails preserve
+effects and reject incompatible results before artifact output. Inventory:
+89/164 match, 75 remain; all 67 program artifact pairs stay unchanged. See the
+[expression-item evidence](../compiler/parity.md#ordinary-expression-items).

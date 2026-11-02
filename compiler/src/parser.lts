@@ -415,6 +415,7 @@ parseBlock := fn(tokens: Tokens, index: Int, prefix: String, closed: Bool): (nex
                 token.text == "using" or token.text == "then" or token.text == "finally") {
             parseFail(token, prefix, "unsupported feature \"" + token.text + "\"");
         }
+        if isSymbol(token, ";") { cursor = cursor + 1; continue; }
         var itemText := "";
         if token.kind == TOKEN_KIND_KEYWORD() and token.text == "if" {
             condition := parseExpression(tokens, cursor + 1, prefix, 0);

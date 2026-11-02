@@ -1,8 +1,8 @@
 {
-  "note": "Current exact artifacts after sequential value shadowing. All 66 older program artifact pairs are unchanged; duplicate-local is now an accepted silent program. Historical checkpoints remain preserved.",
+  "note": "Current exact artifacts after ordinary expression items, empty separators and checked function tails. All 67 earlier program artifact pairs remain unchanged. Four malformed-source diagnostics now report the specific unknown name or unterminated literal; historical checkpoints remain preserved.",
   "recorded": "2026-11-02",
-  "sourceSha256": "26133c9e709f743cecd1b12b226e07bb13903ab00555fc326d82ffded834a80d",
-  "compilerSha256": "afc0ebb55d9238a940730a4a37e180cd3c80216360a46bd989bcac715058ead8",
+  "sourceSha256": "af708f89f39c29ffaf25c1e8a097c42eff4fddb014a84767feec555b00a70193",
+  "compilerSha256": "492bc99d34b7871cf360aeafe0268f0f58561d25da7edda1f9cb9854d9bbc07b",
   "programCases": 67,
   "rejectedCases": 26,
   "artifacts": [

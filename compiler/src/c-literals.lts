@@ -26,6 +26,12 @@ textLiteralCode := fn(value: String): String {
     encoded + "\""
 }
 
+/** Evaluates a Unit expression's effects while suppressing any target builtin return payload. */
+unitEvaluationCode := fn(code: String): String { "((void)(" + code + "), 0)" }
+
+/** Encodes the inert Unit value for C expression evaluation. */
+unitLiteralCode := fn(): String { "0" }
+
 /** Formats a checked Bool value as a C `stdbool.h` literal. */
 boolLiteralCode := fn(value: Bool): String {
     if value { "true" } else { "false" }

@@ -962,3 +962,81 @@ test('sequential value declarations create fresh bindings and retain prior copie
   }
   assertExecutions(executions);
 });
+
+test('ordinary expression items evaluate silently and trailing separators retain function results', () => {
+  const executions: ArtifactExecution[] = [];
+  const both = ['1;', '; ; /* empty */ ;', 'true; false; Unit;', '1; "quiet"; not false; (2 + 3); +4; -5;',
+    'x := 1; x + 2;', 'var x := 2; x * 3; x = 4; x; outputLine(x);',
+    ';; { ;; 1;; "quiet";; };; outputLine("after");;',
+    'if true { 1; } else { 2; } outputLine("after");',
+    'var x := 0; loop x < 3 { x + 1; x = x + 1;; } outputLine(x);',
+    'var zero := 0; if false { 1 / zero; } outputLine("alive");',
+    'false and (1 / 0 > 0); true or (9223372036854775807 + 1 > 0);',
+    'var x := 2; x < 3 < 4; "a" + "b"; outputLine("done");',
+    'outputLine("before"); 9223372036854775807 - 1;',
+    'Unit;; outputLine("after");', 'and true and false; or false or true;'];
+  const tsOnly = ['[1, 2]; (n = 1, label = "quiet");',
+    'f := fn(): Int { outputLine("effect"); 7; } f() + 1; outputLine("after");',
+    'f := fn(): Int { 1; 2;; } outputLine(f());',
+    'f := fn(): Bool { false; true;; } outputLine(f());',
+    'f := fn(): String { "first"; "last";; } outputLine(f());',
+    'f := fn(n: Int): Int { n + 1; n + 2;; } outputLine(f(3));',
+    'f := fn(): Unit { ;; Unit;; } f();',
+    'effect := fn(): Unit { outputLine("effect"); } f := fn(): Unit { effect();; } f();',
+    'f := fn(): Int { if true { 1;; } else { 2;; };; } outputLine(f());',
+    'f := fn(flag: Bool): Int { if flag { outputLine("yes"); 1;; } else { outputLine("no"); 2;; };; } outputLine(f(false), f(true));',
+    'f := fn(): List<Int> { values: List<Int> = [1, 2]; values;; } outputLine(f());',
+    'f := fn(): List<Int> { values: List<Int> = []; values;; } outputLine(f());',
+    'f := fn(): (n: Int) { (n = 2);; } outputLine(f());',
+    'var values: mut List<Int> = [1, 2]; pop_back(mut values); outputLine(values);',
+    'f := fn(): Int { values: mut List<Int> = [1, 2]; pop_back(mut values);; } outputLine(f());',
+    'f := fn(): Unit { if true { Unit } else { Unit };; } f();',
+    'f := fn(): Unit { values: mut List<Int> = [1]; push_back(mut values, 2);; } f();',
+    'f := fn(): Unit { if true { outputLine("yes"); Unit;; } else { outputLine("no"); Unit;; };; } f();',
+  ];
+  for (const [sources, targets] of [[both, ['ts', 'c']], [tsOnly, ['ts']]] as const) for (const text of sources) {
+    const expected = runText(text); assert.equal(expected.status, 0, text + expected.stderr.toString());
+    for (const target of targets) {
+      const compiled = compileTarget(target, { text }); assert.equal(compiled.status, 0, text + compiled.stderr.toString());
+      if (target === 'c' && process.env['LITE_SKIP_NATIVE'] === '1') continue;
+      executions.push({ target, artifact: compiled.stdout.toString(), expected, context: text });
+    }
+    if (targets.length === 1) {
+      const c = compileTarget('c', { text }); assert.equal(c.status, 2, text); assert.equal(c.stdout.length, 0);
+    }
+  }
+  for (const [text, stdin] of [
+    ['inputInt("n? ") + inputInt("m? "); outputLine(inputInt());', '1 2 3'],
+    ['inputLine("line? "); outputLine(inputLine());', 'first\nlast\n'],
+    ['inputAll("all? "); outputLine(inputAll());', 'all\n🙂'],
+  ] as const) {
+    const expected = runText(text!, { stdin }); assert.equal(expected.status, 0, expected.stderr.toString());
+    const compiled = compileTarget('ts', { text: text! }); assert.equal(compiled.status, 0, compiled.stderr.toString());
+    executions.push({ target: 'ts', artifact: compiled.stdout.toString(), expected, options: { stdin }, context: text! });
+  }
+  const invalid = ['outputLine("before"); 1 2;', 'true false;', 'Unit Unit;',
+    'x := 1; x + 2 outputLine(x);', 'unknown;', 'outputLine("before"); 1 + true;',
+    'f := fn(): Int { "wrong";; } f();', 'f := fn(): Int { ;; } f();',
+    'f := fn(): Unit { 1;; } f();',
+    'g := fn(): Int { outputLine("effect"); 1 } f := fn(): Unit { g();; } f();',
+    'g := fn(): String { outputLine("effect"); "value" } f := fn(): Unit { (g());; } f();',
+    'f := fn(): Unit { if true { 1 } else { 2 };; } f();',
+    'f := fn(): Unit { if true { outputLine("effect"); 1;; } else { 2;; };; } f();'];
+  for (const text of invalid) {
+    const expected = runText(text); assert.equal(expected.status, 1, text); assert.equal(expected.stdout.length, 0, text);
+    for (const target of ['ts', 'c'] as const) {
+      const compiled = compileTarget(target, { text }); assert.equal(compiled.status, 2, text); assert.equal(compiled.stdout.length, 0, text);
+    }
+  }
+  for (const text of ['outputLine("before");\r\nvar zero := 0; 1 / zero;',
+    'outputLine("before");\r\n9223372036854775807 + 1;',
+    'var x := 9223372036854775807; if true { x + 1; }']) {
+    const name = 'items سلام.lts', expected = runText(text, { name }); assert.equal(expected.status, 1, text);
+    for (const target of ['ts', 'c'] as const) {
+      const compiled = compileTarget(target, { text, name }); assert.equal(compiled.status, 0, text + compiled.stderr.toString());
+      if (target === 'c' && process.env['LITE_SKIP_NATIVE'] === '1') continue;
+      executions.push({ target, artifact: compiled.stdout.toString(), expected, context: text });
+    }
+  }
+  assertExecutions(executions);
+});

@@ -18,7 +18,7 @@ Current components:
 - Igniter: **0.1.0-alpha.38**
 - VS Code extension: **0.1.1**
 - Verification corpus: 38 features, 19 examples, 20 samples, 78 scenarios, 100 target executions
-- Tests: 236 interpreter groups, 26 compiler-host groups, 4 policy/tooling groups and 9 editor grammar groups
+- Tests: 236 interpreter groups, 27 compiler-host groups, 4 policy/tooling groups and 9 editor grammar groups
 
 Constant integer arithmetic faults now execute only when reached. Dead branches,
 false loops, skipped Boolean operands and unused functions compile safely; invalid
@@ -195,3 +195,9 @@ TS/C; initializers retain the previous value and later uses obey the new type
 and mutation permissions. Corpus: 67 programs/26 rejections; all 66 older
 artifact pairs remain identical. Inventory: 88/164 match, 76 remain, with no
 regressions. See the [shadowing evidence](../compiler/parity.md#sequential-value-bindings).
+
+Generated expression items now evaluate silently, empty separators are accepted,
+and trailing separators retain checked function results. Unit tails preserve
+effects and reject incompatible results before artifact output. Inventory:
+89/164 match, 75 remain; all 67 program artifact pairs stay unchanged. See the
+[expression-item evidence](../compiler/parity.md#ordinary-expression-items).

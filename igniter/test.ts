@@ -283,7 +283,9 @@ test('Lite parser parses L0 libraries and every program case', () => {
     'x := if true { 1 } else { 2 } outputLine(x)',
     'var x := 1; x = 2', '{ outputLine(1) }; outputLine(2)',
     'outputLine("a" /* nested /* comment */ */ "b")', 'word := "a" "b"; outputLine(word)',
-    'outputLine(1,)', 'f := fn(n: Int): Int { n } outputLine(f(1,),)'];
+    'outputLine(1,)', 'f := fn(n: Int): Int { n } outputLine(f(1,),)',
+    '; ; /* empty */ ;', '1; Unit; true;;', 'x := 1; x + 2;;',
+    'f := fn(): Int { ;; 1; 2;; } outputLine(f());'];
   const boundaryRejections = ['outputLine(1) outputLine(2)', 'x := 1 outputLine(x)',
     'x := (if true { 1 } else { 2 }) outputLine(x)', 'x := 1 /* } */ outputLine(x)',
     'f := fn(): Int { return 7 outputLine(9); }', 'outputLine(("a") "b")', 'outputLine(1,,)'];
@@ -400,7 +402,7 @@ test('Lite checker collects value bindings and rejects unsupported duplicate sym
   }
   withGeneratedDriver(checkerDumpPath, generated => {
     for (const text of ['x := 1; x := 2;', 'f := fn(n: Int): Int { var n := n; n = n + 1; return n; }',
-      'values: List<Int> = [1]; loop values as item { item: Int = 2; }']) {
+      'values: List<Int> = [1]; loop values as item { item: Int = 2; }', '; ;', 'x := 1; x + 2;;']) {
       const expected = runFile(checkerDumpPath, text), actual = generated(text);
       assert.equal(expected.code, 0, expected.errors); assert.deepEqual(actual, expected);
     }
@@ -1874,15 +1876,17 @@ test('restricted compiler completes statement-shaped if branches as function res
     phase: 'run', status: 0, signal: null,
     stdout: Buffer.from('neg 0 10 0 5 a b c\nfalse true true false\n'), stderr: Buffer.alloc(0),
   });
-  // A branch without a value is not a Lite diagnostic here; the strict artifact
-  // typecheck rejects the emitted function that can fall through.
-  const incomplete = runCompiler(tsManifestPath, [
+  // An incompatible Unit call tail now rejects in Lite before any effects or artifact output.
+  const incompleteSource = [
     'g := fn (x: Bool): Int { if x { reportError("a"); } else { 2 } }',
     'outputLine(g(true));',
     '',
-  ].join('\n'));
-  assert.equal(incomplete.code, 0, incomplete.errors);
-  assert.equal(runTsArtifact(incomplete.output).phase, 'typecheck');
+  ].join('\n');
+  const reference = runText(incompleteSource);
+  assert.equal(reference.status, 1); assert.equal(reference.stdout.length, 0);
+  assert.deepEqual(runCompiler(tsManifestPath, incompleteSource), {
+    code: 2, output: '', errors: '1:33: cannot return Unit from function g returning Int\n',
+  });
 });
 
 test('restricted compiler diagnoses invalid value if expressions and rejects them in C', () => {

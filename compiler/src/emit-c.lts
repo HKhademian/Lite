@@ -218,10 +218,10 @@ emitProgram := fn(items: Items, source: String, prefix: String): Unit {
         if unsupported =!= "" {
             fail("", unsupported);
         }
-        if isTupleKind(item.kind) or item.kind == "LocalTuple" or item.kind == "VarTuple" or item.kind == "AssignTuple" {
+        if isTupleKind(item.kind) or (item.kind == "Discard" and isTupleKind(item.name)) or item.kind == "LocalTuple" or item.kind == "VarTuple" or item.kind == "AssignTuple" {
             fail("", "C backend does not support tuple values yet");
         }
-        if isListKind(item.kind) or item.kind == "LocalList" or item.kind == "VarList" or item.kind == "AssignList" {
+        if isListKind(item.kind) or (item.kind == "Discard" and isListKind(item.name)) or item.kind == "LocalList" or item.kind == "VarList" or item.kind == "AssignList" {
             fail("", "C backend does not support list values yet");
         }
         if item.kind == "LoopSeq" {
@@ -267,6 +267,8 @@ emitProgram := fn(items: Items, source: String, prefix: String): Unit {
             outputLine(indent + "(void)" + item.runtime + ";");
         } else if item.kind == "AssignInt" or item.kind == "AssignString" or item.kind == "AssignBool" or item.kind == "AssignFloat" {
             outputLine(indent + item.runtime + " = " + item.code + ";");
+        } else if item.kind == "Discard" {
+            outputLine(indent + "(void)(" + item.code + ");");
         } else if item.kind == "Break" {
             outputLine(indent + "break;");
         } else if item.kind == "Continue" {

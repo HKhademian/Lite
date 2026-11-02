@@ -77,7 +77,7 @@ bounded code-point views; that source snapshot has a 668 ms self-build median in
 [before/after benchmark](../benchmark/reports/2026-11-02-text-cache.md), excluding
 strict checking. The subsequent [report-order refresh](../compiler/parity.md#report-order-seed-refresh)
 preserves output produced by calls inside report arguments and records a new
-three-generation fixed point. Current tests include 236 interpreter groups, 26 compiler-host
+three-generation fixed point. Current tests include 236 interpreter groups, 27 compiler-host
 groups, 4 policy/tooling groups and 9 editor grammar groups; the historical P0 counts below remain fixed.
 The full-source lexer/parser/checker sweeps now run generated TS drivers, checked
 once per sweep and executed in isolated processes. Focused fixtures retain
@@ -898,3 +898,9 @@ TS/C; initializers retain the previous value and later uses obey the new type
 and mutation permissions. Corpus: 67 programs/26 rejections; all 66 older
 artifact pairs remain identical. Inventory: 88/164 match, 76 remain, with no
 regressions. See the [shadowing evidence](../compiler/parity.md#sequential-value-bindings).
+
+Generated expression items now evaluate silently, empty separators are accepted,
+and trailing separators retain checked function results. Unit tails preserve
+effects and reject incompatible results before artifact output. Inventory:
+89/164 match, 75 remain; all 67 program artifact pairs stay unchanged. See the
+[expression-item evidence](../compiler/parity.md#ordinary-expression-items).

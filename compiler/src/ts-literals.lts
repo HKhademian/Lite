@@ -33,6 +33,12 @@ textLiteralCode := fn(value: String): String {
     encoded + "\""
 }
 
+/** Evaluates a Unit expression's effects while suppressing any target builtin return payload. */
+unitEvaluationCode := fn(code: String): String { "(void (" + code + "))" }
+
+/** Encodes the inert Unit value for TypeScript expression evaluation. */
+unitLiteralCode := fn(): String { "undefined" }
+
 /** Formats a checked Bool value as a TypeScript literal. */
 boolLiteralCode := fn(value: Bool): String {
     if value { "true" } else { "false" }

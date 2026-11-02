@@ -12,8 +12,8 @@
         "hash": "sha256:e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
       },
       "stderr": {
-        "text": "2:1: expected := or = after local name x\n",
-        "hash": "sha256:4ae6889f5c1f6a1f532d74055248b1aa9e2d928a15b1c0daa68284907c4b0146"
+        "text": "1:1: unknown value x\n",
+        "hash": "sha256:08ce65fd4aa0bf9ab15af0a1d2b780214bca17bcbc75d3af8944e17e139578af"
       },
       "exitCode": 2
     }

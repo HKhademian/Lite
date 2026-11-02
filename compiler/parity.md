@@ -993,3 +993,56 @@ item separators are next; broader namespaces remain explicitly queued.
 All 266 full tests pass with zero skips in 98.1 s; fast passes 254 with
 12 expected skips in 71.7 s. Strict host/seeds, both 93-case corpora,
 100 verifier executions, coverage and nine editor groups also pass.
+
+## Ordinary expression items
+
+Expression items now evaluate in order and discard ordinary results silently in
+scripts and action scopes. Both targets emit explicit discard evaluation, so
+checked arithmetic and short-circuit faults are preserved. Empty separators
+are admitted. In a function, separators after the final expression do not
+change its result; the same result checker handles scalar/name/call/builtin
+forms and admitted final conditional branches.
+
+This also repairs incorrectly admitted non-Unit tails in Unit functions. They
+now reject before effects. A valid Unit tail keeps its effects and suppresses
+an implementation builtin's return payload, such as JavaScript Array.push's
+length. Inert Unit literals are encoded separately for TS and C, avoiding a
+TypeScript undefined token in discarded native expressions. Native functions,
+aggregates and broader value blocks/conditionals remain pending.
+
+Coverage includes fifteen TS/C programs, eighteen TS function/aggregate
+programs, three input scenarios, thirteen rejected sources and six exact fault
+executions. Four additional expression/separator sources run through both
+standalone parser drivers; checker driver coverage also includes empty
+separators and ordinary expressions. C explicitly rejects the TS-only cases.
+The 93-case corpus stays at 67 programs/26 rejections. All 67 program artifact
+pairs are unchanged. Four rejected-source models now identify the unknown name
+or unterminated String at its source location, instead of rejecting the whole
+expression statement form. Full consumer diagnostic parity stays queued.
+
+The [generated-only ladder](reports/2026-11-02-expression-items-ladder.json)
+records three identical, strictly checked final TS generations. Consolidating
+five expression/call tail paths removes repeated parsing/checking code. The TS
+source shrinks by 3518 bytes and artifact by 4604 bytes; the C source shrinks by
+3421 bytes and artifact by 4421 bytes. First-character guards avoid scanning
+unrelated keywords on ordinary item names.
+
+Five paired compiler-phase medians: TS outputs 60.2 → 62.7 ms, identical S
+642.3 → 635.6 ms, constant expressions 129.4 → 127.7 ms; C-emitter outputs
+78.2 → 79.3 ms, divisions 165.8 → 165.8 ms, constants 211.0 → 214.3 ms.
+Changes are mixed, including a small output-workload regression; no general
+speedup is claimed. Ordinary measured program bytes match. Self-source output
+changes by corrected Unit tail normalization and matches the strictly checked
+transitional/fixed-point hashes. See the [raw performance report](reports/2026-11-02-expression-items-performance.json).
+
+An additional type-admission flaw is retained in the fixed-array queue: T00
+rejects a bare fixed-array tail for a List-returning function, whereas the
+restricted frontend contextually treats it as a List. That distinction is not
+claimed as fixed by ordinary expression-item support.
+
+All 267 full tests pass without skips in 112.7 s; fast passes 255 with
+12 expected skips in 78.4 s. These two gate runs overlap, so their durations
+are validation observations rather than speed comparisons. Strict host/seeds,
+both 93-case corpora, 100 verifier executions, coverage, nine editor groups and
+six strict native UBSan programs also pass. Inventory: 89/164 match, 75 remain;
+37 original failures closed, none regress, 210 tracked sources, no load errors.

@@ -3,7 +3,7 @@
 Runtime environment details omitted for privacy.
 Working tree at audit start: modified. The raw report records its status; artifact and per-source hashes identify the measured inputs.
 
-T11 identity: `afc0ebb55d9238a940730a4a37e180cd3c80216360a46bd989bcac715058ead8`. The preserved artifact passed its separate strict TypeScript check.
+T11 identity: `492bc99d34b7871cf360aeafe0268f0f58561d25da7edda1f9cb9854d9bbc07b`. The preserved artifact passed its separate strict TypeScript check.
 
 This is the current measured support inventory, not acceptance of new language features. Dated historical inventories remain unchanged.
 
@@ -21,15 +21,15 @@ This is the current measured support inventory, not acceptance of new language f
 - feature: 38; 24 matches tested behavior; 14 T11 rejects source.
 - example: 19; 11 matches tested behavior; 8 T11 rejects source.
 - sample: 20; 11 matches tested behavior; 9 T11 rejects source.
-- probe: 79; 34 matches tested behavior; 45 T11 rejects source.
+- probe: 79; 35 matches tested behavior; 44 T11 rejects source.
 - library-test: 8; 8 matches tested behavior.
 - trackedSourceFiles: 210.
 - Showcases: none currently implemented.
 
 ## Progress since the original inventory
 
-- 36 formerly failing cases now match; 0 formerly matching cases regress. Case identity includes kind and id.
-- 88/164 executed source cases match; 76 still fail. These are case counts, not distinct missing features or an overall completion percentage.
+- 37 formerly failing cases now match; 0 formerly matching cases regress. Case identity includes kind and id.
+- 89/164 executed source cases match; 75 still fail. These are case counts, not distinct missing features or an overall completion percentage.
 - Native C, compile-only sources and run/check migration have separate gates in [the live gap tracker](../gaps.md).
 
 Closed original cases:
@@ -55,6 +55,7 @@ Closed original cases:
 - probe: input.line
 - probe: input.whole-prompt
 - probe: comparison.chain
+- probe: scope.discarded-expression
 - probe: tuple.report
 - probe: function.report-order
 - probe: text.bounds-diagnostic
@@ -90,10 +91,10 @@ Closed original cases:
   First diagnostic: 1:31: expected an Int, String or Bool expression
 - **function.recursion — matches tested behavior.** Typed functions and own-name recursion. Source: `verifications/features/function-recursion.lts`.
 - **tuple.shape — T11 rejects source.** Flat tuple values and fields. Source: `verifications/features/tuple-shape.lts`.
-  First diagnostic: 3:1: expected a statement: output/outputLine, declaration, assignment, if or loop
+  First diagnostic: 3:2: unknown value one
 - **array.fixed — matches tested behavior.** Fixed arrays and indexed reads. Source: `verifications/features/array-fixed.lts`.
 - **list.mutation — T11 rejects source.** Growable lists and end operations. Source: `verifications/features/list-mutation.lts`.
-  First diagnostic: 3:11: expected := or = after local name push_front
+  First diagnostic: 3:1: unknown value push_front
 - **text.helpers — matches tested behavior.** Temporary code-point text helpers. Source: `verifications/features/text-helpers.lts`.
 - **alias.transparent — matches tested behavior.** Transparent type aliases. Source: `verifications/features/alias-transparent.lts`.
 - **scope.locals — matches tested behavior.** Lexical local scope and shadowing. Source: `verifications/features/scope-locals.lts`.
@@ -113,7 +114,7 @@ Closed original cases:
 - **int.limits — matches tested behavior.** Signed 64-bit Int boundaries. Source: `verifications/features/int-limits.lts`.
 - **int.floor — matches tested behavior.** Floor division and floor modulo. Source: `verifications/features/int-floor.lts`.
 - **scope.compound — T11 rejects source.** Compound arithmetic updates. Source: `verifications/features/scope-compound.lts`.
-  First diagnostic: 2:7: expected := or = after local name total
+  First diagnostic: 2:8: expected an Int, String or Bool expression
 - **mut.inferred — T11 rejects source.** Inferred mut and var mut declarations. Source: `verifications/features/mut-inferred.lts`.
   First diagnostic: 1:1: unsupported feature "mut": see docs/declarations-and-assignment.md; the restricted compiler accepts Int/String/Bool expressions, locals, output/outputLine, if/else and loop only
 - **num.power — T11 rejects source.** Right-associative Float-default power. Source: `verifications/features/num-power.lts`.
@@ -168,9 +169,8 @@ Closed original cases:
 - **comparison.chain — matches tested behavior.** Comparison chains
 - **comparison.complements — matches tested behavior.** Complement comparison spellings <! <!= >! >!=
 - **scope.compound — T11 rejects source.** Compound arithmetic updates
-  First diagnostic: 1:16: expected := or = after local name x
-- **scope.discarded-expression — T11 rejects source.** Expression statements with silent Unit script completion
-  First diagnostic: 1:11: expected := or = after local name x
+  First diagnostic: 1:17: expected an Int, String or Bool expression
+- **scope.discarded-expression — matches tested behavior.** Expression statements with silent Unit script completion
 - **scope.zero-scalar — matches tested behavior.** Omitted typed scalar initializers
 - **scope.reserved — T11 rejects source.** Reserved storage and first whole-value initialization
   First diagnostic: 1:10: expected an Int, String or Bool expression
@@ -181,7 +181,7 @@ Closed original cases:
 - **tuple.shorthand — T11 rejects source.** Named tuple field shorthand
   First diagnostic: 1:29: expected an Int, String or Bool expression
 - **tuple.destructuring — T11 rejects source.** Tuple destructuring declarations
-  First diagnostic: 1:25: expected a statement: output/outputLine, declaration, assignment, if or loop
+  First diagnostic: 1:26: unknown value x
 - **tuple.receiving-labels — T11 rejects source.** Typed receiving declarations rename tuple positions
   First diagnostic: 1:29: cannot initialize (l: Int, r: Int) with (r: Int, l: Int)
 - **tuple.report — matches tested behavior.** Source-like tuple report formatting
@@ -194,7 +194,7 @@ Closed original cases:
 - **array.function — T11 rejects source.** Fixed-array function parameters/results
   First diagnostic: 1:15: unsupported function type
 - **list.front-operations — T11 rejects source.** push_front/pop_front end operations
-  First diagnostic: 1:43: expected := or = after local name push_front
+  First diagnostic: 1:33: unknown value push_front
 - **list.inferred-mut — T11 rejects source.** Inferred mut and var mut list declarations
   First diagnostic: 1:1: unsupported feature "mut": see docs/declarations-and-assignment.md; the restricted compiler accepts Int/String/Bool expressions, locals, output/outputLine, if/else and loop only
 - **list.unit-elements — T11 rejects source.** List<Unit> element contracts
@@ -274,11 +274,11 @@ Closed original cases:
 - **example.012-named-arguments — T11 rejects source.** Interleaves named and positional arguments and uses named self calls. Source: `examples/012-named-arguments.lts`.
   First diagnostic: 5:19: unknown value c
 - **example.013-growable-lists — T11 rejects source.** Exercises all four explicit mut list end operations. Source: `examples/013-growable-lists.lts`.
-  First diagnostic: 3:11: expected := or = after local name push_front
+  First diagnostic: 3:1: unknown value push_front
 - **example.014-input-history — matches tested behavior.** Collects integers until zero, then reports the retained history and sum. Source: `examples/014-input-history.lts`.
 - **example.015-retained-tokens — matches tested behavior.** Tokenizes a line into a retained list before reporting it. Source: `examples/015-retained-tokens.lts`.
 - **example.016-integer-calculator — T11 rejects source.** Tokenized integer calculator with precedence and nesting. Source: `examples/016-integer-calculator.lts`.
-  First diagnostic: 70:97: expected a tuple field name
+  First diagnostic: 49:5: cannot return Unit from function digitValue returning Int
 - **example.019-whole-input — matches tested behavior.** Reads remaining text through EOF and reports its code-point length. Source: `examples/019-whole-input.lts`.
 - **example.020-script-arguments — matches tested behavior.** Reports ordered script arguments after --. Source: `examples/020-script-arguments.lts`.
 - **example.021-type-aliases — matches tested behavior.** Transparent tuple/list aliases with list traversal. Source: `examples/021-type-aliases.lts`.

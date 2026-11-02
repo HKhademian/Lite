@@ -322,3 +322,9 @@ TS/C; initializers retain the previous value and later uses obey the new type
 and mutation permissions. Corpus: 67 programs/26 rejections; all 66 older
 artifact pairs remain identical. Inventory: 88/164 match, 76 remain, with no
 regressions. See the [shadowing evidence](parity.md#sequential-value-bindings).
+
+Generated expression items now evaluate silently, empty separators are accepted,
+and trailing separators retain checked function results. Unit tails preserve
+effects and reject incompatible results before artifact output. Inventory:
+89/164 match, 75 remain; all 67 program artifact pairs stay unchanged. See the
+[expression-item evidence](parity.md#ordinary-expression-items).

@@ -9,7 +9,7 @@ This tracker covers the T00 replacement goal, including newly discovered flaws.
 
 The [current inventory](reports/current-t00-t11-inventory.md) and
 [raw observations](reports/current-t00-t11-inventory.json) use the generated
-seed `afc0ebb5…`. All inputs compile/check against the current reference, both
+seed `492bc99d…`. All inputs compile/check against the current reference, both
 execution paths use identical anonymous diagnostic naming, and raw-byte input
 probes follow the real CLI's lazy strict UTF-8 decoding. Historical reports stay
 unchanged. Refresh with `node compiler/scripts/t00-t11-inventory.ts --large-sources`.
@@ -17,11 +17,11 @@ unchanged. Refresh with `node compiler/scripts/t00-t11-inventory.ts --large-sour
 - Canonical features: 24/38 match; 14 rejected.
 - Examples: 11/19 match; 8 rejected.
 - Implemented samples: 11/20 match; 9 rejected.
-- Isolated boundary probes: 34/79 match; 45 rejected; no differences among accepted probes.
+- Isolated boundary probes: 35/79 match; 44 rejected; no differences among accepted probes.
 - Library tests: 8/8 match. All 210 tracked Lite sources are accounted for;
   compile-only acceptance is distinguished from executed parity.
-- Total executed source cases: 88/164 match, 76 still fail. Compared with the
-  original inventory, 36 previously failing cases now match and none regress.
+- Total executed source cases: 89/164 match, 75 still fail. Compared with the
+  original inventory, 37 previously failing cases now match and none regress.
   The temporary-I/O case, retained function-tail probe and new chain feature
   account for three additional matching cases.
 
@@ -82,7 +82,7 @@ Keep dependencies explicit; split a topic further when its contracts warrant it.
 - [x] **Sequential value bindings:** same-block declarations create fresh bindings;
   initializers read the previous binding, copies retain values, and later uses
   obey the newest type and mutation permission. Callable/type namespaces remain queued.
-- [ ] **Script expressions:** discard ordinary expression values while retaining
+- [x] **Script expressions:** discard ordinary expression values while retaining
   evaluation, effects and faults; accept empty item separators.
 - [x] **Deferred arithmetic faults:** constant arithmetic must fault only when
   reached; dead branches and short-circuit operands must remain unevaluated.
@@ -92,11 +92,15 @@ Keep dependencies explicit; split a topic further when its contracts warrant it.
 - [ ] **Numeric widths:** explicit Int64/Float aliases, narrow types, promotion,
   lossless widening, checked narrow results and Float32 rounding.
 - [ ] **Block and conditional values:** statement-bearing blocks, Unit tails,
-  partial defaults and false-branch no-write assignments.
+  partial defaults and false-branch no-write assignments. Audit every returning
+  branch: `f := fn(flag: Bool): Int { if flag { 1; } else { x := 2; } }`
+  rejects in T00 but T11 currently emits a function that fails strict TS checking.
 - [ ] **Tuple shapes:** unnamed/mixed/unit/singleton tuples, shorthand fields,
   positional reads, destructuring, receiving-label conversion and display.
 - [ ] **Fixed arrays:** inferred/explicit extents, function contracts, aliases,
-  copies and indexed/sequence access.
+  copies and indexed/sequence access. Keep array/List distinctions in function
+  tails: T00 rejects `f := fn(): List<Int> { [1, 2] }` as an array result,
+  while T11 currently contextually admits it as a List.
 - [ ] **Mutability and lists:** inferred mut/var mut, front operations,
   List<Unit>, all end operations and copy contracts.
 - [ ] **Storage and updates:** compound assignments, zero initialization,
@@ -299,3 +303,15 @@ statements and empty item separators; callable/type shadowing remains separate.
 All 266 full tests pass with zero skips; fast passes 254 with 12 expected
 skips. Strict checks, both corpora, 100 verifier executions, coverage and nine
 editor groups also pass.
+
+Ordinary expression items: 89/164 match, 75 remain; 37 original failures closed
+and none regress. All 267 full tests pass without skips; fast passes 255 with
+12 expected skips. Strict checks, both 93-case corpora, 100 verifier executions,
+coverage, nine editor groups and six native sanitizer programs pass. All 67
+earlier artifact pairs stay identical. Consolidated item/tail handling shrinks
+source and generated artifacts; paired compiler medians have mixed small changes,
+recorded without a general speedup claim. See the
+[expression-item ledger](parity.md#ordinary-expression-items). Newly confirmed
+array/List tail admission and incomplete declaration-branch results stay queued.
+Next: branch-result checking, then broader function admission and control/value
+forms; Unicode columns remain in the final diagnostic audit.

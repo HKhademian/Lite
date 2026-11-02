@@ -1,0 +1,141 @@
+{
+  "date": "2026-11-02",
+  "baseRevision": "1ba98c5f60bf0c1f748f9f70d25d460d35ce30f1",
+  "node": "v24.16.0",
+  "previousSeedSha256": "afc0ebb55d9238a940730a4a37e180cd3c80216360a46bd989bcac715058ead8",
+  "transitionalArtifactSha256": "e09a8909a50babf74f0f31d6bf142efc6cb6bf2609d4e7cd496ba2012bc95efe",
+  "recipe": "Previous generated seed compiling current S -> transitional compiler; transitional compiler compiling the same S -> stage1; stage1 and stage2 compile the same S into stage2 and stage3. No source rewriting or T00 execution.",
+  "source": {
+    "sha256": "af708f89f39c29ffaf25c1e8a097c42eff4fddb014a84767feec555b00a70193",
+    "bytes": 170820
+  },
+  "generations": [
+    {
+      "name": "stage1",
+      "sha256": "492bc99d34b7871cf360aeafe0268f0f58561d25da7edda1f9cb9854d9bbc07b",
+      "bytes": 313353,
+      "strictTypecheck": true,
+      "status": 0
+    },
+    {
+      "name": "stage2",
+      "sha256": "492bc99d34b7871cf360aeafe0268f0f58561d25da7edda1f9cb9854d9bbc07b",
+      "bytes": 313353,
+      "strictTypecheck": true,
+      "status": 0
+    },
+    {
+      "name": "stage3",
+      "sha256": "492bc99d34b7871cf360aeafe0268f0f58561d25da7edda1f9cb9854d9bbc07b",
+      "bytes": 313353,
+      "strictTypecheck": true,
+      "status": 0
+    }
+  ],
+  "fixedPoint": true,
+  "c": {
+    "sourceSha256": "2ba8804e4c3dfce599381b20ce1ad6868b28722d0942403a4087599807e81363",
+    "sourceBytes": 160037,
+    "artifactSha256": "9ae40155e852d3a1d2f94de74da3d0b37707f9bfc2573f64466dc18438f61f6c",
+    "artifactBytes": 289907,
+    "builderSha256": "492bc99d34b7871cf360aeafe0268f0f58561d25da7edda1f9cb9854d9bbc07b",
+    "native": false
+  },
+  "validation": {
+    "strictHostAndSeeds": true,
+    "scalarExpressionPrograms": 15,
+    "tsFunctionAggregateExpressionPrograms": 18,
+    "inputScenarios": 3,
+    "rejectionSources": 13,
+    "exactRuntimeFaultExecutions": 6,
+    "generatedStandaloneParser": {
+      "additionalValidSources": 4
+    },
+    "generatedStandaloneChecker": {
+      "validSources": 5,
+      "invalidSources": 1
+    },
+    "fullSuite": {
+      "tests": 267,
+      "passed": 267,
+      "failed": 0,
+      "skipped": 0,
+      "durationMs": 112655.120083
+    },
+    "fastSuite": {
+      "tests": 267,
+      "passed": 255,
+      "failed": 0,
+      "skipped": 12,
+      "durationMs": 78385.8255
+    },
+    "hostGroups": 27,
+    "editorGroups": 9,
+    "tsCorpus": {
+      "phase": "compare",
+      "artifact": "<local-path>/Projects/LiteScript/compiler/bootstrap/T11.ts",
+      "target": "ts",
+      "cases": 93,
+      "programs": 67,
+      "rejections": 26,
+      "mismatches": 0,
+      "first": []
+    },
+    "cCorpus": {
+      "phase": "compare",
+      "artifact": "<local-path>/Projects/LiteScript/compiler/bootstrap/c-emitter.ts",
+      "target": "c",
+      "cases": 93,
+      "programs": 67,
+      "rejections": 26,
+      "mismatches": 0,
+      "first": []
+    },
+    "verifierExecutions": 100,
+    "registeredFeatures": 38,
+    "coverage": true,
+    "existingCorpusArtifactPairsUnchanged": 67,
+    "rejectionDiagnosticChanges": 4,
+    "undefinedBehaviorSanitizer": {
+      "compiler": "cc",
+      "flags": [
+        "-std=c11",
+        "-Wall",
+        "-Wextra",
+        "-Werror",
+        "-fsanitize=undefined",
+        "-fno-sanitize-recover=all"
+      ],
+      "sources": [
+        "1; \"quiet\"; true; Unit; ();; outputLine(\"after\");",
+        "var x := 0; loop x < 3 { x + 1;; x = x + 1; } outputLine(x);",
+        "var x := 2; x < 3 < 4; false and (1 / 0 > 0); true or (9223372036854775807 + 1 > 0);",
+        "var zero := 0; if false { 1 / zero; } outputLine(\"alive\");",
+        "outputLine(\"before\");\r\nvar zero := 0; 1 / zero;",
+        "outputLine(\"before\");\r\n9223372036854775807 + 1;"
+      ],
+      "cases": 6,
+      "exactStatusAndStreams": true
+    },
+    "inventory": {
+      "matches": 89,
+      "total": 164,
+      "remaining": 75,
+      "originalFailuresClosed": 37,
+      "regressions": 0,
+      "trackedLiteFiles": 210,
+      "loadErrors": 0
+    },
+    "performanceReport": "2026-11-02-expression-items-performance.json",
+    "knownLimits": "Expression items over admitted forms. Value blocks and broader conditional results, fixed-array/List tail distinctions, function/type namespaces and unsupported data capture, native C and run/check migration remain queued. Supplementary-character columns stay deferred to the final diagnostic audit."
+  },
+  "reproductionCommands": [
+    "git show 1ba98c5f60bf0c1f748f9f70d25d460d35ce30f1:compiler/bootstrap/T11.ts > /tmp/previous-seed.ts",
+    "node --input-type=module -e 'import {writeFileSync} from \"node:fs\"; import {loadBundle} from \"./igniter/loader.ts\"; writeFileSync(\"/tmp/S.lts\",loadBundle(\"compiler/manifests/ts.json\").text); writeFileSync(\"/tmp/C-S.lts\",loadBundle(\"compiler/manifests/c.json\").text);'",
+    "node compiler/scripts/run-ts-artifact.ts --artifact /tmp/previous-seed.ts --source /tmp/S.lts --out /tmp/transitional.ts",
+    "node compiler/scripts/run-ts-artifact.ts --artifact /tmp/transitional.ts --source /tmp/S.lts --out /tmp/stage1.ts",
+    "node compiler/scripts/run-ts-artifact.ts --artifact /tmp/stage1.ts --source /tmp/S.lts --out /tmp/stage2.ts",
+    "node compiler/scripts/run-ts-artifact.ts --artifact /tmp/stage2.ts --source /tmp/S.lts --out /tmp/stage3.ts",
+    "node compiler/scripts/run-ts-artifact.ts --artifact /tmp/stage3.ts --source /tmp/C-S.lts --out /tmp/c-emitter.ts"
+  ]
+}

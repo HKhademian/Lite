@@ -12,8 +12,8 @@
         "hash": "sha256:e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
       },
       "stderr": {
-        "text": "1:17: expected a statement: output/outputLine, declaration, assignment, if or loop\n",
-        "hash": "sha256:7d4ffa7f50035851cefa3de57a52dc8254240aec0dc6ee775e4def78e913947e"
+        "text": "1:17: unterminated string literal\n",
+        "hash": "sha256:afae01ae743764c2de64d565ec5febf43b56853bcf2258d8003c10dbc82d780a"
       },
       "exitCode": 2
     }

@@ -480,6 +480,8 @@ emitProgram := fn(items: Items, source: String, prefix: String): Unit {
             outputLine(indent + "continue;");
         } else if item.kind == "Call" {
             outputLine(indent + item.code + ";");
+        } else if item.kind == "Discard" {
+            outputLine(indent + "void (" + item.code + ");");
         } else if item.kind == "LocalInt" or item.kind == "LocalString" or item.kind == "LocalBool" or item.kind == "LocalFloat" or item.kind == "LocalTuple" {
             outputLine(indent + "const " + item.runtime + " = " + item.code + ";");
             outputLine(indent + "void " + item.runtime + ";");

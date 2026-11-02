@@ -423,6 +423,7 @@ collectSymbols := fn(tokens: Tokens, prefix: String): Symbols {
     var cursor := 0;
     loop cursor < count {
         token := tokenAt(tokens, cursor);
+        if isSymbol(token, ";") { cursor = cursor + 1; continue; }
         if token.kind == TOKEN_KIND_EOF() { break; }
         if token.kind == TOKEN_KIND_NAME() and isSymbol(tokenAt(tokens, cursor + 1), ":=") and
             tokenAt(tokens, cursor + 2).kind == TOKEN_KIND_KEYWORD() and tokenAt(tokens, cursor + 2).text == "type" {

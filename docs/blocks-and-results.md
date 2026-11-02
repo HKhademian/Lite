@@ -151,6 +151,13 @@ Declarations and assignments likewise do not echo their values. See
 Discarding an ordinary result does not skip its evaluation or suppress its effects
 or failures.
 
+Generated compiler coverage, 2026-11-02: ordinary expression items now preserve
+evaluation and discard the result silently over each target's admitted forms.
+Empty separators are accepted; trailing separators preserve a function's final
+expression result and its type check. Generated C evaluates discarded scalar
+expressions explicitly; functions and aggregates remain in its transition queue.
+See the [expression-item evidence](../compiler/parity.md#ordinary-expression-items).
+
 Because there is no enclosing function, loop, or tagged block at this boundary, a
 top-level `return`, `break`, or `continue` has no valid target. Exact diagnostics
 and any future top-level exit spelling remain open.
