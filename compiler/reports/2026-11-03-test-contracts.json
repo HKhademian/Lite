@@ -1,0 +1,126 @@
+{
+  "date": "2026-11-03",
+  "phase": "w1-contracts",
+  "baselineRevision": "5259aaa",
+  "node": "v24.16.0",
+  "sourceSha256": "214cfa39400929ca9e45d5e5f67a4102ec35d0276b109e8ebcc2405490ec7a5e",
+  "seedSha256": "77cacbacdc2aa97c6c3b86c61f54501fd322ca081cb8be63bd9e5cf1f91818ee",
+  "languageSourceOrSeedChanged": false,
+  "originalIgniterTests": 240,
+  "destinations": {
+    "generatedPhaseArtifact": 81,
+    "reference": 159
+  },
+  "referenceBodiesUnchanged": true,
+  "recordedProcessContracts": 776,
+  "distinctSources": 611,
+  "expectationProvenance": {
+    "revision": "5259aaa",
+    "method": "Captured from handwritten T00, never generated TS output. Existing explicit selected-Lite expectations remain in test bodies.",
+    "interpreterSha256": "057e418490b39553f804798711ab72e749dea9cf8796414cc35c3e4f06dfe8a2",
+    "referenceAdapterSha256": "4c0b269732e2a052bdc3cf84002b8534c25fed73827658d43090d1f5d6f7bdd7",
+    "nativeExpectations": "49 additional requests evaluated from unchanged host test source/input matrices using T00 only, with artifact execution disabled. No native validation claimed."
+  },
+  "fast": {
+    "tests": 290,
+    "passed": 278,
+    "failed": 0,
+    "skipped": 12,
+    "durationMs": 123089.530041
+  },
+  "full": {
+    "tests": 290,
+    "passed": 281,
+    "failed": 0,
+    "skipped": 9,
+    "durationMs": 123464.846875
+  },
+  "fullCommand": "/usr/bin/caffeinate -i ./lite test --full",
+  "noT00": {
+    "command": "node --test --test-name-pattern=\"generated reports|generated temporary I/O|generated input rejects|Int64, Float64|Float contexts|default verification\" compiler/tests/host.test.ts",
+    "result": {
+      "tests": 6,
+      "passed": 6,
+      "failed": 0,
+      "skipped": 0,
+      "durationMs": 21747.808791
+    },
+    "absent": [
+      "igniter/lite.ts",
+      "igniter/bootstrap.ts",
+      "igniter/cli.ts"
+    ],
+    "note": "Copied package used verbatim relative launcher symlinks; process contracts also load from a standalone T00-free package."
+  },
+  "strictChecks": [
+    "node igniter/node_modules/typescript/bin/tsc --noEmit -p igniter/tsconfig.json",
+    "node igniter/node_modules/typescript/bin/tsc --noEmit -p compiler/bootstrap/tsconfig.json"
+  ],
+  "contractIntegrityTests": 5,
+  "editorGrammarTests": 9,
+  "generatedFixedPoint": {
+    "node": "v24.16.0",
+    "sourceSha256": "214cfa39400929ca9e45d5e5f67a4102ec35d0276b109e8ebcc2405490ec7a5e",
+    "seedSha256": "77cacbacdc2aa97c6c3b86c61f54501fd322ca081cb8be63bd9e5cf1f91818ee",
+    "stages": [
+      {
+        "generation": 1,
+        "sha256": "77cacbacdc2aa97c6c3b86c61f54501fd322ca081cb8be63bd9e5cf1f91818ee",
+        "bytes": 351426,
+        "durationMs": 937.6899999999999
+      },
+      {
+        "generation": 2,
+        "sha256": "77cacbacdc2aa97c6c3b86c61f54501fd322ca081cb8be63bd9e5cf1f91818ee",
+        "bytes": 351426,
+        "durationMs": 1017.353167
+      },
+      {
+        "generation": 3,
+        "sha256": "77cacbacdc2aa97c6c3b86c61f54501fd322ca081cb8be63bd9e5cf1f91818ee",
+        "bytes": 351426,
+        "durationMs": 1054.3573330000002
+      }
+    ]
+  },
+  "canonicalVerification": {
+    "executed": 81,
+    "passed": 60,
+    "failed": 21,
+    "failures": [
+      "FAIL cond.partial/defaults-and-no-write [ts]: compiler exited 2: 2:19: value if requires a final else",
+      "FAIL finally.cleanup/cleanup [ts]: compiler exited 2: 1:31: expected an Int, Float, String or Bool expression",
+      "FAIL init.reserved/first-write [ts]: compiler exited 2: 1:10: expected an Int, Float, String or Bool expression",
+      "FAIL init.zero/zero-values [ts]: compiler exited 2: 3:5: expected a tuple field name",
+      "FAIL list.mutation/push-front-back [ts]: compiler exited 2: 3:1: unknown value push_front",
+      "FAIL loop.metadata/metadata-and-targets [ts]: compiler exited 2: 1:6: unsupported feature \"loop\": see docs/loops.md; the restricted compiler accepts Int/Float/String/Bool expressions, locals, output/outputLine, if/else and loop only",
+      "FAIL loop.value/value-and-then [ts]: compiler exited 2: 1:8: unsupported feature \"loop\": see docs/loops.md; the restricted compiler accepts Int/Float/String/Bool expressions, locals, output/outputLine, if/else and loop only",
+      "FAIL match.subjectless/first-true-and-fallback [ts]: compiler exited 2: 2:10: unsupported feature \"match\": see docs/match.md; the restricted compiler accepts Int/Float/String/Bool expressions, locals, output/outputLine, if/else and loop only",
+      "FAIL mut.inferred/writable-lists [ts]: compiler exited 2: 1:1: unsupported feature \"mut\": see docs/declarations-and-assignment.md; the restricted compiler accepts Int/Float/String/Bool expressions, locals, output/outputLine, if/else and loop only",
+      "FAIL num.widths/widths [ts]: compiler exited 2: 1:4: unsupported local type Int8",
+      "FAIL report.tuple/tuple-display [ts]: compiler exited 2: 1:29: expected )",
+      "FAIL scope.compound/compound-chain [ts]: compiler exited 2: 2:8: expected an Int, Float, String or Bool expression",
+      "FAIL tuple.shape/named-and-positional [ts]: compiler exited 2: 3:2: unknown value one",
+      "FAIL example.006-fixed-tuples/tuple-demo [ts]: compiler exited 2: 1:47: expected a tuple field name",
+      "FAIL example.008-named-tuples/named-tuple [ts]: compiler exited 2: 2:6: expected an Int, Float, String or Bool expression",
+      "FAIL example.009-fixed-arrays/token-index [ts]: compiler exited 2: 12:19: unsupported function type",
+      "FAIL example.010-mixed-tuples/mixed-tuple [ts]: compiler exited 2: 2:12: expected )",
+      "FAIL example.011-tuple-label-conversion/relabel [ts]: compiler exited 2: 2:1: cannot initialize (x: Int, y: Int) with (width: Int, height: Int)",
+      "FAIL example.012-named-arguments/named-args [ts]: compiler exited 2: 5:19: unknown value c",
+      "FAIL example.013-growable-lists/list-ends [ts]: compiler exited 2: 3:1: unknown value push_front",
+      "FAIL example.016-integer-calculator/precedence [ts]: compiler exited 2: 49:5: cannot return Unit from function digitValue returning Int"
+    ]
+  },
+  "coverage": {
+    "features": 41,
+    "examples": 19,
+    "samples": 20,
+    "passed": true
+  },
+  "remaining": [
+    "w2: default actual compiler and phase-driver helpers still require generated execution; launcher still includes the reference suite.",
+    "w3: routine self-build, corpus and benchmark scripts still need generated-only routes.",
+    "Existing language ports and T00 retirement remain pending; reference passes are not generated support."
+  ],
+  "timingNote": "Fast/full durations are regression evidence, not a paired performance comparison. No speedup is claimed. Earlier full attempts hit subprocess timeouts during long host suspension; the final run temporarily inhibited idle sleep without changing test timeouts."
+}

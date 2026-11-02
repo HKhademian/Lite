@@ -1,11 +1,11 @@
 ---
 name: t00-ts-retirement-workflows
-status: pending
+status: in_progress
 created: 2026-11-02
 todos:
   - id: w1-contracts
     content: "Separate generated contracts from live T00 reference execution"
-    status: pending
+    status: completed
   - id: w2-default-tests
     content: "Make lite test execute generated compiler regressions by default"
     status: pending
@@ -26,6 +26,8 @@ Finish the consumer cutover before further broad feature work, keeping all gener
 
 ## Done
 
+- 2026-11-03, w1-contracts: all 240 original igniter tests retain a mapped destination (81 generated/phase/artifact, 159 reference); shared manifest loading and 776 exact independent process contracts replace live expected-value queries. The explicit reference suite replays the corpus and archive. Five contract/ledger tests and six copied-checkout no-T00 host groups pass. Fast: 278 pass/12 deferred skips; full: 281 pass/nine native skips. Strict host/seed checks pass. Compiler source/seed and the 60/81 TS canonical audit are unchanged. Default actual compiler/phase helpers and launcher routing remain w2 work.
+
 Public compile/check/verify already use T11. Public run is removed; C/native gates are deferred. Do not redo commits 32373f7, f5594f3 or 4007639.
 
 ## Plan links
@@ -34,18 +36,6 @@ Public compile/check/verify already use T11. Public run is removed; C/native gat
 - Execute sequentially; the compiler frontend and seed files are shared.
 
 ## Implementation order
-
-### w1-contracts — Separate generated contracts from live T00 reference execution
-
-**Depends on:** none.
-**Files:** `igniter/test.ts`, `compiler/tests/host.test.ts`, `igniter/tests/compiler/`; create shared fixture/test adapters under those test directories.
-**Actions / atomic commit order:**
-1. Inventory every test/helper that imports lite.ts/bootstrap.ts or spawns the T00 CLI. Classify generated actual execution, live-reference expectation lookup, interpreter-internal API tests and native-only checks; retain a mapping from every existing assertion to its destination.
-2. Extract reusable fixture loading and reviewed expected streams/status from current manifests and explicit expectations. Replace live T00 expected-value calls in generated regressions with independent expectations. Preserve manual selected-Lite expectations where T00 differs; do not snapshot current generated output as its own oracle.
-3. Keep interpreter-internal and explicit differential checks in a separately named reference suite. Do not move generated feature regressions out of the default merely because they currently import a reference helper.
-
-**Acceptance:** Every existing generated assertion has a maintained TS destination or an explicitly recorded pending port; no lost checks or hidden backend passes.
-**Verify:** Focused fixture integrity/stream/status checks and tests proving generated helpers load with T00 absent.
 
 ### w2-default-tests — Make lite test execute generated compiler regressions by default
 

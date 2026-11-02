@@ -1,11 +1,11 @@
 ---
 name: t00-ts-retirement-master
-status: pending
+status: in_progress
 created: 2026-11-02
 todos:
   - id: wave-1-workflows
     content: "Default tests and routine compiler tools use generated TS"
-    status: pending
+    status: in_progress
   - id: wave-2-values-calls
     content: "Port existing data, storage and callable contracts"
     status: pending
@@ -43,9 +43,11 @@ Follow the owner's direction: "lets make it the fastest way possible to switch t
 remove the run command from selfhosted for now
 all the features must be compilable and then run from the artifacts ( ts / c )
 postpone c output to the post migration".
-Finish existing supported TS features and consumers, then retire active T00. This index defines order; implementation details and atomic topic sequences live in its four child plans. Planning does not start implementation or restart the cleared autonomous goal.
+Finish existing supported TS features and consumers, then retire active T00. This index defines order; implementation details and atomic topic sequences live in its four child plans. Execution resumed on 2026-11-03; no persistent autonomous goal is created.
 
 ## Done and verified baseline
+
+- 2026-11-03: w1-contracts is complete; original test ownership and independent expectations are preserved. Wave 1 remains active: generated actual helpers/default routing (w2), then compiler tooling (w3). See the workflow plan and `compiler/tests/contracts/README.md`.
 
 - `32373f7`: public run removed; generated TS compile/check, check-only without effects; C output deferred.
 - `f5594f3`: verification/updates use TS artifacts; T00 only via --reference; compile/check once per manifest.

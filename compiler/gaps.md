@@ -471,3 +471,9 @@ pass. All 69 earlier fixture artifact pairs remain unchanged. See the
 Owner update: remove public run, compile then execute TS artifacts, and defer
 C output/native gates until after TS migration. Next is the public workflow
 cutover and the remaining ordinary TS syntax; C is not a retirement blocker.
+
+## Test-contract separation (2026-11-03)
+
+- 2026-11-03: w1 test contracts are separated: all 240 original igniter tests retain destinations (81 generated/phase/artifact, 159 reference), and 776 exact process contracts replace live T00 expected-value lookups. Shared manifest loading retains all 93 compiler fixtures. Five contract/ownership checks, six copied-checkout no-T00 host groups, strict host/seed checks, three identical generated self-builds and nine editor groups pass. Fast: 278 pass/12 skips; full: 281 pass/9 native skips, zero failures. Compiler source/seed and the 60/81 canonical TS audit are unchanged. Default actual compiler/phase helpers and reference selection remain w2 work. See [the evidence](reports/2026-11-03-test-contracts.json) and [contract guide](tests/contracts/README.md).
+
+This is a harness prerequisite, not a language-port closure or completed default test cutover. The measured 112/172 source inventory is unchanged because compiler source and seed identities are unchanged.

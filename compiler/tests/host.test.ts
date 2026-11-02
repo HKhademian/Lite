@@ -9,7 +9,7 @@ import { loadBundle } from '../../igniter/loader.ts';
 import { buildCompiler, buildTsCompiler, compileTarget, compileTs, type CompilerTarget } from '../host.ts';
 import { seed } from '../bootstrap/seed.ts';
 import { cSeed } from '../bootstrap/c-seed.ts';
-import { runText } from '../../igniter/bootstrap.ts';
+import { expectedText } from './contracts.ts';
 import { checkTsArtifact, runTsArtifact, runCArtifact, withTsArtifact, withTsArtifacts, type ArtifactOptions, type ArtifactRun } from '../../igniter/artifacts.ts';
 
 const root = fileURLToPath(new URL('../../', import.meta.url));
@@ -177,7 +177,7 @@ test('generated reports evaluate arguments once in order and preserve nested out
       stdout: 'before\nstopped\n', status: 4 },
   ];
   for (const { source, stdout, status } of cases) {
-    const expected = runText(source);
+    const expected = expectedText(source);
     assert.deepEqual(expected, { status, stdout: Buffer.from(stdout), stderr: Buffer.alloc(0) });
     const compiled = compileTs({ text: source });
     assert.equal(compiled.status, 0, compiled.stderr.toString());
@@ -394,7 +394,7 @@ test('generated temporary I/O helpers preserve prompts, value display, input sta
     ['inputLine("L: ");', ''],
   ];
   for (const [source, stdin] of cases) {
-    const expected = runText(source, { stdin });
+    const expected = expectedText(source, { stdin });
     const compiled = compileTs({ text: source });
     assert.equal(compiled.status, 0, compiled.stderr.toString());
     const actual = runTsArtifact(compiled.stdout.toString(), { stdin });
@@ -403,7 +403,7 @@ test('generated temporary I/O helpers preserve prompts, value display, input sta
     assert.deepEqual({ status: actual.status, stdout: actual.stdout, stderr: actual.stderr }, expected, source);
   }
   const faultSource = 'outputLine("before fault"); values: List<Int> = [1]; outputLine(values[2]);';
-  const expectedFault = runText(faultSource);
+  const expectedFault = expectedText(faultSource);
   const compiledFault = compileTs({ text: faultSource });
   assert.equal(compiledFault.status, 0, compiledFault.stderr.toString());
   const actualFault = runTsArtifact(compiledFault.stdout.toString());
@@ -413,31 +413,32 @@ test('generated temporary I/O helpers preserve prompts, value display, input sta
 
 });
 
-test('generated input rejects malformed UTF-8 at the same read as the real interpreter CLI', () => {
-  const directory = mkdtempSync(join(tmpdir(), 'lite-io-utf8-'));
-  try {
-    const path = join(directory, 'input.lts');
-    for (const stdin of [Buffer.from([0xff]), Buffer.from([0xf0, 0x9f]), Buffer.from([0x37, 0x20, 0xff])]) {
-      const source = 'output("before:"); outputLine(inputInt("N: ")); inputAll("Rest: ");';
-      writeFileSync(path, source);
-      const expected = spawnSync(process.execPath, [join(root, 'igniter/cli.ts'), path], { input: stdin });
-      assert.equal(expected.error, undefined);
-      const compiled = compileTs({ text: source, name: path });
-      assert.equal(compiled.status, 0, compiled.stderr.toString());
-      const actual = runTsArtifact(compiled.stdout.toString(), { stdin });
-      assert.equal(actual.phase, 'run');
-      assert.equal(actual.status, expected.status);
-      assert.deepEqual(actual.stdout, expected.stdout);
-      assert.deepEqual(actual.stderr, expected.stderr);
+test('generated input rejects malformed UTF-8 at the first reached read', () => {
+  let decodeError = '';
+  try { new TextDecoder('utf-8', { fatal: true }).decode(Buffer.from([0xff])); }
+  catch (error) { decodeError = (error as Error).message; }
+  assert.ok(decodeError);
+  const source = 'output("before:"); outputLine(inputInt("N: ")); inputAll("Rest: ");';
+  const compiled = compileTs({ text: source, name: 'input.lts' });
+  assert.equal(compiled.status, 0, compiled.stderr.toString());
+  withTsArtifact(compiled.stdout.toString(), run => {
+    for (const [stdin, stdout, column] of [
+      [Buffer.from([0xff]), 'before:N: ', 31], [Buffer.from([0xf0, 0x9f]), 'before:N: ', 31],
+      [Buffer.from([0x37, 0x20, 0xff]), 'before:N: 7\nRest: ', 49],
+    ] as const) {
+      const actual = run({ stdin });
+      assert.equal(actual.phase, 'run'); assert.equal(actual.signal, null); assert.equal(actual.status, 1);
+      assert.equal(actual.stdout.toString(), stdout);
+      assert.equal(actual.stderr.toString(), `input.lts:1:${column}: InputFault: cannot read input: ${decodeError}\n`);
     }
-  } finally { rmSync(directory, { recursive: true, force: true }); }
+  });
 });
 
 test('report is no longer a builtin and temporary I/O rejects invalid signatures before effects', () => {
   for (const source of ['report(1);', 'inputLine(7);', 'inputFloat(7);', 'inputInt("a", "b");', 'inputAll(1);',
     'outputLine(prompt = "label", 1);', 'output(fn(): Int { 1 });',
     'inputInt := 3; outputLine(inputInt());', 'outputLine := 3; outputLine(1);']) {
-    assert.notEqual(runText(source).status, 0, source);
+    assert.notEqual(expectedText(source).status, 0, source);
     assert.notEqual(compileTs({ text: source }).status, 0, source);
   }
 });
@@ -484,7 +485,7 @@ test('generated TS checks Int64 boundaries, exact faults and operand evaluation 
   const compiled = compileTs({ text: source });
   assert.equal(compiled.status, 0, compiled.stderr.toString());
   const actual = runTsArtifact(compiled.stdout.toString());
-  const expected = runText(source);
+  const expected = expectedText(source);
   assert.equal(actual.phase, 'run', actual.stdout.toString() + actual.stderr.toString());
   assert.deepEqual({ status: actual.status, stdout: actual.stdout, stderr: actual.stderr }, expected);
 
@@ -497,7 +498,7 @@ test('generated TS checks Int64 boundaries, exact faults and operand evaluation 
   assert.equal(faults.status, 0, faults.stderr.toString());
   withTsArtifact(faults.stdout.toString(), run => {
     for (const [index, expression] of overflowingInt64Expressions.entries()) {
-      const reference = runText(faultSource, { stdin: String(index), name });
+      const reference = expectedText(faultSource, { stdin: String(index), name });
       assert.equal(reference.status, 1, expression);
       const result = run({ stdin: String(index) });
       assert.equal(result.phase, 'run'); assert.equal(result.signal, null);
@@ -509,7 +510,7 @@ test('generated TS checks Int64 boundaries, exact faults and operand evaluation 
   const emitted = compileTs({ text: effects });
   assert.equal(emitted.status, 0, emitted.stderr.toString());
   const run = runTsArtifact(emitted.stdout.toString());
-  const reference = runText(effects);
+  const reference = expectedText(effects);
   assert.deepEqual({ status: run.status, stdout: run.stdout, stderr: run.stderr }, reference);
 });
 
@@ -542,7 +543,7 @@ test('generated text/list bounds faults preserve exact positions, output and ope
     assert.equal(compiled.status, 0, compiled.stderr.toString());
     withTsArtifact(compiled.stdout.toString(), run => {
       for (const [index, body] of bodies.entries()) {
-        const expected = runText(text, name === undefined ? { stdin: String(index) } : { stdin: String(index), name });
+        const expected = expectedText(text, name === undefined ? { stdin: String(index) } : { stdin: String(index), name });
         const actual = run({ stdin: String(index) });
         assert.equal(expected.status, 1); assert.equal(actual.phase, 'run'); assert.equal(actual.signal, null);
         assert.deepEqual({ status: actual.status, stdout: actual.stdout, stderr: actual.stderr }, expected, body);
@@ -553,7 +554,7 @@ test('generated text/list bounds faults preserve exact positions, output and ope
     'index := fn(): Int { outputLine("index"); 2 } outputLine("before"); outputLine(items()[index()]);';
   const valid = 'values: mut List<Int> = [3, 4]; outputLine(textAt("🙂x", 0), textSlice("🙂ab", 0, 3), textSlice("", 0, 0), values[0], values[1], pop_back(mut values));';
   for (const source of [effects, valid]) {
-    const compiled = compileTs({ text: source }), expected = runText(source);
+    const compiled = compileTs({ text: source }), expected = expectedText(source);
     assert.equal(compiled.status, 0, compiled.stderr.toString());
     const actual = runTsArtifact(compiled.stdout.toString());
     assert.equal(actual.phase, 'run');
@@ -579,7 +580,7 @@ test('inequality stays distinct from assignment and tuple fields in grouping and
     'point := (value = 7); outputLine(point.value);',
   ];
   for (const source of [...common, ...tsOnly]) {
-    const expected = runText(source); assert.equal(expected.status, 0, expected.stderr.toString());
+    const expected = expectedText(source); assert.equal(expected.status, 0, expected.stderr.toString());
     const compiled = compileTs({ text: source }); assert.equal(compiled.status, 0, compiled.stderr.toString());
     const actual = runTsArtifact(compiled.stdout.toString());
     assert.equal(actual.phase, 'run', actual.stdout.toString() + actual.stderr.toString());
@@ -593,7 +594,7 @@ test('inequality stays distinct from assignment and tuple fields in grouping and
   for (const bad of ['value := "x"; outputLine((value =!=));', 'value := "x"; outputLine((value =!= 1));',
     'x := 1; x = 2;', 'point := (value =);', 'var x := 1; x === 2;']) {
     const text = 'outputLine("before"); ' + bad;
-    assert.equal(runText(text).stdout.length, 0);
+    assert.equal(expectedText(text).stdout.length, 0);
     for (const target of ['ts', 'c'] as const) {
       const compiled = compileTarget(target, { text });
       assert.equal(compiled.status, 2, bad); assert.equal(compiled.stdout.length, 0, bad);
@@ -612,7 +613,7 @@ test('constant integer faults execute only when reached, preserving short-circui
     `outputLine(false and (${expression} > 0), true or (${expression} > 0));`,
   ]).join('\n');
   const valid = skipped + '\noutputLine(2 * (3 - 4), -(-7), -9223372036854775808 % -1);';
-  const compiled = compileTs({ text: valid }), expected = runText(valid);
+  const compiled = compileTs({ text: valid }), expected = expectedText(valid);
   assert.equal(expected.status, 0, expected.stderr.toString()); assert.equal(compiled.status, 0, compiled.stderr.toString());
   const actual = runTsArtifact(compiled.stdout.toString()); assert.equal(actual.phase, 'run');
   assert.deepEqual({ status: actual.status, stdout: actual.stdout, stderr: actual.stderr }, expected);
@@ -626,13 +627,13 @@ test('constant integer faults execute only when reached, preserving short-circui
   const faults = compileTs({ text, name }); assert.equal(faults.status, 0, faults.stderr.toString());
   withTsArtifact(faults.stdout.toString(), run => {
     for (const [index, expression] of expressions.entries()) {
-      const expected = runText(text, { stdin: String(index), name }), actual = run({ stdin: String(index) });
+      const expected = expectedText(text, { stdin: String(index), name }), actual = run({ stdin: String(index) });
       assert.equal(expected.status, 1); assert.equal(actual.phase, 'run'); assert.equal(actual.signal, null);
       assert.deepEqual({ status: actual.status, stdout: actual.stdout, stderr: actual.stderr }, expected, expression);
       if (process.env['LITE_SKIP_NATIVE'] !== '1') {
         const text = `outputLine("before");\r\noutputLine(${expression});`;
         const c = compileTarget('c', { text, name }); assert.equal(c.status, 0, c.stderr.toString());
-        const native = runCArtifact(c.stdout.toString()), expected = runText(text, { name });
+        const native = runCArtifact(c.stdout.toString()), expected = expectedText(text, { name });
         assert.equal(native.phase, 'run'); assert.equal(native.signal, null);
         assert.deepEqual({ status: native.status, stdout: native.stdout, stderr: native.stderr }, expected);
       }
@@ -642,12 +643,12 @@ test('constant integer faults execute only when reached, preserving short-circui
     'value := if true { 5 } else { 1 / 0 }; outputLine(value);',
     'value := if false { 1 / 0 } else { 5 }; outputLine(value);']) {
     const c = compileTs({ text }); assert.equal(c.status, 0, c.stderr.toString());
-    const r = runTsArtifact(c.stdout.toString()), e = runText(text);
+    const r = runTsArtifact(c.stdout.toString()), e = expectedText(text);
     assert.equal(r.phase, 'run'); assert.deepEqual({ status: r.status, stdout: r.stdout, stderr: r.stderr }, e);
   }
   for (const text of ['if false { outputLine(missing); }', 'outputLine(false and ("x" + 1 > 0));',
     'if false { outputLine(9223372036854775808); }']) {
-    assert.equal(runText(text).status, 1);
+    assert.equal(expectedText(text).status, 1);
     for (const target of ['ts', 'c'] as const) {
       const c = compileTarget(target, { text }); assert.equal(c.status, 2); assert.equal(c.stdout.length, 0);
     }
@@ -671,7 +672,7 @@ test('comparison chains compare adjacent values once and skip later operands on 
   rows.push('var lt_cmp_i_0_0 := 3; outputLine(0 < lt_cmp_i_0_0 < 4);');
   rows.push('var n := 0; loop 0 <= n < 3 { outputLine(n); n = n + 1; } outputLine(0 <= a < 2 < 3 < 4);');
   rows.push('var repeated := 1; outputLine(' + ['0', ...Array.from({ length: 300 }, () => 'repeated'), '2'].join(' <= ') + ');');
-  const matrix = rows.join('\n'), expected = runText(matrix);
+  const matrix = rows.join('\n'), expected = expectedText(matrix);
   assert.equal(expected.status, 0, expected.stderr.toString());
   for (const target of ['ts', 'c'] as const) {
     const compiled = compileTarget(target, { text: matrix }); assert.equal(compiled.status, 0, compiled.stderr.toString());
@@ -693,13 +694,13 @@ test('comparison chains compare adjacent values once and skip later operands on 
   ];
   for (const item of cases) {
     const compiled = compileTs({ text: item.text }); assert.equal(compiled.status, 0, compiled.stderr.toString());
-    const actual = runTsArtifact(compiled.stdout.toString(), { stdin: item.stdin }), expected = runText(item.text, { stdin: item.stdin });
+    const actual = runTsArtifact(compiled.stdout.toString(), { stdin: item.stdin }), expected = expectedText(item.text, { stdin: item.stdin });
     assert.equal(actual.phase, 'run', actual.stdout.toString() + actual.stderr.toString()); assert.equal(actual.signal, null);
     assert.deepEqual({ status: actual.status, stdout: actual.stdout, stderr: actual.stderr }, expected, item.text);
   }
   for (const expression of ['0 < 1 < (1 / 0)', '0 < 1 < (9223372036854775807 + 1)', '(1 / 0) < 2 < 3']) {
     const text = 'outputLine("before");\r\noutputLine("prefix", ' + expression + ');', name = 'chain سلام.lts';
-    const expected = runText(text, { name }); assert.equal(expected.status, 1);
+    const expected = expectedText(text, { name }); assert.equal(expected.status, 1);
     for (const target of ['ts', 'c'] as const) {
       const compiled = compileTarget(target, { text, name }); assert.equal(compiled.status, 0, compiled.stderr.toString());
       if (target === 'c' && process.env['LITE_SKIP_NATIVE'] === '1') continue;
@@ -710,7 +711,7 @@ test('comparison chains compare adjacent values once and skip later operands on 
   }
   for (const bad of ['outputLine(1 > 2 < "bad");', 'outputLine(true < true < true);', 'outputLine(1 < 2 < missing);',
     'if 1 < 2', 'outputLine(1 < 2 <);']) {
-    assert.equal(runText(bad).status, 1);
+    assert.equal(expectedText(bad).status, 1);
     for (const target of ['ts', 'c'] as const) { const c = compileTarget(target, { text: bad }); assert.equal(c.status, 2); assert.equal(c.stdout.length, 0); }
   }
   assert.equal(compileTarget('c', { text: 'outputLine(Unit =!= Unit == exit(3));' }).status, 2);
@@ -736,7 +737,7 @@ test('C output evaluates all arguments before writing, including mixed scalar an
     const text = prefix + body, name = 'output سلام🙂.lts';
     const compiled = compileTarget('c', { text, name });
     assert.equal(compiled.status, 0, compiled.stderr.toString());
-    const expected = runText(text, { name }), actual = runCArtifact(compiled.stdout.toString());
+    const expected = expectedText(text, { name }), actual = runCArtifact(compiled.stdout.toString());
     assert.equal(actual.phase, 'run', actual.stdout.toString() + actual.stderr.toString());
     assert.equal(actual.signal, null);
     assert.deepEqual({ status: actual.status, stdout: actual.stdout, stderr: actual.stderr }, expected, body);
@@ -749,7 +750,7 @@ test('generated TS division family matches boundary values, fault positions and 
     'var x := 1; var z := 0; var flag := false; outputLine(flag and (x / z > 0)); if flag { outputLine(x % z); }']) {
     const emitted = compileTs({ text: source });
     assert.equal(emitted.status, 0, emitted.stderr.toString());
-    const result = runTsArtifact(emitted.stdout.toString()), expected = runText(source);
+    const result = runTsArtifact(emitted.stdout.toString()), expected = expectedText(source);
     assert.equal(result.phase, 'run', result.stdout.toString() + result.stderr.toString());
     assert.equal(result.signal, null);
     assert.deepEqual({ status: result.status, stdout: result.stdout, stderr: result.stderr }, expected);
@@ -760,7 +761,7 @@ test('generated TS division family matches boundary values, fault positions and 
   assert.equal(emitted.status, 0, emitted.stderr.toString());
   withTsArtifact(emitted.stdout.toString(), run => {
     for (const [index, expression] of divisionFaultExpressions.entries()) {
-      const expected = runText(source, { name, stdin: String(index) }), actual = run({ stdin: String(index) });
+      const expected = expectedText(source, { name, stdin: String(index) }), actual = run({ stdin: String(index) });
       assert.equal(expected.status, 1); assert.equal(actual.phase, 'run'); assert.equal(actual.signal, null);
       assert.deepEqual({ status: actual.status, stdout: actual.stdout, stderr: actual.stderr }, expected, expression);
     }
@@ -771,13 +772,13 @@ test('portable C11 division family preserves defined minimum remainders and nest
   if (process.env['LITE_SKIP_NATIVE'] === '1') { context.skip('LITE_SKIP_NATIVE=1'); return; }
   const valid = int64BoundaryProgram(true), artifact = compileTarget('c', { text: valid });
   assert.equal(artifact.status, 0, artifact.stderr.toString());
-  const result = runCArtifact(artifact.stdout.toString()), reference = runText(valid);
+  const result = runCArtifact(artifact.stdout.toString()), reference = expectedText(valid);
   assert.equal(result.phase, 'run', result.stdout.toString() + result.stderr.toString());
   assert.deepEqual({ status: result.status, stdout: result.stdout, stderr: result.stderr }, reference);
   for (const expression of divisionFaultExpressions) {
     const text = divisionFaultSource(expression), name = 'division سلام🙂.lts', emitted = compileTarget('c', { text, name });
     assert.equal(emitted.status, 0, emitted.stderr.toString());
-    const expected = runText(text, { name }), actual = runCArtifact(emitted.stdout.toString());
+    const expected = expectedText(text, { name }), actual = runCArtifact(emitted.stdout.toString());
     assert.equal(expected.status, 1); assert.equal(actual.phase, 'run'); assert.equal(actual.signal, null);
     assert.deepEqual({ status: actual.status, stdout: actual.stdout, stderr: actual.stderr }, expected, expression);
   }
@@ -790,11 +791,11 @@ test('portable C11 checks Int64 boundaries and sequences nested faults left to r
   assert.equal(compiled.status, 0, compiled.stderr.toString());
   const result = runCArtifact(compiled.stdout.toString());
   assert.equal(result.phase, 'run', result.stdout.toString() + result.stderr.toString());
-  const reference = runText(source);
+  const reference = expectedText(source);
   assert.deepEqual({ status: result.status, stdout: result.stdout, stderr: result.stderr }, reference);
   for (const expression of overflowingInt64Expressions) {
     const text = int64FaultProgram(expression), name = 'arithmetic سلام🙂.lts';
-    const expected = runText(text, { name });
+    const expected = expectedText(text, { name });
     assert.equal(expected.status, 1);
     const artifact = compileTarget('c', { text, name });
     assert.equal(artifact.status, 0, artifact.stderr.toString());
@@ -817,7 +818,7 @@ test('empty and comment-only scripts compile silently without hiding malformed s
     ' \n/* سلام🙂 */\r\n', '/* ; {} () outputLine(1 / 0); */', '/* \"quoted\" */ /* another */',
     '/*# arbitrary /* nested-looking */ text #*/', '/* outer /*# raw */ body #*/ end */'];
   for (const text of sources) {
-    const expected = runText(text);
+    const expected = expectedText(text);
     assert.deepEqual(expected, { status: 0, stdout: Buffer.alloc(0), stderr: Buffer.alloc(0) });
     for (const target of ['ts', 'c'] as const) {
       const compiled = compileTarget(target, { text }); assert.equal(compiled.status, 0, compiled.stderr.toString());
@@ -826,13 +827,13 @@ test('empty and comment-only scripts compile silently without hiding malformed s
     }
   }
   for (const text of ['/*', '/* outer /* nested */', '/*# unterminated', '/* ok */ }', '/* ok */ outputLine(1); /* unterminated']) {
-    assert.equal(runText(text).status, 1);
+    assert.equal(expectedText(text).status, 1);
     for (const target of ['ts', 'c'] as const) {
       const result = compileTarget(target, { text }); assert.equal(result.status, 2); assert.equal(result.stdout.length, 0);
     }
   }
   for (const text of ['/* before */ outputLine(7); /* after */', '/* nested /* inner */ */ var n := 1; outputLine(0 <= n < 2);']) {
-    const expected = runText(text);
+    const expected = expectedText(text);
     for (const target of ['ts', 'c'] as const) {
       const compiled = compileTarget(target, { text }); assert.equal(compiled.status, 0, compiled.stderr.toString());
       if (target === 'c' && process.env['LITE_SKIP_NATIVE'] === '1') continue;
@@ -856,7 +857,7 @@ test('statement separators follow EOF, closing scope and directly closed block b
     'values: mut List<Int> = [1]; pop_back(mut values)',
     'inputLine("Prompt: ")', 'f := fn(): Unit { outputLine(7) } f()'];
   for (const [sources, targets] of [[both, ['ts', 'c']], [tsOnly, ['ts']]] as const) for (const text of sources) {
-    const expected = runText(text, { stdin: 'line\n' }); assert.equal(expected.status, 0, text + expected.stderr.toString());
+    const expected = expectedText(text, { stdin: 'line\n' }); assert.equal(expected.status, 0, text + expected.stderr.toString());
     for (const target of targets) {
       const compiled = compileTarget(target, { text }); assert.equal(compiled.status, 0, text + compiled.stderr.toString());
       if (target === 'c' && process.env['LITE_SKIP_NATIVE'] === '1') continue;
@@ -868,13 +869,13 @@ test('statement separators follow EOF, closing scope and directly closed block b
     'x := (if true { 1 } else { 2 }) outputLine(x);', 'Number := type Int outputLine(1);',
     'if true { outputLine(1)', 'noop := fn(): Unit { return', 'f := fn(): Int { return }'];
   for (const text of invalid) {
-    assert.equal(runText(text).status, 1, text);
+    assert.equal(expectedText(text).status, 1, text);
     for (const target of ['ts', 'c'] as const) {
       const result = compileTarget(target, { text }); assert.equal(result.status, 2, text); assert.equal(result.stdout.length, 0);
     }
   }
   const text = 'outputLine("before");\r\nvar zero := 0; outputLine(1 / zero) /* tail */', name = 'boundary سلام.lts';
-  const expected = runText(text, { name }); assert.equal(expected.status, 1);
+  const expected = expectedText(text, { name }); assert.equal(expected.status, 1);
   for (const target of ['ts', 'c'] as const) {
     const compiled = compileTarget(target, { text, name }); assert.equal(compiled.status, 0, compiled.stderr.toString());
     if (target === 'c' && process.env['LITE_SKIP_NATIVE'] === '1') continue;
@@ -901,7 +902,7 @@ test('adjacent String literals join across trivia before expressions and encode 
     'outputLine(textLength("ab" "cd"), textAt("ab" "cd", 2), textSlice("ab" "cd", 1, 3));',
     'value := if true { "a" "b" } else { "c" "d" } outputLine(value);'];
   for (const [sources, targets] of [[both, ['ts', 'c']], [tsOnly, ['ts']]] as const) for (const text of sources) {
-    const expected = runText(text, { stdin: 'line\n' }); assert.equal(expected.status, 0, text + expected.stderr.toString());
+    const expected = expectedText(text, { stdin: 'line\n' }); assert.equal(expected.status, 0, text + expected.stderr.toString());
     for (const target of targets) {
       const compiled = compileTarget(target, { text }); assert.equal(compiled.status, 0, text + compiled.stderr.toString());
       if (target === 'c' && process.env['LITE_SKIP_NATIVE'] === '1') continue;
@@ -912,7 +913,7 @@ test('adjacent String literals join across trivia before expressions and encode 
     'outputLine("a" /* unterminated', 'outputLine("a" /*# unterminated',
     'value := "a"; outputLine(value "b");', 'outputLine(("a") "b");', 'outputLine("a"; "b");', 'outputLine("a" 7);'];
   for (const text of invalid) {
-    assert.equal(runText(text).status, 1, text);
+    assert.equal(expectedText(text).status, 1, text);
     for (const target of ['ts', 'c'] as const) {
       const result = compileTarget(target, { text }); assert.equal(result.status, 2, text); assert.equal(result.stdout.length, 0);
     }
@@ -923,7 +924,7 @@ test('adjacent String literals join across trivia before expressions and encode 
     const text = 'value := "a" "b"; outputLine(value);\nvar zero := 0; outputLine(1 / zero);', name = 'joined سلام.lts';
     const compiled = compileTarget(target, { text, name }); assert.equal(compiled.status, 0, compiled.stderr.toString());
     if (target === 'c' && process.env['LITE_SKIP_NATIVE'] === '1') continue;
-    executions.push({ target, artifact: compiled.stdout.toString(), expected: runText(text, { name }), context: text });
+    executions.push({ target, artifact: compiled.stdout.toString(), expected: expectedText(text, { name }), context: text });
   }
   assertExecutions(executions);
 });
@@ -945,7 +946,7 @@ test('nonempty calls admit one trailing comma without adding a value or weakenin
     'reportError("err",); outputLine("after",);', 'outputLine("before",); exit(3,);'];
   for (const [sources, targets] of [[both, ['ts', 'c']], [tsOnly, ['ts']]] as const) for (const text of sources) {
     const stdin = text.includes('inputInt(') ? '7\n' : '1.5\n';
-    const reference = runText(text, { stdin });
+    const reference = expectedText(text, { stdin });
     assert.ok(reference.status === 0 || text.includes('exit(3,') && reference.status === 3, text + reference.stderr.toString());
     for (const target of targets) {
       const compiled = compileTarget(target, { text }); assert.equal(compiled.status, 0, text + compiled.stderr.toString());
@@ -959,7 +960,7 @@ test('nonempty calls admit one trailing comma without adding a value or weakenin
     'f := fn(a: Int, b: Int): Int { a + b } outputLine(f(1,));',
     'values: mut List<Int> = [1]; push_back(mut values,);', 'values: mut List<Int> = [1]; pop_back(mut values,,);'];
   for (const text of invalid) {
-    assert.equal(runText(text).status, 1, text);
+    assert.equal(expectedText(text).status, 1, text);
     for (const target of ['ts', 'c'] as const) {
       const result = compileTarget(target, { text }); assert.equal(result.status, 2, text); assert.equal(result.stdout.length, 0);
     }
@@ -967,7 +968,7 @@ test('nonempty calls admit one trailing comma without adding a value or weakenin
   for (const text of ['outputLine("before");\nvar zero := 0; outputLine("prefix", 1 / zero,);',
     'outputLine(inputInt("Int: ",),);', 'values: mut List<Int> = []; outputLine(pop_back(mut values,),);']) {
     const targets = text.includes('zero') ? ['ts', 'c'] as const : ['ts'] as const, name = 'comma سلام.lts';
-    const expected = runText(text, { name, stdin: 'bad' }); assert.equal(expected.status, 1);
+    const expected = expectedText(text, { name, stdin: 'bad' }); assert.equal(expected.status, 1);
     for (const target of targets) {
       const compiled = compileTarget(target, { text, name }); assert.equal(compiled.status, 0, compiled.stderr.toString());
       if (target === 'c' && process.env['LITE_SKIP_NATIVE'] === '1') continue;
@@ -1004,7 +1005,7 @@ test('statement scopes isolate locals and preserve outer values while shadow ini
     'pair := (n = 1, label = "x"); { pair := (n = pair.n + 1, label = pair.label); outputLine(pair.n, pair.label); } outputLine(pair.n);',
     'first := fn(values: List<Int>): Int { { values := values[0]; outputLine(values); } values[1] } items: List<Int> = [1, 2]; outputLine(first(items));'];
   for (const [sources, targets] of [[both, ['ts', 'c']], [tsOnly, ['ts']]] as const) for (const text of sources) {
-    const expected = runText(text); assert.equal(expected.status, 0, text + expected.stderr.toString());
+    const expected = expectedText(text); assert.equal(expected.status, 0, text + expected.stderr.toString());
     for (const target of targets) {
       const compiled = compileTarget(target, { text }); assert.equal(compiled.status, 0, text + compiled.stderr.toString());
       if (target === 'c' && process.env['LITE_SKIP_NATIVE'] === '1') continue;
@@ -1015,7 +1016,7 @@ test('statement scopes isolate locals and preserve outer values while shadow ini
     'var x := 1; { y := x; { outputLine(y); } } outputLine(y);', '{', '}', '{} else {}',
     '{ break; }', '{ continue; }', 'x := 1; { x = 2; }', 'var x := 7; { x: Bool = x; }'];
   for (const text of invalid) {
-    assert.equal(runText(text).status, 1, text);
+    assert.equal(expectedText(text).status, 1, text);
     for (const target of ['ts', 'c'] as const) {
       const compiled = compileTarget(target, { text }); assert.equal(compiled.status, 2, text); assert.equal(compiled.stdout.length, 0);
     }
@@ -1024,7 +1025,7 @@ test('statement scopes isolate locals and preserve outer values while shadow ini
     'var value := 9223372036854775807; outputLine("before");\r\n{ value := value + 1; outputLine(value); }',
     'values: List<Int> = [1]; outputLine("before");\r\n{ values := values[2]; outputLine(values); }'];
   for (const text of faults) {
-    const name = 'scope سلام.lts', expected = runText(text, { name }); assert.equal(expected.status, 1);
+    const name = 'scope سلام.lts', expected = expectedText(text, { name }); assert.equal(expected.status, 1);
     const targets = text.startsWith('values') ? ['ts'] as const : ['ts', 'c'] as const;
     for (const target of targets) {
       const compiled = compileTarget(target, { text, name }); assert.equal(compiled.status, 0, compiled.stderr.toString());
@@ -1059,7 +1060,7 @@ test('sequential value declarations create fresh bindings and retain prior copie
     'pair := (n = 1, label = "old"); saved := pair; pair := (n = pair.n + 1, label = "new"); outputLine(saved, pair);',
   ];
   for (const [sources, targets] of [[both, ['ts', 'c']], [tsOnly, ['ts']]] as const) for (const text of sources) {
-    const expected = runText(text); assert.equal(expected.status, 0, text + expected.stderr.toString());
+    const expected = expectedText(text); assert.equal(expected.status, 0, text + expected.stderr.toString());
     for (const target of targets) {
       const compiled = compileTarget(target, { text }); assert.equal(compiled.status, 0, text + compiled.stderr.toString());
       if (target === 'c' && process.env['LITE_SKIP_NATIVE'] === '1') continue;
@@ -1072,14 +1073,14 @@ test('sequential value declarations create fresh bindings and retain prior copie
     'f := fn(n: Int, n: Int): Int { n } outputLine(f(1, 2));',
     '{ x := 1; x := 2; } outputLine(x);'];
   for (const text of invalid) {
-    assert.equal(runText(text).status, 1, text);
+    assert.equal(expectedText(text).status, 1, text);
     for (const target of ['ts', 'c'] as const) {
       const compiled = compileTarget(target, { text }); assert.equal(compiled.status, 2, text); assert.equal(compiled.stdout.length, 0);
     }
   }
   for (const text of ['outputLine("before");\r\nvar x := 9223372036854775807; x := x + 1;',
     'outputLine("before");\r\nvar x := 0; x := 1 / x;']) {
-    const name = 'shadow سلام.lts', expected = runText(text, { name }); assert.equal(expected.status, 1);
+    const name = 'shadow سلام.lts', expected = expectedText(text, { name }); assert.equal(expected.status, 1);
     for (const target of ['ts', 'c'] as const) {
       const compiled = compileTarget(target, { text, name }); assert.equal(compiled.status, 0, compiled.stderr.toString());
       if (target === 'c' && process.env['LITE_SKIP_NATIVE'] === '1') continue;
@@ -1121,7 +1122,7 @@ test('ordinary expression items evaluate silently and trailing separators retain
     'f := fn(): Unit { if true { outputLine("yes"); Unit;; } else { outputLine("no"); Unit;; };; } f();',
   ];
   for (const [sources, targets] of [[both, ['ts', 'c']], [tsOnly, ['ts']]] as const) for (const text of sources) {
-    const expected = runText(text); assert.equal(expected.status, 0, text + expected.stderr.toString());
+    const expected = expectedText(text); assert.equal(expected.status, 0, text + expected.stderr.toString());
     for (const target of targets) {
       const compiled = compileTarget(target, { text }); assert.equal(compiled.status, 0, text + compiled.stderr.toString());
       if (target === 'c' && process.env['LITE_SKIP_NATIVE'] === '1') continue;
@@ -1136,7 +1137,7 @@ test('ordinary expression items evaluate silently and trailing separators retain
     ['inputLine("line? "); outputLine(inputLine());', 'first\nlast\n'],
     ['inputAll("all? "); outputLine(inputAll());', 'all\n🙂'],
   ] as const) {
-    const expected = runText(text!, { stdin }); assert.equal(expected.status, 0, expected.stderr.toString());
+    const expected = expectedText(text!, { stdin }); assert.equal(expected.status, 0, expected.stderr.toString());
     const compiled = compileTarget('ts', { text: text! }); assert.equal(compiled.status, 0, compiled.stderr.toString());
     executions.push({ target: 'ts', artifact: compiled.stdout.toString(), expected, options: { stdin }, context: text! });
   }
@@ -1149,7 +1150,7 @@ test('ordinary expression items evaluate silently and trailing separators retain
     'f := fn(): Unit { if true { 1 } else { 2 };; } f();',
     'f := fn(): Unit { if true { outputLine("effect"); 1;; } else { 2;; };; } f();'];
   for (const text of invalid) {
-    const expected = runText(text); assert.equal(expected.status, 1, text); assert.equal(expected.stdout.length, 0, text);
+    const expected = expectedText(text); assert.equal(expected.status, 1, text); assert.equal(expected.stdout.length, 0, text);
     for (const target of ['ts', 'c'] as const) {
       const compiled = compileTarget(target, { text }); assert.equal(compiled.status, 2, text); assert.equal(compiled.stdout.length, 0, text);
     }
@@ -1157,7 +1158,7 @@ test('ordinary expression items evaluate silently and trailing separators retain
   for (const text of ['outputLine("before");\r\nvar zero := 0; 1 / zero;',
     'outputLine("before");\r\n9223372036854775807 + 1;',
     'var x := 9223372036854775807; if true { x + 1; }']) {
-    const name = 'items سلام.lts', expected = runText(text, { name }); assert.equal(expected.status, 1, text);
+    const name = 'items سلام.lts', expected = expectedText(text, { name }); assert.equal(expected.status, 1, text);
     for (const target of ['ts', 'c'] as const) {
       const compiled = compileTarget(target, { text, name }); assert.equal(compiled.status, 0, text + compiled.stderr.toString());
       if (target === 'c' && process.env['LITE_SKIP_NATIVE'] === '1') continue;
@@ -1192,7 +1193,7 @@ test('function completion joins every conditional arm and preserves earlier defi
     'f := fn(flag: Bool): Unit { if flag { return; } else { return; } 1; } f(false); outputLine("after");',
   ];
   for (const text of sources) {
-    const expected = runText(text); assert.equal(expected.status, 0, text + expected.stderr.toString());
+    const expected = expectedText(text); assert.equal(expected.status, 0, text + expected.stderr.toString());
     const compiled = compileTarget('ts', { text }); assert.equal(compiled.status, 0, text + compiled.stderr.toString());
     executions.push({ target: 'ts', artifact: compiled.stdout.toString(), expected, context: text });
     const c = compileTarget('c', { text }); assert.equal(c.status, 2, text); assert.equal(c.stdout.length, 0);
@@ -1204,7 +1205,7 @@ test('function completion joins every conditional arm and preserves earlier defi
     'var n := 0; loop { n = n + 1; if n > 1 { break; } else { continue; } outputLine("dead"); } outputLine(n);',
     'loop { loop { break; } outputLine("outer"); break; } outputLine("after");'];
   for (const text of scalarControl) {
-    const expected = runText(text); assert.equal(expected.status, 0, text + expected.stderr.toString());
+    const expected = expectedText(text); assert.equal(expected.status, 0, text + expected.stderr.toString());
     for (const target of ['ts', 'c'] as const) {
       const compiled = compileTarget(target, { text }); assert.equal(compiled.status, 0, text + compiled.stderr.toString());
       if (target === 'c' && process.env['LITE_SKIP_NATIVE'] === '1') continue;
@@ -1229,7 +1230,7 @@ test('function completion joins every conditional arm and preserves earlier defi
   ];
   for (const source of invalid) {
     const text = 'outputLine("before");\r\n' + source;
-    const reference = runText(text); assert.equal(reference.status, 1, source); assert.equal(reference.stdout.length, 0, source);
+    const reference = expectedText(text); assert.equal(reference.status, 1, source); assert.equal(reference.stdout.length, 0, source);
     for (const target of ['ts', 'c'] as const) {
       const compiled = compileTarget(target, { text, name: 'branch سلام.lts' });
       assert.equal(compiled.status, 2, source); assert.equal(compiled.stdout.length, 0, source);
@@ -1238,7 +1239,7 @@ test('function completion joins every conditional arm and preserves earlier defi
   }
   for (const text of ['outputLine("before"); f := fn(flag: Bool): Int { if flag { var zero := 0; return 1 / zero; } else { return 2; } } outputLine(f(true));',
     'f := fn(flag: Bool): Int { if flag { return 1; } else { var max := 9223372036854775807; max + 1; } } outputLine(f(false));']) {
-    const name = 'branch سلام.lts', expected = runText(text, { name }); assert.equal(expected.status, 1, text);
+    const name = 'branch سلام.lts', expected = expectedText(text, { name }); assert.equal(expected.status, 1, text);
     const compiled = compileTarget('ts', { text, name }); assert.equal(compiled.status, 0, compiled.stderr.toString());
     executions.push({ target: 'ts', artifact: compiled.stdout.toString(), expected, context: text });
   }
@@ -1269,7 +1270,7 @@ test('finite Float literals retain binary64 values, display and same-family comp
     'f := fn(n: Float): Float { if n < 0.0 { return -n; } n } outputLine(f(-1.5));',
     'echo := fn(n: Float): Float { outputLine("call", n); n } outputLine(echo(1.5) < echo(2.5) < echo(3.5), echo(3.5) < echo(2.5) < echo(1.5));'];
   for (const [sources, targets] of [[both, ['ts', 'c']], [tsOnly, ['ts']]] as const) for (const text of sources) {
-    const expected = runText(text); assert.equal(expected.status, 0, text + expected.stderr.toString());
+    const expected = expectedText(text); assert.equal(expected.status, 0, text + expected.stderr.toString());
     for (const target of targets) {
       const compiled = compileTarget(target, { text }); assert.equal(compiled.status, 0, text + compiled.stderr.toString());
       if (target === 'c' && process.env['LITE_SKIP_NATIVE'] === '1') continue;
@@ -1287,7 +1288,7 @@ test('finite Float literals retain binary64 values, display and same-family comp
   let random = 0x123456789abcdefn;
   for (let i = 0; i < 200; i++) { random = BigInt.asUintN(64, random * 6364136223846793005n + 1442695040888963407n); view.setBigUint64(0, random); const n = view.getFloat64(0); if (Number.isFinite(n)) vectors.push(n); }
   const text = vectors.map(n => { let token = Object.is(n, -0) ? '-0.0' : String(n); if (!/[.eE]/.test(token)) token += '.0'; return 'outputLine(' + token + ');'; }).join('\n');
-  const expected = runText(text); assert.equal(expected.status, 0, expected.stderr.toString());
+  const expected = expectedText(text); assert.equal(expected.status, 0, expected.stderr.toString());
   assert.equal(expected.stdout.toString(), vectors.map(n => String(n)).join('\n') + '\n');
   for (const target of ['ts', 'c'] as const) {
     const compiled = compileTarget(target, { text }); assert.equal(compiled.status, 0, compiled.stderr.toString());
@@ -1300,7 +1301,7 @@ test('finite Float literals retain binary64 values, display and same-family comp
     'if false { outputLine(1e99999); }', 'var x: Float = "wrong";', 'outputLine(1.5 == "wrong");'];
   for (const source of invalid) {
     const text = 'outputLine("before");\r\n' + source;
-    const expected = runText(text); assert.equal(expected.status, 1, source); assert.equal(expected.stdout.length, 0, source);
+    const expected = expectedText(text); assert.equal(expected.status, 1, source); assert.equal(expected.stdout.length, 0, source);
     for (const target of ['ts', 'c'] as const) {
       const compiled = compileTarget(target, { text, name: 'float سلام.lts' }); assert.equal(compiled.status, 2, source); assert.equal(compiled.stdout.length, 0, source);
       assert.match(compiled.stderr.toString(), /^float سلام\.lts:2:[0-9]+: /);
@@ -1308,7 +1309,7 @@ test('finite Float literals retain binary64 values, display and same-family comp
   }
   for (const text of ['outputLine("before"); var zero := 0; outputLine(0.1, 1 / zero);',
     'outputLine("before"); outputLine(0.1, 9223372036854775807 + 1);']) {
-    const name = 'float سلام.lts', expected = runText(text, { name }); assert.equal(expected.status, 1);
+    const name = 'float سلام.lts', expected = expectedText(text, { name }); assert.equal(expected.status, 1);
     for (const target of ['ts', 'c'] as const) {
       const compiled = compileTarget(target, { text, name }); assert.equal(compiled.status, 0, compiled.stderr.toString());
       if (target === 'c' && process.env['LITE_SKIP_NATIVE'] === '1') continue;
@@ -1316,7 +1317,7 @@ test('finite Float literals retain binary64 values, display and same-family comp
     }
   }
   {
-    const text = 'outputLine(0.1 < inputFloat("middle? ") < inputFloat("last? "));', stdin = '0.0 bad', expected = runText(text, { stdin });
+    const text = 'outputLine(0.1 < inputFloat("middle? ") < inputFloat("last? "));', stdin = '0.0 bad', expected = expectedText(text, { stdin });
     assert.equal(expected.status, 0); assert.equal(expected.stdout.toString(), 'middle? false\n');
     const compiled = compileTarget('ts', { text }); assert.equal(compiled.status, 0, compiled.stderr.toString());
     executions.push({ target: 'ts', artifact: compiled.stdout.toString(), expected, options: { stdin }, context: text });
@@ -1346,7 +1347,7 @@ test('mixed Float arithmetic and comparisons preserve values, effects and positi
     'f := fn(n: Int, x: Float): Float { n * x + 0.25 } p := (value = f(2, 0.5)); values: List<Float> = [p.value, f(3, 0.5)]; outputLine(p, values);',
   ];
   for (const [sources, targets] of [[both, ['ts', 'c']], [tsOnly, ['ts']]] as const) for (const text of sources) {
-    const expected = runText(text); assert.equal(expected.status, 0, text + expected.stderr.toString());
+    const expected = expectedText(text); assert.equal(expected.status, 0, text + expected.stderr.toString());
     for (const target of targets) {
       const compiled = compileTarget(target, { text }); assert.equal(compiled.status, 0, text + compiled.stderr.toString());
       if (target === 'c' && process.env['LITE_SKIP_NATIVE'] === '1') continue;
@@ -1363,7 +1364,7 @@ test('mixed Float arithmetic and comparisons preserve values, effects and positi
   ];
   for (const source of faults) {
     const text = 'outputLine("before");\r\n' + source, name = 'mixed-float سلام.lts';
-    const expected = runText(text, { name }); assert.equal(expected.status, 1, text);
+    const expected = expectedText(text, { name }); assert.equal(expected.status, 1, text);
     assert.equal(expected.stdout.toString(), 'before\n');
     assert.match(expected.stderr.toString(), /^mixed-float سلام\.lts:2:\d+: ArithmeticPanic: (division by zero|non-finite floating value)\n$/);
     for (const target of ['ts', 'c'] as const) {
@@ -1376,11 +1377,11 @@ test('mixed Float arithmetic and comparisons preserve values, effects and positi
     'outputLine(1.5 + "x");', 'outputLine(true * 1.5);', 'outputLine(Unit / 1.5);',
     'outputLine(1.5 < "x");', 'outputLine(1 < 2.5 < true);', 'var x: Int = 1.5 + 2;']) {
     const text = 'outputLine("before"); ' + source;
-    const expected = runText(text); assert.equal(expected.status, 1, text); assert.equal(expected.stdout.length, 0, text);
+    const expected = expectedText(text); assert.equal(expected.status, 1, text); assert.equal(expected.stdout.length, 0, text);
     for (const target of ['ts', 'c'] as const) { const compiled = compileTarget(target, { text }); assert.equal(compiled.status, 2, text); assert.equal(compiled.stdout.length, 0, text); }
   }
   {
-    const text = 'outputLine(inputInt("int? ") / inputFloat("float? "));', stdin = '3 2.0', expected = runText(text, { stdin });
+    const text = 'outputLine(inputInt("int? ") / inputFloat("float? "));', stdin = '3 2.0', expected = expectedText(text, { stdin });
     assert.equal(expected.status, 0); assert.equal(expected.stdout.toString(), 'int? float? 1.5\n');
     const compiled = compileTarget('ts', { text }); assert.equal(compiled.status, 0, compiled.stderr.toString());
     executions.push({ target: 'ts', artifact: compiled.stdout.toString(), expected, options: { stdin }, context: text });
@@ -1407,7 +1408,7 @@ test('power preserves right association, explicit negative-base grouping and the
     'unused := fn(): Float { 2 ** 0 } f := fn(flag: Bool): Float { if flag { return 2 ** 3; } 3 ** 2 } outputLine(f(true), f(false));',
   ];
   for (const [sources, targets] of [[both, ['ts', 'c']], [tsOnly, ['ts']]] as const) for (const text of sources) {
-    const expected = runText(text); assert.equal(expected.status, 0, text + expected.stderr.toString());
+    const expected = expectedText(text); assert.equal(expected.status, 0, text + expected.stderr.toString());
     for (const target of targets) {
       const compiled = compileTarget(target, { text }); assert.equal(compiled.status, 0, text + compiled.stderr.toString());
       if (target === 'c' && process.env['LITE_SKIP_NATIVE'] === '1') continue;
@@ -1418,7 +1419,7 @@ test('power preserves right association, explicit negative-base grouping and the
   for (const source of ['outputLine(2 ** 0);', 'outputLine(2 ** -1);', 'outputLine(2 ** -0.0);',
     'outputLine(1e308 ** 2);', 'outputLine((-2) ** 0.5);', 'outputLine((2 ** 0) ** (1e308 ** 2));',
     'outputLine(2 ** (2 ** 0));', 'outputLine(2 ** 0, "after");', 'var e := -1; outputLine(2 ** e);']) {
-    const text = 'outputLine("before");\r\n' + source, name = 'power سلام.lts', expected = runText(text, { name });
+    const text = 'outputLine("before");\r\n' + source, name = 'power سلام.lts', expected = expectedText(text, { name });
     assert.equal(expected.status, 1, text); assert.equal(expected.stdout.toString(), 'before\n');
     assert.match(expected.stderr.toString(), /^power سلام\.lts:2:\d+: ArithmeticPanic: (power exponent must be positive in this checkpoint|non-finite floating value)\n$/);
     for (const target of ['ts', 'c'] as const) {
@@ -1432,7 +1433,7 @@ test('power preserves right association, explicit negative-base grouping and the
     'outputLine("x" ** 2);', 'outputLine(2 ** false);', 'outputLine(Unit ** 2);',
     'var x: Int = 2 ** 3;', 'outputLine(2 *** 3);', 'outputLine(2 **);', 'outputLine(** 2);',
     'var x := 2; x **= 2;', 'outputLine(2 ^ 3);']) {
-    const text = 'outputLine("before"); ' + source, expected = runText(text);
+    const text = 'outputLine("before"); ' + source, expected = expectedText(text);
     assert.equal(expected.status, 1, text); assert.equal(expected.stdout.length, 0, text);
     for (const target of ['ts', 'c'] as const) { const compiled = compileTarget(target, { text }); assert.equal(compiled.status, 2, text); assert.equal(compiled.stdout.length, 0, text); }
   }
@@ -1446,7 +1447,7 @@ test('power preserves right association, explicit negative-base grouping and the
     }
   }
   {
-    const text = 'outputLine(inputInt("base? ") ** inputFloat("exponent? "));', stdin = '4 0.5', expected = runText(text, { stdin });
+    const text = 'outputLine(inputInt("base? ") ** inputFloat("exponent? "));', stdin = '4 0.5', expected = expectedText(text, { stdin });
     assert.equal(expected.status, 0); assert.equal(expected.stdout.toString(), 'base? exponent? 2\n');
     const compiled = compileTarget('ts', { text }); assert.equal(compiled.status, 0, compiled.stderr.toString());
     executions.push({ target: 'ts', artifact: compiled.stdout.toString(), expected, options: { stdin }, context: text });
@@ -1474,7 +1475,7 @@ test('Int64, Float64 and Double normalize across admitted numeric annotations an
     'xs: mut List<Int64> = [1, 2]; ys: List<Float64> = [0.5, 1.5]; push_back(mut xs, 3); outputLine(xs, ys, xs[1]);',
   ];
   for (const [sources, targets] of [[both, ['ts', 'c']], [tsOnly, ['ts']]] as const) for (const text of sources) {
-    const expected = runText(text); assert.equal(expected.status, 0, text + expected.stderr.toString());
+    const expected = expectedText(text); assert.equal(expected.status, 0, text + expected.stderr.toString());
     for (const target of targets) {
       const compiled = compileTarget(target, { text }); assert.equal(compiled.status, 0, text + compiled.stderr.toString());
       if (target === 'c' && process.env['LITE_SKIP_NATIVE'] === '1') continue;
@@ -1489,13 +1490,13 @@ test('Int64, Float64 and Double normalize across admitted numeric annotations an
     'var x: Int64 = 9223372036854775808;', 'var x: Float64 = 1e309;',
     'x: List<Int64> = [0.5];', 'x: (n: Int64) = (n = 0.5);'];
   for (const source of invalid) {
-    const text = 'outputLine("before"); ' + source, expected = runText(text);
+    const text = 'outputLine("before"); ' + source, expected = expectedText(text);
     assert.equal(expected.status, 1, text); assert.equal(expected.stdout.length, 0, text);
     for (const target of ['ts', 'c'] as const) { const compiled = compileTarget(target, { text }); assert.equal(compiled.status, 2, text); assert.equal(compiled.stdout.length, 0, text); }
   }
   for (const source of ['var x: Int64 = 9223372036854775807; outputLine(x + 1);',
     'var x: Double = 1e308; outputLine(x * 2);']) {
-    const text = 'outputLine("before");\r\n' + source, name = 'numeric-alias سلام.lts', expected = runText(text, { name });
+    const text = 'outputLine("before");\r\n' + source, name = 'numeric-alias سلام.lts', expected = expectedText(text, { name });
     assert.equal(expected.status, 1, text); assert.equal(expected.stdout.toString(), 'before\n');
     for (const target of ['ts', 'c'] as const) {
       const compiled = compileTarget(target, { text, name }); assert.equal(compiled.status, 0, text + compiled.stderr.toString());
@@ -1509,7 +1510,7 @@ test('Int64, Float64 and Double normalize across admitted numeric annotations an
     assert.equal(alias.status, 0); assert.equal(canonical.status, 0); assert.deepEqual(alias.stdout, canonical.stdout);
   }
   {
-    const text = 'i: Int64 = inputInt("int? "); f: Double = inputFloat("float? "); outputLine(i * f);', stdin = '3 0.5', expected = runText(text, { stdin });
+    const text = 'i: Int64 = inputInt("int? "); f: Double = inputFloat("float? "); outputLine(i * f);', stdin = '3 0.5', expected = expectedText(text, { stdin });
     assert.equal(expected.status, 0); assert.equal(expected.stdout.toString(), 'int? float? 1.5\n');
     const compiled = compileTarget('ts', { text }); assert.equal(compiled.status, 0, compiled.stderr.toString());
     executions.push({ target: 'ts', artifact: compiled.stdout.toString(), expected, options: { stdin }, context: text });
@@ -1548,7 +1549,7 @@ test('Float contexts admit exact integer literals without widening values or cha
     'outputLine(if true{12}else{34}); x := if true {1}else {2} +3; outputLine(x);',
   ];
   for (const [sources, targets] of [[both, ['ts', 'c']], [tsOnly, ['ts']]] as const) for (const text of sources) {
-    const expected = runText(text); assert.equal(expected.status, 0, text + expected.stderr.toString());
+    const expected = expectedText(text); assert.equal(expected.status, 0, text + expected.stderr.toString());
     for (const target of targets) {
       const compiled = compileTarget(target, { text }); assert.equal(compiled.status, 0, text + compiled.stderr.toString());
       if (target === 'c' && process.env['LITE_SKIP_NATIVE'] === '1') continue;
@@ -1565,13 +1566,13 @@ test('Float contexts admit exact integer literals without widening values or cha
     'f: Float = if false{9007199254740993}else{2};', 'f := fn(): Float { 9007199254740993 }',
     'p: (n: Float) = (n = 9007199254740993);', 'outputLine(if true{1}else{2}+3);'];
   for (const source of invalid) {
-    const text = 'outputLine("before"); ' + source, expected = runText(text);
+    const text = 'outputLine("before"); ' + source, expected = expectedText(text);
     assert.equal(expected.status, 1, text); assert.equal(expected.stdout.length, 0, text);
     for (const target of ['ts', 'c'] as const) { const compiled = compileTarget(target, { text }); assert.equal(compiled.status, 2, text); assert.equal(compiled.stdout.length, 0, text); }
   }
   for (const source of ['var f: Float = 2; outputLine(f / 0);', 'var f: Float = 0; outputLine(1 / f);',
     'var f: Float = 2; outputLine(f * 1e308);']) {
-    const text = 'outputLine("before");\r\n' + source, name = 'float-context سلام.lts', expected = runText(text, { name });
+    const text = 'outputLine("before");\r\n' + source, name = 'float-context سلام.lts', expected = expectedText(text, { name });
     assert.equal(expected.status, 1); assert.equal(expected.stdout.toString(), 'before\n');
     for (const target of ['ts', 'c'] as const) {
       const compiled = compileTarget(target, { text, name }); assert.equal(compiled.status, 0, text + compiled.stderr.toString());

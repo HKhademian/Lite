@@ -51,6 +51,8 @@ native-first ordering in historical progress entries.
 
 ## Done
 
+- 2026-11-03: w1 test contracts are separated: all 240 original igniter tests retain destinations (81 generated/phase/artifact, 159 reference), and 776 exact process contracts replace live T00 expected-value lookups. Shared manifest loading retains all 93 compiler fixtures. Five contract/ownership checks, six copied-checkout no-T00 host groups, strict host/seed checks, three identical generated self-builds and nine editor groups pass. Fast: 278 pass/12 skips; full: 281 pass/9 native skips, zero failures. Compiler source/seed and the 60/81 canonical TS audit are unchanged. Default actual compiler/phase helpers and reference selection remain w2 work. See [the evidence](reports/2026-11-03-test-contracts.json) and [contract guide](tests/contracts/README.md).
+
 - 2026-11-02: verification and expectation updates now use TS artifacts by
   default, independent of historical manifest target metadata. T00 loads only
   with --reference; C execution is deferred. Compile/check once per manifest,

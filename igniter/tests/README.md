@@ -182,3 +182,18 @@ The corpus uses every source and stream form:
   because they need bytes, CLI arguments or artifact inspection rather than the
   program input/output stream model.
 - Strict TypeScript checking: `npm run check`.
+
+### Regression ownership during TS migration
+
+The generated compiler/phase/artifact regressions live in `igniter/test.ts`.
+Interpreter API, historical audit and not-yet-ported semantic assertions live in
+`igniter/reference.test.ts`; the current launcher still includes both until the
+next default-routing step lands. Do not count reference passes as generated
+language support. The [test migration ledger](../../compiler/tests/test-migration.json)
+accounts for all 240 original tests and retains their assertion ownership.
+
+Both suites use the independent manifest loader in `igniter/test-fixtures.ts`.
+Generated regressions use [recorded process contracts](../../compiler/tests/contracts/README.md)
+instead of live T00 expectation lookups. Unknown source/input/argument/name
+combinations fail explicitly. The reference suite replays the saved contracts;
+it cannot silently update them or replace selected Lite expectations.
