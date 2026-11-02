@@ -10,7 +10,7 @@ import { buildCompiler, buildTsCompiler, compileTarget, compileTs, type Compiler
 import { seed } from '../bootstrap/seed.ts';
 import { cSeed } from '../bootstrap/c-seed.ts';
 import { runText } from '../../igniter/bootstrap.ts';
-import { runTsArtifact } from '../../igniter/artifacts.ts';
+import { runTsArtifact, runCArtifact, withTsArtifact } from '../../igniter/artifacts.ts';
 
 const root = fileURLToPath(new URL('../../', import.meta.url));
 const env = { ...process.env, PATH: dirname(process.execPath) + delimiter + (process.env['PATH'] ?? '') };
@@ -292,5 +292,98 @@ test('report is no longer a builtin and temporary I/O rejects invalid signatures
     'inputInt := 3; outputLine(inputInt());', 'outputLine := 3; outputLine(1);']) {
     assert.notEqual(runText(source).status, 0, source);
     assert.notEqual(compileTs({ text: source }).status, 0, source);
+  }
+});
+
+/** Boundary/sign combinations with every representable result retained for differential execution. */
+function int64BoundaryProgram(): string {
+  const min = -(1n << 63n), max = (1n << 63n) - 1n;
+  const values = [min, min + 1n, -3037000500n, -3037000499n, -2n, -1n, 0n, 1n, 2n, 3037000499n, 3037000500n, max - 1n, max];
+  const lines: string[] = [];
+  let index = 0;
+  for (const left of values) for (const right of values) {
+    const a = `a${index}`, b = `b${index}`;
+    lines.push(`var ${a} := ${left}; var ${b} := ${right};`);
+    for (const [operator, result] of [['+', left + right], ['-', left - right], ['*', left * right]] as const) {
+      if (result >= min && result <= max) lines.push(`outputLine(${a} ${operator} ${b});`);
+    }
+    index += 1;
+  }
+  for (const [i, value] of values.entries()) if (value !== min) lines.push(`var n${i} := ${value}; outputLine(-n${i});`);
+  lines.push('var checked_add := 3; var lt_arg_left_0 := 4; outputLine(checked_add + lt_arg_left_0);');
+  lines.push('var hi := 9223372036854775807; var lo := -9223372036854775808; var flag := false;');
+  lines.push('outputLine(flag and (hi + 1 > 0)); if flag { outputLine(lo - 1); }');
+  lines.push('outputLine(not flag or (hi * 2 > 0)); if flag { outputLine(-lo); }');
+  return lines.join('\n');
+}
+
+const overflowingInt64Expressions = [
+  'hi + 1', 'lo + -1', 'hi - -1', 'lo - 1', 'hi * 2', 'lo * 2', '-lo', 'lo * -1',
+  '(hi + 1) - 1', '(hi + 1) + (lo - 1)', '(lo - 1) + (hi + 1)',
+];
+
+/** Produces runtime operands and output before a fault, with Unicode and CRLF position coverage. */
+function int64FaultProgram(expression: string): string {
+  return '/* 🙂 */ outputLine("before");\r\nvar hi := 9223372036854775807; var lo := -9223372036854775808;\r\noutputLine(' + expression + ');';
+}
+
+test('generated TS checks Int64 boundaries, exact faults and operand evaluation order', () => {
+  const source = int64BoundaryProgram();
+  const compiled = compileTs({ text: source });
+  assert.equal(compiled.status, 0, compiled.stderr.toString());
+  const actual = runTsArtifact(compiled.stdout.toString());
+  const expected = runText(source);
+  assert.equal(actual.phase, 'run', actual.stdout.toString() + actual.stderr.toString());
+  assert.deepEqual({ status: actual.status, stdout: actual.stdout, stderr: actual.stderr }, expected);
+
+  const name = 'arithmetic سلام🙂.lts';
+  const branches = overflowingInt64Expressions.map((expression, index) =>
+    `${index === 0 ? 'if' : 'else if'} selector == ${index} { outputLine(${expression}); }`).join('\n');
+  const faultSource = '/* 🙂 */ outputLine("before");\r\nselector := inputInt();\r\n' +
+    'var hi := 9223372036854775807; var lo := -9223372036854775808;\r\n' + branches;
+  const faults = compileTs({ text: faultSource, name });
+  assert.equal(faults.status, 0, faults.stderr.toString());
+  withTsArtifact(faults.stdout.toString(), run => {
+    for (const [index, expression] of overflowingInt64Expressions.entries()) {
+      const reference = runText(faultSource, { stdin: String(index), name });
+      assert.equal(reference.status, 1, expression);
+      const result = run({ stdin: String(index) });
+      assert.equal(result.phase, 'run'); assert.equal(result.signal, null);
+      assert.deepEqual({ status: result.status, stdout: result.stdout, stderr: result.stderr }, reference, expression);
+    }
+  });
+  const effects = 'touch := fn(n: Int): Int { outputLine("arg", n); n } ' +
+    'outputLine(touch(3) + touch(4), touch(9) - touch(2), touch(2) * touch(5), -touch(6));';
+  const emitted = compileTs({ text: effects });
+  assert.equal(emitted.status, 0, emitted.stderr.toString());
+  const run = runTsArtifact(emitted.stdout.toString());
+  const reference = runText(effects);
+  assert.deepEqual({ status: run.status, stdout: run.stdout, stderr: run.stderr }, reference);
+});
+
+test('portable C11 checks Int64 boundaries and sequences nested faults left to right', context => {
+  if (process.env['LITE_SKIP_NATIVE'] === '1') { context.skip('LITE_SKIP_NATIVE=1'); return; }
+  const source = int64BoundaryProgram();
+  const compiled = compileTarget('c', { text: source });
+  assert.equal(compiled.status, 0, compiled.stderr.toString());
+  const result = runCArtifact(compiled.stdout.toString());
+  assert.equal(result.phase, 'run', result.stdout.toString() + result.stderr.toString());
+  const reference = runText(source);
+  assert.deepEqual({ status: result.status, stdout: result.stdout, stderr: result.stderr }, reference);
+  for (const expression of overflowingInt64Expressions) {
+    const text = int64FaultProgram(expression), name = 'arithmetic سلام🙂.lts';
+    const expected = runText(text, { name });
+    assert.equal(expected.status, 1);
+    const artifact = compileTarget('c', { text, name });
+    assert.equal(artifact.status, 0, artifact.stderr.toString());
+    const run = runCArtifact(artifact.stdout.toString());
+    assert.equal(run.phase, 'run', run.stdout.toString() + run.stderr.toString());
+    assert.equal(run.signal, null);
+    assert.deepEqual({ status: run.status, stdout: run.stdout, stderr: run.stderr }, expected, expression);
+  }
+  for (const target of ['ts', 'c'] as const) {
+    const literal = compileTarget(target, { text: 'outputLine("lt_arg_left_1 = lt_checked_add( lite$addInt(");' });
+    assert.equal(literal.status, 0);
+    assert.doesNotMatch(literal.stdout.toString(), /const lite\$intLines|static const size_t lt_int_lines/);
   }
 });

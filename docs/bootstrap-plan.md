@@ -68,7 +68,7 @@ bounded code-point views; that source snapshot has a 668 ms self-build median in
 [before/after benchmark](../benchmark/reports/2026-11-02-text-cache.md), excluding
 strict checking. The subsequent [report-order refresh](../compiler/parity.md#report-order-seed-refresh)
 preserves output produced by calls inside report arguments and records a new
-three-generation fixed point. Current tests include 236 interpreter groups, 11 compiler-host
+three-generation fixed point. Current tests include 236 interpreter groups, 13 compiler-host
 groups, 4 policy/tooling groups and 9 editor grammar groups; the historical P0 counts below remain fixed.
 The full-source lexer/parser/checker sweeps now run generated TS drivers, checked
 once per sweep and executed in isolated processes. Focused fixtures retain
@@ -80,7 +80,14 @@ the four prompted input helpers to generated TS. This explicit owner decision
 updates the temporary helper contract; it does not add general optional/variadic
 function grammar. Current corpus: 55 programs/38 rejections; verification:
 37 features, 77 scenarios, 95 target executions. The generated-only spelling
-adapter and current fixed point are in the [I/O ladder](../compiler/reports/2026-11-02-io-migration-ladder.json).
+adapter and that snapshot's fixed point are in the [I/O ladder](../compiler/reports/2026-11-02-io-migration-ladder.json).
+
+The subsequent [checked Int64 refresh](../compiler/parity.md#checked-int64-arithmetic)
+adds dynamic addition, subtraction, multiplication and negation guards to both
+targets, with exact source-positioned runtime overflow faults. Its
+[generated-only ladder](../compiler/reports/2026-11-02-int64-ladder.json) records
+the current source and three identical compiler generations. Division-family
+behavior, wider numeric types and the remaining feature/native gates stay separate.
 
 ## Historical P0 baseline, 2026-11-01
 
@@ -132,7 +139,8 @@ them clearly. Dynamic Int `/`, `%`, `:/` and `:%` now lower to checked
 TS and C helpers; dynamic String concatenation and bare nearest-loop
 `break`/`continue` also lower in Boolean, unconditional and list-traversal
 loops. Collections beyond `List<T>`, `match`, runtime input outside these
-helpers and checked dynamic C overflow remain open.
+helpers remain open. Checked dynamic Int64 addition, subtraction, multiplication
+and negation now lower in both targets, including portable C11 overflow guards.
 
 ## Bootstrap parity loop
 

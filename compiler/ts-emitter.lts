@@ -522,6 +522,26 @@ intFloorDivideCode := fn(left: String, right: String): String {
 intFloorModuloCode := fn(left: String, right: String): String {
     "lite$floorModuloInt(" + left + ", " + right + ")"
 }
+
+/** Emits checked Int64 addition, evaluating both operands once in source order. */
+intAddCode := fn(left: String, right: String, position: Int): String {
+    "lite$addInt(" + left + ", " + right + ", " + intText(position) + ")"
+}
+
+/** Emits checked Int64 subtraction, evaluating both operands once in source order. */
+intSubtractCode := fn(left: String, right: String, position: Int): String {
+    "lite$subtractInt(" + left + ", " + right + ", " + intText(position) + ")"
+}
+
+/** Emits checked Int64 multiplication, evaluating both operands once in source order. */
+intMultiplyCode := fn(left: String, right: String, position: Int): String {
+    "lite$multiplyInt(" + left + ", " + right + ", " + intText(position) + ")"
+}
+
+/** Emits checked Int64 negation, evaluating the operand once. */
+intNegateCode := fn(value: String, position: Int): String {
+    "lite$negateInt(" + value + ", " + intText(position) + ")"
+}
 /* Shared restricted front-end. Not a standalone program: a target manifest
    places the target literal encoders before this file and the emitter/driver
    after it. */
@@ -1670,7 +1690,8 @@ parseBinary := fn(source: String, position: Int, prefix: String, locals: List<Lo
                 value := if ch == "-" { negateInteger(source, start, operand.intValue, prefix) } else { operand.intValue };
                 left = intParsed(code, value, true, operand.next);
             } else {
-                left = intParsed(code, 0, false, operand.next);
+                runtimeCode := if ch == "-" { intNegateCode(operand.code, start) } else { code };
+                left = intParsed(runtimeCode, 0, false, operand.next);
             }
         }
     } else if isDigit(ch) {
@@ -2025,7 +2046,10 @@ parseBinary := fn(source: String, position: Int, prefix: String, locals: List<Lo
             } else if operator.text == ":%" {
                 left = intParsed(intFloorModuloCode(left.code, right.code), 0, false, right.next);
             } else {
-                left = intParsed("(" + left.code + " " + operator.text + " " + right.code + ")", 0, false, right.next);
+                runtimeCode := if operator.text == "+" { intAddCode(left.code, right.code, operatorPosition) }
+                    else if operator.text == "-" { intSubtractCode(left.code, right.code, operatorPosition) }
+                    else { intMultiplyCode(left.code, right.code, operatorPosition) };
+                left = intParsed(runtimeCode, 0, false, right.next);
             }
         } else if operator.text == "+" and left.kind == "String" and right.kind == "String" {
             if left.constant and right.constant {
@@ -2886,6 +2910,17 @@ parseProgram := fn(source: String, prefix: String): Items {
     }
     items
 }
+
+/** Encodes all line-start character offsets once for positioned runtime arithmetic faults. */
+lineStartCodes := fn(source: String): String {
+    var code := "0";
+    var position := 0;
+    loop position < textLength(source) {
+        if textAt(source, position) == "\n" { code = code + ", " + intText(position + 1); }
+        position = position + 1;
+    }
+    code
+}
 /** Removes one four-space indentation level from `indent`. */
 dedent := fn(indent: String): String {
     textSlice(indent, 0, textLength(indent) - 4)
@@ -3030,6 +3065,43 @@ usesBuiltin := fn(items: Items, name: String): Bool {
     false
 }
 
+/** True when a program needs the checked dynamic Int64 arithmetic runtime. */
+usesIntArithmetic := fn(items: Items): Bool {
+    usesBuiltin(items, "addInt") or usesBuiltin(items, "subtractInt") or usesBuiltin(items, "multiplyInt") or usesBuiltin(items, "negateInt")
+}
+
+/** Emits position metadata once, a checked result guard, and only the arithmetic helpers the program uses. */
+emitIntArithmeticHelpers := fn(items: Items, source: String, prefix: String): Unit {
+    if not usesIntArithmetic(items) { return; }
+    namePrefix := if prefix == "" { "" } else { prefix + ":" };
+    outputLine("const lite$intLines: readonly number[] = [" + lineStartCodes(source) + "];");
+    outputLine("const lite$intSource = " + textLiteralCode(namePrefix) + ";");
+    outputLine("const lite$intMin = -(1n << 63n), lite$intMax = (1n << 63n) - 1n;");
+    outputLine("function lite$checkedInt(value: bigint, at: number): bigint {");
+    outputLine("    if (value < lite$intMin || value > lite$intMax) {");
+    outputLine("        let line = 0;");
+    outputLine("        while (line + 1 < lite$intLines.length && (lite$intLines[line + 1] ?? Infinity) <= at) line += 1;");
+    outputLine("        const column = at - (lite$intLines[line] ?? 0) + 1;");
+    outputLine("        process.getBuiltinModule(\"node:fs\").writeSync(2, lite$intSource + (line + 1) + \":\" + column + \": ArithmeticPanic: integer outside Int range\\n\");");
+    outputLine("        process.exit(1);");
+    outputLine("    }");
+    outputLine("    return value;");
+    outputLine("}");
+    if usesBuiltin(items, "addInt") {
+        outputLine("function lite$addInt(left: bigint, right: bigint, at: number): bigint { return lite$checkedInt(left + right, at); }");
+    }
+    if usesBuiltin(items, "subtractInt") {
+        outputLine("function lite$subtractInt(left: bigint, right: bigint, at: number): bigint { return lite$checkedInt(left - right, at); }");
+    }
+    if usesBuiltin(items, "multiplyInt") {
+        outputLine("function lite$multiplyInt(left: bigint, right: bigint, at: number): bigint { return lite$checkedInt(left * right, at); }");
+    }
+    if usesBuiltin(items, "negateInt") {
+        outputLine("function lite$negateInt(value: bigint, at: number): bigint { return lite$checkedInt(-value, at); }");
+    }
+    outputLine("");
+}
+
 /** Emits shared buffered byte input and strict incremental UTF-8 decoding for the temporary input helpers. */
 emitInputHelpers := fn(items: Items): Unit {
     if not (usesBuiltin(items, "inputAll") or usesBuiltin(items, "inputLine") or usesBuiltin(items, "inputInt") or usesBuiltin(items, "inputFloat")) { return; }
@@ -3126,7 +3198,7 @@ emitInputHelpers := fn(items: Items): Unit {
 /** Emits the self-contained declarations and helpers for the I/O and text builtins a program uses. */
 emitBuiltinHelpers := fn(items: Items): Unit {
     if usesBuiltin(items, "inputArgs") or usesBuiltin(items, "inputAll") or usesBuiltin(items, "inputLine") or usesBuiltin(items, "inputInt") or usesBuiltin(items, "inputFloat") or
-        usesBuiltin(items, "reportError") or usesBuiltin(items, "exit") {
+        usesBuiltin(items, "reportError") or usesBuiltin(items, "exit") or usesIntArithmetic(items) {
         outputLine("declare const process: {");
         outputLine("    argv: string[];");
         outputLine("    exit(code: number): never;");
@@ -3296,7 +3368,7 @@ emitIntDivisionHelpers := fn(items: Items): Unit {
 }
 
 /** Emits the TS module from the flat item stream. Report arguments evaluate once, left to right, before reading and appending to `lite_out`, preserving reports made by argument calls. */
-emitProgram := fn(items: Items): Unit {
+emitProgram := fn(items: Items, source: String, prefix: String): Unit {
     hasExit := usesBuiltin(items, "exit") or usesBuiltin(items, "inputAll") or usesBuiltin(items, "inputLine") or usesBuiltin(items, "inputInt") or usesBuiltin(items, "inputFloat");
     if hasExit {
         outputLine("let lite_out = \"\";");
@@ -3305,6 +3377,7 @@ emitProgram := fn(items: Items): Unit {
     emitBuiltinHelpers(items);
     if usesListIndex(items) { emitListIndexHelper(); }
     if usesListPop(items) { emitListPopHelper(); }
+    emitIntArithmeticHelpers(items, source, prefix);
     emitIntDivisionHelpers(items);
     outputLine("export function main(lite$write?: (text: string) => void): string {");
     if not hasExit { outputLine("    let lite_out = \"\";"); }
@@ -3412,4 +3485,4 @@ emitProgram := fn(items: Items): Unit {
 }
 prefix := sourcePrefix();
 source := inputAll();
-emitProgram(parseProgram(source, prefix));
+emitProgram(parseProgram(source, prefix), source, prefix);

@@ -102,3 +102,26 @@ intFloorDivideCode := fn(left: String, right: String): String {
 intFloorModuloCode := fn(left: String, right: String): String {
     "lite_floor_modulo_int(" + left + ", " + right + ")"
 }
+
+/** Emits checked Int64 addition, evaluating both operands once in source order. */
+intAddCode := fn(left: String, right: String, position: Int): String {
+    id := intText(position);
+    "(lt_arg_left_" + id + " = " + left + ", lt_arg_right_" + id + " = " + right + ", lt_checked_add(lt_arg_left_" + id + ", lt_arg_right_" + id + ", " + id + "))"
+}
+
+/** Emits checked Int64 subtraction, evaluating both operands once in source order. */
+intSubtractCode := fn(left: String, right: String, position: Int): String {
+    id := intText(position);
+    "(lt_arg_left_" + id + " = " + left + ", lt_arg_right_" + id + " = " + right + ", lt_checked_subtract(lt_arg_left_" + id + ", lt_arg_right_" + id + ", " + id + "))"
+}
+
+/** Emits checked Int64 multiplication, evaluating both operands once in source order. */
+intMultiplyCode := fn(left: String, right: String, position: Int): String {
+    id := intText(position);
+    "(lt_arg_left_" + id + " = " + left + ", lt_arg_right_" + id + " = " + right + ", lt_checked_multiply(lt_arg_left_" + id + ", lt_arg_right_" + id + ", " + id + "))"
+}
+
+/** Emits checked Int64 negation, evaluating the operand once. */
+intNegateCode := fn(value: String, position: Int): String {
+    "lt_checked_negate(" + value + ", " + intText(position) + ")"
+}

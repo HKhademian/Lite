@@ -5,7 +5,15 @@ Current components:
 - Igniter: **0.1.0-alpha.38**
 - VS Code extension: **0.1.1**
 - Verification corpus: 37 features, 19 examples, 20 samples, 77 scenarios, 95 target executions
-- Tests: 236 interpreter groups, 11 compiler-host groups, 4 policy/tooling groups and 9 editor grammar groups
+- Tests: 236 interpreter groups, 13 compiler-host groups, 4 policy/tooling groups and 9 editor grammar groups
+
+Unreleased checked-arithmetic parity, 2026-11-02: generated TS and portable C11
+now check dynamic Int64 addition, subtraction, multiplication and negation,
+matching T00 overflow diagnostics, status and prior output. Three generated
+compiler generations match; all 253 full tests pass with zero skips (54.6 s),
+both 93-case corpus comparisons and all 95 verifier executions pass. The
+[arithmetic ledger](../compiler/parity.md#checked-int64-arithmetic) records the
+boundaries and remaining gates. No release tag is introduced.
 
 Unreleased I/O selection, 2026-11-02: outputLine replaces report with no alias;
 output adds the same space-separated display without a newline. Empty calls are

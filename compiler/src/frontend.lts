@@ -1146,7 +1146,8 @@ parseBinary := fn(source: String, position: Int, prefix: String, locals: List<Lo
                 value := if ch == "-" { negateInteger(source, start, operand.intValue, prefix) } else { operand.intValue };
                 left = intParsed(code, value, true, operand.next);
             } else {
-                left = intParsed(code, 0, false, operand.next);
+                runtimeCode := if ch == "-" { intNegateCode(operand.code, start) } else { code };
+                left = intParsed(runtimeCode, 0, false, operand.next);
             }
         }
     } else if isDigit(ch) {
@@ -1501,7 +1502,10 @@ parseBinary := fn(source: String, position: Int, prefix: String, locals: List<Lo
             } else if operator.text == ":%" {
                 left = intParsed(intFloorModuloCode(left.code, right.code), 0, false, right.next);
             } else {
-                left = intParsed("(" + left.code + " " + operator.text + " " + right.code + ")", 0, false, right.next);
+                runtimeCode := if operator.text == "+" { intAddCode(left.code, right.code, operatorPosition) }
+                    else if operator.text == "-" { intSubtractCode(left.code, right.code, operatorPosition) }
+                    else { intMultiplyCode(left.code, right.code, operatorPosition) };
+                left = intParsed(runtimeCode, 0, false, right.next);
             }
         } else if operator.text == "+" and left.kind == "String" and right.kind == "String" {
             if left.constant and right.constant {
@@ -2361,4 +2365,15 @@ parseProgram := fn(source: String, prefix: String): Items {
         failAt(source, size, prefix, "expected } before end of source");
     }
     items
+}
+
+/** Encodes all line-start character offsets once for positioned runtime arithmetic faults. */
+lineStartCodes := fn(source: String): String {
+    var code := "0";
+    var position := 0;
+    loop position < textLength(source) {
+        if textAt(source, position) == "\n" { code = code + ", " + intText(position + 1); }
+        position = position + 1;
+    }
+    code
 }

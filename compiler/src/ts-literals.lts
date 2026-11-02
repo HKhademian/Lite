@@ -98,3 +98,23 @@ intFloorDivideCode := fn(left: String, right: String): String {
 intFloorModuloCode := fn(left: String, right: String): String {
     "lite$floorModuloInt(" + left + ", " + right + ")"
 }
+
+/** Emits checked Int64 addition, evaluating both operands once in source order. */
+intAddCode := fn(left: String, right: String, position: Int): String {
+    "lite$addInt(" + left + ", " + right + ", " + intText(position) + ")"
+}
+
+/** Emits checked Int64 subtraction, evaluating both operands once in source order. */
+intSubtractCode := fn(left: String, right: String, position: Int): String {
+    "lite$subtractInt(" + left + ", " + right + ", " + intText(position) + ")"
+}
+
+/** Emits checked Int64 multiplication, evaluating both operands once in source order. */
+intMultiplyCode := fn(left: String, right: String, position: Int): String {
+    "lite$multiplyInt(" + left + ", " + right + ", " + intText(position) + ")"
+}
+
+/** Emits checked Int64 negation, evaluating the operand once. */
+intNegateCode := fn(value: String, position: Int): String {
+    "lite$negateInt(" + value + ", " + intText(position) + ")"
+}

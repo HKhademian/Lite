@@ -3,12 +3,12 @@
   "kind": "feature",
   "source": {
     "file": "int-limits.lts",
-    "hash": "sha256:21c412eb6ef2709b82c0a65a52a9d2388944571a4a08a992edd571f922bd675f"
+    "hash": "sha256:bef77f89d19b79e2e65864c634e2ef126719d4bef0d2d83a9ad749a4ad0e561c"
   },
   "features": [
     "int.limits"
   ],
-  "guideline": "Checks the signed 64-bit Int boundaries through the reference interpreter and both restricted compiler targets.",
+  "guideline": "Checks signed Int64 literals and valid dynamic addition, subtraction, multiplication and negation at the bounds.",
   "targets": [
     "igniter",
     "ts",
@@ -18,8 +18,8 @@
     {
       "name": "signed-boundaries",
       "stdout": {
-        "text": "9223372036854775807\n-9223372036854775808\n",
-        "hash": "sha256:f4b8acc78d353447d6dcc8ab746ceaf1f81b5ac805783eb7a1a13e72b42f78a3"
+        "text": "9223372036854775807\n-9223372036854775808\n9223372036854775807 -9223372036854775808\n-9223372036854775807 9223372036854775806\n-9223372036854775808 9223372036854775807 0\n-9223372036854775807 -1\n",
+        "hash": "sha256:ed58825f9c69c14978d59ee71d9158679ec405c3e1d29719248629cfd1dbd733"
       },
       "exitCode": 0
     }

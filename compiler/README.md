@@ -203,7 +203,12 @@ allocations are intentionally leaked by this bootstrap slice. Bare `break` and
 `continue` inside Boolean and unconditional loops lower directly to target loop
 exits with nearest-loop semantics; list-traversal loops emit the same TS exits
 while the C path still rejects traversal. Payloads, labels and use outside a
-loop are rejected. Dynamic C integer overflow is not checked. Function syntax,
+loop are rejected. Dynamic Int64 addition, subtraction, multiplication and
+negation now check overflow in both targets and preserve exact positioned
+ArithmeticPanic diagnostics, prior output and status. Portable C11 guards reject
+overflow before evaluating signed arithmetic; operand temporaries preserve
+left-to-right nested faults. Constant folding and division-family behavior are
+unchanged by this [refresh](parity.md#checked-int64-arithmetic). Function syntax,
 tuple values, list values and total value `if` expressions are
 emitted as runnable TS; the C path rejects them with a clear status-2
 diagnostic. List values lower to TS arrays and a checked `lite$listAt` helper;

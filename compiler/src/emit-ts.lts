@@ -142,6 +142,43 @@ usesBuiltin := fn(items: Items, name: String): Bool {
     false
 }
 
+/** True when a program needs the checked dynamic Int64 arithmetic runtime. */
+usesIntArithmetic := fn(items: Items): Bool {
+    usesBuiltin(items, "addInt") or usesBuiltin(items, "subtractInt") or usesBuiltin(items, "multiplyInt") or usesBuiltin(items, "negateInt")
+}
+
+/** Emits position metadata once, a checked result guard, and only the arithmetic helpers the program uses. */
+emitIntArithmeticHelpers := fn(items: Items, source: String, prefix: String): Unit {
+    if not usesIntArithmetic(items) { return; }
+    namePrefix := if prefix == "" { "" } else { prefix + ":" };
+    outputLine("const lite$intLines: readonly number[] = [" + lineStartCodes(source) + "];");
+    outputLine("const lite$intSource = " + textLiteralCode(namePrefix) + ";");
+    outputLine("const lite$intMin = -(1n << 63n), lite$intMax = (1n << 63n) - 1n;");
+    outputLine("function lite$checkedInt(value: bigint, at: number): bigint {");
+    outputLine("    if (value < lite$intMin || value > lite$intMax) {");
+    outputLine("        let line = 0;");
+    outputLine("        while (line + 1 < lite$intLines.length && (lite$intLines[line + 1] ?? Infinity) <= at) line += 1;");
+    outputLine("        const column = at - (lite$intLines[line] ?? 0) + 1;");
+    outputLine("        process.getBuiltinModule(\"node:fs\").writeSync(2, lite$intSource + (line + 1) + \":\" + column + \": ArithmeticPanic: integer outside Int range\\n\");");
+    outputLine("        process.exit(1);");
+    outputLine("    }");
+    outputLine("    return value;");
+    outputLine("}");
+    if usesBuiltin(items, "addInt") {
+        outputLine("function lite$addInt(left: bigint, right: bigint, at: number): bigint { return lite$checkedInt(left + right, at); }");
+    }
+    if usesBuiltin(items, "subtractInt") {
+        outputLine("function lite$subtractInt(left: bigint, right: bigint, at: number): bigint { return lite$checkedInt(left - right, at); }");
+    }
+    if usesBuiltin(items, "multiplyInt") {
+        outputLine("function lite$multiplyInt(left: bigint, right: bigint, at: number): bigint { return lite$checkedInt(left * right, at); }");
+    }
+    if usesBuiltin(items, "negateInt") {
+        outputLine("function lite$negateInt(value: bigint, at: number): bigint { return lite$checkedInt(-value, at); }");
+    }
+    outputLine("");
+}
+
 /** Emits shared buffered byte input and strict incremental UTF-8 decoding for the temporary input helpers. */
 emitInputHelpers := fn(items: Items): Unit {
     if not (usesBuiltin(items, "inputAll") or usesBuiltin(items, "inputLine") or usesBuiltin(items, "inputInt") or usesBuiltin(items, "inputFloat")) { return; }
@@ -238,7 +275,7 @@ emitInputHelpers := fn(items: Items): Unit {
 /** Emits the self-contained declarations and helpers for the I/O and text builtins a program uses. */
 emitBuiltinHelpers := fn(items: Items): Unit {
     if usesBuiltin(items, "inputArgs") or usesBuiltin(items, "inputAll") or usesBuiltin(items, "inputLine") or usesBuiltin(items, "inputInt") or usesBuiltin(items, "inputFloat") or
-        usesBuiltin(items, "reportError") or usesBuiltin(items, "exit") {
+        usesBuiltin(items, "reportError") or usesBuiltin(items, "exit") or usesIntArithmetic(items) {
         outputLine("declare const process: {");
         outputLine("    argv: string[];");
         outputLine("    exit(code: number): never;");
@@ -408,7 +445,7 @@ emitIntDivisionHelpers := fn(items: Items): Unit {
 }
 
 /** Emits the TS module from the flat item stream. Report arguments evaluate once, left to right, before reading and appending to `lite_out`, preserving reports made by argument calls. */
-emitProgram := fn(items: Items): Unit {
+emitProgram := fn(items: Items, source: String, prefix: String): Unit {
     hasExit := usesBuiltin(items, "exit") or usesBuiltin(items, "inputAll") or usesBuiltin(items, "inputLine") or usesBuiltin(items, "inputInt") or usesBuiltin(items, "inputFloat");
     if hasExit {
         outputLine("let lite_out = \"\";");
@@ -417,6 +454,7 @@ emitProgram := fn(items: Items): Unit {
     emitBuiltinHelpers(items);
     if usesListIndex(items) { emitListIndexHelper(); }
     if usesListPop(items) { emitListPopHelper(); }
+    emitIntArithmeticHelpers(items, source, prefix);
     emitIntDivisionHelpers(items);
     outputLine("export function main(lite$write?: (text: string) => void): string {");
     if not hasExit { outputLine("    let lite_out = \"\";"); }

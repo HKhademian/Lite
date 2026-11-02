@@ -36,6 +36,21 @@ features may be ported; new syntax, builtins and semantics still require approva
 
 ## Done
 
+- 2026-11-02: checked dynamic Int64 addition, subtraction, multiplication and
+  negation now lower through Lite-defined TS and portable C11 helpers. Runtime
+  overflow matches T00's exact source-positioned ArithmeticPanic, status and
+  prior output. C guards run before signed arithmetic, with source-offset
+  temporaries preserving left-to-right nested faults. Boundary/sign matrices,
+  eleven fault expressions, short-circuit/untaken branches and TS call effects
+  have differential coverage. The generated-only [seed ladder](reports/2026-11-02-int64-ladder.json)
+  records three identical generations and refreshed C emission. This closes
+  these four dynamic Int64 operations; wider numeric/type/operator parity,
+  run/check migration and the native compiler ladder remain pending.
+  Strict host/seed checks, all 253 full tests (zero skips, 54.6 s), fast 243 pass
+  with ten expected skips (30.4 s), nine editor groups, both 93-case corpus
+  comparisons and all 95 verifier executions pass. Six native boundary/fault
+  programs also pass undefined-behavior sanitizer checks with exact streams/status.
+
 - 2026-11-02: owner-selected [temporary I/O migration](../docs/tooling-and-learning.md#temporary-input-and-output-helpers-selected-2026-11-02)
   replaces report with outputLine (no alias), adds output without a newline,
   allows zero output arguments, and adds array/list display on T00. Generated TS
@@ -164,8 +179,9 @@ distinguishing implemented contracts from wider language design. Then
 port one existing feature per checked slice into Lite; update TS/C lowering and
 runtime support, preserve checked semantics, refresh generated compiler artifacts
 and record feature parity. The report argument-order difference is closed by the
-first feature-parity slice; the owner-selected I/O migration follows it. Next port checked dynamic Int64 arithmetic, then continue the measured
-input, expression/control-flow and data/function gaps. No new language surface
+first feature-parity slice; the owner-selected I/O migration and checked dynamic
+Int64 addition/subtraction/multiplication/negation follow it. Continue the measured
+numeric, expression/control-flow and data/function gaps. No new language surface
 is selected by this order.
 **Acceptance:** every existing T00-supported contract has an equivalent Lite
 compiler path or an explicitly approved exception; no new language decisions.
@@ -208,15 +224,15 @@ active T00 implementation; bootstrap recovery remains reproducible from history.
 - Do not modify published tags or create release tags without a release decision.
 - Preserve source names, invalid UTF-8 rejection, output streams and status.
 - Source/manifest changes must not silently use a stale generated compiler.
-- The current seed is 273040 bytes, SHA-256
-  `fa134de2a4c19891ce0a8970d83682ea4acafdfe21736ac73a30e1f4ac330daf`.
-- Current S is 167117 bytes, SHA-256
-  `4cf236be54783ca9b2854dbdc22c4c28a08d579ff92cb902714c36619f9c1991`.
+- The current seed is 310891 bytes, SHA-256
+  `de37c5be4c981847fbfc0895ac9af027451e07ddc267952638fb8d18ee7e3767`.
+- Current S is 171197 bytes, SHA-256
+  `e9764d147082ef2f95583adddd3100305b00b966bd7a7852d7a0d56449fd00ab`.
 - Source/builder identities are in `bootstrap/seed.ts` and `bootstrap/c-seed.ts`;
   actual host Node v24.16.0, repository pin 26.13.0, TypeScript 7.0.2.
 - Original TS self-compilation was slow; the original benchmark's two 60 s
   timeouts remain censored observations. The text-cache snapshot has a recorded
-  668 ms successful self-build median. The current report-order source has its
+  668 ms successful self-build median. The current checked-arithmetic source has its
   own three-generation equality; its timings are not a new benchmark.
 
 ## Overall acceptance

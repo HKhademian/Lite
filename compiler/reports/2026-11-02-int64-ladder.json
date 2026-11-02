@@ -1,0 +1,120 @@
+{
+  "date": "2026-11-02",
+  "baseRevision": "66df79ac23002876be930bd2b8083d188a90b14c",
+  "node": "v24.16.0",
+  "previousSeedSha256": "fa134de2a4c19891ce0a8970d83682ea4acafdfe21736ac73a30e1f4ac330daf",
+  "transitionalArtifactSha256": "5b1854bf39ceb5ce2d3a05b018fbb55c4128ac8262059372545045eb830d9aed",
+  "recipe": "Previous generated seed compiling current S -> transitional compiler; transitional compiler compiling the same S -> stage1; stage1 and stage2 compile the same S into stage2 and stage3. No source rewriting or T00 execution.",
+  "source": {
+    "sha256": "e9764d147082ef2f95583adddd3100305b00b966bd7a7852d7a0d56449fd00ab",
+    "bytes": 171197
+  },
+  "generations": [
+    {
+      "name": "stage1",
+      "sha256": "de37c5be4c981847fbfc0895ac9af027451e07ddc267952638fb8d18ee7e3767",
+      "bytes": 310891,
+      "strictTypecheck": true,
+      "status": 0
+    },
+    {
+      "name": "stage2",
+      "sha256": "de37c5be4c981847fbfc0895ac9af027451e07ddc267952638fb8d18ee7e3767",
+      "bytes": 310891,
+      "strictTypecheck": true,
+      "status": 0
+    },
+    {
+      "name": "stage3",
+      "sha256": "de37c5be4c981847fbfc0895ac9af027451e07ddc267952638fb8d18ee7e3767",
+      "bytes": 310891,
+      "strictTypecheck": true,
+      "status": 0
+    }
+  ],
+  "fixedPoint": true,
+  "c": {
+    "sourceSha256": "e70525a549f47e2ca1fad710ab9bc14b581af90c1197c67be854f939d984c183",
+    "sourceBytes": 158078,
+    "artifactSha256": "b6f54e8e809b89db75965781436ebbc8647ecaa66dee510d653c46e2d36fa4cc",
+    "artifactBytes": 283282,
+    "builderSha256": "de37c5be4c981847fbfc0895ac9af027451e07ddc267952638fb8d18ee7e3767",
+    "native": false
+  },
+  "validation": {
+    "strictHostAndSeeds": true,
+    "fullSuite": {
+      "tests": 253,
+      "passed": 253,
+      "failed": 0,
+      "skipped": 0,
+      "durationMs": 54564.521208
+    },
+    "fastSuite": {
+      "tests": 253,
+      "passed": 243,
+      "failed": 0,
+      "skipped": 10,
+      "durationMs": 30420.453375
+    },
+    "editorGroups": 9,
+    "hostGroups": 13,
+    "tsCorpus": {
+      "phase": "compare",
+      "artifact": "compiler/bootstrap/T11.ts",
+      "target": "ts",
+      "cases": 93,
+      "programs": 55,
+      "rejections": 38,
+      "mismatches": 0,
+      "first": []
+    },
+    "cCorpus": {
+      "phase": "compare",
+      "artifact": "compiler/bootstrap/c-emitter.ts",
+      "target": "c",
+      "cases": 93,
+      "programs": 55,
+      "rejections": 38,
+      "mismatches": 0,
+      "first": []
+    },
+    "features": 37,
+    "scenarios": 77,
+    "verifierExecutions": 95,
+    "undefinedBehaviorSanitizer": {
+      "compiler": "cc",
+      "flags": [
+        "-std=c11",
+        "-Wall",
+        "-Wextra",
+        "-Werror",
+        "-fsanitize=undefined",
+        "-fno-sanitize-recover=all"
+      ],
+      "cases": 6,
+      "exactStatusAndStreams": true,
+      "sourcePrefix": "var hi := 9223372036854775807; var lo := -9223372036854775808; outputLine(\"before\");",
+      "sourceBodies": [
+        "outputLine(hi+0,lo- -1,hi*1,lo*0,-hi);",
+        "outputLine(hi+1);",
+        "outputLine(lo-1);",
+        "outputLine(lo*-1);",
+        "outputLine(-lo);",
+        "outputLine((hi+1)+(lo-1));"
+      ]
+    },
+    "faultExpressions": 11,
+    "boundaryOperandValues": 13,
+    "knownLimits": "This closes dynamic default-Int addition, subtraction, multiplication and negation only. Constant folding and division-family behavior are unchanged; wider numeric/types, expression/control-flow and data/function parity, run/check migration and native compiler self-hosting remain pending."
+  },
+  "reproductionCommands": [
+    "git show 66df79ac23002876be930bd2b8083d188a90b14c:compiler/bootstrap/T11.ts > /tmp/previous-seed.ts",
+    "node --input-type=module -e 'import {writeFileSync} from \"node:fs\"; import {loadBundle} from \"./igniter/loader.ts\"; writeFileSync(\"/tmp/S.lts\",loadBundle(\"compiler/manifests/ts.json\").text); writeFileSync(\"/tmp/C-S.lts\",loadBundle(\"compiler/manifests/c.json\").text);'",
+    "node compiler/scripts/run-ts-artifact.ts --artifact /tmp/previous-seed.ts --source /tmp/S.lts --out /tmp/transitional.ts",
+    "node compiler/scripts/run-ts-artifact.ts --artifact /tmp/transitional.ts --source /tmp/S.lts --out /tmp/stage1.ts",
+    "node compiler/scripts/run-ts-artifact.ts --artifact /tmp/stage1.ts --source /tmp/S.lts --out /tmp/stage2.ts",
+    "node compiler/scripts/run-ts-artifact.ts --artifact /tmp/stage2.ts --source /tmp/S.lts --out /tmp/stage3.ts",
+    "node compiler/scripts/run-ts-artifact.ts --artifact /tmp/stage3.ts --source /tmp/C-S.lts --out /tmp/c-emitter.ts"
+  ]
+}

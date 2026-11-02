@@ -526,6 +526,29 @@ intFloorDivideCode := fn(left: String, right: String): String {
 intFloorModuloCode := fn(left: String, right: String): String {
     "lite_floor_modulo_int(" + left + ", " + right + ")"
 }
+
+/** Emits checked Int64 addition, evaluating both operands once in source order. */
+intAddCode := fn(left: String, right: String, position: Int): String {
+    id := intText(position);
+    "(lt_arg_left_" + id + " = " + left + ", lt_arg_right_" + id + " = " + right + ", lt_checked_add(lt_arg_left_" + id + ", lt_arg_right_" + id + ", " + id + "))"
+}
+
+/** Emits checked Int64 subtraction, evaluating both operands once in source order. */
+intSubtractCode := fn(left: String, right: String, position: Int): String {
+    id := intText(position);
+    "(lt_arg_left_" + id + " = " + left + ", lt_arg_right_" + id + " = " + right + ", lt_checked_subtract(lt_arg_left_" + id + ", lt_arg_right_" + id + ", " + id + "))"
+}
+
+/** Emits checked Int64 multiplication, evaluating both operands once in source order. */
+intMultiplyCode := fn(left: String, right: String, position: Int): String {
+    id := intText(position);
+    "(lt_arg_left_" + id + " = " + left + ", lt_arg_right_" + id + " = " + right + ", lt_checked_multiply(lt_arg_left_" + id + ", lt_arg_right_" + id + ", " + id + "))"
+}
+
+/** Emits checked Int64 negation, evaluating the operand once. */
+intNegateCode := fn(value: String, position: Int): String {
+    "lt_checked_negate(" + value + ", " + intText(position) + ")"
+}
 /* Shared restricted front-end. Not a standalone program: a target manifest
    places the target literal encoders before this file and the emitter/driver
    after it. */
@@ -1674,7 +1697,8 @@ parseBinary := fn(source: String, position: Int, prefix: String, locals: List<Lo
                 value := if ch == "-" { negateInteger(source, start, operand.intValue, prefix) } else { operand.intValue };
                 left = intParsed(code, value, true, operand.next);
             } else {
-                left = intParsed(code, 0, false, operand.next);
+                runtimeCode := if ch == "-" { intNegateCode(operand.code, start) } else { code };
+                left = intParsed(runtimeCode, 0, false, operand.next);
             }
         }
     } else if isDigit(ch) {
@@ -2029,7 +2053,10 @@ parseBinary := fn(source: String, position: Int, prefix: String, locals: List<Lo
             } else if operator.text == ":%" {
                 left = intParsed(intFloorModuloCode(left.code, right.code), 0, false, right.next);
             } else {
-                left = intParsed("(" + left.code + " " + operator.text + " " + right.code + ")", 0, false, right.next);
+                runtimeCode := if operator.text == "+" { intAddCode(left.code, right.code, operatorPosition) }
+                    else if operator.text == "-" { intSubtractCode(left.code, right.code, operatorPosition) }
+                    else { intMultiplyCode(left.code, right.code, operatorPosition) };
+                left = intParsed(runtimeCode, 0, false, right.next);
             }
         } else if operator.text == "+" and left.kind == "String" and right.kind == "String" {
             if left.constant and right.constant {
@@ -2890,6 +2917,17 @@ parseProgram := fn(source: String, prefix: String): Items {
     }
     items
 }
+
+/** Encodes all line-start character offsets once for positioned runtime arithmetic faults. */
+lineStartCodes := fn(source: String): String {
+    var code := "0";
+    var position := 0;
+    loop position < textLength(source) {
+        if textAt(source, position) == "\n" { code = code + ", " + intText(position + 1); }
+        position = position + 1;
+    }
+    code
+}
 /** Removes one four-space indentation level from `indent`. */
 dedent := fn(indent: String): String {
     textSlice(indent, 0, textLength(indent) - 4)
@@ -2936,6 +2974,75 @@ usesIntHelper := fn(items: Items, name: String): Bool {
 usesIntDivision := fn(items: Items): Bool {
     usesIntHelper(items, "lite_divide_int(") or usesIntHelper(items, "lite_remainder_int(") or
     usesIntHelper(items, "lite_floor_divide_int(") or usesIntHelper(items, "lite_floor_modulo_int(")
+}
+
+/** True when a program needs checked dynamic Int64 arithmetic. */
+usesIntArithmetic := fn(items: Items): Bool {
+    usesIntHelper(items, "lt_checked_add(") or usesIntHelper(items, "lt_checked_subtract(") or
+        usesIntHelper(items, "lt_checked_multiply(") or usesIntHelper(items, "lt_checked_negate(")
+}
+
+/** Emits portable C11 guards that reject overflow before evaluating a signed operation. */
+emitIntArithmeticHelpers := fn(items: Items, source: String, prefix: String): Unit {
+    if not usesIntArithmetic(items) { return; }
+    namePrefix := if prefix == "" { "" } else { prefix + ":" };
+    outputLine("static const size_t lt_int_lines[] = {" + lineStartCodes(source) + "};");
+    outputLine("static const char *lt_int_source = " + textLiteralCode(namePrefix) + ";");
+    outputLine("static _Noreturn void lt_int_fault(size_t at) {");
+    outputLine("    size_t line = 0;");
+    outputLine("    while (line + 1 < sizeof(lt_int_lines) / sizeof(lt_int_lines[0]) && lt_int_lines[line + 1] <= at) { line += 1; }");
+    outputLine("    fprintf(stderr, \"%s%zu:%zu: ArithmeticPanic: integer outside Int range\\n\", lt_int_source, line + 1, at - lt_int_lines[line] + 1);");
+    outputLine("    exit(1);");
+    outputLine("}");
+    if usesIntHelper(items, "lt_checked_add(") {
+        outputLine("static int64_t lt_checked_add(int64_t left, int64_t right, size_t at) {");
+        outputLine("    if ((right > 0 && left > INT64_MAX - right) || (right < 0 && left < INT64_MIN - right)) { lt_int_fault(at); }");
+        outputLine("    return left + right;");
+        outputLine("}");
+    }
+    if usesIntHelper(items, "lt_checked_subtract(") {
+        outputLine("static int64_t lt_checked_subtract(int64_t left, int64_t right, size_t at) {");
+        outputLine("    if ((right < 0 && left > INT64_MAX + right) || (right > 0 && left < INT64_MIN + right)) { lt_int_fault(at); }");
+        outputLine("    return left - right;");
+        outputLine("}");
+    }
+    if usesIntHelper(items, "lt_checked_multiply(") {
+        outputLine("static int64_t lt_checked_multiply(int64_t left, int64_t right, size_t at) {");
+        outputLine("    if (left == 0 || right == 0) { return 0; }");
+        outputLine("    if (left > 0) {");
+        outputLine("        if (right > 0) { if (left > INT64_MAX / right) { lt_int_fault(at); } }");
+        outputLine("        else if (right < INT64_MIN / left) { lt_int_fault(at); }");
+        outputLine("    } else if (right > 0) {");
+        outputLine("        if (left < INT64_MIN / right) { lt_int_fault(at); }");
+        outputLine("    } else if (right < INT64_MAX / left) { lt_int_fault(at); }");
+        outputLine("    return left * right;");
+        outputLine("}");
+    }
+    if usesIntHelper(items, "lt_checked_negate(") {
+        outputLine("static int64_t lt_checked_negate(int64_t value, size_t at) {");
+        outputLine("    if (value == INT64_MIN) { lt_int_fault(at); }");
+        outputLine("    return -value;");
+        outputLine("}");
+    }
+    outputLine("");
+}
+
+/** Declares hygienic operand temporaries at their unique source-offset assignment sites; quoted text is skipped. Comma expressions sequence nested faults left to right. */
+emitArithmeticTemporaries := fn(items: Items): Unit {
+    loop items as item {
+        var cursor := 0;
+        loop cursor < textLength(item.code) {
+            if textAt(item.code, cursor) == "\"" {
+                cursor = skipAliasString(item.code, cursor);
+            } else if startsWithAt(item.code, cursor, "lt_arg_") {
+                end := skipName(item.code, cursor);
+                if startsWithAt(item.code, end, " = ") {
+                    outputLine("    int64_t " + textSlice(item.code, cursor, end) + ";");
+                }
+                cursor = end;
+            } else { cursor = cursor + 1; }
+        }
+    }
 }
 
 /** True when any emitted item concatenates dynamic Strings through the checked helper. */
@@ -3028,7 +3135,7 @@ emitStringConcatHelper := fn(): Unit {
 }
 
 /** Emits the C program from the flat item stream. Locals become int64_t, const char pointer or bool declarations, control flow becomes braces, and every report printf keeps the shared write-failure status. */
-emitProgram := fn(items: Items): Unit {
+emitProgram := fn(items: Items, source: String, prefix: String): Unit {
     loop items as item {
         if item.kind == "FunctionStart" {
             fail("", "C backend does not support top-level functions yet");
@@ -3054,14 +3161,16 @@ emitProgram := fn(items: Items): Unit {
         }
     }
     outputLine("#include <stdio.h>");
-    if usesIntDivision(items) or usesStringConcat(items) { outputLine("#include <stdlib.h>"); }
+    if usesIntDivision(items) or usesStringConcat(items) or usesIntArithmetic(items) { outputLine("#include <stdlib.h>"); }
     outputLine("#include <inttypes.h>");
     outputLine("#include <stdbool.h>");
     outputLine("#include <string.h>");
+    emitIntArithmeticHelpers(items, source, prefix);
     emitIntDivisionHelpers(items);
     if usesStringConcat(items) { emitStringConcatHelper(); }
     outputLine("int main(void) {");
     outputLine("    int status = 0;");
+    emitArithmeticTemporaries(items);
     var indent := "    ";
     var count := 0;
     loop items as item {
@@ -3118,4 +3227,4 @@ emitProgram := fn(items: Items): Unit {
 }
 prefix := sourcePrefix();
 source := inputAll();
-emitProgram(parseProgram(source, prefix));
+emitProgram(parseProgram(source, prefix), source, prefix);

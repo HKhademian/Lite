@@ -18,7 +18,7 @@ audit through `igniter/bundle-cli.ts`, so its node labels remain accurate.
 
 Interpreter run/check and the interpreter regression tests still use
 T00. The C emitter is now a TS-hosted compiler built by T11; its exact source,
-artifact and builder hashes are in `bootstrap/c-seed.ts`. The I/O seed
+artifact and builder hashes are in `bootstrap/c-seed.ts`. The checked-arithmetic seed
 refresh below records three byte-identical generated generations for its source snapshot. Native C01/C11
 remain unrecorded. These host transition slices do
 not complete feature parity or authorize deleting T00 before its replacements pass.
@@ -269,6 +269,46 @@ removed report spelling. Strict host/seed checks pass. All 251 full tests pass w
 the fast suite passes 242 with nine expected skips in 30.1 s. All nine editor
 groups, both 93-case compiler comparisons and 95 verifier executions pass.
 
+## Checked Int64 arithmetic
+
+The next existing-feature slice checks dynamic default-Int addition, subtraction,
+multiplication and negation in both generated targets. TS guards BigInt results;
+portable C11 guards reject overflow before evaluating signed operations. C
+source-offset operand temporaries use comma sequencing to preserve left-to-right
+nested faults. Helper names and temporaries are distinct from source locals.
+Line-start metadata is emitted once, with line/column lookup only on a fault;
+logical source names, Unicode code-point columns and CRLF positions match T00.
+Overflow preserves earlier streamed output, exact ArithmeticPanic stderr and
+status 1. Short-circuit logic and untaken branches avoid executing their faults.
+
+The [host differential tests](tests/host.test.ts) cover a 13-value signed boundary
+matrix, all representable pairwise results, eleven overflow expressions, nested
+fault order, helper-name hygiene and TS call effects. The existing canonical
+Int-limits case now also executes dynamic boundary operations on all three
+targets. Six native programs pass with `-fsanitize=undefined` and
+`-fno-sanitize-recover=all`, matching T00's exact status/stdout/stderr.
+Constant folding, division-family behavior and wider numeric widths are unchanged
+by this slice; these checks do not establish complete numeric or language parity.
+
+Current TS S is 171197 bytes, SHA-256
+`e9764d147082ef2f95583adddd3100305b00b966bd7a7852d7a0d56449fd00ab`.
+Three generated compiler generations are byte-identical, 310891 bytes, SHA-256
+`de37c5be4c981847fbfc0895ac9af027451e07ddc267952638fb8d18ee7e3767`.
+The refresh starts from the previous generated seed, compiles unchanged current
+S through a transitional compiler, then compiles it three times; no T00 or
+source rewriting is used. The refreshed TS-hosted C emitter is 283282 bytes,
+SHA-256 `b6f54e8e809b89db75965781436ebbc8647ecaa66dee510d653c46e2d36fa4cc`,
+from C source SHA-256
+`e70525a549f47e2ca1fad710ab9bc14b581af90c1197c67be854f939d984c183`.
+The [ladder record](reports/2026-11-02-int64-ladder.json) preserves the recipe,
+identities and validation results.
+
+Strict host/seed checks pass. The full suite passes all 253 tests with zero
+skips in 54.6 s; fast passes 243 with ten expected skips in 30.4 s. All nine
+editor groups, both 93-case corpus comparisons and all 95 canonical target
+executions pass. Full existing-feature parity, run/check migration and the native
+C compiler ladder remain pending; T00 is still required.
+
 ## Rule
 
 For one Lite source at a time, starting with the compiler corpus and then S:
@@ -374,7 +414,7 @@ Useful internal tools:
 | Date | Target | Source | First difference | Class | Resolution |
 |---|---|---|---|---|---|
 | 2026-11-02 | TS | `report(f())` where `f` itself reports | Stage 0 prints `f`'s line before the outer line; the emitted `lite_out += f()` reads the accumulator before its arguments, so `f`'s line is dropped | emitter argument-order bug | closed by the report-order seed refresh above; six focused T00/generated scenarios and current corpus hashes |
-| 2026-11-02 | TS | Dynamic Int64 addition, subtraction, multiplication and negation overflow | T00 faults; generated TS returns out-of-range BigInt values | checked-arithmetic gap | open; exact probes in the support inventory |
+| 2026-11-02 | TS | Dynamic Int64 addition, subtraction, multiplication and negation overflow | T00 faults; generated TS returns out-of-range BigInt values | checked-arithmetic gap | closed for these four default-Int operations by the checked Int64 refresh; exact fault streams/status and portable C11 guards covered |
 | 2026-11-02 | TS | A report followed by an indexed-read runtime fault | T00 retains the earlier report; generated TS loses it because main never returns the accumulator | output-retention gap | closed for process adapters by the I/O migration; exact runtime fault diagnostics remain separate |
 | 2026-11-02 | TS | `inputAll()` with invalid UTF-8 stdin | T00 returns InputFault; generated TS substitutes a replacement character and succeeds | input-decoding gap | closed by strict incremental input decoding and exact real-CLI UTF-8 probes |
 | — | — | — | No generated compiler yet | — | — |

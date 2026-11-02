@@ -1,19 +1,20 @@
 # Generated bootstrap seeds
 
-`T11.ts` is the current generated compiler from the owner-approved
-[I/O migration](../parity.md#temporary-io-migration). Its exact source/builder
+`T11.ts` is the current generated compiler after the
+[checked Int64 refresh](../parity.md#checked-int64-arithmetic). Its exact source/builder
 identities are in [seed.ts](seed.ts). Three generated generations are byte-identical:
-273040 bytes, SHA-256 `fa134de2…`. The refresh starts from the
-previous generated seed and uses a temporary source-call spelling adapter; it
-does not need T00 execution. The [ladder record](../reports/2026-11-02-io-migration-ladder.json)
-preserves the recipe, previous seed revision and transitional source/artifact
+310891 bytes, SHA-256 `de37c5be…`. The refresh starts from the
+previous generated seed, compiles unchanged current S at each generation, and
+does not need T00 execution. The [ladder record](../reports/2026-11-02-int64-ladder.json)
+preserves the recipe, previous seed revision and transitional artifact
 hashes. Historical T00-built ladder identities remain in the parity ledger.
 
 `c-emitter.ts` is the current Lite C emitter compiled by the refreshed TS seed.
-It is 244073 bytes, SHA-256 `8928ddc7…`; C source
-SHA-256 `b342a963…`, builder SHA-256 `fa134de2…`.
+It is 283282 bytes, SHA-256 `b6f54e8e…`; C source
+SHA-256 `e70525a5…`, builder SHA-256 `de37c5be…`.
 Its metadata is in [c-seed.ts](c-seed.ts). It supports admitted scalar output
-forms and still rejects unsupported input/aggregate forms explicitly. It is a
+forms and checked dynamic Int64 addition, subtraction, multiplication and negation;
+it still rejects unsupported input/aggregate forms explicitly. It is a
 TS-hosted C emitter, not the pending native C11 compiler or a native fixed point.
 
 The owner approved starting the default-compiler transition on 2026-11-02.

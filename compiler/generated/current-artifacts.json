@@ -1,8 +1,8 @@
 {
-  "note": "Current exact artifacts after the owner-approved output/outputLine and input-helper migration. P0 and earlier checkpoint records remain historical.",
+  "note": "Current exact artifacts after checked dynamic Int64 addition, subtraction, multiplication and negation. P0 and earlier checkpoint records remain historical.",
   "recorded": "2026-11-02",
-  "sourceSha256": "4cf236be54783ca9b2854dbdc22c4c28a08d579ff92cb902714c36619f9c1991",
-  "compilerSha256": "fa134de2a4c19891ce0a8970d83682ea4acafdfe21736ac73a30e1f4ac330daf",
+  "sourceSha256": "e9764d147082ef2f95583adddd3100305b00b966bd7a7852d7a0d56449fd00ab",
+  "compilerSha256": "de37c5be4c981847fbfc0895ac9af027451e07ddc267952638fb8d18ee7e3767",
   "programCases": 55,
   "rejectedCases": 38,
   "artifacts": [
@@ -291,14 +291,14 @@
     {
       "name": "mutable-counter-loop",
       "source": "001-007-mutable-counter-loop.lts",
-      "ts": "sha256:01271cc6aa77cdc78dcf05fc39af1cd833bb23ae8afba2a259e35b6d37843711",
-      "c": "sha256:b4c7e33e8698eab7afeb7fe8f6a71bf7967dad1267be97f1356824d9e013794e"
+      "ts": "sha256:ed1c2da2b19011e82cce4a9f1c3c667edfad1de15ce82fb9d399f618e48da83d",
+      "c": "sha256:449b1ce70de06d06558cfc0489db38d5ae7755525a5774e860f8f1a2d7083419"
     },
     {
       "name": "nested-if-in-loop",
       "source": "001-007-nested-if-in-loop.lts",
-      "ts": "sha256:aa51b71cd8dbe1cc62d895b31a33d4cbdbbb3c7e0e87cd815bf981ad271d715e",
-      "c": "sha256:2ec8b2cd949f83e27727d8afd6d77845afba0875916058d7199df4b0d68bbefe"
+      "ts": "sha256:2d3c23a07576801737528a1505f7195786d40545d933780e0c7a1124d3c5819b",
+      "c": "sha256:056ea4f6a1cebc053cf198fc1d5ce137f9e20b9194a70b6b859c5a548be98f23"
     },
     {
       "name": "not-precedence",
@@ -309,8 +309,8 @@
     {
       "name": "report-in-loop",
       "source": "001-007-report-in-loop.lts",
-      "ts": "sha256:5f0d71b1bebe07af5c64aac6d75779aa13fec4510c65267a7e96e56bbd9c55ca",
-      "c": "sha256:e3886c3994bc187363e25997b644e086e777e44bb7f2338e3ecb531823e294b7"
+      "ts": "sha256:d0a2d01c8e76172504780befd0409ae3f13d4d0bbdb85ff6fabab182879996c5",
+      "c": "sha256:4e7dac660048a90ca056e943948b2818811b5bcdc5dc3eb4f009adb5eaa73e91"
     },
     {
       "name": "string-equality-if",

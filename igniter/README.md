@@ -19,7 +19,7 @@ this igniter's supported language. The refreshed T11/T12/T13 fixed point covers
 the bootstrap subset; full existing T00 feature parity and the native C ladder
 remain pending. The [text-cache benchmark](../benchmark/reports/2026-11-02-text-cache.md)
 records 668 ms median self-compilation after eliminating repeated whole-source
-code-point copies. The current test suite has 236 interpreter groups, 11
+code-point copies. The current test suite has 236 interpreter groups, 13
 compiler-host groups and 4 policy/tooling groups, with 9 separate editor grammar groups.
 
 Generated TS now preserves nested report effects and left-to-right report
@@ -29,6 +29,11 @@ The [current temporary helper contract](../docs/tooling-and-learning.md#temporar
 uses output/outputLine and optional input prompts. The report builtin is removed;
 maintained Lite calls use outputLine. T00 output now includes array/list display;
 generated TS implements the admitted forms and the four input helpers.
+
+Generated TS and portable C11 now check dynamic Int64 addition, subtraction,
+multiplication and negation with matching positioned overflow faults; see the
+[arithmetic refresh](../compiler/parity.md#checked-int64-arithmetic). Wider
+existing-feature parity, run/check migration and native self-hosting remain pending.
 
 ## Run
 
