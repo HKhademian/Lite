@@ -25,7 +25,7 @@ this igniter's supported language. The refreshed T11/T12/T13 fixed point covers
 the bootstrap subset; full existing T00 feature parity and the native C ladder
 remain pending. The [text-cache benchmark](../benchmark/reports/2026-11-02-text-cache.md)
 records 668 ms median self-compilation after eliminating repeated whole-source
-code-point copies. The current test suite has 236 interpreter groups, 17
+code-point copies. The current test suite has 236 interpreter groups, 18
 compiler-host groups and 4 policy/tooling groups, with 9 separate editor grammar groups.
 
 Generated TS now preserves nested report effects and left-to-right report
@@ -62,6 +62,11 @@ earlier output, using shared fault metadata. All 257 full tests pass with zero
 skips (47.3 s); the measured inventory is 73/162 matching cases with 89 remaining.
 The supplementary-character column convention is separately pending; see the
 [bounds-fault ledger](../compiler/parity.md#positioned-text-and-list-bounds-faults).
+
+Parenthesized inequality and bare String/Int/Bool function tails now stay
+comparisons, using a shared equals-token check. All 258 full tests pass with zero
+skips (47.3 s); the measured inventory is 75/163 matching cases, 88 remaining.
+Existing corpus artifacts are unchanged; see the [inequality ledger](../compiler/parity.md#inequality-token-discrimination).
 
 ## Run
 

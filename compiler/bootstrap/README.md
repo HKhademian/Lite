@@ -1,22 +1,22 @@
 # Generated bootstrap seeds
 
 `T11.ts` is the current generated compiler after the
-[bounds-fault refresh](../parity.md#positioned-text-and-list-bounds-faults). Its exact source/builder
+[inequality-token refresh](../parity.md#inequality-token-discrimination). Its exact source/builder
 identities are in [seed.ts](seed.ts). Three generated generations are byte-identical:
-315117 bytes, SHA-256 `c9529226…`. The refresh starts from the
+314867 bytes, SHA-256 `0cacf4b4…`. The refresh starts from the
 previous generated seed, compiles unchanged current S at each generation, and
-does not need T00 execution. The [ladder record](../reports/2026-11-02-bounds-ladder.json)
+does not need T00 execution. The [ladder record](../reports/2026-11-02-inequality-ladder.json)
 preserves the recipe, previous seed revision and transitional artifact
 hashes. Historical T00-built ladder identities remain in the parity ledger.
 
 `c-emitter.ts` is the current Lite C emitter compiled by the refreshed TS seed.
-It is 288864 bytes, SHA-256 `7428143f…`; C source
-SHA-256 `550cd452…`, builder SHA-256 `c9529226…`.
+It is 288610 bytes, SHA-256 `6f891dd9…`; C source
+SHA-256 `1b5adf79…`, builder SHA-256 `0cacf4b4…`.
 Its metadata is in [c-seed.ts](c-seed.ts). It supports admitted scalar output
 forms and checked dynamic Int64 arithmetic, including positioned division-family faults.
 Multi-value output evaluates every argument before writing. The subsequent
 [bounds-fault refresh](../reports/2026-11-02-bounds-ladder.json) rebuilds this emitter
-from shared frontend changes; native C program bytes stay unchanged. The emitter still rejects unsupported input/aggregate forms explicitly. It is a
+from shared frontend changes; existing corpus program bytes stay unchanged. The emitter still rejects unsupported input/aggregate forms explicitly. It is a
 TS-hosted C emitter, not the pending native C11 compiler or a native fixed point.
 
 The owner approved starting the default-compiler transition on 2026-11-02.

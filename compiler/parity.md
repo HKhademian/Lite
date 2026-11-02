@@ -479,6 +479,45 @@ editor groups pass. Paired compiler-phase medians are 60.2 → 59.4 ms for 1,000
 outputs, 628.3 → 646.2 ms for the same compiler source. C-emitter pairs are
 80.0 → 79.9 ms for 1,000 outputs and 166.8 → 164.3 ms for 200 divisions.
 
+## Inequality token discrimination
+
+A shared single-equals check now distinguishes assignment/named-tuple fields
+from both equality and inequality. Parenthesized `value =!= other` no longer
+looks like tuple construction, and a bare function tail no longer looks like
+assignment to its immutable parameter. Existing assignment and named fields
+retain their contracts. No new operator or language syntax is selected.
+
+Focused checks cover 12 TS programs and seven native C programs over String,
+Int and Bool values, nested grouping, comments, loops, ordinary assignment,
+tuple construction and implicit function results. Ten target rejection checks
+cover malformed/mistyped comparisons, immutable assignment, broken fields and
+invalid longer operator spellings, before effects. A new inventory probe keeps
+the discovered bare function-tail failure as a permanent source case.
+
+Current TS S is 173318 bytes, SHA-256
+`55dfd45e27e5a31a4d90c3833b8750fba22e0a258ee86ad8b570d767b3a1bab1`.
+Three generated generations match, 314867 bytes, SHA-256
+`0cacf4b4907e8c1c83a343a00ab954df726bd79ed58a3e41e4878691eaa15b36`.
+The TS-hosted C emitter is 288610 bytes, SHA-256
+`6f891dd9315276f07e75b28a71530953c9173927aef6b92dc41affdbd90de7b3`,
+from C source SHA-256
+`1b5adf7998d2e335d37be55a4f17d535fe03e10709a7bc967d77bb0c69907b1d`.
+The [generated-only ladder](reports/2026-11-02-inequality-ladder.json) records
+provenance; all existing corpus program artifact bytes remain unchanged.
+
+The inventory now has 75/163 matches and 88 rejections: one old failed probe
+is closed and the new function-tail probe also matches. Twenty-four original
+failures are closed, with no original matching case regressing. The
+[paired measurements](reports/2026-11-02-inequality-performance.json) are recorded
+without claiming a speedup. Deferred constant arithmetic faults are the next
+topic, before comparison chains; the supplementary-column decision stays separate.
+
+Strict checks, all 258 full tests (zero skips, 47.3 s), fast 246 pass with twelve
+expected skips (30.4 s), both 93-case corpora, all 95 verifier executions and nine
+editor groups pass. Paired TS medians: 63.2 → 62.9 ms for 1,000 outputs,
+634.8 → 647.0 ms for identical S. C-emitter medians: 80.4 → 85.9 ms for 1,000
+outputs, 174.6 → 174.4 ms for 200 divisions. No speedup is claimed for this slice.
+
 ## Rule
 
 For one Lite source at a time, starting with the compiler corpus and then S:

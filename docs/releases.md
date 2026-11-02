@@ -13,7 +13,12 @@ Current components:
 - Igniter: **0.1.0-alpha.38**
 - VS Code extension: **0.1.1**
 - Verification corpus: 37 features, 19 examples, 20 samples, 77 scenarios, 95 target executions
-- Tests: 236 interpreter groups, 17 compiler-host groups, 4 policy/tooling groups and 9 editor grammar groups
+- Tests: 236 interpreter groups, 18 compiler-host groups, 4 policy/tooling groups and 9 editor grammar groups
+
+Parenthesized inequality and bare String/Int/Bool function tails now stay
+comparisons, using a shared equals-token check. All 258 full tests pass with zero
+skips (47.3 s); the measured inventory is 75/163 matching cases, 88 remaining.
+Existing corpus artifacts are unchanged; see the [inequality ledger](../compiler/parity.md#inequality-token-discrimination).
 
 Generated TS text/list bounds faults now carry exact source locations and keep
 earlier output, using shared fault metadata. All 257 full tests pass with zero

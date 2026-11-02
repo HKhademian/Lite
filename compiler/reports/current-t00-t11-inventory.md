@@ -2,7 +2,7 @@
 
 Runtime environment details omitted for privacy.
 
-T11 identity: `c95292264a2b894c0f1e5d31eb53193d3605c71800def6b987db6934b8b717b7`. The preserved artifact passed its separate strict TypeScript check.
+T11 identity: `0cacf4b4907e8c1c83a343a00ab954df726bd79ed58a3e41e4878691eaa15b36`. The preserved artifact passed its separate strict TypeScript check.
 
 This is the current measured support inventory, not acceptance of new language features. Dated historical inventories remain unchanged.
 
@@ -20,15 +20,15 @@ This is the current measured support inventory, not acceptance of new language f
 - feature: 37; 22 matches tested behavior; 15 T11 rejects source.
 - example: 19; 10 matches tested behavior; 9 T11 rejects source.
 - sample: 20; 11 matches tested behavior; 9 T11 rejects source.
-- probe: 78; 22 matches tested behavior; 56 T11 rejects source.
+- probe: 79; 24 matches tested behavior; 55 T11 rejects source.
 - library-test: 8; 8 matches tested behavior.
 - trackedSourceFiles: 209.
 - Showcases: none currently implemented.
 
 ## Progress since the original inventory
 
-- 23 formerly failing cases now match; 0 formerly matching cases regress. Case identity includes kind and id.
-- 73/162 executed source cases match; 89 still fail. These are case counts, not distinct missing features or an overall completion percentage.
+- 24 formerly failing cases now match; 0 formerly matching cases regress. Case identity includes kind and id.
+- 75/163 executed source cases match; 88 still fail. These are case counts, not distinct missing features or an overall completion percentage.
 - Native C, compile-only sources and run/check migration have separate gates in [the live gap tracker](../gaps.md).
 
 Closed original cases:
@@ -55,6 +55,7 @@ Closed original cases:
 - probe: function.report-order
 - probe: text.bounds-diagnostic
 - probe: output.before-fault
+- probe: comparison.parenthesized-not-equal
 - probe: input.invalid-utf8
 
 ## feature
@@ -245,9 +246,9 @@ Closed original cases:
   First diagnostic: 1:25: division by zero in integer expression
 - **logic.short-circuit-fault — T11 rejects source.** Short-circuiting skips a failing arithmetic operand
   First diagnostic: 1:25: division by zero in integer expression
-- **comparison.parenthesized-not-equal — T11 rejects source.** Parenthesized inequality with a named left operand
-  First diagnostic: 1:34: expected an Int, String or Bool expression
+- **comparison.parenthesized-not-equal — matches tested behavior.** Parenthesized inequality with a named left operand
 - **input.invalid-utf8 — matches tested behavior.** Invalid UTF-8 stdin is rejected rather than replaced
+- **comparison.bare-function-tail — matches tested behavior.** A bare inequality function tail remains a comparison rather than assignment
 
 ## example
 

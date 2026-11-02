@@ -481,5 +481,11 @@
       255
     ],
     "test": "whole-input example runs via the real launcher preserving UTF-8 bytes and silent check-only behavior"
+  },
+  {
+    "id": "comparison.bare-function-tail",
+    "summary": "A bare inequality function tail remains a comparison rather than assignment",
+    "source": "f := fn(value: String): Bool { value =!= \"\" } outputLine(f(\"x\"));",
+    "test": "comparison tails distinguish =!= from assignment and named tuple field tokens"
   }
 ]

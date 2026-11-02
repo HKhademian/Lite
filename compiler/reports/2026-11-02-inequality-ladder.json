@@ -1,0 +1,104 @@
+{
+  "date": "2026-11-02",
+  "baseRevision": "2c787bcfcca54cb73db7004ec4f1b68780e6583a",
+  "node": "v24.16.0",
+  "previousSeedSha256": "c95292264a2b894c0f1e5d31eb53193d3605c71800def6b987db6934b8b717b7",
+  "transitionalArtifactSha256": "0cacf4b4907e8c1c83a343a00ab954df726bd79ed58a3e41e4878691eaa15b36",
+  "recipe": "Previous generated seed compiling current S -> transitional compiler; transitional compiler compiling the same S -> stage1; stage1 and stage2 compile the same S into stage2 and stage3. No source rewriting or T00 execution.",
+  "source": {
+    "sha256": "55dfd45e27e5a31a4d90c3833b8750fba22e0a258ee86ad8b570d767b3a1bab1",
+    "bytes": 173318
+  },
+  "generations": [
+    {
+      "name": "stage1",
+      "sha256": "0cacf4b4907e8c1c83a343a00ab954df726bd79ed58a3e41e4878691eaa15b36",
+      "bytes": 314867,
+      "strictTypecheck": true,
+      "status": 0
+    },
+    {
+      "name": "stage2",
+      "sha256": "0cacf4b4907e8c1c83a343a00ab954df726bd79ed58a3e41e4878691eaa15b36",
+      "bytes": 314867,
+      "strictTypecheck": true,
+      "status": 0
+    },
+    {
+      "name": "stage3",
+      "sha256": "0cacf4b4907e8c1c83a343a00ab954df726bd79ed58a3e41e4878691eaa15b36",
+      "bytes": 314867,
+      "strictTypecheck": true,
+      "status": 0
+    }
+  ],
+  "fixedPoint": true,
+  "c": {
+    "sourceSha256": "1b5adf7998d2e335d37be55a4f17d535fe03e10709a7bc967d77bb0c69907b1d",
+    "sourceBytes": 161163,
+    "artifactSha256": "6f891dd9315276f07e75b28a71530953c9173927aef6b92dc41affdbd90de7b3",
+    "artifactBytes": 288610,
+    "builderSha256": "0cacf4b4907e8c1c83a343a00ab954df726bd79ed58a3e41e4878691eaa15b36",
+    "native": false
+  },
+  "validation": {
+    "strictHostAndSeeds": true,
+    "validTsPrograms": 12,
+    "validCPrograms": 7,
+    "rejectedTargetChecks": 10,
+    "fullSuite": {
+      "tests": 258,
+      "passed": 258,
+      "failed": 0,
+      "skipped": 0,
+      "durationMs": 47282.542541
+    },
+    "fastSuite": {
+      "tests": 258,
+      "passed": 246,
+      "failed": 0,
+      "skipped": 12,
+      "durationMs": 30404.353917
+    },
+    "hostGroups": 18,
+    "editorGroups": 9,
+    "tsCorpus": {
+      "phase": "compare",
+      "target": "ts",
+      "cases": 93,
+      "programs": 55,
+      "rejections": 38,
+      "mismatches": 0,
+      "first": []
+    },
+    "cCorpus": {
+      "phase": "compare",
+      "target": "c",
+      "cases": 93,
+      "programs": 55,
+      "rejections": 38,
+      "mismatches": 0,
+      "first": []
+    },
+    "verifierExecutions": 95,
+    "existingProgramArtifactsUnchanged": true,
+    "inventory": {
+      "matches": 75,
+      "total": 163,
+      "remaining": 88,
+      "originalFailuresClosed": 24,
+      "regressions": 0
+    },
+    "performanceReport": "2026-11-02-inequality-performance.json",
+    "knownLimits": "Comparison chains require subsequent deferred-arithmetic-fault handling and lowering. The supplementary-character column convention and wider feature/C/native/run/check gaps remain pending."
+  },
+  "reproductionCommands": [
+    "git show 2c787bcfcca54cb73db7004ec4f1b68780e6583a:compiler/bootstrap/T11.ts > /tmp/previous-seed.ts",
+    "node --input-type=module -e 'import {writeFileSync} from \"node:fs\"; import {loadBundle} from \"./igniter/loader.ts\"; writeFileSync(\"/tmp/S.lts\",loadBundle(\"compiler/manifests/ts.json\").text); writeFileSync(\"/tmp/C-S.lts\",loadBundle(\"compiler/manifests/c.json\").text);'",
+    "node compiler/scripts/run-ts-artifact.ts --artifact /tmp/previous-seed.ts --source /tmp/S.lts --out /tmp/transitional.ts",
+    "node compiler/scripts/run-ts-artifact.ts --artifact /tmp/transitional.ts --source /tmp/S.lts --out /tmp/stage1.ts",
+    "node compiler/scripts/run-ts-artifact.ts --artifact /tmp/stage1.ts --source /tmp/S.lts --out /tmp/stage2.ts",
+    "node compiler/scripts/run-ts-artifact.ts --artifact /tmp/stage2.ts --source /tmp/S.lts --out /tmp/stage3.ts",
+    "node compiler/scripts/run-ts-artifact.ts --artifact /tmp/stage3.ts --source /tmp/C-S.lts --out /tmp/c-emitter.ts"
+  ]
+}

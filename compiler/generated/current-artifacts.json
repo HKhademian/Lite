@@ -1,8 +1,8 @@
 {
-  "note": "Current exact artifacts after positioned generated TS text/list bounds faults and shared fault metadata. Native C program artifacts remain unchanged.",
+  "note": "Current exact artifacts after distinguishing assignment/tuple equals from =!= comparisons. Existing corpus program artifact hashes remain unchanged.",
   "recorded": "2026-11-02",
-  "sourceSha256": "ee0832948120401868cf7e93d93e0f51cc794faadb54daf4cfc58b2533d08aa8",
-  "compilerSha256": "c95292264a2b894c0f1e5d31eb53193d3605c71800def6b987db6934b8b717b7",
+  "sourceSha256": "55dfd45e27e5a31a4d90c3833b8750fba22e0a258ee86ad8b570d767b3a1bab1",
+  "compilerSha256": "0cacf4b4907e8c1c83a343a00ab954df726bd79ed58a3e41e4878691eaa15b36",
   "programCases": 55,
   "rejectedCases": 38,
   "artifacts": [

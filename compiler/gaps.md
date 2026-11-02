@@ -9,7 +9,7 @@ This tracker covers the T00 replacement goal, including newly discovered flaws.
 
 The [current inventory](reports/current-t00-t11-inventory.md) and
 [raw observations](reports/current-t00-t11-inventory.json) use the checked Int64
-seed `c9529226…`. All inputs compile/check against the current reference, both
+seed `0cacf4b4…`. All inputs compile/check against the current reference, both
 execution paths use identical anonymous diagnostic naming, and raw-byte input
 probes follow the real CLI's lazy strict UTF-8 decoding. Historical reports stay
 unchanged. Refresh with `node compiler/scripts/t00-t11-inventory.ts --large-sources`.
@@ -17,12 +17,13 @@ unchanged. Refresh with `node compiler/scripts/t00-t11-inventory.ts --large-sour
 - Canonical features: 22/37 match; 15 rejected.
 - Examples: 10/19 match; 9 rejected.
 - Implemented samples: 11/20 match; 9 rejected.
-- Isolated boundary probes: 22/78 match; 56 rejected; no differences among accepted probes.
+- Isolated boundary probes: 24/79 match; 55 rejected; no differences among accepted probes.
 - Library tests: 8/8 match. All 209 tracked Lite sources are accounted for;
   compile-only acceptance is distinguished from executed parity.
-- Total executed source cases: 73/162 match, 89 still fail. Compared with the
-  original inventory, 23 previously failing cases now match and none regress.
-  A new temporary-I/O case accounts for the additional matching case.
+- Total executed source cases: 75/163 match, 88 still fail. Compared with the
+  original inventory, 24 previously failing cases now match and none regress.
+  The temporary-I/O case and a newly retained function-tail probe account for
+  two additional matching cases.
 
 These counts describe measured programs. Several failing cases share one cause;
 a passing broad case can still contain unsupported forms. The detailed report
@@ -57,14 +58,16 @@ Keep dependencies explicit; split a topic further when its contracts warrant it.
   the convention; retain explicit supplementary-character cases when resolved.
   Earlier runtime parity probes put supplementary source characters on preceding
   lines, so their passing results do not cover this difference.
-- [ ] **Comparisons:** parenthesized inequality, chains and single evaluation.
-  A bare function tail `value =!= ""` is also mistaken for assignment to the
-  parameter; retain a regression for that form when fixing comparison parsing.
+- [x] **Equals-token discrimination:** parenthesized inequality and bare
+  function tails stay comparisons; assignment and tuple fields still work.
+- [ ] **Comparison chains:** adjacent comparisons, middle-operand single
+  evaluation and short-circuiting. Depends on deferred arithmetic faults.
 - [ ] **Script and lexical forms:** empty scripts, optional final semicolons,
   adjacent Strings, trailing call commas, standalone scope blocks, expression
   statements and same-block shadowing.
 - [ ] **Deferred arithmetic faults:** constant arithmetic must fault only when
   reached; dead branches and short-circuit operands must remain unevaluated.
+  Next slice, before comparison-chain lowering.
 - [ ] **Float arithmetic:** decimal/exponent literals, mixed operations,
   comparisons, finite-result faults, power and display.
 - [ ] **Numeric widths:** explicit Int64/Float aliases, narrow types, promotion,
@@ -162,3 +165,13 @@ for supplementary characters remain separately pending; no parity claim includes
 that unresolved case. Paired TS compiler medians: 60.2 → 59.4 ms for 1,000 outputs,
 628.3 → 646.2 ms for identical compiler source. C-emitter medians stay steady:
 80.0 → 79.9 ms for 1,000 outputs, 166.8 → 164.3 ms for 200 divisions.
+
+Inequality-token discrimination passes 12 TS programs, seven native C programs
+and ten rejection checks. All 258 full tests pass with zero skips in 47.3 s;
+fast 246 pass/12 expected skips, strict checks, both 93-case corpora, all 95
+verifier executions and nine editor groups pass. Existing corpus artifact bytes
+are unchanged. Inventory: 75/163 match, 88 reject; the new function-tail probe
+also passes. Paired TS medians: 63.2 → 62.9 ms for 1,000 outputs, 634.8 → 647.0 ms
+for identical S. C-emitter medians: 80.4 → 85.9 ms for 1,000 outputs,
+174.6 → 174.4 ms for 200 divisions. Mixed timing changes are recorded without a
+speedup claim. Next: deferred arithmetic faults before comparison chains.

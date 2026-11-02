@@ -1,10 +1,10 @@
 {
   "schema": 1,
   "date": "2026-11-02",
-  "startedAt": "2026-11-02T15:27:36.207Z",
-  "revision": "f8e46a099293fdf95b75e9caff988fd29f21accd",
+  "startedAt": "2026-11-02T15:38:44.998Z",
+  "revision": "2c787bcfcca54cb73db7004ec4f1b68780e6583a",
   "node": "v24.16.0",
-  "t11Sha256": "c95292264a2b894c0f1e5d31eb53193d3605c71800def6b987db6934b8b717b7",
+  "t11Sha256": "0cacf4b4907e8c1c83a343a00ab954df726bd79ed58a3e41e4878691eaa15b36",
   "rows": [
     {
       "id": "int.arithmetic",
@@ -6127,7 +6127,7 @@
       "t00Check": {
         "accepted": true
       },
-      "status": "rejected",
+      "status": "matches",
       "cases": [
         {
           "name": "boundary",
@@ -6138,14 +6138,27 @@
             "stdout": "true\n",
             "stderr": "",
             "signal": null
-          }
+          },
+          "t11": {
+            "status": 0,
+            "signal": null,
+            "stdout": "true\n",
+            "stderr": ""
+          },
+          "matches": true
         }
       ],
       "t11Compile": {
-        "status": 2,
+        "status": 0,
+        "signal": null,
+        "stdout": "export function main(lite$write?: (text: string) => void): string {\n    let lite_out = \"\";\n    function lite$emit(text: string): void {\n        if (lite$write === undefined) lite_out += text;\n        else lite$write(text);\n    }\n    void lite$emit;\n    const lite_label = \"x\";\n    void lite_label;\n    const lite$report0 = (((true)) ? \"true\" : \"false\");\n    lite$emit(lite$report0 + \"\\n\");\n    return lite_out;\n}\n",
+        "stderr": ""
+      },
+      "artifactTypecheck": {
+        "status": 0,
         "signal": null,
         "stdout": "",
-        "stderr": "1:34: expected an Int, String or Bool expression\n"
+        "stderr": ""
       }
     },
     {
@@ -6187,6 +6200,51 @@
         "status": 0,
         "signal": null,
         "stdout": "let lite_out = \"\";\n\ndeclare const process: {\n    argv: string[];\n    exit(code: number): never;\n    getBuiltinModule(name: \"node:fs\"): {\n        readSync(fd: number, buffer: Uint8Array, offset: number, length: number, position: null): number;\n        writeSync(fd: number, text: string): number;\n    };\n};\n\ndeclare const TextDecoder: { new(label: string, options: { fatal: boolean }): { decode(input?: Uint8Array, options?: { stream: boolean }): string } };\nconst lite$decoder = new TextDecoder(\"utf-8\", { fatal: true });\nconst lite$bytes = new Uint8Array(4096);\nlet lite$byteAt = 0, lite$byteEnd = 0;\nlet lite$ended = false;\nlet lite$pending: string | null | undefined;\nfunction lite$inputFault(at: string, message: string): never {\n    process.getBuiltinModule(\"node:fs\").writeSync(2, at + message + \"\\n\");\n    process.exit(1);\n}\nfunction lite$prompt(text: string | undefined): void {\n    if (text === undefined) return;\n    process.getBuiltinModule(\"node:fs\").writeSync(1, lite_out + text);\n    lite_out = \"\";\n}\nfunction lite$peek(at: string): string | null {\n    if (lite$pending !== undefined) return lite$pending;\n    if (lite$ended) return null;\n    try {\n        while (true) {\n            if (lite$byteAt === lite$byteEnd) {\n                lite$byteEnd = process.getBuiltinModule(\"node:fs\").readSync(0, lite$bytes, 0, lite$bytes.length, null);\n                lite$byteAt = 0;\n                if (lite$byteEnd === 0) {\n                    lite$ended = true;\n                    lite$pending = lite$decoder.decode() || null;\n                    return lite$pending;\n                }\n            }\n            const text = lite$decoder.decode(lite$bytes.subarray(lite$byteAt, ++lite$byteAt), { stream: true });\n            if (text !== \"\") { lite$pending = text; return text; }\n        }\n    } catch (error) {\n        return lite$inputFault(at, \"cannot read input: \" + (error instanceof Error ? error.message : String(error)));\n    }\n}\nfunction lite$take(at: string): string | null {\n    const text = lite$peek(at); lite$pending = undefined; return text;\n}\nfunction lite$inputAll(prompt: string | undefined, at: string): string {\n    lite$prompt(prompt);\n    let text = \"\";\n    for (let ch = lite$take(at); ch !== null; ch = lite$take(at)) text += ch;\n    return text;\n}\n\nexport function main(lite$write?: (text: string) => void): string {\n    function lite$emit(text: string): void {\n        if (lite$write === undefined) lite_out += text;\n        else lite$write(text);\n    }\n    void lite$emit;\n    const lite$report0 = lite$inputAll(undefined, \"1:12: InputFault: \");\n    lite$emit(lite$report0 + \"\\n\");\n    return lite_out;\n}\n",
+        "stderr": ""
+      },
+      "artifactTypecheck": {
+        "status": 0,
+        "signal": null,
+        "stdout": "",
+        "stderr": ""
+      }
+    },
+    {
+      "id": "comparison.bare-function-tail",
+      "kind": "probe",
+      "summary": "A bare inequality function tail remains a comparison rather than assignment",
+      "test": "comparison tails distinguish =!= from assignment and named tuple field tokens",
+      "features": [],
+      "sourceSha256": "630e49865c42978c45cd528e682c89f4d0d47c822ee6fd3a30a0df0c7354ee17",
+      "source": "f := fn(value: String): Bool { value =!= \"\" } outputLine(f(\"x\"));",
+      "t00Check": {
+        "accepted": true
+      },
+      "status": "matches",
+      "cases": [
+        {
+          "name": "boundary",
+          "stdin": "",
+          "args": [],
+          "t00": {
+            "status": 0,
+            "stdout": "true\n",
+            "stderr": "",
+            "signal": null
+          },
+          "t11": {
+            "status": 0,
+            "signal": null,
+            "stdout": "true\n",
+            "stderr": ""
+          },
+          "matches": true
+        }
+      ],
+      "t11Compile": {
+        "status": 0,
+        "signal": null,
+        "stdout": "export function main(lite$write?: (text: string) => void): string {\n    let lite_out = \"\";\n    function lite$emit(text: string): void {\n        if (lite$write === undefined) lite_out += text;\n        else lite$write(text);\n    }\n    void lite$emit;\n    function liteFn_f(lite_value: string): boolean {\n        void lite_value;\n        return ((lite_value) !== (\"\"));\n    }\n    void liteFn_f;\n    const lite$report0 = ((liteFn_f(\"x\")) ? \"true\" : \"false\");\n    lite$emit(lite$report0 + \"\\n\");\n    return lite_out;\n}\n",
         "stderr": ""
       },
       "artifactTypecheck": {
@@ -6560,8 +6618,8 @@
   "sourceFiles": [
     {
       "path": "compiler/c-emitter.lts",
-      "sourceSha256": "550cd452f94d14887875c7a335a97d0cf0fffa57fee0a705b549c6e608e47b99",
-      "bytes": 161221,
+      "sourceSha256": "1b5adf7998d2e335d37be55a4f17d535fe03e10709a7bc967d77bb0c69907b1d",
+      "bytes": 161163,
       "t00Check": {
         "accepted": true
       },
@@ -6570,7 +6628,7 @@
         "status": 0,
         "signal": null,
         "stderr": "",
-        "stdoutBytes": 288910
+        "stdoutBytes": 288656
       },
       "artifactTypecheck": {
         "status": 0,
@@ -6579,7 +6637,7 @@
         "stderr": ""
       },
       "status": "accepted",
-      "artifactSha256": "c00aa7241f5e832f654a7fe7e30efd2623201fc1342f18b4407c63c57e760fd6"
+      "artifactSha256": "90e0fade96288932cd909ed341d2eb4bd0a676a4f6086bdb3d08e878444f8cc3"
     },
     {
       "path": "compiler/src/c-literals.lts",
@@ -6643,8 +6701,8 @@
     },
     {
       "path": "compiler/src/frontend.lts",
-      "sourceSha256": "8613094756887df0fe92e33005a802fdb6420648e447f21b53135b8e36785119",
-      "bytes": 125041,
+      "sourceSha256": "b0f2f04f8713f908d40bd8ca830ef1618a4bc31350d98a8b2cc14b6aa7b5e7b1",
+      "bytes": 124983,
       "t00Check": {
         "accepted": false,
         "diagnostic": "TypeError: unknown helper/function lineColumn; forward function lookup is not supported yet"
@@ -6911,8 +6969,8 @@
     },
     {
       "path": "compiler/ts-emitter.lts",
-      "sourceSha256": "ee0832948120401868cf7e93d93e0f51cc794faadb54daf4cfc58b2533d08aa8",
-      "bytes": 173376,
+      "sourceSha256": "55dfd45e27e5a31a4d90c3833b8750fba22e0a258ee86ad8b570d767b3a1bab1",
+      "bytes": 173318,
       "t00Check": {
         "accepted": true
       },
@@ -8866,9 +8924,9 @@
       "baseline": 0
     },
     "probe": {
-      "total": 78,
-      "matches": 22,
-      "rejected": 56,
+      "total": 79,
+      "matches": 24,
+      "rejected": 55,
       "typecheck": 0,
       "mismatch": 0,
       "diagnostic": 0,
@@ -9128,7 +9186,7 @@
     "type aliases follow single lexical scope with value shadowing and rejection",
     "type alias example runs and checks through the root launcher"
   ],
-  "finishedAt": "2026-11-02T15:28:22.706Z",
+  "finishedAt": "2026-11-02T15:39:31.944Z",
   "status": "complete",
   "method": {
     "compilationTimeoutMs": 20000,

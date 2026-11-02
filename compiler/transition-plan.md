@@ -36,6 +36,17 @@ features may be ported; new syntax, builtins and semantics still require approva
 
 ## Done
 
+- 2026-11-02: a shared single-equals token check distinguishes assignment/tuple
+  fields from both == and =!=. Parenthesized inequality and bare String/Int/Bool
+  function tails now work; ordinary assignment and named tuple fields retain
+  their behavior. Focused checks cover 12 TS programs, seven native C programs
+  and ten rejection comparisons. The new bare-function-tail probe preserves
+  the discovered failure in the inventory. Three generated generations match;
+  [the ladder](reports/2026-11-02-inequality-ladder.json) records identities and
+  gates. Current inventory: 75/163 matching, 88 remaining, 24 original failures
+  closed without a regression. Deferred arithmetic faults precede comparison
+  chains so skipped later operands do not fault during compilation.
+
 - 2026-11-02: generated TS textAt/textSlice, list reads and pop_back now
   report exact positioned BoundPanic diagnostics and preserve prior output.
   Numeric source offsets reuse one fault-location table, including arithmetic,
@@ -272,10 +283,10 @@ active T00 implementation; bootstrap recovery remains reproducible from history.
 - Do not modify published tags or create release tags without a release decision.
 - Preserve source names, invalid UTF-8 rejection, output streams and status.
 - Source/manifest changes must not silently use a stale generated compiler.
-- The current seed is 315117 bytes, SHA-256
-  `c95292264a2b894c0f1e5d31eb53193d3605c71800def6b987db6934b8b717b7`.
-- Current S is 173376 bytes, SHA-256
-  `ee0832948120401868cf7e93d93e0f51cc794faadb54daf4cfc58b2533d08aa8`.
+- The current seed is 314867 bytes, SHA-256
+  `0cacf4b4907e8c1c83a343a00ab954df726bd79ed58a3e41e4878691eaa15b36`.
+- Current S is 173318 bytes, SHA-256
+  `55dfd45e27e5a31a4d90c3833b8750fba22e0a258ee86ad8b570d767b3a1bab1`.
 - Source/builder identities are in `bootstrap/seed.ts` and `bootstrap/c-seed.ts`;
   actual host Node v24.16.0, repository pin 26.13.0, TypeScript 7.0.2.
 - Original TS self-compilation was slow; the original benchmark's two 60 s

@@ -1,16 +1,16 @@
-/** Verified generated bounds seed; exact identities follow. */
+/** Verified generated inequality seed; exact identities follow. */
 export const cSeed = Object.freeze({
   "artifact": "c-emitter.ts",
-  "sourceSha256": "550cd452f94d14887875c7a335a97d0cf0fffa57fee0a705b549c6e608e47b99",
-  "sourceBytes": 161221,
-  "artifactSha256": "7428143f0c993a997d19a08e19c68463e17b0429bd6a4df0281fe95d97b06a46",
-  "artifactBytes": 288864,
-  "builderSha256": "c95292264a2b894c0f1e5d31eb53193d3605c71800def6b987db6934b8b717b7",
+  "sourceSha256": "1b5adf7998d2e335d37be55a4f17d535fe03e10709a7bc967d77bb0c69907b1d",
+  "sourceBytes": 161163,
+  "artifactSha256": "6f891dd9315276f07e75b28a71530953c9173927aef6b92dc41affdbd90de7b3",
+  "artifactBytes": 288610,
+  "builderSha256": "0cacf4b4907e8c1c83a343a00ab954df726bd79ed58a3e41e4878691eaa15b36",
   "native": false,
   "sourceManifest": "compiler/manifests/c.json",
-  "sourceRevision": "70bde087332b5efa05ba36614349e68b488742df",
-  "artifactRevision": "70bde087332b5efa05ba36614349e68b488742df",
-  "builderRevision": "70bde087332b5efa05ba36614349e68b488742df",
+  "sourceRevision": "Inequality source snapshot committed with this seed; see sourceSha256",
+  "artifactRevision": "Inequality artifact committed with this seed; see artifactSha256",
+  "builderRevision": "Current inequality TS seed; see builderSha256",
   "builder": "Refreshed generated TS compiler compiling current Lite C emitter",
   "node": "v24.16.0",
   "typescript": "7.0.2"

@@ -414,6 +414,46 @@ test('generated text/list bounds faults preserve exact positions, output and ope
   }
 });
 
+test('inequality stays distinct from assignment and tuple fields in grouping and function tails', () => {
+  const common = [
+    'value := "x"; outputLine((value =!= ""), (((value =!= "x"))), (value == "x"));',
+    'var x := 2; outputLine((x =!= 1), (x =!= 2), (x == 2));',
+    'var flag := true; outputLine((flag =!= false), (flag =!= true));',
+    'var x := 1; x = 3; outputLine((x =!= 2), x);',
+    'value := ""; outputLine(not (value =!= ""));',
+    'value := "x"; outputLine((value /* left */ =!= /* right */ ""));',
+    'var x := 0; loop x < 2 { if (x =!= 1) { outputLine(x); } x = x + 1; }',
+  ];
+  const tsOnly = [
+    'different := fn(value: String): Bool { value =!= "" } outputLine(different("x"), different(""));',
+    'different := fn(value: Int): Bool { value =!= 0 } outputLine(different(0), different(1));',
+    'different := fn(value: Bool): Bool { value =!= false } outputLine(different(true), different(false));',
+    'different := fn(value: String): Bool { (value =!= "") } outputLine(different("x"));',
+    'point := (value = 7); outputLine(point.value);',
+  ];
+  for (const source of [...common, ...tsOnly]) {
+    const expected = runText(source); assert.equal(expected.status, 0, expected.stderr.toString());
+    const compiled = compileTs({ text: source }); assert.equal(compiled.status, 0, compiled.stderr.toString());
+    const actual = runTsArtifact(compiled.stdout.toString());
+    assert.equal(actual.phase, 'run', actual.stdout.toString() + actual.stderr.toString());
+    assert.deepEqual({ status: actual.status, stdout: actual.stdout, stderr: actual.stderr }, expected, source);
+    if (common.includes(source) && process.env['LITE_SKIP_NATIVE'] !== '1') {
+      const c = compileTarget('c', { text: source }); assert.equal(c.status, 0, c.stderr.toString());
+      const native = runCArtifact(c.stdout.toString()); assert.equal(native.phase, 'run');
+      assert.deepEqual({ status: native.status, stdout: native.stdout, stderr: native.stderr }, expected, source);
+    }
+  }
+  for (const bad of ['value := "x"; outputLine((value =!=));', 'value := "x"; outputLine((value =!= 1));',
+    'x := 1; x = 2;', 'point := (value =);', 'var x := 1; x === 2;']) {
+    const text = 'outputLine("before"); ' + bad;
+    assert.equal(runText(text).stdout.length, 0);
+    for (const target of ['ts', 'c'] as const) {
+      const compiled = compileTarget(target, { text });
+      assert.equal(compiled.status, 2, bad); assert.equal(compiled.stdout.length, 0, bad);
+    }
+  }
+});
+
 test('C output evaluates all arguments before writing, including mixed scalar and Unit values', context => {
   if (process.env['LITE_SKIP_NATIVE'] === '1') { context.skip('LITE_SKIP_NATIVE=1'); return; }
   const prefix = '/* 🙂 */ var zero := 0; var maximum := 9223372036854775807;\r\n';

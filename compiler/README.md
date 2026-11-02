@@ -236,6 +236,11 @@ so list mutation cannot share state.
 self-rebuild and temporary input helpers are described above. Reserved
 features outside the subset are rejected by name with status 2.
 
+A shared equals-token check keeps parenthesized inequality and bare function
+tails distinct from assignment and named tuple fields. The
+[inequality ledger](parity.md#inequality-token-discrimination) records coverage
+and unchanged existing artifacts; comparison chains remain separate work.
+
 Diagnostics are source-positioned as `name:line:column: message` (or
 `line:column: message` when no logical source name is supplied). Columns are
 1-based source characters, computed from immutable offsets. Generated TS text/list

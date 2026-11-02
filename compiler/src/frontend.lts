@@ -1010,13 +1010,17 @@ collectAliases := fn(source: String, prefix: String): List<AliasDecl> {
     aliases
 }
 
+/** True for the single assignment/field equals token, excluding both equality and inequality operators. */
+isSingleEquals := fn(source: String, position: Int): Bool {
+    startsWithAt(source, position, "=") and not startsWithAt(source, position, "==") and not startsWithAt(source, position, "=!=")
+}
+
 /** True when the text after an opening `(` starts a named tuple entry `label = ...`, rather than grouping. */
 looksLikeTupleEntry := fn(source: String, position: Int, prefix: String): Bool {
     start := skipTrivia(source, position, prefix);
     if start >= textLength(source) or not isNameStart(textAt(source, start)) { return false; }
     afterName := skipTrivia(source, skipName(source, start), prefix);
-    if afterName >= textLength(source) or textAt(source, afterName) =!= "=" { return false; }
-    not startsWithAt(source, afterName, "==")
+    isSingleEquals(source, afterName)
 }
 
 /** Wraps target code in the backend's list-copy hook when `kind` is a List; every other kind is unchanged. */
@@ -1123,7 +1127,7 @@ parseBinary := fn(source: String, position: Int, prefix: String, locals: List<Lo
                 }
                 push_back(mut labels, label);
                 cursor = skipTrivia(source, cursor, prefix);
-                if cursor >= textLength(source) or textAt(source, cursor) =!= "=" or startsWithAt(source, cursor, "==") {
+                if not isSingleEquals(source, cursor) {
                     failAt(source, cursor, prefix, "expected = after tuple field " + label);
                 }
                 cursor = skipTrivia(source, cursor + 1, prefix);
@@ -2177,7 +2181,7 @@ parseProgram := fn(source: String, prefix: String): Items {
                 typed := parseLocalType(source, position + 1, prefix, aliases);
                 declaredWritable = typed.writable;
                 position = skipTrivia(source, typed.next, prefix);
-                if position < size and textAt(source, position) == "=" and not startsWithAt(source, position, "==") {
+                if isSingleEquals(source, position) {
                     parsed = parseExpressionAs(source, skipTrivia(source, position + 1, prefix), prefix, locals, functions, functionParams, currentName, typed.kind);
                     if parsed.kind =!= typed.kind {
                         failAt(source, localStart, prefix, "cannot initialize " + displayKind(typed.kind) + " with " + displayKind(parsed.kind));
@@ -2325,7 +2329,7 @@ parseProgram := fn(source: String, prefix: String): Items {
             typed := parseLocalType(source, position + 1, prefix, aliases);
             position = skipTrivia(source, typed.next, prefix);
             var parsed := zeroParsed(typed.kind, position);
-            if position < size and textAt(source, position) == "=" and not startsWithAt(source, position, "==") {
+            if isSingleEquals(source, position) {
                 parsed = parseExpressionAs(source, skipTrivia(source, position + 1, prefix), prefix, locals, functions, functionParams, currentName, typed.kind);
                 if parsed.kind =!= typed.kind {
                     failAt(source, nameStart, prefix, "cannot initialize " + displayKind(typed.kind) + " with " + displayKind(parsed.kind));
@@ -2347,7 +2351,7 @@ parseProgram := fn(source: String, prefix: String): Items {
                 code = copiedValueCode(typed.kind, parsed.code), intValue = parsed.intValue, textValue = itemTextPayload(parsed)));
             continue;
         }
-        if position < size and textAt(source, position) == "=" and not startsWithAt(source, position, "==") {
+        if isSingleEquals(source, position) {
             index := localIndex(locals, name);
             if index < 0 {
                 failAt(source, nameStart, prefix, "unknown value " + name);
