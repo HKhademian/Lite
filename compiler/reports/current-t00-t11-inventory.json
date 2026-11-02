@@ -1,15 +1,15 @@
 {
   "schema": 1,
   "date": "2026-11-02",
-  "startedAt": "2026-11-02T18:08:09.506Z",
-  "revision": "9e16826508a0bfa1bfcbef61429853fc2a3220a6",
+  "startedAt": "2026-11-02T18:39:29.034Z",
+  "revision": "8587516dbbfb5eee9a4c5b43682bee9cf67f28fe",
   "revisionMeaning": "HEAD at audit start; artifact and per-source hashes identify the measured inputs",
   "workingTreeDirtyAtStart": true,
-  "worktreeStatusAtStart": " M compiler/bootstrap/T11.ts\n M compiler/bootstrap/c-emitter.ts\n M compiler/bootstrap/c-seed.ts\n M compiler/bootstrap/seed.ts\n M compiler/c-emitter.lts\n M compiler/gaps.md\n M compiler/generated/current-artifacts.json\n M compiler/src/emit-c.lts\n M compiler/src/emit-ts.lts\n M compiler/src/frontend.lts\n M compiler/tests/host.test.ts\n M compiler/ts-emitter.lts\n M docs/blocks-and-results.md\n M docs/bootstrap-plan.md\n M docs/releases.md\n M docs/spec/README.md\n M igniter/test.ts\n M verifications/README.md\n M verifications/features/scope-locals.json\n?? compiler/reports/2026-11-02-statement-scopes-ladder.json\n",
-  "compilerSourceSha256": "a5d23ef5ef3b8afd6f67c3be648e0415e8a430dca388d310409cf1a7339bdac1",
-  "compilerSourceRevision": "43ec8aa9ee097b73253a79a782d96626707412ea",
+  "worktreeStatusAtStart": " M compiler/README.md\n M compiler/bootstrap/README.md\n M compiler/bootstrap/T11.ts\n M compiler/bootstrap/c-emitter.ts\n M compiler/bootstrap/c-seed.ts\n M compiler/bootstrap/seed.ts\n M compiler/c-emitter.lts\n M compiler/gaps.md\n M compiler/generated/current-artifacts.json\n M compiler/parity.md\n M compiler/src/check.lts\n M compiler/src/frontend.lts\n M compiler/tests/host.test.ts\n M compiler/ts-emitter.lts\n M docs/blocks-and-results.md\n M docs/bootstrap-plan.md\n M docs/local-shadowing-and-copies.md\n M docs/releases.md\n M docs/spec/README.md\n M igniter/README.md\n M igniter/test.ts\n M igniter/tests/README.md\nR  igniter/tests/compiler/002-005-duplicate-local.json -> igniter/tests/compiler/001-005-duplicate-local.json\nR  igniter/tests/compiler/002-005-duplicate-local.lts -> igniter/tests/compiler/001-005-duplicate-local.lts\n?? compiler/reports/2026-11-02-value-shadowing-ladder.json\n",
+  "compilerSourceSha256": "26133c9e709f743cecd1b12b226e07bb13903ab00555fc326d82ffded834a80d",
+  "compilerSourceRevision": "Value-shadowing source snapshot committed with this seed; see sourceSha256",
   "node": "v24.16.0",
-  "t11Sha256": "4b2152ec54f17ac7c7cf5c3f70a8c6b581ea971ec8d5510d1b2a02f3e4bc7343",
+  "t11Sha256": "afc0ebb55d9238a940730a4a37e180cd3c80216360a46bd989bcac715058ead8",
   "rows": [
     {
       "id": "int.arithmetic",
@@ -6067,7 +6067,7 @@
       "t00Check": {
         "accepted": true
       },
-      "status": "rejected",
+      "status": "matches",
       "cases": [
         {
           "name": "boundary",
@@ -6078,14 +6078,27 @@
             "stdout": "2\n",
             "stderr": "",
             "signal": null
-          }
+          },
+          "t11": {
+            "status": 0,
+            "signal": null,
+            "stdout": "2\n",
+            "stderr": ""
+          },
+          "matches": true
         }
       ],
       "t11Compile": {
-        "status": 2,
+        "status": 0,
+        "signal": null,
+        "stdout": "export function main(lite$write?: (text: string) => void): string {\n    let lite_out = \"\";\n    function lite$emit(text: string): void {\n        if (lite$write === undefined) lite_out += text;\n        else lite$write(text);\n    }\n    void lite$emit;\n    const lite_x = 1n;\n    void lite_x;\n    const lt_local_x_8 = 2n;\n    void lt_local_x_8;\n    const lite$report0 = (lt_local_x_8).toString();\n    lite$emit(lite$report0 + \"\\n\");\n    return lite_out;\n}\n",
+        "stderr": ""
+      },
+      "artifactTypecheck": {
+        "status": 0,
         "signal": null,
         "stdout": "",
-        "stderr": "1:9: duplicate local x\n"
+        "stderr": ""
       }
     },
     {
@@ -6815,8 +6828,8 @@
   "sourceFiles": [
     {
       "path": "compiler/c-emitter.lts",
-      "sourceSha256": "0caab3b7f4e511e20f6af0c5537f68723b88e85605fd4360dd2de821aeb6efc6",
-      "bytes": 163753,
+      "sourceSha256": "b84fdd326dc66fee71729afaf5bf3970dc43f20e62a8b4dda6e8a41a7792126e",
+      "bytes": 163458,
       "t00Check": {
         "accepted": true
       },
@@ -6825,7 +6838,7 @@
         "status": 0,
         "signal": null,
         "stderr": "",
-        "stdoutBytes": 294906
+        "stdoutBytes": 294374
       },
       "artifactTypecheck": {
         "status": 0,
@@ -6834,7 +6847,7 @@
         "stderr": ""
       },
       "status": "accepted",
-      "artifactSha256": "57fe23818f6a6f5030dbc65046b4fb5036dc0c7434e0e769d5d0fe0ae4006597"
+      "artifactSha256": "ad1706c4564f26da2e8be6e86aa8cb353f28db69d3c32bd9f1fdf424b71486dd"
     },
     {
       "path": "compiler/src/c-literals.lts",
@@ -6848,8 +6861,8 @@
     },
     {
       "path": "compiler/src/check.lts",
-      "sourceSha256": "7b9a1eca07d7ec12a1f3b995bc1680f0ef62a581fcd079ba17504a1900d02cdf",
-      "bytes": 38791,
+      "sourceSha256": "fc5d9f8ffff931f88542aa89cf483accb57fe2ea8119a352cab150438f97c1dd",
+      "bytes": 39971,
       "t00Check": {
         "accepted": false,
         "diagnostic": "TypeError: unknown helper/function startsWithAt; forward function lookup is not supported yet"
@@ -6898,8 +6911,8 @@
     },
     {
       "path": "compiler/src/frontend.lts",
-      "sourceSha256": "aa249c583b001ad08abbcb64727f5e0402054276d33d751adcc18043bc789b99",
-      "bytes": 125310,
+      "sourceSha256": "c62a2811a379d9ae612c014ea86cd0a85a8a0f28d954ae12079293c13504d517",
+      "bytes": 125015,
       "t00Check": {
         "accepted": false,
         "diagnostic": "TypeError: unknown helper/function lineColumn; forward function lookup is not supported yet"
@@ -6938,8 +6951,8 @@
     },
     {
       "path": "compiler/tests/checker/checker-dump.lts",
-      "sourceSha256": "a9593668e0ed215e1c3f95199d6555d90381938af426c4013bdd107fe75c7b35",
-      "bytes": 93805,
+      "sourceSha256": "0d39f02cd0edc2959e1671d7f6dbbc5fbdd3fdd86ab82a1963f0cc3a4e031497",
+      "bytes": 94985,
       "t00Check": {
         "accepted": true
       },
@@ -6948,7 +6961,7 @@
         "status": 0,
         "signal": null,
         "stderr": "",
-        "stdoutBytes": 189979
+        "stdoutBytes": 192336
       },
       "artifactTypecheck": {
         "status": 0,
@@ -6957,7 +6970,7 @@
         "stderr": ""
       },
       "status": "accepted",
-      "artifactSha256": "1c2f133e0689d5508ba0b3fcc77dc49cf0d87a1fcb43557d7568da6297d352cc"
+      "artifactSha256": "685598108c2fb04bcfdac6070477c4007f9bc48c29d22226d7afc6fe4bfe0740"
     },
     {
       "path": "compiler/tests/checker/symbols.lts",
@@ -7166,8 +7179,8 @@
     },
     {
       "path": "compiler/ts-emitter.lts",
-      "sourceSha256": "a5d23ef5ef3b8afd6f67c3be648e0415e8a430dca388d310409cf1a7339bdac1",
-      "bytes": 174633,
+      "sourceSha256": "26133c9e709f743cecd1b12b226e07bb13903ab00555fc326d82ffded834a80d",
+      "bytes": 174338,
       "t00Check": {
         "accepted": true
       },
@@ -7863,6 +7876,22 @@
       "status": "accepted"
     },
     {
+      "path": "igniter/tests/compiler/001-005-duplicate-local.lts",
+      "sourceSha256": "bc08aa140a009616ddca78a53700fd1f0caf0b543c4c48c9afa48ade321ff8ba",
+      "bytes": 16,
+      "t00Check": {
+        "accepted": true
+      },
+      "coverage": "compile-only",
+      "t11Compile": {
+        "status": 0,
+        "signal": null,
+        "stderr": "",
+        "stdoutBytes": 364
+      },
+      "status": "accepted"
+    },
+    {
       "path": "igniter/tests/compiler/001-005-local-missing-semicolon.lts",
       "sourceSha256": "e4068c3a09bf6ddfe5e9922da6984961d90a5f7dad3d5436a201b1888e2e84d8",
       "bytes": 7,
@@ -8529,22 +8558,6 @@
       "coverage": "not-a-standalone-T00-program"
     },
     {
-      "path": "igniter/tests/compiler/002-005-duplicate-local.lts",
-      "sourceSha256": "bc08aa140a009616ddca78a53700fd1f0caf0b543c4c48c9afa48ade321ff8ba",
-      "bytes": 16,
-      "t00Check": {
-        "accepted": true
-      },
-      "coverage": "compile-only",
-      "t11Compile": {
-        "status": 2,
-        "signal": null,
-        "stderr": "igniter/tests/compiler/002-005-duplicate-local.lts:1:9: duplicate local x\n",
-        "stdoutBytes": 0
-      },
-      "status": "rejected"
-    },
-    {
       "path": "igniter/tests/compiler/002-005-unknown-local.lts",
       "sourceSha256": "e43691e06120f875fa58539d16726e460b8d186fd39c2c00a86bce1e772718ef",
       "bytes": 23,
@@ -9127,8 +9140,8 @@
     },
     "probe": {
       "total": 79,
-      "matches": 33,
-      "rejected": 46,
+      "matches": 34,
+      "rejected": 45,
       "typecheck": 0,
       "mismatch": 0,
       "diagnostic": 0,
@@ -9165,7 +9178,7 @@
     "Lite parser parses L0 libraries and every program case",
     "Lite parser parses the assembled compiler S and lexer source",
     "Lite parser rejects unsupported constructs by name",
-    "Lite checker collects top-level symbols and rejects duplicates",
+    "Lite checker collects value bindings and rejects unsupported duplicate symbols",
     "Lite checker collects symbols from the assembled S",
     "Lite parser parses type aliases and rejects malformed types",
     "compiler, L0 and lexer declarations carry doc comments",
@@ -9208,7 +9221,7 @@
     "restricted compiler diagnoses invalid leading and/or forms",
     "restricted compiler compiles list mutation grants, push and pop to runnable TS",
     "restricted compiler treats nested, doc and raw comments as separating trivia",
-    "restricted compiler corpus keeps 66 program and 27 rejection cases",
+    "restricted compiler corpus keeps 67 program and 26 rejection cases",
     "restricted compiler compiles scalar functions, calls and returns to runnable TS",
     "restricted compiler completes scalar functions from tail expressions",
     "restricted compiler completes function tails from Bool literals and calls",
@@ -9388,7 +9401,7 @@
     "type aliases follow single lexical scope with value shadowing and rejection",
     "type alias example runs and checks through the root launcher"
   ],
-  "finishedAt": "2026-11-02T18:09:02.495Z",
+  "finishedAt": "2026-11-02T18:40:22.135Z",
   "status": "complete",
   "method": {
     "compilationTimeoutMs": 20000,
@@ -9398,6 +9411,5 @@
     "probes": "additional existing T00 contracts drawn from interpreter tests; exact source is included for reproduction",
     "sourceFiles": "all tracked .lt/.lts files are checked as standalone T00 programs; files not accepted by T00 are excluded, not called T11 gaps",
     "limits": "Finite corpus and explicit probes, not proof for every program. Compile-only acceptance does not imply runtime parity. T11 remains a restricted compiler."
-  },
-  "compilerSourceRevisionResolution": "Verified after committing the measured source and artifact; audit base/worktree fields are unchanged."
+  }
 }

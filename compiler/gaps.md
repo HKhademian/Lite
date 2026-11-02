@@ -9,7 +9,7 @@ This tracker covers the T00 replacement goal, including newly discovered flaws.
 
 The [current inventory](reports/current-t00-t11-inventory.md) and
 [raw observations](reports/current-t00-t11-inventory.json) use the generated
-seed `4b2152ec…`. All inputs compile/check against the current reference, both
+seed `afc0ebb5…`. All inputs compile/check against the current reference, both
 execution paths use identical anonymous diagnostic naming, and raw-byte input
 probes follow the real CLI's lazy strict UTF-8 decoding. Historical reports stay
 unchanged. Refresh with `node compiler/scripts/t00-t11-inventory.ts --large-sources`.
@@ -17,11 +17,11 @@ unchanged. Refresh with `node compiler/scripts/t00-t11-inventory.ts --large-sour
 - Canonical features: 24/38 match; 14 rejected.
 - Examples: 11/19 match; 8 rejected.
 - Implemented samples: 11/20 match; 9 rejected.
-- Isolated boundary probes: 33/79 match; 46 rejected; no differences among accepted probes.
+- Isolated boundary probes: 34/79 match; 45 rejected; no differences among accepted probes.
 - Library tests: 8/8 match. All 210 tracked Lite sources are accounted for;
   compile-only acceptance is distinguished from executed parity.
-- Total executed source cases: 87/164 match, 77 still fail. Compared with the
-  original inventory, 35 previously failing cases now match and none regress.
+- Total executed source cases: 88/164 match, 76 still fail. Compared with the
+  original inventory, 36 previously failing cases now match and none regress.
   The temporary-I/O case, retained function-tail probe and new chain feature
   account for three additional matching cases.
 
@@ -79,7 +79,11 @@ Keep dependencies explicit; split a topic further when its contracts warrant it.
 - [x] **Statement scopes:** lexical blocks, outer assignments and restoration;
   hygienic names preserve outer values during shadowed initializers, including
   existing if/loop scopes and TS traversal receiver bindings.
-- [ ] **Script and lexical forms:** expression statements and same-block shadowing.
+- [x] **Sequential value bindings:** same-block declarations create fresh bindings;
+  initializers read the previous binding, copies retain values, and later uses
+  obey the newest type and mutation permission. Callable/type namespaces remain queued.
+- [ ] **Script expressions:** discard ordinary expression values while retaining
+  evaluation, effects and faults; accept empty item separators.
 - [x] **Deferred arithmetic faults:** constant arithmetic must fault only when
   reached; dead branches and short-circuit operands must remain unevaluated.
   Valid constant folding remains; invalid arithmetic executes only when reached.
@@ -102,7 +106,10 @@ Keep dependencies explicit; split a topic further when its contracts warrant it.
 - [ ] **Function values and environments:** static function lookup must respect
   later ordinary value shadowing: `f := fn(): Int { 1 } f := 2; outputLine(f());`
   currently prints 1 on T11 while T00 rejects before effects. Compatible copies/replacement,
-  nested helpers, live captures and distinct escaped environments.
+  nested helpers, live captures and distinct escaped environments. Also reject
+  surrounding runtime-data capture where the current reference rejects it: T00
+  rejects `var x := 2; reader := fn(): Int { return x; }`, while T11 currently
+  accepts it. Keep admitted helper references distinct from unsupported data capture.
 - [ ] **Never-valued exit:** preserve the reference's Never result in value
   contexts. T00 rejects `Unit == exit(3)` before effects, while the current TS
   frontend treats exit as Unit and accepts it. Conversely, an Int-returning
@@ -281,3 +288,14 @@ Paired compiler throughput stays steady; self-source output changes by runtime
 identifier hygiene and matches the strict ladder hashes. See the [scope ledger](parity.md#statement-scopes).
 Next: same-block value bindings and ordinary expression statements; static
 function/value lookup and broader type namespaces remain explicitly queued.
+
+Sequential value bindings: 88/164 match, 76 remain; 36 original failures closed
+and none regress. The corpus now has 67 programs and 26 rejections; all 66 older
+program artifact pairs stay identical. Six native UBSan programs pass. Compiler
+source shrinks by 295 bytes and each generated artifact by 532 bytes; paired
+throughput has small mixed changes, with no general speedup claim. See the
+[shadowing ledger](parity.md#sequential-value-bindings). Next: ordinary expression
+statements and empty item separators; callable/type shadowing remains separate.
+All 266 full tests pass with zero skips; fast passes 254 with 12 expected
+skips. Strict checks, both corpora, 100 verifier executions, coverage and nine
+editor groups also pass.

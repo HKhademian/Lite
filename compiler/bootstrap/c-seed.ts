@@ -1,16 +1,16 @@
-/** Verified generated statement-scope seed; exact identities follow. */
+/** Verified generated value-shadowing seed; exact identities follow. */
 export const cSeed = Object.freeze({
   "artifact": "c-emitter.ts",
-  "sourceSha256": "0caab3b7f4e511e20f6af0c5537f68723b88e85605fd4360dd2de821aeb6efc6",
-  "sourceBytes": 163753,
-  "artifactSha256": "2b571ebf0bd3bc46e314728be7e3c5e70a8cf80f590339fdf1a9c67c74500e8a",
-  "artifactBytes": 294860,
-  "builderSha256": "4b2152ec54f17ac7c7cf5c3f70a8c6b581ea971ec8d5510d1b2a02f3e4bc7343",
+  "sourceSha256": "b84fdd326dc66fee71729afaf5bf3970dc43f20e62a8b4dda6e8a41a7792126e",
+  "sourceBytes": 163458,
+  "artifactSha256": "7384af5878bb3a51ce5e0a9fb36b95637883e9483895ef6e281569d4ebd7db4e",
+  "artifactBytes": 294328,
+  "builderSha256": "afc0ebb55d9238a940730a4a37e180cd3c80216360a46bd989bcac715058ead8",
   "native": false,
   "sourceManifest": "compiler/manifests/c.json",
-  "sourceRevision": "43ec8aa9ee097b73253a79a782d96626707412ea",
-  "artifactRevision": "43ec8aa9ee097b73253a79a782d96626707412ea",
-  "builderRevision": "43ec8aa9ee097b73253a79a782d96626707412ea",
+  "sourceRevision": "Value-shadowing source snapshot committed with this seed; see sourceSha256",
+  "artifactRevision": "Value-shadowing artifact committed with this seed; see artifactSha256",
+  "builderRevision": "Current value-shadowing TS seed; see builderSha256",
   "builder": "Refreshed generated TS compiler compiling current Lite C emitter",
   "node": "v24.16.0",
   "typescript": "7.0.2"

@@ -1,7 +1,7 @@
 {
   "name": "duplicate-local",
   "source": {
-    "file": "002-005-duplicate-local.lts",
+    "file": "001-005-duplicate-local.lts",
     "hash": "sha256:bc08aa140a009616ddca78a53700fd1f0caf0b543c4c48c9afa48ade321ff8ba"
   },
   "cases": [
@@ -12,10 +12,10 @@
         "hash": "sha256:e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
       },
       "stderr": {
-        "text": "1:9: duplicate local x\n",
-        "hash": "sha256:78e092f5d394362e67654187634437dc150ff787272849b1766baffa632fd6ec"
+        "text": "",
+        "hash": "sha256:e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
       },
-      "exitCode": 2
+      "exitCode": 0
     }
   ]
 }

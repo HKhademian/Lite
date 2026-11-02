@@ -3,7 +3,7 @@
 Runtime environment details omitted for privacy.
 Working tree at audit start: modified. The raw report records its status; artifact and per-source hashes identify the measured inputs.
 
-T11 identity: `4b2152ec54f17ac7c7cf5c3f70a8c6b581ea971ec8d5510d1b2a02f3e4bc7343`. The preserved artifact passed its separate strict TypeScript check.
+T11 identity: `afc0ebb55d9238a940730a4a37e180cd3c80216360a46bd989bcac715058ead8`. The preserved artifact passed its separate strict TypeScript check.
 
 This is the current measured support inventory, not acceptance of new language features. Dated historical inventories remain unchanged.
 
@@ -21,15 +21,15 @@ This is the current measured support inventory, not acceptance of new language f
 - feature: 38; 24 matches tested behavior; 14 T11 rejects source.
 - example: 19; 11 matches tested behavior; 8 T11 rejects source.
 - sample: 20; 11 matches tested behavior; 9 T11 rejects source.
-- probe: 79; 33 matches tested behavior; 46 T11 rejects source.
+- probe: 79; 34 matches tested behavior; 45 T11 rejects source.
 - library-test: 8; 8 matches tested behavior.
 - trackedSourceFiles: 210.
 - Showcases: none currently implemented.
 
 ## Progress since the original inventory
 
-- 35 formerly failing cases now match; 0 formerly matching cases regress. Case identity includes kind and id.
-- 87/164 executed source cases match; 77 still fail. These are case counts, not distinct missing features or an overall completion percentage.
+- 36 formerly failing cases now match; 0 formerly matching cases regress. Case identity includes kind and id.
+- 88/164 executed source cases match; 76 still fail. These are case counts, not distinct missing features or an overall completion percentage.
 - Native C, compile-only sources and run/check migration have separate gates in [the live gap tracker](../gaps.md).
 
 Closed original cases:
@@ -62,6 +62,7 @@ Closed original cases:
 - probe: scope.standalone-block
 - probe: text.adjacent-literals
 - probe: call.trailing-comma
+- probe: scope.same-block-shadow
 - probe: syntax.final-semicolon
 - probe: syntax.empty-script
 - probe: syntax.whitespace-script
@@ -242,8 +243,7 @@ Closed original cases:
   First diagnostic: 1:14: unsupported feature "fn": see docs/functions.md; the restricted compiler accepts Int/String/Bool expressions, locals, output/outputLine, if/else and loop only
 - **text.adjacent-literals — matches tested behavior.** Adjacent quoted strings concatenate
 - **call.trailing-comma — matches tested behavior.** Trailing comma in a call argument list
-- **scope.same-block-shadow — T11 rejects source.** Later declarations shadow same-block bindings
-  First diagnostic: 1:9: duplicate local x
+- **scope.same-block-shadow — matches tested behavior.** Later declarations shadow same-block bindings
 - **syntax.final-semicolon — matches tested behavior.** Final declaration can end at EOF without a semicolon
 - **syntax.empty-script — matches tested behavior.** Empty scripts complete silently
 - **syntax.whitespace-script — matches tested behavior.** Whitespace-only scripts complete silently
@@ -391,6 +391,7 @@ Closed original cases:
 - `igniter/tests/compiler/001-004-string-local.lts`: compile accepted; execution not tested.
 - `igniter/tests/compiler/001-004-string-multiline.lts`: compile accepted; execution not tested.
 - `igniter/tests/compiler/001-004-string-unicode.lts`: compile accepted; execution not tested.
+- `igniter/tests/compiler/001-005-duplicate-local.lts`: compile accepted; execution not tested.
 - `igniter/tests/compiler/001-005-local-missing-semicolon.lts`: compile accepted; execution not tested.
 - `igniter/tests/compiler/001-005-output-values.lts`: compile accepted; execution not tested.
 - `igniter/tests/compiler/001-005-report-mixed-values.lts`: compile accepted; execution not tested.
@@ -439,7 +440,6 @@ Closed original cases:
 - `igniter/tests/compiler/002-003-literal-too-large.lts`: not-a-standalone-T00-program.
 - `igniter/tests/compiler/002-004-bad-string-escape.lts`: not-a-standalone-T00-program.
 - `igniter/tests/compiler/002-004-unterminated-string.lts`: not-a-standalone-T00-program.
-- `igniter/tests/compiler/002-005-duplicate-local.lts`: T11 rejects source.
 - `igniter/tests/compiler/002-005-unknown-local.lts`: not-a-standalone-T00-program.
 - `igniter/tests/compiler/002-005-unknown-value.lts`: not-a-standalone-T00-program.
 - `igniter/tests/compiler/002-006-unsupported-loop.lts`: T11 rejects source.

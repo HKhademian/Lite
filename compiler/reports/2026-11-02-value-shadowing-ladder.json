@@ -1,0 +1,136 @@
+{
+  "date": "2026-11-02",
+  "baseRevision": "8587516dbbfb5eee9a4c5b43682bee9cf67f28fe",
+  "node": "v24.16.0",
+  "previousSeedSha256": "4b2152ec54f17ac7c7cf5c3f70a8c6b581ea971ec8d5510d1b2a02f3e4bc7343",
+  "transitionalArtifactSha256": "afc0ebb55d9238a940730a4a37e180cd3c80216360a46bd989bcac715058ead8",
+  "recipe": "Previous generated seed compiling current S -> transitional compiler; transitional compiler compiling the same S -> stage1; stage1 and stage2 compile the same S into stage2 and stage3. No source rewriting or T00 execution.",
+  "source": {
+    "sha256": "26133c9e709f743cecd1b12b226e07bb13903ab00555fc326d82ffded834a80d",
+    "bytes": 174338
+  },
+  "generations": [
+    {
+      "name": "stage1",
+      "sha256": "afc0ebb55d9238a940730a4a37e180cd3c80216360a46bd989bcac715058ead8",
+      "bytes": 317957,
+      "strictTypecheck": true,
+      "status": 0
+    },
+    {
+      "name": "stage2",
+      "sha256": "afc0ebb55d9238a940730a4a37e180cd3c80216360a46bd989bcac715058ead8",
+      "bytes": 317957,
+      "strictTypecheck": true,
+      "status": 0
+    },
+    {
+      "name": "stage3",
+      "sha256": "afc0ebb55d9238a940730a4a37e180cd3c80216360a46bd989bcac715058ead8",
+      "bytes": 317957,
+      "strictTypecheck": true,
+      "status": 0
+    }
+  ],
+  "fixedPoint": true,
+  "c": {
+    "sourceSha256": "b84fdd326dc66fee71729afaf5bf3970dc43f20e62a8b4dda6e8a41a7792126e",
+    "sourceBytes": 163458,
+    "artifactSha256": "7384af5878bb3a51ce5e0a9fb36b95637883e9483895ef6e281569d4ebd7db4e",
+    "artifactBytes": 294328,
+    "builderSha256": "afc0ebb55d9238a940730a4a37e180cd3c80216360a46bd989bcac715058ead8",
+    "native": false
+  },
+  "validation": {
+    "strictHostAndSeeds": true,
+    "scalarShadowPrograms": 16,
+    "tsFunctionAggregateShadowPrograms": 5,
+    "rejectionSources": 7,
+    "exactRuntimeFaultExecutions": 4,
+    "generatedStandaloneChecker": {
+      "validSources": 3,
+      "invalidSources": 1
+    },
+    "fullSuite": {
+      "tests": 266,
+      "passed": 266,
+      "failed": 0,
+      "skipped": 0,
+      "durationMs": 98093.328834
+    },
+    "fastSuite": {
+      "tests": 266,
+      "passed": 254,
+      "failed": 0,
+      "skipped": 12,
+      "durationMs": 71691.256666
+    },
+    "hostGroups": 26,
+    "editorGroups": 9,
+    "tsCorpus": {
+      "phase": "compare",
+      "artifact": "<local-path>/Projects/LiteScript/compiler/bootstrap/T11.ts",
+      "target": "ts",
+      "cases": 93,
+      "programs": 67,
+      "rejections": 26,
+      "mismatches": 0,
+      "first": []
+    },
+    "cCorpus": {
+      "phase": "compare",
+      "artifact": "<local-path>/Projects/LiteScript/compiler/bootstrap/c-emitter.ts",
+      "target": "c",
+      "cases": 93,
+      "programs": 67,
+      "rejections": 26,
+      "mismatches": 0,
+      "first": []
+    },
+    "verifierExecutions": 100,
+    "registeredFeatures": 38,
+    "coverage": true,
+    "existingCorpusArtifactPairsUnchanged": 66,
+    "undefinedBehaviorSanitizer": {
+      "compiler": "cc",
+      "flags": [
+        "-std=c11",
+        "-Wall",
+        "-Wextra",
+        "-Werror",
+        "-fsanitize=undefined",
+        "-fno-sanitize-recover=all"
+      ],
+      "sources": [
+        "var x := 2; saved := x; x = 3; x := x + 4; outputLine(saved, x);",
+        "x := 1; var x := x; x = x + 1; outputLine(x);",
+        "x := 1; one := x; x := \"two\"; two := x; x := true; outputLine(one, two, x);",
+        "x := 7; x: Int; outputLine(x);",
+        "var x := 0; x := x + 1; x := x + 1; x := x + 1; x := x + 1; x := x + 1; x := x + 1; x := x + 1; x := x + 1; x := x + 1; x := x + 1; x := x + 1; x := x + 1; x := x + 1; x := x + 1; x := x + 1; x := x + 1; x := x + 1; x := x + 1; x := x + 1; x := x + 1; x := x + 1; x := x + 1; x := x + 1; x := x + 1; x := x + 1; x := x + 1; x := x + 1; x := x + 1; x := x + 1; x := x + 1; x := x + 1; x := x + 1; x := x + 1; x := x + 1; x := x + 1; x := x + 1; x := x + 1; x := x + 1; x := x + 1; x := x + 1; x := x + 1; x := x + 1; x := x + 1; x := x + 1; x := x + 1; x := x + 1; x := x + 1; x := x + 1; x := x + 1; x := x + 1; x := x + 1; x := x + 1; x := x + 1; x := x + 1; x := x + 1; x := x + 1; x := x + 1; x := x + 1; x := x + 1; x := x + 1; x := x + 1; x := x + 1; x := x + 1; x := x + 1; x := x + 1; x := x + 1; x := x + 1; x := x + 1; x := x + 1; x := x + 1; x := x + 1; x := x + 1; x := x + 1; x := x + 1; x := x + 1; x := x + 1; x := x + 1; x := x + 1; x := x + 1; x := x + 1; x := x + 1; x := x + 1; x := x + 1; x := x + 1; x := x + 1; x := x + 1; x := x + 1; x := x + 1; x := x + 1; x := x + 1; x := x + 1; x := x + 1; x := x + 1; x := x + 1; x := x + 1; x := x + 1; x := x + 1; x := x + 1; x := x + 1; x := x + 1; x := x + 1; x := x + 1; x := x + 1; x := x + 1; x := x + 1; x := x + 1; x := x + 1; x := x + 1; x := x + 1; x := x + 1; x := x + 1; x := x + 1; x := x + 1; x := x + 1; x := x + 1; x := x + 1; x := x + 1; x := x + 1; x := x + 1; x := x + 1; x := x + 1; x := x + 1; x := x + 1; x := x + 1; x := x + 1; x := x + 1; x := x + 1; x := x + 1; x := x + 1; x := x + 1; x := x + 1; x := x + 1; x := x + 1; x := x + 1; x := x + 1; x := x + 1; x := x + 1; x := x + 1; x := x + 1; x := x + 1; x := x + 1; x := x + 1; x := x + 1; x := x + 1; x := x + 1; x := x + 1; x := x + 1; x := x + 1; x := x + 1; x := x + 1; x := x + 1; x := x + 1; x := x + 1; x := x + 1; x := x + 1; x := x + 1; x := x + 1; x := x + 1; x := x + 1; x := x + 1; x := x + 1; x := x + 1; x := x + 1; x := x + 1; x := x + 1; x := x + 1; x := x + 1; x := x + 1; x := x + 1; x := x + 1; x := x + 1; x := x + 1; x := x + 1; x := x + 1; x := x + 1; x := x + 1; x := x + 1; x := x + 1; x := x + 1; x := x + 1; x := x + 1; x := x + 1; x := x + 1; x := x + 1; x := x + 1; x := x + 1; x := x + 1; x := x + 1; x := x + 1; x := x + 1; x := x + 1; x := x + 1; x := x + 1; x := x + 1; x := x + 1; x := x + 1; x := x + 1; x := x + 1; x := x + 1; x := x + 1; outputLine(x);",
+        "outputLine(\"before\");\r\nvar x := 9223372036854775807; x := x + 1;"
+      ],
+      "cases": 6,
+      "exactStatusAndStreams": true
+    },
+    "inventory": {
+      "matches": 88,
+      "total": 164,
+      "remaining": 76,
+      "originalFailuresClosed": 36,
+      "regressions": 0,
+      "trackedLiteFiles": 210,
+      "loadErrors": 0
+    },
+    "performanceReport": "2026-11-02-value-shadowing-performance.json",
+    "knownLimits": "Ordinary sequential value bindings only. Function/type namespaces, unsupported runtime-data capture, expression statements, broader type/control/data forms, native C and run/check migration remain pending; supplementary-character column audit is deferred."
+  },
+  "reproductionCommands": [
+    "git show 8587516dbbfb5eee9a4c5b43682bee9cf67f28fe:compiler/bootstrap/T11.ts > /tmp/previous-seed.ts",
+    "node --input-type=module -e 'import {writeFileSync} from \"node:fs\"; import {loadBundle} from \"./igniter/loader.ts\"; writeFileSync(\"/tmp/S.lts\",loadBundle(\"compiler/manifests/ts.json\").text); writeFileSync(\"/tmp/C-S.lts\",loadBundle(\"compiler/manifests/c.json\").text);'",
+    "node compiler/scripts/run-ts-artifact.ts --artifact /tmp/previous-seed.ts --source /tmp/S.lts --out /tmp/transitional.ts",
+    "node compiler/scripts/run-ts-artifact.ts --artifact /tmp/transitional.ts --source /tmp/S.lts --out /tmp/stage1.ts",
+    "node compiler/scripts/run-ts-artifact.ts --artifact /tmp/stage1.ts --source /tmp/S.lts --out /tmp/stage2.ts",
+    "node compiler/scripts/run-ts-artifact.ts --artifact /tmp/stage2.ts --source /tmp/S.lts --out /tmp/stage3.ts",
+    "node compiler/scripts/run-ts-artifact.ts --artifact /tmp/stage3.ts --source /tmp/C-S.lts --out /tmp/c-emitter.ts"
+  ]
+}

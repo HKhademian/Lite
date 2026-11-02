@@ -77,7 +77,7 @@ line-map contract and current hashes are recorded in:
 - [`parity.md`](parity.md) — stage-0 versus generated-compiler burndown; the
   current TS/C parity target and difference log.
 - [`generated/current-artifacts.json`](generated/current-artifacts.json) —
-  current emitted-artifact hashes for all 66 program cases; the P0 hashes remain
+  current emitted-artifact hashes for all 67 program cases; the P0 hashes remain
   in `generated/baseline-artifacts.json`.
 
 The bundle path is green: [`../igniter/loader.ts`](../igniter/loader.ts) loads
@@ -316,3 +316,9 @@ each program in a fresh process with exact stream/status assertions. See the
 
 See [INV-061](../investigations/INV-061-string-and-multi-value-reports.md) for
 the current evidence and limits.
+
+Sequential ordinary value declarations now create fresh bindings on generated
+TS/C; initializers retain the previous value and later uses obey the new type
+and mutation permissions. Corpus: 67 programs/26 rejections; all 66 older
+artifact pairs remain identical. Inventory: 88/164 match, 76 remain, with no
+regressions. See the [shadowing evidence](parity.md#sequential-value-bindings).

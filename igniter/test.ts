@@ -333,17 +333,16 @@ test('Lite parser rejects unsupported constructs by name', () => {
   }
 });
 
-test('Lite checker collects top-level symbols and rejects duplicates', () => {
+test('Lite checker collects value bindings and rejects unsupported duplicate symbols', () => {
   const source = readFileSync(new URL('../compiler/tests/checker/symbols.lts', import.meta.url), 'utf8');
   const expected = readFileSync(new URL('../compiler/tests/checker/symbols.symbols', import.meta.url), 'utf8');
   assert.deepEqual(runFile(checkerDumpPath, source), { code: 0, output: expected, errors: '' });
   for (const [bad, errors] of [
-    ['x := 1;\nx := 2;\n', '2:1: duplicate top-level name x\n'],
     ['f := fn(a: Int): Int { a }\nf := fn(): Int { 1 }\n', '2:1: duplicate top-level name f\n'],
+    ['var x := 1; x := 2; x = 3;\n', '1:21: cannot assign to immutable local x\n'],
     ['x: Missing = 1;\n', '1:1: unknown type Missing\n'],
     ['A := type B;\nB := type A;\n', '2:1: recursive type alias B\n'],
     ['f := fn(a: Int, a: Int): Int { a }\n', '1:17: duplicate parameter a\n'],
-    ['f := fn(): Int { x := 1; x := 2; x }\n', '1:26: duplicate local x\n'],
     ['f := fn(a: Int): Int { a = 2; a }\n', '1:24: cannot assign to immutable local a\n'],
     ['f := fn(): Int { y = 2; 1 }\n', '1:18: unknown local y\n'],
     ['f := fn(): Int { if true { x := 1; } x = 2; 1 }\n', '1:38: unknown local x\n'],
@@ -388,12 +387,26 @@ test('Lite checker collects top-level symbols and rejects duplicates', () => {
     'values: List<String> = ["ok", "yes"];\n',
     'values: List<Int> = [];\n',
     'values: mut List<Int> = []; push_back(mut values, 1);\n',
+    'x := 1; x := 2;\n',
+    'x := 1; x := \"value\";\n',
+    'f := fn(): Int { x := 1; x := 2; x }\n',
+    'f := fn(n: Int): Int { var n := n; n = n + 1; return n; }\n',
+    'values: List<Int> = [1]; loop values as item { item: Int = 2; }\n',
   ]) {
     const result = runFile(checkerDumpPath, good);
-    assert.equal(result.code, 0, good);
+    assert.equal(result.code, 0, good + result.errors);
     assert.equal(result.errors, '', good);
     assert.notEqual(result.output, '', good);
   }
+  withGeneratedDriver(checkerDumpPath, generated => {
+    for (const text of ['x := 1; x := 2;', 'f := fn(n: Int): Int { var n := n; n = n + 1; return n; }',
+      'values: List<Int> = [1]; loop values as item { item: Int = 2; }']) {
+      const expected = runFile(checkerDumpPath, text), actual = generated(text);
+      assert.equal(expected.code, 0, expected.errors); assert.deepEqual(actual, expected);
+    }
+    const text = 'var x := 1; x := 2; x = 3;', expected = runFile(checkerDumpPath, text);
+    assert.equal(expected.code, 2); assert.deepEqual(generated(text), expected);
+  });
 });
 
 test('Lite checker collects symbols from the assembled S', context => {
@@ -1361,7 +1374,6 @@ test('restricted compiler diagnoses invalid list traversal clearly', () => {
     ['loop 1 as item { outputLine(item); }\n', '1:6: loop sequence must be a List, got Int\n'],
     ['loop true as item { outputLine(item); }\n', '1:6: loop sequence must be a List, got Bool\n'],
     ['values: List<Int> = [1];\nloop values as {\n}\n', '2:16: expected an item name after as\n'],
-    ['values: List<Int> = [1];\nloop values as item {\n    item: Int = 2;\n}\n', '3:5: duplicate local item\n'],
     ['values: List<Int> = [1];\nloop values as item {\n    item = 2;\n}\n', '3:5: cannot assign to immutable local item\n'],
     ['values: List<Int> = [1];\nloop values as item {\n    outputLine(item);\n}\noutputLine(item);\n', '5:12: unknown value item\n'],
   ] as const) {
@@ -1712,9 +1724,9 @@ test('restricted compiler treats nested, doc and raw comments as separating triv
   }
 });
 
-test('restricted compiler corpus keeps 66 program and 27 rejection cases', () => {
-  assert.equal(programFixtures.length, 66);
-  assert.equal(rejectionFixtures.length, 27);
+test('restricted compiler corpus keeps 67 program and 26 rejection cases', () => {
+  assert.equal(programFixtures.length, 67);
+  assert.equal(rejectionFixtures.length, 26);
 });
 
 test('restricted compiler compiles scalar functions, calls and returns to runnable TS', () => {

@@ -908,3 +908,57 @@ test('statement scopes isolate locals and preserve outer values while shadow ini
   }
   assertExecutions(executions);
 });
+
+test('sequential value declarations create fresh bindings and retain prior copies and permissions', () => {
+  const executions: ArtifactExecution[] = [];
+  const both = ['x := 1; x := 2; outputLine(x);',
+    'var x := 2; saved := x; x = 3; x := x + 4; outputLine(saved, x);',
+    'x := 1; var x := x; x = x + 1; outputLine(x);',
+    'var x := 1; x := x + 1; outputLine(x);',
+    'x := 1; one := x; x := "two"; two := x; x := true; outputLine(one, two, x);',
+    'var x: Int = 7; x: Int = x; outputLine(x);', 'x := 7; x: Int; outputLine(x);',
+    'x := 1; x := 2; { x := x + 1; outputLine(x); } outputLine(x);',
+    'var x := 0; loop { var x := x + 1; var x := x + 1; outputLine(x); break } outputLine(x);',
+    'var x := 0; if true { x := x + 1; x := x + 1; outputLine(x); } outputLine(x);',
+    'var x := 1; original := x; var x := x + 1; x = 9; outputLine(original, x);',
+    'var flag := false; flag := not flag; outputLine(flag);',
+    'var text := "a"; text := text + "b"; outputLine(text);',
+    'x := 9223372036854775807; x := x - 1; outputLine(x);',
+    'inputInt := 7; inputInt := "value"; outputLine(inputInt);',
+    'var x := 0; ' + Array(200).fill('x := x + 1;').join(' ') + ' outputLine(x);'];
+  const tsOnly = ['f := fn(n: Int): Int { var n := n; n = n + 1; n } outputLine(f(3));',
+    'f := fn(n: Int): String { n := "value"; return n; } outputLine(f(3));',
+    'values: List<Int> = [1, 2]; loop values as item { item := item + 1; outputLine(item); }',
+    'values: List<Int> = [1]; saved: List<Int> = values; values: mut List<Int> = values; push_back(mut values, 2); outputLine(saved, values);',
+    'pair := (n = 1, label = "old"); saved := pair; pair := (n = pair.n + 1, label = "new"); outputLine(saved, pair);',
+  ];
+  for (const [sources, targets] of [[both, ['ts', 'c']], [tsOnly, ['ts']]] as const) for (const text of sources) {
+    const expected = runText(text); assert.equal(expected.status, 0, text + expected.stderr.toString());
+    for (const target of targets) {
+      const compiled = compileTarget(target, { text }); assert.equal(compiled.status, 0, text + compiled.stderr.toString());
+      if (target === 'c' && process.env['LITE_SKIP_NATIVE'] === '1') continue;
+      executions.push({ target, artifact: compiled.stdout.toString(), expected, context: text });
+    }
+  }
+  const invalid = ['outputLine("before"); x := x;', 'var x := 7; x: Bool = x;',
+    'var x := 1; x := x + 1; x = 3;', 'x := 1; var x: Bool = true; x = 1;',
+    'values: mut List<Int> = [1]; values: List<Int> = values; push_back(mut values, 2);',
+    'f := fn(n: Int, n: Int): Int { n } outputLine(f(1, 2));',
+    '{ x := 1; x := 2; } outputLine(x);'];
+  for (const text of invalid) {
+    assert.equal(runText(text).status, 1, text);
+    for (const target of ['ts', 'c'] as const) {
+      const compiled = compileTarget(target, { text }); assert.equal(compiled.status, 2, text); assert.equal(compiled.stdout.length, 0);
+    }
+  }
+  for (const text of ['outputLine("before");\r\nvar x := 9223372036854775807; x := x + 1;',
+    'outputLine("before");\r\nvar x := 0; x := 1 / x;']) {
+    const name = 'shadow سلام.lts', expected = runText(text, { name }); assert.equal(expected.status, 1);
+    for (const target of ['ts', 'c'] as const) {
+      const compiled = compileTarget(target, { text, name }); assert.equal(compiled.status, 0, compiled.stderr.toString());
+      if (target === 'c' && process.env['LITE_SKIP_NATIVE'] === '1') continue;
+      executions.push({ target, artifact: compiled.stdout.toString(), expected, context: text });
+    }
+  }
+  assertExecutions(executions);
+});

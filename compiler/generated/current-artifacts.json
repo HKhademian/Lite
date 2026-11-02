@@ -1,10 +1,10 @@
 {
-  "note": "Current exact artifacts after statement scopes and hygienic shadowed bindings. All 66 older program artifact pairs are unchanged; historical checkpoints remain preserved.",
+  "note": "Current exact artifacts after sequential value shadowing. All 66 older program artifact pairs are unchanged; duplicate-local is now an accepted silent program. Historical checkpoints remain preserved.",
   "recorded": "2026-11-02",
-  "sourceSha256": "a5d23ef5ef3b8afd6f67c3be648e0415e8a430dca388d310409cf1a7339bdac1",
-  "compilerSha256": "4b2152ec54f17ac7c7cf5c3f70a8c6b581ea971ec8d5510d1b2a02f3e4bc7343",
-  "programCases": 66,
-  "rejectedCases": 27,
+  "sourceSha256": "26133c9e709f743cecd1b12b226e07bb13903ab00555fc326d82ffded834a80d",
+  "compilerSha256": "afc0ebb55d9238a940730a4a37e180cd3c80216360a46bd989bcac715058ead8",
+  "programCases": 67,
+  "rejectedCases": 26,
   "artifacts": [
     {
       "name": "adjacent-strings",
@@ -227,6 +227,12 @@
       "source": "001-004-string-unicode.lts",
       "ts": "sha256:8645e7c05038d9add132468bf77e52b3caaa701fe6c81c83654662fb31eadbe3",
       "c": "sha256:04a919b50b33e47277428e38ff1befeb073b838493fae8098979fc93aae9ac70"
+    },
+    {
+      "name": "duplicate-local",
+      "source": "001-005-duplicate-local.lts",
+      "ts": "sha256:6983c59bfccbf9fdec6cefb294b17fbb9e9383ee1d6843c8e5ab03e05d23270b",
+      "c": "sha256:f311bf7c2933f1d2f252b81ff20ea5ffed622dca51c82b93ed76c24f1c1f037e"
     },
     {
       "name": "local-missing-semicolon",

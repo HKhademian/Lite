@@ -1219,11 +1219,10 @@ localIndex := fn(locals: List<Local>, name: String): Int {
     found
 }
 
-/** Selects a hygienic runtime name in one lookup, preserving an outer binding while the shadow's initializer evaluates. Same-block redeclarations remain a separate admission gap. */
-localRuntimeName := fn(source: String, locals: List<Local>, name: String, depth: Int, position: Int, prefix: String): String {
+/** Selects a fresh runtime name for a new binding, retaining the previous same-name binding while its initializer evaluates. */
+localRuntimeName := fn(locals: List<Local>, name: String, position: Int): String {
     index := localIndex(locals, name);
     if index < 0 { return "lite_" + name; }
-    if locals[index].depth == depth { failAt(source, position, prefix, "duplicate local " + name); }
     "lt_local_" + name + "_" + intText(position)
 }
 
@@ -2719,7 +2718,7 @@ parseProgram := fn(source: String, prefix: String): Items {
             }
             position = expectSymbol(source, position, "{", prefix);
             if itemName =!= "" {
-                runtime := localRuntimeName(source, locals, itemName, depth + 1, nameStart, prefix);
+                runtime := localRuntimeName(locals, itemName, nameStart);
                 push_back(mut locals, (name = itemName, runtime = runtime, kind = itemKind,
                     mutable = false, writable = false, depth = depth + 1, constant = false, code = runtime,
                     intValue = 0, textValue = ""));
@@ -2771,7 +2770,7 @@ parseProgram := fn(source: String, prefix: String): Items {
             statementNext := consumeStatementEnd(source, parsed.next, prefix);
             if statementNext < 0 { failAt(source, skipTrivia(source, parsed.next, prefix), prefix, "expected ; after local declaration " + localName); }
             position = statementNext;
-            runtime := localRuntimeName(source, locals, localName, depth, localStart, prefix);
+            runtime := localRuntimeName(locals, localName, localStart);
             push_back(mut locals, (name = localName, runtime = runtime, kind = parsed.kind,
                 mutable = true, writable = declaredWritable, depth = depth, constant = false, code = parsed.code,
                 intValue = parsed.intValue, textValue = parsed.textValue));
@@ -2878,7 +2877,7 @@ parseProgram := fn(source: String, prefix: String): Items {
             statementNext := consumeStatementEnd(source, parsed.next, prefix);
             if statementNext < 0 { failAt(source, skipTrivia(source, parsed.next, prefix), prefix, "expected ; after local declaration " + name); }
             position = statementNext;
-            runtime := localRuntimeName(source, locals, name, depth, nameStart, prefix);
+            runtime := localRuntimeName(locals, name, nameStart);
             push_back(mut locals, (name = name, runtime = runtime, kind = parsed.kind,
                 mutable = false, writable = false, depth = depth, constant = parsed.constant, code = parsed.code,
                 intValue = parsed.intValue, textValue = parsed.textValue));
@@ -2899,7 +2898,7 @@ parseProgram := fn(source: String, prefix: String): Items {
             statementNext := consumeStatementEnd(source, parsed.next, prefix);
             if statementNext < 0 { failAt(source, skipTrivia(source, parsed.next, prefix), prefix, "expected ; after local declaration " + name); }
             position = statementNext;
-            runtime := localRuntimeName(source, locals, name, depth, nameStart, prefix);
+            runtime := localRuntimeName(locals, name, nameStart);
             push_back(mut locals, (name = name, runtime = runtime, kind = typed.kind,
                 mutable = false, writable = typed.writable, depth = depth, constant = parsed.constant, code = parsed.code,
                 intValue = parsed.intValue, textValue = parsed.textValue));

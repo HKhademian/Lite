@@ -4,6 +4,13 @@ Status: **selected direction, 2026-10-19**. Sequential local declarations may sh
 
 ## New bindings rather than permission upgrades
 
+Generated compiler coverage, 2026-11-02: sequential ordinary value declarations
+now create fresh bindings in both targets over their admitted types. Initializers
+read the previous binding; stored copies and replacement/mutation permissions
+remain independent. Generated TS also covers parameter and traversal-receiver
+shadowing. Callable/type namespace interactions remain in the
+[transition queue](../compiler/gaps.md).
+
 ```text
 x := make_user();
 var x := x;

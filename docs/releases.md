@@ -18,7 +18,7 @@ Current components:
 - Igniter: **0.1.0-alpha.38**
 - VS Code extension: **0.1.1**
 - Verification corpus: 38 features, 19 examples, 20 samples, 78 scenarios, 100 target executions
-- Tests: 236 interpreter groups, 25 compiler-host groups, 4 policy/tooling groups and 9 editor grammar groups
+- Tests: 236 interpreter groups, 26 compiler-host groups, 4 policy/tooling groups and 9 editor grammar groups
 
 Constant integer arithmetic faults now execute only when reached. Dead branches,
 false loops, skipped Boolean operands and unused functions compile safely; invalid
@@ -189,3 +189,9 @@ generated fixed-point evidence, native sanitizer cases and paired timing data.
 - Project, language, compiler, runtime, CLI and standard-library tag streams
   remain defined by [versioning and naming](versioning-and-naming.md); only the
   igniter stream is currently published.
+
+Sequential ordinary value declarations now create fresh bindings on generated
+TS/C; initializers retain the previous value and later uses obey the new type
+and mutation permissions. Corpus: 67 programs/26 rejections; all 66 older
+artifact pairs remain identical. Inventory: 88/164 match, 76 remain, with no
+regressions. See the [shadowing evidence](../compiler/parity.md#sequential-value-bindings).

@@ -359,9 +359,10 @@ skipBraces := fn(tokens: Tokens, index: Int, prefix: String): Int {
     cursor
 }
 
-/** Adds one symbol, rejecting a duplicate top-level name. */
+/** Retains sequential value bindings in source order; other duplicate symbol kinds remain unsupported. */
 addSymbol := fn(symbols: Symbols, symbol: Symbol, prefix: String): Symbols {
-    if findSymbol(symbols, symbol.name) >= 0 {
+    previous := findSymbol(symbols, symbol.name);
+    if previous >= 0 and (symbol.kind =!= SYMBOL_KIND_VALUE() or symbols[previous].kind =!= SYMBOL_KIND_VALUE()) {
         checkFail((kind = symbol.kind, text = symbol.name, offset = symbol.offset,
             line = symbol.line, column = symbol.column), prefix, "duplicate top-level name " + symbol.name);
     }
@@ -415,7 +416,7 @@ parseFunctionSymbol := fn(tokens: Tokens, index: Int, prefix: String): (next: In
         offset = nameToken.offset, line = nameToken.line, column = nameToken.column)
 }
 
-/** Collects top-level type, function and value symbols with duplicate rejection. */
+/** Collects top-level symbols, retaining each sequential value declaration. */
 collectSymbols := fn(tokens: Tokens, prefix: String): Symbols {
     count := tokenCount(tokens);
     var symbols: mut List<Symbol> = [];
@@ -445,6 +446,22 @@ collectSymbols := fn(tokens: Tokens, prefix: String): Symbols {
             symbols = addSymbol(symbols, (kind = SYMBOL_KIND_VALUE(), name = declaration.name, detail = declaration.detail,
                 offset = nameToken.offset, line = nameToken.line, column = nameToken.column), prefix);
             cursor = declaration.next;
+        } else if token.kind == TOKEN_KIND_KEYWORD() and token.text == "loop" {
+            var body := cursor + 1;
+            if not isSymbol(tokenAt(tokens, body), "{") {
+                sequence := parseExpression(tokens, body, prefix, 0);
+                body = sequence.next;
+                if tokenAt(tokens, body).kind == TOKEN_KIND_NAME() and tokenAt(tokens, body).text == "as" {
+                    receiver := tokenAt(tokens, body + 1);
+                    if receiver.kind =!= TOKEN_KIND_NAME() { checkFail(receiver, prefix, "expected a loop item name after as"); }
+                    body = body + 2;
+                }
+            }
+            cursor = skipBraces(tokens, body, prefix);
+            if isSymbol(tokenAt(tokens, cursor), ";") { cursor = cursor + 1; }
+        } else if token.kind == TOKEN_KIND_NAME() and isSymbol(tokenAt(tokens, cursor + 1), "=") {
+            value := parseExpression(tokens, cursor + 2, prefix, 0);
+            cursor = consumeStatementEnd(tokens, value.next, prefix);
         } else {
             expression := parseExpression(tokens, cursor, prefix, 0);
             cursor = expression.next;
@@ -587,6 +604,11 @@ checkLocals := fn(tokens: Tokens, prefix: String, symbols: Symbols): Unit {
             continue;
         }
         if token.kind == TOKEN_KIND_KEYWORD() and token.text == "loop" {
+            if isSymbol(tokenAt(tokens, cursor + 1), "{") {
+                pendingLoop = true;
+                cursor = cursor + 1;
+                continue;
+            }
             source := parseExpression(tokens, cursor + 1, prefix, 0);
             if tokenAt(tokens, source.next).kind == TOKEN_KIND_NAME() and tokenAt(tokens, source.next).text == "as" {
                 itemToken := tokenAt(tokens, source.next + 1);
@@ -635,9 +657,6 @@ checkLocals := fn(tokens: Tokens, prefix: String, symbols: Symbols): Unit {
                 isSymbol(tokenAt(tokens, cursor + 1), ":"))) {
             declaration := parseDeclaration(tokens, cursor, prefix);
             nameToken := tokenAt(tokens, cursor + (if token.kind == TOKEN_KIND_KEYWORD() { 1 } else { 0 }));
-            if findLocalAtDepth(locals, declaration.name, depth) >= 0 {
-                checkFail(nameToken, prefix, "duplicate local " + declaration.name);
-            }
             mutable := startsWithAt(declaration.detail, 0, "var ");
             var writable := false;
             var work := declaration.detail;

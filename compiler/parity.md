@@ -4,7 +4,7 @@ Status: **active, 2026-11-02**. This ledger drives the owner direction that the
 TS igniter and the generated compilers converge into the same compiler for the
 bootstrap surface. It is a burndown list, not a claim that parity already holds.
 
-Immediate scope: the bootstrap subset L, S, and the 66 program / 27 rejection
+Immediate scope: the bootstrap subset L, S, and the 67 program / 26 rejection
 cases. The owner approved starting full T00 replacement on 2026-11-02; existing
 features beyond L remain pending work in the [transition plan](transition-plan.md).
 
@@ -949,3 +949,47 @@ Inventory: 87/164 match, 77 remain; 35 original failures closed, no regressions,
 flaw after ordinary value shadowing is now explicitly retained in the queue.
 The supplementary-character column discrepancy stays in the final diagnostic
 audit while functional T00 dependencies are removed.
+
+## Sequential value bindings
+
+Ordinary value declarations can now shadow earlier values in the same block.
+The initializer resolves against the preceding binding; subsequent reads and
+assignments use the new binding's type and mutation permissions. The hygienic
+runtime name introduced for statement scopes keeps these cells distinct on
+both TS and C. Previous scalar and aggregate copies remain independent.
+Function/type namespace replacement remains a separate gap, including the
+recorded static-function lookup flaw and unsupported runtime-data captures.
+
+The standalone checker retains sequential value symbols and validates the
+latest local binding. Its symbol collector also traverses loop headers and
+top-level assignments so those interacting cases reach local checking.
+Duplicate parameters and unsupported duplicate callable/type symbols still reject.
+
+Coverage includes sixteen TS/C programs, five TS function/aggregate programs,
+seven rejected sources and four exact runtime fault executions. Three accepted
+and one rejected source also compare reference/generated standalone checker
+results. Six strict native UBSan programs preserve exact streams and status.
+The duplicate-local fixture becomes an accepted silent program: the corpus
+remains 93 cases, now 67 programs and 26 rejections. All 66 earlier program
+artifact pairs remain identical.
+
+The [generated-only ladder](reports/2026-11-02-value-shadowing-ladder.json)
+records three identical, strictly checked TS generations. Removing the repeated
+duplicate-admission guard and unused helper arguments shrinks each flat source
+by 295 bytes and each generated compiler artifact by 532 bytes. The C emitter
+is still TS-hosted; native C compiler self-hosting remains pending.
+
+Five paired compiler-phase medians: TS outputs 62.4 → 64.6 ms, identical S
+641.2 → 653.7 ms, constant expressions 128.1 → 128.1 ms; C-emitter outputs
+81.2 → 80.4 ms, divisions 167.4 → 167.6 ms, constant expressions 213.0 →
+214.6 ms. All measured emitted bytes match, including identical compiler source.
+Timing changes are small and mixed; no general speedup is claimed. See the
+[raw performance report](reports/2026-11-02-value-shadowing-performance.json).
+
+Inventory: 88/164 match, 76 remain; 36 original failures closed, no regressions,
+210 tracked Lite sources and no load errors. Expression statements and empty
+item separators are next; broader namespaces remain explicitly queued.
+
+All 266 full tests pass with zero skips in 98.1 s; fast passes 254 with
+12 expected skips in 71.7 s. Strict host/seeds, both 93-case corpora,
+100 verifier executions, coverage and nine editor groups also pass.
