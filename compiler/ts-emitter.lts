@@ -1964,6 +1964,7 @@ parseBinary := fn(source: String, position: Int, prefix: String, locals: List<Lo
                     location := (if prefix == "" { "" } else { prefix + ":" }) + decimalText(place.line) + ":" + decimalText(place.column) + ": InputFault: ";
                     push_back(mut builtinCodes, textLiteralCode(location));
                 }
+                if name == "textAt" or name == "textSlice" { push_back(mut builtinCodes, intText(nameStart)); }
                 left = (kind = builtinResultKind(name), code = "lite$" + name + "(" + joinTexts(builtinCodes, ", ") + ")",
                     intValue = 0, textValue = "", constant = false, next = builtinCursor);
             } else if name == "push_back" and afterName < textLength(source) and textAt(source, afterName) == "(" {
@@ -1985,7 +1986,7 @@ parseBinary := fn(source: String, position: Int, prefix: String, locals: List<Lo
             } else if name == "pop_back" and afterName < textLength(source) and textAt(source, afterName) == "(" {
                 grant := parseListGrant(source, afterName, prefix, locals, "pop_back");
                 close := expectSymbol(source, skipTrivia(source, grant.next, prefix), ")", prefix);
-                left = (kind = listElementKind(grant.kind), code = "lite$listPopBack(" + grant.runtime + ")",
+                left = (kind = listElementKind(grant.kind), code = "lite$listPopBack(" + grant.runtime + ", " + intText(nameStart) + ")",
                     intValue = 0, textValue = "", constant = false, next = close);
             } else {
                 index := localIndex(locals, name);
@@ -2028,7 +2029,7 @@ parseBinary := fn(source: String, position: Int, prefix: String, locals: List<Lo
             close := skipTrivia(source, index.next, prefix);
             next := expectSymbol(source, close, "]", prefix);
             left = (kind = listElementKind(left.kind),
-                code = "lite$listAt((" + left.code + "), " + index.code + ")",
+                code = "lite$listAt((" + left.code + "), " + index.code + ", " + intText(indexStart) + ")",
                 intValue = 0, textValue = "", constant = false, next = next);
         } else {
             break;
@@ -3102,21 +3103,30 @@ usesIntDivision := fn(calls: String): Bool {
     usesBuiltin(calls, "divideInt") or usesBuiltin(calls, "remainderInt") or usesBuiltin(calls, "floorDivideInt") or usesBuiltin(calls, "floorModuloInt")
 }
 
-/** Emits position metadata once, a checked result guard, and only the arithmetic helpers the program uses. */
+/** True when positioned bounds faults may be raised by text or list helpers. */
+usesBounds := fn(calls: String): Bool {
+    usesBuiltin(calls, "textAt") or usesBuiltin(calls, "textSlice") or usesListIndex(calls) or usesListPop(calls)
+}
+
+/** Emits shared position metadata once, exact runtime faults, and the arithmetic helpers actually used. */
 emitIntArithmeticHelpers := fn(calls: String, source: String, prefix: String): Unit {
-    if not usesIntArithmetic(calls) and not usesIntDivision(calls) { return; }
+    integers := usesIntArithmetic(calls) or usesIntDivision(calls);
+    if not integers and not usesBounds(calls) { return; }
     namePrefix := if prefix == "" { "" } else { prefix + ":" };
     needsRange := usesIntArithmetic(calls) or usesBuiltin(calls, "divideInt") or usesBuiltin(calls, "floorDivideInt");
     outputLine("const lite$intLines: readonly number[] = [" + lineStartCodes(source) + "];");
     outputLine("const lite$intSource = " + textLiteralCode(namePrefix) + ";");
     if needsRange { outputLine("const lite$intMin = -(1n << 63n), lite$intMax = (1n << 63n) - 1n;"); }
-    outputLine("function lite$intFault(at: number, message: string): never {");
+    outputLine("function lite$fault(category: string, at: number, message: string): never {");
     outputLine("    let line = 0;");
     outputLine("    while (line + 1 < lite$intLines.length && (lite$intLines[line + 1] ?? Infinity) <= at) line += 1;");
     outputLine("    const column = at - (lite$intLines[line] ?? 0) + 1;");
-    outputLine("    process.getBuiltinModule(\"node:fs\").writeSync(2, lite$intSource + (line + 1) + \":\" + column + \": ArithmeticPanic: \" + message + \"\\n\");");
+    outputLine("    process.getBuiltinModule(\"node:fs\").writeSync(2, lite$intSource + (line + 1) + \":\" + column + \": \" + category + \": \" + message + \"\\n\");");
     outputLine("    process.exit(1);");
     outputLine("}");
+    if integers {
+        outputLine("function lite$intFault(at: number, message: string): never { return lite$fault(\"ArithmeticPanic\", at, message); }");
+    }
     if needsRange {
         outputLine("function lite$checkedInt(value: bigint, at: number): bigint {");
         outputLine("    if (value < lite$intMin || value > lite$intMax) lite$intFault(at, \"integer outside Int range\");");
@@ -3234,7 +3244,7 @@ emitInputHelpers := fn(calls: String): Unit {
 /** Emits the self-contained declarations and helpers for the I/O and text builtins a program uses. */
 emitBuiltinHelpers := fn(calls: String): Unit {
     if usesBuiltin(calls, "inputArgs") or usesBuiltin(calls, "inputAll") or usesBuiltin(calls, "inputLine") or usesBuiltin(calls, "inputInt") or usesBuiltin(calls, "inputFloat") or
-        usesBuiltin(calls, "reportError") or usesBuiltin(calls, "exit") or usesIntArithmetic(calls) or usesIntDivision(calls) {
+        usesBuiltin(calls, "reportError") or usesBuiltin(calls, "exit") or usesIntArithmetic(calls) or usesIntDivision(calls) or usesBounds(calls) {
         outputLine("declare const process: {");
         outputLine("    argv: string[];");
         outputLine("    exit(code: number): never;");
@@ -3291,10 +3301,10 @@ emitBuiltinHelpers := fn(calls: String): Unit {
         outputLine("");
     }
     if usesBuiltin(calls, "textAt") {
-        outputLine("function lite$textAt(text: string, position: bigint): string {");
+        outputLine("function lite$textAt(text: string, position: bigint, at: number): string {");
         outputLine("    const points = lite$textPoints(text);");
         outputLine("    if (position < 0n || position >= BigInt(points.length)) {");
-        outputLine("        throw new Error(\"BoundPanic: textAt index outside text\");");
+        outputLine("        lite$fault(\"BoundPanic\", at, \"textAt index outside text\");");
         outputLine("    }");
         outputLine("    const value = points[Number(position)];");
         outputLine("    if (value === undefined) {");
@@ -3305,10 +3315,10 @@ emitBuiltinHelpers := fn(calls: String): Unit {
         outputLine("");
     }
     if usesBuiltin(calls, "textSlice") {
-        outputLine("function lite$textSlice(text: string, start: bigint, end: bigint): string {");
+        outputLine("function lite$textSlice(text: string, start: bigint, end: bigint, at: number): string {");
         outputLine("    const points = lite$textPoints(text);");
         outputLine("    if (start < 0n || end < start || end > BigInt(points.length)) {");
-        outputLine("        throw new Error(\"BoundPanic: textSlice requires 0 <= start <= end <= textLength(text)\");");
+        outputLine("        lite$fault(\"BoundPanic\", at, \"textSlice requires 0 <= start <= end <= textLength(text)\");");
         outputLine("    }");
         outputLine("    return points.slice(Number(start), Number(end)).join(\"\");");
         outputLine("}");
@@ -3319,13 +3329,13 @@ emitBuiltinHelpers := fn(calls: String): Unit {
 
 /** Emits the checked list-index helper used by generated programs that read list elements. */
 emitListIndexHelper := fn(): Unit {
-    outputLine("function lite$listAt<T>(items: readonly T[], index: bigint): T {");
+    outputLine("function lite$listAt<T>(items: readonly T[], index: bigint, at: number): T {");
     outputLine("    if (index < 0n || index >= BigInt(items.length)) {");
-    outputLine("        throw new Error(\"BoundPanic: list index outside its extent\");");
+    outputLine("        lite$fault(\"BoundPanic\", at, \"list index outside its extent\");");
     outputLine("    }");
     outputLine("    const value = items[Number(index)];");
     outputLine("    if (value === undefined) {");
-    outputLine("        throw new Error(\"BoundPanic: list index outside its extent\");");
+    outputLine("        lite$fault(\"BoundPanic\", at, \"list index outside its extent\");");
     outputLine("    }");
     outputLine("    return value;");
     outputLine("}");
@@ -3334,10 +3344,10 @@ emitListIndexHelper := fn(): Unit {
 
 /** Emits the checked list-pop helper used by generated programs that pop a list tail. */
 emitListPopHelper := fn(): Unit {
-    outputLine("function lite$listPopBack<T>(items: T[]): T {");
+    outputLine("function lite$listPopBack<T>(items: T[], at: number): T {");
     outputLine("    const value = items.pop();");
     outputLine("    if (value === undefined) {");
-    outputLine("        throw new Error(\"BoundPanic: pop_back on an empty list\");");
+    outputLine("        lite$fault(\"BoundPanic\", at, \"pop_back on an empty list\");");
     outputLine("    }");
     outputLine("    return value;");
     outputLine("}");

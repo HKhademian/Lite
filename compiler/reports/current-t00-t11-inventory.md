@@ -2,7 +2,7 @@
 
 Runtime environment details omitted for privacy.
 
-T11 identity: `625bee56643e91b2836a6d5b3660a28f0e3a6cb0efa28b66fbd175e2d68ac8f9`. The preserved artifact passed its separate strict TypeScript check.
+T11 identity: `c95292264a2b894c0f1e5d31eb53193d3605c71800def6b987db6934b8b717b7`. The preserved artifact passed its separate strict TypeScript check.
 
 This is the current measured support inventory, not acceptance of new language features. Dated historical inventories remain unchanged.
 
@@ -20,15 +20,15 @@ This is the current measured support inventory, not acceptance of new language f
 - feature: 37; 22 matches tested behavior; 15 T11 rejects source.
 - example: 19; 10 matches tested behavior; 9 T11 rejects source.
 - sample: 20; 11 matches tested behavior; 9 T11 rejects source.
-- probe: 78; 20 matches tested behavior; 56 T11 rejects source; 2 runtime diagnostic differs.
+- probe: 78; 22 matches tested behavior; 56 T11 rejects source.
 - library-test: 8; 8 matches tested behavior.
 - trackedSourceFiles: 209.
 - Showcases: none currently implemented.
 
 ## Progress since the original inventory
 
-- 21 formerly failing cases now match; 0 formerly matching cases regress. Case identity includes kind and id.
-- 71/162 executed source cases match; 91 still fail. These are case counts, not distinct missing features or an overall completion percentage.
+- 23 formerly failing cases now match; 0 formerly matching cases regress. Case identity includes kind and id.
+- 73/162 executed source cases match; 89 still fail. These are case counts, not distinct missing features or an overall completion percentage.
 - Native C, compile-only sources and run/check migration have separate gates in [the live gap tracker](../gaps.md).
 
 Closed original cases:
@@ -53,6 +53,8 @@ Closed original cases:
 - probe: input.whole-prompt
 - probe: tuple.report
 - probe: function.report-order
+- probe: text.bounds-diagnostic
+- probe: output.before-fault
 - probe: input.invalid-utf8
 
 ## feature
@@ -212,10 +214,8 @@ Closed original cases:
 - **function.nested-helper — T11 rejects source.** Nested function declarations without a scalar capture
   First diagnostic: 1:28: function definitions are only allowed at top level
 - **function.report-order — matches tested behavior.** Reports in a function argument precede the outer report
-- **text.bounds-diagnostic — runtime diagnostic differs.** Text bounds faults preserve the diagnostic contract
-  boundary: T00 status 1, stdout ""; T11 status 1, stdout "".
-- **output.before-fault — runtime diagnostic differs.** Earlier output survives a later runtime bounds fault
-  boundary: T00 status 1, stdout "before\n"; T11 status 1, stdout "before\n".
+- **text.bounds-diagnostic — matches tested behavior.** Text bounds faults preserve the diagnostic contract
+- **output.before-fault — matches tested behavior.** Earlier output survives a later runtime bounds fault
 - **alias.array — T11 rejects source.** Transparent aliases to fixed-array types
   First diagnostic: 1:14: unsupported type alias target; only Int, Float, String, Bool, Unit, List<T>, flat named tuples and aliases are supported
 - **alias.shadowing — matches tested behavior.** One lexical namespace: a later value hides an alias

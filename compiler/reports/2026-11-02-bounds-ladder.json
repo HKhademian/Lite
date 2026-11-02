@@ -1,0 +1,103 @@
+{
+  "date": "2026-11-02",
+  "baseRevision": "f8e46a099293fdf95b75e9caff988fd29f21accd",
+  "node": "v24.16.0",
+  "previousSeedSha256": "c25922d7a3c843395844deb30e99c34e73e1cbc66a04740b2a596c1d433c7683",
+  "transitionalArtifactSha256": "36bdc9b85b0490f24976cd85eda8121e0fcc2d25130c4320db20bba4e2afe143",
+  "recipe": "Previous generated seed compiling current S -> transitional compiler; transitional compiler compiling the same S -> stage1; stage1 and stage2 compile the same S into stage2 and stage3. No source rewriting or T00 execution.",
+  "source": {
+    "sha256": "ee0832948120401868cf7e93d93e0f51cc794faadb54daf4cfc58b2533d08aa8",
+    "bytes": 173376
+  },
+  "generations": [
+    {
+      "name": "stage1",
+      "sha256": "c95292264a2b894c0f1e5d31eb53193d3605c71800def6b987db6934b8b717b7",
+      "bytes": 315117,
+      "strictTypecheck": true,
+      "status": 0
+    },
+    {
+      "name": "stage2",
+      "sha256": "c95292264a2b894c0f1e5d31eb53193d3605c71800def6b987db6934b8b717b7",
+      "bytes": 315117,
+      "strictTypecheck": true,
+      "status": 0
+    },
+    {
+      "name": "stage3",
+      "sha256": "c95292264a2b894c0f1e5d31eb53193d3605c71800def6b987db6934b8b717b7",
+      "bytes": 315117,
+      "strictTypecheck": true,
+      "status": 0
+    }
+  ],
+  "fixedPoint": true,
+  "c": {
+    "sourceSha256": "550cd452f94d14887875c7a335a97d0cf0fffa57fee0a705b549c6e608e47b99",
+    "sourceBytes": 161221,
+    "artifactSha256": "7428143f0c993a997d19a08e19c68463e17b0429bd6a4df0281fe95d97b06a46",
+    "artifactBytes": 288864,
+    "builderSha256": "c95292264a2b894c0f1e5d31eb53193d3605c71800def6b987db6934b8b717b7",
+    "native": false
+  },
+  "validation": {
+    "strictHostAndSeeds": true,
+    "focusedRuntimeExecutions": 30,
+    "fullSuite": {
+      "tests": 257,
+      "passed": 257,
+      "failed": 0,
+      "skipped": 0,
+      "durationMs": 47295.708208
+    },
+    "fastSuite": {
+      "tests": 257,
+      "passed": 245,
+      "failed": 0,
+      "skipped": 12,
+      "durationMs": 30279.983458
+    },
+    "hostGroups": 17,
+    "editorGroups": 9,
+    "tsCorpus": {
+      "phase": "compare",
+      "target": "ts",
+      "cases": 93,
+      "programs": 55,
+      "rejections": 38,
+      "mismatches": 0,
+      "first": []
+    },
+    "cCorpus": {
+      "phase": "compare",
+      "target": "c",
+      "cases": 93,
+      "programs": 55,
+      "rejections": 38,
+      "mismatches": 0,
+      "first": []
+    },
+    "verifierExecutions": 95,
+    "nativeCProgramArtifactsUnchanged": true,
+    "inventory": {
+      "matches": 73,
+      "total": 162,
+      "remaining": 89,
+      "originalFailuresClosed": 23,
+      "regressions": 0,
+      "acceptedRuntimeDifferences": 0
+    },
+    "performanceReport": "2026-11-02-bounds-performance.json",
+    "knownLimits": "Same-line supplementary-character columns differ (T00 UTF-16 units versus Lite code-point offsets); an owner choice is pending. This slice preserves existing Lite units and reports exact reference diagnostics where units agree. Wider feature/C/native/run/check gaps remain open."
+  },
+  "reproductionCommands": [
+    "git show f8e46a099293fdf95b75e9caff988fd29f21accd:compiler/bootstrap/T11.ts > /tmp/previous-seed.ts",
+    "node --input-type=module -e 'import {writeFileSync} from \"node:fs\"; import {loadBundle} from \"./igniter/loader.ts\"; writeFileSync(\"/tmp/S.lts\",loadBundle(\"compiler/manifests/ts.json\").text); writeFileSync(\"/tmp/C-S.lts\",loadBundle(\"compiler/manifests/c.json\").text);'",
+    "node compiler/scripts/run-ts-artifact.ts --artifact /tmp/previous-seed.ts --source /tmp/S.lts --out /tmp/transitional.ts",
+    "node compiler/scripts/run-ts-artifact.ts --artifact /tmp/transitional.ts --source /tmp/S.lts --out /tmp/stage1.ts",
+    "node compiler/scripts/run-ts-artifact.ts --artifact /tmp/stage1.ts --source /tmp/S.lts --out /tmp/stage2.ts",
+    "node compiler/scripts/run-ts-artifact.ts --artifact /tmp/stage2.ts --source /tmp/S.lts --out /tmp/stage3.ts",
+    "node compiler/scripts/run-ts-artifact.ts --artifact /tmp/stage3.ts --source /tmp/C-S.lts --out /tmp/c-emitter.ts"
+  ]
+}

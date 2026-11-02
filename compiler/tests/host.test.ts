@@ -374,6 +374,46 @@ function divisionFaultSource(expression: string): string {
   return '/* 🙂 */ outputLine("before");\r\nvar hi := 9223372036854775807; var lo := -9223372036854775808; var zero := 0;\r\noutputLine(' + expression + ');';
 }
 
+test('generated text/list bounds faults preserve exact positions, output and operand effects', () => {
+  const bodies = [
+    'outputLine(textAt("🙂x", -1));', 'outputLine(textAt("🙂x", 2));', 'outputLine(textAt("", 0));',
+    'outputLine(textSlice("🙂ab", -1, 1));', 'outputLine(textSlice("🙂ab", 2, 1));',
+    'outputLine(textSlice("🙂ab", 0, 4));',
+    'values: List<Int> = [7]; outputLine(values[-1]);',
+    'values: List<Int> = [7]; outputLine(values[/* سلام */ 1]);',
+    'values: List<Int> = [7]; outputLine(values[9223372036854775807]);',
+    'values: mut List<Int> = []; outputLine(pop_back(mut values));',
+    'values: mut List<Int> = [7]; outputLine(pop_back(mut values)); pop_back(mut values);',
+    'outputLine("prefix", textAt("x", 1));',
+    'var n := 0; loop n < 2 { outputLine(textAt("x", n)); n = n + 1; }',
+    'outputLine(textSlice("x", 0, 2), textAt("", 0));',
+  ];
+  const branches = bodies.map((body, index) => `${index === 0 ? 'if' : 'else if'} pick == ${index} { ${body} }`).join('\r\n');
+  const text = '/* 🙂 */ outputLine("before");\r\npick := inputInt();\r\n' + branches;
+  for (const name of [undefined, 'bounds سلام🙂.lts']) {
+    const compiled = compileTs(name === undefined ? { text } : { text, name });
+    assert.equal(compiled.status, 0, compiled.stderr.toString());
+    withTsArtifact(compiled.stdout.toString(), run => {
+      for (const [index, body] of bodies.entries()) {
+        const expected = runText(text, name === undefined ? { stdin: String(index) } : { stdin: String(index), name });
+        const actual = run({ stdin: String(index) });
+        assert.equal(expected.status, 1); assert.equal(actual.phase, 'run'); assert.equal(actual.signal, null);
+        assert.deepEqual({ status: actual.status, stdout: actual.stdout, stderr: actual.stderr }, expected, body);
+      }
+    });
+  }
+  const effects = 'items := fn(): List<Int> { outputLine("items"); values: List<Int> = [1]; values } ' +
+    'index := fn(): Int { outputLine("index"); 2 } outputLine("before"); outputLine(items()[index()]);';
+  const valid = 'values: mut List<Int> = [3, 4]; outputLine(textAt("🙂x", 0), textSlice("🙂ab", 0, 3), textSlice("", 0, 0), values[0], values[1], pop_back(mut values));';
+  for (const source of [effects, valid]) {
+    const compiled = compileTs({ text: source }), expected = runText(source);
+    assert.equal(compiled.status, 0, compiled.stderr.toString());
+    const actual = runTsArtifact(compiled.stdout.toString());
+    assert.equal(actual.phase, 'run');
+    assert.deepEqual({ status: actual.status, stdout: actual.stdout, stderr: actual.stderr }, expected);
+  }
+});
+
 test('C output evaluates all arguments before writing, including mixed scalar and Unit values', context => {
   if (process.env['LITE_SKIP_NATIVE'] === '1') { context.skip('LITE_SKIP_NATIVE=1'); return; }
   const prefix = '/* 🙂 */ var zero := 0; var maximum := 9223372036854775807;\r\n';

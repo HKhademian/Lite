@@ -77,7 +77,7 @@ bounded code-point views; that source snapshot has a 668 ms self-build median in
 [before/after benchmark](../benchmark/reports/2026-11-02-text-cache.md), excluding
 strict checking. The subsequent [report-order refresh](../compiler/parity.md#report-order-seed-refresh)
 preserves output produced by calls inside report arguments and records a new
-three-generation fixed point. Current tests include 236 interpreter groups, 16 compiler-host
+three-generation fixed point. Current tests include 236 interpreter groups, 17 compiler-host
 groups, 4 policy/tooling groups and 9 editor grammar groups; the historical P0 counts below remain fixed.
 The full-source lexer/parser/checker sweeps now run generated TS drivers, checked
 once per sweep and executed in isolated processes. Focused fixtures retain
@@ -113,6 +113,12 @@ C multi-value output now evaluates every argument before any write, preserving
 left-to-right faults and earlier output. Single-value emitted C is unchanged.
 All 256 full tests pass with zero skips (48.5 s); the [C output-order ledger](../compiler/parity.md#c-output-argument-evaluation)
 records coverage, unchanged TS seeds and steady paired C-emitter timings.
+
+Generated TS text/list bounds faults now carry exact source locations and keep
+earlier output, using shared fault metadata. All 257 full tests pass with zero
+skips (47.3 s); the measured inventory is 73/162 matching cases with 89 remaining.
+The supplementary-character column convention is separately pending; see the
+[bounds-fault ledger](../compiler/parity.md#positioned-text-and-list-bounds-faults).
 
 ## Historical P0 baseline, 2026-11-01
 

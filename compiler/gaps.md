@@ -9,7 +9,7 @@ This tracker covers the T00 replacement goal, including newly discovered flaws.
 
 The [current inventory](reports/current-t00-t11-inventory.md) and
 [raw observations](reports/current-t00-t11-inventory.json) use the checked Int64
-seed `625bee56…`. All inputs compile/check against the current reference, both
+seed `c9529226…`. All inputs compile/check against the current reference, both
 execution paths use identical anonymous diagnostic naming, and raw-byte input
 probes follow the real CLI's lazy strict UTF-8 decoding. Historical reports stay
 unchanged. Refresh with `node compiler/scripts/t00-t11-inventory.ts --large-sources`.
@@ -17,11 +17,11 @@ unchanged. Refresh with `node compiler/scripts/t00-t11-inventory.ts --large-sour
 - Canonical features: 22/37 match; 15 rejected.
 - Examples: 10/19 match; 9 rejected.
 - Implemented samples: 11/20 match; 9 rejected.
-- Isolated boundary probes: 20/78 match; 56 rejected, 2 diagnostic differences.
+- Isolated boundary probes: 22/78 match; 56 rejected; no differences among accepted probes.
 - Library tests: 8/8 match. All 209 tracked Lite sources are accounted for;
   compile-only acceptance is distinguished from executed parity.
-- Total executed source cases: 71/162 match, 91 still fail. Compared with the
-  original inventory, 21 previously failing cases now match and none regress.
+- Total executed source cases: 73/162 match, 89 still fail. Compared with the
+  original inventory, 23 previously failing cases now match and none regress.
   A new temporary-I/O case accounts for the additional matching case.
 
 These counts describe measured programs. Several failing cases share one cause;
@@ -50,7 +50,13 @@ Keep dependencies explicit; split a topic further when its contracts warrant it.
   single evaluation and left-to-right fault ordering on TS/C.
 - [x] **Helper-scan performance:** collect needed target helpers once per
   program; verify exact artifacts and paired throughput.
-- [ ] **Bounds faults:** exact text/list diagnostics and retained output.
+- [x] **Bounds faults:** positioned text/list diagnostics and retained output;
+  supplementary-character column units are tracked separately.
+- [ ] **Unicode diagnostic columns:** a same-line supplementary character counts
+  as one source offset in Lite and two UTF-16 units in T00. The owner is choosing
+  the convention; retain explicit supplementary-character cases when resolved.
+  Earlier runtime parity probes put supplementary source characters on preceding
+  lines, so their passing results do not cover this difference.
 - [ ] **Comparisons:** parenthesized inequality, chains and single evaluation.
   A bare function tail `value =!= ""` is also mistaken for assignment to the
   parameter; retain a regression for that form when fixing comparison parsing.
@@ -146,3 +152,13 @@ all 95 verifier executions and nine editor groups also pass. The paired C-emitte
 timings are steady within noise: 78.8 → 79.6 ms for 1,000 single-value outputs;
 185.7 → 181.7 ms for 200 multi-value outputs. Next: positioned bounds diagnostics,
 followed by comparison parsing.
+
+Positioned bounds faults pass 30 focused runtime executions. All 257 full tests
+pass with zero skips in 47.3 s; fast 245 pass/12 expected skips, strict checks,
+both 93-case corpora, 95 verifier executions and nine editor groups pass. The
+inventory improves to 73/162 matching cases, 89 remaining, with no observed
+accepted-source runtime differences in that finite corpus. Source-column units
+for supplementary characters remain separately pending; no parity claim includes
+that unresolved case. Paired TS compiler medians: 60.2 → 59.4 ms for 1,000 outputs,
+628.3 → 646.2 ms for identical compiler source. C-emitter medians stay steady:
+80.0 → 79.9 ms for 1,000 outputs, 166.8 → 164.3 ms for 200 divisions.

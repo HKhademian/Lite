@@ -13,7 +13,13 @@ Current components:
 - Igniter: **0.1.0-alpha.38**
 - VS Code extension: **0.1.1**
 - Verification corpus: 37 features, 19 examples, 20 samples, 77 scenarios, 95 target executions
-- Tests: 236 interpreter groups, 16 compiler-host groups, 4 policy/tooling groups and 9 editor grammar groups
+- Tests: 236 interpreter groups, 17 compiler-host groups, 4 policy/tooling groups and 9 editor grammar groups
+
+Generated TS text/list bounds faults now carry exact source locations and keep
+earlier output, using shared fault metadata. All 257 full tests pass with zero
+skips (47.3 s); the measured inventory is 73/162 matching cases with 89 remaining.
+The supplementary-character column convention is separately pending; see the
+[bounds-fault ledger](../compiler/parity.md#positioned-text-and-list-bounds-faults).
 
 C multi-value output now evaluates every argument before any write, preserving
 left-to-right faults and earlier output. Single-value emitted C is unchanged.

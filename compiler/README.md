@@ -238,7 +238,10 @@ features outside the subset are rejected by name with status 2.
 
 Diagnostics are source-positioned as `name:line:column: message` (or
 `line:column: message` when no logical source name is supplied). Columns are
-1-based source characters, computed from immutable offsets. Unsupported
+1-based source characters, computed from immutable offsets. Generated TS text/list
+bounds faults now use shared location metadata and preserve prior output. The
+T00 UTF-16 versus Lite code-point column difference for same-line supplementary
+characters is separately tracked in [the gap list](gaps.md). Unsupported
 reserved features name the feature, point to its documentation, and repeat the
 accepted subset, for example:
 

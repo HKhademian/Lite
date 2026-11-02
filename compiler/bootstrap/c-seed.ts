@@ -1,17 +1,17 @@
-/** Verified generated C output-evaluation seed; exact identities follow. */
+/** Verified generated bounds seed; exact identities follow. */
 export const cSeed = Object.freeze({
   "artifact": "c-emitter.ts",
-  "sourceSha256": "b109e2dde95a0fd961e3fa7d06dd3d742bc6eb6e63346853a9e4e41916c6d9cd",
-  "sourceBytes": 161052,
-  "artifactSha256": "ec6d4b7b48f61101d8160c464409ccf846e8b0136890d58c54cf7c1198511928",
-  "artifactBytes": 286924,
-  "builderSha256": "c25922d7a3c843395844deb30e99c34e73e1cbc66a04740b2a596c1d433c7683",
+  "sourceSha256": "550cd452f94d14887875c7a335a97d0cf0fffa57fee0a705b549c6e608e47b99",
+  "sourceBytes": 161221,
+  "artifactSha256": "7428143f0c993a997d19a08e19c68463e17b0429bd6a4df0281fe95d97b06a46",
+  "artifactBytes": 288864,
+  "builderSha256": "c95292264a2b894c0f1e5d31eb53193d3605c71800def6b987db6934b8b717b7",
   "native": false,
   "sourceManifest": "compiler/manifests/c.json",
-  "sourceRevision": "6492561620b4191319a871dd0aa14b2531e2a9c3",
-  "artifactRevision": "6492561620b4191319a871dd0aa14b2531e2a9c3",
-  "builderRevision": "30e0981fae4850bcd03e782a5e7175952ec12ab3",
-  "builder": "Current generated TS seed compiling Lite C emitter",
+  "sourceRevision": "Bounds source snapshot committed with this seed; see sourceSha256",
+  "artifactRevision": "Bounds artifact committed with this seed; see artifactSha256",
+  "builderRevision": "Current bounds TS seed; see builderSha256",
+  "builder": "Refreshed generated TS compiler compiling current Lite C emitter",
   "node": "v24.16.0",
   "typescript": "7.0.2"
 });

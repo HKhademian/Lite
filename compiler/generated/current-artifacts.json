@@ -1,8 +1,8 @@
 {
-  "note": "Current exact artifacts after C multi-value output evaluates all arguments before writing. TS source/seed and all TS artifacts remain unchanged.",
+  "note": "Current exact artifacts after positioned generated TS text/list bounds faults and shared fault metadata. Native C program artifacts remain unchanged.",
   "recorded": "2026-11-02",
-  "sourceSha256": "9de37c318f9ba014f1f1c50c1f4036a99c2b86a3504b0e9e47eb8b1f86b3d0b8",
-  "compilerSha256": "c25922d7a3c843395844deb30e99c34e73e1cbc66a04740b2a596c1d433c7683",
+  "sourceSha256": "ee0832948120401868cf7e93d93e0f51cc794faadb54daf4cfc58b2533d08aa8",
+  "compilerSha256": "c95292264a2b894c0f1e5d31eb53193d3605c71800def6b987db6934b8b717b7",
   "programCases": 55,
   "rejectedCases": 38,
   "artifacts": [
@@ -291,13 +291,13 @@
     {
       "name": "mutable-counter-loop",
       "source": "001-007-mutable-counter-loop.lts",
-      "ts": "sha256:6c16c6a7165629289391427401b5a99e654d098b755e302127647d128418c15c",
+      "ts": "sha256:bdb1dc43dd7ae763e0c520f350e04c4e4121b727386d47f63215c11d945b63f3",
       "c": "sha256:e750d1ea7ea87ff2d27ee5cf6234c91c47a0ea9f242a61fb97b62b601f372bff"
     },
     {
       "name": "nested-if-in-loop",
       "source": "001-007-nested-if-in-loop.lts",
-      "ts": "sha256:5345e4242b7a0c1409463c37658bc5bfe347f3e71d9faccb8c0f499b1197b60b",
+      "ts": "sha256:fd887817ac98f0b7bdd312938eb637ac2769168ce4c05e53c898011bcf78725b",
       "c": "sha256:e3723913a1ba7dfe17909add9228333f4922b8c80e3150115043c548584924c9"
     },
     {
@@ -309,7 +309,7 @@
     {
       "name": "report-in-loop",
       "source": "001-007-report-in-loop.lts",
-      "ts": "sha256:187f01996912951c76172cfdf1ffabfbde6ecb25f238f2d3a6f70ebcbc52203d",
+      "ts": "sha256:82b01ac37509c5b3c939fbcfad5777592f51ffded7e8d39ad4379ce54bd54e8e",
       "c": "sha256:ac4375917684343e3ed8a94666f50c459e68d0073ac53ea865f0c113acb4d916"
     },
     {
@@ -321,13 +321,13 @@
     {
       "name": "runtime-division",
       "source": "001-009-runtime-division.lts",
-      "ts": "sha256:4c5a55a0a909fe5691e5d3141c7449d16be791152bae0852be8b08b66e59b34c",
+      "ts": "sha256:b240894667d92d897510e39adb78c3e0a21a65c0c3979ccf8476f3b228fef897",
       "c": "sha256:4741c71cda1f2d14db72498e720369354828eb163576b332d69d10fc2b7ba05c"
     },
     {
       "name": "runtime-remainder",
       "source": "001-009-runtime-remainder.lts",
-      "ts": "sha256:e3a745d331890a3c4fa8b220cc5f0b0c2ed32f278eaa544aebc53b6d454d70e9",
+      "ts": "sha256:226cf9969827929d8ce2778a961e6e9e977d1107a89b159c17faca0091c24a6e",
       "c": "sha256:f46e1cfebca3b9af4803e5e1fc775f5a718e8204dbb418545c8dce0bd849a383"
     },
     {

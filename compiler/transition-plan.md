@@ -36,6 +36,18 @@ features may be ported; new syntax, builtins and semantics still require approva
 
 ## Done
 
+- 2026-11-02: generated TS textAt/textSlice, list reads and pop_back now
+  report exact positioned BoundPanic diagnostics and preserve prior output.
+  Numeric source offsets reuse one fault-location table, including arithmetic,
+  instead of rescanning source per access. Focused cases cover named/anonymous
+  diagnostics, CRLF, BMP text, nested effects, negative/huge indices, empty
+  reads/pops, valid bounds and loops. Three generated generations match; the
+  [ladder](reports/2026-11-02-bounds-ladder.json) records gates and identities.
+  Inventory: 73/162 matching, 89 remaining, 23 original failures closed and
+  no original passing case regressing. The same-line supplementary-character
+  column convention is separately pending an owner choice; earlier finite
+  probes did not cover it. Next: comparison parsing and the other live topics.
+
 - 2026-11-02: C multi-value output evaluates every argument once before any
   write, preserving earlier calls and left-to-right fault order. Single-value
   calls retain exact emitted C and avoid unused temporary names. Fourteen
@@ -260,10 +272,10 @@ active T00 implementation; bootstrap recovery remains reproducible from history.
 - Do not modify published tags or create release tags without a release decision.
 - Preserve source names, invalid UTF-8 rejection, output streams and status.
 - Source/manifest changes must not silently use a stale generated compiler.
-- The current seed is 312229 bytes, SHA-256
-  `c25922d7a3c843395844deb30e99c34e73e1cbc66a04740b2a596c1d433c7683`.
-- Current S is 172660 bytes, SHA-256
-  `9de37c318f9ba014f1f1c50c1f4036a99c2b86a3504b0e9e47eb8b1f86b3d0b8`.
+- The current seed is 315117 bytes, SHA-256
+  `c95292264a2b894c0f1e5d31eb53193d3605c71800def6b987db6934b8b717b7`.
+- Current S is 173376 bytes, SHA-256
+  `ee0832948120401868cf7e93d93e0f51cc794faadb54daf4cfc58b2533d08aa8`.
 - Source/builder identities are in `bootstrap/seed.ts` and `bootstrap/c-seed.ts`;
   actual host Node v24.16.0, repository pin 26.13.0, TypeScript 7.0.2.
 - Original TS self-compilation was slow; the original benchmark's two 60 s

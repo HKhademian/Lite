@@ -436,6 +436,49 @@ and nine editor groups pass. The TS inventory remains 71/162, with 91 failing
 cases. C output ordering is closed; positioned bounds diagnostics, comparison
 parsing and the other [live gaps](gaps.md) remain pending.
 
+## Positioned text and list bounds faults
+
+Generated textAt/textSlice, list indexing and pop_back now raise exact positioned
+BoundPanic diagnostics and preserve earlier output in the process adapters.
+Each call carries its immutable numeric source offset. Bounds and integer faults
+share one line-start table and lookup routine, with location lookup only on a
+fault; this avoids rescanning the source for every access during compilation.
+Operands retain their existing evaluation order and execute once.
+
+Thirty focused executions compare named/anonymous diagnostics with T00, covering
+negative/huge indices, empty text/lists, reversed/oversized slices, prior output,
+loops, nested effects, valid endpoints, CRLF and BMP source comments. Unicode
+source names and supplementary text values are included. A separate same-line
+supplementary-character probe exposed different column units: T00 counts UTF-16
+units, Lite offsets count code points. The owner is choosing that convention;
+this slice preserves the existing Lite convention and keeps that gap explicit.
+Earlier arithmetic Unicode probes used preceding lines/logical names and did
+not establish parity for supplementary characters before a fault on the same line.
+
+Current TS S is 173376 bytes, SHA-256
+`ee0832948120401868cf7e93d93e0f51cc794faadb54daf4cfc58b2533d08aa8`.
+Three generated generations match, 315117 bytes, SHA-256
+`c95292264a2b894c0f1e5d31eb53193d3605c71800def6b987db6934b8b717b7`.
+The refreshed TS-hosted C emitter is 288864 bytes, SHA-256
+`7428143f0c993a997d19a08e19c68463e17b0429bd6a4df0281fe95d97b06a46`,
+from C source SHA-256
+`550cd452f94d14887875c7a335a97d0cf0fffa57fee0a705b549c6e608e47b99`.
+Native C program bytes are unchanged. The
+[generated-only ladder](reports/2026-11-02-bounds-ladder.json) records provenance.
+
+The refreshed inventory has 73/162 matches, 89 rejections, and no observed
+runtime/diagnostic differences among accepted inputs; 23 original failures now
+match, with no original passing case regressing. These are finite observations;
+the supplementary-column discrepancy and wider gaps remain tracked separately.
+The [paired performance report](reports/2026-11-02-bounds-performance.json)
+records the cost of positioned helpers without claiming a speedup.
+
+Strict checks, all 257 full tests (zero skips, 47.3 s), fast 245 pass with twelve
+expected skips (30.3 s), both 93-case corpora, 95 verifier executions and nine
+editor groups pass. Paired compiler-phase medians are 60.2 → 59.4 ms for 1,000
+outputs, 628.3 → 646.2 ms for the same compiler source. C-emitter pairs are
+80.0 → 79.9 ms for 1,000 outputs and 166.8 → 164.3 ms for 200 divisions.
+
 ## Rule
 
 For one Lite source at a time, starting with the compiler corpus and then S:

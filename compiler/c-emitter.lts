@@ -1974,6 +1974,7 @@ parseBinary := fn(source: String, position: Int, prefix: String, locals: List<Lo
                     location := (if prefix == "" { "" } else { prefix + ":" }) + decimalText(place.line) + ":" + decimalText(place.column) + ": InputFault: ";
                     push_back(mut builtinCodes, textLiteralCode(location));
                 }
+                if name == "textAt" or name == "textSlice" { push_back(mut builtinCodes, intText(nameStart)); }
                 left = (kind = builtinResultKind(name), code = "lite$" + name + "(" + joinTexts(builtinCodes, ", ") + ")",
                     intValue = 0, textValue = "", constant = false, next = builtinCursor);
             } else if name == "push_back" and afterName < textLength(source) and textAt(source, afterName) == "(" {
@@ -1995,7 +1996,7 @@ parseBinary := fn(source: String, position: Int, prefix: String, locals: List<Lo
             } else if name == "pop_back" and afterName < textLength(source) and textAt(source, afterName) == "(" {
                 grant := parseListGrant(source, afterName, prefix, locals, "pop_back");
                 close := expectSymbol(source, skipTrivia(source, grant.next, prefix), ")", prefix);
-                left = (kind = listElementKind(grant.kind), code = "lite$listPopBack(" + grant.runtime + ")",
+                left = (kind = listElementKind(grant.kind), code = "lite$listPopBack(" + grant.runtime + ", " + intText(nameStart) + ")",
                     intValue = 0, textValue = "", constant = false, next = close);
             } else {
                 index := localIndex(locals, name);
@@ -2038,7 +2039,7 @@ parseBinary := fn(source: String, position: Int, prefix: String, locals: List<Lo
             close := skipTrivia(source, index.next, prefix);
             next := expectSymbol(source, close, "]", prefix);
             left = (kind = listElementKind(left.kind),
-                code = "lite$listAt((" + left.code + "), " + index.code + ")",
+                code = "lite$listAt((" + left.code + "), " + index.code + ", " + intText(indexStart) + ")",
                 intValue = 0, textValue = "", constant = false, next = next);
         } else {
             break;
