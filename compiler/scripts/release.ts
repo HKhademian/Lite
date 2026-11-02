@@ -9,6 +9,7 @@ import { basename, join, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { buildCompiler } from '../host.ts';
 import { loadBundle } from '../../igniter/loader.ts';
+import { componentVersions, parseComponentTag, selectComponentRelease, type ComponentRelease, type ComponentVersions } from '../release-streams.ts';
 
 const root = fileURLToPath(new URL('../../', import.meta.url));
 const targets = ['linux-x64', 'linux-arm64', 'darwin-x64', 'darwin-arm64'];
@@ -24,6 +25,7 @@ type CompilerIdentity = { target: string; sourceSha256: string; artifactSha256: 
 type Release = {
   schemaVersion: number; label: string; tag: string | null; commit: string; node: string; typescript: string;
   igniterVersion: string; libraries: string; nativeCompiler: boolean;
+  releasedComponent: ComponentRelease | null; componentVersions: ComponentVersions;
   compilers: CompilerIdentity[]; programs: Program[];
 };
 
@@ -57,8 +59,13 @@ function archive(source: string, name: string, entries: string[]): void {
 }
 function readRelease(path: string): Release {
   const value = object(readJson(path));
-  assert.equal(value['schemaVersion'], 1);
-  assert(/^(lite-v|igniter-v|snapshot-)[A-Za-z0-9.+-]+$/.test(text(value['label'])));
+  assert.equal(value['schemaVersion'], 2);
+  const label = text(value['label']);
+  if (!/^snapshot-[a-f0-9]{12}$/.test(label)) {
+    const release = parseComponentTag(label);
+    assert.deepEqual(value['releasedComponent'], release);
+    assert.equal(object(value['componentVersions'])[release.component], release.version);
+  } else assert.equal(value['releasedComponent'], null);
   assert(/^[a-f0-9]{40}$/.test(text(value['commit'])));
   array(value['programs']);
   return value as Release;
@@ -88,13 +95,14 @@ function prepare(): void {
   const commit = run('git', ['rev-parse', 'HEAD']).toString().trim();
   const tag = process.env['GITHUB_REF_TYPE'] === 'tag' ? process.env['GITHUB_REF_NAME'] : undefined;
   if (tag !== undefined) {
-    assert(/^(lite|igniter)-v\d+\.\d+\.\d+(?:-[0-9A-Za-z.-]+)?$/.test(tag), 'unsupported release tag');
+    parseComponentTag(tag);
     assert.equal(run('git', ['cat-file', '-t', `refs/tags/${tag}`]).toString().trim(), 'tag', 'release tags must be annotated');
     assert.equal(run('git', ['rev-parse', `refs/tags/${tag}^{commit}`]).toString().trim(), commit);
   }
   const label = tag ?? `snapshot-${commit.slice(0, 12)}`;
   const igniterVersion = text(object(readJson(join(root, 'igniter/package.json')))['version']);
-  if (tag?.startsWith('igniter-v')) assert.equal(tag, `igniter-v${igniterVersion}`, 'tag/package version mismatch');
+  const versions = componentVersions(readJson(join(root, 'versions.json')), igniterVersion);
+  const releasedComponent = selectComponentRelease(tag, versions);
   run(process.execPath, [join(root, 'igniter/node_modules/typescript/bin/tsc'), '-p', join(root, 'compiler/bootstrap/tsconfig.json')]);
   const work = mkdtempSync(join(tmpdir(), 'lite-release-'));
   try {
@@ -144,10 +152,11 @@ function prepare(): void {
     }
     assert(programs.length > 0, 'no C programs packaged');
     const release: Release = {
-      schemaVersion: 1, label, tag: tag ?? null, commit, node: process.version,
+      schemaVersion: 2, label, tag: tag ?? null, commit, node: process.version,
       typescript: text(object(readJson(join(root, 'igniter/node_modules/typescript/package.json')))['version']), igniterVersion,
       libraries: 'provisional lib/core; no stable stdlib version or ABI assigned',
       nativeCompiler: false, compilers, programs,
+      releasedComponent, componentVersions: versions,
     };
     json(join(out, 'release.json'), release);
     json(join(generated, 'release.json'), release);
@@ -230,7 +239,10 @@ function finalize(): void {
     workflowRun: process.env['GITHUB_RUN_ID'] ?? null,
   });
   writeFileSync(join(out, 'RELEASE-NOTES.md'), `Bootstrap snapshot ${release.label}\n\n` +
+    (release.releasedComponent === null ? 'Unpublished source snapshot.\n\n' :
+      `Released component: ${release.releasedComponent.component} ${release.releasedComponent.version}. Other component versions advance independently.\n\n`) +
     `Source commit: ${release.commit}. Igniter package: ${release.igniterVersion}.\n\n` +
+    `Component versions: ${Object.entries(release.componentVersions).map(([component, version]) => `${component}=${version ?? 'unassigned'}`).join(', ')}.\n\n` +
     'The bootstrap archive contains the complete source tree, igniter, provisional libraries, generated TS compiler seeds, flattened compiler sources, line maps and rebuild instructions.\n\n' +
     `Generated C and ${targets.join(', ')} executables cover ${release.programs.length} admitted compiler test programs. These executables are conformance programs; a native self-hosting C compiler is not available yet. Libraries remain provisional, without a stable stdlib API or ABI.\n\n` +
     'See BOOTSTRAP.md in the bootstrap archive. manifest.json records source/builder hashes and native toolchains; SHA256SUMS covers every other release asset. Native binaries depend on their runner OS/libc and are not signed.\n');

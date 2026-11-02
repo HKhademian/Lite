@@ -4,7 +4,14 @@ on:
   push:
     tags:
       - 'lite-v*'
+      - 'lang-v*'
+      - 'script-v*'
       - 'igniter-v*'
+      - 'compiler-v*'
+      - 'cli-v*'
+      - 'formatter-v*'
+      - 'runtime-v*'
+      - 'std-v*'
   workflow_dispatch:
 
 permissions:
@@ -120,7 +127,8 @@ jobs:
         run: |
           set -euo pipefail
           flags=()
-          if [[ "$RELEASE_TAG" == *-*.*.*-* ]]; then
+          version="${RELEASE_TAG#*-v}"
+          if [[ "${version%%+*}" == *-* ]]; then
             flags+=(--prerelease)
           fi
           gh release create "$RELEASE_TAG" .cache/release/* \

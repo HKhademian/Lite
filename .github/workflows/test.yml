@@ -53,6 +53,7 @@ jobs:
 
       - name: Bootstrap release packaging smoke test
         run: |
+          node --test compiler/scripts/release-streams.test.ts
           node compiler/scripts/release.ts prepare .cache/release-smoke
           node compiler/scripts/release.ts native .cache/native-smoke .cache/release-smoke
           mkdir -p .cache/extracted-release

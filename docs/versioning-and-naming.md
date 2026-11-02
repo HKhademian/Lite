@@ -1,6 +1,6 @@
 # Naming and versioning
 
-Status: **selected naming and version policy, 2026-10-25; distinct script/module suffixes selected 2026-10-30; tool alias matrix extended 2026-10-31; name origin recorded 2026-11-01**. The prototype compiler lives in `compiler/` and is exposed as `./ltc`, `./litec` and `./lite compile`; the checker as `./lite check`; docs as `./lite docs`; and help as `./lite help`. Linker and formatter names are reserved but unimplemented; the verifier and tester have first implemented slices. Package-registry spelling, final release packaging and automation remain open.
+Status: **selected naming and version policy, 2026-10-25; distinct script/module suffixes selected 2026-10-30; tool alias matrix extended 2026-10-31; name origin recorded 2026-11-01; independent release streams selected 2026-11-02**. The prototype compiler lives in `compiler/` and is exposed as `./ltc`, `./litec` and `./lite compile`; the checker as `./lite check`; docs as `./lite docs`; and help as `./lite help`. Linker and formatter names are reserved but unimplemented; the verifier and tester have first implemented slices. [Bootstrap release automation](release-automation.md) packages exact component snapshots. Package-registry spelling remains open.
 
 ## 1. Canonical names
 
@@ -122,9 +122,11 @@ the source version/tag and exact commit it builds, and how to produce and check
 the next stage, including required host tools. Preserve this compatibility map
 alongside the sources so users do not have to guess which historic revisions
 work together. Tags identify sources; successful end-to-end rebuilds must still
-verify the route. The current igniter tag stream is `igniter-vX.Y.Z[-prerelease]`;
-see [release history](releases.md). Tag naming for future non-igniter streams and
-the bootstrap record format remain open. This policy does not itself create a tag.
+verify the route. The igniter tag stream is `igniter-vX.Y.Z[-prerelease]`;
+see [release history](releases.md). The [release automation](release-automation.md)
+preserves the component version combination, source/builder identities and
+rebuild instructions. The independent stream names below were selected by the
+owner on 2026-11-02. This policy does not itself create a tag.
 
 ## 2. Version streams
 
@@ -134,12 +136,28 @@ These are independent version streams. A release manifest records the exact comb
 |---|---|---|---|
 | Project release | `MAJOR.MINOR.PATCH` | `lite-vX.Y.Z` | `lite-v0.3.0` |
 | Language | `MAJOR.MINOR.PATCH` | `lang-vA.B.C` | `lang-v1.2.0` |
+| Scripting part | `MAJOR.MINOR.PATCH` | `script-vX.Y.Z` | `script-v0.2.0` |
 | Compiler | `MAJOR.MINOR.PATCH` | `compiler-vX.Y.Z` | `compiler-v0.4.1` |
+| Igniter | `MAJOR.MINOR.PATCH` | `igniter-vX.Y.Z` | `igniter-v0.1.0-alpha.38` |
 | Runtime | `MAJOR.MINOR.PATCH` plus ABI integer | `runtime-vX.Y.Z` | `runtime-v0.3.0` |
 | CLI/tooling | `MAJOR.MINOR.PATCH` | `cli-vX.Y.Z` | `cli-v0.5.0` |
-| Standard library | `MAJOR.MINOR.PATCH` | `stdlib-vX.Y.Z` | reserved |
+| Formatter | `MAJOR.MINOR.PATCH` | `formatter-vX.Y.Z` | reserved; implementation planned |
+| Standard library | `MAJOR.MINOR.PATCH` | `std-vX.Y.Z` | reserved |
 
 The project release version labels the umbrella manifest. It is not the language version and not the `lite` CLI version. The manifest names the exact component versions.
+
+Language-only changes use `lang-v*`; scripting-part changes use
+`script-v*`. Compiler fixes and added feature coverage can advance
+`compiler-v*` independently of both, without an automatic umbrella version bump.
+A release that changes several components records each changed version. A
+component version can remain unchanged while the source snapshot advances;
+exact source and builder hashes identify the shipped bytes.
+
+[`versions.json`](../versions.json) records project, language, scripting,
+compiler, runtime, CLI, formatter and library versions. The igniter keeps its
+version in `igniter/package.json`. Unassigned entries are `null`; a release tag
+must match the selected stream's recorded version. Versions do not imply that
+planned tools are implemented or that provisional libraries have a stable API.
 
 Version identifiers in output:
 
@@ -197,9 +215,10 @@ Additional rules:
 ## 6. CLI and tooling version rules
 
 - `lite` uses independent semantic versioning.
-- `lite fmt` output changes are CLI/tooling changes, not language changes.
-- Formatter style changes require a CLI MINOR release when they alter default output.
-- Formatter bug fixes that preserve the documented style may use CLI PATCH.
+- The formatter has its own `formatter-v*` stream, even when invoked through `lite fmt`.
+- Formatter style changes require a formatter MINOR release when they alter default output.
+- Formatter bug fixes that preserve the documented style may use formatter PATCH.
+- CLI interface changes use `cli-v*`; a formatter-only change does not automatically bump CLI or language versions.
 - A tool must report its own version separately from the language version.
 - Tool output text, diagnostics, and formatting are not language ABI.
 
@@ -210,7 +229,7 @@ Additional rules:
 - A runtime declares its ABI and supported language range.
 - Incompatible combinations are rejected with a clear diagnostic; do not guess or silently downgrade.
 - Diagnostic wording, formatting output, and internal metadata are not stable interfaces.
-- A release manifest is the authoritative combination of language, compiler, runtime, CLI, ABI, and standard-library versions.
+- A release manifest is the authoritative combination of umbrella, language, scripting, igniter, compiler, runtime, CLI, formatter, ABI, and standard-library versions.
 
 ## 8. Proposal versioning
 
@@ -242,7 +261,7 @@ Rules:
 ## 9. Release and tagging
 
 - Use `lite-vX.Y.Z` for the project release manifest.
-- Use component tags: `lang-vA.B.C`, `compiler-vX.Y.Z`, `runtime-vX.Y.Z`, `cli-vX.Y.Z`, and `stdlib-vX.Y.Z` when introduced.
+- Use component tags: `lang-vA.B.C`, `script-vX.Y.Z`, `compiler-vX.Y.Z`, `igniter-vX.Y.Z`, `runtime-vX.Y.Z`, `cli-vX.Y.Z`, `formatter-vX.Y.Z`, and `std-vX.Y.Z`.
 - A release manifest lists every component version and the ABI version.
 - Release notes list accepted proposal IDs and any compatibility break.
 - A single repository may contain all components; tags remain component-specific.
@@ -294,6 +313,7 @@ A backward-compatible language addition:
 LP-0012 r1 accepted, target LiteLang 0.3.0
 lite-v0.3.0
 lang-v0.3.0
+script-v0.2.0
 compiler-v0.5.0 (LiteLang 0.3.0, ABI 1)
 runtime-v0.4.0 (ABI 1)
 cli-v0.6.0
@@ -312,6 +332,7 @@ A breaking language and ABI release:
 LP-0020 r3 accepted, target LiteLang 1.0.0
 lite-v1.0.0
 lang-v1.0.0
+script-v1.0.0
 compiler-v1.0.0 (LiteLang 1.0.0, ABI 2)
 runtime-v2.0.0 (ABI 2)
 cli-v1.0.0

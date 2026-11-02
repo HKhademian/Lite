@@ -736,6 +736,27 @@ Owner: [TypeScript igniter and early self-hosting](tooling-and-learning.md#types
 Investigation: [INV-061 follow-up](../investigations/INV-061-fvp-implementation-language.md#typescriptnode-replacement-and-implementation-2026-10-30).
 The earlier Python choice below is superseded; it produced no Python seed.
 
+## Independent release streams, 2026-11-02
+
+- Owner selection: `lite-v*` identifies umbrella releases, `lang-v*`
+  language-only changes and `script-v*` scripting-part changes. These have
+  separate versions. lite-lang uses `lang-v*`, LiteScript uses `script-v*`,
+  and lite-compiler uses `compiler-v*`.
+- Compiler fixes and coverage (`compiler-v*`), igniter (`igniter-v*`), CLI
+  (`cli-v*`), formatter (`formatter-v*`), runtime (`runtime-v*`) and libraries
+  (`std-v*`) can progress independently. Shipping a full bootstrap snapshot
+  for a component release does not bump every component.
+- Every release manifest names the tagged component, the complete version
+  combination and exact source/builder identities. `versions.json` records
+  explicit versions except the igniter's existing package version; unassigned
+  entries remain `null`. Tags must match the committed version.
+- This selects release identities, not new language/script semantics or a
+  completed formatter, stable stdlib or native compiler. No tag or version bump
+  is introduced by this selection.
+
+Owner: [version streams](versioning-and-naming.md#2-version-streams).
+Implementation: [release automation](release-automation.md).
+
 ## Stable bootstrap version tags and source history, 2026-10-30
 
 - The user emphasizes tagged versioning and version control as essential to

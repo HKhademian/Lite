@@ -1,10 +1,38 @@
 # Bootstrap release automation
 
-Push an **annotated Git tag** named `lite-vX.Y.Z[-prerelease]` for a complete
-project bootstrap snapshot, or `igniter-vX.Y.Z[-prerelease]` for an igniter
-milestone. Both package the exact combination at that commit. An igniter tag
-must match `igniter/package.json`; a project tag does not change component
-versions. These are Git tags, rather than GitHub issue or pull-request labels.
+The umbrella and each component have independent versions and **annotated Git tags**:
+
+- `lite-vX.Y.Z`: umbrella release, recording the complete component combination.
+- `lang-vX.Y.Z`: language-only changes.
+- `script-vX.Y.Z`: scripting-part changes.
+- `compiler-vX.Y.Z`: compiler fixes, added language coverage and code generation.
+- `igniter-vX.Y.Z`: igniter milestones.
+- `cli-vX.Y.Z`: command-line tooling.
+- `formatter-vX.Y.Z`: formatter changes; its implementation is still planned.
+- `runtime-vX.Y.Z`: target runtime support.
+- `std-vX.Y.Z`: library releases; the current libraries remain provisional.
+
+All streams allow SemVer prerelease suffixes and build metadata. `lite-v*`,
+`lang-v*` and `script-v*` are distinct streams. These are Git tags, rather than
+issue or pull-request labels.
+
+Record the selected component version in [`versions.json`](../versions.json)
+and commit it with the release preparation before tagging. Igniter versions
+keep their existing authority in `igniter/package.json` instead. Every tag must
+match its component's recorded version. A compiler-only change can advance
+`compiler` while leaving `project`, `language`, `scripting`, `cli` and the other
+versions unchanged. The `project` key controls umbrella `lite-v*` releases;
+`language` controls `lang-v*`; `scripting` controls `script-v*`; `stdlib`
+controls `std-v*`.
+`null` means unassigned, and blocks a tag for that component until its version
+is explicitly selected. No initial component versions are invented here.
+
+Every component release still packages a complete bootstrap snapshot of the
+exact commit. The manifest records `releasedComponent` (the tagged component
+and version) and `componentVersions` (the full combination), alongside exact
+source and builder identities. Shipping other components in the same archive
+does not release new versions of them. Source commits identify changes since a
+component's last version; the version alone is not proof of identical bytes.
 
 The [release workflow](../.github/workflows/release.yml) runs the existing full
 test, coverage, strict TypeScript and editor gates, checks byte-identical
@@ -16,13 +44,14 @@ publish it using the existing tag. A failed upload can leave a draft to inspect;
 it cannot expose a partially uploaded release. Existing releases are never
 overwritten, and published tags are never moved; a correction needs a new tag.
 Prerelease tags produce prereleases. Releases do not automatically replace the
-repository's “latest” release, since project and component versions differ.
+repository's “latest” release, since the component streams differ.
 
-For example, after committing and checking the intended release revision:
+For example, set `compiler` to `0.5.1` in `versions.json`, commit that release
+preparation separately from the compiler fix, and check the intended revision:
 
 ```sh
-git tag -a lite-v0.1.0-alpha.1 -m "Lite bootstrap snapshot 0.1.0-alpha.1"
-git push github lite-v0.1.0-alpha.1
+git tag -a compiler-v0.5.1 -m "Compiler 0.5.1"
+git push github compiler-v0.5.1
 ```
 
 The example version is illustrative; choose an unused version. No tag is
@@ -52,8 +81,8 @@ tag. Download the `bootstrap-release` artifact to inspect that dry run.
 - `manifest.json`, `release.json`, `native-*.json`, `RELEASE-NOTES.md` and
   `SHA256SUMS`: exact source commit, actual component version, compiler source
   and builder hashes, host tool versions, C flags, runner image versions,
-  binary hashes and archive checksums. Unassigned library/ABI versions remain
-  explicitly unassigned.
+  binary hashes, archive checksums, the released component and every component
+  version. Unassigned component/ABI versions remain explicitly unassigned.
 
 Archives preserve launchers' executable bits and symlinks. Git, Node and C
 toolchains are not bundled. Native packages use their runner's system libc and

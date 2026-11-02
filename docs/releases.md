@@ -1,12 +1,17 @@
 # Release and tag history
 
 Tagged pushes now have a [bootstrap release workflow](release-automation.md):
-`lite-v*` and `igniter-v*` annotated tags run the full gates and package the
+Independent umbrella (`lite-v*`), language (`lang-v*`), scripting
+(`script-v*`), compiler (`compiler-v*`), igniter, CLI, formatter, runtime and
+library annotated tags run the full gates and package the
 complete bootstrap source, provisional libraries, generated C programs and
 verified Linux/macOS x64/ARM64 program builds with source/builder hashes and
 checksums. Manual workflow runs build without publishing. The native C compiler
 ladder remains pending; native assets currently contain conformance programs.
-No version bump or tag is introduced by this automation change.
+The release manifest names the released component and the complete independent
+version combination. [versions.json](../versions.json) records component
+versions, with the igniter version kept in its package manifest. No version bump
+or tag is introduced by this automation change.
 
 Current components:
 
