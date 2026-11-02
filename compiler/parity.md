@@ -1219,3 +1219,55 @@ records mixed medians: TS outputs 67.2 → 70.1 ms, identical S 721.2 → 728.1 
 constants 144.7 → 129.9 ms and dead-output input 46.5 → 44.2 ms; C-emitter
 outputs 87.9 → 89.6 ms, divisions 191.5 → 183.2 ms, constants 244.5 → 246.3 ms
 and dead-output input 49.6 → 48.8 ms. Every measured output stream matches.
+
+## Power checkpoint
+
+The Lite frontend now implements existing `**` syntax at precedence 25, above
+multiplication and below the explicitly grouped unary boundary. Power associates
+right to left, accepts Int/Float operands, and produces Float. Both operands
+evaluate once from left to right, including nested right-associated calls.
+The existing positive-exponent checkpoint remains: zero and negative exponents
+raise positioned ArithmeticPanic only when reached, as do non-finite results.
+This does not decide their final language semantics. TS uses Math.pow; C uses
+the C math library's pow. Managed native runners link `-lm` after the source;
+manual C builds must link the math library where required.
+
+Explicit negative-base grouping remains mandatory. Lite rejects a leading `+`
+that conceals an ungrouped minus, such as `+-2 ** 2`, as the selected syntax
+requires. T00 still admits those forms. This documented reference discrepancy
+does not change the selected rule or require a T00 implementation update.
+The standalone parser enforces the same boundary; the standalone checker
+recognizes Float power results in local annotations and explicit returns,
+including negated/grouped powers. General implicit-tail checking in that phase
+remains outside this slice; the generated frontend checks those function tails.
+
+Focused coverage includes nine TS/C value programs (including decimal bases and
+fractional exponents), three TS function/aggregate/effect programs, nine fault
+sources on both targets, fifteen malformed/type/grouping rejections, three
+concealed-minus rejections and one prompted input scenario. Parser drivers
+compare three admitted/four rejected forms; checker drivers compare three
+admitted/two rejected types between reference and generated execution. Six native
+programs pass optimized address/undefined-behavior sanitizer checks.
+
+The canonical num.power manifest now selects T00, TS and C explicitly. The
+[generated-only ladder](reports/2026-11-02-power-ladder.json) records three
+matching generations without using power operations in S. The operator reader
+recognizes `*`/`**` before comparison-token probes, preserving a short common
+path; paired measurements and unchanged-output checks are recorded separately.
+Exhaustive libm/host rounding boundaries, numeric-width conversions and final
+power fault semantics remain later work, not blockers for the Lite default
+workflow migration.
+
+All 276 full tests pass with zero skips (161.0 s); fast passes 264
+with 12 expected skips (109.8 s). Strict host/seeds, both 93-case
+corpora, 123 verifier executions, 39-feature coverage, nine editor groups and
+six optimized native sanitizer cases pass. Three generated generations match.
+Inventory: 105/167 matching, 62 remaining; 50 original failures closed, none
+regress. All 69 earlier TS/C fixture pairs remain byte-identical.
+
+Paired medians remain mixed: TS output 84.1 → 83.7 ms, identical S 805.5 →
+809.9 ms, constants 145.4 → 147.4 ms and dead-output input 54.1 → 48.3 ms;
+C-emitter output 85.0 → 85.3 ms, divisions 169.6 → 171.3 ms, constants
+215.7 → 213.5 ms and dead-output input 45.1 → 44.8 ms. All measured output
+streams match. The [performance record](reports/2026-11-02-power-performance.json)
+contains raw pairs and identities; no general speedup is claimed.

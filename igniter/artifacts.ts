@@ -128,7 +128,7 @@ export function runTsArtifact(source: string, options: ArtifactOptions = {}): Ar
 
 /**
  * Writes emitted C to a temporary file, compiles it with
- * `-std=c11 -Wall -Wextra -Werror`, then runs it and captures raw streams.
+ * `-std=c11 -Wall -Wextra -Werror` and the math library (`-lm`), then runs it and captures raw streams.
  * A missing C compiler is an error, so callers that support skipping can catch
  * the `C compiler unavailable` message.
  */
@@ -139,7 +139,7 @@ export function runCArtifact(source: string, options: ArtifactOptions = {}): Art
     const executable = join(directory, 'artifact');
     writeFileSync(artifact, source);
     const cc = process.env['CC'] ?? 'cc';
-    const compiled = spawnSync(cc, ['-std=c11', '-Wall', '-Wextra', '-Werror', artifact, '-o', executable], {
+    const compiled = spawnSync(cc, ['-std=c11', '-Wall', '-Wextra', '-Werror', artifact, '-o', executable, '-lm'], {
       encoding: 'utf8', timeout: 30000,
     });
     if (compiled.error !== undefined) {

@@ -1,16 +1,16 @@
-/** Verified generated float-arithmetic seed; exact identities follow. */
+/** Verified generated power seed; exact identities follow. */
 export const cSeed = Object.freeze({
   "artifact": "c-emitter.ts",
-  "sourceSha256": "effd1e78384b72df15d038993d391a6604a33b9b956d8bfe065fe4bef8625a63",
-  "sourceBytes": 181384,
-  "artifactSha256": "7b188399c22da0deec4470ed991f9d850d563539fbb47319718640cd6431de18",
-  "artifactBytes": 328254,
-  "builderSha256": "99b18ccf1ef01633b7f5c1432603a60ac86ce19f762b52f6833f5da9a64b3b1c",
+  "sourceSha256": "88fb3dc5caf21379e64833b9a79a5166a7f3172f5ed2a88c9edea78a28d00c14",
+  "sourceBytes": 183666,
+  "artifactSha256": "2b0c1e241aceeb0bd5b371348737907ae757bb47da4b4e8c04abb3cefe9b93f3",
+  "artifactBytes": 332190,
+  "builderSha256": "2052e0629ac603950b92461f06ec6f5de1babe09d7765da82022ba241cb73222",
   "native": false,
   "sourceManifest": "compiler/manifests/c.json",
-  "sourceRevision": "07337c34952b1ee48119d62db57147eafca449ba",
-  "artifactRevision": "07337c34952b1ee48119d62db57147eafca449ba",
-  "builderRevision": "07337c34952b1ee48119d62db57147eafca449ba",
+  "sourceRevision": "Power source snapshot committed with this seed; see sourceSha256",
+  "artifactRevision": "Power artifact committed with this seed; see artifactSha256",
+  "builderRevision": "Current power TS seed; see builderSha256",
   "builder": "Refreshed generated TS compiler compiling current Lite C emitter",
   "node": "v24.16.0",
   "typescript": "7.0.2"

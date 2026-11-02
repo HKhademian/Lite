@@ -104,6 +104,12 @@ floatBinaryCode := fn(op: String, left: String, right: String, position: Int): S
     "(lt_arg_f_left_" + id + " = " + left + ", lt_arg_f_right_" + id + " = " + right + ", lt_float_op(lt_arg_f_left_" + id + ", lt_arg_f_right_" + id + ", " + tag + ", " + id + "))"
 }
 
+/** Sequences both operands before the selected Float-default power checkpoint. */
+floatPowerCode := fn(left: String, right: String, position: Int): String {
+    id := intText(position);
+    "(lt_arg_f_left_" + id + " = " + left + ", lt_arg_f_right_" + id + " = " + right + ", lt_float_power(lt_arg_f_left_" + id + ", lt_arg_f_right_" + id + ", " + id + "))"
+}
+
 /** Emits an int64_t floor-division expression. */
 floorDivCode := fn(left: String, right: String): String {
     "(" + left + " / " + right + " - ((((" + left + " % " + right + ") != 0) && (((" + left + " % " + right + ") < 0) != (" + right + " < 0))) ? 1 : 0))"

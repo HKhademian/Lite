@@ -315,6 +315,15 @@ parseExpression := fn(tokens: Tokens, index: Int, prefix: String, minimum: Int):
         if not isBinaryToken(operator) { break; }
         level := binaryLevel(operator.text);
         if level < minimum { break; }
+        if operator.text == "**" {
+            var signIndex := index;
+            loop isSymbol(tokenAt(tokens, signIndex), "+") or isSymbol(tokenAt(tokens, signIndex), "-") {
+                if isSymbol(tokenAt(tokens, signIndex), "-") {
+                    parseFail(operator, prefix, "group a negative power base as (-base) or negate the completed power as -(base ** exponent)");
+                }
+                signIndex = signIndex + 1;
+            }
+        }
         rightMinimum := if operator.text == "**" { level } else { level + 1 };
         right := self(tokens, cursor + 1, prefix, rightMinimum);
         leftText = "(" + leftText + " " + operator.text + " " + right.text + ")";

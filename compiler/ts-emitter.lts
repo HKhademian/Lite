@@ -532,6 +532,11 @@ floatBinaryCode := fn(op: String, left: String, right: String, position: Int): S
     "lite$floatOp(" + left + ", " + right + ", " + tag + ", " + intText(position) + ")"
 }
 
+/** Emits the selected Float-default, positive-exponent power checkpoint. */
+floatPowerCode := fn(left: String, right: String, position: Int): String {
+    "lite$floatPower(" + left + ", " + right + ", " + intText(position) + ")"
+}
+
 /** Emits a BigInt floor-division expression without evaluating operands more than once in source semantics. */
 floorDivCode := fn(left: String, right: String): String {
     "(" + left + " / " + right + " - ((((" + left + " % " + right + ") != 0n) && (((" + left + " % " + right + ") < 0n) != (" + right + " < 0n))) ? 1n : 0n))"
@@ -1345,11 +1350,17 @@ operatorLevel := fn(operator: String): Int {
     else if isComparison(operator) { 5 }
     else if operator == "+" or operator == "-" { 10 }
     else if operator == "*" or operator == "/" or operator == "%" or operator == ":/" or operator == ":%" { 20 }
+    else if operator == "**" { 25 }
     else { 0 }
 }
 
 /** Reads an operator at `position`, preferring the longest spelling; returns empty text when none starts there. */
 readOperator := fn(source: String, position: Int): Operator {
+    ch := textAt(source, position);
+    if ch == "*" {
+        if startsWithAt(source, position, "**") { return (text = "**", width = 2); }
+        return (text = "*", width = 1);
+    }
     if startsWithAt(source, position, "=!=") { return (text = "=!=", width = 3); }
     if startsWithAt(source, position, "<!=") { return (text = "<!=", width = 3); }
     if startsWithAt(source, position, ">!=") { return (text = ">!=", width = 3); }
@@ -1358,10 +1369,9 @@ readOperator := fn(source: String, position: Int): Operator {
     if startsWithAt(source, position, ">=") { return (text = ">=", width = 2); }
     if startsWithAt(source, position, "<!") { return (text = "<!", width = 2); }
     if startsWithAt(source, position, ">!") { return (text = ">!", width = 2); }
-    ch := textAt(source, position);
     if ch == "<" { return (text = "<", width = 1); }
     if ch == ">" { return (text = ">", width = 1); }
-    if ch == "+" or ch == "-" or ch == "*" or ch == "/" or ch == "%" { return (text = ch, width = 1); }
+    if ch == "+" or ch == "-" or ch == "/" or ch == "%" { return (text = ch, width = 1); }
     if startsWithAt(source, position, ":/") { return (text = ":/", width = 2); }
     if startsWithAt(source, position, ":%") { return (text = ":%", width = 2); }
     if isNameStart(ch) {
@@ -2187,7 +2197,17 @@ parseBinary := fn(source: String, position: Int, prefix: String, locals: List<Lo
         if operator.text == "" { break; }
         level := operatorLevel(operator.text);
         if level < minimum { break; }
-        right := self(source, operatorPosition + operator.width, prefix, locals, functions, params, currentName, "", level + 1);
+        if operator.text == "**" {
+            var signPosition := start;
+            loop signPosition < textLength(source) and (textAt(source, signPosition) == "+" or textAt(source, signPosition) == "-") {
+                if textAt(source, signPosition) == "-" {
+                    failAt(source, operatorPosition, prefix, "group a negative power base as (-base) or negate the completed power as -(base ** exponent)");
+                }
+                signPosition = skipTrivia(source, signPosition + 1, prefix);
+            }
+        }
+        rightMinimum := if operator.text == "**" { level } else { level + 1 };
+        right := self(source, operatorPosition + operator.width, prefix, locals, functions, params, currentName, "", rightMinimum);
         if operator.text == "and" or operator.text == "or" {
             if left.kind =!= "Bool" or right.kind =!= "Bool" {
                 failAt(source, operatorPosition, prefix, "operator " + operator.text + " requires Bool operands");
@@ -2234,6 +2254,12 @@ parseBinary := fn(source: String, position: Int, prefix: String, locals: List<Lo
                 if constant { left = boolParsed(boolLiteralCode(value), value, true, end); }
                 else { left = boolParsed(comparisonChainCode(codes, kinds, operators, count, operatorPosition), false, false, end); }
             }
+        } else if operator.text == "**" {
+            if (left.kind =!= "Int" and left.kind =!= "Float") or (right.kind =!= "Int" and right.kind =!= "Float") {
+                failAt(source, operatorPosition, prefix, "power requires Int or Float operands");
+            }
+            code := floatPowerCode(floatOperandCode(left.kind, left.code), floatOperandCode(right.kind, right.code), operatorPosition);
+            left = (kind = "Float", code = code, intValue = 0, textValue = "", constant = false, next = right.next);
         } else if left.kind == "Int" and right.kind == "Int" {
             if left.constant and right.constant {
                 folded := tryFoldInteger(operator.text, left.intValue, right.intValue);
@@ -3249,11 +3275,20 @@ usesIntDivision := fn(calls: String): Bool {
 }
 
 /** True when binary64 operations need finite-result and zero-divisor guards. */
-usesFloatArithmetic := fn(calls: String): Bool { usesBuiltin(calls, "floatOp") }
+usesFloatArithmetic := fn(calls: String): Bool { usesBuiltin(calls, "floatOp") or usesBuiltin(calls, "floatPower") }
 
 /** Emits the shared Float arithmetic helper without folding operations before execution. */
 emitFloatArithmeticHelpers := fn(calls: String): Unit {
     if not usesFloatArithmetic(calls) { return; }
+    if usesBuiltin(calls, "floatPower") {
+        outputLine("function lite$floatPower(left: number, right: number, at: number): number {");
+        outputLine("    if (right <= 0) lite$fault(\"ArithmeticPanic\", at, \"power exponent must be positive in this checkpoint\");");
+        outputLine("    const value = Math.pow(left, right);");
+        outputLine("    if (!Number.isFinite(value)) lite$fault(\"ArithmeticPanic\", at, \"non-finite floating value\");");
+        outputLine("    return value;");
+        outputLine("}");
+    }
+    if not usesBuiltin(calls, "floatOp") { return; }
     outputLine("function lite$floatOp(left: number, right: number, op: number, at: number): number {");
     outputLine("    if (op === 3 && right === 0) lite$fault(\"ArithmeticPanic\", at, \"division by zero\");");
     outputLine("    const value = op === 0 ? left + right : op === 1 ? left - right : op === 2 ? left * right : left / right;");

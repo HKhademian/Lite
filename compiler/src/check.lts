@@ -246,7 +246,7 @@ simpleType := fn(symbols: Symbols, locals: Locals, text: String): String {
         return "Int";
     }
     if startsWithAt(text, 0, "(-") or startsWithAt(text, 0, "(+") {
-        operand := firstOperandType(symbols, locals, text);
+        operand := self(symbols, locals, textSlice(text, 2, size - 1));
         if operand == "Float" { return "Float"; }
         return "Int";
     }
@@ -291,8 +291,9 @@ simpleType := fn(symbols: Symbols, locals: Locals, text: String): String {
             if firstOperandType(symbols, locals, text) == "String" { return "String"; }
             return "Int";
         }
+        if operator == "**" { return "Float"; }
         if operator == "-" or operator == "*" or operator == "/" or operator == "%" or
-            operator == ":/" or operator == ":%" or operator == "**" {
+            operator == ":/" or operator == ":%" {
             return "Int";
         }
         if indexOfText(text, ",", 0) >= 0 or indexOfText(text, " = ", 0) >= 0 { return ""; }

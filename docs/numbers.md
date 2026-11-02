@@ -108,7 +108,7 @@ and the [decision ledger](decisions-and-open-questions.md#temporary-fvp-numeric-
 
 ## Arithmetic grouping
 
-Within the selected set, prefix negation binds above multiplicative * / :/ % :%, then binary + -. Binary operations at each level associate left to right; parentheses override grouping, and operands retain left-to-right evaluation. Identity leading + does not alter that grouping or introduce promotion. See [operators](operators.md#basic-arithmetic-grouping-selected). Power uses `**` and requires explicit negative-base or outer-negation grouping: -2 `**` 2 and -2 `**` 3 are invalid. Chained-power association, full precedence, result types, and signed-exponent rules remain open; see [power and negation](power-and-negation.md). [The language comparison](arithmetic-operators-comparison.md) records alternatives.
+Within the selected set, prefix negation binds above multiplicative * / :/ % :%, then binary + -. Binary operations at each of those levels associate left to right; parentheses override grouping, and operands retain left-to-right evaluation. Identity leading + does not alter that grouping or introduce promotion. See [operators](operators.md#basic-arithmetic-grouping-selected). Power uses `**`, associates right to left, returns Float by default, and requires explicit negative-base or outer-negation grouping: -2 `**` 2 and -2 `**` 3 are invalid. The implemented checkpoint requires positive exponents; final zero/negative-exponent rules remain open. See [power and negation](power-and-negation.md). [The language comparison](arithmetic-operators-comparison.md) records alternatives.
 
 ## Division
 

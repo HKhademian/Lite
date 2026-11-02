@@ -108,6 +108,11 @@ floatBinaryCode := fn(op: String, left: String, right: String, position: Int): S
     "lite$floatOp(" + left + ", " + right + ", " + tag + ", " + intText(position) + ")"
 }
 
+/** Emits the selected Float-default, positive-exponent power checkpoint. */
+floatPowerCode := fn(left: String, right: String, position: Int): String {
+    "lite$floatPower(" + left + ", " + right + ", " + intText(position) + ")"
+}
+
 /** Emits a BigInt floor-division expression without evaluating operands more than once in source semantics. */
 floorDivCode := fn(left: String, right: String): String {
     "(" + left + " / " + right + " - ((((" + left + " % " + right + ") != 0n) && (((" + left + " % " + right + ") < 0n) != (" + right + " < 0n))) ? 1n : 0n))"

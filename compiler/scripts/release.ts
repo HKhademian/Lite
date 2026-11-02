@@ -185,12 +185,13 @@ function native(): void {
     mkdirSync(bin);
     const cc = process.env['CC'] ?? 'cc';
     const flags = ['-std=c11', '-O2', '-Wall', '-Wextra', '-Werror'];
+    const linkFlags = ['-lm'];
     for (const program of release.programs) {
       assert(/^001-[a-z0-9-]+$/.test(program.name));
       const source = join(work, `${program.name}.c`);
       assert.equal(sha(readFileSync(source)), program.cSha256);
       const executable = join(bin, program.name);
-      run(cc, [...flags, source, '-o', executable]);
+      run(cc, [...flags, source, '-o', executable, ...linkFlags]);
       for (const scenario of program.cases) {
         const result = spawnSync(executable, [], { input: Buffer.from(scenario.stdin, 'base64'), timeout: 10000 });
         if (result.error !== undefined) throw result.error;
@@ -203,7 +204,7 @@ function native(): void {
     }
     const report = {
       label: release.label, commit: release.commit, target, node: process.version,
-      compiler: run(cc, ['--version']).toString(), flags,
+      compiler: run(cc, ['--version']).toString(), flags: [...flags, ...linkFlags],
       runnerImage: process.env['ImageVersion'] ?? null,
       programs: release.programs.map(program => ({
         name: program.name, cSha256: program.cSha256,

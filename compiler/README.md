@@ -233,16 +233,21 @@ The component/package is `lite-compiler`; its entry points are `ltc` (short
 command), `litec` (full binary) and `lite compile` (CLI form). Both binaries also
 accept the target as a bare positional word: `./ltc ts program.lts`.
 
+Generated TS/C also lower the existing right-associative, Float-default `**`
+checkpoint with explicit negative-base grouping and positive exponents. C power
+uses the math library; link emitted C with `-lm` where required. See the
+[power ledger](parity.md#power-checkpoint) for current validation and limits.
+
 The compiler source is still restricted, but the accepted surface now includes
-Int/String/Bool expressions, immutable and mutable locals (`:=`, `var`,
+Int/Float/String/Bool expressions, immutable and mutable locals (`:=`, `var`,
 assignment), `outputLine(...)`, action `if`/`else if`/`else`, Boolean or unconditional `loop`,
 transparent top-level type aliases (`Name := type Type;`), top-level
-functions with Int/String/Bool/Unit, flat named-tuple or `List<T>` parameters and
+functions with Int/Float/String/Bool/Unit, flat named-tuple or `List<T>` parameters and
 results, positional calls, recursion/`self` and `return`. Aliases resolve to
-Int/String/Bool/Unit, a flat named tuple, `List<T>`, or another alias and may
+Int/Float/String/Bool/Unit, a flat named tuple, `List<T>`, or another alias and may
 appear in local, parameter and result annotations. Flat named tuples use
 `(label: Type, ...)` types, `(label = value, ...)` construction and `.label`
-reads with Int/String/Bool components. `List<T>` accepts scalar or flat
+reads with Int/Float/String/Bool components. `List<T>` accepts scalar or flat
 named-tuple elements, `[value, ...]` construction, contextual `[]`, and checked
 `values[index]` reads with an Int index. `loop sequence as item { ... }`
 traverses a List value once, binding a read-only item local of the element kind

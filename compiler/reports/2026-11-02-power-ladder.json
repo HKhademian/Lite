@@ -1,0 +1,166 @@
+{
+  "date": "2026-11-02",
+  "baseRevision": "5cf49f03b56ac869ff942a9f99796f5f51c22c8e",
+  "node": "v24.16.0",
+  "previousSeedSha256": "99b18ccf1ef01633b7f5c1432603a60ac86ce19f762b52f6833f5da9a64b3b1c",
+  "transitionalArtifactSha256": "2052e0629ac603950b92461f06ec6f5de1babe09d7765da82022ba241cb73222",
+  "recipe": "Previous generated seed compiling current S -> transitional compiler; transitional compiler compiling the same S -> stage1; stage1 and stage2 compile the same S into stage2 and stage3. No source rewriting or T00 execution.",
+  "source": {
+    "sha256": "399d88b3520fe653c4b5b731f71733a8b8d96fdad9e99397fcd337b5d55591d3",
+    "bytes": 187837
+  },
+  "generations": [
+    {
+      "name": "stage1",
+      "sha256": "2052e0629ac603950b92461f06ec6f5de1babe09d7765da82022ba241cb73222",
+      "bytes": 342488,
+      "strictTypecheck": true,
+      "status": 0
+    },
+    {
+      "name": "stage2",
+      "sha256": "2052e0629ac603950b92461f06ec6f5de1babe09d7765da82022ba241cb73222",
+      "bytes": 342488,
+      "strictTypecheck": true,
+      "status": 0
+    },
+    {
+      "name": "stage3",
+      "sha256": "2052e0629ac603950b92461f06ec6f5de1babe09d7765da82022ba241cb73222",
+      "bytes": 342488,
+      "strictTypecheck": true,
+      "status": 0
+    }
+  ],
+  "fixedPoint": true,
+  "c": {
+    "sourceSha256": "88fb3dc5caf21379e64833b9a79a5166a7f3172f5ed2a88c9edea78a28d00c14",
+    "sourceBytes": 183666,
+    "artifactSha256": "2b0c1e241aceeb0bd5b371348737907ae757bb47da4b4e8c04abb3cefe9b93f3",
+    "artifactBytes": 332190,
+    "builderSha256": "2052e0629ac603950b92461f06ec6f5de1babe09d7765da82022ba241cb73222",
+    "native": false
+  },
+  "validation": {
+    "strictHostAndSeeds": true,
+    "tsAndCValueSources": 9,
+    "tsFunctionAggregateSources": 3,
+    "faultSources": 9,
+    "exactFaultExecutions": 18,
+    "rejectedSources": 15,
+    "concealedMinusRejections": 3,
+    "promptedInputScenarios": 1,
+    "focusedGroups": {
+      "tests": 1,
+      "passed": 1,
+      "failed": 0,
+      "skipped": 0,
+      "durationMs": 12534.415583
+    },
+    "phaseGroups": {
+      "tests": 1,
+      "passed": 1,
+      "failed": 0,
+      "skipped": 0,
+      "durationMs": 2724.205959
+    },
+    "parserSources": {
+      "valid": 3,
+      "rejected": 4
+    },
+    "checkerSources": {
+      "valid": 3,
+      "rejected": 2
+    },
+    "fastSuite": {
+      "tests": 276,
+      "passed": 264,
+      "failed": 0,
+      "skipped": 12,
+      "durationMs": 109818.594584
+    },
+    "fullSuite": {
+      "tests": 276,
+      "passed": 276,
+      "failed": 0,
+      "skipped": 0,
+      "durationMs": 160984.967583
+    },
+    "hostGroups": 34,
+    "interpreterGroups": 238,
+    "editorGroups": 9,
+    "tsCorpus": {
+      "phase": "compare",
+      "artifact": "<local-path>/Projects/LiteScript/compiler/bootstrap/T11.ts",
+      "target": "ts",
+      "cases": 93,
+      "programs": 69,
+      "rejections": 24,
+      "mismatches": 0,
+      "first": []
+    },
+    "cCorpus": {
+      "phase": "compare",
+      "artifact": "<local-path>/Projects/LiteScript/compiler/bootstrap/c-emitter.ts",
+      "target": "c",
+      "cases": 93,
+      "programs": 69,
+      "rejections": 24,
+      "mismatches": 0,
+      "first": []
+    },
+    "verifierExecutions": 123,
+    "registeredFeatures": 39,
+    "coverage": true,
+    "canonicalGeneratedTargetsAdded": "num.power",
+    "existingCorpusArtifactPairsUnchanged": 69,
+    "nativeSanitizers": {
+      "cases": 6,
+      "compiler": "cc",
+      "flags": [
+        "-std=c11",
+        "-O2",
+        "-Wall",
+        "-Wextra",
+        "-Werror",
+        "-fsanitize=undefined,address",
+        "-fno-sanitize-recover=all"
+      ],
+      "linkFlags": [
+        "-lm"
+      ],
+      "sources": [
+        "outputLine(2 ** 3 ** 2, (2 ** 3) ** 2, (-2) ** 3, -(2 ** 2));",
+        "outputLine(4 ** 0.5, 2.5 ** 2, 1e-200 ** 2);",
+        "outputLine(false and (2 ** 0 > 1), 3 < 2 < 2 ** 0);",
+        "outputLine(\"before\"); outputLine(2 ** 0);",
+        "outputLine(\"before\"); outputLine((2 ** 0) ** (1e308 ** 2));",
+        "outputLine(\"before\"); outputLine((-2) ** 0.5);"
+      ],
+      "exactStatusAndStreams": true
+    },
+    "inventory": {
+      "matches": 105,
+      "total": 167,
+      "remaining": 62,
+      "originalFailuresClosed": 50,
+      "regressions": 0,
+      "trackedLiteFiles": 212,
+      "loadErrors": 0
+    },
+    "performanceReport": "2026-11-02-power-performance.json",
+    "scope": "Selected right-associative Float-default positive-exponent power checkpoint, implemented in Lite without power adoption in S. Core syntax and the early generated-default workflow cutover remain the priority.",
+    "referenceException": "T00 admits identity-plus prefixes concealing ungrouped minus at the power boundary. Generated Lite enforces the already selected grouping rule; no T00 implementation change or new syntax decision.",
+    "knownLimits": "Final zero/negative-exponent semantics, exhaustive cross-libm rounding and advanced boundaries remain later work. Common numeric aliases and remaining data/call/control syntax precede the Lite default cutover. C functions/aggregates/input and native self-hosting remain pending.",
+    "nativeLinkage": "All maintained C artifact/verification/corpus/release runners link the standard math library with -lm after the source. The native fixture cache key includes the flag."
+  },
+  "reproductionCommands": [
+    "git show 5cf49f03b56ac869ff942a9f99796f5f51c22c8e:compiler/bootstrap/T11.ts > /tmp/previous-seed.ts",
+    "node --input-type=module -e 'import {writeFileSync} from \"node:fs\"; import {loadBundle} from \"./igniter/loader.ts\"; writeFileSync(\"/tmp/S.lts\",loadBundle(\"compiler/manifests/ts.json\").text); writeFileSync(\"/tmp/C-S.lts\",loadBundle(\"compiler/manifests/c.json\").text);'",
+    "node compiler/scripts/run-ts-artifact.ts --artifact /tmp/previous-seed.ts --source /tmp/S.lts --out /tmp/transitional.ts",
+    "node compiler/scripts/run-ts-artifact.ts --artifact /tmp/transitional.ts --source /tmp/S.lts --out /tmp/stage1.ts",
+    "node compiler/scripts/run-ts-artifact.ts --artifact /tmp/stage1.ts --source /tmp/S.lts --out /tmp/stage2.ts",
+    "node compiler/scripts/run-ts-artifact.ts --artifact /tmp/stage2.ts --source /tmp/S.lts --out /tmp/stage3.ts",
+    "node compiler/scripts/run-ts-artifact.ts --artifact /tmp/stage3.ts --source /tmp/C-S.lts --out /tmp/c-emitter.ts"
+  ]
+}

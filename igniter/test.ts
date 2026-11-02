@@ -574,7 +574,7 @@ test('lite verify runs feature and artifact cases and reports coverage', () => {
     assert.equal(verified.error, undefined); assert.equal(verified.status, 0, verified.stderr);
     assert.match(verified.stdout, /PASS int\.arithmetic\/precedence-and-division/);
     assert.match(verified.stdout, /PASS example\.001-double-sum\/seven-and-five/);
-    assert.match(verified.stdout, /verification passed: 121 executed, 0 cached/);
+    assert.match(verified.stdout, /verification passed: 123 executed, 0 cached/);
     const covered = spawnSync(join(root, 'lite'), ['verify', '--coverage'], { env, encoding: 'utf8', timeout: 30000 });
     assert.equal(covered.error, undefined); assert.equal(covered.status, 0, covered.stderr);
     assert.match(covered.stdout, /features: 39 registered, 39 cases/);
@@ -2290,13 +2290,13 @@ test('Lite-generated native C, TS and igniter programs have identical output byt
         writeFileSync(path, emitted.output);
       }
       const cacheKey = createHash('sha256').update(readFileSync(cPath)).update(ccVersion)
-        .update('-std=c11 -Wall -Wextra -Werror').update(process.platform).update(process.arch).digest('hex');
+        .update('-std=c11 -Wall -Wextra -Werror -lm').update(process.platform).update(process.arch).digest('hex');
       const cached = join(cacheDirectory, cacheKey);
       let executablePath = executable;
       if (process.env['LITE_NO_NATIVE_CACHE'] !== '1' && existsSync(cached)) {
         executablePath = cached;
       } else {
-        const built = spawnSync(cc, ['-std=c11', '-Wall', '-Wextra', '-Werror', cPath, '-o', executable], {
+        const built = spawnSync(cc, ['-std=c11', '-Wall', '-Wextra', '-Werror', cPath, '-o', executable, '-lm'], {
           encoding: 'utf8', timeout: 30000,
         });
         assert.equal(built.error, undefined); assert.equal(built.status, 0, built.stdout + built.stderr);
@@ -4303,6 +4303,23 @@ test('Lite numeric literal phases share Float spelling and finite-range checks',
     for (const text of ['outputLine(1e);', 'outputLine(1e309);']) {
       const expected = runFile(driver, text); assert.equal(expected.code, 2, text); assert.equal(expected.output, '');
       assert.deepEqual(generated(text), expected);
+    }
+  });
+});
+
+test('Lite power parser retains association and rejects concealed ungrouped negative bases', () => {
+  const valid = ['outputLine(2 ** 3 ** 2);', 'outputLine((-2) ** 2, -(2 ** 2));', 'outputLine(+(-2) ** 2);'];
+  const invalid = ['outputLine(-2 ** 2);', 'base := 2; outputLine(-base ** 2);', 'outputLine(+-2 ** 2);', 'outputLine((-2 ** 2));'];
+  withGeneratedDriver(parserProgramDumpPath, generated => {
+    for (const text of valid) { const expected = runFile(parserProgramDumpPath, text); assert.equal(expected.code, 0, text + expected.errors); assert.deepEqual(generated(text), expected); }
+    for (const text of invalid) { const expected = runFile(parserProgramDumpPath, text); assert.equal(expected.code, 2, text); assert.equal(expected.output, ''); assert.match(expected.errors, /group a negative power base/); assert.deepEqual(generated(text), expected); }
+  });
+  withGeneratedDriver(checkerDumpPath, generated => {
+    for (const text of ['x: Float = 2 ** 3;', 'f := fn(): Float { return -(2 ** 2); } outputLine(f());', 'f := fn(): Float { return 2 ** 3 ** 2; } outputLine(f());']) {
+      const expected = runFile(checkerDumpPath, text); assert.equal(expected.code, 0, text + expected.errors); assert.deepEqual(generated(text), expected);
+    }
+    for (const text of ['x: Int = 2 ** 3;', 'f := fn(): Int { return 2 ** 3; }']) {
+      const expected = runFile(checkerDumpPath, text); assert.equal(expected.code, 2, text); assert.deepEqual(generated(text), expected);
     }
   });
 });

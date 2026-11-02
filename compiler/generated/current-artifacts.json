@@ -1,8 +1,8 @@
 {
-  "note": "Current exact artifacts after mixed Float arithmetic/comparisons. All 69 TS artifact hashes are unchanged. Only the two Float literal C fixtures change, using the discovered literal-parser wrapper to preserve dependencies in comparison-only programs. Historical checkpoints remain preserved.",
+  "note": "Current exact artifacts after positive-exponent Float-default power migration. All 69 existing TS/C artifact pairs are unchanged. New power behavior is covered by the canonical num.power target manifest and focused generated tests. Historical checkpoints remain preserved.",
   "recorded": "2026-11-02",
-  "sourceSha256": "9e0da572aff9520ff5e17c7e3b04b53b481feb455a848aefae46f777920dd6d3",
-  "compilerSha256": "99b18ccf1ef01633b7f5c1432603a60ac86ce19f762b52f6833f5da9a64b3b1c",
+  "sourceSha256": "399d88b3520fe653c4b5b731f71733a8b8d96fdad9e99397fcd337b5d55591d3",
+  "compilerSha256": "2052e0629ac603950b92461f06ec6f5de1babe09d7765da82022ba241cb73222",
   "programCases": 69,
   "rejectedCases": 24,
   "artifacts": [

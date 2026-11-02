@@ -110,7 +110,7 @@ dependencies:
 ```sh
 ./lite run igniter/tests/compiler/001-001-report-int-42.lts
 ./litec --target c igniter/tests/compiler/001-001-report-int-42.lts > hello.c
-cc -std=c11 -Wall -Wextra -Werror hello.c -o hello
+cc -std=c11 -Wall -Wextra -Werror hello.c -o hello -lm
 ./hello
 ```
 

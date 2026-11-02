@@ -1234,11 +1234,6 @@ test('finite Float literals retain binary64 values, display and same-family comp
       assert.match(compiled.stderr.toString(), /^float سلام\.lts:2:[0-9]+: /);
     }
   }
-  // Power remains a separate ordinary-syntax migration slice.
-  for (const text of ['outputLine(1.5 ** 2);', 'outputLine(2 ** 3);']) {
-    assert.equal(runText(text).status, 0);
-    for (const target of ['ts', 'c'] as const) { const compiled = compileTarget(target, { text }); assert.equal(compiled.status, 2); assert.equal(compiled.stdout.length, 0); }
-  }
   for (const text of ['outputLine("before"); var zero := 0; outputLine(0.1, 1 / zero);',
     'outputLine("before"); outputLine(0.1, 9223372036854775807 + 1);']) {
     const name = 'float سلام.lts', expected = runText(text, { name }); assert.equal(expected.status, 1);
@@ -1315,6 +1310,72 @@ test('mixed Float arithmetic and comparisons preserve values, effects and positi
   {
     const text = 'outputLine(inputInt("int? ") / inputFloat("float? "));', stdin = '3 2.0', expected = runText(text, { stdin });
     assert.equal(expected.status, 0); assert.equal(expected.stdout.toString(), 'int? float? 1.5\n');
+    const compiled = compileTarget('ts', { text }); assert.equal(compiled.status, 0, compiled.stderr.toString());
+    executions.push({ target: 'ts', artifact: compiled.stdout.toString(), expected, options: { stdin }, context: text });
+  }
+  assertExecutions(executions);
+});
+
+test('power preserves right association, explicit negative-base grouping and the positive-exponent checkpoint', () => {
+  const executions: ArtifactExecution[] = [];
+  const both = [
+    'outputLine(2 ** 3, 2 ** 3 ** 2, (2 ** 3) ** 2, 2 ** (3 ** 2));',
+    'outputLine(4 ** 0.5, 2.5 ** 2, 2 ** 3.0, 1.5 ** 2.0);',
+    'outputLine(1.1 ** 3, 10 ** 0.1, 27 ** (1.0 / 3.0), 0.1 ** 0.2);',
+    'outputLine((-2) ** 2, (-2) ** 3, -(2 ** 2), +(-2) ** 2, (- /* c */ 2) ** 3);',
+    'outputLine(2 ** 3 * 2, 2 * 3 ** 2, 2 ** (3 * 2), 1 + 2 ** 3 * 2, (1 + 2) ** 2);',
+    'var base := 2; var exponent := 3; var value: Float = base ** exponent; outputLine(value, value + 0.5, value == 8);',
+    'outputLine(0 ** 2, (-0.0) ** 3, 1e-200 ** 2, 9223372036854775807 ** 1);',
+    'if false { outputLine(2 ** 0); } loop false { outputLine(2 ** -1); } outputLine(false and (2 ** 0 > 1), true or (1e308 ** 2 > 1), 3 < 2 < 2 ** 0);',
+    'var n := 1; loop n <= 3 { outputLine(2 ** n); n = n + 1; }',
+  ];
+  const tsOnly = [
+    'echo := fn(n: Int): Int { outputLine("call", n); n } outputLine(echo(2) ** echo(3) ** echo(2));',
+    'f := fn(base: Float, exponent: Int): Float { base ** exponent } p := (n = f(2.5, 2)); xs: List<Float> = [p.n, f(1.5, 2)]; outputLine(p, xs);',
+    'unused := fn(): Float { 2 ** 0 } f := fn(flag: Bool): Float { if flag { return 2 ** 3; } 3 ** 2 } outputLine(f(true), f(false));',
+  ];
+  for (const [sources, targets] of [[both, ['ts', 'c']], [tsOnly, ['ts']]] as const) for (const text of sources) {
+    const expected = runText(text); assert.equal(expected.status, 0, text + expected.stderr.toString());
+    for (const target of targets) {
+      const compiled = compileTarget(target, { text }); assert.equal(compiled.status, 0, text + compiled.stderr.toString());
+      if (target === 'c' && process.env['LITE_SKIP_NATIVE'] === '1') continue;
+      executions.push({ target, artifact: compiled.stdout.toString(), expected, context: text });
+    }
+    if (targets.length === 1) { const c = compileTarget('c', { text }); assert.equal(c.status, 2, text); assert.equal(c.stdout.length, 0); }
+  }
+  for (const source of ['outputLine(2 ** 0);', 'outputLine(2 ** -1);', 'outputLine(2 ** -0.0);',
+    'outputLine(1e308 ** 2);', 'outputLine((-2) ** 0.5);', 'outputLine((2 ** 0) ** (1e308 ** 2));',
+    'outputLine(2 ** (2 ** 0));', 'outputLine(2 ** 0, "after");', 'var e := -1; outputLine(2 ** e);']) {
+    const text = 'outputLine("before");\r\n' + source, name = 'power سلام.lts', expected = runText(text, { name });
+    assert.equal(expected.status, 1, text); assert.equal(expected.stdout.toString(), 'before\n');
+    assert.match(expected.stderr.toString(), /^power سلام\.lts:2:\d+: ArithmeticPanic: (power exponent must be positive in this checkpoint|non-finite floating value)\n$/);
+    for (const target of ['ts', 'c'] as const) {
+      const compiled = compileTarget(target, { text, name }); assert.equal(compiled.status, 0, text + compiled.stderr.toString());
+      if (target === 'c' && process.env['LITE_SKIP_NATIVE'] === '1') continue;
+      executions.push({ target, artifact: compiled.stdout.toString(), expected, context: text });
+    }
+  }
+  for (const source of ['outputLine(-2 ** 2);', 'outputLine(- /* c */ 2 ** 3);', 'base := 2; outputLine(-base ** 2);',
+    'outputLine((-2 ** 2));', 'outputLine(-(2) ** 2);', 'outputLine(2 ** -1 ** 2);',
+    'outputLine("x" ** 2);', 'outputLine(2 ** false);', 'outputLine(Unit ** 2);',
+    'var x: Int = 2 ** 3;', 'outputLine(2 *** 3);', 'outputLine(2 **);', 'outputLine(** 2);',
+    'var x := 2; x **= 2;', 'outputLine(2 ^ 3);']) {
+    const text = 'outputLine("before"); ' + source, expected = runText(text);
+    assert.equal(expected.status, 1, text); assert.equal(expected.stdout.length, 0, text);
+    for (const target of ['ts', 'c'] as const) { const compiled = compileTarget(target, { text }); assert.equal(compiled.status, 2, text); assert.equal(compiled.stdout.length, 0, text); }
+  }
+  // The selected grammar forbids using identity + to conceal an ungrouped negative base.
+  // T00 still admits these forms; its admission is not the selected syntax rule.
+  for (const source of ['+-2 ** 2', '+ - /* c */ 2 ** 3', '+-+2 ** 2']) {
+    for (const target of ['ts', 'c'] as const) {
+      const compiled = compileTarget(target, { text: 'outputLine("before"); outputLine(' + source + ');' });
+      assert.equal(compiled.status, 2, source); assert.equal(compiled.stdout.length, 0, source);
+      assert.match(compiled.stderr.toString(), /group a negative power base/);
+    }
+  }
+  {
+    const text = 'outputLine(inputInt("base? ") ** inputFloat("exponent? "));', stdin = '4 0.5', expected = runText(text, { stdin });
+    assert.equal(expected.status, 0); assert.equal(expected.stdout.toString(), 'base? exponent? 2\n');
     const compiled = compileTarget('ts', { text }); assert.equal(compiled.status, 0, compiled.stderr.toString());
     executions.push({ target: 'ts', artifact: compiled.stdout.toString(), expected, options: { stdin }, context: text });
   }

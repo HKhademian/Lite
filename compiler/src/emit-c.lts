@@ -52,11 +52,20 @@ usesIntArithmetic := fn(calls: String): Bool {
 }
 
 /** True when binary64 operations need finite-result and zero-divisor guards. */
-usesFloatArithmetic := fn(calls: String): Bool { usesIntHelper(calls, "lt_float_op(") }
+usesFloatArithmetic := fn(calls: String): Bool { usesIntHelper(calls, "lt_float_op(") or usesIntHelper(calls, "lt_float_power(") }
 
 /** Emits checked binary64 operations; caller temporaries preserve left-to-right operand effects. */
 emitFloatArithmeticHelpers := fn(calls: String): Unit {
     if not usesFloatArithmetic(calls) { return; }
+    if usesIntHelper(calls, "lt_float_power(") {
+        outputLine("static double lt_float_power(double left, double right, size_t at) {");
+        outputLine("    if (right <= 0) { lt_int_fault(at, \"power exponent must be positive in this checkpoint\"); }");
+        outputLine("    double value = pow(left, right);");
+        outputLine("    if (!isfinite(value)) { lt_int_fault(at, \"non-finite floating value\"); }");
+        outputLine("    return value;");
+        outputLine("}");
+    }
+    if not usesIntHelper(calls, "lt_float_op(") { return; }
     outputLine("static double lt_float_op(double left, double right, int op, size_t at) {");
     outputLine("    if (op == 3 && right == 0) { lt_int_fault(at, \"division by zero\"); }");
     outputLine("    double value = op == 0 ? left + right : op == 1 ? left - right : op == 2 ? left * right : left / right;");

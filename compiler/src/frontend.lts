@@ -672,11 +672,17 @@ operatorLevel := fn(operator: String): Int {
     else if isComparison(operator) { 5 }
     else if operator == "+" or operator == "-" { 10 }
     else if operator == "*" or operator == "/" or operator == "%" or operator == ":/" or operator == ":%" { 20 }
+    else if operator == "**" { 25 }
     else { 0 }
 }
 
 /** Reads an operator at `position`, preferring the longest spelling; returns empty text when none starts there. */
 readOperator := fn(source: String, position: Int): Operator {
+    ch := textAt(source, position);
+    if ch == "*" {
+        if startsWithAt(source, position, "**") { return (text = "**", width = 2); }
+        return (text = "*", width = 1);
+    }
     if startsWithAt(source, position, "=!=") { return (text = "=!=", width = 3); }
     if startsWithAt(source, position, "<!=") { return (text = "<!=", width = 3); }
     if startsWithAt(source, position, ">!=") { return (text = ">!=", width = 3); }
@@ -685,10 +691,9 @@ readOperator := fn(source: String, position: Int): Operator {
     if startsWithAt(source, position, ">=") { return (text = ">=", width = 2); }
     if startsWithAt(source, position, "<!") { return (text = "<!", width = 2); }
     if startsWithAt(source, position, ">!") { return (text = ">!", width = 2); }
-    ch := textAt(source, position);
     if ch == "<" { return (text = "<", width = 1); }
     if ch == ">" { return (text = ">", width = 1); }
-    if ch == "+" or ch == "-" or ch == "*" or ch == "/" or ch == "%" { return (text = ch, width = 1); }
+    if ch == "+" or ch == "-" or ch == "/" or ch == "%" { return (text = ch, width = 1); }
     if startsWithAt(source, position, ":/") { return (text = ":/", width = 2); }
     if startsWithAt(source, position, ":%") { return (text = ":%", width = 2); }
     if isNameStart(ch) {
@@ -1514,7 +1519,17 @@ parseBinary := fn(source: String, position: Int, prefix: String, locals: List<Lo
         if operator.text == "" { break; }
         level := operatorLevel(operator.text);
         if level < minimum { break; }
-        right := self(source, operatorPosition + operator.width, prefix, locals, functions, params, currentName, "", level + 1);
+        if operator.text == "**" {
+            var signPosition := start;
+            loop signPosition < textLength(source) and (textAt(source, signPosition) == "+" or textAt(source, signPosition) == "-") {
+                if textAt(source, signPosition) == "-" {
+                    failAt(source, operatorPosition, prefix, "group a negative power base as (-base) or negate the completed power as -(base ** exponent)");
+                }
+                signPosition = skipTrivia(source, signPosition + 1, prefix);
+            }
+        }
+        rightMinimum := if operator.text == "**" { level } else { level + 1 };
+        right := self(source, operatorPosition + operator.width, prefix, locals, functions, params, currentName, "", rightMinimum);
         if operator.text == "and" or operator.text == "or" {
             if left.kind =!= "Bool" or right.kind =!= "Bool" {
                 failAt(source, operatorPosition, prefix, "operator " + operator.text + " requires Bool operands");
@@ -1561,6 +1576,12 @@ parseBinary := fn(source: String, position: Int, prefix: String, locals: List<Lo
                 if constant { left = boolParsed(boolLiteralCode(value), value, true, end); }
                 else { left = boolParsed(comparisonChainCode(codes, kinds, operators, count, operatorPosition), false, false, end); }
             }
+        } else if operator.text == "**" {
+            if (left.kind =!= "Int" and left.kind =!= "Float") or (right.kind =!= "Int" and right.kind =!= "Float") {
+                failAt(source, operatorPosition, prefix, "power requires Int or Float operands");
+            }
+            code := floatPowerCode(floatOperandCode(left.kind, left.code), floatOperandCode(right.kind, right.code), operatorPosition);
+            left = (kind = "Float", code = code, intValue = 0, textValue = "", constant = false, next = right.next);
         } else if left.kind == "Int" and right.kind == "Int" {
             if left.constant and right.constant {
                 folded := tryFoldInteger(operator.text, left.intValue, right.intValue);

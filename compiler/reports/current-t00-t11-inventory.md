@@ -3,7 +3,7 @@
 Runtime environment details omitted for privacy.
 Working tree at audit start: modified. The raw report records its status; artifact and per-source hashes identify the measured inputs.
 
-T11 identity: `99b18ccf1ef01633b7f5c1432603a60ac86ce19f762b52f6833f5da9a64b3b1c`. The preserved artifact passed its separate strict TypeScript check.
+T11 identity: `2052e0629ac603950b92461f06ec6f5de1babe09d7765da82022ba241cb73222`. The preserved artifact passed its separate strict TypeScript check.
 
 This is the current measured support inventory, not acceptance of new language features. Dated historical inventories remain unchanged.
 
@@ -18,24 +18,25 @@ This is the current measured support inventory, not acceptance of new language f
 
 ## Counts
 
-- feature: 39; 25 matches tested behavior; 14 T11 rejects source.
+- feature: 39; 26 matches tested behavior; 13 T11 rejects source.
 - example: 19; 11 matches tested behavior; 8 T11 rejects source.
 - sample: 20; 20 matches tested behavior.
-- probe: 81; 39 matches tested behavior; 42 T11 rejects source.
+- probe: 81; 40 matches tested behavior; 41 T11 rejects source.
 - library-test: 8; 8 matches tested behavior.
 - trackedSourceFiles: 212.
 - Showcases: none currently implemented.
 
 ## Progress since the original inventory
 
-- 48 formerly failing cases now match; 0 formerly matching cases regress. Case identity includes kind and id.
-- 103/167 executed source cases match; 64 still fail. These are case counts, not distinct missing features or an overall completion percentage.
+- 50 formerly failing cases now match; 0 formerly matching cases regress. Case identity includes kind and id.
+- 105/167 executed source cases match; 62 still fail. These are case counts, not distinct missing features or an overall completion percentage.
 - Native C, compile-only sources and run/check migration have separate gates in [the live gap tracker](../gaps.md).
 
 Closed original cases:
 
 - feature: scope.locals
 - feature: io.input
+- feature: num.power
 - example: example.001-double-sum
 - example: example.002-decisions
 - example: example.003-sum-positive
@@ -56,6 +57,7 @@ Closed original cases:
 - sample: sample.017-linear-interpolation
 - probe: numeric.float
 - probe: numeric.exponent-literal
+- probe: numeric.power
 - probe: numeric.dynamic-add-overflow
 - probe: numeric.dynamic-subtract-overflow
 - probe: numeric.dynamic-multiply-overflow
@@ -129,8 +131,7 @@ Closed original cases:
   First diagnostic: 2:8: expected an Int, Float, String or Bool expression
 - **mut.inferred — T11 rejects source.** Inferred mut and var mut declarations. Source: `verifications/features/mut-inferred.lts`.
   First diagnostic: 1:1: unsupported feature "mut": see docs/declarations-and-assignment.md; the restricted compiler accepts Int/Float/String/Bool expressions, locals, output/outputLine, if/else and loop only
-- **num.power — T11 rejects source.** Right-associative Float-default power. Source: `verifications/features/num-power.lts`.
-  First diagnostic: 1:15: expected an Int, Float, String or Bool expression
+- **num.power — matches tested behavior.** Right-associative Float-default power. Source: `verifications/features/num-power.lts`.
 - **match.subjectless — T11 rejects source.** Subjectless Boolean match selection. Source: `verifications/features/match-subjectless.lts`.
   First diagnostic: 2:10: unsupported feature "match": see docs/match.md; the restricted compiler accepts Int/Float/String/Bool expressions, locals, output/outputLine, if/else and loop only
 - **init.zero — T11 rejects source.** Zero initialization for omitted typed locals. Source: `verifications/features/init-zero.lts`.
@@ -151,8 +152,7 @@ Closed original cases:
 - **numeric.float-aliases — T11 rejects source.** Float64 and Double annotations
   First diagnostic: 1:4: unsupported local type Float64
 - **numeric.exponent-literal — matches tested behavior.** Decimal exponent literal syntax
-- **numeric.power — T11 rejects source.** Right-associative Float-default power
-  First diagnostic: 1:15: expected an Int, Float, String or Bool expression
+- **numeric.power — matches tested behavior.** Right-associative Float-default power
 - **numeric.dynamic-add-overflow — matches tested behavior.** Runtime Int64 addition overflow faults
 - **numeric.dynamic-subtract-overflow — matches tested behavior.** Runtime Int64 subtraction overflow faults
 - **numeric.dynamic-multiply-overflow — matches tested behavior.** Runtime Int64 multiplication overflow faults

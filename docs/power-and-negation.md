@@ -1,6 +1,6 @@
 # Power and negation
 
-Status: **`**` spelling and explicit unary-minus grouping selected 2026-10-25; right association, Float-default result typing and a positive-exponent checkpoint selected 2026-11-01. The igniter implements that subset; zero/negative exponents, exact overflow/fault rules and compiler-target lowering remain open.**
+Status: **`**` spelling and explicit unary-minus grouping selected 2026-10-25; right association, Float-default result typing and a positive-exponent checkpoint selected 2026-11-01. T00 and the Lite-generated TS/C targets implement that checkpoint; final zero/negative-exponent and exact overflow/fault rules remain open.**
 
 ## Selected grouping requirement
 
@@ -95,14 +95,26 @@ The current igniter checkpoint admits only **positive exponents**. `x ** 0`
 and negative exponents raise `ArithmeticPanic` as explicitly unsupported, not
 as final language semantics. Non-finite Float results use the existing
 arithmetic-fault path. Zero exponent, negative exponents, exact overflow and
-the complete power fault contract remain open. Compiler targets do not lower
-`**` yet.
+the complete power fault contract remain open.
+
+Migration implementation, 2026-11-02: the Lite frontend lowers this checkpoint
+to checked TS and C helpers. TS uses `Math.pow`; C uses the C math library's
+`pow`, linked with `-lm` where required. Both operands evaluate once, left to
+right; nonpositive exponents and non-finite results fault at the operator only
+when reached. This ports the existing checkpoint without selecting final
+zero/negative-exponent semantics or a universal cross-library rounding contract.
+The [power migration ledger](../compiler/parity.md#power-checkpoint) records
+target validation and remaining limits.
+
+Lite also enforces the already selected rule against concealed ungrouped minus,
+such as `+-2 ** 2`. T00 currently admits that form. T00's admission is a known
+reference discrepancy; it does not override the explicit grouping requirement.
 
 ## Separate decisions still open
 
 The selected rule settles association and the first Float-default result/checkpoint.
 It does not settle zero/negative exponents, signed zero, exact overflow,
-non-finite/domain faults, or compiler-target lowering. The recursive grammar
+non-finite/domain faults, or universal cross-target rounding. The recursive grammar
 enforces the selected unary-minus boundary.
 
 The examples' values describe ordinary mathematical powers for admitted operands. Complete typing and numeric rules determine which programs are accepted and how their values are represented. `**=` and redundant leading `**` are not selected. Leading minus remains a real operation; identity leading + gains no new operation or exception.

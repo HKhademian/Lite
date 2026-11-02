@@ -49,6 +49,19 @@ reference until the final Lite implementations and retirement gates pass.
 
 ## Done
 
+- 2026-11-02: the selected right-associative, Float-default positive-exponent
+  power checkpoint now lowers on TS/C. The frontend/parser enforce negative-base
+  grouping, including concealed minus that T00 still admits; the standalone
+  checker infers Float power results. Native runners link the math library.
+  All 276 full tests, both 93-case corpora, strict checks, 123 verifier runs,
+  coverage, nine editor groups and six native sanitizer cases pass. Three
+  generated generations match; all 69 prior TS/C fixture pairs are unchanged.
+  Inventory: 105/167 match, 62 remaining, 50 original failures closed, none
+  regress. See the [ladder](reports/2026-11-02-power-ladder.json). Next: common
+  numeric annotations and ordinary data/call/control syntax before the early
+  Lite default cutover. Final signed-exponent semantics and exhaustive math
+  rounding remain outside this checkpoint.
+
 - 2026-11-02: existing mixed Float arithmetic/comparisons now run on generated
   TS/C, with finite-result and zero-divisor faults, pairwise comparison
   conversions and lazy operand sequencing. All 20 implemented samples pass
@@ -278,7 +291,8 @@ subset used to write the compiler. Prioritize:
 
 - Numeric expressions: Int/Float arithmetic and comparisons, precedence, power,
   and common numeric annotations. Mixed Float arithmetic now runs all nine
-  previously blocked lesson programs; power and ordinary annotations follow.
+  previously blocked lesson programs. The power checkpoint is also ported;
+  ordinary annotations follow.
   Exhaustive width/promotion/rounding matrices follow the default switch.
 - Bindings and storage: inference, annotations, aliases, lexical scope, mutability,
   compound updates, zero initialization and reserved storage's first assignment.

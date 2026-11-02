@@ -1,15 +1,15 @@
 {
   "schema": 1,
   "date": "2026-11-02",
-  "startedAt": "2026-11-02T20:47:56.086Z",
-  "revision": "4ef631bdbf0d0ab3236395fb1bf340daea396520",
+  "startedAt": "2026-11-02T21:04:13.403Z",
+  "revision": "5cf49f03b56ac869ff942a9f99796f5f51c22c8e",
   "revisionMeaning": "HEAD at audit start; artifact and per-source hashes identify the measured inputs",
   "workingTreeDirtyAtStart": true,
-  "worktreeStatusAtStart": " M compiler/bootstrap/T11.ts\n M compiler/bootstrap/c-emitter.ts\n M compiler/bootstrap/c-seed.ts\n M compiler/bootstrap/seed.ts\n M compiler/c-emitter.lts\n M compiler/gaps.md\n M compiler/generated/current-artifacts.json\n M compiler/parity.md\n M compiler/src/c-literals.lts\n M compiler/src/emit-c.lts\n M compiler/src/emit-ts.lts\n M compiler/src/frontend.lts\n M compiler/src/ts-literals.lts\n M compiler/tests/host.test.ts\n M compiler/ts-emitter.lts\n M verifications/artifacts/samples/004-triangle-area.json\n M verifications/artifacts/samples/005-circle-measurements.json\n M verifications/artifacts/samples/006-temperature-conversion.json\n M verifications/artifacts/samples/007-distance-conversion.json\n M verifications/artifacts/samples/009-average-three-values.json\n M verifications/artifacts/samples/010-percentage-of-total.json\n M verifications/artifacts/samples/014-speed-distance-time.json\n M verifications/artifacts/samples/016-midpoint-coordinates.json\n M verifications/artifacts/samples/017-linear-interpolation.json\n M verifications/features.json\nA  verifications/features/num-float.json\nA  verifications/features/num-float.lts\n?? compiler/reports/2026-11-02-float-arithmetic-ladder.json\n",
-  "compilerSourceSha256": "9e0da572aff9520ff5e17c7e3b04b53b481feb455a848aefae46f777920dd6d3",
-  "compilerSourceRevision": "07337c34952b1ee48119d62db57147eafca449ba",
+  "worktreeStatusAtStart": " M compiler/README.md\n M compiler/bootstrap/T11.ts\n M compiler/bootstrap/c-emitter.ts\n M compiler/bootstrap/c-seed.ts\n M compiler/bootstrap/seed.ts\n M compiler/c-emitter.lts\n M compiler/generated/current-artifacts.json\n M compiler/parity.md\n M compiler/scripts/release.ts\n M compiler/src/c-literals.lts\n M compiler/src/check.lts\n M compiler/src/emit-c.lts\n M compiler/src/emit-ts.lts\n M compiler/src/frontend.lts\n M compiler/src/parser.lts\n M compiler/src/ts-literals.lts\n M compiler/tests/host.test.ts\n M compiler/ts-emitter.lts\n M docs/numbers.md\n M docs/operators.md\n M docs/power-and-negation.md\n M docs/release-automation.md\n M igniter/README.md\n M igniter/artifacts.ts\n M igniter/test.ts\n M igniter/verify.ts\n M verifications/features/num-power.json\n?? compiler/reports/2026-11-02-power-ladder.json\n",
+  "compilerSourceSha256": "399d88b3520fe653c4b5b731f71733a8b8d96fdad9e99397fcd337b5d55591d3",
+  "compilerSourceRevision": "Power source snapshot committed with this seed; see sourceSha256",
   "node": "v24.16.0",
-  "t11Sha256": "99b18ccf1ef01633b7f5c1432603a60ac86ce19f762b52f6833f5da9a64b3b1c",
+  "t11Sha256": "2052e0629ac603950b92461f06ec6f5de1babe09d7765da82022ba241cb73222",
   "rows": [
     {
       "id": "int.arithmetic",
@@ -1569,7 +1569,7 @@
       "t00Check": {
         "accepted": true
       },
-      "status": "rejected",
+      "status": "matches",
       "cases": [
         {
           "name": "association-and-grouping",
@@ -1581,14 +1581,27 @@
             "stderr": "",
             "signal": null
           },
-          "t00MatchesManifest": true
+          "t00MatchesManifest": true,
+          "t11": {
+            "status": 0,
+            "signal": null,
+            "stdout": "8\n512\n2\n-8\n-4\n",
+            "stderr": ""
+          },
+          "matches": true
         }
       ],
       "t11Compile": {
-        "status": 2,
+        "status": 0,
+        "signal": null,
+        "stdout": "declare const process: {\n    argv: string[];\n    exit(code: number): never;\n    getBuiltinModule(name: \"node:fs\"): {\n        readSync(fd: number, buffer: Uint8Array, offset: number, length: number, position: null): number;\n        writeSync(fd: number, text: string): number;\n    };\n};\n\nconst lite$intLines: readonly number[] = [0, 20, 45, 67, 90, 113];\nconst lite$intSource = \"\";\nfunction lite$fault(category: string, at: number, message: string): never {\n    let line = 0;\n    while (line + 1 < lite$intLines.length && (lite$intLines[line + 1] ?? Infinity) <= at) line += 1;\n    const column = at - (lite$intLines[line] ?? 0) + 1;\n    process.getBuiltinModule(\"node:fs\").writeSync(2, lite$intSource + (line + 1) + \":\" + column + \": \" + category + \": \" + message + \"\\n\");\n    process.exit(1);\n}\n\nfunction lite$floatPower(left: number, right: number, at: number): number {\n    if (right <= 0) lite$fault(\"ArithmeticPanic\", at, \"power exponent must be positive in this checkpoint\");\n    const value = Math.pow(left, right);\n    if (!Number.isFinite(value)) lite$fault(\"ArithmeticPanic\", at, \"non-finite floating value\");\n    return value;\n}\nexport function main(lite$write?: (text: string) => void): string {\n    let lite_out = \"\";\n    function lite$emit(text: string): void {\n        if (lite$write === undefined) lite_out += text;\n        else lite$write(text);\n    }\n    void lite$emit;\n    const lite$report0 = (lite$floatPower(Number(2n), Number(3n), 13)).toString();\n    lite$emit(lite$report0 + \"\\n\");\n    const lite$report1 = (lite$floatPower(Number(2n), lite$floatPower(Number(3n), Number(2n), 38), 33)).toString();\n    lite$emit(lite$report1 + \"\\n\");\n    const lite$report2 = (lite$floatPower(Number(4n), Number(\"0.5\"), 58)).toString();\n    lite$emit(lite$report2 + \"\\n\");\n    const lite$report3 = (lite$floatPower(Number(((-2n))), Number(3n), 83)).toString();\n    lite$emit(lite$report3 + \"\\n\");\n    const lite$report4 = ((-(lite$floatPower(Number(2n), Number(2n), 105)))).toString();\n    lite$emit(lite$report4 + \"\\n\");\n    return lite_out;\n}\n",
+        "stderr": ""
+      },
+      "artifactTypecheck": {
+        "status": 0,
         "signal": null,
         "stdout": "",
-        "stderr": "1:15: expected an Int, Float, String or Bool expression\n"
+        "stderr": ""
       }
     },
     {
@@ -3884,7 +3897,7 @@
       "t00Check": {
         "accepted": true
       },
-      "status": "rejected",
+      "status": "matches",
       "cases": [
         {
           "name": "boundary",
@@ -3895,14 +3908,27 @@
             "stdout": "512\n",
             "stderr": "",
             "signal": null
-          }
+          },
+          "t11": {
+            "status": 0,
+            "signal": null,
+            "stdout": "512\n",
+            "stderr": ""
+          },
+          "matches": true
         }
       ],
       "t11Compile": {
-        "status": 2,
+        "status": 0,
+        "signal": null,
+        "stdout": "declare const process: {\n    argv: string[];\n    exit(code: number): never;\n    getBuiltinModule(name: \"node:fs\"): {\n        readSync(fd: number, buffer: Uint8Array, offset: number, length: number, position: null): number;\n        writeSync(fd: number, text: string): number;\n    };\n};\n\nconst lite$intLines: readonly number[] = [0];\nconst lite$intSource = \"\";\nfunction lite$fault(category: string, at: number, message: string): never {\n    let line = 0;\n    while (line + 1 < lite$intLines.length && (lite$intLines[line + 1] ?? Infinity) <= at) line += 1;\n    const column = at - (lite$intLines[line] ?? 0) + 1;\n    process.getBuiltinModule(\"node:fs\").writeSync(2, lite$intSource + (line + 1) + \":\" + column + \": \" + category + \": \" + message + \"\\n\");\n    process.exit(1);\n}\n\nfunction lite$floatPower(left: number, right: number, at: number): number {\n    if (right <= 0) lite$fault(\"ArithmeticPanic\", at, \"power exponent must be positive in this checkpoint\");\n    const value = Math.pow(left, right);\n    if (!Number.isFinite(value)) lite$fault(\"ArithmeticPanic\", at, \"non-finite floating value\");\n    return value;\n}\nexport function main(lite$write?: (text: string) => void): string {\n    let lite_out = \"\";\n    function lite$emit(text: string): void {\n        if (lite$write === undefined) lite_out += text;\n        else lite$write(text);\n    }\n    void lite$emit;\n    const lite$report0 = (lite$floatPower(Number(2n), lite$floatPower(Number(3n), Number(2n), 18), 13)).toString();\n    lite$emit(lite$report0 + \"\\n\");\n    return lite_out;\n}\n",
+        "stderr": ""
+      },
+      "artifactTypecheck": {
+        "status": 0,
         "signal": null,
         "stdout": "",
-        "stderr": "1:15: expected an Int, Float, String or Bool expression\n"
+        "stderr": ""
       }
     },
     {
@@ -7125,8 +7151,8 @@
   "sourceFiles": [
     {
       "path": "compiler/c-emitter.lts",
-      "sourceSha256": "effd1e78384b72df15d038993d391a6604a33b9b956d8bfe065fe4bef8625a63",
-      "bytes": 181384,
+      "sourceSha256": "88fb3dc5caf21379e64833b9a79a5166a7f3172f5ed2a88c9edea78a28d00c14",
+      "bytes": 183666,
       "t00Check": {
         "accepted": true
       },
@@ -7135,7 +7161,7 @@
         "status": 0,
         "signal": null,
         "stderr": "",
-        "stdoutBytes": 328300
+        "stdoutBytes": 332236
       },
       "artifactTypecheck": {
         "status": 0,
@@ -7144,12 +7170,12 @@
         "stderr": ""
       },
       "status": "accepted",
-      "artifactSha256": "edbf58ab8447438f0fd91cc8a4b2579b6cdf039fe6b52e363eb21197795ba483"
+      "artifactSha256": "0506165e15a2d1db4993cabd3a5ed3ae0c1e364edfb3dce71f619ded9b5e7340"
     },
     {
       "path": "compiler/src/c-literals.lts",
-      "sourceSha256": "63457b88335b6476f1f3ffc3e9a13f44484806bd9534834c752edbeccb602568",
-      "bytes": 9161,
+      "sourceSha256": "2a04e54b8a2e223c054a2309aa6b44565f24dac36c1ed125c263b861083e2dfd",
+      "bytes": 9523,
       "t00Check": {
         "accepted": false,
         "diagnostic": "TypeError: unknown helper/function fail; forward function lookup is not supported yet"
@@ -7158,8 +7184,8 @@
     },
     {
       "path": "compiler/src/check.lts",
-      "sourceSha256": "cb4cdeaa11807242e9a04df5bb17edb77b116897b6dde911424d7f080ba753b6",
-      "bytes": 40451,
+      "sourceSha256": "e46b14115ee81a77d7e98340abd9f64affa4c2641cd6bb55aece723f89265c73",
+      "bytes": 40491,
       "t00Check": {
         "accepted": false,
         "diagnostic": "TypeError: unknown helper/function startsWithAt; forward function lookup is not supported yet"
@@ -7188,8 +7214,8 @@
     },
     {
       "path": "compiler/src/emit-c.lts",
-      "sourceSha256": "eafccc7584ae3a0f3bf360af755cf4a024ecf0b065563ff9c2346e29c55a7b0e",
-      "bytes": 24321,
+      "sourceSha256": "a3dcef73665973ab84b47b46273bcdb8cf86bbe76343736430cb6cb94cb3468a",
+      "bytes": 24920,
       "t00Check": {
         "accepted": false,
         "diagnostic": "TypeError: unknown helper/function indexOfText; forward function lookup is not supported yet"
@@ -7198,8 +7224,8 @@
     },
     {
       "path": "compiler/src/emit-ts.lts",
-      "sourceSha256": "dffeeb87ba68a3256900cb803131542a39589df1605d0c2aa6ca5eca35f0536b",
-      "bytes": 29826,
+      "sourceSha256": "27b839d52529837ffda02d0ead2a17529b75352bb01dc89d67bdbf87842c731e",
+      "bytes": 30452,
       "t00Check": {
         "accepted": false,
         "diagnostic": "TypeError: unknown helper/function skipName; forward function lookup is not supported yet"
@@ -7208,8 +7234,8 @@
     },
     {
       "path": "compiler/src/frontend.lts",
-      "sourceSha256": "41414bd524492a75ce6f80322488d5b3552a5421816420ac9f87bd6dc6734c70",
-      "bytes": 129424,
+      "sourceSha256": "83f9d5248be7c45f638c9ae72ceb5d15f31cf195bab8fcfdde6c664c7d10d85e",
+      "bytes": 130745,
       "t00Check": {
         "accepted": false,
         "diagnostic": "TypeError: unknown helper/function lineColumn; forward function lookup is not supported yet"
@@ -7238,8 +7264,8 @@
     },
     {
       "path": "compiler/src/parser.lts",
-      "sourceSha256": "e029f17cc3bee5702f31275fc2486d668139d666f25a9bfb86de7cf09296e7c5",
-      "bytes": 28620,
+      "sourceSha256": "5156d313fc3b47d3ff20201949562e40b2296536cc0a863ad53e29dbff484144",
+      "bytes": 29089,
       "t00Check": {
         "accepted": false,
         "diagnostic": "TypeError: function annotations currently require a numeric width, String, Bool, or Unit"
@@ -7248,8 +7274,8 @@
     },
     {
       "path": "compiler/src/ts-literals.lts",
-      "sourceSha256": "6c054746bbfde60d9c93be2a8deabcd605a2d513272200b9020d4017a7894076",
-      "bytes": 7929,
+      "sourceSha256": "a71ae721cd4de47e0cc14f9958ad4a03d11fc01f37f0c4f384722b5720d6fbe1",
+      "bytes": 8162,
       "t00Check": {
         "accepted": false,
         "diagnostic": "TypeError: unknown helper/function intText; forward function lookup is not supported yet"
@@ -7258,8 +7284,8 @@
     },
     {
       "path": "compiler/tests/checker/checker-dump.lts",
-      "sourceSha256": "497c4321a23e02230d3d9b60059907150a168165395838196f9ea62ced58a54b",
-      "bytes": 100122,
+      "sourceSha256": "e528a7a07d39be5edc1e60b472a3a24761168cfa8aba61e3933fdb4d20776007",
+      "bytes": 100631,
       "t00Check": {
         "accepted": true
       },
@@ -7268,7 +7294,7 @@
         "status": 0,
         "signal": null,
         "stderr": "",
-        "stdoutBytes": 202151
+        "stdoutBytes": 203075
       },
       "artifactTypecheck": {
         "status": 0,
@@ -7277,7 +7303,7 @@
         "stderr": ""
       },
       "status": "accepted",
-      "artifactSha256": "95d6517192719002acc2a143b037b5485bba7d7becef71fc9cfc479bc000a3fa"
+      "artifactSha256": "1553a86d44703f825216506c49ee01e51524415f9c1191135129c6f664a43bab"
     },
     {
       "path": "compiler/tests/checker/symbols.lts",
@@ -7385,8 +7411,8 @@
     },
     {
       "path": "compiler/tests/parser/parser-decl-dump.lts",
-      "sourceSha256": "0faede5f224d6cb07aad973e302f61bfdeb40a80c2989475e9cb7b1c5a7c40fd",
-      "bytes": 59676,
+      "sourceSha256": "69c292b424028be822342ce09e69850dcd3f9d403cedbcdfb2b14d37a62631ce",
+      "bytes": 60145,
       "t00Check": {
         "accepted": true
       },
@@ -7395,7 +7421,7 @@
         "status": 0,
         "signal": null,
         "stderr": "",
-        "stdoutBytes": 119822
+        "stdoutBytes": 120603
       },
       "artifactTypecheck": {
         "status": 0,
@@ -7404,12 +7430,12 @@
         "stderr": ""
       },
       "status": "accepted",
-      "artifactSha256": "eba756de9e9136f81a6829c8932e7abcde31a2230d241fc120599aafc7d292b7"
+      "artifactSha256": "211629ef7f5dbd6a822a58d3423af1588681e778d4088bafa7b77919974f8970"
     },
     {
       "path": "compiler/tests/parser/parser-dump.lts",
-      "sourceSha256": "0b63758aad1c38d7b1f32457504ef732a0150c0f207ec678d985ae8a1e1f678e",
-      "bytes": 59685,
+      "sourceSha256": "34531132ae39cfbf36dd115b21e51f0933babe688c83da9be64d414fddb18934",
+      "bytes": 60154,
       "t00Check": {
         "accepted": true
       },
@@ -7418,7 +7444,7 @@
         "status": 0,
         "signal": null,
         "stderr": "",
-        "stdoutBytes": 119816
+        "stdoutBytes": 120597
       },
       "artifactTypecheck": {
         "status": 0,
@@ -7427,12 +7453,12 @@
         "stderr": ""
       },
       "status": "accepted",
-      "artifactSha256": "b6cb60035f26e76737151accc08293152a6d7924c9ee2c56f657718756ec138a"
+      "artifactSha256": "715c71337c898288e28b04623e53f28049d36750386456683ff0cf5d2eafa969"
     },
     {
       "path": "compiler/tests/parser/parser-program-dump.lts",
-      "sourceSha256": "1e12af6b08eced1e09e1e0bc184964592c7eb0399c5c8e0820ef0d48f8199d26",
-      "bytes": 59672,
+      "sourceSha256": "a624acfdac40114c2c45761c103e8b9ee7481e09e7f9cd061e51cd61c5e53925",
+      "bytes": 60141,
       "t00Check": {
         "accepted": true
       },
@@ -7441,7 +7467,7 @@
         "status": 0,
         "signal": null,
         "stderr": "",
-        "stdoutBytes": 119823
+        "stdoutBytes": 120604
       },
       "artifactTypecheck": {
         "status": 0,
@@ -7450,7 +7476,7 @@
         "stderr": ""
       },
       "status": "accepted",
-      "artifactSha256": "76e7c2e433dbaa400640fb2ae962ec49f42764708bb41750e19f6bd4d9594273"
+      "artifactSha256": "9b5a47561c722a3143ade8ae1d4da8285792e9fdf47905687fe974138450c414"
     },
     {
       "path": "compiler/tests/parser/program.lts",
@@ -7486,8 +7512,8 @@
     },
     {
       "path": "compiler/ts-emitter.lts",
-      "sourceSha256": "9e0da572aff9520ff5e17c7e3b04b53b481feb455a848aefae46f777920dd6d3",
-      "bytes": 185657,
+      "sourceSha256": "399d88b3520fe653c4b5b731f71733a8b8d96fdad9e99397fcd337b5d55591d3",
+      "bytes": 187837,
       "t00Check": {
         "accepted": true
       },
@@ -9408,8 +9434,8 @@
   "counts": {
     "feature": {
       "total": 39,
-      "matches": 25,
-      "rejected": 14,
+      "matches": 26,
+      "rejected": 13,
       "typecheck": 0,
       "mismatch": 0,
       "diagnostic": 0,
@@ -9452,8 +9478,8 @@
     },
     "probe": {
       "total": 81,
-      "matches": 39,
-      "rejected": 42,
+      "matches": 40,
+      "rejected": 41,
       "typecheck": 0,
       "mismatch": 0,
       "diagnostic": 0,
@@ -9712,9 +9738,10 @@
     "transparent type aliases support scalar, tuple, array and list forms",
     "type aliases follow single lexical scope with value shadowing and rejection",
     "type alias example runs and checks through the root launcher",
-    "Lite numeric literal phases share Float spelling and finite-range checks"
+    "Lite numeric literal phases share Float spelling and finite-range checks",
+    "Lite power parser retains association and rejects concealed ungrouped negative bases"
   ],
-  "finishedAt": "2026-11-02T20:48:57.179Z",
+  "finishedAt": "2026-11-02T21:05:05.818Z",
   "status": "complete",
   "method": {
     "compilationTimeoutMs": 20000,

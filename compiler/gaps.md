@@ -21,8 +21,9 @@ self-hosting must be closed before switching defaults.
 
 ## Immediate migration priorities
 
-1. Power and remaining ordinary numeric annotations. Mixed Float arithmetic
-   now admits the nine previously blocked lesson programs; see its recorded gate.
+1. Common numeric annotations, then the remaining ordinary data/call/control
+   syntax. Mixed Float arithmetic and the power checkpoint are ported; all 20
+   implemented lessons now run on generated Lite.
 2. Missing ordinary binding/storage, tuple/array/List, call/function and
    block/conditional/loop/match/cleanup forms. Use the existing examples and
    focused syntax-family cases to decide the next dependency, rather than
@@ -44,19 +45,19 @@ Basic validation and normal runtime behavior remain part of each syntax port.
 
 The [current inventory](reports/current-t00-t11-inventory.md) and
 [raw observations](reports/current-t00-t11-inventory.json) use the generated
-seed `99b18ccf…`. All inputs compile/check against the current reference, both
+seed `2052e062…`. All inputs compile/check against the current reference, both
 execution paths use identical anonymous diagnostic naming, and raw-byte input
 probes follow the real CLI's lazy strict UTF-8 decoding. Historical reports stay
 unchanged. Refresh with `node compiler/scripts/t00-t11-inventory.ts --large-sources`.
 
-- Canonical features: 25/39 match; 14 rejected.
+- Canonical features: 26/39 match; 13 rejected.
 - Examples: 11/19 match; 8 rejected.
 - Implemented samples: 20/20 match; none rejected.
-- Isolated boundary probes: 39/81 match; 42 rejected; no differences among accepted probes.
+- Isolated boundary probes: 40/81 match; 41 rejected; no differences among accepted probes.
 - Library tests: 8/8 match. All 212 tracked Lite sources are accounted for;
   compile-only acceptance is distinguished from executed parity.
-- Total executed source cases: 103/167 match, 64 still fail. Compared with the
-  original inventory, 48 previously failing cases now match and none regress.
+- Total executed source cases: 105/167 match, 62 still fail. Compared with the
+  original inventory, 50 previously failing cases now match and none regress.
   The temporary-I/O case, retained function-tail probe, chain feature and two
   completion probes and the Float feature account for six additional matching
   cases. The completion probes separately expose corrected unreachable tails
@@ -134,9 +135,10 @@ Keep dependencies explicit; split a topic further when its contracts warrant it.
   TS/C. Broader arithmetic and numeric-width conversions remain separate.
 - [x] **Mixed Float arithmetic/comparisons:** binary64 operations, pairwise
   Int conversions, single evaluation, skipped faults and finite-result checks.
-- [ ] **Power:** existing right-associative exponentiation and ordinary operand
-  forms. Unselected contextual division/storage semantics are not a migration
-  dependency.
+- [x] **Power checkpoint:** right-associative Float-default power, explicit
+  negative-base grouping, positive exponents, lazy faults and TS/C lowering.
+  Final signed-exponent semantics and exhaustive libm rounding are later work;
+  unselected contextual division/storage semantics are not migration dependencies.
 - [ ] **Numeric widths:** explicit Int64/Float aliases, narrow types, promotion,
   lossless widening, checked narrow results and Float32 rounding.
 - [ ] **Block and conditional values:** statement-bearing blocks, Unit tails,
@@ -415,3 +417,20 @@ are mixed, with no general speedup claimed. See the
 Next: power and common numeric annotations, then the ordinary syntax blockers
 for the eight remaining examples and generated default workflows. Advanced edge
 coverage and native self-hosting remain later gates.
+
+Power checkpoint migration: generated TS/C now lower right-associative,
+Float-default positive-exponent power, preserving explicit negative-base grouping,
+operand effects and lazy positioned faults. T00's concealed-minus admission
+differs from the selected rule; Lite follows that rule without changing T00.
+All 276 full tests pass with zero skips (161.0 s); fast passes 264
+with 12 expected skips (109.8 s). Strict host/seeds, both 93-case
+corpora, 123 verifier executions, 39-feature coverage, nine editor groups and
+six optimized native sanitizer cases pass. Three generated generations match.
+Inventory: 105/167 matching, 62 remaining; 50 original failures closed, none
+regress. All 69 earlier TS/C fixture pairs remain byte-identical.
+The [power ledger](parity.md#power-checkpoint),
+[ladder](reports/2026-11-02-power-ladder.json) and
+[paired timing record](reports/2026-11-02-power-performance.json) retain evidence.
+Next: common numeric annotations, then remaining ordinary data/call/control
+syntax and the Lite-default workflow cutover. Advanced rounding/edge coverage
+remains deferred.

@@ -200,7 +200,7 @@ loads and compiles a target manifest once, runs it with fixed args/stdin, maps
 compiler diagnostics from flattened rows back to original files, and provides
 sha-256, nondeterminism and benchmark helpers. [`artifacts.ts`](artifacts.ts)
 strict-typechecks and runs emitted TS, and compiles/runs emitted C with
-`-std=c11 -Wall -Wextra -Werror`, capturing raw streams and status.
+`-std=c11 -Wall -Wextra -Werror` and the math library (`-lm`), capturing raw streams and status.
 TS runs capture stdout and stderr through fresh temporary regular files so
 synchronous generated writes cannot hit nonblocking-pipe `EAGAIN` or silently
 truncate a large write. Prompts, diagnostics and output before faults or explicit

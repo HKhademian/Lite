@@ -39,7 +39,7 @@ Binary operators at each level associate left to right. Parentheses override gro
 
 An optional leading + at a complete additive-chain entry leaves this grouping unchanged. Binary associativity does not authorize regrouping or reordering actual operations; ordinary operands still evaluate left to right under the separate [evaluation contract](evaluation-order.md#operator-operands).
 
-This selects the basic ladder, not a completed expression grammar. The `**` power spelling and explicit grouping at the unary-minus/base boundary are selected separately below. Power association, complete precedence/integration, operand/result typing, power updates, bitwise operations, and numeric conversions remain open. The [cross-language arithmetic comparison](arithmetic-operators-comparison.md) records primary sources and foreign-runtime probes without adopting their extra operators or numeric contracts.
+This selects the basic ladder, not a completed expression grammar. The `**` power spelling, association, Float-default checkpoint and explicit grouping at the unary-minus/base boundary are covered separately below. Complete expression integration, power updates, bitwise operations and numeric conversions remain open. The [cross-language arithmetic comparison](arithmetic-operators-comparison.md) records primary sources and foreign-runtime probes without adopting their extra operators or numeric contracts.
 
 ## Power and unary minus selected
 
@@ -47,7 +47,7 @@ Selected 2026-10-25: use `**` for power and reject an unparenthesized unary-minu
 
 This selects the spelling and grouping requirement, not a complete power contract. Right association, Float-default result typing and a positive-exponent checkpoint are selected on 2026-11-01; zero/negative exponents, exact overflow/faults and compiler-target lowering remain open. `**=` is not selected. See [power and negation](power-and-negation.md) for primary-source comparisons and the selected distinction from Python/Lua precedence.
 
-Implementation note, 2026-11-01: the igniter parses right-associative `**`, returns Float for admitted Int/Float operands, and rejects zero or negative exponents as unsupported. `2 ** 3` evaluates to Float 8. Compiler targets do not lower `**` yet.
+Implementation note, updated 2026-11-02: T00 and the Lite-generated TS/C targets parse right-associative `**`, return Float for admitted Int/Float operands, and reject zero or negative exponents as unsupported in this checkpoint. `2 ** 3` evaluates to Float 8. Generated helpers retain left-to-right evaluation and positioned runtime faults. See [power and negation](power-and-negation.md) for the selected grouping rule and limits.
 
 ## Division
 

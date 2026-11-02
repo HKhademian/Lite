@@ -592,7 +592,7 @@ async function runCompilerTarget(target: Target, source: string,
       const executable = join(directory, 'program');
       writeFileSync(cPath, emitted);
       const built = spawnSync(process.env['CC'] ?? 'cc', ['-std=c11', '-Wall', '-Wextra', '-Werror',
-        cPath, '-o', executable], { encoding: 'utf8', timeout: 30000 });
+        cPath, '-o', executable, '-lm'], { encoding: 'utf8', timeout: 30000 });
       if (built.error !== undefined) throw built.error;
       if (built.status !== 0) throw new Error(`C compiler failed: ${built.stdout}${built.stderr}`);
       const run = spawnSync(executable, [], { timeout: 5000 });
