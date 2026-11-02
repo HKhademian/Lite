@@ -9,7 +9,7 @@
  * needs.
  *
  * Usage:
- *   node compiler/scripts/run-ts-artifact.mjs --artifact T11.ts --source S.lts \
+ *   node compiler/scripts/run-ts-artifact.ts --artifact T11.ts --source S.lts \
  *     --out T12.ts [--err T12.err] [--args a,b] [--no-check]
  *
  * Exit status is the artifact's status when it ran, or the typecheck status when
@@ -25,7 +25,7 @@ import { fileURLToPath } from 'node:url';
 const repository = resolve(fileURLToPath(new URL('../..', import.meta.url)));
 
 /** Reads one required `--name value` option. */
-function required(options, name) {
+function required(options: ReadonlyMap<string, string>, name: string) {
   const value = options.get(name);
   if (value === undefined) {
     process.stderr.write(`missing --${name}\n`);
@@ -36,18 +36,18 @@ function required(options, name) {
 
 /** Builds the artifact typecheck config from the igniter's strict settings. */
 function checkOptions() {
-  const config = JSON.parse(readFileSync(join(repository, 'igniter', 'tsconfig.json'), 'utf8'));
+  const config = JSON.parse(readFileSync(join(repository, 'igniter', 'tsconfig.json'), 'utf8')) as { compilerOptions: Record<string, unknown> };
   return {
     compilerOptions: { ...config.compilerOptions, types: [], typeRoots: [], lib: ['ESNext'] },
-    files: [],
+    files: [] as string[],
   };
 }
 
 const raw = process.argv.slice(2);
-const options = new Map();
+const options = new Map<string, string>();
 for (let index = 0; index < raw.length; index += 1) {
   const argument = raw[index];
-  if (!argument.startsWith('--')) continue;
+  if (argument === undefined || !argument.startsWith('--')) continue;
   const name = argument.slice(2);
   if (name === 'no-check') {
     options.set(name, 'true');

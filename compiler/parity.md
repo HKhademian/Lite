@@ -101,13 +101,13 @@ three-node TS equality record.
 Regenerate and re-check the ladder with one command:
 
 ```sh
-node compiler/scripts/self-host.mjs --out /tmp/selfhost-run
+node compiler/scripts/self-host.ts --out /tmp/selfhost-run
 ```
 
 Corpus parity for an emitted compiler:
 
 ```sh
-node compiler/scripts/corpus-parity.mjs --artifact /tmp/T11.ts
+node compiler/scripts/corpus-parity.ts --artifact /tmp/T11.ts
 ```
 
 The 2026-11-02 run compared T11 with stage 0 over all 92 cases in 7.7 s with
@@ -122,11 +122,11 @@ node --input-type=module -e 'import {loadBundle} from "./igniter/loader.ts"; pro
 # T11 = stage 0 compiling S.
 node igniter/bundle-cli.ts ts /tmp/S.lts > /tmp/T11.ts
 # T12 = T11 compiling S; the runner typechecks T11 strictly first.
-node compiler/scripts/run-ts-artifact.mjs --artifact /tmp/T11.ts --source /tmp/S.lts --out /tmp/T12.ts
+node compiler/scripts/run-ts-artifact.ts --artifact /tmp/T11.ts --source /tmp/S.lts --out /tmp/T12.ts
 shasum -a 256 /tmp/S.lts /tmp/T11.ts /tmp/T12.ts
 ```
 
-Slow-stage-0 compiles take minutes, so `compiler/scripts/run-ts-artifact.mjs`
+Slow-stage-0 compiles take minutes, so `compiler/scripts/run-ts-artifact.ts`
 keeps the artifact contract while dropping the harness's ten-second cap.
 
 Completion requires all of:

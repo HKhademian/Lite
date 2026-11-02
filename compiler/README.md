@@ -19,7 +19,7 @@ language decision.
 source. Unchanged S uses the seed directly. Changed S is compiled by T11 and
 strictly typechecked before publication under a source/builder-keyed
 `.cache/compiler/` directory. Corrupt seeds/caches and rejected rebuilds fail
-explicitly; there is no silent T00 fallback. `node compiler/scripts/build.mjs`
+explicitly; there is no silent T00 fallback. `node compiler/scripts/build.ts`
 selects or rebuilds both target compilers and prints their provenance. The
 [text-cache optimization](../benchmark/reports/2026-11-02-text-cache.md) reduces
 current full-source self-compilation to a 668 ms median on the recorded machine,
@@ -67,12 +67,12 @@ P4 the parser under `src/`; `runtime/ts/` contains the P6 runtime support.
 
 Historical self-hosting runs outlasted the ten-second cap in
 [`../igniter/artifacts.ts`](../igniter/artifacts.ts). The ladder uses
-[`scripts/run-ts-artifact.mjs`](scripts/run-ts-artifact.mjs). It applies the same
+[`scripts/run-ts-artifact.ts`](scripts/run-ts-artifact.ts). It applies the same
 strict artifact typecheck and `main()` adapter, then runs the artifact with fixed
 stdin and no timeout:
 
 ```sh
-node compiler/scripts/run-ts-artifact.mjs \
+node compiler/scripts/run-ts-artifact.ts \
   --artifact /tmp/T11.ts --source /tmp/S.lts --out /tmp/T12.ts
 ```
 
@@ -108,9 +108,9 @@ compiler slice first. The remaining stage-0 versus generated gap is tracked in
 | [`generated/report-42.c`](generated/report-42.c) | Checked-in C reference for `report(42);` |
 | [`generated/run-report.ts`](generated/run-report.ts) | Visible Node adapter for the TS reference |
 | [`generated/baseline-artifacts.json`](generated/baseline-artifacts.json) | P0 emitted-artifact hashes for the 50 program cases |
-| [`scripts/run-ts-artifact.mjs`](scripts/run-ts-artifact.mjs) | Strict-typechecks and runs one emitted TS artifact with fixed stdin and no harness timeout |
-| [`scripts/self-host.mjs`](scripts/self-host.mjs) | Runs the S → T11 → T12 ladder and reports hashes and fixed-point status |
-| [`scripts/corpus-parity.mjs`](scripts/corpus-parity.mjs) | Compares an emitted TS compiler with stage 0 across every compiler corpus case |
+| [`scripts/run-ts-artifact.ts`](scripts/run-ts-artifact.ts) | Strict-typechecks and runs one emitted TS artifact with fixed stdin and no harness timeout |
+| [`scripts/self-host.ts`](scripts/self-host.ts) | Runs the S → T11 → T12 ladder and reports hashes and fixed-point status |
+| [`scripts/corpus-parity.ts`](scripts/corpus-parity.ts) | Compares an emitted TS compiler with stage 0 across every compiler corpus case |
 
 The backend source is split by role and assembled by manifest order. The
 compatibility `ts-emitter.lts` and `c-emitter.lts` files are generated flattened

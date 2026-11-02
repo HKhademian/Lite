@@ -3,11 +3,12 @@ import { readFileSync, writeSync } from 'node:fs';
 import { pathToFileURL } from 'node:url';
 
 const [engine, artifact, sourceName] = process.argv.slice(2);
+if (artifact === undefined || sourceName === undefined) throw new Error('missing compiler artifact or source name');
 const source = engine === 'T11' ? undefined : readFileSync(0, 'utf8');
 const started = performance.now();
 const cpuStarted = process.cpuUsage();
-let loaded;
-let result;
+let loaded = started;
+let result: { status: number; stdout: Buffer; stderr: Buffer };
 let metricsWritten = false;
 function writeMetrics() {
   if (metricsWritten) return;
@@ -23,21 +24,24 @@ function writeMetrics() {
   }));
 }
 if (engine === 'T11') {
-  const { main } = await import(pathToFileURL(artifact).href);
+  const module: unknown = await import(pathToFileURL(artifact).href);
+  if (typeof module !== 'object' || module === null || !('main' in module) || typeof module.main !== 'function') throw new Error('missing main');
+  const entry = module.main;
+  const main = (): string => { const value: unknown = entry(); if (typeof value !== 'string') throw new Error('invalid main result'); return value; };
   process.argv = [process.execPath, artifact, sourceName];
   loaded = performance.now();
   const exit = process.exit;
-  process.exit = code => { writeMetrics(); exit(code); };
+  process.exit = code => { writeMetrics(); return exit(code); };
   result = { status: 0, stdout: Buffer.from(main()), stderr: Buffer.alloc(0) };
 } else if (engine === 'T00+S') {
   const { loadCompiler } = await import('../igniter/bootstrap.ts');
   const compiler = loadCompiler(new URL('../compiler/manifests/ts.json', import.meta.url).pathname);
   loaded = performance.now();
-  result = compiler.compile({ text: source, name: sourceName });
+  result = compiler.compile({ text: source ?? '', name: sourceName });
 } else if (engine === 'T00-frontend') {
   const { compile } = await import('../igniter/lite.ts');
   loaded = performance.now();
-  compile(source);
+  compile(source ?? '');
   result = { status: 0, stdout: Buffer.alloc(0), stderr: Buffer.alloc(0) };
 } else {
   throw new Error(`unknown measurement engine: ${engine}`);

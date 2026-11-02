@@ -2517,7 +2517,7 @@ test('emitted TS and igniter outputs match byte for byte across the admitted com
 test('checked-in TS output and explicit Node adapter typecheck and reproduce the reference bytes', () => {
   const root = new URL('../', import.meta.url).pathname;
   const checked = spawnSync(process.execPath, [join(root, 'igniter/node_modules/typescript/bin/tsc'),
-    '-p', join(root, 'compiler/generated')], { encoding: 'utf8', timeout: 30000 });
+    '-p', join(root, 'igniter/tsconfig.json')], { encoding: 'utf8', timeout: 30000 });
   assert.equal(checked.error, undefined); assert.equal(checked.status, 0, checked.stdout + checked.stderr);
   const result = spawnSync(process.execPath, [join(root, 'compiler/generated/run-report.ts')], { timeout: 5000 });
   assert.equal(result.error, undefined); assert.equal(result.status, 0);

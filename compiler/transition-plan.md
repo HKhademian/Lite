@@ -36,6 +36,14 @@ features may be ported; new syntax, builtins and semantics still require approva
 
 ## Done
 
+- 2026-11-02: owner-required [code-file policy](../docs/tooling-source-policy.md)
+  converts compiler/benchmark/challenge tooling and editor tests to strictly
+  checked TS. Command aliases link to TS entries, the JSX report is removed,
+  and only igniter/bootstrap tsconfigs remain. Compiler seeds and challenge data
+  are unchanged. A regression check enforces the permitted source types. Full
+  suite 246/246 (zero skips), fast 237/9 expected skips, 9 editor groups, both
+  92-case compiler comparisons and 1,811 rebuilt dataset files pass. This does
+  not advance the remaining language/native feature milestones.
 - 2026-11-02: generated text helpers share a bounded cache of eight immutable
   code-point views, eliminating repeated whole-source copies during scanning.
   The [benchmark](../benchmark/reports/2026-11-02-text-cache.md) records 23.91×
@@ -96,8 +104,8 @@ features may be ported; new syntax, builtins and semantics still require approva
 - [Existing bundle CLI](../igniter/bundle-cli.ts)
 - [Verifier](../igniter/verify.ts)
 - [Artifact runner](../igniter/artifacts.ts)
-- [TS ladder](scripts/self-host.mjs)
-- [Corpus parity](scripts/corpus-parity.mjs)
+- [TS ladder](scripts/self-host.ts)
+- [Corpus parity](scripts/corpus-parity.ts)
 - [Measured T00/T11 support inventory](reports/2026-11-02-t00-t11-inventory.md)
 
 ## Implementation order

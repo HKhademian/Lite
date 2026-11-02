@@ -8,7 +8,7 @@
  * status for every program and rejection case.
  *
  * Usage:
- *   node compiler/scripts/corpus-parity.mjs --artifact /tmp/T11.ts [--target ts|c]
+ *   node compiler/scripts/corpus-parity.ts --artifact /tmp/T11.ts [--target ts|c]
  *
  * Prints one JSON summary and exits nonzero on the first mismatches.
  */
@@ -25,17 +25,17 @@ const { loadCompiler } = await import('../../igniter/bootstrap.ts');
 const arguments_ = process.argv.slice(2);
 const artifactIndex = arguments_.indexOf('--artifact');
 if (artifactIndex < 0 || arguments_[artifactIndex + 1] === undefined) {
-  process.stderr.write('usage: node compiler/scripts/corpus-parity.mjs --artifact T11.ts\n');
+  process.stderr.write('usage: node compiler/scripts/corpus-parity.ts --artifact T11.ts\n');
   process.exit(64);
 }
-const artifactPath = resolve(arguments_[artifactIndex + 1]);
+const artifactPath = resolve(arguments_[artifactIndex + 1]!);
 const targetIndex = arguments_.indexOf('--target');
 const target = targetIndex < 0 ? 'ts' : arguments_[targetIndex + 1];
 if (target !== 'ts' && target !== 'c') throw new Error('--target must be ts or c');
 
 /** Reads one artifact typecheck config from the igniter's strict settings. */
 function checkOptions() {
-  const config = JSON.parse(readFileSync(join(repository, 'igniter', 'tsconfig.json'), 'utf8'));
+  const config = JSON.parse(readFileSync(join(repository, 'igniter', 'tsconfig.json'), 'utf8')) as { compilerOptions: Record<string, unknown> };
   return { compilerOptions: { ...config.compilerOptions, types: [], typeRoots: [], lib: ['ESNext'] } };
 }
 
@@ -67,7 +67,7 @@ try {
   /** Mismatches stay in corpus order; only the first few are reported. */
   const mismatches = [];
   for (const manifestName of manifests) {
-    const manifest = JSON.parse(readFileSync(join(fixtures, manifestName), 'utf8'));
+    const manifest = JSON.parse(readFileSync(join(fixtures, manifestName), 'utf8')) as { source: { file: string } };
     const sourcePath = join(fixtures, manifest.source.file);
     const source = readFileSync(sourcePath, 'utf8');
     const expected = compiler.compile({ text: source, name: sourcePath });

@@ -19,8 +19,8 @@ this igniter's supported language. The refreshed T11/T12/T13 fixed point covers
 the bootstrap subset; full existing T00 feature parity and the native C ladder
 remain pending. The [text-cache benchmark](../benchmark/reports/2026-11-02-text-cache.md)
 records 668 ms median self-compilation after eliminating repeated whole-source
-code-point copies. The current test suite has 235 interpreter groups and 7
-compiler-host groups, with 9 separate editor grammar groups.
+code-point copies. The current test suite has 235 interpreter groups, 7
+compiler-host groups and 4 policy/tooling groups, with 9 separate editor grammar groups.
 
 ## Run
 
@@ -78,7 +78,8 @@ Run tests through the CLI:
 ./lite test          # full local gate; cached native builds
 ```
 
-The root [lite launcher](../lite) is an executable POSIX shell script. It forwards
+The root [lite launcher](../lite) links to the executable TypeScript entry
+[`launcher.ts`](launcher.ts). It forwards
 run to `node igniter/cli.ts` using node from PATH, preserving arguments, stdin,
 output and exit status. It locates the igniter relative to itself while source
 paths stay relative to the caller's working directory. No installation, build or
@@ -805,8 +806,8 @@ Run the compiler with:
 Inspect the checked-in [TS reference](../compiler/generated/report-42.ts),
 [explicit adapter](../compiler/generated/run-report.ts), and
 [C reference](../compiler/generated/report-42.c). Strictly check the TS
-reference/adapter with
-node igniter/node_modules/typescript/bin/tsc -p compiler/generated.
+reference/adapter with the shared igniter check:
+`node igniter/node_modules/typescript/bin/tsc -p igniter/tsconfig.json`.
 
 The TS backend lowers Int expressions to runtime BigInt, folds closed String
 expressions into escaped literals, and formats multi-value reports. The C backend

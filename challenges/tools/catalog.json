@@ -1,0 +1,542 @@
+{
+  "CATEGORIES": {
+    "algorithms": "Classic algorithmic problem solving: arrays, sorting, DP, graphs, ...",
+    "data-structures": "Implement or reason about a data structure.",
+    "mathematics": "Number theory, combinatorics, geometry, probability.",
+    "databases": "SQL / relational query problems.",
+    "shell": "Unix shell and command-line problems.",
+    "concurrency": "Threads, locks, async and parallel coordination.",
+    "javascript": "JavaScript-language-specific exercises.",
+    "data-analysis": "Tabular data manipulation (pandas-style).",
+    "security": "Cryptography and security challenges.",
+    "bioinformatics": "String and sequence problems over biological data.",
+    "puzzles": "Story-driven or puzzle-first problems (Advent of Code style).",
+    "frontend": "UI, CSS and browser challenges.",
+    "system-design": "Architecture and design interview questions."
+  },
+  "LC_TOPICS": {
+    "Array": "arrays",
+    "String": "strings",
+    "Hash Table": "hash-table",
+    "Hash Function": "hashing",
+    "Dynamic Programming": "dynamic-programming",
+    "Depth-First Search": "dfs",
+    "Breadth-First Search": "bfs",
+    "Binary Search": "binary-search",
+    "Two Pointers": "two-pointers",
+    "Sliding Window": "sliding-window",
+    "Linked List": "linked-list",
+    "Doubly-Linked List": "doubly-linked-list",
+    "Stack": "stack",
+    "Queue": "queue",
+    "Heap (Priority Queue)": "heap",
+    "Monotonic Stack": "monotonic-stack",
+    "Monotonic Queue": "monotonic-queue",
+    "Graph": "graphs",
+    "Tree": "trees",
+    "Binary Tree": "binary-tree",
+    "Binary Search Tree": "binary-search-tree",
+    "Trie": "trie",
+    "Union Find": "union-find",
+    "Segment Tree": "segment-tree",
+    "Binary Indexed Tree": "fenwick-tree",
+    "Matrix": "matrix",
+    "Math": "math",
+    "Number Theory": "number-theory",
+    "Combinatorics": "combinatorics",
+    "Geometry": "geometry",
+    "Bit Manipulation": "bit-manipulation",
+    "Bitmask": "bitmask",
+    "Recursion": "recursion",
+    "Memoization": "memoization",
+    "Backtracking": "backtracking",
+    "Greedy": "greedy",
+    "Sort": "sorting",
+    "Sorting": "sorting",
+    "Counting": "counting",
+    "Enumeration": "enumeration",
+    "Simulation": "simulation",
+    "Divide and Conquer": "divide-and-conquer",
+    "Design": "design",
+    "Database": "databases",
+    "Shell": "shell",
+    "Concurrency": "concurrency",
+    "JavaScript": "javascript",
+    "Pandas": "pandas",
+    "Brainteaser": "brainteaser",
+    "Interactive": "interactive",
+    "Randomized": "randomized",
+    "Quickselect": "quickselect",
+    "Topological Sort": "topological-sort",
+    "Shortest Path": "shortest-path",
+    "Minimum Spanning Tree": "minimum-spanning-tree",
+    "Strongly Connected Component": "strongly-connected-component",
+    "Biconnected Component": "biconnected-component",
+    "Eulerian Circuit": "eulerian-circuit",
+    "Prefix Sum": "prefix-sum",
+    "Suffix Array": "suffix-array",
+    "Rolling Hash": "rolling-hash",
+    "String Matching": "string-matching",
+    "Game Theory": "game-theory",
+    "Probability and Statistics": "probability",
+    "Data Stream": "data-stream",
+    "Iterator": "iterator",
+    "Merge Sort": "merge-sort",
+    "Radix Sort": "radix-sort",
+    "Bucket Sort": "bucket-sort",
+    "Counting Sort": "counting-sort",
+    "Line Sweep": "sweep-line",
+    "Ordered Set": "ordered-set",
+    "Reservoir Sampling": "reservoir-sampling",
+    "Rejection Sampling": "rejection-sampling"
+  },
+  "CF_TAGS": {
+    "*special": "special",
+    "2-sat": "2-sat",
+    "binary search": "binary-search",
+    "bitmasks": "bitmask",
+    "brute force": "brute-force",
+    "chinese remainder theorem": "chinese-remainder-theorem",
+    "combinatorics": "combinatorics",
+    "communication": "communication",
+    "constructive algorithms": "constructive-algorithms",
+    "data structures": "data-structures",
+    "dfs and similar": "dfs",
+    "divide and conquer": "divide-and-conquer",
+    "dp": "dynamic-programming",
+    "dsu": "union-find",
+    "expression parsing": "parsing",
+    "fft": "fft",
+    "flows": "network-flow",
+    "games": "game-theory",
+    "geometry": "geometry",
+    "graph matchings": "graph-matching",
+    "graphs": "graphs",
+    "greedy": "greedy",
+    "hashing": "hashing",
+    "implementation": "implementation",
+    "interactive": "interactive",
+    "math": "math",
+    "matrices": "matrix",
+    "meet-in-the-middle": "meet-in-the-middle",
+    "number theory": "number-theory",
+    "probabilities": "probability",
+    "schedules": "scheduling",
+    "shortest paths": "shortest-path",
+    "sortings": "sorting",
+    "string suffix structures": "suffix-array",
+    "strings": "strings",
+    "ternary search": "ternary-search",
+    "trees": "trees",
+    "two pointers": "two-pointers"
+  },
+  "CSES_SECTIONS": {
+    "Introductory Problems": [
+      [
+        "implementation",
+        "simulation",
+        "math"
+      ],
+      2.0
+    ],
+    "Sorting and Searching": [
+      [
+        "sorting",
+        "binary-search",
+        "two-pointers"
+      ],
+      3.0
+    ],
+    "Dynamic Programming": [
+      [
+        "dynamic-programming"
+      ],
+      4.5
+    ],
+    "Graph Algorithms": [
+      [
+        "graphs",
+        "shortest-path",
+        "dfs",
+        "bfs"
+      ],
+      4.5
+    ],
+    "Range Queries": [
+      [
+        "range-queries",
+        "segment-tree",
+        "fenwick-tree"
+      ],
+      4.5
+    ],
+    "Tree Algorithms": [
+      [
+        "trees",
+        "dfs"
+      ],
+      4.5
+    ],
+    "Mathematics": [
+      [
+        "math",
+        "number-theory",
+        "combinatorics"
+      ],
+      5.5
+    ],
+    "String Algorithms": [
+      [
+        "strings",
+        "string-matching"
+      ],
+      4.5
+    ],
+    "Geometry": [
+      [
+        "geometry"
+      ],
+      5.5
+    ],
+    "Advanced Techniques": [
+      [
+        "advanced-techniques"
+      ],
+      7.0
+    ],
+    "Sliding Window Problems": [
+      [
+        "sliding-window"
+      ],
+      5.0
+    ],
+    "Interactive Problems": [
+      [
+        "interactive"
+      ],
+      5.0
+    ],
+    "Bitwise Operations": [
+      [
+        "bit-manipulation"
+      ],
+      5.0
+    ],
+    "Construction Problems": [
+      [
+        "constructive-algorithms"
+      ],
+      5.5
+    ],
+    "Advanced Graph Problems": [
+      [
+        "graphs",
+        "network-flow"
+      ],
+      7.0
+    ],
+    "Counting Problems": [
+      [
+        "combinatorics",
+        "counting"
+      ],
+      6.0
+    ],
+    "Additional Problems I": [
+      [
+        "mixed"
+      ],
+      6.0
+    ],
+    "Additional Problems II": [
+      [
+        "mixed"
+      ],
+      6.5
+    ]
+  },
+  "CRYPTOPALS_SETS": {
+    "1": [
+      "Basics",
+      [
+        "cryptography",
+        "encoding",
+        "xor"
+      ]
+    ],
+    "2": [
+      "Block crypto",
+      [
+        "cryptography",
+        "aes",
+        "block-ciphers"
+      ]
+    ],
+    "3": [
+      "Block & stream crypto",
+      [
+        "cryptography",
+        "aes",
+        "stream-ciphers"
+      ]
+    ],
+    "4": [
+      "Stream crypto and randomness",
+      [
+        "cryptography",
+        "randomness",
+        "mt19937"
+      ]
+    ],
+    "5": [
+      "Diffie-Hellman and friends",
+      [
+        "cryptography",
+        "diffie-hellman"
+      ]
+    ],
+    "6": [
+      "RSA and DSA",
+      [
+        "cryptography",
+        "rsa"
+      ]
+    ],
+    "7": [
+      "Hashes",
+      [
+        "cryptography",
+        "hashing",
+        "length-extension"
+      ]
+    ],
+    "8": [
+      "Abstract algebra",
+      [
+        "cryptography",
+        "abstract-algebra"
+      ]
+    ]
+  },
+  "TOPIC_GROUPS": {
+    "arrays": "data-structures",
+    "linked-list": "data-structures",
+    "doubly-linked-list": "data-structures",
+    "stack": "data-structures",
+    "queue": "data-structures",
+    "heap": "data-structures",
+    "hash-table": "data-structures",
+    "hashing": "data-structures",
+    "trie": "data-structures",
+    "union-find": "data-structures",
+    "segment-tree": "data-structures",
+    "fenwick-tree": "data-structures",
+    "ordered-set": "data-structures",
+    "matrix": "data-structures",
+    "data-stream": "data-structures",
+    "iterator": "data-structures",
+    "monotonic-stack": "data-structures",
+    "monotonic-queue": "data-structures",
+    "trees": "data-structures",
+    "binary-tree": "data-structures",
+    "binary-search-tree": "data-structures",
+    "data-structures": "data-structures",
+    "range-queries": "data-structures",
+    "bit-manipulation": "techniques",
+    "graphs": "graphs",
+    "dfs": "graphs",
+    "bfs": "graphs",
+    "topological-sort": "graphs",
+    "shortest-path": "graphs",
+    "minimum-spanning-tree": "graphs",
+    "strongly-connected-component": "graphs",
+    "biconnected-component": "graphs",
+    "eulerian-circuit": "graphs",
+    "network-flow": "graphs",
+    "graph-matching": "graphs",
+    "2-sat": "graphs",
+    "dynamic-programming": "dynamic-programming",
+    "memoization": "dynamic-programming",
+    "bitmask": "dynamic-programming",
+    "math": "mathematics",
+    "number-theory": "mathematics",
+    "combinatorics": "mathematics",
+    "geometry": "mathematics",
+    "probability": "mathematics",
+    "game-theory": "mathematics",
+    "chinese-remainder-theorem": "mathematics",
+    "fft": "mathematics",
+    "modular-arithmetic": "mathematics",
+    "strings": "strings",
+    "string-matching": "strings",
+    "suffix-array": "strings",
+    "rolling-hash": "strings",
+    "parsing": "strings",
+    "sorting": "techniques",
+    "binary-search": "techniques",
+    "two-pointers": "techniques",
+    "sliding-window": "techniques",
+    "prefix-sum": "techniques",
+    "sweep-line": "techniques",
+    "greedy": "techniques",
+    "backtracking": "techniques",
+    "recursion": "techniques",
+    "divide-and-conquer": "techniques",
+    "quickselect": "techniques",
+    "meet-in-the-middle": "techniques",
+    "ternary-search": "techniques",
+    "constructive-algorithms": "techniques",
+    "brute-force": "techniques",
+    "implementation": "techniques",
+    "simulation": "techniques",
+    "enumeration": "techniques",
+    "counting": "techniques",
+    "advanced-techniques": "techniques",
+    "randomized": "techniques",
+    "communication": "techniques",
+    "special": "techniques",
+    "scheduling": "techniques",
+    "mixed": "techniques",
+    "merge-sort": "techniques",
+    "radix-sort": "techniques",
+    "bucket-sort": "techniques",
+    "counting-sort": "techniques",
+    "reservoir-sampling": "techniques",
+    "rejection-sampling": "techniques",
+    "databases": "systems",
+    "shell": "systems",
+    "concurrency": "systems",
+    "javascript": "systems",
+    "pandas": "systems",
+    "design": "systems",
+    "interactive": "systems",
+    "brainteaser": "systems",
+    "cryptography": "domain",
+    "encoding": "domain",
+    "xor": "domain",
+    "aes": "domain",
+    "block-ciphers": "domain",
+    "stream-ciphers": "domain",
+    "randomness": "domain",
+    "mt19937": "domain",
+    "diffie-hellman": "domain",
+    "rsa": "domain",
+    "length-extension": "domain",
+    "abstract-algebra": "domain",
+    "bioinformatics": "domain",
+    "security": "domain",
+    "frontend": "domain"
+  },
+  "TOPIC_LABELS": {
+    "dfs": "DFS",
+    "bfs": "BFS",
+    "fft": "FFT",
+    "2-sat": "2-SAT",
+    "aes": "AES",
+    "rsa": "RSA",
+    "xor": "XOR",
+    "mt19937": "MT19937",
+    "javascript": "JavaScript",
+    "diffie-hellman": "Diffie-Hellman",
+    "aho-corasick": "Aho-Corasick",
+    "kmp": "KMP",
+    "lca": "LCA",
+    "sql": "SQL",
+    "api": "API",
+    "ui": "UI"
+  },
+  "DIFFICULTY_BANDS": [
+    {
+      "id": "beginner",
+      "min": 1.0,
+      "max": 2.0
+    },
+    {
+      "id": "easy",
+      "min": 2.1,
+      "max": 4.0
+    },
+    {
+      "id": "intermediate",
+      "min": 4.1,
+      "max": 6.0
+    },
+    {
+      "id": "advanced",
+      "min": 6.1,
+      "max": 8.0
+    },
+    {
+      "id": "expert",
+      "min": 8.1,
+      "max": 10.0
+    }
+  ],
+  "SOURCE_INFO": [
+    [
+      "advent-of-code",
+      "Advent of Code",
+      "https://adventofcode.com",
+      "Annual 25-day (12 in 2025) two-part holiday puzzle event, 2015-2025."
+    ],
+    [
+      "project-euler",
+      "Project Euler",
+      "https://projecteuler.net",
+      "Mathematical/computational problems, one numeric answer each."
+    ],
+    [
+      "leetcode",
+      "LeetCode",
+      "https://leetcode.com",
+      "Interview-style function problems; free problems only, with topics."
+    ],
+    [
+      "codeforces",
+      "Codeforces",
+      "https://codeforces.com",
+      "Competitive programming; 800 most-solved rated problems with tags."
+    ],
+    [
+      "cses",
+      "CSES Problem Set",
+      "https://cses.fi/problemset/",
+      "400-task competitive programming set with 18 topic sections."
+    ],
+    [
+      "atcoder",
+      "AtCoder",
+      "https://atcoder.jp",
+      "ABC/ARC/AGC problems with community difficulty estimates."
+    ],
+    [
+      "rosalind",
+      "Rosalind",
+      "https://rosalind.info",
+      "Bioinformatics programming challenges."
+    ],
+    [
+      "cryptopals",
+      "Cryptopals",
+      "https://cryptopals.com",
+      "The Matasano crypto challenges, 8 sets of 8."
+    ],
+    [
+      "jane-street",
+      "Jane Street Puzzles",
+      "https://www.janestreet.com/puzzles/",
+      "Monthly quantitative trading puzzles."
+    ]
+  ],
+  "SOURCE_ORDER": [
+    "advent-of-code",
+    "project-euler",
+    "leetcode",
+    "codeforces",
+    "cses",
+    "atcoder",
+    "rosalind",
+    "cryptopals",
+    "jane-street"
+  ]
+}

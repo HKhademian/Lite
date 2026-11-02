@@ -67,7 +67,7 @@ T11 == T12 == T13 for its exact source snapshot. Generated text scanning reuses
 bounded code-point views; the current self-build median is 668 ms in the
 [before/after benchmark](../benchmark/reports/2026-11-02-text-cache.md), excluding
 strict checking. Current tests include 235 interpreter groups, 7 compiler-host
-groups and 9 editor grammar groups; the historical P0 counts below remain fixed.
+groups, 4 policy/tooling groups and 9 editor grammar groups; the historical P0 counts below remain fixed.
 
 ## Historical P0 baseline, 2026-11-01
 
@@ -213,6 +213,13 @@ requires the project owner's explicit selection and an update to this page and t
     do not mix unrelated work, version bumps or release tags. Release tagging
     stays a separate gate action under rule 10 and the
     [versioning policy](versioning-and-naming.md#9-release-and-tagging).
+15. **Keep project-owned code in the approved file types.** Use `.lt`, `.lts`,
+    `.lite`, `.ts` and JSON. Generated TS/C artifacts remain allowed. Command
+    aliases link to TypeScript entries; do not add Python, JS, MJS, CommonJS,
+    shell or JSX source files. Keep only the igniter and bootstrap TypeScript
+    configurations, and include maintained tooling in the shared strict check.
+    Documentation, fixture data, workflow configuration and editor assets retain
+    their normal formats. `igniter/source-files.test.ts` enforces this policy.
 
 ## Phase map
 

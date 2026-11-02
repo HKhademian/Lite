@@ -73,15 +73,15 @@ in the same repository.
 ## Rebuilding
 
 ```bash
-python3 tools/fetch_benchmark_euler.py
-python3 tools/build_benchmark_euler.py
+node tools/fetch_benchmark_euler.ts
+node tools/build_benchmark_euler.ts
 
-python3 tools/fetch_benchmark_leetcode.py
-python3 tools/build_benchmark_leetcode.py
+node tools/fetch_benchmark_leetcode.ts
+node tools/build_benchmark_leetcode.ts
 
-python3 tools/validate_benchmark.py
+node tools/validate_benchmark.ts
 ```
 
 The build scripts are idempotent and regenerate `items.jsonl` and `index.json`.
-`tools/validate_benchmark.py` checks every item directory, statement, test count
+`tools/validate_benchmark.ts` checks every item directory, statement, test count
 and reference URL shape.

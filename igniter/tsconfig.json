@@ -18,8 +18,23 @@
     "allowUnreachableCode": false,
     "allowUnusedLabels": false,
     "forceConsistentCasingInFileNames": true,
-    "types": ["node"],
-    "lib": ["ESNext"]
+    "types": [
+      "node"
+    ],
+    "lib": [
+      "ESNext"
+    ]
   },
-  "include": ["*.ts", "../compiler/*.ts", "../compiler/bootstrap/*-seed.ts", "../compiler/bootstrap/seed.ts", "../compiler/tests/host.test.ts"]
+  "include": [
+    "*.ts",
+    "../compiler/*.ts",
+    "../compiler/bootstrap/*-seed.ts",
+    "../compiler/bootstrap/seed.ts",
+    "../compiler/tests/host.test.ts",
+    "../compiler/scripts/*.ts",
+    "../benchmark/*.ts",
+    "../editors/vscode/test/*.ts",
+    "../challenges/tools/*.ts",
+    "../compiler/generated/*.ts"
+  ]
 }

@@ -1,11 +1,18 @@
-const assert = require('node:assert/strict');
-const { existsSync, readFileSync, readdirSync } = require('node:fs');
-const path = require('node:path');
-const { test } = require('node:test');
-const { Registry, parseRawGrammar, INITIAL } = require('vscode-textmate');
-const oniguruma = require('vscode-oniguruma');
+/// <reference lib="dom" />
+import assert from 'node:assert/strict';
+import { existsSync, readFileSync, readdirSync } from 'node:fs';
+import path from 'node:path';
+import { createRequire } from 'node:module';
+import { fileURLToPath } from 'node:url';
+const require = createRequire(import.meta.url);
+import { test } from 'node:test';
+import textmate from 'vscode-textmate';
+import type { IToken } from 'vscode-textmate';
+const { Registry, parseRawGrammar, INITIAL } = textmate;
+import oniguruma from 'vscode-oniguruma';
 
-const root = path.join(__dirname, '..');
+const root = fileURLToPath(new URL('../', import.meta.url));
+type Row = { line: string; tokens: IToken[] };
 const registry = new Registry({
   onigLib: oniguruma.loadWASM(readFileSync(require.resolve('vscode-oniguruma/release/onig.wasm'))).then(() => ({
     createOnigScanner: patterns => new oniguruma.OnigScanner(patterns),
@@ -16,7 +23,7 @@ const registry = new Registry({
 });
 const ready = registry.loadGrammar('source.lite');
 
-async function tokenize(source) {
+async function tokenize(source: string): Promise<Row[]> {
   const grammar = await ready;
   assert.ok(grammar);
   let state = INITIAL;
@@ -27,16 +34,17 @@ async function tokenize(source) {
     return { line, tokens: result.tokens };
   });
 }
-function scopesAt(rows, line, needle) {
+function scopesAt(rows: Row[], line: number, needle: string) {
   const row = rows[line];
+  assert.ok(row);
   const start = row.line.indexOf(needle);
   assert.notEqual(start, -1, needle);
   const token = row.tokens.find(token => token.startIndex <= start && start < token.endIndex);
   assert.ok(token, needle);
   return token.scopes;
 }
-function has(rows, line, needle, scope) { assert.ok(scopesAt(rows, line, needle).includes(scope), `${needle}: ${scope}`); }
-function lacks(rows, line, needle, scope) { assert.ok(!scopesAt(rows, line, needle).includes(scope), `${needle}: unexpected ${scope}`); }
+function has(rows: Row[], line: number, needle: string, scope: string) { assert.ok(scopesAt(rows, line, needle).includes(scope), `${needle}: ${scope}`); }
+function lacks(rows: Row[], line: number, needle: string, scope: string) { assert.ok(!scopesAt(rows, line, needle).includes(scope), `${needle}: unexpected ${scope}`); }
 
 test('ordinary Lite declarations, calls, scalar types, literals and Unicode identifiers', async () => {
   const rows = await tokenize('double := fn(n: Int): Int { n * 2 }\nvar شمارنده := 1.25e-3;\nreport(double(4));\nif true and not false { return Unit; }');
@@ -61,7 +69,7 @@ test('ordinary Lite declarations, calls, scalar types, literals and Unicode iden
   has(inferred, 1, 'mut', 'storage.modifier.lite');
   has(inferred, 1, 'other', 'variable.other.lite');
   has(inferred, 0, 'inputArgs', 'entity.name.function.call.lite');
-  const manifest = JSON.parse(readFileSync(path.join(root, 'package.json'), 'utf8'));
+  const manifest = JSON.parse(readFileSync(path.join(root, 'package.json'), 'utf8')) as { contributes: { languages: [{ extensions: string[]; icon: Record<string, string> }] } };
   assert.deepEqual(manifest.contributes.languages[0].extensions, ['.lt', '.lts', '.lite']);
   for (const icon of Object.values(manifest.contributes.languages[0].icon)) {
     assert.ok(existsSync(path.join(root, icon)), icon);
@@ -84,7 +92,7 @@ test('ordinary comments nest; quotes do not shield inner delimiters', async () =
 });
 test('raw fences use the exact hash count and ignore ordinary delimiters', async () => {
   const rows = await tokenize('/*## raw\n#*/ shorter\n###*/ longer\n/* " if */ remains raw\n##*/ report(2);');
-  for (const [line, text] of [[1, 'shorter'], [2, 'longer'], [3, 'if']]) has(rows, line, text, 'comment.block.raw.lite');
+  for (const [line, text] of ([[1, 'shorter'], [2, 'longer'], [3, 'if']] as const)) has(rows, line, text, 'comment.block.raw.lite');
   has(rows, 4, 'report', 'entity.name.function.call.lite');
   const one = await tokenize('/*# ##*/ still raw #*/ report(1);');
   has(one, 0, 'still', 'comment.block.raw.lite');
@@ -109,8 +117,8 @@ test('no line comments, invented builtin classification, or keyword matches with
 test('long operators stay intact; leading-dot access is not a fractional literal', async () => {
   const operators = ['=!=', '<!=', '>!=', '<!', '>!', '<=', '>=', '==', '<', '>', ':/=', ':%=', ':/', ':%', ':='];
   const rows = await tokenize(operators.join(' ') + ' @outer .5 0.5');
-  const operatorTokens = rows[0].tokens.filter(t => t.scopes.includes('keyword.operator.lite'))
-    .map(t => rows[0].line.slice(t.startIndex, t.endIndex));
+  const operatorTokens = rows[0]!.tokens.filter(t => t.scopes.includes('keyword.operator.lite'))
+    .map(t => rows[0]!.line.slice(t.startIndex, t.endIndex));
   assert.deepEqual(operatorTokens, operators);
   has(rows, 0, '@outer', 'entity.name.label.lite');
   lacks(rows, 0, '5 0.5', 'constant.numeric.lite');
@@ -126,7 +134,7 @@ test('unfinished comments and multiline strings stay open without guessing a ter
 });
 test('tokenize project samples and indexed examples using the real TextMate engine', async () => {
   let files = 0;
-  async function visit(dir) {
+  async function visit(dir: string): Promise<void> {
     for (const entry of readdirSync(dir, { withFileTypes: true })) {
       const file = path.join(dir, entry.name);
       if (entry.isDirectory()) await visit(file);

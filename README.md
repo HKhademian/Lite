@@ -12,6 +12,9 @@ typed functions, flat tuples, fixed arrays and explicit growable-list operations
 Run `./lite run examples/001-double-sum.lts` with
 Node 26.13.0; enter `7` and `5` to report `24`. See the [igniter guide](igniter/README.md)
 for setup, strict typechecking, tests, supported behavior, and limitations.
+Project-owned code uses Lite or TypeScript, with JSON data/configuration and
+generated TS/C artifacts. The launchers, compiler tools, benchmarks, challenge
+tools and editor tests use TypeScript; see the [source-file policy](docs/tooling-source-policy.md).
 The wider language remains a design draft. The first Lite-written compiler stage
 now lives in [compiler/](compiler/README.md): a shared restricted front-end with
 TypeScript and C backends. Run it with `./ltc --target ts file.lts` (short),

@@ -47,10 +47,12 @@ Parser/checker timing only; no target emission, so no speedup comparison with T1
 - Artifact strict typechecking and bootstrap generation are excluded. Full-source timeouts are censored and excluded from ratios.
 - C01/C11 are unavailable, not zero-time results. Existing C emission runs under T00 and is not a native compiler artifact.
 
+Tool commands below use the current TypeScript filenames; recorded measurements and hashes are unchanged.
+
 Reproduce:
 
 ```sh
-node benchmark/compiler-performance.mjs --artifact /absolute/path/T11.ts --samples 7 --warmups 1 --self-timeout-ms 60000
+node benchmark/compiler-performance.ts --artifact /absolute/path/T11.ts --samples 7 --warmups 1 --self-timeout-ms 60000
 ```
 
-Raw samples: [JSON](2026-11-02-compiler-performance.json). Interactive summary: [Canvas](2026-11-02-compiler-performance.canvas.tsx).
+Raw samples: [JSON](2026-11-02-compiler-performance.json).

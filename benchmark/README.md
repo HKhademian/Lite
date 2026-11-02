@@ -6,24 +6,23 @@ Measured compiler performance, raw samples, provenance and reports live here.
 Text-cache optimization: [before/after report](reports/2026-11-02-text-cache.md)
 and [raw samples](reports/2026-11-02-text-cache.json). The measured 1,000-statement
 workload improves from 3489 to 146 ms; current self-compilation is 668 ms median.
-Reproduce with `node benchmark/text-cache.mjs --before /path/to/old/T11.ts`.
+Reproduce with `node benchmark/text-cache.ts --before /path/to/old/T11.ts`.
 The report records exact artifact/source identities and its censored old self-build.
 
 Original four-compiler availability and timing audit: [2026-11-02 report](reports/2026-11-02-compiler-performance.md),
-[raw samples](reports/2026-11-02-compiler-performance.json), and
-[interactive summary](reports/2026-11-02-compiler-performance.canvas.tsx).
+[raw samples](reports/2026-11-02-compiler-performance.json).
 
 Run from the repository root:
 
 ```sh
-node benchmark/compiler-performance.mjs
+node benchmark/compiler-performance.ts
 ```
 
 The script defaults to the verified checked-in `compiler/bootstrap/T11.ts` seed.
 Use `--artifact /absolute/path/T11.ts` to measure another generated artifact.
 Strict typechecking happens outside the timed samples. The runner snapshots
 the input artifact, validates its corpus outputs against stage 0, records its
-SHA-256 and the source revision, then saves JSON, Markdown and a browsable canvas
+SHA-256 and the source revision, then saves JSON and Markdown
 under `benchmark/reports/`. Use `--out benchmark/reports/another-run` to preserve
 a second run on the same day.
 

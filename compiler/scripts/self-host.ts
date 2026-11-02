@@ -7,13 +7,13 @@
  *   T12 = T11 compiling S, after a strict artifact typecheck
  *
  * Usage:
- *   node compiler/scripts/self-host.mjs [--out DIR]
+ *   node compiler/scripts/self-host.ts [--out DIR]
  *
  * Prints one JSON summary with both statuses, byte counts, hashes and whether
  * T12 equals T11. A non-pairing ladder exits nonzero so it can gate CI later.
  */
 
-import { spawnSync } from 'node:child_process';
+import { spawnSync, type SpawnSyncOptionsWithBufferEncoding } from 'node:child_process';
 import { createHash } from 'node:crypto';
 import { mkdtempSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
@@ -24,16 +24,16 @@ const repository = resolve(fileURLToPath(new URL('../..', import.meta.url)));
 const arguments_ = process.argv.slice(2);
 const outIndex = arguments_.indexOf('--out');
 const outDirectory = outIndex >= 0 && arguments_[outIndex + 1] !== undefined
-  ? resolve(arguments_[outIndex + 1])
+  ? resolve(arguments_[outIndex + 1]!)
   : mkdtempSync(join(tmpdir(), 'lite-self-host-'));
 
 /** SHA-256 as lowercase hex. */
-function hashBytes(bytes) {
+function hashBytes(bytes: Uint8Array) {
   return createHash('sha256').update(bytes).digest('hex');
 }
 
 /** Runs one command and returns its status and captured text streams. */
-function run(command, arguments__, options = {}) {
+function run(command: string, arguments__: string[], options: SpawnSyncOptionsWithBufferEncoding = {}) {
   const started = process.hrtime.bigint();
   const result = spawnSync(command, arguments__, {
     encoding: 'buffer',
@@ -78,7 +78,7 @@ if (stage0.status !== 0) {
 
 const t12Path = join(outDirectory, 'T12.ts');
 const generated = run(process.execPath, [
-  join(repository, 'compiler', 'scripts', 'run-ts-artifact.mjs'),
+  join(repository, 'compiler', 'scripts', 'run-ts-artifact.ts'),
   '--artifact', t11Path,
   '--source', sourcePath,
   '--out', t12Path,

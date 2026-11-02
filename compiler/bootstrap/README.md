@@ -25,7 +25,7 @@ automatic fallback to the T00 interpreter.
 
 ```sh
 node igniter/node_modules/typescript/bin/tsc -p compiler/bootstrap/tsconfig.json
-node compiler/scripts/build.mjs
+node compiler/scripts/build.ts
 ```
 
 The second command returns both selected compilers and their hashes. It uses the
@@ -38,13 +38,13 @@ artifact bytes are checked before execution.
 Compare the C-emitting compiler against the preserved stage-0 reference:
 
 ```sh
-node compiler/scripts/corpus-parity.mjs --target c --artifact compiler/bootstrap/c-emitter.ts
+node compiler/scripts/corpus-parity.ts --target c --artifact compiler/bootstrap/c-emitter.ts
 ```
 
 Historical T00 regeneration is still explicit:
 
 ```sh
-node compiler/scripts/self-host.mjs --out /tmp/lite-historical-ladder
+node compiler/scripts/self-host.ts --out /tmp/lite-historical-ladder
 ```
 
 That script deliberately invokes `igniter/bundle-cli.ts`, rather than the default

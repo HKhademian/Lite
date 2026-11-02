@@ -51,8 +51,8 @@
   "reproductionCommands": [
     "node --input-type=module -e 'import {loadBundle} from \"./igniter/loader.ts\"; process.stdout.write(loadBundle(\"compiler/manifests/ts.json\").text);' > /tmp/S.lts",
     "node igniter/bundle-cli.ts ts /tmp/S.lts > /tmp/T11.ts",
-    "node compiler/scripts/run-ts-artifact.mjs --artifact /tmp/T11.ts --source /tmp/S.lts --out /tmp/T12.ts",
-    "node compiler/scripts/run-ts-artifact.mjs --artifact /tmp/T12.ts --source /tmp/S.lts --out /tmp/T13.ts",
+    "node compiler/scripts/run-ts-artifact.ts --artifact /tmp/T11.ts --source /tmp/S.lts --out /tmp/T12.ts",
+    "node compiler/scripts/run-ts-artifact.ts --artifact /tmp/T12.ts --source /tmp/S.lts --out /tmp/T13.ts",
     "node igniter/node_modules/typescript/bin/tsc -p compiler/bootstrap/tsconfig.json"
   ],
   "validation": {

@@ -63,18 +63,18 @@ challenges/
 │   ├── items.jsonl          # manifest of all benchmark items
 │   └── README.md            # harness formats and coverage
 ├── tools/
-│   ├── fetch_sources.py     # cached, resumable download of raw source data
-│   ├── fetch_tests.py       # cached download of CSES/AtCoder/Rosalind pages
-│   ├── build.py             # normalizes sources -> data/*, validates, writes index
-│   ├── build_tests.py       # parses official samples into public/held-out cases
-│   ├── query.py             # filter / sort / group / search CLI
-│   └── validate.py          # dependency-free integrity checks for edited data
+│   ├── fetch_sources.ts     # cached, resumable download of raw source data
+│   ├── fetch_tests.ts       # cached download of CSES/AtCoder/Rosalind pages
+│   ├── build.ts             # normalizes sources -> data/*, validates, writes index
+│   ├── build_tests.ts       # parses official samples into public/held-out cases
+│   ├── query.ts             # filter / sort / group / search CLI
+│   └── validate.ts          # dependency-free integrity checks for edited data
 ├── Makefile                 # make fetch / build / check
 └── README.md
 ```
 
 The `.cache/` directory holds raw downloads and is git-ignored.  Delete it any
-time; `fetch_sources.py` rebuilds it.
+time; `fetch_sources.ts` rebuilds it.
 
 ## Record shape
 
@@ -227,25 +227,25 @@ and verification status.  See [`benchmark/README.md`](benchmark/README.md).
 
 ```bash
 # corpus summary
-python3 tools/query.py --stats
+node tools/query.ts --stats
 
 # the Blind 75, in roadmap order
-python3 tools/query.py --list blind-75 --all
+node tools/query.ts --list blind-75 --all
 
 # hardest database problems, premium excluded
-python3 tools/query.py --category databases --premium exclude --sort difficulty --desc
+node tools/query.ts --category databases --premium exclude --sort difficulty --desc
 
 # graph problems at difficulty 5–7, most solved first
-python3 tools/query.py --source codeforces --topic graphs --difficulty 5-7 \
+node tools/query.ts --source codeforces --topic graphs --difficulty 5-7 \
     --sort popularity --desc --limit 20
 
 # search titles and emit JSONL
-python3 tools/query.py --search "binary tree" --json --all > trees.jsonl
+node tools/query.ts --search "binary tree" --json --all > trees.jsonl
 
 # count things (the raw material for grouping)
-python3 tools/query.py --group-by category
-python3 tools/query.py --group-by topic
-python3 tools/query.py --group-by difficulty
+node tools/query.ts --group-by category
+node tools/query.ts --group-by topic
+node tools/query.ts --group-by difficulty
 ```
 
 Filters combine with AND; repeated `--topic` values must all match.  `--json`
@@ -254,29 +254,29 @@ emits full records, `--csv` emits a flat table.
 ## Rebuilding and extending
 
 ```bash
-python3 tools/fetch_sources.py          # download/caches every source
-python3 tools/fetch_tests.py            # download sample pages
-python3 tools/build.py                 # normalize, validate, write data/*
-python3 tools/build_tests.py           # parse samples into tests.jsonl
+node tools/fetch_sources.ts          # download/caches every source
+node tools/fetch_tests.ts            # download sample pages
+node tools/build.ts                 # normalize, validate, write data/*
+node tools/build_tests.ts           # parse samples into tests.jsonl
 
-python3 tools/fetch_benchmark_euler.py
-python3 tools/build_benchmark_euler.py
-python3 tools/fetch_benchmark_leetcode.py
-python3 tools/build_benchmark_leetcode.py
-python3 tools/validate_benchmark.py
+node tools/fetch_benchmark_euler.ts
+node tools/build_benchmark_euler.ts
+node tools/fetch_benchmark_leetcode.ts
+node tools/build_benchmark_leetcode.ts
+node tools/validate_benchmark.ts
 ```
 
-`build.py` fails loudly on duplicate ids, malformed URLs, unknown categories,
+`build.ts` fails loudly on duplicate ids, malformed URLs, unknown categories,
 out-of-range difficulty, or lists pointing at missing ids.  It also regenerates
 `data/index.json` and `schema/taxonomy.json`.
 
 To add a source:
 
-1. Add a `fetch_*` function and register it in `SOURCES` (`tools/fetch_sources.py`).
-2. Add a `parse_*` adapter returning `make_record(...)` dicts (`tools/build.py`).
+1. Add a `fetch_*` function and register it in `sources` (`tools/fetch_sources.ts`).
+2. Add a source adapter returning `record(...)` objects (`tools/build.ts`).
 3. Add the source to `SOURCE_INFO` and the `source` enum in
    `schema/challenge.schema.json`.
-4. Run the two commands above; add curated lists in `build_lists` if the source
+4. Run the two commands above; add curated lists in `buildLists` if the source
    has natural collections.
 
 ## Provenance and licensing

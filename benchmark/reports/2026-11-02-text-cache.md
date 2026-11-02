@@ -22,11 +22,13 @@ Source bundle: `17e53ce5a8eb6a603b84e25af67378c58a6bdec6d9914200c80f056931f8d74f
 
 This measures the existing TS compiler and a private runtime optimization, not newly supported language features. Preparing the reference seeds, strict typechecking and output hashing are excluded from the timed interval. CPU activity elsewhere on the machine is not controlled.
 
+Tool commands below use the current TypeScript filenames; recorded measurements and hashes are unchanged.
+
 Reproduce using a preserved old artifact:
 
 ```sh
 git show 6c6b55b4d23a54b95697cabac7484b5aa70dec97:compiler/bootstrap/T11.ts > /tmp/T11-before-text-cache.ts
-node benchmark/text-cache.mjs --before /tmp/T11-before-text-cache.ts
+node benchmark/text-cache.ts --before /tmp/T11-before-text-cache.ts
 ```
 
 Raw samples: [JSON](2026-11-02-text-cache.json).
