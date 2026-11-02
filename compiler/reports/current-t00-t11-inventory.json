@@ -7,7 +7,7 @@
   "workingTreeDirtyAtStart": true,
   "worktreeStatusAtStart": " M compiler/bootstrap/T11.ts\n M compiler/bootstrap/c-emitter.ts\n M compiler/bootstrap/c-seed.ts\n M compiler/bootstrap/seed.ts\n M compiler/c-emitter.lts\n M compiler/generated/current-artifacts.json\n M compiler/src/check.lts\n M compiler/src/frontend.lts\n M compiler/src/numeric-literals.lts\n M compiler/tests/host.test.ts\n M compiler/tests/t00-t11-probes.json\n M compiler/ts-emitter.lts\n M igniter/test.ts\n M verifications/features.json\nA  verifications/features/num-float-context.json\nA  verifications/features/num-float-context.lts\n?? compiler/reports/2026-11-02-float-contexts-ladder.json\n",
   "compilerSourceSha256": "214cfa39400929ca9e45d5e5f67a4102ec35d0276b109e8ebcc2405490ec7a5e",
-  "compilerSourceRevision": "Float-context source snapshot committed with this seed; see sourceSha256",
+  "compilerSourceRevision": "e04d47245c33db963c08582a95e6baf431b85d90",
   "node": "v24.16.0",
   "t11Sha256": "77cacbacdc2aa97c6c3b86c61f54501fd322ca081cb8be63bd9e5cf1f91818ee",
   "rows": [
