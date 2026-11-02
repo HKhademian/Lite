@@ -1,15 +1,15 @@
 {
   "schema": 1,
   "date": "2026-11-02",
-  "startedAt": "2026-11-02T21:04:13.403Z",
-  "revision": "5cf49f03b56ac869ff942a9f99796f5f51c22c8e",
+  "startedAt": "2026-11-02T21:21:24.999Z",
+  "revision": "3c69bf116ae393e45a3f8cebb4ce7df7a7c302cf",
   "revisionMeaning": "HEAD at audit start; artifact and per-source hashes identify the measured inputs",
   "workingTreeDirtyAtStart": true,
-  "worktreeStatusAtStart": " M compiler/README.md\n M compiler/bootstrap/T11.ts\n M compiler/bootstrap/c-emitter.ts\n M compiler/bootstrap/c-seed.ts\n M compiler/bootstrap/seed.ts\n M compiler/c-emitter.lts\n M compiler/generated/current-artifacts.json\n M compiler/parity.md\n M compiler/scripts/release.ts\n M compiler/src/c-literals.lts\n M compiler/src/check.lts\n M compiler/src/emit-c.lts\n M compiler/src/emit-ts.lts\n M compiler/src/frontend.lts\n M compiler/src/parser.lts\n M compiler/src/ts-literals.lts\n M compiler/tests/host.test.ts\n M compiler/ts-emitter.lts\n M docs/numbers.md\n M docs/operators.md\n M docs/power-and-negation.md\n M docs/release-automation.md\n M igniter/README.md\n M igniter/artifacts.ts\n M igniter/test.ts\n M igniter/verify.ts\n M verifications/features/num-power.json\n?? compiler/reports/2026-11-02-power-ladder.json\n",
-  "compilerSourceSha256": "399d88b3520fe653c4b5b731f71733a8b8d96fdad9e99397fcd337b5d55591d3",
-  "compilerSourceRevision": "59b8a218560f9140a661759d079747e7204a8f27",
+  "worktreeStatusAtStart": " M compiler/bootstrap/T11.ts\n M compiler/bootstrap/c-emitter.ts\n M compiler/bootstrap/c-seed.ts\n M compiler/bootstrap/seed.ts\n M compiler/c-emitter.lts\n M compiler/generated/current-artifacts.json\n M compiler/parity.md\n M compiler/src/check.lts\n M compiler/src/frontend.lts\n M compiler/src/numeric-literals.lts\n M compiler/src/parser.lts\n M compiler/tests/host.test.ts\n M compiler/tests/t00-t11-probes.json\n M compiler/ts-emitter.lts\n M docs/numbers.md\n M igniter/test.ts\n M verifications/features.json\nA  verifications/features/num-aliases.json\nA  verifications/features/num-aliases.lts\n?? compiler/reports/2026-11-02-numeric-aliases-ladder.json\n",
+  "compilerSourceSha256": "944a4e8da33c36df699c6e779727a0b699ab9bcfdbdfd65f0e0e789f1f24dd02",
+  "compilerSourceRevision": "Numeric-alias source snapshot committed with this seed; see sourceSha256",
   "node": "v24.16.0",
-  "t11Sha256": "2052e0629ac603950b92461f06ec6f5de1babe09d7765da82022ba241cb73222",
+  "t11Sha256": "0900d0ed8fefb5636d676cb4f560e483611e2230cea289c299262847b5bbe15a",
   "rows": [
     {
       "id": "int.arithmetic",
@@ -102,6 +102,57 @@
         "status": 0,
         "signal": null,
         "stdout": "declare const process: {\n    argv: string[];\n    exit(code: number): never;\n    getBuiltinModule(name: \"node:fs\"): {\n        readSync(fd: number, buffer: Uint8Array, offset: number, length: number, position: null): number;\n        writeSync(fd: number, text: string): number;\n    };\n};\n\nconst lite$intLines: readonly number[] = [0, 41, 112, 145, 175, 222, 241];\nconst lite$intSource = \"\";\nconst lite$intMin = -(1n << 63n), lite$intMax = (1n << 63n) - 1n;\nfunction lite$fault(category: string, at: number, message: string): never {\n    let line = 0;\n    while (line + 1 < lite$intLines.length && (lite$intLines[line + 1] ?? Infinity) <= at) line += 1;\n    const column = at - (lite$intLines[line] ?? 0) + 1;\n    process.getBuiltinModule(\"node:fs\").writeSync(2, lite$intSource + (line + 1) + \":\" + column + \": \" + category + \": \" + message + \"\\n\");\n    process.exit(1);\n}\nfunction lite$intFault(at: number, message: string): never { return lite$fault(\"ArithmeticPanic\", at, message); }\nfunction lite$checkedInt(value: bigint, at: number): bigint {\n    if (value < lite$intMin || value > lite$intMax) lite$intFault(at, \"integer outside Int range\");\n    return value;\n}\nfunction lite$addInt(left: bigint, right: bigint, at: number): bigint { return lite$checkedInt(left + right, at); }\n\nfunction lite$floatOp(left: number, right: number, op: number, at: number): number {\n    if (op === 3 && right === 0) lite$fault(\"ArithmeticPanic\", at, \"division by zero\");\n    const value = op === 0 ? left + right : op === 1 ? left - right : op === 2 ? left * right : left / right;\n    if (!Number.isFinite(value)) lite$fault(\"ArithmeticPanic\", at, \"non-finite floating value\");\n    return value;\n}\nexport function main(lite$write?: (text: string) => void): string {\n    let lite_out = \"\";\n    function lite$emit(text: string): void {\n        if (lite$write === undefined) lite_out += text;\n        else lite$write(text);\n    }\n    void lite$emit;\n    const lite$report0 = (lite$floatOp(Number(2n), Number(\"0.5\"), 0, 13)).toString() + \" \" + (lite$floatOp(Number(\"5.0\"), Number(2n), 3, 24)).toString() + \" \" + (lite$floatOp(Number(\"0.1\"), Number(\"0.2\"), 0, 33)).toString();\n    lite$emit(lite$report0 + \"\\n\");\n    const lite$report1 = ((((): boolean => { const lite$compare0: number = Number(\"9007199254740992.0\"); const lite$compare1: bigint = 9007199254740993n; if (!(((lite$compare0) === (Number(lite$compare1))))) return false; const lite$compare2: bigint = 9007199254740992n; return ((lite$compare1) > (lite$compare2)); })()) ? \"true\" : \"false\");\n    lite$emit(lite$report1 + \"\\n\");\n    const lite$report2 = ((((): boolean => { const lite$compare0: number = Number(\"3.5\"); const lite$compare1: bigint = 2n; if (!(((lite$compare0) < (Number(lite$compare1))))) return false; const lite$compare2: number = (lite$floatOp(Number(\"1.0\"), Number(0n), 3, 138)); return ((Number(lite$compare1)) < (lite$compare2)); })()) ? \"true\" : \"false\");\n    lite$emit(lite$report2 + \"\\n\");\n    let lite_total = Number(\"0.0\");\n    void lite_total;\n    let lite_n = 0n;\n    void lite_n;\n    while (((lite_n) < (3n))) {\n        lite_total = lite$floatOp(lite_total, Number(\"0.5\"), 0, 202);\n        lite_n = lite$addInt(lite_n, 1n, 215);\n    }\n    const lite$report3 = (lite_total).toString();\n    lite$emit(lite$report3 + \"\\n\");\n    return lite_out;\n}\n",
+        "stderr": ""
+      },
+      "artifactTypecheck": {
+        "status": 0,
+        "signal": null,
+        "stdout": "",
+        "stderr": ""
+      }
+    },
+    {
+      "id": "num.aliases",
+      "kind": "feature",
+      "summary": "Int64, Float64 and Double as synonyms of the existing 64-bit numeric types.",
+      "path": "verifications/features/num-aliases.lts",
+      "manifest": "verifications/features/num-aliases.json",
+      "features": [
+        "num.aliases",
+        "num.float",
+        "alias.transparent"
+      ],
+      "sourceSha256": "e78ff3a3cdf2aa3451de0b582c8b5c25f3039cba0f67b04c9ea3e6f6a3453530",
+      "source": "var count: Int64 = 2;\nvar weight: Float64 = 0.5;\nresult: Double = count * weight;\nzero: Double;\noutputLine(count, weight, result, zero);\nCount := type Int64;\nRate := type Float64;\nnext: Count = count + 1;\nrate: Rate = weight;\noutputLine(next, rate);\n",
+      "t00Check": {
+        "accepted": true
+      },
+      "status": "matches",
+      "cases": [
+        {
+          "name": "canonical-numeric-names",
+          "stdin": "",
+          "args": [],
+          "t00": {
+            "status": 0,
+            "stdout": "2 0.5 1 0\n3 0.5\n",
+            "stderr": "",
+            "signal": null
+          },
+          "t00MatchesManifest": true,
+          "t11": {
+            "status": 0,
+            "signal": null,
+            "stdout": "2 0.5 1 0\n3 0.5\n",
+            "stderr": ""
+          },
+          "matches": true
+        }
+      ],
+      "t11Compile": {
+        "status": 0,
+        "signal": null,
+        "stdout": "declare const process: {\n    argv: string[];\n    exit(code: number): never;\n    getBuiltinModule(name: \"node:fs\"): {\n        readSync(fd: number, buffer: Uint8Array, offset: number, length: number, position: null): number;\n        writeSync(fd: number, text: string): number;\n    };\n};\n\nconst lite$intLines: readonly number[] = [0, 22, 49, 82, 96, 137, 158, 180, 205, 226, 250];\nconst lite$intSource = \"\";\nconst lite$intMin = -(1n << 63n), lite$intMax = (1n << 63n) - 1n;\nfunction lite$fault(category: string, at: number, message: string): never {\n    let line = 0;\n    while (line + 1 < lite$intLines.length && (lite$intLines[line + 1] ?? Infinity) <= at) line += 1;\n    const column = at - (lite$intLines[line] ?? 0) + 1;\n    process.getBuiltinModule(\"node:fs\").writeSync(2, lite$intSource + (line + 1) + \":\" + column + \": \" + category + \": \" + message + \"\\n\");\n    process.exit(1);\n}\nfunction lite$intFault(at: number, message: string): never { return lite$fault(\"ArithmeticPanic\", at, message); }\nfunction lite$checkedInt(value: bigint, at: number): bigint {\n    if (value < lite$intMin || value > lite$intMax) lite$intFault(at, \"integer outside Int range\");\n    return value;\n}\nfunction lite$addInt(left: bigint, right: bigint, at: number): bigint { return lite$checkedInt(left + right, at); }\n\nfunction lite$floatOp(left: number, right: number, op: number, at: number): number {\n    if (op === 3 && right === 0) lite$fault(\"ArithmeticPanic\", at, \"division by zero\");\n    const value = op === 0 ? left + right : op === 1 ? left - right : op === 2 ? left * right : left / right;\n    if (!Number.isFinite(value)) lite$fault(\"ArithmeticPanic\", at, \"non-finite floating value\");\n    return value;\n}\nexport function main(lite$write?: (text: string) => void): string {\n    let lite_out = \"\";\n    function lite$emit(text: string): void {\n        if (lite$write === undefined) lite_out += text;\n        else lite$write(text);\n    }\n    void lite$emit;\n    let lite_count = 2n;\n    void lite_count;\n    let lite_weight = Number(\"0.5\");\n    void lite_weight;\n    const lite_result = lite$floatOp(Number(lite_count), lite_weight, 2, 72);\n    void lite_result;\n    const lite_zero = 0;\n    void lite_zero;\n    const lite$report0 = (lite_count).toString() + \" \" + (lite_weight).toString() + \" \" + (lite_result).toString() + \" \" + (lite_zero).toString();\n    lite$emit(lite$report0 + \"\\n\");\n    const lite_next = lite$addInt(lite_count, 1n, 200);\n    void lite_next;\n    const lite_rate = lite_weight;\n    void lite_rate;\n    const lite$report1 = (lite_next).toString() + \" \" + (lite_rate).toString();\n    lite$emit(lite$report1 + \"\\n\");\n    return lite_out;\n}\n",
         "stderr": ""
       },
       "artifactTypecheck": {
@@ -3756,7 +3807,7 @@
       "t00Check": {
         "accepted": true
       },
-      "status": "rejected",
+      "status": "matches",
       "cases": [
         {
           "name": "boundary",
@@ -3767,14 +3818,27 @@
             "stdout": "5\n",
             "stderr": "",
             "signal": null
-          }
+          },
+          "t11": {
+            "status": 0,
+            "signal": null,
+            "stdout": "5\n",
+            "stderr": ""
+          },
+          "matches": true
         }
       ],
       "t11Compile": {
-        "status": 2,
+        "status": 0,
+        "signal": null,
+        "stdout": "export function main(lite$write?: (text: string) => void): string {\n    let lite_out = \"\";\n    function lite$emit(text: string): void {\n        if (lite$write === undefined) lite_out += text;\n        else lite$write(text);\n    }\n    void lite$emit;\n    const lite_i = 5n;\n    void lite_i;\n    const lite$report0 = (lite_i).toString();\n    lite$emit(lite$report0 + \"\\n\");\n    return lite_out;\n}\n",
+        "stderr": ""
+      },
+      "artifactTypecheck": {
+        "status": 0,
         "signal": null,
         "stdout": "",
-        "stderr": "1:4: unsupported local type Int64\n"
+        "stderr": ""
       }
     },
     {
@@ -3820,7 +3884,7 @@
       "t00Check": {
         "accepted": true
       },
-      "status": "rejected",
+      "status": "matches",
       "cases": [
         {
           "name": "boundary",
@@ -3831,6 +3895,51 @@
             "stdout": "2.5 3.5\n",
             "stderr": "",
             "signal": null
+          },
+          "t11": {
+            "status": 0,
+            "signal": null,
+            "stdout": "2.5 3.5\n",
+            "stderr": ""
+          },
+          "matches": true
+        }
+      ],
+      "t11Compile": {
+        "status": 0,
+        "signal": null,
+        "stdout": "export function main(lite$write?: (text: string) => void): string {\n    let lite_out = \"\";\n    function lite$emit(text: string): void {\n        if (lite$write === undefined) lite_out += text;\n        else lite$write(text);\n    }\n    void lite$emit;\n    const lite_f = Number(\"2.5\");\n    void lite_f;\n    const lite_d = Number(\"3.5\");\n    void lite_d;\n    const lite$report0 = (lite_f).toString() + \" \" + (lite_d).toString();\n    lite$emit(lite$report0 + \"\\n\");\n    return lite_out;\n}\n",
+        "stderr": ""
+      },
+      "artifactTypecheck": {
+        "status": 0,
+        "signal": null,
+        "stdout": "",
+        "stderr": ""
+      }
+    },
+    {
+      "id": "numeric.float-integer-literal",
+      "kind": "probe",
+      "summary": "An exactly representable integer literal in a Float storage context",
+      "test": "numeric widths promote, widen losslessly and range-check",
+      "features": [],
+      "sourceSha256": "cf8e0ae312dafee289e25afb0257825997d221d8f78523c25e3c44f6be51f84c",
+      "source": "f: Float = 2; outputLine(f);",
+      "t00Check": {
+        "accepted": true
+      },
+      "status": "rejected",
+      "cases": [
+        {
+          "name": "boundary",
+          "stdin": "",
+          "args": [],
+          "t00": {
+            "status": 0,
+            "stdout": "2\n",
+            "stderr": "",
+            "signal": null
           }
         }
       ],
@@ -3838,7 +3947,7 @@
         "status": 2,
         "signal": null,
         "stdout": "",
-        "stderr": "1:4: unsupported local type Float64\n"
+        "stderr": "1:1: cannot initialize Float with Int\n"
       }
     },
     {
@@ -7151,8 +7260,8 @@
   "sourceFiles": [
     {
       "path": "compiler/c-emitter.lts",
-      "sourceSha256": "88fb3dc5caf21379e64833b9a79a5166a7f3172f5ed2a88c9edea78a28d00c14",
-      "bytes": 183666,
+      "sourceSha256": "4f85e58820d8bfef4fa193bb9861bac4e71aa4fd096093134faaf76e21d58862",
+      "bytes": 184381,
       "t00Check": {
         "accepted": true
       },
@@ -7161,7 +7270,7 @@
         "status": 0,
         "signal": null,
         "stderr": "",
-        "stdoutBytes": 332236
+        "stdoutBytes": 333299
       },
       "artifactTypecheck": {
         "status": 0,
@@ -7170,7 +7279,7 @@
         "stderr": ""
       },
       "status": "accepted",
-      "artifactSha256": "0506165e15a2d1db4993cabd3a5ed3ae0c1e364edfb3dce71f619ded9b5e7340"
+      "artifactSha256": "c9f2e54c04d486e1ee218e6ea5a82ce0ec6443d8359286476070770a212050fd"
     },
     {
       "path": "compiler/src/c-literals.lts",
@@ -7184,11 +7293,11 @@
     },
     {
       "path": "compiler/src/check.lts",
-      "sourceSha256": "e46b14115ee81a77d7e98340abd9f64affa4c2641cd6bb55aece723f89265c73",
-      "bytes": 40491,
+      "sourceSha256": "b4e11b21e83df44b8484cd8cdf1c196c1a08259ed3f5be632b2b3df4b5483b4f",
+      "bytes": 40617,
       "t00Check": {
         "accepted": false,
-        "diagnostic": "TypeError: unknown helper/function startsWithAt; forward function lookup is not supported yet"
+        "diagnostic": "TypeError: unknown helper/function numericAliasKind; forward function lookup is not supported yet"
       },
       "coverage": "not-a-standalone-T00-program"
     },
@@ -7234,8 +7343,8 @@
     },
     {
       "path": "compiler/src/frontend.lts",
-      "sourceSha256": "83f9d5248be7c45f638c9ae72ceb5d15f31cf195bab8fcfdde6c664c7d10d85e",
-      "bytes": 130745,
+      "sourceSha256": "62fed920d9cd5e415a17ecbbb401db18c2431e6996c7593bd0b3643ff0ec8494",
+      "bytes": 131134,
       "t00Check": {
         "accepted": false,
         "diagnostic": "TypeError: unknown helper/function lineColumn; forward function lookup is not supported yet"
@@ -7254,8 +7363,8 @@
     },
     {
       "path": "compiler/src/numeric-literals.lts",
-      "sourceSha256": "64563c035271d27708b27632da440fd50105d79ee513f8cee3c7fa739466e7a7",
-      "bytes": 3988,
+      "sourceSha256": "9095e355bf1c2316531840e73389c44e31ec45c816ccdfb615ce164d1cef156e",
+      "bytes": 4314,
       "t00Check": {
         "accepted": false,
         "diagnostic": "TypeError: unknown helper/function digitValue; forward function lookup is not supported yet"
@@ -7264,8 +7373,8 @@
     },
     {
       "path": "compiler/src/parser.lts",
-      "sourceSha256": "5156d313fc3b47d3ff20201949562e40b2296536cc0a863ad53e29dbff484144",
-      "bytes": 29089,
+      "sourceSha256": "2e0a47c7b37be79b0d7f446f723801d57dae64b97c5a91a205bd06ec7e38f6ea",
+      "bytes": 29188,
       "t00Check": {
         "accepted": false,
         "diagnostic": "TypeError: function annotations currently require a numeric width, String, Bool, or Unit"
@@ -7284,8 +7393,8 @@
     },
     {
       "path": "compiler/tests/checker/checker-dump.lts",
-      "sourceSha256": "e528a7a07d39be5edc1e60b472a3a24761168cfa8aba61e3933fdb4d20776007",
-      "bytes": 100631,
+      "sourceSha256": "3689897aa02266f229cb7f374ee199802a7bb29b796e0dc5dac192fa4fae34d3",
+      "bytes": 101182,
       "t00Check": {
         "accepted": true
       },
@@ -7294,7 +7403,7 @@
         "status": 0,
         "signal": null,
         "stderr": "",
-        "stdoutBytes": 203075
+        "stdoutBytes": 203848
       },
       "artifactTypecheck": {
         "status": 0,
@@ -7303,7 +7412,7 @@
         "stderr": ""
       },
       "status": "accepted",
-      "artifactSha256": "1553a86d44703f825216506c49ee01e51524415f9c1191135129c6f664a43bab"
+      "artifactSha256": "52c60d0890c821034e32f2d4a934302b164d963ce28caa2c300457752b4f3dc2"
     },
     {
       "path": "compiler/tests/checker/symbols.lts",
@@ -7349,8 +7458,8 @@
     },
     {
       "path": "compiler/tests/lexer/lexer-dump.lts",
-      "sourceSha256": "b02f8614027ccf64f5a723ed68940043662de6a5238bc43f52f53248cbb2fd9f",
-      "bytes": 31033,
+      "sourceSha256": "edd9e8d500f2553745ff1ccc8db8fb990fb6f1613b1fc59e12009da07c2c952d",
+      "bytes": 31359,
       "t00Check": {
         "accepted": true
       },
@@ -7359,7 +7468,7 @@
         "status": 0,
         "signal": null,
         "stderr": "",
-        "stdoutBytes": 63471
+        "stdoutBytes": 63809
       },
       "status": "accepted"
     },
@@ -7411,8 +7520,8 @@
     },
     {
       "path": "compiler/tests/parser/parser-decl-dump.lts",
-      "sourceSha256": "69c292b424028be822342ce09e69850dcd3f9d403cedbcdfb2b14d37a62631ce",
-      "bytes": 60145,
+      "sourceSha256": "d9909e1fe8b036f4e2c13d4e206464054ddb0e551ca2c70aecc200b1e3fb56d5",
+      "bytes": 60570,
       "t00Check": {
         "accepted": true
       },
@@ -7421,7 +7530,7 @@
         "status": 0,
         "signal": null,
         "stderr": "",
-        "stdoutBytes": 120603
+        "stdoutBytes": 121126
       },
       "artifactTypecheck": {
         "status": 0,
@@ -7430,12 +7539,12 @@
         "stderr": ""
       },
       "status": "accepted",
-      "artifactSha256": "211629ef7f5dbd6a822a58d3423af1588681e778d4088bafa7b77919974f8970"
+      "artifactSha256": "c73bbf66142453599734de81a44cb75ca7160928d9fcda0a75af621fd23d8168"
     },
     {
       "path": "compiler/tests/parser/parser-dump.lts",
-      "sourceSha256": "34531132ae39cfbf36dd115b21e51f0933babe688c83da9be64d414fddb18934",
-      "bytes": 60154,
+      "sourceSha256": "9d041ff97945855fe4ad3bee0624596e263522420cff14c1da4928343d79bada",
+      "bytes": 60579,
       "t00Check": {
         "accepted": true
       },
@@ -7444,7 +7553,7 @@
         "status": 0,
         "signal": null,
         "stderr": "",
-        "stdoutBytes": 120597
+        "stdoutBytes": 121120
       },
       "artifactTypecheck": {
         "status": 0,
@@ -7453,12 +7562,12 @@
         "stderr": ""
       },
       "status": "accepted",
-      "artifactSha256": "715c71337c898288e28b04623e53f28049d36750386456683ff0cf5d2eafa969"
+      "artifactSha256": "b3066ae80be50987879f4797f0e2d21f07d23b87c0eab6f277c4ca7edfbe6e03"
     },
     {
       "path": "compiler/tests/parser/parser-program-dump.lts",
-      "sourceSha256": "a624acfdac40114c2c45761c103e8b9ee7481e09e7f9cd061e51cd61c5e53925",
-      "bytes": 60141,
+      "sourceSha256": "931034b0885b230f37df0c14e356037c8e00a5687f93a9d3d07f8a8331c6b88f",
+      "bytes": 60566,
       "t00Check": {
         "accepted": true
       },
@@ -7467,7 +7576,7 @@
         "status": 0,
         "signal": null,
         "stderr": "",
-        "stdoutBytes": 120604
+        "stdoutBytes": 121127
       },
       "artifactTypecheck": {
         "status": 0,
@@ -7476,7 +7585,7 @@
         "stderr": ""
       },
       "status": "accepted",
-      "artifactSha256": "9b5a47561c722a3143ade8ae1d4da8285792e9fdf47905687fe974138450c414"
+      "artifactSha256": "ab18addee616819724fef8b8544caa2d849885c0e5506bf3a6022eba2b3a1596"
     },
     {
       "path": "compiler/tests/parser/program.lts",
@@ -7512,8 +7621,8 @@
     },
     {
       "path": "compiler/ts-emitter.lts",
-      "sourceSha256": "399d88b3520fe653c4b5b731f71733a8b8d96fdad9e99397fcd337b5d55591d3",
-      "bytes": 187837,
+      "sourceSha256": "944a4e8da33c36df699c6e779727a0b699ab9bcfdbdfd65f0e0e789f1f24dd02",
+      "bytes": 188552,
       "t00Check": {
         "accepted": true
       },
@@ -9371,6 +9480,11 @@
       "id": "mut.inferred"
     },
     {
+      "path": "verifications/features/num-aliases.lts",
+      "coverage": "canonical-manifest",
+      "id": "num.aliases"
+    },
+    {
       "path": "verifications/features/num-float.lts",
       "coverage": "canonical-manifest",
       "id": "num.float"
@@ -9433,8 +9547,8 @@
   ],
   "counts": {
     "feature": {
-      "total": 39,
-      "matches": 26,
+      "total": 40,
+      "matches": 27,
       "rejected": 13,
       "typecheck": 0,
       "mismatch": 0,
@@ -9477,9 +9591,9 @@
       "baseline": 0
     },
     "probe": {
-      "total": 81,
-      "matches": 40,
-      "rejected": 41,
+      "total": 82,
+      "matches": 42,
+      "rejected": 40,
       "typecheck": 0,
       "mismatch": 0,
       "diagnostic": 0,
@@ -9498,7 +9612,7 @@
       "accepted": 0,
       "baseline": 0
     },
-    "trackedSourceFiles": 212
+    "trackedSourceFiles": 213
   },
   "seedStrictTypecheck": "passed",
   "testGroups": [
@@ -9739,9 +9853,10 @@
     "type aliases follow single lexical scope with value shadowing and rejection",
     "type alias example runs and checks through the root launcher",
     "Lite numeric literal phases share Float spelling and finite-range checks",
-    "Lite power parser retains association and rejects concealed ungrouped negative bases"
+    "Lite power parser retains association and rejects concealed ungrouped negative bases",
+    "Lite numeric alias phases normalize built-in synonyms across annotations and signatures"
   ],
-  "finishedAt": "2026-11-02T21:05:05.818Z",
+  "finishedAt": "2026-11-02T21:22:21.782Z",
   "status": "complete",
   "method": {
     "compilationTimeoutMs": 20000,

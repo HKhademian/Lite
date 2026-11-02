@@ -21,6 +21,15 @@
       ]
     },
     {
+      "id": "num.aliases",
+      "summary": "Int64, Float64 and Double as synonyms of the existing 64-bit numeric types.",
+      "case": "features/num-aliases.json",
+      "status": "verified",
+      "docs": [
+        "docs/numbers.md"
+      ]
+    },
+    {
       "id": "num.widths",
       "summary": "Sized integer and floating widths with promotion and lossless widening.",
       "case": "features/num-widths.json",

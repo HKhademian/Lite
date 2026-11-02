@@ -1,8 +1,8 @@
 {
-  "note": "Current exact artifacts after positive-exponent Float-default power migration. All 69 existing TS/C artifact pairs are unchanged. New power behavior is covered by the canonical num.power target manifest and focused generated tests. Historical checkpoints remain preserved.",
+  "note": "Current exact artifacts after Int64/Float64/Double type-synonym normalization. All 69 earlier TS/C artifact pairs remain unchanged. Numeric alias support has canonical and focused target coverage; Float integer-literal contexts remain a separately tracked core migration gap. Historical checkpoints stay preserved.",
   "recorded": "2026-11-02",
-  "sourceSha256": "399d88b3520fe653c4b5b731f71733a8b8d96fdad9e99397fcd337b5d55591d3",
-  "compilerSha256": "2052e0629ac603950b92461f06ec6f5de1babe09d7765da82022ba241cb73222",
+  "sourceSha256": "944a4e8da33c36df699c6e779727a0b699ab9bcfdbdfd65f0e0e789f1f24dd02",
+  "compilerSha256": "0900d0ed8fefb5636d676cb4f560e483611e2230cea289c299262847b5bbe15a",
   "programCases": 69,
   "rejectedCases": 24,
   "artifacts": [

@@ -1,3 +1,10 @@
+/** Resolves the three public 64-bit numeric synonyms, or returns empty text for any other spelling. Shared by the frontend and normalized parser/checker phases. */
+numericAliasKind := fn(name: String): String {
+    if name == "Int64" { "Int" }
+    else if name == "Float64" or name == "Double" { "Float" }
+    else { "" }
+}
+
 /** Checks finite binary64 literal rounding using decimal digits, without requiring Float arithmetic in the bootstrap compiler. The excluded midpoint is 2^1024 - 2^970; a tie rounds to infinity. */
 finiteFloatDigits := fn(digits: String, fractionCount: Int, exponent: Int): Bool {
     var first := 0;

@@ -603,6 +603,13 @@ comparisonChainCode := fn(codes: List<String>, kinds: List<String>, operators: L
     }
     result + "})()"
 }
+/** Resolves the three public 64-bit numeric synonyms, or returns empty text for any other spelling. Shared by the frontend and normalized parser/checker phases. */
+numericAliasKind := fn(name: String): String {
+    if name == "Int64" { "Int" }
+    else if name == "Float64" or name == "Double" { "Float" }
+    else { "" }
+}
+
 /** Checks finite binary64 literal rounding using decimal digits, without requiring Float arithmetic in the bootstrap compiler. The excluded midpoint is 2^1024 - 2^970; a tie rounds to infinity. */
 finiteFloatDigits := fn(digits: String, fractionCount: Int, exponent: Int): Bool {
     var first := 0;
@@ -1083,6 +1090,8 @@ resolveTypeText := fn(source: String, position: Int, prefix: String, aliases: Li
         failAt(source, position, prefix, "unexpected text after type " + name);
     }
     if name == "Int" or name == "Float" or name == "String" or name == "Bool" or name == "Unit" { return name; }
+    numericKind := numericAliasKind(name);
+    if numericKind =!= "" { return numericKind; }
     if isUnsupportedAliasTarget(name) {
         unsupportedAliasTarget(source, position, prefix, name);
         return "";
@@ -1154,11 +1163,16 @@ parseTupleTypeAt := fn(source: String, position: Int, prefix: String, aliases: L
         var componentKind := "";
         if componentName == "Int" or componentName == "Float" or componentName == "String" or componentName == "Bool" or componentName == "Unit" {
             componentKind = componentName;
-        } else if findAlias(aliases, componentName) >= 0 {
-            seen: mut List<String> = [];
-            componentKind = resolveAliasKind(source, componentStart, prefix, aliases, componentName, seen);
         } else {
-            failAt(source, componentStart, prefix, "unsupported tuple field type " + componentName);
+            componentKind = numericAliasKind(componentName);
+            if componentKind == "" {
+                if findAlias(aliases, componentName) >= 0 {
+                    seen: mut List<String> = [];
+                    componentKind = resolveAliasKind(source, componentStart, prefix, aliases, componentName, seen);
+                } else {
+                    failAt(source, componentStart, prefix, "unsupported tuple field type " + componentName);
+                }
+            }
         }
         if isTupleKind(componentKind) {
             failAt(source, componentStart, prefix, "nested tuple types are not supported");
@@ -1211,6 +1225,8 @@ parseTypeAt := fn(source: String, position: Int, prefix: String, aliases: List<A
     if name == "Int" or name == "Float" or name == "String" or name == "Bool" or name == "Unit" {
         return (kind = name, next = after);
     }
+    numericKind := numericAliasKind(name);
+    if numericKind =!= "" { return (kind = numericKind, next = after); }
     if findAlias(aliases, name) >= 0 {
         seen: mut List<String> = [];
         return (kind = resolveAliasKind(source, start, prefix, aliases, name, seen), next = after);

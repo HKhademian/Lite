@@ -574,10 +574,10 @@ test('lite verify runs feature and artifact cases and reports coverage', () => {
     assert.equal(verified.error, undefined); assert.equal(verified.status, 0, verified.stderr);
     assert.match(verified.stdout, /PASS int\.arithmetic\/precedence-and-division/);
     assert.match(verified.stdout, /PASS example\.001-double-sum\/seven-and-five/);
-    assert.match(verified.stdout, /verification passed: 123 executed, 0 cached/);
+    assert.match(verified.stdout, /verification passed: 126 executed, 0 cached/);
     const covered = spawnSync(join(root, 'lite'), ['verify', '--coverage'], { env, encoding: 'utf8', timeout: 30000 });
     assert.equal(covered.error, undefined); assert.equal(covered.status, 0, covered.stderr);
-    assert.match(covered.stdout, /features: 39 registered, 39 cases/);
+    assert.match(covered.stdout, /features: 40 registered, 40 cases/);
     assert.match(covered.stdout, /examples: 19\/19 manifests/);
     assert.match(covered.stdout, /samples: 20\/20 manifests/);
     const first = spawnSync(join(root, 'lite'), ['verify', '--all', '--filter', 'int.arithmetic'],
@@ -4319,6 +4319,21 @@ test('Lite power parser retains association and rejects concealed ungrouped nega
       const expected = runFile(checkerDumpPath, text); assert.equal(expected.code, 0, text + expected.errors); assert.deepEqual(generated(text), expected);
     }
     for (const text of ['x: Int = 2 ** 3;', 'f := fn(): Int { return 2 ** 3; }']) {
+      const expected = runFile(checkerDumpPath, text); assert.equal(expected.code, 2, text); assert.deepEqual(generated(text), expected);
+    }
+  });
+});
+
+test('Lite numeric alias phases normalize built-in synonyms across annotations and signatures', () => {
+  for (const driver of [parserProgramDumpPath, checkerDumpPath]) withGeneratedDriver(driver, generated => {
+    for (const text of ['i: Int64 = 2; f: Float64 = 0.5; d: Double = 1.5;',
+      'Count := type Int64; f := fn(n: Count, x: Double): Float64 { return x; } outputLine(f(2, 0.5));',
+      'p: (i: Int64, f: Double) = (i = 2, f = 0.5); xs: List<Int64> = [1, 2];']) {
+      const expected = runFile(driver, text); assert.equal(expected.code, 0, text + expected.errors); assert.deepEqual(generated(text), expected);
+    }
+  });
+  withGeneratedDriver(checkerDumpPath, generated => {
+    for (const text of ['x: Int64 = "x";', 'x: Double = false;', 'f := fn(): Int64 { return 0.5; }']) {
       const expected = runFile(checkerDumpPath, text); assert.equal(expected.code, 2, text); assert.deepEqual(generated(text), expected);
     }
   });

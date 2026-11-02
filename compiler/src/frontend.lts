@@ -405,6 +405,8 @@ resolveTypeText := fn(source: String, position: Int, prefix: String, aliases: Li
         failAt(source, position, prefix, "unexpected text after type " + name);
     }
     if name == "Int" or name == "Float" or name == "String" or name == "Bool" or name == "Unit" { return name; }
+    numericKind := numericAliasKind(name);
+    if numericKind =!= "" { return numericKind; }
     if isUnsupportedAliasTarget(name) {
         unsupportedAliasTarget(source, position, prefix, name);
         return "";
@@ -476,11 +478,16 @@ parseTupleTypeAt := fn(source: String, position: Int, prefix: String, aliases: L
         var componentKind := "";
         if componentName == "Int" or componentName == "Float" or componentName == "String" or componentName == "Bool" or componentName == "Unit" {
             componentKind = componentName;
-        } else if findAlias(aliases, componentName) >= 0 {
-            seen: mut List<String> = [];
-            componentKind = resolveAliasKind(source, componentStart, prefix, aliases, componentName, seen);
         } else {
-            failAt(source, componentStart, prefix, "unsupported tuple field type " + componentName);
+            componentKind = numericAliasKind(componentName);
+            if componentKind == "" {
+                if findAlias(aliases, componentName) >= 0 {
+                    seen: mut List<String> = [];
+                    componentKind = resolveAliasKind(source, componentStart, prefix, aliases, componentName, seen);
+                } else {
+                    failAt(source, componentStart, prefix, "unsupported tuple field type " + componentName);
+                }
+            }
         }
         if isTupleKind(componentKind) {
             failAt(source, componentStart, prefix, "nested tuple types are not supported");
@@ -533,6 +540,8 @@ parseTypeAt := fn(source: String, position: Int, prefix: String, aliases: List<A
     if name == "Int" or name == "Float" or name == "String" or name == "Bool" or name == "Unit" {
         return (kind = name, next = after);
     }
+    numericKind := numericAliasKind(name);
+    if numericKind =!= "" { return (kind = numericKind, next = after); }
     if findAlias(aliases, name) >= 0 {
         seen: mut List<String> = [];
         return (kind = resolveAliasKind(source, start, prefix, aliases, name, seen), next = after);

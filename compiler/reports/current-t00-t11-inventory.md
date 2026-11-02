@@ -3,7 +3,7 @@
 Runtime environment details omitted for privacy.
 Working tree at audit start: modified. The raw report records its status; artifact and per-source hashes identify the measured inputs.
 
-T11 identity: `2052e0629ac603950b92461f06ec6f5de1babe09d7765da82022ba241cb73222`. The preserved artifact passed its separate strict TypeScript check.
+T11 identity: `0900d0ed8fefb5636d676cb4f560e483611e2230cea289c299262847b5bbe15a`. The preserved artifact passed its separate strict TypeScript check.
 
 This is the current measured support inventory, not acceptance of new language features. Dated historical inventories remain unchanged.
 
@@ -18,18 +18,18 @@ This is the current measured support inventory, not acceptance of new language f
 
 ## Counts
 
-- feature: 39; 26 matches tested behavior; 13 T11 rejects source.
+- feature: 40; 27 matches tested behavior; 13 T11 rejects source.
 - example: 19; 11 matches tested behavior; 8 T11 rejects source.
 - sample: 20; 20 matches tested behavior.
-- probe: 81; 40 matches tested behavior; 41 T11 rejects source.
+- probe: 82; 42 matches tested behavior; 40 T11 rejects source.
 - library-test: 8; 8 matches tested behavior.
-- trackedSourceFiles: 212.
+- trackedSourceFiles: 213.
 - Showcases: none currently implemented.
 
 ## Progress since the original inventory
 
-- 50 formerly failing cases now match; 0 formerly matching cases regress. Case identity includes kind and id.
-- 105/167 executed source cases match; 62 still fail. These are case counts, not distinct missing features or an overall completion percentage.
+- 52 formerly failing cases now match; 0 formerly matching cases regress. Case identity includes kind and id.
+- 108/169 executed source cases match; 61 still fail. These are case counts, not distinct missing features or an overall completion percentage.
 - Native C, compile-only sources and run/check migration have separate gates in [the live gap tracker](../gaps.md).
 
 Closed original cases:
@@ -56,6 +56,8 @@ Closed original cases:
 - sample: sample.016-midpoint-coordinates
 - sample: sample.017-linear-interpolation
 - probe: numeric.float
+- probe: numeric.int64-alias
+- probe: numeric.float-aliases
 - probe: numeric.exponent-literal
 - probe: numeric.power
 - probe: numeric.dynamic-add-overflow
@@ -89,6 +91,7 @@ Closed original cases:
 
 - **int.arithmetic — matches tested behavior.** Signed Int arithmetic and precedence. Source: `verifications/features/int-arithmetic.lts`.
 - **num.float — matches tested behavior.** Finite Float arithmetic and mixed Int/Float comparisons with checked runtime faults. Source: `verifications/features/num-float.lts`.
+- **num.aliases — matches tested behavior.** Int64, Float64 and Double as synonyms of the existing 64-bit numeric types. Source: `verifications/features/num-aliases.lts`.
 - **num.widths — T11 rejects source.** Sized integer and floating widths with promotion and lossless widening. Source: `verifications/features/num-widths.lts`.
   First diagnostic: 1:4: unsupported local type Int8
 - **bool.conditions — matches tested behavior.** Bool comparisons and conditional selection. Source: `verifications/features/bool-conditions.lts`.
@@ -145,12 +148,12 @@ Closed original cases:
 - **numeric.float — matches tested behavior.** Float literals and mixed Int/Float arithmetic
 - **numeric.sized-int — T11 rejects source.** Sized Int8/Int16/Int32 storage and widening
   First diagnostic: 1:4: unsupported local type Int8
-- **numeric.int64-alias — T11 rejects source.** Explicit Int64 annotations
-  First diagnostic: 1:4: unsupported local type Int64
+- **numeric.int64-alias — matches tested behavior.** Explicit Int64 annotations
 - **numeric.float32 — T11 rejects source.** Float32 rounding and promotion
   First diagnostic: 1:4: unsupported local type Float32
-- **numeric.float-aliases — T11 rejects source.** Float64 and Double annotations
-  First diagnostic: 1:4: unsupported local type Float64
+- **numeric.float-aliases — matches tested behavior.** Float64 and Double annotations
+- **numeric.float-integer-literal — T11 rejects source.** An exactly representable integer literal in a Float storage context
+  First diagnostic: 1:1: cannot initialize Float with Int
 - **numeric.exponent-literal — matches tested behavior.** Decimal exponent literal syntax
 - **numeric.power — matches tested behavior.** Right-associative Float-default power
 - **numeric.dynamic-add-overflow — matches tested behavior.** Runtime Int64 addition overflow faults

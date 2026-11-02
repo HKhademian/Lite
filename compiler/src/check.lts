@@ -23,7 +23,7 @@ SYMBOL_KIND_VALUE := fn(): String { "value" }
 
 /** True for a built-in type name accepted by the bootstrap subset. */
 isBuiltinType := fn(name: String): Bool {
-    name == "Int" or name == "Float" or name == "String" or name == "Bool" or name == "Unit" or name == "List"
+    name == "Int" or name == "Float" or name == "String" or name == "Bool" or name == "Unit" or name == "List" or numericAliasKind(name) =!= ""
 }
 
 /** True when a read-only text list contains `target`. */
@@ -183,7 +183,8 @@ resolveAliasName := fn(symbols: Symbols, typeText: String, depth: Int): String {
     if index >= 0 and symbols[index].kind == SYMBOL_KIND_TYPE() {
         return resolveAliasName(symbols, symbols[index].detail, depth + 1);
     }
-    typeText
+    numericKind := numericAliasKind(typeText);
+    if numericKind == "" { typeText } else { numericKind }
 }
 
 /** Returns one tuple component type by label or positional index, or empty. */

@@ -49,6 +49,18 @@ reference until the final Lite implementations and retirement gates pass.
 
 ## Done
 
+- 2026-11-02: shared Lite numeric-name normalization admits Int64/Float64/Double
+  across existing scalar, user-alias, tuple, List and function contracts. Parser
+  and checker phases share the same mapping. All 278 full tests, both corpora,
+  strict checks, 126 verifier runs, coverage, nine editor groups and six native
+  sanitizer cases pass. Three generated generations match; all 69 earlier TS/C
+  fixture pairs are unchanged. Inventory: 108/169 match, 61 remain, 52 original
+  failures closed, none regress. A passing alias feature and newly retained
+  failing Float integer-literal probe expand the denominator. See the
+  [ladder](reports/2026-11-02-numeric-aliases-ladder.json). The literal-context
+  port is the next core migration dependency; advanced width/rounding matrices
+  remain deferred until after the default cutover.
+
 - 2026-11-02: the selected right-associative, Float-default positive-exponent
   power checkpoint now lowers on TS/C. The frontend/parser enforce negative-base
   grouping, including concealed minus that T00 still admits; the standalone
@@ -292,7 +304,8 @@ subset used to write the compiler. Prioritize:
 - Numeric expressions: Int/Float arithmetic and comparisons, precedence, power,
   and common numeric annotations. Mixed Float arithmetic now runs all nine
   previously blocked lesson programs. The power checkpoint is also ported;
-  ordinary annotations follow.
+  common 64-bit numeric synonyms are also ported. Ordinary Float literal
+  contexts follow.
   Exhaustive width/promotion/rounding matrices follow the default switch.
 - Bindings and storage: inference, annotations, aliases, lexical scope, mutability,
   compound updates, zero initialization and reserved storage's first assignment.

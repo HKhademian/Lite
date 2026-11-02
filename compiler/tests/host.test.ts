@@ -1381,3 +1381,66 @@ test('power preserves right association, explicit negative-base grouping and the
   }
   assertExecutions(executions);
 });
+
+test('Int64, Float64 and Double normalize across admitted numeric annotations and contracts', () => {
+  const executions: ArtifactExecution[] = [];
+  const both = [
+    'i: Int64 = 5; f: Float64 = 2.5; d: Double = 3.5; outputLine(i, f, d);',
+    'i: Int64; f: Float64; d: Double; outputLine(i, f, d);',
+    'var i: Int64 = 2; var f: Double = 0.5; i = i + 1; f = i * f; outputLine(i, f);',
+    'Count := type Int64; SavedCount := type Count; Amount := type Double; a: SavedCount = 7; b: Amount = 0.25; outputLine(a, b, a + b);',
+    'var i: Int64 = 7; { i: Int64 = -i; outputLine(i); } outputLine(i);',
+    'low: Int64 = -9223372036854775808; high: Int64 = 9223372036854775807; outputLine(low, high);',
+    'var total: Float64 = 0.0; var n: Int64 = 0; loop n < 3 { total = total + 0.5; n = n + 1; } outputLine(total);',
+    'x: Double = 2 ** 3; outputLine(x, x == 8, x / 2);',
+  ];
+  const tsOnly = [
+    'f := fn(n: Int64, x: Float64): Double { n * x } outputLine(f(3, 0.5));',
+    'Count := type Int64; Amount := type Float64; f := fn(n: Count, x: Amount): Double { if n > 0 { return x; } -x } outputLine(f(2, 0.5), f(0, 0.5));',
+    'p: (i: Int64, f: Double) = (i = 2, f = 0.5); outputLine(p, p.i, p.f);',
+    'Pair := type (i: Int64, f: Float64); f := fn(p: Pair): Double { p.i * p.f } p: Pair = (i = 3, f = 0.5); outputLine(f(p));',
+    'xs: mut List<Int64> = [1, 2]; ys: List<Float64> = [0.5, 1.5]; push_back(mut xs, 3); outputLine(xs, ys, xs[1]);',
+  ];
+  for (const [sources, targets] of [[both, ['ts', 'c']], [tsOnly, ['ts']]] as const) for (const text of sources) {
+    const expected = runText(text); assert.equal(expected.status, 0, text + expected.stderr.toString());
+    for (const target of targets) {
+      const compiled = compileTarget(target, { text }); assert.equal(compiled.status, 0, text + compiled.stderr.toString());
+      if (target === 'c' && process.env['LITE_SKIP_NATIVE'] === '1') continue;
+      executions.push({ target, artifact: compiled.stdout.toString(), expected, context: text });
+    }
+    if (targets.length === 1) { const c = compileTarget('c', { text }); assert.equal(c.status, 2, text); assert.equal(c.stdout.length, 0); }
+  }
+  const invalid = ['var x: Int64 = "x";', 'var x: Float64 = false;', 'var x: Double = Unit;',
+    'var x: Int64 = 0.5;', 'var x: Int64 = 2 ** 3;', 'var x: Double = 0.5; x = true;',
+    'f := fn(n: Int64): Int64 { n } outputLine(f(0.5));',
+    'f := fn(n: Double): Double { n } i: Int64 = 2; outputLine(f(i));',
+    'var x: Int64 = 9223372036854775808;', 'var x: Float64 = 1e309;',
+    'x: List<Int64> = [0.5];', 'x: (n: Int64) = (n = 0.5);'];
+  for (const source of invalid) {
+    const text = 'outputLine("before"); ' + source, expected = runText(text);
+    assert.equal(expected.status, 1, text); assert.equal(expected.stdout.length, 0, text);
+    for (const target of ['ts', 'c'] as const) { const compiled = compileTarget(target, { text }); assert.equal(compiled.status, 2, text); assert.equal(compiled.stdout.length, 0, text); }
+  }
+  for (const source of ['var x: Int64 = 9223372036854775807; outputLine(x + 1);',
+    'var x: Double = 1e308; outputLine(x * 2);']) {
+    const text = 'outputLine("before");\r\n' + source, name = 'numeric-alias سلام.lts', expected = runText(text, { name });
+    assert.equal(expected.status, 1, text); assert.equal(expected.stdout.toString(), 'before\n');
+    for (const target of ['ts', 'c'] as const) {
+      const compiled = compileTarget(target, { text, name }); assert.equal(compiled.status, 0, text + compiled.stderr.toString());
+      if (target === 'c' && process.env['LITE_SKIP_NATIVE'] === '1') continue;
+      executions.push({ target, artifact: compiled.stdout.toString(), expected, context: text });
+    }
+  }
+  for (const target of ['ts', 'c'] as const) {
+    const alias = compileTarget(target, { text: 'i: Int64 = 2; f: Float64 = 0.5; d: Double = 1.5; outputLine(i, f, d);' });
+    const canonical = compileTarget(target, { text: 'i: Int = 2; f: Float = 0.5; d: Float = 1.5; outputLine(i, f, d);' });
+    assert.equal(alias.status, 0); assert.equal(canonical.status, 0); assert.deepEqual(alias.stdout, canonical.stdout);
+  }
+  {
+    const text = 'i: Int64 = inputInt("int? "); f: Double = inputFloat("float? "); outputLine(i * f);', stdin = '3 0.5', expected = runText(text, { stdin });
+    assert.equal(expected.status, 0); assert.equal(expected.stdout.toString(), 'int? float? 1.5\n');
+    const compiled = compileTarget('ts', { text }); assert.equal(compiled.status, 0, compiled.stderr.toString());
+    executions.push({ target: 'ts', artifact: compiled.stdout.toString(), expected, options: { stdin }, context: text });
+  }
+  assertExecutions(executions);
+});

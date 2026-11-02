@@ -21,8 +21,9 @@ self-hosting must be closed before switching defaults.
 
 ## Immediate migration priorities
 
-1. Common numeric annotations, then the remaining ordinary data/call/control
-   syntax. Mixed Float arithmetic and the power checkpoint are ported; all 20
+1. Exactly representable integer literals in Float storage/call/result contexts,
+   then remaining ordinary data/call/control syntax. The common 64-bit numeric
+   type names, mixed Float arithmetic and power checkpoint are ported; all 20
    implemented lessons now run on generated Lite.
 2. Missing ordinary binding/storage, tuple/array/List, call/function and
    block/conditional/loop/match/cleanup forms. Use the existing examples and
@@ -45,24 +46,24 @@ Basic validation and normal runtime behavior remain part of each syntax port.
 
 The [current inventory](reports/current-t00-t11-inventory.md) and
 [raw observations](reports/current-t00-t11-inventory.json) use the generated
-seed `2052e062…`. All inputs compile/check against the current reference, both
+seed `0900d0ed…`. All inputs compile/check against the current reference, both
 execution paths use identical anonymous diagnostic naming, and raw-byte input
 probes follow the real CLI's lazy strict UTF-8 decoding. Historical reports stay
 unchanged. Refresh with `node compiler/scripts/t00-t11-inventory.ts --large-sources`.
 
-- Canonical features: 26/39 match; 13 rejected.
+- Canonical features: 27/40 match; 13 rejected.
 - Examples: 11/19 match; 8 rejected.
 - Implemented samples: 20/20 match; none rejected.
-- Isolated boundary probes: 40/81 match; 41 rejected; no differences among accepted probes.
-- Library tests: 8/8 match. All 212 tracked Lite sources are accounted for;
+- Isolated boundary probes: 42/82 match; 40 rejected; no differences among accepted probes.
+- Library tests: 8/8 match. All 213 tracked Lite sources are accounted for;
   compile-only acceptance is distinguished from executed parity.
-- Total executed source cases: 105/167 match, 62 still fail. Compared with the
-  original inventory, 50 previously failing cases now match and none regress.
-  The temporary-I/O case, retained function-tail probe, chain feature and two
-  completion probes and the Float feature account for six additional matching
-  cases. The completion probes separately expose corrected unreachable tails
-  and return-through-loop
-  artifact checking; they are additions to the original inventory.
+- Total executed source cases: 108/169 match, 61 still fail. Compared with the
+  original inventory, 52 previously failing cases now match and none regress.
+  Temporary I/O, the retained function-tail probe, the chain feature, two
+  completion probes and the Float/numeric-alias features add seven matching
+  cases beyond the original inventory. The newly retained Float integer-literal
+  context adds one failing case. These additions explain denominator changes.
+
 
 These counts describe measured programs. Several failing cases share one cause;
 a passing broad case can still contain unsupported forms. The detailed report
@@ -139,8 +140,14 @@ Keep dependencies explicit; split a topic further when its contracts warrant it.
   negative-base grouping, positive exponents, lazy faults and TS/C lowering.
   Final signed-exponent semantics and exhaustive libm rounding are later work;
   unselected contextual division/storage semantics are not migration dependencies.
-- [ ] **Numeric widths:** explicit Int64/Float aliases, narrow types, promotion,
-  lossless widening, checked narrow results and Float32 rounding.
+- [x] **64-bit numeric synonyms:** Int64=Int and Float64=Double=Float across
+  admitted scalar, alias, tuple, List and function contracts.
+- [ ] **Float literal contexts (next core port):** exactly representable Int
+  literals in Float storage/call/result contexts. The new retained probe rejects
+  on T11 while T00 prints 2. Ordinary integer variables still require the
+  selected lossless storage-admission rules.
+- [ ] **Numeric widths:** narrow types, promotion, lossless widening, checked
+  narrow results and Float32 rounding; exhaustive matrices follow the cutover.
 - [ ] **Block and conditional values:** statement-bearing blocks, Unit tails,
   partial defaults and false-branch no-write assignments. Function completion
   checking over currently admitted statement forms is recorded separately below.
@@ -434,3 +441,20 @@ The [power ledger](parity.md#power-checkpoint),
 Next: common numeric annotations, then remaining ordinary data/call/control
 syntax and the Lite-default workflow cutover. Advanced rounding/edge coverage
 remains deferred.
+
+Numeric synonym migration: Int64=Int and Float64=Double=Float now normalize
+across admitted annotation/alias/function/aggregate forms, without runtime
+conversions or source-subset adoption.
+All 278 full tests pass with zero skips (166.3 s); fast passes 266
+with 12 expected skips (119.7 s). Strict host/seeds, both 93-case
+corpora, 126 verifier executions, coverage of 40 registered features, nine editor
+groups and six native sanitizer cases pass. Three generated generations match,
+and all 69 earlier TS/C fixture pairs remain unchanged. Inventory: 108/169
+matching, 61 remaining, 52 original failures closed, no observed regressions.
+The new alias feature adds one passing case, while the retained Float-literal
+context probe adds one failing case; both contribute to the new denominator.
+See the [numeric-synonym ledger](parity.md#numeric-type-synonyms),
+[ladder](reports/2026-11-02-numeric-aliases-ladder.json) and
+[paired timing report](reports/2026-11-02-numeric-aliases-performance.json).
+Next: the retained Float integer-literal context, then remaining ordinary
+data/call/control syntax and the early Lite-default workflow cutover.

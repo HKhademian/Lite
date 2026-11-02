@@ -30,6 +30,12 @@
     "test": "numeric widths promote, widen losslessly and range-check"
   },
   {
+    "id": "numeric.float-integer-literal",
+    "summary": "An exactly representable integer literal in a Float storage context",
+    "source": "f: Float = 2; outputLine(f);",
+    "test": "numeric widths promote, widen losslessly and range-check"
+  },
+  {
     "id": "numeric.exponent-literal",
     "summary": "Decimal exponent literal syntax",
     "source": "outputLine(1e3);",

@@ -1,0 +1,10 @@
+var count: Int64 = 2;
+var weight: Float64 = 0.5;
+result: Double = count * weight;
+zero: Double;
+outputLine(count, weight, result, zero);
+Count := type Int64;
+Rate := type Float64;
+next: Count = count + 1;
+rate: Rate = weight;
+outputLine(next, rate);

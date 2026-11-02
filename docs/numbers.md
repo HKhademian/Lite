@@ -47,6 +47,11 @@ types `Int8`, `Int16`, `Int32`, `Int64` and the floating types `Float32`,
 `Float64`. `Int` is an alias for `Int64`; `Float`, `Float64` and `Double` are
 one 64-bit floating type. Unannotated integer literals remain `Int` (Int64) and
 fractional literals remain `Float` (Float64); they do not become minimal-width.
+The Lite-generated TS/C targets also recognize these three 64-bit synonyms in
+their admitted annotations, aliases and aggregate/function contracts. This
+normalizes type names; integer-literal initialization of Float storage and narrow
+numeric widths remain separate generated-compiler migration work. See the
+[numeric-synonym ledger](../compiler/parity.md#numeric-type-synonyms).
 A literal constant may initialize a narrow annotated type only when it fits:
 integer literals must be inside that width's range (and exactly representable
 for a floating destination), while a fractional literal stored as `Float32`

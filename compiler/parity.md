@@ -1271,3 +1271,47 @@ C-emitter output 85.0 → 85.3 ms, divisions 169.6 → 171.3 ms, constants
 215.7 → 213.5 ms and dead-output input 45.1 → 44.8 ms. All measured output
 streams match. The [performance record](reports/2026-11-02-power-performance.json)
 contains raw pairs and identities; no general speedup is claimed.
+
+## Numeric type synonyms
+
+The shared Lite numeric spelling helper maps Int64 to Int and Float64/Double
+to Float. Existing canonical names retain their ordinary frontend path. The
+frontend normalizes names in scalar annotations, user-alias targets, tuple fields,
+List elements and function signatures. Parser/checker phases share the mapping
+and normalize built-in synonyms without changing tuple labels or user-alias
+names. This adds no storage conversion, arithmetic width or runtime wrapper.
+A focused scalar program emits identical TS/C bytes using synonyms or canonical
+names; all earlier corpus artifacts likewise remain unchanged.
+
+The canonical [num.aliases case](../verifications/features/num-aliases.json)
+selects T00, TS and C. Focused coverage includes eight TS/C programs, five TS
+function/tuple/List programs, twelve type/range rejections, four exact positioned
+fault executions and a prompted input scenario. Parser/checker drivers each
+compare three admitted sources; the checker also compares three rejected sources.
+Six native programs check scalar values, zero initialization, user aliases, loops
+and arithmetic faults with optimized address/undefined-behavior sanitizers.
+
+Integer-literal admission in a Float storage context is a separate core gap.
+The retained `numeric.float-integer-literal` probe shows T00 accepting
+`f: Float = 2; outputLine(f);` while generated Lite still rejects it. Its addition
+increases the measured denominator rather than hiding the missing behavior.
+That literal-context port follows this name-normalization slice; narrow widths
+and exhaustive promotion/rounding matrices remain later work. The
+[generated-only ladder](reports/2026-11-02-numeric-aliases-ladder.json) records
+the fixed point without adopting these type spellings in S.
+
+All 278 full tests pass with zero skips (166.3 s); fast passes 266
+with 12 expected skips (119.7 s). Strict host/seeds, both 93-case
+corpora, 126 verifier executions, coverage of 40 registered features, nine editor
+groups and six native sanitizer cases pass. Three generated generations match,
+and all 69 earlier TS/C fixture pairs remain unchanged. Inventory: 108/169
+matching, 61 remaining, 52 original failures closed, no observed regressions.
+The new alias feature adds one passing case, while the retained Float-literal
+context probe adds one failing case; both contribute to the new denominator.
+
+The [paired performance report](reports/2026-11-02-numeric-aliases-performance.json)
+records close/mixed medians: TS output 63.9 → 64.9 ms, identical S 704.6 →
+704.1 ms, constants 128.6 → 127.7 ms and dead-output input 44.6 → 44.0 ms;
+C-emitter output 85.0 → 82.8 ms, divisions 163.5 → 167.8 ms, constants
+211.4 → 209.2 ms and dead-output input 44.0 → 44.3 ms. All measured output
+bytes match; no general speedup is claimed.

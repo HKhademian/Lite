@@ -74,7 +74,8 @@ parseType := fn(tokens: Tokens, index: Int, prefix: String): (next: Int, text: S
             closed := expectSymbol(tokens, inner.next, ">", prefix);
             return (next = closed, text = "List<" + inner.text + ">");
         }
-        return (next = index + 1, text = token.text);
+        numericKind := numericAliasKind(token.text);
+        return (next = index + 1, text = if numericKind == "" { token.text } else { numericKind });
     }
     if isSymbol(token, "(") {
         var cursor := index + 1;
