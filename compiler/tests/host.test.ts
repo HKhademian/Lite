@@ -507,6 +507,68 @@ test('constant integer faults execute only when reached, preserving short-circui
   }
 });
 
+test('comparison chains compare adjacent values once and skip later operands on both targets', () => {
+  const operators = ['==', '=!=', '<', '<!', '<=', '<!=', '>', '>!', '>=', '>!='];
+  const rows = ['var a := 0; var b := 0; var c := 0;'];
+  for (const [a, b, c] of [[-1, 0, 1], [1, 0, -1], [0, 0, 0]]) {
+    rows.push(`a = ${a}; b = ${b}; c = ${c};`);
+    for (const first of operators) for (const second of operators) {
+      rows.push(`outputLine(a ${first} b ${second} c, ${a} ${first} ${b} ${second} ${c});`);
+    }
+  }
+  rows.push('var lo := -9223372036854775808; var hi := 9223372036854775807; outputLine(lo < 0 < hi, hi > 0 > lo);');
+  rows.push('var text := "a"; var flag := true; outputLine(text == "a" =!= "b", flag == true =!= false);');
+  rows.push('outputLine(Unit == Unit == Unit, Unit =!= Unit == Unit);');
+  rows.push('outputLine(1 > 2 < (1 / 0), 1 > 2 < (9223372036854775807 + 1));');
+  rows.push('outputLine(not 1 < 2 < 3, (1 < 2) == true == true, 0 < 1 < 2 and false);');
+  rows.push('var lt_cmp_i_0_0 := 3; outputLine(0 < lt_cmp_i_0_0 < 4);');
+  rows.push('var n := 0; loop 0 <= n < 3 { outputLine(n); n = n + 1; } outputLine(0 <= a < 2 < 3 < 4);');
+  rows.push('var repeated := 1; outputLine(' + ['0', ...Array.from({ length: 300 }, () => 'repeated'), '2'].join(' <= ') + ');');
+  const matrix = rows.join('\n'), expected = runText(matrix);
+  assert.equal(expected.status, 0, expected.stderr.toString());
+  for (const target of ['ts', 'c'] as const) {
+    const compiled = compileTarget(target, { text: matrix }); assert.equal(compiled.status, 0, compiled.stderr.toString());
+    if (target === 'c' && process.env['LITE_SKIP_NATIVE'] === '1') continue;
+    const actual = target === 'ts' ? runTsArtifact(compiled.stdout.toString()) : runCArtifact(compiled.stdout.toString());
+    assert.equal(actual.phase, 'run', actual.stdout.toString() + actual.stderr.toString());
+    assert.deepEqual({ status: actual.status, stdout: actual.stdout, stderr: actual.stderr }, expected);
+  }
+  const cases = [
+    { text: 'touch := fn(n: Int): Int { outputLine(n); n } outputLine(touch(1) < touch(2) < touch(3)); outputLine(touch(3) < touch(2) < touch(1));', stdin: '' },
+    { text: 'touch := fn(): Unit { outputLine("unit"); } outputLine(Unit == Unit == touch()); outputLine(Unit =!= Unit == touch());', stdin: '' },
+    { text: 'outputLine("x" == "y" == inputLine("unreached: "));', stdin: '' },
+    { text: 'outputLine("x" == "x" == inputLine("Text: "));', stdin: 'x\n' },
+    { text: 'outputLine(inputFloat() == inputFloat() == inputFloat());', stdin: '1.5 1.5 1.5' },
+    { text: 'stop := fn(): Unit { exit(3); } outputLine("before"); outputLine(Unit == Unit == stop());', stdin: '' },
+    { text: 'outputLine(inputInt() < inputInt() < inputInt()); outputLine(inputInt());', stdin: '3 2 1' },
+    { text: 'values: List<Int> = [1]; outputLine(1 > 2 < values[9]);', stdin: '' },
+    { text: 'values: List<Int> = [1]; outputLine("before"); outputLine(0 < 1 < values[9]);', stdin: '' },
+  ];
+  for (const item of cases) {
+    const compiled = compileTs({ text: item.text }); assert.equal(compiled.status, 0, compiled.stderr.toString());
+    const actual = runTsArtifact(compiled.stdout.toString(), { stdin: item.stdin }), expected = runText(item.text, { stdin: item.stdin });
+    assert.equal(actual.phase, 'run', actual.stdout.toString() + actual.stderr.toString()); assert.equal(actual.signal, null);
+    assert.deepEqual({ status: actual.status, stdout: actual.stdout, stderr: actual.stderr }, expected, item.text);
+  }
+  for (const expression of ['0 < 1 < (1 / 0)', '0 < 1 < (9223372036854775807 + 1)', '(1 / 0) < 2 < 3']) {
+    const text = 'outputLine("before");\r\noutputLine("prefix", ' + expression + ');', name = 'chain سلام.lts';
+    const expected = runText(text, { name }); assert.equal(expected.status, 1);
+    for (const target of ['ts', 'c'] as const) {
+      const compiled = compileTarget(target, { text, name }); assert.equal(compiled.status, 0, compiled.stderr.toString());
+      if (target === 'c' && process.env['LITE_SKIP_NATIVE'] === '1') continue;
+      const actual = target === 'ts' ? runTsArtifact(compiled.stdout.toString()) : runCArtifact(compiled.stdout.toString());
+      assert.equal(actual.phase, 'run', actual.stderr.toString()); assert.equal(actual.signal, null);
+      assert.deepEqual({ status: actual.status, stdout: actual.stdout, stderr: actual.stderr }, expected);
+    }
+  }
+  for (const bad of ['outputLine(1 > 2 < "bad");', 'outputLine(true < true < true);', 'outputLine(1 < 2 < missing);',
+    'if 1 < 2', 'outputLine(1 < 2 <);']) {
+    assert.equal(runText(bad).status, 1);
+    for (const target of ['ts', 'c'] as const) { const c = compileTarget(target, { text: bad }); assert.equal(c.status, 2); assert.equal(c.stdout.length, 0); }
+  }
+  assert.equal(compileTarget('c', { text: 'outputLine(Unit =!= Unit == exit(3));' }).status, 2);
+});
+
 test('C output evaluates all arguments before writing, including mixed scalar and Unit values', context => {
   if (process.env['LITE_SKIP_NATIVE'] === '1') { context.skip('LITE_SKIP_NATIVE=1'); return; }
   const prefix = '/* 🙂 */ var zero := 0; var maximum := 9223372036854775807;\r\n';

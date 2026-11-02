@@ -1,10 +1,10 @@
 {
   "schema": 1,
   "date": "2026-11-02",
-  "startedAt": "2026-11-02T15:58:05.457Z",
-  "revision": "191977e1d4fff5cfa8aad2a38398f51837725f61",
+  "startedAt": "2026-11-02T16:37:20.241Z",
+  "revision": "8c48ba1481b0a237d96bfb0b4e7183602d260a03",
   "node": "v24.16.0",
-  "t11Sha256": "c1a9436393f31334aa3574bfc86569e6f2048cd923920b651af9fe74f9a061d8",
+  "t11Sha256": "78fe04497b02149590da6f62e2abce597378525198141958bf22372fbb72ff69",
   "rows": [
     {
       "id": "int.arithmetic",
@@ -131,6 +131,55 @@
         "status": 0,
         "signal": null,
         "stdout": "export function main(lite$write?: (text: string) => void): string {\n    let lite_out = \"\";\n    function lite$emit(text: string): void {\n        if (lite$write === undefined) lite_out += text;\n        else lite$write(text);\n    }\n    void lite$emit;\n    const lite_value = 7n;\n    void lite_value;\n    if (Boolean(true)) {\n        const lite$report0 = \"inside\";\n        lite$emit(lite$report0 + \"\\n\");\n    } else {\n        const lite$report1 = \"outside\";\n        lite$emit(lite$report1 + \"\\n\");\n    }\n    const lite$report2 = (Boolean(true) ? \"single\" : \"multiple\");\n    lite$emit(lite$report2 + \"\\n\");\n    return lite_out;\n}\n",
+        "stderr": ""
+      },
+      "artifactTypecheck": {
+        "status": 0,
+        "signal": null,
+        "stdout": "",
+        "stderr": ""
+      }
+    },
+    {
+      "id": "comparison.chains",
+      "kind": "feature",
+      "summary": "Adjacent comparison chains with single-evaluation middle values and lazy later operands.",
+      "path": "verifications/features/comparison-chains.lts",
+      "manifest": "verifications/features/comparison-chains.json",
+      "features": [
+        "comparison.chains"
+      ],
+      "sourceSha256": "aabb806448f5686d19a858104ba69855f9427a35f32062386170b769f9d82b33",
+      "source": "var middle := 5;\noutputLine(0 <= middle < 10, 0 <= middle < 3);\noutputLine(1 > 2 < (1 / 0));\nvar label := \"x\";\nvar flag := true;\noutputLine(label == \"x\" =!= \"y\", flag == true =!= false);\noutputLine(1 < 2 < 3 < 4);\n",
+      "t00Check": {
+        "accepted": true
+      },
+      "status": "matches",
+      "cases": [
+        {
+          "name": "adjacency-and-short-circuit",
+          "stdin": "",
+          "args": [],
+          "t00": {
+            "status": 0,
+            "stdout": "true false\nfalse\ntrue true\ntrue\n",
+            "stderr": "",
+            "signal": null
+          },
+          "t00MatchesManifest": true,
+          "t11": {
+            "status": 0,
+            "signal": null,
+            "stdout": "true false\nfalse\ntrue true\ntrue\n",
+            "stderr": ""
+          },
+          "matches": true
+        }
+      ],
+      "t11Compile": {
+        "status": 0,
+        "signal": null,
+        "stdout": "declare const process: {\n    argv: string[];\n    exit(code: number): never;\n    getBuiltinModule(name: \"node:fs\"): {\n        readSync(fd: number, buffer: Uint8Array, offset: number, length: number, position: null): number;\n        writeSync(fd: number, text: string): number;\n    };\n};\n\nconst lite$intLines: readonly number[] = [0, 17, 64, 93, 111, 129, 187, 214];\nconst lite$intSource = \"\";\nconst lite$intMin = -(1n << 63n), lite$intMax = (1n << 63n) - 1n;\nfunction lite$fault(category: string, at: number, message: string): never {\n    let line = 0;\n    while (line + 1 < lite$intLines.length && (lite$intLines[line + 1] ?? Infinity) <= at) line += 1;\n    const column = at - (lite$intLines[line] ?? 0) + 1;\n    process.getBuiltinModule(\"node:fs\").writeSync(2, lite$intSource + (line + 1) + \":\" + column + \": \" + category + \": \" + message + \"\\n\");\n    process.exit(1);\n}\nfunction lite$intFault(at: number, message: string): never { return lite$fault(\"ArithmeticPanic\", at, message); }\nfunction lite$checkedInt(value: bigint, at: number): bigint {\n    if (value < lite$intMin || value > lite$intMax) lite$intFault(at, \"integer outside Int range\");\n    return value;\n}\n\nfunction lite$divideInt(left: bigint, right: bigint, at: number): bigint {\n    if (right === 0n) lite$intFault(at, \"division by zero\");\n    return lite$checkedInt(left / right, at);\n}\n\nexport function main(lite$write?: (text: string) => void): string {\n    let lite_out = \"\";\n    function lite$emit(text: string): void {\n        if (lite$write === undefined) lite_out += text;\n        else lite$write(text);\n    }\n    void lite$emit;\n    let lite_middle = 5n;\n    void lite_middle;\n    const lite$report0 = ((((): boolean => { const lite$compare0: bigint = 0n; const lite$compare1: bigint = lite_middle; if (!(((lite$compare0) <= (lite$compare1)))) return false; const lite$compare2: bigint = 10n; return ((lite$compare1) < (lite$compare2)); })()) ? \"true\" : \"false\") + \" \" + ((((): boolean => { const lite$compare0: bigint = 0n; const lite$compare1: bigint = lite_middle; if (!(((lite$compare0) <= (lite$compare1)))) return false; const lite$compare2: bigint = 3n; return ((lite$compare1) < (lite$compare2)); })()) ? \"true\" : \"false\");\n    lite$emit(lite$report0 + \"\\n\");\n    const lite$report1 = ((((): boolean => { const lite$compare0: bigint = 1n; const lite$compare1: bigint = 2n; if (!(((lite$compare0) > (lite$compare1)))) return false; const lite$compare2: bigint = (lite$divideInt(1n, 0n, 86)); return ((lite$compare1) < (lite$compare2)); })()) ? \"true\" : \"false\");\n    lite$emit(lite$report1 + \"\\n\");\n    let lite_label = \"x\";\n    void lite_label;\n    let lite_flag = true;\n    void lite_flag;\n    const lite$report2 = ((((): boolean => { const lite$compare0: string = lite_label; const lite$compare1: string = \"x\"; if (!(((lite$compare0) === (lite$compare1)))) return false; const lite$compare2: string = \"y\"; return ((lite$compare1) !== (lite$compare2)); })()) ? \"true\" : \"false\") + \" \" + ((((): boolean => { const lite$compare0: boolean = lite_flag; const lite$compare1: boolean = true; if (!((Boolean(lite$compare0) === Boolean(lite$compare1)))) return false; const lite$compare2: boolean = false; return (Boolean(lite$compare1) !== Boolean(lite$compare2)); })()) ? \"true\" : \"false\");\n    lite$emit(lite$report2 + \"\\n\");\n    const lite$report3 = ((true) ? \"true\" : \"false\");\n    lite$emit(lite$report3 + \"\\n\");\n    return lite_out;\n}\n",
         "stderr": ""
       },
       "artifactTypecheck": {
@@ -4333,7 +4382,7 @@
       "t00Check": {
         "accepted": true
       },
-      "status": "rejected",
+      "status": "matches",
       "cases": [
         {
           "name": "boundary",
@@ -4344,14 +4393,27 @@
             "stdout": "true\ntrue\n",
             "stderr": "",
             "signal": null
-          }
+          },
+          "t11": {
+            "status": 0,
+            "signal": null,
+            "stdout": "true\ntrue\n",
+            "stderr": ""
+          },
+          "matches": true
         }
       ],
       "t11Compile": {
-        "status": 2,
+        "status": 0,
+        "signal": null,
+        "stdout": "export function main(lite$write?: (text: string) => void): string {\n    let lite_out = \"\";\n    function lite$emit(text: string): void {\n        if (lite$write === undefined) lite_out += text;\n        else lite$write(text);\n    }\n    void lite$emit;\n    const lite$report0 = ((true) ? \"true\" : \"false\");\n    lite$emit(lite$report0 + \"\\n\");\n    const lite$report1 = ((true) ? \"true\" : \"false\");\n    lite$emit(lite$report1 + \"\\n\");\n    return lite_out;\n}\n",
+        "stderr": ""
+      },
+      "artifactTypecheck": {
+        "status": 0,
         "signal": null,
         "stdout": "",
-        "stderr": "1:18: cannot compare Bool and Int\n"
+        "stderr": ""
       }
     },
     {
@@ -6644,8 +6706,8 @@
   "sourceFiles": [
     {
       "path": "compiler/c-emitter.lts",
-      "sourceSha256": "e52694da6923f1f6b3cc85c94a69849eee558cb10825a41931eb0edad22674d9",
-      "bytes": 158134,
+      "sourceSha256": "903d7841ccfa3b909a8beb9167270a37c2f65dde2a7681f558045d415c7fecbd",
+      "bytes": 162520,
       "t00Check": {
         "accepted": true
       },
@@ -6654,7 +6716,7 @@
         "status": 0,
         "signal": null,
         "stderr": "",
-        "stdoutBytes": 283606
+        "stdoutBytes": 292287
       },
       "artifactTypecheck": {
         "status": 0,
@@ -6663,12 +6725,12 @@
         "stderr": ""
       },
       "status": "accepted",
-      "artifactSha256": "a6866f6a86094fe0aaf9cd39ec47f114de4b15f565f2df0afe59d9c19776abf3"
+      "artifactSha256": "2ab7f26a0aa8ce2e87d92315ec7f6276a4cf11ef4c391fd9723da82193a37e5e"
     },
     {
       "path": "compiler/src/c-literals.lts",
-      "sourceSha256": "ee8d06a009c11958eb5bd80b00ee386b7494153c525ca8ec7fc8195a89da035c",
-      "bytes": 5542,
+      "sourceSha256": "50526965aba858189a953681c31402cb2511976ec1eaf4f55d6426f65d05c2ac",
+      "bytes": 7343,
       "t00Check": {
         "accepted": false,
         "diagnostic": "TypeError: unknown helper/function fail; forward function lookup is not supported yet"
@@ -6707,8 +6769,8 @@
     },
     {
       "path": "compiler/src/emit-c.lts",
-      "sourceSha256": "c1b2305b29916094dda59078b06a558d625412186e781be3a4e9d73d787c8b1b",
-      "bytes": 16148,
+      "sourceSha256": "a76ae496abb7672f5f0e1fbf183bde4bda6045c3db6f7cd159d41fbaf8cd8295",
+      "bytes": 16466,
       "t00Check": {
         "accepted": false,
         "diagnostic": "TypeError: unknown helper/function indexOfText; forward function lookup is not supported yet"
@@ -6717,8 +6779,8 @@
     },
     {
       "path": "compiler/src/emit-ts.lts",
-      "sourceSha256": "3adeaf9156e5e27c94cac9b0543c4b6ed7df14e5a6ab3499007b81c58b9ad8c0",
-      "bytes": 28743,
+      "sourceSha256": "034967d7d0955fd504f56e5493987e7b313eb420ef7c64f37075cf05b563e9a4",
+      "bytes": 28453,
       "t00Check": {
         "accepted": false,
         "diagnostic": "TypeError: unknown helper/function skipName; forward function lookup is not supported yet"
@@ -6727,8 +6789,8 @@
     },
     {
       "path": "compiler/src/frontend.lts",
-      "sourceSha256": "e1842de34bfcea47a6030b39940787304e4dffe249e27c7ce163eafd3b51b9b4",
-      "bytes": 121954,
+      "sourceSha256": "302ee21cb342098270fa4e6dc017f90c3cc38e21c964ae9e8e3fba0d39f29e29",
+      "bytes": 124221,
       "t00Check": {
         "accepted": false,
         "diagnostic": "TypeError: unknown helper/function lineColumn; forward function lookup is not supported yet"
@@ -6757,8 +6819,8 @@
     },
     {
       "path": "compiler/src/ts-literals.lts",
-      "sourceSha256": "a49583f5e297e5c1351549612544c5eb43f88822a47cf01abf26028373db2f7c",
-      "bytes": 5102,
+      "sourceSha256": "dceef5a7a36f30bb6283bfa3406145fc3045b6f993c393619e473f38d9749d4e",
+      "bytes": 6236,
       "t00Check": {
         "accepted": false,
         "diagnostic": "TypeError: unknown helper/function intText; forward function lookup is not supported yet"
@@ -6995,8 +7057,8 @@
     },
     {
       "path": "compiler/ts-emitter.lts",
-      "sourceSha256": "8801038265573d0f5552913834a79d64acd6eccb767c5f53d39a497d8fe82110",
-      "bytes": 170289,
+      "sourceSha256": "1be00ebd9db034010ae420b156b4166ae285a13c332be1ea8c0b859ef20f5157",
+      "bytes": 173400,
       "t00Check": {
         "accepted": true
       },
@@ -8739,6 +8801,11 @@
       "id": "bool.conditions"
     },
     {
+      "path": "verifications/features/comparison-chains.lts",
+      "coverage": "canonical-manifest",
+      "id": "comparison.chains"
+    },
+    {
       "path": "verifications/features/cond-partial.lts",
       "coverage": "canonical-manifest",
       "id": "cond.partial"
@@ -8906,8 +8973,8 @@
   ],
   "counts": {
     "feature": {
-      "total": 37,
-      "matches": 22,
+      "total": 38,
+      "matches": 23,
       "rejected": 15,
       "typecheck": 0,
       "mismatch": 0,
@@ -8951,8 +9018,8 @@
     },
     "probe": {
       "total": 79,
-      "matches": 26,
-      "rejected": 53,
+      "matches": 27,
+      "rejected": 52,
       "typecheck": 0,
       "mismatch": 0,
       "diagnostic": 0,
@@ -8971,7 +9038,7 @@
       "accepted": 0,
       "baseline": 0
     },
-    "trackedSourceFiles": 209
+    "trackedSourceFiles": 210
   },
   "seedStrictTypecheck": "passed",
   "testGroups": [
@@ -9212,7 +9279,7 @@
     "type aliases follow single lexical scope with value shadowing and rejection",
     "type alias example runs and checks through the root launcher"
   ],
-  "finishedAt": "2026-11-02T15:58:52.148Z",
+  "finishedAt": "2026-11-02T16:38:08.813Z",
   "status": "complete",
   "method": {
     "compilationTimeoutMs": 20000,

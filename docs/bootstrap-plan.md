@@ -77,7 +77,7 @@ bounded code-point views; that source snapshot has a 668 ms self-build median in
 [before/after benchmark](../benchmark/reports/2026-11-02-text-cache.md), excluding
 strict checking. The subsequent [report-order refresh](../compiler/parity.md#report-order-seed-refresh)
 preserves output produced by calls inside report arguments and records a new
-three-generation fixed point. Current tests include 236 interpreter groups, 19 compiler-host
+three-generation fixed point. Current tests include 236 interpreter groups, 20 compiler-host
 groups, 4 policy/tooling groups and 9 editor grammar groups; the historical P0 counts below remain fixed.
 The full-source lexer/parser/checker sweeps now run generated TS drivers, checked
 once per sweep and executed in isolated processes. Focused fixtures retain
@@ -88,7 +88,7 @@ renames S's report calls to outputLine, adds output without a newline, and ports
 the four prompted input helpers to generated TS. This explicit owner decision
 updates the temporary helper contract; it does not add general optional/variadic
 function grammar. Current corpus: 61 programs/32 rejections; verification:
-37 features, 77 scenarios, 95 target executions. The generated-only spelling
+38 features, 78 scenarios, 98 target executions. The generated-only spelling
 adapter and that snapshot's fixed point are in the [I/O ladder](../compiler/reports/2026-11-02-io-migration-ladder.json).
 
 The subsequent [checked Int64 refresh](../compiler/parity.md#checked-int64-arithmetic)
@@ -130,6 +130,14 @@ false loops, skipped Boolean operands and unused functions compile safely; inval
 literals/types still reject before effects. Six fixtures now model runtime faults,
 so the compiler corpus is 61 programs/32 rejections (still 93 sources). All 259
 full tests pass with zero skips (53.4 s). See the [deferred-fault ledger](../compiler/parity.md#deferred-constant-arithmetic-faults).
+
+
+Comparison chains now retain middle operands once and skip later operands on both
+generated targets over their admitted scalar types. All 260 full tests pass with
+zero skips (49.4 s); inventory is 79/164 matching cases, 85 remaining. The new
+canonical chain feature executes on all three targets. See the [chain ledger](../compiler/parity.md#comparison-chain-lowering)
+for fixed-point, sanitizer and paired speed evidence. Broader types, Never-valued
+exit typing, native C and run/check migration remain pending.
 
 ## Historical P0 baseline, 2026-11-01
 

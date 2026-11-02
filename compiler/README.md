@@ -23,7 +23,7 @@ records that snapshot's compiler artifacts. The subsequent
 runtime requirements once per program and records about 30% less compiler time
 on paired output/self-source workloads, with exact emitted bytes preserved.
 
-The [T00/T11 support inventory](reports/2026-11-02-t00-t11-inventory.md) lists
+The [T00/T11 support inventory](reports/current-t00-t11-inventory.md) lists
 measured missing forms, behavior/diagnostic differences, every maintained example
 and sample, and source-file coverage. It includes exact-source boundary probes
 and a reproducible audit script; it is an inventory, not a priority list or a new
@@ -105,6 +105,14 @@ Stage 0 is feature-frozen during bootstrap (B8/B11). Do not add igniter-only
 features to make compiler work easier; new capability belongs in L/S and the
 compiler slice first. The remaining stage-0 versus generated gap is tracked in
 [`parity.md`](parity.md).
+
+Comparison chains now retain middle operands once and skip later operands on both
+generated targets over their admitted scalar types. All 260 full tests pass with
+zero skips (49.4 s); inventory is 79/164 matching cases, 85 remaining. The new
+canonical chain feature executes on all three targets. See the [chain ledger](parity.md#comparison-chain-lowering)
+for fixed-point, sanitizer and paired speed evidence. Broader types, Never-valued
+exit typing, native C and run/check migration remain pending.
+
 
 ## Layout
 

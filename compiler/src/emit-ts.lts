@@ -3,15 +3,6 @@ dedent := fn(indent: String): String {
     textSlice(indent, 0, textLength(indent) - 4)
 }
 
-/** Maps a restricted Lite scalar kind to its TypeScript type. */
-tsScalarType := fn(kind: String): String {
-    if kind == "Int" { "bigint" }
-    else if kind == "String" { "string" }
-    else if kind == "Float" { "number" }
-    else if kind == "Bool" { "boolean" }
-    else { "void" }
-}
-
 /** Formats one canonical flat named-tuple kind as a TypeScript object type. */
 tsTupleType := fn(kind: String): String {
     size := textLength(kind);

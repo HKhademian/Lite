@@ -10,6 +10,13 @@ short-circuit tests. It checks matching scalar types, orders only Int/Float,
 and supports String/Bool/Unit equality. Mixed-type/custom comparisons and the
 broader ownership model remain outside this implementation.
 
+Generated compiler coverage, 2026-11-02: both targets implement chains over
+their admitted scalar types, including Int ordering and String/Bool/Unit equality.
+All adjacent pairs are checked before execution. Generated TS also covers
+effectful operands and input; C still rejects unsupported input/function forms.
+Float ordering and mixed numeric types remain separate gaps. See the
+[lowering ledger](../compiler/parity.md#comparison-chain-lowering).
+
 Express mathematical bounds and adjacent comparisons without repeating the middle expression.
 
 ```text

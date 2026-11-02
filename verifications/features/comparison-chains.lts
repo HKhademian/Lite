@@ -1,0 +1,7 @@
+var middle := 5;
+outputLine(0 <= middle < 10, 0 <= middle < 3);
+outputLine(1 > 2 < (1 / 0));
+var label := "x";
+var flag := true;
+outputLine(label == "x" =!= "y", flag == true =!= false);
+outputLine(1 < 2 < 3 < 4);

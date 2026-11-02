@@ -128,3 +128,34 @@ intMultiplyCode := fn(left: String, right: String, position: Int): String {
 intNegateCode := fn(value: String, position: Int): String {
     "lt_checked_negate(" + value + ", " + intText(position) + ")"
 }
+
+/** Names a typed, source-position-hygienic C comparison operand temporary. */
+comparisonTemp := fn(kind: String, position: Int, index: Int): String {
+    tag := if kind == "String" { "s" } else if kind == "Bool" { "b" } else if kind == "Float" { "f" } else { "i" };
+    "lt_cmp_" + tag + "_" + intText(position) + "_" + intText(index)
+}
+
+/** Represents Unit as zero, retaining unsupported/effectful code for C validation instead of dropping it. */
+comparisonValueCode := fn(kind: String, code: String): String {
+    if kind =!= "Unit" { return code; }
+    var inner := code;
+    loop textLength(inner) >= 2 and textAt(inner, 0) == "(" and textAt(inner, textLength(inner) - 1) == ")" {
+        inner = textSlice(inner, 1, textLength(inner) - 1);
+    }
+    if inner == "undefined" { "0" } else { "(" + code + ", 0)" }
+}
+
+/** Emits portable comma/short-circuit sequencing so middle operands are evaluated once and later operands stay lazy. */
+comparisonChainCode := fn(codes: List<String>, kinds: List<String>, operators: List<String>, count: Int, position: Int): String {
+    first := comparisonTemp(kinds[0], position, 0);
+    second := comparisonTemp(kinds[1], position, 1);
+    var result := "(" + first + " = " + comparisonValueCode(kinds[0], codes[0]) + ", " + second + " = " + comparisonValueCode(kinds[1], codes[1]) + ", " + comparisonCode(operators[0], kinds[0], first, second);
+    var index := 2;
+    loop index <= count {
+        name := comparisonTemp(kinds[index], position, index);
+        pair := comparisonCode(operators[index - 1], kinds[index - 1], comparisonTemp(kinds[index - 1], position, index - 1), name);
+        result = result + " && (" + name + " = " + comparisonValueCode(kinds[index], codes[index]) + ", " + pair + ")";
+        index = index + 1;
+    }
+    result + ")"
+}

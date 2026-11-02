@@ -9,21 +9,21 @@ This tracker covers the T00 replacement goal, including newly discovered flaws.
 
 The [current inventory](reports/current-t00-t11-inventory.md) and
 [raw observations](reports/current-t00-t11-inventory.json) use the checked Int64
-seed `c1a94363…`. All inputs compile/check against the current reference, both
+seed `78fe0449…`. All inputs compile/check against the current reference, both
 execution paths use identical anonymous diagnostic naming, and raw-byte input
 probes follow the real CLI's lazy strict UTF-8 decoding. Historical reports stay
 unchanged. Refresh with `node compiler/scripts/t00-t11-inventory.ts --large-sources`.
 
-- Canonical features: 22/37 match; 15 rejected.
+- Canonical features: 23/38 match; 15 rejected.
 - Examples: 10/19 match; 9 rejected.
 - Implemented samples: 11/20 match; 9 rejected.
-- Isolated boundary probes: 26/79 match; 53 rejected; no differences among accepted probes.
-- Library tests: 8/8 match. All 209 tracked Lite sources are accounted for;
+- Isolated boundary probes: 27/79 match; 52 rejected; no differences among accepted probes.
+- Library tests: 8/8 match. All 210 tracked Lite sources are accounted for;
   compile-only acceptance is distinguished from executed parity.
-- Total executed source cases: 77/163 match, 86 still fail. Compared with the
-  original inventory, 26 previously failing cases now match and none regress.
-  The temporary-I/O case and a newly retained function-tail probe account for
-  two additional matching cases.
+- Total executed source cases: 79/164 match, 85 still fail. Compared with the
+  original inventory, 27 previously failing cases now match and none regress.
+  The temporary-I/O case, retained function-tail probe and new chain feature
+  account for three additional matching cases.
 
 These counts describe measured programs. Several failing cases share one cause;
 a passing broad case can still contain unsupported forms. The detailed report
@@ -60,8 +60,9 @@ Keep dependencies explicit; split a topic further when its contracts warrant it.
   lines, so their passing results do not cover this difference.
 - [x] **Equals-token discrimination:** parenthesized inequality and bare
   function tails stay comparisons; assignment and tuple fields still work.
-- [ ] **Comparison chains:** adjacent comparisons, middle-operand single
-  evaluation and short-circuiting. Deferred faults are now ready; next slice.
+- [x] **Comparison chains:** adjacent comparisons over admitted scalar types,
+  middle-operand single evaluation and short-circuiting on TS/C. Broader Float
+  ordering remains in the Float topic.
 - [ ] **Script and lexical forms:** empty scripts, optional final semicolons,
   adjacent Strings, trailing call commas, standalone scope blocks, expression
   statements and same-block shadowing.
@@ -86,6 +87,10 @@ Keep dependencies explicit; split a topic further when its contracts warrant it.
   earlier contributions and trailing argument forms.
 - [ ] **Function values and environments:** compatible copies/replacement,
   nested helpers, live captures and distinct escaped environments.
+- [ ] **Never-valued exit:** preserve the reference's Never result in value
+  contexts. T00 rejects `Unit == exit(3)` before effects, while the current TS
+  frontend treats exit as Unit and accepts it. Conversely, an Int-returning
+  function whose tail exits needs the supported bottom-type flow contract.
 - [ ] **Traversal forms:** unnamed item bindings and consistent scope.
 - [ ] **Loop values and exits:** value/then completion, metadata, payloads,
   tagged break/continue and the reference's supported tagged returns.
@@ -188,3 +193,13 @@ Source shrinks by 3029 bytes and the TS compiler by 5045 bytes after removing
 eight obsolete eager-failure wrappers. Paired throughput stays steady (see the
 [raw measurements](reports/2026-11-02-deferred-faults-performance.json)).
 Comparison chains are next; supplementary-character column units remain pending.
+
+Comparison chains close the adjacent-pair probe and add one canonical generated
+feature: 79/164 cases match, 85 remain, 27 original failures closed, no regressions.
+All 260 full tests pass with zero skips in 49.4 s, both 93-case corpora, 98 verifier
+executions, strict checks, coverage and nine editor groups pass. Nine native
+UBSan programs match exact status/streams. Existing 61 corpus artifact pairs
+are unchanged. Paired medians remain steady with mixed small timing changes;
+see the [chain performance report](reports/2026-11-02-comparison-chains-performance.json).
+The decisions example next exposes a semicolon-free value-if declaration gap.
+Next topic: script/lexical forms, starting with empty scripts.

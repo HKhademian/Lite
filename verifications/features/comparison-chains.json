@@ -1,0 +1,27 @@
+{
+  "id": "comparison.chains",
+  "kind": "feature",
+  "source": {
+    "file": "comparison-chains.lts",
+    "hash": "sha256:aabb806448f5686d19a858104ba69855f9427a35f32062386170b769f9d82b33"
+  },
+  "features": [
+    "comparison.chains"
+  ],
+  "guideline": "Checks adjacent comparisons, negated/mixed operators and short-circuited later arithmetic faults on all three targets.",
+  "targets": [
+    "igniter",
+    "ts",
+    "c"
+  ],
+  "cases": [
+    {
+      "name": "adjacency-and-short-circuit",
+      "stdout": {
+        "text": "true false\nfalse\ntrue true\ntrue\n",
+        "hash": "sha256:34b5170ec2ffe92dcf7baaa29d553c673abeaba83700872bbd4f18892ef8e94e"
+      },
+      "exitCode": 0
+    }
+  ]
+}

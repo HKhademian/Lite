@@ -552,6 +552,37 @@ intMultiplyCode := fn(left: String, right: String, position: Int): String {
 intNegateCode := fn(value: String, position: Int): String {
     "lt_checked_negate(" + value + ", " + intText(position) + ")"
 }
+
+/** Names a typed, source-position-hygienic C comparison operand temporary. */
+comparisonTemp := fn(kind: String, position: Int, index: Int): String {
+    tag := if kind == "String" { "s" } else if kind == "Bool" { "b" } else if kind == "Float" { "f" } else { "i" };
+    "lt_cmp_" + tag + "_" + intText(position) + "_" + intText(index)
+}
+
+/** Represents Unit as zero, retaining unsupported/effectful code for C validation instead of dropping it. */
+comparisonValueCode := fn(kind: String, code: String): String {
+    if kind =!= "Unit" { return code; }
+    var inner := code;
+    loop textLength(inner) >= 2 and textAt(inner, 0) == "(" and textAt(inner, textLength(inner) - 1) == ")" {
+        inner = textSlice(inner, 1, textLength(inner) - 1);
+    }
+    if inner == "undefined" { "0" } else { "(" + code + ", 0)" }
+}
+
+/** Emits portable comma/short-circuit sequencing so middle operands are evaluated once and later operands stay lazy. */
+comparisonChainCode := fn(codes: List<String>, kinds: List<String>, operators: List<String>, count: Int, position: Int): String {
+    first := comparisonTemp(kinds[0], position, 0);
+    second := comparisonTemp(kinds[1], position, 1);
+    var result := "(" + first + " = " + comparisonValueCode(kinds[0], codes[0]) + ", " + second + " = " + comparisonValueCode(kinds[1], codes[1]) + ", " + comparisonCode(operators[0], kinds[0], first, second);
+    var index := 2;
+    loop index <= count {
+        name := comparisonTemp(kinds[index], position, index);
+        pair := comparisonCode(operators[index - 1], kinds[index - 1], comparisonTemp(kinds[index - 1], position, index - 1), name);
+        result = result + " && (" + name + " = " + comparisonValueCode(kinds[index], codes[index]) + ", " + pair + ")";
+        index = index + 1;
+    }
+    result + ")"
+}
 /* Shared restricted front-end. Not a standalone program: a target manifest
    places the target literal encoders before this file and the emitter/driver
    after it. */
@@ -1239,6 +1270,14 @@ readOperator := fn(source: String, position: Int): Operator {
         word := textSlice(source, position, after);
         if word == "and" or word == "or" { return (text = word, width = after - position); }
     }
+    (text = "", width = 0)
+}
+
+/** Peeks only for a following comparison; the one-character filter avoids a full operator scan for ordinary delimiters and logic. */
+comparisonOperatorAt := fn(source: String, position: Int): Operator {
+    if position >= textLength(source) { return (text = "", width = 0); }
+    ch := textAt(source, position);
+    if ch == "=" or ch == "<" or ch == ">" { return readOperator(source, position); }
     (text = "", width = 0)
 }
 
@@ -2029,7 +2068,37 @@ parseBinary := fn(source: String, position: Int, prefix: String, locals: List<Lo
                 left = boolParsed(logicCode(operator.text, left.code, right.code), false, false, right.next);
             }
         } else if isComparison(operator.text) {
-            left = compareParsed(source, operatorPosition, operator.text, left, right, prefix);
+            firstPair := compareParsed(source, operatorPosition, operator.text, left, right, prefix);
+            var nextPosition := skipTrivia(source, right.next, prefix);
+            var nextOperator := comparisonOperatorAt(source, nextPosition);
+            if not isComparison(nextOperator.text) {
+                left = firstPair;
+            } else {
+                codes: mut List<String> = [left.code, right.code];
+                kinds: mut List<String> = [left.kind, right.kind];
+                operators: mut List<String> = [operator.text];
+                var count := 1;
+                var previous := right;
+                var end := right.next;
+                var constant := left.constant and right.constant;
+                var value := firstPair.intValue =!= 0;
+                loop isComparison(nextOperator.text) {
+                    operand := self(source, nextPosition + nextOperator.width, prefix, locals, functions, params, currentName, "", level + 1);
+                    pair := compareParsed(source, nextPosition, nextOperator.text, previous, operand, prefix);
+                    push_back(mut codes, operand.code);
+                    push_back(mut kinds, operand.kind);
+                    push_back(mut operators, nextOperator.text);
+                    constant = constant and operand.constant;
+                    if constant { value = value and pair.intValue =!= 0; }
+                    count = count + 1;
+                    previous = operand;
+                    end = operand.next;
+                    nextPosition = skipTrivia(source, end, prefix);
+                    nextOperator = comparisonOperatorAt(source, nextPosition);
+                }
+                if constant { left = boolParsed(boolLiteralCode(value), value, true, end); }
+                else { left = boolParsed(comparisonChainCode(codes, kinds, operators, count, operatorPosition), false, false, end); }
+            }
         } else if left.kind == "Int" and right.kind == "Int" {
             if left.constant and right.constant {
                 folded := tryFoldInteger(operator.text, left.intValue, right.intValue);
@@ -3014,17 +3083,21 @@ emitIntArithmeticHelpers := fn(calls: String, source: String, prefix: String): U
     outputLine("");
 }
 
-/** Declares hygienic operand temporaries at their unique source-offset assignment sites; quoted text is skipped. Comma expressions sequence nested faults left to right. */
+/** Declares hygienic arithmetic/comparison temporaries at unique assignment sites, skipping quoted text. */
 emitArithmeticTemporaries := fn(items: Items): Unit {
     loop items as item {
         var cursor := 0;
         loop cursor < textLength(item.code) {
-            if textAt(item.code, cursor) == "\"" {
+            ch := textAt(item.code, cursor);
+            if ch == "\"" {
                 cursor = skipAliasString(item.code, cursor);
-            } else if startsWithAt(item.code, cursor, "lt_arg_") {
+            } else if ch == "l" and (startsWithAt(item.code, cursor, "lt_arg_") or startsWithAt(item.code, cursor, "lt_cmp_")) {
                 end := skipName(item.code, cursor);
                 if startsWithAt(item.code, end, " = ") {
-                    outputLine("    int64_t " + textSlice(item.code, cursor, end) + ";");
+                    tag := if startsWithAt(item.code, cursor, "lt_cmp_") { textAt(item.code, cursor + 7) } else { "i" };
+                    typeCode := if tag == "s" { "const char *" } else if tag == "b" { "bool " }
+                        else if tag == "f" { "double " } else { "int64_t " };
+                    outputLine("    " + typeCode + textSlice(item.code, cursor, end) + ";");
                 }
                 cursor = end;
             } else { cursor = cursor + 1; }

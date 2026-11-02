@@ -25,7 +25,7 @@ this igniter's supported language. The refreshed T11/T12/T13 fixed point covers
 the bootstrap subset; full existing T00 feature parity and the native C ladder
 remain pending. The [text-cache benchmark](../benchmark/reports/2026-11-02-text-cache.md)
 records 668 ms median self-compilation after eliminating repeated whole-source
-code-point copies. The current test suite has 236 interpreter groups, 19
+code-point copies. The current test suite has 236 interpreter groups, 20
 compiler-host groups and 4 policy/tooling groups, with 9 separate editor grammar groups.
 
 Generated TS now preserves nested report effects and left-to-right report
@@ -73,6 +73,14 @@ false loops, skipped Boolean operands and unused functions compile safely; inval
 literals/types still reject before effects. Six fixtures now model runtime faults,
 so the compiler corpus is 61 programs/32 rejections (still 93 sources). All 259
 full tests pass with zero skips (53.4 s). See the [deferred-fault ledger](../compiler/parity.md#deferred-constant-arithmetic-faults).
+
+
+Comparison chains now retain middle operands once and skip later operands on both
+generated targets over their admitted scalar types. All 260 full tests pass with
+zero skips (49.4 s); inventory is 79/164 matching cases, 85 remaining. The new
+canonical chain feature executes on all three targets. See the [chain ledger](../compiler/parity.md#comparison-chain-lowering)
+for fixed-point, sanitizer and paired speed evidence. Broader types, Never-valued
+exit typing, native C and run/check migration remain pending.
 
 ## Run
 

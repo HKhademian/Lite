@@ -423,6 +423,15 @@ listContainsBool := fn(values: List<Bool>, target: Bool): Bool {
     listIndexOfBool(values, target) >= 0
 }
 /* TypeScript backend for the temporary Lite compiler. */
+/** Maps a restricted Lite scalar kind to its TypeScript type. */
+tsScalarType := fn(kind: String): String {
+    if kind == "Int" { "bigint" }
+    else if kind == "String" { "string" }
+    else if kind == "Float" { "number" }
+    else if kind == "Bool" { "boolean" }
+    else { "void" }
+}
+
 /** Formats a checked Int value as a TypeScript BigInt literal. */
 intLiteralCode := fn(value: Int, negative: Bool, digits: String): String {
     if value == 0 { "0n" }
@@ -541,6 +550,23 @@ intMultiplyCode := fn(left: String, right: String, position: Int): String {
 /** Emits checked Int64 negation, evaluating the operand once. */
 intNegateCode := fn(value: String, position: Int): String {
     "lite$negateInt(" + value + ", " + intText(position) + ")"
+}
+
+/** Emits a chain with one evaluation per operand and lazy later operands in a private expression scope. */
+comparisonChainCode := fn(codes: List<String>, kinds: List<String>, operators: List<String>, count: Int, position: Int): String {
+    var result := "((): boolean => { ";
+    var index := 0;
+    loop index <= count {
+        name := "lite$compare" + intText(index);
+        result = result + "const " + name + ": " + tsScalarType(kinds[index]) + " = " + codes[index] + "; ";
+        if index > 0 {
+            pair := comparisonCode(operators[index - 1], kinds[index - 1], "lite$compare" + intText(index - 1), name);
+            if index < count { result = result + "if (!(" + pair + ")) return false; "; }
+            else { result = result + "return " + pair + "; "; }
+        }
+        index = index + 1;
+    }
+    result + "})()"
 }
 /* Shared restricted front-end. Not a standalone program: a target manifest
    places the target literal encoders before this file and the emitter/driver
@@ -1229,6 +1255,14 @@ readOperator := fn(source: String, position: Int): Operator {
         word := textSlice(source, position, after);
         if word == "and" or word == "or" { return (text = word, width = after - position); }
     }
+    (text = "", width = 0)
+}
+
+/** Peeks only for a following comparison; the one-character filter avoids a full operator scan for ordinary delimiters and logic. */
+comparisonOperatorAt := fn(source: String, position: Int): Operator {
+    if position >= textLength(source) { return (text = "", width = 0); }
+    ch := textAt(source, position);
+    if ch == "=" or ch == "<" or ch == ">" { return readOperator(source, position); }
     (text = "", width = 0)
 }
 
@@ -2019,7 +2053,37 @@ parseBinary := fn(source: String, position: Int, prefix: String, locals: List<Lo
                 left = boolParsed(logicCode(operator.text, left.code, right.code), false, false, right.next);
             }
         } else if isComparison(operator.text) {
-            left = compareParsed(source, operatorPosition, operator.text, left, right, prefix);
+            firstPair := compareParsed(source, operatorPosition, operator.text, left, right, prefix);
+            var nextPosition := skipTrivia(source, right.next, prefix);
+            var nextOperator := comparisonOperatorAt(source, nextPosition);
+            if not isComparison(nextOperator.text) {
+                left = firstPair;
+            } else {
+                codes: mut List<String> = [left.code, right.code];
+                kinds: mut List<String> = [left.kind, right.kind];
+                operators: mut List<String> = [operator.text];
+                var count := 1;
+                var previous := right;
+                var end := right.next;
+                var constant := left.constant and right.constant;
+                var value := firstPair.intValue =!= 0;
+                loop isComparison(nextOperator.text) {
+                    operand := self(source, nextPosition + nextOperator.width, prefix, locals, functions, params, currentName, "", level + 1);
+                    pair := compareParsed(source, nextPosition, nextOperator.text, previous, operand, prefix);
+                    push_back(mut codes, operand.code);
+                    push_back(mut kinds, operand.kind);
+                    push_back(mut operators, nextOperator.text);
+                    constant = constant and operand.constant;
+                    if constant { value = value and pair.intValue =!= 0; }
+                    count = count + 1;
+                    previous = operand;
+                    end = operand.next;
+                    nextPosition = skipTrivia(source, end, prefix);
+                    nextOperator = comparisonOperatorAt(source, nextPosition);
+                }
+                if constant { left = boolParsed(boolLiteralCode(value), value, true, end); }
+                else { left = boolParsed(comparisonChainCode(codes, kinds, operators, count, operatorPosition), false, false, end); }
+            }
         } else if left.kind == "Int" and right.kind == "Int" {
             if left.constant and right.constant {
                 folded := tryFoldInteger(operator.text, left.intValue, right.intValue);
@@ -2909,15 +2973,6 @@ lineStartCodes := fn(source: String): String {
 /** Removes one four-space indentation level from `indent`. */
 dedent := fn(indent: String): String {
     textSlice(indent, 0, textLength(indent) - 4)
-}
-
-/** Maps a restricted Lite scalar kind to its TypeScript type. */
-tsScalarType := fn(kind: String): String {
-    if kind == "Int" { "bigint" }
-    else if kind == "String" { "string" }
-    else if kind == "Float" { "number" }
-    else if kind == "Bool" { "boolean" }
-    else { "void" }
 }
 
 /** Formats one canonical flat named-tuple kind as a TypeScript object type. */

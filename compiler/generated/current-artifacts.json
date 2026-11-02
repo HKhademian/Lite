@@ -1,8 +1,8 @@
 {
-  "note": "Current exact artifacts after deferring constant arithmetic faults to execution. Six former compile-rejection fixtures are now runtime-fault programs; valid existing program artifact hashes remain unchanged.",
+  "note": "Current exact artifacts after comparison-chain lowering. All 61 existing corpus program artifact pairs are unchanged; historical checkpoints remain preserved.",
   "recorded": "2026-11-02",
-  "sourceSha256": "8801038265573d0f5552913834a79d64acd6eccb767c5f53d39a497d8fe82110",
-  "compilerSha256": "c1a9436393f31334aa3574bfc86569e6f2048cd923920b651af9fe74f9a061d8",
+  "sourceSha256": "1be00ebd9db034010ae420b156b4166ae285a13c332be1ea8c0b859ef20f5157",
+  "compilerSha256": "78fe04497b02149590da6f62e2abce597378525198141958bf22372fbb72ff69",
   "programCases": 61,
   "rejectedCases": 32,
   "artifacts": [

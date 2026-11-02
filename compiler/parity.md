@@ -674,3 +674,40 @@ Useful internal tools:
 | 2026-11-02 | TS | A report followed by an indexed-read runtime fault | T00 retains the earlier report; generated TS loses it because main never returns the accumulator | output-retention gap | closed for process adapters by the I/O migration; exact runtime fault diagnostics remain separate |
 | 2026-11-02 | TS | `inputAll()` with invalid UTF-8 stdin | T00 returns InputFault; generated TS substitutes a replacement character and succeeds | input-decoding gap | closed by strict incremental input decoding and exact real-CLI UTF-8 probes |
 | — | — | — | No generated compiler yet | — | — |
+
+## Comparison-chain lowering
+
+The generated TS and C targets now compare adjacent operands, retain each middle
+operand once and skip later operands after the first failed pair. All ten
+operators share this path, while ordinary two-operand artifacts stay unchanged.
+Every adjacent pair is checked even after a constant false pair. TS uses private
+expression scopes; C uses typed, source-offset temporaries and flat comma/`&&`
+sequencing, avoiding C argument-order ambiguity and deep bracket nesting.
+
+Coverage includes 600 constant/dynamic chains across all 100 operator pairs,
+Int64 limits, String/Bool/Unit equality, prefix `not`, grouping, loops, names,
+prompted input, operand effects, skipped/reached faults and static rejection.
+A 301-operator chain runs on both targets. Nine strict native UBSan programs
+match reference status and streams. All 61 older corpus artifact pairs remain
+identical; both 93-case corpora and all 98 verifier executions pass.
+
+The full gate passes 260/260 tests, zero skips, in 49.4 s; fast passes 248
+with 12 expected skips in 28.3 s. Strict host/seeds,
+coverage and nine editor groups pass. The [generated-only ladder](reports/2026-11-02-comparison-chains-ladder.json)
+records three identical TS generations and the TS-hosted C emitter. Native C
+compiler self-hosting remains pending.
+
+Character-filtered comparison lookahead and C temporary scanning keep the common
+path small. Five paired samples show TS medians 60.6 → 59.5 ms for 1,000 outputs,
+636.4 → 627.4 ms for identical compiler source, and 123.0 → 124.9 ms for 1,000
+constant expressions. C-emitter medians are 78.8 → 76.9, 166.5 → 163.2 and
+221.3 → 213.0 ms for outputs, dynamic divisions and constant expressions.
+These mixed changes are recorded without a general speedup claim; see the
+[raw performance report](reports/2026-11-02-comparison-chains-performance.json).
+
+Inventory: 79/164 match, 85 remain, 27 original failures closed, no regressions,
+210 tracked Lite sources, no load errors. The decisions example still needs a
+semicolon-free value-if declaration; chain support alone does not close it.
+A separate Never-valued `exit` typing flaw was discovered and added to the queue.
+Supplementary-character columns remain an owner decision. Next is the script
+and lexical-form queue, beginning with empty scripts.

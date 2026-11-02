@@ -29,6 +29,16 @@
       ]
     },
     {
+      "id": "comparison.chains",
+      "summary": "Adjacent comparison chains with single-evaluation middle values and lazy later operands.",
+      "case": "features/comparison-chains.json",
+      "status": "verified",
+      "docs": [
+        "docs/comparison-chains.md",
+        "docs/operators.md"
+      ]
+    },
+    {
       "id": "cond.partial",
       "summary": "Partial conditional declaration defaults and no-write assignments.",
       "case": "features/cond-partial.json",

@@ -2,7 +2,7 @@
 
 Runtime environment details omitted for privacy.
 
-T11 identity: `c1a9436393f31334aa3574bfc86569e6f2048cd923920b651af9fe74f9a061d8`. The preserved artifact passed its separate strict TypeScript check.
+T11 identity: `78fe04497b02149590da6f62e2abce597378525198141958bf22372fbb72ff69`. The preserved artifact passed its separate strict TypeScript check.
 
 This is the current measured support inventory, not acceptance of new language features. Dated historical inventories remain unchanged.
 
@@ -17,18 +17,18 @@ This is the current measured support inventory, not acceptance of new language f
 
 ## Counts
 
-- feature: 37; 22 matches tested behavior; 15 T11 rejects source.
+- feature: 38; 23 matches tested behavior; 15 T11 rejects source.
 - example: 19; 10 matches tested behavior; 9 T11 rejects source.
 - sample: 20; 11 matches tested behavior; 9 T11 rejects source.
-- probe: 79; 26 matches tested behavior; 53 T11 rejects source.
+- probe: 79; 27 matches tested behavior; 52 T11 rejects source.
 - library-test: 8; 8 matches tested behavior.
-- trackedSourceFiles: 209.
+- trackedSourceFiles: 210.
 - Showcases: none currently implemented.
 
 ## Progress since the original inventory
 
-- 26 formerly failing cases now match; 0 formerly matching cases regress. Case identity includes kind and id.
-- 77/163 executed source cases match; 86 still fail. These are case counts, not distinct missing features or an overall completion percentage.
+- 27 formerly failing cases now match; 0 formerly matching cases regress. Case identity includes kind and id.
+- 79/164 executed source cases match; 85 still fail. These are case counts, not distinct missing features or an overall completion percentage.
 - Native C, compile-only sources and run/check migration have separate gates in [the live gap tracker](../gaps.md).
 
 Closed original cases:
@@ -51,6 +51,7 @@ Closed original cases:
 - probe: input.float
 - probe: input.line
 - probe: input.whole-prompt
+- probe: comparison.chain
 - probe: tuple.report
 - probe: function.report-order
 - probe: text.bounds-diagnostic
@@ -66,6 +67,7 @@ Closed original cases:
 - **num.widths — T11 rejects source.** Sized integer and floating widths with promotion and lossless widening. Source: `verifications/features/num-widths.lts`.
   First diagnostic: 1:4: unsupported local type Int8
 - **bool.conditions — matches tested behavior.** Bool comparisons and conditional selection. Source: `verifications/features/bool-conditions.lts`.
+- **comparison.chains — matches tested behavior.** Adjacent comparison chains with single-evaluation middle values and lazy later operands. Source: `verifications/features/comparison-chains.lts`.
 - **cond.partial — T11 rejects source.** Partial conditional declaration defaults and no-write assignments. Source: `verifications/features/cond-partial.lts`.
   First diagnostic: 2:19: value if requires a final else
 - **loop.conditional — matches tested behavior.** Conditional action loops with mutable state. Source: `verifications/features/loop-conditional.lts`.
@@ -154,8 +156,7 @@ Closed original cases:
   First diagnostic: 1:16: unknown value y
 - **condition.unit-block — T11 rejects source.** Empty blocks and declaration tails produce Unit
   First diagnostic: 1:12: expected an Int, String or Bool expression
-- **comparison.chain — T11 rejects source.** Comparison chains
-  First diagnostic: 1:18: cannot compare Bool and Int
+- **comparison.chain — matches tested behavior.** Comparison chains
 - **comparison.complements — matches tested behavior.** Complement comparison spellings <! <!= >! >!=
 - **scope.compound — T11 rejects source.** Compound arithmetic updates
   First diagnostic: 1:16: expected := or = after local name x

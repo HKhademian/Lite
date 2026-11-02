@@ -12,8 +12,8 @@ Current components:
 
 - Igniter: **0.1.0-alpha.38**
 - VS Code extension: **0.1.1**
-- Verification corpus: 37 features, 19 examples, 20 samples, 77 scenarios, 95 target executions
-- Tests: 236 interpreter groups, 19 compiler-host groups, 4 policy/tooling groups and 9 editor grammar groups
+- Verification corpus: 38 features, 19 examples, 20 samples, 78 scenarios, 98 target executions
+- Tests: 236 interpreter groups, 20 compiler-host groups, 4 policy/tooling groups and 9 editor grammar groups
 
 Constant integer arithmetic faults now execute only when reached. Dead branches,
 false loops, skipped Boolean operands and unused functions compile safely; invalid
@@ -132,6 +132,14 @@ falls from 580.6 s to 47.6 s with all 248 tests passing and zero skips.
 | `igniter-v0.1.0-alpha.36` | 2026-11-01 | `8da2f93` | Named unsupported-feature diagnostics in the restricted compiler |
 | `igniter-v0.1.0-alpha.37` | 2026-11-01 | `64c471f` | Restricted compiler control-flow slice: Bool, mutable locals, if/else and loops |
 | `igniter-v0.1.0-alpha.38` | 2026-11-01 | `e5bb678` | Positioned compiler diagnostics and documentation links |
+
+Comparison chains now retain middle operands once and skip later operands on both
+generated targets over their admitted scalar types. All 260 full tests pass with
+zero skips (49.4 s); inventory is 79/164 matching cases, 85 remaining. The new
+canonical chain feature executes on all three targets. See the [chain ledger](../compiler/parity.md#comparison-chain-lowering)
+for fixed-point, sanitizer and paired speed evidence. Broader types, Never-valued
+exit typing, native C and run/check migration remain pending.
+
 
 ## Current tag conventions
 
