@@ -1,7 +1,7 @@
 {
   "date": "2026-11-02",
   "sourceBaseRevision": "d82cfe348889deb7518e8298c2e0cfbf88322069",
-  "sourceSnapshot": "report-order source snapshot committed with this record; identified by source.sha256",
+  "sourceSnapshot": "exact committed source at sourceRevision, identified by source.sha256",
   "sourceManifest": "compiler/manifests/ts.json",
   "source": {
     "bytes": 156467,
@@ -59,7 +59,9 @@
     "sha256": "4dd040adee51f4854c78b5947edd4be94233f3e9cd3f3825e106765082ccf2af",
     "builderSha256": "49ac81d68078c8f4c189391a4979e84c2fec353c1589cb747c75bdbd61111b9c",
     "sourceRevision": "41d15fc8c424a03b0c87e602995c0a5199d48b6a",
-    "native": false
+    "native": false,
+    "builderRevision": "3f5fbce277790a58d6671f69665604d05738586b",
+    "artifactRevision": "3f5fbce277790a58d6671f69665604d05738586b"
   },
   "reproductionCommands": [
     "node --input-type=module -e 'import {loadBundle} from \"./igniter/loader.ts\"; process.stdout.write(loadBundle(\"compiler/manifests/ts.json\").text);' > /tmp/S.lts",
@@ -98,5 +100,7 @@
       "failed": 0,
       "durationMs": 580556.73
     }
-  }
+  },
+  "sourceRevision": "3f5fbce277790a58d6671f69665604d05738586b",
+  "artifactRevision": "3f5fbce277790a58d6671f69665604d05738586b"
 }
