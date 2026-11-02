@@ -254,3 +254,13 @@ programs/27 rejections; all 65 earlier artifact pairs stay identical. Paired
 compiler throughput remains steady; see the [comma ledger](parity.md#trailing-call-commas).
 Default-argument exit() remains a separately verified builtin gap. Remaining
 scope/statement forms and broader type/control/native/consumer work stay queued.
+
+Validation-harness performance: four recent groups batch 81 strict TS module
+checks into four projects and retain all 133 execution contracts (52 native).
+The same 66 precompiled corpus programs validate/run in 5877.2 → 3215.8 ms median
+(1.83×), with exact fixture observations across five paired fresh samples.
+All 264 full tests pass without skips in 75.5 s; fast passes 252 with 12 expected
+skips in 51.0 s. Strict checks, both 93-case corpora, 98 verifier executions,
+coverage and nine editor groups pass. Compiler source/seed identities and the
+85/164 inventory are unchanged. See the [harness ledger](parity.md#batched-ts-artifact-validation).
+Next: remaining scope/statement forms and the verified default exit() gap.

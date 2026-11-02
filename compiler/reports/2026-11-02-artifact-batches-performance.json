@@ -1,0 +1,1153 @@
+{
+  "date": "2026-11-02",
+  "baseRevision": "47b6e34f5e2bbaf65db6073b2c94cca4f2799a03",
+  "method": "Five alternating paired fresh-process samples after one warm-up pair, without concurrent gates. Both runners receive identical precompiled corpus artifacts, inputs and args; all status/signal/stdout/stderr observations must equal fixture expectations. Timed phase covers strict checking, temporary artifact setup and isolated execution, excluding compiler emission and worker/module/data loading. No persistent typecheck cache.",
+  "runnerSourceSha256": {
+    "previous": "6fca243a0bec048aa0f441487db391ef25b38264ffd3e8b150dd1ae86a3f6c9d",
+    "current": "18bc90befd7d70db94c14e9831cbbe904513c97416eeb2075d582dc71f2428ee"
+  },
+  "tsconfigSha256": "8da5111a5fda15d4508f85bc298840b84538b7f78e4577e5788b3f41a7ebfacb",
+  "workloadSha256": "5876cecb13f3097f9daf5ea0e95ad39a8cdcc2700ef7ef168ade3b7dffeec1a8",
+  "scenarios": 66,
+  "workloads": [
+    {
+      "id": "adjacent-strings/default",
+      "path": "igniter/tests/compiler/001-001-adjacent-strings.lts",
+      "sourceSha256": "bde8f4e9bf1602c4fd31f26cc9b5cefd5ba64648d61407739e0f4aa31f3e1ad1",
+      "artifactSha256": "4761d99d9784be0167a05a977e7ca7351d2d3d232b32134773e83b757e00ddfa",
+      "stdinSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "args": [],
+      "expected": {
+        "phase": "run",
+        "status": 0,
+        "signal": null,
+        "stdout": "YWIK",
+        "stderr": ""
+      }
+    },
+    {
+      "id": "empty-source/default",
+      "path": "igniter/tests/compiler/001-001-empty-source.lts",
+      "sourceSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "artifactSha256": "0bc5ce57b960ec0579994f91213b40d2dfdd05d813720915c5f57ee342c8fb92",
+      "stdinSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "args": [],
+      "expected": {
+        "phase": "run",
+        "status": 0,
+        "signal": null,
+        "stdout": "",
+        "stderr": ""
+      }
+    },
+    {
+      "id": "output-line-empty-arguments/default",
+      "path": "igniter/tests/compiler/001-001-output-line-empty-arguments.lts",
+      "sourceSha256": "5e72423926e0780734b76cb4c29fd8791732c03087185149d8dd39eb0953ffde",
+      "artifactSha256": "f0262c75afe4af56afff7687ad20cd975a074841a25b6c1583ce7e9c9b0bc1ff",
+      "stdinSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "args": [],
+      "expected": {
+        "phase": "run",
+        "status": 0,
+        "signal": null,
+        "stdout": "Cg==",
+        "stderr": ""
+      }
+    },
+    {
+      "id": "report-crlf-spacing/default",
+      "path": "igniter/tests/compiler/001-001-report-crlf-spacing.lts",
+      "sourceSha256": "6b694ffc3c628e5bca3cd69324c79434dc728727a3b54ebf1a15c77d2bc0f975",
+      "artifactSha256": "8db4c94112c0fd27ede57be8853b4f07fa45396e7e7913dbc3c02c41c8a098ed",
+      "stdinSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "args": [],
+      "expected": {
+        "phase": "run",
+        "status": 0,
+        "signal": null,
+        "stdout": "LTQyCg==",
+        "stderr": ""
+      }
+    },
+    {
+      "id": "report-int-42/default",
+      "path": "igniter/tests/compiler/001-001-report-int-42.lts",
+      "sourceSha256": "11c45fff5c9a579bf353cfc71a3b94376f079010260ab19cb6e3de7eb1fa1869",
+      "artifactSha256": "5fb05e7e91d97183f219c365e1bbdd188be380e99d7c8663497b60a5c9e33625",
+      "stdinSha256": "712450d3c4a79eea9509e75dc1dacdeff58034df538536cfae2da882bd8a0c50",
+      "args": [],
+      "expected": {
+        "phase": "run",
+        "status": 0,
+        "signal": null,
+        "stdout": "NDIK",
+        "stderr": ""
+      }
+    },
+    {
+      "id": "report-int-max/default",
+      "path": "igniter/tests/compiler/001-001-report-int-max.lts",
+      "sourceSha256": "e799cd09279411498024c412a1973bb09c96b14cb5d1adea27532cc3a737afa7",
+      "artifactSha256": "426f258af3ee1d2b65641e8d7cc87333bbe3c64f2bfe17cdb710ab9e922f56ea",
+      "stdinSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "args": [],
+      "expected": {
+        "phase": "run",
+        "status": 0,
+        "signal": null,
+        "stdout": "OTIyMzM3MjAzNjg1NDc3NTgwNwo=",
+        "stderr": ""
+      }
+    },
+    {
+      "id": "report-int-min/default",
+      "path": "igniter/tests/compiler/001-001-report-int-min.lts",
+      "sourceSha256": "0fe2f266ca75bea0e00fbf49796d5e211376d30f89e810979c7cb57b9c5ee5a7",
+      "artifactSha256": "af5c29be2b85f3ccc5d223dc5f8f4770893324ca9bb445a748480a78693b7adf",
+      "stdinSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "args": [],
+      "expected": {
+        "phase": "run",
+        "status": 0,
+        "signal": null,
+        "stdout": "LTkyMjMzNzIwMzY4NTQ3NzU4MDgK",
+        "stderr": ""
+      }
+    },
+    {
+      "id": "report-large-magnitude/default",
+      "path": "igniter/tests/compiler/001-001-report-large-magnitude.lts",
+      "sourceSha256": "07f3dde894deed1af9b71272b6a7acbf65cb711c8f1b4496e4e374bf3c8bf2f0",
+      "artifactSha256": "304693f926b03a64d24a22fb2d09d53fb39f4200f368e3b737fac1030f5be98d",
+      "stdinSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "args": [],
+      "expected": {
+        "phase": "run",
+        "status": 0,
+        "signal": null,
+        "stdout": "OTk5OTk5OTk5OTk5OTk5OQo=",
+        "stderr": ""
+      }
+    },
+    {
+      "id": "report-leading-plus-zeroes/default",
+      "path": "igniter/tests/compiler/001-001-report-leading-plus-zeroes.lts",
+      "sourceSha256": "d85e9053a3f6460fe66cff12f4e27e3b2586a61076db94c1b8ddab3895c7eaec",
+      "artifactSha256": "5fb05e7e91d97183f219c365e1bbdd188be380e99d7c8663497b60a5c9e33625",
+      "stdinSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "args": [],
+      "expected": {
+        "phase": "run",
+        "status": 0,
+        "signal": null,
+        "stdout": "NDIK",
+        "stderr": ""
+      }
+    },
+    {
+      "id": "report-missing-argument/default",
+      "path": "igniter/tests/compiler/001-001-report-missing-argument.lts",
+      "sourceSha256": "251d478c9ff04f740ce8368491106f99e38ce9859a74090e81d77426534e5495",
+      "artifactSha256": "bcb9a5b754eba67ec3af5ffa5521c024b19b6e5c0c340a2f2cac0f9a0c15f90c",
+      "stdinSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "args": [],
+      "expected": {
+        "phase": "run",
+        "status": 0,
+        "signal": null,
+        "stdout": "MQo=",
+        "stderr": ""
+      }
+    },
+    {
+      "id": "report-multiline-spacing/default",
+      "path": "igniter/tests/compiler/001-001-report-multiline-spacing.lts",
+      "sourceSha256": "961a1f1e3c43cb1bac24900f95a0d23168a130b05f5149572ac54b0cf031e232",
+      "artifactSha256": "5fb05e7e91d97183f219c365e1bbdd188be380e99d7c8663497b60a5c9e33625",
+      "stdinSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "args": [],
+      "expected": {
+        "phase": "run",
+        "status": 0,
+        "signal": null,
+        "stdout": "NDIK",
+        "stderr": ""
+      }
+    },
+    {
+      "id": "report-negative-zero/default",
+      "path": "igniter/tests/compiler/001-001-report-negative-zero.lts",
+      "sourceSha256": "60a8cb04a8b6ac3b3ae90cd0ae856e0ce4a263e271d7f197b7feee95e5885a27",
+      "artifactSha256": "3523c0bee345476a5ea987480fc8fb32e199cd4069c7448f7243fbcc310ffc64",
+      "stdinSha256": "bdad36f6438895c28aca3e46b37a21d0bd40edd975968b40417c7c2c2d500662",
+      "args": [],
+      "expected": {
+        "phase": "run",
+        "status": 0,
+        "signal": null,
+        "stdout": "MAo=",
+        "stderr": ""
+      }
+    },
+    {
+      "id": "report-spaced-negative/default",
+      "path": "igniter/tests/compiler/001-001-report-spaced-negative.lts",
+      "sourceSha256": "cac73fb69437048e715156cbfaae35de9f68fd5cbce5a2e11f7a9f43b97df48d",
+      "artifactSha256": "8db4c94112c0fd27ede57be8853b4f07fa45396e7e7913dbc3c02c41c8a098ed",
+      "stdinSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "args": [],
+      "expected": {
+        "phase": "run",
+        "status": 0,
+        "signal": null,
+        "stdout": "LTQyCg==",
+        "stderr": ""
+      }
+    },
+    {
+      "id": "report-zero/default",
+      "path": "igniter/tests/compiler/001-001-report-zero.lts",
+      "sourceSha256": "a0e1e43a486352b560920a30dbb0763c82a2389554e7bf34208f4eae0f6b3139",
+      "artifactSha256": "3523c0bee345476a5ea987480fc8fb32e199cd4069c7448f7243fbcc310ffc64",
+      "stdinSha256": "712450d3c4a79eea9509e75dc1dacdeff58034df538536cfae2da882bd8a0c50",
+      "args": [],
+      "expected": {
+        "phase": "run",
+        "status": 0,
+        "signal": null,
+        "stdout": "MAo=",
+        "stderr": ""
+      }
+    },
+    {
+      "id": "report-zeroes/default",
+      "path": "igniter/tests/compiler/001-001-report-zeroes.lts",
+      "sourceSha256": "ed5dd9e3531191414fc45aa71d78bae68e9568cb59e0b26d57f2f764275a81b5",
+      "artifactSha256": "3523c0bee345476a5ea987480fc8fb32e199cd4069c7448f7243fbcc310ffc64",
+      "stdinSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "args": [],
+      "expected": {
+        "phase": "run",
+        "status": 0,
+        "signal": null,
+        "stdout": "MAo=",
+        "stderr": ""
+      }
+    },
+    {
+      "id": "whitespace-source/default",
+      "path": "igniter/tests/compiler/001-001-whitespace-source.lts",
+      "sourceSha256": "01ba4719c80b6fe911b091a7c05124b64eeece964e09c058ef8f9805daca546b",
+      "artifactSha256": "0bc5ce57b960ec0579994f91213b40d2dfdd05d813720915c5f57ee342c8fb92",
+      "stdinSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "args": [],
+      "expected": {
+        "phase": "run",
+        "status": 0,
+        "signal": null,
+        "stdout": "",
+        "stderr": ""
+      }
+    },
+    {
+      "id": "arithmetic-beyond-32-bit/default",
+      "path": "igniter/tests/compiler/001-002-arithmetic-beyond-32-bit.lts",
+      "sourceSha256": "655d3c44ac329e77759b2390d61f2a5dc680af7dbc20600ad247064ea010d381",
+      "artifactSha256": "1984a31eb06e75e7a75a5939595f28a72ec3d08d4ad9f418ba0fc33f20cb85d9",
+      "stdinSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "args": [],
+      "expected": {
+        "phase": "run",
+        "status": 0,
+        "signal": null,
+        "stdout": "MjE0NzQ4MzY0OAo=",
+        "stderr": ""
+      }
+    },
+    {
+      "id": "arithmetic-int-min/default",
+      "path": "igniter/tests/compiler/001-002-arithmetic-int-min.lts",
+      "sourceSha256": "d2fd17863d754b13bae84baa58a9e80e8e7e64785de45d9cd9bfb5852a2ae12f",
+      "artifactSha256": "e9d6eb5f5a9905e37d27291e7597cead335242b89bc72fbf6816b404b2ed7108",
+      "stdinSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "args": [],
+      "expected": {
+        "phase": "run",
+        "status": 0,
+        "signal": null,
+        "stdout": "LTkyMjMzNzIwMzY4NTQ3NzU4MDgK",
+        "stderr": ""
+      }
+    },
+    {
+      "id": "arithmetic-negative-division/default",
+      "path": "igniter/tests/compiler/001-002-arithmetic-negative-division.lts",
+      "sourceSha256": "d28c1cee49724bebd3c263321e990d0b491c80b828f2f817129e607e3ddd51ed",
+      "artifactSha256": "74ce0e454e70cce6975289353fa897970d8e7f1f38a7eedccef118f9a529d885",
+      "stdinSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "args": [],
+      "expected": {
+        "phase": "run",
+        "status": 0,
+        "signal": null,
+        "stdout": "LTMK",
+        "stderr": ""
+      }
+    },
+    {
+      "id": "arithmetic-parentheses/default",
+      "path": "igniter/tests/compiler/001-002-arithmetic-parentheses.lts",
+      "sourceSha256": "5bcdfe7bec89ec1bb0507dd04b9b25f908c4cd52f5e2e74096f092399a24d64a",
+      "artifactSha256": "0b17893693dd601a0d8de989358f22fc984b72662e4581952f9a51ea7198c98b",
+      "stdinSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "args": [],
+      "expected": {
+        "phase": "run",
+        "status": 0,
+        "signal": null,
+        "stdout": "MjAK",
+        "stderr": ""
+      }
+    },
+    {
+      "id": "arithmetic-precedence/default",
+      "path": "igniter/tests/compiler/001-002-arithmetic-precedence.lts",
+      "sourceSha256": "f2038bf14d018b74db26830255151ffd6a2af2abb7c9f8aee19f937e348aac21",
+      "artifactSha256": "2a1d8c2786814a9d6caa52d6d6222d0b0c0094fd91c8bcc62ce1266588018aa5",
+      "stdinSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "args": [],
+      "expected": {
+        "phase": "run",
+        "status": 0,
+        "signal": null,
+        "stdout": "LTEK",
+        "stderr": ""
+      }
+    },
+    {
+      "id": "arithmetic-unary-signs/default",
+      "path": "igniter/tests/compiler/001-002-arithmetic-unary-signs.lts",
+      "sourceSha256": "a817f21bc161e609f6c43a976bf47fdac62f2692dd40d13a92f28f0c32e48a14",
+      "artifactSha256": "0bc804436e930cdc9632c7d9029ae1b56c777acd8f09f0361cddd9eab2a9a154",
+      "stdinSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "args": [],
+      "expected": {
+        "phase": "run",
+        "status": 0,
+        "signal": null,
+        "stdout": "NQo=",
+        "stderr": ""
+      }
+    },
+    {
+      "id": "floor-int/default",
+      "path": "igniter/tests/compiler/001-002-floor-int.lts",
+      "sourceSha256": "ce92101a1b394d2988344c63c3a99fb3d4c33b9e80822787eebbda650dac1ef2",
+      "artifactSha256": "de362de38dea31e6bfd66d7837403154f65bbd130b0707f4f68820b7bdfeb63d",
+      "stdinSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "args": [],
+      "expected": {
+        "phase": "run",
+        "status": 0,
+        "signal": null,
+        "stdout": "MgotMwoxCjIK",
+        "stderr": ""
+      }
+    },
+    {
+      "id": "remainder-int/default",
+      "path": "igniter/tests/compiler/001-002-remainder-int.lts",
+      "sourceSha256": "f95e911f072de4bb6f0fc38ec7a77cb1f98c3a1b57da1c8bfc59aa93ed09393d",
+      "artifactSha256": "10c97edefd5458640ee848842b5d479d5770a9ce4af4d3f53a33c53da603bfbc",
+      "stdinSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "args": [],
+      "expected": {
+        "phase": "run",
+        "status": 0,
+        "signal": null,
+        "stdout": "MQotMQoxCjAK",
+        "stderr": ""
+      }
+    },
+    {
+      "id": "report-signed-sequence/default",
+      "path": "igniter/tests/compiler/001-002-report-signed-sequence.lts",
+      "sourceSha256": "b38d71f3134cf3902a14e3166e4e7227951e638e467dfebcf5485524ab8c8883",
+      "artifactSha256": "b340f009aa5a01c1d89a029af55feaea8083331ccb33570e036b88d8333dfb67",
+      "stdinSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "args": [],
+      "expected": {
+        "phase": "run",
+        "status": 0,
+        "signal": null,
+        "stdout": "MAotNDIKMTAwCg==",
+        "stderr": ""
+      }
+    },
+    {
+      "id": "arithmetic-large-multiply/default",
+      "path": "igniter/tests/compiler/001-003-arithmetic-large-multiply.lts",
+      "sourceSha256": "c19fe36ed28aa66f52d7baf07edc6ee5a51b4366349e027bfc3a6c9f120a4d01",
+      "artifactSha256": "a8366716173e5329d930417f878479976ea7aa081876259c0e1169af683a6a26",
+      "stdinSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "args": [],
+      "expected": {
+        "phase": "run",
+        "status": 0,
+        "signal": null,
+        "stdout": "MzAwMDAwMDAwMAo=",
+        "stderr": ""
+      }
+    },
+    {
+      "id": "local-arithmetic/default",
+      "path": "igniter/tests/compiler/001-003-local-arithmetic.lts",
+      "sourceSha256": "528f27e6f206a619a4ad587a6d96a5dd8d5baae662ec8ceb858bb782fa4973e9",
+      "artifactSha256": "5a2c3edca343eaa56ad8c54787df5e356b0002e05eabc67781ee28dcf3b67456",
+      "stdinSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "args": [],
+      "expected": {
+        "phase": "run",
+        "status": 0,
+        "signal": null,
+        "stdout": "LTEK",
+        "stderr": ""
+      }
+    },
+    {
+      "id": "local-dependencies/default",
+      "path": "igniter/tests/compiler/001-003-local-dependencies.lts",
+      "sourceSha256": "b926ebd38e871c2ed919c839d660c1d1af6c24b420d419151925fb2bf31f6b22",
+      "artifactSha256": "e3019157da74ea001ee7570a534d304a70d4737d58558fcec1e5bd3237ea9b31",
+      "stdinSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "args": [],
+      "expected": {
+        "phase": "run",
+        "status": 0,
+        "signal": null,
+        "stdout": "MTAKLTUK",
+        "stderr": ""
+      }
+    },
+    {
+      "id": "local-unused/default",
+      "path": "igniter/tests/compiler/001-004-local-unused.lts",
+      "sourceSha256": "4c3024083a2c861ce57e11754f6dd22d7295d9b348d553245a49c1b5bb1ae501",
+      "artifactSha256": "acbd79018fe6324dbcb35d6f61265887a261eb7858a20b70773e68ac56029c58",
+      "stdinSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "args": [],
+      "expected": {
+        "phase": "run",
+        "status": 0,
+        "signal": null,
+        "stdout": "NDIK",
+        "stderr": ""
+      }
+    },
+    {
+      "id": "report-two-strings/default",
+      "path": "igniter/tests/compiler/001-004-report-two-strings.lts",
+      "sourceSha256": "5d6a9849405a52911015d2e2d7829c4adad1816635b9957698c4a5573a8c1534",
+      "artifactSha256": "ba1519a69120e6228233aa425ea12bbdd22338198e56dcb5172ccdc0a2ec3d6b",
+      "stdinSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "args": [],
+      "expected": {
+        "phase": "run",
+        "status": 0,
+        "signal": null,
+        "stdout": "YSBiCg==",
+        "stderr": ""
+      }
+    },
+    {
+      "id": "string-concatenation/default",
+      "path": "igniter/tests/compiler/001-004-string-concatenation.lts",
+      "sourceSha256": "03469e08ad544ed0a9670ddc823cb6c2ed4f85acf58fb346f90685a4970bf9d0",
+      "artifactSha256": "4761d99d9784be0167a05a977e7ca7351d2d3d232b32134773e83b757e00ddfa",
+      "stdinSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "args": [],
+      "expected": {
+        "phase": "run",
+        "status": 0,
+        "signal": null,
+        "stdout": "YWIK",
+        "stderr": ""
+      }
+    },
+    {
+      "id": "string-empty/default",
+      "path": "igniter/tests/compiler/001-004-string-empty.lts",
+      "sourceSha256": "e4428c8c4ec96d553325951e9bc0942c14fd076ecbaaa59249e12beccf5cdc3d",
+      "artifactSha256": "f0262c75afe4af56afff7687ad20cd975a074841a25b6c1583ce7e9c9b0bc1ff",
+      "stdinSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "args": [],
+      "expected": {
+        "phase": "run",
+        "status": 0,
+        "signal": null,
+        "stdout": "Cg==",
+        "stderr": ""
+      }
+    },
+    {
+      "id": "string-escapes/default",
+      "path": "igniter/tests/compiler/001-004-string-escapes.lts",
+      "sourceSha256": "b01a0fbbe6de00be05800c49575c6b25fc5487964be0b513b209bf1ed37678f8",
+      "artifactSha256": "25e2b04e103a6d16d9a7d94f2c2827c67e1cb090c5fbf841ff0f5c56cbfce893",
+      "stdinSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "args": [],
+      "expected": {
+        "phase": "run",
+        "status": 0,
+        "signal": null,
+        "stdout": "cXVvdGU6ICIgc2xhc2g6IFwgdGFiOgkgZW5kCg==",
+        "stderr": ""
+      }
+    },
+    {
+      "id": "string-hello/default",
+      "path": "igniter/tests/compiler/001-004-string-hello.lts",
+      "sourceSha256": "714c0b8d73696511a0976bb47c68c5b9efcae9fa6d78ae824dc3b821ac5dcee0",
+      "artifactSha256": "4bb15bee816375be1c9e624b5afdd280693255f16d12205a73a5afa8d4d234a4",
+      "stdinSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "args": [],
+      "expected": {
+        "phase": "run",
+        "status": 0,
+        "signal": null,
+        "stdout": "aGVsbG8K",
+        "stderr": ""
+      }
+    },
+    {
+      "id": "string-local/default",
+      "path": "igniter/tests/compiler/001-004-string-local.lts",
+      "sourceSha256": "4f596e6d5c00f549c0d2cc754f4616677b7c41636cf1a8fcbc845d1ddc8ee311",
+      "artifactSha256": "66542e62bdeaa651db3966f0d123b400c499ab945e01cea9a5dfd35468b6d694",
+      "stdinSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "args": [],
+      "expected": {
+        "phase": "run",
+        "status": 0,
+        "signal": null,
+        "stdout": "aGkK",
+        "stderr": ""
+      }
+    },
+    {
+      "id": "string-multiline/default",
+      "path": "igniter/tests/compiler/001-004-string-multiline.lts",
+      "sourceSha256": "08e23c8564e0533b0740cb051d210f10a89ad5396b0430907717b592c3be3c25",
+      "artifactSha256": "9ccf5dd1803dc4d78327d3df9eb621ffa291d3e9f33bd9846268e7faa1d5153c",
+      "stdinSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "args": [],
+      "expected": {
+        "phase": "run",
+        "status": 0,
+        "signal": null,
+        "stdout": "bGluZTEKbGluZTIK",
+        "stderr": ""
+      }
+    },
+    {
+      "id": "string-unicode/default",
+      "path": "igniter/tests/compiler/001-004-string-unicode.lts",
+      "sourceSha256": "347025859425ae2a5d54d761de942dee352ddf176393eae0985bca20c7366a6c",
+      "artifactSha256": "8645e7c05038d9add132468bf77e52b3caaa701fe6c81c83654662fb31eadbe3",
+      "stdinSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "args": [],
+      "expected": {
+        "phase": "run",
+        "status": 0,
+        "signal": null,
+        "stdout": "2LPZhNin2YXwn5mCCg==",
+        "stderr": ""
+      }
+    },
+    {
+      "id": "local-missing-semicolon/default",
+      "path": "igniter/tests/compiler/001-005-local-missing-semicolon.lts",
+      "sourceSha256": "e4068c3a09bf6ddfe5e9922da6984961d90a5f7dad3d5436a201b1888e2e84d8",
+      "artifactSha256": "5775501338f38e86528c9afda595e7541cb8d29e8781521d75688d77df50d120",
+      "stdinSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "args": [],
+      "expected": {
+        "phase": "run",
+        "status": 0,
+        "signal": null,
+        "stdout": "",
+        "stderr": ""
+      }
+    },
+    {
+      "id": "output-values/default",
+      "path": "igniter/tests/compiler/001-005-output-values.lts",
+      "sourceSha256": "963377005c82b3cf97d549511ed0f1bfd587cd42182c35654ba15e94a66abf68",
+      "artifactSha256": "efa3032ab0367c694031aa79edefe00a5e44978af161bfadbe18a8e2d965cb64",
+      "stdinSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "args": [],
+      "expected": {
+        "phase": "run",
+        "status": 0,
+        "signal": null,
+        "stdout": "YSAxCnRydWUgVW5pdAo=",
+        "stderr": ""
+      }
+    },
+    {
+      "id": "report-mixed-values/default",
+      "path": "igniter/tests/compiler/001-005-report-mixed-values.lts",
+      "sourceSha256": "ce3a21779321d57e2e84ac1a5a1be69a77e1d20cd35464713171826a27d59584",
+      "artifactSha256": "eacebfdca140f5b539e38069ed586045a63562e86e2942e0c80d2fc4e973cc4e",
+      "stdinSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "args": [],
+      "expected": {
+        "phase": "run",
+        "status": 0,
+        "signal": null,
+        "stdout": "MSB0d28gMwo=",
+        "stderr": ""
+      }
+    },
+    {
+      "id": "report-three-statements/default",
+      "path": "igniter/tests/compiler/001-005-report-three-statements.lts",
+      "sourceSha256": "bdbd3b6618328cef131c8bbe3dd3470cf5d15f9092e07d97c3081dede7815f5c",
+      "artifactSha256": "3f2c7c87fca53db0f35a6ba984ec445d127fb5d365cdd83a8883f003f9dfaa59",
+      "stdinSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "args": [],
+      "expected": {
+        "phase": "run",
+        "status": 0,
+        "signal": null,
+        "stdout": "MQoyCjMK",
+        "stderr": ""
+      }
+    },
+    {
+      "id": "report-trailing-newline/default",
+      "path": "igniter/tests/compiler/001-005-report-trailing-newline.lts",
+      "sourceSha256": "11c45fff5c9a579bf353cfc71a3b94376f079010260ab19cb6e3de7eb1fa1869",
+      "artifactSha256": "5fb05e7e91d97183f219c365e1bbdd188be380e99d7c8663497b60a5c9e33625",
+      "stdinSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "args": [],
+      "expected": {
+        "phase": "run",
+        "status": 0,
+        "signal": null,
+        "stdout": "NDIK",
+        "stderr": ""
+      }
+    },
+    {
+      "id": "report-two-statements/default",
+      "path": "igniter/tests/compiler/001-005-report-two-statements.lts",
+      "sourceSha256": "df929a5ecb83d1e9c46497b8a9b74778797b3cbc6abfd0d4964c25bcd72ea5cb",
+      "artifactSha256": "1a3f67797c68380955ca0d04b9ec7e8f03ef96668591500666d08c76da9d6736",
+      "stdinSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "args": [],
+      "expected": {
+        "phase": "run",
+        "status": 0,
+        "signal": null,
+        "stdout": "NDIKOQo=",
+        "stderr": ""
+      }
+    },
+    {
+      "id": "string-local-chain/default",
+      "path": "igniter/tests/compiler/001-005-string-local-chain.lts",
+      "sourceSha256": "41c671cf4bde5d36d20354eb7a466b0ffaadce4a107c7e8f56f5f0685dadf73a",
+      "artifactSha256": "41367a886a2b3f6f34d8202bf53448117edb3ee51fb97278023ffaaf08591f38",
+      "stdinSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "args": [],
+      "expected": {
+        "phase": "run",
+        "status": 0,
+        "signal": null,
+        "stdout": "YWIhCg==",
+        "stderr": ""
+      }
+    },
+    {
+      "id": "string-percent-trigraph/default",
+      "path": "igniter/tests/compiler/001-005-string-percent-trigraph.lts",
+      "sourceSha256": "a9a3ba9e98de75ab9f883f9308603104a583dfffc83711591a81efcb3ea49404",
+      "artifactSha256": "aee4631766f88b1ee65dc6a11027a77f2d3da7c3515f1afbcce605219b6039e0",
+      "stdinSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "args": [],
+      "expected": {
+        "phase": "run",
+        "status": 0,
+        "signal": null,
+        "stdout": "JXMgPz8vCg==",
+        "stderr": ""
+      }
+    },
+    {
+      "id": "local-hygiene-int/default",
+      "path": "igniter/tests/compiler/001-006-local-hygiene-int.lts",
+      "sourceSha256": "8933884af7d19f4c2cc5fda99d95664e4c8b34436f8426c3105b1405b2b2d3f2",
+      "artifactSha256": "f1dd02f7528edf642162afb7962bfdc9cdf8228842d31bdbdfab79852e409780",
+      "stdinSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "args": [],
+      "expected": {
+        "phase": "run",
+        "status": 0,
+        "signal": null,
+        "stdout": "Mgo=",
+        "stderr": ""
+      }
+    },
+    {
+      "id": "local-hygiene-string/default",
+      "path": "igniter/tests/compiler/001-006-local-hygiene-string.lts",
+      "sourceSha256": "e9a8acd8af695a3f9b72ed9c4d1e7a51c30bac02a7318148605f0e1b9b06f627",
+      "artifactSha256": "70af661f3b8edc3fac9b24ff6a01460e369f8b855183d8e3722499ca2538df73",
+      "stdinSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "args": [],
+      "expected": {
+        "phase": "run",
+        "status": 0,
+        "signal": null,
+        "stdout": "eHkgMQo=",
+        "stderr": ""
+      }
+    },
+    {
+      "id": "local-macro-name/default",
+      "path": "igniter/tests/compiler/001-006-local-macro-name.lts",
+      "sourceSha256": "efe82e40f79338ca5fc4d7d626187125a291d47f7aaa8d94667eddbe782c792e",
+      "artifactSha256": "cf4f2ffadb28d9cddf5369fc0bdcd28c10cf27f4ea1949780a159dcf5b679b08",
+      "stdinSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "args": [],
+      "expected": {
+        "phase": "run",
+        "status": 0,
+        "signal": null,
+        "stdout": "Nwo=",
+        "stderr": ""
+      }
+    },
+    {
+      "id": "report-empty-value/default",
+      "path": "igniter/tests/compiler/001-006-report-empty-value.lts",
+      "sourceSha256": "2dfb59b7550dfb8eaf2e6d50024371a6d44e31e1c0721da405ac06800dd1a00b",
+      "artifactSha256": "79be685a385490900b8eee6e37de72225113763d47404eb75c385e3676e0eaca",
+      "stdinSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "args": [],
+      "expected": {
+        "phase": "run",
+        "status": 0,
+        "signal": null,
+        "stdout": "YSAK",
+        "stderr": ""
+      }
+    },
+    {
+      "id": "report-literal-sequence/default",
+      "path": "igniter/tests/compiler/001-006-report-literal-sequence.lts",
+      "sourceSha256": "2de1d27234e7e3e647c568c6a8038bafa10763e44707e6884491af2ac4a7f1fe",
+      "artifactSha256": "1c9c525d76dd3b4dc31d14888ace96d4e236fef4c276be44a2533c5d342c1fb2",
+      "stdinSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "args": [],
+      "expected": {
+        "phase": "run",
+        "status": 0,
+        "signal": null,
+        "stdout": "NDIKMAo=",
+        "stderr": ""
+      }
+    },
+    {
+      "id": "bool-literals-logic/default",
+      "path": "igniter/tests/compiler/001-007-bool-literals-logic.lts",
+      "sourceSha256": "728b2f837742924112c69bec963e8692a395d9f4d11de34b23976b4aeb3f7204",
+      "artifactSha256": "6c0e10e9fb882777d4fe06d911a807f7c6ba0cc1efacb6a9f515f3d16f317619",
+      "stdinSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "args": [],
+      "expected": {
+        "phase": "run",
+        "status": 0,
+        "signal": null,
+        "stdout": "dHJ1ZSBmYWxzZSB0cnVlCnRydWUKdHJ1ZQp0cnVlIHRydWUgdHJ1ZQpsb2dpYyBvawo=",
+        "stderr": ""
+      }
+    },
+    {
+      "id": "int-comparisons-if-else/default",
+      "path": "igniter/tests/compiler/001-007-int-comparisons-if-else.lts",
+      "sourceSha256": "d226bb96e932c5f8992294de5d610eca59b416abddcc5690460fb0189c98664d",
+      "artifactSha256": "5f826978edea15c2ba0550a6c92e1ad82c6031a11a0168a46768e660170f7e5a",
+      "stdinSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "args": [],
+      "expected": {
+        "phase": "run",
+        "status": 0,
+        "signal": null,
+        "stdout": "dHJ1ZSB0cnVlIHRydWUgdHJ1ZSB0cnVlIHRydWUgdHJ1ZSB0cnVlIHRydWUgdHJ1ZQpsYXJnZQo=",
+        "stderr": ""
+      }
+    },
+    {
+      "id": "mutable-counter-loop/default",
+      "path": "igniter/tests/compiler/001-007-mutable-counter-loop.lts",
+      "sourceSha256": "a7999c57a23cec04a2fb2a1ce0677e74530349443cc46a28f27597efb62dc1d5",
+      "artifactSha256": "bdb1dc43dd7ae763e0c520f350e04c4e4121b727386d47f63215c11d945b63f3",
+      "stdinSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "args": [],
+      "expected": {
+        "phase": "run",
+        "status": 0,
+        "signal": null,
+        "stdout": "MTAK",
+        "stderr": ""
+      }
+    },
+    {
+      "id": "nested-if-in-loop/default",
+      "path": "igniter/tests/compiler/001-007-nested-if-in-loop.lts",
+      "sourceSha256": "3e9ca8220ce17121829f6bd4f23f34cca2e374fd7b08bf634f0e3573e3b10c84",
+      "artifactSha256": "fd887817ac98f0b7bdd312938eb637ac2769168ce4c05e53c898011bcf78725b",
+      "stdinSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "args": [],
+      "expected": {
+        "phase": "run",
+        "status": 0,
+        "signal": null,
+        "stdout": "MCBsb3cKMSBsb3cKMiBoaWdoCjMgaGlnaAo0IGhpZ2gK",
+        "stderr": ""
+      }
+    },
+    {
+      "id": "not-precedence/default",
+      "path": "igniter/tests/compiler/001-007-not-precedence.lts",
+      "sourceSha256": "8f7eb2b292fd0a7b93e47341ff2d9538a06fb4c8bcf83d0d1683985c35279a7c",
+      "artifactSha256": "1d47f4b2b469778c103d1e61c05bb5662fc8c47a00499cd4be06446e12757bd2",
+      "stdinSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "args": [],
+      "expected": {
+        "phase": "run",
+        "status": 0,
+        "signal": null,
+        "stdout": "dHJ1ZQp0cnVlCnRydWUKdHJ1ZQpmYWxzZQo=",
+        "stderr": ""
+      }
+    },
+    {
+      "id": "report-in-loop/default",
+      "path": "igniter/tests/compiler/001-007-report-in-loop.lts",
+      "sourceSha256": "2841cc6bf50eb38079e1ac7732476b9a9a8ab5df0a59732313d31505df52767d",
+      "artifactSha256": "82b01ac37509c5b3c939fbcfad5777592f51ffded7e8d39ad4379ce54bd54e8e",
+      "stdinSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "args": [],
+      "expected": {
+        "phase": "run",
+        "status": 0,
+        "signal": null,
+        "stdout": "dGljayAwCnRpY2sgMQp0aWNrIDIK",
+        "stderr": ""
+      }
+    },
+    {
+      "id": "string-equality-if/default",
+      "path": "igniter/tests/compiler/001-007-string-equality-if.lts",
+      "sourceSha256": "e5882cf2e9e005028def27e0b4ff67ae526fa9846a34215ed9632d946bd8c22d",
+      "artifactSha256": "5f1bbe9d46e505b18200267557166c66cc0898881e1c7de1f1644669d82d0860",
+      "stdinSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "args": [],
+      "expected": {
+        "phase": "run",
+        "status": 0,
+        "signal": null,
+        "stdout": "bWF0Y2gKZGlmZmVyZW50CmNvbnN0YW50IG1hdGNoCg==",
+        "stderr": ""
+      }
+    },
+    {
+      "id": "runtime-division/default",
+      "path": "igniter/tests/compiler/001-009-runtime-division.lts",
+      "sourceSha256": "f5600d41e5c6e3bc556ba7b1455c045fd4f3ee500b11dca326375c0e84181150",
+      "artifactSha256": "b240894667d92d897510e39adb78c3e0a21a65c0c3979ccf8476f3b228fef897",
+      "stdinSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "args": [],
+      "expected": {
+        "phase": "run",
+        "status": 0,
+        "signal": null,
+        "stdout": "Mgo=",
+        "stderr": ""
+      }
+    },
+    {
+      "id": "runtime-remainder/default",
+      "path": "igniter/tests/compiler/001-009-runtime-remainder.lts",
+      "sourceSha256": "b88702e1126396f7c4e202ea6b722d4fdb62ae63f71126b27231db2d823b5840",
+      "artifactSha256": "226cf9969827929d8ce2778a961e6e9e977d1107a89b159c17faca0091c24a6e",
+      "stdinSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "args": [],
+      "expected": {
+        "phase": "run",
+        "status": 0,
+        "signal": null,
+        "stdout": "MQo=",
+        "stderr": ""
+      }
+    },
+    {
+      "id": "runtime-string-concat/default",
+      "path": "igniter/tests/compiler/001-010-runtime-string-concat.lts",
+      "sourceSha256": "c4df1f28d1c04cec3a94107cffddee73cbd6eb6d0c6851416ecc369b9a7f22ab",
+      "artifactSha256": "32888da95c212578fd31bb061d52cfa03e3b563852d3a159272cfa83401aa25b",
+      "stdinSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "args": [],
+      "expected": {
+        "phase": "run",
+        "status": 0,
+        "signal": null,
+        "stdout": "SGVsbG8sIExpdGUhCg==",
+        "stderr": ""
+      }
+    },
+    {
+      "id": "division-by-zero/default",
+      "path": "igniter/tests/compiler/001-011-division-by-zero.lts",
+      "sourceSha256": "393a66a6ac176247595c66d38f7bba079d14a2295f28a2e4017945dff4ae928d",
+      "artifactSha256": "eaf35af1233dd92d4b8bd9bc957887c6040d112af7b1e2731002735835aded0b",
+      "stdinSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "args": [],
+      "expected": {
+        "phase": "run",
+        "status": 1,
+        "signal": null,
+        "stdout": "",
+        "stderr": "MToxNDogQXJpdGhtZXRpY1BhbmljOiBkaXZpc2lvbiBieSB6ZXJvCg=="
+      }
+    },
+    {
+      "id": "min-divide-minus-one/default",
+      "path": "igniter/tests/compiler/001-011-min-divide-minus-one.lts",
+      "sourceSha256": "2e6ee56e1748da36a61e1aec2d7ec6ae73d82613d4fdb993d2fc014162a1210c",
+      "artifactSha256": "855c471b01cb2a8fd47ac97a523df9bb9747f57eb76900e81c69363a2f0a2b9f",
+      "stdinSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "args": [],
+      "expected": {
+        "phase": "run",
+        "status": 1,
+        "signal": null,
+        "stdout": "",
+        "stderr": "MTozMzogQXJpdGhtZXRpY1BhbmljOiBpbnRlZ2VyIG91dHNpZGUgSW50IHJhbmdlCg=="
+      }
+    },
+    {
+      "id": "overflow-add/default",
+      "path": "igniter/tests/compiler/001-011-overflow-add.lts",
+      "sourceSha256": "c14764e9740d3799768926d96db86988b6211fb54c0f2d2bcd91110f8afc271b",
+      "artifactSha256": "2c4f393ad9442d8f3116beb97978c30c9afc04c54ac36d43bfb072bf39db5905",
+      "stdinSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "args": [],
+      "expected": {
+        "phase": "run",
+        "status": 1,
+        "signal": null,
+        "stdout": "",
+        "stderr": "MTozMjogQXJpdGhtZXRpY1BhbmljOiBpbnRlZ2VyIG91dHNpZGUgSW50IHJhbmdlCg=="
+      }
+    },
+    {
+      "id": "overflow-multiply-large/default",
+      "path": "igniter/tests/compiler/001-011-overflow-multiply-large.lts",
+      "sourceSha256": "4e2d9e4795f70a38bbe98a94f6308410b506a0b61a711f8df765a09e1088f4f7",
+      "artifactSha256": "33522291ab52639dd8a528f766be47718b5843b5701002078f2fbaae6a6f95dd",
+      "stdinSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "args": [],
+      "expected": {
+        "phase": "run",
+        "status": 1,
+        "signal": null,
+        "stdout": "",
+        "stderr": "MToyMzogQXJpdGhtZXRpY1BhbmljOiBpbnRlZ2VyIG91dHNpZGUgSW50IHJhbmdlCg=="
+      }
+    },
+    {
+      "id": "overflow-multiply/default",
+      "path": "igniter/tests/compiler/001-011-overflow-multiply.lts",
+      "sourceSha256": "a3a6a486455bbdddddffabdf23451ecd13138feb5cec8f1a19cf9f9b02802b38",
+      "artifactSha256": "16e6768a58194a037f3a79471bc8171fde341ea8d006853f323a40ab3bae1b2f",
+      "stdinSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "args": [],
+      "expected": {
+        "phase": "run",
+        "status": 1,
+        "signal": null,
+        "stdout": "",
+        "stderr": "MTozMzogQXJpdGhtZXRpY1BhbmljOiBpbnRlZ2VyIG91dHNpZGUgSW50IHJhbmdlCg=="
+      }
+    },
+    {
+      "id": "overflow-subtract/default",
+      "path": "igniter/tests/compiler/001-011-overflow-subtract.lts",
+      "sourceSha256": "521be89ae4b5416694d44fb845f84f2a4a9239aa1eb93d4f025ce3cbe2b88bea",
+      "artifactSha256": "a9e6690432d5188a795ebb491d817b084352f628fd7791fcd56b1abfbc4ac024",
+      "stdinSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "args": [],
+      "expected": {
+        "phase": "run",
+        "status": 1,
+        "signal": null,
+        "stdout": "",
+        "stderr": "MTozMzogQXJpdGhtZXRpY1BhbmljOiBpbnRlZ2VyIG91dHNpZGUgSW50IHJhbmdlCg=="
+      }
+    }
+  ],
+  "raw": [
+    {
+      "pass": 0,
+      "engine": "single",
+      "elapsedMs": 5873.749707999999,
+      "observationsSha256": "22024b55643a9d94a6527ff4e1725b26cab3b846a5240de343a955bbc524ee74"
+    },
+    {
+      "pass": 0,
+      "engine": "batch",
+      "elapsedMs": 3194.332042,
+      "observationsSha256": "22024b55643a9d94a6527ff4e1725b26cab3b846a5240de343a955bbc524ee74"
+    },
+    {
+      "pass": 1,
+      "engine": "batch",
+      "elapsedMs": 3205.3615419999996,
+      "observationsSha256": "22024b55643a9d94a6527ff4e1725b26cab3b846a5240de343a955bbc524ee74"
+    },
+    {
+      "pass": 1,
+      "engine": "single",
+      "elapsedMs": 5850.796708,
+      "observationsSha256": "22024b55643a9d94a6527ff4e1725b26cab3b846a5240de343a955bbc524ee74"
+    },
+    {
+      "pass": 2,
+      "engine": "single",
+      "elapsedMs": 5877.241333,
+      "observationsSha256": "22024b55643a9d94a6527ff4e1725b26cab3b846a5240de343a955bbc524ee74"
+    },
+    {
+      "pass": 2,
+      "engine": "batch",
+      "elapsedMs": 3215.831459,
+      "observationsSha256": "22024b55643a9d94a6527ff4e1725b26cab3b846a5240de343a955bbc524ee74"
+    },
+    {
+      "pass": 3,
+      "engine": "batch",
+      "elapsedMs": 3253.1025,
+      "observationsSha256": "22024b55643a9d94a6527ff4e1725b26cab3b846a5240de343a955bbc524ee74"
+    },
+    {
+      "pass": 3,
+      "engine": "single",
+      "elapsedMs": 5901.094291,
+      "observationsSha256": "22024b55643a9d94a6527ff4e1725b26cab3b846a5240de343a955bbc524ee74"
+    },
+    {
+      "pass": 4,
+      "engine": "single",
+      "elapsedMs": 5938.319375,
+      "observationsSha256": "22024b55643a9d94a6527ff4e1725b26cab3b846a5240de343a955bbc524ee74"
+    },
+    {
+      "pass": 4,
+      "engine": "batch",
+      "elapsedMs": 3243.73925,
+      "observationsSha256": "22024b55643a9d94a6527ff4e1725b26cab3b846a5240de343a955bbc524ee74"
+    }
+  ],
+  "summary": {
+    "previousMedianMs": 5877.241333,
+    "currentMedianMs": 3215.831459,
+    "speedup": 1.8275961933737648
+  },
+  "validation": {
+    "strictCheckingBeforeEveryBatchExecution": true,
+    "freshProcessPerProgram": true,
+    "exactFixtureObservations": true,
+    "fullSuite": {
+      "tests": 264,
+      "passed": 264,
+      "failed": 0,
+      "skipped": 0,
+      "durationMs": 75493.461792
+    },
+    "fastSuite": {
+      "tests": 264,
+      "passed": 252,
+      "failed": 0,
+      "skipped": 12,
+      "durationMs": 51043.1075
+    },
+    "strictHostAndSeeds": true,
+    "tsCorpus": {
+      "phase": "compare",
+      "artifact": "<local-path>/Projects/LiteScript/compiler/bootstrap/T11.ts",
+      "target": "ts",
+      "cases": 93,
+      "programs": 66,
+      "rejections": 27,
+      "mismatches": 0,
+      "first": []
+    },
+    "cCorpus": {
+      "phase": "compare",
+      "artifact": "<local-path>/Projects/LiteScript/compiler/bootstrap/c-emitter.ts",
+      "target": "c",
+      "cases": 93,
+      "programs": 66,
+      "rejections": 27,
+      "mismatches": 0,
+      "first": []
+    },
+    "verifierExecutions": 98,
+    "coverage": true,
+    "editorGroups": 9,
+    "hostGroups": 24,
+    "batchedHostGroups": 4,
+    "batchedTsPrograms": 81,
+    "retainedNativeExecutions": 52,
+    "retainedExecutionContracts": 133,
+    "unitCases": [
+      "single/batch fresh process state",
+      "raw binary stdin and Unicode args",
+      "separate module directories",
+      "cleanup after success and callback throw",
+      "one bad module prevents all execution",
+      "empty batch"
+    ],
+    "coreSourcesAndSeedsIdenticalToBase": true,
+    "inventory": {
+      "matches": 85,
+      "total": 164,
+      "remaining": 79,
+      "originalFailuresClosed": 33,
+      "regressions": 0
+    }
+  },
+  "compilerIdentities": {
+    "ts": {
+      "sourceSha256": "5dc2eb8664ffe5a3bc55d6d9cbafde4de9973d47cf407a22ca5d06a4a5b63b33",
+      "artifactSha256": "3fe0dd566163b06861e0a05cb84da47afdc8934921133f02ac626e0e9975fcdd"
+    },
+    "c": {
+      "sourceSha256": "7d9aed5e81347c209b40b8b662f9dac0ee62e0f24d77a8a9c721c536091aa90e",
+      "artifactSha256": "b138205634c2edfa347f0d719edcbbcf27b78477af8ecedf75079f1e3a765f5d",
+      "builderSha256": "3fe0dd566163b06861e0a05cb84da47afdc8934921133f02ac626e0e9975fcdd"
+    }
+  },
+  "reproduction": {
+    "baseline": "git show 47b6e34f5e2bbaf65db6073b2c94cca4f2799a03:igniter/artifacts.ts; preserve its sibling tsconfig.json/package.json and TypeScript dependency resolution",
+    "workload": "Compile each 001-* compiler fixture once with the recorded TS seed, preserve every scenario input/args and fixture status/stdout/stderr; identify outputs by the recorded source/artifact hashes.",
+    "single": "For each scenario call baseline withTsArtifact(artifact, run => run(options)).",
+    "batch": "Call current withTsArtifacts(allArtifacts, runs => scenarios.map((scenario,index) => runs[index](options))).",
+    "pairing": "Use one warm-up pair, then five alternating paired fresh Node workers; load artifacts/modules before starting the clock and compare every result to fixture expectations."
+  }
+}

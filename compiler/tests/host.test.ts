@@ -10,10 +10,31 @@ import { buildCompiler, buildTsCompiler, compileTarget, compileTs, type Compiler
 import { seed } from '../bootstrap/seed.ts';
 import { cSeed } from '../bootstrap/c-seed.ts';
 import { runText } from '../../igniter/bootstrap.ts';
-import { runTsArtifact, runCArtifact, withTsArtifact } from '../../igniter/artifacts.ts';
+import { runTsArtifact, runCArtifact, withTsArtifact, withTsArtifacts, type ArtifactOptions, type ArtifactRun } from '../../igniter/artifacts.ts';
 
 const root = fileURLToPath(new URL('../../', import.meta.url));
 const env = { ...process.env, PATH: dirname(process.execPath) + delimiter + (process.env['PATH'] ?? '') };
+
+/** One generated program with its exact isolated execution contract. */
+type ArtifactExecution = Readonly<{
+  target: CompilerTarget; artifact: string; expected: Pick<ArtifactRun, 'status' | 'stdout' | 'stderr'>;
+  options?: ArtifactOptions; context: string;
+}>;
+
+/** Checks all TS modules before execution, then retains per-program input, process state, status and stream assertions on both targets. */
+function assertExecutions(executions: readonly ArtifactExecution[]): void {
+  const ts = executions.filter(item => item.target === 'ts');
+  withTsArtifacts(ts.map(item => item.artifact), runs => {
+    let index = 0;
+    for (const item of executions) {
+      const actual = item.target === 'ts' ? runs[index++]!(item.options) : runCArtifact(item.artifact, item.options);
+      assert.equal(actual.phase, 'run', item.context + actual.stdout.toString() + actual.stderr.toString());
+      assert.equal(actual.signal, null, item.context);
+      assert.deepEqual({ status: actual.status, stdout: actual.stdout, stderr: actual.stderr }, item.expected, item.context);
+    }
+    assert.equal(index, runs.length);
+  });
+}
 
 test('generated reports evaluate arguments once in order and preserve nested output', () => {
   const cases = [
@@ -665,6 +686,7 @@ test('portable C11 checks Int64 boundaries and sequences nested faults left to r
 
 
 test('empty and comment-only scripts compile silently without hiding malformed source', () => {
+  const executions: ArtifactExecution[] = [];
   const sources = ['', ' ', '\n', '\r\n\t ', '/**/', '/* words */', '/* outer /* nested */ end */',
     ' \n/* سلام🙂 */\r\n', '/* ; {} () outputLine(1 / 0); */', '/* \"quoted\" */ /* another */',
     '/*# arbitrary /* nested-looking */ text #*/', '/* outer /*# raw */ body #*/ end */'];
@@ -674,9 +696,7 @@ test('empty and comment-only scripts compile silently without hiding malformed s
     for (const target of ['ts', 'c'] as const) {
       const compiled = compileTarget(target, { text }); assert.equal(compiled.status, 0, compiled.stderr.toString());
       if (target === 'c' && process.env['LITE_SKIP_NATIVE'] === '1') continue;
-      const actual = target === 'ts' ? runTsArtifact(compiled.stdout.toString()) : runCArtifact(compiled.stdout.toString());
-      assert.equal(actual.phase, 'run', actual.stderr.toString()); assert.equal(actual.signal, null);
-      assert.deepEqual({ status: actual.status, stdout: actual.stdout, stderr: actual.stderr }, expected);
+      executions.push({ target, artifact: compiled.stdout.toString(), expected, context: text });
     }
   }
   for (const text of ['/*', '/* outer /* nested */', '/*# unterminated', '/* ok */ }', '/* ok */ outputLine(1); /* unterminated']) {
@@ -690,15 +710,15 @@ test('empty and comment-only scripts compile silently without hiding malformed s
     for (const target of ['ts', 'c'] as const) {
       const compiled = compileTarget(target, { text }); assert.equal(compiled.status, 0, compiled.stderr.toString());
       if (target === 'c' && process.env['LITE_SKIP_NATIVE'] === '1') continue;
-      const actual = target === 'ts' ? runTsArtifact(compiled.stdout.toString()) : runCArtifact(compiled.stdout.toString());
-      assert.equal(actual.phase, 'run', actual.stderr.toString());
-      assert.deepEqual({ status: actual.status, stdout: actual.stdout, stderr: actual.stderr }, expected);
+      executions.push({ target, artifact: compiled.stdout.toString(), expected, context: text });
     }
   }
+  assertExecutions(executions);
 });
 
 
 test('statement separators follow EOF, closing scope and directly closed block boundaries', () => {
+  const executions: ArtifactExecution[] = [];
   const both = ['outputLine(7)', 'output("x") /* tail */', 'x := 1', 'var x := 1', 'x: Int = 1', 'x: Int',
     'var x := 1; x = 2', 'Number := type Int', 'if true { outputLine(7) }',
     'if true { x := 7 } outputLine(8)', 'var n := 0; loop n < 3 { n = n + 1; continue } outputLine(n)',
@@ -714,9 +734,7 @@ test('statement separators follow EOF, closing scope and directly closed block b
     for (const target of targets) {
       const compiled = compileTarget(target, { text }); assert.equal(compiled.status, 0, text + compiled.stderr.toString());
       if (target === 'c' && process.env['LITE_SKIP_NATIVE'] === '1') continue;
-      const actual = target === 'ts' ? runTsArtifact(compiled.stdout.toString(), { stdin: 'line\n' }) : runCArtifact(compiled.stdout.toString());
-      assert.equal(actual.phase, 'run', actual.stderr.toString()); assert.equal(actual.signal, null);
-      assert.deepEqual({ status: actual.status, stdout: actual.stdout, stderr: actual.stderr }, expected, text);
+      executions.push({ target, artifact: compiled.stdout.toString(), expected, options: target === 'ts' ? { stdin: 'line\n' } : {}, context: text });
     }
   }
   const invalid = ['outputLine(1) outputLine(2);', 'outputLine(1)\noutputLine(2)', 'output("x") outputLine("y")',
@@ -734,13 +752,13 @@ test('statement separators follow EOF, closing scope and directly closed block b
   for (const target of ['ts', 'c'] as const) {
     const compiled = compileTarget(target, { text, name }); assert.equal(compiled.status, 0, compiled.stderr.toString());
     if (target === 'c' && process.env['LITE_SKIP_NATIVE'] === '1') continue;
-    const actual = target === 'ts' ? runTsArtifact(compiled.stdout.toString()) : runCArtifact(compiled.stdout.toString());
-    assert.equal(actual.phase, 'run', actual.stderr.toString());
-    assert.deepEqual({ status: actual.status, stdout: actual.stdout, stderr: actual.stderr }, expected);
+    executions.push({ target, artifact: compiled.stdout.toString(), expected, context: text });
   }
+  assertExecutions(executions);
 });
 
 test('adjacent String literals join across trivia before expressions and encode once', () => {
+  const executions: ArtifactExecution[] = [];
   const both = ['outputLine("a""b");', 'outputLine("" "" "x" "");', 'outputLine("a"\n"b");',
     'outputLine("a" /* outer /* inner */ end */ "b");', 'outputLine("a" /*# raw /* */ #*/ "b");',
     'outputLine("a\\n" "\\t" "\\r" "\\\"" "\\\\");', 'outputLine("سلام" "🙂");',
@@ -761,9 +779,7 @@ test('adjacent String literals join across trivia before expressions and encode 
     for (const target of targets) {
       const compiled = compileTarget(target, { text }); assert.equal(compiled.status, 0, text + compiled.stderr.toString());
       if (target === 'c' && process.env['LITE_SKIP_NATIVE'] === '1') continue;
-      const actual = target === 'ts' ? runTsArtifact(compiled.stdout.toString(), { stdin: 'line\n' }) : runCArtifact(compiled.stdout.toString());
-      assert.equal(actual.phase, 'run', actual.stderr.toString()); assert.equal(actual.signal, null);
-      assert.deepEqual({ status: actual.status, stdout: actual.stdout, stderr: actual.stderr }, expected, text);
+      executions.push({ target, artifact: compiled.stdout.toString(), expected, options: target === 'ts' ? { stdin: 'line\n' } : {}, context: text });
     }
   }
   const invalid = ['outputLine("ok");\noutputLine("a" "\\q");', 'outputLine("a" "unterminated',
@@ -781,13 +797,13 @@ test('adjacent String literals join across trivia before expressions and encode 
     const text = 'value := "a" "b"; outputLine(value);\nvar zero := 0; outputLine(1 / zero);', name = 'joined سلام.lts';
     const compiled = compileTarget(target, { text, name }); assert.equal(compiled.status, 0, compiled.stderr.toString());
     if (target === 'c' && process.env['LITE_SKIP_NATIVE'] === '1') continue;
-    const actual = target === 'ts' ? runTsArtifact(compiled.stdout.toString()) : runCArtifact(compiled.stdout.toString());
-    assert.equal(actual.phase, 'run', actual.stderr.toString());
-    assert.deepEqual({ status: actual.status, stdout: actual.stdout, stderr: actual.stderr }, runText(text, { name }));
+    executions.push({ target, artifact: compiled.stdout.toString(), expected: runText(text, { name }), context: text });
   }
+  assertExecutions(executions);
 });
 
 test('nonempty calls admit one trailing comma without adding a value or weakening arity', () => {
+  const executions: ArtifactExecution[] = [];
   const both = ['outputLine(1,);', 'output(1,); outputLine("x",);', 'outputLine(1, "x", true,);',
     'outputLine(Unit,);', 'outputLine("a" "b", /* nested /* comment */ */);',
     'outputLine(0 < 1 < 2,);', 'var x := 7; outputLine(x + 1,);',
@@ -808,9 +824,7 @@ test('nonempty calls admit one trailing comma without adding a value or weakenin
     for (const target of targets) {
       const compiled = compileTarget(target, { text }); assert.equal(compiled.status, 0, text + compiled.stderr.toString());
       if (target === 'c' && process.env['LITE_SKIP_NATIVE'] === '1') continue;
-      const actual = target === 'ts' ? runTsArtifact(compiled.stdout.toString(), { stdin }) : runCArtifact(compiled.stdout.toString());
-      assert.equal(actual.phase, 'run', actual.stderr.toString()); assert.equal(actual.signal, null);
-      assert.deepEqual({ status: actual.status, stdout: actual.stdout, stderr: actual.stderr }, reference, text);
+      executions.push({ target, artifact: compiled.stdout.toString(), expected: reference, options: target === 'ts' ? { stdin } : {}, context: text });
     }
   }
   const invalid = ['outputLine(,);', 'outputLine(1,,);', 'outputLine(,1);', 'outputLine(1,',
@@ -831,9 +845,8 @@ test('nonempty calls admit one trailing comma without adding a value or weakenin
     for (const target of targets) {
       const compiled = compileTarget(target, { text, name }); assert.equal(compiled.status, 0, compiled.stderr.toString());
       if (target === 'c' && process.env['LITE_SKIP_NATIVE'] === '1') continue;
-      const actual = target === 'ts' ? runTsArtifact(compiled.stdout.toString(), { stdin: 'bad' }) : runCArtifact(compiled.stdout.toString());
-      assert.equal(actual.phase, 'run', actual.stderr.toString());
-      assert.deepEqual({ status: actual.status, stdout: actual.stdout, stderr: actual.stderr }, expected);
+      executions.push({ target, artifact: compiled.stdout.toString(), expected, options: target === 'ts' ? { stdin: 'bad' } : {}, context: text });
     }
   }
+  assertExecutions(executions);
 });

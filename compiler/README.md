@@ -302,7 +302,10 @@ compile-time rejections. Generated TS uses BigInt; generated C uses
 Verification cases and expected streams live in
 [`../igniter/tests/compiler/`](../igniter/tests/compiler/); the schema is in
 [`../igniter/tests/README.md`](../igniter/tests/README.md). Run the suite with
-`npm test` from `../igniter/`.
+`./lite test --fast` or `./lite test --full` from the repository root.
+Recent generated-program groups batch strict TS module checking, then execute
+each program in a fresh process with exact stream/status assertions. See the
+[validation-harness ledger](parity.md#batched-ts-artifact-validation).
 
 See [INV-061](../investigations/INV-061-string-and-multi-value-reports.md) for
 the current evidence and limits.

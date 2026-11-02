@@ -3,13 +3,13 @@ import { chmodSync, closeSync, copyFileSync, existsSync, mkdirSync, openSync, re
 import { createHash } from 'node:crypto';
 import { tmpdir } from 'node:os';
 import { join, dirname, delimiter } from 'node:path';
-import { pathToFileURL } from 'node:url';
+import { fileURLToPath, pathToFileURL } from 'node:url';
 import { spawnSync } from 'node:child_process';
 import { test } from 'node:test';
 import { compile, execute, LiteFault } from './lite.ts';
 import { loadBundle, loadManifest, loadSource } from './loader.ts';
 import { benchmark, hashBytes, loadCompiler, nondeterminismReasons, runBundle, runText } from './bootstrap.ts';
-import { runCArtifact, runTsArtifact, withTsArtifact } from './artifacts.ts';
+import { runCArtifact, runTsArtifact, withTsArtifact, withTsArtifacts } from './artifacts.ts';
 import { compileTs } from '../compiler/host.ts';
 import {
   INT_MAX, INT_MIN, checkedAdd, checkedDivide, checkedFloorDivide, checkedFloorModulo,
@@ -1027,6 +1027,44 @@ test('prepared TS artifacts run in fresh processes and retain typecheck failures
     assert.notEqual(result.status, 0);
     assert.match(result.stdout.toString(), /not assignable to type 'string'/);
   });
+  const locationSource = 'export function main(): string { return (import.meta as { url: string }).url; }';
+  const locations = withTsArtifacts([
+    'let calls = 0; export function main(): string { calls += 1; return String(calls); }',
+    'declare const process: { argv: string[]; getBuiltinModule(name: string): { readFileSync(fd: number): Uint8Array } }; ' +
+      'export function main(): string { return JSON.stringify({ args: process.argv.slice(2), bytes: Array.from(process.getBuiltinModule("fs").readFileSync(0)) }); }',
+    locationSource, locationSource,
+  ], runs => {
+    assert.equal(runs.length, 4);
+    for (let invocation = 0; invocation < 2; invocation += 1) {
+      assert.deepEqual(runs[0]!(), { phase: 'run', status: 0, signal: null, stdout: Buffer.from('1'), stderr: Buffer.alloc(0) });
+    }
+    const args = ['a b', 'سلام🙂'], bytes = [255, 0, 128];
+    assert.deepEqual(runs[1]!({ args, stdin: Uint8Array.from(bytes) }), {
+      phase: 'run', status: 0, signal: null, stdout: Buffer.from(JSON.stringify({ args, bytes })), stderr: Buffer.alloc(0),
+    });
+    return [runs[2]!(), runs[3]!()].map(result => {
+      assert.equal(result.phase, 'run'); assert.equal(result.status, 0); assert.equal(result.stderr.length, 0);
+      return fileURLToPath(result.stdout.toString());
+    });
+  });
+  assert.notEqual(locations[0], locations[1]);
+  for (const location of locations) assert.equal(existsSync(location), false);
+  withTsArtifacts(['export function main(): string { throw new Error("EXECUTED"); }',
+    'export function main(): string { return 42; }'], runs => {
+    for (const run of runs) {
+      const result = run(); assert.equal(result.phase, 'typecheck'); assert.notEqual(result.status, 0);
+      assert.match(result.stdout.toString(), /not assignable to type 'string'/);
+      assert.doesNotMatch(result.stdout.toString() + result.stderr.toString(), /EXECUTED/);
+    }
+  });
+  let stoppedLocation = '';
+  assert.throws(() => withTsArtifacts([locationSource], runs => {
+    const result = runs[0]!(); assert.equal(result.phase, 'run'); assert.equal(result.status, 0);
+    stoppedLocation = fileURLToPath(result.stdout.toString());
+    throw new Error('callback stopped');
+  }), /callback stopped/);
+  assert.ok(stoppedLocation.length > 0); assert.equal(existsSync(stoppedLocation), false);
+  assert.equal(withTsArtifacts([], runs => runs.length), 0);
 });
 
 test('TS runtime helpers preserve checked Int64, text and list semantics', () => {

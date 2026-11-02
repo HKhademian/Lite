@@ -1,7 +1,7 @@
 /** Internal artifact runner for emitted bootstrap TS and C. */
 
 import { spawnSync } from 'node:child_process';
-import { mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
+import { mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 
@@ -48,17 +48,35 @@ export type TsArtifactRunner = (options?: ArtifactOptions) => ArtifactRun;
  * returned by the runner without executing the artifact.
  */
 export function withTsArtifact<Result>(source: string, use: (run: TsArtifactRunner) => Result): Result {
+  return withTsArtifacts([source], runs => use(runs[0]!));
+}
+
+/**
+ * Strict-checks generated TS modules in one project, then supplies one isolated
+ * process runner per source. Sources keep separate directories and module
+ * scopes. Any checking failure prevents execution of every module in the batch.
+ * The synchronous callback and cleanup contract match withTsArtifact.
+ */
+export function withTsArtifacts<Result>(sources: readonly string[], use: (runs: readonly TsArtifactRunner[]) => Result): Result {
+  if (sources.length === 0) return use([]);
   const directory = mkdtempSync(join(tmpdir(), 'lite-artifact-ts-'));
   try {
-    const artifact = join(directory, 'artifact.ts');
-    const runner = join(directory, 'runner.ts');
     const config = join(directory, 'tsconfig.json');
     writeFileSync(join(directory, 'package.json'), '{"type":"module"}\n');
-    writeFileSync(artifact, source);
-    writeFileSync(runner, "import { main } from './artifact.ts';\nimport { writeSync } from 'node:fs';\nprocess.stdout.write(main((text: string): void => { writeSync(1, text); }));\n");
+    const artifacts: string[] = [];
+    const runners = sources.map((source, index) => {
+      const itemDirectory = join(directory, String(index));
+      mkdirSync(itemDirectory);
+      const artifact = join(itemDirectory, 'artifact.ts');
+      const runner = join(itemDirectory, 'runner.ts');
+      writeFileSync(artifact, source);
+      writeFileSync(runner, "import { main } from './artifact.ts';\nimport { writeSync } from 'node:fs';\nprocess.stdout.write(main((text: string): void => { writeSync(1, text); }));\n");
+      artifacts.push(artifact);
+      return runner;
+    });
     writeFileSync(config, JSON.stringify({
       compilerOptions: { ...checkOptions(), types: [], typeRoots: [], lib: ['ESNext'] },
-      files: [artifact],
+      files: artifacts,
     }));
     const tsc = new URL('./node_modules/typescript/bin/tsc', import.meta.url).pathname;
     const checked = spawnSync(process.execPath, [tsc, '-p', config], { encoding: 'utf8', timeout: 30000 });
@@ -68,9 +86,9 @@ export function withTsArtifact<Result>(source: string, use: (run: TsArtifactRunn
         phase: 'typecheck', status: checked.status, signal: checked.signal,
         stdout: Buffer.from(checked.stdout), stderr: Buffer.from(checked.stderr),
       };
-      return use(() => failure);
+      return use(sources.map(() => () => failure));
     }
-    return use((options = {}) => {
+    return use(runners.map((runner): TsArtifactRunner => (options = {}) => {
       const result = spawnSync(process.execPath, [runner, ...(options.args ?? [])],
         { input: inputBytes(options.stdin), timeout: 10000, maxBuffer: 16 * 1024 * 1024 });
       if (result.error !== undefined) throw result.error;
@@ -78,7 +96,7 @@ export function withTsArtifact<Result>(source: string, use: (run: TsArtifactRunn
         phase: 'run', status: result.status, signal: result.signal,
         stdout: result.stdout ?? Buffer.alloc(0), stderr: result.stderr ?? Buffer.alloc(0),
       };
-    });
+    }));
   } finally {
     rmSync(directory, { recursive: true, force: true });
   }

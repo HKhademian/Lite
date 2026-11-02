@@ -868,3 +868,33 @@ Inventory: 85/164 match, 79 remain; 33 original failures closed, no regressions,
 210 tracked Lite sources and no load errors. `exit()` still needs its existing
 zero-argument contract (T00 exits zero; T11 rejects); this is recorded separately
 from trailing separators. The remaining scope/statement forms are next.
+
+## Batched TS artifact validation
+
+Generated TS modules can now be strictly checked in one project, with one fresh
+process runner per module. Every source keeps its own directory and module
+scope; stdin bytes, argument values, streamed output, status and signals retain
+the existing contracts. One checking failure prevents every module in the batch
+from executing. The single-artifact API delegates to this path. No persistent
+typecheck cache is involved.
+
+Four recent compiler groups now batch their 81 TS modules into four checks;
+their 133 execution contracts, including 52 native executions, remain in place.
+Compile-time rejection assertions remain individual. Unit cases cover repeated
+fresh state, raw stdin/Unicode args, independent module locations, cleanup after
+success/throw, atomic checking failure and an empty batch.
+
+The [paired report](reports/2026-11-02-artifact-batches-performance.json) runs the
+same 66 precompiled corpus programs through both runners. Five alternating
+paired fresh workers after a warm-up pair reduce median validation/execution
+from 5877.2 to 3215.8 ms (1.83×). Every status, signal and stdout/stderr byte
+matches fixture expectations in every sample. Emission and worker/module loading
+are outside that timed phase; this measures the validation harness.
+
+All 264 full tests pass with zero skips in 75.5 s; fast passes 252 with 12
+expected skips in 51.0 s. These gate durations are observations, separate from
+the controlled paired measurement. Strict host/seeds, both 93-case corpora,
+98 verifier executions, coverage and nine editor groups pass. Exact assembled
+TS/C source and generated seed hashes remain those of the trailing-comma slice;
+both default compiler selections verify successfully. The measured language
+inventory stays at 85/164 matching cases with 79 remaining.

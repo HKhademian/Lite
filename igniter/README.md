@@ -216,7 +216,10 @@ full-gate test (`LITE_SKIP_HEAVY=1` skips it in the fast lane); it tokenizes the
 expanded TS S, the C emitter, the lexer sources and all 92 compiler cases.
 Full-source lexer/parser/checker sweeps now run T11-compiled, strictly checked
 drivers. Small fixtures retain T00 execution and compare exact output with the
-generated path. See the [test-consumer migration](../compiler/parity.md#generated-full-source-test-consumers).
+generated path. Recent compiler regression groups also batch strict checking
+of distinct generated modules, preserving fresh processes and per-program stream
+assertions. See the [test-consumer migration](../compiler/parity.md#generated-full-source-test-consumers)
+and [artifact-validation ledger](../compiler/parity.md#batched-ts-artifact-validation).
 
 P4 adds the parser core, type grammar, declarations, expressions, statements and
 functions in [`../compiler/src/parser.lts`](../compiler/src/parser.lts). It parses
