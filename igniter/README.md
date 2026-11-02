@@ -82,6 +82,13 @@ canonical chain feature executes on all three targets. See the [chain ledger](..
 for fixed-point, sanitizer and paired speed evidence. Broader types, Never-valued
 exit typing, native C and run/check migration remain pending.
 
+
+Empty and comment-only scripts now compile silently on generated TS/C, with
+malformed comments still rejected before effects. The corpus is 63 programs and
+30 rejections; existing 61 artifact pairs are unchanged. The parser skips alias
+scanning and remaining state allocation for empty scripts. See the [empty-script
+ledger](../compiler/parity.md#empty-script-support) for generated bootstrap and paired timing evidence.
+
 ## Run
 
 Use Node **26.13.0** (pinned in [.node-version](.node-version)); TypeScript
@@ -830,7 +837,7 @@ warm cache.
 Compiler verification cases are one JSON model plus a sibling `.lts` entry
 source per case under [tests/compiler](tests/compiler/); filenames follow
 `NNN-MMM-title-subtitle.json` (category 001 accepted program, 002 compiler rejection).
-There are 61 programs and 32 rejections; accepted programs include six expected
+There are 63 programs and 30 rejections; accepted programs include six expected
 arithmetic runtime faults. The schema
 and workflow are documented in [tests/README.md](tests/README.md). The suite
 loads all cases and does not keep separate inline source, input, and

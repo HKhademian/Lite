@@ -2,7 +2,7 @@
 
 Runtime environment details omitted for privacy.
 
-T11 identity: `78fe04497b02149590da6f62e2abce597378525198141958bf22372fbb72ff69`. The preserved artifact passed its separate strict TypeScript check.
+T11 identity: `cebdab4f094ba8d47938fe6d20381bb72bf5d7606d0a8199a2402912936eb993`. The preserved artifact passed its separate strict TypeScript check.
 
 This is the current measured support inventory, not acceptance of new language features. Dated historical inventories remain unchanged.
 
@@ -20,15 +20,15 @@ This is the current measured support inventory, not acceptance of new language f
 - feature: 38; 23 matches tested behavior; 15 T11 rejects source.
 - example: 19; 10 matches tested behavior; 9 T11 rejects source.
 - sample: 20; 11 matches tested behavior; 9 T11 rejects source.
-- probe: 79; 27 matches tested behavior; 52 T11 rejects source.
+- probe: 79; 29 matches tested behavior; 50 T11 rejects source.
 - library-test: 8; 8 matches tested behavior.
 - trackedSourceFiles: 210.
 - Showcases: none currently implemented.
 
 ## Progress since the original inventory
 
-- 27 formerly failing cases now match; 0 formerly matching cases regress. Case identity includes kind and id.
-- 79/164 executed source cases match; 85 still fail. These are case counts, not distinct missing features or an overall completion percentage.
+- 29 formerly failing cases now match; 0 formerly matching cases regress. Case identity includes kind and id.
+- 81/164 executed source cases match; 83 still fail. These are case counts, not distinct missing features or an overall completion percentage.
 - Native C, compile-only sources and run/check migration have separate gates in [the live gap tracker](../gaps.md).
 
 Closed original cases:
@@ -56,6 +56,8 @@ Closed original cases:
 - probe: function.report-order
 - probe: text.bounds-diagnostic
 - probe: output.before-fault
+- probe: syntax.empty-script
+- probe: syntax.whitespace-script
 - probe: condition.dead-arithmetic
 - probe: logic.short-circuit-fault
 - probe: comparison.parenthesized-not-equal
@@ -241,10 +243,8 @@ Closed original cases:
   First diagnostic: 1:9: duplicate local x
 - **syntax.final-semicolon — T11 rejects source.** Final declaration can end at EOF without a semicolon
   First diagnostic: 1:7: expected ; after local declaration x
-- **syntax.empty-script — T11 rejects source.** Empty scripts complete silently
-  First diagnostic: 1:1: expected a statement: output/outputLine, declaration, assignment, if or loop
-- **syntax.whitespace-script — T11 rejects source.** Whitespace-only scripts complete silently
-  First diagnostic: 2:1: expected a statement: output/outputLine, declaration, assignment, if or loop
+- **syntax.empty-script — matches tested behavior.** Empty scripts complete silently
+- **syntax.whitespace-script — matches tested behavior.** Whitespace-only scripts complete silently
 - **condition.dead-arithmetic — matches tested behavior.** Arithmetic in an unselected branch does not fault
 - **logic.short-circuit-fault — matches tested behavior.** Short-circuiting skips a failing arithmetic operand
 - **comparison.parenthesized-not-equal — matches tested behavior.** Parenthesized inequality with a named left operand
@@ -353,6 +353,7 @@ Closed original cases:
 - `compiler/tests/parser/program.lts`: compile accepted; execution not tested.
 - `compiler/tests/parser/types.lts`: compile accepted; execution not tested.
 - `compiler/ts-emitter.lts`: compile accepted; execution not tested. Current source bytes exactly match preserved T11/T12 source identity; not recompiled in this audit..
+- `igniter/tests/compiler/001-001-empty-source.lts`: compile accepted; execution not tested.
 - `igniter/tests/compiler/001-001-output-line-empty-arguments.lts`: compile accepted; execution not tested.
 - `igniter/tests/compiler/001-001-report-crlf-spacing.lts`: compile accepted; execution not tested.
 - `igniter/tests/compiler/001-001-report-int-42.lts`: compile accepted; execution not tested.
@@ -365,6 +366,7 @@ Closed original cases:
 - `igniter/tests/compiler/001-001-report-spaced-negative.lts`: compile accepted; execution not tested.
 - `igniter/tests/compiler/001-001-report-zero.lts`: compile accepted; execution not tested.
 - `igniter/tests/compiler/001-001-report-zeroes.lts`: compile accepted; execution not tested.
+- `igniter/tests/compiler/001-001-whitespace-source.lts`: compile accepted; execution not tested.
 - `igniter/tests/compiler/001-002-arithmetic-beyond-32-bit.lts`: compile accepted; execution not tested.
 - `igniter/tests/compiler/001-002-arithmetic-int-min.lts`: compile accepted; execution not tested.
 - `igniter/tests/compiler/001-002-arithmetic-negative-division.lts`: compile accepted; execution not tested.
@@ -418,7 +420,6 @@ Closed original cases:
 - `igniter/tests/compiler/002-001-bare-name.lts`: not-a-standalone-T00-program.
 - `igniter/tests/compiler/002-001-call-statement.lts`: not-a-standalone-T00-program.
 - `igniter/tests/compiler/002-001-decimal-literal.lts`: T11 rejects source.
-- `igniter/tests/compiler/002-001-empty-source.lts`: T11 rejects source.
 - `igniter/tests/compiler/002-001-exponent-literal.lts`: T11 rejects source.
 - `igniter/tests/compiler/002-001-injected-source.lts`: not-a-standalone-T00-program.
 - `igniter/tests/compiler/002-001-report-missing-argument.lts`: T11 rejects source.
@@ -426,7 +427,6 @@ Closed original cases:
 - `igniter/tests/compiler/002-001-report-missing-expression.lts`: not-a-standalone-T00-program.
 - `igniter/tests/compiler/002-001-report-without-call.lts`: not-a-standalone-T00-program.
 - `igniter/tests/compiler/002-001-trailing-statement.lts`: not-a-standalone-T00-program.
-- `igniter/tests/compiler/002-001-whitespace-source.lts`: T11 rejects source.
 - `igniter/tests/compiler/002-002-mixed-int-string.lts`: not-a-standalone-T00-program.
 - `igniter/tests/compiler/002-002-string-minus-int.lts`: not-a-standalone-T00-program.
 - `igniter/tests/compiler/002-002-string-plus-int-local.lts`: not-a-standalone-T00-program.

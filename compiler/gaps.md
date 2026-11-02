@@ -8,8 +8,8 @@ This tracker covers the T00 replacement goal, including newly discovered flaws.
 ## Measured checkpoint
 
 The [current inventory](reports/current-t00-t11-inventory.md) and
-[raw observations](reports/current-t00-t11-inventory.json) use the checked Int64
-seed `78fe0449…`. All inputs compile/check against the current reference, both
+[raw observations](reports/current-t00-t11-inventory.json) use the generated
+seed `cebdab4f…`. All inputs compile/check against the current reference, both
 execution paths use identical anonymous diagnostic naming, and raw-byte input
 probes follow the real CLI's lazy strict UTF-8 decoding. Historical reports stay
 unchanged. Refresh with `node compiler/scripts/t00-t11-inventory.ts --large-sources`.
@@ -17,11 +17,11 @@ unchanged. Refresh with `node compiler/scripts/t00-t11-inventory.ts --large-sour
 - Canonical features: 23/38 match; 15 rejected.
 - Examples: 10/19 match; 9 rejected.
 - Implemented samples: 11/20 match; 9 rejected.
-- Isolated boundary probes: 27/79 match; 52 rejected; no differences among accepted probes.
+- Isolated boundary probes: 29/79 match; 50 rejected; no differences among accepted probes.
 - Library tests: 8/8 match. All 210 tracked Lite sources are accounted for;
   compile-only acceptance is distinguished from executed parity.
-- Total executed source cases: 79/164 match, 85 still fail. Compared with the
-  original inventory, 27 previously failing cases now match and none regress.
+- Total executed source cases: 81/164 match, 83 still fail. Compared with the
+  original inventory, 29 previously failing cases now match and none regress.
   The temporary-I/O case, retained function-tail probe and new chain feature
   account for three additional matching cases.
 
@@ -63,7 +63,9 @@ Keep dependencies explicit; split a topic further when its contracts warrant it.
 - [x] **Comparison chains:** adjacent comparisons over admitted scalar types,
   middle-operand single evaluation and short-circuiting on TS/C. Broader Float
   ordering remains in the Float topic.
-- [ ] **Script and lexical forms:** empty scripts, optional final semicolons,
+- [x] **Empty scripts:** empty, whitespace-only and nested/raw-comment-only
+  scripts compile silently on TS/C; malformed comments still reject.
+- [ ] **Script and lexical forms:** optional final semicolons,
   adjacent Strings, trailing call commas, standalone scope blocks, expression
   statements and same-block shadowing.
 - [x] **Deferred arithmetic faults:** constant arithmetic must fault only when
@@ -105,6 +107,9 @@ Keep dependencies explicit; split a topic further when its contracts warrant it.
   part of the call. C now matches T00/TS and prints no partial call on a fault.
 - [ ] **Native C ladder:** C11, historical-node equality and cross-host fixed
   points, strict native compilation, boundary cases and clean rebuilds.
+- [ ] **Inventory provenance:** report HEAD as the base revision when auditing
+  uncommitted compiler changes; retain actual artifact/source hashes and record
+  worktree state rather than labeling HEAD as the complete audited snapshot.
 - [ ] **Consumers:** generated check/run and remaining regression consumers,
   source names/line maps, rejection-before-effects and full diagnostic parity.
 - [ ] **Retirement:** dependency scan, reproducible recovery from Git history,
@@ -203,3 +208,11 @@ are unchanged. Paired medians remain steady with mixed small timing changes;
 see the [chain performance report](reports/2026-11-02-comparison-chains-performance.json).
 The decisions example next exposes a semicolon-free value-if declaration gap.
 Next topic: script/lexical forms, starting with empty scripts.
+
+Empty-script support: 81/164 match, 83 remain; 29 original failures closed and
+none regress. All 261 full tests pass without skips in 52.2 s; fast passes
+249 with 12 expected skips in 32.5 s. Both 93-case corpora, 98 verifier executions,
+coverage, strict checks and nine editor groups pass. The corpus is now 63
+programs/30 rejections; 61 older artifact pairs are unchanged. Source and seed
+size shrink slightly, while paired throughput stays steady. See the
+[empty-script ledger](parity.md#empty-script-support).

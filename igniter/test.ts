@@ -1656,9 +1656,9 @@ test('restricted compiler treats nested, doc and raw comments as separating triv
   }
 });
 
-test('restricted compiler corpus keeps 61 program and 32 rejection cases', () => {
-  assert.equal(programFixtures.length, 61);
-  assert.equal(rejectionFixtures.length, 32);
+test('restricted compiler corpus keeps 63 program and 30 rejection cases', () => {
+  assert.equal(programFixtures.length, 63);
+  assert.equal(rejectionFixtures.length, 30);
 });
 
 test('restricted compiler compiles scalar functions, calls and returns to runnable TS', () => {
@@ -2159,7 +2159,11 @@ test('whole-source TS and C compilers reject later statements and decoding failu
   try {
     const sourcePath = join(directory, 'source.lts');
     for (const target of ['ts', 'c'] as const) {
-      for (const input of ['', 'outputLine(42);\nunsupported();\n', 'outputLine(42);\nprocess.exit(7);\n']) {
+      writeFileSync(sourcePath, '');
+      const empty = spawnSync(join(root, 'litec'), [target, sourcePath], { env, timeout: 5000 });
+      assert.equal(empty.error, undefined); assert.equal(empty.status, 0, empty.stderr.toString());
+      assert.ok(empty.stdout.length > 0); assert.equal(empty.stderr.length, 0);
+      for (const input of [' \n}', 'outputLine(42);\nunsupported();\n', 'outputLine(42);\nprocess.exit(7);\n']) {
         writeFileSync(sourcePath, input);
         const rejected = spawnSync(join(root, 'litec'), [target, sourcePath], { env, timeout: 5000 });
         assert.equal(rejected.error, undefined); assert.equal(rejected.status, 2, rejected.stderr.toString());

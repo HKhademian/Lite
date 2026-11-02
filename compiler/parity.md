@@ -4,7 +4,7 @@ Status: **active, 2026-11-02**. This ledger drives the owner direction that the
 TS igniter and the generated compilers converge into the same compiler for the
 bootstrap surface. It is a burndown list, not a claim that parity already holds.
 
-Immediate scope: the bootstrap subset L, S, and the 61 program / 32 rejection
+Immediate scope: the bootstrap subset L, S, and the 63 program / 30 rejection
 cases. The owner approved starting full T00 replacement on 2026-11-02; existing
 features beyond L remain pending work in the [transition plan](transition-plan.md).
 
@@ -711,3 +711,39 @@ semicolon-free value-if declaration; chain support alone does not close it.
 A separate Never-valued `exit` typing flaw was discovered and added to the queue.
 Supplementary-character columns remain an owner decision. Next is the script
 and lexical-form queue, beginning with empty scripts.
+
+## Empty-script support
+
+Empty, whitespace-only and comment-only scripts now compile and finish silently
+on generated TS and C. The parser validates leading trivia, returns its typed
+empty Items list before alias discovery and skips the remaining parser-state
+allocation. Keeping the Items annotation preserves the historical T00 source
+route; contextual inference for a bare `return []` is not required by S.
+
+Twelve focused empty/comment programs include nested/raw comments and Unicode;
+two nonempty combinations retain output, locals and chains. Five malformed
+sources reject before effects, including unfinished comments after prior output.
+The real CLI admits an empty file on both targets and still rejects malformed
+later source and invalid UTF-8. The two original empty fixtures move from 002 to
+001 without changing source bytes. Corpus: 63 programs/30 rejections, still 93
+sources. The 61 earlier program artifact pairs are unchanged.
+
+The full gate passes all 261 tests with zero skips in 52.2 s; fast passes
+249 with 12 expected skips in 32.5 s.
+The [generated-only ladder](reports/2026-11-02-empty-scripts-ladder.json) records
+three identical compiler generations and the TS-hosted C emitter. Strict host,
+seed and artifact checks, both 93-case corpora, 98 verifier executions, coverage
+and nine editor groups pass. Native C compiler self-hosting remains pending.
+
+Five paired samples show steady nonempty compiler throughput: TS medians
+63.0 → 64.7 ms for 1,000 outputs, 645.7 → 642.4 ms for identical S, and
+130.6 → 128.5 ms for 1,000 constant expressions. C-emitter medians are
+83.2 → 82.2, 170.9 → 168.5 and 216.5 → 217.0 ms for outputs, divisions and
+constant expressions. Mixed small changes do not establish a speedup; the
+[performance report](reports/2026-11-02-empty-scripts-performance.json) keeps raw
+samples and exact input/artifact identities. The source shrinks by 112 bytes
+and each generated compiler by 126 bytes.
+
+Inventory: 81/164 match, 83 remain; 29 original failures closed, no regressions,
+210 tracked Lite sources, no load errors. Next: optional final semicolons and
+closed-block statement boundaries. The broader gap queue remains active.

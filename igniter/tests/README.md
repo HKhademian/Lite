@@ -21,8 +21,9 @@ The sibling `.lts` file is the entry source. A manifest may hold several
 scenarios for that one source under `cases`. Program category 001 means the
 source compiles successfully; its execution may exit nonzero with a modeled
 runtime fault. Category 002 models compiler rejection before artifact output.
-The current corpus has 61 programs and 32 rejections; six arithmetic-fault
-sources moved to 001-011 without changing their source bytes.
+The current corpus has 63 programs and 30 rejections. Six arithmetic-fault
+sources moved to 001-011; empty/whitespace scripts moved to 001-001. Source
+bytes are unchanged in these migrations.
 
 ### Subcategories
 

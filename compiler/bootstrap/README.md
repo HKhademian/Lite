@@ -1,17 +1,17 @@
 # Generated bootstrap seeds
 
 `T11.ts` is the current generated compiler after the
-[comparison-chain refresh](../parity.md#comparison-chain-lowering). Its exact source/builder
+[empty-script refresh](../parity.md#empty-script-support). Its exact source/builder
 identities are in [seed.ts](seed.ts). Three generated generations are byte-identical:
-315867 bytes, SHA-256 `78fe0449…`. The refresh starts from the
+315741 bytes, SHA-256 `cebdab4f…`. The refresh starts from the
 previous generated seed, compiles unchanged current S at each generation, and
-does not need T00 execution. The [ladder record](../reports/2026-11-02-comparison-chains-ladder.json)
+does not need T00 execution. The [ladder record](../reports/2026-11-02-empty-scripts-ladder.json)
 preserves the recipe, previous seed revision and transitional artifact
 hashes. Historical T00-built ladder identities remain in the parity ledger.
 
 `c-emitter.ts` is the current Lite C emitter compiled by the refreshed TS seed.
-It is 292241 bytes, SHA-256 `684bb40e…`; C source
-SHA-256 `903d7841…`, builder SHA-256 `78fe0449…`.
+It is 292115 bytes, SHA-256 `e585638a…`; C source
+SHA-256 `353941d8…`, builder SHA-256 `cebdab4f…`.
 Its metadata is in [c-seed.ts](c-seed.ts). It supports admitted scalar output
 forms and checked dynamic Int64 arithmetic, including positioned division-family faults.
 Multi-value output evaluates every argument before writing. Comparison chains retain each middle operand and skip later operands after a

@@ -662,3 +662,37 @@ test('portable C11 checks Int64 boundaries and sequences nested faults left to r
     assert.doesNotMatch(literal.stdout.toString(), /const lite\$intLines|static const size_t lt_int_lines/);
   }
 });
+
+
+test('empty and comment-only scripts compile silently without hiding malformed source', () => {
+  const sources = ['', ' ', '\n', '\r\n\t ', '/**/', '/* words */', '/* outer /* nested */ end */',
+    ' \n/* سلام🙂 */\r\n', '/* ; {} () outputLine(1 / 0); */', '/* \"quoted\" */ /* another */',
+    '/*# arbitrary /* nested-looking */ text #*/', '/* outer /*# raw */ body #*/ end */'];
+  for (const text of sources) {
+    const expected = runText(text);
+    assert.deepEqual(expected, { status: 0, stdout: Buffer.alloc(0), stderr: Buffer.alloc(0) });
+    for (const target of ['ts', 'c'] as const) {
+      const compiled = compileTarget(target, { text }); assert.equal(compiled.status, 0, compiled.stderr.toString());
+      if (target === 'c' && process.env['LITE_SKIP_NATIVE'] === '1') continue;
+      const actual = target === 'ts' ? runTsArtifact(compiled.stdout.toString()) : runCArtifact(compiled.stdout.toString());
+      assert.equal(actual.phase, 'run', actual.stderr.toString()); assert.equal(actual.signal, null);
+      assert.deepEqual({ status: actual.status, stdout: actual.stdout, stderr: actual.stderr }, expected);
+    }
+  }
+  for (const text of ['/*', '/* outer /* nested */', '/*# unterminated', '/* ok */ }', '/* ok */ outputLine(1); /* unterminated']) {
+    assert.equal(runText(text).status, 1);
+    for (const target of ['ts', 'c'] as const) {
+      const result = compileTarget(target, { text }); assert.equal(result.status, 2); assert.equal(result.stdout.length, 0);
+    }
+  }
+  for (const text of ['/* before */ outputLine(7); /* after */', '/* nested /* inner */ */ var n := 1; outputLine(0 <= n < 2);']) {
+    const expected = runText(text);
+    for (const target of ['ts', 'c'] as const) {
+      const compiled = compileTarget(target, { text }); assert.equal(compiled.status, 0, compiled.stderr.toString());
+      if (target === 'c' && process.env['LITE_SKIP_NATIVE'] === '1') continue;
+      const actual = target === 'ts' ? runTsArtifact(compiled.stdout.toString()) : runCArtifact(compiled.stdout.toString());
+      assert.equal(actual.phase, 'run', actual.stderr.toString());
+      assert.deepEqual({ status: actual.status, stdout: actual.stdout, stderr: actual.stderr }, expected);
+    }
+  }
+});

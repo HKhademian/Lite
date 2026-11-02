@@ -2357,9 +2357,11 @@ insideLoop := fn(blocks: List<String>): Bool {
 /** Parses complete source into a flat Items stream with an iterative block stack, dropping block-local declarations on `}`. Exits 2 on unsupported, malformed or faulting source. */
 parseProgram := fn(source: String, prefix: String): Items {
     size := textLength(source);
+    var position := skipTrivia(source, 0, prefix);
+    items: mut Items = [];
+    if position == size { return items; }
     aliases := collectAliases(source, prefix);
     var locals: mut List<Local> = [];
-    items: mut Items = [];
     blocks: mut List<String> = [];
     functions: mut List<FunctionInfo> = [];
     functionParams: mut List<String> = [];
@@ -2369,10 +2371,6 @@ parseProgram := fn(source: String, prefix: String): Items {
     var currentName := "";
     var currentResult := "";
     var currentReturned := false;
-    var position := skipTrivia(source, 0, prefix);
-    if position == size {
-        failAt(source, position, prefix, "expected a statement: output/outputLine, declaration, assignment, if or loop");
-    }
     loop position < size {
         ch := textAt(source, position);
         if ch == "}" {

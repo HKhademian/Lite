@@ -1,11 +1,17 @@
 {
-  "note": "Current exact artifacts after comparison-chain lowering. All 61 existing corpus program artifact pairs are unchanged; historical checkpoints remain preserved.",
+  "note": "Current exact artifacts after empty-script support. Existing 61 program artifact pairs remain unchanged; two empty scripts now compile. Historical checkpoints remain preserved.",
   "recorded": "2026-11-02",
-  "sourceSha256": "1be00ebd9db034010ae420b156b4166ae285a13c332be1ea8c0b859ef20f5157",
-  "compilerSha256": "78fe04497b02149590da6f62e2abce597378525198141958bf22372fbb72ff69",
-  "programCases": 61,
-  "rejectedCases": 32,
+  "sourceSha256": "a8e60844bf85c2cc84fc424a67168a68437ec4e7210a197238fd2b68b8af79e5",
+  "compilerSha256": "cebdab4f094ba8d47938fe6d20381bb72bf5d7606d0a8199a2402912936eb993",
+  "programCases": 63,
+  "rejectedCases": 30,
   "artifacts": [
+    {
+      "name": "empty-source",
+      "source": "001-001-empty-source.lts",
+      "ts": "sha256:0bc5ce57b960ec0579994f91213b40d2dfdd05d813720915c5f57ee342c8fb92",
+      "c": "sha256:628413d3225feae4e38811b5dc738a2622882467da84984558cbfda10484e83d"
+    },
     {
       "name": "output-line-empty-arguments",
       "source": "001-001-output-line-empty-arguments.lts",
@@ -77,6 +83,12 @@
       "source": "001-001-report-zeroes.lts",
       "ts": "sha256:3523c0bee345476a5ea987480fc8fb32e199cd4069c7448f7243fbcc310ffc64",
       "c": "sha256:2dcb562462999ae4cc60c94e382e472c1aa4b3b59d05b0abe0ee55e45fbc6894"
+    },
+    {
+      "name": "whitespace-source",
+      "source": "001-001-whitespace-source.lts",
+      "ts": "sha256:0bc5ce57b960ec0579994f91213b40d2dfdd05d813720915c5f57ee342c8fb92",
+      "c": "sha256:628413d3225feae4e38811b5dc738a2622882467da84984558cbfda10484e83d"
     },
     {
       "name": "arithmetic-beyond-32-bit",

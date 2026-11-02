@@ -447,13 +447,13 @@
     "id": "syntax.empty-script",
     "summary": "Empty scripts complete silently",
     "source": "",
-    "test": "compiler fixture 002-001-empty-source.lts"
+    "test": "compiler fixture 001-001-empty-source.lts"
   },
   {
     "id": "syntax.whitespace-script",
     "summary": "Whitespace-only scripts complete silently",
     "source": "   \n",
-    "test": "compiler fixture 002-001-whitespace-source.lts"
+    "test": "compiler fixture 001-001-whitespace-source.lts"
   },
   {
     "id": "condition.dead-arithmetic",

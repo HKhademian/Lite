@@ -1,0 +1,110 @@
+{
+  "date": "2026-11-02",
+  "baseRevision": "b3af27fb211bd19f5b8601cf54c53be6ea519a0c",
+  "node": "v24.16.0",
+  "previousSeedSha256": "78fe04497b02149590da6f62e2abce597378525198141958bf22372fbb72ff69",
+  "transitionalArtifactSha256": "cebdab4f094ba8d47938fe6d20381bb72bf5d7606d0a8199a2402912936eb993",
+  "recipe": "Previous generated seed compiling current S -> transitional compiler; transitional compiler compiling the same S -> stage1; stage1 and stage2 compile the same S into stage2 and stage3. No source rewriting or T00 execution.",
+  "source": {
+    "sha256": "a8e60844bf85c2cc84fc424a67168a68437ec4e7210a197238fd2b68b8af79e5",
+    "bytes": 173288
+  },
+  "generations": [
+    {
+      "name": "stage1",
+      "sha256": "cebdab4f094ba8d47938fe6d20381bb72bf5d7606d0a8199a2402912936eb993",
+      "bytes": 315741,
+      "strictTypecheck": true,
+      "status": 0
+    },
+    {
+      "name": "stage2",
+      "sha256": "cebdab4f094ba8d47938fe6d20381bb72bf5d7606d0a8199a2402912936eb993",
+      "bytes": 315741,
+      "strictTypecheck": true,
+      "status": 0
+    },
+    {
+      "name": "stage3",
+      "sha256": "cebdab4f094ba8d47938fe6d20381bb72bf5d7606d0a8199a2402912936eb993",
+      "bytes": 315741,
+      "strictTypecheck": true,
+      "status": 0
+    }
+  ],
+  "fixedPoint": true,
+  "c": {
+    "sourceSha256": "353941d860093225d58e16dbbd5ecd32df0f382802ab1df4065a17ad950c1e89",
+    "sourceBytes": 162408,
+    "artifactSha256": "e585638aed7b337787c6d051c3ca13d27990efc6d209552ae5eaf6549e0472d0",
+    "artifactBytes": 292115,
+    "builderSha256": "cebdab4f094ba8d47938fe6d20381bb72bf5d7606d0a8199a2402912936eb993",
+    "native": false
+  },
+  "validation": {
+    "strictHostAndSeeds": true,
+    "emptyOrCommentOnlyPrograms": 12,
+    "nonemptyCommentCombinations": 2,
+    "malformedSources": 5,
+    "fullSuite": {
+      "tests": 261,
+      "passed": 261,
+      "failed": 0,
+      "skipped": 0,
+      "durationMs": 52246.954875
+    },
+    "fastSuite": {
+      "tests": 261,
+      "passed": 249,
+      "failed": 0,
+      "skipped": 12,
+      "durationMs": 32534.499167
+    },
+    "hostGroups": 21,
+    "editorGroups": 9,
+    "tsCorpus": {
+      "phase": "compare",
+      "artifact": "<local-path>/Projects/LiteScript/compiler/bootstrap/T11.ts",
+      "target": "ts",
+      "cases": 93,
+      "programs": 63,
+      "rejections": 30,
+      "mismatches": 0,
+      "first": []
+    },
+    "cCorpus": {
+      "phase": "compare",
+      "artifact": "<local-path>/Projects/LiteScript/compiler/bootstrap/c-emitter.ts",
+      "target": "c",
+      "cases": 93,
+      "programs": 63,
+      "rejections": 30,
+      "mismatches": 0,
+      "first": []
+    },
+    "verifierExecutions": 98,
+    "registeredFeatures": 38,
+    "coverage": true,
+    "existingCorpusArtifactPairsUnchanged": 61,
+    "inventory": {
+      "matches": 81,
+      "total": 164,
+      "remaining": 83,
+      "originalFailuresClosed": 29,
+      "regressions": 0,
+      "trackedLiteFiles": 210,
+      "loadErrors": 0
+    },
+    "performanceReport": "2026-11-02-empty-scripts-performance.json",
+    "knownLimits": "Other lexical forms, broader types/control/data/functions, native C and run/check migration remain pending."
+  },
+  "reproductionCommands": [
+    "git show b3af27fb211bd19f5b8601cf54c53be6ea519a0c:compiler/bootstrap/T11.ts > /tmp/previous-seed.ts",
+    "node --input-type=module -e 'import {writeFileSync} from \"node:fs\"; import {loadBundle} from \"./igniter/loader.ts\"; writeFileSync(\"/tmp/S.lts\",loadBundle(\"compiler/manifests/ts.json\").text); writeFileSync(\"/tmp/C-S.lts\",loadBundle(\"compiler/manifests/c.json\").text);'",
+    "node compiler/scripts/run-ts-artifact.ts --artifact /tmp/previous-seed.ts --source /tmp/S.lts --out /tmp/transitional.ts",
+    "node compiler/scripts/run-ts-artifact.ts --artifact /tmp/transitional.ts --source /tmp/S.lts --out /tmp/stage1.ts",
+    "node compiler/scripts/run-ts-artifact.ts --artifact /tmp/stage1.ts --source /tmp/S.lts --out /tmp/stage2.ts",
+    "node compiler/scripts/run-ts-artifact.ts --artifact /tmp/stage2.ts --source /tmp/S.lts --out /tmp/stage3.ts",
+    "node compiler/scripts/run-ts-artifact.ts --artifact /tmp/stage3.ts --source /tmp/C-S.lts --out /tmp/c-emitter.ts"
+  ]
+}

@@ -1,7 +1,7 @@
 {
   "name": "whitespace-source",
   "source": {
-    "file": "002-001-whitespace-source.lts",
+    "file": "001-001-whitespace-source.lts",
     "hash": "sha256:01ba4719c80b6fe911b091a7c05124b64eeece964e09c058ef8f9805daca546b"
   },
   "cases": [
@@ -12,10 +12,10 @@
         "hash": "sha256:e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
       },
       "stderr": {
-        "text": "2:1: expected a statement: output/outputLine, declaration, assignment, if or loop\n",
-        "hash": "sha256:5a874f468bc0c191baf293940e0c96aa1cc412772489dff43af20bf58e4c3665"
+        "text": "",
+        "hash": "sha256:e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
       },
-      "exitCode": 2
+      "exitCode": 0
     }
   ]
 }

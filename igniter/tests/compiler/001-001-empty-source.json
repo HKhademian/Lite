@@ -1,7 +1,7 @@
 {
   "name": "empty-source",
   "source": {
-    "file": "002-001-empty-source.lts",
+    "file": "001-001-empty-source.lts",
     "hash": "sha256:e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
   },
   "cases": [
@@ -12,10 +12,10 @@
         "hash": "sha256:e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
       },
       "stderr": {
-        "text": "1:1: expected a statement: output/outputLine, declaration, assignment, if or loop\n",
-        "hash": "sha256:f2586a14a8823bf2cf305833b718e8e2010bf8706b303d4c70aa00a5ea22e82d"
+        "text": "",
+        "hash": "sha256:e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
       },
-      "exitCode": 2
+      "exitCode": 0
     }
   ]
 }

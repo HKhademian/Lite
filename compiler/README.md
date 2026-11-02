@@ -77,7 +77,7 @@ line-map contract and current hashes are recorded in:
 - [`parity.md`](parity.md) — stage-0 versus generated-compiler burndown; the
   current TS/C parity target and difference log.
 - [`generated/current-artifacts.json`](generated/current-artifacts.json) —
-  current emitted-artifact hashes for all 61 program cases; the P0 hashes remain
+  current emitted-artifact hashes for all 63 program cases; the P0 hashes remain
   in `generated/baseline-artifacts.json`.
 
 The bundle path is green: [`../igniter/loader.ts`](../igniter/loader.ts) loads
@@ -112,6 +112,13 @@ zero skips (49.4 s); inventory is 79/164 matching cases, 85 remaining. The new
 canonical chain feature executes on all three targets. See the [chain ledger](parity.md#comparison-chain-lowering)
 for fixed-point, sanitizer and paired speed evidence. Broader types, Never-valued
 exit typing, native C and run/check migration remain pending.
+
+
+Empty and comment-only scripts now compile silently on generated TS/C, with
+malformed comments still rejected before effects. The corpus is 63 programs and
+30 rejections; existing 61 artifact pairs are unchanged. The parser skips alias
+scanning and remaining state allocation for empty scripts. See the [empty-script
+ledger](parity.md#empty-script-support) for generated bootstrap and paired timing evidence.
 
 
 ## Layout
