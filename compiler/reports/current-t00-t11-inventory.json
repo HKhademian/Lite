@@ -1,15 +1,15 @@
 {
   "schema": 1,
   "date": "2026-11-02",
-  "startedAt": "2026-11-02T16:54:39.470Z",
-  "revision": "f52496e9f723c0a6001c5a6e5af24ce1cb137604",
+  "startedAt": "2026-11-02T17:02:24.804Z",
+  "revision": "7caf511a4997379ae514b408ae012db1abd8863b",
   "revisionMeaning": "HEAD at audit start; artifact and per-source hashes identify the measured inputs",
   "workingTreeDirtyAtStart": true,
-  "worktreeStatusAtStart": " M compiler/README.md\n M compiler/bootstrap/README.md\n M compiler/bootstrap/T11.ts\n M compiler/bootstrap/c-emitter.ts\n M compiler/bootstrap/c-seed.ts\n M compiler/bootstrap/seed.ts\n M compiler/c-emitter.lts\n M compiler/generated/current-artifacts.json\n M compiler/parity.md\n M compiler/reports/current-t00-t11-inventory.json\n M compiler/reports/current-t00-t11-inventory.md\n M compiler/src/frontend.lts\n M compiler/src/parser.lts\n M compiler/tests/host.test.ts\n M compiler/ts-emitter.lts\n M docs/bootstrap-plan.md\n M docs/releases.md\n M docs/spec/README.md\n M igniter/README.md\n M igniter/test.ts\n M igniter/tests/README.md\nR  igniter/tests/compiler/002-005-local-missing-semicolon.json -> igniter/tests/compiler/001-005-local-missing-semicolon.json\nR  igniter/tests/compiler/002-005-local-missing-semicolon.lts -> igniter/tests/compiler/001-005-local-missing-semicolon.lts\n?? compiler/reports/2026-11-02-statement-boundaries-ladder.json\n",
-  "compilerSourceSha256": "0e5038391ba190029682655f510dfe1a18c396fd834ab760a7b9b378e3f20a82",
-  "compilerSourceRevision": "af47f07ef4ba524f1cd9eea10b04a95dd5ffb503",
+  "worktreeStatusAtStart": " M compiler/README.md\n M compiler/bootstrap/README.md\n M compiler/bootstrap/T11.ts\n M compiler/bootstrap/c-emitter.ts\n M compiler/bootstrap/c-seed.ts\n M compiler/bootstrap/seed.ts\n M compiler/c-emitter.lts\n M compiler/generated/current-artifacts.json\n M compiler/parity.md\n M compiler/src/frontend.lts\n M compiler/src/parser.lts\n M compiler/tests/host.test.ts\n M compiler/tests/t00-t11-probes.json\n M compiler/ts-emitter.lts\n M docs/bootstrap-plan.md\n M docs/releases.md\n M docs/spec/README.md\n M docs/strings.md\n M igniter/README.md\n M igniter/test.ts\n M igniter/tests/README.md\nR  igniter/tests/compiler/002-001-adjacent-strings.json -> igniter/tests/compiler/001-001-adjacent-strings.json\nR  igniter/tests/compiler/002-001-adjacent-strings.lts -> igniter/tests/compiler/001-001-adjacent-strings.lts\n?? compiler/reports/2026-11-02-adjacent-strings-ladder.json\n",
+  "compilerSourceSha256": "dd03f09997dab38159bf81ef613b46290674be6b669a710aa39a582f0183d0c6",
+  "compilerSourceRevision": "Adjacent-string source snapshot committed with this seed; see sourceSha256",
   "node": "v24.16.0",
-  "t11Sha256": "b8876b75fb94ff3f01a09c1d205074250490f04c7f94ee1c173617e83e481257",
+  "t11Sha256": "526d0d0bad0d6221f21bfed7495b99519f2daef27bfbce1f83f6bde9c5d34829",
   "rows": [
     {
       "id": "int.arithmetic",
@@ -5944,14 +5944,14 @@
       "id": "text.adjacent-literals",
       "kind": "probe",
       "summary": "Adjacent quoted strings concatenate",
-      "test": "compiler fixture 002-001-adjacent-strings.lts",
+      "test": "compiler fixture 001-001-adjacent-strings.lts",
       "features": [],
       "sourceSha256": "edf4d12d72154dbfddda1fbe9fa8fe98e9576dd3040d1f8556ba0137329b7509",
       "source": "outputLine(\"a\" \"b\");",
       "t00Check": {
         "accepted": true
       },
-      "status": "rejected",
+      "status": "matches",
       "cases": [
         {
           "name": "boundary",
@@ -5962,14 +5962,27 @@
             "stdout": "ab\n",
             "stderr": "",
             "signal": null
-          }
+          },
+          "t11": {
+            "status": 0,
+            "signal": null,
+            "stdout": "ab\n",
+            "stderr": ""
+          },
+          "matches": true
         }
       ],
       "t11Compile": {
-        "status": 2,
+        "status": 0,
+        "signal": null,
+        "stdout": "export function main(lite$write?: (text: string) => void): string {\n    let lite_out = \"\";\n    function lite$emit(text: string): void {\n        if (lite$write === undefined) lite_out += text;\n        else lite$write(text);\n    }\n    void lite$emit;\n    const lite$report0 = \"ab\";\n    lite$emit(lite$report0 + \"\\n\");\n    return lite_out;\n}\n",
+        "stderr": ""
+      },
+      "artifactTypecheck": {
+        "status": 0,
         "signal": null,
         "stdout": "",
-        "stderr": "1:16: expected )\n"
+        "stderr": ""
       }
     },
     {
@@ -6763,8 +6776,8 @@
   "sourceFiles": [
     {
       "path": "compiler/c-emitter.lts",
-      "sourceSha256": "31f0536305e59431970f05631d00020f688422f54d65a407589bb4bb3ccfb132",
-      "bytes": 162523,
+      "sourceSha256": "5475c59b62328e313de014c4f4bfaba0011e8d85fdbc5766059ee9b179421832",
+      "bytes": 162826,
       "t00Check": {
         "accepted": true
       },
@@ -6773,7 +6786,7 @@
         "status": 0,
         "signal": null,
         "stderr": "",
-        "stdoutBytes": 292651
+        "stdoutBytes": 293216
       },
       "artifactTypecheck": {
         "status": 0,
@@ -6782,7 +6795,7 @@
         "stderr": ""
       },
       "status": "accepted",
-      "artifactSha256": "d839e7d6195d79c81abb45ea2880c34d6949a4bdfcb7a70a04897de7911d4b2c"
+      "artifactSha256": "f6095c09a3f8b8aae5078363d24a106b7c1de1716bb4c6d859260865064151b7"
     },
     {
       "path": "compiler/src/c-literals.lts",
@@ -6846,8 +6859,8 @@
     },
     {
       "path": "compiler/src/frontend.lts",
-      "sourceSha256": "710844dbb3dccf273f28f0db4e1d54dedd53eace9edec3264b6fb59af37fc19e",
-      "bytes": 124224,
+      "sourceSha256": "205bba9e8f9a52928803f289932387b25238b2726eed5b0b9f52d6d9b57e6951",
+      "bytes": 124527,
       "t00Check": {
         "accepted": false,
         "diagnostic": "TypeError: unknown helper/function lineColumn; forward function lookup is not supported yet"
@@ -6866,8 +6879,8 @@
     },
     {
       "path": "compiler/src/parser.lts",
-      "sourceSha256": "1b23e4a7037504f649dad2ce7c14980362ac99c6d68f97595318804b934d9905",
-      "bytes": 28321,
+      "sourceSha256": "49ab1be59d3fa0c7086eed1eb124b5769e0e6deacb78cc68c9414c941c28117e",
+      "bytes": 28517,
       "t00Check": {
         "accepted": false,
         "diagnostic": "TypeError: function annotations currently require a numeric width, String, Bool, or Unit"
@@ -6886,8 +6899,8 @@
     },
     {
       "path": "compiler/tests/checker/checker-dump.lts",
-      "sourceSha256": "99e0258e37eeab9f91251ce72c950bac5b5d008ed05b03eb87637f19ca2d1b9a",
-      "bytes": 93609,
+      "sourceSha256": "a9593668e0ed215e1c3f95199d6555d90381938af426c4013bdd107fe75c7b35",
+      "bytes": 93805,
       "t00Check": {
         "accepted": true
       },
@@ -6896,7 +6909,7 @@
         "status": 0,
         "signal": null,
         "stderr": "",
-        "stdoutBytes": 189575
+        "stdoutBytes": 189979
       },
       "artifactTypecheck": {
         "status": 0,
@@ -6905,7 +6918,7 @@
         "stderr": ""
       },
       "status": "accepted",
-      "artifactSha256": "7fa4b5cf6a310028e146bb65056f24fd492d0c2ca6ed67566abfde099013c769"
+      "artifactSha256": "1c2f133e0689d5508ba0b3fcc77dc49cf0d87a1fcb43557d7568da6297d352cc"
     },
     {
       "path": "compiler/tests/checker/symbols.lts",
@@ -7013,8 +7026,8 @@
     },
     {
       "path": "compiler/tests/parser/parser-decl-dump.lts",
-      "sourceSha256": "2cba8fa20bb921e38f451e5e15975e72412425585c6efcf59d96b3ae5643f31f",
-      "bytes": 54823,
+      "sourceSha256": "145cce99e383a2881bc7ab73be5fbbf80cfe9d34d301810fedbb3d0783e54d23",
+      "bytes": 55019,
       "t00Check": {
         "accepted": true
       },
@@ -7023,7 +7036,7 @@
         "status": 0,
         "signal": null,
         "stderr": "",
-        "stdoutBytes": 110658
+        "stdoutBytes": 111062
       },
       "artifactTypecheck": {
         "status": 0,
@@ -7032,12 +7045,12 @@
         "stderr": ""
       },
       "status": "accepted",
-      "artifactSha256": "106f9df5a0858d3afe0e8e18029195b40f00c488fc94524e3aff50627152d889"
+      "artifactSha256": "c5d66252fc00def8791495353dc77c137c2f7f1bb1ef3f098c66dfa078ebb7af"
     },
     {
       "path": "compiler/tests/parser/parser-dump.lts",
-      "sourceSha256": "279e33294323c744d448786dd90cf8f57f34429964a3f93bf46239bdc1abe675",
-      "bytes": 54832,
+      "sourceSha256": "dab6e475039a32bb7ba5b19b8f7d96187b9ace94a447de2ab11fd494bc940ca1",
+      "bytes": 55028,
       "t00Check": {
         "accepted": true
       },
@@ -7046,7 +7059,7 @@
         "status": 0,
         "signal": null,
         "stderr": "",
-        "stdoutBytes": 110652
+        "stdoutBytes": 111056
       },
       "artifactTypecheck": {
         "status": 0,
@@ -7055,12 +7068,12 @@
         "stderr": ""
       },
       "status": "accepted",
-      "artifactSha256": "6e9c3e74f04e26b86d0a714439062d30e9d72edf3dac099661294578eb44a3dd"
+      "artifactSha256": "fc0d6c3bafb1242187faf725ebed0056c370776e801e8c1f3706f96deb9ab07c"
     },
     {
       "path": "compiler/tests/parser/parser-program-dump.lts",
-      "sourceSha256": "cc48aa057ad82d4aa41debd8ff1097a970c5f59e57a49c882bc0f4dc000bf37b",
-      "bytes": 54819,
+      "sourceSha256": "f7f313ec8033c0285a6756928bf6038aa126f08920f04659ace7d5366e238dd1",
+      "bytes": 55015,
       "t00Check": {
         "accepted": true
       },
@@ -7069,7 +7082,7 @@
         "status": 0,
         "signal": null,
         "stderr": "",
-        "stdoutBytes": 110659
+        "stdoutBytes": 111063
       },
       "artifactTypecheck": {
         "status": 0,
@@ -7078,7 +7091,7 @@
         "stderr": ""
       },
       "status": "accepted",
-      "artifactSha256": "903316ae0c5ec4f38d4f02304a5ff7cc2cac7094c6c3be5426384e376e28aaa4"
+      "artifactSha256": "d287a62ff391273664f05f0c0a6d3153b7477a7ac193a827b91e28725b197b0f"
     },
     {
       "path": "compiler/tests/parser/program.lts",
@@ -7114,8 +7127,8 @@
     },
     {
       "path": "compiler/ts-emitter.lts",
-      "sourceSha256": "0e5038391ba190029682655f510dfe1a18c396fd834ab760a7b9b378e3f20a82",
-      "bytes": 173403,
+      "sourceSha256": "dd03f09997dab38159bf81ef613b46290674be6b669a710aa39a582f0183d0c6",
+      "bytes": 173706,
       "t00Check": {
         "accepted": true
       },
@@ -7217,6 +7230,22 @@
       "path": "examples/021-type-aliases.lts",
       "coverage": "canonical-manifest",
       "id": "example.021-type-aliases"
+    },
+    {
+      "path": "igniter/tests/compiler/001-001-adjacent-strings.lts",
+      "sourceSha256": "bde8f4e9bf1602c4fd31f26cc9b5cefd5ba64648d61407739e0f4aa31f3e1ad1",
+      "bytes": 21,
+      "t00Check": {
+        "accepted": true
+      },
+      "coverage": "compile-only",
+      "t11Compile": {
+        "status": 0,
+        "signal": null,
+        "stderr": "",
+        "stdoutBytes": 339
+      },
+      "status": "accepted"
     },
     {
       "path": "igniter/tests/compiler/001-001-empty-source.lts",
@@ -8243,22 +8272,6 @@
       "status": "accepted"
     },
     {
-      "path": "igniter/tests/compiler/002-001-adjacent-strings.lts",
-      "sourceSha256": "bde8f4e9bf1602c4fd31f26cc9b5cefd5ba64648d61407739e0f4aa31f3e1ad1",
-      "bytes": 21,
-      "t00Check": {
-        "accepted": true
-      },
-      "coverage": "compile-only",
-      "t11Compile": {
-        "status": 2,
-        "signal": null,
-        "stderr": "igniter/tests/compiler/002-001-adjacent-strings.lts:1:16: expected )\n",
-        "stdoutBytes": 0
-      },
-      "status": "rejected"
-    },
-    {
       "path": "igniter/tests/compiler/002-001-bare-name.lts",
       "sourceSha256": "73cb3858a687a8494ca3323053016282f3dad39d42cf62ca4e79dda2aac7d9ac",
       "bytes": 2,
@@ -9075,8 +9088,8 @@
     },
     "probe": {
       "total": 79,
-      "matches": 30,
-      "rejected": 49,
+      "matches": 31,
+      "rejected": 48,
       "typecheck": 0,
       "mismatch": 0,
       "diagnostic": 0,
@@ -9156,7 +9169,7 @@
     "restricted compiler diagnoses invalid leading and/or forms",
     "restricted compiler compiles list mutation grants, push and pop to runnable TS",
     "restricted compiler treats nested, doc and raw comments as separating trivia",
-    "restricted compiler corpus keeps 64 program and 29 rejection cases",
+    "restricted compiler corpus keeps 65 program and 28 rejection cases",
     "restricted compiler compiles scalar functions, calls and returns to runnable TS",
     "restricted compiler completes scalar functions from tail expressions",
     "restricted compiler completes function tails from Bool literals and calls",
@@ -9336,7 +9349,7 @@
     "type aliases follow single lexical scope with value shadowing and rejection",
     "type alias example runs and checks through the root launcher"
   ],
-  "finishedAt": "2026-11-02T16:55:27.078Z",
+  "finishedAt": "2026-11-02T17:03:14.673Z",
   "status": "complete",
   "method": {
     "compilationTimeoutMs": 20000,
@@ -9346,6 +9359,5 @@
     "probes": "additional existing T00 contracts drawn from interpreter tests; exact source is included for reproduction",
     "sourceFiles": "all tracked .lt/.lts files are checked as standalone T00 programs; files not accepted by T00 are excluded, not called T11 gaps",
     "limits": "Finite corpus and explicit probes, not proof for every program. Compile-only acceptance does not imply runtime parity. T11 remains a restricted compiler."
-  },
-  "compilerSourceRevisionResolution": "Verified after committing the measured source and artifact; audit base/worktree fields are unchanged."
+  }
 }

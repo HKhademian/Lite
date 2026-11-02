@@ -423,7 +423,7 @@
     "id": "text.adjacent-literals",
     "summary": "Adjacent quoted strings concatenate",
     "source": "outputLine(\"a\" \"b\");",
-    "test": "compiler fixture 002-001-adjacent-strings.lts"
+    "test": "compiler fixture 001-001-adjacent-strings.lts"
   },
   {
     "id": "call.trailing-comma",

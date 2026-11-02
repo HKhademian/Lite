@@ -1,0 +1,21 @@
+{
+  "name": "adjacent-strings",
+  "source": {
+    "file": "001-001-adjacent-strings.lts",
+    "hash": "sha256:bde8f4e9bf1602c4fd31f26cc9b5cefd5ba64648d61407739e0f4aa31f3e1ad1"
+  },
+  "cases": [
+    {
+      "name": "default",
+      "stdout": {
+        "text": "ab\n",
+        "hash": "sha256:a63d8014dba891345b30174df2b2a57efbb65b4f9f09b98f245d1b3192277ece"
+      },
+      "stderr": {
+        "text": "",
+        "hash": "sha256:e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+      },
+      "exitCode": 0
+    }
+  ]
+}

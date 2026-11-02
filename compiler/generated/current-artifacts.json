@@ -1,11 +1,17 @@
 {
-  "note": "Current exact artifacts after statement-boundary support. Existing 63 program artifact pairs remain unchanged; the final-semicolon fixture now compiles. Historical checkpoints remain preserved.",
+  "note": "Current exact artifacts after adjacent-literal support. Existing 64 program artifact pairs remain unchanged; adjacent literals now compile. Historical checkpoints remain preserved.",
   "recorded": "2026-11-02",
-  "sourceSha256": "0e5038391ba190029682655f510dfe1a18c396fd834ab760a7b9b378e3f20a82",
-  "compilerSha256": "b8876b75fb94ff3f01a09c1d205074250490f04c7f94ee1c173617e83e481257",
-  "programCases": 64,
-  "rejectedCases": 29,
+  "sourceSha256": "dd03f09997dab38159bf81ef613b46290674be6b669a710aa39a582f0183d0c6",
+  "compilerSha256": "526d0d0bad0d6221f21bfed7495b99519f2daef27bfbce1f83f6bde9c5d34829",
+  "programCases": 65,
+  "rejectedCases": 28,
   "artifacts": [
+    {
+      "name": "adjacent-strings",
+      "source": "001-001-adjacent-strings.lts",
+      "ts": "sha256:4761d99d9784be0167a05a977e7ca7351d2d3d232b32134773e83b757e00ddfa",
+      "c": "sha256:5f23b59f08eb6e7bf106f711f7bdccd2ada61f27a16ff5ee2b289f61428c3b82"
+    },
     {
       "name": "empty-source",
       "source": "001-001-empty-source.lts",

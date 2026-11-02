@@ -4,7 +4,7 @@ Status: **active, 2026-11-02**. This ledger drives the owner direction that the
 TS igniter and the generated compilers converge into the same compiler for the
 bootstrap surface. It is a burndown list, not a claim that parity already holds.
 
-Immediate scope: the bootstrap subset L, S, and the 64 program / 29 rejection
+Immediate scope: the bootstrap subset L, S, and the 65 program / 28 rejection
 cases. The owner approved starting full T00 replacement on 2026-11-02; existing
 features beyond L remain pending work in the [transition plan](transition-plan.md).
 
@@ -788,3 +788,42 @@ TS outputs 61.3 → 61.9 ms, identical S 676.2 → 669.4 ms, constant expression
 constant expressions 218.0 → 215.0 ms. All measured output bytes match exactly;
 these mixed changes do not establish a general speedup. See the
 [raw performance report](reports/2026-11-02-statement-boundaries-performance.json).
+
+## Adjacent String literals
+
+Both generated targets now join adjacent admitted quoted literal tokens across
+whitespace and nested/raw comments before expression parsing. The frontend scans
+all pieces into one value and encodes once. The standalone token parser likewise
+joins decoded pieces before quoting normalized text. Semicolons and arbitrary
+computed expressions remain item/expression boundaries. Later malformed literals
+retain their own source position and reject before effects.
+
+Coverage includes thirteen TS/C programs and seven TS function/aggregate/input
+programs: empty pieces, escapes, Unicode, line breaks, comments, concatenation,
+comparisons/chains, branches, lists, tuples, prompts and text helpers. A chain of
+1,024 literal tokens runs on both targets. Eight invalid sources reject before
+artifact output; both targets check the exact later-literal diagnostic and a
+runtime fault after joining. Two additional valid and one invalid source execute
+through both standalone parser drivers.
+
+The original adjacent-literal fixture moves to 001-001 with unchanged source
+bytes. Corpus: 65 programs/28 rejections, still 93 sources. All 64 earlier program
+artifact pairs are unchanged. Both compiler corpora, 98 verifier executions,
+coverage, strict host/seeds and nine editor groups pass. The
+[generated-only ladder](reports/2026-11-02-adjacent-strings-ladder.json) records
+three identical TS generations and the TS-hosted C emitter.
+
+Five paired compiler-phase medians stay steady: TS outputs 63.8 → 63.5 ms,
+identical S 661.9 → 649.4 ms, constant expressions 126.5 → 129.0 ms;
+C-emitter outputs 80.3 → 80.5 ms, divisions 170.7 → 166.3 ms, constant
+expressions 211.6 → 215.8 ms. All measured output bytes match exactly. The
+[raw performance report](reports/2026-11-02-adjacent-strings-performance.json)
+preserves the mixed results without a general speedup claim.
+
+All 263 full tests pass with zero skips in 70.2 s; fast passes 251 with
+12 expected skips in 51.2 s. Gate durations are validation observations;
+isolated compiler timings are recorded separately above.
+
+Inventory: 84/164 match, 80 remain; 32 original failures closed, no regressions,
+210 tracked Lite sources and no load errors. Next: trailing call commas and
+remaining scope/statement forms. Broader literal grammar remains separate.

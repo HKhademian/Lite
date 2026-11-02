@@ -9,7 +9,7 @@ This tracker covers the T00 replacement goal, including newly discovered flaws.
 
 The [current inventory](reports/current-t00-t11-inventory.md) and
 [raw observations](reports/current-t00-t11-inventory.json) use the generated
-seed `b8876b75…`. All inputs compile/check against the current reference, both
+seed `526d0d0b…`. All inputs compile/check against the current reference, both
 execution paths use identical anonymous diagnostic naming, and raw-byte input
 probes follow the real CLI's lazy strict UTF-8 decoding. Historical reports stay
 unchanged. Refresh with `node compiler/scripts/t00-t11-inventory.ts --large-sources`.
@@ -17,11 +17,11 @@ unchanged. Refresh with `node compiler/scripts/t00-t11-inventory.ts --large-sour
 - Canonical features: 23/38 match; 15 rejected.
 - Examples: 11/19 match; 8 rejected.
 - Implemented samples: 11/20 match; 9 rejected.
-- Isolated boundary probes: 30/79 match; 49 rejected; no differences among accepted probes.
+- Isolated boundary probes: 31/79 match; 48 rejected; no differences among accepted probes.
 - Library tests: 8/8 match. All 210 tracked Lite sources are accounted for;
   compile-only acceptance is distinguished from executed parity.
-- Total executed source cases: 83/164 match, 81 still fail. Compared with the
-  original inventory, 31 previously failing cases now match and none regress.
+- Total executed source cases: 84/164 match, 80 still fail. Compared with the
+  original inventory, 32 previously failing cases now match and none regress.
   The temporary-I/O case, retained function-tail probe and new chain feature
   account for three additional matching cases.
 
@@ -68,8 +68,10 @@ Keep dependencies explicit; split a topic further when its contracts warrant it.
 - [x] **Statement boundaries:** optional final semicolons, closing-scope and
   directly closed-block boundaries; reject missing separators between simple
   items in both generated frontend and standalone parser drivers.
-- [ ] **Script and lexical forms:**
-  adjacent Strings, trailing call commas, standalone scope blocks, expression
+- [x] **Adjacent String literals:** concatenate decoded literal tokens across
+  whitespace/comments before expression parsing; encode the joined value once
+  in both frontend and standalone parser.
+- [ ] **Script and lexical forms:** trailing call commas, standalone scope blocks, expression
   statements and same-block shadowing.
 - [x] **Deferred arithmetic faults:** constant arithmetic must fault only when
   reached; dead branches and short-circuit operands must remain unevaluated.
@@ -230,3 +232,12 @@ duplicate trivia scans; paired compiler throughput stays steady with mixed small
 changes. The standalone parser's reference/generated drivers also cover nine
 valid and five rejected boundary sources. See the [boundary ledger](parity.md#statement-boundaries).
 Next: adjacent String literals, then trailing call commas and remaining scope forms.
+
+Adjacent String literals: 84/164 match, 80 remain; 32 original failures closed
+and none regress. All 263 full tests pass with zero skips in 70.2 s; fast passes
+251 with 12 expected skips in 51.2 s. Strict checks, both 93-case corpora,
+98 verifier executions, coverage and nine editor groups pass. Corpus: 65
+programs/28 rejections; all 64 earlier artifact pairs remain identical. Literal
+pieces are decoded in one scan and encoded once. Paired compiler throughput
+stays steady with mixed small changes; see the [literal ledger](parity.md#adjacent-string-literals).
+Next: trailing call commas, then remaining scope/statement forms.

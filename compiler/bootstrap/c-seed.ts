@@ -1,16 +1,16 @@
-/** Verified generated statement-boundary seed; exact identities follow. */
+/** Verified generated adjacent-string seed; exact identities follow. */
 export const cSeed = Object.freeze({
   "artifact": "c-emitter.ts",
-  "sourceSha256": "31f0536305e59431970f05631d00020f688422f54d65a407589bb4bb3ccfb132",
-  "sourceBytes": 162523,
-  "artifactSha256": "7291e2d465c1469eb7e28912b6fd38e25e60ad51622f917b52bb34891339c919",
-  "artifactBytes": 292605,
-  "builderSha256": "b8876b75fb94ff3f01a09c1d205074250490f04c7f94ee1c173617e83e481257",
+  "sourceSha256": "5475c59b62328e313de014c4f4bfaba0011e8d85fdbc5766059ee9b179421832",
+  "sourceBytes": 162826,
+  "artifactSha256": "fe7b1b759e8663047002b7188495334907bbe011b65e153c42471ded5eabb7f6",
+  "artifactBytes": 293170,
+  "builderSha256": "526d0d0bad0d6221f21bfed7495b99519f2daef27bfbce1f83f6bde9c5d34829",
   "native": false,
   "sourceManifest": "compiler/manifests/c.json",
-  "sourceRevision": "af47f07ef4ba524f1cd9eea10b04a95dd5ffb503",
-  "artifactRevision": "af47f07ef4ba524f1cd9eea10b04a95dd5ffb503",
-  "builderRevision": "af47f07ef4ba524f1cd9eea10b04a95dd5ffb503",
+  "sourceRevision": "Adjacent-string source snapshot committed with this seed; see sourceSha256",
+  "artifactRevision": "Adjacent-string artifact committed with this seed; see artifactSha256",
+  "builderRevision": "Current adjacent-string TS seed; see builderSha256",
   "builder": "Refreshed generated TS compiler compiling current Lite C emitter",
   "node": "v24.16.0",
   "typescript": "7.0.2"

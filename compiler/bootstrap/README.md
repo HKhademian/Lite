@@ -1,17 +1,17 @@
 # Generated bootstrap seeds
 
 `T11.ts` is the current generated compiler after the
-[statement-boundary refresh](../parity.md#statement-boundaries). Its exact source/builder
+[adjacent-literal refresh](../parity.md#adjacent-string-literals). Its exact source/builder
 identities are in [seed.ts](seed.ts). Three generated generations are byte-identical:
-316230 bytes, SHA-256 `b8876b75…`. The refresh starts from the
+316797 bytes, SHA-256 `526d0d0b…`. The refresh starts from the
 previous generated seed, compiles unchanged current S at each generation, and
-does not need T00 execution. The [ladder record](../reports/2026-11-02-statement-boundaries-ladder.json)
+does not need T00 execution. The [ladder record](../reports/2026-11-02-adjacent-strings-ladder.json)
 preserves the recipe, previous seed revision and transitional artifact
 hashes. Historical T00-built ladder identities remain in the parity ledger.
 
 `c-emitter.ts` is the current Lite C emitter compiled by the refreshed TS seed.
-It is 292605 bytes, SHA-256 `7291e2d4…`; C source
-SHA-256 `31f05363…`, builder SHA-256 `b8876b75…`.
+It is 293170 bytes, SHA-256 `fe7b1b75…`; C source
+SHA-256 `5475c59b…`, builder SHA-256 `526d0d0b…`.
 Its metadata is in [c-seed.ts](c-seed.ts). It supports admitted scalar output
 forms and checked dynamic Int64 arithmetic, including positioned division-family faults.
 Multi-value output evaluates every argument before writing. Comparison chains retain each middle operand and skip later operands after a

@@ -797,17 +797,24 @@ parseInteger := fn(source: String, position: Int, prefix: String): Parsed {
     intParsed(code, value, true, cursor)
 }
 
-/** Parses one double-quoted literal with n/t/r/quote/backslash escapes. Returns escaped target code, text value and next position; exits 2 on malformed input. */
+/** Joins adjacent double-quoted literal tokens across trivia in one scan and encodes the complete value once. Escapes and malformed later tokens retain their own source positions. */
 parseText := fn(source: String, position: Int, prefix: String): Parsed {
+    var literalStart := position;
     var cursor := position + 1;
     var value := "";
     loop true {
         if cursor >= textLength(source) {
-            failAt(source, position, prefix, "unterminated string literal");
+            failAt(source, literalStart, prefix, "unterminated string literal");
         }
         ch := textAt(source, cursor);
         if ch == "\"" {
             cursor = cursor + 1;
+            next := skipTrivia(source, cursor, prefix);
+            if next < textLength(source) and textAt(source, next) == "\"" {
+                literalStart = next;
+                cursor = next + 1;
+                continue;
+            }
             break;
         }
         if ch == "\\" {

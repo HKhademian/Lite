@@ -15,6 +15,12 @@ message := "Hello, " "world";
 
 ## Adjacent literal joining
 
+Implementation coverage, 2026-11-02: generated TS and C join admitted quoted
+literals across whitespace and nested/raw comments. Both parser paths retain
+the token boundary before checking expression and statement separators. The
+[compiler ledger](../compiler/parity.md#adjacent-string-literals) records
+generated execution, malformed-source checks and performance evidence.
+
 Adjacent string literal tokens concatenate without inserting whitespace:
 
 ```text

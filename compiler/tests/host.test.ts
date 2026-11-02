@@ -739,3 +739,50 @@ test('statement separators follow EOF, closing scope and directly closed block b
     assert.deepEqual({ status: actual.status, stdout: actual.stdout, stderr: actual.stderr }, expected);
   }
 });
+
+test('adjacent String literals join across trivia before expressions and encode once', () => {
+  const both = ['outputLine("a""b");', 'outputLine("" "" "x" "");', 'outputLine("a"\n"b");',
+    'outputLine("a" /* outer /* inner */ end */ "b");', 'outputLine("a" /*# raw /* */ #*/ "b");',
+    'outputLine("a\\n" "\\t" "\\r" "\\\"" "\\\\");', 'outputLine("سلام" "🙂");',
+    'var x := "a" "b"; outputLine(x + "c" "d");',
+    'var x := "ab"; outputLine(x == "a" "b" =!= "z");',
+    'if "a" "b" == "ab" { outputLine("y" "es"); } else { outputLine("no"); }',
+    'output("x" "y"); outputLine("z");', 'outputLine("a", "b"); outputLine("a"); outputLine("b");',
+    'outputLine(' + Array(1024).fill('"x"').join(' ') + ');'];
+  const tsOnly = ['echo := fn(s: String): String { s } outputLine(echo("a" "b"));',
+    'f := fn(): String { "a" "b" } outputLine(f());',
+    'values: List<String> = ["a" "b", "c" "d"]; outputLine(values[0], values[1]);',
+    'pair := (label = "a" "b", value = 3); outputLine(pair.label);',
+    'outputLine(inputLine("Prom" "pt: "));',
+    'outputLine(textLength("ab" "cd"), textAt("ab" "cd", 2), textSlice("ab" "cd", 1, 3));',
+    'value := if true { "a" "b" } else { "c" "d" } outputLine(value);'];
+  for (const [sources, targets] of [[both, ['ts', 'c']], [tsOnly, ['ts']]] as const) for (const text of sources) {
+    const expected = runText(text, { stdin: 'line\n' }); assert.equal(expected.status, 0, text + expected.stderr.toString());
+    for (const target of targets) {
+      const compiled = compileTarget(target, { text }); assert.equal(compiled.status, 0, text + compiled.stderr.toString());
+      if (target === 'c' && process.env['LITE_SKIP_NATIVE'] === '1') continue;
+      const actual = target === 'ts' ? runTsArtifact(compiled.stdout.toString(), { stdin: 'line\n' }) : runCArtifact(compiled.stdout.toString());
+      assert.equal(actual.phase, 'run', actual.stderr.toString()); assert.equal(actual.signal, null);
+      assert.deepEqual({ status: actual.status, stdout: actual.stdout, stderr: actual.stderr }, expected, text);
+    }
+  }
+  const invalid = ['outputLine("ok");\noutputLine("a" "\\q");', 'outputLine("a" "unterminated',
+    'outputLine("a" /* unterminated', 'outputLine("a" /*# unterminated',
+    'value := "a"; outputLine(value "b");', 'outputLine(("a") "b");', 'outputLine("a"; "b");', 'outputLine("a" 7);'];
+  for (const text of invalid) {
+    assert.equal(runText(text).status, 1, text);
+    for (const target of ['ts', 'c'] as const) {
+      const result = compileTarget(target, { text }); assert.equal(result.status, 2, text); assert.equal(result.stdout.length, 0);
+    }
+  }
+  for (const target of ['ts', 'c'] as const) {
+    const bad = compileTarget(target, { text: 'outputLine("ok");\noutputLine("a" "unterminated', name: 'later.lts' });
+    assert.equal(bad.stderr.toString(), 'later.lts:2:16: unterminated string literal\n');
+    const text = 'value := "a" "b"; outputLine(value);\nvar zero := 0; outputLine(1 / zero);', name = 'joined سلام.lts';
+    const compiled = compileTarget(target, { text, name }); assert.equal(compiled.status, 0, compiled.stderr.toString());
+    if (target === 'c' && process.env['LITE_SKIP_NATIVE'] === '1') continue;
+    const actual = target === 'ts' ? runTsArtifact(compiled.stdout.toString()) : runCArtifact(compiled.stdout.toString());
+    assert.equal(actual.phase, 'run', actual.stderr.toString());
+    assert.deepEqual({ status: actual.status, stdout: actual.stdout, stderr: actual.stderr }, runText(text, { name }));
+  }
+});

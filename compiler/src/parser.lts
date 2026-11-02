@@ -161,8 +161,13 @@ parseExpression := fn(tokens: Tokens, index: Int, prefix: String, minimum: Int):
         leftText = token.text;
         cursor = index + 1;
     } else if token.kind == TOKEN_KIND_STRING() {
-        leftText = "\"" + quotedText(token.text) + "\"";
+        var value := token.text;
         cursor = index + 1;
+        loop tokenAt(tokens, cursor).kind == TOKEN_KIND_STRING() {
+            value = value + tokenAt(tokens, cursor).text;
+            cursor = cursor + 1;
+        }
+        leftText = "\"" + quotedText(value) + "\"";
     } else if token.kind == TOKEN_KIND_BOOL() {
         leftText = token.text;
         cursor = index + 1;
