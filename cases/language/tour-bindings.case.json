@@ -1,0 +1,25 @@
+{
+  "id": "tour.bindings",
+  "kind": "feature",
+  "source": "tour-bindings.lts",
+  "features": [
+    "int.arithmetic",
+    "scope.assignment",
+    "io.report"
+  ],
+  "cases": [
+    {
+      "name": "twenty-four",
+      "stdin": {
+        "text": ""
+      },
+      "stdout": {
+        "text": "24\n"
+      },
+      "stderr": {
+        "text": ""
+      },
+      "exitCode": 0
+    }
+  ]
+}

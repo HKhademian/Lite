@@ -1,0 +1,23 @@
+{
+  "id": "case.reject-effects",
+  "kind": "reject",
+  "source": "reject-effects.lts",
+  "features": [
+    "scope.names"
+  ],
+  "cases": [
+    {
+      "name": "no-effects-or-artifact",
+      "stdin": {
+        "text": ""
+      },
+      "stdout": {
+        "text": ""
+      },
+      "stderr": {
+        "file": "reject-effects.stderr"
+      },
+      "exitCode": 2
+    }
+  ]
+}

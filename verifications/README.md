@@ -93,6 +93,11 @@ The runner performs equivalent structural validation in
 
 ## Runner
 
+General command, compile/emission, rejection and isolated file cases use the
+[declarative case runner](../cases/README.md). Run one with
+`./lite verify PATH.case.json`; the existing feature/artifact verifier and its
+changed-case, cache, shard and explicit-reference modes remain available below.
+
 ```sh
 ./lite verify                    # only cases affected by git changes
 ./lite verify --all              # all TS artifact cases; cached; remaining ports fail

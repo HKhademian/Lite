@@ -1,0 +1,22 @@
+{
+  "id": "fixture.ambiguous",
+  "kind": "tool",
+  "tool": "lite-docs",
+  "features": [],
+  "cases": [
+    {
+      "name": "ambiguous",
+      "stdin": {
+        "text": "",
+        "bytes": []
+      },
+      "stdout": {
+        "text": ""
+      },
+      "stderr": {
+        "text": ""
+      },
+      "exitCode": 0
+    }
+  ]
+}

@@ -1,0 +1,28 @@
+{
+  "id": "tooling.compiler-cli",
+  "kind": "tool",
+  "tool": "litec",
+  "features": [
+    "tooling.cli"
+  ],
+  "cases": [
+    {
+      "name": "deferred-c",
+      "args": [
+        "--target",
+        "c",
+        "ignored.lts"
+      ],
+      "stdin": {
+        "text": ""
+      },
+      "stdout": {
+        "text": ""
+      },
+      "stderr": {
+        "text": "litec: C output is deferred until after the TS compiler migration\n"
+      },
+      "exitCode": 2
+    }
+  ]
+}

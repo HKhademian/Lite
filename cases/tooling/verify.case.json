@@ -1,0 +1,42 @@
+{
+  "id": "tooling.verify",
+  "kind": "tool",
+  "tool": "lite-verify",
+  "features": [
+    "tooling.cases"
+  ],
+  "cases": [
+    {
+      "name": "ambiguous-stream",
+      "args": [
+        "cases/tooling/ambiguous.invalid.json"
+      ],
+      "stdin": {
+        "text": ""
+      },
+      "stdout": {
+        "text": ""
+      },
+      "stderr": {
+        "text": "stream: exactly one of text, bytes or file required\n"
+      },
+      "exitCode": 1
+    },
+    {
+      "name": "pending",
+      "args": [
+        "cases/tooling/proposal.fixture.json"
+      ],
+      "stdin": {
+        "text": ""
+      },
+      "stdout": {
+        "text": "PENDING fixture.proposed/default: runner fixture for a future proposal\n0/0 scenarios passed\n1 scenarios pending\n"
+      },
+      "stderr": {
+        "text": ""
+      },
+      "exitCode": 1
+    }
+  ]
+}

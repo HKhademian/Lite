@@ -1,0 +1,43 @@
+{
+  "id": "case.silent",
+  "kind": "sample",
+  "source": "silent.lts",
+  "features": [
+    "scope.locals"
+  ],
+  "cases": [
+    {
+      "name": "no-output",
+      "stdin": {
+        "text": ""
+      },
+      "stdout": {
+        "text": ""
+      },
+      "stderr": {
+        "text": ""
+      },
+      "exitCode": 0,
+      "inputFiles": {
+        "input.bin": {
+          "bytes": [
+            0,
+            255,
+            13,
+            10
+          ]
+        }
+      },
+      "outputFiles": {
+        "input.bin": {
+          "bytes": [
+            0,
+            255,
+            13,
+            10
+          ]
+        }
+      }
+    }
+  ]
+}

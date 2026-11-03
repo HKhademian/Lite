@@ -1,0 +1,42 @@
+{
+  "id": "tooling.doctor",
+  "kind": "tool",
+  "tool": "lite-doctor",
+  "features": [
+    "tooling.docs"
+  ],
+  "cases": [
+    {
+      "name": "docs",
+      "args": [
+        "--docs"
+      ],
+      "stdin": {
+        "text": ""
+      },
+      "stdout": {
+        "text": "Repository checks passed.\n"
+      },
+      "stderr": {
+        "text": ""
+      },
+      "exitCode": 0
+    },
+    {
+      "name": "invalid",
+      "args": [
+        "--unknown"
+      ],
+      "stdin": {
+        "text": ""
+      },
+      "stdout": {
+        "text": ""
+      },
+      "stderr": {
+        "text": "usage: lite doctor [--docs]\n"
+      },
+      "exitCode": 1
+    }
+  ]
+}

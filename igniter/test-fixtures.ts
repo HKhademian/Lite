@@ -1,6 +1,8 @@
 /** Shared reviewed compiler fixtures; no compiler or interpreter imports. */
 import { createHash } from 'node:crypto';
 import { readFileSync, readdirSync } from 'node:fs';
+import { fileURLToPath } from 'node:url';
+import { streamBytes } from '../tools/streams.ts';
 
 
 export type CompilerFixture = Readonly<{
@@ -20,7 +22,7 @@ export type CompilerFixture = Readonly<{
 
 const fixtureFile = /^(\d{3})-(\d{3})-([a-z0-9]+(?:-[a-z0-9]+)*)\.json$/;
 
-const fixtureStream = /^[A-Za-z0-9][A-Za-z0-9._-]*$/;
+
 
 const sha256 = (bytes: Buffer): string => `sha256:${createHash('sha256').update(bytes).digest('hex')}`;
 
@@ -48,36 +50,7 @@ function readStream(value: unknown, file: string, label: string, directory: URL,
     if (required) throw new Error(`${file}: ${label} is required`);
     return Buffer.alloc(0);
   }
-  const stream = fixtureRecord(value, file);
-  checkKeys(stream, ['text', 'bytes', 'file', 'hash'], file, label);
-  const forms = ['text', 'bytes', 'file'].filter(key => stream[key] !== undefined);
-  if (forms.length !== 1) throw new Error(`${file}: ${label} must contain exactly one of text, bytes or file`);
-  let bytes: Buffer;
-  const form = forms[0];
-  if (form === 'text') {
-    const text = stream['text'];
-    if (typeof text !== 'string') throw new Error(`${file}: ${label}.text must be a string`);
-    bytes = Buffer.from(text, 'utf8');
-  } else if (form === 'bytes') {
-    const values = stream['bytes'];
-    if (!Array.isArray(values) || !values.every(byte =>
-      typeof byte === 'number' && Number.isInteger(byte) && byte >= 0 && byte <= 255)) {
-      throw new Error(`${file}: ${label}.bytes must be an array of bytes`);
-    }
-    bytes = Buffer.from(values as number[]);
-  } else {
-    const pathName = stream['file'];
-    if (typeof pathName !== 'string' || !fixtureStream.test(pathName)) {
-      throw new Error(`${file}: ${label}.file must be a sibling file name`);
-    }
-    bytes = readFileSync(new URL(pathName, directory));
-  }
-  const expectedHash = stream['hash'];
-  if (typeof expectedHash !== 'string' || !/^sha256:[0-9a-f]{64}$/.test(expectedHash)) {
-    throw new Error(`${file}: ${label}.hash must be sha256:<64 lowercase hex>`);
-  }
-  if (expectedHash !== sha256(bytes)) throw new Error(`${file}: ${label}.hash does not match content`);
-  return bytes;
+  return streamBytes(value, fileURLToPath(directory), `${file}: ${label}`, { requiredHash: true, siblingOnly: true });
 }
 
 

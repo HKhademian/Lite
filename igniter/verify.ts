@@ -6,6 +6,7 @@ import { dirname, isAbsolute, relative, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { loadBundle, loadSource } from './loader.ts';
 import { compileTs } from '../compiler/host.ts';
+import { streamBytes as resolveStreamBytes } from '../tools/streams.ts';
 
 type Stream = Readonly<{ text?: string; bytes?: readonly number[]; file?: string; hash?: string }>;
 type Source = Readonly<{ file?: string; text?: string; bytes?: readonly number[]; hash?: string }>;
@@ -141,18 +142,15 @@ function stream(value: unknown, label: string): Stream | undefined {
 
 function streamBytes(value: Stream | undefined, base: string, label: string, checkHash = true): Buffer {
   if (value === undefined) return Buffer.alloc(0);
-  let bytes: Buffer;
-  if (value.text !== undefined) bytes = Buffer.from(value.text, 'utf8');
-  else if (value.bytes !== undefined) bytes = Buffer.from(value.bytes);
-  else {
+  if (value.file !== undefined) {
     const path = resolve(base, value.file ?? '');
     if (!path.startsWith(`${base}/`) && path !== base) throw new Error(`${label}.file: path escapes its directory`);
-    bytes = readFileSync(path);
   }
-  if (checkHash && value.hash !== undefined && value.hash !== hash(bytes)) {
-    throw new Error(`${label}.hash: content changed; run ./lite verify --update`);
+  try { return resolveStreamBytes(value, base, label, { checkHash }); }
+  catch (error) {
+    if (error instanceof Error && error.message === `${label}.hash does not match content`) throw new Error(`${label}.hash: content changed; run ./lite verify --update`);
+    throw error;
   }
-  return bytes;
 }
 
 function streamText(value: Stream | undefined, base: string, label: string, checkHash = true): string {

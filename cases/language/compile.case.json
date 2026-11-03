@@ -1,0 +1,26 @@
+{
+  "id": "case.compile",
+  "kind": "compile",
+  "source": "tour-bindings.lts",
+  "features": [
+    "tooling.compile"
+  ],
+  "cases": [
+    {
+      "name": "emitted-artifact",
+      "stdin": {
+        "text": ""
+      },
+      "stdout": {
+        "text": ""
+      },
+      "stderr": {
+        "text": ""
+      },
+      "exitCode": 0,
+      "artifact": {
+        "file": "tour-bindings.expected.ts"
+      }
+    }
+  ]
+}

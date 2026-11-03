@@ -1,0 +1,5 @@
+first := 7;
+second := 5;
+var total := first + second;
+total = total * 2;
+outputLine(total);

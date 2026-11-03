@@ -16,7 +16,8 @@ outputLine(total);
 ```
 
 `:=` introduces a binding. `var` permits replacement. This fragment prints
-`24`; the [double-sum case](../verifications/artifacts/examples/001-double-sum.json)
+`24` and has its own [runnable case](../cases/language/tour-bindings.case.json).
+The [double-sum case](../verifications/artifacts/examples/001-double-sum.json)
 checks the corresponding interactive program.
 Read [declarations](declarations-and-assignment.md), [mutability](mutability.md)
 and [operators](operators.md) for the selected contracts.

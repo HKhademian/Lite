@@ -2,6 +2,9 @@
 
 Generated-only compiler measurements and historical comparisons live here.
 `challenges/benchmark/` is the separate algorithm challenge dataset.
+Shared tool/program case workloads can opt into `./lite bench NEW_REPORT.json FILTER`;
+see [declarative cases](../cases/README.md). Their end-to-end timings include
+verification and are separate from the detailed compiler-phase intervals below.
 
 Run from the repository root:
 

@@ -1,0 +1,13 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "Case input or expected-output descriptor",
+  "type": "object",
+  "properties": {
+    "text": { "type": "string" },
+    "bytes": { "type": "array", "items": { "type": "integer", "minimum": 0, "maximum": 255 } },
+    "file": { "type": "string", "minLength": 1 },
+    "hash": { "type": "string", "pattern": "^sha256:[a-f0-9]{64}$" }
+  },
+  "oneOf": [{ "required": ["text"] }, { "required": ["bytes"] }, { "required": ["file"] }],
+  "additionalProperties": false
+}

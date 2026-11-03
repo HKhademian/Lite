@@ -9,7 +9,7 @@ import { generatedTestFiles, referenceTestFiles } from '../igniter/test-suites.t
 const args = process.argv.slice(2);
 const executable = basename(process.argv[1] ?? 'lite');
 const command = executable.startsWith('lite-') ? executable.slice(5) : args.shift();
-const componentNames = { check: 'checker', test: 'tester', verify: 'verifier', docs: 'docs', doctor: 'doctor', compile: 'compiler' } as const;
+const componentNames = { check: 'checker', test: 'tester', verify: 'verifier', docs: 'docs', doctor: 'doctor', compile: 'compiler', bench: 'benchmark' } as const;
 if (command === '--version' || args[0] === '--version') {
   const current = versions();
   const key = command === '--version' ? 'cli' : componentNames[command as keyof typeof componentNames];
@@ -27,6 +27,9 @@ const usage = [
   '  test [--fast|--full] [--reference]        Test generated TS (or explicit T00 reference)',
   '  docs [QUERY|--json|--check]                 Browse and search documentation',
   '  doctor [--docs]                           Check repository consistency',
+  '  test --cases [FILTER|FILE.case.json]       Run declarative cases',
+  '  verify FILE.case.json                     Verify one declarative manifest',
+  '  bench OUTPUT [FILTER]                     Benchmark verified cases',
   '  --version                                 Show CLI version',
   '  help                                      Show this help', '',
   'Compiler entry points: ./ltc, ./litec, ./lite compile',
@@ -50,8 +53,12 @@ switch (command) {
   case 'docs': run('docs.ts', args);
   case 'doctor': run('check.ts', args);
   case 'compile': run('../compiler/launcher.ts', args);
-  case 'verify': run('../igniter/verify.ts', args);
+  case 'bench': run('bench.ts', args);
+  case 'verify':
+    if (args.length === 1 && args[0]?.endsWith('.json')) run('test.ts', args);
+    run('../igniter/verify.ts', args);
   case 'test': {
+    if (args[0] === '--cases') run('test.ts', args.slice(1));
     let mode: '--fast' | '--full' | undefined;
     let reference = false;
     for (const arg of args) {

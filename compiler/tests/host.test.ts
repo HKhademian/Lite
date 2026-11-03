@@ -199,6 +199,7 @@ function isolatedCheckout(): string {
     'lite', 'ltc', 'litec', 'compiler/host.ts', 'compiler/entry.ts', 'compiler/cli.ts', 'compiler/launcher.ts', 'compiler/package.json',
     'igniter/launcher.ts', 'igniter/test-suites.ts', 'igniter/check.ts', 'igniter/artifacts.ts', 'igniter/package.json', 'igniter/verify.ts',
     'tools/cli.ts', 'tools/project.ts', 'compiler/release-streams.ts', 'config/versions.json',
+    'tools/streams.ts',
     'compiler/scripts/release-streams.test.ts',
     'compiler/bootstrap/T11.ts', 'compiler/bootstrap/seed.ts', 'compiler/bootstrap/tsconfig.json',
     'compiler/bootstrap/c-emitter.ts', 'compiler/bootstrap/c-seed.ts',

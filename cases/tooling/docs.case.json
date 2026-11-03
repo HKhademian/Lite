@@ -1,0 +1,44 @@
+{
+  "id": "tooling.docs",
+  "kind": "tool",
+  "tool": "lite-docs",
+  "features": [
+    "tooling.docs"
+  ],
+  "benchmark": {
+    "warmups": 1,
+    "samples": 3
+  },
+  "cases": [
+    {
+      "name": "entry",
+      "args": [],
+      "stdin": {
+        "text": ""
+      },
+      "stdout": {
+        "text": "Start: docs/start-here.md\nTour: docs/tour.md\nReference: docs/README.md\nCompiler: compiler/README.md\nFixtures: igniter/tests/README.md\nStatus: compiler/transition-plan.md\nContribute: CONTRIBUTING.md\nSearch: lite docs QUERY | --json [QUERY] | --check\n"
+      },
+      "stderr": {
+        "text": ""
+      },
+      "exitCode": 0
+    },
+    {
+      "name": "no-match",
+      "args": [
+        "unfindable-documentation-topic-123"
+      ],
+      "stdin": {
+        "text": ""
+      },
+      "stdout": {
+        "text": ""
+      },
+      "stderr": {
+        "text": "no documentation matches: unfindable-documentation-topic-123\n"
+      },
+      "exitCode": 1
+    }
+  ]
+}
