@@ -109,6 +109,13 @@ features to make compiler work easier; new capability belongs in L/S and the
 compiler slice first. The remaining stage-0 versus generated gap is tracked in
 [`parity.md`](parity.md).
 
+## Historical implementation checkpoints
+
+The entries in this section retain their original coverage counts and limitations.
+Use the introduction, [bootstrap guide](bootstrap/README.md) and
+[transition](transition-plan.md) for current commands and support. In particular,
+old run/check and native-first statements below do not describe the current CLI.
+
 Comparison chains now retain middle operands once and skip later operands on both
 generated targets over their admitted scalar types. All 260 full tests pass with
 zero skips (49.4 s); inventory is 79/164 matching cases, 85 remaining. The new
