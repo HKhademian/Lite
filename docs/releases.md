@@ -8,6 +8,23 @@ the current test or support inventory. See [the transition](../compiler/transiti
 
 ## Independent component baseline, 2026-11-03
 
+### Hosted CI correction
+
+Compiler, runtime, builtins, tester, release tooling and documentation advance to
+**0.1.0-alpha.2** after hosted evidence exposed two overly short harness limits.
+The 81-scenario CLI verifier audit now has a 180-second aggregate budget and
+the whole-source checker sweep a 120-second tool budget. Ordinary program
+execution limits and all expected behavior assertions remain unchanged.
+Full and T00-free archive suites run in separate 30-minute Linux/macOS jobs;
+superseded branch CI is canceled while release-tag runs remain independent.
+
+The corrected local full suite passes **138/147 tests**, with nine deferred native
+skips and no failures. Both formerly timing-out checks pass in a focused run.
+Compiler source and generated seed bytes remain unchanged. The compiler/runtime/
+builtin alpha.1 tags remain immutable failed release attempts; alpha.2 is the
+corrected packaging milestone. Other published alpha.1 tooling releases and the
+0.1.1 editor release remain available. Hosted publication is verified separately.
+
 Release preparation assigns **0.1.0-alpha.1** independently to the generated TS
 compiler, temporary builtins, TS runtime, CLI, source checker, tester, verifier,
 case benchmarker, release tool, documentation and repository validator. The
