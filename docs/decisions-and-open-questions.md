@@ -1,6 +1,31 @@
 # Decisions and open questions
 
-Snapshot: **2026-10-30**. Source: the language-design discussion in this chat. No compiler implementation or conformance result is implied.
+Dated decision ledger, updated through **2026-11-03**. Older entries retain their
+original scope. Decisions do not establish compiler conformance; use
+[the transition](../compiler/transition-plan.md) for current execution evidence.
+
+## Development and documentation adoption, 2026-11-03
+
+The owner adopts independent entity versions, annotated milestone tags published
+to the configured remote by default, component-specific release gates, bin/tools/
+config organization and direct Node TypeScript including CI. Declarative cases
+invoke real commands through shared stream and workspace infrastructure. Contracts
+and focused/combined cases precede implementation; pending proposals never count
+as passes and accepted-language migration failures remain failures.
+
+Support and seed acceptance precede compiler-source adoption. More supporting
+tools may move to LiteLang as their generated-language workload becomes supported;
+self-hosting remains a compiler requirement, not a requirement to port all tools
+at once. Internal-kind centralization remains an
+[investigation](../investigations/INV-061-internal-kinds.md).
+
+Documentation, samples, examples and independently versioned editor support are
+part of each relevant increment. Documentation must be current, accessible,
+easy to enter, explore and cross-link, with C3/V and other reference languages
+providing presentation evidence. See [documentation maintenance](documentation.md),
+[the workflow](development-workflow.md), [release gates](release-automation.md)
+and [the tool-hosting direction](tool-hosting.md). No language syntax is selected
+by these project-process decisions.
 
 ## Selective language inspiration, 2026-11-02
 

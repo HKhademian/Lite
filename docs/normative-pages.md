@@ -32,6 +32,7 @@ The [multilingual source and learning page](multilingual-source-and-learning.md)
 | Naming and versions | [Naming and versioning](versioning-and-naming.md) | — |
 | Tooling and formatter | [Tooling and learning](tooling-and-learning.md) | [Lexical structure](lexical-structure.md) |
 | Process and history | [Decision ledger](decisions-and-open-questions.md) | [Review handoff](language-design-review-handoff.md), [historical backlog](../TASKS.md) |
+| Project workflow and documentation | [Development workflow](development-workflow.md) | [Documentation maintenance](documentation.md), [component releases](release-automation.md) |
 
 ## Reducing duplication
 

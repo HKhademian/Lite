@@ -59,6 +59,8 @@ remain failures. Do not mark them pending to make a gate green.
 ## Open investigations
 
 Centralized token/value/stage constants and derived types need further investigation.
+The [bounded investigation](../investigations/INV-061-internal-kinds.md) records
+current source owners, local probes and remaining evidence.
 Node's default TypeScript execution requires erasable syntax; `const enum` is not
 an adopted solution. Preserve discriminated-union checks and the compiler-source
 subset while evaluating alternatives.

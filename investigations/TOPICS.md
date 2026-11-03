@@ -809,6 +809,10 @@ questions; check their status and current owning pages before relying on them.
 
 ## INV-061 — Compiler structure
 
+**Current bounded note:** [internal kind representations](INV-061-internal-kinds.md)
+compares literal discriminants, named TS constants and bootstrap-source constraints;
+project-wide adoption remains unselected.
+
 **Scope:** Parsing, checking, intermediate representations, lowering, and code generation.
 
 **Starter question:** Which responsibilities belong to each compiler boundary, and what information must survive until safe lowering and diagnostics?
