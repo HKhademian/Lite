@@ -198,6 +198,8 @@ function isolatedCheckout(): string {
   const paths = new Set([
     'lite', 'ltc', 'litec', 'compiler/host.ts', 'compiler/entry.ts', 'compiler/cli.ts', 'compiler/launcher.ts', 'compiler/package.json',
     'igniter/launcher.ts', 'igniter/test-suites.ts', 'igniter/check.ts', 'igniter/artifacts.ts', 'igniter/package.json', 'igniter/verify.ts',
+    'tools/cli.ts', 'tools/project.ts', 'compiler/release-streams.ts', 'config/versions.json',
+    'compiler/scripts/release-streams.test.ts',
     'compiler/bootstrap/T11.ts', 'compiler/bootstrap/seed.ts', 'compiler/bootstrap/tsconfig.json',
     'compiler/bootstrap/c-emitter.ts', 'compiler/bootstrap/c-seed.ts',
     'compiler/manifests/ts.json', 'compiler/manifests/c.json', 'igniter/loader.ts', 'igniter/tsconfig.json',
@@ -1614,7 +1616,7 @@ test('prepared artifacts retain isolated runs and release their resources explic
 test('default test startup and generated baseline run in a source archive without T00', () => {
   const directory = isolatedCheckout();
   try {
-    for (const path of ['igniter', 'compiler/tests', 'compiler/generated', 'compiler/runtime', 'lib',
+    for (const path of ['igniter', 'tools', 'bin', 'config', 'compiler/tests', 'compiler/generated', 'compiler/runtime', 'lib',
       'verifications', 'examples', 'samples', 'docs', 'challenges/tools', '.agents/rules']) {
       cpSync(join(root, path), join(directory, path), { recursive: true, verbatimSymlinks: true,
         filter: candidate => !/(?:\/node_modules|\/lite\.ts|\/bootstrap\.ts|\/bundle-cli\.ts|\/cli\.ts)$/.test(candidate) });

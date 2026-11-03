@@ -7,6 +7,9 @@ fixture data, workflow configuration and editor assets keep their normal formats
 Installed third-party packages are dependencies rather than project-owned source.
 
 `lite`, `litec` and `ltc` are command symlinks to executable TypeScript files.
+Canonical entries also live in `bin/`; `tools/` holds shared repository tooling.
+`config/versions.json` owns component metadata. Existing root commands remain
+compatible. Internal compiler routines remain under `compiler/scripts/`.
 Their arguments, source paths, streams and exit statuses retain the existing
 contract. Compiler language implementation remains in Lite.
 

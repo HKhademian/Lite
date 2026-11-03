@@ -15,5 +15,6 @@
   "release": null,
   "docs": null,
   "vscode": "0.1.1",
-  "linker": null
+  "linker": null,
+  "doctor": null
 }

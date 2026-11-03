@@ -8,7 +8,7 @@ const versions = {
   language: '0.2.0', compiler: '0.5.1', cli: '0.3.0', formatter: '0.1.0-alpha.1',
   runtime: '0.4.0', stdlib: null,
   builtins: null, checker: null, tester: null, verifier: null, benchmark: null,
-  release: null, docs: null, vscode: '0.1.1', linker: null,
+  release: null, docs: null, vscode: '0.1.1', linker: null, doctor: null,
 };
 
 test('umbrella, language, scripting and tool releases keep independent versions', () => {

@@ -3,9 +3,9 @@
 Status: not started
 Contributor: unassigned
 Last updated: YYYY-MM-DD
-Catalog brief: [INV-NNN](TOPICS.md#inv-nnn)
+Catalog brief: [topic catalog](TOPICS.md) (replace with the actual INV-NNN anchor)
 Covered subtopics: INV-NNN.NN (or whole topic; name the actual coverage)
-Subtopic brief: [INV-NNN.NN](SUBTOPICS.md#inv-nnn-nn) (omit for a whole-topic note)
+Subtopic brief: [subtopic catalog](SUBTOPICS.md) (replace with the actual anchor; omit for a whole-topic note)
 
 This is a non-normative investigation note outside the language draft. Recording
 an option or recommendation here does not select a language rule.

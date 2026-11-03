@@ -49,6 +49,12 @@ contrast and a usable mobile layout; this guide does not claim a site exists.
 
 ## Checks
 
+Run `./lite doctor --docs` for local Markdown links/fragments, fences and editor
+version consistency. `./lite doctor` also runs both strict TS configurations.
+Use `./lite docs QUERY` to search titles/headings/paths offline, or
+`./lite docs --json QUERY` for structured discovery. The same entry points live
+under `bin/`; `lite check FILE` retains its source-checking meaning.
+
 Check local links and fragments, heading/fence structure, document discovery,
 version consistency and sample coverage. Run the exact generated compiler cases
 referenced by runnable documentation. Documentation-only changes need these

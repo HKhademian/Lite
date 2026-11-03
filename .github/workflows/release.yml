@@ -21,6 +21,7 @@ on:
       - 'docs-v*'
       - 'vscode-v*'
       - 'linker-v*'
+      - 'doctor-v*'
   workflow_dispatch:
 
 permissions:

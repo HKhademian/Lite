@@ -1,6 +1,12 @@
 #!/usr/bin/env node
 /** Public compiler argument adapter shared by litec, ltc and lite compile. */
 import { statSync } from 'node:fs';
+import { versions } from '../tools/project.ts';
+
+if (process.argv[2] === '--version') {
+  console.log(`litec ${versions().compiler ?? 'unassigned'}`);
+  process.exit(0);
+}
 
 function usage(): never {
   process.stderr.write('Usage: ./ltc [--target ts] file.lts\n       ./litec [--target ts] file.lts\n       ./lite compile [--target ts] file.lts\n');

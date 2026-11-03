@@ -156,6 +156,7 @@ These are independent version streams. A release manifest records the exact comb
 | Documentation | `MAJOR.MINOR.PATCH` | `docs-vX.Y.Z` | guides and discovery tools |
 | Editor extension | plain `MAJOR.MINOR.PATCH` | `vscode-vX.Y.Z` | package and lockfile match registry |
 | Linker | `MAJOR.MINOR.PATCH` | `linker-vX.Y.Z` | reserved; unimplemented |
+| Repository validator | `MAJOR.MINOR.PATCH` | `doctor-vX.Y.Z` | `lite doctor`, separate from source check |
 
 The project release version labels the umbrella manifest. It is not the language version and not the `lite` CLI version. The manifest names the exact component versions.
 

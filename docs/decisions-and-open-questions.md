@@ -373,7 +373,7 @@ compiler adopts them without changing the 50 program / 42 rejection baseline.
 ## Lite-written lexer checkpoint, 2026-11-01
 
 P3 adds [`compiler/src/lexer.lts`](../compiler/src/lexer.lts) and the
-token-dump helper [`compiler/src/lexer-dump.lts`](../compiler/src/lexer-dump.lts).
+token-dump helper [`compiler/tests/lexer/lexer-dump.lts`](../compiler/tests/lexer/lexer-dump.lts).
 It emits name, keyword, Int, String, Bool, symbol and EOF tokens with offset,
 line and column; skips nested and raw comments; decodes the selected string
 escapes; and rejects Int magnitudes above the signed-minimum magnitude. Focused

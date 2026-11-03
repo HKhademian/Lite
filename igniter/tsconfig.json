@@ -37,6 +37,7 @@
     "../benchmark/*.ts",
     "../editors/vscode/test/*.ts",
     "../challenges/tools/*.ts",
-    "../compiler/generated/*.ts"
+    "../compiler/generated/*.ts",
+    "../tools/*.ts"
   ]
 }
