@@ -6,6 +6,36 @@ milestones have independent streams. Native C packaging is deferred. The entries
 below preserve dated earlier checkpoints and their original counts; they are not
 the current test or support inventory. See [the transition](../compiler/transition-plan.md).
 
+## Independent component baseline, 2026-11-03
+
+Release preparation assigns **0.1.0-alpha.1** independently to the generated TS
+compiler, temporary builtins, TS runtime, CLI, source checker, tester, verifier,
+case benchmarker, release tool, documentation and repository validator. The
+editor remains **0.1.1** and the igniter remains **0.1.0-alpha.38**. Language,
+scripting, umbrella, formatter, linker and standard-library streams remain
+unassigned; no stable language, native runtime ABI or stdlib release is claimed.
+
+This is the first independent version baseline for existing compiler/runtime/
+builtin behavior, not a language-feature addition. Compiler source and selected
+seed bytes are unchanged. New tool behavior includes bin entries and version
+reporting, offline documentation search, repository checks, shared declarative
+cases/streams, source-backed documentation snippets, case benchmarks and
+component-specific release packaging through direct TypeScript CI.
+
+Validation: strict host/seed configurations, all nine editor grammar groups,
+workflow actionlint, all 15 command/language scenarios, documentation links and
+source snippets pass. The generated full suite passes 137 tests with nine
+deferred native skips; the T00-free source archive passes the same suite, three
+identical generated generations and all 93 compiler contracts/69 runtime cases.
+Those full runs used Node 26.12.1; CI pins Node 26.13.0. The documentation
+freshness increment additionally passes its two focused tests and CLI cases.
+The ordinary canonical verifier still reports 60/81 pass and 21 accepted-language
+failures. See [the explicit baseline](../config/ts-migration.json).
+
+Annotated tags will identify this prepared revision; confirm hosted publication
+on the [release workflow](../.github/workflows/release.yml). Local packaging and
+successful tag pushes are distinct from completed hosted releases.
+
 Tagged pushes now have an [igniter release workflow](release-automation.md):
 Independent umbrella (`lite-v*`), language (`lang-v*`), scripting
 (`script-v*`), compiler (`compiler-v*`), igniter, CLI, formatter, runtime and
