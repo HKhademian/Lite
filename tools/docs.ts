@@ -81,7 +81,7 @@ export function showDocuments(args: string[]): void {
   const query = (json ? args.slice(1) : args).join(' ').toLowerCase();
   const selected = documents().filter(doc => !query || [doc.path, doc.title, ...doc.headings].some(value => value.toLowerCase().includes(query)));
   if (json) console.log(JSON.stringify(selected, null, 2));
-  else if (!query) console.log('Start: docs/start-here.md\nTour: docs/tour.md\nReference: docs/README.md\nStatus: compiler/transition-plan.md\nContribute: CONTRIBUTING.md\nSearch: lite docs QUERY | --json [QUERY] | --check');
+  else if (!query) console.log('Start: docs/start-here.md\nTour: docs/tour.md\nReference: docs/README.md\nCompiler: compiler/README.md\nFixtures: igniter/tests/README.md\nStatus: compiler/transition-plan.md\nContribute: CONTRIBUTING.md\nSearch: lite docs QUERY | --json [QUERY] | --check');
   else { if (!selected.length) throw new Error(`no documentation matches: ${query}`); for (const doc of selected) console.log(`${doc.title}\n  ${doc.path}`); }
 }
 
