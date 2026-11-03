@@ -46,7 +46,31 @@ jobs:
         run: migration
       - name: Verified case benchmark smoke test
         run: bench
-      - name: Complete generated path without T00 or Git metadata
-        run: no-t00
       - name: Extracted source distribution smoke test
         run: package
+
+  generated-archive:
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-24.04, macos-15]
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 20
+    defaults:
+      run:
+        shell: node tools/ci.ts {0}
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@v7
+        with:
+          node-version-file: igniter/.node-version
+          cache: npm
+          cache-dependency-path: |
+            igniter/package-lock.json
+            editors/vscode/package-lock.json
+      - name: Install locked development tools
+        run: install
+      - name: Complete generated path without T00 or Git metadata
+        run: no-t00
