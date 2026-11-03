@@ -32,6 +32,8 @@ Attach measurable claims to named commands, scenarios and dated evidence.
 Use current guides for current behavior and dated ledgers for history. Do not
 leave current commands hidden below obsolete introductions. Never infer that a
 design-reference fragment runs merely because it is valid selected syntax.
+Link historical implementation files to an exact preserved Git revision, so
+those links remain useful in archives that omit the handwritten reference.
 
 When changing a contract, search for affected explanations, snippets, examples,
 samples, manifests, editor grammar and CLI help. Update them with the change.

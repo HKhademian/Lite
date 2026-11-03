@@ -325,7 +325,7 @@ target literal encoders, shared front-end, target emitter and target driver.
 `litec` enters through [`compiler/cli.ts`](../compiler/cli.ts): TS uses the
 verified T11 seed/current Lite compiler, and C uses its Lite emitter compiled by
 T11 into a TS-hosted compiler. The old
-[`igniter/bundle-cli.ts`](../igniter/bundle-cli.ts) remains an explicit reference
+[`igniter/bundle-cli.ts`](https://github.com/redacted/Lite/blob/d3bd6f7bcf06bbea6669c8d74bebe5e73f383114/igniter/bundle-cli.ts) remains an explicit reference
 path. There is no module/import
 syntax, and compiler source no longer uses `importFlatAll`. Access is
 `./litec [--target ts] file.lts`, `./lite compile ...`, or the short `./ltc`

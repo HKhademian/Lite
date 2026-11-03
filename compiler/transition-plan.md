@@ -313,7 +313,7 @@ native-first ordering in historical progress entries.
 - [Parity ledger](parity.md)
 - [Bootstrap plan](../docs/bootstrap-plan.md)
 - [Compiler launcher](../litec)
-- [Existing bundle CLI](../igniter/bundle-cli.ts)
+- [Existing bundle CLI](https://github.com/redacted/Lite/blob/d3bd6f7bcf06bbea6669c8d74bebe5e73f383114/igniter/bundle-cli.ts)
 - [Verifier](../igniter/verify.ts)
 - [Artifact runner](../igniter/artifacts.ts)
 - [TS ladder](scripts/self-host.ts)

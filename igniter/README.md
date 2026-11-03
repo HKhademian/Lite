@@ -178,7 +178,7 @@ P1 adds internal bundle tooling for the [bootstrap plan](../docs/bootstrap-plan.
 it is not a public CLI command and does not add Lite syntax. [`loader.ts`](loader.ts)
 now also exports `loadManifest` and `loadBundle`: ordered relative manifests,
 strict UTF-8, include-once and cycle rejection, directive expansion, and a
-flattened-line map back to each original path and 1-based line. [`bootstrap.ts`](bootstrap.ts)
+flattened-line map back to each original path and 1-based line. [`bootstrap.ts`](https://github.com/redacted/Lite/blob/d3bd6f7bcf06bbea6669c8d74bebe5e73f383114/igniter/bootstrap.ts)
 loads and compiles a target manifest once, runs it with fixed args/stdin, maps
 compiler diagnostics from flattened rows back to original files, and provides
 sha-256, nondeterminism and benchmark helpers. [`artifacts.ts`](artifacts.ts)
@@ -197,7 +197,7 @@ The manifests are [compiler/manifests/ts.json](../compiler/manifests/ts.json) an
 [c.json](../compiler/manifests/c.json). They list the L0 libraries, target
 literal encoders, shared front-end, target emitter and target driver in
 dependency order. `litec` compiles the manifest bundle through
-[`bundle-cli.ts`](bundle-cli.ts); compiler source and `lib/core` contain no
+[`bundle-cli.ts`](https://github.com/redacted/Lite/blob/d3bd6f7bcf06bbea6669c8d74bebe5e73f383114/igniter/bundle-cli.ts); compiler source and `lib/core` contain no
 `importFlatAll` directives. The `compiler/ts-emitter.lts` and
 `compiler/c-emitter.lts` compatibility bundles are generated from the manifests.
 

@@ -84,10 +84,10 @@ line-map contract and current hashes are recorded in:
   in `generated/baseline-artifacts.json`.
 
 The bundle path is green: [`../igniter/loader.ts`](../igniter/loader.ts) loads
-the ordered manifests, and [`../igniter/bootstrap.ts`](../igniter/bootstrap.ts)
+the ordered manifests, and [`../igniter/bootstrap.ts`](https://github.com/redacted/Lite/blob/d3bd6f7bcf06bbea6669c8d74bebe5e73f383114/igniter/bootstrap.ts)
 compiles and runs them with flattened-position diagnostics mapped back to the
 original files. `litec` uses [`cli.ts`](cli.ts): both targets use the generated
-compiler host. [`../igniter/bundle-cli.ts`](../igniter/bundle-cli.ts) remains an
+compiler host. [`../igniter/bundle-cli.ts`](https://github.com/redacted/Lite/blob/d3bd6f7bcf06bbea6669c8d74bebe5e73f383114/igniter/bundle-cli.ts) remains an
 explicit historical/reference path. P2 adds the provisional
 L0 helpers under [`../lib/core/`](../lib/README.md): checked Int, text, source
 positions, diagnostics, formatting and list search. P3 adds the Lite lexer and
