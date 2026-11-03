@@ -28,9 +28,9 @@ host adapters, test harnesses and platform glue may remain TypeScript under the
 language implementation.
 
 The current generated TS compiler can rebuild its own supported source subset.
-Both compile targets use Lite-generated, TS-hosted compilers. Native C
-self-hosting, full T00 feature parity and migration of `lite run`/`lite check`
-remain pending. T00 is the handwritten historical interpreter/reference; it is
+Public compile/check, default tests and routine compiler tools use generated TS.
+Public run is removed; C output/native self-hosting are deferred until after TS
+parity and T00 retirement. The historical C emitter remains TS-hosted. T00 is the handwritten historical interpreter/reference; it is
 distinct from the generated TS igniter. New compiler work does not require a
 new handwritten T00 implementation as a prerequisite. Keep existing consumers
 working until their tested replacements are ready.
@@ -121,8 +121,8 @@ Use the existing harnesses and schemas:
 
 Do not leave new language coverage only in T00 interpreter tests. Register or
 wire cases into the maintained runner so the generated compiler actually runs
-them. Existing manifests default to the igniter unless targets are supplied;
-explicitly select supported generated targets. A test present on disk, a coverage
+them. Ordinary verification executes generated TS; T00 requires explicit --reference.
+Historical targets metadata does not establish a C pass or permit fallback. A test present on disk, a coverage
 registry entry or a skipped backend is not evidence of generated support.
 
 During implementation run the focused cases and `./lite test --fast`. Before
@@ -180,3 +180,13 @@ TS-first adoption need not wait for all C support, but it must preserve the
 documented bootstrap routes and explicitly track C gaps. Native C seed adoption
 requires its own compilation, execution, corpus and fixed-point evidence; a
 TS-hosted C emitter is not that evidence.
+
+## Complete consumers with each increment
+
+Follow the [development workflow](../../docs/development-workflow.md). Define cases
+with proposals and implement approved increments before accumulating more design.
+Update affected samples, examples, reference pages, editor grammar and independently
+versioned editor packaging with language changes. Proposed pending cases never count
+as passes; accepted-language migration failures remain failures. Supporting tools
+may move to LiteLang when generated support and shared case comparisons establish
+their requirements. Internal kind/type centralization remains an investigation.

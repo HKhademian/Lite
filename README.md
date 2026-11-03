@@ -4,7 +4,9 @@
 
 **Lite** is the project. **LiteLang** is its language; a **LiteScript** is one of its programs. Lightness is what the whole thing is meant to be, in every sense the word carries here: fast native execution and low runtime weight, small runtime support and small final executables, and code that is easy to reason about, read, maintain, learn, teach, and distribute. The project keeps ceremony low, makes consequential behavior explicit, and lets people and programming agents focus on problem solving. Ordinary native programs should not require a VM or tracing garbage collector; memory-management and backend mechanisms remain open. See [name origin](docs/versioning-and-naming.md#name-origin).
 
-**Start with the [LiteLang white paper](docs/white-paper.md)** for LiteLang's philosophy, goals, and design criteria.
+**Start with [your first program](docs/start-here.md)**, then follow the
+[short language tour](docs/tour.md) or browse the [reference](docs/README.md).
+Read the [white paper](docs/white-paper.md) for philosophy and design criteria.
 
 The Lite-written compiler now supplies the generated **T11** TS igniter. Compile
 programs and execute their artifacts with Node 26.13.0:
@@ -26,7 +28,8 @@ public compilation or checking.
 The generated compiler still accepts a subset of the existing language. The
 [current inventory](compiler/reports/current-t00-t11-inventory.md) records
 112/172 matching source cases, with 60 remaining failures. T00 stays available
-as an explicit reference while TS ports and default test migration land.
+as an explicit reference while the remaining TS ports land. Default tests and
+routine build, self-build, corpus and benchmark commands already use generated TS.
 Verification now defaults to TS artifacts and reports its unsupported cases.
 The [transition plan](compiler/transition-plan.md) tracks retirement separately
 from the later C work. Language implementation belongs in Lite; small host,

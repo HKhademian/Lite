@@ -17,8 +17,11 @@ Owner direction, 2026-11-02: always keep project changes in atomic commits.
 - Create the commit before reporting a unit complete or moving to independent
   work. Report the commit ID and verification performed. If committing is blocked,
   report the blocker and exact uncommitted scope.
-- Do not amend others' commits, rewrite published history, push or create release
-  tags without authorization. A commit does not imply language-design acceptance.
+- Owner authorization, 2026-11-03: publish verified atomic commits and their
+  annotated component-release tags to the configured remote by default. Keep
+  release preparation separate; tag its verified revision before the next feature.
+  Verify remote CI/publication separately. Never amend others' commits, force-push,
+  move published tags or rewrite published history. A commit/tag is not design acceptance.
 
 For example, commit a compiler fix with its regressions and contract updates;
 commit an unrelated release workflow separately.

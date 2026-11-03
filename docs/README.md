@@ -1,13 +1,19 @@
 # Language documentation
 
-Design snapshot: **2026-10-30**. Stage: **design draft with a limited experimental igniter**.
+Current entry guide: **2026-11-03**. Stage: **selected design with partial generated-TS support**.
 
-The [TypeScript/Node igniter](../igniter/README.md) executes the first narrow
-checkpoint. The broader reference is not fully implemented. Statements about no
-implementation in dated investigation baselines describe those earlier revisions;
-only the igniter's documented features and checks are current execution evidence.
+The [Lite-written compiler](../compiler/README.md) supplies the generated TS
+bootstrap used by public compile/check, default tests and routine compiler tools.
+T00 is an explicit historical reference. C output/native self-hosting are deferred.
+The broader reference is not fully implemented; use the
+[transition](../compiler/transition-plan.md) for current support evidence.
 
 ## Start here
+
+- [First program](start-here.md): prepare the checkout, compile and run a program.
+- [Short language tour](tour.md): examples connected to their reference topics.
+- [Contributor guide](../CONTRIBUTING.md), [development workflow](development-workflow.md)
+  and [documentation maintenance](documentation.md): how changes stay verifiable.
 
 1. [LiteLang white paper](white-paper.md): the LiteLang philosophy, intended audience, and criteria for every design decision.
 2. [Principles and goals](principles.md): a concise overview of established goals and defaults.
@@ -44,7 +50,10 @@ dated review snapshots are historical, not another selected current source kind.
 
 These four categories are the intended filter; status lines may use the synonyms above.
 
-Examples use `text` fences because no LiteLang syntax highlighter exists in this project. They illustrate proposed language behavior rather than verified executable programs. `[...]` in grammar templates denotes optional syntax unless the document explicitly says otherwise.
+Examples use `text` fences for portable rendering. The project has a
+[VS Code highlighter](../editors/vscode/README.md). Reference fragments illustrate
+the stated design status; executable evidence comes from linked case manifests.
+`[...]` in grammar templates denotes optional syntax unless stated otherwise.
 
 Tuple type components use `name: Type`, a bare label with an inferred type, or `:Type` for an unnamed component. For example, `(l: Int, r: Int)`, `(l, r)`, and `(:Int, :Int)` have distinct named/unnamed roles in type context. Tuple value expressions and binding patterns retain their context-specific meanings; see the component grammar in the named-input routing entry.
 
