@@ -35,6 +35,7 @@ export function componentVersions(value: unknown, igniterVersion: string): Compo
     if (key === 'igniter') continue;
     const version = record[key];
     assert(version === null || (typeof version === 'string' && validVersion(version)), `versions.json: invalid or missing ${key} version`);
+    if (key === 'vscode' && version !== null) assert(/^\d+\.\d+\.\d+$/.test(version as string), 'vscode version requires plain MAJOR.MINOR.PATCH');
     versions[key] = version;
   }
   return versions;

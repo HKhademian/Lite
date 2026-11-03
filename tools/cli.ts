@@ -9,7 +9,7 @@ import { generatedTestFiles, referenceTestFiles } from '../igniter/test-suites.t
 const args = process.argv.slice(2);
 const executable = basename(process.argv[1] ?? 'lite');
 const command = executable.startsWith('lite-') ? executable.slice(5) : args.shift();
-const componentNames = { check: 'checker', test: 'tester', verify: 'verifier', docs: 'docs', doctor: 'doctor', compile: 'compiler', bench: 'benchmark' } as const;
+const componentNames = { check: 'checker', test: 'tester', verify: 'verifier', docs: 'docs', doctor: 'doctor', compile: 'compiler', bench: 'benchmark', release: 'release' } as const;
 if (command === '--version' || args[0] === '--version') {
   const current = versions();
   const key = command === '--version' ? 'cli' : componentNames[command as keyof typeof componentNames];
@@ -30,6 +30,7 @@ const usage = [
   '  test --cases [FILTER|FILE.case.json]       Run declarative cases',
   '  verify FILE.case.json                     Verify one declarative manifest',
   '  bench OUTPUT [FILTER]                     Benchmark verified cases',
+  '  release OUTPUT [TAG]                      Package a verified source snapshot',
   '  --version                                 Show CLI version',
   '  help                                      Show this help', '',
   'Compiler entry points: ./ltc, ./litec, ./lite compile',
@@ -54,6 +55,7 @@ switch (command) {
   case 'doctor': run('check.ts', args);
   case 'compile': run('../compiler/launcher.ts', args);
   case 'bench': run('bench.ts', args);
+  case 'release': run('release.ts', args);
   case 'verify':
     if (args.length === 1 && args[0]?.endsWith('.json')) run('test.ts', args);
     run('../igniter/verify.ts', args);

@@ -261,7 +261,9 @@ Selected:
 - Same language MAJOR promises source compatibility; the runtime must match the compiler's declared ABI or a declared compatibility range.
 - Existing pages that say “LiteScript” for the language are legacy usage. New and edited text uses LiteLang for the language and LiteScript only for a program.
 
-Open: package-registry spelling, release automation, and standard-library versioning details beyond the reserved `lite-stdlib` name.
+Open: package-registry spelling and stable standard-library contracts. Independent
+component versions and release automation are implemented; see the
+[release guide](../release-automation.md) and [registry](../../config/versions.json).
 
 ## Open contracts at a glance
 

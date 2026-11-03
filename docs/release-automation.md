@@ -1,182 +1,96 @@
-# Igniter release automation
+# Component releases
 
-The **igniter** is the entity responsible for bootstrapping the project. Its
-release archive preserves the sources, compiler seeds and instructions needed
-to perform that process at the selected version.
+Current workflow, 2026-11-03. The [version policy](versioning-and-naming.md) and
+[registry](../config/versions.json) define independent component streams.
+The igniter retains its existing version authority in igniter/package.json.
 
-The umbrella and each component have independent versions and **annotated Git tags**:
+## Prepare a release
 
-- `lite-vX.Y.Z`: umbrella release, recording the complete component combination.
-- `lang-vX.Y.Z`: language-only changes.
-- `script-vX.Y.Z`: scripting-part changes.
-- `compiler-vX.Y.Z`: compiler fixes, added language coverage and code generation.
-- `igniter-vX.Y.Z`: igniter milestones.
-- `cli-vX.Y.Z`: command-line tooling.
-- `formatter-vX.Y.Z`: formatter changes; its implementation is still planned.
-- `runtime-vX.Y.Z`: target runtime support.
-- `std-vX.Y.Z`: library releases; the current libraries remain provisional.
-
-All streams allow SemVer prerelease suffixes and build metadata. `lite-v*`,
-`lang-v*` and `script-v*` are distinct streams. These are Git tags, rather than
-issue or pull-request labels.
-
-Record the selected component version in [`versions.json`](../config/versions.json)
-and commit it with the release preparation before tagging. Igniter versions
-keep their existing authority in `igniter/package.json` instead. Every tag must
-match its component's recorded version. A compiler-only change can advance
-`compiler` while leaving `project`, `language`, `scripting`, `cli` and the other
-versions unchanged. The `project` key controls umbrella `lite-v*` releases;
-`language` controls `lang-v*`; `scripting` controls `script-v*`; `stdlib`
-controls `std-v*`.
-`null` means unassigned, and blocks a tag for that component until its version
-is explicitly selected. No initial component versions are invented here.
-
-Every component release still packages a complete igniter snapshot of the
-exact commit. The manifest records `releasedComponent` (the tagged component
-and version) and `componentVersions` (the full combination), alongside exact
-source and builder identities. Shipping other components in the same archive
-does not release new versions of them. Source commits identify changes since a
-component's last version; the version alone is not proof of identical bytes.
-
-The [release workflow](../.github/workflows/release.yml) runs the existing full
-test, coverage, strict TypeScript and editor gates, checks byte-identical
-regeneration of both current compiler targets, then builds and executes the
-admitted C compiler corpus on Linux x64/ARM64 and macOS Intel/Apple Silicon.
-Every scenario must match its recorded stdout, stderr and exit status. Only
-after all jobs succeed does it upload the assets to a draft GitHub Release and
-publish it using the existing tag. A failed upload can leave a draft to inspect;
-it cannot expose a partially uploaded release. Existing releases are never
-overwritten, and published tags are never moved; a correction needs a new tag.
-Prerelease tags produce prereleases. Releases do not automatically replace the
-repository's “latest” release, since the component streams differ.
-
-For example, set `compiler` to `0.5.1` in `versions.json`, commit that release
-preparation separately from the compiler fix, and check the intended revision:
+Use a clean committed checkout and Node from [igniter/.node-version](../igniter/.node-version).
+Install locked development dependencies, then run the affected cases and gates.
 
 ```sh
-git tag -a compiler-v0.5.1 -m "Compiler 0.5.1"
-git push github compiler-v0.5.1
+./lite doctor
+./lite test --full
+./lite verify --coverage
+./lite test --cases
+./lite release .cache/release-local
 ```
 
-The example version is illustrative; choose an unused version. No tag is
-created by installing this workflow. Branch pushes and pull requests continue
-to run CI. The manual **Igniter release → Run workflow** action builds the
-same assets for the selected ref without publishing, even when the ref is a
-tag. Download the `igniter-release` artifact to inspect that dry run.
+The final command creates an unpublished source snapshot. Output directories
+must be empty. Snapshot packaging validates documentation/metadata and extracts
+and runs the resulting distribution without Git or installed npm packages.
+The generic tooling profile does not claim a newly verified compiler fixed point.
 
-## Release assets
-
-- `lite-TAG-igniter.tar.gz`: complete tracked source tree, including the
-  igniter and lockfile, launchers, provisional libraries and tests, compiler
-  manifests, runtime support, checked-in seeds and their historical builder
-  records. Its additional `release/` directory contains the selected generated
-  TS and C-emitting **TS** compilers, flattened Lite sources, line maps and the
-  source/builder/artifact SHA-256 map. `IGNITER.md` is this guide.
-- `lite-TAG-libraries.tar.gz`: the provisional `lib/` tree, its tests and the
-  matching release record. This is not a separately versioned stable stdlib.
-- `lite-TAG-generated-c.tar.gz`: one `.c` and original `.lts` per admitted
-  compiler program fixture, plus exact scenario input/output bytes encoded in
-  base64 in `release.json`. All `001-*.json` program fixtures are required;
-  emission failures fail the release instead of silently omitting programs.
-- `lite-TAG-{linux,darwin}-{x64,arm64}.tar.gz`: compiled conformance programs
-  under `bin/`, the release record and native build report. These are currently
-  program executables, not native compiler executables. The C backend cannot
-  compile the compiler itself yet. No native C fixed point is claimed.
-- `manifest.json`, `release.json`, `native-*.json`, `RELEASE-NOTES.md` and
-  `SHA256SUMS`: exact source commit, actual component version, compiler source
-  and builder hashes, host tool versions, C flags, runner image versions,
-  binary hashes, archive checksums, the released component and every component
-  version. Unassigned component/ABI versions remain explicitly unassigned.
-
-Archives preserve launchers' executable bits and symlinks. Git, Node and C
-toolchains are not bundled. Native packages use their runner's system libc and
-SDK, are unsigned, and do not promise compatibility with older operating
-systems or bit-identical binaries across different toolchains. Current runner
-labels are fixed OS generations; the exact installed compiler is recorded for
-each build. Compiler source regeneration is checked byte for byte.
-
-## Migration CI
-
-The ordinary test workflow now smoke-tests a source archive without T00:
-strictly check Lite source, compile it to TS, and execute that artifact. Native
-C packaging/execution is deferred from this migration gate, as are native lanes
-in public lite test. The separate tagged-release workflow and historical C
-packaging commands remain preserved for the post-migration release work; no
-release was created by this change.
-
-## Bootstrap from an extracted release
-
-Check the downloaded assets before extraction, using `sha256sum -c SHA256SUMS`
-on Linux or `shasum -a 256 -c SHA256SUMS` on macOS. Extract the igniter archive
-into an empty directory and enter it. The archive is usable without `.git` and
-without downloading any older release. Keep `release/release.json` to identify
-the source and generated compiler pair.
-
-Install the Node version recorded in `igniter/.node-version` (currently
-26.13.0). The igniter and preserved generated TS compilers have no npm runtime
-dependencies:
+Keep implementation and release preparation in separate atomic commits. Select
+only the versions of changed components, commit the registry, and create annotated
+tags on that exact revision. For example, after assigning an unused CLI version:
 
 ```sh
-./lite compile igniter/tests/compiler/001-001-report-int-42.lts > hello.ts
-node compiler/entry.ts hello.ts
+git tag -a cli-v0.1.0-alpha.1 -m "CLI 0.1.0-alpha.1"
+./lite release .cache/release-cli cli-v0.1.0-alpha.1
+git push github main cli-v0.1.0-alpha.1
 ```
 
-This prints `42`. Public run is removed and public C output is deferred during
-the TS migration. Older releases retain their documented command contracts.
-For a historical package containing the C-emitting compiler, its exact artifact
-can still be executed directly:
+The version is illustrative. Never reuse or move a published tag. The owner's
+2026-11-03 direction authorizes publishing verified commits and component tags
+by default. Confirm CI and the hosted release before reporting publication.
 
-```sh
-node compiler/entry.ts release/c-compiler.ts < igniter/tests/compiler/001-001-report-int-42.lts > hello.c
-```
+## Readiness by component
 
-To check and rebuild the compiler after changing its Lite sources, install the
-locked development tools with `npm --prefix igniter ci`, then run:
+- Tool, documentation and editor releases validate their own behavior in CI and
+  package the complete source tree. They do not wait for deferred native C or
+  remaining accepted-language TS ports.
+- Compiler prereleases and igniter/runtime/builtin/library releases additionally
+  require three strictly checked generated generations and the recorded compiler
+  corpus. The archive includes release/compiler.ts, matching flattened Lite source
+  and verification evidence. This establishes the restricted supported subset.
+- Language, scripting, project umbrella and stable compiler releases additionally
+  require all current canonical semantic verifications to pass. Existing TS gaps
+  block those releases rather than becoming skips or pending proposals.
+- Unassigned components cannot release. Reserved formatter/linker/library streams
+  do not imply implementations. Editor package/lockfile versions must match the
+  registry; vscode tags additionally produce a checksummed VSIX.
 
-```sh
-node igniter/node_modules/typescript/bin/tsc -p compiler/bootstrap/tsconfig.json
-node compiler/scripts/build.ts
-./lite test
-./lite verify --all --coverage
-```
+Ordinary CI reports all accepted-language failures and compares them with the
+explicit [migration baseline](../config/ts-migration.json). A changed pass/failure
+set or diagnostic fails the baseline gate for review. This is a regression gate,
+not a full-conformance claim; bare `./lite verify --all` still fails for the known
+ports. Completing a port requires removing its baseline failure after verification.
 
-This rebuilds changed compiler source using T11 and checks it strictly. The
-historical stage-0 route remains documented in
-[compiler/bootstrap/README.md](../compiler/bootstrap/README.md); all its source
-is included. Host tooling still needs Node even when the resulting program is
-native C. Supported language subsets and remaining input/aggregate/native
-compiler gaps are recorded in [compiler/README.md](../compiler/README.md).
+## Distribution
 
-To rebuild and verify all packaged C programs on one of the four supported
-hosts, extract the generated-C archive or retain it alongside `release.json`.
-From the extracted igniter tree, run:
+Assets are lite-TAG.tar.gz, manifest.json, RELEASE-NOTES.md and SHA256SUMS, plus
+an editor VSIX for vscode tags. RELEASE.json inside the source archive matches
+the external manifest. Records identify the source commit, all component versions,
+released component, readiness profile, Node version and any generated bootstrap
+proof. Source archives retain launchers, libraries, cases and rebuild instructions.
 
-```sh
-node compiler/scripts/release.ts native /tmp/lite-native-rebuild /path/to/downloaded-assets
-```
+Check SHA256SUMS with your platform's SHA-256 tool, extract into an empty directory,
+then run `./bin/lite doctor --docs`. The generated compiler can compile a program
+with Node alone; development strict checks need the locked npm development tools.
+Generated compiler bytes reproduce exactly; compressed archive bytes are not
+promised identical across archive toolchains.
 
-The output directory must be empty. Set `CC` to a compiler executable if `cc`
-is not the desired compiler. The build uses `-std=c11 -O2 -Wall -Wextra -Werror`
-and fails on a missing compiler or any scenario mismatch.
+## CI and publication
 
-## Local packaging and historical versions
+[Test](../.github/workflows/test.yml) runs on Linux and macOS. TypeScript task
+code in [tools/ci.ts](../tools/ci.ts) performs strict checks, generated regressions,
+editor grammar, coverage, the explicit TS migration audit, a verified case
+benchmark, a T00-free source-archive gate and extracted-distribution checks.
+Workflow YAML dispatches named Node tasks without embedded shell programs.
 
-From a clean Git checkout with the locked igniter development tools installed:
+[Release](../.github/workflows/release.yml) responds to all registered component
+tag streams. It validates the annotated tag and recorded version at the exact
+commit, packages the appropriate profile, uploads every asset to a draft, then
+publishes. Prereleases remain prereleases, and independent streams do not replace
+GitHub's default latest release. Existing releases are never overwritten.
+Manual runs build source snapshot artifacts without publishing.
 
-```sh
-node compiler/scripts/release.ts prepare .cache/release-local
-node compiler/scripts/release.ts native .cache/native-local .cache/release-local
-```
+## Historical native packaging
 
-Local runs produce `snapshot-COMMIT` assets and never publish. Each output
-directory must be empty. Final assembly requires the reports and archives from
-all four hosts, then `node compiler/scripts/release.ts finalize ASSET_DIRECTORY`.
-CI uses the same script. Packaging includes only committed files and rejects a
-dirty checkout so uncommitted changes cannot be mislabeled as a release.
-
-Automation applies to tags whose commits contain this workflow and toolchain.
-Existing historical tags remain unchanged; this does not retroactively create
-assets for old versions that lack the generated seeds or C support. Their exact
-igniter sources and rebuild instructions remain available by checking out the
-original tag. New snapshots preserve the complete bootstrap route from their
-own version onward.
+The earlier `compiler/scripts/release.ts prepare|native|finalize` commands and
+TS-hosted C emitter remain available for explicit historical audits. Their native
+program packages are not native self-hosted compilers. Public C output and native
+release gates resume after TS migration and T00 retirement; the current component
+workflow does not invoke those historical packaging commands.

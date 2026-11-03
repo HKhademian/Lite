@@ -156,6 +156,11 @@
             "type": "integer",
             "minimum": 0,
             "maximum": 255
+          },
+          "timeoutMs": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 600000
           }
         },
         "additionalProperties": false

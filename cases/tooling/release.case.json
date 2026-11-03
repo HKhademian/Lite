@@ -1,0 +1,93 @@
+{
+  "id": "tooling.release",
+  "kind": "tool",
+  "tool": "lite-release",
+  "features": [
+    "tooling.release"
+  ],
+  "cases": [
+    {
+      "name": "dirty",
+      "args": [
+        ".cache/case-release"
+      ],
+      "stdin": {
+        "text": ""
+      },
+      "stdout": {
+        "text": ""
+      },
+      "stderr": {
+        "text": "release needs a clean committed checkout\n"
+      },
+      "exitCode": 1,
+      "workspace": "dirty",
+      "timeoutMs": 90000
+    },
+    {
+      "name": "invalid-tag",
+      "args": [
+        ".cache/case-release",
+        "v0.1.0"
+      ],
+      "stdin": {
+        "text": ""
+      },
+      "stdout": {
+        "text": ""
+      },
+      "stderr": {
+        "text": "unsupported release tag: v0.1.0\n"
+      },
+      "exitCode": 1,
+      "workspace": "clean",
+      "timeoutMs": 90000
+    },
+    {
+      "name": "lightweight",
+      "args": [
+        ".cache/case-release",
+        "igniter-v0.1.0-alpha.38"
+      ],
+      "stdin": {
+        "text": ""
+      },
+      "stdout": {
+        "text": ""
+      },
+      "stderr": {
+        "text": "release tags must be annotated\n"
+      },
+      "exitCode": 1,
+      "workspace": "clean",
+      "tag": {
+        "name": "igniter-v0.1.0-alpha.38",
+        "annotated": false
+      },
+      "timeoutMs": 90000
+    },
+    {
+      "name": "source-roundtrip",
+      "args": [
+        ".cache/case-release"
+      ],
+      "stdin": {
+        "text": ""
+      },
+      "stdout": {
+        "text": "Release prepared.\n"
+      },
+      "stderr": {
+        "text": ""
+      },
+      "exitCode": 0,
+      "workspace": "clean",
+      "files": [
+        ".cache/case-release/manifest.json",
+        ".cache/case-release/SHA256SUMS",
+        ".cache/case-release/RELEASE-NOTES.md"
+      ],
+      "timeoutMs": 90000
+    }
+  ]
+}

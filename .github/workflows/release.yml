@@ -1,4 +1,4 @@
-name: Igniter release
+name: Component release
 
 on:
   push:
@@ -28,120 +28,75 @@ permissions:
   contents: read
 
 concurrency:
-  group: igniter-release-${{ github.ref }}
+  group: component-release-${{ github.ref }}
   cancel-in-progress: false
 
 jobs:
-  test:
-    uses: ./.github/workflows/test.yml
-
-  prepare:
-    needs: test
+  ci:
     runs-on: ubuntu-24.04
     timeout-minutes: 20
+    defaults:
+      run:
+        shell: node tools/ci.ts {0}
     steps:
-      - uses: actions/checkout@v4
-        with:
-          fetch-depth: 0
-          persist-credentials: false
-      - uses: actions/setup-node@v4
-        with:
-          node-version-file: igniter/.node-version
-          cache: npm
-          cache-dependency-path: igniter/package-lock.json
-      - run: npm --prefix igniter ci
-      - name: Verify the igniter and package the exact source revision
-        run: node compiler/scripts/release.ts prepare .cache/release
-      - uses: actions/upload-artifact@v7
-        with:
-          name: release-sources
-          path: .cache/release/*
-          include-hidden-files: true
-          if-no-files-found: error
-          compression-level: 0
-
-  native:
-    needs: prepare
-    strategy:
-      fail-fast: false
-      matrix:
-        include:
-          - runner: ubuntu-24.04
-            target: linux-x64
-          - runner: ubuntu-24.04-arm
-            target: linux-arm64
-          - runner: macos-15-intel
-            target: darwin-x64
-          - runner: macos-15
-            target: darwin-arm64
-    runs-on: ${{ matrix.runner }}
-    timeout-minutes: 15
-    steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
         with:
           persist-credentials: false
-      - uses: actions/setup-node@v4
+      - uses: actions/setup-node@v7
         with:
           node-version-file: igniter/.node-version
-      - uses: actions/download-artifact@v8
-        with:
-          name: release-sources
-          path: .cache/release
-      - name: Compile and run every packaged C fixture
-        env:
-          RELEASE_TARGET: ${{ matrix.target }}
-        run: node compiler/scripts/release.ts native .cache/native .cache/release
-      - uses: actions/upload-artifact@v7
-        with:
-          name: release-native-${{ matrix.target }}
-          path: .cache/native/*
-          include-hidden-files: true
-          if-no-files-found: error
-          compression-level: 0
-
-  publish:
-    needs: [prepare, native]
+      - name: Install locked checking tools
+        run: install
+      - name: Validate the selected component readiness profile
+        run: release-check
+  package:
+    needs: ci
     runs-on: ubuntu-24.04
     timeout-minutes: 10
-    permissions:
-      contents: write
+    defaults:
+      run:
+        shell: node tools/ci.ts {0}
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
         with:
           fetch-depth: 0
           persist-credentials: false
-      - uses: actions/setup-node@v4
+      - uses: actions/setup-node@v7
+        with:
+          node-version-file: igniter/.node-version
+      - name: Install development and packaging tools
+        run: install
+      - name: Validate component readiness and package exact tagged sources
+        run: package
+      - uses: actions/upload-artifact@v7
+        with:
+          name: component-release
+          path: .cache/release/*
+          if-no-files-found: error
+          compression-level: 0
+  publish:
+    needs: package
+    if: github.event_name == 'push' && github.ref_type == 'tag'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    permissions:
+      contents: write
+    defaults:
+      run:
+        shell: node tools/ci.ts {0}
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@v7
         with:
           node-version-file: igniter/.node-version
       - uses: actions/download-artifact@v8
         with:
-          pattern: release-*
-          merge-multiple: true
+          name: component-release
           path: .cache/release
-      - name: Assemble the manifest and checksums
-        run: node compiler/scripts/release.ts finalize .cache/release
-      - uses: actions/upload-artifact@v7
-        with:
-          name: igniter-release
-          path: .cache/release/*
-          include-hidden-files: true
-          if-no-files-found: error
-          compression-level: 0
-      - name: Publish the existing tag after every gate passes
-        if: github.event_name == 'push' && github.ref_type == 'tag'
+      - name: Upload draft assets and publish the immutable component release
+        run: publish
         env:
           GH_TOKEN: ${{ github.token }}
           GH_REPO: ${{ github.repository }}
-          RELEASE_TAG: ${{ github.ref_name }}
-        shell: bash
-        run: |
-          set -euo pipefail
-          flags=()
-          version="${RELEASE_TAG#*-v}"
-          if [[ "${version%%+*}" == *-* ]]; then
-            flags+=(--prerelease)
-          fi
-          gh release create "$RELEASE_TAG" .cache/release/* \
-            --draft --verify-tag --latest=false --title "$RELEASE_TAG" \
-            --notes-file .cache/release/RELEASE-NOTES.md "${flags[@]}"
-          gh release edit "$RELEASE_TAG" --draft=false --latest=false

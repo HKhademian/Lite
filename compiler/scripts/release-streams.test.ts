@@ -49,6 +49,7 @@ test('tag and version validation rejects ambiguous streams and malformed version
   assert.deepEqual(parseComponentTag('compiler-v1.2.3-rc.1+build.2'), { component: 'compiler', version: '1.2.3-rc.1+build.2' });
   assert.throws(() => componentVersions({ ...versions, compiler: '01.2.3' }, '0.1.0'), /invalid or missing compiler/);
   assert.throws(() => componentVersions({ ...versions, igniter: '0.1.0' }, '0.1.0'), /unknown.*igniter/);
+  assert.throws(() => componentVersions({ ...versions, vscode: '0.1.0-alpha.1' }, '0.1.0'), /vscode.*plain/);
 });
 
 test('workflow triggers cover all distinct project and component streams', () => {

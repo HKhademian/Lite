@@ -21,6 +21,7 @@ export type Scenario = {
   stdout: Stream;
   stderr: Stream;
   exitCode: number;
+  timeoutMs?: number;
   artifact?: Stream;
   inputFiles?: Record<string, Stream>;
   outputFiles?: Record<string, Stream>;
@@ -61,10 +62,11 @@ export function loadCase(path: string): Fixture {
   assert(Array.isArray(spec.cases) && spec.cases.length > 0, 'case scenarios required');
   const names = new Set<string>();
   for (const scenario of spec.cases) {
-    assert(Object.keys(scenario).every(key => ['name', 'args', 'stdin', 'stdout', 'stderr', 'exitCode', 'artifact', 'inputFiles', 'outputFiles', 'workspace', 'tag', 'files'].includes(key)), 'unexpected scenario key');
+    assert(Object.keys(scenario).every(key => ['name', 'args', 'stdin', 'stdout', 'stderr', 'exitCode', 'timeoutMs', 'artifact', 'inputFiles', 'outputFiles', 'workspace', 'tag', 'files'].includes(key)), 'unexpected scenario key');
     assert(typeof scenario.name === 'string' && scenario.name.length > 0 && !names.has(scenario.name), 'scenario names must be unique');
     names.add(scenario.name);
     assert(Number.isInteger(scenario.exitCode) && scenario.exitCode >= 0 && scenario.exitCode <= 255, 'invalid exit status');
+    assert(scenario.timeoutMs === undefined || (Number.isInteger(scenario.timeoutMs) && scenario.timeoutMs > 0 && scenario.timeoutMs <= 600_000), 'invalid timeout');
     assert(scenario.args === undefined || (Array.isArray(scenario.args) && scenario.args.every(arg => typeof arg === 'string')), 'invalid arguments');
     for (const key of ['stdin', 'stdout', 'stderr'] as const) stream(scenario[key], dirname(file));
     for (const key of ['inputFiles', 'outputFiles'] as const) {
@@ -121,7 +123,7 @@ function toolWorkspace(project: string, scenario: Scenario, work: string): strin
   }
   const git = (...args: string[]) => run('git', [
     '-c', 'user.name=Case fixture', '-c', 'user.email=fixture@example.invalid',
-    '-c', 'commit.gpgSign=false', '-c', 'tag.gpgSign=false', ...args,
+    '-c', 'commit.gpgSign=false', '-c', 'tag.gpgSign=false', '-c', 'maintenance.auto=false', '-c', 'gc.auto=0', ...args,
   ], directory);
   git('init', '-b', 'main');
   git('add', '.');
@@ -140,7 +142,7 @@ export function verifyScenario(fixture: Fixture, scenario: Scenario, projectRoot
   const directory = dirname(path);
   const work = mkdtempSync(join(tmpdir(), 'lite-case-'));
   const execute = (file: string, args: string[], input: Buffer, cwd = projectRoot) => {
-    const result = spawnSync(process.execPath, [file, ...args], { cwd, input, timeout: 30_000, maxBuffer: 32 * 1024 * 1024 });
+    const result = spawnSync(process.execPath, [file, ...args], { cwd, input, timeout: scenario.timeoutMs ?? 30_000, maxBuffer: 32 * 1024 * 1024 });
     if (result.error) throw result.error;
     assert.equal(result.signal, null, spec.id + '/' + scenario.name + ': process terminated by signal');
     return result;
@@ -190,7 +192,7 @@ export function verifyScenario(fixture: Fixture, scenario: Scenario, projectRoot
     if (spec.kind === CaseKind.Reject) { assert.notEqual(scenario.exitCode, 0); assert.equal(result.stdout.length, 0); }
     for (const file of scenario.files ?? []) assert(existsSync(resolve(workspace, file)), 'missing artifact: ' + file);
     return artifact;
-  } finally { rmSync(work, { recursive: true, force: true }); }
+  } finally { rmSync(work, { recursive: true, force: true, maxRetries: 3, retryDelay: 100 }); }
 }
 
 export function caseIdentity(fixture: Fixture) {

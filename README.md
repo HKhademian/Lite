@@ -45,6 +45,11 @@ implemented. The verifier is `./lite verify`; the tester is `./lite test`; docs
 are `./lite docs`; help is `./lite help`. See
 [tool naming](docs/versioning-and-naming.md#1-canonical-names).
 
+Commands also live under `bin/`. Use `./lite docs QUERY` to search documentation
+offline, `./lite doctor` for repository checks, `./lite test --cases` for
+declarative command/program cases, and `./lite release OUTPUT` for an unpublished
+source snapshot. `./lite check FILE` remains source checking.
+
 - [Language documentation and reading order](docs/README.md)
 - [Numbered runnable examples](examples/README.md): small language demonstrations shared by the interpreter and editor tooling.
 - [Lite compiler prototype](compiler/README.md): shared front-end and TS/C backends, run with `./ltc`, `./litec`, or `./lite compile`.
@@ -56,7 +61,7 @@ are `./lite docs`; help is `./lite help`. See
 - [First working targets](docs/principles.md#first-working-targets): the interpreter and restricted TS/C emission prototypes now run; practical scripts and broader compiled subsets follow.
 - [Igniter and target direction](docs/tooling-and-learning.md#typescript-igniter-and-early-self-hosting): readable permanent TS igniter, maintained TS/web and C/native export targets, and overlapping igniter/self-hosted development. Full self-rebuild and AS/Wasm compatibility remain open.
 - [Bootstrap and self-hosting plan](docs/bootstrap-plan.md): staged compiler-bootstrap defaults, igniter tooling, shared library layers, gates and agent workflow; implementation plan, not a language/std decision.
-- [Igniter releases](docs/release-automation.md): tag-triggered GitHub releases with complete igniter sources, libraries, generated C, native program builds and rebuild instructions.
+- [Component releases](docs/release-automation.md): independent annotated tags, component readiness gates, complete sources and generated bootstrap evidence; native packaging remains deferred.
 - [Lightweight native execution](docs/memory-and-performance.md#lightweight-native-execution-priority): selected priorities, proposed compiler/memory direction, and [focused investigation points](investigations/lightweight-native-execution.md).
 - [Continuity and analogical coherence](docs/continuity-and-analogy.md): design-method principle for local predictability and visible semantic boundaries.
 - [Current decisions and open questions](docs/decisions-and-open-questions.md)

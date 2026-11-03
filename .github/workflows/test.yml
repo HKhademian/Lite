@@ -2,7 +2,7 @@ name: Test
 
 on:
   push:
-    branches: [main]
+    branches: ['**']
   pull_request:
   workflow_dispatch:
   workflow_call:
@@ -10,63 +10,43 @@ on:
 permissions:
   contents: read
 
-concurrency:
-  group: ${{ github.workflow }}-${{ github.ref }}
-  cancel-in-progress: true
-
 jobs:
   test:
-    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-24.04, macos-15]
+    runs-on: ${{ matrix.os }}
     timeout-minutes: 20
+    defaults:
+      run:
+        shell: node tools/ci.ts {0}
     steps:
-      - uses: actions/checkout@v4
-
-      - uses: actions/setup-node@v4
+      - uses: actions/checkout@v7
         with:
-          node-version: "26"
+          persist-credentials: false
+      - uses: actions/setup-node@v7
+        with:
+          node-version-file: igniter/.node-version
           cache: npm
           cache-dependency-path: |
             igniter/package-lock.json
             editors/vscode/package-lock.json
-
-      - name: Install igniter dependencies
-        working-directory: igniter
-        run: npm ci
-
-      - name: Install editor test dependencies
-        working-directory: editors/vscode
-        run: npm ci
-
-      - name: Strict TypeScript check
-        working-directory: igniter
-        run: npm run check
-
-      - name: Lite test and verification gate
-        run: ./lite test
-
-      - name: Coverage gate
-        run: ./lite verify --all --coverage
-
-      - name: Editor grammar tests
-        working-directory: editors/vscode
-        run: npm test
-
-      - name: Generated TS regression suite and artifacts without T00
-        run: |
-          node --test compiler/scripts/release-streams.test.ts
-          mkdir -p .cache/ts-smoke
-          git archive HEAD | tar -x -C .cache/ts-smoke
-          cd .cache/ts-smoke
-          test ! -e .git
-          test ! -e igniter/node_modules
-          rm igniter/lite.ts igniter/bootstrap.ts igniter/cli.ts igniter/bundle-cli.ts
-          ln -s "$GITHUB_WORKSPACE/igniter/node_modules" igniter/node_modules
-          ./lite test --full
-          node compiler/scripts/build.ts
-          node compiler/scripts/self-host.ts --out .cache/generated-ladder
-          node compiler/scripts/corpus-parity.ts --artifact .cache/generated-ladder/generation-3.ts
-          node benchmark/compiler-performance.ts --samples 1 --warmups 0 --out .cache/generated-performance
-          ./lite verify --all --filter features/int-arithmetic.json --no-cache
-          ./lite check igniter/tests/compiler/001-001-report-int-42.lts
-          ./lite compile igniter/tests/compiler/001-001-report-int-42.lts > hello.ts
-          test "$(node compiler/entry.ts hello.ts)" = 42
+      - name: Install locked development tools
+        run: install
+      - name: Strict types, docs, versions and declarative cases
+        run: check
+      - name: Generated regression and real command contracts
+        run: test
+      - name: Editor grammar
+        run: editor
+      - name: Coverage registration
+        run: coverage
+      - name: Report and preserve the known TS migration failures
+        run: migration
+      - name: Verified case benchmark smoke test
+        run: bench
+      - name: Complete generated path without T00 or Git metadata
+        run: no-t00
+      - name: Extracted source distribution smoke test
+        run: package

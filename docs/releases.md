@@ -1,5 +1,11 @@
 # Release and tag history
 
+Current entry, 2026-11-03: use [component release instructions](release-automation.md)
+and [the registry](../config/versions.json). Tools, editor, docs and compiler
+milestones have independent streams. Native C packaging is deferred. The entries
+below preserve dated earlier checkpoints and their original counts; they are not
+the current test or support inventory. See [the transition](../compiler/transition-plan.md).
+
 Tagged pushes now have an [igniter release workflow](release-automation.md):
 Independent umbrella (`lite-v*`), language (`lang-v*`), scripting
 (`script-v*`), compiler (`compiler-v*`), igniter, CLI, formatter, runtime and

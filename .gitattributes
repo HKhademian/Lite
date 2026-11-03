@@ -2,3 +2,6 @@
 # GitHub classification requires Lite to be registered in upstream Linguist.
 *.lt linguist-language=Lite linguist-detectable=true
 *.lts linguist-language=Lite linguist-detectable=true
+cases/**/*.stdin -text whitespace=cr-at-eol
+cases/**/*.stdout -text whitespace=cr-at-eol
+cases/**/*.stderr -text whitespace=cr-at-eol

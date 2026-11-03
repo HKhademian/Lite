@@ -10,6 +10,8 @@ source stays in a separate `.lts`. Tool cases name a real command under `bin/`;
 there are no per-case executable wrappers. Each scenario states stdin, stdout,
 stderr and exitCode. Streams contain exactly one of `text`, `bytes` or `file`,
 with optional `sha256:` hash. Substantial payloads belong in external raw files.
+Processes default to 30 seconds; a scenario can declare `timeoutMs` from 1 to
+600000 for a larger workload. Timeouts always fail verification and benchmarking.
 
 Kinds distinguish `tool`, `compile`, `reject`, and runnable `feature`, `sample`
 or `example`. Successful compiler stdout is captured as the generated artifact;

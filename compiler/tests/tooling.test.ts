@@ -22,7 +22,7 @@ function summary(result: ReturnType<typeof invoke>): Record<string, unknown> {
 
 /** Copies tool inputs with relative links intact and all T00 adapters absent. */
 function copyToolArchive(directory: string): void {
-  for (const path of ['compiler', 'igniter', 'lib', 'benchmark']) {
+  for (const path of ['compiler', 'igniter', 'lib', 'benchmark', 'tools', 'config', 'bin']) {
     cpSync(join(root, path), join(directory, path), { recursive: true, verbatimSymlinks: true,
       filter: candidate => !/(?:\/node_modules|\/reports|\/lite\.ts|\/bootstrap\.ts|\/bundle-cli\.ts|\/cli\.ts)$/.test(candidate) || candidate.endsWith('/compiler/cli.ts') });
   }
