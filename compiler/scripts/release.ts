@@ -101,7 +101,7 @@ function prepare(): void {
   }
   const label = tag ?? `snapshot-${commit.slice(0, 12)}`;
   const igniterVersion = text(object(readJson(join(root, 'igniter/package.json')))['version']);
-  const versions = componentVersions(readJson(join(root, 'versions.json')), igniterVersion);
+  const versions = componentVersions(readJson(join(root, 'config/versions.json')), igniterVersion);
   const releasedComponent = selectComponentRelease(tag, versions);
   run(process.execPath, [join(root, 'igniter/node_modules/typescript/bin/tsc'), '-p', join(root, 'compiler/bootstrap/tsconfig.json')]);
   const work = mkdtempSync(join(tmpdir(), 'lite-release-'));

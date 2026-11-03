@@ -9,7 +9,7 @@ verified Linux/macOS x64/ARM64 program builds with source/builder hashes and
 checksums. Manual workflow runs build without publishing. The native C compiler
 ladder remains pending; native assets currently contain conformance programs.
 The release manifest names the released component and the complete independent
-version combination. [versions.json](../versions.json) records component
+version combination. [versions.json](../config/versions.json) records component
 versions, with the igniter version kept in its package manifest. No version bump
 or tag is introduced by this automation change.
 

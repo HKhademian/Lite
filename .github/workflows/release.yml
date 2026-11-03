@@ -12,6 +12,15 @@ on:
       - 'formatter-v*'
       - 'runtime-v*'
       - 'std-v*'
+      - 'builtins-v*'
+      - 'check-v*'
+      - 'test-v*'
+      - 'verify-v*'
+      - 'bench-v*'
+      - 'release-v*'
+      - 'docs-v*'
+      - 'vscode-v*'
+      - 'linker-v*'
   workflow_dispatch:
 
 permissions:

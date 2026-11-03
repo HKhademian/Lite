@@ -1,0 +1,19 @@
+{
+  "project": null,
+  "language": null,
+  "scripting": null,
+  "compiler": null,
+  "cli": null,
+  "formatter": null,
+  "runtime": null,
+  "stdlib": null,
+  "builtins": null,
+  "checker": null,
+  "tester": null,
+  "verifier": null,
+  "benchmark": null,
+  "release": null,
+  "docs": null,
+  "vscode": "0.1.1",
+  "linker": null
+}

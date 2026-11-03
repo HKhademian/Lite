@@ -20,7 +20,7 @@ All streams allow SemVer prerelease suffixes and build metadata. `lite-v*`,
 `lang-v*` and `script-v*` are distinct streams. These are Git tags, rather than
 issue or pull-request labels.
 
-Record the selected component version in [`versions.json`](../versions.json)
+Record the selected component version in [`versions.json`](../config/versions.json)
 and commit it with the release preparation before tagging. Igniter versions
 keep their existing authority in `igniter/package.json` instead. Every tag must
 match its component's recorded version. A compiler-only change can advance

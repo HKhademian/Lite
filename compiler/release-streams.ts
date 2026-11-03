@@ -4,6 +4,8 @@ import assert from 'node:assert/strict';
 export const componentPrefixes = Object.freeze({
   project: 'lite', language: 'lang', scripting: 'script', compiler: 'compiler', igniter: 'igniter', cli: 'cli',
   formatter: 'formatter', runtime: 'runtime', stdlib: 'std',
+  builtins: 'builtins', checker: 'check', tester: 'test', verifier: 'verify',
+  benchmark: 'bench', release: 'release', docs: 'docs', vscode: 'vscode', linker: 'linker',
 });
 export type Component = keyof typeof componentPrefixes;
 export type ComponentVersions = Readonly<Record<Component, string | null>>;
@@ -22,6 +24,8 @@ export function componentVersions(value: unknown, igniterVersion: string): Compo
   const versions: Record<Component, string | null> = {
     project: null, language: null, scripting: null, compiler: null, igniter: igniterVersion, cli: null,
     formatter: null, runtime: null, stdlib: null,
+    builtins: null, checker: null, tester: null, verifier: null, benchmark: null,
+    release: null, docs: null, vscode: null, linker: null,
   };
   assert(validVersion(igniterVersion), 'invalid igniter package version');
   for (const key of Object.keys(record)) {

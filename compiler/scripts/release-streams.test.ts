@@ -7,6 +7,8 @@ const versions = {
   project: '0.8.0', scripting: '0.3.0',
   language: '0.2.0', compiler: '0.5.1', cli: '0.3.0', formatter: '0.1.0-alpha.1',
   runtime: '0.4.0', stdlib: null,
+  builtins: null, checker: null, tester: null, verifier: null, benchmark: null,
+  release: null, docs: null, vscode: '0.1.1', linker: null,
 };
 
 test('umbrella, language, scripting and tool releases keep independent versions', () => {
@@ -53,7 +55,16 @@ test('workflow triggers cover all distinct project and component streams', () =>
   const workflow = readFileSync(new URL('../../.github/workflows/release.yml', import.meta.url), 'utf8');
   const triggers = [...workflow.matchAll(/^      - '([a-z]+)-v\*'$/gm)].map(match => match[1]).sort();
   assert.deepEqual(triggers, Object.values(componentPrefixes).sort());
-  const declared: unknown = JSON.parse(readFileSync(new URL('../../versions.json', import.meta.url), 'utf8'));
+  const declared: unknown = JSON.parse(readFileSync(new URL('../../config/versions.json', import.meta.url), 'utf8'));
   const igniter = JSON.parse(readFileSync(new URL('../../igniter/package.json', import.meta.url), 'utf8')) as { version: string };
   assert.equal(componentVersions(declared, igniter.version).igniter, igniter.version);
+});
+
+test('each independently evolving tool has its own release stream', () => {
+  for (const component of ['checker', 'tester', 'verifier', 'benchmark', 'release', 'docs', 'builtins', 'vscode', 'linker'] as const) {
+    const current = componentVersions({ ...versions, [component]: '0.2.0' }, '0.1.0-alpha.38');
+    assert.deepEqual(selectComponentRelease(`${componentPrefixes[component]}-v0.2.0`, current), { component, version: '0.2.0' });
+    assert.equal(current.language, versions.language);
+    assert.throws(() => selectComponentRelease(`${componentPrefixes[component]}-v0.1.0`, current), /tag\/version mismatch/);
+  }
 });

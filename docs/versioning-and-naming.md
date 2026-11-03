@@ -144,9 +144,18 @@ These are independent version streams. A release manifest records the exact comb
 | Compiler | `MAJOR.MINOR.PATCH` | `compiler-vX.Y.Z` | `compiler-v0.4.1` |
 | Igniter | `MAJOR.MINOR.PATCH` | `igniter-vX.Y.Z` | `igniter-v0.1.0-alpha.38` |
 | Runtime | `MAJOR.MINOR.PATCH` plus ABI integer | `runtime-vX.Y.Z` | `runtime-v0.3.0` |
-| CLI/tooling | `MAJOR.MINOR.PATCH` | `cli-vX.Y.Z` | `cli-v0.5.0` |
+| CLI dispatcher | `MAJOR.MINOR.PATCH` | `cli-vX.Y.Z` | `cli-v0.5.0` |
 | Formatter | `MAJOR.MINOR.PATCH` | `formatter-vX.Y.Z` | reserved; implementation planned |
 | Standard library | `MAJOR.MINOR.PATCH` | `std-vX.Y.Z` | reserved |
+| Builtins | `MAJOR.MINOR.PATCH` | `builtins-vX.Y.Z` | temporary primitives version independently |
+| Source checker | `MAJOR.MINOR.PATCH` | `check-vX.Y.Z` | distinct from repository validation |
+| Tester | `MAJOR.MINOR.PATCH` | `test-vX.Y.Z` | independent tool |
+| Verifier | `MAJOR.MINOR.PATCH` | `verify-vX.Y.Z` | independent tool |
+| Benchmarker | `MAJOR.MINOR.PATCH` | `bench-vX.Y.Z` | independent tool |
+| Release tool | `MAJOR.MINOR.PATCH` | `release-vX.Y.Z` | versions packaging behavior |
+| Documentation | `MAJOR.MINOR.PATCH` | `docs-vX.Y.Z` | guides and discovery tools |
+| Editor extension | plain `MAJOR.MINOR.PATCH` | `vscode-vX.Y.Z` | package and lockfile match registry |
+| Linker | `MAJOR.MINOR.PATCH` | `linker-vX.Y.Z` | reserved; unimplemented |
 
 The project release version labels the umbrella manifest. It is not the language version and not the `lite` CLI version. The manifest names the exact component versions.
 
@@ -157,11 +166,17 @@ A release that changes several components records each changed version. A
 component version can remain unchanged while the source snapshot advances;
 exact source and builder hashes identify the shipped bytes.
 
-[`versions.json`](../versions.json) records project, language, scripting,
-compiler, runtime, CLI, formatter and library versions. The igniter keeps its
+[`config/versions.json`](../config/versions.json) records all streams except the igniter. The igniter keeps its
 version in `igniter/package.json`. Unassigned entries are `null`; a release tag
 must match the selected stream's recorded version. Versions do not imply that
 planned tools are implemented or that provisional libraries have a stable API.
+
+Owner direction, 2026-11-03: every independently evolving entity has its own
+stream. Verified version milestones receive annotated tags on their actual
+release-preparation commits and are published to the configured remote by default.
+Routine commits need no invented version; never publish an unverified tag.
+Tag pushes trigger release automation; confirm its result before claiming publication.
+Implementation, release preparation and source adoption remain separate atomic units.
 
 Version identifiers in output:
 
