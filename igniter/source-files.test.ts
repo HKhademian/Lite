@@ -1,19 +1,31 @@
 /** Keep project-owned executable source inside the owner's permitted file types. */
 import assert from 'node:assert/strict';
 import { spawnSync } from 'node:child_process';
-import { existsSync, lstatSync, readFileSync, realpathSync } from 'node:fs';
+import { existsSync, lstatSync, readFileSync, readdirSync, realpathSync } from 'node:fs';
 import { extname, resolve, relative } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { test } from 'node:test';
 
 test('project-owned code uses Lite, TypeScript, JSON and generated C files', () => {
   const root = fileURLToPath(new URL('../', import.meta.url));
-  const result = spawnSync('git', ['ls-files', '--cached', '--others', '--exclude-standard', '-z'], { cwd: root, encoding: 'utf8' });
-  assert.equal(result.status, 0, result.stderr);
+  let files: string[];
+  if (existsSync(resolve(root, '.git'))) {
+    const result = spawnSync('git', ['ls-files', '--cached', '--others', '--exclude-standard', '-z'], { cwd: root, encoding: 'utf8' });
+    assert.equal(result.status, 0, result.stderr);
+    files = result.stdout.split('\0').filter(Boolean);
+  } else {
+    // Source archives have no Git metadata; inspect their shipped files directly.
+    const visit = (directory: string): string[] => readdirSync(resolve(root, directory), { withFileTypes: true }).flatMap(entry => {
+      if (['.git', '.cache', 'node_modules'].includes(entry.name)) return [];
+      const name = directory + entry.name;
+      return entry.isDirectory() ? visit(name + '/') : [name];
+    });
+    files = visit('');
+  }
   const data = new Set(['.md', '.jsonl', '.csv', '.txt', '.png', '.svg', '.yml', '.yaml', '.tokens', '.nodes', '.symbols', '.stderr', '.stdin', '.stdout']);
   const source = new Set(['.lt', '.lts', '.lite', '.ts', '.json']);
   const violations: string[] = [];
-  for (const name of new Set(result.stdout.split('\0').filter(Boolean))) {
+  for (const name of new Set(files)) {
     const path = resolve(root, name); if (!existsSync(path)) continue;
     if (lstatSync(path).isSymbolicLink()) {
       const target = realpathSync(path);

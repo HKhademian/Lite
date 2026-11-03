@@ -6,18 +6,17 @@ import { createHash } from 'node:crypto';
 import { chmodSync, closeSync, copyFileSync, existsSync, mkdirSync, mkdtempSync, openSync, readFileSync, readdirSync, rmSync, symlinkSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { delimiter, dirname, join } from 'node:path';
-import { test } from 'node:test';
+import { after, test } from 'node:test';
 import { fileURLToPath, pathToFileURL } from 'node:url';
-import { compileTs } from '../compiler/host.ts';
+import { buildCompiler, compileTarget, compileTs, type CompilerInput, type CompilerResult } from '../compiler/host.ts';
 import {
   INT_MAX, INT_MIN, LiteRuntimeFault,
   checkedAdd, checkedDivide, checkedFloorDivide, checkedFloorModulo,
   checkedMultiply, checkedNegate, checkedRemainder, checkedSubtract, intText, listCopy,
   runMain, textAt, textLength, textSlice,
 } from '../compiler/runtime/ts/runtime.ts';
-import { runCArtifact, runTsArtifact, withTsArtifact, withTsArtifacts } from './artifacts.ts';
-import { benchmark, hashBytes, loadCompiler, nondeterminismReasons } from './bootstrap.ts';
-import { compile, execute } from './lite.ts';
+import { prepareTsArtifacts, runCArtifact, runTsArtifact, withTsArtifact, withTsArtifacts, type PreparedTsArtifacts } from './artifacts.ts';
+import { benchmark, hashBytes, nondeterminismReasons } from './measure.ts';
 import { loadBundle, loadManifest, loadSource } from './loader.ts';
 
 const tsManifestPath = new URL('../compiler/manifests/ts.json', import.meta.url).pathname;
@@ -26,11 +25,13 @@ const lexerDumpPath = new URL('../compiler/tests/lexer/lexer-dump.lts', import.m
 const parserProgramDumpPath = new URL('../compiler/tests/parser/parser-program-dump.lts', import.meta.url).pathname;
 const checkerDumpPath = new URL('../compiler/tests/checker/checker-dump.lts', import.meta.url).pathname;
 
-const compilerInstances = new Map<string, ReturnType<typeof loadCompiler>>();
-function compilerFor(manifestPath: string): ReturnType<typeof loadCompiler> {
+type TestCompiler = Readonly<{ bundle: ReturnType<typeof loadBundle>; compile: (input: CompilerInput) => CompilerResult }>;
+const compilerInstances = new Map<string, TestCompiler>();
+function compilerFor(manifestPath: string): TestCompiler {
   let compiler = compilerInstances.get(manifestPath);
   if (compiler === undefined) {
-    compiler = loadCompiler(manifestPath);
+    const bundle = loadBundle(manifestPath);
+    compiler = { bundle, compile: input => compileTarget(bundle.target, input) };
     compilerInstances.set(manifestPath, compiler);
   }
   return compiler;
@@ -41,18 +42,23 @@ function runCompiler(manifestPath: string, source: string, name?: string): { cod
   return { code: result.status, output: result.stdout.toString('utf8'), errors: result.stderr.toString('utf8') };
 }
 
-/** Executes inline Lite source with captured reports and scripted stdin. */
+/** Reuses checked driver artifacts, while every input executes in a fresh process. */
+const drivers = new Map<string, PreparedTsArtifacts>();
+after(() => { for (const prepared of drivers.values()) prepared.dispose(); });
 function run(source: string, input = '', args: readonly string[] = []): { code: number; output: string; errors: string } {
-  let cursor = 0;
-  let output = '';
-  let errors = '';
-  const code = execute(compile(source), {
-    args,
-    read: () => input[cursor++] ?? null,
-    report: text => { output += text; },
-    reportError: text => { errors += text; },
-  });
-  return { code, output, errors };
+  let prepared = drivers.get(source);
+  if (prepared === undefined) {
+    const compiled = compileTs({ text: source });
+    assert.equal(compiled.status, 0, compiled.stderr.toString());
+    assert.equal(compiled.stderr.length, 0);
+    prepared = prepareTsArtifacts([compiled.stdout.toString()]);
+    drivers.set(source, prepared);
+  }
+  const actual = prepared.runs[0]!({ stdin: input, args });
+  assert.equal(actual.phase, 'run', actual.stdout.toString() + actual.stderr.toString());
+  assert.equal(actual.signal, null);
+  assert.notEqual(actual.status, null);
+  return { code: actual.status!, output: actual.stdout.toString(), errors: actual.stderr.toString() };
 }
 /** Loads a file through the temporary flat-import loader and executes it. */
 function runFile(path: string, input = '', args: readonly string[] = []): { code: number; output: string; errors: string } {
@@ -176,20 +182,7 @@ test('Lite parser parses functions, loops and statements', () => {
 
 test('Lite parser parses L0 libraries and every program case', () => {
   const root = new URL('../', import.meta.url).pathname;
-  const program = compile(loadSource(parserProgramDumpPath));
-  const runParser = (input: string): { code: number; output: string; errors: string } => {
-    const chars = Array.from(input);
-    let cursor = 0;
-    let output = '';
-    let errors = '';
-    const code = execute(program, {
-      args: [],
-      read: () => chars[cursor++] ?? null,
-      report: text => { output += text; },
-      reportError: text => { errors += text; },
-    });
-    return { code, output, errors };
-  };
+  const runParser = (input: string) => runFile(parserProgramDumpPath, input);
   for (const path of ['lib/core/int.lts', 'lib/core/text.lts', 'lib/core/source.lts',
     'lib/core/format.lts', 'lib/core/diag.lts', 'lib/core/list.lts', 'lib/core/test.lts']) {
     const result = runParser(loadSource(join(root, path)));
@@ -377,13 +370,14 @@ test('compiler applications preserve optional logical source names in their own 
       });
     }
     assert.deepEqual(runCompiler(manifest, 'outputLine(1 +);'), { code: 2, output: '', errors: '1:15: expected an Int, Float, String or Bool expression\n' });
-    let reads = 0; let errors = '';
-    const code = execute(compile(loadBundle(manifest).text), {
-      args: ['first.lts', 'extra'], read: () => { reads++; return null; },
-      report: () => { throw new Error('unexpected artifact'); }, reportError: text => { errors += text; },
+    const target = loadBundle(manifest).target;
+    withTsArtifact(readFileSync(buildCompiler(target).path, 'utf8'), execute => {
+      // Malformed stdin would fault if decoded before the argument-count rejection.
+      const actual = execute({ args: ['first.lts', 'extra'], stdin: Buffer.from([0xff]) });
+      assert.equal(actual.phase, 'run'); assert.equal(actual.signal, null);
+      assert.equal(actual.status, 2); assert.equal(actual.stdout.length, 0);
+      assert.equal(actual.stderr.toString(), 'expected at most one logical source name argument\n');
     });
-    assert.equal(code, 2); assert.equal(reads, 0);
-    assert.equal(errors, 'expected at most one logical source name argument\n');
   }
 });
 
@@ -452,9 +446,6 @@ test('lite verify defaults to TS, reports migration gaps and keeps T00 explicitl
     assert.match(verified.stdout, /\[ts\]/); assert.doesNotMatch(verified.stdout, /T00 reference|\[c\]/);
     assert.match(verified.stdout, /FAIL match\.subjectless\/.*unsupported feature "match"/);
     assert.match(verified.stdout, /verification failed: 21 failing scenario\(s\), 81 executed, 0 cached/);
-    const reference = spawnSync(join(root, 'lite'), ['verify', '--all', '--reference', '--no-cache'], { env, encoding: 'utf8', timeout: 30000 });
-    assert.equal(reference.status, 0, reference.stdout + reference.stderr);
-    assert.match(reference.stdout, /\[T00 reference\]/); assert.match(reference.stdout, /verification passed: 81 executed, 0 cached/);
     const covered = spawnSync(join(root, 'lite'), ['verify', '--coverage'], { env, encoding: 'utf8', timeout: 30000 });
     assert.equal(covered.error, undefined); assert.equal(covered.status, 0, covered.stderr);
     assert.match(covered.stdout, /features: 41 registered, 41 cases/);
@@ -1757,7 +1748,7 @@ test('restricted C compiler preserves existing output and rejects function synta
 test('artifact runner typechecks emitted TS and compiles C with warnings as errors', async context => {
   const root = new URL('../', import.meta.url).pathname;
   const source = 'x := 2 * 3;\noutputLine(x);\n';
-  const tsCompiler = loadCompiler(join(root, 'compiler/manifests/ts.json'));
+  const tsCompiler = compilerFor(join(root, 'compiler/manifests/ts.json'));
   const tsArtifact = tsCompiler.compile({ text: source });
   assert.equal(tsArtifact.status, 0);
   assert.deepEqual(runTsArtifact(tsArtifact.stdout.toString('utf8')), {
@@ -1773,7 +1764,7 @@ test('artifact runner typechecks emitted TS and compiles C with warnings as erro
   }
   assert.equal(probe.error, undefined);
   assert.equal(probe.status, 0, probe.stderr);
-  const cCompiler = loadCompiler(join(root, 'compiler/manifests/c.json'));
+  const cCompiler = compilerFor(join(root, 'compiler/manifests/c.json'));
   const cArtifact = cCompiler.compile({ text: source });
   assert.equal(cArtifact.status, 0);
   assert.deepEqual(runCArtifact(cArtifact.stdout.toString('utf8')), {
@@ -2320,9 +2311,16 @@ test('whole-source TS and C compilers reject later statements and decoding failu
 
 test('checked-in TS output and explicit Node adapter typecheck and reproduce the reference bytes', () => {
   const root = new URL('../', import.meta.url).pathname;
-  const checked = spawnSync(process.execPath, [join(root, 'igniter/node_modules/typescript/bin/tsc'),
-    '-p', join(root, 'igniter/tsconfig.json')], { encoding: 'utf8', timeout: 30000 });
-  assert.equal(checked.error, undefined); assert.equal(checked.status, 0, checked.stdout + checked.stderr);
+  const directory = mkdtempSync(join(tmpdir(), 'lite-adapter-check-'));
+  try {
+    const config = join(directory, 'tsconfig.json');
+    writeFileSync(config, JSON.stringify({ extends: join(root, 'igniter/tsconfig.json'), include: [],
+      files: [join(root, 'compiler/generated/run-report.ts')],
+      compilerOptions: { typeRoots: [join(root, 'igniter/node_modules/@types')] } }));
+    const checked = spawnSync(process.execPath, [join(root, 'igniter/node_modules/typescript/bin/tsc'), '-p', config],
+      { encoding: 'utf8', timeout: 30000 });
+    assert.equal(checked.error, undefined); assert.equal(checked.status, 0, checked.stdout + checked.stderr);
+  } finally { rmSync(directory, { recursive: true, force: true }); }
   const result = spawnSync(process.execPath, [join(root, 'compiler/generated/run-report.ts')], { timeout: 5000 });
   assert.equal(result.error, undefined); assert.equal(result.status, 0);
   assert.deepEqual(result.stdout, Buffer.from('42\n')); assert.equal(result.stderr.length, 0);
@@ -2332,7 +2330,7 @@ test('checked-in TS output and explicit Node adapter typecheck and reproduce the
 test('bundle artifacts are deterministic and leak no timestamps or host paths', context => {
   const root = new URL('../', import.meta.url).pathname;
   const manifest = join(root, 'compiler/manifests/ts.json');
-  const compiler = loadCompiler(manifest);
+  const compiler = compilerFor(manifest);
   const source = 'x := 1;\noutputLine(x + 1);\n';
   const first = compiler.compile({ text: source });
   const second = compiler.compile({ text: source });
@@ -2340,9 +2338,12 @@ test('bundle artifacts are deterministic and leak no timestamps or host paths', 
   assert.equal(hashBytes(first.stdout), hashBytes(second.stdout));
   assert.equal(hashBytes(first.stderr), hashBytes(second.stderr));
   assert.deepEqual(nondeterminismReasons(first.stdout.toString('utf8'), [root, tmpdir(), process.cwd()]), []);
-  const measured = benchmark(() => loadCompiler(manifest), 2);
-  context.diagnostic(`compiler bundle load+compile best: ${measured.bestMs.toFixed(1)} ms`);
-  assert.ok(measured.bestMs < 10000, `compiler bundle load+compile took ${measured.bestMs.toFixed(1)} ms`);
+  const measured = benchmark(() => {
+    const bundle = loadBundle(manifest);
+    return { ...buildCompiler(bundle.target), bundle };
+  }, 2);
+  context.diagnostic(`generated compiler selection best: ${measured.bestMs.toFixed(1)} ms`);
+  assert.ok(measured.bestMs < 10000, `generated compiler selection took ${measured.bestMs.toFixed(1)} ms`);
   for (const value of measured.values) {
     assert.equal(value.bundle.lineMap.length, value.bundle.text.split('\n').length - 1);
   }

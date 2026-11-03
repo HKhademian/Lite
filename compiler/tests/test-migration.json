@@ -11,7 +11,7 @@
         "spawnSync"
       ],
       "originalAssertions": 5,
-      "route": "explicit T00 reference; generated equivalent still required in w2 or the owning language-port step"
+      "route": "explicit --reference suite; generated semantic equivalents remain assigned to language-port steps"
     },
     {
       "title": "temporary importFlatAll reports missing files and cycles",
@@ -19,7 +19,7 @@
       "originalLine": 107,
       "dependencies": [],
       "originalAssertions": 2,
-      "route": "explicit T00 reference; generated equivalent still required in w2 or the owning language-port step"
+      "route": "explicit --reference suite; generated semantic equivalents remain assigned to language-port steps"
     },
     {
       "title": "bundle manifests flatten ordered sources with exact text and line maps",
@@ -29,7 +29,7 @@
         "runBundle"
       ],
       "originalAssertions": 6,
-      "route": "explicit T00 reference; generated equivalent still required in w2 or the owning language-port step"
+      "route": "explicit --reference suite; generated semantic equivalents remain assigned to language-port steps"
     },
     {
       "title": "bundle manifests reject duplicates, cycles, missing files and invalid paths",
@@ -37,7 +37,7 @@
       "originalLine": 142,
       "dependencies": [],
       "originalAssertions": 9,
-      "route": "retained generated/phase/artifact test; actual compiler/driver helper migration in w2"
+      "route": "default generated compiler/phase/artifact execution with independent expectations"
     },
     {
       "title": "bundle diagnostics map flattened rows back to original files and lines",
@@ -48,7 +48,7 @@
         "compile"
       ],
       "originalAssertions": 3,
-      "route": "explicit T00 reference; generated equivalent still required in w2 or the owning language-port step"
+      "route": "explicit --reference suite; generated semantic equivalents remain assigned to language-port steps"
     },
     {
       "title": "internal run harness captures report streams and exit status from fixed inputs",
@@ -58,7 +58,7 @@
         "runText"
       ],
       "originalAssertions": 2,
-      "route": "explicit T00 reference; generated equivalent still required in w2 or the owning language-port step"
+      "route": "explicit --reference suite; generated semantic equivalents remain assigned to language-port steps"
     },
     {
       "title": "L0 shared libraries have direct bootstrap tests",
@@ -68,7 +68,7 @@
         "runFile"
       ],
       "originalAssertions": 3,
-      "route": "retained generated/phase/artifact test; actual compiler/driver helper migration in w2"
+      "route": "default generated compiler/phase/artifact execution with independent expectations"
     },
     {
       "title": "Lite lexer tokenizes lexical fixtures exactly",
@@ -78,7 +78,7 @@
         "runFile"
       ],
       "originalAssertions": 1,
-      "route": "retained generated/phase/artifact test; actual compiler/driver helper migration in w2"
+      "route": "default generated compiler/phase/artifact execution with independent expectations"
     },
     {
       "title": "Lite lexer rejects malformed lexical input with positioned diagnostics",
@@ -88,7 +88,7 @@
         "runFile"
       ],
       "originalAssertions": 1,
-      "route": "retained generated/phase/artifact test; actual compiler/driver helper migration in w2"
+      "route": "default generated compiler/phase/artifact execution with independent expectations"
     },
     {
       "title": "Lite parser parses declarations and expression forms",
@@ -98,7 +98,7 @@
         "runFile"
       ],
       "originalAssertions": 2,
-      "route": "retained generated/phase/artifact test; actual compiler/driver helper migration in w2"
+      "route": "default generated compiler/phase/artifact execution with independent expectations"
     },
     {
       "title": "Lite parser parses functions, loops and statements",
@@ -108,7 +108,7 @@
         "runFile"
       ],
       "originalAssertions": 1,
-      "route": "retained generated/phase/artifact test; actual compiler/driver helper migration in w2"
+      "route": "default generated compiler/phase/artifact execution with independent expectations"
     },
     {
       "title": "Lite parser parses L0 libraries and every program case",
@@ -119,7 +119,7 @@
         "execute"
       ],
       "originalAssertions": 9,
-      "route": "retained generated/phase/artifact test; actual compiler/driver helper migration in w2"
+      "route": "default generated compiler/phase/artifact execution with independent expectations"
     },
     {
       "title": "Lite parser parses the assembled compiler S and lexer source",
@@ -129,7 +129,7 @@
         "runFile"
       ],
       "originalAssertions": 10,
-      "route": "retained generated/phase/artifact test; actual compiler/driver helper migration in w2"
+      "route": "default generated compiler/phase/artifact execution with independent expectations"
     },
     {
       "title": "Lite parser rejects unsupported constructs by name",
@@ -139,7 +139,7 @@
         "runFile"
       ],
       "originalAssertions": 1,
-      "route": "retained generated/phase/artifact test; actual compiler/driver helper migration in w2"
+      "route": "default generated compiler/phase/artifact execution with independent expectations"
     },
     {
       "title": "Lite checker collects value bindings and rejects unsupported duplicate symbols",
@@ -149,7 +149,7 @@
         "runFile"
       ],
       "originalAssertions": 9,
-      "route": "retained generated/phase/artifact test; actual compiler/driver helper migration in w2"
+      "route": "default generated compiler/phase/artifact execution with independent expectations"
     },
     {
       "title": "Lite checker collects symbols from the assembled S",
@@ -159,7 +159,7 @@
         "runFile"
       ],
       "originalAssertions": 6,
-      "route": "retained generated/phase/artifact test; actual compiler/driver helper migration in w2"
+      "route": "default generated compiler/phase/artifact execution with independent expectations"
     },
     {
       "title": "Lite parser parses type aliases and rejects malformed types",
@@ -169,7 +169,7 @@
         "runFile"
       ],
       "originalAssertions": 2,
-      "route": "retained generated/phase/artifact test; actual compiler/driver helper migration in w2"
+      "route": "default generated compiler/phase/artifact execution with independent expectations"
     },
     {
       "title": "compiler, L0 and lexer declarations carry doc comments",
@@ -177,7 +177,7 @@
       "originalLine": 446,
       "dependencies": [],
       "originalAssertions": 1,
-      "route": "retained generated/phase/artifact test; actual compiler/driver helper migration in w2"
+      "route": "default generated compiler/phase/artifact execution with independent expectations"
     },
     {
       "title": "compiler applications preserve optional logical source names in their own diagnostics only",
@@ -189,7 +189,7 @@
         "compile"
       ],
       "originalAssertions": 6,
-      "route": "retained generated/phase/artifact test; actual compiler/driver helper migration in w2"
+      "route": "default generated compiler/phase/artifact execution with independent expectations"
     },
     {
       "title": "real compiler CLI forwards source-name context without changing emitted bytes",
@@ -199,7 +199,7 @@
         "spawnSync"
       ],
       "originalAssertions": 8,
-      "route": "retained generated/phase/artifact test; actual compiler/driver helper migration in w2"
+      "route": "default generated compiler/phase/artifact execution with independent expectations"
     },
     {
       "title": "litec, ltc, lite compile and lite check expose the compiler sources directly",
@@ -209,7 +209,7 @@
         "spawnSync"
       ],
       "originalAssertions": 23,
-      "route": "retained generated/phase/artifact test; actual compiler/driver helper migration in w2"
+      "route": "default generated compiler/phase/artifact execution with independent expectations"
     },
     {
       "title": "lite help and docs expose the command matrix and documentation roots",
@@ -219,7 +219,7 @@
         "spawnSync"
       ],
       "originalAssertions": 14,
-      "route": "retained generated/phase/artifact test; actual compiler/driver helper migration in w2"
+      "route": "default generated compiler/phase/artifact execution with independent expectations"
     },
     {
       "title": "lite verify defaults to TS, reports migration gaps and keeps T00 explicitly selectable",
@@ -229,7 +229,7 @@
         "spawnSync"
       ],
       "originalAssertions": 26,
-      "route": "retained generated/phase/artifact test; actual compiler/driver helper migration in w2"
+      "route": "default generated compiler/phase/artifact execution with independent expectations"
     },
     {
       "title": "inputArgs returns an ordered String list with independent ordinary receiving copies",
@@ -240,7 +240,7 @@
         "fault"
       ],
       "originalAssertions": 2,
-      "route": "explicit T00 reference; generated equivalent still required in w2 or the owning language-port step"
+      "route": "explicit --reference suite; generated semantic equivalents remain assigned to language-port steps"
     },
     {
       "title": "inputArgs has no stream effects and snapshots host arguments before program execution",
@@ -252,7 +252,7 @@
         "run"
       ],
       "originalAssertions": 3,
-      "route": "explicit T00 reference; generated equivalent still required in w2 or the owning language-port step"
+      "route": "explicit --reference suite; generated semantic equivalents remain assigned to language-port steps"
     },
     {
       "title": "inputArgs signatures fail before effects and normal helper shadowing is preserved",
@@ -265,7 +265,7 @@
         "run"
       ],
       "originalAssertions": 3,
-      "route": "explicit T00 reference; generated equivalent still required in w2 or the owning language-port step"
+      "route": "explicit --reference suite; generated semantic equivalents remain assigned to language-port steps"
     },
     {
       "title": "explicit T00 reference CLI preserves script argument values after the separating suffix",
@@ -275,7 +275,7 @@
         "spawnSync"
       ],
       "originalAssertions": 7,
-      "route": "explicit T00 reference; generated equivalent still required in w2 or the owning language-port step"
+      "route": "explicit --reference suite; generated semantic equivalents remain assigned to language-port steps"
     },
     {
       "title": "argument suffix errors precede execution and check-only ignores all script data",
@@ -285,7 +285,7 @@
         "spawnSync"
       ],
       "originalAssertions": 8,
-      "route": "explicit T00 reference; generated equivalent still required in w2 or the owning language-port step"
+      "route": "explicit --reference suite; generated semantic equivalents remain assigned to language-port steps"
     },
     {
       "title": "script arguments survive caller-relative paths and script filenames with spaces",
@@ -295,7 +295,7 @@
         "spawnSync"
       ],
       "originalAssertions": 4,
-      "route": "explicit T00 reference; generated equivalent still required in w2 or the owning language-port step"
+      "route": "explicit --reference suite; generated semantic equivalents remain assigned to language-port steps"
     },
     {
       "title": "inputAll preserves multi-line text, line endings, trailing whitespace and empty EOF",
@@ -305,7 +305,7 @@
         "run"
       ],
       "originalAssertions": 3,
-      "route": "explicit T00 reference; generated equivalent still required in w2 or the owning language-port step"
+      "route": "explicit --reference suite; generated semantic equivalents remain assigned to language-port steps"
     },
     {
       "title": "inputAll consumes unread lookahead and the remainder after other input helpers",
@@ -316,7 +316,7 @@
         "fault"
       ],
       "originalAssertions": 4,
-      "route": "explicit T00 reference; generated equivalent still required in w2 or the owning language-port step"
+      "route": "explicit --reference suite; generated semantic equivalents remain assigned to language-port steps"
     },
     {
       "title": "inputAll prompt evaluates once and writes exact stdout before the first read even at EOF",
@@ -328,7 +328,7 @@
         "run"
       ],
       "originalAssertions": 4,
-      "route": "explicit T00 reference; generated equivalent still required in w2 or the owning language-port step"
+      "route": "explicit --reference suite; generated semantic equivalents remain assigned to language-port steps"
     },
     {
       "title": "inputAll retains terminal read failures and never reads after a failed prompt write",
@@ -340,7 +340,7 @@
         "LiteFault"
       ],
       "originalAssertions": 4,
-      "route": "explicit T00 reference; generated equivalent still required in w2 or the owning language-port step"
+      "route": "explicit --reference suite; generated semantic equivalents remain assigned to language-port steps"
     },
     {
       "title": "inputAll signatures and named arguments fail before effects while ordinary shadowing works",
@@ -353,7 +353,7 @@
         "run"
       ],
       "originalAssertions": 3,
-      "route": "explicit T00 reference; generated equivalent still required in w2 or the owning language-port step"
+      "route": "explicit --reference suite; generated semantic equivalents remain assigned to language-port steps"
     },
     {
       "title": "whole-input example runs via the real launcher preserving UTF-8 bytes and silent check-only behavior",
@@ -363,7 +363,7 @@
         "spawnSync"
       ],
       "originalAssertions": 11,
-      "route": "explicit T00 reference; generated equivalent still required in w2 or the owning language-port step"
+      "route": "explicit --reference suite; generated semantic equivalents remain assigned to language-port steps"
     },
     {
       "title": "compiler verification cases are well-formed and cover both categories",
@@ -371,7 +371,7 @@
       "originalLine": 920,
       "dependencies": [],
       "originalAssertions": 3,
-      "route": "retained generated/phase/artifact test; actual compiler/driver helper migration in w2"
+      "route": "default generated compiler/phase/artifact execution with independent expectations"
     },
     {
       "title": "generated compatibility emitter bundles match the manifests",
@@ -379,7 +379,7 @@
       "originalLine": 926,
       "dependencies": [],
       "originalAssertions": 2,
-      "route": "retained generated/phase/artifact test; actual compiler/driver helper migration in w2"
+      "route": "default generated compiler/phase/artifact execution with independent expectations"
     },
     {
       "title": "bundle compilers reproduce every compiler case with exact artifacts and diagnostics",
@@ -389,7 +389,7 @@
         "compile"
       ],
       "originalAssertions": 11,
-      "route": "retained generated/phase/artifact test; actual compiler/driver helper migration in w2"
+      "route": "default generated compiler/phase/artifact execution with independent expectations"
     },
     {
       "title": "Lite lexer tokenizes all bootstrap S and compiler cases",
@@ -399,7 +399,7 @@
         "runFile"
       ],
       "originalAssertions": 14,
-      "route": "retained generated/phase/artifact test; actual compiler/driver helper migration in w2"
+      "route": "default generated compiler/phase/artifact execution with independent expectations"
     },
     {
       "title": "prepared TS artifacts run in fresh processes and retain typecheck failures",
@@ -409,7 +409,7 @@
         "run"
       ],
       "originalAssertions": 22,
-      "route": "retained generated/phase/artifact test; actual compiler/driver helper migration in w2"
+      "route": "default generated compiler/phase/artifact execution with independent expectations"
     },
     {
       "title": "TS runtime helpers preserve checked Int64, text and list semantics",
@@ -417,7 +417,7 @@
       "originalLine": 1090,
       "dependencies": [],
       "originalAssertions": 23,
-      "route": "retained generated/phase/artifact test; actual compiler/driver helper migration in w2"
+      "route": "default generated compiler/phase/artifact execution with independent expectations"
     },
     {
       "title": "restricted compiler accepts typed scalar locals without changing existing cases",
@@ -428,7 +428,7 @@
         "spawnSync"
       ],
       "originalAssertions": 5,
-      "route": "retained generated/phase/artifact test; actual compiler/driver helper migration in w2"
+      "route": "default generated compiler/phase/artifact execution with independent expectations"
     },
     {
       "title": "restricted compiler resolves transparent scalar aliases",
@@ -439,7 +439,7 @@
         "spawnSync"
       ],
       "originalAssertions": 6,
-      "route": "retained generated/phase/artifact test; actual compiler/driver helper migration in w2"
+      "route": "default generated compiler/phase/artifact execution with independent expectations"
     },
     {
       "title": "restricted compiler compiles flat named tuples and tuple functions to runnable TS",
@@ -449,7 +449,7 @@
         "runCompiler"
       ],
       "originalAssertions": 2,
-      "route": "retained generated/phase/artifact test; actual compiler/driver helper migration in w2"
+      "route": "default generated compiler/phase/artifact execution with independent expectations"
     },
     {
       "title": "restricted compiler diagnoses invalid flat named tuples clearly",
@@ -459,7 +459,7 @@
         "runCompiler"
       ],
       "originalAssertions": 2,
-      "route": "retained generated/phase/artifact test; actual compiler/driver helper migration in w2"
+      "route": "default generated compiler/phase/artifact execution with independent expectations"
     },
     {
       "title": "restricted compiler compiles growable lists, literals and indexing to runnable TS",
@@ -469,7 +469,7 @@
         "runCompiler"
       ],
       "originalAssertions": 6,
-      "route": "retained generated/phase/artifact test; actual compiler/driver helper migration in w2"
+      "route": "default generated compiler/phase/artifact execution with independent expectations"
     },
     {
       "title": "restricted compiler diagnoses invalid list types, literals and indexes clearly",
@@ -479,7 +479,7 @@
         "runCompiler"
       ],
       "originalAssertions": 2,
-      "route": "retained generated/phase/artifact test; actual compiler/driver helper migration in w2"
+      "route": "default generated compiler/phase/artifact execution with independent expectations"
     },
     {
       "title": "restricted compiler compiles list traversal to runnable TS",
@@ -489,7 +489,7 @@
         "runCompiler"
       ],
       "originalAssertions": 2,
-      "route": "retained generated/phase/artifact test; actual compiler/driver helper migration in w2"
+      "route": "default generated compiler/phase/artifact execution with independent expectations"
     },
     {
       "title": "restricted compiler diagnoses invalid list traversal clearly",
@@ -499,7 +499,7 @@
         "runCompiler"
       ],
       "originalAssertions": 2,
-      "route": "retained generated/phase/artifact test; actual compiler/driver helper migration in w2"
+      "route": "default generated compiler/phase/artifact execution with independent expectations"
     },
     {
       "title": "restricted compiler lowers bare break and continue to runnable TS",
@@ -509,7 +509,7 @@
         "runCompiler"
       ],
       "originalAssertions": 3,
-      "route": "retained generated/phase/artifact test; actual compiler/driver helper migration in w2"
+      "route": "default generated compiler/phase/artifact execution with independent expectations"
     },
     {
       "title": "restricted compiler lowers bare break and continue to runnable C",
@@ -520,7 +520,7 @@
         "runCompiler"
       ],
       "originalAssertions": 3,
-      "route": "retained generated/phase/artifact test; actual compiler/driver helper migration in w2"
+      "route": "default generated compiler/phase/artifact execution with independent expectations"
     },
     {
       "title": "restricted compiler diagnoses break and continue outside loops",
@@ -530,7 +530,7 @@
         "runCompiler"
       ],
       "originalAssertions": 2,
-      "route": "retained generated/phase/artifact test; actual compiler/driver helper migration in w2"
+      "route": "default generated compiler/phase/artifact execution with independent expectations"
     },
     {
       "title": "restricted compiler accepts one optional leading and/or in Bool expressions for TS",
@@ -540,7 +540,7 @@
         "runCompiler"
       ],
       "originalAssertions": 3,
-      "route": "retained generated/phase/artifact test; actual compiler/driver helper migration in w2"
+      "route": "default generated compiler/phase/artifact execution with independent expectations"
     },
     {
       "title": "restricted compiler accepts one optional leading and/or in Bool expressions for C",
@@ -551,7 +551,7 @@
         "runCompiler"
       ],
       "originalAssertions": 3,
-      "route": "retained generated/phase/artifact test; actual compiler/driver helper migration in w2"
+      "route": "default generated compiler/phase/artifact execution with independent expectations"
     },
     {
       "title": "restricted compiler diagnoses invalid leading and/or forms",
@@ -561,7 +561,7 @@
         "runCompiler"
       ],
       "originalAssertions": 2,
-      "route": "retained generated/phase/artifact test; actual compiler/driver helper migration in w2"
+      "route": "default generated compiler/phase/artifact execution with independent expectations"
     },
     {
       "title": "restricted compiler compiles list mutation grants, push and pop to runnable TS",
@@ -571,7 +571,7 @@
         "runCompiler"
       ],
       "originalAssertions": 8,
-      "route": "retained generated/phase/artifact test; actual compiler/driver helper migration in w2"
+      "route": "default generated compiler/phase/artifact execution with independent expectations"
     },
     {
       "title": "restricted compiler treats nested, doc and raw comments as separating trivia",
@@ -583,7 +583,7 @@
         "spawnSync"
       ],
       "originalAssertions": 11,
-      "route": "retained generated/phase/artifact test; actual compiler/driver helper migration in w2"
+      "route": "default generated compiler/phase/artifact execution with independent expectations"
     },
     {
       "title": "restricted compiler corpus keeps 69 program and 24 rejection cases",
@@ -591,7 +591,7 @@
       "originalLine": 1734,
       "dependencies": [],
       "originalAssertions": 2,
-      "route": "retained generated/phase/artifact test; actual compiler/driver helper migration in w2"
+      "route": "default generated compiler/phase/artifact execution with independent expectations"
     },
     {
       "title": "restricted compiler compiles scalar functions, calls and returns to runnable TS",
@@ -601,7 +601,7 @@
         "runCompiler"
       ],
       "originalAssertions": 5,
-      "route": "retained generated/phase/artifact test; actual compiler/driver helper migration in w2"
+      "route": "default generated compiler/phase/artifact execution with independent expectations"
     },
     {
       "title": "restricted compiler completes scalar functions from tail expressions",
@@ -611,7 +611,7 @@
         "runCompiler"
       ],
       "originalAssertions": 2,
-      "route": "retained generated/phase/artifact test; actual compiler/driver helper migration in w2"
+      "route": "default generated compiler/phase/artifact execution with independent expectations"
     },
     {
       "title": "restricted compiler completes function tails from Bool literals and calls",
@@ -621,7 +621,7 @@
         "runCompiler"
       ],
       "originalAssertions": 3,
-      "route": "retained generated/phase/artifact test; actual compiler/driver helper migration in w2"
+      "route": "default generated compiler/phase/artifact execution with independent expectations"
     },
     {
       "title": "restricted compiler allows top-level declarations between functions",
@@ -631,7 +631,7 @@
         "runCompiler"
       ],
       "originalAssertions": 2,
-      "route": "retained generated/phase/artifact test; actual compiler/driver helper migration in w2"
+      "route": "default generated compiler/phase/artifact execution with independent expectations"
     },
     {
       "title": "restricted compiler diagnoses scalar function arity, argument and return mismatches",
@@ -641,7 +641,7 @@
         "runCompiler"
       ],
       "originalAssertions": 1,
-      "route": "retained generated/phase/artifact test; actual compiler/driver helper migration in w2"
+      "route": "default generated compiler/phase/artifact execution with independent expectations"
     },
     {
       "title": "restricted compiler compiles value if expressions in every value position",
@@ -651,7 +651,7 @@
         "runCompiler"
       ],
       "originalAssertions": 3,
-      "route": "retained generated/phase/artifact test; actual compiler/driver helper migration in w2"
+      "route": "default generated compiler/phase/artifact execution with independent expectations"
     },
     {
       "title": "restricted compiler completes statement-shaped if branches as function results",
@@ -662,7 +662,7 @@
         "runText"
       ],
       "originalAssertions": 5,
-      "route": "retained generated/phase/artifact test; actual compiler/driver helper migration in w2"
+      "route": "default generated compiler/phase/artifact execution with independent expectations"
     },
     {
       "title": "restricted compiler diagnoses invalid value if expressions and rejects them in C",
@@ -672,7 +672,7 @@
         "runCompiler"
       ],
       "originalAssertions": 3,
-      "route": "retained generated/phase/artifact test; actual compiler/driver helper migration in w2"
+      "route": "default generated compiler/phase/artifact execution with independent expectations"
     },
     {
       "title": "restricted compiler compiles action else-if chains to runnable TS",
@@ -682,7 +682,7 @@
         "runCompiler"
       ],
       "originalAssertions": 3,
-      "route": "retained generated/phase/artifact test; actual compiler/driver helper migration in w2"
+      "route": "default generated compiler/phase/artifact execution with independent expectations"
     },
     {
       "title": "restricted compiler compiles action else-if chains to runnable C",
@@ -693,7 +693,7 @@
         "spawnSync"
       ],
       "originalAssertions": 3,
-      "route": "retained generated/phase/artifact test; actual compiler/driver helper migration in w2"
+      "route": "default generated compiler/phase/artifact execution with independent expectations"
     },
     {
       "title": "restricted compiler diagnoses invalid action else-if chains",
@@ -703,7 +703,7 @@
         "runCompiler"
       ],
       "originalAssertions": 2,
-      "route": "retained generated/phase/artifact test; actual compiler/driver helper migration in w2"
+      "route": "default generated compiler/phase/artifact execution with independent expectations"
     },
     {
       "title": "restricted compiler compiles text builtins with code-point semantics and bounds faults",
@@ -713,7 +713,7 @@
         "runCompiler"
       ],
       "originalAssertions": 6,
-      "route": "retained generated/phase/artifact test; actual compiler/driver helper migration in w2"
+      "route": "default generated compiler/phase/artifact execution with independent expectations"
     },
     {
       "title": "generated text helpers preserve Unicode values after many distinct cached inputs",
@@ -724,7 +724,7 @@
         "runCompiler"
       ],
       "originalAssertions": 3,
-      "route": "retained generated/phase/artifact test; actual compiler/driver helper migration in w2"
+      "route": "default generated compiler/phase/artifact execution with independent expectations"
     },
     {
       "title": "restricted compiler compiles input, diagnostic and exit builtins in value and statement positions",
@@ -734,7 +734,7 @@
         "runCompiler"
       ],
       "originalAssertions": 9,
-      "route": "retained generated/phase/artifact test; actual compiler/driver helper migration in w2"
+      "route": "default generated compiler/phase/artifact execution with independent expectations"
     },
     {
       "title": "restricted compiler diagnoses I/O and text builtin arity and argument mismatches",
@@ -744,7 +744,7 @@
         "runCompiler"
       ],
       "originalAssertions": 1,
-      "route": "retained generated/phase/artifact test; actual compiler/driver helper migration in w2"
+      "route": "default generated compiler/phase/artifact execution with independent expectations"
     },
     {
       "title": "restricted C compiler rejects input, diagnostic and text builtins clearly",
@@ -754,7 +754,7 @@
         "runCompiler"
       ],
       "originalAssertions": 1,
-      "route": "retained generated/phase/artifact test; actual compiler/driver helper migration in w2"
+      "route": "default generated compiler/phase/artifact execution with independent expectations"
     },
     {
       "title": "restricted C compiler preserves existing output and rejects function syntax clearly",
@@ -764,7 +764,7 @@
         "runCompiler"
       ],
       "originalAssertions": 2,
-      "route": "retained generated/phase/artifact test; actual compiler/driver helper migration in w2"
+      "route": "default generated compiler/phase/artifact execution with independent expectations"
     },
     {
       "title": "artifact runner typechecks emitted TS and compiles C with warnings as errors",
@@ -776,7 +776,7 @@
         "spawnSync"
       ],
       "originalAssertions": 6,
-      "route": "retained generated/phase/artifact test; actual compiler/driver helper migration in w2"
+      "route": "default generated compiler/phase/artifact execution with independent expectations"
     },
     {
       "title": "bundle artifacts are deterministic and leak no timestamps or host paths",
@@ -787,7 +787,7 @@
         "compile"
       ],
       "originalAssertions": 6,
-      "route": "retained generated determinism regression; actual compiler helper migration in w2"
+      "route": "default generated compiler/phase/artifact execution with independent expectations"
     },
     {
       "title": "whole-source TS and C compilers reject later statements and decoding failures before artifact output",
@@ -797,7 +797,7 @@
         "spawnSync"
       ],
       "originalAssertions": 12,
-      "route": "retained generated/phase/artifact test; actual compiler/driver helper migration in w2"
+      "route": "default generated compiler/phase/artifact execution with independent expectations"
     },
     {
       "title": "restricted C compiler emits the readable reference and sequences reports",
@@ -807,7 +807,7 @@
         "runCompiler"
       ],
       "originalAssertions": 2,
-      "route": "retained generated/phase/artifact test; actual compiler/driver helper migration in w2"
+      "route": "default generated compiler/phase/artifact execution with independent expectations"
     },
     {
       "title": "Lite-generated native C, TS and igniter programs have identical output bytes and status",
@@ -818,7 +818,7 @@
         "runCompiler"
       ],
       "originalAssertions": 14,
-      "route": "retained generated/phase/artifact test; actual compiler/driver helper migration in w2"
+      "route": "default generated compiler/phase/artifact execution with independent expectations"
     },
     {
       "title": "quoted closing delimiters remain values in calls, tuple entries and array/list elements",
@@ -828,7 +828,7 @@
         "run"
       ],
       "originalAssertions": 1,
-      "route": "explicit T00 reference; generated equivalent still required in w2 or the owning language-port step"
+      "route": "explicit --reference suite; generated semantic equivalents remain assigned to language-port steps"
     },
     {
       "title": "Lite-written TS emitter produces a deterministic readable reference with no extra source",
@@ -838,7 +838,7 @@
         "runCompiler"
       ],
       "originalAssertions": 4,
-      "route": "retained generated/phase/artifact test; actual compiler/driver helper migration in w2"
+      "route": "default generated compiler/phase/artifact execution with independent expectations"
     },
     {
       "title": "Lite-written TS and C compilers sequence multiple report statements deterministically",
@@ -848,7 +848,7 @@
         "runCompiler"
       ],
       "originalAssertions": 6,
-      "route": "retained generated/phase/artifact test; actual compiler/driver helper migration in w2"
+      "route": "default generated compiler/phase/artifact execution with independent expectations"
     },
     {
       "title": "Lite-written TS and C compilers lower arithmetic expressions and immutable locals deterministically",
@@ -858,7 +858,7 @@
         "runCompiler"
       ],
       "originalAssertions": 2,
-      "route": "retained generated/phase/artifact test; actual compiler/driver helper migration in w2"
+      "route": "default generated compiler/phase/artifact execution with independent expectations"
     },
     {
       "title": "restricted compiler lowers dynamic Int division and remainder with checked semantics",
@@ -868,7 +868,7 @@
         "runCompiler"
       ],
       "originalAssertions": 2,
-      "route": "retained generated/phase/artifact test; actual compiler/driver helper migration in w2"
+      "route": "default generated compiler/phase/artifact execution with independent expectations"
     },
     {
       "title": "restricted compiler lowers dynamic Int division and remainder to runnable C",
@@ -880,7 +880,7 @@
         "runText"
       ],
       "originalAssertions": 7,
-      "route": "retained generated/phase/artifact test; actual compiler/driver helper migration in w2"
+      "route": "default generated compiler/phase/artifact execution with independent expectations"
     },
     {
       "title": "restricted compiler lowers dynamic String concatenation with left-to-right TS evaluation",
@@ -890,7 +890,7 @@
         "runCompiler"
       ],
       "originalAssertions": 7,
-      "route": "retained generated/phase/artifact test; actual compiler/driver helper migration in w2"
+      "route": "default generated compiler/phase/artifact execution with independent expectations"
     },
     {
       "title": "restricted compiler lowers dynamic String concatenation to runnable C",
@@ -901,7 +901,7 @@
         "runCompiler"
       ],
       "originalAssertions": 7,
-      "route": "retained generated/phase/artifact test; actual compiler/driver helper migration in w2"
+      "route": "default generated compiler/phase/artifact execution with independent expectations"
     },
     {
       "title": "restricted compiler division faults preserve zero divisor and minimum/-1 status and stderr",
@@ -912,7 +912,7 @@
         "runText"
       ],
       "originalAssertions": 5,
-      "route": "retained generated/phase/artifact test; actual compiler/driver helper migration in w2"
+      "route": "default generated compiler/phase/artifact execution with independent expectations"
     },
     {
       "title": "Lite-written TS and C compilers lower String values and multi-value reports deterministically",
@@ -922,7 +922,7 @@
         "runCompiler"
       ],
       "originalAssertions": 2,
-      "route": "retained generated/phase/artifact test; actual compiler/driver helper migration in w2"
+      "route": "default generated compiler/phase/artifact execution with independent expectations"
     },
     {
       "title": "compiler applications reject fixture sources with exact diagnostics, positions and docs before artifact output",
@@ -932,7 +932,7 @@
         "runCompiler"
       ],
       "originalAssertions": 7,
-      "route": "retained generated/phase/artifact test; actual compiler/driver helper migration in w2"
+      "route": "default generated compiler/phase/artifact execution with independent expectations"
     },
     {
       "title": "restricted TS compiler emits a deterministic report sequence",
@@ -942,7 +942,7 @@
         "runCompiler"
       ],
       "originalAssertions": 1,
-      "route": "retained generated/phase/artifact test; actual compiler/driver helper migration in w2"
+      "route": "default generated compiler/phase/artifact execution with independent expectations"
     },
     {
       "title": "emitted TS and igniter outputs match byte for byte across the admitted compiler corpus",
@@ -953,7 +953,7 @@
         "spawnSync"
       ],
       "originalAssertions": 9,
-      "route": "retained generated/phase/artifact test; actual compiler/driver helper migration in w2"
+      "route": "default generated compiler/phase/artifact execution with independent expectations"
     },
     {
       "title": "checked-in TS output and explicit Node adapter typecheck and reproduce the reference bytes",
@@ -963,7 +963,7 @@
         "spawnSync"
       ],
       "originalAssertions": 6,
-      "route": "retained generated/phase/artifact test; actual compiler/driver helper migration in w2"
+      "route": "default generated compiler/phase/artifact execution with independent expectations"
     },
     {
       "title": "Lite-written integer calculator handles precedence, associativity, nesting and unary signs",
@@ -973,7 +973,7 @@
         "run"
       ],
       "originalAssertions": 1,
-      "route": "explicit T00 reference; generated equivalent still required in w2 or the owning language-port step"
+      "route": "explicit --reference suite; generated semantic equivalents remain assigned to language-port steps"
     },
     {
       "title": "Lite calculator distinguishes malformed input, unsupported text, EOF and checked arithmetic faults",
@@ -984,7 +984,7 @@
         "fault"
       ],
       "originalAssertions": 4,
-      "route": "explicit T00 reference; generated equivalent still required in w2 or the owning language-port step"
+      "route": "explicit --reference suite; generated semantic equivalents remain assigned to language-port steps"
     },
     {
       "title": "integer calculator runs and checks through the root launcher without extending host syntax",
@@ -994,7 +994,7 @@
         "spawnSync"
       ],
       "originalAssertions": 8,
-      "route": "explicit T00 reference; generated equivalent still required in w2 or the owning language-port step"
+      "route": "explicit --reference suite; generated semantic equivalents remain assigned to language-port steps"
     },
     {
       "title": "retained tokenizer returns named token lists, preserving text and rejecting before traversal output",
@@ -1005,7 +1005,7 @@
         "fault"
       ],
       "originalAssertions": 6,
-      "route": "explicit T00 reference; generated equivalent still required in w2 or the owning language-port step"
+      "route": "explicit --reference suite; generated semantic equivalents remain assigned to language-port steps"
     },
     {
       "title": "retained tokenizer runs and checks through the root launcher with explicit status and Unicode errors",
@@ -1015,7 +1015,7 @@
         "spawnSync"
       ],
       "originalAssertions": 8,
-      "route": "explicit T00 reference; generated equivalent still required in w2 or the owning language-port step"
+      "route": "explicit --reference suite; generated semantic equivalents remain assigned to language-port steps"
     },
     {
       "title": "typed list construction supports known empty elements and preserves the fixed-array default",
@@ -1026,7 +1026,7 @@
         "fault"
       ],
       "originalAssertions": 1,
-      "route": "explicit T00 reference; generated equivalent still required in w2 or the owning language-port step"
+      "route": "explicit --reference suite; generated semantic equivalents remain assigned to language-port steps"
     },
     {
       "title": "both list ends preserve element order, duplicate occurrences and direct pop values",
@@ -1036,7 +1036,7 @@
         "run"
       ],
       "originalAssertions": 1,
-      "route": "explicit T00 reference; generated equivalent still required in w2 or the owning language-port step"
+      "route": "explicit --reference suite; generated semantic equivalents remain assigned to language-port steps"
     },
     {
       "title": "list copies and typed mutable receiving copies remain independent under end operations",
@@ -1046,7 +1046,7 @@
         "run"
       ],
       "originalAssertions": 1,
-      "route": "explicit T00 reference; generated equivalent still required in w2 or the owning language-port step"
+      "route": "explicit --reference suite; generated semantic equivalents remain assigned to language-port steps"
     },
     {
       "title": "list arguments and results retain evaluated snapshots through later argument mutation",
@@ -1056,7 +1056,7 @@
         "run"
       ],
       "originalAssertions": 1,
-      "route": "explicit T00 reference; generated equivalent still required in w2 or the owning language-port step"
+      "route": "explicit --reference suite; generated semantic equivalents remain assigned to language-port steps"
     },
     {
       "title": "flat tuple list elements preserve labels, positional shape and popped copies",
@@ -1067,7 +1067,7 @@
         "fault"
       ],
       "originalAssertions": 1,
-      "route": "explicit T00 reference; generated equivalent still required in w2 or the owning language-port step"
+      "route": "explicit --reference suite; generated semantic equivalents remain assigned to language-port steps"
     },
     {
       "title": "list construction, supplied elements and indexed receivers evaluate once in written order",
@@ -1077,7 +1077,7 @@
         "run"
       ],
       "originalAssertions": 1,
-      "route": "explicit T00 reference; generated equivalent still required in w2 or the owning language-port step"
+      "route": "explicit --reference suite; generated semantic equivalents remain assigned to language-port steps"
     },
     {
       "title": "list traversal evaluates a source snapshot once while original end mutations remain independent",
@@ -1087,7 +1087,7 @@
         "run"
       ],
       "originalAssertions": 1,
-      "route": "explicit T00 reference; generated equivalent still required in w2 or the owning language-port step"
+      "route": "explicit --reference suite; generated semantic equivalents remain assigned to language-port steps"
     },
     {
       "title": "list mutation grants follow lexical slots and never silently capture surrounding runtime data",
@@ -1098,7 +1098,7 @@
         "fault"
       ],
       "originalAssertions": 1,
-      "route": "explicit T00 reference; generated equivalent still required in w2 or the owning language-port step"
+      "route": "explicit --reference suite; generated semantic equivalents remain assigned to language-port steps"
     },
     {
       "title": "list bounds and empty pops are located terminal BoundPanic failures",
@@ -1109,7 +1109,7 @@
         "LiteFault"
       ],
       "originalAssertions": 1,
-      "route": "explicit T00 reference; generated equivalent still required in w2 or the owning language-port step"
+      "route": "explicit --reference suite; generated semantic equivalents remain assigned to language-port steps"
     },
     {
       "title": "faults and exits during list preparation stop later effects and invocation",
@@ -1122,7 +1122,7 @@
         "LiteFault"
       ],
       "originalAssertions": 4,
-      "route": "explicit T00 reference; generated equivalent still required in w2 or the owning language-port step"
+      "route": "explicit --reference suite; generated semantic equivalents remain assigned to language-port steps"
     },
     {
       "title": "invalid list contracts, grants and unsupported aliasing fail before any input or output",
@@ -1134,7 +1134,7 @@
         "LiteFault"
       ],
       "originalAssertions": 2,
-      "route": "explicit T00 reference; generated equivalent still required in w2 or the owning language-port step"
+      "route": "explicit --reference suite; generated semantic equivalents remain assigned to language-port steps"
     },
     {
       "title": "growable list example runs and checks through the launcher with runtime fault diagnostics",
@@ -1144,7 +1144,7 @@
         "spawnSync"
       ],
       "originalAssertions": 6,
-      "route": "explicit T00 reference; generated equivalent still required in w2 or the owning language-port step"
+      "route": "explicit --reference suite; generated semantic equivalents remain assigned to language-port steps"
     },
     {
       "title": "named calls route interleaved positional entries into the next unfilled slot",
@@ -1154,7 +1154,7 @@
         "run"
       ],
       "originalAssertions": 1,
-      "route": "explicit T00 reference; generated equivalent still required in w2 or the owning language-port step"
+      "route": "explicit --reference suite; generated semantic equivalents remain assigned to language-port steps"
     },
     {
       "title": "named call replacement checks only surviving slot types but evaluates every supplied expression",
@@ -1165,7 +1165,7 @@
         "fault"
       ],
       "originalAssertions": 1,
-      "route": "explicit T00 reference; generated equivalent still required in w2 or the owning language-port step"
+      "route": "explicit --reference suite; generated semantic equivalents remain assigned to language-port steps"
     },
     {
       "title": "named call arguments retain callee-before-arguments selection and stop on exits or faults",
@@ -1178,7 +1178,7 @@
         "LiteFault"
       ],
       "originalAssertions": 4,
-      "route": "explicit T00 reference; generated equivalent still required in w2 or the owning language-port step"
+      "route": "explicit --reference suite; generated semantic equivalents remain assigned to language-port steps"
     },
     {
       "title": "named recursive calls and aggregate arguments preserve public labels and stored tuple contracts",
@@ -1189,7 +1189,7 @@
         "fault"
       ],
       "originalAssertions": 1,
-      "route": "explicit T00 reference; generated equivalent still required in w2 or the owning language-port step"
+      "route": "explicit --reference suite; generated semantic equivalents remain assigned to language-port steps"
     },
     {
       "title": "invalid named mappings and unsupported builtin labels fail before effects",
@@ -1201,7 +1201,7 @@
         "LiteFault"
       ],
       "originalAssertions": 2,
-      "route": "explicit T00 reference; generated equivalent still required in w2 or the owning language-port step"
+      "route": "explicit --reference suite; generated semantic equivalents remain assigned to language-port steps"
     },
     {
       "title": "indexed named argument example executes and checks through the root launcher",
@@ -1211,7 +1211,7 @@
         "spawnSync"
       ],
       "originalAssertions": 3,
-      "route": "explicit T00 reference; generated equivalent still required in w2 or the owning language-port step"
+      "route": "explicit --reference suite; generated semantic equivalents remain assigned to language-port steps"
     },
     {
       "title": "typed tuple receiving declarations rename positions without reordering source values",
@@ -1221,7 +1221,7 @@
         "run"
       ],
       "originalAssertions": 1,
-      "route": "explicit T00 reference; generated equivalent still required in w2 or the owning language-port step"
+      "route": "explicit --reference suite; generated semantic equivalents remain assigned to language-port steps"
     },
     {
       "title": "typed tuple declarations evaluate once and preserve source copies and old shadow targets",
@@ -1231,7 +1231,7 @@
         "run"
       ],
       "originalAssertions": 1,
-      "route": "explicit T00 reference; generated equivalent still required in w2 or the owning language-port step"
+      "route": "explicit --reference suite; generated semantic equivalents remain assigned to language-port steps"
     },
     {
       "title": "typed tuple conversions produce ordinary label-sensitive values usable in calls and arrays",
@@ -1242,7 +1242,7 @@
         "fault"
       ],
       "originalAssertions": 1,
-      "route": "explicit T00 reference; generated equivalent still required in w2 or the owning language-port step"
+      "route": "explicit --reference suite; generated semantic equivalents remain assigned to language-port steps"
     },
     {
       "title": "typed tuple conversion rejects incompatible shapes and types before effects",
@@ -1255,7 +1255,7 @@
         "run"
       ],
       "originalAssertions": 4,
-      "route": "explicit T00 reference; generated equivalent still required in w2 or the owning language-port step"
+      "route": "explicit --reference suite; generated semantic equivalents remain assigned to language-port steps"
     },
     {
       "title": "indexed typed tuple conversion example runs and checks through the launcher",
@@ -1265,7 +1265,7 @@
         "spawnSync"
       ],
       "originalAssertions": 3,
-      "route": "explicit T00 reference; generated equivalent still required in w2 or the owning language-port step"
+      "route": "explicit --reference suite; generated semantic equivalents remain assigned to language-port steps"
     },
     {
       "title": "mixed tuples preserve interleaved positions, shorthand and source evaluation order",
@@ -1275,7 +1275,7 @@
         "run"
       ],
       "originalAssertions": 1,
-      "route": "explicit T00 reference; generated equivalent still required in w2 or the owning language-port step"
+      "route": "explicit --reference suite; generated semantic equivalents remain assigned to language-port steps"
     },
     {
       "title": "mixed tuple copies, function contracts and homogeneous arrays retain labels and order",
@@ -1285,7 +1285,7 @@
         "run"
       ],
       "originalAssertions": 1,
-      "route": "explicit T00 reference; generated equivalent still required in w2 or the owning language-port step"
+      "route": "explicit --reference suite; generated semantic equivalents remain assigned to language-port steps"
     },
     {
       "title": "mixed tuple identity rejects label movement, duplication and unknown fields before effects",
@@ -1297,7 +1297,7 @@
         "LiteFault"
       ],
       "originalAssertions": 2,
-      "route": "explicit T00 reference; generated equivalent still required in w2 or the owning language-port step"
+      "route": "explicit --reference suite; generated semantic equivalents remain assigned to language-port steps"
     },
     {
       "title": "indexed mixed tuple example executes and checks without effects",
@@ -1307,7 +1307,7 @@
         "spawnSync"
       ],
       "originalAssertions": 3,
-      "route": "explicit T00 reference; generated equivalent still required in w2 or the owning language-port step"
+      "route": "explicit --reference suite; generated semantic equivalents remain assigned to language-port steps"
     },
     {
       "title": "first checkpoint: stdin integers, mutation, arithmetic and explicit report",
@@ -1317,7 +1317,7 @@
         "run"
       ],
       "originalAssertions": 2,
-      "route": "explicit T00 reference; generated equivalent still required in w2 or the owning language-port step"
+      "route": "explicit --reference suite; generated semantic equivalents remain assigned to language-port steps"
     },
     {
       "title": "Unit completion and no automatic binding/expression output",
@@ -1327,7 +1327,7 @@
         "run"
       ],
       "originalAssertions": 2,
-      "route": "explicit T00 reference; generated equivalent still required in w2 or the owning language-port step"
+      "route": "explicit --reference suite; generated semantic equivalents remain assigned to language-port steps"
     },
     {
       "title": "shadowing retains earlier copies; same-name initializer sees previous binding",
@@ -1337,7 +1337,7 @@
         "run"
       ],
       "originalAssertions": 1,
-      "route": "explicit T00 reference; generated equivalent still required in w2 or the owning language-port step"
+      "route": "explicit --reference suite; generated semantic equivalents remain assigned to language-port steps"
     },
     {
       "title": "all syntax/name/type checking precedes input or output",
@@ -1349,7 +1349,7 @@
         "LiteFault"
       ],
       "originalAssertions": 2,
-      "route": "explicit T00 reference; generated equivalent still required in w2 or the owning language-port step"
+      "route": "explicit --reference suite; generated semantic equivalents remain assigned to language-port steps"
     },
     {
       "title": "builtin spelling can be shadowed without calling hidden implementation",
@@ -1360,7 +1360,7 @@
         "fault"
       ],
       "originalAssertions": 1,
-      "route": "explicit T00 reference; generated equivalent still required in w2 or the owning language-port step"
+      "route": "explicit --reference suite; generated semantic equivalents remain assigned to language-port steps"
     },
     {
       "title": "precedence, exact integer division and fractional mixed division",
@@ -1370,7 +1370,7 @@
         "run"
       ],
       "originalAssertions": 3,
-      "route": "explicit T00 reference; generated equivalent still required in w2 or the owning language-port step"
+      "route": "explicit --reference suite; generated semantic equivalents remain assigned to language-port steps"
     },
     {
       "title": "truncating remainder follows the dividend and rejects zero or Float",
@@ -1381,7 +1381,7 @@
         "fault"
       ],
       "originalAssertions": 2,
-      "route": "explicit T00 reference; generated equivalent still required in w2 or the owning language-port step"
+      "route": "explicit --reference suite; generated semantic equivalents remain assigned to language-port steps"
     },
     {
       "title": "floor division, floor modulo and compound updates follow documented signs",
@@ -1392,7 +1392,7 @@
         "fault"
       ],
       "originalAssertions": 7,
-      "route": "explicit T00 reference; generated equivalent still required in w2 or the owning language-port step"
+      "route": "explicit --reference suite; generated semantic equivalents remain assigned to language-port steps"
     },
     {
       "title": "inferred mut and var mut declarations grant writable list access",
@@ -1403,7 +1403,7 @@
         "fault"
       ],
       "originalAssertions": 2,
-      "route": "explicit T00 reference; generated equivalent still required in w2 or the owning language-port step"
+      "route": "explicit --reference suite; generated semantic equivalents remain assigned to language-port steps"
     },
     {
       "title": "power is right-associative, Float-default and positive-exponent only",
@@ -1414,7 +1414,7 @@
         "fault"
       ],
       "originalAssertions": 2,
-      "route": "explicit T00 reference; generated equivalent still required in w2 or the owning language-port step"
+      "route": "explicit --reference suite; generated semantic equivalents remain assigned to language-port steps"
     },
     {
       "title": "subjectless match selects the first true arm and requires a final fallback",
@@ -1425,7 +1425,7 @@
         "fault"
       ],
       "originalAssertions": 2,
-      "route": "explicit T00 reference; generated equivalent still required in w2 or the owning language-port step"
+      "route": "explicit --reference suite; generated semantic equivalents remain assigned to language-port steps"
     },
     {
       "title": "typed scalar, tuple and fixed-array declarations initialize or zero-initialize",
@@ -1436,7 +1436,7 @@
         "fault"
       ],
       "originalAssertions": 3,
-      "route": "explicit T00 reference; generated equivalent still required in w2 or the owning language-port step"
+      "route": "explicit --reference suite; generated semantic equivalents remain assigned to language-port steps"
     },
     {
       "title": "reserved storage initializes once and rejects reads before its first whole-value write",
@@ -1447,7 +1447,7 @@
         "fault"
       ],
       "originalAssertions": 7,
-      "route": "explicit T00 reference; generated equivalent still required in w2 or the owning language-port step"
+      "route": "explicit --reference suite; generated semantic equivalents remain assigned to language-port steps"
     },
     {
       "title": "reserved storage requires initialization on every path that reaches a read",
@@ -1458,7 +1458,7 @@
         "fault"
       ],
       "originalAssertions": 3,
-      "route": "explicit T00 reference; generated equivalent still required in w2 or the owning language-port step"
+      "route": "explicit --reference suite; generated semantic equivalents remain assigned to language-port steps"
     },
     {
       "title": "loops accumulate typed .value and an optional then completion",
@@ -1469,7 +1469,7 @@
         "fault"
       ],
       "originalAssertions": 13,
-      "route": "explicit T00 reference; generated equivalent still required in w2 or the owning language-port step"
+      "route": "explicit --reference suite; generated semantic equivalents remain assigned to language-port steps"
     },
     {
       "title": "loop metadata, payload exits and tagged targets complete loops",
@@ -1480,7 +1480,7 @@
         "fault"
       ],
       "originalAssertions": 11,
-      "route": "explicit T00 reference; generated equivalent still required in w2 or the owning language-port step"
+      "route": "explicit --reference suite; generated semantic equivalents remain assigned to language-port steps"
     },
     {
       "title": "construct-level finally runs after then and on every exit",
@@ -1493,7 +1493,7 @@
         "LiteFault"
       ],
       "originalAssertions": 9,
-      "route": "explicit T00 reference; generated equivalent still required in w2 or the owning language-port step"
+      "route": "explicit --reference suite; generated semantic equivalents remain assigned to language-port steps"
     },
     {
       "title": "numeric widths promote, widen losslessly and range-check",
@@ -1504,7 +1504,7 @@
         "fault"
       ],
       "originalAssertions": 14,
-      "route": "explicit T00 reference; generated equivalent still required in w2 or the owning language-port step"
+      "route": "explicit --reference suite; generated semantic equivalents remain assigned to language-port steps"
     },
     {
       "title": "integer arithmetic cannot silently wrap",
@@ -1514,7 +1514,7 @@
         "fault"
       ],
       "originalAssertions": 0,
-      "route": "explicit T00 reference; generated equivalent still required in w2 or the owning language-port step"
+      "route": "explicit --reference suite; generated semantic equivalents remain assigned to language-port steps"
     },
     {
       "title": "zero divisors, non-finite results, and literals fault",
@@ -1525,7 +1525,7 @@
         "run"
       ],
       "originalAssertions": 1,
-      "route": "explicit T00 reference; generated equivalent still required in w2 or the owning language-port step"
+      "route": "explicit --reference suite; generated semantic equivalents remain assigned to language-port steps"
     },
     {
       "title": "direct input faults instead of retrying or fabricating values",
@@ -1536,7 +1536,7 @@
         "run"
       ],
       "originalAssertions": 1,
-      "route": "explicit T00 reference; generated equivalent still required in w2 or the owning language-port step"
+      "route": "explicit --reference suite; generated semantic equivalents remain assigned to language-port steps"
     },
     {
       "title": "line/word input, empty lines, unterminated final lines, Unicode, and shared cursor",
@@ -1547,7 +1547,7 @@
         "fault"
       ],
       "originalAssertions": 5,
-      "route": "explicit T00 reference; generated equivalent still required in w2 or the owning language-port step"
+      "route": "explicit --reference suite; generated semantic equivalents remain assigned to language-port steps"
     },
     {
       "title": "text tokens are data, including keyword and punctuation lookalikes",
@@ -1558,7 +1558,7 @@
         "fault"
       ],
       "originalAssertions": 2,
-      "route": "explicit T00 reference; generated equivalent still required in w2 or the owning language-port step"
+      "route": "explicit --reference suite; generated semantic equivalents remain assigned to language-port steps"
     },
     {
       "title": "nested/raw comments do not create code or separators",
@@ -1569,7 +1569,7 @@
         "fault"
       ],
       "originalAssertions": 2,
-      "route": "explicit T00 reference; generated equivalent still required in w2 or the owning language-port step"
+      "route": "explicit --reference suite; generated semantic equivalents remain assigned to language-port steps"
     },
     {
       "title": "reportError is report-only and exit explicitly prevents continuation",
@@ -1580,7 +1580,7 @@
         "fault"
       ],
       "originalAssertions": 3,
-      "route": "explicit T00 reference; generated equivalent still required in w2 or the owning language-port step"
+      "route": "explicit --reference suite; generated semantic equivalents remain assigned to language-port steps"
     },
     {
       "title": "existing lessons remain unchanged and execute within the supported subset",
@@ -1590,7 +1590,7 @@
         "run"
       ],
       "originalAssertions": 2,
-      "route": "explicit T00 reference; generated equivalent still required in w2 or the owning language-port step"
+      "route": "explicit --reference suite; generated semantic equivalents remain assigned to language-port steps"
     },
     {
       "title": "CLI: direct TS run, exact statuses, source locations, and check-only mode",
@@ -1600,7 +1600,7 @@
         "spawnSync"
       ],
       "originalAssertions": 9,
-      "route": "explicit T00 reference; generated equivalent still required in w2 or the owning language-port step"
+      "route": "explicit --reference suite; generated semantic equivalents remain assigned to language-port steps"
     },
     {
       "title": "Bool values and complete same-type conditional expressions",
@@ -1610,7 +1610,7 @@
         "run"
       ],
       "originalAssertions": 5,
-      "route": "explicit T00 reference; generated equivalent still required in w2 or the owning language-port step"
+      "route": "explicit --reference suite; generated semantic equivalents remain assigned to language-port steps"
     },
     {
       "title": "only the selected branch executes; action conditionals may omit else",
@@ -1620,7 +1620,7 @@
         "run"
       ],
       "originalAssertions": 6,
-      "route": "explicit T00 reference; generated equivalent still required in w2 or the owning language-port step"
+      "route": "explicit --reference suite; generated semantic equivalents remain assigned to language-port steps"
     },
     {
       "title": "blocks and branches have lexical scope, scalar results, and Unit declaration tails",
@@ -1631,7 +1631,7 @@
         "fault"
       ],
       "originalAssertions": 4,
-      "route": "explicit T00 reference; generated equivalent still required in w2 or the owning language-port step"
+      "route": "explicit --reference suite; generated semantic equivalents remain assigned to language-port steps"
     },
     {
       "title": "truthiness, branch unions, partial value conditionals and malformed branches are rejected",
@@ -1644,7 +1644,7 @@
         "LiteFault"
       ],
       "originalAssertions": 2,
-      "route": "explicit T00 reference; generated equivalent still required in w2 or the owning language-port step"
+      "route": "explicit --reference suite; generated semantic equivalents remain assigned to language-port steps"
     },
     {
       "title": "partial conditionals give declarations a default and skip false assignment writes",
@@ -1655,7 +1655,7 @@
         "fault"
       ],
       "originalAssertions": 14,
-      "route": "explicit T00 reference; generated equivalent still required in w2 or the owning language-port step"
+      "route": "explicit --reference suite; generated semantic equivalents remain assigned to language-port steps"
     },
     {
       "title": "short-circuit logic preserves operand order and Bool-only conditions",
@@ -1666,7 +1666,7 @@
         "fault"
       ],
       "originalAssertions": 3,
-      "route": "explicit T00 reference; generated equivalent still required in w2 or the owning language-port step"
+      "route": "explicit --reference suite; generated semantic equivalents remain assigned to language-port steps"
     },
     {
       "title": "comparison chains retain the middle value once and skip later operands",
@@ -1677,7 +1677,7 @@
         "fault"
       ],
       "originalAssertions": 5,
-      "route": "explicit T00 reference; generated equivalent still required in w2 or the owning language-port step"
+      "route": "explicit --reference suite; generated semantic equivalents remain assigned to language-port steps"
     },
     {
       "title": "all ten comparison operators complement their adjacent positive form",
@@ -1688,7 +1688,7 @@
         "fault"
       ],
       "originalAssertions": 2,
-      "route": "explicit T00 reference; generated equivalent still required in w2 or the owning language-port step"
+      "route": "explicit --reference suite; generated semantic equivalents remain assigned to language-port steps"
     },
     {
       "title": "Boolean loops test before entry and reevaluate the header after each body",
@@ -1698,7 +1698,7 @@
         "run"
       ],
       "originalAssertions": 4,
-      "route": "explicit T00 reference; generated equivalent still required in w2 or the owning language-port step"
+      "route": "explicit --reference suite; generated semantic equivalents remain assigned to language-port steps"
     },
     {
       "title": "continue skips the body tail and reevaluates the condition",
@@ -1708,7 +1708,7 @@
         "run"
       ],
       "originalAssertions": 2,
-      "route": "explicit T00 reference; generated equivalent still required in w2 or the owning language-port step"
+      "route": "explicit --reference suite; generated semantic equivalents remain assigned to language-port steps"
     },
     {
       "title": "bare break ends the nearest loop without rechecking its condition",
@@ -1718,7 +1718,7 @@
         "run"
       ],
       "originalAssertions": 3,
-      "route": "explicit T00 reference; generated equivalent still required in w2 or the owning language-port step"
+      "route": "explicit --reference suite; generated semantic equivalents remain assigned to language-port steps"
     },
     {
       "title": "nested continue stays in the inner loop and execution resumes after it",
@@ -1728,7 +1728,7 @@
         "run"
       ],
       "originalAssertions": 1,
-      "route": "explicit T00 reference; generated equivalent still required in w2 or the owning language-port step"
+      "route": "explicit --reference suite; generated semantic equivalents remain assigned to language-port steps"
     },
     {
       "title": "body locals initialize on every entry; header and outer shadows keep their bindings",
@@ -1739,7 +1739,7 @@
         "fault"
       ],
       "originalAssertions": 2,
-      "route": "explicit T00 reference; generated equivalent still required in w2 or the owning language-port step"
+      "route": "explicit --reference suite; generated semantic equivalents remain assigned to language-port steps"
     },
     {
       "title": "loops reject invalid sources, escaping controls, and value/completion forms before effects",
@@ -1752,7 +1752,7 @@
         "LiteFault"
       ],
       "originalAssertions": 2,
-      "route": "explicit T00 reference; generated equivalent still required in w2 or the owning language-port step"
+      "route": "explicit --reference suite; generated semantic equivalents remain assigned to language-port steps"
     },
     {
       "title": "program exit and runtime faults propagate through nested loops",
@@ -1763,7 +1763,7 @@
         "fault"
       ],
       "originalAssertions": 1,
-      "route": "explicit T00 reference; generated equivalent still required in w2 or the owning language-port step"
+      "route": "explicit --reference suite; generated semantic equivalents remain assigned to language-port steps"
     },
     {
       "title": "sentinel-input sum example runs through the real CLI",
@@ -1774,7 +1774,7 @@
         "spawnSync"
       ],
       "originalAssertions": 6,
-      "route": "explicit T00 reference; generated equivalent still required in w2 or the owning language-port step"
+      "route": "explicit --reference suite; generated semantic equivalents remain assigned to language-port steps"
     },
     {
       "title": "typed functions accept scalar inputs and yield tail or explicit results without automatic output",
@@ -1784,7 +1784,7 @@
         "run"
       ],
       "originalAssertions": 2,
-      "route": "explicit T00 reference; generated equivalent still required in w2 or the owning language-port step"
+      "route": "explicit --reference suite; generated semantic equivalents remain assigned to language-port steps"
     },
     {
       "title": "ordinary function values copy, shadow helpers, and replace only compatible var bindings",
@@ -1795,7 +1795,7 @@
         "fault"
       ],
       "originalAssertions": 1,
-      "route": "explicit T00 reference; generated equivalent still required in w2 or the owning language-port step"
+      "route": "explicit --reference suite; generated semantic equivalents remain assigned to language-port steps"
     },
     {
       "title": "calls select the callee once before arguments and evaluate arguments left to right",
@@ -1805,7 +1805,7 @@
         "run"
       ],
       "originalAssertions": 1,
-      "route": "explicit T00 reference; generated equivalent still required in w2 or the owning language-port step"
+      "route": "explicit --reference suite; generated semantic equivalents remain assigned to language-port steps"
     },
     {
       "title": "self recursion and direct own-name recursion keep separate call locals",
@@ -1815,7 +1815,7 @@
         "run"
       ],
       "originalAssertions": 1,
-      "route": "explicit T00 reference; generated equivalent still required in w2 or the owning language-port step"
+      "route": "explicit --reference suite; generated semantic equivalents remain assigned to language-port steps"
     },
     {
       "title": "parameters, local vars and block shadows belong to each invocation",
@@ -1826,7 +1826,7 @@
         "fault"
       ],
       "originalAssertions": 1,
-      "route": "explicit T00 reference; generated equivalent still required in w2 or the owning language-port step"
+      "route": "explicit --reference suite; generated semantic equivalents remain assigned to language-port steps"
     },
     {
       "title": "an earlier same-name helper remains the ordinary named recursion target",
@@ -1836,7 +1836,7 @@
         "run"
       ],
       "originalAssertions": 1,
-      "route": "explicit T00 reference; generated equivalent still required in w2 or the owning language-port step"
+      "route": "explicit --reference suite; generated semantic equivalents remain assigned to language-port steps"
     },
     {
       "title": "self calls retain the executing implementation after its source binding is replaced",
@@ -1846,7 +1846,7 @@
         "run"
       ],
       "originalAssertions": 1,
-      "route": "explicit T00 reference; generated equivalent still required in w2 or the owning language-port step"
+      "route": "explicit --reference suite; generated semantic equivalents remain assigned to language-port steps"
     },
     {
       "title": "admitted helper references read live bindings and ignore later shadows",
@@ -1856,7 +1856,7 @@
         "run"
       ],
       "originalAssertions": 1,
-      "route": "explicit T00 reference; generated equivalent still required in w2 or the owning language-port step"
+      "route": "explicit --reference suite; generated semantic equivalents remain assigned to language-port steps"
     },
     {
       "title": "escaped helpers preserve distinct environments from repeated block activations",
@@ -1866,7 +1866,7 @@
         "run"
       ],
       "originalAssertions": 1,
-      "route": "explicit T00 reference; generated equivalent still required in w2 or the owning language-port step"
+      "route": "explicit --reference suite; generated semantic equivalents remain assigned to language-port steps"
     },
     {
       "title": "return exits the nearest function through loops and nested calls return locally",
@@ -1877,7 +1877,7 @@
         "fault"
       ],
       "originalAssertions": 1,
-      "route": "explicit T00 reference; generated equivalent still required in w2 or the owning language-port step"
+      "route": "explicit --reference suite; generated semantic equivalents remain assigned to language-port steps"
     },
     {
       "title": "exit, input faults and arithmetic faults propagate through user functions",
@@ -1888,7 +1888,7 @@
         "fault"
       ],
       "originalAssertions": 1,
-      "route": "explicit T00 reference; generated equivalent still required in w2 or the owning language-port step"
+      "route": "explicit --reference suite; generated semantic equivalents remain assigned to language-port steps"
     },
     {
       "title": "invalid signatures, captures, forward references and unsupported forms fail before effects",
@@ -1901,7 +1901,7 @@
         "fault"
       ],
       "originalAssertions": 2,
-      "route": "explicit T00 reference; generated equivalent still required in w2 or the owning language-port step"
+      "route": "explicit --reference suite; generated semantic equivalents remain assigned to language-port steps"
     },
     {
       "title": "factorial example runs through real CLI with checked results and failures",
@@ -1913,7 +1913,7 @@
         "spawnSync"
       ],
       "originalAssertions": 6,
-      "route": "explicit T00 reference; generated equivalent still required in w2 or the owning language-port step"
+      "route": "explicit --reference suite; generated semantic equivalents remain assigned to language-port steps"
     },
     {
       "title": "computed String concatenation preserves contents and ordinary value copies",
@@ -1924,7 +1924,7 @@
         "fault"
       ],
       "originalAssertions": 1,
-      "route": "explicit T00 reference; generated equivalent still required in w2 or the owning language-port step"
+      "route": "explicit --reference suite; generated semantic equivalents remain assigned to language-port steps"
     },
     {
       "title": "text helpers use consistent code-point positions without normalization or grapheme grouping",
@@ -1934,7 +1934,7 @@
         "run"
       ],
       "originalAssertions": 2,
-      "route": "explicit T00 reference; generated equivalent still required in w2 or the owning language-port step"
+      "route": "explicit --reference suite; generated semantic equivalents remain assigned to language-port steps"
     },
     {
       "title": "textSlice admits empty and full half-open intervals, including the end of empty text",
@@ -1944,7 +1944,7 @@
         "run"
       ],
       "originalAssertions": 1,
-      "route": "explicit T00 reference; generated equivalent still required in w2 or the owning language-port step"
+      "route": "explicit --reference suite; generated semantic equivalents remain assigned to language-port steps"
     },
     {
       "title": "invalid text positions fault without negative wrapping, clamping or huge-index rounding",
@@ -1954,7 +1954,7 @@
         "fault"
       ],
       "originalAssertions": 0,
-      "route": "explicit T00 reference; generated equivalent still required in w2 or the owning language-port step"
+      "route": "explicit --reference suite; generated semantic equivalents remain assigned to language-port steps"
     },
     {
       "title": "text operands and helper arguments execute once in written order before bounds checks",
@@ -1967,7 +1967,7 @@
         "LiteFault"
       ],
       "originalAssertions": 3,
-      "route": "explicit T00 reference; generated equivalent still required in w2 or the owning language-port step"
+      "route": "explicit --reference suite; generated semantic equivalents remain assigned to language-port steps"
     },
     {
       "title": "text signatures are checked before effects and temporary helper names can be shadowed",
@@ -1980,7 +1980,7 @@
         "run"
       ],
       "originalAssertions": 3,
-      "route": "explicit T00 reference; generated equivalent still required in w2 or the owning language-port step"
+      "route": "explicit --reference suite; generated semantic equivalents remain assigned to language-port steps"
     },
     {
       "title": "a Lite function can scan and reconstruct text recursively with the temporary helpers",
@@ -1990,7 +1990,7 @@
         "run"
       ],
       "originalAssertions": 1,
-      "route": "explicit T00 reference; generated equivalent still required in w2 or the owning language-port step"
+      "route": "explicit --reference suite; generated semantic equivalents remain assigned to language-port steps"
     },
     {
       "title": "Lite arithmetic tokenizer handles final digits, whitespace, punctuation and explicit rejection",
@@ -2001,7 +2001,7 @@
         "fault"
       ],
       "originalAssertions": 6,
-      "route": "explicit T00 reference; generated equivalent still required in w2 or the owning language-port step"
+      "route": "explicit --reference suite; generated semantic equivalents remain assigned to language-port steps"
     },
     {
       "title": "real CLI runs the Lite tokenizer, preserves supplementary text, and reports bounds locations",
@@ -2011,7 +2011,7 @@
         "spawnSync"
       ],
       "originalAssertions": 16,
-      "route": "explicit T00 reference; generated equivalent still required in w2 or the owning language-port step"
+      "route": "explicit --reference suite; generated semantic equivalents remain assigned to language-port steps"
     },
     {
       "title": "flat fixed tuple construction and positional reads retain heterogeneous scalar types",
@@ -2021,7 +2021,7 @@
         "run"
       ],
       "originalAssertions": 2,
-      "route": "explicit T00 reference; generated equivalent still required in w2 or the owning language-port step"
+      "route": "explicit --reference suite; generated semantic equivalents remain assigned to language-port steps"
     },
     {
       "title": "tuple expressions and receivers evaluate once in written order",
@@ -2031,7 +2031,7 @@
         "run"
       ],
       "originalAssertions": 1,
-      "route": "explicit T00 reference; generated equivalent still required in w2 or the owning language-port step"
+      "route": "explicit --reference suite; generated semantic equivalents remain assigned to language-port steps"
     },
     {
       "title": "Unit, grouping, singleton tuples and Unit-valued positions keep distinct shapes",
@@ -2042,7 +2042,7 @@
         "fault"
       ],
       "originalAssertions": 1,
-      "route": "explicit T00 reference; generated equivalent still required in w2 or the owning language-port step"
+      "route": "explicit --reference suite; generated semantic equivalents remain assigned to language-port steps"
     },
     {
       "title": "destructuring resolves the source first, then shadows receiver names in written order",
@@ -2053,7 +2053,7 @@
         "fault"
       ],
       "originalAssertions": 2,
-      "route": "explicit T00 reference; generated equivalent still required in w2 or the owning language-port step"
+      "route": "explicit --reference suite; generated semantic equivalents remain assigned to language-port steps"
     },
     {
       "title": "ordinary tuple copies survive whole-value var replacement and later shadows",
@@ -2064,7 +2064,7 @@
         "fault"
       ],
       "originalAssertions": 1,
-      "route": "explicit T00 reference; generated equivalent still required in w2 or the owning language-port step"
+      "route": "explicit --reference suite; generated semantic equivalents remain assigned to language-port steps"
     },
     {
       "title": "explicit tuple inputs and outputs support tail returns, early returns and compatible replacement",
@@ -2075,7 +2075,7 @@
         "fault"
       ],
       "originalAssertions": 1,
-      "route": "explicit T00 reference; generated equivalent still required in w2 or the owning language-port step"
+      "route": "explicit --reference suite; generated semantic equivalents remain assigned to language-port steps"
     },
     {
       "title": "a tuple is one ordinary call argument and is copied at its evaluation position",
@@ -2086,7 +2086,7 @@
         "fault"
       ],
       "originalAssertions": 1,
-      "route": "explicit T00 reference; generated equivalent still required in w2 or the owning language-port step"
+      "route": "explicit --reference suite; generated semantic equivalents remain assigned to language-port steps"
     },
     {
       "title": "tuple parameters and destructured locals remain separate across recursive calls",
@@ -2097,7 +2097,7 @@
         "fault"
       ],
       "originalAssertions": 1,
-      "route": "explicit T00 reference; generated equivalent still required in w2 or the owning language-port step"
+      "route": "explicit --reference suite; generated semantic equivalents remain assigned to language-port steps"
     },
     {
       "title": "invalid tuple shapes, positions and transfers fail before any input or output",
@@ -2110,7 +2110,7 @@
         "fault"
       ],
       "originalAssertions": 2,
-      "route": "explicit T00 reference; generated equivalent still required in w2 or the owning language-port step"
+      "route": "explicit --reference suite; generated semantic equivalents remain assigned to language-port steps"
     },
     {
       "title": "tuple demonstration runs from the numbered project examples through the real CLI",
@@ -2121,7 +2121,7 @@
         "spawnSync"
       ],
       "originalAssertions": 5,
-      "route": "explicit T00 reference; generated equivalent still required in w2 or the owning language-port step"
+      "route": "explicit --reference suite; generated semantic equivalents remain assigned to language-port steps"
     },
     {
       "title": "root launcher compiles artifacts and forwards their input, diagnostics and status from caller directories",
@@ -2132,7 +2132,7 @@
         "fault"
       ],
       "originalAssertions": 21,
-      "route": "retained generated/phase/artifact test; actual compiler/driver helper migration in w2"
+      "route": "default generated compiler/phase/artifact execution with independent expectations"
     },
     {
       "title": "inputInt optionally writes an exact String prompt before reading without an added newline",
@@ -2144,7 +2144,7 @@
         "compile"
       ],
       "originalAssertions": 4,
-      "route": "explicit T00 reference; generated equivalent still required in w2 or the owning language-port step"
+      "route": "explicit --reference suite; generated semantic equivalents remain assigned to language-port steps"
     },
     {
       "title": "invalid or missing input faults after one prompt; prompt output failure prevents reading",
@@ -2156,7 +2156,7 @@
         "LiteFault"
       ],
       "originalAssertions": 4,
-      "route": "explicit T00 reference; generated equivalent still required in w2 or the owning language-port step"
+      "route": "explicit --reference suite; generated semantic equivalents remain assigned to language-port steps"
     },
     {
       "title": "report joins one or more ordinary scalar values with spaces and exactly one final newline",
@@ -2166,7 +2166,7 @@
         "run"
       ],
       "originalAssertions": 3,
-      "route": "explicit T00 reference; generated equivalent still required in w2 or the owning language-port step"
+      "route": "explicit --reference suite; generated semantic equivalents remain assigned to language-port steps"
     },
     {
       "title": "report evaluates each argument once left to right and writes the joined line after evaluation",
@@ -2179,7 +2179,7 @@
         "LiteFault"
       ],
       "originalAssertions": 3,
-      "route": "explicit T00 reference; generated equivalent still required in w2 or the owning language-port step"
+      "route": "explicit --reference suite; generated semantic equivalents remain assigned to language-port steps"
     },
     {
       "title": "prompt and report signatures fail before effects without broadening other helpers or tuple spread",
@@ -2193,7 +2193,7 @@
         "run"
       ],
       "originalAssertions": 3,
-      "route": "explicit T00 reference; generated equivalent still required in w2 or the owning language-port step"
+      "route": "explicit --reference suite; generated semantic equivalents remain assigned to language-port steps"
     },
     {
       "title": "report displays flat tuples source-like with labels and a singleton comma",
@@ -2204,7 +2204,7 @@
         "fault"
       ],
       "originalAssertions": 5,
-      "route": "explicit T00 reference; generated equivalent still required in w2 or the owning language-port step"
+      "route": "explicit --reference suite; generated semantic equivalents remain assigned to language-port steps"
     },
     {
       "title": "numbered prompt/report example runs through the root command with real redirected stdin",
@@ -2215,7 +2215,7 @@
         "spawnSync"
       ],
       "originalAssertions": 9,
-      "route": "explicit T00 reference; generated equivalent still required in w2 or the owning language-port step"
+      "route": "explicit --reference suite; generated semantic equivalents remain assigned to language-port steps"
     },
     {
       "title": "named scalar tuple members agree with fixed numeric positions without inferring bare-name labels",
@@ -2226,7 +2226,7 @@
         "fault"
       ],
       "originalAssertions": 2,
-      "route": "explicit T00 reference; generated equivalent still required in w2 or the owning language-port step"
+      "route": "explicit --reference suite; generated semantic equivalents remain assigned to language-port steps"
     },
     {
       "title": "same-name shorthand copies a lexical value while explicit labels do not assign that lexical binding",
@@ -2237,7 +2237,7 @@
         "fault"
       ],
       "originalAssertions": 1,
-      "route": "explicit T00 reference; generated equivalent still required in w2 or the owning language-port step"
+      "route": "explicit --reference suite; generated semantic equivalents remain assigned to language-port steps"
     },
     {
       "title": "named singleton value/type forms need no comma and do not erase Unit-valued members",
@@ -2248,7 +2248,7 @@
         "fault"
       ],
       "originalAssertions": 1,
-      "route": "explicit T00 reference; generated equivalent still required in w2 or the owning language-port step"
+      "route": "explicit --reference suite; generated semantic equivalents remain assigned to language-port steps"
     },
     {
       "title": "named tuple construction and member receivers evaluate once in written order",
@@ -2258,7 +2258,7 @@
         "run"
       ],
       "originalAssertions": 1,
-      "route": "explicit T00 reference; generated equivalent still required in w2 or the owning language-port step"
+      "route": "explicit --reference suite; generated semantic equivalents remain assigned to language-port steps"
     },
     {
       "title": "named tuple copies, grouping and positional binding preserve stored order and independent values",
@@ -2268,7 +2268,7 @@
         "run"
       ],
       "originalAssertions": 1,
-      "route": "explicit T00 reference; generated equivalent still required in w2 or the owning language-port step"
+      "route": "explicit --reference suite; generated semantic equivalents remain assigned to language-port steps"
     },
     {
       "title": "explicit named tuple inputs/results and recursive calls preserve label-sensitive contracts",
@@ -2278,7 +2278,7 @@
         "run"
       ],
       "originalAssertions": 1,
-      "route": "explicit T00 reference; generated equivalent still required in w2 or the owning language-port step"
+      "route": "explicit --reference suite; generated semantic equivalents remain assigned to language-port steps"
     },
     {
       "title": "stored tuple transfers never silently relabel or reorder through a known parameter/result type",
@@ -2289,7 +2289,7 @@
         "LiteFault"
       ],
       "originalAssertions": 1,
-      "route": "explicit T00 reference; generated equivalent still required in w2 or the owning language-port step"
+      "route": "explicit --reference suite; generated semantic equivalents remain assigned to language-port steps"
     },
     {
       "title": "valid contextual fresh-constructor routing is diagnosed as unimplemented rather than a new order rule",
@@ -2300,7 +2300,7 @@
         "LiteFault"
       ],
       "originalAssertions": 1,
-      "route": "explicit T00 reference; generated equivalent still required in w2 or the owning language-port step"
+      "route": "explicit --reference suite; generated semantic equivalents remain assigned to language-port steps"
     },
     {
       "title": "invalid labels and unsupported tuple extensions are rejected before effects",
@@ -2312,7 +2312,7 @@
         "LiteFault"
       ],
       "originalAssertions": 2,
-      "route": "explicit T00 reference; generated equivalent still required in w2 or the owning language-port step"
+      "route": "explicit --reference suite; generated semantic equivalents remain assigned to language-port steps"
     },
     {
       "title": "named tuple example runs through the root launcher and check-only mode",
@@ -2323,7 +2323,7 @@
         "spawnSync"
       ],
       "originalAssertions": 5,
-      "route": "explicit T00 reference; generated equivalent still required in w2 or the owning language-port step"
+      "route": "explicit --reference suite; generated semantic equivalents remain assigned to language-port steps"
     },
     {
       "title": "homogeneous scalar arrays have fixed extents and matching dot/bracket reads",
@@ -2334,7 +2334,7 @@
         "fault"
       ],
       "originalAssertions": 1,
-      "route": "explicit T00 reference; generated equivalent still required in w2 or the owning language-port step"
+      "route": "explicit --reference suite; generated semantic equivalents remain assigned to language-port steps"
     },
     {
       "title": "array constructors and bracket receivers/indices evaluate once in written order",
@@ -2344,7 +2344,7 @@
         "run"
       ],
       "originalAssertions": 2,
-      "route": "explicit T00 reference; generated equivalent still required in w2 or the owning language-port step"
+      "route": "explicit --reference suite; generated semantic equivalents remain assigned to language-port steps"
     },
     {
       "title": "array bracket bounds fault safely while invalid static dot positions fail before execution",
@@ -2355,7 +2355,7 @@
         "run"
       ],
       "originalAssertions": 1,
-      "route": "explicit T00 reference; generated equivalent still required in w2 or the owning language-port step"
+      "route": "explicit --reference suite; generated semantic equivalents remain assigned to language-port steps"
     },
     {
       "title": "array traversal evaluates its source once and creates fresh scoped body/item bindings",
@@ -2366,7 +2366,7 @@
         "fault"
       ],
       "originalAssertions": 1,
-      "route": "explicit T00 reference; generated equivalent still required in w2 or the owning language-port step"
+      "route": "explicit --reference suite; generated semantic equivalents remain assigned to language-port steps"
     },
     {
       "title": "unnamed array traversal introduces no implicit variable and receiver shadowing stays in the body",
@@ -2377,7 +2377,7 @@
         "fault"
       ],
       "originalAssertions": 2,
-      "route": "explicit T00 reference; generated equivalent still required in w2 or the owning language-port step"
+      "route": "explicit --reference suite; generated semantic equivalents remain assigned to language-port steps"
     },
     {
       "title": "traversal retains the evaluated array value when its original variable is replaced",
@@ -2387,7 +2387,7 @@
         "run"
       ],
       "originalAssertions": 1,
-      "route": "explicit T00 reference; generated equivalent still required in w2 or the owning language-port step"
+      "route": "explicit --reference suite; generated semantic equivalents remain assigned to language-port steps"
     },
     {
       "title": "array loop break/continue target the nearest loop without restarting the source",
@@ -2397,7 +2397,7 @@
         "run"
       ],
       "originalAssertions": 3,
-      "route": "explicit T00 reference; generated equivalent still required in w2 or the owning language-port step"
+      "route": "explicit --reference suite; generated semantic equivalents remain assigned to language-port steps"
     },
     {
       "title": "arrays of flat named and unnamed tuples preserve member types and body destructuring",
@@ -2407,7 +2407,7 @@
         "run"
       ],
       "originalAssertions": 1,
-      "route": "explicit T00 reference; generated equivalent still required in w2 or the owning language-port step"
+      "route": "explicit --reference suite; generated semantic equivalents remain assigned to language-port steps"
     },
     {
       "title": "explicit fixed-array inputs/results check element contracts and extents",
@@ -2418,7 +2418,7 @@
         "fault"
       ],
       "originalAssertions": 1,
-      "route": "explicit T00 reference; generated equivalent still required in w2 or the owning language-port step"
+      "route": "explicit --reference suite; generated semantic equivalents remain assigned to language-port steps"
     },
     {
       "title": "ordinary fixed-array copies and supplied arguments survive source replacement",
@@ -2429,7 +2429,7 @@
         "fault"
       ],
       "originalAssertions": 1,
-      "route": "explicit T00 reference; generated equivalent still required in w2 or the owning language-port step"
+      "route": "explicit --reference suite; generated semantic equivalents remain assigned to language-port steps"
     },
     {
       "title": "array arguments and item locals stay separate through recursive calls",
@@ -2440,7 +2440,7 @@
         "fault"
       ],
       "originalAssertions": 1,
-      "route": "explicit T00 reference; generated equivalent still required in w2 or the owning language-port step"
+      "route": "explicit --reference suite; generated semantic equivalents remain assigned to language-port steps"
     },
     {
       "title": "returns, exit and bounds faults propagate correctly through array traversal",
@@ -2451,7 +2451,7 @@
         "fault"
       ],
       "originalAssertions": 2,
-      "route": "explicit T00 reference; generated equivalent still required in w2 or the owning language-port step"
+      "route": "explicit --reference suite; generated semantic equivalents remain assigned to language-port steps"
     },
     {
       "title": "unsupported array forms fail before effects without inventing empty types, unions or mutation",
@@ -2463,7 +2463,7 @@
         "LiteFault"
       ],
       "originalAssertions": 2,
-      "route": "explicit T00 reference; generated equivalent still required in w2 or the owning language-port step"
+      "route": "explicit --reference suite; generated semantic equivalents remain assigned to language-port steps"
     },
     {
       "title": "numbered fixed-array example runs and checks through the root launcher",
@@ -2474,7 +2474,7 @@
         "spawnSync"
       ],
       "originalAssertions": 13,
-      "route": "explicit T00 reference; generated equivalent still required in w2 or the owning language-port step"
+      "route": "explicit --reference suite; generated semantic equivalents remain assigned to language-port steps"
     },
     {
       "title": "transparent type aliases support scalar, tuple, array and list forms",
@@ -2484,7 +2484,7 @@
         "run"
       ],
       "originalAssertions": 7,
-      "route": "explicit T00 reference; generated equivalent still required in w2 or the owning language-port step"
+      "route": "explicit --reference suite; generated semantic equivalents remain assigned to language-port steps"
     },
     {
       "title": "type aliases follow single lexical scope with value shadowing and rejection",
@@ -2495,7 +2495,7 @@
         "run"
       ],
       "originalAssertions": 2,
-      "route": "explicit T00 reference; generated equivalent still required in w2 or the owning language-port step"
+      "route": "explicit --reference suite; generated semantic equivalents remain assigned to language-port steps"
     },
     {
       "title": "type alias example runs and checks through the root launcher",
@@ -2506,7 +2506,7 @@
         "spawnSync"
       ],
       "originalAssertions": 9,
-      "route": "explicit T00 reference; generated equivalent still required in w2 or the owning language-port step"
+      "route": "explicit --reference suite; generated semantic equivalents remain assigned to language-port steps"
     },
     {
       "title": "Lite numeric literal phases share Float spelling and finite-range checks",
@@ -2516,7 +2516,7 @@
         "runFile"
       ],
       "originalAssertions": 5,
-      "route": "retained generated/phase/artifact test; actual compiler/driver helper migration in w2"
+      "route": "default generated compiler/phase/artifact execution with independent expectations"
     },
     {
       "title": "Lite power parser retains association and rejects concealed ungrouped negative bases",
@@ -2526,7 +2526,7 @@
         "runFile"
       ],
       "originalAssertions": 10,
-      "route": "retained generated/phase/artifact test; actual compiler/driver helper migration in w2"
+      "route": "default generated compiler/phase/artifact execution with independent expectations"
     },
     {
       "title": "Lite numeric alias phases normalize built-in synonyms across annotations and signatures",
@@ -2536,7 +2536,7 @@
         "runFile"
       ],
       "originalAssertions": 4,
-      "route": "retained generated/phase/artifact test; actual compiler/driver helper migration in w2"
+      "route": "default generated compiler/phase/artifact execution with independent expectations"
     },
     {
       "title": "Lite checker admits exact scalar integer literals in Float contexts without widening values",
@@ -2546,7 +2546,7 @@
         "runFile"
       ],
       "originalAssertions": 4,
-      "route": "retained generated/phase/artifact test; actual compiler/driver helper migration in w2"
+      "route": "default generated compiler/phase/artifact execution with independent expectations"
     }
   ],
   "transferredAssertions": [
@@ -2554,6 +2554,16 @@
       "from": "native C and emitted TS corpus tests",
       "to": "T00 reference matches every admitted compiler fixture contract",
       "contract": "Every program fixture retains exact exit status, stdout and stderr on T00; default artifact checks independently read the same reviewed manifest."
+    },
+    {
+      "from": "default verifier regression",
+      "to": "explicit T00 verifier preserves all canonical reference scenarios",
+      "contract": "The 81-scenario T00 verifier audit runs only in the explicitly selected reference suite."
+    },
+    {
+      "from": "source-name compiler regression interpreter read callback",
+      "to": "generated compiler argument-count rejection",
+      "contract": "Malformed raw stdin must remain unread when two logical source-name arguments are rejected; exit status, stdout and exact error text remain asserted."
     }
   ]
 }

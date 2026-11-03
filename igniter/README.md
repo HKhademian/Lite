@@ -147,9 +147,17 @@ npm --prefix igniter run check
 Run tests through the CLI:
 
 ```sh
-./lite test --fast   # no native C lane or full-S lexer sweep
-./lite test          # full current regressions and generated source sweeps; C deferred
+./lite test --fast       # generated TS regressions; full-source sweeps omitted
+./lite test --full       # generated TS regressions and full-source phase sweeps
+./lite test --reference  # explicitly run retained T00 interpreter/reference checks
 ```
+
+Default tests compile Lite with the generated compiler, strictly check TS artifacts,
+and execute them in isolated processes. Phase drivers reuse their checked artifacts
+across inputs. T00 and its adapters can be absent; the source-archive CI gate runs
+the full default suite in that state. Native execution stays deferred. Reference
+tests run only with `--reference` and never provide fallback results. Known
+unsupported semantic contracts continue to fail visibly in `lite verify --all`.
 
 The root [lite launcher](../lite) links to the executable TypeScript entry
 [`launcher.ts`](launcher.ts). Compile/check locate their adapters relative to

@@ -187,8 +187,8 @@ The corpus uses every source and stream form:
 
 The generated compiler/phase/artifact regressions live in `igniter/test.ts`.
 Interpreter API, historical audit and not-yet-ported semantic assertions live in
-`igniter/reference.test.ts`; the current launcher still includes both until the
-next default-routing step lands. Do not count reference passes as generated
+`igniter/reference.test.ts`; run it explicitly with `./lite test --reference`.
+Default `./lite test --fast` and `./lite test --full` use generated execution only. Do not count reference passes as generated
 language support. The [test migration ledger](../../compiler/tests/test-migration.json)
 accounts for all 240 original tests and retains their assertion ownership.
 

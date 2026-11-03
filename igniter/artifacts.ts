@@ -66,10 +66,28 @@ export function withTsArtifacts<Result>(sources: readonly string[], use: (runs: 
   return withPreparedTsArtifacts(sources, runs => use(runs));
 }
 
-/** Shares preparation and checking between check-only and isolated execution callers. */
+/** Owns checked TS runners until explicitly disposed. Each run still has fresh process state. */
+export type PreparedTsArtifacts = Readonly<{
+  runs: readonly TsArtifactRunner[]; checked: ArtifactRun; dispose: () => void;
+}>;
+
+/** Keeps callback-style callers scoped to their prepared artifact lifetime. */
 function withPreparedTsArtifacts<Result>(sources: readonly string[], use: (runs: readonly TsArtifactRunner[], checked: ArtifactRun) => Result): Result {
-  if (sources.length === 0) return use([], { phase: 'typecheck', status: 0, signal: null, stdout: Buffer.alloc(0), stderr: Buffer.alloc(0) });
+  const prepared = prepareTsArtifacts(sources);
+  try { return use(prepared.runs, prepared.checked); }
+  finally { prepared.dispose(); }
+}
+
+/** Strict-checks a batch once and provides isolated runners with an explicit lifetime. */
+export function prepareTsArtifacts(sources: readonly string[]): PreparedTsArtifacts {
+  const success: ArtifactRun = { phase: 'typecheck', status: 0, signal: null, stdout: Buffer.alloc(0), stderr: Buffer.alloc(0) };
+  if (sources.length === 0) return { runs: [], checked: success, dispose: () => {} };
   const directory = mkdtempSync(join(tmpdir(), 'lite-artifact-ts-'));
+  let disposed = false;
+  const dispose = (): void => {
+    if (!disposed) { disposed = true; rmSync(directory, { recursive: true, force: true }); }
+  };
+  const active = (): void => { if (disposed) throw new Error('TS artifacts have been disposed'); };
   try {
     const config = join(directory, 'tsconfig.json');
     writeFileSync(join(directory, 'package.json'), '{"type":"module"}\n');
@@ -96,9 +114,10 @@ function withPreparedTsArtifacts<Result>(sources: readonly string[], use: (runs:
       stdout: Buffer.from(checked.stdout), stderr: Buffer.from(checked.stderr),
     };
     if (checked.status !== 0 || checked.signal !== null) {
-      return use(sources.map(() => () => check), check);
+      return { runs: sources.map(() => () => { active(); return check; }), checked: check, dispose };
     }
-    return use(runners.map((runner): TsArtifactRunner => (options = {}) => {
+    return { runs: runners.map((runner): TsArtifactRunner => (options = {}) => {
+      active();
       const stdoutPath = `${runner}.stdout`;
       const stderrPath = `${runner}.stderr`;
       let stdout: number | undefined;
@@ -125,9 +144,9 @@ function withPreparedTsArtifacts<Result>(sources: readonly string[], use: (runs:
         if (stderr !== undefined) closeSync(stderr);
         if (stdout !== undefined) closeSync(stdout);
       }
-    }), check);
-  } finally {
-    rmSync(directory, { recursive: true, force: true });
+    }), checked: check, dispose };
+  } catch (error) {
+    dispose(); throw error;
   }
 }
 

@@ -30,14 +30,15 @@ generated tests use independent expectations. Raw fixture bytes still reach
 generated artifacts unchanged; the historical T00 adapter keeps its existing
 UTF-8 replacement when testing the admitted compiler fixtures.
 
-At this migration checkpoint the launcher still includes the reference suite.
-The next workflow step makes it explicitly selectable and changes the remaining
-actual compiler/phase-driver calls to generated execution. Moving the tests
-alone is not evidence that those actual helpers are independent of T00.
+The default launcher now uses generated compiler, phase, library and artifact
+execution. The historical suite is selected only with `./lite test --reference`.
+Its manifest and archive replays preserve differential evidence without providing
+fallback results to default tests. Default fast/full suites are also checked in
+a source archive without T00 or its interpreter adapters.
 
 ```sh
 node --test compiler/tests/contracts.test.ts
-node --test --test-name-pattern='T00 reference' igniter/reference.test.ts
+./lite test --reference
 ```
 
 `../test-migration.json` maps every one of the 240 original igniter tests to its

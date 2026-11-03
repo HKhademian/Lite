@@ -1,0 +1,176 @@
+{
+  "date": "2026-11-03",
+  "phase": "w2-default-tests",
+  "baselineRevision": "2207fb6",
+  "node": "v24.16.0",
+  "compilerSourceSha256": "214cfa39400929ca9e45d5e5f67a4102ec35d0276b109e8ebcc2405490ec7a5e",
+  "seedSha256": "77cacbacdc2aa97c6c3b86c61f54501fd322ca081cb8be63bd9e5cf1f91818ee",
+  "sourceAndSeedUnchanged": true,
+  "results": {
+    "fast": {
+      "tests": 131,
+      "passed": 119,
+      "failed": 0,
+      "skipped": 12,
+      "durationMs": 154556.410291
+    },
+    "full": {
+      "tests": 131,
+      "passed": 122,
+      "failed": 0,
+      "skipped": 9,
+      "durationMs": 153043.812416
+    },
+    "noT00Fast": {
+      "tests": 131,
+      "passed": 119,
+      "failed": 0,
+      "skipped": 12,
+      "durationMs": 151995.888
+    },
+    "noT00Full": {
+      "tests": 131,
+      "passed": 122,
+      "failed": 0,
+      "skipped": 9,
+      "durationMs": 150541.577458
+    },
+    "reference": {
+      "tests": 162,
+      "passed": 162,
+      "failed": 0,
+      "skipped": 0,
+      "durationMs": 7658.259958
+    }
+  },
+  "contracts": {
+    "compilerFixtures": 93,
+    "libraries": 8,
+    "originalGeneratedTests": 81,
+    "originalReferenceTests": 159,
+    "recordedProcessContracts": 776
+  },
+  "defaultImportAudit": {
+    "defaultStaticDependencies": [
+      "challenges/tools/common.ts",
+      "challenges/tools/download.ts",
+      "challenges/tools/tools.test.ts",
+      "compiler/bootstrap/c-seed.ts",
+      "compiler/bootstrap/seed.ts",
+      "compiler/host.ts",
+      "compiler/runtime/ts/runtime.ts",
+      "compiler/tests/contracts.test.ts",
+      "compiler/tests/contracts.ts",
+      "compiler/tests/host.test.ts",
+      "igniter/artifacts.ts",
+      "igniter/launcher.ts",
+      "igniter/loader.ts",
+      "igniter/measure.ts",
+      "igniter/source-files.test.ts",
+      "igniter/test-fixtures.ts",
+      "igniter/test-suites.ts",
+      "igniter/test.ts"
+    ],
+    "forbidden": [
+      "igniter/lite.ts",
+      "igniter/bootstrap.ts",
+      "igniter/cli.ts",
+      "igniter/bundle-cli.ts",
+      "igniter/reference.test.ts"
+    ],
+    "passed": true
+  },
+  "archive": {
+    "gitMetadata": false,
+    "absent": [
+      "igniter/lite.ts",
+      "igniter/bootstrap.ts",
+      "igniter/cli.ts",
+      "igniter/bundle-cli.ts"
+    ],
+    "symlinks": "Copied verbatim; command links resolve within the archive.",
+    "defaultCommands": [
+      "./lite test --fast",
+      "./lite test --full"
+    ],
+    "smoke": "Public compile/check, strict artifacts, stdin/arguments/streams and expectation updates run through the same default suite. CI additionally compiles and executes the 42 fixture and verifies the supported arithmetic contract.",
+    "smokeResults": {
+      "check": 0,
+      "compile": 0,
+      "strictArtifactPhase": "run",
+      "status": 0,
+      "stdout": "42\n",
+      "stderr": "",
+      "verification": "PASS int.arithmetic/precedence-and-division [ts]\nverification passed: 1 executed, 0 cached"
+    }
+  },
+  "strictChecks": [
+    "node igniter/node_modules/typescript/bin/tsc --noEmit -p igniter/tsconfig.json",
+    "node igniter/node_modules/typescript/bin/tsc --noEmit -p compiler/bootstrap/tsconfig.json"
+  ],
+  "editorGroups": 9,
+  "generatedFixedPoint": {
+    "node": "v24.16.0",
+    "sourceSha256": "214cfa39400929ca9e45d5e5f67a4102ec35d0276b109e8ebcc2405490ec7a5e",
+    "seedSha256": "77cacbacdc2aa97c6c3b86c61f54501fd322ca081cb8be63bd9e5cf1f91818ee",
+    "stages": [
+      {
+        "generation": 1,
+        "sha256": "77cacbacdc2aa97c6c3b86c61f54501fd322ca081cb8be63bd9e5cf1f91818ee",
+        "bytes": 351426,
+        "durationMs": 1150.947833
+      },
+      {
+        "generation": 2,
+        "sha256": "77cacbacdc2aa97c6c3b86c61f54501fd322ca081cb8be63bd9e5cf1f91818ee",
+        "bytes": 351426,
+        "durationMs": 1240.007209
+      },
+      {
+        "generation": 3,
+        "sha256": "77cacbacdc2aa97c6c3b86c61f54501fd322ca081cb8be63bd9e5cf1f91818ee",
+        "bytes": 351426,
+        "durationMs": 1259.3203750000002
+      }
+    ]
+  },
+  "canonicalVerification": {
+    "passed": 60,
+    "failed": 21,
+    "executed": 81,
+    "failures": [
+      "FAIL cond.partial/defaults-and-no-write [ts]: compiler exited 2: 2:19: value if requires a final else",
+      "FAIL finally.cleanup/cleanup [ts]: compiler exited 2: 1:31: expected an Int, Float, String or Bool expression",
+      "FAIL init.reserved/first-write [ts]: compiler exited 2: 1:10: expected an Int, Float, String or Bool expression",
+      "FAIL init.zero/zero-values [ts]: compiler exited 2: 3:5: expected a tuple field name",
+      "FAIL list.mutation/push-front-back [ts]: compiler exited 2: 3:1: unknown value push_front",
+      "FAIL loop.metadata/metadata-and-targets [ts]: compiler exited 2: 1:6: unsupported feature \"loop\": see docs/loops.md; the restricted compiler accepts Int/Float/String/Bool expressions, locals, output/outputLine, if/else and loop only",
+      "FAIL loop.value/value-and-then [ts]: compiler exited 2: 1:8: unsupported feature \"loop\": see docs/loops.md; the restricted compiler accepts Int/Float/String/Bool expressions, locals, output/outputLine, if/else and loop only",
+      "FAIL match.subjectless/first-true-and-fallback [ts]: compiler exited 2: 2:10: unsupported feature \"match\": see docs/match.md; the restricted compiler accepts Int/Float/String/Bool expressions, locals, output/outputLine, if/else and loop only",
+      "FAIL mut.inferred/writable-lists [ts]: compiler exited 2: 1:1: unsupported feature \"mut\": see docs/declarations-and-assignment.md; the restricted compiler accepts Int/Float/String/Bool expressions, locals, output/outputLine, if/else and loop only",
+      "FAIL num.widths/widths [ts]: compiler exited 2: 1:4: unsupported local type Int8",
+      "FAIL report.tuple/tuple-display [ts]: compiler exited 2: 1:29: expected )",
+      "FAIL scope.compound/compound-chain [ts]: compiler exited 2: 2:8: expected an Int, Float, String or Bool expression",
+      "FAIL tuple.shape/named-and-positional [ts]: compiler exited 2: 3:2: unknown value one",
+      "FAIL example.006-fixed-tuples/tuple-demo [ts]: compiler exited 2: 1:47: expected a tuple field name",
+      "FAIL example.008-named-tuples/named-tuple [ts]: compiler exited 2: 2:6: expected an Int, Float, String or Bool expression",
+      "FAIL example.009-fixed-arrays/token-index [ts]: compiler exited 2: 12:19: unsupported function type",
+      "FAIL example.010-mixed-tuples/mixed-tuple [ts]: compiler exited 2: 2:12: expected )",
+      "FAIL example.011-tuple-label-conversion/relabel [ts]: compiler exited 2: 2:1: cannot initialize (x: Int, y: Int) with (width: Int, height: Int)",
+      "FAIL example.012-named-arguments/named-args [ts]: compiler exited 2: 5:19: unknown value c",
+      "FAIL example.013-growable-lists/list-ends [ts]: compiler exited 2: 3:1: unknown value push_front",
+      "FAIL example.016-integer-calculator/precedence [ts]: compiler exited 2: 49:5: cannot return Unit from function digitValue returning Int"
+    ]
+  },
+  "coverage": {
+    "features": 41,
+    "examples": 19,
+    "samples": 20,
+    "passed": true
+  },
+  "timingNote": "Gate durations are validation measurements. Default and reference suites now have different scopes from the baseline; these are not paired compiler benchmarks or evidence of a speedup.",
+  "remaining": [
+    "w3: generated-only routine self-build/corpus/benchmark commands.",
+    "Existing TS semantic ports and T00 retirement; C/native remain deferred."
+  ]
+}

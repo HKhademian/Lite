@@ -8,7 +8,7 @@ todos:
     status: completed
   - id: w2-default-tests
     content: "Make lite test execute generated compiler regressions by default"
-    status: pending
+    status: completed
   - id: w3-tooling
     content: "Preserve self-hosting and migrate routine compiler scripts"
     status: pending
@@ -26,6 +26,8 @@ Finish the consumer cutover before further broad feature work, keeping all gener
 
 ## Done
 
+- 2026-11-03, w2-default-tests: default compiler/phase/library/artifact execution is generated-only; T00 tests use explicit --reference (162 pass). Ordinary and no-T00 archive fast: 119 pass/12 skips; full: 122 pass/nine native skips, zero failures. All 93 fixtures/eight libraries remain covered. Strict checks, nine editor groups, 18-module no-T00 static import audit and three identical self-builds pass. Source/seed and 21 canonical migration failures are unchanged. CI runs full default tests without T00 and its historical adapters. Evidence: compiler/reports/2026-11-03-generated-tests.json.
+
 - 2026-11-03, w1-contracts: all 240 original igniter tests retain a mapped destination (81 generated/phase/artifact, 159 reference); shared manifest loading and 776 exact independent process contracts replace live expected-value queries. The explicit reference suite replays the corpus and archive. Five contract/ledger tests and six copied-checkout no-T00 host groups pass. Fast: 278 pass/12 deferred skips; full: 281 pass/nine native skips. Strict host/seed checks pass. Compiler source/seed and the 60/81 TS canonical audit are unchanged. Default actual compiler/phase helpers and launcher routing remain w2 work.
 
 Public compile/check/verify already use T11. Public run is removed; C/native gates are deferred. Do not redo commits 32373f7, f5594f3 or 4007639.
@@ -36,18 +38,6 @@ Public compile/check/verify already use T11. Public run is removed; C/native gat
 - Execute sequentially; the compiler frontend and seed files are shared.
 
 ## Implementation order
-
-### w2-default-tests — Make lite test execute generated compiler regressions by default
-
-**Depends on:** w1-contracts.
-**Files:** `igniter/launcher.ts`, `igniter/test.ts`, `compiler/tests/host.test.ts`, `igniter/artifacts.ts`, `igniter/tsconfig.json`, `.github/workflows/test.yml`.
-**Actions / atomic commit order:**
-1. Port ordinary Lite execution helpers to compileTs plus strictly checked isolated artifacts. Use fixtures/expected fault diagnostics for rejected/faulting source rather than interpreter exceptions. Reuse compiled drivers across inputs.
-2. Switch default test routing to generated suites, phase fixtures/sweeps, artifact corpus and library tests. Preserve fast/full distinctions; native C stays deferred. Add an explicit reference test option only for retained T00-specific checks and document it.
-3. Add a copied-checkout test with igniter/lite.ts removed: default test startup, generated baseline, CLI compile/check and verification of supported sources must work. Known unsupported semantic contracts remain visible in verification/inventory, not green skipped tests.
-
-**Acceptance:** Default tests have no T00 execution/import requirement; all 93 current compiler source fixtures, eight libraries and existing generated phase assertions retain their expected behavior.
-**Verify:** Default fast/full suites in ordinary and no-T00 checkouts; explicit reference suite separately. Do not conflate registration coverage with support.
 
 ### w3-tooling — Preserve self-hosting and migrate routine compiler scripts
 

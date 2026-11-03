@@ -51,6 +51,8 @@ native-first ordering in historical progress entries.
 
 ## Done
 
+- 2026-11-03: default tests now compile with generated Lite, strictly check TS and execute isolated artifacts; checked library/phase drivers are reused across inputs. All 93 compiler fixtures, eight library entries and 81 original generated tests remain covered. T00 checks require `./lite test --reference` (162 pass). Ordinary and T00-free source-archive fast suites each pass 119 with 12 deferred skips; full suites each pass 122 with nine native skips and zero failures. Strict checks, nine editor groups and three identical self-builds pass; source/seed are unchanged. The default static graph has 18 modules and no T00 imports. CI now runs the full no-T00 suite. The canonical TS audit still reports 60/81 passing with 21 visible pending ports. See [the evidence](reports/2026-11-03-generated-tests.json). Routine tooling remains w3 work.
+
 - 2026-11-03: w1 test contracts are separated: all 240 original igniter tests retain destinations (81 generated/phase/artifact, 159 reference), and 776 exact process contracts replace live T00 expected-value lookups. Shared manifest loading retains all 93 compiler fixtures. Five contract/ownership checks, six copied-checkout no-T00 host groups, strict host/seed checks, three identical generated self-builds and nine editor groups pass. Fast: 278 pass/12 skips; full: 281 pass/9 native skips, zero failures. Compiler source/seed and the 60/81 canonical TS audit are unchanged. Default actual compiler/phase helpers and reference selection remain w2 work. See [the evidence](reports/2026-11-03-test-contracts.json) and [contract guide](tests/contracts/README.md).
 
 - 2026-11-02: verification and expectation updates now use TS artifacts by
@@ -323,8 +325,9 @@ native-first ordering in historical progress entries.
 **Depends on:** the completed T11 TS self-build and default compilation path.
 **Current routing:** public compile/check use generated TS. Public run is
 removed, and public C requests fail explicitly. Verification defaults to TS
-artifacts with an explicit --reference lane; legacy default regression consumers
-still need migration. Full-source phase sweeps run strictly checked generated
+artifacts with an explicit --reference lane; default tests compile and execute generated TS, with T00 selected only by
+`lite test --reference`. Routine corpus/self-build/benchmark scripts remain the
+next workflow dependency. Full-source phase sweeps run strictly checked generated
 drivers.
 **Actions:** migrate verification and default tests to compiled TS artifacts;
 keep explicitly named T00 reference/audit lanes separate. Never fall back to

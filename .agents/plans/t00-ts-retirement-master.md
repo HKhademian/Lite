@@ -47,7 +47,9 @@ Finish existing supported TS features and consumers, then retire active T00. Thi
 
 ## Done and verified baseline
 
-- 2026-11-03: w1-contracts is complete; original test ownership and independent expectations are preserved. Wave 1 remains active: generated actual helpers/default routing (w2), then compiler tooling (w3). See the workflow plan and `compiler/tests/contracts/README.md`.
+- 2026-11-03: w2 is complete. Default fast/full suites pass in ordinary and no-T00 source archives; explicit reference passes separately. Generated source/seed remain unchanged. Wave 1 continues with w3 tooling, before any language-wave dependency is marked complete.
+
+- 2026-11-03: w1-contracts is complete; original test ownership and independent expectations are preserved. Wave 1 remains active; w2 default routing is now complete, with routine compiler tooling (w3) next. See the workflow plan and `compiler/tests/contracts/README.md`.
 
 - `32373f7`: public run removed; generated TS compile/check, check-only without effects; C output deferred.
 - `f5594f3`: verification/updates use TS artifacts; T00 only via --reference; compile/check once per manifest.

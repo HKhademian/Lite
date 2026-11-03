@@ -6,11 +6,12 @@ import { delimiter, dirname, join, relative, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { test } from 'node:test';
 import { loadBundle } from '../../igniter/loader.ts';
+import { generatedTestFiles } from '../../igniter/test-suites.ts';
 import { buildCompiler, buildTsCompiler, compileTarget, compileTs, type CompilerTarget } from '../host.ts';
 import { seed } from '../bootstrap/seed.ts';
 import { cSeed } from '../bootstrap/c-seed.ts';
 import { expectedText } from './contracts.ts';
-import { checkTsArtifact, runTsArtifact, runCArtifact, withTsArtifact, withTsArtifacts, type ArtifactOptions, type ArtifactRun } from '../../igniter/artifacts.ts';
+import { prepareTsArtifacts, checkTsArtifact, runTsArtifact, runCArtifact, withTsArtifact, withTsArtifacts, type ArtifactOptions, type ArtifactRun } from '../../igniter/artifacts.ts';
 
 const root = fileURLToPath(new URL('../../', import.meta.url));
 const env = { ...process.env, PATH: dirname(process.execPath) + delimiter + (process.env['PATH'] ?? '') };
@@ -196,7 +197,7 @@ function isolatedCheckout(): string {
   const bundles = [loadBundle(manifest), loadBundle(resolve(root, 'compiler/manifests/c.json'))];
   const paths = new Set([
     'lite', 'ltc', 'litec', 'compiler/host.ts', 'compiler/entry.ts', 'compiler/cli.ts', 'compiler/launcher.ts', 'compiler/package.json',
-    'igniter/launcher.ts', 'igniter/check.ts', 'igniter/artifacts.ts', 'igniter/package.json', 'igniter/verify.ts',
+    'igniter/launcher.ts', 'igniter/test-suites.ts', 'igniter/check.ts', 'igniter/artifacts.ts', 'igniter/package.json', 'igniter/verify.ts',
     'compiler/bootstrap/T11.ts', 'compiler/bootstrap/seed.ts', 'compiler/bootstrap/tsconfig.json',
     'compiler/bootstrap/c-emitter.ts', 'compiler/bootstrap/c-seed.ts',
     'compiler/manifests/ts.json', 'compiler/manifests/c.json', 'igniter/loader.ts', 'igniter/tsconfig.json',
@@ -1587,4 +1588,54 @@ test('Float contexts admit exact integer literals without widening values or cha
     executions.push({ target: 'ts', artifact: compiled.stdout.toString(), expected: { status: 0, stdout: Buffer.from('2\n'), stderr: Buffer.alloc(0) }, context: text });
   }
   assertExecutions(executions);
+});
+
+
+test('prepared artifacts retain isolated runs and release their resources explicitly', () => {
+  const compiled = compileTs({ text: 'outputLine(inputAll(), inputArgs()[0]);' });
+  assert.equal(compiled.status, 0, compiled.stderr.toString());
+  const prepared = prepareTsArtifacts([compiled.stdout.toString()]);
+  try {
+    assert.equal(prepared.checked.status, 0);
+    for (const input of ['first', 'second', '']) {
+      const result = prepared.runs[0]!({ stdin: input, args: ['argument'] });
+      assert.equal(result.phase, 'run'); assert.equal(result.status, 0); assert.equal(result.signal, null);
+      assert.equal(result.stdout.toString(), input + ' argument\n'); assert.equal(result.stderr.length, 0);
+    }
+  } finally { prepared.dispose(); }
+  prepared.dispose();
+  assert.throws(() => prepared.runs[0]!(), /artifacts have been disposed/);
+  const bad = prepareTsArtifacts(['export function main(): string { throw new Error("must not run"); return 42; }']);
+  try { assert.notEqual(bad.checked.status, 0); assert.equal(bad.runs[0]!().phase, 'typecheck'); }
+  finally { bad.dispose(); }
+  assert.throws(() => bad.runs[0]!(), /artifacts have been disposed/);
+});
+
+test('default test startup and generated baseline run in a source archive without T00', () => {
+  const directory = isolatedCheckout();
+  try {
+    for (const path of ['igniter', 'compiler/tests', 'compiler/generated', 'compiler/runtime', 'lib',
+      'verifications', 'examples', 'samples', 'docs', 'challenges/tools', '.agents/rules']) {
+      cpSync(join(root, path), join(directory, path), { recursive: true, verbatimSymlinks: true,
+        filter: candidate => !/(?:\/node_modules|\/lite\.ts|\/bootstrap\.ts|\/bundle-cli\.ts|\/cli\.ts)$/.test(candidate) });
+    }
+    symlinkSync(join(root, 'igniter/node_modules'), join(directory, 'igniter/node_modules'));
+    for (const path of ['igniter/lite.ts', 'igniter/bootstrap.ts', 'igniter/cli.ts', '.git']) assert.equal(existsSync(join(directory, path)), false);
+    const childEnv: NodeJS.ProcessEnv = { ...env, LITE_SKIP_NATIVE: '1' };
+    delete childEnv['NODE_TEST_CONTEXT'];
+    const pattern = '^L0 shared libraries|^bundle compilers reproduce|^compiler verification cases';
+    const result = spawnSync(process.execPath, ['--test', '--test-reporter=tap', '--test-name-pattern=' + pattern, ...generatedTestFiles],
+      { cwd: join(directory, 'igniter'), encoding: 'utf8', env: childEnv, timeout: 60000 });
+    assert.equal(result.error, undefined); assert.equal(result.status, 0, result.stdout + result.stderr);
+    assert.match(result.stdout, /L0 shared libraries have direct bootstrap tests/);
+    assert.match(result.stdout, /bundle compilers reproduce every compiler case/);
+    assert.match(result.stdout, /compiler verification cases are well-formed/);
+    assert.match(result.stdout, /# fail 0/); assert.doesNotMatch(result.stdout, /ERR_MODULE_NOT_FOUND|T00 reference/);
+    for (const args of [['--fast', '--full'], ['--reference', '--reference'], ['--unknown']]) {
+      const rejected = spawnSync(join(directory, 'lite'), ['test', ...args], { encoding: 'utf8', env, timeout: 5000 });
+      assert.equal(rejected.status, 2); assert.match(rejected.stderr, /Usage:/); assert.equal(rejected.stdout, '');
+    }
+    const reference = spawnSync(join(directory, 'lite'), ['test', '--reference'], { encoding: 'utf8', env, timeout: 10000 });
+    assert.notEqual(reference.status, 0); assert.match(reference.stdout + reference.stderr, /ERR_MODULE_NOT_FOUND/);
+  } finally { rmSync(directory, { recursive: true, force: true }); }
 });

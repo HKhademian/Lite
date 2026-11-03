@@ -51,7 +51,7 @@ jobs:
         working-directory: editors/vscode
         run: npm test
 
-      - name: Generated TS artifact smoke test without T00
+      - name: Generated TS regression suite and artifacts without T00
         run: |
           node --test compiler/scripts/release-streams.test.ts
           mkdir -p .cache/ts-smoke
@@ -59,8 +59,10 @@ jobs:
           cd .cache/ts-smoke
           test ! -e .git
           test ! -e igniter/node_modules
-          rm igniter/lite.ts
+          rm igniter/lite.ts igniter/bootstrap.ts igniter/cli.ts igniter/bundle-cli.ts
           ln -s "$GITHUB_WORKSPACE/igniter/node_modules" igniter/node_modules
+          ./lite test --full
+          ./lite verify --all --filter features/int-arithmetic.json --no-cache
           ./lite check igniter/tests/compiler/001-001-report-int-42.lts
           ./lite compile igniter/tests/compiler/001-001-report-int-42.lts > hello.ts
           test "$(node compiler/entry.ts hello.ts)" = 42

@@ -2,6 +2,7 @@
 /** Repository CLI entry; command implementations remain ordinary TypeScript files. */
 import { spawnSync } from 'node:child_process';
 import { fileURLToPath } from 'node:url';
+import { generatedTestFiles, referenceTestFiles } from './test-suites.ts';
 
 const root = fileURLToPath(new URL('../', import.meta.url));
 const args = process.argv.slice(2);
@@ -11,7 +12,7 @@ const usage = [
   '  check file.lts                            Check source only',
   '  compile [--target ts] file.lts            Compile to a TS artifact',
   '  verify [--all|--update|--coverage]        Verify TS artifacts (--reference for T00)',
-  '  test [--fast|--full]                      Run the project test suite',
+  '  test [--fast|--full] [--reference]        Test generated TS (or explicit T00 reference)',
   '  docs                                      Show documentation paths',
   '  help                                      Show this help', '',
   'Compiler entry points: ./ltc, ./litec, ./lite compile',
@@ -46,16 +47,23 @@ switch (command) {
   case 'compile': run('../compiler/launcher.ts', args);
   case 'verify': run('verify.ts', args);
   case 'test': {
-    const mode = args.shift();
-    if (mode !== undefined && mode !== '--fast' && mode !== '--full') {
-      process.stderr.write(`lite test: unknown option ${mode}\n`); process.exit(2);
+    let mode: '--fast' | '--full' | undefined;
+    let reference = false;
+    for (const arg of args) {
+      if ((arg === '--fast' || arg === '--full') && mode === undefined) mode = arg;
+      else if (arg === '--reference' && !reference) reference = true;
+      else { process.stderr.write('Usage: ./lite test [--fast|--full] [--reference]\n'); process.exit(2); }
     }
-    if (args.length > 0) { process.stderr.write('Usage: ./lite test [--fast|--full]\n'); process.exit(2); }
-    // Node's test flags precede the files rather than the script position used by run().
-    const result = spawnSync(process.execPath, ['--test', 'test.ts', 'reference.test.ts', '../compiler/tests/host.test.ts', '../compiler/tests/contracts.test.ts', 'source-files.test.ts', '../challenges/tools/tools.test.ts'], {
+    const testEnv: NodeJS.ProcessEnv = { ...process.env, LITE_SKIP_NATIVE: '1',
+      ...(mode === '--fast' ? { LITE_SKIP_HEAVY: '1' } : {}) };
+    // A CLI invoked from a Node test must launch an independent test coordinator.
+    delete testEnv['NODE_TEST_CONTEXT'];
+    // Reference tests never enter the default route or provide a fallback.
+    const files = reference ? referenceTestFiles : generatedTestFiles;
+    const result = spawnSync(process.execPath, ['--test', ...files], {
       cwd: fileURLToPath(new URL('.', import.meta.url)), stdio: 'inherit',
       // Native C work resumes after TS migration; full still retains the generated source sweeps.
-      env: { ...process.env, LITE_SKIP_NATIVE: '1', ...(mode === '--fast' ? { LITE_SKIP_HEAVY: '1' } : {}) },
+      env: testEnv,
     });
     if (result.error !== undefined) { process.stderr.write(`${result.error.message}\n`); process.exit(1); }
     if (result.signal !== null) { process.kill(process.pid, result.signal); process.exit(1); }

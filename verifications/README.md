@@ -137,9 +137,11 @@ The verifier is designed for a growing corpus, not a fixed case count:
   explicit alias for the default.
 - `--shard i/n` deterministically partitions scenarios for CI workers.
 - `--no-cache` forces execution; `--quiet` suppresses per-case PASS lines.
-- Native compiler parity is a separate lane. Its builds are cached under
-  `.cache/native/` by C source, compiler version and flags. `./lite test --fast`
-  skips that lane; `./lite test` / `./lite test --full` include it.
+- Native compiler parity is deferred until after TS migration. Its retained
+  historical checks use `.cache/native/`; neither default test mode executes
+  native C during this migration. `./lite test --full` includes the generated
+  full-source phase sweeps; `--fast` omits them. T00 regression checks require
+  `./lite test --reference`.
 
 Target budgets:
 
@@ -147,12 +149,12 @@ Target budgets:
 |---|---|---|
 | `lite verify` | affected scenarios | < 5s |
 | `lite verify --all` | all interpreter/artifact cases, warm cache | < 1s |
-| `lite test --fast` | unit/interpreter/verification without native C | ~15s |
-| `lite test` / `lite test --full` | full local gate, native builds cached | ~15s warm |
+| `lite test --fast` | generated TS regressions without full-source sweeps | ~15s |
+| `lite test` / `lite test --full` | generated TS regressions and full-source phase sweeps | ~15s warm |
 | `lite verify --all --shard i/n` | one CI shard of the full matrix | bounded |
 
 At 10k+ cases, the default local lanes must not compile every native case.
-T00 feature/artifact verification remains in-process; generated TS uses isolated
+Explicit T00 reference feature/artifact verification remains in-process; generated TS uses isolated
 child processes with strict artifact checks. Full native coverage is
 sharded or curated, and caches make unchanged work nearly free.
 
