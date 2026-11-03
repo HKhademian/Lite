@@ -10,10 +10,10 @@ import { seed } from '../bootstrap/seed.ts';
 import { prepareTsArtifacts } from '../../igniter/artifacts.ts';
 
 const root = fileURLToPath(new URL('../../', import.meta.url));
-function invoke(directory: string, command: string, args: string[]) {
+function invoke(directory: string, command: string, args: string[], timeoutMs = 90000) {
   const env: NodeJS.ProcessEnv = { ...process.env };
   delete env['NODE_TEST_CONTEXT'];
-  return spawnSync(process.execPath, [join(directory, command), ...args], { cwd: directory, env, encoding: 'utf8', timeout: 90000, maxBuffer: 8 * 1024 * 1024 });
+  return spawnSync(process.execPath, [join(directory, command), ...args], { cwd: directory, env, encoding: 'utf8', timeout: timeoutMs, maxBuffer: 8 * 1024 * 1024 });
 }
 function summary(result: ReturnType<typeof invoke>): Record<string, unknown> {
   assert.equal(result.error, undefined); assert.equal(result.signal, null); assert.equal(result.status, 0, result.stdout + result.stderr);
@@ -109,7 +109,8 @@ test('everyday tooling and benchmark work in a source archive without T00 or Git
     const corpus = summary(invoke(directory, 'compiler/scripts/corpus-parity.ts', []));
     assert.equal(corpus['cases'], 93); assert.equal(corpus['executions'], 69); assert.deepEqual(corpus['mismatches'], []);
     const prefix = join(directory, '.cache/benchmark');
-    const report = summary(invoke(directory, 'benchmark/compiler-performance.ts', ['--samples', '1', '--warmups', '0', '--out', prefix]));
+    // This command validates the full corpus and times five workloads, including S.
+    const report = summary(invoke(directory, 'benchmark/compiler-performance.ts', ['--samples', '1', '--warmups', '0', '--out', prefix], 300000));
     assert.equal(report['mode'], 'generated-only'); assert.equal(report['revision'], null);
     assert.equal((report['method'] as { samples: number; warmups: number }).samples, 1);
     assert.deepEqual((report['runtime'] as { checkedSyntheticOutputCounts: number[] }).checkedSyntheticOutputCounts, [1, 100, 1000]);

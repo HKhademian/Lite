@@ -83,6 +83,8 @@ Full regressions and the T00-free archive run in separate jobs with 30-minute
 budgets. The whole-source checker sweep has a 120-second tool budget and the
 81-scenario CLI audit a 180-second controller budget; ordinary artifact limits
 remain unchanged. Timeouts are failures, never successful samples or skipped cases.
+The archive benchmark controller has a separate 300-second budget because it
+validates the corpus and measures five workloads; its program limits are unchanged.
 
 [Release](../.github/workflows/release.yml) responds to all registered component
 tag streams. It validates the annotated tag and recorded version at the exact
