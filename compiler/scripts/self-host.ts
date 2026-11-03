@@ -1,103 +1,49 @@
 #!/usr/bin/env node
-/**
- * Runs the TS bootstrap ladder end to end and reports the artifact hashes.
- *
- *   S   = the ordered TS manifest bundle
- *   T11 = explicit stage-0 bundle driver compiling S (not the default CLI)
- *   T12 = T11 compiling S, after a strict artifact typecheck
- *
- * Usage:
- *   node compiler/scripts/self-host.ts [--out DIR]
- *
- * Prints one JSON summary with both statuses, byte counts, hashes and whether
- * T12 equals T11. A non-pairing ladder exits nonzero so it can gate CI later.
- */
-
-import { spawnSync, type SpawnSyncOptionsWithBufferEncoding } from 'node:child_process';
-import { createHash } from 'node:crypto';
-import { mkdtempSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs';
+/** Generated-only three-generation TS fixed point. Historical T00 reconstruction requires --reference. */
+import { mkdirSync, mkdtempSync, readFileSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join, resolve } from 'node:path';
-import { fileURLToPath } from 'node:url';
+import { loadBundle } from '../../igniter/loader.ts';
+import { prepareTsArtifacts } from '../../igniter/artifacts.ts';
+import { fail, hashBytes, mainFile, referenceCommand, repository, revision, selectedArtifact, strictArtifact, toolIdentities, toolOptions, writeJson } from './tooling.ts';
 
-const repository = resolve(fileURLToPath(new URL('../..', import.meta.url)));
-const arguments_ = process.argv.slice(2);
-const outIndex = arguments_.indexOf('--out');
-const outDirectory = outIndex >= 0 && arguments_[outIndex + 1] !== undefined
-  ? resolve(arguments_[outIndex + 1]!)
-  : mkdtempSync(join(tmpdir(), 'lite-self-host-'));
-
-/** SHA-256 as lowercase hex. */
-function hashBytes(bytes: Uint8Array) {
-  return createHash('sha256').update(bytes).digest('hex');
+/** Rebuilds current S through three checked TS generations or dispatches the explicit historical audit. */
+export function selfHost(args: readonly string[]): void {
+  const options = toolOptions(args, ['out', 'artifact']);
+  if (options.reference) {
+    if (options.values.has('artifact')) throw new Error('--artifact is not part of the historical T00 ladder');
+    referenceCommand(join(repository, 'compiler/scripts/self-host-reference.ts'), args); return;
+  }
+  const selected = selectedArtifact(options.values.get('artifact'));
+  const source = loadBundle(join(repository, 'compiler/manifests/ts.json')).text;
+  const out = options.values.has('out') ? resolve(options.values.get('out')!) : mkdtempSync(join(tmpdir(), 'lite-generated-ladder-'));
+  mkdirSync(out, { recursive: true }); writeFileSync(join(out, 'package.json'), '{"type":"module"}\n');
+  writeFileSync(join(out, 'S.lts'), source);
+  const generations: { generation: number; sourceSha256: string; builderSha256: string; artifactSha256: string; bytes: number; compileProcessMs: number; strictCheckMs: number; path: string }[] = [];
+  let builder = selected.bytes;
+  for (let generation = 1; generation <= 3; generation += 1) {
+    const prepared = prepareTsArtifacts([builder.toString()], { timeoutMs: 0 });
+    try {
+      if (prepared.checked.status !== 0 || prepared.checked.signal !== null) throw new Error(`generation ${generation} builder failed strict checking:\n${prepared.checked.stdout}${prepared.checked.stderr}`);
+      const start = performance.now(); const actual = prepared.runs[0]!({ stdin: source }); const compileProcessMs = performance.now() - start;
+      if (actual.status !== 0 || actual.signal !== null || actual.stderr.length !== 0) throw new Error(`generation ${generation} failed (${actual.status}):\n${actual.stderr}`);
+      const strictCheckMs = strictArtifact(actual.stdout.toString());
+      const path = join(out, `generation-${generation}.ts`); writeFileSync(path, actual.stdout);
+      generations.push({ generation, sourceSha256: hashBytes(source), builderSha256: hashBytes(builder), artifactSha256: hashBytes(actual.stdout),
+        bytes: actual.stdout.length, compileProcessMs, strictCheckMs, path });
+      builder = actual.stdout;
+    } finally { prepared.dispose(); }
+  }
+  const fixedPoint = generations.every(item => item.artifactSha256 === generations[0]!.artifactSha256);
+  const summary = { phase: 'generated-fixed-point', revision: revision(), node: process.version, out,
+    selected: { artifactSha256: selected.sha256, currentSourceSha256: selected.currentSourceSha256, selectedCompilerSha256: selected.selectedCompilerSha256, selectedCompilerBuilderSha256: selected.selectedCompilerBuilderSha256, supplied: selected.supplied },
+    toolSources: toolIdentities(['compiler/scripts/self-host.ts', 'compiler/scripts/tooling.ts', 'compiler/host.ts', 'igniter/artifacts.ts']),
+    source: { bytes: Buffer.byteLength(source), sha256: hashBytes(source) }, generations, fixedPoint,
+    matchesSelectedCompiler: hashBytes(builder) === selected.selectedCompilerSha256,
+    equalsSelectedBuilder: hashBytes(builder) === selected.sha256 };
+  // Check persisted bytes before publishing the ladder summary.
+  for (const item of generations) if (hashBytes(readFileSync(item.path)) !== item.artifactSha256) throw new Error('persisted generation identity mismatch');
+  writeJson(join(out, 'ladder.json'), summary); process.stdout.write(JSON.stringify(summary, null, 2) + '\n');
+  if (!fixedPoint) process.exitCode = 1;
 }
-
-/** Runs one command and returns its status and captured text streams. */
-function run(command: string, arguments__: string[], options: SpawnSyncOptionsWithBufferEncoding = {}) {
-  const started = process.hrtime.bigint();
-  const result = spawnSync(command, arguments__, {
-    encoding: 'buffer',
-    timeout: 0,
-    maxBuffer: 512 * 1024 * 1024,
-    ...options,
-  });
-  if (result.error !== undefined) throw result.error;
-  return {
-    status: result.status,
-    stdout: result.stdout ?? Buffer.alloc(0),
-    stderr: result.stderr ?? Buffer.alloc(0),
-    seconds: Number(process.hrtime.bigint() - started) / 1e9,
-  };
-}
-
-mkdirSync(outDirectory, { recursive: true });
-
-const bundle = spawnSync(process.execPath, [
-  '--input-type=module',
-  '-e',
-  'import {loadBundle} from "./igniter/loader.ts"; process.stdout.write(loadBundle("compiler/manifests/ts.json").text);',
-], { cwd: repository, encoding: 'buffer', maxBuffer: 64 * 1024 * 1024 });
-if (bundle.error !== undefined) throw bundle.error;
-if (bundle.status !== 0) {
-  process.stderr.write(bundle.stderr ?? Buffer.alloc(0));
-  process.exit(bundle.status ?? 1);
-}
-const sourcePath = join(outDirectory, 'S.lts');
-writeFileSync(sourcePath, bundle.stdout ?? Buffer.alloc(0));
-
-// The default litec now uses T11. Keep this historical audit's T00 builder explicit.
-const stage0 = run(process.execPath, [join(repository, 'igniter', 'bundle-cli.ts'), 'ts', sourcePath]);
-const t11Path = join(outDirectory, 'T11.ts');
-writeFileSync(t11Path, stage0.stdout);
-writeFileSync(`${t11Path}.err`, stage0.stderr);
-if (stage0.status !== 0) {
-  process.stderr.write(stage0.stderr);
-  process.stderr.write(JSON.stringify({ phase: 'T11', status: stage0.status, out: outDirectory }) + '\n');
-  process.exit(stage0.status ?? 1);
-}
-
-const t12Path = join(outDirectory, 'T12.ts');
-const generated = run(process.execPath, [
-  join(repository, 'compiler', 'scripts', 'run-ts-artifact.ts'),
-  '--artifact', t11Path,
-  '--source', sourcePath,
-  '--out', t12Path,
-]);
-if (generated.status !== 0) {
-  process.stderr.write(generated.stderr);
-  process.stderr.write(JSON.stringify({ phase: 'T12', status: generated.status, out: outDirectory }) + '\n');
-  process.exit(generated.status ?? 1);
-}
-
-const t11 = readFileSync(t11Path);
-const t12 = readFileSync(t12Path);
-const summary = {
-  phase: 'complete',
-  out: outDirectory,
-  source: { bytes: (bundle.stdout ?? Buffer.alloc(0)).length, hash: hashBytes(bundle.stdout ?? Buffer.alloc(0)) },
-  t11: { bytes: t11.length, hash: hashBytes(t11), seconds: stage0.seconds },
-  t12: { bytes: t12.length, hash: hashBytes(t12) },
-  fixedPoint: t11.equals(t12),
-};
-process.stdout.write(JSON.stringify(summary, null, 2) + '\n');
-process.exit(summary.fixedPoint ? 0 : 1);
+if (mainFile(import.meta.url)) { try { selfHost(process.argv.slice(2)); } catch (error) { fail(error); } }

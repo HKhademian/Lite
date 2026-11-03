@@ -31,6 +31,7 @@
     "../compiler/bootstrap/*-seed.ts",
     "../compiler/bootstrap/seed.ts",
     "../compiler/tests/host.test.ts",
+    "../compiler/tests/tooling.test.ts",
     "../compiler/tests/contracts*.ts",
     "../compiler/scripts/*.ts",
     "../benchmark/*.ts",

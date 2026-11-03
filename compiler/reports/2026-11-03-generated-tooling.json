@@ -1,0 +1,328 @@
+{
+  "date": "2026-11-03",
+  "phase": "w3-tooling",
+  "baselineRevision": "f62828f",
+  "node": "v24.16.0",
+  "sourceSha256": "214cfa39400929ca9e45d5e5f67a4102ec35d0276b109e8ebcc2405490ec7a5e",
+  "selectedSeedSha256": "77cacbacdc2aa97c6c3b86c61f54501fd322ca081cb8be63bd9e5cf1f91818ee",
+  "sourceAndSeedUnchanged": true,
+  "gates": {
+    "fast": {
+      "tests": 136,
+      "passed": 124,
+      "failed": 0,
+      "skipped": 12,
+      "durationMs": 157814.04025
+    },
+    "full": {
+      "tests": 136,
+      "passed": 127,
+      "failed": 0,
+      "skipped": 9,
+      "durationMs": 156351.987834
+    },
+    "noT00Full": {
+      "tests": 136,
+      "passed": 127,
+      "failed": 0,
+      "skipped": 9,
+      "durationMs": 155714.144
+    },
+    "reference": {
+      "tests": 162,
+      "passed": 162,
+      "failed": 0,
+      "skipped": 0,
+      "durationMs": 9392.445292
+    },
+    "editor": {
+      "tests": 9,
+      "passed": 9,
+      "failed": 0,
+      "skipped": 0,
+      "durationMs": 128.743
+    }
+  },
+  "ladder": {
+    "phase": "generated-fixed-point",
+    "revision": "f62828f301b824b4948eb7432c270f97fc4b9bcc",
+    "node": "v24.16.0",
+    "out": "/tmp/lite-w3-final-ladder",
+    "selected": {
+      "artifactSha256": "77cacbacdc2aa97c6c3b86c61f54501fd322ca081cb8be63bd9e5cf1f91818ee",
+      "currentSourceSha256": "214cfa39400929ca9e45d5e5f67a4102ec35d0276b109e8ebcc2405490ec7a5e",
+      "selectedCompilerSha256": "77cacbacdc2aa97c6c3b86c61f54501fd322ca081cb8be63bd9e5cf1f91818ee",
+      "selectedCompilerBuilderSha256": "77cacbacdc2aa97c6c3b86c61f54501fd322ca081cb8be63bd9e5cf1f91818ee",
+      "supplied": false
+    },
+    "toolSources": [
+      {
+        "path": "compiler/scripts/self-host.ts",
+        "sha256": "973b60126594dbb69a03ccfa7691276ec20a6f0e47dbe33098d2611923ef0d6b"
+      },
+      {
+        "path": "compiler/scripts/tooling.ts",
+        "sha256": "a04ea7d8c5fde0b828a129eaa842bf666d85f2d77805c9adf1c789102e3a7f47"
+      },
+      {
+        "path": "compiler/host.ts",
+        "sha256": "5529727d1804dd64778e24c5cdfa421231b7bbc5d39280721b0208da11dd4ac9"
+      },
+      {
+        "path": "igniter/artifacts.ts",
+        "sha256": "084be9e0d6f3e5ce581ecbda1fc86aea601a2de409c5ddb0d5363c3a671db626"
+      }
+    ],
+    "source": {
+      "bytes": 192587,
+      "sha256": "214cfa39400929ca9e45d5e5f67a4102ec35d0276b109e8ebcc2405490ec7a5e"
+    },
+    "generations": [
+      {
+        "generation": 1,
+        "sourceSha256": "214cfa39400929ca9e45d5e5f67a4102ec35d0276b109e8ebcc2405490ec7a5e",
+        "builderSha256": "77cacbacdc2aa97c6c3b86c61f54501fd322ca081cb8be63bd9e5cf1f91818ee",
+        "artifactSha256": "77cacbacdc2aa97c6c3b86c61f54501fd322ca081cb8be63bd9e5cf1f91818ee",
+        "bytes": 351426,
+        "compileProcessMs": 843.323875,
+        "strictCheckMs": 64.00183299999992,
+        "path": "/tmp/lite-w3-final-ladder/generation-1.ts"
+      },
+      {
+        "generation": 2,
+        "sourceSha256": "214cfa39400929ca9e45d5e5f67a4102ec35d0276b109e8ebcc2405490ec7a5e",
+        "builderSha256": "77cacbacdc2aa97c6c3b86c61f54501fd322ca081cb8be63bd9e5cf1f91818ee",
+        "artifactSha256": "77cacbacdc2aa97c6c3b86c61f54501fd322ca081cb8be63bd9e5cf1f91818ee",
+        "bytes": 351426,
+        "compileProcessMs": 869.490166,
+        "strictCheckMs": 68.70370899999989,
+        "path": "/tmp/lite-w3-final-ladder/generation-2.ts"
+      },
+      {
+        "generation": 3,
+        "sourceSha256": "214cfa39400929ca9e45d5e5f67a4102ec35d0276b109e8ebcc2405490ec7a5e",
+        "builderSha256": "77cacbacdc2aa97c6c3b86c61f54501fd322ca081cb8be63bd9e5cf1f91818ee",
+        "artifactSha256": "77cacbacdc2aa97c6c3b86c61f54501fd322ca081cb8be63bd9e5cf1f91818ee",
+        "bytes": 351426,
+        "compileProcessMs": 871.697917,
+        "strictCheckMs": 62.69100000000026,
+        "path": "/tmp/lite-w3-final-ladder/generation-3.ts"
+      }
+    ],
+    "fixedPoint": true,
+    "matchesSelectedCompiler": true,
+    "equalsSelectedBuilder": true
+  },
+  "corpus": {
+    "phase": "recorded-contracts",
+    "target": "ts",
+    "artifactSha256": "77cacbacdc2aa97c6c3b86c61f54501fd322ca081cb8be63bd9e5cf1f91818ee",
+    "sourceSha256": "214cfa39400929ca9e45d5e5f67a4102ec35d0276b109e8ebcc2405490ec7a5e",
+    "selectedCompilerSha256": "77cacbacdc2aa97c6c3b86c61f54501fd322ca081cb8be63bd9e5cf1f91818ee",
+    "selectedCompilerBuilderSha256": "77cacbacdc2aa97c6c3b86c61f54501fd322ca081cb8be63bd9e5cf1f91818ee",
+    "supplied": true,
+    "toolSources": [
+      {
+        "path": "compiler/scripts/corpus-parity.ts",
+        "sha256": "ef33bea62f633f333708e8c03fe9334f99eb776fda4be4bac6e413ff6378f980"
+      },
+      {
+        "path": "compiler/scripts/corpus-contracts.ts",
+        "sha256": "adcbab8ce774f33abf3545e1d93db20b25f66ff62ea742b2a682d686b2b2eb14"
+      },
+      {
+        "path": "compiler/scripts/tooling.ts",
+        "sha256": "a04ea7d8c5fde0b828a129eaa842bf666d85f2d77805c9adf1c789102e3a7f47"
+      },
+      {
+        "path": "compiler/host.ts",
+        "sha256": "5529727d1804dd64778e24c5cdfa421231b7bbc5d39280721b0208da11dd4ac9"
+      },
+      {
+        "path": "igniter/artifacts.ts",
+        "sha256": "084be9e0d6f3e5ce581ecbda1fc86aea601a2de409c5ddb0d5363c3a671db626"
+      },
+      {
+        "path": "igniter/test-fixtures.ts",
+        "sha256": "53d8ce39a0e1c4e9c4209d433e12d83a65f6f7a110f8d03ee2971b1cb251a431"
+      }
+    ],
+    "cases": 93,
+    "programs": 69,
+    "rejections": 24,
+    "executions": 69,
+    "mismatches": []
+  },
+  "historicalReferenceCorpus": {
+    "phase": "compare",
+    "artifact": "<local-path>/Projects/LiteScript/compiler/bootstrap/T11.ts",
+    "target": "ts",
+    "cases": 93,
+    "programs": 69,
+    "rejections": 24,
+    "mismatches": 0,
+    "first": []
+  },
+  "dependencyAudit": {
+    "defaultStaticModules": [
+      "benchmark/compiler-performance.ts",
+      "compiler/bootstrap/c-seed.ts",
+      "compiler/bootstrap/seed.ts",
+      "compiler/host.ts",
+      "compiler/scripts/build.ts",
+      "compiler/scripts/corpus-contracts.ts",
+      "compiler/scripts/corpus-parity.ts",
+      "compiler/scripts/self-host.ts",
+      "compiler/scripts/tooling.ts",
+      "igniter/artifacts.ts",
+      "igniter/loader.ts",
+      "igniter/measure.ts",
+      "igniter/test-fixtures.ts"
+    ],
+    "forbiddenImports": [
+      "igniter/lite.ts",
+      "igniter/bootstrap.ts",
+      "igniter/cli.ts",
+      "igniter/bundle-cli.ts"
+    ],
+    "passed": true,
+    "historicalAuditPreservation": [
+      {
+        "before": "compiler/scripts/self-host.ts",
+        "after": "compiler/scripts/self-host-reference.ts",
+        "programBytesUnchanged": true
+      },
+      {
+        "before": "compiler/scripts/corpus-parity.ts",
+        "after": "compiler/scripts/corpus-parity-reference.ts",
+        "programBytesUnchanged": true
+      },
+      {
+        "before": "benchmark/compiler-performance.ts",
+        "after": "benchmark/compiler-performance-reference.ts",
+        "programBytesUnchanged": true
+      }
+    ],
+    "explicitReferenceDependencies": [
+      "*-reference.ts audit commands",
+      "benchmark/compiler-worker.ts T00+S and T00-frontend modes",
+      "compiler/scripts/t00-t11-inventory.ts"
+    ]
+  },
+  "toolingRegressions": {
+    "groups": 5,
+    "contracts": [
+      "generated three-generation fixed point and persisted identities",
+      "invalid options, strict failures and unrelated fixed point rejected by corpus conformance",
+      "93 compiler contracts plus 69 strictly checked runtime scenarios; bad compiler cannot fall back",
+      "all ordinary tools and benchmark work without T00 adapters or Git metadata; explicit references fail when absent",
+      "changed Lite emission reaches a new fixed point whose bytes can differ from the first old-seed build"
+    ],
+    "note": "The refresh probe changes only a copied source archive. No accepted seed is rewritten or selected."
+  },
+  "benchmark": {
+    "path": "benchmark/reports/2026-11-03-generated-compiler-performance.json",
+    "sha256": "34a28472b0400f0ab50aca53f411f630d8f28031e7355a424fa364bdcb402f98",
+    "samples": 3,
+    "warmups": 1,
+    "strictCompilerCheckMs": 66.1225,
+    "strictProgramCheckMs": 87.0245419999992,
+    "results": [
+      {
+        "workload": "output-1",
+        "processMs": 86.35416700000133,
+        "loadMs": 21.540707999999995,
+        "compileMs": 2.4735000000000014,
+        "cpuMs": 82.019,
+        "peakRssKiB": 97088
+      },
+      {
+        "workload": "output-100",
+        "processMs": 86.61804100000154,
+        "loadMs": 19.730416000000005,
+        "compileMs": 13.018625000000007,
+        "cpuMs": 108.782,
+        "peakRssKiB": 106880
+      },
+      {
+        "workload": "output-1000",
+        "processMs": 142.453125,
+        "loadMs": 19.918915999999996,
+        "compileMs": 65.868042,
+        "cpuMs": 199.107,
+        "peakRssKiB": 137280
+      },
+      {
+        "workload": "compiler-corpus",
+        "processMs": 7799.662206999987,
+        "loadMs": 1887.2314560000002,
+        "compileMs": 249.29116199999999,
+        "cpuMs": 7275.616000000001,
+        "peakRssKiB": 100352
+      },
+      {
+        "workload": "self-build",
+        "processMs": 843.590458000006,
+        "loadMs": 19.758125,
+        "compileMs": 760.129916,
+        "cpuMs": 1125.207,
+        "peakRssKiB": 336064
+      }
+    ],
+    "runtime": {
+      "checkedSyntheticOutputCounts": [
+        1,
+        100,
+        1000
+      ],
+      "workload": "output-1000",
+      "artifactSha256": "f302689bb4bc02b867c7719c289daa1815031501bda9b7581ccd8959a9ad8bfb",
+      "samples": [
+        63.51866699999664,
+        61.33412500000122,
+        61.839333000003535
+      ],
+      "medianProcessMs": 61.839333000003535
+    },
+    "note": "Generated-only baseline, measured sequentially after regression gates; no speedup or native/compiler-completeness claim."
+  },
+  "canonicalVerification": {
+    "passed": 60,
+    "failed": 21,
+    "executed": 81,
+    "failures": [
+      "FAIL cond.partial/defaults-and-no-write [ts]: compiler exited 2: 2:19: value if requires a final else",
+      "FAIL finally.cleanup/cleanup [ts]: compiler exited 2: 1:31: expected an Int, Float, String or Bool expression",
+      "FAIL init.reserved/first-write [ts]: compiler exited 2: 1:10: expected an Int, Float, String or Bool expression",
+      "FAIL init.zero/zero-values [ts]: compiler exited 2: 3:5: expected a tuple field name",
+      "FAIL list.mutation/push-front-back [ts]: compiler exited 2: 3:1: unknown value push_front",
+      "FAIL loop.metadata/metadata-and-targets [ts]: compiler exited 2: 1:6: unsupported feature \"loop\": see docs/loops.md; the restricted compiler accepts Int/Float/String/Bool expressions, locals, output/outputLine, if/else and loop only",
+      "FAIL loop.value/value-and-then [ts]: compiler exited 2: 1:8: unsupported feature \"loop\": see docs/loops.md; the restricted compiler accepts Int/Float/String/Bool expressions, locals, output/outputLine, if/else and loop only",
+      "FAIL match.subjectless/first-true-and-fallback [ts]: compiler exited 2: 2:10: unsupported feature \"match\": see docs/match.md; the restricted compiler accepts Int/Float/String/Bool expressions, locals, output/outputLine, if/else and loop only",
+      "FAIL mut.inferred/writable-lists [ts]: compiler exited 2: 1:1: unsupported feature \"mut\": see docs/declarations-and-assignment.md; the restricted compiler accepts Int/Float/String/Bool expressions, locals, output/outputLine, if/else and loop only",
+      "FAIL num.widths/widths [ts]: compiler exited 2: 1:4: unsupported local type Int8",
+      "FAIL report.tuple/tuple-display [ts]: compiler exited 2: 1:29: expected )",
+      "FAIL scope.compound/compound-chain [ts]: compiler exited 2: 2:8: expected an Int, Float, String or Bool expression",
+      "FAIL tuple.shape/named-and-positional [ts]: compiler exited 2: 3:2: unknown value one",
+      "FAIL example.006-fixed-tuples/tuple-demo [ts]: compiler exited 2: 1:47: expected a tuple field name",
+      "FAIL example.008-named-tuples/named-tuple [ts]: compiler exited 2: 2:6: expected an Int, Float, String or Bool expression",
+      "FAIL example.009-fixed-arrays/token-index [ts]: compiler exited 2: 12:19: unsupported function type",
+      "FAIL example.010-mixed-tuples/mixed-tuple [ts]: compiler exited 2: 2:12: expected )",
+      "FAIL example.011-tuple-label-conversion/relabel [ts]: compiler exited 2: 2:1: cannot initialize (x: Int, y: Int) with (width: Int, height: Int)",
+      "FAIL example.012-named-arguments/named-args [ts]: compiler exited 2: 5:19: unknown value c",
+      "FAIL example.013-growable-lists/list-ends [ts]: compiler exited 2: 3:1: unknown value push_front",
+      "FAIL example.016-integer-calculator/precedence [ts]: compiler exited 2: 49:5: cannot return Unit from function digitValue returning Int"
+    ]
+  },
+  "coverage": {
+    "features": 41,
+    "examples": 19,
+    "samples": 20,
+    "passed": true
+  },
+  "deferred": [
+    "T00 inventory remains an explicitly named reference audit until retirement.",
+    "Ordinary TS feature ports remain pending; the recorded source inventory remains 112/172 because source/seed identities are unchanged.",
+    "C/native/cross-host work remains after TS migration and T00 retirement."
+  ]
+}

@@ -185,8 +185,8 @@ enabled. See the [completion assessment and evidence](parity.md#function-complet
 | [`generated/run-report.ts`](generated/run-report.ts) | Visible Node adapter for the TS reference |
 | [`generated/baseline-artifacts.json`](generated/baseline-artifacts.json) | P0 emitted-artifact hashes for the 50 program cases |
 | [`scripts/run-ts-artifact.ts`](scripts/run-ts-artifact.ts) | Strict-typechecks and runs one emitted TS artifact with fixed stdin and no harness timeout |
-| [`scripts/self-host.ts`](scripts/self-host.ts) | Runs the S → T11 → T12 ladder and reports hashes and fixed-point status |
-| [`scripts/corpus-parity.ts`](scripts/corpus-parity.ts) | Compares an emitted TS compiler with stage 0 across every compiler corpus case |
+| [`scripts/self-host.ts`](scripts/self-host.ts) | Builds three strictly checked generated TS generations; historical T00 ladder requires `--reference` |
+| [`scripts/corpus-parity.ts`](scripts/corpus-parity.ts) | Checks compiler bytes, rejections and TS execution against recorded contracts; T00 comparison requires `--reference` |
 
 The backend source is split by role and assembled by manifest order. The
 compatibility `ts-emitter.lts` and `c-emitter.lts` files are generated flattened

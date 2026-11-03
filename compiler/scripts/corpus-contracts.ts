@@ -1,0 +1,56 @@
+/** Recorded corpus contracts and generated TS execution; no live interpreter. */
+import { readFileSync } from 'node:fs';
+import { join } from 'node:path';
+import { buildCompiler } from '../host.ts';
+import { prepareTsArtifacts, type ArtifactRun } from '../../igniter/artifacts.ts';
+import { compilerFixtures, type CompilerFixture } from '../../igniter/test-fixtures.ts';
+import { repository, hashBytes } from './tooling.ts';
+
+export type ArtifactContract = Readonly<{ ts: string; c: string }>;
+/** Runtime streams/status come from manifests; compiler artifacts come from independently recorded hashes. */
+export function corpusContracts(): { fixtures: readonly CompilerFixture[]; artifacts: ReadonlyMap<string, ArtifactContract> } {
+  const record = JSON.parse(readFileSync(join(repository, 'compiler/generated/current-artifacts.json'), 'utf8')) as {
+    sourceSha256: string; artifacts: { name: string; ts: string; c: string }[];
+  };
+  if (record.sourceSha256 !== buildCompiler('ts').sourceSha256) throw new Error('recorded corpus artifacts do not match current Lite compiler source; review their contracts first');
+  const artifacts = new Map(record.artifacts.map(row => [row.name, { ts: row.ts, c: row.c }]));
+  for (const fixture of compilerFixtures) if (fixture.category === 'program' && !artifacts.has(fixture.name)) throw new Error(`missing artifact contract: ${fixture.name}`);
+  return { fixtures: compilerFixtures, artifacts };
+}
+export function compilerContractMatches(fixture: CompilerFixture, result: Pick<ArtifactRun, 'status' | 'signal' | 'stdout' | 'stderr'>, artifacts: ReadonlyMap<string, ArtifactContract>): boolean {
+  if (result.signal !== null) return false;
+  if (fixture.category === 'rejected') return result.status === fixture.exitCode && result.stdout.equals(fixture.stdout) && result.stderr.equals(fixture.stderr);
+  return result.status === 0 && result.stderr.length === 0 && 'sha256:' + hashBytes(result.stdout) === artifacts.get(fixture.name)?.ts;
+}
+/** Compile each distinct source and then strictly check/run every admitted scenario. */
+export function validateCorpus(artifact: string): { cases: number; programs: number; rejections: number; executions: number; mismatches: string[] } {
+  const { fixtures, artifacts } = corpusContracts();
+  const compiler = prepareTsArtifacts([artifact]);
+  const programs: { fixture: CompilerFixture; source: string }[] = []; const mismatches: string[] = [];
+  const compiled = new Map<string, ArtifactRun>();
+  let rejections = 0;
+  try {
+    if (compiler.checked.status !== 0 || compiler.checked.signal !== null) throw new Error(`strict compiler check failed:\n${compiler.checked.stdout}${compiler.checked.stderr}`);
+    for (const fixture of fixtures) {
+      let actual = compiled.get(fixture.source);
+      if (actual === undefined) { actual = compiler.runs[0]!({ stdin: fixture.source }); compiled.set(fixture.source, actual); }
+      if (!compilerContractMatches(fixture, actual, artifacts)) { mismatches.push(fixture.file + '/' + fixture.caseName + ': compiler contract'); continue; }
+      if (fixture.category === 'rejected') rejections += 1;
+      else programs.push({ fixture, source: actual.stdout.toString() });
+    }
+  } finally { compiler.dispose(); }
+  const distinctPrograms = [...new Set(programs.map(item => item.source))];
+  const executableIndex = new Map(distinctPrograms.map((source, i) => [source, i]));
+  const executables = prepareTsArtifacts(distinctPrograms);
+  let executions = 0;
+  try {
+    if (executables.checked.status !== 0 || executables.checked.signal !== null) throw new Error(`strict corpus artifact check failed:\n${executables.checked.stdout}${executables.checked.stderr}`);
+    for (const { fixture, source } of programs) {
+      const actual = executables.runs[executableIndex.get(source)!]!({ stdin: fixture.stdin }); executions += 1;
+      if (actual.phase !== 'run' || actual.signal !== null || actual.status !== fixture.exitCode || !actual.stdout.equals(fixture.stdout) || !actual.stderr.equals(fixture.stderr)) {
+        mismatches.push(fixture.file + '/' + fixture.caseName + ': runtime contract');
+      }
+    }
+  } finally { executables.dispose(); }
+  return { cases: fixtures.length, programs: programs.length, rejections, executions, mismatches };
+}

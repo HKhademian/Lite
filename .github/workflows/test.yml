@@ -62,6 +62,10 @@ jobs:
           rm igniter/lite.ts igniter/bootstrap.ts igniter/cli.ts igniter/bundle-cli.ts
           ln -s "$GITHUB_WORKSPACE/igniter/node_modules" igniter/node_modules
           ./lite test --full
+          node compiler/scripts/build.ts
+          node compiler/scripts/self-host.ts --out .cache/generated-ladder
+          node compiler/scripts/corpus-parity.ts --artifact .cache/generated-ladder/generation-3.ts
+          node benchmark/compiler-performance.ts --samples 1 --warmups 0 --out .cache/generated-performance
           ./lite verify --all --filter features/int-arithmetic.json --no-cache
           ./lite check igniter/tests/compiler/001-001-report-int-42.lts
           ./lite compile igniter/tests/compiler/001-001-report-int-42.lts > hello.ts

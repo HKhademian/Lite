@@ -14,7 +14,7 @@ todos:
     status: in_progress
   - id: generated-default-workflows
     content: Remove public run; use generated TS artifacts for check, compile, verification and tests; retain explicit T00 references
-    status: in_progress
+    status: completed
   - id: existing-feature-parity
     content: Compile all existing supported features to TS and execute their artifacts; defer advanced edge audits
     status: pending
@@ -50,6 +50,8 @@ reference until the TS replacements are complete. This supersedes earlier
 native-first ordering in historical progress entries.
 
 ## Done
+
+- 2026-11-03: w3 completes generated-only routine tooling. Self-build strictly checks three named generations and records real source/builder identities; corpus validation checks 93 compiler contracts and 69 TS runtime scenarios against recorded expectations. Benchmarking records generated process/load/compile/check/runtime phases with three samples and one excluded warmup. Old T00 audit programs are preserved byte-for-byte apart from routing comments and require --reference. Five CLI regression groups include absent T00/Git, malformed inputs, wrong compilers and a legitimate changed-source fixed point. Fast: 124 pass/12 skips; ordinary and no-T00 full: 127 pass/nine native skips, zero failures. Reference 162/162, nine editor groups, strict checks and both corpus routes pass. Source/seed remain unchanged; the canonical audit is still 60/81 with 21 visible pending ports. See [evidence](reports/2026-11-03-generated-tooling.json), [tool guide](bootstrap/README.md) and [baseline](../benchmark/reports/2026-11-03-generated-compiler-performance.md).
 
 - 2026-11-03: default tests now compile with generated Lite, strictly check TS and execute isolated artifacts; checked library/phase drivers are reused across inputs. All 93 compiler fixtures, eight library entries and 81 original generated tests remain covered. T00 checks require `./lite test --reference` (162 pass). Ordinary and T00-free source-archive fast suites each pass 119 with 12 deferred skips; full suites each pass 122 with nine native skips and zero failures. Strict checks, nine editor groups and three identical self-builds pass; source/seed are unchanged. The default static graph has 18 modules and no T00 imports. CI now runs the full no-T00 suite. The canonical TS audit still reports 60/81 passing with 21 visible pending ports. See [the evidence](reports/2026-11-03-generated-tests.json). Routine tooling remains w3 work.
 
@@ -320,26 +322,13 @@ native-first ordering in historical progress entries.
 
 ## Implementation order
 
-### Step 3a — generated-default-workflows
+### Step 3a — generated-default-workflows (completed 2026-11-03)
 
-**Depends on:** the completed T11 TS self-build and default compilation path.
-**Current routing:** public compile/check use generated TS. Public run is
-removed, and public C requests fail explicitly. Verification defaults to TS
-artifacts with an explicit --reference lane; default tests compile and execute generated TS, with T00 selected only by
-`lite test --reference`. Routine corpus/self-build/benchmark scripts remain the
-next workflow dependency. Full-source phase sweeps run strictly checked generated
-drivers.
-**Actions:** migrate verification and default tests to compiled TS artifacts;
-keep explicitly named T00 reference/audit lanes separate. Never fall back to
-T00. Check-only must not execute effects. Preserve flat imports, stdin,
-arguments, streamed output, diagnostics and status. Keep generated self-build,
-strict checks and the TS fixed-point ladder passing throughout.
-**Acceptance:** default check/verify/test/compile exercise Lite. A checkout
-without T00 supports the generated baseline and everyday workflow; explicit
-reference tests may still require T00. Unsupported source remains a visible
-gap, never a skipped or T00-executed Lite pass.
-**Verify:** real CLI/no-T00 tests, strict checking, TS suites, verifier target
-selection and dependency scans. Record generated and reference results separately.
+Public check/compile/verify and default tests execute generated TS. Routine build,
+three-generation self-hosting, corpus and benchmark commands work without T00.
+Historical audits require explicit --reference selection. Unsupported canonical
+contracts still fail visibly, and T00 is not retired. Source/seed identities and
+all completed workflow evidence are recorded above. Continue with core syntax.
 
 ### Step 3b — core-syntax-baseline
 

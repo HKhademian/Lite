@@ -5,7 +5,7 @@ created: 2026-11-02
 todos:
   - id: wave-1-workflows
     content: "Default tests and routine compiler tools use generated TS"
-    status: in_progress
+    status: completed
   - id: wave-2-values-calls
     content: "Port existing data, storage and callable contracts"
     status: pending
@@ -47,6 +47,8 @@ Finish existing supported TS features and consumers, then retire active T00. Thi
 
 ## Done and verified baseline
 
+- 2026-11-03: Wave 1/w3 is complete. Ordinary build, default tests, self-hosting, recorded-contract corpus validation and benchmark commands work without T00. Exact generated identities and gates are in compiler/reports/2026-11-03-generated-tooling.json. Wave 2 is ready, starting with d1-tuples; no language-port closure or T00 retirement is claimed. The completed workflow plan remains until final cleanup.
+
 - 2026-11-03: w2 is complete. Default fast/full suites pass in ordinary and no-T00 source archives; explicit reference passes separately. Generated source/seed remain unchanged. Wave 1 continues with w3 tooling, before any language-wave dependency is marked complete.
 
 - 2026-11-03: w1-contracts is complete; original test ownership and independent expectations are preserved. Wave 1 remains active; w2 default routing is now complete, with routine compiler tooling (w3) next. See the workflow plan and `compiler/tests/contracts/README.md`.
@@ -61,8 +63,8 @@ Finish existing supported TS features and consumers, then retire active T00. Thi
 
 ## Child plans and execution order
 
-1. **Wave 1 — workflows (start here).** [t00-ts-retirement-workflows.md](./t00-ts-retirement-workflows.md): w1-contracts → w2-default-tests → w3-tooling. End with default generated regression/build/corpus/performance paths usable without T00.
-2. **Wave 2 — values and calls.** [t00-ts-retirement-values-calls.md](./t00-ts-retirement-values-calls.md): d1-tuples → d2-tuple-contracts → d3-arrays → d4-storage → d5-lists → d6-call-routing → d7-function-values. Port shared foundations once; keep all previously passing cases.
+1. **Wave 1 — workflows (completed).** [t00-ts-retirement-workflows.md](./t00-ts-retirement-workflows.md): w1-contracts → w2-default-tests → w3-tooling. End with default generated regression/build/corpus/performance paths usable without T00.
+2. **Wave 2 — values and calls (next).** [t00-ts-retirement-values-calls.md](./t00-ts-retirement-values-calls.md): d1-tuples → d2-tuple-contracts → d3-arrays → d4-storage → d5-lists → d6-call-routing → d7-function-values. Port shared foundations once; keep all previously passing cases.
 3. **Wave 3 — control and types.** [t00-ts-retirement-control-types.md](./t00-ts-retirement-control-types.md): c1-never-input → c2-blocks → c3-match → c4-loop-values → c5-loop-exits → c6-cleanup → c7-widths. C1 may be pulled forward after Wave 1 when it unblocks calculator typing; do not overlap shared-file edits.
 4. **Wave 4 — integration and retirement.** [t00-ts-retirement-integration.md](./t00-ts-retirement-integration.md): r1-coverage → r2-recovery → r3-retire. This gate requires all mandatory prior topic acceptance, not merely launcher selection.
 

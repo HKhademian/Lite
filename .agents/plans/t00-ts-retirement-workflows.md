@@ -1,6 +1,6 @@
 ---
 name: t00-ts-retirement-workflows
-status: in_progress
+status: completed
 created: 2026-11-02
 todos:
   - id: w1-contracts
@@ -11,7 +11,7 @@ todos:
     status: completed
   - id: w3-tooling
     content: "Preserve self-hosting and migrate routine compiler scripts"
-    status: pending
+    status: completed
 plans:
   requires: []
   blocks: []
@@ -26,6 +26,8 @@ Finish the consumer cutover before further broad feature work, keeping all gener
 
 ## Done
 
+- 2026-11-03, w3-tooling: routine self-build/corpus/benchmark commands now use generated TS; explicit --reference routes retain the original audit programs. Three strictly checked generations reproduce the selected seed; 93 corpus contracts and 69 runtime scenarios pass. Five tool regression groups cover bad artifacts/options, no-T00/Git archives and changed-source fixed points. Fast 124 pass/12 skips; ordinary and no-T00 full each 127 pass/nine native skips; reference 162/162; strict checks and nine editor groups pass. A generated-only three-sample baseline is recorded, without a speedup claim. Compiler source/seed and 21 canonical pending ports are unchanged. See compiler/reports/2026-11-03-generated-tooling.json.
+
 - 2026-11-03, w2-default-tests: default compiler/phase/library/artifact execution is generated-only; T00 tests use explicit --reference (162 pass). Ordinary and no-T00 archive fast: 119 pass/12 skips; full: 122 pass/nine native skips, zero failures. All 93 fixtures/eight libraries remain covered. Strict checks, nine editor groups, 18-module no-T00 static import audit and three identical self-builds pass. Source/seed and 21 canonical migration failures are unchanged. CI runs full default tests without T00 and its historical adapters. Evidence: compiler/reports/2026-11-03-generated-tests.json.
 
 - 2026-11-03, w1-contracts: all 240 original igniter tests retain a mapped destination (81 generated/phase/artifact, 159 reference); shared manifest loading and 776 exact independent process contracts replace live expected-value queries. The explicit reference suite replays the corpus and archive. Five contract/ledger tests and six copied-checkout no-T00 host groups pass. Fast: 278 pass/12 deferred skips; full: 281 pass/nine native skips. Strict host/seed checks pass. Compiler source/seed and the 60/81 TS canonical audit are unchanged. Default actual compiler/phase helpers and launcher routing remain w2 work.
@@ -39,17 +41,7 @@ Public compile/check/verify already use T11. Public run is removed; C/native gat
 
 ## Implementation order
 
-### w3-tooling — Preserve self-hosting and migrate routine compiler scripts
-
-**Depends on:** w2-default-tests.
-**Files:** `compiler/scripts/self-host.ts`, `compiler/scripts/corpus-parity.ts`, `benchmark/compiler-performance.ts`, `igniter/bootstrap.ts`, `compiler/bootstrap/README.md`, `compiler/parity.md`.
-**Actions / atomic commit order:**
-1. Provide a documented generated-only self-build/three-generation fixed-point command using loadBundle, selected T11 and strict artifact checks. Retain the old T00 reconstruction only as an explicitly named historical audit route; never relabel a historical node.
-2. Change routine corpus/performance callers from loadCompiler/runBundle T00 execution to the generated compiler host. Compare generated output with recorded contract artifacts/diagnostics or successive generated generations; retain live T00 comparison explicitly while available.
-3. Record baseline compiler/process/check timings and exact seed/source identities. Keep T00 inventory tooling explicitly reference-only for now; its final archival replacement belongs to the retirement wave.
-
-**Acceptance:** Everyday build, test, corpus and benchmark commands run without T00; three generated generations are byte identical, strictly checked and source/builder identities are retained.
-**Verify:** 93-source TS corpus, self-build/fixed point, strict checks and a command/import dependency scan; no C ladder.
+All workflow steps are complete. Permanent commands, identities and reproduction routes live in the compiler bootstrap guide and parity ledger. This completed plan is retained until final master-plan cleanup, as the orchestrator requires.
 
 ## Constraints and verification
 

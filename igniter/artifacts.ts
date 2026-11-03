@@ -79,7 +79,9 @@ function withPreparedTsArtifacts<Result>(sources: readonly string[], use: (runs:
 }
 
 /** Strict-checks a batch once and provides isolated runners with an explicit lifetime. */
-export function prepareTsArtifacts(sources: readonly string[]): PreparedTsArtifacts {
+export function prepareTsArtifacts(sources: readonly string[], options: Readonly<{ timeoutMs?: number }> = {}): PreparedTsArtifacts {
+  const timeout = options.timeoutMs ?? 10000;
+  if (!Number.isSafeInteger(timeout) || timeout < 0) throw new Error('invalid TS artifact execution timeout');
   const success: ArtifactRun = { phase: 'typecheck', status: 0, signal: null, stdout: Buffer.alloc(0), stderr: Buffer.alloc(0) };
   if (sources.length === 0) return { runs: [], checked: success, dispose: () => {} };
   const directory = mkdtempSync(join(tmpdir(), 'lite-artifact-ts-'));
@@ -129,7 +131,7 @@ export function prepareTsArtifacts(sources: readonly string[]): PreparedTsArtifa
         stdout = openSync(stdoutPath, 'w');
         stderr = openSync(stderrPath, 'w');
         const result = spawnSync(process.execPath, [runner, ...(options.args ?? [])], {
-          input: inputBytes(options.stdin), timeout: 10000, stdio: ['pipe', stdout, stderr],
+          input: inputBytes(options.stdin), timeout, stdio: ['pipe', stdout, stderr],
         });
         if (result.error !== undefined) throw result.error;
         // Bound the buffers read into the parent, as with the former pipe capture.

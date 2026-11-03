@@ -98,16 +98,18 @@ their emitted TS matched stage 0 byte for byte. T13 was not recorded for this
 original source snapshot. The refreshed source below has its own complete
 three-node TS equality record.
 
-Regenerate and re-check the ladder with one command:
+Audit the historical T00 → generated builder route for current S with one
+command. To reproduce the checkpoint hashes above, first restore its matching
+source revision; the command does not restore historical S:
 
 ```sh
-node compiler/scripts/self-host.ts --out /tmp/selfhost-run
+node compiler/scripts/self-host.ts --reference --out /tmp/selfhost-run
 ```
 
 Corpus parity for an emitted compiler:
 
 ```sh
-node compiler/scripts/corpus-parity.ts --artifact /tmp/T11.ts
+node compiler/scripts/corpus-parity.ts --reference --artifact /tmp/T11.ts
 ```
 
 The 2026-11-02 run compared T11 with stage 0 over all 92 cases in 7.7 s with
@@ -1368,3 +1370,9 @@ shows mixed medians: output 66.0 → 62.9 ms, identical S 745.8 → 767.4 ms,
 constants 131.6 → 135.5 ms and dead-output input 44.5 → 44.6 ms. Every measured
 output stream matches. C timing/output/native gates are deferred under the
 latest owner direction; earlier C snapshot evidence is retained.
+
+## Generated-only routine tooling
+
+- 2026-11-03: w3 completes generated-only routine tooling. Self-build strictly checks three named generations and records real source/builder identities; corpus validation checks 93 compiler contracts and 69 TS runtime scenarios against recorded expectations. Benchmarking records generated process/load/compile/check/runtime phases with three samples and one excluded warmup. Old T00 audit programs are preserved byte-for-byte apart from routing comments and require --reference. Five CLI regression groups include absent T00/Git, malformed inputs, wrong compilers and a legitimate changed-source fixed point. Fast: 124 pass/12 skips; ordinary and no-T00 full: 127 pass/nine native skips, zero failures. Reference 162/162, nine editor groups, strict checks and both corpus routes pass. Source/seed remain unchanged; the canonical audit is still 60/81 with 21 visible pending ports. See [evidence](reports/2026-11-03-generated-tooling.json), [tool guide](bootstrap/README.md) and [baseline](../benchmark/reports/2026-11-03-generated-compiler-performance.md).
+
+The generated ladder names outputs generation-1 through generation-3 and keeps historical T11/T12 builder meanings in the preserved reference route. A fixed point is not a conformance oracle: supplied candidates and changed-source refreshes require the separate recorded-contract corpus gate before seed acceptance. Benchmark self-build output is independently validated on that corpus before timed hashes are compared. No generated seed or old measurement is rewritten.
