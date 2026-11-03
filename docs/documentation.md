@@ -53,6 +53,10 @@ contrast and a usable mobile layout; this guide does not claim a site exists.
 
 Run `./lite doctor --docs` for local Markdown links/fragments, fences and editor
 version consistency. `./lite doctor` also runs both strict TS configurations.
+The [documentation configuration](../config/documentation.json) owns landing
+destinations and source-backed snippet registrations. Registered fences are
+compared with their separate source files, so entry-guide examples cannot drift
+silently. Register additional runnable snippets as their cases become available.
 Use `./lite docs QUERY` to search titles/headings/paths offline, or
 `./lite docs --json QUERY` for structured discovery. The same entry points live
 under `bin/`; `lite check FILE` retains its source-checking meaning.

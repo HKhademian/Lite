@@ -7,6 +7,7 @@ import { root, run, versions } from './project.ts';
 import { loadCases } from './cases.ts';
 
 export function checkProject(docsOnly = false): void {
+  JSON.parse(readFileSync(join(root, 'config/documentation.json'), 'utf8'));
   const failures = checkDocuments();
   assert.equal(failures.length, 0, failures.join('\n'));
   const current = versions();

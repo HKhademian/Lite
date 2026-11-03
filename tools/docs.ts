@@ -4,6 +4,11 @@ import { dirname, extname, join, relative, resolve } from 'node:path';
 import { root } from './project.ts';
 
 export type Document = { path: string; title: string; headings: string[] };
+type Documentation = { navigation: { label: string; path: string }[]; snippets: { document: string; source: string; fence: number; skipLines?: number }[] };
+function configuration(directory: string): Documentation | undefined {
+  const file = join(directory, 'config/documentation.json');
+  return existsSync(file) ? JSON.parse(readFileSync(file, 'utf8')) as Documentation : undefined;
+}
 const ignored = new Set(['.git', '.cache', 'node_modules', 'dist', '.agent']);
 const prose = (text: string): string => text.replace(/^(`{3,}|~{3,})[^\n]*\n[\s\S]*?^\1\s*$/gm, '');
 
@@ -68,6 +73,17 @@ export function checkDocuments(directory = root): string[] {
       }
     }
   }
+  const config = configuration(directory);
+  if (config) {
+    for (const entry of config.navigation) if (!entry.label || !existsSync(resolve(directory, entry.path))) failures.push(`config/documentation.json: missing navigation destination ${entry.path}`);
+    for (const entry of config.snippets) {
+      const source = resolve(directory, entry.source), document = resolve(directory, entry.document);
+      if (!existsSync(source) || !existsSync(document)) { failures.push(`config/documentation.json: missing snippet source/document ${entry.source}`); continue; }
+      const fences = [...readFileSync(document, 'utf8').matchAll(/^```[^\n]*\n([\s\S]*?)^```/gm)];
+      const expected = readFileSync(source, 'utf8').split('\n').slice(entry.skipLines ?? 0).join('\n');
+      if (!Number.isInteger(entry.fence) || entry.fence < 0 || fences[entry.fence]?.[1] !== expected) failures.push(`${entry.document}: code fence ${entry.fence} differs from ${entry.source}`);
+    }
+  }
   return failures;
 }
 
@@ -81,7 +97,11 @@ export function showDocuments(args: string[]): void {
   const query = (json ? args.slice(1) : args).join(' ').toLowerCase();
   const selected = documents().filter(doc => !query || [doc.path, doc.title, ...doc.headings].some(value => value.toLowerCase().includes(query)));
   if (json) console.log(JSON.stringify(selected, null, 2));
-  else if (!query) console.log('Start: docs/start-here.md\nTour: docs/tour.md\nReference: docs/README.md\nCompiler: compiler/README.md\nFixtures: igniter/tests/README.md\nStatus: compiler/transition-plan.md\nContribute: CONTRIBUTING.md\nSearch: lite docs QUERY | --json [QUERY] | --check');
+  else if (!query) {
+    const config = configuration(root);
+    if (!config) throw new Error('documentation navigation configuration is missing');
+    console.log(config.navigation.map(entry => `${entry.label}: ${entry.path}`).join('\n') + '\nSearch: lite docs QUERY | --json [QUERY] | --check');
+  }
   else { if (!selected.length) throw new Error(`no documentation matches: ${query}`); for (const doc of selected) console.log(`${doc.title}\n  ${doc.path}`); }
 }
 
