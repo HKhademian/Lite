@@ -10,6 +10,13 @@ the current test or support inventory. See [the transition](../compiler/transiti
 
 ### Hosted CI correction
 
+The tester advances separately to **0.1.0-alpha.3** after Linux exposed the
+archive benchmark's 90-second outer controller cap. That corpus-validating,
+five-workload command now has a 300-second controller budget. Its focused
+archive test passes; all benchmark workloads, report assertions and ordinary
+program limits are preserved. Compiler/runtime/builtin alpha.2 readiness gates
+have passed and their source/seed bytes remain unchanged.
+
 Compiler, runtime, builtins, tester, release tooling and documentation advance to
 **0.1.0-alpha.2** after hosted evidence exposed two overly short harness limits.
 The 81-scenario CLI verifier audit now has a 180-second aggregate budget and

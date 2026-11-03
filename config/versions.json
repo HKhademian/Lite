@@ -9,7 +9,7 @@
   "stdlib": null,
   "builtins": "0.1.0-alpha.2",
   "checker": "0.1.0-alpha.1",
-  "tester": "0.1.0-alpha.2",
+  "tester": "0.1.0-alpha.3",
   "verifier": "0.1.0-alpha.1",
   "benchmark": "0.1.0-alpha.1",
   "release": "0.1.0-alpha.2",
