@@ -79,6 +79,10 @@ code in [tools/ci.ts](../tools/ci.ts) performs strict checks, generated regressi
 editor grammar, coverage, the explicit TS migration audit, a verified case
 benchmark, a T00-free source-archive gate and extracted-distribution checks.
 Workflow YAML dispatches named Node tasks without embedded shell programs.
+Full regressions and the T00-free archive run in separate jobs with 30-minute
+budgets. The whole-source checker sweep has a 120-second tool budget and the
+81-scenario CLI audit a 180-second controller budget; ordinary artifact limits
+remain unchanged. Timeouts are failures, never successful samples or skipped cases.
 
 [Release](../.github/workflows/release.yml) responds to all registered component
 tag streams. It validates the annotated tag and recorded version at the exact

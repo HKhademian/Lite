@@ -70,17 +70,20 @@ function expectedFile(path: string, input = ''): { code: number; output: string;
   return { code: result.status, output: result.stdout.toString(), errors: result.stderr.toString() };
 }
 /** Compiles a Lite test driver with T11 once, strictly checks it once, and runs isolated inputs. */
-function withGeneratedDriver(path: string, check: (run: (input: string) => { code: number; output: string; errors: string }) => void): void {
+function withGeneratedDriver(path: string, check: (run: (input: string) => { code: number; output: string; errors: string }) => void, timeoutMs = 10000): void {
   const compiled = compileTs({ text: loadSource(path) });
   assert.equal(compiled.status, 0, compiled.stderr.toString());
   assert.equal(compiled.stderr.length, 0);
-  withTsArtifact(compiled.stdout.toString(), run => check(input => {
-    const result = run({ stdin: input });
-    assert.equal(result.phase, 'run', result.stdout.toString() + result.stderr.toString());
-    assert.equal(result.signal, null);
-    assert.notEqual(result.status, null);
-    return { code: result.status!, output: result.stdout.toString(), errors: result.stderr.toString() };
-  }));
+  const prepared = prepareTsArtifacts([compiled.stdout.toString()], { timeoutMs });
+  try {
+    check(input => {
+      const result = prepared.runs[0]!({ stdin: input });
+      assert.equal(result.phase, 'run', result.stdout.toString() + result.stderr.toString());
+      assert.equal(result.signal, null);
+      assert.notEqual(result.status, null);
+      return { code: result.status!, output: result.stdout.toString(), errors: result.stderr.toString() };
+    });
+  } finally { prepared.dispose(); }
 }
 /** Imports an emitted TS/JS core and returns its main() string. */
 async function importedMain(path: string): Promise<string> {
@@ -343,7 +346,7 @@ test('Lite checker collects symbols from the assembled S', context => {
     assert.equal(result.errors, '');
     assert.match(result.output, /^function\|intMin\|/);
     assert.match(result.output, /\nvalue\|source\|/);
-  });
+  }, 120000); // Whole compiler source is a phase sweep, beyond an ordinary program fixture.
 });
 
 test('Lite parser parses type aliases and rejects malformed types', () => {
@@ -439,7 +442,8 @@ test('lite verify defaults to TS, reports migration gaps and keeps T00 explicitl
   const env = { ...process.env, PATH: dirname(process.execPath) + delimiter + (process.env['PATH'] ?? ''),
     LITE_VERIFY_CACHE: join(directory, 'cache.json') };
   try {
-    const verified = spawnSync(join(root, 'lite'), ['verify', '--all', '--no-cache'], { env, encoding: 'utf8', timeout: 30000 });
+    // This controller runs 81 isolated scenarios; each artifact retains its own timeout.
+    const verified = spawnSync(join(root, 'lite'), ['verify', '--all', '--no-cache'], { env, encoding: 'utf8', timeout: 180000 });
     assert.equal(verified.error, undefined); assert.equal(verified.status, 1, verified.stderr);
     assert.match(verified.stdout, /PASS int\.arithmetic\/precedence-and-division/);
     assert.match(verified.stdout, /PASS example\.001-double-sum\/seven-and-five/);
