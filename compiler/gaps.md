@@ -6,22 +6,26 @@ keep correctness, source readability and reproducible bootstrap routes intact.
 This tracker covers the T00 replacement goal, including newly discovered flaws.
 
 Latest owner direction prioritizes TS migration over independent correctness
-work. Public run is removed; compile and execute artifacts. Keep self-hosted TS
-rebuilds/fixed points throughout. T00 remains an explicit reference until TS
-features and consumers migrate. C output/native work and advanced edge audits
-follow retirement. See the [transition order](transition-plan.md#implementation-order).
+work. Public `run` compiles a script to a temporary artifact and executes it with
+the Node entry; compiling and executing artifacts explicitly also remains
+available. Keep self-hosted TS rebuilds/fixed points throughout. T00 remains an
+explicit reference until TS features and consumers migrate. C output/native work
+and advanced edge audits follow retirement. See the
+[transition order](transition-plan.md#implementation-order).
 
 ## Immediate migration priorities
 
 Latest owner direction: switch to the Lite-written TS compiler as quickly as
-possible, keep its generated self-build/fixed point, remove public run, and
-execute compiled artifacts. C output/native work is post migration and does not
+possible, keep its generated self-build/fixed point, replace the removed
+interpreter run launcher with compile-and-execute `lite run`, and execute
+compiled artifacts. C output/native work is post migration and does not
 block TS default use or T00 retirement. This supersedes the older native-first
 retirement ordering.
 
 1. Switch public compile/check and ordinary verification/test consumers to
-   generated TS artifacts; remove public run. Retain T00 only as an explicit
-   reference while the remaining TS ports land.
+   generated TS artifacts; keep the interpreter launcher removed and provide
+   compile-and-execute `lite run`. Retain T00 only as an explicit reference while
+   the remaining TS ports land.
 2. Port the missing ordinary binding/storage, tuple/array/List, call/function and
    block/conditional/loop/match/cleanup forms. All 20 implemented lessons and
    eight library tests already run on generated Lite; eight examples remain.
@@ -67,10 +71,12 @@ percentage. Native C is a separate post-migration milestone.
   skips, zero failures. Three generated self-build generations retain the exact
   selected seed. Default regression routing still needs migration.
 
-- [x] Remove public run; default compilation to TS artifacts and migrate check
+- [x] Remove the interpreter run launcher; default compilation to TS artifacts and migrate check
   to generated compilation plus strict artifact checking without effects.
   Public C output is explicitly deferred. Full current suite: 273 pass, nine
   native-only skips, zero failures; verifier/default test routing still pending.
+  Owner direction, 2026-11-05: `lite run` returns as a compile-and-execute
+  adapter; the interpreter launcher stays removed.
 
 - [x] Make T11 the default TS compiler and compile the C emitter through T11.
 - [x] Preserve nested output effects and argument order.

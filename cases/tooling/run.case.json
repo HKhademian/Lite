@@ -1,0 +1,127 @@
+{
+  "id": "tooling.run",
+  "kind": "tool",
+  "tool": "lite-run",
+  "features": [
+    "tooling.run"
+  ],
+  "cases": [
+    {
+      "name": "interactive-input",
+      "args": [
+        "examples/001-double-sum.lts"
+      ],
+      "stdin": {
+        "text": "7\n5\n"
+      },
+      "stdout": {
+        "text": "First integer: Second integer: 24\n"
+      },
+      "stderr": {
+        "text": ""
+      },
+      "exitCode": 0
+    },
+    {
+      "name": "forwarded-arguments",
+      "args": [
+        "examples/020-script-arguments.lts",
+        "--",
+        "a b",
+        "",
+        "--check"
+      ],
+      "stdin": {
+        "text": ""
+      },
+      "stdout": {
+        "text": "a b\n\n--check\n"
+      },
+      "stderr": {
+        "text": ""
+      },
+      "exitCode": 0
+    },
+    {
+      "name": "propagated-status",
+      "args": [
+        "examples/004-factorial.lts"
+      ],
+      "stdin": {
+        "text": "-1\n"
+      },
+      "stdout": {
+        "text": "Nonnegative integer: "
+      },
+      "stderr": {
+        "text": "expected a nonnegative integer\n"
+      },
+      "exitCode": 2
+    },
+    {
+      "name": "rejection",
+      "args": [
+        "cases/language/reject-effects.lts"
+      ],
+      "stdin": {
+        "text": ""
+      },
+      "stdout": {
+        "text": ""
+      },
+      "stderr": {
+        "text": "cases/language/reject-effects.lts:2:1: unknown value unknown_name\n"
+      },
+      "exitCode": 2
+    },
+    {
+      "name": "missing-source",
+      "args": [
+        "cases/tooling/absent.lts"
+      ],
+      "stdin": {
+        "text": ""
+      },
+      "stdout": {
+        "text": ""
+      },
+      "stderr": {
+        "text": "lite run: cannot read cases/tooling/absent.lts\n"
+      },
+      "exitCode": 2
+    },
+    {
+      "name": "non-script-source",
+      "args": [
+        "README.md"
+      ],
+      "stdin": {
+        "text": ""
+      },
+      "stdout": {
+        "text": ""
+      },
+      "stderr": {
+        "text": "lite run: source must be a .lts file\n"
+      },
+      "exitCode": 2
+    },
+    {
+      "name": "check-hint",
+      "args": [
+        "--check",
+        "examples/001-double-sum.lts"
+      ],
+      "stdin": {
+        "text": ""
+      },
+      "stdout": {
+        "text": ""
+      },
+      "stderr": {
+        "text": "lite run: --check is ./lite check file.lts\n"
+      },
+      "exitCode": 2
+    }
+  ]
+}

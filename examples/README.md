@@ -7,11 +7,12 @@ is independent of the [520 learning exercises](../samples/list.md).
 Run from the repository root with Node 26.13.0:
 
 ```sh
+./lite run examples/001-double-sum.lts
 ./lite compile examples/001-double-sum.lts > /tmp/lite-example.ts
 node compiler/entry.ts /tmp/lite-example.ts
 ```
 
-Eight examples still need TS ports; see the [current inventory](../compiler/reports/current-t00-t11-inventory.md). Unsupported source fails without a T00 fallback. Public run is removed and C output is deferred.
+`run` compiles to a temporary artifact and executes it. Eight examples still need TS ports; see the [current inventory](../compiler/reports/current-t00-t11-inventory.md). Unsupported source fails without a T00 fallback. C output is deferred.
 
 The interactive examples display explicit prompts. Integer prompts leave the
 cursor on the same line; the scanner prints a heading before reading its line.

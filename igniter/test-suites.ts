@@ -4,6 +4,7 @@ export const generatedTestFiles = [
   'source-files.test.ts', '../challenges/tools/tools.test.ts',
   '../tools/docs.test.ts', '../compiler/scripts/release-streams.test.ts',
   '../tools/cases.test.ts',
+  '../tools/run.test.ts',
   '../tools/release.test.ts',
 ] as const;
 export const referenceTestFiles = ['reference.test.ts'] as const;

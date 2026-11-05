@@ -100,7 +100,7 @@ test('artifact check-only reports strict errors without loading or executing a m
   assert.match(rejected.stdout.toString() + rejected.stderr.toString(), /not assignable to type 'string'/);
 });
 
-test('public commands compile and check TS artifacts without T00 and reject source run/C output', () => {
+test('public commands compile, run and check TS artifacts without T00 and reject C output', () => {
   const directory = isolatedCheckout();
   try {
     symlinkSync(join(root, 'igniter/node_modules'), join(directory, 'igniter/node_modules'));
@@ -113,13 +113,13 @@ test('public commands compile and check TS artifacts without T00 and reject sour
     const artifact = join(directory, 'program.ts'); writeFileSync(artifact, compiled.stdout);
     const executed = spawnSync(process.execPath, [join(directory, 'compiler/entry.ts'), artifact], { input: '7', env, timeout: 10000 });
     assert.equal(executed.status, 0, executed.stderr.toString()); assert.equal(executed.stdout.toString(), 'n? 14\n');
+    const ran = spawnSync(join(directory, 'lite'), ['run', path], { input: '7', env, timeout: 10000 });
+    assert.equal(ran.status, 0, ran.stderr.toString()); assert.equal(ran.stdout.toString(), 'n? 14\n'); assert.equal(ran.stderr.length, 0);
     const checked = spawnSync(join(directory, 'lite'), ['check', path], { input: Buffer.from([0xff]), env, timeout: 10000 });
     assert.equal(checked.status, 0, checked.stderr.toString()); assert.equal(checked.stdout.length, 0); assert.equal(checked.stderr.length, 0);
-    for (const args of [['run', path], ['compile', '--target', 'c', path]]) {
-      const result = spawnSync(join(directory, 'lite'), args, { env, timeout: 10000 });
-      assert.equal(result.status, 2); assert.equal(result.stdout.length, 0);
-      assert.match(result.stderr.toString(), args[0] === 'run' ? /Usage:/ : /C output is deferred/);
-    }
+    const deferred = spawnSync(join(directory, 'lite'), ['compile', '--target', 'c', path], { env, timeout: 10000 });
+    assert.equal(deferred.status, 2); assert.equal(deferred.stdout.length, 0);
+    assert.match(deferred.stderr.toString(), /C output is deferred/);
     writeFileSync(path, 'outputLine("before"); match { true { 1 } _ { 2 } }');
     const unsupported = spawnSync(join(directory, 'lite'), ['check', path], { env, timeout: 10000 });
     assert.equal(unsupported.status, 1); assert.equal(unsupported.stdout.length, 0);
@@ -198,7 +198,7 @@ function isolatedCheckout(): string {
   const paths = new Set([
     'lite', 'ltc', 'litec', 'compiler/host.ts', 'compiler/entry.ts', 'compiler/cli.ts', 'compiler/launcher.ts', 'compiler/package.json',
     'igniter/launcher.ts', 'igniter/test-suites.ts', 'igniter/check.ts', 'igniter/artifacts.ts', 'igniter/package.json', 'igniter/verify.ts',
-    'tools/cli.ts', 'tools/project.ts', 'compiler/release-streams.ts', 'config/versions.json',
+    'tools/cli.ts', 'tools/run.ts', 'tools/project.ts', 'compiler/release-streams.ts', 'config/versions.json',
     'tools/streams.ts',
     'compiler/scripts/release-streams.test.ts',
     'compiler/bootstrap/T11.ts', 'compiler/bootstrap/seed.ts', 'compiler/bootstrap/tsconfig.json',

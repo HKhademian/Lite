@@ -2157,9 +2157,13 @@ test('root launcher compiles artifacts and forwards their input, diagnostics and
     const check = invoke(['check', source]); assert.equal(check.status, 0, check.stderr); assert.equal(check.stdout, ''); assert.equal(check.stderr, '');
     writeFileSync(source, 'loop inputArgs() as arg { outputLine(arg); }'); build();
     const args = executeArtifact('', ['a b', '', '--check']); assert.equal(args.status, 0, args.stderr); assert.equal(args.stdout, 'a b\n\n--check\n');
+    const ran = invoke(['run', 'program with spaces.lts', '--', 'a b', '', '--check']);
+    assert.equal(ran.status, 0, ran.stderr); assert.equal(ran.stdout, 'a b\n\n--check\n'); assert.equal(ran.stderr, '');
     writeFileSync(source, 'outputLine(1/0);'); build(); const fault = executeArtifact();
     assert.equal(fault.status, 1); assert.equal(fault.stdout, ''); assert.match(fault.stderr, /program with spaces\.lts:1:13: ArithmeticPanic:/);
-    for (const argv of [[], ['run'], ['unknown', source]]) { const usage = invoke(argv); assert.equal(usage.status, 2); assert.equal(usage.stdout, ''); assert.match(usage.stderr, /^Usage: \.\/lite <command>/); }
+    for (const argv of [[], ['unknown', source]]) { const usage = invoke(argv); assert.equal(usage.status, 2); assert.equal(usage.stdout, ''); assert.match(usage.stderr, /^Usage: \.\/lite <command>/); }
+    const runUsage = invoke(['run']); assert.equal(runUsage.status, 2); assert.equal(runUsage.stdout, '');
+    assert.equal(runUsage.stderr, 'Usage: ./lite run file.lts [-- argument ...]\n');
     const alias = join(dir, 'project with spaces'); symlinkSync(root, alias, 'dir');
     writeFileSync(source, 'outputLine(23);'); build(source, join(alias, 'lite')); const spaced = executeArtifact();
     assert.equal(spaced.status, 0, spaced.stderr); assert.equal(spaced.stdout, '23\n'); assert.equal(spaced.stderr, '');

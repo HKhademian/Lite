@@ -8,18 +8,20 @@
 [short language tour](docs/tour.md) or browse the [reference](docs/README.md).
 Read the [white paper](docs/white-paper.md) for philosophy and design criteria.
 
-The Lite-written compiler now supplies the generated **T11** TS igniter. Compile
-programs and execute their artifacts with Node 26.13.0:
+The Lite-written compiler now supplies the generated **T11** TS igniter. Run a
+script, or compile it and execute the artifact, with Node 26.13.0:
 
 ```sh
+./lite run examples/001-double-sum.lts
 ./lite compile examples/001-double-sum.lts > /tmp/lite-example.ts
 node compiler/entry.ts /tmp/lite-example.ts
 ./lite check examples/001-double-sum.lts
 ```
 
-Enter `7` and `5` to print `24` after the explicit prompts. `check` compiles and
-strictly checks the artifact without executing program effects. Public `run` is
-removed for this migration; C output and native self-hosting resume afterward.
+Enter `7` and `5` to print `24` after the explicit prompts. `run` compiles to a
+temporary artifact, executes it and forwards arguments, streams and status;
+`check` compiles and strictly checks without executing program effects. C output
+and native self-hosting resume afterward.
 The generated compiler rebuilds its Lite source through its preserved seed,
 with source/builder identities and fixed-point evidence in the
 [bootstrap guide](compiler/bootstrap/README.md). No T00 fallback is used by
@@ -38,8 +40,8 @@ platform and test adapters may use TypeScript under the
 a design draft.
 
 Tool entry points follow one naming matrix: compiler `./ltc`, `./litec` or
-`./lite compile`; checker `./lite check`. Execute TS artifacts with
-`node compiler/entry.ts program.ts [argument ...]`. Linker
+`./lite compile`; runner `./lite run`; checker `./lite check`. Execute TS
+artifacts with `node compiler/entry.ts program.ts [argument ...]`. Linker
 (`./ltl`/`./lite link`) and formatter (`./lite fmt`) names are reserved but not
 implemented. The verifier is `./lite verify`; the tester is `./lite test`; docs
 are `./lite docs`; help is `./lite help`. See

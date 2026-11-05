@@ -13,7 +13,7 @@ todos:
     content: Port important existing syntax and ordinary program behavior needed by generated default workflows
     status: in_progress
   - id: generated-default-workflows
-    content: Remove public run; use generated TS artifacts for check, compile, verification and tests; retain explicit T00 references
+    content: Keep the interpreter run launcher removed; provide compile-and-execute `lite run`; use generated TS artifacts for check, compile, verification and tests; retain explicit T00 references
     status: completed
   - id: existing-feature-parity
     content: Compile all existing supported features to TS and execute their artifacts; defer advanced edge audits
@@ -41,15 +41,21 @@ Retain T00 functionality until it has a tested replacement. Existing language
 features may be ported; new syntax, builtins and semantics still require approval.
 
 Latest owner direction, 2026-11-02: switch to the Lite-written compiler as fast
-as possible while retaining TS self-hosting. Remove public run. Compile every
-supported language feature to a TS artifact and execute that artifact. Public C
-output and native self-hosting resume **after TS migration and T00 retirement**;
-neither blocks the default switch or retirement. Advanced correctness and edge
-coverage follow ordinary syntax migration. Retain T00 only as an explicit
-reference until the TS replacements are complete. This supersedes earlier
-native-first ordering in historical progress entries.
+as possible while retaining TS self-hosting. Remove the interpreter run launcher.
+Compile every supported language feature to a TS artifact and execute that
+artifact. Public C output and native self-hosting resume **after TS migration and
+T00 retirement**; neither blocks the default switch or retirement. Advanced
+correctness and edge coverage follow ordinary syntax migration. Retain T00 only
+as an explicit reference until the TS replacements are complete. This supersedes
+earlier native-first ordering in historical progress entries.
+
+Owner update, 2026-11-05: `./lite run` returns as a compile-and-execute adapter
+over the generated compiler and Node entry; the retired interpreter launcher
+stays removed and no T00 fallback is added.
 
 ## Done
+
+- 2026-11-05: `./lite run` returns as a compile-and-execute adapter over the generated compiler instead of the retired interpreter launcher. It compiles one `.lts` script into a temporary directory, executes the TS artifact through `compiler/entry.ts`, forwards program arguments after an optional `--`, inherited streams and exit status, and removes the temporary directory; rejected source keeps its exact diagnostics and status without executing effects. Seven declarative tool scenarios cover prompted input, forwarded arguments, propagated status, rejection, missing source, non-script source and the `--check` hint; a host test proves temporary-directory removal. The isolated public-command fixture copies `tools/run.ts`, and the launcher and public-command tests now assert the adapter contract instead of usage rejection. CLI help, start-here, examples, naming, specification, bootstrap and migration docs record the adapter while the interpreter launcher stays removed. Compiler source and seed are unchanged. Fast: 136 pass/12 skips (150.1 s); full: 139 pass/nine native skips, zero failures (149.6 s). Coverage: 41/41 features, 19/19 examples, 20/20 samples. The canonical TS audit is unchanged at 60/81 with the same 21 visible failures, and docs links/fragments/fences, strict checks and nine editor groups pass.
 
 - 2026-11-03: w3 completes generated-only routine tooling. Self-build strictly checks three named generations and records real source/builder identities; corpus validation checks 93 compiler contracts and 69 TS runtime scenarios against recorded expectations. Benchmarking records generated process/load/compile/check/runtime phases with three samples and one excluded warmup. Old T00 audit programs are preserved byte-for-byte apart from routing comments and require --reference. Five CLI regression groups include absent T00/Git, malformed inputs, wrong compilers and a legitimate changed-source fixed point. Fast: 124 pass/12 skips; ordinary and no-T00 full: 127 pass/nine native skips, zero failures. Reference 162/162, nine editor groups, strict checks and both corpus routes pass. Source/seed remain unchanged; the canonical audit is still 60/81 with 21 visible pending ports. See [evidence](reports/2026-11-03-generated-tooling.json), [tool guide](bootstrap/README.md) and [baseline](../benchmark/reports/2026-11-03-generated-compiler-performance.md).
 

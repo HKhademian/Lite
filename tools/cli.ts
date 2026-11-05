@@ -23,9 +23,10 @@ const usage = [
   'Usage: ./lite <command> [options]', '', 'Commands:',
   '  check file.lts                            Check source only',
   '  compile [--target ts] file.lts            Compile to a TS artifact',
+  '  run file.lts [-- argument ...]            Compile to a temporary artifact and execute it',
   '  verify [--all|--update|--coverage]        Verify TS artifacts (--reference for T00)',
   '  test [--fast|--full] [--reference]        Test generated TS (or explicit T00 reference)',
-  '  docs [QUERY|--json|--check]                 Browse and search documentation',
+  '  docs [QUERY|--json|--check]               Browse and search documentation',
   '  doctor [--docs]                           Check repository consistency',
   '  test --cases [FILTER|FILE.case.json]       Run declarative cases',
   '  verify FILE.case.json                     Verify one declarative manifest',
@@ -54,6 +55,7 @@ switch (command) {
   case 'docs': run('docs.ts', args);
   case 'doctor': run('check.ts', args);
   case 'compile': run('../compiler/launcher.ts', args);
+  case 'run': run('run.ts', args);
   case 'bench': run('bench.ts', args);
   case 'release': run('release.ts', args);
   case 'verify':

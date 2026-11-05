@@ -3,8 +3,9 @@
 This directory contains the Lite-written compiler and its bootstrap host. TS
 compilation defaults to the verified generated **T11** compiler in
 [`bootstrap/`](bootstrap/README.md). Public compile and check use generated TS;
-check-only also strictly checks the artifact without executing it. Public run is
-removed. Execute compiled programs with `node compiler/entry.ts program.ts`.
+check-only also strictly checks the artifact without executing it. Public
+`./lite run` compiles to a temporary artifact and executes it through
+`entry.ts`; compiled programs also run as `node compiler/entry.ts program.ts`.
 C output and native self-hosting are deferred until after the TS migration and
 T00 retirement. The earlier TS-hosted C emitter and its provenance remain for
 explicit historical tests; they are not a public C output promise. See the

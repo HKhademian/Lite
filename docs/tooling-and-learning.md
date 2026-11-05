@@ -298,15 +298,18 @@ self-rebuild remain open. See
 [String/report evidence](../investigations/INV-061-string-and-multi-value-reports.md)
 and the [fixture schema](../igniter/tests/README.md).
 
-Current CLI entry points are `./lite check`, `./lite compile`,
+Current CLI entry points are `./lite check`, `./lite compile`, `./lite run`,
 `./lite verify`, `./lite test`, `./lite docs` and `./lite help`; compiler aliases
-are `./ltc` and `./litec`. Public run is removed for the TS migration. Compile
-with `./lite compile source.lts > /tmp/program.ts`, then execute
-`node compiler/entry.ts /tmp/program.ts [argument ...]`. Check-only uses the
-generated compiler and strict artifact checking without program effects. C
-output is deferred until after T00 retirement. Earlier run/C instructions on
-this page are historical checkpoints. Linker and formatter names are reserved but
-unimplemented. See [tool naming](versioning-and-naming.md#1-canonical-names).
+are `./ltc` and `./litec`. `./lite run source.lts [-- argument ...]` compiles to a
+temporary TS artifact, executes it with the Node entry, forwards arguments,
+streams and status and removes the temporary directory. Compiling with
+`./lite compile source.lts > /tmp/program.ts` and executing
+`node compiler/entry.ts /tmp/program.ts [argument ...]` remain the explicit
+artifact path. Check-only uses the generated compiler and strict artifact
+checking without program effects. C output is deferred until after T00
+retirement. Earlier interpreter-run/C instructions on this page are historical
+checkpoints. Linker and formatter names are reserved but unimplemented. See
+[tool naming](versioning-and-naming.md#1-canonical-names).
 
 Feature and artifact verification lives in `verifications/`. `./lite verify`
 selects changed cases; `--all` selects everything. All ordinary verification now
@@ -734,12 +737,17 @@ The existing future two-pass idempotence conformance requirement remains indepen
 
 ## Run and build proposals
 
-The historical root run launcher described [above](#root-run-launcher) is
-removed for the 2026-11-02 TS migration. Compile and execute artifacts instead.
-Build/native caching and broader installed-CLI behavior below remain proposals.
+The historical interpreter run launcher described [above](#root-run-launcher) is
+removed for the 2026-11-02 TS migration and stays removed. Owner direction,
+**2026-11-05**: `./lite run` returns as a compile-and-execute adapter — it
+compiles the script to a temporary TS artifact, executes it with
+`compiler/entry.ts`, forwards arguments, streams and exit status, and removes the
+temporary directory. It adds no interpreter. Compiling and executing artifacts
+explicitly also remains available. Native build/caching and broader
+installed-CLI behavior below remain proposals.
 
 ```text
-lite run lesson.lts
+lite run lesson.lts [-- argument ...]
 lite build lesson.lts
 ```
 

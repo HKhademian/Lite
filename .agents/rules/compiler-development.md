@@ -29,8 +29,9 @@ language implementation.
 
 The current generated TS compiler can rebuild its own supported source subset.
 Public compile/check, default tests and routine compiler tools use generated TS.
-Public run is removed; C output/native self-hosting are deferred until after TS
-parity and T00 retirement. The historical C emitter remains TS-hosted. T00 is the handwritten historical interpreter/reference; it is
+Public `run` compiles a script to a temporary artifact and executes it with the
+Node entry, without an interpreter; C output/native self-hosting are deferred
+until after TS parity and T00 retirement. The historical C emitter remains TS-hosted. T00 is the handwritten historical interpreter/reference; it is
 distinct from the generated TS igniter. New compiler work does not require a
 new handwritten T00 implementation as a prerequisite. Keep existing consumers
 working until their tested replacements are ready.

@@ -6,8 +6,12 @@ design. C output and native self-hosting are deferred during the TS migration.
 
 ## Prepare the checkout
 
-Use the Node version in [igniter/.node-version](../igniter/.node-version).
-Install development tools from the repository root:
+Compiling and running a script use the checked-in generated compiler and need no
+installed packages. Use the Node version in
+[igniter/.node-version](../igniter/.node-version).
+
+`./lite check`, the test tools and editor grammar checks use locked development
+dependencies. Install them from the repository root:
 
 ```sh
 npm --prefix igniter ci
@@ -17,7 +21,7 @@ npm --prefix editors/vscode ci
 The editor dependencies are needed for grammar checks and extension packaging.
 Public compilation uses the checked-in generated compiler, without a T00 fallback.
 
-## Compile a first program
+## Run a first program
 
 The [double-sum example](../examples/001-double-sum.lts) reads two integers and
 prints twice their sum:
@@ -33,12 +37,24 @@ outputLine(total);
 From the repository root:
 
 ```sh
+./lite run examples/001-double-sum.lts
+```
+
+Enter `7` and `5`; the final value is `24`. Prompts are explicit program output.
+`run` compiles the script to a temporary artifact, executes it with Node,
+forwards script arguments after an optional `--` and exits with the program
+status without leaving the artifact behind.
+
+## Compile and check it
+
+Compile the artifact yourself, or check the source without executing it:
+
+```sh
 ./lite compile examples/001-double-sum.lts > /tmp/lite-example.ts
 node compiler/entry.ts /tmp/lite-example.ts
 ./lite check examples/001-double-sum.lts
 ```
 
-Enter `7` and `5`; the final value is `24`. Prompts are explicit program output.
 `check` compiles and strictly checks without executing the program.
 The [verification case](../verifications/artifacts/examples/001-double-sum.json)
 records exact expected streams.

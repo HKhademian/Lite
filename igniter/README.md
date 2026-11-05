@@ -3,8 +3,9 @@
 This directory retains the historical handwritten **T00** interpreter as an
 explicit migration reference, alongside TypeScript host and test adapters.
 Public compile and check now use the Lite-written generated
-[T11 compiler](../compiler/bootstrap/README.md). Public run is removed; programs
-execute from compiled TS artifacts. C output/native self-hosting is postponed
+[T11 compiler](../compiler/bootstrap/README.md). Public `./lite run` compiles a
+script to a temporary artifact and executes it; programs also execute from
+directly compiled TS artifacts. C output/native self-hosting is postponed
 until after TS migration and T00 retirement. Verification defaults to TS artifacts with explicit `--reference` for T00.
 Legacy default regression consumers still need migration; see the
 [transition plan](../compiler/transition-plan.md).
@@ -593,6 +594,7 @@ array values; it does not validate native header-free storage or performance.
 inputArgs() returns a readable List<String> containing only script arguments:
 
 ```sh
+./lite run examples/020-script-arguments.lts -- "a b" "" "سلام🙂" --check
 ./lite compile examples/020-script-arguments.lts > /tmp/args.ts
 node compiler/entry.ts /tmp/args.ts "a b" "" "سلام🙂" --check
 ```
@@ -600,8 +602,8 @@ node compiler/entry.ts /tmp/args.ts "a b" "" "سلام🙂" --check
 The example reports each supplied value in order, including an empty line for
 the empty argument. Every value after the artifact path is program data,
 including `--` and `--check`. Without arguments, inputArgs returns an empty
-known-String list. Public run is removed; no separating `--` is required by the
-artifact adapter.
+known-String list. `./lite run` removes one optional `--` separator after the
+script path; the artifact adapter needs no separator.
 
 The zero-argument helper consumes no stdin and produces no prompt/output. It
 snapshots host argument String values at execution entry; repeated calls retain

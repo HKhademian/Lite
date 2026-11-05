@@ -24,9 +24,10 @@ Rules:
 - Every declaration carries a `/** ... */` doc comment.
 - These files stay inside bootstrap subset L.
 
-`lib/tests/` holds direct Lite test entries. Compile and execute them:
+`lib/tests/` holds direct Lite test entries. Run them, or compile and execute them:
 
 ```sh
+./lite run lib/tests/text.lts
 ./lite compile lib/tests/text.lts > /tmp/lite-text-test.ts
 node compiler/entry.ts /tmp/lite-text-test.ts
 ```

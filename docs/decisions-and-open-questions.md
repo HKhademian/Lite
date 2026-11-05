@@ -1,8 +1,21 @@
 # Decisions and open questions
 
-Dated decision ledger, updated through **2026-11-03**. Older entries retain their
+Dated decision ledger, updated through **2026-11-05**. Older entries retain their
 original scope. Decisions do not establish compiler conformance; use
 [the transition](../compiler/transition-plan.md) for current execution evidence.
+
+## Compile-and-execute runner adapter, 2026-11-05
+
+The owner restores `./lite run` as a compile-and-execute adapter, not an
+interpreter. It compiles one `.lts` script with the generated compiler into a
+temporary directory, executes the TS artifact with `compiler/entry.ts`, forwards
+program arguments after an optional `--`, inherited standard streams and the
+program's exit status, and removes the temporary directory. Rejected source keeps
+its compiler diagnostics and status without executing program effects. `./lite
+check` remains the check-only command and `--check` is not a run option. The
+earlier interpreter launcher stays removed, no T00 fallback is added and the
+runner shares the Lite CLI component without a separate release stream. See
+[tool naming](versioning-and-naming.md#1-canonical-names).
 
 ## Development and documentation adoption, 2026-11-03
 
