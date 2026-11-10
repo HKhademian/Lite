@@ -36,6 +36,13 @@ plans:
 
 # T00 retirement through self-hosted TS — execution index
 
+> **Superseded ordering (2026-11-10):** Owner direction now establishes a
+> compiler-capable self-hosting kernel without requiring full T00/T11 feature
+> parity. Use [`self-hosting-kernel.md`](./self-hosting-kernel.md) for the
+> current sequence. This plan and its child plans remain a historical inventory
+> of prior migration work and case ownership; do not execute their full-parity
+> retirement gate until it is reconciled with the new kernel plan.
+
 ## Mission
 
 Follow the owner's direction: "lets make it the fastest way possible to switch to the new compiler
