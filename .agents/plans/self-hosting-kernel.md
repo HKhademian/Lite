@@ -3,6 +3,9 @@ name: self-hosting-kernel
 status: pending
 created: 2026-11-10
 todos:
+  - id: cli-router
+    content: "Step 0 — make lite a router over dedicated tool commands"
+    status: completed
   - id: define-kernel
     content: "Step 1 — define and verify the compiler-capable self-hosting kernel"
     status: pending
@@ -28,6 +31,12 @@ plans:
 
 > **For the next agent.** Recenter Lite's compiler transition around the smallest language subset that can implement and rebuild the compiler, then grow Lite through verified increments.
 
+The historical TS0/LT0 sequence, terminology, comparison scope, and LT1/LT2
+fixed-point definition are recorded in the dated
+[self-hosting strategy](../../docs/self-hosting-kernel-strategy-2026-11-10.md).
+Use that document for the model; use this handoff and current project plans for
+implementation status and gates.
+
 ## Mission
 
 Reach a reliable generated compiler fixed point using only the portion of LiteLang needed to express the compiler. Do not make all of the language specification a self-hosting prerequisite. After that gate, evaluate a minimal top-level import feature in Lite, retire the active T00 dependency once the imported-source path is proven, establish an explicit and extendable compiler-stage architecture, and implement the already documented language surface before taking on remaining proposals.
@@ -35,6 +44,8 @@ Reach a reliable generated compiler fixed point using only the portion of LiteLa
 ## Done
 
 - Reviewed the current Lite checkout at `e6406ad` (2026-11-10 planning turn); working tree was clean.
+- Completed the CLI-router phase: `lite` now owns routing/help only; dedicated `lite-compiler-ts`, `lite-check`, `lite-run`, `lite-verify`, `lite-test`, `lite-docs`, `lite-doctor`, `lite-bench`, and `lite-release` commands own the operations.
+- Recorded the TS0/LT0 minimal bootstrap path and LT1/LT2 reproducible fixed-point definition in [`docs/self-hosting-kernel-strategy-2026-11-10.md`](../../docs/self-hosting-kernel-strategy-2026-11-10.md).
 - Confirmed T11 generated TS is the public/default compiler path and rebuilds its supported Lite source subset. T00 remains a historical reference. Native C output and native self-hosting remain deferred.
 - The latest recorded T00/T11 inventory is dated 2026-11-02: 112/172 executed source cases match; 60 cases fail. Treat this as a stale planning baseline, not a completion percentage.
 - Confirmed compiler source is split into `compiler/src/*.lts` and assembled through ordered manifests. This glue is acceptable for the initial self-hosting kernel.
@@ -47,6 +58,7 @@ Reach a reliable generated compiler fixed point using only the portion of LiteLa
 |----------|-------------|
 | Current transition status | [`compiler/transition-plan.md`](../../compiler/transition-plan.md) |
 | Bootstrap constraints and recorded gates | [`docs/bootstrap-plan.md`](../../docs/bootstrap-plan.md) |
+| Historical minimum-path model | [`docs/self-hosting-kernel-strategy-2026-11-10.md`](../../docs/self-hosting-kernel-strategy-2026-11-10.md) |
 | Previous T00 migration work and failure ownership | [`t00-ts-retirement-master.md`](./t00-ts-retirement-master.md) — reference inventory only; its full-parity-before-retirement order is superseded by this plan |
 | Compiler feature workflow | [`../rules/compiler-development.md`](../rules/compiler-development.md) |
 | Atomic commits | [`../rules/atomic-commits.md`](../rules/atomic-commits.md) |
@@ -64,23 +76,50 @@ Reach a reliable generated compiler fixed point using only the portion of LiteLa
 
 Execute sequentially. Each feature/support increment is a separate atomic commit with focused cases, documentation, generated seeds, and applicable component version evidence.
 
-### Step 1 — define-kernel
+### Step 0 — cli-router
 
 **Depends on:** none  
+**Files:** `tools/cli.ts`, dedicated tester/verifier command entries under `tools/`, `bin/lite-*` links, `tools/ci.ts`, a focused CLI routing test, and the tooling policy/naming documentation.
+
+**Actions:**
+
+- Keep `lite` as a small alias router: map subcommands to dedicated commands, forward arguments/streams/status, and own only CLI help and its own version.
+- Route `lite compile` to `lite-compiler-ts`; route verify, test, doctor, check, run, docs, bench, and release to their corresponding standalone tool commands.
+- Move test-suite selection and case-manifest dispatch out of the router and into the tester/verifier commands.
+- Keep each operation implementation in its owning tool module. Direct `bin/lite-*` entries should reach that operation without importing the command router.
+- Preserve current command aliases and component-version behavior; document the distinction between the `lite` router and operation commands.
+
+**Acceptance:**
+
+- [x] `tools/cli.ts` contains only alias lookup, help/router-version handling, and child forwarding; it imports no operation implementations or test suites.
+- [x] `lite compile` and `lite-compiler-ts` reach the same compiler operation; the other canonical aliases likewise match their direct tools.
+- [x] Test and verifier options, case-manifest behavior, output streams, exit status and component versions remain available through both direct and routed entry points.
+- [x] Tooling docs identify the router, each command owner, and the alias relationship.
+
+**Verified:** `node --test tools/cli.test.ts` (5 passed); `./lite doctor`; `./lite test --fast` (136 passed, 12 skipped, 0 failed). Compiler entry behavior was not changed.
+
+---
+
+### Step 1 — define-kernel
+
+**Depends on:** cli-router
 **Files:** modify [`docs/bootstrap-plan.md`](../../docs/bootstrap-plan.md), [`compiler/transition-plan.md`](../../compiler/transition-plan.md), [`compiler/gaps.md`](../../compiler/gaps.md), and the relevant declaration/function contract pages; refresh the inventory report only through its documented audit script.
 
 **Actions:**
 
-- Reproduce the current generated TS seed/build/fixed-point and no-T00 default workflows in a clean checkout. Do not claim completion from the stored report alone.
-- Define the kernel from concrete compiler responsibilities: scan, parse, resolve, check, emit, and run the compiler's own source. Do not choose a target percentage of the language specification.
+- Follow the dated TS0/LT0 strategy: establish what compiler seed and Lite-written compiler source currently play those roles without confusing these strategy labels with repository seed names.
+- Define the kernel from concrete compiler responsibilities: scan, parse, resolve, check, emit, and build the compiler's own source. Do not choose a target percentage of the language specification.
 - Reclassify each current inventory failure as (a) required by the compiler source, (b) an already documented language feature for a later increment, or (c) deferred/unneeded. Existing feature coverage is not a gate merely because T00 once accepted it.
+- Add each required capability to the seed first, then adopt it in the Lite-written compiler; compare both over the declared self-hosting subset after each increment.
+- Build LT1 by compiling the Lite-written compiler with TS0. Build LT2 by compiling that same source with LT1, and require deterministic LT1/LT2 artifact equality to verify the fixed point.
 - Record the owner-selected resolution contract with focused cases: same-scope duplicate definitions reject; nested scopes may shadow; deferred function bodies can resolve later top-level declarations; eager top-level initializers run in written order and cannot read a later value.
 - Preserve the current manifest assembly and flat compiler representation for this kernel. Keep `lib/core/` provisional and add only utility operations concretely required by compiler source.
 - Reconcile “T00 retirement,” “bootstrap removal,” and the preserved TypeScript seed as distinct concepts. The repository currently preserves a TS igniter/seed for reproducibility; do not delete it or rewrite Git history as part of this compiler plan.
 
 **Acceptance:**
 
-- [ ] A clean checkout rebuilds the compiler from Lite source and reaches the documented TS fixed point without loading T00 at runtime.
+- [ ] A clean checkout can produce LT1 from LT0 with TS0 and then reproduce LT1 as byte-identical LT2 using LT1, without loading T00 at runtime.
+- [ ] TS0/LT0 comparison cases and compiler-artifact fixed-point evidence cover the explicitly recorded self-hosting subset; neither is presented as full language parity.
 - [ ] Kernel acceptance cases demonstrate compiler-source sufficiency, symbol resolution, source-ordered initialization, and diagnostics.
 - [ ] The active plan no longer treats all 172 inventory cases as a precondition for the kernel gate; remaining cases have explicit owners and phases.
 - [ ] Docs distinguish the minimal compiler-source subset from the larger accepted language specification.
@@ -210,6 +249,7 @@ Execute sequentially. Each feature/support increment is a separate atomic commit
 | Bootstrap subset | See `docs/bootstrap-plan.md`; records no imports, flat streaming, and exclusion of recursive AST/records/enums/unions. |
 | Shared support | Provisional helpers are under `lib/core/`; no public standard library is established. |
 | Tooling | Thin command entries live under `bin/`; shared implementations under `tools/`; generated compiler seeds under `compiler/bootstrap/`. |
+| CLI boundary | `lite` routes; `lite-compiler-ts`, `lite-verify`, `lite-doctor`, and sibling commands own their operation behavior. |
 | Runtime | Current CLI requires Node 26.13.0; native C output/self-hosting are deferred. |
 
 ## References

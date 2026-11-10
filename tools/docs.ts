@@ -2,6 +2,7 @@
 import { existsSync, readFileSync, readdirSync, statSync } from 'node:fs';
 import { dirname, extname, join, relative, resolve } from 'node:path';
 import { root } from './project.ts';
+import { showToolVersion } from './tool-version.ts';
 
 export type Document = { path: string; title: string; headings: string[] };
 type Documentation = { navigation: { label: string; path: string }[]; snippets: { document: string; source: string; fence: number; skipLines?: number }[] };
@@ -106,6 +107,9 @@ export function showDocuments(args: string[]): void {
 }
 
 if (import.meta.main) {
-  try { showDocuments(process.argv.slice(2)); }
+  try {
+    if (showToolVersion('docs', 'docs')) process.exit(0);
+    showDocuments(process.argv.slice(2));
+  }
   catch (error) { console.error(error instanceof Error ? error.message : String(error)); process.exitCode = 1; }
 }

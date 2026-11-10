@@ -1,24 +1,14 @@
 #!/usr/bin/env node
-/** Repository CLI entry; command implementations remain ordinary TypeScript files. */
-import { basename } from 'node:path';
-import { versions } from './project.ts';
-import { spawnSync } from 'node:child_process';
-import { fileURLToPath } from 'node:url';
-import { generatedTestFiles, referenceTestFiles } from '../igniter/test-suites.ts';
+/** Lite CLI router; operation behavior lives in the dedicated tool commands. */
+import { join } from 'node:path';
+import { forward } from './forward.ts';
+import { root } from './project.ts';
+import { showToolVersion } from './tool-version.ts';
 
 const args = process.argv.slice(2);
-const executable = basename(process.argv[1] ?? 'lite');
-const command = executable.startsWith('lite-') ? executable.slice(5) : args.shift();
-const componentNames = { check: 'checker', test: 'tester', verify: 'verifier', docs: 'docs', doctor: 'doctor', compile: 'compiler', bench: 'benchmark', release: 'release' } as const;
-if (command === '--version' || args[0] === '--version') {
-  const current = versions();
-  const key = command === '--version' ? 'cli' : componentNames[command as keyof typeof componentNames];
-  if (key === undefined || (command === '--version' ? args.length !== 0 : args.length !== 1)) {
-    process.stderr.write('lite: invalid version request\n'); process.exit(2);
-  }
-  process.stdout.write(`lite ${command === '--version' ? 'cli' : command} ${current[key] ?? 'unassigned'}\n`);
-  process.exit(0);
-}
+if (showToolVersion('cli', 'cli')) process.exit(0);
+
+const command = args.shift();
 const usage = [
   'Usage: ./lite <command> [options]', '', 'Commands:',
   '  check file.lts                            Check source only',
@@ -28,65 +18,40 @@ const usage = [
   '  test [--fast|--full] [--reference]        Test generated TS (or explicit T00 reference)',
   '  docs [QUERY|--json|--check]               Browse and search documentation',
   '  doctor [--docs]                           Check repository consistency',
-  '  test --cases [FILTER|FILE.case.json]       Run declarative cases',
+  '  test --cases [FILTER|FILE.case.json]      Run declarative cases',
   '  verify FILE.case.json                     Verify one declarative manifest',
   '  bench OUTPUT [FILTER]                     Benchmark verified cases',
   '  release OUTPUT [TAG]                      Package a verified source snapshot',
-  '  --version                                 Show CLI version',
   '  help                                      Show this help', '',
   'Compiler entry points: ./ltc, ./litec, ./lite compile',
-  'Execute artifacts: node compiler/entry.ts program.ts [argument ...]',
+  'Direct command: ./bin/lite-compiler-ts [--target ts] file.lts',
   'C output is deferred until after the TS compiler migration.',
   'Reserved names: ./ltl/lite link, lite fmt', '',
 ].join('\n');
 
-/** Preserves inherited streams, child exit status and signal termination. */
-function run(path: string, argv: string[]): never {
-  const result = spawnSync(process.execPath, [fileURLToPath(new URL(path, import.meta.url)), ...argv], {
-    stdio: 'inherit',
-  });
-  if (result.error !== undefined) { process.stderr.write(`${result.error.message}\n`); process.exit(1); }
-  if (result.signal !== null) { process.kill(process.pid, result.signal); process.exit(1); }
-  process.exit(result.status ?? 1);
+if (command === 'help' || command === '--help' || command === '-h') {
+  process.stdout.write(usage);
+  process.exit(0);
+}
+if (command === undefined) {
+  process.stderr.write(usage);
+  process.exit(2);
 }
 
-switch (command) {
-  case 'help': case '--help': case '-h': process.stdout.write(usage); break;
-  case 'docs': run('docs.ts', args);
-  case 'doctor': run('check.ts', args);
-  case 'compile': run('../compiler/launcher.ts', args);
-  case 'run': run('run.ts', args);
-  case 'bench': run('bench.ts', args);
-  case 'release': run('release.ts', args);
-  case 'verify':
-    if (args.length === 1 && args[0]?.endsWith('.json')) run('test.ts', args);
-    run('../igniter/verify.ts', args);
-  case 'test': {
-    if (args[0] === '--cases') run('test.ts', args.slice(1));
-    let mode: '--fast' | '--full' | undefined;
-    let reference = false;
-    for (const arg of args) {
-      if ((arg === '--fast' || arg === '--full') && mode === undefined) mode = arg;
-      else if (arg === '--reference' && !reference) reference = true;
-      else { process.stderr.write('Usage: ./lite test [--fast|--full] [--reference]\n'); process.exit(2); }
-    }
-    const testEnv: NodeJS.ProcessEnv = { ...process.env, LITE_SKIP_NATIVE: '1',
-      ...(mode === '--fast' ? { LITE_SKIP_HEAVY: '1' } : {}) };
-    // A CLI invoked from a Node test must launch an independent test coordinator.
-    delete testEnv['NODE_TEST_CONTEXT'];
-    // Reference tests never enter the default route or provide a fallback.
-    const files = reference ? referenceTestFiles : generatedTestFiles;
-    const result = spawnSync(process.execPath, ['--test', ...files], {
-      cwd: fileURLToPath(new URL('../igniter/', import.meta.url)), stdio: 'inherit',
-      // Native C work resumes after TS migration; full still retains the generated source sweeps.
-      env: testEnv,
-    });
-    if (result.error !== undefined) { process.stderr.write(`${result.error.message}\n`); process.exit(1); }
-    if (result.signal !== null) { process.kill(process.pid, result.signal); process.exit(1); }
-    process.exit(result.status ?? 1);
-  }
-  case 'check':
-    if (args.length === 0) { process.stderr.write('Usage: ./lite check file.lts\n'); process.exit(2); }
-    run('../igniter/check.ts', args);
-  default: process.stderr.write(usage); process.exitCode = 2;
+const routes: Record<string, string> = {
+  check: 'lite-check',
+  compile: 'lite-compiler-ts',
+  run: 'lite-run',
+  verify: 'lite-verify',
+  test: 'lite-test',
+  docs: 'lite-docs',
+  doctor: 'lite-doctor',
+  bench: 'lite-bench',
+  release: 'lite-release',
+};
+const target = routes[command];
+if (target === undefined) {
+  process.stderr.write(usage);
+  process.exit(2);
 }
+forward(join(root, 'bin', target), args);

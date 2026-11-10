@@ -5,6 +5,7 @@ import { join } from 'node:path';
 import { checkDocuments } from './docs.ts';
 import { root, run, versions } from './project.ts';
 import { loadCases } from './cases.ts';
+import { showToolVersion } from './tool-version.ts';
 
 export function checkProject(docsOnly = false): void {
   JSON.parse(readFileSync(join(root, 'config/documentation.json'), 'utf8'));
@@ -26,6 +27,7 @@ export function checkProject(docsOnly = false): void {
 
 if (import.meta.main) {
   try {
+    if (showToolVersion('doctor', 'doctor')) process.exit(0);
     const args = process.argv.slice(2);
     assert(args.length === 0 || (args.length === 1 && args[0] === '--docs'), 'usage: lite doctor [--docs]');
     checkProject(args[0] === '--docs');

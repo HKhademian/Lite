@@ -39,8 +39,10 @@ platform and test adapters may use TypeScript under the
 [source-file policy](docs/tooling-source-policy.md). The wider language remains
 a design draft.
 
-Tool entry points follow one naming matrix: compiler `./ltc`, `./litec` or
-`./lite compile`; runner `./lite run`; checker `./lite check`. Execute TS
+Tool entry points follow one naming matrix: compiler `./ltc`, `./litec`,
+`./bin/lite-compiler-ts` or routed alias `./lite compile`; runner `./lite run`;
+checker `./lite check`. The `lite` command only routes to standalone operation
+commands such as `lite-verify` and `lite-doctor`. Execute TS
 artifacts with `node compiler/entry.ts program.ts [argument ...]`. Linker
 (`./ltl`/`./lite link`) and formatter (`./lite fmt`) names are reserved but not
 implemented. The verifier is `./lite verify`; the tester is `./lite test`; docs

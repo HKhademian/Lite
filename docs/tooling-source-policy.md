@@ -6,12 +6,17 @@ Use the existing igniter and bootstrap TypeScript configurations. Documentation,
 fixture data, workflow configuration and editor assets keep their normal formats.
 Installed third-party packages are dependencies rather than project-owned source.
 
-`lite`, `litec` and `ltc` are command symlinks to executable TypeScript files.
-Canonical entries also live in `bin/`; `tools/` holds shared repository tooling.
-`config/versions.json` owns component metadata. Existing root commands remain
-compatible. Internal compiler routines remain under `compiler/scripts/`.
-Their arguments, source paths, streams and exit statuses retain the existing
-contract. Compiler language implementation remains in Lite.
+`lite` is a command router: it maps subcommands to standalone entries in `bin/`
+and forwards arguments, streams and exit status. It contains no implementation
+of compiler, verification, testing, runner, documentation or repository-check
+operations. For example, `lite compile` routes to `lite-compiler-ts`, while
+`lite verify` and `lite doctor` route to `lite-verify` and `lite-doctor`.
+Operation implementations live in their owning `tools/`, `compiler/` or
+`igniter/` modules. `litec` and `ltc` remain direct compiler compatibility
+entries. `config/versions.json` owns component metadata. Internal compiler
+routines remain under `compiler/scripts/`; command arguments, source paths,
+streams and exit statuses retain their existing contracts. Compiler language
+implementation remains in Lite.
 
 All maintained compiler scripts, benchmark runners, challenge maintenance tools
 and editor tests are checked by `igniter/tsconfig.json`. The generated compiler

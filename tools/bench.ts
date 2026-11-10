@@ -5,6 +5,7 @@ import { dirname, join, resolve } from 'node:path';
 import { performance } from 'node:perf_hooks';
 import { caseIdentity, loadCases, verifyScenario } from './cases.ts';
 import { root, run, sha256, versions } from './project.ts';
+import { showToolVersion } from './tool-version.ts';
 
 export function benchmark(output: string, filter = ''): void {
   assert(!existsSync(output), 'benchmark output already exists; choose a new report path');
@@ -37,6 +38,7 @@ export function benchmark(output: string, filter = ''): void {
 
 if (import.meta.main) {
   try {
+    if (showToolVersion('benchmark', 'bench')) process.exit(0);
     const [output, filter, ...extra] = process.argv.slice(2);
     assert(output !== undefined && extra.length === 0, 'usage: lite bench OUTPUT [FILTER]');
     benchmark(resolve(output), filter);

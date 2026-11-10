@@ -48,7 +48,7 @@ if (import.meta.main) {
       case 'migration': verifyMigration(); break;
       case 'release-check': {
         lite('doctor');
-        invoke(process.execPath, ['--test', 'tools/docs.test.ts', 'tools/cases.test.ts', 'tools/release.test.ts', 'compiler/scripts/release-streams.test.ts']);
+        invoke(process.execPath, ['--test', 'tools/docs.test.ts', 'tools/cases.test.ts', 'tools/cli.test.ts', 'tools/release.test.ts', 'compiler/scripts/release-streams.test.ts']);
         invoke(process.execPath, ['--test', 'editors/vscode/test/grammar.test.ts']);
         const tag = process.env['GITHUB_EVENT_NAME'] === 'push' && process.env['GITHUB_REF_TYPE'] === 'tag' ? process.env['GITHUB_REF_NAME'] : undefined;
         if (releaseProfile(selectComponentRelease(tag, versions())) !== 'tools') { lite('test', '--full'); lite('verify', '--coverage'); verifyMigration(); }

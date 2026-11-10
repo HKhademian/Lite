@@ -196,9 +196,11 @@ function isolatedCheckout(): string {
   const manifest = resolve(root, 'compiler/manifests/ts.json');
   const bundles = [loadBundle(manifest), loadBundle(resolve(root, 'compiler/manifests/c.json'))];
   const paths = new Set([
-    'lite', 'ltc', 'litec', 'compiler/host.ts', 'compiler/entry.ts', 'compiler/cli.ts', 'compiler/launcher.ts', 'compiler/package.json',
+    'lite', 'ltc', 'litec', 'bin/lite-compiler-ts', 'bin/lite-check', 'bin/lite-run', 'bin/lite-verify',
+    'compiler/host.ts', 'compiler/entry.ts', 'compiler/cli.ts', 'compiler/launcher.ts', 'compiler/package.json',
     'igniter/launcher.ts', 'igniter/test-suites.ts', 'igniter/check.ts', 'igniter/artifacts.ts', 'igniter/package.json', 'igniter/verify.ts',
-    'tools/cli.ts', 'tools/run.ts', 'tools/project.ts', 'compiler/release-streams.ts', 'config/versions.json',
+    'tools/cli.ts', 'tools/forward.ts', 'tools/tool-version.ts', 'tools/checker.ts', 'tools/verify.ts', 'tools/run.ts', 'tools/project.ts',
+    'compiler/release-streams.ts', 'config/versions.json',
     'tools/streams.ts',
     'compiler/scripts/release-streams.test.ts',
     'compiler/bootstrap/T11.ts', 'compiler/bootstrap/seed.ts', 'compiler/bootstrap/tsconfig.json',

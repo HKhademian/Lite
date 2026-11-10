@@ -5,6 +5,7 @@ import { tmpdir } from 'node:os';
 import { join, resolve } from 'node:path';
 import { selectComponentRelease, type ComponentRelease } from '../compiler/release-streams.ts';
 import { root, run, sha256, versions } from './project.ts';
+import { showToolVersion } from './tool-version.ts';
 
 /** Tool releases validate their own surface; language releases also require full conformance. */
 export function releaseProfile(release: ComponentRelease | null): 'tools' | 'compiler' | 'language' {
@@ -87,6 +88,7 @@ export function prepareRelease(directory: string, output: string, tag?: string) 
 
 if (import.meta.main) {
   try {
+    if (showToolVersion('release', 'release')) process.exit(0);
     const [output, tag, ...extra] = process.argv.slice(2);
     assert(output !== undefined && extra.length === 0, 'usage: lite release OUTPUT [TAG]');
     prepareRelease(root, resolve(output), tag);

@@ -1,6 +1,6 @@
 # Naming and versioning
 
-Status: **selected naming and version policy, 2026-10-25; distinct script/module suffixes selected 2026-10-30; tool alias matrix extended 2026-10-31; name origin recorded 2026-11-01; independent release streams selected 2026-11-02; compile-and-execute runner adapter selected 2026-11-05**. The prototype compiler lives in `compiler/` and is exposed as `./ltc`, `./litec` and `./lite compile`; the runner as `./lite run`; the checker as `./lite check`; docs as `./lite docs`; and help as `./lite help`. Linker and formatter names are reserved but unimplemented; the verifier and tester have first implemented slices. [Igniter release automation](release-automation.md) packages exact component snapshots. Package-registry spelling remains open.
+Status: **selected naming and version policy, 2026-10-25; distinct script/module suffixes selected 2026-10-30; tool alias matrix extended 2026-10-31; name origin recorded 2026-11-01; independent release streams selected 2026-11-02; compile-and-execute runner adapter selected 2026-11-05; dedicated routed tool entries selected 2026-11-10**. The prototype compiler lives in `compiler/` and is exposed as `./ltc`, `./litec`, `./bin/lite-compiler-ts` and routed alias `./lite compile`; the runner as `./lite-run`/`./lite run`; the checker as `./lite-check`/`./lite check`; docs as `./lite-docs`/`./lite docs`; and help as `./lite help`. Linker and formatter names are reserved but unimplemented; the verifier and tester have first implemented slices. [Igniter release automation](release-automation.md) packages exact component snapshots. Package-registry spelling remains open.
 
 ## 1. Canonical names
 
@@ -21,13 +21,13 @@ Lightness, here, means three things at once.
 | Umbrella project | **Lite** | `lite` | The whole project; not a language name |
 | Language | **LiteLang** | `litelang` | The language and its reference |
 | Program | **LiteScript** | `litescript` | A script/program; module source is a distinct file kind |
-| Compiler | **Lite compiler** | `lite-compiler`; binary `litec`, short `ltc` | Compiles LiteLang programs; CLI `lite compile` |
+| Compiler | **Lite compiler** | `lite-compiler`; binary `litec`, short `ltc`; TS command `lite-compiler-ts` | Compiles LiteLang programs; `lite compile` routes to `lite-compiler-ts` |
 | Igniter | **Lite igniter** | `lite-igniter`; release tags `igniter-v*` | Bootstraps the project from preserved sources and generated compiler seeds |
 | Linker | **Lite linker** | `lite-linker`; executable `ltl` | Links compiled outputs; CLI `lite link` (planned) |
 | Runner | **Lite runner** | `lite-runner` | Compile-and-execute adapter; CLI `lite run`, no separate binary or release stream |
 | Checker | **Lite checker** | `lite-checker` | Check-only source validation; CLI `lite check` |
 | Compiled runtime | **Lite runtime** | `lite-runtime`; binary `literun` | Executes compiled LiteScript programs (separate, planned) |
-| Command-line tool | **Lite CLI** | `lite` | Dispatcher for `lite compile`, `lite run`, `lite link` (reserved), `lite check`, `lite docs`, `lite help`, `lite fmt`, `lite verify`, `lite test` |
+| Command-line tool | **Lite CLI** | `lite` / `lite-cli` | Router for standalone operation commands; `lite compile`, `lite verify`, `lite doctor`, and sibling subcommands are aliases |
 | Script source | **LiteScript file** | `.lts` | Convenient standalone script body |
 | Module source | **LiteLang module file** | `.lt` | Package/module-owned declarations and explicit module access |
 | Formatter | **Lite formatter** | `lite-formatter` | CLI `lite fmt` (planned) |
@@ -50,7 +50,7 @@ Lightness, here, means three things at once.
 - The entity is the **Lite igniter**, named `lite-igniter`. Its responsibility is bootstrapping the project; “bootstrap” names the process, not a separate component.
 - The runtime is the **Lite runtime**, package `lite-runtime`, executable `literun`.
 - The CLI is `lite`. `lite` is not the compiler binary and must not be used as a synonym for `litec`.
-- Compiler entry points are equivalent: component/package `lite-compiler`, binary `./litec`, short `./ltc`, and CLI `./lite compile`.
+- Compiler entry points are equivalent: component/package `lite-compiler`, direct TS command `./bin/lite-compiler-ts`, compatibility binaries `./litec` and `./ltc`, and routed alias `./lite compile`.
 - Linker entry points are reserved as component `lite-linker`, executable `./ltl`, and CLI `./lite link`; no linker is implemented.
 - The runner is `./lite run` (bin entry `lite-run`): it compiles one script to a temporary TS artifact, executes it with the Node entry, forwards arguments after an optional `--`, standard streams and exit status, and removes the temporary directory. It restores no interpreter and no T00 fallback; `./lite check` remains the check-only command. The runner shares the Lite CLI component and adds no separate release stream.
 - The checker is `lite-checker` / `./lite check`; it compiles with generated Lite and strictly checks the TS artifact without executing it.
