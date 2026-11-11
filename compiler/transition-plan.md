@@ -413,17 +413,22 @@ baseline unchanged (60/81 scenarios pass, 21 known gaps); generated build;
 three-generation exact T13 fixed point; 94-case corpus (zero mismatches); and
 source-archive route tests without Git metadata.
 
-### Step 3d — module-imports (pending)
+### Step 3d — module-imports (in progress)
 
 **Depends on:** generated-default-workflows, the verified TS kernel and the
 post-self-hosting stage architecture.
-**Actions:** follow [the staged import contract](module-import-stages.md):
-implement the receiver-less import and public-name scope, move graph traversal
-and separate-unit compilation into Lite, then remove host text splicing. Add
-namespace bindings (`module := import "relative/path.lts";`) afterward and
-migrate maintained source to aliases before deciding whether unpacking remains.
-Track `visited` and `processed` separately and keep source spans attached to
-their units.
+**Completed slice:** the parser retains each receiver-less import as an `Import`
+item, and the generated TS driver reads and parses child sources through the
+host `readSource` callback. Typed `ModuleVisitState` values keep `visited` and
+`processed` distinct; visited is set before child traversal and processed after
+all outgoing imports. Tests cover a cycle and a malformed imported unit.
+
+**Remaining actions:** follow [the staged import contract](module-import-stages.md):
+use imported `pub` declarations in the importing scope, retain the module graph
+and source spans for resolution and emission, and then remove host text splicing
+from active paths. Add namespace bindings (`module := import
+"relative/path.lts";`) afterward and migrate maintained source to aliases before
+deciding whether unpacking remains.
 **Acceptance:** only imported public names enter an open-importing file scope;
 private names remain unknown. Each canonical source is read once, entered once
 and compiled once; cycles terminate at `visited` edges; alias imports later

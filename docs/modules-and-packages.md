@@ -129,11 +129,13 @@ or an explicit unpack form replaces it. No project source should retain a
 dependency on implicit unpacking after the alias migration.
 
 As of **2026-11-11**, the compiler lexer and parser recognize `pub` on a
-top-level declaration and the receiver-less `import "path";` clause. Both are
-syntax-only in direct compiler parsing: `pub` does not change visibility and
-the compiler does not load the imported source. Public CLI paths still use the
-host source expander as a temporary bridge. Module interfaces, graph traversal
-and separate-unit compilation remain unimplemented.
+top-level declaration and the receiver-less `import "path";` clause. The
+generated TypeScript driver now reads and parses imported units using the
+compiler's Lite-owned graph walk when invoked with a source filename. It marks
+a unit visited before following imports and processed after its outgoing
+imports. It does not yet expose `pub` declarations or emit imported units.
+Parser-only calls without a source filename remain syntax checks, and public
+CLI paths still use the host source expander as a temporary bridge.
 
 Every source unit is compiled as its own unit. The compiler resolves the import
 graph without splicing source text. A module alias refers to the same module

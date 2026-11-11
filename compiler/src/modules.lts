@@ -1,0 +1,33 @@
+/* Initial source graph traversal for the generated TypeScript compiler. */
+
+/** One source unit's graph traversal state; visiting means entered, processing means all imports completed. */
+ModuleVisitState := type (path: String, visited: Bool, processed: Bool);
+
+/** Returns the most recent state for one canonical source identity. */
+moduleVisitState := fn(states: List<ModuleVisitState>, path: String): ModuleVisitState {
+    var result := (path = "", visited = false, processed = false);
+    loop states as state {
+        if state.path == path { result = state; }
+    }
+    result
+}
+
+/** Reads, parses and visits each imported source once; it records visited before recursion and processed after all outgoing edges. */
+visitImportedSources := fn(importer: String, items: Items, states: List<ModuleVisitState>): List<ModuleVisitState> {
+    var nextStates: mut List<ModuleVisitState> = states;
+    state := moduleVisitState(nextStates, importer);
+    if state.visited { return nextStates; }
+    push_back(mut nextStates, (path = importer, visited = true, processed = false));
+    loop items as item {
+        if item.kind == "Import" {
+            loaded := readSource(importer, item.textValue);
+            childState := moduleVisitState(nextStates, loaded.path);
+            if not childState.visited {
+                importedItems := parseProgram(loaded.text, loaded.path);
+                nextStates = visitImportedSources(loaded.path, importedItems, nextStates);
+            }
+        }
+    }
+    push_back(mut nextStates, (path = importer, visited = true, processed = true));
+    nextStates
+}

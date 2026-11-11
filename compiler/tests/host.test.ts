@@ -181,6 +181,29 @@ test('receiver-less imports are recognized as top-level source clauses', () => {
   }
 });
 
+test('the Lite TypeScript driver visits imported source units once across cycles', () => {
+  const directory = mkdtempSync(join(tmpdir(), 'lite-import-graph-'));
+  try {
+    const rootSource = join(directory, 'app.lts');
+    const childSource = join(directory, 'math.lts');
+    writeFileSync(rootSource, 'import "./math.lts"; outputLine(42);\n');
+    writeFileSync(childSource, 'import "./app.lts"; pub twice := fn(x: Int): Int { x * 2 };\n');
+    const compiled = compileTs({ text: readFileSync(rootSource, 'utf8'), name: realpathSync(rootSource) });
+    assert.equal(compiled.status, 0, compiled.stderr.toString());
+    withTsArtifact(compiled.stdout.toString(), run => {
+      const actual = run();
+      assert.equal(actual.status, 0, actual.stderr.toString());
+      assert.equal(actual.stdout.toString(), '42\n');
+    });
+
+    writeFileSync(childSource, 'outputLine(1 +);\n');
+    const rejected = compileTs({ text: readFileSync(rootSource, 'utf8'), name: realpathSync(rootSource) });
+    assert.equal(rejected.status, 2);
+    assert.match(rejected.stderr.toString(), /math\.lts:1:/);
+    assert.equal(rejected.stdout.length, 0);
+  } finally { rmSync(directory, { recursive: true, force: true }); }
+});
+
 test('TS artifact capture preserves repeated output, diagnostics and early exit across fresh runs', () => {
   const chunk = '🙂سلام\r\n'.repeat(128);
   const source = 'mode := inputInt(); var n := 0; loop n < 512 { ' +

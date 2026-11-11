@@ -1,0 +1,33 @@
+{
+  "phase": "lite-owned-import-graph-traversal",
+  "sourceSha256": "b36039593c607a70724f077aab4a538bcaeadfdc3a0f75a24fb2139ac03927ad",
+  "sourceBytes": 202757,
+  "priorSeed": {
+    "artifact": "T13.ts",
+    "sha256": "b01766fc37d699a6578a64030808d0284cc968015ed023908f8500923d1819a0"
+  },
+  "selectedSeed": {
+    "artifact": "T14.ts",
+    "sha256": "ac2fbe67a04084562bd03310dc2a5d68e7aa1c9e0e41d3b346c5d69834d6b52b",
+    "bytes": 370608
+  },
+  "generations": [
+    "ac2fbe67a04084562bd03310dc2a5d68e7aa1c9e0e41d3b346c5d69834d6b52b",
+    "ac2fbe67a04084562bd03310dc2a5d68e7aa1c9e0e41d3b346c5d69834d6b52b",
+    "ac2fbe67a04084562bd03310dc2a5d68e7aa1c9e0e41d3b346c5d69834d6b52b"
+  ],
+  "fixedPoint": true,
+  "corpus": {
+    "cases": 94,
+    "programs": 69,
+    "rejections": 25,
+    "executions": 69,
+    "mismatches": 0
+  },
+  "focusedCases": [
+    "receiver-less imports remain top-level and validate path/separator syntax",
+    "the Lite TypeScript driver visits imported source units once across cycles",
+    "malformed imported source is rejected with its source filename"
+  ],
+  "scope": "Imported units are parsed through the Lite-owned TS graph walk. Public visibility, module retention/emission, CLI transition, and removal of host source expansion remain pending."
+}

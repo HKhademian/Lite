@@ -586,6 +586,7 @@ emitProgram := fn(items: Items, source: String, prefix: String): Unit {
             reportIndex = reportIndex + 1;
             line = "";
             count = 0;
+        } else if item.kind == "Import" {
         } else {
             if count > 0 { line = line + " + \" \" + "; }
             line = line + reportArgumentCode(item);

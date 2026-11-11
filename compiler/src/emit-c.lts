@@ -433,6 +433,7 @@ emitProgram := fn(items: Items, source: String, prefix: String): Unit {
             if item.kind == "End" { outputLine(indent + "if (printf(\"\\n\") < 0) { status = 1; }"); }
             count = 0;
             writes = "";
+        } else if item.kind == "Import" {
         } else {
             if count == 0 {
                 firstKind = item.kind;

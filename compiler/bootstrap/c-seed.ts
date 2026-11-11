@@ -1,17 +1,17 @@
 /** Verified C emitter rebuilt by the selected minimum-kernel TS seed. */
 export const cSeed = Object.freeze({
   "artifact": "c-emitter.ts",
-  "sourceSha256": "28294ad637488ed37a60e73a61d88efdcb6e825fab39085fc674cfe268b73e00",
-  "sourceBytes": 195981,
-  "artifactSha256": "0bda2fa15ad598066b93ba0b07e9d67b89c3a04feeaeebf00d312af9f0309add",
-  "artifactBytes": 355175,
-  "builderSha256": "b01766fc37d699a6578a64030808d0284cc968015ed023908f8500923d1819a0",
+  "sourceSha256": "f2baa44e3cbd28bcad9af3bb80633bc8756df368dd5a16ee00d12fbf9575b8d3",
+  "sourceBytes": 196170,
+  "artifactSha256": "799d6de75e7f985cf177df2edcab37dcfc67707d186d2059b678df3e38e48535",
+  "artifactBytes": 355395,
+  "builderSha256": "ac2fbe67a04084562bd03310dc2a5d68e7aa1c9e0e41d3b346c5d69834d6b52b",
   "native": false,
   "sourceManifest": "compiler/manifests/c.json",
-  "sourceRevision": "cb8f72199eae20ec45a7811600d58d76180dfe6e",
-  "artifactRevision": "cb8f72199eae20ec45a7811600d58d76180dfe6e",
-  "builderRevision": "cb8f72199eae20ec45a7811600d58d76180dfe6e",
-  "builder": "Selected T13 generated compiler",
+  "sourceRevision": "worktree:f2baa44e3cbd28bcad9af3bb80633bc8756df368dd5a16ee00d12fbf9575b8d3",
+  "artifactRevision": "worktree:799d6de75e7f985cf177df2edcab37dcfc67707d186d2059b678df3e38e48535",
+  "builderRevision": "worktree:b36039593c607a70724f077aab4a538bcaeadfdc3a0f75a24fb2139ac03927ad",
+  "builder": "Selected T14 generated compiler",
   "node": "v26.12.1",
   "typescript": "7.0.2"
 });

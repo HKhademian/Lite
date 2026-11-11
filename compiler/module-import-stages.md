@@ -1,6 +1,6 @@
 # Module imports and compiler stages
 
-Status: **owner-selected staged migration; `pub` marker and receiver-less import syntax parse, import graph and visibility semantics pending**
+Status: **owner-selected staged migration; `pub` and receiver-less import syntax parse, and the generated TS compiler reads/parses imported units with separate visited/processed state; public visibility and import emission pending**
 
 ## Implementation sequence selected 2026-11-11
 
@@ -15,10 +15,14 @@ Status: **owner-selected staged migration; `pub` marker and receiver-less import
    receiver-less form or a separately explicit unpacking form remains only
    after that migration.
 
-The current `pub` marker and receiver-less import clause are syntax-only in the
-Lite-written compiler. `pub` does not yet create a module interface, and direct
-compiler parsing does not load an imported source. Public CLI paths still use
-the host source expander as a temporary bridge.
+The current `pub` marker is syntax-only: it does not yet create a module
+interface. With a logical source filename, the generated TS driver uses
+`readSource` and a Lite-written recursive walk to read and parse imports. The
+walk marks each canonical imported path visited before following its outgoing
+imports and processed after them. It does not yet retain a graph for later
+resolution or emission, expose imported declarations, or emit imported units.
+Parser-only calls without a filename only validate import syntax. Public CLI
+paths still use the host source expander as a temporary bridge.
 
 ## Selected import surface
 

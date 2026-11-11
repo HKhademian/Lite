@@ -2221,6 +2221,8 @@ parseProgram := fn(source: String, prefix: String): Items {
             if statementNext < 0 {
                 failAt(source, skipTrivia(source, path.next, prefix), prefix, "expected ; after import");
             }
+            push_back(mut items, (kind = "Import", name = "", runtime = "", code = "",
+                intValue = 0, textValue = path.textValue));
             position = statementNext;
             continue;
         }

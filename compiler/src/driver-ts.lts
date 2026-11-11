@@ -1,3 +1,7 @@
 prefix := sourcePrefix();
 source := inputAll();
-emitProgram(parseProgram(source, prefix), source, prefix);
+items := parseProgram(source, prefix);
+if prefix =!= "" {
+    graphStates := visitImportedSources(prefix, items, []);
+}
+emitProgram(items, source, prefix);

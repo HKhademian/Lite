@@ -1,8 +1,8 @@
 {
-  "note": "Reviewed 2026-11-11 after the source-reader and pub/import parser increments. All 94 recorded cases pass (69 programs and 25 rejections); all 69 TS artifact hashes changed because generated main now declares the optional source-reader host callback. Runtime streams and rejection contracts are unchanged. C hashes remain historical comparisons.",
+  "note": "Reviewed 2026-11-11 after Lite-owned TypeScript import graph traversal. All 94 recorded cases pass (69 programs and 25 rejections); artifact hashes were refreshed only after independently checking every rejection stream and every program runtime contract. C hashes remain historical comparisons.",
   "recorded": "2026-11-11",
-  "sourceSha256": "a1d5d8621b1250ea81f338b8fdbf22587c798455c0b4e79641aae67e9bcfad33",
-  "compilerSha256": "b01766fc37d699a6578a64030808d0284cc968015ed023908f8500923d1819a0",
+  "sourceSha256": "b36039593c607a70724f077aab4a538bcaeadfdc3a0f75a24fb2139ac03927ad",
+  "compilerSha256": "ac2fbe67a04084562bd03310dc2a5d68e7aa1c9e0e41d3b346c5d69834d6b52b",
   "programCases": 69,
   "rejectedCases": 25,
   "artifacts": [

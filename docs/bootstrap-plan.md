@@ -33,13 +33,12 @@ Advanced correctness/edge audits do not block ordinary syntax migration.
 
 Owner update, 2026-11-11: T13 is promoted from the Lite compiler source after a
 strict three-generation fixed point and a reviewed 94-case corpus run (69
-programs, 25 rejections, zero behavior mismatches). Its generated program hashes
-changed because the compiler entry gained the optional source-reader callback;
-runtime and rejection contracts remain unchanged. `pub` and receiver-less
-`import "path";` currently parse as syntax only. The host source expander remains
-active, and Lite-owned graph traversal, public interfaces, and separate-unit
-compilation are still pending. The current fast suite still has unrelated
-ledger, artifact-expectation, and source-archive package failures.
+programs, 25 rejections, zero behavior mismatches). T14 adds a Lite-owned TS
+driver walk that reads/parses imported units, with separate typed visited and
+processed states. `pub` remains syntax-only; imports do not yet expose public
+names or emit imported units. The public host source expander remains active.
+The current fast suite still has unrelated ledger, artifact-expectation, and
+source-archive package failures.
 
 Owner update, 2026-11-05: `./bin/lite run` is available again as a compile-and-execute
 adapter over the generated compiler and Node entry. It restores no interpreter and

@@ -211,12 +211,15 @@ executable contract remains the verification cases under
 
 ## Manifest assembly
 
-Compiler source is multi-file but has no `import`/`export` syntax. The ordered
-manifests in [`manifests/`](manifests/README.md) list the files for each target;
-the loader splices them into one flattened bundle with a line map. Dependency
-order is semantic because Lite has no forward function lookup: literal encoders
-come before the shared front-end, and the front-end comes before the emitter and
-driver.
+Compiler source uses receiver-less `import "path";` lines for its ordered
+components, but those lines still describe host-assembled bundles rather than
+separate Lite modules. The manifests in [`manifests/`](manifests/README.md) list
+files for each target, and the loader splices them into one flattened bundle
+with a line map. Dependency order is semantic because Lite has no forward
+function lookup: literal encoders come before the shared front-end, and the
+front-end comes before the emitter and driver. The generated TS driver has a
+separate experimental graph walk for source imports; it does not yet resolve
+module visibility or replace bundle assembly.
 
 `lite-compile-ts` compiles through [`cli.ts`](cli.ts), selecting the current T11-derived
 target compiler. The old `ts-emitter.lts` and `c-emitter.lts`

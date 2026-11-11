@@ -7,5 +7,6 @@ import "../../lib/core/list.lts";
 import "ts-literals.lts";
 import "numeric-literals.lts";
 import "frontend.lts";
+import "modules.lts";
 import "emit-ts.lts";
 import "driver-ts.lts";
