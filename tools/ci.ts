@@ -33,6 +33,13 @@ export function verifyMigration(): void {
 }
 
 const taskFile = process.argv[2];
+function releaseTag(): string | undefined {
+  return process.env['GITHUB_EVENT_NAME'] === 'push' && process.env['GITHUB_REF_TYPE'] === 'tag'
+    ? process.env['GITHUB_REF_NAME'] : undefined;
+}
+function releaseNeedsCompilerGates(): boolean {
+  return releaseProfile(selectComponentRelease(releaseTag(), versions())) !== 'tools';
+}
 if (import.meta.main) {
   try {
     assert(taskFile !== undefined, 'CI task file required');
@@ -46,14 +53,13 @@ if (import.meta.main) {
       case 'editor': invoke(process.execPath, ['--test', 'editors/vscode/test/grammar.test.ts']); break;
       case 'coverage': lite('verify', '--coverage'); break;
       case 'migration': verifyMigration(); break;
-      case 'release-check': {
-        lite('doctor');
-        invoke(process.execPath, ['--test', 'tools/docs.test.ts', 'tools/cases.test.ts', 'tools/cli.test.ts', 'tools/release.test.ts', 'compiler/scripts/release-streams.test.ts']);
-        invoke(process.execPath, ['--test', 'editors/vscode/test/grammar.test.ts']);
-        const tag = process.env['GITHUB_EVENT_NAME'] === 'push' && process.env['GITHUB_REF_TYPE'] === 'tag' ? process.env['GITHUB_REF_NAME'] : undefined;
-        if (releaseProfile(selectComponentRelease(tag, versions())) !== 'tools') { lite('test', '--full'); lite('verify', '--coverage'); verifyMigration(); }
-        break;
-      }
+      case 'release-doctor': lite('doctor'); break;
+      case 'release-unit':
+        invoke(process.execPath, ['--test', 'tools/docs.test.ts', 'tools/cases.test.ts', 'tools/cli.test.ts', 'tools/release.test.ts', 'compiler/scripts/release-streams.test.ts']); break;
+      case 'release-editor': invoke(process.execPath, ['--test', 'editors/vscode/test/grammar.test.ts']); break;
+      case 'release-regressions': if (releaseNeedsCompilerGates()) lite('test', '--full'); break;
+      case 'release-coverage': if (releaseNeedsCompilerGates()) lite('verify', '--coverage'); break;
+      case 'release-migration': if (releaseNeedsCompilerGates()) verifyMigration(); break;
       case 'bench': lite('bench', '.cache/case-bench-ci.json', 'tooling.docs'); break;
       case 'self-host': {
         const work = mkdtempSync(join(tmpdir(), 'lite-ci-self-host-'));
@@ -70,8 +76,7 @@ if (import.meta.main) {
         break;
       }
       case 'package': {
-        const tag = process.env['GITHUB_EVENT_NAME'] === 'push' && process.env['GITHUB_REF_TYPE'] === 'tag' ? process.env['GITHUB_REF_NAME'] : undefined;
-        prepareRelease(root, join(root, '.cache/release'), tag); break;
+        prepareRelease(root, join(root, '.cache/release'), releaseTag()); break;
       }
       case 'publish': {
         assert.equal(process.env['GITHUB_EVENT_NAME'], 'push');

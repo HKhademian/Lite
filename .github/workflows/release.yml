@@ -32,7 +32,11 @@ concurrency:
   cancel-in-progress: false
 
 jobs:
-  ci:
+  checks:
+    strategy:
+      fail-fast: false
+      matrix:
+        task: [release-doctor, release-unit, release-editor, release-regressions, release-coverage, release-migration]
     runs-on: ubuntu-24.04
     timeout-minutes: 30
     defaults:
@@ -47,10 +51,10 @@ jobs:
           node-version-file: igniter/.node-version
       - name: Install locked checking tools
         run: install
-      - name: Validate the selected component readiness profile
-        run: release-check
+      - name: Run the component-scoped release gate
+        run: ${{ matrix.task }}
   package:
-    needs: ci
+    needs: checks
     runs-on: ubuntu-24.04
     timeout-minutes: 10
     defaults:

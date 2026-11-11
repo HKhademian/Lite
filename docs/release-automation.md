@@ -109,9 +109,12 @@ validates the corpus and measures five workloads; its program limits are unchang
 
 [Release](../.github/workflows/release.yml) responds to all registered component
 tag streams. It validates the annotated tag and recorded version at the exact
-commit, packages the appropriate profile, uploads every asset to a draft, then
-publishes. Prereleases remain prereleases, and independent streams do not replace
-GitHub's default latest release. Existing releases are never overwritten.
+commit. Documentation/tooling, editor, full-regression, coverage, and migration
+baseline gates run as parallel jobs; compiler-family gates do no work on
+tool-only tags. Packaging waits for all applicable gates, then uploads every
+asset to a draft and publishes. Prereleases remain prereleases, and independent
+streams do not replace GitHub's default latest release. Existing releases are
+never overwritten.
 Manual runs build source snapshot artifacts without publishing.
 
 ## Historical native packaging
