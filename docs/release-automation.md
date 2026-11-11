@@ -52,6 +52,27 @@ by default. Confirm CI and the hosted release before reporting publication.
   do not imply implementations. Editor package/lockfile versions must match the
   registry; vscode tags additionally produce a checksummed VSIX.
 
+## Choose verification by change scope
+
+Use the smallest set of checks that covers the changed contract, and run
+independent checks in parallel when they do not share mutable outputs:
+
+- Documentation, metadata, or tool-only edits use their focused checks and
+  `./lite doctor`; editor grammar checks apply when editor support or syntax
+  metadata changes.
+- Compiler behavior edits use the named accepted/rejected/boundary/interaction
+  cases, affected generated targets, strict checks, and `./lite test --fast`.
+- Compiler source, seed, or bootstrap edits add a reproducible build, the
+  relevant multi-generation fixed-point ladder, and recorded corpus parity;
+  run the full regression suite before accepting the increment.
+- Language-wide acceptance and language, scripting, umbrella, or stable compiler
+  releases require coverage registration and every canonical semantic contract
+  to pass. A recorded migration gap remains a gap; it is not a pass or a skip.
+
+This lets routine improvements iterate on the behavior they touch while the
+release profile raises the gate when the released contract is broader. It does
+not require every compiler change to establish full language conformance.
+
 Ordinary CI reports all accepted-language failures and compares them with the
 explicit [migration baseline](../config/ts-migration.json). A changed pass/failure
 set or diagnostic fails the baseline gate for review. This is a regression gate,
@@ -74,12 +95,12 @@ promised identical across archive toolchains.
 
 ## CI and publication
 
-[Test](../.github/workflows/test.yml) runs on Linux and macOS. TypeScript task
-code in [tools/ci.ts](../tools/ci.ts) performs strict checks, generated regressions,
-editor grammar, coverage, the explicit TS migration audit, a verified case
-benchmark, a T00-free source-archive gate and extracted-distribution checks.
+[Test](../.github/workflows/test.yml) runs independent jobs concurrently:
+strict repository checks, Linux/macOS full regressions, editor grammar,
+verification coverage, the explicit TS migration audit, a verified case
+benchmark, extracted-distribution checks, and the T00-free archive gate.
 Workflow YAML dispatches named Node tasks without embedded shell programs.
-Full regressions and the T00-free archive run in separate jobs with 30-minute
+The full suite and archive gate retain separate OS matrices and 30-minute
 budgets. The whole-source checker sweep has a 120-second tool budget and the
 81-scenario CLI audit a 180-second controller budget; ordinary artifact limits
 remain unchanged. Timeouts are failures, never successful samples or skipped cases.

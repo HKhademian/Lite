@@ -15,6 +15,28 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
+  check:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    defaults:
+      run:
+        shell: node tools/ci.ts {0}
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@v7
+        with:
+          node-version-file: igniter/.node-version
+          cache: npm
+          cache-dependency-path: |
+            igniter/package-lock.json
+            editors/vscode/package-lock.json
+      - name: Install locked development tools
+        run: install
+      - name: Strict types, docs, versions and declarative cases
+        run: check
+
   test:
     strategy:
       fail-fast: false
@@ -38,18 +60,107 @@ jobs:
             editors/vscode/package-lock.json
       - name: Install locked development tools
         run: install
-      - name: Strict types, docs, versions and declarative cases
-        run: check
       - name: Generated regression and real command contracts
         run: test
+
+  editor:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    defaults:
+      run:
+        shell: node tools/ci.ts {0}
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@v7
+        with:
+          node-version-file: igniter/.node-version
+          cache: npm
+          cache-dependency-path: |
+            igniter/package-lock.json
+            editors/vscode/package-lock.json
+      - name: Install locked development tools
+        run: install
       - name: Editor grammar
         run: editor
+
+  verification:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    defaults:
+      run:
+        shell: node tools/ci.ts {0}
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@v7
+        with:
+          node-version-file: igniter/.node-version
+          cache: npm
+          cache-dependency-path: |
+            igniter/package-lock.json
+            editors/vscode/package-lock.json
+      - name: Install locked development tools
+        run: install
       - name: Coverage registration
         run: coverage
+
+  migration-baseline:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    defaults:
+      run:
+        shell: node tools/ci.ts {0}
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@v7
+        with:
+          node-version-file: igniter/.node-version
+          cache: npm
       - name: Report and preserve the known TS migration failures
         run: migration
+
+  benchmark:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    defaults:
+      run:
+        shell: node tools/ci.ts {0}
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@v7
+        with:
+          node-version-file: igniter/.node-version
+          cache: npm
+          cache-dependency-path: igniter/package-lock.json
+      - name: Install locked development tools
+        run: install
       - name: Verified case benchmark smoke test
         run: bench
+
+  package:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    defaults:
+      run:
+        shell: node tools/ci.ts {0}
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@v7
+        with:
+          node-version-file: igniter/.node-version
+          cache: npm
+          cache-dependency-path: igniter/package-lock.json
+      - name: Install locked development tools
+        run: install
       - name: Extracted source distribution smoke test
         run: package
 
