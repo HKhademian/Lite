@@ -98,6 +98,33 @@ test('compiler entry provides canonical strict-UTF-8 source reads to generated c
   }
 });
 
+test('Lite readSource returns a typed source unit through the compiler host', () => {
+  const directory = mkdtempSync(join(tmpdir(), 'lite-source-builtin-'));
+  try {
+    const sourcePath = join(directory, 'app.lts');
+    const dependency = join(directory, 'dep.lts');
+    writeFileSync(sourcePath, '');
+    writeFileSync(dependency, 'module text\n');
+    const compiled = compileTs({
+      text: 'loaded := readSource("app.lts", "./dep.lts"); outputLine(loaded.path); outputLine(loaded.text);',
+      name: 'app.lts',
+    });
+    assert.equal(compiled.status, 0, compiled.stderr.toString());
+    assert.equal(compiled.stderr.length, 0);
+    const artifact = join(directory, 'program.ts');
+    writeFileSync(artifact, compiled.stdout);
+    writeFileSync(join(directory, 'package.json'), '{"type":"module"}\n');
+    const entry = join(root, 'compiler/entry.ts');
+    const actual = spawnSync(process.execPath, [entry, artifact], { cwd: directory, encoding: 'utf8', timeout: 10000 });
+    assert.equal(actual.status, 0, actual.stderr);
+    assert.equal(actual.signal, null);
+    assert.equal(actual.stderr, '');
+    assert.equal(actual.stdout, `${realpathSync(dependency)}\nmodule text\n\n`);
+  } finally {
+    rmSync(directory, { recursive: true, force: true });
+  }
+});
+
 test('TS artifact capture preserves repeated output, diagnostics and early exit across fresh runs', () => {
   const chunk = '🙂سلام\r\n'.repeat(128);
   const source = 'mode := inputInt(); var n := 0; loop n < 512 { ' +

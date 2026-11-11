@@ -26,7 +26,9 @@ usesIntHelper := fn(calls: String, name: String): Bool {
 
 /** Returns the C rejection message for one emitted expression that calls an unsupported I/O or text builtin, or empty text. */
 unsupportedBuiltinCode := fn(calls: String): String {
-    if usesIntHelper(calls, "lite$inputArgs(") or usesIntHelper(calls, "lite$inputAll(") or usesIntHelper(calls, "lite$inputLine(") or usesIntHelper(calls, "lite$inputInt(") or usesIntHelper(calls, "lite$inputFloat(") {
+    if usesIntHelper(calls, "lite$readSource(") {
+        "C backend does not support compiler source reads"
+    } else if usesIntHelper(calls, "lite$inputArgs(") or usesIntHelper(calls, "lite$inputAll(") or usesIntHelper(calls, "lite$inputLine(") or usesIntHelper(calls, "lite$inputInt(") or usesIntHelper(calls, "lite$inputFloat(") {
         "C backend does not support input builtins yet"
     } else if usesIntHelper(calls, "lite$reportError(") or usesIntHelper(calls, "lite$exit(") {
         "C backend does not support reportError or exit yet"

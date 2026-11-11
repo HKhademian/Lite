@@ -1064,7 +1064,7 @@ copiedValueCode := fn(kind: String, code: String): String {
 /** True for the zero-argument or checked I/O and text builtins this compiler admits. */
 isAdmittedBuiltin := fn(name: String): Bool {
     name == "inputArgs" or name == "inputAll" or name == "inputLine" or name == "inputInt" or name == "inputFloat" or name == "reportError" or name == "exit" or
-    name == "textLength" or name == "textAt" or name == "textSlice"
+    name == "textLength" or name == "textAt" or name == "textSlice" or name == "readSource"
 }
 
 /** Number of positional arguments one admitted builtin requires. */
@@ -1072,12 +1072,14 @@ builtinArity := fn(name: String): Int {
     if name == "inputArgs" { 0 }
     else if name == "textAt" { 2 }
     else if name == "textSlice" { 3 }
+    else if name == "readSource" { 2 }
     else { 1 }
 }
 
 /** Required kind of argument `index` for one admitted builtin. */
 builtinParameterKind := fn(name: String, index: Int): String {
     if name == "reportError" or name == "textLength" or name == "inputAll" or name == "inputLine" or name == "inputInt" or name == "inputFloat" { "String" }
+    else if name == "readSource" { "String" }
     else if name == "textAt" or name == "textSlice" {
         if index == 0 { "String" } else { "Int" }
     } else { "Int" }
@@ -1086,6 +1088,7 @@ builtinParameterKind := fn(name: String, index: Int): String {
 /** Result kind of one admitted builtin. */
 builtinResultKind := fn(name: String): String {
     if name == "inputArgs" { "List<String>" }
+    else if name == "readSource" { "(path:String,text:String)" }
     else if name == "inputAll" or name == "inputLine" or name == "textAt" or name == "textSlice" { "String" }
     else if name == "textLength" or name == "inputInt" { "Int" }
     else if name == "inputFloat" { "Float" }
