@@ -1,5 +1,10 @@
 # Contributing to Lite
 
+Lite is licensed under the Apache License, Version 2.0. See [LICENSE](LICENSE).
+Contributions intentionally submitted for inclusion are licensed under Apache
+2.0 as described in sections 5 and 6 of that license. No separate contributor
+agreement is required.
+
 Read [AGENTS.md](AGENTS.md) and the [development workflow](docs/development-workflow.md).
 Use Node from [igniter/.node-version](igniter/.node-version) and install locked
 development dependencies with `npm --prefix igniter ci` and
