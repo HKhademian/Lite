@@ -12,6 +12,12 @@ identities are in [c-seed.ts](c-seed.ts). It is not a native C11 compiler or a
 native fixed point. Public C output and native/cross-host gates remain deferred
 until after TS migration and T00 retirement.
 
+The TS and C manifests now point to one Lite root each. Their top-level imports
+expand through the host loader; `buildCompiler()` exposes the resolved dependency
+order and records it in rebuilt-artifact provenance. Import path resolution and
+source mapping stay host responsibilities while the generated compiler receives
+the flattened Lite program.
+
 Edit Lite implementation under `compiler/src/` and `lib/core/`, not the generated
 seeds. The host verifies source and seed identities. Changed S rebuilds with the
 accepted generated TS seed into a source/builder-keyed, strictly checked

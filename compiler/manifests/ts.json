@@ -1,16 +1,4 @@
 {
   "target": "ts",
-  "files": [
-    "../../lib/core/int.lts",
-    "../../lib/core/text.lts",
-    "../../lib/core/source.lts",
-    "../../lib/core/diag.lts",
-    "../../lib/core/format.lts",
-    "../../lib/core/list.lts",
-    "../src/ts-literals.lts",
-    "../src/numeric-literals.lts",
-    "../src/frontend.lts",
-    "../src/emit-ts.lts",
-    "../src/driver-ts.lts"
-  ]
+  "files": ["../src/ts-root.lts"]
 }

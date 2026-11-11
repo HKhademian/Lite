@@ -175,11 +175,13 @@ and no explicit `any`, non-null assertions, or unchecked type casts.
 
 ## Bootstrap bundle tooling
 
-P1 adds internal bundle tooling for the [bootstrap plan](../docs/bootstrap-plan.md);
-it is not a public CLI command and does not add Lite syntax. [`loader.ts`](loader.ts)
-now also exports `loadManifest` and `loadBundle`: ordered relative manifests,
-strict UTF-8, include-once and cycle rejection, directive expansion, and a
-flattened-line map back to each original path and 1-based line. [`bootstrap.ts`](https://github.com/redacted/Lite/blob/d3bd6f7bcf06bbea6669c8d74bebe5e73f383114/igniter/bootstrap.ts)
+P1 adds internal bundle tooling for the [bootstrap plan](../docs/bootstrap-plan.md).
+[`loader.ts`](loader.ts) exports `loadManifest`, `loadBundle` and
+`loadSourceDetails`: ordered relative manifests, strict UTF-8, top-level Lite
+source imports, open-once dependency tracking and source-import cycle
+termination, plus a flattened-line map back to each original path and 1-based
+line. The older `importFlatAll` directive remains for test-only declaration
+drivers and still reports cycles. [`bootstrap.ts`](https://github.com/redacted/Lite/blob/d3bd6f7bcf06bbea6669c8d74bebe5e73f383114/igniter/bootstrap.ts)
 loads and compiles a target manifest once, runs it with fixed args/stdin, maps
 compiler diagnostics from flattened rows back to original files, and provides
 sha-256, nondeterminism and benchmark helpers. [`artifacts.ts`](artifacts.ts)
@@ -195,11 +197,14 @@ between runs and removed with the artifact directory. Host regressions cover
 large raw Unicode/NUL output, repeated reports, prompts, faults and early exit.
 
 The manifests are [compiler/manifests/ts.json](../compiler/manifests/ts.json) and
-[c.json](../compiler/manifests/c.json). They list the L0 libraries, target
-literal encoders, shared front-end, target emitter and target driver in
-dependency order. `litec` compiles the manifest bundle through
+[c.json](../compiler/manifests/c.json). Each names one Lite root file; its
+top-level imports list the L0 libraries, target literal encoders, shared
+front-end, target emitter and target driver in dependency order. Build
+provenance records the resolved dependency paths. `litec` compiles the expanded
+manifest bundle through
 [`bundle-cli.ts`](https://github.com/redacted/Lite/blob/d3bd6f7bcf06bbea6669c8d74bebe5e73f383114/igniter/bundle-cli.ts); compiler source and `lib/core` contain no
-`importFlatAll` directives. The `compiler/ts-emitter.lts` and
+`importFlatAll` directives. This does not add module namespaces or package
+resolution. The `compiler/ts-emitter.lts` and
 `compiler/c-emitter.lts` compatibility bundles are generated from the manifests.
 
 P3 adds the Lite-written lexer in [`../compiler/src/lexer.lts`](../compiler/src/lexer.lts)
@@ -884,10 +889,10 @@ self-hosted build. See [INV-061 evidence](../investigations/INV-061-lite-arithme
 
 The Lite-written compiler now lives in [compiler/](../compiler/README.md), not
 in the runnable example list. It has one shared front-end and separate TS/C
-backends assembled by the ordered manifests. `litec` compiles the manifest
-bundle through the [generated host](../compiler/host.ts); no module or import syntax is
-introduced, and compiler source no longer uses the temporary `importFlatAll`
-directive.
+backends assembled through the ordered manifests and Lite-authored source
+imports. `litec` expands the import dependency graph through the [generated
+host](../compiler/host.ts); compiler source no longer uses the temporary
+`importFlatAll` directive. Module namespaces and package resolution remain open.
 
 Run the compiler with:
 

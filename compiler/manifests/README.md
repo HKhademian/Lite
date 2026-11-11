@@ -1,39 +1,29 @@
 # Compiler source manifests
 
-Status: **P4 implemented, 2026-11-01**. The bundle loader lives in
+Status: **manifest roots with Lite source imports, 2026-11-11**. The bundle loader lives in
 [`../../igniter/loader.ts`](../../igniter/loader.ts); the internal driver,
 harness remain under [`../../igniter/`](../../igniter/). The default `litec`
-entry is now [`../cli.ts`](../cli.ts): both targets use T11-derived compilers
+entry is now [`../cli.ts`](../cli.ts): both targets use selected generated compilers
 through the [current compiler host](../host.ts). The legacy bundle driver is an
 explicit reference/audit path.
 No public `bootstrap` command is exposed.
 
-A manifest is the ordered assembly description for one bootstrap target. It
-replaces neither Lite source nor a module system: it names the files the loader
-splices into one bundle, in dependency order. The schema is
+A manifest names the root source for one bootstrap target. The root's top-level
+`import` declarations establish dependency order; the host expands them into
+one compiler input bundle. This does not define a general module/package system.
+The manifest schema is
 [`manifest.schema.json`](manifest.schema.json).
 
 ```json
 {
   "target": "ts",
-  "files": [
-    "../../lib/core/int.lts",
-    "../../lib/core/text.lts",
-    "../../lib/core/source.lts",
-    "../../lib/core/diag.lts",
-    "../../lib/core/format.lts",
-    "../../lib/core/list.lts",
-    "../src/ts-literals.lts",
-    "../src/frontend.lts",
-    "../src/emit-ts.lts",
-    "../src/driver-ts.lts"
-  ]
+  "files": ["../src/ts-root.lts"]
 }
 ```
 
-The current manifests list the L0 libraries, the target literal encoders, the
-shared front-end, the target emitter and the target driver. `lib/core/test.lts`
-is test-only and is not part of a compiler bundle.
+The TS and C roots import the L0 libraries, target literal encoders, shared
+front-end, target emitter and target driver. `lib/core/test.lts` is test-only
+and is not part of a compiler bundle.
 
 No compiler source file or `lib/core` file contains an `importFlatAll`
 directive. The temporary directive remains only in test helpers under
@@ -52,20 +42,19 @@ manifest text.
   encoders therefore appear before the shared front-end that calls them.
 - Each entry is a relative UTF-8 path with `/` separators. Absolute paths,
   drive-letter paths and backslashes are rejected. Paths resolve relative to the
-  manifest file, so `../../lib/core/...` is valid.
+  manifest file. Import paths resolve relative to the importing source.
 - Each file appears once. A duplicate is an error, not a silent include-once
-  skip. A file-directive cycle is rejected as well.
-- Files are declaration-only except the final driver entry, which may run the
-  bundle. The final entry is the target driver, for example `driver-ts.lts` or
-  `driver-c.lts`; it is not a shared front-end file.
+  skip. Source imports are visited on open; repeated edges and cycles stop at
+  the first visit. The legacy `importFlatAll` directive still rejects cycles.
+- Imported files are declaration-oriented except the target root's final driver,
+  which may run the bundle.
 - Missing files, directories, invalid UTF-8, empty paths and unresolved nested
   directives are load errors.
 - The bundle carries no `import`/`export` syntax into the generated artifact.
-  Assembly is entirely a loader concern (bootstrap default B2).
+  The host loader owns import path resolution and explicit dependency metadata.
 
-The temporary `importFlatAll` directive in the current compiler is a
-pre-manifest loader workaround. P1 keeps it working until the bundle path
-replaces it; it is not part of this schema.
+The temporary `importFlatAll` directive remains only in test helpers; compiler
+source roots now use Lite `import` declarations.
 
 ## Line-map contract
 
@@ -78,6 +67,7 @@ type Bundle = Readonly<{
   text: string;
   lineMap: readonly LineMapEntry[];
   files: readonly string[];
+  dependencies: readonly string[];
 }>;
 ```
 

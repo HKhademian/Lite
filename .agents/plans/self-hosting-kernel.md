@@ -1,6 +1,6 @@
 ---
 name: self-hosting-kernel
-status: pending
+status: in_progress
 created: 2026-11-10
 todos:
   - id: cli-router
@@ -11,10 +11,10 @@ todos:
     status: completed
   - id: source-imports
     content: "Step 2 — add source imports in Lite after the kernel gate"
-    status: in_progress
+    status: completed
   - id: retire-reference
     content: "Step 3 — retire the active T00 dependency after imports and the kernel gate"
-    status: pending
+    status: in_progress
   - id: stage-architecture
     content: "Step 4 — define clean typed compiler stages after self-hosting"
     status: pending
@@ -53,6 +53,7 @@ Reach a reliable generated compiler fixed point using only the portion of LiteLa
 - Confirmed compiler source is split into `compiler/src/*.lts` and assembled through ordered manifests. This glue is acceptable for the initial self-hosting kernel.
 - Captured owner direction: definitions/symbols are distinct from runtime values; repeated names in one flat scope should be rejected while nested shadowing is allowed; deferred function bodies may reference later compile-time-known top-level symbols, while eager top-level initializers execute in source order and may not read later values.
 - Captured owner direction: source imports need not be part of the initial bootstrap kernel. After that gate, prefer a minimal top-level import in Lite if it is inexpensive; dependencies still need explicit metadata even when a glue step assembles files.
+- Implemented the minimal source-import slice after the kernel gate: one top-level relative `.lts` import, deterministic ordered DFS expansion, visit-on-open cycle/repeat termination, explicit dependency metadata, and imported-file source locations. Compiler manifests now each name one Lite source root. TS and C source hashes and the T12 fixed point remain unchanged. The fast suite passes with import coverage.
 
 ## Plan links
 
@@ -146,14 +147,14 @@ The fixed-point and corpus checks prove the updated compiler source rebuilds its
 - Use the existing manifest/seed route to implement and verify the feature. Adopt imports in compiler source only after the generated compiler can rebuild that imported source reproducibly.
 - If the minimal source import requires substantial bootstrap or package-system work, keep manifest assembly as a temporary bridge and record the smallest blocker. Do not make dependency metadata implicit or lose the route to move resolution into Lite later.
 
-**Acceptance:**
+**Acceptance: PASSED.**
 
-- [ ] Focused cases cover top-level-only placement, imported declarations, missing paths, repeated/cyclic imports, source locations, dependency order, and runtime declaration order.
-- [ ] The compiler source is modular and rebuilds through the documented seed/igniter to the same fixed point.
-- [ ] Dependency metadata is explicit and inspectable, whether the first implementation uses Lite imports or a temporary manifest bridge.
-- [ ] No package manager, implicit prelude, or unrelated standard-library policy is introduced.
+- [x] Focused cases cover top-level-only placement, imported declarations, missing paths, repeated/cyclic imports, source locations, dependency order, and runtime declaration order.
+- [x] The compiler source is modular and rebuilds through the documented seed/igniter to the same fixed point.
+- [x] Dependency metadata is explicit and inspectable in compiler builds and provenance.
+- [x] No package manager, implicit prelude, or unrelated standard-library policy is introduced.
 
-**Verify:** relevant parser/checker/compiler cases, `./lite test --fast`, complete self-host fixed point and corpus checks for the new compiler source.
+**Verified:** focused import/CLI/host cases; `node compiler/scripts/build.ts`; three-generation `node compiler/scripts/self-host.ts --out /tmp/lite-self-host-imports-20261111` fixed point; 94-case corpus parity; `./lite test --fast` (140 passed, 12 skipped, 0 failed). The import graph is explicit in `provenance.json`; compiler source and T12 artifact hashes are unchanged.
 
 ---
 
@@ -250,7 +251,7 @@ The fixed-point and corpus checks prove the updated compiler source rebuilds its
 |------|-------|
 | Current compiler | Generated T12 TypeScript compiler is the default; T00 remains an explicit historical reference. |
 | Last measured migration inventory | 112/173 source scenarios match; 61 T12 rejections, recorded 2026-11-11. These are post-kernel parity work unless tied to a compiler-source requirement. |
-| Source assembly | `compiler/src/*.lts` is split into files and ordered-manifest assembled; no source import grammar is implemented. |
+| Source assembly | Compiler sources use top-level relative `.lts` imports with ordered DFS expansion, cycle/repeat termination, source maps, and dependency metadata. |
 | Bootstrap subset | See `docs/bootstrap-plan.md`; records no imports, flat streaming, and exclusion of recursive AST/records/enums/unions. |
 | Shared support | Provisional helpers are under `lib/core/`; no public standard library is established. |
 | Tooling | Thin command entries live under `bin/`; shared implementations under `tools/`; generated compiler seeds under `compiler/bootstrap/`. |

@@ -23,13 +23,14 @@ later target. See the
 
 The current path is:
 
-1. Complete the T12 kernel step with refreshed inventory and clean-checkout
-   verification; its source, fixed-point and compiler-corpus checks are recorded.
-2. Add the narrow top-level import path after the completed kernel. Resolve each
-   source once on open, retain source locations, and expose dependency metadata.
-3. Remove T00 from active commands, test suites, verifiers, benchmarks and
-   compiler audits once clean-checkout/no-T00 gates pass. The 61 T12 rejections
-   remain visible feature-parity work; they do not block this step.
+1. T12 kernel complete: root-symbol rules, fixed point, 94-case compiler corpus,
+   T00/T12 inventory, and fast-suite verification are recorded.
+2. Verify the top-level import implementation across copied no-T00 builds and
+   public compile/check/run paths. It resolves local source once on open, records
+   dependency order, and retains imported-file source locations.
+3. Retire active T00 command, test, verifier, benchmark and audit dependencies
+   after the import and no-T00 gates pass. The 61 T12 rejections remain explicit
+   parity backlog; they do not block retirement.
 4. Continue needed Lite compiler features in paired seed/source increments and
    compare the declared subset. Resume public C/native work separately.
 

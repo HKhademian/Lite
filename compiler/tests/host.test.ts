@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 import { spawnSync } from 'node:child_process';
-import { chmodSync, copyFileSync, cpSync, lstatSync, readlinkSync, existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync, symlinkSync, writeFileSync } from 'node:fs';
+import { chmodSync, copyFileSync, cpSync, lstatSync, readlinkSync, existsSync, mkdirSync, mkdtempSync, readFileSync, readdirSync, rmSync, symlinkSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { delimiter, dirname, join, relative, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
@@ -234,7 +234,7 @@ function isolatedCheckout(): string {
     'compiler/bootstrap/T11.ts', `compiler/bootstrap/${seed.artifact}`, 'compiler/bootstrap/seed.ts', 'compiler/bootstrap/tsconfig.json',
     'compiler/bootstrap/c-emitter.ts', 'compiler/bootstrap/c-seed.ts',
     'compiler/manifests/ts.json', 'compiler/manifests/c.json', 'igniter/loader.ts', 'igniter/tsconfig.json',
-    ...bundles.flatMap(bundle => bundle.files.map(path => relative(root, resolve(dirname(manifest), path)))),
+    ...bundles.flatMap(bundle => bundle.dependencies.map(path => relative(root, resolve(dirname(manifest), path)))),
   ]);
   for (const path of paths) {
     const destination = join(directory, path);
@@ -338,12 +338,21 @@ test('a modified bootstrap seed fails explicitly without executing T00', () => {
   } finally { rmSync(directory, { recursive: true, force: true }); }
 });
 
+test('selected compiler build exposes its imported source dependencies', () => {
+  const selected = buildCompiler('ts');
+  assert.deepEqual(selected.dependencies.slice(0, 3), [
+    '../src/ts-root.lts', '../../lib/core/int.lts', '../../lib/core/text.lts',
+  ]);
+  assert.ok(selected.dependencies.includes('../src/frontend.lts'));
+});
+
 test('the TS-hosted C seed preserves source names, subset rejection and artifact integrity', () => {
   const selected = buildCompiler('c');
   assert.equal(selected.target, 'c');
   assert.equal(selected.artifactSha256, cSeed.artifactSha256);
   assert.equal(selected.builderSha256, seed.artifactSha256);
   assert.equal(selected.sourceSha256, cSeed.sourceSha256);
+  assert.ok(selected.dependencies.includes('../src/c-root.lts'));
   assert.deepEqual(compileTarget('c', { text: 'outputLine(42);', name: 'سلام file.lts' }), {
     status: 0, stdout: readFileSync(join(root, 'compiler/generated/report-42.c')), stderr: Buffer.alloc(0),
   });
@@ -363,15 +372,21 @@ test('the TS-hosted C seed preserves source names, subset rejection and artifact
   } finally { rmSync(directory, { recursive: true, force: true }); }
 });
 
-test('changed C compiler source rebuilds with the selected seed without a T00 implementation', () => {
+test('imported C compiler source rebuilds with the selected seed and records dependencies without T00', () => {
   const directory = isolatedCheckout();
   try {
     symlinkSync(join(root, 'igniter/node_modules'), join(directory, 'igniter/node_modules'));
-    writeFileSync(join(directory, 'compiler/manifests/c.json'), JSON.stringify({ target: 'c', files: ['../src/fixture-c.lts'] }));
+    writeFileSync(join(directory, 'compiler/manifests/c.json'), JSON.stringify({ target: 'c', files: ['../src/fixture-root.lts'] }));
+    writeFileSync(join(directory, 'compiler/src/fixture-root.lts'), 'import "fixture-c.lts";\n');
     writeFileSync(join(directory, 'compiler/src/fixture-c.lts'), 'source := inputAll(); outputLine("fresh C");');
     const result = invoke(directory, 'outputLine(42);', 'c');
     assert.equal(result.error, undefined); assert.equal(result.status, 0, result.stderr.toString());
     assert.equal(result.stdout.toString(), 'fresh C\n');
+    const cache = join(directory, '.cache/compiler');
+    const entries = readdirSync(cache).filter(name => !name.startsWith('build-'));
+    assert.equal(entries.length, 1);
+    const provenance = JSON.parse(readFileSync(join(cache, entries[0]!, 'provenance.json'), 'utf8')) as { dependencies: string[] };
+    assert.deepEqual(provenance.dependencies, ['../src/fixture-root.lts', '../src/fixture-c.lts']);
     const ts = invoke(directory, 'outputLine(42);', 'ts');
     assert.equal(ts.status, 0); assert.notEqual(ts.stdout.toString(), result.stdout.toString());
   } finally { rmSync(directory, { recursive: true, force: true }); }

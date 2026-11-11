@@ -37,14 +37,15 @@ keeps the T00-free default route.
 
 Owner direction, 2026-11-10: use the smallest LiteLang subset that can compile
 and rebuild the Lite-written compiler. The full language specification or T00
-parity is not a self-hosting prerequisite. The current T11 seed compiles the
-manifest source through three strictly checked generations to the same artifact,
-and that artifact passes the recorded 93-case compiler corpus. Add a minimal
+parity is not a self-hosting prerequisite. The selected generated seed compiles
+the compiler source through three strictly checked generations to the same
+artifact, and that artifact passes its recorded compiler corpus. Add a minimal
 top-level source import after this kernel if its cost remains modest, retaining
 explicit dependency metadata. Then retire the handwritten T00 implementation
-from the active tree after no-T00 checks pass. Keep remaining T11 rejections as
-post-kernel feature work; preserve the generated TS seed and its provenance for
-reproducible recovery. Native C is a later target.
+from active command and verification paths after no-T00 checks pass. Keep
+remaining selected-compiler rejections as post-kernel feature work; preserve
+the generated TS seed and its provenance for reproducible recovery. Native C is
+a later target.
 
 Owner clarification, 2026-11-11: the current seed must also implement the
 bounded root-symbol contract: reject duplicate root value definitions, allow
@@ -162,11 +163,21 @@ behavior, wider numeric types and the remaining feature/native gates stay separa
   observations; full parity is not a self-hosting gate.
 
 T12 is selected and rebuilds its source to the same artifact. Its generated
-compiler corpus and fast suite pass. The refreshed T00/T12 audit keeps feature
-parity separate from the kernel. The small import/dependency step is next; remove
-handwritten T00 from active commands and checks only after the imported-source
-path passes its gate. See the active
+compiler corpus, fast suite, and refreshed T00/T12 audit pass. The import and
+dependency slice is recorded below; remove handwritten T00 from active commands
+and checks only after that imported-source path passes its gate. See the active
 [self-hosting handoff](../.agents/plans/self-hosting-kernel.md).
+
+### Minimal source import, 2026-11-11
+
+The post-kernel source-import slice supports whole-line top-level `.lts`
+imports. TS and C compiler manifests each point to one Lite root file, which
+imports its components in order. The host records opened dependency paths in
+compiler build provenance, terminates repeated/cyclic visits when a path opens,
+and maps diagnostics through the flattened line map. Expanded source bytes are
+identical to the previous manifest bundle, so the selected T12 seed and fixed
+point artifact do not change. Module namespaces, exports, package resolution,
+and `.lt` semantics remain outside this slice.
 
 Dynamic integer division/remainder now match exact positioned faults in both
 generated targets, and MIN%-1 returns zero without undefined C arithmetic.

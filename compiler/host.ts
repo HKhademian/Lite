@@ -16,7 +16,7 @@ export type CompilerResult = Readonly<{ status: number; stdout: Buffer; stderr: 
 /** Complete source plus optional diagnostic name or flattened-source line map. */
 export type CompilerInput = Readonly<{ text: string; name?: string; lineMap?: readonly LineMapEntry[] }>;
 /** Selected artifact and exact source/builder identities. */
-export type CompilerBuild = Readonly<{ target: CompilerTarget; path: string; sourceSha256: string; artifactSha256: string; builderSha256: string; cached: boolean }>;
+export type CompilerBuild = Readonly<{ target: CompilerTarget; path: string; sourceSha256: string; artifactSha256: string; builderSha256: string; dependencies: readonly string[]; cached: boolean }>;
 
 const root = fileURLToPath(new URL('../', import.meta.url));
 const seedPath = fileURLToPath(new URL(`./bootstrap/${seed.artifact}`, import.meta.url));
@@ -51,17 +51,18 @@ function checkArtifact(artifact: string, directory: string): void {
 }
 
 /** Verifies cached compiler bytes and their exact current source and seed identity. */
-function cachedBuild(directory: string, sourceSha256: string, target: CompilerTarget): CompilerBuild {
+function cachedBuild(directory: string, sourceSha256: string, target: CompilerTarget, dependencies: readonly string[]): CompilerBuild {
   const record: unknown = JSON.parse(readFileSync(join(directory, 'provenance.json'), 'utf8'));
   const path = join(directory, 'compiler.ts');
   const artifactSha256 = hash(readFileSync(path));
   if (typeof record !== 'object' || record === null || !('sourceSha256' in record) ||
       record.sourceSha256 !== sourceSha256 || !('builderSha256' in record) ||
       record.builderSha256 !== seed.artifactSha256 || !('artifactSha256' in record) ||
-      record.artifactSha256 !== artifactSha256 || !('target' in record) || record.target !== target) {
+      record.artifactSha256 !== artifactSha256 || !('target' in record) || record.target !== target ||
+      !('dependencies' in record) || JSON.stringify(record.dependencies) !== JSON.stringify(dependencies)) {
     throw new Error(`compiler cache integrity mismatch: ${directory}`);
   }
-  return { target, path, sourceSha256, artifactSha256, builderSha256: seed.artifactSha256, cached: true };
+  return { target, path, sourceSha256, artifactSha256, builderSha256: seed.artifactSha256, dependencies, cached: true };
 }
 
 /**
@@ -78,12 +79,12 @@ export function buildCompiler(target: CompilerTarget): CompilerBuild {
     const path = fileURLToPath(new URL(`./bootstrap/${known.artifact}`, import.meta.url));
     const artifactSha256 = hash(readFileSync(path));
     if (artifactSha256 !== known.artifactSha256) throw new Error(`${target} bootstrap seed hash mismatch`);
-    return { target, path, sourceSha256, artifactSha256, builderSha256: seed.artifactSha256, cached: false };
+    return { target, path, sourceSha256, artifactSha256, builderSha256: seed.artifactSha256, dependencies: bundle.dependencies, cached: false };
   }
   const cache = resolve(root, '.cache/compiler');
-  const key = hash(`${target}:${seed.artifactSha256}:${sourceSha256}`);
+  const key = hash(`${target}:${seed.artifactSha256}:${sourceSha256}:${JSON.stringify(bundle.dependencies)}`);
   const destination = join(cache, key);
-  if (existsSync(destination)) return cachedBuild(destination, sourceSha256, target);
+  if (existsSync(destination)) return cachedBuild(destination, sourceSha256, target, bundle.dependencies);
   mkdirSync(cache, { recursive: true });
   const temporary = mkdtempSync(join(cache, 'build-'));
   try {
@@ -98,6 +99,7 @@ export function buildCompiler(target: CompilerTarget): CompilerBuild {
     checkArtifact(artifact, temporary);
     writeFileSync(join(temporary, 'provenance.json'), JSON.stringify({
       target, sourceSha256, builderSha256: seed.artifactSha256, artifactSha256: hash(generated.stdout),
+      dependencies: bundle.dependencies,
     }, null, 2) + '\n');
     try {
       renameSync(temporary, destination);
@@ -105,7 +107,7 @@ export function buildCompiler(target: CompilerTarget): CompilerBuild {
       if (!existsSync(destination)) throw error;
       // Another builder may have published this exact source; verify it below.
     }
-    return cachedBuild(destination, sourceSha256, target);
+    return cachedBuild(destination, sourceSha256, target, bundle.dependencies);
   } finally {
     rmSync(temporary, { recursive: true, force: true });
   }

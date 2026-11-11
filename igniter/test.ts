@@ -17,7 +17,7 @@ import {
 } from '../compiler/runtime/ts/runtime.ts';
 import { prepareTsArtifacts, runCArtifact, runTsArtifact, withTsArtifact, withTsArtifacts, type PreparedTsArtifacts } from './artifacts.ts';
 import { benchmark, hashBytes, nondeterminismReasons } from './measure.ts';
-import { loadBundle, loadManifest, loadSource } from './loader.ts';
+import { loadBundle, loadManifest, loadSource, loadSourceDetails } from './loader.ts';
 
 const tsManifestPath = new URL('../compiler/manifests/ts.json', import.meta.url).pathname;
 const cManifestPath = new URL('../compiler/manifests/c.json', import.meta.url).pathname;
@@ -122,6 +122,42 @@ test('bundle manifests reject duplicates, cycles, missing files and invalid path
     writeFileSync(manifestPath, JSON.stringify({ target: 'ts', files: ['a.lts'], extra: true }));
     assert.throws(() => loadManifest(manifestPath), /unexpected manifest key/);
     assert.throws(() => loadManifest(join(directory, 'missing.json')), /ENOENT/);
+  } finally { rmSync(directory, { recursive: true, force: true }); }
+});
+
+test('Lite source imports are top-level, visited on open, ordered and source-mapped', () => {
+  const directory = mkdtempSync(join(tmpdir(), 'lite-source-import-'));
+  try {
+    const main = join(directory, 'main.lts');
+    writeFileSync(main, 'import "a.lts";\nimport "a.lts";\noutputLine(answer);\n');
+    writeFileSync(join(directory, 'a.lts'), 'import "b.lts";\nanswer := base + 1;\n');
+    writeFileSync(join(directory, 'b.lts'), 'import "main.lts";\nbase := 1;\n');
+    const loaded = loadSourceDetails(main);
+    assert.deepEqual(loaded.dependencies, ['main.lts', 'a.lts', 'b.lts']);
+    assert.equal(loaded.text, 'base := 1;\nanswer := base + 1;\noutputLine(answer);\n');
+    assert.deepEqual(loaded.lineMap, [
+      { path: 'b.lts', line: 2 }, { path: 'a.lts', line: 2 }, { path: 'main.lts', line: 3 },
+    ]);
+    const compiled = compileTs({ text: loaded.text, lineMap: loaded.lineMap });
+    assert.equal(compiled.status, 0, compiled.stderr.toString());
+    assert.deepEqual(runTsArtifact(compiled.stdout.toString()).stdout, Buffer.from('2\n'));
+
+    writeFileSync(join(directory, 'bad.lts'), 'outputLine(1 +);\n');
+    writeFileSync(main, 'import "bad.lts";\n');
+    const bad = loadSourceDetails(main);
+    const rejected = compileTs({ text: bad.text, lineMap: bad.lineMap });
+    assert.equal(rejected.status, 2);
+    assert.equal(rejected.stdout.length, 0);
+    assert.match(rejected.stderr.toString(), /^bad\.lts:1:15: /);
+
+    writeFileSync(main, 'if true {\nimport "a.lts";\n}\n');
+    assert.throws(() => loadSource(main), /import is only allowed at top level/);
+    writeFileSync(main, 'import "missing.lts";\n');
+    assert.throws(() => loadSource(main), /missing\.lts/);
+    writeFileSync(main, 'import "/absolute.lts";\n');
+    assert.throws(() => loadSource(main), /import requires a relative path/);
+    writeFileSync(main, 'import "";\n');
+    assert.throws(() => loadSource(main), /import requires a path/);
   } finally { rmSync(directory, { recursive: true, force: true }); }
 });
 

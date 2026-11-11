@@ -1,11 +1,9 @@
 import { readFileSync } from 'node:fs';
 import { dirname, relative, resolve, sep } from 'node:path';
 
-/**
- * Whole-line temporary directive that splices a relative, declaration-only
- * source file. This is a loader workaround, not language syntax.
- */
-const directive = /^\s*importFlatAll\s+"([^"]*)"\s*;\s*$/;
+/** Whole-line build splice retained for test drivers and generated source bundles. */
+const flatDirective = /^\s*importFlatAll\s+"([^"]*)"\s*;\s*$/;
+const sourceImport = /^\s*import\s+"([^"\\]*)"\s*;\s*$/;
 
 /** Bootstrap target named by a manifest. */
 export type BundleTarget = 'ts' | 'c';
@@ -16,21 +14,36 @@ export type LineMapEntry = Readonly<{ path: string; line: number }>;
 /** Validated ordered manifest: one target and its relative source paths. */
 export type Manifest = Readonly<{ target: BundleTarget; files: readonly string[] }>;
 
-/** Flattened bundle text, line map and the manifest's top-level files. */
+/** Flattened bundle text, line map, manifest roots and every opened dependency. */
 export type Bundle = Readonly<{
   target: BundleTarget;
   text: string;
   lineMap: readonly LineMapEntry[];
   files: readonly string[];
+  dependencies: readonly string[];
 }>;
 
+/** One source file expanded through top-level imports, with dependency order and original locations. */
+export type LoadedSource = Readonly<{ text: string; lineMap: readonly LineMapEntry[]; dependencies: readonly string[] }>;
+
 /**
- * Loads one UTF-8 Lite source file and expands temporary `importFlatAll`
- * directives. Each resolved file is included at most once; cycles, absolute
- * paths, missing files and invalid UTF-8 throw.
+ * Loads one UTF-8 Lite source file and expands top-level `import` declarations
+ * plus the temporary `importFlatAll` build directive. Repeated imports and
+ * source-import cycles terminate when a path is first opened.
  */
 export function loadSource(path: string): string {
-  return flatten(resolve(path), [], new Set<string>());
+  return loadSourceDetails(path).text;
+}
+
+/** Loads one source root and retains source locations plus canonical dependency order. */
+export function loadSourceDetails(path: string): LoadedSource {
+  const absolute = resolve(path);
+  const root = dirname(absolute);
+  const lines: string[] = [];
+  const lineMap: LineMapEntry[] = [];
+  const dependencies: string[] = [];
+  expandBundleFile(absolute, root, [], new Set<string>(), lines, lineMap, false, dependencies);
+  return { text: lines.length === 0 ? '' : `${lines.join('\n')}\n`, lineMap, dependencies };
 }
 
 /**
@@ -44,46 +57,6 @@ function readUtf8(path: string, kind: 'source' | 'manifest'): string {
   } catch {
     throw new Error(`${path}: ${kind} is not valid UTF-8`);
   }
-}
-
-/**
- * Recursively expands one file. `stack` detects cycles, while `included` keeps
- * a file from being spliced twice in the same load. Imported text replaces the
- * directive line; all other lines are preserved.
- */
-function flatten(path: string, stack: readonly string[], included: Set<string>): string {
-  if (stack.includes(path)) {
-    throw new Error(`importFlatAll cycle: ${[...stack, path].join(' -> ')}`);
-  }
-  if (included.has(path)) return '';
-  included.add(path);
-  const text = readUtf8(path, 'source');
-  const nextStack = [...stack, path];
-  const lines = text.split(/\r?\n/);
-  const output: string[] = [];
-  let inBlockComment = false;
-  let inString = false;
-  for (const [index, line] of lines.entries()) {
-    const startsInCode = !inBlockComment && !inString;
-    const scanned = scanLine(line, inBlockComment, inString);
-    inBlockComment = scanned.inBlockComment;
-    inString = scanned.inString;
-    if (startsInCode) {
-      const match = directive.exec(scanned.code);
-      if (match !== null) {
-        const spec = match[1] ?? '';
-        if (spec === '') throw new Error(`${path}:${index + 1}: importFlatAll requires a path`);
-        if (spec.startsWith('/') || /^[A-Za-z]:[\\/]/.test(spec)) {
-          throw new Error(`${path}:${index + 1}: importFlatAll requires a relative path`);
-        }
-        const child = flatten(resolve(dirname(path), spec), nextStack, included);
-        if (child !== '') output.push(child.replace(/\n$/, ''));
-        continue;
-      }
-    }
-    output.push(line);
-  }
-  return output.join('\n');
 }
 
 /**
@@ -167,6 +140,7 @@ function expandBundleFile(
   lines: string[],
   lineMap: LineMapEntry[],
   explicit: boolean,
+  dependencies: string[],
 ): void {
   const display = displayPath(root, path);
   if (stack.includes(path)) {
@@ -177,35 +151,63 @@ function expandBundleFile(
     return;
   }
   included.add(path);
+  dependencies.push(display);
   const text = readUtf8(path, 'source');
   const fileLines = sourceLines(text);
   const nextStack = [...stack, path];
   let inBlockComment = false;
   let inString = false;
+  let braceDepth = 0;
   for (const [index, line] of fileLines.entries()) {
+    const startsInString = inString;
     const startsInCode = !inBlockComment && !inString;
     const scanned = scanLine(line, inBlockComment, inString);
     inBlockComment = scanned.inBlockComment;
     inString = scanned.inString;
     if (startsInCode) {
-      const match = directive.exec(scanned.code);
-      if (match !== null) {
-        const spec = match[1] ?? '';
-        if (spec === '') throw new Error(`${display}:${index + 1}: importFlatAll requires a path`);
-        if (spec.startsWith('/') || /^[A-Za-z]:[\\/]/.test(spec)) {
-          throw new Error(`${display}:${index + 1}: importFlatAll requires a relative path`);
+      const imported = sourceImport.exec(scanned.code);
+      const flattened = flatDirective.exec(scanned.code);
+      if (braceDepth !== 0 && /^\s*import\b/.test(scanned.code)) {
+        throw new Error(`${display}:${index + 1}: import is only allowed at top level`);
+      }
+      if (imported !== null || flattened !== null) {
+        const spec = (imported ?? flattened)![1] ?? '';
+        const kind = imported === null ? 'importFlatAll' : 'import';
+        if (spec === '') throw new Error(`${display}:${index + 1}: ${kind} requires a path`);
+        if (spec.startsWith('/') || spec.includes('\\') || /^[A-Za-z]:[\\/]/.test(spec)) {
+          throw new Error(`${display}:${index + 1}: ${kind} requires a relative path using "/" separators`);
         }
         const child = resolve(dirname(path), spec);
-        if (nextStack.includes(child)) {
+        if (imported === null && nextStack.includes(child)) {
           throw new Error(`bundle cycle: ${[...nextStack, child].map(item => displayPath(root, item)).join(' -> ')}`);
         }
-        expandBundleFile(child, root, nextStack, included, lines, lineMap, false);
+        // Source imports mark a canonical path visited as it opens. This makes
+        // repeated edges and import cycles finite without hiding dependency order.
+        if (imported !== null && included.has(child)) continue;
+        expandBundleFile(child, root, nextStack, included, lines, lineMap, false, dependencies);
         continue;
       }
     }
     lines.push(line);
     lineMap.push({ path: display, line: index + 1 });
+    braceDepth = updateBraceDepth(scanned.code, braceDepth, startsInString);
   }
+}
+
+/** Updates lexical brace depth while ignoring braces inside strings. */
+function updateBraceDepth(code: string, initial: number, startsInString: boolean): number {
+  let depth = initial;
+  let inString = startsInString;
+  for (let index = 0; index < code.length; index += 1) {
+    const ch = code[index] ?? '';
+    if (inString) {
+      if (ch === '\\') index += 1;
+      else if (ch === '"') inString = false;
+    } else if (ch === '"') inString = true;
+    else if (ch === '{') depth += 1;
+    else if (ch === '}') depth = Math.max(0, depth - 1);
+  }
+  return depth;
 }
 
 /**
@@ -226,16 +228,18 @@ export function loadBundle(path: string): Bundle {
   const stack: string[] = [];
   const lines: string[] = [];
   const lineMap: LineMapEntry[] = [];
+  const dependencies: string[] = [];
   const files: string[] = [];
   for (const item of resolved) {
     files.push(displayPath(root, item));
-    expandBundleFile(item, root, stack, included, lines, lineMap, true);
+    expandBundleFile(item, root, stack, included, lines, lineMap, true, dependencies);
   }
   return {
     target: manifest.target,
     text: lines.length === 0 ? '' : `${lines.join('\n')}\n`,
     lineMap,
     files,
+    dependencies,
   };
 }
 

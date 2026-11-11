@@ -108,14 +108,43 @@ module may require expressing its package, dependencies, and entry behavior;
 the full migration contract remains open under INV-003.04. The suffix selection
 does not complete module/import grammar.
 
-## Import sketch
+## Minimal source imports
+
+Selected for the post-kernel bootstrap path, **2026-11-11**: `.lts` source may
+contain whole-line top-level imports of relative Lite source files:
+
+```text
+import "../lib/core/int.lts";
+import "./helpers.lts";
+```
+
+The host loader opens each canonical path once, in depth-first written order,
+and splices its declarations at the import site. Repeated imports and cycles
+terminate when an already-opened path is reached. The loader exposes the opened
+dependency order and maps flattened diagnostics back to each original path and
+line. Compiler manifests now import their Lite source through this route.
+
+This is a narrow source-assembly feature: it does not define module namespaces,
+exports, visibility, package lookup, version resolution, or arbitrary module
+initialization. Imported declarations join the same flat compilation unit; the
+compiler's existing declaration and runtime initialization rules still apply.
+Nested imports and absolute paths reject. Paths use `/` separators and resolve
+relative to the importing file.
+
+The later `.lt` module/package design below remains broader and open. It can add
+explicit access control and qualified dependencies without changing this small
+bootstrap import contract.
+
+## Broader module import sketch
 
 ```text
 import std.fs;
 import school.students.{Student, find_student};
 ```
 
-This is working notation from the initial discussion, not a settled grammar. Explicit imports and exports are the intended direction. Re-exports should be deliberate.
+This is working notation for module imports, not part of the selected `.lts`
+source-assembly grammar above. Explicit imports and exports are the intended
+direction for modules. Re-exports should be deliberate.
 
 The braces in the import-list sketch group imported names; they are not a block body. This ordinary import item keeps its separator. A final item may omit its separator, and block constructs now also permit an optional trailing semicolon; token classification must not depend merely on the last character being }.
 

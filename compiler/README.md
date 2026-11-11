@@ -1,7 +1,7 @@
 # Lite compiler prototype
 
 This directory contains the Lite-written compiler and its bootstrap host. TS
-compilation defaults to the verified generated **T11** compiler in
+compilation defaults to the verified generated **T12** compiler in
 [`bootstrap/`](bootstrap/README.md). Public compile and check use generated TS;
 check-only also strictly checks the artifact without executing it. Public
 `./lite run` compiles to a temporary artifact and executes it through
@@ -27,14 +27,14 @@ records that snapshot's compiler artifacts. The subsequent
 runtime requirements once per program and records about 30% less compiler time
 on paired output/self-source workloads, with exact emitted bytes preserved.
 
-The [T00/T11 support inventory](reports/current-t00-t11-inventory.md) lists
+The [T00/selected-compiler support inventory](reports/current-t00-t11-inventory.md) lists
 measured missing forms, behavior/diagnostic differences, every maintained example
 and sample, and source-file coverage. It includes exact-source boundary probes
 and a reproducible audit script; it is an inventory, not a priority list or a new
 language decision.
 
 [`host.ts`](host.ts) checks the seed's SHA-256 and the current assembled Lite
-source. Unchanged S uses the seed directly. Changed S is compiled by T11 and
+source. Unchanged S uses the seed directly. Changed S is compiled by the selected generated seed and
 strictly typechecked before publication under a source/builder-keyed
 `.cache/compiler/` directory. Corrupt seeds/caches and rejected rebuilds fail
 explicitly; there is no silent T00 fallback. `node compiler/scripts/build.ts`

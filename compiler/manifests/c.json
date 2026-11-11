@@ -1,16 +1,4 @@
 {
   "target": "c",
-  "files": [
-    "../../lib/core/int.lts",
-    "../../lib/core/text.lts",
-    "../../lib/core/source.lts",
-    "../../lib/core/diag.lts",
-    "../../lib/core/format.lts",
-    "../../lib/core/list.lts",
-    "../src/c-literals.lts",
-    "../src/numeric-literals.lts",
-    "../src/frontend.lts",
-    "../src/emit-c.lts",
-    "../src/driver-c.lts"
-  ]
+  "files": ["../src/c-root.lts"]
 }
