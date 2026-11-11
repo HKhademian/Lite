@@ -87,10 +87,10 @@ is `module := import "relative/path.lts";`; module members require explicit
 `pub`, source files remain separate compilation units, and the finished active
 path removes text flattening.
 
-Owner update, 2026-11-11: generated TS supports namespace aliases for public
-functions and immutable scalar values, including nested imports. The compiler
-source has not yet migrated to aliases; C and compiler-source builds still use
-host source expansion.
+Owner update, 2026-11-12: generated TS supports namespace aliases for public
+functions, immutable scalar values, and public types, including qualified type
+annotations and signatures. The compiler source has not yet migrated to aliases;
+C and compiler-source builds still use host source expansion.
 
 ## Done
 
@@ -423,25 +423,24 @@ source-archive route tests without Git metadata.
 **Depends on:** generated-default-workflows, the verified TS kernel and the
 post-self-hosting stage architecture.
 **Completed slice:** the parser retains receiver-less imports and `pub`
-functions; the generated TS driver reads and parses child sources through the
+functions, values, and types; the generated TS driver reads and parses child sources through the
 host `readSource` callback. `ModuleVisited` and `ModuleProcessed` graph records
 remain separate; visited is set before child traversal and processed after all
 outgoing imports and local parsing. Imported `pub` function signatures and
-immutable scalar values seed the importing scope, and module-local runtime names
+immutable scalar values and public type aliases seed the importing scope; namespace
+aliases support qualified type annotations/signatures, and module-local runtime names
 remain distinct. Public TS compile/check/run use this graph. Tests cover cycles,
 malformed and missing units, private-name rejection, duplicate exports,
 repeated imports, type mismatch, and distinct private identities.
 
 **Remaining actions:** follow [the staged import contract](module-import-stages.md):
-extend exports to public types, retain source spans for runtime diagnostics,
-and then remove host text splicing from the remaining C/build paths. Add
-namespace bindings (`module := import
-"relative/path.lts";`) afterward and migrate maintained source to aliases before
-deciding whether unpacking remains.
+retain source spans for runtime diagnostics, remove host text splicing from the
+remaining C/build paths, and migrate maintained source to namespace aliases
+before deciding whether unpacking remains.
 **Acceptance:** only imported public names enter an open-importing file scope;
 private names remain unknown. Each canonical source is read once, entered once
-and compiled once; cycles terminate at `visited` edges; alias imports later
-share module and definition identity. Original source spans survive all stages,
+and compiled once; cycles terminate at `visited` edges; aliases share module and
+definition identity. Original source spans survive all stages,
 and the generated compiler reaches a fixed point without text flattening.
 
 ### Step 4 — language-growth

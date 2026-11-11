@@ -1,8 +1,8 @@
 {
-  "note": "Reviewed 2026-11-11 after namespace import support. Retained cases are validated against public-import changes; artifact hashes change only after reviewing compiler output, rejection streams, and runtime contracts. C hashes remain historical comparisons.",
-  "recorded": "2026-11-11",
-  "sourceSha256": "302a04df0be26f2abfff78cfbd981c07e3b00ada54ba0741b89f0322905b8e56",
-  "compilerSha256": "e957ff5aeea62f34ac8491488065c59f639a53304891a2ad6d8219d18078163b",
+  "note": "Reviewed 2026-11-12 after public type imports. Retained cases are validated against public-type changes; artifact hashes change only after reviewing compiler output, rejection streams, and runtime contracts. C hashes remain historical comparisons.",
+  "recorded": "2026-11-12",
+  "sourceSha256": "060205fd44b0a0098739665bea72e9a75778f74c2c9b27cb51d0fc79c50aa96c",
+  "compilerSha256": "aefa7ed017dfd3b950f3aa1d57619ce84ee4c333d3d10cf082b6cfb43c5a679d",
   "programCases": 69,
   "rejectedCases": 25,
   "artifacts": [

@@ -40,7 +40,9 @@ modulePublicDeclarations := fn(graph: Items, path: String): Items {
     loop graph as item {
         if item.kind == "ModuleStart" { inside = item.name == path; }
         else if item.kind == "ModuleEnd" and inside { break; }
-        else if inside and (item.kind == "PublicFunction" or item.kind == "PublicValue") { push_back(mut result, item); }
+        else if inside and (item.kind == "PublicFunction" or item.kind == "PublicValue" or item.kind == "PublicType") {
+            push_back(mut result, item);
+        }
     }
     result
 }
@@ -60,10 +62,13 @@ appendModuleExports := fn(existing: Items, incoming: Items, prefix: String): Ite
                     (previous.kind == "ModuleAlias" and previous.name == item.name) {
                     duplicate = true;
                 }
+            } else if item.kind == "PublicType" and previous.kind == "PublicType" and previous.name == item.name {
+                duplicate = true;
             }
         }
         if duplicate {
             if item.kind == "ModuleAlias" { fail(prefix, "duplicate module alias " + item.name); }
+            if item.kind == "PublicType" { fail(prefix, "duplicate imported public type " + item.name); }
             fail(prefix, "duplicate imported public name " + item.name);
         }
         push_back(mut result, item);

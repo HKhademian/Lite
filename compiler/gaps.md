@@ -28,8 +28,8 @@ The current path is:
    inventory remains parity evidence.
 2. The Lite TS driver reads and parses imported units with separate
    visited/processed graph records. Receiver-less and namespace imports expose
-   public functions and immutable scalar values with per-unit runtime
-   identities. Public types and retained diagnostic spans remain open. Public
+   public functions, immutable scalar values, and public types with per-unit
+   runtime identities. Retained diagnostic spans remain open. Public
    TS compile/check/run use the graph; C and compiler-source assembly still use
    the host expander. Maintained compiler sources have not yet migrated to
    namespace imports.

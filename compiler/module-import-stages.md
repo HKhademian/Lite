@@ -1,6 +1,6 @@
 # Module imports and compiler stages
 
-Status: **generated TS supports receiver-less public imports and namespace aliases for public functions and immutable scalar values; source-wide alias migration, public types, full source spans and C/build bridge removal remain pending**
+Status: **generated TS supports receiver-less public imports and namespace aliases for public functions, immutable scalar values, and public types; source-wide alias migration, full source spans and C/build bridge removal remain pending**
 
 ## Implementation sequence selected 2026-11-11
 
@@ -9,7 +9,7 @@ Status: **generated TS supports receiver-less public imports and namespace alias
    declarations into the importing file scope. This is a migration stage that
    lets the compiler source stop relying on host-side source glue.
 3. Add namespace collection with `math := import "./math.lts";` — implemented
-   for public functions and immutable scalar values in generated TS.
+   for public functions, immutable scalar values, and public types in generated TS.
 4. Migrate project source to namespace imports incrementally, so no project
    source continues to depend on implicit unpacking.
 5. Remove external source concatenation from active build paths after the
@@ -20,15 +20,15 @@ Status: **generated TS supports receiver-less public imports and namespace alias
 With a logical source filename, the generated TS driver uses `readSource` and
 a Lite-written recursive walk to read and parse imports. It marks a canonical
 path visited before following imports and processed after parsing the unit.
-Receiver-less imports seed the importing scope with `pub` function signatures
-and immutable scalar values, then emit imported definitions under per-unit
-runtime identities. Private declarations stay out of the importing scope.
-Namespace aliases expose public functions and immutable scalar values through
-qualified lookups. Repeated aliases to one canonical source share its graph
-identity. Public types, original runtime source spans, and migration of the
-compiler source to aliases are pending. A cycle terminates at its visited edge;
-references to declarations in a not-yet-processed module are not resolved as
-mutual declarations yet. Parser-only calls without a filename validate syntax
+Receiver-less imports seed the importing scope with `pub` declarations, then
+emit imported definitions under per-unit runtime identities. Private
+declarations stay out of the importing scope. Namespace aliases expose public
+functions, immutable scalar values, and types through qualified lookups,
+including qualified type annotations and function signatures. Repeated aliases
+to one canonical source share its graph identity. Original runtime source spans
+and migration of the compiler source to aliases are pending. A cycle terminates
+at its visited edge; references to declarations in a not-yet-processed module
+are not resolved as mutual declarations yet. Parser-only calls without a filename validate syntax
 only. Public TS compile/check/run use this path; C compilation and
 compiler-source assembly still use the host source expander.
 

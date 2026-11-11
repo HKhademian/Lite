@@ -433,7 +433,7 @@ emitProgram := fn(items: Items, source: String, prefix: String): Unit {
             if item.kind == "End" { outputLine(indent + "if (printf(\"\\n\") < 0) { status = 1; }"); }
             count = 0;
             writes = "";
-        } else if item.kind == "Import" or item.kind == "PublicFunction" or item.kind == "PublicValue" {
+        } else if item.kind == "Import" or item.kind == "PublicFunction" or item.kind == "PublicValue" or item.kind == "PublicType" {
         } else {
             if count == 0 {
                 firstKind = item.kind;

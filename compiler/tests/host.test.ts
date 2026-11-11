@@ -373,6 +373,43 @@ test('namespace imports work in imported modules and preserve direct-only visibi
   } finally { rmSync(directory, { recursive: true, force: true }); }
 });
 
+test('namespace imports expose public types for qualified annotations and signatures', () => {
+  const directory = mkdtempSync(join(tmpdir(), 'lite-import-public-types-'));
+  try {
+    const rootSource = join(directory, 'app.lts');
+    const typesSource = join(directory, 'types.lts');
+    writeFileSync(typesSource, [
+      'InternalCount := type Int;',
+      'pub Count := type InternalCount;',
+      'pub Point := type (x: Int, y: Int);',
+      'pub shift := fn(point: Point, dx: Int): Point { (x = point.x + dx, y = point.y) }',
+    ].join('\n') + '\n');
+    writeFileSync(rootSource, [
+      'types := import "./types.lts";',
+      'point: types.Point = (x = 40, y = 2);',
+      'shifted: types.Point = types.shift(point, 2);',
+      'count: types.Count = 42;',
+      'outputLine(shifted.x, count);',
+    ].join('\n'));
+    const compiled = compileTs({ text: readFileSync(rootSource, 'utf8'), name: realpathSync(rootSource) });
+    assert.equal(compiled.status, 0, compiled.stderr.toString());
+    withTsArtifact(compiled.stdout.toString(), run => {
+      const actual = run();
+      assert.equal(actual.status, 0, actual.stderr.toString());
+      assert.equal(actual.stdout.toString(), '42 42\n');
+    });
+
+    const hiddenType = compileTs({ text: 'types := import "./types.lts"; hidden: types.InternalCount = 1;', name: realpathSync(rootSource) });
+    assert.equal(hiddenType.status, 2);
+    assert.match(hiddenType.stderr.toString(), /unknown type alias types\.InternalCount/);
+    assert.equal(hiddenType.stdout.length, 0);
+
+    const malformedValue = compileTs({ text: 'types := import "./types.lts"; point: types.Point = (x = 1, y = "two");', name: realpathSync(rootSource) });
+    assert.equal(malformedValue.status, 2);
+    assert.equal(malformedValue.stdout.length, 0);
+  } finally { rmSync(directory, { recursive: true, force: true }); }
+});
+
 test('receiver-less imports expose immutable public values but keep private values local', () => {
   const directory = mkdtempSync(join(tmpdir(), 'lite-import-values-'));
   try {

@@ -1,0 +1,59 @@
+{
+  "phase": "namespace-public-types",
+  "recorded": "2026-11-12",
+  "baseRevision": "e4d04dd59b7cab5e5db155c8d093c6a8c9d3c99c",
+  "source": {
+    "bytes": 224738,
+    "sha256": "060205fd44b0a0098739665bea72e9a75778f74c2c9b27cb51d0fc79c50aa96c"
+  },
+  "selectedCompiler": {
+    "artifact": "compiler.ts",
+    "sha256": "aefa7ed017dfd3b950f3aa1d57619ce84ee4c333d3d10cf082b6cfb43c5a679d",
+    "bytes": 413020
+  },
+  "builderSeed": {
+    "sha256": "08e0468894e5f7d227c652b6a3197ce0795c98c7f2b3f39e007d3d33b4a242bf"
+  },
+  "generations": [
+    {
+      "generation": 1,
+      "builderSha256": "aefa7ed017dfd3b950f3aa1d57619ce84ee4c333d3d10cf082b6cfb43c5a679d",
+      "artifactSha256": "aefa7ed017dfd3b950f3aa1d57619ce84ee4c333d3d10cf082b6cfb43c5a679d",
+      "bytes": 413020
+    },
+    {
+      "generation": 2,
+      "builderSha256": "aefa7ed017dfd3b950f3aa1d57619ce84ee4c333d3d10cf082b6cfb43c5a679d",
+      "artifactSha256": "aefa7ed017dfd3b950f3aa1d57619ce84ee4c333d3d10cf082b6cfb43c5a679d",
+      "bytes": 413020
+    },
+    {
+      "generation": 3,
+      "builderSha256": "aefa7ed017dfd3b950f3aa1d57619ce84ee4c333d3d10cf082b6cfb43c5a679d",
+      "artifactSha256": "aefa7ed017dfd3b950f3aa1d57619ce84ee4c333d3d10cf082b6cfb43c5a679d",
+      "bytes": 413020
+    }
+  ],
+  "fixedPoint": true,
+  "corpus": {
+    "cases": 94,
+    "programs": 69,
+    "rejections": 25,
+    "executions": 69,
+    "mismatches": 0
+  },
+  "cEmitter": {
+    "sourceSha256": "63724d7cc9c95998361cbb226d24144051f00a1feaca1186d0c8a525c9b748a8",
+    "artifactSha256": "9650d11fc44febaaa6a217dc4f6a33a82ae14f679092760f2664bb5758e17303",
+    "builderSha256": "aefa7ed017dfd3b950f3aa1d57619ce84ee4c333d3d10cf082b6cfb43c5a679d",
+    "bytes": 387945,
+    "native": false
+  },
+  "importCases": [
+    "qualified public aliases in value annotations",
+    "qualified public aliases in tuple annotations and function signatures",
+    "private type rejection through a namespace",
+    "malformed value rejection for a public tuple type"
+  ],
+  "scope": "Namespace imports expose public type aliases in qualified annotations and signatures. Receiver-less imports, nested modules, module identity, and existing visibility rules remain supported. Runtime source spans, compiler-source migration to namespace aliases, and host expansion removal from C/build paths remain pending."
+}
