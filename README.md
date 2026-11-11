@@ -70,6 +70,8 @@ declarative command/program cases, and `./bin/lite release OUTPUT` for an unpubl
 source snapshot. `./bin/lite check FILE` remains source checking.
 `./bin/lite test` runs the short smoke suite; `--fast` runs the generated regression
 suite without full-source sweeps, and `--full` runs every regression used by CI.
+The default reporter is compact; `--verbose` shows each test, `--mute` prints only a
+success line or failure details, and `--silence` suppresses all test output.
 
 - [Language documentation and reading order](docs/README.md)
 - [Numbered runnable examples](language/examples/README.md): small language demonstrations shared by the interpreter and editor tooling.

@@ -19,14 +19,18 @@ if (!showToolVersion('tester', 'test')) {
   }
 
   let requestedMode: '--smoke' | '--fast' | '--full' | undefined;
+  let outputMode: '--verbose' | '--mute' | '--silence' | undefined;
   for (const arg of args) {
     if ((arg === '--smoke' || arg === '--fast' || arg === '--full') && requestedMode === undefined) requestedMode = arg;
+    else if ((arg === '--verbose' || arg === '--mute' || arg === '--silence') && outputMode === undefined) outputMode = arg;
     else {
-      process.stderr.write('Usage: ./bin/lite test [--smoke|--fast|--full]\n');
+      process.stderr.write('Usage: ./bin/lite test [--smoke|--fast|--full] [--verbose|--mute|--silence]\n');
       process.exit(2);
     }
   }
   const mode = requestedMode ?? '--smoke';
+  const reporter = outputMode === '--verbose' ? 'spec' : 'dot';
+  const quiet = outputMode === '--mute' || outputMode === '--silence';
 
   const testEnv: NodeJS.ProcessEnv = {
     ...process.env,
@@ -35,12 +39,20 @@ if (!showToolVersion('tester', 'test')) {
   };
   delete testEnv['NODE_TEST_CONTEXT'];
   const files = mode === '--smoke' ? fastTestFiles : generatedTestFiles;
-  const result = spawnSync(process.execPath, ['--test', ...files], {
+  const result = spawnSync(process.execPath, ['--test', `--test-reporter=${reporter}`, ...files], {
     cwd: fileURLToPath(new URL('../igniter/', import.meta.url)),
-    stdio: 'inherit',
+    stdio: quiet ? 'pipe' : 'inherit',
+    encoding: quiet ? 'utf8' : undefined,
     env: testEnv,
   });
-  if (result.error !== undefined) { process.stderr.write(`${result.error.message}\n`); process.exit(1); }
+  if (result.error !== undefined) {
+    if (outputMode !== '--silence') process.stderr.write(`${result.error.message}\n`);
+    process.exit(1);
+  }
   if (result.signal !== null) { process.kill(process.pid, result.signal); process.exit(1); }
+  if (outputMode === '--mute') {
+    if (result.status === 0) process.stdout.write('Tests passed.\n');
+    else { process.stdout.write(result.stdout ?? ''); process.stderr.write(result.stderr ?? ''); }
+  }
   process.exit(result.status ?? 1);
 }

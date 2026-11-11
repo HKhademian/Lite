@@ -149,6 +149,7 @@ Run tests through the CLI:
 ./bin/lite test              # short routing, tool, docs, and source-layout smoke suite
 ./bin/lite test --fast       # generated regressions; full-source sweeps omitted
 ./bin/lite test --full       # all generated regressions and full-source phase sweeps
+./bin/lite test --verbose    # print every test; --mute summarizes; --silence prints nothing
 ```
 
 The generated regression suite compiles Lite with the generated compiler, strictly checks TS artifacts,
