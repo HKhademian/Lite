@@ -1,5 +1,5 @@
 #!/usr/bin/env node
-/** Selects/rebuilds both current target compilers using T11, never T00. */
+/** Selects/rebuilds the generated TS compiler and its TS-hosted C emitter. */
 import { buildCompiler } from '../host.ts';
 try {
   process.stdout.write(JSON.stringify({ ts: buildCompiler('ts'), c: buildCompiler('c') }, null, 2) + '\n');

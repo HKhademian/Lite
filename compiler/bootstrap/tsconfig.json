@@ -9,10 +9,7 @@
   },
   "include": [],
   "files": [
-    "T14.ts",
-    "T13.ts",
-    "T12.ts",
-    "T11.ts",
+    "compiler.ts",
     "c-emitter.ts"
   ]
 }

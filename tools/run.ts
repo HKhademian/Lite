@@ -6,7 +6,7 @@ import { tmpdir } from 'node:os';
 import { basename, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { compileTs } from '../compiler/host.ts';
-import { loadSourceDetails } from '../igniter/loader.ts';
+import { readSourceInput } from '../compiler/source.ts';
 
 const entry = fileURLToPath(new URL('../compiler/entry.ts', import.meta.url));
 
@@ -33,9 +33,9 @@ if (!path.endsWith('.lts')) {
   process.exit(2);
 }
 
-let loaded: ReturnType<typeof loadSourceDetails>;
+let source: ReturnType<typeof readSourceInput>;
 try {
-  loaded = loadSourceDetails(path);
+  source = readSourceInput(path);
 } catch (error: unknown) {
   const message = error instanceof Error ? error.message : String(error);
   // Ordinary read failures share the compiler launcher's short message; loader
@@ -52,9 +52,7 @@ try {
 // artifact is executed after a rejected program.
 let compiled: ReturnType<typeof compileTs>;
 try {
-  compiled = loaded.dependencies.length === 1
-    ? compileTs({ text: loaded.text, name: path })
-    : compileTs({ text: loaded.text, lineMap: loaded.lineMap });
+  compiled = compileTs({ text: source.text, name: source.path });
 } catch (error: unknown) {
   process.stderr.write(`lite run: ${error instanceof Error ? error.message : String(error)}\n`);
   process.exit(1);

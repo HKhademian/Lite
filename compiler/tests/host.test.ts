@@ -78,9 +78,9 @@ test('compiler entry provides canonical strict-UTF-8 source reads to generated c
 
     writeFileSync(dependency, Buffer.from([0xff]));
     const invalidUtf8 = spawnSync(process.execPath, [entry, artifact, importer], { cwd: directory, encoding: 'utf8', timeout: 10000 });
-    assert.equal(invalidUtf8.status, 1);
+    assert.equal(invalidUtf8.status, 2);
     assert.equal(invalidUtf8.signal, null);
-    assert.match(invalidUtf8.stderr, /source is not valid UTF-8/);
+    assert.match(invalidUtf8.stderr, /cannot read imported source \.\/dep\.lts/);
 
     writeFileSync(artifact, `
       type SourceReader = (importer: string, spec: string) => { path: string; text: string };
@@ -90,7 +90,7 @@ test('compiler entry provides canonical strict-UTF-8 source reads to generated c
       }
     `);
     const rejected = spawnSync(process.execPath, [entry, artifact], { cwd: directory, encoding: 'utf8', timeout: 10000 });
-    assert.equal(rejected.status, 1);
+    assert.equal(rejected.status, 2);
     assert.equal(rejected.signal, null);
     assert.match(rejected.stderr, /import path must be nonempty, relative, and use "\/" separators/);
   } finally {
@@ -201,6 +201,124 @@ test('the Lite TypeScript driver visits imported source units once across cycles
     assert.equal(rejected.status, 2);
     assert.match(rejected.stderr.toString(), /math\.lts:1:/);
     assert.equal(rejected.stdout.length, 0);
+
+    writeFileSync(rootSource, 'import "./missing.lts"; outputLine(42);\n');
+    const missing = compileTs({ text: readFileSync(rootSource, 'utf8'), name: realpathSync(rootSource) });
+    assert.equal(missing.status, 2);
+    assert.match(missing.stderr.toString(), /cannot read imported source \.\/missing\.lts/);
+    assert.equal(missing.stdout.length, 0);
+  } finally { rmSync(directory, { recursive: true, force: true }); }
+});
+
+test('receiver-less imports expose only public functions and emit their module bodies', () => {
+  const directory = mkdtempSync(join(tmpdir(), 'lite-import-pub-'));
+  try {
+    const rootSource = join(directory, 'app.lts');
+    const mathSource = join(directory, 'math.lts');
+    writeFileSync(rootSource, 'import "./math.lts"; outputLine(twice(21));\n');
+    writeFileSync(mathSource, 'privateDouble := fn(x: Int): Int { x * 2 }; pub twice := fn(x: Int): Int { privateDouble(x) };\n');
+    const compiled = compileTs({ text: readFileSync(rootSource, 'utf8'), name: realpathSync(rootSource) });
+    assert.equal(compiled.status, 0, compiled.stderr.toString());
+    withTsArtifact(compiled.stdout.toString(), run => {
+      const actual = run();
+      assert.equal(actual.status, 0, actual.stderr.toString());
+      assert.equal(actual.stdout.toString(), '42\n');
+    });
+
+    const privateName = compileTs({ text: 'import "./math.lts"; outputLine(privateDouble(21));', name: realpathSync(rootSource) });
+    assert.equal(privateName.status, 2);
+    assert.match(privateName.stderr.toString(), /unknown value privateDouble/);
+    assert.equal(privateName.stdout.length, 0);
+
+    const wrongArgument = compileTs({ text: 'import "./math.lts"; outputLine(twice("21"));', name: realpathSync(rootSource) });
+    assert.equal(wrongArgument.status, 2);
+    assert.match(wrongArgument.stderr.toString(), /argument 1 of twice must be Int, got String/);
+    assert.equal(wrongArgument.stdout.length, 0);
+
+    writeFileSync(rootSource, 'import "./math.lts"; import "./math.lts"; outputLine(twice(21));\n');
+    const repeated = compileTs({ text: readFileSync(rootSource, 'utf8'), name: realpathSync(rootSource) });
+    assert.equal(repeated.status, 0, repeated.stderr.toString());
+    withTsArtifact(repeated.stdout.toString(), run => {
+      const actual = run();
+      assert.equal(actual.status, 0, actual.stderr.toString());
+      assert.equal(actual.stdout.toString(), '42\n');
+    });
+
+    const otherSource = join(directory, 'other.lts');
+    writeFileSync(otherSource, 'pub twice := fn(x: Int): Int { x + x };\n');
+    writeFileSync(rootSource, 'import "./math.lts"; import "./other.lts"; outputLine(twice(21));\n');
+    const duplicate = compileTs({ text: readFileSync(rootSource, 'utf8'), name: realpathSync(rootSource) });
+    assert.equal(duplicate.status, 2);
+    assert.match(duplicate.stderr.toString(), /duplicate imported public name twice/);
+    assert.equal(duplicate.stdout.length, 0);
+  } finally { rmSync(directory, { recursive: true, force: true }); }
+});
+
+test('separate imported modules retain distinct private function and value identities', () => {
+  const directory = mkdtempSync(join(tmpdir(), 'lite-import-identities-'));
+  try {
+    const rootSource = join(directory, 'app.lts');
+    const firstSource = join(directory, 'first.lts');
+    const secondSource = join(directory, 'second.lts');
+    writeFileSync(rootSource, 'import "./first.lts"; import "./second.lts"; outputLine(twice(20), plusFive(20));\n');
+    writeFileSync(firstSource, 'scale := 2; helper := fn(x: Int): Int { x * scale }; pub twice := fn(x: Int): Int { helper(x) };\n');
+    writeFileSync(secondSource, 'scale := 1; helper := fn(x: Int): Int { x + 5 * scale }; pub plusFive := fn(x: Int): Int { helper(x) };\n');
+    const compiled = compileTs({ text: readFileSync(rootSource, 'utf8'), name: realpathSync(rootSource) });
+    assert.equal(compiled.status, 0, compiled.stderr.toString());
+    withTsArtifact(compiled.stdout.toString(), run => {
+      const actual = run();
+      assert.equal(actual.status, 0, actual.stderr.toString());
+      assert.equal(actual.stdout.toString(), '40 25\n');
+    });
+  } finally { rmSync(directory, { recursive: true, force: true }); }
+});
+
+test('nested imports resolve exported functions without re-exporting dependencies', () => {
+  const directory = mkdtempSync(join(tmpdir(), 'lite-import-nested-'));
+  try {
+    const rootSource = join(directory, 'app.lts');
+    writeFileSync(rootSource, 'import "./facade.lts"; outputLine(timesSix(7));\n');
+    writeFileSync(join(directory, 'facade.lts'), 'import "./base.lts"; pub timesSix := fn(x: Int): Int { triple(x) * 2 };\n');
+    writeFileSync(join(directory, 'base.lts'), 'pub triple := fn(x: Int): Int { x * 3 };\n');
+    const compiled = compileTs({ text: readFileSync(rootSource, 'utf8'), name: realpathSync(rootSource) });
+    assert.equal(compiled.status, 0, compiled.stderr.toString());
+    withTsArtifact(compiled.stdout.toString(), run => {
+      const actual = run();
+      assert.equal(actual.status, 0, actual.stderr.toString());
+      assert.equal(actual.stdout.toString(), '42\n');
+    });
+
+    const transitiveName = compileTs({ text: 'import "./facade.lts"; outputLine(triple(7));', name: realpathSync(rootSource) });
+    assert.equal(transitiveName.status, 2);
+    assert.match(transitiveName.stderr.toString(), /unknown value triple/);
+    assert.equal(transitiveName.stdout.length, 0);
+  } finally { rmSync(directory, { recursive: true, force: true }); }
+});
+
+test('receiver-less imports expose immutable public values but keep private values local', () => {
+  const directory = mkdtempSync(join(tmpdir(), 'lite-import-values-'));
+  try {
+    const rootSource = join(directory, 'app.lts');
+    const mathSource = join(directory, 'math.lts');
+    writeFileSync(rootSource, 'import "./math.lts"; outputLine(answer);\n');
+    writeFileSync(mathSource, 'privateBase := 21; pub answer := privateBase * 2;\n');
+    const compiled = compileTs({ text: readFileSync(rootSource, 'utf8'), name: realpathSync(rootSource) });
+    assert.equal(compiled.status, 0, compiled.stderr.toString());
+    withTsArtifact(compiled.stdout.toString(), run => {
+      const actual = run();
+      assert.equal(actual.status, 0, actual.stderr.toString());
+      assert.equal(actual.stdout.toString(), '42\n');
+    });
+
+    const privateName = compileTs({ text: 'import "./math.lts"; outputLine(privateBase);', name: realpathSync(rootSource) });
+    assert.equal(privateName.status, 2);
+    assert.match(privateName.stderr.toString(), /unknown value privateBase/);
+    assert.equal(privateName.stdout.length, 0);
+
+    const reassignment = compileTs({ text: 'import "./math.lts"; answer = 43;', name: realpathSync(rootSource) });
+    assert.equal(reassignment.status, 2);
+    assert.match(reassignment.stderr.toString(), /cannot assign to immutable local answer/);
+    assert.equal(reassignment.stdout.length, 0);
   } finally { rmSync(directory, { recursive: true, force: true }); }
 });
 
@@ -257,8 +375,8 @@ test('public commands compile, run and check TS artifacts without T00 and reject
     symlinkSync(join(root, 'igniter/node_modules'), join(directory, 'igniter/node_modules'));
     assert.equal(existsSync(join(directory, 'igniter/lite.ts')), false);
     const path = join(directory, 'program with spaces.lts');
-    writeFileSync(join(directory, 'helper.lts'), 'twice := fn(n: Int): Int { n * 2 }');
-    writeFileSync(path, 'importFlatAll "helper.lts";\noutputLine(twice(inputInt("n? ")));');
+    writeFileSync(join(directory, 'helper.lts'), 'pub twice := fn(n: Int): Int { n * 2 }');
+    writeFileSync(path, 'import "./helper.lts";\noutputLine(twice(inputInt("n? ")));');
     const compiled = spawnSync(join(directory, 'bin/lite'), ['compile', path], { env, timeout: 10000 });
     assert.equal(compiled.status, 0, compiled.stderr.toString()); assert.equal(compiled.stderr.length, 0);
     const artifact = join(directory, 'program.ts'); writeFileSync(artifact, compiled.stdout);
@@ -268,6 +386,17 @@ test('public commands compile, run and check TS artifacts without T00 and reject
     assert.equal(ran.status, 0, ran.stderr.toString()); assert.equal(ran.stdout.toString(), 'n? 14\n'); assert.equal(ran.stderr.length, 0);
     const checked = spawnSync(join(directory, 'bin/lite'), ['check', path], { input: Buffer.from([0xff]), env, timeout: 10000 });
     assert.equal(checked.status, 0, checked.stderr.toString()); assert.equal(checked.stdout.length, 0); assert.equal(checked.stderr.length, 0);
+    writeFileSync(join(directory, 'helper.lts'), 'twice := fn(n: Int): Int { n * 2 }');
+    writeFileSync(path, 'import "./helper.lts"; outputLine(twice(21));');
+    const privateCompile = spawnSync(join(directory, 'bin/lite'), ['compile', path], { env, timeout: 10000 });
+    assert.equal(privateCompile.status, 2); assert.equal(privateCompile.stdout.length, 0);
+    assert.match(privateCompile.stderr.toString(), /unknown value twice/);
+    const privateCheck = spawnSync(join(directory, 'bin/lite'), ['check', path], { env, timeout: 10000 });
+    assert.equal(privateCheck.status, 1); assert.equal(privateCheck.stdout.length, 0);
+    assert.match(privateCheck.stderr.toString(), /unknown value twice/);
+    const privateRun = spawnSync(join(directory, 'bin/lite'), ['run', path], { env, timeout: 10000 });
+    assert.equal(privateRun.status, 2); assert.equal(privateRun.stdout.length, 0);
+    assert.match(privateRun.stderr.toString(), /unknown value twice/);
     const deferred = spawnSync(join(directory, 'bin/lite'), ['compile', '--target', 'c', path], { env, timeout: 10000 });
     assert.equal(deferred.status, 2); assert.equal(deferred.stdout.length, 0);
     assert.match(deferred.stderr.toString(), /C output is deferred/);
@@ -376,13 +505,13 @@ function isolatedCheckout(): string {
   const bundles = [loadBundle(manifest), loadBundle(resolve(root, 'compiler/manifests/c.json'))];
   const paths = new Set([
     'bin/lite', 'bin/lite-compile', 'bin/lite-compile-ts', 'bin/lite-compile-c', 'bin/lite-check', 'bin/lite-run', 'bin/lite-verify',
-    'compiler/host.ts', 'compiler/entry.ts', 'compiler/cli.ts', 'compiler/launcher.ts', 'compiler/compile-ts.ts', 'compiler/compile-c.ts', 'compiler/package.json',
+    'compiler/host.ts', 'compiler/source.ts', 'compiler/entry.ts', 'compiler/cli.ts', 'compiler/launcher.ts', 'compiler/compile-ts.ts', 'compiler/compile-c.ts', 'compiler/package.json',
     'igniter/launcher.ts', 'igniter/test-suites.ts', 'igniter/check.ts', 'igniter/artifacts.ts', 'igniter/package.json', 'igniter/verify.ts',
     'tools/cli.ts', 'tools/forward.ts', 'tools/tool-version.ts', 'tools/checker.ts', 'tools/verify.ts', 'tools/run.ts', 'tools/project.ts',
     'compiler/release-streams.ts', 'config/versions.json',
     'tools/streams.ts',
     'compiler/scripts/release-streams.test.ts',
-    'compiler/bootstrap/T11.ts', `compiler/bootstrap/${seed.artifact}`, 'compiler/bootstrap/seed.ts', 'compiler/bootstrap/tsconfig.json',
+    `compiler/bootstrap/${seed.artifact}`, 'compiler/bootstrap/seed.ts', 'compiler/bootstrap/tsconfig.json',
     'compiler/bootstrap/c-emitter.ts', 'compiler/bootstrap/c-seed.ts',
     'compiler/manifests/ts.json', 'compiler/manifests/c.json', 'igniter/loader.ts', 'igniter/tsconfig.json',
     ...bundles.flatMap(bundle => bundle.dependencies.map(path => relative(root, resolve(dirname(manifest), path)))),

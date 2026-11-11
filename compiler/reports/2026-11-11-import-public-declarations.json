@@ -1,0 +1,57 @@
+{
+  "phase": "lite-owned-receiverless-public-imports",
+  "recorded": "2026-11-11",
+  "sourceSha256": "fc8ccf3ad71a54d12c14ded2888e95cc9965d245510589c9c24222bfd72fc4cc",
+  "sourceBytes": 213785,
+  "selectedCompiler": {
+    "artifact": "compiler.ts",
+    "sha256": "b0aedeea4c7383eaa8215a65bd4a83968b184b3185f6f8e139da552f57a0edef",
+    "bytes": 392912
+  },
+  "priorSelectedCompiler": {
+    "sha256": "39c546e86b1b03d2c988893270adf30c677451e702bbe3a8c9a63958336fddf4"
+  },
+  "generations": [
+    {
+      "generation": 1,
+      "builderSha256": "b0aedeea4c7383eaa8215a65bd4a83968b184b3185f6f8e139da552f57a0edef",
+      "artifactSha256": "b0aedeea4c7383eaa8215a65bd4a83968b184b3185f6f8e139da552f57a0edef"
+    },
+    {
+      "generation": 2,
+      "builderSha256": "b0aedeea4c7383eaa8215a65bd4a83968b184b3185f6f8e139da552f57a0edef",
+      "artifactSha256": "b0aedeea4c7383eaa8215a65bd4a83968b184b3185f6f8e139da552f57a0edef"
+    },
+    {
+      "generation": 3,
+      "builderSha256": "b0aedeea4c7383eaa8215a65bd4a83968b184b3185f6f8e139da552f57a0edef",
+      "artifactSha256": "b0aedeea4c7383eaa8215a65bd4a83968b184b3185f6f8e139da552f57a0edef"
+    }
+  ],
+  "fixedPoint": true,
+  "corpus": {
+    "cases": 94,
+    "programCases": 69,
+    "rejections": 25,
+    "executions": 69,
+    "mismatches": 0
+  },
+  "cEmitter": {
+    "sourceSha256": "286dc0203b67dbc32a59beda5df9e3dca3ffa6d63888213251705c1626209b54",
+    "artifactSha256": "60357fc9066ec1cc931125e00c79fc8d00c6eac935c3e8b152e4cdc881ea7a1f",
+    "builderSha256": "b0aedeea4c7383eaa8215a65bd4a83968b184b3185f6f8e139da552f57a0edef",
+    "bytes": 371500
+  },
+  "importCases": [
+    "receiver-less import clauses parse only at the top level and reject malformed paths",
+    "public functions and immutable scalar values are visible to the importer",
+    "private functions and values remain unknown to the importer",
+    "imported function argument kinds are checked in the importing scope",
+    "duplicate imported public names are rejected",
+    "repeated imports share a module runtime identity",
+    "nested imports expose only direct public declarations",
+    "cycle traversal terminates; malformed and missing dependencies fail without an artifact",
+    "public TS compile/check/run resolve source imports without T00"
+  ],
+  "scope": "The current TS import path supports receiver-less imports, public functions and immutable scalar values, cycle-safe traversal, and module-qualified runtime identities. Public types, namespace aliases, mutual declaration resolution across cycles, retained per-module runtime diagnostic spans, and replacing host expansion for C/compiler-source assembly remain pending."
+}

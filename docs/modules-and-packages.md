@@ -133,17 +133,24 @@ top-level declaration and the receiver-less `import "path";` clause. The
 generated TypeScript driver now reads and parses imported units using the
 compiler's Lite-owned graph walk when invoked with a source filename. It marks
 a unit visited before following imports and processed after its outgoing
-imports. It does not yet expose `pub` declarations or emit imported units.
-Parser-only calls without a source filename remain syntax checks, and public
-CLI paths still use the host source expander as a temporary bridge.
+imports. Receiver-less imports now expose `pub` functions and immutable scalar
+values to the importing scope and emit imported definitions with per-unit
+runtime identities. Private declarations remain hidden; duplicate exported
+names are rejected. Public types, retained source spans for runtime
+diagnostics, and module alias bindings are not implemented yet. Cycles
+terminate during graph traversal, but references to declarations in a
+not-yet-processed module are not resolved as mutual declarations. Parser-only
+calls without a source filename remain syntax checks. Public TS compile/check/run
+use the Lite graph walk; C compilation and compiler-source assembly still use the host
+expander as a temporary bridge.
 
-Every source unit is compiled as its own unit. The compiler resolves the import
-graph without splicing source text. A module alias refers to the same module
-entity when the same canonical source is imported more than once, and the file
-is visited and processed once. `visited` is set when a source is entered, before
-following its imports; `processed` is set after the compiler has handled that
-unit. A cycle edge to an already visited source is recorded without reopening
-it. Each unit retains its own path and source spans for diagnostics.
+The target model keeps source units separate through parsing and resolution,
+without splicing Lite text. The current stage parses each canonical file once,
+then combines typed items into one emitted artifact; module-specific runtime
+identities avoid name collisions. `visited` is set when a source is entered,
+before following imports; `processed` is set after its imports and local parse
+complete. A cycle edge to an already visited source does not reopen it. Retained
+per-source runtime spans remain future work.
 
 Visibility is explicit. A top-level declaration is private by default;
 `pub` makes it available through an importing module alias:

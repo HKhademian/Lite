@@ -1,6 +1,6 @@
 # Module imports and compiler stages
 
-Status: **owner-selected staged migration; `pub` and receiver-less import syntax parse, and the generated TS compiler reads/parses imported units with separate visited/processed state; public visibility and import emission pending**
+Status: **receiver-less imports expose and emit public functions and immutable scalar values in generated TS; public types, namespace imports, full source spans and C/build bridge removal remain pending**
 
 ## Implementation sequence selected 2026-11-11
 
@@ -15,14 +15,18 @@ Status: **owner-selected staged migration; `pub` and receiver-less import syntax
    receiver-less form or a separately explicit unpacking form remains only
    after that migration.
 
-The current `pub` marker is syntax-only: it does not yet create a module
-interface. With a logical source filename, the generated TS driver uses
-`readSource` and a Lite-written recursive walk to read and parse imports. The
-walk marks each canonical imported path visited before following its outgoing
-imports and processed after them. It does not yet retain a graph for later
-resolution or emission, expose imported declarations, or emit imported units.
-Parser-only calls without a filename only validate import syntax. Public CLI
-paths still use the host source expander as a temporary bridge.
+With a logical source filename, the generated TS driver uses `readSource` and
+a Lite-written recursive walk to read and parse imports. It marks a canonical
+path visited before following imports and processed after parsing the unit.
+Receiver-less imports seed the importing scope with `pub` function signatures
+and immutable scalar values, then emit imported definitions under per-unit
+runtime identities. Private declarations stay out of the importing scope.
+Public types, stable module identities beyond one compilation, original runtime
+source spans, and the alias form are pending. A cycle terminates at its visited
+edge; references to declarations in a not-yet-processed module are not resolved
+as mutual declarations yet. Parser-only calls without a filename validate
+syntax only. Public TS compile/check/run use this path; C compilation and
+compiler-source assembly still use the host source expander.
 
 ## Selected import surface
 

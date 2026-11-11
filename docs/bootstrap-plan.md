@@ -31,14 +31,15 @@ self-hosting are later work. The
 supersedes earlier phase ordering and native retirement prerequisites below.
 Advanced correctness/edge audits do not block ordinary syntax migration.
 
-Owner update, 2026-11-11: T13 is promoted from the Lite compiler source after a
-strict three-generation fixed point and a reviewed 94-case corpus run (69
-programs, 25 rejections, zero behavior mismatches). T14 adds a Lite-owned TS
-driver walk that reads/parses imported units, with separate typed visited and
-processed states. `pub` remains syntax-only; imports do not yet expose public
-names or emit imported units. The public host source expander remains active.
-The current fast suite still has unrelated ledger, artifact-expectation, and
-source-archive package failures.
+Owner update, 2026-11-11: one selected generated compiler is promoted from the
+Lite compiler source after a strict three-generation fixed point and a reviewed
+94-case corpus run (69 programs, 25 rejections, zero behavior mismatches). The
+Lite-owned TS driver graph has separate visited/processed records, public
+function signatures, immutable scalar values, imported definitions, and
+per-unit runtime identities. Public TS compile/check/run use it. Public types,
+runtime source spans, alias imports, and C/build bridge removal remain pending.
+The current fast suite still has unrelated ledger, archived-seed/source fixture,
+and recorded-expectation failures.
 
 Owner update, 2026-11-05: `./bin/lite run` is available again as a compile-and-execute
 adapter over the generated compiler and Node entry. It restores no interpreter and

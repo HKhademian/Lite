@@ -479,11 +479,11 @@ emitProgram := fn(items: Items, source: String, prefix: String): Unit {
     emitIntArithmeticHelpers(calls, source, prefix);
     emitFloatArithmeticHelpers(calls);
     emitIntDivisionHelpers(calls);
-    outputLine("export function main(lite$write?: (text: string) => void, lite$sourceProviderInput?: (importer: string, spec: string) => { path: string; text: string }): string {");
     if usesBuiltin(calls, "readSource") {
+        outputLine("export function main(lite$write?: (text: string) => void, lite$sourceProviderInput?: (importer: string, spec: string) => { path: string; text: string }): string {");
         outputLine("    lite$sourceProvider = lite$sourceProviderInput;");
     } else {
-        outputLine("    void lite$sourceProviderInput;");
+        outputLine("export function main(lite$write?: (text: string) => void): string {");
     }
     if not hasExit { outputLine("    let lite_out = \"\";"); }
     outputLine("    function lite$emit(text: string): void {");
@@ -586,7 +586,7 @@ emitProgram := fn(items: Items, source: String, prefix: String): Unit {
             reportIndex = reportIndex + 1;
             line = "";
             count = 0;
-        } else if item.kind == "Import" {
+        } else if item.kind == "Import" or item.kind == "PublicFunction" or item.kind == "PublicValue" {
         } else {
             if count > 0 { line = line + " + \" \" + "; }
             line = line + reportArgumentCode(item);

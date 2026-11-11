@@ -1,7 +1,7 @@
 # Lite compiler prototype
 
 This directory contains the Lite-written compiler and its bootstrap host. TS
-compilation defaults to the verified generated **T13** compiler in
+compilation defaults to the one verified generated compiler in
 [`bootstrap/`](bootstrap/README.md). Public compile and check use generated TS;
 check-only also strictly checks the artifact without executing it. Public
 `./bin/lite run` compiles to a temporary artifact and executes it through
@@ -217,12 +217,13 @@ separate Lite modules. The manifests in [`manifests/`](manifests/README.md) list
 files for each target, and the loader splices them into one flattened bundle
 with a line map. Dependency order is semantic because Lite has no forward
 function lookup: literal encoders come before the shared front-end, and the
-front-end comes before the emitter and driver. The generated TS driver has a
-separate experimental graph walk for source imports; it does not yet resolve
-module visibility or replace bundle assembly.
+front-end comes before the emitter and driver. The generated TS compiler has a
+Lite-owned source graph for user imports, but compiler-source assembly still
+uses manifests and the host bundle loader.
 
-`lite-compile-ts` compiles through [`cli.ts`](cli.ts), selecting the current T11-derived
-target compiler. The old `ts-emitter.lts` and `c-emitter.lts`
+`lite-compile-ts` reads the root file through [`cli.ts`](cli.ts); the Lite
+compiler reads its imports. C and compiler-source assembly still use the
+transitional host loader. The old `ts-emitter.lts` and `c-emitter.lts`
 paths are generated compatibility bundles that match the manifest output; edit
 `src/` and regenerate them, do not edit the bundles.
 

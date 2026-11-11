@@ -1,17 +1,17 @@
-/** Verified C emitter rebuilt by the selected minimum-kernel TS seed. */
+/** Verified TS-hosted C emitter rebuilt by the selected generated compiler. */
 export const cSeed = Object.freeze({
   "artifact": "c-emitter.ts",
-  "sourceSha256": "f2baa44e3cbd28bcad9af3bb80633bc8756df368dd5a16ee00d12fbf9575b8d3",
-  "sourceBytes": 196170,
-  "artifactSha256": "799d6de75e7f985cf177df2edcab37dcfc67707d186d2059b678df3e38e48535",
-  "artifactBytes": 355395,
-  "builderSha256": "ac2fbe67a04084562bd03310dc2a5d68e7aa1c9e0e41d3b346c5d69834d6b52b",
+  "sourceSha256": "286dc0203b67dbc32a59beda5df9e3dca3ffa6d63888213251705c1626209b54",
+  "sourceBytes": 202223,
+  "artifactSha256": "60357fc9066ec1cc931125e00c79fc8d00c6eac935c3e8b152e4cdc881ea7a1f",
+  "artifactBytes": 371500,
+  "builderSha256": "b0aedeea4c7383eaa8215a65bd4a83968b184b3185f6f8e139da552f57a0edef",
   "native": false,
   "sourceManifest": "compiler/manifests/c.json",
-  "sourceRevision": "worktree:f2baa44e3cbd28bcad9af3bb80633bc8756df368dd5a16ee00d12fbf9575b8d3",
-  "artifactRevision": "worktree:799d6de75e7f985cf177df2edcab37dcfc67707d186d2059b678df3e38e48535",
-  "builderRevision": "worktree:b36039593c607a70724f077aab4a538bcaeadfdc3a0f75a24fb2139ac03927ad",
-  "builder": "Selected T14 generated compiler",
+  "sourceRevision": "worktree:286dc0203b67dbc32a59beda5df9e3dca3ffa6d63888213251705c1626209b54",
+  "artifactRevision": "worktree:60357fc9066ec1cc931125e00c79fc8d00c6eac935c3e8b152e4cdc881ea7a1f",
+  "builderRevision": "worktree:b0aedeea4c7383eaa8215a65bd4a83968b184b3185f6f8e139da552f57a0edef",
+  "builder": "Selected generated compiler",
   "node": "v26.12.1",
   "typescript": "7.0.2"
 });

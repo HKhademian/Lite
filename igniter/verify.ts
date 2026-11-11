@@ -6,6 +6,7 @@ import { dirname, isAbsolute, relative, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { loadBundle, loadSource } from './loader.ts';
 import { compileTs } from '../compiler/host.ts';
+import { seed } from '../compiler/bootstrap/seed.ts';
 import { streamBytes as resolveStreamBytes } from '../tools/streams.ts';
 
 type Stream = Readonly<{ text?: string; bytes?: readonly number[]; file?: string; hash?: string }>;
@@ -300,7 +301,7 @@ const runtimeHash = createHash('sha256')
   .update(readFileSync(resolve(root, 'compiler/host.ts')))
   .update(readFileSync(resolve(root, 'compiler/entry.ts')))
   .update(readFileSync(resolve(root, 'compiler/bootstrap/seed.ts')))
-  .update(readFileSync(resolve(root, 'compiler/bootstrap/T12.ts')))
+  .update(readFileSync(resolve(root, `compiler/bootstrap/${seed.artifact}`)))
   .update(loadBundle(resolve(root, 'compiler/manifests/ts.json')).text)
   .update(process.version)
   .digest('hex');

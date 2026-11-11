@@ -1,7 +1,8 @@
 prefix := sourcePrefix();
 source := inputAll();
-items := parseProgram(source, prefix);
 if prefix =!= "" {
-    graphStates := visitImportedSources(prefix, items, []);
+    graph := visitSourceModule(prefix, source, []);
+    emitProgram(moduleItems(graph), source, prefix);
+} else {
+    emitProgram(parseProgram(source, prefix), source, prefix);
 }
-emitProgram(items, source, prefix);

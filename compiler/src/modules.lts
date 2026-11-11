@@ -1,33 +1,93 @@
 /* Initial source graph traversal for the generated TypeScript compiler. */
 
-/** One source unit's graph traversal state; visiting means entered, processing means all imports completed. */
-ModuleVisitState := type (path: String, visited: Bool, processed: Bool);
+/** True when the graph has entered one canonical source path. */
+moduleVisited := fn(graph: Items, path: String): Bool {
+    loop graph as item {
+        if item.kind == "ModuleVisited" and item.name == path { return true; }
+    }
+    false
+}
 
-/** Returns the most recent state for one canonical source identity. */
-moduleVisitState := fn(states: List<ModuleVisitState>, path: String): ModuleVisitState {
-    var result := (path = "", visited = false, processed = false);
-    loop states as state {
-        if state.path == path { result = state; }
+/** True when the graph completed parsing one canonical source path. */
+moduleProcessed := fn(graph: Items, path: String): Bool {
+    loop graph as item {
+        if item.kind == "ModuleProcessed" and item.name == path { return true; }
+    }
+    false
+}
+
+/** Assigns a stable ordinal to the next discovered source unit. */
+nextModuleId := fn(graph: Items): Int {
+    var count := 0;
+    loop graph as item {
+        if item.kind == "ModuleVisited" { count = count + 1; }
+    }
+    count
+}
+
+/** Returns public declaration records for one completed source module. */
+modulePublicDeclarations := fn(graph: Items, path: String): Items {
+    result: mut Items = [];
+    var inside := false;
+    loop graph as item {
+        if item.kind == "ModuleStart" { inside = item.name == path; }
+        else if item.kind == "ModuleEnd" and inside { break; }
+        else if inside and (item.kind == "PublicFunction" or item.kind == "PublicValue") { push_back(mut result, item); }
+    }
+    result
+}
+/** Appends one module's public functions to the importer scope, rejecting name collisions. */
+appendModuleExports := fn(existing: Items, incoming: Items, prefix: String): Items {
+    var result: mut Items = existing;
+    loop incoming as item {
+        var duplicate := false;
+        loop result as previous {
+            if (previous.kind == "PublicFunction" or previous.kind == "PublicValue") and previous.name == item.name {
+                duplicate = true;
+            }
+        }
+        if duplicate { fail(prefix, "duplicate imported public name " + item.name); }
+        push_back(mut result, item);
     }
     result
 }
 
-/** Reads, parses and visits each imported source once; it records visited before recursion and processed after all outgoing edges. */
-visitImportedSources := fn(importer: String, items: Items, states: List<ModuleVisitState>): List<ModuleVisitState> {
-    var nextStates: mut List<ModuleVisitState> = states;
-    state := moduleVisitState(nextStates, importer);
-    if state.visited { return nextStates; }
-    push_back(mut nextStates, (path = importer, visited = true, processed = false));
-    loop items as item {
-        if item.kind == "Import" {
-            loaded := readSource(importer, item.textValue);
-            childState := moduleVisitState(nextStates, loaded.path);
-            if not childState.visited {
-                importedItems := parseProgram(loaded.text, loaded.path);
-                nextStates = visitImportedSources(loaded.path, importedItems, nextStates);
+/** Reads and parses each canonical source once, marking it visited before recursion and processed after dependencies and local parsing. */
+visitSourceModule := fn(path: String, source: String, initialGraph: Items): Items {
+    if moduleVisited(initialGraph, path) { return initialGraph; }
+    moduleId := nextModuleId(initialGraph);
+    var graph: mut Items = initialGraph;
+    push_back(mut graph, (kind = "ModuleVisited", name = path, runtime = "", code = "", intValue = moduleId, textValue = ""));
+    directPaths: mut List<String> = [];
+    var importedExports: mut Items = [];
+    loop collectImportPaths(source, path) as spec {
+        loaded := readSource(path, spec);
+        if not listContainsText(directPaths, loaded.path) {
+            push_back(mut directPaths, loaded.path);
+            if not moduleVisited(graph, loaded.path) {
+                graph = visitSourceModule(loaded.path, loaded.text, graph);
+            }
+            if moduleProcessed(graph, loaded.path) {
+                importedExports = appendModuleExports(importedExports, modulePublicDeclarations(graph, loaded.path), path);
             }
         }
     }
-    push_back(mut nextStates, (path = importer, visited = true, processed = true));
-    nextStates
+    localItems := parseProgramWithExports(source, path, importedExports, moduleId);
+    push_back(mut graph, (kind = "ModuleStart", name = path, runtime = "", code = "", intValue = moduleId, textValue = ""));
+    loop localItems as item { push_back(mut graph, item); }
+    push_back(mut graph, (kind = "ModuleEnd", name = path, runtime = "", code = "", intValue = moduleId, textValue = ""));
+    push_back(mut graph, (kind = "ModuleProcessed", name = path, runtime = "", code = "", intValue = 0, textValue = ""));
+    graph
+}
+
+/** Removes graph-only records while preserving dependency-first parsed item order. */
+moduleItems := fn(graph: Items): Items {
+    result: mut Items = [];
+    loop graph as item {
+        if item.kind =!= "ModuleVisited" and item.kind =!= "ModuleProcessed" and
+            item.kind =!= "ModuleStart" and item.kind =!= "ModuleEnd" {
+            push_back(mut result, item);
+        }
+    }
+    result
 }

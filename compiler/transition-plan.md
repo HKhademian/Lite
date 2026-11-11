@@ -417,16 +417,20 @@ source-archive route tests without Git metadata.
 
 **Depends on:** generated-default-workflows, the verified TS kernel and the
 post-self-hosting stage architecture.
-**Completed slice:** the parser retains each receiver-less import as an `Import`
-item, and the generated TS driver reads and parses child sources through the
-host `readSource` callback. Typed `ModuleVisitState` values keep `visited` and
-`processed` distinct; visited is set before child traversal and processed after
-all outgoing imports. Tests cover a cycle and a malformed imported unit.
+**Completed slice:** the parser retains receiver-less imports and `pub`
+functions; the generated TS driver reads and parses child sources through the
+host `readSource` callback. `ModuleVisited` and `ModuleProcessed` graph records
+remain separate; visited is set before child traversal and processed after all
+outgoing imports and local parsing. Imported `pub` function signatures and
+immutable scalar values seed the importing scope, and module-local runtime names
+remain distinct. Public TS compile/check/run use this graph. Tests cover cycles,
+malformed and missing units, private-name rejection, duplicate exports,
+repeated imports, type mismatch, and distinct private identities.
 
 **Remaining actions:** follow [the staged import contract](module-import-stages.md):
-use imported `pub` declarations in the importing scope, retain the module graph
-and source spans for resolution and emission, and then remove host text splicing
-from active paths. Add namespace bindings (`module := import
+extend exports to public types, retain source spans for runtime diagnostics,
+and then remove host text splicing from the remaining C/build paths. Add
+namespace bindings (`module := import
 "relative/path.lts";`) afterward and migrate maintained source to aliases before
 deciding whether unpacking remains.
 **Acceptance:** only imported public names enter an open-importing file scope;

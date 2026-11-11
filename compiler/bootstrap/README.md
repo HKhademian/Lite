@@ -1,11 +1,11 @@
 # Generated bootstrap seeds
 
-`T14.ts` is the selected generated TS compiler. [seed.ts](seed.ts) owns its
+`compiler.ts` is the one selected generated TS compiler. [seed.ts](seed.ts) owns its
 exact source, artifact, builder and revision identities; the current selection
 follows the [Lite-owned import graph checkpoint](../transition-plan.md#step-3d--module-imports-in-progress).
-Historical checkpoint hashes and ladder node identities remain in the parity
-ledger and their original reports. A filename is not a substitute for those
-source/builder identities.
+Historical checkpoint hashes and ladder node identities remain in Git history,
+the parity ledger and their reports; numbered generations are not kept as
+parallel active compiler files.
 
 `c-emitter.ts` is the retained Lite C emitter hosted by generated TS. Its exact
 identities are in [c-seed.ts](c-seed.ts). It is not a native C11 compiler or a

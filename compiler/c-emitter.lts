@@ -423,6 +423,7 @@ listContainsBool := fn(values: List<Bool>, target: Bool): Bool {
     listIndexOfBool(values, target) >= 0
 }
 /* C backend for the temporary Lite compiler. */
+
 /** Formats a checked Int value as a C signed 64-bit literal (`INT64_C`, `INT64_MIN`). */
 intLiteralCode := fn(value: Int, negative: Bool, digits: String): String {
     if value == -9223372036854775808 { "INT64_MIN" }
@@ -717,16 +718,16 @@ scanNumericLiteral := fn(source: String, position: Int): (next: Int, integerEnd:
 Parsed := type (kind: String, code: String, intValue: Int, textValue: String, constant: Bool, next: Int);
 /** One local visible to later statements: source name, hygienic runtime name, value kind, binding reassignment permission, held-data write grant, declaration block depth, constant value and target code. */
 Local := type (name: String, runtime: String, kind: String, mutable: Bool, writable: Bool, depth: Int, constant: Bool, code: String, intValue: Int, textValue: String);
-/** One entry in the flat program stream: a report argument or boundary, a local declaration or assignment, an if/loop/function block marker, a break/continue target, a return or a function call statement. */
+/** One program or module-graph item: a report stream entry, declaration, control-flow marker, import edge, public function signature or module visit boundary. */
 Item := type (kind: String, name: String, runtime: String, code: String, intValue: Int, textValue: String);
-/** Flat program stream returned by parseProgram and consumed by a backend emitter. */
+/** Parsed module/compiler items returned by parseProgram and consumed by the module collector and backend emitters. */
 Items := type List<Item>;
 /** Completion facts saved while an inner block is parsed; earlier conditional arms are joined only after a final else. */
 BlockState := type (returned: Bool, stopped: Bool, branchesReturned: Bool, branchesStopped: Bool, hasElse: Bool, loopForever: Bool, live: Bool);
 /** One recognized binary operator spelling and the number of source bytes it occupies. */
 Operator := type (text: String, width: Int);
 /** One previously declared top-level function: source name, result kind, first parameter entry and parameter count. */
-FunctionInfo := type (name: String, result: String, first: Int, count: Int);
+FunctionInfo := type (name: String, runtime: String, result: String, first: Int, count: Int);
 /** A later top-level scalar definition visible only while checking a deferred function body. */
 FutureValue := type (name: String, runtime: String, kind: String, at: Int, intValue: Int, textValue: String);
 /** One top-level transparent type alias: source name, raw target type text, declaration position and the position just after that target. */
@@ -837,7 +838,7 @@ consumeStatementEnd := fn(source: String, position: Int, prefix: String): Int {
 
 /** True for a Lite keyword that this restricted compiler does not implement. */
 isReservedWord := fn(name: String): Bool {
-    name == "var" or name == "mut" or name == "fn" or name == "loop" or
+    name == "pub" or name == "var" or name == "mut" or name == "fn" or name == "loop" or
     name == "break" or name == "continue" or name == "return" or name == "if" or
     name == "else" or name == "then" or name == "finally" or name == "match" or
     name == "import" or name == "using" or name == "record" or name == "type" or
@@ -852,6 +853,7 @@ featureDoc := fn(name: String): String {
     else if name == "var" or name == "mut" { "docs/declarations-and-assignment.md" }
     else if name == "fn" or name == "return" { "docs/functions.md" }
     else if name == "match" { "docs/match.md" }
+    else if name == "pub" { "docs/modules-and-packages.md" }
     else if name == "import" or name == "using" { "docs/modules-and-packages.md" }
     else if name == "record" or name == "type" { "docs/types-and-inference.md" }
     else if name == "break" or name == "continue" { "docs/control-flow.md" }
@@ -1375,10 +1377,14 @@ localIndex := fn(locals: List<Local>, name: String): Int {
 }
 
 /** Selects a fresh runtime name for a new binding, retaining the previous same-name binding while its initializer evaluates. */
-localRuntimeName := fn(locals: List<Local>, name: String, position: Int): String {
+localRuntimeName := fn(locals: List<Local>, name: String, position: Int, moduleId: Int): String {
     index := localIndex(locals, name);
-    if index < 0 { return "lite_" + name; }
-    "lt_local_" + name + "_" + intText(position)
+    if moduleId == 0 {
+        if index < 0 { return "lite_" + name; }
+        return "lt_local_" + name + "_" + intText(position);
+    }
+    if index < 0 { return "lite_m" + intText(moduleId) + "_" + name; }
+    "lt_local_m" + intText(moduleId) + "_" + name + "_" + intText(position)
 }
 
 /** True for the ten comparison spellings accepted by this checkpoint. */
@@ -1776,7 +1782,7 @@ copiedValueCode := fn(kind: String, code: String): String {
 /** True for the zero-argument or checked I/O and text builtins this compiler admits. */
 isAdmittedBuiltin := fn(name: String): Bool {
     name == "inputArgs" or name == "inputAll" or name == "inputLine" or name == "inputInt" or name == "inputFloat" or name == "reportError" or name == "exit" or
-    name == "textLength" or name == "textAt" or name == "textSlice"
+    name == "textLength" or name == "textAt" or name == "textSlice" or name == "readSource"
 }
 
 /** Number of positional arguments one admitted builtin requires. */
@@ -1784,12 +1790,14 @@ builtinArity := fn(name: String): Int {
     if name == "inputArgs" { 0 }
     else if name == "textAt" { 2 }
     else if name == "textSlice" { 3 }
+    else if name == "readSource" { 2 }
     else { 1 }
 }
 
 /** Required kind of argument `index` for one admitted builtin. */
 builtinParameterKind := fn(name: String, index: Int): String {
     if name == "reportError" or name == "textLength" or name == "inputAll" or name == "inputLine" or name == "inputInt" or name == "inputFloat" { "String" }
+    else if name == "readSource" { "String" }
     else if name == "textAt" or name == "textSlice" {
         if index == 0 { "String" } else { "Int" }
     } else { "Int" }
@@ -1798,6 +1806,7 @@ builtinParameterKind := fn(name: String, index: Int): String {
 /** Result kind of one admitted builtin. */
 builtinResultKind := fn(name: String): String {
     if name == "inputArgs" { "List<String>" }
+    else if name == "readSource" { "(path:String,text:String)" }
     else if name == "inputAll" or name == "inputLine" or name == "textAt" or name == "textSlice" { "String" }
     else if name == "textLength" or name == "inputInt" { "Int" }
     else if name == "inputFloat" { "Float" }
@@ -2152,7 +2161,7 @@ parseBinary := fn(source: String, position: Int, prefix: String, locals: List<Lo
                     failAt(source, nameStart, prefix, "function " + calleeName + " expects " + decimalText(info.count) +
                         suffix + ", got " + decimalText(argumentCount));
                 }
-                left = (kind = info.result, code = "liteFn_" + calleeName + "(" + joinTexts(argumentCodes, ", ") + ")",
+                left = (kind = info.result, code = info.runtime + "(" + joinTexts(argumentCodes, ", ") + ")",
                     intValue = 0, textValue = "", constant = false, next = cursor);
             } else if callableIndex >= 0 {
                 failAt(source, nameStart, prefix, "function " + calleeName + " must be called");
@@ -2751,21 +2760,179 @@ withoutFutureValues := fn(locals: List<Local>): List<Local> {
     kept
 }
 
-/** Parses complete source into a flat Items stream with an iterative block stack, dropping block-local declarations on `}`. Exits 2 on unsupported, malformed or faulting source. */
-parseProgram := fn(source: String, prefix: String): Items {
+/** Collects top-level source paths before full parsing so imported declarations can seed the importing file's symbol table. */
+collectImportPaths := fn(source: String, prefix: String): List<String> {
+    paths: mut List<String> = [];
+    size := textLength(source);
+    var position := 0;
+    var depth := 0;
+    loop position < size {
+        position = skipTrivia(source, position, prefix);
+        if position >= size { break; }
+        ch := textAt(source, position);
+        if ch == "\"" {
+            position = skipAliasString(source, position);
+        } else if ch == "{" {
+            depth = depth + 1;
+            position = position + 1;
+        } else if ch == "}" {
+            if depth > 0 { depth = depth - 1; }
+            position = position + 1;
+        } else if depth == 0 and wordAt(source, position, "import") {
+            pathStart := skipTrivia(source, position + 6, prefix);
+            if pathStart >= size or textAt(source, pathStart) =!= "\"" {
+                failAt(source, pathStart, prefix, "import requires a quoted source path");
+            }
+            path := parseText(source, pathStart, prefix);
+            pathLength := textLength(path.textValue);
+            var invalidPath := pathLength == 0;
+            if pathLength > 0 and textAt(path.textValue, 0) == "/" { invalidPath = true; }
+            var pathIndex := 0;
+            loop pathIndex < pathLength {
+                if textAt(path.textValue, pathIndex) == "\\" { invalidPath = true; }
+                pathIndex = pathIndex + 1;
+            }
+            if pathLength > 1 and textAt(path.textValue, 1) == ":" and isNameStart(textAt(path.textValue, 0)) {
+                invalidPath = true;
+            }
+            if invalidPath {
+                failAt(source, pathStart, prefix, "import path must be nonempty, relative, and use \"/\" separators");
+            }
+            statementNext := consumeStatementEnd(source, path.next, prefix);
+            if statementNext < 0 {
+                failAt(source, skipTrivia(source, path.next, prefix), prefix, "expected ; after import");
+            }
+            push_back(mut paths, path.textValue);
+            position = statementNext;
+        } else {
+            position = position + 1;
+        }
+    }
+    paths
+}
+
+/** Collects function names explicitly marked `pub`. */
+collectPublishedFunctions := fn(source: String, prefix: String): List<String> {
+    names: mut List<String> = [];
+    size := textLength(source);
+    var position := 0;
+    var depth := 0;
+    loop position < size {
+        position = skipTrivia(source, position, prefix);
+        if position >= size { break; }
+        ch := textAt(source, position);
+        if ch == "\"" {
+            position = skipAliasString(source, position);
+        } else if ch == "{" {
+            depth = depth + 1;
+            position = position + 1;
+        } else if ch == "}" {
+            if depth > 0 { depth = depth - 1; }
+            position = position + 1;
+        } else if depth == 0 and wordAt(source, position, "pub") {
+            declarationStart := skipTrivia(source, position + 3, prefix);
+            if declarationStart < size and isNameStart(textAt(source, declarationStart)) {
+                nameEnd := skipName(source, declarationStart);
+                operator := skipTrivia(source, nameEnd, prefix);
+                value := skipTrivia(source, operator + 2, prefix);
+                if startsWithAt(source, operator, ":=") and wordAt(source, value, "fn") {
+                    push_back(mut names, textSlice(source, declarationStart, nameEnd));
+                }
+                position = nameEnd;
+            } else {
+                position = position + 3;
+            }
+        } else {
+            position = position + 1;
+        }
+    }
+    names
+}
+
+/** Collects immutable value names explicitly marked `pub`; imported type aliases remain pending. */
+collectPublishedValues := fn(source: String, prefix: String): List<String> {
+    names: mut List<String> = [];
+    size := textLength(source);
+    var position := 0;
+    var depth := 0;
+    loop position < size {
+        position = skipTrivia(source, position, prefix);
+        if position >= size { break; }
+        ch := textAt(source, position);
+        if ch == "\"" {
+            position = skipAliasString(source, position);
+        } else if ch == "{" {
+            depth = depth + 1;
+            position = position + 1;
+        } else if ch == "}" {
+            if depth > 0 { depth = depth - 1; }
+            position = position + 1;
+        } else if depth == 0 and wordAt(source, position, "pub") {
+            declarationStart := skipTrivia(source, position + 3, prefix);
+            if declarationStart < size and isNameStart(textAt(source, declarationStart)) {
+                nameEnd := skipName(source, declarationStart);
+                operator := skipTrivia(source, nameEnd, prefix);
+                value := skipTrivia(source, operator + 2, prefix);
+                if startsWithAt(source, operator, ":=") and
+                    not wordAt(source, value, "fn") and not wordAt(source, value, "type") {
+                    push_back(mut names, textSlice(source, declarationStart, nameEnd));
+                }
+                position = nameEnd;
+            } else {
+                position = position + 3;
+            }
+        } else {
+            position = position + 1;
+        }
+    }
+    names
+}
+
+/** Parses complete source with imported public function signatures available in its root symbol table. Exits 2 on unsupported, malformed or faulting source. */
+parseProgramWithExports := fn(source: String, prefix: String, exports: Items, moduleId: Int): Items {
     size := textLength(source);
     var position := skipTrivia(source, 0, prefix);
     items: mut Items = [];
     if position == size { return items; }
     aliases := collectAliases(source, prefix);
+    publishedFunctions := collectPublishedFunctions(source, prefix);
+    publishedValues := collectPublishedValues(source, prefix);
     futureValues := collectFutureValues(source, prefix);
     var locals: mut List<Local> = [];
     blocks: mut List<String> = [];
     functions: mut List<FunctionInfo> = [];
     functionParams: mut List<String> = [];
+    var parameterTotal := 0;
+    loop exports as exported {
+        if exported.kind == "PublicFunction" {
+            if findFunction(functions, exported.name) >= 0 or localIndex(locals, exported.name) >= 0 {
+                fail(prefix, "duplicate imported public name " + exported.name);
+            }
+            first := parameterTotal;
+            var entryStart := 0;
+            var entryIndex := 0;
+            loop entryIndex < exported.intValue {
+                separator := indexOfText(exported.textValue, "|", entryStart);
+                var entryEnd := textLength(exported.textValue);
+                if separator >= 0 { entryEnd = separator; }
+                push_back(mut functionParams, textSlice(exported.textValue, entryStart, entryEnd));
+                parameterTotal = parameterTotal + 1;
+                entryStart = entryEnd + 1;
+                entryIndex = entryIndex + 1;
+            }
+            push_back(mut functions, (name = exported.name, runtime = exported.runtime, result = exported.code,
+                first = first, count = exported.intValue));
+        } else if exported.kind == "PublicValue" {
+            if findFunction(functions, exported.name) >= 0 or localIndex(locals, exported.name) >= 0 {
+                fail(prefix, "duplicate imported public name " + exported.name);
+            }
+            push_back(mut locals, (name = exported.name, runtime = exported.runtime, kind = exported.code,
+                mutable = false, writable = false, depth = 0, constant = false, code = exported.runtime,
+                intValue = 0, textValue = ""));
+        }
+    }
     var blockCount := 0;
     var depth := 0;
-    var parameterTotal := 0;
     var currentName := "";
     var currentResult := "";
     var currentReturned := false;
@@ -2833,7 +3000,9 @@ parseProgram := fn(source: String, prefix: String): Items {
                 if currentResult =!= "Unit" and not currentReturned {
                     failAt(source, position, prefix, "function " + currentName + " must return " + currentResult);
                 }
-                if currentLive { push_back(mut items, (kind = "FunctionEnd", name = "", runtime = "liteFn_" + currentName,
+                functionRuntime := if moduleId == 0 { "liteFn_" + currentName }
+                    else { "liteFn_m" + intText(moduleId) + "_" + currentName };
+                if currentLive { push_back(mut items, (kind = "FunctionEnd", name = "", runtime = functionRuntime,
                     code = "", intValue = 0, textValue = "")); }
                 currentName = "";
                 currentResult = "";
@@ -2902,6 +3071,54 @@ parseProgram := fn(source: String, prefix: String): Items {
         nameStart := position;
         position = skipName(source, position);
         name := textSlice(source, nameStart, position);
+        if name == "import" {
+            if blockCount =!= 0 {
+                failAt(source, nameStart, prefix, "import is only allowed at top level");
+            }
+            pathStart := skipTrivia(source, position, prefix);
+            if pathStart >= size or textAt(source, pathStart) =!= "\"" {
+                failAt(source, pathStart, prefix, "import requires a quoted source path");
+            }
+            path := parseText(source, pathStart, prefix);
+            pathLength := textLength(path.textValue);
+            var invalidPath := pathLength == 0;
+            if pathLength > 0 and textAt(path.textValue, 0) == "/" { invalidPath = true; }
+            var pathIndex := 0;
+            loop pathIndex < pathLength {
+                if textAt(path.textValue, pathIndex) == "\\" { invalidPath = true; }
+                pathIndex = pathIndex + 1;
+            }
+            if pathLength > 1 and textAt(path.textValue, 1) == ":" and isNameStart(textAt(path.textValue, 0)) {
+                invalidPath = true;
+            }
+            if invalidPath {
+                failAt(source, pathStart, prefix, "import path must be nonempty, relative, and use \"/\" separators");
+            }
+            statementNext := consumeStatementEnd(source, path.next, prefix);
+            if statementNext < 0 {
+                failAt(source, skipTrivia(source, path.next, prefix), prefix, "expected ; after import");
+            }
+            push_back(mut items, (kind = "Import", name = "", runtime = "", code = "",
+                intValue = 0, textValue = path.textValue));
+            position = statementNext;
+            continue;
+        }
+        if name == "pub" {
+            if blockCount =!= 0 {
+                failAt(source, nameStart, prefix, "pub is only allowed on top-level declarations");
+            }
+            declarationStart := skipTrivia(source, position, prefix);
+            if declarationStart >= size or not isNameStart(textAt(source, declarationStart)) {
+                failAt(source, declarationStart, prefix, "expected a declaration after pub");
+            }
+            declarationEnd := skipName(source, declarationStart);
+            declarationOperator := skipTrivia(source, declarationEnd, prefix);
+            if not startsWithAt(source, declarationOperator, ":=") {
+                failAt(source, declarationOperator, prefix, "expected := after published declaration name");
+            }
+            position = declarationStart;
+            continue;
+        }
         position = skipTrivia(source, position, prefix);
         var afterDefinition := position;
         if startsWithAt(source, position, ":=") {
@@ -3087,7 +3304,7 @@ parseProgram := fn(source: String, prefix: String): Items {
             }
             position = expectSymbol(source, position, "{", prefix);
             if itemName =!= "" {
-                runtime := localRuntimeName(locals, itemName, nameStart);
+                runtime := localRuntimeName(locals, itemName, nameStart, moduleId);
                 push_back(mut locals, (name = itemName, runtime = runtime, kind = itemKind,
                     mutable = false, writable = false, depth = depth + 1, constant = false, code = runtime,
                     intValue = 0, textValue = ""));
@@ -3154,7 +3371,7 @@ parseProgram := fn(source: String, prefix: String): Items {
             statementNext := consumeStatementEnd(source, parsed.next, prefix);
             if statementNext < 0 { failAt(source, skipTrivia(source, parsed.next, prefix), prefix, "expected ; after local declaration " + localName); }
             position = statementNext;
-            runtime := localRuntimeName(locals, localName, localStart);
+            runtime := localRuntimeName(locals, localName, localStart, moduleId);
             push_back(mut locals, (name = localName, runtime = runtime, kind = parsed.kind,
                 mutable = true, writable = declaredWritable, depth = depth, constant = false, code = parsed.code,
                 intValue = parsed.intValue, textValue = parsed.textValue));
@@ -3211,8 +3428,15 @@ parseProgram := fn(source: String, prefix: String): Items {
                 header := parseFunctionHeader(source, position, prefix, aliases);
                 position = skipTrivia(source, header.next, prefix);
                 position = expectSymbol(source, position, "{", prefix);
-                push_back(mut functions, (name = name, result = header.result, first = parameterTotal, count = header.count));
-                if currentLive and not currentStopped { push_back(mut items, (kind = "FunctionStart", name = name, runtime = "liteFn_" + name,
+                functionRuntime := if moduleId == 0 { "liteFn_" + name }
+                    else { "liteFn_m" + intText(moduleId) + "_" + name };
+                push_back(mut functions, (name = name, runtime = functionRuntime, result = header.result,
+                    first = parameterTotal, count = header.count));
+                if listContainsText(publishedFunctions, name) {
+                    push_back(mut items, (kind = "PublicFunction", name = name, runtime = functionRuntime, code = header.result,
+                        intValue = header.count, textValue = header.params));
+                }
+                if currentLive and not currentStopped { push_back(mut items, (kind = "FunctionStart", name = name, runtime = functionRuntime,
                     code = header.result, intValue = header.count, textValue = header.params)); }
                 var entryStart := 0;
                 var entryIndex := 0;
@@ -3270,10 +3494,14 @@ parseProgram := fn(source: String, prefix: String): Items {
             statementNext := consumeStatementEnd(source, parsed.next, prefix);
             if statementNext < 0 { failAt(source, skipTrivia(source, parsed.next, prefix), prefix, "expected ; after local declaration " + name); }
             position = statementNext;
-            runtime := localRuntimeName(locals, name, nameStart);
+            runtime := localRuntimeName(locals, name, nameStart, moduleId);
             push_back(mut locals, (name = name, runtime = runtime, kind = parsed.kind,
                 mutable = false, writable = false, depth = depth, constant = parsed.constant, code = parsed.code,
                 intValue = parsed.intValue, textValue = parsed.textValue));
+            if depth == 0 and blockCount == 0 and listContainsText(publishedValues, name) {
+                push_back(mut items, (kind = "PublicValue", name = name, runtime = runtime, code = parsed.kind,
+                    intValue = 0, textValue = ""));
+            }
             if currentLive and not currentStopped { push_back(mut items, (kind = "Local" + storageKind(parsed.kind), name = name, runtime = runtime,
                 code = copiedValueCode(parsed.kind, parsed.code), intValue = parsed.intValue, textValue = itemTextPayload(parsed))); }
             continue;
@@ -3297,7 +3525,7 @@ parseProgram := fn(source: String, prefix: String): Items {
             statementNext := consumeStatementEnd(source, parsed.next, prefix);
             if statementNext < 0 { failAt(source, skipTrivia(source, parsed.next, prefix), prefix, "expected ; after local declaration " + name); }
             position = statementNext;
-            runtime := localRuntimeName(locals, name, nameStart);
+            runtime := localRuntimeName(locals, name, nameStart, moduleId);
             push_back(mut locals, (name = name, runtime = runtime, kind = typed.kind,
                 mutable = false, writable = typed.writable, depth = depth, constant = parsed.constant, code = parsed.code,
                 intValue = parsed.intValue, textValue = parsed.textValue));
@@ -3342,6 +3570,11 @@ parseProgram := fn(source: String, prefix: String): Items {
     items
 }
 
+/** Parses one source without imported public symbols. */
+parseProgram := fn(source: String, prefix: String): Items {
+    parseProgramWithExports(source, prefix, [], 0)
+}
+
 /** Encodes all line-start character offsets once for positioned runtime arithmetic faults. */
 lineStartCodes := fn(source: String): String {
     var code := "0";
@@ -3380,7 +3613,9 @@ usesIntHelper := fn(calls: String, name: String): Bool {
 
 /** Returns the C rejection message for one emitted expression that calls an unsupported I/O or text builtin, or empty text. */
 unsupportedBuiltinCode := fn(calls: String): String {
-    if usesIntHelper(calls, "lite$inputArgs(") or usesIntHelper(calls, "lite$inputAll(") or usesIntHelper(calls, "lite$inputLine(") or usesIntHelper(calls, "lite$inputInt(") or usesIntHelper(calls, "lite$inputFloat(") {
+    if usesIntHelper(calls, "lite$readSource(") {
+        "C backend does not support compiler source reads"
+    } else if usesIntHelper(calls, "lite$inputArgs(") or usesIntHelper(calls, "lite$inputAll(") or usesIntHelper(calls, "lite$inputLine(") or usesIntHelper(calls, "lite$inputInt(") or usesIntHelper(calls, "lite$inputFloat(") {
         "C backend does not support input builtins yet"
     } else if usesIntHelper(calls, "lite$reportError(") or usesIntHelper(calls, "lite$exit(") {
         "C backend does not support reportError or exit yet"
@@ -3785,6 +4020,7 @@ emitProgram := fn(items: Items, source: String, prefix: String): Unit {
             if item.kind == "End" { outputLine(indent + "if (printf(\"\\n\") < 0) { status = 1; }"); }
             count = 0;
             writes = "";
+        } else if item.kind == "Import" or item.kind == "PublicFunction" or item.kind == "PublicValue" {
         } else {
             if count == 0 {
                 firstKind = item.kind;
