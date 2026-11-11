@@ -95,7 +95,7 @@ export function loadCase(path: string): Fixture {
   return { path: file, definition: spec };
 }
 
-export function loadCases(filter = '', directory = join(root, 'cases')): Fixture[] {
+export function loadCases(filter = '', directory?: string): Fixture[] {
   const fixtures: Fixture[] = [];
   function visit(path: string): void {
     for (const entry of readdirSync(path, { withFileTypes: true }).sort((a, b) => a.name.localeCompare(b.name))) {
@@ -104,7 +104,9 @@ export function loadCases(filter = '', directory = join(root, 'cases')): Fixture
       else if (entry.name.endsWith('.case.json')) fixtures.push(loadCase(file));
     }
   }
-  visit(directory);
+  for (const path of directory === undefined
+    ? [join(root, 'language', 'cases'), join(root, 'tools', 'cases')]
+    : [directory]) visit(path);
   assert(new Set(fixtures.map(item => item.definition.id)).size === fixtures.length, 'duplicate case IDs');
   const selected = fixtures.filter(item => item.definition.id.includes(filter));
   assert(selected.length > 0, 'no cases match: ' + filter);
@@ -157,7 +159,7 @@ export function verifyScenario(fixture: Fixture, scenario: Scenario, projectRoot
       result = execute(join(workspace, 'bin', spec.tool), scenario.args ?? [], input, workspace);
     } else {
       const output = join(work, 'program.lts.ts');
-      const compiled = execute(join(projectRoot, 'bin/litec'), [relative(projectRoot, resolve(directory, spec.source))], Buffer.alloc(0));
+      const compiled = execute(join(projectRoot, 'bin/lite-compile'), [relative(projectRoot, resolve(directory, spec.source))], Buffer.alloc(0));
       if (compiled.status === 0) {
         const checked = checkTsArtifact(compiled.stdout.toString('utf8'));
         assert.equal(checked.status, 0, checked.stderr.toString());

@@ -1,0 +1,24 @@
+{
+  "id": "example.006-fixed-tuples",
+  "kind": "example",
+  "source": {
+    "file": "../../../language/examples/006-fixed-tuples.lts",
+    "hash": "sha256:a62a877339247cc45ce0041cc3a23cbe28d33b51ed2a22ccbd2f59528816b2bf"
+  },
+  "features": [
+    "tuple.shape",
+    "scope.locals",
+    "io.report"
+  ],
+  "description": "Tuple construction, fields, destructuring, and singleton grouping.",
+  "cases": [
+    {
+      "name": "tuple-demo",
+      "stdout": {
+        "text": "number\n12\nnumber: 12\n42\n",
+        "hash": "sha256:6a41acc0779529542dd16622553d573944dd2094988b9acb930021750fe809cc"
+      },
+      "exitCode": 0
+    }
+  ]
+}

@@ -63,7 +63,7 @@ The white paper and [principles](docs/principles.md) are coherent and usable.
 ## 2. Foundations and scope — 3/10
 
 - **R-002 · P1 — Foundation sequencing risk.** Memory/ownership, generics, modules, numeric representation, tooling, effects, concurrency, and FFI remain open ([principles](docs/principles.md)), while deep surface details are already selected. **Fix:** freeze new surface decisions; run a foundation review; mark dependent decisions provisional until their foundation is settled.
-- **R-007 · P2 — Sample scope mismatch.** There are 20 samples and a plan for 021–520 ([notes](samples/NOTES.md)), but no toolchain to verify any of them. **Fix:** cap sample expansion until the samples can be parsed and executed; gate new lessons behind a verified-toolchain milestone.
+- **R-007 · P2 — Sample scope mismatch.** There are 20 samples and a plan for 021–520 ([notes](language/samples/NOTES.md)), but no toolchain to verify any of them. **Fix:** cap sample expansion until the samples can be parsed and executed; gate new lessons behind a verified-toolchain milestone.
 - **R-008 · P2 — No complexity budget.** 148 docs, ~214k words, 274 ledger bullets, and many context-sensitive surface rules. **Fix:** define a per-feature complexity budget, require a reference-language check and a beginner example, and consolidate rules that fail it.
 - **R-011 · P2 — No beginner usability validation.** The principles say simplicity must be evaluated with actual beginner tasks ([principles](docs/principles.md)), but no such evaluation exists. **Fix:** run small task-based studies and record results with the decisions they affect.
 
@@ -185,7 +185,7 @@ The white paper and [principles](docs/principles.md) are coherent and usable.
 ## 17. Tooling, implementation, and validation — 2/10
 
 - **T-035 · P2 — Formatter status/body disagree and the ledger lacks the requirement.** **Fix:** pick one status and add the formatter requirement to the ledger.
-- **R-001 · P0 — No executable validation loop.** There is no lexer, parser, type checker, interpreter, runtime, or test suite; all 20 samples are unverified ([notes](samples/NOTES.md)). **Fix:** implement a minimal toolchain that parses, checks, and runs the 20 samples; add CI; make implementation the next milestone.
+- **R-001 · P0 — No executable validation loop.** There is no lexer, parser, type checker, interpreter, runtime, or test suite; all 20 samples are unverified ([notes](language/samples/NOTES.md)). **Fix:** implement a minimal toolchain that parses, checks, and runs the 20 samples; add CI; make implementation the next milestone.
 - **R-009 · P2 — No per-decision acceptance cases.** Selected rules have no positive/negative conformance cases. **Fix:** require at least one accepting and one rejecting case per selected rule.
 - **R-013 · P2 — No roadmap or definition of done.** The repo is planning-only but has no milestone plan beyond the handoff. **Fix:** add a roadmap with exit criteria for spec, toolchain, and samples.
 

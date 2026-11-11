@@ -48,7 +48,7 @@ and typed fixed arrays remain on the existing-feature parity track. C implements
 the admitted scalar output forms and clearly rejects unsupported input/aggregate
 forms; native C self-hosting remains pending.
 
-The [canonical I/O case](../verifications/features/io-temporary.lts) runs through
+The [canonical I/O case](../language/verifications/features/io-temporary.lts) runs through
 both T00 and generated TS. Focused host tests cover EOF, numeric range/grammar,
 prompt order, mixed reads, zero arguments, aggregate display, Unicode buffer
 boundaries, exact real-CLI UTF-8 diagnostics and removal of the old builtin.
@@ -65,14 +65,14 @@ existing lexical forms using the editor's theme. It includes nested/raw comments
 multiline strings, basic numbers, keywords/operators, type names and ordinary calls.
 It has no extension runtime, formatter, runner or language server. Colorization is
 approximate and does not validate code, choose open grammar rules, or approve
-experimental builtins. See [INV-072 evidence](../investigations/INV-072-vscode-highlighter.md).
+experimental builtins. See [INV-072 evidence](../research/investigations/INV-072-vscode-highlighter.md).
 
 ## FVP direction
 
 The [selected first working targets](principles.md#first-working-targets) call
 for a tiny executable demonstrator before practical scripting. A small interpreter
 is selected for the FVP, with TypeScript/Node as the minimal igniter and early LiteLang
-self-hosting selected below. The user-requested ./lite run launcher is recorded below. Temporary input/reporting
+self-hosting selected below. The user-requested ./bin/lite run launcher is recorded below. Temporary input/reporting
 helper names are selected below; their detailed contracts remain open.
 
 ## FVP interpreter
@@ -80,14 +80,14 @@ helper names are selected below; their detailed contracts remain open.
 ### Root run launcher
 
 Requested and implemented **2026-10-31**: use
-`./lite run examples/006-fixed-tuples.lts` from the project root. The executable
-[lite](../lite) command now links to the executable TypeScript
+`./bin/lite run language/examples/006-fixed-tuples.lts` from the project root. The executable
+[lite](../bin/lite) command now links to the executable TypeScript
 [`igniter/launcher.ts`](../igniter/launcher.ts), which forwards to the igniter through
 node from PATH. It resolves the implementation from its own location, preserves
 caller-relative source paths, arguments, stdin, output and exit status, and also
 forwards the existing run --check form. No language syntax, builtin, compilation
 backend or installed-command mechanism is added. Strict checking and all 63
-interpreter test groups pass; see [INV-004 evidence](../investigations/INV-004-fvp-execution-path.md#root-shebang-launcher-2026-10-31).
+interpreter test groups pass; see [INV-004 evidence](../research/investigations/INV-004-fvp-execution-path.md#root-shebang-launcher-2026-10-31).
 
 ### Interpreter direction
 
@@ -125,7 +125,7 @@ is open. The checkpoint is not the final FVP feature ceiling or a requirement
 to finish all 001–020 exercises first. Numeric/text details and helper contracts
 are documented provisionally in the implemented [igniter](../igniter/README.md).
 The broad language contract remains a draft.
-See [INV-002.02](../investigations/INV-002-02-fvp-first-runnable-slice.md#selected-first-runnable-slice).
+See [INV-002.02](../research/investigations/INV-002-02-fvp-first-runnable-slice.md#selected-first-runnable-slice).
 
 Implementation increment, 2026-10-30: the igniter now also supports Boolean
 values/logic, scalar comparison chains, basic conditionals, and scoped block
@@ -133,14 +133,14 @@ values. Value branches currently need matching result types; partial conditional
 are supported only as actions. Union results, guarded initializers/assignments,
 pattern conditions, completion/cleanup hooks, loops, and user functions remained
 unsupported at that checkpoint. See [implemented conditions](../igniter/README.md#conditions-and-block-values)
-and [INV-015 evidence](../investigations/INV-015-igniter-boolean-conditionals.md).
+and [INV-015 evidence](../research/investigations/INV-015-igniter-boolean-conditionals.md).
 
 The following increment adds [action loops](../igniter/README.md#action-loops):
 Boolean-condition and unconditional loop bodies, bare break/continue, and scoped
 locals reinitialized on each entry. It preserves header reevaluation and
 innermost targeting. Loop values/metadata, iterables, tagged/payload exits and
 then/finally remain unsupported. Strict checking and all 30 test groups pass;
-[INV-035](../investigations/INV-035-igniter-action-loops.md) records the evidence.
+[INV-035](../research/investigations/INV-035-igniter-action-loops.md) records the evidence.
 
 The next increment implements [typed scalar functions](../igniter/README.md#typed-user-functions),
 positional calls, tail/explicit returns, own-name and self(...) recursion, with
@@ -148,7 +148,7 @@ separate call environments. Tests preserve callee/argument order, lexical/live
 helper reads, and return/loop boundaries. General captures, later helper lookup,
 inference, wider argument routing, and callable inputs/results remain unsupported.
 The factorial CLI reports 120 for 5; strict checking and all 43 test groups pass.
-See [INV-030](../investigations/INV-030-igniter-functions.md). This is another
+See [INV-030](../research/investigations/INV-030-igniter-functions.md). This is another
 bounded step toward the Lite-written compiler, not a self-hosting result.
 
 The next implemented experiment adds computed String concatenation and temporary
@@ -157,39 +157,39 @@ tokenizer. Its code-point positions, half-open intervals and terminal bounds
 faults are provisional host behavior; full Unicode/text policy remains open.
 Strict checking and all 52 test groups pass, including the real CLI and Unicode/
 empty/bounds cases. See [text-helper coverage](../igniter/README.md#temporary-text-operations)
-and [INV-016](../investigations/INV-016-igniter-text-operations.md). This is a
+and [INV-016](../research/investigations/INV-016-igniter-text-operations.md). This is a
 scanning experiment, not the Lite lexer or a compiler bootstrap stage.
 The new helpers were initially introduced without explicit consent; the user
 subsequently approves their exact temporary FVP scope on 2026-10-31 after review.
 The alpha.15 retained-token example now uses these approved helpers and lists.
 Strict checking and 122 interpreter groups pass; broader text policy stays open.
-Follow the [explicit-consent rule](../investigations/README.md#explicit-consent-for-language-changes)
+Follow the [explicit-consent rule](../research/investigations/README.md#explicit-consent-for-language-changes)
 before adding syntax/features, even for temporary scaffolding.
 
 The user-approved **2026-10-31** increment adds flat fixed tuples of existing
 scalars, literal positional reads, declaration destructuring and explicit tuple
 function inputs/results, using already selected syntax. The runnable example is
-[006-fixed-tuples.lts](../examples/006-fixed-tuples.lts). Strict checking and all
+[006-fixed-tuples.lts](../language/examples/006-fixed-tuples.lts). Strict checking and all
 62 interpreter test groups pass. Named/nested/rest tuples, mutation/access grants,
 tuple reporting and native layout remain unsupported. Text helpers were
-separately approved for their temporary FVP scope on 2026-10-31. See [INV-022](../investigations/INV-022-fvp-fixed-tuples.md)
+separately approved for their temporary FVP scope on 2026-10-31. See [INV-022](../research/investigations/INV-022-fvp-fixed-tuples.md)
 and [implemented tuple coverage](../igniter/README.md#flat-fixed-tuples).
 
 The following named-field increment implements existing flat fully named tuple
 values, =name shorthand, field reads, named function tuple annotations and
-label-sensitive stored transfers. The [008 example](../examples/008-named-tuples.lts)
-runs with ./lite run; strict checking and all 79 interpreter test groups pass.
+label-sensitive stored transfers. The [008 example](../language/examples/008-named-tuples.lts)
+runs with ./bin/lite run; strict checking and all 79 interpreter test groups pass.
 Broader tuple routing, named patterns, nested tuples and mutation
-remain unimplemented. See [INV-022](../investigations/INV-022-fvp-named-tuples.md)
+remain unimplemented. See [INV-022](../research/investigations/INV-022-fvp-named-tuples.md)
 and [named-field coverage](../igniter/README.md#named-fixed-tuples).
 
 The user-approved fixed-array increment adds nonempty homogeneous arrays of
 scalars/flat tuples, indexed reads, exact [T; N] function inputs/results and
-action traversal with optional as item. The [009 example](../examples/009-fixed-arrays.lts)
-runs through ./lite run. Strict checking and all 93 interpreter test groups pass.
+action traversal with optional as item. The [009 example](../language/examples/009-fixed-arrays.lts)
+runs through ./bin/lite run. Strict checking and all 93 interpreter test groups pass.
 Empty construction, mixed-type inference, nested arrays, mutation/growth, views,
 count helpers and native layout remain unimplemented; see
-[INV-054](../investigations/INV-054-fvp-fixed-arrays.md) and
+[INV-054](../research/investigations/INV-054-fvp-fixed-arrays.md) and
 [array coverage](../igniter/README.md#fixed-arrays-and-traversal).
 
 The selected [temporary numeric profile](numbers.md#temporary-fvp-numeric-profile)
@@ -200,7 +200,7 @@ promotions/literal details and text profile remain open. TypeScript/Node is the 
 **FVP scope correction, 2026-10-30:** basic quoted text and the temporary
 inputLine/inputWord/report helpers are enough to begin. Use a simple temporary
 implementation and define concrete behavior as examples require it. The detailed
-[text-profile proposal](../investigations/INV-016-01-fvp-text-profile.md#fvp-scope-correction-2026-10-30)
+[text-profile proposal](../research/investigations/INV-016-01-fvp-text-profile.md#fvp-scope-correction-2026-10-30)
 is deferred and unselected; detailed encoding/Unicode, escape coverage, and
 mixed-input rules are not prerequisites for starting the interpreter. Existing
 input-fault and explicit-output selections still apply. Record supported
@@ -210,31 +210,31 @@ semantics.
 The next INV-022 increment implements already selected interleaved named/unnamed
 flat tuples, including mixed annotations, copies and array elements. Strict
 checking and all 97 interpreter groups pass; see
-[the evidence](../investigations/INV-022-fvp-mixed-tuples.md).
+[the evidence](../research/investigations/INV-022-fvp-mixed-tuples.md).
 
 Explicit typed receiving declarations can now relabel stored flat scalar tuples
 by position with exact shape/types. Ordinary transfers remain label-sensitive;
 fresh-constructor routing stays unimplemented. Strict checking and 102 groups
-pass; see [INV-022 evidence](../investigations/INV-022-fvp-label-conversion.md).
+pass; see [INV-022 evidence](../research/investigations/INV-022-fvp-label-conversion.md).
 
 The INV-031 increment implements existing fixed-slot named user-function calls,
 including shorthand and positional replacement, without defaults/spread or new
 builtin labels. Strict checking and 108 interpreter groups pass, including
 source-order effects and callee selection; see
-[bounded evidence](../investigations/INV-031-fvp-named-calls.md).
+[bounded evidence](../research/investigations/INV-031-fvp-named-calls.md).
 
 The user-approved INV-055 slice adds builtin List<T> typed construction, ordinary
 sequence copies, readable indexing/traversal and four explicit mut end operations.
 Strict checking and 120 interpreter groups pass, including real launcher/check-only
 execution of 013; editor checks include List highlighting. General generics,
 capacity, views, user-function mutation grants and recovery remain outside the
-increment. See [bounded evidence](../investigations/INV-055-fvp-list-slice.md).
+increment. See [bounded evidence](../research/investigations/INV-055-fvp-list-slice.md).
 
-The next application-only increment, [016](../examples/016-integer-calculator.lts),
+The next application-only increment, [016](../language/examples/016-integer-calculator.lts),
 implements a recursive integer arithmetic parser/evaluator in Lite, using retained
 token lists and value/position tuple results. It runs on the preserved alpha.15
 interpreter without host feature changes. Strict checking and 125 groups pass;
-see [INV-061 evidence](../investigations/INV-061-lite-arithmetic-front-end.md).
+see [INV-061 evidence](../research/investigations/INV-061-lite-arithmetic-front-end.md).
 This produces a calculated result, not a compiler artifact or self-hosted stage.
 
 The first emitted-code milestone (originally example 017) is now
@@ -243,7 +243,7 @@ report into readable TS. Nine admitted programs have
 raw stdout/stderr/status parity against the igniter and direct TS/translated JS
 execution. Strict checking and 130 interpreter groups pass; the Node-free core
 and visible adapter have separate checks. This is not compiler self-hosting or
-browser/Wasm execution. See [emission evidence](../investigations/INV-061-ts-emission-and-parity.md).
+browser/Wasm execution. See [emission evidence](../research/investigations/INV-061-ts-emission-and-parity.md).
 
 The selected C target now has a matching restricted
 [C emitter](../compiler/c-emitter.lts).
@@ -251,24 +251,24 @@ Nine emitted native programs, their TS equivalents and the igniter have equal ra
 stdout/stderr/status. Strict checking and 132 groups pass; the native test ran
 with the local C compiler and skips explicitly if unavailable elsewhere. This is
 first native output for the restricted class, not library export or self-hosting.
-See [C evidence](../investigations/INV-061-c-emission-and-parity.md).
+See [C evidence](../research/investigations/INV-061-c-emission-and-parity.md).
 
 The restricted TS/C emitters subsequently adopt approved inputAll() for complete
 source, with multi-line whitespace and rejection of later unsupported source
 before any artifact. Twelve admitted cases retain byte/status parity; strict
 checking and 139 interpreter groups pass. See
-[whole-source evidence](../investigations/INV-061-whole-source-emission.md).
+[whole-source evidence](../research/investigations/INV-061-whole-source-emission.md).
 
 The compiler applications subsequently adopt inputArgs for an optional explicit
 logical source name. Exact names prefix their own rejection diagnostics, while
 valid artifact bytes stay unchanged and extra arguments fail before reads.
 Strict checking and 147 groups pass; generated runtime fault locations remain
-separate. See [context evidence](../investigations/INV-061-compiler-source-context.md).
+separate. See [context evidence](../research/investigations/INV-061-compiler-source-context.md).
 
 Both compiler applications subsequently advance to sequence arbitrary `outputLine(integer);`
 statements across the whole input without language extensions. Emitted TS and native C
 preserve exact byte/status parity across 15 admitted programs. Strict checking and 148
-groups pass. See [statement sequencing evidence](../investigations/INV-061-statement-sequencing.md).
+groups pass. See [statement sequencing evidence](../research/investigations/INV-061-statement-sequencing.md).
 
 They then admit left-associative `+ - * /`, parentheses, unary signs and immutable
 `x := <expression>;` locals. Expressions are checked in signed 64-bit at compile
@@ -278,7 +278,7 @@ formatting or `printf` with `PRId64`, and collision-prone local names receive a
 parity across emitted TS, translated JS, native C and the igniter; strict checking
 and 153 groups passed. Range faults and division by zero are compile-time
 rejections, not emitted runtime panic parity. See
-[arithmetic/local evidence](../investigations/INV-061-arithmetic-and-locals-emission.md).
+[arithmetic/local evidence](../research/investigations/INV-061-arithmetic-and-locals-emission.md).
 
 They now also admit String literals/escapes, immutable String locals, String `+`
 concatenation and multi-value reports over Int/String values. Constant String
@@ -295,15 +295,15 @@ stream uses `text`/`bytes`/`file` plus `hash`). Filenames follow
 rejection cases pass exact diagnostics through both compilers. Strict checking
 and 234 groups pass. Text operations/indexing, NUL handling, runtime input and
 self-rebuild remain open. See
-[String/report evidence](../investigations/INV-061-string-and-multi-value-reports.md)
+[String/report evidence](../research/investigations/INV-061-string-and-multi-value-reports.md)
 and the [fixture schema](../igniter/tests/README.md).
 
-Current CLI entry points are `./lite check`, `./lite compile`, `./lite run`,
-`./lite verify`, `./lite test`, `./lite docs` and `./lite help`; compiler aliases
-are `./ltc` and `./litec`. `./lite run source.lts [-- argument ...]` compiles to a
+Current CLI entry points are `./bin/lite check`, `./bin/lite compile`, `./bin/lite run`,
+`./bin/lite verify`, `./bin/lite test`, `./bin/lite docs` and `./bin/lite help`; compiler aliases
+are `./bin/lite-compile` and `./bin/lite-compile`. `./bin/lite run source.lts [-- argument ...]` compiles to a
 temporary TS artifact, executes it with the Node entry, forwards arguments,
 streams and status and removes the temporary directory. Compiling with
-`./lite compile source.lts > /tmp/program.ts` and executing
+`./bin/lite compile source.lts > /tmp/program.ts` and executing
 `node compiler/entry.ts /tmp/program.ts [argument ...]` remain the explicit
 artifact path. Check-only uses the generated compiler and strict artifact
 checking without program effects. C output is deferred to a later native
@@ -311,23 +311,23 @@ compiler phase. Earlier interpreter-run/C instructions on this page are historic
 checkpoints. Linker and formatter names are reserved but unimplemented. See
 [tool naming](versioning-and-naming.md#1-canonical-names).
 
-Feature and artifact verification lives in `verifications/`. `./lite verify`
+Feature and artifact verification lives in `language/verifications/`. `./bin/lite verify`
 selects changed cases; `--all` selects everything. Verification compiles and
 executes TS artifacts against reviewed expected streams. The former 81-case T00
 comparison and its 60-pass/21-failure TS snapshot are historical; there is no
 live T00 lane. `--update`, `--coverage`, `--filter`, `--shard i/n`, `--no-cache`
-and `--quiet` remain available. See the [verification guide](../verifications/README.md).
+and `--quiet` remain available. See the [verification guide](../language/verifications/README.md).
 
 The compiler implementation now lives in
 [`compiler/`](../compiler/README.md), not in runnable examples. Its source is
 split under `compiler/src/` and assembled by ordered manifests: L0 libraries,
 target literal encoders, shared front-end, target emitter and target driver.
-`litec` enters through [`compiler/cli.ts`](../compiler/cli.ts): TS uses the
+`lite-compile-ts` enters through [`compiler/cli.ts`](../compiler/cli.ts): TS uses the
 verified T12 seed/current Lite compiler, and C uses its Lite emitter compiled by
 T12 into a TS-hosted compiler. Top-level relative `.lts` imports define compiler
 source dependencies; package and namespace semantics remain unimplemented.
 Compiler source no longer uses `importFlatAll`. Access is
-`./litec [--target ts] file.lts`, `./lite compile ...`, or the short `./ltc`
+`./bin/lite-compile [--target ts] file.lts`, `./bin/lite compile ...`, or the short `./bin/lite-compile`
 command. This removes the duplicated parser/checker while keeping separate
 target backends.
 
@@ -400,7 +400,7 @@ path. Do not equate interpreting Lite with already compiling itself. The seed's
 supported language subset, first compatible compiler revision, stage artifacts,
 host dependencies, source/version compatibility, preservation and verification
 of the chain, and rebuild reproducibility remain open under
-[INV-061.06](../investigations/SUBTOPICS.md#inv-061-06). A direct igniter-to-latest
+[INV-061.06](../research/investigations/SUBTOPICS.md#inv-061-06). A direct igniter-to-latest
 route is not promised if later compiler source uses newer language features.
 
 This direction chooses Lite for compiler development, TS for the first emitted
@@ -410,7 +410,7 @@ AS compatibility or C library ABI. Keep the igniter minimal. Safety here means
 matching observable output bytes, status and effects for equivalent supported
 programs/inputs, with readable auditable TS and reproducible provenance. Tests
 provide bounded evidence, not a universal absence-of-Trojan proof. See
-[INV-061 target/safety clarification](../investigations/INV-061-first-compiler-output.md).
+[INV-061 target/safety clarification](../research/investigations/INV-061-first-compiler-output.md).
 
 The implementation pins Node 26.13.0 and TypeScript 7.0.2, checked against stable
 releases on 2026-10-30. Execute the TS sources directly and run the separate strict
@@ -418,7 +418,7 @@ typecheck before accepting changes; Node's type stripping does not typecheck.
 See the [igniter guide](../igniter/README.md) for commands, exact provisional
 helper behavior, test evidence, and the first tagged-checkpoint identity.
 
-An isolated [AS/Wasm probe](../investigations/INV-070-assemblyscript-report-probe.md)
+An isolated [AS/Wasm probe](../research/investigations/INV-070-assemblyscript-report-probe.md)
 now compiles the unchanged emitted report core with AssemblyScript 0.28.20 and
 matches all 12 output/status cases through Wasm bindings. The compiler/tools are
 installed only in a temporary directory; no project dependency or permanent AS
@@ -427,15 +427,15 @@ general emitted-TS compatibility.
 
 ## Explicit output and tracing
 
-The user-approved [INV-067 increment](../investigations/INV-067-fvp-script-arguments.md)
+The user-approved [INV-067 increment](../research/investigations/INV-067-fvp-script-arguments.md)
 adds inputArgs(): List<String> and the invocation
-./lite run [--check] file.lts [-- argument ...]. Preserve ordered host argument
+./bin/lite run [--check] file.lts [-- argument ...]. Preserve ordered host argument
 Strings after the separator, excluding runner metadata. The helper produces no
 output/prompt, consumes no stdin and returns ordinary copied values. Strict
 checking and 145 interpreter groups plus 9 editor groups pass. Compiler use of
 source identity remains a separate application step; no file/process API is added.
 
-The approved compiler-input [INV-004 increment](../investigations/INV-004-fvp-whole-input.md)
+The approved compiler-input [INV-004 increment](../research/investigations/INV-004-fvp-whole-input.md)
 adds inputAll() or inputAll(String prompt) for remaining stdin text through EOF,
 with empty text at immediate EOF. The optional prompt follows inputInt: stdout,
 no added newline, once before reading. Preserve lookahead, CR/LF and whitespace;
@@ -537,10 +537,10 @@ unreportable, and reportError keeps its single ordinary-value contract. This is
 temporary FVP scaffolding, not a general variadic function implementation or a
 permanent standard-library API.
 
-The [007 example](../examples/007-prompts-and-report.lts) runs through ./lite run.
+The [007 example](../language/examples/007-prompts-and-report.lts) runs through ./bin/lite run.
 Strict checking and all 170 interpreter test groups pass, including effect order,
 prompt/output failure, invalid input, pre-effect rejection and real CLI output.
-See [INV-004 evidence](../investigations/INV-004-fvp-prompt-and-report-values.md).
+See [INV-004 evidence](../research/investigations/INV-004-fvp-prompt-and-report-values.md).
 
 ### Temporary input failures
 
@@ -587,7 +587,7 @@ and unwinding, buffering/flush behavior, argument-evaluation failures, embedded
 host behavior, and interception by recovery remain open. The exit selection
 does not choose hard-abort semantics or silently bypass selected cleanup rules.
 Neither exit(0) as a default nor any special syntax/ABI is implied by omission.
-Owner of the investigation: [INV-005](../investigations/INV-005-fvp-completion-and-reporting.md#report-only-and-explicit-exit-selection-2026-10-30).
+Owner of the investigation: [INV-005](../research/investigations/INV-005-fvp-completion-and-reporting.md#report-only-and-explicit-exit-selection-2026-10-30).
 
 ## Optional teaching inspection
 
@@ -611,7 +611,7 @@ Flag/mark spelling, source versus external marks, snapshot timing, failures,
 value formatting, state retention and lifetime costs, and diagnostic destinations
 remain open. Observation must not reevaluate the program's earlier expressions.
 Keep inspection distinguishable from deliberate program reports; no particular
-output stream or UI is selected. Inventory: [INV-072.05](../investigations/SUBTOPICS.md#inv-072-05).
+output stream or UI is selected. Inventory: [INV-072.05](../research/investigations/SUBTOPICS.md#inv-072-05).
 
 ## Formatter
 
@@ -670,7 +670,7 @@ cold compilation need separate timings.
 
 These are tooling investigation requirements, not selected command-line flags or
 implemented reports. C and LLVM backends should eventually share behavioral
-conformance cases if both are implemented. See [investigation points](../investigations/lightweight-native-execution.md).
+conformance cases if both are implemented. See [investigation points](../research/investigations/lightweight-native-execution.md).
 
 ## Verification before writing
 
@@ -731,7 +731,7 @@ The existing future two-pass idempotence conformance requirement remains indepen
 
 The historical interpreter run launcher described [above](#root-run-launcher) is
 removed for the 2026-11-02 TS migration and stays removed. Owner direction,
-**2026-11-05**: `./lite run` returns as a compile-and-execute adapter — it
+**2026-11-05**: `./bin/lite run` returns as a compile-and-execute adapter — it
 compiles the script to a temporary TS artifact, executes it with
 `compiler/entry.ts`, forwards arguments, streams and exit status, and removes the
 temporary directory. It adds no interpreter. Compiling and executing artifacts
@@ -817,7 +817,7 @@ selected [comment contract](comments.md#selected-formatting-contract).
 Investigate mixed-direction selection, punctuation, debugger positions, fonts,
 normalization, and visible confusable/control-character handling without silently
 rejecting a whole script. Localization catalogs should remain in tooling unless
-program features require them at runtime. The [question map](../investigations/multilingual-source-and-learning.md)
+program features require them at runtime. The [question map](../research/investigations/multilingual-source-and-learning.md)
 records lexical, tooling, conversion, learning, and footprint checks.
 
 ## Beginner validation

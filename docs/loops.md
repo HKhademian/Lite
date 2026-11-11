@@ -22,7 +22,7 @@ fresh on each entry; bare continue advances and break stops the nearest loop.
 Whole-source variable replacement does not retarget that evaluated traversal.
 General iterables, metadata, named Boolean/unconditional receivers, loop values
 and completion/cleanup remain unimplemented; no new always-Unit loop contract
-is selected. See [INV-054](../investigations/INV-054-fvp-fixed-arrays.md).
+is selected. See [INV-054](../research/investigations/INV-054-fvp-fixed-arrays.md).
 
 Implementation coverage, 2026-11-01: the igniter now implements typed loop
 `.value` and one receiverless `then`. `.value` starts at `zero(T)`; a normally

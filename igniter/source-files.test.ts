@@ -37,10 +37,10 @@ test('project-owned code uses Lite, TypeScript, JSON and generated C files', () 
       violations.push(`${name}: use the igniter or bootstrap TypeScript configuration`); continue;
     }
     if (source.has(extension) || data.has(extension)) continue;
-    if (extension === '.c' && (name.startsWith('compiler/generated/') || name.startsWith('compiler/bootstrap/'))) continue;
+    if (extension === '.c' && (name.startsWith('compiler/tests/references/generated/') || name.startsWith('compiler/bootstrap/'))) continue;
     const content = readFileSync(path);
     if (extension === '' && !content.subarray(0, 2).equals(Buffer.from('#!'))) continue;
     violations.push(relative(root, path));
   }
-  assert.deepEqual(violations, [], 'Keep handwritten code in .lt/.lts/.lite/.ts files; generated C belongs under compiler/generated or compiler/bootstrap.');
+  assert.deepEqual(violations, [], 'Keep handwritten code in .lt/.lts/.lite/.ts files; generated C references belong under compiler/tests/references/generated or compiler/bootstrap.');
 });

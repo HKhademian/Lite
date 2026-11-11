@@ -10,7 +10,7 @@ if (showToolVersion('cli', 'cli')) process.exit(0);
 
 const command = args.shift();
 const usage = [
-  'Usage: ./lite <command> [options]', '', 'Commands:',
+  'Usage: ./bin/lite <command> [options]', '', 'Commands:',
   '  check file.lts                            Check source only',
   '  compile [--target ts] file.lts            Compile to a TS artifact',
   '  run file.lts [-- argument ...]            Compile to a temporary artifact and execute it',
@@ -23,8 +23,8 @@ const usage = [
   '  bench OUTPUT [FILTER]                     Benchmark verified cases',
   '  release OUTPUT [TAG]                      Package a verified source snapshot',
   '  help                                      Show this help', '',
-  'Compiler entry points: ./ltc, ./litec, ./lite compile',
-  'Direct command: ./bin/lite-compiler-ts [--target ts] file.lts',
+  'Compiler entry points: ./bin/lite-compile, ./bin/lite compile',
+  'Target commands: ./bin/lite-compile-ts, ./bin/lite-compile-c',
   'C output is deferred until after the TS compiler migration.',
   'Reserved names: ./ltl/lite link, lite fmt', '',
 ].join('\n');
@@ -40,7 +40,7 @@ if (command === undefined) {
 
 const routes: Record<string, string> = {
   check: 'lite-check',
-  compile: 'lite-compiler-ts',
+  compile: 'lite-compile',
   run: 'lite-run',
   verify: 'lite-verify',
   test: 'lite-test',

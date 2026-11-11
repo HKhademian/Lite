@@ -73,7 +73,7 @@ export function prepareRelease(directory: string, output: string, tag?: string) 
     run('tar', ['-xf', join(work, archive), '-C', extracted], work);
     run(process.execPath, [join(extracted, 'bin/lite'), 'doctor', '--docs'], extracted);
     // The distribution runs generated code with Node alone, without Git or npm packages.
-    const emitted = run(process.execPath, [join(extracted, 'bin/litec'), 'igniter/tests/compiler/001-001-report-int-42.lts'], extracted);
+    const emitted = run(process.execPath, [join(extracted, 'bin/lite-compile'), 'igniter/tests/compiler/001-001-report-int-42.lts'], extracted);
     const program = join(work, 'hello.ts'); writeFileSync(program, emitted);
     assert.equal(run(process.execPath, [join(extracted, 'compiler/entry.ts'), program], extracted).toString(), '42\n');
     mkdirSync(output, { recursive: true });

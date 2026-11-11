@@ -4,7 +4,7 @@ Status: **front/back operation names selected by the user, 2026-10-31; structura
 
 ## Proposed operations
 
-FVP review, **2026-10-31**: [INV-055](../investigations/INV-055-fvp-list-operations.md)
+FVP review, **2026-10-31**: [INV-055](../research/investigations/INV-055-fvp-list-operations.md)
 records the user's acceptance of the existing front/back name family below. This
 does not adopt generic notation, a constructor, public argument labels or
 allocation failure handling by itself. The separately approved bounded FVP
@@ -86,7 +86,7 @@ Consequently a generic end-operation contract must state its complexity guarante
 
 ## Remaining contracts
 
-The [INV-055 FVP slice](../investigations/INV-055-fvp-list-slice.md) proposes a
+The [INV-055 FVP slice](../research/investigations/INV-055-fvp-list-slice.md) proposes a
 bounded construction/grant surface and temporary diagnostic policy for the
 runner. The user separately approves that bounded slice after name selection;
 the igniter implements it with explicit named-list mut grants and terminal

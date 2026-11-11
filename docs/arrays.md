@@ -12,7 +12,7 @@ indices fault safely; invalid literal dot positions fail before execution.
 Exact extents/types and ordinary value-copy behavior are preserved. Empty
 construction, union-element inference, nested arrays, mutation/access grants,
 growth, views and native layout remain unimplemented. See
-[INV-054 evidence](../investigations/INV-054-fvp-fixed-arrays.md).
+[INV-054 evidence](../research/investigations/INV-054-fvp-fixed-arrays.md).
 
 The angle brackets in examples such as `Array<Float, 3>` are [temporary generic notation](generic-notation.md). Float names the intended element type; 3 names the intended static extent. Their joint spelling does not select a generic parameter mechanism or const-generic syntax. The fixed-array surface used here is [T; N]; runtime-array spelling remains open.
 

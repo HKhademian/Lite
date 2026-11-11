@@ -105,7 +105,7 @@ An explicit prefix raises an additional boundary: should Name := type { ... } be
 ## Selected rule
 
 FVP follow-up, **2026-10-31**: the
-[INV-029 name-resolution review](../investigations/INV-029-fvp-alias-name-resolution.md)
+[INV-029 name-resolution review](../research/investigations/INV-029-fvp-alias-name-resolution.md)
 selects one ordinary lexical namespace for source-introduced aliases and value
 bindings. A value binding shadows an earlier same-name alias; subsequent lookup
 in a type annotation finds the value and fails with a static type error stating

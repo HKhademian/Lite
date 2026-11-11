@@ -1,6 +1,6 @@
 # Naming and versioning
 
-Status: **selected naming and version policy, 2026-10-25; distinct script/module suffixes selected 2026-10-30; tool alias matrix extended 2026-10-31; name origin recorded 2026-11-01; independent release streams selected 2026-11-02; compile-and-execute runner adapter selected 2026-11-05; dedicated routed tool entries selected 2026-11-10**. The prototype compiler lives in `compiler/` and is exposed as `./ltc`, `./litec`, `./bin/lite-compiler-ts` and routed alias `./lite compile`; the runner as `./lite-run`/`./lite run`; the checker as `./lite-check`/`./lite check`; docs as `./lite-docs`/`./lite docs`; and help as `./lite help`. Linker and formatter names are reserved but unimplemented; the verifier and tester have first implemented slices. [Igniter release automation](release-automation.md) packages exact component snapshots. Package-registry spelling remains open.
+Status: **selected naming and version policy, 2026-10-25; distinct script/module suffixes selected 2026-10-30;  tool alias matrix extended 2026-10-31; name origin recorded 2026-11-01; independent release streams selected 2026-11-02; target-aware compiler routing selected 2026-11-11**. The compiler router is `./bin/lite-compile`; it selects `./bin/lite-compile-ts` or `./bin/lite-compile-c`. `./bin/lite compile` routes through the same compiler command. The runner, checker, docs and help are available through `./bin/lite` and their dedicated `bin/` entries. [Igniter release automation](release-automation.md) packages exact component snapshots. Package-registry spelling remains open.
 
 ## 1. Canonical names
 
@@ -21,7 +21,7 @@ Lightness, here, means three things at once.
 | Umbrella project | **Lite** | `lite` | The whole project; not a language name |
 | Language | **LiteLang** | `litelang` | The language and its reference |
 | Program | **LiteScript** | `litescript` | A script/program; module source is a distinct file kind |
-| Compiler | **Lite compiler** | `lite-compiler`; binary `litec`, short `ltc`; TS command `lite-compiler-ts` | Compiles LiteLang programs; `lite compile` routes to `lite-compiler-ts` |
+| Compiler | **Lite compiler** | `lite-compiler`; router `lite-compile`; targets `lite-compile-ts`, `lite-compile-c` | Compiles LiteLang programs; `lite compile` routes through `lite-compile` |
 | Igniter | **Lite igniter** | `lite-igniter`; release tags `igniter-v*` | Bootstraps the project from preserved sources and generated compiler seeds |
 | Linker | **Lite linker** | `lite-linker`; executable `ltl` | Links compiled outputs; CLI `lite link` (planned) |
 | Runner | **Lite runner** | `lite-runner` | Compile-and-execute adapter; CLI `lite run`, no separate binary or release stream |
@@ -46,19 +46,19 @@ Lightness, here, means three things at once.
 - Do **not** write `Lite Script`, `Litescript`, `Lite Lang`, `litelang` in prose, or `LITE` as a name.
 - Do not call the language “LiteScript”; that names a program. Do not call the project “LiteLang”.
 - The project is `lite`. Do not say “write lite code”; code is written in LiteLang.
-- The compiler is the **Lite compiler**, package `lite-compiler`, executable `litec`.
+- The compiler is the **Lite compiler**, package `lite-compiler`, routed by `./bin/lite-compile`.
 - The entity is the **Lite igniter**, named `lite-igniter`. Its responsibility is bootstrapping the project; “bootstrap” names the process, not a separate component.
 - The runtime is the **Lite runtime**, package `lite-runtime`, executable `literun`.
-- The CLI is `lite`. `lite` is not the compiler binary and must not be used as a synonym for `litec`.
-- Compiler entry points are equivalent: component/package `lite-compiler`, direct TS command `./bin/lite-compiler-ts`, compatibility binaries `./litec` and `./ltc`, and routed alias `./lite compile`.
-- Linker entry points are reserved as component `lite-linker`, executable `./ltl`, and CLI `./lite link`; no linker is implemented.
-- The runner is `./lite run` (bin entry `lite-run`): it compiles one script to a temporary TS artifact, executes it with the Node entry, forwards arguments after an optional `--`, standard streams and exit status, and removes the temporary directory. It restores no interpreter and no T00 fallback; `./lite check` remains the check-only command. The runner shares the Lite CLI component and adds no separate release stream.
-- The checker is `lite-checker` / `./lite check`; it compiles with generated Lite and strictly checks the TS artifact without executing it.
-- Documentation is `lite-docs` / `./lite docs`; help is `lite-help` / `./lite help` (also `--help`/`-h`).
-- The verifier is `lite-verifier` / `./lite verify`; its first slice covers 36 features and all 39 artifacts, with eight feature cases running through TS and C. Showcase transcripts remain open; GitHub Actions runs the test gates.
-- The tester is `lite-tester` / `./lite test`, with `--fast` and `--full` lanes. The formatter is reserved as `lite-formatter`/`./lite fmt` and is not implemented.
+- The CLI is `./bin/lite`; it routes commands to standalone entries in `bin/`.
+- Compiler routing is layered: `./bin/lite compile` selects `./bin/lite-compile`, which selects a target command. `./bin/lite-compile-ts` is the maintained backend; `./bin/lite-compile-c` reserves the currently deferred C backend.
+- Linker entry points are reserved as component `lite-linker`, executable `./ltl`, and CLI `./bin/lite link`; no linker is implemented.
+- The runner is `./bin/lite run` (bin entry `lite-run`): it compiles one script to a temporary TS artifact, executes it with the Node entry, forwards arguments after an optional `--`, standard streams and exit status, and removes the temporary directory. It restores no interpreter and no T00 fallback; `./bin/lite check` remains the check-only command. The runner shares the Lite CLI component and adds no separate release stream.
+- The checker is `lite-checker` / `./bin/lite check`; it compiles with generated Lite and strictly checks the TS artifact without executing it.
+- Documentation is `lite-docs` / `./bin/lite docs`; help is `lite-help` / `./bin/lite help` (also `--help`/`-h`).
+- The verifier is `lite-verifier` / `./bin/lite verify`; its first slice covers 36 features and all 39 artifacts, with eight feature cases running through TS and C. Showcase transcripts remain open; GitHub Actions runs the test gates.
+- The tester is `lite-tester` / `./bin/lite test`, with `--fast` and `--full` lanes. The formatter is reserved as `lite-formatter`/`./bin/lite fmt` and is not implemented.
 - The separate compiled-program runtime remains `lite-runtime` / `literun` and is not the same tool as `lite-runner`.
-- These names describe one component with several entry points; `ltc`, `litec`, `lite-compiler` and `lite compile` are not competing product names.
+- The former `ltc`, `litec`, and root launchers are retired; use the layered compiler commands above.
 - Binary names are lowercase and contain no spaces. Prose names may contain spaces.
 - Existing `lite fmt` documentation is consistent with this policy.
 - Do not introduce a second short name for the language. “Lite” alone is not a language name.
@@ -97,7 +97,7 @@ compatible compiler source revisions sufficient to build forward to the current
 Lite-written compiler after active development becomes self-hosted. Preserve
 the bootstrap path when source language requirements change. Exact required
 revisions, stage dependencies, preservation/rebuild verification, and distribution
-procedure remain open under [INV-061.06](../investigations/SUBTOPICS.md#inv-061-06).
+procedure remain open under [INV-061.06](../research/investigations/SUBTOPICS.md#inv-061-06).
 See [the owning self-hosting direction](tooling-and-learning.md#typescript-igniter-and-early-self-hosting).
 Clarified **2026-10-31**: preserve a permanent shippable readable TypeScript
 igniter while moving compiler development into Lite. Keep igniter and
@@ -107,7 +107,7 @@ For generated compiler snapshots, preserve generating Lite sources, exact builde
 and source tags/commits, tool versions and commands. Verify reproducible emitted
 bytes and behavioral parity separately; readable source/tags alone do not prove
 the absence of hidden compiler behavior. C remains a maintained native/export
-path. See [the target/safety direction](../investigations/INV-061-first-compiler-output.md).
+path. See [the target/safety direction](../research/investigations/INV-061-first-compiler-output.md).
 
 The preserved generated TypeScript igniter can rebuild its supported compiler
 source subset; native C self-hosting remains pending. The original handwritten
@@ -141,7 +141,7 @@ These are independent version streams. A release manifest records the exact comb
 | Project release | `MAJOR.MINOR.PATCH` | `lite-vX.Y.Z` | `lite-v0.3.0` |
 | Language | `MAJOR.MINOR.PATCH` | `lang-vA.B.C` | `lang-v1.2.0` |
 | Scripting part | `MAJOR.MINOR.PATCH` | `script-vX.Y.Z` | `script-v0.2.0` |
-| Compiler | `MAJOR.MINOR.PATCH` | `compiler-vX.Y.Z` | `compiler-v0.4.1` |
+| Compiler | **Lite compiler** | `lite-compiler`; router `lite-compile`; targets `lite-compile-ts`, `lite-compile-c` | Compiles LiteLang programs; `lite compile` routes through `lite-compile` |
 | Igniter | `MAJOR.MINOR.PATCH` | `igniter-vX.Y.Z` | `igniter-v0.1.0-alpha.38` |
 | Runtime | `MAJOR.MINOR.PATCH` plus ABI integer | `runtime-vX.Y.Z` | `runtime-v0.3.0` |
 | CLI dispatcher | `MAJOR.MINOR.PATCH` | `cli-vX.Y.Z` | `cli-v0.5.0` |

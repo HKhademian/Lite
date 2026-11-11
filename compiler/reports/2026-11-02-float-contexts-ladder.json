@@ -214,7 +214,7 @@
     "node compiler/scripts/run-ts-artifact.ts --artifact /tmp/stage2.ts --source /tmp/S.lts --out /tmp/stage3.ts",
     "node compiler/scripts/run-ts-artifact.ts --artifact /tmp/stage3.ts --source /tmp/C-S.lts --out /tmp/c-emitter.ts"
   ],
-  "tsOnlyGateCommand": "LITE_SKIP_NATIVE=1 ./lite test --full",
+  "tsOnlyGateCommand": "LITE_SKIP_NATIVE=1 ./bin/lite test --full",
   "sourceRevision": "e04d47245c33db963c08582a95e6baf431b85d90",
   "artifactRevision": "e04d47245c33db963c08582a95e6baf431b85d90"
 }

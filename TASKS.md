@@ -441,7 +441,7 @@ Suggested first pass: T-002 (aggregate carrier), T-003 (function target), T-004 
 **Area:** duplication
 **Evidence:** loop completion is restated in [loops.md](docs/loops.md), [loop-completion.md](docs/loop-completion.md), [unified-loop-completion.md](docs/unified-loop-completion.md), [loop-value.md](docs/loop-value.md), and [loop-type-inference.md](docs/loop-type-inference.md); collections span 14 docs; recovery spans a dozen.
 **Problem:** every selection must be edited in several places; the current backlog is largely the result of that.
-**Fix:** designate one normative page per area and reduce the others to examples/links.
+**Fix:** designate one normative page per area and reduce the others to language/examples/links.
 
 ### T-058 — Status vocabulary is still not the four labels
 **Status (2026-10-23):** OPEN — verified still present at `177893c`.

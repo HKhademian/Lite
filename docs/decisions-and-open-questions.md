@@ -6,12 +6,12 @@ original scope. Decisions do not establish compiler conformance; use
 
 ## Compile-and-execute runner adapter, 2026-11-05
 
-The owner restores `./lite run` as a compile-and-execute adapter, not an
+The owner restores `./bin/lite run` as a compile-and-execute adapter, not an
 interpreter. It compiles one `.lts` script with the generated compiler into a
 temporary directory, executes the TS artifact with `compiler/entry.ts`, forwards
 program arguments after an optional `--`, inherited standard streams and the
 program's exit status, and removes the temporary directory. Rejected source keeps
-its compiler diagnostics and status without executing program effects. `./lite
+its compiler diagnostics and status without executing program effects. `./bin/lite
 check` remains the check-only command and `--check` is not a run option. The
 earlier interpreter launcher stays removed, no T00 fallback is added and the
 runner shares the Lite CLI component without a separate release stream. See
@@ -30,7 +30,7 @@ Support and seed acceptance precede compiler-source adoption. More supporting
 tools may move to LiteLang as their generated-language workload becomes supported;
 self-hosting remains a compiler requirement, not a requirement to port all tools
 at once. Internal-kind centralization remains an
-[investigation](../investigations/INV-061-internal-kinds.md).
+[investigation](../research/investigations/INV-061-internal-kinds.md).
 
 Documentation, samples, examples and independently versioned editor support are
 part of each relevant increment. Documentation must be current, accessible,
@@ -120,12 +120,12 @@ remain open. `**=` and redundant power prefixes are not selected.
 
 Feature verifications are selected as the canonical semantic contract, separate
 from examples, samples and showcases, which are verified consumers. The new
-`verifications/` tree holds a JSON schema, a 20-feature registry and canonical
-cases; `igniter/verify.ts` and `./lite verify` run them through the reference
+`language/verifications/` tree holds a JSON schema, a 20-feature registry and canonical
+cases; `igniter/verify.ts` and `./bin/lite verify` run them through the reference
 igniter; the default verifies only git-affected cases, while `--all` runs
 everything. `--update` regenerates expected streams/source hashes, `--coverage`
-reports coverage and `--filter` selects manifests. `./lite test --fast` runs the
-no-native test lane; `./lite test`/`--full` runs the full local gate. Passing results are cached
+reports coverage and `--filter` selects manifests. `./bin/lite test --fast` runs the
+no-native test lane; `./bin/lite test`/`--full` runs the full local gate. Passing results are cached
 by runner/source/expectation hash; `--changed` selects affected cases for fast
 feedback, and `--shard i/n` supports a growing CI matrix. `source` holds exactly
 one of `file`, `text` or `bytes` plus an optional `hash`. `source.hash` and per-stream `stdin`/`stdout`/`stderr` hashes prevent source or
@@ -137,12 +137,12 @@ The registry now covers 36 feature cases, all 19 examples, all 20 samples and
 reference igniter, emitted TS and native C. All pass; 175 interpreter groups and
 9 editor groups pass. Coverage is blocking for features, examples and samples.
 Broader compiler targets and showcase transcripts remain open; the GitHub Actions workflow now runs the test, verification and editor gates. See
-[INV-073 evidence](../investigations/INV-073-verification-registry.md) and the
-[verification guide](../verifications/README.md).
+[INV-073 evidence](../research/investigations/INV-073-verification-registry.md) and the
+[verification guide](../language/verifications/README.md).
 
 ## Compiler sources extracted from examples with temporary flat imports, 2026-10-31
 
-The Lite-written TS/C emitters moved out of `examples/017` and `examples/018`
+The Lite-written TS/C emitters moved out of `language/examples/017` and `language/examples/018`
 into `compiler/` because they are compiler implementation, not runnable language
 examples. `compiler/frontend.lts` now holds the shared parser, checked Int
 evaluation, String/Int values, local lookup, report statement stream and source
@@ -158,15 +158,15 @@ shares one flat namespace and rejects cycles; absolute paths are rejected and
 flattening shifts diagnostics. It remains replaceable by the future module/import
 design.
 
-Access is `./ltc --target ts|c file.lts`, `./litec --target ts|c file.lts`, or
-`./lite compile --target ts|c file.lts`. `lite` keeps `run` and adds `check`
+Access is `./bin/lite-compile --target ts|c file.lts`, `./bin/lite-compile --target ts|c file.lts`, or
+`./bin/lite compile --target ts|c file.lts`. `lite` keeps `run` and adds `check`
 (check-only), `docs` and `help`; `lite run --check` remains compatible. The
-canonical matrix is recorded in `docs/versioning-and-naming.md`: `ltc`/`litec`/
+canonical matrix is recorded in `docs/versioning-and-naming.md`: `lite-compile`/`lite-compile-ts`/
 `lite-compiler`/`lite compile` name one compiler component; `lite-runner`,
 `lite-checker`, `lite-docs` and `lite-help` map to their CLI commands; linker,
 formatter is reserved but unimplemented; the verifier and tester have first slices. The 53 program and 39 rejection verification cases keep their behavior; 175 interpreter groups and 9 editor groups pass. The examples index
 now points to `compiler/` and leaves the 017/018 numbering gap intentional. See
-[INV-061 evidence](../investigations/INV-061-compiler-extraction.md) and the
+[INV-061 evidence](../research/investigations/INV-061-compiler-extraction.md) and the
 [compiler guide](../compiler/README.md).
 
 ## Compiler control-flow slice, 2026-11-01
@@ -233,7 +233,7 @@ Filenames follow `NNN-MMM-title-subtitle.json`, where category `001` is program
 verification and `002` is compiler rejection. Program cases run through the igniter, emitted TS,
 translated JS and native C; rejection cases run through both compilers with
 exact diagnostics. All 175 interpreter groups plus 9 editor groups pass. See
-[INV-061 evidence](../investigations/INV-061-string-and-multi-value-reports.md)
+[INV-061 evidence](../research/investigations/INV-061-string-and-multi-value-reports.md)
 and the [fixture schema](../igniter/tests/README.md).
 
 Text operations/indexing, adjacent string-literal joining, embedded-NUL
@@ -256,7 +256,7 @@ The 28-case arithmetic/local corpus had raw byte/status/signal parity across emi
 TS, translated JS, native C and the igniter. Strict checking and 153 interpreter
 groups plus 9 editor groups pass. This is not a full parser, emitted runtime
 panic parity or self-rebuild; see
-[INV-061 evidence](../investigations/INV-061-arithmetic-and-locals-emission.md).
+[INV-061 evidence](../research/investigations/INV-061-arithmetic-and-locals-emission.md).
 
 ## One lexical namespace selected for ordinary aliases and value bindings, 2026-10-31
 
@@ -268,7 +268,7 @@ subsequent lookup in a type annotation finding that value fails with a static
 type error stating the binding does not denote a type. It does not skip the
 nearest binding to recover an older alias. Type aliases have transparent identity
 and zero runtime memory or storage. See
-[INV-029 recorded decision](../investigations/INV-029-fvp-alias-name-resolution.md).
+[INV-029 recorded decision](../research/investigations/INV-029-fvp-alias-name-resolution.md).
 
 ## Isolated early Wasm feasibility evidence, 2026-10-31
 
@@ -278,7 +278,7 @@ through generated Wasm/ESM bindings with stdout/stderr bytes, status and signal
 matching the igniter. Incremental runtime and tool/dependency integrity are
 recorded explicitly. Project dependency sets remain unchanged; this is not
 adoption of a general AS backend, browser execution or a final Wasm memory policy.
-See [INV-070 evidence](../investigations/INV-070-assemblyscript-report-probe.md).
+See [INV-070 evidence](../research/investigations/INV-070-assemblyscript-report-probe.md).
 
 ## Explicit compiler source context, 2026-10-31
 
@@ -292,13 +292,13 @@ Strict checking and 147 interpreter groups plus 9 editor groups pass, including
 exact diagnostic bytes for unusual names and unchanged generated reference files.
 Preserve as alpha.22; generated-program runtime source positions/faults and
 self-rebuild remain open. See
-[INV-061 evidence](../investigations/INV-061-compiler-source-context.md).
+[INV-061 evidence](../research/investigations/INV-061-compiler-source-context.md).
 
 ## Script arguments and source context input approved, 2026-10-31
 
 The user replies "Approve inputArgs() and the -- argument suffix" after the
 proposal in `7c7d383`. Implement zero-argument inputArgs(): List<String> and
-./lite run [--check] file.lts [-- argument ...], preserving ordered host argument
+./bin/lite run [--check] file.lts [-- argument ...], preserving ordered host argument
 Strings after the separator without runner metadata, normalization, conversion,
 stdin or output effects. Snapshot values at execution entry; ordinary copies
 expose no write grant to host arguments. Check-only remains silent/nonexecuting.
@@ -308,7 +308,7 @@ snapshot mutation, signatures/shadowing and exact real CLI argument forwarding,
 usage, caller-relative/spaced paths and check-only behavior. All 9 editor groups
 pass. Preserve as alpha.21; this adds no file/process API, generated diagnostic
 ABI or compiler self-rebuild. See
-[INV-067 evidence](../investigations/INV-067-fvp-script-arguments.md).
+[INV-067 evidence](../research/investigations/INV-067-fvp-script-arguments.md).
 
 ## Complete-source input for restricted emitters, 2026-10-31
 
@@ -321,7 +321,7 @@ ignored. Reference generated artifacts stay unchanged.
 Strict checking and 139 interpreter groups pass; twelve admitted inputs have
 byte/status parity across native C, TS/translated JS and the igniter. All 9 editor
 groups pass. Preserve as alpha.20; full language parsing and self-rebuild remain
-open. See [INV-061 evidence](../investigations/INV-061-whole-source-emission.md).
+open. See [INV-061 evidence](../research/investigations/INV-061-whole-source-emission.md).
 
 ## Whole compiler input with optional prompt approved, 2026-10-31
 
@@ -336,7 +336,7 @@ Strict checking and 138 interpreter groups pass, including prompt/read ordering,
 read/write failures, invalid signatures, lookahead, Unicode/CRLF and real launcher
 checks. All 9 editor groups pass. Preserve as igniter-v0.1.0-alpha.19; this adds
 no file/process API or full multi-line compiler. See
-[INV-004 evidence](../investigations/INV-004-fvp-whole-input.md).
+[INV-004 evidence](../research/investigations/INV-004-fvp-whole-input.md).
 
 ## First restricted native output and three-way parity, 2026-10-31
 
@@ -350,7 +350,7 @@ Strict checking and 132 interpreter groups pass; the native test ran locally
 with Apple clang 21.0.0 and is an explicit skip if the compiler is absent on
 another machine. All 9 editor groups pass. Preserve as alpha.18; general C library
 export, runtime/fault-environment parity, multi-line source and compiler self-rebuild
-remain open. See [INV-061 evidence](../investigations/INV-061-c-emission-and-parity.md).
+remain open. See [INV-061 evidence](../research/investigations/INV-061-c-emission-and-parity.md).
 
 ## TS bootstrap/web, C native/export and overlapping self-hosting, 2026-10-31
 
@@ -377,8 +377,8 @@ JS checks pass. All 130 interpreter groups and 9 editor groups pass. A quoted
 closing-delimiter parser defect discovered by the example is fixed with regression
 coverage. Preserve as igniter-v0.1.0-alpha.17; this is not a self-hosted compiler
 or proof of browser/AS/Wasm execution. See
-[target/safety direction](../investigations/INV-061-first-compiler-output.md) and
-[implementation evidence](../investigations/INV-061-ts-emission-and-parity.md).
+[target/safety direction](../research/investigations/INV-061-first-compiler-output.md) and
+[implementation evidence](../research/investigations/INV-061-ts-emission-and-parity.md).
 
 ## Stage-0 parity burndown, 2026-11-01
 
@@ -428,7 +428,7 @@ reasons; the other cases tokenize. The fast lane skips this full-S sweep
 P4 splits the compiler into ordered source files under `compiler/src/`: shared
 `frontend.lts`, target `*-literals.lts`, `emit-*.lts` and `driver-*.lts`, plus
 the Lite lexer and parser. The TS/C manifests list L0 libraries, literal
-encoders, front-end, emitter and driver in dependency order. `litec` compiles the
+encoders, front-end, emitter and driver in dependency order. `lite-compile-ts` compiles the
 manifest bundle through `igniter/bundle-cli.ts`; compiler source and `lib/core`
 contain no `importFlatAll` directives. The old `compiler/ts-emitter.lts` and
 `compiler/c-emitter.lts` paths are generated compatibility bundles matching the
@@ -492,7 +492,7 @@ launcher syntax/arithmetic failures and silent check-only mode. Preserve the
 application milestone as igniter-v0.1.0-alpha.16. This is not a full Lite parser,
 AST/IR selection, code-generation backend or self-hosting result. First compiler
 source/output/rebuild contracts remain open; see
-[INV-061 evidence](../investigations/INV-061-lite-arithmetic-front-end.md).
+[INV-061 evidence](../research/investigations/INV-061-lite-arithmetic-front-end.md).
 
 ## Temporary text helpers approved and retained scanning delivered, 2026-10-31
 
@@ -503,13 +503,13 @@ terminal BoundPanic on invalid bounds. Combining marks count separately; no
 normalization, grapheme grouping, String indexing syntax or full Unicode profile
 is selected. The earlier alpha.5 implementation did not supply consent.
 
-The [015 scanner](../examples/015-retained-tokens.lts) now returns a list of named
+The [015 scanner](../language/examples/015-retained-tokens.lts) now returns a list of named
 token tuples before traversal/output, using the already approved list/function
 features. Unsupported input reports an error and exits 2 before partial tokens
 are printed. Strict checking, 122 interpreter groups and 9 editor groups pass,
 including real launcher/check-only cases. Preserve this consent/application
 milestone as igniter-v0.1.0-alpha.15. See
-[INV-016 evidence](../investigations/INV-016-igniter-text-operations.md).
+[INV-016 evidence](../research/investigations/INV-016-igniter-text-operations.md).
 
 ## Approved FVP list delivery, 2026-10-31
 
@@ -529,9 +529,9 @@ capacity APIs, indexed writes, user-function mut parameters, complex/overlapping
 reentrant grants and recovery remain unimplemented.
 
 Strict no-emit checking, all 120 interpreter groups and 9 editor groups pass,
-including the real [013 example](../examples/013-growable-lists.lts), check-only
+including the real [013 example](../language/examples/013-growable-lists.lts), check-only
 mode and located empty-pop diagnostics. Preserve as igniter-v0.1.0-alpha.14;
-see [INV-055 evidence](../investigations/INV-055-fvp-list-slice.md).
+see [INV-055 evidence](../research/investigations/INV-055-fvp-list-slice.md).
 
 ## List end-operation names selected, 2026-10-31
 
@@ -541,7 +541,7 @@ that canonical family with "sure" and asks for uninterrupted progression until
 another permission is required. Retain explicit mutation grants and the selected
 direct-pop fault behavior. Generic punctuation, construction, public argument
 labels, module placement and allocation failures are not selected. No executable
-list increment is claimed. See [the decision](../investigations/INV-055-fvp-list-operations.md).
+list increment is claimed. See [the decision](../research/investigations/INV-055-fvp-list-operations.md).
 
 ## Copy-first FVP direction clarified, 2026-10-31
 
@@ -558,7 +558,7 @@ end helpers and terminal diagnostics. Permanent capacity/allocation behavior and
 noncopying syntax remain separate; no optimization implementation is added.
 Broader resource eligibility remains separate. Growth is not asserted to be a
 prerequisite for every possible self-hosting approach. See
-[the investigation](../investigations/INV-055-fvp-owner-boundary.md).
+[the investigation](../research/investigations/INV-055-fvp-owner-boundary.md).
 
 ## Named user-function call delivery, 2026-10-31
 
@@ -569,7 +569,7 @@ evaluate callee then every supplied expression in written order before invocatio
 Strict checking and 108 interpreter groups pass, including example 012 through
 the launcher. Defaults, spread, access grants and builtin public labels remain
 unimplemented. Tag igniter-v0.1.0-alpha.13; see
-[INV-031 evidence](../investigations/INV-031-fvp-named-calls.md).
+[INV-031 evidence](../research/investigations/INV-031-fvp-named-calls.md).
 
 ## Explicit tuple label conversion delivery, 2026-10-31
 
@@ -579,7 +579,7 @@ and keep source labels intact. Ordinary replacements/arguments/returns still
 check labels. Fresh constructors needing contextual routing remain unsupported.
 Strict checking and 102 interpreter groups pass, including example 011 and
 check-only execution through the launcher. Tag igniter-v0.1.0-alpha.12; see
-[bounded evidence](../investigations/INV-022-fvp-label-conversion.md).
+[bounded evidence](../research/investigations/INV-022-fvp-label-conversion.md).
 
 ## Mixed tuple FVP delivery, 2026-10-31
 
@@ -590,7 +590,7 @@ Strict checking and 97 interpreter groups pass, including example 010 through
 the root launcher and check-only mode. This implements existing decisions;
 contextual routing, nested tuples and broader patterns remain unimplemented.
 Preserve the source as igniter-v0.1.0-alpha.11. See
-[INV-022 evidence](../investigations/INV-022-fvp-mixed-tuples.md).
+[INV-022 evidence](../research/investigations/INV-022-fvp-mixed-tuples.md).
 
 ## Automatic selected-scope progression, 2026-10-31
 
@@ -599,7 +599,7 @@ syntax/features within bounded INV scope, without stopping for another prompt.
 Continue through investigation, implementation, checks and atomic commits. Stop
 at a concrete unresolved behavior, conflicting decision or required scope/new
 design expansion; new syntax/features/APIs still require explicit consent.
-See the [workflow rule](../investigations/README.md#automatic-progression-within-selected-contracts).
+See the [workflow rule](../research/investigations/README.md#automatic-progression-within-selected-contracts).
 
 ## Approved readable fixed-array increment, 2026-10-31
 
@@ -613,12 +613,12 @@ retain their existing targets. Runtime bounds use the temporary BoundPanic
 diagnostic; static dot positions fail before execution.
 
 Strict checking and all 93 interpreter test groups pass, including the real
-[009 example](../examples/009-fixed-arrays.lts) through ./lite run. Empty array
+[009 example](../language/examples/009-fixed-arrays.lts) through ./bin/lite run. Empty array
 construction/default element typing, union-element inference, nested arrays,
 element mutation, growth, access grants, slices, metadata and native layout remain
 unimplemented. No length/count helper or public panic API is invented. Preserve
 prior tags and add igniter-v0.1.0-alpha.10. See
-[INV-054 evidence](../investigations/INV-054-fvp-fixed-arrays.md).
+[INV-054 evidence](../research/investigations/INV-054-fvp-fixed-arrays.md).
 
 ## Named-field tuple igniter increment, 2026-10-31
 
@@ -633,10 +633,10 @@ Valid fresh constructors needing contextual routing are diagnosed as unsupported
 not silently relabeled/reordered or treated as evidence of a new order rule.
 Mixed/nested tuples, named patterns, spread/rest, declaration-site conversion and
 field mutation remain unimplemented. Strict checking and all 79 interpreter test
-groups pass, including the root-command [008 example](../examples/008-named-tuples.lts).
+groups pass, including the root-command [008 example](../language/examples/008-named-tuples.lts).
 Preserve prior tags and add igniter-v0.1.0-alpha.9. Experimental text-helper
 consent, full ownership/layout and self-hosting remain separate.
-See [INV-022 evidence](../investigations/INV-022-fvp-named-tuples.md).
+See [INV-022 evidence](../research/investigations/INV-022-fvp-named-tuples.md).
 
 ## Optional inputInt prompt and multiple report values, 2026-10-31
 
@@ -650,20 +650,20 @@ remain. reportError/other input signatures, empty report calls and aggregate
 reporting are outside this change.
 
 Strict checking and 69 interpreter test groups pass, including the root-command
-[007 example](../examples/007-prompts-and-report.lts). Preserve alpha.1–alpha.7
+[007 example](../language/examples/007-prompts-and-report.lts). Preserve alpha.1–alpha.7
 and tag this source as igniter-v0.1.0-alpha.8. Named tuples remain pending approval;
 experimental text-helper consent is unchanged. See
-[INV-004 evidence](../investigations/INV-004-fvp-prompt-and-report-values.md).
+[INV-004 evidence](../research/investigations/INV-004-fvp-prompt-and-report-values.md).
 
 ## User-requested root run command, 2026-10-31
 
-The user selects ./lite run with shebang forwarding to the current igniter.
-The executable root launcher now runs examples/006-fixed-tuples.lts directly,
+The user selects ./bin/lite run with shebang forwarding to the current igniter.
+The executable root launcher now runs language/examples/006-fixed-tuples.lts directly,
 preserving arguments, caller-relative source paths, standard streams and statuses.
 It uses node from PATH and forwards the existing --check option. Strict checking
 and 63 interpreter test groups pass; preserve as igniter-v0.1.0-alpha.7. This is
 CLI access to existing behavior, not a new language feature or compiler backend.
-See [INV-004 evidence](../investigations/INV-004-fvp-execution-path.md#root-shebang-launcher-2026-10-31).
+See [INV-004 evidence](../research/investigations/INV-004-fvp-execution-path.md#root-shebang-launcher-2026-10-31).
 
 ## Approved fixed-tuple igniter increment, 2026-10-31
 
@@ -675,13 +675,13 @@ arity/types, singleton/grouping/Unit distinctions, source-once destructuring,
 ordered receiver shadowing, value copies and compatible whole-value replacement.
 
 Strict no-emit checking and all 62 interpreter test groups pass, including the
-real [006 example](../examples/006-fixed-tuples.lts). Preserve alpha.1–alpha.5
+real [006 example](../language/examples/006-fixed-tuples.lts). Preserve alpha.1–alpha.5
 and add igniter-v0.1.0-alpha.6. Named/mixed/nested/rest tuples, member mutation,
 access grants, tuple reporting/equality, native layout and self-hosting remain
 unimplemented at this increment. The text helpers later receive separate
 explicit consent on 2026-10-31.
 Coverage: [fixed tuples](../igniter/README.md#flat-fixed-tuples).
-Evidence and approval: [INV-022](../investigations/INV-022-fvp-fixed-tuples.md).
+Evidence and approval: [INV-022](../research/investigations/INV-022-fvp-fixed-tuples.md).
 
 ## Explicit design consent required, 2026-10-30
 
@@ -691,8 +691,8 @@ for unspecified additions. Investigate new choices when needed and obtain consen
 before implementation or selection; continue already approved work within scope.
 At this 2026-10-30 correction, textLength/textAt/textSlice remained experiments
 awaiting consent despite tests and alpha.5. The later explicit approval above
-settles only their exact temporary FVP scope. See the [workflow rule](../investigations/README.md#explicit-consent-for-language-changes)
-and [INV-016 correction](../investigations/INV-016-igniter-text-operations.md#scope-and-contracts).
+settles only their exact temporary FVP scope. See the [workflow rule](../research/investigations/README.md#explicit-consent-for-language-changes)
+and [INV-016 correction](../research/investigations/INV-016-igniter-text-operations.md#scope-and-contracts).
 
 ## Igniter text-scanning increment, 2026-10-30
 
@@ -710,7 +710,7 @@ groups pass, including Unicode, bounds and real CLI probes. Preserve earlier
 tags and add igniter-v0.1.0-alpha.5. The example is not a full Lite lexer, parser,
 native compiler, or self-hosted build chain.
 Coverage: [temporary text operations](../igniter/README.md#temporary-text-operations).
-Evidence: [INV-016](../investigations/INV-016-igniter-text-operations.md).
+Evidence: [INV-016](../research/investigations/INV-016-igniter-text-operations.md).
 
 ## Igniter typed-function increment, 2026-10-30
 
@@ -728,7 +728,7 @@ Strict checking and all 43 test groups pass, including real CLI factorial succes
 negative-input exit, and an evaluator overflow case. Preserve alpha.1–alpha.3 and
 add igniter-v0.1.0-alpha.4. No native or self-hosted compiler is claimed.
 Coverage: [typed functions](../igniter/README.md#typed-user-functions).
-Evidence: [INV-030](../investigations/INV-030-igniter-functions.md).
+Evidence: [INV-030](../research/investigations/INV-030-igniter-functions.md).
 
 ## Igniter action-loop increment, 2026-10-30
 
@@ -744,7 +744,7 @@ This is a bounded implementation, not a revision of the wider loop semantics.
 Strict checking and all 30 test groups pass, including the real sentinel-input
 example. Version 0.1.0-alpha.3 gets a new tag; prior milestones remain fixed.
 Coverage: [action loops](../igniter/README.md#action-loops).
-Evidence: [INV-035](../investigations/INV-035-igniter-action-loops.md).
+Evidence: [INV-035](../research/investigations/INV-035-igniter-action-loops.md).
 
 ## Igniter Boolean and conditional increment, 2026-10-30
 
@@ -759,7 +759,7 @@ Strict typechecking and all 22 Node test groups pass, covering skipped effects,
 chain evaluation counts, scope and Unit tails, and negative cases. Version
 0.1.0-alpha.2 receives a new milestone tag; alpha.1 remains fixed.
 Implementation: [conditions and block values](../igniter/README.md#conditions-and-block-values).
-Evidence: [INV-015](../investigations/INV-015-igniter-boolean-conditionals.md).
+Evidence: [INV-015](../research/investigations/INV-015-igniter-boolean-conditionals.md).
 No loops, user functions, native compiler or self-hosted chain is claimed.
 
 ## TypeScript/Node replaces Python; first igniter checkpoint, 2026-10-30
@@ -782,7 +782,7 @@ No loops, user functions, native compiler or self-hosted chain is claimed.
 
 Implementation/commands/limits: [igniter guide](../igniter/README.md).
 Owner: [TypeScript igniter and early self-hosting](tooling-and-learning.md#typescript-igniter-and-early-self-hosting).
-Investigation: [INV-061 follow-up](../investigations/INV-061-fvp-implementation-language.md#typescriptnode-replacement-and-implementation-2026-10-30).
+Investigation: [INV-061 follow-up](../research/investigations/INV-061-fvp-implementation-language.md#typescriptnode-replacement-and-implementation-2026-10-30).
 The earlier Python choice below is superseded; it produced no Python seed.
 
 ## Independent release streams, 2026-11-02
@@ -823,7 +823,7 @@ Implementation: [release automation](release-automation.md).
   bump, release, or verified bootstrap result is created by this selection.
 
 Owner: [bootstrap source continuity](versioning-and-naming.md#bootstrap-source-continuity).
-[INV-061](../investigations/INV-061-fvp-implementation-language.md#bootstrap-versioning-clarification-2026-10-30)
+[INV-061](../research/investigations/INV-061-fvp-implementation-language.md#bootstrap-versioning-clarification-2026-10-30)
 records the clarification.
 
 ## Minimal Python igniter and early self-hosting, 2026-10-30
@@ -849,8 +849,8 @@ self-hosting, and preserved-source-route direction remains selected.
   checkpoint into a full compiler or build/release system now.
 
 Owner: [Python igniter and early self-hosting](tooling-and-learning.md#typescript-igniter-and-early-self-hosting).
-[INV-061](../investigations/INV-061-fvp-implementation-language.md#igniter-and-self-hosting-selection-2026-10-30)
-records the selection; [INV-061.06](../investigations/SUBTOPICS.md#inv-061-06)
+[INV-061](../research/investigations/INV-061-fvp-implementation-language.md#igniter-and-self-hosting-selection-2026-10-30)
+records the selection; [INV-061.06](../research/investigations/SUBTOPICS.md#inv-061-06)
 tracks the unresolved source-bootstrap route.
 
 ## Defer detailed text design for the FVP, 2026-10-30
@@ -864,7 +864,7 @@ Preserve already-selected input-fault and explicit-output rules and document
 actual supported behavior/limitations. No implementation is claimed.
 
 Owner: [first executable checkpoint](tooling-and-learning.md#first-executable-checkpoint).
-[INV-016 scope correction](../investigations/INV-016-01-fvp-text-profile.md#fvp-scope-correction-2026-10-30)
+[INV-016 scope correction](../research/investigations/INV-016-01-fvp-text-profile.md#fvp-scope-correction-2026-10-30)
 records the deferral; permanent text semantics are not settled by this decision.
 
 ## Temporary FVP numeric profile, 2026-10-30
@@ -883,7 +883,7 @@ records the deferral; permanent text semantics are not settled by this decision.
   open. This is disposable FVP scaffolding, not a numeric implementation result.
 
 Owner: [temporary FVP numeric profile](numbers.md#temporary-fvp-numeric-profile).
-[INV-014](../investigations/INV-014-01-fvp-numeric-profile.md#selected-bounded-profile)
+[INV-014](../research/investigations/INV-014-01-fvp-numeric-profile.md#selected-bounded-profile)
 records acceptance. Language-wide numeric contracts remain reviewable and open
 where not selected separately.
 
@@ -903,7 +903,7 @@ where not selected separately.
   coverage remain open. No execution is claimed.
 
 Owner: [first executable checkpoint](tooling-and-learning.md#first-executable-checkpoint).
-[INV-002.02](../investigations/INV-002-02-fvp-first-runnable-slice.md#selected-first-runnable-slice)
+[INV-002.02](../research/investigations/INV-002-02-fvp-first-runnable-slice.md#selected-first-runnable-slice)
 records acceptance and the candidate probes.
 
 ## Small interpreter for the FVP, 2026-10-30
@@ -922,7 +922,7 @@ records acceptance and the candidate probes.
   measured performance/footprint result.
 
 Owner: [FVP interpreter](tooling-and-learning.md#fvp-interpreter).
-[INV-004](../investigations/INV-004-fvp-execution-path.md#interpreter-selection-2026-10-30)
+[INV-004](../research/investigations/INV-004-fvp-execution-path.md#interpreter-selection-2026-10-30)
 records acceptance; the existing native deployment priority remains selected.
 
 ## Temporary input fault policy, 2026-10-30
@@ -939,7 +939,7 @@ records acceptance; the existing native deployment priority remains selected.
   not select a raw abort or permanent stdlib API.
 
 Owner: [temporary input failures](tooling-and-learning.md#temporary-input-failures).
-[INV-004](../investigations/INV-004-fvp-execution-path.md#temporary-input-failure-selection-2026-10-30)
+[INV-004](../research/investigations/INV-004-fvp-execution-path.md#temporary-input-failure-selection-2026-10-30)
 records acceptance. No input helper or runtime test is implemented.
 
 ## Disposable FVP scaffolding, 2026-10-30
@@ -969,7 +969,7 @@ Owner: [temporary FVP input and reporting](tooling-and-learning.md#temporary-fvp
   the name exit. Input failures and reporting I/O failures remain separate.
 
 Owner: [FVP completion and explicit exit](tooling-and-learning.md#fvp-completion-and-explicit-exit).
-[INV-005](../investigations/INV-005-fvp-completion-and-reporting.md#report-only-and-explicit-exit-selection-2026-10-30)
+[INV-005](../research/investigations/INV-005-fvp-completion-and-reporting.md#report-only-and-explicit-exit-selection-2026-10-30)
 records the selection. No implemented exit operation or runtime result is claimed.
 
 ## Temporary FVP input and reporting helpers, 2026-10-30
@@ -991,7 +991,7 @@ records the selection. No implemented exit operation or runtime result is claime
   revise the deferred .lt no-implicit-import or replaceable-stdlib direction.
 
 Owner: [temporary FVP input and reporting](tooling-and-learning.md#temporary-fvp-input-and-reporting).
-[INV-004](../investigations/INV-004-fvp-execution-path.md#temporary-helper-selection-2026-10-30)
+[INV-004](../research/investigations/INV-004-fvp-execution-path.md#temporary-helper-selection-2026-10-30)
 records the selection and remaining contracts. No runtime verification is claimed.
 
 ## FVP focus before module architecture, 2026-10-30
@@ -1011,7 +1011,7 @@ records the selection and remaining contracts. No runtime verification is claime
   nor a complete feature list. No compiler implementation is claimed.
 
 Owner: [immediate FVP focus](principles.md#immediate-focus-first-viable-product).
-[INV-003.04](../investigations/INV-003-04-script-to-module-boundary.md#fvp-scope-correction-2026-10-30)
+[INV-003.04](../research/investigations/INV-003-04-script-to-module-boundary.md#fvp-scope-correction-2026-10-30)
 records the deferral; no runtime result is claimed.
 
 ## Distinct source kinds and replaceable standard modules, 2026-10-30
@@ -1040,7 +1040,7 @@ Owners: [source kinds](modules-and-packages.md#distinct-script-and-module-files)
 [replaceable standard modules](modules-and-packages.md#replaceable-standard-modules),
 [script convenience proposal](modules-and-packages.md#prelude), and
 [source naming](versioning-and-naming.md#source-file-kinds).
-[INV-003.03 and partial INV-003.04](../investigations/INV-003-03-script-environment.md#source-kind-and-standard-module-selection-2026-10-30)
+[INV-003.03 and partial INV-003.04](../research/investigations/INV-003-03-script-environment.md#source-kind-and-standard-module-selection-2026-10-30)
 record the discussion and remaining questions. No compiler/runtime is implemented.
 
 ## Explicit current-function self calls, 2026-10-29
@@ -1064,7 +1064,7 @@ Recorded 2026-10-30:
   function tags, or unrestricted surrounding access is selected.
 
 Owner: [explicit self calls](functions.md#explicit-current-function-self-calls).
-[INV-003.02](../investigations/INV-003-02-declarations-and-lookup.md#explicit-self-reference-selection-2026-10-29)
+[INV-003.02](../research/investigations/INV-003-02-declarations-and-lookup.md#explicit-self-reference-selection-2026-10-29)
 records the selection; [grammar sketch](grammar-sketch.md#explicit-current-function-self-calls)
 remains incomplete and no compiler/runtime is implemented.
 
@@ -1079,7 +1079,7 @@ remains incomplete and no compiler/runtime is implemented.
   keyword reservation remain open.
 
 Owner of the review criterion: [resolving competing goals](principles.md#resolving-competing-goals).
-[INV-003.02](../investigations/INV-003-02-declarations-and-lookup.md#explicit-self-reference-proposal-2026-10-29)
+[INV-003.02](../research/investigations/INV-003-02-declarations-and-lookup.md#explicit-self-reference-proposal-2026-10-29)
 records the syntax candidates and open semantic questions. The existing
 no-earlier-target self-reference selection remains current and reviewable.
 
@@ -1097,7 +1097,7 @@ no-earlier-target self-reference selection remains current and reviewable.
   surrounding-value eligibility, and escaping lifetime rules remain open.
 
 Owner: [direct self-reference](functions.md#direct-self-reference-without-an-earlier-target).
-[INV-003.02](../investigations/INV-003-02-declarations-and-lookup.md#direct-self-reference-selection-2026-10-29)
+[INV-003.02](../research/investigations/INV-003-02-declarations-and-lookup.md#direct-self-reference-selection-2026-10-29)
 records the selection and next conflict probe. No compiler/runtime is implemented.
 
 ## First later binding in the defining block, 2026-10-29
@@ -1114,7 +1114,7 @@ records the selection and next conflict probe. No compiler/runtime is implemente
   module resolution, access eligibility, and lifetime rules remain open.
 
 Owner: [first later binding](functions.md#first-later-binding-in-the-defining-block).
-[INV-003.02](../investigations/INV-003-02-declarations-and-lookup.md#forward-target-with-an-intervening-call-2026-10-29)
+[INV-003.02](../research/investigations/INV-003-02-declarations-and-lookup.md#forward-target-with-an-intervening-call-2026-10-29)
 records the selection and alternatives. No LiteLang execution is claimed.
 
 ## Live reads of admitted surrounding bindings, 2026-10-29
@@ -1133,7 +1133,7 @@ records the selection and alternatives. No LiteLang execution is claimed.
   environment fields do not become public callable inputs.
 
 Owner: [live surrounding reads](functions.md#live-reads-of-admitted-surrounding-bindings).
-[INV-003.02](../investigations/INV-003-02-declarations-and-lookup.md#live-binding-reads-selection-2026-10-29)
+[INV-003.02](../research/investigations/INV-003-02-declarations-and-lookup.md#live-binding-reads-selection-2026-10-29)
 records the selection. No compiler/runtime or lifetime analysis is implemented.
 
 ## Deferred-body binding identity and shadowing, 2026-10-29
@@ -1152,7 +1152,7 @@ records the selection. No compiler/runtime or lifetime analysis is implemented.
   recursion remain open.
 
 Owner: [existing bindings survive later shadowing](functions.md#existing-bindings-survive-later-shadowing).
-[INV-003.02](../investigations/INV-003-02-declarations-and-lookup.md#binding-identity-selection-2026-10-29)
+[INV-003.02](../research/investigations/INV-003-02-declarations-and-lookup.md#binding-identity-selection-2026-10-29)
 records the selection and surrounding-access reconsideration. The user's
 clarified requirement is a defined policy for surrounding runtime values,
 including reads, while keeping simple helper calls possible; neither a blanket
@@ -1171,7 +1171,7 @@ execution is claimed.
   before treating conservative rejection as a universal language rule.
 
 Owner: [initial static enforcement](functions.md#initial-static-enforcement).
-[INV-003.02](../investigations/INV-003-02-declarations-and-lookup.md#initial-static-enforcement-selection-2026-10-29)
+[INV-003.02](../research/investigations/INV-003-02-declarations-and-lookup.md#initial-static-enforcement-selection-2026-10-29)
 records the selected starting direction and unresolved cases. No compiler
 implementation, safety proof, or public callable effect/dependency list is claimed.
 
@@ -1181,7 +1181,7 @@ implementation, safety proof, or public callable effect/dependency list is claim
 - Record the concern that children may need to learn programming concepts and unfamiliar English vocabulary at the same time. Simple English is the project's reference human-language presentation; it is distinct from the set of reference programming languages. Explore learning in a familiar language with an optional bridge back to English, preserving one set of LiteLang semantics.
 - Multilingual source remains a proposal. Its desired scope includes keywords, names, predefined types/values, teaching APIs, diagnostics, lessons, and editor support, beyond already accepted Unicode identifiers. Writing system, human language, and transliteration are separate choices. Keyword mappings, supported languages, selection/mixing/versioning, API/name translation, Unicode/bidi rules, conversion guarantees, and measured educational benefit remain open.
 
-Owner of the proposal and its boundaries: [multilingual source and learning](multilingual-source-and-learning.md). The [investigation points](../investigations/multilingual-source-and-learning.md) record questions, not findings. No grammar or runtime behavior changes here.
+Owner of the proposal and its boundaries: [multilingual source and learning](multilingual-source-and-learning.md). The [investigation points](../research/investigations/multilingual-source-and-learning.md) record questions, not findings. No grammar or runtime behavior changes here.
 
 ## Lightweight native execution priorities, 2026-10-28
 
@@ -1189,7 +1189,7 @@ Owner of the proposal and its boundaries: [multilingual source and learning](mul
 - Assess execution time, compilation/startup, memory, runtime footprint, and executable/deployment size separately. Specialization/inlining can trade size for speed; required shared-library bytes must remain visible in size accounting. Numeric budgets and target-specific acceptance workloads remain open.
 - Preserve selected copy, access, safety, cleanup, and failure behavior. Owned storage with deterministic cleanup, checked views, explicit sharing, static generic specialization, a typed compiler core, C generation, and a later direct LLVM path are recommendations to investigate. No ownership system, implicit move/borrow, backend, ABI, linking mode, freestanding profile, or implementation order is selected.
 
-Owner: [memory and performance](memory-and-performance.md#lightweight-native-execution-priority). The [investigation focus](../investigations/lightweight-native-execution.md) links stable questions across memory, compiler, runtime, optimization, and measurement topics; listing questions does not complete their investigations.
+Owner: [memory and performance](memory-and-performance.md#lightweight-native-execution-priority). The [investigation focus](../research/investigations/lightweight-native-execution.md) links stable questions across memory, compiler, runtime, optimization, and measurement topics; listing questions does not complete their investigations.
 
 ## First working targets, 2026-10-28
 
@@ -1207,7 +1207,7 @@ Owner: [memory and performance](memory-and-performance.md#lightweight-native-exe
   conformance result is implied.
 
 Owner: [first working targets](principles.md#first-working-targets).
-[INV-001](../investigations/INV-001-language-goals-and-boundaries.md#working-target-selection-2026-10-28)
+[INV-001](../research/investigations/INV-001-language-goals-and-boundaries.md#working-target-selection-2026-10-28)
 records the investigation follow-up. The memory-control usability boundary is
 selected below; its mechanisms remain open. Goal-conflict review is also selected
 below.
@@ -1264,8 +1264,8 @@ capability or implementation questions.
   numeric contracts, and observation still need definition. No lesson was
   changed or executed; implemented-but-unverified status remains.
 
-Project policy owner: [sample contributor notes](../samples/NOTES.md#initial-correctness-batch).
-[INV-002](../investigations/INV-002-01-exercise-contracts-001-020.md) records the
+Project policy owner: [sample contributor notes](../language/samples/NOTES.md#initial-correctness-batch).
+[INV-002](../research/investigations/INV-002-01-exercise-contracts-001-020.md) records the
 contract inventory and remaining dependencies. This selects coverage, not numeric
 semantics or a runner/compiler implementation.
 
@@ -1297,7 +1297,7 @@ semantics or a runner/compiler implementation.
 Owners: [block order](evaluation-order.md#executable-block-items),
 [deferred-body lookup](functions.md#deferred-body-lookup), and
 [module lookup](modules-and-packages.md#module-lookup-without-header-files).
-[INV-003.02](../investigations/INV-003-02-declarations-and-lookup.md) records the
+[INV-003.02](../research/investigations/INV-003-02-declarations-and-lookup.md) records the
 partial selection and remaining gaps; no compiler/runtime verification exists.
 
 ## Explicit output and tracing, 2026-10-28
@@ -1316,7 +1316,7 @@ partial selection and remaining gaps; no compiler/runtime verification exists.
 
 Owner: [explicit output and tracing](tooling-and-learning.md#explicit-output-and-tracing).
 [Source-file completion](blocks-and-results.md#source-file-body) retains its
-evaluation rule. [INV-003.01](../investigations/INV-003-01-top-level-execution.md)
+evaluation rule. [INV-003.01](../research/investigations/INV-003-01-top-level-execution.md)
 records the reconsideration and selection; no implementation is claimed.
 
 ## Recapture, Result inspection, and implicit panics, 2026-10-27

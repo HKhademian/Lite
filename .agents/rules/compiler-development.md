@@ -109,7 +109,7 @@ by the compiler source.
 
 Use the existing harnesses and schemas:
 
-- [Feature verifications](../../verifications/README.md) carry semantic contracts,
+- [Feature verifications](../../language/verifications/README.md) carry semantic contracts,
   feature IDs and named input/output scenarios. Extend `cases` for multiple
   inputs to the same source, and add focused sources for different forms.
 - [Compiler fixtures](../../igniter/tests/README.md) cover admitted programs and
@@ -140,7 +140,7 @@ consistency review rather than a compiler rebuild.
 Syntax or semantic alternatives may be investigated with explicitly flagged
 support in the **Lite compiler**, within the stated investigation scope. Keep
 the candidate contract, alternatives and open questions in an
-[investigation](../../investigations/README.md) or proposal. A bounded experiment
+[investigation](../../research/investigations/README.md) or proposal. A bounded experiment
 does not make its syntax part of the selected language; normal design acceptance
 still follows the project's explicit-consent process.
 

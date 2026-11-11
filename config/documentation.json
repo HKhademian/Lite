@@ -9,7 +9,7 @@
     { "label": "Contribute", "path": "CONTRIBUTING.md" }
   ],
   "snippets": [
-    { "document": "docs/tour.md", "source": "cases/language/tour-bindings.lts", "fence": 0 },
-    { "document": "docs/start-here.md", "source": "examples/001-double-sum.lts", "fence": 1, "skipLines": 1 }
+    { "document": "docs/tour.md", "source": "language/cases/tour-bindings.lts", "fence": 0 },
+    { "document": "docs/start-here.md", "source": "language/examples/001-double-sum.lts", "fence": 1, "skipLines": 1 }
   ]
 }

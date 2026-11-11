@@ -62,7 +62,7 @@ historical reports, remove live interpreter/reference routes and audit tools,
 and proceed to the typed compiler-stage architecture. The Lite CLI remains a
 router over dedicated tools.
 
-Owner update, 2026-11-05: `./lite run` returns as a compile-and-execute adapter
+Owner update, 2026-11-05: `./bin/lite run` returns as a compile-and-execute adapter
 over the generated compiler and Node entry; the retired interpreter launcher
 stays removed and no T00 fallback is added.
 
@@ -89,11 +89,11 @@ path removes text flattening.
 
 ## Done
 
-- 2026-11-05: `./lite run` returns as a compile-and-execute adapter over the generated compiler instead of the retired interpreter launcher. It compiles one `.lts` script into a temporary directory, executes the TS artifact through `compiler/entry.ts`, forwards program arguments after an optional `--`, inherited streams and exit status, and removes the temporary directory; rejected source keeps its exact diagnostics and status without executing effects. Seven declarative tool scenarios cover prompted input, forwarded arguments, propagated status, rejection, missing source, non-script source and the `--check` hint; a host test proves temporary-directory removal. The isolated public-command fixture copies `tools/run.ts`, and the launcher and public-command tests now assert the adapter contract instead of usage rejection. CLI help, start-here, examples, naming, specification, bootstrap and migration docs record the adapter while the interpreter launcher stays removed. Compiler source and seed are unchanged. Fast: 136 pass/12 skips (150.1 s); full: 139 pass/nine native skips, zero failures (149.6 s). Coverage: 41/41 features, 19/19 examples, 20/20 samples. The canonical TS audit is unchanged at 60/81 with the same 21 visible failures, and docs links/fragments/fences, strict checks and nine editor groups pass.
+- 2026-11-05: `./bin/lite run` returns as a compile-and-execute adapter over the generated compiler instead of the retired interpreter launcher. It compiles one `.lts` script into a temporary directory, executes the TS artifact through `compiler/entry.ts`, forwards program arguments after an optional `--`, inherited streams and exit status, and removes the temporary directory; rejected source keeps its exact diagnostics and status without executing effects. Seven declarative tool scenarios cover prompted input, forwarded arguments, propagated status, rejection, missing source, non-script source and the `--check` hint; a host test proves temporary-directory removal. The isolated public-command fixture copies `tools/run.ts`, and the launcher and public-command tests now assert the adapter contract instead of usage rejection. CLI help, start-here, examples, naming, specification, bootstrap and migration docs record the adapter while the interpreter launcher stays removed. Compiler source and seed are unchanged. Fast: 136 pass/12 skips (150.1 s); full: 139 pass/nine native skips, zero failures (149.6 s). Coverage: 41/41 features, 19/19 examples, 20/20 samples. The canonical TS audit is unchanged at 60/81 with the same 21 visible failures, and docs links/fragments/fences, strict checks and nine editor groups pass.
 
 - 2026-11-03: w3 completes generated-only routine tooling. Self-build strictly checks three named generations and records real source/builder identities; corpus validation checks 93 compiler contracts and 69 TS runtime scenarios against recorded expectations. Benchmarking records generated process/load/compile/check/runtime phases with three samples and one excluded warmup. Old T00 audit programs are preserved byte-for-byte apart from routing comments and require --reference. Five CLI regression groups include absent T00/Git, malformed inputs, wrong compilers and a legitimate changed-source fixed point. Fast: 124 pass/12 skips; ordinary and no-T00 full: 127 pass/nine native skips, zero failures. Reference 162/162, nine editor groups, strict checks and both corpus routes pass. Source/seed remain unchanged; the canonical audit is still 60/81 with 21 visible pending ports. See [evidence](reports/2026-11-03-generated-tooling.json), [tool guide](bootstrap/README.md) and [baseline](../benchmark/reports/2026-11-03-generated-compiler-performance.md).
 
-- 2026-11-03: default tests now compile with generated Lite, strictly check TS and execute isolated artifacts; checked library/phase drivers are reused across inputs. All 93 compiler fixtures, eight library entries and 81 original generated tests remain covered. T00 checks require `./lite test --reference` (162 pass). Ordinary and T00-free source-archive fast suites each pass 119 with 12 deferred skips; full suites each pass 122 with nine native skips and zero failures. Strict checks, nine editor groups and three identical self-builds pass; source/seed are unchanged. The default static graph has 18 modules and no T00 imports. CI now runs the full no-T00 suite. The canonical TS audit still reports 60/81 passing with 21 visible pending ports. See [the evidence](reports/2026-11-03-generated-tests.json). Routine tooling remains w3 work.
+- 2026-11-03: default tests now compile with generated Lite, strictly check TS and execute isolated artifacts; checked library/phase drivers are reused across inputs. All 93 compiler fixtures, eight library entries and 81 original generated tests remain covered. T00 checks require `./bin/lite test --reference` (162 pass). Ordinary and T00-free source-archive fast suites each pass 119 with 12 deferred skips; full suites each pass 122 with nine native skips and zero failures. Strict checks, nine editor groups and three identical self-builds pass; source/seed are unchanged. The default static graph has 18 modules and no T00 imports. CI now runs the full no-T00 suite. The canonical TS audit still reports 60/81 passing with 21 visible pending ports. See [the evidence](reports/2026-11-03-generated-tests.json). Routine tooling remains w3 work.
 
 - 2026-11-03: w1 test contracts are separated: all 240 original igniter tests retain destinations (81 generated/phase/artifact, 159 reference), and 776 exact process contracts replace live T00 expected-value lookups. Shared manifest loading retains all 93 compiler fixtures. Five contract/ownership checks, six copied-checkout no-T00 host groups, strict host/seed checks, three identical generated self-builds and nine editor groups pass. Fast: 278 pass/12 skips; full: 281 pass/9 native skips, zero failures. Compiler source/seed and the 60/81 canonical TS audit are unchanged. Default actual compiler/phase helpers and reference selection remain w2 work. See [the evidence](reports/2026-11-03-test-contracts.json) and [contract guide](tests/contracts/README.md).
 
@@ -352,7 +352,7 @@ path removes text flattening.
 - [Live gap/progress tracker](gaps.md) and [current measured inventory](reports/current-t00-t11-inventory.md)
 - [Parity ledger](parity.md)
 - [Bootstrap plan](../docs/bootstrap-plan.md)
-- [Compiler launcher](../litec)
+- [Compiler launcher](../bin/lite-compile)
 - [Existing bundle CLI](https://github.com/redacted/Lite/blob/d3bd6f7bcf06bbea6669c8d74bebe5e73f383114/igniter/bundle-cli.ts)
 - [Verifier](../igniter/verify.ts)
 - [Artifact runner](../igniter/artifacts.ts)
@@ -387,7 +387,7 @@ roots use imports and reproduce the same generated bytes and T12 fixed point.
 No package or initialization policy was added.
 **Verify:** import/host/CLI focused cases, `node compiler/scripts/build.ts`,
 three-generation self-host fixed point, 94-case corpus parity, and
-`./lite test --fast` (140 passed, 12 skipped, 0 failed).
+`./bin/lite test --fast` (140 passed, 12 skipped, 0 failed).
 
 This milestone describes only the transitional host loader. Its bare
 `import "path";` text expansion is not the selected Lite language contract and
@@ -407,8 +407,8 @@ inventory generator. Default build, tests, verification, imports,
 three-generation self-host and recorded compiler corpus use the generated
 compiler. Historical reports remain labeled; future cases use reviewed
 recorded contracts.
-**Verified:** `./lite test --full` (143 passed, 9 native-only skips, 0 failed);
-`./lite verify --coverage`; `./lite doctor`; strict TypeScript check; migration
+**Verified:** `./bin/lite test --full` (143 passed, 9 native-only skips, 0 failed);
+`./bin/lite verify --coverage`; `./bin/lite doctor`; strict TypeScript check; migration
 baseline unchanged (60/81 scenarios pass, 21 known gaps); generated build;
 three-generation exact T12 fixed point; 94-case corpus (zero mismatches); and
 source-archive route tests without Git metadata.

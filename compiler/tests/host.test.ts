@@ -211,24 +211,24 @@ test('public commands compile, run and check TS artifacts without T00 and reject
     const path = join(directory, 'program with spaces.lts');
     writeFileSync(join(directory, 'helper.lts'), 'twice := fn(n: Int): Int { n * 2 }');
     writeFileSync(path, 'importFlatAll "helper.lts";\noutputLine(twice(inputInt("n? ")));');
-    const compiled = spawnSync(join(directory, 'lite'), ['compile', path], { env, timeout: 10000 });
+    const compiled = spawnSync(join(directory, 'bin/lite'), ['compile', path], { env, timeout: 10000 });
     assert.equal(compiled.status, 0, compiled.stderr.toString()); assert.equal(compiled.stderr.length, 0);
     const artifact = join(directory, 'program.ts'); writeFileSync(artifact, compiled.stdout);
     const executed = spawnSync(process.execPath, [join(directory, 'compiler/entry.ts'), artifact], { input: '7', env, timeout: 10000 });
     assert.equal(executed.status, 0, executed.stderr.toString()); assert.equal(executed.stdout.toString(), 'n? 14\n');
-    const ran = spawnSync(join(directory, 'lite'), ['run', path], { input: '7', env, timeout: 10000 });
+    const ran = spawnSync(join(directory, 'bin/lite'), ['run', path], { input: '7', env, timeout: 10000 });
     assert.equal(ran.status, 0, ran.stderr.toString()); assert.equal(ran.stdout.toString(), 'n? 14\n'); assert.equal(ran.stderr.length, 0);
-    const checked = spawnSync(join(directory, 'lite'), ['check', path], { input: Buffer.from([0xff]), env, timeout: 10000 });
+    const checked = spawnSync(join(directory, 'bin/lite'), ['check', path], { input: Buffer.from([0xff]), env, timeout: 10000 });
     assert.equal(checked.status, 0, checked.stderr.toString()); assert.equal(checked.stdout.length, 0); assert.equal(checked.stderr.length, 0);
-    const deferred = spawnSync(join(directory, 'lite'), ['compile', '--target', 'c', path], { env, timeout: 10000 });
+    const deferred = spawnSync(join(directory, 'bin/lite'), ['compile', '--target', 'c', path], { env, timeout: 10000 });
     assert.equal(deferred.status, 2); assert.equal(deferred.stdout.length, 0);
     assert.match(deferred.stderr.toString(), /C output is deferred/);
     writeFileSync(path, 'outputLine("before"); match { true { 1 } _ { 2 } }');
-    const unsupported = spawnSync(join(directory, 'lite'), ['check', path], { env, timeout: 10000 });
+    const unsupported = spawnSync(join(directory, 'bin/lite'), ['check', path], { env, timeout: 10000 });
     assert.equal(unsupported.status, 1); assert.equal(unsupported.stdout.length, 0);
     assert.match(unsupported.stderr.toString(), /unsupported feature "match"/);
     writeFileSync(path, 'outputLine("before"); unknown();');
-    const invalid = spawnSync(join(directory, 'lite'), ['compile', path], { env, timeout: 10000 });
+    const invalid = spawnSync(join(directory, 'bin/lite'), ['compile', path], { env, timeout: 10000 });
     assert.equal(invalid.status, 2); assert.equal(invalid.stdout.length, 0); assert.match(invalid.stderr.toString(), /unknown value unknown/);
   } finally { rmSync(directory, { recursive: true, force: true }); }
 });
@@ -238,23 +238,23 @@ test('default verification and expectation updates use TS artifacts without T00'
   try {
     symlinkSync(join(root, 'igniter/node_modules'), join(directory, 'igniter/node_modules'));
     copyFileSync(join(root, 'igniter/package-lock.json'), join(directory, 'igniter/package-lock.json'));
-    for (const folder of ['verifications', 'examples', 'samples']) cpSync(join(root, folder), join(directory, folder), { recursive: true });
-    const registry = JSON.parse(readFileSync(join(root, 'verifications/features.json'), 'utf8')) as { features: { docs: string[] }[] };
+    for (const folder of ['language/verifications', 'language/examples', 'language/samples']) cpSync(join(root, folder), join(directory, folder), { recursive: true });
+    const registry = JSON.parse(readFileSync(join(root, 'language/verifications/features.json'), 'utf8')) as { features: { docs: string[] }[] };
     for (const item of registry.features) for (const path of item.docs) {
       mkdirSync(dirname(join(directory, path)), { recursive: true }); copyFileSync(join(root, path), join(directory, path));
     }
-    const invoke = (...args: string[]) => spawnSync(join(directory, 'lite'), ['verify', '--all', '--no-cache', ...args],
+    const invoke = (...args: string[]) => spawnSync(join(directory, 'bin/lite'), ['verify', '--all', '--no-cache', ...args],
       { env, encoding: 'utf8', timeout: 30000 });
     const io = invoke('--filter', 'io.temporary');
     assert.equal(io.status, 0, io.stdout + io.stderr); assert.match(io.stdout, /all-helpers \[ts\]/);
     assert.match(io.stdout, /empty-line-and-remainder \[ts\]/); assert.doesNotMatch(io.stdout, /T00 reference|\[c\]/);
     const covered = invoke('--coverage'); assert.equal(covered.status, 0, covered.stderr);
-    const manifest = join(directory, 'verifications/features/int-arithmetic.json');
+    const manifest = join(directory, 'language/verifications/features/int-arithmetic.json');
     const expected = readFileSync(manifest);
     const updated = invoke('--filter', 'features/int-arithmetic.json', '--update');
     assert.equal(updated.status, 0, updated.stdout + updated.stderr); assert.match(updated.stdout, /updated/);
     assert.deepEqual(JSON.parse(readFileSync(manifest, 'utf8')), JSON.parse(expected.toString()));
-    const unsupported = join(directory, 'verifications/features/match-subjectless.json');
+    const unsupported = join(directory, 'language/verifications/features/match-subjectless.json');
     const before = readFileSync(unsupported);
     const failed = invoke('--filter', 'match.subjectless', '--update');
     assert.equal(failed.status, 1); assert.match(failed.stdout, /unsupported feature "match"/);
@@ -327,8 +327,8 @@ function isolatedCheckout(): string {
   const manifest = resolve(root, 'compiler/manifests/ts.json');
   const bundles = [loadBundle(manifest), loadBundle(resolve(root, 'compiler/manifests/c.json'))];
   const paths = new Set([
-    'lite', 'ltc', 'litec', 'bin/lite-compiler-ts', 'bin/lite-check', 'bin/lite-run', 'bin/lite-verify',
-    'compiler/host.ts', 'compiler/entry.ts', 'compiler/cli.ts', 'compiler/launcher.ts', 'compiler/package.json',
+    'bin/lite', 'bin/lite-compile', 'bin/lite-compile-ts', 'bin/lite-compile-c', 'bin/lite-check', 'bin/lite-run', 'bin/lite-verify',
+    'compiler/host.ts', 'compiler/entry.ts', 'compiler/cli.ts', 'compiler/launcher.ts', 'compiler/compile-ts.ts', 'compiler/compile-c.ts', 'compiler/package.json',
     'igniter/launcher.ts', 'igniter/test-suites.ts', 'igniter/check.ts', 'igniter/artifacts.ts', 'igniter/package.json', 'igniter/verify.ts',
     'tools/cli.ts', 'tools/forward.ts', 'tools/tool-version.ts', 'tools/checker.ts', 'tools/verify.ts', 'tools/run.ts', 'tools/project.ts',
     'compiler/release-streams.ts', 'config/versions.json',
@@ -345,7 +345,7 @@ function isolatedCheckout(): string {
     if (lstatSync(join(root, path)).isSymbolicLink()) symlinkSync(readlinkSync(join(root, path)), destination);
     else copyFileSync(join(root, path), destination);
   }
-  chmodSync(join(directory, 'litec'), 0o755);
+  chmodSync(join(directory, 'bin/lite-compile-ts'), 0o755);
   return directory;
 }
 
@@ -353,7 +353,7 @@ function isolatedCheckout(): string {
 function invoke(directory: string, source: string | Buffer, target: CompilerTarget = 'ts') {
   const path = join(directory, 'source with spaces.lts');
   writeFileSync(path, source);
-  return target === 'ts' ? spawnSync(join(directory, 'litec'), [target, path], { env, timeout: 10000 })
+  return target === 'ts' ? spawnSync(join(directory, 'bin/lite-compile-ts'), [path], { env, timeout: 10000 })
     : spawnSync(process.execPath, [join(directory, 'compiler/cli.ts'), target, path], { env, timeout: 10000 });
 }
 
@@ -361,7 +361,7 @@ test('TS host selects the recorded seed and preserves output, diagnostics and so
   const built = buildTsCompiler();
   assert.equal(built.artifactSha256, seed.artifactSha256);
   assert.equal(built.sourceSha256, seed.sourceSha256);
-  const reference = readFileSync(join(root, 'compiler/generated/report-42.ts'));
+  const reference = readFileSync(join(root, 'compiler/tests/references/generated/report-42.ts'));
   for (const name of [undefined, '', 'a b.lts', 'سلام🙂.lts', 'quote";\\\nname.lts']) {
     const input = name === undefined ? { text: 'outputLine(42);' } : { text: 'outputLine(42);', name };
     assert.deepEqual(compileTs(input), { status: 0, stdout: reference, stderr: Buffer.alloc(0) });
@@ -384,7 +384,7 @@ test('public TS compilation and the retained internal C host work without T00', 
     for (const target of ['ts', 'c'] as const) {
       const result = invoke(directory, 'outputLine(42);', target);
       assert.equal(result.error, undefined); assert.equal(result.status, 0, result.stderr.toString());
-      assert.deepEqual(result.stdout, readFileSync(join(root, `compiler/generated/report-42.${target}`)));
+      assert.deepEqual(result.stdout, readFileSync(join(root, `compiler/tests/references/generated/report-42.${target}`)));
       assert.equal(result.stderr.length, 0);
       const bad = invoke(directory, 'outputLine(42);\nunsupported();\n', target);
       assert.equal(bad.error, undefined); assert.equal(bad.status, 2);
@@ -457,7 +457,7 @@ test('the TS-hosted C seed preserves source names, subset rejection and artifact
   assert.equal(selected.sourceSha256, cSeed.sourceSha256);
   assert.ok(selected.dependencies.includes('../src/c-root.lts'));
   assert.deepEqual(compileTarget('c', { text: 'outputLine(42);', name: 'سلام file.lts' }), {
-    status: 0, stdout: readFileSync(join(root, 'compiler/generated/report-42.c')), stderr: Buffer.alloc(0),
+    status: 0, stdout: readFileSync(join(root, 'compiler/tests/references/generated/report-42.c')), stderr: Buffer.alloc(0),
   });
   assert.deepEqual(compileTarget('c', { text: 'outputLine(1 +);', name: 'a b.lts' }), {
     status: 2, stdout: Buffer.alloc(0), stderr: Buffer.from('a b.lts:1:15: expected an Int, Float, String or Bool expression\n'),
@@ -485,7 +485,7 @@ test('imported C compiler source rebuilds with the selected seed and records dep
     const result = invoke(directory, 'outputLine(42);', 'c');
     assert.equal(result.error, undefined); assert.equal(result.status, 0, result.stderr.toString());
     assert.equal(result.stdout.toString(), 'fresh C\n');
-    const cache = join(directory, '.cache/compiler');
+    const cache = join(directory, 'dist/compiler-cache');
     const entries = readdirSync(cache).filter(name => !name.startsWith('build-'));
     assert.equal(entries.length, 1);
     const provenance = JSON.parse(readFileSync(join(cache, entries[0]!, 'provenance.json'), 'utf8')) as { dependencies: string[] };
@@ -505,14 +505,14 @@ test('default verifier selects consumers after compiler changes and ignores inve
       'compiler/manifests/c.json', 'lib/core/int.lts']) {
       writeFileSync(git, `#!/bin/sh\nprintf '%s\\n' ' M ${path}'\n`);
       chmodSync(git, 0o755);
-      const result = spawnSync(join(root, 'lite'), ['verify', '--no-cache', '--filter', 'features/int-arithmetic.json'], {
+      const result = spawnSync(join(root, 'bin/lite'), ['verify', '--no-cache', '--filter', 'features/int-arithmetic.json'], {
         env: changedEnv, encoding: 'utf8', timeout: 30000,
       });
       assert.equal(result.error, undefined); assert.equal(result.status, 0, result.stderr);
       assert.match(result.stdout, /verification passed: 1 executed, 0 cached/, path);
     }
     writeFileSync(git, "#!/bin/sh\nprintf '%s\\n' ' M compiler/reports/2026-11-02-t00-t11-inventory.md'\n");
-    const documentation = spawnSync(join(root, 'lite'), ['verify', '--no-cache', '--filter', 'features/int-arithmetic.json'], {
+    const documentation = spawnSync(join(root, 'bin/lite'), ['verify', '--no-cache', '--filter', 'features/int-arithmetic.json'], {
       env: changedEnv, encoding: 'utf8', timeout: 30000,
     });
     assert.equal(documentation.status, 0, documentation.stderr);
@@ -1731,8 +1731,8 @@ test('prepared artifacts retain isolated runs and release their resources explic
 test('default test startup and generated baseline run in a source archive without T00', () => {
   const directory = isolatedCheckout();
   try {
-    for (const path of ['igniter', 'tools', 'bin', 'config', 'compiler/tests', 'compiler/generated', 'compiler/runtime', 'lib',
-      'verifications', 'examples', 'samples', 'docs', 'challenges/tools', '.agents/rules']) {
+    for (const path of ['igniter', 'tools', 'bin', 'config', 'compiler/tests', 'compiler/tests/references/generated', 'compiler/runtime', 'lib',
+      'language/verifications', 'language/examples', 'language/samples', 'language/cases', 'docs', 'benchmark/challenges/tools', '.agents/rules']) {
       cpSync(join(root, path), join(directory, path), { recursive: true, verbatimSymlinks: true,
         filter: candidate => !/(?:\/node_modules|\/lite\.ts|\/bootstrap\.ts|\/bundle-cli\.ts|\/cli\.ts)$/.test(candidate) });
     }
@@ -1749,10 +1749,10 @@ test('default test startup and generated baseline run in a source archive withou
     assert.match(result.stdout, /compiler verification cases are well-formed/);
     assert.match(result.stdout, /# fail 0/); assert.doesNotMatch(result.stdout, /ERR_MODULE_NOT_FOUND|T00 reference/);
     for (const args of [['--fast', '--full'], ['--reference'], ['--unknown']]) {
-      const rejected = spawnSync(join(directory, 'lite'), ['test', ...args], { encoding: 'utf8', env, timeout: 5000 });
+      const rejected = spawnSync(join(directory, 'bin/lite'), ['test', ...args], { encoding: 'utf8', env, timeout: 5000 });
       assert.equal(rejected.status, 2); assert.match(rejected.stderr, /Usage:/); assert.equal(rejected.stdout, '');
     }
-    const legacy = spawnSync(join(directory, 'lite'), ['test', '--reference'], { encoding: 'utf8', env, timeout: 10000 });
+    const legacy = spawnSync(join(directory, 'bin/lite'), ['test', '--reference'], { encoding: 'utf8', env, timeout: 10000 });
     assert.equal(legacy.status, 2); assert.match(legacy.stderr, /Usage:/); assert.equal(legacy.stdout, '');
   } finally { rmSync(directory, { recursive: true, force: true }); }
 });

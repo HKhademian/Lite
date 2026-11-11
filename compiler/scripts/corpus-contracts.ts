@@ -9,7 +9,7 @@ import { repository, hashBytes } from './tooling.ts';
 export type ArtifactContract = Readonly<{ ts: string; c: string }>;
 /** Runtime streams/status come from manifests; compiler artifacts come from independently recorded hashes. */
 export function corpusContracts(): { fixtures: readonly CompilerFixture[]; artifacts: ReadonlyMap<string, ArtifactContract> } {
-  const record = JSON.parse(readFileSync(join(repository, 'compiler/generated/current-artifacts.json'), 'utf8')) as {
+  const record = JSON.parse(readFileSync(join(repository, 'compiler/tests/references/generated/current-artifacts.json'), 'utf8')) as {
     sourceSha256: string; artifacts: { name: string; ts: string; c: string }[];
   };
   if (record.sourceSha256 !== buildCompiler('ts').sourceSha256) throw new Error('recorded corpus artifacts do not match current Lite compiler source; review their contracts first');

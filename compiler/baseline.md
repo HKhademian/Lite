@@ -43,14 +43,14 @@ encoders.
 Commands and results:
 
 ```text
-$ ./lite check compiler/ts-emitter.lts
+$ ./bin/lite check compiler/ts-emitter.lts
 (exit 0)
 
-$ ./lite check compiler/c-emitter.lts
+$ ./bin/lite check compiler/c-emitter.lts
 (exit 0)
 ```
 
-`./lite check compiler/frontend.lts` exits 1 with `unknown helper/function
+`./bin/lite check compiler/frontend.lts` exits 1 with `unknown helper/function
 boolLiteralCode; forward function lookup is not supported yet`. That is expected
 for a declaration-only shared front-end, not a regression.
 
@@ -61,13 +61,13 @@ files byte for byte.
 
 | Artifact | SHA-256 |
 |---|---|
-| `compiler/generated/report-42.ts` | `89df6dd0454f8d6cc50fa6fc9758e7beb708ce6487715773b335343bbedde3cb` |
-| `compiler/generated/report-42.c` | `7b245669f9a1bc4a1d81c797e3a4a16268270bffcc67014cf13d18d5b452f101` |
+| `compiler/tests/references/generated/report-42.ts` | `89df6dd0454f8d6cc50fa6fc9758e7beb708ce6487715773b335343bbedde3cb` |
+| `compiler/tests/references/generated/report-42.c` | `7b245669f9a1bc4a1d81c797e3a4a16268270bffcc67014cf13d18d5b452f101` |
 
 The full current compiler output baseline is
-[`generated/baseline-artifacts.json`](generated/baseline-artifacts.json): one
+[`tests/references/generated/baseline-artifacts.json`](tests/references/generated/baseline-artifacts.json): one
 SHA-256 per emitted TS and C artifact for all 50 program cases, produced by
-`./litec --target ts|c <fixture source>`. That file records 50 program cases and
+`./bin/lite-compile --target ts|c <fixture source>`. That file records 50 program cases and
 42 rejection cases. Rejection output is not duplicated here because each
 rejection manifest already holds the exact expected `stdout`, `stderr` and exit
 status contract.
@@ -75,14 +75,14 @@ status contract.
 ## Test evidence
 
 ```text
-$ ./lite test --fast
+$ ./bin/lite test --fast
 ℹ tests 175
 ℹ pass 174
 ℹ fail 0
 ℹ skipped 1
 ℹ duration_ms 10846.54275
 
-$ ./lite test
+$ ./bin/lite test
 ℹ tests 175
 ℹ pass 175
 ℹ fail 0

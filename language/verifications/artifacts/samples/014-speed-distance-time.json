@@ -1,0 +1,28 @@
+{
+  "id": "sample.014-speed-distance-time",
+  "kind": "sample",
+  "source": {
+    "file": "../../../language/samples/014_speed_distance_time.lts",
+    "hash": "sha256:2cdfed62f3f81e3d538c3d5838cc83304cca933b8fcd434f28b2b9c3fc1a9851"
+  },
+  "features": [
+    "num.float",
+    "scope.locals"
+  ],
+  "description": "Speed, distance and time relations.",
+  "append": "outputLine(speed); outputLine(distance); outputLine(time);",
+  "cases": [
+    {
+      "name": "observed-values",
+      "stdout": {
+        "text": "12.5\n60\n12.5\n",
+        "hash": "sha256:05cac73a0883dfd5863fbe556645dba7d20f035e39048bab43264d47ff3a4be3"
+      },
+      "exitCode": 0
+    }
+  ],
+  "targets": [
+    "ts",
+    "c"
+  ]
+}

@@ -62,7 +62,7 @@
     },
     "tool": {
       "type": "string",
-      "pattern": "^(lite|litec|ltc|lite-[a-z]+)$"
+      "pattern": "^lite(?:-[a-z]+)*$"
     },
     "features": {
       "type": "array",

@@ -19,7 +19,7 @@ physical copying in the compiler or after compilation where behavior is preserve
 Explicit noncopying modes come later. Do not require a new clone/move/borrow
 surface before ordinary FVP sequence values can follow this copy model. This
 does not declare every resource copyable or select an optimization implementation.
-See [INV-055](../investigations/INV-055-fvp-owner-boundary.md).
+See [INV-055](../research/investigations/INV-055-fvp-owner-boundary.md).
 
 ## Ordinary return values are copies selected
 

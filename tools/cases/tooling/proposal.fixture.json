@@ -1,0 +1,22 @@
+{
+  "id": "fixture.proposed",
+  "kind": "compile",
+  "source": "../../../language/cases/silent.lts",
+  "features": [],
+  "pending": "runner fixture for a future proposal",
+  "cases": [
+    {
+      "name": "default",
+      "stdin": {
+        "text": ""
+      },
+      "stdout": {
+        "text": ""
+      },
+      "stderr": {
+        "text": ""
+      },
+      "exitCode": 0
+    }
+  ]
+}

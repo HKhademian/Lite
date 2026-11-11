@@ -27,8 +27,8 @@ Rules:
 `lib/tests/` holds direct Lite test entries. Run them, or compile and execute them:
 
 ```sh
-./lite run lib/tests/text.lts
-./lite compile lib/tests/text.lts > /tmp/lite-text-test.ts
+./bin/lite run lib/tests/text.lts
+./bin/lite compile lib/tests/text.lts > /tmp/lite-text-test.ts
 node compiler/entry.ts /tmp/lite-text-test.ts
 ```
 

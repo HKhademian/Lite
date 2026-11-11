@@ -155,7 +155,7 @@ fixture does not establish support; verify each claimed generated target.
 3. Add `NNN-MMM-title-subtitle.json` with the matching `name`, a `source`
    object and one or more `cases`.
 4. Add external stream files only where inline text or bytes would be unwieldy.
-5. Run `./lite test` from the repository root. No test-code edit is needed.
+5. Run `./bin/lite test` from the repository root. No test-code edit is needed.
 
 Fixtures are sorted by filename. Keep the numeric prefixes stable for readable
 diffs.

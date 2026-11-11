@@ -90,7 +90,7 @@ Original TS ladder record, 2026-11-02 (historical source before the text cache):
 | T11 | 243 216 | `8273ce69973afb8beb25052dc2c8ef4b0682c00f4af866623ece751531b15e39` |
 | T12 | 243 216 | `8273ce69973afb8beb25052dc2c8ef4b0682c00f4af866623ece751531b15e39` |
 
-T11 was originally produced by `./litec ts` from S while that launcher used T00.
+T11 was originally produced by `./bin/lite-compile ts` from S while that launcher used T00.
 Historical reproduction now uses `node igniter/bundle-cli.ts ts S.lts` explicitly.
 T12 was produced by T11 running on the
 same S after a strict artifact typecheck. Both artifacts ran the probe source and
@@ -196,7 +196,7 @@ values in a loop, exit after a report, and exit inside an argument.
   91 verification executions pass. The fast suite passes 238 tests with nine
   expected skips; all nine editor groups pass. The full suite passes all 247
   tests with zero failures or skips (581 s, including the T00 sweeps).
-- [`generated/current-artifacts.json`](generated/current-artifacts.json) records
+- [`tests/references/generated/current-artifacts.json`](tests/references/generated/current-artifacts.json) records
   current hashes for all 53 program cases, checked without optional hash skips.
   Historical P0 hashes and the original support inventory remain unchanged.
 
@@ -655,9 +655,9 @@ freeze prevents the target from growing while it is approached.
   features; any new capability is a Lite-first owner decision.
 - T00 exists. The refreshed T11, T12 and T13 are recorded and byte-identical for
   the bootstrap surface. The native C ladder remains pending.
-- [`generated/current-artifacts.json`](generated/current-artifacts.json) contains
+- [`tests/references/generated/current-artifacts.json`](tests/references/generated/current-artifacts.json) contains
   the current artifact hashes for all 53 program cases. The original 50-case P0
-  hashes remain in `generated/baseline-artifacts.json` as historical evidence.
+  hashes remain in `tests/references/generated/baseline-artifacts.json` as historical evidence.
 
 Useful internal tools:
 
@@ -1193,7 +1193,7 @@ above 2^53. TS expression scopes and typed C comma-expression temporaries evalua
 operands once, left to right, and retain lazy later chain operands. Float
 arithmetic reuses the existing source-position table and fault reporting.
 
-The canonical [num.float case](../verifications/features/num-float.json) runs on
+The canonical [num.float case](../language/verifications/features/num-float.json) runs on
 T00 and both generated targets. Nine previously rejected lesson manifests now
 also select TS/C explicitly. Focused host coverage includes eleven TS/C programs,
 four TS function/aggregate programs, eleven fault sources on both targets, nine
@@ -1285,7 +1285,7 @@ names. This adds no storage conversion, arithmetic width or runtime wrapper.
 A focused scalar program emits identical TS/C bytes using synonyms or canonical
 names; all earlier corpus artifacts likewise remain unchanged.
 
-The canonical [num.aliases case](../verifications/features/num-aliases.json)
+The canonical [num.aliases case](../language/verifications/features/num-aliases.json)
 selects T00, TS and C. Focused coverage includes eight TS/C programs, five TS
 function/tuple/List programs, twelve type/range rejections, four exact positioned
 fault executions and a prompted input scenario. Parser/checker drivers each
@@ -1347,7 +1347,7 @@ function/aggregate/conditional programs, twenty rejected sources, six exact
 positioned fault executions and an explicit dead-statement completion case.
 The scalar checker compares five admitted/six rejected sources between reference
 and generated drivers. The canonical
-[num.float-context case](../verifications/features/num-float-context.json) and
+[num.float-context case](../language/verifications/features/num-float-context.json) and
 two retained boundary probes supplement the previously failing literal probe.
 The [ladder](reports/2026-11-02-float-contexts-ladder.json) records pre-fix evidence,
 three matching generated self-builds and the exact validation scope.

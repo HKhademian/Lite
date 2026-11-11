@@ -81,7 +81,7 @@ export function buildCompiler(target: CompilerTarget): CompilerBuild {
     if (artifactSha256 !== known.artifactSha256) throw new Error(`${target} bootstrap seed hash mismatch`);
     return { target, path, sourceSha256, artifactSha256, builderSha256: seed.artifactSha256, dependencies: bundle.dependencies, cached: false };
   }
-  const cache = resolve(root, '.cache/compiler');
+  const cache = resolve(root, 'dist/compiler-cache');
   const key = hash(`${target}:${seed.artifactSha256}:${sourceSha256}:${JSON.stringify(bundle.dependencies)}`);
   const destination = join(cache, key);
   if (existsSync(destination)) return cachedBuild(destination, sourceSha256, target, bundle.dependencies);

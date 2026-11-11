@@ -35,7 +35,7 @@
     "skipped": 9,
     "durationMs": 123464.846875
   },
-  "fullCommand": "/usr/bin/caffeinate -i ./lite test --full",
+  "fullCommand": "/usr/bin/caffeinate -i ./bin/lite test --full",
   "noT00": {
     "command": "node --test --test-name-pattern=\"generated reports|generated temporary I/O|generated input rejects|Int64, Float64|Float contexts|default verification\" compiler/tests/host.test.ts",
     "result": {

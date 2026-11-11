@@ -5,7 +5,7 @@
       "name": "Preview Lite highlighting",
       "type": "extensionHost",
       "request": "launch",
-      "args": ["--extensionDevelopmentPath=${workspaceFolder}", "${workspaceFolder}/../../examples/004-factorial.lts"]
+      "args": ["--extensionDevelopmentPath=${workspaceFolder}", "${workspaceFolder}/../../language/examples/004-factorial.lts"]
     }
   ]
 }

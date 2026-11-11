@@ -156,4 +156,4 @@ Artifacts execute through `node compiler/entry.ts program.ts [argument ...]`; no
 - [Compiler rules](../rules/compiler-development.md), [atomic commits](../rules/atomic-commits.md).
 - [Transition plan](../../compiler/transition-plan.md), [live gaps](../../compiler/gaps.md).
 - [Measured inventory](../../compiler/reports/current-t00-t11-inventory.md), [raw inventory](../../compiler/reports/current-t00-t11-inventory.json).
-- [Bootstrap identities](../../compiler/bootstrap/README.md), [verification contract](../../verifications/README.md).
+- [Bootstrap identities](../../compiler/bootstrap/README.md), [verification contract](../../language/verifications/README.md).

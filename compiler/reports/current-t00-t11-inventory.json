@@ -5,7 +5,7 @@
   "revision": "10a1ab03ec5a120ade0a8124eea545bc55fd0438",
   "revisionMeaning": "HEAD at audit start; artifact and per-source hashes identify the measured inputs",
   "workingTreeDirtyAtStart": true,
-  "worktreeStatusAtStart": " M .agents/plans/self-hosting-kernel.md\n M README.md\n M compiler/bootstrap/README.md\n M compiler/bootstrap/c-emitter.ts\n M compiler/bootstrap/c-seed.ts\n M compiler/bootstrap/seed.ts\n M compiler/bootstrap/tsconfig.json\n M compiler/c-emitter.lts\n M compiler/gaps.md\n M compiler/generated/current-artifacts.json\n M compiler/host.ts\n M compiler/reports/current-t00-t11-inventory.json\n M compiler/scripts/t00-t11-inventory.ts\n M compiler/src/frontend.lts\n M compiler/tests/contracts/process.json\n M compiler/tests/host.test.ts\n M compiler/tests/t00-t11-probes.json\n M compiler/tests/test-migration.json\n M compiler/tests/tooling.test.ts\n M compiler/transition-plan.md\n M compiler/ts-emitter.lts\n M docs/bootstrap-plan.md\n M docs/spec/README.md\n M igniter/README.md\n M igniter/test.ts\n M igniter/tests/README.md\n D igniter/tests/compiler/001-005-duplicate-local.json\n D igniter/tests/compiler/001-005-duplicate-local.lts\n?? compiler/bootstrap/T12.ts\n?? compiler/reports/2026-11-11-self-hosting-kernel.json\n?? igniter/tests/compiler/001-005-nested-shadow.json\n?? igniter/tests/compiler/001-005-nested-shadow.lts\n?? igniter/tests/compiler/002-005-duplicate-top-level.json\n?? igniter/tests/compiler/002-005-duplicate-top-level.lts\n",
+  "worktreeStatusAtStart": " M .agents/plans/self-hosting-kernel.md\n M README.md\n M compiler/bootstrap/README.md\n M compiler/bootstrap/c-emitter.ts\n M compiler/bootstrap/c-seed.ts\n M compiler/bootstrap/seed.ts\n M compiler/bootstrap/tsconfig.json\n M compiler/c-emitter.lts\n M compiler/gaps.md\n M compiler/tests/references/generated/current-artifacts.json\n M compiler/host.ts\n M compiler/reports/current-t00-t11-inventory.json\n M compiler/scripts/t00-t11-inventory.ts\n M compiler/src/frontend.lts\n M compiler/tests/contracts/process.json\n M compiler/tests/host.test.ts\n M compiler/tests/t00-t11-probes.json\n M compiler/tests/test-migration.json\n M compiler/tests/tooling.test.ts\n M compiler/transition-plan.md\n M compiler/ts-emitter.lts\n M docs/bootstrap-plan.md\n M docs/spec/README.md\n M igniter/README.md\n M igniter/test.ts\n M igniter/tests/README.md\n D igniter/tests/compiler/001-005-duplicate-local.json\n D igniter/tests/compiler/001-005-duplicate-local.lts\n?? compiler/bootstrap/T12.ts\n?? compiler/reports/2026-11-11-self-hosting-kernel.json\n?? igniter/tests/compiler/001-005-nested-shadow.json\n?? igniter/tests/compiler/001-005-nested-shadow.lts\n?? igniter/tests/compiler/002-005-duplicate-top-level.json\n?? igniter/tests/compiler/002-005-duplicate-top-level.lts\n",
   "compilerSourceSha256": "8d2a857a496ae34dffc711fb59cfa4b189a902cf634003792e1505bf30d3a8f7",
   "compilerSourceRevision": "worktree:8d2a857a496ae34dffc711fb59cfa4b189a902cf634003792e1505bf30d3a8f7",
   "node": "v26.12.1",
@@ -15,8 +15,8 @@
       "id": "int.arithmetic",
       "kind": "feature",
       "summary": "Signed Int arithmetic and precedence.",
-      "path": "verifications/features/int-arithmetic.lts",
-      "manifest": "verifications/features/int-arithmetic.json",
+      "path": "language/verifications/features/int-arithmetic.lts",
+      "manifest": "language/verifications/features/int-arithmetic.json",
       "features": [
         "int.arithmetic"
       ],
@@ -64,8 +64,8 @@
       "id": "num.float",
       "kind": "feature",
       "summary": "Finite Float arithmetic and mixed Int/Float comparisons with checked runtime faults.",
-      "path": "verifications/features/num-float.lts",
-      "manifest": "verifications/features/num-float.json",
+      "path": "language/verifications/features/num-float.lts",
+      "manifest": "language/verifications/features/num-float.json",
       "features": [
         "num.float",
         "comparison.chains",
@@ -115,8 +115,8 @@
       "id": "num.aliases",
       "kind": "feature",
       "summary": "Int64, Float64 and Double as synonyms of the existing 64-bit numeric types.",
-      "path": "verifications/features/num-aliases.lts",
-      "manifest": "verifications/features/num-aliases.json",
+      "path": "language/verifications/features/num-aliases.lts",
+      "manifest": "language/verifications/features/num-aliases.json",
       "features": [
         "num.aliases",
         "num.float",
@@ -166,8 +166,8 @@
       "id": "num.float-context",
       "kind": "feature",
       "summary": "Exactly representable integer literals in admitted Float storage, call and result contexts.",
-      "path": "verifications/features/num-float-context.lts",
-      "manifest": "verifications/features/num-float-context.json",
+      "path": "language/verifications/features/num-float-context.lts",
+      "manifest": "language/verifications/features/num-float-context.json",
       "features": [
         "num.float-context",
         "num.aliases",
@@ -217,8 +217,8 @@
       "id": "num.widths",
       "kind": "feature",
       "summary": "Sized integer and floating widths with promotion and lossless widening.",
-      "path": "verifications/features/num-widths.lts",
-      "manifest": "verifications/features/num-widths.json",
+      "path": "language/verifications/features/num-widths.lts",
+      "manifest": "language/verifications/features/num-widths.json",
       "features": [
         "num.widths"
       ],
@@ -253,8 +253,8 @@
       "id": "bool.conditions",
       "kind": "feature",
       "summary": "Bool comparisons and conditional selection.",
-      "path": "verifications/features/bool-conditions.lts",
-      "manifest": "verifications/features/bool-conditions.json",
+      "path": "language/verifications/features/bool-conditions.lts",
+      "manifest": "language/verifications/features/bool-conditions.json",
       "features": [
         "bool.conditions"
       ],
@@ -302,8 +302,8 @@
       "id": "comparison.chains",
       "kind": "feature",
       "summary": "Adjacent comparison chains with single-evaluation middle values and lazy later operands.",
-      "path": "verifications/features/comparison-chains.lts",
-      "manifest": "verifications/features/comparison-chains.json",
+      "path": "language/verifications/features/comparison-chains.lts",
+      "manifest": "language/verifications/features/comparison-chains.json",
       "features": [
         "comparison.chains"
       ],
@@ -351,8 +351,8 @@
       "id": "cond.partial",
       "kind": "feature",
       "summary": "Partial conditional declaration defaults and no-write assignments.",
-      "path": "verifications/features/cond-partial.lts",
-      "manifest": "verifications/features/cond-partial.json",
+      "path": "language/verifications/features/cond-partial.lts",
+      "manifest": "language/verifications/features/cond-partial.json",
       "features": [
         "cond.partial"
       ],
@@ -387,8 +387,8 @@
       "id": "loop.conditional",
       "kind": "feature",
       "summary": "Conditional action loops with mutable state.",
-      "path": "verifications/features/loop-conditional.lts",
-      "manifest": "verifications/features/loop-conditional.json",
+      "path": "language/verifications/features/loop-conditional.lts",
+      "manifest": "language/verifications/features/loop-conditional.json",
       "features": [
         "loop.conditional"
       ],
@@ -436,8 +436,8 @@
       "id": "loop.sequence",
       "kind": "feature",
       "summary": "Ordered sequence traversal loops.",
-      "path": "verifications/features/loop-sequence.lts",
-      "manifest": "verifications/features/loop-sequence.json",
+      "path": "language/verifications/features/loop-sequence.lts",
+      "manifest": "language/verifications/features/loop-sequence.json",
       "features": [
         "loop.sequence"
       ],
@@ -485,8 +485,8 @@
       "id": "loop.value",
       "kind": "feature",
       "summary": "Typed loop .value accumulation and then completion.",
-      "path": "verifications/features/loop-value.lts",
-      "manifest": "verifications/features/loop-value.json",
+      "path": "language/verifications/features/loop-value.lts",
+      "manifest": "language/verifications/features/loop-value.json",
       "features": [
         "loop.value"
       ],
@@ -521,8 +521,8 @@
       "id": "loop.metadata",
       "kind": "feature",
       "summary": "Loop metadata and payload/targeted exits.",
-      "path": "verifications/features/loop-metadata.lts",
-      "manifest": "verifications/features/loop-metadata.json",
+      "path": "language/verifications/features/loop-metadata.lts",
+      "manifest": "language/verifications/features/loop-metadata.json",
       "features": [
         "loop.metadata"
       ],
@@ -557,8 +557,8 @@
       "id": "finally.cleanup",
       "kind": "feature",
       "summary": "Construct-level finally cleanup ordering.",
-      "path": "verifications/features/finally-cleanup.lts",
-      "manifest": "verifications/features/finally-cleanup.json",
+      "path": "language/verifications/features/finally-cleanup.lts",
+      "manifest": "language/verifications/features/finally-cleanup.json",
       "features": [
         "finally.cleanup"
       ],
@@ -593,8 +593,8 @@
       "id": "function.recursion",
       "kind": "feature",
       "summary": "Typed functions and own-name recursion.",
-      "path": "verifications/features/function-recursion.lts",
-      "manifest": "verifications/features/function-recursion.json",
+      "path": "language/verifications/features/function-recursion.lts",
+      "manifest": "language/verifications/features/function-recursion.json",
       "features": [
         "function.recursion"
       ],
@@ -642,8 +642,8 @@
       "id": "tuple.shape",
       "kind": "feature",
       "summary": "Flat tuple values and fields.",
-      "path": "verifications/features/tuple-shape.lts",
-      "manifest": "verifications/features/tuple-shape.json",
+      "path": "language/verifications/features/tuple-shape.lts",
+      "manifest": "language/verifications/features/tuple-shape.json",
       "features": [
         "tuple.shape"
       ],
@@ -678,8 +678,8 @@
       "id": "array.fixed",
       "kind": "feature",
       "summary": "Fixed arrays and indexed reads.",
-      "path": "verifications/features/array-fixed.lts",
-      "manifest": "verifications/features/array-fixed.json",
+      "path": "language/verifications/features/array-fixed.lts",
+      "manifest": "language/verifications/features/array-fixed.json",
       "features": [
         "array.fixed"
       ],
@@ -727,8 +727,8 @@
       "id": "list.mutation",
       "kind": "feature",
       "summary": "Growable lists and end operations.",
-      "path": "verifications/features/list-mutation.lts",
-      "manifest": "verifications/features/list-mutation.json",
+      "path": "language/verifications/features/list-mutation.lts",
+      "manifest": "language/verifications/features/list-mutation.json",
       "features": [
         "list.mutation"
       ],
@@ -763,8 +763,8 @@
       "id": "text.helpers",
       "kind": "feature",
       "summary": "Temporary code-point text helpers.",
-      "path": "verifications/features/text-helpers.lts",
-      "manifest": "verifications/features/text-helpers.json",
+      "path": "language/verifications/features/text-helpers.lts",
+      "manifest": "language/verifications/features/text-helpers.json",
       "features": [
         "text.helpers"
       ],
@@ -812,8 +812,8 @@
       "id": "alias.transparent",
       "kind": "feature",
       "summary": "Transparent type aliases.",
-      "path": "verifications/features/alias-transparent.lts",
-      "manifest": "verifications/features/alias-transparent.json",
+      "path": "language/verifications/features/alias-transparent.lts",
+      "manifest": "language/verifications/features/alias-transparent.json",
       "features": [
         "alias.transparent"
       ],
@@ -861,8 +861,8 @@
       "id": "scope.locals",
       "kind": "feature",
       "summary": "Lexical local scope and shadowing.",
-      "path": "verifications/features/scope-locals.lts",
-      "manifest": "verifications/features/scope-locals.json",
+      "path": "language/verifications/features/scope-locals.lts",
+      "manifest": "language/verifications/features/scope-locals.json",
       "features": [
         "scope.locals"
       ],
@@ -910,8 +910,8 @@
       "id": "scope.assignment",
       "kind": "feature",
       "summary": "Mutable var replacement.",
-      "path": "verifications/features/scope-assignment.lts",
-      "manifest": "verifications/features/scope-assignment.json",
+      "path": "language/verifications/features/scope-assignment.lts",
+      "manifest": "language/verifications/features/scope-assignment.json",
       "features": [
         "scope.assignment"
       ],
@@ -959,8 +959,8 @@
       "id": "io.input",
       "kind": "feature",
       "summary": "Prompted integer input.",
-      "path": "verifications/features/io-input.lts",
-      "manifest": "verifications/features/io-input.json",
+      "path": "language/verifications/features/io-input.lts",
+      "manifest": "language/verifications/features/io-input.json",
       "features": [
         "io.input"
       ],
@@ -1008,8 +1008,8 @@
       "id": "io.arguments",
       "kind": "feature",
       "summary": "Ordered script arguments.",
-      "path": "verifications/features/io-arguments.lts",
-      "manifest": "verifications/features/io-arguments.json",
+      "path": "language/verifications/features/io-arguments.lts",
+      "manifest": "language/verifications/features/io-arguments.json",
       "features": [
         "io.arguments"
       ],
@@ -1061,8 +1061,8 @@
       "id": "io.whole-input",
       "kind": "feature",
       "summary": "Whole remaining input through EOF.",
-      "path": "verifications/features/io-whole-input.lts",
-      "manifest": "verifications/features/io-whole-input.json",
+      "path": "language/verifications/features/io-whole-input.lts",
+      "manifest": "language/verifications/features/io-whole-input.json",
       "features": [
         "io.whole-input"
       ],
@@ -1110,8 +1110,8 @@
       "id": "io.exit",
       "kind": "feature",
       "summary": "Explicit process exit.",
-      "path": "verifications/features/io-exit.lts",
-      "manifest": "verifications/features/io-exit.json",
+      "path": "language/verifications/features/io-exit.lts",
+      "manifest": "language/verifications/features/io-exit.json",
       "features": [
         "io.exit"
       ],
@@ -1159,7 +1159,7 @@
       "id": "io.report",
       "kind": "feature",
       "summary": "Multiple report values.",
-      "manifest": "verifications/features/io-report.json",
+      "manifest": "language/verifications/features/io-report.json",
       "features": [
         "io.report"
       ],
@@ -1207,8 +1207,8 @@
       "id": "int.remainder",
       "kind": "feature",
       "summary": "Truncating Int remainder.",
-      "path": "verifications/features/int-remainder.lts",
-      "manifest": "verifications/features/int-remainder.json",
+      "path": "language/verifications/features/int-remainder.lts",
+      "manifest": "language/verifications/features/int-remainder.json",
       "features": [
         "int.remainder"
       ],
@@ -1256,8 +1256,8 @@
       "id": "text.concat",
       "kind": "feature",
       "summary": "String concatenation.",
-      "path": "verifications/features/text-concat.lts",
-      "manifest": "verifications/features/text-concat.json",
+      "path": "language/verifications/features/text-concat.lts",
+      "manifest": "language/verifications/features/text-concat.json",
       "features": [
         "text.concat"
       ],
@@ -1305,8 +1305,8 @@
       "id": "local.immutable",
       "kind": "feature",
       "summary": "Immutable local bindings.",
-      "path": "verifications/features/local-immutable.lts",
-      "manifest": "verifications/features/local-immutable.json",
+      "path": "language/verifications/features/local-immutable.lts",
+      "manifest": "language/verifications/features/local-immutable.json",
       "features": [
         "local.immutable"
       ],
@@ -1354,8 +1354,8 @@
       "id": "string.escape",
       "kind": "feature",
       "summary": "String escape sequences.",
-      "path": "verifications/features/string-escape.lts",
-      "manifest": "verifications/features/string-escape.json",
+      "path": "language/verifications/features/string-escape.lts",
+      "manifest": "language/verifications/features/string-escape.json",
       "features": [
         "string.escape"
       ],
@@ -1403,8 +1403,8 @@
       "id": "report.multi",
       "kind": "feature",
       "summary": "Multi-value reports.",
-      "path": "verifications/features/report-multi.lts",
-      "manifest": "verifications/features/report-multi.json",
+      "path": "language/verifications/features/report-multi.lts",
+      "manifest": "language/verifications/features/report-multi.json",
       "features": [
         "report.multi"
       ],
@@ -1452,8 +1452,8 @@
       "id": "report.tuple",
       "kind": "feature",
       "summary": "Source-like report display of flat tuple values.",
-      "path": "verifications/features/report-tuple.lts",
-      "manifest": "verifications/features/report-tuple.json",
+      "path": "language/verifications/features/report-tuple.lts",
+      "manifest": "language/verifications/features/report-tuple.json",
       "features": [
         "report.tuple"
       ],
@@ -1488,8 +1488,8 @@
       "id": "int.limits",
       "kind": "feature",
       "summary": "Signed 64-bit Int boundaries.",
-      "path": "verifications/features/int-limits.lts",
-      "manifest": "verifications/features/int-limits.json",
+      "path": "language/verifications/features/int-limits.lts",
+      "manifest": "language/verifications/features/int-limits.json",
       "features": [
         "int.limits"
       ],
@@ -1537,8 +1537,8 @@
       "id": "int.floor",
       "kind": "feature",
       "summary": "Floor division and floor modulo.",
-      "path": "verifications/features/int-floor.lts",
-      "manifest": "verifications/features/int-floor.json",
+      "path": "language/verifications/features/int-floor.lts",
+      "manifest": "language/verifications/features/int-floor.json",
       "features": [
         "int.floor"
       ],
@@ -1586,8 +1586,8 @@
       "id": "scope.compound",
       "kind": "feature",
       "summary": "Compound arithmetic updates.",
-      "path": "verifications/features/scope-compound.lts",
-      "manifest": "verifications/features/scope-compound.json",
+      "path": "language/verifications/features/scope-compound.lts",
+      "manifest": "language/verifications/features/scope-compound.json",
       "features": [
         "scope.compound"
       ],
@@ -1622,8 +1622,8 @@
       "id": "mut.inferred",
       "kind": "feature",
       "summary": "Inferred mut and var mut declarations.",
-      "path": "verifications/features/mut-inferred.lts",
-      "manifest": "verifications/features/mut-inferred.json",
+      "path": "language/verifications/features/mut-inferred.lts",
+      "manifest": "language/verifications/features/mut-inferred.json",
       "features": [
         "mut.inferred"
       ],
@@ -1661,8 +1661,8 @@
       "id": "num.power",
       "kind": "feature",
       "summary": "Right-associative Float-default power.",
-      "path": "verifications/features/num-power.lts",
-      "manifest": "verifications/features/num-power.json",
+      "path": "language/verifications/features/num-power.lts",
+      "manifest": "language/verifications/features/num-power.json",
       "features": [
         "num.power"
       ],
@@ -1710,8 +1710,8 @@
       "id": "match.subjectless",
       "kind": "feature",
       "summary": "Subjectless Boolean match selection.",
-      "path": "verifications/features/match-subjectless.lts",
-      "manifest": "verifications/features/match-subjectless.json",
+      "path": "language/verifications/features/match-subjectless.lts",
+      "manifest": "language/verifications/features/match-subjectless.json",
       "features": [
         "match.subjectless"
       ],
@@ -1746,8 +1746,8 @@
       "id": "init.zero",
       "kind": "feature",
       "summary": "Zero initialization for omitted typed locals.",
-      "path": "verifications/features/init-zero.lts",
-      "manifest": "verifications/features/init-zero.json",
+      "path": "language/verifications/features/init-zero.lts",
+      "manifest": "language/verifications/features/init-zero.json",
       "features": [
         "init.zero"
       ],
@@ -1782,8 +1782,8 @@
       "id": "init.reserved",
       "kind": "feature",
       "summary": "Reserved storage and first whole-value initialization.",
-      "path": "verifications/features/init-reserved.lts",
-      "manifest": "verifications/features/init-reserved.json",
+      "path": "language/verifications/features/init-reserved.lts",
+      "manifest": "language/verifications/features/init-reserved.json",
       "features": [
         "init.reserved"
       ],
@@ -1818,8 +1818,8 @@
       "id": "io.temporary",
       "kind": "feature",
       "summary": "Temporary input prompts and variadic output/outputLine helpers.",
-      "path": "verifications/features/io-temporary.lts",
-      "manifest": "verifications/features/io-temporary.json",
+      "path": "language/verifications/features/io-temporary.lts",
+      "manifest": "language/verifications/features/io-temporary.json",
       "features": [
         "io.temporary"
       ],
@@ -1886,8 +1886,8 @@
       "id": "example.001-double-sum",
       "kind": "example",
       "summary": "Prompted integer addition doubled and reported.",
-      "path": "examples/001-double-sum.lts",
-      "manifest": "verifications/artifacts/examples/001-double-sum.json",
+      "path": "language/examples/001-double-sum.lts",
+      "manifest": "language/verifications/artifacts/language/examples/001-double-sum.json",
       "features": [
         "io.input",
         "int.arithmetic",
@@ -1938,8 +1938,8 @@
       "id": "example.002-decisions",
       "kind": "example",
       "summary": "Sign, range, and short-circuit decisions for a supplied integer.",
-      "path": "examples/002-decisions.lts",
-      "manifest": "verifications/artifacts/examples/002-decisions.json",
+      "path": "language/examples/002-decisions.lts",
+      "manifest": "language/verifications/artifacts/language/examples/002-decisions.json",
       "features": [
         "io.input",
         "bool.conditions",
@@ -1990,8 +1990,8 @@
       "id": "example.003-sum-positive",
       "kind": "example",
       "summary": "Reads integers until zero, skipping negatives, and reports the positive sum.",
-      "path": "examples/003-sum-positive.lts",
-      "manifest": "verifications/artifacts/examples/003-sum-positive.json",
+      "path": "language/examples/003-sum-positive.lts",
+      "manifest": "language/verifications/artifacts/language/examples/003-sum-positive.json",
       "features": [
         "io.input",
         "loop.conditional",
@@ -2043,8 +2043,8 @@
       "id": "example.004-factorial",
       "kind": "example",
       "summary": "Prompts for an integer and reports its recursive factorial.",
-      "path": "examples/004-factorial.lts",
-      "manifest": "verifications/artifacts/examples/004-factorial.json",
+      "path": "language/examples/004-factorial.lts",
+      "manifest": "language/verifications/artifacts/language/examples/004-factorial.json",
       "features": [
         "io.input",
         "function.recursion",
@@ -2097,8 +2097,8 @@
       "id": "example.005-scan-arithmetic",
       "kind": "example",
       "summary": "Scans an arithmetic line into number and symbol tokens.",
-      "path": "examples/005-scan-arithmetic.lts",
-      "manifest": "verifications/artifacts/examples/005-scan-arithmetic.json",
+      "path": "language/examples/005-scan-arithmetic.lts",
+      "manifest": "language/verifications/artifacts/language/examples/005-scan-arithmetic.json",
       "features": [
         "io.input",
         "loop.conditional",
@@ -2149,8 +2149,8 @@
       "id": "example.006-fixed-tuples",
       "kind": "example",
       "summary": "Tuple construction, fields, destructuring, and singleton grouping.",
-      "path": "examples/006-fixed-tuples.lts",
-      "manifest": "verifications/artifacts/examples/006-fixed-tuples.json",
+      "path": "language/examples/006-fixed-tuples.lts",
+      "manifest": "language/verifications/artifacts/language/examples/006-fixed-tuples.json",
       "features": [
         "tuple.shape",
         "scope.locals",
@@ -2187,8 +2187,8 @@
       "id": "example.007-prompts-and-report",
       "kind": "example",
       "summary": "Two prompted integers with a multi-value report.",
-      "path": "examples/007-prompts-and-report.lts",
-      "manifest": "verifications/artifacts/examples/007-prompts-and-report.json",
+      "path": "language/examples/007-prompts-and-report.lts",
+      "manifest": "language/verifications/artifacts/language/examples/007-prompts-and-report.json",
       "features": [
         "io.input",
         "int.arithmetic",
@@ -2238,8 +2238,8 @@
       "id": "example.008-named-tuples",
       "kind": "example",
       "summary": "Named tuple fields, shorthand construction, and named function contracts.",
-      "path": "examples/008-named-tuples.lts",
-      "manifest": "verifications/artifacts/examples/008-named-tuples.json",
+      "path": "language/examples/008-named-tuples.lts",
+      "manifest": "language/verifications/artifacts/language/examples/008-named-tuples.json",
       "features": [
         "tuple.shape",
         "io.report"
@@ -2275,8 +2275,8 @@
       "id": "example.009-fixed-arrays",
       "kind": "example",
       "summary": "Traverses token tuples, reads one index, and sums a fixed array.",
-      "path": "examples/009-fixed-arrays.lts",
-      "manifest": "verifications/artifacts/examples/009-fixed-arrays.json",
+      "path": "language/examples/009-fixed-arrays.lts",
+      "manifest": "language/verifications/artifacts/language/examples/009-fixed-arrays.json",
       "features": [
         "array.fixed",
         "loop.sequence",
@@ -2315,8 +2315,8 @@
       "id": "example.010-mixed-tuples",
       "kind": "example",
       "summary": "Interleaves named and unnamed tuple fields and destructures stored order.",
-      "path": "examples/010-mixed-tuples.lts",
-      "manifest": "verifications/artifacts/examples/010-mixed-tuples.json",
+      "path": "language/examples/010-mixed-tuples.lts",
+      "manifest": "language/verifications/artifacts/language/examples/010-mixed-tuples.json",
       "features": [
         "tuple.shape",
         "io.report"
@@ -2352,8 +2352,8 @@
       "id": "example.011-tuple-label-conversion",
       "kind": "example",
       "summary": "Relabels stored tuple positions through explicit receiving types.",
-      "path": "examples/011-tuple-label-conversion.lts",
-      "manifest": "verifications/artifacts/examples/011-tuple-label-conversion.json",
+      "path": "language/examples/011-tuple-label-conversion.lts",
+      "manifest": "language/verifications/artifacts/language/examples/011-tuple-label-conversion.json",
       "features": [
         "tuple.shape",
         "io.report"
@@ -2389,8 +2389,8 @@
       "id": "example.012-named-arguments",
       "kind": "example",
       "summary": "Interleaves named and positional arguments and uses named self calls.",
-      "path": "examples/012-named-arguments.lts",
-      "manifest": "verifications/artifacts/examples/012-named-arguments.json",
+      "path": "language/examples/012-named-arguments.lts",
+      "manifest": "language/verifications/artifacts/language/examples/012-named-arguments.json",
       "features": [
         "tuple.shape",
         "io.report"
@@ -2426,8 +2426,8 @@
       "id": "example.013-growable-lists",
       "kind": "example",
       "summary": "Exercises all four explicit mut list end operations.",
-      "path": "examples/013-growable-lists.lts",
-      "manifest": "verifications/artifacts/examples/013-growable-lists.json",
+      "path": "language/examples/013-growable-lists.lts",
+      "manifest": "language/verifications/artifacts/language/examples/013-growable-lists.json",
       "features": [
         "list.mutation",
         "loop.sequence",
@@ -2464,8 +2464,8 @@
       "id": "example.014-input-history",
       "kind": "example",
       "summary": "Collects integers until zero, then reports the retained history and sum.",
-      "path": "examples/014-input-history.lts",
-      "manifest": "verifications/artifacts/examples/014-input-history.json",
+      "path": "language/examples/014-input-history.lts",
+      "manifest": "language/verifications/artifacts/language/examples/014-input-history.json",
       "features": [
         "list.mutation",
         "io.input",
@@ -2518,8 +2518,8 @@
       "id": "example.015-retained-tokens",
       "kind": "example",
       "summary": "Tokenizes a line into a retained list before reporting it.",
-      "path": "examples/015-retained-tokens.lts",
-      "manifest": "verifications/artifacts/examples/015-retained-tokens.json",
+      "path": "language/examples/015-retained-tokens.lts",
+      "manifest": "language/verifications/artifacts/language/examples/015-retained-tokens.json",
       "features": [
         "list.mutation",
         "loop.sequence",
@@ -2571,8 +2571,8 @@
       "id": "example.016-integer-calculator",
       "kind": "example",
       "summary": "Tokenized integer calculator with precedence and nesting.",
-      "path": "examples/016-integer-calculator.lts",
-      "manifest": "verifications/artifacts/examples/016-integer-calculator.json",
+      "path": "language/examples/016-integer-calculator.lts",
+      "manifest": "language/verifications/artifacts/language/examples/016-integer-calculator.json",
       "features": [
         "int.arithmetic",
         "list.mutation",
@@ -2614,8 +2614,8 @@
       "id": "example.019-whole-input",
       "kind": "example",
       "summary": "Reads remaining text through EOF and reports its code-point length.",
-      "path": "examples/019-whole-input.lts",
-      "manifest": "verifications/artifacts/examples/019-whole-input.json",
+      "path": "language/examples/019-whole-input.lts",
+      "manifest": "language/verifications/artifacts/language/examples/019-whole-input.json",
       "features": [
         "io.whole-input",
         "text.helpers",
@@ -2665,8 +2665,8 @@
       "id": "example.020-script-arguments",
       "kind": "example",
       "summary": "Reports ordered script arguments after --.",
-      "path": "examples/020-script-arguments.lts",
-      "manifest": "verifications/artifacts/examples/020-script-arguments.json",
+      "path": "language/examples/020-script-arguments.lts",
+      "manifest": "language/verifications/artifacts/language/examples/020-script-arguments.json",
       "features": [
         "io.arguments",
         "loop.sequence",
@@ -2720,8 +2720,8 @@
       "id": "example.021-type-aliases",
       "kind": "example",
       "summary": "Transparent tuple/list aliases with list traversal.",
-      "path": "examples/021-type-aliases.lts",
-      "manifest": "verifications/artifacts/examples/021-type-aliases.json",
+      "path": "language/examples/021-type-aliases.lts",
+      "manifest": "language/verifications/artifacts/language/examples/021-type-aliases.json",
       "features": [
         "alias.transparent",
         "list.mutation",
@@ -2772,8 +2772,8 @@
       "id": "sample.001-add-two-numbers",
       "kind": "sample",
       "summary": "Adds two supplied baskets; the verification appends outputLine(apples).",
-      "path": "samples/001_add_two_numbers.lts",
-      "manifest": "verifications/artifacts/samples/001-add-two-numbers.json",
+      "path": "language/samples/001_add_two_numbers.lts",
+      "manifest": "language/verifications/artifacts/language/samples/001-add-two-numbers.json",
       "features": [
         "int.arithmetic",
         "scope.locals"
@@ -2822,8 +2822,8 @@
       "id": "sample.002-arithmetic-operations",
       "kind": "sample",
       "summary": "Four integer operations; the verification appends reports for each result.",
-      "path": "samples/002_arithmetic_operations.lts",
-      "manifest": "verifications/artifacts/samples/002-arithmetic-operations.json",
+      "path": "language/samples/002_arithmetic_operations.lts",
+      "manifest": "language/verifications/artifacts/language/samples/002-arithmetic-operations.json",
       "features": [
         "int.arithmetic",
         "scope.locals"
@@ -2872,8 +2872,8 @@
       "id": "sample.003-rectangle-measurements",
       "kind": "sample",
       "summary": "Rectangle area and perimeter.",
-      "path": "samples/003_rectangle_measurements.lts",
-      "manifest": "verifications/artifacts/samples/003-rectangle-measurements.json",
+      "path": "language/samples/003_rectangle_measurements.lts",
+      "manifest": "language/verifications/artifacts/language/samples/003-rectangle-measurements.json",
       "features": [
         "int.arithmetic",
         "scope.locals"
@@ -2922,8 +2922,8 @@
       "id": "sample.004-triangle-area",
       "kind": "sample",
       "summary": "Triangle area from base and height.",
-      "path": "samples/004_triangle_area.lts",
-      "manifest": "verifications/artifacts/samples/004-triangle-area.json",
+      "path": "language/samples/004_triangle_area.lts",
+      "manifest": "language/verifications/artifacts/language/samples/004-triangle-area.json",
       "features": [
         "num.float",
         "scope.locals"
@@ -2972,8 +2972,8 @@
       "id": "sample.005-circle-measurements",
       "kind": "sample",
       "summary": "Approximate circumference and area of a circle.",
-      "path": "samples/005_circle_measurements.lts",
-      "manifest": "verifications/artifacts/samples/005-circle-measurements.json",
+      "path": "language/samples/005_circle_measurements.lts",
+      "manifest": "language/verifications/artifacts/language/samples/005-circle-measurements.json",
       "features": [
         "num.float",
         "scope.locals"
@@ -3022,8 +3022,8 @@
       "id": "sample.006-temperature-conversion",
       "kind": "sample",
       "summary": "Celsius to Fahrenheit and back.",
-      "path": "samples/006_temperature_conversion.lts",
-      "manifest": "verifications/artifacts/samples/006-temperature-conversion.json",
+      "path": "language/samples/006_temperature_conversion.lts",
+      "manifest": "language/verifications/artifacts/language/samples/006-temperature-conversion.json",
       "features": [
         "num.float",
         "scope.locals"
@@ -3072,8 +3072,8 @@
       "id": "sample.007-distance-conversion",
       "kind": "sample",
       "summary": "Meters converted to kilometers and centimeters.",
-      "path": "samples/007_distance_conversion.lts",
-      "manifest": "verifications/artifacts/samples/007-distance-conversion.json",
+      "path": "language/samples/007_distance_conversion.lts",
+      "manifest": "language/verifications/artifacts/language/samples/007-distance-conversion.json",
       "features": [
         "num.float",
         "scope.locals"
@@ -3122,8 +3122,8 @@
       "id": "sample.008-duration-parts",
       "kind": "sample",
       "summary": "Split seconds into hours, minutes and seconds.",
-      "path": "samples/008_duration_parts.lts",
-      "manifest": "verifications/artifacts/samples/008-duration-parts.json",
+      "path": "language/samples/008_duration_parts.lts",
+      "manifest": "language/verifications/artifacts/language/samples/008-duration-parts.json",
       "features": [
         "int.arithmetic",
         "int.remainder",
@@ -3173,8 +3173,8 @@
       "id": "sample.009-average-three-values",
       "kind": "sample",
       "summary": "Average of three daily values.",
-      "path": "samples/009_average_three_values.lts",
-      "manifest": "verifications/artifacts/samples/009-average-three-values.json",
+      "path": "language/samples/009_average_three_values.lts",
+      "manifest": "language/verifications/artifacts/language/samples/009-average-three-values.json",
       "features": [
         "num.float",
         "scope.locals"
@@ -3223,8 +3223,8 @@
       "id": "sample.010-percentage-of-total",
       "kind": "sample",
       "summary": "Completed percentage and a percentage of the total.",
-      "path": "samples/010_percentage_of_total.lts",
-      "manifest": "verifications/artifacts/samples/010-percentage-of-total.json",
+      "path": "language/samples/010_percentage_of_total.lts",
+      "manifest": "language/verifications/artifacts/language/samples/010-percentage-of-total.json",
       "features": [
         "num.float",
         "scope.locals"
@@ -3273,8 +3273,8 @@
       "id": "sample.011-discounted-price",
       "kind": "sample",
       "summary": "Percentage discount rounded to cents.",
-      "path": "samples/011_discounted_price.lts",
-      "manifest": "verifications/artifacts/samples/011-discounted-price.json",
+      "path": "language/samples/011_discounted_price.lts",
+      "manifest": "language/verifications/artifacts/language/samples/011-discounted-price.json",
       "features": [
         "int.arithmetic",
         "scope.locals"
@@ -3323,8 +3323,8 @@
       "id": "sample.012-tax-and-tip",
       "kind": "sample",
       "summary": "Tax and tip rounded to cents.",
-      "path": "samples/012_tax_and_tip.lts",
-      "manifest": "verifications/artifacts/samples/012-tax-and-tip.json",
+      "path": "language/samples/012_tax_and_tip.lts",
+      "manifest": "language/verifications/artifacts/language/samples/012-tax-and-tip.json",
       "features": [
         "int.arithmetic",
         "scope.locals"
@@ -3373,8 +3373,8 @@
       "id": "sample.013-simple-interest",
       "kind": "sample",
       "summary": "Simple interest over three years.",
-      "path": "samples/013_simple_interest.lts",
-      "manifest": "verifications/artifacts/samples/013-simple-interest.json",
+      "path": "language/samples/013_simple_interest.lts",
+      "manifest": "language/verifications/artifacts/language/samples/013-simple-interest.json",
       "features": [
         "int.arithmetic",
         "scope.locals"
@@ -3423,8 +3423,8 @@
       "id": "sample.014-speed-distance-time",
       "kind": "sample",
       "summary": "Speed, distance and time relations.",
-      "path": "samples/014_speed_distance_time.lts",
-      "manifest": "verifications/artifacts/samples/014-speed-distance-time.json",
+      "path": "language/samples/014_speed_distance_time.lts",
+      "manifest": "language/verifications/artifacts/language/samples/014-speed-distance-time.json",
       "features": [
         "num.float",
         "scope.locals"
@@ -3473,8 +3473,8 @@
       "id": "sample.015-weighted-average",
       "kind": "sample",
       "summary": "Weighted average of three scores.",
-      "path": "samples/015_weighted_average.lts",
-      "manifest": "verifications/artifacts/samples/015-weighted-average.json",
+      "path": "language/samples/015_weighted_average.lts",
+      "manifest": "language/verifications/artifacts/language/samples/015-weighted-average.json",
       "features": [
         "int.arithmetic",
         "scope.locals"
@@ -3523,8 +3523,8 @@
       "id": "sample.016-midpoint-coordinates",
       "kind": "sample",
       "summary": "Midpoint of two coordinate pairs.",
-      "path": "samples/016_midpoint_coordinates.lts",
-      "manifest": "verifications/artifacts/samples/016-midpoint-coordinates.json",
+      "path": "language/samples/016_midpoint_coordinates.lts",
+      "manifest": "language/verifications/artifacts/language/samples/016-midpoint-coordinates.json",
       "features": [
         "num.float",
         "scope.locals"
@@ -3573,8 +3573,8 @@
       "id": "sample.017-linear-interpolation",
       "kind": "sample",
       "summary": "Linear interpolation at a fraction.",
-      "path": "samples/017_linear_interpolation.lts",
-      "manifest": "verifications/artifacts/samples/017-linear-interpolation.json",
+      "path": "language/samples/017_linear_interpolation.lts",
+      "manifest": "language/verifications/artifacts/language/samples/017-linear-interpolation.json",
       "features": [
         "num.float",
         "scope.locals"
@@ -3623,8 +3623,8 @@
       "id": "sample.018-split-bill",
       "kind": "sample",
       "summary": "Whole-cent bill split with remainder.",
-      "path": "samples/018_split_bill.lts",
-      "manifest": "verifications/artifacts/samples/018-split-bill.json",
+      "path": "language/samples/018_split_bill.lts",
+      "manifest": "language/verifications/artifacts/language/samples/018-split-bill.json",
       "features": [
         "int.arithmetic",
         "int.remainder",
@@ -3674,8 +3674,8 @@
       "id": "sample.019-currency-conversion",
       "kind": "sample",
       "summary": "Currency conversion rounded to target cents.",
-      "path": "samples/019_currency_conversion.lts",
-      "manifest": "verifications/artifacts/samples/019-currency-conversion.json",
+      "path": "language/samples/019_currency_conversion.lts",
+      "manifest": "language/verifications/artifacts/language/samples/019-currency-conversion.json",
       "features": [
         "int.arithmetic",
         "scope.locals"
@@ -3724,8 +3724,8 @@
       "id": "sample.020-swap-values",
       "kind": "sample",
       "summary": "Swaps two var bindings through a temporary; verification reports both.",
-      "path": "samples/020_swap_values.lts",
-      "manifest": "verifications/artifacts/samples/020-swap-values.json",
+      "path": "language/samples/020_swap_values.lts",
+      "manifest": "language/verifications/artifacts/language/samples/020-swap-values.json",
       "features": [
         "scope.assignment",
         "scope.locals"
@@ -7445,7 +7445,7 @@
   ],
   "sourceFiles": [
     {
-      "path": "cases/language/reject-effects.lts",
+      "path": "language/cases/reject-effects.lts",
       "sourceSha256": "1e6c978bf6ade04cdb4a1027d5cf4a0d420ad25d3adaedbd0df98e304a180316",
       "bytes": 42,
       "t00Check": {
@@ -7455,7 +7455,7 @@
       "coverage": "not-a-standalone-T00-program"
     },
     {
-      "path": "cases/language/silent.lts",
+      "path": "language/cases/silent.lts",
       "sourceSha256": "f26dc181c45a1a10a1e96f59a9f8e72ac78f3b64e854788884f0964ef87649e3",
       "bytes": 12,
       "t00Check": {
@@ -7471,7 +7471,7 @@
       "status": "accepted"
     },
     {
-      "path": "cases/language/tour-bindings.lts",
+      "path": "language/cases/tour-bindings.lts",
       "sourceSha256": "539924726b3471a186f9513d106d6ca765604d0f6f12b7878b98c53b8895216a",
       "bytes": 92,
       "t00Check": {
@@ -7859,97 +7859,97 @@
       "evidence": "Current source bytes exactly match preserved selected source identity; not recompiled in this audit."
     },
     {
-      "path": "examples/001-double-sum.lts",
+      "path": "language/examples/001-double-sum.lts",
       "coverage": "canonical-manifest",
       "id": "example.001-double-sum"
     },
     {
-      "path": "examples/002-decisions.lts",
+      "path": "language/examples/002-decisions.lts",
       "coverage": "canonical-manifest",
       "id": "example.002-decisions"
     },
     {
-      "path": "examples/003-sum-positive.lts",
+      "path": "language/examples/003-sum-positive.lts",
       "coverage": "canonical-manifest",
       "id": "example.003-sum-positive"
     },
     {
-      "path": "examples/004-factorial.lts",
+      "path": "language/examples/004-factorial.lts",
       "coverage": "canonical-manifest",
       "id": "example.004-factorial"
     },
     {
-      "path": "examples/005-scan-arithmetic.lts",
+      "path": "language/examples/005-scan-arithmetic.lts",
       "coverage": "canonical-manifest",
       "id": "example.005-scan-arithmetic"
     },
     {
-      "path": "examples/006-fixed-tuples.lts",
+      "path": "language/examples/006-fixed-tuples.lts",
       "coverage": "canonical-manifest",
       "id": "example.006-fixed-tuples"
     },
     {
-      "path": "examples/007-prompts-and-report.lts",
+      "path": "language/examples/007-prompts-and-report.lts",
       "coverage": "canonical-manifest",
       "id": "example.007-prompts-and-report"
     },
     {
-      "path": "examples/008-named-tuples.lts",
+      "path": "language/examples/008-named-tuples.lts",
       "coverage": "canonical-manifest",
       "id": "example.008-named-tuples"
     },
     {
-      "path": "examples/009-fixed-arrays.lts",
+      "path": "language/examples/009-fixed-arrays.lts",
       "coverage": "canonical-manifest",
       "id": "example.009-fixed-arrays"
     },
     {
-      "path": "examples/010-mixed-tuples.lts",
+      "path": "language/examples/010-mixed-tuples.lts",
       "coverage": "canonical-manifest",
       "id": "example.010-mixed-tuples"
     },
     {
-      "path": "examples/011-tuple-label-conversion.lts",
+      "path": "language/examples/011-tuple-label-conversion.lts",
       "coverage": "canonical-manifest",
       "id": "example.011-tuple-label-conversion"
     },
     {
-      "path": "examples/012-named-arguments.lts",
+      "path": "language/examples/012-named-arguments.lts",
       "coverage": "canonical-manifest",
       "id": "example.012-named-arguments"
     },
     {
-      "path": "examples/013-growable-lists.lts",
+      "path": "language/examples/013-growable-lists.lts",
       "coverage": "canonical-manifest",
       "id": "example.013-growable-lists"
     },
     {
-      "path": "examples/014-input-history.lts",
+      "path": "language/examples/014-input-history.lts",
       "coverage": "canonical-manifest",
       "id": "example.014-input-history"
     },
     {
-      "path": "examples/015-retained-tokens.lts",
+      "path": "language/examples/015-retained-tokens.lts",
       "coverage": "canonical-manifest",
       "id": "example.015-retained-tokens"
     },
     {
-      "path": "examples/016-integer-calculator.lts",
+      "path": "language/examples/016-integer-calculator.lts",
       "coverage": "canonical-manifest",
       "id": "example.016-integer-calculator"
     },
     {
-      "path": "examples/019-whole-input.lts",
+      "path": "language/examples/019-whole-input.lts",
       "coverage": "canonical-manifest",
       "id": "example.019-whole-input"
     },
     {
-      "path": "examples/020-script-arguments.lts",
+      "path": "language/examples/020-script-arguments.lts",
       "coverage": "canonical-manifest",
       "id": "example.020-script-arguments"
     },
     {
-      "path": "examples/021-type-aliases.lts",
+      "path": "language/examples/021-type-aliases.lts",
       "coverage": "canonical-manifest",
       "id": "example.021-type-aliases"
     },
@@ -9467,302 +9467,302 @@
       "status": "matches"
     },
     {
-      "path": "samples/001_add_two_numbers.lts",
+      "path": "language/samples/001_add_two_numbers.lts",
       "coverage": "canonical-manifest",
       "id": "sample.001-add-two-numbers"
     },
     {
-      "path": "samples/002_arithmetic_operations.lts",
+      "path": "language/samples/002_arithmetic_operations.lts",
       "coverage": "canonical-manifest",
       "id": "sample.002-arithmetic-operations"
     },
     {
-      "path": "samples/003_rectangle_measurements.lts",
+      "path": "language/samples/003_rectangle_measurements.lts",
       "coverage": "canonical-manifest",
       "id": "sample.003-rectangle-measurements"
     },
     {
-      "path": "samples/004_triangle_area.lts",
+      "path": "language/samples/004_triangle_area.lts",
       "coverage": "canonical-manifest",
       "id": "sample.004-triangle-area"
     },
     {
-      "path": "samples/005_circle_measurements.lts",
+      "path": "language/samples/005_circle_measurements.lts",
       "coverage": "canonical-manifest",
       "id": "sample.005-circle-measurements"
     },
     {
-      "path": "samples/006_temperature_conversion.lts",
+      "path": "language/samples/006_temperature_conversion.lts",
       "coverage": "canonical-manifest",
       "id": "sample.006-temperature-conversion"
     },
     {
-      "path": "samples/007_distance_conversion.lts",
+      "path": "language/samples/007_distance_conversion.lts",
       "coverage": "canonical-manifest",
       "id": "sample.007-distance-conversion"
     },
     {
-      "path": "samples/008_duration_parts.lts",
+      "path": "language/samples/008_duration_parts.lts",
       "coverage": "canonical-manifest",
       "id": "sample.008-duration-parts"
     },
     {
-      "path": "samples/009_average_three_values.lts",
+      "path": "language/samples/009_average_three_values.lts",
       "coverage": "canonical-manifest",
       "id": "sample.009-average-three-values"
     },
     {
-      "path": "samples/010_percentage_of_total.lts",
+      "path": "language/samples/010_percentage_of_total.lts",
       "coverage": "canonical-manifest",
       "id": "sample.010-percentage-of-total"
     },
     {
-      "path": "samples/011_discounted_price.lts",
+      "path": "language/samples/011_discounted_price.lts",
       "coverage": "canonical-manifest",
       "id": "sample.011-discounted-price"
     },
     {
-      "path": "samples/012_tax_and_tip.lts",
+      "path": "language/samples/012_tax_and_tip.lts",
       "coverage": "canonical-manifest",
       "id": "sample.012-tax-and-tip"
     },
     {
-      "path": "samples/013_simple_interest.lts",
+      "path": "language/samples/013_simple_interest.lts",
       "coverage": "canonical-manifest",
       "id": "sample.013-simple-interest"
     },
     {
-      "path": "samples/014_speed_distance_time.lts",
+      "path": "language/samples/014_speed_distance_time.lts",
       "coverage": "canonical-manifest",
       "id": "sample.014-speed-distance-time"
     },
     {
-      "path": "samples/015_weighted_average.lts",
+      "path": "language/samples/015_weighted_average.lts",
       "coverage": "canonical-manifest",
       "id": "sample.015-weighted-average"
     },
     {
-      "path": "samples/016_midpoint_coordinates.lts",
+      "path": "language/samples/016_midpoint_coordinates.lts",
       "coverage": "canonical-manifest",
       "id": "sample.016-midpoint-coordinates"
     },
     {
-      "path": "samples/017_linear_interpolation.lts",
+      "path": "language/samples/017_linear_interpolation.lts",
       "coverage": "canonical-manifest",
       "id": "sample.017-linear-interpolation"
     },
     {
-      "path": "samples/018_split_bill.lts",
+      "path": "language/samples/018_split_bill.lts",
       "coverage": "canonical-manifest",
       "id": "sample.018-split-bill"
     },
     {
-      "path": "samples/019_currency_conversion.lts",
+      "path": "language/samples/019_currency_conversion.lts",
       "coverage": "canonical-manifest",
       "id": "sample.019-currency-conversion"
     },
     {
-      "path": "samples/020_swap_values.lts",
+      "path": "language/samples/020_swap_values.lts",
       "coverage": "canonical-manifest",
       "id": "sample.020-swap-values"
     },
     {
-      "path": "verifications/features/alias-transparent.lts",
+      "path": "language/verifications/features/alias-transparent.lts",
       "coverage": "canonical-manifest",
       "id": "alias.transparent"
     },
     {
-      "path": "verifications/features/array-fixed.lts",
+      "path": "language/verifications/features/array-fixed.lts",
       "coverage": "canonical-manifest",
       "id": "array.fixed"
     },
     {
-      "path": "verifications/features/bool-conditions.lts",
+      "path": "language/verifications/features/bool-conditions.lts",
       "coverage": "canonical-manifest",
       "id": "bool.conditions"
     },
     {
-      "path": "verifications/features/comparison-chains.lts",
+      "path": "language/verifications/features/comparison-chains.lts",
       "coverage": "canonical-manifest",
       "id": "comparison.chains"
     },
     {
-      "path": "verifications/features/cond-partial.lts",
+      "path": "language/verifications/features/cond-partial.lts",
       "coverage": "canonical-manifest",
       "id": "cond.partial"
     },
     {
-      "path": "verifications/features/finally-cleanup.lts",
+      "path": "language/verifications/features/finally-cleanup.lts",
       "coverage": "canonical-manifest",
       "id": "finally.cleanup"
     },
     {
-      "path": "verifications/features/function-recursion.lts",
+      "path": "language/verifications/features/function-recursion.lts",
       "coverage": "canonical-manifest",
       "id": "function.recursion"
     },
     {
-      "path": "verifications/features/init-reserved.lts",
+      "path": "language/verifications/features/init-reserved.lts",
       "coverage": "canonical-manifest",
       "id": "init.reserved"
     },
     {
-      "path": "verifications/features/init-zero.lts",
+      "path": "language/verifications/features/init-zero.lts",
       "coverage": "canonical-manifest",
       "id": "init.zero"
     },
     {
-      "path": "verifications/features/int-arithmetic.lts",
+      "path": "language/verifications/features/int-arithmetic.lts",
       "coverage": "canonical-manifest",
       "id": "int.arithmetic"
     },
     {
-      "path": "verifications/features/int-floor.lts",
+      "path": "language/verifications/features/int-floor.lts",
       "coverage": "canonical-manifest",
       "id": "int.floor"
     },
     {
-      "path": "verifications/features/int-limits.lts",
+      "path": "language/verifications/features/int-limits.lts",
       "coverage": "canonical-manifest",
       "id": "int.limits"
     },
     {
-      "path": "verifications/features/int-remainder.lts",
+      "path": "language/verifications/features/int-remainder.lts",
       "coverage": "canonical-manifest",
       "id": "int.remainder"
     },
     {
-      "path": "verifications/features/io-arguments.lts",
+      "path": "language/verifications/features/io-arguments.lts",
       "coverage": "canonical-manifest",
       "id": "io.arguments"
     },
     {
-      "path": "verifications/features/io-exit.lts",
+      "path": "language/verifications/features/io-exit.lts",
       "coverage": "canonical-manifest",
       "id": "io.exit"
     },
     {
-      "path": "verifications/features/io-input.lts",
+      "path": "language/verifications/features/io-input.lts",
       "coverage": "canonical-manifest",
       "id": "io.input"
     },
     {
-      "path": "verifications/features/io-temporary.lts",
+      "path": "language/verifications/features/io-temporary.lts",
       "coverage": "canonical-manifest",
       "id": "io.temporary"
     },
     {
-      "path": "verifications/features/io-whole-input.lts",
+      "path": "language/verifications/features/io-whole-input.lts",
       "coverage": "canonical-manifest",
       "id": "io.whole-input"
     },
     {
-      "path": "verifications/features/list-mutation.lts",
+      "path": "language/verifications/features/list-mutation.lts",
       "coverage": "canonical-manifest",
       "id": "list.mutation"
     },
     {
-      "path": "verifications/features/local-immutable.lts",
+      "path": "language/verifications/features/local-immutable.lts",
       "coverage": "canonical-manifest",
       "id": "local.immutable"
     },
     {
-      "path": "verifications/features/loop-conditional.lts",
+      "path": "language/verifications/features/loop-conditional.lts",
       "coverage": "canonical-manifest",
       "id": "loop.conditional"
     },
     {
-      "path": "verifications/features/loop-metadata.lts",
+      "path": "language/verifications/features/loop-metadata.lts",
       "coverage": "canonical-manifest",
       "id": "loop.metadata"
     },
     {
-      "path": "verifications/features/loop-sequence.lts",
+      "path": "language/verifications/features/loop-sequence.lts",
       "coverage": "canonical-manifest",
       "id": "loop.sequence"
     },
     {
-      "path": "verifications/features/loop-value.lts",
+      "path": "language/verifications/features/loop-value.lts",
       "coverage": "canonical-manifest",
       "id": "loop.value"
     },
     {
-      "path": "verifications/features/match-subjectless.lts",
+      "path": "language/verifications/features/match-subjectless.lts",
       "coverage": "canonical-manifest",
       "id": "match.subjectless"
     },
     {
-      "path": "verifications/features/mut-inferred.lts",
+      "path": "language/verifications/features/mut-inferred.lts",
       "coverage": "canonical-manifest",
       "id": "mut.inferred"
     },
     {
-      "path": "verifications/features/num-aliases.lts",
+      "path": "language/verifications/features/num-aliases.lts",
       "coverage": "canonical-manifest",
       "id": "num.aliases"
     },
     {
-      "path": "verifications/features/num-float-context.lts",
+      "path": "language/verifications/features/num-float-context.lts",
       "coverage": "canonical-manifest",
       "id": "num.float-context"
     },
     {
-      "path": "verifications/features/num-float.lts",
+      "path": "language/verifications/features/num-float.lts",
       "coverage": "canonical-manifest",
       "id": "num.float"
     },
     {
-      "path": "verifications/features/num-power.lts",
+      "path": "language/verifications/features/num-power.lts",
       "coverage": "canonical-manifest",
       "id": "num.power"
     },
     {
-      "path": "verifications/features/num-widths.lts",
+      "path": "language/verifications/features/num-widths.lts",
       "coverage": "canonical-manifest",
       "id": "num.widths"
     },
     {
-      "path": "verifications/features/report-multi.lts",
+      "path": "language/verifications/features/report-multi.lts",
       "coverage": "canonical-manifest",
       "id": "report.multi"
     },
     {
-      "path": "verifications/features/report-tuple.lts",
+      "path": "language/verifications/features/report-tuple.lts",
       "coverage": "canonical-manifest",
       "id": "report.tuple"
     },
     {
-      "path": "verifications/features/scope-assignment.lts",
+      "path": "language/verifications/features/scope-assignment.lts",
       "coverage": "canonical-manifest",
       "id": "scope.assignment"
     },
     {
-      "path": "verifications/features/scope-compound.lts",
+      "path": "language/verifications/features/scope-compound.lts",
       "coverage": "canonical-manifest",
       "id": "scope.compound"
     },
     {
-      "path": "verifications/features/scope-locals.lts",
+      "path": "language/verifications/features/scope-locals.lts",
       "coverage": "canonical-manifest",
       "id": "scope.locals"
     },
     {
-      "path": "verifications/features/string-escape.lts",
+      "path": "language/verifications/features/string-escape.lts",
       "coverage": "canonical-manifest",
       "id": "string.escape"
     },
     {
-      "path": "verifications/features/text-concat.lts",
+      "path": "language/verifications/features/text-concat.lts",
       "coverage": "canonical-manifest",
       "id": "text.concat"
     },
     {
-      "path": "verifications/features/text-helpers.lts",
+      "path": "language/verifications/features/text-helpers.lts",
       "coverage": "canonical-manifest",
       "id": "text.helpers"
     },
     {
-      "path": "verifications/features/tuple-shape.lts",
+      "path": "language/verifications/features/tuple-shape.lts",
       "coverage": "canonical-manifest",
       "id": "tuple.shape"
     }

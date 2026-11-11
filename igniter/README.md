@@ -3,7 +3,7 @@
 This directory contains TypeScript build, verification and artifact adapters
 for the generated Lite compiler. The handwritten **T00** interpreter and its
 active CLI/test adapters have been retired. Public compile and check use the
-Lite-written generated [T12 compiler](../compiler/bootstrap/README.md). Public `./lite run` compiles a
+Lite-written generated [T12 compiler](../compiler/bootstrap/README.md). Public `./bin/lite run` compiles a
 script to a temporary artifact and executes it; programs also execute from
 directly compiled TS artifacts. C output/native self-hosting are later work.
 Verification runs generated TS artifacts. See the
@@ -123,9 +123,9 @@ no npm package dependencies and executes the `.ts` sources directly.
 From the repository root:
 
 ```sh
-./lite compile examples/001-double-sum.lts > /tmp/lite-example.ts
+./bin/lite compile language/examples/001-double-sum.lts > /tmp/lite-example.ts
 node compiler/entry.ts /tmp/lite-example.ts
-./lite check examples/001-double-sum.lts
+./bin/lite check language/examples/001-double-sum.lts
 ```
 
 Enter `7` and `5` on separate lines; it prints `24` after the explicit prompts.
@@ -146,8 +146,8 @@ npm --prefix igniter run check
 Run tests through the CLI:
 
 ```sh
-./lite test --fast       # generated TS regressions; full-source sweeps omitted
-./lite test --full       # generated TS regressions and full-source phase sweeps
+./bin/lite test --fast       # generated TS regressions; full-source sweeps omitted
+./bin/lite test --full       # generated TS regressions and full-source phase sweeps
 ```
 
 Default tests compile Lite with the generated compiler, strictly check TS artifacts,
@@ -156,7 +156,7 @@ across inputs. The generated compiler is required for all active paths. Native
 execution stays deferred. Known
 unsupported semantic contracts continue to fail visibly in `lite verify --all`.
 
-The root [lite launcher](../lite) links to the executable TypeScript entry
+The root [lite launcher](../bin/lite) links to the executable TypeScript entry
 [`launcher.ts`](launcher.ts). Compile/check locate their adapters relative to
 the launcher while source paths remain relative to the caller. TS artifacts run
 through [`compiler/entry.ts`](../compiler/entry.ts), preserving program arguments,
@@ -195,7 +195,7 @@ The manifests are [compiler/manifests/ts.json](../compiler/manifests/ts.json) an
 [c.json](../compiler/manifests/c.json). Each names one Lite root file; its
 top-level imports list the L0 libraries, target literal encoders, shared
 front-end, target emitter and target driver in dependency order. Build
-provenance records the resolved dependency paths. `litec` compiles the expanded
+provenance records the resolved dependency paths. `lite-compile-ts` compiles the expanded
 manifest bundle through [`compiler/cli.ts`](../compiler/cli.ts); compiler source and `lib/core` contain no
 `importFlatAll` directives. This does not add module namespaces or package
 resolution. The `compiler/ts-emitter.lts` and
@@ -392,8 +392,8 @@ Select the callee first, evaluate every supplied expression once in written orde
 An exit/fault stops later preparation and the body. self uses the same routing.
 Temporary builtin helpers remain positional; their public labels are unselected.
 Defaults, spread, callable views and access-qualified inputs remain unsupported.
-See [012](../examples/012-named-arguments.lts) and
-[INV-031 evidence](../investigations/INV-031-fvp-named-calls.md).
+See [012](../language/examples/012-named-arguments.lts) and
+[INV-031 evidence](../research/investigations/INV-031-fvp-named-calls.md).
 
 ### Flat fixed tuples
 
@@ -479,8 +479,8 @@ Named and unnamed scalar fields may interleave in written order, for example
 (7, tea = "green", 2) with type (:Int, tea: String, :Int). Numeric access covers
 every position; field access covers labeled positions. Copies, function contracts
 and homogeneous arrays preserve each position's label or absence of a label.
-See [010](../examples/010-mixed-tuples.lts) and
-[INV-022 evidence](../investigations/INV-022-fvp-mixed-tuples.md).
+See [010](../language/examples/010-mixed-tuples.lts) and
+[INV-022 evidence](../research/investigations/INV-022-fvp-mixed-tuples.md).
 
 ### Explicit tuple label conversion
 
@@ -492,8 +492,8 @@ receiving bindings work; later replacement still checks the destination labels.
 Fresh constructors with matching labels work, but contextual construction needing
 routing remains diagnosed as unimplemented. No numeric casts, callable label
 adaptation, aliases or uninitialized typed storage are implemented here. See
-[011](../examples/011-tuple-label-conversion.lts) and
-[INV-022 evidence](../investigations/INV-022-fvp-label-conversion.md).
+[011](../language/examples/011-tuple-label-conversion.lts) and
+[INV-022 evidence](../research/investigations/INV-022-fvp-label-conversion.md).
 
 ### Growable lists
 
@@ -541,8 +541,8 @@ exhaustion is not promised recoverable. No allocation Result, capacity helper,
 optimizer, view, indexed write, alias framework or attached recovery is added.
 Each host update builds a fresh immutable sequence, preserving previous values;
 this intentionally simple implementation has no amortized growth or native
-layout/performance claim. See [013](../examples/013-growable-lists.lts) and
-[INV-055 evidence](../investigations/INV-055-fvp-list-slice.md).
+layout/performance claim. See [013](../language/examples/013-growable-lists.lts) and
+[INV-055 evidence](../research/investigations/INV-055-fvp-list-slice.md).
 
 ### Fixed arrays and traversal
 
@@ -593,15 +593,15 @@ array values; it does not validate native header-free storage or performance.
 inputArgs() returns a readable List<String> containing only script arguments:
 
 ```sh
-./lite run examples/020-script-arguments.lts -- "a b" "" "سلام🙂" --check
-./lite compile examples/020-script-arguments.lts > /tmp/args.ts
+./bin/lite run language/examples/020-script-arguments.lts -- "a b" "" "سلام🙂" --check
+./bin/lite compile language/examples/020-script-arguments.lts > /tmp/args.ts
 node compiler/entry.ts /tmp/args.ts "a b" "" "سلام🙂" --check
 ```
 
 The example reports each supplied value in order, including an empty line for
 the empty argument. Every value after the artifact path is program data,
 including `--` and `--check`. Without arguments, inputArgs returns an empty
-known-String list. `./lite run` removes one optional `--` separator after the
+known-String list. `./bin/lite run` removes one optional `--` separator after the
 script path; the artifact adapter needs no separator.
 
 The zero-argument helper consumes no stdin and produces no prompt/output. It
@@ -611,7 +611,7 @@ runner flags, script path and separator are excluded. No path normalization,
 option parsing, glob expansion or conversion occurs inside Lite. Ordinary helper
 shadowing and before-effects signature checking apply. Check-only remains silent
 and does not execute inputArgs or read stdin. The embedding IO.args field is
-optional for existing callers. See [INV-067 evidence](../investigations/INV-067-fvp-script-arguments.md).
+optional for existing callers. See [INV-067 evidence](../research/investigations/INV-067-fvp-script-arguments.md).
 
 ### Whole input with optional prompt
 
@@ -627,8 +627,8 @@ remain unsupported; ordinary shadowing works. Invalid signatures fail before
 program effects, read failures stay terminal and the other input helpers retain
 their EOF-fault rules. It reads all remaining text and may use proportional memory;
 no file API, rewind, streaming guarantee or normalization is added. See
-[019](../examples/019-whole-input.lts) and
-[INV-004 evidence](../investigations/INV-004-fvp-whole-input.md).
+[019](../language/examples/019-whole-input.lts) and
+[INV-004 evidence](../research/investigations/INV-004-fvp-whole-input.md).
 
 ### Temporary text operations
 
@@ -636,7 +636,7 @@ no file API, rewind, streaming guarantee or normalization is added. See
 code-point/half-open/terminal-bounds policy are selected as temporary FVP helpers.
 The earlier alpha.5 implementation was unapproved at the time; current acceptance
 comes from the user's explicit reply to the focused review. See
-[INV-016](../investigations/INV-016-igniter-text-operations.md#focused-consent-review-2026-10-31).
+[INV-016](../research/investigations/INV-016-igniter-text-operations.md#focused-consent-review-2026-10-31).
 
 Computed `String + String` concatenates without adding separators, interpreting
 escapes, or converting other types to text. Operands evaluate once, left to right.
@@ -670,7 +670,7 @@ unsupported or open. Helper parameter names above are explanatory; only
 positional arguments are supported. These helper names obey ordinary shadowing and are not
 first-class builtin values.
 
-The [arithmetic tokenizer](../examples/005-scan-arithmetic.lts) groups ASCII decimal
+The [arithmetic tokenizer](../language/examples/005-scan-arithmetic.lts) groups ASCII decimal
 digit runs, skips spaces/tabs, and reports individual `+ - * / ( )` symbols.
 It preserves digit text, including leading zeroes. An unsupported character
 explicitly reports an error and exits 2. An empty supplied line emits only the
@@ -770,7 +770,7 @@ fixed:
   temporary FVP scope on 2026-10-31.
 - **igniter-v0.1.0-alpha.6**, commit `d667395`: approved flat fixed tuples,
   declaration destructuring and tuple function inputs/results.
-- **igniter-v0.1.0-alpha.7**, commit `36b301f`: root ./lite run launcher.
+- **igniter-v0.1.0-alpha.7**, commit `36b301f`: root ./bin/lite run launcher.
 - **igniter-v0.1.0-alpha.8**, commit `27d6f03`: optional inputInt prompts and
   multiple ordinary report arguments.
 - **igniter-v0.1.0-alpha.9**, commit `fc0fb5d`: named fixed-tuple fields,
@@ -845,15 +845,15 @@ At the alpha.38 checkpoint, all **234 test groups** passed under Node
 26.12.1/TypeScript 7.0.2 in this workspace, along with all 9 editor grammar groups.
 The tests exercise the real CLI
 and evaluator, including overflow and negative programs. All 20 lessons
-have focused checked outcomes through `verifications/` manifests; lesson files
+have focused checked outcomes through `language/verifications/` manifests; lesson files
 remain unchanged. This is not proof of the full
 20-lesson or larger-language contract.
 
-Project-level feature and artifact verification is `./lite verify`, backed by
-[verify.ts](verify.ts) and [verifications/](../verifications/README.md). The
+Project-level feature and artifact verification is `./bin/lite verify`, backed by
+[verify.ts](verify.ts) and [language/verifications/](../language/verifications/README.md). The
 first slice has 36 feature cases and 39 artifact manifests (19 examples, 20 samples). Verification results
-and native C builds are cached under the gitignored `.cache/` directory.
-`./lite test --fast` skips the native C lane; `./lite test` / `./lite test --full`
+and native C builds are cached under the gitignored `dist/` directory.
+`./bin/lite test --fast` skips the native C lane; `./bin/lite test` / `./bin/lite test --full`
 include it. The full suite is designed to stay under the 30s local budget with a
 warm cache.
 
@@ -872,34 +872,34 @@ References checked for the toolchain: [Node release/downloads](https://nodejs.or
 [TypeScript installation](https://www.typescriptlang.org/download/), and
 [compiler options](https://www.typescriptlang.org/tsconfig/).
 
-The [retained-token example 015](../examples/015-retained-tokens.lts) returns a
+The [retained-token example 015](../language/examples/015-retained-tokens.lts) returns a
 named-tuple list before traversal; invalid text exits without partial token output.
 
-The [integer calculator 016](../examples/016-integer-calculator.lts) parses the
+The [integer calculator 016](../language/examples/016-integer-calculator.lts) parses the
 scanner's arithmetic input using ordinary Lite recursion and position/value
 pairs. It runs on the preserved alpha.15 interpreter too. This is application
 front-end evidence, not a Lite compiler, AST/IR choice, code generator or
-self-hosted build. See [INV-061 evidence](../investigations/INV-061-lite-arithmetic-front-end.md).
+self-hosted build. See [INV-061 evidence](../research/investigations/INV-061-lite-arithmetic-front-end.md).
 
 The Lite-written compiler now lives in [compiler/](../compiler/README.md), not
 in the runnable example list. It has one shared front-end and separate TS/C
 backends assembled through the ordered manifests and Lite-authored source
-imports. `litec` expands the import dependency graph through the [generated
+imports. `lite-compile-ts` expands the import dependency graph through the [generated
 host](../compiler/host.ts); compiler source no longer uses the temporary
 `importFlatAll` directive. Module namespaces and package resolution remain open.
 
 Run the compiler with:
 
 ```sh
-./litec program.lts > /tmp/program.ts
+./bin/lite-compile program.lts > /tmp/program.ts
 node compiler/entry.ts /tmp/program.ts
-./lite check program.lts
-./ltc ts program.lts
+./bin/lite check program.lts
+./bin/lite-compile ts program.lts
 ```
 
-Inspect the checked-in [TS reference](../compiler/generated/report-42.ts),
-[explicit adapter](../compiler/generated/run-report.ts), and
-[C reference](../compiler/generated/report-42.c). Strictly check the TS
+Inspect the checked-in [TS reference](../compiler/tests/references/generated/report-42.ts),
+[explicit adapter](../compiler/tests/references/generated/run-report.ts), and
+[C reference](../compiler/tests/references/generated/report-42.c). Strictly check the TS
 reference/adapter with the shared igniter check:
 `node igniter/node_modules/typescript/bin/tsc -p igniter/tsconfig.json`.
 
@@ -909,7 +909,7 @@ uses `int64_t`/`INT64_C`, `printf` with `PRId64`, and UTF-8 string literals with
 trigraph-safe `?`. Both check signed 64-bit ranges and Int/String mixing before
 producing source. The emitted core checks without Node/DOM types; no browser,
 AS/Wasm or compiler self-rebuild claim follows. See
-[String/report evidence](../investigations/INV-061-string-and-multi-value-reports.md).
+[String/report evidence](../research/investigations/INV-061-string-and-multi-value-reports.md).
 
 Both backends use inputAll() without prompts, accepting multi-line
 spaces/tabs/CR/LF around admitted statements and rejecting later unsupported
@@ -918,14 +918,14 @@ inputLine EOF fault. The shared corpus now has 53 program cases and 39
 rejection cases under [tests/compiler](tests/compiler/), with exact raw
 bytes/status across emitted TS, translated JS, native C and the igniter for the
 program cases. See
-[String/report evidence](../investigations/INV-061-string-and-multi-value-reports.md).
+[String/report evidence](../research/investigations/INV-061-string-and-multi-value-reports.md).
 
 The two compiler applications accept zero or one logical source-name argument
 after --. One name is preserved exactly as a prefix on compiler rejection
 messages; omission keeps prior messages. Extra arguments fail before source
 reads. Valid artifact bytes remain unchanged, and names are not embedded as
 source code. This does not implement generated runtime source locations or
-fault parity; see [source-context evidence](../investigations/INV-061-compiler-source-context.md).
+fault parity; see [source-context evidence](../research/investigations/INV-061-compiler-source-context.md).
 
 Sequential ordinary value declarations now create fresh bindings on generated
 TS/C; initializers retain the previous value and later uses obey the new type

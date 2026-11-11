@@ -6,7 +6,7 @@ own current names/counts; the checkpoint counts and scope below remain historica
 Original target order was T00 → T11 → T12 only, with C/P7 waiting.
 
 Each slice is one atomic commit. During T11/T12, verify with
-`npm --prefix igniter run check`, `./lite test --fast`, and focused TS tests only.
+`npm --prefix igniter run check`, `./bin/lite test --fast`, and focused TS tests only.
 Do not run the full gate, native C, or C parity per slice; full regression and C
 validation run at the P6 gate.
 

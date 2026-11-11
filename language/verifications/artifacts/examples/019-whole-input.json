@@ -1,0 +1,28 @@
+{
+  "id": "example.019-whole-input",
+  "kind": "example",
+  "source": {
+    "file": "../../../language/examples/019-whole-input.lts",
+    "hash": "sha256:95af3cb6901003b8715246537b66efbb699968b05a992b2ee6c76bfbdecfef07"
+  },
+  "features": [
+    "io.whole-input",
+    "text.helpers",
+    "io.report"
+  ],
+  "description": "Reads remaining text through EOF and reports its code-point length.",
+  "cases": [
+    {
+      "name": "whole-input",
+      "stdin": {
+        "text": "abc\n",
+        "hash": "sha256:edeaaff3f1774ad2888673770c6d64097e391bc362d7d6fb34982ddf0efd18cb"
+      },
+      "stdout": {
+        "text": "Text (finish with EOF): code points: 4\nabc\n\n",
+        "hash": "sha256:0cddc41c351c0c9b293337d15321d531c260ec952d0227dddffb94386b3d3e10"
+      },
+      "exitCode": 0
+    }
+  ]
+}

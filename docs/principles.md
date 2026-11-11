@@ -76,7 +76,7 @@ Selected 2026-10-28: begin with a tiny working demonstrator for experimenting
 with LiteLang features, then grow toward a first useful milestone of practical
 scripts with command-line arguments, console input/output, and file processing.
 The exercise corpus supplies use cases. The
-[initial correctness batch](../samples/NOTES.md#initial-correctness-batch) is
+[initial correctness batch](../language/samples/NOTES.md#initial-correctness-batch) is
 001–020, exercised incrementally; exact later milestone coverage remains open.
 Foreign calls, explicit memory placement, and concurrency remain later
 investigations outside that first useful milestone.
@@ -138,7 +138,7 @@ owns this goal; module/API syntax and the memory-management mechanism remain ope
 
 Selected priority, 2026-10-28: Lite must be light in deployed cost as well as source ceremony. Aim for performance near C on suitable workloads, low allocation and memory overhead, fast startup, small runtime support, and small final executables. Review feature costs against each measure; a speed improvement does not automatically justify greater code size or runtime complexity. Preserve selected safety and observable behavior.
 
-Measure execution time, cold/warm startup, compilation latency, executable and required support size, allocations, peak memory, and tail latency separately. Numeric budgets and representative workloads still need investigation. No universal C-speed, no-allocation, zero-runtime, or executable-size guarantee is established. See [measurement requirements](memory-and-performance.md#performance-evidence-and-size-accounting) and the [investigation focus](../investigations/lightweight-native-execution.md).
+Measure execution time, cold/warm startup, compilation latency, executable and required support size, allocations, peak memory, and tail latency separately. Numeric budgets and representative workloads still need investigation. No universal C-speed, no-allocation, zero-runtime, or executable-size guarantee is established. See [measurement requirements](memory-and-performance.md#performance-evidence-and-size-accounting) and the [investigation focus](../research/investigations/lightweight-native-execution.md).
 
 ## Resolving competing goals
 

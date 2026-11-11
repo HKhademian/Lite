@@ -52,9 +52,9 @@
   },
   "defaultImportAudit": {
     "defaultStaticDependencies": [
-      "challenges/tools/common.ts",
-      "challenges/tools/download.ts",
-      "challenges/tools/tools.test.ts",
+      "benchmark/challenges/tools/common.ts",
+      "benchmark/challenges/tools/download.ts",
+      "benchmark/challenges/tools/tools.test.ts",
       "compiler/bootstrap/c-seed.ts",
       "compiler/bootstrap/seed.ts",
       "compiler/host.ts",
@@ -90,8 +90,8 @@
     ],
     "symlinks": "Copied verbatim; command links resolve within the archive.",
     "defaultCommands": [
-      "./lite test --fast",
-      "./lite test --full"
+      "./bin/lite test --fast",
+      "./bin/lite test --full"
     ],
     "smoke": "Public compile/check, strict artifacts, stdin/arguments/streams and expectation updates run through the same default suite. CI additionally compiles and executes the 42 fixture and verifies the supported arithmetic contract.",
     "smokeResults": {

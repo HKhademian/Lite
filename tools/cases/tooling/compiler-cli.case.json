@@ -1,0 +1,28 @@
+{
+  "id": "tooling.compiler-cli",
+  "kind": "tool",
+  "tool": "lite-compile",
+  "features": [
+    "tooling.cli"
+  ],
+  "cases": [
+    {
+      "name": "deferred-c",
+      "args": [
+        "--target",
+        "c",
+        "ignored.lts"
+      ],
+      "stdin": {
+        "text": ""
+      },
+      "stdout": {
+        "text": ""
+      },
+      "stderr": {
+        "text": "lite-compile-c: C output is deferred until after the TS compiler migration\n"
+      },
+      "exitCode": 2
+    }
+  ]
+}

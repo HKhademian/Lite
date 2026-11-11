@@ -1,0 +1,25 @@
+{
+  "id": "sample.008-duration-parts",
+  "kind": "sample",
+  "source": {
+    "file": "../../../language/samples/008_duration_parts.lts",
+    "hash": "sha256:f440482ff45767e9b89c629e6cec3523c706ed68390a193f495617d922832751"
+  },
+  "features": [
+    "int.arithmetic",
+    "int.remainder",
+    "scope.locals"
+  ],
+  "description": "Split seconds into hours, minutes and seconds.",
+  "append": "outputLine(hours); outputLine(minutes); outputLine(seconds);",
+  "cases": [
+    {
+      "name": "observed-values",
+      "stdout": {
+        "text": "1\n1\n1\n",
+        "hash": "sha256:ccce065269620747ca153e9a430d44b175cdc1f7e0958741b567250a1d6b1d95"
+      },
+      "exitCode": 0
+    }
+  ]
+}

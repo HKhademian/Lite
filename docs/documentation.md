@@ -14,7 +14,7 @@ the owning rule, inspect its cases and discover related topics.
 - Use [the normative map](normative-pages.md) to locate the owner of each rule.
 - Use [the current compiler guide](../compiler/README.md) and
   [transition](../compiler/transition-plan.md) for implementation status.
-- Use [proposals](proposals/README.md) and [investigations](../investigations/README.md)
+- Use [proposals](proposals/README.md) and [investigations](../research/investigations/README.md)
   for unfinished design. Keep historical alternatives clearly identified.
 
 Each new guide needs a descriptive title, purpose, status, prerequisites where
@@ -51,14 +51,14 @@ contrast and a usable mobile layout; this guide does not claim a site exists.
 
 ## Checks
 
-Run `./lite doctor --docs` for local Markdown links/fragments, fences and editor
-version consistency. `./lite doctor` also runs both strict TS configurations.
+Run `./bin/lite doctor --docs` for local Markdown links/fragments, fences and editor
+version consistency. `./bin/lite doctor` also runs both strict TS configurations.
 The [documentation configuration](../config/documentation.json) owns landing
 destinations and source-backed snippet registrations. Registered fences are
 compared with their separate source files, so entry-guide examples cannot drift
 silently. Register additional runnable snippets as their cases become available.
-Use `./lite docs QUERY` to search titles/headings/paths offline, or
-`./lite docs --json QUERY` for structured discovery. The same entry points live
+Use `./bin/lite docs QUERY` to search titles/headings/paths offline, or
+`./bin/lite docs --json QUERY` for structured discovery. The same entry points live
 under `bin/`; `lite check FILE` retains its source-checking meaning.
 
 Check local links and fragments, heading/fence structure, document discovery,

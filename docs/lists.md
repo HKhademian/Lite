@@ -9,7 +9,7 @@ optimizations; explicit noncopying modes come later. Do not block ordinary FVP
 sequence copies on designing noncopyable owners. Concrete type/construction,
 capacity APIs and permanent allocation behavior remain unresolved. The next
 bounded construction/end-operation slice is now approved and implemented. See
-[INV-055 decision boundary](../investigations/INV-055-fvp-owner-boundary.md).
+[INV-055 decision boundary](../research/investigations/INV-055-fvp-owner-boundary.md).
 
 `List<Int>` is selected for this builtin FVP family under the [narrow generic-notation exception](generic-notation.md); other families remain explanatory notation. An expected concrete List type or an explicit constructor requests growable storage. Fresh statically sized literals instead follow [fixed-array inference](tuple-array-shapes.md#known-size-fresh-literals-infer-fixed-arrays).
 
@@ -32,18 +32,18 @@ A var binding with an explicit List contract permits compatible whole-binding re
 
 The [end-operation review](sequence-end-operations.md) records the selected push_front/push_back/pop_front/pop_back names. These require structural capabilities beyond mut [T]; fixed arrays and slices can support element replacement without changing length. The user accepts direct indexing/pop with typed faults and requests shared else recovery. A separate Option-returning removal remains an alternative. Broader capture scope, permanent operation signatures and allocation failure policy remain open.
 
-The [FVP naming decision](../investigations/INV-055-fvp-list-operations.md)
+The [FVP naming decision](../research/investigations/INV-055-fvp-list-operations.md)
 selects that existing front/back family without adopting generic grammar or a
 constructor. No helper implementation or public parameter labels are selected
 by the naming decision.
 
-The user approves the [bounded FVP slice](../investigations/INV-055-fvp-list-slice.md):
+The user approves the [bounded FVP slice](../research/investigations/INV-055-fvp-list-slice.md):
 List<T> construction at fully initialized typed declarations (including typed
 empty lists), scalar/flat-tuple elements, readable indexing/traversal, ordinary
 sequence copies, and temporary positional end-operation bindings with explicit
 mut grants to named writable list bindings. Bounds/empty pops use terminal
 BoundPanic; catchable host resource failures retain terminal CLI handling.
-Strict checking and 120 interpreter groups pass, including [example 013](../examples/013-growable-lists.lts).
+Strict checking and 120 interpreter groups pass, including [example 013](../language/examples/013-growable-lists.lts).
 Complex/simultaneous/reentrant grants, views, capacity, indexed writes, general
 user-function mut parameters, recovery and generic infrastructure remain outside
 this implementation. No native/performance claim follows.

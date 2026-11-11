@@ -1,0 +1,30 @@
+{
+  "id": "example.009-fixed-arrays",
+  "kind": "example",
+  "source": {
+    "file": "../../../language/examples/009-fixed-arrays.lts",
+    "hash": "sha256:fec2bf374260b1841c7ff12819420c8e6b940310d616a9b9e4f5927f02114f84"
+  },
+  "features": [
+    "array.fixed",
+    "loop.sequence",
+    "tuple.shape",
+    "io.input",
+    "io.report"
+  ],
+  "description": "Traverses token tuples, reads one index, and sums a fixed array.",
+  "cases": [
+    {
+      "name": "token-index",
+      "stdin": {
+        "text": "1\n",
+        "hash": "sha256:4355a46b19d348dc2f57c046f8ef63d4538ebb936000f3c9ee954a27460dd865"
+      },
+      "stdout": {
+        "text": "number 12\nsymbol +\nnumber 30\nToken index: +\nsum: 60\n",
+        "hash": "sha256:52175d3a9dd0f7de31de615fe743c75a3cb74cf301fde3fdd78c4aca8135a84d"
+      },
+      "exitCode": 0
+    }
+  ]
+}

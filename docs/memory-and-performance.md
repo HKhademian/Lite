@@ -27,7 +27,7 @@ target and an important maintained route for shippable libraries/projects and
 migration outside Lite. Possible AssemblyScript/early Wasm support remains an
 investigation. Native no-mandatory-VM/tracing goals remain native-path goals;
 this does not claim them for a JS host or an unverified AS runtime profile. See
-[INV-061 direction](../investigations/INV-061-first-compiler-output.md).
+[INV-061 direction](../research/investigations/INV-061-first-compiler-output.md).
 
 ## Ordinary and advanced memory control
 
@@ -43,7 +43,7 @@ compiler/post-compilation optimizations remove physical copying where they can
 preserve all observable behavior. Explicit noncopying modes are later work. This
 sets the current investigation boundary; it does not select an optimization pass
 or make a zero-copy/performance claim. See
-[INV-055 clarification](../investigations/INV-055-fvp-owner-boundary.md).
+[INV-055 clarification](../research/investigations/INV-055-fvp-owner-boundary.md).
 
 Advanced memory controls must remain available through an explicit step with
 little ceremony. They should stay outside the default beginner surface and be
@@ -160,7 +160,7 @@ well as success paths. Future differential checks between C and LLVM backends
 must compare observable behavior before comparing speed or size. No commands or
 benchmarks listed here are implemented by this documentation update.
 
-See the [focused investigation points](../investigations/lightweight-native-execution.md)
+See the [focused investigation points](../research/investigations/lightweight-native-execution.md)
 for owning topic IDs, starting questions, and expected evidence. External
 inspiration is recorded in [references](references.md#lightweight-native-execution-reviewed-2026-10-28);
 other languages' claims do not establish LiteLang results.

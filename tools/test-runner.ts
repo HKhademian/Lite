@@ -16,7 +16,7 @@ if (!showToolVersion('tester', 'test')) {
   for (const arg of args) {
     if ((arg === '--fast' || arg === '--full') && mode === undefined) mode = arg;
     else {
-      process.stderr.write('Usage: ./lite test [--fast|--full]\n');
+      process.stderr.write('Usage: ./bin/lite test [--fast|--full]\n');
       process.exit(2);
     }
   }

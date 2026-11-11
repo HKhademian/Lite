@@ -8,7 +8,7 @@ named replacement of an earlier positional contribution and source-order
 execution including superseded expressions. Only surviving contributions need
 fit their destination slots. Defaults, spread, full contextual tuple routing,
 access grants and builtin public labels remain outside this implementation.
-See [INV-031 evidence](../investigations/INV-031-fvp-named-calls.md).
+See [INV-031 evidence](../research/investigations/INV-031-fvp-named-calls.md).
 
 ## Selected value shorthand and positional access
 

@@ -1,0 +1,788 @@
+# INV-003.02 — Declarations and lookup
+
+Status: in progress
+Contributor: redacted (agent-assisted)
+Last updated: 2026-10-30
+Catalog brief: [INV-003](TOPICS.md#inv-003)
+Covered subtopics: INV-003.02 (partial direction selected; safety and binding details open)
+Subtopic brief: [INV-003.02](SUBTOPICS.md#inv-003-02)
+
+This is a non-normative investigation note outside the language draft. Options
+and recommendations do not select a language rule.
+
+## Investigation question
+
+When can a run file refer to a top-level binding, and how do ordinary values,
+function-valued bindings, later helper definitions, and recursion interact?
+Separate lexical visibility, signature availability, and initialized value
+availability. Review existing rules rather than treating selection as final.
+Imports/module declaration lists belong to INV-003.04/INV-006; general lookup
+belongs to INV-011; recursion/inference also belongs to INV-030/INV-018.
+
+## Selected direction and safety gap, 2026-10-28
+
+The user clarifies that all executed code blocks run top to bottom. Ordinary
+eager code does not know lower bindings, and shadowing preserves that order.
+Function bodies are the exception: their execution is deferred, so they may
+refer to lower identifiers. This does not make the callable binding itself
+available before its initializer.
+
+The user also rejects mandatory header-file/duplicate-signature ceremony and
+accepts more flexible declaration lookup in modules subject to safety. Module
+declarations can be resolved from source without making their initialization
+arbitrary. Compile-time computation and metaprogramming remain open
+possibilities, not reasons to abandon ordering within executed blocks.
+
+Owners: [block order](../../docs/evaluation-order.md#executable-block-items),
+[function bodies](../../docs/functions.md#deferred-body-lookup),
+[module lookup](../../docs/modules-and-packages.md#module-lookup-without-header-files),
+and the [ledger](../../docs/decisions-and-open-questions.md#block-order-deferred-bodies-and-module-lookup-2026-10-28).
+These are selected directions and safety requirements, not completed closure,
+initialization, module, or compile-time semantics.
+
+The user's gap, using a selected explicit function header for the probe:
+
+```text
+op := fn(): Int { tmp2 }
+tmp1 := op();
+tmp2 := 1;
+```
+
+Creation does not execute the body. The next item invokes it before tmp2's
+initializer has run. A later name can be known without its value being ready:
+safe execution cannot supply 1 early, substitute zero, or read unspecified
+storage. This is not repaired by the universal zero-mapping rule, because this
+inferred declaration has not executed. Moving the call below tmp2 removes the
+particular ordering hazard, subject to the unresolved environment contracts.
+
+### Initial enforcement alternatives (follow-up selection below)
+
+- **Static proof/rejection.** Reject a call whose reached body would read an
+  uninitialized binding; reject uncertain cases conservatively if safety cannot
+  be established. This avoids requiring runtime readiness checks but can reject
+  safe indirect/conditional calls unless analysis is sufficiently precise.
+- **Checked execution where proof is unavailable.** Reject obvious bad calls
+  statically and define a checked failure before an uncertain invalid access.
+  This admits more indirect uses but needs a selected fault category, attribution,
+  cleanup behavior, and readiness/lifetime mechanism. No such runtime fallback
+  is selected here, and implicit live panics must not become public effect lists.
+
+Initial recommendation: diagnose the directly evident early call at compile
+time. Before choosing a fallback, probe a callback invoked by an opaque helper,
+a conditional call that does not actually read tmp2, and a function escaping
+the defining block. Do not assume name visibility proves readiness or lifetime.
+These cases partly reopen a dependency on deferred capture/lifetime work; the
+lookup direction alone does not select that machinery or reopen every context
+proposal. Also resolve which binding a future name selects when shadows exist.
+
+## Initial static enforcement selection, 2026-10-29
+
+Selected starting direction: diagnose the directly evident op() early read at
+compile time. In the initial supported subset, also reject calls whose
+initialization safety cannot be established, rather than assuming safe timing
+or adding a runtime readiness fallback. Distinguish a known invalid read from
+insufficient proof in diagnostics.
+
+The [owning function page](../../docs/functions.md#initial-static-enforcement) and
+[ledger](../../docs/decisions-and-open-questions.md#initial-static-initialization-enforcement-2026-10-29)
+record the selection. This is a conservative starting subset, not a permanent
+ban on every safe program that needs more precise analysis. Exact proof rules,
+callbacks/conditional accesses, escaping functions, and the full language's
+long-term rejection-versus-checked-execution policy remain open. No capture
+representation, public callable dependency list, or new panic category is selected.
+
+Evidence baseline for this update: `a015e54`. Reviewed the current owners and
+their selected/open boundaries, local links, fences, and diff consistency.
+No LiteLang parsing, type checking, runtime check, or safety proof was executed.
+
+### Binding-selection probe
+
+```text
+value := 1;
+read_value := fn(): Int { value }
+value := 2;
+answer := read_value();
+```
+
+The original question was whether the deferred-body exception could select the
+later shadow. The recommendation was to keep the earlier lexical binding. The
+selection below now adopts that recommendation, with capture modes still separate.
+
+## Binding identity selection, 2026-10-29
+
+The user agrees that the reference-language comparison still shows source order
+matters. Select retention of the already-visible lexical binding: read_value's
+value refers to the first binding, and the later declaration does not redirect
+it. The fixed-scalar probe returns 1. Deferring a body's execution does not make
+binding selection depend on the caller's source position.
+
+The [owning function rule](../../docs/functions.md#existing-bindings-survive-later-shadowing)
+and [ledger](../../docs/decisions-and-open-questions.md#deferred-body-binding-identity-and-shadowing-2026-10-29)
+record the selection for surrounding references admitted by the access/capture
+rules. It does not grant implicit local capture. This does not select creation-time value snapshots, live
+mutable captures, or retention/lifetime machinery. When no suitable earlier
+binding exists, the future-name exception still needs an exact selection rule.
+
+Next probe, with no earlier value binding:
+
+```text
+read_value := fn(): Int { value }
+value := 1;
+value := 2;
+answer := read_value();
+```
+
+Original candidate (subsequently selected for the same-block case below): select the first subsequent declaration in the defining block, then
+keep that binding identity. Alternatives include selecting a later declaration
+or rejecting an ambiguous forward reference. Compare a call
+between the two declarations, nested scopes, and a recursive name before
+generalizing the future-name rule. Existing initialization safety still applies.
+
+Evidence baseline for this update: `25de30b`. Reviewed the current owners and
+comparison findings; checked links, fences, and diff consistency. This is a
+documentation decision; no LiteLang program was compiled or executed.
+
+## Forward target with an intervening call, 2026-10-29
+
+Question: when no earlier binding exists, which later declaration should an
+admitted deferred-body reference select? Baseline: `59b52e1`. The shared
+binding/read model applies regardless of whether the value is callable.
+
+```text
+read_value := fn(): Int { value }
+value := 1;
+a := read_value();
+value := 2;
+b := read_value();
+```
+
+Assume the surrounding access is admitted and the selected target's lifetime
+is valid. Three candidate policies distinguish name resolution from readiness:
+
+- **First subsequent declaration in the defining executable block:** both
+  reads target the value initialized to 1, so a = 1 and b = 1. The later shadow
+  cannot retarget the body, and the first call occurs after its target's
+  initialization.
+- **Last later declaration in that block:** both reads target the value
+  initialized to 2. The first call now reaches its target before initialization,
+  so the initial static-safety direction rejects the program. It cannot return
+  1 for a and then silently choose a different binding for b.
+- **Reject multiple future declarations as ambiguous:** neither call is
+  admitted until the author removes the ambiguity. This avoids choosing a
+  future target but adds restrictions to ordinary sequential shadowing.
+
+Selection recorded 2026-10-29: choose the first subsequent same-name ordinary
+binding declaration in the defining executable block, then preserve that identity.
+This extends source-order reasoning without choosing a binding per invocation
+or hoisting its initializer. The [owning function rule](../../docs/functions.md#first-later-binding-in-the-defining-block)
+and [ledger](../../docs/decisions-and-open-questions.md#first-later-binding-in-the-defining-block-2026-10-29)
+record the selection; both a and b are 1 in this admitted case. Nested-scope search,
+declarations within conditional regions, and the function's own recursive
+binding need separate probes. Module declaration uniqueness/order remains its
+own contract. An earlier typed zero-callable binding, as in the preceding user
+probe, already supplies a target and is not skipped in favor of a later body.
+
+Verification: compared these candidate outcomes with the current binding,
+live-read, and initial static-enforcement owners. No LiteLang execution or
+proof algorithm was implemented or run.
+
+Acceptance baseline: `5c94dd9`. Updated the owning pages, current-design
+summary, related lookup references, and tracking together. Link/fence/diff checks
+are documentation verification, not execution or implementation evidence.
+
+## Direct self-reference selection, 2026-10-29
+
+```text
+countdown := fn(n: Int): Int {
+    if n == 0 { 0 } else { countdown(n - 1) }
+}
+answer := countdown(3);
+```
+
+No earlier countdown exists. The name belongs to the declaration currently
+being initialized, not a subsequent item, so the new same-block rule does not
+settle it. The user selects making this direct function-valued binding's own
+name available in its deferred body, while retaining initialization safety for
+calls. It selects the current binding before any strictly later same-name
+declaration. This supports the shown ordinary recursion without a separate
+signature-only declaration or header. The probe supplies input/result types;
+recursive inference is not selected.
+
+The [owning rule](../../docs/functions.md#direct-self-reference-without-an-earlier-target)
+and [ledger](../../docs/decisions-and-open-questions.md#direct-self-reference-without-an-earlier-target-2026-10-29)
+record the no-earlier-target selection. Earlier same-name precedence, callable
+replacement during recursion, mutual recursion, and escaping lifetimes remain
+open. Initialization is not hoisted, and an eager call during an incomplete
+initializer is not made safe just by resolving the name.
+
+Next conflict probe:
+
+```text
+step := fn(n: Int): Int { n * 2 }
+step := fn(n: Int): Int {
+    if n == 0 { 0 } else { step(n - 1) }
+}
+answer := step(3);
+```
+
+Keeping the earlier visible binding for the inner reference gives 4. Giving
+the new function's own binding priority gives recursive calls and result 0.
+The no-earlier-target selection alone does not choose between these. Compare
+wrapper intent with recursive-self intent before extending the precedence rule.
+The later explicit self selection below preserves ordinary step lookup to the
+earlier binding (4) and provides self for current-implementation recursion (0).
+
+Acceptance baseline: `16400a3`. Checked the selected/open boundaries, local
+links, fences, and diff consistency. No LiteLang recursion was compiled or run.
+
+<a id="explicit-self-reference-proposal-2026-10-29"></a>
+
+## Explicit self-reference selection, 2026-10-29
+
+The user emphasizes that every decision should make source easier to read and
+reason about. Self-reference feels clearer to them in the recursive-shadow
+probe, but they explicitly question how much that preference comes from
+familiarity and suggest special syntax to remove the collision. The
+[owning design criterion](../../docs/principles.md#resolving-competing-goals) records
+the readability emphasis. The later user selection chooses self(...) as the
+explicit current-function call and keeps ordinary names under ordinary lookup.
+
+Selected self-call form, not an implemented parser/runtime:
+
+```text
+step := fn(n: Int): Int { n * 2 }
+step := fn(n: Int): Int {
+    if n == 0 { 0 } else { self(n - 1) }
+}
+```
+
+Selected meaning: self(...) calls the currently executing function
+implementation with its current implementation environment. It does not look
+up the latest binding spelled step or reread a mutable step binding. Ordinary
+step(...) keeps ordinary lexical binding lookup, making an earlier definition
+available for a wrapper. Under this selected split, explicit self recursion
+gives result 0 for step(3), while the earlier-binding wrapper gives 4.
+
+This makes the intention visible within the body, without requiring the reader
+to search for earlier same-name declarations to recognize a self-call. It also
+needs a deliberate semantic choice: current callable identity versus the live
+contents of its original binding. The selected marker denotes the former;
+ordinary permitted binding references retain the selected live-read rule.
+
+Spellings considered:
+
+- **self(...) — selected:** short and directly names the intended callable identity.
+  Check collision with parameters/locals and any future object receiver name.
+- **recur(...) — unselected alternative:** explicitly announces a recursive call and could be defined as
+  a call-only operation rather than a first-class value. Keyword/contextual-name
+  rules still need investigation; no tail-call-only behavior, loop transfer, or
+  stack optimization guarantee is implied by this proposed spelling.
+
+For self, review full nested/outer-function targeting,
+argument labels/packs, output checking, calls after binding replacement,
+escaping/copying callables, and whether a first-class self value is needed at
+all. Do not repurpose existing @tags silently: functions/closures are not current
+tag targets under [tags and contexts](../../docs/tags-and-contexts.md).
+
+Selection recorded 2026-10-30 from the user's 2026-10-29 choice: use self(...)
+for explicit current-implementation calls. Preserve ordinary name lookup so
+wrapping an earlier definition stays possible. Keep the already selected
+implicit own-name recursion with no earlier target; self is not made mandatory
+for every recursive function. Do not infer a standalone first-class self value,
+global reservation/name collision policy, new tag/receiver role, or tail-call
+optimization guarantee. Normal call argument/checking/failure/cleanup behavior
+applies. Readability is reasoned from these minimal pairs, not measured in a
+learner study.
+
+The [owning function rule](../../docs/functions.md#explicit-current-function-self-calls),
+[ledger](../../docs/decisions-and-open-questions.md#explicit-current-function-self-calls-2026-10-29),
+and [grammar outline](../../docs/grammar-sketch.md#explicit-current-function-self-calls)
+record the selection. Acceptance-update baseline: `78e3c9c`. Complete parsing,
+reservation, nested/outer rules, first-class self, and inference remain open.
+
+Evidence baseline: `d7ebc3a`; checked current lookup, function/closure boundaries,
+tag rules, and continuity's decision checklist. No LiteLang parser, runtime,
+keyword-reservation check, or learner study was executed.
+
+## Surrounding-access reconsideration, 2026-10-29
+
+The user wants to minimize surrounding identifier access and asks whether
+function-valued bindings make such access unavoidable. They do not: assigning or
+storing a callable does not itself define lexical scope or require captured
+runtime locals. A noncapturing callable and a callable carrying private state
+can have different implementation requirements. LiteLang has not selected their
+physical representation, and a callable value need not be only a code address.
+
+Primary comparison evidence: Rust's [function-pointer reference](https://doc.rust-lang.org/reference/types/function-pointer.html)
+admits coercion from noncapturing closures, while its [closure-type reference](https://doc.rust-lang.org/reference/types/closure.html)
+describes closure values in terms of captured state. These demonstrate that
+first-class function storage does not force implicit local capture; they do not
+select LiteLang's representation or ownership mechanism.
+
+Relevant earlier material: [deferred contexts](../../docs/deferred-contexts.md) and
+[closure capture history](../../docs/closures.md#implementation-captures-deferred)
+already distinguish private captured state from public call inputs. The older
+explicit-capture sketches are deferred, not available syntax. This investigation
+can reopen the access boundary without reinstating all those mechanisms.
+
+The user clarified that the concern is blindly granting access to every
+surrounding value, even for reading, rather than demanding a blanket prohibition
+that would also prevent simple helper calls. Select the design requirement of a
+defined access policy that keeps ordinary helper calls expressible. No complete
+implicit/explicit capture policy is chosen yet. Static module/type/constant
+lookup must be distinguished from retaining enclosing runtime locals.
+
+Proposed classification probe:
+
+```text
+double := fn(n: Int): Int { n * 2 }
+quadruple := fn(n: Int): Int { double(double(n)) }
+```
+
+If double resolves to a known noncapturing helper, calling it need not retain
+the enclosing stack as captured state. The ordinary script binding must still
+be available in order. This is different from reading an enclosing runtime
+value, invoking a replaceable/runtime-computed callable, or retaining a helper
+that itself has an environment. Merely classifying a value's type as callable
+is not sufficient to waive those obligations. The exact eligibility categories
+are a proposal for investigation, not a complete selected rule.
+
+### Helper ordering and later-shadow probes
+
+The user reverses the helper definitions:
+
+```text
+quadruple := fn(n: Int): Int { double(double(n)) }
+double := fn(n: Int): Int { n * 2 }
+answer := quadruple(2);
+```
+
+Proposed outcome for an admitted known noncapturing helper reference: 8. The
+first item creates quadruple without executing its body; the next initializes
+double; only then does the call execute. This exercises the existing deferred-
+body direction without hoisting double's initialization. Moving the call
+between the definitions would reach double before its initializer and must be
+rejected under the initial static safety direction. Exact helper eligibility
+and future-name selection remain open, so this is a proposed admitted case,
+not a complete new access policy.
+
+The user then keeps an earlier helper and adds a later shadow:
+
+```text
+double := fn(n: Int): Int { n * 2 }
+quadruple := fn(n: Int): Int { double(double(n)) }
+double := fn(n: Int): Int { n * 3 }
+answer := quadruple(2);
+later_answer := double(2);
+```
+
+For an admitted helper reference, the selected existing-binding rule gives
+answer = 8 and later_answer = 6. The two occurrences inside quadruple identify
+the first double binding. The final direct call identifies the new binding.
+The later := does not replace the old binding, patch earlier bodies, or require
+looking up the most recent declaration by spelling at each call. The compiler
+can distinguish the declarations by binding identity; no physical closure
+representation or runtime environment is selected by this reasoning.
+
+These probes distinguish a forward body reference with no earlier target from
+a reference already resolved to a visible helper. They do not settle reassignment
+through a var callable, captures of runtime-computed/stateful helpers, a forward
+reference with multiple later shadows, or recursive-self lookup. Evidence:
+traced from the current selected block-order, existing-binding, and initial
+static-enforcement pages at baseline `88ba9e3`; no LiteLang execution occurred.
+
+### Typed callable binding, replacement, and shadow probes
+
+The user adds a typed declaration before defining quadruple, emphasizing that
+the reference itself needs a definition and resolution. Under the current
+[omitted initialization rule](../../docs/declarations-and-assignment.md#omitted-zero-and-default-initialization),
+double: fn(n: Int): Int; initializes a fixed binding immediately. It is not an
+uninitialized forward declaration. Its value is the
+[zero callable](../../docs/zero-initialization.md#zero-initialized-functions), which
+returns zero(Int), or 0, after ordinary argument evaluation.
+
+In the first added probe, two later double := fn(...) declarations both return
+n * 3. For permitted surrounding access, quadruple still identifies the first
+fixed zero-callable binding. The three x1/x2/x3 calls therefore yield 0 under
+the current binding/zero rules; the later declarations do not fill in that
+binding's implementation. They introduce two new bindings. This is a design
+trace, not LiteLang execution.
+
+The user then mixes replacement and shadowing:
+
+```text
+double: fn(n: Int): Int;
+quadruple := fn(n: Int): Int { double(double(n)) }
+x1 := quadruple(1);
+double = fn(n: Int): Int { n * 2 }
+x2 := quadruple(1);
+double := fn(n: Int): Int { n * 3 }
+x3 := quadruple(1);
+double = fn(n: Int): Int { n * 4 }
+x4 := quadruple(4);
+```
+
+As written, this program is rejected: the first = attempts replacement of the
+already-initialized fixed zero-callable binding, and the last = independently
+attempts replacement of the later fixed shadow binding. Neither has var.
+An execution trace is not evidence that the invalid whole program runs.
+
+To isolate the unresolved capture question, make both bindings reassignable:
+
+```text
+var double: fn(n: Int): Int;
+quadruple := fn(n: Int): Int { double(double(n)) }
+x1 := quadruple(1);
+double = fn(n: Int): Int { n * 2 }
+x2 := quadruple(1);
+var double := fn(n: Int): Int { n * 3 }
+x3 := quadruple(1);
+double = fn(n: Int): Int { n * 4 }
+x4 := quadruple(4);
+```
+
+Two policies now differ while preserving the same lexical binding identity:
+
+- **Live access to the original binding:** candidate results are x1 = 0,
+  x2 = 4, x3 = 4, x4 = 16. The original binding changes from zero callable to
+  times-two. The later shadow is a distinct binding; assigning times-four to
+  that newer binding does not change the original one used by quadruple.
+- **Snapshot the original callable value at function creation:** candidate
+  results are 0 for all four calls, since the captured value was the zero
+  callable. This is a proposed capture policy, not a consequence forced by
+  assigning a function value or resolving a binding name.
+
+Thus declaring/resolving a binding, initializing/replacing its stored callable,
+and choosing snapshot versus live surrounding access are separate contracts.
+The probes initially selected no access mode; the subsequent live-read selection
+below now settles read timing for admitted access. An explicit reserved binding
+with = ? and later first write with
+= is another existing construction mechanism, but no read is permitted before
+initialization; it is not the same as the typed zero declaration above. Nor is
+a signature-only function symbol currently selected by this syntax. Those
+alternatives can be reconsidered rather than silently conflated.
+
+Evidence baseline: `cc794e4`; read the current declaration, callable-zero,
+callable-replacement, and first-initialization owners. No compiler/runtime
+executed these probes. Resume with the intended access semantics of the mutable
+original binding before generalizing surrounding-value eligibility.
+
+## Live binding reads selection, 2026-10-29
+
+Status: selected for admitted surrounding access; eligibility and capture
+implementation remain open. Recommendation baseline: `dcebe31`; acceptance
+update baseline: `26717f2`.
+
+The user accepts live access to the original lexical binding when that surrounding
+access is permitted. Read its stored callable when the body evaluates the name,
+rather than silently moving that read to function creation. Preserve the
+distinction between = replacing that binding's value and := declaring a new
+binding. Under this selection, the var-corrected probe above gives 0, 4, 4, 16.
+The [owning function page](../../docs/functions.md#live-reads-of-admitted-surrounding-bindings)
+and [ledger](../../docs/decisions-and-open-questions.md#live-reads-of-admitted-surrounding-bindings-2026-10-29)
+record the rule together with the existing callee-evaluation contract.
+
+This fits the selected deferred-body execution rule and gives the same read
+expression its execution-time meaning. It does not turn an ordinary
+[value copy](../../docs/declarations-and-assignment.md#value-transfers-copy-no-implicit-references)
+such as saved := double into a live alias to double's storage: that initializer
+still copies the value when it runs. Deliberately using a separate fixed saved
+binding can express value freezing for an eligible callable. No capture-header
+syntax is selected here.
+
+This freezes the callable value, not transitive mutable state held by that
+callable's own environment; no deep-clone guarantee is introduced.
+
+Preserve [callee-before-arguments evaluation](../../docs/evaluation-order.md#function-calls):
+in double(double(n)), evaluate the outer callee's value first, then evaluate
+the inner call, then invoke the already selected outer callable. Do not read
+the outer callee again if argument evaluation changes the original binding.
+The simple multiplication probe performs no such intervening replacement.
+
+Live binding access does not grant every surrounding name unrestricted access.
+The [surrounding-access policy](../../docs/functions.md#surrounding-access-under-review)
+still needs eligibility/permission rules even for reads. Required initialization
+and lifetime safety must be established under the initial static-first direction;
+unknown captures/callbacks cannot simply be assumed safe. Retaining mutable
+storage or supporting escapes can add implementation work and costs; no closure
+layout, ownership mechanism, storage promotion, or public capture-parameter list
+is chosen by this selection. State retention remains private implementation
+context where admitted.
+
+Compare explicit snapshot and live-access cases before selecting general
+capture eligibility rules. This selection is a semantic choice for already-admitted access,
+not acceptance of implicit local capture. It was checked against current source
+contracts; no LiteLang execution or runtime-cost measurement occurred.
+
+### Reading a callable versus another value, 2026-10-29
+
+The user asks whether accessing a fn differs from accessing an ordinary value.
+At the binding level, both need name resolution, initialized/readable storage,
+the applicable access permission, and valid lifetime. The selected live-read
+and shadow-identity rules apply to admitted surrounding references generally,
+not only to callable-valued ones.
+
+```text
+saved_count := count;
+saved_callable := double;
+result := saved_callable(3);
+```
+
+The first two initializers perform ordinary
+[value transfers](../../docs/declarations-and-assignment.md#value-transfers-copy-no-implicit-references)
+under each type's copy eligibility. Invocation adds a later operation: read/select
+the [callee value](../../docs/evaluation-order.md#function-calls), evaluate supplied
+arguments, then execute that callable. Reading a function value does not itself
+execute the function body or waive capture/lifetime obligations.
+
+The earlier statically known helper discussion is an implementation distinction,
+not blanket permission for outer names whose type happens to be callable. A
+runtime-selected/stateful callable may require retained runtime context; a
+non-callable constant may also be known statically. The recommended policy axis
+is static declaration availability versus runtime binding/state access, together
+with permissions, initialization, and lifetime, rather than fn versus non-fn.
+Exact eligibility categories remain open. No callable layout or universal
+cost-free capture is selected by this explanation.
+
+Evidence baseline: `335768f`; checked uniform value-transfer, live-read, binding,
+and callee-evaluation owners. This is design analysis, not LiteLang execution or
+acceptance of a new capture/access category.
+
+For example, an ordinary parameter can avoid a surrounding reference entirely:
+
+```text
+read_value := fn(value: Int): Int { value }
+answer := read_value(value);
+```
+
+Only the caller reads its own value binding. The function body uses its input.
+This is not a requirement to expose hidden capture fields in public signatures;
+an eventual deliberate capture facility could still bind implementation-private
+state. The previously recorded binding-identity rule applies only where such
+surrounding access is admitted. Its fixed-scalar shadow probe does not decide
+whether plain fn permits implicit local capture.
+
+Continue with concrete allowed-name/access categories before revising the
+earlier deferred-body access direction. Do not infer that all outer names are
+forbidden or that every surrounding read is automatically permitted. The actual
+safe lowering, initialization analysis, and lifetime policy remain open.
+
+## Reference-language comparison, 2026-10-29
+
+Question: how do other languages handle the next binding-selection probe? Keep
+redeclaration/shadowing distinct from assigning a new value to an existing
+binding, and keep binding identity distinct from capture mode. This comparison
+does not select a LiteLang rule.
+
+- **Rust:** a later local let can introduce a new binding with the same name.
+  The earlier closure still refers to the first binding, so the analogous
+  shadow probe returns 1. A closure cannot resolve a later local let that was
+  not in scope at its definition. Function items are different: their names
+  extend through the containing block/module, permitting forward uses.
+  Source: [Rust Reference, scopes](https://doc.rust-lang.org/reference/names/scopes.html#pattern-binding-scopes).
+- **JavaScript:** repeating let/const with the same name in one lexical scope
+  is a SyntaxError. If the second line instead assigns value = 2 to the existing
+  let binding, an earlier closure reads 2. A closure may name a later lexical
+  declaration, but calling before initialization throws ReferenceError; calling
+  afterward works. Sources: [let and its temporal dead zone](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Statements/let),
+  [closure environments](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Guide/Closures).
+- **Python:** assigning value = 2 again in the same enclosing function updates
+  its existing local binding; it is not Rust/Lite-style same-block shadowing.
+  An inner function reads 2 when called afterward. It can reference a name
+  assigned later in that enclosing function, but the early-call free-variable
+  probe raises NameError. Source: [Python execution model](https://docs.python.org/3/reference/executionmodel.html).
+- **C++:** capture mode adds a separate choice. With an existing local integer,
+  a lambda capturing [value] retains its copied 1 after the original variable
+  is assigned 2; [&value] reads the updated original and returns 2. This probe
+  changes the original value, not binding identity through shadowing.
+  Source: [Microsoft C++ lambda capture documentation](https://learn.microsoft.com/en-us/cpp/cpp/lambda-expressions-in-cpp?view=msvc-170#capture-clause).
+- **Zig 0.15.2:** shadowing a visible identifier is forbidden, so the proposed
+  same-name local shadow model is not admitted. Container declarations are
+  separately order-independent and lazily analyzed, with compile-time
+  initialization. This supports separating local execution from module
+  declaration lookup, without copying Zig's shadowing restriction into LiteLang.
+  Sources: [shadowing](https://ziglang.org/documentation/0.15.2/#Shadowing),
+  [container variables](https://ziglang.org/documentation/0.15.2/#Container-Level-Variables).
+
+### Probe evidence and limits
+
+Primary documentation above was read on 2026-10-29. Local foreign-language
+probes used rustc 1.97.1 (Rust 2021 edition), Node v24.16.0, Python 3.15.1, and
+Apple clang 21.0.0 with C++17. Temporary sources/executables were outside the
+repository and removed after use. Observed:
+
+- Rust shadow closure returned 1; a closure naming a later local let failed
+  compilation with E0425.
+- JavaScript lexical redeclaration failed with SyntaxError; reassignment read
+  2; a later-name closure reported ReferenceError before initialization and 1
+  afterward.
+- Python enclosing-function reassignment read 2; the later-name inner-function
+  probe reported NameError before initialization and 1 afterward.
+- C++ scalar copy/reference captures returned 1 and 2 respectively after
+  reassignment, checked by a compiled executable's success exit status.
+
+Zig was checked against its versioned reference only; no Zig compiler was
+available. Python's current online reference and the local interpreter have
+different patch versions; the recorded probe version is the execution evidence.
+No LiteLang program was compiled or run. These comparisons do not settle
+LiteLang's future-shadow rule, capture representation, or readiness analysis.
+
+Interpretation: retaining the earlier binding in the proposed Lite shadow probe
+has a direct Rust precedent. Python/JavaScript results of 2 under reassignment
+are not counterexamples, because those probes update one binding. C++ shows why
+capture policy must be reviewed separately. The earlier Lite recommendation
+was unselected when the comparison was recorded. The later binding-identity
+selection above now adopts it; other capture/future-name rules remain open.
+
+## Initial contracts and evidence
+
+The following inventory and alternatives retain their initial scope; the later
+partial selection above supersedes the earlier recommendation where they differ.
+
+Evidence baseline: `2fdb250`; working tree clean before writing this note.
+
+- [Source-file bodies](../../docs/blocks-and-results.md#source-file-body) execute
+  items in written order. That page explicitly leaves duplicate top-level names
+  and recursive function-literal initialization open.
+- [Local shadowing](../../docs/local-shadowing-and-copies.md#new-bindings-rather-than-permission-upgrades)
+  resolves an ordinary initializer against the previously visible bindings,
+  then introduces the new binding. It explicitly leaves recursive function
+  initialization unsettled.
+- [Declarations](../../docs/declarations-and-assignment.md) and
+  [identifiers](../../docs/identifiers.md#names-and-scope) distinguish new bindings
+  from assignment and retain separate module-declaration contracts.
+- [Function inference](../../docs/functions.md#independent-lambda-result-inference)
+  admits nonrecursive local result inference once inputs are known.
+  [Recursion](../../docs/functions.md#recursion-and-inference) still needs a
+  declaration-resolution rule; adding a result annotation alone does not define
+  lexical lookup or when a callable value becomes initialized.
+
+No rule currently gives all top-level function-valued bindings early
+availability. A function literal's body executes when called, while its
+initializer creates the callable value; these are distinct events. Future
+capture/storage details remain with their owning topics.
+
+## Concrete cases
+
+These are source-level design probes, not executed programs. Proposed outcomes
+for top-level lookup remain alternatives until selected.
+
+```text
+/* 1. Direct forward value read */
+answer := later + 1;
+later := 10;
+```
+
+```text
+/* 2. Ordinary sequential shadowing */
+x := 1;
+x := x + 1;
+```
+
+```text
+/* 3. Call a helper before its initializer */
+answer := double(3);
+double := fn(n: Int): Int { n * 2 }
+```
+
+```text
+/* 4. Earlier function body names a later value, called after initialization */
+scale := fn(n: Int): Int { n * factor }
+factor := 2;
+answer := scale(3);
+```
+
+Case 4 separates early lookup of a deferred body from an early value read.
+Whole-file lookup could find factor, but still needs a safe initialization and
+environment contract. Moving the call before factor would require another
+readiness check; merely knowing its type is insufficient.
+
+```text
+/* 5. Self-reference versus shadowing an earlier callable */
+step := fn(): Int { 1 }
+step := fn(): Int { step() + 1 }
+```
+
+Under ordinary initializer lookup, the inner step names the earlier binding.
+A special recursive self-binding rule could instead select the new binding and
+change this into recursion. That choice cannot be inferred just from spelling
+the initializer as fn. Genuine self-recursion and mutually recursive helpers
+need explicit contracts for names, signatures, and initialized values too.
+
+## Options and consequences
+
+- **A — Sequential ordinary bindings.** Make a new binding visible after its
+  initializer, including ordinary function-valued initializers. Case 2 yields a
+  new x with value 2; cases 1 and 3 cannot read the later binding. Case 4 cannot
+  resolve factor lexically under this rule. This reuses local reasoning and
+  avoids startup reordering, but helpers must be written before their callers.
+  Self/mutual recursion still needs a separate, explicit rule.
+- **B — Whole-file visibility with initialization checks.** Resolve later names
+  early but preserve written initialization. This may admit case 4 once its
+  environment and readiness are defined. It does not by itself make cases 1 or
+  3 safe: their values are not initialized yet. Calls/callbacks and shadowing
+  complicate readiness proof; any dynamic fallback needs a selected failure
+  contract. Runtime overhead is not assumed or measured here.
+- **C — Early function availability.** Register supported function definitions
+  before running other items. This could allow case 3 and aid recursion, but
+  requires a definition category, signature checking, and environment policy.
+  Distinguish a plain literal from a computed callable initializer such as
+  make_function(). Do not silently move arbitrary initializer effects. A
+  dedicated declaration or restriction would need a visible contract; no new
+  syntax is proposed here. This may revise the current file-initialization rule.
+
+These choices can be combined with deliberately defined boundaries; they are
+not three complete language architectures. In particular, choosing A for
+ordinary values does not require banning recursion or every forward reference.
+
+## Findings and remaining questions
+
+Written execution order alone does not settle lookup. Existing ordinary local
+shadowing is a useful baseline, but neither that baseline nor knowing a
+function signature settles top-level helper availability and recursion.
+
+Original recommendation (partly superseded by the selection above): retain sequential initialization for ordinary values;
+use declare-before-use for ordinary function-valued bindings unless a distinct
+early-availability contract is chosen. Review self/mutual recursion separately,
+especially the shadowing counterexample. This keeps the simple case predictable,
+at the cost of ordering helpers before callers. It is not a selected rule.
+
+Original discussion question: should case 3 work as written? If yes, decide which
+function initializers qualify and what happens to earlier captured values and
+side effects. If no, discuss a small recursion mechanism without accidentally
+changing case 5. Module growth must be checked before generalizing either answer.
+
+## Verification and limits
+
+Read the current source-file, declaration, identifier, shadowing, and function
+pages and checked their selected/open boundaries at the evidence baseline.
+Checked local links, note fences, and catalog tracking. No LiteLang parser,
+typechecker, runtime, performance measurement, or foreign-language probe was
+used. All proposed case outcomes above are design analysis.
+
+## Decision references and handoff
+
+Selected, reviewable direction: sequential eager script/block evaluation;
+deferred bodies may name lower declarations; module declaration lookup may be
+more flexible without mandatory handwritten headers, subject to safety. Script
+case 3 is not admitted by the deferred-body exception. Case 4 is eligible in
+direction but needs environment/readiness rules. An already-visible lexical
+binding is now retained across later shadows; a body without an earlier target
+now selects the first subsequent same-name ordinary binding in the defining
+executable block. A direct function-valued declaration with no earlier same-name
+target now admits its own name in its deferred body. Explicit self(...) calls
+the current implementation, while ordinary named calls keep ordinary lookup.
+Nested-scope search, self-name collisions, and mutual recursion remain open.
+The 2026-10-29 selection makes evident op/tmp2 early reads static
+errors and uses conservative proof/rejection for the initial subset, with the
+full language's long-term fallback still open. Admitted surrounding references
+now use live execution-time reads of their original binding; deliberate value
+copying remains distinct, and surrounding-access eligibility is not settled.
+
+The owning pages and ledger linked above record this partial selection. Resume
+with self-name collision/reservation and full nested/outer self targeting, then
+mutual recursion, nested-scope forward search, and concrete
+surrounding-access/callback probes.
+Module-growth and compile-time details belong to INV-003.04/INV-006/INV-062.
+No capture representation, readiness-check runtime, or recursive inference rule
+is selected. No LiteLang execution or safety implementation has been verified.

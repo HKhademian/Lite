@@ -21,7 +21,7 @@ the flattened Lite program.
 Edit Lite implementation under `compiler/src/` and `lib/core/`, not the generated
 seeds. The host verifies source and seed identities. Changed S rebuilds with the
 accepted generated TS seed into a source/builder-keyed, strictly checked
-`.cache/compiler/` artifact; cached bytes are verified before use. There is no
+`dist/compiler-cache/` artifact; cached bytes are verified before use. There is no
 T00 fallback and no release/tag change implied by these commands.
 
 ## Routine generated-only commands

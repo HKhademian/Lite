@@ -9,8 +9,8 @@ Compiler implementation belongs in `compiler/src/` and `lib/core/`. Generated
 seeds are rebuilt, never edited. Supporting tools use direct Node TypeScript
 until a verified LiteLang replacement is ready. Preserve the generated-only path.
 
-Use focused checks during development, then `./lite test --full`, strict TS
-checks, `./lite verify --coverage`, applicable verification cases and editor
+Use focused checks during development, then `./bin/lite test --full`, strict TS
+checks, `./bin/lite verify --coverage`, applicable verification cases and editor
 grammar checks. Existing TS migration gaps are recorded in
 [the transition](compiler/transition-plan.md); report them without changing their status.
 

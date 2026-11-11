@@ -10,11 +10,11 @@ Use a clean committed checkout and Node from [igniter/.node-version](../igniter/
 Install locked development dependencies, then run the affected cases and gates.
 
 ```sh
-./lite doctor
-./lite test --full
-./lite verify --coverage
-./lite test --cases
-./lite release .cache/release-local
+./bin/lite doctor
+./bin/lite test --full
+./bin/lite verify --coverage
+./bin/lite test --cases
+./bin/lite release dist/release-local
 ```
 
 The final command creates an unpublished source snapshot. Output directories
@@ -28,7 +28,7 @@ tags on that exact revision. For example, after assigning an unused CLI version:
 
 ```sh
 git tag -a cli-v0.1.0-alpha.1 -m "CLI 0.1.0-alpha.1"
-./lite release .cache/release-cli cli-v0.1.0-alpha.1
+./bin/lite release dist/release-cli cli-v0.1.0-alpha.1
 git push github main cli-v0.1.0-alpha.1
 ```
 
@@ -58,10 +58,10 @@ Use the smallest set of checks that covers the changed contract, and run
 independent checks in parallel when they do not share mutable outputs:
 
 - Documentation, metadata, or tool-only edits use their focused checks and
-  `./lite doctor`; editor grammar checks apply when editor support or syntax
+  `./bin/lite doctor`; editor grammar checks apply when editor support or syntax
   metadata changes.
 - Compiler behavior edits use the named accepted/rejected/boundary/interaction
-  cases, affected generated targets, strict checks, and `./lite test --fast`.
+  cases, affected generated targets, strict checks, and `./bin/lite test --fast`.
 - Compiler source, seed, or bootstrap edits add a reproducible build, the
   relevant multi-generation fixed-point ladder, and recorded corpus parity;
   run the full regression suite before accepting the increment.
@@ -81,7 +81,7 @@ benchmark output; performance claims need a reviewed before/after measurement.
 Ordinary CI reports all accepted-language failures and compares them with the
 explicit [migration baseline](../config/ts-migration.json). A changed pass/failure
 set or diagnostic fails the baseline gate for review. This is a regression gate,
-not a full-conformance claim; bare `./lite verify --all` still fails for the known
+not a full-conformance claim; bare `./bin/lite verify --all` still fails for the known
 ports. Completing a port requires removing its baseline failure after verification.
 
 ## Distribution

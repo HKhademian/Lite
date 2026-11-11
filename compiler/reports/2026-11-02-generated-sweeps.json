@@ -5,7 +5,7 @@
   "beforeRevision": "3f5fbce277790a58d6671f69665604d05738586b",
   "method": "One recorded before and one after full-gate run on the same workspace. Timing includes all tests and child processes; these are observations, not statistical benchmarks. Existing full-source/corpus assertions are retained; small fixtures compare exact generated and T00 streams/status. No new full-gate skips.",
   "before": {
-    "command": "./lite test --full",
+    "command": "./bin/lite test --full",
     "tests": 247,
     "passed": 247,
     "skipped": 0,
@@ -26,7 +26,7 @@
     ]
   },
   "after": {
-    "command": "./lite test --full",
+    "command": "./bin/lite test --full",
     "tests": 248,
     "passed": 248,
     "skipped": 0,
@@ -48,7 +48,7 @@
   },
   "observedSpeedup": 12.19187687504085,
   "fast": {
-    "command": "./lite test --fast",
+    "command": "./bin/lite test --fast",
     "tests": 248,
     "passed": 239,
     "skipped": 9,
@@ -67,7 +67,7 @@
   },
   "reproducedBy": [
     "node igniter/node_modules/typescript/bin/tsc -p igniter/tsconfig.json",
-    "./lite test --fast",
-    "./lite test --full"
+    "./bin/lite test --fast",
+    "./bin/lite test --full"
   ]
 }

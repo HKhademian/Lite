@@ -15,24 +15,32 @@ function command(name: string, args: string[]) {
   return { status: result.status, stdout: result.stdout, stderr: result.stderr };
 }
 
-test('lite compile routes to the dedicated TypeScript compiler command', () => {
+test('lite compile routes through the compiler router to its TypeScript target', () => {
   assert.deepEqual(
-    command('lite', ['compile', 'examples/001-double-sum.lts']),
-    command('lite-compiler-ts', ['examples/001-double-sum.lts']),
+    command('lite', ['compile', 'language/examples/001-double-sum.lts']),
+    command('lite-compile', ['language/examples/001-double-sum.lts']),
+  );
+  assert.deepEqual(
+    command('lite-compile', ['language/examples/001-double-sum.lts']),
+    command('lite-compile-ts', ['language/examples/001-double-sum.lts']),
+  );
+  assert.deepEqual(
+    command('lite-compile', ['--target', 'c', 'language/examples/001-double-sum.lts']),
+    command('lite-compile-c', ['language/examples/001-double-sum.lts']),
   );
 });
 
 test('lite verify routes case manifests to the verifier command', () => {
   assert.deepEqual(
-    command('lite', ['verify', 'cases/tooling/proposal.fixture.json']),
-    command('lite-verify', ['cases/tooling/proposal.fixture.json']),
+    command('lite', ['verify', 'tools/cases/tooling/proposal.fixture.json']),
+    command('lite-verify', ['tools/cases/tooling/proposal.fixture.json']),
   );
 });
 
 test('lite test routes case mode to the tester command', () => {
   assert.deepEqual(
-    command('lite', ['test', '--cases', 'cases/tooling/proposal.fixture.json']),
-    command('lite-test', ['--cases', 'cases/tooling/proposal.fixture.json']),
+    command('lite', ['test', '--cases', 'tools/cases/tooling/proposal.fixture.json']),
+    command('lite-test', ['--cases', 'tools/cases/tooling/proposal.fixture.json']),
   );
 });
 

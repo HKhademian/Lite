@@ -202,7 +202,7 @@
       "route": "default generated compiler/phase/artifact execution with independent expectations"
     },
     {
-      "title": "litec, ltc, lite compile and lite check expose the compiler sources directly",
+      "title": "lite compiler commands expose the selected compiler targets",
       "destination": "igniter/test.ts",
       "originalLine": 515,
       "dependencies": [

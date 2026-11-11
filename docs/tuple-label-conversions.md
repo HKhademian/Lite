@@ -11,7 +11,7 @@ The next increment implements explicit declaration-site conversion of stored fla
 scalar tuples with exact ordered shape/types, including mixed destinations.
 General contextual constructor routing, callable adaptation, aliases, widening
 and access grants remain unimplemented. See
-[conversion evidence](../investigations/INV-022-fvp-label-conversion.md).
+[conversion evidence](../research/investigations/INV-022-fvp-label-conversion.md).
 
 Selected on **2026-10-25**, clarified by the user: ordinary tuple/callable compatibility remains label-sensitive. A known expected type alone does not authorize relabeling. Plain assignment to an existing binding, argument passing, and returning an already constructed value must satisfy the destination's label contract as well as its ordinary type/access/omission requirements.
 

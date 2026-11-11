@@ -13,7 +13,7 @@ separate invocation environments. Surrounding scalar captures, surrounding
 writes, later helper references, inference, and the wider callable model remain
 unsupported. Admitting surrounding function-valued helper dependencies is a
 temporary implementation boundary, not a general capture-policy selection.
-See [INV-030 evidence](../investigations/INV-030-igniter-functions.md).
+See [INV-030 evidence](../research/investigations/INV-030-igniter-functions.md).
 
 The approved **2026-10-31** [fixed-tuple increment](../igniter/README.md#flat-fixed-tuples)
 extends explicit function inputs/results to flat unnamed tuples of scalar values,
@@ -21,28 +21,28 @@ using existing annotations such as (:Int, :String) and (:Int,). A tuple remains
 one ordinary argument and preserves its evaluated component values. It does not
 implement intrinsic pack application, argument spread, callable-valued inputs/
 results, tuple data captures, or the wider callable model. See
-[INV-022 evidence](../investigations/INV-022-fvp-fixed-tuples.md).
+[INV-022 evidence](../research/investigations/INV-022-fvp-fixed-tuples.md).
 
-The [named-field follow-up](../investigations/INV-022-fvp-named-tuples.md) extends
+The [named-field follow-up](../research/investigations/INV-022-fvp-named-tuples.md) extends
 these explicit tuple inputs/results to fully named scalar shapes. Stored values
 must retain compatible ordered labels and component types. This does not add
 contextual field routing; valid fresh-constructor routing requests receive an unsupported diagnostic.
 
-The approved [fixed-array increment](../investigations/INV-054-fvp-fixed-arrays.md)
+The approved [fixed-array increment](../research/investigations/INV-054-fvp-fixed-arrays.md)
 also admits explicit [T; N] inputs/results for the supported scalar or flat-tuple
 element T and literal extent N. Exact extents and element contracts are checked;
 ordinary arguments retain their evaluated values when the original variable
 changes. General [T] contracts, array views/access grants and nested arrays
 remain outside the interpreter subset.
 
-The subsequent [INV-031 increment](../investigations/INV-031-fvp-named-calls.md)
+The subsequent [INV-031 increment](../research/investigations/INV-031-fvp-named-calls.md)
 implements existing named/positional user-function routing and =name shorthand,
 including named self calls. It preserves supplied evaluation order and validates
 only surviving contributions against destination slots. Stored tuple receiving
-label conversion is also [implemented narrowly](../investigations/INV-022-fvp-label-conversion.md).
+label conversion is also [implemented narrowly](../research/investigations/INV-022-fvp-label-conversion.md).
 Defaults, spread and named builtin helper arguments remain unsupported.
 
-The approved [INV-055 slice](../investigations/INV-055-fvp-list-slice.md) adds
+The approved [INV-055 slice](../research/investigations/INV-055-fvp-list-slice.md) adds
 ordinary List<T> inputs/results with exact element contracts and preserved
 sequence copies. Mut grants are limited to the four temporary list operations;
 general user-function mut parameters remain unsupported.
@@ -493,7 +493,7 @@ rename := fn (user: mut User, name: String): Unit {
 
 The example assumes `name` is an accessible writable field in the implementation context. The operation requires writable access to `user`; it only reads the replacement `name` parameter. Each affected receiver or parameter needs its own `mut` marker. A read-only argument cannot satisfy a writable-access requirement.
 
-The same rule applies to a method's receiver binding. The complete method notation and whether it uses an explicit `self` parameter remain open. The Kotlin-inspired `List.push_front := fn(self, ...)` candidate and its many open questions are recorded in [method declaration syntax](../investigations/INV-030-method-declaration-syntax.md); neither that spelling nor `self` as a receiver is selected. There is no additional `mut fn` or other function-level mutation marker.
+The same rule applies to a method's receiver binding. The complete method notation and whether it uses an explicit `self` parameter remain open. The Kotlin-inspired `List.push_front := fn(self, ...)` candidate and its many open questions are recorded in [method declaration syntax](../research/investigations/INV-030-method-declaration-syntax.md); neither that spelling nor `self` as a receiver is selected. There is no additional `mut fn` or other function-level mutation marker.
 
 The declaration `mut rename := fn (...) { ... }` would instead describe writable access to the held function value. It does not replace the mutation contracts on the function's parameters.
 
@@ -603,7 +603,7 @@ Nested-scope forward lookup, self-name collisions and mutual recursion,
 initialization proofs through calls/callbacks, and inaccessible/cyclic future
 definitions remain open. Capture representation, ownership, and escaping
 lifetimes remain deferred; no public capture-parameter or checked panic-effect
-list is introduced. See [INV-003.02](../investigations/INV-003-02-declarations-and-lookup.md).
+list is introduced. See [INV-003.02](../research/investigations/INV-003-02-declarations-and-lookup.md).
 
 ### Existing bindings survive later shadowing
 
@@ -625,7 +625,7 @@ This selects binding identity, not permission for implicit surrounding-local
 capture. The live-read rule below defines when an admitted reference reads the
 binding's value; deliberate value copies retain their ordinary behavior.
 The permitted surrounding-access surface is under reconsideration in
-[INV-003.02](../investigations/INV-003-02-declarations-and-lookup.md#surrounding-access-reconsideration-2026-10-29).
+[INV-003.02](../research/investigations/INV-003-02-declarations-and-lookup.md#surrounding-access-reconsideration-2026-10-29).
 Mutation, retention, and escaping lifetimes keep
 their separate contracts. The forward-reference direction applies when no
 appropriate earlier binding is visible; the same-block rule below selects its

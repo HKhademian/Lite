@@ -2,8 +2,8 @@
 
 Status: **manifest roots with a temporary host-expanded source bridge, 2026-11-11**. The bundle loader lives in
 [`../../igniter/loader.ts`](../../igniter/loader.ts); the internal driver,
-harness remain under [`../../igniter/`](../../igniter/). The default `litec`
-entry is now [`../cli.ts`](../cli.ts): both targets use selected generated compilers
+harness remain under [`../../igniter/`](../../igniter/). `lite-compile` routes to
+target commands that enter [`../cli.ts`](../cli.ts) and use selected generated compilers
 through the [current compiler host](../host.ts). The legacy bundle driver is an
 explicit reference/audit path.
 No public `bootstrap` command is exposed.

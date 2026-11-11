@@ -57,7 +57,7 @@ The newline inside the quotes is data. The working direction preserves literal c
 
 ## Notes
 
-The next [focused FVP review](../investigations/INV-016-igniter-text-operations.md#focused-consent-review-2026-10-31)
+The next [focused FVP review](../research/investigations/INV-016-igniter-text-operations.md#focused-consent-review-2026-10-31)
 records the explicit acceptance of textLength/textAt/textSlice as temporary
 positional code-point helpers with terminal bounds faults. This review does not settle ordinary String indexing, graphemes,
 normalization, native representation or the deferred complete text profile.
@@ -82,7 +82,7 @@ Whitespace outside literals can move freely without changing executable structur
 The user explicitly approves the exact temporary positional code-point helpers
 on 2026-10-31 after the consent correction and focused review. Acceptance comes
 from that reply, not the earlier implementation/tag. See
-[INV-016 approval and evidence](../investigations/INV-016-igniter-text-operations.md#focused-consent-review-2026-10-31).
+[INV-016 approval and evidence](../research/investigations/INV-016-igniter-text-operations.md#focused-consent-review-2026-10-31).
 
 Implementation increment, **2026-10-30**: the
 [igniter](../igniter/README.md#temporary-text-operations) now executes computed
@@ -93,7 +93,7 @@ invalid bounds raise a terminal BoundPanic. Code points are materialized on each
 helper call, so these operations do not promise constant-time access or a native
 representation. This records disposable host behavior, not a language-wide
 String indexing/character/slicing policy. The detailed FVP text-profile proposal
-remains deferred; [INV-016 evidence](../investigations/INV-016-igniter-text-operations.md)
+remains deferred; [INV-016 evidence](../research/investigations/INV-016-igniter-text-operations.md)
 records exact coverage and limitations.
 
 The restricted compiler's TS path now accepts the same three helpers as checked

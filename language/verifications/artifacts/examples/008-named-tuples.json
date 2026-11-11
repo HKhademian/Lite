@@ -1,0 +1,23 @@
+{
+  "id": "example.008-named-tuples",
+  "kind": "example",
+  "source": {
+    "file": "../../../language/examples/008-named-tuples.lts",
+    "hash": "sha256:fcf10484649b31ced7aeb0117c8b67929390487b5312743d512d1769f8dc035e"
+  },
+  "features": [
+    "tuple.shape",
+    "io.report"
+  ],
+  "description": "Named tuple fields, shorthand construction, and named function contracts.",
+  "cases": [
+    {
+      "name": "named-tuple",
+      "stdout": {
+        "text": "number 12\nnumber: 12\nnumber 12\n42\n",
+        "hash": "sha256:a4047019f9d0fb8b8818dd578db3c575618b7a052577923c02008e1bfc808b28"
+      },
+      "exitCode": 0
+    }
+  ]
+}

@@ -3,10 +3,10 @@
 Status: **named-entry shorthand and zero-based positional access selected by the user, 2026-10-21; runtime variable indexing rejected, mixed named/unnamed tuples, singleton value/type forms, singleton binding/grouped patterns, the empty tuple pattern, and Unit/() empty tuple identity selected by the user, 2026-10-22. Design contract; limited igniter implementation coverage is recorded below**.
 
 The FVP implements flat scalar mixed tuples in written order; see
-[bounded implementation evidence](../investigations/INV-022-fvp-mixed-tuples.md).
+[bounded implementation evidence](../research/investigations/INV-022-fvp-mixed-tuples.md).
 Broader nesting, pattern and contextual routing contracts remain separate.
 Stored-value explicit typed label conversion also has
-[bounded evidence](../investigations/INV-022-fvp-label-conversion.md).
+[bounded evidence](../research/investigations/INV-022-fvp-label-conversion.md).
 
 ## Selected value entry forms
 
@@ -16,9 +16,9 @@ unnamed scalar tuple construction, fixed .0/.1 reads, declaration destructuring,
 tuple copies and explicit function inputs/results. It preserves grouping versus
 singleton shape and Unit-valued positions. This does not implement named/mixed,
 nested, spread/segment, mutation, native layout or complete grammar contracts
-described on this page. See [INV-022](../investigations/INV-022-fvp-fixed-tuples.md).
+described on this page. See [INV-022](../research/investigations/INV-022-fvp-fixed-tuples.md).
 
-The following [named-field increment](../investigations/INV-022-fvp-named-tuples.md)
+The following [named-field increment](../research/investigations/INV-022-fvp-named-tuples.md)
 implements fully named scalar tuple values, =name shorthand, literal member reads,
 named tuple function inputs/results and label-sensitive stored transfers. Named
 singletons need no comma; numeric reads and positional binding keep stored order.

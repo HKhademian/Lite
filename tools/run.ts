@@ -11,7 +11,7 @@ import { loadSourceDetails } from '../igniter/loader.ts';
 const entry = fileURLToPath(new URL('../compiler/entry.ts', import.meta.url));
 
 function usage(): never {
-  process.stderr.write('Usage: ./lite run file.lts [-- argument ...]\n');
+  process.stderr.write('Usage: ./bin/lite run file.lts [-- argument ...]\n');
   process.exit(2);
 }
 
@@ -20,7 +20,7 @@ if (args[0] === '--') args.shift();
 const path = args.shift();
 if (path === undefined) usage();
 if (path === '--check') {
-  process.stderr.write('lite run: --check is ./lite check file.lts\n');
+  process.stderr.write('lite run: --check is ./bin/lite check file.lts\n');
   process.exit(2);
 }
 if (path.startsWith('-')) {

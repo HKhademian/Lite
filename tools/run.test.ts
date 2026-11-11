@@ -12,7 +12,7 @@ const root = fileURLToPath(new URL('../', import.meta.url));
 test('lite run executes a script from a temporary artifact and removes the directory', () => {
   const scratch = mkdtempSync(join(tmpdir(), 'lite-run-probe-'));
   try {
-    const result = spawnSync(process.execPath, [join(root, 'bin/lite-run'), 'examples/020-script-arguments.lts', 'hello'], {
+    const result = spawnSync(process.execPath, [join(root, 'bin/lite-run'), 'language/examples/020-script-arguments.lts', 'hello'], {
       cwd: root, env: { ...process.env, TMPDIR: scratch }, encoding: 'utf8', timeout: 60_000,
     });
     assert.equal(result.status, 0, result.stderr);

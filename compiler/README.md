@@ -4,7 +4,7 @@ This directory contains the Lite-written compiler and its bootstrap host. TS
 compilation defaults to the verified generated **T12** compiler in
 [`bootstrap/`](bootstrap/README.md). Public compile and check use generated TS;
 check-only also strictly checks the artifact without executing it. Public
-`./lite run` compiles to a temporary artifact and executes it through
+`./bin/lite run` compiles to a temporary artifact and executes it through
 `entry.ts`; compiled programs also run as `node compiler/entry.ts program.ts`.
 C output and native self-hosting are deferred until later. The handwritten T00
 compiler and its active adapters have been retired; historical audit reports
@@ -38,7 +38,7 @@ language decision.
 [`host.ts`](host.ts) checks the seed's SHA-256 and the current assembled Lite
 source. Unchanged S uses the seed directly. Changed S is compiled by the selected generated seed and
 strictly typechecked before publication under a source/builder-keyed
-`.cache/compiler/` directory. Corrupt seeds/caches and rejected rebuilds fail
+`dist/compiler-cache/` directory. Corrupt seeds/caches and rejected rebuilds fail
 explicitly; there is no silent T00 fallback. `node compiler/scripts/build.ts`
 selects or rebuilds both target compilers and prints their provenance. The
 [text-cache optimization](../benchmark/reports/2026-11-02-text-cache.md) records
@@ -82,13 +82,13 @@ line-map contract and current hashes are recorded in:
   and test evidence.
 - [`parity.md`](parity.md) — stage-0 versus generated-compiler burndown; the
   current TS/C parity target and difference log.
-- [`generated/current-artifacts.json`](generated/current-artifacts.json) —
+- [`tests/references/generated/current-artifacts.json`](tests/references/generated/current-artifacts.json) —
   current emitted-artifact hashes for all 69 program cases; the P0 hashes remain
-  in `generated/baseline-artifacts.json`.
+  in `tests/references/generated/baseline-artifacts.json`.
 
 The bundle path is green: [`../igniter/loader.ts`](../igniter/loader.ts) loads
 the ordered manifests, expands top-level imports and maps diagnostics back to
-the original files. `litec` uses [`cli.ts`](cli.ts): both targets use the
+the original files. `lite-compile-ts` uses [`cli.ts`](cli.ts): target commands use the
 generated compiler host. The handwritten interpreter and bundle CLI are
 retired. P2 adds the provisional
 L0 helpers under [`../lib/core/`](../lib/README.md): checked Int, text, source
@@ -189,10 +189,10 @@ enabled. See the [completion assessment and evidence](parity.md#function-complet
 | [`ts-emitter.lts`](ts-emitter.lts) | Generated compatibility bundle for the TS manifest |
 | [`c-emitter.lts`](c-emitter.lts) | Generated compatibility bundle for the C manifest |
 | [`runtime/ts/runtime.ts`](runtime/ts/runtime.ts) | P6 TS runtime: checked Int64, code-point text, list copies, faults and exit |
-| [`generated/report-42.ts`](generated/report-42.ts) | Checked-in TS reference for `outputLine(42);` |
-| [`generated/report-42.c`](generated/report-42.c) | Checked-in C reference for `outputLine(42);` |
-| [`generated/run-report.ts`](generated/run-report.ts) | Visible Node adapter for the TS reference |
-| [`generated/baseline-artifacts.json`](generated/baseline-artifacts.json) | P0 emitted-artifact hashes for the 50 program cases |
+| [`tests/references/generated/report-42.ts`](tests/references/generated/report-42.ts) | Checked-in TS reference for `outputLine(42);` |
+| [`tests/references/generated/report-42.c`](tests/references/generated/report-42.c) | Checked-in C reference for `outputLine(42);` |
+| [`tests/references/generated/run-report.ts`](tests/references/generated/run-report.ts) | Visible Node adapter for the TS reference |
+| [`tests/references/generated/baseline-artifacts.json`](tests/references/generated/baseline-artifacts.json) | P0 emitted-artifact hashes for the 50 program cases |
 | [`scripts/run-ts-artifact.ts`](scripts/run-ts-artifact.ts) | Strict-typechecks and runs one emitted TS artifact with fixed stdin and no harness timeout |
 | [`scripts/self-host.ts`](scripts/self-host.ts) | Builds three strictly checked generated TS generations |
 | [`scripts/corpus-parity.ts`](scripts/corpus-parity.ts) | Checks compiler bytes, rejections and TS execution against recorded contracts |
@@ -218,7 +218,7 @@ order is semantic because Lite has no forward function lookup: literal encoders
 come before the shared front-end, and the front-end comes before the emitter and
 driver.
 
-`litec` compiles through [`cli.ts`](cli.ts), selecting the current T11-derived
+`lite-compile-ts` compiles through [`cli.ts`](cli.ts), selecting the current T11-derived
 target compiler. The old `ts-emitter.lts` and `c-emitter.lts`
 paths are generated compatibility bundles that match the manifest output; edit
 `src/` and regenerate them, do not edit the bundles.
@@ -230,21 +230,21 @@ use it. It is not part of the permanent module/import design.
 ## Run the compiler
 
 ```sh
-./litec program.lts > /tmp/program.ts
+./bin/lite-compile program.lts > /tmp/program.ts
 node compiler/entry.ts /tmp/program.ts
-./lite check program.lts
+./bin/lite check program.lts
 ```
 
 Equivalent forms:
 
 ```sh
-./lite compile --target ts program.lts
-./ltc ts program.lts
+./bin/lite compile --target ts program.lts
+./bin/lite-compile ts program.lts
 ```
 
-The component/package is `lite-compiler`; its entry points are `ltc` (short
-command), `litec` (full binary) and `lite compile` (CLI form). Both binaries also
-accept `ts` as a bare positional target: `./ltc ts program.lts`. TS is the
+The component/package is `lite-compiler`. `./bin/lite-compile` routes to
+`./bin/lite-compile-ts` by default or to a selected target such as
+`./bin/lite-compile-c`; `./bin/lite compile` uses the same router. TS is the
 default. Public C requests fail explicitly until the post-migration C phase.
 
 Generated TS/C also lower the existing right-associative, Float-default `**`
@@ -319,7 +319,7 @@ reserved features name the feature, point to its documentation, and repeat the
 accepted subset, for example:
 
 ```text
-verifications/features/loop-metadata.lts:1:6: unsupported feature "loop": see docs/loops.md; the restricted compiler accepts Int/String/Bool expressions, locals, output/outputLine, if/else and loop only
+language/verifications/features/loop-metadata.lts:1:6: unsupported feature "loop": see docs/loops.md; the restricted compiler accepts Int/String/Bool expressions, locals, output/outputLine, if/else and loop only
 ```
 
 The frontend still scans offsets directly; a separate reusable token stream is
@@ -333,12 +333,12 @@ compile-time rejections. Generated TS uses BigInt; generated C uses
 Verification cases and expected streams live in
 [`../igniter/tests/compiler/`](../igniter/tests/compiler/); the schema is in
 [`../igniter/tests/README.md`](../igniter/tests/README.md). Run the suite with
-`./lite test --fast` or `./lite test --full` from the repository root.
+`./bin/lite test --fast` or `./bin/lite test --full` from the repository root.
 Recent generated-program groups batch strict TS module checking, then execute
 each program in a fresh process with exact stream/status assertions. See the
 [validation-harness ledger](parity.md#batched-ts-artifact-validation).
 
-See [INV-061](../investigations/INV-061-string-and-multi-value-reports.md) for
+See [INV-061](../research/investigations/INV-061-string-and-multi-value-reports.md) for
 the current evidence and limits.
 
 Sequential ordinary value declarations now create fresh bindings on generated

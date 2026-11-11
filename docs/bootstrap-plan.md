@@ -31,7 +31,7 @@ self-hosting are later work. The
 supersedes earlier phase ordering and native retirement prerequisites below.
 Advanced correctness/edge audits do not block ordinary syntax migration.
 
-Owner update, 2026-11-05: `./lite run` is available again as a compile-and-execute
+Owner update, 2026-11-05: `./bin/lite run` is available again as a compile-and-execute
 adapter over the generated compiler and Node entry. It restores no interpreter and
 keeps the T00-free default route.
 
@@ -68,11 +68,11 @@ Related direction:
 
 - [TypeScript igniter and early self-hosting](tooling-and-learning.md#typescript-igniter-and-early-self-hosting)
 - [Bootstrap source continuity](versioning-and-naming.md#bootstrap-source-continuity)
-- [INV-061.06 target and safety direction](../investigations/INV-061-first-compiler-output.md)
+- [INV-061.06 target and safety direction](../research/investigations/INV-061-first-compiler-output.md)
 - [Compiler prototype](../compiler/README.md)
 - [Bootstrap parity ledger](../compiler/parity.md)
 - [Igniter](../igniter/README.md)
-- [Verification guide](../verifications/README.md)
+- [Verification guide](../language/verifications/README.md)
 - [Modules and packages](modules-and-packages.md) (open design)
 
 ## How to use this page
@@ -115,7 +115,7 @@ emitter is TS-hosted, built by T11, and is not the future native C11 compiler.
 Changed S is rebuilt by T11 and strictly checked before
 use; artifact/source identities prevent stale or corrupt compiler selection.
 Public compile/check now use generated TS, the interpreter run launcher is removed,
-`./lite run` is a compile-and-execute adapter and C output is deferred. Default
+`./bin/lite run` is a compile-and-execute adapter and C output is deferred. Default
 regression consumers and TS feature parity still
 need migration before T00 retirement. The native C ladder follows retirement. The
 [text-cache seed refresh](../compiler/parity.md#text-cache-seed-refresh) records
@@ -275,7 +275,7 @@ The counts and implementation limits below describe P0, not the current compiler
   L0 helpers under `lib/core/`. Exact P0 hashes are recorded in
   [`compiler/baseline.md`](../compiler/baseline.md); P2 artifact hashes are
   unchanged.
-- S is valid Lite today: `./lite check compiler/ts-emitter.lts` passes. The
+- S is valid Lite today: `./bin/lite check compiler/ts-emitter.lts` passes. The
   compiler itself does not parse S yet; its accepted surface is Int/String/Bool
   expressions, immutable and mutable locals, `report(...)`, `if`/`else`, and
   Boolean/unconditional `loop`. Dynamic division and dynamic String
@@ -373,7 +373,7 @@ requires the project owner's explicit selection and an update to this page and t
 
 1. **One phase at a time.** Do not start the next gate until the current gate's
    evidence is recorded, even when the next task looks independent.
-2. **Keep the fast lane green.** Run `./lite test --fast` after every change.
+2. **Keep the fast lane green.** Run `./bin/lite test --fast` after every change.
    Run the full gate before recording completion.
 3. **Grow the bootstrap in paired increments.** When the compiler needs a new
    capability, add it to the TS seed first, then implement/adopt it in Lite and
@@ -386,7 +386,7 @@ requires the project owner's explicit selection and an update to this page and t
 5. **No official std.** Shared code lives under a clearly provisional location
    such as `lib/`; it is not `lite-stdlib`, has no stable API, is not imported by
    examples or samples and is not added to the design specification.
-6. **No npm in visible commands.** Local gates use `./lite ...`. The repository
+6. **No npm in visible commands.** Local gates use `./bin/lite ...`. The repository
    CI separately runs the strict TypeScript check.
 7. **Every change has multiple focused and combined-feature cases.** Follow the
    [development guidelines](../.agents/rules/compiler-development.md) for features, syntax/spec
@@ -444,7 +444,7 @@ target layout without changing behavior.
 
 - [x] Record the baseline counts and the exact current compiler outputs. See
       [`compiler/baseline.md`](../compiler/baseline.md) and
-      [`compiler/generated/baseline-artifacts.json`](../compiler/generated/baseline-artifacts.json).
+      [`compiler/tests/references/generated/baseline-artifacts.json`](../compiler/tests/references/generated/baseline-artifacts.json).
 - [x] Lock the default manifest schema (paths relative to the manifest, order is
       dependency order, each file included once, cycles rejected):
 
@@ -466,8 +466,8 @@ target layout without changing behavior.
 **Gate passed 2026-11-01:** the baseline counts and current emitted outputs are
 recorded in [`compiler/baseline.md`](../compiler/baseline.md); the manifest
 schema and line-map contract are recorded in
-[`compiler/manifests/README.md`](../compiler/manifests/README.md); `./lite test
---fast` passes 174 tests with one native-C skip and `./lite test` passes all 175
+[`compiler/manifests/README.md`](../compiler/manifests/README.md); `./bin/lite test
+--fast` passes 174 tests with one native-C skip and `./bin/lite test` passes all 175
 tests, and the current 50/42 compiler path remains green. The bundle path itself
 is P1's gate.
 
@@ -506,10 +506,10 @@ this phase.
 **Gate passed 2026-11-01:** the bundle path loads and stage-0 compiles both
 current S emitters; all 92 compiler cases match the direct flat-import path with
 byte-identical artifacts and exact diagnostics; TS/C bundle text equals the
-direct loader output; `./lite test --fast` passes 180 tests with two native-C
-skips in 11.7 s, and `./lite test` passes all 182 tests in 12.9 s.
+direct loader output; `./bin/lite test --fast` passes 180 tests with two native-C
+skips in 11.7 s, and `./bin/lite test` passes all 182 tests in 12.9 s.
 
-**Do not:** add file/process/stdlib builtins, change `litec`'s public contract,
+**Do not:** add file/process/stdlib builtins, change `lite-compile`'s public contract,
 or add a public `bootstrap` command without an owner decision.
 
 ## P2 — L0 shared libraries
@@ -573,7 +573,7 @@ sources. Five rejection fixtures fail lexically for the expected reasons:
 injected unterminated string, below-minimum and too-large Int literals, a bad
 string escape, and an unterminated string. Focused fixtures cover symbols,
 comments, strings, Int bounds and exact token dumps. No parser or emitter
-behavior changed. `./lite test` passes all 186 tests in 65.3 s; the fast lane
+behavior changed. `./bin/lite test` passes all 186 tests in 65.3 s; the fast lane
 passes 183 with three skips in 13.2 s.
 
 **Do not:** add Float, arrays, `match`, records, enums or modules to L just to
@@ -599,7 +599,7 @@ make the lexer complete.
 - [x] Keep the backend literal encoders ordered before the frontend in the
       manifest; the no-forward-reference rule makes order semantic.
 - [x] Make manifest order authoritative in S and remove `importFlatAll` from the
-      compiler source. `litec` compiles the manifest bundle through
+      compiler source. `lite-compile-ts` compiles the manifest bundle through
       [`igniter/bundle-cli.ts`](https://github.com/redacted/Lite/blob/d3bd6f7bcf06bbea6669c8d74bebe5e73f383114/igniter/bundle-cli.ts); the old emitter paths
       are generated compatibility bundles.
 - [x] Negative fixtures: unsupported constructs are rejected by name before any
@@ -608,7 +608,7 @@ make the lexer complete.
 **Gate passed 2026-11-01:** expanded S, L0, the lexer and every supported
 program case parse; unsupported declarations are rejected by name; compiler
 source and `lib/core` contain no `importFlatAll`; manifest order is authoritative
-and the current artifacts and diagnostics are unchanged. `./lite test` passes
+and the current artifacts and diagnostics are unchanged. `./bin/lite test` passes
 all 193 tests in 150.6 s; the fast lane passes 189 with four heavy/native skips
 in 10.9 s.
 
@@ -643,7 +643,7 @@ reproduce.
 accepts expanded S and rejects focused ill-typed fixtures for scopes, types,
 arity, arguments, returns, conditions, tuple/list/index forms and mutation
 grants. All 50 program and 42 rejection cases retain their exact artifacts and
-diagnostics; no invalid program emits an artifact. `./lite test` passes all 195
+diagnostics; no invalid program emits an artifact. `./bin/lite test` passes all 195
 tests in 228.6 s; the fast lane passes 190 with five heavy/native skips in 11.7 s.
 
 **Do not:** add union inference, records, enums, pattern matching, recovery or
@@ -660,7 +660,7 @@ not a checked-in IR or a prerequisite. Introduce a richer instruction stream onl
 if direct emission becomes unmaintainable.
 
 **T11/T12 verification policy.** During the T11/T12 critical path, each atomic
-slice verifies `npm --prefix igniter run check`, `./lite test --fast`, and focused
+slice verifies `npm --prefix igniter run check`, `./bin/lite test --fast`, and focused
 TS tests only. Do not run the full gate, native C, or C parity per slice; those
 are deferred to the P6 gate where full regression and C validation run together.
 
@@ -905,12 +905,12 @@ Use the existing visible commands:
 
 | Command | Use |
 |---|---|
-| `./lite test --fast` | Fast local gate; target under 30 s; skips native C and the full-S lexer sweep |
-| `./lite test` / `./lite test --full` | Full current regressions/generated sweeps; native C deferred |
-| `./lite verify --all` | All feature/example/sample scenarios and targets |
-| `./lite check file.lts` | Source check |
-| `./lite compile [--target ts] file.lts` | Generated TS compiler; C deferred |
-| `./lite run file.lts [-- argument ...]` | Compile to a temporary artifact and execute it; forwards arguments, streams and status |
+| `./bin/lite test --fast` | Fast local gate; target under 30 s; skips native C and the full-S lexer sweep |
+| `./bin/lite test` / `./bin/lite test --full` | Full current regressions/generated sweeps; native C deferred |
+| `./bin/lite verify --all` | All feature/example/sample scenarios and targets |
+| `./bin/lite check file.lts` | Source check |
+| `./bin/lite compile [--target ts] file.lts` | Generated TS compiler; C deferred |
+| `./bin/lite run file.lts [-- argument ...]` | Compile to a temporary artifact and execute it; forwards arguments, streams and status |
 | `node compiler/entry.ts program.ts [argument ...]` | Execute a compiled TS artifact directly |
 
 The repository CI also runs the strict TypeScript check and editor tests. Do not

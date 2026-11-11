@@ -69,19 +69,19 @@ if (import.meta.main) {
           symlinkSync(join(root, 'igniter/node_modules'), join(work, 'igniter/node_modules'));
           invoke(process.execPath, ['bin/lite', 'test', '--full'], work);
           invoke(process.execPath, ['compiler/scripts/build.ts'], work);
-          invoke(process.execPath, ['compiler/scripts/self-host.ts', '--out', '.cache/ladder'], work);
-          invoke(process.execPath, ['compiler/scripts/corpus-parity.ts', '--artifact', '.cache/ladder/generation-3.ts'], work);
+          invoke(process.execPath, ['compiler/scripts/self-host.ts', '--out', 'dist/ladder'], work);
+          invoke(process.execPath, ['compiler/scripts/corpus-parity.ts', '--artifact', 'dist/ladder/generation-3.ts'], work);
         } finally { rmSync(work, { recursive: true, force: true }); }
         break;
       }
       case 'package': {
-        prepareRelease(root, join(root, '.cache/release'), releaseTag()); break;
+        prepareRelease(root, join(root, 'dist/release'), releaseTag()); break;
       }
       case 'publish': {
         assert.equal(process.env['GITHUB_EVENT_NAME'], 'push');
         assert.equal(process.env['GITHUB_REF_TYPE'], 'tag');
         const tag = process.env['GITHUB_REF_NAME']; assert(tag);
-        const directory = join(root, '.cache/release');
+        const directory = join(root, 'dist/release');
         const manifest = JSON.parse(readFileSync(join(directory, 'manifest.json'), 'utf8')) as { tag: string; releasedComponent: { version: string } };
         assert.equal(manifest.tag, tag);
         const args = ['release', 'create', tag, ...readdirSync(directory).map(file => join(directory, file)), '--draft', '--verify-tag', '--latest=false', '--title', tag, '--notes-file', join(directory, 'RELEASE-NOTES.md')];

@@ -42,7 +42,7 @@ type RegistryEntry = Readonly<{
 }>;
 
 const root = resolve(dirname(fileURLToPath(import.meta.url)), '..');
-const verifications = resolve(root, 'verifications');
+const verifications = resolve(root, 'language/verifications');
 
 const options = {
   update: false,
@@ -82,7 +82,7 @@ for (let index = 0; index < process.argv.length - 2; index += 1) {
 function usage(message?: string, code = 2): never {
   if (message !== undefined) process.stderr.write(`lite verify: ${message}\n`);
   const target = code === 0 ? process.stdout : process.stderr;
-  target.write('Usage: ./lite verify [--all] [--update] [--coverage] [--shard i/n] [--filter id-or-path] [--no-cache] [--quiet]\n');
+  target.write('Usage: ./bin/lite verify [--all] [--update] [--coverage] [--shard i/n] [--filter id-or-path] [--no-cache] [--quiet]\n');
   process.exit(code);
 }
 
@@ -143,7 +143,7 @@ function streamBytes(value: Stream | undefined, base: string, label: string, che
   }
   try { return resolveStreamBytes(value, base, label, { checkHash }); }
   catch (error) {
-    if (error instanceof Error && error.message === `${label}.hash does not match content`) throw new Error(`${label}.hash: content changed; run ./lite verify --update`);
+    if (error instanceof Error && error.message === `${label}.hash does not match content`) throw new Error(`${label}.hash: content changed; run ./bin/lite verify --update`);
     throw error;
   }
 }
@@ -172,13 +172,13 @@ function scenario(value: unknown, label: string): Scenario {
 
 function registry(): Map<string, RegistryEntry> {
   const path = resolve(verifications, 'features.json');
-  const record = object(JSON.parse(readFileSync(path, 'utf8')), 'verifications/features.json');
-  checkKeys(record, ['features'], 'verifications/features.json');
+  const record = object(JSON.parse(readFileSync(path, 'utf8')), 'language/verifications/features.json');
+  checkKeys(record, ['features'], 'language/verifications/features.json');
   const entries = new Map<string, RegistryEntry>();
   const features = record['features'];
-  if (!Array.isArray(features)) throw new Error('verifications/features.json: features must be an array');
+  if (!Array.isArray(features)) throw new Error('language/verifications/features.json: features must be an array');
   for (const [index, value] of features.entries()) {
-    const label = `verifications/features.json: features[${index}]`;
+    const label = `language/verifications/features.json: features[${index}]`;
     const item = object(value, label);
     checkKeys(item, ['id', 'summary', 'case', 'status', 'docs'], label);
     const id = text(item['id'], `${label}.id`);
@@ -307,7 +307,7 @@ const runtimeHash = createHash('sha256')
 
 type CacheData = { version: 1; passed: Record<string, true> };
 const cacheFile = process.env['LITE_VERIFY_CACHE'] === undefined
-  ? resolve(root, '.cache/verifications.json')
+  ? resolve(root, 'dist/verifications.json')
   : resolve(process.env['LITE_VERIFY_CACHE']);
 
 function loadCache(): CacheData {
@@ -373,7 +373,7 @@ function changedPaths(): Set<string> | undefined {
 const invalidating = new Set([
   'igniter/loader.ts', 'igniter/verify.ts',
   'igniter/artifacts.ts', 'igniter/tsconfig.json', 'igniter/package-lock.json',
-  'verifications/features.json', 'verifications/schema/verification.schema.json',
+  'language/verifications/features.json', 'language/verifications/schema/verification.schema.json',
   'compiler/host.ts', 'compiler/entry.ts', 'compiler/cli.ts',
 ]);
 
@@ -574,7 +574,7 @@ function main(): void {
       ? (item.source.bytes === undefined ? item.source.text ?? '' : Buffer.from(item.source.bytes).toString('utf8'))
       : loadSource(sourcePath)) + (item.append === undefined ? '' : `\n${item.append}`);
     if (!options.update && item.source.hash !== sourceHash) {
-      process.stdout.write(`FAIL ${item.id}: source hash changed; run ./lite verify --update\n`);
+      process.stdout.write(`FAIL ${item.id}: source hash changed; run ./bin/lite verify --update\n`);
       failures += 1;
       continue;
     }

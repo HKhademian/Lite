@@ -1,0 +1,28 @@
+{
+  "id": "sample.005-circle-measurements",
+  "kind": "sample",
+  "source": {
+    "file": "../../../language/samples/005_circle_measurements.lts",
+    "hash": "sha256:55b579f0149981a0b26a88b4477859be485a8b68c65b47cb92c0794354dc6c99"
+  },
+  "features": [
+    "num.float",
+    "scope.locals"
+  ],
+  "description": "Approximate circumference and area of a circle.",
+  "append": "outputLine(circumference); outputLine(area);",
+  "cases": [
+    {
+      "name": "observed-values",
+      "stdout": {
+        "text": "25.13272\n50.26544\n",
+        "hash": "sha256:830f87ea92758ad7da80ac1b0bd37c1a1133c7bceee815d81b0008896da44c77"
+      },
+      "exitCode": 0
+    }
+  ],
+  "targets": [
+    "ts",
+    "c"
+  ]
+}

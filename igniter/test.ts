@@ -420,37 +420,37 @@ test('compiler applications preserve optional logical source names in their own 
   }
 });
 
-test('litec, ltc, lite compile and lite check expose the compiler sources directly', () => {
+test('lite and compiler commands route through the compiler and selected target', () => {
   const root = new URL('../', import.meta.url).pathname;
   const env = { ...process.env, PATH: dirname(process.execPath) + delimiter + (process.env['PATH'] ?? '') };
   const directory = mkdtempSync(join(tmpdir(), 'litec-'));
   try {
     const sourcePath = join(directory, 'sample.lts');
     writeFileSync(sourcePath, 'outputLine(42);');
-    const ts = spawnSync(join(root, 'litec'), ['--target', 'ts', sourcePath], { env, timeout: 5000 });
+    const ts = spawnSync(join(root, 'bin/lite-compile'), ['--target', 'ts', sourcePath], { env, timeout: 5000 });
     assert.equal(ts.error, undefined); assert.equal(ts.status, 0, ts.stderr.toString());
-    assert.deepEqual(ts.stdout, readFileSync(join(root, 'compiler/generated/report-42.ts')));
+    assert.deepEqual(ts.stdout, readFileSync(join(root, 'compiler/tests/references/generated/report-42.ts')));
     assert.equal(ts.stderr.length, 0);
-    const c = spawnSync(join(root, 'lite'), ['compile', '--target', 'c', sourcePath], { env, timeout: 5000 });
+    const c = spawnSync(join(root, 'bin/lite-compile'), ['--target', 'c', sourcePath], { env, timeout: 5000 });
     assert.equal(c.error, undefined); assert.equal(c.status, 2);
     assert.equal(c.stdout.length, 0); assert.match(c.stderr.toString(), /C output is deferred/);
-    const shorthand = spawnSync(join(root, 'ltc'), ['ts', sourcePath], { env, timeout: 5000 });
+    const shorthand = spawnSync(join(root, 'bin/lite-compile-ts'), [sourcePath], { env, timeout: 5000 });
     assert.equal(shorthand.error, undefined); assert.equal(shorthand.status, 0);
     assert.deepEqual(shorthand.stdout, ts.stdout);
-    const validCheck = spawnSync(join(root, 'lite'), ['check', sourcePath], { env, timeout: 5000 });
+    const validCheck = spawnSync(join(root, 'bin/lite'), ['check', sourcePath], { env, timeout: 5000 });
     assert.equal(validCheck.error, undefined); assert.equal(validCheck.status, 0);
     assert.equal(validCheck.stdout.length, 0); assert.equal(validCheck.stderr.length, 0);
     const invalidPath = join(directory, 'bad.lts');
     writeFileSync(invalidPath, 'outputLine(1 +);\n');
-    const invalid = spawnSync(join(root, 'litec'), ['ts', invalidPath], { env, timeout: 5000 });
+    const invalid = spawnSync(join(root, 'bin/lite-compile-ts'), [invalidPath], { env, timeout: 5000 });
     assert.equal(invalid.status, 2); assert.equal(invalid.stdout.length, 0);
     assert.deepEqual(invalid.stderr, Buffer.from(`${invalidPath}:1:15: expected an Int, Float, String or Bool expression\n`));
-    const invalidCheck = spawnSync(join(root, 'lite'), ['check', invalidPath], { env, timeout: 5000 });
+    const invalidCheck = spawnSync(join(root, 'bin/lite'), ['check', invalidPath], { env, timeout: 5000 });
     assert.equal(invalidCheck.status, 1); assert.equal(invalidCheck.stdout.length, 0);
     assert.match(invalidCheck.stderr.toString(), /bad\.lts:1:15: expected an Int, Float, String or Bool expression/);
     for (const args of [[], ['--target', 'x', sourcePath], ['ts', join(directory, 'missing.lts')],
       ['ts', join(directory, 'sample.txt')]]) {
-      const bad = spawnSync(join(root, 'litec'), args, { env, timeout: 5000 });
+      const bad = spawnSync(join(root, 'bin/lite-compile-ts'), args, { env, timeout: 5000 });
       assert.equal(bad.status, 2, args.join(' ')); assert.equal(bad.stdout.length, 0);
     }
   } finally { rmSync(directory, { recursive: true, force: true }); }
@@ -458,18 +458,18 @@ test('litec, ltc, lite compile and lite check expose the compiler sources direct
 test('lite help and docs expose the command matrix and documentation roots', () => {
   const root = new URL('../', import.meta.url).pathname;
   const env = { ...process.env, PATH: dirname(process.execPath) + delimiter + (process.env['PATH'] ?? '') };
-  const help = spawnSync(join(root, 'lite'), ['help'], { env, encoding: 'utf8', timeout: 5000 });
+  const help = spawnSync(join(root, 'bin/lite'), ['help'], { env, encoding: 'utf8', timeout: 5000 });
   assert.equal(help.error, undefined); assert.equal(help.status, 0);
   assert.match(help.stdout, /Usage: \.\/lite <command>/);
-  assert.match(help.stdout, /Compiler entry points: \.\/ltc, \.\/litec, \.\/lite compile/);
+  assert.match(help.stdout, /Compiler entry points: \.\/bin\/lite-compile, \.\/lite compile/);
   assert.match(help.stdout, /test \[--fast\|--full\]/);
   assert.equal(help.stderr, '');
-  const docs = spawnSync(join(root, 'lite'), ['docs'], { env, encoding: 'utf8', timeout: 5000 });
+  const docs = spawnSync(join(root, 'bin/lite'), ['docs'], { env, encoding: 'utf8', timeout: 5000 });
   assert.equal(docs.error, undefined); assert.equal(docs.status, 0);
   assert.match(docs.stdout, /compiler\/README\.md/);
   assert.match(docs.stdout, /igniter\/tests\/README\.md/);
   assert.equal(docs.stderr, '');
-  const noArgs = spawnSync(join(root, 'lite'), [], { env, encoding: 'utf8', timeout: 5000 });
+  const noArgs = spawnSync(join(root, 'bin/lite'), [], { env, encoding: 'utf8', timeout: 5000 });
   assert.equal(noArgs.status, 2); assert.equal(noArgs.stdout, ''); assert.match(noArgs.stderr, /Usage:/);
 });
 test('lite verify uses generated TS, reports migration gaps and rejects the retired reference flag', () => {
@@ -479,28 +479,28 @@ test('lite verify uses generated TS, reports migration gaps and rejects the reti
     LITE_VERIFY_CACHE: join(directory, 'cache.json') };
   try {
     // This controller runs 81 isolated scenarios; each artifact retains its own timeout.
-    const verified = spawnSync(join(root, 'lite'), ['verify', '--all', '--no-cache'], { env, encoding: 'utf8', timeout: 180000 });
+    const verified = spawnSync(join(root, 'bin/lite'), ['verify', '--all', '--no-cache'], { env, encoding: 'utf8', timeout: 180000 });
     assert.equal(verified.error, undefined); assert.equal(verified.status, 1, verified.stderr);
     assert.match(verified.stdout, /PASS int\.arithmetic\/precedence-and-division/);
     assert.match(verified.stdout, /PASS example\.001-double-sum\/seven-and-five/);
     assert.match(verified.stdout, /\[ts\]/); assert.doesNotMatch(verified.stdout, /T00 reference|\[c\]/);
     assert.match(verified.stdout, /FAIL match\.subjectless\/.*unsupported feature "match"/);
     assert.match(verified.stdout, /verification failed: 21 failing scenario\(s\), 81 executed, 0 cached/);
-    const covered = spawnSync(join(root, 'lite'), ['verify', '--coverage'], { env, encoding: 'utf8', timeout: 30000 });
+    const covered = spawnSync(join(root, 'bin/lite'), ['verify', '--coverage'], { env, encoding: 'utf8', timeout: 30000 });
     assert.equal(covered.error, undefined); assert.equal(covered.status, 0, covered.stderr);
     assert.match(covered.stdout, /features: 41 registered, 41 cases/);
     assert.match(covered.stdout, /examples: 19\/19 manifests/);
     assert.match(covered.stdout, /samples: 20\/20 manifests/);
-    const first = spawnSync(join(root, 'lite'), ['verify', '--all', '--filter', 'features/int-arithmetic.json'],
+    const first = spawnSync(join(root, 'bin/lite'), ['verify', '--all', '--filter', 'features/int-arithmetic.json'],
       { env, encoding: 'utf8', timeout: 30000 });
     assert.equal(first.error, undefined); assert.equal(first.status, 0, first.stderr);
     assert.match(first.stdout, /verification passed: \d+ executed, 0 cached/);
-    const second = spawnSync(join(root, 'lite'), ['verify', '--all', '--filter', 'features/int-arithmetic.json'],
+    const second = spawnSync(join(root, 'bin/lite'), ['verify', '--all', '--filter', 'features/int-arithmetic.json'],
       { env, encoding: 'utf8', timeout: 30000 });
     assert.equal(second.error, undefined); assert.equal(second.status, 0, second.stderr);
     assert.match(second.stdout, /verification passed: 0 executed, \d+ cached/);
     assert.match(second.stdout, /\(cached\)/);
-    const sharded = spawnSync(join(root, 'lite'), ['verify', '--all', '--filter', 'features/int-arithmetic.json', '--shard', '2/2', '--no-cache'],
+    const sharded = spawnSync(join(root, 'bin/lite'), ['verify', '--all', '--filter', 'features/int-arithmetic.json', '--shard', '2/2', '--no-cache'],
       { env, encoding: 'utf8', timeout: 30000 });
     assert.equal(sharded.error, undefined); assert.equal(sharded.status, 0, sharded.stderr);
     assert.match(sharded.stdout, /verification passed: \d+ executed, 0 cached/);
@@ -544,7 +544,7 @@ test('bundle compilers reproduce every compiler case with exact artifacts and di
   assert.equal(cCompiler.bundle.lineMap.length, cCompiler.bundle.text.split('\n').length - 1);
   // Intentional emitter changes refresh the current hashes; P0 stays historical.
   const baselineValue: unknown = JSON.parse(readFileSync(
-    new URL('../compiler/generated/current-artifacts.json', import.meta.url), 'utf8'));
+    new URL('../compiler/tests/references/generated/current-artifacts.json', import.meta.url), 'utf8'));
   if (typeof baselineValue !== 'object' || baselineValue === null || Array.isArray(baselineValue)) {
     throw new Error('invalid baseline artifacts');
   }
@@ -580,7 +580,7 @@ test('bundle compilers reproduce every compiler case with exact artifacts and di
   }
   const label = 'named source.lts';
   assert.deepEqual(tsCompiler.compile({ text: 'outputLine(42);', name: label }), {
-    status: 0, stdout: readFileSync(new URL('../compiler/generated/report-42.ts', import.meta.url)), stderr: Buffer.alloc(0),
+    status: 0, stdout: readFileSync(new URL('../compiler/tests/references/generated/report-42.ts', import.meta.url)), stderr: Buffer.alloc(0),
   });
   assert.deepEqual(tsCompiler.compile({ text: 'outputLine(1 +);', name: label }), {
     status: 2, stdout: Buffer.alloc(0), stderr: Buffer.from(`${label}:1:15: expected an Int, Float, String or Bool expression\n`),
@@ -1778,7 +1778,7 @@ test('restricted C compiler rejects input, diagnostic and text builtins clearly'
 
 test('restricted C compiler preserves existing output and rejects function syntax clearly', () => {
   assert.deepEqual(runCompiler(cManifestPath, 'outputLine(42);'), {
-    code: 0, output: readFileSync(new URL('../compiler/generated/report-42.c', import.meta.url), 'utf8'), errors: '',
+    code: 0, output: readFileSync(new URL('../compiler/tests/references/generated/report-42.c', import.meta.url), 'utf8'), errors: '',
   });
   assert.deepEqual(runCompiler(cManifestPath, 'f := fn (x: Int): Int { return x; }\noutputLine(f(42));\n'), {
     code: 2, output: '', errors: 'C backend does not support top-level functions yet\n',
@@ -1813,7 +1813,7 @@ test('artifact runner typechecks emitted TS and compiles C with warnings as erro
 });
 
 test('restricted C compiler emits the readable reference and sequences reports', () => {
-  const expected = readFileSync(new URL('../compiler/generated/report-42.c', import.meta.url), 'utf8');
+  const expected = readFileSync(new URL('../compiler/tests/references/generated/report-42.c', import.meta.url), 'utf8');
   assert.deepEqual(runCompiler(cManifestPath, 'outputLine(42);'), { code: 0, output: expected, errors: '' });
   assert.equal(runCompiler(cManifestPath, 'outputLine(42);\noutputLine(9);').output,
     '#include <stdio.h>\n#include <inttypes.h>\n#include <stdbool.h>\n#include <string.h>\nint main(void) {\n    int status = 0;\n' +
@@ -1834,7 +1834,7 @@ test('Lite-generated native C, TS and igniter programs have identical output byt
   }
   assert.equal(probe.error, undefined); assert.equal(probe.status, 0, probe.stderr);
   const ccVersion = `${probe.stdout}\n${probe.stderr}`.trim();
-  const cacheDirectory = new URL('../.cache/native/', import.meta.url).pathname;
+  const cacheDirectory = new URL('../dist/native/', import.meta.url).pathname;
   mkdirSync(cacheDirectory, { recursive: true });
   const directory = mkdtempSync(join(tmpdir(), 'lite-native-parity-'));
   try {
@@ -1884,7 +1884,7 @@ test('Lite-generated native C, TS and igniter programs have identical output byt
   } finally { rmSync(directory, { recursive: true, force: true }); }
 });
 test('Lite-written TS emitter produces a deterministic readable reference with no extra source', () => {
-  const expected = readFileSync(new URL('../compiler/generated/report-42.ts', import.meta.url), 'utf8');
+  const expected = readFileSync(new URL('../compiler/tests/references/generated/report-42.ts', import.meta.url), 'utf8');
   assert.deepEqual(runCompiler(tsManifestPath, 'outputLine(42);'), { code: 0, output: expected, errors: '' });
   assert.equal(runCompiler(tsManifestPath, 'outputLine(42);').output, runCompiler(tsManifestPath, 'outputLine(42);').output);
   assert.equal(runCompiler(tsManifestPath, ' outputLine ( +00042 ) ; ').output, expected);
@@ -2174,7 +2174,7 @@ test('emitted TS and igniter outputs match byte for byte across the admitted com
 });
 
 test('root launcher compiles artifacts and forwards their input, diagnostics and status from caller directories', () => {
-  const root = new URL('../', import.meta.url).pathname, launcher = join(root, 'lite');
+  const root = new URL('../', import.meta.url).pathname, launcher = join(root, 'bin/lite');
   const dir = mkdtempSync(join(tmpdir(), 'lite-launcher-')), source = join(dir, 'program with spaces.lts'), artifact = join(dir, 'program.ts');
   const env = { ...process.env, PATH: dirname(process.execPath) + delimiter + (process.env['PATH'] ?? ''), CDPATH: dir };
   const invoke = (args: readonly string[], executable = launcher, cwd = dir) =>
@@ -2185,7 +2185,7 @@ test('root launcher compiles artifacts and forwards their input, diagnostics and
   const executeArtifact = (input = '', args: readonly string[] = []) => spawnSync(process.execPath,
     [join(root, 'compiler/entry.ts'), artifact, ...args], { cwd: dir, env, input, encoding: 'utf8', timeout: 10000 });
   try {
-    build('examples/001-double-sum.lts', launcher, root);
+    build('language/examples/001-double-sum.lts', launcher, root);
     const example = executeArtifact('7\n5\n'); assert.equal(example.status, 0, example.stderr); assert.equal(example.stdout, 'First integer: Second integer: 24\n');
     writeFileSync(source, 'outputLine(inputInt()); reportError("done"); exit(7);'); build();
     const result = executeArtifact('19\n'); assert.equal(result.status, 7); assert.equal(result.stdout, '19\n'); assert.equal(result.stderr, 'done\n');
@@ -2199,7 +2199,7 @@ test('root launcher compiles artifacts and forwards their input, diagnostics and
     assert.equal(fault.status, 1); assert.equal(fault.stdout, ''); assert.match(fault.stderr, /program with spaces\.lts:1:13: ArithmeticPanic:/);
     for (const argv of [[], ['unknown', source]]) { const usage = invoke(argv); assert.equal(usage.status, 2); assert.equal(usage.stdout, ''); assert.match(usage.stderr, /^Usage: \.\/lite <command>/); }
     const runUsage = invoke(['run']); assert.equal(runUsage.status, 2); assert.equal(runUsage.stdout, '');
-    assert.equal(runUsage.stderr, 'Usage: ./lite run file.lts [-- argument ...]\n');
+    assert.equal(runUsage.stderr, 'Usage: ./bin/lite run file.lts [-- argument ...]\n');
     const alias = join(dir, 'project with spaces'); symlinkSync(root, alias, 'dir');
     writeFileSync(source, 'outputLine(23);'); build(source, join(alias, 'lite')); const spaced = executeArtifact();
     assert.equal(spaced.status, 0, spaced.stderr); assert.equal(spaced.stdout, '23\n'); assert.equal(spaced.stderr, '');
@@ -2308,12 +2308,12 @@ test('real compiler CLI forwards source-name context without changing emitted by
     const sourcePath = join(directory, 'label with spaces.lts');
     for (const [target, reference] of [['ts', 'report-42.ts'], ['c', 'report-42.c']] as const) {
       writeFileSync(sourcePath, 'outputLine(42);');
-      const valid = spawnSync(target === 'ts' ? join(root, 'litec') : process.execPath, target === 'ts' ? [target, sourcePath] : [join(root, 'compiler/cli.ts'), target, sourcePath], { env, timeout: 5000 });
+      const valid = spawnSync(target === 'ts' ? join(root, 'bin/lite-compile-ts') : process.execPath, target === 'ts' ? [sourcePath] : [join(root, 'compiler/cli.ts'), target, sourcePath], { env, timeout: 5000 });
       assert.equal(valid.error, undefined); assert.equal(valid.status, 0);
-      assert.deepEqual(valid.stdout, readFileSync(join(root, 'compiler/generated', reference)));
+      assert.deepEqual(valid.stdout, readFileSync(join(root, 'compiler/tests/references/generated', reference)));
       assert.equal(valid.stderr.length, 0);
       writeFileSync(sourcePath, 'outputLine(1 +);');
-      const invalid = spawnSync(target === 'ts' ? join(root, 'litec') : process.execPath, target === 'ts' ? [target, sourcePath] : [join(root, 'compiler/cli.ts'), target, sourcePath], { env, timeout: 5000 });
+      const invalid = spawnSync(target === 'ts' ? join(root, 'bin/lite-compile-ts') : process.execPath, target === 'ts' ? [sourcePath] : [join(root, 'compiler/cli.ts'), target, sourcePath], { env, timeout: 5000 });
       assert.equal(invalid.error, undefined); assert.equal(invalid.status, 2); assert.equal(invalid.stdout.length, 0);
       assert.deepEqual(invalid.stderr, Buffer.from(`${sourcePath}:1:15: expected an Int, Float, String or Bool expression\n`));
     }
@@ -2336,17 +2336,17 @@ test('whole-source TS and C compilers reject later statements and decoding failu
     const sourcePath = join(directory, 'source.lts');
     for (const target of ['ts', 'c'] as const) {
       writeFileSync(sourcePath, '');
-      const empty = spawnSync(target === 'ts' ? join(root, 'litec') : process.execPath, target === 'ts' ? [target, sourcePath] : [join(root, 'compiler/cli.ts'), target, sourcePath], { env, timeout: 5000 });
+      const empty = spawnSync(target === 'ts' ? join(root, 'bin/lite-compile-ts') : process.execPath, target === 'ts' ? [sourcePath] : [join(root, 'compiler/cli.ts'), target, sourcePath], { env, timeout: 5000 });
       assert.equal(empty.error, undefined); assert.equal(empty.status, 0, empty.stderr.toString());
       assert.ok(empty.stdout.length > 0); assert.equal(empty.stderr.length, 0);
       for (const input of [' \n}', 'outputLine(42);\nunsupported();\n', 'outputLine(42);\nprocess.exit(7);\n']) {
         writeFileSync(sourcePath, input);
-        const rejected = spawnSync(target === 'ts' ? join(root, 'litec') : process.execPath, target === 'ts' ? [target, sourcePath] : [join(root, 'compiler/cli.ts'), target, sourcePath], { env, timeout: 5000 });
+        const rejected = spawnSync(target === 'ts' ? join(root, 'bin/lite-compile-ts') : process.execPath, target === 'ts' ? [sourcePath] : [join(root, 'compiler/cli.ts'), target, sourcePath], { env, timeout: 5000 });
         assert.equal(rejected.error, undefined); assert.equal(rejected.status, 2, rejected.stderr.toString());
         assert.equal(rejected.stdout.length, 0); assert.notEqual(rejected.stderr.length, 0);
       }
       writeFileSync(sourcePath, Buffer.concat([Buffer.from('outputLine(42);\n'), Buffer.from([0xff])]));
-      const invalid = spawnSync(target === 'ts' ? join(root, 'litec') : process.execPath, target === 'ts' ? [target, sourcePath] : [join(root, 'compiler/cli.ts'), target, sourcePath], { env, timeout: 5000 });
+      const invalid = spawnSync(target === 'ts' ? join(root, 'bin/lite-compile-ts') : process.execPath, target === 'ts' ? [sourcePath] : [join(root, 'compiler/cli.ts'), target, sourcePath], { env, timeout: 5000 });
       assert.equal(invalid.error, undefined); assert.equal(invalid.status, 1);
       assert.equal(invalid.stdout.length, 0); assert.match(invalid.stderr.toString(), /InputFault: cannot read input/);
     }
@@ -2359,13 +2359,13 @@ test('checked-in TS output and explicit Node adapter typecheck and reproduce the
   try {
     const config = join(directory, 'tsconfig.json');
     writeFileSync(config, JSON.stringify({ extends: join(root, 'igniter/tsconfig.json'), include: [],
-      files: [join(root, 'compiler/generated/run-report.ts')],
+      files: [join(root, 'compiler/tests/references/generated/run-report.ts')],
       compilerOptions: { typeRoots: [join(root, 'igniter/node_modules/@types')] } }));
     const checked = spawnSync(process.execPath, [join(root, 'igniter/node_modules/typescript/bin/tsc'), '-p', config],
       { encoding: 'utf8', timeout: 30000 });
     assert.equal(checked.error, undefined); assert.equal(checked.status, 0, checked.stdout + checked.stderr);
   } finally { rmSync(directory, { recursive: true, force: true }); }
-  const result = spawnSync(process.execPath, [join(root, 'compiler/generated/run-report.ts')], { timeout: 5000 });
+  const result = spawnSync(process.execPath, [join(root, 'compiler/tests/references/generated/run-report.ts')], { timeout: 5000 });
   assert.equal(result.error, undefined); assert.equal(result.status, 0);
   assert.deepEqual(result.stdout, Buffer.from('42\n')); assert.equal(result.stderr.length, 0);
 });

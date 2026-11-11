@@ -88,60 +88,60 @@ Closed original cases:
 
 ## feature
 
-- **int.arithmetic — matches tested behavior.** Signed Int arithmetic and precedence. Source: `verifications/features/int-arithmetic.lts`.
-- **num.float — matches tested behavior.** Finite Float arithmetic and mixed Int/Float comparisons with checked runtime faults. Source: `verifications/features/num-float.lts`.
-- **num.aliases — matches tested behavior.** Int64, Float64 and Double as synonyms of the existing 64-bit numeric types. Source: `verifications/features/num-aliases.lts`.
-- **num.float-context — matches tested behavior.** Exactly representable integer literals in admitted Float storage, call and result contexts. Source: `verifications/features/num-float-context.lts`.
-- **num.widths — selected compiler rejects source.** Sized integer and floating widths with promotion and lossless widening. Source: `verifications/features/num-widths.lts`.
+- **int.arithmetic — matches tested behavior.** Signed Int arithmetic and precedence. Source: `language/verifications/features/int-arithmetic.lts`.
+- **num.float — matches tested behavior.** Finite Float arithmetic and mixed Int/Float comparisons with checked runtime faults. Source: `language/verifications/features/num-float.lts`.
+- **num.aliases — matches tested behavior.** Int64, Float64 and Double as synonyms of the existing 64-bit numeric types. Source: `language/verifications/features/num-aliases.lts`.
+- **num.float-context — matches tested behavior.** Exactly representable integer literals in admitted Float storage, call and result contexts. Source: `language/verifications/features/num-float-context.lts`.
+- **num.widths — selected compiler rejects source.** Sized integer and floating widths with promotion and lossless widening. Source: `language/verifications/features/num-widths.lts`.
   First diagnostic: 1:4: unsupported local type Int8
-- **bool.conditions — matches tested behavior.** Bool comparisons and conditional selection. Source: `verifications/features/bool-conditions.lts`.
-- **comparison.chains — matches tested behavior.** Adjacent comparison chains with single-evaluation middle values and lazy later operands. Source: `verifications/features/comparison-chains.lts`.
-- **cond.partial — selected compiler rejects source.** Partial conditional declaration defaults and no-write assignments. Source: `verifications/features/cond-partial.lts`.
+- **bool.conditions — matches tested behavior.** Bool comparisons and conditional selection. Source: `language/verifications/features/bool-conditions.lts`.
+- **comparison.chains — matches tested behavior.** Adjacent comparison chains with single-evaluation middle values and lazy later operands. Source: `language/verifications/features/comparison-chains.lts`.
+- **cond.partial — selected compiler rejects source.** Partial conditional declaration defaults and no-write assignments. Source: `language/verifications/features/cond-partial.lts`.
   First diagnostic: 2:19: value if requires a final else
-- **loop.conditional — matches tested behavior.** Conditional action loops with mutable state. Source: `verifications/features/loop-conditional.lts`.
-- **loop.sequence — matches tested behavior.** Ordered sequence traversal loops. Source: `verifications/features/loop-sequence.lts`.
-- **loop.value — selected compiler rejects source.** Typed loop .value accumulation and then completion. Source: `verifications/features/loop-value.lts`.
+- **loop.conditional — matches tested behavior.** Conditional action loops with mutable state. Source: `language/verifications/features/loop-conditional.lts`.
+- **loop.sequence — matches tested behavior.** Ordered sequence traversal loops. Source: `language/verifications/features/loop-sequence.lts`.
+- **loop.value — selected compiler rejects source.** Typed loop .value accumulation and then completion. Source: `language/verifications/features/loop-value.lts`.
   First diagnostic: 1:8: unsupported feature "loop": see docs/loops.md; the restricted compiler accepts Int/Float/String/Bool expressions, locals, output/outputLine, if/else and loop only
-- **loop.metadata — selected compiler rejects source.** Loop metadata and payload/targeted exits. Source: `verifications/features/loop-metadata.lts`.
+- **loop.metadata — selected compiler rejects source.** Loop metadata and payload/targeted exits. Source: `language/verifications/features/loop-metadata.lts`.
   First diagnostic: 1:6: unsupported feature "loop": see docs/loops.md; the restricted compiler accepts Int/Float/String/Bool expressions, locals, output/outputLine, if/else and loop only
-- **finally.cleanup — selected compiler rejects source.** Construct-level finally cleanup ordering. Source: `verifications/features/finally-cleanup.lts`.
+- **finally.cleanup — selected compiler rejects source.** Construct-level finally cleanup ordering. Source: `language/verifications/features/finally-cleanup.lts`.
   First diagnostic: 1:31: expected an Int, Float, String or Bool expression
-- **function.recursion — matches tested behavior.** Typed functions and own-name recursion. Source: `verifications/features/function-recursion.lts`.
-- **tuple.shape — selected compiler rejects source.** Flat tuple values and fields. Source: `verifications/features/tuple-shape.lts`.
+- **function.recursion — matches tested behavior.** Typed functions and own-name recursion. Source: `language/verifications/features/function-recursion.lts`.
+- **tuple.shape — selected compiler rejects source.** Flat tuple values and fields. Source: `language/verifications/features/tuple-shape.lts`.
   First diagnostic: 3:2: unknown value one
-- **array.fixed — matches tested behavior.** Fixed arrays and indexed reads. Source: `verifications/features/array-fixed.lts`.
-- **list.mutation — selected compiler rejects source.** Growable lists and end operations. Source: `verifications/features/list-mutation.lts`.
+- **array.fixed — matches tested behavior.** Fixed arrays and indexed reads. Source: `language/verifications/features/array-fixed.lts`.
+- **list.mutation — selected compiler rejects source.** Growable lists and end operations. Source: `language/verifications/features/list-mutation.lts`.
   First diagnostic: 3:1: unknown value push_front
-- **text.helpers — matches tested behavior.** Temporary code-point text helpers. Source: `verifications/features/text-helpers.lts`.
-- **alias.transparent — matches tested behavior.** Transparent type aliases. Source: `verifications/features/alias-transparent.lts`.
-- **scope.locals — matches tested behavior.** Lexical local scope and shadowing. Source: `verifications/features/scope-locals.lts`.
-- **scope.assignment — matches tested behavior.** Mutable var replacement. Source: `verifications/features/scope-assignment.lts`.
-- **io.input — matches tested behavior.** Prompted integer input. Source: `verifications/features/io-input.lts`.
-- **io.arguments — matches tested behavior.** Ordered script arguments. Source: `verifications/features/io-arguments.lts`.
-- **io.whole-input — matches tested behavior.** Whole remaining input through EOF. Source: `verifications/features/io-whole-input.lts`.
-- **io.exit — matches tested behavior.** Explicit process exit. Source: `verifications/features/io-exit.lts`.
+- **text.helpers — matches tested behavior.** Temporary code-point text helpers. Source: `language/verifications/features/text-helpers.lts`.
+- **alias.transparent — matches tested behavior.** Transparent type aliases. Source: `language/verifications/features/alias-transparent.lts`.
+- **scope.locals — matches tested behavior.** Lexical local scope and shadowing. Source: `language/verifications/features/scope-locals.lts`.
+- **scope.assignment — matches tested behavior.** Mutable var replacement. Source: `language/verifications/features/scope-assignment.lts`.
+- **io.input — matches tested behavior.** Prompted integer input. Source: `language/verifications/features/io-input.lts`.
+- **io.arguments — matches tested behavior.** Ordered script arguments. Source: `language/verifications/features/io-arguments.lts`.
+- **io.whole-input — matches tested behavior.** Whole remaining input through EOF. Source: `language/verifications/features/io-whole-input.lts`.
+- **io.exit — matches tested behavior.** Explicit process exit. Source: `language/verifications/features/io-exit.lts`.
 - **io.report — matches tested behavior.** Multiple report values.
-- **int.remainder — matches tested behavior.** Truncating Int remainder. Source: `verifications/features/int-remainder.lts`.
-- **text.concat — matches tested behavior.** String concatenation. Source: `verifications/features/text-concat.lts`.
-- **local.immutable — matches tested behavior.** Immutable local bindings. Source: `verifications/features/local-immutable.lts`.
-- **string.escape — matches tested behavior.** String escape sequences. Source: `verifications/features/string-escape.lts`.
-- **report.multi — matches tested behavior.** Multi-value reports. Source: `verifications/features/report-multi.lts`.
-- **report.tuple — selected compiler rejects source.** Source-like report display of flat tuple values. Source: `verifications/features/report-tuple.lts`.
+- **int.remainder — matches tested behavior.** Truncating Int remainder. Source: `language/verifications/features/int-remainder.lts`.
+- **text.concat — matches tested behavior.** String concatenation. Source: `language/verifications/features/text-concat.lts`.
+- **local.immutable — matches tested behavior.** Immutable local bindings. Source: `language/verifications/features/local-immutable.lts`.
+- **string.escape — matches tested behavior.** String escape sequences. Source: `language/verifications/features/string-escape.lts`.
+- **report.multi — matches tested behavior.** Multi-value reports. Source: `language/verifications/features/report-multi.lts`.
+- **report.tuple — selected compiler rejects source.** Source-like report display of flat tuple values. Source: `language/verifications/features/report-tuple.lts`.
   First diagnostic: 1:29: expected )
-- **int.limits — matches tested behavior.** Signed 64-bit Int boundaries. Source: `verifications/features/int-limits.lts`.
-- **int.floor — matches tested behavior.** Floor division and floor modulo. Source: `verifications/features/int-floor.lts`.
-- **scope.compound — selected compiler rejects source.** Compound arithmetic updates. Source: `verifications/features/scope-compound.lts`.
+- **int.limits — matches tested behavior.** Signed 64-bit Int boundaries. Source: `language/verifications/features/int-limits.lts`.
+- **int.floor — matches tested behavior.** Floor division and floor modulo. Source: `language/verifications/features/int-floor.lts`.
+- **scope.compound — selected compiler rejects source.** Compound arithmetic updates. Source: `language/verifications/features/scope-compound.lts`.
   First diagnostic: 2:8: expected an Int, Float, String or Bool expression
-- **mut.inferred — selected compiler rejects source.** Inferred mut and var mut declarations. Source: `verifications/features/mut-inferred.lts`.
+- **mut.inferred — selected compiler rejects source.** Inferred mut and var mut declarations. Source: `language/verifications/features/mut-inferred.lts`.
   First diagnostic: 1:1: unsupported feature "mut": see docs/declarations-and-assignment.md; the restricted compiler accepts Int/Float/String/Bool expressions, locals, output/outputLine, if/else and loop only
-- **num.power — matches tested behavior.** Right-associative Float-default power. Source: `verifications/features/num-power.lts`.
-- **match.subjectless — selected compiler rejects source.** Subjectless Boolean match selection. Source: `verifications/features/match-subjectless.lts`.
+- **num.power — matches tested behavior.** Right-associative Float-default power. Source: `language/verifications/features/num-power.lts`.
+- **match.subjectless — selected compiler rejects source.** Subjectless Boolean match selection. Source: `language/verifications/features/match-subjectless.lts`.
   First diagnostic: 2:10: unsupported feature "match": see docs/match.md; the restricted compiler accepts Int/Float/String/Bool expressions, locals, output/outputLine, if/else and loop only
-- **init.zero — selected compiler rejects source.** Zero initialization for omitted typed locals. Source: `verifications/features/init-zero.lts`.
+- **init.zero — selected compiler rejects source.** Zero initialization for omitted typed locals. Source: `language/verifications/features/init-zero.lts`.
   First diagnostic: 3:5: expected a tuple field name
-- **init.reserved — selected compiler rejects source.** Reserved storage and first whole-value initialization. Source: `verifications/features/init-reserved.lts`.
+- **init.reserved — selected compiler rejects source.** Reserved storage and first whole-value initialization. Source: `language/verifications/features/init-reserved.lts`.
   First diagnostic: 1:10: expected an Int, Float, String or Bool expression
-- **io.temporary — matches tested behavior.** Temporary input prompts and variadic output/outputLine helpers. Source: `verifications/features/io-temporary.lts`.
+- **io.temporary — matches tested behavior.** Temporary input prompts and variadic output/outputLine helpers. Source: `language/verifications/features/io-temporary.lts`.
 
 ## probe
 
@@ -273,56 +273,56 @@ Closed original cases:
 
 ## example
 
-- **example.001-double-sum — matches tested behavior.** Prompted integer addition doubled and reported. Source: `examples/001-double-sum.lts`.
-- **example.002-decisions — matches tested behavior.** Sign, range, and short-circuit decisions for a supplied integer. Source: `examples/002-decisions.lts`.
-- **example.003-sum-positive — matches tested behavior.** Reads integers until zero, skipping negatives, and reports the positive sum. Source: `examples/003-sum-positive.lts`.
-- **example.004-factorial — matches tested behavior.** Prompts for an integer and reports its recursive factorial. Source: `examples/004-factorial.lts`.
-- **example.005-scan-arithmetic — matches tested behavior.** Scans an arithmetic line into number and symbol tokens. Source: `examples/005-scan-arithmetic.lts`.
-- **example.006-fixed-tuples — selected compiler rejects source.** Tuple construction, fields, destructuring, and singleton grouping. Source: `examples/006-fixed-tuples.lts`.
+- **example.001-double-sum — matches tested behavior.** Prompted integer addition doubled and reported. Source: `language/examples/001-double-sum.lts`.
+- **example.002-decisions — matches tested behavior.** Sign, range, and short-circuit decisions for a supplied integer. Source: `language/examples/002-decisions.lts`.
+- **example.003-sum-positive — matches tested behavior.** Reads integers until zero, skipping negatives, and reports the positive sum. Source: `language/examples/003-sum-positive.lts`.
+- **example.004-factorial — matches tested behavior.** Prompts for an integer and reports its recursive factorial. Source: `language/examples/004-factorial.lts`.
+- **example.005-scan-arithmetic — matches tested behavior.** Scans an arithmetic line into number and symbol tokens. Source: `language/examples/005-scan-arithmetic.lts`.
+- **example.006-fixed-tuples — selected compiler rejects source.** Tuple construction, fields, destructuring, and singleton grouping. Source: `language/examples/006-fixed-tuples.lts`.
   First diagnostic: 1:47: expected a tuple field name
-- **example.007-prompts-and-report — matches tested behavior.** Two prompted integers with a multi-value report. Source: `examples/007-prompts-and-report.lts`.
-- **example.008-named-tuples — selected compiler rejects source.** Named tuple fields, shorthand construction, and named function contracts. Source: `examples/008-named-tuples.lts`.
+- **example.007-prompts-and-report — matches tested behavior.** Two prompted integers with a multi-value report. Source: `language/examples/007-prompts-and-report.lts`.
+- **example.008-named-tuples — selected compiler rejects source.** Named tuple fields, shorthand construction, and named function contracts. Source: `language/examples/008-named-tuples.lts`.
   First diagnostic: 2:6: expected an Int, Float, String or Bool expression
-- **example.009-fixed-arrays — selected compiler rejects source.** Traverses token tuples, reads one index, and sums a fixed array. Source: `examples/009-fixed-arrays.lts`.
+- **example.009-fixed-arrays — selected compiler rejects source.** Traverses token tuples, reads one index, and sums a fixed array. Source: `language/examples/009-fixed-arrays.lts`.
   First diagnostic: 12:19: unsupported function type
-- **example.010-mixed-tuples — selected compiler rejects source.** Interleaves named and unnamed tuple fields and destructures stored order. Source: `examples/010-mixed-tuples.lts`.
+- **example.010-mixed-tuples — selected compiler rejects source.** Interleaves named and unnamed tuple fields and destructures stored order. Source: `language/examples/010-mixed-tuples.lts`.
   First diagnostic: 2:12: expected )
-- **example.011-tuple-label-conversion — selected compiler rejects source.** Relabels stored tuple positions through explicit receiving types. Source: `examples/011-tuple-label-conversion.lts`.
+- **example.011-tuple-label-conversion — selected compiler rejects source.** Relabels stored tuple positions through explicit receiving types. Source: `language/examples/011-tuple-label-conversion.lts`.
   First diagnostic: 2:1: cannot initialize (x: Int, y: Int) with (width: Int, height: Int)
-- **example.012-named-arguments — selected compiler rejects source.** Interleaves named and positional arguments and uses named self calls. Source: `examples/012-named-arguments.lts`.
+- **example.012-named-arguments — selected compiler rejects source.** Interleaves named and positional arguments and uses named self calls. Source: `language/examples/012-named-arguments.lts`.
   First diagnostic: 5:19: unknown value c
-- **example.013-growable-lists — selected compiler rejects source.** Exercises all four explicit mut list end operations. Source: `examples/013-growable-lists.lts`.
+- **example.013-growable-lists — selected compiler rejects source.** Exercises all four explicit mut list end operations. Source: `language/examples/013-growable-lists.lts`.
   First diagnostic: 3:1: unknown value push_front
-- **example.014-input-history — matches tested behavior.** Collects integers until zero, then reports the retained history and sum. Source: `examples/014-input-history.lts`.
-- **example.015-retained-tokens — matches tested behavior.** Tokenizes a line into a retained list before reporting it. Source: `examples/015-retained-tokens.lts`.
-- **example.016-integer-calculator — selected compiler rejects source.** Tokenized integer calculator with precedence and nesting. Source: `examples/016-integer-calculator.lts`.
+- **example.014-input-history — matches tested behavior.** Collects integers until zero, then reports the retained history and sum. Source: `language/examples/014-input-history.lts`.
+- **example.015-retained-tokens — matches tested behavior.** Tokenizes a line into a retained list before reporting it. Source: `language/examples/015-retained-tokens.lts`.
+- **example.016-integer-calculator — selected compiler rejects source.** Tokenized integer calculator with precedence and nesting. Source: `language/examples/016-integer-calculator.lts`.
   First diagnostic: 49:5: cannot return Unit from function digitValue returning Int
-- **example.019-whole-input — matches tested behavior.** Reads remaining text through EOF and reports its code-point length. Source: `examples/019-whole-input.lts`.
-- **example.020-script-arguments — matches tested behavior.** Reports ordered script arguments after --. Source: `examples/020-script-arguments.lts`.
-- **example.021-type-aliases — matches tested behavior.** Transparent tuple/list aliases with list traversal. Source: `examples/021-type-aliases.lts`.
+- **example.019-whole-input — matches tested behavior.** Reads remaining text through EOF and reports its code-point length. Source: `language/examples/019-whole-input.lts`.
+- **example.020-script-arguments — matches tested behavior.** Reports ordered script arguments after --. Source: `language/examples/020-script-arguments.lts`.
+- **example.021-type-aliases — matches tested behavior.** Transparent tuple/list aliases with list traversal. Source: `language/examples/021-type-aliases.lts`.
 
 ## sample
 
-- **sample.001-add-two-numbers — matches tested behavior.** Adds two supplied baskets; the verification appends outputLine(apples). Source: `samples/001_add_two_numbers.lts`.
-- **sample.002-arithmetic-operations — matches tested behavior.** Four integer operations; the verification appends reports for each result. Source: `samples/002_arithmetic_operations.lts`.
-- **sample.003-rectangle-measurements — matches tested behavior.** Rectangle area and perimeter. Source: `samples/003_rectangle_measurements.lts`.
-- **sample.004-triangle-area — matches tested behavior.** Triangle area from base and height. Source: `samples/004_triangle_area.lts`.
-- **sample.005-circle-measurements — matches tested behavior.** Approximate circumference and area of a circle. Source: `samples/005_circle_measurements.lts`.
-- **sample.006-temperature-conversion — matches tested behavior.** Celsius to Fahrenheit and back. Source: `samples/006_temperature_conversion.lts`.
-- **sample.007-distance-conversion — matches tested behavior.** Meters converted to kilometers and centimeters. Source: `samples/007_distance_conversion.lts`.
-- **sample.008-duration-parts — matches tested behavior.** Split seconds into hours, minutes and seconds. Source: `samples/008_duration_parts.lts`.
-- **sample.009-average-three-values — matches tested behavior.** Average of three daily values. Source: `samples/009_average_three_values.lts`.
-- **sample.010-percentage-of-total — matches tested behavior.** Completed percentage and a percentage of the total. Source: `samples/010_percentage_of_total.lts`.
-- **sample.011-discounted-price — matches tested behavior.** Percentage discount rounded to cents. Source: `samples/011_discounted_price.lts`.
-- **sample.012-tax-and-tip — matches tested behavior.** Tax and tip rounded to cents. Source: `samples/012_tax_and_tip.lts`.
-- **sample.013-simple-interest — matches tested behavior.** Simple interest over three years. Source: `samples/013_simple_interest.lts`.
-- **sample.014-speed-distance-time — matches tested behavior.** Speed, distance and time relations. Source: `samples/014_speed_distance_time.lts`.
-- **sample.015-weighted-average — matches tested behavior.** Weighted average of three scores. Source: `samples/015_weighted_average.lts`.
-- **sample.016-midpoint-coordinates — matches tested behavior.** Midpoint of two coordinate pairs. Source: `samples/016_midpoint_coordinates.lts`.
-- **sample.017-linear-interpolation — matches tested behavior.** Linear interpolation at a fraction. Source: `samples/017_linear_interpolation.lts`.
-- **sample.018-split-bill — matches tested behavior.** Whole-cent bill split with remainder. Source: `samples/018_split_bill.lts`.
-- **sample.019-currency-conversion — matches tested behavior.** Currency conversion rounded to target cents. Source: `samples/019_currency_conversion.lts`.
-- **sample.020-swap-values — matches tested behavior.** Swaps two var bindings through a temporary; verification reports both. Source: `samples/020_swap_values.lts`.
+- **sample.001-add-two-numbers — matches tested behavior.** Adds two supplied baskets; the verification appends outputLine(apples). Source: `language/samples/001_add_two_numbers.lts`.
+- **sample.002-arithmetic-operations — matches tested behavior.** Four integer operations; the verification appends reports for each result. Source: `language/samples/002_arithmetic_operations.lts`.
+- **sample.003-rectangle-measurements — matches tested behavior.** Rectangle area and perimeter. Source: `language/samples/003_rectangle_measurements.lts`.
+- **sample.004-triangle-area — matches tested behavior.** Triangle area from base and height. Source: `language/samples/004_triangle_area.lts`.
+- **sample.005-circle-measurements — matches tested behavior.** Approximate circumference and area of a circle. Source: `language/samples/005_circle_measurements.lts`.
+- **sample.006-temperature-conversion — matches tested behavior.** Celsius to Fahrenheit and back. Source: `language/samples/006_temperature_conversion.lts`.
+- **sample.007-distance-conversion — matches tested behavior.** Meters converted to kilometers and centimeters. Source: `language/samples/007_distance_conversion.lts`.
+- **sample.008-duration-parts — matches tested behavior.** Split seconds into hours, minutes and seconds. Source: `language/samples/008_duration_parts.lts`.
+- **sample.009-average-three-values — matches tested behavior.** Average of three daily values. Source: `language/samples/009_average_three_values.lts`.
+- **sample.010-percentage-of-total — matches tested behavior.** Completed percentage and a percentage of the total. Source: `language/samples/010_percentage_of_total.lts`.
+- **sample.011-discounted-price — matches tested behavior.** Percentage discount rounded to cents. Source: `language/samples/011_discounted_price.lts`.
+- **sample.012-tax-and-tip — matches tested behavior.** Tax and tip rounded to cents. Source: `language/samples/012_tax_and_tip.lts`.
+- **sample.013-simple-interest — matches tested behavior.** Simple interest over three years. Source: `language/samples/013_simple_interest.lts`.
+- **sample.014-speed-distance-time — matches tested behavior.** Speed, distance and time relations. Source: `language/samples/014_speed_distance_time.lts`.
+- **sample.015-weighted-average — matches tested behavior.** Weighted average of three scores. Source: `language/samples/015_weighted_average.lts`.
+- **sample.016-midpoint-coordinates — matches tested behavior.** Midpoint of two coordinate pairs. Source: `language/samples/016_midpoint_coordinates.lts`.
+- **sample.017-linear-interpolation — matches tested behavior.** Linear interpolation at a fraction. Source: `language/samples/017_linear_interpolation.lts`.
+- **sample.018-split-bill — matches tested behavior.** Whole-cent bill split with remainder. Source: `language/samples/018_split_bill.lts`.
+- **sample.019-currency-conversion — matches tested behavior.** Currency conversion rounded to target cents. Source: `language/samples/019_currency_conversion.lts`.
+- **sample.020-swap-values — matches tested behavior.** Swaps two var bindings through a temporary; verification reports both. Source: `language/samples/020_swap_values.lts`.
 
 ## library-test
 
@@ -337,9 +337,9 @@ Closed original cases:
 
 ## Other tracked Lite sources
 
-- `cases/language/reject-effects.lts`: not-a-standalone-T00-program.
-- `cases/language/silent.lts`: compile accepted; execution not tested.
-- `cases/language/tour-bindings.lts`: compile accepted; execution not tested.
+- `language/cases/reject-effects.lts`: not-a-standalone-T00-program.
+- `language/cases/silent.lts`: compile accepted; execution not tested.
+- `language/cases/tour-bindings.lts`: compile accepted; execution not tested.
 - `compiler/c-emitter.lts`: compile accepted; execution not tested.
 - `compiler/src/c-literals.lts`: not-a-standalone-T00-program.
 - `compiler/src/check.lts`: not-a-standalone-T00-program.

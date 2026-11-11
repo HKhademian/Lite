@@ -8,10 +8,10 @@
   },
   "scripts": {
     "check": "tsc --noEmit",
-    "test": "../lite test",
-    "test:fast": "../lite test --fast",
-    "test:full": "../lite test --full",
-    "verify": "../lite verify --all"
+    "test": "../bin/lite test",
+    "test:fast": "../bin/lite test --fast",
+    "test:full": "../bin/lite test --full",
+    "verify": "../bin/lite verify --all"
   },
   "devDependencies": {
     "@types/node": "26.6.6",

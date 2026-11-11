@@ -6,7 +6,7 @@ import { loadSourceDetails } from './loader.ts';
 
 const [path, ...extra] = process.argv.slice(2);
 if (path === undefined || extra.length !== 0) {
-  process.stderr.write('Usage: ./lite check file.lts\n');
+  process.stderr.write('Usage: ./bin/lite check file.lts\n');
   process.exitCode = 2;
 } else {
   try {

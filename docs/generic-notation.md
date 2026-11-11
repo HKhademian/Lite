@@ -3,7 +3,7 @@
 Status: **documentation convention clarified by the user, 2026-10-19**. Generic concepts can be discussed before their source syntax is designed. Angle-bracket examples are temporary explanatory notation except for the explicitly approved builtin FVP List<T> family below; general generic grammar remains unselected.
 
 FVP exception selected by the user, **2026-10-31**: adopt List<T> for this builtin
-family in the [bounded INV-055 slice](../investigations/INV-055-fvp-list-slice.md).
+family in the [bounded INV-055 slice](../research/investigations/INV-055-fvp-list-slice.md).
 The igniter supports existing scalar/flat-tuple elements and explicit receiving
 construction. This does not adopt general generic declarations/application,
 other families, constraints or specialization infrastructure.
@@ -40,7 +40,7 @@ The selected [generic widening criterion](types-and-inference.md#generic-widenin
 
 ## Deferred generic design
 
-The **2026-10-31** [INV-055 FVP proposal](../investigations/INV-055-fvp-list-slice.md)
+The **2026-10-31** [INV-055 FVP proposal](../research/investigations/INV-055-fvp-list-slice.md)
 was explicitly approved for the builtin List<T> family after operation-name
 selection. That bounded exception does not adopt angle brackets for other
 families or settle their generic declaration/application design.

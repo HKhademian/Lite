@@ -10,7 +10,7 @@ Compiling and running a script use the checked-in generated compiler and need no
 installed packages. Use the Node version in
 [igniter/.node-version](../igniter/.node-version).
 
-`./lite check`, the test tools and editor grammar checks use locked development
+`./bin/lite check`, the test tools and editor grammar checks use locked development
 dependencies. Install them from the repository root:
 
 ```sh
@@ -23,7 +23,7 @@ Public compilation uses the checked-in generated compiler, without a T00 fallbac
 
 ## Run a first program
 
-The [double-sum example](../examples/001-double-sum.lts) reads two integers and
+The [double-sum example](../language/examples/001-double-sum.lts) reads two integers and
 prints twice their sum:
 
 ```text
@@ -37,7 +37,7 @@ outputLine(total);
 From the repository root:
 
 ```sh
-./lite run examples/001-double-sum.lts
+./bin/lite run language/examples/001-double-sum.lts
 ```
 
 Enter `7` and `5`; the final value is `24`. Prompts are explicit program output.
@@ -50,18 +50,18 @@ status without leaving the artifact behind.
 Compile the artifact yourself, or check the source without executing it:
 
 ```sh
-./lite compile examples/001-double-sum.lts > /tmp/lite-example.ts
+./bin/lite compile language/examples/001-double-sum.lts > /tmp/lite-example.ts
 node compiler/entry.ts /tmp/lite-example.ts
-./lite check examples/001-double-sum.lts
+./bin/lite check language/examples/001-double-sum.lts
 ```
 
 `check` compiles and strictly checks without executing the program.
-The [verification case](../verifications/artifacts/examples/001-double-sum.json)
+The [verification case](../language/verifications/artifacts/examples/001-double-sum.json)
 records exact expected streams.
 
 ## Explore
 
-Continue with [the tour](tour.md), [examples](../examples/README.md) or
+Continue with [the tour](tour.md), [examples](../language/examples/README.md) or
 [the reference index](README.md). Use [compiler status](../compiler/README.md)
 and [the transition](../compiler/transition-plan.md) before relying on a feature.
 Use [contributing](../CONTRIBUTING.md) to work on the project.

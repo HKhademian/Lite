@@ -3,10 +3,10 @@
 Status: **same-value binding/destructuring and union type-pattern narrowing established; variable-or-pattern collection selected 2026-10-23, with no combined whole-value/nested binding; complete recursive pattern syntax open**.
 
 The FVP implements flat scalar mixed tuples in written order; see
-[bounded implementation evidence](../investigations/INV-022-fvp-mixed-tuples.md).
+[bounded implementation evidence](../research/investigations/INV-022-fvp-mixed-tuples.md).
 Broader nesting, pattern and contextual routing contracts remain separate.
 Stored-value explicit typed label conversion also has
-[bounded evidence](../investigations/INV-022-fvp-label-conversion.md).
+[bounded evidence](../research/investigations/INV-022-fvp-label-conversion.md).
 
 ## Purpose
 
@@ -19,8 +19,8 @@ declaration patterns, and
 explicit tuple function inputs/results. Empty/singleton/grouped patterns keep
 their selected meanings; repeated receiver names bind in written order. Named,
 nested, typed and rest patterns, conditional/match patterns, and the wider tuple
-model remain unimplemented. See [INV-022](../investigations/INV-022-fvp-fixed-tuples.md).
-The [named-field follow-up](../investigations/INV-022-fvp-named-tuples.md) records
+model remain unimplemented. See [INV-022](../research/investigations/INV-022-fvp-fixed-tuples.md).
+The [named-field follow-up](../research/investigations/INV-022-fvp-named-tuples.md) records
 shorthand construction and label-sensitive transfers; named patterns themselves
 remain outside this coverage.
 

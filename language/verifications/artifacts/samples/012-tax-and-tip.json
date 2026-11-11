@@ -1,0 +1,24 @@
+{
+  "id": "sample.012-tax-and-tip",
+  "kind": "sample",
+  "source": {
+    "file": "../../../language/samples/012_tax_and_tip.lts",
+    "hash": "sha256:fa70c39438e3e8aff2502a720de64a945a1841f7291b651d5f1b62a3335eb6c4"
+  },
+  "features": [
+    "int.arithmetic",
+    "scope.locals"
+  ],
+  "description": "Tax and tip rounded to cents.",
+  "append": "outputLine(tax_cents); outputLine(tip_cents); outputLine(total_cents);",
+  "cases": [
+    {
+      "name": "observed-values",
+      "stdout": {
+        "text": "160\n300\n2459\n",
+        "hash": "sha256:38f8b297456b440bdc2f7c9f5ef19140abd4b5b97792c353be914de06bc9be0e"
+      },
+      "exitCode": 0
+    }
+  ]
+}

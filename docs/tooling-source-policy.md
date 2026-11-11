@@ -9,11 +9,11 @@ Installed third-party packages are dependencies rather than project-owned source
 `lite` is a command router: it maps subcommands to standalone entries in `bin/`
 and forwards arguments, streams and exit status. It contains no implementation
 of compiler, verification, testing, runner, documentation or repository-check
-operations. For example, `lite compile` routes to `lite-compiler-ts`, while
-`lite verify` and `lite doctor` route to `lite-verify` and `lite-doctor`.
-Operation implementations live in their owning `tools/`, `compiler/` or
-`igniter/` modules. `litec` and `ltc` remain direct compiler compatibility
-entries. `config/versions.json` owns component metadata. Internal compiler
+operations. For example, `lite compile` routes to `lite-compile`, which selects a target
+command such as `lite-compile-ts`; `lite verify` and `lite doctor` route to
+`lite-verify` and `lite-doctor`. Operation implementations live in their owning
+`tools/`, `compiler/` or `igniter/` modules. `bin/` contains executable entries;
+the former `litec`, `ltc` and root launchers are retired. `config/versions.json` owns component metadata. Internal compiler
 routines remain under `compiler/scripts/`; command arguments, source paths,
 streams and exit statuses retain their existing contracts. Compiler language
 implementation remains in Lite.
@@ -30,19 +30,19 @@ formats. Historical measurements and compiler seed bytes were preserved.
 
 ## Checks
 
-Run `./lite test --fast` during development and `./lite test --full` at the gate.
+Run `./bin/lite test --fast` during development and `./bin/lite test --full` at the gate.
 Both include the source-file policy and challenge tooling boundary checks.
 CI's separate strict TypeScript check includes all maintained TS tooling.
 `igniter/source-files.test.ts` rejects other first-party code extensions, shell
 launchers and extra TypeScript configs. Generated C is confined to
-`compiler/generated/` or `compiler/bootstrap/`.
+`compiler/tests/references/generated/` or `compiler/bootstrap/`.
 
 The challenge tools run directly with Node, for example:
 
 ```sh
-node challenges/tools/query.ts --stats
-node challenges/tools/validate.ts
-node challenges/tools/validate_benchmark.ts
+node benchmark/challenges/tools/query.ts --stats
+node benchmark/challenges/tools/validate.ts
+node benchmark/challenges/tools/validate_benchmark.ts
 ```
 
 ## Migration evidence

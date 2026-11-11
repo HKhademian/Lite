@@ -28,7 +28,7 @@ if ((target !== 'ts' && target !== 'c') || path === undefined) {
       if (result.stderr.length > 0) writeSync(2, result.stderr);
       process.exitCode = result.status;
     } catch (error: unknown) {
-      process.stderr.write(`litec: ${error instanceof Error ? error.message : String(error)}\n`);
+      process.stderr.write(`lite-compile-ts: ${error instanceof Error ? error.message : String(error)}\n`);
       process.exitCode = 1;
     }
   }

@@ -1,0 +1,29 @@
+{
+  "id": "example.002-decisions",
+  "kind": "example",
+  "source": {
+    "file": "../../../language/examples/002-decisions.lts",
+    "hash": "sha256:8804956bb539cc6cf21e688e02388b5f02691e3b3cec89160bdcf9b9892eb318"
+  },
+  "features": [
+    "io.input",
+    "bool.conditions",
+    "int.arithmetic",
+    "io.report"
+  ],
+  "description": "Sign, range, and short-circuit decisions for a supplied integer.",
+  "cases": [
+    {
+      "name": "five",
+      "stdin": {
+        "text": "5\n",
+        "hash": "sha256:f0b5c2c2211c8d67ed15e75e656c7862d086e9245420892a7de62cd9ec582a06"
+      },
+      "stdout": {
+        "text": "Integer: positive\nbetween zero and nine\nquotient exceeds five\n",
+        "hash": "sha256:26eaa57d80946dc946e15d63b5e01baeb24d6294835bd84a92b68c283037c1c9"
+      },
+      "exitCode": 0
+    }
+  ]
+}

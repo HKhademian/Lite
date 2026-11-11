@@ -1,0 +1,23 @@
+{
+  "id": "example.011-tuple-label-conversion",
+  "kind": "example",
+  "source": {
+    "file": "../../../language/examples/011-tuple-label-conversion.lts",
+    "hash": "sha256:f5c996d9fcab80082bfef10eb82ce05b231a99c43821fabf52749db9e01d9e84"
+  },
+  "features": [
+    "tuple.shape",
+    "io.report"
+  ],
+  "description": "Relabels stored tuple positions through explicit receiving types.",
+  "cases": [
+    {
+      "name": "relabel",
+      "stdout": {
+        "text": "640 480\n640 480\n640 480\n",
+        "hash": "sha256:2afc7f3914ffac02af7530dfc9ab71ca3d8e58853b8794b3ec420aef19559704"
+      },
+      "exitCode": 0
+    }
+  ]
+}

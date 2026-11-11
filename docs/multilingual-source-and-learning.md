@@ -146,7 +146,7 @@ reading ability, keyboard/script familiarity, and programming understanding.
 Check translation binding/type/behavior parity, mixed-direction editing, source
 locations, unsupported vocabulary, and executable footprint independently.
 
-[Investigation points](../investigations/multilingual-source-and-learning.md)
+[Investigation points](../research/investigations/multilingual-source-and-learning.md)
 record bounded questions. [Salam and Unicode references](references.md#salam-and-multilingual-source-reviewed-2026-10-28)
 provide starting evidence; no LiteLang compiler execution, educational study, or
 translation experiment was run to establish this proposal.

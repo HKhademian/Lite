@@ -1,0 +1,28 @@
+{
+  "id": "sample.017-linear-interpolation",
+  "kind": "sample",
+  "source": {
+    "file": "../../../language/samples/017_linear_interpolation.lts",
+    "hash": "sha256:0d24221c1b6a233e0917acf6ee1945afeb9edb67887883b530343a28ea2ef3d7"
+  },
+  "features": [
+    "num.float",
+    "scope.locals"
+  ],
+  "description": "Linear interpolation at a fraction.",
+  "append": "outputLine(value);",
+  "cases": [
+    {
+      "name": "observed-values",
+      "stdout": {
+        "text": "15\n",
+        "hash": "sha256:238903180cc104ec2c5d8b3f20c5bc61b389ec0a967df8cc208cdc7cd454174f"
+      },
+      "exitCode": 0
+    }
+  ],
+  "targets": [
+    "ts",
+    "c"
+  ]
+}
