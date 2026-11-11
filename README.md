@@ -77,6 +77,7 @@ success line or failure details, and `--silence` suppresses all test output.
 - [Numbered runnable examples](language/examples/README.md): small language demonstrations shared by the interpreter and editor tooling.
 - [Lite compiler prototype](compiler/README.md): shared front-end and TS/C backends, run with `./bin/lite-compile`, `./bin/lite-compile-ts`, or `./bin/lite compile`.
 - [Compiler development guidelines](.agents/rules/compiler-development.md): Lite source implementation, multiple focused and combined-feature tests, flagged investigations, and verified generated-igniter support before compiler-source adoption.
+- [Evolving Lite with its own compiler](docs/evolving-language.md): small verified language increments, seed promotion, and breaking source migrations.
 - [Verification cases](language/verifications/README.md): feature contracts and artifact manifests, run with `./bin/lite verify`.
 - [Small VS Code highlighter](editors/vscode/README.md): local Lite highlighting for `.lt` and `.lts` files, with an installable VSIX and no extension runtime code.
 - [Source file kinds](docs/modules-and-packages.md#distinct-script-and-module-files): convenient `.lts` scripts and explicit `.lt` module files; module files have no implicit imports, and standard module providers are intended to be replaceable.

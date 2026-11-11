@@ -8,6 +8,8 @@ focused test cases and coverage of combined feature usage.
 This is the ongoing development policy. The [bootstrap plan](../../docs/bootstrap-plan.md)
 records the initial bootstrap constraints and gates; the
 [transition plan](../../compiler/transition-plan.md) tracks the remaining ports.
+The [language evolution guide](../../docs/evolving-language.md) defines the
+verified feature and breaking-source migration sequence.
 This policy does not itself select new language syntax or mark pending support
 complete.
 

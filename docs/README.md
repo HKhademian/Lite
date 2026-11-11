@@ -14,6 +14,8 @@ The broader reference is not fully implemented; use the
 - [Short language tour](tour.md): examples connected to their reference topics.
 - [Contributor guide](../CONTRIBUTING.md), [development workflow](development-workflow.md)
   and [documentation maintenance](documentation.md): how changes stay verifiable.
+- [Evolving Lite with its own compiler](evolving-language.md): grow the
+  self-hosting subset through verified feature increments and temporary bridges.
 
 1. [LiteLang white paper](white-paper.md): the LiteLang philosophy, intended audience, and criteria for every design decision.
 2. [Principles and goals](principles.md): a concise overview of established goals and defaults.
