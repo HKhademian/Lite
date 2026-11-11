@@ -108,32 +108,55 @@ module may require expressing its package, dependencies, and entry behavior;
 the full migration contract remains open under INV-003.04. The suffix selection
 does not complete module/import grammar.
 
-## Minimal source imports
+## Source imports
 
-Selected for the post-kernel bootstrap path, **2026-11-11**: `.lts` source may
-contain whole-line top-level imports of relative Lite source files:
+Owner-selected import form, **2026-11-11**:
 
-```text
-import "../lib/core/int.lts";
-import "./helpers.lts";
+```lite
+math := import "./math.lts";
 ```
 
-The host loader opens each canonical path once, in depth-first written order,
-and splices its declarations at the import site. Repeated imports and cycles
-terminate when an already-opened path is reached. The loader exposes the opened
-dependency order and maps flattened diagnostics back to each original path and
-line. Compiler manifests now import their Lite source through this route.
+An import is a top-level module definition. The left side gives the immutable
+module alias; imported members are accessed through that alias. This is the only
+supported import form for the initial language implementation. Bare imports,
+implicit unpacking, selective imports, and block-local imports are not included.
+Paths are relative to the importing source file, use `/` separators, and name a
+source file directly. Package lookup and version solving remain out of scope.
 
-This is a narrow source-assembly feature: it does not define module namespaces,
-exports, visibility, package lookup, version resolution, or arbitrary module
-initialization. Imported declarations join the same flat compilation unit; the
-compiler's existing declaration and runtime initialization rules still apply.
-Nested imports and absolute paths reject. Paths use `/` separators and resolve
-relative to the importing file.
+Every source unit is compiled as its own unit. The compiler resolves the import
+graph without splicing source text. A module alias refers to the same module
+entity when the same canonical source is imported more than once, and the file
+is visited and processed once. `visited` is set when a source is entered, before
+following its imports; `processed` is set after the compiler has handled that
+unit. A cycle edge to an already visited source is recorded without reopening
+it. Each unit retains its own path and source spans for diagnostics.
 
-The later `.lt` module/package design below remains broader and open. It can add
-explicit access control and qualified dependencies without changing this small
-bootstrap import contract.
+Visibility is explicit. A top-level declaration is private by default;
+`pub` makes it available through an importing module alias:
+
+```lite
+// math.lts
+pub sin := fn(x: Float): Float { ... }
+cos := fn(x: Float): Float { ... }
+```
+
+```lite
+math := import "./math.lts";
+math.sin(x); // resolves
+math.cos(x); // unknown through this module
+```
+
+Private declarations remain usable within their defining source unit but are
+not members of its imported interface. Importing a module does not add runtime
+effects or grant ambient host authority. The compiler still parses, checks and
+compiles every imported unit, even when no member is referenced, so target
+declarations such as explicit C FFI exports can be emitted. Runtime module
+initialization order remains a separate decision.
+
+The current host-side source expander is a bootstrap bridge, not the language
+semantics. It may remain while the Lite-written compiler learns module imports;
+the finished path must pass separate source units to the compiler and remove
+text splicing and flattened line maps.
 
 ## Broader module import sketch
 
@@ -150,9 +173,11 @@ The braces in the import-list sketch group imported names; they are not a block 
 
 ## Visibility
 
-Declarations should expose less by default. A private module-level declaration and private record fields were recommended defaults. The exact visibility boundary, modifier syntax, and use of `pub` need to be aligned with uniform definition bindings.
-
-For example, `pub name := fn(...) { ... }` is a possible future shape, not an accepted declaration form in this snapshot.
+For imported modules, top-level declarations are private by default. The
+selected spelling `pub name := ...` exposes a declaration through its module
+alias. Private declarations remain visible inside their defining source unit;
+an inaccessible member is unknown to an importer. Visibility for record fields,
+re-exports, and visibility modifiers on imported module aliases remains open.
 
 ## Package contents
 

@@ -9,17 +9,20 @@ todos:
   - id: define-kernel
     content: "Step 1 — define and verify the compiler-capable self-hosting kernel"
     status: completed
-  - id: source-imports
-    content: "Step 2 — add source imports in Lite after the kernel gate"
+  - id: source-import-bridge
+    content: "Step 2 — establish temporary host source assembly for the old seed"
     status: completed
   - id: retire-reference
     content: "Step 3 — retire the active T00 dependency after imports and the kernel gate"
-    status: in_progress
+    status: completed
   - id: stage-architecture
-    content: "Step 4 — define clean typed compiler stages after self-hosting"
+    content: "Step 4 — define clean typed compiler stages for separate source units"
+    status: in_progress
+  - id: module-imports
+    content: "Step 5 — implement aliased imports, explicit public visibility, and remove source flattening"
     status: pending
   - id: language-growth
-    content: "Step 5 — expand supported language feature by feature"
+    content: "Step 6 — expand supported language feature by feature"
     status: pending
 plans:
   requires: []
@@ -39,7 +42,7 @@ implementation status and gates.
 
 ## Mission
 
-Reach a reliable generated compiler fixed point using only the portion of LiteLang needed to express the compiler. Do not make all of the language specification a self-hosting prerequisite. The minimum kernel, source imports and T00 retirement are now complete; next establish an explicit and extendable compiler-stage architecture, then implement the already documented language surface before taking on remaining proposals.
+Reach a reliable generated compiler fixed point using only the portion of LiteLang needed to express the compiler. Do not make all of the language specification a self-hosting prerequisite. The minimum kernel and T00 retirement are complete. The earlier host-expanded `import "path";` implementation is only a bootstrap bridge, not the selected language import semantics. Next establish explicit compiler stages for separate source units, then implement aliased module imports with explicit public visibility and remove source flattening.
 
 ## Done
 
@@ -52,8 +55,9 @@ Reach a reliable generated compiler fixed point using only the portion of LiteLa
 - The latest T00/selected-compiler inventory is dated 2026-11-11: 112/173 source scenarios match; 61 are selected-compiler rejections. Treat this as parity evidence, not a completion percentage or a kernel gate.
 - Confirmed compiler source is split into `compiler/src/*.lts` and assembled through ordered manifests. This glue is acceptable for the initial self-hosting kernel.
 - Captured owner direction: definitions/symbols are distinct from runtime values; repeated names in one flat scope should be rejected while nested shadowing is allowed; deferred function bodies may reference later compile-time-known top-level symbols, while eager top-level initializers execute in source order and may not read later values.
-- Captured owner direction: source imports need not be part of the initial bootstrap kernel. After that gate, prefer a minimal top-level import in Lite if it is inexpensive; dependencies still need explicit metadata even when a glue step assembles files.
-- Implemented the minimal source-import slice after the kernel gate: one top-level relative `.lts` import, deterministic ordered DFS expansion, visit-on-open cycle/repeat termination, explicit dependency metadata, and imported-file source locations. Compiler manifests now each name one Lite source root. TS and C source hashes and the T12 fixed point remain unchanged. The fast suite passes with import coverage.
+- Owner-selected module surface, 2026-11-11: `math := import "./math.lts";` is the only initial import form. Imports bind immutable module aliases, and top-level definitions are private unless marked `pub`. Imported files remain separate compiler units; each canonical source is visited and processed once.
+- Captured owner direction: source imports need not be part of the initial bootstrap kernel. The existing host expansion is a temporary bridge only; the selected language form is an immutable aliased module binding with explicit public visibility.
+- Implemented the old-seed source-expansion bridge after the kernel gate: one top-level relative `.lts` import, deterministic ordered DFS expansion, visit-on-open cycle/repeat termination, explicit dependency metadata, and imported-file source locations. Compiler manifests now each name one Lite source root. TS and C source hashes and the T12 fixed point remain unchanged. This bridge does not implement module visibility or separate-unit compilation.
 - Completed T00 retirement after the import gate: removed the interpreter and adapters, removed all live reference command lanes and the T00-dependent audit generators, retained immutable historical reports/contracts, and kept generated expectations independent of a live interpreter. The clean-source build and test gates no longer depend on T00.
 
 ## Plan links
@@ -131,24 +135,22 @@ Execute sequentially. Each feature/support increment is a separate atomic commit
 
 **Verified:** `node compiler/scripts/build.ts`; `node compiler/scripts/self-host.ts --out /tmp/lite-self-host-kernel-promoted-20261111`; `node compiler/scripts/corpus-parity.ts --artifact /tmp/lite-self-host-kernel-promoted-20261111/generation-3.ts` (94 cases; 69 programs, 25 rejections); focused host regression for duplicate roots, nested shadowing, deferred lookup, parameter shadowing and eager reads. T12 is now the selected seed and reproduces the fixed point.
 
-The fixed-point and corpus checks prove the updated compiler source rebuilds itself and covers the bounded kernel contract. T12 promotion, the 94-case corpus, fast suite, and refreshed inventory are complete. Step 2 is now active.
+The fixed-point and corpus checks prove the updated compiler source rebuilds itself and covers the bounded kernel contract. T12 promotion, the 94-case corpus, fast suite, and refreshed inventory are complete. Step 2 established only the temporary source-expansion bridge; the current work is Step 4's stage architecture for separate units.
 
 ---
 
-### Step 2 — source-imports
+### Step 2 — source-import-bridge
 
 **Depends on:** define-kernel  
-**Files:** implement the narrow import slice in `compiler/src/`, its verifier/parser cases, [`docs/modules-and-packages.md`](../../docs/modules-and-packages.md), and compiler source manifests as needed.
+**Files:** `igniter/loader.ts`, compiler manifests and bootstrap documentation.
 
 **Actions:**
 
-- First estimate the narrow feature's implementation cost against the existing Lite compiler and bootstrap path. Import is post-kernel, not a prerequisite for the initial self-hosting subset.
-- If the slice is modest, support one top-level import form in Lite. Keep imports out of nested blocks; start with local source files and defer package registries, version solving, installation, and broad initialization policy.
-- Mark a canonical source as visited when opening it, before traversing its imports, so repeated imports and cycles terminate without repeated expansion. Keep ordered dependency metadata visible to the compiler; a host reader may load bytes but must not hide the compiler's dependency graph.
-- Use the existing manifest/seed route to implement and verify the feature. Adopt imports in compiler source only after the generated compiler can rebuild that imported source reproducibly.
-- If the minimal source import requires substantial bootstrap or package-system work, keep manifest assembly as a temporary bridge and record the smallest blocker. Do not make dependency metadata implicit or lose the route to move resolution into Lite later.
+- Use the old seed's host expander to assemble the compiler source and retain explicit dependency metadata while the generated compiler acquires language-level modules.
+- Treat this source assembly as a temporary bootstrap bridge, not as the language import contract.
+- Keep the bridge reproducible and source-mapped until the new compiler can rebuild its own source without it.
 
-**Acceptance: PASSED.**
+**Acceptance: PASSED for the bridge only.**
 
 - [x] Focused cases cover top-level-only placement, imported declarations, missing paths, repeated/cyclic imports, source locations, dependency order, and runtime declaration order.
 - [x] The compiler source is modular and rebuilds through the documented seed/igniter to the same fixed point.
@@ -161,7 +163,7 @@ The fixed-point and corpus checks prove the updated compiler source rebuilds its
 
 ### Step 3 — retire-reference (completed 2026-11-11)
 
-**Depends on:** source-imports  
+**Depends on:** source-import-bridge
 **Files:** update [`compiler/transition-plan.md`](../../compiler/transition-plan.md), T00 consumers and the default compiler/test routes that still import T00; retain historical audit fixtures only where documented.
 
 **Actions:**
@@ -191,10 +193,11 @@ and focused source-archive tests with Git metadata absent.
 
 **Actions:**
 
-- Define explicit stage boundaries and contracts for source/tokens, parsed definitions and expressions, name/type checking, lowered representation, and target emission.
+- Define explicit stage boundaries and contracts for source units/tokens, parsed definitions and expressions, name/type checking, lowered representation, and target emission.
 - Separate compile-time definitions/symbols from runtime values. Use Lite's typed values for definition and expression data where they fit; do not encode every distinction as free-form strings.
-- Specify the stage inputs/outputs, invariants, diagnostic/source-span ownership, and extension point for additional backends.
+- Specify the stage inputs/outputs, invariants, import graph states (`visited` and `processed`), module interfaces, diagnostic/source-span ownership, and extension point for additional backends.
 - Keep stage architecture a post-self-hosting redesign. Do not add recursive ASTs, enums, unions, or stage frameworks to the bootstrap kernel as a prerequisite.
+- See [`module-import-stages.md`](../../compiler/module-import-stages.md) for the selected module surface and proposed contracts.
 
 **Acceptance:**
 
@@ -206,9 +209,26 @@ and focused source-archive tests with Git metadata absent.
 
 ---
 
-### Step 5 — language-growth
+### Step 5 — module-imports
 
-**Depends on:** stage-architecture  
+**Depends on:** stage-architecture
+**Files:** `compiler/src/`, source-provider/host adapter, module/import documentation, compiler build path and focused contracts.
+
+**Actions:**
+
+- Implement only `module := import "relative/path.lts";` initially. Keep the alias immutable and resolve members through the module's public interface.
+- Add explicit top-level `pub` visibility; private declarations stay local to their defining unit.
+- Track `visited` on first entry before traversing imports, and `processed` separately for completed unit work. Preserve dependency edges and process each canonical file once.
+- Keep text flattening only as the old-seed bootstrap bridge. Once generated support and compiler-source adoption are separately verified, switch active builds to distinct source units and remove flattened bundles/maps.
+- Leave bare imports, implicit unpacking, selective imports, packages, runtime initialization order, and re-export policy out of this increment.
+
+**Acceptance:** per-file source spans survive every stage; only `pub` members resolve through aliases; repeated aliases share module/symbol identity; each source is visited and processed once; source text is never spliced in the active compiler path; the generated compiler reaches a reproducible fixed point.
+
+---
+
+### Step 6 — language-growth
+
+**Depends on:** module-imports
 **Files:** owning language docs, `compiler/src/`, `verifications/`, relevant examples/samples and editor grammar/version metadata.
 
 **Actions:**

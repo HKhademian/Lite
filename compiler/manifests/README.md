@@ -1,6 +1,6 @@
 # Compiler source manifests
 
-Status: **manifest roots with Lite source imports, 2026-11-11**. The bundle loader lives in
+Status: **manifest roots with a temporary host-expanded source bridge, 2026-11-11**. The bundle loader lives in
 [`../../igniter/loader.ts`](../../igniter/loader.ts); the internal driver,
 harness remain under [`../../igniter/`](../../igniter/). The default `litec`
 entry is now [`../cli.ts`](../cli.ts): both targets use selected generated compilers
@@ -8,9 +8,12 @@ through the [current compiler host](../host.ts). The legacy bundle driver is an
 explicit reference/audit path.
 No public `bootstrap` command is exposed.
 
-A manifest names the root source for one bootstrap target. The root's top-level
-`import` declarations establish dependency order; the host expands them into
-one compiler input bundle. This does not define a general module/package system.
+A manifest names the root source for one bootstrap target. The current old-seed
+bridge expands the root's top-level `import "path";` directives into one
+compiler input bundle. This is build plumbing, not the selected language import
+semantics. The target language form is `module := import "path";` with explicit
+`pub` visibility and separate source units; see
+[`../module-import-stages.md`](../module-import-stages.md).
 The manifest schema is
 [`manifest.schema.json`](manifest.schema.json).
 
@@ -53,8 +56,9 @@ manifest text.
 - The bundle carries no `import`/`export` syntax into the generated artifact.
   The host loader owns import path resolution and explicit dependency metadata.
 
-The temporary `importFlatAll` directive remains only in test helpers; compiler
-source roots now use Lite `import` declarations.
+The temporary `importFlatAll` directive remains only in test helpers. Compiler
+source roots use the older bare-import spelling only as long as the selected
+seed requires the host-expansion bridge.
 
 ## Line-map contract
 

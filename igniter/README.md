@@ -173,10 +173,12 @@ and no explicit `any`, non-null assertions, or unchecked type casts.
 
 P1 adds internal bundle tooling for the [bootstrap plan](../docs/bootstrap-plan.md).
 [`loader.ts`](loader.ts) exports `loadManifest`, `loadBundle` and
-`loadSourceDetails`: ordered relative manifests, strict UTF-8, top-level Lite
-source imports, open-once dependency tracking and source-import cycle
-termination, plus a flattened-line map back to each original path and 1-based
-line. The older `importFlatAll` directive remains for test-only declaration
+`loadSourceDetails`: ordered relative manifests, strict UTF-8 and a transitional
+host-side expansion of bare top-level imports, with open-once dependency
+tracking and a flattened-line map back to each original path and 1-based line.
+This bridge is not the selected language import semantics; Lite's selected form
+is `module := import "path";` with explicit `pub` visibility and separate source
+units. The older `importFlatAll` directive remains for test-only declaration
 drivers and still reports cycles. [`artifacts.ts`](artifacts.ts)
 strict-typechecks and runs emitted TS, and compiles/runs emitted C with
 `-std=c11 -Wall -Wextra -Werror` and the math library (`-lm`), capturing raw streams and status.

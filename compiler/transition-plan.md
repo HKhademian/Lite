@@ -19,8 +19,11 @@ todos:
     content: Grow Lite compiler support feature by feature after T00 retirement; keep T00 parity cases as explicit backlog
     status: pending
   - id: source-imports
-    content: Add the minimal top-level Lite source import and explicit dependency metadata after the TS kernel
+    content: Keep the top-level source-expansion bridge needed by the old seed, with explicit dependency metadata
     status: completed
+  - id: module-imports
+    content: Implement aliased imports and explicit public visibility in Lite, then remove source flattening
+    status: pending
   - id: retire-t00
     content: Remove active handwritten T00 after source imports and no-T00 gates; full feature parity is not required
     status: completed
@@ -77,6 +80,12 @@ reject duplicate root value definitions while preserving nested bindings, allow
 deferred function bodies to resolve later compile-time-known root values, and
 keep eager root initialization in written order. Root-symbol definitions are
 compile-time facts; runtime values still become available only at initialization.
+
+Owner direction, 2026-11-11: the existing host-expanded `import "path";` is a
+temporary bootstrap bridge, not the selected language import. The language form
+is `module := import "relative/path.lts";`; module members require explicit
+`pub`, source files remain separate compilation units, and the finished active
+path removes text flattening.
 
 ## Done
 
@@ -361,7 +370,7 @@ Historical audits require explicit --reference selection. Unsupported canonical
 contracts still fail visibly, and T00 is not retired. Source/seed identities and
 all completed workflow evidence are recorded above. Continue with core syntax.
 
-### Step 3b — source-imports (completed 2026-11-11)
+### Step 3b — source-import-bridge (completed 2026-11-11)
 
 **Depends on:** generated-default-workflows and the verified TS kernel.
 **Actions:** estimate the cost of a top-level-only import clause for local source
@@ -379,6 +388,10 @@ No package or initialization policy was added.
 **Verify:** import/host/CLI focused cases, `node compiler/scripts/build.ts`,
 three-generation self-host fixed point, 94-case corpus parity, and
 `./lite test --fast` (140 passed, 12 skipped, 0 failed).
+
+This milestone describes only the transitional host loader. Its bare
+`import "path";` text expansion is not the selected Lite language contract and
+must not be treated as completion of module imports.
 
 ### Step 3c — retire-t00 (completed 2026-11-11)
 
@@ -399,6 +412,22 @@ recorded contracts.
 baseline unchanged (60/81 scenarios pass, 21 known gaps); generated build;
 three-generation exact T12 fixed point; 94-case corpus (zero mismatches); and
 source-archive route tests without Git metadata.
+
+### Step 3d — module-imports (pending)
+
+**Depends on:** generated-default-workflows, the verified TS kernel and the
+post-self-hosting stage architecture.
+**Actions:** implement only aliased module bindings
+(`module := import "relative/path.lts";`), explicit top-level `pub` visibility,
+per-file compiler stages and separate `visited`/`processed` state. Preserve the
+host expander only while an old seed is needed to create generated support; then
+move active builds to separate source units and remove source splicing and
+flattened-line mapping.
+**Acceptance:** imported private names are unknown to importers; public members
+resolve through immutable aliases; repeated aliases share one module and
+definition identity; each canonical file is entered and compiled once; original
+source spans survive every stage; generated compiler source reaches a fixed
+point without text flattening.
 
 ### Step 4 — language-growth
 
