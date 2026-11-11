@@ -471,7 +471,8 @@ emitProgram := fn(items: Items, source: String, prefix: String): Unit {
     emitIntArithmeticHelpers(calls, source, prefix);
     emitFloatArithmeticHelpers(calls);
     emitIntDivisionHelpers(calls);
-    outputLine("export function main(lite$write?: (text: string) => void): string {");
+    outputLine("export function main(lite$write?: (text: string) => void, lite$readSource?: (importer: string, spec: string) => { path: string; text: string }): string {");
+    outputLine("    void lite$readSource;");
     if not hasExit { outputLine("    let lite_out = \"\";"); }
     outputLine("    function lite$emit(text: string): void {");
     outputLine("        if (lite$write === undefined) lite_out += text;");

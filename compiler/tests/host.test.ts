@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 import { spawnSync } from 'node:child_process';
-import { chmodSync, copyFileSync, cpSync, lstatSync, readlinkSync, existsSync, mkdirSync, mkdtempSync, readFileSync, readdirSync, rmSync, symlinkSync, writeFileSync } from 'node:fs';
+import { chmodSync, copyFileSync, cpSync, lstatSync, readlinkSync, existsSync, mkdirSync, mkdtempSync, readFileSync, readdirSync, realpathSync, rmSync, symlinkSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { delimiter, dirname, join, relative, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
@@ -51,6 +51,51 @@ test('TS artifact capture preserves large synchronous writes and the returned ta
   assert.equal(actual.signal, null);
   assert.equal(actual.stderr.length, 0);
   assert.ok(actual.stdout.equals(Buffer.from(chunk + chunk + 'tail\n')), 'complete raw output including returned tail');
+});
+
+test('compiler entry provides canonical strict-UTF-8 source reads to generated compilers', () => {
+  const directory = mkdtempSync(join(tmpdir(), 'lite-source-provider-'));
+  try {
+    const artifact = join(directory, 'reader.ts');
+    const importer = join(directory, 'app.lts');
+    const dependency = join(directory, 'dep.lts');
+    writeFileSync(importer, '');
+    writeFileSync(dependency, 'dependency source\n');
+    writeFileSync(artifact, `
+      declare const process: { argv: string[] };
+      type SourceReader = (importer: string, spec: string) => { path: string; text: string };
+      export function main(_write: ((text: string) => void) | undefined, readSource: SourceReader): string {
+        const source = readSource(process.argv[2] ?? "", "./dep.lts");
+        return source.path + "\\n" + source.text;
+      }
+    `);
+    const entry = join(root, 'compiler/entry.ts');
+    const read = spawnSync(process.execPath, [entry, artifact, importer], { cwd: directory, encoding: 'utf8', timeout: 10000 });
+    assert.equal(read.status, 0, read.stderr);
+    assert.equal(read.signal, null);
+    assert.equal(read.stderr, '');
+    assert.equal(read.stdout, `${realpathSync(dependency)}\ndependency source\n`);
+
+    writeFileSync(dependency, Buffer.from([0xff]));
+    const invalidUtf8 = spawnSync(process.execPath, [entry, artifact, importer], { cwd: directory, encoding: 'utf8', timeout: 10000 });
+    assert.equal(invalidUtf8.status, 1);
+    assert.equal(invalidUtf8.signal, null);
+    assert.match(invalidUtf8.stderr, /source is not valid UTF-8/);
+
+    writeFileSync(artifact, `
+      type SourceReader = (importer: string, spec: string) => { path: string; text: string };
+      export function main(_write: ((text: string) => void) | undefined, readSource: SourceReader): string {
+        readSource("app.lts", "/absolute.lts");
+        return "unreachable";
+      }
+    `);
+    const rejected = spawnSync(process.execPath, [entry, artifact], { cwd: directory, encoding: 'utf8', timeout: 10000 });
+    assert.equal(rejected.status, 1);
+    assert.equal(rejected.signal, null);
+    assert.match(rejected.stderr, /import path must be nonempty, relative, and use "\/" separators/);
+  } finally {
+    rmSync(directory, { recursive: true, force: true });
+  }
 });
 
 test('TS artifact capture preserves repeated output, diagnostics and early exit across fresh runs', () => {
