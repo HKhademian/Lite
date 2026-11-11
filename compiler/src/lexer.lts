@@ -150,7 +150,7 @@ skipTrivia := fn(source: String, position: Int, line: Int, lineStart: Int, prefi
 
 /** True for a Lite keyword other than the Bool literals. */
 isKeyword := fn(name: String): Bool {
-    name == "var" or name == "mut" or name == "fn" or name == "loop" or
+    name == "pub" or name == "var" or name == "mut" or name == "fn" or name == "loop" or
     name == "break" or name == "continue" or name == "return" or name == "if" or
     name == "else" or name == "then" or name == "finally" or name == "match" or
     name == "import" or name == "using" or name == "record" or name == "type" or

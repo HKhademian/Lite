@@ -110,18 +110,28 @@ does not complete module/import grammar.
 
 ## Source imports
 
-Owner-selected import form, **2026-11-11**:
+Owner-selected namespace collection form, **2026-11-11**:
 
 ```lite
 math := import "./math.lts";
 ```
 
 An import is a top-level module definition. The left side gives the immutable
-module alias; imported members are accessed through that alias. This is the only
-supported import form for the initial language implementation. Bare imports,
-implicit unpacking, selective imports, and block-local imports are not included.
-Paths are relative to the importing source file, use `/` separators, and name a
-source file directly. Package lookup and version solving remain out of scope.
+module alias; imported members are accessed through that alias. Paths are
+relative to the importing source file, use `/` separators, and name a source
+file directly. Package lookup and version solving remain out of scope.
+
+The implementation will first support a receiver-less import that introduces
+the imported module's `pub` declarations into the importing file scope, as a
+staged route away from host-side source concatenation. The codebase must migrate
+to namespace collection before deciding whether this open-import form remains
+or an explicit unpack form replaces it. No project source should retain a
+dependency on implicit unpacking after the alias migration.
+
+As of **2026-11-11**, the compiler lexer and parser recognize `pub` on a
+top-level declaration as a syntax-only marker. It does not change visibility
+yet. Import parsing, module interfaces, graph traversal and separate-unit
+compilation are not implemented; the host source expander is still active.
 
 Every source unit is compiled as its own unit. The compiler resolves the import
 graph without splicing source text. A module alias refers to the same module

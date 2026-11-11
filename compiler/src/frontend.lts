@@ -125,7 +125,7 @@ consumeStatementEnd := fn(source: String, position: Int, prefix: String): Int {
 
 /** True for a Lite keyword that this restricted compiler does not implement. */
 isReservedWord := fn(name: String): Bool {
-    name == "var" or name == "mut" or name == "fn" or name == "loop" or
+    name == "pub" or name == "var" or name == "mut" or name == "fn" or name == "loop" or
     name == "break" or name == "continue" or name == "return" or name == "if" or
     name == "else" or name == "then" or name == "finally" or name == "match" or
     name == "import" or name == "using" or name == "record" or name == "type" or
@@ -140,6 +140,7 @@ featureDoc := fn(name: String): String {
     else if name == "var" or name == "mut" { "docs/declarations-and-assignment.md" }
     else if name == "fn" or name == "return" { "docs/functions.md" }
     else if name == "match" { "docs/match.md" }
+    else if name == "pub" { "docs/modules-and-packages.md" }
     else if name == "import" or name == "using" { "docs/modules-and-packages.md" }
     else if name == "record" or name == "type" { "docs/types-and-inference.md" }
     else if name == "break" or name == "continue" { "docs/control-flow.md" }
@@ -2193,6 +2194,22 @@ parseProgram := fn(source: String, prefix: String): Items {
         nameStart := position;
         position = skipName(source, position);
         name := textSlice(source, nameStart, position);
+        if name == "pub" {
+            if blockCount =!= 0 {
+                failAt(source, nameStart, prefix, "pub is only allowed on top-level declarations");
+            }
+            declarationStart := skipTrivia(source, position, prefix);
+            if declarationStart >= size or not isNameStart(textAt(source, declarationStart)) {
+                failAt(source, declarationStart, prefix, "expected a declaration after pub");
+            }
+            declarationEnd := skipName(source, declarationStart);
+            declarationOperator := skipTrivia(source, declarationEnd, prefix);
+            if not startsWithAt(source, declarationOperator, ":=") {
+                failAt(source, declarationOperator, prefix, "expected := after published declaration name");
+            }
+            position = declarationStart;
+            continue;
+        }
         position = skipTrivia(source, position, prefix);
         var afterDefinition := position;
         if startsWithAt(source, position, ":=") {

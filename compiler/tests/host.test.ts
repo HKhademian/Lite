@@ -125,6 +125,37 @@ test('Lite readSource returns a typed source unit through the compiler host', ()
   }
 });
 
+test('pub marks a top-level declaration without changing current visibility behavior', () => {
+  const compiled = compileTs({ text: 'pub twice := fn(x: Int): Int { x * 2 }; outputLine(twice(4));' });
+  assert.equal(compiled.status, 0, compiled.stderr.toString());
+  assert.equal(compiled.stderr.length, 0);
+  withTsArtifact(compiled.stdout.toString(), run => {
+    const actual = run();
+    assert.equal(actual.status, 0, actual.stderr.toString());
+    assert.equal(actual.signal, null);
+    assert.equal(actual.stdout.toString(), '8\n');
+  });
+
+  const lexerFiles = [
+    'lib/core/int.lts', 'lib/core/text.lts', 'lib/core/source.lts', 'lib/core/diag.lts',
+    'lib/core/format.lts', 'compiler/src/numeric-literals.lts', 'compiler/src/lexer.lts',
+  ];
+  const lexerDriver = readFileSync(join(root, 'compiler/tests/lexer/lexer-dump.lts'), 'utf8')
+    .replace(/^importFlatAll .*;\n/gm, '');
+  const lexerSource = lexerFiles.map(path => readFileSync(join(root, path), 'utf8')).join('\n') + '\n' + lexerDriver;
+  const lexer = compileTs({ text: lexerSource, name: 'lexer-dump.lts' });
+  assert.equal(lexer.status, 0, lexer.stderr.toString());
+  withTsArtifact(lexer.stdout.toString(), run => {
+    const actual = run({ stdin: 'pub twice := fn() { 2 }' });
+    assert.equal(actual.status, 0, actual.stderr.toString());
+    assert.match(actual.stdout.toString(), /^Keyword@1:1:0 pub\n/);
+  });
+
+  const nested = compileTs({ text: 'if true { pub hidden := fn() { 1 }; }' });
+  assert.equal(nested.status, 2);
+  assert.match(nested.stderr.toString(), /pub is only allowed on top-level declarations/);
+});
+
 test('TS artifact capture preserves repeated output, diagnostics and early exit across fresh runs', () => {
   const chunk = '🙂سلام\r\n'.repeat(128);
   const source = 'mode := inputInt(); var n := 0; loop n < 512 { ' +

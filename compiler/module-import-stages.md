@@ -1,6 +1,23 @@
 # Module imports and compiler stages
 
-Status: **owner-selected surface; implementation architecture in progress**
+Status: **owner-selected staged migration; `pub` lexer/parser marker implemented, import graph and visibility semantics pending**
+
+## Implementation sequence selected 2026-11-11
+
+1. Recognize `pub` in the lexer and parser without changing visibility yet.
+2. Add a receiver-less source import that introduces that module's `pub`
+   declarations into the importing file scope. This is a migration stage that
+   lets the compiler source stop relying on host-side source glue.
+3. Remove external source concatenation from active build paths.
+4. Add namespace collection with `math := import "./math.lts";`.
+5. Migrate project source to namespace imports incrementally, so no project
+   source continues to depend on implicit unpacking. Decide whether the
+   receiver-less form or a separately explicit unpacking form remains only
+   after that migration.
+
+The current `pub` marker is syntax-only. The compiler still gives the marked
+declaration its existing behavior; it does not yet create a public module
+interface.
 
 ## Selected import surface
 
@@ -10,12 +27,15 @@ The initial module import is a top-level immutable binding:
 math := import "./math.lts";
 ```
 
-There is no bare import, implicit unpack, selective import, package lookup, or
-block-local import in this increment. Top-level declarations are private by
-default. `pub name := ...` adds a declaration to the module interface; importers
-can resolve it only through their alias, such as `math.sin`. A private `cos`
-remains available within its defining module and appears unknown through
-`math.cos` in another module.
+Namespace import is the intended explicit collection form. A receiver-less
+import is also part of the migration sequence and introduces `pub` declarations
+into the importing file scope; whether this stays as permanent implicit
+unpacking or is replaced by an explicit unpack form remains open until source
+migration is complete. Package lookup, selective imports, and block-local
+imports are outside this sequence. Top-level declarations are intended to be
+private by default. `pub name := ...` will add a declaration to a module
+interface; a private `cos` will remain usable in its source unit but unknown to
+an importer.
 
 Two aliases to the same canonical source denote the same module and definition
 identities. The module namespace is fixed; aliases cannot add or replace
