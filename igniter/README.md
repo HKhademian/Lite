@@ -146,12 +146,13 @@ npm --prefix igniter run check
 Run tests through the CLI:
 
 ```sh
-./bin/lite test --fast       # generated TS regressions; full-source sweeps omitted
-./bin/lite test --full       # generated TS regressions and full-source phase sweeps
+./bin/lite test              # short routing, tool, docs, and source-layout smoke suite
+./bin/lite test --fast       # generated regressions; full-source sweeps omitted
+./bin/lite test --full       # all generated regressions and full-source phase sweeps
 ```
 
-Default tests compile Lite with the generated compiler, strictly check TS artifacts,
-and execute them in isolated processes. Phase drivers reuse their checked artifacts
+The generated regression suite compiles Lite with the generated compiler, strictly checks TS artifacts,
+and executes them in isolated processes. Phase drivers reuse their checked artifacts
 across inputs. The generated compiler is required for all active paths. Native
 execution stays deferred. Known
 unsupported semantic contracts continue to fail visibly in `lite verify --all`.
@@ -853,9 +854,8 @@ Project-level feature and artifact verification is `./bin/lite verify`, backed b
 [verify.ts](verify.ts) and [language/verifications/](../language/verifications/README.md). The
 first slice has 36 feature cases and 39 artifact manifests (19 examples, 20 samples). Verification results
 and native C builds are cached under the gitignored `dist/` directory.
-`./bin/lite test --fast` skips the native C lane; `./bin/lite test` / `./bin/lite test --full`
-include it. The full suite is designed to stay under the 30s local budget with a
-warm cache.
+The default smoke suite is intended for quick local feedback. `--fast` runs the broad
+generated regression suite, and CI uses `--full` to include full-source phase sweeps.
 
 Compiler verification cases are one JSON model plus a sibling `.lts` entry
 source per case under [tests/compiler](tests/compiler/); filenames follow

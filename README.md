@@ -68,6 +68,8 @@ Commands also live under `bin/`. Use `./bin/lite docs QUERY` to search documenta
 offline, `./bin/lite doctor` for repository checks, `./bin/lite test --cases` for
 declarative command/program cases, and `./bin/lite release OUTPUT` for an unpublished
 source snapshot. `./bin/lite check FILE` remains source checking.
+`./bin/lite test` runs the short smoke suite; `--fast` runs the generated regression
+suite without full-source sweeps, and `--full` runs every regression used by CI.
 
 - [Language documentation and reading order](docs/README.md)
 - [Numbered runnable examples](language/examples/README.md): small language demonstrations shared by the interpreter and editor tooling.

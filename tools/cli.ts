@@ -15,7 +15,7 @@ const usage = [
   '  compile [--target ts] file.lts            Compile to a TS artifact',
   '  run file.lts [-- argument ...]            Compile to a temporary artifact and execute it',
   '  verify [--all|--update|--coverage]        Verify generated TS artifacts',
-  '  test [--fast|--full]                     Test the generated compiler and tools',
+  '  test [--smoke|--fast|--full]              Smoke by default; --fast/--full run compiler regressions',
   '  docs [QUERY|--json|--check]               Browse and search documentation',
   '  doctor [--docs]                           Check repository consistency',
   '  test --cases [FILTER|FILE.case.json]      Run declarative cases',

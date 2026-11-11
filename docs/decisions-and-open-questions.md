@@ -124,8 +124,9 @@ from examples, samples and showcases, which are verified consumers. The new
 cases; `igniter/verify.ts` and `./bin/lite verify` run them through the reference
 igniter; the default verifies only git-affected cases, while `--all` runs
 everything. `--update` regenerates expected streams/source hashes, `--coverage`
-reports coverage and `--filter` selects manifests. `./bin/lite test --fast` runs the
-no-native test lane; `./bin/lite test`/`--full` runs the full local gate. Passing results are cached
+reports coverage and `--filter` selects manifests. `./bin/lite test` runs a short
+tooling smoke suite; `--fast` runs generated regressions and `--full` adds full-source
+phase sweeps. Passing results are cached
 by runner/source/expectation hash; `--changed` selects affected cases for fast
 feedback, and `--shard i/n` supports a growing CI matrix. `source` holds exactly
 one of `file`, `text` or `bytes` plus an optional `hash`. `source.hash` and per-stream `stdin`/`stdout`/`stderr` hashes prevent source or

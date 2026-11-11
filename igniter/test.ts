@@ -462,7 +462,7 @@ test('lite help and docs expose the command matrix and documentation roots', () 
   assert.equal(help.error, undefined); assert.equal(help.status, 0);
   assert.match(help.stdout, /Usage: \.\/lite <command>/);
   assert.match(help.stdout, /Compiler entry points: \.\/bin\/lite-compile, \.\/lite compile/);
-  assert.match(help.stdout, /test \[--fast\|--full\]/);
+  assert.match(help.stdout, /test \[--smoke\|--fast\|--full\]/);
   assert.equal(help.stderr, '');
   const docs = spawnSync(join(root, 'bin/lite'), ['docs'], { env, encoding: 'utf8', timeout: 5000 });
   assert.equal(docs.error, undefined); assert.equal(docs.status, 0);

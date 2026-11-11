@@ -6,20 +6,27 @@ import { generatedTestFiles } from '../igniter/test-suites.ts';
 import { forward } from './forward.ts';
 import { showToolVersion } from './tool-version.ts';
 
+/** Short feedback loop: command routing, tool contracts, docs, and source layout. */
+const fastTestFiles = [
+  '../tools/cli.test.ts', '../tools/run.test.ts', '../tools/docs.test.ts',
+  '../tools/release.test.ts', '../compiler/scripts/release-streams.test.ts', 'source-files.test.ts',
+] as const;
+
 if (!showToolVersion('tester', 'test')) {
   const args = process.argv.slice(2);
   if (args[0] === '--cases') {
     forward(fileURLToPath(new URL('./test.ts', import.meta.url)), args.slice(1));
   }
 
-  let mode: '--fast' | '--full' | undefined;
+  let requestedMode: '--smoke' | '--fast' | '--full' | undefined;
   for (const arg of args) {
-    if ((arg === '--fast' || arg === '--full') && mode === undefined) mode = arg;
+    if ((arg === '--smoke' || arg === '--fast' || arg === '--full') && requestedMode === undefined) requestedMode = arg;
     else {
-      process.stderr.write('Usage: ./bin/lite test [--fast|--full]\n');
+      process.stderr.write('Usage: ./bin/lite test [--smoke|--fast|--full]\n');
       process.exit(2);
     }
   }
+  const mode = requestedMode ?? '--smoke';
 
   const testEnv: NodeJS.ProcessEnv = {
     ...process.env,
@@ -27,7 +34,8 @@ if (!showToolVersion('tester', 'test')) {
     ...(mode === '--fast' ? { LITE_SKIP_HEAVY: '1' } : {}),
   };
   delete testEnv['NODE_TEST_CONTEXT'];
-  const result = spawnSync(process.execPath, ['--test', ...generatedTestFiles], {
+  const files = mode === '--smoke' ? fastTestFiles : generatedTestFiles;
+  const result = spawnSync(process.execPath, ['--test', ...files], {
     cwd: fileURLToPath(new URL('../igniter/', import.meta.url)),
     stdio: 'inherit',
     env: testEnv,
