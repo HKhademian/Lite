@@ -10,7 +10,6 @@
   ],
   "guideline": "Checks an immutable local through the reference interpreter and both restricted compiler targets.",
   "targets": [
-    "igniter",
     "ts",
     "c"
   ],

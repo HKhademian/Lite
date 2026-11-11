@@ -1,4 +1,4 @@
-/** Default regressions and the explicitly selected historical reference suite. */
+/** Active regressions and public tool contract suites. */
 export const generatedTestFiles = [
   'test.ts', '../compiler/tests/tooling.test.ts', '../compiler/tests/host.test.ts', '../compiler/tests/contracts.test.ts',
   'source-files.test.ts', '../challenges/tools/tools.test.ts',
@@ -7,4 +7,3 @@ export const generatedTestFiles = [
   '../tools/run.test.ts',
   '../tools/release.test.ts',
 ] as const;
-export const referenceTestFiles = ['reference.test.ts'] as const;

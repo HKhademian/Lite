@@ -19,7 +19,7 @@ type Scenario = Readonly<{
   exitCode: number;
 }>;
 type Kind = 'feature' | 'example' | 'sample' | 'showcase';
-type Target = 'igniter' | 'ts' | 'c';
+type Target = 'ts' | 'c';
 type Manifest = {
   file: string;
   kind: Kind;
@@ -46,7 +46,6 @@ const verifications = resolve(root, 'verifications');
 
 const options = {
   update: false,
-  reference: false,
   coverage: false,
   changed: true,
   cache: true,
@@ -56,8 +55,7 @@ const options = {
 };
 for (let index = 0; index < process.argv.length - 2; index += 1) {
   const flag = process.argv[index + 2] ?? '';
-  if (flag === '--reference') options.reference = true;
-  else if (flag === '--update') options.update = true;
+  if (flag === '--update') options.update = true;
   else if (flag === '--coverage') options.coverage = true;
   else if (flag === '--changed') options.changed = true;
   else if (flag === '--all') options.changed = false;
@@ -81,13 +79,10 @@ for (let index = 0; index < process.argv.length - 2; index += 1) {
   else usage(`unknown argument ${flag}`);
 }
 
-// T00 is loaded only for the explicitly requested historical reference lane.
-const reference = options.reference ? await import('./lite.ts') : undefined;
-
 function usage(message?: string, code = 2): never {
   if (message !== undefined) process.stderr.write(`lite verify: ${message}\n`);
   const target = code === 0 ? process.stdout : process.stderr;
-  target.write('Usage: ./lite verify [--all] [--reference] [--update] [--coverage] [--shard i/n] [--filter id-or-path] [--no-cache] [--quiet]\n');
+  target.write('Usage: ./lite verify [--all] [--update] [--coverage] [--shard i/n] [--filter id-or-path] [--no-cache] [--quiet]\n');
   process.exit(code);
 }
 
@@ -150,15 +145,6 @@ function streamBytes(value: Stream | undefined, base: string, label: string, che
   catch (error) {
     if (error instanceof Error && error.message === `${label}.hash does not match content`) throw new Error(`${label}.hash: content changed; run ./lite verify --update`);
     throw error;
-  }
-}
-
-function streamText(value: Stream | undefined, base: string, label: string, checkHash = true): string {
-  const bytes = streamBytes(value, base, label, checkHash);
-  try {
-    return new TextDecoder('utf-8', { fatal: true }).decode(bytes);
-  } catch {
-    throw new Error(`${label}: expected UTF-8 text for the igniter target`);
   }
 }
 
@@ -251,7 +237,7 @@ function manifest(file: string, kind: Kind, features: Map<string, RegistryEntry>
       throw new Error(`${label}.targets: expected unique target names`);
     }
     for (const target of targetValues) {
-      if (target !== 'igniter' && target !== 'ts' && target !== 'c') {
+      if (target !== 'ts' && target !== 'c') {
         throw new Error(`${label}.targets: unknown target ${target}`);
       }
     }
@@ -306,7 +292,6 @@ function hash(bytes: Buffer): string {
 }
 
 const runtimeHash = createHash('sha256')
-  .update(options.reference ? readFileSync(resolve(root, 'igniter/lite.ts')) : 'generated-ts-only')
   .update(readFileSync(resolve(root, 'igniter/artifacts.ts')))
   .update(readFileSync(resolve(root, 'igniter/tsconfig.json')))
   .update(readFileSync(resolve(root, 'igniter/package-lock.json')))
@@ -315,7 +300,7 @@ const runtimeHash = createHash('sha256')
   .update(readFileSync(resolve(root, 'compiler/host.ts')))
   .update(readFileSync(resolve(root, 'compiler/entry.ts')))
   .update(readFileSync(resolve(root, 'compiler/bootstrap/seed.ts')))
-  .update(readFileSync(resolve(root, 'compiler/bootstrap/T11.ts')))
+  .update(readFileSync(resolve(root, 'compiler/bootstrap/T12.ts')))
   .update(loadBundle(resolve(root, 'compiler/manifests/ts.json')).text)
   .update(process.version)
   .digest('hex');
@@ -386,7 +371,7 @@ function changedPaths(): Set<string> | undefined {
 }
 
 const invalidating = new Set([
-  'igniter/lite.ts', 'igniter/loader.ts', 'igniter/verify.ts', 'igniter/cli.ts',
+  'igniter/loader.ts', 'igniter/verify.ts',
   'igniter/artifacts.ts', 'igniter/tsconfig.json', 'igniter/package-lock.json',
   'verifications/features.json', 'verifications/schema/verification.schema.json',
   'compiler/host.ts', 'compiler/entry.ts', 'compiler/cli.ts',
@@ -427,30 +412,6 @@ function matches(item: Manifest, filter: string | undefined): boolean {
 
 function describe(buffer: Buffer): string {
   return JSON.stringify(buffer.toString('utf8'));
-}
-
-function runCase(source: string, item: Manifest, fallback: Scenario): { stdout: Buffer; stderr: Buffer; exitCode: number } {
-  if (reference === undefined) throw new Error('T00 execution requires --reference');
-  const base = dirname(item.file);
-  const input = streamText(fallback.stdin, base, `${item.id}/${fallback.name}/stdin`, !options.update);
-  let cursor = 0;
-  let stdout = '';
-  let stderr = '';
-  try {
-    const program = reference.compile(source);
-    const exitCode = reference.execute(program, {
-      args: [...(fallback.args ?? [])],
-      read: () => input[cursor++] ?? null,
-      report: value => { stdout += value; },
-      reportError: value => { stderr += value; },
-    });
-    return { stdout: Buffer.from(stdout, 'utf8'), stderr: Buffer.from(stderr, 'utf8'), exitCode };
-  } catch (error: unknown) {
-    if (error instanceof reference.LiteFault) {
-      throw new Error(`${error.category}: ${error.message}`);
-    }
-    throw error;
-  }
 }
 
 function withStreamHash(value: Stream, bytes: Buffer): Stream {
@@ -618,7 +579,7 @@ function main(): void {
       continue;
     }
     const updates = new Map<string, Scenario>();
-    const target: Target = options.reference ? 'igniter' : 'ts';
+    const target: Target = 'ts';
     const processScenarios = (run: (scenario: Scenario) => CaseResult): void => {
       for (const original of selected) {
         let expectedStdout: Buffer<ArrayBufferLike> = Buffer.alloc(0);
@@ -644,7 +605,7 @@ function main(): void {
           }
           continue;
         }
-        const label = `${item.id}/${original.name} [${options.reference ? 'T00 reference' : 'ts'}]`;
+        const label = `${item.id}/${original.name} [ts]`;
         const key = caseKey(item, original, sourceHash, target);
         if (options.cache && cache.passed[key] === true) {
           cached += 1;
@@ -685,8 +646,6 @@ function main(): void {
       !options.cache || cache.passed[caseKey(item, scenario, sourceHash, target)] !== true);
     if (!needsArtifact) {
       processScenarios(() => { throw new Error('cached scenario unexpectedly executed'); });
-    } else if (options.reference) {
-      processScenarios(scenario => runCase(source, item, scenario));
     } else {
       try {
         const compiled = compileTs({ text: source });

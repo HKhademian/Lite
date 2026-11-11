@@ -30,11 +30,11 @@ language implementation.
 The current generated TS compiler can rebuild its own supported source subset.
 Public compile/check, default tests and routine compiler tools use generated TS.
 Public `run` compiles a script to a temporary artifact and executes it with the
-Node entry, without an interpreter; C output/native self-hosting are deferred
-until after TS parity and T00 retirement. The historical C emitter remains TS-hosted. T00 is the handwritten historical interpreter/reference; it is
-distinct from the generated TS igniter. New compiler work does not require a
-new handwritten T00 implementation as a prerequisite. Keep existing consumers
-working until their tested replacements are ready.
+Node entry. The handwritten T00 interpreter and its active routes are retired;
+generated TS is the only maintained language implementation. C output/native
+self-hosting are deferred, and the historical C emitter remains TS-hosted. New
+compiler work belongs in Lite, with TypeScript limited to host, test and platform
+adapters.
 
 Distinguish the language the compiler **accepts** from the language used to
 **write** it. A feature can be implemented in Lite using already supported
@@ -120,10 +120,9 @@ Use the existing harnesses and schemas:
 - Generated-target execution and shared corpus comparisons check behavior
   across supported backends; host tests check source/seed integrity and rebuilds.
 
-Do not leave new language coverage only in T00 interpreter tests. Register or
-wire cases into the maintained runner so the generated compiler actually runs
-them. Ordinary verification executes generated TS; T00 requires explicit --reference.
-Historical targets metadata does not establish a C pass or permit fallback. A test present on disk, a coverage
+Register or wire language coverage into the maintained runner so the generated
+compiler actually runs it. Verification executes generated TS. Historical
+targets metadata does not establish a C pass or permit fallback. A test present on disk, a coverage
 registry entry or a skipped backend is not evidence of generated support.
 
 During implementation run the focused cases and `./lite test --fast`. Before
@@ -133,7 +132,7 @@ TS checks and affected editor grammar checks. When changing compiler source or
 seeds, also verify generated rebuilds, determinism, the relevant fixed-point
 ladder and corpus parity. Record commands, case names, results, skips and target
 gaps; the [bootstrap seed guide](../../compiler/bootstrap/README.md) describes the
-current build and historical audit paths. Documentation-only edits need link and
+current build and recorded-contract paths. Documentation-only edits need link and
 consistency review rather than a compiler rebuild.
 
 ## Syntax investigations and feature flags

@@ -1,35 +1,35 @@
 {
   "baselineRevision": "5259aaa",
-  "note": "Every original test remains mapped by title. Interpreter semantic assertions need generated ports; their reference execution is not Lite support evidence.",
+  "note": "Every original test remains accounted for. Generated tests remain active; interpreter-specific tests are recorded as retired with T00, with source history preserved in Git.",
   "tests": [
     {
       "title": "temporary importFlatAll flattens declarations relative to the importing file",
-      "destination": "igniter/reference.test.ts",
+      "destination": "retired-with-t00",
       "originalLine": 88,
       "dependencies": [
         "run",
         "spawnSync"
       ],
       "originalAssertions": 5,
-      "route": "explicit --reference suite; generated semantic equivalents remain assigned to language-port steps"
+      "route": "retired with the handwritten T00 implementation; historical source remains in Git history"
     },
     {
       "title": "temporary importFlatAll reports missing files and cycles",
-      "destination": "igniter/reference.test.ts",
+      "destination": "retired-with-t00",
       "originalLine": 107,
       "dependencies": [],
       "originalAssertions": 2,
-      "route": "explicit --reference suite; generated semantic equivalents remain assigned to language-port steps"
+      "route": "retired with the handwritten T00 implementation; historical source remains in Git history"
     },
     {
       "title": "bundle manifests flatten ordered sources with exact text and line maps",
-      "destination": "igniter/reference.test.ts",
+      "destination": "retired-with-t00",
       "originalLine": 118,
       "dependencies": [
         "runBundle"
       ],
       "originalAssertions": 6,
-      "route": "explicit --reference suite; generated semantic equivalents remain assigned to language-port steps"
+      "route": "retired with the handwritten T00 implementation; historical source remains in Git history"
     },
     {
       "title": "bundle manifests reject duplicates, cycles, missing files and invalid paths",
@@ -41,24 +41,24 @@
     },
     {
       "title": "bundle diagnostics map flattened rows back to original files and lines",
-      "destination": "igniter/reference.test.ts",
+      "destination": "retired-with-t00",
       "originalLine": 169,
       "dependencies": [
         "loadCompiler",
         "compile"
       ],
       "originalAssertions": 3,
-      "route": "explicit --reference suite; generated semantic equivalents remain assigned to language-port steps"
+      "route": "retired with the handwritten T00 implementation; historical source remains in Git history"
     },
     {
       "title": "internal run harness captures report streams and exit status from fixed inputs",
-      "destination": "igniter/reference.test.ts",
+      "destination": "retired-with-t00",
       "originalLine": 185,
       "dependencies": [
         "runText"
       ],
       "originalAssertions": 2,
-      "route": "explicit --reference suite; generated semantic equivalents remain assigned to language-port steps"
+      "route": "retired with the handwritten T00 implementation; historical source remains in Git history"
     },
     {
       "title": "L0 shared libraries have direct bootstrap tests",
@@ -222,7 +222,7 @@
       "route": "default generated compiler/phase/artifact execution with independent expectations"
     },
     {
-      "title": "lite verify defaults to TS, reports migration gaps and keeps T00 explicitly selectable",
+      "title": "lite verify uses generated TS, reports migration gaps and rejects the retired reference flag",
       "destination": "igniter/test.ts",
       "originalLine": 567,
       "dependencies": [
@@ -233,18 +233,18 @@
     },
     {
       "title": "inputArgs returns an ordered String list with independent ordinary receiving copies",
-      "destination": "igniter/reference.test.ts",
+      "destination": "retired-with-t00",
       "originalLine": 603,
       "dependencies": [
         "run",
         "fault"
       ],
       "originalAssertions": 2,
-      "route": "explicit --reference suite; generated semantic equivalents remain assigned to language-port steps"
+      "route": "retired with the handwritten T00 implementation; historical source remains in Git history"
     },
     {
       "title": "inputArgs has no stream effects and snapshots host arguments before program execution",
-      "destination": "igniter/reference.test.ts",
+      "destination": "retired-with-t00",
       "originalLine": 612,
       "dependencies": [
         "execute",
@@ -252,11 +252,11 @@
         "run"
       ],
       "originalAssertions": 3,
-      "route": "explicit --reference suite; generated semantic equivalents remain assigned to language-port steps"
+      "route": "retired with the handwritten T00 implementation; historical source remains in Git history"
     },
     {
       "title": "inputArgs signatures fail before effects and normal helper shadowing is preserved",
-      "destination": "igniter/reference.test.ts",
+      "destination": "retired-with-t00",
       "originalLine": 622,
       "dependencies": [
         "execute",
@@ -265,62 +265,62 @@
         "run"
       ],
       "originalAssertions": 3,
-      "route": "explicit --reference suite; generated semantic equivalents remain assigned to language-port steps"
+      "route": "retired with the handwritten T00 implementation; historical source remains in Git history"
     },
     {
       "title": "explicit T00 reference CLI preserves script argument values after the separating suffix",
-      "destination": "igniter/reference.test.ts",
+      "destination": "retired-with-t00",
       "originalLine": 632,
       "dependencies": [
         "spawnSync"
       ],
       "originalAssertions": 7,
-      "route": "explicit --reference suite; generated semantic equivalents remain assigned to language-port steps"
+      "route": "retired with the handwritten T00 implementation; historical source remains in Git history"
     },
     {
       "title": "argument suffix errors precede execution and check-only ignores all script data",
-      "destination": "igniter/reference.test.ts",
+      "destination": "retired-with-t00",
       "originalLine": 646,
       "dependencies": [
         "spawnSync"
       ],
       "originalAssertions": 8,
-      "route": "explicit --reference suite; generated semantic equivalents remain assigned to language-port steps"
+      "route": "retired with the handwritten T00 implementation; historical source remains in Git history"
     },
     {
       "title": "script arguments survive caller-relative paths and script filenames with spaces",
-      "destination": "igniter/reference.test.ts",
+      "destination": "retired-with-t00",
       "originalLine": 662,
       "dependencies": [
         "spawnSync"
       ],
       "originalAssertions": 4,
-      "route": "explicit --reference suite; generated semantic equivalents remain assigned to language-port steps"
+      "route": "retired with the handwritten T00 implementation; historical source remains in Git history"
     },
     {
       "title": "inputAll preserves multi-line text, line endings, trailing whitespace and empty EOF",
-      "destination": "igniter/reference.test.ts",
+      "destination": "retired-with-t00",
       "originalLine": 676,
       "dependencies": [
         "run"
       ],
       "originalAssertions": 3,
-      "route": "explicit --reference suite; generated semantic equivalents remain assigned to language-port steps"
+      "route": "retired with the handwritten T00 implementation; historical source remains in Git history"
     },
     {
       "title": "inputAll consumes unread lookahead and the remainder after other input helpers",
-      "destination": "igniter/reference.test.ts",
+      "destination": "retired-with-t00",
       "originalLine": 683,
       "dependencies": [
         "run",
         "fault"
       ],
       "originalAssertions": 4,
-      "route": "explicit --reference suite; generated semantic equivalents remain assigned to language-port steps"
+      "route": "retired with the handwritten T00 implementation; historical source remains in Git history"
     },
     {
       "title": "inputAll prompt evaluates once and writes exact stdout before the first read even at EOF",
-      "destination": "igniter/reference.test.ts",
+      "destination": "retired-with-t00",
       "originalLine": 693,
       "dependencies": [
         "execute",
@@ -328,11 +328,11 @@
         "run"
       ],
       "originalAssertions": 4,
-      "route": "explicit --reference suite; generated semantic equivalents remain assigned to language-port steps"
+      "route": "retired with the handwritten T00 implementation; historical source remains in Git history"
     },
     {
       "title": "inputAll retains terminal read failures and never reads after a failed prompt write",
-      "destination": "igniter/reference.test.ts",
+      "destination": "retired-with-t00",
       "originalLine": 705,
       "dependencies": [
         "execute",
@@ -340,11 +340,11 @@
         "LiteFault"
       ],
       "originalAssertions": 4,
-      "route": "explicit --reference suite; generated semantic equivalents remain assigned to language-port steps"
+      "route": "retired with the handwritten T00 implementation; historical source remains in Git history"
     },
     {
       "title": "inputAll signatures and named arguments fail before effects while ordinary shadowing works",
-      "destination": "igniter/reference.test.ts",
+      "destination": "retired-with-t00",
       "originalLine": 717,
       "dependencies": [
         "execute",
@@ -353,17 +353,17 @@
         "run"
       ],
       "originalAssertions": 3,
-      "route": "explicit --reference suite; generated semantic equivalents remain assigned to language-port steps"
+      "route": "retired with the handwritten T00 implementation; historical source remains in Git history"
     },
     {
       "title": "whole-input example runs via the real launcher preserving UTF-8 bytes and silent check-only behavior",
-      "destination": "igniter/reference.test.ts",
+      "destination": "retired-with-t00",
       "originalLine": 728,
       "dependencies": [
         "spawnSync"
       ],
       "originalAssertions": 11,
-      "route": "explicit --reference suite; generated semantic equivalents remain assigned to language-port steps"
+      "route": "retired with the handwritten T00 implementation; historical source remains in Git history"
     },
     {
       "title": "compiler verification cases are well-formed and cover both categories",
@@ -822,13 +822,13 @@
     },
     {
       "title": "quoted closing delimiters remain values in calls, tuple entries and array/list elements",
-      "destination": "igniter/reference.test.ts",
+      "destination": "retired-with-t00",
       "originalLine": 2335,
       "dependencies": [
         "run"
       ],
       "originalAssertions": 1,
-      "route": "explicit --reference suite; generated semantic equivalents remain assigned to language-port steps"
+      "route": "retired with the handwritten T00 implementation; historical source remains in Git history"
     },
     {
       "title": "Lite-written TS emitter produces a deterministic readable reference with no extra source",
@@ -967,153 +967,153 @@
     },
     {
       "title": "Lite-written integer calculator handles precedence, associativity, nesting and unary signs",
-      "destination": "igniter/reference.test.ts",
+      "destination": "retired-with-t00",
       "originalLine": 2646,
       "dependencies": [
         "run"
       ],
       "originalAssertions": 1,
-      "route": "explicit --reference suite; generated semantic equivalents remain assigned to language-port steps"
+      "route": "retired with the handwritten T00 implementation; historical source remains in Git history"
     },
     {
       "title": "Lite calculator distinguishes malformed input, unsupported text, EOF and checked arithmetic faults",
-      "destination": "igniter/reference.test.ts",
+      "destination": "retired-with-t00",
       "originalLine": 2658,
       "dependencies": [
         "run",
         "fault"
       ],
       "originalAssertions": 4,
-      "route": "explicit --reference suite; generated semantic equivalents remain assigned to language-port steps"
+      "route": "retired with the handwritten T00 implementation; historical source remains in Git history"
     },
     {
       "title": "integer calculator runs and checks through the root launcher without extending host syntax",
-      "destination": "igniter/reference.test.ts",
+      "destination": "retired-with-t00",
       "originalLine": 2671,
       "dependencies": [
         "spawnSync"
       ],
       "originalAssertions": 8,
-      "route": "explicit --reference suite; generated semantic equivalents remain assigned to language-port steps"
+      "route": "retired with the handwritten T00 implementation; historical source remains in Git history"
     },
     {
       "title": "retained tokenizer returns named token lists, preserving text and rejecting before traversal output",
-      "destination": "igniter/reference.test.ts",
+      "destination": "retired-with-t00",
       "originalLine": 2689,
       "dependencies": [
         "run",
         "fault"
       ],
       "originalAssertions": 6,
-      "route": "explicit --reference suite; generated semantic equivalents remain assigned to language-port steps"
+      "route": "retired with the handwritten T00 implementation; historical source remains in Git history"
     },
     {
       "title": "retained tokenizer runs and checks through the root launcher with explicit status and Unicode errors",
-      "destination": "igniter/reference.test.ts",
+      "destination": "retired-with-t00",
       "originalLine": 2701,
       "dependencies": [
         "spawnSync"
       ],
       "originalAssertions": 8,
-      "route": "explicit --reference suite; generated semantic equivalents remain assigned to language-port steps"
+      "route": "retired with the handwritten T00 implementation; historical source remains in Git history"
     },
     {
       "title": "typed list construction supports known empty elements and preserves the fixed-array default",
-      "destination": "igniter/reference.test.ts",
+      "destination": "retired-with-t00",
       "originalLine": 2719,
       "dependencies": [
         "run",
         "fault"
       ],
       "originalAssertions": 1,
-      "route": "explicit --reference suite; generated semantic equivalents remain assigned to language-port steps"
+      "route": "retired with the handwritten T00 implementation; historical source remains in Git history"
     },
     {
       "title": "both list ends preserve element order, duplicate occurrences and direct pop values",
-      "destination": "igniter/reference.test.ts",
+      "destination": "retired-with-t00",
       "originalLine": 2728,
       "dependencies": [
         "run"
       ],
       "originalAssertions": 1,
-      "route": "explicit --reference suite; generated semantic equivalents remain assigned to language-port steps"
+      "route": "retired with the handwritten T00 implementation; historical source remains in Git history"
     },
     {
       "title": "list copies and typed mutable receiving copies remain independent under end operations",
-      "destination": "igniter/reference.test.ts",
+      "destination": "retired-with-t00",
       "originalLine": 2735,
       "dependencies": [
         "run"
       ],
       "originalAssertions": 1,
-      "route": "explicit --reference suite; generated semantic equivalents remain assigned to language-port steps"
+      "route": "retired with the handwritten T00 implementation; historical source remains in Git history"
     },
     {
       "title": "list arguments and results retain evaluated snapshots through later argument mutation",
-      "destination": "igniter/reference.test.ts",
+      "destination": "retired-with-t00",
       "originalLine": 2743,
       "dependencies": [
         "run"
       ],
       "originalAssertions": 1,
-      "route": "explicit --reference suite; generated semantic equivalents remain assigned to language-port steps"
+      "route": "retired with the handwritten T00 implementation; historical source remains in Git history"
     },
     {
       "title": "flat tuple list elements preserve labels, positional shape and popped copies",
-      "destination": "igniter/reference.test.ts",
+      "destination": "retired-with-t00",
       "originalLine": 2752,
       "dependencies": [
         "run",
         "fault"
       ],
       "originalAssertions": 1,
-      "route": "explicit --reference suite; generated semantic equivalents remain assigned to language-port steps"
+      "route": "retired with the handwritten T00 implementation; historical source remains in Git history"
     },
     {
       "title": "list construction, supplied elements and indexed receivers evaluate once in written order",
-      "destination": "igniter/reference.test.ts",
+      "destination": "retired-with-t00",
       "originalLine": 2762,
       "dependencies": [
         "run"
       ],
       "originalAssertions": 1,
-      "route": "explicit --reference suite; generated semantic equivalents remain assigned to language-port steps"
+      "route": "retired with the handwritten T00 implementation; historical source remains in Git history"
     },
     {
       "title": "list traversal evaluates a source snapshot once while original end mutations remain independent",
-      "destination": "igniter/reference.test.ts",
+      "destination": "retired-with-t00",
       "originalLine": 2769,
       "dependencies": [
         "run"
       ],
       "originalAssertions": 1,
-      "route": "explicit --reference suite; generated semantic equivalents remain assigned to language-port steps"
+      "route": "retired with the handwritten T00 implementation; historical source remains in Git history"
     },
     {
       "title": "list mutation grants follow lexical slots and never silently capture surrounding runtime data",
-      "destination": "igniter/reference.test.ts",
+      "destination": "retired-with-t00",
       "originalLine": 2776,
       "dependencies": [
         "run",
         "fault"
       ],
       "originalAssertions": 1,
-      "route": "explicit --reference suite; generated semantic equivalents remain assigned to language-port steps"
+      "route": "retired with the handwritten T00 implementation; historical source remains in Git history"
     },
     {
       "title": "list bounds and empty pops are located terminal BoundPanic failures",
-      "destination": "igniter/reference.test.ts",
+      "destination": "retired-with-t00",
       "originalLine": 2784,
       "dependencies": [
         "run",
         "LiteFault"
       ],
       "originalAssertions": 1,
-      "route": "explicit --reference suite; generated semantic equivalents remain assigned to language-port steps"
+      "route": "retired with the handwritten T00 implementation; historical source remains in Git history"
     },
     {
       "title": "faults and exits during list preparation stop later effects and invocation",
-      "destination": "igniter/reference.test.ts",
+      "destination": "retired-with-t00",
       "originalLine": 2797,
       "dependencies": [
         "run",
@@ -1122,11 +1122,11 @@
         "LiteFault"
       ],
       "originalAssertions": 4,
-      "route": "explicit --reference suite; generated semantic equivalents remain assigned to language-port steps"
+      "route": "retired with the handwritten T00 implementation; historical source remains in Git history"
     },
     {
       "title": "invalid list contracts, grants and unsupported aliasing fail before any input or output",
-      "destination": "igniter/reference.test.ts",
+      "destination": "retired-with-t00",
       "originalLine": 2809,
       "dependencies": [
         "execute",
@@ -1134,42 +1134,42 @@
         "LiteFault"
       ],
       "originalAssertions": 2,
-      "route": "explicit --reference suite; generated semantic equivalents remain assigned to language-port steps"
+      "route": "retired with the handwritten T00 implementation; historical source remains in Git history"
     },
     {
       "title": "growable list example runs and checks through the launcher with runtime fault diagnostics",
-      "destination": "igniter/reference.test.ts",
+      "destination": "retired-with-t00",
       "originalLine": 2841,
       "dependencies": [
         "spawnSync"
       ],
       "originalAssertions": 6,
-      "route": "explicit --reference suite; generated semantic equivalents remain assigned to language-port steps"
+      "route": "retired with the handwritten T00 implementation; historical source remains in Git history"
     },
     {
       "title": "named calls route interleaved positional entries into the next unfilled slot",
-      "destination": "igniter/reference.test.ts",
+      "destination": "retired-with-t00",
       "originalLine": 2860,
       "dependencies": [
         "run"
       ],
       "originalAssertions": 1,
-      "route": "explicit --reference suite; generated semantic equivalents remain assigned to language-port steps"
+      "route": "retired with the handwritten T00 implementation; historical source remains in Git history"
     },
     {
       "title": "named call replacement checks only surviving slot types but evaluates every supplied expression",
-      "destination": "igniter/reference.test.ts",
+      "destination": "retired-with-t00",
       "originalLine": 2867,
       "dependencies": [
         "run",
         "fault"
       ],
       "originalAssertions": 1,
-      "route": "explicit --reference suite; generated semantic equivalents remain assigned to language-port steps"
+      "route": "retired with the handwritten T00 implementation; historical source remains in Git history"
     },
     {
       "title": "named call arguments retain callee-before-arguments selection and stop on exits or faults",
-      "destination": "igniter/reference.test.ts",
+      "destination": "retired-with-t00",
       "originalLine": 2874,
       "dependencies": [
         "run",
@@ -1178,22 +1178,22 @@
         "LiteFault"
       ],
       "originalAssertions": 4,
-      "route": "explicit --reference suite; generated semantic equivalents remain assigned to language-port steps"
+      "route": "retired with the handwritten T00 implementation; historical source remains in Git history"
     },
     {
       "title": "named recursive calls and aggregate arguments preserve public labels and stored tuple contracts",
-      "destination": "igniter/reference.test.ts",
+      "destination": "retired-with-t00",
       "originalLine": 2888,
       "dependencies": [
         "run",
         "fault"
       ],
       "originalAssertions": 1,
-      "route": "explicit --reference suite; generated semantic equivalents remain assigned to language-port steps"
+      "route": "retired with the handwritten T00 implementation; historical source remains in Git history"
     },
     {
       "title": "invalid named mappings and unsupported builtin labels fail before effects",
-      "destination": "igniter/reference.test.ts",
+      "destination": "retired-with-t00",
       "originalLine": 2897,
       "dependencies": [
         "execute",
@@ -1201,52 +1201,52 @@
         "LiteFault"
       ],
       "originalAssertions": 2,
-      "route": "explicit --reference suite; generated semantic equivalents remain assigned to language-port steps"
+      "route": "retired with the handwritten T00 implementation; historical source remains in Git history"
     },
     {
       "title": "indexed named argument example executes and checks through the root launcher",
-      "destination": "igniter/reference.test.ts",
+      "destination": "retired-with-t00",
       "originalLine": 2915,
       "dependencies": [
         "spawnSync"
       ],
       "originalAssertions": 3,
-      "route": "explicit --reference suite; generated semantic equivalents remain assigned to language-port steps"
+      "route": "retired with the handwritten T00 implementation; historical source remains in Git history"
     },
     {
       "title": "typed tuple receiving declarations rename positions without reordering source values",
-      "destination": "igniter/reference.test.ts",
+      "destination": "retired-with-t00",
       "originalLine": 2927,
       "dependencies": [
         "run"
       ],
       "originalAssertions": 1,
-      "route": "explicit --reference suite; generated semantic equivalents remain assigned to language-port steps"
+      "route": "retired with the handwritten T00 implementation; historical source remains in Git history"
     },
     {
       "title": "typed tuple declarations evaluate once and preserve source copies and old shadow targets",
-      "destination": "igniter/reference.test.ts",
+      "destination": "retired-with-t00",
       "originalLine": 2933,
       "dependencies": [
         "run"
       ],
       "originalAssertions": 1,
-      "route": "explicit --reference suite; generated semantic equivalents remain assigned to language-port steps"
+      "route": "retired with the handwritten T00 implementation; historical source remains in Git history"
     },
     {
       "title": "typed tuple conversions produce ordinary label-sensitive values usable in calls and arrays",
-      "destination": "igniter/reference.test.ts",
+      "destination": "retired-with-t00",
       "originalLine": 2942,
       "dependencies": [
         "run",
         "fault"
       ],
       "originalAssertions": 1,
-      "route": "explicit --reference suite; generated semantic equivalents remain assigned to language-port steps"
+      "route": "retired with the handwritten T00 implementation; historical source remains in Git history"
     },
     {
       "title": "typed tuple conversion rejects incompatible shapes and types before effects",
-      "destination": "igniter/reference.test.ts",
+      "destination": "retired-with-t00",
       "originalLine": 2954,
       "dependencies": [
         "execute",
@@ -1255,41 +1255,41 @@
         "run"
       ],
       "originalAssertions": 4,
-      "route": "explicit --reference suite; generated semantic equivalents remain assigned to language-port steps"
+      "route": "retired with the handwritten T00 implementation; historical source remains in Git history"
     },
     {
       "title": "indexed typed tuple conversion example runs and checks through the launcher",
-      "destination": "igniter/reference.test.ts",
+      "destination": "retired-with-t00",
       "originalLine": 2974,
       "dependencies": [
         "spawnSync"
       ],
       "originalAssertions": 3,
-      "route": "explicit --reference suite; generated semantic equivalents remain assigned to language-port steps"
+      "route": "retired with the handwritten T00 implementation; historical source remains in Git history"
     },
     {
       "title": "mixed tuples preserve interleaved positions, shorthand and source evaluation order",
-      "destination": "igniter/reference.test.ts",
+      "destination": "retired-with-t00",
       "originalLine": 2986,
       "dependencies": [
         "run"
       ],
       "originalAssertions": 1,
-      "route": "explicit --reference suite; generated semantic equivalents remain assigned to language-port steps"
+      "route": "retired with the handwritten T00 implementation; historical source remains in Git history"
     },
     {
       "title": "mixed tuple copies, function contracts and homogeneous arrays retain labels and order",
-      "destination": "igniter/reference.test.ts",
+      "destination": "retired-with-t00",
       "originalLine": 2993,
       "dependencies": [
         "run"
       ],
       "originalAssertions": 1,
-      "route": "explicit --reference suite; generated semantic equivalents remain assigned to language-port steps"
+      "route": "retired with the handwritten T00 implementation; historical source remains in Git history"
     },
     {
       "title": "mixed tuple identity rejects label movement, duplication and unknown fields before effects",
-      "destination": "igniter/reference.test.ts",
+      "destination": "retired-with-t00",
       "originalLine": 3001,
       "dependencies": [
         "execute",
@@ -1297,51 +1297,51 @@
         "LiteFault"
       ],
       "originalAssertions": 2,
-      "route": "explicit --reference suite; generated semantic equivalents remain assigned to language-port steps"
+      "route": "retired with the handwritten T00 implementation; historical source remains in Git history"
     },
     {
       "title": "indexed mixed tuple example executes and checks without effects",
-      "destination": "igniter/reference.test.ts",
+      "destination": "retired-with-t00",
       "originalLine": 3017,
       "dependencies": [
         "spawnSync"
       ],
       "originalAssertions": 3,
-      "route": "explicit --reference suite; generated semantic equivalents remain assigned to language-port steps"
+      "route": "retired with the handwritten T00 implementation; historical source remains in Git history"
     },
     {
       "title": "first checkpoint: stdin integers, mutation, arithmetic and explicit report",
-      "destination": "igniter/reference.test.ts",
+      "destination": "retired-with-t00",
       "originalLine": 3029,
       "dependencies": [
         "run"
       ],
       "originalAssertions": 2,
-      "route": "explicit --reference suite; generated semantic equivalents remain assigned to language-port steps"
+      "route": "retired with the handwritten T00 implementation; historical source remains in Git history"
     },
     {
       "title": "Unit completion and no automatic binding/expression output",
-      "destination": "igniter/reference.test.ts",
+      "destination": "retired-with-t00",
       "originalLine": 3034,
       "dependencies": [
         "run"
       ],
       "originalAssertions": 2,
-      "route": "explicit --reference suite; generated semantic equivalents remain assigned to language-port steps"
+      "route": "retired with the handwritten T00 implementation; historical source remains in Git history"
     },
     {
       "title": "shadowing retains earlier copies; same-name initializer sees previous binding",
-      "destination": "igniter/reference.test.ts",
+      "destination": "retired-with-t00",
       "originalLine": 3038,
       "dependencies": [
         "run"
       ],
       "originalAssertions": 1,
-      "route": "explicit --reference suite; generated semantic equivalents remain assigned to language-port steps"
+      "route": "retired with the handwritten T00 implementation; historical source remains in Git history"
     },
     {
       "title": "all syntax/name/type checking precedes input or output",
-      "destination": "igniter/reference.test.ts",
+      "destination": "retired-with-t00",
       "originalLine": 3041,
       "dependencies": [
         "compile",
@@ -1349,142 +1349,142 @@
         "LiteFault"
       ],
       "originalAssertions": 2,
-      "route": "explicit --reference suite; generated semantic equivalents remain assigned to language-port steps"
+      "route": "retired with the handwritten T00 implementation; historical source remains in Git history"
     },
     {
       "title": "builtin spelling can be shadowed without calling hidden implementation",
-      "destination": "igniter/reference.test.ts",
+      "destination": "retired-with-t00",
       "originalLine": 3054,
       "dependencies": [
         "run",
         "fault"
       ],
       "originalAssertions": 1,
-      "route": "explicit --reference suite; generated semantic equivalents remain assigned to language-port steps"
+      "route": "retired with the handwritten T00 implementation; historical source remains in Git history"
     },
     {
       "title": "precedence, exact integer division and fractional mixed division",
-      "destination": "igniter/reference.test.ts",
+      "destination": "retired-with-t00",
       "originalLine": 3058,
       "dependencies": [
         "run"
       ],
       "originalAssertions": 3,
-      "route": "explicit --reference suite; generated semantic equivalents remain assigned to language-port steps"
+      "route": "retired with the handwritten T00 implementation; historical source remains in Git history"
     },
     {
       "title": "truncating remainder follows the dividend and rejects zero or Float",
-      "destination": "igniter/reference.test.ts",
+      "destination": "retired-with-t00",
       "originalLine": 3064,
       "dependencies": [
         "run",
         "fault"
       ],
       "originalAssertions": 2,
-      "route": "explicit --reference suite; generated semantic equivalents remain assigned to language-port steps"
+      "route": "retired with the handwritten T00 implementation; historical source remains in Git history"
     },
     {
       "title": "floor division, floor modulo and compound updates follow documented signs",
-      "destination": "igniter/reference.test.ts",
+      "destination": "retired-with-t00",
       "originalLine": 3072,
       "dependencies": [
         "run",
         "fault"
       ],
       "originalAssertions": 7,
-      "route": "explicit --reference suite; generated semantic equivalents remain assigned to language-port steps"
+      "route": "retired with the handwritten T00 implementation; historical source remains in Git history"
     },
     {
       "title": "inferred mut and var mut declarations grant writable list access",
-      "destination": "igniter/reference.test.ts",
+      "destination": "retired-with-t00",
       "originalLine": 3089,
       "dependencies": [
         "run",
         "fault"
       ],
       "originalAssertions": 2,
-      "route": "explicit --reference suite; generated semantic equivalents remain assigned to language-port steps"
+      "route": "retired with the handwritten T00 implementation; historical source remains in Git history"
     },
     {
       "title": "power is right-associative, Float-default and positive-exponent only",
-      "destination": "igniter/reference.test.ts",
+      "destination": "retired-with-t00",
       "originalLine": 3099,
       "dependencies": [
         "run",
         "fault"
       ],
       "originalAssertions": 2,
-      "route": "explicit --reference suite; generated semantic equivalents remain assigned to language-port steps"
+      "route": "retired with the handwritten T00 implementation; historical source remains in Git history"
     },
     {
       "title": "subjectless match selects the first true arm and requires a final fallback",
-      "destination": "igniter/reference.test.ts",
+      "destination": "retired-with-t00",
       "originalLine": 3109,
       "dependencies": [
         "run",
         "fault"
       ],
       "originalAssertions": 2,
-      "route": "explicit --reference suite; generated semantic equivalents remain assigned to language-port steps"
+      "route": "retired with the handwritten T00 implementation; historical source remains in Git history"
     },
     {
       "title": "typed scalar, tuple and fixed-array declarations initialize or zero-initialize",
-      "destination": "igniter/reference.test.ts",
+      "destination": "retired-with-t00",
       "originalLine": 3120,
       "dependencies": [
         "run",
         "fault"
       ],
       "originalAssertions": 3,
-      "route": "explicit --reference suite; generated semantic equivalents remain assigned to language-port steps"
+      "route": "retired with the handwritten T00 implementation; historical source remains in Git history"
     },
     {
       "title": "reserved storage initializes once and rejects reads before its first whole-value write",
-      "destination": "igniter/reference.test.ts",
+      "destination": "retired-with-t00",
       "originalLine": 3129,
       "dependencies": [
         "run",
         "fault"
       ],
       "originalAssertions": 7,
-      "route": "explicit --reference suite; generated semantic equivalents remain assigned to language-port steps"
+      "route": "retired with the handwritten T00 implementation; historical source remains in Git history"
     },
     {
       "title": "reserved storage requires initialization on every path that reaches a read",
-      "destination": "igniter/reference.test.ts",
+      "destination": "retired-with-t00",
       "originalLine": 3145,
       "dependencies": [
         "run",
         "fault"
       ],
       "originalAssertions": 3,
-      "route": "explicit --reference suite; generated semantic equivalents remain assigned to language-port steps"
+      "route": "retired with the handwritten T00 implementation; historical source remains in Git history"
     },
     {
       "title": "loops accumulate typed .value and an optional then completion",
-      "destination": "igniter/reference.test.ts",
+      "destination": "retired-with-t00",
       "originalLine": 3155,
       "dependencies": [
         "run",
         "fault"
       ],
       "originalAssertions": 13,
-      "route": "explicit --reference suite; generated semantic equivalents remain assigned to language-port steps"
+      "route": "retired with the handwritten T00 implementation; historical source remains in Git history"
     },
     {
       "title": "loop metadata, payload exits and tagged targets complete loops",
-      "destination": "igniter/reference.test.ts",
+      "destination": "retired-with-t00",
       "originalLine": 3178,
       "dependencies": [
         "run",
         "fault"
       ],
       "originalAssertions": 11,
-      "route": "explicit --reference suite; generated semantic equivalents remain assigned to language-port steps"
+      "route": "retired with the handwritten T00 implementation; historical source remains in Git history"
     },
     {
       "title": "construct-level finally runs after then and on every exit",
-      "destination": "igniter/reference.test.ts",
+      "destination": "retired-with-t00",
       "originalLine": 3200,
       "dependencies": [
         "run",
@@ -1493,149 +1493,149 @@
         "LiteFault"
       ],
       "originalAssertions": 9,
-      "route": "explicit --reference suite; generated semantic equivalents remain assigned to language-port steps"
+      "route": "retired with the handwritten T00 implementation; historical source remains in Git history"
     },
     {
       "title": "numeric widths promote, widen losslessly and range-check",
-      "destination": "igniter/reference.test.ts",
+      "destination": "retired-with-t00",
       "originalLine": 3219,
       "dependencies": [
         "run",
         "fault"
       ],
       "originalAssertions": 14,
-      "route": "explicit --reference suite; generated semantic equivalents remain assigned to language-port steps"
+      "route": "retired with the handwritten T00 implementation; historical source remains in Git history"
     },
     {
       "title": "integer arithmetic cannot silently wrap",
-      "destination": "igniter/reference.test.ts",
+      "destination": "retired-with-t00",
       "originalLine": 3244,
       "dependencies": [
         "fault"
       ],
       "originalAssertions": 0,
-      "route": "explicit --reference suite; generated semantic equivalents remain assigned to language-port steps"
+      "route": "retired with the handwritten T00 implementation; historical source remains in Git history"
     },
     {
       "title": "zero divisors, non-finite results, and literals fault",
-      "destination": "igniter/reference.test.ts",
+      "destination": "retired-with-t00",
       "originalLine": 3251,
       "dependencies": [
         "fault",
         "run"
       ],
       "originalAssertions": 1,
-      "route": "explicit --reference suite; generated semantic equivalents remain assigned to language-port steps"
+      "route": "retired with the handwritten T00 implementation; historical source remains in Git history"
     },
     {
       "title": "direct input faults instead of retrying or fabricating values",
-      "destination": "igniter/reference.test.ts",
+      "destination": "retired-with-t00",
       "originalLine": 3257,
       "dependencies": [
         "fault",
         "run"
       ],
       "originalAssertions": 1,
-      "route": "explicit --reference suite; generated semantic equivalents remain assigned to language-port steps"
+      "route": "retired with the handwritten T00 implementation; historical source remains in Git history"
     },
     {
       "title": "line/word input, empty lines, unterminated final lines, Unicode, and shared cursor",
-      "destination": "igniter/reference.test.ts",
+      "destination": "retired-with-t00",
       "originalLine": 3263,
       "dependencies": [
         "run",
         "fault"
       ],
       "originalAssertions": 5,
-      "route": "explicit --reference suite; generated semantic equivalents remain assigned to language-port steps"
+      "route": "retired with the handwritten T00 implementation; historical source remains in Git history"
     },
     {
       "title": "text tokens are data, including keyword and punctuation lookalikes",
-      "destination": "igniter/reference.test.ts",
+      "destination": "retired-with-t00",
       "originalLine": 3271,
       "dependencies": [
         "run",
         "fault"
       ],
       "originalAssertions": 2,
-      "route": "explicit --reference suite; generated semantic equivalents remain assigned to language-port steps"
+      "route": "retired with the handwritten T00 implementation; historical source remains in Git history"
     },
     {
       "title": "nested/raw comments do not create code or separators",
-      "destination": "igniter/reference.test.ts",
+      "destination": "retired-with-t00",
       "originalLine": 3277,
       "dependencies": [
         "run",
         "fault"
       ],
       "originalAssertions": 2,
-      "route": "explicit --reference suite; generated semantic equivalents remain assigned to language-port steps"
+      "route": "retired with the handwritten T00 implementation; historical source remains in Git history"
     },
     {
       "title": "reportError is report-only and exit explicitly prevents continuation",
-      "destination": "igniter/reference.test.ts",
+      "destination": "retired-with-t00",
       "originalLine": 3284,
       "dependencies": [
         "run",
         "fault"
       ],
       "originalAssertions": 3,
-      "route": "explicit --reference suite; generated semantic equivalents remain assigned to language-port steps"
+      "route": "retired with the handwritten T00 implementation; historical source remains in Git history"
     },
     {
       "title": "existing lessons remain unchanged and execute within the supported subset",
-      "destination": "igniter/reference.test.ts",
+      "destination": "retired-with-t00",
       "originalLine": 3291,
       "dependencies": [
         "run"
       ],
       "originalAssertions": 2,
-      "route": "explicit --reference suite; generated semantic equivalents remain assigned to language-port steps"
+      "route": "retired with the handwritten T00 implementation; historical source remains in Git history"
     },
     {
       "title": "CLI: direct TS run, exact statuses, source locations, and check-only mode",
-      "destination": "igniter/reference.test.ts",
+      "destination": "retired-with-t00",
       "originalLine": 3304,
       "dependencies": [
         "spawnSync"
       ],
       "originalAssertions": 9,
-      "route": "explicit --reference suite; generated semantic equivalents remain assigned to language-port steps"
+      "route": "retired with the handwritten T00 implementation; historical source remains in Git history"
     },
     {
       "title": "Bool values and complete same-type conditional expressions",
-      "destination": "igniter/reference.test.ts",
+      "destination": "retired-with-t00",
       "originalLine": 3324,
       "dependencies": [
         "run"
       ],
       "originalAssertions": 5,
-      "route": "explicit --reference suite; generated semantic equivalents remain assigned to language-port steps"
+      "route": "retired with the handwritten T00 implementation; historical source remains in Git history"
     },
     {
       "title": "only the selected branch executes; action conditionals may omit else",
-      "destination": "igniter/reference.test.ts",
+      "destination": "retired-with-t00",
       "originalLine": 3331,
       "dependencies": [
         "run"
       ],
       "originalAssertions": 6,
-      "route": "explicit --reference suite; generated semantic equivalents remain assigned to language-port steps"
+      "route": "retired with the handwritten T00 implementation; historical source remains in Git history"
     },
     {
       "title": "blocks and branches have lexical scope, scalar results, and Unit declaration tails",
-      "destination": "igniter/reference.test.ts",
+      "destination": "retired-with-t00",
       "originalLine": 3340,
       "dependencies": [
         "run",
         "fault"
       ],
       "originalAssertions": 4,
-      "route": "explicit --reference suite; generated semantic equivalents remain assigned to language-port steps"
+      "route": "retired with the handwritten T00 implementation; historical source remains in Git history"
     },
     {
       "title": "truthiness, branch unions, partial value conditionals and malformed branches are rejected",
-      "destination": "igniter/reference.test.ts",
+      "destination": "retired-with-t00",
       "originalLine": 3349,
       "dependencies": [
         "fault",
@@ -1644,106 +1644,106 @@
         "LiteFault"
       ],
       "originalAssertions": 2,
-      "route": "explicit --reference suite; generated semantic equivalents remain assigned to language-port steps"
+      "route": "retired with the handwritten T00 implementation; historical source remains in Git history"
     },
     {
       "title": "partial conditionals give declarations a default and skip false assignment writes",
-      "destination": "igniter/reference.test.ts",
+      "destination": "retired-with-t00",
       "originalLine": 3361,
       "dependencies": [
         "run",
         "fault"
       ],
       "originalAssertions": 14,
-      "route": "explicit --reference suite; generated semantic equivalents remain assigned to language-port steps"
+      "route": "retired with the handwritten T00 implementation; historical source remains in Git history"
     },
     {
       "title": "short-circuit logic preserves operand order and Bool-only conditions",
-      "destination": "igniter/reference.test.ts",
+      "destination": "retired-with-t00",
       "originalLine": 3383,
       "dependencies": [
         "run",
         "fault"
       ],
       "originalAssertions": 3,
-      "route": "explicit --reference suite; generated semantic equivalents remain assigned to language-port steps"
+      "route": "retired with the handwritten T00 implementation; historical source remains in Git history"
     },
     {
       "title": "comparison chains retain the middle value once and skip later operands",
-      "destination": "igniter/reference.test.ts",
+      "destination": "retired-with-t00",
       "originalLine": 3394,
       "dependencies": [
         "run",
         "fault"
       ],
       "originalAssertions": 5,
-      "route": "explicit --reference suite; generated semantic equivalents remain assigned to language-port steps"
+      "route": "retired with the handwritten T00 implementation; historical source remains in Git history"
     },
     {
       "title": "all ten comparison operators complement their adjacent positive form",
-      "destination": "igniter/reference.test.ts",
+      "destination": "retired-with-t00",
       "originalLine": 3404,
       "dependencies": [
         "run",
         "fault"
       ],
       "originalAssertions": 2,
-      "route": "explicit --reference suite; generated semantic equivalents remain assigned to language-port steps"
+      "route": "retired with the handwritten T00 implementation; historical source remains in Git history"
     },
     {
       "title": "Boolean loops test before entry and reevaluate the header after each body",
-      "destination": "igniter/reference.test.ts",
+      "destination": "retired-with-t00",
       "originalLine": 3417,
       "dependencies": [
         "run"
       ],
       "originalAssertions": 4,
-      "route": "explicit --reference suite; generated semantic equivalents remain assigned to language-port steps"
+      "route": "retired with the handwritten T00 implementation; historical source remains in Git history"
     },
     {
       "title": "continue skips the body tail and reevaluates the condition",
-      "destination": "igniter/reference.test.ts",
+      "destination": "retired-with-t00",
       "originalLine": 3423,
       "dependencies": [
         "run"
       ],
       "originalAssertions": 2,
-      "route": "explicit --reference suite; generated semantic equivalents remain assigned to language-port steps"
+      "route": "retired with the handwritten T00 implementation; historical source remains in Git history"
     },
     {
       "title": "bare break ends the nearest loop without rechecking its condition",
-      "destination": "igniter/reference.test.ts",
+      "destination": "retired-with-t00",
       "originalLine": 3428,
       "dependencies": [
         "run"
       ],
       "originalAssertions": 3,
-      "route": "explicit --reference suite; generated semantic equivalents remain assigned to language-port steps"
+      "route": "retired with the handwritten T00 implementation; historical source remains in Git history"
     },
     {
       "title": "nested continue stays in the inner loop and execution resumes after it",
-      "destination": "igniter/reference.test.ts",
+      "destination": "retired-with-t00",
       "originalLine": 3433,
       "dependencies": [
         "run"
       ],
       "originalAssertions": 1,
-      "route": "explicit --reference suite; generated semantic equivalents remain assigned to language-port steps"
+      "route": "retired with the handwritten T00 implementation; historical source remains in Git history"
     },
     {
       "title": "body locals initialize on every entry; header and outer shadows keep their bindings",
-      "destination": "igniter/reference.test.ts",
+      "destination": "retired-with-t00",
       "originalLine": 3436,
       "dependencies": [
         "run",
         "fault"
       ],
       "originalAssertions": 2,
-      "route": "explicit --reference suite; generated semantic equivalents remain assigned to language-port steps"
+      "route": "retired with the handwritten T00 implementation; historical source remains in Git history"
     },
     {
       "title": "loops reject invalid sources, escaping controls, and value/completion forms before effects",
-      "destination": "igniter/reference.test.ts",
+      "destination": "retired-with-t00",
       "originalLine": 3441,
       "dependencies": [
         "fault",
@@ -1752,147 +1752,147 @@
         "LiteFault"
       ],
       "originalAssertions": 2,
-      "route": "explicit --reference suite; generated semantic equivalents remain assigned to language-port steps"
+      "route": "retired with the handwritten T00 implementation; historical source remains in Git history"
     },
     {
       "title": "program exit and runtime faults propagate through nested loops",
-      "destination": "igniter/reference.test.ts",
+      "destination": "retired-with-t00",
       "originalLine": 3455,
       "dependencies": [
         "run",
         "fault"
       ],
       "originalAssertions": 1,
-      "route": "explicit --reference suite; generated semantic equivalents remain assigned to language-port steps"
+      "route": "retired with the handwritten T00 implementation; historical source remains in Git history"
     },
     {
       "title": "sentinel-input sum example runs through the real CLI",
-      "destination": "igniter/reference.test.ts",
+      "destination": "retired-with-t00",
       "originalLine": 3461,
       "dependencies": [
         "run",
         "spawnSync"
       ],
       "originalAssertions": 6,
-      "route": "explicit --reference suite; generated semantic equivalents remain assigned to language-port steps"
+      "route": "retired with the handwritten T00 implementation; historical source remains in Git history"
     },
     {
       "title": "typed functions accept scalar inputs and yield tail or explicit results without automatic output",
-      "destination": "igniter/reference.test.ts",
+      "destination": "retired-with-t00",
       "originalLine": 3476,
       "dependencies": [
         "run"
       ],
       "originalAssertions": 2,
-      "route": "explicit --reference suite; generated semantic equivalents remain assigned to language-port steps"
+      "route": "retired with the handwritten T00 implementation; historical source remains in Git history"
     },
     {
       "title": "ordinary function values copy, shadow helpers, and replace only compatible var bindings",
-      "destination": "igniter/reference.test.ts",
+      "destination": "retired-with-t00",
       "originalLine": 3486,
       "dependencies": [
         "run",
         "fault"
       ],
       "originalAssertions": 1,
-      "route": "explicit --reference suite; generated semantic equivalents remain assigned to language-port steps"
+      "route": "retired with the handwritten T00 implementation; historical source remains in Git history"
     },
     {
       "title": "calls select the callee once before arguments and evaluate arguments left to right",
-      "destination": "igniter/reference.test.ts",
+      "destination": "retired-with-t00",
       "originalLine": 3497,
       "dependencies": [
         "run"
       ],
       "originalAssertions": 1,
-      "route": "explicit --reference suite; generated semantic equivalents remain assigned to language-port steps"
+      "route": "retired with the handwritten T00 implementation; historical source remains in Git history"
     },
     {
       "title": "self recursion and direct own-name recursion keep separate call locals",
-      "destination": "igniter/reference.test.ts",
+      "destination": "retired-with-t00",
       "originalLine": 3505,
       "dependencies": [
         "run"
       ],
       "originalAssertions": 1,
-      "route": "explicit --reference suite; generated semantic equivalents remain assigned to language-port steps"
+      "route": "retired with the handwritten T00 implementation; historical source remains in Git history"
     },
     {
       "title": "parameters, local vars and block shadows belong to each invocation",
-      "destination": "igniter/reference.test.ts",
+      "destination": "retired-with-t00",
       "originalLine": 3514,
       "dependencies": [
         "run",
         "fault"
       ],
       "originalAssertions": 1,
-      "route": "explicit --reference suite; generated semantic equivalents remain assigned to language-port steps"
+      "route": "retired with the handwritten T00 implementation; historical source remains in Git history"
     },
     {
       "title": "an earlier same-name helper remains the ordinary named recursion target",
-      "destination": "igniter/reference.test.ts",
+      "destination": "retired-with-t00",
       "originalLine": 3526,
       "dependencies": [
         "run"
       ],
       "originalAssertions": 1,
-      "route": "explicit --reference suite; generated semantic equivalents remain assigned to language-port steps"
+      "route": "retired with the handwritten T00 implementation; historical source remains in Git history"
     },
     {
       "title": "self calls retain the executing implementation after its source binding is replaced",
-      "destination": "igniter/reference.test.ts",
+      "destination": "retired-with-t00",
       "originalLine": 3533,
       "dependencies": [
         "run"
       ],
       "originalAssertions": 1,
-      "route": "explicit --reference suite; generated semantic equivalents remain assigned to language-port steps"
+      "route": "retired with the handwritten T00 implementation; historical source remains in Git history"
     },
     {
       "title": "admitted helper references read live bindings and ignore later shadows",
-      "destination": "igniter/reference.test.ts",
+      "destination": "retired-with-t00",
       "originalLine": 3539,
       "dependencies": [
         "run"
       ],
       "originalAssertions": 1,
-      "route": "explicit --reference suite; generated semantic equivalents remain assigned to language-port steps"
+      "route": "retired with the handwritten T00 implementation; historical source remains in Git history"
     },
     {
       "title": "escaped helpers preserve distinct environments from repeated block activations",
-      "destination": "igniter/reference.test.ts",
+      "destination": "retired-with-t00",
       "originalLine": 3548,
       "dependencies": [
         "run"
       ],
       "originalAssertions": 1,
-      "route": "explicit --reference suite; generated semantic equivalents remain assigned to language-port steps"
+      "route": "retired with the handwritten T00 implementation; historical source remains in Git history"
     },
     {
       "title": "return exits the nearest function through loops and nested calls return locally",
-      "destination": "igniter/reference.test.ts",
+      "destination": "retired-with-t00",
       "originalLine": 3566,
       "dependencies": [
         "run",
         "fault"
       ],
       "originalAssertions": 1,
-      "route": "explicit --reference suite; generated semantic equivalents remain assigned to language-port steps"
+      "route": "retired with the handwritten T00 implementation; historical source remains in Git history"
     },
     {
       "title": "exit, input faults and arithmetic faults propagate through user functions",
-      "destination": "igniter/reference.test.ts",
+      "destination": "retired-with-t00",
       "originalLine": 3579,
       "dependencies": [
         "run",
         "fault"
       ],
       "originalAssertions": 1,
-      "route": "explicit --reference suite; generated semantic equivalents remain assigned to language-port steps"
+      "route": "retired with the handwritten T00 implementation; historical source remains in Git history"
     },
     {
       "title": "invalid signatures, captures, forward references and unsupported forms fail before effects",
-      "destination": "igniter/reference.test.ts",
+      "destination": "retired-with-t00",
       "originalLine": 3584,
       "dependencies": [
         "execute",
@@ -1901,11 +1901,11 @@
         "fault"
       ],
       "originalAssertions": 2,
-      "route": "explicit --reference suite; generated semantic equivalents remain assigned to language-port steps"
+      "route": "retired with the handwritten T00 implementation; historical source remains in Git history"
     },
     {
       "title": "factorial example runs through real CLI with checked results and failures",
-      "destination": "igniter/reference.test.ts",
+      "destination": "retired-with-t00",
       "originalLine": 3605,
       "dependencies": [
         "run",
@@ -1913,52 +1913,52 @@
         "spawnSync"
       ],
       "originalAssertions": 6,
-      "route": "explicit --reference suite; generated semantic equivalents remain assigned to language-port steps"
+      "route": "retired with the handwritten T00 implementation; historical source remains in Git history"
     },
     {
       "title": "computed String concatenation preserves contents and ordinary value copies",
-      "destination": "igniter/reference.test.ts",
+      "destination": "retired-with-t00",
       "originalLine": 3624,
       "dependencies": [
         "run",
         "fault"
       ],
       "originalAssertions": 1,
-      "route": "explicit --reference suite; generated semantic equivalents remain assigned to language-port steps"
+      "route": "retired with the handwritten T00 implementation; historical source remains in Git history"
     },
     {
       "title": "text helpers use consistent code-point positions without normalization or grapheme grouping",
-      "destination": "igniter/reference.test.ts",
+      "destination": "retired-with-t00",
       "originalLine": 3633,
       "dependencies": [
         "run"
       ],
       "originalAssertions": 2,
-      "route": "explicit --reference suite; generated semantic equivalents remain assigned to language-port steps"
+      "route": "retired with the handwritten T00 implementation; historical source remains in Git history"
     },
     {
       "title": "textSlice admits empty and full half-open intervals, including the end of empty text",
-      "destination": "igniter/reference.test.ts",
+      "destination": "retired-with-t00",
       "originalLine": 3642,
       "dependencies": [
         "run"
       ],
       "originalAssertions": 1,
-      "route": "explicit --reference suite; generated semantic equivalents remain assigned to language-port steps"
+      "route": "retired with the handwritten T00 implementation; historical source remains in Git history"
     },
     {
       "title": "invalid text positions fault without negative wrapping, clamping or huge-index rounding",
-      "destination": "igniter/reference.test.ts",
+      "destination": "retired-with-t00",
       "originalLine": 3650,
       "dependencies": [
         "fault"
       ],
       "originalAssertions": 0,
-      "route": "explicit --reference suite; generated semantic equivalents remain assigned to language-port steps"
+      "route": "retired with the handwritten T00 implementation; historical source remains in Git history"
     },
     {
       "title": "text operands and helper arguments execute once in written order before bounds checks",
-      "destination": "igniter/reference.test.ts",
+      "destination": "retired-with-t00",
       "originalLine": 3657,
       "dependencies": [
         "run",
@@ -1967,11 +1967,11 @@
         "LiteFault"
       ],
       "originalAssertions": 3,
-      "route": "explicit --reference suite; generated semantic equivalents remain assigned to language-port steps"
+      "route": "retired with the handwritten T00 implementation; historical source remains in Git history"
     },
     {
       "title": "text signatures are checked before effects and temporary helper names can be shadowed",
-      "destination": "igniter/reference.test.ts",
+      "destination": "retired-with-t00",
       "originalLine": 3667,
       "dependencies": [
         "execute",
@@ -1980,128 +1980,128 @@
         "run"
       ],
       "originalAssertions": 3,
-      "route": "explicit --reference suite; generated semantic equivalents remain assigned to language-port steps"
+      "route": "retired with the handwritten T00 implementation; historical source remains in Git history"
     },
     {
       "title": "a Lite function can scan and reconstruct text recursively with the temporary helpers",
-      "destination": "igniter/reference.test.ts",
+      "destination": "retired-with-t00",
       "originalLine": 3680,
       "dependencies": [
         "run"
       ],
       "originalAssertions": 1,
-      "route": "explicit --reference suite; generated semantic equivalents remain assigned to language-port steps"
+      "route": "retired with the handwritten T00 implementation; historical source remains in Git history"
     },
     {
       "title": "Lite arithmetic tokenizer handles final digits, whitespace, punctuation and explicit rejection",
-      "destination": "igniter/reference.test.ts",
+      "destination": "retired-with-t00",
       "originalLine": 3688,
       "dependencies": [
         "run",
         "fault"
       ],
       "originalAssertions": 6,
-      "route": "explicit --reference suite; generated semantic equivalents remain assigned to language-port steps"
+      "route": "retired with the handwritten T00 implementation; historical source remains in Git history"
     },
     {
       "title": "real CLI runs the Lite tokenizer, preserves supplementary text, and reports bounds locations",
-      "destination": "igniter/reference.test.ts",
+      "destination": "retired-with-t00",
       "originalLine": 3700,
       "dependencies": [
         "spawnSync"
       ],
       "originalAssertions": 16,
-      "route": "explicit --reference suite; generated semantic equivalents remain assigned to language-port steps"
+      "route": "retired with the handwritten T00 implementation; historical source remains in Git history"
     },
     {
       "title": "flat fixed tuple construction and positional reads retain heterogeneous scalar types",
-      "destination": "igniter/reference.test.ts",
+      "destination": "retired-with-t00",
       "originalLine": 3729,
       "dependencies": [
         "run"
       ],
       "originalAssertions": 2,
-      "route": "explicit --reference suite; generated semantic equivalents remain assigned to language-port steps"
+      "route": "retired with the handwritten T00 implementation; historical source remains in Git history"
     },
     {
       "title": "tuple expressions and receivers evaluate once in written order",
-      "destination": "igniter/reference.test.ts",
+      "destination": "retired-with-t00",
       "originalLine": 3735,
       "dependencies": [
         "run"
       ],
       "originalAssertions": 1,
-      "route": "explicit --reference suite; generated semantic equivalents remain assigned to language-port steps"
+      "route": "retired with the handwritten T00 implementation; historical source remains in Git history"
     },
     {
       "title": "Unit, grouping, singleton tuples and Unit-valued positions keep distinct shapes",
-      "destination": "igniter/reference.test.ts",
+      "destination": "retired-with-t00",
       "originalLine": 3742,
       "dependencies": [
         "run",
         "fault"
       ],
       "originalAssertions": 1,
-      "route": "explicit --reference suite; generated semantic equivalents remain assigned to language-port steps"
+      "route": "retired with the handwritten T00 implementation; historical source remains in Git history"
     },
     {
       "title": "destructuring resolves the source first, then shadows receiver names in written order",
-      "destination": "igniter/reference.test.ts",
+      "destination": "retired-with-t00",
       "originalLine": 3756,
       "dependencies": [
         "run",
         "fault"
       ],
       "originalAssertions": 2,
-      "route": "explicit --reference suite; generated semantic equivalents remain assigned to language-port steps"
+      "route": "retired with the handwritten T00 implementation; historical source remains in Git history"
     },
     {
       "title": "ordinary tuple copies survive whole-value var replacement and later shadows",
-      "destination": "igniter/reference.test.ts",
+      "destination": "retired-with-t00",
       "originalLine": 3767,
       "dependencies": [
         "run",
         "fault"
       ],
       "originalAssertions": 1,
-      "route": "explicit --reference suite; generated semantic equivalents remain assigned to language-port steps"
+      "route": "retired with the handwritten T00 implementation; historical source remains in Git history"
     },
     {
       "title": "explicit tuple inputs and outputs support tail returns, early returns and compatible replacement",
-      "destination": "igniter/reference.test.ts",
+      "destination": "retired-with-t00",
       "originalLine": 3778,
       "dependencies": [
         "run",
         "fault"
       ],
       "originalAssertions": 1,
-      "route": "explicit --reference suite; generated semantic equivalents remain assigned to language-port steps"
+      "route": "retired with the handwritten T00 implementation; historical source remains in Git history"
     },
     {
       "title": "a tuple is one ordinary call argument and is copied at its evaluation position",
-      "destination": "igniter/reference.test.ts",
+      "destination": "retired-with-t00",
       "originalLine": 3791,
       "dependencies": [
         "run",
         "fault"
       ],
       "originalAssertions": 1,
-      "route": "explicit --reference suite; generated semantic equivalents remain assigned to language-port steps"
+      "route": "retired with the handwritten T00 implementation; historical source remains in Git history"
     },
     {
       "title": "tuple parameters and destructured locals remain separate across recursive calls",
-      "destination": "igniter/reference.test.ts",
+      "destination": "retired-with-t00",
       "originalLine": 3800,
       "dependencies": [
         "run",
         "fault"
       ],
       "originalAssertions": 1,
-      "route": "explicit --reference suite; generated semantic equivalents remain assigned to language-port steps"
+      "route": "retired with the handwritten T00 implementation; historical source remains in Git history"
     },
     {
       "title": "invalid tuple shapes, positions and transfers fail before any input or output",
-      "destination": "igniter/reference.test.ts",
+      "destination": "retired-with-t00",
       "originalLine": 3810,
       "dependencies": [
         "execute",
@@ -2110,18 +2110,18 @@
         "fault"
       ],
       "originalAssertions": 2,
-      "route": "explicit --reference suite; generated semantic equivalents remain assigned to language-port steps"
+      "route": "retired with the handwritten T00 implementation; historical source remains in Git history"
     },
     {
       "title": "tuple demonstration runs from the numbered project examples through the real CLI",
-      "destination": "igniter/reference.test.ts",
+      "destination": "retired-with-t00",
       "originalLine": 3829,
       "dependencies": [
         "run",
         "spawnSync"
       ],
       "originalAssertions": 5,
-      "route": "explicit --reference suite; generated semantic equivalents remain assigned to language-port steps"
+      "route": "retired with the handwritten T00 implementation; historical source remains in Git history"
     },
     {
       "title": "root launcher compiles artifacts and forwards their input, diagnostics and status from caller directories",
@@ -2136,7 +2136,7 @@
     },
     {
       "title": "inputInt optionally writes an exact String prompt before reading without an added newline",
-      "destination": "igniter/reference.test.ts",
+      "destination": "retired-with-t00",
       "originalLine": 3869,
       "dependencies": [
         "run",
@@ -2144,11 +2144,11 @@
         "compile"
       ],
       "originalAssertions": 4,
-      "route": "explicit --reference suite; generated semantic equivalents remain assigned to language-port steps"
+      "route": "retired with the handwritten T00 implementation; historical source remains in Git history"
     },
     {
       "title": "invalid or missing input faults after one prompt; prompt output failure prevents reading",
-      "destination": "igniter/reference.test.ts",
+      "destination": "retired-with-t00",
       "originalLine": 3881,
       "dependencies": [
         "execute",
@@ -2156,21 +2156,21 @@
         "LiteFault"
       ],
       "originalAssertions": 4,
-      "route": "explicit --reference suite; generated semantic equivalents remain assigned to language-port steps"
+      "route": "retired with the handwritten T00 implementation; historical source remains in Git history"
     },
     {
       "title": "report joins one or more ordinary scalar values with spaces and exactly one final newline",
-      "destination": "igniter/reference.test.ts",
+      "destination": "retired-with-t00",
       "originalLine": 3897,
       "dependencies": [
         "run"
       ],
       "originalAssertions": 3,
-      "route": "explicit --reference suite; generated semantic equivalents remain assigned to language-port steps"
+      "route": "retired with the handwritten T00 implementation; historical source remains in Git history"
     },
     {
       "title": "report evaluates each argument once left to right and writes the joined line after evaluation",
-      "destination": "igniter/reference.test.ts",
+      "destination": "retired-with-t00",
       "originalLine": 3904,
       "dependencies": [
         "run",
@@ -2179,11 +2179,11 @@
         "LiteFault"
       ],
       "originalAssertions": 3,
-      "route": "explicit --reference suite; generated semantic equivalents remain assigned to language-port steps"
+      "route": "retired with the handwritten T00 implementation; historical source remains in Git history"
     },
     {
       "title": "prompt and report signatures fail before effects without broadening other helpers or tuple spread",
-      "destination": "igniter/reference.test.ts",
+      "destination": "retired-with-t00",
       "originalLine": 3913,
       "dependencies": [
         "execute",
@@ -2193,118 +2193,118 @@
         "run"
       ],
       "originalAssertions": 3,
-      "route": "explicit --reference suite; generated semantic equivalents remain assigned to language-port steps"
+      "route": "retired with the handwritten T00 implementation; historical source remains in Git history"
     },
     {
       "title": "report displays flat tuples source-like with labels and a singleton comma",
-      "destination": "igniter/reference.test.ts",
+      "destination": "retired-with-t00",
       "originalLine": 3926,
       "dependencies": [
         "run",
         "fault"
       ],
       "originalAssertions": 5,
-      "route": "explicit --reference suite; generated semantic equivalents remain assigned to language-port steps"
+      "route": "retired with the handwritten T00 implementation; historical source remains in Git history"
     },
     {
       "title": "numbered prompt/report example runs through the root command with real redirected stdin",
-      "destination": "igniter/reference.test.ts",
+      "destination": "retired-with-t00",
       "originalLine": 3936,
       "dependencies": [
         "run",
         "spawnSync"
       ],
       "originalAssertions": 9,
-      "route": "explicit --reference suite; generated semantic equivalents remain assigned to language-port steps"
+      "route": "retired with the handwritten T00 implementation; historical source remains in Git history"
     },
     {
       "title": "named scalar tuple members agree with fixed numeric positions without inferring bare-name labels",
-      "destination": "igniter/reference.test.ts",
+      "destination": "retired-with-t00",
       "originalLine": 3955,
       "dependencies": [
         "run",
         "fault"
       ],
       "originalAssertions": 2,
-      "route": "explicit --reference suite; generated semantic equivalents remain assigned to language-port steps"
+      "route": "retired with the handwritten T00 implementation; historical source remains in Git history"
     },
     {
       "title": "same-name shorthand copies a lexical value while explicit labels do not assign that lexical binding",
-      "destination": "igniter/reference.test.ts",
+      "destination": "retired-with-t00",
       "originalLine": 3964,
       "dependencies": [
         "run",
         "fault"
       ],
       "originalAssertions": 1,
-      "route": "explicit --reference suite; generated semantic equivalents remain assigned to language-port steps"
+      "route": "retired with the handwritten T00 implementation; historical source remains in Git history"
     },
     {
       "title": "named singleton value/type forms need no comma and do not erase Unit-valued members",
-      "destination": "igniter/reference.test.ts",
+      "destination": "retired-with-t00",
       "originalLine": 3975,
       "dependencies": [
         "run",
         "fault"
       ],
       "originalAssertions": 1,
-      "route": "explicit --reference suite; generated semantic equivalents remain assigned to language-port steps"
+      "route": "retired with the handwritten T00 implementation; historical source remains in Git history"
     },
     {
       "title": "named tuple construction and member receivers evaluate once in written order",
-      "destination": "igniter/reference.test.ts",
+      "destination": "retired-with-t00",
       "originalLine": 3987,
       "dependencies": [
         "run"
       ],
       "originalAssertions": 1,
-      "route": "explicit --reference suite; generated semantic equivalents remain assigned to language-port steps"
+      "route": "retired with the handwritten T00 implementation; historical source remains in Git history"
     },
     {
       "title": "named tuple copies, grouping and positional binding preserve stored order and independent values",
-      "destination": "igniter/reference.test.ts",
+      "destination": "retired-with-t00",
       "originalLine": 3993,
       "dependencies": [
         "run"
       ],
       "originalAssertions": 1,
-      "route": "explicit --reference suite; generated semantic equivalents remain assigned to language-port steps"
+      "route": "retired with the handwritten T00 implementation; historical source remains in Git history"
     },
     {
       "title": "explicit named tuple inputs/results and recursive calls preserve label-sensitive contracts",
-      "destination": "igniter/reference.test.ts",
+      "destination": "retired-with-t00",
       "originalLine": 4002,
       "dependencies": [
         "run"
       ],
       "originalAssertions": 1,
-      "route": "explicit --reference suite; generated semantic equivalents remain assigned to language-port steps"
+      "route": "retired with the handwritten T00 implementation; historical source remains in Git history"
     },
     {
       "title": "stored tuple transfers never silently relabel or reorder through a known parameter/result type",
-      "destination": "igniter/reference.test.ts",
+      "destination": "retired-with-t00",
       "originalLine": 4014,
       "dependencies": [
         "compile",
         "LiteFault"
       ],
       "originalAssertions": 1,
-      "route": "explicit --reference suite; generated semantic equivalents remain assigned to language-port steps"
+      "route": "retired with the handwritten T00 implementation; historical source remains in Git history"
     },
     {
       "title": "valid contextual fresh-constructor routing is diagnosed as unimplemented rather than a new order rule",
-      "destination": "igniter/reference.test.ts",
+      "destination": "retired-with-t00",
       "originalLine": 4029,
       "dependencies": [
         "compile",
         "LiteFault"
       ],
       "originalAssertions": 1,
-      "route": "explicit --reference suite; generated semantic equivalents remain assigned to language-port steps"
+      "route": "retired with the handwritten T00 implementation; historical source remains in Git history"
     },
     {
       "title": "invalid labels and unsupported tuple extensions are rejected before effects",
-      "destination": "igniter/reference.test.ts",
+      "destination": "retired-with-t00",
       "originalLine": 4039,
       "dependencies": [
         "execute",
@@ -2312,150 +2312,150 @@
         "LiteFault"
       ],
       "originalAssertions": 2,
-      "route": "explicit --reference suite; generated semantic equivalents remain assigned to language-port steps"
+      "route": "retired with the handwritten T00 implementation; historical source remains in Git history"
     },
     {
       "title": "named tuple example runs through the root launcher and check-only mode",
-      "destination": "igniter/reference.test.ts",
+      "destination": "retired-with-t00",
       "originalLine": 4060,
       "dependencies": [
         "run",
         "spawnSync"
       ],
       "originalAssertions": 5,
-      "route": "explicit --reference suite; generated semantic equivalents remain assigned to language-port steps"
+      "route": "retired with the handwritten T00 implementation; historical source remains in Git history"
     },
     {
       "title": "homogeneous scalar arrays have fixed extents and matching dot/bracket reads",
-      "destination": "igniter/reference.test.ts",
+      "destination": "retired-with-t00",
       "originalLine": 4075,
       "dependencies": [
         "run",
         "fault"
       ],
       "originalAssertions": 1,
-      "route": "explicit --reference suite; generated semantic equivalents remain assigned to language-port steps"
+      "route": "retired with the handwritten T00 implementation; historical source remains in Git history"
     },
     {
       "title": "array constructors and bracket receivers/indices evaluate once in written order",
-      "destination": "igniter/reference.test.ts",
+      "destination": "retired-with-t00",
       "originalLine": 4082,
       "dependencies": [
         "run"
       ],
       "originalAssertions": 2,
-      "route": "explicit --reference suite; generated semantic equivalents remain assigned to language-port steps"
+      "route": "retired with the handwritten T00 implementation; historical source remains in Git history"
     },
     {
       "title": "array bracket bounds fault safely while invalid static dot positions fail before execution",
-      "destination": "igniter/reference.test.ts",
+      "destination": "retired-with-t00",
       "originalLine": 4091,
       "dependencies": [
         "fault",
         "run"
       ],
       "originalAssertions": 1,
-      "route": "explicit --reference suite; generated semantic equivalents remain assigned to language-port steps"
+      "route": "retired with the handwritten T00 implementation; historical source remains in Git history"
     },
     {
       "title": "array traversal evaluates its source once and creates fresh scoped body/item bindings",
-      "destination": "igniter/reference.test.ts",
+      "destination": "retired-with-t00",
       "originalLine": 4098,
       "dependencies": [
         "run",
         "fault"
       ],
       "originalAssertions": 1,
-      "route": "explicit --reference suite; generated semantic equivalents remain assigned to language-port steps"
+      "route": "retired with the handwritten T00 implementation; historical source remains in Git history"
     },
     {
       "title": "unnamed array traversal introduces no implicit variable and receiver shadowing stays in the body",
-      "destination": "igniter/reference.test.ts",
+      "destination": "retired-with-t00",
       "originalLine": 4109,
       "dependencies": [
         "run",
         "fault"
       ],
       "originalAssertions": 2,
-      "route": "explicit --reference suite; generated semantic equivalents remain assigned to language-port steps"
+      "route": "retired with the handwritten T00 implementation; historical source remains in Git history"
     },
     {
       "title": "traversal retains the evaluated array value when its original variable is replaced",
-      "destination": "igniter/reference.test.ts",
+      "destination": "retired-with-t00",
       "originalLine": 4115,
       "dependencies": [
         "run"
       ],
       "originalAssertions": 1,
-      "route": "explicit --reference suite; generated semantic equivalents remain assigned to language-port steps"
+      "route": "retired with the handwritten T00 implementation; historical source remains in Git history"
     },
     {
       "title": "array loop break/continue target the nearest loop without restarting the source",
-      "destination": "igniter/reference.test.ts",
+      "destination": "retired-with-t00",
       "originalLine": 4120,
       "dependencies": [
         "run"
       ],
       "originalAssertions": 3,
-      "route": "explicit --reference suite; generated semantic equivalents remain assigned to language-port steps"
+      "route": "retired with the handwritten T00 implementation; historical source remains in Git history"
     },
     {
       "title": "arrays of flat named and unnamed tuples preserve member types and body destructuring",
-      "destination": "igniter/reference.test.ts",
+      "destination": "retired-with-t00",
       "originalLine": 4136,
       "dependencies": [
         "run"
       ],
       "originalAssertions": 1,
-      "route": "explicit --reference suite; generated semantic equivalents remain assigned to language-port steps"
+      "route": "retired with the handwritten T00 implementation; historical source remains in Git history"
     },
     {
       "title": "explicit fixed-array inputs/results check element contracts and extents",
-      "destination": "igniter/reference.test.ts",
+      "destination": "retired-with-t00",
       "originalLine": 4143,
       "dependencies": [
         "run",
         "fault"
       ],
       "originalAssertions": 1,
-      "route": "explicit --reference suite; generated semantic equivalents remain assigned to language-port steps"
+      "route": "retired with the handwritten T00 implementation; historical source remains in Git history"
     },
     {
       "title": "ordinary fixed-array copies and supplied arguments survive source replacement",
-      "destination": "igniter/reference.test.ts",
+      "destination": "retired-with-t00",
       "originalLine": 4153,
       "dependencies": [
         "run",
         "fault"
       ],
       "originalAssertions": 1,
-      "route": "explicit --reference suite; generated semantic equivalents remain assigned to language-port steps"
+      "route": "retired with the handwritten T00 implementation; historical source remains in Git history"
     },
     {
       "title": "array arguments and item locals stay separate through recursive calls",
-      "destination": "igniter/reference.test.ts",
+      "destination": "retired-with-t00",
       "originalLine": 4161,
       "dependencies": [
         "run",
         "fault"
       ],
       "originalAssertions": 1,
-      "route": "explicit --reference suite; generated semantic equivalents remain assigned to language-port steps"
+      "route": "retired with the handwritten T00 implementation; historical source remains in Git history"
     },
     {
       "title": "returns, exit and bounds faults propagate correctly through array traversal",
-      "destination": "igniter/reference.test.ts",
+      "destination": "retired-with-t00",
       "originalLine": 4170,
       "dependencies": [
         "run",
         "fault"
       ],
       "originalAssertions": 2,
-      "route": "explicit --reference suite; generated semantic equivalents remain assigned to language-port steps"
+      "route": "retired with the handwritten T00 implementation; historical source remains in Git history"
     },
     {
       "title": "unsupported array forms fail before effects without inventing empty types, unions or mutation",
-      "destination": "igniter/reference.test.ts",
+      "destination": "retired-with-t00",
       "originalLine": 4178,
       "dependencies": [
         "execute",
@@ -2463,50 +2463,50 @@
         "LiteFault"
       ],
       "originalAssertions": 2,
-      "route": "explicit --reference suite; generated semantic equivalents remain assigned to language-port steps"
+      "route": "retired with the handwritten T00 implementation; historical source remains in Git history"
     },
     {
       "title": "numbered fixed-array example runs and checks through the root launcher",
-      "destination": "igniter/reference.test.ts",
+      "destination": "retired-with-t00",
       "originalLine": 4200,
       "dependencies": [
         "run",
         "spawnSync"
       ],
       "originalAssertions": 13,
-      "route": "explicit --reference suite; generated semantic equivalents remain assigned to language-port steps"
+      "route": "retired with the handwritten T00 implementation; historical source remains in Git history"
     },
     {
       "title": "transparent type aliases support scalar, tuple, array and list forms",
-      "destination": "igniter/reference.test.ts",
+      "destination": "retired-with-t00",
       "originalLine": 4219,
       "dependencies": [
         "run"
       ],
       "originalAssertions": 7,
-      "route": "explicit --reference suite; generated semantic equivalents remain assigned to language-port steps"
+      "route": "retired with the handwritten T00 implementation; historical source remains in Git history"
     },
     {
       "title": "type aliases follow single lexical scope with value shadowing and rejection",
-      "destination": "igniter/reference.test.ts",
+      "destination": "retired-with-t00",
       "originalLine": 4248,
       "dependencies": [
         "fault",
         "run"
       ],
       "originalAssertions": 2,
-      "route": "explicit --reference suite; generated semantic equivalents remain assigned to language-port steps"
+      "route": "retired with the handwritten T00 implementation; historical source remains in Git history"
     },
     {
       "title": "type alias example runs and checks through the root launcher",
-      "destination": "igniter/reference.test.ts",
+      "destination": "retired-with-t00",
       "originalLine": 4274,
       "dependencies": [
         "run",
         "spawnSync"
       ],
       "originalAssertions": 9,
-      "route": "explicit --reference suite; generated semantic equivalents remain assigned to language-port steps"
+      "route": "retired with the handwritten T00 implementation; historical source remains in Git history"
     },
     {
       "title": "Lite numeric literal phases share Float spelling and finite-range checks",

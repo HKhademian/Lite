@@ -12,7 +12,6 @@
   ],
   "description": "Mixed binary64 arithmetic, pairwise comparison conversion and skipped arithmetic faults.",
   "targets": [
-    "igniter",
     "ts",
     "c"
   ],

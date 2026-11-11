@@ -11,10 +11,10 @@ The selected generated T12 compiler now reaches a three-generation fixed point
 for the bounded kernel and passes its 94-case compiler corpus. The root-symbol
 contract is covered for repeated root definitions, nested bindings, deferred
 function references to later inferred scalar literals, parameter shadowing,
-and source-ordered eager reads. Next, implement a minimal top-level source
-import with explicit dependency metadata, then remove active T00 consumers
-after clean-checkout/no-T00 gates pass. Keep the remaining T00/selected-compiler inventory as
-parity backlog, not a retirement prerequisite. Public `run` remains
+and source-ordered eager reads. Top-level source imports are implemented and
+active handwritten T00 consumers have been retired. Keep the archived
+T00/selected-compiler inventory as parity evidence, not a retirement
+prerequisite. Public `run` remains
 compile-and-execute over a TS artifact. C output/native self-hosting remains a
 later target. See the
 [transition order](transition-plan.md#implementation-order).
@@ -25,23 +25,22 @@ The current path is:
 
 1. T12 kernel complete: root-symbol rules, fixed point, 94-case compiler corpus,
    T00/T12 inventory, and fast-suite verification are recorded.
-2. Verify the top-level import implementation across copied no-T00 builds and
+2. Top-level Lite source imports are verified across copied builds and
    public compile/check/run paths. It resolves local source once on open, records
    dependency order, and retains imported-file source locations.
-3. Retire active T00 command, test, verifier, benchmark and audit dependencies
-   after the import and no-T00 gates pass. The 61 T12 rejections remain explicit
-   parity backlog; they do not block retirement.
+3. T00 implementation and active interpreter/reference routes are retired. The
+   61 T12 rejections remain explicit parity backlog; they did not block retirement.
 4. Continue needed Lite compiler features in paired seed/source increments and
    compare the declared subset. Resume public C/native work separately.
 
 ## Measured checkpoint
 
-The [current inventory](reports/current-t00-t11-inventory.md) and
+The archived [T00/T12 inventory](reports/current-t00-t11-inventory.md) and
 [raw observations](reports/current-t00-t11-inventory.json) were refreshed on
 2026-11-11 against selected generated seed `02e8e226…`, at base revision `10a1ab03`.
 The report covers 217 tracked Lite source files and records exact source and
-artifact hashes. Refresh with `node compiler/scripts/t00-t11-inventory.ts
---large-sources` while T00 is retained.
+artifact hashes. Its generator required the retired T00 implementation, so this
+is a historical snapshot; new feature work uses recorded contracts and cases.
 
 - Canonical features: 28/41 match; 13 rejected.
 - Examples: 11/19 match; 8 rejected.
@@ -64,12 +63,9 @@ percentage. Native C is a separate post-migration milestone.
 
 ## Closed slices
 
-- [x] Default verification and expectation updates to TS artifacts, with explicit
-  --reference for T00 and no C execution. Canonical TS audit: 60/81 scenarios
-  pass, 21 fail visibly; T00 reference: 81/81 pass. Supported verification and
-  updates work with T00 absent. Full current regressions: 274 pass, nine native
-  skips, zero failures. Three generated self-build generations retain the exact
-  selected seed. Default regression routing still needs migration.
+- [x] Default verification and expectation updates use generated TS artifacts
+  and independent recorded contracts. The former 81-case comparison (60 TS
+  passes, 21 failures) is archived. The active verification route is T00-free.
 
 - [x] Remove the interpreter run launcher; default compilation to TS artifacts and migrate check
   to generated compilation plus strict artifact checking without effects.
@@ -79,6 +75,8 @@ percentage. Native C is a separate post-migration milestone.
   adapter; the interpreter launcher stays removed.
 
 - [x] Make T11 the default TS compiler and compile the C emitter through T11.
+- [x] Add Lite top-level source imports and retire all active handwritten T00
+  implementation and reference routes after the kernel and no-T00 gates.
 - [x] Preserve nested output effects and argument order.
 - [x] Migrate maintained report calls to outputLine; implement selected
   output/input helpers on generated TS, including strict incremental UTF-8,

@@ -6,9 +6,11 @@ compilation defaults to the verified generated **T12** compiler in
 check-only also strictly checks the artifact without executing it. Public
 `./lite run` compiles to a temporary artifact and executes it through
 `entry.ts`; compiled programs also run as `node compiler/entry.ts program.ts`.
-C output and native self-hosting are deferred until after the TS migration and
-T00 retirement. The earlier TS-hosted C emitter and its provenance remain for
-explicit historical tests; they are not a public C output promise. See the
+C output and native self-hosting are deferred until later. The handwritten T00
+compiler and its active adapters have been retired; historical audit reports
+and recorded contracts remain for reference. The earlier TS-hosted C emitter
+and its provenance remain for explicit historical tests; they are not a public
+C output promise. See the
 [owner-approved transition](transition-plan.md).
 The accepted language remains
 the restricted bootstrap subset, not the entire language design.
@@ -27,7 +29,7 @@ records that snapshot's compiler artifacts. The subsequent
 runtime requirements once per program and records about 30% less compiler time
 on paired output/self-source workloads, with exact emitted bytes preserved.
 
-The [T00/selected-compiler support inventory](reports/current-t00-t11-inventory.md) lists
+The archived [T00/selected-compiler support inventory](reports/current-t00-t11-inventory.md) lists
 measured missing forms, behavior/diagnostic differences, every maintained example
 and sample, and source-file coverage. It includes exact-source boundary probes
 and a reproducible audit script; it is an inventory, not a priority list or a new
@@ -85,11 +87,10 @@ line-map contract and current hashes are recorded in:
   in `generated/baseline-artifacts.json`.
 
 The bundle path is green: [`../igniter/loader.ts`](../igniter/loader.ts) loads
-the ordered manifests, and [`../igniter/bootstrap.ts`](https://github.com/redacted/Lite/blob/d3bd6f7bcf06bbea6669c8d74bebe5e73f383114/igniter/bootstrap.ts)
-compiles and runs them with flattened-position diagnostics mapped back to the
-original files. `litec` uses [`cli.ts`](cli.ts): both targets use the generated
-compiler host. [`../igniter/bundle-cli.ts`](https://github.com/redacted/Lite/blob/d3bd6f7bcf06bbea6669c8d74bebe5e73f383114/igniter/bundle-cli.ts) remains an
-explicit historical/reference path. P2 adds the provisional
+the ordered manifests, expands top-level imports and maps diagnostics back to
+the original files. `litec` uses [`cli.ts`](cli.ts): both targets use the
+generated compiler host. The handwritten interpreter and bundle CLI are
+retired. P2 adds the provisional
 L0 helpers under [`../lib/core/`](../lib/README.md): checked Int, text, source
 positions, diagnostics, formatting and list search. P3 adds the Lite lexer and
 P4 the parser under `src/`; `runtime/ts/` contains the P6 runtime support.
@@ -193,8 +194,8 @@ enabled. See the [completion assessment and evidence](parity.md#function-complet
 | [`generated/run-report.ts`](generated/run-report.ts) | Visible Node adapter for the TS reference |
 | [`generated/baseline-artifacts.json`](generated/baseline-artifacts.json) | P0 emitted-artifact hashes for the 50 program cases |
 | [`scripts/run-ts-artifact.ts`](scripts/run-ts-artifact.ts) | Strict-typechecks and runs one emitted TS artifact with fixed stdin and no harness timeout |
-| [`scripts/self-host.ts`](scripts/self-host.ts) | Builds three strictly checked generated TS generations; historical T00 ladder requires `--reference` |
-| [`scripts/corpus-parity.ts`](scripts/corpus-parity.ts) | Checks compiler bytes, rejections and TS execution against recorded contracts; T00 comparison requires `--reference` |
+| [`scripts/self-host.ts`](scripts/self-host.ts) | Builds three strictly checked generated TS generations |
+| [`scripts/corpus-parity.ts`](scripts/corpus-parity.ts) | Checks compiler bytes, rejections and TS execution against recorded contracts |
 
 The backend source is split by role and assembled by manifest order. The
 compatibility `ts-emitter.lts` and `c-emitter.lts` files are generated flattened

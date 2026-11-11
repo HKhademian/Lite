@@ -306,31 +306,27 @@ streams and status and removes the temporary directory. Compiling with
 `./lite compile source.lts > /tmp/program.ts` and executing
 `node compiler/entry.ts /tmp/program.ts [argument ...]` remain the explicit
 artifact path. Check-only uses the generated compiler and strict artifact
-checking without program effects. C output is deferred until after T00
-retirement. Earlier interpreter-run/C instructions on this page are historical
+checking without program effects. C output is deferred to a later native
+compiler phase. Earlier interpreter-run/C instructions on this page are historical
 checkpoints. Linker and formatter names are reserved but unimplemented. See
 [tool naming](versioning-and-naming.md#1-canonical-names).
 
 Feature and artifact verification lives in `verifications/`. `./lite verify`
-selects changed cases; `--all` selects everything. All ordinary verification now
-compiles and executes TS artifacts; `--reference` explicitly selects T00.
-There are 41 feature manifests, 19 example manifests and 20 lesson manifests,
-with 81 scenarios. The current TS run passes 60 and reports 21 remaining port
-failures; the reference lane passes all 81. `--update`, `--coverage`, `--filter`,
-`--shard i/n`, `--no-cache` and `--quiet` remain available. Updates use the
-selected execution lane. Legacy regression/test routing is still migrating;
-see the [verification guide](../verifications/README.md).
+selects changed cases; `--all` selects everything. Verification compiles and
+executes TS artifacts against reviewed expected streams. The former 81-case T00
+comparison and its 60-pass/21-failure TS snapshot are historical; there is no
+live T00 lane. `--update`, `--coverage`, `--filter`, `--shard i/n`, `--no-cache`
+and `--quiet` remain available. See the [verification guide](../verifications/README.md).
 
 The compiler implementation now lives in
 [`compiler/`](../compiler/README.md), not in runnable examples. Its source is
 split under `compiler/src/` and assembled by ordered manifests: L0 libraries,
 target literal encoders, shared front-end, target emitter and target driver.
 `litec` enters through [`compiler/cli.ts`](../compiler/cli.ts): TS uses the
-verified T11 seed/current Lite compiler, and C uses its Lite emitter compiled by
-T11 into a TS-hosted compiler. The old
-[`igniter/bundle-cli.ts`](https://github.com/redacted/Lite/blob/d3bd6f7bcf06bbea6669c8d74bebe5e73f383114/igniter/bundle-cli.ts) remains an explicit reference
-path. There is no module/import
-syntax, and compiler source no longer uses `importFlatAll`. Access is
+verified T12 seed/current Lite compiler, and C uses its Lite emitter compiled by
+T12 into a TS-hosted compiler. Top-level relative `.lts` imports define compiler
+source dependencies; package and namespace semantics remain unimplemented.
+Compiler source no longer uses `importFlatAll`. Access is
 `./litec [--target ts] file.lts`, `./lite compile ...`, or the short `./ltc`
 command. This removes the duplicated parser/checker while keeping separate
 target backends.
@@ -370,19 +366,15 @@ executable checkpoint small; a complete self-hosted compiler is not its gate.
 Clarified **2026-10-31**: first emit readable, tightly checked TypeScript to move
 compiler development into Lite sooner. Keep the igniter active as a reference
 and fallback during the transition, until the self-hosted path is satisfactory.
-Retire handwritten igniter development after that evidence is sufficient; retain
-a permanent shippable readable TS bootstrap, source provenance and fixed tags.
+Retain a shippable readable TS bootstrap and source provenance.
 TypeScript remains an important maintained web target, while C is the selected
 first native target and a maintained library/project export and migration path.
 Possible AssemblyScript/early Wasm support needs its own compatibility checks.
-Update **2026-11-02**: T11/T12 are recorded byte-identical for the bootstrap
-subset, and the owner approved the [transition](../compiler/transition-plan.md)
-to T11 as the default TS compiler, followed by C host migration, existing-feature
-parity, native self-hosting and eventual T00 retirement. The readable generated
-TS seed is shipped with exact source/builder hashes; the original T00 route and
-published tags remain preserved. Default TS and C compilation have no automatic T00
-fallback. T13, native C fixed points and full existing-feature parity remain
-unverified. The staged
+Update **2026-11-11**: T12 is the selected generated compiler and the handwritten
+T00 implementation and active routes are retired. The verified minimum subset
+rebuilds to a fixed point; source imports record the compiler dependency graph.
+The readable generated TS seed is shipped with exact source/builder hashes.
+Native C fixed points and remaining language parity remain future work. The staged
 implementation route, agent gates and definition of done are in the
 [bootstrap and self-hosting plan](bootstrap-plan.md); it records implementation
 defaults without selecting new language, module or std rules.

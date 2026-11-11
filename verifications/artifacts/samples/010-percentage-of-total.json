@@ -22,7 +22,6 @@
     }
   ],
   "targets": [
-    "igniter",
     "ts",
     "c"
   ]

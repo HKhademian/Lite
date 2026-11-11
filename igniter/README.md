@@ -1,26 +1,25 @@
 # Lite igniter
 
-This directory retains the historical handwritten **T00** interpreter as an
-explicit migration reference, alongside TypeScript host and test adapters.
-Public compile and check now use the Lite-written generated
-[T11 compiler](../compiler/bootstrap/README.md). Public `./lite run` compiles a
+This directory contains TypeScript build, verification and artifact adapters
+for the generated Lite compiler. The handwritten **T00** interpreter and its
+active CLI/test adapters have been retired. Public compile and check use the
+Lite-written generated [T12 compiler](../compiler/bootstrap/README.md). Public `./lite run` compiles a
 script to a temporary artifact and executes it; programs also execute from
-directly compiled TS artifacts. C output/native self-hosting is postponed
-until after TS migration and T00 retirement. Verification defaults to TS artifacts with explicit `--reference` for T00.
-Legacy default regression consumers still need migration; see the
+directly compiled TS artifacts. C output/native self-hosting are later work.
+Verification runs generated TS artifacts. See the
 [transition plan](../compiler/transition-plan.md).
 
 Ongoing language work follows the
 [compiler development guidelines](../.agents/rules/compiler-development.md): implement in
 Lite, verify multiple focused and combined-feature cases, and accept generated
-igniter support before using a new feature in compiler source. The generated TS
-igniter is distinct from this historical handwritten T00 implementation.
+compiler support before using a new feature in compiler source. The generated
+compiler is the only maintained language implementation.
 
 The staged compiler-bootstrap path and agent gates are recorded in the
 [bootstrap and self-hosting plan](../docs/bootstrap-plan.md); it does not change
-this igniter's supported language. The refreshed T11/T12/T13 fixed point covers
-the bootstrap subset; full existing T00 feature parity and the native C ladder
-remain pending. The [text-cache benchmark](../benchmark/reports/2026-11-02-text-cache.md)
+this compiler's supported language. T12 reaches the verified fixed point for
+the compiler-source subset; remaining recorded language contracts and the
+native C ladder remain future work. The [text-cache benchmark](../benchmark/reports/2026-11-02-text-cache.md)
 records 668 ms median self-compilation after eliminating repeated whole-source
 code-point copies. The current test suite has 237 interpreter groups, 32
 compiler-host groups and 4 policy/tooling groups, with 9 separate editor grammar groups.
@@ -135,8 +134,7 @@ for example `node compiler/entry.ts /tmp/args.ts "a b" "" --check`.
 Check-only never executes program effects or reads program stdin. Unsupported
 source fails explicitly, without T00 fallback; the
 [current inventory](../compiler/reports/current-t00-t11-inventory.md) lists gaps.
-The old `node igniter/cli.ts file.lts` entry remains an explicitly requested T00
-reference, rather than the public execution workflow.
+The former `node igniter/cli.ts` T00 entry has been removed.
 
 Install and typecheck the igniter once:
 
@@ -150,14 +148,12 @@ Run tests through the CLI:
 ```sh
 ./lite test --fast       # generated TS regressions; full-source sweeps omitted
 ./lite test --full       # generated TS regressions and full-source phase sweeps
-./lite test --reference  # explicitly run retained T00 interpreter/reference checks
 ```
 
 Default tests compile Lite with the generated compiler, strictly check TS artifacts,
 and execute them in isolated processes. Phase drivers reuse their checked artifacts
-across inputs. T00 and its adapters can be absent; the source-archive CI gate runs
-the full default suite in that state. Native execution stays deferred. Reference
-tests run only with `--reference` and never provide fallback results. Known
+across inputs. The generated compiler is required for all active paths. Native
+execution stays deferred. Known
 unsupported semantic contracts continue to fail visibly in `lite verify --all`.
 
 The root [lite launcher](../lite) links to the executable TypeScript entry
@@ -181,10 +177,7 @@ P1 adds internal bundle tooling for the [bootstrap plan](../docs/bootstrap-plan.
 source imports, open-once dependency tracking and source-import cycle
 termination, plus a flattened-line map back to each original path and 1-based
 line. The older `importFlatAll` directive remains for test-only declaration
-drivers and still reports cycles. [`bootstrap.ts`](https://github.com/redacted/Lite/blob/d3bd6f7bcf06bbea6669c8d74bebe5e73f383114/igniter/bootstrap.ts)
-loads and compiles a target manifest once, runs it with fixed args/stdin, maps
-compiler diagnostics from flattened rows back to original files, and provides
-sha-256, nondeterminism and benchmark helpers. [`artifacts.ts`](artifacts.ts)
+drivers and still reports cycles. [`artifacts.ts`](artifacts.ts)
 strict-typechecks and runs emitted TS, and compiles/runs emitted C with
 `-std=c11 -Wall -Wextra -Werror` and the math library (`-lm`), capturing raw streams and status.
 TS runs capture stdout and stderr through fresh temporary regular files so
@@ -201,8 +194,7 @@ The manifests are [compiler/manifests/ts.json](../compiler/manifests/ts.json) an
 top-level imports list the L0 libraries, target literal encoders, shared
 front-end, target emitter and target driver in dependency order. Build
 provenance records the resolved dependency paths. `litec` compiles the expanded
-manifest bundle through
-[`bundle-cli.ts`](https://github.com/redacted/Lite/blob/d3bd6f7bcf06bbea6669c8d74bebe5e73f383114/igniter/bundle-cli.ts); compiler source and `lib/core` contain no
+manifest bundle through [`compiler/cli.ts`](../compiler/cli.ts); compiler source and `lib/core` contain no
 `importFlatAll` directives. This does not add module namespaces or package
 resolution. The `compiler/ts-emitter.lts` and
 `compiler/c-emitter.lts` compatibility bundles are generated from the manifests.

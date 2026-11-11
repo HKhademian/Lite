@@ -12,7 +12,6 @@
   ],
   "guideline": "Checks Int64=Int and Float64=Double=Float across declarations, mutation, zero values and user aliases without introducing storage conversions.",
   "targets": [
-    "igniter",
     "ts",
     "c"
   ],

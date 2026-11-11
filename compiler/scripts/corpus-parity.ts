@@ -1,18 +1,13 @@
 #!/usr/bin/env node
 /** Validates generated TS compiler output and execution against recorded corpus contracts. */
-import { join } from 'node:path';
 import { validateCorpus } from './corpus-contracts.ts';
-import { fail, mainFile, referenceCommand, repository, selectedArtifact, toolIdentities, toolOptions } from './tooling.ts';
-/** Validates the current TS corpus or invokes the explicitly requested stage-0 comparison. */
+import { fail, mainFile, selectedArtifact, toolIdentities, toolOptions } from './tooling.ts';
+/** Validates generated TS compiler output against recorded contracts. */
 export function corpusParity(args: readonly string[]): void {
   const options = toolOptions(args, ['artifact', 'target']);
   const target = options.values.get('target') ?? 'ts';
   if (target !== 'ts' && target !== 'c') throw new Error('--target must be ts or c');
-  if (options.reference) {
-    if (!options.values.has('artifact')) throw new Error('historical reference comparison requires --artifact');
-    referenceCommand(join(repository, 'compiler/scripts/corpus-parity-reference.ts'), args); return;
-  }
-  if (target !== 'ts') throw new Error('C corpus execution is deferred; --reference retains the historical comparison only');
+  if (target !== 'ts') throw new Error('C corpus execution is deferred');
   const selected = selectedArtifact(options.values.get('artifact'));
   const result = validateCorpus(selected.bytes.toString());
   process.stdout.write(JSON.stringify({ phase: 'recorded-contracts', target, artifactSha256: selected.sha256,

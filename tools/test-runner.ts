@@ -1,8 +1,8 @@
 #!/usr/bin/env node
-/** Standalone generated/reference test command; `lite test` routes here. */
+/** Standalone generated test command; `lite test` routes here. */
 import { spawnSync } from 'node:child_process';
 import { fileURLToPath } from 'node:url';
-import { generatedTestFiles, referenceTestFiles } from '../igniter/test-suites.ts';
+import { generatedTestFiles } from '../igniter/test-suites.ts';
 import { forward } from './forward.ts';
 import { showToolVersion } from './tool-version.ts';
 
@@ -13,12 +13,10 @@ if (!showToolVersion('tester', 'test')) {
   }
 
   let mode: '--fast' | '--full' | undefined;
-  let reference = false;
   for (const arg of args) {
     if ((arg === '--fast' || arg === '--full') && mode === undefined) mode = arg;
-    else if (arg === '--reference' && !reference) reference = true;
     else {
-      process.stderr.write('Usage: ./lite test [--fast|--full] [--reference]\n');
+      process.stderr.write('Usage: ./lite test [--fast|--full]\n');
       process.exit(2);
     }
   }
@@ -29,8 +27,7 @@ if (!showToolVersion('tester', 'test')) {
     ...(mode === '--fast' ? { LITE_SKIP_HEAVY: '1' } : {}),
   };
   delete testEnv['NODE_TEST_CONTEXT'];
-  const files = reference ? referenceTestFiles : generatedTestFiles;
-  const result = spawnSync(process.execPath, ['--test', ...files], {
+  const result = spawnSync(process.execPath, ['--test', ...generatedTestFiles], {
     cwd: fileURLToPath(new URL('../igniter/', import.meta.url)),
     stdio: 'inherit',
     env: testEnv,

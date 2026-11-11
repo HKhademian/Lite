@@ -76,5 +76,5 @@ jobs:
             editors/vscode/package-lock.json
       - name: Install locked development tools
         run: install
-      - name: Complete generated path without T00 or Git metadata
-        run: no-t00
+      - name: Complete self-host path without Git metadata
+        run: self-host

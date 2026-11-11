@@ -23,7 +23,7 @@ todos:
     status: completed
   - id: retire-t00
     content: Remove active handwritten T00 after source imports and no-T00 gates; full feature parity is not required
-    status: in_progress
+    status: completed
   - id: native-self-host
     content: Post migration restore C output and complete native self-hosting and cross-host ladder
     status: pending
@@ -51,6 +51,13 @@ T00 retirement**; neither blocks the default switch or retirement. Advanced
 correctness and edge coverage follow ordinary syntax migration. Retain T00 only
 as an explicit reference until the TS replacements are complete. This supersedes
 earlier native-first ordering in historical progress entries.
+
+Owner direction, 2026-11-11: complete the self-hosting path through retirement
+of the handwritten implementation. The minimum TS kernel, top-level source
+imports, and T00 retirement are now implemented. Retain recorded contracts and
+historical reports, remove live interpreter/reference routes and audit tools,
+and proceed to the typed compiler-stage architecture. The Lite CLI remains a
+router over dedicated tools.
 
 Owner update, 2026-11-05: `./lite run` returns as a compile-and-execute adapter
 over the generated compiler and Node entry; the retired interpreter launcher
@@ -373,7 +380,7 @@ No package or initialization policy was added.
 three-generation self-host fixed point, 94-case corpus parity, and
 `./lite test --fast` (140 passed, 12 skipped, 0 failed).
 
-### Step 3c — retire-t00
+### Step 3c — retire-t00 (completed 2026-11-11)
 
 **Depends on:** generated-default-workflows, the verified TS kernel and
 completed source-imports.
@@ -381,12 +388,17 @@ completed source-imports.
 Preserve generated corpus expectations and the exact T00 source/seed provenance
 in existing Git history. Remove T00 from the active tree and remove explicit
 reference routes. Do not wait for unrelated T11 feature rejections to reach zero.
-**Acceptance:** a clean checkout passes default build, tests, verify, source
-import, three-generation self-host and compiler corpus with no handwritten T00
-implementation or runtime dependency. Historical inventory results remain
-clearly labeled; future cases use recorded contracts rather than T00 output.
-**Verify:** full/no-T00 tests, verification, strict TS/editor checks, clean
-rebuild, corpus, dependency scan and `rg` audit for runtime T00 imports.
+**Acceptance:** the active tree has no handwritten T00 implementation,
+interpreter adapter, reference CLI/test/verifier/benchmark route or T00-dependent
+inventory generator. Default build, tests, verification, imports,
+three-generation self-host and recorded compiler corpus use the generated
+compiler. Historical reports remain labeled; future cases use reviewed
+recorded contracts.
+**Verified:** `./lite test --full` (143 passed, 9 native-only skips, 0 failed);
+`./lite verify --coverage`; `./lite doctor`; strict TypeScript check; migration
+baseline unchanged (60/81 scenarios pass, 21 known gaps); generated build;
+three-generation exact T12 fixed point; 94-case corpus (zero mismatches); and
+source-archive route tests without Git metadata.
 
 ### Step 4 — language-growth
 

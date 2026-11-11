@@ -156,8 +156,8 @@ test('default verification and expectation updates use TS artifacts without T00'
     const failed = invoke('--filter', 'match.subjectless', '--update');
     assert.equal(failed.status, 1); assert.match(failed.stdout, /unsupported feature "match"/);
     assert.deepEqual(readFileSync(unsupported), before, 'unsupported source must not rewrite expectations');
-    const reference = invoke('--reference', '--filter', 'int.arithmetic');
-    assert.notEqual(reference.status, 0); assert.match(reference.stderr, /ERR_MODULE_NOT_FOUND/);
+    const legacy = invoke('--reference', '--filter', 'int.arithmetic');
+    assert.equal(legacy.status, 2); assert.match(legacy.stderr, /unknown argument --reference/);
   } finally { rmSync(directory, { recursive: true, force: true }); }
 });
 
@@ -1645,11 +1645,11 @@ test('default test startup and generated baseline run in a source archive withou
     assert.match(result.stdout, /bundle compilers reproduce every compiler case/);
     assert.match(result.stdout, /compiler verification cases are well-formed/);
     assert.match(result.stdout, /# fail 0/); assert.doesNotMatch(result.stdout, /ERR_MODULE_NOT_FOUND|T00 reference/);
-    for (const args of [['--fast', '--full'], ['--reference', '--reference'], ['--unknown']]) {
+    for (const args of [['--fast', '--full'], ['--reference'], ['--unknown']]) {
       const rejected = spawnSync(join(directory, 'lite'), ['test', ...args], { encoding: 'utf8', env, timeout: 5000 });
       assert.equal(rejected.status, 2); assert.match(rejected.stderr, /Usage:/); assert.equal(rejected.stdout, '');
     }
-    const reference = spawnSync(join(directory, 'lite'), ['test', '--reference'], { encoding: 'utf8', env, timeout: 10000 });
-    assert.notEqual(reference.status, 0); assert.match(reference.stdout + reference.stderr, /ERR_MODULE_NOT_FOUND/);
+    const legacy = spawnSync(join(directory, 'lite'), ['test', '--reference'], { encoding: 'utf8', env, timeout: 10000 });
+    assert.equal(legacy.status, 2); assert.match(legacy.stderr, /Usage:/); assert.equal(legacy.stdout, '');
   } finally { rmSync(directory, { recursive: true, force: true }); }
 });

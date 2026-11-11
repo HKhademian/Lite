@@ -28,13 +28,13 @@ with source/builder identities and fixed-point evidence in the
 public compilation or checking.
 
 The generated compiler still accepts a subset of the existing language. The
-[current inventory](compiler/reports/current-t00-t11-inventory.md) records
-112/173 matching source cases, with 61 remaining rejections. T00 stays available
-as an explicit reference while the remaining TS ports land. Default tests and
-routine build, self-build, corpus and benchmark commands already use generated TS.
-Verification now defaults to TS artifacts and reports its unsupported cases.
-The [transition plan](compiler/transition-plan.md) tracks retirement separately
-from the later C work. Language implementation belongs in Lite; small host,
+archived [T00/T12 inventory](compiler/reports/current-t00-t11-inventory.md)
+records 112/173 matching source cases, with 61 remaining rejections. The
+handwritten implementation and active reference routes have been retired.
+Tests, build, self-build, corpus, verification and benchmark commands use
+generated TS. The [transition plan](compiler/transition-plan.md) tracks the next
+compiler-stage and language-growth work separately from later C work. Language
+implementation belongs in Lite; small host,
 platform and test adapters may use TypeScript under the
 [source-file policy](docs/tooling-source-policy.md). The wider language remains
 a design draft.

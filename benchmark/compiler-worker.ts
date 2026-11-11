@@ -1,10 +1,9 @@
 /** One fresh-process compiler measurement. Metrics use fd 3, separate from program streams. */
-import { readFileSync, writeSync } from 'node:fs';
+import { writeSync } from 'node:fs';
 import { pathToFileURL } from 'node:url';
 
 const [engine, artifact, sourceName] = process.argv.slice(2);
 if (artifact === undefined || sourceName === undefined) throw new Error('missing compiler artifact or source name');
-const source = engine === 'T11' ? undefined : readFileSync(0, 'utf8');
 const started = performance.now();
 const cpuStarted = process.cpuUsage();
 let loaded = started;
@@ -33,16 +32,6 @@ if (engine === 'T11') {
   const exit = process.exit;
   process.exit = code => { writeMetrics(); return exit(code); };
   result = { status: 0, stdout: Buffer.from(main()), stderr: Buffer.alloc(0) };
-} else if (engine === 'T00+S') {
-  const { loadCompiler } = await import('../igniter/bootstrap.ts');
-  const compiler = loadCompiler(new URL('../compiler/manifests/ts.json', import.meta.url).pathname);
-  loaded = performance.now();
-  result = compiler.compile({ text: source ?? '', name: sourceName });
-} else if (engine === 'T00-frontend') {
-  const { compile } = await import('../igniter/lite.ts');
-  loaded = performance.now();
-  compile(source ?? '');
-  result = { status: 0, stdout: Buffer.alloc(0), stderr: Buffer.alloc(0) };
 } else {
   throw new Error(`unknown measurement engine: ${engine}`);
 }

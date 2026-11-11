@@ -65,12 +65,9 @@ compiler fixtures.
 - `description` — optional artifact summary.
 - `append` — optional text appended to the source for observation. Used by
   samples whose teaching bodies print nothing.
-- `targets` — historical target coverage metadata (`igniter`, `ts`, `c`).
-  During TS migration, ordinary verification always uses the generated TS
-  compiler, including manifests that previously defaulted to T00. The explicit
-  `--reference` lane uses T00 only. C execution is deferred; old metadata is
-  preserved without counting a C pass. Unsupported TS forms fail visibly with
-  their diagnostics, without fallback or an implicit skip. TS artifacts are
+- `targets` — historical backend coverage metadata (`ts`, `c`). The active
+  verifier runs generated TS; C execution is deferred. Unsupported TS forms
+  fail visibly with their diagnostics, without fallback or an implicit skip. TS artifacts are
   strictly checked once per manifest, then each input/argument scenario runs in
   a fresh process. Cache identities include the selected lane, generated seed,
   assembled TS compiler, host/artifact adapters and pinned checking tools.
@@ -101,16 +98,15 @@ changed-case, cache, shard and explicit-reference modes remain available below.
 ```sh
 ./lite verify                    # only cases affected by git changes
 ./lite verify --all              # all TS artifact cases; cached; remaining ports fail
-./lite verify --all --reference  # explicit historical T00 comparison
 ./lite verify --all --update     # regenerate expected streams and hashes
 ./lite verify --coverage         # coverage report without executing
 ./lite verify --all --filter int.arithmetic
 ./lite verify --all --shard 1/4  # one CI shard
 ```
 
-`--update` writes expected streams from the generated TS artifact by default.
-`--reference --update` explicitly uses T00. It rewrites external stdout/stderr
-files and refreshes source/stream hashes; review the diff before committing.
+`--update` writes expected streams from the generated TS artifact. It rewrites
+external stdout/stderr files and refreshes source/stream hashes; review the diff
+before committing.
 Only manifests whose selected scenarios all succeed are rewritten. Unsupported
 source never obtains expectations from an implicit fallback. Use `--all` to
 refresh the complete selection.
@@ -119,9 +115,9 @@ refresh the complete selection.
 also selects consumers tagged with that feature. Use `features/int-arithmetic.json`
 for only that canonical manifest. Shards partition scenarios before execution.
 
-The default TS audit currently executes 81 scenarios: 60 pass and 21 fail
-(13 feature contracts and eight examples still need TS ports). All 81 pass the
-explicit T00 reference lane. The [live gaps](../compiler/gaps.md) and
+The former T00 comparison recorded 81 scenarios: 60 passed and 21 failed
+(13 feature contracts and eight examples still needed TS ports). That audit is
+archived; active verification uses recorded contracts. The [live gaps](../compiler/gaps.md) and
 [current inventory](../compiler/reports/current-t00-t11-inventory.md) track the
 remaining work. Coverage reports only manifest registration, not compiler support.
 
@@ -131,7 +127,7 @@ The verifier is designed for a growing corpus, not a fixed case count:
 
 - TS compilation and strict checking happen once per selected manifest, with
   isolated fresh executions for each input. Fully cached manifests need neither
-  compilation nor checking. T00 executes only with `--reference`.
+  compilation nor checking.
 - Passing results are cached in `.cache/verifications.json` (gitignored). The
   cache key includes the target, runner source hash, case source hash, expected
   streams, arguments and exit code. A runner or case change cannot reuse a stale pass.
@@ -142,25 +138,22 @@ The verifier is designed for a growing corpus, not a fixed case count:
   explicit alias for the default.
 - `--shard i/n` deterministically partitions scenarios for CI workers.
 - `--no-cache` forces execution; `--quiet` suppresses per-case PASS lines.
-- Native compiler parity is deferred until after TS migration. Its retained
-  historical checks use `.cache/native/`; neither default test mode executes
-  native C during this migration. `./lite test --full` includes the generated
-  full-source phase sweeps; `--fast` omits them. T00 regression checks require
-  `./lite test --reference`.
+- Native compiler parity is deferred. Neither default test mode executes native
+  C. `./lite test --full` includes the generated full-source phase sweeps;
+  `--fast` omits them.
 
 Target budgets:
 
 | Command | Scope | Target |
 |---|---|---|
 | `lite verify` | affected scenarios | < 5s |
-| `lite verify --all` | all interpreter/artifact cases, warm cache | < 1s |
+| `lite verify --all` | all generated artifact cases, warm cache | < 1s |
 | `lite test --fast` | generated TS regressions without full-source sweeps | ~15s |
 | `lite test` / `lite test --full` | generated TS regressions and full-source phase sweeps | ~15s warm |
 | `lite verify --all --shard i/n` | one CI shard of the full matrix | bounded |
 
 At 10k+ cases, the default local lanes must not compile every native case.
-Explicit T00 reference feature/artifact verification remains in-process; generated TS uses isolated
-child processes with strict artifact checks. Full native coverage is
+Generated TS uses isolated child processes with strict artifact checks. Full native coverage is
 sharded or curated, and caches make unchanged work nearly free.
 
 ## Coverage status
@@ -169,9 +162,7 @@ sharded or curated, and caches make unchanged work nearly free.
 - Examples: 19 of 19 manifest-covered.
 - Samples: 20 of 20 manifest-covered.
 - Showcases: reserved, no manifests yet.
-- Scenarios: 78 (39 feature + 19 example + 20 sample); 100 target executions.
-  Eight original feature cases use all three targets; the new temporary I/O
-  feature supplies two scenarios on T00 and generated TS.
+- Scenarios: 78 (39 feature + 19 example + 20 sample); 78 generated TS executions.
 
 Coverage is now a blocking gate: `./lite verify --coverage` exits nonzero if any
 feature, example or sample lacks a manifest. Showcases are allowed to remain

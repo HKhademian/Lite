@@ -39,7 +39,7 @@ implementation status and gates.
 
 ## Mission
 
-Reach a reliable generated compiler fixed point using only the portion of LiteLang needed to express the compiler. Do not make all of the language specification a self-hosting prerequisite. After that gate, evaluate a minimal top-level import feature in Lite, retire the active T00 dependency once the imported-source path is proven, establish an explicit and extendable compiler-stage architecture, and implement the already documented language surface before taking on remaining proposals.
+Reach a reliable generated compiler fixed point using only the portion of LiteLang needed to express the compiler. Do not make all of the language specification a self-hosting prerequisite. The minimum kernel, source imports and T00 retirement are now complete; next establish an explicit and extendable compiler-stage architecture, then implement the already documented language surface before taking on remaining proposals.
 
 ## Done
 
@@ -48,12 +48,13 @@ Reach a reliable generated compiler fixed point using only the portion of LiteLa
 - Recorded the TS0/LT0 minimal bootstrap path and LT1/LT2 reproducible fixed-point definition in [`docs/self-hosting-kernel-strategy-2026-11-10.md`](../../docs/self-hosting-kernel-strategy-2026-11-10.md).
 - Refreshed the T00/selected-compiler inventory on 2026-11-11 against T12: 112/173 measured scenarios match, all 61 remaining scenarios are selected-compiler rejections, none are runtime/typecheck mismatches, and all 217 tracked Lite source files are accounted for. This is parity evidence, not a self-hosting percentage or a gate requiring every row to pass.
 - Implemented and focused-tested the initial root-symbol contract: root duplicate values reject, nested shadowing remains accepted, deferred function bodies resolve later inferred scalar-literal root values, and eager reads remain source ordered. The updated source rebuilds through three strictly checked generations and the final generation passes the refreshed 94-case corpus (69 programs and 25 rejections, zero mismatches).
-- Promoted generated T12 as the selected TS compiler. Its exact self-hosting fixed point and corpus evidence are recorded in [`compiler/reports/2026-11-11-self-hosting-kernel.json`](../../compiler/reports/2026-11-11-self-hosting-kernel.json). T00 remains available as an explicit historical reference; native C output and native self-hosting remain deferred.
+- Promoted generated T12 as the selected TS compiler. Its exact self-hosting fixed point and corpus evidence are recorded in [`compiler/reports/2026-11-11-self-hosting-kernel.json`](../../compiler/reports/2026-11-11-self-hosting-kernel.json). The active handwritten T00 implementation, CLI, verifier lane, test lane, benchmark lane and inventory generator are retired; native C output and native self-hosting remain deferred.
 - The latest T00/selected-compiler inventory is dated 2026-11-11: 112/173 source scenarios match; 61 are selected-compiler rejections. Treat this as parity evidence, not a completion percentage or a kernel gate.
 - Confirmed compiler source is split into `compiler/src/*.lts` and assembled through ordered manifests. This glue is acceptable for the initial self-hosting kernel.
 - Captured owner direction: definitions/symbols are distinct from runtime values; repeated names in one flat scope should be rejected while nested shadowing is allowed; deferred function bodies may reference later compile-time-known top-level symbols, while eager top-level initializers execute in source order and may not read later values.
 - Captured owner direction: source imports need not be part of the initial bootstrap kernel. After that gate, prefer a minimal top-level import in Lite if it is inexpensive; dependencies still need explicit metadata even when a glue step assembles files.
 - Implemented the minimal source-import slice after the kernel gate: one top-level relative `.lts` import, deterministic ordered DFS expansion, visit-on-open cycle/repeat termination, explicit dependency metadata, and imported-file source locations. Compiler manifests now each name one Lite source root. TS and C source hashes and the T12 fixed point remain unchanged. The fast suite passes with import coverage.
+- Completed T00 retirement after the import gate: removed the interpreter and adapters, removed all live reference command lanes and the T00-dependent audit generators, retained immutable historical reports/contracts, and kept generated expectations independent of a live interpreter. The clean-source build and test gates no longer depend on T00.
 
 ## Plan links
 
@@ -158,7 +159,7 @@ The fixed-point and corpus checks prove the updated compiler source rebuilds its
 
 ---
 
-### Step 3 — retire-reference
+### Step 3 — retire-reference (completed 2026-11-11)
 
 **Depends on:** source-imports  
 **Files:** update [`compiler/transition-plan.md`](../../compiler/transition-plan.md), T00 consumers and the default compiler/test routes that still import T00; retain historical audit fixtures only where documented.
@@ -167,15 +168,19 @@ The fixed-point and corpus checks prove the updated compiler source rebuilds its
 
 - Remove T00 as an active interpreter/compiler dependency only after Step 1's kernel gate and the imported-source rebuild gate pass.
 - Keep independent expected streams and preserved seed provenance; do not use live T00 behavior as the expected result for future cases.
-- Resolve whether “remove bootstrap” means removing active T00 use only or also changing the maintained TypeScript igniter/seed policy. The current project docs select a maintained/reproducible TypeScript igniter; changing that policy is a separate owner decision.
+- Retire T00 as the handwritten language implementation while retaining the TypeScript host adapters and reproducible generated T12 seed.
 
-**Acceptance:**
+**Acceptance: PASSED.**
 
-- [ ] Default compile/check/run/test/verify/self-build paths pass in a clean checkout without T00.
-- [ ] No required runtime/tooling path silently falls back to T00.
-- [ ] A preserved, reproducible build route and its exact seed/source/builder identities are documented.
+- [x] Default compile/check/run/test/verify/self-build paths pass in a clean checkout without T00.
+- [x] No required runtime/tooling path silently falls back to T00; the retired `--reference` options reject as unknown.
+- [x] The generated T12 build route and exact seed/source/builder identities remain documented and reproducible.
 
-**Verify:** `./lite test --full`; `./lite verify --coverage`; `./lite verify --all`; `node compiler/scripts/self-host.ts --out /tmp/lite-self-host-retired`; no-T00 archive/corpus checks and strict host/seed checks.
+**Verified:** `./lite test --full` (143 passed, 9 native-only skips, 0 failed);
+`./lite verify --coverage`; `./lite doctor`; `tsc -p igniter/tsconfig.json
+--noEmit`; migration baseline (60/81 pass with the same 21 known language gaps);
+build; three-generation exact T12 fixed point; 94-case corpus (zero mismatches);
+and focused source-archive tests with Git metadata absent.
 
 ---
 
@@ -233,8 +238,8 @@ The fixed-point and corpus checks prove the updated compiler source rebuilds its
 
 ## Overall acceptance criteria
 
-- [ ] A small LiteLang subset compiles and rebuilds the compiler to a reproducible fixed point without requiring the complete language spec.
-- [ ] Active T00 dependencies are retired only after clean-checkout and corpus evidence for the agreed kernel.
+- [x] A small LiteLang subset compiles and rebuilds the compiler to a reproducible fixed point without requiring the complete language spec.
+- [x] Active T00 dependencies are retired after clean-checkout and corpus evidence for the agreed kernel.
 - [ ] Source imports and a typed, staged compiler architecture are introduced after the initial kernel, without expanding its bootstrap requirements.
 - [ ] Additional documented features are implemented one at a time with cases, samples/docs and atomic commits; remaining proposals follow later.
 
@@ -249,7 +254,7 @@ The fixed-point and corpus checks prove the updated compiler source rebuilds its
 
 | Item | Value |
 |------|-------|
-| Current compiler | Generated T12 TypeScript compiler is the default; T00 remains an explicit historical reference. |
+| Current compiler | Generated T12 TypeScript compiler is the only active language implementation; T00 source remains recoverable in Git history. |
 | Last measured migration inventory | 112/173 source scenarios match; 61 T12 rejections, recorded 2026-11-11. These are post-kernel parity work unless tied to a compiler-source requirement. |
 | Source assembly | Compiler sources use top-level relative `.lts` imports with ordered DFS expansion, cycle/repeat termination, source maps, and dependency metadata. |
 | Bootstrap subset | See `docs/bootstrap-plan.md`; records no imports, flat streaming, and exclusion of recursive AST/records/enums/unions. |

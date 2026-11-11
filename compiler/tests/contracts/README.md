@@ -22,30 +22,21 @@ prefer short explicit expectations in their bodies or canonical manifests.
 Review a deliberate contract change against the owning specification; do not
 refresh expectations merely to match the compiler under test.
 
-`igniter/test-fixtures.ts` separately loads the existing 93 compiler fixtures
-and their hashed streams. Default artifact checks use those manifest contracts;
-T00 fixture execution is retained in `igniter/reference.test.ts`. The reference
-suite also replays this archive, preserving the old differential checks while
-generated tests use independent expectations. Raw fixture bytes still reach
-generated artifacts unchanged; the historical T00 adapter keeps its existing
-UTF-8 replacement when testing the admitted compiler fixtures.
+`igniter/test-fixtures.ts` separately loads the current compiler fixtures and
+their hashed streams. Artifact checks use those manifest contracts. Raw fixture
+bytes reach generated artifacts unchanged.
 
-The default launcher now uses generated compiler, phase, library and artifact
-execution. The historical suite is selected only with `./lite test --reference`.
-Its manifest and archive replays preserve differential evidence without providing
-fallback results to default tests. Default fast/full suites are also checked in
-a source archive without T00 or its interpreter adapters.
+The launcher uses generated compiler, phase, library and artifact execution.
+Recorded contracts preserve expected process results without running a second
+language implementation. The fast/full suite and compiler commands are checked
+in a source archive without Git metadata.
 
 ```sh
 node --test compiler/tests/contracts.test.ts
-./lite test --reference
 ```
 
-`../test-migration.json` maps every one of the 240 original igniter tests to its
-maintained suite by title, with original assertion counts and dependency names.
-All 81 compiler/phase/artifact tests stay in `igniter/test.ts`; 159 interpreter
-and historical audit tests stay in `igniter/reference.test.ts`. Language-level
-assertions in the reference suite still need generated equivalents, including
-the existing failures assigned by the retirement plans. Moving a reference test
-does not mark its semantics supported. The migration ledger's integrity test
-fails if an original test loses its destination.
+`../test-migration.json` accounts for all 240 original igniter tests by title.
+The 81 compiler/phase/artifact tests remain active in `igniter/test.ts`; 159
+interpreter-specific tests are marked retired with T00. Their source remains
+recoverable from Git history. The ledger integrity test checks active test
+destinations and the retired count.

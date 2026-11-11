@@ -1,5 +1,5 @@
 #!/usr/bin/env node
-/** Generated-only compiler/process/check/runtime measurements; T00 comparison requires --reference. */
+/** Generated compiler/process/check/runtime measurements. */
 import { spawnSync } from 'node:child_process';
 import { readFileSync, mkdirSync, mkdtempSync, rmSync, writeFileSync } from 'node:fs';
 import { cpus, platform, tmpdir } from 'node:os';
@@ -8,7 +8,7 @@ import { loadBundle } from '../igniter/loader.ts';
 import { prepareTsArtifacts } from '../igniter/artifacts.ts';
 import { compilerFixtures } from '../igniter/test-fixtures.ts';
 import { compilerContractMatches, corpusContracts, validateCorpus } from '../compiler/scripts/corpus-contracts.ts';
-import { fail, hashBytes, mainFile, positiveOption, referenceCommand,
+import { fail, hashBytes, mainFile, positiveOption,
   repository, revision, selectedArtifact, strictArtifact, toolIdentities, toolOptions, writeJson } from '../compiler/scripts/tooling.ts';
 
 type Metrics = { loadMs: number; compileMs: number; cpuMs: number; maxRssKiB: number };
@@ -39,7 +39,6 @@ function invoke(artifact: string, source: string, timeout: number): Timed {
 /** Validates the candidate compiler and records independent compiler/check/program process phases. */
 export function compilerPerformance(args: readonly string[]): void {
   const options = toolOptions(args, ['artifact', 'out', 'samples', 'warmups', 'self-timeout-ms']);
-  if (options.reference) { referenceCommand(join(repository, 'benchmark/compiler-performance-reference.ts'), args); return; }
   const samples = positiveOption(options.values, 'samples', 7), warmups = positiveOption(options.values, 'warmups', 1, 0);
   const timeout = positiveOption(options.values, 'self-timeout-ms', 60000);
   const selected = selectedArtifact(options.values.get('artifact'));

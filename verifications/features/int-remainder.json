@@ -10,7 +10,6 @@
   ],
   "guideline": "Checks truncating Int remainder, signed dividends/divisors, exact division, and remainder-by-zero failure.",
   "targets": [
-    "igniter",
     "ts",
     "c"
   ],

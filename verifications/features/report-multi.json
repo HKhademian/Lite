@@ -10,7 +10,6 @@
   ],
   "guideline": "Checks space-separated Int/String report values through the reference interpreter and both restricted compiler targets.",
   "targets": [
-    "igniter",
     "ts",
     "c"
   ],

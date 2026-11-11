@@ -10,7 +10,6 @@
   ],
   "guideline": "Checks adjacent comparisons, negated/mixed operators and short-circuited later arithmetic faults on all three targets.",
   "targets": [
-    "igniter",
     "ts",
     "c"
   ],

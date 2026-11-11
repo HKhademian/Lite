@@ -1,19 +1,15 @@
 #!/usr/bin/env node
-/** Generated-only three-generation TS fixed point. Historical T00 reconstruction requires --reference. */
+/** Three-generation generated TS fixed point. */
 import { mkdirSync, mkdtempSync, readFileSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join, resolve } from 'node:path';
 import { loadBundle } from '../../igniter/loader.ts';
 import { prepareTsArtifacts } from '../../igniter/artifacts.ts';
-import { fail, hashBytes, mainFile, referenceCommand, repository, revision, selectedArtifact, strictArtifact, toolIdentities, toolOptions, writeJson } from './tooling.ts';
+import { fail, hashBytes, mainFile, repository, revision, selectedArtifact, strictArtifact, toolIdentities, toolOptions, writeJson } from './tooling.ts';
 
-/** Rebuilds current S through three checked TS generations or dispatches the explicit historical audit. */
+/** Rebuilds current S through three checked TS generations. */
 export function selfHost(args: readonly string[]): void {
   const options = toolOptions(args, ['out', 'artifact']);
-  if (options.reference) {
-    if (options.values.has('artifact')) throw new Error('--artifact is not part of the historical T00 ladder');
-    referenceCommand(join(repository, 'compiler/scripts/self-host-reference.ts'), args); return;
-  }
   const selected = selectedArtifact(options.values.get('artifact'));
   const source = loadBundle(join(repository, 'compiler/manifests/ts.json')).text;
   const out = options.values.has('out') ? resolve(options.values.get('out')!) : mkdtempSync(join(tmpdir(), 'lite-generated-ladder-'));

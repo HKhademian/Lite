@@ -472,7 +472,7 @@ test('lite help and docs expose the command matrix and documentation roots', () 
   const noArgs = spawnSync(join(root, 'lite'), [], { env, encoding: 'utf8', timeout: 5000 });
   assert.equal(noArgs.status, 2); assert.equal(noArgs.stdout, ''); assert.match(noArgs.stderr, /Usage:/);
 });
-test('lite verify defaults to TS, reports migration gaps and keeps T00 explicitly selectable', () => {
+test('lite verify uses generated TS, reports migration gaps and rejects the retired reference flag', () => {
   const root = new URL('../', import.meta.url).pathname;
   const directory = mkdtempSync(join(tmpdir(), 'lite-verify-test-'));
   const env = { ...process.env, PATH: dirname(process.execPath) + delimiter + (process.env['PATH'] ?? ''),

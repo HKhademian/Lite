@@ -12,7 +12,6 @@
   ],
   "guideline": "Checks exactly representable integer literals in Float declarations and assignments, grouped literals and signed Int64 boundaries without general Int-to-Float storage widening.",
   "targets": [
-    "igniter",
     "ts",
     "c"
   ],

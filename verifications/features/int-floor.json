@@ -10,7 +10,6 @@
   ],
   "guideline": "Checks floor division and floor modulo across all sign combinations.",
   "targets": [
-    "igniter",
     "ts",
     "c"
   ],

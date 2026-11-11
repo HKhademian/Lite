@@ -10,7 +10,6 @@
   ],
   "guideline": "Checks integer precedence, valid folding, and unexecuted arithmetic faults in dead branches and short-circuit operands.",
   "targets": [
-    "igniter",
     "ts",
     "c"
   ],

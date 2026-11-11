@@ -36,15 +36,10 @@ startup, compiler loading and stream capture are included in process wall time.
 Git revision may be null in source archives. No T00 ratio or speedup is inferred
 from this generated-only baseline.
 
-## Historical reference routes
+## Archived historical reports
 
-```sh
-node benchmark/compiler-performance.ts --reference --out /tmp/lite-reference-performance
-```
-
-This explicit route preserves the old T00+S, T11 and T00-frontend comparison in
-`compiler-performance-reference.ts`. It requires T00; it cannot be entered as a
-fallback. Prior results retain their original source/artifact identities:
+The handwritten T00 comparison runner has been retired. Prior results retain
+their original source/artifact identities:
 
 - [Original 2026-11-02 availability/timing audit](reports/2026-11-02-compiler-performance.md)
   and [raw samples](reports/2026-11-02-compiler-performance.json).

@@ -55,13 +55,12 @@ if (import.meta.main) {
         break;
       }
       case 'bench': lite('bench', '.cache/case-bench-ci.json', 'tooling.docs'); break;
-      case 'no-t00': {
-        const work = mkdtempSync(join(tmpdir(), 'lite-ci-no-t00-'));
+      case 'self-host': {
+        const work = mkdtempSync(join(tmpdir(), 'lite-ci-self-host-'));
         try {
           const tar = join(work, 'source.tar');
           writeFileSync(tar, run('git', ['archive', '--format=tar', 'HEAD']));
           run('tar', ['-xf', tar, '-C', work], work); rmSync(tar);
-          for (const name of ['lite.ts', 'bootstrap.ts', 'cli.ts', 'bundle-cli.ts']) rmSync(join(work, 'igniter', name));
           symlinkSync(join(root, 'igniter/node_modules'), join(work, 'igniter/node_modules'));
           invoke(process.execPath, ['bin/lite', 'test', '--full'], work);
           invoke(process.execPath, ['compiler/scripts/build.ts'], work);

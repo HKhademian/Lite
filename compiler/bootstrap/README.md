@@ -10,7 +10,7 @@ source/builder identities.
 `c-emitter.ts` is the retained Lite C emitter hosted by generated TS. Its exact
 identities are in [c-seed.ts](c-seed.ts). It is not a native C11 compiler or a
 native fixed point. Public C output and native/cross-host gates remain deferred
-until after TS migration and T00 retirement.
+until the TS compiler and module structure mature further.
 
 The TS and C manifests now point to one Lite root each. Their top-level imports
 expand through the host loader; `buildCompiler()` exposes the resolved dependency
@@ -34,10 +34,9 @@ node compiler/scripts/corpus-parity.ts --artifact /tmp/lite-generated-ladder/gen
 node benchmark/compiler-performance.ts --samples 3 --warmups 1
 ```
 
-These commands work in a source archive with `igniter/lite.ts`, `bootstrap.ts`,
-`cli.ts` and `bundle-cli.ts` absent. Git metadata is optional; reports use a null
-revision when the source directory is not the Git checkout root. Input, artifact
-and tool hashes still identify what was measured.
+These commands work in a clean source archive without Git metadata; reports use
+a null revision when the source directory is not the Git checkout root. Input,
+artifact and tool hashes still identify what was measured.
 
 The self-build command compiles unchanged current S three times, starting with
 the selected generated compiler. The 2026-11-11 minimum-kernel candidate is
@@ -61,7 +60,8 @@ admitted scenario then executes in a fresh process after strict TS checking.
 Inputs sharing source/artifact bytes reuse compilation and checking. A stale
 source identity, bad artifact or mismatch fails explicitly; generated output is
 never used to update its own expectations. The current corpus is 69 admitted
-programs and 24 rejections. Ordinary `--target c` requests reject during TS migration.
+programs and 25 rejections. Ordinary `--target c` requests reject because C
+output is deferred.
 
 The benchmark records generated-only process, load and compilation timings,
 strict compiler/program checking, and generated program execution separately.
@@ -70,20 +70,8 @@ successful report. Defaults are seven samples and one excluded warmup; reports
 use a `generated-compiler-performance` prefix so historical T00 measurements are
 preserved. See the [benchmark guide](../../benchmark/README.md).
 
-## Explicit historical audits
-
-```sh
-node compiler/scripts/self-host.ts --reference --out /tmp/lite-historical-ladder
-node compiler/scripts/corpus-parity.ts --reference --artifact compiler/bootstrap/T11.ts
-node benchmark/compiler-performance.ts --reference --out /tmp/lite-t00-comparison
-```
-
-Only `--reference` routes enter the preserved `*-reference.ts` audit commands.
-The historical self-build still invokes `igniter/bundle-cli.ts`: its T11/T12
-builder meanings are unchanged. The corpus audit still compares emitted
-compiler streams against S interpreted by T00; its explicit `--target c` option
-is retained as a historical comparison, not a restored public C/native gate.
-The benchmark audit retains its T00+S, generated T11 and T00-frontend lanes.
-Reference audits fail when T00 is absent; ordinary commands never fall back to
-them. The explicitly named T00 inventory remains reference tooling until the
-retirement wave supplies its archival replacement.
+The handwritten T00 interpreter, its command adapters, differential test lane
+and audit runners have been retired. Earlier compiler and benchmark reports,
+recorded process contracts, seed artifacts and inventory snapshots remain as
+historical evidence. The current generated compiler is tested against those
+recorded contracts; no active command executes T00.

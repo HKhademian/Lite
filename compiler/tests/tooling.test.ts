@@ -120,8 +120,8 @@ test('everyday tooling and benchmark work in a source archive without T00 or Git
     const persisted = JSON.parse(readFileSync(prefix + '.json', 'utf8')) as { validation: { mismatches: unknown[] }; runtime: { samples: number[] } };
     assert.deepEqual(persisted.validation.mismatches, []); assert.equal(persisted.runtime.samples.length, 1);
     for (const command of ['compiler/scripts/self-host.ts', 'compiler/scripts/corpus-parity.ts', 'benchmark/compiler-performance.ts']) {
-      const reference = invoke(directory, command, ['--reference', ...(command.endsWith('corpus-parity.ts') ? ['--artifact', join(directory, 'compiler/bootstrap/T11.ts')] : [])]);
-      assert.notEqual(reference.status, 0); assert.match(reference.stdout + reference.stderr, /MODULE_NOT_FOUND|Cannot find module/);
+      const legacy = invoke(directory, command, ['--reference']);
+      assert.notEqual(legacy.status, 0); assert.match(legacy.stdout + legacy.stderr, /invalid or missing option: --reference/);
     }
   } finally { rmSync(directory, { recursive: true, force: true }); }
 });

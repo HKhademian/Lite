@@ -59,16 +59,19 @@ test('generated contract lookup loads in a copied package without T00 or bootstr
   } finally { rmSync(directory, { recursive: true, force: true }); }
 });
 
-test('the migration ledger retains a destination for every original regression test', () => {
+test('the migration ledger accounts for active and T00-retired regression tests', () => {
   const ledger = JSON.parse(readFileSync(new URL('./test-migration.json', import.meta.url), 'utf8')) as {
     tests: { title: string; destination: string; originalAssertions: number }[];
   };
   assert.equal(ledger.tests.length, 240);
   assert.equal(new Set(ledger.tests.map(item => item.title)).size, ledger.tests.length);
+  let active = 0, retired = 0;
   for (const item of ledger.tests) {
     assert.ok(Number.isInteger(item.originalAssertions) && item.originalAssertions >= 0, item.title);
-    assert.ok(['igniter/test.ts', 'igniter/reference.test.ts'].includes(item.destination));
+    if (item.destination === 'retired-with-t00') { retired += 1; continue; }
+    assert.equal(item.destination, 'igniter/test.ts'); active += 1;
     const content = readFileSync(new URL('../../' + item.destination, import.meta.url), 'utf8');
     assert.ok(content.includes("test('" + item.title.replaceAll("'", "\\'") + "'"), `${item.title}: lost destination`);
   }
+  assert.equal(active, 81); assert.equal(retired, 159);
 });

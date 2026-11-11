@@ -1,6 +1,6 @@
 # Bootstrap and self-hosting plan
 
-Status: **historical bootstrap defaults, with the current minimum TS self-hosting path updated 2026-11-10**.
+Status: **historical bootstrap defaults; current TS kernel, imports, and T00 retirement updated 2026-11-11**.
 
 This page is the operational plan for reaching the first compiler-bootstrap point:
 the Lite-written compiler source **S** is compiled by the stage-0 TypeScript
@@ -21,12 +21,12 @@ investigations are permitted under those guidelines. The restrictions below
 describe the current L and bootstrap phase scope; they do not permanently freeze
 Lite compiler feature development. Native C self-hosting remains pending.
 
-Latest owner direction, 2026-11-02: switch immediately toward generated TS
-workflows while keeping the compiler self-hosted. Remove the interpreter run
-launcher; compile programs and execute their TS artifacts. Check-only uses generated Lite
-and strict artifact checking without program effects. Verification now uses TS artifacts by default, with an explicit T00 reference
-lane. Default test consumers and missing ordinary syntax are still migrating. C output and native
-self-hosting resume **after TS migration and T00 retirement**. The
+Latest owner direction, 2026-11-11: the generated T12 compiler is the only
+active language implementation. The handwritten T00 interpreter, its CLI,
+reference verifier/test/benchmark lanes, and T00-dependent audit generator have
+been removed from the active tree. Compile, check and run use generated TS;
+verification compares against reviewed recorded contracts. C output and native
+self-hosting are later work. The
 [current transition order](../compiler/transition-plan.md#implementation-order)
 supersedes earlier phase ordering and native retirement prerequisites below.
 Advanced correctness/edge audits do not block ordinary syntax migration.
@@ -163,9 +163,8 @@ behavior, wider numeric types and the remaining feature/native gates stay separa
   observations; full parity is not a self-hosting gate.
 
 T12 is selected and rebuilds its source to the same artifact. Its generated
-compiler corpus, fast suite, and refreshed T00/T12 audit pass. The import and
-dependency slice is recorded below; remove handwritten T00 from active commands
-and checks only after that imported-source path passes its gate. See the active
+compiler corpus, full fast suite, and source-import tests pass. T00 retirement
+is complete; the import and dependency slice is recorded below. See the active
 [self-hosting handoff](../.agents/plans/self-hosting-kernel.md).
 
 ### Minimal source import, 2026-11-11
@@ -178,6 +177,12 @@ and maps diagnostics through the flattened line map. Expanded source bytes are
 identical to the previous manifest bundle, so the selected T12 seed and fixed
 point artifact do not change. Module namespaces, exports, package resolution,
 and `.lt` semantics remain outside this slice.
+
+T00 retirement followed in the same transition wave: the handwritten
+interpreter and adapters, explicit reference routes, and T00-dependent audit
+generators were removed. Historical reports and independently recorded process
+contracts remain. The refreshed inventory is an archived measurement and its
+generator is retired because it required live T00 execution.
 
 Dynamic integer division/remainder now match exact positioned faults in both
 generated targets, and MIN%-1 returns zero without undefined C arithmetic.
@@ -768,7 +773,7 @@ created by this change.
       lines and this plan.
 - [ ] Document unsupported constructs, host prerequisites and rebuild limits.
 - [x] Keep the verified generated T11 seed shipped with exact source/builder hashes.
-- [ ] Remove active handwritten T00 after the minimal source-import step and
+- [x] Remove active handwritten T00 after the minimal source-import step and
       no-T00 gates; full T11/T00 feature parity is not a prerequisite.
 
 **Gate:** a clean checkout rebuilds the chain and reproduces the recorded hashes;
@@ -923,9 +928,8 @@ Each gate records:
 
 The current minimum gate is narrower and already measured: the selected TS seed
 builds S, S reaches byte-identical TS artifacts through three generations, the
-final compiler passes its recorded 93-case compiler corpus, and the build path
-does not load T00. T00 retirement additionally requires the source-import and
-no-T00 consumer gates in the active handoff.
+final compiler passes its recorded 94-case compiler corpus, and the build path
+does not load T00. Source imports and no-T00 consumer gates are complete.
 
 The point is reached only when all of these are true:
 

@@ -8,14 +8,13 @@ import { hashBytes } from '../../igniter/measure.ts';
 import { checkTsArtifact } from '../../igniter/artifacts.ts';
 
 export const repository = resolve(fileURLToPath(new URL('../..', import.meta.url)));
-/** Parsed tool options; --reference is an explicit lane, never a fallback. */
-export type ToolOptions = Readonly<{ values: ReadonlyMap<string, string>; reference: boolean }>;
+/** Parsed generated-tool options. */
+export type ToolOptions = Readonly<{ values: ReadonlyMap<string, string> }>;
 /** Reject duplicate, unknown and missing options before selecting an artifact or creating output. */
 export function toolOptions(args: readonly string[], allowed: readonly string[]): ToolOptions {
-  const values = new Map<string, string>(); let reference = false;
+  const values = new Map<string, string>();
   for (let i = 0; i < args.length; i += 1) {
     const arg = args[i]!;
-    if (arg === '--reference' && !reference) { reference = true; continue; }
     const key = arg.startsWith('--') ? arg.slice(2) : '';
     const value = args[++i];
     if (!allowed.includes(key) || values.has(key) || value === undefined || value.startsWith('--')) {
@@ -23,19 +22,13 @@ export function toolOptions(args: readonly string[], allowed: readonly string[])
     }
     values.set(key, value);
   }
-  return { values, reference };
+  return { values };
 }
 /** Reads a bounded integer option before benchmark output is created. */
 export function positiveOption(options: ReadonlyMap<string, string>, key: string, fallback: number, minimum = 1): number {
   const value = Number(options.get(key) ?? fallback);
   if (!Number.isSafeInteger(value) || value < minimum) throw new Error(`invalid --${key}`);
   return value;
-}
-/** Run the preserved audit in a fresh process only when explicitly requested. */
-export function referenceCommand(path: string, args: readonly string[]): void {
-  const result = spawnSync(process.execPath, [path, ...args.filter(arg => arg !== '--reference')], { stdio: 'inherit' });
-  if (result.error !== undefined) throw result.error;
-  process.exitCode = result.status ?? 1;
 }
 /** Returns only the owning checkout revision; archives never inherit an ancestor Git identity. */
 export function revision(): string | null {

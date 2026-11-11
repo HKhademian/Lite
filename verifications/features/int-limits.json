@@ -10,7 +10,6 @@
   ],
   "guideline": "Checks signed Int64 literals and valid dynamic addition, subtraction, multiplication and negation at the bounds.",
   "targets": [
-    "igniter",
     "ts",
     "c"
   ],
