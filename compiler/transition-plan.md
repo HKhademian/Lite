@@ -11,15 +11,18 @@ todos:
     status: completed
   - id: core-syntax-baseline
     content: Port important existing syntax and ordinary program behavior needed by generated default workflows
-    status: in_progress
+    status: pending
   - id: generated-default-workflows
     content: Keep the interpreter run launcher removed; provide compile-and-execute `lite run`; use generated TS artifacts for check, compile, verification and tests; retain explicit T00 references
     status: completed
   - id: existing-feature-parity
-    content: Compile all existing supported features to TS and execute their artifacts; defer advanced edge audits
+    content: Grow Lite compiler support feature by feature after T00 retirement; keep T00 parity cases as explicit backlog
+    status: pending
+  - id: source-imports
+    content: Add the minimal top-level Lite source import and explicit dependency metadata after the TS kernel
     status: pending
   - id: retire-t00
-    content: Remove T00 after TS features, consumers and clean-checkout self-build migrate
+    content: Remove active handwritten T00 after source imports and no-T00 gates; full feature parity is not required
     status: pending
   - id: native-self-host
     content: Post migration restore C output and complete native self-hosting and cross-host ladder
@@ -52,6 +55,21 @@ earlier native-first ordering in historical progress entries.
 Owner update, 2026-11-05: `./lite run` returns as a compile-and-execute adapter
 over the generated compiler and Node entry; the retired interpreter launcher
 stays removed and no T00 fallback is added.
+
+Owner direction, 2026-11-10: the current Lite-written TS compiler already
+rebuilds to an identical three-generation fixed point and passes its 93-case
+compiler corpus. The self-hosting gate is the compiler-source subset, not all
+existing T00 behavior. Add the bounded top-level source import and explicit
+dependency information, then remove active T00 consumers without waiting for
+the 60 remaining T11 rejections. Continue those feature ports after retirement
+in paired seed/source increments. Native C remains later work.
+
+Owner clarification, 2026-11-11: the fixed point is evidence for the current
+compiler source, not completion of the kernel contract. Before source imports,
+reject duplicate root value definitions while preserving nested bindings, allow
+deferred function bodies to resolve later compile-time-known root values, and
+keep eager root initialization in written order. Root-symbol definitions are
+compile-time facts; runtime values still become available only at initialization.
 
 ## Done
 
@@ -336,63 +354,51 @@ Historical audits require explicit --reference selection. Unsupported canonical
 contracts still fail visibly, and T00 is not retired. Source/seed identities and
 all completed workflow evidence are recorded above. Continue with core syntax.
 
-### Step 3b — core-syntax-baseline
+### Step 3b — source-imports
 
-**Depends on:** generated-default-workflows; feature ports may proceed while
-consumer migration is in progress.
-**Actions:** port ordinary existing syntax, prioritizing shared blockers:
+**Depends on:** generated-default-workflows and the verified TS kernel.
+**Actions:** estimate the cost of a top-level-only import clause for local source
+files. Reuse existing path validation, source locations and flattening where
+appropriate; record every dependency explicitly. A file is marked visited when
+opened so repeated imports and cycles terminate. Keep packages, search paths,
+version solving, nested imports, initialization scheduling and general module
+semantics out of this increment.
+**Acceptance:** the compiler source can declare its dependencies through the
+Lite-source import path or a documented fallback manifest; ordering and the
+dependency closure are inspectable, and imports rebuild to the same fixed point.
+If the import clause proves too costly, preserve the current explicit manifest
+as the bridge and move to T00 retirement without hiding dependencies.
+**Verify:** import path, duplicate/cycle, missing source, dependency metadata,
+source mapping, clean build and TS fixed-point cases.
 
-- Bindings/storage: inference, annotations, aliases, mutability, compound updates,
-  zero initialization and reserved storage's first assignment.
-- Data: tuple shapes, fields/destructuring, fixed arrays, List end operations,
-  indexing, copies and output. Include function and receiving-type interactions.
-- Calls/functions: parameters/results, recursion, function values and supported
-  environments, named/positional/shorthand arguments, returns and Never exits.
-- Control: blocks, complete/partial conditionals, sequence/conditional loops,
-  loop values/completion and exits, subjectless match and cleanup.
-- Program interface: text, selected input/output helpers, arguments, exit,
-  flat-import loading and usable source diagnostics.
+### Step 3c — retire-t00
 
-Mixed Float arithmetic, the power checkpoint, common numeric synonyms and exact
-Float literal contexts are already ported. Do not reopen exhaustive numeric,
-Unicode, metadata or tagged-exit matrices as prerequisites for ordinary ports.
-Use the selected Lite rule when T00 behavior is worse.
-**Acceptance:** TS artifacts execute all 19 existing examples, all 20 implemented
-lessons and all eight library entries, plus focused accepted/rejected and combined
-cases for each family. Record exact supported forms; finite cases do not prove
-full language coverage.
-**Verify:** relevant TS artifact tests, strict/full TS gates, reproducible seed
-rebuilds and the TS fixed point. C ports are outside this phase.
-
-### Step 3c — existing-feature-parity
-
-**Depends on:** generated-default-workflows and ordinary core ports.
-**Actions:** finish existing supported feature compilation/execution using the
-Lite default. T00 is reference evidence, not automatic design authority. Keep
-atomic topics and measured speed improvements; optional optimization must not
-hold up migration. Preserve ordinary validation, evaluation order, rejection
-before effects and runtime fault behavior.
-**Acceptance:** every existing supported contract compiles to TS and executes
-from its artifact, or has an explicitly owner-approved exception. Advanced
-correctness/edge audits remain a separate backlog, not a demand for perfection.
-**Verify:** canonical features, remaining migration inventory, TS regression and
-artifact corpus checks. Report any approved exceptions explicitly.
-
-### Step 4 — retire-t00
-
-**Depends on:** generated-default-workflows and TS existing-feature migration.
+**Depends on:** generated-default-workflows, the verified TS kernel and
+source-imports (or the documented manifest bridge).
 **Actions:** audit active CLI, tests, verifier, tooling and recovery dependencies.
-Preserve the exact T00 seed revision and builder map in Git history. Remove its
-handwritten implementation from the active tree after TS replacements pass.
-**Acceptance:** a clean checkout compiles and executes formerly supported
-programs from TS artifacts without T00; S rebuilds through the generated seed
-with a reproducible TS fixed point. Recovery remains reproducible from history.
-**Verify:** strict/runtime/editor TS gates, clean-checkout generated rebuild,
-artifact corpus and dependency scan. Native C is not a retirement gate.
+Preserve generated corpus expectations and the exact T00 source/seed provenance
+in existing Git history. Remove T00 from the active tree and remove explicit
+reference routes. Do not wait for unrelated T11 feature rejections to reach zero.
+**Acceptance:** a clean checkout passes default build, tests, verify, source
+import, three-generation self-host and compiler corpus with no handwritten T00
+implementation or runtime dependency. Historical inventory results remain
+clearly labeled; future cases use recorded contracts rather than T00 output.
+**Verify:** full/no-T00 tests, verification, strict TS/editor checks, clean
+rebuild, corpus, dependency scan and `rg` audit for runtime T00 imports.
+
+### Step 4 — language-growth
+
+**Depends on:** retire-t00.
+**Actions:** port the remaining documented language features in small increments.
+For each needed feature, update the seed/compiler loop, then S, and compare the
+declared bootstrap subset. Keep unsupported or advanced edge cases visible in
+the parity backlog; do not turn full historical parity into a self-host gate.
+**Verify:** focused contracts, generated compiler rebuild, subset comparison,
+fixed point and affected corpus checks per increment. C ports are separate.
 
 ### Step 5 — native-self-host (post migration)
 
-**Depends on:** TS migration and T00 retirement.
+**Depends on:** TS self-hosting and T00 retirement.
 **Actions:** restore public C output after porting the remaining frontend/runtime
 support; build native C11 and the defined C01/C21-C23 and T21-T23 ladder. Preserve
 all historical node identities and prove their equality rather than renaming.

@@ -861,7 +861,7 @@ warm cache.
 Compiler verification cases are one JSON model plus a sibling `.lts` entry
 source per case under [tests/compiler](tests/compiler/); filenames follow
 `NNN-MMM-title-subtitle.json` (category 001 accepted program, 002 compiler rejection).
-There are 69 programs and 24 rejections; accepted programs include six expected
+There are 69 programs and 25 rejections; accepted programs include six expected
 arithmetic runtime faults. The schema
 and workflow are documented in [tests/README.md](tests/README.md). The suite
 loads all cases and does not keep separate inline source, input, and

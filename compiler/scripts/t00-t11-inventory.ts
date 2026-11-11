@@ -1,5 +1,5 @@
 #!/usr/bin/env node
-/** Inventory existing T00 contracts against the exact T11 seed; no implementation priorities are selected. */
+/** Inventory existing T00 contracts against the selected generated compiler; no implementation priorities are selected. */
 import { spawnSync, execFileSync, type SpawnSyncReturns } from 'node:child_process';
 import { createHash } from 'node:crypto';
 import { existsSync, mkdirSync, mkdtempSync, readFileSync, readdirSync, rmSync, writeFileSync } from 'node:fs';
@@ -16,12 +16,12 @@ type ProcessResult = { status: number | null; signal: NodeJS.Signals | null; std
 type Stream = { text?: string; bytes?: number[]; file?: string; hash?: string };
 type Scenario = { name: string; stdin?: string | undefined; stdinBytes?: number[] | undefined; args?: string[] | undefined; expected?: Omit<ProcessResult, 'signal'> };
 type Check = { accepted: boolean; diagnostic?: string };
-type Case = { name: string; stdin: string; stdinBytes?: number[]; args: string[]; t00: ProcessResult; t11?: ProcessResult; matches?: boolean; t00MatchesManifest?: boolean };
+type Case = { name: string; stdin: string; stdinBytes?: number[]; args: string[]; t00: ProcessResult; generated?: ProcessResult; matches?: boolean; t00MatchesManifest?: boolean };
 type AuditInput = { id: string; kind: string; summary: string; path?: string | undefined; manifest?: string; features?: string[]; test?: string };
-type AuditRow = AuditInput & { status: Status; sourceSha256: string; source: string; t00Check: Check; t11Compile?: ProcessResult; artifactTypecheck?: ProcessResult; cases: Case[] };
+type AuditRow = AuditInput & { status: Status; sourceSha256: string; source: string; t00Check: Check; generatedCompile?: ProcessResult; artifactTypecheck?: ProcessResult; cases: Case[] };
 type Observation = Omit<ProcessResult, 'stdout'> & { stdout?: string | undefined; stdoutBytes?: number };
-type SourceFile = { path: string; coverage?: string; id?: string; diagnostic?: string; sourceSha256?: string; bytes?: number; t00Check?: Check; status?: Status; evidence?: string; t11Compile?: Observation; artifactTypecheck?: ProcessResult; artifactSha256?: string; compilationEvidence?: { sourceSha256: string; builderSha256: string; artifactSha256: string; origin: string } };
-type Evidence = { path: string; sourceSha256: string; t11Sha256: string; artifactPath: string; artifactSha256: string; compile: ProcessResult };
+type SourceFile = { path: string; coverage?: string; id?: string; diagnostic?: string; sourceSha256?: string; bytes?: number; t00Check?: Check; status?: Status; evidence?: string; generatedCompile?: Observation; artifactTypecheck?: ProcessResult; artifactSha256?: string; compilationEvidence?: { sourceSha256: string; builderSha256: string; artifactSha256: string; origin: string } };
+type Evidence = { path: string; sourceSha256: string; selectedCompilerSha256: string; artifactPath: string; artifactSha256: string; compile: ProcessResult };
 type Manifest = { id: string; kind: string; description?: string; features: string[]; source: Stream; append?: string; cases: { name: string; stdin?: Stream; stdout?: Stream; stderr?: Stream; args?: string[]; exitCode: number }[] };
 type Probe = { id: string; summary: string; test: string; source: string; stdin?: string; stdinBytes?: number[]; args?: string[] };
 
@@ -64,12 +64,12 @@ const evidenceIndex = process.argv.indexOf('--source-evidence');
 const sourceEvidence = evidenceIndex < 0 ? [] : JSON.parse(readFileSync(process.argv[evidenceIndex + 1]!, 'utf8')) as Evidence[];
 const largeSources = process.argv.includes('--large-sources');
 const scratch = mkdtempSync(join(tmpdir(), 'lite-inventory-'));
-const artifact = join(root, 'compiler/bootstrap/T11.ts');
+const artifact = join(root, 'compiler/bootstrap', seed.artifact);
 const entry = join(root, 'compiler/entry.ts');
 const config = JSON.parse(readFileSync(join(root, 'igniter/tsconfig.json'), 'utf8')) as { compilerOptions: Record<string, unknown> };
 const tsc = join(root, 'igniter/node_modules/typescript/bin/tsc');
 const hash = (value: string | Uint8Array) => createHash('sha256').update(value).digest('hex');
-if (hash(readFileSync(artifact)) !== seed.artifactSha256) throw new Error('T11 seed identity mismatch');
+if (hash(readFileSync(artifact)) !== seed.artifactSha256) throw new Error('selected generated seed identity mismatch');
 mkdirSync(dirname(prefix), { recursive: true });
 writeFileSync(join(scratch, 'package.json'), '{"type":"module"}\n');
 const worktreeStatusAtStart = execFileSync('git', ['status', '--porcelain=v1', '--untracked-files=normal'], { cwd: root, encoding: 'utf8' });
@@ -77,13 +77,13 @@ const report = { schema: 1, date, startedAt: new Date().toISOString(), revision:
   revisionMeaning: 'HEAD at audit start; artifact and per-source hashes identify the measured inputs',
   workingTreeDirtyAtStart: worktreeStatusAtStart.length > 0, worktreeStatusAtStart,
   compilerSourceSha256: seed.sourceSha256, compilerSourceRevision: seed.sourceRevision,
-  node: process.version, t11Sha256: seed.artifactSha256, rows: [] as AuditRow[], sourceFiles: [] as SourceFile[], counts: {} as Record<string, number | ({ total: number } & Partial<Record<Status, number>>)>, seedStrictTypecheck: '', testGroups: [] as string[], finishedAt: '', status: '',
+  node: process.version, selectedCompilerSha256: seed.artifactSha256, rows: [] as AuditRow[], sourceFiles: [] as SourceFile[], counts: {} as Record<string, number | ({ total: number } & Partial<Record<Status, number>>)>, seedStrictTypecheck: '', testGroups: [] as string[], finishedAt: '', status: '',
   method: { compilationTimeoutMs: 20000, executionTimeoutMs: 5000, strictArtifactTypecheck: true,
-    canonical: 'all feature/example/sample/showcase manifests; each supplied scenario runs under T00 and the T11-generated program',
+    canonical: 'all feature/example/sample/showcase manifests; each supplied scenario runs under T00 and the selected generated program',
     probes: 'additional existing T00 contracts drawn from interpreter tests; exact source is included for reproduction',
-    sourceFiles: 'all tracked .lt/.lts files are checked as standalone T00 programs; files not accepted by T00 are excluded, not called T11 gaps',
-    limits: 'Finite corpus and explicit probes, not proof for every program. Compile-only acceptance does not imply runtime parity. T11 remains a restricted compiler.' } };
-const statuses = { matches: 'matches tested behavior', rejected: 'T11 rejects source', typecheck: 'T11 emits invalid strict TS', mismatch: 'runtime behavior differs',
+    sourceFiles: 'all tracked .lt/.lts files are checked as standalone T00 programs; files not accepted by T00 are excluded, not called support gaps',
+    limits: 'Finite corpus and explicit probes, not proof for every program. Compile-only acceptance does not imply runtime parity. the selected compiler remains a restricted compiler.' } };
+const statuses = { matches: 'matches tested behavior', rejected: 'selected compiler rejects source', typecheck: 'selected compiler emits invalid strict TS', mismatch: 'runtime behavior differs',
   diagnostic: 'runtime diagnostic differs', unknown: 'unverified or timed out', accepted: 'compile accepted; execution not tested', baseline: 'T00 baseline failed' };
 
 type Status = keyof typeof statuses;
@@ -127,12 +127,12 @@ function audit(input: AuditInput, source: string, scenarios: Scenario[]): AuditR
   if (!row.t00Check.accepted) { row.status = 'baseline'; report.rows.push(row); checkpoint(); return row; }
   // Both execution paths use anonymous diagnostics, as canonical manifests do.
   // The owning path/id remains recorded separately, without normalizing output.
-  row.t11Compile = emit(source, '');
-  if (row.t11Compile.error || row.t11Compile.signal !== null) row.status = 'unknown';
-  else if (row.t11Compile.status !== 0) row.status = 'rejected';
+  row.generatedCompile = emit(source, '');
+  if (row.generatedCompile.error || row.generatedCompile.signal !== null) row.status = 'unknown';
+  else if (row.generatedCompile.status !== 0) row.status = 'rejected';
   else {
     const path = join(scratch, 'program.ts');
-    writeFileSync(path, row.t11Compile.stdout);
+    writeFileSync(path, row.generatedCompile.stdout);
     row.artifactTypecheck = strictCheck(path);
     row.status = row.artifactTypecheck.status === 0 && !row.artifactTypecheck.error ? 'matches' : 'typecheck';
   }
@@ -144,12 +144,12 @@ function audit(input: AuditInput, source: string, scenarios: Scenario[]): AuditR
       item.t00MatchesManifest = same(baseline, { ...scenario.expected, signal: null });
       if (!item.t00MatchesManifest) row.status = 'baseline';
     }
-    if (row.t11Compile.status === 0 && row.artifactTypecheck?.status === 0) {
-      item.t11 = runGenerated(join(scratch, 'program.ts'), scenario);
-      item.matches = same(baseline, item.t11);
+    if (row.generatedCompile.status === 0 && row.artifactTypecheck?.status === 0) {
+      item.generated = runGenerated(join(scratch, 'program.ts'), scenario);
+      item.matches = same(baseline, item.generated);
       if (!item.matches && row.status !== 'baseline') {
-        if (baseline.error || item.t11.error || baseline.signal !== null || item.t11.signal !== null) row.status = 'unknown';
-        else if (baseline.status === item.t11.status && baseline.stdout === item.t11.stdout && baseline.status !== 0 && category(baseline.stderr) !== undefined && category(baseline.stderr) === category(item.t11.stderr)) row.status = row.status === 'mismatch' ? 'mismatch' : 'diagnostic';
+        if (baseline.error || item.generated.error || baseline.signal !== null || item.generated.signal !== null) row.status = 'unknown';
+        else if (baseline.status === item.generated.status && baseline.stdout === item.generated.stdout && baseline.status !== 0 && category(baseline.stderr) !== undefined && category(baseline.stderr) === category(item.generated.stderr)) row.status = row.status === 'mismatch' ? 'mismatch' : 'diagnostic';
         else row.status = 'mismatch';
       }
     }
@@ -163,7 +163,7 @@ function audit(input: AuditInput, source: string, scenarios: Scenario[]): AuditR
 
 try {
   const seedCheck = strictCheck(artifact);
-  if (seedCheck.status !== 0 || seedCheck.error) throw new Error('T11 seed strict typecheck failed');
+  if (seedCheck.status !== 0 || seedCheck.error) throw new Error('selected generated seed strict typecheck failed');
   report.seedStrictTypecheck = 'passed';
   const registry = (JSON.parse(readFileSync(join(root, 'verifications/features.json'), 'utf8')) as { features: { id: string; summary: string; case: string }[] }).features;
   const featureSummaries = new Map(registry.map(feature => [feature.id, feature.summary]));
@@ -204,22 +204,22 @@ try {
     const row: SourceFile = { path, sourceSha256: hash(source), bytes: Buffer.byteLength(source), t00Check: baseline };
     if (!baseline.accepted) { row.coverage = 'not-a-standalone-T00-program'; report.sourceFiles.push(row); continue; }
     if (hash(source) === seed.sourceSha256) {
-      row.coverage = 'recorded-self-compilation'; row.status = 'accepted'; row.evidence = 'Current source bytes exactly match preserved T11/T12 source identity; not recompiled in this audit.';
+      row.coverage = 'recorded-self-compilation'; row.status = 'accepted'; row.evidence = 'Current source bytes exactly match preserved selected source identity; not recompiled in this audit.';
     } else if (Buffer.byteLength(source) > 50000) {
-      const evidence = sourceEvidence.find(item => item.path === path && item.sourceSha256 === hash(source) && item.t11Sha256 === seed.artifactSha256);
+      const evidence = sourceEvidence.find(item => item.path === path && item.sourceSha256 === hash(source) && item.selectedCompilerSha256 === seed.artifactSha256);
       if (evidence !== undefined) {
-        row.coverage = 'compile-only-large'; row.t11Compile = evidence.compile;
+        row.coverage = 'compile-only-large'; row.generatedCompile = evidence.compile;
         if (evidence.compile.status === 0 && evidence.compile.signal === null) {
           if (hash(readFileSync(evidence.artifactPath)) !== evidence.artifactSha256) throw new Error(`supplemental artifact identity mismatch: ${path}`);
           row.artifactTypecheck = strictCheck(evidence.artifactPath);
-          row.compilationEvidence = { sourceSha256: evidence.sourceSha256, builderSha256: evidence.t11Sha256, artifactSha256: evidence.artifactSha256,
-            origin: evidence.compile.reused ?? 'T11 compilation in this audit session' };
+          row.compilationEvidence = { sourceSha256: evidence.sourceSha256, builderSha256: evidence.selectedCompilerSha256, artifactSha256: evidence.artifactSha256,
+            origin: evidence.compile.reused ?? 'selected-compiler compilation in this audit session' };
           row.status = row.artifactTypecheck.status === 0 && !row.artifactTypecheck.error ? 'accepted' : 'typecheck';
         } else row.status = evidence.compile.signal !== null || evidence.compile.error ? 'unknown' : 'rejected';
       } else if (largeSources) {
         const emitted = emit(source, path, 600000);
         row.coverage = 'compile-only-large';
-        row.t11Compile = { ...emitted, stdout: undefined, stdoutBytes: Buffer.byteLength(emitted.stdout) };
+        row.generatedCompile = { ...emitted, stdout: undefined, stdoutBytes: Buffer.byteLength(emitted.stdout) };
         if (emitted.status === 0 && !emitted.error) {
           const output = join(scratch, 'large.ts'); writeFileSync(output, emitted.stdout);
           row.artifactTypecheck = strictCheck(output);
@@ -234,7 +234,7 @@ try {
       row.coverage = 'executed-library-test'; row.status = audited.status;
     } else {
       const emitted = emit(source, path);
-      row.coverage = 'compile-only'; row.t11Compile = { ...emitted, stdout: undefined, stdoutBytes: Buffer.byteLength(emitted.stdout) };
+      row.coverage = 'compile-only'; row.generatedCompile = { ...emitted, stdout: undefined, stdoutBytes: Buffer.byteLength(emitted.stdout) };
       row.status = emitted.error || emitted.signal !== null ? 'unknown' : emitted.status === 0 ? 'accepted' : 'rejected';
     }
     report.sourceFiles.push(row);
@@ -255,12 +255,12 @@ try {
   const closed = report.rows.filter(row => row.status === 'matches' && previous.has(`${row.kind}:${row.id}`) && previous.get(`${row.kind}:${row.id}`) !== 'matches');
   const regressed = report.rows.filter(row => row.status !== 'matches' && previous.get(`${row.kind}:${row.id}`) === 'matches');
   const remaining = report.rows.filter(row => row.status !== 'matches');
-  const lines = [ '# T00 versus T11 support inventory', '', `Date: ${date}. Base revision (HEAD at audit start): \`${report.revision}\`. Node ${report.node}.`,
+  const lines = [ '# T00 versus selected generated compiler support inventory', '', `Date: ${date}. Base revision (HEAD at audit start): \`${report.revision}\`. Node ${report.node}.`,
     `Working tree at audit start: ${report.workingTreeDirtyAtStart ? 'modified' : 'clean'}. The raw report records its status; artifact and per-source hashes identify the measured inputs.`, '',
-    `T11 identity: \`${seed.artifactSha256}\`. The preserved artifact passed its separate strict TypeScript check.`, '',
+    `Selected compiler identity: \`${seed.artifactSha256}\`. The preserved artifact passed its separate strict TypeScript check.`, '',
     'This is the current measured support inventory, not acceptance of new language features. Dated historical inventories remain unchanged.', '',
     '## Scope and interpretation', '',
-    '- All canonical feature, example, sample and showcase manifests were selected, regardless of their existing target lists. Each scenario ran under T00, with its expected manifest bytes checked, and under the T11-generated TS program when compilation and strict checking succeeded.',
+    '- All canonical feature, example, sample and showcase manifests were selected, regardless of their existing target lists. Each scenario ran under T00, with its expected manifest bytes checked, and under the selected generated TS program when compilation and strict checking succeeded.',
     '- Additional boundary probes isolate existing T00 contracts that a broad canonical program can hide. Their exact source, input, output and interpreter-test reference are in the raw JSON and probe file.',
     '- Every tracked Lite source is accounted for. Source fragments/data fixtures rejected as standalone programs by T00 are excluded. Remaining sources receive a compile-only check, except bundles explicitly linked to recorded self-compilation evidence. Large-source artifacts can reuse exact source/builder/artifact identities and receive a fresh strict typecheck; other source checks do not include execution.',
     '- A rejection is a gap for that program, not proof that every subfeature in it is absent. Matching one probe is not universal feature parity. Runtime diagnostics are distinguished from output/status mismatches. The 520 exercise catalog contains only 20 implemented lesson files; planned exercises are not counted as supported programs.',
@@ -280,10 +280,10 @@ try {
     lines.push(`## ${kind}`, '');
     for (const row of report.rows.filter(row => row.kind === kind)) {
       lines.push(`- **${row.id} — ${statuses[row.status]}.** ${row.summary}${row.path ? ` Source: \`${row.path}\`.` : ''}`);
-      if (row.status === 'rejected') lines.push(`  First diagnostic: ${row.t11Compile!.stderr.trim().split('\n')[0]}`);
+      if (row.status === 'rejected') lines.push(`  First diagnostic: ${row.generatedCompile!.stderr.trim().split('\n')[0]}`);
       if (row.status === 'typecheck') lines.push(`  Strict-check diagnostic: ${(row.artifactTypecheck!.stdout + row.artifactTypecheck!.stderr).trim().split('\n')[0]}`);
       if (row.status === 'mismatch' || row.status === 'diagnostic') for (const scenario of row.cases.filter(item => item.matches === false)) {
-        lines.push(`  ${scenario.name}: T00 status ${scenario.t00.status}, stdout ${JSON.stringify(scenario.t00.stdout)}; T11 status ${scenario.t11!.status}, stdout ${JSON.stringify(scenario.t11!.stdout)}.`);
+        lines.push(`  ${scenario.name}: T00 status ${scenario.t00.status}, stdout ${JSON.stringify(scenario.t00.stdout)}; generated status ${scenario.generated!.status}, stdout ${JSON.stringify(scenario.generated!.stdout)}.`);
       }
     }
     lines.push('');

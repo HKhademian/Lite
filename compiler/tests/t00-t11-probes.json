@@ -438,10 +438,16 @@
     "test": "compiler fixture 001-001-report-missing-argument.lts"
   },
   {
-    "id": "scope.same-block-shadow",
-    "summary": "Later declarations shadow same-block bindings",
+    "id": "scope.nested-shadow",
+    "summary": "Nested declarations shadow root bindings",
+    "source": "x := 1; if true { x := 2; outputLine(x); } outputLine(x);",
+    "test": "nested branch bindings retain their own runtime names and leave the root binding unchanged"
+  },
+  {
+    "id": "scope.duplicate-root-rejected",
+    "summary": "The initial self-hosting compiler rejects repeated root value definitions",
     "source": "x := 1; x := 2; outputLine(x);",
-    "test": "shadowing retains earlier copies; same-name initializer sees previous binding"
+    "test": "bootstrap kernel restriction: root definitions are unique even though the historical T00 reference accepts sequential shadowing"
   },
   {
     "id": "syntax.final-semicolon",

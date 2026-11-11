@@ -618,7 +618,8 @@
     "fc49416970395c36158a734cb14f9ef949544f88c3b2888ddfed002423638688": "outputLine([1, 2], (left = 3, right = \"x\"), Unit, ());",
     "fdb83cf535e16ad1266644e421dfc54d437b9d9a5bcb278d377912c4a0c87e6d": "outputLine(\"before\"); outputLine(2 ** false);",
     "fdbb942dee6242f7211613196936530f73611e471d5637ab777d1cfab9f5145f": "outputLine(1, \"x\", true,);",
-    "ff8c3f49f6ddd2798195067184152ec4f20f66387c2293136ea6e348ed0e9f54": "outputLine(\"before\"); outputLine(0.1, 9223372036854775807 + 1);"
+    "ff8c3f49f6ddd2798195067184152ec4f20f66387c2293136ea6e348ed0e9f54": "outputLine(\"before\"); outputLine(0.1, 9223372036854775807 + 1);",
+    "149b3bdcfbc3391cf8fc4b3e19be5ed0400124fc94e4f38395705f4d3f91894a": "var n: Float = 0.1; saved := n; n = 0.2; n = -n; outputLine(saved, n, +n, -(-n));"
   },
   "cases": [
     {
@@ -7604,6 +7605,15 @@
       "status": 1,
       "stdout": "before\n",
       "stderr": "float سلام.lts:1:59: ArithmeticPanic: integer outside Int range\n"
+    },
+    {
+      "source": "149b3bdcfbc3391cf8fc4b3e19be5ed0400124fc94e4f38395705f4d3f91894a",
+      "stdin": "",
+      "args": [],
+      "name": null,
+      "status": 0,
+      "stdout": "0.1 -0.2 -0.2 -0.2\n",
+      "stderr": ""
     }
   ]
 }

@@ -1,6 +1,6 @@
 # Generated bootstrap seeds
 
-`T11.ts` is the selected generated TS compiler. [seed.ts](seed.ts) owns its
+`T12.ts` is the selected generated TS compiler. [seed.ts](seed.ts) owns its
 exact source, artifact, builder and revision identities; the current selection
 follows the [Float-context checkpoint](../parity.md#float-literal-contexts-and-braced-values).
 Historical checkpoint hashes and ladder node identities remain in the parity
@@ -34,7 +34,9 @@ revision when the source directory is not the Git checkout root. Input, artifact
 and tool hashes still identify what was measured.
 
 The self-build command compiles unchanged current S three times, starting with
-the selected generated compiler. Every builder and output passes strict TS
+the selected generated compiler. The 2026-11-11 minimum-kernel candidate is
+recorded in [the self-hosting report](../reports/2026-11-11-self-hosting-kernel.json).
+Every builder and output passes strict TS
 checking. Self-build execution has no fixed timeout, matching the historical
 ladder; ordinary corpus/program tests retain their execution limits. `generation-1.ts` through `generation-3.ts`, `S.lts` and `ladder.json`
 are retained under `--out`. The summary records the actual builder SHA for each

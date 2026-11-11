@@ -1,0 +1,21 @@
+{
+  "name": "nested-shadow",
+  "source": {
+    "file": "001-005-nested-shadow.lts",
+    "hash": "sha256:001433451a0b3abfd1d9bb981d956aa8e82c555b42d8d5a215b12f75c3d11948"
+  },
+  "cases": [
+    {
+      "name": "default",
+      "stdout": {
+        "text": "2\n1\n",
+        "hash": "sha256:451d660bc5f37a981539cf07c4c6a182693a7d165b4589ecb1165a72555ff90a"
+      },
+      "stderr": {
+        "text": "",
+        "hash": "sha256:e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+      },
+      "exitCode": 0
+    }
+  ]
+}

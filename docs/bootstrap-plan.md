@@ -1,6 +1,6 @@
 # Bootstrap and self-hosting plan
 
-Status: **implementation plan, 2026-11-01; bootstrap defaults recorded for agent work; language, module, std and CLI decisions remain open**.
+Status: **historical bootstrap defaults, with the current minimum TS self-hosting path updated 2026-11-10**.
 
 This page is the operational plan for reaching the first compiler-bootstrap point:
 the Lite-written compiler source **S** is compiled by the stage-0 TypeScript
@@ -35,6 +35,34 @@ Owner update, 2026-11-05: `./lite run` is available again as a compile-and-execu
 adapter over the generated compiler and Node entry. It restores no interpreter and
 keeps the T00-free default route.
 
+Owner direction, 2026-11-10: use the smallest LiteLang subset that can compile
+and rebuild the Lite-written compiler. The full language specification or T00
+parity is not a self-hosting prerequisite. The current T11 seed compiles the
+manifest source through three strictly checked generations to the same artifact,
+and that artifact passes the recorded 93-case compiler corpus. Add a minimal
+top-level source import after this kernel if its cost remains modest, retaining
+explicit dependency metadata. Then retire the handwritten T00 implementation
+from the active tree after no-T00 checks pass. Keep remaining T11 rejections as
+post-kernel feature work; preserve the generated TS seed and its provenance for
+reproducible recovery. Native C is a later target.
+
+Owner clarification, 2026-11-11: the current seed must also implement the
+bounded root-symbol contract: reject duplicate root value definitions, allow
+nested shadowing, resolve later inferred scalar-literal roots inside deferred
+function bodies, and reject eager reads before runtime initialization. Compile-
+time symbol availability does not hoist runtime values. This first pre-scan is
+deliberately narrow; typed and computed later values remain future work.
+
+Owner clarification, 2026-11-11: the measured fixed point proves the current
+compiler source rebuilds; it does not close the minimum symbol-resolution
+contract. Before imports, the first compiler must reject duplicate root value
+definitions while allowing nested bindings, make later scalar root definitions
+available as compile-time symbols inside deferred function bodies, and still
+reject eager reads before runtime initialization. The first implementation
+keeps this predeclaration narrow to inferred scalar literals; broader type
+predeclaration and full language shadowing remain later compiler work. Keep
+definition lookup separate from runtime initialization state.
+
 Related direction:
 
 - [TypeScript igniter and early self-hosting](tooling-and-learning.md#typescript-igniter-and-early-self-hosting)
@@ -52,9 +80,10 @@ Related direction:
 2. Work through phases in order; do not start a later gate early.
 3. Keep every commit green and within the phase's scope.
 4. At a gate, record the evidence and update the checkboxes in this page.
-5. If a default must change, or a new language feature is required, **stop** and
-   ask the project owner. Do not invent syntax, a std API, a module system or a
-   host interface.
+5. Follow the owner-selected 2026-11-10 minimum-kernel and source-import
+   direction in the active [self-hosting handoff](../.agents/plans/self-hosting-kernel.md).
+   Keep the import increment top-level and bounded; do not infer package,
+   standard-library, initialization or general module-system rules from it.
 
 ## Definitions
 
@@ -63,12 +92,13 @@ Related direction:
 | **Stage 0** | The preserved TypeScript/Node igniter in [`igniter/`](../igniter/README.md). |
 | **S** | The Lite-written compiler source, assembled from an ordered manifest. |
 | **L** | The language subset S may use. Defined below. |
-| **T** | The TypeScript compiler artifact produced by stage 0 from S. |
-| **C** | The C compiler artifact produced by stage 0 from S. |
-| **T2 / C2** | Artifacts produced by T/C when they compile S again. |
+| **T** | The generated TS compiler artifact used to bootstrap S; current selected seed is T12. |
+| **C** | The retained TS-hosted C emitter; not part of the current minimum self-hosting gate. |
+| **T2** | Artifact produced when T compiles S again. |
+| **C2** | Historical/later artifact produced by the native C compiler when it compiles S. |
 | **Bundle** | Ordered source files plus a line map, flattened by the loader before S is executed or compiled. |
-| **Fixed point** | T2 is byte-identical to T and C2 is byte-identical to C, with the same source and toolchain. |
-| **Self-host point** | S compiles to T/C; T/C compile S; the fixed point and corpus gates pass; no stage-0 dependency remains at runtime. |
+| **Fixed point** | For the current TS gate, T2 is byte-identical to T for the same S and toolchain. C fixed points are a separate native milestone. |
+| **Self-host point** | TS0 compiles LT0 to LT1; LT1 compiles the same LT0 to byte-identical LT2; the declared compiler-source corpus passes. This does not imply full language parity or T00 retirement by itself. |
 
 The explicit T11-T13, C01/C21-C23 and T21-T23 ladder and its completion
 equalities are recorded in
@@ -113,6 +143,30 @@ targets, with exact source-positioned runtime overflow faults. Its
 [generated-only ladder](../compiler/reports/2026-11-02-int64-ladder.json) records
 the current source and three identical compiler generations. Division-family
 behavior, wider numeric types and the remaining feature/native gates stay separate.
+
+### Current minimum TS kernel evidence, 2026-11-11
+
+- The selected T11 seed compiled the updated compiler source into T12 candidate
+  artifact `02e8e226…` from source `8d2a857a…`; its three strictly checked LT1/LT2
+  generations are byte-identical.
+- `node compiler/scripts/corpus-parity.ts --artifact
+  /tmp/lite-self-host-kernel-20261111/generation-3.ts` passed 94 compiler cases:
+  69 programs and 25 rejections, with zero mismatches. The former repeated-root
+  program was replaced by nested-shadow coverage, and root duplication now has
+  a source-positioned rejection contract.
+- Focused host cases also cover a deferred function reading a later inferred
+  scalar-literal root, a parameter shadowing that root, and an eager initializer
+  rejecting its read before the later runtime initialization.
+- The 2026-11-11 [T00/T12 inventory](../compiler/reports/current-t00-t11-inventory.md)
+  records 112/173 matching scenarios and 61 T12 rejections. These are parity
+  observations; full parity is not a self-hosting gate.
+
+T12 is selected and rebuilds its source to the same artifact. Its generated
+compiler corpus and fast suite pass. The refreshed T00/T12 audit keeps feature
+parity separate from the kernel. The small import/dependency step is next; remove
+handwritten T00 from active commands and checks only after the imported-source
+path passes its gate. See the active
+[self-hosting handoff](../.agents/plans/self-hosting-kernel.md).
 
 Dynamic integer division/remainder now match exact positioned faults in both
 generated targets, and MIN%-1 returns zero without undefined C arithmetic.
@@ -216,9 +270,9 @@ The counts and implementation limits below describe P0, not the current compiler
 Update these counts only when they actually change. Do not copy stale counts into
 new documents.
 
-**Current gate: P6 — TS emitter and runtime, in progress.** P5 was completed on
-2026-11-01; update this line when a gate is completed and use the phase
-checklists as the source of truth.
+**Historical phase marker:** the former P0-P9 checklist is retained as design
+history. The current minimum TS kernel is complete; use the dated current
+evidence above and the active self-hosting handoff for next steps.
 
 **Original critical path (owner direction, 2026-11-01): T00 → T11 → T12.**
 T11/T12 are recorded; the 2026-11-02 transition above is the current host work.
@@ -273,6 +327,12 @@ only the minimal execution support needed to run S. Otherwise each igniter
 feature makes the generated alternative a harder, moving target. The parity
 ledger records both output differences and the remaining feature gap.
 
+The 2026-11-10 owner direction supersedes full TS/C parity as a prerequisite:
+grow the seed and S in paired increments, but compare the declared kernel
+subset only. Current S already reaches a TS fixed point. Unsupported language
+features stay in the post-kernel queue and must not block imports or T00
+retirement unless a concrete compiler-source dependency proves otherwise.
+
 ## Fixed bootstrap defaults
 
 These are implementation defaults, not selected language decisions. Changing one
@@ -282,16 +342,16 @@ requires the project owner's explicit selection and an update to this page and t
 | ID | Default | Effect |
 |---|---|---|
 | **B1** | **L** is the current compiler-source subset listed below. | Keeps the first self-host small; the igniter already executes S. |
-| **B2** | Assembly is an **ordered manifest** plus a loader line map. No `import`/`export` language syntax. | Avoids preempting the open module grammar; solves the backend-literal ordering problem. |
+| **B2** | Initial kernel assembly may use an **ordered manifest** plus a loader line map. Source imports are a post-kernel step; this does not select a general module/package system. | Keeps bootstrap construction simple while leaving a clean path to explicit source dependencies. |
 | **B3** | Compiler architecture is **streaming/direct emission**, with a flat non-recursive item or instruction stream if needed. No recursive AST. | No recursive product/sum types are required in L. |
 | **B4** | Shared libraries use **read-only parameters and returned values** at first. No `mut` parameters, records, generics, closures or `Result`; diagnostic/exit helpers are allowed. | Keeps L and the compiler surface small. |
-| **B5** | **TS first, C second**; both are required at the fixed-point gate. | TS iterates faster; C is the longer runtime/memory pole. |
-| **B6** | Fixed point means **byte-identical** `T2 == T` and `C2 == C`. Behavioral parity with a normalized diff is a fallback only after the cause is understood and recorded. | Makes nondeterminism visible. |
+| **B5** | **TS is the minimum self-hosting gate.** Native C is a later target. | The Lite compiler can reach the initial self-hosting point without waiting for native-backend work. |
+| **B6** | The TS fixed point means **byte-identical** `T2 == T`. Native C equality is checked in its separate later ladder. | Makes nondeterminism visible without coupling the TS kernel to native C. |
 | **B7** | No official std, module/import, CLI or ABI decision is made by this plan. | Keeps bootstrap scaffolding replaceable. |
-| **B8** | **Stage 0 feature freeze for bootstrap:** do not add a new igniter language feature, builtin, host API or CLI behavior. If one is genuinely required, stop; the owner decision must add the same slice to L/S and its compiler plan. | Prevents the generated compiler from chasing a moving TS target. |
+| **B8** | Grow the seed and Lite-written compiler in paired increments: first add the capability to the seed, then adopt it in S, and compare the declared kernel subset. | Keeps the seed and S aligned without requiring the full language spec before self-hosting. |
 | **B9** | S may use only **L**. Expand L after contract and generated-support acceptance, then adopt the feature in S under the [development guidelines](../.agents/rules/compiler-development.md#accept-support-before-using-it-in-compiler-source). | The selected seed must support the compiler source before adoption. |
 | **B10** | Bootstrap artifacts are **single-file** per target (or one source plus one documented runtime file); no target-level package system. | Keeps the build chain auditable. |
-| **B11** | Stage 0, L/S and T/C are kept in **lockstep feature parity**. Igniter-only capability is debt, not progress; closing the gap is part of the bootstrap. | Keeps a Lite implementation reachable instead of chasing an ever-growing TS igniter. |
+| **B11** | Seed/S comparisons are required for the **declared self-hosting subset**, not full T00/T11 parity. | Lets compiler work reach a fixed point while unsupported language features stay explicit backlog. |
 
 ## Agent workflow rules
 
@@ -299,11 +359,11 @@ requires the project owner's explicit selection and an update to this page and t
    evidence is recorded, even when the next task looks independent.
 2. **Keep the fast lane green.** Run `./lite test --fast` after every change.
    Run the full gate before recording completion.
-3. **No new language surface in this plan; stage 0 is feature-frozen.** Do not
-   add syntax, builtins, standard modules, host APIs or CLI commands. New
-   capability is Lite-first: design it in L/S, add its compiler slice, and give
-   stage 0 only the minimal execution support needed to run S. If a task cannot
-   be done without new surface, stop at the decision point.
+3. **Grow the bootstrap in paired increments.** When the compiler needs a new
+   capability, add it to the TS seed first, then implement/adopt it in Lite and
+   compare the declared self-hosting subset. Avoid unrelated syntax, builtins,
+   standard modules, host APIs and CLI behavior. The bounded top-level import
+   step is already owner-approved for after the current kernel.
 4. **S stays inside L.** Do not use `match`, records, enums, unions, Float,
    arrays, closures, `mut` parameters, modules, `finally`, loop metadata or
    compound operators in S just because the igniter supports them.
@@ -358,7 +418,7 @@ requires the project owner's explicit selection and an update to this page and t
 | **P5** | Checker | Accepts S; rejection diagnostics match |
 | **P6** | TS emitter and runtime | T(S) produces a runnable T2 |
 | **P7** | C emitter and runtime | C(S) produces a runnable C2 |
-| **P8** | Self-host and fixed point | `T2 == T`, `C2 == C`, corpus parity |
+| **P8** | Historical full TS/C gate; current minimum is TS | `T2 == T` for the kernel; C remains later |
 | **P9** | Packaging, CI and provenance | Clean-checkout rebuild is reproducible and documented |
 
 ## P0 — Baseline and scaffolding
@@ -636,7 +696,11 @@ explicitly assigned the independent C runtime work.
 **Gate:** C compiles cleanly, runs, compiles every program case with exact
 behavior and produces a runnable C2 from S.
 
-## P8 — Self-host and fixed point
+## P8 — Historical full TS/C self-host and fixed point
+
+This broader TS/C ladder is retained as the former plan. Its C fixed points,
+cross-builds and 53/39-case parity requirements are future native work, not
+prerequisites for the verified minimum TS kernel or T00 retirement.
 
 **Goal:** prove the bootstrap chain.
 
@@ -693,7 +757,8 @@ created by this change.
       lines and this plan.
 - [ ] Document unsupported constructs, host prerequisites and rebuild limits.
 - [x] Keep the verified generated T11 seed shipped with exact source/builder hashes.
-      T00 remains active until the transition's feature and consumer gates pass.
+- [ ] Remove active handwritten T00 after the minimal source-import step and
+      no-T00 gates; full T11/T00 feature parity is not a prerequisite.
 
 **Gate:** a clean checkout rebuilds the chain and reproduces the recorded hashes;
 a reviewer can follow the commands without guessing.
@@ -843,7 +908,13 @@ Each gate records:
 - the commit and, at a release gate, the annotated tag;
 - any new limitation.
 
-## Self-host point: definition of done
+## Historical full TS/C definition of done (superseded as the minimum gate)
+
+The current minimum gate is narrower and already measured: the selected TS seed
+builds S, S reaches byte-identical TS artifacts through three generations, the
+final compiler passes its recorded 93-case compiler corpus, and the build path
+does not load T00. T00 retirement additionally requires the source-import and
+no-T00 consumer gates in the active handoff.
 
 The point is reached only when all of these are true:
 
@@ -869,17 +940,17 @@ The point is reached only when all of these are true:
 | D2 | Ordered manifest, no import/export syntax | default |
 | D3 | Streaming/direct emission, flat IR allowed, no AST | default |
 | D4 | Pure L0/L1 libraries; no `mut` params/records/generics/closures | default |
-| D5 | TS first, C second, both at the gate | default |
-| D6 | Byte-identical fixed point | default |
+| D5 | TS minimum kernel first; C/native follows separately | owner direction 2026-11-10 |
+| D6 | Byte-identical TS fixed point for the kernel; byte-identical C fixed point remains a later native gate | default |
 | D7 | No official std/module/CLI/ABI decision | default |
-| D8 | New igniter language feature needed by S | **stop and ask** |
+| D8 | New seed language feature needed by S | Add it in the seed first, then Lite; compare the declared subset (owner direction 2026-11-10) |
 | D9 | `mut` parameters become necessary for a library API | **stop and ask** |
 | D10 | Records/enums/`match` become necessary for the AST/checker | **stop and ask** |
-| D11 | Modules/imports become necessary for compiler self-assembly | **stop and ask** |
+| D11 | Minimal top-level source import after the kernel | owner-approved for bounded implementation; general module/package rules remain open |
 | D12 | Host file/process APIs become necessary for the CLI | **stop and ask** |
 | D13 | Compiler release tag stream and artifact check-in policy | Generated TS/C-emitter seed check-in selected by owner-approved transition 2026-11-02; igniter release automation uses independent annotated streams: `lite-v*` umbrella, `lang-v*` language, `script-v*` scripting and `compiler-v*` compiler; unselected versions remain unassigned in `versions.json` |
 | D14 | C memory model (arena/refcount/free) | choose at P7 and record |
-| D15 | Stage 0 feature freeze and Lite-first lockstep parity (B8/B11) | owner direction 2026-11-01; changing it requires owner |
+| D15 | Paired seed/Lite growth over the declared self-hosting subset (B8/B11) | owner direction 2026-11-10; full language parity is not a bootstrap gate |
 
 ## Risks and mitigations
 

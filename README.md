@@ -8,7 +8,7 @@
 [short language tour](docs/tour.md) or browse the [reference](docs/README.md).
 Read the [white paper](docs/white-paper.md) for philosophy and design criteria.
 
-The Lite-written compiler now supplies the generated **T11** TS igniter. Run a
+The Lite-written compiler now supplies the generated **T12** TS igniter. Run a
 script, or compile it and execute the artifact, with Node 26.13.0:
 
 ```sh
@@ -29,7 +29,7 @@ public compilation or checking.
 
 The generated compiler still accepts a subset of the existing language. The
 [current inventory](compiler/reports/current-t00-t11-inventory.md) records
-112/172 matching source cases, with 60 remaining failures. T00 stays available
+112/173 matching source cases, with 61 remaining rejections. T00 stays available
 as an explicit reference while the remaining TS ports land. Default tests and
 routine build, self-build, corpus and benchmark commands already use generated TS.
 Verification now defaults to TS artifacts and reports its unsupported cases.

@@ -1,60 +1,59 @@
 # Generated compiler gaps and progress
 
-Owner direction, 2026-11-02: continue topic by topic, with an atomic commit for
-each verified slice. Improve compiler speed where measurements support a change;
-keep correctness, source readability and reproducible bootstrap routes intact.
-This tracker covers the T00 replacement goal, including newly discovered flaws.
+Owner direction, 2026-11-11: the self-hosting gate is the smallest Lite source
+subset that can build and rebuild the compiler. Do not require full T00 feature
+parity before retiring the handwritten implementation. Continue adding needed
+features in the seed/compiler loop, comparing only the declared bootstrap subset
+at each increment. Keep each verified slice atomic and preserve reproducible
+builds.
 
-Latest owner direction prioritizes TS migration over independent correctness
-work. Public `run` compiles a script to a temporary artifact and executes it with
-the Node entry; compiling and executing artifacts explicitly also remains
-available. Keep self-hosted TS rebuilds/fixed points throughout. T00 remains an
-explicit reference until TS features and consumers migrate. C output/native work
-and advanced edge audits follow retirement. See the
+The selected generated T12 compiler now reaches a three-generation fixed point
+for the bounded kernel and passes its 94-case compiler corpus. The root-symbol
+contract is covered for repeated root definitions, nested bindings, deferred
+function references to later inferred scalar literals, parameter shadowing,
+and source-ordered eager reads. Next, implement a minimal top-level source
+import with explicit dependency metadata, then remove active T00 consumers
+after clean-checkout/no-T00 gates pass. Keep the remaining T00/selected-compiler inventory as
+parity backlog, not a retirement prerequisite. Public `run` remains
+compile-and-execute over a TS artifact. C output/native self-hosting remains a
+later target. See the
 [transition order](transition-plan.md#implementation-order).
 
 ## Immediate migration priorities
 
-Latest owner direction: switch to the Lite-written TS compiler as quickly as
-possible, keep its generated self-build/fixed point, replace the removed
-interpreter run launcher with compile-and-execute `lite run`, and execute
-compiled artifacts. C output/native work is post migration and does not
-block TS default use or T00 retirement. This supersedes the older native-first
-retirement ordering.
+The current path is:
 
-1. Switch public compile/check and ordinary verification/test consumers to
-   generated TS artifacts; keep the interpreter launcher removed and provide
-   compile-and-execute `lite run`. Retain T00 only as an explicit reference while
-   the remaining TS ports land.
-2. Port the missing ordinary binding/storage, tuple/array/List, call/function and
-   block/conditional/loop/match/cleanup forms. All 20 implemented lessons and
-   eight library tests already run on generated Lite; eight examples remain.
-3. Make every supported feature compile and execute from a TS artifact, then
-   remove active T00 dependencies and complete the clean-checkout audit.
-4. Resume C output and native self-hosting after the TS migration. Advanced
-   correctness/edge matrices remain separate from the urgent compiler switch.
+1. Complete the T12 kernel step with refreshed inventory and clean-checkout
+   verification; its source, fixed-point and compiler-corpus checks are recorded.
+2. Add the narrow top-level import path after the completed kernel. Resolve each
+   source once on open, retain source locations, and expose dependency metadata.
+3. Remove T00 from active commands, test suites, verifiers, benchmarks and
+   compiler audits once clean-checkout/no-T00 gates pass. The 61 T12 rejections
+   remain visible feature-parity work; they do not block this step.
+4. Continue needed Lite compiler features in paired seed/source increments and
+   compare the declared subset. Resume public C/native work separately.
 
 ## Measured checkpoint
 
 The [current inventory](reports/current-t00-t11-inventory.md) and
-[raw observations](reports/current-t00-t11-inventory.json) use the generated
-seed `77cacbac…`. All inputs compile/check against the current reference, both
-execution paths use identical anonymous diagnostic naming, and raw-byte input
-probes follow the real CLI's lazy strict UTF-8 decoding. Historical reports stay
-unchanged. Refresh with `node compiler/scripts/t00-t11-inventory.ts --large-sources`.
+[raw observations](reports/current-t00-t11-inventory.json) were refreshed on
+2026-11-11 against selected generated seed `02e8e226…`, at base revision `10a1ab03`.
+The report covers 217 tracked Lite source files and records exact source and
+artifact hashes. Refresh with `node compiler/scripts/t00-t11-inventory.ts
+--large-sources` while T00 is retained.
 
 - Canonical features: 28/41 match; 13 rejected.
 - Examples: 11/19 match; 8 rejected.
 - Implemented samples: 20/20 match; none rejected.
-- Isolated boundary probes: 45/84 match; 39 rejected; no differences among accepted probes.
-- Library tests: 8/8 match. All 214 tracked Lite sources are accounted for;
+- Isolated boundary probes: 45/85 match; 40 rejected; no differences among accepted probes.
+- Library tests: 8/8 match. All 217 tracked Lite sources are accounted for;
   compile-only acceptance is distinguished from executed parity.
-- Total executed source cases: 112/172 match, 60 still fail. Compared with the
-  original inventory, 52 previously failing cases now match and none regress.
-  New canonical cases and isolated probes explain denominator changes. The
-  Float integer-literal probe now passes; two new braced-value boundary probes
-  preserve corrected old behavior. Original-case progress is unchanged at 52
-  closures because these three probes were added after the original inventory.
+- Total executed source cases: 112/173 match, 61 still fail. Compared with the
+  original inventory, 51 previously failing cases now match and none regress.
+  All 61 remaining cases are T12 rejections; the audit found no runtime output,
+  status, diagnostic or strict-typecheck mismatches among the accepted cases.
+  These case counts are parity evidence, not an overall completion percentage
+  or a self-hosting gate.
 
 
 These counts describe measured programs. Several failing cases share one cause;
@@ -482,16 +481,16 @@ cutover and the remaining ordinary TS syntax; C is not a retirement blocker.
 
 - 2026-11-03: w1 test contracts are separated: all 240 original igniter tests retain destinations (81 generated/phase/artifact, 159 reference), and 776 exact process contracts replace live T00 expected-value lookups. Shared manifest loading retains all 93 compiler fixtures. Five contract/ownership checks, six copied-checkout no-T00 host groups, strict host/seed checks, three identical generated self-builds and nine editor groups pass. Fast: 278 pass/12 skips; full: 281 pass/9 native skips, zero failures. Compiler source/seed and the 60/81 canonical TS audit are unchanged. Default actual compiler/phase helpers and reference selection remain w2 work. See [the evidence](reports/2026-11-03-test-contracts.json) and [contract guide](tests/contracts/README.md).
 
-This is a harness prerequisite, not a language-port closure or completed default test cutover. The measured 112/172 source inventory is unchanged because compiler source and seed identities are unchanged.
+This is a harness prerequisite, not a language-port closure or completed default test cutover. The measured 112/173 source inventory is unchanged because compiler source and seed identities are unchanged.
 
 ## Generated default regressions (2026-11-03)
 
 - 2026-11-03: default tests now compile with generated Lite, strictly check TS and execute isolated artifacts; checked library/phase drivers are reused across inputs. All 93 compiler fixtures, eight library entries and 81 original generated tests remain covered. T00 checks require `./lite test --reference` (162 pass). Ordinary and T00-free source-archive fast suites each pass 119 with 12 deferred skips; full suites each pass 122 with nine native skips and zero failures. Strict checks, nine editor groups and three identical self-builds pass; source/seed are unchanged. The default static graph has 18 modules and no T00 imports. CI now runs the full no-T00 suite. The canonical TS audit still reports 60/81 passing with 21 visible pending ports. See [the evidence](reports/2026-11-03-generated-tests.json). Routine tooling remains w3 work.
 
-This completes the default test execution cutover, not the remaining language ports or T00 retirement. The recorded 112/172 source inventory stays unchanged; source/seed identities match, while the canonical TS scenario audit above was freshly executed.
+This completes the default test execution cutover, not the remaining language ports or T00 retirement. The recorded 112/173 source inventory stays unchanged; source/seed identities match, while the canonical TS scenario audit above was freshly executed.
 
 ## Generated routine tooling (2026-11-03)
 
 - 2026-11-03: w3 completes generated-only routine tooling. Self-build strictly checks three named generations and records real source/builder identities; corpus validation checks 93 compiler contracts and 69 TS runtime scenarios against recorded expectations. Benchmarking records generated process/load/compile/check/runtime phases with three samples and one excluded warmup. Old T00 audit programs are preserved byte-for-byte apart from routing comments and require --reference. Five CLI regression groups include absent T00/Git, malformed inputs, wrong compilers and a legitimate changed-source fixed point. Fast: 124 pass/12 skips; ordinary and no-T00 full: 127 pass/nine native skips, zero failures. Reference 162/162, nine editor groups, strict checks and both corpus routes pass. Source/seed remain unchanged; the canonical audit is still 60/81 with 21 visible pending ports. See [evidence](reports/2026-11-03-generated-tooling.json), [tool guide](bootstrap/README.md) and [baseline](../benchmark/reports/2026-11-03-generated-compiler-performance.md).
 
-Workflow cutover is complete. This adds no language support and does not close the 60 measured source-case failures. Next is the planned tuple/data/call migration; advanced audits and native C remain deferred.
+Workflow cutover is complete. This adds no language support and does not close the 61 measured source-case failures. Next is the planned tuple/data/call migration; advanced audits and native C remain deferred.

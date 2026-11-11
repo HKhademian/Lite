@@ -1,0 +1,70 @@
+{
+  "phase": "generated-fixed-point",
+  "revision": "10a1ab03ec5a120ade0a8124eea545bc55fd0438",
+  "node": "v26.12.1",
+  "out": "/tmp/lite-self-host-kernel-promoted-20261111",
+  "selected": {
+    "artifactSha256": "02e8e226d5d192660eaf2fe009f9ec54fa8d3a4fe3c3cda487ac594ca76adc59",
+    "currentSourceSha256": "8d2a857a496ae34dffc711fb59cfa4b189a902cf634003792e1505bf30d3a8f7",
+    "selectedCompilerSha256": "02e8e226d5d192660eaf2fe009f9ec54fa8d3a4fe3c3cda487ac594ca76adc59",
+    "selectedCompilerBuilderSha256": "02e8e226d5d192660eaf2fe009f9ec54fa8d3a4fe3c3cda487ac594ca76adc59",
+    "supplied": false
+  },
+  "toolSources": [
+    {
+      "path": "compiler/scripts/self-host.ts",
+      "sha256": "973b60126594dbb69a03ccfa7691276ec20a6f0e47dbe33098d2611923ef0d6b"
+    },
+    {
+      "path": "compiler/scripts/tooling.ts",
+      "sha256": "a04ea7d8c5fde0b828a129eaa842bf666d85f2d77805c9adf1c789102e3a7f47"
+    },
+    {
+      "path": "compiler/host.ts",
+      "sha256": "d746e90f202cee4aa881c0244de9423f519d2ee61ef0745d7bd855a9a2ac8cda"
+    },
+    {
+      "path": "igniter/artifacts.ts",
+      "sha256": "084be9e0d6f3e5ce581ecbda1fc86aea601a2de409c5ddb0d5363c3a671db626"
+    }
+  ],
+  "source": {
+    "bytes": 197423,
+    "sha256": "8d2a857a496ae34dffc711fb59cfa4b189a902cf634003792e1505bf30d3a8f7"
+  },
+  "generations": [
+    {
+      "generation": 1,
+      "sourceSha256": "8d2a857a496ae34dffc711fb59cfa4b189a902cf634003792e1505bf30d3a8f7",
+      "builderSha256": "02e8e226d5d192660eaf2fe009f9ec54fa8d3a4fe3c3cda487ac594ca76adc59",
+      "artifactSha256": "02e8e226d5d192660eaf2fe009f9ec54fa8d3a4fe3c3cda487ac594ca76adc59",
+      "bytes": 360625,
+      "compileProcessMs": 884.432541,
+      "strictCheckMs": 121.746083,
+      "path": "/tmp/lite-self-host-kernel-promoted-20261111/generation-1.ts"
+    },
+    {
+      "generation": 2,
+      "sourceSha256": "8d2a857a496ae34dffc711fb59cfa4b189a902cf634003792e1505bf30d3a8f7",
+      "builderSha256": "02e8e226d5d192660eaf2fe009f9ec54fa8d3a4fe3c3cda487ac594ca76adc59",
+      "artifactSha256": "02e8e226d5d192660eaf2fe009f9ec54fa8d3a4fe3c3cda487ac594ca76adc59",
+      "bytes": 360625,
+      "compileProcessMs": 877.679625,
+      "strictCheckMs": 122.31800000000021,
+      "path": "/tmp/lite-self-host-kernel-promoted-20261111/generation-2.ts"
+    },
+    {
+      "generation": 3,
+      "sourceSha256": "8d2a857a496ae34dffc711fb59cfa4b189a902cf634003792e1505bf30d3a8f7",
+      "builderSha256": "02e8e226d5d192660eaf2fe009f9ec54fa8d3a4fe3c3cda487ac594ca76adc59",
+      "artifactSha256": "02e8e226d5d192660eaf2fe009f9ec54fa8d3a4fe3c3cda487ac594ca76adc59",
+      "bytes": 360625,
+      "compileProcessMs": 889.3464999999997,
+      "strictCheckMs": 118.94645899999978,
+      "path": "/tmp/lite-self-host-kernel-promoted-20261111/generation-3.ts"
+    }
+  ],
+  "fixedPoint": true,
+  "matchesSelectedCompiler": true,
+  "equalsSelectedBuilder": true
+}

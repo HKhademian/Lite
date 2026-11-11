@@ -2285,9 +2285,9 @@ test('real compiler CLI forwards source-name context without changing emitted by
 });
 
 
-test('restricted compiler corpus keeps 69 program and 24 rejection cases', () => {
+test('restricted compiler corpus keeps 69 program and 25 rejection cases', () => {
   assert.equal(programFixtures.length, 69);
-  assert.equal(rejectionFixtures.length, 24);
+  assert.equal(rejectionFixtures.length, 25);
 });
 
 

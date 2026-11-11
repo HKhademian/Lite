@@ -29,7 +29,7 @@ function copyToolArchive(directory: string): void {
   symlinkSync(join(root, 'igniter/node_modules'), join(directory, 'igniter/node_modules'));
 }
 
-test('generated self-build records three strictly checked generations without relabeling T11', () => {
+test('generated self-build records three strictly checked generations from the selected seed', () => {
   const directory = mkdtempSync(join(tmpdir(), 'lite tools ladder '));
   try {
     const result = summary(invoke(root, 'compiler/scripts/self-host.ts', ['--out', directory]));
@@ -41,7 +41,7 @@ test('generated self-build records three strictly checked generations without re
       assert.equal(item.sourceSha256, seed.sourceSha256); assert.equal(item.path, join(directory, `generation-${i + 1}.ts`));
       assert.ok(existsSync(item.path));
     }
-    assert.equal(existsSync(join(directory, 'T11.ts')), false);
+    assert.equal(existsSync(join(directory, seed.artifact)), false);
     assert.equal(JSON.parse(readFileSync(join(directory, 'ladder.json'), 'utf8')).fixedPoint, true);
   } finally { rmSync(directory, { recursive: true, force: true }); }
 });
@@ -75,7 +75,7 @@ test('tooling separates option/type failures, fixed points and compiler conforma
     assert.equal(ladder.fixedPoint, true); assert.equal(ladder.matchesSelectedCompiler, false);
     const conformance = invoke(root, 'compiler/scripts/corpus-parity.ts', ['--artifact', join(directory, 'unrelated/generation-3.ts')]);
     assert.equal(conformance.status, 1);
-    assert.equal((JSON.parse(conformance.stdout) as { mismatches: unknown[] }).mismatches.length, 93);
+    assert.equal((JSON.parse(conformance.stdout) as { mismatches: unknown[] }).mismatches.length, 94);
     const out = join(directory, 'failed');
     const failed = invoke(root, 'compiler/scripts/self-host.ts', ['--artifact', broken, '--out', out]);
     assert.notEqual(failed.status, 0); assert.equal(existsSync(join(out, 'ladder.json')), false);
@@ -85,8 +85,8 @@ test('tooling separates option/type failures, fixed points and compiler conforma
 
 test('corpus command checks exact artifacts, rejected streams and executed program contracts', () => {
   const result = summary(invoke(root, 'compiler/scripts/corpus-parity.ts', []));
-  assert.equal(result['phase'], 'recorded-contracts'); assert.equal(result['cases'], 93);
-  assert.equal(result['programs'], 69); assert.equal(result['rejections'], 24); assert.equal(result['executions'], 69);
+  assert.equal(result['phase'], 'recorded-contracts'); assert.equal(result['cases'], 94);
+  assert.equal(result['programs'], 69); assert.equal(result['rejections'], 25); assert.equal(result['executions'], 69);
   assert.deepEqual(result['mismatches'], []); assert.equal(result['artifactSha256'], seed.artifactSha256);
   const directory = mkdtempSync(join(tmpdir(), 'lite-tools-mismatch-'));
   try {
@@ -94,7 +94,7 @@ test('corpus command checks exact artifacts, rejected streams and executed progr
     const wrong = invoke(root, 'compiler/scripts/corpus-parity.ts', ['--artifact', artifact]);
     assert.equal(wrong.error, undefined); assert.equal(wrong.status, 1);
     const report = JSON.parse(wrong.stdout) as { mismatches: string[]; executions: number };
-    assert.equal(report.mismatches.length, 93); assert.equal(report.executions, 0);
+    assert.equal(report.mismatches.length, 94); assert.equal(report.executions, 0);
   } finally { rmSync(directory, { recursive: true, force: true }); }
 });
 
@@ -107,7 +107,7 @@ test('everyday tooling and benchmark work in a source archive without T00 or Git
     const out = join(directory, '.cache/tooling'); mkdirSync(dirname(out), { recursive: true });
     assert.equal(summary(invoke(directory, 'compiler/scripts/self-host.ts', ['--out', out]))['fixedPoint'], true);
     const corpus = summary(invoke(directory, 'compiler/scripts/corpus-parity.ts', []));
-    assert.equal(corpus['cases'], 93); assert.equal(corpus['executions'], 69); assert.deepEqual(corpus['mismatches'], []);
+    assert.equal(corpus['cases'], 94); assert.equal(corpus['executions'], 69); assert.deepEqual(corpus['mismatches'], []);
     const prefix = join(directory, '.cache/benchmark');
     // This command validates the full corpus and times five workloads, including S.
     const report = summary(invoke(directory, 'benchmark/compiler-performance.ts', ['--samples', '1', '--warmups', '0', '--out', prefix], 300000));

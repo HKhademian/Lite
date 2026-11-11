@@ -586,7 +586,7 @@
       "route": "default generated compiler/phase/artifact execution with independent expectations"
     },
     {
-      "title": "restricted compiler corpus keeps 69 program and 24 rejection cases",
+      "title": "restricted compiler corpus keeps 69 program and 25 rejection cases",
       "destination": "igniter/test.ts",
       "originalLine": 1734,
       "dependencies": [],

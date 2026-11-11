@@ -19,7 +19,7 @@ export type CompilerInput = Readonly<{ text: string; name?: string; lineMap?: re
 export type CompilerBuild = Readonly<{ target: CompilerTarget; path: string; sourceSha256: string; artifactSha256: string; builderSha256: string; cached: boolean }>;
 
 const root = fileURLToPath(new URL('../', import.meta.url));
-const seedPath = fileURLToPath(new URL('./bootstrap/T11.ts', import.meta.url));
+const seedPath = fileURLToPath(new URL(`./bootstrap/${seed.artifact}`, import.meta.url));
 const entryPath = fileURLToPath(new URL('./entry.ts', import.meta.url));
 
 /** Computes a lowercase SHA-256 identity without normalizing source bytes. */
@@ -69,7 +69,7 @@ function cachedBuild(directory: string, sourceSha256: string, target: CompilerTa
  * seed and strict-checks it before atomic cache publication. No T00 code runs.
  */
 export function buildCompiler(target: CompilerTarget): CompilerBuild {
-  if (hash(readFileSync(seedPath)) !== seed.artifactSha256) throw new Error('T11 bootstrap seed hash mismatch');
+  if (hash(readFileSync(seedPath)) !== seed.artifactSha256) throw new Error('selected TS bootstrap seed hash mismatch');
   const known = target === 'ts' ? seed : cSeed;
   const bundle = loadBundle(resolve(root, known.sourceManifest));
   const source = bundle.text;
@@ -90,7 +90,7 @@ export function buildCompiler(target: CompilerTarget): CompilerBuild {
     const generated = invoke(seedPath, source);
     if (generated.status !== 0 || generated.stderr.length !== 0) {
       const diagnostic = mapDiagnostics(generated.stderr, bundle.lineMap).toString('utf8');
-      throw new Error(`T11 cannot rebuild current compiler source (${generated.status}):\n${diagnostic}`);
+      throw new Error(`${seed.artifact} cannot rebuild current compiler source (${generated.status}):\n${diagnostic}`);
     }
     const artifact = join(temporary, 'compiler.ts');
     writeFileSync(artifact, generated.stdout);

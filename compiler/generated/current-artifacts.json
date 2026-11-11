@@ -1,10 +1,10 @@
 {
-  "note": "Current exact artifacts after Float literal-context and braced-value boundary migration. All 69 prior TS/C artifact pairs remain unchanged. New cases execute as generated TS artifacts. C output/native gates are deferred by the owner until after the TS migration; already generated C evidence remains historical.",
-  "recorded": "2026-11-02",
-  "sourceSha256": "214cfa39400929ca9e45d5e5f67a4102ec35d0276b109e8ebcc2405490ec7a5e",
-  "compilerSha256": "77cacbacdc2aa97c6c3b86c61f54501fd322ca081cb8be63bd9e5cf1f91818ee",
+  "note": "Current exact artifacts after the 2026-11-11 self-hosting-kernel symbol-resolution increment. Existing program artifacts remain unchanged except the nested-shadow fixture; root duplicate definitions are now an exact rejection contract. C output/native gates remain deferred; C hashes are recorded only for historical generated-artifact comparisons.",
+  "recorded": "2026-11-11",
+  "sourceSha256": "8d2a857a496ae34dffc711fb59cfa4b189a902cf634003792e1505bf30d3a8f7",
+  "compilerSha256": "02e8e226d5d192660eaf2fe009f9ec54fa8d3a4fe3c3cda487ac594ca76adc59",
   "programCases": 69,
-  "rejectedCases": 24,
+  "rejectedCases": 25,
   "artifacts": [
     {
       "name": "adjacent-strings",
@@ -241,10 +241,10 @@
       "c": "sha256:04a919b50b33e47277428e38ff1befeb073b838493fae8098979fc93aae9ac70"
     },
     {
-      "name": "duplicate-local",
-      "source": "001-005-duplicate-local.lts",
-      "ts": "sha256:6983c59bfccbf9fdec6cefb294b17fbb9e9383ee1d6843c8e5ab03e05d23270b",
-      "c": "sha256:f311bf7c2933f1d2f252b81ff20ea5ffed622dca51c82b93ed76c24f1c1f037e"
+      "name": "nested-shadow",
+      "source": "001-005-nested-shadow.lts",
+      "ts": "sha256:e6243d8e0c4b74cb62c620764bf07f46ae08336de3071e1f2c434034e3b61e68",
+      "c": "sha256:baf1296a6f2dc391c71621fb4e54bc13801a65fd1ebc2e8dfbfaeef8cf57af4f"
     },
     {
       "name": "local-missing-semicolon",

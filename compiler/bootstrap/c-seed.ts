@@ -1,17 +1,17 @@
-/** Verified generated float-context seed; exact identities follow. */
+/** Verified C emitter rebuilt by the selected minimum-kernel TS seed. */
 export const cSeed = Object.freeze({
   "artifact": "c-emitter.ts",
-  "sourceSha256": "d13def5c7eb856678f99496ab125d821c7ebac1d39847590ff8f8c418d551381",
-  "sourceBytes": 188416,
-  "artifactSha256": "a21878480102273fc16c1e392b8e89db8588391ff4866ef95f10ea5400fdcc7c",
-  "artifactBytes": 341133,
-  "builderSha256": "77cacbacdc2aa97c6c3b86c61f54501fd322ca081cb8be63bd9e5cf1f91818ee",
+  "sourceSha256": "1c721be3a74c740c6a4b2fc762ac856d7deb135d1f0cc0da1b788969a21266f1",
+  "sourceBytes": 193252,
+  "artifactSha256": "a12ef7f35e1a7b3784b8cfc69c03b46b7e4255b17a5c16ddda1890da02380957",
+  "artifactBytes": 350334,
+  "builderSha256": "02e8e226d5d192660eaf2fe009f9ec54fa8d3a4fe3c3cda487ac594ca76adc59",
   "native": false,
   "sourceManifest": "compiler/manifests/c.json",
-  "sourceRevision": "e04d47245c33db963c08582a95e6baf431b85d90",
-  "artifactRevision": "e04d47245c33db963c08582a95e6baf431b85d90",
-  "builderRevision": "e04d47245c33db963c08582a95e6baf431b85d90",
-  "builder": "Refreshed generated TS compiler compiling current Lite C emitter",
-  "node": "v24.16.0",
+  "sourceRevision": "worktree:8d2a857a496ae34dffc711fb59cfa4b189a902cf634003792e1505bf30d3a8f7",
+  "artifactRevision": "worktree:8d2a857a496ae34dffc711fb59cfa4b189a902cf634003792e1505bf30d3a8f7",
+  "builderRevision": "worktree:8d2a857a496ae34dffc711fb59cfa4b189a902cf634003792e1505bf30d3a8f7",
+  "builder": "Selected T12 minimum-kernel compiler",
+  "node": "v26.12.1",
   "typescript": "7.0.2"
 });

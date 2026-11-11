@@ -190,6 +190,34 @@ test('generated reports evaluate arguments once in order and preserve nested out
   }
 });
 
+test('self-hosting kernel separates root symbols from runtime initialization and nested bindings', () => {
+  const duplicate = compileTs({ text: 'x := 1; x := 1; outputLine(x);', name: 'duplicate-root.lts' });
+  assert.equal(duplicate.status, 2);
+  assert.equal(duplicate.stdout.length, 0, 'rejected source must not produce an artifact');
+  assert.match(duplicate.stderr.toString(), /duplicate-root\.lts:1:9: duplicate top-level value x/);
+
+  const nested = compileTs({ text: 'x := 1; if true { x := 2; outputLine(x); } outputLine(x);', name: 'nested-shadow.lts' });
+  assert.equal(nested.status, 0, nested.stderr.toString());
+  assert.deepEqual(runTsArtifact(nested.stdout.toString()).stdout, Buffer.from('2\n1\n'));
+
+  const deferred = compileTs({
+    text: 'y := fn (): Int { x * 2 }; x := 1; outputLine(y());', name: 'deferred-root.lts',
+  });
+  assert.equal(deferred.status, 0, deferred.stderr.toString());
+  assert.deepEqual(runTsArtifact(deferred.stdout.toString()).stdout, Buffer.from('2\n'));
+
+  const parameterShadows = compileTs({
+    text: 'y := fn (x: Int): Int { x * 2 }; x := 1; outputLine(y(3));', name: 'parameter-shadows-root.lts',
+  });
+  assert.equal(parameterShadows.status, 0, parameterShadows.stderr.toString());
+  assert.deepEqual(runTsArtifact(parameterShadows.stdout.toString()).stdout, Buffer.from('6\n'));
+
+  const eager = compileTs({ text: 'y := x * 2; x := 1; outputLine(y);', name: 'eager-root.lts' });
+  assert.equal(eager.status, 2);
+  assert.equal(eager.stdout.length, 0, 'invalid eager initialization must not produce an artifact');
+  assert.match(eager.stderr.toString(), /eager-root\.lts:1:6: unknown value x/);
+});
+
 /** Copies only host glue, the seed and Lite sources; the T00 implementation is deliberately absent. */
 function isolatedCheckout(): string {
   const directory = mkdtempSync(join(tmpdir(), 'lite-t11-checkout-'));
@@ -203,7 +231,7 @@ function isolatedCheckout(): string {
     'compiler/release-streams.ts', 'config/versions.json',
     'tools/streams.ts',
     'compiler/scripts/release-streams.test.ts',
-    'compiler/bootstrap/T11.ts', 'compiler/bootstrap/seed.ts', 'compiler/bootstrap/tsconfig.json',
+    'compiler/bootstrap/T11.ts', `compiler/bootstrap/${seed.artifact}`, 'compiler/bootstrap/seed.ts', 'compiler/bootstrap/tsconfig.json',
     'compiler/bootstrap/c-emitter.ts', 'compiler/bootstrap/c-seed.ts',
     'compiler/manifests/ts.json', 'compiler/manifests/c.json', 'igniter/loader.ts', 'igniter/tsconfig.json',
     ...bundles.flatMap(bundle => bundle.files.map(path => relative(root, resolve(dirname(manifest), path)))),
@@ -226,7 +254,7 @@ function invoke(directory: string, source: string | Buffer, target: CompilerTarg
     : spawnSync(process.execPath, [join(directory, 'compiler/cli.ts'), target, path], { env, timeout: 10000 });
 }
 
-test('T11 host selects the recorded seed and preserves output, diagnostics and source line maps', () => {
+test('TS host selects the recorded seed and preserves output, diagnostics and source line maps', () => {
   const built = buildTsCompiler();
   assert.equal(built.artifactSha256, seed.artifactSha256);
   assert.equal(built.sourceSha256, seed.sourceSha256);
@@ -247,6 +275,7 @@ test('T11 host selects the recorded seed and preserves output, diagnostics and s
 test('public TS compilation and the retained internal C host work without T00', () => {
   const directory = isolatedCheckout();
   try {
+    symlinkSync(join(root, 'igniter/node_modules'), join(directory, 'igniter/node_modules'));
     assert.equal(existsSync(join(directory, 'igniter/lite.ts')), false);
     assert.equal(existsSync(join(directory, 'igniter/bootstrap.ts')), false);
     for (const target of ['ts', 'c'] as const) {
@@ -264,7 +293,7 @@ test('public TS compilation and the retained internal C host work without T00', 
   } finally { rmSync(directory, { recursive: true, force: true }); }
 });
 
-test('a changed Lite compiler rebuilds with T11, caches by source and rejects corrupt cache bytes', () => {
+test('a changed Lite compiler rebuilds with the selected seed, caches by source and rejects corrupt cache bytes', () => {
   const directory = isolatedCheckout();
   try {
     // Only the TypeScript checker is shared; the copied checkout still has no T00 code.
@@ -293,7 +322,7 @@ test('a changed Lite compiler rebuilds with T11, caches by source and rejects co
     writeFileSync(source, 'this is not valid Lite');
     const rejected = invoke(directory, 'outputLine(42);');
     assert.equal(rejected.status, 1); assert.equal(rejected.stdout.length, 0);
-    assert.match(rejected.stderr.toString(), /T11 cannot rebuild current compiler source/);
+    assert.match(rejected.stderr.toString(), /T12\.ts cannot rebuild current compiler source/);
     assert.match(rejected.stderr.toString(), /\.\.\/src\/fixture\.lts:1:/);
   } finally { rmSync(directory, { recursive: true, force: true }); }
 });
@@ -301,11 +330,11 @@ test('a changed Lite compiler rebuilds with T11, caches by source and rejects co
 test('a modified bootstrap seed fails explicitly without executing T00', () => {
   const directory = isolatedCheckout();
   try {
-    const path = join(directory, 'compiler/bootstrap/T11.ts');
+    const path = join(directory, `compiler/bootstrap/${seed.artifact}`);
     writeFileSync(path, readFileSync(path, 'utf8') + '\n');
     const result = invoke(directory, 'outputLine(42);');
     assert.equal(result.status, 1); assert.equal(result.stdout.length, 0);
-    assert.match(result.stderr.toString(), /T11 bootstrap seed hash mismatch/);
+    assert.match(result.stderr.toString(), /selected TS bootstrap seed hash mismatch/);
   } finally { rmSync(directory, { recursive: true, force: true }); }
 });
 
@@ -334,7 +363,7 @@ test('the TS-hosted C seed preserves source names, subset rejection and artifact
   } finally { rmSync(directory, { recursive: true, force: true }); }
 });
 
-test('changed C compiler source rebuilds with T11 without a T00 implementation', () => {
+test('changed C compiler source rebuilds with the selected seed without a T00 implementation', () => {
   const directory = isolatedCheckout();
   try {
     symlinkSync(join(root, 'igniter/node_modules'), join(directory, 'igniter/node_modules'));
@@ -1042,58 +1071,23 @@ test('statement scopes isolate locals and preserve outer values while shadow ini
   assertExecutions(executions);
 });
 
-test('sequential value declarations create fresh bindings and retain prior copies and permissions', () => {
-  const executions: ArtifactExecution[] = [];
-  const both = ['x := 1; x := 2; outputLine(x);',
-    'var x := 2; saved := x; x = 3; x := x + 4; outputLine(saved, x);',
-    'x := 1; var x := x; x = x + 1; outputLine(x);',
-    'var x := 1; x := x + 1; outputLine(x);',
-    'x := 1; one := x; x := "two"; two := x; x := true; outputLine(one, two, x);',
-    'var x: Int = 7; x: Int = x; outputLine(x);', 'x := 7; x: Int; outputLine(x);',
-    'x := 1; x := 2; { x := x + 1; outputLine(x); } outputLine(x);',
-    'var x := 0; loop { var x := x + 1; var x := x + 1; outputLine(x); break } outputLine(x);',
-    'var x := 0; if true { x := x + 1; x := x + 1; outputLine(x); } outputLine(x);',
-    'var x := 1; original := x; var x := x + 1; x = 9; outputLine(original, x);',
-    'var flag := false; flag := not flag; outputLine(flag);',
-    'var text := "a"; text := text + "b"; outputLine(text);',
-    'x := 9223372036854775807; x := x - 1; outputLine(x);',
-    'inputInt := 7; inputInt := "value"; outputLine(inputInt);',
-    'var x := 0; ' + Array(200).fill('x := x + 1;').join(' ') + ' outputLine(x);'];
-  const tsOnly = ['f := fn(n: Int): Int { var n := n; n = n + 1; n } outputLine(f(3));',
-    'f := fn(n: Int): String { n := "value"; return n; } outputLine(f(3));',
-    'values: List<Int> = [1, 2]; loop values as item { item := item + 1; outputLine(item); }',
-    'values: List<Int> = [1]; saved: List<Int> = values; values: mut List<Int> = values; push_back(mut values, 2); outputLine(saved, values);',
-    'pair := (n = 1, label = "old"); saved := pair; pair := (n = pair.n + 1, label = "new"); outputLine(saved, pair);',
-  ];
-  for (const [sources, targets] of [[both, ['ts', 'c']], [tsOnly, ['ts']]] as const) for (const text of sources) {
-    const expected = expectedText(text); assert.equal(expected.status, 0, text + expected.stderr.toString());
-    for (const target of targets) {
-      const compiled = compileTarget(target, { text }); assert.equal(compiled.status, 0, text + compiled.stderr.toString());
-      if (target === 'c' && process.env['LITE_SKIP_NATIVE'] === '1') continue;
-      executions.push({ target, artifact: compiled.stdout.toString(), expected, context: text });
-    }
-  }
-  const invalid = ['outputLine("before"); x := x;', 'var x := 7; x: Bool = x;',
-    'var x := 1; x := x + 1; x = 3;', 'x := 1; var x: Bool = true; x = 1;',
-    'values: mut List<Int> = [1]; values: List<Int> = values; push_back(mut values, 2);',
-    'f := fn(n: Int, n: Int): Int { n } outputLine(f(1, 2));',
-    '{ x := 1; x := 2; } outputLine(x);'];
-  for (const text of invalid) {
-    assert.equal(expectedText(text).status, 1, text);
+test('nested value declarations shadow while root declarations remain unique', () => {
+  const nested = 'x := 1; if true { x := 2; outputLine(x); } outputLine(x);';
+  const tsNested = compileTarget('ts', { text: nested });
+  assert.equal(tsNested.status, 0, tsNested.stderr.toString());
+  assert.deepEqual(runTsArtifact(tsNested.stdout.toString()).stdout, Buffer.from('2\n1\n'));
+  const cNested = compileTarget('c', { text: nested });
+  assert.equal(cNested.status, 0, cNested.stderr.toString());
+  if (process.env['LITE_SKIP_NATIVE'] !== '1') assert.deepEqual(runCArtifact(cNested.stdout.toString()).stdout, Buffer.from('2\n1\n'));
+
+  for (const text of ['x := 1; x := 2;', 'var x := 1; x: Int = 2;']) {
     for (const target of ['ts', 'c'] as const) {
-      const compiled = compileTarget(target, { text }); assert.equal(compiled.status, 2, text); assert.equal(compiled.stdout.length, 0);
+      const compiled = compileTarget(target, { text });
+      assert.equal(compiled.status, 2, `${target}: ${text}`);
+      assert.equal(compiled.stdout.length, 0, `${target}: rejected roots emit no artifact`);
+      assert.match(compiled.stderr.toString(), /duplicate top-level value x/);
     }
   }
-  for (const text of ['outputLine("before");\r\nvar x := 9223372036854775807; x := x + 1;',
-    'outputLine("before");\r\nvar x := 0; x := 1 / x;']) {
-    const name = 'shadow سلام.lts', expected = expectedText(text, { name }); assert.equal(expected.status, 1);
-    for (const target of ['ts', 'c'] as const) {
-      const compiled = compileTarget(target, { text, name }); assert.equal(compiled.status, 0, compiled.stderr.toString());
-      if (target === 'c' && process.env['LITE_SKIP_NATIVE'] === '1') continue;
-      executions.push({ target, artifact: compiled.stdout.toString(), expected, context: text });
-    }
-  }
-  assertExecutions(executions);
 });
 
 test('ordinary expression items evaluate silently and trailing separators retain function results', () => {
@@ -1262,7 +1256,7 @@ test('finite Float literals retain binary64 values, display and same-family comp
   const midpoint = (1n << 1024n) - (1n << 970n);
   literals.push((midpoint - 1n).toString() + '.0');
   const both = ['outputLine(' + literals.join(', ') + ');',
-    'var n: Float = 0.1; saved := n; n = 0.2; n := -n; outputLine(saved, n, +n, -(-n));',
+    'var n: Float = 0.1; saved := n; n = 0.2; n = -n; outputLine(saved, n, +n, -(-n));',
     'zero: Float; outputLine(zero, zero == 0.0, -zero, +zero);',
     'a := 1.5; b := 2.5; outputLine(a == b, a =!= b, a < b, a <! b, a <= b, a <!= b, a > b, a >! b, a >= b, a >!= b);',
     'a := 1.5; b := 2.5; c := 3.5; outputLine(a < b < c, c > b > a, a > b < c);',
