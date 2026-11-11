@@ -8,7 +8,7 @@
 [short language tour](docs/tour.md) or browse the [reference](docs/README.md).
 Read the [white paper](docs/white-paper.md) for philosophy and design criteria.
 
-The Lite-written compiler now supplies the generated **T12** TS igniter. Run a
+The Lite-written compiler now supplies the generated **T13** TS igniter. Run a
 script, or compile it and execute the artifact, with Node 26.13.0:
 
 ```sh

@@ -450,7 +450,7 @@ test('a changed Lite compiler rebuilds with the selected seed, caches by source 
     writeFileSync(source, 'this is not valid Lite');
     const rejected = invoke(directory, 'outputLine(42);');
     assert.equal(rejected.status, 1); assert.equal(rejected.stdout.length, 0);
-    assert.match(rejected.stderr.toString(), /T12\.ts cannot rebuild current compiler source/);
+    assert.match(rejected.stderr.toString(), /cannot rebuild current compiler source/);
     assert.match(rejected.stderr.toString(), /\.\.\/src\/fixture\.lts:1:/);
   } finally { rmSync(directory, { recursive: true, force: true }); }
 });

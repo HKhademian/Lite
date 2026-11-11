@@ -323,8 +323,8 @@ The compiler implementation now lives in
 split under `compiler/src/` and assembled by ordered manifests: L0 libraries,
 target literal encoders, shared front-end, target emitter and target driver.
 `lite-compile-ts` enters through [`compiler/cli.ts`](../compiler/cli.ts): TS uses the
-verified T12 seed/current Lite compiler, and C uses its Lite emitter compiled by
-T12 into a TS-hosted compiler. Top-level relative `.lts` imports define compiler
+verified T13 seed/current Lite compiler, and C uses its Lite emitter compiled by
+T13 into a TS-hosted compiler. Top-level relative `.lts` imports define compiler
 source dependencies; package and namespace semantics remain unimplemented.
 Compiler source no longer uses `importFlatAll`. Access is
 `./bin/lite-compile [--target ts] file.lts`, `./bin/lite compile ...`, or the short `./bin/lite-compile`
@@ -370,7 +370,7 @@ Retain a shippable readable TS bootstrap and source provenance.
 TypeScript remains an important maintained web target, while C is the selected
 first native target and a maintained library/project export and migration path.
 Possible AssemblyScript/early Wasm support needs its own compatibility checks.
-Update **2026-11-11**: T12 is the selected generated compiler and the handwritten
+Update **2026-11-11**: T13 is the selected generated compiler and the handwritten
 T00 implementation and active routes are retired. The verified minimum subset
 rebuilds to a fixed point; source imports record the compiler dependency graph.
 The readable generated TS seed is shipped with exact source/builder hashes.

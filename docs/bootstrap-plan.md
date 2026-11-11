@@ -21,7 +21,7 @@ investigations are permitted under those guidelines. The restrictions below
 describe the current L and bootstrap phase scope; they do not permanently freeze
 Lite compiler feature development. Native C self-hosting remains pending.
 
-Latest owner direction, 2026-11-11: the generated T12 compiler is the only
+Latest owner direction, 2026-11-11: the generated T13 compiler is the only
 active language implementation. The handwritten T00 interpreter, its CLI,
 reference verifier/test/benchmark lanes, and T00-dependent audit generator have
 been removed from the active tree. Compile, check and run use generated TS;
@@ -30,6 +30,16 @@ self-hosting are later work. The
 [current transition order](../compiler/transition-plan.md#implementation-order)
 supersedes earlier phase ordering and native retirement prerequisites below.
 Advanced correctness/edge audits do not block ordinary syntax migration.
+
+Owner update, 2026-11-11: T13 is promoted from the Lite compiler source after a
+strict three-generation fixed point and a reviewed 94-case corpus run (69
+programs, 25 rejections, zero behavior mismatches). Its generated program hashes
+changed because the compiler entry gained the optional source-reader callback;
+runtime and rejection contracts remain unchanged. `pub` and receiver-less
+`import "path";` currently parse as syntax only. The host source expander remains
+active, and Lite-owned graph traversal, public interfaces, and separate-unit
+compilation are still pending. The current fast suite still has unrelated
+ledger, artifact-expectation, and source-archive package failures.
 
 Owner update, 2026-11-05: `./bin/lite run` is available again as a compile-and-execute
 adapter over the generated compiler and Node entry. It restores no interpreter and
@@ -93,7 +103,7 @@ Related direction:
 | **Stage 0** | The preserved TypeScript/Node igniter in [`igniter/`](../igniter/README.md). |
 | **S** | The Lite-written compiler source, assembled from an ordered manifest. |
 | **L** | The language subset S may use. Defined below. |
-| **T** | The generated TS compiler artifact used to bootstrap S; current selected seed is T12. |
+| **T** | The generated TS compiler artifact used to bootstrap S; current selected seed is T13. |
 | **C** | The retained TS-hosted C emitter; not part of the current minimum self-hosting gate. |
 | **T2** | Artifact produced when T compiles S again. |
 | **C2** | Historical/later artifact produced by the native C compiler when it compiles S. |
@@ -162,9 +172,9 @@ behavior, wider numeric types and the remaining feature/native gates stay separa
   records 112/173 matching scenarios and 61 T12 rejections. These are parity
   observations; full parity is not a self-hosting gate.
 
-T12 is selected and rebuilds its source to the same artifact. Its generated
-compiler corpus, full fast suite, and source-import tests pass. T00 retirement
-is complete; the import and dependency slice is recorded below. See the active
+T13 is selected and rebuilds its source to the same artifact. Its generated
+compiler corpus and focused source-import tests pass. T00 retirement is
+complete; the host import bridge is recorded below. See the active
 [self-hosting handoff](../.agents/plans/self-hosting-kernel.md).
 
 ### Minimal source import, 2026-11-11
@@ -175,7 +185,7 @@ imports its components in order. The host records opened dependency paths in
 compiler build provenance, terminates repeated/cyclic visits when a path opens,
 and maps diagnostics through the flattened line map. Expanded source bytes are
 identical to the previous manifest bundle, so the selected T12 seed and fixed
-point artifact do not change. Module namespaces, exports, package resolution,
+point artifact did not change at that stage. Module namespaces, exports, package resolution,
 and `.lt` semantics remain outside this slice.
 
 T00 retirement followed in the same transition wave: the handwritten

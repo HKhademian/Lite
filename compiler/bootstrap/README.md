@@ -1,6 +1,6 @@
 # Generated bootstrap seeds
 
-`T12.ts` is the selected generated TS compiler. [seed.ts](seed.ts) owns its
+`T13.ts` is the selected generated TS compiler. [seed.ts](seed.ts) owns its
 exact source, artifact, builder and revision identities; the current selection
 follows the [Float-context checkpoint](../parity.md#float-literal-contexts-and-braced-values).
 Historical checkpoint hashes and ladder node identities remain in the parity

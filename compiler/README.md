@@ -1,7 +1,7 @@
 # Lite compiler prototype
 
 This directory contains the Lite-written compiler and its bootstrap host. TS
-compilation defaults to the verified generated **T12** compiler in
+compilation defaults to the verified generated **T13** compiler in
 [`bootstrap/`](bootstrap/README.md). Public compile and check use generated TS;
 check-only also strictly checks the artifact without executing it. Public
 `./bin/lite run` compiles to a temporary artifact and executes it through

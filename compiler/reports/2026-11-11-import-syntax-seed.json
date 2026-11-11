@@ -1,0 +1,50 @@
+{
+  "phase": "promoted-generated-seed",
+  "revision": "cb8f72199eae20ec45a7811600d58d76180dfe6e",
+  "node": "v26.12.1",
+  "source": {
+    "bytes": 200868,
+    "sha256": "a1d5d8621b1250ea81f338b8fdbf22587c798455c0b4e79641aae67e9bcfad33"
+  },
+  "priorSeed": {
+    "artifact": "T12.ts",
+    "sha256": "02e8e226d5d192660eaf2fe009f9ec54fa8d3a4fe3c3cda487ac594ca76adc59"
+  },
+  "generations": [
+    {
+      "compiler": "T13",
+      "builderSha256": "438981d3237697f67f00ca8b2fee155331562bef1257b58cda3fac7ff6a7289a",
+      "artifactSha256": "b01766fc37d699a6578a64030808d0284cc968015ed023908f8500923d1819a0",
+      "bytes": 366801,
+      "strictCheckMs": 122.07616699999994
+    },
+    {
+      "compiler": "T14",
+      "builderSha256": "b01766fc37d699a6578a64030808d0284cc968015ed023908f8500923d1819a0",
+      "artifactSha256": "b01766fc37d699a6578a64030808d0284cc968015ed023908f8500923d1819a0",
+      "bytes": 366801,
+      "strictCheckMs": 117.74095800000032
+    },
+    {
+      "compiler": "T15",
+      "builderSha256": "b01766fc37d699a6578a64030808d0284cc968015ed023908f8500923d1819a0",
+      "artifactSha256": "b01766fc37d699a6578a64030808d0284cc968015ed023908f8500923d1819a0",
+      "bytes": 366801,
+      "strictCheckMs": 114.44074999999975
+    }
+  ],
+  "fixedPoint": true,
+  "promotedSeed": {
+    "artifact": "T13.ts",
+    "sha256": "b01766fc37d699a6578a64030808d0284cc968015ed023908f8500923d1819a0",
+    "bytes": 366801
+  },
+  "corpusAudit": {
+    "cases": 94,
+    "programs": 69,
+    "rejectedCases": 25,
+    "behaviorMismatches": 0,
+    "changedProgramArtifactHashes": 69,
+    "reason": "The generated main entry declares the optional source-reader host callback; recorded runtime streams and rejection contracts remain unchanged."
+  }
+}

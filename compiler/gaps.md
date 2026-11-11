@@ -7,7 +7,7 @@ features in the seed/compiler loop, comparing only the declared bootstrap subset
 at each increment. Keep each verified slice atomic and preserve reproducible
 builds.
 
-The selected generated T12 compiler now reaches a three-generation fixed point
+The selected generated T13 compiler now reaches a three-generation fixed point
 for the bounded kernel and passes its 94-case compiler corpus. The root-symbol
 contract is covered for repeated root definitions, nested bindings, deferred
 function references to later inferred scalar literals, parameter shadowing,
@@ -23,11 +23,11 @@ later target. See the
 
 The current path is:
 
-1. T12 kernel complete: root-symbol rules, fixed point, 94-case compiler corpus,
-   T00/T12 inventory, and fast-suite verification are recorded.
-2. Top-level Lite source imports are verified across copied builds and
-   public compile/check/run paths. It resolves local source once on open, records
-   dependency order, and retains imported-file source locations.
+1. T13 kernel complete: root-symbol rules, fixed point, and 94-case compiler
+   corpus are recorded. The archived T00/T12 inventory remains parity evidence.
+2. The host loader still expands source imports. Lite parses `pub` markers and
+   receiver-less import clauses, but public visibility and compiler-owned graph
+   traversal are not implemented yet.
 3. T00 implementation and active interpreter/reference routes are retired. The
    61 T12 rejections remain explicit parity backlog; they did not block retirement.
 4. Continue needed Lite compiler features in paired seed/source increments and
