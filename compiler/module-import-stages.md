@@ -1,6 +1,6 @@
 # Module imports and compiler stages
 
-Status: **owner-selected staged migration; `pub` lexer/parser marker implemented, import graph and visibility semantics pending**
+Status: **owner-selected staged migration; `pub` marker and receiver-less import syntax parse, import graph and visibility semantics pending**
 
 ## Implementation sequence selected 2026-11-11
 
@@ -15,9 +15,10 @@ Status: **owner-selected staged migration; `pub` lexer/parser marker implemented
    receiver-less form or a separately explicit unpacking form remains only
    after that migration.
 
-The current `pub` marker is syntax-only. The compiler still gives the marked
-declaration its existing behavior; it does not yet create a public module
-interface.
+The current `pub` marker and receiver-less import clause are syntax-only in the
+Lite-written compiler. `pub` does not yet create a module interface, and direct
+compiler parsing does not load an imported source. Public CLI paths still use
+the host source expander as a temporary bridge.
 
 ## Selected import surface
 

@@ -156,6 +156,31 @@ test('pub marks a top-level declaration without changing current visibility beha
   assert.match(nested.stderr.toString(), /pub is only allowed on top-level declarations/);
 });
 
+test('receiver-less imports are recognized as top-level source clauses', () => {
+  const compiled = compileTs({ text: 'import "./math.lts"; outputLine(6 * 7);' });
+  assert.equal(compiled.status, 0, compiled.stderr.toString());
+  assert.equal(compiled.stderr.length, 0);
+  withTsArtifact(compiled.stdout.toString(), run => {
+    const actual = run();
+    assert.equal(actual.status, 0, actual.stderr.toString());
+    assert.equal(actual.signal, null);
+    assert.equal(actual.stdout.toString(), '42\n');
+  });
+
+  for (const [source, diagnostic] of [
+    ['if true { import "./math.lts"; }', 'import is only allowed at top level'],
+    ['import "../math.lts" outputLine(1);', 'expected ; after import'],
+    ['import "";', 'import path must be nonempty, relative, and use "/" separators'],
+    ['import "/math.lts";', 'import path must be nonempty, relative, and use "/" separators'],
+    ['import "math\\\\math.lts";', 'import path must be nonempty, relative, and use "/" separators'],
+  ] as const) {
+    const rejected = compileTs({ text: source });
+    assert.equal(rejected.status, 2, source);
+    assert.ok(rejected.stderr.toString().includes(diagnostic), source + '\n' + rejected.stderr.toString());
+    assert.equal(rejected.stdout.length, 0, source);
+  }
+});
+
 test('TS artifact capture preserves repeated output, diagnostics and early exit across fresh runs', () => {
   const chunk = '🙂سلام\r\n'.repeat(128);
   const source = 'mode := inputInt(); var n := 0; loop n < 512 { ' +

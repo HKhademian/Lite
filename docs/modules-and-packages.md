@@ -129,9 +129,11 @@ or an explicit unpack form replaces it. No project source should retain a
 dependency on implicit unpacking after the alias migration.
 
 As of **2026-11-11**, the compiler lexer and parser recognize `pub` on a
-top-level declaration as a syntax-only marker. It does not change visibility
-yet. Import parsing, module interfaces, graph traversal and separate-unit
-compilation are not implemented; the host source expander is still active.
+top-level declaration and the receiver-less `import "path";` clause. Both are
+syntax-only in direct compiler parsing: `pub` does not change visibility and
+the compiler does not load the imported source. Public CLI paths still use the
+host source expander as a temporary bridge. Module interfaces, graph traversal
+and separate-unit compilation remain unimplemented.
 
 Every source unit is compiled as its own unit. The compiler resolves the import
 graph without splicing source text. A module alias refers to the same module

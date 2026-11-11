@@ -26,7 +26,7 @@ test('lite compile, check and run resolve top-level Lite source imports', () => 
   try {
     const main = join(directory, 'main.lts');
     writeFileSync(main, 'import "lib.lts";\noutputLine(answer);\n');
-    writeFileSync(join(directory, 'lib.lts'), 'answer := 42;\n');
+    writeFileSync(join(directory, 'lib.lts'), 'pub answer := 42;\n');
     const compile = spawnSync(process.execPath, [join(root, 'compiler/cli.ts'), 'ts', main], {
       cwd: root, encoding: 'utf8', timeout: 60_000,
     });

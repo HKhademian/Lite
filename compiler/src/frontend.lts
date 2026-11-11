@@ -2194,6 +2194,36 @@ parseProgram := fn(source: String, prefix: String): Items {
         nameStart := position;
         position = skipName(source, position);
         name := textSlice(source, nameStart, position);
+        if name == "import" {
+            if blockCount =!= 0 {
+                failAt(source, nameStart, prefix, "import is only allowed at top level");
+            }
+            pathStart := skipTrivia(source, position, prefix);
+            if pathStart >= size or textAt(source, pathStart) =!= "\"" {
+                failAt(source, pathStart, prefix, "import requires a quoted source path");
+            }
+            path := parseText(source, pathStart, prefix);
+            pathLength := textLength(path.textValue);
+            var invalidPath := pathLength == 0;
+            if pathLength > 0 and textAt(path.textValue, 0) == "/" { invalidPath = true; }
+            var pathIndex := 0;
+            loop pathIndex < pathLength {
+                if textAt(path.textValue, pathIndex) == "\\" { invalidPath = true; }
+                pathIndex = pathIndex + 1;
+            }
+            if pathLength > 1 and textAt(path.textValue, 1) == ":" and isNameStart(textAt(path.textValue, 0)) {
+                invalidPath = true;
+            }
+            if invalidPath {
+                failAt(source, pathStart, prefix, "import path must be nonempty, relative, and use \"/\" separators");
+            }
+            statementNext := consumeStatementEnd(source, path.next, prefix);
+            if statementNext < 0 {
+                failAt(source, skipTrivia(source, path.next, prefix), prefix, "expected ; after import");
+            }
+            position = statementNext;
+            continue;
+        }
         if name == "pub" {
             if blockCount =!= 0 {
                 failAt(source, nameStart, prefix, "pub is only allowed on top-level declarations");
