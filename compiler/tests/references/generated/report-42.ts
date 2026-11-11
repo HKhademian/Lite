@@ -1,5 +1,4 @@
-export function main(lite$write?: (text: string) => void, lite$sourceProviderInput?: (importer: string, spec: string) => { path: string; text: string }): string {
-    void lite$sourceProviderInput;
+export function main(lite$write?: (text: string) => void): string {
     let lite_out = "";
     function lite$emit(text: string): void {
         if (lite$write === undefined) lite_out += text;

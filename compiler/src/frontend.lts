@@ -1547,16 +1547,36 @@ parseBinary := fn(source: String, position: Int, prefix: String, locals: List<Lo
             if labelStart >= textLength(source) or not isNameStart(textAt(source, labelStart)) {
                 break;
             }
-            if not isTupleKind(left.kind) {
-                failAt(source, postPosition, prefix, "field access requires a tuple value");
-            }
             labelEnd := skipName(source, labelStart);
             label := textSlice(source, labelStart, labelEnd);
-            fieldKind := tupleFieldKind(left.kind, label);
-            if fieldKind == "" {
-                failAt(source, labelStart, prefix, "tuple has no field " + label);
+            if left.kind == "Module" {
+                qualified := left.textValue + "." + label;
+                functionIndex := findFunction(functions, qualified);
+                if functionIndex >= 0 {
+                    left = (kind = "ModuleFunction", code = "", intValue = functionIndex, textValue = qualified,
+                        constant = false, next = labelEnd);
+                } else {
+                    memberIndex := localIndex(locals, qualified);
+                    if memberIndex < 0 {
+                        failAt(source, labelStart, prefix, "unknown module member " + qualified);
+                    }
+                    if isSingleEquals(source, skipTrivia(source, labelEnd, prefix)) {
+                        failAt(source, labelStart, prefix, "module members are immutable");
+                    }
+                    member := locals[memberIndex];
+                    left = (kind = member.kind, code = member.runtime, intValue = member.intValue,
+                        textValue = member.textValue, constant = member.constant, next = labelEnd);
+                }
+            } else {
+                if not isTupleKind(left.kind) {
+                    failAt(source, postPosition, prefix, "field access requires a tuple or module value");
+                }
+                fieldKind := tupleFieldKind(left.kind, label);
+                if fieldKind == "" {
+                    failAt(source, labelStart, prefix, "tuple has no field " + label);
+                }
+                left = (kind = fieldKind, code = "(" + left.code + ")." + label, intValue = 0, textValue = "", constant = false, next = labelEnd);
             }
-            left = (kind = fieldKind, code = "(" + left.code + ")." + label, intValue = 0, textValue = "", constant = false, next = labelEnd);
         } else if postPosition < textLength(source) and textAt(source, postPosition) == "[" {
             if not isListKind(left.kind) {
                 failAt(source, postPosition, prefix, "indexing requires a list value");
@@ -1574,6 +1594,47 @@ parseBinary := fn(source: String, position: Int, prefix: String, locals: List<Lo
         } else {
             break;
         }
+    }
+    if left.kind == "ModuleFunction" {
+        info := functions[left.intValue];
+        callOpen := skipTrivia(source, left.next, prefix);
+        if callOpen >= textLength(source) or textAt(source, callOpen) =!= "(" {
+            failAt(source, start, prefix, "function " + left.textValue + " must be called");
+        }
+        var cursor := skipTrivia(source, callOpen + 1, prefix);
+        argumentCodes: mut List<String> = [];
+        var argumentCount := 0;
+        if cursor < textLength(source) and textAt(source, cursor) =!= ")" {
+            loop true {
+                if argumentCount >= info.count {
+                    suffix := if info.count == 1 { " argument" } else { " arguments" };
+                    failAt(source, start, prefix, "function " + left.textValue + " expects " + decimalText(info.count) + suffix + ", got more");
+                }
+                expected := paramKindOf(params[info.first + argumentCount]);
+                argument := self(source, cursor, prefix, locals, functions, params, currentName, expected, 0);
+                if argument.kind =!= expected {
+                    failAt(source, cursor, prefix, "argument " + decimalText(argumentCount + 1) + " of " + left.textValue +
+                        " must be " + displayKind(expected) + ", got " + displayKind(argument.kind));
+                }
+                push_back(mut argumentCodes, copiedValueCode(argument.kind, argument.code));
+                argumentCount = argumentCount + 1;
+                cursor = skipTrivia(source, argument.next, prefix);
+                if cursor < textLength(source) and textAt(source, cursor) == "," {
+                    cursor = skipTrivia(source, cursor + 1, prefix);
+                    if cursor < textLength(source) and textAt(source, cursor) == ")" { break; }
+                } else {
+                    break;
+                }
+            }
+        }
+        cursor = expectSymbol(source, cursor, ")", prefix);
+        if argumentCount =!= info.count {
+            suffix := if info.count == 1 { " argument" } else { " arguments" };
+            failAt(source, start, prefix, "function " + left.textValue + " expects " + decimalText(info.count) +
+                suffix + ", got " + decimalText(argumentCount));
+        }
+        left = (kind = info.result, code = info.runtime + "(" + joinTexts(argumentCodes, ", ") + ")",
+            intValue = 0, textValue = "", constant = false, next = cursor);
     }
     loop true {
         if left.next > 0 and textAt(source, left.next - 1) == "}" { break; }
@@ -2047,9 +2108,37 @@ withoutFutureValues := fn(locals: List<Local>): List<Local> {
     kept
 }
 
-/** Collects top-level source paths before full parsing so imported declarations can seed the importing file's symbol table. */
-collectImportPaths := fn(source: String, prefix: String): List<String> {
-    paths: mut List<String> = [];
+/** Parses one top-level receiver-less or namespace import and returns its next source position. */
+parseImportClause := fn(source: String, position: Int, alias: String, prefix: String): Item {
+    pathStart := skipTrivia(source, position + 6, prefix);
+    if pathStart >= textLength(source) or textAt(source, pathStart) =!= "\"" {
+        failAt(source, pathStart, prefix, "import requires a quoted source path");
+    }
+    path := parseText(source, pathStart, prefix);
+    pathLength := textLength(path.textValue);
+    var invalidPath := pathLength == 0;
+    if pathLength > 0 and textAt(path.textValue, 0) == "/" { invalidPath = true; }
+    var pathIndex := 0;
+    loop pathIndex < pathLength {
+        if textAt(path.textValue, pathIndex) == "\\" { invalidPath = true; }
+        pathIndex = pathIndex + 1;
+    }
+    if pathLength > 1 and textAt(path.textValue, 1) == ":" and isNameStart(textAt(path.textValue, 0)) {
+        invalidPath = true;
+    }
+    if invalidPath {
+        failAt(source, pathStart, prefix, "import path must be nonempty, relative, and use \"/\" separators");
+    }
+    statementNext := consumeStatementEnd(source, path.next, prefix);
+    if statementNext < 0 {
+        failAt(source, skipTrivia(source, path.next, prefix), prefix, "expected ; after import");
+    }
+    (kind = "Import", name = alias, runtime = "", code = "", intValue = statementNext, textValue = path.textValue)
+}
+
+/** Collects top-level import clauses before parsing so imported declarations can seed the importing file's symbol table. */
+collectImportClauses := fn(source: String, prefix: String): Items {
+    imports: mut Items = [];
     size := textLength(source);
     var position := 0;
     var depth := 0;
@@ -2065,37 +2154,29 @@ collectImportPaths := fn(source: String, prefix: String): List<String> {
         } else if ch == "}" {
             if depth > 0 { depth = depth - 1; }
             position = position + 1;
-        } else if depth == 0 and wordAt(source, position, "import") {
-            pathStart := skipTrivia(source, position + 6, prefix);
-            if pathStart >= size or textAt(source, pathStart) =!= "\"" {
-                failAt(source, pathStart, prefix, "import requires a quoted source path");
+        } else if depth == 0 and isNameStart(ch) {
+            nameEnd := skipName(source, position);
+            name := textSlice(source, position, nameEnd);
+            if name == "import" {
+                imported := parseImportClause(source, position, "", prefix);
+                push_back(mut imports, imported);
+                position = imported.intValue;
+            } else {
+                afterName := skipTrivia(source, nameEnd, prefix);
+                afterDeclare := skipTrivia(source, afterName + 2, prefix);
+                if startsWithAt(source, afterName, ":=") and wordAt(source, afterDeclare, "import") {
+                    imported := parseImportClause(source, afterDeclare, name, prefix);
+                    push_back(mut imports, imported);
+                    position = imported.intValue;
+                } else {
+                    position = nameEnd;
+                }
             }
-            path := parseText(source, pathStart, prefix);
-            pathLength := textLength(path.textValue);
-            var invalidPath := pathLength == 0;
-            if pathLength > 0 and textAt(path.textValue, 0) == "/" { invalidPath = true; }
-            var pathIndex := 0;
-            loop pathIndex < pathLength {
-                if textAt(path.textValue, pathIndex) == "\\" { invalidPath = true; }
-                pathIndex = pathIndex + 1;
-            }
-            if pathLength > 1 and textAt(path.textValue, 1) == ":" and isNameStart(textAt(path.textValue, 0)) {
-                invalidPath = true;
-            }
-            if invalidPath {
-                failAt(source, pathStart, prefix, "import path must be nonempty, relative, and use \"/\" separators");
-            }
-            statementNext := consumeStatementEnd(source, path.next, prefix);
-            if statementNext < 0 {
-                failAt(source, skipTrivia(source, path.next, prefix), prefix, "expected ; after import");
-            }
-            push_back(mut paths, path.textValue);
-            position = statementNext;
         } else {
             position = position + 1;
         }
     }
-    paths
+    imports
 }
 
 /** Collects function names explicitly marked `pub`. */
@@ -2189,9 +2270,17 @@ parseProgramWithExports := fn(source: String, prefix: String, exports: Items, mo
     blocks: mut List<String> = [];
     functions: mut List<FunctionInfo> = [];
     functionParams: mut List<String> = [];
+    declaredImportAliases: mut List<String> = [];
     var parameterTotal := 0;
     loop exports as exported {
-        if exported.kind == "PublicFunction" {
+        if exported.kind == "ModuleAlias" {
+            if findFunction(functions, exported.name) >= 0 or localIndex(locals, exported.name) >= 0 {
+                fail(prefix, "duplicate imported module name " + exported.name);
+            }
+            push_back(mut locals, (name = exported.name, runtime = "", kind = "Module", mutable = false,
+                writable = false, depth = 0, constant = false, code = "", intValue = exported.intValue,
+                textValue = exported.name));
+        } else if exported.kind == "PublicFunction" {
             if findFunction(functions, exported.name) >= 0 or localIndex(locals, exported.name) >= 0 {
                 fail(prefix, "duplicate imported public name " + exported.name);
             }
@@ -2362,32 +2451,9 @@ parseProgramWithExports := fn(source: String, prefix: String, exports: Items, mo
             if blockCount =!= 0 {
                 failAt(source, nameStart, prefix, "import is only allowed at top level");
             }
-            pathStart := skipTrivia(source, position, prefix);
-            if pathStart >= size or textAt(source, pathStart) =!= "\"" {
-                failAt(source, pathStart, prefix, "import requires a quoted source path");
-            }
-            path := parseText(source, pathStart, prefix);
-            pathLength := textLength(path.textValue);
-            var invalidPath := pathLength == 0;
-            if pathLength > 0 and textAt(path.textValue, 0) == "/" { invalidPath = true; }
-            var pathIndex := 0;
-            loop pathIndex < pathLength {
-                if textAt(path.textValue, pathIndex) == "\\" { invalidPath = true; }
-                pathIndex = pathIndex + 1;
-            }
-            if pathLength > 1 and textAt(path.textValue, 1) == ":" and isNameStart(textAt(path.textValue, 0)) {
-                invalidPath = true;
-            }
-            if invalidPath {
-                failAt(source, pathStart, prefix, "import path must be nonempty, relative, and use \"/\" separators");
-            }
-            statementNext := consumeStatementEnd(source, path.next, prefix);
-            if statementNext < 0 {
-                failAt(source, skipTrivia(source, path.next, prefix), prefix, "expected ; after import");
-            }
-            push_back(mut items, (kind = "Import", name = "", runtime = "", code = "",
-                intValue = 0, textValue = path.textValue));
-            position = statementNext;
+            imported := parseImportClause(source, nameStart, "", prefix);
+            push_back(mut items, imported);
+            position = imported.intValue;
             continue;
         }
         if name == "pub" {
@@ -2407,6 +2473,22 @@ parseProgramWithExports := fn(source: String, prefix: String, exports: Items, mo
             continue;
         }
         position = skipTrivia(source, position, prefix);
+        if startsWithAt(source, position, ":=") {
+            afterImport := skipTrivia(source, position + 2, prefix);
+            if wordAt(source, afterImport, "import") {
+                if blockCount =!= 0 {
+                    failAt(source, nameStart, prefix, "import is only allowed at top level");
+                }
+                if listContainsText(declaredImportAliases, name) {
+                    failAt(source, nameStart, prefix, "duplicate module alias " + name);
+                }
+                push_back(mut declaredImportAliases, name);
+                imported := parseImportClause(source, afterImport, name, prefix);
+                push_back(mut items, imported);
+                position = imported.intValue;
+                continue;
+            }
+        }
         var afterDefinition := position;
         if startsWithAt(source, position, ":=") {
             afterDefinition = skipTrivia(source, position + 2, prefix);
@@ -2456,6 +2538,19 @@ parseProgramWithExports := fn(source: String, prefix: String, exports: Items, mo
             if currentLive and not currentStopped { push_back(mut items, (kind = if name == "break" { "Break" } else { "Continue" }, name = "", runtime = "",
                 code = "", intValue = 0, textValue = "")); }
             currentStopped = true;
+            continue;
+        }
+        moduleIndex := localIndex(locals, name);
+        if moduleIndex >= 0 and locals[moduleIndex].kind == "Module" {
+            if position >= size or textAt(source, position) =!= "." {
+                failAt(source, nameStart, prefix, "module namespace " + name + " requires a public member");
+            }
+            expression := parseExpressionItem(source, nameStart, prefix, locals, functions, functionParams, currentName,
+                currentResult, atValueTail(blocks, blockCount) and not currentStopped);
+            if currentLive and not currentStopped { push_back(mut items, (kind = if expression.returned { "Return" } else { "Call" },
+                name = "", runtime = "", code = expression.code, intValue = 0, textValue = "")); }
+            if expression.returned { currentReturned = true; currentStopped = true; }
+            position = expression.next;
             continue;
         }
         var callableIndex := findFunction(functions, name);

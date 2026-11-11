@@ -35,9 +35,10 @@ Owner update, 2026-11-11: one selected generated compiler is promoted from the
 Lite compiler source after a strict three-generation fixed point and a reviewed
 94-case corpus run (69 programs, 25 rejections, zero behavior mismatches). The
 Lite-owned TS driver graph has separate visited/processed records, public
-function signatures, immutable scalar values, imported definitions, and
-per-unit runtime identities. Public TS compile/check/run use it. Public types,
-runtime source spans, alias imports, and C/build bridge removal remain pending.
+function signatures, immutable scalar values, imported definitions, namespace
+aliases, and per-unit runtime identities. Public TS compile/check/run use it.
+Public types, runtime source spans, compiler-source migration to aliases, and
+C/build bridge removal remain pending.
 The current fast suite still has unrelated ledger, archived-seed/source fixture,
 and recorded-expectation failures.
 

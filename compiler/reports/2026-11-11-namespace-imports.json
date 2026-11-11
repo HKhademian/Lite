@@ -1,0 +1,60 @@
+{
+  "phase": "lite-owned-namespace-imports",
+  "recorded": "2026-11-11",
+  "baseRevision": "01e7d397356c3d2f48147e80f10cfedacf61f556",
+  "sourceSha256": "302a04df0be26f2abfff78cfbd981c07e3b00ada54ba0741b89f0322905b8e56",
+  "sourceBytes": 220972,
+  "selectedCompiler": {
+    "artifact": "compiler.ts",
+    "sha256": "e957ff5aeea62f34ac8491488065c59f639a53304891a2ad6d8219d18078163b",
+    "bytes": 405779
+  },
+  "builderSeed": {
+    "sha256": "b0aedeea4c7383eaa8215a65bd4a83968b184b3185f6f8e139da552f57a0edef"
+  },
+  "generations": [
+    {
+      "generation": 1,
+      "builderSha256": "e957ff5aeea62f34ac8491488065c59f639a53304891a2ad6d8219d18078163b",
+      "artifactSha256": "e957ff5aeea62f34ac8491488065c59f639a53304891a2ad6d8219d18078163b",
+      "bytes": 405779
+    },
+    {
+      "generation": 2,
+      "builderSha256": "e957ff5aeea62f34ac8491488065c59f639a53304891a2ad6d8219d18078163b",
+      "artifactSha256": "e957ff5aeea62f34ac8491488065c59f639a53304891a2ad6d8219d18078163b",
+      "bytes": 405779
+    },
+    {
+      "generation": 3,
+      "builderSha256": "e957ff5aeea62f34ac8491488065c59f639a53304891a2ad6d8219d18078163b",
+      "artifactSha256": "e957ff5aeea62f34ac8491488065c59f639a53304891a2ad6d8219d18078163b",
+      "bytes": 405779
+    }
+  ],
+  "fixedPoint": true,
+  "corpus": {
+    "cases": 94,
+    "programs": 69,
+    "rejections": 25,
+    "executions": 69,
+    "mismatches": 0
+  },
+  "cEmitter": {
+    "sourceSha256": "cd4646767a852381ceae26811fbd5163ba2ce52061f5f29228370bc375091c50",
+    "artifactSha256": "35884bad92b6eb9f4d5a0cb95fe4ed22678a83cce295b3a40668810328404d37",
+    "builderSha256": "e957ff5aeea62f34ac8491488065c59f639a53304891a2ad6d8219d18078163b",
+    "bytes": 381195,
+    "native": false
+  },
+  "importCases": [
+    "aliased imports resolve exported functions and immutable scalar values",
+    "private values stay inaccessible through aliases",
+    "function argument kinds are checked through qualified names",
+    "module members are immutable",
+    "repeated aliases share one module function identity",
+    "duplicate aliases are rejected",
+    "nested namespace imports work without re-exporting dependencies"
+  ],
+  "scope": "Namespace imports are supported by the generated TS compiler for public functions and immutable scalar values. Compiler-source migration, public types, retained per-module diagnostic spans, C/compiler build bridge removal and unpacking policy remain open."
+}

@@ -16,6 +16,14 @@ moduleProcessed := fn(graph: Items, path: String): Bool {
     false
 }
 
+/** Returns the graph identity assigned when one canonical source was first visited. */
+moduleIdForPath := fn(graph: Items, path: String): Int {
+    loop graph as item {
+        if item.kind == "ModuleVisited" and item.name == path { return item.intValue; }
+    }
+    -1
+}
+
 /** Assigns a stable ordinal to the next discovered source unit. */
 nextModuleId := fn(graph: Items): Int {
     var count := 0;
@@ -36,18 +44,40 @@ modulePublicDeclarations := fn(graph: Items, path: String): Items {
     }
     result
 }
-/** Appends one module's public functions to the importer scope, rejecting name collisions. */
+/** Appends an import interface, rejecting alias and public-name collisions. */
 appendModuleExports := fn(existing: Items, incoming: Items, prefix: String): Items {
     var result: mut Items = existing;
     loop incoming as item {
         var duplicate := false;
         loop result as previous {
-            if (previous.kind == "PublicFunction" or previous.kind == "PublicValue") and previous.name == item.name {
-                duplicate = true;
+            if item.kind == "ModuleAlias" {
+                if (previous.kind == "ModuleAlias" and previous.name == item.name) or
+                    ((previous.kind == "PublicFunction" or previous.kind == "PublicValue") and previous.name == item.name) {
+                    duplicate = true;
+                }
+            } else if item.kind == "PublicFunction" or item.kind == "PublicValue" {
+                if ((previous.kind == "PublicFunction" or previous.kind == "PublicValue") and previous.name == item.name) or
+                    (previous.kind == "ModuleAlias" and previous.name == item.name) {
+                    duplicate = true;
+                }
             }
         }
-        if duplicate { fail(prefix, "duplicate imported public name " + item.name); }
+        if duplicate {
+            if item.kind == "ModuleAlias" { fail(prefix, "duplicate module alias " + item.name); }
+            fail(prefix, "duplicate imported public name " + item.name);
+        }
         push_back(mut result, item);
+    }
+    result
+}
+
+/** Builds one aliased module namespace from its public interface and stable graph identity. */
+moduleAliasExports := fn(graph: Items, path: String, alias: String): Items {
+    result: mut Items = [(kind = "ModuleAlias", name = alias, runtime = "", code = "",
+        intValue = moduleIdForPath(graph, path), textValue = path)];
+    loop modulePublicDeclarations(graph, path) as item {
+        push_back(mut result, (kind = item.kind, name = alias + "." + item.name, runtime = item.runtime,
+            code = item.code, intValue = item.intValue, textValue = item.textValue));
     }
     result
 }
@@ -58,17 +88,21 @@ visitSourceModule := fn(path: String, source: String, initialGraph: Items): Item
     moduleId := nextModuleId(initialGraph);
     var graph: mut Items = initialGraph;
     push_back(mut graph, (kind = "ModuleVisited", name = path, runtime = "", code = "", intValue = moduleId, textValue = ""));
-    directPaths: mut List<String> = [];
+    barePaths: mut List<String> = [];
     var importedExports: mut Items = [];
-    loop collectImportPaths(source, path) as spec {
-        loaded := readSource(path, spec);
-        if not listContainsText(directPaths, loaded.path) {
-            push_back(mut directPaths, loaded.path);
-            if not moduleVisited(graph, loaded.path) {
-                graph = visitSourceModule(loaded.path, loaded.text, graph);
-            }
-            if moduleProcessed(graph, loaded.path) {
-                importedExports = appendModuleExports(importedExports, modulePublicDeclarations(graph, loaded.path), path);
+    loop collectImportClauses(source, path) as clause {
+        loaded := readSource(path, clause.textValue);
+        if not moduleVisited(graph, loaded.path) {
+            graph = visitSourceModule(loaded.path, loaded.text, graph);
+        }
+        if moduleProcessed(graph, loaded.path) {
+            if clause.name == "" {
+                if not listContainsText(barePaths, loaded.path) {
+                    push_back(mut barePaths, loaded.path);
+                    importedExports = appendModuleExports(importedExports, modulePublicDeclarations(graph, loaded.path), path);
+                }
+            } else {
+                importedExports = appendModuleExports(importedExports, moduleAliasExports(graph, loaded.path, clause.name), path);
             }
         }
     }

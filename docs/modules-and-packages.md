@@ -121,28 +121,30 @@ module alias; imported members are accessed through that alias. Paths are
 relative to the importing source file, use `/` separators, and name a source
 file directly. Package lookup and version solving remain out of scope.
 
-The implementation will first support a receiver-less import that introduces
-the imported module's `pub` declarations into the importing file scope, as a
-staged route away from host-side source concatenation. The codebase must migrate
-to namespace collection before deciding whether this open-import form remains
-or an explicit unpack form replaces it. No project source should retain a
+Generated TS supports both receiver-less imports, which introduce the imported
+module's `pub` declarations into the importing file scope, and namespace
+imports, which expose those declarations through an immutable alias. Namespace
+members currently include public functions and immutable scalar values; public
+types and compiler-source adoption remain pending. The codebase must migrate to
+namespace collection before deciding whether this open-import form remains or
+an explicit unpack form replaces it. No project source should retain a
 dependency on implicit unpacking after the alias migration.
 
-As of **2026-11-11**, the compiler lexer and parser recognize `pub` on a
-top-level declaration and the receiver-less `import "path";` clause. The
-generated TypeScript driver now reads and parses imported units using the
-compiler's Lite-owned graph walk when invoked with a source filename. It marks
-a unit visited before following imports and processed after its outgoing
-imports. Receiver-less imports now expose `pub` functions and immutable scalar
-values to the importing scope and emit imported definitions with per-unit
-runtime identities. Private declarations remain hidden; duplicate exported
-names are rejected. Public types, retained source spans for runtime
-diagnostics, and module alias bindings are not implemented yet. Cycles
-terminate during graph traversal, but references to declarations in a
-not-yet-processed module are not resolved as mutual declarations. Parser-only
+As of **2026-11-11**, the compiler lexer and parser recognize `pub`, receiver-less
+`import "path";`, and namespace imports such as
+`math := import "./math.lts";`. The generated TypeScript driver reads and parses
+imported units using the compiler's Lite-owned graph walk when invoked with a
+source filename. It marks a unit visited before following imports and processed
+after its outgoing imports. Both import forms expose `pub` functions and
+immutable scalar values; namespace members stay qualified and private
+declarations remain hidden. Repeated aliases share one module identity.
+Duplicate aliases and exported names are rejected. Public types, retained
+source spans for runtime diagnostics, and compiler-source adoption remain
+pending. Cycles terminate during graph traversal, but references to declarations
+in a not-yet-processed module are not resolved as mutual declarations. Parser-only
 calls without a source filename remain syntax checks. Public TS compile/check/run
-use the Lite graph walk; C compilation and compiler-source assembly still use the host
-expander as a temporary bridge.
+use the Lite graph walk; C compilation and compiler-source assembly still use the
+host expander as a temporary bridge.
 
 The target model keeps source units separate through parsing and resolution,
 without splicing Lite text. The current stage parses each canonical file once,

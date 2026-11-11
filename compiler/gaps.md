@@ -27,12 +27,12 @@ The current path is:
    fixed point and 94-case compiler corpus are recorded. The archived T00/T12
    inventory remains parity evidence.
 2. The Lite TS driver reads and parses imported units with separate
-   visited/processed graph records. Receiver-less imports expose and emit
+   visited/processed graph records. Receiver-less and namespace imports expose
    public functions and immutable scalar values with per-unit runtime
-   identities. Public types, retained diagnostic spans and namespace imports
-   remain open. Public TS compile/check/run use the graph; C and
-   compiler-source assembly still use
-   the host expander.
+   identities. Public types and retained diagnostic spans remain open. Public
+   TS compile/check/run use the graph; C and compiler-source assembly still use
+   the host expander. Maintained compiler sources have not yet migrated to
+   namespace imports.
 3. T00 implementation and active interpreter/reference routes are retired.
    Recorded parity rejections remain explicit backlog; they did not block retirement.
 4. Continue needed Lite compiler features in paired seed/source increments and

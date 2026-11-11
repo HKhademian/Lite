@@ -87,6 +87,11 @@ is `module := import "relative/path.lts";`; module members require explicit
 `pub`, source files remain separate compilation units, and the finished active
 path removes text flattening.
 
+Owner update, 2026-11-11: generated TS supports namespace aliases for public
+functions and immutable scalar values, including nested imports. The compiler
+source has not yet migrated to aliases; C and compiler-source builds still use
+host source expansion.
+
 ## Done
 
 - 2026-11-05: `./bin/lite run` returns as a compile-and-execute adapter over the generated compiler instead of the retired interpreter launcher. It compiles one `.lts` script into a temporary directory, executes the TS artifact through `compiler/entry.ts`, forwards program arguments after an optional `--`, inherited streams and exit status, and removes the temporary directory; rejected source keeps its exact diagnostics and status without executing effects. Seven declarative tool scenarios cover prompted input, forwarded arguments, propagated status, rejection, missing source, non-script source and the `--check` hint; a host test proves temporary-directory removal. The isolated public-command fixture copies `tools/run.ts`, and the launcher and public-command tests now assert the adapter contract instead of usage rejection. CLI help, start-here, examples, naming, specification, bootstrap and migration docs record the adapter while the interpreter launcher stays removed. Compiler source and seed are unchanged. Fast: 136 pass/12 skips (150.1 s); full: 139 pass/nine native skips, zero failures (149.6 s). Coverage: 41/41 features, 19/19 examples, 20/20 samples. The canonical TS audit is unchanged at 60/81 with the same 21 visible failures, and docs links/fragments/fences, strict checks and nine editor groups pass.

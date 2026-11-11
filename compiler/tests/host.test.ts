@@ -295,6 +295,84 @@ test('nested imports resolve exported functions without re-exporting dependencie
   } finally { rmSync(directory, { recursive: true, force: true }); }
 });
 
+test('namespace imports resolve public functions and immutable values through aliases', () => {
+  const directory = mkdtempSync(join(tmpdir(), 'lite-import-alias-'));
+  try {
+    const rootSource = join(directory, 'app.lts');
+    const mathSource = join(directory, 'math.lts');
+    writeFileSync(mathSource, 'hidden := 9; pub factor := 2; pub twice := fn(x: Int): Int { x * factor }\n');
+    writeFileSync(rootSource, 'math := import "./math.lts"; outputLine(math.twice(21), math.factor);\n');
+    const compiled = compileTs({ text: readFileSync(rootSource, 'utf8'), name: realpathSync(rootSource) });
+    assert.equal(compiled.status, 0, compiled.stderr.toString());
+    withTsArtifact(compiled.stdout.toString(), run => {
+      const actual = run();
+      assert.equal(actual.status, 0, actual.stderr.toString());
+      assert.equal(actual.stdout.toString(), '42 2\n');
+    });
+
+    const statementCall = compileTs({ text: 'math := import "./math.lts"; math.twice(10); outputLine(1);', name: realpathSync(rootSource) });
+    assert.equal(statementCall.status, 0, statementCall.stderr.toString());
+    withTsArtifact(statementCall.stdout.toString(), run => {
+      const actual = run();
+      assert.equal(actual.status, 0, actual.stderr.toString());
+      assert.equal(actual.stdout.toString(), '1\n');
+    });
+
+    const hidden = compileTs({ text: 'math := import "./math.lts"; outputLine(math.hidden);', name: realpathSync(rootSource) });
+    assert.equal(hidden.status, 2);
+    assert.match(hidden.stderr.toString(), /unknown module member math\.hidden/);
+    assert.equal(hidden.stdout.length, 0);
+
+    const wrongArgument = compileTs({ text: 'math := import "./math.lts"; outputLine(math.twice("21"));', name: realpathSync(rootSource) });
+    assert.equal(wrongArgument.status, 2);
+    assert.match(wrongArgument.stderr.toString(), /argument 1 of math\.twice must be Int, got String/);
+    assert.equal(wrongArgument.stdout.length, 0);
+
+    const immutableMember = compileTs({ text: 'math := import "./math.lts"; math.factor = 5;', name: realpathSync(rootSource) });
+    assert.equal(immutableMember.status, 2);
+    assert.match(immutableMember.stderr.toString(), /module members are immutable/);
+    assert.equal(immutableMember.stdout.length, 0);
+
+    writeFileSync(rootSource, 'left := import "./math.lts"; right := import "./math.lts"; outputLine(left.twice(10), right.twice(11));\n');
+    const repeatedAliases = compileTs({ text: readFileSync(rootSource, 'utf8'), name: realpathSync(rootSource) });
+    assert.equal(repeatedAliases.status, 0, repeatedAliases.stderr.toString());
+    assert.equal((repeatedAliases.stdout.toString().match(/function liteFn_m1_twice\(/g) ?? []).length, 1);
+    withTsArtifact(repeatedAliases.stdout.toString(), run => {
+      const actual = run();
+      assert.equal(actual.status, 0, actual.stderr.toString());
+      assert.equal(actual.stdout.toString(), '20 22\n');
+    });
+
+    const duplicateAlias = compileTs({ text: 'math := import "./math.lts"; math := import "./math.lts";', name: realpathSync(rootSource) });
+    assert.equal(duplicateAlias.status, 2);
+    assert.match(duplicateAlias.stderr.toString(), /duplicate module alias math/);
+    assert.equal(duplicateAlias.stdout.length, 0);
+  } finally { rmSync(directory, { recursive: true, force: true }); }
+});
+
+test('namespace imports work in imported modules and preserve direct-only visibility', () => {
+  const directory = mkdtempSync(join(tmpdir(), 'lite-import-alias-nested-'));
+  try {
+    const rootSource = join(directory, 'app.lts');
+    const facadeSource = join(directory, 'facade.lts');
+    writeFileSync(rootSource, 'facade := import "./facade.lts"; outputLine(facade.timesSix(7));\n');
+    writeFileSync(facadeSource, 'math := import "./math.lts"; pub timesSix := fn(x: Int): Int { math.twice(x) * 3 };\n');
+    writeFileSync(join(directory, 'math.lts'), 'pub twice := fn(x: Int): Int { x * 2 };\n');
+    const compiled = compileTs({ text: readFileSync(rootSource, 'utf8'), name: realpathSync(rootSource) });
+    assert.equal(compiled.status, 0, compiled.stderr.toString());
+    withTsArtifact(compiled.stdout.toString(), run => {
+      const actual = run();
+      assert.equal(actual.status, 0, actual.stderr.toString());
+      assert.equal(actual.stdout.toString(), '42\n');
+    });
+
+    const notReexported = compileTs({ text: 'facade := import "./facade.lts"; outputLine(facade.twice(3));', name: realpathSync(rootSource) });
+    assert.equal(notReexported.status, 2);
+    assert.match(notReexported.stderr.toString(), /unknown module member facade\.twice/);
+    assert.equal(notReexported.stdout.length, 0);
+  } finally { rmSync(directory, { recursive: true, force: true }); }
+});
+
 test('receiver-less imports expose immutable public values but keep private values local', () => {
   const directory = mkdtempSync(join(tmpdir(), 'lite-import-values-'));
   try {

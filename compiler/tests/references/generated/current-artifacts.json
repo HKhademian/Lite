@@ -1,8 +1,8 @@
 {
-  "note": "Reviewed 2026-11-11 after Lite-owned TypeScript import graph traversal. All 94 recorded cases pass (69 programs and 25 rejections); artifact hashes were refreshed only after independently checking every rejection stream and every program runtime contract. C hashes remain historical comparisons.",
+  "note": "Reviewed 2026-11-11 after namespace import support. Retained cases are validated against public-import changes; artifact hashes change only after reviewing compiler output, rejection streams, and runtime contracts. C hashes remain historical comparisons.",
   "recorded": "2026-11-11",
-  "sourceSha256": "fc8ccf3ad71a54d12c14ded2888e95cc9965d245510589c9c24222bfd72fc4cc",
-  "compilerSha256": "b0aedeea4c7383eaa8215a65bd4a83968b184b3185f6f8e139da552f57a0edef",
+  "sourceSha256": "302a04df0be26f2abfff78cfbd981c07e3b00ada54ba0741b89f0322905b8e56",
+  "compilerSha256": "e957ff5aeea62f34ac8491488065c59f639a53304891a2ad6d8219d18078163b",
   "programCases": 69,
   "rejectedCases": 25,
   "artifacts": [
