@@ -1,4 +1,5 @@
 /* C backend for the temporary Lite compiler. */
+
 /** Formats a checked Int value as a C signed 64-bit literal (`INT64_C`, `INT64_MIN`). */
 intLiteralCode := fn(value: Int, negative: Bool, digits: String): String {
     if value == -9223372036854775808 { "INT64_MIN" }
