@@ -60,7 +60,6 @@ if (import.meta.main) {
       case 'release-regressions': if (releaseNeedsCompilerGates()) lite('test', '--full'); break;
       case 'release-coverage': if (releaseNeedsCompilerGates()) lite('verify', '--coverage'); break;
       case 'release-migration': if (releaseNeedsCompilerGates()) verifyMigration(); break;
-      case 'bench': lite('bench', '.cache/case-bench-ci.json', 'tooling.docs'); break;
       case 'self-host': {
         const work = mkdtempSync(join(tmpdir(), 'lite-ci-self-host-'));
         try {

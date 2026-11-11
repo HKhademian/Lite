@@ -73,6 +73,11 @@ This lets routine improvements iterate on the behavior they touch while the
 release profile raises the gate when the released contract is broader. It does
 not require every compiler change to establish full language conformance.
 
+Use `./bin/lite-bench OUTPUT [FILTER]` for explicitly scoped performance work
+and compare reports from the same host, runtime, workload, and compiler source.
+Routine CI does not collect timing reports, and release notes do not consume
+benchmark output; performance claims need a reviewed before/after measurement.
+
 Ordinary CI reports all accepted-language failures and compares them with the
 explicit [migration baseline](../config/ts-migration.json). A changed pass/failure
 set or diagnostic fails the baseline gate for review. This is a regression gate,
@@ -97,8 +102,8 @@ promised identical across archive toolchains.
 
 [Test](../.github/workflows/test.yml) runs independent jobs concurrently:
 strict repository checks, Linux/macOS full regressions, editor grammar,
-verification coverage, the explicit TS migration audit, a verified case
-benchmark, extracted-distribution checks, and the T00-free archive gate.
+verification coverage, the explicit TS migration audit,
+extracted-distribution checks, and the T00-free archive gate.
 Workflow YAML dispatches named Node tasks without embedded shell programs.
 The full suite and archive gate retain separate OS matrices and 30-minute
 budgets. The whole-source checker sweep has a 120-second tool budget and the
