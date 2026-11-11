@@ -410,6 +410,24 @@ test('namespace imports expose public types for qualified annotations and signat
   } finally { rmSync(directory, { recursive: true, force: true }); }
 });
 
+test('core integer operations are available through a module alias', () => {
+  const sourceName = resolve(root, 'compiler/tests/fixtures/core-int-alias.lts');
+  const compiled = compileTs({
+    text: [
+      'integer := import "../../../lib/core/int.lts";',
+      'sum := integer.intAdd(40, 2);',
+      'outputLine(integer.intText(sum.value), sum.ok);',
+    ].join('\n'),
+    name: sourceName,
+  });
+  assert.equal(compiled.status, 0, compiled.stderr.toString());
+  withTsArtifact(compiled.stdout.toString(), run => {
+    const actual = run();
+    assert.equal(actual.status, 0, actual.stderr.toString());
+    assert.equal(actual.stdout.toString(), '42 true\n');
+  });
+});
+
 test('receiver-less imports expose immutable public values but keep private values local', () => {
   const directory = mkdtempSync(join(tmpdir(), 'lite-import-values-'));
   try {

@@ -1,6 +1,6 @@
 # Module imports and compiler stages
 
-Status: **generated TS supports receiver-less public imports and namespace aliases for public functions, immutable scalar values, and public types; source-wide alias migration, full source spans and C/build bridge removal remain pending**
+Status: **generated TS supports receiver-less public imports and namespace aliases for public functions, immutable scalar values, and public types; one isolated core API is exercised through an alias; compiler-source migration, full source spans and C/build bridge removal remain pending**
 
 ## Implementation sequence selected 2026-11-11
 
@@ -31,6 +31,13 @@ at its visited edge; references to declarations in a not-yet-processed module
 are not resolved as mutual declarations yet. Parser-only calls without a filename validate syntax
 only. Public TS compile/check/run use this path; C compilation and
 compiler-source assembly still use the host source expander.
+
+The first isolated library alias case is `integer := import ".../int.lts";`.
+The checked integer operations are explicitly `pub`, and a host test compiles
+and runs an importer that calls `integer.intAdd` and `integer.intText`. Compiler
+source migration remains blocked on dependencies supplied by the manifest-wide
+flattened bundle, especially the shared frontend's target-specific literal
+encoders. The [transition plan](transition-plan.md) tracks that prerequisite.
 
 ## Selected import surface
 

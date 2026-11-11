@@ -89,8 +89,12 @@ path removes text flattening.
 
 Owner update, 2026-11-12: generated TS supports namespace aliases for public
 functions, immutable scalar values, and public types, including qualified type
-annotations and signatures. The compiler source has not yet migrated to aliases;
-C and compiler-source builds still use host source expansion.
+annotations and signatures. The isolated `lib/core/int.lts` API is explicitly
+public and tested through a namespace alias. Compiler source still relies on
+the manifest-wide flattened bundle. Its shared frontend calls target-specific
+literal encoders before the target emitter consumes the resulting `Item`/`Items`
+data, so direct per-file imports need a target boundary first. C and
+compiler-source builds still use host source expansion.
 
 ## Done
 

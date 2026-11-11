@@ -1,0 +1,58 @@
+{
+  "phase": "core-int-namespace-alias",
+  "recorded": "2026-11-12",
+  "baseRevision": "763996cbd484378492099f6d777bb53f60c614b2",
+  "source": {
+    "sha256": "33089e0b09c638398d0c9ba89ea70dcb4c9f6593b78476dd034f1723e152f9a2",
+    "bytes": 224782
+  },
+  "selectedCompiler": {
+    "artifact": "compiler.ts",
+    "sha256": "ec6ecf6ed76f9bd7655fbfec166ef66c0b7b9db9aa1a55e0e04d5f2a35853894",
+    "bytes": 413025
+  },
+  "builderSeed": {
+    "sha256": "866d60b699b09a16b69e160d34ad358b6c8d39e2a90dc9d2c6c898408693b6bd"
+  },
+  "generations": [
+    {
+      "generation": 1,
+      "builderSha256": "ec6ecf6ed76f9bd7655fbfec166ef66c0b7b9db9aa1a55e0e04d5f2a35853894",
+      "artifactSha256": "ec6ecf6ed76f9bd7655fbfec166ef66c0b7b9db9aa1a55e0e04d5f2a35853894",
+      "bytes": 413025
+    },
+    {
+      "generation": 2,
+      "builderSha256": "ec6ecf6ed76f9bd7655fbfec166ef66c0b7b9db9aa1a55e0e04d5f2a35853894",
+      "artifactSha256": "ec6ecf6ed76f9bd7655fbfec166ef66c0b7b9db9aa1a55e0e04d5f2a35853894",
+      "bytes": 413025
+    },
+    {
+      "generation": 3,
+      "builderSha256": "ec6ecf6ed76f9bd7655fbfec166ef66c0b7b9db9aa1a55e0e04d5f2a35853894",
+      "artifactSha256": "ec6ecf6ed76f9bd7655fbfec166ef66c0b7b9db9aa1a55e0e04d5f2a35853894",
+      "bytes": 413025
+    }
+  ],
+  "fixedPoint": true,
+  "corpus": {
+    "cases": 94,
+    "programs": 69,
+    "rejections": 25,
+    "executions": 69,
+    "mismatches": 0
+  },
+  "cEmitter": {
+    "sourceSha256": "8699309f9f6c783c912d370759a2b6789b5e8969fd8ec55d5c97b9975c79a109",
+    "artifactSha256": "0a5208696c02c7e0942fea23f17c67fa0d78aa43c7e38d56e22a3d92f09383f3",
+    "builderSha256": "ec6ecf6ed76f9bd7655fbfec166ef66c0b7b9db9aa1a55e0e04d5f2a35853894",
+    "bytes": 387951,
+    "native": false
+  },
+  "importCases": [
+    "Public integer operations through `integer := import ...`",
+    "Qualified tuple result field access through a module alias",
+    "Runtime result matches the unqualified reference behavior"
+  ],
+  "scope": "The core integer operations are exposed as public declarations and exercised through namespace imports. Compiler source has not migrated: the current manifest-wide source bundle and shared frontend target helpers remain to be separated."
+}

@@ -1,8 +1,8 @@
 {
-  "note": "Reviewed 2026-11-12 after public type imports. Retained cases are validated against public-type changes; artifact hashes change only after reviewing compiler output, rejection streams, and runtime contracts. C hashes remain historical comparisons.",
+  "note": "Reviewed 2026-11-12 after the core integer module export. Recorded compiler cases remain unchanged; the namespace alias behavior is covered by a dedicated source fixture. C hashes remain historical comparisons.",
   "recorded": "2026-11-12",
-  "sourceSha256": "060205fd44b0a0098739665bea72e9a75778f74c2c9b27cb51d0fc79c50aa96c",
-  "compilerSha256": "aefa7ed017dfd3b950f3aa1d57619ce84ee4c333d3d10cf082b6cfb43c5a679d",
+  "sourceSha256": "33089e0b09c638398d0c9ba89ea70dcb4c9f6593b78476dd034f1723e152f9a2",
+  "compilerSha256": "ec6ecf6ed76f9bd7655fbfec166ef66c0b7b9db9aa1a55e0e04d5f2a35853894",
   "programCases": 69,
   "rejectedCases": 25,
   "artifacts": [
