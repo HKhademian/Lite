@@ -3,3 +3,6 @@ node_modules/
 *.tsbuildinfo
 .cache/
 /dist/
+
+# Local-only reports and scratch files
+/tmp/
