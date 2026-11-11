@@ -3,7 +3,6 @@
 import { spawnSync, execFileSync } from 'node:child_process';
 import { createHash } from 'node:crypto';
 import { readFileSync, writeFileSync, mkdirSync } from 'node:fs';
-import { cpus } from 'node:os';
 import { resolve, dirname } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { loadBundle } from '../igniter/loader.ts';
@@ -28,8 +27,8 @@ const sha = (x: string | Uint8Array) => createHash('sha256').update(x).digest('h
 const source = loadBundle(resolve(root, 'compiler/manifests/ts.json')).text;
 const report = { date, revision: execFileSync('git', ['rev-parse', 'HEAD'], { cwd: root, encoding: 'utf8' }).trim(),
   dirtyBefore: execFileSync('git', ['status', '--short'], { cwd: root, encoding: 'utf8' }).trim(),
-  node: process.version, cpu: cpus()[0]?.model, sourceBytes: Buffer.byteLength(source), sourceSha256: sha(source),
-  artifacts: Object.fromEntries(Object.entries(artifacts).map(([name,path]) => [name, { path, sha256: sha(readFileSync(path)), bytes: readFileSync(path).length }])) as Record<Version, { path: string; sha256: string; bytes: number }>,
+  sourceBytes: Buffer.byteLength(source), sourceSha256: sha(source),
+  artifacts: Object.fromEntries(Object.entries(artifacts).map(([name,path]) => [name, { sha256: sha(readFileSync(path)), bytes: readFileSync(path).length }])) as Record<Version, { sha256: string; bytes: number }>,
   method: { samples: 7, discardedWarmups: 1, process: 'fresh process per invocation; alternating before/after order; sequential measurements',
     wallTime: 'Node startup, TS loading, compilation and output capture; input generation and comparison excluded',
     oldSelfLimitMs: 10000, selfComparison: 'one censored old invocation; seven successful new invocations, no whole-source speedup ratio',
@@ -82,7 +81,7 @@ report.completedAt = new Date().toISOString();
 writeFileSync(`${prefix}.json`, JSON.stringify(report, null, 2) + '\n');
 writeFileSync(`${prefix}.md`, [
   '# TS compiler text-cache comparison', '',
-  `${date} · ${report.cpu} · Node ${report.node}. Seven measured fresh-process samples after one discarded warm-up.`, '',
+  `${date} · Seven measured fresh-process samples after one discarded warm-up.`, '',
   'The old textLength/textAt/textSlice helpers rebuilt a whole code-point array for each call. Source scanning therefore repeatedly copied the entire source. The new private cache retains at most eight immutable code-point views, shared by those helpers. Public String and copy semantics are unchanged.', '',
   ...report.results.map(r => `- **${r.name}:** ${r.before.medianWallMs.toFixed(2)} ms → ${r.after.medianWallMs.toFixed(2)} ms median process wall time; **${r.speedup.toFixed(2)}×** faster. Emitted TS bytes match exactly. Peak RSS medians: ${r.before.medianPeakRssMiB.toFixed(1)} → ${r.after.medianPeakRssMiB.toFixed(1)} MiB.`), '',
   `- **Full source (${report.sourceBytes} bytes):** old invocation ${report.self[0]!.error === 'ETIMEDOUT' ? 'did not finish within 10 seconds' : `finished in ${report.self[0]!.wallMs.toFixed(2)} ms`}; new median **${report.selfAfterMedianMs.toFixed(2)} ms**. Every successful new invocation reproduces the selected compiler SHA-256. No whole-source speedup ratio is claimed from a censored baseline.`, '',

@@ -63,7 +63,7 @@ export function prepareRelease(directory: string, output: string, tag?: string) 
     }
     const label = tag ?? `snapshot-${commit.slice(0, 12)}`;
     const manifest = { schemaVersion: 3, tag: tag ?? null, commit, releasedComponent, componentVersions: current,
-      profile, node: process.version, bootstrap, nativeCompiler: false, vsix };
+      profile, bootstrap, nativeCompiler: false, vsix };
     const record = JSON.stringify(manifest, null, 2) + '\n';
     assert(!existsSync(join(source, 'RELEASE.json')), 'RELEASE.json is reserved for packaged metadata');
     writeFileSync(join(source, 'RELEASE.json'), record);

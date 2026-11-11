@@ -1,8 +1,8 @@
 #!/usr/bin/env node
 /** Generated compiler/process/check/runtime measurements. */
 import { spawnSync } from 'node:child_process';
-import { readFileSync, mkdirSync, mkdtempSync, rmSync, writeFileSync } from 'node:fs';
-import { cpus, platform, tmpdir } from 'node:os';
+import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from 'node:fs';
+import { tmpdir } from 'node:os';
 import { dirname, join, resolve } from 'node:path';
 import { loadBundle } from '../igniter/loader.ts';
 import { prepareTsArtifacts } from '../igniter/artifacts.ts';
@@ -118,8 +118,7 @@ export function compilerPerformance(args: readonly string[]): void {
         if (pass >= 0) executionSamples.push(ms);
       }
     } finally { runtime.dispose(); }
-    const summary = { schema: 2, mode: 'generated-only', date, revision: revision(), environment: { node: process.version, platform: platform(), arch: process.arch, cpu: cpus()[0]?.model,
-      typescript: (JSON.parse(readFileSync(join(repository, 'igniter/node_modules/typescript/package.json'), 'utf8')) as { version: string }).version },
+    const summary = { schema: 2, mode: 'generated-only', date, revision: revision(),
       source: { sha256: hashBytes(bundle.text), bytes: Buffer.byteLength(bundle.text) },
       toolSources: toolIdentities(['benchmark/compiler-performance.ts', 'benchmark/compiler-worker.ts', 'compiler/scripts/tooling.ts', 'compiler/scripts/corpus-contracts.ts', 'compiler/host.ts', 'igniter/artifacts.ts']),
       artifact: { sha256: selected.sha256, selectedCompilerSha256: selected.selectedCompilerSha256, selectedCompilerBuilderSha256: selected.selectedCompilerBuilderSha256, bytes: selected.bytes.length, supplied: selected.supplied },
@@ -129,7 +128,7 @@ export function compilerPerformance(args: readonly string[]): void {
       runtime: { checkedSyntheticOutputCounts: outputCounts, workload: 'output-1000', artifactSha256: hashBytes(runtimeSource), samples: executionSamples, medianProcessMs: median(executionSamples) }, results };
     mkdirSync(dirname(prefix), { recursive: true }); writeJson(prefix + '.json', summary);
     writeFileSync(prefix + '.md', [`# Generated compiler performance — ${date}`, '',
-      `Node ${process.version}; source SHA-256 \`${summary.source.sha256}\`; compiler SHA-256 \`${selected.sha256}\`.`, '',
+      `Source SHA-256 \`${summary.source.sha256}\`; compiler SHA-256 \`${selected.sha256}\`.`, '',
       `Sequential fresh-process samples: ${samples}; excluded warmups: ${warmups}. Strict compiler check: ${strictCompilerCheckMs.toFixed(2)} ms; strict program check: ${strictProgramCheckMs.toFixed(2)} ms.`, '',
       ...results.map(row => `- ${row.workload}: median process ${row.medians.processMs.toFixed(2)} ms; load ${row.medians.loadMs.toFixed(2)} ms; compile ${row.medians.compileMs.toFixed(2)} ms.`), '',
       `Generated program execution: ${summary.runtime.medianProcessMs.toFixed(2)} ms median process time; exact output checked.`, '',

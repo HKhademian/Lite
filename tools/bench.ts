@@ -32,7 +32,7 @@ export function benchmark(output: string, filter = ''): void {
   const tooling = sha256(readdirSync(join(root, 'tools')).filter(file => file.endsWith('.ts')).sort().map(file => file + '\0' + readFileSync(join(root, 'tools', file), 'utf8')).join('\0'));
   mkdirSync(dirname(output), { recursive: true });
   assert(!existsSync(output), 'benchmark output already exists; choose a new report path');
-  writeFileSync(output, JSON.stringify({ node: process.version, platform: process.platform, architecture: process.arch, commit, dirty, versions: versions(root), compiler, tooling, scope: 'fresh-process wall time including startup, IO, verification, and compilation for program cases', results }, null, 2) + '\n');
+  writeFileSync(output, JSON.stringify({ commit, dirty, versions: versions(root), compiler, tooling, scope: 'fresh-process wall time including startup, IO, verification, and compilation for program cases', results }, null, 2) + '\n');
   console.log(`Wrote ${results.length} benchmark results to ${output}`);
 }
 
