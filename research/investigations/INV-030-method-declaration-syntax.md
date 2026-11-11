@@ -1,7 +1,7 @@
 # INV-030 — Method and extension-operation declaration syntax
 
 Status: inventoried; no syntax selected, no implementation started
-Contributor: redacted (agent-assisted)
+Contributor: project contributor (agent-assisted)
 Last updated: 2026-10-31
 Catalog brief: [INV-030](TOPICS.md#inv-030)
 Covered subtopics: whole topic; method/extension declaration syntax

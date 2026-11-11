@@ -1,7 +1,7 @@
 # INV-061 — String values and multi-value reports in the restricted emitters
 
 Status: recorded (bounded emitter increment; text operations, runtime input and self-rebuild remain open)
-Contributor: redacted (agent-assisted)
+Contributor: project contributor (agent-assisted)
 Last updated: 2026-10-31
 Catalog brief: [INV-061](TOPICS.md#inv-061)
 Compatible interpreter: no igniter change; runs on alpha.22 and the later alias checkpoint `d7fdd3e`

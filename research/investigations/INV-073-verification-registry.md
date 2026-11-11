@@ -1,7 +1,7 @@
 # INV-073 — Feature and artifact verification registry
 
 Status: recorded (first slice implemented; broader compiler targets and showcases remain open)
-Contributor: redacted (agent-assisted)
+Contributor: project contributor (agent-assisted)
 Last updated: 2026-10-31
 Catalog brief: [INV-073](TOPICS.md#inv-073)
 

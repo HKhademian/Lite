@@ -2,15 +2,15 @@
   {
     "name": "held-out-1",
     "kind": "held-out-example",
-    "input": "path = \"<local-path>/foo/\"",
+    "input": "path = \"<local-path>\"",
     "output": "\"<local-path>\"",
     "explanation": null
   },
   {
     "name": "held-out-2",
     "kind": "held-out-example",
-    "input": "path = \"<local-path>/Documents/../Pictures\"",
-    "output": "\"<local-path>/Pictures\"",
+    "input": "path = \"<local-path>\"",
+    "output": "\"<local-path>\"",
     "explanation": null
   },
   {

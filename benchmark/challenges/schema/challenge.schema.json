@@ -55,11 +55,17 @@
       "description": "Identifier inside the source (question number, task id, contest id, slug)."
     },
     "set": {
-      "type": ["string", "null"],
+      "type": [
+        "string",
+        "null"
+      ],
       "description": "Year, contest, section, track or collection the item belongs to."
     },
     "number": {
-      "type": ["integer", "null"],
+      "type": [
+        "integer",
+        "null"
+      ],
       "description": "Numeric position inside the source or set, when one exists."
     },
     "category": {
@@ -81,7 +87,10 @@
       ]
     },
     "primary_topic": {
-      "type": ["string", "null"],
+      "type": [
+        "string",
+        "null"
+      ],
       "description": "First topic, provided as a convenience for grouping."
     },
     "topics": {
@@ -94,21 +103,36 @@
     },
     "raw_topics": {
       "type": "array",
-      "items": { "type": "string" },
+      "items": {
+        "type": "string"
+      },
       "description": "The source's own topic labels, before normalization."
     },
     "tags": {
       "type": "array",
-      "items": { "type": "string" },
+      "items": {
+        "type": "string"
+      },
       "description": "Free-form facets: source, year, contest, rating, index, ..."
     },
     "difficulty": {
       "type": "object",
       "additionalProperties": false,
-      "required": ["scale", "raw", "normalized"],
+      "required": [
+        "scale",
+        "raw",
+        "normalized"
+      ],
       "properties": {
-        "scale": { "type": "string" },
-        "raw": { "type": ["string", "number"] },
+        "scale": {
+          "type": "string"
+        },
+        "raw": {
+          "type": [
+            "string",
+            "number"
+          ]
+        },
         "normalized": {
           "type": "number",
           "minimum": 1,
@@ -135,21 +159,44 @@
     },
     "languages": {
       "type": "array",
-      "items": { "type": "string" }
+      "items": {
+        "type": "string"
+      }
     },
     "topics_source": {
       "type": "string",
-      "enum": ["source", "section", "curated", "none"],
+      "enum": [
+        "source",
+        "section",
+        "curated",
+        "none"
+      ],
       "description": "How topics were obtained; 'none' means the record still needs tagging."
     },
     "popularity": {
-      "type": ["object", "null"],
+      "type": [
+        "object",
+        "null"
+      ],
       "additionalProperties": false,
       "properties": {
-        "attempts": { "type": "integer", "minimum": 0 },
-        "solved": { "type": "integer", "minimum": 0 },
-        "acceptance": { "type": "number", "minimum": 0, "maximum": 1 },
-        "users": { "type": "integer", "minimum": 0 }
+        "attempts": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "solved": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "acceptance": {
+          "type": "number",
+          "minimum": 0,
+          "maximum": 1
+        },
+        "users": {
+          "type": "integer",
+          "minimum": 0
+        }
       }
     },
     "premium": {
@@ -158,7 +205,10 @@
     },
     "status": {
       "type": "string",
-      "enum": ["verified", "partial"],
+      "enum": [
+        "verified",
+        "partial"
+      ],
       "description": "'partial' means title/URL are verified but topics are missing."
     }
   }

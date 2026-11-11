@@ -1,15 +1,45 @@
 {
   "navigation": [
-    { "label": "Start", "path": "docs/start-here.md" },
-    { "label": "Tour", "path": "docs/tour.md" },
-    { "label": "Reference", "path": "docs/README.md" },
-    { "label": "Compiler", "path": "compiler/README.md" },
-    { "label": "Fixtures", "path": "igniter/tests/README.md" },
-    { "label": "Status", "path": "compiler/transition-plan.md" },
-    { "label": "Contribute", "path": "CONTRIBUTING.md" }
+    {
+      "label": "Start",
+      "path": "docs/start-here.md"
+    },
+    {
+      "label": "Tour",
+      "path": "docs/tour.md"
+    },
+    {
+      "label": "Reference",
+      "path": "docs/README.md"
+    },
+    {
+      "label": "Compiler",
+      "path": "compiler/README.md"
+    },
+    {
+      "label": "Fixtures",
+      "path": "igniter/tests/README.md"
+    },
+    {
+      "label": "Status",
+      "path": "compiler/transition-plan.md"
+    },
+    {
+      "label": "Contribute",
+      "path": "CONTRIBUTING.md"
+    }
   ],
   "snippets": [
-    { "document": "docs/tour.md", "source": "language/cases/tour-bindings.lts", "fence": 0 },
-    { "document": "docs/start-here.md", "source": "language/examples/001-double-sum.lts", "fence": 1, "skipLines": 1 }
+    {
+      "document": "docs/tour.md",
+      "source": "language/cases/tour-bindings.lts",
+      "fence": 0
+    },
+    {
+      "document": "docs/start-here.md",
+      "source": "language/examples/001-double-sum.lts",
+      "fence": 1,
+      "skipLines": 1
+    }
   ]
 }

@@ -1,7 +1,7 @@
 # INV-004 — Optional input prompt and multiple report values
 
 Status: recorded (explicitly approved bounded helper implementation)
-Contributor: redacted (agent-assisted)
+Contributor: project contributor (agent-assisted)
 Last updated: 2026-10-31
 Catalog brief: [INV-004](TOPICS.md#inv-004)
 Covered scope: inputInt's optional prompt and report's ordinary multiple arguments.

@@ -1,7 +1,7 @@
 # INV-029 — Alias names versus ordinary value shadowing
 
 Status: approved (one ordinary lexical binding namespace selected; ready for implementation)
-Contributor: redacted (agent-assisted)
+Contributor: project contributor (agent-assisted)
 Last updated: 2026-10-31
 Catalog brief: [INV-029](TOPICS.md#inv-029)
 Baseline: igniter-v0.1.0-alpha.22, `dd31cb0`

@@ -1,7 +1,7 @@
 # INV-057 — Collection capability lattice and concept boundaries
 
 Status: recorded (reference survey and lattice proposal; no contract selected)
-Contributor: redacted (agent-assisted)
+Contributor: project contributor (agent-assisted)
 Last updated: 2026-11-01
 Catalog brief: [INV-057](TOPICS.md#inv-057)
 Covered subtopics: whole topic; traversal, indexing, ordering, capabilities, and

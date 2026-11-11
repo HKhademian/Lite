@@ -1,7 +1,7 @@
 # INV-030 — Typed-function igniter increment
 
 Status: recorded (bounded implementation; full callable/capture contracts open)
-Contributor: redacted (agent-assisted)
+Contributor: project contributor (agent-assisted)
 Last updated: 2026-10-30
 Catalog brief: [INV-030](TOPICS.md#inv-030)
 Covered scope: explicit scalar signatures, positional calls, returns and recursion.

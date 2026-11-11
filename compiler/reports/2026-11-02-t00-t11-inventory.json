@@ -3665,7 +3665,7 @@
             "status": 1,
             "signal": null,
             "stdout": "",
-            "stderr": "file://<local-path>/_dsd9s596d19gtf4zr279bzm0000gn/T/lite-inventory-23Z9Ok/program.ts:3\n        throw new Error(\"ArithmeticPanic: division by zero in integer expression\");\n              ^\n\nError: ArithmeticPanic: division by zero in integer expression\n    at lite$divideInt (file://<local-path>/_dsd9s596d19gtf4zr279bzm0000gn/T/lite-inventory-23Z9Ok/program.ts:3:15)\n    at Module.main (file://<local-path>/_dsd9s596d19gtf4zr279bzm0000gn/T/lite-inventory-23Z9Ok/program.ts:17:18)\n    at file://<local-path>/Projects/LiteScript/compiler/entry.ts:11:34\n\nNode.js v24.16.0\n"
+            "stderr": "file://<temporary-path>        throw new Error(\"ArithmeticPanic: division by zero in integer expression\");\n              ^\n\nError: ArithmeticPanic: division by zero in integer expression\n    at lite$divideInt (file://<temporary-path>)\n    at Module.main (file://<temporary-path>)\n    at file://<local-path> v24.16.0\n"
           },
           "matches": false
         }
@@ -5264,7 +5264,7 @@
             "status": 1,
             "signal": null,
             "stdout": "",
-            "stderr": "file://<local-path>/_dsd9s596d19gtf4zr279bzm0000gn/T/lite-inventory-23Z9Ok/program.ts:4\n        throw new Error(\"BoundPanic: textAt index outside text\");\n              ^\n\nError: BoundPanic: textAt index outside text\n    at lite$textAt (file://<local-path>/_dsd9s596d19gtf4zr279bzm0000gn/T/lite-inventory-23Z9Ok/program.ts:4:15)\n    at Module.main (file://<local-path>/_dsd9s596d19gtf4zr279bzm0000gn/T/lite-inventory-23Z9Ok/program.ts:15:17)\n    at file://<local-path>/Projects/LiteScript/compiler/entry.ts:11:34\n\nNode.js v24.16.0\n"
+            "stderr": "file://<temporary-path>        throw new Error(\"BoundPanic: textAt index outside text\");\n              ^\n\nError: BoundPanic: textAt index outside text\n    at lite$textAt (file://<temporary-path>)\n    at Module.main (file://<temporary-path>)\n    at file://<local-path> v24.16.0\n"
           },
           "matches": false
         }
@@ -5309,7 +5309,7 @@
             "status": 1,
             "signal": null,
             "stdout": "",
-            "stderr": "file://<local-path>/_dsd9s596d19gtf4zr279bzm0000gn/T/lite-inventory-23Z9Ok/program.ts:3\n        throw new Error(\"BoundPanic: list index outside its extent\");\n              ^\n\nError: BoundPanic: list index outside its extent\n    at lite$listAt (file://<local-path>/_dsd9s596d19gtf4zr279bzm0000gn/T/lite-inventory-23Z9Ok/program.ts:3:15)\n    at Module.main (file://<local-path>/_dsd9s596d19gtf4zr279bzm0000gn/T/lite-inventory-23Z9Ok/program.ts:17:18)\n    at file://<local-path>/Projects/LiteScript/compiler/entry.ts:11:34\n\nNode.js v24.16.0\n"
+            "stderr": "file://<temporary-path>        throw new Error(\"BoundPanic: list index outside its extent\");\n              ^\n\nError: BoundPanic: list index outside its extent\n    at lite$listAt (file://<temporary-path>)\n    at Module.main (file://<temporary-path>)\n    at file://<local-path> v24.16.0\n"
           },
           "matches": false
         }

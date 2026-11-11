@@ -1,7 +1,7 @@
 # INV-055 — FVP runtime-owner decision boundary
 
 Status: recorded (copy-first direction and bounded FVP slice approved; broader owner contracts open)
-Contributor: redacted (agent-assisted)
+Contributor: project contributor (agent-assisted)
 Last updated: 2026-10-31
 Catalog brief: [INV-055](TOPICS.md#inv-055)
 Baseline: `2139003`, tagged igniter-v0.1.0-alpha.13

@@ -1,7 +1,7 @@
 # INV-072 — Small VS Code highlighter
 
 Status: recorded (bounded editor implementation; wider tooling questions open)
-Contributor: redacted (agent-assisted)
+Contributor: project contributor (agent-assisted)
 Last updated: 2026-10-31
 Catalog brief: [INV-072](TOPICS.md#inv-072)
 Covered scope: local VS Code syntax highlighting for .lt and .lts.

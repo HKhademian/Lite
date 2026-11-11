@@ -1,7 +1,7 @@
 # INV-061 — FVP interpreter implementation language
 
 Status: recorded (TypeScript/Node replaces Python; first checkpoint implemented; self-hosting open)
-Contributor: redacted (agent-assisted)
+Contributor: project contributor (agent-assisted)
 Last updated: 2026-10-30
 Catalog brief: [INV-061](TOPICS.md#inv-061)
 Covered scope: bounded whole-topic question — language and minimal structure for

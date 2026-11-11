@@ -1,7 +1,7 @@
 # INV-054 — Readable fixed arrays for the FVP
 
 Status: recorded (explicitly approved bounded implementation)
-Contributor: redacted (agent-assisted)
+Contributor: project contributor (agent-assisted)
 Last updated: 2026-10-31
 Catalog brief: [INV-054](TOPICS.md#inv-054)
 Covered scope: fixed array values, indexed reads and action traversal.

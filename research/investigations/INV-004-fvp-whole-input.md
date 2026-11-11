@@ -1,7 +1,7 @@
 # INV-004 — Whole-input helper with optional prompt
 
 Status: recorded (explicitly approved with optional prompt; implemented)
-Contributor: redacted (agent-assisted)
+Contributor: project contributor (agent-assisted)
 Last updated: 2026-10-31
 Catalog brief: [INV-004](TOPICS.md#inv-004)
 Related: [self-hosting/source input](SUBTOPICS.md#inv-061-06)

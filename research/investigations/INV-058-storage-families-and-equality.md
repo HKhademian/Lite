@@ -1,7 +1,7 @@
 # INV-058 — Storage families, equality, hashing, and ordering
 
 Status: recorded (reference survey and structure proposal; no contract selected)
-Contributor: redacted (agent-assisted)
+Contributor: project contributor (agent-assisted)
 Last updated: 2026-11-01
 Catalog brief: [INV-058](TOPICS.md#inv-058)
 Covered subtopics: whole topic; hashing, equality, ordering, and storage choices.

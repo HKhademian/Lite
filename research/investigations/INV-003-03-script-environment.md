@@ -1,7 +1,7 @@
 # INV-003.03 — Script environment
 
 Status: in progress
-Contributor: redacted (agent-assisted)
+Contributor: project contributor (agent-assisted)
 Last updated: 2026-10-30
 Catalog brief: [INV-003](TOPICS.md#inv-003)
 Covered subtopics: INV-003.03 (environment and explicit module dependencies), INV-003.04 (partial: source-kind boundary only)

@@ -1,7 +1,7 @@
 # INV-002 — Exercise coverage: contracts required by exercises 001–020
 
 Status: in progress
-Contributor: redacted (agent-assisted)
+Contributor: project contributor (agent-assisted)
 Last updated: 2026-10-28
 Catalog brief: [INV-002](TOPICS.md#inv-002)
 Covered subtopics: none — INV-002 has no starter subtopics, so this note answers a bounded question named within the topic's scope: *which language, library, host, and tooling contracts do the 20 written exercises require, and which have no selected rule?*

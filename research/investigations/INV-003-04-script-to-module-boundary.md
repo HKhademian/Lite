@@ -1,7 +1,7 @@
 # INV-003.04 — Growing a script into a module
 
 Status: recorded (discussion deferred beyond the immediate FVP; question unresolved)
-Contributor: redacted (agent-assisted)
+Contributor: project contributor (agent-assisted)
 Last updated: 2026-10-30
 Catalog brief: [INV-003](TOPICS.md#inv-003)
 Covered subtopic: INV-003.04 (importable source kinds and code extraction)

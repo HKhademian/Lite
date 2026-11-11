@@ -1,7 +1,7 @@
 # INV-055 — Concrete list end-operation names
 
 Status: recorded (canonical names selected by the user; no implementation)
-Contributor: redacted (agent-assisted)
+Contributor: project contributor (agent-assisted)
 Last updated: 2026-10-31
 Catalog brief: [INV-055](TOPICS.md#inv-055)
 Related scope: [INV-057 collection protocols](TOPICS.md#inv-057)

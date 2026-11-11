@@ -8580,7 +8580,7 @@
     {
       "path": "igniter/tests/compiler/001-005-duplicate-local.lts",
       "coverage": "load-error",
-      "diagnostic": "Error: ENOENT: no such file or directory, open '<local-path>/Projects/LiteScript/igniter/tests/compiler/001-005-duplicate-local.lts'"
+      "diagnostic": "Error: ENOENT: no such file or directory, open '<local-path>'"
     },
     {
       "path": "igniter/tests/compiler/001-005-local-missing-semicolon.lts",

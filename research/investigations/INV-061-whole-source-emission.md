@@ -1,7 +1,7 @@
 # INV-061 — Whole-source input for the restricted emitters
 
 Status: recorded (existing source subset over complete input; not full-language parsing)
-Contributor: redacted (agent-assisted)
+Contributor: project contributor (agent-assisted)
 Last updated: 2026-10-31
 Catalog brief: [INV-061](TOPICS.md#inv-061)
 Compatible helper milestone: igniter-v0.1.0-alpha.19, `90754bd`

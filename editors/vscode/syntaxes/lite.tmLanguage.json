@@ -3,50 +3,139 @@
   "name": "Lite",
   "scopeName": "source.lite",
   "patterns": [
-    { "include": "#comments" },
-    { "include": "#strings" },
-    { "name": "constant.language.lite", "match": "(?<![\\p{L}\\p{M}\\p{N}_])(?:true|false|Unit)(?![\\p{L}\\p{M}\\p{N}_])" },
-    { "name": "keyword.control.lite", "match": "(?<![\\p{L}\\p{M}\\p{N}_])(?:if|else|match|loop|then|finally|return|break|continue|raise)(?![\\p{L}\\p{M}\\p{N}_])" },
-    { "name": "storage.modifier.lite", "match": "(?<![\\p{L}\\p{M}\\p{N}_])(?:var|mut)(?![\\p{L}\\p{M}\\p{N}_])" },
-    { "name": "storage.type.lite", "match": "(?<![\\p{L}\\p{M}\\p{N}_])(?:fn|record|enum|type)(?![\\p{L}\\p{M}\\p{N}_])" },
-    { "name": "keyword.operator.word.lite", "match": "(?<![\\p{L}\\p{M}\\p{N}_])(?:and|or|not)(?![\\p{L}\\p{M}\\p{N}_])" },
-    { "name": "keyword.control.import.lite", "match": "(?<![\\p{L}\\p{M}\\p{N}_])(?:import|using)(?![\\p{L}\\p{M}\\p{N}_])" },
-    { "name": "support.type.lite", "match": "(?<![\\p{L}\\p{M}\\p{N}_])(?:Int|Float|String|Bool|List)(?![\\p{L}\\p{M}\\p{N}_])" },
-    { "name": "constant.numeric.lite", "match": "(?<![\\p{L}\\p{M}\\p{N}_.])[0-9]+(?:\\.[0-9]+)?(?:[eE][+-]?[0-9]+)?(?![\\p{L}\\p{M}\\p{N}_])" },
-    { "name": "entity.name.function.lite", "match": "[\\p{L}_][\\p{L}\\p{M}\\p{N}_]*(?=\\s*:=\\s*fn(?![\\p{L}\\p{M}\\p{N}_]))" },
-    { "name": "entity.name.function.call.lite", "match": "[\\p{L}_][\\p{L}\\p{M}\\p{N}_]*(?=\\s*\\()" },
-    { "name": "entity.name.label.lite", "match": "@[\\p{L}_][\\p{L}\\p{M}\\p{N}_]*" },
-    { "name": "keyword.operator.lite", "match": "(?:>!=|<!=|=!=|:/=|:%=|:=|==|>=|<=|>!|<!|\\+=|-=|\\*=|/=|%=|:/|:%|[+*/%=<>!?|&-])" },
-    { "name": "punctuation.section.brackets.lite", "match": "[{}\\[\\]()]" },
-    { "name": "punctuation.separator.lite", "match": "[;,:.]" },
-    { "name": "variable.other.lite", "match": "[\\p{L}_][\\p{L}\\p{M}\\p{N}_]*" }
+    {
+      "include": "#comments"
+    },
+    {
+      "include": "#strings"
+    },
+    {
+      "name": "constant.language.lite",
+      "match": "(?<![\\p{L}\\p{M}\\p{N}_])(?:true|false|Unit)(?![\\p{L}\\p{M}\\p{N}_])"
+    },
+    {
+      "name": "keyword.control.lite",
+      "match": "(?<![\\p{L}\\p{M}\\p{N}_])(?:if|else|match|loop|then|finally|return|break|continue|raise)(?![\\p{L}\\p{M}\\p{N}_])"
+    },
+    {
+      "name": "storage.modifier.lite",
+      "match": "(?<![\\p{L}\\p{M}\\p{N}_])(?:var|mut)(?![\\p{L}\\p{M}\\p{N}_])"
+    },
+    {
+      "name": "storage.type.lite",
+      "match": "(?<![\\p{L}\\p{M}\\p{N}_])(?:fn|record|enum|type)(?![\\p{L}\\p{M}\\p{N}_])"
+    },
+    {
+      "name": "keyword.operator.word.lite",
+      "match": "(?<![\\p{L}\\p{M}\\p{N}_])(?:and|or|not)(?![\\p{L}\\p{M}\\p{N}_])"
+    },
+    {
+      "name": "keyword.control.import.lite",
+      "match": "(?<![\\p{L}\\p{M}\\p{N}_])(?:import|using)(?![\\p{L}\\p{M}\\p{N}_])"
+    },
+    {
+      "name": "support.type.lite",
+      "match": "(?<![\\p{L}\\p{M}\\p{N}_])(?:Int|Float|String|Bool|List)(?![\\p{L}\\p{M}\\p{N}_])"
+    },
+    {
+      "name": "constant.numeric.lite",
+      "match": "(?<![\\p{L}\\p{M}\\p{N}_.])[0-9]+(?:\\.[0-9]+)?(?:[eE][+-]?[0-9]+)?(?![\\p{L}\\p{M}\\p{N}_])"
+    },
+    {
+      "name": "entity.name.function.lite",
+      "match": "[\\p{L}_][\\p{L}\\p{M}\\p{N}_]*(?=\\s*:=\\s*fn(?![\\p{L}\\p{M}\\p{N}_]))"
+    },
+    {
+      "name": "entity.name.function.call.lite",
+      "match": "[\\p{L}_][\\p{L}\\p{M}\\p{N}_]*(?=\\s*\\()"
+    },
+    {
+      "name": "entity.name.label.lite",
+      "match": "@[\\p{L}_][\\p{L}\\p{M}\\p{N}_]*"
+    },
+    {
+      "name": "keyword.operator.lite",
+      "match": "(?:>!=|<!=|=!=|:/=|:%=|:=|==|>=|<=|>!|<!|\\+=|-=|\\*=|/=|%=|:/|:%|[+*/%=<>!?|&-])"
+    },
+    {
+      "name": "punctuation.section.brackets.lite",
+      "match": "[{}\\[\\]()]"
+    },
+    {
+      "name": "punctuation.separator.lite",
+      "match": "[;,:.]"
+    },
+    {
+      "name": "variable.other.lite",
+      "match": "[\\p{L}_][\\p{L}\\p{M}\\p{N}_]*"
+    }
   ],
   "repository": {
     "comments": {
-      "patterns": [{ "include": "#raw-comment" }, { "include": "#block-comment" }]
+      "patterns": [
+        {
+          "include": "#raw-comment"
+        },
+        {
+          "include": "#block-comment"
+        }
+      ]
     },
     "raw-comment": {
       "name": "comment.block.raw.lite",
       "begin": "/\\*(#+)",
-      "beginCaptures": { "0": { "name": "punctuation.definition.comment.begin.lite" } },
+      "beginCaptures": {
+        "0": {
+          "name": "punctuation.definition.comment.begin.lite"
+        }
+      },
       "end": "(?<!#)\\1\\*/",
-      "endCaptures": { "0": { "name": "punctuation.definition.comment.end.lite" } }
+      "endCaptures": {
+        "0": {
+          "name": "punctuation.definition.comment.end.lite"
+        }
+      }
     },
     "block-comment": {
       "name": "comment.block.lite",
       "begin": "/\\*(?!#)",
-      "beginCaptures": { "0": { "name": "punctuation.definition.comment.begin.lite" } },
+      "beginCaptures": {
+        "0": {
+          "name": "punctuation.definition.comment.begin.lite"
+        }
+      },
       "end": "\\*/",
-      "endCaptures": { "0": { "name": "punctuation.definition.comment.end.lite" } },
-      "patterns": [{ "include": "#comments" }]
+      "endCaptures": {
+        "0": {
+          "name": "punctuation.definition.comment.end.lite"
+        }
+      },
+      "patterns": [
+        {
+          "include": "#comments"
+        }
+      ]
     },
     "strings": {
       "name": "string.quoted.double.lite",
       "begin": "\"",
-      "beginCaptures": { "0": { "name": "punctuation.definition.string.begin.lite" } },
+      "beginCaptures": {
+        "0": {
+          "name": "punctuation.definition.string.begin.lite"
+        }
+      },
       "end": "\"",
-      "endCaptures": { "0": { "name": "punctuation.definition.string.end.lite" } },
-      "patterns": [{ "name": "constant.character.escape.lite", "match": "\\\\[nrt\"\\\\]" }]
+      "endCaptures": {
+        "0": {
+          "name": "punctuation.definition.string.end.lite"
+        }
+      },
+      "patterns": [
+        {
+          "name": "constant.character.escape.lite",
+          "match": "\\\\[nrt\"\\\\]"
+        }
+      ]
     }
   }
 }

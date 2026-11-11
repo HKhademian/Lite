@@ -1,7 +1,7 @@
 # INV-055 — Approved bounded FVP list slice
 
 Status: recorded (explicitly approved bounded implementation)
-Contributor: redacted (agent-assisted)
+Contributor: project contributor (agent-assisted)
 Last updated: 2026-10-31
 Catalog brief: [INV-055](TOPICS.md#inv-055)
 Baseline: `7cafc24`; interpreter remains igniter-v0.1.0-alpha.13

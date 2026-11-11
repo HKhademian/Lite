@@ -1,7 +1,7 @@
 # INV-014 — Temporary FVP numeric profile
 
 Status: recorded (temporary profile selected; remaining numeric details open)
-Contributor: redacted (agent-assisted)
+Contributor: project contributor (agent-assisted)
 Last updated: 2026-10-30
 Catalog brief: [INV-014](TOPICS.md#inv-014)
 Covered subtopics: INV-014.01 (provisional representations), INV-014.03 (partial:

@@ -1,7 +1,7 @@
 # INV-067 — Script arguments for compiler source context
 
 Status: recorded (explicitly approved helper/runner suffix implemented)
-Contributor: redacted (agent-assisted)
+Contributor: project contributor (agent-assisted)
 Last updated: 2026-10-31
 Catalog brief: [INV-067](TOPICS.md#inv-067)
 Related: [INV-061 compiler output/parity](INV-061-first-compiler-output.md)

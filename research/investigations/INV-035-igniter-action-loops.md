@@ -1,7 +1,7 @@
 # INV-035 — Action-loop igniter increment
 
 Status: recorded (bounded implementation; wider loop contracts unimplemented)
-Contributor: redacted (agent-assisted)
+Contributor: project contributor (agent-assisted)
 Last updated: 2026-10-30
 Catalog brief: [INV-035](TOPICS.md#inv-035)
 Covered scope: Boolean and unconditional action loops with bare body break/continue.

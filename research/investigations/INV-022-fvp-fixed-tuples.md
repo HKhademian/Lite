@@ -1,7 +1,7 @@
 # INV-022 — Fixed tuples for the next FVP increment
 
 Status: recorded (user-approved bounded implementation; wider tuple contracts open)
-Contributor: redacted (agent-assisted)
+Contributor: project contributor (agent-assisted)
 Last updated: 2026-10-31
 Catalog brief: [INV-022](TOPICS.md#inv-022)
 Covered scope: a small positional fixed-tuple subset using existing selected syntax.

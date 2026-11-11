@@ -1,7 +1,7 @@
 # INV-061 — Statement sequencing in compiler applications
 
 Status: recorded (sequential report statements implemented; general control flow remains open)
-Contributor: redacted (agent-assisted)
+Contributor: project contributor (agent-assisted)
 Last updated: 2026-10-31
 Catalog brief: [INV-061](TOPICS.md#inv-061)
 

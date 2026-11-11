@@ -1,4 +1,6 @@
 {
   "target": "ts",
-  "files": ["../src/ts-root.lts"]
+  "files": [
+    "../src/ts-root.lts"
+  ]
 }

@@ -1,7 +1,7 @@
 # INV-005 — FVP completion and error reporting
 
 Status: in progress
-Contributor: redacted (agent-assisted)
+Contributor: project contributor (agent-assisted)
 Last updated: 2026-10-30
 Catalog brief: [INV-005](TOPICS.md#inv-005)
 Covered scope: bounded whole-topic question — normal FVP completion, host success/

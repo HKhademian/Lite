@@ -1,7 +1,7 @@
 # INV-061 — Compiler extraction, shared front-end and temporary flat imports
 
 Status: recorded (compiler sources moved out of examples; shared front-end; temporary loader)
-Contributor: redacted (agent-assisted)
+Contributor: project contributor (agent-assisted)
 Last updated: 2026-10-31
 Catalog brief: [INV-061](TOPICS.md#inv-061)
 Compatible interpreter: alpha.22 and the later alias checkpoint `d7fdd3e`; the loader is a host addition

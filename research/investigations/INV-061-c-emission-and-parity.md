@@ -1,7 +1,7 @@
 # INV-061 — First restricted C emission and three-way byte parity
 
 Status: recorded (bounded native prototype; maintained export/ABI goals remain open)
-Contributor: redacted (agent-assisted)
+Contributor: project contributor (agent-assisted)
 Last updated: 2026-10-31
 Catalog brief: [INV-061](TOPICS.md#inv-061)
 Direction: [TS bootstrap/web and C native/export](INV-061-first-compiler-output.md)

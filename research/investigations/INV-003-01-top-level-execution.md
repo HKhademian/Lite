@@ -1,7 +1,7 @@
 # INV-003.01 — Top-level execution
 
 Status: recorded
-Contributor: redacted (agent-assisted)
+Contributor: project contributor (agent-assisted)
 Last updated: 2026-10-28
 Catalog brief: [INV-003](TOPICS.md#inv-003)
 Covered subtopics: INV-003.01

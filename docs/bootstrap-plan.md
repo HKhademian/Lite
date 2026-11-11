@@ -486,12 +486,12 @@ this phase.
 - [x] **Driver:** compile a bundle for a target; pass the logical source name
       through `inputArgs`; feed the bundle through `inputAll`; capture
       stdout/stderr/status. `loadCompiler` in
-      [`igniter/bootstrap.ts`](https://github.com/redacted/Lite/blob/d3bd6f7bcf06bbea6669c8d74bebe5e73f383114/igniter/bootstrap.ts) is internal; no public
+      [`igniter/bootstrap.ts`](https://github.com/repository owner/Lite/blob/d3bd6f7bcf06bbea6669c8d74bebe5e73f383114/igniter/bootstrap.ts) is internal; no public
       command was added.
 - [x] **Library/unit harness:** run a Lite file or bundle with fixed args/stdin;
       capture `report`, `reportError` and exit status; compare text and bytes.
       `runText`/`runFile`/`runBundle` in
-      [`igniter/bootstrap.ts`](https://github.com/redacted/Lite/blob/d3bd6f7bcf06bbea6669c8d74bebe5e73f383114/igniter/bootstrap.ts).
+      [`igniter/bootstrap.ts`](https://github.com/repository owner/Lite/blob/d3bd6f7bcf06bbea6669c8d74bebe5e73f383114/igniter/bootstrap.ts).
 - [x] **Artifact runner:** write emitted TS/C to temporary files; strict
       typecheck/run TS; compile/run C with `-std=c11 -Wall -Wextra -Werror`;
       capture raw streams and status.
@@ -600,7 +600,7 @@ make the lexer complete.
       manifest; the no-forward-reference rule makes order semantic.
 - [x] Make manifest order authoritative in S and remove `importFlatAll` from the
       compiler source. `lite-compile-ts` compiles the manifest bundle through
-      [`igniter/bundle-cli.ts`](https://github.com/redacted/Lite/blob/d3bd6f7bcf06bbea6669c8d74bebe5e73f383114/igniter/bundle-cli.ts); the old emitter paths
+      [`igniter/bundle-cli.ts`](https://github.com/repository owner/Lite/blob/d3bd6f7bcf06bbea6669c8d74bebe5e73f383114/igniter/bundle-cli.ts); the old emitter paths
       are generated compatibility bundles.
 - [x] Negative fixtures: unsupported constructs are rejected by name before any
       emission.

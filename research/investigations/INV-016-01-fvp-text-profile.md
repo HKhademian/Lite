@@ -1,7 +1,7 @@
 # INV-016 — Temporary FVP text profile
 
 Status: recorded (detailed profile deferred; proposal unselected)
-Contributor: redacted (agent-assisted)
+Contributor: project contributor (agent-assisted)
 Last updated: 2026-10-30
 Catalog brief: [INV-016](TOPICS.md#inv-016)
 Covered subtopics: partial INV-016.01 (encoding) and INV-016.04 (literal/input text)

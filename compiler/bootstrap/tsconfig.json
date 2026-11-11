@@ -3,8 +3,14 @@
   "compilerOptions": {
     "types": [],
     "typeRoots": [],
-    "lib": ["ESNext"]
+    "lib": [
+      "ESNext"
+    ]
   },
   "include": [],
-  "files": ["T12.ts", "T11.ts", "c-emitter.ts"]
+  "files": [
+    "T12.ts",
+    "T11.ts",
+    "c-emitter.ts"
+  ]
 }

@@ -1,7 +1,7 @@
 # INV-061.06 — Bootstrap and maintained output targets
 
 Status: recorded (user-selected target direction; bounded TS emitter implemented)
-Contributor: redacted (agent-assisted)
+Contributor: project contributor (agent-assisted)
 Last updated: 2026-10-31
 Catalog brief: [INV-061](TOPICS.md#inv-061)
 Subtopic: [INV-061.06](SUBTOPICS.md#inv-061-06)

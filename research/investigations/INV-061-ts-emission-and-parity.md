@@ -1,7 +1,7 @@
 # INV-061 — First Lite-to-TypeScript emission and byte parity
 
 Status: recorded (bounded emitted-code prototype; self-hosting remains open)
-Contributor: redacted (agent-assisted)
+Contributor: project contributor (agent-assisted)
 Last updated: 2026-10-31
 Catalog brief: [INV-061](TOPICS.md#inv-061)
 Direction: [TS bootstrap, web, C native/export and possible AS/Wasm](INV-061-first-compiler-output.md)

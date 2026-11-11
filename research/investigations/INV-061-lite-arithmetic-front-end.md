@@ -1,7 +1,7 @@
 # INV-061 — Arithmetic front-end exercise written in Lite
 
 Status: recorded (bounded application demonstration; compiler stages/backend open)
-Contributor: redacted (agent-assisted)
+Contributor: project contributor (agent-assisted)
 Last updated: 2026-10-31
 Catalog brief: [INV-061](TOPICS.md#inv-061)
 Baseline: `f5f9cbe`, preserved as igniter-v0.1.0-alpha.15

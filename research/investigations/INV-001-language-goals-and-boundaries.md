@@ -1,7 +1,7 @@
 # INV-001 — Language goals and boundaries
 
 Status: recorded
-Contributor: redacted (agent-assisted)
+Contributor: project contributor (agent-assisted)
 Last updated: 2026-10-28
 Catalog brief: [INV-001](TOPICS.md#inv-001)
 Covered subtopics: whole topic (INV-001 has no starter subtopics in [SUBTOPICS.md](SUBTOPICS.md))

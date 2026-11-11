@@ -19,7 +19,7 @@ questions; check their status and current owning pages before relying on them.
 
 **Start with:** [docs/white-paper.md](../../docs/white-paper.md); [docs/principles.md](../../docs/principles.md).
 
-**Investigation:** recorded; contributor: redacted (agent-assisted); note: [INV-001 — language goals and boundaries](INV-001-language-goals-and-boundaries.md) — tiny demonstrator, practical-script milestone, ordinary/advanced memory-control usability boundary, and case-by-case goal-conflict review selected 2026-10-28; exact coverage, memory mechanisms, and evidence budgets remain open.
+**Investigation:** recorded; contributor: project contributor (agent-assisted); note: [INV-001 — language goals and boundaries](INV-001-language-goals-and-boundaries.md) — tiny demonstrator, practical-script milestone, ordinary/advanced memory-control usability boundary, and case-by-case goal-conflict review selected 2026-10-28; exact coverage, memory mechanisms, and evidence budgets remain open.
 
 <a id="inv-002"></a>
 
@@ -31,7 +31,7 @@ questions; check their status and current owning pages before relying on them.
 
 **Start with:** [language/samples/list.md](../../language/samples/list.md); [language/samples/NOTES.md](../../language/samples/NOTES.md); [benchmark/challenges/README.md](../../benchmark/challenges/README.md).
 
-**Investigation:** in progress; contributor: redacted (agent-assisted); note: [INV-002-01](INV-002-01-exercise-contracts-001-020.md) — contracts required by 001–020; initial incremental correctness batch selected 2026-10-28, with focused feature examples added as executable. [INV-002-02](INV-002-02-fvp-first-runnable-slice.md) — recorded, first runnable checkpoint selected (scalar values, bindings/replacement, basic arithmetic, temporary helper calls); control flow/functions/tuples follow incrementally. Numeric/text profile, remaining helper details, and later coverage remain open.
+**Investigation:** in progress; contributor: project contributor (agent-assisted); note: [INV-002-01](INV-002-01-exercise-contracts-001-020.md) — contracts required by 001–020; initial incremental correctness batch selected 2026-10-28, with focused feature examples added as executable. [INV-002-02](INV-002-02-fvp-first-runnable-slice.md) — recorded, first runnable checkpoint selected (scalar values, bindings/replacement, basic arithmetic, temporary helper calls); control flow/functions/tuples follow incrementally. Numeric/text profile, remaining helper details, and later coverage remain open.
 
 <a id="inv-003"></a>
 
@@ -45,7 +45,7 @@ questions; check their status and current owning pages before relying on them.
 
 **Starter subtopics:** [5 bounded questions](SUBTOPICS.md#inv-003).
 
-**Investigation:** in progress; contributor: redacted (agent-assisted); notes: [INV-003-01](INV-003-01-top-level-execution.md) — recorded, file-body and explicit-output decisions, observation APIs open; [INV-003-02](INV-003-02-declarations-and-lookup.md) — in progress, ordered blocks, lookup/live-read rules, static-first checks, direct recursion, and explicit self calls recorded; naming/nesting/access/inference details remain open; [INV-003-03](INV-003-03-script-environment.md) — in progress, .lts/.lt source kinds, no implicit imports in .lt, and replaceable standard-module goal selected; script convenience/disclosure proposal remains open. [INV-003-04](INV-003-04-script-to-module-boundary.md) — recorded, unresolved importability discussion deferred beyond the immediate FVP on 2026-10-30; recommendation unselected. Source-kind direction remains recorded in INV-003.03 but two modes/module architecture are not FVP gates; full module shape and migration remain open. INV-003.05 (possible restriction on module top-level effects and declaration initializers) inventoried for later; not started.
+**Investigation:** in progress; contributor: project contributor (agent-assisted); notes: [INV-003-01](INV-003-01-top-level-execution.md) — recorded, file-body and explicit-output decisions, observation APIs open; [INV-003-02](INV-003-02-declarations-and-lookup.md) — in progress, ordered blocks, lookup/live-read rules, static-first checks, direct recursion, and explicit self calls recorded; naming/nesting/access/inference details remain open; [INV-003-03](INV-003-03-script-environment.md) — in progress, .lts/.lt source kinds, no implicit imports in .lt, and replaceable standard-module goal selected; script convenience/disclosure proposal remains open. [INV-003-04](INV-003-04-script-to-module-boundary.md) — recorded, unresolved importability discussion deferred beyond the immediate FVP on 2026-10-30; recommendation unselected. Source-kind direction remains recorded in INV-003.03 but two modes/module architecture are not FVP gates; full module shape and migration remain open. INV-003.05 (possible restriction on module top-level effects and declaration initializers) inventoried for later; not started.
 
 <a id="inv-004"></a>
 
@@ -61,7 +61,7 @@ questions; check their status and current owning pages before relying on them.
 
 **Focus:** [Lightweight native execution questions and evidence](lightweight-native-execution.md).
 
-**Investigation:** in progress; contributor: redacted (agent-assisted); note: [INV-004 — minimal FVP execution path](INV-004-fvp-execution-path.md) — small interpreter selected for the FVP: read one file, parse/check the supported subset, and execute with temporary helpers; native compilation is a later goal. Temporary inputInt/inputFloat/inputLine/inputWord/report/reportError helper names selected for the FVP; invalid input/EOF input faults selected, with clear diagnostics/nonzero status when unhandled, no automatic retry/default, and intentionally empty inputLine allowed. The first executable feature checkpoint is selected under INV-002.02. The user-requested root ./bin/lite run shebang launcher now forwards to the TypeScript/Node igniter; strict checking and 63 interpreter test groups pass. Complete numeric/text and I/O contracts, native deployment/backend, caching, full mode parity and restricted profiles remain open.
+**Investigation:** in progress; contributor: project contributor (agent-assisted); note: [INV-004 — minimal FVP execution path](INV-004-fvp-execution-path.md) — small interpreter selected for the FVP: read one file, parse/check the supported subset, and execute with temporary helpers; native compilation is a later goal. Temporary inputInt/inputFloat/inputLine/inputWord/report/reportError helper names selected for the FVP; invalid input/EOF input faults selected, with clear diagnostics/nonzero status when unhandled, no automatic retry/default, and intentionally empty inputLine allowed. The first executable feature checkpoint is selected under INV-002.02. The user-requested root ./bin/lite run shebang launcher now forwards to the TypeScript/Node igniter; strict checking and 63 interpreter test groups pass. Complete numeric/text and I/O contracts, native deployment/backend, caching, full mode parity and restricted profiles remain open.
 
 **Helper follow-up:** [INV-004 — optional input prompt and multiple report values](INV-004-fvp-prompt-and-report-values.md) — explicit user selections implemented: inputInt prompt on stdout without an added newline, report values space-separated with a final newline, ordinary multiple arguments only. Strict checking and 69 interpreter test groups pass.
 
@@ -77,7 +77,7 @@ questions; check their status and current owning pages before relying on them.
 
 **Start with:** [docs/modules-and-packages.md](../../docs/modules-and-packages.md); [docs/finally.md](../../docs/finally.md); [docs/panics.md](../../docs/panics.md).
 
-**Investigation:** in progress; contributor: redacted (agent-assisted); note: [INV-005 — FVP completion and reporting](INV-005-fvp-completion-and-reporting.md) — reportError report-only, normal completion status 0 versus nonzero rejected/fatal failure, and explicit exit(errCode?) selected. Omitted-code default, code domain, exit cleanup/recovery behavior, exact I/O failures/codes, and full lifecycle remain open.
+**Investigation:** in progress; contributor: project contributor (agent-assisted); note: [INV-005 — FVP completion and reporting](INV-005-fvp-completion-and-reporting.md) — reportError report-only, normal completion status 0 versus nonzero rejected/fatal failure, and explicit exit(errCode?) selected. Omitted-code default, code domain, exit cleanup/recovery behavior, exact I/O failures/codes, and full lifecycle remain open.
 
 <a id="inv-006"></a>
 
@@ -191,7 +191,7 @@ questions; check their status and current owning pages before relying on them.
 
 **Starter subtopics:** [4 bounded questions](SUBTOPICS.md#inv-014).
 
-**Investigation:** in progress; contributor: redacted (agent-assisted); note: [INV-014-01 — temporary FVP numeric profile](INV-014-01-fvp-numeric-profile.md) — temporary signed 64-bit integers, one finite 64-bit floating family, checked overflow, zero-divisor faults, and rejection/faulting of non-finite values selected. Covers INV-014.01 and part of INV-014.03; precise rounding, promotions, literal/input rules, permanent widths, and ABI remain open.
+**Investigation:** in progress; contributor: project contributor (agent-assisted); note: [INV-014-01 — temporary FVP numeric profile](INV-014-01-fvp-numeric-profile.md) — temporary signed 64-bit integers, one finite 64-bit floating family, checked overflow, zero-divisor faults, and rejection/faulting of non-finite values selected. Covers INV-014.01 and part of INV-014.03; precise rounding, promotions, literal/input rules, permanent widths, and ABI remain open.
 
 <a id="inv-015"></a>
 
@@ -203,7 +203,7 @@ questions; check their status and current owning pages before relying on them.
 
 **Start with:** [docs/condition-chains.md](../../docs/condition-chains.md); [docs/conditionals.md](../../docs/conditionals.md); [docs/leading-separators.md](../../docs/leading-separators.md).
 
-**Investigation:** recorded; contributor: redacted (agent-assisted); note: [INV-015 — Boolean/conditional igniter increment](INV-015-igniter-boolean-conditionals.md) — Bool-only logic, scalar comparison chains, scopes, and basic branches implemented with 22 passing test groups. Result unions, partial value/guarded updates, patterns, and then/finally remain unsupported; this is bounded implementation evidence, not completion of the full topic.
+**Investigation:** recorded; contributor: project contributor (agent-assisted); note: [INV-015 — Boolean/conditional igniter increment](INV-015-igniter-boolean-conditionals.md) — Bool-only logic, scalar comparison chains, scopes, and basic branches implemented with 22 passing test groups. Result unions, partial value/guarded updates, patterns, and then/finally remain unsupported; this is bounded implementation evidence, not completion of the full topic.
 
 <a id="inv-016"></a>
 
@@ -217,7 +217,7 @@ questions; check their status and current owning pages before relying on them.
 
 **Starter subtopics:** [4 bounded questions](SUBTOPICS.md#inv-016).
 
-**Investigation:** recorded (temporary helpers explicitly approved); contributor: redacted (agent-assisted); notes: [INV-016-01 — temporary FVP text profile](INV-016-01-fvp-text-profile.md) — detailed proposal remains deferred; [INV-016 — text-scanning increment](INV-016-igniter-text-operations.md) — the user explicitly approves the existing positional textLength/textAt/textSlice code-point helpers and terminal bounds policy after the [focused review](INV-016-igniter-text-operations.md#focused-consent-review-2026-10-31). A retained named-token list scanner is verified through the launcher. Strict checking and 122 interpreter groups pass; 9 editor groups pass. General String indexing, grapheme/normalization policy, native text layout and performance remain open.
+**Investigation:** recorded (temporary helpers explicitly approved); contributor: project contributor (agent-assisted); notes: [INV-016-01 — temporary FVP text profile](INV-016-01-fvp-text-profile.md) — detailed proposal remains deferred; [INV-016 — text-scanning increment](INV-016-igniter-text-operations.md) — the user explicitly approves the existing positional textLength/textAt/textSlice code-point helpers and terminal bounds policy after the [focused review](INV-016-igniter-text-operations.md#focused-consent-review-2026-10-31). A retained named-token list scanner is verified through the launcher. Strict checking and 122 interpreter groups pass; 9 editor groups pass. General String indexing, grapheme/normalization policy, native text layout and performance remain open.
 
 <a id="inv-017"></a>
 
@@ -291,7 +291,7 @@ questions; check their status and current owning pages before relying on them.
 
 **Start with:** [docs/tuples-and-patterns.md](../../docs/tuples-and-patterns.md); [docs/tuple-spread-and-rest.md](../../docs/tuple-spread-and-rest.md); [docs/tuple-array-segments.md](../../docs/tuple-array-segments.md).
 
-**Investigation:** recorded (user-approved bounded implementation); contributor: redacted (agent-assisted); note: [INV-022 — fixed-tuple FVP increment](INV-022-fvp-fixed-tuples.md) — flat unnamed scalar tuples, construction/access, positional binding, explicit function inputs/results and value copies implemented using existing selected syntax. Strict checking and 62 test groups pass. Wider tuple topics remain open or unimplemented; text-helper consent is unchanged.
+**Investigation:** recorded (user-approved bounded implementation); contributor: project contributor (agent-assisted); note: [INV-022 — fixed-tuple FVP increment](INV-022-fvp-fixed-tuples.md) — flat unnamed scalar tuples, construction/access, positional binding, explicit function inputs/results and value copies implemented using existing selected syntax. Strict checking and 62 test groups pass. Wider tuple topics remain open or unimplemented; text-helper consent is unchanged.
 
 **Follow-up:** [INV-022 — named fields for fixed tuples](INV-022-fvp-named-tuples.md) — resumed after the intervening I/O work; bounded implementation of existing named entry/shorthand/member forms, named function tuple annotations and label-sensitive stored transfers. Strict checking and 79 interpreter groups pass. Broader routing/conversion, mixed/nested tuples and named patterns remain unimplemented.
 
@@ -387,7 +387,7 @@ questions; check their status and current owning pages before relying on them.
 
 **Start with:** [docs/type-aliases.md](../../docs/type-aliases.md); [docs/record-type-identity.md](../../docs/record-type-identity.md); [docs/type-categories.md](../../docs/type-categories.md).
 
-**Investigation:** approved (one ordinary namespace selected); contributor: redacted (agent-assisted); note: [INV-029 — alias names versus ordinary shadowing](INV-029-fvp-alias-name-resolution.md) — selected alias syntax/transparent meaning stays intact; user selects one ordinary lexical binding namespace ("easier to reason; a value identifier could contain a value and has a type, but a type could not have any mem address") and rejects dual namespaces. Later same-name value shadows alias; subsequent type lookup fails with static TypeError.
+**Investigation:** approved (one ordinary namespace selected); contributor: project contributor (agent-assisted); note: [INV-029 — alias names versus ordinary shadowing](INV-029-fvp-alias-name-resolution.md) — selected alias syntax/transparent meaning stays intact; user selects one ordinary lexical binding namespace ("easier to reason; a value identifier could contain a value and has a type, but a type could not have any mem address") and rejects dual namespaces. Later same-name value shadows alias; subsequent type lookup fails with static TypeError.
 
 <a id="inv-030"></a>
 
@@ -401,7 +401,7 @@ questions; check their status and current owning pages before relying on them.
 
 **Starter subtopics:** [4 bounded questions](SUBTOPICS.md#inv-030).
 
-**Investigation:** recorded (bounded implementation); contributor: redacted (agent-assisted); note: [INV-030 — typed-function igniter increment](INV-030-igniter-functions.md) — explicit scalar functions, positional calls, tail/explicit returns and own-name/self recursion implemented; strict checking and 43 test groups pass. General capture policy, later helper lookup, inference, full argument routing and callable inputs/results remain open or unsupported. **Follow-up:** [INV-030 — method and extension-operation declaration syntax](INV-030-method-declaration-syntax.md) — inventoried only; Kotlin's `fun T.method()` is a reference, and the user's `List.push_front := fn(self, ...)` candidate with `self` as a special receiver is recorded but not selected. Dot-call scope, receiver binding, `self` versus self-recursion, mutation grants, overloads, generics, and implementation remain open.
+**Investigation:** recorded (bounded implementation); contributor: project contributor (agent-assisted); note: [INV-030 — typed-function igniter increment](INV-030-igniter-functions.md) — explicit scalar functions, positional calls, tail/explicit returns and own-name/self recursion implemented; strict checking and 43 test groups pass. General capture policy, later helper lookup, inference, full argument routing and callable inputs/results remain open or unsupported. **Follow-up:** [INV-030 — method and extension-operation declaration syntax](INV-030-method-declaration-syntax.md) — inventoried only; Kotlin's `fun T.method()` is a reference, and the user's `List.push_front := fn(self, ...)` candidate with `self` as a special receiver is recorded but not selected. Dot-call scope, receiver binding, `self` versus self-recursion, mutation grants, overloads, generics, and implementation remain open.
 
 <a id="inv-031"></a>
 
@@ -415,7 +415,7 @@ questions; check their status and current owning pages before relying on them.
 
 **Starter subtopics:** [4 bounded questions](SUBTOPICS.md#inv-031).
 
-**Investigation:** recorded (bounded implementation of selected rules); contributor: redacted (agent-assisted); note: [INV-031 — named fixed-slot calls](INV-031-fvp-named-calls.md) — interleaved named/positional arguments, shorthand and named replacement preserve evaluation order and final slot typing. Strict checking and 108 interpreter groups pass. Defaults, spread, access grants and builtin public labels remain outside this delivery.
+**Investigation:** recorded (bounded implementation of selected rules); contributor: project contributor (agent-assisted); note: [INV-031 — named fixed-slot calls](INV-031-fvp-named-calls.md) — interleaved named/positional arguments, shorthand and named replacement preserve evaluation order and final slot typing. Strict checking and 108 interpreter groups pass. Defaults, spread, access grants and builtin public labels remain outside this delivery.
 
 <a id="inv-032"></a>
 
@@ -467,7 +467,7 @@ questions; check their status and current owning pages before relying on them.
 
 **Start with:** [docs/loops.md](../../docs/loops.md); [docs/loop-value.md](../../docs/loop-value.md); [docs/loop-completion.md](../../docs/loop-completion.md).
 
-**Investigation:** recorded; contributor: redacted (agent-assisted); note: [INV-035 — action-loop igniter increment](INV-035-igniter-action-loops.md) — Boolean/unconditional action loops, scoped bodies, bare nearest-loop break/continue implemented; strict checking and 30 test groups pass. Values/metadata, iterables, header/tagged/payload transfers, and completion/cleanup remain unsupported.
+**Investigation:** recorded; contributor: project contributor (agent-assisted); note: [INV-035 — action-loop igniter increment](INV-035-igniter-action-loops.md) — Boolean/unconditional action loops, scoped bodies, bare nearest-loop break/continue implemented; strict checking and 30 test groups pass. Values/metadata, iterables, header/tagged/payload transfers, and completion/cleanup remain unsupported.
 
 <a id="inv-036"></a>
 
@@ -723,7 +723,7 @@ questions; check their status and current owning pages before relying on them.
 
 **Start with:** [docs/arrays.md](../../docs/arrays.md); [docs/tuple-array-shapes.md](../../docs/tuple-array-shapes.md); [docs/call-replacement-flow.md](../../docs/call-replacement-flow.md).
 
-**Investigation:** recorded (user-approved bounded implementation); contributor: redacted (agent-assisted); note: [INV-054 — readable fixed arrays for the FVP](INV-054-fvp-fixed-arrays.md) — existing literal/index/type forms and action traversal implemented for nonempty homogeneous arrays of scalars/flat tuples. Strict checking and 93 interpreter test groups pass. No new helper APIs; empty construction, mutation/growth, union/nested inference, views, general protocols and native layout remain unimplemented.
+**Investigation:** recorded (user-approved bounded implementation); contributor: project contributor (agent-assisted); note: [INV-054 — readable fixed arrays for the FVP](INV-054-fvp-fixed-arrays.md) — existing literal/index/type forms and action traversal implemented for nonempty homogeneous arrays of scalars/flat tuples. Strict checking and 93 interpreter test groups pass. No new helper APIs; empty construction, mutation/growth, union/nested inference, views, general protocols and native layout remain unimplemented.
 
 <a id="inv-055"></a>
 
@@ -737,7 +737,7 @@ questions; check their status and current owning pages before relying on them.
 
 **Starter subtopics:** [4 bounded questions](SUBTOPICS.md#inv-055).
 
-**Investigation:** recorded (bounded FVP implementation; broader contracts open); contributor: redacted (agent-assisted); note: [INV-055 — FVP runtime-owner boundary](INV-055-fvp-owner-boundary.md) — copy-first FVP focus clarified by the user: ordinary sequence copies now, behavior-preserving compiler/post-compilation optimization, explicit noncopying modes later. The subsequent explicitly approved list slice supplies bounded runtime construction/end operations and temporary faults. General generics, capacity and permanent allocation behavior remain open; no optimizer added.
+**Investigation:** recorded (bounded FVP implementation; broader contracts open); contributor: project contributor (agent-assisted); note: [INV-055 — FVP runtime-owner boundary](INV-055-fvp-owner-boundary.md) — copy-first FVP focus clarified by the user: ordinary sequence copies now, behavior-preserving compiler/post-compilation optimization, explicit noncopying modes later. The subsequent explicitly approved list slice supplies bounded runtime construction/end operations and temporary faults. General generics, capacity and permanent allocation behavior remain open; no optimizer added.
 
 **Follow-up:** [INV-055 — list end-operation names](INV-055-fvp-list-operations.md) — records the user-selected canonical push_front/push_back/pop_front/pop_back names. No generic grammar, constructor, helper implementation or allocation policy selected.
 
@@ -767,7 +767,7 @@ questions; check their status and current owning pages before relying on them.
 
 **Start with:** [docs/collection-capabilities.md](../../docs/collection-capabilities.md); [docs/collection-operation-contracts.md](../../docs/collection-operation-contracts.md); [docs/collection-function-signatures.md](../../docs/collection-function-signatures.md).
 
-**Investigation:** recorded (fourteen-system survey and lattice proposal; no contract selected); contributor: redacted (agent-assisted); note: [INV-057 — collection capability lattice and concept boundaries](INV-057-capability-lattice.md) — records the orthogonal axes, the combinations representation forces, a seven-test split/merge procedure, a six-primitive lattice with derived operations and named bundles, conformance options, and the mapping from twelve storage families. Open: the `[T]` bundle definition, contiguity as a refinement, cost-class spelling, and user conformance syntax.
+**Investigation:** recorded (fourteen-system survey and lattice proposal; no contract selected); contributor: project contributor (agent-assisted); note: [INV-057 — collection capability lattice and concept boundaries](INV-057-capability-lattice.md) — records the orthogonal axes, the combinations representation forces, a seven-test split/merge procedure, a six-primitive lattice with derived operations and named bundles, conformance options, and the mapping from twelve storage families. Open: the `[T]` bundle definition, contiguity as a refinement, cost-class spelling, and user conformance syntax.
 
 <a id="inv-058"></a>
 
@@ -779,7 +779,7 @@ questions; check their status and current owning pages before relying on them.
 
 **Start with:** [docs/collection-order-and-traversal.md](../../docs/collection-order-and-traversal.md); [docs/set-patterns.md](../../docs/set-patterns.md); [docs/collections-and-iterators.md](../../docs/collections-and-iterators.md).
 
-**Investigation:** recorded (storage-family survey, equality/hash/order contracts, shipping recommendation); contributor: redacted (agent-assisted); note: [INV-058 — storage families, equality, hashing, and ordering](INV-058-storage-families-and-equality.md) — records twelve storage families with honest guarantees, the equivalence/hash-consistency/total-order contracts associative containers need, the numeric-key edge cases, an insertion-ordered default for reproducibility, text as a named-unit family, and a proposed shipping table that excludes a linked list and flags the missing inline fixed-capacity cell.
+**Investigation:** recorded (storage-family survey, equality/hash/order contracts, shipping recommendation); contributor: project contributor (agent-assisted); note: [INV-058 — storage families, equality, hashing, and ordering](INV-058-storage-families-and-equality.md) — records twelve storage families with honest guarantees, the equivalence/hash-consistency/total-order contracts associative containers need, the numeric-key edge cases, an insertion-ordered default for reproducibility, text as a named-unit family, and a proposed shipping table that excludes a linked list and flags the missing inline fixed-capacity cell.
 
 <a id="inv-059"></a>
 
@@ -791,7 +791,7 @@ questions; check their status and current owning pages before relying on them.
 
 **Start with:** [docs/collection-algorithms.md](../../docs/collection-algorithms.md); [docs/collection-function-signatures.md](../../docs/collection-function-signatures.md); [docs/generic-collection-performance.md](../../docs/generic-collection-performance.md).
 
-**Investigation:** in progress (operator-surface and intermediate-allocation portion recorded); contributor: redacted (agent-assisted); note: [INV-060 — sequence execution and operator-surface models](INV-060-sequence-execution-and-surface-models.md) — records the composition-surface options, the lazy return-type dependency, and the per-stage-versus-per-element cost split across thirteen reference systems. Sorting and search algorithm selection remain not started.
+**Investigation:** in progress (operator-surface and intermediate-allocation portion recorded); contributor: project contributor (agent-assisted); note: [INV-060 — sequence execution and operator-surface models](INV-060-sequence-execution-and-surface-models.md) — records the composition-surface options, the lazy return-type dependency, and the per-stage-versus-per-element cost split across thirteen reference systems. Sorting and search algorithm selection remain not started.
 
 <a id="inv-060"></a>
 
@@ -803,7 +803,7 @@ questions; check their status and current owning pages before relying on them.
 
 **Start with:** [docs/collection-source-contracts.md](../../docs/collection-source-contracts.md); [docs/collection-order-and-traversal.md](../../docs/collection-order-and-traversal.md); [docs/collections-and-iterators.md](../../docs/collections-and-iterators.md).
 
-**Investigation:** recorded (reference survey and option analysis; no contract selected); contributor: redacted (agent-assisted); note: [INV-060 — sequence execution and operator-surface models](INV-060-sequence-execution-and-surface-models.md) — the user identifies general sequence operators as a required capability covering cold, warm, lazy, and generator sources. Records thirteen reference systems, the surface options, the execution-model options, the two generator shapes, the per-element failure options, and the per-stage-versus-per-element cost split. No new container type is recommended; the open blockers are receiver declaration (INV-030) and the lazy return-type decision.
+**Investigation:** recorded (reference survey and option analysis; no contract selected); contributor: project contributor (agent-assisted); note: [INV-060 — sequence execution and operator-surface models](INV-060-sequence-execution-and-surface-models.md) — the user identifies general sequence operators as a required capability covering cold, warm, lazy, and generator sources. Records thirteen reference systems, the surface options, the execution-model options, the two generator shapes, the per-element failure options, and the per-stage-versus-per-element cost split. No new container type is recommended; the open blockers are receiver declaration (INV-030) and the lazy return-type decision.
 
 <a id="inv-061"></a>
 
@@ -823,7 +823,7 @@ project-wide adoption remains unselected.
 
 **Focus:** [Lightweight native execution questions and evidence](lightweight-native-execution.md).
 
-**Investigation:** recorded; contributor: redacted (agent-assisted); note: [INV-061 — FVP implementation language](INV-061-fvp-implementation-language.md) — strict TypeScript/Node replaces Python as the minimal igniter; the first checkpoint is implemented and tested, with early transition to a Lite-written compiler still selected; retire active host-language development while preserving the source-bootstrap path. INV-061.06 now reviews a bounded first-output proposal; retirement thresholds, rebuild chain and full compiler architecture remain open.
+**Investigation:** recorded; contributor: project contributor (agent-assisted); note: [INV-061 — FVP implementation language](INV-061-fvp-implementation-language.md) — strict TypeScript/Node replaces Python as the minimal igniter; the first checkpoint is implemented and tested, with early transition to a Lite-written compiler still selected; retire active host-language development while preserving the source-bootstrap path. INV-061.06 now reviews a bounded first-output proposal; retirement thresholds, rebuild chain and full compiler architecture remain open.
 
 **Follow-up:** [INV-061 — arithmetic front-end exercise in Lite](INV-061-lite-arithmetic-front-end.md) — application-only recursive parser/evaluator uses approved token lists and value/position pairs; runs on the preserved alpha.15 interpreter without host changes. Strict checking and 125 interpreter groups plus 9 editor groups pass. No compiler output, AST/IR/backend selection or self-hosted stage; first execution/output/rebuild contracts remain open.
 
@@ -919,7 +919,7 @@ project-wide adoption remains unselected.
 
 **Starter subtopics:** [5 bounded questions](SUBTOPICS.md#inv-066).
 
-**Investigation:** direction recorded; export/ABI implementation not started; contributor: redacted (agent-assisted); note: [maintained C export and migration goal](INV-061-first-compiler-output.md#maintained-c-export-and-migration-goal) — user requests shippable/shareable libraries/projects and a migration path outside Lite. Exact C interfaces, support dependencies, ABI and export layout remain open.
+**Investigation:** direction recorded; export/ABI implementation not started; contributor: project contributor (agent-assisted); note: [maintained C export and migration goal](INV-061-first-compiler-output.md#maintained-c-export-and-migration-goal) — user requests shippable/shareable libraries/projects and a migration path outside Lite. Exact C interfaces, support dependencies, ABI and export layout remain open.
 
 <a id="inv-067"></a>
 
@@ -931,7 +931,7 @@ project-wide adoption remains unselected.
 
 **Start with:** [docs/modules-and-packages.md](../../docs/modules-and-packages.md); [docs/tooling-and-learning.md](../../docs/tooling-and-learning.md); [language/samples/list.md](../../language/samples/list.md).
 
-**Investigation:** recorded (bounded helper/CLI implementation); contributor: redacted (agent-assisted); note: [INV-067 — script arguments for source context](INV-067-fvp-script-arguments.md) — explicitly approved inputArgs(): List<String> and -- separated runner suffix implemented with ordered copied argument Strings, no stream effects and silent check-only behavior. Strict checking and 145 interpreter groups plus 9 editor groups pass; source-context application and other host interaction remain separate.
+**Investigation:** recorded (bounded helper/CLI implementation); contributor: project contributor (agent-assisted); note: [INV-067 — script arguments for source context](INV-067-fvp-script-arguments.md) — explicitly approved inputArgs(): List<String> and -- separated runner suffix implemented with ordered copied argument Strings, no stream effects and silent check-only behavior. Strict checking and 145 interpreter groups plus 9 editor groups pass; source-context application and other host interaction remain separate.
 
 <a id="inv-068"></a>
 
@@ -971,7 +971,7 @@ project-wide adoption remains unselected.
 
 **Start with:** [docs/memory-and-performance.md](../../docs/memory-and-performance.md); [docs/modules-and-packages.md](../../docs/modules-and-packages.md); [docs/versioning-and-naming.md](../../docs/versioning-and-naming.md).
 
-**Investigation:** target direction recorded; full platform investigation open; contributor: redacted (agent-assisted); note: [TS/web, C/native and possible AS/Wasm direction](INV-061-first-compiler-output.md) — TS is a maintained web/bootstrap target; C is first native and a maintained export target; possible AS/early Wasm needs separate compatibility/host/runtime checks. No platform matrix, ABI or Wasm execution claim.
+**Investigation:** target direction recorded; full platform investigation open; contributor: project contributor (agent-assisted); note: [TS/web, C/native and possible AS/Wasm direction](INV-061-first-compiler-output.md) — TS is a maintained web/bootstrap target; C is first native and a maintained export target; possible AS/early Wasm needs separate compatibility/host/runtime checks. No platform matrix, ABI or Wasm execution claim.
 
 **Follow-up:** [INV-070 — isolated AssemblyScript report-core probe](INV-070-assemblyscript-report-probe.md) — unchanged emitted TS compiles/runs with AS 0.28.20 in a temporary environment for 12 report-literal cases, matching raw output/status/signal. Incremental runtime and host bindings are explicit; no project dependency, general AS support, browser claim or memory policy selected.
 
@@ -1007,7 +1007,7 @@ project-wide adoption remains unselected.
 
 **Teaching proposal, 2026-10-30:** [INV-072.05](SUBTOPICS.md#inv-072-05) inventories a final-binding run flag and marked inspection points. Detailed investigation not started; no flag/mark syntax or debugger implementation is selected, and this is not an FVP gate.
 
-**Investigation:** recorded (editor-highlighter scope only); contributor: redacted (agent-assisted); note: [INV-072 — small VS Code highlighter](INV-072-vscode-highlighter.md) — user-requested local .lt/.lts highlighting using existing syntax; no new language feature, semantic checker, formatter, runner or debugger. Other tooling/diagnostic questions remain open.
+**Investigation:** recorded (editor-highlighter scope only); contributor: project contributor (agent-assisted); note: [INV-072 — small VS Code highlighter](INV-072-vscode-highlighter.md) — user-requested local .lt/.lts highlighting using existing syntax; no new language feature, semantic checker, formatter, runner or debugger. Other tooling/diagnostic questions remain open.
 
 <a id="inv-073"></a>
 
@@ -1023,7 +1023,7 @@ project-wide adoption remains unselected.
 
 **Focus:** [Multilingual source and learning questions](multilingual-source-and-learning.md).
 
-**Investigation:** recorded (first verification-registry slice); contributor: redacted (agent-assisted); note: [INV-073 — feature and artifact verification registry](INV-073-verification-registry.md) — feature verifications are the semantic contract and language/examples/samples are verified consumers. The 17-feature registry and 25-scenario runner pass; 5 examples and 3 samples have manifests; `./bin/lite verify` supports `--update`, `--coverage` and `--filter`. Coverage is informational; compiler targets, showcases, CI, full manifest coverage and blocking gates remain open.
+**Investigation:** recorded (first verification-registry slice); contributor: project contributor (agent-assisted); note: [INV-073 — feature and artifact verification registry](INV-073-verification-registry.md) — feature verifications are the semantic contract and language/examples/samples are verified consumers. The 17-feature registry and 25-scenario runner pass; 5 examples and 3 samples have manifests; `./bin/lite verify` supports `--update`, `--coverage` and `--filter`. Coverage is informational; compiler targets, showcases, CI, full manifest coverage and blocking gates remain open.
 
 <a id="inv-074"></a>
 

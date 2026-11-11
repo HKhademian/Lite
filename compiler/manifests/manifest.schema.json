@@ -5,11 +5,17 @@
   "description": "One ordered bootstrap source bundle for one target under compiler/manifests/.",
   "type": "object",
   "additionalProperties": false,
-  "required": ["target", "files"],
+  "required": [
+    "target",
+    "files"
+  ],
   "properties": {
     "target": {
       "description": "The artifact target produced from this bundle.",
-      "enum": ["ts", "c"]
+      "enum": [
+        "ts",
+        "c"
+      ]
     },
     "files": {
       "description": "UTF-8 Lite sources in dependency order, each listed once, relative to the manifest directory.",

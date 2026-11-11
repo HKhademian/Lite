@@ -1,7 +1,7 @@
 # INV-070 — Isolated AssemblyScript/Wasm report-core probe
 
 Status: recorded (narrow compatibility evidence; general AS target not selected)
-Contributor: redacted (agent-assisted)
+Contributor: project contributor (agent-assisted)
 Last updated: 2026-10-31
 Catalog brief: [INV-070](TOPICS.md#inv-070)
 Related: [TS/web and possible early Wasm direction](INV-061-first-compiler-output.md)

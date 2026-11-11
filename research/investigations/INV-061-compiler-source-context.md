@@ -1,7 +1,7 @@
 # INV-061 — Explicit source context in compiler applications
 
 Status: recorded (application context implemented; generated runtime faults remain open)
-Contributor: redacted (agent-assisted)
+Contributor: project contributor (agent-assisted)
 Last updated: 2026-10-31
 Catalog brief: [INV-061](TOPICS.md#inv-061)
 Compatible helper milestone: igniter-v0.1.0-alpha.21, `7ebd22d`

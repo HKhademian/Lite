@@ -661,7 +661,7 @@ freeze prevents the target from growing while it is approached.
 
 Useful internal tools:
 
-- [`../igniter/bootstrap.ts`](https://github.com/redacted/Lite/blob/d3bd6f7bcf06bbea6669c8d74bebe5e73f383114/igniter/bootstrap.ts): `RunResult`,
+- [`../igniter/bootstrap.ts`](https://github.com/repository owner/Lite/blob/d3bd6f7bcf06bbea6669c8d74bebe5e73f383114/igniter/bootstrap.ts): `RunResult`,
   `loadCompiler`, `runText`/`runFile`/`runBundle`, `hashBytes`,
   `nondeterminismReasons`.
 - [`../igniter/artifacts.ts`](../igniter/artifacts.ts): strict TS typecheck/run

@@ -1,7 +1,7 @@
 # INV-016 — Text-scanning igniter increment
 
 Status: recorded (temporary helpers explicitly approved; retained-token example verified)
-Contributor: redacted (agent-assisted)
+Contributor: project contributor (agent-assisted)
 Last updated: 2026-10-31
 Catalog brief: [INV-016](TOPICS.md#inv-016)
 Covered scope: computed concatenation and temporary text-scanning helpers.

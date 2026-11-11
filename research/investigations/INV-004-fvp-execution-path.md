@@ -1,7 +1,7 @@
 # INV-004 — Minimal FVP execution path
 
 Status: in progress
-Contributor: redacted (agent-assisted)
+Contributor: project contributor (agent-assisted)
 Last updated: 2026-10-31
 Catalog brief: [INV-004](TOPICS.md#inv-004)
 Covered scope: bounded whole-topic question — the first runnable FVP mechanism;

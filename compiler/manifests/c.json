@@ -1,4 +1,6 @@
 {
   "target": "c",
-  "files": ["../src/c-root.lts"]
+  "files": [
+    "../src/c-root.lts"
+  ]
 }

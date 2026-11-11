@@ -1,7 +1,7 @@
 # INV-031 — Named fixed-slot user calls in the FVP
 
 Status: recorded (bounded implementation of existing selected rules)
-Contributor: redacted (agent-assisted)
+Contributor: project contributor (agent-assisted)
 Last updated: 2026-10-31
 Catalog brief: [INV-031](TOPICS.md#inv-031)
 

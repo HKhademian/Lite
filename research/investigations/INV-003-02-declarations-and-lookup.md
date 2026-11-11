@@ -1,7 +1,7 @@
 # INV-003.02 — Declarations and lookup
 
 Status: in progress
-Contributor: redacted (agent-assisted)
+Contributor: project contributor (agent-assisted)
 Last updated: 2026-10-30
 Catalog brief: [INV-003](TOPICS.md#inv-003)
 Covered subtopics: INV-003.02 (partial direction selected; safety and binding details open)

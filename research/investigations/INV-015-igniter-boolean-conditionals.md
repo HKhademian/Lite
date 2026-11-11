@@ -1,7 +1,7 @@
 # INV-015 — Boolean and conditional igniter increment
 
 Status: recorded (bounded implementation; broader conditional contracts open)
-Contributor: redacted (agent-assisted)
+Contributor: project contributor (agent-assisted)
 Last updated: 2026-10-30
 Catalog brief: [INV-015](TOPICS.md#inv-015)
 Covered scope: Boolean-only conditions, short-circuit logic and comparisons, and

@@ -1,7 +1,7 @@
 # INV-002 — First runnable FVP slice
 
 Status: recorded (first feature checkpoint selected; numeric/text and helper details open)
-Contributor: redacted (agent-assisted)
+Contributor: project contributor (agent-assisted)
 Last updated: 2026-10-30
 Catalog brief: [INV-002](TOPICS.md#inv-002)
 Covered scope: bounded whole-topic question — the smallest end-to-end interpreter

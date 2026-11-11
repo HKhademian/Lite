@@ -89,7 +89,7 @@
     "editorGroups": 9,
     "tsCorpus": {
       "phase": "compare",
-      "artifact": "<local-path>/Projects/LiteScript/compiler/bootstrap/T11.ts",
+      "artifact": "<local-path>",
       "target": "ts",
       "cases": 93,
       "programs": 69,

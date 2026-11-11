@@ -1,7 +1,7 @@
 # INV-060 — Sequence execution and operator-surface models
 
 Status: recorded (reference survey and option analysis; no contract selected)
-Contributor: redacted (agent-assisted)
+Contributor: project contributor (agent-assisted)
 Last updated: 2026-11-01
 Catalog brief: [INV-060](TOPICS.md#inv-060) and [INV-059](TOPICS.md#inv-059)
 Covered subtopics: whole of INV-060 (laziness, retention, mutation during traversal,
