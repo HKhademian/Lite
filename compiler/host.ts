@@ -237,9 +237,13 @@ export function buildCompiler(target: CompilerTarget): CompilerBuild {
 export function buildTsCompiler(): CompilerBuild { return buildCompiler('ts'); }
 
 /** Compiles one whole Lite source with a current Lite-written target compiler. */
+export function compileBuiltCompiler(build: CompilerBuild, input: CompilerInput): CompilerResult {
+  return invoke(build.path, input.text, input.name);
+}
+
+/** Selects the current graph then compiles one whole Lite source. */
 export function compileTarget(target: CompilerTarget, input: CompilerInput): CompilerResult {
-  const selected = buildCompiler(target);
-  return invoke(selected.path, input.text, input.name);
+  return compileBuiltCompiler(buildCompiler(target), input);
 }
 
 /** Compiles to TS through the current generated compiler. */

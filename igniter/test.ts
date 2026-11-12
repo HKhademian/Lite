@@ -8,7 +8,7 @@ import { tmpdir } from 'node:os';
 import { delimiter, dirname, join, resolve } from 'node:path';
 import { after, test } from 'node:test';
 import { fileURLToPath, pathToFileURL } from 'node:url';
-import { buildCompiler, compileTarget, compileTs, type CompilerInput, type CompilerResult } from '../compiler/host.ts';
+import { buildCompiler, compileBuiltCompiler, compileTs, type CompilerInput, type CompilerResult } from '../compiler/host.ts';
 import {
   INT_MAX, INT_MIN, LiteRuntimeFault,
   checkedAdd, checkedDivide, checkedFloorDivide, checkedFloorModulo,
@@ -31,7 +31,8 @@ function compilerFor(manifestPath: string): TestCompiler {
   let compiler = compilerInstances.get(manifestPath);
   if (compiler === undefined) {
     const manifest = loadManifest(manifestPath);
-    compiler = { target: manifest.target, compile: input => compileTarget(manifest.target, input) };
+    const build = buildCompiler(manifest.target);
+    compiler = { target: manifest.target, compile: input => compileBuiltCompiler(build, input) };
     compilerInstances.set(manifestPath, compiler);
   }
   return compiler;
