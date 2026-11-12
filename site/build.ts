@@ -99,7 +99,7 @@ function renderHeader(basePath: string, active: 'home' | 'playground' | 'samples
     </a>
     <nav class="site-nav" aria-label="Main navigation">
       <a href="${basePath}index.html"${active === 'home' ? ' class="active"' : ''}>Overview</a>
-      <a href="${basePath}playground/index.html"${active === 'playground' ? ' class="active"' : ''}>Playground</a>
+      <a href="${basePath}playground/index.html"${active === 'playground' ? ' class="active"' : ''}>Play</a>
       <a href="${basePath}samples/index.html"${active === 'samples' ? ' class="active"' : ''}>Samples</a>
       <a href="${escapeHtml(docsHref)}">Docs</a>
       <a href="${escapeHtml(repoHref)}">GitHub</a>
@@ -150,7 +150,7 @@ function renderSampleCard(sample: RenderedSample, basePath: string, includeNote 
   <pre class="code-block"><code>${sample.sourceHtml}</code></pre>
   ${outputBlock}
   <footer class="sample-foot">
-    <a href="${basePath}playground/index.html?sample=${escapeHtml(sample.id)}">Open in playground &rarr;</a>
+    <a href="${basePath}playground/index.html?sample=${escapeHtml(sample.id)}">Play &rarr;</a>
   </footer>
 </article>`;
 }
@@ -211,7 +211,7 @@ function renderHomePage(rendered: ReadonlyMap<string, RenderedSample>, repoUrl: 
       clear consequences, and readable code.
     </p>
     <div class="hero-actions">
-      <a class="btn btn-primary" href="playground/index.html">Try the playground</a>
+      <a class="btn btn-primary" href="playground/index.html">Play online</a>
       <a class="btn" href="${escapeHtml(docsStart)}">Get started</a>
     </div>
     <div class="quickstart"><pre>git clone ${escapeHtml(cloneUrl)}
@@ -413,7 +413,80 @@ function renderPlaygroundPage(rendered: ReadonlyMap<string, RenderedSample>, rep
   let lastFrameAt = 0;
 
   function escapeHtml(text) {
-    return text.replaceAll("&", "&amp;").replaceAll("<", "&lt;").replaceAll(">", "&gt;");
+    return text.replaceAll("&", "&amp;").replaceAll("<", "&lt;").replaceAll(">", "&gt;").replaceAll('"', "&quot;").replaceAll("'", "&#39;");
+  }
+
+  const liteKeywords = new Set([
+    "as", "and", "break", "continue", "else", "false", "fn", "if",
+    "import", "loop", "mut", "not", "or", "pub", "return", "self",
+    "true", "type", "var", "while",
+  ]);
+  const liteTypes = new Set(["Bool", "Int", "Float", "String", "Void", "List", "Array"]);
+
+  function highlightLite(source) {
+    const out = [];
+    let i = 0;
+    const n = source.length;
+    while (i < n) {
+      const ch = source[i];
+      if (ch === "/" && source[i + 1] === "*") {
+        const end = source.indexOf("*/", i + 2);
+        const slice = end === -1 ? source.slice(i) : source.slice(i, end + 2);
+        out.push('<span class="tok-comment">' + escapeHtml(slice) + "</span>");
+        i += slice.length;
+        continue;
+      }
+      if (ch === "/" && source[i + 1] === "/") {
+        const end = source.indexOf("\\n", i + 2);
+        const slice = end === -1 ? source.slice(i) : source.slice(i, end);
+        out.push('<span class="tok-comment">' + escapeHtml(slice) + "</span>");
+        i += slice.length;
+        continue;
+      }
+      if (ch === '"' || ch === "'") {
+        let j = i + 1;
+        while (j < n) {
+          if (source[j] === "\\\\") { j += 2; continue; }
+          if (source[j] === ch) { j += 1; break; }
+          j += 1;
+        }
+        out.push('<span class="tok-string">' + escapeHtml(source.slice(i, j)) + "</span>");
+        i = j;
+        continue;
+      }
+      if (ch >= "0" && ch <= "9") {
+        let j = i + 1;
+        while (j < n && /[0-9_a-zA-Z.]/.test(source[j])) j += 1;
+        out.push('<span class="tok-number">' + escapeHtml(source.slice(i, j)) + "</span>");
+        i = j;
+        continue;
+      }
+      if (/[a-zA-Z_$]/.test(ch)) {
+        let j = i + 1;
+        while (j < n && /[a-zA-Z0-9_$]/.test(source[j])) j += 1;
+        const word = source.slice(i, j);
+        if (liteKeywords.has(word)) out.push('<span class="tok-keyword">' + escapeHtml(word) + "</span>");
+        else if (liteTypes.has(word)) out.push('<span class="tok-type">' + escapeHtml(word) + "</span>");
+        else out.push(escapeHtml(word));
+        i = j;
+        continue;
+      }
+      const three = source.slice(i, i + 3);
+      const two = source.slice(i, i + 2);
+      if (three === "===" || three === "!==" || three === "= !=" || three === "=!=") {
+        out.push('<span class="tok-op">' + escapeHtml(three) + "</span>");
+        i += 3;
+        continue;
+      }
+      if (two === ":=" || two === "==" || two === "!=" || two === "<=" || two === ">=" || two === "=>" || two === "->") {
+        out.push('<span class="tok-op">' + escapeHtml(two) + "</span>");
+        i += 2;
+        continue;
+      }
+      out.push(escapeHtml(ch));
+      i += 1;
+    }
+    return out.join("");
   }
 
   function showTab(name) {
@@ -433,7 +506,7 @@ function renderPlaygroundPage(rendered: ReadonlyMap<string, RenderedSample>, rep
   }
 
   editorEl.addEventListener("input", () => {
-    sourceEl.innerHTML = escapeHtml(editorEl.value) + "\\n";
+    sourceEl.innerHTML = highlightLite(editorEl.value) + "\\n";
     statusEl.textContent = "Modified (local sandbox deferred)";
   });
 
@@ -467,9 +540,10 @@ function renderPlaygroundPage(rendered: ReadonlyMap<string, RenderedSample>, rep
 
     if (meta.canvas) {
       const demoSource = "/* Interactive ℓite Canvas Stage */\\nio := import \\"core/io\\";\\nio.outputLine(\\"Rendering ℓite mark on canvas...\\");";
-      currentSample = { id: meta.id, source: demoSource, sourceHtml: escapeHtml(demoSource), tsHtml: "// Canvas stage runs directly in browser", output: "Canvas stage active\\n", args: [], stdin: "" };
+      const demoHtml = highlightLite(demoSource);
+      currentSample = { id: meta.id, source: demoSource, sourceHtml: demoHtml, tsHtml: "// Canvas stage runs directly in browser", output: "Canvas stage active\\n", args: [], stdin: "" };
       editorEl.value = demoSource;
-      sourceEl.innerHTML = demoSource;
+      sourceEl.innerHTML = demoHtml + "\\n";
       tsEl.textContent = "// Canvas stage runs directly in browser";
       argsEl.value = "";
       stdinEl.value = "";

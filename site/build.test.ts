@@ -44,12 +44,13 @@ test('buildSite generates static pages and metadata in dist/site', () => {
   }
   const index = readFileSync(join(out, 'index.html'), 'utf8');
   assert(index.includes('is light.'));
-  assert(index.includes('Open in playground'));
+  assert(index.includes('Play &rarr;'));
   assert(!index.includes('Inspect generated TypeScript'));
   assert(index.includes('commit-hash'));
   assert(index.includes('commit-time'));
   const playground = readFileSync(join(out, 'playground/index.html'), 'utf8');
   assert(playground.includes('playground-page'));
+  assert(playground.includes('highlightLite(editorEl.value)'));
   assert(playground.includes('Generated TS'));
   assert(playground.includes('id="pg-compile"'));
   assert(playground.includes('id="pg-play"'));
