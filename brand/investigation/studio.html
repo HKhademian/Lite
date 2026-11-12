@@ -1167,55 +1167,55 @@ function renderSim() {
   document.getElementById('bs-code-box').style.fontFamily = activeBsCodeFont.css;
   document.getElementById('bs-kw').style.color = acc;
   document.getElementById('bs-str').style.color = acc;
-  document.getElementById('bs-summary').textContent = `Logo: ${it.ref} (${it.title})  ·  Accent: ${activeBsAccent.name}  ·  Palette: ${activeBsPal.name}  ·  Brand Font: ${activeBsLogoFont.name}  ·  Site Font: ${activeBsFont.name}  ·  Code Font: ${activeBsCodeFont.name}`;
+  document.getElementById('bs-summary').textContent = `Logo: ${it.ref}  ·  Accent: ${activeBsAccent.ref}  ·  Palette: ${activeBsPal.ref}  ·  Brand Font: ${activeBsLogoFont.ref}  ·  Site Font: ${activeBsFont.ref}  ·  Code Font: ${activeBsCodeFont.ref}`;
 
   if (brandSystemOpen) renderBrandSystem();
   saveState();
 }
 
 const bsAccents = [
-  { id: 'filament', name: 'Filament Gold', accL: '#C97B14', accD: '#F0B45A' },
-  { id: 'teal', name: 'Teal (VS Code)', accL: '#0D9488', accD: '#5EEAD4' },
-  { id: 'sky', name: 'Sky (mini)', accL: '#0284C7', accD: '#38BDF8' },
-  { id: 'indigo', name: 'Electric Indigo', accL: '#4F46E5', accD: '#818CF8' },
-  { id: 'emerald', name: 'Emerald', accL: '#059669', accD: '#34D399' },
-  { id: 'coral', name: 'Warm Coral', accL: '#DC2626', accD: '#FB7185' },
-  { id: 'mono', name: 'Mono (Ink)', accL: '#101113', accD: '#F2F0EA' }
+  { ref: 'A-01', id: 'filament', name: 'Filament Gold', accL: '#C97B14', accD: '#F0B45A' },
+  { ref: 'A-02', id: 'teal', name: 'Teal (VS Code)', accL: '#0D9488', accD: '#5EEAD4' },
+  { ref: 'A-03', id: 'sky', name: 'Sky (mini)', accL: '#0284C7', accD: '#38BDF8' },
+  { ref: 'A-04', id: 'indigo', name: 'Electric Indigo', accL: '#4F46E5', accD: '#818CF8' },
+  { ref: 'A-05', id: 'emerald', name: 'Emerald', accL: '#059669', accD: '#34D399' },
+  { ref: 'A-06', id: 'coral', name: 'Warm Coral', accL: '#DC2626', accD: '#FB7185' },
+  { ref: 'A-07', id: 'mono', name: 'Mono (Ink)', accL: '#101113', accD: '#F2F0EA' }
 ];
 const bsPalettes = [
-  { id: 'paper-warm', name: 'Warm Paper', bg: '#F5F3EE', card: '#FBFAF7', ink: '#101113', ui: 'light' },
-  { id: 'ink-deep', name: 'Deep Ink', bg: '#0B0C0E', card: '#131519', ink: '#F2F0EA', ui: 'dark' },
-  { id: 'slate-editor', name: 'Editor Slate', bg: '#0F1115', card: '#161920', ink: '#F3F4F6', ui: 'dark' },
-  { id: 'cloud-crisp', name: 'Crisp Cloud', bg: '#F8FAFC', card: '#FFFFFF', ink: '#0F172A', ui: 'light' },
-  { id: 'stone-bone', name: 'Stone & Bone', bg: '#ECEAE4', card: '#F7F6F2', ink: '#1C1917', ui: 'light' },
-  { id: 'midnight-navy', name: 'Midnight Navy', bg: '#0A101F', card: '#11192E', ink: '#E2E8F0', ui: 'dark' },
-  { id: 'forest-charcoal', name: 'Forest Charcoal', bg: '#0D1412', card: '#141E1B', ink: '#E6EFEA', ui: 'dark' },
-  { id: 'solar-light', name: 'Solar Light', bg: '#FDF6E3', card: '#FAF3DC', ink: '#073642', ui: 'light' }
+  { ref: 'P-01', id: 'paper-warm', name: 'Warm Paper', bg: '#F5F3EE', card: '#FBFAF7', ink: '#101113', ui: 'light' },
+  { ref: 'P-02', id: 'ink-deep', name: 'Deep Ink', bg: '#0B0C0E', card: '#131519', ink: '#F2F0EA', ui: 'dark' },
+  { ref: 'P-03', id: 'slate-editor', name: 'Editor Slate', bg: '#0F1115', card: '#161920', ink: '#F3F4F6', ui: 'dark' },
+  { ref: 'P-04', id: 'cloud-crisp', name: 'Crisp Cloud', bg: '#F8FAFC', card: '#FFFFFF', ink: '#0F172A', ui: 'light' },
+  { ref: 'P-05', id: 'stone-bone', name: 'Stone & Bone', bg: '#ECEAE4', card: '#F7F6F2', ink: '#1C1917', ui: 'light' },
+  { ref: 'P-06', id: 'midnight-navy', name: 'Midnight Navy', bg: '#0A101F', card: '#11192E', ink: '#E2E8F0', ui: 'dark' },
+  { ref: 'P-07', id: 'forest-charcoal', name: 'Forest Charcoal', bg: '#0D1412', card: '#141E1B', ink: '#E6EFEA', ui: 'dark' },
+  { ref: 'P-08', id: 'solar-light', name: 'Solar Light', bg: '#FDF6E3', card: '#FAF3DC', ink: '#073642', ui: 'light' }
 ];
 const bsLogoFonts = [
-  { id: 'vector', name: 'Vector Monoline', css: null, weight: 600 },
-  { id: 'rounded', name: 'Rounded Sans', css: 'ui-rounded, "SF Pro Rounded", system-ui, sans-serif', weight: 500 },
-  { id: 'grotesque', name: 'Neutral Grotesque', css: 'ui-sans-serif, -apple-system, "Inter", sans-serif', weight: 600 },
-  { id: 'serif', name: 'Editorial Serif', css: 'Georgia, "Iowan Old Style", serif', weight: 600 },
-  { id: 'humanist', name: 'Geometric Humanist', css: '"Avenir Next", "Segoe UI", sans-serif', weight: 600 },
-  { id: 'mono', name: 'Technical Mono', css: 'ui-monospace, "SF Mono", Menlo, monospace', weight: 600 }
+  { ref: 'BF-01', id: 'vector', name: 'Vector Monoline', css: null, weight: 600 },
+  { ref: 'BF-02', id: 'rounded', name: 'Rounded Sans', css: 'ui-rounded, "SF Pro Rounded", system-ui, sans-serif', weight: 500 },
+  { ref: 'BF-03', id: 'grotesque', name: 'Neutral Grotesque', css: 'ui-sans-serif, -apple-system, "Inter", sans-serif', weight: 600 },
+  { ref: 'BF-04', id: 'serif', name: 'Editorial Serif', css: 'Georgia, "Iowan Old Style", serif', weight: 600 },
+  { ref: 'BF-05', id: 'humanist', name: 'Geometric Humanist', css: '"Avenir Next", "Segoe UI", sans-serif', weight: 600 },
+  { ref: 'BF-06', id: 'mono', name: 'Technical Mono', css: 'ui-monospace, "SF Mono", Menlo, monospace', weight: 600 }
 ];
 const bsFonts = [
-  { id: 'grotesque', name: 'Neutral Grotesque', display: 'ui-sans-serif, -apple-system, "Inter", "Segoe UI", sans-serif', body: 'ui-sans-serif, -apple-system, "Inter", "Segoe UI", sans-serif' },
-  { id: 'rounded', name: 'Rounded (mini)', display: 'ui-rounded, "SF Pro Rounded", system-ui, sans-serif', body: 'ui-sans-serif, -apple-system, system-ui, sans-serif' },
-  { id: 'editorial', name: 'Editorial Serif', display: 'Georgia, "Iowan Old Style", "Palatino", serif', body: 'ui-sans-serif, -apple-system, system-ui, sans-serif' },
-  { id: 'plex', name: 'Geometric Humanist', display: '"Avenir Next", "Segoe UI", sans-serif', body: '"Avenir Next", "Segoe UI", sans-serif' },
-  { id: 'system', name: 'System Classic', display: '-apple-system, BlinkMacSystemFont, "Helvetica Neue", sans-serif', body: '-apple-system, BlinkMacSystemFont, "Helvetica Neue", sans-serif' },
-  { id: 'mono-tech', name: 'Technical Mono', display: 'ui-monospace, "SF Mono", "JetBrains Mono", Menlo, monospace', body: 'ui-sans-serif, -apple-system, system-ui, sans-serif' },
-  { id: 'all-mono', name: 'All-Mono Minimal', display: 'ui-monospace, "SF Mono", Menlo, monospace', body: 'ui-monospace, "SF Mono", Menlo, monospace' }
+  { ref: 'SF-01', id: 'grotesque', name: 'Neutral Grotesque', display: 'ui-sans-serif, -apple-system, "Inter", "Segoe UI", sans-serif', body: 'ui-sans-serif, -apple-system, "Inter", "Segoe UI", sans-serif' },
+  { ref: 'SF-02', id: 'rounded', name: 'Rounded (mini)', display: 'ui-rounded, "SF Pro Rounded", system-ui, sans-serif', body: 'ui-sans-serif, -apple-system, system-ui, sans-serif' },
+  { ref: 'SF-03', id: 'editorial', name: 'Editorial Serif', display: 'Georgia, "Iowan Old Style", "Palatino", serif', body: 'ui-sans-serif, -apple-system, system-ui, sans-serif' },
+  { ref: 'SF-04', id: 'plex', name: 'Geometric Humanist', display: '"Avenir Next", "Segoe UI", sans-serif', body: '"Avenir Next", "Segoe UI", sans-serif' },
+  { ref: 'SF-05', id: 'system', name: 'System Classic', display: '-apple-system, BlinkMacSystemFont, "Helvetica Neue", sans-serif', body: '-apple-system, BlinkMacSystemFont, "Helvetica Neue", sans-serif' },
+  { ref: 'SF-06', id: 'mono-tech', name: 'Technical Mono', display: 'ui-monospace, "SF Mono", "JetBrains Mono", Menlo, monospace', body: 'ui-sans-serif, -apple-system, system-ui, sans-serif' },
+  { ref: 'SF-07', id: 'all-mono', name: 'All-Mono Minimal', display: 'ui-monospace, "SF Mono", Menlo, monospace', body: 'ui-monospace, "SF Mono", Menlo, monospace' }
 ];
 const bsCodeFonts = [
-  { id: 'jetbrains', name: 'JetBrains Mono', css: '"JetBrains Mono", ui-monospace, monospace' },
-  { id: 'sf-mono', name: 'SF Mono', css: '"SF Mono", ui-monospace, monospace' },
-  { id: 'fira', name: 'Fira Code', css: '"Fira Code", "Cascadia Code", ui-monospace, monospace' },
-  { id: 'menlo', name: 'Menlo', css: 'Menlo, Consolas, monospace' },
-  { id: 'plex-mono', name: 'IBM Plex Mono', css: '"IBM Plex Mono", ui-monospace, monospace' },
-  { id: 'system-mono', name: 'System Mono', css: 'ui-monospace, monospace' }
+  { ref: 'CF-01', id: 'jetbrains', name: 'JetBrains Mono', css: '"JetBrains Mono", ui-monospace, monospace' },
+  { ref: 'CF-02', id: 'sf-mono', name: 'SF Mono', css: '"SF Mono", ui-monospace, monospace' },
+  { ref: 'CF-03', id: 'fira', name: 'Fira Code', css: '"Fira Code", "Cascadia Code", ui-monospace, monospace' },
+  { ref: 'CF-04', id: 'menlo', name: 'Menlo', css: 'Menlo, Consolas, monospace' },
+  { ref: 'CF-05', id: 'plex-mono', name: 'IBM Plex Mono', css: '"IBM Plex Mono", ui-monospace, monospace' },
+  { ref: 'CF-06', id: 'system-mono', name: 'System Mono', css: 'ui-monospace, monospace' }
 ];
 let activeBsAccent = bsAccents[0];
 let activeBsPal = bsPalettes[0];
@@ -1239,9 +1239,12 @@ function renderBrandSystem() {
 
   document.getElementById('bs-accents').innerHTML = bsAccents.map(a => `
     <button class="bs-tile ${a.id === activeBsAccent.id ? 'active' : ''}" onclick="selectBsAccent('${a.id}')">
-      <div style="display:flex; gap:5px;">
-        <span class="sw-dot" style="background:${a.accL}"></span>
-        <span class="sw-dot" style="background:${a.accD}"></span>
+      <div style="display:flex; align-items:center; justify-content:space-between; width:100%;">
+        <div style="display:flex; gap:5px;">
+          <span class="sw-dot" style="background:${a.accL}"></span>
+          <span class="sw-dot" style="background:${a.accD}"></span>
+        </div>
+        <span class="origin">${a.ref}</span>
       </div>
       <span class="bs-tile-title">${a.name}</span>
     </button>
@@ -1249,10 +1252,13 @@ function renderBrandSystem() {
 
   document.getElementById('bs-palettes').innerHTML = bsPalettes.map(p => `
     <button class="bs-tile ${p.id === activeBsPal.id ? 'active' : ''}" onclick="selectBsPalette('${p.id}')">
-      <div style="display:flex; gap:5px;">
-        <span class="sw-dot" style="background:${p.bg}"></span>
-        <span class="sw-dot" style="background:${p.card}"></span>
-        <span class="sw-dot" style="background:${p.ink}"></span>
+      <div style="display:flex; align-items:center; justify-content:space-between; width:100%;">
+        <div style="display:flex; gap:5px;">
+          <span class="sw-dot" style="background:${p.bg}"></span>
+          <span class="sw-dot" style="background:${p.card}"></span>
+          <span class="sw-dot" style="background:${p.ink}"></span>
+        </div>
+        <span class="origin">${p.ref}</span>
       </div>
       <span class="bs-tile-title">${p.name}</span>
     </button>
@@ -1260,21 +1266,30 @@ function renderBrandSystem() {
 
   document.getElementById('bs-logo-fonts').innerHTML = bsLogoFonts.map(lf => `
     <button class="bs-tile ${lf.id === activeBsLogoFont.id ? 'active' : ''}" onclick="selectBsLogoFont('${lf.id}')">
-      <div>${buildCustomWordmark(it, acc, ink, 20, lf)}</div>
+      <div style="display:flex; align-items:center; justify-content:space-between; width:100%;">
+        <div>${buildCustomWordmark(it, acc, ink, 20, lf)}</div>
+        <span class="origin">${lf.ref}</span>
+      </div>
       <span class="bs-tile-title">${lf.name}</span>
     </button>
   `).join('');
 
   document.getElementById('bs-fonts').innerHTML = bsFonts.map(f => `
     <button class="bs-tile ${f.id === activeBsFont.id ? 'active' : ''}" onclick="selectBsFont('${f.id}')">
-      <div style="font-family:${f.display}; font-size:16px; font-weight:700;">Lite is light.</div>
+      <div style="display:flex; align-items:center; justify-content:space-between; width:100%;">
+        <div style="font-family:${f.display}; font-size:15px; font-weight:700;">Lite is light.</div>
+        <span class="origin">${f.ref}</span>
+      </div>
       <span class="bs-tile-title">${f.name}</span>
     </button>
   `).join('');
 
   document.getElementById('bs-code-fonts').innerHTML = bsCodeFonts.map(cf => `
     <button class="bs-tile ${cf.id === activeBsCodeFont.id ? 'active' : ''}" onclick="selectBsCodeFont('${cf.id}')">
-      <div style="font-family:${cf.css}; font-size:13px;">fn main()</div>
+      <div style="display:flex; align-items:center; justify-content:space-between; width:100%;">
+        <div style="font-family:${cf.css}; font-size:12.5px;">fn main()</div>
+        <span class="origin">${cf.ref}</span>
+      </div>
       <span class="bs-tile-title">${cf.name}</span>
     </button>
   `).join('');
