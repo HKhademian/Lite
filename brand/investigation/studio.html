@@ -392,7 +392,7 @@
           </div>
         </div>
         <div style="display:flex; align-items:center; gap:8px; flex-wrap:wrap;">
-          <a id="brand-sys-link" class="tab-btn" style="padding:5px 11px; font-size:12px; text-decoration:none;" href="./brand-system.html#R14-02">Color &amp; Fontface ↗</a>
+          <button class="tab-btn" style="padding:5px 11px; font-size:12px;" onclick="setGroup('brand-system')">Color &amp; Fontface</button>
           <button class="tab-btn" style="padding:5px 11px; font-size:12px;" onclick="openVisibility()">Visibility Matrix ↗</button>
         </div>
       </div>
@@ -455,6 +455,7 @@
   <!-- Single Unified Category Switcher -->
   <div class="nav-bar">
     <button class="tab-btn active" id="grp-all" onclick="setGroup('all')">All Candidates</button>
+    <button class="tab-btn" id="grp-brand-system" onclick="setGroup('brand-system')">★ Color &amp; Fontface</button>
     <button class="tab-btn" id="grp-rev14" onclick="setGroup('rev14')">Rev 14 · Controlled Test (3)</button>
     <button class="tab-btn" id="grp-rev13" onclick="setGroup('rev13')">Rev 13 · Three-way (3)</button>
     <button class="tab-btn" id="grp-rev12" onclick="setGroup('rev12')">Rev 12 · ℓ Refinements (5)</button>
@@ -475,6 +476,31 @@
 
   <!-- Cards Grid -->
   <div id="grid" class="grid"></div>
+
+  <!-- Unified Color & Fontface View (toggled via Color & Fontface tab) -->
+  <div id="brand-system-view" style="display:none; flex-direction:column; gap:16px;">
+    <div class="panel" style="display:grid; grid-template-columns:1.2fr 1fr; gap:18px; align-items:center;">
+      <div style="display:flex; flex-direction:column; gap:8px;">
+        <div id="bs-wordmark"></div>
+        <h2 id="bs-headline" style="margin:0; font-size:26px; letter-spacing:-0.025em;">Lite is light.</h2>
+        <p class="sub" id="bs-copy">Fast native execution, small runtime support, and code that is easy to reason about, read, maintain, and distribute.</p>
+      </div>
+      <div style="background:var(--bg); border:1px solid var(--line); border-radius:10px; padding:12px 14px; font-family:var(--mono); font-size:12px; line-height:1.65;">
+        <div style="color:var(--muted); margin-bottom:4px;">$ ./bin/lite run hello.lts</div>
+        <div><span id="bs-kw">fn</span> main() {</div>
+        <div>&nbsp;&nbsp;print(<span id="bs-str">"Lite is light."</span>)</div>
+        <div>}</div>
+      </div>
+    </div>
+    <div class="panel">
+      <div class="eyebrow" style="margin-bottom:10px;">Color Palettes</div>
+      <div class="grid" id="bs-palettes"></div>
+    </div>
+    <div class="panel">
+      <div class="eyebrow" style="margin-bottom:10px;">Fontface Pairings</div>
+      <div class="grid" id="bs-fonts"></div>
+    </div>
+  </div>
 
 </div>
 
@@ -1143,8 +1169,6 @@ function jumpToRef(ref) {
 function renderSim() {
   const it = items.find(x => x.id === selectedId) || items[0];
   document.getElementById('sel-pill').textContent = `Selected: ${it.ref} · ${it.title}`;
-  const bsl = document.getElementById('brand-sys-link');
-  if (bsl) bsl.href = `./brand-system.html#${it.ref}`;
   document.getElementById('sim-dark-fav').innerHTML = `<svg viewBox="${it.vb}" width="16" height="16">${it.mark(accDark)}</svg>`;
   document.getElementById('sim-light-fav').innerHTML = `<svg viewBox="${it.vb}" width="16" height="16">${it.mark(accLight)}</svg>`;
   document.getElementById('sim-dark-wm').innerHTML = buildWordmark(it, accDark, '#F3F4F6', 26);
@@ -1160,6 +1184,74 @@ function renderSim() {
       <span>${px}px</span>
     </div>
   `).join('');
+
+  if (activeGroup === 'brand-system') renderBrandSystem();
+}
+
+const bsPalettes = [
+  { id: 'paper-filament', name: 'Paper & Filament', note: 'Editorial warm paper + filament amber', bg: '#F5F3EE', card: '#FBFAF7', ink: '#101113', accL: '#C97B14', accD: '#F0B45A', ui: 'light' },
+  { id: 'ink-filament', name: 'Ink & Filament', note: 'Deep ink + warm filament gold', bg: '#0B0C0E', card: '#131519', ink: '#F2F0EA', accL: '#C97B14', accD: '#F0B45A', ui: 'dark' },
+  { id: 'slate-teal', name: 'Slate & Teal (VS Code)', note: 'Dark editor slate + crisp teal', bg: '#0F1115', card: '#161920', ink: '#F3F4F6', accL: '#0D9488', accD: '#5EEAD4', ui: 'dark' },
+  { id: 'cloud-sky', name: 'Cloud & Sky (mini-aligned)', note: 'Crisp light surface + sky blue', bg: '#F8FAFC', card: '#FFFFFF', ink: '#0F172A', accL: '#0284C7', accD: '#38BDF8', ui: 'light' },
+  { id: 'paper-teal', name: 'Paper & Deep Teal', note: 'Warm paper + high-contrast teal', bg: '#F5F3EE', card: '#FFFFFF', ink: '#101113', accL: '#0F766E', accD: '#5EEAD4', ui: 'light' },
+  { id: 'mono-ink', name: 'Pure Monochrome', note: 'Zero-accent ink on paper', bg: '#F5F3EE', card: '#FBFAF7', ink: '#101113', accL: '#101113', accD: '#F5F3EE', ui: 'light' }
+];
+const bsFonts = [
+  { id: 'grotesque', name: 'Neutral Grotesque', note: 'Inter / SF Pro — crisp system clarity', display: 'ui-sans-serif, -apple-system, "Inter", "Segoe UI", sans-serif', body: 'ui-sans-serif, -apple-system, "Inter", "Segoe UI", sans-serif' },
+  { id: 'rounded', name: 'Rounded (mini-style)', note: 'SF Pro Rounded / ui-rounded — friendly & soft', display: 'ui-rounded, "SF Pro Rounded", system-ui, sans-serif', body: 'ui-sans-serif, -apple-system, system-ui, sans-serif' },
+  { id: 'editorial', name: 'Editorial Serif + Sans', note: 'Georgia / Charter display + clean sans body', display: 'Georgia, "Iowan Old Style", "Palatino", serif', body: 'ui-sans-serif, -apple-system, system-ui, sans-serif' },
+  { id: 'mono-tech', name: 'Technical Mono', note: 'JetBrains Mono / SF Mono — compiler-first', display: 'ui-monospace, "SF Mono", "JetBrains Mono", Menlo, monospace', body: 'ui-sans-serif, -apple-system, system-ui, sans-serif' },
+  { id: 'plex', name: 'Geometric Humanist', note: 'Avenir Next / Segoe UI — airy & light', display: '"Avenir Next", "Segoe UI", sans-serif', body: '"Avenir Next", "Segoe UI", sans-serif' },
+  { id: 'classic-mono', name: 'All-Mono Minimal', note: 'Monospace everywhere — pure terminal aesthetic', display: 'ui-monospace, "SF Mono", Menlo, monospace', body: 'ui-monospace, "SF Mono", Menlo, monospace' }
+];
+let activeBsPal = bsPalettes[0];
+let activeBsFont = bsFonts[0];
+
+function renderBrandSystem() {
+  const it = items.find(x => x.id === selectedId) || items[0];
+  const isDark = document.documentElement.getAttribute('data-ui') === 'dark';
+  const acc = isDark ? accDark : accLight;
+  const ink = isDark ? '#F2F0EA' : '#101113';
+  document.getElementById('bs-wordmark').innerHTML = buildWordmark(it, acc, ink, 30);
+  document.getElementById('bs-headline').style.fontFamily = activeBsFont.display;
+  document.getElementById('bs-copy').style.fontFamily = activeBsFont.body;
+  document.getElementById('bs-kw').style.color = acc;
+  document.getElementById('bs-str').style.color = acc;
+
+  document.getElementById('bs-palettes').innerHTML = bsPalettes.map(p => `
+    <div class="card ${p.id === activeBsPal.id ? 'selected' : ''}" onclick="selectBsPalette('${p.id}')">
+      <div style="display:flex; gap:6px; margin-bottom:8px;">
+        <span style="width:22px;height:22px;border-radius:6px;background:${p.bg};border:1px solid rgba(128,128,128,.3)"></span>
+        <span style="width:22px;height:22px;border-radius:6px;background:${p.card};border:1px solid rgba(128,128,128,.3)"></span>
+        <span style="width:22px;height:22px;border-radius:6px;background:${p.ink};border:1px solid rgba(128,128,128,.3)"></span>
+        <span style="width:22px;height:22px;border-radius:6px;background:${p.ui==='dark'?p.accD:p.accL};border:1px solid rgba(128,128,128,.3)"></span>
+      </div>
+      <h3>${p.name}</h3>
+      <p class="desc">${p.note}</p>
+    </div>
+  `).join('');
+
+  document.getElementById('bs-fonts').innerHTML = bsFonts.map(f => `
+    <div class="card ${f.id === activeBsFont.id ? 'selected' : ''}" onclick="selectBsFont('${f.id}')">
+      <div style="font-family:${f.display}; font-size:20px; font-weight:700; margin-bottom:6px;">Lite is light.</div>
+      <h3>${f.name}</h3>
+      <p class="desc">${f.note}</p>
+    </div>
+  `).join('');
+}
+
+function selectBsPalette(id) {
+  activeBsPal = bsPalettes.find(x => x.id === id) || bsPalettes[0];
+  accLight = activeBsPal.accL;
+  accDark = activeBsPal.accD;
+  setUi(activeBsPal.ui);
+  render(); renderSim();
+}
+
+function selectBsFont(id) {
+  activeBsFont = bsFonts.find(x => x.id === id) || bsFonts[0];
+  document.body.style.fontFamily = activeBsFont.body;
+  renderSim();
 }
 
 function setRenderMode(mode) {
@@ -1171,11 +1263,15 @@ function setRenderMode(mode) {
 
 function setGroup(grp) {
   activeGroup = grp;
-  ['rev14', 'rev13', 'rev12', 'rev11', 'rev10', 'rev9', 'rev8', 'rev7', 'rev6', 'top', 'rev3', 'rev4', 'rev1', 'all'].forEach(g => {
+  ['brand-system', 'rev14', 'rev13', 'rev12', 'rev11', 'rev10', 'rev9', 'rev8', 'rev7', 'rev6', 'top', 'rev3', 'rev4', 'rev1', 'all'].forEach(g => {
     const el = document.getElementById('grp-' + g);
     if (el) el.classList.toggle('active', g === grp);
   });
-  render();
+  const isBs = grp === 'brand-system';
+  document.getElementById('grid').style.display = isBs ? 'none' : 'grid';
+  document.getElementById('brand-system-view').style.display = isBs ? 'flex' : 'none';
+  if (isBs) renderBrandSystem();
+  else render();
 }
 
 function toggleArchive() {
