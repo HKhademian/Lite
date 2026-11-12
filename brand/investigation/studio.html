@@ -408,6 +408,7 @@
   <!-- Single Unified Category Switcher -->
   <div class="nav-bar">
     <button class="tab-btn active" id="grp-all" onclick="setGroup('all')">All Candidates</button>
+    <button class="tab-btn" id="grp-rev13" onclick="setGroup('rev13')">Rev 13 · Three-way (3)</button>
     <button class="tab-btn" id="grp-rev12" onclick="setGroup('rev12')">Rev 12 · ℓ Refinements (5)</button>
     <button class="tab-btn" id="grp-rev11" onclick="setGroup('rev11')">Rev 11 · ℓ Finalists (6)</button>
     <button class="tab-btn" id="grp-rev3" onclick="setGroup('rev3')">Rev 3 · The Quill (4)</button>
@@ -485,7 +486,25 @@ const rev12Mark03 = (c) => `<g fill="none" stroke="${c}" stroke-width="2" stroke
 const rev12Mark04 = (c) => `<g fill="none" stroke="${c}" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M2.2 10C5 7.9 8.5 5 8.4 3C8.3 1.7 6.8 1.8 5.8 3.2C4.6 5 4.2 8 4.4 10.4C4.6 12.2 5.8 13 7.4 13C8.7 13 9.7 12.2 10.4 11.2"/><path d="M4.7 9.4C6.3 9.1 7.4 8.5 8.1 7.6" stroke-width="1.3"/></g>`;
 const rev12Mark05 = (c) => `<g fill="none" stroke="${c}" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9.1 3.8C8.3 2.1 6.9 1.9 5.9 3.2C4.6 5 4.2 8 4.4 10.4C4.6 12.2 5.8 13 7.4 13C8.7 13 9.7 12.2 10.4 11.2"/></g>`;
 
+const rev13Mark01 = (c) => `<g fill="none" stroke="${c}" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M2.2 10C5 7.9 8.6 5 8.5 3C8.4 1.7 6.9 1.7 5.9 3.1C4.6 4.9 4.2 8 4.4 10.4C4.6 12.2 5.8 13 7.4 13C8.6 13 9.5 12.4 10.2 11.4"/></g>`;
+const rev13Mark02 = (c) => `<g fill="none" stroke="${c}" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M2.2 10C5 7.9 8.5 5 8.4 3C8.3 1.7 6.8 1.8 5.8 3.2C4.6 5 4.2 8 4.4 10.4C4.6 12.2 5.8 13 7.4 13C8.7 13 9.7 12.2 10.4 11.2"/><path d="M4.7 9.4C6.3 9.1 7.4 8.5 8.1 7.6" stroke-width="1.3"/></g>`;
+const rev13Mark03 = (c) => `<g fill="none" stroke="${c}" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M2.2 10C5.1 7.9 8.5 5 8.4 3C8.3 1.7 6.8 1.8 5.8 3.2C4.6 5 4.2 8 4.4 10.4C4.6 12.2 5.8 13 7.5 13C10.1 13 12.5 12.6 13.8 10.9"/></g>`;
+
 const items = [
+  // ================= REV 13 THREE-WAY COMPARISON =================
+  {
+    ref: 'R13-01', created: '2026-11-12T13:27+01:00', from: ['R12-01'], author: 'gpt-6.1-terra', id: 'r13-01-clean-control', groups: ['rev13'], badge: 'Rev 13 · 01', origin: 'R12-01',
+    title: 'Clean control', desc: 'R12-01 kept unchanged for a direct comparison.', note: 'Compare the 16 px mark and wordmark spacing.', vb: '0 0 16 16', mark: rev13Mark01, first: rev13Mark01, off: 12.8
+  },
+  {
+    ref: 'R13-02', created: '2026-11-12T13:27+01:00', from: ['R12-04'], author: 'gpt-6.1-terra', id: 'r13-02-feather-control', groups: ['rev13'], badge: 'Rev 13 · 02', origin: 'R12-04',
+    title: 'Feather control', desc: 'R12-04 kept unchanged, with its lower feather flick.', note: 'Compare the 16 px mark and wordmark spacing.', vb: '0 0 16 16', mark: rev13Mark02, first: rev13Mark02, off: 12.8
+  },
+  {
+    ref: 'R13-03', created: '2026-11-12T13:27+01:00', from: ['R12-02'], author: 'gpt-6.1-terra', id: 'r13-03-long-sweep', groups: ['rev13'], badge: 'Rev 13 · 03', origin: 'R12-02',
+    title: 'Longer sweep', desc: 'R12-02 with a visibly longer, raised exit and more space before the i.', note: 'Compare the 16 px mark and wordmark spacing.', vb: '0 0 16 16', mark: rev13Mark03, first: rev13Mark03, off: 16.1
+  },
+
   // ================= REV 12 ℓ REFINEMENTS =================
   {
     ref: 'R12-01', author: 'gpt-6.1-terra', id: 'r12-balanced-sweep', groups: ['rev12'], badge: 'Rev 12 · 01', origin: 'Rev 11 refinement',
@@ -1062,7 +1081,7 @@ function renderSim() {
 
 function setGroup(grp) {
   activeGroup = grp;
-  ['rev12', 'rev11', 'rev10', 'rev9', 'rev8', 'rev7', 'rev6', 'top', 'rev3', 'rev4', 'rev1', 'all'].forEach(g => {
+  ['rev13', 'rev12', 'rev11', 'rev10', 'rev9', 'rev8', 'rev7', 'rev6', 'top', 'rev3', 'rev4', 'rev1', 'all'].forEach(g => {
     const el = document.getElementById('grp-' + g);
     if (el) el.classList.toggle('active', g === grp);
   });
