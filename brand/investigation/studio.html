@@ -392,7 +392,7 @@
           </div>
         </div>
         <div style="display:flex; align-items:center; gap:8px; flex-wrap:wrap;">
-          <button class="tab-btn" style="padding:5px 11px; font-size:12px;" onclick="setGroup('brand-system')">Color &amp; Fontface</button>
+          <button class="tab-btn" style="padding:5px 11px; font-size:12px;" onclick="setGroup('brand-system')">Brand System (7)</button>
           <button class="tab-btn" style="padding:5px 11px; font-size:12px;" onclick="openVisibility()">Visibility Matrix ↗</button>
         </div>
       </div>
@@ -455,7 +455,7 @@
   <!-- Single Unified Category Switcher -->
   <div class="nav-bar">
     <button class="tab-btn active" id="grp-all" onclick="setGroup('all')">All Candidates</button>
-    <button class="tab-btn" id="grp-brand-system" onclick="setGroup('brand-system')">★ Color &amp; Fontface</button>
+    <button class="tab-btn" id="grp-brand-system" onclick="setGroup('brand-system')">★ Brand System (Color · Font · Mono)</button>
     <button class="tab-btn" id="grp-rev14" onclick="setGroup('rev14')">Rev 14 · Controlled Test (3)</button>
     <button class="tab-btn" id="grp-rev13" onclick="setGroup('rev13')">Rev 13 · Three-way (3)</button>
     <button class="tab-btn" id="grp-rev12" onclick="setGroup('rev12')">Rev 12 · ℓ Refinements (5)</button>
@@ -477,13 +477,18 @@
   <!-- Cards Grid -->
   <div id="grid" class="grid"></div>
 
-  <!-- Unified Color & Fontface View (toggled via Color & Fontface tab) -->
+  <!-- Unified Brand System View (Logo · Mono · Wordmark · Accent · Website Palette · Logo Font · Website Font) -->
   <div id="brand-system-view" style="display:none; flex-direction:column; gap:16px;">
-    <div class="panel" style="display:grid; grid-template-columns:1.2fr 1fr; gap:18px; align-items:center;">
-      <div style="display:flex; flex-direction:column; gap:8px;">
-        <div id="bs-wordmark"></div>
+    <div class="panel" style="display:grid; grid-template-columns:1.25fr 1fr; gap:18px; align-items:center;">
+      <div style="display:flex; flex-direction:column; gap:10px;">
+        <div style="display:flex; align-items:center; gap:14px; flex-wrap:wrap;">
+          <div id="bs-logo-only" title="Logo"></div>
+          <div id="bs-mono-only" title="Mono"></div>
+          <div id="bs-wordmark" title="Wordmark"></div>
+        </div>
         <h2 id="bs-headline" style="margin:0; font-size:26px; letter-spacing:-0.025em;">Lite is light.</h2>
         <p class="sub" id="bs-copy">Fast native execution, small runtime support, and code that is easy to reason about, read, maintain, and distribute.</p>
+        <div class="eyebrow" id="bs-summary"></div>
       </div>
       <div style="background:var(--bg); border:1px solid var(--line); border-radius:10px; padding:12px 14px; font-family:var(--mono); font-size:12px; line-height:1.65;">
         <div style="color:var(--muted); margin-bottom:4px;">$ ./bin/lite run hello.lts</div>
@@ -492,12 +497,30 @@
         <div>}</div>
       </div>
     </div>
+
     <div class="panel">
-      <div class="eyebrow" style="margin-bottom:10px;">Color Palettes</div>
+      <div style="display:flex; align-items:center; justify-content:space-between; flex-wrap:wrap; gap:8px; margin-bottom:10px;">
+        <div class="eyebrow">1 · Accent (Logo Coloring) &amp; Mono Mode</div>
+        <div class="seg">
+          <button id="bs-mode-accent" class="active" onclick="setLogoColorMode('accent')">Two-Tone Accent</button>
+          <button id="bs-mode-mono" onclick="setLogoColorMode('mono')">Mono (Single Ink)</button>
+        </div>
+      </div>
+      <div class="grid" id="bs-accents"></div>
+    </div>
+
+    <div class="panel">
+      <div class="eyebrow" style="margin-bottom:10px;">2 · Palette (Website Surfaces)</div>
       <div class="grid" id="bs-palettes"></div>
     </div>
+
     <div class="panel">
-      <div class="eyebrow" style="margin-bottom:10px;">Fontface Pairings</div>
+      <div class="eyebrow" style="margin-bottom:10px;">3 · Fontface (Logo / Wordmark)</div>
+      <div class="grid" id="bs-logo-fonts"></div>
+    </div>
+
+    <div class="panel">
+      <div class="eyebrow" style="margin-bottom:10px;">4 · Fontface (Website Typography)</div>
       <div class="grid" id="bs-fonts"></div>
     </div>
   </div>
@@ -1188,13 +1211,23 @@ function renderSim() {
   if (activeGroup === 'brand-system') renderBrandSystem();
 }
 
+const bsAccents = [
+  { id: 'filament', name: 'Filament Gold', note: 'Warm light source (#C97B14 / #F0B45A)', accL: '#C97B14', accD: '#F0B45A' },
+  { id: 'teal', name: 'Teal (VS Code)', note: 'Crisp editor teal (#0D9488 / #5EEAD4)', accL: '#0D9488', accD: '#5EEAD4' },
+  { id: 'sky', name: 'Sky (mini-aligned)', note: 'Clear sky blue (#0284C7 / #38BDF8)', accL: '#0284C7', accD: '#38BDF8' },
+  { id: 'indigo', name: 'Electric Indigo', note: 'High-energy spark (#4F46E5 / #818CF8)', accL: '#4F46E5', accD: '#818CF8' }
+];
 const bsPalettes = [
-  { id: 'paper-filament', name: 'Paper & Filament', note: 'Editorial warm paper + filament amber', bg: '#F5F3EE', card: '#FBFAF7', ink: '#101113', accL: '#C97B14', accD: '#F0B45A', ui: 'light' },
-  { id: 'ink-filament', name: 'Ink & Filament', note: 'Deep ink + warm filament gold', bg: '#0B0C0E', card: '#131519', ink: '#F2F0EA', accL: '#C97B14', accD: '#F0B45A', ui: 'dark' },
-  { id: 'slate-teal', name: 'Slate & Teal (VS Code)', note: 'Dark editor slate + crisp teal', bg: '#0F1115', card: '#161920', ink: '#F3F4F6', accL: '#0D9488', accD: '#5EEAD4', ui: 'dark' },
-  { id: 'cloud-sky', name: 'Cloud & Sky (mini-aligned)', note: 'Crisp light surface + sky blue', bg: '#F8FAFC', card: '#FFFFFF', ink: '#0F172A', accL: '#0284C7', accD: '#38BDF8', ui: 'light' },
-  { id: 'paper-teal', name: 'Paper & Deep Teal', note: 'Warm paper + high-contrast teal', bg: '#F5F3EE', card: '#FFFFFF', ink: '#101113', accL: '#0F766E', accD: '#5EEAD4', ui: 'light' },
-  { id: 'mono-ink', name: 'Pure Monochrome', note: 'Zero-accent ink on paper', bg: '#F5F3EE', card: '#FBFAF7', ink: '#101113', accL: '#101113', accD: '#F5F3EE', ui: 'light' }
+  { id: 'paper-warm', name: 'Warm Paper', note: 'Editorial paper #F5F3EE + #101113 ink', bg: '#F5F3EE', card: '#FBFAF7', ink: '#101113', ui: 'light' },
+  { id: 'ink-deep', name: 'Deep Ink', note: 'Dark ink #0B0C0E + #F2F0EA paper text', bg: '#0B0C0E', card: '#131519', ink: '#F2F0EA', ui: 'dark' },
+  { id: 'slate-editor', name: 'Editor Slate', note: 'Cool slate #0F1115 + #F3F4F6 text', bg: '#0F1115', card: '#161920', ink: '#F3F4F6', ui: 'dark' },
+  { id: 'cloud-crisp', name: 'Crisp Cloud', note: 'Clean white #F8FAFC + #0F172A ink', bg: '#F8FAFC', card: '#FFFFFF', ink: '#0F172A', ui: 'light' }
+];
+const bsLogoFonts = [
+  { id: 'vector', name: 'Vector Monoline (mini-style)', note: '16-unit custom SVG paths matching ℓ stroke', css: null },
+  { id: 'rounded', name: 'Rounded Sans', note: 'ui-rounded / SF Pro Rounded next to ℓ', css: 'ui-rounded, "SF Pro Rounded", system-ui, sans-serif' },
+  { id: 'grotesque', name: 'Neutral Grotesque', note: 'Inter / SF Pro Display next to ℓ', css: 'ui-sans-serif, -apple-system, "Inter", sans-serif' },
+  { id: 'mono', name: 'Technical Mono', note: 'JetBrains Mono / SF Mono next to ℓ', css: 'ui-monospace, "SF Mono", Menlo, monospace' }
 ];
 const bsFonts = [
   { id: 'grotesque', name: 'Neutral Grotesque', note: 'Inter / SF Pro — crisp system clarity', display: 'ui-sans-serif, -apple-system, "Inter", "Segoe UI", sans-serif', body: 'ui-sans-serif, -apple-system, "Inter", "Segoe UI", sans-serif' },
@@ -1204,19 +1237,45 @@ const bsFonts = [
   { id: 'plex', name: 'Geometric Humanist', note: 'Avenir Next / Segoe UI — airy & light', display: '"Avenir Next", "Segoe UI", sans-serif', body: '"Avenir Next", "Segoe UI", sans-serif' },
   { id: 'classic-mono', name: 'All-Mono Minimal', note: 'Monospace everywhere — pure terminal aesthetic', display: 'ui-monospace, "SF Mono", Menlo, monospace', body: 'ui-monospace, "SF Mono", Menlo, monospace' }
 ];
+let activeBsAccent = bsAccents[0];
 let activeBsPal = bsPalettes[0];
+let activeBsLogoFont = bsLogoFonts[0];
 let activeBsFont = bsFonts[0];
+let logoColorMode = 'accent';
+
+function buildCustomWordmark(it, acc, ink, h) {
+  if (!activeBsLogoFont.css) return buildWordmark(it, acc, ink, h);
+  const textTail = wordCase === 'title' ? 'ite' : 'ite';
+  return `<span style="display:inline-flex;align-items:center;gap:2px;font-family:${activeBsLogoFont.css};font-size:${h}px;font-weight:600;letter-spacing:-0.03em;line-height:1;color:${ink};">
+    <svg viewBox="${it.vb}" width="${Math.round(h*0.95)}" height="${Math.round(h*0.95)}">${it.mark(acc)}</svg><span>${textTail}</span>
+  </span>`;
+}
 
 function renderBrandSystem() {
   const it = items.find(x => x.id === selectedId) || items[0];
   const isDark = document.documentElement.getAttribute('data-ui') === 'dark';
-  const acc = isDark ? accDark : accLight;
   const ink = isDark ? '#F2F0EA' : '#101113';
-  document.getElementById('bs-wordmark').innerHTML = buildWordmark(it, acc, ink, 30);
+  const acc = logoColorMode === 'mono' ? ink : (isDark ? accDark : accLight);
+
+  document.getElementById('bs-logo-only').innerHTML = `<div class="tile-dark" style="padding:8px;"><svg viewBox="${it.vb}" width="28" height="28">${it.mark(logoColorMode === 'mono' ? '#F5F3EE' : accDark)}</svg></div>`;
+  document.getElementById('bs-mono-only').innerHTML = `<div class="tile-paper" style="padding:8px;"><svg viewBox="${it.vb}" width="28" height="28">${it.mark('#101113')}</svg></div>`;
+  document.getElementById('bs-wordmark').innerHTML = buildCustomWordmark(it, acc, ink, 30);
   document.getElementById('bs-headline').style.fontFamily = activeBsFont.display;
   document.getElementById('bs-copy').style.fontFamily = activeBsFont.body;
   document.getElementById('bs-kw').style.color = acc;
   document.getElementById('bs-str').style.color = acc;
+  document.getElementById('bs-summary').textContent = `${it.ref} · ${logoColorMode.toUpperCase()} (${activeBsAccent.name}) · ${activeBsPal.name} · Logo: ${activeBsLogoFont.name} · Site: ${activeBsFont.name}`;
+
+  document.getElementById('bs-accents').innerHTML = bsAccents.map(a => `
+    <div class="card ${a.id === activeBsAccent.id ? 'selected' : ''}" onclick="selectBsAccent('${a.id}')">
+      <div style="display:flex; gap:6px; margin-bottom:8px;">
+        <span style="width:22px;height:22px;border-radius:6px;background:${a.accL};border:1px solid rgba(128,128,128,.3)"></span>
+        <span style="width:22px;height:22px;border-radius:6px;background:${a.accD};border:1px solid rgba(128,128,128,.3)"></span>
+      </div>
+      <h3>${a.name}</h3>
+      <p class="desc">${a.note}</p>
+    </div>
+  `).join('');
 
   document.getElementById('bs-palettes').innerHTML = bsPalettes.map(p => `
     <div class="card ${p.id === activeBsPal.id ? 'selected' : ''}" onclick="selectBsPalette('${p.id}')">
@@ -1224,10 +1283,16 @@ function renderBrandSystem() {
         <span style="width:22px;height:22px;border-radius:6px;background:${p.bg};border:1px solid rgba(128,128,128,.3)"></span>
         <span style="width:22px;height:22px;border-radius:6px;background:${p.card};border:1px solid rgba(128,128,128,.3)"></span>
         <span style="width:22px;height:22px;border-radius:6px;background:${p.ink};border:1px solid rgba(128,128,128,.3)"></span>
-        <span style="width:22px;height:22px;border-radius:6px;background:${p.ui==='dark'?p.accD:p.accL};border:1px solid rgba(128,128,128,.3)"></span>
       </div>
       <h3>${p.name}</h3>
       <p class="desc">${p.note}</p>
+    </div>
+  `).join('');
+
+  document.getElementById('bs-logo-fonts').innerHTML = bsLogoFonts.map(lf => `
+    <div class="card ${lf.id === activeBsLogoFont.id ? 'selected' : ''}" onclick="selectBsLogoFont('${lf.id}')">
+      <h3>${lf.name}</h3>
+      <p class="desc">${lf.note}</p>
     </div>
   `).join('');
 
@@ -1240,12 +1305,32 @@ function renderBrandSystem() {
   `).join('');
 }
 
+function setLogoColorMode(m) {
+  logoColorMode = m;
+  document.getElementById('bs-mode-accent').classList.toggle('active', m === 'accent');
+  document.getElementById('bs-mode-mono').classList.toggle('active', m === 'mono');
+  renderSim();
+}
+
+function selectBsAccent(id) {
+  activeBsAccent = bsAccents.find(x => x.id === id) || bsAccents[0];
+  accLight = activeBsAccent.accL;
+  accDark = activeBsAccent.accD;
+  logoColorMode = 'accent';
+  document.getElementById('bs-mode-accent').classList.add('active');
+  document.getElementById('bs-mode-mono').classList.remove('active');
+  render(); renderSim();
+}
+
 function selectBsPalette(id) {
   activeBsPal = bsPalettes.find(x => x.id === id) || bsPalettes[0];
-  accLight = activeBsPal.accL;
-  accDark = activeBsPal.accD;
   setUi(activeBsPal.ui);
   render(); renderSim();
+}
+
+function selectBsLogoFont(id) {
+  activeBsLogoFont = bsLogoFonts.find(x => x.id === id) || bsLogoFonts[0];
+  renderSim();
 }
 
 function selectBsFont(id) {
