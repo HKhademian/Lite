@@ -1,43 +1,43 @@
 /** Stylesheet for the static Lite public showcase site and playground, emitted to dist/site/style.css. */
 
 export const siteCss = `:root {
-  --bg: #fdfcfa;
-  --surface: #f5f2eb;
-  --surface-elevated: #ffffff;
-  --border: #e4ded3;
-  --ink: #1e1b16;
-  --ink-muted: #5e574c;
-  --accent: #c97b14;
+  --bg: #F5F3EE;
+  --surface: #ECE8DF;
+  --surface-elevated: #FBFAF7;
+  --border: #DDD7CB;
+  --ink: #101113;
+  --ink-muted: #56585E;
+  --accent: #C97B14;
   --accent-soft: rgba(201, 123, 20, 0.12);
-  --code-bg: #f6f3ec;
-  --tok-keyword: #9e4b08;
-  --tok-type: #0d6678;
-  --tok-string: #2c6e31;
-  --tok-number: #7a3e9d;
-  --tok-comment: #7c7467;
-  --tok-op: #8b4513;
+  --code-bg: #FBFAF7;
+  --tok-keyword: #9E4B08;
+  --tok-type: #0D6678;
+  --tok-string: #2C6E31;
+  --tok-number: #7A3E9D;
+  --tok-comment: #6E7178;
+  --tok-op: #8B4513;
   --radius: 10px;
-  --font-sans: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
-  --font-mono: ui-monospace, "SFMono-Regular", Menlo, Monaco, Consolas, "Liberation Mono", monospace;
+  --font-sans: ui-sans-serif, -apple-system, 'Helvetica Neue', sans-serif;
+  --font-mono: 'SF Mono', ui-monospace, monospace;
 }
 
 @media (prefers-color-scheme: dark) {
   :root {
-    --bg: #14120f;
-    --surface: #1c1915;
-    --surface-elevated: #221e19;
-    --border: #322c24;
-    --ink: #f3efe8;
-    --ink-muted: #aba294;
-    --accent: #f0b45a;
+    --bg: #0B0C0E;
+    --surface: #1A1D22;
+    --surface-elevated: #131519;
+    --border: #252930;
+    --ink: #F2F0EA;
+    --ink-muted: #9EA2AC;
+    --accent: #F0B45A;
     --accent-soft: rgba(240, 180, 90, 0.14);
-    --code-bg: #181511;
-    --tok-keyword: #f0b45a;
-    --tok-type: #6ec4d8;
-    --tok-string: #89c983;
-    --tok-number: #c69ae8;
-    --tok-comment: #857d70;
-    --tok-op: #e09f5a;
+    --code-bg: #131519;
+    --tok-keyword: #F0B45A;
+    --tok-type: #6EC4D8;
+    --tok-string: #89C983;
+    --tok-number: #C69AE8;
+    --tok-comment: #7B808C;
+    --tok-op: #E09F5A;
   }
 }
 
@@ -189,7 +189,7 @@ a:hover { text-decoration: underline; }
 .btn-primary {
   background: var(--accent);
   border-color: var(--accent);
-  color: #14120f;
+  color: #0B0C0E;
 }
 .btn-primary:hover { filter: brightness(1.06); }
 
@@ -520,7 +520,7 @@ pre.code-block {
 .pg-canvas {
   border: 1px solid var(--border);
   border-radius: 8px;
-  background: #14120f;
+  background: #0B0C0E;
   image-rendering: pixelated;
   max-width: 100%;
 }

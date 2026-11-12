@@ -607,7 +607,7 @@ function renderPlaygroundPage(rendered: ReadonlyMap<string, RenderedSample>, rep
     }
     lastFrameAt = now;
 
-    ctx.fillStyle = "#14120f";
+    ctx.fillStyle = "#0B0C0E";
     ctx.fillRect(0, 0, canvas.width, canvas.height);
 
     ctx.strokeStyle = "rgba(240, 180, 90, 0.07)";
@@ -625,20 +625,20 @@ function renderPlaygroundPage(rendered: ReadonlyMap<string, RenderedSample>, rep
     if (by <= 8 || by + boxH >= canvas.height - 8) vy = -vy;
 
     ctx.fillStyle = "rgba(240, 180, 90, 0.14)";
-    ctx.strokeStyle = "#f0b45a";
+    ctx.strokeStyle = "#F0B45A";
     ctx.lineWidth = 2;
     ctx.beginPath();
     ctx.roundRect(bx, by, boxW, boxH, 10);
     ctx.fill();
     ctx.stroke();
 
-    ctx.font = "bold 24px ui-monospace, Menlo, monospace";
+    ctx.font = "600 24px 'SF Mono', ui-monospace, monospace";
     ctx.textBaseline = "middle";
     ctx.textAlign = "right";
-    ctx.fillStyle = "#f0b45a";
+    ctx.fillStyle = "#F0B45A";
     ctx.fillText("ℓ", bx + boxW / 2 - 12, by + boxH / 2 + 1);
     ctx.textAlign = "left";
-    ctx.fillStyle = "#f3efe8";
+    ctx.fillStyle = "#F2F0EA";
     ctx.fillText("ite", bx + boxW / 2 - 10, by + boxH / 2 + 1);
 
     animFrame = requestAnimationFrame(drawFrame);
