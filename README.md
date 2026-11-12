@@ -76,6 +76,7 @@ success line or failure details, and `--silence` suppresses all test output.
 - [Language documentation and reading order](docs/README.md)
 - [Numbered runnable examples](language/examples/README.md): small language demonstrations shared by the interpreter and editor tooling.
 - [Lite compiler prototype](compiler/README.md): shared front-end and TS/C backends, run with `./bin/lite-compile`, `./bin/lite-compile-ts`, or `./bin/lite compile`.
+- [Core modules and host capabilities](compiler/core-modules-plan.md): current builtin inventory, importable host API boundaries, and the ordered utility-library stage.
 - [Compiler development guidelines](.agents/rules/compiler-development.md): Lite source implementation, multiple focused and combined-feature tests, flagged investigations, and verified generated-igniter support before compiler-source adoption.
 - [Evolving Lite with its own compiler](docs/evolving-language.md): small verified language increments, seed promotion, and breaking source migrations.
 - [Verification cases](language/verifications/README.md): feature contracts and artifact manifests, run with `./bin/lite verify`.
