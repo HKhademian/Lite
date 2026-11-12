@@ -2,11 +2,11 @@
 /** Serve dist/site/ locally with no external dependencies. */
 import { existsSync, readFileSync, statSync } from 'node:fs';
 import { createServer } from 'node:http';
-import { extname, join, normalize } from 'node:path';
-import { dirname } from 'node:path';
+import { dirname, extname, join, normalize, resolve } from 'node:path';
 
 const root = dirname(import.meta.dirname);
 const siteDir = join(root, 'dist', 'site');
+const brandDir = join(root, 'brand');
 const port = Number(process.env['PORT'] ?? '8080');
 
 const mimeTypes: Readonly<Record<string, string>> = {
@@ -23,8 +23,33 @@ if (!existsSync(siteDir)) {
   process.exit(1);
 }
 
+function serveFile(res: import('node:http').ServerResponse, filePath: string): void {
+  const mime = mimeTypes[extname(filePath)] ?? 'application/octet-stream';
+  res.writeHead(200, { 'Content-Type': mime, 'Cache-Control': 'no-store' });
+  res.end(readFileSync(filePath));
+}
+
 const server = createServer((req, res) => {
   const urlPath = (req.url ?? '/').split('?')[0] ?? '/';
+
+  if (urlPath === '/studio' || urlPath === '/studio/' || urlPath === '/brand' || urlPath === '/brand/') {
+    const studio = join(brandDir, 'investigation', 'studio.html');
+    if (existsSync(studio) && statSync(studio).isFile()) {
+      res.writeHead(302, { Location: '/brand/investigation/studio.html', 'Cache-Control': 'no-store' });
+      res.end();
+      return;
+    }
+  }
+
+  if (urlPath.startsWith('/brand/')) {
+    const rel = normalize(urlPath.slice('/brand/'.length)).replace(/^(\.\.(\/|\\|$))+/, '');
+    const target = resolve(brandDir, rel);
+    if (target.startsWith(brandDir) && existsSync(target) && statSync(target).isFile()) {
+      serveFile(res, target);
+      return;
+    }
+  }
+
   const safePath = normalize(urlPath).replace(/^(\.\.(\/|\\|$))+/, '');
   let target = join(siteDir, safePath);
   if (existsSync(target) && statSync(target).isDirectory()) {
@@ -35,11 +60,12 @@ const server = createServer((req, res) => {
     res.end('Not Found\n');
     return;
   }
-  const mime = mimeTypes[extname(target)] ?? 'application/octet-stream';
-  res.writeHead(200, { 'Content-Type': mime, 'Cache-Control': 'no-store' });
-  res.end(readFileSync(target));
+  serveFile(res, target);
 });
 
 server.listen(port, '127.0.0.1', () => {
   console.log(`Serving Lite site at http://127.0.0.1:${String(port)}/`);
+  if (existsSync(join(brandDir, 'investigation', 'studio.html'))) {
+    console.log(`Brand studio (local): http://127.0.0.1:${String(port)}/brand/`);
+  }
 });
