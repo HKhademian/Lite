@@ -18,6 +18,11 @@ type RenderedSample = ShowcaseSample & Readonly<{
   output: string;
 }>;
 
+type SourceRevision = Readonly<{
+  commit: string;
+  timestamp: string;
+}>;
+
 const root = dirname(import.meta.dirname);
 const outputDir = join(root, 'dist', 'site');
 const entryPath = fileURLToPath(new URL('../compiler/entry.ts', import.meta.url));
@@ -34,11 +39,17 @@ function readRepositoryUrl(): string {
   return match === null ? '' : `https://github.com/${match[1]}`;
 }
 
-function readSourceCommit(): string {
-  const result = spawnSync('git', ['rev-parse', 'HEAD'], { cwd: root, encoding: 'utf8' });
-  if (result.error !== undefined) throw result.error;
-  if (result.status !== 0) throw new Error('could not read the source commit');
-  return result.stdout.trim();
+function readSourceRevision(): SourceRevision {
+  const commitResult = spawnSync('git', ['rev-parse', 'HEAD'], { cwd: root, encoding: 'utf8' });
+  if (commitResult.error !== undefined) throw commitResult.error;
+  if (commitResult.status !== 0) throw new Error('could not read the source commit');
+  const timeResult = spawnSync('git', ['show', '-s', '--format=%cI', 'HEAD'], { cwd: root, encoding: 'utf8' });
+  if (timeResult.error !== undefined) throw timeResult.error;
+  if (timeResult.status !== 0) throw new Error('could not read the commit timestamp');
+  return {
+    commit: commitResult.stdout.trim(),
+    timestamp: timeResult.stdout.trim(),
+  };
 }
 
 function compileAndRunSample(sample: ShowcaseSample): RenderedSample {
@@ -97,15 +108,20 @@ function renderHeader(basePath: string, active: 'home' | 'playground' | 'samples
 </header>`;
 }
 
-function renderFooter(commit: string, repoUrl: string): string {
-  const short = commit.slice(0, 12);
+function renderFooter(rev: SourceRevision, repoUrl: string): string {
+  const short = rev.commit.slice(0, 12);
+  const rest = rev.commit.slice(12);
+  const hashInner = `<code><strong>${escapeHtml(short)}</strong>${escapeHtml(rest)}</code>`;
   const commitHtml = repoUrl
-    ? `<a class="commit-pill" href="${escapeHtml(`${repoUrl}/commit/${commit}`)}">${escapeHtml(short)}</a>`
-    : `<span class="commit-pill">${escapeHtml(short)}</span>`;
+    ? `<a class="commit-hash" href="${escapeHtml(`${repoUrl}/commit/${rev.commit}`)}" title="Released ${escapeHtml(rev.timestamp)}">${hashInner}</a>`
+    : `<span class="commit-hash" title="Released ${escapeHtml(rev.timestamp)}">${hashInner}</span>`;
   return `<footer class="site-footer">
   <div class="container footer-inner">
     <span>Lite is licensed under Apache-2.0.</span>
-    <span>Revision ${commitHtml}</span>
+    <div class="footer-commit">
+      <div>Revision ${commitHtml}</div>
+      <time class="commit-time" datetime="${escapeHtml(rev.timestamp)}">Committed ${escapeHtml(rev.timestamp)}</time>
+    </div>
   </div>
 </footer>`;
 }
@@ -141,9 +157,13 @@ function renderPage(options: Readonly<{
   basePath: string;
   active: 'home' | 'playground' | 'samples';
   repoUrl: string;
-  commit: string;
+  rev: SourceRevision;
   body: string;
+  bodyClass?: string;
+  mainClass?: string;
 }>): string {
+  const bodyAttr = options.bodyClass ? ` class="${escapeHtml(options.bodyClass)}"` : '';
+  const mainAttr = ` class="${escapeHtml(options.mainClass ?? 'container')}"`;
   return `<!doctype html>
 <html lang="en">
 <head>
@@ -153,18 +173,18 @@ function renderPage(options: Readonly<{
   <link rel="icon" type="image/svg+xml" href="${options.basePath}favicon.svg">
   <link rel="stylesheet" href="${options.basePath}style.css">
 </head>
-<body>
+<body${bodyAttr}>
 ${renderHeader(options.basePath, options.active, options.repoUrl)}
-<main class="container">
+<main${mainAttr}>
 ${options.body}
 </main>
-${renderFooter(options.commit, options.repoUrl)}
+${renderFooter(options.rev, options.repoUrl)}
 </body>
 </html>
 `;
 }
 
-function renderHomePage(rendered: ReadonlyMap<string, RenderedSample>, repoUrl: string, commit: string): string {
+function renderHomePage(rendered: ReadonlyMap<string, RenderedSample>, repoUrl: string, rev: SourceRevision): string {
   const hero = rendered.get(heroSample.id);
   if (hero === undefined) throw new Error('missing rendered hero sample');
   const featuredIds = ['double-sum', 'factorial', 'decisions', 'script-arguments'];
@@ -179,7 +199,10 @@ function renderHomePage(rendered: ReadonlyMap<string, RenderedSample>, repoUrl: 
 
   const body = `<section class="hero">
   <div>
-    <h1>Lite is light.</h1>
+    <div class="hero-display">
+      ${brandWordmark}
+      <h1>is light.</h1>
+    </div>
     <p class="hero-lead">
       A small, explicit language and self-hosted compiler designed for low runtime weight,
       clear consequences, and readable code.
@@ -230,12 +253,12 @@ cd LiteScript
     basePath: '',
     active: 'home',
     repoUrl,
-    commit,
+    rev,
     body,
   });
 }
 
-function renderSamplesPage(rendered: ReadonlyMap<string, RenderedSample>, repoUrl: string, commit: string): string {
+function renderSamplesPage(rendered: ReadonlyMap<string, RenderedSample>, repoUrl: string, rev: SourceRevision): string {
   const sections = sampleGroups.map(group => {
     const cards = showcaseSamples
       .filter(s => s.group === group.id)
@@ -254,7 +277,7 @@ function renderSamplesPage(rendered: ReadonlyMap<string, RenderedSample>, repoUr
 </section>`;
   }).join('\n');
 
-  const body = `<section style="padding: 2.25rem 0 1rem;">
+  const body = `<section style="padding: 2rem 0 1rem;">
   <h1 style="margin: 0 0 0.5rem;">Verified Samples</h1>
   <p class="hero-lead" style="margin: 0;">
     All ${String(rendered.size)} examples below are compiled and executed by the generated Lite compiler during the site build.
@@ -267,56 +290,68 @@ ${sections}`;
     basePath: '../',
     active: 'samples',
     repoUrl,
-    commit,
+    rev,
     body,
   });
 }
 
-function renderPlaygroundPage(rendered: ReadonlyMap<string, RenderedSample>, repoUrl: string, commit: string): string {
+function renderPlaygroundPage(rendered: ReadonlyMap<string, RenderedSample>, repoUrl: string, rev: SourceRevision): string {
   const optionsHtml = sampleGroups.map(group => {
     const items = showcaseSamples
       .filter(s => s.group === group.id)
       .map(s => `<option value="${escapeHtml(s.id)}">${escapeHtml(s.title)}</option>`)
       .join('');
     return `<optgroup label="${escapeHtml(group.title)}">${items}</optgroup>`;
-  }).join('');
+  }).join('') + `<optgroup label="Visual Stage"><option value="canvas-bounce">ℓite Canvas Stage</option></optgroup>`;
 
   const payload = Array.from(rendered.values()).map(s => ({
     id: s.id,
     title: s.title,
     file: s.file,
     showOutput: s.showOutput === true,
+    canvas: false,
   }));
+  payload.push({
+    id: 'canvas-bounce',
+    title: 'ℓite Canvas Stage',
+    file: 'playground/canvas-stage',
+    showOutput: false,
+    canvas: true,
+  });
   const serialized = JSON.stringify(payload).replaceAll('<', '\\u003c');
 
-  const body = `<section class="pg-bar">
-  <div class="pg-controls">
-    <label for="pg-samples" class="code-card-title">Sample:</label>
-    <select id="pg-samples" class="pg-select">${optionsHtml}</select>
-    <button id="pg-play" class="btn btn-primary" type="button">&#9654; Play</button>
-    <button id="pg-canvas-btn" class="btn" type="button">Canvas</button>
-  </div>
-  <span id="pg-status" class="pg-status">Ready</span>
-</section>
-
-<section class="pg-grid">
-  <div class="pg-pane">
-    <div class="pg-pane-head">
-      <span id="pg-file" class="code-card-title"></span>
-      <span id="pg-note" class="code-card-meta"></span>
+  const body = `<div class="workbench">
+  <section class="pane" aria-label="Source editor">
+    <div class="pane-head">
+      <div class="sample-picker">
+        <select id="pg-samples" class="pg-select" aria-label="Choose a sample">${optionsHtml}</select>
+        <button id="pg-reset" class="btn" type="button">Reset</button>
+      </div>
+      <div class="pg-actions">
+        <button id="pg-compile" class="btn" type="button">Compile</button>
+        <button id="pg-play" class="btn btn-primary" type="button">&#9654; Play</button>
+      </div>
     </div>
-    <pre class="code-block"><code id="pg-source"></code></pre>
-    <div id="pg-io" class="pg-io-strip"></div>
-  </div>
+    <div class="pg-editor-wrap">
+      <pre class="pg-editor-pre" aria-hidden="true"><code id="pg-source"></code></pre>
+      <textarea id="pg-editor" class="pg-editor-input" spellcheck="false" autocomplete="off" autocapitalize="off" aria-label="Lite source editor"></textarea>
+    </div>
+    <div class="pg-io-strip">
+      <label class="pg-io-field">args <input id="pg-args" type="text" placeholder="optional args"></label>
+      <label class="pg-io-field">stdin <input id="pg-stdin" type="text" placeholder="optional stdin"></label>
+      <span id="pg-file" class="pg-status"></span>
+    </div>
+  </section>
 
-  <div class="pg-pane">
-    <div class="pg-pane-head">
+  <section class="pane" aria-label="Compiler and output inspector">
+    <div class="pane-head">
       <div class="pg-tabs" role="tablist">
         <button class="pg-tab" role="tab" data-tab="output" aria-selected="true" type="button">Output</button>
-        <button class="pg-tab" role="tab" data-tab="ts" aria-selected="false" type="button">Generated TypeScript</button>
+        <button class="pg-tab" role="tab" data-tab="ts" aria-selected="false" type="button">Generated TS</button>
         <button class="pg-tab" role="tab" data-tab="c" aria-selected="false" type="button">Generated C</button>
-        <button class="pg-tab" role="tab" data-tab="canvas" aria-selected="false" type="button">Canvas</button>
+        <button id="tab-canvas" class="pg-tab" role="tab" data-tab="canvas" aria-selected="false" type="button" hidden>Canvas</button>
       </div>
+      <span id="pg-status" class="pg-status">Ready</span>
     </div>
 
     <div id="panel-output" class="pg-panel" role="tabpanel">
@@ -336,27 +371,31 @@ function renderPlaygroundPage(rendered: ReadonlyMap<string, RenderedSample>, rep
 
     <div id="panel-canvas" class="pg-panel" role="tabpanel" hidden>
       <div class="pg-canvas-wrap">
-        <canvas id="pg-canvas" class="pg-canvas" width="420" height="240"></canvas>
-        <span class="code-card-meta">Lite Canvas Stage — bouncing ℓite mark</span>
+        <canvas id="pg-canvas" class="pg-canvas" width="460" height="260"></canvas>
+        <span id="pg-fps" class="pg-status">0.0 fps &middot; 0.0 ms</span>
       </div>
     </div>
-  </div>
-</section>
+  </section>
+</div>
 
 <script type="module">
   const samples = ${serialized};
   const byId = new Map(samples.map(s => [s.id, s]));
   const cache = new Map();
   const select = document.getElementById("pg-samples");
+  const resetBtn = document.getElementById("pg-reset");
+  const compileBtn = document.getElementById("pg-compile");
   const playBtn = document.getElementById("pg-play");
-  const canvasBtn = document.getElementById("pg-canvas-btn");
   const statusEl = document.getElementById("pg-status");
   const fileEl = document.getElementById("pg-file");
-  const noteEl = document.getElementById("pg-note");
+  const editorEl = document.getElementById("pg-editor");
   const sourceEl = document.getElementById("pg-source");
-  const ioEl = document.getElementById("pg-io");
+  const argsEl = document.getElementById("pg-args");
+  const stdinEl = document.getElementById("pg-stdin");
   const outputEl = document.getElementById("pg-output");
   const tsEl = document.getElementById("pg-ts");
+  const tabCanvas = document.getElementById("tab-canvas");
+  const fpsEl = document.getElementById("pg-fps");
   const tabs = Array.from(document.querySelectorAll(".pg-tab"));
   const panels = {
     output: document.getElementById("panel-output"),
@@ -366,7 +405,13 @@ function renderPlaygroundPage(rendered: ReadonlyMap<string, RenderedSample>, rep
   };
 
   let activeTab = "output";
+  let currentSample = null;
   let animFrame = 0;
+  let lastFrameAt = 0;
+
+  function escapeHtml(text) {
+    return text.replaceAll("&", "&amp;").replaceAll("<", "&lt;").replaceAll(">", "&gt;");
+  }
 
   function showTab(name) {
     activeTab = name;
@@ -384,6 +429,19 @@ function renderPlaygroundPage(rendered: ReadonlyMap<string, RenderedSample>, rep
     tab.addEventListener("click", () => showTab(tab.dataset.tab));
   }
 
+  editorEl.addEventListener("input", () => {
+    sourceEl.innerHTML = escapeHtml(editorEl.value) + "\\n";
+    statusEl.textContent = "Modified (local sandbox deferred)";
+  });
+
+  editorEl.addEventListener("scroll", () => {
+    const pre = sourceEl.parentElement;
+    if (pre) {
+      pre.scrollTop = editorEl.scrollTop;
+      pre.scrollLeft = editorEl.scrollLeft;
+    }
+  });
+
   async function fetchSample(id) {
     if (cache.has(id)) return cache.get(id);
     const res = await fetch("./samples/" + encodeURIComponent(id) + ".json");
@@ -393,33 +451,52 @@ function renderPlaygroundPage(rendered: ReadonlyMap<string, RenderedSample>, rep
     return data;
   }
 
-  async function loadSample(id, replay) {
+  async function loadSample(id, mode) {
     const meta = byId.get(id) ?? samples[0];
     if (!meta) return;
     select.value = meta.id;
     fileEl.textContent = meta.file;
-    noteEl.textContent = meta.title;
     statusEl.textContent = "Loading " + meta.file + "...";
 
     const url = new URL(window.location.href);
     url.searchParams.set("sample", meta.id);
     window.history.replaceState({}, "", url);
 
+    if (meta.canvas) {
+      const demoSource = "/* Interactive ℓite Canvas Stage */\\nio := import \\"core/io\\";\\nio.outputLine(\\"Rendering ℓite mark on canvas...\\");";
+      currentSample = { id: meta.id, source: demoSource, sourceHtml: escapeHtml(demoSource), tsHtml: "// Canvas stage runs directly in browser", output: "Canvas stage active\\n", args: [], stdin: "" };
+      editorEl.value = demoSource;
+      sourceEl.innerHTML = demoSource;
+      tsEl.textContent = "// Canvas stage runs directly in browser";
+      argsEl.value = "";
+      stdinEl.value = "";
+      tabCanvas.hidden = false;
+      showTab("canvas");
+      return;
+    }
+
+    tabCanvas.hidden = true;
+    if (activeTab === "canvas") showTab("output");
+
     const sample = await fetchSample(meta.id);
+    currentSample = sample;
+    editorEl.value = sample.source;
     sourceEl.innerHTML = sample.sourceHtml;
     tsEl.innerHTML = sample.tsHtml;
-    const ioParts = [];
-    if (sample.args.length) ioParts.push("args: " + sample.args.join(" "));
-    if (sample.stdin) ioParts.push("stdin: " + JSON.stringify(sample.stdin));
-    ioEl.textContent = ioParts.length ? ioParts.join("  |  ") : "no stdin or args required";
+    argsEl.value = sample.args.join(" ");
+    stdinEl.value = sample.stdin.replaceAll("\\n", "\\\\n");
 
-    if (replay) {
+    if (mode === "compile") {
+      showTab("ts");
+      statusEl.textContent = "Compiled to TypeScript";
+    } else if (mode === "play") {
+      showTab("output");
       outputEl.textContent = "";
       statusEl.textContent = "Running " + meta.file + "...";
       setTimeout(() => {
         outputEl.textContent = sample.output;
         statusEl.textContent = "Exited 0 (verified)";
-      }, 120);
+      }, 100);
     } else if (meta.showOutput) {
       outputEl.textContent = sample.output;
       statusEl.textContent = "Verified output ready";
@@ -429,27 +506,28 @@ function renderPlaygroundPage(rendered: ReadonlyMap<string, RenderedSample>, rep
     }
   }
 
-  select.addEventListener("change", () => loadSample(select.value, false));
-  playBtn.addEventListener("click", () => {
-    if (activeTab === "canvas") startCanvas();
-    else {
-      showTab("output");
-      loadSample(select.value, true);
-    }
-  });
-  canvasBtn.addEventListener("click", () => showTab("canvas"));
+  select.addEventListener("change", () => loadSample(select.value, "load"));
+  resetBtn.addEventListener("click", () => loadSample(select.value, "load"));
+  compileBtn.addEventListener("click", () => loadSample(select.value, "compile"));
+  playBtn.addEventListener("click", () => loadSample(select.value, "play"));
 
-  // Bouncing Lite Canvas Stage
+  // Bouncing ℓite Canvas Stage with FPS / frametime reporting
   const canvas = document.getElementById("pg-canvas");
   const ctx = canvas.getContext("2d");
-  let bx = 40, by = 40, vx = 2.2, vy = 1.7, hue = 35;
+  let bx = 48, by = 48, vx = 2.4, vy = 1.8;
 
-  function drawFrame() {
+  function drawFrame(now) {
+    if (lastFrameAt !== 0) {
+      const dt = Math.max(now - lastFrameAt, 0.1);
+      const fps = 1000 / dt;
+      fpsEl.textContent = fps.toFixed(1) + " fps · " + dt.toFixed(1) + " ms";
+    }
+    lastFrameAt = now;
+
     ctx.fillStyle = "#14120f";
     ctx.fillRect(0, 0, canvas.width, canvas.height);
 
-    // Subtle pixel grid
-    ctx.strokeStyle = "rgba(240, 180, 90, 0.06)";
+    ctx.strokeStyle = "rgba(240, 180, 90, 0.07)";
     ctx.lineWidth = 1;
     for (let x = 0; x < canvas.width; x += 20) {
       ctx.beginPath(); ctx.moveTo(x, 0); ctx.lineTo(x, canvas.height); ctx.stroke();
@@ -459,9 +537,9 @@ function renderPlaygroundPage(rendered: ReadonlyMap<string, RenderedSample>, rep
     }
 
     bx += vx; by += vy;
-    const boxW = 92, boxH = 44;
-    if (bx <= 8 || bx + boxW >= canvas.width - 8) { vx = -vx; hue = (hue + 25) % 360; }
-    if (by <= 8 || by + boxH >= canvas.height - 8) { vy = -vy; hue = (hue + 25) % 360; }
+    const boxW = 96, boxH = 46;
+    if (bx <= 8 || bx + boxW >= canvas.width - 8) vx = -vx;
+    if (by <= 8 || by + boxH >= canvas.height - 8) vy = -vy;
 
     ctx.fillStyle = "rgba(240, 180, 90, 0.14)";
     ctx.strokeStyle = "#f0b45a";
@@ -471,26 +549,31 @@ function renderPlaygroundPage(rendered: ReadonlyMap<string, RenderedSample>, rep
     ctx.fill();
     ctx.stroke();
 
-    ctx.fillStyle = "#f3efe8";
     ctx.font = "bold 24px ui-monospace, Menlo, monospace";
-    ctx.textAlign = "center";
     ctx.textBaseline = "middle";
-    ctx.fillText("ℓite", bx + boxW / 2, by + boxH / 2 + 1);
+    ctx.textAlign = "right";
+    ctx.fillStyle = "#f0b45a";
+    ctx.fillText("ℓ", bx + boxW / 2 - 12, by + boxH / 2 + 1);
+    ctx.textAlign = "left";
+    ctx.fillStyle = "#f3efe8";
+    ctx.fillText("ite", bx + boxW / 2 - 10, by + boxH / 2 + 1);
 
     animFrame = requestAnimationFrame(drawFrame);
   }
 
   function startCanvas() {
+    lastFrameAt = 0;
     if (!animFrame) animFrame = requestAnimationFrame(drawFrame);
     statusEl.textContent = "Canvas stage active";
   }
 
   function stopCanvas() {
     if (animFrame) { cancelAnimationFrame(animFrame); animFrame = 0; }
+    lastFrameAt = 0;
   }
 
   const initial = new URLSearchParams(window.location.search).get("sample") ?? "${escapeHtml(heroSample.id)}";
-  loadSample(initial, false);
+  loadSample(initial, "load");
 </script>`;
 
   return renderPage({
@@ -498,14 +581,16 @@ function renderPlaygroundPage(rendered: ReadonlyMap<string, RenderedSample>, rep
     basePath: '../',
     active: 'playground',
     repoUrl,
-    commit,
+    rev,
     body,
+    bodyClass: 'playground-page',
+    mainClass: 'playground-main',
   });
 }
 
 export function buildSite(): void {
   const repoUrl = readRepositoryUrl();
-  const commit = readSourceCommit();
+  const rev = readSourceRevision();
   const rendered = new Map<string, RenderedSample>();
 
   for (const sample of showcaseSamples) {
@@ -518,9 +603,9 @@ export function buildSite(): void {
 
   writeFileSync(join(outputDir, 'style.css'), siteCss);
   cpSync(join(root, 'brand', 'lite-favicon.svg'), join(outputDir, 'favicon.svg'));
-  writeFileSync(join(outputDir, 'index.html'), renderHomePage(rendered, repoUrl, commit));
-  writeFileSync(join(outputDir, 'samples', 'index.html'), renderSamplesPage(rendered, repoUrl, commit));
-  writeFileSync(join(outputDir, 'playground', 'index.html'), renderPlaygroundPage(rendered, repoUrl, commit));
+  writeFileSync(join(outputDir, 'index.html'), renderHomePage(rendered, repoUrl, rev));
+  writeFileSync(join(outputDir, 'samples', 'index.html'), renderSamplesPage(rendered, repoUrl, rev));
+  writeFileSync(join(outputDir, 'playground', 'index.html'), renderPlaygroundPage(rendered, repoUrl, rev));
   for (const sample of rendered.values()) {
     writeFileSync(
       join(outputDir, 'playground', 'samples', `${sample.id}.json`),
@@ -528,6 +613,7 @@ export function buildSite(): void {
         id: sample.id,
         args: sample.args,
         stdin: sample.stdin,
+        source: sample.source,
         sourceHtml: sample.sourceHtml,
         tsHtml: sample.tsHtml,
         output: sample.output,
@@ -536,7 +622,7 @@ export function buildSite(): void {
   }
   writeFileSync(
     join(outputDir, 'build.json'),
-    JSON.stringify({ commit, shortCommit: commit.slice(0, 12), samples: rendered.size }, null, 2) + '\n',
+    JSON.stringify({ commit: rev.commit, shortCommit: rev.commit.slice(0, 12), timestamp: rev.timestamp, samples: rendered.size }, null, 2) + '\n',
   );
 
   console.log(`Built Lite site (${String(rendered.size)} verified samples) -> dist/site/`);

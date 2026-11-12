@@ -43,16 +43,23 @@ test('buildSite generates static pages and metadata in dist/site', () => {
     assert(existsSync(join(out, rel)), `missing generated site file: ${rel}`);
   }
   const index = readFileSync(join(out, 'index.html'), 'utf8');
-  assert(index.includes('Lite is light.'));
+  assert(index.includes('is light.'));
   assert(index.includes('Open in playground'));
   assert(!index.includes('Inspect generated TypeScript'));
+  assert(index.includes('commit-hash'));
+  assert(index.includes('commit-time'));
   const playground = readFileSync(join(out, 'playground/index.html'), 'utf8');
-  assert(playground.includes('Generated TypeScript'));
-  assert(playground.includes('pg-canvas'));
+  assert(playground.includes('playground-page'));
+  assert(playground.includes('Generated TS'));
+  assert(playground.includes('id="pg-compile"'));
+  assert(playground.includes('id="pg-play"'));
+  assert(playground.includes('id="tab-canvas"'));
+  assert(playground.includes('id="pg-fps"'));
   for (const sample of showcaseSamples) {
     assert(existsSync(join(out, 'playground', 'samples', `${sample.id}.json`)), `missing playground payload for ${sample.id}`);
   }
-  const buildInfo = JSON.parse(readFileSync(join(out, 'build.json'), 'utf8')) as { samples: number; shortCommit: string };
+  const buildInfo = JSON.parse(readFileSync(join(out, 'build.json'), 'utf8')) as { samples: number; shortCommit: string; timestamp: string };
   assert.equal(buildInfo.samples, showcaseSamples.length);
   assert.equal(buildInfo.shortCommit.length, 12);
+  assert(buildInfo.timestamp.length > 0);
 });
