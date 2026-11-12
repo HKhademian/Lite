@@ -420,6 +420,122 @@ test('core integer operations are available through a module alias', () => {
   });
 });
 
+test('core output aliases preserve the legacy heterogeneous host-output contract', () => {
+  const fixtureName = resolve(root, 'compiler/tests/fixtures/core-host-io.lts');
+  const compiled = compileTs({
+    text: [
+      'io := import "../../../lib/core/io.lts";',
+      'outputLine := fn(text: String): Int { 99 };',
+      'local := outputLine("ordinary function");',
+      'effect := fn(value: String): String { io.outputLine("arg", value); value };',
+      'invoke := fn(): Int {',
+      '    output(); io.output(); io.outputLine();',
+      '    output("legacy", 1, true);',
+      '    io.output("qualified", effect("a"), 7, true);',
+      '    io.outputLine(effect("b"), false);',
+      '    io.outputLine([1, 2], (left = "tuple", right = 3));',
+      '    io.errorLine("host error");',
+      '    42',
+      '};',
+      'io.outputLine(local);',
+      'io.outputLine(invoke());',
+    ].join('\n'),
+    name: fixtureName,
+  });
+  assert.equal(compiled.status, 0, compiled.stderr.toString());
+  withTsArtifact(compiled.stdout.toString(), run => {
+    const actual = run();
+    assert.equal(actual.status, 0, actual.stderr.toString());
+    assert.equal(actual.stdout.toString(), '99\n\nlegacy 1 truearg a\nqualified a 7 truearg b\nb false\n[1, 2] (left=tuple, right=3)\n42\n');
+    assert.equal(actual.stderr.toString(), 'host error\n');
+  });
+});
+
+test('core host identities reject forged declarations and retain target boundaries', () => {
+  const fixtureName = resolve(root, 'compiler/tests/fixtures/core-host-io.lts');
+  const directory = mkdtempSync(join(tmpdir(), 'lite-core-host-unbound-'));
+  try {
+    const unboundSource = join(directory, 'io.lts');
+    const unboundApp = join(directory, 'app.lts');
+    writeFileSync(unboundSource, 'pub output := fn(...values): Unit;\n');
+    writeFileSync(unboundApp, 'io := import "./io.lts"; io.output(1, "x");\n');
+    const unbound = compileTs({ text: readFileSync(unboundApp, 'utf8'), name: realpathSync(unboundApp) });
+    assert.equal(unbound.status, 2);
+    assert.match(unbound.stderr.toString(), /bodyless function declaration has no matching core host binding/);
+    assert.equal(unbound.stdout.length, 0);
+
+    const mismatchedAbi = compileTs({ text: 'pub output := fn(...values): String;', name: 'lib/core/io.lts' });
+    assert.equal(mismatchedAbi.status, 2);
+    assert.match(mismatchedAbi.stderr.toString(), /bodyless function declaration has no matching core host binding/);
+    assert.equal(mismatchedAbi.stdout.length, 0);
+
+    const ordinaryVariadicFunction = compileTs({ text: 'values := fn(...values): Unit { };', name: fixtureName });
+    assert.equal(ordinaryVariadicFunction.status, 2);
+    assert.match(ordinaryVariadicFunction.stderr.toString(), /variadic parameters are reserved for registered core host declarations/);
+    assert.equal(ordinaryVariadicFunction.stdout.length, 0);
+
+    const outputAsValue = compileTs({
+      text: 'io := import "../../../lib/core/io.lts"; value := io.output(1);',
+      name: fixtureName,
+    });
+    assert.equal(outputAsValue.status, 2);
+    assert.match(outputAsValue.stderr.toString(), /host output functions are standalone statements/);
+    assert.equal(outputAsValue.stdout.length, 0);
+
+    const wrongErrorType = compileTs({
+      text: 'io := import "../../../lib/core/io.lts"; io.errorLine(1);',
+      name: fixtureName,
+    });
+    assert.equal(wrongErrorType.status, 2);
+    assert.match(wrongErrorType.stderr.toString(), /argument 1 of io\.errorLine must be String, got Int/);
+    assert.equal(wrongErrorType.stdout.length, 0);
+
+    const unavailableError = compileTarget('c', {
+      text: 'io := import "../../../lib/core/io.lts"; io.errorLine("x");',
+      name: fixtureName,
+    });
+    assert.equal(unavailableError.status, 2);
+    assert.match(unavailableError.stderr.toString(), /C backend does not support reportError or exit yet/);
+    assert.equal(unavailableError.stdout.length, 0);
+
+    const unavailableAggregate = compileTarget('c', {
+      text: 'io := import "../../../lib/core/io.lts"; io.outputLine([1, 2]);',
+      name: fixtureName,
+    });
+    assert.equal(unavailableAggregate.status, 2);
+    assert.match(unavailableAggregate.stderr.toString(), /C backend does not support/);
+    assert.equal(unavailableAggregate.stdout.length, 0);
+
+    const supportedC = compileTarget('c', {
+      text: 'io := import "../../../lib/core/io.lts"; io.outputLine(1, "x", true);',
+      name: fixtureName,
+    });
+    assert.equal(supportedC.status, 0, supportedC.stderr.toString());
+    assert.match(supportedC.stdout.toString(), /1/);
+  } finally { rmSync(directory, { recursive: true, force: true }); }
+});
+
+test('qualified output preserves evaluation order and delays its write until all values evaluate', () => {
+  const fixtureName = resolve(root, 'compiler/tests/fixtures/core-host-io.lts');
+  const compiled = compileTs({
+    text: [
+      'io := import "../../../lib/core/io.lts";',
+      'effect := fn(): String { io.outputLine("argument evaluated"); "value" };',
+      'fail := fn(value: Int): Int { value / (value - value) };',
+      'io.outputLine(effect(), 9, fail(5));',
+    ].join('\n'),
+    name: fixtureName,
+  });
+  assert.equal(compiled.status, 0, compiled.stderr.toString());
+  withTsArtifact(compiled.stdout.toString(), run => {
+    const actual = run();
+    assert.equal(actual.status, 1);
+    assert.equal(actual.stdout.toString(), 'argument evaluated\n');
+    assert.match(actual.stderr.toString(), /ArithmeticPanic: division by zero/);
+    assert.doesNotMatch(actual.stdout.toString(), /value 9/);
+  });
+});
+
 test('receiver-less imports expose immutable public values but keep private values local', () => {
   const directory = mkdtempSync(join(tmpdir(), 'lite-import-values-'));
   try {

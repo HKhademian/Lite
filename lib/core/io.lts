@@ -1,0 +1,10 @@
+/* Provisional core host signatures. This module adds no host authority by itself. */
+
+/** Writes display values to the host output stream without adding a newline. */
+pub output := fn(...values): Unit;
+
+/** Writes display values to the host output stream followed by one newline. */
+pub outputLine := fn(...values): Unit;
+
+/** Writes one message to the host error stream followed by one newline. */
+pub errorLine := fn(text: String): Unit;

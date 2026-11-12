@@ -1,8 +1,8 @@
 {
-  "note": "Reviewed 2026-11-12 after migrating compiler and phase tests to Lite namespace imports. Recorded corpus artifact and execution contracts remain unchanged; C hashes remain historical comparisons.",
+  "note": "Reviewed 2026-11-12 after core host output aliases. Existing compiler fixture contracts remain unchanged; host binding behavior is covered by focused tests. C hashes remain historical comparisons.",
   "recorded": "2026-11-12",
-  "sourceSha256": "70cd4c4a8b66dc2f9ffc6be65cc303db96d4593bffb7c64dae0cb175a162f64c",
-  "compilerSha256": "a45f85f81ef7b187f253c6901c30044395f37b72e636c3dc94abdc1634d00f7f",
+  "sourceSha256": "11871bae418f91aeed3875c9f514eaad7a8847ab346cb2f0f67b5621f520a639",
+  "compilerSha256": "5a9d0d56f814d6d674571f94a959d11bee1f742d6f0e9413a13dcf2a2eaf4f0a",
   "programCases": 69,
   "rejectedCases": 25,
   "artifacts": [

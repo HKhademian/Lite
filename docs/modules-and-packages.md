@@ -156,6 +156,33 @@ before following imports; `processed` is set after its imports and local parse
 complete. A cycle edge to an already visited source does not reopen it. Retained
 per-source runtime spans remain future work.
 
+### Provisional core host declarations
+
+`lib/core/io.lts` contains public bodyless declarations for the current output
+operations and error stream operation:
+
+```lite
+pub output := fn(...values): Unit;
+pub outputLine := fn(...values): Unit;
+pub errorLine := fn(text: String): Unit;
+```
+
+The compiler binds these declarations by the resolved core module identity,
+member identity, and exact ABI. An ordinary same-named function is not a host
+override, and bodyless declarations outside the registered core contract are
+rejected. `...values` is the heterogeneous argument pack for these special
+output statements only; it does not make ordinary user functions variadic.
+Imported `io.output(...)` and `io.outputLine(...)` calls keep the same one-call
+argument evaluation, formatting, stream writes, and newline behavior as their
+legacy global forms. `io.errorLine(String)` writes to stderr with one newline.
+The generated TS target supports errorLine; C preserves its current explicit
+rejection of error reporting, and its output forms retain the existing scalar
+subset. The old global forms remain as a migration bridge.
+
+This is a provisional importable runtime surface, not a general foreign
+function interface or filesystem API. The compiler's `readSource` operation
+remains an internal source-loader capability.
+
 Visibility is explicit. A top-level declaration is private by default;
 `pub` makes it available through an importing module alias:
 

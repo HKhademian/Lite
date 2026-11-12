@@ -8,6 +8,7 @@ the language specification. Names and signatures may change with the compiler.
 
 | File | Capabilities |
 |---|---|
+| `core/io.lts` | Public host signatures for output, outputLine and errorLine; target support matches current builtins |
 | `core/int.lts` | Int64 bounds, checked arithmetic, decimal formatting |
 | `core/text.lts` | ASCII predicates, whitespace/name skipping, starts-with, index-of, join, text-to-Int |
 | `core/source.lts` | offset clamping, line/column, line start/end/count helpers |
@@ -23,6 +24,14 @@ Rules:
 - No compiler-specific types (`Parsed`, `Local`, `Item`).
 - Every declaration carries a `/** ... */` doc comment.
 - These files stay inside bootstrap subset L.
+
+The bodyless declarations in `core/io.lts` are host-backed. The generated
+compiler binds each exact module/member/ABI to the existing output lowering or
+TypeScript error-stream helper. `...values` is the heterogeneous argument pack
+for these two special output statements only; it does not add variadic
+user-defined functions. The module does not grant filesystem access. Other
+bodyless declarations are rejected unless their exact identity and ABI are
+registered for the selected target.
 
 `lib/tests/` holds direct Lite test entries. Run them, or compile and execute them:
 

@@ -38,9 +38,13 @@ The module graph and `pub`/namespace behavior live in
    error. Import it through the existing namespace alias and type-check calls
    from its signature. Ordinary public functions keep their current body and
    behavior. This is a bounded host binding, not a user-extensible plugin or
-   FFI system. The first proof should cover the fixed-arity, pure text helpers;
-   optional-prompt I/O and variadic display need their existing special call
-   contracts preserved and are later substeps.
+   FFI system. The initial vertical slice is the existing fixed-arity
+   current I/O contracts in `lib/core/io.lts`: `output(...values): Unit`,
+   `outputLine(...values): Unit`, and `errorLine(String): Unit`. `...values`
+   declares the existing special heterogeneous host call pack; it does not
+   enable general variadic user functions. Calls retain one argument list and
+   lower through the existing grouped output handling. Optional-prompt input
+   remains a later substep.
 2. **Pure core operations.** Expose existing pure, stable contracts through
    importable modules where their current target support permits it. Keep pure
    source implementations in Lite when they already are ordinary Lite

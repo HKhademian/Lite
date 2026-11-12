@@ -649,7 +649,20 @@ parseFunctionHeader := fn(source: String, position: Int, prefix: String, aliases
     names: mut List<String> = [];
     var encoded := "";
     var count := 0;
-    if cursor < size and textAt(source, cursor) =!= ")" {
+    if textLib.startsWithAt(source, cursor, "...") {
+        cursor = skipTrivia(source, cursor + 3, prefix);
+        if cursor >= size or not textLib.isNameStart(textAt(source, cursor)) {
+            failAt(source, cursor, prefix, "expected a name after ... in host value-pack declaration");
+        }
+        nameStart := cursor;
+        cursor = textLib.skipName(source, cursor);
+        encoded = "..." + textSlice(source, nameStart, cursor);
+        count = -1;
+        cursor = skipTrivia(source, cursor, prefix);
+        if cursor < size and textAt(source, cursor) == "," {
+            failAt(source, cursor, prefix, "host value-pack declaration must be its only parameter");
+        }
+    } else if cursor < size and textAt(source, cursor) =!= ")" {
         loop true {
             if cursor >= size or not textLib.isNameStart(textAt(source, cursor)) {
                 failAt(source, cursor, prefix, "expected a parameter name");
@@ -681,6 +694,26 @@ parseFunctionHeader := fn(source: String, position: Int, prefix: String, aliases
     cursor = expectSymbol(source, cursor, ":", prefix);
     resultType := parseFunctionType(source, cursor, prefix, aliases);
     (next = resultType.next, result = resultType.kind, params = encoded, count = count)
+}
+
+/** Resolves a bodyless public core declaration only when its module identity and complete ABI are registered. */
+coreHostFunction := fn(modulePath: String, name: String, params: String, result: String): String {
+    if modulePath == "lib/core/io.lts" and params == "...values" and result == "Unit" {
+        if name == "output" { "lite$core$io$output:v1" }
+        else if name == "outputLine" { "lite$core$io$outputLine:v1" }
+        else { "" }
+    } else if modulePath == "lib/core/io.lts" and name == "errorLine" and params == "text=String" and result == "Unit" {
+        "lite$reportError"
+    } else {
+        ""
+    }
+}
+
+/** Maps one registered output intrinsic identity to its source special-statement name. */
+coreOutputName := fn(runtime: String): String {
+    if runtime == "lite$core$io$output:v1" { "output" }
+    else if runtime == "lite$core$io$outputLine:v1" { "outputLine" }
+    else { "" }
 }
 
 /** Returns the source name from one encoded `name=kind` function parameter entry. */
@@ -1499,6 +1532,9 @@ parseBinary := fn(target: String, source: String, position: Int, prefix: String,
             }
             if callableIndex >= 0 and afterName < textLength(source) and textAt(source, afterName) == "(" {
                 info := functions[callableIndex];
+                if info.count < 0 {
+                    failAt(source, nameStart, prefix, "host output functions are standalone statements");
+                }
                 var cursor := skipTrivia(source, afterName + 1, prefix);
                 argumentCodes: mut List<String> = [];
                 var argumentCount := 0;
@@ -1680,6 +1716,9 @@ parseBinary := fn(target: String, source: String, position: Int, prefix: String,
     }
     if left.kind == "ModuleFunction" {
         info := functions[left.intValue];
+        if info.count < 0 {
+            failAt(source, start, prefix, "host output functions are standalone statements");
+        }
         callOpen := skipTrivia(source, left.next, prefix);
         if callOpen >= textLength(source) or textAt(source, callOpen) =!= "(" {
             failAt(source, start, prefix, "function " + left.textValue + " must be called");
@@ -2377,6 +2416,35 @@ collectPublishedTypes := fn(source: String, prefix: String): List<String> {
     names
 }
 
+/** Parses one legacy or imported output statement into the same ordered argument group and ending marker. */
+parseOutputStatement := fn(target: String, source: String, openPosition: Int, outputName: String, prefix: String,
+    locals: List<Local>, functions: List<FunctionInfo>, params: List<String>, currentName: String,
+    live: Bool): Items {
+    var position := openPosition;
+    if position >= textLength(source) or textAt(source, position) =!= "(" {
+        failAt(source, position, prefix, "expected ( after " + outputName);
+    }
+    position = skipTrivia(source, position + 1, prefix);
+    result: mut Items = [];
+    loop position < textLength(source) and textAt(source, position) =!= ")" {
+        argument := parseExpression(target, source, position, prefix, locals, functions, params, currentName);
+        if live { push_back(mut result, (kind = argument.kind, name = "", runtime = "", code = argument.code,
+            intValue = argument.intValue, textValue = argument.textValue)); }
+        position = skipTrivia(source, argument.next, prefix);
+        if position < textLength(source) and textAt(source, position) == "," {
+            position = skipTrivia(source, position + 1, prefix);
+        } else {
+            break;
+        }
+    }
+    position = expectSymbol(source, position, ")", prefix);
+    statementNext := consumeStatementEnd(source, position, prefix);
+    if statementNext < 0 { failAt(source, skipTrivia(source, position, prefix), prefix, "expected ; after " + outputName); }
+    push_back(mut result, (kind = if outputName == "outputLine" { "End" } else { "EndOutput" },
+        name = "", runtime = "", code = "", intValue = statementNext, textValue = ""));
+    result
+}
+
 /** Parses complete source with imported public function signatures available in its root symbol table. Exits 2 on unsupported, malformed or faulting source. */
 pub parseProgramWithExports := fn(target: String, source: String, prefix: String, exports: Items, moduleId: Int): Items {
     size := textLength(source);
@@ -2672,11 +2740,33 @@ pub parseProgramWithExports := fn(target: String, source: String, prefix: String
             currentStopped = true;
             continue;
         }
+        var importedOutputName := "";
+        var importedOutputOpen := position;
         moduleIndex := localIndex(locals, name);
         if moduleIndex >= 0 and locals[moduleIndex].kind == "Module" {
             if position >= size or textAt(source, position) =!= "." {
                 failAt(source, nameStart, prefix, "module namespace " + name + " requires a public member");
             }
+            memberStart := skipTrivia(source, position + 1, prefix);
+            memberEnd := textLib.skipName(source, memberStart);
+            if memberEnd > memberStart {
+                functionIndex := findFunction(functions, name + "." + textSlice(source, memberStart, memberEnd));
+                if functionIndex >= 0 {
+                    importedOutputName = coreOutputName(functions[functionIndex].runtime);
+                    importedOutputOpen = skipTrivia(source, memberEnd, prefix);
+                }
+            }
+        }
+        if importedOutputName =!= "" {
+            parsedOutput := parseOutputStatement(target, source, importedOutputOpen, importedOutputName, prefix,
+                locals, functions, functionParams, currentName, currentLive and not currentStopped);
+            loop parsedOutput as outputItem {
+                if outputItem.kind == "End" or outputItem.kind == "EndOutput" { position = outputItem.intValue; }
+                if currentLive and not currentStopped { push_back(mut items, outputItem); }
+            }
+            continue;
+        }
+        if moduleIndex >= 0 and locals[moduleIndex].kind == "Module" {
             expression := parseExpressionItem(target, source, nameStart, prefix, locals, functions, functionParams, currentName,
                 currentResult, atValueTail(blocks, blockCount) and not currentStopped);
             if currentLive and not currentStopped { push_back(mut items, (kind = if expression.returned { "Return" } else { "Call" },
@@ -2705,28 +2795,13 @@ pub parseProgramWithExports := fn(target: String, source: String, prefix: String
             position = expression.next;
             continue;
         }
-        if (name == "output" or name == "outputLine") and localIndex(locals, name) < 0 {
-            if position >= size or textAt(source, position) =!= "(" {
-                failAt(source, position, prefix, "expected ( after " + name);
+        if (name == "output" or name == "outputLine") and localIndex(locals, name) < 0 and not definition {
+            parsedOutput := parseOutputStatement(target, source, position, name, prefix, locals, functions,
+                functionParams, currentName, currentLive and not currentStopped);
+            loop parsedOutput as outputItem {
+                if outputItem.kind == "End" or outputItem.kind == "EndOutput" { position = outputItem.intValue; }
+                if currentLive and not currentStopped { push_back(mut items, outputItem); }
             }
-            position = skipTrivia(source, position + 1, prefix);
-            loop position < size and textAt(source, position) =!= ")" {
-                argument := parseExpression(target, source, position, prefix, locals, functions, functionParams, currentName);
-                if currentLive and not currentStopped { push_back(mut items, (kind = argument.kind, name = "", runtime = "", code = argument.code,
-                    intValue = argument.intValue, textValue = argument.textValue)); }
-                position = skipTrivia(source, argument.next, prefix);
-                if position < size and textAt(source, position) == "," {
-                    position = skipTrivia(source, position + 1, prefix);
-                } else {
-                    break;
-                }
-            }
-            position = expectSymbol(source, position, ")", prefix);
-            statementNext := consumeStatementEnd(source, position, prefix);
-            if statementNext < 0 { failAt(source, skipTrivia(source, position, prefix), prefix, "expected ; after " + name); }
-            position = statementNext;
-            if currentLive and not currentStopped { push_back(mut items, (kind = if name == "outputLine" { "End" } else { "EndOutput" }, name = "", runtime = "", code = "",
-                intValue = 0, textValue = "")); }
             continue;
         }
         if name == "if" {
@@ -2945,6 +3020,23 @@ pub parseProgramWithExports := fn(target: String, source: String, prefix: String
                 position = skipTrivia(source, afterDeclare + 2, prefix);
                 header := parseFunctionHeader(source, position, prefix, aliases);
                 position = skipTrivia(source, header.next, prefix);
+                if position < size and textAt(source, position) == ";" {
+                    hostRuntime := coreHostFunction(prefix, name, header.params, header.result);
+                    if not listLib.listContainsText(publishedFunctions, name) or hostRuntime == "" {
+                        failAt(source, nameStart, prefix, "bodyless function declaration has no matching core host binding");
+                    }
+                    position = skipTrivia(source, position + 1, prefix);
+                    push_back(mut functions, (name = name, runtime = hostRuntime, result = header.result,
+                        first = parameterTotal, count = header.count));
+                    if currentLive {
+                        push_back(mut items, (kind = "PublicFunction", name = name, runtime = hostRuntime, code = header.result,
+                            intValue = header.count, textValue = header.params));
+                    }
+                    continue;
+                }
+                if header.count < 0 {
+                    failAt(source, nameStart, prefix, "variadic parameters are reserved for registered core host declarations");
+                }
                 position = expectSymbol(source, position, "{", prefix);
                 functionRuntime := if moduleId == 0 { "liteFn_" + name }
                     else { "liteFn_m" + integer.intText(moduleId) + "_" + name };
