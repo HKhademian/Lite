@@ -1320,8 +1320,8 @@ function selectBsLogoFont(id) {
 
 function selectBsFont(id) {
   activeBsFont = bsFonts.find(x => x.id === id) || bsFonts[0];
-  document.documentElement.style.setProperty('--font', activeBsFont.body);
-  document.body.style.fontFamily = activeBsFont.body;
+  document.documentElement.style.setProperty('--font', activeBsFont.display);
+  document.body.style.fontFamily = activeBsFont.display;
   renderSim();
 }
 
@@ -1475,8 +1475,8 @@ function loadState() {
     if (st.logoFont) activeBsLogoFont = bsLogoFonts.find(x => x.id === st.logoFont) || activeBsLogoFont;
     if (st.siteFont) {
       activeBsFont = bsFonts.find(x => x.id === st.siteFont) || activeBsFont;
-      document.documentElement.style.setProperty('--font', activeBsFont.body);
-      document.body.style.fontFamily = activeBsFont.body;
+      document.documentElement.style.setProperty('--font', activeBsFont.display);
+      document.body.style.fontFamily = activeBsFont.display;
     }
     if (st.codeFont) {
       activeBsCodeFont = bsCodeFonts.find(x => x.id === st.codeFont) || activeBsCodeFont;
