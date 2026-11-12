@@ -408,6 +408,7 @@
   <!-- Single Unified Category Switcher -->
   <div class="nav-bar">
     <button class="tab-btn active" id="grp-all" onclick="setGroup('all')">All Candidates</button>
+    <button class="tab-btn" id="grp-rev12" onclick="setGroup('rev12')">Rev 12 · ℓ Refinements (5)</button>
     <button class="tab-btn" id="grp-rev11" onclick="setGroup('rev11')">Rev 11 · ℓ Finalists (6)</button>
     <button class="tab-btn" id="grp-rev3" onclick="setGroup('rev3')">Rev 3 · The Quill (4)</button>
     <button class="tab-btn" id="grp-rev8" onclick="setGroup('rev8')">Rev 8 · Script ℓ / ℒ (6)</button>
@@ -478,7 +479,40 @@ const rev10Mark04 = (c) => `<g fill="none" stroke="${c}" stroke-width="1.8" stro
 const rev10Mark05 = (c) => `<g fill="none" stroke="${c}" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4.4 2.4V10.8C4.4 12.3 5.3 13 6.7 13H8.4"/><path d="M2.6 8.8L8.2 5.8" stroke-width="1.45"/></g>`;
 const rev10Mark06 = (c) => `<g fill="none" stroke="${c}" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4.4 2.4V10.8C4.4 12.3 5.3 13 6.7 13H8.4"/><path d="M2.8 9C5.4 8.1 7.1 6.8 8.3 5" stroke-width="1.4"/></g>`;
 
+const rev12Mark01 = (c) => `<g fill="none" stroke="${c}" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M2.2 10C5 7.9 8.6 5 8.5 3C8.4 1.7 6.9 1.7 5.9 3.1C4.6 4.9 4.2 8 4.4 10.4C4.6 12.2 5.8 13 7.4 13C8.6 13 9.5 12.4 10.2 11.4"/></g>`;
+const rev12Mark02 = (c) => `<g fill="none" stroke="${c}" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M2.2 10C5.1 7.9 8.5 5 8.4 3C8.3 1.7 6.8 1.8 5.8 3.2C4.6 5 4.2 8 4.4 10.4C4.6 12.2 5.8 13 7.5 13C9 13 10.1 12.2 10.8 11.1"/></g>`;
+const rev12Mark03 = (c) => `<g fill="none" stroke="${c}" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M2.2 10C5 7.9 8.5 5 8.4 3C8.3 1.7 6.8 1.8 5.8 3.2C4.6 5 4.2 8 4.4 10.4C4.6 12.2 5.8 13 7.4 13C8.7 13 9.7 12.2 10.4 11.2"/><path d="M4.7 8.5C6.6 8.1 8.1 7.2 9.1 5.9" stroke-width="1.3"/></g>`;
+const rev12Mark04 = (c) => `<g fill="none" stroke="${c}" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M2.2 10C5 7.9 8.5 5 8.4 3C8.3 1.7 6.8 1.8 5.8 3.2C4.6 5 4.2 8 4.4 10.4C4.6 12.2 5.8 13 7.4 13C8.7 13 9.7 12.2 10.4 11.2"/><path d="M4.7 9.4C6.3 9.1 7.4 8.5 8.1 7.6" stroke-width="1.3"/></g>`;
+const rev12Mark05 = (c) => `<g fill="none" stroke="${c}" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9.1 3.8C8.3 2.1 6.9 1.9 5.9 3.2C4.6 5 4.2 8 4.4 10.4C4.6 12.2 5.8 13 7.4 13C8.7 13 9.7 12.2 10.4 11.2"/></g>`;
+
 const items = [
+  // ================= REV 12 ℓ REFINEMENTS =================
+  {
+    ref: 'R12-01', author: 'gpt-6.1-terra', id: 'r12-balanced-sweep', groups: ['rev12'], badge: 'Rev 12 · 01', origin: 'Rev 11 refinement',
+    title: 'Balanced sweep', desc: 'A full-weight loop with a compact, lifted exit.', note: 'Based on R11-03; compare the shorter exit and wider inner loop.', vb: '0 0 16 16',
+    mark: rev12Mark01, first: rev12Mark01, off: 12.8
+  },
+  {
+    ref: 'R12-02', author: 'gpt-6.1-terra', id: 'r12-long-sweep', groups: ['rev12'], badge: 'Rev 12 · 02', origin: 'Rev 11 refinement',
+    title: 'Long sweep', desc: 'A generous ℓ with a longer, gently rising tail.', note: 'Develops R11-03 and R10-02; watch the spacing beside the i.', vb: '0 0 16 16',
+    mark: rev12Mark02, first: rev12Mark02, off: 13.2
+  },
+  {
+    ref: 'R12-03', author: 'gpt-6.1-terra', id: 'r12-feather-sweep', groups: ['rev12'], badge: 'Rev 12 · 03', origin: 'Rev 11 refinement',
+    title: 'Feather sweep', desc: 'A swept loop with one light feather stroke high on the stem.', note: 'Refines R11-01 and R10-04; compare the feather stroke at 16 px.', vb: '0 0 16 16',
+    mark: rev12Mark03, first: rev12Mark03, off: 12.8
+  },
+  {
+    ref: 'R12-04', author: 'gpt-6.1-terra', id: 'r12-soft-feather', groups: ['rev12'], badge: 'Rev 12 · 04', origin: 'Rev 11 refinement',
+    title: 'Soft feather', desc: 'The loop and one shorter feather flick, with a quieter silhouette.', note: 'Keeps R10-04’s feather cue closer to the R11-03 letter.', vb: '0 0 16 16',
+    mark: rev12Mark04, first: rev12Mark04, off: 12.8
+  },
+  {
+    ref: 'R12-05', author: 'gpt-6.1-terra', id: 'r12-open-crest', groups: ['rev12'], badge: 'Rev 12 · 05', origin: 'Rev 11 refinement',
+    title: 'Open crest', desc: 'A single-stroke open crest with the same lifted foot.', note: 'The open form can read as C; compare it with the looped options.', vb: '0 0 16 16',
+    mark: rev12Mark05, first: rev12Mark05, off: 12.8
+  },
+
   // ================= REV 11 ℓ FINALIST REFINEMENTS =================
   {
     ref: 'R11-01', author: 'gemini-3.8-flash', id: 'r11-swept-feather-ell', groups: ['rev11'], badge: 'Rev 11 · 01', origin: 'R10-02 + R10-04',
@@ -1015,7 +1049,7 @@ function renderSim() {
 
 function setGroup(grp) {
   activeGroup = grp;
-  ['rev11', 'rev10', 'rev9', 'rev8', 'rev7', 'rev6', 'top', 'rev3', 'rev4', 'rev1', 'all'].forEach(g => {
+  ['rev12', 'rev11', 'rev10', 'rev9', 'rev8', 'rev7', 'rev6', 'top', 'rev3', 'rev4', 'rev1', 'all'].forEach(g => {
     const el = document.getElementById('grp-' + g);
     if (el) el.classList.toggle('active', g === grp);
   });

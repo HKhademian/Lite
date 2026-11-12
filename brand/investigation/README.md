@@ -25,6 +25,7 @@ Creators are recorded per revision; the same names appear on the cards in
 | 8 | `rev-8-script-l/` | `gemini-3.8-flash` | Six `ℓ` / `ℒ` variations (R8-01…06). |
 | 9 | `rev-9-letterforms/` | `gpt-6.1-terra` | Eight custom letterforms drawing on ℓ, ℒ, ł, ȴ and feather strokes. |
 | 11 | `rev-11-ell-finalists/` | `gemini-3.8-flash` | Six `ℓ` finalist refinements (`R11-01`–`R11-06`) synthesizing `R10-01`, `R10-02`, and `R10-04`. |
+| 12 | `rev-12-ell-refinements/` | `gpt-6.1-terra` | Five studies refining Rev 11’s ℓ, feather stroke, and swept foot. |
 | — | root | `gemini-3.8-flash` | `concept-7-radiant-feather.svg`, `concept-8-celestial-quill.svg`. |
 | — | root | `glm-5.3-flash` | `visibility-draft.html` — **draft, kept for future reference**: reusable visibility-matrix template (any mark × paper/ink/graphite/filament/teal × 64–16 px, WCAG ratios). Marks seeded with rev-2-plume glyphs; swap via the `MARKS` object in the file. |
 
