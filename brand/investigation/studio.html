@@ -90,15 +90,13 @@
       color: var(--bg);
     }
 
-    /* Group / Category Navigation */
+    /* Single Unified Category Switcher */
     .nav-bar {
       display: flex;
       flex-wrap: wrap;
       align-items: center;
-      justify-content: space-between;
-      gap: 12px;
+      gap: 8px;
     }
-    .primary-tabs { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
     .tab-btn {
       font-family: var(--font);
       font-size: 13px;
@@ -117,29 +115,25 @@
       color: var(--bg);
       border-color: var(--ink);
     }
-
-    /* Less accessible / secondary archive grouping */
-    .archive-drawer {
-      display: flex;
-      align-items: center;
-      gap: 8px;
-      flex-wrap: wrap;
-    }
-    .archive-label {
-      font-family: var(--mono);
-      font-size: 11px;
-      color: var(--muted);
-    }
-    .archive-select {
-      font-family: var(--mono);
+    .tab-btn.subtle {
       font-size: 12px;
-      padding: 6px 10px;
-      border-radius: 8px;
-      border: 1px solid var(--line);
-      background: var(--card);
-      color: var(--ink);
-      cursor: pointer;
+      color: var(--muted);
+      background: transparent;
     }
+    .tab-btn.subtle.active {
+      background: var(--ink);
+      color: var(--bg);
+      border-color: var(--ink);
+    }
+    .archive-menu {
+      display: none;
+      align-items: center;
+      gap: 6px;
+      flex-wrap: wrap;
+      padding-left: 8px;
+      border-left: 1px solid var(--line);
+    }
+    .archive-menu.open { display: flex; }
 
     /* Benchmark bar */
     .bench {
@@ -304,21 +298,15 @@
     </div>
   </div>
 
-  <!-- Category Switcher: Top Picks primary, other entities' ideas tucked cleanly in Archive switcher -->
+  <!-- Single Unified Category Switcher -->
   <div class="nav-bar">
-    <div class="primary-tabs">
-      <button class="tab-btn active" id="grp-top" onclick="setGroup('top')">★ Top Picks (6)</button>
-      <button class="tab-btn" id="grp-all" onclick="setGroup('all')">All Candidates</button>
-    </div>
-
-    <div class="archive-drawer">
-      <span class="archive-label">Other Entities &amp; Archive:</span>
-      <select id="archive-select" class="archive-select" onchange="onArchiveSelect(this.value)">
-        <option value="">— Select archived study —</option>
-        <option value="rev3">Rev 3 · External Eval (Quill, Spark, Bolt)</option>
-        <option value="rev4">Rev 4 · mini-Style Monograms</option>
-        <option value="rev1">Rev 1 · Early Literal Sketches</option>
-      </select>
+    <button class="tab-btn active" id="grp-top" onclick="setGroup('top')">★ Top Picks (6)</button>
+    <button class="tab-btn subtle" id="archive-toggle" onclick="toggleArchive()">Other Entities &amp; Archive ▾</button>
+    <div id="archive-menu" class="archive-menu">
+      <button class="tab-btn subtle" id="grp-rev3" onclick="setGroup('rev3')">Rev 3 · External Eval</button>
+      <button class="tab-btn subtle" id="grp-rev4" onclick="setGroup('rev4')">Rev 4 · mini Monograms</button>
+      <button class="tab-btn subtle" id="grp-rev1" onclick="setGroup('rev1')">Rev 1 · Early Sketches</button>
+      <button class="tab-btn subtle" id="grp-all" onclick="setGroup('all')">All Candidates</button>
     </div>
   </div>
 
@@ -662,18 +650,18 @@ function renderSim() {
 
 function setGroup(grp) {
   activeGroup = grp;
-  document.getElementById('grp-top').classList.toggle('active', grp === 'top');
-  document.getElementById('grp-all').classList.toggle('active', grp === 'all');
-  document.getElementById('archive-select').value = '';
+  ['top', 'rev3', 'rev4', 'rev1', 'all'].forEach(g => {
+    const el = document.getElementById('grp-' + g);
+    if (el) el.classList.toggle('active', g === grp);
+  });
   render();
 }
 
-function onArchiveSelect(val) {
-  if (!val) { setGroup('top'); return; }
-  activeGroup = val;
-  document.getElementById('grp-top').classList.remove('active');
-  document.getElementById('grp-all').classList.remove('active');
-  render();
+function toggleArchive() {
+  const menu = document.getElementById('archive-menu');
+  const btn = document.getElementById('archive-toggle');
+  const isOpen = menu.classList.toggle('open');
+  btn.textContent = isOpen ? 'Other Entities & Archive ▴' : 'Other Entities & Archive ▾';
 }
 
 function setAccent(l, d, btn) {
