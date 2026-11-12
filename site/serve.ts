@@ -19,7 +19,7 @@ const mimeTypes: Readonly<Record<string, string>> = {
 };
 
 if (!existsSync(siteDir)) {
-  console.error('dist/site/ does not exist. Run `node site/build.ts` first.');
+  console.error('dist/site/ does not exist. Run `./site/build.ts` first.');
   process.exit(1);
 }
 

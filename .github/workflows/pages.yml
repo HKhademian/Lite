@@ -27,7 +27,7 @@ jobs:
         with:
           node-version-file: igniter/.node-version
       - name: Build the public showcase site
-        run: node site/build.ts
+        run: ./site/build.ts
       - uses: actions/configure-pages@v5
       - uses: actions/upload-pages-artifact@v3
         with:
