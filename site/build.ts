@@ -261,13 +261,26 @@ cd LiteScript
   });
 }
 
+function renderGalleryCard(sample: RenderedSample, basePath: string): string {
+  return `<article class="code-card" id="sample-${escapeHtml(sample.id)}">
+  <div class="code-card-head">
+    <span class="code-card-title">${escapeHtml(sample.title)}</span>
+    <span class="code-card-meta">${escapeHtml(sample.file)}</span>
+  </div>
+  <p class="sample-note" style="flex: 1;">${escapeHtml(sample.note)}</p>
+  <footer class="sample-foot">
+    <a href="${basePath}playground/index.html?sample=${escapeHtml(sample.id)}">Play &rarr;</a>
+  </footer>
+</article>`;
+}
+
 function renderGalleryPage(rendered: ReadonlyMap<string, RenderedSample>, repoUrl: string, rev: SourceRevision): string {
   const sections = sampleGroups.map(group => {
     const cards = showcaseSamples
       .filter(s => s.group === group.id)
       .map(s => rendered.get(s.id))
       .filter((s): s is RenderedSample => s !== undefined)
-      .map(s => renderSampleCard(s, '../'))
+      .map(s => renderGalleryCard(s, '../'))
       .join('\n');
     return `<section class="section" id="group-${escapeHtml(group.id)}">
   <div class="section-head">

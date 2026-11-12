@@ -44,7 +44,8 @@ test('buildSite generates static pages and metadata in dist/site', () => {
   }
   const gallery = readFileSync(join(out, 'gallery/index.html'), 'utf8');
   assert(gallery.includes('<title>Gallery — Lite</title>'));
-  assert(gallery.includes('<pre class="code-block"><code>'));
+  assert(gallery.includes('Play &rarr;'));
+  assert(!gallery.includes('<pre class="code-block"><code>'));
   const index = readFileSync(join(out, 'index.html'), 'utf8');
   assert(index.includes('is light.'));
   assert(index.includes('Play &rarr;'));
