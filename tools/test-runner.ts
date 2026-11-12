@@ -9,7 +9,8 @@ import { showToolVersion } from './tool-version.ts';
 /** Short feedback loop: command routing, tool contracts, docs, and source layout. */
 const fastTestFiles = [
   '../tools/cli.test.ts', '../tools/run.test.ts', '../tools/docs.test.ts',
-  '../tools/release.test.ts', '../compiler/scripts/release-streams.test.ts', 'source-files.test.ts',
+  '../tools/release.test.ts', '../compiler/scripts/release-streams.test.ts',
+  '../site/build.test.ts', 'source-files.test.ts',
 ] as const;
 
 if (!showToolVersion('tester', 'test')) {
