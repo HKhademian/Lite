@@ -1,7 +1,7 @@
 /* Provisional bootstrap source-position support. Not an official standard library. */
 
 /** Clamps one offset into the inclusive range `0..textLength(source)`. */
-clampPosition := fn(source: String, position: Int): Int {
+pub clampPosition := fn(source: String, position: Int): Int {
     size := textLength(source);
     if position < 0 { return 0; }
     if position > size { return size; }
@@ -9,7 +9,7 @@ clampPosition := fn(source: String, position: Int): Int {
 }
 
 /** One-based line and column of a source offset, clamping at both ends. */
-lineColumn := fn(source: String, position: Int): (line: Int, column: Int) {
+pub lineColumn := fn(source: String, position: Int): (line: Int, column: Int) {
     cursor := clampPosition(source, position);
     var line := 1;
     var lineStart := 0;
@@ -25,7 +25,7 @@ lineColumn := fn(source: String, position: Int): (line: Int, column: Int) {
 }
 
 /** Number of source lines, counting the empty source as one line. */
-lineCount := fn(source: String): Int {
+pub lineCount := fn(source: String): Int {
     size := textLength(source);
     var count := 1;
     var index := 0;
@@ -37,7 +37,7 @@ lineCount := fn(source: String): Int {
 }
 
 /** Offset of the first character on one-based `line`, or text length when absent. */
-lineStartOffset := fn(source: String, line: Int): Int {
+pub lineStartOffset := fn(source: String, line: Int): Int {
     size := textLength(source);
     if line <= 1 { return 0; }
     var current := 2;
@@ -53,7 +53,7 @@ lineStartOffset := fn(source: String, line: Int): Int {
 }
 
 /** Offset just before the line terminator of one-based `line`. */
-lineEndOffset := fn(source: String, line: Int): Int {
+pub lineEndOffset := fn(source: String, line: Int): Int {
     size := textLength(source);
     start := lineStartOffset(source, line);
     var index := start;

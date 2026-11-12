@@ -19,11 +19,11 @@ todos:
     content: Grow Lite compiler support feature by feature after T00 retirement; keep T00 parity cases as explicit backlog
     status: pending
   - id: source-imports
-    content: Keep the top-level source-expansion bridge needed by the old seed, with explicit dependency metadata
+    content: Retire the host source-expansion bridge and validate compiler imports through the Lite graph
     status: completed
   - id: module-imports
     content: Implement aliased imports and explicit public visibility in Lite, then remove source flattening
-    status: pending
+    status: completed
   - id: retire-t00
     content: Remove active handwritten T00 after source imports and no-T00 gates; full feature parity is not required
     status: completed
@@ -89,12 +89,19 @@ path removes text flattening.
 
 Owner update, 2026-11-12: generated TS supports namespace aliases for public
 functions, immutable scalar values, and public types, including qualified type
-annotations and signatures. The isolated `lib/core/int.lts` API is explicitly
-public and tested through a namespace alias. Compiler source still relies on
-the manifest-wide flattened bundle. Its shared frontend calls target-specific
-literal encoders before the target emitter consumes the resulting `Item`/`Items`
-data, so direct per-file imports need a target boundary first. C and
-compiler-source builds still use host source expansion.
+annotations and signatures. The compiler sources and core library have migrated
+to aliases, including a shared frontend with target-aware literal operations.
+Each manifest selects one root; the Lite visitor reads and processes its import
+graph. The host, CLI, self-host, release, verification and current benchmark
+routes no longer flatten compiler source. Build provenance follows the actual
+Lite reads and validates nested hashes, import edges, removed dependencies and
+symlink retargeting. One TS igniter builds both target emitters; C remains
+TS-hosted and native C self-hosting is still pending.
+
+Owner update, 2026-11-12: every maintained Lite source and lexer/parser/checker
+phase fixture now uses namespace imports. Igniter tests compile roots through
+the import graph, and `igniter/loader.ts` only validates manifest metadata.
+The source-expansion bridge and `importFlatAll` language fixtures are removed.
 
 ## Done
 
@@ -422,7 +429,7 @@ baseline unchanged (60/81 scenarios pass, 21 known gaps); generated build;
 three-generation exact T13 fixed point; 94-case corpus (zero mismatches); and
 source-archive route tests without Git metadata.
 
-### Step 3d — module-imports (in progress)
+### Step 3d — module-imports (completed)
 
 **Depends on:** generated-default-workflows, the verified TS kernel and the
 post-self-hosting stage architecture.
@@ -437,10 +444,9 @@ remain distinct. Public TS compile/check/run use this graph. Tests cover cycles,
 malformed and missing units, private-name rejection, duplicate exports,
 repeated imports, type mismatch, and distinct private identities.
 
-**Remaining actions:** follow [the staged import contract](module-import-stages.md):
-retain source spans for runtime diagnostics, remove host text splicing from the
-remaining C/build paths, and migrate maintained source to namespace aliases
-before deciding whether unpacking remains.
+**Remaining actions:** retain source spans for runtime diagnostics. Native C
+self-hosting remains a separate later stage. The future unpacking choice stays
+open and has not been added to current syntax.
 **Acceptance:** only imported public names enter an open-importing file scope;
 private names remain unknown. Each canonical source is read once, entered once
 and compiled once; cycles terminate at `visited` edges; aliases share module and
@@ -478,9 +484,9 @@ artifact hashes and the full native/cross-host ladder. These are later gates.
 - Do not modify published tags or create release tags without a release decision.
 - Preserve source names, invalid UTF-8 rejection, output streams and status.
 - Source/manifest changes must not silently use a stale generated compiler.
-- Current source/artifact hashes and byte counts belong in
-  [TS seed metadata](bootstrap/seed.ts) and [C emitter metadata](bootstrap/c-seed.ts),
-  rather than duplicated checkpoint values here. Source/builder identities are
+- Current source/artifact hashes and byte counts belong in the
+  [single TS seed metadata](bootstrap/seed.ts), rather than duplicated
+  checkpoint values here. Source/builder identities are
   recorded there;
   actual host Node v24.16.0, repository pin 26.13.0, TypeScript 7.0.2.
 - Original TS self-compilation was slow; the original benchmark's two 60 s

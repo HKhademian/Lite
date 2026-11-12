@@ -1,8 +1,8 @@
 {
-  "note": "Reviewed 2026-11-12 after the core integer module export. Recorded compiler cases remain unchanged; the namespace alias behavior is covered by a dedicated source fixture. C hashes remain historical comparisons.",
+  "note": "Reviewed 2026-11-12 after migrating compiler and phase tests to Lite namespace imports. Recorded corpus artifact and execution contracts remain unchanged; C hashes remain historical comparisons.",
   "recorded": "2026-11-12",
-  "sourceSha256": "33089e0b09c638398d0c9ba89ea70dcb4c9f6593b78476dd034f1723e152f9a2",
-  "compilerSha256": "ec6ecf6ed76f9bd7655fbfec166ef66c0b7b9db9aa1a55e0e04d5f2a35853894",
+  "sourceSha256": "70cd4c4a8b66dc2f9ffc6be65cc303db96d4593bffb7c64dae0cb175a162f64c",
+  "compilerSha256": "a45f85f81ef7b187f253c6901c30044395f37b72e636c3dc94abdc1634d00f7f",
   "programCases": 69,
   "rejectedCases": 25,
   "artifacts": [

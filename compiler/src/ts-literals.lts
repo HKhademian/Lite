@@ -1,6 +1,7 @@
 /* TypeScript backend for the temporary Lite compiler. */
+integer := import "../../lib/core/int.lts";
 /** Maps a restricted Lite scalar kind to its TypeScript type. */
-tsScalarType := fn(kind: String): String {
+pub tsScalarType := fn(kind: String): String {
     if kind == "Int" { "bigint" }
     else if kind == "String" { "string" }
     else if kind == "Float" { "number" }
@@ -9,14 +10,14 @@ tsScalarType := fn(kind: String): String {
 }
 
 /** Formats a checked Int value as a TypeScript BigInt literal. */
-intLiteralCode := fn(value: Int, negative: Bool, digits: String): String {
+pub intLiteralCode := fn(value: Int, negative: Bool, digits: String): String {
     if value == 0 { "0n" }
     else if negative { "(-" + digits + "n)" }
     else { digits + "n" }
 }
 
 /** Escapes a String as a readable TypeScript double-quoted literal. */
-textLiteralCode := fn(value: String): String {
+pub textLiteralCode := fn(value: String): String {
     size := textLength(value);
     var encoded := "\"";
     var position := 0;
@@ -34,45 +35,45 @@ textLiteralCode := fn(value: String): String {
 }
 
 /** Encodes a finite decimal Float token through the target's correctly rounded binary64 parser, preserving signed zero and gradual underflow. */
-floatLiteralCode := fn(digits: String, negative: Bool): String {
+pub floatLiteralCode := fn(digits: String, negative: Bool): String {
     parsed := "Number(" + textLiteralCode(digits) + ")";
     if negative { "(-" + parsed + ")" } else { parsed }
 }
 
 /** Evaluates a Unit expression's effects while suppressing any target builtin return payload. */
-unitEvaluationCode := fn(code: String): String { "(void (" + code + "))" }
+pub unitEvaluationCode := fn(code: String): String { "(void (" + code + "))" }
 
 /** Encodes the inert Unit value for TypeScript expression evaluation. */
-unitLiteralCode := fn(): String { "undefined" }
+pub unitLiteralCode := fn(): String { "undefined" }
 
 /** Formats a checked Bool value as a TypeScript literal. */
-boolLiteralCode := fn(value: Bool): String {
+pub boolLiteralCode := fn(value: Bool): String {
     if value { "true" } else { "false" }
 }
 
 /** Emits one ordinary list value copy as a fresh TypeScript array so later mutation cannot reach the source. */
-listCopyCode := fn(code: String): String {
+pub listCopyCode := fn(code: String): String {
     "[...(" + code + ")]"
 }
 
 /** Emits an ordinary TypeScript String concatenation whose operands evaluate left to right. */
-concatCode := fn(left: String, right: String): String {
+pub concatCode := fn(left: String, right: String): String {
     "((" + left + ") + (" + right + "))"
 }
 
 /** Emits a TypeScript logical negation around one Bool expression. */
-notCode := fn(value: String): String {
+pub notCode := fn(value: String): String {
     "(!(" + value + "))"
 }
 
 /** Emits a TypeScript short-circuit `and`/`or` expression around two Bool expressions. */
-logicCode := fn(op: String, left: String, right: String): String {
+pub logicCode := fn(op: String, left: String, right: String): String {
     if op == "and" { "((" + left + ") && (" + right + "))" }
     else { "((" + left + ") || (" + right + "))" }
 }
 
 /** Emits a kind-aware TypeScript comparison; equality uses strict operators and not-less/not-more spellings invert the ordering. Bool comparisons coerce through `Boolean` so literal-type narrowing cannot reject them. */
-comparisonCode := fn(op: String, kind: String, left: String, right: String): String {
+pub comparisonCode := fn(op: String, kind: String, left: String, right: String): String {
     operator := if op == "==" { "===" }
         else if op == "=!=" { "!==" }
         else if op == "<" { "<" }
@@ -91,7 +92,7 @@ comparisonCode := fn(op: String, kind: String, left: String, right: String): Str
 }
 
 /** Converts an Int operand only at a mixed Float operation, retaining original values for later comparison-chain pairs. */
-floatOperandCode := fn(kind: String, code: String): String {
+pub floatOperandCode := fn(kind: String, code: String): String {
     if kind == "Int" { "Number(" + code + ")" } else { code }
 }
 
@@ -103,75 +104,75 @@ comparisonPairCode := fn(op: String, leftKind: String, rightKind: String, left: 
 }
 
 /** Emits checked binary64 arithmetic; target calls evaluate operands once in source order. */
-floatBinaryCode := fn(op: String, left: String, right: String, position: Int): String {
+pub floatBinaryCode := fn(op: String, left: String, right: String, position: Int): String {
     tag := if op == "+" { "0" } else if op == "-" { "1" } else if op == "*" { "2" } else { "3" };
-    "lite$floatOp(" + left + ", " + right + ", " + tag + ", " + intText(position) + ")"
+    "lite$floatOp(" + left + ", " + right + ", " + tag + ", " + integer.intText(position) + ")"
 }
 
 /** Emits the selected Float-default, positive-exponent power checkpoint. */
-floatPowerCode := fn(left: String, right: String, position: Int): String {
-    "lite$floatPower(" + left + ", " + right + ", " + intText(position) + ")"
+pub floatPowerCode := fn(left: String, right: String, position: Int): String {
+    "lite$floatPower(" + left + ", " + right + ", " + integer.intText(position) + ")"
 }
 
 /** Emits a BigInt floor-division expression without evaluating operands more than once in source semantics. */
-floorDivCode := fn(left: String, right: String): String {
+pub floorDivCode := fn(left: String, right: String): String {
     "(" + left + " / " + right + " - ((((" + left + " % " + right + ") != 0n) && (((" + left + " % " + right + ") < 0n) != (" + right + " < 0n))) ? 1n : 0n))"
 }
 
 /** Emits a BigInt floor-modulo expression. */
-floorModCode := fn(left: String, right: String): String {
+pub floorModCode := fn(left: String, right: String): String {
     "(" + left + " % " + right + " + ((((" + left + " % " + right + ") != 0n) && (((" + left + " % " + right + ") < 0n) != (" + right + " < 0n))) ? " + right + " : 0n))"
 }
 
 /** Emits a checked truncating BigInt division call. */
-intDivideCode := fn(left: String, right: String, position: Int): String {
-    "lite$divideInt(" + left + ", " + right + ", " + intText(position) + ")"
+pub intDivideCode := fn(left: String, right: String, position: Int): String {
+    "lite$divideInt(" + left + ", " + right + ", " + integer.intText(position) + ")"
 }
 
 /** Emits a checked BigInt remainder call. */
-intRemainderCode := fn(left: String, right: String, position: Int): String {
-    "lite$remainderInt(" + left + ", " + right + ", " + intText(position) + ")"
+pub intRemainderCode := fn(left: String, right: String, position: Int): String {
+    "lite$remainderInt(" + left + ", " + right + ", " + integer.intText(position) + ")"
 }
 
 /** Emits a checked BigInt floor-division call. */
-intFloorDivideCode := fn(left: String, right: String, position: Int): String {
-    "lite$floorDivideInt(" + left + ", " + right + ", " + intText(position) + ")"
+pub intFloorDivideCode := fn(left: String, right: String, position: Int): String {
+    "lite$floorDivideInt(" + left + ", " + right + ", " + integer.intText(position) + ")"
 }
 
 /** Emits a checked BigInt floor-modulo call. */
-intFloorModuloCode := fn(left: String, right: String, position: Int): String {
-    "lite$floorModuloInt(" + left + ", " + right + ", " + intText(position) + ")"
+pub intFloorModuloCode := fn(left: String, right: String, position: Int): String {
+    "lite$floorModuloInt(" + left + ", " + right + ", " + integer.intText(position) + ")"
 }
 
 /** Emits checked Int64 addition, evaluating both operands once in source order. */
-intAddCode := fn(left: String, right: String, position: Int): String {
-    "lite$addInt(" + left + ", " + right + ", " + intText(position) + ")"
+pub intAddCode := fn(left: String, right: String, position: Int): String {
+    "lite$addInt(" + left + ", " + right + ", " + integer.intText(position) + ")"
 }
 
 /** Emits checked Int64 subtraction, evaluating both operands once in source order. */
-intSubtractCode := fn(left: String, right: String, position: Int): String {
-    "lite$subtractInt(" + left + ", " + right + ", " + intText(position) + ")"
+pub intSubtractCode := fn(left: String, right: String, position: Int): String {
+    "lite$subtractInt(" + left + ", " + right + ", " + integer.intText(position) + ")"
 }
 
 /** Emits checked Int64 multiplication, evaluating both operands once in source order. */
-intMultiplyCode := fn(left: String, right: String, position: Int): String {
-    "lite$multiplyInt(" + left + ", " + right + ", " + intText(position) + ")"
+pub intMultiplyCode := fn(left: String, right: String, position: Int): String {
+    "lite$multiplyInt(" + left + ", " + right + ", " + integer.intText(position) + ")"
 }
 
 /** Emits checked Int64 negation, evaluating the operand once. */
-intNegateCode := fn(value: String, position: Int): String {
-    "lite$negateInt(" + value + ", " + intText(position) + ")"
+pub intNegateCode := fn(value: String, position: Int): String {
+    "lite$negateInt(" + value + ", " + integer.intText(position) + ")"
 }
 
 /** Emits a chain with one evaluation per operand and lazy later operands in a private expression scope. */
-comparisonChainCode := fn(codes: List<String>, kinds: List<String>, operators: List<String>, count: Int, position: Int): String {
+pub comparisonChainCode := fn(codes: List<String>, kinds: List<String>, operators: List<String>, count: Int, position: Int): String {
     var result := "((): boolean => { ";
     var index := 0;
     loop index <= count {
-        name := "lite$compare" + intText(index);
+        name := "lite$compare" + integer.intText(index);
         result = result + "const " + name + ": " + tsScalarType(kinds[index]) + " = " + codes[index] + "; ";
         if index > 0 {
-            pair := comparisonPairCode(operators[index - 1], kinds[index - 1], kinds[index], "lite$compare" + intText(index - 1), name);
+            pair := comparisonPairCode(operators[index - 1], kinds[index - 1], kinds[index], "lite$compare" + integer.intText(index - 1), name);
             if index < count { result = result + "if (!(" + pair + ")) return false; "; }
             else { result = result + "return " + pair + "; "; }
         }

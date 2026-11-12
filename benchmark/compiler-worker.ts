@@ -1,8 +1,10 @@
 /** One fresh-process compiler measurement. Metrics use fd 3, separate from program streams. */
 import { writeSync } from 'node:fs';
+import { readFileSync, realpathSync } from 'node:fs';
+import { dirname, resolve } from 'node:path';
 import { pathToFileURL } from 'node:url';
 
-const [engine, artifact, sourceName] = process.argv.slice(2);
+const [engine, artifact, sourceName, sourceRoot] = process.argv.slice(2);
 if (artifact === undefined || sourceName === undefined) throw new Error('missing compiler artifact or source name');
 const started = performance.now();
 const cpuStarted = process.cpuUsage();
@@ -26,7 +28,17 @@ if (engine === 'T11') {
   const module: unknown = await import(pathToFileURL(artifact).href);
   if (typeof module !== 'object' || module === null || !('main' in module) || typeof module.main !== 'function') throw new Error('missing main');
   const entry = module.main;
-  const main = (): string => { const value: unknown = entry(); if (typeof value !== 'string') throw new Error('invalid main result'); return value; };
+  const readSource = sourceRoot === undefined ? undefined : (importer: string, spec: string): Readonly<{ path: string; text: string }> => {
+    if (spec.length === 0 || spec.startsWith('/') || spec.includes('\\') || /^[A-Za-z]:/.test(spec)) throw new Error('invalid source import');
+    const path = realpathSync(resolve(dirname(importer), spec));
+    const bytes = readFileSync(path);
+    return { path, text: new TextDecoder('utf-8', { fatal: true }).decode(bytes) };
+  };
+  const main = (): string => {
+    const value: unknown = sourceRoot === undefined ? entry() : entry(undefined, readSource);
+    if (typeof value !== 'string') throw new Error('invalid main result');
+    return value;
+  };
   process.argv = [process.execPath, artifact, sourceName];
   loaded = performance.now();
   const exit = process.exit;

@@ -1,3 +1,8 @@
+frontend := import "frontend.lts";
+cLiteral := import "c-literals.lts";
+textLib := import "../../lib/core/text.lts";
+integer := import "../../lib/core/int.lts";
+diagLib := import "../../lib/core/diag.lts";
 /** Removes one four-space indentation level from `indent`. */
 dedent := fn(indent: String): String {
     textSlice(indent, 0, textLength(indent) - 4)
@@ -21,7 +26,7 @@ cCall := fn(kind: String, code: String): String {
 /** True when any emitted item calls the checked Int division-family helper `name`. */
 usesIntHelper := fn(calls: String, name: String): Bool {
     if calls == "|" { return false; }
-    indexOfText(calls, "|" + name + "|", 0) >= 0
+    textLib.indexOfText(calls, "|" + name + "|", 0) >= 0
 }
 
 /** Returns the C rejection message for one emitted expression that calls an unsupported I/O or text builtin, or empty text. */
@@ -80,8 +85,8 @@ emitFloatArithmeticHelpers := fn(calls: String): Unit {
 emitIntArithmeticHelpers := fn(calls: String, source: String, prefix: String): Unit {
     if not usesIntArithmetic(calls) and not usesIntDivision(calls) and not usesFloatArithmetic(calls) { return; }
     namePrefix := if prefix == "" { "" } else { prefix + ":" };
-    outputLine("static const size_t lt_int_lines[] = {" + lineStartCodes(source) + "};");
-    outputLine("static const char *lt_int_source = " + textLiteralCode(namePrefix) + ";");
+    outputLine("static const size_t lt_int_lines[] = {" + frontend.lineStartCodes(source) + "};");
+    outputLine("static const char *lt_int_source = " + cLiteral.textLiteralCode(namePrefix) + ";");
     outputLine("static _Noreturn void lt_int_fault(size_t at, const char *message) {");
     outputLine("    size_t line = 0;");
     outputLine("    while (line + 1 < sizeof(lt_int_lines) / sizeof(lt_int_lines[0]) && lt_int_lines[line + 1] <= at) { line += 1; }");
@@ -122,17 +127,17 @@ emitIntArithmeticHelpers := fn(calls: String, source: String, prefix: String): U
 }
 
 /** Declares hygienic arithmetic/comparison temporaries at unique assignment sites, skipping quoted text. */
-emitArithmeticTemporaries := fn(items: Items): Unit {
+emitArithmeticTemporaries := fn(items: frontend.Items): Unit {
     loop items as item {
         var cursor := 0;
         loop cursor < textLength(item.code) {
             ch := textAt(item.code, cursor);
             if ch == "\"" {
-                cursor = skipAliasString(item.code, cursor);
-            } else if ch == "l" and (startsWithAt(item.code, cursor, "lt_arg_") or startsWithAt(item.code, cursor, "lt_cmp_")) {
-                end := skipName(item.code, cursor);
-                if startsWithAt(item.code, end, " = ") {
-                    tag := if startsWithAt(item.code, cursor, "lt_cmp_") or startsWithAt(item.code, cursor, "lt_arg_f_") { textAt(item.code, cursor + 7) } else { "i" };
+                cursor = frontend.skipAliasString(item.code, cursor);
+            } else if ch == "l" and (textLib.startsWithAt(item.code, cursor, "lt_arg_") or textLib.startsWithAt(item.code, cursor, "lt_cmp_")) {
+                end := textLib.skipName(item.code, cursor);
+                if textLib.startsWithAt(item.code, end, " = ") {
+                    tag := if textLib.startsWithAt(item.code, cursor, "lt_cmp_") or textLib.startsWithAt(item.code, cursor, "lt_arg_f_") { textAt(item.code, cursor + 7) } else { "i" };
                     typeCode := if tag == "s" { "const char *" } else if tag == "b" { "bool " }
                         else if tag == "f" { "double " } else { "int64_t " };
                     outputLine("    " + typeCode + textSlice(item.code, cursor, end) + ";");
@@ -324,8 +329,8 @@ outputWriteCode := fn(kind: String, code: String, indent: String): String {
 }
 
 /** Emits the C program from the flat item stream. Multi-value output evaluates its arguments before any write; every printf keeps the shared write-failure status. */
-emitProgram := fn(items: Items, source: String, prefix: String): Unit {
-    calls := targetHelperCalls(items);
+pub emitProgram := fn(items: frontend.Items, source: String, prefix: String): Unit {
+    calls := frontend.targetHelperCalls(items);
     var floatOutput := false;
     floatLiterals := usesIntHelper(calls, "lt_float_literal(");
     var floatValues := floatLiterals or usesFloatArithmetic(calls);
@@ -334,26 +339,26 @@ emitProgram := fn(items: Items, source: String, prefix: String): Unit {
         if item.kind == "Float" or item.kind == "LocalFloat" or item.kind == "VarFloat" or item.kind == "AssignFloat" or
             (item.kind == "Discard" and item.name == "Float") { floatValues = true; }
         if item.kind == "FunctionStart" {
-            fail("", "C backend does not support top-level functions yet");
+            diagLib.fail("", "C backend does not support top-level functions yet");
         }
-        unsupported := unsupportedBuiltinCode(targetCodeCalls(item.code, "|"));
+        unsupported := unsupportedBuiltinCode(frontend.targetCodeCalls(item.code, "|"));
         if unsupported =!= "" {
-            fail("", unsupported);
+            diagLib.fail("", unsupported);
         }
-        if isTupleKind(item.kind) or (item.kind == "Discard" and isTupleKind(item.name)) or item.kind == "LocalTuple" or item.kind == "VarTuple" or item.kind == "AssignTuple" {
-            fail("", "C backend does not support tuple values yet");
+        if frontend.isTupleKind(item.kind) or (item.kind == "Discard" and frontend.isTupleKind(item.name)) or item.kind == "LocalTuple" or item.kind == "VarTuple" or item.kind == "AssignTuple" {
+            diagLib.fail("", "C backend does not support tuple values yet");
         }
-        if isListKind(item.kind) or (item.kind == "Discard" and isListKind(item.name)) or item.kind == "LocalList" or item.kind == "VarList" or item.kind == "AssignList" {
-            fail("", "C backend does not support list values yet");
+        if frontend.isListKind(item.kind) or (item.kind == "Discard" and frontend.isListKind(item.name)) or item.kind == "LocalList" or item.kind == "VarList" or item.kind == "AssignList" {
+            diagLib.fail("", "C backend does not support list values yet");
         }
         if item.kind == "LoopSeq" {
-            fail("", "C backend does not support list traversal yet");
+            diagLib.fail("", "C backend does not support list traversal yet");
         }
-        if codeUsesListIndex(item.code) or codeUsesListPop(item.code) {
-            fail("", "C backend does not support list values yet");
+        if frontend.codeUsesListIndex(item.code) or frontend.codeUsesListPop(item.code) {
+            diagLib.fail("", "C backend does not support list values yet");
         }
-        if codeUsesValueIf(item.code) {
-            fail("", "C backend does not support value if expressions yet");
+        if frontend.codeUsesValueIf(item.code) {
+            diagLib.fail("", "C backend does not support value if expressions yet");
         }
     }
     outputLine("#include <stdio.h>");
@@ -440,12 +445,12 @@ emitProgram := fn(items: Items, source: String, prefix: String): Unit {
                 firstCode = item.code;
             } else {
                 if count == 1 {
-                    firstTemp = "lt_output_" + intText(tempIndex);
+                    firstTemp = "lt_output_" + integer.intText(tempIndex);
                     tempIndex = tempIndex + 1;
                     emitOutputArgument(firstKind, firstCode, firstTemp, indent);
                     writes = outputWriteCode(firstKind, firstTemp, indent);
                 }
-                temp := "lt_output_" + intText(tempIndex);
+                temp := "lt_output_" + integer.intText(tempIndex);
                 tempIndex = tempIndex + 1;
                 emitOutputArgument(item.kind, item.code, temp, indent);
                 writes = writes + indent + "if (printf(\" \") < 0) { status = 1; }\n" + outputWriteCode(item.kind, temp, indent);

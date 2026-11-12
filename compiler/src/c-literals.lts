@@ -1,7 +1,9 @@
 /* C backend for the temporary Lite compiler. */
+integer := import "../../lib/core/int.lts";
+diagLib := import "../../lib/core/diag.lts";
 
 /** Formats a checked Int value as a C signed 64-bit literal (`INT64_C`, `INT64_MIN`). */
-intLiteralCode := fn(value: Int, negative: Bool, digits: String): String {
+pub intLiteralCode := fn(value: Int, negative: Bool, digits: String): String {
     if value == -9223372036854775808 { "INT64_MIN" }
     else if value == 0 { "INT64_C(0)" }
     else if negative { "(-INT64_C(" + digits + "))" }
@@ -9,7 +11,7 @@ intLiteralCode := fn(value: Int, negative: Bool, digits: String): String {
 }
 
 /** Escapes a String as a readable C literal, including trigraph-safe `?`. */
-textLiteralCode := fn(value: String): String {
+pub textLiteralCode := fn(value: String): String {
     size := textLength(value);
     var encoded := "\"";
     var position := 0;
@@ -28,46 +30,46 @@ textLiteralCode := fn(value: String): String {
 }
 
 /** Encodes a finite decimal Float token through the target's correctly rounded binary64 parser, preserving signed zero and gradual underflow. */
-floatLiteralCode := fn(digits: String, negative: Bool): String {
+pub floatLiteralCode := fn(digits: String, negative: Bool): String {
     parsed := "lt_float_literal(" + textLiteralCode(digits) + ")";
     if negative { "(-" + parsed + ")" } else { parsed }
 }
 
 /** Evaluates a Unit expression's effects while suppressing any target builtin return payload. */
-unitEvaluationCode := fn(code: String): String { "((void)(" + code + "), 0)" }
+pub unitEvaluationCode := fn(code: String): String { "((void)(" + code + "), 0)" }
 
 /** Encodes the inert Unit value for C expression evaluation. */
-unitLiteralCode := fn(): String { "0" }
+pub unitLiteralCode := fn(): String { "0" }
 
 /** Formats a checked Bool value as a C `stdbool.h` literal. */
-boolLiteralCode := fn(value: Bool): String {
+pub boolLiteralCode := fn(value: Bool): String {
     if value { "true" } else { "false" }
 }
 
 /** Rejects the ordinary list value copy this backend does not implement; list values are unsupported in C. */
-listCopyCode := fn(code: String): String {
-    fail("", "C backend does not support list values yet");
+pub listCopyCode := fn(code: String): String {
+    diagLib.fail("", "C backend does not support list values yet");
     code
 }
 
 /** Emits a checked UTF-8 byte concatenation call; the bootstrap C backend intentionally leaks each result. */
-concatCode := fn(left: String, right: String): String {
+pub concatCode := fn(left: String, right: String): String {
     "lite_concat(" + left + ", " + right + ")"
 }
 
 /** Emits a C logical negation around one Bool expression. */
-notCode := fn(value: String): String {
+pub notCode := fn(value: String): String {
     "(!(" + value + "))"
 }
 
 /** Emits a C short-circuit `and`/`or` expression around two Bool expressions. */
-logicCode := fn(op: String, left: String, right: String): String {
+pub logicCode := fn(op: String, left: String, right: String): String {
     if op == "and" { "((" + left + ") && (" + right + "))" }
     else { "((" + left + ") || (" + right + "))" }
 }
 
 /** Emits a kind-aware C comparison; String equality uses `strcmp` and not-less/not-more spellings invert the ordering. */
-comparisonCode := fn(op: String, kind: String, left: String, right: String): String {
+pub comparisonCode := fn(op: String, kind: String, left: String, right: String): String {
     if kind == "String" {
         if op == "==" { "strcmp(" + left + ", " + right + ") == 0" }
         else { "strcmp(" + left + ", " + right + ") != 0" }
@@ -87,7 +89,7 @@ comparisonCode := fn(op: String, kind: String, left: String, right: String): Str
 }
 
 /** Converts an Int operand only at a mixed Float operation, retaining original values for later comparison-chain pairs. */
-floatOperandCode := fn(kind: String, code: String): String {
+pub floatOperandCode := fn(kind: String, code: String): String {
     if kind == "Int" { "((double)(" + code + "))" } else { code }
 }
 
@@ -99,78 +101,78 @@ comparisonPairCode := fn(op: String, leftKind: String, rightKind: String, left: 
 }
 
 /** Sequences operands into binary64 temporaries before the checked operation. */
-floatBinaryCode := fn(op: String, left: String, right: String, position: Int): String {
+pub floatBinaryCode := fn(op: String, left: String, right: String, position: Int): String {
     tag := if op == "+" { "0" } else if op == "-" { "1" } else if op == "*" { "2" } else { "3" };
-    id := intText(position);
+    id := integer.intText(position);
     "(lt_arg_f_left_" + id + " = " + left + ", lt_arg_f_right_" + id + " = " + right + ", lt_float_op(lt_arg_f_left_" + id + ", lt_arg_f_right_" + id + ", " + tag + ", " + id + "))"
 }
 
 /** Sequences both operands before the selected Float-default power checkpoint. */
-floatPowerCode := fn(left: String, right: String, position: Int): String {
-    id := intText(position);
+pub floatPowerCode := fn(left: String, right: String, position: Int): String {
+    id := integer.intText(position);
     "(lt_arg_f_left_" + id + " = " + left + ", lt_arg_f_right_" + id + " = " + right + ", lt_float_power(lt_arg_f_left_" + id + ", lt_arg_f_right_" + id + ", " + id + "))"
 }
 
 /** Emits an int64_t floor-division expression. */
-floorDivCode := fn(left: String, right: String): String {
+pub floorDivCode := fn(left: String, right: String): String {
     "(" + left + " / " + right + " - ((((" + left + " % " + right + ") != 0) && (((" + left + " % " + right + ") < 0) != (" + right + " < 0))) ? 1 : 0))"
 }
 
 /** Emits an int64_t floor-modulo expression. */
-floorModCode := fn(left: String, right: String): String {
+pub floorModCode := fn(left: String, right: String): String {
     "(" + left + " % " + right + " + ((((" + left + " % " + right + ") != 0) && (((" + left + " % " + right + ") < 0) != (" + right + " < 0))) ? " + right + " : 0))"
 }
 
 /** Emits a positioned Int helper call with operands evaluated once, from left to right. */
 intBinaryCallCode := fn(name: String, left: String, right: String, position: Int): String {
-    id := intText(position);
+    id := integer.intText(position);
     "(lt_arg_left_" + id + " = " + left + ", lt_arg_right_" + id + " = " + right + ", " + name + "(lt_arg_left_" + id + ", lt_arg_right_" + id + ", " + id + "))"
 }
 
 /** Emits a checked int64_t truncating division call. */
-intDivideCode := fn(left: String, right: String, position: Int): String {
+pub intDivideCode := fn(left: String, right: String, position: Int): String {
     intBinaryCallCode("lite_divide_int", left, right, position)
 }
 
 /** Emits a checked int64_t remainder call. */
-intRemainderCode := fn(left: String, right: String, position: Int): String {
+pub intRemainderCode := fn(left: String, right: String, position: Int): String {
     intBinaryCallCode("lite_remainder_int", left, right, position)
 }
 
 /** Emits a checked int64_t floor-division call. */
-intFloorDivideCode := fn(left: String, right: String, position: Int): String {
+pub intFloorDivideCode := fn(left: String, right: String, position: Int): String {
     intBinaryCallCode("lite_floor_divide_int", left, right, position)
 }
 
 /** Emits a checked int64_t floor-modulo call. */
-intFloorModuloCode := fn(left: String, right: String, position: Int): String {
+pub intFloorModuloCode := fn(left: String, right: String, position: Int): String {
     intBinaryCallCode("lite_floor_modulo_int", left, right, position)
 }
 
 /** Emits checked Int64 addition, evaluating both operands once in source order. */
-intAddCode := fn(left: String, right: String, position: Int): String {
+pub intAddCode := fn(left: String, right: String, position: Int): String {
     intBinaryCallCode("lt_checked_add", left, right, position)
 }
 
 /** Emits checked Int64 subtraction, evaluating both operands once in source order. */
-intSubtractCode := fn(left: String, right: String, position: Int): String {
+pub intSubtractCode := fn(left: String, right: String, position: Int): String {
     intBinaryCallCode("lt_checked_subtract", left, right, position)
 }
 
 /** Emits checked Int64 multiplication, evaluating both operands once in source order. */
-intMultiplyCode := fn(left: String, right: String, position: Int): String {
+pub intMultiplyCode := fn(left: String, right: String, position: Int): String {
     intBinaryCallCode("lt_checked_multiply", left, right, position)
 }
 
 /** Emits checked Int64 negation, evaluating the operand once. */
-intNegateCode := fn(value: String, position: Int): String {
-    "lt_checked_negate(" + value + ", " + intText(position) + ")"
+pub intNegateCode := fn(value: String, position: Int): String {
+    "lt_checked_negate(" + value + ", " + integer.intText(position) + ")"
 }
 
 /** Names a typed, source-position-hygienic C comparison operand temporary. */
 comparisonTemp := fn(kind: String, position: Int, index: Int): String {
     tag := if kind == "String" { "s" } else if kind == "Bool" { "b" } else if kind == "Float" { "f" } else { "i" };
-    "lt_cmp_" + tag + "_" + intText(position) + "_" + intText(index)
+    "lt_cmp_" + tag + "_" + integer.intText(position) + "_" + integer.intText(index)
 }
 
 /** Represents Unit as zero, retaining unsupported/effectful code for C validation instead of dropping it. */
@@ -184,7 +186,7 @@ comparisonValueCode := fn(kind: String, code: String): String {
 }
 
 /** Emits portable comma/short-circuit sequencing so middle operands are evaluated once and later operands stay lazy. */
-comparisonChainCode := fn(codes: List<String>, kinds: List<String>, operators: List<String>, count: Int, position: Int): String {
+pub comparisonChainCode := fn(codes: List<String>, kinds: List<String>, operators: List<String>, count: Int, position: Int): String {
     first := comparisonTemp(kinds[0], position, 0);
     second := comparisonTemp(kinds[1], position, 1);
     var result := "(" + first + " = " + comparisonValueCode(kinds[0], codes[0]) + ", " + second + " = " + comparisonValueCode(kinds[1], codes[1]) + ", " + comparisonPairCode(operators[0], kinds[0], kinds[1], first, second);

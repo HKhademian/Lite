@@ -1,13 +1,14 @@
 /* Provisional bootstrap formatting support. Not an official standard library. */
+integer := import "./int.lts";
 
 
 /** Formats one signed 64-bit Int as decimal text. */
-decimalText := fn(value: Int): String {
-    intText(value)
+pub decimalText := fn(value: Int): String {
+    integer.intText(value)
 }
 
 /** Left-pads `value` with spaces to at least `width` characters. */
-padLeftText := fn(value: String, width: Int): String {
+pub padLeftText := fn(value: String, width: Int): String {
     size := textLength(value);
     var result := value;
     var index := size;
@@ -19,7 +20,7 @@ padLeftText := fn(value: String, width: Int): String {
 }
 
 /** Right-pads `value` with spaces to at least `width` characters. */
-padRightText := fn(value: String, width: Int): String {
+pub padRightText := fn(value: String, width: Int): String {
     size := textLength(value);
     var result := value;
     var index := size;
@@ -31,25 +32,25 @@ padRightText := fn(value: String, width: Int): String {
 }
 
 /** Formats an Int and left-pads it with spaces to at least `width` characters. */
-padLeftInt := fn(value: Int, width: Int): String {
-    padLeftText(intText(value), width)
+pub padLeftInt := fn(value: Int, width: Int): String {
+    padLeftText(integer.intText(value), width)
 }
 
 /** Formats an Int and right-pads it with spaces to at least `width` characters. */
-padRightInt := fn(value: Int, width: Int): String {
-    padRightText(intText(value), width)
+pub padRightInt := fn(value: Int, width: Int): String {
+    padRightText(integer.intText(value), width)
 }
 
 /** Joins Int values in list order with `separator` between adjacent values. */
-joinIntTexts := fn(values: List<Int>, separator: String): String {
+pub joinIntTexts := fn(values: List<Int>, separator: String): String {
     var result := "";
     var first := true;
     loop values as value {
         if first {
-            result = intText(value);
+            result = integer.intText(value);
             first = false;
         } else {
-            result = result + separator + intText(value);
+            result = result + separator + integer.intText(value);
         }
     }
     result

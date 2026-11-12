@@ -1,13 +1,6 @@
 /* Full-program parser dump. Test helper, not a public command. */
 
-importFlatAll "../../../lib/core/int.lts";
-importFlatAll "../../../lib/core/text.lts";
-importFlatAll "../../../lib/core/source.lts";
-importFlatAll "../../../lib/core/diag.lts";
-importFlatAll "../../../lib/core/format.lts";
-importFlatAll "../../src/numeric-literals.lts";
-importFlatAll "../../src/lexer.lts";
-importFlatAll "../../src/parser.lts";
+parser := import "../../src/parser.lts";
 
 var prefix := "";
 var argCount := 0;
@@ -19,5 +12,4 @@ if argCount > 1 {
     reportError("expected at most one logical source name argument");
     exit(2);
 }
-tokens := tokenize(inputAll(), prefix);
-dumpNodes(parseProgram(tokens, prefix));
+    parser.testDumpProgram(inputAll(), prefix);

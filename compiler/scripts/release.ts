@@ -5,10 +5,11 @@ import { spawnSync } from 'node:child_process';
 import { createHash } from 'node:crypto';
 import { copyFileSync, existsSync, mkdirSync, mkdtempSync, readFileSync, readdirSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
-import { basename, join, resolve } from 'node:path';
+import { basename, dirname, join, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { buildCompiler } from '../host.ts';
-import { loadBundle } from '../../igniter/loader.ts';
+import { loadManifest } from '../../igniter/loader.ts';
+import { readSourceInput } from '../source.ts';
 import { componentVersions, parseComponentTag, selectComponentRelease, type ComponentRelease, type ComponentVersions } from '../release-streams.ts';
 
 const root = fileURLToPath(new URL('../../', import.meta.url));
@@ -117,14 +118,20 @@ function prepare(): void {
     assert(!existsSync(generated), 'release/ is reserved for generated release content');
     mkdirSync(generated);
     const compilers: CompilerIdentity[] = [];
+    const tsBuilder = buildCompiler('ts');
     for (const target of ['ts', 'c'] as const) {
       const built = buildCompiler(target);
-      const bundle = loadBundle(join(root, 'compiler/manifests', `${target}.json`));
-      const regenerated = run(process.execPath, [join(root, 'compiler/entry.ts'), buildCompiler('ts').path], bundle.text);
+      const manifestPath = join(root, 'compiler/manifests', `${target}.json`);
+      const manifest = loadManifest(manifestPath);
+      assert.equal(manifest.files.length, 1, `${target} source graph has one root`);
+      const source = readSourceInput(resolve(dirname(manifestPath), manifest.files[0]!));
+      const regenerated = run(process.execPath, [join(root, 'compiler/entry.ts'), tsBuilder.path, source.path], source.text);
       assert.equal(sha(regenerated), built.artifactSha256, `${target} compiler rebuild must be byte-identical`);
       copyFileSync(built.path, join(generated, `${target}-compiler.ts`));
-      writeFileSync(join(generated, `${target}-source.lts`), bundle.text);
-      json(join(generated, `${target}-line-map.json`), bundle.lineMap);
+      writeFileSync(join(generated, `${target}-source.lts`), source.text);
+      json(join(generated, `${target}-dependencies.json`), built.dependencies.map(path => ({
+        path, sha256: sha(readFileSync(resolve(root, path))),
+      })));
       const { sourceSha256, artifactSha256, builderSha256 } = built;
       compilers.push({ target, sourceSha256, artifactSha256, builderSha256 });
     }
@@ -244,7 +251,7 @@ function finalize(): void {
       `Released component: ${release.releasedComponent.component} ${release.releasedComponent.version}. Other component versions advance independently.\n\n`) +
     `Source commit: ${release.commit}. Igniter package: ${release.igniterVersion}.\n\n` +
     `Component versions: ${Object.entries(release.componentVersions).map(([component, version]) => `${component}=${version ?? 'unassigned'}`).join(', ')}.\n\n` +
-    'The igniter archive contains the complete source tree, igniter, provisional libraries, generated TS compiler seeds, flattened compiler sources, line maps and rebuild instructions.\n\n' +
+    'The igniter archive contains the source tree, one selected TS igniter, provisional libraries and rebuild instructions. Compiler dependencies are ordinary Lite source imports and no generated C seed is required.\n\n' +
     `Generated C and ${targets.join(', ')} executables cover ${release.programs.length} admitted compiler test programs. These executables are conformance programs; a native self-hosting C compiler is not available yet. Libraries remain provisional, without a stable stdlib API or ABI.\n\n` +
     'See IGNITER.md in the igniter archive. manifest.json records source/builder hashes and native toolchains; SHA256SUMS covers every other release asset. Native binaries depend on their runner OS/libc and are not signed.\n');
   const files = readdirSync(out).filter(file => file !== 'SHA256SUMS').sort();

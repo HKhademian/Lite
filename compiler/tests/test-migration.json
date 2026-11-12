@@ -32,12 +32,12 @@
       "route": "retired with the handwritten T00 implementation; historical source remains in Git history"
     },
     {
-      "title": "bundle manifests reject duplicates, cycles, missing files and invalid paths",
+      "title": "compiler manifests reject duplicate entries and invalid target or path shapes",
       "destination": "igniter/test.ts",
       "originalLine": 142,
       "dependencies": [],
-      "originalAssertions": 9,
-      "route": "default generated compiler/phase/artifact execution with independent expectations"
+      "originalAssertions": 6,
+      "route": "metadata validation remains in the TypeScript manifest adapter; import cycles and file resolution are tested by the Lite compiler host graph"
     },
     {
       "title": "bundle diagnostics map flattened rows back to original files and lines",
@@ -122,7 +122,7 @@
       "route": "default generated compiler/phase/artifact execution with independent expectations"
     },
     {
-      "title": "Lite parser parses the assembled compiler S and lexer source",
+      "title": "Lite parser coverage follows the compiler source graph",
       "destination": "igniter/test.ts",
       "originalLine": 302,
       "dependencies": [
@@ -202,7 +202,7 @@
       "route": "default generated compiler/phase/artifact execution with independent expectations"
     },
     {
-      "title": "lite compiler commands expose the selected compiler targets",
+      "title": "lite and compiler commands route through the compiler and selected target",
       "destination": "igniter/test.ts",
       "originalLine": 515,
       "dependencies": [
@@ -374,7 +374,7 @@
       "route": "default generated compiler/phase/artifact execution with independent expectations"
     },
     {
-      "title": "generated compatibility emitter bundles match the manifests",
+      "title": "compiler manifests name graph roots and no flattened source bundle",
       "destination": "igniter/test.ts",
       "originalLine": 926,
       "dependencies": [],
@@ -779,7 +779,7 @@
       "route": "default generated compiler/phase/artifact execution with independent expectations"
     },
     {
-      "title": "bundle artifacts are deterministic and leak no timestamps or host paths",
+      "title": "source graph artifacts are deterministic and leak no timestamps or host paths",
       "destination": "igniter/test.ts",
       "originalLine": 2212,
       "dependencies": [

@@ -1,23 +1,23 @@
-importFlatAll "../core/int.lts";
-importFlatAll "../core/source.lts";
-importFlatAll "../core/test.lts";
+integer := import "../core/int.lts";
+source := import "../core/source.lts";
+test := import "../core/test.lts";
 
-place := lineColumn("ab\ncd", 3);
-checkInt("line column line", 2, place.line);
-checkInt("line column column", 1, place.column);
+place := source.lineColumn("ab\ncd", 3);
+test.checkInt("line column line", 2, place.line);
+test.checkInt("line column column", 1, place.column);
 
-clamped := lineColumn("ab\ncd", 100);
-checkInt("line column clamped line", 2, clamped.line);
-checkInt("line column clamped column", 3, clamped.column);
+clamped := source.lineColumn("ab\ncd", 100);
+test.checkInt("line column clamped line", 2, clamped.line);
+test.checkInt("line column clamped column", 3, clamped.column);
 
-checkInt("line count empty", 1, lineCount(""));
-checkInt("line count two", 2, lineCount("a\nb"));
-checkInt("line count trailing", 2, lineCount("a\n"));
+test.checkInt("line count empty", 1, source.lineCount(""));
+test.checkInt("line count two", 2, source.lineCount("a\nb"));
+test.checkInt("line count trailing", 2, source.lineCount("a\n"));
 
-checkInt("line start second", 3, lineStartOffset("ab\ncd", 2));
-checkInt("line end first", 2, lineEndOffset("ab\ncd", 1));
-checkInt("line end last", 5, lineEndOffset("ab\ncd", 2));
-checkInt("clamp below", 0, clampPosition("abc", -2));
-checkInt("clamp above", 3, clampPosition("abc", 9));
+test.checkInt("line start second", 3, source.lineStartOffset("ab\ncd", 2));
+test.checkInt("line end first", 2, source.lineEndOffset("ab\ncd", 1));
+test.checkInt("line end last", 5, source.lineEndOffset("ab\ncd", 2));
+test.checkInt("clamp below", 0, source.clampPosition("abc", -2));
+test.checkInt("clamp above", 3, source.clampPosition("abc", 9));
 
-done("source");
+test.done("source");

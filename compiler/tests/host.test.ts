@@ -2,14 +2,12 @@ import assert from 'node:assert/strict';
 import { spawnSync } from 'node:child_process';
 import { chmodSync, copyFileSync, cpSync, lstatSync, readlinkSync, existsSync, mkdirSync, mkdtempSync, readFileSync, readdirSync, realpathSync, rmSync, symlinkSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
-import { delimiter, dirname, join, relative, resolve } from 'node:path';
+import { delimiter, dirname, join, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { test } from 'node:test';
-import { loadBundle } from '../../igniter/loader.ts';
 import { generatedTestFiles } from '../../igniter/test-suites.ts';
 import { buildCompiler, buildTsCompiler, compileTarget, compileTs, type CompilerTarget } from '../host.ts';
 import { seed } from '../bootstrap/seed.ts';
-import { cSeed } from '../bootstrap/c-seed.ts';
 import { expectedText } from './contracts.ts';
 import { prepareTsArtifacts, checkTsArtifact, runTsArtifact, runCArtifact, withTsArtifact, withTsArtifacts, type ArtifactOptions, type ArtifactRun } from '../../igniter/artifacts.ts';
 
@@ -136,14 +134,8 @@ test('pub marks a top-level declaration without changing current visibility beha
     assert.equal(actual.stdout.toString(), '8\n');
   });
 
-  const lexerFiles = [
-    'lib/core/int.lts', 'lib/core/text.lts', 'lib/core/source.lts', 'lib/core/diag.lts',
-    'lib/core/format.lts', 'compiler/src/numeric-literals.lts', 'compiler/src/lexer.lts',
-  ];
-  const lexerDriver = readFileSync(join(root, 'compiler/tests/lexer/lexer-dump.lts'), 'utf8')
-    .replace(/^importFlatAll .*;\n/gm, '');
-  const lexerSource = lexerFiles.map(path => readFileSync(join(root, path), 'utf8')).join('\n') + '\n' + lexerDriver;
-  const lexer = compileTs({ text: lexerSource, name: 'lexer-dump.lts' });
+  const lexerPath = join(root, 'compiler/tests/lexer/lexer-dump.lts');
+  const lexer = compileTs({ text: readFileSync(lexerPath, 'utf8'), name: realpathSync(lexerPath) });
   assert.equal(lexer.status, 0, lexer.stderr.toString());
   withTsArtifact(lexer.stdout.toString(), run => {
     const actual = run({ stdin: 'pub twice := fn() { 2 }' });
@@ -634,8 +626,7 @@ test('self-hosting kernel separates root symbols from runtime initialization and
 /** Copies only host glue, the seed and Lite sources; the T00 implementation is deliberately absent. */
 function isolatedCheckout(): string {
   const directory = mkdtempSync(join(tmpdir(), 'lite-t11-checkout-'));
-  const manifest = resolve(root, 'compiler/manifests/ts.json');
-  const bundles = [loadBundle(manifest), loadBundle(resolve(root, 'compiler/manifests/c.json'))];
+  const dependencies = (['ts', 'c'] as const).flatMap(target => buildCompiler(target).dependencies);
   const paths = new Set([
     'bin/lite', 'bin/lite-compile', 'bin/lite-compile-ts', 'bin/lite-compile-c', 'bin/lite-check', 'bin/lite-run', 'bin/lite-verify',
     'compiler/host.ts', 'compiler/source.ts', 'compiler/entry.ts', 'compiler/cli.ts', 'compiler/launcher.ts', 'compiler/compile-ts.ts', 'compiler/compile-c.ts', 'compiler/package.json',
@@ -645,9 +636,8 @@ function isolatedCheckout(): string {
     'tools/streams.ts',
     'compiler/scripts/release-streams.test.ts',
     `compiler/bootstrap/${seed.artifact}`, 'compiler/bootstrap/seed.ts', 'compiler/bootstrap/tsconfig.json',
-    'compiler/bootstrap/c-emitter.ts', 'compiler/bootstrap/c-seed.ts',
     'compiler/manifests/ts.json', 'compiler/manifests/c.json', 'igniter/loader.ts', 'igniter/tsconfig.json',
-    ...bundles.flatMap(bundle => bundle.dependencies.map(path => relative(root, resolve(dirname(manifest), path)))),
+    ...dependencies,
   ]);
   for (const path of paths) {
     const destination = join(directory, path);
@@ -667,10 +657,12 @@ function invoke(directory: string, source: string | Buffer, target: CompilerTarg
     : spawnSync(process.execPath, [join(directory, 'compiler/cli.ts'), target, path], { env, timeout: 10000 });
 }
 
-test('TS host selects the recorded seed and preserves output, diagnostics and source line maps', () => {
+test('TS host rebuilds the Lite source graph and preserves output, diagnostics and source names', () => {
   const built = buildTsCompiler();
+  assert.equal(built.builderSha256, seed.artifactSha256);
   assert.equal(built.artifactSha256, seed.artifactSha256);
-  assert.equal(built.sourceSha256, seed.sourceSha256);
+  assert.ok(built.dependencies.includes('compiler/src/frontend.lts'));
+  assert.ok(built.dependencies.includes('lib/core/text.lts'));
   const reference = readFileSync(join(root, 'compiler/tests/references/generated/report-42.ts'));
   for (const name of [undefined, '', 'a b.lts', 'سلام🙂.lts', 'quote";\\\nname.lts']) {
     const input = name === undefined ? { text: 'outputLine(42);' } : { text: 'outputLine(42);', name };
@@ -679,10 +671,6 @@ test('TS host selects the recorded seed and preserves output, diagnostics and so
     assert.deepEqual(compileTs(bad), { status: 2, stdout: Buffer.alloc(0),
       stderr: Buffer.from(`${name === undefined || name === '' ? '' : name + ':'}1:15: expected an Int, Float, String or Bool expression\n`) });
   }
-  assert.deepEqual(compileTs({ text: 'outputLine(1);\noutputLine(1 +);\n', name: 'flattened.lts',
-    lineMap: [{ path: 'first.lts', line: 5 }, { path: 'second.lts', line: 9 }] }), {
-    status: 2, stdout: Buffer.alloc(0), stderr: Buffer.from('second.lts:9:15: expected an Int, Float, String or Bool expression\n'),
-  });
 });
 
 test('public TS compilation and the retained internal C host work without T00', () => {
@@ -736,7 +724,7 @@ test('a changed Lite compiler rebuilds with the selected seed, caches by source 
     const rejected = invoke(directory, 'outputLine(42);');
     assert.equal(rejected.status, 1); assert.equal(rejected.stdout.length, 0);
     assert.match(rejected.stderr.toString(), /cannot rebuild current compiler source/);
-    assert.match(rejected.stderr.toString(), /\.\.\/src\/fixture\.lts:1:/);
+    assert.match(rejected.stderr.toString(), /fixture\.lts:1:/);
   } finally { rmSync(directory, { recursive: true, force: true }); }
 });
 
@@ -754,21 +742,27 @@ test('a modified bootstrap seed fails explicitly without executing T00', () => {
 test('selected compiler build exposes its imported source dependencies', () => {
   const selected = buildCompiler('ts');
   assert.deepEqual(selected.dependencies.slice(0, 3), [
-    '../src/ts-root.lts', '../../lib/core/int.lts', '../../lib/core/text.lts',
+    'compiler/src/ts-root.lts', 'compiler/src/driver-ts.lts', 'compiler/src/frontend.lts',
   ]);
-  assert.ok(selected.dependencies.includes('../src/frontend.lts'));
+  assert.ok(selected.dependencies.includes('compiler/src/numeric-literals.lts'));
 });
 
-test('the TS-hosted C seed preserves source names, subset rejection and artifact integrity', () => {
+test('the graph-built TS-hosted C emitter preserves source names and subset rejection', () => {
   const selected = buildCompiler('c');
   assert.equal(selected.target, 'c');
-  assert.equal(selected.artifactSha256, cSeed.artifactSha256);
+  assert.notEqual(selected.artifactSha256, seed.artifactSha256);
   assert.equal(selected.builderSha256, seed.artifactSha256);
-  assert.equal(selected.sourceSha256, cSeed.sourceSha256);
-  assert.ok(selected.dependencies.includes('../src/c-root.lts'));
-  assert.deepEqual(compileTarget('c', { text: 'outputLine(42);', name: 'سلام file.lts' }), {
+  assert.equal(selected.dependencies[0], 'compiler/src/c-root.lts');
+  assert.ok(selected.dependencies.includes('compiler/src/emit-c.lts'));
+  const simpleC = compileTarget('c', { text: 'outputLine(42);', name: 'سلام file.lts' });
+  assert.deepEqual(simpleC, {
     status: 0, stdout: readFileSync(join(root, 'compiler/tests/references/generated/report-42.c')), stderr: Buffer.alloc(0),
   });
+  if (process.env['LITE_SKIP_NATIVE'] !== '1') {
+    const native = runCArtifact(simpleC.stdout.toString());
+    assert.equal(native.phase, 'run'); assert.equal(native.status, 0, native.stderr.toString());
+    assert.equal(native.stdout.toString(), '42\n'); assert.equal(native.stderr.length, 0);
+  }
   assert.deepEqual(compileTarget('c', { text: 'outputLine(1 +);', name: 'a b.lts' }), {
     status: 2, stdout: Buffer.alloc(0), stderr: Buffer.from('a b.lts:1:15: expected an Int, Float, String or Bool expression\n'),
   });
@@ -777,15 +771,20 @@ test('the TS-hosted C seed preserves source names, subset rejection and artifact
   });
   const directory = isolatedCheckout();
   try {
-    const path = join(directory, 'compiler/bootstrap/c-emitter.ts');
-    writeFileSync(path, readFileSync(path, 'utf8') + '\n');
+    symlinkSync(join(root, 'igniter/node_modules'), join(directory, 'igniter/node_modules'));
+    const built = spawnSync(process.execPath, ['--input-type=module', '-e',
+      'import {buildCompiler} from "./compiler/host.ts"; process.stdout.write(JSON.stringify(buildCompiler("c")));'],
+    { cwd: directory, env, encoding: 'utf8', timeout: 10000 });
+    assert.equal(built.status, 0, built.stderr);
+    const artifactPath = (JSON.parse(built.stdout) as { path: string }).path;
+    writeFileSync(artifactPath, readFileSync(artifactPath, 'utf8') + '\n');
     const corrupt = invoke(directory, 'outputLine(42);', 'c');
     assert.equal(corrupt.status, 1); assert.equal(corrupt.stdout.length, 0);
-    assert.match(corrupt.stderr.toString(), /c bootstrap seed hash mismatch/);
+    assert.match(corrupt.stderr.toString(), /compiler cache integrity mismatch/);
   } finally { rmSync(directory, { recursive: true, force: true }); }
 });
 
-test('imported C compiler source rebuilds with the selected seed and records dependencies without T00', () => {
+test('imported C compiler source hashes transitive files and invalidates its cache without T00', () => {
   const directory = isolatedCheckout();
   try {
     symlinkSync(join(root, 'igniter/node_modules'), join(directory, 'igniter/node_modules'));
@@ -796,10 +795,47 @@ test('imported C compiler source rebuilds with the selected seed and records dep
     assert.equal(result.error, undefined); assert.equal(result.status, 0, result.stderr.toString());
     assert.equal(result.stdout.toString(), 'fresh C\n');
     const cache = join(directory, 'dist/compiler-cache');
-    const entries = readdirSync(cache).filter(name => !name.startsWith('build-'));
-    assert.equal(entries.length, 1);
-    const provenance = JSON.parse(readFileSync(join(cache, entries[0]!, 'provenance.json'), 'utf8')) as { dependencies: string[] };
-    assert.deepEqual(provenance.dependencies, ['../src/fixture-root.lts', '../src/fixture-c.lts']);
+    const entries = () => readdirSync(cache).filter(name => name !== 'selection' && !name.startsWith('build-'));
+    assert.equal(entries().length, 1);
+    const provenance = JSON.parse(readFileSync(join(cache, entries()[0]!, 'provenance.json'), 'utf8')) as { dependencies: string[] };
+    assert.deepEqual(provenance.dependencies, ['compiler/src/fixture-root.lts', 'compiler/src/fixture-c.lts']);
+    writeFileSync(join(directory, 'compiler/src/fixture-c.lts'), 'source := inputAll(); outputLine("changed nested C");');
+    const changed = invoke(directory, 'outputLine(42);', 'c');
+    assert.equal(changed.error, undefined); assert.equal(changed.status, 0, changed.stderr.toString());
+    assert.equal(changed.stdout.toString(), 'changed nested C\n');
+    assert.equal(entries().length, 2,
+      'a transitive source-byte change must select a distinct compiler cache entry');
+    writeFileSync(join(directory, 'compiler/src/fixture-d.lts'), 'source := inputAll(); outputLine("changed import path");');
+    writeFileSync(join(directory, 'compiler/src/fixture-root.lts'), 'import "fixture-d.lts";\n');
+    const redirected = invoke(directory, 'outputLine(42);', 'c');
+    assert.equal(redirected.status, 0, redirected.stderr.toString());
+    assert.equal(redirected.stdout.toString(), 'changed import path\n');
+    assert.equal(entries().length, 3,
+      'changing an import edge must choose a distinct dependency graph');
+    writeFileSync(join(directory, 'compiler/src/fixture-root.lts'), 'source := inputAll(); outputLine("removed dependency");');
+    const removed = invoke(directory, 'outputLine(42);', 'c');
+    assert.equal(removed.status, 0, removed.stderr.toString());
+    assert.equal(removed.stdout.toString(), 'removed dependency\n');
+    const afterRemoval = entries();
+    assert.equal(afterRemoval.length, 4);
+    const removedProvenance = afterRemoval.map(name => JSON.parse(readFileSync(join(cache, name, 'provenance.json'), 'utf8')) as { dependencies: string[] })
+      .find(item => item.dependencies.length === 1 && item.dependencies[0] === 'compiler/src/fixture-root.lts');
+    assert.ok(removedProvenance, 'the root-only graph is recorded independently of directory enumeration order');
+    assert.deepEqual(removedProvenance.dependencies, ['compiler/src/fixture-root.lts']);
+    const link = join(directory, 'compiler/src/fixture-link.lts');
+    writeFileSync(join(directory, 'compiler/src/fixture-e.lts'), 'source := inputAll(); outputLine("symlink E");');
+    writeFileSync(join(directory, 'compiler/src/fixture-f.lts'), 'source := inputAll(); outputLine("symlink F");');
+    symlinkSync('fixture-e.lts', link);
+    writeFileSync(join(directory, 'compiler/src/fixture-root.lts'), 'import "fixture-link.lts";\n');
+    const linked = invoke(directory, 'outputLine(42);', 'c');
+    assert.equal(linked.status, 0, linked.stderr.toString());
+    assert.equal(linked.stdout.toString(), 'symlink E\n');
+    rmSync(link, { force: true });
+    symlinkSync('fixture-f.lts', link);
+    const retargeted = invoke(directory, 'outputLine(42);', 'c');
+    assert.equal(retargeted.status, 0, retargeted.stderr.toString());
+    assert.equal(retargeted.stdout.toString(), 'symlink F\n', 'cache hit must revalidate the resolved import edge');
+    assert.equal(entries().length, 6);
     const ts = invoke(directory, 'outputLine(42);', 'ts');
     assert.equal(ts.status, 0); assert.notEqual(ts.stdout.toString(), result.stdout.toString());
   } finally { rmSync(directory, { recursive: true, force: true }); }
@@ -811,7 +847,7 @@ test('default verifier selects consumers after compiler changes and ignores inve
     const git = join(directory, 'git');
     const changedEnv = { ...env, PATH: directory + delimiter + env.PATH };
     // Supply a changed-file listing without editing compiler source or the real Git index.
-    for (const path of ['compiler/host.ts', 'compiler/bootstrap/c-emitter.ts', 'compiler/src/frontend.lts',
+    for (const path of ['compiler/host.ts', 'compiler/src/c-literals.lts', 'compiler/src/frontend.lts',
       'compiler/manifests/c.json', 'lib/core/int.lts']) {
       writeFileSync(git, `#!/bin/sh\nprintf '%s\\n' ' M ${path}'\n`);
       chmodSync(git, 0o755);

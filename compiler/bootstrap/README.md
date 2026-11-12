@@ -1,77 +1,50 @@
-# Generated bootstrap seeds
+# Generated bootstrap compiler
 
-`compiler.ts` is the one selected generated TS compiler. [seed.ts](seed.ts) owns its
-exact source, artifact, builder and revision identities; the current selection
-follows the [Lite-owned import graph checkpoint](../transition-plan.md#step-3d--module-imports-in-progress).
-Historical checkpoint hashes and ladder node identities remain in Git history,
-the parity ledger and their reports; numbered generations are not kept as
-parallel active compiler files.
+`compiler.ts` is the one selected generated TypeScript igniter. [seed.ts](seed.ts)
+records its source, artifact, builder and revision identities. Numbered compiler
+generations are historical records, not parallel active compiler sources.
 
-`c-emitter.ts` is the retained Lite C emitter hosted by generated TS. Its exact
-identities are in [c-seed.ts](c-seed.ts). It is not a native C11 compiler or a
-native fixed point. Public C output and native/cross-host gates remain deferred
-until the TS compiler and module structure mature further.
+The TypeScript compiler and retained C emitter are both compiled from their
+Lite source roots by that same igniter. The C backend is still TS-hosted; it is
+not a native C compiler or a C self-hosting fixed point. No separate generated
+C-emitter seed is selected or required.
 
-The TS and C manifests now point to one Lite root each. Their top-level imports
-expand through the host loader; `buildCompiler()` exposes the resolved dependency
-order and records it in rebuilt-artifact provenance. Import path resolution and
-source mapping stay host responsibilities while the generated compiler receives
-the flattened Lite program.
+The TS and C manifests each name one Lite root. The generated compiler follows
+its language-level imports. The host reads only the root file and supplies
+source reads; dependency identities come from the paths and exact bytes the Lite
+graph visitor actually reads. Cache provenance stores each repository-relative
+path and SHA-256. Cache hits recheck every dependency byte hash, so nested edits
+invalidate the selected artifact before use. A separate selection index keyed
+by target, igniter and root bytes locates the prior dependency set; any changed
+dependency triggers a fresh graph compilation and replaces that index.
 
-Edit Lite implementation under `compiler/src/` and `lib/core/`, not the generated
-seeds. The host verifies source and seed identities. Changed S rebuilds with the
-accepted generated TS seed into a source/builder-keyed, strictly checked
-`dist/compiler-cache/` artifact; cached bytes are verified before use. There is no
-T00 fallback and no release/tag change implied by these commands.
+Edit compiler behavior in `compiler/src/` and `lib/core/`, not the generated
+igniter. Changed source rebuilds with the selected TS igniter into a strictly
+checked cache artifact. There is no T00 fallback.
 
 ## Routine generated-only commands
 
 ```sh
 node igniter/node_modules/typescript/bin/tsc -p compiler/bootstrap/tsconfig.json
 node compiler/scripts/build.ts
-node compiler/scripts/self-host.ts --out /tmp/lite-generated-ladder
-node compiler/scripts/corpus-parity.ts --artifact /tmp/lite-generated-ladder/generation-3.ts
+node compiler/scripts/self-host.ts --out /tmp/lite-selfhost
+node compiler/scripts/corpus-parity.ts
 node benchmark/compiler-performance.ts --samples 3 --warmups 1
 ```
 
-These commands work in a clean source archive without Git metadata; reports use
-a null revision when the source directory is not the Git checkout root. Input,
-artifact and tool hashes still identify what was measured.
+The self-build command compiles the same TS root import graph three times,
+starting from the selected compiler. It records each builder and output hash,
+strictly checks each generation and requires byte equality at the fixed point.
+Run the corpus command on the selected output before accepting a compiler
+change; a fixed point alone does not establish correct behavior. An alternate
+`--artifact path.ts` builder is recorded explicitly.
 
-The self-build command compiles unchanged current S three times, starting with
-the selected generated compiler. The 2026-11-11 minimum-kernel candidate is
-recorded in [the self-hosting report](../reports/2026-11-11-self-hosting-kernel.json).
-Every builder and output passes strict TS
-checking. Self-build execution has no fixed timeout, matching the historical
-ladder; ordinary corpus/program tests retain their execution limits. `generation-1.ts` through `generation-3.ts`, `S.lts` and `ladder.json`
-are retained under `--out`. The summary records the actual builder SHA for each
-generation, byte equality and equality with the selected current compiler.
-It does not relabel these outputs as historical T11/T12 nodes or rewrite seeds.
-An alternate `--artifact path.ts` builder is recorded explicitly. A changed S may
-reach a new fixed point whose bytes differ from the first old-seed build. Those
-equality fields are reported separately and do not select a seed. Run the corpus
-command on the final generation before accepting it; a fixed point alone does
-not establish compiler correctness or feature support.
+The corpus command compares admitted TS artifact hashes and exact rejection
+streams/status against the maintained contracts. It then strictly checks and
+executes every admitted scenario in a fresh process. The current corpus has 69
+programs and 25 rejections. The internal C emitter retains its separate C-output
+and native execution checks; those do not imply native C self-hosting.
 
-The corpus command defaults to the selected compiler, with optional
-`--artifact path.ts`. Compiler output is checked against recorded artifact
-hashes and exact rejection streams/status in the maintained manifests. Every
-admitted scenario then executes in a fresh process after strict TS checking.
-Inputs sharing source/artifact bytes reuse compilation and checking. A stale
-source identity, bad artifact or mismatch fails explicitly; generated output is
-never used to update its own expectations. The current corpus is 69 admitted
-programs and 25 rejections. Ordinary `--target c` requests reject because C
-output is deferred.
-
-The benchmark records generated-only process, load and compilation timings,
-strict compiler/program checking, and generated program execution separately.
-Corpus contracts and exact runtime output are validated before publishing a
-successful report. Defaults are seven samples and one excluded warmup; reports
-use a `generated-compiler-performance` prefix so historical T00 measurements are
-preserved. See the [benchmark guide](../../benchmark/README.md).
-
-The handwritten T00 interpreter, its command adapters, differential test lane
-and audit runners have been retired. Earlier compiler and benchmark reports,
-recorded process contracts, seed artifacts and inventory snapshots remain as
-historical evidence. The current generated compiler is tested against those
-recorded contracts; no active command executes T00.
+The handwritten T00 interpreter and its command adapters are retired. Earlier
+compiler and benchmark reports remain historical evidence; no active command
+executes T00.

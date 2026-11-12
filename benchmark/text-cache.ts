@@ -5,7 +5,9 @@ import { createHash } from 'node:crypto';
 import { readFileSync, writeFileSync, mkdirSync } from 'node:fs';
 import { resolve, dirname } from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { loadBundle } from '../igniter/loader.ts';
+import { loadManifest } from '../igniter/loader.ts';
+import { readSourceInput } from '../compiler/source.ts';
+import { buildCompiler } from '../compiler/host.ts';
 
 
 type Version = 'before' | 'after';
@@ -19,24 +21,27 @@ const args = process.argv.slice(2);
 function option(name: string, fallback?: string) { const i = args.indexOf(`--${name}`); return i < 0 ? fallback : args[i + 1]; }
 const before = option('before');
 if (before === undefined) throw new Error('usage: node benchmark/text-cache.ts --before /path/T11.ts [--after /path/current.ts]');
-const artifacts = { before: resolve(before), after: resolve(option('after', 'compiler/bootstrap/T11.ts')!) };
+const artifacts = { before: resolve(before), after: resolve(option('after', buildCompiler('ts').path)!) };
 const date = new Intl.DateTimeFormat('en-CA', { timeZone: 'Europe/Berlin', year: 'numeric', month: '2-digit', day: '2-digit' }).format(new Date());
 const prefix = resolve(option('out', `benchmark/reports/${date}-text-cache`)!);
 mkdirSync(dirname(prefix), { recursive: true });
 const sha = (x: string | Uint8Array) => createHash('sha256').update(x).digest('hex');
-const source = loadBundle(resolve(root, 'compiler/manifests/ts.json')).text;
+const manifestPath = resolve(root, 'compiler/manifests/ts.json');
+const manifest = loadManifest(manifestPath);
+if (manifest.files.length !== 1) throw new Error('text-cache benchmark requires one TS source root');
+const source = readSourceInput(resolve(dirname(manifestPath), manifest.files[0]!));
 const report = { date, revision: execFileSync('git', ['rev-parse', 'HEAD'], { cwd: root, encoding: 'utf8' }).trim(),
   dirtyBefore: execFileSync('git', ['status', '--short'], { cwd: root, encoding: 'utf8' }).trim(),
-  sourceBytes: Buffer.byteLength(source), sourceSha256: sha(source),
+  sourceBytes: source.bytes.length, sourceSha256: sha(source.bytes),
   artifacts: Object.fromEntries(Object.entries(artifacts).map(([name,path]) => [name, { sha256: sha(readFileSync(path)), bytes: readFileSync(path).length }])) as Record<Version, { sha256: string; bytes: number }>,
   method: { samples: 7, discardedWarmups: 1, process: 'fresh process per invocation; alternating before/after order; sequential measurements',
     wallTime: 'Node startup, TS loading, compilation and output capture; input generation and comparison excluded',
     oldSelfLimitMs: 10000, selfComparison: 'one censored old invocation; seven successful new invocations, no whole-source speedup ratio',
     scope: 'Text-runtime optimization only; compiled programs must produce identical TS bytes on the report workloads. Not a full-language parity claim.' },
   rows: [] as Measurement[], results: [] as Comparison[], self: [] as Measurement[], selfAfterMedianMs: 0, completedAt: '' };
-function run(version: Version, text: string, name: string, timeout = 30000): Measurement {
+function run(version: Version, text: string, name: string, timeout = 30000, sourceRoot?: string): Measurement {
   const start = performance.now();
-  const p = spawnSync(process.execPath, [resolve(root, 'benchmark/compiler-worker.ts'), 'T11', artifacts[version], name], {
+  const p = spawnSync(process.execPath, [resolve(root, 'benchmark/compiler-worker.ts'), 'T11', artifacts[version], name, ...(sourceRoot === undefined ? [] : [sourceRoot])], {
     input: text, stdio: ['pipe','pipe','pipe','pipe'], timeout, maxBuffer: 128 * 1024 * 1024,
   });
   const wallMs = performance.now() - start;
@@ -66,13 +71,13 @@ for (const n of [100, 1000]) {
   })) as Record<Version, Statistics>;
   report.results.push({ name: `report-${n}`, sourceBytes: Buffer.byteLength(input), ...values, speedup: values.before.medianWallMs / values.after.medianWallMs });
 }
-const oldSelf = run('before', source, 'self', 10000);
+const oldSelf = run('before', source.text, source.path, 10000, source.path);
 if (oldSelf.error !== 'ETIMEDOUT' && (oldSelf.error || oldSelf.status !== 0 || oldSelf.signal !== null || oldSelf.stderr !== '' || oldSelf.stdoutSha256 !== report.artifacts.after.sha256)) {
   throw new Error('old self-build failed for a reason other than the measured timeout or emitted different bytes');
 }
 report.self.push({ ...oldSelf, pass: 0 });
 for (let pass = -1; pass < 7; pass++) {
-  const row = { ...run('after', source, 'self'), pass };
+  const row = { ...run('after', source.text, source.path, 30000, source.path), pass };
   if (row.error || row.status !== 0 || row.signal !== null || row.stderr !== '' || row.stdoutSha256 !== report.artifacts.after.sha256) throw new Error('new self-build failed equality');
   report.self.push(row);
 }

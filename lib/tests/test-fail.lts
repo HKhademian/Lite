@@ -1,5 +1,5 @@
-importFlatAll "../core/int.lts";
-importFlatAll "../core/test.lts";
+integer := import "../core/int.lts";
+test := import "../core/test.lts";
 
-check("bad", false);
+test.check("bad", false);
 outputLine("unreachable");

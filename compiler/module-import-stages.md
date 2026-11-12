@@ -1,6 +1,6 @@
 # Module imports and compiler stages
 
-Status: **generated TS supports receiver-less public imports and namespace aliases for public functions, immutable scalar values, and public types; one isolated core API is exercised through an alias; compiler-source migration, full source spans and C/build bridge removal remain pending**
+Status: **both generated targets build from one source root and follow Lite imports; compiler source now uses namespace aliases; no build, CLI, self-host or release path concatenates compiler source**
 
 ## Implementation sequence selected 2026-11-11
 
@@ -11,11 +11,11 @@ Status: **generated TS supports receiver-less public imports and namespace alias
 3. Add namespace collection with `math := import "./math.lts";` — implemented
    for public functions, immutable scalar values, and public types in generated TS.
 4. Migrate project source to namespace imports incrementally, so no project
-   source continues to depend on implicit unpacking.
+   source continues to depend on implicit unpacking. **Complete for
+   `compiler/src/` and `lib/core/`.**
 5. Remove external source concatenation from active build paths after the
-   compiler source and its bootstrap use the import graph reproducibly. Decide
-   whether the receiver-less form or a separately explicit unpacking form
-   remains only after the migration.
+   compiler source and its bootstrap use the import graph reproducibly. **Complete
+   for build, CLI, self-host, release, verification and current benchmark paths.**
 
 With a logical source filename, the generated TS driver uses `readSource` and
 a Lite-written recursive walk to read and parse imports. It marks a canonical
@@ -26,18 +26,18 @@ declarations stay out of the importing scope. Namespace aliases expose public
 functions, immutable scalar values, and types through qualified lookups,
 including qualified type annotations and function signatures. Repeated aliases
 to one canonical source share its graph identity. Original runtime source spans
-and migration of the compiler source to aliases are pending. A cycle terminates
+remain pending. A cycle terminates
 at its visited edge; references to declarations in a not-yet-processed module
 are not resolved as mutual declarations yet. Parser-only calls without a filename validate syntax
-only. Public TS compile/check/run use this path; C compilation and
-compiler-source assembly still use the host source expander.
+only. Public TS compile/check/run use this path. Both TS and C compilation use
+this same generated TS compiler and Lite-owned source graph; the C emitter is
+still a TS-hosted backend, not a native self-hosted compiler.
 
-The first isolated library alias case is `integer := import ".../int.lts";`.
-The checked integer operations are explicitly `pub`, and a host test compiles
-and runs an importer that calls `integer.intAdd` and `integer.intText`. Compiler
-source migration remains blocked on dependencies supplied by the manifest-wide
-flattened bundle, especially the shared frontend's target-specific literal
-encoders. The [transition plan](transition-plan.md) tracks that prerequisite.
+The first isolated library alias case was `integer := import ".../int.lts";`.
+The checked integer operations are explicitly `pub`. Compiler modules now
+qualify cross-file references, including the shared frontend's target-aware
+literal operations. Build dependencies and hashes come from the files the Lite
+graph visitor actually reads, rather than a parallel host-side import scanner.
 
 ## Selected import surface
 
@@ -130,10 +130,10 @@ unused-member elimination.
 
 ## Bootstrap transition
 
-The current host source expander may remain as a temporary bridge while the
-Lite-written compiler gains this pipeline. First establish the import contract
-in generated compiler support; then adopt imports in compiler source and move
-normal builds to separate source units. Remove `loadBundle`-style text
-expansion, flattened line maps and compatibility bundles from active build
-paths after the selected generated compiler can rebuild the separate-unit
-compiler source to a fixed point.
+The selected TS seed now rebuilds the TS and C compiler roots through the Lite
+import graph. The host reads only each manifest's root file; the compiler trace
+supplies dependency identities from actual source reads. Release and self-host
+paths pass a root path and source bytes to the generated compiler. The loader's
+flattening helpers remain for legacy phase fixtures and historical reports;
+they are not used by active compiler production paths. Native C self-hosting is
+still a separate, unproven milestone.

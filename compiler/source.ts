@@ -3,7 +3,7 @@ import { readFileSync, realpathSync } from 'node:fs';
 import { resolve } from 'node:path';
 
 /** Canonical root source identity and strict UTF-8 text. */
-export type SourceInput = Readonly<{ path: string; text: string }>;
+export type SourceInput = Readonly<{ path: string; text: string; bytes: Buffer }>;
 
 /** Resolves and reads only the requested root file, leaving imports to the generated compiler. */
 export function readSourceInput(path: string): SourceInput {
@@ -15,5 +15,5 @@ export function readSourceInput(path: string): SourceInput {
   } catch {
     throw new Error(`${canonical}: source is not valid UTF-8`);
   }
-  return { path: canonical, text };
+  return { path: canonical, text, bytes };
 }

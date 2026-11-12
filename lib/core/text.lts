@@ -1,14 +1,15 @@
 /* Provisional bootstrap text support. Not an official standard library. */
+integer := import "./int.lts";
 
 
 /** True when `text` is exactly one ASCII decimal digit. */
-isDigit := fn(text: String): Bool {
+pub isDigit := fn(text: String): Bool {
     or text == "0" or text == "1" or text == "2" or text == "3" or text == "4"
     or text == "5" or text == "6" or text == "7" or text == "8" or text == "9"
 }
 
 /** Numeric value of one checked ASCII decimal digit. */
-digitValue := fn(text: String): Int {
+pub digitValue := fn(text: String): Int {
     if text == "0" { return 0; }
     if text == "1" { return 1; }
     if text == "2" { return 2; }
@@ -22,7 +23,7 @@ digitValue := fn(text: String): Int {
 }
 
 /** True for one ASCII letter, `a`-`z` or `A`-`Z`. */
-isAsciiLetter := fn(ch: String): Bool {
+pub isAsciiLetter := fn(ch: String): Bool {
     letters := "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ";
     size := textLength(letters);
     var position := 0;
@@ -34,17 +35,17 @@ isAsciiLetter := fn(ch: String): Bool {
 }
 
 /** True for an ASCII identifier start or underscore accepted by the compiler subset. */
-isNameStart := fn(ch: String): Bool {
+pub isNameStart := fn(ch: String): Bool {
     isAsciiLetter(ch) or ch == "_"
 }
 
 /** True for an identifier continuation character. */
-isNameContinue := fn(ch: String): Bool {
+pub isNameContinue := fn(ch: String): Bool {
     isNameStart(ch) or isDigit(ch)
 }
 
 /** Returns the first position at or after `start` that is not Lite whitespace. */
-skipSpaces := fn(source: String, start: Int): Int {
+pub skipSpaces := fn(source: String, start: Int): Int {
     size := textLength(source);
     var position := start;
     loop position < size and (textAt(source, position) == " " or textAt(source, position) == "\t" or textAt(source, position) == "\r" or textAt(source, position) == "\n") {
@@ -54,7 +55,7 @@ skipSpaces := fn(source: String, start: Int): Int {
 }
 
 /** Returns the position after the identifier run starting at `start`. */
-skipName := fn(source: String, start: Int): Int {
+pub skipName := fn(source: String, start: Int): Int {
     size := textLength(source);
     var position := start;
     loop position < size and isNameContinue(textAt(source, position)) {
@@ -64,21 +65,21 @@ skipName := fn(source: String, start: Int): Int {
 }
 
 /** True when `text` occurs at `position` and stays inside `source`. */
-startsWithAt := fn(source: String, position: Int, text: String): Bool {
+pub startsWithAt := fn(source: String, position: Int, text: String): Bool {
     width := textLength(text);
     if position < 0 or position + width > textLength(source) { return false; }
     textSlice(source, position, position + width) == text
 }
 
 /** True when the whole identifier `word` occurs at `position`, not a longer identifier that merely starts with it. */
-wordAt := fn(source: String, position: Int, word: String): Bool {
+pub wordAt := fn(source: String, position: Int, word: String): Bool {
     if not startsWithAt(source, position, word) { return false; }
     after := position + textLength(word);
     after >= textLength(source) or not isNameContinue(textAt(source, after))
 }
 
 /** Returns the first index at or after `start` where `needle` occurs, or -1 when absent. */
-indexOfText := fn(source: String, needle: String, start: Int): Int {
+pub indexOfText := fn(source: String, needle: String, start: Int): Int {
     size := textLength(source);
     width := textLength(needle);
     var position := start;
@@ -92,7 +93,7 @@ indexOfText := fn(source: String, needle: String, start: Int): Int {
 }
 
 /** Joins text values in list order with `separator` between adjacent values. */
-joinTexts := fn(values: List<String>, separator: String): String {
+pub joinTexts := fn(values: List<String>, separator: String): String {
     var result := "";
     var first := true;
     loop values as value {
@@ -107,7 +108,7 @@ joinTexts := fn(values: List<String>, separator: String): String {
 }
 
 /** Parses optional-sign decimal Int64 text; `ok` is false for empty, malformed or out-of-range text. */
-textToInt := fn(text: String): (value: Int, ok: Bool) {
+pub textToInt := fn(text: String): (value: Int, ok: Bool) {
     size := textLength(text);
     if size == 0 { return (value = 0, ok = false); }
     var position := 0;
@@ -125,10 +126,10 @@ textToInt := fn(text: String): (value: Int, ok: Bool) {
         if not isDigit(ch) { return (value = 0, ok = false); }
         digit := digitValue(ch);
         if negative {
-            if value < (intMin() + digit) / 10 { return (value = 0, ok = false); }
+            if value < (integer.intMin() + digit) / 10 { return (value = 0, ok = false); }
             value = value * 10 - digit;
         } else {
-            if value > (intMax() - digit) / 10 { return (value = 0, ok = false); }
+            if value > (integer.intMax() - digit) / 10 { return (value = 0, ok = false); }
             value = value * 10 + digit;
         }
         position = position + 1;

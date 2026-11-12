@@ -29,16 +29,17 @@ function copyToolArchive(directory: string): void {
   symlinkSync(join(root, 'igniter/node_modules'), join(directory, 'igniter/node_modules'));
 }
 
-test('generated self-build records three strictly checked generations from the selected seed', () => {
+test('generated source graph build records three strictly checked fixed-point generations', () => {
   const directory = mkdtempSync(join(tmpdir(), 'lite tools ladder '));
   try {
     const result = summary(invoke(root, 'compiler/scripts/self-host.ts', ['--out', directory]));
     assert.equal(result['phase'], 'generated-fixed-point'); assert.equal(result['fixedPoint'], true); assert.equal(result['equalsSelectedBuilder'], true); assert.equal(result['matchesSelectedCompiler'], true);
+    const selected = result['selected'] as { artifactSha256: string; currentSourceSha256: string };
     const generations = result['generations'] as { artifactSha256: string; builderSha256: string; sourceSha256: string; path: string }[];
     assert.equal(generations.length, 3);
     for (const [i, item] of generations.entries()) {
-      assert.equal(item.artifactSha256, seed.artifactSha256); assert.equal(item.builderSha256, seed.artifactSha256);
-      assert.equal(item.sourceSha256, seed.sourceSha256); assert.equal(item.path, join(directory, `generation-${i + 1}.ts`));
+      assert.equal(item.artifactSha256, selected.artifactSha256); assert.equal(item.builderSha256, selected.artifactSha256);
+      assert.equal(item.sourceSha256, selected.currentSourceSha256); assert.equal(item.path, join(directory, `generation-${i + 1}.ts`));
       assert.ok(existsSync(item.path));
     }
     assert.equal(existsSync(join(directory, seed.artifact)), false);

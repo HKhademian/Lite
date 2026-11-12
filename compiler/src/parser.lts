@@ -1,11 +1,17 @@
-/* Lite-written parser core. Starts with the type grammar; declaration/body slices follow. */
+/* Lite-written parser core. */
+
+lexer := import "lexer.lts";
+numeric := import "numeric-literals.lts";
+text := import "../../lib/core/text.lts";
+diag := import "../../lib/core/diag.lts";
+format := import "../../lib/core/format.lts";
 
 
 /** One flat parse node: kind, name, detail text and source position. */
-Node := type (kind: String, name: String, detail: String, offset: Int, line: Int, column: Int);
+pub Node := type (kind: String, name: String, detail: String, offset: Int, line: Int, column: Int);
 
 /** Parse nodes in source order. */
-Nodes := type List<Node>;
+pub Nodes := type List<Node>;
 
 /* Parse-node kind spellings. Zero-argument accessors because Lite has no enum
    and top-level values cannot be captured by functions yet. */
@@ -19,32 +25,43 @@ NODE_KIND_DECLARATION := fn(): String { "Declaration" }
 NODE_KIND_PROGRAM := fn(): String { "Program" }
 
 /** Reports one token-positioned parser diagnostic and exits 2. */
-parseFail := fn(token: Token, prefix: String, message: String): Unit {
-    fail(prefix, decimalText(token.line) + ":" + decimalText(token.column) + ": " + message);
+parseFail := fn(token: lexer.Token, prefix: String, message: String): Unit {
+    diag.fail(prefix, format.decimalText(token.line) + ":" + format.decimalText(token.column) + ": " + message);
 }
 
 /** Number of tokens, including the final EOF token. */
-tokenCount := fn(tokens: Tokens): Int {
+pub tokenCount := fn(tokens: lexer.Tokens): Int {
     var count := 0;
     loop tokens as token {
-        if token.kind == TOKEN_KIND_EOF() { return count + 1; }
+        if token.kind == lexer.TOKEN_KIND_EOF() { return count + 1; }
         count = count + 1;
     }
     count
 }
 
 /** Returns the token at `index`; the caller keeps `index` inside the counted list. */
-tokenAt := fn(tokens: Tokens, index: Int): Token {
+pub tokenAt := fn(tokens: lexer.Tokens, index: Int): lexer.Token {
     tokens[index]
 }
 
+/** Reads one token field through a public scalar accessor for imported callers. */
+pub tokenKindAt := fn(tokens: lexer.Tokens, index: Int): String { tokenAt(tokens, index).kind }
+/** Reads one token field through a public scalar accessor for imported callers. */
+pub tokenTextAt := fn(tokens: lexer.Tokens, index: Int): String { tokenAt(tokens, index).text }
+/** Reads one token field through a public scalar accessor for imported callers. */
+pub tokenLineAt := fn(tokens: lexer.Tokens, index: Int): Int { tokenAt(tokens, index).line }
+/** Reads one token field through a public scalar accessor for imported callers. */
+pub tokenColumnAt := fn(tokens: lexer.Tokens, index: Int): Int { tokenAt(tokens, index).column }
+/** Reads one token field through a public scalar accessor for imported callers. */
+pub tokenOffsetAt := fn(tokens: lexer.Tokens, index: Int): Int { tokenAt(tokens, index).offset }
+
 /** True when the token is the exact symbol `text`. */
-isSymbol := fn(token: Token, text: String): Bool {
-    token.kind == TOKEN_KIND_SYMBOL() and token.text == text
+pub isSymbol := fn(token: lexer.Token, text: String): Bool {
+    token.kind == lexer.TOKEN_KIND_SYMBOL() and token.text == text
 }
 
 /** Consumes the exact symbol or reports a parser diagnostic. */
-expectSymbol := fn(tokens: Tokens, index: Int, text: String, prefix: String): Int {
+pub expectSymbol := fn(tokens: lexer.Tokens, index: Int, text: String, prefix: String): Int {
     token := tokenAt(tokens, index);
     if not isSymbol(token, text) {
         parseFail(token, prefix, "expected " + text);
@@ -53,18 +70,18 @@ expectSymbol := fn(tokens: Tokens, index: Int, text: String, prefix: String): In
 }
 
 /** Consumes a simple-item separator, allowing EOF, a closing scope and a directly closed block token as implicit boundaries. */
-consumeStatementEnd := fn(tokens: Tokens, index: Int, prefix: String): Int {
+pub consumeStatementEnd := fn(tokens: lexer.Tokens, index: Int, prefix: String): Int {
     token := tokenAt(tokens, index);
     if isSymbol(token, ";") { return index + 1; }
-    if token.kind == TOKEN_KIND_EOF() or isSymbol(token, "}") or
+    if token.kind == lexer.TOKEN_KIND_EOF() or isSymbol(token, "}") or
         (index > 0 and isSymbol(tokenAt(tokens, index - 1), "}")) { return index; }
     expectSymbol(tokens, index, ";", prefix)
 }
 
 /** Parses one type: a name, `List<T>` or a flat tuple with optional labels. */
-parseType := fn(tokens: Tokens, index: Int, prefix: String): (next: Int, text: String) {
+pub parseType := fn(tokens: lexer.Tokens, index: Int, prefix: String): (next: Int, text: String) {
     token := tokenAt(tokens, index);
-    if token.kind == TOKEN_KIND_NAME() {
+    if token.kind == lexer.TOKEN_KIND_NAME() {
         after := tokenAt(tokens, index + 1);
         if isSymbol(after, "<") {
             if token.text =!= "List" {
@@ -74,7 +91,7 @@ parseType := fn(tokens: Tokens, index: Int, prefix: String): (next: Int, text: S
             closed := expectSymbol(tokens, inner.next, ">", prefix);
             return (next = closed, text = "List<" + inner.text + ">");
         }
-        numericKind := numericAliasKind(token.text);
+        numericKind := numeric.numericAliasKind(token.text);
         return (next = index + 1, text = if numericKind == "" { token.text } else { numericKind });
     }
     if isSymbol(token, "(") {
@@ -84,7 +101,7 @@ parseType := fn(tokens: Tokens, index: Int, prefix: String): (next: Int, text: S
         loop true {
             if isSymbol(tokenAt(tokens, cursor), ")") { break; }
             var label := "";
-            if tokenAt(tokens, cursor).kind == TOKEN_KIND_NAME() and isSymbol(tokenAt(tokens, cursor + 1), ":") {
+            if tokenAt(tokens, cursor).kind == lexer.TOKEN_KIND_NAME() and isSymbol(tokenAt(tokens, cursor + 1), ":") {
                 label = tokenAt(tokens, cursor).text + ": ";
                 cursor = cursor + 2;
             }
@@ -108,7 +125,7 @@ parseType := fn(tokens: Tokens, index: Int, prefix: String): (next: Int, text: S
 
 /** Quotes one String value as valid normalized expression text. */
 quotedText := fn(text: String): String {
-    escaped := escapedTokenText(text);
+    escaped := lexer.escapedTokenText(text);
     var result := "";
     var index := 0;
     loop index < textLength(escaped) {
@@ -132,9 +149,9 @@ binaryLevel := fn(text: String): Int {
 }
 
 /** True when a token is a selected binary operator. */
-isBinaryToken := fn(token: Token): Bool {
-    if token.kind == TOKEN_KIND_KEYWORD() and (token.text == "and" or token.text == "or") { return true; }
-    token.kind == TOKEN_KIND_SYMBOL() and binaryLevel(token.text) > 0
+isBinaryToken := fn(token: lexer.Token): Bool {
+    if token.kind == lexer.TOKEN_KIND_KEYWORD() and (token.text == "and" or token.text == "or") { return true; }
+    token.kind == lexer.TOKEN_KIND_SYMBOL() and binaryLevel(token.text) > 0
 }
 
 /**
@@ -142,37 +159,37 @@ isBinaryToken := fn(token: Token): Bool {
  * `if` value expressions are the next slice; this function reports them
  * explicitly instead of guessing a block boundary.
  */
-parseExpression := fn(tokens: Tokens, index: Int, prefix: String, minimum: Int): (next: Int, text: String) {
+pub parseExpression := fn(tokens: lexer.Tokens, index: Int, prefix: String, minimum: Int): (next: Int, text: String) {
     token := tokenAt(tokens, index);
     var cursor := index;
     var leftText := "";
     var firstLabel := false;
-    if token.kind == TOKEN_KIND_KEYWORD() and (token.text == "and" or token.text == "or") {
+    if token.kind == lexer.TOKEN_KIND_KEYWORD() and (token.text == "and" or token.text == "or") {
         operand := self(tokens, index + 1, prefix, 0);
         return (next = operand.next, text = operand.text);
-    } else if token.kind == TOKEN_KIND_KEYWORD() and token.text == "not" {
+    } else if token.kind == lexer.TOKEN_KIND_KEYWORD() and token.text == "not" {
         operand := self(tokens, index + 1, prefix, 5);
         leftText = "(not " + operand.text + ")";
         cursor = operand.next;
-    } else if token.kind == TOKEN_KIND_SYMBOL() and (token.text == "-" or token.text == "+") {
+    } else if token.kind == lexer.TOKEN_KIND_SYMBOL() and (token.text == "-" or token.text == "+") {
         operand := self(tokens, index + 1, prefix, 30);
         leftText = "(" + token.text + operand.text + ")";
         cursor = operand.next;
-    } else if token.kind == TOKEN_KIND_INT() or token.kind == TOKEN_KIND_FLOAT() {
+    } else if token.kind == lexer.TOKEN_KIND_INT() or token.kind == lexer.TOKEN_KIND_FLOAT() {
         leftText = token.text;
         cursor = index + 1;
-    } else if token.kind == TOKEN_KIND_STRING() {
+    } else if token.kind == lexer.TOKEN_KIND_STRING() {
         var value := token.text;
         cursor = index + 1;
-        loop tokenAt(tokens, cursor).kind == TOKEN_KIND_STRING() {
+        loop tokenAt(tokens, cursor).kind == lexer.TOKEN_KIND_STRING() {
             value = value + tokenAt(tokens, cursor).text;
             cursor = cursor + 1;
         }
         leftText = "\"" + quotedText(value) + "\"";
-    } else if token.kind == TOKEN_KIND_BOOL() {
+    } else if token.kind == lexer.TOKEN_KIND_BOOL() {
         leftText = token.text;
         cursor = index + 1;
-    } else if token.kind == TOKEN_KIND_NAME() {
+    } else if token.kind == lexer.TOKEN_KIND_NAME() {
         leftText = token.text;
         cursor = index + 1;
         if isSymbol(tokenAt(tokens, cursor), "(") {
@@ -182,11 +199,11 @@ parseExpression := fn(tokens: Tokens, index: Int, prefix: String, minimum: Int):
             loop true {
                 if isSymbol(tokenAt(tokens, cursor), ")") { break; }
                 if argCount > 0 { argText = argText + ", "; }
-                if tokenAt(tokens, cursor).kind == TOKEN_KIND_KEYWORD() and tokenAt(tokens, cursor).text == "mut" {
+                if tokenAt(tokens, cursor).kind == lexer.TOKEN_KIND_KEYWORD() and tokenAt(tokens, cursor).text == "mut" {
                     argText = argText + "mut ";
                     cursor = cursor + 1;
                 }
-                if tokenAt(tokens, cursor).kind == TOKEN_KIND_NAME() and isSymbol(tokenAt(tokens, cursor + 1), "=") {
+                if tokenAt(tokens, cursor).kind == lexer.TOKEN_KIND_NAME() and isSymbol(tokenAt(tokens, cursor + 1), "=") {
                     argText = argText + tokenAt(tokens, cursor).text + " = ";
                     cursor = cursor + 2;
                 }
@@ -206,7 +223,7 @@ parseExpression := fn(tokens: Tokens, index: Int, prefix: String, minimum: Int):
     } else if isSymbol(token, "(") {
         cursor = index + 1;
         var firstText := "";
-        if tokenAt(tokens, cursor).kind == TOKEN_KIND_NAME() and isSymbol(tokenAt(tokens, cursor + 1), "=") {
+        if tokenAt(tokens, cursor).kind == lexer.TOKEN_KIND_NAME() and isSymbol(tokenAt(tokens, cursor + 1), "=") {
             firstText = tokenAt(tokens, cursor).text + " = ";
             firstLabel = true;
             cursor = cursor + 2;
@@ -220,7 +237,7 @@ parseExpression := fn(tokens: Tokens, index: Int, prefix: String, minimum: Int):
             loop true {
                 if isSymbol(tokenAt(tokens, cursor), ")") { break; }
                 tupleText = tupleText + ", ";
-                if tokenAt(tokens, cursor).kind == TOKEN_KIND_NAME() and isSymbol(tokenAt(tokens, cursor + 1), "=") {
+                if tokenAt(tokens, cursor).kind == lexer.TOKEN_KIND_NAME() and isSymbol(tokenAt(tokens, cursor + 1), "=") {
                     tupleText = tupleText + tokenAt(tokens, cursor).text + " = ";
                     cursor = cursor + 2;
                 }
@@ -258,7 +275,7 @@ parseExpression := fn(tokens: Tokens, index: Int, prefix: String, minimum: Int):
         }
         cursor = expectSymbol(tokens, cursor, "]", prefix);
         leftText = listText + "]";
-    } else if token.kind == TOKEN_KIND_KEYWORD() and token.text == "if" {
+    } else if token.kind == lexer.TOKEN_KIND_KEYWORD() and token.text == "if" {
         condition := self(tokens, index + 1, prefix, 0);
         opening := expectSymbol(tokens, condition.next, "{", prefix);
         branchValue := self(tokens, opening, prefix, 0);
@@ -266,9 +283,9 @@ parseExpression := fn(tokens: Tokens, index: Int, prefix: String, minimum: Int):
         var ifText := "if " + condition.text + " { " + branchValue.text + " }";
         cursor = closing;
         loop true {
-            if tokenAt(tokens, cursor).kind == TOKEN_KIND_KEYWORD() and tokenAt(tokens, cursor).text == "else" {
+            if tokenAt(tokens, cursor).kind == lexer.TOKEN_KIND_KEYWORD() and tokenAt(tokens, cursor).text == "else" {
                 afterElse := cursor + 1;
-                if tokenAt(tokens, afterElse).kind == TOKEN_KIND_KEYWORD() and tokenAt(tokens, afterElse).text == "if" {
+                if tokenAt(tokens, afterElse).kind == lexer.TOKEN_KIND_KEYWORD() and tokenAt(tokens, afterElse).text == "if" {
                     elseCondition := self(tokens, afterElse + 1, prefix, 0);
                     elseOpening := expectSymbol(tokens, elseCondition.next, "{", prefix);
                     elseValue := self(tokens, elseOpening, prefix, 0);
@@ -296,7 +313,7 @@ parseExpression := fn(tokens: Tokens, index: Int, prefix: String, minimum: Int):
         current := tokenAt(tokens, cursor);
         if isSymbol(current, ".") {
             member := tokenAt(tokens, cursor + 1);
-            if member.kind == TOKEN_KIND_NAME() or member.kind == TOKEN_KIND_INT() {
+            if member.kind == lexer.TOKEN_KIND_NAME() or member.kind == lexer.TOKEN_KIND_INT() {
                 leftText = leftText + "." + member.text;
                 cursor = cursor + 2;
             } else {
@@ -334,15 +351,15 @@ parseExpression := fn(tokens: Tokens, index: Int, prefix: String, minimum: Int):
 }
 
 /** Parses one declaration into scalar node fields. */
-parseDeclaration := fn(tokens: Tokens, index: Int, prefix: String): (next: Int, name: String, detail: String, offset: Int, line: Int, column: Int) {
+pub parseDeclaration := fn(tokens: lexer.Tokens, index: Int, prefix: String): (next: Int, name: String, detail: String, offset: Int, line: Int, column: Int) {
     var cursor := index;
     var isVar := false;
-    if tokenAt(tokens, cursor).kind == TOKEN_KIND_KEYWORD() and tokenAt(tokens, cursor).text == "var" {
+    if tokenAt(tokens, cursor).kind == lexer.TOKEN_KIND_KEYWORD() and tokenAt(tokens, cursor).text == "var" {
         isVar = true;
         cursor = cursor + 1;
     }
     token := tokenAt(tokens, cursor);
-    if token.kind =!= TOKEN_KIND_NAME() {
+    if token.kind =!= lexer.TOKEN_KIND_NAME() {
         parseFail(token, prefix, "expected a declaration name");
     }
     name := token.text;
@@ -355,7 +372,7 @@ parseDeclaration := fn(tokens: Tokens, index: Int, prefix: String): (next: Int, 
     } else if isSymbol(tokenAt(tokens, cursor), ":") {
         cursor = cursor + 1;
         var mutableType := false;
-        if tokenAt(tokens, cursor).kind == TOKEN_KIND_KEYWORD() and tokenAt(tokens, cursor).text == "mut" {
+        if tokenAt(tokens, cursor).kind == lexer.TOKEN_KIND_KEYWORD() and tokenAt(tokens, cursor).text == "mut" {
             mutableType = true;
             cursor = cursor + 1;
         }
@@ -384,13 +401,13 @@ parseDeclaration := fn(tokens: Tokens, index: Int, prefix: String): (next: Int, 
 }
 
 /** Parses a source made only of declarations, ending at EOF. */
-parseDeclarations := fn(tokens: Tokens, prefix: String): Nodes {
+pub parseDeclarations := fn(tokens: lexer.Tokens, prefix: String): Nodes {
     count := tokenCount(tokens);
     nodes: mut List<Node> = [];
     var cursor := 0;
     loop cursor < count {
         token := tokenAt(tokens, cursor);
-        if token.kind == TOKEN_KIND_EOF() { break; }
+        if token.kind == lexer.TOKEN_KIND_EOF() { break; }
         parsed := parseDeclaration(tokens, cursor, prefix);
         push_back(mut nodes, (kind = NODE_KIND_DECLARATION(), name = parsed.name, detail = parsed.detail,
             offset = parsed.offset, line = parsed.line, column = parsed.column));
@@ -400,7 +417,7 @@ parseDeclarations := fn(tokens: Tokens, prefix: String): Nodes {
 }
 
 /** Parses one `{ ... }` block or the whole source when `closed` is false into normalized text. */
-parseBlock := fn(tokens: Tokens, index: Int, prefix: String, closed: Bool): (next: Int, text: String) {
+pub parseBlock := fn(tokens: lexer.Tokens, index: Int, prefix: String, closed: Bool): (next: Int, text: String) {
     var cursor := index;
     if closed {
         cursor = expectSymbol(tokens, cursor, "{", prefix);
@@ -413,21 +430,21 @@ parseBlock := fn(tokens: Tokens, index: Int, prefix: String, closed: Bool): (nex
             cursor = cursor + 1;
             break;
         }
-        if token.kind == TOKEN_KIND_EOF() {
+        if token.kind == lexer.TOKEN_KIND_EOF() {
             if closed { parseFail(token, prefix, "expected } before end of source"); }
             break;
         }
         if isSymbol(token, "}") {
             parseFail(token, prefix, "unexpected }");
         }
-        if token.kind == TOKEN_KIND_KEYWORD() and
+        if token.kind == lexer.TOKEN_KIND_KEYWORD() and
             (token.text == "match" or token.text == "record" or token.text == "import" or
                 token.text == "using" or token.text == "then" or token.text == "finally") {
             parseFail(token, prefix, "unsupported feature \"" + token.text + "\"");
         }
         if isSymbol(token, ";") { cursor = cursor + 1; continue; }
         var itemText := "";
-        if token.kind == TOKEN_KIND_KEYWORD() and token.text == "if" {
+        if token.kind == lexer.TOKEN_KIND_KEYWORD() and token.text == "if" {
             condition := parseExpression(tokens, cursor + 1, prefix, 0);
             if not isSymbol(tokenAt(tokens, condition.next), "{") {
                 parseFail(tokenAt(tokens, condition.next), prefix, "expected { after if condition");
@@ -436,9 +453,9 @@ parseBlock := fn(tokens: Tokens, index: Int, prefix: String, closed: Bool): (nex
             var branchText := "if " + condition.text + " " + branch.text;
             cursor = branch.next;
             loop true {
-                if tokenAt(tokens, cursor).kind == TOKEN_KIND_KEYWORD() and tokenAt(tokens, cursor).text == "else" {
+                if tokenAt(tokens, cursor).kind == lexer.TOKEN_KIND_KEYWORD() and tokenAt(tokens, cursor).text == "else" {
                     afterElse := cursor + 1;
-                    if tokenAt(tokens, afterElse).kind == TOKEN_KIND_KEYWORD() and tokenAt(tokens, afterElse).text == "if" {
+                    if tokenAt(tokens, afterElse).kind == lexer.TOKEN_KIND_KEYWORD() and tokenAt(tokens, afterElse).text == "if" {
                         elseCondition := parseExpression(tokens, afterElse + 1, prefix, 0);
                         if not isSymbol(tokenAt(tokens, elseCondition.next), "{") {
                             parseFail(tokenAt(tokens, elseCondition.next), prefix, "expected { after else if condition");
@@ -458,11 +475,11 @@ parseBlock := fn(tokens: Tokens, index: Int, prefix: String, closed: Bool): (nex
             }
             cursor = consumeStatementEnd(tokens, cursor, prefix);
             itemText = branchText;
-        } else if token.kind == TOKEN_KIND_KEYWORD() and token.text == "loop" {
+        } else if token.kind == lexer.TOKEN_KIND_KEYWORD() and token.text == "loop" {
             source := parseExpression(tokens, cursor + 1, prefix, 0);
-            if tokenAt(tokens, source.next).kind == TOKEN_KIND_NAME() and tokenAt(tokens, source.next).text == "as" {
+            if tokenAt(tokens, source.next).kind == lexer.TOKEN_KIND_NAME() and tokenAt(tokens, source.next).text == "as" {
                 variable := tokenAt(tokens, source.next + 1);
-                if variable.kind =!= TOKEN_KIND_NAME() {
+                if variable.kind =!= lexer.TOKEN_KIND_NAME() {
                     parseFail(variable, prefix, "expected a loop item name after as");
                 }
                 bodyBlock := self(tokens, source.next + 2, prefix, true);
@@ -477,20 +494,20 @@ parseBlock := fn(tokens: Tokens, index: Int, prefix: String, closed: Bool): (nex
                 cursor = bodyBlock.next;
             }
             cursor = consumeStatementEnd(tokens, cursor, prefix);
-        } else if token.kind == TOKEN_KIND_KEYWORD() and (token.text == "break" or token.text == "continue") {
+        } else if token.kind == lexer.TOKEN_KIND_KEYWORD() and (token.text == "break" or token.text == "continue") {
             itemText = token.text;
             cursor = cursor + 1;
             if isSymbol(tokenAt(tokens, cursor), "@") {
                 label := tokenAt(tokens, cursor + 1);
-                if label.kind =!= TOKEN_KIND_NAME() { parseFail(label, prefix, "expected a loop label after @"); }
+                if label.kind =!= lexer.TOKEN_KIND_NAME() { parseFail(label, prefix, "expected a loop label after @"); }
                 itemText = itemText + " @" + label.text;
                 cursor = cursor + 2;
             }
             cursor = consumeStatementEnd(tokens, cursor, prefix);
-        } else if token.kind == TOKEN_KIND_KEYWORD() and token.text == "return" {
+        } else if token.kind == lexer.TOKEN_KIND_KEYWORD() and token.text == "return" {
             afterReturn := cursor + 1;
             if isSymbol(tokenAt(tokens, afterReturn), ";") or isSymbol(tokenAt(tokens, afterReturn), "}") or
-                tokenAt(tokens, afterReturn).kind == TOKEN_KIND_EOF() {
+                tokenAt(tokens, afterReturn).kind == lexer.TOKEN_KIND_EOF() {
                 itemText = "return";
                 cursor = afterReturn;
             } else {
@@ -499,12 +516,12 @@ parseBlock := fn(tokens: Tokens, index: Int, prefix: String, closed: Bool): (nex
                 cursor = value.next;
             }
             cursor = consumeStatementEnd(tokens, cursor, prefix);
-        } else if token.kind == TOKEN_KIND_SYMBOL() and token.text == "{" {
+        } else if token.kind == lexer.TOKEN_KIND_SYMBOL() and token.text == "{" {
             blockText := self(tokens, cursor, prefix, true);
             itemText = blockText.text;
             cursor = consumeStatementEnd(tokens, blockText.next, prefix);
-        } else if token.kind == TOKEN_KIND_NAME() and isSymbol(tokenAt(tokens, cursor + 1), ":=") and
-            tokenAt(tokens, cursor + 2).kind == TOKEN_KIND_KEYWORD() and tokenAt(tokens, cursor + 2).text == "fn" {
+        } else if token.kind == lexer.TOKEN_KIND_NAME() and isSymbol(tokenAt(tokens, cursor + 1), ":=") and
+            tokenAt(tokens, cursor + 2).kind == lexer.TOKEN_KIND_KEYWORD() and tokenAt(tokens, cursor + 2).text == "fn" {
             name := token.text;
             var afterName := cursor + 3;
             afterName = expectSymbol(tokens, afterName, "(", prefix);
@@ -513,7 +530,7 @@ parseBlock := fn(tokens: Tokens, index: Int, prefix: String, closed: Bool): (nex
             loop true {
                 if isSymbol(tokenAt(tokens, afterName), ")") { break; }
                 parameter := tokenAt(tokens, afterName);
-                if parameter.kind =!= TOKEN_KIND_NAME() { parseFail(parameter, prefix, "expected a parameter name"); }
+                if parameter.kind =!= lexer.TOKEN_KIND_NAME() { parseFail(parameter, prefix, "expected a parameter name"); }
                 colon := expectSymbol(tokens, afterName + 1, ":", prefix);
                 parameterType := parseType(tokens, colon, prefix);
                 if parameterCount > 0 { parameters = parameters + ", "; }
@@ -536,24 +553,24 @@ parseBlock := fn(tokens: Tokens, index: Int, prefix: String, closed: Bool): (nex
             itemText = name + " := fn(" + parameters + "): " + resultType.text + " " + functionBody.text;
             cursor = functionBody.next;
             cursor = consumeStatementEnd(tokens, cursor, prefix);
-        } else if token.kind == TOKEN_KIND_NAME() and isSymbol(tokenAt(tokens, cursor + 1), ":=") and
-            tokenAt(tokens, cursor + 2).kind == TOKEN_KIND_KEYWORD() and tokenAt(tokens, cursor + 2).text == "type" {
+        } else if token.kind == lexer.TOKEN_KIND_NAME() and isSymbol(tokenAt(tokens, cursor + 1), ":=") and
+            tokenAt(tokens, cursor + 2).kind == lexer.TOKEN_KIND_KEYWORD() and tokenAt(tokens, cursor + 2).text == "type" {
             assigned := expectSymbol(tokens, cursor + 1, ":=", prefix);
             typeWord := tokenAt(tokens, assigned);
-            if typeWord.kind =!= TOKEN_KIND_KEYWORD() or typeWord.text =!= "type" {
+            if typeWord.kind =!= lexer.TOKEN_KIND_KEYWORD() or typeWord.text =!= "type" {
                 parseFail(typeWord, prefix, "expected type after :=");
             }
             aliasType := parseType(tokens, assigned + 1, prefix);
             ended := consumeStatementEnd(tokens, aliasType.next, prefix);
             itemText = token.text + " := type " + aliasType.text;
             cursor = ended;
-        } else if token.kind == TOKEN_KIND_KEYWORD() and token.text == "var" or
-            (token.kind == TOKEN_KIND_NAME() and (isSymbol(tokenAt(tokens, cursor + 1), ":=") or
+        } else if token.kind == lexer.TOKEN_KIND_KEYWORD() and token.text == "var" or
+            (token.kind == lexer.TOKEN_KIND_NAME() and (isSymbol(tokenAt(tokens, cursor + 1), ":=") or
                 isSymbol(tokenAt(tokens, cursor + 1), ":"))) {
             declaration := parseDeclaration(tokens, cursor, prefix);
             itemText = declaration.name + " " + declaration.detail;
             cursor = declaration.next;
-        } else if token.kind == TOKEN_KIND_NAME() and isSymbol(tokenAt(tokens, cursor + 1), "=") {
+        } else if token.kind == lexer.TOKEN_KIND_NAME() and isSymbol(tokenAt(tokens, cursor + 1), "=") {
             value := parseExpression(tokens, cursor + 2, prefix, 0);
             itemText = token.text + " = " + value.text;
             cursor = value.next;
@@ -572,7 +589,7 @@ parseBlock := fn(tokens: Tokens, index: Int, prefix: String, closed: Bool): (nex
 }
 
 /** Parses a complete source as one Program node containing normalized item text. */
-parseProgram := fn(tokens: Tokens, prefix: String): Nodes {
+pub parseProgram := fn(tokens: lexer.Tokens, prefix: String): Nodes {
     parsed := parseBlock(tokens, 0, prefix, false);
     nodes: mut List<Node> = [];
     push_back(mut nodes, (kind = NODE_KIND_PROGRAM(), name = "", detail = parsed.text, offset = 0, line = 1, column = 1));
@@ -580,14 +597,14 @@ parseProgram := fn(tokens: Tokens, prefix: String): Nodes {
 }
 
 /** Parses one `Name := type Type;` declaration into scalar node fields. */
-parseTypeAlias := fn(tokens: Tokens, index: Int, prefix: String): (next: Int, name: String, detail: String, offset: Int, line: Int, column: Int) {
+pub parseTypeAlias := fn(tokens: lexer.Tokens, index: Int, prefix: String): (next: Int, name: String, detail: String, offset: Int, line: Int, column: Int) {
     token := tokenAt(tokens, index);
-    if token.kind =!= TOKEN_KIND_NAME() {
+    if token.kind =!= lexer.TOKEN_KIND_NAME() {
         parseFail(token, prefix, "expected a type alias name");
     }
     assigned := expectSymbol(tokens, index + 1, ":=", prefix);
     typeWord := tokenAt(tokens, assigned);
-    if typeWord.kind =!= TOKEN_KIND_KEYWORD() or typeWord.text =!= "type" {
+    if typeWord.kind =!= lexer.TOKEN_KIND_KEYWORD() or typeWord.text =!= "type" {
         parseFail(typeWord, prefix, "expected type after :=");
     }
     parsed := parseType(tokens, assigned + 1, prefix);
@@ -597,13 +614,13 @@ parseTypeAlias := fn(tokens: Tokens, index: Int, prefix: String): (next: Int, na
 }
 
 /** Parses a source made only of type alias declarations, ending at EOF. */
-parseTypeDeclarations := fn(tokens: Tokens, prefix: String): Nodes {
+pub parseTypeDeclarations := fn(tokens: lexer.Tokens, prefix: String): Nodes {
     count := tokenCount(tokens);
     nodes: mut List<Node> = [];
     var cursor := 0;
     loop cursor < count {
         token := tokenAt(tokens, cursor);
-        if token.kind == TOKEN_KIND_EOF() { break; }
+        if token.kind == lexer.TOKEN_KIND_EOF() { break; }
         parsed := parseTypeAlias(tokens, cursor, prefix);
         push_back(mut nodes, (kind = NODE_KIND_TYPE_ALIAS(), name = parsed.name, detail = parsed.detail,
             offset = parsed.offset, line = parsed.line, column = parsed.column));
@@ -614,13 +631,31 @@ parseTypeDeclarations := fn(tokens: Tokens, prefix: String): Nodes {
 
 /** Formats one parse node as `kind|name|detail|line:column|offset`. */
 dumpNode := fn(node: Node): String {
-    node.kind + "|" + node.name + "|" + node.detail + "|" + decimalText(node.line) + ":" +
-        decimalText(node.column) + "|" + decimalText(node.offset)
+    node.kind + "|" + node.name + "|" + node.detail + "|" + format.decimalText(node.line) + ":" +
+        format.decimalText(node.column) + "|" + format.decimalText(node.offset)
 }
 
 /** Reports parsed nodes in source order, one per line. */
-dumpNodes := fn(nodes: Nodes): Unit {
+pub dumpNodes := fn(nodes: Nodes): Unit {
     loop nodes as node {
         outputLine(dumpNode(node));
     }
+}
+
+/** Runs the declaration parser and writes its deterministic node dump. */
+pub testDumpDeclarations := fn(source: String, prefix: String): Unit {
+    tokens := lexer.tokenize(source, prefix);
+    dumpNodes(parseDeclarations(tokens, prefix));
+}
+
+/** Runs the type-alias parser and writes its deterministic node dump. */
+pub testDumpTypeDeclarations := fn(source: String, prefix: String): Unit {
+    tokens := lexer.tokenize(source, prefix);
+    dumpNodes(parseTypeDeclarations(tokens, prefix));
+}
+
+/** Runs the whole-program parser and writes its deterministic node dump. */
+pub testDumpProgram := fn(source: String, prefix: String): Unit {
+    tokens := lexer.tokenize(source, prefix);
+    dumpNodes(parseProgram(tokens, prefix));
 }

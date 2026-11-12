@@ -4,8 +4,7 @@ import { createHash } from 'node:crypto';
 import { existsSync, mkdirSync, readFileSync, readdirSync, renameSync, statSync, writeFileSync } from 'node:fs';
 import { dirname, isAbsolute, relative, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { loadBundle, loadSource } from './loader.ts';
-import { compileTs } from '../compiler/host.ts';
+import { buildCompiler, compileTs } from '../compiler/host.ts';
 import { seed } from '../compiler/bootstrap/seed.ts';
 import { streamBytes as resolveStreamBytes } from '../tools/streams.ts';
 
@@ -292,6 +291,7 @@ function hash(bytes: Buffer): string {
   return `sha256:${createHash('sha256').update(bytes).digest('hex')}`;
 }
 
+const compilerBuild = buildCompiler('ts');
 const runtimeHash = createHash('sha256')
   .update(readFileSync(resolve(root, 'igniter/artifacts.ts')))
   .update(readFileSync(resolve(root, 'igniter/tsconfig.json')))
@@ -302,7 +302,7 @@ const runtimeHash = createHash('sha256')
   .update(readFileSync(resolve(root, 'compiler/entry.ts')))
   .update(readFileSync(resolve(root, 'compiler/bootstrap/seed.ts')))
   .update(readFileSync(resolve(root, `compiler/bootstrap/${seed.artifact}`)))
-  .update(loadBundle(resolve(root, 'compiler/manifests/ts.json')).text)
+  .update(JSON.stringify(compilerBuild.dependencies.map(path => [path, createHash('sha256').update(readFileSync(resolve(root, path))).digest('hex')])))
   .update(process.version)
   .digest('hex');
 
@@ -573,7 +573,7 @@ function main(): void {
     const sourceHash = hash(sourceBytes);
     const source = (sourcePath === undefined
       ? (item.source.bytes === undefined ? item.source.text ?? '' : Buffer.from(item.source.bytes).toString('utf8'))
-      : loadSource(sourcePath)) + (item.append === undefined ? '' : `\n${item.append}`);
+      : sourceBytes.toString('utf8')) + (item.append === undefined ? '' : `\n${item.append}`);
     if (!options.update && item.source.hash !== sourceHash) {
       process.stdout.write(`FAIL ${item.id}: source hash changed; run ./bin/lite verify --update\n`);
       failures += 1;
@@ -649,7 +649,7 @@ function main(): void {
       processScenarios(() => { throw new Error('cached scenario unexpectedly executed'); });
     } else {
       try {
-        const compiled = compileTs({ text: source });
+        const compiled = sourcePath === undefined ? compileTs({ text: source }) : compileTs({ text: source, name: sourcePath });
         if (compiled.status !== 0) throw new Error(`compiler exited ${compiled.status}: ${compiled.stderr.toString('utf8').trim()}`);
         withTsArtifact(compiled.stdout.toString('utf8'), run => {
           processScenarios(scenario => runGenerated(run, scenario, dirname(item.file)));

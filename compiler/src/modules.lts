@@ -1,7 +1,10 @@
+diagLib := import "../../lib/core/diag.lts";
+listLib := import "../../lib/core/list.lts";
+frontend := import "frontend.lts";
 /* Initial source graph traversal for the generated TypeScript compiler. */
 
 /** True when the graph has entered one canonical source path. */
-moduleVisited := fn(graph: Items, path: String): Bool {
+moduleVisited := fn(graph: frontend.Items, path: String): Bool {
     loop graph as item {
         if item.kind == "ModuleVisited" and item.name == path { return true; }
     }
@@ -9,7 +12,7 @@ moduleVisited := fn(graph: Items, path: String): Bool {
 }
 
 /** True when the graph completed parsing one canonical source path. */
-moduleProcessed := fn(graph: Items, path: String): Bool {
+moduleProcessed := fn(graph: frontend.Items, path: String): Bool {
     loop graph as item {
         if item.kind == "ModuleProcessed" and item.name == path { return true; }
     }
@@ -17,7 +20,7 @@ moduleProcessed := fn(graph: Items, path: String): Bool {
 }
 
 /** Returns the graph identity assigned when one canonical source was first visited. */
-moduleIdForPath := fn(graph: Items, path: String): Int {
+moduleIdForPath := fn(graph: frontend.Items, path: String): Int {
     loop graph as item {
         if item.kind == "ModuleVisited" and item.name == path { return item.intValue; }
     }
@@ -25,7 +28,7 @@ moduleIdForPath := fn(graph: Items, path: String): Int {
 }
 
 /** Assigns a stable ordinal to the next discovered source unit. */
-nextModuleId := fn(graph: Items): Int {
+nextModuleId := fn(graph: frontend.Items): Int {
     var count := 0;
     loop graph as item {
         if item.kind == "ModuleVisited" { count = count + 1; }
@@ -34,8 +37,8 @@ nextModuleId := fn(graph: Items): Int {
 }
 
 /** Returns public declaration records for one completed source module. */
-modulePublicDeclarations := fn(graph: Items, path: String): Items {
-    result: mut Items = [];
+modulePublicDeclarations := fn(graph: frontend.Items, path: String): frontend.Items {
+    result: mut frontend.Items = [];
     var inside := false;
     loop graph as item {
         if item.kind == "ModuleStart" { inside = item.name == path; }
@@ -47,8 +50,8 @@ modulePublicDeclarations := fn(graph: Items, path: String): Items {
     result
 }
 /** Appends an import interface, rejecting alias and public-name collisions. */
-appendModuleExports := fn(existing: Items, incoming: Items, prefix: String): Items {
-    var result: mut Items = existing;
+appendModuleExports := fn(existing: frontend.Items, incoming: frontend.Items, prefix: String): frontend.Items {
+    var result: mut frontend.Items = existing;
     loop incoming as item {
         var duplicate := false;
         loop result as previous {
@@ -67,9 +70,9 @@ appendModuleExports := fn(existing: Items, incoming: Items, prefix: String): Ite
             }
         }
         if duplicate {
-            if item.kind == "ModuleAlias" { fail(prefix, "duplicate module alias " + item.name); }
-            if item.kind == "PublicType" { fail(prefix, "duplicate imported public type " + item.name); }
-            fail(prefix, "duplicate imported public name " + item.name);
+            if item.kind == "ModuleAlias" { diagLib.fail(prefix, "duplicate module alias " + item.name); }
+            if item.kind == "PublicType" { diagLib.fail(prefix, "duplicate imported public type " + item.name); }
+            diagLib.fail(prefix, "duplicate imported public name " + item.name);
         }
         push_back(mut result, item);
     }
@@ -77,8 +80,8 @@ appendModuleExports := fn(existing: Items, incoming: Items, prefix: String): Ite
 }
 
 /** Builds one aliased module namespace from its public interface and stable graph identity. */
-moduleAliasExports := fn(graph: Items, path: String, alias: String): Items {
-    result: mut Items = [(kind = "ModuleAlias", name = alias, runtime = "", code = "",
+moduleAliasExports := fn(graph: frontend.Items, path: String, alias: String): frontend.Items {
+    result: mut frontend.Items = [(kind = "ModuleAlias", name = alias, runtime = "", code = "",
         intValue = moduleIdForPath(graph, path), textValue = path)];
     loop modulePublicDeclarations(graph, path) as item {
         push_back(mut result, (kind = item.kind, name = alias + "." + item.name, runtime = item.runtime,
@@ -88,21 +91,21 @@ moduleAliasExports := fn(graph: Items, path: String, alias: String): Items {
 }
 
 /** Reads and parses each canonical source once, marking it visited before recursion and processed after dependencies and local parsing. */
-visitSourceModule := fn(path: String, source: String, initialGraph: Items): Items {
+pub visitSourceModule := fn(target: String, path: String, source: String, initialGraph: frontend.Items): frontend.Items {
     if moduleVisited(initialGraph, path) { return initialGraph; }
     moduleId := nextModuleId(initialGraph);
-    var graph: mut Items = initialGraph;
+    var graph: mut frontend.Items = initialGraph;
     push_back(mut graph, (kind = "ModuleVisited", name = path, runtime = "", code = "", intValue = moduleId, textValue = ""));
     barePaths: mut List<String> = [];
-    var importedExports: mut Items = [];
-    loop collectImportClauses(source, path) as clause {
+    var importedExports: mut frontend.Items = [];
+    loop frontend.collectImportClauses(target, source, path) as clause {
         loaded := readSource(path, clause.textValue);
         if not moduleVisited(graph, loaded.path) {
-            graph = visitSourceModule(loaded.path, loaded.text, graph);
+            graph = visitSourceModule(target, loaded.path, loaded.text, graph);
         }
         if moduleProcessed(graph, loaded.path) {
             if clause.name == "" {
-                if not listContainsText(barePaths, loaded.path) {
+                if not listLib.listContainsText(barePaths, loaded.path) {
                     push_back(mut barePaths, loaded.path);
                     importedExports = appendModuleExports(importedExports, modulePublicDeclarations(graph, loaded.path), path);
                 }
@@ -111,7 +114,7 @@ visitSourceModule := fn(path: String, source: String, initialGraph: Items): Item
             }
         }
     }
-    localItems := parseProgramWithExports(source, path, importedExports, moduleId);
+    localItems := frontend.parseProgramWithExports(target, source, path, importedExports, moduleId);
     push_back(mut graph, (kind = "ModuleStart", name = path, runtime = "", code = "", intValue = moduleId, textValue = ""));
     loop localItems as item { push_back(mut graph, item); }
     push_back(mut graph, (kind = "ModuleEnd", name = path, runtime = "", code = "", intValue = moduleId, textValue = ""));
@@ -120,8 +123,8 @@ visitSourceModule := fn(path: String, source: String, initialGraph: Items): Item
 }
 
 /** Removes graph-only records while preserving dependency-first parsed item order. */
-moduleItems := fn(graph: Items): Items {
-    result: mut Items = [];
+pub moduleItems := fn(graph: frontend.Items): frontend.Items {
+    result: mut frontend.Items = [];
     loop graph as item {
         if item.kind =!= "ModuleVisited" and item.kind =!= "ModuleProcessed" and
             item.kind =!= "ModuleStart" and item.kind =!= "ModuleEnd" {

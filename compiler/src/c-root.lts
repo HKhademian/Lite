@@ -1,11 +1,2 @@
-import "../../lib/core/int.lts";
-import "../../lib/core/text.lts";
-import "../../lib/core/source.lts";
-import "../../lib/core/diag.lts";
-import "../../lib/core/format.lts";
-import "../../lib/core/list.lts";
-import "c-literals.lts";
-import "numeric-literals.lts";
-import "frontend.lts";
-import "emit-c.lts";
-import "driver-c.lts";
+driver := import "driver-c.lts";
+driver.run();

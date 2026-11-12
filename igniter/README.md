@@ -3,9 +3,11 @@
 This directory contains TypeScript build, verification and artifact adapters
 for the generated Lite compiler. The handwritten **T00** interpreter and its
 active CLI/test adapters have been retired. Public compile and check use the
-Lite-written generated [T12 compiler](../compiler/bootstrap/README.md). Public `./bin/lite run` compiles a
-script to a temporary artifact and executes it; programs also execute from
-directly compiled TS artifacts. C output/native self-hosting are later work.
+single selected Lite-written TS igniter in
+[`compiler/bootstrap/`](../compiler/bootstrap/README.md). Public `./bin/lite
+run` compiles a script to a temporary artifact and executes it; programs also
+execute from directly compiled TS artifacts. Native C self-hosting remains
+later work; public C compilation is currently deferred.
 Verification runs generated TS artifacts. See the
 [transition plan](../compiler/transition-plan.md).
 
@@ -17,9 +19,10 @@ compiler is the only maintained language implementation.
 
 The staged compiler-bootstrap path and agent gates are recorded in the
 [bootstrap and self-hosting plan](../docs/bootstrap-plan.md); it does not change
-this compiler's supported language. T12 reaches the verified fixed point for
-the compiler-source subset; remaining recorded language contracts and the
-native C ladder remain future work. The [text-cache benchmark](../benchmark/reports/2026-11-02-text-cache.md)
+this compiler's supported language. The selected Lite-written TS compiler
+rebuilds to a verified three-generation fixed point for the compiler-source
+subset; remaining recorded language contracts and native C self-hosting remain
+future work. The [text-cache benchmark](../benchmark/reports/2026-11-02-text-cache.md)
 records 668 ms median self-compilation after eliminating repeated whole-source
 code-point copies. The current test suite has 237 interpreter groups, 32
 compiler-host groups and 4 policy/tooling groups, with 9 separate editor grammar groups.
@@ -171,17 +174,17 @@ access, exact optional properties, unused checks, and erasable syntax only.
 The implementation uses tagged unions, exhaustive switches, `unknown` catches,
 and no explicit `any`, non-null assertions, or unchecked type casts.
 
-## Bootstrap bundle tooling
+## Compiler source graph
 
-P1 adds internal bundle tooling for the [bootstrap plan](../docs/bootstrap-plan.md).
-[`loader.ts`](loader.ts) exports `loadManifest`, `loadBundle` and
-`loadSourceDetails`: ordered relative manifests, strict UTF-8 and a transitional
-host-side expansion of bare top-level imports, with open-once dependency
-tracking and a flattened-line map back to each original path and 1-based line.
-This bridge is not the selected language import semantics; Lite's selected form
-is `module := import "path";` with explicit `pub` visibility and separate source
-units. The older `importFlatAll` directive remains for test-only declaration
-drivers and still reports cycles. [`artifacts.ts`](artifacts.ts)
+Each compiler manifest now identifies one Lite source root. The single selected
+TS igniter compiles the TS or C target through Lite's source import graph. The
+host provides strict UTF-8 source reads and records the canonical file bytes and
+resolved import edges reported by the Lite visitor; those identities drive
+cache invalidation. Build, CLI, self-host, release, verification, and phase-test
+paths all follow imports in Lite. TypeScript retains manifest metadata parsing,
+test harnesses, and platform adapters. This work does not claim native C
+self-hosting.
+[`artifacts.ts`](artifacts.ts)
 strict-typechecks and runs emitted TS, and compiles/runs emitted C with
 `-std=c11 -Wall -Wextra -Werror` and the math library (`-lm`), capturing raw streams and status.
 TS runs capture stdout and stderr through fresh temporary regular files so
@@ -194,14 +197,10 @@ between runs and removed with the artifact directory. Host regressions cover
 large raw Unicode/NUL output, repeated reports, prompts, faults and early exit.
 
 The manifests are [compiler/manifests/ts.json](../compiler/manifests/ts.json) and
-[c.json](../compiler/manifests/c.json). Each names one Lite root file; its
-top-level imports list the L0 libraries, target literal encoders, shared
-front-end, target emitter and target driver in dependency order. Build
-provenance records the resolved dependency paths. `lite-compile-ts` compiles the expanded
-manifest bundle through [`compiler/cli.ts`](../compiler/cli.ts); compiler source and `lib/core` contain no
-`importFlatAll` directives. This does not add module namespaces or package
-resolution. The `compiler/ts-emitter.lts` and
-`compiler/c-emitter.lts` compatibility bundles are generated from the manifests.
+[c.json](../compiler/manifests/c.json). Each names one Lite root. Imports in
+`compiler/src/` and `lib/core/` use module aliases; the compiler visitor follows
+the graph and build provenance records the resolved dependency paths. The
+production route enters through [`compiler/cli.ts`](../compiler/cli.ts).
 
 P3 adds the Lite-written lexer in [`../compiler/src/lexer.lts`](../compiler/src/lexer.lts)
 with a token-dump driver at
@@ -211,22 +210,18 @@ nested/raw comments; decodes the selected string escapes; checks Int64 magnitude
 and records offset plus line/column. Operators use longest-match over the
 selected spellings; incomplete `=!` and the unsupported `&&`/`||` spellings are
 rejected with guidance. Focused fixtures live under
-[`../compiler/tests/lexer/`](../compiler/tests/lexer/). The full-S sweep is a
-full-gate test (`LITE_SKIP_HEAVY=1` skips it in the fast lane); it tokenizes the
-expanded TS S, the C emitter, the lexer sources and all 92 compiler cases.
-Full-source lexer/parser/checker sweeps now run T11-compiled, strictly checked
-drivers. Small fixtures retain T00 execution and compare exact output with the
-generated path. Recent compiler regression groups also batch strict checking
-of distinct generated modules, preserving fresh processes and per-program stream
-assertions. See the [test-consumer migration](../compiler/parity.md#generated-full-source-test-consumers)
-and [artifact-validation ledger](../compiler/parity.md#batched-ts-artifact-validation).
+[`../compiler/tests/lexer/`](../compiler/tests/lexer/). Phase drivers import the
+lexer, parser, and checker by module alias and compile through Lite's graph.
+Compiler host regressions cover imported file identities, source-hash
+invalidation and both output targets. See the [test-consumer
+migration](../compiler/parity.md#generated-full-source-test-consumers) and
+[artifact-validation ledger](../compiler/parity.md#batched-ts-artifact-validation).
 
 P4 adds the parser core, type grammar, declarations, expressions, statements and
 functions in [`../compiler/src/parser.lts`](../compiler/src/parser.lts). It parses
 expanded S, L0, the lexer source and all program cases; value `if` branches are
-currently single-expression blocks. Manifest-order assembly is authoritative,
-compiler source and `lib/core` no longer use `importFlatAll`, and unsupported
-declarations are rejected by name. Fixtures live under
+currently single-expression blocks. Compiler source imports now follow Lite
+module aliases; unsupported declarations are rejected by name. Fixtures live under
 [`../compiler/tests/parser/`](../compiler/tests/parser/).
 
 P5 adds the Lite checker in [`../compiler/src/check.lts`](../compiler/src/check.lts).
@@ -884,10 +879,10 @@ self-hosted build. See [INV-061 evidence](../research/investigations/INV-061-lit
 
 The Lite-written compiler now lives in [compiler/](../compiler/README.md), not
 in the runnable example list. It has one shared front-end and separate TS/C
-backends assembled through the ordered manifests and Lite-authored source
-imports. `lite-compile-ts` expands the import dependency graph through the [generated
-host](../compiler/host.ts); compiler source no longer uses the temporary
-`importFlatAll` directive. Module namespaces and package resolution remain open.
+emitters connected with Lite namespace imports. Each manifest selects one root;
+the Lite import visitor traverses its graph and the [generated host](../compiler/host.ts)
+supplies source reads and records the exact dependencies. Module namespaces are
+available to compiler source; package resolution remains open.
 
 Run the compiler with:
 

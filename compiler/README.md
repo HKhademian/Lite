@@ -6,11 +6,10 @@ compilation defaults to the one verified generated compiler in
 check-only also strictly checks the artifact without executing it. Public
 `./bin/lite run` compiles to a temporary artifact and executes it through
 `entry.ts`; compiled programs also run as `node compiler/entry.ts program.ts`.
-C output and native self-hosting are deferred until later. The handwritten T00
-compiler and its active adapters have been retired; historical audit reports
-and recorded contracts remain for reference. The earlier TS-hosted C emitter
-and its provenance remain for explicit historical tests; they are not a public
-C output promise. See the
+C emitter remains buildable internally through the same TS compiler host; public
+C output and a native C self-hosting compiler remain deferred. The handwritten
+T00 compiler, numbered generated compiler chain and separate C seed have been
+retired; one selected TS igniter drives both target emitters. See the
 [owner-approved transition](transition-plan.md).
 The accepted language remains
 the restricted bootstrap subset, not the entire language design.
@@ -35,12 +34,14 @@ and sample, and source-file coverage. It includes exact-source boundary probes
 and a reproducible audit script; it is an inventory, not a priority list or a new
 language decision.
 
-[`host.ts`](host.ts) checks the seed's SHA-256 and the current assembled Lite
-source. Unchanged S uses the seed directly. Changed S is compiled by the selected generated seed and
-strictly typechecked before publication under a source/builder-keyed
-`dist/compiler-cache/` directory. Corrupt seeds/caches and rejected rebuilds fail
-explicitly; there is no silent T00 fallback. `node compiler/scripts/build.ts`
-selects or rebuilds both target compilers and prints their provenance. The
+[`host.ts`](host.ts) checks the one seed's SHA-256 and reads only each manifest's
+root source. The generated Lite import visitor discovers and opens dependencies;
+its trace supplies source hashes and import edges for cache validation. Changed
+graphs are compiled by the selected seed and strictly typechecked before
+publication under `dist/compiler-cache/`. Corrupt seeds/caches and rejected
+rebuilds fail explicitly; there is no silent fallback. `node
+compiler/scripts/build.ts` selects or rebuilds both target compilers and prints
+their provenance. The
 [text-cache optimization](../benchmark/reports/2026-11-02-text-cache.md) records
 a 668 ms median self-compilation for its source snapshot on the recorded machine,
 excluding strict checking. The [report-order refresh](parity.md#report-order-seed-refresh)
@@ -71,13 +72,13 @@ historical igniter supports them. Expand L through the guidelines' support and
 seed acceptance gates before adopting a construct in S: the selected generated
 compiler must parse, check and lower it too.
 
-P4 moves the compiler source under `src/` and makes manifest order
-authoritative. Compiler source and `lib/core` no longer use `importFlatAll`; the
-old emitter paths are generated compatibility bundles. The manifest schema,
-line-map contract and current hashes are recorded in:
+Compiler sources under `src/` and `lib/core/` use Lite namespace imports. Each
+manifest names one root; active build, CLI, self-host, release and verification
+routes do not flatten source or depend on an ordered file list. The loader's
+flattening support remains for isolated legacy phase fixtures. Current module
+status and the manifest schema are recorded in:
 
-- [`manifests/README.md`](manifests/README.md) — manifest and line-map
-  contract; the P1 loader and driver are implemented.
+- [`manifests/README.md`](manifests/README.md) — source-root manifest contract.
 - [`baseline.md`](baseline.md) — P0 counts, source hashes, reference artifacts
   and test evidence.
 - [`parity.md`](parity.md) — stage-0 versus generated-compiler burndown; the
@@ -86,24 +87,19 @@ line-map contract and current hashes are recorded in:
   current emitted-artifact hashes for all 69 program cases; the P0 hashes remain
   in `tests/references/generated/baseline-artifacts.json`.
 
-The bundle path is green: [`../igniter/loader.ts`](../igniter/loader.ts) loads
-the ordered manifests, expands top-level imports and maps diagnostics back to
-the original files. `lite-compile-ts` uses [`cli.ts`](cli.ts): target commands use the
-generated compiler host. The handwritten interpreter and bundle CLI are
+`lite-compile-ts` uses [`cli.ts`](cli.ts): target commands use the generated
+compiler host, and Lite reads imported source units through the compiler's
+`readSource` host callback. The handwritten interpreter and bundle CLI are
 retired. P2 adds the provisional
 L0 helpers under [`../lib/core/`](../lib/README.md): checked Int, text, source
 positions, diagnostics, formatting and list search. P3 adds the Lite lexer and
 P4 the parser under `src/`; `runtime/ts/` contains the P6 runtime support.
 
-Historical self-hosting runs outlasted the ten-second cap in
-[`../igniter/artifacts.ts`](../igniter/artifacts.ts). The ladder uses
-[`scripts/run-ts-artifact.ts`](scripts/run-ts-artifact.ts). It applies the same
-strict artifact typecheck and `main()` adapter, then runs the artifact with fixed
-stdin and no timeout:
+The self-host ladder compiles the TS source root through three strictly checked
+generated compilers and records whether their bytes reach a fixed point:
 
 ```sh
-node compiler/scripts/run-ts-artifact.ts \
-  --artifact /tmp/T11.ts --source /tmp/S.lts --out /tmp/T12.ts
+node compiler/scripts/self-host.ts --out /tmp/lite-ladder
 ```
 
 Stage 0 is feature-frozen during bootstrap (B8/B11). Do not add igniter-only
@@ -186,8 +182,6 @@ enabled. See the [completion assessment and evidence](parity.md#function-complet
 | [`tests/lexer/`](tests/lexer/) | Focused lexer fixtures, dump driver and expected tokens |
 | [`tests/parser/`](tests/parser/) | Focused parser fixtures, dump drivers and expected nodes |
 | [`tests/checker/`](tests/checker/) | Checker fixtures, dump driver and expected symbols |
-| [`ts-emitter.lts`](ts-emitter.lts) | Generated compatibility bundle for the TS manifest |
-| [`c-emitter.lts`](c-emitter.lts) | Generated compatibility bundle for the C manifest |
 | [`runtime/ts/runtime.ts`](runtime/ts/runtime.ts) | P6 TS runtime: checked Int64, code-point text, list copies, faults and exit |
 | [`tests/references/generated/report-42.ts`](tests/references/generated/report-42.ts) | Checked-in TS reference for `outputLine(42);` |
 | [`tests/references/generated/report-42.c`](tests/references/generated/report-42.c) | Checked-in C reference for `outputLine(42);` |
@@ -197,9 +191,7 @@ enabled. See the [completion assessment and evidence](parity.md#function-complet
 | [`scripts/self-host.ts`](scripts/self-host.ts) | Builds three strictly checked generated TS generations |
 | [`scripts/corpus-parity.ts`](scripts/corpus-parity.ts) | Checks compiler bytes, rejections and TS execution against recorded contracts |
 
-The backend source is split by role and assembled by manifest order. The
-compatibility `ts-emitter.lts` and `c-emitter.lts` files are generated flattened
-bundles, not hand-edited sources.
+Backend source is split by role and connected with Lite namespace aliases.
 
 ## Documentation style
 
@@ -209,27 +201,17 @@ comment describing its contract, checked-value meaning, and failure behavior
 executable contract remains the verification cases under
 [`../igniter/tests/compiler/`](../igniter/tests/compiler/).
 
-## Manifest assembly
+## Source graph
 
-Compiler source uses receiver-less `import "path";` lines for its ordered
-components, but those lines still describe host-assembled bundles rather than
-separate Lite modules. The manifests in [`manifests/`](manifests/README.md) list
-files for each target, and the loader splices them into one flattened bundle
-with a line map. Dependency order is semantic because Lite has no forward
-function lookup: literal encoders come before the shared front-end, and the
-front-end comes before the emitter and driver. The generated TS compiler has a
-Lite-owned source graph for user imports, but compiler-source assembly still
-uses manifests and the host bundle loader.
+Each manifest selects one root. The Lite compiler follows namespace imports
+such as `frontend := import "frontend.lts";`; each source unit remains separate
+through parsing and checking. Both target roots share the frontend while their
+drivers select the TS or C emitter. Only the host's `readSource` callback opens
+files and reports canonical identities to the build cache.
 
-`lite-compile-ts` reads the root file through [`cli.ts`](cli.ts); the Lite
-compiler reads its imports. C and compiler-source assembly still use the
-transitional host loader. The old `ts-emitter.lts` and `c-emitter.lts`
-paths are generated compatibility bundles that match the manifest output; edit
-`src/` and regenerate them, do not edit the bundles.
-
-The temporary `importFlatAll` loader directive remains only in test helpers
-under `compiler/tests/` and `lib/tests/`; compiler source and `lib/core` do not
-use it. It is not part of the permanent module/import design.
+Compiler and phase-test source is compiled through Lite's import graph. The
+TypeScript host only validates manifest metadata and supplies source reads;
+there is no source concatenation path.
 
 ## Run the compiler
 

@@ -1,3 +1,7 @@
+tsLiteral := import "ts-literals.lts";
+frontend := import "frontend.lts";
+textLib := import "../../lib/core/text.lts";
+integer := import "../../lib/core/int.lts";
 /** Removes one four-space indentation level from `indent`. */
 dedent := fn(indent: String): String {
     textSlice(indent, 0, textLength(indent) - 4)
@@ -11,14 +15,14 @@ tsTupleType := fn(kind: String): String {
     var count := 0;
     loop cursor < size and textAt(kind, cursor) =!= ")" {
         nameStart := cursor;
-        cursor = skipName(kind, cursor);
+        cursor = textLib.skipName(kind, cursor);
         label := textSlice(kind, nameStart, cursor);
         if cursor < size and textAt(kind, cursor) == ":" { cursor = cursor + 1; }
         typeStart := cursor;
-        cursor = skipName(kind, cursor);
+        cursor = textLib.skipName(kind, cursor);
         fieldKind := textSlice(kind, typeStart, cursor);
         if count > 0 { result = result + " "; }
-        result = result + label + ": " + tsScalarType(fieldKind);
+        result = result + label + ": " + tsLiteral.tsScalarType(fieldKind);
         count = count + 1;
         if cursor < size and textAt(kind, cursor) == "," {
             result = result + ";";
@@ -30,9 +34,9 @@ tsTupleType := fn(kind: String): String {
 
 /** Maps a restricted Lite scalar, flat named-tuple or List kind to its TypeScript type. */
 tsFunctionType := fn(kind: String): String {
-    if isListKind(kind) { tsFunctionType(listElementKind(kind)) + "[]" }
-    else if isTupleKind(kind) { tsTupleType(kind) }
-    else { tsScalarType(kind) }
+    if frontend.isListKind(kind) { tsFunctionType(frontend.listElementKind(kind)) + "[]" }
+    else if frontend.isTupleKind(kind) { tsTupleType(kind) }
+    else { tsLiteral.tsScalarType(kind) }
 }
 
 /** Formats a `|`-separated `name=kind` parameter list as a TypeScript parameter list. */
@@ -41,11 +45,11 @@ tsParameterList := fn(encoded: String): String {
     var result := "";
     var start := 0;
     loop true {
-        separator := indexOfText(encoded, "|", start);
+        separator := textLib.indexOfText(encoded, "|", start);
         var end := textLength(encoded);
         if separator >= 0 { end = separator; }
         entry := textSlice(encoded, start, end);
-        equals := indexOfText(entry, "=", 0);
+        equals := textLib.indexOfText(entry, "=", 0);
         parameterName := textSlice(entry, 0, equals);
         parameterKind := textSlice(entry, equals + 1, textLength(entry));
         if textLength(result) > 0 { result = result + ", "; }
@@ -61,11 +65,11 @@ reportParameterReads := fn(encoded: String, indent: String): Unit {
     if encoded == "" { return; }
     var start := 0;
     loop true {
-        separator := indexOfText(encoded, "|", start);
+        separator := textLib.indexOfText(encoded, "|", start);
         var end := textLength(encoded);
         if separator >= 0 { end = separator; }
         entry := textSlice(encoded, start, end);
-        equals := indexOfText(entry, "=", 0);
+        equals := textLib.indexOfText(entry, "=", 0);
         outputLine(indent + "void lite_" + textSlice(entry, 0, equals) + ";");
         if separator < 0 { break; }
         start = separator + 1;
@@ -77,42 +81,42 @@ displayValueCode := fn(kind: String, code: String): String {
     if kind == "Int" or kind == "Float" { return "(" + code + ").toString()"; }
     if kind == "Bool" { return "((" + code + ") ? \"true\" : \"false\")"; }
     if kind == "Unit" { return "((value: unknown): string => { void value; return \"Unit\"; })(" + code + ")"; }
-    if isListKind(kind) {
-        element := listElementKind(kind);
+    if frontend.isListKind(kind) {
+        element := frontend.listElementKind(kind);
         return "(\"[\" + (" + code + ").map((value: " + tsFunctionType(element) + ") => " + self(element, "value") + ").join(\", \") + \"]\")";
     }
-    if isTupleKind(kind) {
-        var result := textLiteralCode("(");
+    if frontend.isTupleKind(kind) {
+        var result := tsLiteral.textLiteralCode("(");
         var cursor := 1;
         var count := 0;
         loop cursor < textLength(kind) and textAt(kind, cursor) =!= ")" {
             start := cursor;
-            cursor = skipName(kind, cursor);
+            cursor = textLib.skipName(kind, cursor);
             label := textSlice(kind, start, cursor);
             cursor = cursor + 1;
             typeStart := cursor;
-            cursor = skipName(kind, cursor);
+            cursor = textLib.skipName(kind, cursor);
             component := textSlice(kind, typeStart, cursor);
             separator := if count == 0 { "" } else { ", " };
-            result = result + " + " + textLiteralCode(separator + label + "=") + " + " + self(component, "value." + label);
+            result = result + " + " + tsLiteral.textLiteralCode(separator + label + "=") + " + " + self(component, "value." + label);
             count = count + 1;
             if cursor < textLength(kind) and textAt(kind, cursor) == "," { cursor = cursor + 1; }
         }
         ending := if count == 1 { ",)" } else { ")" };
-        return "((value: " + tsFunctionType(kind) + "): string => " + result + " + " + textLiteralCode(ending) + ")(" + code + ")";
+        return "((value: " + tsFunctionType(kind) + "): string => " + result + " + " + tsLiteral.textLiteralCode(ending) + ")(" + code + ")";
     }
     code
 }
 
 /** Formats one output argument without duplicating its evaluation. */
-reportArgumentCode := fn(item: Item): String {
+reportArgumentCode := fn(item: frontend.Item): String {
     displayValueCode(item.kind, item.code)
 }
 
 /** True when any emitted item calls the named `lite$` helper outside quoted String literal text. */
 usesBuiltin := fn(calls: String, name: String): Bool {
     if calls == "|" { return false; }
-    indexOfText(calls, "|lite$" + name + "(|", 0) >= 0
+    textLib.indexOfText(calls, "|lite$" + name + "(|", 0) >= 0
 }
 
 /** True when any emitted item reads a list element through the checked helper. */
@@ -170,8 +174,8 @@ emitIntArithmeticHelpers := fn(calls: String, source: String, prefix: String): U
     if not integers and not usesBounds(calls) and not usesFloatArithmetic(calls) { return; }
     namePrefix := if prefix == "" { "" } else { prefix + ":" };
     needsRange := usesIntArithmetic(calls) or usesBuiltin(calls, "divideInt") or usesBuiltin(calls, "floorDivideInt");
-    outputLine("const lite$intLines: readonly number[] = [" + lineStartCodes(source) + "];");
-    outputLine("const lite$intSource = " + textLiteralCode(namePrefix) + ";");
+    outputLine("const lite$intLines: readonly number[] = [" + frontend.lineStartCodes(source) + "];");
+    outputLine("const lite$intSource = " + tsLiteral.textLiteralCode(namePrefix) + ";");
     if needsRange { outputLine("const lite$intMin = -(1n << 63n), lite$intMax = (1n << 63n) - 1n;"); }
     outputLine("function lite$fault(category: string, at: number, message: string): never {");
     outputLine("    let line = 0;");
@@ -466,8 +470,8 @@ emitIntDivisionHelpers := fn(calls: String): Unit {
 }
 
 /** Emits the TS module from the flat item stream. Report arguments evaluate once, left to right, before reading and appending to `lite_out`, preserving reports made by argument calls. */
-emitProgram := fn(items: Items, source: String, prefix: String): Unit {
-    calls := targetHelperCalls(items);
+pub emitProgram := fn(items: frontend.Items, source: String, prefix: String): Unit {
+    calls := frontend.targetHelperCalls(items);
     hasExit := usesBuiltin(calls, "exit") or usesBuiltin(calls, "inputAll") or usesBuiltin(calls, "inputLine") or usesBuiltin(calls, "inputInt") or usesBuiltin(calls, "inputFloat");
     if hasExit {
         outputLine("let lite_out = \"\";");
@@ -565,7 +569,7 @@ emitProgram := fn(items: Items, source: String, prefix: String): Unit {
             indent = dedent(indent);
             outputLine(indent + "}");
         } else if item.kind == "LoopSeq" {
-            outputLine(indent + "for (const " + item.runtime + " of " + listCopyCode(item.code) + ") {");
+            outputLine(indent + "for (const " + item.runtime + " of " + tsLiteral.listCopyCode(item.code) + ") {");
             indent = indent + "    ";
             outputLine(indent + "void " + item.runtime + ";");
         } else if item.kind == "Loop" {
@@ -578,8 +582,8 @@ emitProgram := fn(items: Items, source: String, prefix: String): Unit {
             indent = dedent(indent);
             outputLine(indent + "}");
         } else if item.kind == "End" or item.kind == "EndOutput" {
-            if count == 0 { line = textLiteralCode(""); }
-            temporary := "lite$report" + intText(reportIndex);
+            if count == 0 { line = tsLiteral.textLiteralCode(""); }
+            temporary := "lite$report" + integer.intText(reportIndex);
             outputLine(indent + "const " + temporary + " = " + line + ";");
             ending := if item.kind == "End" { " + \"\\n\"" } else { "" };
             outputLine(indent + "lite$emit(" + temporary + ending + ");");

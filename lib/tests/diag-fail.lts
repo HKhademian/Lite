@@ -1,4 +1,4 @@
-importFlatAll "../core/diag.lts";
+diag := import "../core/diag.lts";
 
-fail("name", "message");
+diag.fail("name", "message");
 outputLine("unreachable");

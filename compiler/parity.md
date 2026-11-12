@@ -1,8 +1,9 @@
-# Bootstrap parity ledger
+# Historical bootstrap parity ledger
 
-Status: **active, 2026-11-02**. This ledger drives the owner direction that the
-TS igniter and the generated compilers converge into the same compiler for the
-bootstrap surface. It is a burndown list, not a claim that parity already holds.
+Status: **historical snapshot, 2026-11-02**. The commands and results below
+record the pre-import bootstrap path. They are audit evidence, not current build
+instructions; the active graph-based build is documented in
+[`README.md`](README.md) and [`bootstrap/README.md`](bootstrap/README.md).
 
 Immediate scope: the bootstrap subset L, S, and the 67 program / 26 rejection
 cases. The owner approved starting full T00 replacement on 2026-11-02; existing
@@ -116,7 +117,7 @@ The 2026-11-02 run compared T11 with stage 0 over all 92 cases in 7.7 s with
 zero mismatches, covering emitted TS bytes, rejection stderr text and exit
 status.
 
-TS ladder commands:
+Historical TS ladder commands (do not use for current builds):
 
 ```sh
 # S is the ordered TS manifest bundle.

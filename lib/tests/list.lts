@@ -1,20 +1,20 @@
-importFlatAll "../core/int.lts";
-importFlatAll "../core/list.lts";
-importFlatAll "../core/test.lts";
+integer := import "../core/int.lts";
+list := import "../core/list.lts";
+test := import "../core/test.lts";
 
 texts: List<String> = ["a", "b", "c"];
-checkInt("list index text", 1, listIndexOfText(texts, "b"));
-checkInt("list index text absent", -1, listIndexOfText(texts, "z"));
-checkBool("list contains text", true, listContainsText(texts, "c"));
-checkBool("list lacks text", false, listContainsText(texts, "z"));
+test.checkInt("list index text", 1, list.listIndexOfText(texts, "b"));
+test.checkInt("list index text absent", -1, list.listIndexOfText(texts, "z"));
+test.checkBool("list contains text", true, list.listContainsText(texts, "c"));
+test.checkBool("list lacks text", false, list.listContainsText(texts, "z"));
 
 ints: List<Int> = [3, 5, 8];
-checkInt("list index int", 2, listIndexOfInt(ints, 8));
-checkBool("list contains int", true, listContainsInt(ints, 5));
-checkBool("list lacks int", false, listContainsInt(ints, 4));
+test.checkInt("list index int", 2, list.listIndexOfInt(ints, 8));
+test.checkBool("list contains int", true, list.listContainsInt(ints, 5));
+test.checkBool("list lacks int", false, list.listContainsInt(ints, 4));
 
 flags: List<Bool> = [false, true];
-checkInt("list index bool", 1, listIndexOfBool(flags, true));
-checkBool("list contains bool", true, listContainsBool(flags, false));
+test.checkInt("list index bool", 1, list.listIndexOfBool(flags, true));
+test.checkBool("list contains bool", true, list.listContainsBool(flags, false));
 
-done("list");
+test.done("list");

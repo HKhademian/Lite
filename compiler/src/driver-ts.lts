@@ -1,8 +1,15 @@
-prefix := sourcePrefix();
-source := inputAll();
-if prefix =!= "" {
-    graph := visitSourceModule(prefix, source, []);
-    emitProgram(moduleItems(graph), source, prefix);
-} else {
-    emitProgram(parseProgram(source, prefix), source, prefix);
+frontend := import "frontend.lts";
+modules := import "modules.lts";
+emitter := import "emit-ts.lts";
+
+/** Runs the TypeScript compiler entry after its graph dependencies are loaded. */
+pub run := fn(): Unit {
+    prefix := frontend.sourcePrefix();
+    source := inputAll();
+    if prefix =!= "" {
+        graph := modules.visitSourceModule("ts", prefix, source, []);
+        emitter.emitProgram(modules.moduleItems(graph), source, prefix);
+    } else {
+        emitter.emitProgram(frontend.parseProgram("ts", source, prefix), source, prefix);
+    }
 }

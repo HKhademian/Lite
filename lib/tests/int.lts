@@ -1,50 +1,55 @@
-importFlatAll "../core/int.lts";
-importFlatAll "../core/test.lts";
+integer := import "../core/int.lts";
+test := import "../core/test.lts";
 
-sum := intAdd(2, 3);
-checkInt("int add", 5, sum.value);
-checkBool("int add ok", true, sum.ok);
+sum := integer.intAdd(2, 3);
+test.checkInt("int add", 5, sum.value);
+test.checkBool("int add ok", true, sum.ok);
 
-overflow := intAdd(intMax(), 1);
-checkBool("int add overflow", false, overflow.ok);
+overflow := integer.intAdd(integer.intMax(), 1);
+test.checkBool("int add overflow", false, overflow.ok);
 
-underflow := intSubtract(intMin(), 1);
-checkBool("int subtract underflow", false, underflow.ok);
+underflow := integer.intSubtract(integer.intMin(), 1);
+test.checkBool("int subtract underflow", false, underflow.ok);
 
-difference := intSubtract(7, 9);
-checkInt("int subtract", -2, difference.value);
+difference := integer.intSubtract(7, 9);
+test.checkInt("int subtract", -2, difference.value);
 
-product := intMultiply(-6, 7);
-checkInt("int multiply", -42, product.value);
-minimumProduct := intMultiply(intMin(), -1);
-checkBool("int multiply min overflow", false, minimumProduct.ok);
+product := integer.intMultiply(-6, 7);
+test.checkInt("int multiply", -42, product.value);
+minimumProduct := integer.intMultiply(integer.intMin(), -1);
+test.checkBool("int multiply min overflow", false, minimumProduct.ok);
 
-quotient := intDivide(-7, 2);
-checkInt("int divide", -3, quotient.value);
-checkBool("int divide zero", false, intDivide(1, 0).ok);
-checkBool("int divide min", false, intDivide(intMin(), -1).ok);
+quotient := integer.intDivide(-7, 2);
+test.checkInt("int divide", -3, quotient.value);
+zeroQuotient := integer.intDivide(1, 0);
+test.checkBool("int divide zero", false, zeroQuotient.ok);
+minimumQuotient := integer.intDivide(integer.intMin(), -1);
+test.checkBool("int divide min", false, minimumQuotient.ok);
 
-remainder := intRemainder(-7, 2);
-checkInt("int remainder", -1, remainder.value);
-checkBool("int remainder zero", false, intRemainder(1, 0).ok);
-minimumRemainder := intRemainder(intMin(), -1);
-checkBool("int remainder minimum valid", true, minimumRemainder.ok);
-checkInt("int remainder minimum", 0, minimumRemainder.value);
+remainder := integer.intRemainder(-7, 2);
+test.checkInt("int remainder", -1, remainder.value);
+zeroRemainder := integer.intRemainder(1, 0);
+test.checkBool("int remainder zero", false, zeroRemainder.ok);
+minimumRemainder := integer.intRemainder(integer.intMin(), -1);
+test.checkBool("int remainder minimum valid", true, minimumRemainder.ok);
+test.checkInt("int remainder minimum", 0, minimumRemainder.value);
 
-floor := intFloorDivide(-7, 2);
-checkInt("int floor divide", -4, floor.value);
-modulo := intFloorModulo(-7, 2);
-checkInt("int floor modulo", 1, modulo.value);
-checkBool("int floor modulo zero", false, intFloorModulo(1, 0).ok);
+floor := integer.intFloorDivide(-7, 2);
+test.checkInt("int floor divide", -4, floor.value);
+modulo := integer.intFloorModulo(-7, 2);
+test.checkInt("int floor modulo", 1, modulo.value);
+zeroModulo := integer.intFloorModulo(1, 0);
+test.checkBool("int floor modulo zero", false, zeroModulo.ok);
 
-negated := intNegate(42);
-checkInt("int negate", -42, negated.value);
-checkBool("int negate min", false, intNegate(intMin()).ok);
+negated := integer.intNegate(42);
+test.checkInt("int negate", -42, negated.value);
+minimumNegation := integer.intNegate(integer.intMin());
+test.checkBool("int negate min", false, minimumNegation.ok);
 
-checkText("int text zero", "0", intText(0));
-checkText("int text positive", "42", intText(42));
-checkText("int text negative", "-42", intText(-42));
-checkText("int text max", "9223372036854775807", intText(intMax()));
-checkText("int text min", "-9223372036854775808", intText(intMin()));
+test.checkText("int text zero", "0", integer.intText(0));
+test.checkText("int text positive", "42", integer.intText(42));
+test.checkText("int text negative", "-42", integer.intText(-42));
+test.checkText("int text max", "9223372036854775807", integer.intText(integer.intMax()));
+test.checkText("int text min", "-9223372036854775808", integer.intText(integer.intMin()));
 
-done("int");
+test.done("int");

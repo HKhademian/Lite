@@ -1,3 +1,62 @@
+textLib := import "../../lib/core/text.lts";
+formatLib := import "../../lib/core/format.lts";
+listLib := import "../../lib/core/list.lts";
+sourceLib := import "../../lib/core/source.lts";
+diagLib := import "../../lib/core/diag.lts";
+numeric := import "numeric-literals.lts";
+integer := import "../../lib/core/int.lts";
+tsLiteral := import "ts-literals.lts";
+cLiteral := import "c-literals.lts";
+/** Selects the TS or C backend implementation for one emitted literal operation. */
+targetBoolLiteralCode := fn(target: String, value: Bool): String { if target == "ts" { tsLiteral.boolLiteralCode(value) } else { cLiteral.boolLiteralCode(value) } }
+/** Selects the TS or C backend implementation for one emitted literal operation. */
+targetComparisonChainCode := fn(target: String, codes: List<String>, kinds: List<String>, operators: List<String>, count: Int, position: Int): String { if target == "ts" { tsLiteral.comparisonChainCode(codes, kinds, operators, count, position) } else { cLiteral.comparisonChainCode(codes, kinds, operators, count, position) } }
+/** Selects the TS or C backend implementation for one emitted literal operation. */
+targetComparisonCode := fn(target: String, op: String, kind: String, left: String, right: String): String { if target == "ts" { tsLiteral.comparisonCode(op, kind, left, right) } else { cLiteral.comparisonCode(op, kind, left, right) } }
+/** Selects the TS or C backend implementation for one emitted literal operation. */
+targetConcatCode := fn(target: String, left: String, right: String): String { if target == "ts" { tsLiteral.concatCode(left, right) } else { cLiteral.concatCode(left, right) } }
+/** Selects the TS or C backend implementation for one emitted literal operation. */
+targetFloatBinaryCode := fn(target: String, op: String, left: String, right: String, position: Int): String { if target == "ts" { tsLiteral.floatBinaryCode(op, left, right, position) } else { cLiteral.floatBinaryCode(op, left, right, position) } }
+/** Selects the TS or C backend implementation for one emitted literal operation. */
+targetFloatLiteralCode := fn(target: String, digits: String, negative: Bool): String { if target == "ts" { tsLiteral.floatLiteralCode(digits, negative) } else { cLiteral.floatLiteralCode(digits, negative) } }
+/** Selects the TS or C backend implementation for one emitted literal operation. */
+targetFloatOperandCode := fn(target: String, kind: String, code: String): String { if target == "ts" { tsLiteral.floatOperandCode(kind, code) } else { cLiteral.floatOperandCode(kind, code) } }
+/** Selects the TS or C backend implementation for one emitted literal operation. */
+targetFloatPowerCode := fn(target: String, left: String, right: String, position: Int): String { if target == "ts" { tsLiteral.floatPowerCode(left, right, position) } else { cLiteral.floatPowerCode(left, right, position) } }
+/** Selects the TS or C backend implementation for one emitted literal operation. */
+targetFloorDivCode := fn(target: String, left: String, right: String): String { if target == "ts" { tsLiteral.floorDivCode(left, right) } else { cLiteral.floorDivCode(left, right) } }
+/** Selects the TS or C backend implementation for one emitted literal operation. */
+targetFloorModCode := fn(target: String, left: String, right: String): String { if target == "ts" { tsLiteral.floorModCode(left, right) } else { cLiteral.floorModCode(left, right) } }
+/** Selects the TS or C backend implementation for one emitted literal operation. */
+targetIntAddCode := fn(target: String, left: String, right: String, position: Int): String { if target == "ts" { tsLiteral.intAddCode(left, right, position) } else { cLiteral.intAddCode(left, right, position) } }
+/** Selects the TS or C backend implementation for one emitted literal operation. */
+targetIntDivideCode := fn(target: String, left: String, right: String, position: Int): String { if target == "ts" { tsLiteral.intDivideCode(left, right, position) } else { cLiteral.intDivideCode(left, right, position) } }
+/** Selects the TS or C backend implementation for one emitted literal operation. */
+targetIntFloorDivideCode := fn(target: String, left: String, right: String, position: Int): String { if target == "ts" { tsLiteral.intFloorDivideCode(left, right, position) } else { cLiteral.intFloorDivideCode(left, right, position) } }
+/** Selects the TS or C backend implementation for one emitted literal operation. */
+targetIntFloorModuloCode := fn(target: String, left: String, right: String, position: Int): String { if target == "ts" { tsLiteral.intFloorModuloCode(left, right, position) } else { cLiteral.intFloorModuloCode(left, right, position) } }
+/** Selects the TS or C backend implementation for one emitted literal operation. */
+targetIntLiteralCode := fn(target: String, value: Int, negative: Bool, digits: String): String { if target == "ts" { tsLiteral.intLiteralCode(value, negative, digits) } else { cLiteral.intLiteralCode(value, negative, digits) } }
+/** Selects the TS or C backend implementation for one emitted literal operation. */
+targetIntMultiplyCode := fn(target: String, left: String, right: String, position: Int): String { if target == "ts" { tsLiteral.intMultiplyCode(left, right, position) } else { cLiteral.intMultiplyCode(left, right, position) } }
+/** Selects the TS or C backend implementation for one emitted literal operation. */
+targetIntNegateCode := fn(target: String, value: String, position: Int): String { if target == "ts" { tsLiteral.intNegateCode(value, position) } else { cLiteral.intNegateCode(value, position) } }
+/** Selects the TS or C backend implementation for one emitted literal operation. */
+targetIntRemainderCode := fn(target: String, left: String, right: String, position: Int): String { if target == "ts" { tsLiteral.intRemainderCode(left, right, position) } else { cLiteral.intRemainderCode(left, right, position) } }
+/** Selects the TS or C backend implementation for one emitted literal operation. */
+targetIntSubtractCode := fn(target: String, left: String, right: String, position: Int): String { if target == "ts" { tsLiteral.intSubtractCode(left, right, position) } else { cLiteral.intSubtractCode(left, right, position) } }
+/** Selects the TS or C backend implementation for one emitted literal operation. */
+targetListCopyCode := fn(target: String, code: String): String { if target == "ts" { tsLiteral.listCopyCode(code) } else { cLiteral.listCopyCode(code) } }
+/** Selects the TS or C backend implementation for one emitted literal operation. */
+targetLogicCode := fn(target: String, op: String, left: String, right: String): String { if target == "ts" { tsLiteral.logicCode(op, left, right) } else { cLiteral.logicCode(op, left, right) } }
+/** Selects the TS or C backend implementation for one emitted literal operation. */
+targetNotCode := fn(target: String, value: String): String { if target == "ts" { tsLiteral.notCode(value) } else { cLiteral.notCode(value) } }
+/** Selects the TS or C backend implementation for one emitted literal operation. */
+targetTextLiteralCode := fn(target: String, value: String): String { if target == "ts" { tsLiteral.textLiteralCode(value) } else { cLiteral.textLiteralCode(value) } }
+/** Selects the TS or C backend implementation for one emitted literal operation. */
+targetUnitEvaluationCode := fn(target: String, code: String): String { if target == "ts" { tsLiteral.unitEvaluationCode(code) } else { cLiteral.unitEvaluationCode(code) } }
+/** Selects the TS or C backend implementation for one emitted literal operation. */
+targetUnitLiteralCode := fn(target: String): String { if target == "ts" { tsLiteral.unitLiteralCode() } else { cLiteral.unitLiteralCode() } }
 /* Shared restricted front-end. Not a standalone program: a target manifest
    places the target literal encoders before this file and the emitter/driver
    after it. */
@@ -6,9 +65,9 @@ Parsed := type (kind: String, code: String, intValue: Int, textValue: String, co
 /** One local visible to later statements: source name, hygienic runtime name, value kind, binding reassignment permission, held-data write grant, declaration block depth, constant value and target code. */
 Local := type (name: String, runtime: String, kind: String, mutable: Bool, writable: Bool, depth: Int, constant: Bool, code: String, intValue: Int, textValue: String);
 /** One program or module-graph item: a report stream entry, declaration, control-flow marker, import edge, public function signature or module visit boundary. */
-Item := type (kind: String, name: String, runtime: String, code: String, intValue: Int, textValue: String);
+pub Item := type (kind: String, name: String, runtime: String, code: String, intValue: Int, textValue: String);
 /** Parsed module/compiler items returned by parseProgram and consumed by the module collector and backend emitters. */
-Items := type List<Item>;
+pub Items := type List<Item>;
 /** Completion facts saved while an inner block is parsed; earlier conditional arms are joined only after a final else. */
 BlockState := type (returned: Bool, stopped: Bool, branchesReturned: Bool, branchesStopped: Bool, hasElse: Bool, loopForever: Bool, live: Bool);
 /** One recognized binary operator spelling and the number of source bytes it occupies. */
@@ -22,8 +81,8 @@ AliasDecl := type (name: String, target: String, at: Int, end: Int);
 
 /** Reports one source-positioned diagnostic as `name:line:column: message`, or `line:column: message` when `prefix` is empty, then exits 2. */
 failAt := fn(source: String, position: Int, prefix: String, message: String): Unit {
-    place := lineColumn(source, position);
-    fail(prefix, decimalText(place.line) + ":" + decimalText(place.column) + ": " + message);
+    place := sourceLib.lineColumn(source, position);
+    diagLib.fail(prefix, formatLib.decimalText(place.line) + ":" + formatLib.decimalText(place.column) + ": " + message);
 }
 
 /** Consumes the exact `symbol` at `position`, or reports a source-positioned diagnostic and exits 2. */
@@ -36,7 +95,7 @@ expectSymbol := fn(source: String, position: Int, symbol: String, prefix: String
 
 /** Number of consecutive `#` characters after a comment opener; zero means an ordinary comment. */
 rawFenceLength := fn(source: String, position: Int): Int {
-    if not startsWithAt(source, position, "/*") { return 0; }
+    if not textLib.startsWithAt(source, position, "/*") { return 0; }
     var index := position + 2;
     var count := 0;
     loop index < textLength(source) and textAt(source, index) == "#" {
@@ -55,7 +114,7 @@ skipRawComment := fn(source: String, position: Int, fence: Int, prefix: String):
             runStart := cursor;
             var runEnd := cursor;
             loop runEnd < size and textAt(source, runEnd) == "#" { runEnd = runEnd + 1; }
-            if runEnd - runStart == fence and startsWithAt(source, runEnd, "*/") {
+            if runEnd - runStart == fence and textLib.startsWithAt(source, runEnd, "*/") {
                 return runEnd + 2;
             }
             cursor = runEnd;
@@ -78,7 +137,7 @@ skipComment := fn(source: String, position: Int, prefix: String): Int {
         if cursor >= size {
             failAt(source, position, prefix, "unterminated comment");
         }
-        if startsWithAt(source, cursor, "/*") {
+        if textLib.startsWithAt(source, cursor, "/*") {
             innerFence := rawFenceLength(source, cursor);
             if innerFence > 0 {
                 cursor = skipRawComment(source, cursor, innerFence, prefix);
@@ -86,7 +145,7 @@ skipComment := fn(source: String, position: Int, prefix: String): Int {
                 depth = depth + 1;
                 cursor = cursor + 2;
             }
-        } else if startsWithAt(source, cursor, "*/") {
+        } else if textLib.startsWithAt(source, cursor, "*/") {
             depth = depth - 1;
             cursor = cursor + 2;
             if depth == 0 { return cursor; }
@@ -105,7 +164,7 @@ skipTrivia := fn(source: String, start: Int, prefix: String): Int {
         ch := textAt(source, position);
         if ch == " " or ch == "\t" or ch == "\r" or ch == "\n" {
             position = position + 1;
-        } else if startsWithAt(source, position, "/*") {
+        } else if textLib.startsWithAt(source, position, "/*") {
             position = skipComment(source, position, prefix);
         } else {
             break;
@@ -188,15 +247,15 @@ findAlias := fn(aliases: List<AliasDecl>, name: String): Int {
 
 /** Reads one local or module-qualified type name. */
 typeNameAt := fn(source: String, position: Int, prefix: String): (name: String, next: Int) {
-    firstEnd := skipName(source, position);
+    firstEnd := textLib.skipName(source, position);
     first := textSlice(source, position, firstEnd);
     afterFirst := skipTrivia(source, firstEnd, prefix);
     if afterFirst < textLength(source) and textAt(source, afterFirst) == "." {
         memberStart := skipTrivia(source, afterFirst + 1, prefix);
-        if memberStart >= textLength(source) or not isNameStart(textAt(source, memberStart)) {
+        if memberStart >= textLength(source) or not textLib.isNameStart(textAt(source, memberStart)) {
             failAt(source, memberStart, prefix, "expected a type name after .");
         }
-        memberEnd := skipName(source, memberStart);
+        memberEnd := textLib.skipName(source, memberStart);
         member := textSlice(source, memberStart, memberEnd);
         return (name = first + "." + member, next = memberEnd);
     }
@@ -214,17 +273,17 @@ aliasIndexAt := fn(aliases: List<AliasDecl>, position: Int): Int {
 }
 
 /** True when `kind` is this compiler's canonical flat named-tuple kind, written `(label:Kind,label:Kind)`. */
-isTupleKind := fn(kind: String): Bool {
+pub isTupleKind := fn(kind: String): Bool {
     textLength(kind) > 0 and textAt(kind, 0) == "("
 }
 
 /** True when `kind` is this compiler's canonical one-argument list kind, written `List<ElementKind>`. */
-isListKind := fn(kind: String): Bool {
-    textLength(kind) > 5 and startsWithAt(kind, 0, "List<") and textAt(kind, textLength(kind) - 1) == ">"
+pub isListKind := fn(kind: String): Bool {
+    textLength(kind) > 5 and textLib.startsWithAt(kind, 0, "List<") and textAt(kind, textLength(kind) - 1) == ">"
 }
 
 /** Returns the canonical element kind from `List<ElementKind>`. */
-listElementKind := fn(kind: String): String {
+pub listElementKind := fn(kind: String): String {
     if not isListKind(kind) { return ""; }
     textSlice(kind, 5, textLength(kind) - 1)
 }
@@ -248,7 +307,7 @@ codeUsesTextCall := fn(code: String, needle: String): Bool {
                     cursor = cursor + 1;
                 }
             }
-        } else if startsWithAt(code, cursor, needle) {
+        } else if textLib.startsWithAt(code, cursor, needle) {
             return true;
         } else {
             cursor = cursor + 1;
@@ -258,17 +317,17 @@ codeUsesTextCall := fn(code: String, needle: String): Bool {
 }
 
 /** True when emitted target code calls the checked list-index helper outside quoted String literal text. */
-codeUsesListIndex := fn(code: String): Bool {
+pub codeUsesListIndex := fn(code: String): Bool {
     codeUsesTextCall(code, "lite$listAt(")
 }
 
 /** True when emitted target code calls the checked list-pop helper outside quoted String literal text. */
-codeUsesListPop := fn(code: String): Bool {
+pub codeUsesListPop := fn(code: String): Bool {
     codeUsesTextCall(code, "lite$listPopBack(")
 }
 
 /** True when emitted target code contains a value-if conditional expression outside quoted String literal text. */
-codeUsesValueIf := fn(code: String): Bool {
+pub codeUsesValueIf := fn(code: String): Bool {
     codeUsesTextCall(code, "Boolean(")
 }
 
@@ -278,11 +337,11 @@ tupleFieldKind := fn(kind: String, label: String): String {
     var cursor := 1;
     loop cursor < size and textAt(kind, cursor) =!= ")" {
         nameStart := cursor;
-        cursor = skipName(kind, cursor);
+        cursor = textLib.skipName(kind, cursor);
         fieldName := textSlice(kind, nameStart, cursor);
         if cursor < size and textAt(kind, cursor) == ":" { cursor = cursor + 1; }
         typeStart := cursor;
-        cursor = skipName(kind, cursor);
+        cursor = textLib.skipName(kind, cursor);
         fieldKind := textSlice(kind, typeStart, cursor);
         if fieldName == label { return fieldKind; }
         if cursor < size and textAt(kind, cursor) == "," { cursor = cursor + 1; }
@@ -300,11 +359,11 @@ displayKind := fn(kind: String): String {
     var count := 0;
     loop cursor < size and textAt(kind, cursor) =!= ")" {
         nameStart := cursor;
-        cursor = skipName(kind, cursor);
+        cursor = textLib.skipName(kind, cursor);
         fieldName := textSlice(kind, nameStart, cursor);
         if cursor < size and textAt(kind, cursor) == ":" { cursor = cursor + 1; }
         typeStart := cursor;
-        cursor = skipName(kind, cursor);
+        cursor = textLib.skipName(kind, cursor);
         fieldKind := textSlice(kind, typeStart, cursor);
         if count > 0 { result = result + ", "; }
         result = result + fieldName + ": " + displayKind(fieldKind);
@@ -329,13 +388,13 @@ resolveTypeText := fn(source: String, position: Int, prefix: String, aliases: Li
                 cursor = cursor + 1;
                 break;
             }
-            if not isNameStart(textAt(text, cursor)) {
+            if not textLib.isNameStart(textAt(text, cursor)) {
                 failAt(source, position, prefix, "expected a tuple field name");
             }
             labelStart := cursor;
-            cursor = skipName(text, cursor);
+            cursor = textLib.skipName(text, cursor);
             label := textSlice(text, labelStart, cursor);
-            if listContainsText(labels, label) {
+            if listLib.listContainsText(labels, label) {
                 failAt(source, position, prefix, "duplicate tuple field " + label);
             }
             push_back(mut labels, label);
@@ -347,11 +406,11 @@ resolveTypeText := fn(source: String, position: Int, prefix: String, aliases: Li
             if cursor < size and textAt(text, cursor) == "(" {
                 failAt(source, position, prefix, "nested tuple types are not supported");
             }
-            if cursor >= size or not isNameStart(textAt(text, cursor)) {
+            if cursor >= size or not textLib.isNameStart(textAt(text, cursor)) {
                 failAt(source, position, prefix, "expected a tuple field type");
             }
             componentStart := cursor;
-            cursor = skipName(text, cursor);
+            cursor = textLib.skipName(text, cursor);
             componentName := textSlice(text, componentStart, cursor);
             componentKind := resolveTypeText(source, position, prefix, aliases, componentName, seen);
             if isTupleKind(componentKind) {
@@ -426,7 +485,7 @@ resolveTypeText := fn(source: String, position: Int, prefix: String, aliases: Li
         failAt(source, position, prefix, "unexpected text after type " + name);
     }
     if name == "Int" or name == "Float" or name == "String" or name == "Bool" or name == "Unit" { return name; }
-    numericKind := numericAliasKind(name);
+    numericKind := numeric.numericAliasKind(name);
     if numericKind =!= "" { return numericKind; }
     if isUnsupportedAliasTarget(name) {
         unsupportedAliasTarget(source, position, prefix, name);
@@ -438,7 +497,7 @@ resolveTypeText := fn(source: String, position: Int, prefix: String, aliases: Li
         return "";
     }
     alias := aliases[index];
-    if listContainsText(seen, name) {
+    if listLib.listContainsText(seen, name) {
         failAt(source, alias.at, prefix, "recursive type alias " + name);
         return "";
     }
@@ -471,14 +530,14 @@ parseTupleTypeAt := fn(source: String, position: Int, prefix: String, aliases: L
             cursor = cursor + 1;
             break;
         }
-        if not isNameStart(textAt(source, cursor)) {
+        if not textLib.isNameStart(textAt(source, cursor)) {
             failAt(source, cursor, prefix, "expected a tuple field name");
         }
         labelStart := cursor;
-        cursor = skipName(source, cursor);
+        cursor = textLib.skipName(source, cursor);
         label := textSlice(source, labelStart, cursor);
         if isReservedWord(label) { unsupportedFeature(source, labelStart, label, prefix); }
-        if listContainsText(labels, label) {
+        if listLib.listContainsText(labels, label) {
             failAt(source, labelStart, prefix, "duplicate tuple field " + label);
         }
         push_back(mut labels, label);
@@ -490,7 +549,7 @@ parseTupleTypeAt := fn(source: String, position: Int, prefix: String, aliases: L
         if cursor < size and textAt(source, cursor) == "(" {
             failAt(source, cursor, prefix, "nested tuple types are not supported");
         }
-        if cursor >= size or not isNameStart(textAt(source, cursor)) {
+        if cursor >= size or not textLib.isNameStart(textAt(source, cursor)) {
             failAt(source, cursor, prefix, "expected a tuple field type");
         }
         componentStart := cursor;
@@ -501,7 +560,7 @@ parseTupleTypeAt := fn(source: String, position: Int, prefix: String, aliases: L
         if componentName == "Int" or componentName == "Float" or componentName == "String" or componentName == "Bool" or componentName == "Unit" {
             componentKind = componentName;
         } else {
-            componentKind = numericAliasKind(componentName);
+            componentKind = numeric.numericAliasKind(componentName);
             if componentKind == "" {
                 if findAlias(aliases, componentName) >= 0 {
                     seen: mut List<String> = [];
@@ -563,13 +622,13 @@ parseTypeAt := fn(source: String, position: Int, prefix: String, aliases: List<A
     if name == "Int" or name == "Float" or name == "String" or name == "Bool" or name == "Unit" {
         return (kind = name, next = after);
     }
-    numericKind := numericAliasKind(name);
+    numericKind := numeric.numericAliasKind(name);
     if numericKind =!= "" { return (kind = numericKind, next = after); }
     if findAlias(aliases, name) >= 0 {
         seen: mut List<String> = [];
         return (kind = resolveAliasKind(source, start, prefix, aliases, name, seen), next = after);
     }
-    if indexOfText(name, ".", 0) >= 0 {
+    if textLib.indexOfText(name, ".", 0) >= 0 {
         failAt(source, start, prefix, "unknown type alias " + name);
     }
     failAt(source, start, prefix, "unsupported " + context + " type " + name);
@@ -592,14 +651,14 @@ parseFunctionHeader := fn(source: String, position: Int, prefix: String, aliases
     var count := 0;
     if cursor < size and textAt(source, cursor) =!= ")" {
         loop true {
-            if cursor >= size or not isNameStart(textAt(source, cursor)) {
+            if cursor >= size or not textLib.isNameStart(textAt(source, cursor)) {
                 failAt(source, cursor, prefix, "expected a parameter name");
             }
             nameStart := cursor;
-            cursor = skipName(source, cursor);
+            cursor = textLib.skipName(source, cursor);
             parameterName := textSlice(source, nameStart, cursor);
             if isReservedWord(parameterName) { unsupportedFeature(source, nameStart, parameterName, prefix); }
-            if listContainsText(names, parameterName) {
+            if listLib.listContainsText(names, parameterName) {
                 failAt(source, nameStart, prefix, "duplicate parameter " + parameterName);
             }
             push_back(mut names, parameterName);
@@ -626,14 +685,14 @@ parseFunctionHeader := fn(source: String, position: Int, prefix: String, aliases
 
 /** Returns the source name from one encoded `name=kind` function parameter entry. */
 paramNameOf := fn(entry: String): String {
-    separator := indexOfText(entry, "=", 0);
+    separator := textLib.indexOfText(entry, "=", 0);
     if separator < 0 { return entry; }
     textSlice(entry, 0, separator)
 }
 
 /** Returns the kind from one encoded `name=kind` function parameter entry. */
 paramKindOf := fn(entry: String): String {
-    separator := indexOfText(entry, "=", 0);
+    separator := textLib.indexOfText(entry, "=", 0);
     if separator < 0 { return ""; }
     textSlice(entry, separator + 1, textLength(entry))
 }
@@ -655,24 +714,24 @@ boolParsed := fn(code: String, value: Bool, constant: Bool, next: Int): Parsed {
 
 /** Tries a constant integer operation without raising a compile-time runtime fault. */
 tryFoldInteger := fn(operator: String, left: Int, right: Int): (value: Int, ok: Bool) {
-    if operator == "+" { return intAdd(left, right); }
-    if operator == "-" { return intSubtract(left, right); }
-    if operator == "*" { return intMultiply(left, right); }
-    if operator == "/" { return intDivide(left, right); }
-    if operator == "%" { return intRemainder(left, right); }
-    if operator == ":/" { return intFloorDivide(left, right); }
-    intFloorModulo(left, right)
+    if operator == "+" { return integer.intAdd(left, right); }
+    if operator == "-" { return integer.intSubtract(left, right); }
+    if operator == "*" { return integer.intMultiply(left, right); }
+    if operator == "/" { return integer.intDivide(left, right); }
+    if operator == "%" { return integer.intRemainder(left, right); }
+    if operator == ":/" { return integer.intFloorDivide(left, right); }
+    integer.intFloorModulo(left, right)
 }
 
 /** Lowers a checked integer operation whose result is not a safe constant, preserving evaluation and fault timing. */
-runtimeIntegerCode := fn(operator: String, left: String, right: String, position: Int): String {
-    if operator == "+" { return intAddCode(left, right, position); }
-    if operator == "-" { return intSubtractCode(left, right, position); }
-    if operator == "*" { return intMultiplyCode(left, right, position); }
-    if operator == "/" { return intDivideCode(left, right, position); }
-    if operator == "%" { return intRemainderCode(left, right, position); }
-    if operator == ":/" { return intFloorDivideCode(left, right, position); }
-    intFloorModuloCode(left, right, position)
+runtimeIntegerCode := fn(target: String, operator: String, left: String, right: String, position: Int): String {
+    if operator == "+" { return targetIntAddCode(target, left, right, position); }
+    if operator == "-" { return targetIntSubtractCode(target, left, right, position); }
+    if operator == "*" { return targetIntMultiplyCode(target, left, right, position); }
+    if operator == "/" { return targetIntDivideCode(target, left, right, position); }
+    if operator == "%" { return targetIntRemainderCode(target, left, right, position); }
+    if operator == ":/" { return targetIntFloorDivideCode(target, left, right, position); }
+    targetIntFloorModuloCode(target, left, right, position)
 }
 
 /** Returns the index of the newest visible `name` in `locals`, or -1 when it is not visible. */
@@ -691,10 +750,10 @@ localRuntimeName := fn(locals: List<Local>, name: String, position: Int, moduleI
     index := localIndex(locals, name);
     if moduleId == 0 {
         if index < 0 { return "lite_" + name; }
-        return "lt_local_" + name + "_" + intText(position);
+        return "lt_local_" + name + "_" + integer.intText(position);
     }
-    if index < 0 { return "lite_m" + intText(moduleId) + "_" + name; }
-    "lt_local_m" + intText(moduleId) + "_" + name + "_" + intText(position)
+    if index < 0 { return "lite_m" + integer.intText(moduleId) + "_" + name; }
+    "lt_local_m" + integer.intText(moduleId) + "_" + name + "_" + integer.intText(position)
 }
 
 /** True for the ten comparison spellings accepted by this checkpoint. */
@@ -719,24 +778,24 @@ operatorLevel := fn(operator: String): Int {
 readOperator := fn(source: String, position: Int): Operator {
     ch := textAt(source, position);
     if ch == "*" {
-        if startsWithAt(source, position, "**") { return (text = "**", width = 2); }
+        if textLib.startsWithAt(source, position, "**") { return (text = "**", width = 2); }
         return (text = "*", width = 1);
     }
-    if startsWithAt(source, position, "=!=") { return (text = "=!=", width = 3); }
-    if startsWithAt(source, position, "<!=") { return (text = "<!=", width = 3); }
-    if startsWithAt(source, position, ">!=") { return (text = ">!=", width = 3); }
-    if startsWithAt(source, position, "==") { return (text = "==", width = 2); }
-    if startsWithAt(source, position, "<=") { return (text = "<=", width = 2); }
-    if startsWithAt(source, position, ">=") { return (text = ">=", width = 2); }
-    if startsWithAt(source, position, "<!") { return (text = "<!", width = 2); }
-    if startsWithAt(source, position, ">!") { return (text = ">!", width = 2); }
+    if textLib.startsWithAt(source, position, "=!=") { return (text = "=!=", width = 3); }
+    if textLib.startsWithAt(source, position, "<!=") { return (text = "<!=", width = 3); }
+    if textLib.startsWithAt(source, position, ">!=") { return (text = ">!=", width = 3); }
+    if textLib.startsWithAt(source, position, "==") { return (text = "==", width = 2); }
+    if textLib.startsWithAt(source, position, "<=") { return (text = "<=", width = 2); }
+    if textLib.startsWithAt(source, position, ">=") { return (text = ">=", width = 2); }
+    if textLib.startsWithAt(source, position, "<!") { return (text = "<!", width = 2); }
+    if textLib.startsWithAt(source, position, ">!") { return (text = ">!", width = 2); }
     if ch == "<" { return (text = "<", width = 1); }
     if ch == ">" { return (text = ">", width = 1); }
     if ch == "+" or ch == "-" or ch == "/" or ch == "%" { return (text = ch, width = 1); }
-    if startsWithAt(source, position, ":/") { return (text = ":/", width = 2); }
-    if startsWithAt(source, position, ":%") { return (text = ":%", width = 2); }
-    if isNameStart(ch) {
-        after := skipName(source, position);
+    if textLib.startsWithAt(source, position, ":/") { return (text = ":/", width = 2); }
+    if textLib.startsWithAt(source, position, ":%") { return (text = ":%", width = 2); }
+    if textLib.isNameStart(ch) {
+        after := textLib.skipName(source, position);
         word := textSlice(source, position, after);
         if word == "and" or word == "or" { return (text = word, width = after - position); }
     }
@@ -784,13 +843,13 @@ compareBools := fn(operator: String, left: Bool, right: Bool): Bool {
 }
 
 /** Checks and folds or lowers one comparison expression at operator offset `at`, then returns its Bool parsed value. */
-compareParsed := fn(source: String, at: Int, operator: String, left: Parsed, right: Parsed, prefix: String): Parsed {
+compareParsed := fn(target: String, source: String, at: Int, operator: String, left: Parsed, right: Parsed, prefix: String): Parsed {
     if left.kind =!= right.kind {
         if (left.kind == "Int" or left.kind == "Float") and (right.kind == "Int" or right.kind == "Float") {
             codes: List<String> = [left.code, right.code];
             kinds: List<String> = [left.kind, right.kind];
             operators: List<String> = [operator];
-            return boolParsed(comparisonChainCode(codes, kinds, operators, 1, at), false, false, right.next);
+            return boolParsed(targetComparisonChainCode(target, codes, kinds, operators, 1, at), false, false, right.next);
         }
         failAt(source, at, prefix, "cannot compare " + displayKind(left.kind) + " and " + displayKind(right.kind));
     }
@@ -803,15 +862,15 @@ compareParsed := fn(source: String, at: Int, operator: String, left: Parsed, rig
     if left.kind == "Int" {
         if left.constant and right.constant {
             value := compareIntegers(operator, left.intValue, right.intValue);
-            return boolParsed(boolLiteralCode(value), value, true, right.next);
+            return boolParsed(targetBoolLiteralCode(target, value), value, true, right.next);
         }
-        return boolParsed(comparisonCode(operator, left.kind, left.code, right.code), false, false, right.next);
+        return boolParsed(targetComparisonCode(target, operator, left.kind, left.code, right.code), false, false, right.next);
     }
     if left.kind == "Float" {
         codes: List<String> = [left.code, right.code];
         kinds: List<String> = [left.kind, right.kind];
         operators: List<String> = [operator];
-        return boolParsed(comparisonChainCode(codes, kinds, operators, 1, at), false, false, right.next);
+        return boolParsed(targetComparisonChainCode(target, codes, kinds, operators, 1, at), false, false, right.next);
     }
     if operator =!= "==" and operator =!= "=!=" {
         failAt(source, at, prefix, "operator " + operator + " requires Int operands");
@@ -822,13 +881,13 @@ compareParsed := fn(source: String, at: Int, operator: String, left: Parsed, rig
         } else {
             compareBools(operator, left.intValue =!= 0, right.intValue =!= 0)
         };
-        return boolParsed(boolLiteralCode(value), value, true, right.next);
+        return boolParsed(targetBoolLiteralCode(target, value), value, true, right.next);
     }
-    boolParsed(comparisonCode(operator, left.kind, left.code, right.code), false, false, right.next)
+    boolParsed(targetComparisonCode(target, operator, left.kind, left.code, right.code), false, false, right.next)
 }
 
 /** Parses signed decimal Int/Float literals in one digit scan; finite/range admission happens after fractional/exponent classification. */
-parseNumber := fn(source: String, position: Int, prefix: String): Parsed {
+parseNumber := fn(target: String, source: String, position: Int, prefix: String): Parsed {
     var cursor := position;
     var negative := false;
     ch := textAt(source, cursor);
@@ -839,13 +898,13 @@ parseNumber := fn(source: String, position: Int, prefix: String): Parsed {
     start := cursor;
     afterDigit := cursor + 1;
     following := if afterDigit < textLength(source) { textAt(source, afterDigit) } else { "" };
-    if isDigit(textAt(source, cursor)) and not isDigit(following) and following =!= "." and following =!= "e" and following =!= "E" {
+    if textLib.isDigit(textAt(source, cursor)) and not textLib.isDigit(following) and following =!= "." and following =!= "e" and following =!= "E" {
         /* A lone decimal digit is always an Int: avoid the general scanner record and range arithmetic on this hot path. */
-        digit := digitValue(textAt(source, cursor));
+        digit := textLib.digitValue(textAt(source, cursor));
         value := if negative { -digit } else { digit };
-        return intParsed(intLiteralCode(value, negative, textSlice(source, cursor, afterDigit)), value, true, afterDigit);
+        return intParsed(targetIntLiteralCode(target, value, negative, textSlice(source, cursor, afterDigit)), value, true, afterDigit);
     }
-    scanned := scanNumericLiteral(source, cursor);
+    scanned := numeric.scanNumericLiteral(source, cursor);
     cursor = scanned.next;
     integerEnd := scanned.integerEnd;
     if start == integerEnd { failAt(source, position, prefix, "expected a decimal numeric literal"); }
@@ -854,32 +913,32 @@ parseNumber := fn(source: String, position: Int, prefix: String): Parsed {
     loop digitStart + 1 < integerEnd and textAt(source, digitStart) == "0" { digitStart = digitStart + 1; }
     if scanned.floating {
         digits := textSlice(source, start, integerEnd) + textSlice(source, scanned.fractionStart, scanned.fractionEnd);
-        if not finiteFloatDigits(digits, scanned.fractionEnd - scanned.fractionStart, scanned.exponent) {
+        if not numeric.finiteFloatDigits(digits, scanned.fractionEnd - scanned.fractionStart, scanned.exponent) {
             failAt(source, position, prefix, "floating literal is not finite");
         }
         raw := textSlice(source, digitStart, cursor);
-        code := floatLiteralCode(raw, negative);
+        code := targetFloatLiteralCode(target, raw, negative);
         return (kind = "Float", code = code, intValue = 0, textValue = "", constant = false, next = cursor);
     }
     if scanned.outsideInt or (not negative and scanned.magnitude == -9223372036854775808) {
         failAt(source, position, prefix, "integer literal outside signed 64-bit range");
     }
     value := if negative { scanned.magnitude } else { 0 - scanned.magnitude };
-    code := intLiteralCode(value, negative, textSlice(source, digitStart, cursor));
+    code := targetIntLiteralCode(target, value, negative, textSlice(source, digitStart, cursor));
     intParsed(code, value, true, cursor)
 }
 
 /** Admits an exact integer literal into a Float context only when the atom is the complete expression, preserving ordinary binary operand typing. */
-floatContextNumber := fn(source: String, start: Int, prefix: String, parsed: Parsed, minimum: Int): Parsed {
+floatContextNumber := fn(target: String, source: String, start: Int, prefix: String, parsed: Parsed, minimum: Int): Parsed {
     if parsed.kind =!= "Int" or binaryFollows(source, parsed.next, prefix, minimum) { return parsed; }
-    if not intExactlyFloat(parsed.intValue) {
+    if not numeric.intExactlyFloat(parsed.intValue) {
         failAt(source, start, prefix, "integer literal is not exactly representable in Float");
     }
-    (kind = "Float", code = floatOperandCode("Int", parsed.code), intValue = 0, textValue = "", constant = false, next = parsed.next)
+    (kind = "Float", code = targetFloatOperandCode(target, "Int", parsed.code), intValue = 0, textValue = "", constant = false, next = parsed.next)
 }
 
 /** Joins adjacent double-quoted literal tokens across trivia in one scan and encodes the complete value once. Escapes and malformed later tokens retain their own source positions. */
-parseText := fn(source: String, position: Int, prefix: String): Parsed {
+parseText := fn(target: String, source: String, position: Int, prefix: String): Parsed {
     var literalStart := position;
     var cursor := position + 1;
     var value := "";
@@ -919,11 +978,11 @@ parseText := fn(source: String, position: Int, prefix: String): Parsed {
             cursor = cursor + 1;
         }
     }
-    textParsed(textLiteralCode(value), value, true, cursor)
+    textParsed(targetTextLiteralCode(target, value), value, true, cursor)
 }
 
 /** Returns the position after one string literal, or the source end when it does not close; alias collection leaves lexical diagnostics to the main pass. */
-skipAliasString := fn(source: String, position: Int): Int {
+pub skipAliasString := fn(source: String, position: Int): Int {
     size := textLength(source);
     var cursor := position + 1;
     loop cursor < size {
@@ -940,25 +999,25 @@ skipAliasString := fn(source: String, position: Int): Int {
 }
 
 /** Collects distinct target helper call names, skipping quoted text and consuming whole identifiers. Existing names avoid duplicate work across items. */
-targetCodeCalls := fn(code: String, existing: String): String {
-    if indexOfText(code, "lite", 0) < 0 and indexOfText(code, "lt_", 0) < 0 { return existing; }
+pub targetCodeCalls := fn(code: String, existing: String): String {
+    if textLib.indexOfText(code, "lite", 0) < 0 and textLib.indexOfText(code, "lt_", 0) < 0 { return existing; }
     var calls := existing;
     var cursor := 0;
     loop cursor < textLength(code) {
         ch := textAt(code, cursor);
         if ch == "\"" {
             cursor = skipAliasString(code, cursor);
-        } else if isNameStart(ch) {
+        } else if textLib.isNameStart(ch) {
             start := cursor;
-            cursor = skipName(code, cursor);
+            cursor = textLib.skipName(code, cursor);
             if cursor < textLength(code) and textAt(code, cursor) == "$" {
-                cursor = skipName(code, cursor + 1);
+                cursor = textLib.skipName(code, cursor + 1);
             }
             if cursor < textLength(code) and textAt(code, cursor) == "(" {
                 name := textSlice(code, start, cursor);
-                if startsWithAt(name, 0, "lite$") or startsWithAt(name, 0, "lite_") or startsWithAt(name, 0, "lt_") {
+                if textLib.startsWithAt(name, 0, "lite$") or textLib.startsWithAt(name, 0, "lite_") or textLib.startsWithAt(name, 0, "lt_") {
                     token := name + "(|";
-                    if indexOfText(calls, "|" + token, 0) < 0 { calls = calls + token; }
+                    if textLib.indexOfText(calls, "|" + token, 0) < 0 { calls = calls + token; }
                 }
             }
         } else { cursor = cursor + 1; }
@@ -967,7 +1026,7 @@ targetCodeCalls := fn(code: String, existing: String): String {
 }
 
 /** Collects a program's target helper requirements once, with a bounded distinct-name result. */
-targetHelperCalls := fn(items: Items): String {
+pub targetHelperCalls := fn(items: Items): String {
     var calls := "|";
     loop items as item { calls = targetCodeCalls(item.code, calls); }
     calls
@@ -984,7 +1043,7 @@ collectTypeTarget := fn(source: String, position: Int, prefix: String): (text: S
             ch := textAt(source, cursor);
             if ch == "\"" {
                 cursor = skipAliasString(source, cursor);
-            } else if startsWithAt(source, cursor, "/*") {
+            } else if textLib.startsWithAt(source, cursor, "/*") {
                 cursor = skipComment(source, cursor, prefix);
             } else if ch == "(" {
                 depth = depth + 1;
@@ -1009,7 +1068,7 @@ collectTypeTarget := fn(source: String, position: Int, prefix: String): (text: S
             var depth := 0;
             loop cursor < size {
                 ch := textAt(source, cursor);
-                if startsWithAt(source, cursor, "/*") {
+                if textLib.startsWithAt(source, cursor, "/*") {
                     cursor = skipComment(source, cursor, prefix);
                 } else if ch == "<" {
                     depth = depth + 1;
@@ -1049,14 +1108,14 @@ collectAliases := fn(source: String, prefix: String): List<AliasDecl> {
         } else if ch == "}" {
             if depth > 0 { depth = depth - 1; }
             position = position + 1;
-        } else if depth == 0 and isNameStart(ch) {
+        } else if depth == 0 and textLib.isNameStart(ch) {
             nameStart := position;
-            afterName := skipName(source, position);
+            afterName := textLib.skipName(source, position);
             name := textSlice(source, nameStart, afterName);
             aliasPosition := skipTrivia(source, afterName, prefix);
-            if startsWithAt(source, aliasPosition, ":=") {
+            if textLib.startsWithAt(source, aliasPosition, ":=") {
                 typePosition := skipTrivia(source, aliasPosition + 2, prefix);
-                if wordAt(source, typePosition, "type") {
+                if textLib.wordAt(source, typePosition, "type") {
                     targetStart := skipTrivia(source, typePosition + 4, prefix);
                     target := collectTypeTarget(source, targetStart, prefix);
                     push_back(mut aliases, (name = name, target = target.text, at = nameStart, end = target.next));
@@ -1074,20 +1133,20 @@ collectAliases := fn(source: String, prefix: String): List<AliasDecl> {
 
 /** True for the single assignment/field equals token, excluding both equality and inequality operators. */
 isSingleEquals := fn(source: String, position: Int): Bool {
-    startsWithAt(source, position, "=") and not startsWithAt(source, position, "==") and not startsWithAt(source, position, "=!=")
+    textLib.startsWithAt(source, position, "=") and not textLib.startsWithAt(source, position, "==") and not textLib.startsWithAt(source, position, "=!=")
 }
 
 /** True when the text after an opening `(` starts a named tuple entry `label = ...`, rather than grouping. */
 looksLikeTupleEntry := fn(source: String, position: Int, prefix: String): Bool {
     start := skipTrivia(source, position, prefix);
-    if start >= textLength(source) or not isNameStart(textAt(source, start)) { return false; }
-    afterName := skipTrivia(source, skipName(source, start), prefix);
+    if start >= textLength(source) or not textLib.isNameStart(textAt(source, start)) { return false; }
+    afterName := skipTrivia(source, textLib.skipName(source, start), prefix);
     isSingleEquals(source, afterName)
 }
 
 /** Wraps target code in the backend's list-copy hook when `kind` is a List; every other kind is unchanged. */
-copiedValueCode := fn(kind: String, code: String): String {
-    if isListKind(kind) { listCopyCode(code) } else { code }
+copiedValueCode := fn(target: String, kind: String, code: String): String {
+    if isListKind(kind) { targetListCopyCode(target, code) } else { code }
 }
 
 /** True for the zero-argument or checked I/O and text builtins this compiler admits. */
@@ -1134,14 +1193,14 @@ expectNonemptyCallClose := fn(source: String, position: Int, prefix: String): In
 /** Parses the `mut name` grant after one list end-operation opener, rejecting a missing grant, a non-list target and a binding without writable held data. */
 parseListGrant := fn(source: String, open: Int, prefix: String, locals: List<Local>, operation: String): (runtime: String, kind: String, next: Int) {
     var cursor := skipTrivia(source, open + 1, prefix);
-    if not wordAt(source, cursor, "mut") {
+    if not textLib.wordAt(source, cursor, "mut") {
         failAt(source, cursor, prefix, operation + " requires mut list argument");
     }
     cursor = skipTrivia(source, cursor + 3, prefix);
-    if cursor >= textLength(source) or not isNameStart(textAt(source, cursor)) {
+    if cursor >= textLength(source) or not textLib.isNameStart(textAt(source, cursor)) {
         failAt(source, cursor, prefix, "expected a list name after mut");
     }
-    nameEnd := skipName(source, cursor);
+    nameEnd := textLib.skipName(source, cursor);
     listName := textSlice(source, cursor, nameEnd);
     index := localIndex(locals, listName);
     if index < 0 {
@@ -1166,7 +1225,7 @@ scanParenEnd := fn(source: String, open: Int, prefix: String): Int {
     loop cursor < size {
         ch := textAt(source, cursor);
         if ch == "\"" { cursor = skipAliasString(source, cursor); }
-        else if startsWithAt(source, cursor, "/*") { cursor = skipComment(source, cursor, prefix); }
+        else if textLib.startsWithAt(source, cursor, "/*") { cursor = skipComment(source, cursor, prefix); }
         else if ch == "(" { depth = depth + 1; cursor = cursor + 1; }
         else if ch == ")" {
             depth = depth - 1;
@@ -1178,19 +1237,19 @@ scanParenEnd := fn(source: String, open: Int, prefix: String): Int {
 }
 
 /** Precedence-climbing parser for arithmetic, comparisons, `and`/`or`, parentheses, named tuple and list values, field access, indexing, calls, unary signs and `not`. Folds constants, lowers dynamic Int arithmetic, and exits 2 on mixed types, unsupported dynamic operations or range faults. `expected` supplies a contextual kind for empty list literals. self(..., 30) parses a unary operand without binary operators. */
-parseBinary := fn(source: String, position: Int, prefix: String, locals: List<Local>, functions: List<FunctionInfo>, params: List<String>, currentName: String, expected: String, minimum: Int): Parsed {
+parseBinary := fn(target: String, source: String, position: Int, prefix: String, locals: List<Local>, functions: List<FunctionInfo>, params: List<String>, currentName: String, expected: String, minimum: Int): Parsed {
     var start := skipTrivia(source, position, prefix);
     if start >= textLength(source) {
         failAt(source, start, prefix, "expected an Int, Float, String or Bool expression");
     }
     var leaderStart := -1;
     var leaderText := "";
-    if minimum == 0 and (wordAt(source, start, "and") or wordAt(source, start, "or")) {
+    if minimum == 0 and (textLib.wordAt(source, start, "and") or textLib.wordAt(source, start, "or")) {
         leaderStart = start;
-        leaderEnd := skipName(source, start);
+        leaderEnd := textLib.skipName(source, start);
         leaderText = textSlice(source, start, leaderEnd);
         start = skipTrivia(source, leaderEnd, prefix);
-        if wordAt(source, start, "and") or wordAt(source, start, "or") {
+        if textLib.wordAt(source, start, "and") or textLib.wordAt(source, start, "or") {
             failAt(source, start, prefix, "leading " + leaderText + " may appear only once");
         }
     }
@@ -1198,7 +1257,7 @@ parseBinary := fn(source: String, position: Int, prefix: String, locals: List<Lo
     ch := textAt(source, start);
     if ch == "(" {
         if textAt(source, skipTrivia(source, start + 1, prefix)) == ")" {
-            left = (kind = "Unit", code = unitLiteralCode(), intValue = 0, textValue = "", constant = true, next = skipTrivia(source, start + 1, prefix) + 1);
+            left = (kind = "Unit", code = targetUnitLiteralCode(target), intValue = 0, textValue = "", constant = true, next = skipTrivia(source, start + 1, prefix) + 1);
         } else if looksLikeTupleEntry(source, start + 1, prefix) {
             var cursor := skipTrivia(source, start + 1, prefix);
             labels: mut List<String> = [];
@@ -1206,14 +1265,14 @@ parseBinary := fn(source: String, position: Int, prefix: String, locals: List<Lo
             kinds: mut List<String> = [];
             var count := 0;
             loop true {
-                if cursor >= textLength(source) or not isNameStart(textAt(source, cursor)) {
+                if cursor >= textLength(source) or not textLib.isNameStart(textAt(source, cursor)) {
                     failAt(source, cursor, prefix, "expected a tuple field name");
                 }
                 labelStart := cursor;
-                cursor = skipName(source, cursor);
+                cursor = textLib.skipName(source, cursor);
                 label := textSlice(source, labelStart, cursor);
                 if isReservedWord(label) { unsupportedFeature(source, labelStart, label, prefix); }
-                if listContainsText(labels, label) {
+                if listLib.listContainsText(labels, label) {
                     failAt(source, labelStart, prefix, "duplicate tuple field " + label);
                 }
                 push_back(mut labels, label);
@@ -1223,7 +1282,7 @@ parseBinary := fn(source: String, position: Int, prefix: String, locals: List<Lo
                 }
                 cursor = skipTrivia(source, cursor + 1, prefix);
                 fieldExpected := if isTupleKind(expected) { tupleFieldKind(expected, label) } else { "" };
-                value := self(source, cursor, prefix, locals, functions, params, currentName, fieldExpected, 0);
+                value := self(target, source, cursor, prefix, locals, functions, params, currentName, fieldExpected, 0);
                 if isTupleKind(value.kind) {
                     failAt(source, cursor, prefix, "nested tuple values are not supported");
                 }
@@ -1263,17 +1322,17 @@ parseBinary := fn(source: String, position: Int, prefix: String, locals: List<Lo
                 groupEnd := scanParenEnd(source, start, prefix);
                 if groupEnd >= 0 and binaryFollows(source, groupEnd, prefix, minimum) { groupedExpected = ""; }
             }
-            inner := self(source, start + 1, prefix, locals, functions, params, currentName, groupedExpected, 0);
+            inner := self(target, source, start + 1, prefix, locals, functions, params, currentName, groupedExpected, 0);
             next := expectSymbol(source, skipTrivia(source, inner.next, prefix), ")", prefix);
             left = (kind = inner.kind, code = "(" + inner.code + ")", intValue = inner.intValue, textValue = inner.textValue, constant = inner.constant, next = next);
         }
     } else if ch == "+" or ch == "-" {
         after := skipTrivia(source, start + 1, prefix);
-        if after < textLength(source) and isDigit(textAt(source, after)) {
-            left = parseNumber(source, start, prefix);
-            if expected == "Float" and ch == "-" { left = floatContextNumber(source, start, prefix, left, minimum); }
+        if after < textLength(source) and textLib.isDigit(textAt(source, after)) {
+            left = parseNumber(target, source, start, prefix);
+            if expected == "Float" and ch == "-" { left = floatContextNumber(target, source, start, prefix, left, minimum); }
         } else {
-            operand := self(source, start + 1, prefix, locals, functions, params, currentName, "", 30);
+            operand := self(target, source, start + 1, prefix, locals, functions, params, currentName, "", 30);
             if operand.kind =!= "Int" and operand.kind =!= "Float" {
                 failAt(source, start, prefix, "unary " + ch + " requires an Int or Float operand");
             }
@@ -1281,19 +1340,19 @@ parseBinary := fn(source: String, position: Int, prefix: String, locals: List<Lo
             if operand.kind == "Float" {
                 left = (kind = "Float", code = code, intValue = 0, textValue = "", constant = false, next = operand.next);
             } else if operand.constant {
-                folded := if ch == "-" { intNegate(operand.intValue) } else { (value = operand.intValue, ok = true) };
+                folded := if ch == "-" { integer.intNegate(operand.intValue) } else { (value = operand.intValue, ok = true) };
                 if folded.ok { left = intParsed(code, folded.value, true, operand.next); }
-                else { left = intParsed(intNegateCode(operand.code, start), 0, false, operand.next); }
+                else { left = intParsed(targetIntNegateCode(target, operand.code, start), 0, false, operand.next); }
             } else {
-                runtimeCode := if ch == "-" { intNegateCode(operand.code, start) } else { code };
+                runtimeCode := if ch == "-" { targetIntNegateCode(target, operand.code, start) } else { code };
                 left = intParsed(runtimeCode, 0, false, operand.next);
             }
         }
-    } else if isDigit(ch) {
-        left = parseNumber(source, start, prefix);
-        if expected == "Float" { left = floatContextNumber(source, start, prefix, left, minimum); }
+    } else if textLib.isDigit(ch) {
+        left = parseNumber(target, source, start, prefix);
+        if expected == "Float" { left = floatContextNumber(target, source, start, prefix, left, minimum); }
     } else if ch == "\"" {
-        left = parseText(source, start, prefix);
+        left = parseText(target, source, start, prefix);
     } else if ch == "[" {
         var cursor := skipTrivia(source, start + 1, prefix);
         var elementKind := "";
@@ -1306,9 +1365,9 @@ parseBinary := fn(source: String, position: Int, prefix: String, locals: List<Lo
             }
             if textAt(source, cursor) == "]" { break; }
             elementStart := cursor;
-            element := self(source, cursor, prefix, locals, functions, params, currentName, elementKind, 0);
+            element := self(target, source, cursor, prefix, locals, functions, params, currentName, elementKind, 0);
             if element.kind == "Unit" {
-                failAt(source, elementStart, prefix, "list element " + decimalText(count + 1) + " cannot be Unit");
+                failAt(source, elementStart, prefix, "list element " + formatLib.decimalText(count + 1) + " cannot be Unit");
             }
             if isListKind(element.kind) {
                 failAt(source, elementStart, prefix, "nested list types are not supported");
@@ -1316,7 +1375,7 @@ parseBinary := fn(source: String, position: Int, prefix: String, locals: List<Lo
             if elementKind == "" {
                 elementKind = element.kind;
             } else if element.kind =!= elementKind {
-                failAt(source, elementStart, prefix, "list element " + decimalText(count + 1) + " must be " +
+                failAt(source, elementStart, prefix, "list element " + formatLib.decimalText(count + 1) + " must be " +
                     displayKind(elementKind) + ", got " + displayKind(element.kind));
             }
             push_back(mut elementCodes, element.code);
@@ -1332,44 +1391,44 @@ parseBinary := fn(source: String, position: Int, prefix: String, locals: List<Lo
         if count == 0 and elementKind == "" {
             failAt(source, start, prefix, "empty list literal requires a List element type");
         }
-        left = (kind = "List<" + elementKind + ">", code = "[" + joinTexts(elementCodes, ", ") + "]",
+        left = (kind = "List<" + elementKind + ">", code = "[" + textLib.joinTexts(elementCodes, ", ") + "]",
             intValue = 0, textValue = "", constant = false, next = cursor);
-    } else if isNameStart(ch) {
+    } else if textLib.isNameStart(ch) {
         nameStart := start;
-        next := skipName(source, start);
+        next := textLib.skipName(source, start);
         name := textSlice(source, nameStart, next);
         if name == "Unit" {
-            left = (kind = "Unit", code = unitLiteralCode(), intValue = 0, textValue = "", constant = true, next = next);
+            left = (kind = "Unit", code = targetUnitLiteralCode(target), intValue = 0, textValue = "", constant = true, next = next);
         } else if name == "true" {
-            left = boolParsed(boolLiteralCode(true), true, true, next);
+            left = boolParsed(targetBoolLiteralCode(target, true), true, true, next);
         } else if name == "false" {
-            left = boolParsed(boolLiteralCode(false), false, true, next);
+            left = boolParsed(targetBoolLiteralCode(target, false), false, true, next);
         } else if name == "not" {
-            operand := self(source, next, prefix, locals, functions, params, currentName, "", 5);
+            operand := self(target, source, next, prefix, locals, functions, params, currentName, "", 5);
             if operand.kind =!= "Bool" {
                 failAt(source, nameStart, prefix, "not requires a Bool operand");
             }
             if operand.constant {
                 value := operand.intValue == 0;
-                left = boolParsed(boolLiteralCode(value), value, true, operand.next);
+                left = boolParsed(targetBoolLiteralCode(target, value), value, true, operand.next);
             } else {
-                left = boolParsed(notCode(operand.code), false, false, operand.next);
+                left = boolParsed(targetNotCode(target, operand.code), false, false, operand.next);
             }
         } else if name == "if" {
             var cursor := skipTrivia(source, next, prefix);
             conditionStart := cursor;
-            condition := self(source, cursor, prefix, locals, functions, params, currentName, "", 0);
+            condition := self(target, source, cursor, prefix, locals, functions, params, currentName, "", 0);
             if condition.kind =!= "Bool" {
                 failAt(source, conditionStart, prefix, "if condition must be Bool");
             }
             conditionCode := if condition.constant {
-                boolLiteralCode(condition.intValue =!= 0)
+                targetBoolLiteralCode(target, condition.intValue =!= 0)
             } else {
                 condition.code
             };
             cursor = expectSymbol(source, skipTrivia(source, condition.next, prefix), "{", prefix);
             branchStart := skipTrivia(source, cursor, prefix);
-            first := self(source, branchStart, prefix, locals, functions, params, currentName, expected, 0);
+            first := self(target, source, branchStart, prefix, locals, functions, params, currentName, expected, 0);
             cursor = expectSymbol(source, skipTrivia(source, first.next, prefix), "}", prefix);
             conditionCodes: mut List<String> = [];
             branchCodes: mut List<String> = [];
@@ -1379,24 +1438,24 @@ parseBinary := fn(source: String, position: Int, prefix: String, locals: List<Lo
             var branchCount := 1;
             loop true {
                 afterBranch := skipTrivia(source, cursor, prefix);
-                if not wordAt(source, afterBranch, "else") {
+                if not textLib.wordAt(source, afterBranch, "else") {
                     failAt(source, afterBranch, prefix, "value if requires a final else");
                 }
                 afterElse := skipTrivia(source, afterBranch + 4, prefix);
-                if wordAt(source, afterElse, "if") {
+                if textLib.wordAt(source, afterElse, "if") {
                     elseConditionStart := skipTrivia(source, afterElse + 2, prefix);
-                    elseCondition := self(source, elseConditionStart, prefix, locals, functions, params, currentName, "", 0);
+                    elseCondition := self(target, source, elseConditionStart, prefix, locals, functions, params, currentName, "", 0);
                     if elseCondition.kind =!= "Bool" {
                         failAt(source, elseConditionStart, prefix, "if condition must be Bool");
                     }
                     elseConditionCode := if elseCondition.constant {
-                        boolLiteralCode(elseCondition.intValue =!= 0)
+                        targetBoolLiteralCode(target, elseCondition.intValue =!= 0)
                     } else {
                         elseCondition.code
                     };
                     open := expectSymbol(source, skipTrivia(source, elseCondition.next, prefix), "{", prefix);
                     elseBranchStart := skipTrivia(source, open, prefix);
-                    branch := self(source, elseBranchStart, prefix, locals, functions, params, currentName, expected, 0);
+                    branch := self(target, source, elseBranchStart, prefix, locals, functions, params, currentName, expected, 0);
                     if branch.kind =!= resultKind {
                         failAt(source, elseBranchStart, prefix, "value if branches must have the same kind, got " +
                             displayKind(resultKind) + " and " + displayKind(branch.kind));
@@ -1408,7 +1467,7 @@ parseBinary := fn(source: String, position: Int, prefix: String, locals: List<Lo
                 } else {
                     open := expectSymbol(source, afterElse, "{", prefix);
                     elseBranchStart := skipTrivia(source, open, prefix);
-                    branch := self(source, elseBranchStart, prefix, locals, functions, params, currentName, expected, 0);
+                    branch := self(target, source, elseBranchStart, prefix, locals, functions, params, currentName, expected, 0);
                     if branch.kind =!= resultKind {
                         failAt(source, elseBranchStart, prefix, "value if branches must have the same kind, got " +
                             displayKind(resultKind) + " and " + displayKind(branch.kind));
@@ -1447,15 +1506,15 @@ parseBinary := fn(source: String, position: Int, prefix: String, locals: List<Lo
                     loop true {
                         if argumentCount >= info.count {
                             suffix := if info.count == 1 { " argument" } else { " arguments" };
-                            failAt(source, nameStart, prefix, "function " + calleeName + " expects " + decimalText(info.count) + suffix + ", got more");
+                            failAt(source, nameStart, prefix, "function " + calleeName + " expects " + formatLib.decimalText(info.count) + suffix + ", got more");
                         }
                         expected := paramKindOf(params[info.first + argumentCount]);
-                        argument := self(source, cursor, prefix, locals, functions, params, currentName, expected, 0);
+                        argument := self(target, source, cursor, prefix, locals, functions, params, currentName, expected, 0);
                         if argument.kind =!= expected {
-                            failAt(source, cursor, prefix, "argument " + decimalText(argumentCount + 1) + " of " +
+                            failAt(source, cursor, prefix, "argument " + formatLib.decimalText(argumentCount + 1) + " of " +
                                 calleeName + " must be " + displayKind(expected) + ", got " + displayKind(argument.kind));
                         }
-                        push_back(mut argumentCodes, copiedValueCode(argument.kind, argument.code));
+                        push_back(mut argumentCodes, copiedValueCode(target, argument.kind, argument.code));
                         argumentCount = argumentCount + 1;
                         cursor = skipTrivia(source, argument.next, prefix);
                         if cursor < textLength(source) and textAt(source, cursor) == "," {
@@ -1469,10 +1528,10 @@ parseBinary := fn(source: String, position: Int, prefix: String, locals: List<Lo
                 cursor = expectSymbol(source, cursor, ")", prefix);
                 if argumentCount =!= info.count {
                     suffix := if info.count == 1 { " argument" } else { " arguments" };
-                    failAt(source, nameStart, prefix, "function " + calleeName + " expects " + decimalText(info.count) +
-                        suffix + ", got " + decimalText(argumentCount));
+                    failAt(source, nameStart, prefix, "function " + calleeName + " expects " + formatLib.decimalText(info.count) +
+                        suffix + ", got " + formatLib.decimalText(argumentCount));
                 }
-                left = (kind = info.result, code = info.runtime + "(" + joinTexts(argumentCodes, ", ") + ")",
+                left = (kind = info.result, code = info.runtime + "(" + textLib.joinTexts(argumentCodes, ", ") + ")",
                     intValue = 0, textValue = "", constant = false, next = cursor);
             } else if callableIndex >= 0 {
                 failAt(source, nameStart, prefix, "function " + calleeName + " must be called");
@@ -1493,14 +1552,14 @@ parseBinary := fn(source: String, position: Int, prefix: String, locals: List<Lo
                         loop true {
                             if builtinCount >= builtinArityCount {
                                 suffix := if builtinArityCount == 1 { " argument" } else { " arguments" };
-                                failAt(source, nameStart, prefix, name + " expects " + decimalText(builtinArityCount) +
+                                failAt(source, nameStart, prefix, name + " expects " + formatLib.decimalText(builtinArityCount) +
                                     suffix + ", got more");
                             }
                             builtinExpected := builtinParameterKind(name, builtinCount);
                             builtinStart := builtinCursor;
-                            builtinValue := self(source, builtinCursor, prefix, locals, functions, params, currentName, builtinExpected, 0);
+                            builtinValue := self(target, source, builtinCursor, prefix, locals, functions, params, currentName, builtinExpected, 0);
                             if builtinValue.kind =!= builtinExpected {
-                                failAt(source, builtinStart, prefix, "argument " + decimalText(builtinCount + 1) + " of " +
+                                failAt(source, builtinStart, prefix, "argument " + formatLib.decimalText(builtinCount + 1) + " of " +
                                     name + " must be " + displayKind(builtinExpected) + ", got " + displayKind(builtinValue.kind));
                             }
                             push_back(mut builtinCodes, builtinValue.code);
@@ -1519,17 +1578,17 @@ parseBinary := fn(source: String, position: Int, prefix: String, locals: List<Lo
                 optionalPrompt := name == "inputAll" or name == "inputLine" or name == "inputInt" or name == "inputFloat";
                 if builtinCount =!= builtinArityCount and not (optionalPrompt and builtinCount == 0) {
                     suffix := if builtinArityCount == 1 { " argument" } else { " arguments" };
-                    failAt(source, nameStart, prefix, name + " expects " + decimalText(builtinArityCount) + suffix +
-                        ", got " + decimalText(builtinCount));
+                    failAt(source, nameStart, prefix, name + " expects " + formatLib.decimalText(builtinArityCount) + suffix +
+                        ", got " + formatLib.decimalText(builtinCount));
                 }
                 if optionalPrompt {
                     if builtinCount == 0 { push_back(mut builtinCodes, "undefined"); }
-                    place := lineColumn(source, nameStart);
-                    location := (if prefix == "" { "" } else { prefix + ":" }) + decimalText(place.line) + ":" + decimalText(place.column) + ": InputFault: ";
-                    push_back(mut builtinCodes, textLiteralCode(location));
+                    place := sourceLib.lineColumn(source, nameStart);
+                    location := (if prefix == "" { "" } else { prefix + ":" }) + formatLib.decimalText(place.line) + ":" + formatLib.decimalText(place.column) + ": InputFault: ";
+                    push_back(mut builtinCodes, targetTextLiteralCode(target, location));
                 }
-                if name == "textAt" or name == "textSlice" { push_back(mut builtinCodes, intText(nameStart)); }
-                left = (kind = builtinResultKind(name), code = "lite$" + name + "(" + joinTexts(builtinCodes, ", ") + ")",
+                if name == "textAt" or name == "textSlice" { push_back(mut builtinCodes, integer.intText(nameStart)); }
+                left = (kind = builtinResultKind(name), code = "lite$" + name + "(" + textLib.joinTexts(builtinCodes, ", ") + ")",
                     intValue = 0, textValue = "", constant = false, next = builtinCursor);
             } else if name == "push_back" and afterName < textLength(source) and textAt(source, afterName) == "(" {
                 grant := parseListGrant(source, afterName, prefix, locals, "push_back");
@@ -1539,7 +1598,7 @@ parseBinary := fn(source: String, position: Int, prefix: String, locals: List<Lo
                 }
                 valueStart := skipTrivia(source, cursor + 1, prefix);
                 elementKind := listElementKind(grant.kind);
-                value := self(source, valueStart, prefix, locals, functions, params, currentName, elementKind, 0);
+                value := self(target, source, valueStart, prefix, locals, functions, params, currentName, elementKind, 0);
                 if value.kind =!= elementKind {
                     failAt(source, valueStart, prefix, "push_back element must be " + displayKind(elementKind) +
                         ", got " + displayKind(value.kind));
@@ -1550,7 +1609,7 @@ parseBinary := fn(source: String, position: Int, prefix: String, locals: List<Lo
             } else if name == "pop_back" and afterName < textLength(source) and textAt(source, afterName) == "(" {
                 grant := parseListGrant(source, afterName, prefix, locals, "pop_back");
                 close := expectNonemptyCallClose(source, grant.next, prefix);
-                left = (kind = listElementKind(grant.kind), code = "lite$listPopBack(" + grant.runtime + ", " + intText(nameStart) + ")",
+                left = (kind = listElementKind(grant.kind), code = "lite$listPopBack(" + grant.runtime + ", " + integer.intText(nameStart) + ")",
                     intValue = 0, textValue = "", constant = false, next = close);
             } else {
                 index := localIndex(locals, name);
@@ -1568,10 +1627,10 @@ parseBinary := fn(source: String, position: Int, prefix: String, locals: List<Lo
         postPosition := skipTrivia(source, left.next, prefix);
         if postPosition < textLength(source) and textAt(source, postPosition) == "." {
             labelStart := skipTrivia(source, postPosition + 1, prefix);
-            if labelStart >= textLength(source) or not isNameStart(textAt(source, labelStart)) {
+            if labelStart >= textLength(source) or not textLib.isNameStart(textAt(source, labelStart)) {
                 break;
             }
-            labelEnd := skipName(source, labelStart);
+            labelEnd := textLib.skipName(source, labelStart);
             label := textSlice(source, labelStart, labelEnd);
             if left.kind == "Module" {
                 qualified := left.textValue + "." + label;
@@ -1606,14 +1665,14 @@ parseBinary := fn(source: String, position: Int, prefix: String, locals: List<Lo
                 failAt(source, postPosition, prefix, "indexing requires a list value");
             }
             indexStart := skipTrivia(source, postPosition + 1, prefix);
-            index := self(source, indexStart, prefix, locals, functions, params, currentName, "", 0);
+            index := self(target, source, indexStart, prefix, locals, functions, params, currentName, "", 0);
             if index.kind =!= "Int" {
                 failAt(source, indexStart, prefix, "list index must be Int, got " + displayKind(index.kind));
             }
             close := skipTrivia(source, index.next, prefix);
             next := expectSymbol(source, close, "]", prefix);
             left = (kind = listElementKind(left.kind),
-                code = "lite$listAt((" + left.code + "), " + index.code + ", " + intText(indexStart) + ")",
+                code = "lite$listAt((" + left.code + "), " + index.code + ", " + integer.intText(indexStart) + ")",
                 intValue = 0, textValue = "", constant = false, next = next);
         } else {
             break;
@@ -1632,15 +1691,15 @@ parseBinary := fn(source: String, position: Int, prefix: String, locals: List<Lo
             loop true {
                 if argumentCount >= info.count {
                     suffix := if info.count == 1 { " argument" } else { " arguments" };
-                    failAt(source, start, prefix, "function " + left.textValue + " expects " + decimalText(info.count) + suffix + ", got more");
+                    failAt(source, start, prefix, "function " + left.textValue + " expects " + formatLib.decimalText(info.count) + suffix + ", got more");
                 }
                 expected := paramKindOf(params[info.first + argumentCount]);
-                argument := self(source, cursor, prefix, locals, functions, params, currentName, expected, 0);
+                argument := self(target, source, cursor, prefix, locals, functions, params, currentName, expected, 0);
                 if argument.kind =!= expected {
-                    failAt(source, cursor, prefix, "argument " + decimalText(argumentCount + 1) + " of " + left.textValue +
+                    failAt(source, cursor, prefix, "argument " + formatLib.decimalText(argumentCount + 1) + " of " + left.textValue +
                         " must be " + displayKind(expected) + ", got " + displayKind(argument.kind));
                 }
-                push_back(mut argumentCodes, copiedValueCode(argument.kind, argument.code));
+                push_back(mut argumentCodes, copiedValueCode(target, argument.kind, argument.code));
                 argumentCount = argumentCount + 1;
                 cursor = skipTrivia(source, argument.next, prefix);
                 if cursor < textLength(source) and textAt(source, cursor) == "," {
@@ -1654,10 +1713,10 @@ parseBinary := fn(source: String, position: Int, prefix: String, locals: List<Lo
         cursor = expectSymbol(source, cursor, ")", prefix);
         if argumentCount =!= info.count {
             suffix := if info.count == 1 { " argument" } else { " arguments" };
-            failAt(source, start, prefix, "function " + left.textValue + " expects " + decimalText(info.count) +
-                suffix + ", got " + decimalText(argumentCount));
+            failAt(source, start, prefix, "function " + left.textValue + " expects " + formatLib.decimalText(info.count) +
+                suffix + ", got " + formatLib.decimalText(argumentCount));
         }
-        left = (kind = info.result, code = info.runtime + "(" + joinTexts(argumentCodes, ", ") + ")",
+        left = (kind = info.result, code = info.runtime + "(" + textLib.joinTexts(argumentCodes, ", ") + ")",
             intValue = 0, textValue = "", constant = false, next = cursor);
     }
     loop true {
@@ -1678,7 +1737,7 @@ parseBinary := fn(source: String, position: Int, prefix: String, locals: List<Lo
             }
         }
         rightMinimum := if operator.text == "**" { level } else { level + 1 };
-        right := self(source, operatorPosition + operator.width, prefix, locals, functions, params, currentName, "", rightMinimum);
+        right := self(target, source, operatorPosition + operator.width, prefix, locals, functions, params, currentName, "", rightMinimum);
         if operator.text == "and" or operator.text == "or" {
             if left.kind =!= "Bool" or right.kind =!= "Bool" {
                 failAt(source, operatorPosition, prefix, "operator " + operator.text + " requires Bool operands");
@@ -1689,12 +1748,12 @@ parseBinary := fn(source: String, position: Int, prefix: String, locals: List<Lo
                 } else {
                     left.intValue =!= 0 or right.intValue =!= 0
                 };
-                left = boolParsed(boolLiteralCode(value), value, true, right.next);
+                left = boolParsed(targetBoolLiteralCode(target, value), value, true, right.next);
             } else {
-                left = boolParsed(logicCode(operator.text, left.code, right.code), false, false, right.next);
+                left = boolParsed(targetLogicCode(target, operator.text, left.code, right.code), false, false, right.next);
             }
         } else if isComparison(operator.text) {
-            firstPair := compareParsed(source, operatorPosition, operator.text, left, right, prefix);
+            firstPair := compareParsed(target, source, operatorPosition, operator.text, left, right, prefix);
             var nextPosition := skipTrivia(source, right.next, prefix);
             var nextOperator := comparisonOperatorAt(source, nextPosition);
             if not isComparison(nextOperator.text) {
@@ -1709,8 +1768,8 @@ parseBinary := fn(source: String, position: Int, prefix: String, locals: List<Lo
                 var constant := left.constant and right.constant;
                 var value := firstPair.intValue =!= 0;
                 loop isComparison(nextOperator.text) {
-                    operand := self(source, nextPosition + nextOperator.width, prefix, locals, functions, params, currentName, "", level + 1);
-                    pair := compareParsed(source, nextPosition, nextOperator.text, previous, operand, prefix);
+                    operand := self(target, source, nextPosition + nextOperator.width, prefix, locals, functions, params, currentName, "", level + 1);
+                    pair := compareParsed(target, source, nextPosition, nextOperator.text, previous, operand, prefix);
                     push_back(mut codes, operand.code);
                     push_back(mut kinds, operand.kind);
                     push_back(mut operators, nextOperator.text);
@@ -1722,43 +1781,43 @@ parseBinary := fn(source: String, position: Int, prefix: String, locals: List<Lo
                     nextPosition = skipTrivia(source, end, prefix);
                     nextOperator = comparisonOperatorAt(source, nextPosition);
                 }
-                if constant { left = boolParsed(boolLiteralCode(value), value, true, end); }
-                else { left = boolParsed(comparisonChainCode(codes, kinds, operators, count, operatorPosition), false, false, end); }
+                if constant { left = boolParsed(targetBoolLiteralCode(target, value), value, true, end); }
+                else { left = boolParsed(targetComparisonChainCode(target, codes, kinds, operators, count, operatorPosition), false, false, end); }
             }
         } else if operator.text == "**" {
             if (left.kind =!= "Int" and left.kind =!= "Float") or (right.kind =!= "Int" and right.kind =!= "Float") {
                 failAt(source, operatorPosition, prefix, "power requires Int or Float operands");
             }
-            code := floatPowerCode(floatOperandCode(left.kind, left.code), floatOperandCode(right.kind, right.code), operatorPosition);
+            code := targetFloatPowerCode(target, targetFloatOperandCode(target, left.kind, left.code), targetFloatOperandCode(target, right.kind, right.code), operatorPosition);
             left = (kind = "Float", code = code, intValue = 0, textValue = "", constant = false, next = right.next);
         } else if left.kind == "Int" and right.kind == "Int" {
             if left.constant and right.constant {
                 folded := tryFoldInteger(operator.text, left.intValue, right.intValue);
                 if folded.ok {
-                    code := if (operator.text == "%" or operator.text == ":%") and left.intValue == intMin() and right.intValue == -1 {
-                            intLiteralCode(0, false, "0")
-                        } else if operator.text == ":/" { floorDivCode(left.code, right.code) }
-                        else if operator.text == ":%" { floorModCode(left.code, right.code) }
+                    code := if (operator.text == "%" or operator.text == ":%") and left.intValue == integer.intMin() and right.intValue == -1 {
+                            targetIntLiteralCode(target, 0, false, "0")
+                        } else if operator.text == ":/" { targetFloorDivCode(target, left.code, right.code) }
+                        else if operator.text == ":%" { targetFloorModCode(target, left.code, right.code) }
                         else { "(" + left.code + " " + operator.text + " " + right.code + ")" };
                     left = intParsed(code, folded.value, true, right.next);
                 } else {
-                    left = intParsed(runtimeIntegerCode(operator.text, left.code, right.code, operatorPosition), 0, false, right.next);
+                    left = intParsed(runtimeIntegerCode(target, operator.text, left.code, right.code, operatorPosition), 0, false, right.next);
                 }
             } else {
-                left = intParsed(runtimeIntegerCode(operator.text, left.code, right.code, operatorPosition), 0, false, right.next);
+                left = intParsed(runtimeIntegerCode(target, operator.text, left.code, right.code, operatorPosition), 0, false, right.next);
             }
         } else if operator.text == "+" and left.kind == "String" and right.kind == "String" {
             if left.constant and right.constant {
                 combined := left.textValue + right.textValue;
-                left = textParsed(textLiteralCode(combined), combined, true, right.next);
+                left = textParsed(targetTextLiteralCode(target, combined), combined, true, right.next);
             } else {
-                left = textParsed(concatCode(left.code, right.code), "", false, right.next);
+                left = textParsed(targetConcatCode(target, left.code, right.code), "", false, right.next);
             }
         } else if (left.kind == "Int" or left.kind == "Float") and (right.kind == "Int" or right.kind == "Float") {
             if operator.text =!= "+" and operator.text =!= "-" and operator.text =!= "*" and operator.text =!= "/" {
                 failAt(source, operatorPosition, prefix, "operator " + operator.text + " requires Int operands");
             }
-            code := floatBinaryCode(operator.text, floatOperandCode(left.kind, left.code), floatOperandCode(right.kind, right.code), operatorPosition);
+            code := targetFloatBinaryCode(target, operator.text, targetFloatOperandCode(target, left.kind, left.code), targetFloatOperandCode(target, right.kind, right.code), operatorPosition);
             left = (kind = "Float", code = code, intValue = 0, textValue = "", constant = false, next = right.next);
         } else if isListKind(left.kind) or isListKind(right.kind) {
             failAt(source, operatorPosition, prefix, "operator " + operator.text + " is not supported for list values");
@@ -1775,17 +1834,17 @@ parseBinary := fn(source: String, position: Int, prefix: String, locals: List<Lo
 }
 
 /** Parses one complete expression at the lowest precedence with an optional contextual kind for empty list literals. */
-parseExpressionAs := fn(source: String, position: Int, prefix: String, locals: List<Local>, functions: List<FunctionInfo>, params: List<String>, currentName: String, expected: String): Parsed {
-    parseBinary(source, position, prefix, locals, functions, params, currentName, expected, 0)
+parseExpressionAs := fn(target: String, source: String, position: Int, prefix: String, locals: List<Local>, functions: List<FunctionInfo>, params: List<String>, currentName: String, expected: String): Parsed {
+    parseBinary(target, source, position, prefix, locals, functions, params, currentName, expected, 0)
 }
 
 /** Parses one complete expression at the lowest precedence without a contextual kind. */
-parseExpression := fn(source: String, position: Int, prefix: String, locals: List<Local>, functions: List<FunctionInfo>, params: List<String>, currentName: String): Parsed {
-    parseBinary(source, position, prefix, locals, functions, params, currentName, "", 0)
+parseExpression := fn(target: String, source: String, position: Int, prefix: String, locals: List<Local>, functions: List<FunctionInfo>, params: List<String>, currentName: String): Parsed {
+    parseBinary(target, source, position, prefix, locals, functions, params, currentName, "", 0)
 }
 
 /** Reads the optional logical source name from inputArgs. Returns the name without a separator, or empty text; exits 2 for more than one argument. */
-sourcePrefix := fn(): String {
+pub sourcePrefix := fn(): String {
     var prefix := "";
     var argumentCountValue := 0;
     loop inputArgs() as argument {
@@ -1804,13 +1863,13 @@ parseLocalType := fn(source: String, position: Int, prefix: String, aliases: Lis
     start := skipTrivia(source, position, prefix);
     var cursor := start;
     var writable := false;
-    if wordAt(source, cursor, "mut") {
+    if textLib.wordAt(source, cursor, "mut") {
         writable = true;
         cursor = skipTrivia(source, cursor + 3, prefix);
     }
     typed := parseTypeAt(source, cursor, prefix, aliases, "local");
     if typed.kind == "Unit" {
-        name := textSlice(source, cursor, skipName(source, cursor));
+        name := textSlice(source, cursor, textLib.skipName(source, cursor));
         failAt(source, cursor, prefix, "unsupported local type " + name);
     }
     if writable and not isListKind(typed.kind) {
@@ -1827,11 +1886,11 @@ tupleZeroParsed := fn(kind: String, next: Int): Parsed {
     var count := 0;
     loop cursor < size and textAt(kind, cursor) =!= ")" {
         nameStart := cursor;
-        cursor = skipName(kind, cursor);
+        cursor = textLib.skipName(kind, cursor);
         label := textSlice(kind, nameStart, cursor);
         if cursor < size and textAt(kind, cursor) == ":" { cursor = cursor + 1; }
         typeStart := cursor;
-        cursor = skipName(kind, cursor);
+        cursor = textLib.skipName(kind, cursor);
         fieldKind := textSlice(kind, typeStart, cursor);
         if count > 0 { code = code + ", "; }
         code = code + label + ": ";
@@ -1846,13 +1905,13 @@ tupleZeroParsed := fn(kind: String, next: Int): Parsed {
 }
 
 /** Builds the zero value for one supported local type, including a fresh flat named-tuple object and an empty list. */
-zeroParsed := fn(kind: String, next: Int): Parsed {
+zeroParsed := fn(target: String, kind: String, next: Int): Parsed {
     if isTupleKind(kind) { tupleZeroParsed(kind, next) }
     else if isListKind(kind) { (kind = kind, code = "[]", intValue = 0, textValue = "", constant = false, next = next) }
-    else if kind == "Int" { intParsed(intLiteralCode(0, false, "0"), 0, true, next) }
+    else if kind == "Int" { intParsed(targetIntLiteralCode(target, 0, false, "0"), 0, true, next) }
     else if kind == "Float" { (kind = "Float", code = "0", intValue = 0, textValue = "", constant = false, next = next) }
-    else if kind == "String" { textParsed(textLiteralCode(""), "", true, next) }
-    else { boolParsed(boolLiteralCode(false), false, true, next) }
+    else if kind == "String" { textParsed(targetTextLiteralCode(target, ""), "", true, next) }
+    else { boolParsed(targetBoolLiteralCode(target, false), false, true, next) }
 }
 
 /** Collapses a tuple or list kind to its `Tuple`/`List` item suffix while leaving scalar item kinds unchanged. */
@@ -1876,7 +1935,7 @@ scanBraceEnd := fn(source: String, open: Int, prefix: String): Int {
         ch := textAt(source, cursor);
         if ch == "\"" {
             cursor = skipAliasString(source, cursor);
-        } else if startsWithAt(source, cursor, "/*") {
+        } else if textLib.startsWithAt(source, cursor, "/*") {
             cursor = skipComment(source, cursor, prefix);
         } else if ch == "{" {
             depth = depth + 1;
@@ -1901,7 +1960,7 @@ scanConditionOpen := fn(source: String, start: Int, prefix: String): Int {
         ch := textAt(source, cursor);
         if ch == "\"" {
             cursor = skipAliasString(source, cursor);
-        } else if startsWithAt(source, cursor, "/*") {
+        } else if textLib.startsWithAt(source, cursor, "/*") {
             cursor = skipComment(source, cursor, prefix);
         } else if ch == "(" or ch == "[" {
             depth = depth + 1;
@@ -1922,8 +1981,8 @@ scanConditionOpen := fn(source: String, start: Int, prefix: String): Int {
 valueIfBranchAt := fn(source: String, open: Int, close: Int, prefix: String): Bool {
     var cursor := skipTrivia(source, open + 1, prefix);
     if cursor >= close { return false; }
-    if isNameStart(textAt(source, cursor)) {
-        word := textSlice(source, cursor, skipName(source, cursor));
+    if textLib.isNameStart(textAt(source, cursor)) {
+        word := textSlice(source, cursor, textLib.skipName(source, cursor));
         if word == "return" or word == "outputLine" or word == "output" or word == "var" or word == "loop" or
             word == "break" or word == "continue" or word == "else" or word == "fn" {
             return false;
@@ -1934,7 +1993,7 @@ valueIfBranchAt := fn(source: String, open: Int, close: Int, prefix: String): Bo
         ch := textAt(source, scan);
         if ch == "\"" {
             scan = skipAliasString(source, scan);
-        } else if startsWithAt(source, scan, "/*") {
+        } else if textLib.startsWithAt(source, scan, "/*") {
             scan = skipComment(source, scan, prefix);
         } else if ch == ";" {
             return false;
@@ -1954,7 +2013,7 @@ valueIfBranchAt := fn(source: String, open: Int, close: Int, prefix: String): Bo
 scanValueIfEnd := fn(source: String, position: Int, prefix: String, requireValueBranches: Bool): Int {
     size := textLength(source);
     var cursor := skipTrivia(source, position, prefix);
-    if not wordAt(source, cursor, "if") { return -1; }
+    if not textLib.wordAt(source, cursor, "if") { return -1; }
     cursor = skipTrivia(source, cursor + 2, prefix);
     loop true {
         open := scanConditionOpen(source, cursor, prefix);
@@ -1963,9 +2022,9 @@ scanValueIfEnd := fn(source: String, position: Int, prefix: String, requireValue
         if end < 0 { return -1; }
         if requireValueBranches and not valueIfBranchAt(source, open, end - 1, prefix) { return -1; }
         after := skipTrivia(source, end, prefix);
-        if not wordAt(source, after, "else") { return -1; }
+        if not textLib.wordAt(source, after, "else") { return -1; }
         afterElse := skipTrivia(source, after + 4, prefix);
-        if wordAt(source, afterElse, "if") {
+        if textLib.wordAt(source, afterElse, "if") {
             cursor = skipTrivia(source, afterElse + 2, prefix);
         } else {
             if afterElse >= size or textAt(source, afterElse) =!= "{" { return -1; }
@@ -2024,7 +2083,7 @@ scanExpressionItemEnd := fn(source: String, start: Int, prefix: String): Int {
     loop cursor < size {
         ch := textAt(source, cursor);
         if ch == "\"" { cursor = skipAliasString(source, cursor); }
-        else if startsWithAt(source, cursor, "/*") { cursor = skipComment(source, cursor, prefix); }
+        else if textLib.startsWithAt(source, cursor, "/*") { cursor = skipComment(source, cursor, prefix); }
         else if depth == 0 and (ch == ";" or ch == "}") { return cursor; }
         else {
             if ch == "(" or ch == "[" or ch == "{" { depth = depth + 1; }
@@ -2036,7 +2095,7 @@ scanExpressionItemEnd := fn(source: String, start: Int, prefix: String): Int {
 }
 
 /** Parses an expression item once, retaining its evaluation and checking a function's final result across trailing separators. */
-parseExpressionItem := fn(source: String, position: Int, prefix: String, locals: List<Local>, functions: List<FunctionInfo>, params: List<String>, currentName: String, currentResult: String, valueTail: Bool): (next: Int, returned: Bool, code: String, valueKind: String) {
+parseExpressionItem := fn(target: String, source: String, position: Int, prefix: String, locals: List<Local>, functions: List<FunctionInfo>, params: List<String>, currentName: String, currentResult: String, valueTail: Bool): (next: Int, returned: Bool, code: String, valueKind: String) {
     var expected := currentResult;
     if currentResult == "Float" {
         expected = "";
@@ -2046,7 +2105,7 @@ parseExpressionItem := fn(source: String, position: Int, prefix: String, locals:
             if next < textLength(source) and textAt(source, next) == "}" { expected = "Float"; }
         }
     }
-    parsed := parseExpressionAs(source, position, prefix, locals, functions, params, currentName, expected);
+    parsed := parseExpressionAs(target, source, position, prefix, locals, functions, params, currentName, expected);
     ended := consumeStatementEnd(source, parsed.next, prefix);
     if ended < 0 { failAt(source, skipTrivia(source, parsed.next, prefix), prefix, "expected ; after expression statement"); }
     next := skipItemSeparators(source, ended, prefix);
@@ -2055,7 +2114,7 @@ parseExpressionItem := fn(source: String, position: Int, prefix: String, locals:
         failAt(source, position, prefix, "cannot return " + displayKind(parsed.kind) + " from function " + currentName +
             " returning " + displayKind(currentResult));
     }
-    (next = next, returned = returned, code = if returned { if parsed.kind == "Unit" { unitEvaluationCode(parsed.code) } else { copiedValueCode(currentResult, parsed.code) } } else { parsed.code }, valueKind = parsed.kind)
+    (next = next, returned = returned, code = if returned { if parsed.kind == "Unit" { targetUnitEvaluationCode(target, parsed.code) } else { copiedValueCode(target, currentResult, parsed.code) } } else { parsed.code }, valueKind = parsed.kind)
 }
 
 /** Joins a block's definite completion: scopes preserve it, loops require a true header, and conditionals require every arm plus a final else. */
@@ -2066,7 +2125,7 @@ blockCompletion := fn(kind: String, completed: Bool, branchesComplete: Bool, has
 }
 
 /** Finds later root scalar definitions for deferred function-body name resolution; eager root expressions never receive this table. */
-collectFutureValues := fn(source: String, prefix: String): List<FutureValue> {
+collectFutureValues := fn(target: String, source: String, prefix: String): List<FutureValue> {
     values: mut List<FutureValue> = [];
     size := textLength(source);
     var cursor := 0;
@@ -2075,7 +2134,7 @@ collectFutureValues := fn(source: String, prefix: String): List<FutureValue> {
         ch := textAt(source, cursor);
         if ch == "\"" {
             cursor = skipAliasString(source, cursor);
-        } else if startsWithAt(source, cursor, "/*") {
+        } else if textLib.startsWithAt(source, cursor, "/*") {
             cursor = skipComment(source, cursor, prefix);
         } else if ch == "{" {
             braceDepth = braceDepth + 1;
@@ -2083,28 +2142,28 @@ collectFutureValues := fn(source: String, prefix: String): List<FutureValue> {
         } else if ch == "}" {
             if braceDepth > 0 { braceDepth = braceDepth - 1; }
             cursor = cursor + 1;
-        } else if braceDepth == 0 and isNameStart(ch) {
+        } else if braceDepth == 0 and textLib.isNameStart(ch) {
             nameStart := cursor;
-            nameEnd := skipName(source, cursor);
+            nameEnd := textLib.skipName(source, cursor);
             afterName := skipTrivia(source, nameEnd, prefix);
-            if startsWithAt(source, afterName, ":=") {
+            if textLib.startsWithAt(source, afterName, ":=") {
                 valueStart := skipTrivia(source, afterName + 2, prefix);
-                if not wordAt(source, valueStart, "fn") and not wordAt(source, valueStart, "type") {
+                if not textLib.wordAt(source, valueStart, "fn") and not textLib.wordAt(source, valueStart, "type") {
                     valueCh := textAt(source, valueStart);
                     var kind := "";
                     var intValue := 0;
                     var textValue := "";
-                    if isDigit(valueCh) or valueCh == "+" or valueCh == "-" {
-                        parsed := parseNumber(source, valueStart, prefix);
+                    if textLib.isDigit(valueCh) or valueCh == "+" or valueCh == "-" {
+                        parsed := parseNumber(target, source, valueStart, prefix);
                         kind = parsed.kind;
                         intValue = parsed.intValue;
                     } else if valueCh == "\"" {
-                        parsed := parseText(source, valueStart, prefix);
+                        parsed := parseText(target, source, valueStart, prefix);
                         kind = parsed.kind;
                         textValue = parsed.textValue;
-                    } else if wordAt(source, valueStart, "true") or wordAt(source, valueStart, "false") {
+                    } else if textLib.wordAt(source, valueStart, "true") or textLib.wordAt(source, valueStart, "false") {
                         kind = "Bool";
-                        intValue = if wordAt(source, valueStart, "true") { 1 } else { 0 };
+                        intValue = if textLib.wordAt(source, valueStart, "true") { 1 } else { 0 };
                     }
                     if kind =!= "" {
                         valueName := textSlice(source, nameStart, nameEnd);
@@ -2133,12 +2192,12 @@ withoutFutureValues := fn(locals: List<Local>): List<Local> {
 }
 
 /** Parses one top-level receiver-less or namespace import and returns its next source position. */
-parseImportClause := fn(source: String, position: Int, alias: String, prefix: String): Item {
+parseImportClause := fn(target: String, source: String, position: Int, alias: String, prefix: String): Item {
     pathStart := skipTrivia(source, position + 6, prefix);
     if pathStart >= textLength(source) or textAt(source, pathStart) =!= "\"" {
         failAt(source, pathStart, prefix, "import requires a quoted source path");
     }
-    path := parseText(source, pathStart, prefix);
+    path := parseText(target, source, pathStart, prefix);
     pathLength := textLength(path.textValue);
     var invalidPath := pathLength == 0;
     if pathLength > 0 and textAt(path.textValue, 0) == "/" { invalidPath = true; }
@@ -2147,7 +2206,7 @@ parseImportClause := fn(source: String, position: Int, alias: String, prefix: St
         if textAt(path.textValue, pathIndex) == "\\" { invalidPath = true; }
         pathIndex = pathIndex + 1;
     }
-    if pathLength > 1 and textAt(path.textValue, 1) == ":" and isNameStart(textAt(path.textValue, 0)) {
+    if pathLength > 1 and textAt(path.textValue, 1) == ":" and textLib.isNameStart(textAt(path.textValue, 0)) {
         invalidPath = true;
     }
     if invalidPath {
@@ -2161,7 +2220,7 @@ parseImportClause := fn(source: String, position: Int, alias: String, prefix: St
 }
 
 /** Collects top-level import clauses before parsing so imported declarations can seed the importing file's symbol table. */
-collectImportClauses := fn(source: String, prefix: String): Items {
+pub collectImportClauses := fn(target: String, source: String, prefix: String): Items {
     imports: mut Items = [];
     size := textLength(source);
     var position := 0;
@@ -2178,18 +2237,18 @@ collectImportClauses := fn(source: String, prefix: String): Items {
         } else if ch == "}" {
             if depth > 0 { depth = depth - 1; }
             position = position + 1;
-        } else if depth == 0 and isNameStart(ch) {
-            nameEnd := skipName(source, position);
+        } else if depth == 0 and textLib.isNameStart(ch) {
+            nameEnd := textLib.skipName(source, position);
             name := textSlice(source, position, nameEnd);
             if name == "import" {
-                imported := parseImportClause(source, position, "", prefix);
+                imported := parseImportClause(target, source, position, "", prefix);
                 push_back(mut imports, imported);
                 position = imported.intValue;
             } else {
                 afterName := skipTrivia(source, nameEnd, prefix);
                 afterDeclare := skipTrivia(source, afterName + 2, prefix);
-                if startsWithAt(source, afterName, ":=") and wordAt(source, afterDeclare, "import") {
-                    imported := parseImportClause(source, afterDeclare, name, prefix);
+                if textLib.startsWithAt(source, afterName, ":=") and textLib.wordAt(source, afterDeclare, "import") {
+                    imported := parseImportClause(target, source, afterDeclare, name, prefix);
                     push_back(mut imports, imported);
                     position = imported.intValue;
                 } else {
@@ -2221,13 +2280,13 @@ collectPublishedFunctions := fn(source: String, prefix: String): List<String> {
         } else if ch == "}" {
             if depth > 0 { depth = depth - 1; }
             position = position + 1;
-        } else if depth == 0 and wordAt(source, position, "pub") {
+        } else if depth == 0 and textLib.wordAt(source, position, "pub") {
             declarationStart := skipTrivia(source, position + 3, prefix);
-            if declarationStart < size and isNameStart(textAt(source, declarationStart)) {
-                nameEnd := skipName(source, declarationStart);
+            if declarationStart < size and textLib.isNameStart(textAt(source, declarationStart)) {
+                nameEnd := textLib.skipName(source, declarationStart);
                 operator := skipTrivia(source, nameEnd, prefix);
                 value := skipTrivia(source, operator + 2, prefix);
-                if startsWithAt(source, operator, ":=") and wordAt(source, value, "fn") {
+                if textLib.startsWithAt(source, operator, ":=") and textLib.wordAt(source, value, "fn") {
                     push_back(mut names, textSlice(source, declarationStart, nameEnd));
                 }
                 position = nameEnd;
@@ -2259,14 +2318,14 @@ collectPublishedValues := fn(source: String, prefix: String): List<String> {
         } else if ch == "}" {
             if depth > 0 { depth = depth - 1; }
             position = position + 1;
-        } else if depth == 0 and wordAt(source, position, "pub") {
+        } else if depth == 0 and textLib.wordAt(source, position, "pub") {
             declarationStart := skipTrivia(source, position + 3, prefix);
-            if declarationStart < size and isNameStart(textAt(source, declarationStart)) {
-                nameEnd := skipName(source, declarationStart);
+            if declarationStart < size and textLib.isNameStart(textAt(source, declarationStart)) {
+                nameEnd := textLib.skipName(source, declarationStart);
                 operator := skipTrivia(source, nameEnd, prefix);
                 value := skipTrivia(source, operator + 2, prefix);
-                if startsWithAt(source, operator, ":=") and
-                    not wordAt(source, value, "fn") and not wordAt(source, value, "type") {
+                if textLib.startsWithAt(source, operator, ":=") and
+                    not textLib.wordAt(source, value, "fn") and not textLib.wordAt(source, value, "type") {
                     push_back(mut names, textSlice(source, declarationStart, nameEnd));
                 }
                 position = nameEnd;
@@ -2298,13 +2357,13 @@ collectPublishedTypes := fn(source: String, prefix: String): List<String> {
         } else if ch == "}" {
             if depth > 0 { depth = depth - 1; }
             position = position + 1;
-        } else if depth == 0 and wordAt(source, position, "pub") {
+        } else if depth == 0 and textLib.wordAt(source, position, "pub") {
             declarationStart := skipTrivia(source, position + 3, prefix);
-            if declarationStart < size and isNameStart(textAt(source, declarationStart)) {
-                nameEnd := skipName(source, declarationStart);
+            if declarationStart < size and textLib.isNameStart(textAt(source, declarationStart)) {
+                nameEnd := textLib.skipName(source, declarationStart);
                 operator := skipTrivia(source, nameEnd, prefix);
                 typeStart := skipTrivia(source, operator + 2, prefix);
-                if startsWithAt(source, operator, ":=") and wordAt(source, typeStart, "type") {
+                if textLib.startsWithAt(source, operator, ":=") and textLib.wordAt(source, typeStart, "type") {
                     push_back(mut names, textSlice(source, declarationStart, nameEnd));
                 }
                 position = nameEnd;
@@ -2319,7 +2378,7 @@ collectPublishedTypes := fn(source: String, prefix: String): List<String> {
 }
 
 /** Parses complete source with imported public function signatures available in its root symbol table. Exits 2 on unsupported, malformed or faulting source. */
-parseProgramWithExports := fn(source: String, prefix: String, exports: Items, moduleId: Int): Items {
+pub parseProgramWithExports := fn(target: String, source: String, prefix: String, exports: Items, moduleId: Int): Items {
     size := textLength(source);
     var position := skipTrivia(source, 0, prefix);
     items: mut Items = [];
@@ -2334,7 +2393,7 @@ parseProgramWithExports := fn(source: String, prefix: String, exports: Items, mo
     publishedFunctions := collectPublishedFunctions(source, prefix);
     publishedValues := collectPublishedValues(source, prefix);
     publishedTypes := collectPublishedTypes(source, prefix);
-    futureValues := collectFutureValues(source, prefix);
+    futureValues := collectFutureValues(target, source, prefix);
     var locals: mut List<Local> = [];
     blocks: mut List<String> = [];
     functions: mut List<FunctionInfo> = [];
@@ -2344,20 +2403,20 @@ parseProgramWithExports := fn(source: String, prefix: String, exports: Items, mo
     loop exports as exported {
         if exported.kind == "ModuleAlias" {
             if findFunction(functions, exported.name) >= 0 or localIndex(locals, exported.name) >= 0 {
-                fail(prefix, "duplicate imported module name " + exported.name);
+                diagLib.fail(prefix, "duplicate imported module name " + exported.name);
             }
             push_back(mut locals, (name = exported.name, runtime = "", kind = "Module", mutable = false,
                 writable = false, depth = 0, constant = false, code = "", intValue = exported.intValue,
                 textValue = exported.name));
         } else if exported.kind == "PublicFunction" {
             if findFunction(functions, exported.name) >= 0 or localIndex(locals, exported.name) >= 0 {
-                fail(prefix, "duplicate imported public name " + exported.name);
+                diagLib.fail(prefix, "duplicate imported public name " + exported.name);
             }
             first := parameterTotal;
             var entryStart := 0;
             var entryIndex := 0;
             loop entryIndex < exported.intValue {
-                separator := indexOfText(exported.textValue, "|", entryStart);
+                separator := textLib.indexOfText(exported.textValue, "|", entryStart);
                 var entryEnd := textLength(exported.textValue);
                 if separator >= 0 { entryEnd = separator; }
                 push_back(mut functionParams, textSlice(exported.textValue, entryStart, entryEnd));
@@ -2369,14 +2428,14 @@ parseProgramWithExports := fn(source: String, prefix: String, exports: Items, mo
                 first = first, count = exported.intValue));
         } else if exported.kind == "PublicValue" {
             if findFunction(functions, exported.name) >= 0 or localIndex(locals, exported.name) >= 0 {
-                fail(prefix, "duplicate imported public name " + exported.name);
+                diagLib.fail(prefix, "duplicate imported public name " + exported.name);
             }
             push_back(mut locals, (name = exported.name, runtime = exported.runtime, kind = exported.code,
                 mutable = false, writable = false, depth = 0, constant = false, code = exported.runtime,
                 intValue = 0, textValue = ""));
         } else if exported.kind == "PublicType" {
             if findAlias(aliases, exported.name) < 0 {
-                fail(prefix, "unknown imported public type " + exported.name);
+                diagLib.fail(prefix, "unknown imported public type " + exported.name);
             }
         }
     }
@@ -2407,24 +2466,24 @@ parseProgramWithExports := fn(source: String, prefix: String, exports: Items, mo
                 failAt(source, position, prefix, "branch of function " + currentName + " must return " + displayKind(currentResult));
             }
             after := skipTrivia(source, position + 1, prefix);
-            if (blockKind == "if" or blockKind == "ifvalue") and after < size and wordAt(source, after, "else") {
+            if (blockKind == "if" or blockKind == "ifvalue") and after < size and textLib.wordAt(source, after, "else") {
                 locals = visibleLocals(locals, depth);
                 afterElse := skipTrivia(source, after + 4, prefix);
                 branchesReturned = branchesReturned and currentReturned;
                 branchesStopped = branchesStopped and currentStopped;
                 currentReturned = false;
                 currentStopped = false;
-                hasElse = not wordAt(source, afterElse, "if");
+                hasElse = not textLib.wordAt(source, afterElse, "if");
                 droppedIf := pop_back(mut blocks);
                 blockCount = blockCount - 1;
-                if wordAt(source, afterElse, "if") {
+                if textLib.wordAt(source, afterElse, "if") {
                     conditionStart := skipTrivia(source, afterElse + 2, prefix);
-                    condition := parseExpression(source, conditionStart, prefix, locals, functions, functionParams, currentName);
+                    condition := parseExpression(target, source, conditionStart, prefix, locals, functions, functionParams, currentName);
                     if condition.kind =!= "Bool" {
                         failAt(source, conditionStart, prefix, "else if condition must be Bool");
                     }
                     conditionCode := if condition.constant {
-                        boolLiteralCode(condition.intValue =!= 0)
+                        targetBoolLiteralCode(target, condition.intValue =!= 0)
                     } else {
                         condition.code
                     };
@@ -2450,7 +2509,7 @@ parseProgramWithExports := fn(source: String, prefix: String, exports: Items, mo
                     failAt(source, position, prefix, "function " + currentName + " must return " + currentResult);
                 }
                 functionRuntime := if moduleId == 0 { "liteFn_" + currentName }
-                    else { "liteFn_m" + intText(moduleId) + "_" + currentName };
+                    else { "liteFn_m" + integer.intText(moduleId) + "_" + currentName };
                 if currentLive { push_back(mut items, (kind = "FunctionEnd", name = "", runtime = functionRuntime,
                     code = "", intValue = 0, textValue = "")); }
                 currentName = "";
@@ -2502,11 +2561,11 @@ parseProgramWithExports := fn(source: String, prefix: String, exports: Items, mo
             position = skipTrivia(source, position + 1, prefix);
             continue;
         }
-        if isDigit(ch) or ch == "\"" or ch == "(" or ch == "[" or ch == "+" or ch == "-" or
-            (ch == "a" and wordAt(source, position, "and")) or (ch == "o" and wordAt(source, position, "or")) or
-            (ch == "n" and wordAt(source, position, "not")) or (ch == "t" and wordAt(source, position, "true")) or
-            (ch == "f" and wordAt(source, position, "false")) {
-            expression := parseExpressionItem(source, position, prefix, locals, functions, functionParams, currentName,
+        if textLib.isDigit(ch) or ch == "\"" or ch == "(" or ch == "[" or ch == "+" or ch == "-" or
+            (ch == "a" and textLib.wordAt(source, position, "and")) or (ch == "o" and textLib.wordAt(source, position, "or")) or
+            (ch == "n" and textLib.wordAt(source, position, "not")) or (ch == "t" and textLib.wordAt(source, position, "true")) or
+            (ch == "f" and textLib.wordAt(source, position, "false")) {
+            expression := parseExpressionItem(target, source, position, prefix, locals, functions, functionParams, currentName,
                 currentResult, atValueTail(blocks, blockCount) and not currentStopped);
             if currentLive and not currentStopped { push_back(mut items, (kind = if expression.returned { "Return" } else { "Discard" }, name = expression.valueKind,
                 runtime = "", code = expression.code, intValue = 0, textValue = "")); }
@@ -2514,17 +2573,17 @@ parseProgramWithExports := fn(source: String, prefix: String, exports: Items, mo
             position = expression.next;
             continue;
         }
-        if not isNameStart(ch) {
+        if not textLib.isNameStart(ch) {
             failAt(source, position, prefix, "expected a statement: output/outputLine, declaration, assignment, if or loop");
         }
         nameStart := position;
-        position = skipName(source, position);
+        position = textLib.skipName(source, position);
         name := textSlice(source, nameStart, position);
         if name == "import" {
             if blockCount =!= 0 {
                 failAt(source, nameStart, prefix, "import is only allowed at top level");
             }
-            imported := parseImportClause(source, nameStart, "", prefix);
+            imported := parseImportClause(target, source, nameStart, "", prefix);
             push_back(mut items, imported);
             position = imported.intValue;
             continue;
@@ -2534,40 +2593,40 @@ parseProgramWithExports := fn(source: String, prefix: String, exports: Items, mo
                 failAt(source, nameStart, prefix, "pub is only allowed on top-level declarations");
             }
             declarationStart := skipTrivia(source, position, prefix);
-            if declarationStart >= size or not isNameStart(textAt(source, declarationStart)) {
+            if declarationStart >= size or not textLib.isNameStart(textAt(source, declarationStart)) {
                 failAt(source, declarationStart, prefix, "expected a declaration after pub");
             }
-            declarationEnd := skipName(source, declarationStart);
+            declarationEnd := textLib.skipName(source, declarationStart);
             declarationOperator := skipTrivia(source, declarationEnd, prefix);
-            if not startsWithAt(source, declarationOperator, ":=") {
+            if not textLib.startsWithAt(source, declarationOperator, ":=") {
                 failAt(source, declarationOperator, prefix, "expected := after published declaration name");
             }
             position = declarationStart;
             continue;
         }
         position = skipTrivia(source, position, prefix);
-        if startsWithAt(source, position, ":=") {
+        if textLib.startsWithAt(source, position, ":=") {
             afterImport := skipTrivia(source, position + 2, prefix);
-            if wordAt(source, afterImport, "import") {
+            if textLib.wordAt(source, afterImport, "import") {
                 if blockCount =!= 0 {
                     failAt(source, nameStart, prefix, "import is only allowed at top level");
                 }
-                if listContainsText(declaredImportAliases, name) {
+                if listLib.listContainsText(declaredImportAliases, name) {
                     failAt(source, nameStart, prefix, "duplicate module alias " + name);
                 }
                 push_back(mut declaredImportAliases, name);
-                imported := parseImportClause(source, afterImport, name, prefix);
+                imported := parseImportClause(target, source, afterImport, name, prefix);
                 push_back(mut items, imported);
                 position = imported.intValue;
                 continue;
             }
         }
         var afterDefinition := position;
-        if startsWithAt(source, position, ":=") {
+        if textLib.startsWithAt(source, position, ":=") {
             afterDefinition = skipTrivia(source, position + 2, prefix);
         }
-        definition := blockCount == 0 and startsWithAt(source, position, ":=") and
-            (wordAt(source, afterDefinition, "fn") or wordAt(source, afterDefinition, "type"));
+        definition := blockCount == 0 and textLib.startsWithAt(source, position, ":=") and
+            (textLib.wordAt(source, afterDefinition, "fn") or textLib.wordAt(source, afterDefinition, "type"));
         if name == "return" {
             if currentName == "" {
                 failAt(source, nameStart, prefix, "return outside a function");
@@ -2587,7 +2646,7 @@ parseProgramWithExports := fn(source: String, prefix: String, exports: Items, mo
             if currentResult == "Unit" {
                 failAt(source, nameStart, prefix, "function " + currentName + " returns Unit and cannot return a value");
             }
-            parsed := parseExpressionAs(source, position, prefix, locals, functions, functionParams, currentName, currentResult);
+            parsed := parseExpressionAs(target, source, position, prefix, locals, functions, functionParams, currentName, currentResult);
             if parsed.kind =!= currentResult {
                 failAt(source, valueStart, prefix, "cannot return " + displayKind(parsed.kind) + " from function " +
                     currentName + " returning " + displayKind(currentResult));
@@ -2595,7 +2654,7 @@ parseProgramWithExports := fn(source: String, prefix: String, exports: Items, mo
             statementNext := consumeStatementEnd(source, parsed.next, prefix);
             if statementNext < 0 { failAt(source, skipTrivia(source, parsed.next, prefix), prefix, "expected ; after return"); }
             position = statementNext;
-            if currentLive and not currentStopped { push_back(mut items, (kind = "Return", name = "", runtime = "", code = copiedValueCode(currentResult, parsed.code),
+            if currentLive and not currentStopped { push_back(mut items, (kind = "Return", name = "", runtime = "", code = copiedValueCode(target, currentResult, parsed.code),
                 intValue = 0, textValue = "")); }
             if not currentStopped { currentReturned = true; }
             currentStopped = true;
@@ -2618,7 +2677,7 @@ parseProgramWithExports := fn(source: String, prefix: String, exports: Items, mo
             if position >= size or textAt(source, position) =!= "." {
                 failAt(source, nameStart, prefix, "module namespace " + name + " requires a public member");
             }
-            expression := parseExpressionItem(source, nameStart, prefix, locals, functions, functionParams, currentName,
+            expression := parseExpressionItem(target, source, nameStart, prefix, locals, functions, functionParams, currentName,
                 currentResult, atValueTail(blocks, blockCount) and not currentStopped);
             if currentLive and not currentStopped { push_back(mut items, (kind = if expression.returned { "Return" } else { "Call" },
                 name = "", runtime = "", code = expression.code, intValue = 0, textValue = "")); }
@@ -2638,7 +2697,7 @@ parseProgramWithExports := fn(source: String, prefix: String, exports: Items, mo
         if (callableIndex >= 0 or name == "push_back" or name == "pop_back" or
             (isAdmittedBuiltin(name) and localIndex(locals, name) < 0)) and
             position < size and textAt(source, position) == "(" {
-            expression := parseExpressionItem(source, nameStart, prefix, locals, functions, functionParams, currentName,
+            expression := parseExpressionItem(target, source, nameStart, prefix, locals, functions, functionParams, currentName,
                 currentResult, atValueTail(blocks, blockCount) and not currentStopped);
             if currentLive and not currentStopped { push_back(mut items, (kind = if expression.returned { "Return" } else { "Call" }, name = callName, runtime = "",
                 code = expression.code, intValue = 0, textValue = "")); }
@@ -2652,7 +2711,7 @@ parseProgramWithExports := fn(source: String, prefix: String, exports: Items, mo
             }
             position = skipTrivia(source, position + 1, prefix);
             loop position < size and textAt(source, position) =!= ")" {
-                argument := parseExpression(source, position, prefix, locals, functions, functionParams, currentName);
+                argument := parseExpression(target, source, position, prefix, locals, functions, functionParams, currentName);
                 if currentLive and not currentStopped { push_back(mut items, (kind = argument.kind, name = "", runtime = "", code = argument.code,
                     intValue = argument.intValue, textValue = argument.textValue)); }
                 position = skipTrivia(source, argument.next, prefix);
@@ -2677,7 +2736,7 @@ parseProgramWithExports := fn(source: String, prefix: String, exports: Items, mo
                 if valueEnd >= 0 {
                     afterChain := skipItemSeparators(source, valueEnd, prefix);
                     if afterChain < size and textAt(source, afterChain) == "}" {
-                        expression := parseExpressionItem(source, nameStart, prefix, locals, functions, functionParams, currentName,
+                        expression := parseExpressionItem(target, source, nameStart, prefix, locals, functions, functionParams, currentName,
                             currentResult, true);
                         if currentLive and not currentStopped { push_back(mut items, (kind = "Return", name = "", runtime = "", code = expression.code,
                             intValue = 0, textValue = "")); }
@@ -2696,12 +2755,12 @@ parseProgramWithExports := fn(source: String, prefix: String, exports: Items, mo
                 }
             }
             conditionStart := position;
-            condition := parseExpression(source, position, prefix, locals, functions, functionParams, currentName);
+            condition := parseExpression(target, source, position, prefix, locals, functions, functionParams, currentName);
             if condition.kind =!= "Bool" {
                 failAt(source, conditionStart, prefix, "if condition must be Bool");
             }
             conditionCode := if condition.constant {
-                boolLiteralCode(condition.intValue =!= 0)
+                targetBoolLiteralCode(target, condition.intValue =!= 0)
             } else {
                 condition.code
             };
@@ -2729,17 +2788,17 @@ parseProgramWithExports := fn(source: String, prefix: String, exports: Items, mo
             var itemName := "";
             var itemKind := "";
             if position < size and textAt(source, position) =!= "{" {
-                parsed := parseExpression(source, position, prefix, locals, functions, functionParams, currentName);
+                parsed := parseExpression(target, source, position, prefix, locals, functions, functionParams, currentName);
                 afterParsed := skipTrivia(source, parsed.next, prefix);
-                if wordAt(source, afterParsed, "as") {
+                if textLib.wordAt(source, afterParsed, "as") {
                     if not isListKind(parsed.kind) {
                         failAt(source, position, prefix, "loop sequence must be a List, got " + displayKind(parsed.kind));
                     }
                     itemStart := skipTrivia(source, afterParsed + 2, prefix);
-                    if itemStart >= size or not isNameStart(textAt(source, itemStart)) {
+                    if itemStart >= size or not textLib.isNameStart(textAt(source, itemStart)) {
                         failAt(source, itemStart, prefix, "expected an item name after as");
                     }
-                    itemEnd := skipName(source, itemStart);
+                    itemEnd := textLib.skipName(source, itemStart);
                     itemName = textSlice(source, itemStart, itemEnd);
                     if isReservedWord(itemName) { unsupportedFeature(source, itemStart, itemName, prefix); }
                     itemKind = listElementKind(parsed.kind);
@@ -2786,11 +2845,11 @@ parseProgramWithExports := fn(source: String, prefix: String, exports: Items, mo
         }
         if name == "var" {
             position = skipTrivia(source, position, prefix);
-            if position >= size or not isNameStart(textAt(source, position)) {
+            if position >= size or not textLib.isNameStart(textAt(source, position)) {
                 failAt(source, position, prefix, "expected local name after var");
             }
             localStart := position;
-            position = skipName(source, position);
+            position = textLib.skipName(source, position);
             localName := textSlice(source, localStart, position);
             if isReservedWord(localName) { unsupportedFeature(source, localStart, localName, prefix); }
             if depth == 0 and blockCount == 0 {
@@ -2802,9 +2861,9 @@ parseProgramWithExports := fn(source: String, prefix: String, exports: Items, mo
             position = skipTrivia(source, position, prefix);
             var parsed := intParsed("", 0, true, position);
             var declaredWritable := false;
-            if startsWithAt(source, position, ":=") {
+            if textLib.startsWithAt(source, position, ":=") {
                 position = skipTrivia(source, position + 2, prefix);
-                parsed = parseExpression(source, position, prefix, locals, functions, functionParams, currentName);
+                parsed = parseExpression(target, source, position, prefix, locals, functions, functionParams, currentName);
                 if parsed.kind == "Unit" {
                     failAt(source, localStart, prefix, "cannot declare a Unit local " + localName);
                 }
@@ -2813,12 +2872,12 @@ parseProgramWithExports := fn(source: String, prefix: String, exports: Items, mo
                 declaredWritable = typed.writable;
                 position = skipTrivia(source, typed.next, prefix);
                 if isSingleEquals(source, position) {
-                    parsed = parseExpressionAs(source, skipTrivia(source, position + 1, prefix), prefix, locals, functions, functionParams, currentName, typed.kind);
+                    parsed = parseExpressionAs(target, source, skipTrivia(source, position + 1, prefix), prefix, locals, functions, functionParams, currentName, typed.kind);
                     if parsed.kind =!= typed.kind {
                         failAt(source, localStart, prefix, "cannot initialize " + displayKind(typed.kind) + " with " + displayKind(parsed.kind));
                     }
                 } else {
-                    parsed = zeroParsed(typed.kind, position);
+                    parsed = zeroParsed(target, typed.kind, position);
                 }
             } else {
                 failAt(source, position, prefix, "expected := or : after local name " + localName);
@@ -2831,14 +2890,14 @@ parseProgramWithExports := fn(source: String, prefix: String, exports: Items, mo
                 mutable = true, writable = declaredWritable, depth = depth, constant = false, code = parsed.code,
                 intValue = parsed.intValue, textValue = parsed.textValue));
             if currentLive and not currentStopped { push_back(mut items, (kind = "Var" + storageKind(parsed.kind), name = localName, runtime = runtime,
-                code = copiedValueCode(parsed.kind, parsed.code), intValue = parsed.intValue, textValue = itemTextPayload(parsed))); }
+                code = copiedValueCode(target, parsed.kind, parsed.code), intValue = parsed.intValue, textValue = itemTextPayload(parsed))); }
             continue;
         }
         if name == "else" {
             failAt(source, nameStart, prefix, "unexpected else");
         }
         if isReservedWord(name) { unsupportedFeature(source, nameStart, name, prefix); }
-        if startsWithAt(source, position, ":=") and wordAt(source, afterDefinition, "type") {
+        if textLib.startsWithAt(source, position, ":=") and textLib.wordAt(source, afterDefinition, "type") {
             if blockCount =!= 0 or depth =!= 0 {
                 failAt(source, nameStart, prefix, "type aliases are only allowed at top level");
             }
@@ -2861,7 +2920,7 @@ parseProgramWithExports := fn(source: String, prefix: String, exports: Items, mo
             }
             seenAliases: mut List<String> = [];
             resolvedType := resolveTypeText(source, targetStart, prefix, aliases, aliasEntry.target, seenAliases);
-            if listContainsText(publishedTypes, name) {
+            if listLib.listContainsText(publishedTypes, name) {
                 push_back(mut items, (kind = "PublicType", name = name, runtime = "", code = resolvedType,
                     intValue = 0, textValue = ""));
             }
@@ -2870,9 +2929,9 @@ parseProgramWithExports := fn(source: String, prefix: String, exports: Items, mo
             position = afterTarget;
             continue;
         }
-        if startsWithAt(source, position, ":=") {
+        if textLib.startsWithAt(source, position, ":=") {
             afterDeclare := skipTrivia(source, position + 2, prefix);
-            if wordAt(source, afterDeclare, "fn") {
+            if textLib.wordAt(source, afterDeclare, "fn") {
                 if blockCount =!= 0 or depth =!= 0 {
                     failAt(source, nameStart, prefix, "function definitions are only allowed at top level");
                 }
@@ -2888,10 +2947,10 @@ parseProgramWithExports := fn(source: String, prefix: String, exports: Items, mo
                 position = skipTrivia(source, header.next, prefix);
                 position = expectSymbol(source, position, "{", prefix);
                 functionRuntime := if moduleId == 0 { "liteFn_" + name }
-                    else { "liteFn_m" + intText(moduleId) + "_" + name };
+                    else { "liteFn_m" + integer.intText(moduleId) + "_" + name };
                 push_back(mut functions, (name = name, runtime = functionRuntime, result = header.result,
                     first = parameterTotal, count = header.count));
-                if listContainsText(publishedFunctions, name) {
+                if listLib.listContainsText(publishedFunctions, name) {
                     push_back(mut items, (kind = "PublicFunction", name = name, runtime = functionRuntime, code = header.result,
                         intValue = header.count, textValue = header.params));
                 }
@@ -2907,7 +2966,7 @@ parseProgramWithExports := fn(source: String, prefix: String, exports: Items, mo
                     }
                 }
                 loop entryIndex < header.count {
-                    separator := indexOfText(header.params, "|", entryStart);
+                    separator := textLib.indexOfText(header.params, "|", entryStart);
                     var entryEnd := textLength(header.params);
                     if separator >= 0 { entryEnd = separator; }
                     entry := textSlice(header.params, entryStart, entryEnd);
@@ -2946,7 +3005,7 @@ parseProgramWithExports := fn(source: String, prefix: String, exports: Items, mo
                 }
             }
             position = afterDeclare;
-            parsed := parseExpression(source, position, prefix, locals, functions, functionParams, currentName);
+            parsed := parseExpression(target, source, position, prefix, locals, functions, functionParams, currentName);
             if parsed.kind == "Unit" {
                 failAt(source, nameStart, prefix, "cannot declare a Unit local " + name);
             }
@@ -2957,12 +3016,12 @@ parseProgramWithExports := fn(source: String, prefix: String, exports: Items, mo
             push_back(mut locals, (name = name, runtime = runtime, kind = parsed.kind,
                 mutable = false, writable = false, depth = depth, constant = parsed.constant, code = parsed.code,
                 intValue = parsed.intValue, textValue = parsed.textValue));
-            if depth == 0 and blockCount == 0 and listContainsText(publishedValues, name) {
+            if depth == 0 and blockCount == 0 and listLib.listContainsText(publishedValues, name) {
                 push_back(mut items, (kind = "PublicValue", name = name, runtime = runtime, code = parsed.kind,
                     intValue = 0, textValue = ""));
             }
             if currentLive and not currentStopped { push_back(mut items, (kind = "Local" + storageKind(parsed.kind), name = name, runtime = runtime,
-                code = copiedValueCode(parsed.kind, parsed.code), intValue = parsed.intValue, textValue = itemTextPayload(parsed))); }
+                code = copiedValueCode(target, parsed.kind, parsed.code), intValue = parsed.intValue, textValue = itemTextPayload(parsed))); }
             continue;
         }
         if position < size and textAt(source, position) == ":" {
@@ -2974,9 +3033,9 @@ parseProgramWithExports := fn(source: String, prefix: String, exports: Items, mo
             }
             typed := parseLocalType(source, position + 1, prefix, aliases);
             position = skipTrivia(source, typed.next, prefix);
-            var parsed := zeroParsed(typed.kind, position);
+            var parsed := zeroParsed(target, typed.kind, position);
             if isSingleEquals(source, position) {
-                parsed = parseExpressionAs(source, skipTrivia(source, position + 1, prefix), prefix, locals, functions, functionParams, currentName, typed.kind);
+                parsed = parseExpressionAs(target, source, skipTrivia(source, position + 1, prefix), prefix, locals, functions, functionParams, currentName, typed.kind);
                 if parsed.kind =!= typed.kind {
                     failAt(source, nameStart, prefix, "cannot initialize " + displayKind(typed.kind) + " with " + displayKind(parsed.kind));
                 }
@@ -2989,7 +3048,7 @@ parseProgramWithExports := fn(source: String, prefix: String, exports: Items, mo
                 mutable = false, writable = typed.writable, depth = depth, constant = parsed.constant, code = parsed.code,
                 intValue = parsed.intValue, textValue = parsed.textValue));
             if currentLive and not currentStopped { push_back(mut items, (kind = "Local" + storageKind(typed.kind), name = name, runtime = runtime,
-                code = copiedValueCode(typed.kind, parsed.code), intValue = parsed.intValue, textValue = itemTextPayload(parsed))); }
+                code = copiedValueCode(target, typed.kind, parsed.code), intValue = parsed.intValue, textValue = itemTextPayload(parsed))); }
             continue;
         }
         if isSingleEquals(source, position) {
@@ -3002,7 +3061,7 @@ parseProgramWithExports := fn(source: String, prefix: String, exports: Items, mo
                 failAt(source, nameStart, prefix, "cannot assign to immutable local " + name);
             }
             position = skipTrivia(source, position + 1, prefix);
-            parsed := parseExpressionAs(source, position, prefix, locals, functions, functionParams, currentName, entry.kind);
+            parsed := parseExpressionAs(target, source, position, prefix, locals, functions, functionParams, currentName, entry.kind);
             if parsed.kind =!= entry.kind {
                 failAt(source, nameStart, prefix, "cannot assign " + displayKind(parsed.kind) + " to " + displayKind(entry.kind) + " local " + name);
             }
@@ -3013,10 +3072,10 @@ parseProgramWithExports := fn(source: String, prefix: String, exports: Items, mo
                 mutable = true, writable = entry.writable, depth = entry.depth, constant = false, code = parsed.code,
                 intValue = parsed.intValue, textValue = parsed.textValue));
             if currentLive and not currentStopped { push_back(mut items, (kind = "Assign" + storageKind(entry.kind), name = name, runtime = entry.runtime,
-                code = copiedValueCode(entry.kind, parsed.code), intValue = parsed.intValue, textValue = itemTextPayload(parsed))); }
+                code = copiedValueCode(target, entry.kind, parsed.code), intValue = parsed.intValue, textValue = itemTextPayload(parsed))); }
             continue;
         }
-        expression := parseExpressionItem(source, nameStart, prefix, locals, functions, functionParams, currentName,
+        expression := parseExpressionItem(target, source, nameStart, prefix, locals, functions, functionParams, currentName,
             currentResult, atValueTail(blocks, blockCount) and not currentStopped);
         if currentLive and not currentStopped { push_back(mut items, (kind = if expression.returned { "Return" } else { "Discard" }, name = expression.valueKind,
             runtime = "", code = expression.code, intValue = 0, textValue = "")); }
@@ -3030,16 +3089,16 @@ parseProgramWithExports := fn(source: String, prefix: String, exports: Items, mo
 }
 
 /** Parses one source without imported public symbols. */
-parseProgram := fn(source: String, prefix: String): Items {
-    parseProgramWithExports(source, prefix, [], 0)
+pub parseProgram := fn(target: String, source: String, prefix: String): Items {
+    parseProgramWithExports(target, source, prefix, [], 0)
 }
 
 /** Encodes all line-start character offsets once for positioned runtime arithmetic faults. */
-lineStartCodes := fn(source: String): String {
+pub lineStartCodes := fn(source: String): String {
     var code := "0";
     var position := 0;
     loop position < textLength(source) {
-        if textAt(source, position) == "\n" { code = code + ", " + intText(position + 1); }
+        if textAt(source, position) == "\n" { code = code + ", " + integer.intText(position + 1); }
         position = position + 1;
     }
     code

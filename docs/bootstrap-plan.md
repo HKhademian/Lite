@@ -1,6 +1,6 @@
 # Bootstrap and self-hosting plan
 
-Status: **historical bootstrap defaults; current TS kernel, imports, and T00 retirement updated 2026-11-11**.
+Status: **historical bootstrap defaults; current TS kernel, source imports, phase fixtures, and T00 retirement updated 2026-11-12**.
 
 This page is the operational plan for reaching the first compiler-bootstrap point:
 the Lite-written compiler source **S** is compiled by the stage-0 TypeScript
@@ -21,7 +21,7 @@ investigations are permitted under those guidelines. The restrictions below
 describe the current L and bootstrap phase scope; they do not permanently freeze
 Lite compiler feature development. Native C self-hosting remains pending.
 
-Latest owner direction, 2026-11-11: the generated T13 compiler is the only
+Latest owner direction, 2026-11-11: the selected generated TypeScript compiler is the only
 active language implementation. The handwritten T00 interpreter, its CLI,
 reference verifier/test/benchmark lanes, and T00-dependent audit generator have
 been removed from the active tree. Compile, check and run use generated TS;
@@ -37,10 +37,15 @@ Lite compiler source after a strict three-generation fixed point and a reviewed
 Lite-owned TS driver graph has separate visited/processed records, public
 function signatures, immutable scalar values, public types, imported
 definitions, namespace aliases, and per-unit runtime identities. Public TS
-compile/check/run use it. Runtime source spans, compiler-source migration to
-aliases, and C/build bridge removal remain pending.
-The current fast suite still has unrelated ledger, archived-seed/source fixture,
-and recorded-expectation failures.
+compile/check/run use it. Compiler-source migration to aliases is complete. C
+remains TS-hosted; native C self-hosting and richer runtime source spans remain
+pending.
+
+Owner update, 2026-11-12: compiler roots, shared libraries, lexer/parser/checker
+phase modules, test fixtures, and test drivers now use Lite namespace imports.
+The TypeScript loader only reads manifest metadata; it no longer expands or
+concatenates source. The P1/P3/P4 sections below retain their original bootstrap
+history and should not be used as active build instructions.
 
 Owner update, 2026-11-05: `./bin/lite run` is available again as a compile-and-execute
 adapter over the generated compiler and Node entry. It restores no interpreter and
@@ -104,11 +109,11 @@ Related direction:
 | **Stage 0** | The preserved TypeScript/Node igniter in [`igniter/`](../igniter/README.md). |
 | **S** | The Lite-written compiler source, assembled from an ordered manifest. |
 | **L** | The language subset S may use. Defined below. |
-| **T** | The generated TS compiler artifact used to bootstrap S; current selected seed is T13. |
+| **T** | The one selected generated TypeScript compiler artifact used to compile S; its exact identity is recorded in `compiler/bootstrap/seed.ts`. |
 | **C** | The retained TS-hosted C emitter; not part of the current minimum self-hosting gate. |
 | **T2** | Artifact produced when T compiles S again. |
 | **C2** | Historical/later artifact produced by the native C compiler when it compiles S. |
-| **Bundle** | Ordered source files plus a line map, flattened by the loader before S is executed or compiled. |
+| **Bundle** | Historical host-flattened source files and line map; the current compiler follows Lite imports as separate units. |
 | **Fixed point** | For the current TS gate, T2 is byte-identical to T for the same S and toolchain. C fixed points are a separate native milestone. |
 | **Self-host point** | TS0 compiles LT0 to LT1; LT1 compiles the same LT0 to byte-identical LT2; the declared compiler-source corpus passes. This does not imply full language parity or T00 retirement by itself. |
 
@@ -173,7 +178,7 @@ behavior, wider numeric types and the remaining feature/native gates stay separa
   records 112/173 matching scenarios and 61 T12 rejections. These are parity
   observations; full parity is not a self-hosting gate.
 
-T13 is selected and rebuilds its source to the same artifact. Its generated
+The selected compiler rebuilds its source to the same artifact. Its generated
 compiler corpus and focused source-import tests pass. T00 retirement is
 complete; the host import bridge is recorded below. See the active
 [self-hosting handoff](../.agents/plans/self-hosting-kernel.md).
@@ -466,7 +471,8 @@ target layout without changing behavior.
       The machine-readable form is
       [`compiler/manifests/manifest.schema.json`](../compiler/manifests/manifest.schema.json).
 - [x] Add a line-map contract: flattened line → `(source path, original line)`.
-      See [`compiler/manifests/README.md`](../compiler/manifests/README.md#line-map-contract).
+      This loader behavior remains historical; active compiler production paths
+      now preserve source units through the Lite import graph.
 - [x] Create the target layout directories: `compiler/manifests/`,
       `compiler/src/`, `compiler/runtime/` and `lib/core/`.
 - [x] Keep the current `frontend.lts`, `ts-emitter.lts` and `c-emitter.lts`
@@ -489,11 +495,10 @@ this phase.
 
 **Goal:** make stage 0 usable as a repeatable bootstrap driver.
 
-- [x] **Bundle loader:** ordered manifests, include-once, cycle rejection,
-      relative paths, declaration-only targets, line map. Implemented by
-      `loadManifest`/`loadBundle` in
-      [`igniter/loader.ts`](../igniter/loader.ts); contract in
-      [`compiler/manifests/README.md`](../compiler/manifests/README.md).
+- [x] **Manifest metadata:** validate target and ordered relative roots through
+      `loadManifest` in [`igniter/loader.ts`](../igniter/loader.ts). Lite owns
+      source traversal, cycle handling, and source identities; no bundle loader
+      or line-map assembler remains.
 - [x] **Driver:** compile a bundle for a target; pass the logical source name
       through `inputArgs`; feed the bundle through `inputAll`; capture
       stdout/stderr/status. `loadCompiler` in

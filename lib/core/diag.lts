@@ -10,7 +10,7 @@ sourceErrorCategory := "SourceError";
 typeErrorCategory := "TypeError";
 
 /** Reports `message`, prefixed by `prefix:` when nonempty, then exits 2. */
-fail := fn(prefix: String, message: String): Unit {
+pub fail := fn(prefix: String, message: String): Unit {
     if prefix == "" {
         reportError(message);
     } else {
@@ -20,6 +20,6 @@ fail := fn(prefix: String, message: String): Unit {
 }
 
 /** Reports `message` through `fail` unless `condition` is true. */
-expect := fn(prefix: String, condition: Bool, message: String): Unit {
+pub expect := fn(prefix: String, condition: Bool, message: String): Unit {
     if not condition { fail(prefix, message); } else { }
 }
