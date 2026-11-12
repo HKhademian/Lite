@@ -88,7 +88,7 @@ function compileAndRunSample(sample: ShowcaseSample): RenderedSample {
   }
 }
 
-function renderHeader(basePath: string, active: 'home' | 'playground' | 'samples', repoUrl: string): string {
+function renderHeader(basePath: string, active: 'home' | 'playground' | 'gallery', repoUrl: string): string {
   const docsHref = repoUrl ? `${repoUrl}/blob/main/docs/README.md` : '#';
   const repoHref = repoUrl || '#';
   return `<header class="site-header">
@@ -100,7 +100,7 @@ function renderHeader(basePath: string, active: 'home' | 'playground' | 'samples
     <nav class="site-nav" aria-label="Main navigation">
       <a href="${basePath}index.html"${active === 'home' ? ' class="active"' : ''}>Overview</a>
       <a href="${basePath}playground/index.html"${active === 'playground' ? ' class="active"' : ''}>Play</a>
-      <a href="${basePath}samples/index.html"${active === 'samples' ? ' class="active"' : ''}>Samples</a>
+      <a href="${basePath}gallery/index.html"${active === 'gallery' ? ' class="active"' : ''}>Gallery</a>
       <a href="${escapeHtml(docsHref)}">Docs</a>
       <a href="${escapeHtml(repoHref)}">GitHub</a>
     </nav>
@@ -158,7 +158,7 @@ function renderSampleCard(sample: RenderedSample, basePath: string, includeNote 
 function renderPage(options: Readonly<{
   title: string;
   basePath: string;
-  active: 'home' | 'playground' | 'samples';
+  active: 'home' | 'playground' | 'gallery';
   repoUrl: string;
   rev: SourceRevision;
   body: string;
@@ -198,7 +198,7 @@ function renderHomePage(rendered: ReadonlyMap<string, RenderedSample>, repoUrl: 
     .join('\n');
 
   const cloneUrl = repoUrl ? `${repoUrl}.git` : '<repository-url>';
-  const docsStart = repoUrl ? `${repoUrl}/blob/main/docs/start-here.md` : 'samples/index.html';
+  const docsStart = repoUrl ? `${repoUrl}/blob/main/docs/start-here.md` : 'gallery/index.html';
 
   const body = `<section class="hero">
   <div>
@@ -244,7 +244,7 @@ cd LiteScript
 <section class="section">
   <div class="section-head">
     <h2>Featured Examples</h2>
-    <a href="samples/index.html">View all ${String(rendered.size)} verified samples &rarr;</a>
+    <a href="gallery/index.html">Explore Gallery (${String(rendered.size)} samples) &rarr;</a>
   </div>
   <div class="sample-grid">
     ${featuredCards}
@@ -261,7 +261,7 @@ cd LiteScript
   });
 }
 
-function renderSamplesPage(rendered: ReadonlyMap<string, RenderedSample>, repoUrl: string, rev: SourceRevision): string {
+function renderGalleryPage(rendered: ReadonlyMap<string, RenderedSample>, repoUrl: string, rev: SourceRevision): string {
   const sections = sampleGroups.map(group => {
     const cards = showcaseSamples
       .filter(s => s.group === group.id)
@@ -281,17 +281,17 @@ function renderSamplesPage(rendered: ReadonlyMap<string, RenderedSample>, repoUr
   }).join('\n');
 
   const body = `<section style="padding: 2rem 0 1rem;">
-  <h1 style="margin: 0 0 0.5rem;">Verified Samples</h1>
+  <h1 style="margin: 0 0 0.5rem;">Gallery</h1>
   <p class="hero-lead" style="margin: 0;">
-    All ${String(rendered.size)} examples below are compiled and executed by the generated Lite compiler during the site build.
+    All ${String(rendered.size)} examples below are compiled and executed by the Lite compiler during the site build.
   </p>
 </section>
 ${sections}`;
 
   return renderPage({
-    title: 'Samples — Lite',
+    title: 'Gallery — Lite',
     basePath: '../',
-    active: 'samples',
+    active: 'gallery',
     repoUrl,
     rev,
     body,
@@ -681,13 +681,13 @@ export function buildSite(): void {
   }
 
   rmSync(outputDir, { recursive: true, force: true });
-  mkdirSync(join(outputDir, 'samples'), { recursive: true });
+  mkdirSync(join(outputDir, 'gallery'), { recursive: true });
   mkdirSync(join(outputDir, 'playground', 'samples'), { recursive: true });
 
   writeFileSync(join(outputDir, 'style.css'), siteCss);
   cpSync(join(root, 'brand', 'lite-favicon.svg'), join(outputDir, 'favicon.svg'));
   writeFileSync(join(outputDir, 'index.html'), renderHomePage(rendered, repoUrl, rev));
-  writeFileSync(join(outputDir, 'samples', 'index.html'), renderSamplesPage(rendered, repoUrl, rev));
+  writeFileSync(join(outputDir, 'gallery', 'index.html'), renderGalleryPage(rendered, repoUrl, rev));
   writeFileSync(join(outputDir, 'playground', 'index.html'), renderPlaygroundPage(rendered, repoUrl, rev));
   for (const sample of rendered.values()) {
     writeFileSync(

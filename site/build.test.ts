@@ -39,9 +39,12 @@ test('syntax highlighter escapes HTML and marks keywords, strings, and comments'
 test('buildSite generates static pages and metadata in dist/site', () => {
   buildSite();
   const out = join(root, 'dist', 'site');
-  for (const rel of ['index.html', 'style.css', 'favicon.svg', 'build.json', 'samples/index.html', 'playground/index.html']) {
+  for (const rel of ['index.html', 'style.css', 'favicon.svg', 'build.json', 'gallery/index.html', 'playground/index.html']) {
     assert(existsSync(join(out, rel)), `missing generated site file: ${rel}`);
   }
+  const gallery = readFileSync(join(out, 'gallery/index.html'), 'utf8');
+  assert(gallery.includes('<title>Gallery — Lite</title>'));
+  assert(gallery.includes('<pre class="code-block"><code>'));
   const index = readFileSync(join(out, 'index.html'), 'utf8');
   assert(index.includes('is light.'));
   assert(index.includes('Play &rarr;'));
