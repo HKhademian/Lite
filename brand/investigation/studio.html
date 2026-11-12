@@ -392,7 +392,7 @@
           </div>
         </div>
         <div style="display:flex; align-items:center; gap:8px; flex-wrap:wrap;">
-          <button class="tab-btn" style="padding:5px 11px; font-size:12px;" onclick="setGroup('brand-system')">Brand System (7)</button>
+          <button id="bs-top-btn" class="tab-btn" style="padding:5px 11px; font-size:12px;" onclick="toggleBrandSystem()">Brand System ▾</button>
           <button class="tab-btn" style="padding:5px 11px; font-size:12px;" onclick="openVisibility()">Visibility Matrix ↗</button>
         </div>
       </div>
@@ -455,7 +455,6 @@
   <!-- Single Unified Category Switcher -->
   <div class="nav-bar">
     <button class="tab-btn active" id="grp-all" onclick="setGroup('all')">All Candidates</button>
-    <button class="tab-btn" id="grp-brand-system" onclick="setGroup('brand-system')">★ Brand System (Color · Font · Mono)</button>
     <button class="tab-btn" id="grp-rev14" onclick="setGroup('rev14')">Rev 14 · Controlled Test (3)</button>
     <button class="tab-btn" id="grp-rev13" onclick="setGroup('rev13')">Rev 13 · Three-way (3)</button>
     <button class="tab-btn" id="grp-rev12" onclick="setGroup('rev12')">Rev 12 · ℓ Refinements (5)</button>
@@ -477,16 +476,8 @@
   <!-- Cards Grid -->
   <div id="grid" class="grid"></div>
 
-  <!-- Unified Brand System View (Logo · Mono · Wordmark · Accent · Website Palette · Logo Font · Website Font) -->
+  <!-- Unified Brand System Panel (toggles open above the Logo Grid so the grid stays visible) -->
   <div id="brand-system-view" style="display:none; flex-direction:column; gap:16px;">
-    <div class="panel">
-      <div style="display:flex; align-items:center; justify-content:space-between; flex-wrap:wrap; gap:8px; margin-bottom:10px;">
-        <div class="eyebrow">0 · Logo Selection (Quick Switcher)</div>
-        <button class="tab-btn" style="padding:4px 10px; font-size:11px;" onclick="setGroup('all')">Browse All Logos ↗</button>
-      </div>
-      <div id="bs-logo-picks" style="display:flex; flex-wrap:wrap; gap:8px;"></div>
-    </div>
-
     <div class="panel" style="display:grid; grid-template-columns:1.25fr 1fr; gap:18px; align-items:center;">
       <div style="display:flex; flex-direction:column; gap:10px;">
         <div style="display:flex; align-items:center; gap:14px; flex-wrap:wrap;">
@@ -1216,7 +1207,7 @@ function renderSim() {
     </div>
   `).join('');
 
-  if (activeGroup === 'brand-system') renderBrandSystem();
+  if (brandSystemOpen) renderBrandSystem();
 }
 
 const bsAccents = [
@@ -1263,18 +1254,6 @@ function renderBrandSystem() {
   const isDark = document.documentElement.getAttribute('data-ui') === 'dark';
   const ink = isDark ? '#F2F0EA' : '#101113';
   const acc = logoColorMode === 'mono' ? ink : (isDark ? accDark : accLight);
-
-  const pickRefs = ['R14-02', 'R14-01', 'R14-03', 'R13-01', 'R13-02', 'R11-01'];
-  if (!pickRefs.includes(it.ref)) pickRefs.unshift(it.ref);
-  document.getElementById('bs-logo-picks').innerHTML = pickRefs.map(r => {
-    const m = items.find(x => x.ref === r);
-    if (!m) return '';
-    const isSel = m.id === it.id;
-    return `<button class="tab-btn ${isSel ? 'active' : ''}" style="display:inline-flex;align-items:center;gap:7px;padding:6px 11px;font-size:12px;" onclick="selectedId='${m.id}'; history.replaceState(null,'','#${m.ref}'); renderSim();">
-      <svg viewBox="${m.vb}" width="16" height="16">${m.mark(isSel ? (isDark ? '#101113' : '#F5F3EE') : acc)}</svg>
-      <span>${m.ref} · ${m.title}</span>
-    </button>`;
-  }).join('');
 
   document.getElementById('bs-logo-only').innerHTML = `<div class="tile-dark" style="padding:8px;"><svg viewBox="${it.vb}" width="28" height="28">${it.mark(logoColorMode === 'mono' ? '#F5F3EE' : accDark)}</svg></div>`;
   document.getElementById('bs-mono-only').innerHTML = `<div class="tile-paper" style="padding:8px;"><svg viewBox="${it.vb}" width="28" height="28">${it.mark('#101113')}</svg></div>`;
@@ -1366,17 +1345,23 @@ function setRenderMode(mode) {
   renderSim();
 }
 
+let brandSystemOpen = false;
+function toggleBrandSystem() {
+  brandSystemOpen = !brandSystemOpen;
+  document.getElementById('brand-system-view').style.display = brandSystemOpen ? 'flex' : 'none';
+  const btn = document.getElementById('bs-top-btn');
+  btn.classList.toggle('active', brandSystemOpen);
+  btn.textContent = brandSystemOpen ? 'Brand System ▴' : 'Brand System ▾';
+  if (brandSystemOpen) renderBrandSystem();
+}
+
 function setGroup(grp) {
   activeGroup = grp;
-  ['brand-system', 'rev14', 'rev13', 'rev12', 'rev11', 'rev10', 'rev9', 'rev8', 'rev7', 'rev6', 'top', 'rev3', 'rev4', 'rev1', 'all'].forEach(g => {
+  ['rev14', 'rev13', 'rev12', 'rev11', 'rev10', 'rev9', 'rev8', 'rev7', 'rev6', 'top', 'rev3', 'rev4', 'rev1', 'all'].forEach(g => {
     const el = document.getElementById('grp-' + g);
     if (el) el.classList.toggle('active', g === grp);
   });
-  const isBs = grp === 'brand-system';
-  document.getElementById('grid').style.display = isBs ? 'none' : 'grid';
-  document.getElementById('brand-system-view').style.display = isBs ? 'flex' : 'none';
-  if (isBs) renderBrandSystem();
-  else render();
+  render();
 }
 
 function toggleArchive() {
