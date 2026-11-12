@@ -1289,8 +1289,15 @@ let logoColorMode = 'accent';
 
 function buildCustomWordmark(it, acc, ink, h, fontObj = activeBsLogoFont) {
   if (!fontObj.css) return buildWordmark(it, acc, ink, h);
-  return `<span style="display:inline-flex;align-items:center;gap:2px;font-family:${fontObj.css};font-size:${h}px;font-weight:${fontObj.weight||600};letter-spacing:-0.02em;line-height:1;color:${ink};">
-    <svg viewBox="${it.vb}" width="${Math.round(h*0.92)}" height="${Math.round(h*0.92)}">${it.mark(acc)}</svg><span>ite</span>
+  if (it.vb === '0 0 16 16' && !it.companion) {
+    const cropW = it.off ? Math.min(16, Math.max(10.5, it.off - 0.8)) : 12.2;
+    const svgW = Math.round(h * (cropW / 16));
+    return `<span style="display:inline-flex;align-items:baseline;gap:0;font-family:${fontObj.css};font-size:${h}px;font-weight:${fontObj.weight||600};letter-spacing:-0.025em;line-height:1;color:${ink};">
+      <svg viewBox="0 0 ${cropW} 16" width="${svgW}" height="${h}" style="display:block;transform:translateY(${Math.round(h*0.13)}px);">${(it.first || it.mark)(acc, wordCase === 'title')}</svg><span>ite</span>
+    </span>`;
+  }
+  return `<span style="display:inline-flex;align-items:center;gap:3px;font-family:${fontObj.css};font-size:${h}px;font-weight:${fontObj.weight||600};letter-spacing:-0.025em;line-height:1;color:${ink};">
+    <svg viewBox="${it.vb}" width="${Math.round(h*0.9)}" height="${Math.round(h*0.9)}">${it.mark(acc)}</svg><span>lite</span>
   </span>`;
 }
 
