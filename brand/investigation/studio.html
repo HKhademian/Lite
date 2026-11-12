@@ -409,16 +409,10 @@
             <div class="nav-links" style="font-size:11px; gap:10px;"><span>tour</span><span>spec</span><span>docs</span></div>
           </div>
         </div>
-        <div class="hero-mini">
-          <div style="display:flex; flex-direction:column; gap:3px; min-width:0;">
-            <div id="bs-wordmark"></div>
-            <div id="bs-headline" style="font-size:15px; font-weight:700; letter-spacing:-0.02em;">Lite is light.</div>
-          </div>
-          <div id="bs-code-box" style="background:var(--card); border:1px solid var(--line); border-radius:8px; padding:6px 9px; font-family:var(--mono); font-size:10.5px; line-height:1.45; shrink:0;">
-            <div><span id="bs-kw">fn</span> main() {</div>
-            <div>&nbsp;print(<span id="bs-str">"Lite"</span>)</div>
-            <div>}</div>
-          </div>
+        <div id="bs-code-box" style="background:var(--bg); border:1px solid var(--line); border-radius:10px; padding:8px 12px; font-family:var(--mono); font-size:11px; line-height:1.5; display:flex; flex-direction:column; justify-content:center;">
+          <div><span id="bs-kw">fn</span> main() {</div>
+          <div>&nbsp;&nbsp;print(<span id="bs-str">"Lite is light."</span>)</div>
+          <div>}</div>
         </div>
         <div class="inspector-stages" id="inspector-stages"></div>
       </div>
@@ -1165,8 +1159,6 @@ function renderSim() {
   const isDark = document.documentElement.getAttribute('data-ui') === 'dark';
   const ink = isDark ? '#F2F0EA' : '#101113';
   const acc = activeBsAccent.id === 'mono' ? ink : (isDark ? accDark : accLight);
-  document.getElementById('bs-wordmark').innerHTML = buildCustomWordmark(it, acc, ink, 22);
-  document.getElementById('bs-headline').style.fontFamily = activeBsFont.display;
   document.getElementById('bs-code-box').style.fontFamily = activeBsCodeFont.css;
   document.getElementById('bs-kw').style.color = acc;
   document.getElementById('bs-str').style.color = acc;
