@@ -16,6 +16,8 @@ export type ShowcaseSample = Readonly<{
   file: string;
   args: readonly string[];
   stdin: string;
+  /** Only fast, short-output samples display output directly on cards. */
+  showOutput?: boolean;
 }>;
 
 export const sampleGroups: readonly SampleGroup[] = [
@@ -49,6 +51,7 @@ export const heroSample: ShowcaseSample = {
   file: 'language/examples/021-type-aliases.lts',
   args: [],
   stdin: '',
+  showOutput: true,
 };
 
 export const showcaseSamples: readonly ShowcaseSample[] = [
@@ -60,6 +63,7 @@ export const showcaseSamples: readonly ShowcaseSample[] = [
     file: 'language/examples/001-double-sum.lts',
     args: [],
     stdin: '7\n5\n',
+    showOutput: true,
   },
   {
     id: 'factorial',
@@ -69,6 +73,7 @@ export const showcaseSamples: readonly ShowcaseSample[] = [
     file: 'language/examples/004-factorial.lts',
     args: [],
     stdin: '6\n',
+    showOutput: true,
   },
   {
     id: 'prompts-and-report',
@@ -87,6 +92,7 @@ export const showcaseSamples: readonly ShowcaseSample[] = [
     file: 'language/examples/002-decisions.lts',
     args: [],
     stdin: '5\n',
+    showOutput: true,
   },
   {
     id: 'sum-positive',
@@ -142,5 +148,6 @@ export const showcaseSamples: readonly ShowcaseSample[] = [
     file: 'language/examples/020-script-arguments.lts',
     args: ['one', 'two', 'three'],
     stdin: '',
+    showOutput: true,
   },
 ];

@@ -49,6 +49,9 @@ test('buildSite generates static pages and metadata in dist/site', () => {
   const playground = readFileSync(join(out, 'playground/index.html'), 'utf8');
   assert(playground.includes('Generated TypeScript'));
   assert(playground.includes('pg-canvas'));
+  for (const sample of showcaseSamples) {
+    assert(existsSync(join(out, 'playground', 'samples', `${sample.id}.json`)), `missing playground payload for ${sample.id}`);
+  }
   const buildInfo = JSON.parse(readFileSync(join(out, 'build.json'), 'utf8')) as { samples: number; shortCommit: string };
   assert.equal(buildInfo.samples, showcaseSamples.length);
   assert.equal(buildInfo.shortCommit.length, 12);

@@ -115,6 +115,12 @@ function renderSampleCard(sample: RenderedSample, basePath: string): string {
   if (sample.args.length > 0) inputParts.push(`args: ${sample.args.join(' ')}`);
   if (sample.stdin !== '') inputParts.push(`stdin: ${JSON.stringify(sample.stdin)}`);
   const metaText = inputParts.length > 0 ? inputParts.join(' · ') : sample.file;
+  const outputBlock = sample.showOutput === true
+    ? `<div class="output-block">
+    <div class="output-label">Output</div>
+    <pre>${escapeHtml(sample.output.trimEnd())}</pre>
+  </div>`
+    : '';
 
   return `<article class="code-card" id="sample-${escapeHtml(sample.id)}">
   <div class="code-card-head">
@@ -123,10 +129,7 @@ function renderSampleCard(sample: RenderedSample, basePath: string): string {
   </div>
   <p class="sample-note">${escapeHtml(sample.note)}</p>
   <pre class="code-block"><code>${sample.sourceHtml}</code></pre>
-  <div class="output-block">
-    <div class="output-label">Output</div>
-    <pre>${escapeHtml(sample.output.trimEnd())}</pre>
-  </div>
+  ${outputBlock}
   <footer class="sample-foot">
     <a href="${basePath}playground/index.html?sample=${escapeHtml(sample.id)}">Open in playground &rarr;</a>
   </footer>
@@ -281,13 +284,8 @@ function renderPlaygroundPage(rendered: ReadonlyMap<string, RenderedSample>, rep
   const payload = Array.from(rendered.values()).map(s => ({
     id: s.id,
     title: s.title,
-    note: s.note,
     file: s.file,
-    args: s.args,
-    stdin: s.stdin,
-    sourceHtml: s.sourceHtml,
-    tsHtml: s.tsHtml,
-    output: s.output,
+    showOutput: s.showOutput === true,
   }));
   const serialized = JSON.stringify(payload).replaceAll('<', '\\u003c');
 
@@ -348,6 +346,7 @@ function renderPlaygroundPage(rendered: ReadonlyMap<string, RenderedSample>, rep
 <script type="module">
   const samples = ${serialized};
   const byId = new Map(samples.map(s => [s.id, s]));
+  const cache = new Map();
   const select = document.getElementById("pg-samples");
   const playBtn = document.getElementById("pg-play");
   const canvasBtn = document.getElementById("pg-canvas-btn");
@@ -385,32 +384,48 @@ function renderPlaygroundPage(rendered: ReadonlyMap<string, RenderedSample>, rep
     tab.addEventListener("click", () => showTab(tab.dataset.tab));
   }
 
-  function loadSample(id, replay) {
-    const sample = byId.get(id) ?? samples[0];
-    if (!sample) return;
-    select.value = sample.id;
-    fileEl.textContent = sample.file;
-    noteEl.textContent = sample.title;
+  async function fetchSample(id) {
+    if (cache.has(id)) return cache.get(id);
+    const res = await fetch("./samples/" + encodeURIComponent(id) + ".json");
+    if (!res.ok) throw new Error("Failed to load sample " + id);
+    const data = await res.json();
+    cache.set(id, data);
+    return data;
+  }
+
+  async function loadSample(id, replay) {
+    const meta = byId.get(id) ?? samples[0];
+    if (!meta) return;
+    select.value = meta.id;
+    fileEl.textContent = meta.file;
+    noteEl.textContent = meta.title;
+    statusEl.textContent = "Loading " + meta.file + "...";
+
+    const url = new URL(window.location.href);
+    url.searchParams.set("sample", meta.id);
+    window.history.replaceState({}, "", url);
+
+    const sample = await fetchSample(meta.id);
     sourceEl.innerHTML = sample.sourceHtml;
     tsEl.innerHTML = sample.tsHtml;
     const ioParts = [];
     if (sample.args.length) ioParts.push("args: " + sample.args.join(" "));
     if (sample.stdin) ioParts.push("stdin: " + JSON.stringify(sample.stdin));
     ioEl.textContent = ioParts.length ? ioParts.join("  |  ") : "no stdin or args required";
-    outputEl.textContent = replay ? "" : sample.output;
-
-    const url = new URL(window.location.href);
-    url.searchParams.set("sample", sample.id);
-    window.history.replaceState({}, "", url);
 
     if (replay) {
-      statusEl.textContent = "Running " + sample.file + "...";
+      outputEl.textContent = "";
+      statusEl.textContent = "Running " + meta.file + "...";
       setTimeout(() => {
         outputEl.textContent = sample.output;
         statusEl.textContent = "Exited 0 (verified)";
       }, 120);
+    } else if (meta.showOutput) {
+      outputEl.textContent = sample.output;
+      statusEl.textContent = "Verified output ready";
     } else {
-      statusEl.textContent = "Verified output loaded";
+      outputEl.textContent = "(Press Play to run)";
+      statusEl.textContent = "Ready — press Play";
     }
   }
 
@@ -499,13 +514,26 @@ export function buildSite(): void {
 
   rmSync(outputDir, { recursive: true, force: true });
   mkdirSync(join(outputDir, 'samples'), { recursive: true });
-  mkdirSync(join(outputDir, 'playground'), { recursive: true });
+  mkdirSync(join(outputDir, 'playground', 'samples'), { recursive: true });
 
   writeFileSync(join(outputDir, 'style.css'), siteCss);
   cpSync(join(root, 'brand', 'lite-favicon.svg'), join(outputDir, 'favicon.svg'));
   writeFileSync(join(outputDir, 'index.html'), renderHomePage(rendered, repoUrl, commit));
   writeFileSync(join(outputDir, 'samples', 'index.html'), renderSamplesPage(rendered, repoUrl, commit));
   writeFileSync(join(outputDir, 'playground', 'index.html'), renderPlaygroundPage(rendered, repoUrl, commit));
+  for (const sample of rendered.values()) {
+    writeFileSync(
+      join(outputDir, 'playground', 'samples', `${sample.id}.json`),
+      JSON.stringify({
+        id: sample.id,
+        args: sample.args,
+        stdin: sample.stdin,
+        sourceHtml: sample.sourceHtml,
+        tsHtml: sample.tsHtml,
+        output: sample.output,
+      }),
+    );
+  }
   writeFileSync(
     join(outputDir, 'build.json'),
     JSON.stringify({ commit, shortCommit: commit.slice(0, 12), samples: rendered.size }, null, 2) + '\n',
