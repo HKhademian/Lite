@@ -12,16 +12,16 @@ pub errorLine := fn(text: String): Unit;
 /** Returns the command-line arguments following the generated program entry. */
 pub inputArgs := fn(): List<String>;
 
-/** Reads all remaining standard input after writing the required `prompt` argument. */
+/** Reads all remaining standard input; `prompt` is optional at call sites, but this provisional declaration cannot express that yet. */
 pub inputAll := fn(prompt: String): String;
 
-/** Reads one input line after writing the required `prompt` argument. */
+/** Reads one input line; `prompt` is optional at call sites, but this provisional declaration cannot express that yet. */
 pub inputLine := fn(prompt: String): String;
 
-/** Reads one signed Int token after writing the required `prompt` argument. */
+/** Reads one signed Int token; `prompt` is optional at call sites, but this provisional declaration cannot express that yet. */
 pub inputInt := fn(prompt: String): Int;
 
-/** Reads one finite Float token after writing the required `prompt` argument. */
+/** Reads one finite Float token; `prompt` is optional at call sites, but this provisional declaration cannot express that yet. */
 pub inputFloat := fn(prompt: String): Float;
 
 /** Terminates the generated program with `status`. */

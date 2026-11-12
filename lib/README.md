@@ -33,6 +33,10 @@ user-defined functions. The module does not grant filesystem access. Other
 bodyless declarations are rejected unless their exact identity and ABI are
 registered for the selected target.
 
+The host accepts omitted prompts for `inputAll`, `inputLine`, `inputInt` and
+`inputFloat`, but their provisional Lite declarations still require
+`prompt: String`; the declaration syntax cannot express that optionality yet.
+
 `lib/tests/` holds direct Lite test entries. Run them, or compile and execute them:
 
 ```sh
