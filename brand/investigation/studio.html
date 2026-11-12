@@ -300,14 +300,14 @@
 
   <!-- Single Unified Category Switcher -->
   <div class="nav-bar">
-    <button class="tab-btn active" id="grp-rev6" onclick="setGroup('rev6')">Rev 6 · Letter Marks (6)</button>
+    <button class="tab-btn active" id="grp-all" onclick="setGroup('all')">All Candidates</button>
+    <button class="tab-btn" id="grp-rev6" onclick="setGroup('rev6')">Rev 6 · Letter Marks (6)</button>
     <button class="tab-btn" id="grp-top" onclick="setGroup('top')">Top Picks (6)</button>
     <button class="tab-btn subtle" id="archive-toggle" onclick="toggleArchive()">Other Entities &amp; Archive ▾</button>
     <div id="archive-menu" class="archive-menu">
       <button class="tab-btn subtle" id="grp-rev3" onclick="setGroup('rev3')">Rev 3 · External Eval</button>
       <button class="tab-btn subtle" id="grp-rev4" onclick="setGroup('rev4')">Rev 4 · mini Monograms</button>
       <button class="tab-btn subtle" id="grp-rev1" onclick="setGroup('rev1')">Rev 1 · Early Sketches</button>
-      <button class="tab-btn subtle" id="grp-all" onclick="setGroup('all')">All Candidates</button>
     </div>
   </div>
 
@@ -382,7 +382,7 @@
 <script>
 let accLight = '#C97B14';
 let accDark = '#F0B45A';
-let activeGroup = 'rev6';
+let activeGroup = 'all';
 let wordCase = 'lower';
 let selectedId = 'r6-feather-curve';
 
@@ -748,7 +748,7 @@ if (hashRef) {
   const match = items.find(x => x.ref === hashRef);
   if (match) {
     selectedId = match.id;
-    if (!match.groups.includes(activeGroup) && match.groups.length) {
+    if (activeGroup !== 'all' && !match.groups.includes(activeGroup) && match.groups.length) {
       setGroup(match.groups[0]);
     }
   }
