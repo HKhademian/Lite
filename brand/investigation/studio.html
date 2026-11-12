@@ -246,6 +246,44 @@
     }
     .card-foot b { color: var(--ink); }
 
+    /* Sticky Live Preview + Detail Inspector */
+    .sticky-preview {
+      position: sticky;
+      top: 10px;
+      z-index: 30;
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+      background: var(--bg);
+      padding-bottom: 4px;
+    }
+    .sticky-preview .panel {
+      box-shadow: 0 10px 28px rgba(0, 0, 0, 0.14);
+    }
+    .inspector-bar {
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      justify-content: space-between;
+      gap: 14px;
+      padding: 12px 18px;
+    }
+    .inspector-info { display: flex; flex-direction: column; gap: 4px; max-width: 420px; }
+    .inspector-stages { display: flex; align-items: flex-end; gap: 12px; flex-wrap: wrap; }
+    .stage-chip {
+      display: flex; flex-direction: column; align-items: center; gap: 5px;
+      font-family: var(--mono); font-size: 10px; color: var(--muted);
+    }
+    .stage-box {
+      border-radius: 10px;
+      background: #101113;
+      color: #F5F3EE;
+      border: 1px solid rgba(255,255,255,.1);
+      display: flex; align-items: center; justify-content: center;
+      padding: 8px;
+    }
+    .xray svg path, .xray svg circle { opacity: 0.48; }
+
     /* Live Simulator */
     .sim-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; margin-top: 12px; }
     @media (max-width: 760px) { .sim-grid { grid-template-columns: 1fr; } }
@@ -339,39 +377,55 @@
     </div>
   </div>
 
-  <!-- Live Header & Favicon Simulation -->
-  <div class="panel">
-    <div style="display:flex; align-items:center; justify-content:space-between; flex-wrap:wrap; gap:8px;">
-      <div>
-        <h2 style="font-size:15px; margin:0;">Live Header &amp; 16 px Browser Tab Preview</h2>
-        <p class="sub">Click any card below to inspect it in Dark &amp; Paper navbars.</p>
+  <!-- Sticky Live Header, 16 px Browser Tab & Detail Inspector -->
+  <div class="sticky-preview">
+    <div class="panel">
+      <div style="display:flex; align-items:center; justify-content:space-between; flex-wrap:wrap; gap:8px;">
+        <div>
+          <h2 style="font-size:15px; margin:0;">Live Header &amp; 16 px Browser Tab Preview</h2>
+          <p class="sub">Click any card below to inspect it in Dark &amp; Paper navbars.</p>
+        </div>
+        <div style="display:flex; align-items:center; gap:8px; flex-wrap:wrap;">
+          <span id="sel-pill" class="badge">Selected: R14-02</span>
+          <a id="brand-sys-link" class="tab-btn" style="padding:5px 11px; font-size:12px; text-decoration:none;" href="./brand-system.html#R14-02">Color &amp; Fontface ↗</a>
+          <button class="tab-btn" style="padding:5px 11px; font-size:12px;" onclick="openVisibility()">Visibility Matrix ↗</button>
+        </div>
       </div>
-      <div style="display:flex; align-items:center; gap:8px; flex-wrap:wrap;">
-        <span id="sel-pill" class="badge">Selected: Feather curve</span>
-        <button class="tab-btn" style="padding:5px 11px; font-size:12px;" onclick="openVisibility()">Visibility Matrix ↗</button>
+      <div class="sim-grid">
+        <div class="sim-box sim-dark">
+          <div class="sim-tab-bar">
+            <div class="browser-tab"><span id="sim-dark-fav"></span><span>Lite — Lite is light</span></div>
+            <span class="origin">Dark UI · 16px</span>
+          </div>
+          <div class="navbar-sim">
+            <div id="sim-dark-wm"></div>
+            <div class="nav-links"><span>tour</span><span>spec</span><span>docs</span></div>
+          </div>
+        </div>
+        <div class="sim-box sim-light">
+          <div class="sim-tab-bar">
+            <div class="browser-tab"><span id="sim-light-fav"></span><span>Lite — Lite is light</span></div>
+            <span class="origin">Paper UI · 16px</span>
+          </div>
+          <div class="navbar-sim">
+            <div id="sim-light-wm"></div>
+            <div class="nav-links"><span>tour</span><span>spec</span><span>docs</span></div>
+          </div>
+        </div>
       </div>
     </div>
-    <div class="sim-grid">
-      <div class="sim-box sim-dark">
-        <div class="sim-tab-bar">
-          <div class="browser-tab"><span id="sim-dark-fav"></span><span>Lite — Lite is light</span></div>
-          <span class="origin">Dark UI · 16px</span>
-        </div>
-        <div class="navbar-sim">
-          <div id="sim-dark-wm"></div>
-          <div class="nav-links"><span>tour</span><span>spec</span><span>docs</span></div>
-        </div>
-      </div>
-      <div class="sim-box sim-light">
-        <div class="sim-tab-bar">
-          <div class="browser-tab"><span id="sim-light-fav"></span><span>Lite — Lite is light</span></div>
-          <span class="origin">Paper UI · 16px</span>
-        </div>
-        <div class="navbar-sim">
-          <div id="sim-light-wm"></div>
-          <div class="nav-links"><span>tour</span><span>spec</span><span>docs</span></div>
+
+    <!-- Detail Inspector (16..128px · Solid vs Semi-Transparent) -->
+    <div class="panel inspector-bar">
+      <div class="inspector-info">
+        <div class="eyebrow">Detail Inspector · Selected Mark</div>
+        <div id="inspector-title" style="font-size:14px; font-weight:600;"></div>
+        <div class="seg" style="margin-top:4px; align-self:flex-start;">
+          <button id="mode-solid" class="active" onclick="setRenderMode('solid')">Solid (Final)</button>
+          <button id="mode-xray" onclick="setRenderMode('xray')">Semi-Transparent Strokes</button>
         </div>
       </div>
+      <div class="inspector-stages" id="inspector-stages"></div>
     </div>
   </div>
 
@@ -463,7 +517,8 @@ let accLight = '#C97B14';
 let accDark = '#F0B45A';
 let activeGroup = 'all';
 let wordCase = 'lower';
-let selectedId = 'r6-feather-curve';
+let selectedId = 'r14-02-flick-130';
+let renderMode = 'solid';
 
 const rev9Mark01 = (c) => `<g fill="none" stroke="${c}" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M2.3 10.7C5.1 8.8 8.1 5.5 8.2 3.3C8.3 1.9 6.9 1.6 6 2.8C4.9 4.4 4.4 7.9 4.5 10.5C4.5 12.5 5.7 13.2 7.8 12.6"/></g>`;
 const rev9Mark02 = (c) => `<g fill="none" stroke="${c}" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M2.6 9.4C5.8 7.1 8.1 4.6 7.8 2.9C7.6 1.9 6.6 1.9 5.9 3.1C4.8 4.9 4.5 7.9 4.6 10.5C4.7 12.3 5.8 13 8.1 12.4"/></g>`;
@@ -1095,10 +1150,31 @@ function jumpToRef(ref) {
 function renderSim() {
   const it = items.find(x => x.id === selectedId) || items[0];
   document.getElementById('sel-pill').textContent = `Selected: ${it.ref} · ${it.title}`;
+  const bsl = document.getElementById('brand-sys-link');
+  if (bsl) bsl.href = `./brand-system.html#${it.ref}`;
   document.getElementById('sim-dark-fav').innerHTML = `<svg viewBox="${it.vb}" width="16" height="16">${it.mark(accDark)}</svg>`;
   document.getElementById('sim-light-fav').innerHTML = `<svg viewBox="${it.vb}" width="16" height="16">${it.mark(accLight)}</svg>`;
   document.getElementById('sim-dark-wm').innerHTML = buildWordmark(it, accDark, '#F3F4F6', 26);
   document.getElementById('sim-light-wm').innerHTML = buildWordmark(it, accLight, '#111315', 26);
+
+  document.getElementById('inspector-title').textContent = `${it.ref} · ${it.title}`;
+  const stages = document.getElementById('inspector-stages');
+  stages.className = 'inspector-stages' + (renderMode === 'xray' ? ' xray' : '');
+  stages.innerHTML = [16, 32, 64, 96].map(px => `
+    <div class="stage-chip">
+      <div class="stage-box" style="min-width:${Math.max(px + 14, 34)}px;min-height:${Math.max(px + 14, 34)}px;">
+        <svg viewBox="${it.vb}" width="${px}" height="${px}">${it.mark(accDark)}</svg>
+      </div>
+      <span>${px}px</span>
+    </div>
+  `).join('');
+}
+
+function setRenderMode(mode) {
+  renderMode = mode;
+  document.getElementById('mode-solid').classList.toggle('active', mode === 'solid');
+  document.getElementById('mode-xray').classList.toggle('active', mode === 'xray');
+  renderSim();
 }
 
 function setGroup(grp) {

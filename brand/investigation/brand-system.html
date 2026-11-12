@@ -1,0 +1,316 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Lite · Color &amp; Fontface System Studio</title>
+  <style>
+    :root {
+      --bg: #F5F3EE;
+      --surface: #FBFAF7;
+      --surface-2: #EDEAE2;
+      --border: #DCD8CE;
+      --text: #101113;
+      --muted: #6C7078;
+      --accent: #C97B14;
+      --font-body: ui-sans-serif, -apple-system, BlinkMacSystemFont, "Inter", "Segoe UI", sans-serif;
+      --font-display: ui-sans-serif, -apple-system, BlinkMacSystemFont, "Inter", "Segoe UI", sans-serif;
+      --mono: ui-monospace, "SF Mono", "JetBrains Mono", Menlo, monospace;
+    }
+
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      font-family: var(--font-body);
+      background: var(--bg);
+      color: var(--text);
+      line-height: 1.5;
+      transition: background 0.18s, color 0.18s;
+    }
+    .wrap {
+      max-width: 1140px;
+      margin: 0 auto;
+      padding: 24px 20px 64px;
+      display: flex;
+      flex-direction: column;
+      gap: 18px;
+    }
+    .panel {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 14px;
+      padding: 18px 20px;
+    }
+    .topbar {
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      justify-content: space-between;
+      gap: 14px;
+    }
+    .eyebrow {
+      font-family: var(--mono);
+      font-size: 11px;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+      color: var(--muted);
+    }
+    h1 { font-size: 20px; margin: 4px 0; letter-spacing: -0.02em; }
+    .sub { font-size: 13px; color: var(--muted); margin: 0; }
+    .btn {
+      font-family: var(--font-body);
+      font-size: 12px;
+      font-weight: 500;
+      padding: 6px 12px;
+      border-radius: 8px;
+      border: 1px solid var(--border);
+      background: var(--surface-2);
+      color: var(--text);
+      cursor: pointer;
+      text-decoration: none;
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+    }
+    .btn.active {
+      background: var(--text);
+      color: var(--bg);
+      border-color: var(--text);
+    }
+    .row { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; }
+
+    /* Sticky Live Preview */
+    .sticky-preview {
+      position: sticky;
+      top: 10px;
+      z-index: 30;
+      background: var(--bg);
+      padding-bottom: 4px;
+    }
+    .sticky-preview .panel {
+      box-shadow: 0 10px 28px rgba(0, 0, 0, 0.15);
+    }
+    .preview-grid {
+      display: grid;
+      grid-template-columns: 1.2fr 1fr;
+      gap: 18px;
+      align-items: center;
+    }
+    @media (max-width: 820px) { .preview-grid { grid-template-columns: 1fr; } }
+
+    .hero-mock {
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+    }
+    .lockup {
+      display: inline-flex;
+      align-items: center;
+      gap: 10px;
+    }
+    .hero-title {
+      font-family: var(--font-display);
+      font-size: 28px;
+      font-weight: 700;
+      letter-spacing: -0.025em;
+      margin: 0;
+    }
+    .code-mock {
+      background: var(--surface-2);
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      padding: 12px 14px;
+      font-family: var(--mono);
+      font-size: 12px;
+      line-height: 1.65;
+      overflow-x: auto;
+    }
+
+    /* Grids */
+    .grid-3 {
+      display: grid;
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+      gap: 14px;
+    }
+    @media (max-width: 900px) { .grid-3 { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+    @media (max-width: 600px) { .grid-3 { grid-template-columns: 1fr; } }
+
+    .choice-card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: 14px;
+      cursor: pointer;
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+      transition: border-color 0.15s, box-shadow 0.15s;
+    }
+    .choice-card:hover { border-color: var(--muted); }
+    .choice-card.active {
+      border-color: var(--accent);
+      box-shadow: 0 0 0 1px var(--accent);
+    }
+    .swatches { display: flex; gap: 6px; }
+    .swatch {
+      width: 24px; height: 24px; border-radius: 6px;
+      border: 1px solid rgba(128,128,128,0.28);
+    }
+  </style>
+</head>
+<body>
+<div class="wrap">
+
+  <!-- Header & Mark Switcher -->
+  <div class="panel topbar">
+    <div>
+      <div class="eyebrow">Lite Brand System · Color &amp; Fontface Pairing</div>
+      <h1>Color &amp; Typography Studio</h1>
+      <p class="sub">Test the settled Lite mark across surface palettes and developer/editorial fontfaces.</p>
+    </div>
+    <div class="row">
+      <div class="row" id="mark-switcher"></div>
+      <a class="btn" id="back-studio" href="./studio.html#R14-02">← Back to Studio</a>
+    </div>
+  </div>
+
+  <!-- Sticky Live Preview -->
+  <div class="sticky-preview">
+    <div class="panel preview-grid">
+      <div class="hero-mock">
+        <div class="row" style="justify-content:space-between;">
+          <div class="lockup" id="live-wordmark"></div>
+          <span class="eyebrow" id="live-meta">R14-02 · Paper &amp; Filament</span>
+        </div>
+        <h2 class="hero-title" id="live-headline">Lite is light.</h2>
+        <p class="sub" id="live-copy">
+          Fast native execution, small runtime support, and code that is easy to reason about, read, maintain, and distribute.
+        </p>
+      </div>
+      <div class="code-mock">
+        <div style="color:var(--muted); margin-bottom:4px;">$ ./bin/lite run hello.lts</div>
+        <div><span style="color:var(--accent);">fn</span> main() {</div>
+        <div>&nbsp;&nbsp;print(<span style="color:var(--accent);">"Lite is light."</span>)</div>
+        <div>}</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Color Palettes -->
+  <div class="panel">
+    <div class="eyebrow" style="margin-bottom:10px;">1 · Color Palettes</div>
+    <div class="grid-3" id="palettes-grid"></div>
+  </div>
+
+  <!-- Fontface Pairings -->
+  <div class="panel">
+    <div class="eyebrow" style="margin-bottom:10px;">2 · Fontface Pairings</div>
+    <div class="grid-3" id="fonts-grid"></div>
+  </div>
+
+</div>
+
+<script>
+const marks = {
+  'R14-02': {
+    label: 'R14-02 (Primary)',
+    svg: (c) => `<g fill="none" stroke="${c}" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M2.2 10C5 7.9 8.6 5 8.5 3C8.4 1.7 6.9 1.7 5.9 3.1C4.6 4.9 4.2 8 4.4 10.4C4.6 12.2 5.8 13 7.4 13C8.6 13 9.5 12.4 10.2 11.4"/><path d="M4.7 9.4C6.3 9.1 7.4 8.5 8.1 7.6" stroke-width="1.3"/></g>`
+  },
+  'R14-01': {
+    label: 'R14-01 (Minimal)',
+    svg: (c) => `<path d="M2.2 10C5 7.9 8.6 5 8.5 3C8.4 1.7 6.9 1.7 5.9 3.1C4.6 4.9 4.2 8 4.4 10.4C4.6 12.2 5.8 13 7.4 13C8.6 13 9.5 12.4 10.2 11.4" fill="none" stroke="${c}" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>`
+  },
+  'R14-03': {
+    label: 'R14-03 (1.7 Flick)',
+    svg: (c) => `<g fill="none" stroke="${c}" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M2.2 10C5 7.9 8.6 5 8.5 3C8.4 1.7 6.9 1.7 5.9 3.1C4.6 4.9 4.2 8 4.4 10.4C4.6 12.2 5.8 13 7.4 13C8.6 13 9.5 12.4 10.2 11.4"/><path d="M4.7 9.4C6.3 9.1 7.4 8.5 8.1 7.6" stroke-width="1.7"/></g>`
+  }
+};
+
+const palettes = [
+  { id: 'paper-filament', name: 'Paper & Filament', note: 'Editorial warm paper + filament amber', bg: '#F5F3EE', surface: '#FBFAF7', surface2: '#EDEAE2', border: '#DCD8CE', text: '#101113', muted: '#6C7078', accent: '#C97B14' },
+  { id: 'ink-filament', name: 'Ink & Filament', note: 'Deep ink + warm filament gold', bg: '#0B0C0E', surface: '#131519', surface2: '#1B1E24', border: '#262A33', text: '#F2F0EA', muted: '#8B9099', accent: '#F0B45A' },
+  { id: 'slate-teal', name: 'Slate & Teal (VS Code)', note: 'Dark editor slate + crisp teal', bg: '#0F1115', surface: '#161920', surface2: '#1E232D', border: '#2A3140', text: '#F3F4F6', muted: '#9CA3AF', accent: '#5EEAD4' },
+  { id: 'cloud-sky', name: 'Cloud & Sky (mini-aligned)', note: 'Crisp light surface + sky blue', bg: '#F8FAFC', surface: '#FFFFFF', surface2: '#F1F5F9', border: '#E2E8F0', text: '#0F172A', muted: '#64748B', accent: '#0284C7' },
+  { id: 'paper-teal', name: 'Paper & Deep Teal', note: 'Warm paper + high-contrast teal', bg: '#F5F3EE', surface: '#FFFFFF', surface2: '#EAE6DC', border: '#D8D2C5', text: '#101113', muted: '#5B6068', accent: '#0F766E' },
+  { id: 'mono-ink', name: 'Pure Monochrome', note: 'Zero-accent ink on paper', bg: '#F5F3EE', surface: '#FBFAF7', surface2: '#EDEAE2', border: '#DCD8CE', text: '#101113', muted: '#6C7078', accent: '#101113' }
+];
+
+const fonts = [
+  { id: 'grotesque', name: 'Neutral Grotesque', note: 'Inter / SF Pro — crisp system clarity', display: 'ui-sans-serif, -apple-system, "Inter", "Segoe UI", sans-serif', body: 'ui-sans-serif, -apple-system, "Inter", "Segoe UI", sans-serif' },
+  { id: 'rounded', name: 'Rounded (mini-style)', note: 'SF Pro Rounded / ui-rounded — friendly & soft', display: 'ui-rounded, "SF Pro Rounded", system-ui, sans-serif', body: 'ui-sans-serif, -apple-system, system-ui, sans-serif' },
+  { id: 'editorial', name: 'Editorial Serif + Sans', note: 'Georgia / Charter display + clean sans body', display: 'Georgia, "Iowan Old Style", "Palatino", serif', body: 'ui-sans-serif, -apple-system, system-ui, sans-serif' },
+  { id: 'mono-tech', name: 'Technical Mono', note: 'JetBrains Mono / SF Mono — compiler-first', display: 'ui-monospace, "SF Mono", "JetBrains Mono", Menlo, monospace', body: 'ui-sans-serif, -apple-system, system-ui, sans-serif' },
+  { id: 'plex', name: 'Geometric Humanist', note: 'Avenir Next / Segoe UI — airy & light', display: '"Avenir Next", "Plus Jakarta Sans", "Segoe UI", sans-serif', body: '"Avenir Next", "Plus Jakarta Sans", "Segoe UI", sans-serif' },
+  { id: 'classic-mono', name: 'All-Mono Minimal', note: 'Monospace everywhere — pure terminal aesthetic', display: 'ui-monospace, "SF Mono", Menlo, monospace', body: 'ui-monospace, "SF Mono", Menlo, monospace' }
+];
+
+let activeMark = 'R14-02';
+let activePal = palettes[0];
+let activeFont = fonts[0];
+
+const hash = location.hash.replace('#', '').toUpperCase();
+if (marks[hash]) activeMark = hash;
+
+function applyTheme() {
+  const r = document.documentElement.style;
+  r.setProperty('--bg', activePal.bg);
+  r.setProperty('--surface', activePal.surface);
+  r.setProperty('--surface-2', activePal.surface2);
+  r.setProperty('--border', activePal.border);
+  r.setProperty('--text', activePal.text);
+  r.setProperty('--muted', activePal.muted);
+  r.setProperty('--accent', activePal.accent);
+  r.setProperty('--font-display', activeFont.display);
+  r.setProperty('--font-body', activeFont.body);
+
+  const m = marks[activeMark];
+  document.getElementById('live-wordmark').innerHTML = `
+    <svg viewBox="0 0 32 16" width="64" height="32">
+      ${m.svg(activePal.accent)}
+      <g fill="none" stroke="${activePal.text}" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+        <path d="M12.8 13V6.5"/><path d="M18.3 3.5V11.2a1.8 1.8 0 0 0 1.8 1.8H22.3"/><path d="M16.5 6.5H20.5"/>
+        <path d="M23.7 9.6H28.9V9.2a2.6 2.6 0 0 0-5.2 0v1.2a2.6 2.6 0 0 0 4.6 1.6"/>
+      </g>
+      <circle cx="12.8" cy="3.2" r="1.15" fill="${activePal.text}"/>
+    </svg>
+  `;
+  document.getElementById('live-meta').textContent = `${activeMark} · ${activePal.name} · ${activeFont.name}`;
+  document.getElementById('back-studio').href = `./studio.html#${activeMark}`;
+}
+
+function renderControls() {
+  document.getElementById('mark-switcher').innerHTML = Object.entries(marks).map(([k, v]) =>
+    `<button class="btn ${k === activeMark ? 'active' : ''}" onclick="activeMark='${k}'; history.replaceState(null,'','#${k}'); renderControls(); applyTheme();">${v.label}</button>`
+  ).join('');
+
+  document.getElementById('palettes-grid').innerHTML = palettes.map(p => `
+    <div class="choice-card ${p.id === activePal.id ? 'active' : ''}" onclick="activePal=palettes.find(x=>x.id==='${p.id}'); renderControls(); applyTheme();">
+      <div class="swatches">
+        <span class="swatch" style="background:${p.bg}"></span>
+        <span class="swatch" style="background:${p.surface}"></span>
+        <span class="swatch" style="background:${p.text}"></span>
+        <span class="swatch" style="background:${p.accent}"></span>
+      </div>
+      <div>
+        <div style="font-weight:600; font-size:14px;">${p.name}</div>
+        <div class="sub">${p.note}</div>
+      </div>
+    </div>
+  `).join('');
+
+  document.getElementById('fonts-grid').innerHTML = fonts.map(f => `
+    <div class="choice-card ${f.id === activeFont.id ? 'active' : ''}" onclick="activeFont=fonts.find(x=>x.id==='${f.id}'); renderControls(); applyTheme();">
+      <div style="font-family:${f.display}; font-size:20px; font-weight:700;">Lite is light.</div>
+      <div>
+        <div style="font-weight:600; font-size:14px;">${f.name}</div>
+        <div class="sub">${f.note}</div>
+      </div>
+    </div>
+  `).join('');
+}
+
+renderControls();
+applyTheme();
+</script>
+</body>
+</html>
