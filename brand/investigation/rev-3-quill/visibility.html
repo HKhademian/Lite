@@ -1,0 +1,127 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Lite — visibility matrix</title>
+<style>
+  :root{
+    --ink:#101113; --paper:#F5F3EE; --graphite:#6C7078; --filament:#F0B45A;
+  }
+  *{box-sizing:border-box}
+  body{margin:0;background:#EDEBE5;color:var(--ink);
+       font:13px/1.45 -apple-system,BlinkMacSystemFont,"Inter",system-ui,sans-serif;
+       -webkit-font-smoothing:antialiased}
+  .wrap{max-width:920px;margin:0 auto;padding:32px 28px 40px}
+  .eyebrow{font:10px/1 ui-monospace,monospace;letter-spacing:.14em;text-transform:uppercase;color:#8B8E96}
+  h1{font-size:26px;line-height:1.15;letter-spacing:-.02em;font-weight:650;margin:10px 0 6px}
+  p.lede{margin:0 0 26px;color:#4A4D54;max-width:62ch}
+  table{border-collapse:separate;border-spacing:0;width:100%;background:#fff;
+        border:1px solid #E1DED6;border-radius:6px;overflow:hidden}
+  th,td{padding:0;text-align:left}
+  thead th{font:10px/1 ui-monospace,monospace;letter-spacing:.1em;text-transform:uppercase;
+           color:#6C7078;padding:10px 12px;border-bottom:1px solid #E1DED6;font-weight:500}
+  tbody th{font:10px/1 ui-monospace,monospace;color:#6C7078;padding:0 12px;width:74px;
+           border-bottom:1px solid #E1DED6;font-weight:400}
+  td{border-bottom:1px solid #E1DED6}
+  tr:last-child td, tr:last-child th{border-bottom:0}
+  .cell{display:flex;align-items:center;justify-content:center;height:92px}
+  .paper{background:var(--paper);color:var(--ink)}
+  .ink{background:var(--ink);color:var(--paper)}
+  .graphite{background:var(--graphite);color:var(--paper)}
+  .filament{background:var(--filament);color:var(--ink)}
+  .pair{display:flex;gap:14px;align-items:center}
+  .meta{display:flex;gap:18px;margin-top:18px;flex-wrap:wrap;color:#4A4D54}
+  .meta b{font-weight:600}
+  .bad{color:#9A3B2E}
+  .k{font:11px/1 ui-monospace,monospace;color:#6C7078}
+  .legend{display:flex;gap:14px;margin-top:10px;font:11px/1 ui-monospace,monospace;color:#6C7078}
+  .sw{display:inline-block;width:9px;height:9px;border:1px solid rgba(0,0,0,.12);vertical-align:-1px;margin-right:5px}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <div class="eyebrow">Rev 3 · visibility check · 2026-11-12</div>
+  <h1>Does it stay visible?</h1>
+  <p class="lede">The same mark on the four surfaces it will actually meet. Left to right: paper, ink, graphite, filament. Rows are real pixel sizes, not zoomed crops.</p>
+
+  <table>
+    <thead>
+      <tr>
+        <th></th>
+        <th>Paper · ink mark</th>
+        <th>Ink · paper mark</th>
+        <th>Graphite · paper</th>
+        <th>Filament · ink</th>
+      </tr>
+    </thead>
+    <tbody id="rows"></tbody>
+  </table>
+
+  <div class="meta" id="contrast"></div>
+  <div class="legend">
+    <span><i class="sw" style="background:#F5F3EE"></i>paper #F5F3EE</span>
+    <span><i class="sw" style="background:#101113"></i>ink #101113</span>
+    <span><i class="sw" style="background:#6C7078"></i>graphite #6C7078</span>
+    <span><i class="sw" style="background:#F0B45A"></i>filament #F0B45A</span>
+  </div>
+</div>
+
+<script>
+  const QUILL = `
+    <g transform="translate(-4 0) rotate(35 32 32)">
+      <path d="M32 59C34 45 34 20 31 5" stroke-width="4.4"/>
+      <path d="M33.3 47C43 42 49 34 51 24" stroke-width="4.2"/>
+      <path d="M33.7 34C43 29 48 21 50 11" stroke-width="4.2"/>
+      <path d="M32.5 21C39 18 42 13 44 7" stroke-width="4.2"/>
+    </g>`;
+  const CUT = `
+    <g transform="translate(-4 0) rotate(35 32 32)">
+      <path d="M32 58V9"/>
+      <path d="M32 44C43 38 50 29 52 19"/>
+      <path d="M31.5 25C40 20 46 12 48 5"/>
+    </g>`;
+  const svg = (px, cut) => `<svg width="${px}" height="${px}" viewBox="0 0 64 64" fill="none"
+      stroke="currentColor" stroke-linecap="round"
+      stroke-width="${cut ? 5.4 : 4.4}">${cut ? CUT : QUILL}</svg>`;
+
+  const sizes = [64, 48, 32, 24, 16];
+  const rows = sizes.map(s => {
+    const cut = s < 32;                     // optical cut below 32
+    const glyph = svg(s, cut);
+    return `<tr>
+      <th>${s} px</th>
+      <td><div class="cell paper">${glyph}</div></td>
+      <td><div class="cell ink">${glyph}</div></td>
+      <td><div class="cell graphite">${glyph}</div></td>
+      <td><div class="cell filament">${glyph}</div></td>
+    </tr>`;
+  }).join('');
+  document.getElementById('rows').innerHTML = rows;
+
+  // WCAG contrast for the pairs that matter
+  const lum = hex => {
+    const [r,g,b] = hex.match(/\w\w/g).map(h => {
+      const c = parseInt(h,16)/255;
+      return c <= .03928 ? c/12.92 : Math.pow((c+.055)/1.055, 2.4);
+    });
+    return .2126*r + .7152*g + .0722*b;
+  };
+  const ratio = (a,b) => {
+    const [x,y] = [lum(a), lum(b)].sort((m,n)=>n-m);
+    return (x+.05)/(y+.05);
+  };
+  const pairs = [
+    ['ink on paper', '#101113', '#F5F3EE'],
+    ['paper on ink', '#F5F3EE', '#101113'],
+    ['paper on graphite', '#F5F3EE', '#6C7078'],
+    ['ink on filament', '#101113', '#F0B45A'],
+    ['paper on filament', '#F5F3EE', '#F0B45A']
+  ];
+  document.getElementById('contrast').innerHTML = pairs.map(([n,a,b]) => {
+    const r = ratio(a,b);
+    const ok = r >= 4.5;
+    return `<span class="k">${n} <b class="${ok?'':'bad'}">${r.toFixed(1)}:1</b></span>`;
+  }).join('');
+</script>
+</body>
+</html>

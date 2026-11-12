@@ -12,6 +12,8 @@ The three numbered SVG sheets in `rev-1-concepts/`, and the marks in
 The marks in `rev-4-monogram-wordmark/` were created by `gemini-4-argon`, and the
 marks in `rev-5-synthesis/`, `rev-7-letter-l/`, `rev-8-script-l/`, and the
 unified `studio.html` were created by `gemini-3.8-flash`.
+The Rev 3 study (`rev-3-quill/`, the four Rev 3 cards `L-05`, `L-07`, `L-08`,
+`L-09`, and `visibility.html`) was created by `deepseek-4.1-flash`.
 Creator metadata is embedded in those SVGs and shown on their studio cards.
 
 ## Revision log
@@ -34,6 +36,8 @@ Creator metadata is embedded in those SVGs and shown on their studio cards.
 - `lite-mark.svg` — primary mark (3 barbs), `currentColor`.
 - `lite-mark-16.svg` — optical cut for 16 px and below (2 barbs, thicker stroke).
 - `lite-mark.png` — 512 px transparent export.
+- `visibility.html` — the mark at 64/48/32/24/16 px on paper, ink, graphite and
+  filament, with WCAG contrast ratios per pairing.
 - `notes.md` — method, six findings, geometry spec, system rules, open questions.
 
 ### Working conventions

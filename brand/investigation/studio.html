@@ -364,6 +364,7 @@
   <!-- Single Unified Category Switcher -->
   <div class="nav-bar">
     <button class="tab-btn active" id="grp-all" onclick="setGroup('all')">All Candidates</button>
+    <button class="tab-btn" id="grp-rev3" onclick="setGroup('rev3')">Rev 3 · The Quill (4)</button>
     <button class="tab-btn" id="grp-rev8" onclick="setGroup('rev8')">Rev 8 · Script ℓ / ℒ (6)</button>
     <button class="tab-btn" id="grp-rev9" onclick="setGroup('rev9')">Rev 9 · Letterforms (8)</button>
     <button class="tab-btn" id="grp-rev7" onclick="setGroup('rev7')">Rev 7 · Letter $ (8)</button>
@@ -371,7 +372,6 @@
     <button class="tab-btn" id="grp-top" onclick="setGroup('top')">Top Picks (6)</button>
     <button class="tab-btn subtle" id="archive-toggle" onclick="toggleArchive()">Other Entities &amp; Archive ▾</button>
     <div id="archive-menu" class="archive-menu">
-      <button class="tab-btn subtle" id="grp-rev3" onclick="setGroup('rev3')">Rev 3 · External Eval</button>
       <button class="tab-btn subtle" id="grp-rev4" onclick="setGroup('rev4')">Rev 4 · mini Monograms</button>
       <button class="tab-btn subtle" id="grp-rev1" onclick="setGroup('rev1')">Rev 1 · Early Sketches</button>
     </div>
@@ -644,13 +644,13 @@ const items = [
     companion: true
   },
   {
-    ref: 'L-05', author: 'external',
+    ref: 'L-05', author: 'deepseek-4.1-flash',
     id: 'r3-quill-main',
     groups: ['top', 'rev3'],
     badge: 'Top Pick · Rev 3',
-    origin: 'External Eval Rec',
+    origin: 'Rev 3 · The Quill',
     title: 'The Quill (3-Barb 35°)',
-    desc: 'External entity’s primary recommendation: bowed shaft + 3 barbs at 35°, monoline.',
+    desc: 'Rev 3 recommendation: bowed shaft + 3 barbs at 35°, monoline.',
     note: 'Uses 2-barb optical cut (lite-mark-16.svg) at 16px.',
     vb: '0 0 64 64',
     mark: (c) => `<g transform="translate(-4 0) rotate(35 32 32)" fill="none" stroke="${c}" stroke-linecap="round"><path d="M32 59C34 45 34 20 31 5" stroke-width="4.4"/><path d="M33.3 47C43 42 49 34 51 24" stroke-width="4.2"/><path d="M33.7 34C43 29 48 21 50 11" stroke-width="4.2"/><path d="M32.5 21C39 18 42 13 44 7" stroke-width="4.2"/></g>`,
@@ -673,7 +673,7 @@ const items = [
 
   // ================= REV 3 ARCHIVE (EXTERNAL ENTITY) =================
   {
-    ref: 'L-07', author: 'external',
+    ref: 'L-07', author: 'deepseek-4.1-flash',
     id: 'r3-quill-16',
     groups: ['rev3'],
     badge: 'Rev 3 · Optical Cut',
@@ -686,11 +686,11 @@ const items = [
     companion: true
   },
   {
-    ref: 'L-08', author: 'external',
+    ref: 'L-08', author: 'deepseek-4.1-flash',
     id: 'r3-spark-orig',
     groups: ['rev3'],
     badge: 'Rev 3 · Held Open',
-    origin: 'External Eval · Spark',
+    origin: 'Rev 3 · Spark',
     title: 'Spark (Dot Variant)',
     desc: 'Vertical shaft + detached circular dot. Reads as "li" and most mini-like at 16px.',
     note: 'Held open in Rev 3 notes; no feather metaphor.',
@@ -699,11 +699,11 @@ const items = [
     companion: true
   },
   {
-    ref: 'L-09', author: 'external',
+    ref: 'L-09', author: 'deepseek-4.1-flash',
     id: 'r3-bolt-orig',
     groups: ['rev3'],
     badge: 'Rev 3 · Held Open',
-    origin: 'External Eval · Bolt',
+    origin: 'Rev 3 · Bolt',
     title: 'Bolt (Kinked l)',
     desc: 'The "l" ascender kinked into lightning. Suggested for motion, loaders, and release notes.',
     note: '1 continuous path; kept for voice/motion.',
