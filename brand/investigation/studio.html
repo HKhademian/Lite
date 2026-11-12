@@ -267,6 +267,47 @@
     }
     .navbar-sim { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
     .nav-links { display: flex; align-items: center; gap: 14px; font-family: var(--mono); font-size: 12px; opacity: .75; }
+
+    /* Visibility Matrix Dialog */
+    dialog.vis-dialog {
+      border: 1px solid var(--line);
+      border-radius: 14px;
+      padding: 0;
+      width: min(920px, calc(100vw - 32px));
+      max-height: calc(100vh - 48px);
+      background: var(--card);
+      color: var(--ink);
+      box-shadow: 0 24px 64px rgba(0,0,0,.35);
+    }
+    dialog.vis-dialog::backdrop {
+      background: rgba(11, 12, 14, 0.58);
+      backdrop-filter: blur(3px);
+    }
+    .vis-head {
+      display: flex; align-items: flex-start; justify-content: space-between; gap: 16px;
+      padding: 18px 22px; border-bottom: 1px solid var(--line);
+    }
+    .vis-body { padding: 18px 22px 22px; overflow-y: auto; }
+    .vis-table {
+      border-collapse: separate; border-spacing: 0; width: 100%;
+      border: 1px solid var(--line); border-radius: 8px; overflow: hidden;
+    }
+    .vis-table th, .vis-table td { padding: 0; text-align: left; }
+    .vis-table thead th {
+      font-family: var(--mono); font-size: 10px; letter-spacing: .08em; text-transform: uppercase;
+      color: var(--muted); padding: 10px 12px; border-bottom: 1px solid var(--line); font-weight: 500;
+      background: var(--bg);
+    }
+    .vis-table tbody th {
+      font-family: var(--mono); font-size: 11px; color: var(--muted); padding: 0 12px; width: 72px;
+      border-bottom: 1px solid var(--line); font-weight: 500; background: var(--card);
+    }
+    .vis-table td { border-bottom: 1px solid var(--line); }
+    .vis-table tr:last-child td, .vis-table tr:last-child th { border-bottom: 0; }
+    .vis-cell { display: flex; align-items: center; justify-content: center; height: 84px; }
+    .vis-meta { display: flex; gap: 18px; margin-top: 16px; flex-wrap: wrap; font-family: var(--mono); font-size: 11px; color: var(--muted); }
+    .vis-meta b { color: var(--ink); font-weight: 600; }
+    .vis-meta b.bad { color: #DC2626; }
   </style>
 </head>
 <body>
@@ -305,7 +346,10 @@
         <h2 style="font-size:15px; margin:0;">Live Header &amp; 16 px Browser Tab Preview</h2>
         <p class="sub">Click any card below to inspect it in Dark &amp; Paper navbars.</p>
       </div>
-      <span id="sel-pill" class="badge">Selected: Feather curve</span>
+      <div style="display:flex; align-items:center; gap:8px; flex-wrap:wrap;">
+        <span id="sel-pill" class="badge">Selected: Feather curve</span>
+        <button class="tab-btn" style="padding:5px 11px; font-size:12px;" onclick="openVisibility()">Visibility Matrix ↗</button>
+      </div>
     </div>
     <div class="sim-grid">
       <div class="sim-box sim-dark">
@@ -381,6 +425,33 @@
   <div id="grid" class="grid"></div>
 
 </div>
+
+<dialog id="vis-dialog" class="vis-dialog" onclick="if(event.target===this) this.close()">
+  <div class="vis-head">
+    <div>
+      <div class="eyebrow">Visibility Comparison Matrix · Real Pixel Sizes</div>
+      <h2 id="vis-title" style="font-size:18px; margin:4px 0 2px;">Does it stay visible?</h2>
+      <p class="sub" id="vis-sub">Testing the active mark across Paper, Ink, Graphite, Filament, and Active Accent.</p>
+    </div>
+    <button class="tab-btn" style="padding:5px 10px; font-size:12px;" onclick="document.getElementById('vis-dialog').close()">Close ×</button>
+  </div>
+  <div class="vis-body">
+    <table class="vis-table">
+      <thead>
+        <tr>
+          <th>Size</th>
+          <th>Paper · Ink</th>
+          <th>Ink · Paper</th>
+          <th>Graphite · Paper</th>
+          <th>Filament · Ink</th>
+          <th>Ink · Accent</th>
+        </tr>
+      </thead>
+      <tbody id="vis-rows"></tbody>
+    </table>
+    <div class="vis-meta" id="vis-contrast"></div>
+  </div>
+</dialog>
 
 <script>
 let accLight = '#C97B14';
@@ -644,13 +715,13 @@ const items = [
     companion: true
   },
   {
-    ref: 'L-05', author: 'deepseek-4.1-flash',
+    ref: 'L-05', author: 'deepseek-v4.1-flash',
     id: 'r3-quill-main',
     groups: ['top', 'rev3'],
     badge: 'Top Pick · Rev 3',
     origin: 'Rev 3 · The Quill',
     title: 'The Quill (3-Barb 35°)',
-    desc: 'Rev 3 recommendation: bowed shaft + 3 barbs at 35°, monoline.',
+    desc: 'Primary recommendation of Rev 3: bowed shaft + 3 barbs at 35°, monoline.',
     note: 'Uses 2-barb optical cut (lite-mark-16.svg) at 16px.',
     vb: '0 0 64 64',
     mark: (c) => `<g transform="translate(-4 0) rotate(35 32 32)" fill="none" stroke="${c}" stroke-linecap="round"><path d="M32 59C34 45 34 20 31 5" stroke-width="4.4"/><path d="M33.3 47C43 42 49 34 51 24" stroke-width="4.2"/><path d="M33.7 34C43 29 48 21 50 11" stroke-width="4.2"/><path d="M32.5 21C39 18 42 13 44 7" stroke-width="4.2"/></g>`,
@@ -673,7 +744,7 @@ const items = [
 
   // ================= REV 3 ARCHIVE (EXTERNAL ENTITY) =================
   {
-    ref: 'L-07', author: 'deepseek-4.1-flash',
+    ref: 'L-07', author: 'deepseek-v4.1-flash',
     id: 'r3-quill-16',
     groups: ['rev3'],
     badge: 'Rev 3 · Optical Cut',
@@ -686,7 +757,7 @@ const items = [
     companion: true
   },
   {
-    ref: 'L-08', author: 'deepseek-4.1-flash',
+    ref: 'L-08', author: 'deepseek-v4.1-flash',
     id: 'r3-spark-orig',
     groups: ['rev3'],
     badge: 'Rev 3 · Held Open',
@@ -699,7 +770,7 @@ const items = [
     companion: true
   },
   {
-    ref: 'L-09', author: 'deepseek-4.1-flash',
+    ref: 'L-09', author: 'deepseek-v4.1-flash',
     id: 'r3-bolt-orig',
     groups: ['rev3'],
     badge: 'Rev 3 · Held Open',
@@ -897,6 +968,52 @@ function setUi(mode) {
   document.documentElement.setAttribute('data-ui', mode === 'dark' ? 'dark' : 'light');
   document.getElementById('ui-light').classList.toggle('active', mode === 'light');
   document.getElementById('ui-dark').classList.toggle('active', mode === 'dark');
+}
+
+function openVisibility() {
+  const it = items.find(x => x.id === selectedId) || items[0];
+  document.getElementById('vis-title').textContent = `${it.ref} · ${it.title} — Visibility Matrix`;
+  document.getElementById('vis-sub').textContent = `Real pixel sizes (64 → 16 px) across core surfaces and your active accent (${accDark}).`;
+
+  const sizes = [64, 48, 32, 24, 16];
+  const cell = (bg, fg, px) =>
+    `<div class="vis-cell" style="background:${bg};color:${fg}"><svg viewBox="${it.vb}" width="${px}" height="${px}">${it.mark(fg)}</svg></div>`;
+
+  document.getElementById('vis-rows').innerHTML = sizes.map(s => `
+    <tr>
+      <th>${s} px</th>
+      <td>${cell('#F5F3EE', '#101113', s)}</td>
+      <td>${cell('#101113', '#F5F3EE', s)}</td>
+      <td>${cell('#6C7078', '#F5F3EE', s)}</td>
+      <td>${cell('#F0B45A', '#101113', s)}</td>
+      <td>${cell('#101113', accDark, s)}</td>
+    </tr>
+  `).join('');
+
+  const lum = hex => {
+    const [r,g,b] = hex.match(/\w\w/g).map(h => {
+      const c = parseInt(h,16)/255;
+      return c <= .03928 ? c/12.92 : Math.pow((c+.055)/1.055, 2.4);
+    });
+    return .2126*r + .7152*g + .0722*b;
+  };
+  const ratio = (a,b) => {
+    const [x,y] = [lum(a), lum(b)].sort((m,n)=>n-m);
+    return (x+.05)/(y+.05);
+  };
+  const pairs = [
+    ['ink on paper', '#101113', '#F5F3EE'],
+    ['paper on ink', '#F5F3EE', '#101113'],
+    ['paper on graphite', '#F5F3EE', '#6C7078'],
+    ['ink on filament', '#101113', '#F0B45A'],
+    ['accent on ink', accDark, '#101113']
+  ];
+  document.getElementById('vis-contrast').innerHTML = pairs.map(([n,a,b]) => {
+    const r = ratio(a,b);
+    return `<span>${n} <b class="${r >= 4.5 ? '' : 'bad'}">${r.toFixed(1)}:1</b></span>`;
+  }).join('');
+
+  document.getElementById('vis-dialog').showModal();
 }
 
 const hashRef = location.hash.replace('#', '').toUpperCase();
