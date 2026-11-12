@@ -275,20 +275,25 @@
       padding: 8px 12px; display: flex; align-items: center; justify-content: space-between; gap: 10px;
     }
 
-    /* Compact Brand System Chips */
-    .bs-panel { display: flex; flex-direction: column; gap: 10px; padding: 14px 16px; }
-    .bs-row { display: grid; grid-template-columns: 145px 1fr; gap: 10px; align-items: center; }
-    @media (max-width: 720px) { .bs-row { grid-template-columns: 1fr; gap: 6px; } }
-    .bs-chips { display: flex; flex-wrap: wrap; gap: 6px; }
-    .bs-chip {
-      display: inline-flex; align-items: center; gap: 6px;
-      padding: 5px 10px; border-radius: 8px;
-      border: 1px solid var(--line); background: var(--bg); color: var(--ink);
-      font-size: 12px; cursor: pointer; transition: border-color .12s;
+    /* Balanced Brand System Tiles */
+    .bs-wrap { display: flex; flex-direction: column; gap: 12px; }
+    .bs-section { padding: 14px 16px; }
+    .bs-section .eyebrow { margin-bottom: 10px; }
+    .bs-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(156px, 1fr));
+      gap: 9px;
     }
-    .bs-chip:hover { border-color: var(--muted); }
-    .bs-chip.active { border-color: var(--ink); box-shadow: 0 0 0 1px var(--ink); font-weight: 600; }
-    .sw-dot { width: 12px; height: 12px; border-radius: 4px; border: 1px solid rgba(128,128,128,.35); display: inline-block; }
+    .bs-tile {
+      display: flex; flex-direction: column; justify-content: space-between; gap: 6px;
+      padding: 10px 12px; border-radius: 10px; text-align: left;
+      border: 1px solid var(--line); background: var(--bg); color: var(--ink);
+      cursor: pointer; transition: border-color .12s, box-shadow .12s;
+    }
+    .bs-tile:hover { border-color: var(--muted); }
+    .bs-tile.active { border-color: var(--ink); box-shadow: 0 0 0 1px var(--ink); }
+    .bs-tile-title { font-size: 12.5px; font-weight: 600; }
+    .sw-dot { width: 15px; height: 15px; border-radius: 4px; border: 1px solid rgba(128,128,128,.35); display: inline-block; }
     .inspector-stages {
       display: flex; align-items: flex-end; gap: 8px;
       background: var(--bg); border: 1px solid var(--line);
@@ -420,27 +425,27 @@
     </div>
   </div>
 
-  <!-- Compact Unified Brand System Panel (toggled by Brand System ▴/▾ above All Candidates) -->
-  <div id="brand-system-view" class="panel bs-panel" style="display:flex;">
-    <div class="bs-row">
-      <div class="eyebrow">1 · Accent</div>
-      <div class="bs-chips" id="bs-accents"></div>
+  <!-- Unified Brand System Sections (toggled by Brand System ▴/▾ above All Candidates) -->
+  <div id="brand-system-view" class="bs-wrap" style="display:flex;">
+    <div class="panel bs-section">
+      <div class="eyebrow">1 · Accent (Logo Coloring)</div>
+      <div class="bs-grid" id="bs-accents"></div>
     </div>
-    <div class="bs-row">
-      <div class="eyebrow">2 · Palette (Site)</div>
-      <div class="bs-chips" id="bs-palettes"></div>
+    <div class="panel bs-section">
+      <div class="eyebrow">2 · Palette (Website Surfaces)</div>
+      <div class="bs-grid" id="bs-palettes"></div>
     </div>
-    <div class="bs-row">
-      <div class="eyebrow">3 · Fontface (Brand)</div>
-      <div class="bs-chips" id="bs-logo-fonts"></div>
+    <div class="panel bs-section">
+      <div class="eyebrow">3 · Fontface (Brand / Wordmark)</div>
+      <div class="bs-grid" id="bs-logo-fonts"></div>
     </div>
-    <div class="bs-row">
-      <div class="eyebrow">4 · Fontface (Site)</div>
-      <div class="bs-chips" id="bs-fonts"></div>
+    <div class="panel bs-section">
+      <div class="eyebrow">4 · Fontface (Website Typography)</div>
+      <div class="bs-grid" id="bs-fonts"></div>
     </div>
-    <div class="bs-row">
+    <div class="panel bs-section">
       <div class="eyebrow">5 · Fontface (Code)</div>
-      <div class="bs-chips" id="bs-code-fonts"></div>
+      <div class="bs-grid" id="bs-code-fonts"></div>
     </div>
   </div>
 
@@ -1232,36 +1237,44 @@ function renderBrandSystem() {
   const acc = activeBsAccent.id === 'mono' ? ink : (isDark ? accDark : accLight);
 
   document.getElementById('bs-accents').innerHTML = bsAccents.map(a => `
-    <button class="bs-chip ${a.id === activeBsAccent.id ? 'active' : ''}" onclick="selectBsAccent('${a.id}')">
-      <span class="sw-dot" style="background:${a.accD}"></span>
-      <span>${a.name}</span>
+    <button class="bs-tile ${a.id === activeBsAccent.id ? 'active' : ''}" onclick="selectBsAccent('${a.id}')">
+      <div style="display:flex; gap:5px;">
+        <span class="sw-dot" style="background:${a.accL}"></span>
+        <span class="sw-dot" style="background:${a.accD}"></span>
+      </div>
+      <span class="bs-tile-title">${a.name}</span>
     </button>
   `).join('');
 
   document.getElementById('bs-palettes').innerHTML = bsPalettes.map(p => `
-    <button class="bs-chip ${p.id === activeBsPal.id ? 'active' : ''}" onclick="selectBsPalette('${p.id}')">
-      <span class="sw-dot" style="background:${p.bg}"></span>
-      <span class="sw-dot" style="background:${p.ink}"></span>
-      <span>${p.name}</span>
+    <button class="bs-tile ${p.id === activeBsPal.id ? 'active' : ''}" onclick="selectBsPalette('${p.id}')">
+      <div style="display:flex; gap:5px;">
+        <span class="sw-dot" style="background:${p.bg}"></span>
+        <span class="sw-dot" style="background:${p.card}"></span>
+        <span class="sw-dot" style="background:${p.ink}"></span>
+      </div>
+      <span class="bs-tile-title">${p.name}</span>
     </button>
   `).join('');
 
   document.getElementById('bs-logo-fonts').innerHTML = bsLogoFonts.map(lf => `
-    <button class="bs-chip ${lf.id === activeBsLogoFont.id ? 'active' : ''}" onclick="selectBsLogoFont('${lf.id}')">
-      ${buildCustomWordmark(it, acc, ink, 15, lf)}
-      <span>${lf.name}</span>
+    <button class="bs-tile ${lf.id === activeBsLogoFont.id ? 'active' : ''}" onclick="selectBsLogoFont('${lf.id}')">
+      <div>${buildCustomWordmark(it, acc, ink, 20, lf)}</div>
+      <span class="bs-tile-title">${lf.name}</span>
     </button>
   `).join('');
 
   document.getElementById('bs-fonts').innerHTML = bsFonts.map(f => `
-    <button class="bs-chip ${f.id === activeBsFont.id ? 'active' : ''}" style="font-family:${f.display}" onclick="selectBsFont('${f.id}')">
-      <span>${f.name}</span>
+    <button class="bs-tile ${f.id === activeBsFont.id ? 'active' : ''}" onclick="selectBsFont('${f.id}')">
+      <div style="font-family:${f.display}; font-size:16px; font-weight:700;">Lite is light.</div>
+      <span class="bs-tile-title">${f.name}</span>
     </button>
   `).join('');
 
   document.getElementById('bs-code-fonts').innerHTML = bsCodeFonts.map(cf => `
-    <button class="bs-chip ${cf.id === activeBsCodeFont.id ? 'active' : ''}" style="font-family:${cf.css}" onclick="selectBsCodeFont('${cf.id}')">
-      <span>${cf.name}</span>
+    <button class="bs-tile ${cf.id === activeBsCodeFont.id ? 'active' : ''}" onclick="selectBsCodeFont('${cf.id}')">
+      <div style="font-family:${cf.css}; font-size:13px;">fn main()</div>
+      <span class="bs-tile-title">${cf.name}</span>
     </button>
   `).join('');
 }
