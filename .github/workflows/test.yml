@@ -169,3 +169,23 @@ jobs:
         run: install
       - name: Complete self-host path without Git metadata
         run: self-host
+
+  site:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    defaults:
+      run:
+        shell: node tools/ci.ts {0}
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@v7
+        with:
+          node-version-file: igniter/.node-version
+          cache: npm
+          cache-dependency-path: igniter/package-lock.json
+      - name: Install locked development tools
+        run: install
+      - name: Build and verify public showcase site
+        run: site

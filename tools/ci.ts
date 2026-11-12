@@ -51,6 +51,7 @@ if (import.meta.main) {
       case 'check': lite('doctor'); break;
       case 'test': lite('test', '--full'); break;
       case 'editor': invoke(process.execPath, ['--test', 'editors/vscode/test/grammar.test.ts']); break;
+      case 'site': invoke(process.execPath, ['--test', 'site/build.test.ts']); break;
       case 'coverage': lite('verify', '--coverage'); break;
       case 'migration': verifyMigration(); break;
       case 'release-doctor': lite('doctor'); break;
