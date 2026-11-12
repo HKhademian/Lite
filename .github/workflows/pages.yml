@@ -26,6 +26,8 @@ jobs:
       - uses: actions/setup-node@v7
         with:
           node-version-file: igniter/.node-version
+      - name: Install igniter dependencies
+        run: npm ci --prefix igniter
       - name: Build and verify the public showcase site
         run: ./site/build.ts
       - name: Run site checks
