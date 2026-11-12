@@ -1,16 +1,21 @@
 {
   "name": "lite",
   "displayName": "Lite",
-  "description": "Small syntax highlighter for Lite .lt and .lts files.",
+  "description": "Syntax highlighting, diagnostics, formatting, and run support for Lite (.lt, .lts, .lite) files.",
   "version": "0.1.1",
   "publisher": "lite-local",
-  "license": "UNLICENSED",
+  "license": "Apache-2.0",
   "engines": {
     "vscode": "^1.85.0"
   },
   "categories": [
-    "Programming Languages"
+    "Programming Languages",
+    "Formatters"
   ],
+  "activationEvents": [
+    "onLanguage:lite"
+  ],
+  "main": "./dist/extension.js",
   "contributes": {
     "languages": [
       {
@@ -37,11 +42,38 @@
         "scopeName": "source.lite",
         "path": "./syntaxes/lite.tmLanguage.json"
       }
-    ]
+    ],
+    "commands": [
+      {
+        "command": "lite.checkFile",
+        "title": "Lite: Check Current File"
+      },
+      {
+        "command": "lite.runFile",
+        "title": "Lite: Run Current File"
+      }
+    ],
+    "configuration": {
+      "title": "Lite",
+      "properties": {
+        "lite.executablePath": {
+          "type": "string",
+          "default": "",
+          "description": "Path to the lite CLI executable. Defaults to workspace ./bin/lite or lite on PATH."
+        },
+        "lite.checkOnSave": {
+          "type": "boolean",
+          "default": true,
+          "description": "Run lite check automatically when saving Lite source files."
+        }
+      }
+    }
   },
   "scripts": {
-    "test": "node --test test/grammar.test.ts",
-    "package": "vsce package --no-dependencies --allow-missing-repository --skip-license --out lite-0.1.1.vsix"
+    "build": "node scripts/build.ts",
+    "test": "npm run build && node --test test/grammar.test.ts test/extension.test.ts",
+    "vscode:prepublish": "npm run build",
+    "package": "npm run build && vsce package --no-dependencies --allow-missing-repository --out lite-0.1.1.vsix"
   },
   "devDependencies": {
     "@vscode/vsce": "4.1.0",

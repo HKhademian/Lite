@@ -145,7 +145,7 @@ test('tokenize project samples and indexed examples using the real TextMate engi
       }
     }
   }
-  await visit(path.join(root, '../../samples'));
-  await visit(path.join(root, '../../examples'));
+  await visit(path.join(root, '../../language/examples'));
+  await visit(path.join(root, '../../lib'));
   assert.ok(files >= 25, `expected lessons and examples, got ${files}`);
 });
