@@ -1,5 +1,7 @@
 # Revision 6: letter marks
 
+Creator: `gpt-6.1-terra`.
+
 Working sketches, not a selected identity. Each standalone mark is reused without redrawing as the first character of the studio wordmark. The spark in candidate 05 also serves as the dot of the i.
 
 - 01: Upright feather spine and three small barbs.

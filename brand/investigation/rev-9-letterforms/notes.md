@@ -1,5 +1,7 @@
 # Revision 9: letterform studies
 
+Creator: `gpt-6.1-terra`.
+
 Working sketches for a mark that reads as l or L and is reused as the first letter of lite. Letterform inspiration: [Wiktionary: Variations of “l”](https://en.wiktionary.org/wiki/Appendix:Variations_of_%22l%22), including the script ℓ and ℒ, slashed ł, curled ȴ, and double-struck 𝕃. The marks are original vector sketches rather than font glyphs.
 
 | Ref | Candidate | Investigation |

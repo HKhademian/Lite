@@ -7,6 +7,10 @@ This is the tracked design archive — the single place where the trail of revis
 
 ---
 
+The three numbered SVG sheets in `rev-1-concepts/`, and the marks in
+`rev-6-letter-marks/` and `rev-9-letterforms/`, were created by `gpt-6.1-terra`.
+Creator metadata is also embedded in those SVGs and shown on their studio cards.
+
 ## Revision log
 
 | Rev | Folder | What it contains | Verdict |
