@@ -246,50 +246,53 @@
     }
     .card-foot b { color: var(--ink); }
 
-    /* Sticky Live Preview + Detail Inspector */
+    /* Sticky Live Preview + Detail Inspector (Compact Unified Panel) */
     .sticky-preview {
       position: sticky;
-      top: 10px;
+      top: 8px;
       z-index: 30;
-      display: flex;
-      flex-direction: column;
-      gap: 10px;
       background: var(--bg);
-      padding-bottom: 4px;
+      padding-bottom: 2px;
     }
     .sticky-preview .panel {
+      padding: 12px 16px;
       box-shadow: 0 10px 28px rgba(0, 0, 0, 0.14);
     }
-    .inspector-bar {
-      display: flex;
-      flex-wrap: wrap;
-      align-items: center;
-      justify-content: space-between;
-      gap: 14px;
-      padding: 12px 18px;
+    .sticky-top {
+      display: flex; align-items: center; justify-content: space-between;
+      flex-wrap: wrap; gap: 8px; margin-bottom: 10px;
     }
-    .inspector-info { display: flex; flex-direction: column; gap: 4px; max-width: 420px; }
-    .inspector-stages { display: flex; align-items: flex-end; gap: 12px; flex-wrap: wrap; }
+    .sticky-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr auto;
+      gap: 10px;
+      align-items: stretch;
+    }
+    @media (max-width: 920px) { .sticky-grid { grid-template-columns: 1fr 1fr; } }
+    @media (max-width: 640px) { .sticky-grid { grid-template-columns: 1fr; } }
+    .inspector-stages {
+      display: flex; align-items: flex-end; gap: 8px;
+      background: var(--bg); border: 1px solid var(--line);
+      border-radius: 10px; padding: 8px 12px;
+    }
     .stage-chip {
-      display: flex; flex-direction: column; align-items: center; gap: 5px;
-      font-family: var(--mono); font-size: 10px; color: var(--muted);
+      display: flex; flex-direction: column; align-items: center; gap: 3px;
+      font-family: var(--mono); font-size: 9.5px; color: var(--muted);
     }
     .stage-box {
-      border-radius: 10px;
+      border-radius: 8px;
       background: #101113;
       color: #F5F3EE;
       border: 1px solid rgba(255,255,255,.1);
       display: flex; align-items: center; justify-content: center;
-      padding: 8px;
+      padding: 5px;
     }
     .xray svg path, .xray svg circle { opacity: 0.48; }
 
     /* Live Simulator */
-    .sim-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; margin-top: 12px; }
-    @media (max-width: 760px) { .sim-grid { grid-template-columns: 1fr; } }
     .sim-box {
-      border-radius: 10px; padding: 14px 16px;
-      display: flex; flex-direction: column; gap: 14px;
+      border-radius: 10px; padding: 10px 12px;
+      display: flex; flex-direction: column; justify-content: space-between; gap: 8px;
     }
     .sim-dark { background: #0F1115; color: #F3F4F6; border: 1px solid rgba(255,255,255,.1); }
     .sim-light { background: #F6F4EF; color: #111315; border: 1px solid rgba(0,0,0,.1); }
@@ -377,55 +380,45 @@
     </div>
   </div>
 
-  <!-- Sticky Live Header, 16 px Browser Tab & Detail Inspector -->
+  <!-- Sticky Unified Live Header, 16 px Tab & Detail Inspector -->
   <div class="sticky-preview">
     <div class="panel">
-      <div style="display:flex; align-items:center; justify-content:space-between; flex-wrap:wrap; gap:8px;">
-        <div>
-          <h2 style="font-size:15px; margin:0;">Live Header &amp; 16 px Browser Tab Preview</h2>
-          <p class="sub">Click any card below to inspect it in Dark &amp; Paper navbars.</p>
-        </div>
+      <div class="sticky-top">
         <div style="display:flex; align-items:center; gap:8px; flex-wrap:wrap;">
           <span id="sel-pill" class="badge">Selected: R14-02</span>
+          <div class="seg">
+            <button id="mode-solid" class="active" onclick="setRenderMode('solid')">Solid</button>
+            <button id="mode-xray" onclick="setRenderMode('xray')">X-Ray</button>
+          </div>
+        </div>
+        <div style="display:flex; align-items:center; gap:8px; flex-wrap:wrap;">
           <a id="brand-sys-link" class="tab-btn" style="padding:5px 11px; font-size:12px; text-decoration:none;" href="./brand-system.html#R14-02">Color &amp; Fontface ↗</a>
           <button class="tab-btn" style="padding:5px 11px; font-size:12px;" onclick="openVisibility()">Visibility Matrix ↗</button>
         </div>
       </div>
-      <div class="sim-grid">
+      <div class="sticky-grid">
         <div class="sim-box sim-dark">
-          <div class="sim-tab-bar">
-            <div class="browser-tab"><span id="sim-dark-fav"></span><span>Lite — Lite is light</span></div>
-            <span class="origin">Dark UI · 16px</span>
+          <div class="sim-tab-bar" style="padding-bottom:6px;">
+            <div class="browser-tab"><span id="sim-dark-fav"></span><span>Lite</span></div>
+            <span class="origin">Dark · 16px</span>
           </div>
           <div class="navbar-sim">
             <div id="sim-dark-wm"></div>
-            <div class="nav-links"><span>tour</span><span>spec</span><span>docs</span></div>
+            <div class="nav-links" style="font-size:11px; gap:10px;"><span>tour</span><span>spec</span><span>docs</span></div>
           </div>
         </div>
         <div class="sim-box sim-light">
-          <div class="sim-tab-bar">
-            <div class="browser-tab"><span id="sim-light-fav"></span><span>Lite — Lite is light</span></div>
-            <span class="origin">Paper UI · 16px</span>
+          <div class="sim-tab-bar" style="padding-bottom:6px;">
+            <div class="browser-tab"><span id="sim-light-fav"></span><span>Lite</span></div>
+            <span class="origin">Paper · 16px</span>
           </div>
           <div class="navbar-sim">
             <div id="sim-light-wm"></div>
-            <div class="nav-links"><span>tour</span><span>spec</span><span>docs</span></div>
+            <div class="nav-links" style="font-size:11px; gap:10px;"><span>tour</span><span>spec</span><span>docs</span></div>
           </div>
         </div>
+        <div class="inspector-stages" id="inspector-stages"></div>
       </div>
-    </div>
-
-    <!-- Detail Inspector (16..128px · Solid vs Semi-Transparent) -->
-    <div class="panel inspector-bar">
-      <div class="inspector-info">
-        <div class="eyebrow">Detail Inspector · Selected Mark</div>
-        <div id="inspector-title" style="font-size:14px; font-weight:600;"></div>
-        <div class="seg" style="margin-top:4px; align-self:flex-start;">
-          <button id="mode-solid" class="active" onclick="setRenderMode('solid')">Solid (Final)</button>
-          <button id="mode-xray" onclick="setRenderMode('xray')">Semi-Transparent Strokes</button>
-        </div>
-      </div>
-      <div class="inspector-stages" id="inspector-stages"></div>
     </div>
   </div>
 
@@ -1157,12 +1150,11 @@ function renderSim() {
   document.getElementById('sim-dark-wm').innerHTML = buildWordmark(it, accDark, '#F3F4F6', 26);
   document.getElementById('sim-light-wm').innerHTML = buildWordmark(it, accLight, '#111315', 26);
 
-  document.getElementById('inspector-title').textContent = `${it.ref} · ${it.title}`;
   const stages = document.getElementById('inspector-stages');
   stages.className = 'inspector-stages' + (renderMode === 'xray' ? ' xray' : '');
-  stages.innerHTML = [16, 32, 64, 96].map(px => `
+  stages.innerHTML = [16, 32, 64].map(px => `
     <div class="stage-chip">
-      <div class="stage-box" style="min-width:${Math.max(px + 14, 34)}px;min-height:${Math.max(px + 14, 34)}px;">
+      <div class="stage-box" style="min-width:${Math.max(px + 10, 28)}px;min-height:${Math.max(px + 10, 28)}px;">
         <svg viewBox="${it.vb}" width="${px}" height="${px}">${it.mark(accDark)}</svg>
       </div>
       <span>${px}px</span>
