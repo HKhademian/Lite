@@ -1170,6 +1170,7 @@ function renderSim() {
   document.getElementById('bs-summary').textContent = `Logo: ${it.ref} (${it.title})  ·  Accent: ${activeBsAccent.name}  ·  Palette: ${activeBsPal.name}  ·  Brand Font: ${activeBsLogoFont.name}  ·  Site Font: ${activeBsFont.name}  ·  Code Font: ${activeBsCodeFont.name}`;
 
   if (brandSystemOpen) renderBrandSystem();
+  saveState();
 }
 
 const bsAccents = [
@@ -1327,6 +1328,7 @@ function toggleBrandSystem() {
   btn.classList.toggle('active', brandSystemOpen);
   btn.textContent = brandSystemOpen ? 'Brand System ▴' : 'Brand System ▾';
   if (brandSystemOpen) renderBrandSystem();
+  saveState();
 }
 
 function setGroup(grp) {
@@ -1394,6 +1396,74 @@ function openVisibility() {
 
   document.getElementById('vis-dialog').showModal();
 }
+
+const STUDIO_STORAGE_KEY = 'lite.brand.studio.v1';
+
+function saveState() {
+  try {
+    localStorage.setItem(STUDIO_STORAGE_KEY, JSON.stringify({
+      selectedId,
+      activeGroup,
+      renderMode,
+      brandSystemOpen,
+      accent: activeBsAccent.id,
+      palette: activeBsPal.id,
+      logoFont: activeBsLogoFont.id,
+      siteFont: activeBsFont.id,
+      codeFont: activeBsCodeFont.id
+    }));
+  } catch {}
+}
+
+function loadState() {
+  try {
+    const raw = localStorage.getItem(STUDIO_STORAGE_KEY);
+    if (!raw) return;
+    const st = JSON.parse(raw);
+    if (st.selectedId && items.some(x => x.id === st.selectedId)) selectedId = st.selectedId;
+    if (st.activeGroup) {
+      activeGroup = st.activeGroup;
+      ['rev14', 'rev13', 'rev12', 'rev11', 'rev10', 'rev9', 'rev8', 'rev7', 'rev6', 'top', 'rev3', 'rev4', 'rev1', 'all'].forEach(g => {
+        const el = document.getElementById('grp-' + g);
+        if (el) el.classList.toggle('active', g === activeGroup);
+      });
+    }
+    if (st.renderMode === 'solid' || st.renderMode === 'xray') {
+      renderMode = st.renderMode;
+      document.getElementById('mode-solid').classList.toggle('active', renderMode === 'solid');
+      document.getElementById('mode-xray').classList.toggle('active', renderMode === 'xray');
+    }
+    if (typeof st.brandSystemOpen === 'boolean') {
+      brandSystemOpen = st.brandSystemOpen;
+      document.getElementById('brand-system-view').style.display = brandSystemOpen ? 'flex' : 'none';
+      const btn = document.getElementById('bs-top-btn');
+      btn.classList.toggle('active', brandSystemOpen);
+      btn.textContent = brandSystemOpen ? 'Brand System ▴' : 'Brand System ▾';
+    }
+    if (st.accent) {
+      const a = bsAccents.find(x => x.id === st.accent);
+      if (a) { activeBsAccent = a; accLight = a.accL; accDark = a.accD; logoColorMode = a.id === 'mono' ? 'mono' : 'accent'; }
+    }
+    if (st.palette) {
+      const p = bsPalettes.find(x => x.id === st.palette);
+      if (p) {
+        activeBsPal = p;
+        document.documentElement.style.setProperty('--bg', p.bg);
+        document.documentElement.style.setProperty('--card', p.card);
+        document.documentElement.style.setProperty('--ink', p.ink);
+        setUi(p.ui);
+      }
+    }
+    if (st.logoFont) activeBsLogoFont = bsLogoFonts.find(x => x.id === st.logoFont) || activeBsLogoFont;
+    if (st.siteFont) {
+      activeBsFont = bsFonts.find(x => x.id === st.siteFont) || activeBsFont;
+      document.body.style.fontFamily = activeBsFont.body;
+    }
+    if (st.codeFont) activeBsCodeFont = bsCodeFonts.find(x => x.id === st.codeFont) || activeBsCodeFont;
+  } catch {}
+}
+
+loadState();
 
 const hashRef = location.hash.replace('#', '').toUpperCase();
 if (hashRef) {
