@@ -57,8 +57,8 @@ export const heroSample: ShowcaseSample = {
 export const playgroundDefaultSample: ShowcaseSample = {
   id: 'sum-loop',
   group: 'control',
-  title: 'Sum loop (TS & C)',
-  note: 'Variables, loops, and branches compiling to both TypeScript and C.',
+  title: 'Sum loop',
+  note: 'Mutable variables, loop control, and conditional branching.',
   file: 'language/examples/022-sum-loop.lts',
   args: [],
   stdin: '',

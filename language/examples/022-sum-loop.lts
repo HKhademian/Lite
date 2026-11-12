@@ -1,4 +1,4 @@
-/* Variables, loops, and branches compiling cleanly to TypeScript and C. */
+/* Sum integers from 1 to 5 using a loop and branch. */
 
 io := import "core/io";
 
