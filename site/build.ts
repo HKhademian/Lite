@@ -104,6 +104,7 @@ function renderHeader(basePath: string, active: 'home' | 'playground' | 'gallery
       <a href="${basePath}gallery/index.html"${active === 'gallery' ? ' class="active"' : ''}>Gallery</a>
       <a href="${escapeHtml(docsHref)}">Docs</a>
       <a href="${escapeHtml(repoHref)}">GitHub</a>
+      <button id="theme-toggle" class="theme-toggle" type="button" aria-label="Toggle light/dark theme" title="Switch theme">&#9728;</button>
     </nav>
   </div>
 </header>`;
@@ -172,6 +173,14 @@ function renderPage(options: Readonly<{
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>${escapeHtml(options.title)}</title>
   <link rel="icon" type="image/svg+xml" href="${options.basePath}favicon.svg">
+  <script>
+    (function () {
+      try {
+        var t = localStorage.getItem("lite-theme");
+        if (t === "light" || t === "dark") document.documentElement.dataset.theme = t;
+      } catch (e) {}
+    })();
+  </script>
   <link rel="stylesheet" href="${options.basePath}style.css">
 </head>
 <body${bodyAttr}>
@@ -180,6 +189,30 @@ ${renderHeader(options.basePath, options.active, options.repoUrl)}
 ${options.body}
 </main>
 ${renderFooter(options.rev, options.repoUrl)}
+<script>
+  (function () {
+    var btn = document.getElementById("theme-toggle");
+    if (!btn) return;
+    function currentTheme() {
+      var explicit = document.documentElement.dataset.theme;
+      if (explicit === "light" || explicit === "dark") return explicit;
+      return window.matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "light";
+    }
+    function syncIcon() {
+      var dark = currentTheme() === "dark";
+      btn.textContent = dark ? "\\u2600" : "\\u263E";
+      btn.title = dark ? "Switch to light mode" : "Switch to dark mode";
+      btn.setAttribute("aria-label", btn.title);
+    }
+    btn.addEventListener("click", function () {
+      var next = currentTheme() === "dark" ? "light" : "dark";
+      document.documentElement.dataset.theme = next;
+      try { localStorage.setItem("lite-theme", next); } catch (e) {}
+      syncIcon();
+    });
+    syncIcon();
+  })();
+</script>
 </body>
 </html>
 `;

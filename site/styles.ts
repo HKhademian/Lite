@@ -22,7 +22,7 @@ export const siteCss = `:root {
 }
 
 @media (prefers-color-scheme: dark) {
-  :root {
+  :root:not([data-theme="light"]) {
     --bg: #0B0C0E;
     --surface: #1A1D22;
     --surface-elevated: #131519;
@@ -39,6 +39,44 @@ export const siteCss = `:root {
     --tok-comment: #7B808C;
     --tok-op: #E09F5A;
   }
+}
+
+:root[data-theme="dark"] {
+  --bg: #0B0C0E;
+  --surface: #1A1D22;
+  --surface-elevated: #131519;
+  --border: #252930;
+  --ink: #F2F0EA;
+  --ink-muted: #9EA2AC;
+  --accent: #F0B45A;
+  --accent-soft: rgba(240, 180, 90, 0.14);
+  --code-bg: #131519;
+  --tok-keyword: #F0B45A;
+  --tok-type: #6EC4D8;
+  --tok-string: #89C983;
+  --tok-number: #C69AE8;
+  --tok-comment: #7B808C;
+  --tok-op: #E09F5A;
+}
+
+.theme-toggle {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 32px;
+  padding: 0;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: var(--surface-elevated);
+  color: var(--ink-muted);
+  cursor: pointer;
+  font-size: 0.95rem;
+  line-height: 1;
+}
+.theme-toggle:hover {
+  color: var(--accent);
+  border-color: var(--accent);
 }
 
 * { box-sizing: border-box; }
