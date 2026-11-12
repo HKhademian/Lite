@@ -10,6 +10,6 @@ Isolates two variables that differed between `R13-01` and `R13-02` by holding **
 
 1. **`R14-01` (`r14-01-control-spine.svg`)**: `R13-01` exact spine, no flick (baseline).
 2. **`R14-02` (`r14-02-control-flick-130.svg`)**: `R13-01` exact spine + `R13-02`'s flick at `stroke-width="1.3"`.
-3. **`R14-03` (`r14-03-control-flick-145.svg`)**: `R13-01` exact spine + `R13-02`'s flick at `stroke-width="1.45"`.
+3. **`R14-03` (`r14-03-control-flick-145.svg`)**: `R13-01` exact spine + `R13-02`'s flick at `stroke-width="1.7"` (meaningful `+0.4` step over `1.3`).
 
 Compare all three in `studio.html` under `Rev 14 · Controlled Test (3)` and inspect at `16 px` in the **Visibility Matrix**.
