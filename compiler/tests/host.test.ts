@@ -747,6 +747,23 @@ test('selected compiler build exposes its imported source dependencies', () => {
   assert.ok(selected.dependencies.includes('compiler/src/numeric-literals.lts'));
 });
 
+test('the unchanged selected TS source graph uses its verified seed without a local TypeScript install', () => {
+  const directory = isolatedCheckout();
+  try {
+    assert.equal(existsSync(join(directory, 'igniter/node_modules/typescript/bin/tsc')), false);
+    const selected = spawnSync(process.execPath, ['--input-type=module', '-e',
+      'import {buildTsCompiler} from "./compiler/host.ts"; process.stdout.write(JSON.stringify(buildTsCompiler()));'],
+    { cwd: directory, env, encoding: 'utf8', timeout: 20000 });
+    assert.equal(selected.error, undefined);
+    assert.equal(selected.status, 0, selected.stderr);
+    const result = JSON.parse(selected.stdout) as { path: string; sourceSha256: string; artifactSha256: string; cached: boolean };
+    assert.equal(result.path, realpathSync(join(directory, `compiler/bootstrap/${seed.artifact}`)));
+    assert.equal(result.sourceSha256, seed.sourceSha256);
+    assert.equal(result.artifactSha256, seed.artifactSha256);
+    assert.equal(result.cached, false);
+  } finally { rmSync(directory, { recursive: true, force: true }); }
+});
+
 test('the graph-built TS-hosted C emitter preserves source names and subset rejection', () => {
   const selected = buildCompiler('c');
   assert.equal(selected.target, 'c');

@@ -196,6 +196,14 @@ export function buildCompiler(target: CompilerTarget): CompilerBuild {
     }));
     const dependencies = dependencyHashes.map(identity => identity.path);
     const sourceSha256 = hash(JSON.stringify({ version: 4, sourceName, sourceBridgeSha256, dependencyHashes, edges }));
+    if (target === 'ts' && sourceSha256 === seed.sourceSha256) {
+      const artifactSha256 = hash(generated.stdout);
+      if (artifactSha256 !== seed.artifactSha256) {
+        throw new Error('selected TS bootstrap seed does not reproduce its recorded source graph');
+      }
+      return { target, path: seedPath, sourceSha256, artifactSha256, builderSha256: seed.artifactSha256,
+        dependencies, cached: false };
+    }
     const key = hash(`${target}:${seed.artifactSha256}:${sourceSha256}:${JSON.stringify(dependencies)}`);
     const destination = join(cache, key);
     if (existsSync(destination)) {
