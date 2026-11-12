@@ -25,6 +25,7 @@
     }
     * { box-sizing: border-box; }
     button { font-family: inherit; }
+    .lite-wm { cursor: text; }
     body {
       margin: 0;
       background: var(--bg);
@@ -1124,23 +1125,25 @@ function suffixSvg(x, col, skipDot) {
 
 function buildWordmark(item, acc, txt, h = 24) {
   const isT = wordCase === 'title';
+  const word = isT ? 'Lite' : 'lite';
+  const wrap = (svg) => `<span class="lite-wm" data-acc="${acc}" style="position:relative;display:inline-flex;align-items:center;">${svg}<span style="position:absolute;inset:0;color:transparent;font-size:${Math.round(h*0.78)}px;line-height:1;display:flex;align-items:center;justify-content:center;user-select:text;letter-spacing:-0.02em;">${word}</span></span>`;
   if (item.companion) {
     const w = 52;
     const wPx = Math.round((w / 16) * h);
-    return `<svg viewBox="0 0 ${w} 16" width="${wPx}" height="${h}">
+    return wrap(`<svg aria-hidden="true" focusable="false" viewBox="0 0 ${w} 16" width="${wPx}" height="${h}" style="display:block;user-select:none;-webkit-user-select:none;pointer-events:none;">
       <svg viewBox="${item.vb}" width="15" height="15" x="0" y="0.5">${item.mark(acc)}</svg>
       <g fill="none" stroke="${txt}" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" transform="translate(18 0)">
         <path d="M2 13V2.5${isT ? 'M2 13H6.5' : ''}"/>
       </g>
       ${suffixSvg(24.5, txt, false)}
-    </svg>`;
+    </svg>`);
   }
   const w = item.off + 18;
   const wPx = Math.round((w / 16) * h);
-  return `<svg viewBox="0 0 ${w} 16" width="${wPx}" height="${h}">
+  return wrap(`<svg aria-hidden="true" focusable="false" viewBox="0 0 ${w} 16" width="${wPx}" height="${h}" style="display:block;user-select:none;-webkit-user-select:none;pointer-events:none;">
     ${item.first(acc, isT)}
     ${suffixSvg(item.off, txt, item.noDot)}
-  </svg>`;
+  </svg>`);
 }
 
 function render() {
@@ -1289,15 +1292,15 @@ let logoColorMode = 'accent';
 
 function buildCustomWordmark(it, acc, ink, h, fontObj = activeBsLogoFont) {
   if (!fontObj.css) return buildWordmark(it, acc, ink, h);
+  const isT = wordCase === 'title';
+  const charL = isT ? 'L' : 'l';
   if (it.vb === '0 0 16 16' && !it.companion) {
     const cropW = it.off ? Math.min(16, Math.max(10.5, it.off - 0.8)) : 12.2;
     const svgW = Math.round(h * (cropW / 16));
-    return `<span style="display:inline-flex;align-items:baseline;gap:0;font-family:${fontObj.css};font-size:${h}px;font-weight:${fontObj.weight||600};letter-spacing:-0.025em;line-height:1;color:${ink};">
-      <svg viewBox="0 0 ${cropW} 16" width="${svgW}" height="${h}" style="display:block;transform:translateY(${Math.round(h*0.13)}px);">${(it.first || it.mark)(acc, wordCase === 'title')}</svg><span>ite</span>
-    </span>`;
+    return `<span class="lite-wm" data-acc="${acc}" style="display:inline-flex;align-items:baseline;gap:0;font-family:${fontObj.css};font-size:${h}px;font-weight:${fontObj.weight||600};letter-spacing:-0.025em;line-height:1;color:${ink};"><span style="position:relative;display:inline-flex;align-items:baseline;"><svg aria-hidden="true" focusable="false" viewBox="0 0 ${cropW} 16" width="${svgW}" height="${h}" style="display:block;transform:translateY(${Math.round(h*0.13)}px);user-select:none;-webkit-user-select:none;pointer-events:none;">${(it.first || it.mark)(acc, isT)}</svg><span style="position:absolute;inset:0;color:transparent;user-select:text;display:inline-flex;align-items:baseline;justify-content:center;">${charL}</span></span><span>ite</span></span>`;
   }
-  return `<span style="display:inline-flex;align-items:center;gap:3px;font-family:${fontObj.css};font-size:${h}px;font-weight:${fontObj.weight||600};letter-spacing:-0.025em;line-height:1;color:${ink};">
-    <svg viewBox="${it.vb}" width="${Math.round(h*0.9)}" height="${Math.round(h*0.9)}">${it.mark(acc)}</svg><span>lite</span>
+  return `<span class="lite-wm" data-acc="${acc}" style="display:inline-flex;align-items:center;gap:3px;font-family:${fontObj.css};font-size:${h}px;font-weight:${fontObj.weight||600};letter-spacing:-0.025em;line-height:1;color:${ink};">
+    <svg aria-hidden="true" focusable="false" viewBox="${it.vb}" width="${Math.round(h*0.9)}" height="${Math.round(h*0.9)}" style="user-select:none;-webkit-user-select:none;pointer-events:none;">${it.mark(acc)}</svg><span>${isT ? 'Lite' : 'lite'}</span>
   </span>`;
 }
 
@@ -1725,6 +1728,24 @@ if (hashRef) {
     }
   }
 }
+
+document.addEventListener('copy', (e) => {
+  const sel = window.getSelection();
+  if (!sel || sel.rangeCount === 0 || sel.isCollapsed) return;
+  const container = sel.getRangeAt(0).commonAncestorContainer;
+  const parent = container.nodeType === 1 ? container : container.parentElement;
+  const wm = parent ? parent.closest('.lite-wm') : null;
+  if (!wm) return;
+  const txt = sel.toString().trim();
+  if (txt === 'ite' || txt === 'lite' || txt === 'Lite') {
+    const isT = wm.textContent.includes('Lite');
+    const word = isT ? 'Lite' : 'lite';
+    const acc = wm.getAttribute('data-acc') || 'currentColor';
+    e.clipboardData.setData('text/plain', word);
+    e.clipboardData.setData('text/html', `<span style="font-weight:600;"><span style="color:${acc};">${word[0]}</span>${word.slice(1)}</span>`);
+    e.preventDefault();
+  }
+});
 
 render();
 renderSim();
