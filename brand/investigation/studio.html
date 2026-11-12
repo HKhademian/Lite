@@ -392,7 +392,7 @@
           </div>
         </div>
         <div style="display:flex; align-items:center; gap:8px; flex-wrap:wrap;">
-          <button id="bs-top-btn" class="tab-btn" style="padding:5px 11px; font-size:12px;" onclick="toggleBrandSystem()">Brand System ▾</button>
+          <button id="bs-top-btn" class="tab-btn active" style="padding:5px 11px; font-size:12px;" onclick="toggleBrandSystem()">Brand System ▴</button>
           <button class="tab-btn" style="padding:5px 11px; font-size:12px;" onclick="openVisibility()">Visibility Matrix ↗</button>
         </div>
       </div>
@@ -477,7 +477,7 @@
   <div id="grid" class="grid"></div>
 
   <!-- Unified Brand System Panel (toggles open above the Logo Grid so the grid stays visible) -->
-  <div id="brand-system-view" style="display:none; flex-direction:column; gap:16px;">
+  <div id="brand-system-view" style="display:flex; flex-direction:column; gap:16px;">
     <div class="panel" style="display:grid; grid-template-columns:1.25fr 1fr; gap:18px; align-items:center;">
       <div style="display:flex; flex-direction:column; gap:10px;">
         <div style="display:flex; align-items:center; gap:14px; flex-wrap:wrap;">
@@ -1345,7 +1345,7 @@ function setRenderMode(mode) {
   renderSim();
 }
 
-let brandSystemOpen = false;
+let brandSystemOpen = true;
 function toggleBrandSystem() {
   brandSystemOpen = !brandSystemOpen;
   document.getElementById('brand-system-view').style.display = brandSystemOpen ? 'flex' : 'none';
