@@ -62,6 +62,7 @@ test('buildSite generates static pages and metadata in dist/site', () => {
   assert(playground.includes('Generated TS'));
   assert(playground.includes('id="pg-compile"'));
   assert(playground.includes('id="pg-play"'));
+  assert(playground.includes('id="pg-c"'));
   assert(playground.includes('new Worker("./worker.js"'));
   assert(playground.includes('id="tab-canvas"'));
   assert(playground.includes('id="pg-fps"'));
@@ -179,23 +180,28 @@ test('emitted playground worker.js compiles and runs edited Lite code', async ()
   assert(existsSync(workerPath));
   assert(existsSync(join(out, 'playground', 'strip-ts.js')));
 
-  const messages: Array<{ id: number; ok: boolean; ts: string; stdout: string; stderr: string }> = [];
+  const messages: Array<{ id: number; ok: boolean; ts?: string; c?: string; stdout?: string; stderr: string }> = [];
   let waiter: (() => void) | undefined;
   const prevSelf = (globalThis as unknown as { self?: unknown }).self;
   const prevFetch = globalThis.fetch;
 
-  const mockSelf: { onmessage?: (e: { data: unknown }) => Promise<void>; postMessage: (msg: { id: number; ok: boolean; ts: string; stdout: string; stderr: string }) => void } = {
+  const mockSelf: { onmessage?: (e: { data: unknown }) => Promise<void>; postMessage: (msg: { id: number; ok: boolean; ts?: string; c?: string; stdout?: string; stderr: string }) => void } = {
     postMessage(msg) {
       messages.push(msg);
       waiter?.();
     },
   };
   const compilerPath = join(out, 'playground', 'compiler.js');
+  const compilerCPath = join(out, 'playground', 'compiler-c.js');
+  assert(existsSync(compilerCPath));
   (globalThis as unknown as { self: unknown }).self = mockSelf;
   globalThis.fetch = (async (url: string | URL) => {
     const target = String(url);
     if (target.endsWith('stdlib.json')) {
       return { ok: true, status: 200, json: async () => JSON.parse(readFileSync(stdlibPath, 'utf8')) };
+    }
+    if (target.endsWith('compiler-c.js')) {
+      return { ok: true, status: 200, text: async () => readFileSync(compilerCPath, 'utf8') };
     }
     if (target.endsWith('compiler.js')) {
       return { ok: true, status: 200, text: async () => readFileSync(compilerPath, 'utf8') };
@@ -223,18 +229,30 @@ test('emitted playground worker.js compiles and runs edited Lite code', async ()
     });
     assert.equal(runRes.id, 1);
     assert.equal(runRes.ok, true);
-    assert(runRes.ts.includes('export function main'));
+    assert(runRes.ts?.includes('export function main'));
     assert.equal(runRes.stdout, '42\n');
     assert.equal(runRes.stderr, '');
 
-    const errRes = await send({
+    const cRes = await send({
       id: 2,
+      action: 'compile-c',
+      source: 'io := import "core/io";\nio.outputLine(21 * 2);',
+      stdin: '',
+      args: [],
+    });
+    assert.equal(cRes.id, 2);
+    assert.equal(cRes.ok, true);
+    assert(cRes.c?.includes('#include <stdio.h>'));
+    assert(cRes.c?.includes('int main(void)'));
+
+    const errRes = await send({
+      id: 3,
       action: 'compile',
       source: 'io := import "core/io";\nio.outputLine(unknownVar);',
       stdin: '',
       args: [],
     });
-    assert.equal(errRes.id, 2);
+    assert.equal(errRes.id, 3);
     assert.equal(errRes.ok, false);
     assert(errRes.stderr.includes('unknownVar'));
   } finally {

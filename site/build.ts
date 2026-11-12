@@ -6,7 +6,7 @@ import { stripTypeScriptTypes } from 'node:module';
 import { tmpdir } from 'node:os';
 import { dirname, join, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { compileTs } from '../compiler/host.ts';
+import { buildCCompiler, compileTs } from '../compiler/host.ts';
 import { sourceModuleIdentity } from '../compiler/source.ts';
 import { heroSample, sampleGroups, showcaseSamples, type ShowcaseSample } from './groups.ts';
 import { escapeHtml, highlightLite, highlightTs } from './highlight.ts';
@@ -417,10 +417,7 @@ function renderPlaygroundPage(rendered: ReadonlyMap<string, RenderedSample>, rep
     </div>
 
     <div id="panel-c" class="pg-panel" role="tabpanel" hidden>
-      <div style="padding: 1.25rem; color: var(--ink-muted); font-size: 0.92rem;">
-        <p style="margin-top: 0;"><strong>C output is not available yet.</strong></p>
-        <p style="margin-bottom: 0;">Use <code>Generated TS</code> or run <code>./bin/lite run</code> locally.</p>
-      </div>
+      <pre class="code-block"><code id="pg-c"></code></pre>
     </div>
 
     <div id="panel-canvas" class="pg-panel" role="tabpanel" hidden>
@@ -448,6 +445,7 @@ function renderPlaygroundPage(rendered: ReadonlyMap<string, RenderedSample>, rep
   const stdinEl = document.getElementById("pg-stdin");
   const outputEl = document.getElementById("pg-output");
   const tsEl = document.getElementById("pg-ts");
+  const cEl = document.getElementById("pg-c");
   const tabCanvas = document.getElementById("tab-canvas");
   const fpsEl = document.getElementById("pg-fps");
   const tabs = Array.from(document.querySelectorAll(".pg-tab"));
@@ -460,6 +458,7 @@ function renderPlaygroundPage(rendered: ReadonlyMap<string, RenderedSample>, rep
 
   let activeTab = "output";
   let currentSample = null;
+  let lastCSource = null;
   let animFrame = 0;
   let lastFrameAt = 0;
 
@@ -550,6 +549,7 @@ function renderPlaygroundPage(rendered: ReadonlyMap<string, RenderedSample>, rep
     }
     if (name === "canvas") startCanvas();
     else stopCanvas();
+    if (name === "c") void compileCForEditor();
   }
 
   for (const tab of tabs) {
@@ -617,6 +617,9 @@ function renderPlaygroundPage(rendered: ReadonlyMap<string, RenderedSample>, rep
       sourceEl.parentElement.scrollLeft = 0;
     }
     tsEl.innerHTML = sample.tsHtml;
+    lastCSource = null;
+    cEl.textContent = "/* Press Compile or open Generated C to emit C. */";
+    if (activeTab === "c") void compileCForEditor();
     argsEl.value = sample.args.join(" ");
     stdinEl.value = sample.stdin.replaceAll("\\n", "\\\\n");
 
@@ -682,6 +685,26 @@ function renderPlaygroundPage(rendered: ReadonlyMap<string, RenderedSample>, rep
     });
   }
 
+  function formatCOutput(c, cError) {
+    if (c) return c;
+    const msg = (cError || "C backend does not support this program yet.").trim();
+    return "/* " + msg.replaceAll("*/", "* /") + " */";
+  }
+
+  async function compileCForEditor() {
+    const source = editorEl.value;
+    if (lastCSource === source) return;
+    cEl.textContent = "/* Compiling C in browser... */";
+    try {
+      const res = await runInWorker("compile-c", source, "", []);
+      if (editorEl.value !== source) return;
+      lastCSource = source;
+      cEl.textContent = formatCOutput(res.c, res.stderr);
+    } catch (err) {
+      cEl.textContent = "/* " + (err instanceof Error ? err.message : String(err)) + " */";
+    }
+  }
+
   async function runAction(action) {
     const meta = byId.get(select.value);
     if (action === "play" && meta && meta.canvas) {
@@ -700,6 +723,10 @@ function renderPlaygroundPage(rendered: ReadonlyMap<string, RenderedSample>, rep
     try {
       const res = await runInWorker(action, source, stdin, args);
       if (res.ts) tsEl.textContent = res.ts;
+      if (action === "compile" && (res.c !== undefined || res.cError !== undefined)) {
+        lastCSource = source;
+        cEl.textContent = formatCOutput(res.c, res.cError);
+      }
       if (!res.ok) {
         showTab("output");
         outputEl.textContent = (res.stdout ? res.stdout + "\\n" : "") + (res.stderr || "Execution failed.");
@@ -707,8 +734,8 @@ function renderPlaygroundPage(rendered: ReadonlyMap<string, RenderedSample>, rep
         return;
       }
       if (action === "compile") {
-        showTab("ts");
-        statusEl.textContent = "Compiled to TypeScript";
+        if (activeTab !== "c") showTab("ts");
+        statusEl.textContent = "Compiled to TypeScript" + (res.c ? " & C" : "");
       } else {
         showTab("output");
         outputEl.textContent = res.stdout + (res.stderr ? (res.stdout ? "\\n" : "") + res.stderr : "");
@@ -823,6 +850,8 @@ export function buildSite(): void {
   writeFileSync(join(outputDir, 'playground', 'index.html'), renderPlaygroundPage(rendered, repoUrl, rev));
   const compilerTs = readFileSync(join(root, 'compiler', 'bootstrap', 'compiler.ts'), 'utf8');
   writeFileSync(join(outputDir, 'playground', 'compiler.js'), stripTypeScriptTypes(compilerTs, { mode: 'strip' }));
+  const compilerCTs = readFileSync(buildCCompiler().path, 'utf8');
+  writeFileSync(join(outputDir, 'playground', 'compiler-c.js'), stripTypeScriptTypes(compilerCTs, { mode: 'strip' }));
   const stripTs = readFileSync(join(root, 'site', 'strip-ts.ts'), 'utf8');
   writeFileSync(join(outputDir, 'playground', 'strip-ts.js'), stripTypeScriptTypes(stripTs, { mode: 'strip' }));
   writeFileSync(join(outputDir, 'playground', 'worker.js'), playgroundWorkerJs);

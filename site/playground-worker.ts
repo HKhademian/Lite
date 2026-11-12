@@ -1,4 +1,4 @@
-/** Browser Web Worker script for compiling and running Lite programs in Playground. */
+/** Browser Web Worker script for compiling (TS & C) and running Lite programs in Playground. */
 
 export const playgroundWorkerJs = `import { stripLiteTs } from './strip-ts.js';
 
@@ -19,17 +19,20 @@ function loadStdlib() {
   return stdlibPromise;
 }
 
-let compilerSourcePromise = null;
-function loadCompilerSource() {
-  if (!compilerSourcePromise) {
-    compilerSourcePromise = fetch('./compiler.js')
-      .then((res) => {
-        if (!res.ok) throw new Error('Failed to load compiler.js (' + res.status + ')');
-        return res.text();
-      })
-      .then((src) => src.replace(/export function main\\b/, 'function main') + '\\nreturn (w, r) => main(w, r);');
+const compilerSourcePromises = new Map();
+function loadCompilerSource(file) {
+  if (!compilerSourcePromises.has(file)) {
+    compilerSourcePromises.set(
+      file,
+      fetch('./' + file)
+        .then((res) => {
+          if (!res.ok) throw new Error('Failed to load ' + file + ' (' + res.status + ')');
+          return res.text();
+        })
+        .then((src) => src.replace(/export function main\\b/, 'function main') + '\\nreturn (w, r) => main(w, r);'),
+    );
   }
-  return compilerSourcePromise;
+  return compilerSourcePromises.get(file);
 }
 
 const encoder = new TextEncoder();
@@ -92,25 +95,45 @@ function makeReadSource(stdlib) {
   };
 }
 
+function compileWith(compilerSource, readSource, source) {
+  return runWithProcessStub(
+    ['node', 'compiler.js', 'playground.lts', 'playground', 'playground.lts'],
+    source ?? '',
+    (proc, write) => {
+      const compileMain = new Function('process', compilerSource)(proc);
+      return compileMain(write, readSource);
+    },
+  );
+}
+
 self.onmessage = async (event) => {
   const { id, action, source, stdin, args } = event.data;
   try {
-    const [stdlib, compilerSource] = await Promise.all([loadStdlib(), loadCompilerSource()]);
+    const stdlib = await loadStdlib();
     const readSource = makeReadSource(stdlib);
-    const compileResult = runWithProcessStub(
-      ['node', 'compiler.js', 'playground.lts', 'playground', 'playground.lts'],
-      source ?? '',
-      (proc, write) => {
-        const compileMain = new Function('process', compilerSource)(proc);
-        return compileMain(write, readSource);
-      },
-    );
+
+    if (action === 'compile-c') {
+      const cSource = await loadCompilerSource('compiler-c.js');
+      const cResult = compileWith(cSource, readSource, source);
+      self.postMessage({
+        id,
+        ok: cResult.ok && Boolean(cResult.stdout),
+        c: cResult.ok ? cResult.stdout : '',
+        stderr: cResult.stderr,
+      });
+      return;
+    }
+
+    const tsCompilerSource = await loadCompilerSource('compiler.js');
+    const compileResult = compileWith(tsCompilerSource, readSource, source);
 
     if (!compileResult.ok || !compileResult.stdout) {
       self.postMessage({
         id,
         ok: false,
         ts: '',
+        c: '',
+        cError: '',
         stdout: '',
         stderr: compileResult.stderr || 'Compilation failed.',
       });
@@ -119,7 +142,17 @@ self.onmessage = async (event) => {
 
     const ts = compileResult.stdout;
     if (action === 'compile') {
-      self.postMessage({ id, ok: true, ts, stdout: '', stderr: compileResult.stderr });
+      const cSource = await loadCompilerSource('compiler-c.js');
+      const cResult = compileWith(cSource, readSource, source);
+      self.postMessage({
+        id,
+        ok: true,
+        ts,
+        c: cResult.ok ? cResult.stdout : '',
+        cError: cResult.ok ? '' : (cResult.stderr || 'C compilation failed.'),
+        stdout: '',
+        stderr: compileResult.stderr,
+      });
       return;
     }
 
@@ -140,7 +173,7 @@ self.onmessage = async (event) => {
     });
   } catch (err) {
     const message = err instanceof Error ? err.message : String(err);
-    self.postMessage({ id, ok: false, ts: '', stdout: '', stderr: message });
+    self.postMessage({ id, ok: false, ts: '', c: '', cError: '', stdout: '', stderr: message });
   }
 };
 `;

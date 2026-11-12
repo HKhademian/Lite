@@ -240,6 +240,9 @@ export function buildCompiler(target: CompilerTarget): CompilerBuild {
 /** Selects the current TS compiler; retained for existing internal callers. */
 export function buildTsCompiler(): CompilerBuild { return buildCompiler('ts'); }
 
+/** Selects the current C compiler; builds and caches it from compiler sources if needed. */
+export function buildCCompiler(): CompilerBuild { return buildCompiler('c'); }
+
 /** Compiles one whole Lite source with a current Lite-written target compiler. */
 export function compileBuiltCompiler(build: CompilerBuild, input: CompilerInput): CompilerResult {
   return invoke(build.path, input.text, input.name, input.cwd ?? process.cwd());
