@@ -753,9 +753,11 @@ function renderPlaygroundPage(rendered: ReadonlyMap<string, RenderedSample>, rep
   compileBtn.addEventListener("click", () => runAction("compile"));
   playBtn.addEventListener("click", () => runAction("play"));
 
-  // Bouncing ℓite Canvas Stage with FPS / frametime reporting
+  // Full-panel bouncing ℓite logo mark with FPS / frametime reporting
   const canvas = document.getElementById("pg-canvas");
   const ctx = canvas.getContext("2d");
+  const markMain = new Path2D("M2.2 10C5 7.9 8.6 5 8.5 3C8.4 1.7 6.9 1.7 5.9 3.1C4.6 4.9 4.2 8 4.4 10.4C4.6 12.2 5.8 13 7.4 13C8.6 13 9.5 12.4 10.2 11.4");
+  const markBar = new Path2D("M4.7 9.4C6.3 9.1 7.4 8.5 8.1 7.6");
   let bx = 48, by = 48, vx = 2.4, vy = 1.8;
 
   function drawFrame(now) {
@@ -766,39 +768,33 @@ function renderPlaygroundPage(rendered: ReadonlyMap<string, RenderedSample>, rep
     }
     lastFrameAt = now;
 
+    const w = canvas.clientWidth || canvas.width;
+    const h = canvas.clientHeight || canvas.height;
+    if (canvas.width !== w) canvas.width = w;
+    if (canvas.height !== h) canvas.height = h;
+
     ctx.fillStyle = "#0B0C0E";
-    ctx.fillRect(0, 0, canvas.width, canvas.height);
+    ctx.fillRect(0, 0, w, h);
 
-    ctx.strokeStyle = "rgba(240, 180, 90, 0.07)";
-    ctx.lineWidth = 1;
-    for (let x = 0; x < canvas.width; x += 20) {
-      ctx.beginPath(); ctx.moveTo(x, 0); ctx.lineTo(x, canvas.height); ctx.stroke();
-    }
-    for (let y = 0; y < canvas.height; y += 20) {
-      ctx.beginPath(); ctx.moveTo(0, y); ctx.lineTo(canvas.width, y); ctx.stroke();
-    }
-
+    const scale = 4;
+    const markSize = 14 * scale;
     bx += vx; by += vy;
-    const boxW = 96, boxH = 46;
-    if (bx <= 8 || bx + boxW >= canvas.width - 8) vx = -vx;
-    if (by <= 8 || by + boxH >= canvas.height - 8) vy = -vy;
+    if (bx <= 4) { bx = 4; vx = Math.abs(vx); }
+    else if (bx + markSize >= w - 4) { bx = Math.max(4, w - 4 - markSize); vx = -Math.abs(vx); }
+    if (by <= 4) { by = 4; vy = Math.abs(vy); }
+    else if (by + markSize >= h - 4) { by = Math.max(4, h - 4 - markSize); vy = -Math.abs(vy); }
 
-    ctx.fillStyle = "rgba(240, 180, 90, 0.14)";
+    ctx.save();
+    ctx.translate(bx, by);
+    ctx.scale(scale, scale);
     ctx.strokeStyle = "#F0B45A";
+    ctx.lineCap = "round";
+    ctx.lineJoin = "round";
     ctx.lineWidth = 2;
-    ctx.beginPath();
-    ctx.roundRect(bx, by, boxW, boxH, 10);
-    ctx.fill();
-    ctx.stroke();
-
-    ctx.font = "600 24px 'SF Mono', ui-monospace, monospace";
-    ctx.textBaseline = "middle";
-    ctx.textAlign = "right";
-    ctx.fillStyle = "#F0B45A";
-    ctx.fillText("ℓ", bx + boxW / 2 - 12, by + boxH / 2 + 1);
-    ctx.textAlign = "left";
-    ctx.fillStyle = "#F2F0EA";
-    ctx.fillText("ite", bx + boxW / 2 - 10, by + boxH / 2 + 1);
+    ctx.stroke(markMain);
+    ctx.lineWidth = 1.3;
+    ctx.stroke(markBar);
+    ctx.restore();
 
     animFrame = requestAnimationFrame(drawFrame);
   }

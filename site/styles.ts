@@ -570,21 +570,26 @@ details.gallery-code pre.code-block {
 }
 .pg-panel[hidden] { display: none; }
 .pg-canvas-wrap {
+  position: relative;
   flex: 1 1 auto;
+  min-height: 0;
   display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  gap: 0.75rem;
-  padding: 1.25rem;
-  background: var(--code-bg);
+  padding: 0;
+  overflow: hidden;
+  background: #0B0C0E;
 }
 .pg-canvas {
-  border: 1px solid var(--border);
-  border-radius: 8px;
+  display: block;
+  width: 100%;
+  height: 100%;
   background: #0B0C0E;
-  image-rendering: pixelated;
-  max-width: 100%;
+}
+.pg-canvas-wrap .pg-status {
+  position: absolute;
+  right: 0.75rem;
+  bottom: 0.5rem;
+  pointer-events: none;
+  opacity: 0.7;
 }
 
 /* Syntax tokens */
