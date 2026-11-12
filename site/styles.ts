@@ -308,6 +308,25 @@ pre.code-block {
   font-weight: 600;
 }
 
+details.gallery-code {
+  border-top: 1px solid var(--border);
+  background: var(--surface);
+}
+details.gallery-code summary {
+  cursor: pointer;
+  padding: 0.45rem 1rem;
+  font-size: 0.82rem;
+  font-weight: 600;
+  color: var(--ink-muted);
+  user-select: none;
+}
+details.gallery-code summary:hover {
+  color: var(--ink);
+}
+details.gallery-code pre.code-block {
+  border-top: 1px solid var(--border);
+}
+
 /* Pillars */
 .section {
   padding: 2.25rem 0;

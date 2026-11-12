@@ -299,6 +299,10 @@ function renderGalleryCard(sample: RenderedSample, basePath: string): string {
     <span class="code-card-meta">${escapeHtml(sample.file)}</span>
   </div>
   <p class="sample-note" style="flex: 1;">${escapeHtml(sample.note)}</p>
+  <details class="gallery-code">
+    <summary>Source</summary>
+    <pre class="code-block"><code>${sample.sourceHtml}</code></pre>
+  </details>
   <footer class="sample-foot">
     <a href="${basePath}playground/index.html?sample=${escapeHtml(sample.id)}">Play &rarr;</a>
   </footer>
