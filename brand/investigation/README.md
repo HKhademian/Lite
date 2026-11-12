@@ -17,6 +17,7 @@ This is the tracked design archive — the single place where the trail of revis
 | 4 | `rev-4-monogram-wordmark/` | 16×16 monoline monogram-to-wordmark study modeled directly on `MiniLang/brand/`: 6 candidates (`a1`–`a3` Feather `l`, `b1`–`b2` Light/Photon `l`, `c1` Bolt `l`) where the mark *is* the first letter `l` in `lite`, plus interactive `studio.html`. | **Active (Monogram + Wordmark Lockup).** Pairs directly with Rev 3 to compare standalone diagonal Quill vs. `mini`-style first-letter monogram. |
 | 5 | `rev-5-synthesis/` | Synthesis of Rev 3's 6 findings + craft bar with Rev 4's `mini`-style monogram lockup: `1-tapered-quill.svg` (Rev 3's requested calligraphic step), `2-slanted-quill-l.svg` (18° forward-leaning `l` + 1 flick), `3-spark-li.svg` (refined Spark `li`), `4-split-light-quill.svg` (35° quill + lightning step), plus `exploration.html` scorecard. | **Exploration.** Compares standalone quills with `mini`-style letter marks. |
 | 6 | `rev-6-letter-marks/` | Six L-based feather, bolt, and spark sketches, each reused as the first letter in the studio wordmark. | **Exploration.** Letter readability, feather character, spacing, and small-size performance remain open. |
+| 7 | `rev-7-letter-l/` | Eight `$` letter marks (`R7-01`–`R7-08`) designed to stand alone as `$` and replace `L`/`l` in `$ite`: Multi-Barb Quill `L`, Swept Quill-Foot `L`, Lightning Bolt `L`, Minimal Bolt `l`, Spark `Li`, Feather-Foot `L`, Light-Beam `L`, and Wing-Tip `l`. | **Current.** Integrated in `studio.html` under `Rev 7 · Letter $ (8)`. |
 
 ### Revision 3 files
 
