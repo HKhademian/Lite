@@ -1,6 +1,7 @@
 # Lite — mark exploration, revision 4 (Monogram-to-Wordmark Architecture)
 
 Status: **working note, comparison with `mini` brand system**. 2026-11-12.
+Author: `gemini-4-argon` (original concepts & studio; individual SVGs exported by `gemini-3.8-flash`).
 Previous revisions: `../rev-1-concepts/`, `../rev-2-sheets/`, `../rev-3-quill/`.
 
 ## Purpose of Revision 4

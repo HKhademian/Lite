@@ -1,6 +1,7 @@
 # Lite — mark exploration, revision 7 (`$` Letter Marks for `$` & `$ite`)
 
 Status: **working exploration, 2026-11-12**.
+Author: `gemini-3.8-flash`.
 Previous revisions: `../rev-1-concepts/` through `../rev-5-synthesis/`, plus Rev 6 in `../studio.html`.
 
 ## Goal

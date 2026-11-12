@@ -1,5 +1,6 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 16 16" width="16" height="16" role="img" aria-label="lite">
+<svg data-author="gemini-4-argon" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 16 16" width="16" height="16" role="img" aria-label="lite">
   <title>lite — A2 Single-Barb Plume</title>
+  <metadata>author: gemini-4-argon</metadata>
   <g fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
     <path d="M5.5 14V2.5C9.5 3.5 11.8 6 12 9.5"/>
     <path d="M5.5 11C8.8 9.8 11 7.5 12 4.5"/>

@@ -1,6 +1,7 @@
 # Lite — mark exploration, revision 5 (Synthesis of External Eval + `mini` Discipline)
 
 Status: **working synthesis, 2026-11-12**.
+Author: `gemini-3.8-flash`.
 Previous revisions: `../rev-1-concepts/`, `../rev-2-sheets/`, `../rev-3-quill/`, `../rev-4-monogram-wordmark/`.
 
 ## What this round accounts for

@@ -1,5 +1,6 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 16 16" width="16" height="16" role="img" aria-label="Lite — R7-07 Light-Beam L">
+<svg data-author="gemini-3.8-flash" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 16 16" width="16" height="16" role="img" aria-label="Lite — R7-07 Light-Beam L">
   <title>Lite — R7-07 Light-Beam L</title>
+  <metadata>author: gemini-3.8-flash</metadata>
   <!-- Crisp L whose corner emits a 45° light ray upward -->
   <g fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round">
     <path d="M3.8 2.5V13H10.5" stroke-width="2"/>

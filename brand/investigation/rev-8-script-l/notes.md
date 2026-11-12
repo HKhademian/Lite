@@ -1,6 +1,7 @@
 # Lite — mark exploration, revision 8 (`ℓ`, `ℒ`, and `"l"` Variations)
 
 Status: **working exploration, 2026-11-12**.
+Author: `gemini-3.8-flash`.
 Previous revisions: `../rev-1-concepts/` through `../rev-7-letter-l/`.
 
 ## Concept
