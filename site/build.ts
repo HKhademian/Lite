@@ -558,7 +558,13 @@ function renderPlaygroundPage(rendered: ReadonlyMap<string, RenderedSample>, rep
     const sample = await fetchSample(meta.id);
     currentSample = sample;
     editorEl.value = sample.source;
-    sourceEl.innerHTML = sample.sourceHtml;
+    sourceEl.innerHTML = sample.sourceHtml + "\\n";
+    editorEl.scrollTop = 0;
+    editorEl.scrollLeft = 0;
+    if (sourceEl.parentElement) {
+      sourceEl.parentElement.scrollTop = 0;
+      sourceEl.parentElement.scrollLeft = 0;
+    }
     tsEl.innerHTML = sample.tsHtml;
     argsEl.value = sample.args.join(" ");
     stdinEl.value = sample.stdin.replaceAll("\\n", "\\\\n");

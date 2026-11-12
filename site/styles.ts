@@ -405,35 +405,42 @@ pre.code-block {
   flex: 1 1 auto;
   min-height: 220px;
   background: var(--code-bg);
-  overflow: auto;
+  overflow: hidden;
 }
 .pg-editor-pre,
-.pg-editor-input {
-  margin: 0;
-  padding: 1rem;
-  font-family: var(--font-mono);
-  font-size: 0.86rem;
-  line-height: 1.5;
-  tab-size: 4;
-  white-space: pre;
-  word-wrap: normal;
-}
-.pg-editor-pre {
-  pointer-events: none;
-  min-height: 100%;
-}
 .pg-editor-input {
   position: absolute;
   inset: 0;
   width: 100%;
   height: 100%;
+  margin: 0;
+  padding: 16px;
   border: 0;
+  font-family: var(--font-mono);
+  font-size: 0.86rem;
+  line-height: 1.55;
+  letter-spacing: 0;
+  font-variant-ligatures: none;
+  tab-size: 4;
+  white-space: pre;
+  overflow-wrap: normal;
+}
+.pg-editor-pre {
+  overflow: hidden;
+  pointer-events: none;
+}
+.pg-editor-pre code {
+  font: inherit;
+  white-space: inherit;
+}
+.pg-editor-input {
   outline: none;
   resize: none;
+  overflow: auto;
   background: transparent;
   color: transparent;
+  -webkit-text-fill-color: transparent;
   caret-color: var(--ink);
-  overflow: auto;
 }
 .pg-io-strip {
   border-top: 1px solid var(--border);
@@ -519,7 +526,7 @@ pre.code-block {
 }
 
 /* Syntax tokens */
-.tok-keyword { color: var(--tok-keyword); font-weight: 600; }
+.tok-keyword { color: var(--tok-keyword); }
 .tok-type { color: var(--tok-type); }
 .tok-string { color: var(--tok-string); }
 .tok-number { color: var(--tok-number); }
