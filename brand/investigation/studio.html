@@ -420,9 +420,8 @@
           </div>
         </div>
         <div id="bs-code-box" style="background:var(--bg); border:1px solid var(--line); border-radius:10px; padding:8px 12px; font-family:var(--mono); font-size:11px; line-height:1.5; display:flex; flex-direction:column; justify-content:center;">
-          <div><span id="bs-kw">fn</span> main() {</div>
-          <div>&nbsp;&nbsp;print(<span id="bs-str">"Lite is light."</span>)</div>
-          <div>}</div>
+          <div>io := <span id="bs-kw">import</span> <span id="bs-str">"core/io"</span>;</div>
+          <div>io.outputLine(<span id="bs-str2">"Lite is light."</span>);</div>
         </div>
         <div class="inspector-stages" id="inspector-stages" style="cursor:pointer; justify-content:center; align-items:center;" onclick="openScaleDialog()" title="Click to inspect 16–256 px sizes"></div>
       </div>
@@ -1220,6 +1219,7 @@ function renderSim() {
   document.getElementById('bs-code-box').style.fontFamily = activeBsCodeFont.css;
   document.getElementById('bs-kw').style.color = acc;
   document.getElementById('bs-str').style.color = acc;
+  document.getElementById('bs-str2').style.color = acc;
   const refChips = [
     ['Logo', it.ref],
     ['Accent', activeBsAccent.ref],
@@ -1357,7 +1357,7 @@ function renderBrandSystem() {
   document.getElementById('bs-code-fonts').innerHTML = bsCodeFonts.map(cf => `
     <button class="bs-tile ${cf.id === activeBsCodeFont.id ? 'active' : ''}" onclick="selectBsCodeFont('${cf.id}')">
       <div style="display:flex; align-items:center; justify-content:space-between; width:100%;">
-        <div style="font-family:${cf.css}; font-size:12.5px;">fn main()</div>
+        <div style="font-family:${cf.css}; font-size:12.5px;">io.outputLine()</div>
         <span class="origin">${cf.ref}</span>
       </div>
       <span class="bs-tile-title">${cf.name}</span>
@@ -1518,9 +1518,8 @@ function openSiteDialog() {
       </div>
       <div style="background:var(--bg); border:1px solid var(--line); border-radius:10px; padding:14px 16px; font-family:${activeBsCodeFont.css}; font-size:12.5px; line-height:1.65;">
         <div style="color:var(--muted); margin-bottom:6px;">$ ./bin/lite run hello.lts</div>
-        <div><span style="color:${acc};">fn</span> main() {</div>
-        <div>&nbsp;&nbsp;print(<span style="color:${acc};">"Lite is light."</span>)</div>
-        <div>}</div>
+        <div>io := <span style="color:${acc};">import</span> <span style="color:${acc};">"core/io"</span>;</div>
+        <div>io.outputLine(<span style="color:${acc};">"Lite is light."</span>);</div>
       </div>
     </div>
   `;
@@ -1568,9 +1567,8 @@ function openOverviewDialog() {
           <span>hello.lts</span>
         </div>
         <div style="font-family:${activeBsCodeFont.css}; font-size:13px; line-height:1.65;">
-          <div><span style="color:#E6C07B;">fn</span> main() {</div>
-          <div>&nbsp;&nbsp;print_line(<span style="color:#98C379;">"Hello, Lite"</span>);</div>
-          <div>}</div>
+          <div>io := <span style="color:#E6C07B;">import</span> <span style="color:#98C379;">"core/io"</span>;</div>
+          <div>io.outputLine(<span style="color:#98C379;">"Hello, Lite"</span>);</div>
         </div>
       </div>
       <div style="background:var(--card); border:1px solid var(--line); border-radius:12px; padding:18px; display:flex; flex-direction:column; justify-content:space-between; gap:12px;">
