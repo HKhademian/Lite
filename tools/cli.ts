@@ -12,6 +12,7 @@ const command = args.shift();
 const usage = [
   'Usage: ./bin/lite <command> [options]', '', 'Commands:',
   '  check file.lts                            Check source only',
+  '  fmt [--check] [FILE_OR_DIR... | -]        Format Lite source files',
   '  compile [--target ts] file.lts            Compile to a TS artifact',
   '  run file.lts [-- argument ...]            Compile to a temporary artifact and execute it',
   '  verify [--all|--update|--coverage]        Verify generated TS artifacts',
@@ -26,7 +27,7 @@ const usage = [
   'Compiler entry points: ./bin/lite-compile, ./bin/lite compile',
   'Target commands: ./bin/lite-compile-ts, ./bin/lite-compile-c',
   'C output is deferred until after the TS compiler migration.',
-  'Reserved names: ./ltl/lite link, lite fmt', '',
+  'Reserved names: ./ltl/lite link', '',
 ].join('\n');
 
 if (command === 'help' || command === '--help' || command === '-h') {
@@ -40,6 +41,7 @@ if (command === undefined) {
 
 const routes: Record<string, string> = {
   check: 'lite-check',
+  fmt: 'lite-fmt',
   compile: 'lite-compile',
   run: 'lite-run',
   verify: 'lite-verify',
