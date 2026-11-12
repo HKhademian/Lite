@@ -1,2 +1,4 @@
+io := import "core/io";
+
 var x := 4;
-outputLine(x / 2);
+io.outputLine(x / 2);

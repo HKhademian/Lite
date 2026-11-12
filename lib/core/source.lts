@@ -1,8 +1,10 @@
 /* Provisional bootstrap source-position support. Not an official standard library. */
 
-/** Clamps one offset into the inclusive range `0..textLength(source)`. */
+text := import "core/text";
+
+/** Clamps one offset into the inclusive range `0..text.length(source)`. */
 pub clampPosition := fn(source: String, position: Int): Int {
-    size := textLength(source);
+    size := text.length(source);
     if position < 0 { return 0; }
     if position > size { return size; }
     position
@@ -15,7 +17,7 @@ pub lineColumn := fn(source: String, position: Int): (line: Int, column: Int) {
     var lineStart := 0;
     var index := 0;
     loop index < cursor {
-        if textAt(source, index) == "\n" {
+        if text.at(source, index) == "\n" {
             line = line + 1;
             lineStart = index + 1;
         }
@@ -26,11 +28,11 @@ pub lineColumn := fn(source: String, position: Int): (line: Int, column: Int) {
 
 /** Number of source lines, counting the empty source as one line. */
 pub lineCount := fn(source: String): Int {
-    size := textLength(source);
+    size := text.length(source);
     var count := 1;
     var index := 0;
     loop index < size {
-        if textAt(source, index) == "\n" { count = count + 1; }
+        if text.at(source, index) == "\n" { count = count + 1; }
         index = index + 1;
     }
     count
@@ -38,12 +40,12 @@ pub lineCount := fn(source: String): Int {
 
 /** Offset of the first character on one-based `line`, or text length when absent. */
 pub lineStartOffset := fn(source: String, line: Int): Int {
-    size := textLength(source);
+    size := text.length(source);
     if line <= 1 { return 0; }
     var current := 2;
     var index := 0;
     loop index < size {
-        if textAt(source, index) == "\n" {
+        if text.at(source, index) == "\n" {
             if current == line { return index + 1; }
             current = current + 1;
         }
@@ -54,10 +56,10 @@ pub lineStartOffset := fn(source: String, line: Int): Int {
 
 /** Offset just before the line terminator of one-based `line`. */
 pub lineEndOffset := fn(source: String, line: Int): Int {
-    size := textLength(source);
+    size := text.length(source);
     start := lineStartOffset(source, line);
     var index := start;
-    loop index < size and textAt(source, index) =!= "\n" {
+    loop index < size and text.at(source, index) =!= "\n" {
         index = index + 1;
     }
     index

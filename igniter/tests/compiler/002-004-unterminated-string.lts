@@ -1,1 +1,3 @@
-outputLine("unterminated);
+io := import "core/io";
+
+io.outputLine("unterminated);

@@ -2,7 +2,7 @@
   "name": "arithmetic-precedence",
   "source": {
     "file": "001-002-arithmetic-precedence.lts",
-    "hash": "sha256:f2038bf14d018b74db26830255151ffd6a2af2abb7c9f8aee19f937e348aac21"
+    "hash": "sha256:b157638b4ad313b5251d641e38de9f777ac47635d8d705172360fc6f4bba4a5c"
   },
   "cases": [
     {

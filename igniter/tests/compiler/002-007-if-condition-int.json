@@ -2,7 +2,7 @@
   "name": "if-condition-int",
   "source": {
     "file": "002-007-if-condition-int.lts",
-    "hash": "sha256:1bcc1ca7ef25f4d416d8cfe5fce89eac3b07901ce299da6ecf9970c860c56245"
+    "hash": "sha256:c6024d233860b4f00633845a6cc3a3964ac7e3ee74928eb454fd4c25d3fb4055"
   },
   "cases": [
     {
@@ -12,8 +12,8 @@
         "hash": "sha256:e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
       },
       "stderr": {
-        "text": "1:4: if condition must be Bool\n",
-        "hash": "sha256:8008210145f089205963df56b0096678bff098d0ec8036716850f37261386bfa"
+        "text": "3:4: if condition must be Bool\n",
+        "hash": "sha256:691fcda89dda06f79287df6a92a932ff4b958c933d166cc7ea1b9bff91a4a0c2"
       },
       "exitCode": 2
     }

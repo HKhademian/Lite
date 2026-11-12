@@ -2,7 +2,7 @@
   "name": "remainder-int",
   "source": {
     "file": "001-002-remainder-int.lts",
-    "hash": "sha256:f95e911f072de4bb6f0fc38ec7a77cb1f98c3a1b57da1c8bfc59aa93ed09393d"
+    "hash": "sha256:46b8954c267856442f2656880870d492302e476340521d262e489be984110d5e"
   },
   "cases": [
     {

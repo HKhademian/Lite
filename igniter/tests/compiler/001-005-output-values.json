@@ -2,7 +2,7 @@
   "name": "output-values",
   "source": {
     "file": "001-005-output-values.lts",
-    "hash": "sha256:963377005c82b3cf97d549511ed0f1bfd587cd42182c35654ba15e94a66abf68"
+    "hash": "sha256:96d6222953c9f44fa45a0e09b56ee94cd962c4851b5233d67d9d1049f04612ea"
   },
   "cases": [
     {

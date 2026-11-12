@@ -2,7 +2,7 @@
   "name": "unknown-local",
   "source": {
     "file": "002-005-unknown-local.lts",
-    "hash": "sha256:e43691e06120f875fa58539d16726e460b8d186fd39c2c00a86bce1e772718ef"
+    "hash": "sha256:48b018f84c6cc37518346f5b0e141986454866067eece69421bf44e142b442b3"
   },
   "cases": [
     {
@@ -12,8 +12,8 @@
         "hash": "sha256:e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
       },
       "stderr": {
-        "text": "1:20: unknown value y\n",
-        "hash": "sha256:9845b5b65e22520b2d0c5fe3bf01c8689097011720f51a3004f78d7451efabf8"
+        "text": "3:23: unknown value y\n",
+        "hash": "sha256:f49f590ee22baeff9b3194fab3dc719e9f01881c7b5a88614d41403fdfc6b3cb"
       },
       "exitCode": 2
     }

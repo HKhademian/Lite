@@ -1,1 +1,3 @@
-outputLine(-9223372036854775808 / -1);
+io := import "core/io";
+
+io.outputLine(-9223372036854775808 / -1);

@@ -2,7 +2,7 @@
   "name": "report-multiline-spacing",
   "source": {
     "file": "001-001-report-multiline-spacing.lts",
-    "hash": "sha256:961a1f1e3c43cb1bac24900f95a0d23168a130b05f5149572ac54b0cf031e232"
+    "hash": "sha256:6ed0e6819c740da4bcf7d347133e35552cfe162661c31d8645f41e78ab4519dd"
   },
   "cases": [
     {

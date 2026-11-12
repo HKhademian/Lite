@@ -2,7 +2,7 @@
   "name": "report-literal-sequence",
   "source": {
     "file": "001-006-report-literal-sequence.lts",
-    "hash": "sha256:2de1d27234e7e3e647c568c6a8038bafa10763e44707e6884491af2ac4a7f1fe"
+    "hash": "sha256:56a544a72cdbfe9ee196b29fcce0f8595309c018d824b618f40d8021e73e1ac4"
   },
   "cases": [
     {

@@ -1,0 +1,4 @@
+/* Internal compiler host boundary. Import traversal is the only permitted caller. */
+
+/** Reads one imported source unit through the compiler host's trusted resolver. */
+pub read := fn(importer: String, spec: String): (path: String, display: String, identity: String, text: String);

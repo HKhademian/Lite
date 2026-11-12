@@ -1,2 +1,2 @@
-driver := import "driver-c.lts";
+driver := import "./driver-c.lts";
 driver.run();

@@ -1,15 +1,16 @@
 /* Declaration parser dump. Test helper, not a public command. */
 
 parser := import "../../src/parser.lts";
+io := import "core/io";
 
 var prefix := "";
 var argCount := 0;
-loop inputArgs() as argument {
+loop io.inputArgs() as argument {
     if argCount == 0 { prefix = argument; }
     argCount = argCount + 1;
 }
 if argCount > 1 {
-    reportError("expected at most one logical source name argument");
-    exit(2);
+    io.errorLine("expected at most one logical source name argument");
+    io.exit(2);
 }
-    parser.testDumpDeclarations(inputAll(), prefix);
+    parser.testDumpDeclarations(io.inputAll(), prefix);

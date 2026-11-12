@@ -2,7 +2,7 @@
   "name": "bool-literals-logic",
   "source": {
     "file": "001-007-bool-literals-logic.lts",
-    "hash": "sha256:728b2f837742924112c69bec963e8692a395d9f4d11de34b23976b4aeb3f7204"
+    "hash": "sha256:0b0dcfd211a418f84615f27fd5e15e0b1852806731cde3ef8b65cc85489308dc"
   },
   "cases": [
     {

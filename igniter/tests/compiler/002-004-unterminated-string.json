@@ -2,7 +2,7 @@
   "name": "unterminated-string",
   "source": {
     "file": "002-004-unterminated-string.lts",
-    "hash": "sha256:c1cb0862f0b3bde0564391303cf9315c79cf4fb0a5e83660c469f57231986341"
+    "hash": "sha256:dc404b48461d091516477d2f13d9c862317759c6ddb1bd08434137e9c1e609c3"
   },
   "cases": [
     {
@@ -12,8 +12,8 @@
         "hash": "sha256:e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
       },
       "stderr": {
-        "text": "1:12: unterminated string literal\n",
-        "hash": "sha256:b8f8cb0ab782aa743939de767cc910a82f9993ba5b95b847238303587bc0e409"
+        "text": "3:15: unterminated string literal\n",
+        "hash": "sha256:7ab41880631c5740072695530e293dac5af1c21fd8c6f283b44cb3b67dc8a0b1"
       },
       "exitCode": 2
     }

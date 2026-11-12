@@ -1,5 +1,7 @@
+io := import "core/io";
+
 var i := 0;
 loop i < 3 {
-    outputLine("tick", i);
+    io.outputLine("tick", i);
     i = i + 1;
 }

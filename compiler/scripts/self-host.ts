@@ -5,7 +5,7 @@ import { spawnSync } from 'node:child_process';
 import { tmpdir } from 'node:os';
 import { dirname, join, relative, resolve, sep } from 'node:path';
 import { loadManifest } from '../../igniter/loader.ts';
-import { readSourceInput } from '../source.ts';
+import { readSourceInput, sourceModuleIdentity } from '../source.ts';
 import { buildCompiler } from '../host.ts';
 import { fail, hashBytes, mainFile, repository, revision, selectedArtifact, strictArtifact, toolIdentities, toolOptions, writeJson } from './tooling.ts';
 
@@ -19,6 +19,7 @@ export function selfHost(args: readonly string[]): void {
   if (manifest.files.length !== 1) throw new Error('self-host ladder requires one TS source root');
   const source = readSourceInput(resolve(dirname(manifestPath), manifest.files[0]!));
   const sourceName = relative(repository, source.path).split(sep).join('/');
+  const rootIdentity = sourceModuleIdentity(source.bytes);
   const out = options.values.has('out') ? resolve(options.values.get('out')!) : mkdtempSync(join(tmpdir(), 'lite-generated-ladder-'));
   mkdirSync(out, { recursive: true }); writeFileSync(join(out, 'package.json'), '{"type":"module"}\n');
   writeFileSync(join(out, 'S.lts'), source.text);
@@ -27,8 +28,9 @@ export function selfHost(args: readonly string[]): void {
   let builderPath = selected.path;
   for (let generation = 1; generation <= 3; generation += 1) {
     const start = performance.now();
-    const actual = spawnSync(process.execPath, [join(repository, 'compiler/entry.ts'), builderPath, sourceName], {
-      input: source.text, timeout: 0, maxBuffer: 128 * 1024 * 1024,
+    const actual = spawnSync(process.execPath, [join(repository, 'compiler/entry.ts'), builderPath, sourceName,
+      rootIdentity, source.path], {
+      cwd: repository, input: source.text, timeout: 0, maxBuffer: 128 * 1024 * 1024,
     });
     const compileProcessMs = performance.now() - start;
     if (actual.error !== undefined) throw actual.error;

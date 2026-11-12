@@ -2,7 +2,7 @@
   "name": "report-spaced-negative",
   "source": {
     "file": "001-001-report-spaced-negative.lts",
-    "hash": "sha256:cac73fb69437048e715156cbfaae35de9f68fd5cbce5a2e11f7a9f43b97df48d"
+    "hash": "sha256:96af166f772d55807966e4f77335f035e32987641ce2a51270abc52510b61cc8"
   },
   "cases": [
     {

@@ -8,3 +8,21 @@ pub outputLine := fn(...values): Unit;
 
 /** Writes one message to the host error stream followed by one newline. */
 pub errorLine := fn(text: String): Unit;
+
+/** Returns the command-line arguments following the generated program entry. */
+pub inputArgs := fn(): List<String>;
+
+/** Reads all remaining standard input after writing the required `prompt` argument. */
+pub inputAll := fn(prompt: String): String;
+
+/** Reads one input line after writing the required `prompt` argument. */
+pub inputLine := fn(prompt: String): String;
+
+/** Reads one signed Int token after writing the required `prompt` argument. */
+pub inputInt := fn(prompt: String): Int;
+
+/** Reads one finite Float token after writing the required `prompt` argument. */
+pub inputFloat := fn(prompt: String): Float;
+
+/** Terminates the generated program with `status`. */
+pub exit := fn(status: Int): Unit;

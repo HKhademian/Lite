@@ -2,7 +2,7 @@
   "name": "report-crlf-spacing",
   "source": {
     "file": "001-001-report-crlf-spacing.lts",
-    "hash": "sha256:6b694ffc3c628e5bca3cd69324c79434dc728727a3b54ebf1a15c77d2bc0f975"
+    "hash": "sha256:33d7633d8b9e649a203d20743ef09829bf54fa1e5f74f8758f43a76492369a4a"
   },
   "cases": [
     {

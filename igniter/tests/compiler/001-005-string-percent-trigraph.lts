@@ -1,1 +1,3 @@
-outputLine("%s ??/");
+io := import "core/io";
+
+io.outputLine("%s ??/");

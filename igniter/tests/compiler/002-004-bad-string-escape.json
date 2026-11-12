@@ -2,7 +2,7 @@
   "name": "bad-string-escape",
   "source": {
     "file": "002-004-bad-string-escape.lts",
-    "hash": "sha256:47cd67bd05cdd3f82f170addc27e1b11cbfe4f299285e6047a25d60cd50b24e7"
+    "hash": "sha256:b8cb657a93b539f2d5909993ccb19e883dac1411d8b0a4fe7d78388717329ddd"
   },
   "cases": [
     {
@@ -12,8 +12,8 @@
         "hash": "sha256:e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
       },
       "stderr": {
-        "text": "1:17: unsupported string escape \\q\n",
-        "hash": "sha256:a0960b58a33d85964e26b2ed0e5c51b9bbd1f58d8158ab984a300263d494aacb"
+        "text": "3:20: unsupported string escape \\q\n",
+        "hash": "sha256:0acafe09ed217b24a6b848b59d02d5d478d4a0484ad24502681b2395a34d739f"
       },
       "exitCode": 2
     }

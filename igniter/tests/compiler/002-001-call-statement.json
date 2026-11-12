@@ -2,7 +2,7 @@
   "name": "call-statement",
   "source": {
     "file": "002-001-call-statement.lts",
-    "hash": "sha256:5d9afda3cb5b83fd04e7f8e85b8e595edd986fa1450a6db40daf326e8e4e4407"
+    "hash": "sha256:e0e469da3db2d309385e42131b2b493d16fe2d5d336374255abe04c25c0c7a56"
   },
   "cases": [
     {
@@ -12,8 +12,8 @@
         "hash": "sha256:e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
       },
       "stderr": {
-        "text": "1:17: unknown value system\n",
-        "hash": "sha256:b995cd4077845d4a99878d2e6e0e48669a373245ae3b96fa206c9fb577258f51"
+        "text": "3:20: unknown value system\n",
+        "hash": "sha256:18143853f3cace669c9e0e516605c25a128d04eafa53fb532c74e5eebb7eab9d"
       },
       "exitCode": 2
     }

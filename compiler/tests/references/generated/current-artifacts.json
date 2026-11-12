@@ -1,8 +1,8 @@
 {
-  "note": "Reviewed 2026-11-12 after core host output aliases. Existing compiler fixture contracts remain unchanged; host binding behavior is covered by focused tests. C hashes remain historical comparisons.",
+  "note": "Reviewed 2026-11-12 after namespace alias migration and scoped core list signatures. TS/C artifact hashes refreshed after strict checks and exact runtime parity for all 69 programs; rejection diagnostics were position-refreshed after normalized parity for all 25 cases.",
   "recorded": "2026-11-12",
-  "sourceSha256": "11871bae418f91aeed3875c9f514eaad7a8847ab346cb2f0f67b5621f520a639",
-  "compilerSha256": "5a9d0d56f814d6d674571f94a959d11bee1f742d6f0e9413a13dcf2a2eaf4f0a",
+  "sourceSha256": "c130782972481b766f416701840cb4b8ca90ca926197ecfdc9a2a13dd11a0ee7",
+  "compilerSha256": "ff18250396069947b1a50eb6c7d94a907af811c38cf3b74bdd26264284da5cbe",
   "programCases": 69,
   "rejectedCases": 25,
   "artifacts": [
@@ -243,8 +243,8 @@
     {
       "name": "nested-shadow",
       "source": "001-005-nested-shadow.lts",
-      "ts": "sha256:e6243d8e0c4b74cb62c620764bf07f46ae08336de3071e1f2c434034e3b61e68",
-      "c": "sha256:baf1296a6f2dc391c71621fb4e54bc13801a65fd1ebc2e8dfbfaeef8cf57af4f"
+      "ts": "sha256:70fa1e43335786d58f1a1299feaba88e9e1d58a3a1cbc5dcbc743d882275196e",
+      "c": "sha256:efc944b38127765b2b5d6819a227dd1f7e3c4230f798bc6a45912dfd21ff020a"
     },
     {
       "name": "local-missing-semicolon",
@@ -339,14 +339,14 @@
     {
       "name": "mutable-counter-loop",
       "source": "001-007-mutable-counter-loop.lts",
-      "ts": "sha256:bdb1dc43dd7ae763e0c520f350e04c4e4121b727386d47f63215c11d945b63f3",
-      "c": "sha256:e750d1ea7ea87ff2d27ee5cf6234c91c47a0ea9f242a61fb97b62b601f372bff"
+      "ts": "sha256:450309a9187b389da775ff10f82b20a68b714ca6d60861d2634cebd3359c5b5d",
+      "c": "sha256:7b5b0366b2804d2e720f743ce463ac4f2890d07f72be4c95c5301d40ceb703f1"
     },
     {
       "name": "nested-if-in-loop",
       "source": "001-007-nested-if-in-loop.lts",
-      "ts": "sha256:fd887817ac98f0b7bdd312938eb637ac2769168ce4c05e53c898011bcf78725b",
-      "c": "sha256:e3723913a1ba7dfe17909add9228333f4922b8c80e3150115043c548584924c9"
+      "ts": "sha256:377a5fcb6e09b6e4707fa42f08a070214531380625d25b7b4af18e8d5757b18e",
+      "c": "sha256:c85753ebe475041423d552163116f3947164f44b1e1911ce90a3be81e65972fd"
     },
     {
       "name": "not-precedence",
@@ -357,8 +357,8 @@
     {
       "name": "report-in-loop",
       "source": "001-007-report-in-loop.lts",
-      "ts": "sha256:82b01ac37509c5b3c939fbcfad5777592f51ffded7e8d39ad4379ce54bd54e8e",
-      "c": "sha256:ac4375917684343e3ed8a94666f50c459e68d0073ac53ea865f0c113acb4d916"
+      "ts": "sha256:3f5477361411254505fd944275ca817f9a010270081c3335b7e21993573e8bc2",
+      "c": "sha256:010e4c88be865ef74d164323a887400be42ac50b334997f317c60de3d4af678c"
     },
     {
       "name": "string-equality-if",
@@ -369,14 +369,14 @@
     {
       "name": "runtime-division",
       "source": "001-009-runtime-division.lts",
-      "ts": "sha256:b240894667d92d897510e39adb78c3e0a21a65c0c3979ccf8476f3b228fef897",
-      "c": "sha256:4741c71cda1f2d14db72498e720369354828eb163576b332d69d10fc2b7ba05c"
+      "ts": "sha256:afb36285ee85f0956b877063e702dde5254276a2dfebbda41f042c05c20b9a3b",
+      "c": "sha256:30d774104fb1ab96195125a0ded2ae4a0724b7a7f15919146740d181179af379"
     },
     {
       "name": "runtime-remainder",
       "source": "001-009-runtime-remainder.lts",
-      "ts": "sha256:226cf9969827929d8ce2778a961e6e9e977d1107a89b159c17faca0091c24a6e",
-      "c": "sha256:f46e1cfebca3b9af4803e5e1fc775f5a718e8204dbb418545c8dce0bd849a383"
+      "ts": "sha256:96fec71c02a644e031e9e04f6ac43d422faa84012731fa4fce79a4e12c5eb362",
+      "c": "sha256:13fde5228df81f8e3c6e202d7ca301295280312b160a4540d0a4c893d55ba86d"
     },
     {
       "name": "runtime-string-concat",
@@ -387,38 +387,38 @@
     {
       "name": "division-by-zero",
       "source": "001-011-division-by-zero.lts",
-      "ts": "sha256:eaf35af1233dd92d4b8bd9bc957887c6040d112af7b1e2731002735835aded0b",
-      "c": "sha256:0bfd167d4b329de5dae25fc4f795943d818c9e1f7ba9309cb8778c840f982652"
+      "ts": "sha256:7be7434b86d0b2961b18fb990132cc6eb0aaa025d6836d0676d270abd5791881",
+      "c": "sha256:49f83063b4596eea4ab67d4a261a3e71f004096dcdab804e7aa39e885b7bc043"
     },
     {
       "name": "min-divide-minus-one",
       "source": "001-011-min-divide-minus-one.lts",
-      "ts": "sha256:855c471b01cb2a8fd47ac97a523df9bb9747f57eb76900e81c69363a2f0a2b9f",
-      "c": "sha256:9ec4c82212cb8ff8093e3f53f42ee8907eed3e157c62cd0dc9901e8b5f4647ab"
+      "ts": "sha256:6c09ef53f4953b432603a754149e260281655002374f202f1ddedaed454fcd94",
+      "c": "sha256:377b0b43aedfdd3f9c4ce9c0f2639f2d7e7cb4fd48a91d2ef073e63554714a12"
     },
     {
       "name": "overflow-add",
       "source": "001-011-overflow-add.lts",
-      "ts": "sha256:2c4f393ad9442d8f3116beb97978c30c9afc04c54ac36d43bfb072bf39db5905",
-      "c": "sha256:fd27f267b0d770cfae01b995363569bca237f8d80a4fae324d82cc8a72168326"
+      "ts": "sha256:335f88a3cda70bfbeb922f82ab49035e23507295dec217887989c4d464f7a7b7",
+      "c": "sha256:9b7739e9528b6754f86da0cf73a03da2baf136b995da1e533748e0403819dd21"
     },
     {
       "name": "overflow-multiply-large",
       "source": "001-011-overflow-multiply-large.lts",
-      "ts": "sha256:33522291ab52639dd8a528f766be47718b5843b5701002078f2fbaae6a6f95dd",
-      "c": "sha256:59e127585f78fac73294f0cbb7aca5b6ca4571c6cbb5beb911c64c92a4d81607"
+      "ts": "sha256:43cc4694bf13fd58100581245d53cc19e3b301256a15a11c9571ddca3029c0b8",
+      "c": "sha256:320954c0cebe9fe4720a91911be6eb9a81b611284cf5b378375268a2345c8d09"
     },
     {
       "name": "overflow-multiply",
       "source": "001-011-overflow-multiply.lts",
-      "ts": "sha256:16e6768a58194a037f3a79471bc8171fde341ea8d006853f323a40ab3bae1b2f",
-      "c": "sha256:06de0356cd9b925f44f9bad645567976f5b1b7a4fb638b04b8dd4a14590ae230"
+      "ts": "sha256:4fff3f7c5871869915db287bd16e69d580f0cb719327d8bdb1ba6c6751f207e8",
+      "c": "sha256:2a3880e62531d3bad89887014d3af744fe8af3702ac0fe6f9a3e9a2675bd8215"
     },
     {
       "name": "overflow-subtract",
       "source": "001-011-overflow-subtract.lts",
-      "ts": "sha256:a9e6690432d5188a795ebb491d817b084352f628fd7791fcd56b1abfbc4ac024",
-      "c": "sha256:b31a53060d748e12bfd4890c7cb8e6cedd386484a12c409f608e63a46933203f"
+      "ts": "sha256:f6c0c90a1554f43da56d09337e259ea07a1b278313f034c4b5e505976aca5204",
+      "c": "sha256:f39edfd607784fbc069b8635dd916d7e52ea0cb5573ddd48ea27d2fb58ea5cd3"
     }
   ]
 }

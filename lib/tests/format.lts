@@ -1,6 +1,6 @@
-integer := import "../core/int.lts";
-format := import "../core/format.lts";
-test := import "../core/test.lts";
+integer := import "core/int";
+format := import "core/format";
+test := import "core/test";
 
 test.checkText("decimal zero", "0", format.decimalText(0));
 test.checkText("decimal negative", "-42", format.decimalText(-42));

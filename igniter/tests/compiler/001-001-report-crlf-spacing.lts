@@ -1,5 +1,6 @@
+io := import "core/io";
 
-	outputLine
+io.outputLine
 (
 -00042
 )

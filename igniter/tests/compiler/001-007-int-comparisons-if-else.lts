@@ -1,7 +1,9 @@
+io := import "core/io";
+
 var n := 12;
-outputLine(n == 12, n =!= 13, n < 13, n <! 12, n <= 12, n <!= 11, n > 11, n >! 12, n >= 12, n >!= 13);
+io.outputLine(n == 12, n =!= 13, n < 13, n <! 12, n <= 12, n <!= 11, n > 11, n >! 12, n >= 12, n >!= 13);
 if n < 10 {
-    outputLine("small");
+    io.outputLine("small");
 } else {
-    outputLine("large");
+    io.outputLine("large");
 }

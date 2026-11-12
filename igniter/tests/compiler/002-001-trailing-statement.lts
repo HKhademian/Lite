@@ -1,1 +1,3 @@
-outputLine(42); process.exit(7);
+io := import "core/io";
+
+io.outputLine(42); process.io.exit(7);

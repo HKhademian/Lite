@@ -2,7 +2,7 @@
   "name": "string-local",
   "source": {
     "file": "001-004-string-local.lts",
-    "hash": "sha256:4f596e6d5c00f549c0d2cc754f4616677b7c41636cf1a8fcbc845d1ddc8ee311"
+    "hash": "sha256:306ae42941d222440fc170d00b41f041ced227033d867d7e8b2e9703156c7687"
   },
   "cases": [
     {

@@ -1,3 +1,5 @@
+io := import "core/io";
+
 printf := "x";
 status := printf + "y";
-outputLine(status, 1);
+io.outputLine(status, 1);

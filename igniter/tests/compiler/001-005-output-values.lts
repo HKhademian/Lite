@@ -1,1 +1,3 @@
-output("a", 1); outputLine(); output(); outputLine(true, Unit);
+io := import "core/io";
+
+io.output("a", 1); io.outputLine(); io.output(); io.outputLine(true, Unit);

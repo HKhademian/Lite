@@ -1,9 +1,11 @@
+io := import "core/io";
+
 var i := 0;
 loop i < 5 {
     if i < 2 {
-        outputLine(i, "low");
+        io.outputLine(i, "low");
     } else {
-        outputLine(i, "high");
+        io.outputLine(i, "high");
     }
     i = i + 1;
 }

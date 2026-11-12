@@ -2,7 +2,7 @@
   "name": "report-missing-argument",
   "source": {
     "file": "001-001-report-missing-argument.lts",
-    "hash": "sha256:251d478c9ff04f740ce8368491106f99e38ce9859a74090e81d77426534e5495"
+    "hash": "sha256:7213492ad618a857f969260944a107bfc4a1ebef02a16f53309189c6f4c35116"
   },
   "cases": [
     {

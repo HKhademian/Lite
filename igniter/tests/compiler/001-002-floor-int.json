@@ -2,7 +2,7 @@
   "name": "floor-int",
   "source": {
     "file": "001-002-floor-int.lts",
-    "hash": "sha256:ce92101a1b394d2988344c63c3a99fb3d4c33b9e80822787eebbda650dac1ef2"
+    "hash": "sha256:c23409ab1eff96f4473bd71e5267bdceb16a2300e25a21a1b9e98e7024725d29"
   },
   "cases": [
     {

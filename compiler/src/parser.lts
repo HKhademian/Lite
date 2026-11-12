@@ -1,13 +1,14 @@
 /* Lite-written parser core. */
 
-lexer := import "lexer.lts";
-numeric := import "numeric-literals.lts";
-text := import "../../lib/core/text.lts";
-diag := import "../../lib/core/diag.lts";
-format := import "../../lib/core/format.lts";
-
+lexer := import "./lexer.lts";
+numeric := import "./numeric-literals.lts";
+diag := import "core/diag";
+format := import "core/format";
+io := import "core/io";
+textLib := import "core/text";
 
 /** One flat parse node: kind, name, detail text and source position. */
+list := import "core/list";
 pub Node := type (kind: String, name: String, detail: String, offset: Int, line: Int, column: Int);
 
 /** Parse nodes in source order. */
@@ -128,8 +129,8 @@ quotedText := fn(text: String): String {
     escaped := lexer.escapedTokenText(text);
     var result := "";
     var index := 0;
-    loop index < textLength(escaped) {
-        ch := textAt(escaped, index);
+    loop index < textLib.length(escaped) {
+        ch := textLib.at(escaped, index);
         if ch == "\"" { result = result + "\\\""; } else { result = result + ch; }
         index = index + 1;
     }
@@ -409,7 +410,7 @@ pub parseDeclarations := fn(tokens: lexer.Tokens, prefix: String): Nodes {
         token := tokenAt(tokens, cursor);
         if token.kind == lexer.TOKEN_KIND_EOF() { break; }
         parsed := parseDeclaration(tokens, cursor, prefix);
-        push_back(mut nodes, (kind = NODE_KIND_DECLARATION(), name = parsed.name, detail = parsed.detail,
+        list.pushBack(mut nodes, (kind = NODE_KIND_DECLARATION(), name = parsed.name, detail = parsed.detail,
             offset = parsed.offset, line = parsed.line, column = parsed.column));
         cursor = parsed.next;
     }
@@ -592,7 +593,7 @@ pub parseBlock := fn(tokens: lexer.Tokens, index: Int, prefix: String, closed: B
 pub parseProgram := fn(tokens: lexer.Tokens, prefix: String): Nodes {
     parsed := parseBlock(tokens, 0, prefix, false);
     nodes: mut List<Node> = [];
-    push_back(mut nodes, (kind = NODE_KIND_PROGRAM(), name = "", detail = parsed.text, offset = 0, line = 1, column = 1));
+    list.pushBack(mut nodes, (kind = NODE_KIND_PROGRAM(), name = "", detail = parsed.text, offset = 0, line = 1, column = 1));
     nodes
 }
 
@@ -622,7 +623,7 @@ pub parseTypeDeclarations := fn(tokens: lexer.Tokens, prefix: String): Nodes {
         token := tokenAt(tokens, cursor);
         if token.kind == lexer.TOKEN_KIND_EOF() { break; }
         parsed := parseTypeAlias(tokens, cursor, prefix);
-        push_back(mut nodes, (kind = NODE_KIND_TYPE_ALIAS(), name = parsed.name, detail = parsed.detail,
+        list.pushBack(mut nodes, (kind = NODE_KIND_TYPE_ALIAS(), name = parsed.name, detail = parsed.detail,
             offset = parsed.offset, line = parsed.line, column = parsed.column));
         cursor = parsed.next;
     }
@@ -638,7 +639,7 @@ dumpNode := fn(node: Node): String {
 /** Reports parsed nodes in source order, one per line. */
 pub dumpNodes := fn(nodes: Nodes): Unit {
     loop nodes as node {
-        outputLine(dumpNode(node));
+        io.outputLine(dumpNode(node));
     }
 }
 

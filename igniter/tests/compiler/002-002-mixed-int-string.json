@@ -2,7 +2,7 @@
   "name": "mixed-int-string",
   "source": {
     "file": "002-002-mixed-int-string.lts",
-    "hash": "sha256:b4665b8cbb33c50a4df3fe70c2652fa5c0876b6c7de1a437d63ba47f9ceafc93"
+    "hash": "sha256:8a2f175eb78d6b188e19b9d21a8f4fa2fd07ec6dbf4b094946512f6c6f3c7b1b"
   },
   "cases": [
     {
@@ -12,8 +12,8 @@
         "hash": "sha256:e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
       },
       "stderr": {
-        "text": "1:14: cannot mix Int and String operands\n",
-        "hash": "sha256:86feddefcbe7070c51317cc75273e2fa88caf864b585918fe1d0c63a946f156b"
+        "text": "3:17: cannot mix Int and String operands\n",
+        "hash": "sha256:e6158803ef9d0612eb43935b991196ce665e46d7bbf35749d56ab216e48f45ee"
       },
       "exitCode": 2
     }

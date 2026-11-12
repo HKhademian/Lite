@@ -2,7 +2,7 @@
   "name": "report-in-loop",
   "source": {
     "file": "001-007-report-in-loop.lts",
-    "hash": "sha256:2841cc6bf50eb38079e1ac7732476b9a9a8ab5df0a59732313d31505df52767d"
+    "hash": "sha256:7ed3625fc1d557ef4ddaa1944520194c4b3219c829e39681a5a058d72e14ab12"
   },
   "cases": [
     {

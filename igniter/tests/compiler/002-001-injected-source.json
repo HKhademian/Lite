@@ -2,7 +2,7 @@
   "name": "injected-source",
   "source": {
     "file": "002-001-injected-source.lts",
-    "hash": "sha256:534c70b01d5e45b7ef2b2c07da9d89cd129e7279cf32e6f730b2cf337a068643"
+    "hash": "sha256:c169262f93c1b86897922c22ede011ba68a5874f900a318e62f03bde820b166e"
   },
   "cases": [
     {
@@ -12,8 +12,8 @@
         "hash": "sha256:e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
       },
       "stderr": {
-        "text": "1:17: unterminated string literal\n",
-        "hash": "sha256:afae01ae743764c2de64d565ec5febf43b56853bcf2258d8003c10dbc82d780a"
+        "text": "3:20: unterminated string literal\n",
+        "hash": "sha256:443dc72445ccb68699f0820e2628250ae4fd29d45ed2d7bf61d129b6c6475d10"
       },
       "exitCode": 2
     }

@@ -1,7 +1,9 @@
+io := import "core/io";
+
 var i := 0;
 var total := 0;
 loop i < 5 {
     total = total + i;
     i = i + 1;
 }
-outputLine(total);
+io.outputLine(total);

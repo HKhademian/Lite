@@ -1,6 +1,6 @@
-integer := import "../core/int.lts";
-list := import "../core/list.lts";
-test := import "../core/test.lts";
+integer := import "core/int";
+list := import "core/list";
+test := import "core/test";
 
 texts: List<String> = ["a", "b", "c"];
 test.checkInt("list index text", 1, list.listIndexOfText(texts, "b"));

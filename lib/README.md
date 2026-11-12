@@ -10,11 +10,11 @@ the language specification. Names and signatures may change with the compiler.
 |---|---|
 | `core/io.lts` | Public host signatures for output, outputLine and errorLine; target support matches current builtins |
 | `core/int.lts` | Int64 bounds, checked arithmetic, decimal formatting |
-| `core/text.lts` | ASCII predicates, whitespace/name skipping, starts-with, index-of, join, text-to-Int |
+| `core/text.lts` | Public length/at/slice operations plus ASCII predicates, whitespace/name skipping, starts-with, index-of, join, text-to-Int |
 | `core/source.lts` | offset clamping, line/column, line start/end/count helpers |
 | `core/diag.lts` | prefix-aware `fail`/`expect` diagnostics and exit status |
 | `core/format.lts` | decimal text, padding and Int-join helpers |
-| `core/list.lts` | specialized index-of/contains for supported element types |
+| `core/list.lts` | specialized index-of/contains plus source-visible, bodyless `fn<T>` signatures for the two registered `pushBack`/`popBack` intrinsics |
 | `core/test.lts` | assertions for Lite test entries |
 
 Rules:

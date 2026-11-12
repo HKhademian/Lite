@@ -1,5 +1,8 @@
 /* TypeScript backend for the temporary Lite compiler. */
-integer := import "../../lib/core/int.lts";
+
+integer := import "core/int";
+textLib := import "core/text";
+
 /** Maps a restricted Lite scalar kind to its TypeScript type. */
 pub tsScalarType := fn(kind: String): String {
     if kind == "Int" { "bigint" }
@@ -18,11 +21,11 @@ pub intLiteralCode := fn(value: Int, negative: Bool, digits: String): String {
 
 /** Escapes a String as a readable TypeScript double-quoted literal. */
 pub textLiteralCode := fn(value: String): String {
-    size := textLength(value);
+    size := textLib.length(value);
     var encoded := "\"";
     var position := 0;
     loop position < size {
-        ch := textAt(value, position);
+        ch := textLib.at(value, position);
         if ch == "\\" { encoded = encoded + "\\\\"; }
         else if ch == "\"" { encoded = encoded + "\\\""; }
         else if ch == "\n" { encoded = encoded + "\\n"; }

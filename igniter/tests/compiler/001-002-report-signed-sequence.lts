@@ -1,3 +1,5 @@
-outputLine(0);
-outputLine(-42);
-outputLine(+100);
+io := import "core/io";
+
+io.outputLine(0);
+io.outputLine(-42);
+io.outputLine(+100);

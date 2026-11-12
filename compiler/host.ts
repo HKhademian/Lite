@@ -5,7 +5,7 @@ import { existsSync, mkdirSync, mkdtempSync, readFileSync, realpathSync, renameS
 import { dirname, join, relative, resolve, sep } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { loadManifest } from '../igniter/loader.ts';
-import { readSourceInput } from './source.ts';
+import { readSourceInput, resolveImportPath, sourceModuleIdentity } from './source.ts';
 import { seed } from './bootstrap/seed.ts';
 
 /** Existing code-generation targets; this is host plumbing, not language syntax. */
@@ -14,7 +14,7 @@ export type CompilerTarget = 'ts' | 'c';
 /** Raw streams and process-style status from a compiler invocation. */
 export type CompilerResult = Readonly<{ status: number; stdout: Buffer; stderr: Buffer }>;
 /** Complete source plus an optional diagnostic name. */
-export type CompilerInput = Readonly<{ text: string; name?: string }>;
+export type CompilerInput = Readonly<{ text: string; name?: string; cwd?: string }>;
 /** Selected artifact and exact source/builder identities. */
 export type CompilerBuild = Readonly<{ target: CompilerTarget; path: string; sourceSha256: string; artifactSha256: string; builderSha256: string; dependencies: readonly string[]; cached: boolean }>;
 type DependencyIdentity = Readonly<{ path: string; sha256: string }>;
@@ -37,9 +37,10 @@ function selectBuild(indexPath: string, indexDirectory: string, target: Compiler
 }
 
 /** Executes one generated compiler with isolated process state and no stage-0 fallback. */
-function invoke(artifact: string, text: string, name?: string): CompilerResult {
-  const result = spawnSync(process.execPath, [entryPath, artifact, ...(name === undefined ? [] : [name])], {
-    input: text, timeout: 0, maxBuffer: 128 * 1024 * 1024,
+function invoke(artifact: string, text: string, name?: string, cwd = process.cwd()): CompilerResult {
+  const rootPath = name === undefined || name === '' ? resolve(cwd, '__lite_stdin__.lts') : resolve(cwd, name);
+  const result = spawnSync(process.execPath, [entryPath, artifact, name ?? '', sourceModuleIdentity(text), rootPath], {
+    input: text, cwd, timeout: 0, maxBuffer: 128 * 1024 * 1024,
   });
   if (result.error !== undefined) throw result.error;
   if (result.signal !== null || result.status === null) throw new Error(`generated compiler terminated: ${result.signal ?? 'no exit status'}`);
@@ -47,9 +48,10 @@ function invoke(artifact: string, text: string, name?: string): CompilerResult {
 }
 
 /** Compiles a source root and captures the dependency paths actually read by the Lite graph visitor on fd 3. */
-function invokeGraph(artifact: string, text: string, name: string): Readonly<{ result: CompilerResult; dependencies: readonly DependencyIdentity[]; edges: readonly SourceEdge[] }> {
-  const processResult = spawnSync(process.execPath, [entryPath, artifact, name], {
-    input: text, timeout: 0, maxBuffer: 128 * 1024 * 1024,
+function invokeGraph(artifact: string, text: string, name: string, cwd = process.cwd()): Readonly<{ result: CompilerResult; dependencies: readonly DependencyIdentity[]; edges: readonly SourceEdge[] }> {
+  const rootPath = name === '' ? resolve(cwd, '__lite_stdin__.lts') : resolve(cwd, name);
+  const processResult = spawnSync(process.execPath, [entryPath, artifact, name, sourceModuleIdentity(text), rootPath], {
+    input: text, cwd, timeout: 0, maxBuffer: 128 * 1024 * 1024,
     env: { ...process.env, LITE_SOURCE_TRACE: '1' }, stdio: ['pipe', 'pipe', 'pipe', 'pipe'],
   });
   if (processResult.error !== undefined) throw processResult.error;
@@ -107,7 +109,7 @@ function cachedBuild(directory: string, sourceSha256: string, target: CompilerTa
   for (const edge of edges) {
     const importer = resolve(root, edge.importer);
     const imported = resolve(root, edge.path);
-    if (realpathSync(resolve(dirname(importer), edge.spec)) !== realpathSync(imported)) {
+    if (realpathSync(resolveImportPath(importer, edge.spec, root)) !== realpathSync(imported)) {
       throw new Error(`compiler import edge changed during cache selection: ${edge.importer}: ${edge.spec}`);
     }
   }
@@ -128,8 +130,10 @@ export function buildCompiler(target: CompilerTarget): CompilerBuild {
   const cache = resolve(root, 'dist/compiler-cache');
   const sourceRootSha256 = hash(input.bytes);
   const sourceName = relative(root, sourcePath).split(sep).join('/');
-  const sourceBridgeSha256 = hash(readFileSync(entryPath));
-  const indexKey = hash(`trace-v4:${target}:${seed.artifactSha256}:${sourceName}:${sourceRootSha256}:${sourceBridgeSha256}`);
+  const sourceBridgeSha256 = hash(JSON.stringify([
+    hash(readFileSync(entryPath)), hash(readFileSync(resolve(root, 'compiler/source.ts'))),
+  ]));
+  const indexKey = hash(`trace-v5:${target}:${seed.artifactSha256}:${sourceName}:${sourceRootSha256}:${sourceBridgeSha256}`);
   const indexDirectory = join(cache, 'selection');
   const indexPath = join(indexDirectory, `${indexKey}.json`);
   if (existsSync(indexPath)) {
@@ -162,16 +166,16 @@ export function buildCompiler(target: CompilerTarget): CompilerBuild {
     const edgesValid = edges.every(edge => {
       try { return typeof edge.importer === 'string' && typeof edge.spec === 'string' && typeof edge.path === 'string' &&
         dependencyPaths.has(edge.importer) && dependencyPaths.has(edge.path) &&
-        realpathSync(resolve(root, dirname(edge.importer), edge.spec)) === realpathSync(resolve(root, edge.path)); }
+        realpathSync(resolveImportPath(resolve(root, edge.importer), edge.spec, root)) === realpathSync(resolve(root, edge.path)); }
       catch { return false; }
     });
-    if (valid && edgesValid) return cachedBuild(join(cache, index.cacheKey), hash(JSON.stringify({ version: 4, sourceName, sourceBridgeSha256, dependencyHashes, edges })), target, dependencies, dependencyHashes, edges);
+    if (valid && edgesValid) return cachedBuild(join(cache, index.cacheKey), hash(JSON.stringify({ version: 5, sourceName, sourceBridgeSha256, dependencyHashes, edges })), target, dependencies, dependencyHashes, edges);
   }
   mkdirSync(cache, { recursive: true });
   const temporary = mkdtempSync(join(cache, 'build-'));
   try {
     const sourceName = relative(root, sourcePath).split(sep).join('/');
-    const traced = invokeGraph(seedPath, input.text, sourceName);
+    const traced = invokeGraph(seedPath, input.text, sourceName, root);
     const generated = traced.result;
     if (generated.status !== 0 || generated.stderr.length !== 0) {
       const diagnostic = generated.stderr.toString('utf8');
@@ -195,7 +199,7 @@ export function buildCompiler(target: CompilerTarget): CompilerBuild {
       path: relative(root, edge.path).split(sep).join('/'),
     }));
     const dependencies = dependencyHashes.map(identity => identity.path);
-    const sourceSha256 = hash(JSON.stringify({ version: 4, sourceName, sourceBridgeSha256, dependencyHashes, edges }));
+    const sourceSha256 = hash(JSON.stringify({ version: 5, sourceName, sourceBridgeSha256, dependencyHashes, edges }));
     if (target === 'ts' && sourceSha256 === seed.sourceSha256) {
       const artifactSha256 = hash(generated.stdout);
       if (artifactSha256 !== seed.artifactSha256) {
@@ -238,7 +242,7 @@ export function buildTsCompiler(): CompilerBuild { return buildCompiler('ts'); }
 
 /** Compiles one whole Lite source with a current Lite-written target compiler. */
 export function compileBuiltCompiler(build: CompilerBuild, input: CompilerInput): CompilerResult {
-  return invoke(build.path, input.text, input.name);
+  return invoke(build.path, input.text, input.name, input.cwd ?? process.cwd());
 }
 
 /** Selects the current graph then compiles one whole Lite source. */

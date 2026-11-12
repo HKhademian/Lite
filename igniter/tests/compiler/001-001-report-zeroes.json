@@ -2,7 +2,7 @@
   "name": "report-zeroes",
   "source": {
     "file": "001-001-report-zeroes.lts",
-    "hash": "sha256:ed5dd9e3531191414fc45aa71d78bae68e9568cb59e0b26d57f2f764275a81b5"
+    "hash": "sha256:b2c55b490b9b8452c47d124a8909205dfca228069fe619558fd466f6baba42e4"
   },
   "cases": [
     {

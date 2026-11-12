@@ -2,7 +2,7 @@
   "name": "local-dependencies",
   "source": {
     "file": "001-003-local-dependencies.lts",
-    "hash": "sha256:b926ebd38e871c2ed919c839d660c1d1af6c24b420d419151925fb2bf31f6b22"
+    "hash": "sha256:57d4ac235e9062a32573323e367a3413456b6606da31cda073d2d3aae252a229"
   },
   "cases": [
     {

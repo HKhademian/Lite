@@ -1,9 +1,12 @@
 /** Recorded corpus contracts and generated TS execution; no live interpreter. */
 import { readFileSync } from 'node:fs';
-import { join } from 'node:path';
+import { spawnSync } from 'node:child_process';
+import { join, resolve } from 'node:path';
+import { tmpdir } from 'node:os';
 import { buildCompiler } from '../host.ts';
-import { prepareTsArtifacts, type ArtifactRun } from '../../igniter/artifacts.ts';
+import { checkTsArtifact, prepareTsArtifacts, type ArtifactRun } from '../../igniter/artifacts.ts';
 import { compilerFixtures, type CompilerFixture } from '../../igniter/test-fixtures.ts';
+import { sourceModuleIdentity } from '../source.ts';
 import { repository, hashBytes } from './tooling.ts';
 
 export type ArtifactContract = Readonly<{ ts: string; c: string }>;
@@ -25,20 +28,35 @@ export function compilerContractMatches(fixture: CompilerFixture, result: Pick<A
 /** Compile each distinct source and then strictly check/run every admitted scenario. */
 export function validateCorpus(artifact: string): { cases: number; programs: number; rejections: number; executions: number; mismatches: string[] } {
   const { fixtures, artifacts } = corpusContracts();
-  const compiler = prepareTsArtifacts([artifact]);
+  const checked = checkTsArtifact(readFileSync(artifact, 'utf8'));
+  if (checked.status !== 0 || checked.signal !== null) throw new Error(`strict compiler check failed:\n${checked.stdout}${checked.stderr}`);
   const programs: { fixture: CompilerFixture; source: string }[] = []; const mismatches: string[] = [];
   const compiled = new Map<string, ArtifactRun>();
   let rejections = 0;
-  try {
-    if (compiler.checked.status !== 0 || compiler.checked.signal !== null) throw new Error(`strict compiler check failed:\n${compiler.checked.stdout}${compiler.checked.stderr}`);
-    for (const fixture of fixtures) {
-      let actual = compiled.get(fixture.source);
-      if (actual === undefined) { actual = compiler.runs[0]!({ stdin: fixture.source }); compiled.set(fixture.source, actual); }
-      if (!compilerContractMatches(fixture, actual, artifacts)) { mismatches.push(fixture.file + '/' + fixture.caseName + ': compiler contract'); continue; }
-      if (fixture.category === 'rejected') rejections += 1;
-      else programs.push({ fixture, source: actual.stdout.toString() });
+  for (const fixture of fixtures) {
+    const sourcePath = resolve(repository, 'igniter/tests/compiler', fixture.sourcePath ?? fixture.file.replace(/\.json$/, '.lts'));
+    const key = sourcePath + '\0' + fixture.source;
+    let actual = compiled.get(key);
+    if (actual === undefined) {
+      const result = spawnSync(process.execPath, [join(repository, 'compiler/entry.ts'), resolve(artifact), '',
+        sourceModuleIdentity(Buffer.from(fixture.source, 'utf8')), sourcePath], {
+        cwd: tmpdir(), input: fixture.source, timeout: 10000, maxBuffer: 16 * 1024 * 1024,
+      });
+      if (result.error !== undefined) throw result.error;
+      actual = { phase: 'run', status: result.status, signal: result.signal,
+        stdout: result.stdout ?? Buffer.alloc(0), stderr: result.stderr ?? Buffer.alloc(0) };
+      compiled.set(key, actual);
     }
-  } finally { compiler.dispose(); }
+    if (!compilerContractMatches(fixture, actual, artifacts)) {
+      const detail = fixture.category === 'rejected'
+        ? `status ${actual.status}, stderr ${JSON.stringify(actual.stderr.toString())}`
+        : `artifact ${hashBytes(actual.stdout)}, expected ${artifacts.get(fixture.name)?.ts}`;
+      mismatches.push(fixture.file + '/' + fixture.caseName + `: compiler contract (${detail})`);
+      continue;
+    }
+    if (fixture.category === 'rejected') rejections += 1;
+    else programs.push({ fixture, source: actual.stdout.toString() });
+  }
   const distinctPrograms = [...new Set(programs.map(item => item.source))];
   const executableIndex = new Map(distinctPrograms.map((source, i) => [source, i]));
   const executables = prepareTsArtifacts(distinctPrograms);

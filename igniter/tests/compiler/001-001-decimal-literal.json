@@ -2,7 +2,7 @@
   "name": "decimal-literal",
   "source": {
     "file": "001-001-decimal-literal.lts",
-    "hash": "sha256:56a8fa4107b78604b8fb439df19ca7794276ae6b2ae7ef53ec076032216339c5"
+    "hash": "sha256:da496c4a751ae79abf37633ec1ff1eb04301a187a42ee18abfb573ea003506f6"
   },
   "cases": [
     {

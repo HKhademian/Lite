@@ -2,7 +2,7 @@
   "name": "division-by-zero",
   "source": {
     "file": "001-011-division-by-zero.lts",
-    "hash": "sha256:393a66a6ac176247595c66d38f7bba079d14a2295f28a2e4017945dff4ae928d"
+    "hash": "sha256:5149299aa9abffc8e75a7482cc42a4052bfcbc870431a63eb2163c09672cb0b4"
   },
   "cases": [
     {
@@ -12,8 +12,8 @@
         "hash": "sha256:e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
       },
       "stderr": {
-        "text": "1:14: ArithmeticPanic: division by zero\n",
-        "hash": "sha256:0cdf3e25c80c04cfe1a08e82a4595468222beb0f13200aba253c99c212e95104"
+        "text": "3:17: ArithmeticPanic: division by zero\n",
+        "hash": "sha256:a3512386551d22e840067fce7996f91ca4be40b00a83df78ba87aae56bb4abcd"
       },
       "exitCode": 1
     }

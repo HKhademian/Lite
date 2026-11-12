@@ -24,6 +24,7 @@ const cManifestPath = new URL('../compiler/manifests/c.json', import.meta.url).p
 const lexerDumpPath = new URL('../compiler/tests/lexer/lexer-dump.lts', import.meta.url).pathname;
 const parserProgramDumpPath = new URL('../compiler/tests/parser/parser-program-dump.lts', import.meta.url).pathname;
 const checkerDumpPath = new URL('../compiler/tests/checker/checker-dump.lts', import.meta.url).pathname;
+const parserProgramInputs = JSON.parse(readFileSync(new URL('./tests/parser-inputs.json', import.meta.url), 'utf8')) as Record<string, string>;
 
 type TestCompiler = Readonly<{ target: ReturnType<typeof loadManifest>['target']; compile: (input: CompilerInput) => CompilerResult }>;
 const compilerInstances = new Map<string, TestCompiler>();
@@ -179,7 +180,7 @@ test('Lite parser parses functions, loops and statements', () => {
   assert.deepEqual(runFile(parserProgramDumpPath, source), { code: 0, output: expected, errors: '' });
 });
 
-test('Lite parser parses L0 libraries and every program case', () => {
+test('Lite parser parses L0 libraries and original program cases', () => {
   const root = new URL('../', import.meta.url).pathname;
   const runParser = (input: string) => runFile(parserProgramDumpPath, input);
   for (const path of ['lib/core/int.lts', 'lib/core/text.lts', 'lib/core/source.lts',
@@ -188,8 +189,11 @@ test('Lite parser parses L0 libraries and every program case', () => {
     const result = compileTs({ text: readFileSync(sourcePath, 'utf8'), name: realpathSync(sourcePath) });
     assert.equal(result.status, 0, `${path}: ${result.stderr.toString()}`);
   }
+  assert.deepEqual(Object.keys(parserProgramInputs).sort(), programFixtures.map(({ file }) => file).sort());
   for (const fixture of programFixtures) {
-    const result = runParser(fixture.source);
+    const source = parserProgramInputs[fixture.file];
+    assert.equal(typeof source, 'string', `${fixture.file}: missing original parser input`);
+    const result = runParser(source!);
     assert.equal(result.code, 0, `${fixture.name}: ${result.errors}`);
     assert.equal(result.errors, '', fixture.name);
   }
@@ -221,8 +225,11 @@ test('Lite parser coverage follows the compiler source graph', context => {
   }
   withGeneratedDriver(parserProgramDumpPath, runParser => {
     const fixture = readFileSync(new URL('../compiler/tests/parser/program.lts', import.meta.url), 'utf8');
-    assert.deepEqual(runParser(fixture), expectedFile(parserProgramDumpPath, fixture));
-    assert.deepEqual(runParser('match x { _ => 1 }'), expectedFile(parserProgramDumpPath, 'match x { _ => 1 }'));
+    const expected = readFileSync(new URL('../compiler/tests/parser/program.nodes', import.meta.url), 'utf8');
+    assert.deepEqual(runParser(fixture), { code: 0, output: expected, errors: '' });
+    assert.deepEqual(runParser('match x { _ => 1 }'), {
+      code: 2, output: '', errors: '1:1: unsupported feature "match"\n',
+    });
     const selected = buildCompiler('ts');
     for (const file of selected.dependencies) {
       const sourcePath = resolve(new URL('../', import.meta.url).pathname, file);
@@ -278,9 +285,9 @@ test('Lite checker collects value bindings and rejects unsupported duplicate sym
     ['values: List<Int> = [1, 2]; x: String = values[0];\n',
       '1:29: cannot initialize String with Int\n'],
     ['values: List<Int> = ["bad"];\n', '1:1: cannot initialize List<Int> with List<String>\n'],
-    ['values: List<Int> = []; push_back(mut values, 1);\n',
+    ["list := import \"core/list\"; values: List<Int> = []; list.pushBack(mut values, 1);\n",
       '1:39: cannot mutate list values without mut\n'],
-    ['values: mut List<Int> = []; push_back(values, 1);\n',
+    ["list := import \"core/list\"; values: mut List<Int> = []; list.pushBack(values, 1);\n",
       '1:29: push_back requires mut list argument\n'],
   ] as const) {
     assert.deepEqual(expectedFile(checkerDumpPath, bad), { code: 2, output: '', errors }, bad);
@@ -291,7 +298,7 @@ test('Lite checker collects value bindings and rejects unsupported duplicate sym
     'f := fn(value: Int): (value: Int, ok: Bool) { (value = value, ok = true) }\n',
     'f := fn(a: Int, b: Int): Int { a + b }\ng := fn(): Int { f(1, 2) }\n',
     'f := fn(): Int { 1 }\ng := fn(): Int { f() }\n',
-    'values: List<Int> = [1, 2];\nf := fn(): Int { loop values as value { outputLine(value); } 1 }\n',
+    "io := import \"core/io\"; values: List<Int> = [1, 2];\nf := fn(): Int { loop values as value { io.outputLine(value); } 1 }\n",
     'x: Int = 42;\n',
     'f := fn(a: Int): Int { a }\ng := fn(): Int { f(1) }\n',
     'f := fn(a: String): Int { 1 }\ng := fn(): Int { f("ok") }\n',
@@ -301,7 +308,7 @@ test('Lite checker collects value bindings and rejects unsupported duplicate sym
     'values: List<Int> = [1, 2]; x: Int = values[0];\n',
     'values: List<String> = ["ok", "yes"];\n',
     'values: List<Int> = [];\n',
-    'values: mut List<Int> = []; push_back(mut values, 1);\n',
+    "list := import \"core/list\"; values: mut List<Int> = []; list.pushBack(mut values, 1);\n",
     'x := 1; x := 2;\n',
     'x := 1; x := \"value\";\n',
     'f := fn(): Int { x := 1; x := 2; x }\n',
@@ -358,14 +365,14 @@ test('Lite parser parses type aliases and rejects malformed types', () => {
 });
 test('compiler applications preserve optional logical source names in their own diagnostics only', () => {
   for (const manifest of [tsManifestPath, cManifestPath]) {
-    const expected = runCompiler(manifest, 'outputLine(42);').output;
+    const expected = runCompiler(manifest, "io := import \"core/io\"; io.outputLine(42);").output;
     for (const label of ['', 'a b.lts', 'سلام🙂.lts', 'quote";\\\nname.lts']) {
-      assert.deepEqual(runCompiler(manifest, 'outputLine(42);', label), { code: 0, output: expected, errors: '' });
-      assert.deepEqual(runCompiler(manifest, 'outputLine(1 +);', label), {
-        code: 2, output: '', errors: (label === '' ? '' : label + ':') + '1:15: expected an Int, Float, String or Bool expression\n',
+      assert.deepEqual(runCompiler(manifest, "io := import \"core/io\"; io.outputLine(42);", label), { code: 0, output: expected, errors: '' });
+      assert.deepEqual(runCompiler(manifest, "io := import \"core/io\"; io.outputLine(1 +);", label), {
+        code: 2, output: '', errors: (label === '' ? '' : label + ':') + '1:42: expected an Int, Float, String or Bool expression\n',
       });
     }
-    assert.deepEqual(runCompiler(manifest, 'outputLine(1 +);'), { code: 2, output: '', errors: '1:15: expected an Int, Float, String or Bool expression\n' });
+    assert.deepEqual(runCompiler(manifest, "io := import \"core/io\"; io.outputLine(1 +);"), { code: 2, output: '', errors: '1:42: expected an Int, Float, String or Bool expression\n' });
     const target = loadManifest(manifest).target;
     withTsArtifact(readFileSync(buildCompiler(target).path, 'utf8'), execute => {
       // Malformed stdin would fault if decoded before the argument-count rejection.
@@ -383,7 +390,7 @@ test('lite and compiler commands route through the compiler and selected target'
   const directory = mkdtempSync(join(tmpdir(), 'litec-'));
   try {
     const sourcePath = join(directory, 'sample.lts');
-    writeFileSync(sourcePath, 'outputLine(42);');
+    writeFileSync(sourcePath, "io := import \"core/io\"; io.outputLine(42);");
     const ts = spawnSync(join(root, 'bin/lite-compile'), ['--target', 'ts', sourcePath], { env, timeout: 5000 });
     assert.equal(ts.error, undefined); assert.equal(ts.status, 0, ts.stderr.toString());
     assert.deepEqual(ts.stdout, readFileSync(join(root, 'compiler/tests/references/generated/report-42.ts')));
@@ -398,13 +405,13 @@ test('lite and compiler commands route through the compiler and selected target'
     assert.equal(validCheck.error, undefined); assert.equal(validCheck.status, 0);
     assert.equal(validCheck.stdout.length, 0); assert.equal(validCheck.stderr.length, 0);
     const invalidPath = join(directory, 'bad.lts');
-    writeFileSync(invalidPath, 'outputLine(1 +);\n');
+    writeFileSync(invalidPath, "io := import \"core/io\"; io.outputLine(1 +);\n");
     const invalid = spawnSync(join(root, 'bin/lite-compile-ts'), [invalidPath], { env, timeout: 5000 });
     assert.equal(invalid.status, 2); assert.equal(invalid.stdout.length, 0);
-    assert.deepEqual(invalid.stderr, Buffer.from(`${invalidPath}:1:15: expected an Int, Float, String or Bool expression\n`));
+    assert.deepEqual(invalid.stderr, Buffer.from(`${invalidPath}:1:42: expected an Int, Float, String or Bool expression\n`));
     const invalidCheck = spawnSync(join(root, 'bin/lite'), ['check', invalidPath], { env, timeout: 5000 });
     assert.equal(invalidCheck.status, 1); assert.equal(invalidCheck.stdout.length, 0);
-    assert.match(invalidCheck.stderr.toString(), /bad\.lts:1:15: expected an Int, Float, String or Bool expression/);
+    assert.match(invalidCheck.stderr.toString(), /bad\.lts:1:42: expected an Int, Float, String or Bool expression/);
     for (const args of [[], ['--target', 'x', sourcePath], ['ts', join(directory, 'missing.lts')],
       ['ts', join(directory, 'sample.txt')]]) {
       const bad = spawnSync(join(root, 'bin/lite-compile-ts'), args, { env, timeout: 5000 });
@@ -417,8 +424,8 @@ test('lite help and docs expose the command matrix and documentation roots', () 
   const env = { ...process.env, PATH: dirname(process.execPath) + delimiter + (process.env['PATH'] ?? '') };
   const help = spawnSync(join(root, 'bin/lite'), ['help'], { env, encoding: 'utf8', timeout: 5000 });
   assert.equal(help.error, undefined); assert.equal(help.status, 0);
-  assert.match(help.stdout, /Usage: \.\/lite <command>/);
-  assert.match(help.stdout, /Compiler entry points: \.\/bin\/lite-compile, \.\/lite compile/);
+  assert.match(help.stdout, /Usage: \.\/bin\/lite <command>/);
+  assert.match(help.stdout, /Compiler entry points: \.\/bin\/lite-compile, \.\/bin\/lite compile/);
   assert.match(help.stdout, /test \[--smoke\|--fast\|--full\].*\[--verbose\|--mute\|--silence\]/);
   assert.equal(help.stderr, '');
   const docs = spawnSync(join(root, 'bin/lite'), ['docs'], { env, encoding: 'utf8', timeout: 5000 });
@@ -542,11 +549,11 @@ test('bundle compilers reproduce every compiler case with exact artifacts and di
     }
   }
   const label = 'named source.lts';
-  assert.deepEqual(tsCompiler.compile({ text: 'outputLine(42);', name: label }), {
+  assert.deepEqual(tsCompiler.compile({ text: "io := import \"core/io\"; io.outputLine(42);", name: label }), {
     status: 0, stdout: readFileSync(new URL('../compiler/tests/references/generated/report-42.ts', import.meta.url)), stderr: Buffer.alloc(0),
   });
-  assert.deepEqual(tsCompiler.compile({ text: 'outputLine(1 +);', name: label }), {
-    status: 2, stdout: Buffer.alloc(0), stderr: Buffer.from(`${label}:1:15: expected an Int, Float, String or Bool expression\n`),
+  assert.deepEqual(tsCompiler.compile({ text: "io := import \"core/io\"; io.outputLine(1 +);", name: label }), {
+    status: 2, stdout: Buffer.alloc(0), stderr: Buffer.from(`${label}:1:42: expected an Int, Float, String or Bool expression\n`),
   });
 });
 
@@ -694,7 +701,7 @@ test('TS runtime helpers preserve checked Int64, text and list semantics', () =>
 });
 
 test('restricted compiler accepts typed scalar locals without changing existing cases', async context => {
-  const source = 'x: Int = 1;\ns: String = "a";\nb: Bool = true;\ny: Int;\noutputLine(x, s, b, y);\nvar z: Int = 2;\nz = 3;\noutputLine(z);\n';
+  const source = "io := import \"core/io\"; x: Int = 1;\ns: String = \"a\";\nb: Bool = true;\ny: Int;\nio.outputLine(x, s, b, y);\nvar z: Int = 2;\nz = 3;\nio.outputLine(z);\n";
   const ts = runCompiler(tsManifestPath, source);
   assert.equal(ts.code, 0, ts.errors);
   assert.deepEqual(runTsArtifact(ts.output), {
@@ -740,7 +747,7 @@ test('restricted compiler resolves transparent scalar aliases', async context =>
     's: Word = "ok";',
     'b: Flag = true;',
     'z: Forward = 3;',
-    'outputLine(x, y, s, b, add(x, y), echo(s), z);',
+    "io := import \"core/io\"; io.outputLine(x, y, s, b, add(x, y), echo(s), z);",
     'noop();',
   ].join('\n');
   const ts = runCompiler(tsManifestPath, source);
@@ -763,7 +770,7 @@ test('restricted compiler resolves transparent scalar aliases', async context =>
     's: Word = "ok";',
     'b: Flag = true;',
     'z: Forward = 3;',
-    'outputLine(x, y, s, b, z);',
+    "io := import \"core/io\"; io.outputLine(x, y, s, b, z);",
   ].join('\n');
   if (process.env['LITE_SKIP_NATIVE'] !== '1') {
     const cc = process.env['CC'] ?? 'cc';
@@ -798,6 +805,7 @@ test('restricted compiler resolves transparent scalar aliases', async context =>
 
 test('restricted compiler compiles flat named tuples and tuple functions to runnable TS', () => {
   const source = [
+    'io := import "core/io";',
     'Pair := type (kind: String, code: String);',
     'Pair2 := type Pair;',
     'rewrap := fn (value: Pair2): Pair { (kind = value.kind, code = value.code) }',
@@ -807,10 +815,10 @@ test('restricted compiler compiles flat named tuples and tuple functions to runn
     'var current := p;',
     'current = (kind = "symbol", code = "+");',
     'blank: Pair2;',
-    'outputLine(p.kind, p.code, q.kind, current.kind, current.code);',
-    'outputLine(blank.kind);',
-    'outputLine(blank.code);',
-    'outputLine(rewrap(p).kind, rewrap(p).code, label((kind = "call", code = "1")));',
+    'io.outputLine(p.kind, p.code, q.kind, current.kind, current.code);',
+    'io.outputLine(blank.kind);',
+    'io.outputLine(blank.code);',
+    'io.outputLine(rewrap(p).kind, rewrap(p).code, label((kind = "call", code = "1")));',
   ].join('\n');
   const ts = runCompiler(tsManifestPath, source);
   assert.equal(ts.code, 0, ts.errors);
@@ -822,11 +830,11 @@ test('restricted compiler compiles flat named tuples and tuple functions to runn
 
 test('restricted compiler diagnoses invalid flat named tuples clearly', () => {
   for (const [bad, errors] of [
-    ['p: (kind: String) = (kind = "a");\noutputLine(p.nope);\n', '2:14: tuple has no field nope\n'],
+    ["io := import \"core/io\"; p: (kind: String) = (kind = \"a\");\nio.outputLine(p.nope);\n", '2:14: tuple has no field nope\n'],
     ['p: (kind: String) = (kind = 1);\n', '1:1: cannot initialize (kind: String) with (kind: Int)\n'],
     ['p := (kind = 1, kind = 2);\n', '1:17: duplicate tuple field kind\n'],
     ['p: (kind: String, kind: Int) = (kind = "a", kind = 2);\n', '1:19: duplicate tuple field kind\n'],
-    ['f := fn (x: (kind: String)): String { return x.kind; }\noutputLine(f((kind = 1)));\n',
+    ["io := import \"core/io\"; f := fn (x: (kind: String)): String { return x.kind; }\nio.outputLine(f((kind = 1)));\n",
       '2:14: argument 1 of f must be (kind: String), got (kind: Int)\n'],
     ['f := fn (): (kind: String) { return (kind = 1); }\n',
       '1:37: cannot return (kind: Int) from function f returning (kind: String)\n'],
@@ -834,7 +842,7 @@ test('restricted compiler diagnoses invalid flat named tuples clearly', () => {
   ] as const) {
     assert.deepEqual(runCompiler(tsManifestPath, bad), { code: 2, output: '', errors }, bad);
   }
-  const tupleSource = 'p: (kind: String) = (kind = "a");\noutputLine(p.kind);\n';
+  const tupleSource = "io := import \"core/io\"; p: (kind: String) = (kind = \"a\");\nio.outputLine(p.kind);\n";
   assert.deepEqual(runCompiler(cManifestPath, tupleSource), {
     code: 2, output: '', errors: 'C backend does not support tuple values yet\n',
   });
@@ -842,6 +850,7 @@ test('restricted compiler diagnoses invalid flat named tuples clearly', () => {
 
 test('restricted compiler compiles growable lists, literals and indexing to runnable TS', async () => {
   const source = [
+    'io := import "core/io";',
     'Ints := type List<Int>;',
     'Chain := type Ints;',
     'Count := type Int;',
@@ -862,8 +871,8 @@ test('restricted compiler compiles growable lists, literals and indexing to runn
     'counts: Counts = [8, 9];',
     'var editable: List<Int> = [1];',
     'editable = [];',
-    'outputLine(values[1], names[0], first(more), pairs[1].kind, pairs[0].code, make()[1], copy(names)[1], count([]));',
-    'outputLine([4, 5][1], count(empty), count(none()), counts[1]);',
+    'io.outputLine(values[1], names[0], first(more), pairs[1].kind, pairs[0].code, make()[1], copy(names)[1], count([]));',
+    'io.outputLine([4, 5][1], count(empty), count(none()), counts[1]);',
   ].join('\n');
   const ts = runCompiler(tsManifestPath, source);
   assert.equal(ts.code, 0, ts.errors);
@@ -872,7 +881,7 @@ test('restricted compiler compiles growable lists, literals and indexing to runn
     stdout: Buffer.from('20 alpha 7 symbol 12 7 beta 0\n5 0 0 9\n'), stderr: Buffer.alloc(0),
   });
 
-  const bounds = runCompiler(tsManifestPath, 'values: List<Int> = [1];\noutputLine(values[1]);\n');
+  const bounds = runCompiler(tsManifestPath, "io := import \"core/io\"; values: List<Int> = [1];\nio.outputLine(values[1]);\n");
   assert.equal(bounds.code, 0, bounds.errors);
   const boundsRun = runTsArtifact(bounds.output);
   assert.equal(boundsRun.phase, 'run');
@@ -883,15 +892,15 @@ test('restricted compiler compiles growable lists, literals and indexing to runn
 test('restricted compiler diagnoses invalid list types, literals and indexes clearly', () => {
   for (const [bad, errors] of [
     ['values: List<Int> = ["bad"];\n', '1:22: list element 1 must be Int, got String\n'],
-    ['x := 1;\noutputLine(x[0]);\n', '2:13: indexing requires a list value\n'],
-    ['values: List<Int> = [1];\noutputLine(values["x"]);\n', '2:19: list index must be Int, got String\n'],
+    ["io := import \"core/io\"; x := 1;\nio.outputLine(x[0]);\n", '2:13: indexing requires a list value\n'],
+    ["io := import \"core/io\"; values: List<Int> = [1];\nio.outputLine(values[\"x\"]);\n", '2:19: list index must be Int, got String\n'],
     ['values: List<Int> = [1];\nother: List<String> = values;\n', '2:1: cannot initialize List<String> with List<Int>\n'],
     ['values := [];\n', '1:11: empty list literal requires a List element type\n'],
     ['values: List<List<Int>> = [];\n', '1:14: nested list types are not supported\n'],
   ] as const) {
     assert.deepEqual(runCompiler(tsManifestPath, bad), { code: 2, output: '', errors }, bad);
   }
-  for (const bad of ['values: List<Int> = [1];\noutputLine(1);\n', 'outputLine([1][0]);\n']) {
+  for (const bad of ["io := import \"core/io\"; values: List<Int> = [1];\nio.outputLine(1);\n", "io := import \"core/io\"; io.outputLine([1][0]);\n"]) {
     assert.deepEqual(runCompiler(cManifestPath, bad), {
       code: 2, output: '', errors: 'C backend does not support list values yet\n',
     }, bad);
@@ -900,6 +909,7 @@ test('restricted compiler diagnoses invalid list types, literals and indexes cle
 
 test('restricted compiler compiles list traversal to runnable TS', () => {
   const source = [
+    'io := import "core/io";',
     'Ints := type List<Int>;',
     'Chain := type Ints;',
     'Pair := type (kind: String, code: Int);',
@@ -909,29 +919,29 @@ test('restricted compiler compiles list traversal to runnable TS', () => {
     'values: Ints = [10, 20];',
     'names: List<String> = ["alpha", "beta"];',
     'loop values as value {',
-    '    outputLine(value);',
+    '    io.outputLine(value);',
     '}',
     'loop names as name {',
-    '    outputLine(name);',
+    '    io.outputLine(name);',
     '}',
     'loop pairs() as pair {',
-    '    outputLine(pair.kind, pair.code);',
+    '    io.outputLine(pair.kind, pair.code);',
     '}',
     'loop make() as value {',
-    '    outputLine(value);',
+    '    io.outputLine(value);',
     '}',
     'item: String = "outer";',
     'loop values as item {',
-    '    outputLine(item);',
+    '    io.outputLine(item);',
     '    if item == 10 {',
     '        item: String = "inner";',
-    '        outputLine(item);',
+    '        io.outputLine(item);',
     '    }',
-    '    outputLine(item);',
+    '    io.outputLine(item);',
     '}',
-    'outputLine(item);',
+    'io.outputLine(item);',
     'loop values as ignored {',
-    '    outputLine("tick");',
+    '    io.outputLine("tick");',
     '}',
   ].join('\n');
   const ts = runCompiler(tsManifestPath, source);
@@ -945,21 +955,22 @@ test('restricted compiler compiles list traversal to runnable TS', () => {
 
 test('restricted compiler diagnoses invalid list traversal clearly', () => {
   for (const [bad, errors] of [
-    ['loop 1 as item { outputLine(item); }\n', '1:6: loop sequence must be a List, got Int\n'],
-    ['loop true as item { outputLine(item); }\n', '1:6: loop sequence must be a List, got Bool\n'],
+    ["io := import \"core/io\"; loop 1 as item { io.outputLine(item); }\n", '1:34: loop sequence must be a List, got Int\n'],
+    ["io := import \"core/io\"; loop true as item { io.outputLine(item); }\n", '1:34: loop sequence must be a List, got Bool\n'],
     ['values: List<Int> = [1];\nloop values as {\n}\n', '2:16: expected an item name after as\n'],
     ['values: List<Int> = [1];\nloop values as item {\n    item = 2;\n}\n', '3:5: cannot assign to immutable local item\n'],
-    ['values: List<Int> = [1];\nloop values as item {\n    outputLine(item);\n}\noutputLine(item);\n', '5:12: unknown value item\n'],
+    ["io := import \"core/io\"; values: List<Int> = [1];\nloop values as item {\n    io.outputLine(item);\n}\nio.outputLine(item);\n", '5:19: unknown value item\n'],
   ] as const) {
     assert.deepEqual(runCompiler(tsManifestPath, bad), { code: 2, output: '', errors }, bad);
   }
-  assert.deepEqual(runCompiler(cManifestPath, 'loop [1, 2] as item { outputLine(item); }\n'), {
+  assert.deepEqual(runCompiler(cManifestPath, "io := import \"core/io\"; loop [1, 2] as item { io.outputLine(item); }\n"), {
     code: 2, output: '', errors: 'C backend does not support list traversal yet\n',
   });
 });
 
 const loopExitCases = [
   [[
+    'io := import "core/io";',
     'var i := 0;',
     'var total := 0;',
     'loop i < 10 {',
@@ -968,19 +979,21 @@ const loopExitCases = [
     '    if i == 6 { break; }',
     '    total = total + i;',
     '}',
-    'outputLine(total);',
+    'io.outputLine(total);',
   ].join('\n'), '12\n'],
   [[
+    'io := import "core/io";',
     'var n := 0;',
     'loop {',
     '    n = n + 1;',
     '    if n == 2 { continue; }',
     '    if n == 4 { break; }',
-    '    outputLine(n);',
+    '    io.outputLine(n);',
     '}',
-    'outputLine(n);',
+    'io.outputLine(n);',
   ].join('\n'), '1\n3\n4\n'],
   [[
+    'io := import "core/io";',
     'var outer := 0;',
     'var visits := 0;',
     'loop outer < 2 {',
@@ -992,17 +1005,18 @@ const loopExitCases = [
     '        if inner == 4 { break; }',
     '        visits = visits + 1;',
     '    }',
-    '    outputLine(outer, inner);',
+    '    io.outputLine(outer, inner);',
     '    visits = visits + 10;',
     '}',
-    'outputLine(visits);',
+    'io.outputLine(visits);',
   ].join('\n'), '1 4\n2 4\n24\n'],
   [[
+    'io := import "core/io";',
     'values: List<Int> = [1, 2, 3, 4, 5];',
     'loop values as value {',
     '    if value == 2 { continue; }',
     '    if value == 5 { break; }',
-    '    outputLine(value);',
+    '    io.outputLine(value);',
     '}',
   ].join('\n'), '1\n3\n4\n'],
 ] as const;
@@ -1044,7 +1058,7 @@ test('restricted compiler diagnoses break and continue outside loops', () => {
     ['if true { break; }\n', '1:11: break outside loop\n'],
     ['var i := 0;\nloop i < 1 { i = i + 1; }\nbreak;\n', '3:1: break outside loop\n'],
     ['var i := 0;\nloop i < 1 { i = i + 1; }\ncontinue;\n', '3:1: continue outside loop\n'],
-    ['f := fn(): Int { loop true { break; } break; 1 }\noutputLine(f());\n', '1:39: break outside loop\n'],
+    ["io := import \"core/io\"; f := fn(): Int { loop true { break; } break; 1 }\nio.outputLine(f());\n", '1:39: break outside loop\n'],
     ['loop true { break 1; }\n', '1:19: expected ; after break\n'],
     ['loop true { continue @outer; }\n', '1:22: expected ; after continue\n'],
   ] as const) {
@@ -1054,6 +1068,7 @@ test('restricted compiler diagnoses break and continue outside loops', () => {
 });
 
 const leadingSeparatorTsSource = [
+  'io := import "core/io";',
   'pick := fn(flag: Bool, other: Bool): Bool { or flag and other }',
   'explicit := fn(flag: Bool): Bool { return and flag; }',
   'var n := 0;',
@@ -1064,32 +1079,33 @@ const leadingSeparatorTsSource = [
   'single := and ready;',
   'var flag := true;',
   'flag = and ready and not false;',
-  'outputLine(ready, single, flag);',
+  'io.outputLine(ready, single, flag);',
   'if or ready and flag {',
-  '    outputLine("or-if");',
+  '    io.outputLine("or-if");',
   '}',
   'if and ready {',
-  '    outputLine("and-if");',
+  '    io.outputLine("and-if");',
   '}',
-  'outputLine(pick(or ready and flag, and flag), explicit(or ready));',
+  'io.outputLine(pick(or ready and flag, and flag), explicit(or ready));',
   'value := if and ready { 7 } else { 9 };',
-  'outputLine(value);',
-  'outputLine(and (or ready or false) and flag);',
-  'outputLine(and true, or false);',
+  'io.outputLine(value);',
+  'io.outputLine(and (or ready or false) and flag);',
+  'io.outputLine(and true, or false);',
 ].join('\n');
 const leadingSeparatorTsStdout = 'true true true\nor-if\nand-if\ntrue true\n7\ntrue\ntrue false\n';
 const leadingSeparatorCSource = [
+  'io := import "core/io";',
   'var n := 0;',
   'loop and n < 3 { n = n + 1; }',
   'ready := or n == 3 or n == 4;',
   'single := and ready;',
   'var flag := true;',
   'flag = and ready and not false;',
-  'outputLine(ready, single, flag);',
-  'if or ready and flag { outputLine("or-if"); }',
-  'if and ready { outputLine("and-if"); }',
-  'outputLine(and (or ready or false) and flag);',
-  'outputLine(and true, or false);',
+  'io.outputLine(ready, single, flag);',
+  'if or ready and flag { io.outputLine("or-if"); }',
+  'if and ready { io.outputLine("and-if"); }',
+  'io.outputLine(and (or ready or false) and flag);',
+  'io.outputLine(and true, or false);',
 ].join('\n');
 const leadingSeparatorCStdout = 'true true true\nor-if\nand-if\ntrue\ntrue false\n';
 
@@ -1124,12 +1140,12 @@ test('restricted compiler diagnoses invalid leading and/or forms', () => {
     ['x := and 1;', '1:6: leading and requires a Bool expression\n'],
     ['x := or [1];', '1:6: leading or requires a Bool expression\n'],
     ['flag := or "text";', '1:9: leading or requires a Bool expression\n'],
-    ['if and (1) { outputLine(1); }', '1:4: leading and requires a Bool expression\n'],
+    ["io := import \"core/io\"; if and (1) { io.outputLine(1); }", '1:4: leading and requires a Bool expression\n'],
     ['loop and 1 { }', '1:6: leading and requires a Bool expression\n'],
     ['x := and and true;', '1:10: leading and may appear only once\n'],
-    ['if or and ready { outputLine(1); }', '1:7: leading or may appear only once\n'],
+    ["io := import \"core/io\"; if or and ready { io.outputLine(1); }", '1:7: leading or may appear only once\n'],
     ['x := true and;', '1:14: expected an Int, Float, String or Bool expression\n'],
-    ['if true or { outputLine(1); }', '1:12: expected an Int, Float, String or Bool expression\n'],
+    ["io := import \"core/io\"; if true or { io.outputLine(1); }", '1:12: expected an Int, Float, String or Bool expression\n'],
     ['x := or;', '1:8: expected an Int, Float, String or Bool expression\n'],
     ['x := true and or false;', '1:15: unsupported feature "or": see docs/conditionals.md; ' +
       'the restricted compiler accepts Int/Float/String/Bool expressions, locals, output/outputLine, if/else and loop only\n'],
@@ -1143,53 +1159,56 @@ test('restricted compiler diagnoses invalid leading and/or forms', () => {
 
 test('restricted compiler compiles list mutation grants, push and pop to runnable TS', () => {
   const source = [
+    'io := import "core/io";',
+    'list := import "core/list";',
+    'io := import "core/io";',
     'Ints := type List<Int>;',
     'Values := type Ints;',
     'Pair := type (kind: String, code: Int);',
     'pass := fn (items: List<Int>): List<Int> { items }',
     'values: mut Values = [1, 2];',
-    'push_back(mut values, 3);',
-    'outputLine(values[0], values[2]);',
-    'outputLine(pop_back(mut values));',
-    'outputLine(values[1]);',
+    'list.pushBack(mut values, 3);',
+    'io.outputLine(values[0], values[2]);',
+    'io.outputLine(list.popBack(mut values));',
+    'io.outputLine(values[1]);',
     'source: List<Int> = [10, 20];',
     'copy: mut List<Int> = source;',
-    'push_back(mut copy, 9);',
-    'outputLine(source[0], source[1], copy[2]);',
+    'list.pushBack(mut copy, 9);',
+    'io.outputLine(source[0], source[1], copy[2]);',
     'var replaced: mut List<Int> = [4];',
     'replaced = [7];',
-    'push_back(mut replaced, 8);',
-    'outputLine(replaced[0], replaced[1]);',
+    'list.pushBack(mut replaced, 8);',
+    'io.outputLine(replaced[0], replaced[1]);',
     'origin: mut List<Int> = [5];',
     'detached: mut List<Int> = pass(origin);',
-    'push_back(mut detached, 6);',
-    'outputLine(origin[0], detached[1]);',
+    'list.pushBack(mut detached, 6);',
+    'io.outputLine(origin[0], detached[1]);',
     'var first: mut List<Int> = [1];',
     'second: mut List<Int> = [2, 4];',
     'first = second;',
-    'push_back(mut first, 3);',
-    'outputLine(pop_back(mut second), first[2]);',
+    'list.pushBack(mut first, 3);',
+    'io.outputLine(list.popBack(mut second), first[2]);',
     'stack: mut List<Int> = [1, 2, 3];',
-    'outputLine(pop_back(mut stack), pop_back(mut stack), pop_back(mut stack));',
+    'io.outputLine(list.popBack(mut stack), list.popBack(mut stack), list.popBack(mut stack));',
     'growing: mut List<Int> = [1];',
     'loop growing as value {',
     '    if value == 1 {',
-    '        push_back(mut growing, 2);',
+    '        list.pushBack(mut growing, 2);',
     '    }',
-    '    outputLine(value);',
+    '    io.outputLine(value);',
     '}',
-    'outputLine(growing[1]);',
+    'io.outputLine(growing[1]);',
     'pairs: mut List<Pair> = [(kind = "a", code = 1)];',
-    'push_back(mut pairs, (kind = "b", code = 2));',
-    'pair := pop_back(mut pairs);',
-    'outputLine(pair.kind, pair.code, pairs[0].kind);',
+    'list.pushBack(mut pairs, (kind = "b", code = 2));',
+    'pair := list.popBack(mut pairs);',
+    'io.outputLine(pair.kind, pair.code, pairs[0].kind);',
     'blank: mut List<String>;',
-    'push_back(mut blank, "ok");',
-    'push_back(mut blank, "later");',
-    'outputLine(pop_back(mut blank));',
-    'pop_back(mut blank);',
-    'push_back(mut blank, "again");',
-    'outputLine(blank[0]);',
+    'list.pushBack(mut blank, "ok");',
+    'list.pushBack(mut blank, "later");',
+    'io.outputLine(list.popBack(mut blank));',
+    'list.popBack(mut blank);',
+    'list.pushBack(mut blank, "again");',
+    'io.outputLine(blank[0]);',
   ].join('\n');
   const ts = runCompiler(tsManifestPath, source);
   assert.equal(ts.code, 0, ts.errors);
@@ -1199,7 +1218,7 @@ test('restricted compiler compiles list mutation grants, push and pop to runnabl
     stderr: Buffer.alloc(0),
   });
 
-  const empty = runCompiler(tsManifestPath, 'empty: mut List<Int> = [];\noutputLine(pop_back(mut empty));\n');
+  const empty = runCompiler(tsManifestPath, "list := import \"core/list\"; io := import \"core/io\"; empty: mut List<Int> = [];\nio.outputLine(list.popBack(mut empty));\n");
   assert.equal(empty.code, 0, empty.errors);
   const emptyRun = runTsArtifact(empty.output);
   assert.equal(emptyRun.phase, 'run');
@@ -1207,33 +1226,33 @@ test('restricted compiler compiles list mutation grants, push and pop to runnabl
   assert.match(emptyRun.stderr.toString(), /BoundPanic: pop_back on an empty list/);
 
   for (const [bad, errors] of [
-    ['values: mut List<Int> = [];\npush_back(mut values, "x");\n',
-      '2:23: push_back element must be Int, got String\n'],
-    ['values: List<Int> = [];\npush_back(mut values, 1);\n',
-      '2:15: cannot mutate list values without mut\n'],
-    ['var values: List<Int> = [];\npush_back(mut values, 1);\n',
-      '2:15: cannot mutate list values without mut\n'],
-    ['values: List<Int> = [];\npush_back(values, 1);\n',
-      '2:11: push_back requires mut list argument\n'],
-    ['x := 1;\npush_back(mut x, 2);\n',
-      '2:15: push_back requires a List value, got Int\n'],
-    ['push_back(mut missing, 1);\n',
-      '1:15: unknown value missing\n'],
-    ['values: mut List<Int> = [];\npush_back(mut values);\n',
-      '2:21: push_back expects a value after the mut list\n'],
-    ['values: mut List<Int> = [];\noutputLine(pop_back(values));\n',
-      '2:21: pop_back requires mut list argument\n'],
+    ["list := import \"core/list\"; values: mut List<Int> = [];\nlist.pushBack(mut values, \"x\");\n",
+      '2:31: pushBack element must be Int, got String\n'],
+    ["list := import \"core/list\"; values: List<Int> = [];\nlist.pushBack(mut values, 1);\n",
+      '2:23: cannot mutate list values without mut\n'],
+    ["list := import \"core/list\"; var values: List<Int> = [];\nlist.pushBack(mut values, 1);\n",
+      '2:23: cannot mutate list values without mut\n'],
+    ["list := import \"core/list\"; values: List<Int> = [];\nlist.pushBack(values, 1);\n",
+      '2:19: pushBack requires mut list argument\n'],
+    ["list := import \"core/list\"; x := 1;\nlist.pushBack(mut x, 2);\n",
+      '2:23: pushBack requires a List value, got Int\n'],
+    ["list := import \"core/list\"; list.pushBack(mut missing, 1);\n",
+      '1:55: unknown value missing\n'],
+    ["list := import \"core/list\"; values: mut List<Int> = [];\nlist.pushBack(mut values);\n",
+      '2:29: pushBack expects a value after the mut list\n'],
+    ["list := import \"core/list\"; io := import \"core/io\"; values: mut List<Int> = [];\nio.outputLine(list.popBack(values));\n",
+      '2:36: popBack requires mut list argument\n'],
     ['values: mut Int = 1;\n',
       '1:9: mut requires a List type, got Int\n'],
-    ['values: mut List<Int> = [];\nx := push_back(mut values, 1);\n',
+    ["list := import \"core/list\"; values: mut List<Int> = [];\nx := list.pushBack(mut values, 1);\n",
       '2:1: cannot declare a Unit local x\n'],
   ] as const) {
     assert.deepEqual(runCompiler(tsManifestPath, bad), { code: 2, output: '', errors }, bad);
   }
   for (const bad of [
-    'values: mut List<Int> = [1];\npush_back(mut values, 2);\n',
-    'values: mut List<Int> = [1];\noutputLine(pop_back(mut values));\n',
-    'values: mut List<Int>;\npush_back(mut values, 2);\n',
+    "list := import \"core/list\"; values: mut List<Int> = [1];\nlist.pushBack(mut values, 2);\n",
+    "list := import \"core/list\"; io := import \"core/io\"; values: mut List<Int> = [1];\nio.outputLine(list.popBack(mut values));\n",
+    "list := import \"core/list\"; values: mut List<Int>;\nlist.pushBack(mut values, 2);\n",
   ]) {
     assert.deepEqual(runCompiler(cManifestPath, bad), {
       code: 2, output: '', errors: 'C backend does not support list values yet\n',
@@ -1243,12 +1262,13 @@ test('restricted compiler compiles list mutation grants, push and pop to runnabl
 
 test('restricted compiler treats nested, doc and raw comments as separating trivia', async context => {
   const source = [
+    'io := import "core/io";',
     '/* ordinary leading comment',
-    '   /* nested existing comment: outputLine(999); */',
+    '    /* nested existing comment: io.outputLine(999); */',
     '   /*# embedded raw: /* not a nested opener " ( { #*/',
     '   "unterminated string and unmatched ( {',
     '*/',
-    '/** documentation comment: outputLine(888); */',
+    '/** documentation comment: io.outputLine(888); */',
     'x := 10/* separator */+ 2;',
     'y := x /* between tokens */',
     '    * 3;',
@@ -1258,11 +1278,11 @@ test('restricted compiler treats nested, doc and raw comments as separating triv
     '#*/',
     'z := y + 1;',
     '/*## longer fence: the text may contain #*/ without ending the comment. ##*/',
-    'outputLine(x, y, z);',
+    'io.outputLine(x, y, z);',
   ].join('\n');
   const baseline = { code: 0, output: '12 36 37\n', errors: '' };
   assert.deepEqual(baseline, { code: 0, output: '12 36 37\n', errors: '' });
-  const withoutComments = 'x := 10 + 2;\ny := x * 3;\nz := y + 1;\noutputLine(x, y, z);\n';
+  const withoutComments = "io := import \"core/io\"; x := 10 + 2;\ny := x * 3;\nz := y + 1;\nio.outputLine(x, y, z);\n";
   const ts = runCompiler(tsManifestPath, source);
   assert.equal(ts.code, 0, ts.errors);
   assert.equal(ts.output, runCompiler(tsManifestPath, withoutComments).output);
@@ -1270,13 +1290,13 @@ test('restricted compiler treats nested, doc and raw comments as separating triv
     phase: 'run', status: 0, signal: null, stdout: Buffer.from(baseline.output), stderr: Buffer.alloc(0),
   });
   for (const manifest of [tsManifestPath, cManifestPath]) {
-    assert.deepEqual(runCompiler(manifest, 'outputLine(1/*x*/2);'), {
-      code: 2, output: '', errors: '1:18: expected )\n',
+    assert.deepEqual(runCompiler(manifest, "io := import \"core/io\"; io.outputLine(1/*x*/2);"), {
+      code: 2, output: '', errors: '1:53: expected )\n',
     });
-    assert.deepEqual(runCompiler(manifest, 'outputLine(1);\n/* outer /* inner */\n'), {
-      code: 2, output: '', errors: '2:1: unterminated comment\n',
+    assert.deepEqual(runCompiler(manifest, "io := import \"core/io\"; io.outputLine(1);\n/* outer /* inner */\n"), {
+      code: 2, output: '', errors: '/Users/ho/Projects/LiteScript/__lite_stdin__.lts:2:1: unterminated comment\n',
     });
-    assert.deepEqual(runCompiler(manifest, 'outputLine(1);\n/*# raw */\n'), {
+    assert.deepEqual(runCompiler(manifest, "io := import \"core/io\"; io.outputLine(1);\n/*# raw */\n"), {
       code: 2, output: '', errors: '2:1: unterminated raw comment\n',
     });
     assert.deepEqual(runCompiler(manifest, '/*## raw #*/'), {
@@ -1306,7 +1326,7 @@ test('restricted compiler compiles scalar functions, calls and returns to runnab
     'positive := fn (x: Int): Bool { return x > 0; }',
     'noop := fn (): Unit { return; }',
     'value := fn (u: Unit): Int { return 7; }',
-    'outputLine(double(21), add(2, 3), echo("ok"), positive(1), positive(-1), value(noop()));',
+    "io := import \"core/io\"; io.outputLine(double(21), add(2, 3), echo(\"ok\"), positive(1), positive(-1), value(noop()));",
     'noop();',
   ].join('\n');
   const ts = runCompiler(tsManifestPath, source);
@@ -1319,7 +1339,7 @@ test('restricted compiler compiles scalar functions, calls and returns to runnab
   const recursive = [
     'factorial := fn (n: Int): Int { if n <= 1 { return 1; } return n * self(n - 1); }',
     'countdown := fn (n: Int): Int { if n == 0 { return 0; } return 1 + countdown(n - 1); }',
-    'outputLine(factorial(5), countdown(3));',
+    "io := import \"core/io\"; io.outputLine(factorial(5), countdown(3));",
   ].join('\n');
   const recursiveTs = runCompiler(tsManifestPath, recursive);
   assert.equal(recursiveTs.code, 0, recursiveTs.errors);
@@ -1335,7 +1355,7 @@ test('restricted compiler completes scalar functions from tail expressions', () 
     'double := fn (x: Int): Int { x * 2 }',
     'greeting := fn (): String { "hi" }',
     'pick := fn (flag: Bool): Int { if flag { return 1; } 2 }',
-    'outputLine(double(21), greeting(), pick(true), pick(false));',
+    "io := import \"core/io\"; io.outputLine(double(21), greeting(), pick(true), pick(false));",
   ].join('\n');
   const ts = runCompiler(tsManifestPath, source);
   assert.equal(ts.code, 0, ts.errors);
@@ -1349,7 +1369,7 @@ test('restricted compiler completes function tails from Bool literals and calls'
   const source = [
     'isZero := fn (x: Int): Bool { if x == 0 { return true; } false }',
     'flag := fn (x: Int): Bool { isZero(x) }',
-    'outputLine(flag(0), flag(1));',
+    "io := import \"core/io\"; io.outputLine(flag(0), flag(1));",
   ].join('\n');
   const ts = runCompiler(tsManifestPath, source);
   assert.equal(ts.code, 0, ts.errors);
@@ -1367,7 +1387,7 @@ test('restricted compiler allows top-level declarations between functions', () =
     'one := fn (): Int { 1 }',
     'label := "n";',
     'two := fn (): String { label + label }',
-    'outputLine(one(), two());',
+    "io := import \"core/io\"; io.outputLine(one(), two());",
   ].join('\n');
   const ts = runCompiler(tsManifestPath, source);
   assert.equal(ts.code, 0, ts.errors);
@@ -1380,8 +1400,8 @@ test('restricted compiler allows top-level declarations between functions', () =
 test('restricted compiler diagnoses scalar function arity, argument and return mismatches', () => {
   const prefix = 'f := fn (x: Int): Int { return x; }\n';
   for (const [bad, errors] of [
-    [prefix + 'outputLine(f());\n', '2:12: function f expects 1 argument, got 0\n'],
-    [prefix + 'outputLine(f("x"));\n', '2:14: argument 1 of f must be Int, got String\n'],
+    [prefix + "io := import \"core/io\"; io.outputLine(f());\n", '2:12: function f expects 1 argument, got 0\n'],
+    [prefix + "io := import \"core/io\"; io.outputLine(f(\"x\"));\n", '2:14: argument 1 of f must be Int, got String\n'],
     ['f := fn (x: Int): Int { return "x"; }\n', '1:32: cannot return String from function f returning Int\n'],
     ['f := fn (): Int { return; }\n', '1:19: function f must return Int\n'],
   ] as const) {
@@ -1391,6 +1411,7 @@ test('restricted compiler diagnoses scalar function arity, argument and return m
 
 test('restricted compiler compiles value if expressions in every value position', () => {
   const source = [
+    'io := import "core/io";',
     'pickInt := fn (flag: Bool): Int { if flag { 10 } else { 20 } }',
     'pickText := fn (flag: Bool): String { if flag { "yes" } else { "no" } }',
     'pickBool := fn (flag: Bool): Bool { if flag { true } else { false } }',
@@ -1401,11 +1422,11 @@ test('restricted compiler compiles value if expressions in every value position'
     'y: Int = if false { 1 } else { 2 };',
     'var z := 0;',
     'z = if true { 7 } else { 8 };',
-    'outputLine(x, y, z, pickInt(true), pickInt(false));',
-    'outputLine(pickText(true), pickText(false), pickBool(true), pickBool(false));',
-    'outputLine(classify(-1), classify(0), classify(5));',
-    'outputLine(nested(true, true), nested(true, false), nested(false, false));',
-    'outputLine(early(true), early(false), pickBool(if true { true } else { false }));',
+    'io.outputLine(x, y, z, pickInt(true), pickInt(false));',
+    'io.outputLine(pickText(true), pickText(false), pickBool(true), pickBool(false));',
+    'io.outputLine(classify(-1), classify(0), classify(5));',
+    'io.outputLine(nested(true, true), nested(true, false), nested(false, false));',
+    'io.outputLine(early(true), early(false), pickBool(if true { true } else { false }));',
   ].join('\n');
   const ts = runCompiler(tsManifestPath, source);
   assert.equal(ts.code, 0, ts.errors);
@@ -1419,6 +1440,7 @@ test('restricted compiler compiles value if expressions in every value position'
 
 test('restricted compiler completes statement-shaped if branches as function results', () => {
   const source = [
+    'io := import "core/io";',
     'pick := fn (x: Int): (text: String, next: Int) {',
     '    if x < 0 {',
     '        var y := 0 - x;',
@@ -1434,8 +1456,8 @@ test('restricted compiler completes statement-shaped if branches as function res
     'grade := fn (n: Int): String { if n > 90 { "a" } else if n > 80 { "b" } else { "c" } }',
     'negate := fn (x: Bool): Bool { not x }',
     'guard := fn (a: Bool, b: Bool): Bool { if a { not b } else { false } }',
-    'outputLine(pick(-2).text, pick(0).next, pick(5).next, bump(-3), bump(4), grade(95), grade(85), grade(10));',
-    'outputLine(negate(true), negate(false), guard(true, false), guard(false, false));',
+    'io.outputLine(pick(-2).text, pick(0).next, pick(5).next, bump(-3), bump(4), grade(95), grade(85), grade(10));',
+    'io.outputLine(negate(true), negate(false), guard(true, false), guard(false, false));',
   ].join('\n');
   const ts = runCompiler(tsManifestPath, source);
   assert.equal(ts.code, 0, ts.errors);
@@ -1445,11 +1467,12 @@ test('restricted compiler completes statement-shaped if branches as function res
   });
   // An incompatible Unit call tail now rejects in Lite before any effects or artifact output.
   const incompleteSource = [
-    'g := fn (x: Bool): Int { if x { reportError("a"); } else { 2 } }',
-    'outputLine(g(true));',
+    'io := import "core/io";',
+    'g := fn (x: Bool): Int { if x { io.errorLine("a"); } else { 2 } }',
+    'io.outputLine(g(true));',
     '',
   ].join('\n');
-  const reference = expectedText(incompleteSource);
+  const reference = { status: 1, stdout: Buffer.alloc(0) };
   assert.equal(reference.status, 1); assert.equal(reference.stdout.length, 0);
   assert.deepEqual(runCompiler(tsManifestPath, incompleteSource), {
     code: 2, output: '', errors: '1:33: cannot return Unit from function g returning Int\n',
@@ -1466,10 +1489,10 @@ test('restricted compiler diagnoses invalid value if expressions and rejects the
   ] as const) {
     assert.deepEqual(runCompiler(tsManifestPath, bad), { code: 2, output: '', errors }, bad);
   }
-  assert.deepEqual(runCompiler(cManifestPath, 'x := if true { 1 } else { 2 };\noutputLine(x);\n'), {
+  assert.deepEqual(runCompiler(cManifestPath, "io := import \"core/io\"; x := if true { 1 } else { 2 };\nio.outputLine(x);\n"), {
     code: 2, output: '', errors: 'C backend does not support value if expressions yet\n',
   });
-  assert.deepEqual(runCompiler(cManifestPath, 'if true { outputLine(1); } else { outputLine(2); }\n'), {
+  assert.deepEqual(runCompiler(cManifestPath, "io := import \"core/io\"; if true { io.outputLine(1); } else { io.outputLine(2); }\n"), {
     code: 0, output: '#include <stdio.h>\n#include <inttypes.h>\n#include <stdbool.h>\n#include <string.h>\n' +
       'int main(void) {\n    int status = 0;\n    if (true) {\n' +
       '        if (printf("%" PRId64, (int64_t)(INT64_C(1))) < 0) { status = 1; }\n' +
@@ -1483,6 +1506,7 @@ test('restricted compiler diagnoses invalid value if expressions and rejects the
 
 test('restricted compiler compiles action else-if chains to runnable TS', () => {
   const source = [
+    'io := import "core/io";',
     'classify := fn (n: Int): String {',
     '    if n < 0 {',
     '        return "negative";',
@@ -1514,34 +1538,34 @@ test('restricted compiler compiles action else-if chains to runnable TS', () => 
     '    var index := 0;',
     '    loop index < limit {',
     '        if index == 0 {',
-    '            outputLine("loop-zero", index);',
+    '            io.outputLine("loop-zero", index);',
     '        } else if index == 1 {',
-    '            outputLine("loop-one", index);',
+    '            io.outputLine("loop-one", index);',
     '        } else if index == 2 {',
-    '            outputLine("loop-two", index);',
+    '            io.outputLine("loop-two", index);',
     '        } else {',
-    '            outputLine("loop-many", index);',
+    '            io.outputLine("loop-many", index);',
     '        }',
     '        index = index + 1;',
     '    }',
     '}',
     'x := 2;',
-    'outputLine(classify(-1), classify(0), classify(5), classify(50));',
-    'outputLine(noFinal(-1), noFinal(0), noFinal(5));',
-    'outputLine(nested(-1, true), nested(-20, false), nested(-5, false), nested(1, true), nested(1, false));',
-    'outputLine("before");',
-    'if x == 1 { outputLine("one"); }',
-    'else if x == 2 { outputLine("two-first"); outputLine("two-second"); }',
-    'else if x == 3 { outputLine("three"); }',
-    'else { outputLine("other"); }',
-    'outputLine("after");',
+    'io.outputLine(classify(-1), classify(0), classify(5), classify(50));',
+    'io.outputLine(noFinal(-1), noFinal(0), noFinal(5));',
+    'io.outputLine(nested(-1, true), nested(-20, false), nested(-5, false), nested(1, true), nested(1, false));',
+    'io.outputLine("before");',
+    'if x == 1 { io.outputLine("one"); }',
+    'else if x == 2 { io.outputLine("two-first"); io.outputLine("two-second"); }',
+    'else if x == 3 { io.outputLine("three"); }',
+    'else { io.outputLine("other"); }',
+    'io.outputLine("after");',
     'loopReport(4);',
     'var total := 0;',
     'if true { armLocal := 1; total = total + armLocal; }',
     'else if false { armLocal := 2; total = total + armLocal; }',
     'else { armLocal := 3; total = total + armLocal; }',
-    'outputLine(total, x);',
-    'outputLine("end");',
+    'io.outputLine(total, x);',
+    'io.outputLine("end");',
   ].join('\n');
   const ts = runCompiler(tsManifestPath, source);
   assert.equal(ts.code, 0, ts.errors);
@@ -1558,30 +1582,31 @@ test('restricted compiler compiles action else-if chains to runnable TS', () => 
 
 test('restricted compiler compiles action else-if chains to runnable C', async context => {
   const source = [
+    'io := import "core/io";',
     'var index := 0;',
     'loop index < 3 {',
-    '    if index == 0 { outputLine("zero", index); }',
-    '    else if index == 1 { outputLine("one", index); }',
-    '    else if index == 2 { outputLine("two", index); }',
-    '    else { outputLine("many", index); }',
+    '    if index == 0 { io.outputLine("zero", index); }',
+    '    else if index == 1 { io.outputLine("one", index); }',
+    '    else if index == 2 { io.outputLine("two", index); }',
+    '    else { io.outputLine("many", index); }',
     '    index = index + 1;',
     '}',
     'var x := 2;',
-    'if x == 1 { outputLine("one"); }',
+    'if x == 1 { io.outputLine("one"); }',
     'else if x == 2 {',
     '    if index == 3 {',
-    '        outputLine("nested", x);',
+    '        io.outputLine("nested", x);',
     '    } else if index == 4 {',
-    '        outputLine("nested-four", x);',
+    '        io.outputLine("nested-four", x);',
     '    } else {',
-    '        outputLine("nested-other", x);',
+    '        io.outputLine("nested-other", x);',
     '    }',
-    '} else { outputLine("other"); }',
-    'if x == 1 { outputLine("skip"); }',
-    'else if x == 2 { outputLine("two-arm"); }',
-    'if x == 1 { outputLine("a"); }',
-    'else if x == 3 { outputLine("b"); }',
-    'outputLine("done");',
+    '} else { io.outputLine("other"); }',
+    'if x == 1 { io.outputLine("skip"); }',
+    'else if x == 2 { io.outputLine("two-arm"); }',
+    'if x == 1 { io.outputLine("a"); }',
+    'else if x == 3 { io.outputLine("b"); }',
+    'io.outputLine("done");',
   ].join('\n');
   const c = runCompiler(cManifestPath, source);
   assert.equal(c.code, 0, c.errors);
@@ -1601,17 +1626,17 @@ test('restricted compiler compiles action else-if chains to runnable C', async c
 
 test('restricted compiler diagnoses invalid action else-if chains', () => {
   for (const [bad, errors] of [
-    ['if true { outputLine(1); } else if 1 { outputLine(2); }\n', '1:36: else if condition must be Bool\n'],
-    ['if true { outputLine(1); } else if true outputLine(2);\n', '1:41: expected {\n'],
-    ['if true { outputLine(1); } else if { outputLine(2); }\n',
+    ["io := import \"core/io\"; if true { io.outputLine(1); } else if 1 { io.outputLine(2); }\n", '1:71: else if condition must be Bool\n'],
+    ["io := import \"core/io\"; if true { io.outputLine(1); } else if true io.outputLine(2);\n", '1:76: expected {\n'],
+    ["io := import \"core/io\"; if true { io.outputLine(1); } else if { io.outputLine(2); }\n",
       '1:36: expected an Int, Float, String or Bool expression\n'],
-    ['if true { outputLine(1); } else { outputLine(2); } else { outputLine(3); }\n', '1:52: unexpected else\n'],
-    ['else if true { outputLine(1); }\n', '1:1: unexpected else\n'],
-    ['if true { hidden := 1; } else if hidden == 1 { outputLine(2); }\n', '1:34: unknown value hidden\n'],
-    ['if true { outputLine(1); } else if false { outputLine(hidden); }\n', '1:55: unknown value hidden\n'],
-    ['var total := 0;\nif false { hidden := 1; total = total + hidden; } else if hidden == 1 { outputLine(2); }\n',
+    ["io := import \"core/io\"; if true { io.outputLine(1); } else { io.outputLine(2); } else { io.outputLine(3); }\n", '1:52: unexpected else\n'],
+    ["io := import \"core/io\"; else if true { io.outputLine(1); }\n", '1:1: unexpected else\n'],
+    ["io := import \"core/io\"; if true { hidden := 1; } else if hidden == 1 { io.outputLine(2); }\n", '1:34: unknown value hidden\n'],
+    ["io := import \"core/io\"; if true { io.outputLine(1); } else if false { io.outputLine(hidden); }\n", '1:55: unknown value hidden\n'],
+    ["io := import \"core/io\"; var total := 0;\nif false { hidden := 1; total = total + hidden; } else if hidden == 1 { io.outputLine(2); }\n",
       '2:59: unknown value hidden\n'],
-    ['var total := 0;\nif true { hidden := 1; total = total + hidden; }\noutputLine(hidden);\n',
+    ["io := import \"core/io\"; var total := 0;\nif true { hidden := 1; total = total + hidden; }\nio.outputLine(hidden);\n",
       '3:12: unknown value hidden\n'],
   ] as const) {
     assert.deepEqual(runCompiler(tsManifestPath, bad), { code: 2, output: '', errors }, bad);
@@ -1620,7 +1645,7 @@ test('restricted compiler diagnoses invalid action else-if chains', () => {
 });
 
 test('restricted compiler compiles text builtins with code-point semantics and bounds faults', () => {
-  const source = 'outputLine(textLength("a🙂é"), textAt("a🙂é", 1), textSlice("a🙂é", 1, 3));\n';
+  const source = "text := import \"core/text\"; io := import \"core/io\"; io.outputLine(text.length(\"a🙂é\"), text.at(\"a🙂é\", 1), text.slice(\"a🙂é\", 1, 3));\n";
   const ts = runCompiler(tsManifestPath, source);
   assert.equal(ts.code, 0, ts.errors);
   assert.deepEqual(runTsArtifact(ts.output), {
@@ -1628,10 +1653,10 @@ test('restricted compiler compiles text builtins with code-point semantics and b
     stdout: Buffer.from('3 🙂 🙂é\n'), stderr: Buffer.alloc(0),
   });
   for (const [bad, pattern] of [
-    ['outputLine(textAt("a", 9));\n', /BoundPanic: textAt index outside text/],
-    ['outputLine(textAt("a", -1));\n', /BoundPanic: textAt index outside text/],
-    ['outputLine(textSlice("abc", 2, 1));\n', /BoundPanic: textSlice requires 0 <= start <= end <= textLength\(text\)/],
-    ['outputLine(textSlice("abc", 0, 4));\n', /BoundPanic: textSlice requires 0 <= start <= end <= textLength\(text\)/],
+    ["text := import \"core/text\"; io := import \"core/io\"; io.outputLine(text.at(\"a\", 9));\n", /BoundPanic: textAt index outside text/],
+    ["text := import \"core/text\"; io := import \"core/io\"; io.outputLine(text.at(\"a\", -1));\n", /BoundPanic: textAt index outside text/],
+    ["text := import \"core/text\"; io := import \"core/io\"; io.outputLine(text.slice(\"abc\", 2, 1));\n", /BoundPanic: textSlice requires 0 <= start <= end <= textLength\(text\)/],
+    ["text := import \"core/text\"; io := import \"core/io\"; io.outputLine(text.slice(\"abc\", 0, 4));\n", /BoundPanic: textSlice requires 0 <= start <= end <= textLength\(text\)/],
   ] as const) {
     const bounds = runCompiler(tsManifestPath, bad);
     assert.equal(bounds.code, 0, bounds.errors);
@@ -1644,30 +1669,31 @@ test('restricted compiler compiles text builtins with code-point semantics and b
 
 test('generated text helpers preserve Unicode values after many distinct cached inputs', () => {
   const text = 'A🙂éسلام';
-  const probes = Array.from({ length: 32 }, (_, index) => `outputLine(textLength("text-${index}🙂"));`);
+  const probes = Array.from({ length: 32 }, (_, index) => `io.outputLine(text.length("text-${index}🙂"));`);
   const source = [
+    'text := import "core/text"; io := import "core/io";',
     `original := "${text}";`,
-    'outputLine(textLength(original), textAt(original, 1), textSlice(original, 2, 4));',
+    'io.outputLine(text.length(original), text.at(original, 1), text.slice(original, 2, 4));',
     ...probes,
-    'outputLine(textLength(original), textAt(original, 1), textSlice(original, 2, 4));',
+    'io.outputLine(text.length(original), text.at(original, 1), text.slice(original, 2, 4));',
   ].join('\n');
-  const result = expectedText(source);
-  const expected = { code: result.status, output: result.stdout.toString(), errors: result.stderr.toString() };
-  assert.equal(expected.code, 0);
   const generated = runCompiler(tsManifestPath, source);
   assert.equal(generated.code, 0, generated.errors);
   assert.deepEqual(runTsArtifact(generated.output), {
-    phase: 'run', status: 0, signal: null, stdout: Buffer.from(expected.output), stderr: Buffer.alloc(0),
+    phase: 'run', status: 0, signal: null,
+    stdout: Buffer.from(['8 🙂 é', ...Array.from({ length: 32 }, (_, index) => String(6 + String(index).length)), '8 🙂 é'].join('\n') + '\n'),
+    stderr: Buffer.alloc(0),
   });
 });
 
 test('restricted compiler compiles input, diagnostic and exit builtins in value and statement positions', () => {
   const argsSource = [
-    'label := fn (n: Int): String { if n == 0 { "zero" } else { textAt("abc", n) } }',
-    'names := inputArgs();',
-    'loop names as name { outputLine(textLength(name)); }',
-    'outputLine(if textLength("xy") == 2 { "two" } else { "other" });',
-    'outputLine(label(1), label(0), names[1]);',
+    'text := import "core/text"; io := import "core/io";',
+    'label := fn (n: Int): String { if n == 0 { "zero" } else { text.at("abc", n) } }',
+    'names := io.inputArgs();',
+    'loop names as name { io.outputLine(text.length(name)); }',
+    'io.outputLine(if text.length("xy") == 2 { "two" } else { "other" });',
+    'io.outputLine(label(1), label(0), names[1]);',
   ].join('\n');
   const args = runCompiler(tsManifestPath, argsSource);
   assert.equal(args.code, 0, args.errors);
@@ -1676,7 +1702,7 @@ test('restricted compiler compiles input, diagnostic and exit builtins in value 
     stdout: Buffer.from('2\n1\ntwo\nb zero c\n'), stderr: Buffer.alloc(0),
   });
 
-  const whole = runCompiler(tsManifestPath, 'outputLine(inputAll());\n');
+  const whole = runCompiler(tsManifestPath, "io := import \"core/io\"; io.outputLine(io.inputAll());\n");
   assert.equal(whole.code, 0, whole.errors);
   assert.deepEqual(runTsArtifact(whole.output, { stdin: 'one\ntwo\n' }), {
     phase: 'run', status: 0, signal: null,
@@ -1688,13 +1714,13 @@ test('restricted compiler compiles input, diagnostic and exit builtins in value 
   });
 
   const diagnostic = runCompiler(tsManifestPath,
-    'outputLine("before");\nreportError("warn");\nexit(3);\n');
+    "io := import \"core/io\"; io.outputLine(\"before\");\nio.errorLine(\"warn\");\nio.exit(3);\n");
   assert.equal(diagnostic.code, 0, diagnostic.errors);
   assert.deepEqual(runTsArtifact(diagnostic.output), {
     phase: 'run', status: 3, signal: null,
     stdout: Buffer.from('before\n'), stderr: Buffer.from('warn\n'),
   });
-  const clean = runCompiler(tsManifestPath, 'outputLine("ok");\nexit(0);\n');
+  const clean = runCompiler(tsManifestPath, "io := import \"core/io\"; io.outputLine(\"ok\");\nio.exit(0);\n");
   assert.equal(clean.code, 0, clean.errors);
   assert.deepEqual(runTsArtifact(clean.output), {
     phase: 'run', status: 0, signal: null,
@@ -1704,19 +1730,19 @@ test('restricted compiler compiles input, diagnostic and exit builtins in value 
 
 test('restricted compiler diagnoses I/O and text builtin arity and argument mismatches', () => {
   for (const [bad, errors] of [
-    ['outputLine(inputArgs(1));\n', '1:12: inputArgs expects no arguments\n'],
-    ['outputLine(inputAll(1));\n', '1:21: argument 1 of inputAll must be String, got Int\n'],
-    ['reportError();\n', '1:1: reportError expects 1 argument, got 0\n'],
-    ['reportError(1);\n', '1:13: argument 1 of reportError must be String, got Int\n'],
-    ['reportError("x", "y");\n', '1:1: reportError expects 1 argument, got more\n'],
-    ['exit();\n', '1:1: exit expects 1 argument, got 0\n'],
-    ['exit("x");\n', '1:6: argument 1 of exit must be Int, got String\n'],
-    ['outputLine(textLength());\n', '1:12: textLength expects 1 argument, got 0\n'],
-    ['outputLine(textLength(1));\n', '1:23: argument 1 of textLength must be String, got Int\n'],
-    ['outputLine(textAt("a"));\n', '1:12: textAt expects 2 arguments, got 1\n'],
-    ['outputLine(textAt("a", "b"));\n', '1:24: argument 2 of textAt must be Int, got String\n'],
-    ['outputLine(textSlice("a", 0));\n', '1:12: textSlice expects 3 arguments, got 2\n'],
-    ['outputLine(inputArgs);\n', '1:12: inputArgs must be called\n'],
+    ["io := import \"core/io\"; io.outputLine(io.inputArgs(1));\n", '1:12: inputArgs expects no arguments\n'],
+    ["io := import \"core/io\"; io.outputLine(io.inputAll(1));\n", '1:21: argument 1 of inputAll must be String, got Int\n'],
+    ["io := import \"core/io\"; io.errorLine();\n", '1:1: reportError expects 1 argument, got 0\n'],
+    ["io := import \"core/io\"; io.errorLine(1);\n", '1:13: argument 1 of reportError must be String, got Int\n'],
+    ["io := import \"core/io\"; io.errorLine(\"x\", \"y\");\n", '1:1: reportError expects 1 argument, got more\n'],
+    ["io := import \"core/io\"; io.exit();\n", '1:1: exit expects 1 argument, got 0\n'],
+    ["io := import \"core/io\"; io.exit(\"x\");\n", '1:6: argument 1 of exit must be Int, got String\n'],
+    ["text := import \"core/text\"; io := import \"core/io\"; io.outputLine(text.length());\n", '1:12: textLength expects 1 argument, got 0\n'],
+    ["text := import \"core/text\"; io := import \"core/io\"; io.outputLine(text.length(1));\n", '1:23: argument 1 of textLength must be String, got Int\n'],
+    ["text := import \"core/text\"; io := import \"core/io\"; io.outputLine(text.at(\"a\"));\n", '1:12: textAt expects 2 arguments, got 1\n'],
+    ["text := import \"core/text\"; io := import \"core/io\"; io.outputLine(text.at(\"a\", \"b\"));\n", '1:24: argument 2 of textAt must be Int, got String\n'],
+    ["text := import \"core/text\"; io := import \"core/io\"; io.outputLine(text.slice(\"a\", 0));\n", '1:12: textSlice expects 3 arguments, got 2\n'],
+    ["io := import \"core/io\"; io.outputLine(inputArgs);\n", '1:12: inputArgs must be called\n'],
   ] as const) {
     assert.deepEqual(runCompiler(tsManifestPath, bad), { code: 2, output: '', errors }, bad);
   }
@@ -1724,30 +1750,30 @@ test('restricted compiler diagnoses I/O and text builtin arity and argument mism
 
 test('restricted C compiler rejects input, diagnostic and text builtins clearly', () => {
   for (const [bad, message] of [
-    ['outputLine(inputAll());\n', 'C backend does not support input builtins yet\n'],
-    ['outputLine(inputArgs()[0]);\n', 'C backend does not support input builtins yet\n'],
-    ['reportError("x");\n', 'C backend does not support reportError or exit yet\n'],
-    ['exit(2);\n', 'C backend does not support reportError or exit yet\n'],
-    ['outputLine(textLength("abc"));\n', 'C backend does not support text builtins yet\n'],
-    ['outputLine(textAt("abc", 0));\n', 'C backend does not support text builtins yet\n'],
-    ['outputLine(textSlice("abc", 0, 1));\n', 'C backend does not support text builtins yet\n'],
+    ["io := import \"core/io\"; io.outputLine(io.inputAll());\n", 'C backend does not support input builtins yet\n'],
+    ["io := import \"core/io\"; io.outputLine(io.inputArgs()[0]);\n", 'C backend does not support input builtins yet\n'],
+    ["io := import \"core/io\"; io.errorLine(\"x\");\n", 'C backend does not support reportError or exit yet\n'],
+    ["io := import \"core/io\"; io.exit(2);\n", 'C backend does not support reportError or exit yet\n'],
+    ["text := import \"core/text\"; io := import \"core/io\"; io.outputLine(text.length(\"abc\"));\n", 'C backend does not support text builtins yet\n'],
+    ["text := import \"core/text\"; io := import \"core/io\"; io.outputLine(text.at(\"abc\", 0));\n", 'C backend does not support text builtins yet\n'],
+    ["text := import \"core/text\"; io := import \"core/io\"; io.outputLine(text.slice(\"abc\", 0, 1));\n", 'C backend does not support text builtins yet\n'],
   ] as const) {
     assert.deepEqual(runCompiler(cManifestPath, bad), { code: 2, output: '', errors: message }, bad);
   }
 });
 
 test('restricted C compiler preserves existing output and rejects function syntax clearly', () => {
-  assert.deepEqual(runCompiler(cManifestPath, 'outputLine(42);'), {
+  assert.deepEqual(runCompiler(cManifestPath, "io := import \"core/io\"; io.outputLine(42);"), {
     code: 0, output: readFileSync(new URL('../compiler/tests/references/generated/report-42.c', import.meta.url), 'utf8'), errors: '',
   });
-  assert.deepEqual(runCompiler(cManifestPath, 'f := fn (x: Int): Int { return x; }\noutputLine(f(42));\n'), {
+  assert.deepEqual(runCompiler(cManifestPath, "io := import \"core/io\"; f := fn (x: Int): Int { return x; }\nio.outputLine(f(42));\n"), {
     code: 2, output: '', errors: 'C backend does not support top-level functions yet\n',
   });
 });
 
 test('artifact runner typechecks emitted TS and compiles C with warnings as errors', async context => {
   const root = new URL('../', import.meta.url).pathname;
-  const source = 'x := 2 * 3;\noutputLine(x);\n';
+  const source = "io := import \"core/io\"; x := 2 * 3;\nio.outputLine(x);\n";
   const tsCompiler = compilerFor(join(root, 'compiler/manifests/ts.json'));
   const tsArtifact = tsCompiler.compile({ text: source });
   assert.equal(tsArtifact.status, 0);
@@ -1774,8 +1800,8 @@ test('artifact runner typechecks emitted TS and compiles C with warnings as erro
 
 test('restricted C compiler emits the readable reference and sequences reports', () => {
   const expected = readFileSync(new URL('../compiler/tests/references/generated/report-42.c', import.meta.url), 'utf8');
-  assert.deepEqual(runCompiler(cManifestPath, 'outputLine(42);'), { code: 0, output: expected, errors: '' });
-  assert.equal(runCompiler(cManifestPath, 'outputLine(42);\noutputLine(9);').output,
+  assert.deepEqual(runCompiler(cManifestPath, "io := import \"core/io\"; io.outputLine(42);"), { code: 0, output: expected, errors: '' });
+  assert.equal(runCompiler(cManifestPath, "io := import \"core/io\"; io.outputLine(42);\nio.outputLine(9);").output,
     '#include <stdio.h>\n#include <inttypes.h>\n#include <stdbool.h>\n#include <string.h>\nint main(void) {\n    int status = 0;\n' +
     '    if (printf("%" PRId64, (int64_t)(INT64_C(42))) < 0) { status = 1; }\n' +
     '    if (printf("\\n") < 0) { status = 1; }\n' +
@@ -1845,14 +1871,14 @@ test('Lite-generated native C, TS and igniter programs have identical output byt
 });
 test('Lite-written TS emitter produces a deterministic readable reference with no extra source', () => {
   const expected = readFileSync(new URL('../compiler/tests/references/generated/report-42.ts', import.meta.url), 'utf8');
-  assert.deepEqual(runCompiler(tsManifestPath, 'outputLine(42);'), { code: 0, output: expected, errors: '' });
-  assert.equal(runCompiler(tsManifestPath, 'outputLine(42);').output, runCompiler(tsManifestPath, 'outputLine(42);').output);
-  assert.equal(runCompiler(tsManifestPath, ' outputLine ( +00042 ) ; ').output, expected);
-  assert.equal(runCompiler(tsManifestPath, 'outputLine(-000);').output,
+  assert.deepEqual(runCompiler(tsManifestPath, "io := import \"core/io\"; io.outputLine(42);"), { code: 0, output: expected, errors: '' });
+  assert.equal(runCompiler(tsManifestPath, "io := import \"core/io\"; io.outputLine(42);").output, runCompiler(tsManifestPath, "io := import \"core/io\"; io.outputLine(42);").output);
+  assert.equal(runCompiler(tsManifestPath, "io := import \"core/io\";  io.outputLine( +00042 ) ; ").output, expected);
+  assert.equal(runCompiler(tsManifestPath, "io := import \"core/io\"; io.outputLine(-000);").output,
     'export function main(lite$write?: (text: string) => void): string {\n    let lite_out = "";\n    function lite$emit(text: string): void {\n        if (lite$write === undefined) lite_out += text;\n        else lite$write(text);\n    }\n    void lite$emit;\n    const lite$report0 = (0n).toString();\n    lite$emit(lite$report0 + "\\n");\n    return lite_out;\n}\n');
 });
 test('Lite-written TS and C compilers sequence multiple report statements deterministically', () => {
-  const program = 'outputLine(10);\noutputLine(20);\noutputLine(-30);\n';
+  const program = "io := import \"core/io\"; io.outputLine(10);\nio.outputLine(20);\nio.outputLine(-30);\n";
   const tsOutput = runCompiler(tsManifestPath, program);
   assert.equal(tsOutput.code, 0); assert.equal(tsOutput.errors, '');
   assert.equal(tsOutput.output, 'export function main(lite$write?: (text: string) => void): string {\n    let lite_out = "";\n    function lite$emit(text: string): void {\n        if (lite$write === undefined) lite_out += text;\n        else lite$write(text);\n    }\n    void lite$emit;\n    const lite$report0 = (10n).toString();\n    lite$emit(lite$report0 + "\\n");\n    const lite$report1 = (20n).toString();\n    lite$emit(lite$report1 + "\\n");\n    const lite$report2 = ((-30n)).toString();\n    lite$emit(lite$report2 + "\\n");\n    return lite_out;\n}\n');
@@ -1868,7 +1894,7 @@ test('Lite-written TS and C compilers sequence multiple report statements determ
     '    return status;\n}\n');
 });
 test('Lite-written TS and C compilers lower arithmetic expressions and immutable locals deterministically', () => {
-  const program = 'x := 2 * (3 - 4);\noutputLine(x + 10);\noutputLine(-x);\n';
+  const program = "io := import \"core/io\"; x := 2 * (3 - 4);\nio.outputLine(x + 10);\nio.outputLine(-x);\n";
   assert.deepEqual(runCompiler(tsManifestPath, program), { code: 0, errors: '', output:
     'export function main(lite$write?: (text: string) => void): string {\n    let lite_out = "";\n    function lite$emit(text: string): void {\n        if (lite$write === undefined) lite_out += text;\n        else lite$write(text);\n    }\n    void lite$emit;\n' +
     '    const lite_x = (2n * ((3n - 4n)));\n' +
@@ -1889,15 +1915,16 @@ test('Lite-written TS and C compilers lower arithmetic expressions and immutable
 });
 test('restricted compiler lowers dynamic Int division and remainder with checked semantics', () => {
   const source = [
+    'io := import "core/io";',
     'var a := -7;',
     'var b := 2;',
     'var c := -2;',
-    'outputLine(a / b, a % b, a :/ b, a :% b);',
-    'outputLine(a / c, a % c, a :/ c, a :% c);',
-    'outputLine(7 / c, 7 % c, 7 :/ c, 7 :% c);',
+    'io.outputLine(a / b, a % b, a :/ b, a :% b);',
+    'io.outputLine(a / c, a % c, a :/ c, a :% c);',
+    'io.outputLine(7 / c, 7 % c, 7 :/ c, 7 :% c);',
     'var m := -9223372036854775808;',
     'var n := -1;',
-    'outputLine(m % n, m :% n);',
+    'io.outputLine(m % n, m :% n);',
   ].join('\n');
   const ts = runCompiler(tsManifestPath, source);
   assert.equal(ts.code, 0, ts.errors);
@@ -1917,15 +1944,16 @@ test('restricted compiler lowers dynamic Int division and remainder to runnable 
     context.skip('C compiler unavailable; dynamic division C lowering requires cc or CC'); return;
   }
   const source = [
+    'io := import "core/io";',
     'var a := -7;',
     'var b := 2;',
     'var c := -2;',
-    'outputLine(a / b, a % b, a :/ b, a :% b);',
-    'outputLine(a / c, a % c, a :/ c, a :% c);',
-    'outputLine(7 / c, 7 % c, 7 :/ c, 7 :% c);',
+    'io.outputLine(a / b, a % b, a :/ b, a :% b);',
+    'io.outputLine(a / c, a % c, a :/ c, a :% c);',
+    'io.outputLine(7 / c, 7 % c, 7 :/ c, 7 :% c);',
     'var m := -9223372036854775808;',
     'var n := -1;',
-    'outputLine(m :% n);',
+    'io.outputLine(m :% n);',
   ].join('\n');
   const c = runCompiler(cManifestPath, source);
   assert.equal(c.code, 0, c.errors);
@@ -1934,12 +1962,12 @@ test('restricted compiler lowers dynamic Int division and remainder to runnable 
     stdout: Buffer.from('-3 -1 -4 1\n3 -1 3 -1\n-3 1 -4 -1\n0\n'), stderr: Buffer.alloc(0),
   });
   for (const source of [
-    'var x := 1; var y := 0; outputLine(x / y);',
-    'var x := 1; var y := 0; outputLine(x % y);',
-    'var x := 1; var y := 0; outputLine(x :/ y);',
-    'var x := 1; var y := 0; outputLine(x :% y);',
-    'var x := -9223372036854775808; outputLine(x / -1);',
-    'var x := -9223372036854775808; outputLine(x :/ -1);',
+    "io := import \"core/io\"; var x := 1; var y := 0; io.outputLine(x / y);",
+    "io := import \"core/io\"; var x := 1; var y := 0; io.outputLine(x % y);",
+    "io := import \"core/io\"; var x := 1; var y := 0; io.outputLine(x :/ y);",
+    "io := import \"core/io\"; var x := 1; var y := 0; io.outputLine(x :% y);",
+    "io := import \"core/io\"; var x := -9223372036854775808; io.outputLine(x / -1);",
+    "io := import \"core/io\"; var x := -9223372036854775808; io.outputLine(x :/ -1);",
   ]) {
     const compiled = runCompiler(cManifestPath, source);
     assert.equal(compiled.code, 0, compiled.errors);
@@ -1954,20 +1982,21 @@ test('restricted compiler lowers dynamic Int division and remainder to runnable 
 
 test('restricted compiler lowers dynamic String concatenation with left-to-right TS evaluation', () => {
   const source = [
+    'io := import "core/io";',
     'join := fn (a: String, b: String): String { return a + b; }',
     'var prefix := "lit";',
     'name := "er";',
     'pair := (left = "tu", right = "ple");',
     'values := ["li", "st"];',
-    'outputLine(prefix + name);',
-    'outputLine(join("fun", "ction"));',
-    'outputLine(pair.left + pair.right);',
-    'outputLine(values[0] + values[1]);',
-    'outputLine("" + prefix + "" + name);',
-    'outputLine("snow🙂" + "man");',
-    'outputLine("line\\n" + "break");',
-    'outputLine("tab\\t" + "stop");',
-    'outputLine("quote\\"" + "back\\\\slash");',
+    'io.outputLine(prefix + name);',
+    'io.outputLine(join("fun", "ction"));',
+    'io.outputLine(pair.left + pair.right);',
+    'io.outputLine(values[0] + values[1]);',
+    'io.outputLine("" + prefix + "" + name);',
+    'io.outputLine("snow🙂" + "man");',
+    'io.outputLine("line\\n" + "break");',
+    'io.outputLine("tab\\t" + "stop");',
+    'io.outputLine("quote\\\"" + "back\\\\slash");',
   ].join('\n');
   const ts = runCompiler(tsManifestPath, source);
   assert.equal(ts.code, 0, ts.errors);
@@ -1978,7 +2007,7 @@ test('restricted compiler lowers dynamic String concatenation with left-to-right
       'snow🙂man\nline\nbreak\ntab\tstop\nquote"back\\slash\n'),
     stderr: Buffer.alloc(0),
   });
-  const order = runCompiler(tsManifestPath, 'outputLine(textAt("a", 9) + textSlice("a", 0, 9));');
+  const order = runCompiler(tsManifestPath, "text := import \"core/text\"; io := import \"core/io\"; io.outputLine(text.at(\"a\", 9) + text.slice(\"a\", 0, 9));");
   assert.equal(order.code, 0, order.errors);
   const orderRun = runTsArtifact(order.output);
   assert.equal(orderRun.phase, 'run');
@@ -1996,15 +2025,16 @@ test('restricted compiler lowers dynamic String concatenation to runnable C', co
     context.skip('C compiler unavailable; dynamic String concatenation C lowering requires cc or CC'); return;
   }
   const source = [
+    'io := import "core/io";',
     'var prefix := "lit";',
     'name := "er";',
-    'outputLine(prefix + name);',
-    'outputLine(prefix + name + "!");',
-    'outputLine("" + prefix + "");',
-    'outputLine("snow🙂" + "man");',
-    'outputLine("line\\n" + "break");',
-    'outputLine("tab\\t" + "stop");',
-    'outputLine("quote\\"" + "back\\\\slash");',
+    'io.outputLine(prefix + name);',
+    'io.outputLine(prefix + name + "!");',
+    'io.outputLine("" + prefix + "");',
+    'io.outputLine("snow🙂" + "man");',
+    'io.outputLine("line\\n" + "break");',
+    'io.outputLine("tab\\t" + "stop");',
+    'io.outputLine("quote\\\"" + "back\\\\slash");',
   ].join('\n');
   const c = runCompiler(cManifestPath, source);
   assert.equal(c.code, 0, c.errors);
@@ -2015,7 +2045,7 @@ test('restricted compiler lowers dynamic String concatenation to runnable C', co
     stdout: Buffer.from('liter\nliter!\nlit\nsnow🙂man\nline\nbreak\ntab\tstop\nquote"back\\slash\n'),
     stderr: Buffer.alloc(0),
   });
-  const plain = runCompiler(cManifestPath, 's := "a";\noutputLine(s);\n');
+  const plain = runCompiler(cManifestPath, "io := import \"core/io\"; s := \"a\";\nio.outputLine(s);\n");
   assert.equal(plain.code, 0, plain.errors);
   assert.equal(plain.output.includes('lite_concat'), false);
   assert.equal(plain.output.includes('#include <stdlib.h>'), false);
@@ -2023,12 +2053,12 @@ test('restricted compiler lowers dynamic String concatenation to runnable C', co
 
 test('restricted compiler division faults preserve zero divisor and minimum/-1 status and stderr', () => {
   for (const source of [
-    'var x := 1; var y := 0; outputLine(x / y);',
-    'var x := 1; var y := 0; outputLine(x % y);',
-    'var x := 1; var y := 0; outputLine(x :/ y);',
-    'var x := 1; var y := 0; outputLine(x :% y);',
-    'var x := -9223372036854775808; outputLine(x / -1);',
-    'var x := -9223372036854775808; outputLine(x :/ -1);',
+    "io := import \"core/io\"; var x := 1; var y := 0; io.outputLine(x / y);",
+    "io := import \"core/io\"; var x := 1; var y := 0; io.outputLine(x % y);",
+    "io := import \"core/io\"; var x := 1; var y := 0; io.outputLine(x :/ y);",
+    "io := import \"core/io\"; var x := 1; var y := 0; io.outputLine(x :% y);",
+    "io := import \"core/io\"; var x := -9223372036854775808; io.outputLine(x / -1);",
+    "io := import \"core/io\"; var x := -9223372036854775808; io.outputLine(x :/ -1);",
   ]) {
     const compiled = runCompiler(tsManifestPath, source);
     assert.equal(compiled.code, 0, compiled.errors);
@@ -2041,7 +2071,7 @@ test('restricted compiler division faults preserve zero divisor and minimum/-1 s
   }
 });
 test('Lite-written TS and C compilers lower String values and multi-value reports deterministically', () => {
-  const program = 's := "a\\"b";\noutputLine(s);\noutputLine(1, s, 2);\n';
+  const program = "io := import \"core/io\"; s := \"a\\\"b\";\nio.outputLine(s);\nio.outputLine(1, s, 2);\n";
   assert.deepEqual(runCompiler(tsManifestPath, program), { code: 0, errors: '', output:
     'export function main(lite$write?: (text: string) => void): string {\n    let lite_out = "";\n    function lite$emit(text: string): void {\n        if (lite$write === undefined) lite_out += text;\n        else lite$write(text);\n    }\n    void lite$emit;\n' +
     '    const lite_s = "a\\"b";\n' +
@@ -2091,7 +2121,7 @@ test('compiler applications reject fixture sources with exact diagnostics, posit
   }
 });
 test('restricted TS compiler emits a deterministic report sequence', () => {
-  assert.equal(runCompiler(tsManifestPath, 'outputLine(42);\noutputLine(9);').output,
+  assert.equal(runCompiler(tsManifestPath, "io := import \"core/io\"; io.outputLine(42);\nio.outputLine(9);").output,
     'export function main(lite$write?: (text: string) => void): string {\n    let lite_out = "";\n    function lite$emit(text: string): void {\n        if (lite$write === undefined) lite_out += text;\n        else lite$write(text);\n    }\n    void lite$emit;\n    const lite$report0 = (42n).toString();\n    lite$emit(lite$report0 + "\\n");\n    const lite$report1 = (9n).toString();\n    lite$emit(lite$report1 + "\\n");\n    return lite_out;\n}\n');
 });
 test('emitted TS and igniter outputs match byte for byte across the admitted compiler corpus', async () => {
@@ -2147,34 +2177,34 @@ test('root launcher compiles artifacts and forwards their input, diagnostics and
   try {
     build('language/examples/001-double-sum.lts', launcher, root);
     const example = executeArtifact('7\n5\n'); assert.equal(example.status, 0, example.stderr); assert.equal(example.stdout, 'First integer: Second integer: 24\n');
-    writeFileSync(source, 'outputLine(inputInt()); reportError("done"); exit(7);'); build();
+    writeFileSync(source, "io := import \"core/io\"; io.outputLine(io.inputInt()); io.errorLine(\"done\"); io.exit(7);"); build();
     const result = executeArtifact('19\n'); assert.equal(result.status, 7); assert.equal(result.stdout, '19\n'); assert.equal(result.stderr, 'done\n');
-    writeFileSync(source, 'outputLine(inputInt());');
+    writeFileSync(source, "io := import \"core/io\"; io.outputLine(io.inputInt());");
     const check = invoke(['check', source]); assert.equal(check.status, 0, check.stderr); assert.equal(check.stdout, ''); assert.equal(check.stderr, '');
-    writeFileSync(source, 'loop inputArgs() as arg { outputLine(arg); }'); build();
+    writeFileSync(source, "io := import \"core/io\"; loop io.inputArgs() as arg { io.outputLine(arg); }"); build();
     const args = executeArtifact('', ['a b', '', '--check']); assert.equal(args.status, 0, args.stderr); assert.equal(args.stdout, 'a b\n\n--check\n');
     const ran = invoke(['run', 'program with spaces.lts', '--', 'a b', '', '--check']);
     assert.equal(ran.status, 0, ran.stderr); assert.equal(ran.stdout, 'a b\n\n--check\n'); assert.equal(ran.stderr, '');
-    writeFileSync(source, 'outputLine(1/0);'); build(); const fault = executeArtifact();
+    writeFileSync(source, "io := import \"core/io\"; io.outputLine(1/0);"); build(); const fault = executeArtifact();
     assert.equal(fault.status, 1); assert.equal(fault.stdout, ''); assert.match(fault.stderr, /program with spaces\.lts:1:13: ArithmeticPanic:/);
     for (const argv of [[], ['unknown', source]]) { const usage = invoke(argv); assert.equal(usage.status, 2); assert.equal(usage.stdout, ''); assert.match(usage.stderr, /^Usage: \.\/lite <command>/); }
     const runUsage = invoke(['run']); assert.equal(runUsage.status, 2); assert.equal(runUsage.stdout, '');
     assert.equal(runUsage.stderr, 'Usage: ./bin/lite run file.lts [-- argument ...]\n');
     const alias = join(dir, 'project with spaces'); symlinkSync(root, alias, 'dir');
-    writeFileSync(source, 'outputLine(23);'); build(source, join(alias, 'lite')); const spaced = executeArtifact();
+    writeFileSync(source, "io := import \"core/io\"; io.outputLine(23);"); build(source, join(alias, 'lite')); const spaced = executeArtifact();
     assert.equal(spaced.status, 0, spaced.stderr); assert.equal(spaced.stdout, '23\n'); assert.equal(spaced.stderr, '');
   } finally { rmSync(dir, { recursive: true, force: true }); }
 });
 
 test('Lite numeric literal phases share Float spelling and finite-range checks', () => {
-  const texts = ['outputLine(0.1, 1e2, -0.0, 5e-324);',
-    'var n: Float = 0.1; n = 2.5;', 'f := fn(n: Float): Float { -n } outputLine(f(1.5));'];
+  const texts = ["io := import \"core/io\"; io.outputLine(0.1, 1e2, -0.0, 5e-324);",
+    'var n: Float = 0.1; n = 2.5;', "io := import \"core/io\"; f := fn(n: Float): Float { -n } io.outputLine(f(1.5));"];
   for (const driver of [lexerDumpPath, parserProgramDumpPath, checkerDumpPath]) withGeneratedDriver(driver, generated => {
     for (const text of texts) {
       const expected = expectedFile(driver, text); assert.equal(expected.code, 0, text + expected.errors);
       assert.deepEqual(generated(text), expected);
     }
-    for (const text of ['outputLine(1e);', 'outputLine(1e309);']) {
+    for (const text of ["io := import \"core/io\"; io.outputLine(1e);", "io := import \"core/io\"; io.outputLine(1e309);"]) {
       const expected = expectedFile(driver, text); assert.equal(expected.code, 2, text); assert.equal(expected.output, '');
       assert.deepEqual(generated(text), expected);
     }
@@ -2182,14 +2212,14 @@ test('Lite numeric literal phases share Float spelling and finite-range checks',
 });
 
 test('Lite power parser retains association and rejects concealed ungrouped negative bases', () => {
-  const valid = ['outputLine(2 ** 3 ** 2);', 'outputLine((-2) ** 2, -(2 ** 2));', 'outputLine(+(-2) ** 2);'];
-  const invalid = ['outputLine(-2 ** 2);', 'base := 2; outputLine(-base ** 2);', 'outputLine(+-2 ** 2);', 'outputLine((-2 ** 2));'];
+  const valid = ["io := import \"core/io\"; io.outputLine(2 ** 3 ** 2);", "io := import \"core/io\"; io.outputLine((-2) ** 2, -(2 ** 2));", "io := import \"core/io\"; io.outputLine(+(-2) ** 2);"];
+  const invalid = ["io := import \"core/io\"; io.outputLine(-2 ** 2);", "io := import \"core/io\"; base := 2; io.outputLine(-base ** 2);", "io := import \"core/io\"; io.outputLine(+-2 ** 2);", "io := import \"core/io\"; io.outputLine((-2 ** 2));"];
   withGeneratedDriver(parserProgramDumpPath, generated => {
     for (const text of valid) { const expected = expectedFile(parserProgramDumpPath, text); assert.equal(expected.code, 0, text + expected.errors); assert.deepEqual(generated(text), expected); }
     for (const text of invalid) { const expected = expectedFile(parserProgramDumpPath, text); assert.equal(expected.code, 2, text); assert.equal(expected.output, ''); assert.match(expected.errors, /group a negative power base/); assert.deepEqual(generated(text), expected); }
   });
   withGeneratedDriver(checkerDumpPath, generated => {
-    for (const text of ['x: Float = 2 ** 3;', 'f := fn(): Float { return -(2 ** 2); } outputLine(f());', 'f := fn(): Float { return 2 ** 3 ** 2; } outputLine(f());']) {
+    for (const text of ['x: Float = 2 ** 3;', "io := import \"core/io\"; f := fn(): Float { return -(2 ** 2); } io.outputLine(f());", "io := import \"core/io\"; f := fn(): Float { return 2 ** 3 ** 2; } io.outputLine(f());"]) {
       const expected = expectedFile(checkerDumpPath, text); assert.equal(expected.code, 0, text + expected.errors); assert.deepEqual(generated(text), expected);
     }
     for (const text of ['x: Int = 2 ** 3;', 'f := fn(): Int { return 2 ** 3; }']) {
@@ -2201,7 +2231,7 @@ test('Lite power parser retains association and rejects concealed ungrouped nega
 test('Lite numeric alias phases normalize built-in synonyms across annotations and signatures', () => {
   for (const driver of [parserProgramDumpPath, checkerDumpPath]) withGeneratedDriver(driver, generated => {
     for (const text of ['i: Int64 = 2; f: Float64 = 0.5; d: Double = 1.5;',
-      'Count := type Int64; f := fn(n: Count, x: Double): Float64 { return x; } outputLine(f(2, 0.5));',
+      "io := import \"core/io\"; Count := type Int64; f := fn(n: Count, x: Double): Float64 { return x; } io.outputLine(f(2, 0.5));",
       'p: (i: Int64, f: Double) = (i = 2, f = 0.5); xs: List<Int64> = [1, 2];']) {
       const expected = expectedFile(driver, text); assert.equal(expected.code, 0, text + expected.errors); assert.deepEqual(generated(text), expected);
     }
@@ -2216,8 +2246,8 @@ test('Lite numeric alias phases normalize built-in synonyms across annotations a
 test('Lite checker admits exact scalar integer literals in Float contexts without widening values', () => {
   withGeneratedDriver(checkerDumpPath, generated => {
     for (const text of ['f: Float = 2; d: Double = -3; g: Float64 = ((4));',
-      'var f: Float = 2; f = -4;', 'f := fn(): Float { return (-2); } outputLine(f());',
-      'f := fn(n: Float): Float { return n; } outputLine(f(2));', 'f: Float = -9223372036854775808;']) {
+      'var f: Float = 2; f = -4;', "io := import \"core/io\"; f := fn(): Float { return (-2); } io.outputLine(f());",
+      "io := import \"core/io\"; f := fn(n: Float): Float { return n; } io.outputLine(f(2));", 'f: Float = -9223372036854775808;']) {
       const expected = expectedFile(checkerDumpPath, text); assert.equal(expected.code, 0, text + expected.errors); assert.deepEqual(generated(text), expected);
     }
     for (const text of ['f: Float = 9007199254740993;', 'i := 2; f: Float = i;', 'f: Float = 2 + 3;',
@@ -2267,15 +2297,15 @@ test('real compiler CLI forwards source-name context without changing emitted by
   try {
     const sourcePath = join(directory, 'label with spaces.lts');
     for (const [target, reference] of [['ts', 'report-42.ts'], ['c', 'report-42.c']] as const) {
-      writeFileSync(sourcePath, 'outputLine(42);');
+      writeFileSync(sourcePath, "io := import \"core/io\"; io.outputLine(42);");
       const valid = spawnSync(target === 'ts' ? join(root, 'bin/lite-compile-ts') : process.execPath, target === 'ts' ? [sourcePath] : [join(root, 'compiler/cli.ts'), target, sourcePath], { env, timeout: 5000 });
       assert.equal(valid.error, undefined); assert.equal(valid.status, 0);
       assert.deepEqual(valid.stdout, readFileSync(join(root, 'compiler/tests/references/generated', reference)));
       assert.equal(valid.stderr.length, 0);
-      writeFileSync(sourcePath, 'outputLine(1 +);');
+      writeFileSync(sourcePath, "io := import \"core/io\"; io.outputLine(1 +);");
       const invalid = spawnSync(target === 'ts' ? join(root, 'bin/lite-compile-ts') : process.execPath, target === 'ts' ? [sourcePath] : [join(root, 'compiler/cli.ts'), target, sourcePath], { env, timeout: 5000 });
       assert.equal(invalid.error, undefined); assert.equal(invalid.status, 2); assert.equal(invalid.stdout.length, 0);
-      assert.deepEqual(invalid.stderr, Buffer.from(`${sourcePath}:1:15: expected an Int, Float, String or Bool expression\n`));
+      assert.deepEqual(invalid.stderr, Buffer.from(`${sourcePath}:1:42: expected an Int, Float, String or Bool expression\n`));
     }
   } finally { rmSync(directory, { recursive: true, force: true }); }
 });
@@ -2299,13 +2329,13 @@ test('whole-source TS and C compilers reject later statements and decoding failu
       const empty = spawnSync(target === 'ts' ? join(root, 'bin/lite-compile-ts') : process.execPath, target === 'ts' ? [sourcePath] : [join(root, 'compiler/cli.ts'), target, sourcePath], { env, timeout: 5000 });
       assert.equal(empty.error, undefined); assert.equal(empty.status, 0, empty.stderr.toString());
       assert.ok(empty.stdout.length > 0); assert.equal(empty.stderr.length, 0);
-      for (const input of [' \n}', 'outputLine(42);\nunsupported();\n', 'outputLine(42);\nprocess.exit(7);\n']) {
+      for (const input of [' \n}', "io := import \"core/io\"; io.outputLine(42);\nunsupported();\n", "io := import \"core/io\"; io.outputLine(42);\nprocess.io.exit(7);\n"]) {
         writeFileSync(sourcePath, input);
         const rejected = spawnSync(target === 'ts' ? join(root, 'bin/lite-compile-ts') : process.execPath, target === 'ts' ? [sourcePath] : [join(root, 'compiler/cli.ts'), target, sourcePath], { env, timeout: 5000 });
         assert.equal(rejected.error, undefined); assert.equal(rejected.status, 2, rejected.stderr.toString());
         assert.equal(rejected.stdout.length, 0); assert.notEqual(rejected.stderr.length, 0);
       }
-      writeFileSync(sourcePath, Buffer.concat([Buffer.from('outputLine(42);\n'), Buffer.from([0xff])]));
+      writeFileSync(sourcePath, Buffer.concat([Buffer.from("io := import \"core/io\"; io.outputLine(42);\n"), Buffer.from([0xff])]));
       const invalid = spawnSync(target === 'ts' ? join(root, 'bin/lite-compile-ts') : process.execPath, target === 'ts' ? [sourcePath] : [join(root, 'compiler/cli.ts'), target, sourcePath], { env, timeout: 5000 });
       assert.equal(invalid.error, undefined); assert.equal(invalid.status, 1);
       assert.equal(invalid.stdout.length, 0); assert.match(invalid.stderr.toString(), /InputFault: cannot read input/);
@@ -2335,7 +2365,7 @@ test('source graph artifacts are deterministic and leak no timestamps or host pa
   const root = new URL('../', import.meta.url).pathname;
   const manifest = join(root, 'compiler/manifests/ts.json');
   const compiler = compilerFor(manifest);
-  const source = 'x := 1;\noutputLine(x + 1);\n';
+  const source = "io := import \"core/io\"; x := 1;\nio.outputLine(x + 1);\n";
   const first = compiler.compile({ text: source });
   const second = compiler.compile({ text: source });
   assert.equal(first.status, 0);

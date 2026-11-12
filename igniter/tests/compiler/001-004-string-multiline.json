@@ -2,7 +2,7 @@
   "name": "string-multiline",
   "source": {
     "file": "001-004-string-multiline.lts",
-    "hash": "sha256:08e23c8564e0533b0740cb051d210f10a89ad5396b0430907717b592c3be3c25"
+    "hash": "sha256:a06e204927c995afd1c2980b010ed485dbf6d306245c945517579acd309c18d6"
   },
   "cases": [
     {

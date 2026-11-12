@@ -2,7 +2,7 @@
   "name": "min-divide-minus-one",
   "source": {
     "file": "001-011-min-divide-minus-one.lts",
-    "hash": "sha256:2e6ee56e1748da36a61e1aec2d7ec6ae73d82613d4fdb993d2fc014162a1210c"
+    "hash": "sha256:3188346fe29a52b74162803c14b4b3d56de23a47df9042384173b32b6bda93fe"
   },
   "cases": [
     {
@@ -12,8 +12,8 @@
         "hash": "sha256:e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
       },
       "stderr": {
-        "text": "1:33: ArithmeticPanic: integer outside Int range\n",
-        "hash": "sha256:30bcb587aff4c64b12246b2a48da77179fe693aedd7d430d1cb2f46182159834"
+        "text": "3:36: ArithmeticPanic: integer outside Int range\n",
+        "hash": "sha256:47cbd23261c1207451996126f88099266c8d791a5157b4b2e0562deccce3d5e6"
       },
       "exitCode": 1
     }

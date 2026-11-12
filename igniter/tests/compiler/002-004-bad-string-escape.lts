@@ -1,1 +1,3 @@
-outputLine("bad \q");
+io := import "core/io";
+
+io.outputLine("bad \q");

@@ -2,7 +2,7 @@
   "name": "overflow-multiply-large",
   "source": {
     "file": "001-011-overflow-multiply-large.lts",
-    "hash": "sha256:4e2d9e4795f70a38bbe98a94f6308410b506a0b61a711f8df765a09e1088f4f7"
+    "hash": "sha256:817e983b3590d934edf4f410597dfa614d1107fe630185a791273c1ed0b03eca"
   },
   "cases": [
     {
@@ -12,8 +12,8 @@
         "hash": "sha256:e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
       },
       "stderr": {
-        "text": "1:23: ArithmeticPanic: integer outside Int range\n",
-        "hash": "sha256:f7799c128df8a9196f1e4199133861ee26489b9b62f9be9f362eddac9c173ae5"
+        "text": "3:26: ArithmeticPanic: integer outside Int range\n",
+        "hash": "sha256:27650a11cbf1290702cc9e921f642e6ea208c298d18532ea4d40c52a8557ea4a"
       },
       "exitCode": 1
     }

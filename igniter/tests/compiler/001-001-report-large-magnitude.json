@@ -2,7 +2,7 @@
   "name": "report-large-magnitude",
   "source": {
     "file": "001-001-report-large-magnitude.lts",
-    "hash": "sha256:07f3dde894deed1af9b71272b6a7acbf65cb711c8f1b4496e4e374bf3c8bf2f0"
+    "hash": "sha256:2256e94174533902f0554e5548627a0b0f228cfc11cae1bf1d87453df5eb6249"
   },
   "cases": [
     {

@@ -1,5 +1,7 @@
 /* Provisional bootstrap checked-integer support. Not an official standard library. */
 
+hostText := import "core/text-host";
+
 /** Returns the smallest signed 64-bit value. */
 pub intMin := fn(): Int { -9223372036854775808 }
 
@@ -89,7 +91,7 @@ pub intText := fn(value: Int): String {
     var digits := "";
     loop remaining > 0 {
         digit := remaining % 10;
-        digits = textAt("0123456789", digit) + digits;
+        digits = hostText.at("0123456789", digit) + digits;
         remaining = remaining / 10;
     }
     digits

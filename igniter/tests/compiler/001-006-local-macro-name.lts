@@ -1,2 +1,4 @@
+io := import "core/io";
+
 INT64_MIN := 7;
-outputLine(INT64_MIN);
+io.outputLine(INT64_MIN);

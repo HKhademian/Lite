@@ -1,5 +1,5 @@
-integer := import "../core/int.lts";
-test := import "../core/test.lts";
+integer := import "core/int";
+test := import "core/test";
 
 sum := integer.intAdd(2, 3);
 test.checkInt("int add", 5, sum.value);

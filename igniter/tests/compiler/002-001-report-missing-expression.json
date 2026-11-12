@@ -2,7 +2,7 @@
   "name": "report-missing-expression",
   "source": {
     "file": "002-001-report-missing-expression.lts",
-    "hash": "sha256:1d3acac664c936e00f69bb72814c89773db5934dd6015a92f0c096cedeab3764"
+    "hash": "sha256:4224ff6b7874184044490888e6be66625e32296c753bf31f74508b51a39ac3bf"
   },
   "cases": [
     {
@@ -12,8 +12,8 @@
         "hash": "sha256:e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
       },
       "stderr": {
-        "text": "1:15: expected an Int, Float, String or Bool expression\n",
-        "hash": "sha256:fb09bdea10b2db43c92288b7b85179a9e035f56bccc3978bd91605651e270d9e"
+        "text": "3:18: expected an Int, Float, String or Bool expression\n",
+        "hash": "sha256:ba52d8b55512cb7e26c5e9fa7f3d56a430c61e17cf577f76c964827140b2a6df"
       },
       "exitCode": 2
     }

@@ -2,7 +2,7 @@
   "name": "exponent-literal",
   "source": {
     "file": "001-001-exponent-literal.lts",
-    "hash": "sha256:8945f12a17b84b4b0598d4dd062f97929ddafc77ed7ad2a76a79599ce38aaa90"
+    "hash": "sha256:f0542a7786b265dbc8965f0714f4fe671d84f1fd622120a6eb25991fd7507b55"
   },
   "cases": [
     {

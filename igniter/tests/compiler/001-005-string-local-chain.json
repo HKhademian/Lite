@@ -2,7 +2,7 @@
   "name": "string-local-chain",
   "source": {
     "file": "001-005-string-local-chain.lts",
-    "hash": "sha256:41c671cf4bde5d36d20354eb7a466b0ffaadce4a107c7e8f56f5f0685dadf73a"
+    "hash": "sha256:265dd7ef6092e0468d232687f779ac630df0838e1bf665f23217d9ec5ec89c72"
   },
   "cases": [
     {

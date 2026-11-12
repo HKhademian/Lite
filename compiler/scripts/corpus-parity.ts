@@ -9,7 +9,7 @@ export function corpusParity(args: readonly string[]): void {
   if (target !== 'ts' && target !== 'c') throw new Error('--target must be ts or c');
   if (target !== 'ts') throw new Error('C corpus execution is deferred');
   const selected = selectedArtifact(options.values.get('artifact'));
-  const result = validateCorpus(selected.bytes.toString());
+  const result = validateCorpus(selected.path);
   process.stdout.write(JSON.stringify({ phase: 'recorded-contracts', target, artifactSha256: selected.sha256,
     sourceSha256: selected.currentSourceSha256, selectedCompilerSha256: selected.selectedCompilerSha256, selectedCompilerBuilderSha256: selected.selectedCompilerBuilderSha256, supplied: selected.supplied,
     toolSources: toolIdentities(['compiler/scripts/corpus-parity.ts', 'compiler/scripts/corpus-contracts.ts', 'compiler/scripts/tooling.ts', 'compiler/host.ts', 'igniter/artifacts.ts', 'igniter/test-fixtures.ts']),

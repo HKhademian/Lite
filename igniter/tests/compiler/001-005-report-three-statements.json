@@ -2,7 +2,7 @@
   "name": "report-three-statements",
   "source": {
     "file": "001-005-report-three-statements.lts",
-    "hash": "sha256:bdbd3b6618328cef131c8bbe3dd3470cf5d15f9092e07d97c3081dede7815f5c"
+    "hash": "sha256:43d11ef21874ce56a9b6cbf75a46c947cf47d21bdf5c4ed67e11be389080e70f"
   },
   "cases": [
     {

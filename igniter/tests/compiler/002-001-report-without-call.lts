@@ -1,1 +1,2 @@
-outputLine
+io := import "core/io";
+io.outputLine;

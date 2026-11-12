@@ -2,7 +2,7 @@
   "name": "unary-minus-string",
   "source": {
     "file": "002-002-unary-minus-string.lts",
-    "hash": "sha256:d32e8addb58adec6e3a94096deb3a010d4f557a592b2489c681f08353abdaeea"
+    "hash": "sha256:4d104fee2796432a19346cfa6bac5161c967a55926f058e140cc26a6c9deb06c"
   },
   "cases": [
     {
@@ -12,8 +12,8 @@
         "hash": "sha256:e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
       },
       "stderr": {
-        "text": "1:12: unary - requires an Int or Float operand\n",
-        "hash": "sha256:a8d1a0f389713e6bb4bb4483bb40f6270178a8e0547199f631315ee80c579b92"
+        "text": "3:15: unary - requires an Int or Float operand\n",
+        "hash": "sha256:b55c3ac98ccafbfa997ab5482f0f8fa7db304024d27895466617badaaedcf52f"
       },
       "exitCode": 2
     }

@@ -2,7 +2,7 @@
   "name": "report-missing-close",
   "source": {
     "file": "002-001-report-missing-close.lts",
-    "hash": "sha256:f6e43a79efd48a000ebbd4ad8ddcd151e7c54954722c0430d94c81dd44172d8e"
+    "hash": "sha256:126667b211fe01d2f6d40902e78c8dc0849151b2f28627ba34f27df86757c887"
   },
   "cases": [
     {
@@ -12,8 +12,8 @@
         "hash": "sha256:e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
       },
       "stderr": {
-        "text": "2:1: expected )\n",
-        "hash": "sha256:6a6e91b36c5316c29c6e52864c82fb960dead3413ff27bd86636f1c52c85e48e"
+        "text": "4:1: expected )\n",
+        "hash": "sha256:ea7f5d85cc315803bc11acabf9c675fca9ad4cc0e7d826eaefaf2d905012b01e"
       },
       "exitCode": 2
     }

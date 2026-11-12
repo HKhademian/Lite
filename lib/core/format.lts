@@ -1,6 +1,7 @@
 /* Provisional bootstrap formatting support. Not an official standard library. */
-integer := import "./int.lts";
 
+integer := import "core/int";
+text := import "core/text";
 
 /** Formats one signed 64-bit Int as decimal text. */
 pub decimalText := fn(value: Int): String {
@@ -9,7 +10,7 @@ pub decimalText := fn(value: Int): String {
 
 /** Left-pads `value` with spaces to at least `width` characters. */
 pub padLeftText := fn(value: String, width: Int): String {
-    size := textLength(value);
+    size := text.length(value);
     var result := value;
     var index := size;
     loop index < width {
@@ -21,7 +22,7 @@ pub padLeftText := fn(value: String, width: Int): String {
 
 /** Right-pads `value` with spaces to at least `width` characters. */
 pub padRightText := fn(value: String, width: Int): String {
-    size := textLength(value);
+    size := text.length(value);
     var result := value;
     var index := size;
     loop index < width {

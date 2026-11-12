@@ -1,2 +1,4 @@
-outputLine("line1
+io := import "core/io";
+
+io.outputLine("line1
 line2");

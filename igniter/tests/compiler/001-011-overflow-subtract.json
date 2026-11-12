@@ -2,7 +2,7 @@
   "name": "overflow-subtract",
   "source": {
     "file": "001-011-overflow-subtract.lts",
-    "hash": "sha256:521be89ae4b5416694d44fb845f84f2a4a9239aa1eb93d4f025ce3cbe2b88bea"
+    "hash": "sha256:fbd20c1d3d06ea2fe837c3754b4f74746da0bec7f8896da8f3f4af45b7b54e11"
   },
   "cases": [
     {
@@ -12,8 +12,8 @@
         "hash": "sha256:e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
       },
       "stderr": {
-        "text": "1:33: ArithmeticPanic: integer outside Int range\n",
-        "hash": "sha256:30bcb587aff4c64b12246b2a48da77179fe693aedd7d430d1cb2f46182159834"
+        "text": "3:36: ArithmeticPanic: integer outside Int range\n",
+        "hash": "sha256:47cbd23261c1207451996126f88099266c8d791a5157b4b2e0562deccce3d5e6"
       },
       "exitCode": 1
     }

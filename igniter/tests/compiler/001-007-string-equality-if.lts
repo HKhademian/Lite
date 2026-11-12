@@ -1,11 +1,13 @@
+io := import "core/io";
+
 var word := "lite";
 var other := "other";
 if word == "lite" {
-    outputLine("match");
+    io.outputLine("match");
 }
 if word =!= other {
-    outputLine("different");
+    io.outputLine("different");
 }
 if "alpha" == "alpha" {
-    outputLine("constant match");
+    io.outputLine("constant match");
 }

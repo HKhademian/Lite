@@ -1,1 +1,3 @@
-x := 1; outputLine(y);
+io := import "core/io";
+
+x := 1; io.outputLine(y);

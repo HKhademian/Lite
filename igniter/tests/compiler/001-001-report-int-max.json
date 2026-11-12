@@ -2,7 +2,7 @@
   "name": "report-int-max",
   "source": {
     "file": "001-001-report-int-max.lts",
-    "hash": "sha256:e799cd09279411498024c412a1973bb09c96b14cb5d1adea27532cc3a737afa7"
+    "hash": "sha256:580bbacd8b578550cc23c8dc1d2e40f71cf559ef9eeed5585d0f8db737188884"
   },
   "cases": [
     {

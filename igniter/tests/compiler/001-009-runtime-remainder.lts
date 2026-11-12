@@ -1,2 +1,4 @@
+io := import "core/io";
+
 var x := 4;
-outputLine(x % 3);
+io.outputLine(x % 3);

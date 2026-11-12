@@ -2,7 +2,7 @@
   "name": "output-line-empty-arguments",
   "source": {
     "file": "001-001-output-line-empty-arguments.lts",
-    "hash": "sha256:5e72423926e0780734b76cb4c29fd8791732c03087185149d8dd39eb0953ffde"
+    "hash": "sha256:17fad8591ea8d99a569152a51f01b1ce3eb7112c83dcc63ca6ed7186fb25724d"
   },
   "cases": [
     {

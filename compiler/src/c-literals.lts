@@ -1,6 +1,8 @@
 /* C backend for the temporary Lite compiler. */
-integer := import "../../lib/core/int.lts";
-diagLib := import "../../lib/core/diag.lts";
+
+integer := import "core/int";
+diagLib := import "core/diag";
+textLib := import "core/text";
 
 /** Formats a checked Int value as a C signed 64-bit literal (`INT64_C`, `INT64_MIN`). */
 pub intLiteralCode := fn(value: Int, negative: Bool, digits: String): String {
@@ -12,11 +14,11 @@ pub intLiteralCode := fn(value: Int, negative: Bool, digits: String): String {
 
 /** Escapes a String as a readable C literal, including trigraph-safe `?`. */
 pub textLiteralCode := fn(value: String): String {
-    size := textLength(value);
+    size := textLib.length(value);
     var encoded := "\"";
     var position := 0;
     loop position < size {
-        ch := textAt(value, position);
+        ch := textLib.at(value, position);
         if ch == "\\" { encoded = encoded + "\\\\"; }
         else if ch == "\"" { encoded = encoded + "\\\""; }
         else if ch == "?" { encoded = encoded + "\\?"; }
@@ -179,8 +181,8 @@ comparisonTemp := fn(kind: String, position: Int, index: Int): String {
 comparisonValueCode := fn(kind: String, code: String): String {
     if kind =!= "Unit" { return code; }
     var inner := code;
-    loop textLength(inner) >= 2 and textAt(inner, 0) == "(" and textAt(inner, textLength(inner) - 1) == ")" {
-        inner = textSlice(inner, 1, textLength(inner) - 1);
+    loop textLib.length(inner) >= 2 and textLib.at(inner, 0) == "(" and textLib.at(inner, textLib.length(inner) - 1) == ")" {
+        inner = textLib.slice(inner, 1, textLib.length(inner) - 1);
     }
     if inner == "undefined" { "0" } else { "(" + code + ", 0)" }
 }

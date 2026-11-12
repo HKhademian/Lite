@@ -1,3 +1,5 @@
+io := import "core/io";
+
 loop 1 {
-    outputLine(1);
+    io.outputLine(1);
 }

@@ -1,9 +1,11 @@
+io := import "core/io";
+
 var a := true;
 var b := false;
-outputLine(a, b, not b);
-outputLine(a and not b);
-outputLine(a or b);
-outputLine(a == true, b == false, a =!= b);
+io.outputLine(a, b, not b);
+io.outputLine(a and not b);
+io.outputLine(a or b);
+io.outputLine(a == true, b == false, a =!= b);
 if a and not b {
-    outputLine("logic ok");
+    io.outputLine("logic ok");
 }

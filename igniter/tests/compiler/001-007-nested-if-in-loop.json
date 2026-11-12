@@ -2,7 +2,7 @@
   "name": "nested-if-in-loop",
   "source": {
     "file": "001-007-nested-if-in-loop.lts",
-    "hash": "sha256:3e9ca8220ce17121829f6bd4f23f34cca2e374fd7b08bf634f0e3573e3b10c84"
+    "hash": "sha256:91a80f1558b6cc8da887d6572b10bf767601aa4249744e2668e1f4211bce1cff"
   },
   "cases": [
     {

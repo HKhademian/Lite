@@ -1,13 +1,15 @@
-frontend := import "frontend.lts";
-modules := import "modules.lts";
-emitter := import "emit-ts.lts";
+frontend := import "./frontend.lts";
+modules := import "./modules.lts";
+emitter := import "./emit-ts.lts";
+io := import "core/io";
 
 /** Runs the TypeScript compiler entry after its graph dependencies are loaded. */
 pub run := fn(): Unit {
     prefix := frontend.sourcePrefix();
-    source := inputAll();
-    if prefix =!= "" {
-        graph := modules.visitSourceModule("ts", prefix, source, []);
+    source := io.inputAll();
+    if frontend.sourceModulePath() =!= "" {
+        graph := modules.visitSourceModule("ts", frontend.sourceModulePath(), prefix,
+            frontend.sourceModuleIdentity(), source, []);
         emitter.emitProgram(modules.moduleItems(graph), source, prefix);
     } else {
         emitter.emitProgram(frontend.parseProgram("ts", source, prefix), source, prefix);

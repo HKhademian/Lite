@@ -1,1 +1,3 @@
-outputLine(999999999999999999999999);
+io := import "core/io";
+
+io.outputLine(999999999999999999999999);

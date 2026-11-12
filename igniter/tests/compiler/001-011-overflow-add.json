@@ -2,7 +2,7 @@
   "name": "overflow-add",
   "source": {
     "file": "001-011-overflow-add.lts",
-    "hash": "sha256:c14764e9740d3799768926d96db86988b6211fb54c0f2d2bcd91110f8afc271b"
+    "hash": "sha256:a826f683d1e90cbc61a4d534c63de904cb125d411ec37edbe61ce3f25fc99356"
   },
   "cases": [
     {
@@ -12,8 +12,8 @@
         "hash": "sha256:e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
       },
       "stderr": {
-        "text": "1:32: ArithmeticPanic: integer outside Int range\n",
-        "hash": "sha256:0901da87970fbbb4dd595e07badc7b116e2031550d320f57028339ff1cc34dad"
+        "text": "3:35: ArithmeticPanic: integer outside Int range\n",
+        "hash": "sha256:924e7891a5db2e512f6b8337c5c1705adef4cb25fe7ffb00fa97bbf4ae4f514f"
       },
       "exitCode": 1
     }

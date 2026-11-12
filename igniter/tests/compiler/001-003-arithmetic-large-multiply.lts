@@ -1,1 +1,3 @@
-outputLine(1000000000 * 3);
+io := import "core/io";
+
+io.outputLine(1000000000 * 3);

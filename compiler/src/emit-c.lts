@@ -1,11 +1,13 @@
-frontend := import "frontend.lts";
-cLiteral := import "c-literals.lts";
-textLib := import "../../lib/core/text.lts";
-integer := import "../../lib/core/int.lts";
-diagLib := import "../../lib/core/diag.lts";
+frontend := import "./frontend.lts";
+cLiteral := import "./c-literals.lts";
+integer := import "core/int";
+diagLib := import "core/diag";
+io := import "core/io";
+textLib := import "core/text";
+
 /** Removes one four-space indentation level from `indent`. */
 dedent := fn(indent: String): String {
-    textSlice(indent, 0, textLength(indent) - 4)
+    textLib.slice(indent, 0, textLib.length(indent) - 4)
 }
 
 /** Builds one checked printf call for an Int, String or Bool report value without a trailing newline. */
@@ -65,82 +67,82 @@ usesFloatArithmetic := fn(calls: String): Bool { usesIntHelper(calls, "lt_float_
 emitFloatArithmeticHelpers := fn(calls: String): Unit {
     if not usesFloatArithmetic(calls) { return; }
     if usesIntHelper(calls, "lt_float_power(") {
-        outputLine("static double lt_float_power(double left, double right, size_t at) {");
-        outputLine("    if (right <= 0) { lt_int_fault(at, \"power exponent must be positive in this checkpoint\"); }");
-        outputLine("    double value = pow(left, right);");
-        outputLine("    if (!isfinite(value)) { lt_int_fault(at, \"non-finite floating value\"); }");
-        outputLine("    return value;");
-        outputLine("}");
+        io.outputLine("static double lt_float_power(double left, double right, size_t at) {");
+        io.outputLine("    if (right <= 0) { lt_int_fault(at, \"power exponent must be positive in this checkpoint\"); }");
+        io.outputLine("    double value = pow(left, right);");
+        io.outputLine("    if (!isfinite(value)) { lt_int_fault(at, \"non-finite floating value\"); }");
+        io.outputLine("    return value;");
+        io.outputLine("}");
     }
     if not usesIntHelper(calls, "lt_float_op(") { return; }
-    outputLine("static double lt_float_op(double left, double right, int op, size_t at) {");
-    outputLine("    if (op == 3 && right == 0) { lt_int_fault(at, \"division by zero\"); }");
-    outputLine("    double value = op == 0 ? left + right : op == 1 ? left - right : op == 2 ? left * right : left / right;");
-    outputLine("    if (!isfinite(value)) { lt_int_fault(at, \"non-finite floating value\"); }");
-    outputLine("    return value;");
-    outputLine("}");
+    io.outputLine("static double lt_float_op(double left, double right, int op, size_t at) {");
+    io.outputLine("    if (op == 3 && right == 0) { lt_int_fault(at, \"division by zero\"); }");
+    io.outputLine("    double value = op == 0 ? left + right : op == 1 ? left - right : op == 2 ? left * right : left / right;");
+    io.outputLine("    if (!isfinite(value)) { lt_int_fault(at, \"non-finite floating value\"); }");
+    io.outputLine("    return value;");
+    io.outputLine("}");
 }
 
 /** Emits portable C11 guards that reject overflow before evaluating a signed operation. */
 emitIntArithmeticHelpers := fn(calls: String, source: String, prefix: String): Unit {
     if not usesIntArithmetic(calls) and not usesIntDivision(calls) and not usesFloatArithmetic(calls) { return; }
     namePrefix := if prefix == "" { "" } else { prefix + ":" };
-    outputLine("static const size_t lt_int_lines[] = {" + frontend.lineStartCodes(source) + "};");
-    outputLine("static const char *lt_int_source = " + cLiteral.textLiteralCode(namePrefix) + ";");
-    outputLine("static _Noreturn void lt_int_fault(size_t at, const char *message) {");
-    outputLine("    size_t line = 0;");
-    outputLine("    while (line + 1 < sizeof(lt_int_lines) / sizeof(lt_int_lines[0]) && lt_int_lines[line + 1] <= at) { line += 1; }");
-    outputLine("    fprintf(stderr, \"%s%zu:%zu: ArithmeticPanic: %s\\n\", lt_int_source, line + 1, at - lt_int_lines[line] + 1, message);");
-    outputLine("    exit(1);");
-    outputLine("}");
+    io.outputLine("static const size_t lt_int_lines[] = {" + frontend.lineStartCodes(source) + "};");
+    io.outputLine("static const char *lt_int_source = " + cLiteral.textLiteralCode(namePrefix) + ";");
+    io.outputLine("static _Noreturn void lt_int_fault(size_t at, const char *message) {");
+    io.outputLine("    size_t line = 0;");
+    io.outputLine("    while (line + 1 < sizeof(lt_int_lines) / sizeof(lt_int_lines[0]) && lt_int_lines[line + 1] <= at) { line += 1; }");
+    io.outputLine("    fprintf(stderr, \"%s%zu:%zu: ArithmeticPanic: %s\\n\", lt_int_source, line + 1, at - lt_int_lines[line] + 1, message);");
+    io.outputLine("    exit(1);");
+    io.outputLine("}");
     if usesIntHelper(calls, "lt_checked_add(") {
-        outputLine("static int64_t lt_checked_add(int64_t left, int64_t right, size_t at) {");
-        outputLine("    if ((right > 0 && left > INT64_MAX - right) || (right < 0 && left < INT64_MIN - right)) { lt_int_fault(at, \"integer outside Int range\"); }");
-        outputLine("    return left + right;");
-        outputLine("}");
+        io.outputLine("static int64_t lt_checked_add(int64_t left, int64_t right, size_t at) {");
+        io.outputLine("    if ((right > 0 && left > INT64_MAX - right) || (right < 0 && left < INT64_MIN - right)) { lt_int_fault(at, \"integer outside Int range\"); }");
+        io.outputLine("    return left + right;");
+        io.outputLine("}");
     }
     if usesIntHelper(calls, "lt_checked_subtract(") {
-        outputLine("static int64_t lt_checked_subtract(int64_t left, int64_t right, size_t at) {");
-        outputLine("    if ((right < 0 && left > INT64_MAX + right) || (right > 0 && left < INT64_MIN + right)) { lt_int_fault(at, \"integer outside Int range\"); }");
-        outputLine("    return left - right;");
-        outputLine("}");
+        io.outputLine("static int64_t lt_checked_subtract(int64_t left, int64_t right, size_t at) {");
+        io.outputLine("    if ((right < 0 && left > INT64_MAX + right) || (right > 0 && left < INT64_MIN + right)) { lt_int_fault(at, \"integer outside Int range\"); }");
+        io.outputLine("    return left - right;");
+        io.outputLine("}");
     }
     if usesIntHelper(calls, "lt_checked_multiply(") {
-        outputLine("static int64_t lt_checked_multiply(int64_t left, int64_t right, size_t at) {");
-        outputLine("    if (left == 0 || right == 0) { return 0; }");
-        outputLine("    if (left > 0) {");
-        outputLine("        if (right > 0) { if (left > INT64_MAX / right) { lt_int_fault(at, \"integer outside Int range\"); } }");
-        outputLine("        else if (right < INT64_MIN / left) { lt_int_fault(at, \"integer outside Int range\"); }");
-        outputLine("    } else if (right > 0) {");
-        outputLine("        if (left < INT64_MIN / right) { lt_int_fault(at, \"integer outside Int range\"); }");
-        outputLine("    } else if (right < INT64_MAX / left) { lt_int_fault(at, \"integer outside Int range\"); }");
-        outputLine("    return left * right;");
-        outputLine("}");
+        io.outputLine("static int64_t lt_checked_multiply(int64_t left, int64_t right, size_t at) {");
+        io.outputLine("    if (left == 0 || right == 0) { return 0; }");
+        io.outputLine("    if (left > 0) {");
+        io.outputLine("        if (right > 0) { if (left > INT64_MAX / right) { lt_int_fault(at, \"integer outside Int range\"); } }");
+        io.outputLine("        else if (right < INT64_MIN / left) { lt_int_fault(at, \"integer outside Int range\"); }");
+        io.outputLine("    } else if (right > 0) {");
+        io.outputLine("        if (left < INT64_MIN / right) { lt_int_fault(at, \"integer outside Int range\"); }");
+        io.outputLine("    } else if (right < INT64_MAX / left) { lt_int_fault(at, \"integer outside Int range\"); }");
+        io.outputLine("    return left * right;");
+        io.outputLine("}");
     }
     if usesIntHelper(calls, "lt_checked_negate(") {
-        outputLine("static int64_t lt_checked_negate(int64_t value, size_t at) {");
-        outputLine("    if (value == INT64_MIN) { lt_int_fault(at, \"integer outside Int range\"); }");
-        outputLine("    return -value;");
-        outputLine("}");
+        io.outputLine("static int64_t lt_checked_negate(int64_t value, size_t at) {");
+        io.outputLine("    if (value == INT64_MIN) { lt_int_fault(at, \"integer outside Int range\"); }");
+        io.outputLine("    return -value;");
+        io.outputLine("}");
     }
-    outputLine("");
+    io.outputLine("");
 }
 
 /** Declares hygienic arithmetic/comparison temporaries at unique assignment sites, skipping quoted text. */
 emitArithmeticTemporaries := fn(items: frontend.Items): Unit {
     loop items as item {
         var cursor := 0;
-        loop cursor < textLength(item.code) {
-            ch := textAt(item.code, cursor);
+        loop cursor < textLib.length(item.code) {
+            ch := textLib.at(item.code, cursor);
             if ch == "\"" {
                 cursor = frontend.skipAliasString(item.code, cursor);
             } else if ch == "l" and (textLib.startsWithAt(item.code, cursor, "lt_arg_") or textLib.startsWithAt(item.code, cursor, "lt_cmp_")) {
                 end := textLib.skipName(item.code, cursor);
                 if textLib.startsWithAt(item.code, end, " = ") {
-                    tag := if textLib.startsWithAt(item.code, cursor, "lt_cmp_") or textLib.startsWithAt(item.code, cursor, "lt_arg_f_") { textAt(item.code, cursor + 7) } else { "i" };
+                    tag := if textLib.startsWithAt(item.code, cursor, "lt_cmp_") or textLib.startsWithAt(item.code, cursor, "lt_arg_f_") { textLib.at(item.code, cursor + 7) } else { "i" };
                     typeCode := if tag == "s" { "const char *" } else if tag == "b" { "bool " }
                         else if tag == "f" { "double " } else { "int64_t " };
-                    outputLine("    " + typeCode + textSlice(item.code, cursor, end) + ";");
+                    io.outputLine("    " + typeCode + textLib.slice(item.code, cursor, end) + ";");
                 }
                 cursor = end;
             } else { cursor = cursor + 1; }
@@ -150,93 +152,93 @@ emitArithmeticTemporaries := fn(items: frontend.Items): Unit {
 
 /** Emits shortest round-trip binary64 display with decimal/exponent thresholds shared by the TS runtime; source remains statically checked and no locale is selected by generated programs. */
 emitFloatOutputHelpers := fn(): Unit {
-    outputLine("/* Split printf's positive finite decimal into significant digits and its first-digit exponent. */");
-    outputLine("static int lt_float_digits(const char *text, char *digits, int *exponent) {");
-    outputLine("    int size = 0, before = 0, dot = 0;");
-    outputLine("    const char *at = text;");
-    outputLine("    while (*at && *at != 'e' && *at != 'E') {");
-    outputLine("        if (*at == '.') dot = 1;");
-    outputLine("        else { digits[size++] = *at; if (!dot) before++; }");
-    outputLine("        at++;");
-    outputLine("    }");
-    outputLine("    int power = *at ? (int)strtol(at + 1, NULL, 10) : 0;");
-    outputLine("    int leading = 0;");
-    outputLine("    while (leading + 1 < size && digits[leading] == '0') leading++;");
-    outputLine("    memmove(digits, digits + leading, (size_t)(size - leading));");
-    outputLine("    size -= leading;");
-    outputLine("    digits[size] = '\\0';");
-    outputLine("    *exponent = before - leading - 1 + power;");
-    outputLine("    return size;");
-    outputLine("}");
-    outputLine("/* Move to the adjacent positive decimal having at most precision significant digits. */");
-    outputLine("static void lt_float_neighbor(char *digits, int precision, int *exponent, int direction) {");
-    outputLine("    int at = precision - 1;");
-    outputLine("    if (direction > 0) {");
-    outputLine("        while (at >= 0 && digits[at] == '9') digits[at--] = '0';");
-    outputLine("        if (at >= 0) digits[at]++;");
-    outputLine("        else { digits[0] = '1'; (*exponent)++; }");
-    outputLine("    } else {");
-    outputLine("        while (at >= 0 && digits[at] == '0') digits[at--] = '9';");
-    outputLine("        if (at >= 0) digits[at]--;");
-    outputLine("        if (digits[0] == '0') {");
-    outputLine("            for (int i = 0; i < precision; i++) digits[i] = '9';");
-    outputLine("            (*exponent)--;");
-    outputLine("        }");
-    outputLine("    }");
-    outputLine("}");
-    outputLine("/* Find the least significant-digit count that round-trips, including asymmetric boundary candidates. */");
-    outputLine("static int lt_float_format(double value, char *out) {");
-    outputLine("    if (value == 0.0) { strcpy(out, \"0\"); return 1; }");
-    outputLine("    int negative = value < 0.0;");
-    outputLine("    double positive = negative ? -value : value;");
-    outputLine("    char digits[32], nearest[64], adjacent[64];");
-    outputLine("    int size = 0, exponent = 0, found = 0;");
-    outputLine("    for (int precision = 1; precision <= 17 && !found; precision++) {");
-    outputLine("        if (snprintf(nearest, sizeof nearest, \"%.*g\", precision, positive) < 0) return 0;");
-    outputLine("        size = lt_float_digits(nearest, digits, &exponent);");
-    outputLine("        if (strtod(nearest, NULL) == positive) { found = 1; break; }");
-    outputLine("        while (size < precision) digits[size++] = '0';");
-    outputLine("        digits[size] = '\\0';");
-    outputLine("        for (int direction = -1; direction <= 1 && !found; direction += 2) {");
-    outputLine("            char candidate[32]; memcpy(candidate, digits, (size_t)size + 1);");
-    outputLine("            int power = exponent;");
-    outputLine("            lt_float_neighbor(candidate, precision, &power, direction);");
-    outputLine("            if (snprintf(adjacent, sizeof adjacent, \"%se%d\", candidate, power - precision + 1) < 0) return 0;");
-    outputLine("            if (strtod(adjacent, NULL) == positive) {");
-    outputLine("                memcpy(digits, candidate, (size_t)size + 1); exponent = power; found = 1;");
-    outputLine("            }");
-    outputLine("        }");
-    outputLine("    }");
-    outputLine("    if (!found) return 0;");
-    outputLine("    while (size > 1 && digits[size - 1] == '0') size--;");
-    outputLine("    int at = 0;");
-    outputLine("    if (negative) out[at++] = '-';");
-    outputLine("    if (exponent >= 21 || exponent < -6) {");
-    outputLine("        out[at++] = digits[0];");
-    outputLine("        if (size > 1) { out[at++] = '.'; memcpy(out + at, digits + 1, (size_t)size - 1); at += size - 1; }");
-    outputLine("        out[at++] = 'e';");
-    outputLine("        if (exponent >= 0) out[at++] = '+';");
-    outputLine("        int length = snprintf(out + at, 64u - (size_t)at, \"%d\", exponent);");
-    outputLine("        if (length < 0) return 0;");
-    outputLine("        at += length;");
-    outputLine("    } else if (exponent < 0) {");
-    outputLine("        out[at++] = '0'; out[at++] = '.';");
-    outputLine("        for (int i = -1; i > exponent; i--) out[at++] = '0';");
-    outputLine("        memcpy(out + at, digits, (size_t)size); at += size;");
-    outputLine("    } else {");
-    outputLine("        for (int i = 0; i <= exponent || i < size; i++) {");
-    outputLine("            if (i == exponent + 1) out[at++] = '.';");
-    outputLine("            out[at++] = i < size ? digits[i] : '0';");
-    outputLine("        }");
-    outputLine("    }");
-    outputLine("    out[at] = '\\0';");
-    outputLine("    return 1;");
-    outputLine("}");
-    outputLine("static int lt_print_float(double value) {");
-    outputLine("    char text[64];");
-    outputLine("    if (!lt_float_format(value, text)) return -1;");
-    outputLine("    return printf(\"%s\", text);");
-    outputLine("}");
+    io.outputLine("/* Split printf's positive finite decimal into significant digits and its first-digit exponent. */");
+    io.outputLine("static int lt_float_digits(const char *text, char *digits, int *exponent) {");
+    io.outputLine("    int size = 0, before = 0, dot = 0;");
+    io.outputLine("    const char *at = text;");
+    io.outputLine("    while (*at && *at != 'e' && *at != 'E') {");
+    io.outputLine("        if (*at == '.') dot = 1;");
+    io.outputLine("        else { digits[size++] = *at; if (!dot) before++; }");
+    io.outputLine("        at++;");
+    io.outputLine("    }");
+    io.outputLine("    int power = *at ? (int)strtol(at + 1, NULL, 10) : 0;");
+    io.outputLine("    int leading = 0;");
+    io.outputLine("    while (leading + 1 < size && digits[leading] == '0') leading++;");
+    io.outputLine("    memmove(digits, digits + leading, (size_t)(size - leading));");
+    io.outputLine("    size -= leading;");
+    io.outputLine("    digits[size] = '\\0';");
+    io.outputLine("    *exponent = before - leading - 1 + power;");
+    io.outputLine("    return size;");
+    io.outputLine("}");
+    io.outputLine("/* Move to the adjacent positive decimal having at most precision significant digits. */");
+    io.outputLine("static void lt_float_neighbor(char *digits, int precision, int *exponent, int direction) {");
+    io.outputLine("    int at = precision - 1;");
+    io.outputLine("    if (direction > 0) {");
+    io.outputLine("        while (at >= 0 && digits[at] == '9') digits[at--] = '0';");
+    io.outputLine("        if (at >= 0) digits[at]++;");
+    io.outputLine("        else { digits[0] = '1'; (*exponent)++; }");
+    io.outputLine("    } else {");
+    io.outputLine("        while (at >= 0 && digits[at] == '0') digits[at--] = '9';");
+    io.outputLine("        if (at >= 0) digits[at]--;");
+    io.outputLine("        if (digits[0] == '0') {");
+    io.outputLine("            for (int i = 0; i < precision; i++) digits[i] = '9';");
+    io.outputLine("            (*exponent)--;");
+    io.outputLine("        }");
+    io.outputLine("    }");
+    io.outputLine("}");
+    io.outputLine("/* Find the least significant-digit count that round-trips, including asymmetric boundary candidates. */");
+    io.outputLine("static int lt_float_format(double value, char *out) {");
+    io.outputLine("    if (value == 0.0) { strcpy(out, \"0\"); return 1; }");
+    io.outputLine("    int negative = value < 0.0;");
+    io.outputLine("    double positive = negative ? -value : value;");
+    io.outputLine("    char digits[32], nearest[64], adjacent[64];");
+    io.outputLine("    int size = 0, exponent = 0, found = 0;");
+    io.outputLine("    for (int precision = 1; precision <= 17 && !found; precision++) {");
+    io.outputLine("        if (snprintf(nearest, sizeof nearest, \"%.*g\", precision, positive) < 0) return 0;");
+    io.outputLine("        size = lt_float_digits(nearest, digits, &exponent);");
+    io.outputLine("        if (strtod(nearest, NULL) == positive) { found = 1; break; }");
+    io.outputLine("        while (size < precision) digits[size++] = '0';");
+    io.outputLine("        digits[size] = '\\0';");
+    io.outputLine("        for (int direction = -1; direction <= 1 && !found; direction += 2) {");
+    io.outputLine("            char candidate[32]; memcpy(candidate, digits, (size_t)size + 1);");
+    io.outputLine("            int power = exponent;");
+    io.outputLine("            lt_float_neighbor(candidate, precision, &power, direction);");
+    io.outputLine("            if (snprintf(adjacent, sizeof adjacent, \"%se%d\", candidate, power - precision + 1) < 0) return 0;");
+    io.outputLine("            if (strtod(adjacent, NULL) == positive) {");
+    io.outputLine("                memcpy(digits, candidate, (size_t)size + 1); exponent = power; found = 1;");
+    io.outputLine("            }");
+    io.outputLine("        }");
+    io.outputLine("    }");
+    io.outputLine("    if (!found) return 0;");
+    io.outputLine("    while (size > 1 && digits[size - 1] == '0') size--;");
+    io.outputLine("    int at = 0;");
+    io.outputLine("    if (negative) out[at++] = '-';");
+    io.outputLine("    if (exponent >= 21 || exponent < -6) {");
+    io.outputLine("        out[at++] = digits[0];");
+    io.outputLine("        if (size > 1) { out[at++] = '.'; memcpy(out + at, digits + 1, (size_t)size - 1); at += size - 1; }");
+    io.outputLine("        out[at++] = 'e';");
+    io.outputLine("        if (exponent >= 0) out[at++] = '+';");
+    io.outputLine("        int length = snprintf(out + at, 64u - (size_t)at, \"%d\", exponent);");
+    io.outputLine("        if (length < 0) return 0;");
+    io.outputLine("        at += length;");
+    io.outputLine("    } else if (exponent < 0) {");
+    io.outputLine("        out[at++] = '0'; out[at++] = '.';");
+    io.outputLine("        for (int i = -1; i > exponent; i--) out[at++] = '0';");
+    io.outputLine("        memcpy(out + at, digits, (size_t)size); at += size;");
+    io.outputLine("    } else {");
+    io.outputLine("        for (int i = 0; i <= exponent || i < size; i++) {");
+    io.outputLine("            if (i == exponent + 1) out[at++] = '.';");
+    io.outputLine("            out[at++] = i < size ? digits[i] : '0';");
+    io.outputLine("        }");
+    io.outputLine("    }");
+    io.outputLine("    out[at] = '\\0';");
+    io.outputLine("    return 1;");
+    io.outputLine("}");
+    io.outputLine("static int lt_print_float(double value) {");
+    io.outputLine("    char text[64];");
+    io.outputLine("    if (!lt_float_format(value, text)) return -1;");
+    io.outputLine("    return printf(\"%s\", text);");
+    io.outputLine("}");
 }
 
 /** True when any emitted item concatenates dynamic Strings through the checked helper. */
@@ -246,43 +248,43 @@ usesStringConcat := fn(calls: String): Bool {
 
 /** Emits positioned portable division, guarding undefined C arithmetic. */
 emitIntDivideHelper := fn(): Unit {
-    outputLine("static int64_t lite_divide_int(int64_t left, int64_t right, size_t at) {");
-    outputLine("    if (right == 0) { lt_int_fault(at, \"division by zero\"); }");
-    outputLine("    if (left == INT64_MIN && right == -1) { lt_int_fault(at, \"integer outside Int range\"); }");
-    outputLine("    return left / right;");
-    outputLine("}");
-    outputLine("");
+    io.outputLine("static int64_t lite_divide_int(int64_t left, int64_t right, size_t at) {");
+    io.outputLine("    if (right == 0) { lt_int_fault(at, \"division by zero\"); }");
+    io.outputLine("    if (left == INT64_MIN && right == -1) { lt_int_fault(at, \"integer outside Int range\"); }");
+    io.outputLine("    return left / right;");
+    io.outputLine("}");
+    io.outputLine("");
 }
 
 /** Emits positioned remainder, returning zero before C MIN%-1 would be undefined. */
 emitIntRemainderHelper := fn(): Unit {
-    outputLine("static int64_t lite_remainder_int(int64_t left, int64_t right, size_t at) {");
-    outputLine("    if (right == 0) { lt_int_fault(at, \"remainder by zero\"); }");
-    outputLine("    if (left == INT64_MIN && right == -1) { return 0; }");
-    outputLine("    return left % right;");
-    outputLine("}");
-    outputLine("");
+    io.outputLine("static int64_t lite_remainder_int(int64_t left, int64_t right, size_t at) {");
+    io.outputLine("    if (right == 0) { lt_int_fault(at, \"remainder by zero\"); }");
+    io.outputLine("    if (left == INT64_MIN && right == -1) { return 0; }");
+    io.outputLine("    return left % right;");
+    io.outputLine("}");
+    io.outputLine("");
 }
 
 /** Emits positioned portable floor division, evaluating its operands once. */
 emitIntFloorDivideHelper := fn(): Unit {
-    outputLine("static int64_t lite_floor_divide_int(int64_t left, int64_t right, size_t at) {");
-    outputLine("    const int64_t quotient = lite_divide_int(left, right, at);");
-    outputLine("    const int64_t remainder = left % right;");
-    outputLine("    return remainder != 0 && ((remainder < 0) != (right < 0)) ? quotient - 1 : quotient;");
-    outputLine("}");
-    outputLine("");
+    io.outputLine("static int64_t lite_floor_divide_int(int64_t left, int64_t right, size_t at) {");
+    io.outputLine("    const int64_t quotient = lite_divide_int(left, right, at);");
+    io.outputLine("    const int64_t remainder = left % right;");
+    io.outputLine("    return remainder != 0 && ((remainder < 0) != (right < 0)) ? quotient - 1 : quotient;");
+    io.outputLine("}");
+    io.outputLine("");
 }
 
 /** Emits positioned floor modulo with a defined signed-minimum path. */
 emitIntFloorModuloHelper := fn(): Unit {
-    outputLine("static int64_t lite_floor_modulo_int(int64_t left, int64_t right, size_t at) {");
-    outputLine("    if (right == 0) { lt_int_fault(at, \"modulo by zero\"); }");
-    outputLine("    if (left == INT64_MIN && right == -1) { return 0; }");
-    outputLine("    const int64_t remainder = left % right;");
-    outputLine("    return remainder != 0 && ((remainder < 0) != (right < 0)) ? remainder + right : remainder;");
-    outputLine("}");
-    outputLine("");
+    io.outputLine("static int64_t lite_floor_modulo_int(int64_t left, int64_t right, size_t at) {");
+    io.outputLine("    if (right == 0) { lt_int_fault(at, \"modulo by zero\"); }");
+    io.outputLine("    if (left == INT64_MIN && right == -1) { return 0; }");
+    io.outputLine("    const int64_t remainder = left % right;");
+    io.outputLine("    return remainder != 0 && ((remainder < 0) != (right < 0)) ? remainder + right : remainder;");
+    io.outputLine("}");
+    io.outputLine("");
 }
 
 /** Emits every checked Int division-family helper the program reads. */
@@ -298,19 +300,19 @@ emitIntDivisionHelpers := fn(calls: String): Unit {
 
 /** Emits the checked UTF-8 byte concatenation helper; each allocated result is intentionally leaked by this bootstrap backend. */
 emitStringConcatHelper := fn(): Unit {
-    outputLine("static const char *lite_concat(const char *left, const char *right) {");
-    outputLine("    const size_t left_length = strlen(left);");
-    outputLine("    const size_t right_length = strlen(right);");
-    outputLine("    char *combined = malloc(left_length + right_length + 1);");
-    outputLine("    if (combined == NULL) {");
-    outputLine("        fprintf(stderr, \"MemoryFault: cannot allocate concatenated text\\n\");");
-    outputLine("        exit(1);");
-    outputLine("    }");
-    outputLine("    memcpy(combined, left, left_length);");
-    outputLine("    memcpy(combined + left_length, right, right_length + 1);");
-    outputLine("    return combined;");
-    outputLine("}");
-    outputLine("");
+    io.outputLine("static const char *lite_concat(const char *left, const char *right) {");
+    io.outputLine("    const size_t left_length = strlen(left);");
+    io.outputLine("    const size_t right_length = strlen(right);");
+    io.outputLine("    char *combined = malloc(left_length + right_length + 1);");
+    io.outputLine("    if (combined == NULL) {");
+    io.outputLine("        fprintf(stderr, \"MemoryFault: cannot allocate concatenated text\\n\");");
+    io.outputLine("        exit(1);");
+    io.outputLine("    }");
+    io.outputLine("    memcpy(combined, left, left_length);");
+    io.outputLine("    memcpy(combined + left_length, right, right_length + 1);");
+    io.outputLine("    return combined;");
+    io.outputLine("}");
+    io.outputLine("");
 }
 
 /** Evaluates one multi-value output argument into a hygienic scalar temporary. Unit has no stored payload or supported C-side effect. */
@@ -320,7 +322,7 @@ emitOutputArgument := fn(kind: String, code: String, name: String, indent: Strin
         else if kind == "Bool" { "bool " }
         else if kind == "Float" { "double " }
         else { "const char *" };
-    outputLine(indent + typeCode + name + " = " + code + ";");
+    io.outputLine(indent + typeCode + name + " = " + code + ";");
 }
 
 /** Formats one output write after every argument has evaluated successfully. */
@@ -361,24 +363,24 @@ pub emitProgram := fn(items: frontend.Items, source: String, prefix: String): Un
             diagLib.fail("", "C backend does not support value if expressions yet");
         }
     }
-    outputLine("#include <stdio.h>");
-    if usesIntDivision(calls) or usesStringConcat(calls) or usesIntArithmetic(calls) or floatValues { outputLine("#include <stdlib.h>"); }
-    outputLine("#include <inttypes.h>");
-    outputLine("#include <stdbool.h>");
-    outputLine("#include <string.h>");
-    if usesFloatArithmetic(calls) { outputLine("#include <math.h>"); }
+    io.outputLine("#include <stdio.h>");
+    if usesIntDivision(calls) or usesStringConcat(calls) or usesIntArithmetic(calls) or floatValues { io.outputLine("#include <stdlib.h>"); }
+    io.outputLine("#include <inttypes.h>");
+    io.outputLine("#include <stdbool.h>");
+    io.outputLine("#include <string.h>");
+    if usesFloatArithmetic(calls) { io.outputLine("#include <math.h>"); }
     if floatValues {
-        outputLine("#include <float.h>");
-        outputLine("_Static_assert(FLT_RADIX == 2 && DBL_MANT_DIG == 53 && DBL_MAX_EXP == 1024, \"Float requires binary64 double\");");
+        io.outputLine("#include <float.h>");
+        io.outputLine("_Static_assert(FLT_RADIX == 2 && DBL_MANT_DIG == 53 && DBL_MAX_EXP == 1024, \"Float requires binary64 double\");");
     }
-    if floatLiterals { outputLine("static double lt_float_literal(const char *text) { return strtod(text, NULL); }"); }
+    if floatLiterals { io.outputLine("static double lt_float_literal(const char *text) { return strtod(text, NULL); }"); }
     if floatOutput { emitFloatOutputHelpers(); }
     emitIntArithmeticHelpers(calls, source, prefix);
     emitFloatArithmeticHelpers(calls);
     emitIntDivisionHelpers(calls);
     if usesStringConcat(calls) { emitStringConcatHelper(); }
-    outputLine("int main(void) {");
-    outputLine("    int status = 0;");
+    io.outputLine("int main(void) {");
+    io.outputLine("    int status = 0;");
     emitArithmeticTemporaries(items);
     var indent := "    ";
     var count := 0;
@@ -389,53 +391,53 @@ pub emitProgram := fn(items: frontend.Items, source: String, prefix: String): Un
     var writes := "";
     loop items as item {
         if item.kind == "LocalInt" or item.kind == "VarInt" {
-            outputLine(indent + "int64_t " + item.runtime + " = " + item.code + ";");
-            outputLine(indent + "(void)" + item.runtime + ";");
+            io.outputLine(indent + "int64_t " + item.runtime + " = " + item.code + ";");
+            io.outputLine(indent + "(void)" + item.runtime + ";");
         } else if item.kind == "LocalString" or item.kind == "VarString" {
-            outputLine(indent + "const char *" + item.runtime + " = " + item.code + ";");
-            outputLine(indent + "(void)" + item.runtime + ";");
+            io.outputLine(indent + "const char *" + item.runtime + " = " + item.code + ";");
+            io.outputLine(indent + "(void)" + item.runtime + ";");
         } else if item.kind == "LocalFloat" or item.kind == "VarFloat" {
-            outputLine(indent + "double " + item.runtime + " = " + item.code + ";");
-            outputLine(indent + "(void)" + item.runtime + ";");
+            io.outputLine(indent + "double " + item.runtime + " = " + item.code + ";");
+            io.outputLine(indent + "(void)" + item.runtime + ";");
         } else if item.kind == "LocalBool" or item.kind == "VarBool" {
-            outputLine(indent + "bool " + item.runtime + " = " + item.code + ";");
-            outputLine(indent + "(void)" + item.runtime + ";");
+            io.outputLine(indent + "bool " + item.runtime + " = " + item.code + ";");
+            io.outputLine(indent + "(void)" + item.runtime + ";");
         } else if item.kind == "AssignInt" or item.kind == "AssignString" or item.kind == "AssignBool" or item.kind == "AssignFloat" {
-            outputLine(indent + item.runtime + " = " + item.code + ";");
+            io.outputLine(indent + item.runtime + " = " + item.code + ";");
         } else if item.kind == "Discard" {
-            outputLine(indent + "(void)(" + item.code + ");");
+            io.outputLine(indent + "(void)(" + item.code + ");");
         } else if item.kind == "Break" {
-            outputLine(indent + "break;");
+            io.outputLine(indent + "break;");
         } else if item.kind == "Continue" {
-            outputLine(indent + "continue;");
+            io.outputLine(indent + "continue;");
         } else if item.kind == "Scope" {
-            outputLine(indent + "{");
+            io.outputLine(indent + "{");
             indent = indent + "    ";
         } else if item.kind == "If" {
-            outputLine(indent + "if (" + item.code + ") {");
+            io.outputLine(indent + "if (" + item.code + ") {");
             indent = indent + "    ";
         } else if item.kind == "Else" {
             indent = dedent(indent);
-            outputLine(indent + "} else {");
+            io.outputLine(indent + "} else {");
             indent = indent + "    ";
         } else if item.kind == "ElseIf" {
             indent = dedent(indent);
-            outputLine(indent + "} else if (" + item.code + ") {");
+            io.outputLine(indent + "} else if (" + item.code + ") {");
             indent = indent + "    ";
         } else if item.kind == "EndIf" or item.kind == "EndScope" {
             indent = dedent(indent);
-            outputLine(indent + "}");
+            io.outputLine(indent + "}");
         } else if item.kind == "Loop" {
             condition := if item.code == "" { "true" } else { item.code };
-            outputLine(indent + "while (" + condition + ") {");
+            io.outputLine(indent + "while (" + condition + ") {");
             indent = indent + "    ";
         } else if item.kind == "EndLoop" {
             indent = dedent(indent);
-            outputLine(indent + "}");
+            io.outputLine(indent + "}");
         } else if item.kind == "End" or item.kind == "EndOutput" {
-            if count == 1 { output(outputWriteCode(firstKind, firstCode, indent)); }
-            else if count > 1 { output(writes); }
-            if item.kind == "End" { outputLine(indent + "if (printf(\"\\n\") < 0) { status = 1; }"); }
+            if count == 1 { io.output(outputWriteCode(firstKind, firstCode, indent)); }
+            else if count > 1 { io.output(writes); }
+            if item.kind == "End" { io.outputLine(indent + "if (printf(\"\\n\") < 0) { status = 1; }"); }
             count = 0;
             writes = "";
         } else if item.kind == "Import" or item.kind == "PublicFunction" or item.kind == "PublicValue" or item.kind == "PublicType" {
@@ -458,6 +460,6 @@ pub emitProgram := fn(items: frontend.Items, source: String, prefix: String): Un
             count = count + 1;
         }
     }
-    outputLine("    return status;");
-    outputLine("}");
+    io.outputLine("    return status;");
+    io.outputLine("}");
 }

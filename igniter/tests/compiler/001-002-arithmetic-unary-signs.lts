@@ -1,1 +1,3 @@
-outputLine(--2 + +3);
+io := import "core/io";
+
+io.outputLine(--2 + +3);

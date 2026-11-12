@@ -1,6 +1,6 @@
-integer := import "../core/int.lts";
-diag := import "../core/diag.lts";
-test := import "../core/test.lts";
+integer := import "core/int";
+diag := import "core/diag";
+test := import "core/test";
 
 diag.expect("diag", true, "true condition must not fail");
 diag.expect("diag", 1 < 2, "comparison condition must not fail");

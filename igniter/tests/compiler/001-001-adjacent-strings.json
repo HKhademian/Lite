@@ -2,7 +2,7 @@
   "name": "adjacent-strings",
   "source": {
     "file": "001-001-adjacent-strings.lts",
-    "hash": "sha256:bde8f4e9bf1602c4fd31f26cc9b5cefd5ba64648d61407739e0f4aa31f3e1ad1"
+    "hash": "sha256:00411aab13aa0c034a006262c4ac42162977d2d0d861fbfee24515d6401a16df"
   },
   "cases": [
     {

@@ -2,7 +2,7 @@
   "name": "arithmetic-large-multiply",
   "source": {
     "file": "001-003-arithmetic-large-multiply.lts",
-    "hash": "sha256:c19fe36ed28aa66f52d7baf07edc6ee5a51b4366349e027bfc3a6c9f120a4d01"
+    "hash": "sha256:de702aaa396cffa368efddafef7c03055d5d51d66435e1c62fce5ffd30a99272"
   },
   "cases": [
     {

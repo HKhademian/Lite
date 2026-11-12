@@ -1,4 +1,5 @@
-diag := import "../core/diag.lts";
+diag := import "core/diag";
+io := import "core/io";
 
 diag.fail("name", "message");
-outputLine("unreachable");
+io.outputLine("unreachable");

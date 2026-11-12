@@ -1,1 +1,3 @@
-outputLine("a", "b");
+io := import "core/io";
+
+io.outputLine("a", "b");

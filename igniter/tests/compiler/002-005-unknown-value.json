@@ -2,7 +2,7 @@
   "name": "unknown-value",
   "source": {
     "file": "002-005-unknown-value.lts",
-    "hash": "sha256:a9717e16e6602fbdcfb0f87f920350c593fe6e679040751e8d642428fa3d2050"
+    "hash": "sha256:97280657d5f0279ee7de20d57f2c032849c98d20f91b849fb77856a5ddd7fb9e"
   },
   "cases": [
     {
@@ -12,8 +12,8 @@
         "hash": "sha256:e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
       },
       "stderr": {
-        "text": "1:12: unknown value unknown\n",
-        "hash": "sha256:816245f80e4a048c90389fa43b74ef5465aab00aade0c596cff55e450ae272cb"
+        "text": "3:15: unknown value unknown\n",
+        "hash": "sha256:8a606ccc93dc6c83be5856a0f8bd1f03ed5c4303b66a9efca74a148687933f05"
       },
       "exitCode": 2
     }

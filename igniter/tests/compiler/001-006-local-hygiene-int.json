@@ -2,7 +2,7 @@
   "name": "local-hygiene-int",
   "source": {
     "file": "001-006-local-hygiene-int.lts",
-    "hash": "sha256:8933884af7d19f4c2cc5fda99d95664e4c8b34436f8426c3105b1405b2b2d3f2"
+    "hash": "sha256:afe1a0330c8600eb70bcef30f92312aeed653e3674ef7b4c054dffa6d13edd03"
   },
   "cases": [
     {

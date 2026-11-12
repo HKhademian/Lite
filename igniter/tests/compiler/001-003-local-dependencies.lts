@@ -1,4 +1,6 @@
+io := import "core/io";
+
 a := 5;
 b := a * 2;
-outputLine(b);
-outputLine(a - b);
+io.outputLine(b);
+io.outputLine(a - b);

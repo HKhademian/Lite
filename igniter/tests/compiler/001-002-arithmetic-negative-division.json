@@ -2,7 +2,7 @@
   "name": "arithmetic-negative-division",
   "source": {
     "file": "001-002-arithmetic-negative-division.lts",
-    "hash": "sha256:d28c1cee49724bebd3c263321e990d0b491c80b828f2f817129e607e3ddd51ed"
+    "hash": "sha256:e8d11c7c007530b493c133900b2c3ca0642297ec55b5465efa64d0ef3f2cfe10"
   },
   "cases": [
     {

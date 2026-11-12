@@ -2,7 +2,7 @@
   "name": "loop-condition-int",
   "source": {
     "file": "002-007-loop-condition-int.lts",
-    "hash": "sha256:58c9a05c430c6a77e4ae82d18e15fac9109520d0840e51ce81941fce9acaeec5"
+    "hash": "sha256:915a78a2da6bf71bbfccfd8859207c5db4491b564d695a58beba73877f5fac55"
   },
   "cases": [
     {
@@ -12,8 +12,8 @@
         "hash": "sha256:e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
       },
       "stderr": {
-        "text": "1:6: loop condition must be Bool\n",
-        "hash": "sha256:6ac5e49878029547f55126cfe57e2bd4d4a7571f973d6ca2c1633fd766733058"
+        "text": "3:6: loop condition must be Bool\n",
+        "hash": "sha256:e2b7172768586aa8f0fe9f1c8644cde72097e317b89def653c7b6ecb4bb4cf1c"
       },
       "exitCode": 2
     }

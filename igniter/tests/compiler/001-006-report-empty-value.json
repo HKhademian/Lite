@@ -2,7 +2,7 @@
   "name": "report-empty-value",
   "source": {
     "file": "001-006-report-empty-value.lts",
-    "hash": "sha256:2dfb59b7550dfb8eaf2e6d50024371a6d44e31e1c0721da405ac06800dd1a00b"
+    "hash": "sha256:db4d34eaeeba0997ef2014bf827935171111a4a0c871cc4395fca688dd6472e7"
   },
   "cases": [
     {

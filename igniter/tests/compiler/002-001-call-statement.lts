@@ -1,1 +1,3 @@
-outputLine(42); system("anything");
+io := import "core/io";
+
+io.outputLine(42); system("anything");

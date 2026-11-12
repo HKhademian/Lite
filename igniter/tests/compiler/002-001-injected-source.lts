@@ -1,1 +1,3 @@
-outputLine(42); "}; throw 1; //
+io := import "core/io";
+
+io.outputLine(42); "}; throw 1; //

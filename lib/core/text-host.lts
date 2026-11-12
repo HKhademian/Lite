@@ -1,0 +1,10 @@
+/* Provisional host text primitives used by the source-level core text module. */
+
+/** Returns Unicode scalar count for one text value. */
+pub length := fn(text: String): Int;
+
+/** Returns the Unicode scalar at a zero-based position, faulting outside the text. */
+pub at := fn(text: String, position: Int): String;
+
+/** Returns the half-open Unicode scalar interval `[start, end)`, faulting outside the text. */
+pub slice := fn(text: String, start: Int, end: Int): String;

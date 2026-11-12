@@ -1,5 +1,6 @@
-integer := import "../core/int.lts";
-test := import "../core/test.lts";
+integer := import "core/int";
+test := import "core/test";
+io := import "core/io";
 
 test.check("bad", false);
-outputLine("unreachable");
+io.outputLine("unreachable");

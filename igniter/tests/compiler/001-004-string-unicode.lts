@@ -1,1 +1,3 @@
-outputLine("سلام🙂");
+io := import "core/io";
+
+io.outputLine("سلام🙂");

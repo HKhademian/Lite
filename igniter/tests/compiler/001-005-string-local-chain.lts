@@ -1,3 +1,5 @@
+io := import "core/io";
+
 s := "a" + "b";
 t := s + "!";
-outputLine(t);
+io.outputLine(t);

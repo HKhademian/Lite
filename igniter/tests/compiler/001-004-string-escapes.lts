@@ -1,1 +1,3 @@
-outputLine("quote: \" slash: \\ tab:\t end");
+io := import "core/io";
+
+io.outputLine("quote: \" slash: \\ tab:\t end");

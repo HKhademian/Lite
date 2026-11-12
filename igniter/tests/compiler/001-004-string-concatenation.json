@@ -2,7 +2,7 @@
   "name": "string-concatenation",
   "source": {
     "file": "001-004-string-concatenation.lts",
-    "hash": "sha256:03469e08ad544ed0a9670ddc823cb6c2ed4f85acf58fb346f90685a4970bf9d0"
+    "hash": "sha256:20a855ddf5ee414ccb81ca0cb51e732361c2b62ea12106539809e42b2578f1d1"
   },
   "cases": [
     {

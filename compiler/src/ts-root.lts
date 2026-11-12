@@ -1,2 +1,2 @@
-driver := import "driver-ts.lts";
+driver := import "./driver-ts.lts";
 driver.run();

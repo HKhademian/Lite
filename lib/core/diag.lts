@@ -1,5 +1,7 @@
 /* Provisional bootstrap diagnostic support. Not an official standard library. */
 
+io := import "core/io";
+
 /** Returns the process status used for source, type and unsupported-feature diagnostics. */
 diagnosticExit := fn(): Int { 2 }
 
@@ -12,11 +14,11 @@ typeErrorCategory := "TypeError";
 /** Reports `message`, prefixed by `prefix:` when nonempty, then exits 2. */
 pub fail := fn(prefix: String, message: String): Unit {
     if prefix == "" {
-        reportError(message);
+        io.errorLine(message);
     } else {
-        reportError(prefix + ":" + message);
+        io.errorLine(prefix + ":" + message);
     }
-    exit(diagnosticExit());
+    io.exit(diagnosticExit());
 }
 
 /** Reports `message` through `fail` unless `condition` is true. */

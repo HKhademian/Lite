@@ -1,2 +1,4 @@
-outputLine(42);
-outputLine(9);
+io := import "core/io";
+
+io.outputLine(42);
+io.outputLine(9);

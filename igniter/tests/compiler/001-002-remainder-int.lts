@@ -1,4 +1,6 @@
-outputLine(7 % 3);
-outputLine(-7 % 3);
-outputLine(7 % -3);
-outputLine(6 % 3);
+io := import "core/io";
+
+io.outputLine(7 % 3);
+io.outputLine(-7 % 3);
+io.outputLine(7 % -3);
+io.outputLine(6 % 3);

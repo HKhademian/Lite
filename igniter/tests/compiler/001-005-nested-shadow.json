@@ -2,7 +2,7 @@
   "name": "nested-shadow",
   "source": {
     "file": "001-005-nested-shadow.lts",
-    "hash": "sha256:001433451a0b3abfd1d9bb981d956aa8e82c555b42d8d5a215b12f75c3d11948"
+    "hash": "sha256:4a2fa3ec65188f0b3bf0f982d8901f8763eb4e322f63d4e5069add692bb61cab"
   },
   "cases": [
     {

@@ -1,3 +1,5 @@
+io := import "core/io";
+
 var greeting := "Hello";
 var name := "Lite";
-outputLine(greeting + ", " + name + "!");
+io.outputLine(greeting + ", " + name + "!");

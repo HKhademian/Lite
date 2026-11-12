@@ -1,6 +1,6 @@
-integer := import "../core/int.lts";
-source := import "../core/source.lts";
-test := import "../core/test.lts";
+integer := import "core/int";
+source := import "core/source";
+test := import "core/test";
 
 place := source.lineColumn("ab\ncd", 3);
 test.checkInt("line column line", 2, place.line);

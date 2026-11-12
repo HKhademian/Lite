@@ -2,7 +2,7 @@
   "name": "string-hello",
   "source": {
     "file": "001-004-string-hello.lts",
-    "hash": "sha256:714c0b8d73696511a0976bb47c68c5b9efcae9fa6d78ae824dc3b821ac5dcee0"
+    "hash": "sha256:3b4124db3d4a20988276fad11d33a536df0a90c91426d2c6f4a4df73ba2212e4"
   },
   "cases": [
     {

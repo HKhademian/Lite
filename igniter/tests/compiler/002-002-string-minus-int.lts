@@ -1,1 +1,3 @@
-outputLine("text" - 1);
+io := import "core/io";
+
+io.outputLine("text" - 1);

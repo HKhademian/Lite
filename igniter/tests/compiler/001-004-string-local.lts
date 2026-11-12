@@ -1,2 +1,4 @@
+io := import "core/io";
+
 s := "hi";
-outputLine(s);
+io.outputLine(s);

@@ -1,30 +1,32 @@
-tsLiteral := import "ts-literals.lts";
-frontend := import "frontend.lts";
-textLib := import "../../lib/core/text.lts";
-integer := import "../../lib/core/int.lts";
+tsLiteral := import "./ts-literals.lts";
+frontend := import "./frontend.lts";
+integer := import "core/int";
+io := import "core/io";
+textLib := import "core/text";
+
 /** Removes one four-space indentation level from `indent`. */
 dedent := fn(indent: String): String {
-    textSlice(indent, 0, textLength(indent) - 4)
+    textLib.slice(indent, 0, textLib.length(indent) - 4)
 }
 
 /** Formats one canonical flat named-tuple kind as a TypeScript object type. */
 tsTupleType := fn(kind: String): String {
-    size := textLength(kind);
+    size := textLib.length(kind);
     var cursor := 1;
     var result := "{ ";
     var count := 0;
-    loop cursor < size and textAt(kind, cursor) =!= ")" {
+    loop cursor < size and textLib.at(kind, cursor) =!= ")" {
         nameStart := cursor;
         cursor = textLib.skipName(kind, cursor);
-        label := textSlice(kind, nameStart, cursor);
-        if cursor < size and textAt(kind, cursor) == ":" { cursor = cursor + 1; }
+        label := textLib.slice(kind, nameStart, cursor);
+        if cursor < size and textLib.at(kind, cursor) == ":" { cursor = cursor + 1; }
         typeStart := cursor;
         cursor = textLib.skipName(kind, cursor);
-        fieldKind := textSlice(kind, typeStart, cursor);
+        fieldKind := textLib.slice(kind, typeStart, cursor);
         if count > 0 { result = result + " "; }
         result = result + label + ": " + tsLiteral.tsScalarType(fieldKind);
         count = count + 1;
-        if cursor < size and textAt(kind, cursor) == "," {
+        if cursor < size and textLib.at(kind, cursor) == "," {
             result = result + ";";
             cursor = cursor + 1;
         }
@@ -46,13 +48,13 @@ tsParameterList := fn(encoded: String): String {
     var start := 0;
     loop true {
         separator := textLib.indexOfText(encoded, "|", start);
-        var end := textLength(encoded);
+        var end := textLib.length(encoded);
         if separator >= 0 { end = separator; }
-        entry := textSlice(encoded, start, end);
+        entry := textLib.slice(encoded, start, end);
         equals := textLib.indexOfText(entry, "=", 0);
-        parameterName := textSlice(entry, 0, equals);
-        parameterKind := textSlice(entry, equals + 1, textLength(entry));
-        if textLength(result) > 0 { result = result + ", "; }
+        parameterName := textLib.slice(entry, 0, equals);
+        parameterKind := textLib.slice(entry, equals + 1, textLib.length(entry));
+        if textLib.length(result) > 0 { result = result + ", "; }
         result = result + "lite_" + parameterName + ": " + tsFunctionType(parameterKind);
         if separator < 0 { break; }
         start = separator + 1;
@@ -66,11 +68,11 @@ reportParameterReads := fn(encoded: String, indent: String): Unit {
     var start := 0;
     loop true {
         separator := textLib.indexOfText(encoded, "|", start);
-        var end := textLength(encoded);
+        var end := textLib.length(encoded);
         if separator >= 0 { end = separator; }
-        entry := textSlice(encoded, start, end);
+        entry := textLib.slice(encoded, start, end);
         equals := textLib.indexOfText(entry, "=", 0);
-        outputLine(indent + "void lite_" + textSlice(entry, 0, equals) + ";");
+        io.outputLine(indent + "void lite_" + textLib.slice(entry, 0, equals) + ";");
         if separator < 0 { break; }
         start = separator + 1;
     }
@@ -89,18 +91,18 @@ displayValueCode := fn(kind: String, code: String): String {
         var result := tsLiteral.textLiteralCode("(");
         var cursor := 1;
         var count := 0;
-        loop cursor < textLength(kind) and textAt(kind, cursor) =!= ")" {
+        loop cursor < textLib.length(kind) and textLib.at(kind, cursor) =!= ")" {
             start := cursor;
             cursor = textLib.skipName(kind, cursor);
-            label := textSlice(kind, start, cursor);
+            label := textLib.slice(kind, start, cursor);
             cursor = cursor + 1;
             typeStart := cursor;
             cursor = textLib.skipName(kind, cursor);
-            component := textSlice(kind, typeStart, cursor);
+            component := textLib.slice(kind, typeStart, cursor);
             separator := if count == 0 { "" } else { ", " };
             result = result + " + " + tsLiteral.textLiteralCode(separator + label + "=") + " + " + self(component, "value." + label);
             count = count + 1;
-            if cursor < textLength(kind) and textAt(kind, cursor) == "," { cursor = cursor + 1; }
+            if cursor < textLib.length(kind) and textLib.at(kind, cursor) == "," { cursor = cursor + 1; }
         }
         ending := if count == 1 { ",)" } else { ")" };
         return "((value: " + tsFunctionType(kind) + "): string => " + result + " + " + tsLiteral.textLiteralCode(ending) + ")(" + code + ")";
@@ -147,20 +149,20 @@ usesFloatArithmetic := fn(calls: String): Bool { usesBuiltin(calls, "floatOp") o
 emitFloatArithmeticHelpers := fn(calls: String): Unit {
     if not usesFloatArithmetic(calls) { return; }
     if usesBuiltin(calls, "floatPower") {
-        outputLine("function lite$floatPower(left: number, right: number, at: number): number {");
-        outputLine("    if (right <= 0) lite$fault(\"ArithmeticPanic\", at, \"power exponent must be positive in this checkpoint\");");
-        outputLine("    const value = Math.pow(left, right);");
-        outputLine("    if (!Number.isFinite(value)) lite$fault(\"ArithmeticPanic\", at, \"non-finite floating value\");");
-        outputLine("    return value;");
-        outputLine("}");
+        io.outputLine("function lite$floatPower(left: number, right: number, at: number): number {");
+        io.outputLine("    if (right <= 0) lite$fault(\"ArithmeticPanic\", at, \"power exponent must be positive in this checkpoint\");");
+        io.outputLine("    const value = Math.pow(left, right);");
+        io.outputLine("    if (!Number.isFinite(value)) lite$fault(\"ArithmeticPanic\", at, \"non-finite floating value\");");
+        io.outputLine("    return value;");
+        io.outputLine("}");
     }
     if not usesBuiltin(calls, "floatOp") { return; }
-    outputLine("function lite$floatOp(left: number, right: number, op: number, at: number): number {");
-    outputLine("    if (op === 3 && right === 0) lite$fault(\"ArithmeticPanic\", at, \"division by zero\");");
-    outputLine("    const value = op === 0 ? left + right : op === 1 ? left - right : op === 2 ? left * right : left / right;");
-    outputLine("    if (!Number.isFinite(value)) lite$fault(\"ArithmeticPanic\", at, \"non-finite floating value\");");
-    outputLine("    return value;");
-    outputLine("}");
+    io.outputLine("function lite$floatOp(left: number, right: number, op: number, at: number): number {");
+    io.outputLine("    if (op === 3 && right === 0) lite$fault(\"ArithmeticPanic\", at, \"division by zero\");");
+    io.outputLine("    const value = op === 0 ? left + right : op === 1 ? left - right : op === 2 ? left * right : left / right;");
+    io.outputLine("    if (!Number.isFinite(value)) lite$fault(\"ArithmeticPanic\", at, \"non-finite floating value\");");
+    io.outputLine("    return value;");
+    io.outputLine("}");
 }
 
 /** True when positioned bounds faults may be raised by text or list helpers. */
@@ -174,290 +176,290 @@ emitIntArithmeticHelpers := fn(calls: String, source: String, prefix: String): U
     if not integers and not usesBounds(calls) and not usesFloatArithmetic(calls) { return; }
     namePrefix := if prefix == "" { "" } else { prefix + ":" };
     needsRange := usesIntArithmetic(calls) or usesBuiltin(calls, "divideInt") or usesBuiltin(calls, "floorDivideInt");
-    outputLine("const lite$intLines: readonly number[] = [" + frontend.lineStartCodes(source) + "];");
-    outputLine("const lite$intSource = " + tsLiteral.textLiteralCode(namePrefix) + ";");
-    if needsRange { outputLine("const lite$intMin = -(1n << 63n), lite$intMax = (1n << 63n) - 1n;"); }
-    outputLine("function lite$fault(category: string, at: number, message: string): never {");
-    outputLine("    let line = 0;");
-    outputLine("    while (line + 1 < lite$intLines.length && (lite$intLines[line + 1] ?? Infinity) <= at) line += 1;");
-    outputLine("    const column = at - (lite$intLines[line] ?? 0) + 1;");
-    outputLine("    process.getBuiltinModule(\"node:fs\").writeSync(2, lite$intSource + (line + 1) + \":\" + column + \": \" + category + \": \" + message + \"\\n\");");
-    outputLine("    process.exit(1);");
-    outputLine("}");
+    io.outputLine("const lite$intLines: readonly number[] = [" + frontend.lineStartCodes(source) + "];");
+    io.outputLine("const lite$intSource = " + tsLiteral.textLiteralCode(namePrefix) + ";");
+    if needsRange { io.outputLine("const lite$intMin = -(1n << 63n), lite$intMax = (1n << 63n) - 1n;"); }
+    io.outputLine("function lite$fault(category: string, at: number, message: string): never {");
+    io.outputLine("    let line = 0;");
+    io.outputLine("    while (line + 1 < lite$intLines.length && (lite$intLines[line + 1] ?? Infinity) <= at) line += 1;");
+    io.outputLine("    const column = at - (lite$intLines[line] ?? 0) + 1;");
+    io.outputLine("    process.getBuiltinModule(\"node:fs\").writeSync(2, lite$intSource + (line + 1) + \":\" + column + \": \" + category + \": \" + message + \"\\n\");");
+    io.outputLine("    process.exit(1);");
+    io.outputLine("}");
     if integers {
-        outputLine("function lite$intFault(at: number, message: string): never { return lite$fault(\"ArithmeticPanic\", at, message); }");
+        io.outputLine("function lite$intFault(at: number, message: string): never { return lite$fault(\"ArithmeticPanic\", at, message); }");
     }
     if needsRange {
-        outputLine("function lite$checkedInt(value: bigint, at: number): bigint {");
-        outputLine("    if (value < lite$intMin || value > lite$intMax) lite$intFault(at, \"integer outside Int range\");");
-        outputLine("    return value;");
-        outputLine("}");
+        io.outputLine("function lite$checkedInt(value: bigint, at: number): bigint {");
+        io.outputLine("    if (value < lite$intMin || value > lite$intMax) lite$intFault(at, \"integer outside Int range\");");
+        io.outputLine("    return value;");
+        io.outputLine("}");
     }
     if usesBuiltin(calls, "addInt") {
-        outputLine("function lite$addInt(left: bigint, right: bigint, at: number): bigint { return lite$checkedInt(left + right, at); }");
+        io.outputLine("function lite$addInt(left: bigint, right: bigint, at: number): bigint { return lite$checkedInt(left + right, at); }");
     }
     if usesBuiltin(calls, "subtractInt") {
-        outputLine("function lite$subtractInt(left: bigint, right: bigint, at: number): bigint { return lite$checkedInt(left - right, at); }");
+        io.outputLine("function lite$subtractInt(left: bigint, right: bigint, at: number): bigint { return lite$checkedInt(left - right, at); }");
     }
     if usesBuiltin(calls, "multiplyInt") {
-        outputLine("function lite$multiplyInt(left: bigint, right: bigint, at: number): bigint { return lite$checkedInt(left * right, at); }");
+        io.outputLine("function lite$multiplyInt(left: bigint, right: bigint, at: number): bigint { return lite$checkedInt(left * right, at); }");
     }
     if usesBuiltin(calls, "negateInt") {
-        outputLine("function lite$negateInt(value: bigint, at: number): bigint { return lite$checkedInt(-value, at); }");
+        io.outputLine("function lite$negateInt(value: bigint, at: number): bigint { return lite$checkedInt(-value, at); }");
     }
-    outputLine("");
+    io.outputLine("");
 }
 
 /** Emits shared buffered byte input and strict incremental UTF-8 decoding for the temporary input helpers. */
 emitInputHelpers := fn(calls: String): Unit {
     if not (usesBuiltin(calls, "inputAll") or usesBuiltin(calls, "inputLine") or usesBuiltin(calls, "inputInt") or usesBuiltin(calls, "inputFloat")) { return; }
-    outputLine("declare const TextDecoder: { new(label: string, options: { fatal: boolean }): { decode(input?: Uint8Array, options?: { stream: boolean }): string } };");
-    outputLine("const lite$decoder = new TextDecoder(\"utf-8\", { fatal: true });");
-    outputLine("const lite$bytes = new Uint8Array(4096);");
-    outputLine("let lite$byteAt = 0, lite$byteEnd = 0;");
-    outputLine("let lite$ended = false;");
-    outputLine("let lite$pending: string | null | undefined;");
-    outputLine("function lite$inputFault(at: string, message: string): never {");
-    outputLine("    process.getBuiltinModule(\"node:fs\").writeSync(2, at + message + \"\\n\");");
-    outputLine("    process.exit(1);");
-    outputLine("}");
-    outputLine("function lite$prompt(text: string | undefined): void {");
-    outputLine("    if (text === undefined) return;");
-    outputLine("    process.getBuiltinModule(\"node:fs\").writeSync(1, lite_out + text);");
-    outputLine("    lite_out = \"\";");
-    outputLine("}");
-    outputLine("function lite$peek(at: string): string | null {");
-    outputLine("    if (lite$pending !== undefined) return lite$pending;");
-    outputLine("    if (lite$ended) return null;");
-    outputLine("    try {");
-    outputLine("        while (true) {");
-    outputLine("            if (lite$byteAt === lite$byteEnd) {");
-    outputLine("                lite$byteEnd = process.getBuiltinModule(\"node:fs\").readSync(0, lite$bytes, 0, lite$bytes.length, null);");
-    outputLine("                lite$byteAt = 0;");
-    outputLine("                if (lite$byteEnd === 0) {");
-    outputLine("                    lite$ended = true;");
-    outputLine("                    lite$pending = lite$decoder.decode() || null;");
-    outputLine("                    return lite$pending;");
-    outputLine("                }");
-    outputLine("            }");
-    outputLine("            const text = lite$decoder.decode(lite$bytes.subarray(lite$byteAt, ++lite$byteAt), { stream: true });");
-    outputLine("            if (text !== \"\") { lite$pending = text; return text; }");
-    outputLine("        }");
-    outputLine("    } catch (error) {");
-    outputLine("        return lite$inputFault(at, \"cannot read input: \" + (error instanceof Error ? error.message : String(error)));");
-    outputLine("    }");
-    outputLine("}");
-    outputLine("function lite$take(at: string): string | null {");
-    outputLine("    const text = lite$peek(at); lite$pending = undefined; return text;");
-    outputLine("}");
+    io.outputLine("declare const TextDecoder: { new(label: string, options: { fatal: boolean }): { decode(input?: Uint8Array, options?: { stream: boolean }): string } };");
+    io.outputLine("const lite$decoder = new TextDecoder(\"utf-8\", { fatal: true });");
+    io.outputLine("const lite$bytes = new Uint8Array(4096);");
+    io.outputLine("let lite$byteAt = 0, lite$byteEnd = 0;");
+    io.outputLine("let lite$ended = false;");
+    io.outputLine("let lite$pending: string | null | undefined;");
+    io.outputLine("function lite$inputFault(at: string, message: string): never {");
+    io.outputLine("    process.getBuiltinModule(\"node:fs\").writeSync(2, at + message + \"\\n\");");
+    io.outputLine("    process.exit(1);");
+    io.outputLine("}");
+    io.outputLine("function lite$prompt(text: string | undefined): void {");
+    io.outputLine("    if (text === undefined) return;");
+    io.outputLine("    process.getBuiltinModule(\"node:fs\").writeSync(1, lite_out + text);");
+    io.outputLine("    lite_out = \"\";");
+    io.outputLine("}");
+    io.outputLine("function lite$peek(at: string): string | null {");
+    io.outputLine("    if (lite$pending !== undefined) return lite$pending;");
+    io.outputLine("    if (lite$ended) return null;");
+    io.outputLine("    try {");
+    io.outputLine("        while (true) {");
+    io.outputLine("            if (lite$byteAt === lite$byteEnd) {");
+    io.outputLine("                lite$byteEnd = process.getBuiltinModule(\"node:fs\").readSync(0, lite$bytes, 0, lite$bytes.length, null);");
+    io.outputLine("                lite$byteAt = 0;");
+    io.outputLine("                if (lite$byteEnd === 0) {");
+    io.outputLine("                    lite$ended = true;");
+    io.outputLine("                    lite$pending = lite$decoder.decode() || null;");
+    io.outputLine("                    return lite$pending;");
+    io.outputLine("                }");
+    io.outputLine("            }");
+    io.outputLine("            const text = lite$decoder.decode(lite$bytes.subarray(lite$byteAt, ++lite$byteAt), { stream: true });");
+    io.outputLine("            if (text !== \"\") { lite$pending = text; return text; }");
+    io.outputLine("        }");
+    io.outputLine("    } catch (error) {");
+    io.outputLine("        return lite$inputFault(at, \"cannot read input: \" + (error instanceof Error ? error.message : String(error)));");
+    io.outputLine("    }");
+    io.outputLine("}");
+    io.outputLine("function lite$take(at: string): string | null {");
+    io.outputLine("    const text = lite$peek(at); lite$pending = undefined; return text;");
+    io.outputLine("}");
     if usesBuiltin(calls, "inputInt") or usesBuiltin(calls, "inputFloat") {
-        outputLine("function lite$word(at: string): string | null {");
-        outputLine("    let ch = lite$peek(at);");
-        outputLine("    while (ch !== null && /\\s/u.test(ch)) { lite$take(at); ch = lite$peek(at); }");
-        outputLine("    if (ch === null) return null;");
-        outputLine("    let text = \"\";");
-        outputLine("    while (ch !== null && !/\\s/u.test(ch)) { text += lite$take(at); ch = lite$peek(at); }");
-        outputLine("    return text;");
-        outputLine("}");
+        io.outputLine("function lite$word(at: string): string | null {");
+        io.outputLine("    let ch = lite$peek(at);");
+        io.outputLine("    while (ch !== null && /\\s/u.test(ch)) { lite$take(at); ch = lite$peek(at); }");
+        io.outputLine("    if (ch === null) return null;");
+        io.outputLine("    let text = \"\";");
+        io.outputLine("    while (ch !== null && !/\\s/u.test(ch)) { text += lite$take(at); ch = lite$peek(at); }");
+        io.outputLine("    return text;");
+        io.outputLine("}");
     }
     if usesBuiltin(calls, "inputAll") {
-        outputLine("function lite$inputAll(prompt: string | undefined, at: string): string {");
-        outputLine("    lite$prompt(prompt);");
-        outputLine("    let text = \"\";");
-        outputLine("    for (let ch = lite$take(at); ch !== null; ch = lite$take(at)) text += ch;");
-        outputLine("    return text;");
-        outputLine("}");
+        io.outputLine("function lite$inputAll(prompt: string | undefined, at: string): string {");
+        io.outputLine("    lite$prompt(prompt);");
+        io.outputLine("    let text = \"\";");
+        io.outputLine("    for (let ch = lite$take(at); ch !== null; ch = lite$take(at)) text += ch;");
+        io.outputLine("    return text;");
+        io.outputLine("}");
     }
     if usesBuiltin(calls, "inputLine") {
-        outputLine("function lite$inputLine(prompt: string | undefined, at: string): string {");
-        outputLine("    lite$prompt(prompt);");
-        outputLine("    let text = \"\", ch = lite$take(at);");
-        outputLine("    if (ch === null) return lite$inputFault(at, \"EOF before inputLine value\");");
-        outputLine("    while (ch !== null && ch !== \"\\n\") { text += ch; ch = lite$take(at); }");
-        outputLine("    return ch === \"\\n\" && text.endsWith(\"\\r\") ? text.slice(0, -1) : text;");
-        outputLine("}");
+        io.outputLine("function lite$inputLine(prompt: string | undefined, at: string): string {");
+        io.outputLine("    lite$prompt(prompt);");
+        io.outputLine("    let text = \"\", ch = lite$take(at);");
+        io.outputLine("    if (ch === null) return lite$inputFault(at, \"EOF before inputLine value\");");
+        io.outputLine("    while (ch !== null && ch !== \"\\n\") { text += ch; ch = lite$take(at); }");
+        io.outputLine("    return ch === \"\\n\" && text.endsWith(\"\\r\") ? text.slice(0, -1) : text;");
+        io.outputLine("}");
     }
     if usesBuiltin(calls, "inputInt") {
-        outputLine("function lite$inputInt(prompt: string | undefined, at: string): bigint {");
-        outputLine("    lite$prompt(prompt);");
-        outputLine("    const text = lite$word(at);");
-        outputLine("    if (text === null) return lite$inputFault(at, \"EOF before inputInt value\");");
-        outputLine("    if (!/^[+-]?[0-9]+$/.test(text)) return lite$inputFault(at, \"expected an integer token\");");
-        outputLine("    const value = BigInt(text);");
-        outputLine("    if (value < -(1n << 63n) || value > (1n << 63n) - 1n) return lite$inputFault(at, \"input outside signed 64-bit range\");");
-        outputLine("    return value;");
-        outputLine("}");
+        io.outputLine("function lite$inputInt(prompt: string | undefined, at: string): bigint {");
+        io.outputLine("    lite$prompt(prompt);");
+        io.outputLine("    const text = lite$word(at);");
+        io.outputLine("    if (text === null) return lite$inputFault(at, \"EOF before inputInt value\");");
+        io.outputLine("    if (!/^[+-]?[0-9]+$/.test(text)) return lite$inputFault(at, \"expected an integer token\");");
+        io.outputLine("    const value = BigInt(text);");
+        io.outputLine("    if (value < -(1n << 63n) || value > (1n << 63n) - 1n) return lite$inputFault(at, \"input outside signed 64-bit range\");");
+        io.outputLine("    return value;");
+        io.outputLine("}");
     }
     if usesBuiltin(calls, "inputFloat") {
-        outputLine("function lite$inputFloat(prompt: string | undefined, at: string): number {");
-        outputLine("    lite$prompt(prompt);");
-        outputLine("    const text = lite$word(at);");
-        outputLine("    if (text === null) return lite$inputFault(at, \"EOF before inputFloat value\");");
-        outputLine("    const value = Number(text);");
-        outputLine("    if (!/^[+-]?[0-9]+(?:\\.[0-9]+)?(?:[eE][+-]?[0-9]+)?$/.test(text) || !Number.isFinite(value)) return lite$inputFault(at, \"expected a finite floating token\");");
-        outputLine("    return value;");
-        outputLine("}");
+        io.outputLine("function lite$inputFloat(prompt: string | undefined, at: string): number {");
+        io.outputLine("    lite$prompt(prompt);");
+        io.outputLine("    const text = lite$word(at);");
+        io.outputLine("    if (text === null) return lite$inputFault(at, \"EOF before inputFloat value\");");
+        io.outputLine("    const value = Number(text);");
+        io.outputLine("    if (!/^[+-]?[0-9]+(?:\\.[0-9]+)?(?:[eE][+-]?[0-9]+)?$/.test(text) || !Number.isFinite(value)) return lite$inputFault(at, \"expected a finite floating token\");");
+        io.outputLine("    return value;");
+        io.outputLine("}");
     }
-    outputLine("");
+    io.outputLine("");
 }
 
 /** Emits the self-contained declarations and helpers for the I/O and text builtins a program uses. */
 emitBuiltinHelpers := fn(calls: String): Unit {
     if usesBuiltin(calls, "inputArgs") or usesBuiltin(calls, "inputAll") or usesBuiltin(calls, "inputLine") or usesBuiltin(calls, "inputInt") or usesBuiltin(calls, "inputFloat") or
         usesBuiltin(calls, "reportError") or usesBuiltin(calls, "exit") or usesIntArithmetic(calls) or usesIntDivision(calls) or usesBounds(calls) or usesFloatArithmetic(calls) {
-        outputLine("declare const process: {");
-        outputLine("    argv: string[];");
-        outputLine("    exit(code: number): never;");
-        outputLine("    getBuiltinModule(name: \"node:fs\"): {");
-        outputLine("        readSync(fd: number, buffer: Uint8Array, offset: number, length: number, position: null): number;");
-        outputLine("        writeSync(fd: number, text: string): number;");
-        outputLine("    };");
-        outputLine("};");
-        outputLine("");
+        io.outputLine("declare const process: {");
+        io.outputLine("    argv: string[];");
+        io.outputLine("    exit(code: number): never;");
+        io.outputLine("    getBuiltinModule(name: \"node:fs\"): {");
+        io.outputLine("        readSync(fd: number, buffer: Uint8Array, offset: number, length: number, position: null): number;");
+        io.outputLine("        writeSync(fd: number, text: string): number;");
+        io.outputLine("    };");
+        io.outputLine("};");
+        io.outputLine("");
     }
     if usesBuiltin(calls, "readSource") {
-        outputLine("let lite$sourceProvider: ((importer: string, spec: string) => { path: string; text: string }) | undefined;");
-        outputLine("function lite$readSource(importer: string, spec: string): { path: string; text: string } {");
-        outputLine("    if (lite$sourceProvider === undefined) throw new Error(\"compiler host does not provide source reads\");");
-        outputLine("    return lite$sourceProvider(importer, spec);");
-        outputLine("}");
-        outputLine("");
+        io.outputLine("let lite$sourceProvider: ((importer: string, spec: string) => { path: string; display: string; identity: string; text: string }) | undefined;");
+        io.outputLine("function lite$readSource(importer: string, spec: string): { path: string; display: string; identity: string; text: string } {");
+        io.outputLine("    if (lite$sourceProvider === undefined) throw new Error(\"compiler host does not provide source reads\");");
+        io.outputLine("    return lite$sourceProvider(importer, spec);");
+        io.outputLine("}");
+        io.outputLine("");
     }
     if usesBuiltin(calls, "inputArgs") {
-        outputLine("function lite$inputArgs(): string[] {");
-        outputLine("    return process.argv.slice(2);");
-        outputLine("}");
-        outputLine("");
+        io.outputLine("function lite$inputArgs(): string[] {");
+        io.outputLine("    return process.argv.slice(2);");
+        io.outputLine("}");
+        io.outputLine("");
     }
     emitInputHelpers(calls);
     if usesBuiltin(calls, "reportError") {
-        outputLine("function lite$reportError(text: string): void {");
-        outputLine("    process.getBuiltinModule(\"node:fs\").writeSync(2, text + \"\\n\");");
-        outputLine("}");
-        outputLine("");
+        io.outputLine("function lite$reportError(text: string): void {");
+        io.outputLine("    process.getBuiltinModule(\"node:fs\").writeSync(2, text + \"\\n\");");
+        io.outputLine("}");
+        io.outputLine("");
     }
     if usesBuiltin(calls, "exit") {
-        outputLine("function lite$exit(status: bigint): void {");
-        outputLine("    process.getBuiltinModule(\"node:fs\").writeSync(1, lite_out);");
-        outputLine("    process.exit(Number(status));");
-        outputLine("}");
-        outputLine("");
+        io.outputLine("function lite$exit(status: bigint): void {");
+        io.outputLine("    process.getBuiltinModule(\"node:fs\").writeSync(1, lite_out);");
+        io.outputLine("    process.exit(Number(status));");
+        io.outputLine("}");
+        io.outputLine("");
     }
     if usesBuiltin(calls, "textLength") or usesBuiltin(calls, "textAt") or usesBuiltin(calls, "textSlice") {
-        outputLine("const lite$textCache = new Map<string, readonly string[]>();");
-        outputLine("function lite$textPoints(text: string): readonly string[] {");
-        outputLine("    const found = lite$textCache.get(text);");
-        outputLine("    if (found !== undefined) {");
-        outputLine("        lite$textCache.delete(text);");
-        outputLine("        lite$textCache.set(text, found);");
-        outputLine("        return found;");
-        outputLine("    }");
-        outputLine("    const points = Array.from(text);");
-        outputLine("    lite$textCache.set(text, points);");
-        outputLine("    if (lite$textCache.size > 8) {");
-        outputLine("        const oldest = lite$textCache.keys().next();");
-        outputLine("        if (oldest.done !== true) lite$textCache.delete(oldest.value);");
-        outputLine("    }");
-        outputLine("    return points;");
-        outputLine("}");
-        outputLine("");
+        io.outputLine("const lite$textCache = new Map<string, readonly string[]>();");
+        io.outputLine("function lite$textPoints(text: string): readonly string[] {");
+        io.outputLine("    const found = lite$textCache.get(text);");
+        io.outputLine("    if (found !== undefined) {");
+        io.outputLine("        lite$textCache.delete(text);");
+        io.outputLine("        lite$textCache.set(text, found);");
+        io.outputLine("        return found;");
+        io.outputLine("    }");
+        io.outputLine("    const points = Array.from(text);");
+        io.outputLine("    lite$textCache.set(text, points);");
+        io.outputLine("    if (lite$textCache.size > 8) {");
+        io.outputLine("        const oldest = lite$textCache.keys().next();");
+        io.outputLine("        if (oldest.done !== true) lite$textCache.delete(oldest.value);");
+        io.outputLine("    }");
+        io.outputLine("    return points;");
+        io.outputLine("}");
+        io.outputLine("");
     }
     if usesBuiltin(calls, "textLength") {
-        outputLine("function lite$textLength(text: string): bigint {");
-        outputLine("    return BigInt(lite$textPoints(text).length);");
-        outputLine("}");
-        outputLine("");
+        io.outputLine("function lite$textLength(text: string): bigint {");
+        io.outputLine("    return BigInt(lite$textPoints(text).length);");
+        io.outputLine("}");
+        io.outputLine("");
     }
     if usesBuiltin(calls, "textAt") {
-        outputLine("function lite$textAt(text: string, position: bigint, at: number): string {");
-        outputLine("    const points = lite$textPoints(text);");
-        outputLine("    if (position < 0n || position >= BigInt(points.length)) {");
-        outputLine("        lite$fault(\"BoundPanic\", at, \"textAt index outside text\");");
-        outputLine("    }");
-        outputLine("    const value = points[Number(position)];");
-        outputLine("    if (value === undefined) {");
-        outputLine("        throw new Error(\"BoundPanic: textAt index outside text\");");
-        outputLine("    }");
-        outputLine("    return value;");
-        outputLine("}");
-        outputLine("");
+        io.outputLine("function lite$textAt(text: string, position: bigint, at: number): string {");
+        io.outputLine("    const points = lite$textPoints(text);");
+        io.outputLine("    if (position < 0n || position >= BigInt(points.length)) {");
+        io.outputLine("        lite$fault(\"BoundPanic\", at, \"textAt index outside text\");");
+        io.outputLine("    }");
+        io.outputLine("    const value = points[Number(position)];");
+        io.outputLine("    if (value === undefined) {");
+        io.outputLine("        throw new Error(\"BoundPanic: textAt index outside text\");");
+        io.outputLine("    }");
+        io.outputLine("    return value;");
+        io.outputLine("}");
+        io.outputLine("");
     }
     if usesBuiltin(calls, "textSlice") {
-        outputLine("function lite$textSlice(text: string, start: bigint, end: bigint, at: number): string {");
-        outputLine("    const points = lite$textPoints(text);");
-        outputLine("    if (start < 0n || end < start || end > BigInt(points.length)) {");
-        outputLine("        lite$fault(\"BoundPanic\", at, \"textSlice requires 0 <= start <= end <= textLength(text)\");");
-        outputLine("    }");
-        outputLine("    return points.slice(Number(start), Number(end)).join(\"\");");
-        outputLine("}");
-        outputLine("");
+        io.outputLine("function lite$textSlice(text: string, start: bigint, end: bigint, at: number): string {");
+        io.outputLine("    const points = lite$textPoints(text);");
+        io.outputLine("    if (start < 0n || end < start || end > BigInt(points.length)) {");
+        io.outputLine("        lite$fault(\"BoundPanic\", at, \"textSlice requires 0 <= start <= end <= textLength(text)\");");
+        io.outputLine("    }");
+        io.outputLine("    return points.slice(Number(start), Number(end)).join(\"\");");
+        io.outputLine("}");
+        io.outputLine("");
     }
     return;
 }
 
 /** Emits the checked list-index helper used by generated programs that read list elements. */
 emitListIndexHelper := fn(): Unit {
-    outputLine("function lite$listAt<T>(items: readonly T[], index: bigint, at: number): T {");
-    outputLine("    if (index < 0n || index >= BigInt(items.length)) {");
-    outputLine("        lite$fault(\"BoundPanic\", at, \"list index outside its extent\");");
-    outputLine("    }");
-    outputLine("    const value = items[Number(index)];");
-    outputLine("    if (value === undefined) {");
-    outputLine("        lite$fault(\"BoundPanic\", at, \"list index outside its extent\");");
-    outputLine("    }");
-    outputLine("    return value;");
-    outputLine("}");
-    outputLine("");
+    io.outputLine("function lite$listAt<T>(items: readonly T[], index: bigint, at: number): T {");
+    io.outputLine("    if (index < 0n || index >= BigInt(items.length)) {");
+    io.outputLine("        lite$fault(\"BoundPanic\", at, \"list index outside its extent\");");
+    io.outputLine("    }");
+    io.outputLine("    const value = items[Number(index)];");
+    io.outputLine("    if (value === undefined) {");
+    io.outputLine("        lite$fault(\"BoundPanic\", at, \"list index outside its extent\");");
+    io.outputLine("    }");
+    io.outputLine("    return value;");
+    io.outputLine("}");
+    io.outputLine("");
 }
 
 /** Emits the checked list-pop helper used by generated programs that pop a list tail. */
 emitListPopHelper := fn(): Unit {
-    outputLine("function lite$listPopBack<T>(items: T[], at: number): T {");
-    outputLine("    const value = items.pop();");
-    outputLine("    if (value === undefined) {");
-    outputLine("        lite$fault(\"BoundPanic\", at, \"pop_back on an empty list\");");
-    outputLine("    }");
-    outputLine("    return value;");
-    outputLine("}");
-    outputLine("");
+    io.outputLine("function lite$listPopBack<T>(items: T[], at: number): T {");
+    io.outputLine("    const value = items.pop();");
+    io.outputLine("    if (value === undefined) {");
+    io.outputLine("        lite$fault(\"BoundPanic\", at, \"pop_back on an empty list\");");
+    io.outputLine("    }");
+    io.outputLine("    return value;");
+    io.outputLine("}");
+    io.outputLine("");
 }
 
 /** Emits positioned truncating division with checked Int64 results. */
 emitIntDivideHelper := fn(): Unit {
-    outputLine("function lite$divideInt(left: bigint, right: bigint, at: number): bigint {");
-    outputLine("    if (right === 0n) lite$intFault(at, \"division by zero\");");
-    outputLine("    return lite$checkedInt(left / right, at);");
-    outputLine("}");
-    outputLine("");
+    io.outputLine("function lite$divideInt(left: bigint, right: bigint, at: number): bigint {");
+    io.outputLine("    if (right === 0n) lite$intFault(at, \"division by zero\");");
+    io.outputLine("    return lite$checkedInt(left / right, at);");
+    io.outputLine("}");
+    io.outputLine("");
 }
 
 /** Emits positioned remainder; MIN%-1 is representable zero. */
 emitIntRemainderHelper := fn(): Unit {
-    outputLine("function lite$remainderInt(left: bigint, right: bigint, at: number): bigint {");
-    outputLine("    if (right === 0n) lite$intFault(at, \"remainder by zero\");");
-    outputLine("    return left % right;");
-    outputLine("}");
-    outputLine("");
+    io.outputLine("function lite$remainderInt(left: bigint, right: bigint, at: number): bigint {");
+    io.outputLine("    if (right === 0n) lite$intFault(at, \"remainder by zero\");");
+    io.outputLine("    return left % right;");
+    io.outputLine("}");
+    io.outputLine("");
 }
 
 /** Emits positioned floor division without repeating operands. */
 emitIntFloorDivideHelper := fn(): Unit {
-    outputLine("function lite$floorDivideInt(left: bigint, right: bigint, at: number): bigint {");
-    outputLine("    const quotient = lite$divideInt(left, right, at);");
-    outputLine("    const remainder = left % right;");
-    outputLine("    return remainder !== 0n && (left < 0n) !== (right < 0n) ? quotient - 1n : quotient;");
-    outputLine("}");
-    outputLine("");
+    io.outputLine("function lite$floorDivideInt(left: bigint, right: bigint, at: number): bigint {");
+    io.outputLine("    const quotient = lite$divideInt(left, right, at);");
+    io.outputLine("    const remainder = left % right;");
+    io.outputLine("    return remainder !== 0n && (left < 0n) !== (right < 0n) ? quotient - 1n : quotient;");
+    io.outputLine("}");
+    io.outputLine("");
 }
 
 /** Emits positioned floor modulo, including signed-minimum divisors. */
 emitIntFloorModuloHelper := fn(): Unit {
-    outputLine("function lite$floorModuloInt(left: bigint, right: bigint, at: number): bigint {");
-    outputLine("    if (right === 0n) lite$intFault(at, \"modulo by zero\");");
-    outputLine("    const remainder = left % right;");
-    outputLine("    return remainder !== 0n && (remainder < 0n) !== (right < 0n) ? remainder + right : remainder;");
-    outputLine("}");
-    outputLine("");
+    io.outputLine("function lite$floorModuloInt(left: bigint, right: bigint, at: number): bigint {");
+    io.outputLine("    if (right === 0n) lite$intFault(at, \"modulo by zero\");");
+    io.outputLine("    const remainder = left % right;");
+    io.outputLine("    return remainder !== 0n && (remainder < 0n) !== (right < 0n) ? remainder + right : remainder;");
+    io.outputLine("}");
+    io.outputLine("");
 }
 
 /** Emits every checked Int division-family helper the program reads. */
@@ -474,8 +476,8 @@ pub emitProgram := fn(items: frontend.Items, source: String, prefix: String): Un
     calls := frontend.targetHelperCalls(items);
     hasExit := usesBuiltin(calls, "exit") or usesBuiltin(calls, "inputAll") or usesBuiltin(calls, "inputLine") or usesBuiltin(calls, "inputInt") or usesBuiltin(calls, "inputFloat");
     if hasExit {
-        outputLine("let lite_out = \"\";");
-        outputLine("");
+        io.outputLine("let lite_out = \"\";");
+        io.outputLine("");
     }
     emitBuiltinHelpers(calls);
     if usesListIndex(calls) { emitListIndexHelper(); }
@@ -484,65 +486,65 @@ pub emitProgram := fn(items: frontend.Items, source: String, prefix: String): Un
     emitFloatArithmeticHelpers(calls);
     emitIntDivisionHelpers(calls);
     if usesBuiltin(calls, "readSource") {
-        outputLine("export function main(lite$write?: (text: string) => void, lite$sourceProviderInput?: (importer: string, spec: string) => { path: string; text: string }): string {");
-        outputLine("    lite$sourceProvider = lite$sourceProviderInput;");
+        io.outputLine("export function main(lite$write?: (text: string) => void, lite$sourceProviderInput?: (importer: string, spec: string) => { path: string; display: string; identity: string; text: string }): string {");
+        io.outputLine("    lite$sourceProvider = lite$sourceProviderInput;");
     } else {
-        outputLine("export function main(lite$write?: (text: string) => void): string {");
+        io.outputLine("export function main(lite$write?: (text: string) => void): string {");
     }
-    if not hasExit { outputLine("    let lite_out = \"\";"); }
-    outputLine("    function lite$emit(text: string): void {");
-    outputLine("        if (lite$write === undefined) lite_out += text;");
-    outputLine("        else lite$write(text);");
-    outputLine("    }");
-    outputLine("    void lite$emit;");
+    if not hasExit { io.outputLine("    let lite_out = \"\";"); }
+    io.outputLine("    function lite$emit(text: string): void {");
+    io.outputLine("        if (lite$write === undefined) lite_out += text;");
+    io.outputLine("        else lite$write(text);");
+    io.outputLine("    }");
+    io.outputLine("    void lite$emit;");
     var indent := "    ";
     var line := "";
     var count := 0;
     var reportIndex := 0;
     loop items as item {
         if item.kind == "FunctionStart" {
-            outputLine(indent + "function " + item.runtime + "(" + tsParameterList(item.textValue) + "): " +
+            io.outputLine(indent + "function " + item.runtime + "(" + tsParameterList(item.textValue) + "): " +
                 tsFunctionType(item.code) + " {");
             indent = indent + "    ";
             reportParameterReads(item.textValue, indent);
         } else if item.kind == "FunctionEnd" {
             indent = dedent(indent);
-            outputLine(indent + "}");
-            outputLine(indent + "void " + item.runtime + ";");
+            io.outputLine(indent + "}");
+            io.outputLine(indent + "void " + item.runtime + ";");
         } else if item.kind == "Return" {
             if item.code == "" {
-                outputLine(indent + "return;");
+                io.outputLine(indent + "return;");
             } else {
-                outputLine(indent + "return " + item.code + ";");
+                io.outputLine(indent + "return " + item.code + ";");
             }
         } else if item.kind == "Unreachable" {
-            outputLine(indent + "throw new Error(\"unreachable loop completion\");");
+            io.outputLine(indent + "throw new Error(\"unreachable loop completion\");");
         } else if item.kind == "Break" {
-            outputLine(indent + "break;");
+            io.outputLine(indent + "break;");
         } else if item.kind == "Continue" {
-            outputLine(indent + "continue;");
+            io.outputLine(indent + "continue;");
         } else if item.kind == "Call" {
-            outputLine(indent + item.code + ";");
+            io.outputLine(indent + item.code + ";");
         } else if item.kind == "Discard" {
-            outputLine(indent + "void (" + item.code + ");");
+            io.outputLine(indent + "void (" + item.code + ");");
         } else if item.kind == "LocalInt" or item.kind == "LocalString" or item.kind == "LocalBool" or item.kind == "LocalFloat" or item.kind == "LocalTuple" {
-            outputLine(indent + "const " + item.runtime + " = " + item.code + ";");
-            outputLine(indent + "void " + item.runtime + ";");
+            io.outputLine(indent + "const " + item.runtime + " = " + item.code + ";");
+            io.outputLine(indent + "void " + item.runtime + ";");
         } else if item.kind == "LocalList" {
-            outputLine(indent + "const " + item.runtime + ": " + tsFunctionType(item.textValue) + " = " + item.code + ";");
-            outputLine(indent + "void " + item.runtime + ";");
+            io.outputLine(indent + "const " + item.runtime + ": " + tsFunctionType(item.textValue) + " = " + item.code + ";");
+            io.outputLine(indent + "void " + item.runtime + ";");
         } else if item.kind == "VarInt" or item.kind == "VarString" or item.kind == "VarBool" or item.kind == "VarFloat" or item.kind == "VarTuple" {
-            outputLine(indent + "let " + item.runtime + " = " + item.code + ";");
-            outputLine(indent + "void " + item.runtime + ";");
+            io.outputLine(indent + "let " + item.runtime + " = " + item.code + ";");
+            io.outputLine(indent + "void " + item.runtime + ";");
         } else if item.kind == "VarList" {
-            outputLine(indent + "let " + item.runtime + ": " + tsFunctionType(item.textValue) + " = " + item.code + ";");
-            outputLine(indent + "void " + item.runtime + ";");
+            io.outputLine(indent + "let " + item.runtime + ": " + tsFunctionType(item.textValue) + " = " + item.code + ";");
+            io.outputLine(indent + "void " + item.runtime + ";");
         } else if item.kind == "AssignInt" or item.kind == "AssignString" or item.kind == "AssignBool" or item.kind == "AssignFloat" or item.kind == "AssignTuple" {
-            outputLine(indent + item.runtime + " = " + item.code + ";");
+            io.outputLine(indent + item.runtime + " = " + item.code + ";");
         } else if item.kind == "AssignList" {
-            outputLine(indent + item.runtime + " = " + item.code + ";");
+            io.outputLine(indent + item.runtime + " = " + item.code + ";");
         } else if item.kind == "Scope" {
-            outputLine(indent + "{");
+            io.outputLine(indent + "{");
             indent = indent + "    ";
         } else if item.kind == "If" {
             condition := if item.code == "true" or item.code == "false" {
@@ -550,11 +552,11 @@ pub emitProgram := fn(items: frontend.Items, source: String, prefix: String): Un
             } else {
                 item.code
             };
-            outputLine(indent + "if (" + condition + ") {");
+            io.outputLine(indent + "if (" + condition + ") {");
             indent = indent + "    ";
         } else if item.kind == "Else" {
             indent = dedent(indent);
-            outputLine(indent + "} else {");
+            io.outputLine(indent + "} else {");
             indent = indent + "    ";
         } else if item.kind == "ElseIf" {
             indent = dedent(indent);
@@ -563,30 +565,30 @@ pub emitProgram := fn(items: frontend.Items, source: String, prefix: String): Un
             } else {
                 item.code
             };
-            outputLine(indent + "} else if (" + condition + ") {");
+            io.outputLine(indent + "} else if (" + condition + ") {");
             indent = indent + "    ";
         } else if item.kind == "EndIf" or item.kind == "EndScope" {
             indent = dedent(indent);
-            outputLine(indent + "}");
+            io.outputLine(indent + "}");
         } else if item.kind == "LoopSeq" {
-            outputLine(indent + "for (const " + item.runtime + " of " + tsLiteral.listCopyCode(item.code) + ") {");
+            io.outputLine(indent + "for (const " + item.runtime + " of " + tsLiteral.listCopyCode(item.code) + ") {");
             indent = indent + "    ";
-            outputLine(indent + "void " + item.runtime + ";");
+            io.outputLine(indent + "void " + item.runtime + ";");
         } else if item.kind == "Loop" {
             condition := if item.code == "" { "Boolean(true)" }
                 else if item.code == "false" { "Boolean(false)" }
                 else { item.code };
-            outputLine(indent + "while (" + condition + ") {");
+            io.outputLine(indent + "while (" + condition + ") {");
             indent = indent + "    ";
         } else if item.kind == "EndLoop" {
             indent = dedent(indent);
-            outputLine(indent + "}");
+            io.outputLine(indent + "}");
         } else if item.kind == "End" or item.kind == "EndOutput" {
             if count == 0 { line = tsLiteral.textLiteralCode(""); }
             temporary := "lite$report" + integer.intText(reportIndex);
-            outputLine(indent + "const " + temporary + " = " + line + ";");
+            io.outputLine(indent + "const " + temporary + " = " + line + ";");
             ending := if item.kind == "End" { " + \"\\n\"" } else { "" };
-            outputLine(indent + "lite$emit(" + temporary + ending + ");");
+            io.outputLine(indent + "lite$emit(" + temporary + ending + ");");
             reportIndex = reportIndex + 1;
             line = "";
             count = 0;
@@ -597,6 +599,6 @@ pub emitProgram := fn(items: frontend.Items, source: String, prefix: String): Un
             count = count + 1;
         }
     }
-    outputLine("    return lite_out;");
-    outputLine("}");
+    io.outputLine("    return lite_out;");
+    io.outputLine("}");
 }

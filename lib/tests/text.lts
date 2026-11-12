@@ -1,6 +1,6 @@
-integer := import "../core/int.lts";
-text := import "../core/text.lts";
-test := import "../core/test.lts";
+integer := import "core/int";
+text := import "core/text";
+test := import "core/test";
 
 test.checkBool("digit 7", true, text.isDigit("7"));
 test.checkBool("digit a", false, text.isDigit("a"));

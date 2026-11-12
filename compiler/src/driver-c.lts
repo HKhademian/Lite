@@ -1,13 +1,15 @@
-frontend := import "frontend.lts";
-modules := import "modules.lts";
-emitter := import "emit-c.lts";
+frontend := import "./frontend.lts";
+modules := import "./modules.lts";
+emitter := import "./emit-c.lts";
+io := import "core/io";
 
 /** Runs the C emitter over the same source graph used by the TS compiler. */
 pub run := fn(): Unit {
     prefix := frontend.sourcePrefix();
-    source := inputAll();
-    if prefix =!= "" {
-        graph := modules.visitSourceModule("c", prefix, source, []);
+    source := io.inputAll();
+    if frontend.sourceModulePath() =!= "" {
+        graph := modules.visitSourceModule("c", frontend.sourceModulePath(), prefix,
+            frontend.sourceModuleIdentity(), source, []);
         emitter.emitProgram(modules.moduleItems(graph), source, prefix);
     } else {
         emitter.emitProgram(frontend.parseProgram("c", source, prefix), source, prefix);

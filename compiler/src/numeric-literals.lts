@@ -1,5 +1,6 @@
 /** Resolves the three public 64-bit numeric synonyms, or returns empty text for any other spelling. Shared by the frontend and normalized parser/checker phases. */
-text := import "../../lib/core/text.lts";
+
+textLib := import "core/text";
 
 pub numericAliasKind := fn(name: String): String {
     if name == "Int64" { "Int" }
@@ -20,19 +21,19 @@ pub intExactlyFloat := fn(input: Int): Bool {
 /** Checks finite binary64 literal rounding using decimal digits, without requiring Float arithmetic in the bootstrap compiler. The excluded midpoint is 2^1024 - 2^970; a tie rounds to infinity. */
 pub finiteFloatDigits := fn(digits: String, fractionCount: Int, exponent: Int): Bool {
     var first := 0;
-    loop first < textLength(digits) and textAt(digits, first) == "0" { first = first + 1; }
-    if first == textLength(digits) { return true; }
-    significant := textSlice(digits, first, textLength(digits));
-    power := textLength(significant) - fractionCount + exponent;
+    loop first < textLib.length(digits) and textLib.at(digits, first) == "0" { first = first + 1; }
+    if first == textLib.length(digits) { return true; }
+    significant := textLib.slice(digits, first, textLib.length(digits));
+    power := textLib.length(significant) - fractionCount + exponent;
     if power < 309 { return true; }
     if power > 309 { return false; }
     midpoint := "179769313486231580793728971405303415079934132710037826936173778980444968292764750946649017977587207096330286416692887910946555547851940402630657488671505820681908902000708383676273854845817711531764475730270069855571366959622842914819860834936475292719074168444365510704342711559699508093042880177904174497792";
-    var count := textLength(significant);
-    if count < textLength(midpoint) { count = textLength(midpoint); }
+    var count := textLib.length(significant);
+    if count < textLib.length(midpoint) { count = textLib.length(midpoint); }
     var index := 0;
     loop index < count {
-        left := if index < textLength(significant) { text.digitValue(textAt(significant, index)) } else { 0 };
-        right := if index < textLength(midpoint) { text.digitValue(textAt(midpoint, index)) } else { 0 };
+        left := if index < textLib.length(significant) { textLib.digitValue(textLib.at(significant, index)) } else { 0 };
+        right := if index < textLib.length(midpoint) { textLib.digitValue(textLib.at(midpoint, index)) } else { 0 };
         if left < right { return true; }
         if left > right { return false; }
         index = index + 1;
@@ -42,12 +43,12 @@ pub finiteFloatDigits := fn(digits: String, fractionCount: Int, exponent: Int): 
 
 /** Scans one unsigned decimal numeric token, retaining an Int-range witness and Float grammar/range components without target code or diagnostics. Exponent saturation preserves every possible cancellation with the literal's digits. */
 pub scanNumericLiteral := fn(source: String, position: Int): (next: Int, integerEnd: Int, fractionStart: Int, fractionEnd: Int, exponent: Int, floating: Bool, exponentMissingAt: Int, magnitude: Int, outsideInt: Bool) {
-    size := textLength(source);
+    size := textLib.length(source);
     var cursor := position;
     var magnitude := 0;
     var outsideInt := false;
-    loop cursor < size and text.isDigit(textAt(source, cursor)) {
-        digit := text.digitValue(textAt(source, cursor));
+    loop cursor < size and textLib.isDigit(textLib.at(source, cursor)) {
+        digit := textLib.digitValue(textLib.at(source, cursor));
         if not outsideInt {
             if magnitude < (-9223372036854775808 + digit) / 10 { outsideInt = true; }
             else { magnitude = magnitude * 10 - digit; }
@@ -58,28 +59,28 @@ pub scanNumericLiteral := fn(source: String, position: Int): (next: Int, integer
     var fractionStart := cursor;
     var fractionEnd := cursor;
     var floating := false;
-    if cursor + 1 < size and textAt(source, cursor) == "." and text.isDigit(textAt(source, cursor + 1)) {
+    if cursor + 1 < size and textLib.at(source, cursor) == "." and textLib.isDigit(textLib.at(source, cursor + 1)) {
         floating = true;
         cursor = cursor + 1;
         fractionStart = cursor;
-        loop cursor < size and text.isDigit(textAt(source, cursor)) { cursor = cursor + 1; }
+        loop cursor < size and textLib.isDigit(textLib.at(source, cursor)) { cursor = cursor + 1; }
         fractionEnd = cursor;
     }
     var exponent := 0;
     var exponentMissingAt := -1;
-    if cursor < size and (textAt(source, cursor) == "e" or textAt(source, cursor) == "E") {
+    if cursor < size and (textLib.at(source, cursor) == "e" or textLib.at(source, cursor) == "E") {
         floating = true;
         exponentAt := cursor;
         cursor = cursor + 1;
         var negativeExponent := false;
-        if cursor < size and (textAt(source, cursor) == "+" or textAt(source, cursor) == "-") {
-            negativeExponent = textAt(source, cursor) == "-";
+        if cursor < size and (textLib.at(source, cursor) == "+" or textLib.at(source, cursor) == "-") {
+            negativeExponent = textLib.at(source, cursor) == "-";
             cursor = cursor + 1;
         }
         exponentStart := cursor;
         limit := size + 310;
-        loop cursor < size and text.isDigit(textAt(source, cursor)) {
-            digit := text.digitValue(textAt(source, cursor));
+        loop cursor < size and textLib.isDigit(textLib.at(source, cursor)) {
+            digit := textLib.digitValue(textLib.at(source, cursor));
             if exponent > (limit - digit) / 10 { exponent = limit; }
             else { exponent = exponent * 10 + digit; }
             cursor = cursor + 1;

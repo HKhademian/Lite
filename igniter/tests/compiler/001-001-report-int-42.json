@@ -2,7 +2,7 @@
   "name": "report-int-42",
   "source": {
     "file": "001-001-report-int-42.lts",
-    "hash": "sha256:11c45fff5c9a579bf353cfc71a3b94376f079010260ab19cb6e3de7eb1fa1869"
+    "hash": "sha256:cba0c4e9b46c616d31b8845b53eb0923f5e6cf976dcf3ccc611ad2dc1414fe87"
   },
   "cases": [
     {

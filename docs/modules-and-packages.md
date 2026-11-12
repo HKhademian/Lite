@@ -113,40 +113,46 @@ does not complete module/import grammar.
 Owner-selected namespace collection form, **2026-11-11**:
 
 ```lite
-math := import "./math.lts";
+math := import "./math";
+text := import "core/text";
 ```
 
 An import is a top-level module definition. The left side gives the immutable
-module alias; imported members are accessed through that alias. Paths are
-relative to the importing source file, use `/` separators, and name a source
-file directly. Package lookup and version solving remain out of scope.
+module alias; imported members are accessed through that alias. Import paths
+use `/` separators and have three forms: `./name` and `../name` resolve from
+the importing file, `/path/name` is an absolute filesystem path, and a bare
+library path such as `core/text` resolves under the distribution's `lib/`
+directory. Lite appends `.lts` when the path does not already end in `.lts`.
+Same-directory files use the explicit `./` prefix; bare paths select library
+modules. Package manifests and version solving remain out of scope.
 
-Generated TS supports both receiver-less imports, which introduce the imported
-module's `pub` declarations into the importing file scope, and namespace
-imports, which expose those declarations through an immutable alias. Namespace
-members include public functions, immutable scalar values, and public types
-usable in qualified annotations; compiler-source adoption remains pending. The
-codebase must migrate to namespace collection before deciding whether this
-open-import form remains or an explicit unpack form replaces it. No project
-source should retain a dependency on implicit unpacking after the alias
-migration.
+Generated TS supports namespace imports only. Each import has an immutable
+local alias; members stay qualified, including public functions, immutable
+scalar values, and public types usable in annotations. Receiverless imports
+are rejected so imports cannot implicitly add names to the current scope.
 
-As of **2026-11-12**, the compiler lexer and parser recognize `pub`, receiver-less
-`import "path";`, and namespace imports such as
-`math := import "./math.lts";`. The generated TypeScript driver reads and parses
-imported units using the compiler's Lite-owned graph walk when invoked with a
-source filename. It marks a unit visited before following imports and processed
-after its outgoing imports. Both import forms expose `pub` functions,
-immutable scalar values, and public types; namespace members stay qualified and
-private declarations remain hidden. Repeated aliases share one module identity.
+As of **2026-11-12**, the compiler lexer and parser recognize `pub` and
+namespace imports such as `math := import "./math";` and
+`text := import "core/text";`. Relative,
+absolute, and library-root paths are normalized by one host resolver shared by
+compiler graph traversal and build-cache edge validation. Extensionless imports
+infer `.lts`; canonical paths drive source caching and dependency tracing. The
+generated TypeScript driver reads and parses imported units using the compiler's
+Lite-owned graph walk. It marks a unit visited before following imports and
+processed after its outgoing imports. Namespace aliases expose `pub` functions,
+immutable scalar values, and public types; private declarations remain hidden.
+Repeated aliases share one module identity.
 Duplicate aliases and exported names are rejected. Qualified public types work
 in annotations and function signatures. Retained source spans for runtime
 diagnostics and compiler-source adoption remain pending. Cycles terminate
 during graph traversal, but references to declarations in a not-yet-processed
 module are not resolved as mutual declarations. Parser-only
-calls without a source filename remain syntax checks. Public TS compile/check/run
-use the Lite graph walk; C compilation and compiler-source assembly still use the
-host expander as a temporary bridge.
+Host compiler input without an explicit diagnostic name uses a synthetic source
+path in its working directory for relative import resolution, while keeping
+diagnostics unnamed. Direct generated-compiler invocations without a source
+provider path remain parser-only checks. Public TS compile/check/run use the Lite
+graph walk; C compilation and compiler-source assembly still use the host
+expander as a temporary bridge.
 
 The target model keeps source units separate through parsing and resolution,
 without splicing Lite text. The current stage parses each canonical file once,
@@ -173,11 +179,12 @@ override, and bodyless declarations outside the registered core contract are
 rejected. `...values` is the heterogeneous argument pack for these special
 output statements only; it does not make ordinary user functions variadic.
 Imported `io.output(...)` and `io.outputLine(...)` calls keep the same one-call
-argument evaluation, formatting, stream writes, and newline behavior as their
-legacy global forms. `io.errorLine(String)` writes to stderr with one newline.
+argument evaluation, formatting, stream writes, and newline behavior as the
+previous global forms. `io.errorLine(String)` writes to stderr with one newline.
 The generated TS target supports errorLine; C preserves its current explicit
 rejection of error reporting, and its output forms retain the existing scalar
-subset. The old global forms remain as a migration bridge.
+subset. The global source-level forms have been removed; import `core/io` and
+call the operation through its module alias.
 
 This is a provisional importable runtime surface, not a general foreign
 function interface or filesystem API. The compiler's `readSource` operation

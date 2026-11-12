@@ -2,7 +2,7 @@
   "name": "literal-too-large",
   "source": {
     "file": "002-003-literal-too-large.lts",
-    "hash": "sha256:e1bb91beae083ba27eb1a6d4f583757a8ea833168e1158e36d45ce0814d9686e"
+    "hash": "sha256:bd87684dc528f38cadc14a903ebae7a3e04b70ec9dd1139b1afc6745fdf5ca95"
   },
   "cases": [
     {
@@ -12,8 +12,8 @@
         "hash": "sha256:e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
       },
       "stderr": {
-        "text": "1:12: integer literal outside signed 64-bit range\n",
-        "hash": "sha256:0baea174e6667718c46c68111101c08b531049ac154c913444b70ebdceeecc94"
+        "text": "3:15: integer literal outside signed 64-bit range\n",
+        "hash": "sha256:697228f47b2726cd2997badbebc5eb35a6a2c56a9ff37a4d902d68147ef2fb6c"
       },
       "exitCode": 2
     }

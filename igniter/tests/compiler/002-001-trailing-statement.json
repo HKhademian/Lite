@@ -2,7 +2,7 @@
   "name": "trailing-statement",
   "source": {
     "file": "002-001-trailing-statement.lts",
-    "hash": "sha256:f48f3b275b7c7b409e307fa6b6360ffdb010c9650175b77da36388483dff2c54"
+    "hash": "sha256:5bf946b74da7e412cef89f2f1bd18aaa689a5b8766dc5f29a363b24f4c98c4a6"
   },
   "cases": [
     {
@@ -12,8 +12,8 @@
         "hash": "sha256:e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
       },
       "stderr": {
-        "text": "1:17: unknown value process\n",
-        "hash": "sha256:4b145dcb7ad258305cd44acdf268d84899c76d826eea529f6dca14a614592be4"
+        "text": "3:20: unknown value process\n",
+        "hash": "sha256:ec7d1b4f679bf4c8e9baa355cfc380e8d4f69e2a74fa705d689b1c18039f57ee"
       },
       "exitCode": 2
     }
