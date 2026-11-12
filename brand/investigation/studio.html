@@ -848,7 +848,7 @@ function render() {
           </div>
         </div>
       </div>
-      <div class="card-foot"><b>Note:</b> ${it.note}${it.author ? `<br><b>Created by:</b> ${it.author}` : ''}</div>
+      <div class="card-foot"><b>Note:</b> ${it.note}${(it.author || it.creator) ? `<br><b>Created by:</b> <code>${it.author || it.creator}</code>` : ''}</div>
     `;
     grid.appendChild(el);
   });

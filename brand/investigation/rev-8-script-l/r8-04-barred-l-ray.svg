@@ -1,6 +1,6 @@
 <svg data-author="gemini-3.8-flash" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 16 16" width="16" height="16" role="img" aria-label="Lite — R8-04 Barred l-Ray (ł)">
   <title>Lite — R8-04 Barred l-Ray (ł)</title>
-  <metadata>author: gemini-3.8-flash</metadata>
+  <metadata><creator xmlns="http://purl.org/dc/elements/1.1/">gemini-3.8-flash</creator></metadata>
   <!-- Inspired by ł / ƚ: clean l with a single diagonal light-ray slash -->
   <g fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round">
     <path d="M5.8 2.5V11.2A1.8 1.8 0 0 0 7.6 13H9.5" stroke-width="2"/>

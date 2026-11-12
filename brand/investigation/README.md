@@ -9,7 +9,10 @@ This is the tracked design archive — the single place where the trail of revis
 
 The three numbered SVG sheets in `rev-1-concepts/`, and the marks in
 `rev-6-letter-marks/` and `rev-9-letterforms/`, were created by `gpt-6.1-terra`.
-Creator metadata is also embedded in those SVGs and shown on their studio cards.
+The marks in `rev-4-monogram-wordmark/` were created by `gemini-4-argon`, and the
+marks in `rev-5-synthesis/`, `rev-7-letter-l/`, `rev-8-script-l/`, and the
+unified `studio.html` were created by `gemini-3.8-flash`.
+Creator metadata is embedded in those SVGs and shown on their studio cards.
 
 ## Revision log
 

@@ -1,6 +1,6 @@
 <svg data-author="gemini-3.8-flash" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 16 16" width="16" height="16" role="img" aria-label="Lite — R7-01 Multi-Barb Quill L">
   <title>Lite — R7-01 Multi-Barb Quill L</title>
-  <metadata>author: gemini-3.8-flash</metadata>
+  <metadata><creator xmlns="http://purl.org/dc/elements/1.1/">gemini-3.8-flash</creator></metadata>
   <!-- Strong L spine + foot (stroke 2) with 3 well-spaced feather branches (stroke 1.35) -->
   <g fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round">
     <path d="M3.5 2.5V13H10.5" stroke-width="2"/>
