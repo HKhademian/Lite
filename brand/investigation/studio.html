@@ -363,7 +363,6 @@
     <div class="panel">
       <div class="sticky-top">
         <div style="display:flex; align-items:center; gap:8px; flex-wrap:wrap;">
-          <span id="sel-pill" class="badge">Selected: R14-02</span>
           <div class="seg">
             <button id="mode-solid" class="active" onclick="setRenderMode('solid')">Solid</button>
             <button id="mode-xray" onclick="setRenderMode('xray')">X-Ray</button>
@@ -399,7 +398,6 @@
           <div style="display:flex; flex-direction:column; gap:3px; min-width:0;">
             <div id="bs-wordmark"></div>
             <div id="bs-headline" style="font-size:15px; font-weight:700; letter-spacing:-0.02em;">Lite is light.</div>
-            <div class="eyebrow" id="bs-summary" style="font-size:9.5px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;"></div>
           </div>
           <div style="background:var(--card); border:1px solid var(--line); border-radius:8px; padding:6px 9px; font-family:var(--mono); font-size:10.5px; line-height:1.45; shrink:0;">
             <div><span id="bs-kw">fn</span> main() {</div>
@@ -409,6 +407,7 @@
         </div>
         <div class="inspector-stages" id="inspector-stages"></div>
       </div>
+      <div id="bs-summary" class="eyebrow" style="margin-top:8px; padding-top:8px; border-top:1px solid var(--line); font-size:11px; text-transform:none; letter-spacing:0.01em;"></div>
     </div>
   </div>
 
@@ -1132,9 +1131,6 @@ function jumpToRef(ref) {
 
 function renderSim() {
   const it = items.find(x => x.id === selectedId) || items[0];
-  document.getElementById('sel-pill').textContent = `Selected: ${it.ref} · ${it.title}`;
-  const statusEl = document.getElementById('topbar-status');
-  if (statusEl) statusEl.textContent = `${it.ref} · ${logoColorMode === 'mono' ? 'Mono' : activeBsAccent.name} · ${activeBsPal.name}`;
   document.getElementById('sim-dark-fav').innerHTML = `<svg viewBox="${it.vb}" width="16" height="16">${it.mark(logoColorMode === 'mono' ? '#F3F4F6' : accDark)}</svg>`;
   document.getElementById('sim-light-fav').innerHTML = `<svg viewBox="${it.vb}" width="16" height="16">${it.mark(logoColorMode === 'mono' ? '#111315' : accLight)}</svg>`;
   document.getElementById('sim-dark-wm').innerHTML = buildCustomWordmark(it, logoColorMode === 'mono' ? '#F3F4F6' : accDark, '#F3F4F6', 24);
@@ -1164,7 +1160,7 @@ function renderSim() {
   document.getElementById('bs-headline').style.fontFamily = activeBsFont.display;
   document.getElementById('bs-kw').style.color = acc;
   document.getElementById('bs-str').style.color = acc;
-  document.getElementById('bs-summary').textContent = `${it.ref} · ${logoColorMode==='mono'?'Mono':activeBsAccent.name} · ${activeBsPal.name}`;
+  document.getElementById('bs-summary').textContent = `Logo: ${it.ref} (${it.title})  ·  Color: ${logoColorMode==='mono'?'Mono':activeBsAccent.name}  ·  Palette: ${activeBsPal.name}  ·  Logo Font: ${activeBsLogoFont.name}  ·  Site Font: ${activeBsFont.name}`;
 
   if (brandSystemOpen) renderBrandSystem();
 }
