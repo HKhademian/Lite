@@ -1,10 +1,12 @@
 import assert from 'node:assert/strict';
+import { execFileSync } from 'node:child_process';
 import { existsSync, readFileSync } from 'node:fs';
 import { dirname, join, resolve } from 'node:path';
 import { test } from 'node:test';
 import { buildSite } from './build.ts';
 import { heroSample, sampleGroups, showcaseSamples } from './groups.ts';
 import { escapeHtml, highlightLite, highlightTs } from './highlight.ts';
+import { stripLiteTs } from './strip-ts.ts';
 
 const root = dirname(import.meta.dirname);
 
@@ -68,4 +70,46 @@ test('buildSite generates static pages and metadata in dist/site', () => {
   assert.equal(buildInfo.samples, showcaseSamples.length);
   assert.equal(buildInfo.shortCommit.length, 12);
   assert(buildInfo.timestamp.length > 0);
+});
+
+test('stripLiteTs produces runnable JS matching compiler output for all showcase samples', () => {
+  const out = join(root, 'dist', 'site');
+  const liteBin = join(root, 'bin', 'lite');
+  const encoder = new TextEncoder();
+
+  for (const sample of showcaseSamples) {
+    const payload = JSON.parse(
+      readFileSync(join(out, 'playground', 'samples', `${sample.id}.json`), 'utf8')
+    ) as { stdin?: string; args?: string[]; output: string };
+    const ts = execFileSync(liteBin, ['compile', resolve(root, sample.file)], { encoding: 'utf8' });
+    const js = stripLiteTs(ts);
+    const stdinBytes = encoder.encode(payload.stdin ?? '');
+    let offset = 0;
+    let stdout = '';
+    const fakeProcess = {
+      argv: ['node', 'playground.js', ...(payload.args ?? [])],
+      exit(code: number): never {
+        throw new Error(`EXIT:${code}`);
+      },
+      getBuiltinModule(name: string) {
+        assert.equal(name, 'node:fs');
+        return {
+          readSync(_fd: number, buf: Uint8Array, bufOffset: number, length: number): number {
+            if (offset >= stdinBytes.length) return 0;
+            const n = Math.min(length, stdinBytes.length - offset);
+            buf.set(stdinBytes.subarray(offset, offset + n), bufOffset);
+            offset += n;
+            return n;
+          },
+          writeSync(fd: number, text: string): number {
+            if (fd === 1) stdout += text;
+            return text.length;
+          },
+        };
+      },
+    };
+    const fn = new Function('process', `${js.replace(/export function main\b/, 'function main')}\nreturn main();`) as (p: typeof fakeProcess) => string | undefined;
+    const ret = fn(fakeProcess);
+    assert.equal(stdout + (ret ?? ''), payload.output, `runtime parity mismatch for ${sample.id}`);
+  }
 });
