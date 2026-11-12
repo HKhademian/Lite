@@ -2,53 +2,56 @@
 
 **Lite is light.**
 
-**Lite** is the project, **LiteLang** is the language, and a **LiteScript** is one of its programs. Lite is designed for low runtime weight, explicit consequential behavior, and code that is easy to read, reason about, and maintain.
+**Lite** is a small, explicit programming language and self-hosted compiler built for clarity, low runtime weight, and predictable behavior. Everything consequential—output, mutation, imports, and control flow—is visible right in the source.
 
-## Try it
+## Why Lite
 
-The public showcase site and interactive sample playground are built from [site/build.ts](site/build.ts) and published through GitHub Pages. Preview locally:
+- **Low ceremony:** Clean, readable syntax that stays out of your way.
+- **Explicit behavior:** No hidden globals, implicit echoes, or surprise runtime magic.
+- **Lightweight execution:** Compiles cleanly with minimal runtime support today, with a native C path ahead.
+- **Self-hosted foundation:** Written in LiteLang, easy to inspect, learn, and extend.
+
+## Quickstart
+
+Explore the **Showcase & Playground** published via GitHub Pages, or build and preview it locally:
 
 ```sh
 ./site/build.ts
 ./site/serve.ts
 ```
 
-To run Lite scripts locally, use the Node version in [igniter/.node-version](igniter/.node-version):
+Run a script locally (using the Node version in [igniter/.node-version](igniter/.node-version)):
 
 ```sh
-git clone <repository-url>
-cd LiteScript
-./bin/lite run language/examples/001-double-sum.lts
+git clone https://github.com/HKhademian/Lite.git
+cd Lite
+./bin/lite run language/examples/021-type-aliases.lts
 ```
 
-Enter `7` and `5` to print `24`. You can also compile to TypeScript or check without executing:
+Check or compile a script with `./bin/lite`:
 
 ```sh
-./bin/lite compile language/examples/001-double-sum.lts > /tmp/lite-example.ts
-node compiler/entry.ts /tmp/lite-example.ts
 ./bin/lite check language/examples/001-double-sum.lts
+./bin/lite compile language/examples/001-double-sum.lts
 ```
 
-## What you get
+## Learn & Explore
 
-- A Lite-written compiler generating a **T13** TypeScript igniter (with a C backend slot scheduled next).
-- A command-line router (`./bin/lite`) to `run`, `compile`, `check`, `test`, `verify`, `doctor`, and `docs`.
-- A static showcase site and sample playground (`./site/build.ts`, `./site/serve.ts`).
-- A self-rebuilding bootstrap seed ([bootstrap guide](compiler/bootstrap/README.md)).
-- A VS Code syntax highlighter ([VS Code support](editors/vscode/README.md)).
+- [Start here](docs/start-here.md) — run your first program and set up local tools.
+- [Language tour](docs/tour.md) — example-led introduction to LiteLang.
+- [Examples](language/examples/README.md) — runnable `.lts` programs.
+- [White paper](docs/white-paper.md) — philosophy and design criteria.
+- [Documentation index](docs/README.md) — full language design, spec, and proposals.
+- [VS Code support](editors/vscode/README.md) — syntax highlighting for `.lt` and `.lts`.
 
-Lite is alpha software: the generated compiler currently supports a growing subset of the language design, while C output, native self-hosting, `lite fmt`, and `lite link` remain planned. See [compiler status](compiler/README.md) and [the transition plan](compiler/transition-plan.md) for current coverage.
+## Internals & Contributing
 
-## Learn more
+Lite is alpha software; the compiler currently supports a growing subset of the language design.
 
-- [Start here](docs/start-here.md): run your first program and install dev dependencies.
-- [Language tour](docs/tour.md): short example-led overview of LiteLang.
-- [Examples](language/examples/README.md): runnable `.lts` programs.
-- [Documentation index](docs/README.md): language design, spec, and proposals.
-- [White paper](docs/white-paper.md): philosophy and design criteria.
-- [Compiler reference](compiler/README.md): compiler stages, targets, and parity.
-- [Evolving Lite](docs/evolving-language.md): how language increments and seeds advance.
-- [Releases](docs/release-automation.md): component tags, verification gates, and packaging.
-- [Changelog](CHANGELOG.md): notable project milestones.
+- [Compiler reference](compiler/README.md) — compiler architecture, targets, and current coverage.
+- [Bootstrap guide](compiler/bootstrap/README.md) — self-rebuilding seed and verification.
+- [Transition plan](compiler/transition-plan.md) — ongoing compiler work and roadmap.
+- [Releases](docs/release-automation.md) & [Changelog](CHANGELOG.md) — versioning, gates, and milestones.
+- [Contributing](CONTRIBUTING.md) — development workflow and tests.
 
-For repository development, see [contributing](CONTRIBUTING.md). Lite is licensed under [Apache-2.0](LICENSE).
+Licensed under [Apache-2.0](LICENSE).
