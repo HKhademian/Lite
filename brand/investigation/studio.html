@@ -364,6 +364,7 @@
   <!-- Single Unified Category Switcher -->
   <div class="nav-bar">
     <button class="tab-btn active" id="grp-all" onclick="setGroup('all')">All Candidates</button>
+    <button class="tab-btn" id="grp-rev8" onclick="setGroup('rev8')">Rev 8 · Script ℓ / ℒ (6)</button>
     <button class="tab-btn" id="grp-rev7" onclick="setGroup('rev7')">Rev 7 · Letter $ (8)</button>
     <button class="tab-btn" id="grp-rev6" onclick="setGroup('rev6')">Rev 6 · Letter Marks (6)</button>
     <button class="tab-btn" id="grp-top" onclick="setGroup('top')">Top Picks (6)</button>
@@ -388,6 +389,50 @@ let wordCase = 'lower';
 let selectedId = 'r6-feather-curve';
 
 const items = [
+  // ================= REV 8 SCRIPT ℓ / ℒ & "l" VARIATIONS =================
+  {
+    ref: 'R8-01',
+    id: 'r8-script-ell', groups: ['rev8'], badge: 'Rev 8 · Script ℓ', origin: 'U+2113 / $ite',
+    title: 'Script ℓ (Monoline)', desc: 'Classic script small l (ℓ) in 16×16 monoline—1 continuous loop flowing into ite.', note: 'Literally the symbol for liters/lightness; zero extra garnish.', vb: '0 0 16 16',
+    mark: (c) => `<path d="M3.5 9.2C6 7.5 8.8 5 8.8 3.2C8.8 2.2 7.8 2 7 2.8C5.8 4 5.5 7 5.5 10.5C5.5 12.2 6.6 13 8.2 13C9.6 13 10.8 12.1 11.6 11" fill="none" stroke="${c}" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>`,
+    first: (c) => `<path d="M2.2 9.2C4.6 7.5 7.4 5 7.4 3.2C7.4 2.2 6.4 2 5.6 2.8C4.4 4 4.2 7 4.2 10.5C4.2 12.2 5.2 13 6.8 13C8.2 13 9.2 12.1 10 11" fill="none" stroke="${c}" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>`, off: 12.4
+  },
+  {
+    ref: 'R8-02',
+    id: 'r8-feather-ell', groups: ['rev8'], badge: 'Rev 8 · Feather ℓ', origin: 'ℓ + Vane',
+    title: 'Feather-Quill ℓ', desc: 'Opens the top loop of ℓ into a feather vane with a single subtle barb.', note: 'Gives ℓ organic feather lift while preserving its iconic loop.', vb: '0 0 16 16',
+    mark: (c) => `<path d="M10.4 3.4C9.5 2.2 7.8 2.1 6.8 3.3C5.6 4.7 5.2 7.5 5.2 10.5C5.2 12.2 6.4 13 8.2 13C9.8 13 11.2 11.9 12.2 10.2" fill="none" stroke="${c}" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/><path d="M5.4 7.6C7.6 7 9.2 5.8 10.4 4.2" fill="none" stroke="${c}" stroke-width="1.4" stroke-linecap="round"/>`,
+    first: (c) => `<path d="M9.4 3.4C8.5 2.2 6.8 2.1 5.8 3.3C4.6 4.7 4.2 7.5 4.2 10.5C4.2 12.2 5.4 13 7.2 13C8.6 13 9.8 11.9 10.8 10.2" fill="none" stroke="${c}" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/><path d="M4.4 7.6C6.6 7 8.2 5.8 9.2 4.2" fill="none" stroke="${c}" stroke-width="1.4" stroke-linecap="round"/>`, off: 13.0
+  },
+  {
+    ref: 'R8-03',
+    id: 'r8-script-L-cap', groups: ['rev8'], badge: 'Rev 8 · Script ℒ', origin: 'U+2112 / $ite',
+    title: 'Script Capital ℒ', desc: 'Calligraphic ℒ in 1 continuous stroke: upper loop descending into a swept L wave.', note: 'Distinctive standalone $ app icon; pairs cleanly with ite.', vb: '0 0 16 16',
+    mark: (c) => `<path d="M5.2 5.6C5.6 3.5 7.4 2.3 9.2 2.5C10.8 2.7 11.2 4.2 9.8 5.6C7.5 7.8 4.2 10.2 3.2 12.2C2.8 13 4.2 13.4 5.8 12.6C7.4 11.8 9.2 12.8 12 12.6" fill="none" stroke="${c}" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"/>`,
+    first: (c) => `<path d="M4.2 5.6C4.6 3.5 6.4 2.3 8.2 2.5C9.8 2.7 10.2 4.2 8.8 5.6C6.5 7.8 3.4 10.2 2.4 12.2C2 13 3.4 13.4 5 12.6C6.6 11.8 8.2 12.8 10.6 12.6" fill="none" stroke="${c}" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"/>`, off: 13.2
+  },
+  {
+    ref: 'R8-04',
+    id: 'r8-barred-l-ray', groups: ['rev8'], badge: 'Rev 8 · Barred ł', origin: 'ł / ƚ Variation',
+    title: 'Barred ł-Ray', desc: 'Inspired by ł/ƚ: a clean l crossed by a single diagonal light-ray slash.', note: 'Ultra-crisp at 16px with zero loop clutter.', vb: '0 0 16 16',
+    mark: (c) => `<g fill="none" stroke="${c}" stroke-linecap="round" stroke-linejoin="round"><path d="M5.8 2.5V11.2A1.8 1.8 0 0 0 7.6 13H9.5" stroke-width="2"/><path d="M3.2 8.8L9.6 5.2" stroke-width="1.8"/></g>`,
+    first: (c) => `<g fill="none" stroke="${c}" stroke-linecap="round" stroke-linejoin="round"><path d="M5.2 2.5V11.2A1.8 1.8 0 0 0 7 13H8.8" stroke-width="2"/><path d="M2.6 8.8L8.8 5.2" stroke-width="1.8"/></g>`, off: 11.6
+  },
+  {
+    ref: 'R8-05',
+    id: 'r8-curled-l-hook', groups: ['rev8'], badge: 'Rev 8 · Curled ȴ/ɭ', origin: 'ȴ / ɭ Variation',
+    title: 'Curled Hook l', desc: 'Inspired by ȴ/ɭ: 1 continuous stroke descending into a light upward wing curl.', note: 'Minimal, playful, and unmistakable as lowercase l.', vb: '0 0 16 16',
+    mark: (c) => `<path d="M5.2 2.5V10.6C5.2 12.4 6.5 13.3 8.2 13.1C10 12.9 11.2 11.5 10.6 10.2C10 9.1 8.6 9.3 8.4 10.5" fill="none" stroke="${c}" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>`,
+    first: (c) => `<path d="M4.2 2.5V10.6C4.2 12.4 5.5 13.3 7.2 13.1C8.8 12.9 9.8 11.5 9.2 10.2C8.6 9.1 7.4 9.3 7.2 10.5" fill="none" stroke="${c}" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>`, off: 12.2
+  },
+  {
+    ref: 'R8-06',
+    id: 'r8-bolt-ell', groups: ['rev8'], badge: 'Rev 8 · Bolt ℓ', origin: 'ℓ + Lightning',
+    title: 'Bolt-Loop ℓ', desc: 'Angular lightning-faceted ℓ combining script ℓ’s silhouette with bolt speed.', note: '1 continuous stroke; electric take on ℓ.', vb: '0 0 16 16',
+    mark: (c) => `<path d="M3.5 8.2L8.4 2.5L9.8 4.4L5.6 8.5V12.8H10.5" fill="none" stroke="${c}" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>`,
+    first: (c) => `<path d="M2.6 8.2L7.2 2.5L8.6 4.4L4.6 8.5V12.8H9.2" fill="none" stroke="${c}" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>`, off: 11.8
+  },
+
   // ================= REV 7 LETTER "$" MARKS ($ & $ite) =================
   {
     ref: 'R7-01',
@@ -768,7 +813,7 @@ function renderSim() {
 
 function setGroup(grp) {
   activeGroup = grp;
-  ['rev7', 'rev6', 'top', 'rev3', 'rev4', 'rev1', 'all'].forEach(g => {
+  ['rev8', 'rev7', 'rev6', 'top', 'rev3', 'rev4', 'rev1', 'all'].forEach(g => {
     const el = document.getElementById('grp-' + g);
     if (el) el.classList.toggle('active', g === grp);
   });
