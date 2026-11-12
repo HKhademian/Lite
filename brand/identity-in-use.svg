@@ -1,0 +1,38 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="900" viewBox="0 0 1200 900">
+<rect width="1200" height="900" fill="#f4f3ef"/>
+<g font-family="Inter, Helvetica Neue, Arial, sans-serif" fill="#171a19">
+<text x="72" y="66" font-size="13" letter-spacing="2" fill="#737872">LITE · IDENTITY IN USE</text>
+<text x="72" y="113" font-size="30" font-weight="600">One small mark, across the project.</text>
+<text x="72" y="143" font-size="15" fill="#606762">R14-02 carries the name. R14-01 stays clear at compact sizes.</text>
+<!-- Documentation surface -->
+<rect x="72" y="184" width="1056" height="310" rx="12" fill="#fff" stroke="#ddded9"/>
+<text x="102" y="220" font-size="12" letter-spacing="1.3" fill="#7a807b">DOCUMENTATION · LIGHT</text>
+<g transform="translate(103 246) scale(2.2)" fill="none" stroke-linecap="round" stroke-linejoin="round">
+<g stroke="#b56b0a" stroke-width="2"><path d="M2.2 10C5 7.9 8.6 5 8.5 3C8.4 1.7 6.9 1.7 5.9 3.1C4.6 4.9 4.2 8 4.4 10.4C4.6 12.2 5.8 13 7.4 13C8.6 13 9.5 12.4 10.2 11.4"/><path d="M4.7 9.4C6.3 9.1 7.4 8.5 8.1 7.6" stroke-width="1.3"/></g>
+<g stroke="#171a19"><path d="M12.8 13V6.5"/><path d="M18.3 3.5V11.2a1.8 1.8 0 0 0 1.8 1.8H22.3"/><path d="M16.5 6.5H20.5"/><path d="M23.7 9.6H28.9V9.2a2.6 2.6 0 0 0-5.2 0v1.2a2.6 2.6 0 0 0 4.6 1.6"/></g><circle cx="12.8" cy="3.2" r="1.15" fill="#171a19"/></g>
+<text x="101" y="329" font-size="25" font-weight="600">LiteLang</text><text x="227" y="329" font-size="16" fill="#606762">/ language guide</text>
+<text x="103" y="376" font-size="13" fill="#737872">LANGUAGE</text><text x="103" y="406" font-size="15">Start here</text><text x="103" y="436" font-size="15">Tour</text><text x="103" y="466" font-size="15">Reference</text>
+<text x="372" y="382" font-size="28" font-weight="600">Small language. Clear ideas.</text><text x="372" y="414" font-size="15" fill="#606762">A compact, readable language for shaping tools around your needs.</text>
+<rect x="372" y="438" width="132" height="38" rx="5" fill="#171a19"/><text x="392" y="462" font-size="14" fill="#fff">Run your first file</text>
+<text x="103" y="518" font-size="12" fill="#737872">ACCENT · FILAMENT</text><rect x="238" y="505" width="35" height="18" rx="4" fill="#b56b0a"/><text x="290" y="519" font-size="12" fill="#737872">Use for the ℓ only; keep controls and body text neutral.</text>
+<!-- Editor surface -->
+<rect x="72" y="530" width="680" height="286" rx="12" fill="#171a1f"/>
+<text x="101" y="566" font-size="12" letter-spacing="1.3" fill="#a4aaa5">EDITOR · DARK</text>
+<rect x="96" y="585" width="240" height="39" rx="5" fill="#242830"/>
+<g transform="translate(108 596) scale(1.2)" fill="none" stroke="#68d4c1" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M2.2 10C5 7.9 8.6 5 8.5 3C8.4 1.7 6.9 1.7 5.9 3.1C4.6 4.9 4.2 8 4.4 10.4C4.6 12.2 5.8 13 7.4 13C8.6 13 9.5 12.4 10.2 11.4"/><path d="M4.7 9.4C6.3 9.1 7.4 8.5 8.1 7.6" stroke-width="1.3"/></g>
+<text x="136" y="611" font-size="14" fill="#f1f2ee">hello.lts</text><text x="310" y="611" font-size="12" fill="#a4aaa5">×</text>
+<text x="106" y="663" font-family="ui-monospace, SFMono-Regular, Menlo, monospace" font-size="14" fill="#858d95">1</text><text x="137" y="663" font-family="ui-monospace, SFMono-Regular, Menlo, monospace" font-size="14" fill="#e6c07b">fn</text><text x="161" y="663" font-family="ui-monospace, SFMono-Regular, Menlo, monospace" font-size="14" fill="#f1f2ee">main() {</text>
+<text x="106" y="692" font-family="ui-monospace, SFMono-Regular, Menlo, monospace" font-size="14" fill="#858d95">2</text><text x="137" y="692" font-family="ui-monospace, SFMono-Regular, Menlo, monospace" font-size="14" fill="#f1f2ee">  print_line(</text><text x="238" y="692" font-family="ui-monospace, SFMono-Regular, Menlo, monospace" font-size="14" fill="#98c379">"Hello, Lite"</text><text x="340" y="692" font-family="ui-monospace, SFMono-Regular, Menlo, monospace" font-size="14" fill="#f1f2ee">);</text>
+<text x="106" y="721" font-family="ui-monospace, SFMono-Regular, Menlo, monospace" font-size="14" fill="#858d95">3</text><text x="137" y="721" font-family="ui-monospace, SFMono-Regular, Menlo, monospace" font-size="14" fill="#f1f2ee">}</text>
+<text x="106" y="779" font-size="12" fill="#a4aaa5">Minimal icon uses the same ℓ spine, without the feather flick.</text>
+<!-- compact uses -->
+<rect x="776" y="530" width="352" height="286" rx="12" fill="#fff" stroke="#ddded9"/>
+<text x="805" y="566" font-size="12" letter-spacing="1.3" fill="#7a807b">COMPACT · R14-01</text>
+<rect x="805" y="587" width="118" height="86" rx="9" fill="#171a19"/><g transform="translate(843 602) scale(2.8)" fill="none" stroke="#f4f3ef" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M2.2 10C5 7.9 8.6 5 8.5 3C8.4 1.7 6.9 1.7 5.9 3.1C4.6 4.9 4.2 8 4.4 10.4C4.6 12.2 5.8 13 7.4 13C8.6 13 9.5 12.4 10.2 11.4"/></g>
+<rect x="938" y="587" width="160" height="86" rx="9" fill="#f4f3ef" stroke="#ddded9"/><g transform="translate(1004 602) scale(2.8)" fill="none" stroke="#171a19" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M2.2 10C5 7.9 8.6 5 8.5 3C8.4 1.7 6.9 1.7 5.9 3.1C4.6 4.9 4.2 8 4.4 10.4C4.6 12.2 5.8 13 7.4 13C8.6 13 9.5 12.4 10.2 11.4"/></g>
+<text x="805" y="708" font-size="13" fill="#606762">Favicon · file tab · tight UI spaces</text>
+<g transform="translate(807 735) scale(1)"><path d="M2.2 10C5 7.9 8.6 5 8.5 3C8.4 1.7 6.9 1.7 5.9 3.1C4.6 4.9 4.2 8 4.4 10.4C4.6 12.2 5.8 13 7.4 13C8.6 13 9.5 12.4 10.2 11.4" fill="none" stroke="#b56b0a" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></g>
+<g transform="translate(836 736) scale(.85)"><path d="M2.2 10C5 7.9 8.6 5 8.5 3C8.4 1.7 6.9 1.7 5.9 3.1C4.6 4.9 4.2 8 4.4 10.4C4.6 12.2 5.8 13 7.4 13C8.6 13 9.5 12.4 10.2 11.4" fill="none" stroke="#171a19" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></g>
+<text x="866" y="749" font-size="12" fill="#737872">16 px</text>
+<text x="72" y="864" font-size="12" fill="#737872">Lite is light · Filament accent is illustrative; the canonical mark geometry remains unchanged.</text>
+</g></svg>
