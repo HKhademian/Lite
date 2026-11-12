@@ -1,3 +1,4 @@
+io := import "core/io";
 /* A circular pond has a radius of 4 meters.
    Find the distance around it and the area it covers, using approximate pi. */
 

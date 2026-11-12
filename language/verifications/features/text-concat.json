@@ -3,7 +3,7 @@
   "kind": "feature",
   "source": {
     "file": "text-concat.lts",
-    "hash": "sha256:9afaca6ac9dc9016477db77045e9803bd8971068dc5c198c8311d9aa2261b8ac"
+    "hash": "sha256:46cadfa1b81902b92b1b7e1ae3d153ad2b8f3093a1d764f06c7e708f65018b84"
   },
   "features": [
     "text.concat"

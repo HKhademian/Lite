@@ -2,8 +2,8 @@
   "id": "example.019-whole-input",
   "kind": "example",
   "source": {
-    "file": "../../../language/examples/019-whole-input.lts",
-    "hash": "sha256:95af3cb6901003b8715246537b66efbb699968b05a992b2ee6c76bfbdecfef07"
+    "file": "../../../examples/019-whole-input.lts",
+    "hash": "sha256:b243d3799e6762f8f55d4281410afbfd7a3fa7d35997d848b47914d23dd2febf"
   },
   "features": [
     "io.whole-input",

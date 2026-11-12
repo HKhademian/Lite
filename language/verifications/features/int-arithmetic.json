@@ -3,7 +3,7 @@
   "kind": "feature",
   "source": {
     "file": "int-arithmetic.lts",
-    "hash": "sha256:1347783539e94a3f8547d209aac8a334a7a00ec1e7ba02c32f78828dc76a5a5b"
+    "hash": "sha256:aff70b9c0849a979fd87da2c5c7dcbefad0e81c91fcb6846cf6e5ef37362904d"
   },
   "features": [
     "int.arithmetic"

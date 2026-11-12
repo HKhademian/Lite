@@ -1,6 +1,9 @@
 /* Supply two integers, such as 7 and 5. Report twice their sum: 24. */
-first := inputInt("First integer: ");
-second := inputInt("Second integer: ");
+
+io := import "core/io";
+
+first := io.inputInt("First integer: ");
+second := io.inputInt("Second integer: ");
 var total := first + second;
 total = total * 2;
-outputLine(total);
+io.outputLine(total);

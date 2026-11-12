@@ -2,8 +2,8 @@
   "id": "example.002-decisions",
   "kind": "example",
   "source": {
-    "file": "../../../language/examples/002-decisions.lts",
-    "hash": "sha256:8804956bb539cc6cf21e688e02388b5f02691e3b3cec89160bdcf9b9892eb318"
+    "file": "../../../examples/002-decisions.lts",
+    "hash": "sha256:2d7a3e448bcff69484e7ba2e18e71b197db1c4f28099613265a6046778b689dd"
   },
   "features": [
     "io.input",

@@ -1,8 +1,10 @@
+io := import "core/io";
+
 sum := loop [1, 2, 3] as n { .value + n };
-outputLine(sum);
-counted := loop [2, 4, 6] as n { .value + n } then { outputLine(.count); .value };
-outputLine(counted);
+io.outputLine(sum);
+counted := loop [2, 4, 6] as n { .value + n } then { io.outputLine(.count); .value };
+io.outputLine(counted);
 label := loop [1] as n { n } then { "done" };
-outputLine(label);
-empty := loop inputArgs() as a { 1 };
-outputLine(empty);
+io.outputLine(label);
+empty := loop io.inputArgs() as a { 1 };
+io.outputLine(empty);

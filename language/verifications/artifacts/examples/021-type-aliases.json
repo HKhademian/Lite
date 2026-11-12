@@ -2,8 +2,8 @@
   "id": "example.021-type-aliases",
   "kind": "example",
   "source": {
-    "file": "../../../language/examples/021-type-aliases.lts",
-    "hash": "sha256:6ae123158537e1a504a4fff247149bcf38a7200fc65c80882af6dc30f45bf232"
+    "file": "../../../examples/021-type-aliases.lts",
+    "hash": "sha256:79e4422c8ae28fac79b0afc857054a4ba25a1fb06d8bb04d2ff6f5995c55a310"
   },
   "features": [
     "alias.transparent",

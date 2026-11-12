@@ -1,3 +1,4 @@
+io := import "core/io";
 /* A cyclist covers 150 meters in 12 seconds. Find the speed.
    At 12 meters per second, how far can they go in 5 seconds,
    and how long would 150 meters take? */

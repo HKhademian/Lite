@@ -1,8 +1,10 @@
+io := import "core/io";
+
 var f: Float = 2;
 f = -4;
 g: Double = (9007199254740994);
 low: Float64 = -9223372036854775808;
-outputLine(f, g, low);
+io.outputLine(f, g, low);
 Amount := type Double;
 a: Amount = ((8));
-outputLine(a, a / 2);
+io.outputLine(a, a / 2);

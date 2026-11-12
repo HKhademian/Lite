@@ -3,7 +3,7 @@
   "kind": "feature",
   "source": {
     "file": "num-float-context.lts",
-    "hash": "sha256:eefb79cb174287744d8bbeb3d2697f398f30528b99e301fd8c4b461f538fb8c2"
+    "hash": "sha256:833e224562038e9d4c7d2896b27f107af2f2eeda4e3d2e1ffd65471bab66a711"
   },
   "features": [
     "num.float-context",

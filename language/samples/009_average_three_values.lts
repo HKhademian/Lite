@@ -1,3 +1,4 @@
+io := import "core/io";
 /* Three days had 4, 5, and 8 hours of sunshine. Find the daily average. */
 
 first_day := 4.0;

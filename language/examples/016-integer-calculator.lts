@@ -1,4 +1,9 @@
 /* A small integer calculator, written entirely in the supported Lite subset. */
+
+io := import "core/io";
+text := import "core/text";
+
+list := import "core/list";
 isDigit := fn(text: String): Bool {
     or text == "0" or text == "1" or text == "2" or text == "3" or text == "4"
     or text == "5" or text == "6" or text == "7" or text == "8" or text == "9"
@@ -6,10 +11,10 @@ isDigit := fn(text: String): Bool {
 
 tokenize := fn(line: String): List<(kind: String, text: String)> {
     tokens: mut List<(kind: String, text: String)> = [];
-    size := textLength(line);
+    size := text.length(line);
     var position := 0;
     loop position < size {
-        ch := textAt(line, position);
+        ch := text.at(line, position);
         if ch == " " or ch == "\t" {
             position = position + 1;
             continue;
@@ -17,19 +22,19 @@ tokenize := fn(line: String): List<(kind: String, text: String)> {
         if isDigit(ch) {
             start := position;
             position = position + 1;
-            loop position < size and isDigit(textAt(line, position)) {
+            loop position < size and isDigit(text.at(line, position)) {
                 position = position + 1;
             }
-            push_back(mut tokens, (kind = "number", text = textSlice(line, start, position)));
+            list.pushBack(mut tokens, (kind = "number", text = text.slice(line, start, position)));
             continue;
         }
         if ch == "+" or ch == "-" or ch == "*" or ch == "/" or ch == "(" or ch == ")" {
-            push_back(mut tokens, (kind = "symbol", text = ch));
+            list.pushBack(mut tokens, (kind = "symbol", text = ch));
             position = position + 1;
             continue;
         }
-        reportError("unsupported symbol: " + ch);
-        exit(2);
+        io.errorLine("unsupported symbol: " + ch);
+        io.exit(2);
     }
     tokens
 }
@@ -45,16 +50,16 @@ digitValue := fn(text: String): Int {
     if text == "7" { return 7; }
     if text == "8" { return 8; }
     if text == "9" { return 9; }
-    reportError("expected a decimal digit");
-    exit(2);
+    io.errorLine("expected a decimal digit");
+    io.exit(2);
 }
 
 numberValue := fn(text: String): Int {
-    size := textLength(text);
+    size := text.length(text);
     var position := 0;
     var value := 0;
     loop position < size {
-        value = value * 10 + digitValue(textAt(text, position));
+        value = value * 10 + digitValue(text.at(text, position));
         position = position + 1;
     }
     value
@@ -69,8 +74,8 @@ precedence := fn(operator: String): Int {
 /* Returns the calculated value and the first unconsumed token position. */
 parse := fn(tokens: List<(kind: String, text: String)>, count: Int, start: Int, minimum: Int): (:Int, :Int) {
     if start >= count {
-        reportError("expected a number or '('");
-        exit(2);
+        io.errorLine("expected a number or '('");
+        io.exit(2);
     }
     token := tokens[start];
     var position := start + 1;
@@ -86,13 +91,13 @@ parse := fn(tokens: List<(kind: String, text: String)>, count: Int, start: Int, 
         value = parsed.0;
         position = parsed.1;
         if position >= count or tokens[position].text =!= ")" {
-            reportError("expected ')'");
-            exit(2);
+            io.errorLine("expected ')'");
+            io.exit(2);
         }
         position = position + 1;
     } else {
-        reportError("expected a number or '('");
-        exit(2);
+        io.errorLine("expected a number or '('");
+        io.exit(2);
     }
     loop position < count {
         operator := tokens[position].text;
@@ -108,13 +113,13 @@ parse := fn(tokens: List<(kind: String, text: String)>, count: Int, start: Int, 
     (value, position)
 }
 
-outputLine("Arithmetic expression:");
-tokens := tokenize(inputLine());
+io.outputLine("Arithmetic expression:");
+tokens := tokenize(io.inputLine());
 var count := 0;
 loop tokens { count = count + 1; }
 parsed := parse(tokens, count, 0, 0);
 if parsed.1 =!= count {
-    reportError("unexpected trailing token: " + tokens[parsed.1].text);
-    exit(2);
+    io.errorLine("unexpected trailing token: " + tokens[parsed.1].text);
+    io.exit(2);
 }
-outputLine("result:", parsed.0);
+io.outputLine("result:", parsed.0);

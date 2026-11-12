@@ -1,10 +1,12 @@
+io := import "core/io";
+
 flag := false;
 x := if flag { 5 };
-outputLine(x);
+io.outputLine(x);
 label := if flag { "yes" };
-outputLine("[" + label + "]");
+io.outputLine("[" + label + "]");
 var count := 10;
 count = if flag { 7 };
-outputLine(count);
+io.outputLine(count);
 count = if not flag { 3 };
-outputLine(count);
+io.outputLine(count);

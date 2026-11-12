@@ -2,8 +2,8 @@
   "id": "example.007-prompts-and-report",
   "kind": "example",
   "source": {
-    "file": "../../../language/examples/007-prompts-and-report.lts",
-    "hash": "sha256:5bd4d43858bf414cf5595316d838b4a6bdd6d07b36f55c561eda1ea90c708439"
+    "file": "../../../examples/007-prompts-and-report.lts",
+    "hash": "sha256:b7242ad9f9304917d4fd6e38a7f00a6c183475b67f5ba5b50122775e0539da2a"
   },
   "features": [
     "io.input",

@@ -2,7 +2,7 @@
   "id": "example.016-integer-calculator",
   "kind": "example",
   "source": {
-    "file": "../../../language/examples/016-integer-calculator.lts",
+    "file": "../../../examples/016-integer-calculator.lts",
     "hash": "sha256:900f6c8cad1735afaafe803ae386a0b04ad99b4f2ba8f3c3805cd10e1a0f3498"
   },
   "features": [

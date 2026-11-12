@@ -3,7 +3,7 @@
   "kind": "feature",
   "source": {
     "file": "io-input.lts",
-    "hash": "sha256:c8996009722c22119ba6079e44a5cfb0c100dd0165c57a3b7851ceaa519aa49a"
+    "hash": "sha256:feb0ce84b60162497e87cdd0876bde11cbd94f2489419ea6397288076d9d6f34"
   },
   "features": [
     "io.input"

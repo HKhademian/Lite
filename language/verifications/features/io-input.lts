@@ -1,3 +1,5 @@
-first := inputInt("First: ");
-second := inputInt("Second: ");
-outputLine(first + second);
+io := import "core/io";
+
+first := io.inputInt("First: ");
+second := io.inputInt("Second: ");
+io.outputLine(first + second);

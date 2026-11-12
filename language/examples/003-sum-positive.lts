@@ -1,10 +1,13 @@
 /* Read integers until 0. Ignore negatives and report the sum of positives.
    For example: 3, -2, 4, 0 reports 7. */
+
+io := import "core/io";
+
 var sum := 0;
 loop {
-    number := inputInt("Integer (0 to finish): ");
+    number := io.inputInt("Integer (0 to finish): ");
     if number == 0 { break; }
     if number < 0 { continue; }
     sum = sum + number;
 }
-outputLine(sum);
+io.outputLine(sum);

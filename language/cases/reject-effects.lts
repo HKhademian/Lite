@@ -1,2 +1,4 @@
-outputLine("must not run");
+io := import "core/io";
+
+io.outputLine("must not run");
 unknown_name;

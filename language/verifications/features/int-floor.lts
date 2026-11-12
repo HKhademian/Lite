@@ -1,12 +1,14 @@
-outputLine(7 :/ 3);
-outputLine(-7 :/ 3);
-outputLine(7 :/ -3);
-outputLine(-7 :/ -3);
-outputLine(7 :% 3);
-outputLine(-7 :% 3);
-outputLine(7 :% -3);
-outputLine(-7 :% -3);
+io := import "core/io";
+
+io.outputLine(7 :/ 3);
+io.outputLine(-7 :/ 3);
+io.outputLine(7 :/ -3);
+io.outputLine(-7 :/ -3);
+io.outputLine(7 :% 3);
+io.outputLine(-7 :% 3);
+io.outputLine(7 :% -3);
+io.outputLine(-7 :% -3);
 
 var minimum := -9223372036854775808;
 var minusOne := -1;
-outputLine(minimum :% minusOne);
+io.outputLine(minimum :% minusOne);

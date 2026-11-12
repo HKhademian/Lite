@@ -2,7 +2,7 @@
   "id": "example.008-named-tuples",
   "kind": "example",
   "source": {
-    "file": "../../../language/examples/008-named-tuples.lts",
+    "file": "../../../examples/008-named-tuples.lts",
     "hash": "sha256:fcf10484649b31ced7aeb0117c8b67929390487b5312743d512d1769f8dc035e"
   },
   "features": [

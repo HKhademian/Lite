@@ -3,7 +3,7 @@
   "kind": "feature",
   "source": {
     "file": "int-remainder.lts",
-    "hash": "sha256:1abd0cf0701f5e556d052c61e42ca9fd7c47198522e477fa5bc57cddab92aebf"
+    "hash": "sha256:e2c9c1302edb3bcadaf4dc625fcb79d1c1f80e5f685a01c7cc81e0b5ad372ec5"
   },
   "features": [
     "int.remainder"

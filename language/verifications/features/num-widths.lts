@@ -1,14 +1,16 @@
+io := import "core/io";
+
 a: Int8 = 100;
 b: Int16 = 200;
-outputLine(a + b);
+io.outputLine(a + b);
 f: Float32 = 0.1;
-outputLine(f);
+io.outputLine(f);
 g: Float = 2;
-outputLine(g);
+io.outputLine(g);
 i: Int8 = 3;
 h: Float32 = i;
-outputLine(h);
+io.outputLine(h);
 kg: Int8 = 5;
 base: Float = 1.2;
-outputLine(base + kg);
-outputLine(kg > base);
+io.outputLine(base + kg);
+io.outputLine(kg > base);

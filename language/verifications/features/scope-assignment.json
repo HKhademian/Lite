@@ -3,7 +3,7 @@
   "kind": "feature",
   "source": {
     "file": "scope-assignment.lts",
-    "hash": "sha256:875270c9c9e09727f325ce835fae00c881e50dfb884497ff7753436bcd1fe9bb"
+    "hash": "sha256:cc7ac7ae0cf1649a814c92e4f58159e634cfc5f2f81fe477691129f7831975ec"
   },
   "features": [
     "scope.assignment"

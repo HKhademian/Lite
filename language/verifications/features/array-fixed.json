@@ -3,7 +3,7 @@
   "kind": "feature",
   "source": {
     "file": "array-fixed.lts",
-    "hash": "sha256:de5c80891c9a4cb2941c441e9a609376f583297f3d76b29d3971c2e1fd331076"
+    "hash": "sha256:6ec1afd6bbdb889608ed7b52be8a5e3177c7582a60121205eded0f53dd0e30ac"
   },
   "features": [
     "array.fixed"

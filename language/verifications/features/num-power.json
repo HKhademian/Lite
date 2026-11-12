@@ -3,12 +3,16 @@
   "kind": "feature",
   "source": {
     "file": "num-power.lts",
-    "hash": "sha256:c6eab6250aff98ffceea45c9976e944eceda3f7f9f4c0159e0026d72f728fae1"
+    "hash": "sha256:acde30c01eece3b3a0336d83f2a178f8520630b46b421bdc29aec1229a5d9812"
   },
   "features": [
     "num.power"
   ],
   "guideline": "Checks right-associative Float-default power, explicit negative-base grouping, and completed-power negation.",
+  "targets": [
+    "ts",
+    "c"
+  ],
   "cases": [
     {
       "name": "association-and-grouping",
@@ -18,9 +22,5 @@
       },
       "exitCode": 0
     }
-  ],
-  "targets": [
-    "ts",
-    "c"
   ]
 }

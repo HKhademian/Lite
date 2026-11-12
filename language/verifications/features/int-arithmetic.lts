@@ -1,6 +1,8 @@
-outputLine(1 + 2 * (3 - 4));
-outputLine(20 / 3);
-outputLine(-7 / 2);
+io := import "core/io";
 
-if false { outputLine(1 / 0); }
-outputLine(false and (1 / 0 > 0), true or (9223372036854775807 + 1 > 0));
+io.outputLine(1 + 2 * (3 - 4));
+io.outputLine(20 / 3);
+io.outputLine(-7 / 2);
+
+if false { io.outputLine(1 / 0); }
+io.outputLine(false and (1 / 0 > 0), true or (9223372036854775807 + 1 > 0));

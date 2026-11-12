@@ -3,7 +3,7 @@
   "kind": "feature",
   "source": {
     "file": "io-temporary.lts",
-    "hash": "sha256:8dff829c9d8eb8c1297b2a32664aceaf814773634b5744d795beb75bcd5deacf"
+    "hash": "sha256:3f29ccb1876a3785023245eb03b5b385984c8126d73becdb1ee5b1799d5d06b2"
   },
   "features": [
     "io.temporary"

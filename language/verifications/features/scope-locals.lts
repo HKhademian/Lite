@@ -1,6 +1,8 @@
+io := import "core/io";
+
 x := 10;
 {
     x := 20;
-    outputLine(x);
+    io.outputLine(x);
 }
-outputLine(x);
+io.outputLine(x);

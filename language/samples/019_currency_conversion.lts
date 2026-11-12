@@ -1,3 +1,4 @@
+io := import "core/io";
 /* Exchange 105 cents using an example rate: 8 source cents buy 9 target cents.
    Round to the nearest target cent; half a cent rounds up. */
 

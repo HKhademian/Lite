@@ -2,8 +2,8 @@
   "id": "example.004-factorial",
   "kind": "example",
   "source": {
-    "file": "../../../language/examples/004-factorial.lts",
-    "hash": "sha256:f4b401f22cd0fc86eb14086e17e2b01fcc043d553ecbe7c801b189554224d73c"
+    "file": "../../../examples/004-factorial.lts",
+    "hash": "sha256:a847d8036e984c99436539e7dd0a6cc5baff41bbd74e39e217c9c58ebd336981"
   },
   "features": [
     "io.input",

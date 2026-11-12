@@ -1,6 +1,8 @@
-outputLine(2 + 0.5, 5.0 / 2, 0.1 + 0.2);
-outputLine(9007199254740992.0 == 9007199254740993 > 9007199254740992);
-outputLine(3.5 < 2 < (1.0 / 0));
+io := import "core/io";
+
+io.outputLine(2 + 0.5, 5.0 / 2, 0.1 + 0.2);
+io.outputLine(9007199254740992.0 == 9007199254740993 > 9007199254740992);
+io.outputLine(3.5 < 2 < (1.0 / 0));
 var total := 0.0; var n := 0;
 loop n < 3 { total = total + 0.5; n = n + 1; }
-outputLine(total);
+io.outputLine(total);

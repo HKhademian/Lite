@@ -3,7 +3,7 @@
   "kind": "feature",
   "source": {
     "file": "comparison-chains.lts",
-    "hash": "sha256:aabb806448f5686d19a858104ba69855f9427a35f32062386170b769f9d82b33"
+    "hash": "sha256:dcc48237e7cb41e88ddc7f9017668c6a086ea7e7722adcb065981bb670b6319f"
   },
   "features": [
     "comparison.chains"

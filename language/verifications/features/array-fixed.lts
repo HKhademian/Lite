@@ -1,2 +1,4 @@
+io := import "core/io";
+
 values := [10, 20, 30];
-outputLine(values[0] + values[2]);
+io.outputLine(values[0] + values[2]);

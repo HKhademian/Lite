@@ -1,3 +1,5 @@
-outputLine("before");
-exit(3);
-outputLine("after");
+io := import "core/io";
+
+io.outputLine("before");
+io.exit(3);
+io.outputLine("after");

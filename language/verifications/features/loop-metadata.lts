@@ -1,12 +1,14 @@
+io := import "core/io";
+
 x := loop [10, 20] as n {
-  outputLine(.item, .index, .count);
+  io.outputLine(.item, .index, .count);
   n
 } then { .value };
-outputLine(x);
+io.outputLine(x);
 y := @stop loop [1, 2, 3] as n {
   loop [1] as m {
     if n == 2 { break @stop 20 }
   }
   .value + n
 } then { .value };
-outputLine(y);
+io.outputLine(y);

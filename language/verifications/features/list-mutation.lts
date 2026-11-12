@@ -1,4 +1,7 @@
+io := import "core/io";
+
+list := import "core/list";
 values: mut List<Int> = [1, 2];
-push_back(mut values, 3);
+list.pushBack(mut values, 3);
 push_front(mut values, 0);
-outputLine(values[0], values[3]);
+io.outputLine(values[0], values[3]);

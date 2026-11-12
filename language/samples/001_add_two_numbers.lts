@@ -1,3 +1,4 @@
+io := import "core/io";
 /* Two baskets hold 7 apples and 5 apples. How many apples altogether? */
 
 first_basket := 7;

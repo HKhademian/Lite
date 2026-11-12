@@ -2,15 +2,15 @@
   "id": "sample.011-discounted-price",
   "kind": "sample",
   "source": {
-    "file": "../../../language/samples/011_discounted_price.lts",
-    "hash": "sha256:45099ee3bb0a1a42b8b8c9921692d621a75c1552c1077aced53d67ad0f5e5371"
+    "file": "../../../samples/011_discounted_price.lts",
+    "hash": "sha256:c227371db6795213ea5eb913f7194e6988551cccdd52529f5f4b491d32bdd0ca"
   },
   "features": [
     "int.arithmetic",
     "scope.locals"
   ],
   "description": "Percentage discount rounded to cents.",
-  "append": "outputLine(discount_cents); outputLine(pay_cents);",
+  "append": "io.outputLine(discount_cents); io.outputLine(pay_cents);",
   "cases": [
     {
       "name": "observed-values",

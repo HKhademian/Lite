@@ -3,7 +3,7 @@
   "kind": "feature",
   "source": {
     "file": "int-floor.lts",
-    "hash": "sha256:f3884764143f48973e59eaf0d1c6e17410ca9e101e6ab350ba2064f243bc7d9c"
+    "hash": "sha256:6c9957e164e4760da9d77605115cb6275bf6b10295b98778efbc39568265a4c8"
   },
   "features": [
     "int.floor"

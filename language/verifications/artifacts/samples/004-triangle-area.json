@@ -2,15 +2,19 @@
   "id": "sample.004-triangle-area",
   "kind": "sample",
   "source": {
-    "file": "../../../language/samples/004_triangle_area.lts",
-    "hash": "sha256:8f9c664fa7046b247767b56fbbcf0ca681abae336f77eaa84f6c66e7f656aff3"
+    "file": "../../../samples/004_triangle_area.lts",
+    "hash": "sha256:02c54644c22dba89018a6fee6503e8909cee73a8a0fd788063312f688cb46dab"
   },
   "features": [
     "num.float",
     "scope.locals"
   ],
   "description": "Triangle area from base and height.",
-  "append": "outputLine(area);",
+  "append": "io.outputLine(area);",
+  "targets": [
+    "ts",
+    "c"
+  ],
   "cases": [
     {
       "name": "observed-values",
@@ -20,9 +24,5 @@
       },
       "exitCode": 0
     }
-  ],
-  "targets": [
-    "ts",
-    "c"
   ]
 }

@@ -2,7 +2,7 @@
   "id": "example.012-named-arguments",
   "kind": "example",
   "source": {
-    "file": "../../../language/examples/012-named-arguments.lts",
+    "file": "../../../examples/012-named-arguments.lts",
     "hash": "sha256:41accbbda4a18597d6580cd0a7ecaa956eef5b115f5269ebcbf9ad1810ef491e"
   },
   "features": [

@@ -2,8 +2,8 @@
   "id": "example.001-double-sum",
   "kind": "example",
   "source": {
-    "file": "../../../language/examples/001-double-sum.lts",
-    "hash": "sha256:a971acff90fcc4ed6b5cca972b179d7da1e85c15b482619d16653d852cf939e5"
+    "file": "../../../examples/001-double-sum.lts",
+    "hash": "sha256:ef38efbd50017596956f32b59ee0b87f1759d310806099d295fa7b7355323371"
   },
   "features": [
     "io.input",

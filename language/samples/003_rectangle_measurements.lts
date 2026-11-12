@@ -1,3 +1,4 @@
+io := import "core/io";
 /* A garden is 8 meters wide and 3 meters long.
    How much ground does it cover, and how much fence goes around it? */
 

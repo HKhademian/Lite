@@ -1,15 +1,19 @@
 /* A small tokenizer experiment: decimal runs, spaces/tabs, and arithmetic symbols. */
+
+io := import "core/io";
+text := import "core/text";
+
 isDigit := fn(text: String): Bool {
     or text == "0" or text == "1" or text == "2" or text == "3" or text == "4"
     or text == "5" or text == "6" or text == "7" or text == "8" or text == "9"
 }
 
-outputLine("Arithmetic expression:");
-line := inputLine();
-size := textLength(line);
+io.outputLine("Arithmetic expression:");
+line := io.inputLine();
+size := text.length(line);
 var position := 0;
 loop position < size {
-    ch := textAt(line, position);
+    ch := text.at(line, position);
     if ch == " " or ch == "\t" {
         position = position + 1;
         continue;
@@ -17,17 +21,17 @@ loop position < size {
     if isDigit(ch) {
         start := position;
         position = position + 1;
-        loop position < size and isDigit(textAt(line, position)) {
+        loop position < size and isDigit(text.at(line, position)) {
             position = position + 1;
         }
-        outputLine("number:", textSlice(line, start, position));
+        io.outputLine("number:", text.slice(line, start, position));
         continue;
     }
     if ch == "+" or ch == "-" or ch == "*" or ch == "/" or ch == "(" or ch == ")" {
-        outputLine("symbol:", ch);
+        io.outputLine("symbol:", ch);
         position = position + 1;
         continue;
     }
-    reportError("unsupported symbol: " + ch);
-    exit(2);
+    io.errorLine("unsupported symbol: " + ch);
+    io.exit(2);
 }

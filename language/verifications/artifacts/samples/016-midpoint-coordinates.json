@@ -2,15 +2,19 @@
   "id": "sample.016-midpoint-coordinates",
   "kind": "sample",
   "source": {
-    "file": "../../../language/samples/016_midpoint_coordinates.lts",
-    "hash": "sha256:c43323875c228186ca72e1e1bd80f47b5e9f78c89f2542f808989fec9dd8307a"
+    "file": "../../../samples/016_midpoint_coordinates.lts",
+    "hash": "sha256:3624bfb860b7c5e0916501e0e742e0d0e4fb1e32d694beccf0743d6101d68eac"
   },
   "features": [
     "num.float",
     "scope.locals"
   ],
   "description": "Midpoint of two coordinate pairs.",
-  "append": "outputLine(midpoint_x); outputLine(midpoint_y);",
+  "append": "io.outputLine(midpoint_x); io.outputLine(midpoint_y);",
+  "targets": [
+    "ts",
+    "c"
+  ],
   "cases": [
     {
       "name": "observed-values",
@@ -20,9 +24,5 @@
       },
       "exitCode": 0
     }
-  ],
-  "targets": [
-    "ts",
-    "c"
   ]
 }

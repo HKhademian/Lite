@@ -1,4 +1,6 @@
+io := import "core/io";
+
 pair := (kind = "number", text = "12");
-outputLine(pair.kind, pair.text);
+io.outputLine(pair.kind, pair.text);
 (one, two) := (1, 2);
-outputLine(one + two);
+io.outputLine(one + two);

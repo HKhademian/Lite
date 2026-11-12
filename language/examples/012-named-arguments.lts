@@ -1,11 +1,13 @@
+io := import "core/io";
+
 digits := fn(a: Int, b: Int, c: Int): Int {
     a * 100 + b * 10 + c
 }
 b := 2;
-outputLine(digits(c = 3, 1, =b));
-outputLine(digits(9, a = 1, 2, 3));
+io.outputLine(digits(c = 3, 1, =b));
+io.outputLine(digits(9, a = 1, 2, 3));
 count := fn(n: Int, total: Int): Int {
     if n == 0 { return total; }
     self(total = total + n, n = n - 1)
 }
-outputLine(count(total = 0, n = 4));
+io.outputLine(count(total = 0, n = 4));

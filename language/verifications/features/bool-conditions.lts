@@ -1,7 +1,9 @@
+io := import "core/io";
+
 value := 7;
 if value > 5 and value < 10 {
-    outputLine("inside");
+    io.outputLine("inside");
 } else {
-    outputLine("outside");
+    io.outputLine("outside");
 }
-outputLine(if value < 10 { "single" } else { "multiple" });
+io.outputLine(if value < 10 { "single" } else { "multiple" });

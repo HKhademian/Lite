@@ -1,5 +1,7 @@
+io := import "core/io";
+
 factorial := fn(n: Int): Int {
     if n == 0 { return 1; }
     n * self(n - 1)
 }
-outputLine(factorial(5));
+io.outputLine(factorial(5));

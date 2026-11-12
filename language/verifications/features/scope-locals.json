@@ -3,12 +3,16 @@
   "kind": "feature",
   "source": {
     "file": "scope-locals.lts",
-    "hash": "sha256:3623332742821c39a5ad83d31d1b356f1534bba7c1d44e39fc60dc84f2336540"
+    "hash": "sha256:6fb461d617c3b2c6904c6930ddb9f26b66b05ca0fb468d91003024bf7b23edcc"
   },
   "features": [
     "scope.locals"
   ],
   "guideline": "Checks that a block-local binding shadows and restores the outer binding.",
+  "targets": [
+    "ts",
+    "c"
+  ],
   "cases": [
     {
       "name": "block-shadowing",
@@ -18,9 +22,5 @@
       },
       "exitCode": 0
     }
-  ],
-  "targets": [
-    "ts",
-    "c"
   ]
 }

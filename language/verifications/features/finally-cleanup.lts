@@ -1,5 +1,7 @@
-loop [1, 2] as n { outputLine(.count); } then { outputLine("then"); } finally { outputLine("finally"); }
-x := if true { 1 } else { 2 } finally { outputLine("cond"); }
-outputLine(x);
-f := fn(): Int { loop [1] { return 5 } finally { outputLine("return-cleanup"); } 0 }
-outputLine(f());
+io := import "core/io";
+
+loop [1, 2] as n { io.outputLine(.count); } then { io.outputLine("then"); } finally { io.outputLine("finally"); }
+x := if true { 1 } else { 2 } finally { io.outputLine("cond"); }
+io.outputLine(x);
+f := fn(): Int { loop [1] { return 5 } finally { io.outputLine("return-cleanup"); } 0 }
+io.outputLine(f());

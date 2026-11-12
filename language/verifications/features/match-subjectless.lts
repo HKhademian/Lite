@@ -1,11 +1,13 @@
+io := import "core/io";
+
 x := 2;
 label := match {
   x == 1 { "one" }
   x == 2 { "two" }
   _ { "other" }
 }
-outputLine(label);
+io.outputLine(label);
 match {
-  false { outputLine("bad"); }
-  _ { outputLine("ok"); }
+  false { io.outputLine("bad"); }
+  _ { io.outputLine("ok"); }
 }

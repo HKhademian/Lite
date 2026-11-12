@@ -1,9 +1,11 @@
-outputLine(9223372036854775807);
-outputLine(-9223372036854775808);
+io := import "core/io";
+
+io.outputLine(9223372036854775807);
+io.outputLine(-9223372036854775808);
 var upper := 9223372036854775807;
 var lower := -9223372036854775808;
 var one := 1;
-outputLine(upper + 0, lower + 0);
-outputLine(lower - -one, upper - one);
-outputLine(lower * one, upper * one, lower * 0);
-outputLine(-upper, -one);
+io.outputLine(upper + 0, lower + 0);
+io.outputLine(lower - -one, upper - one);
+io.outputLine(lower * one, upper * one, lower * 0);
+io.outputLine(-upper, -one);

@@ -1,8 +1,11 @@
+io := import "core/io";
+
+list := import "core/list";
 values: mut List<Int> = [1, 2];
 saved := values;
 push_front(mut values, 0);
-push_back(mut values, 3);
-outputLine(pop_front(mut values), pop_back(mut values));
+list.pushBack(mut values, 3);
+io.outputLine(pop_front(mut values), list.popBack(mut values));
 loop saved as value {
-    outputLine(value);
+    io.outputLine(value);
 }

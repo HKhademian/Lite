@@ -2,7 +2,7 @@
   "id": "example.010-mixed-tuples",
   "kind": "example",
   "source": {
-    "file": "../../../language/examples/010-mixed-tuples.lts",
+    "file": "../../../examples/010-mixed-tuples.lts",
     "hash": "sha256:6dcb30c10a6f5db6828f607276d1f218c6109413a07fb31aadc3acc5372e9c71"
   },
   "features": [

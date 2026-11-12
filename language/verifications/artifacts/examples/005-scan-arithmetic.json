@@ -2,8 +2,8 @@
   "id": "example.005-scan-arithmetic",
   "kind": "example",
   "source": {
-    "file": "../../../language/examples/005-scan-arithmetic.lts",
-    "hash": "sha256:b28d45c3e1f8cc739edea27f121c1ddc107fef63185f2458b41b3342ac215e78"
+    "file": "../../../examples/005-scan-arithmetic.lts",
+    "hash": "sha256:fdf1a087b84dd5d61ae74cbf81d9688cd237dc4a1ec5eff140c849cb4e50b802"
   },
   "features": [
     "io.input",

@@ -1,11 +1,13 @@
+io := import "core/io";
+
 a: Int;
 b: String;
 c: (:Int, :String);
 d: [Int; 2];
 var n: Int;
 n = 5;
-outputLine(a);
-outputLine(b);
-outputLine(c.0, c.1);
-outputLine(d[0], d[1]);
-outputLine(n);
+io.outputLine(a);
+io.outputLine(b);
+io.outputLine(c.0, c.1);
+io.outputLine(d[0], d[1]);
+io.outputLine(n);

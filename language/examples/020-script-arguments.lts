@@ -1,4 +1,6 @@
-values := inputArgs();
+io := import "core/io";
+
+values := io.inputArgs();
 loop values as value {
-    outputLine(value);
+    io.outputLine(value);
 }

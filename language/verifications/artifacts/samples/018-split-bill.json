@@ -2,8 +2,8 @@
   "id": "sample.018-split-bill",
   "kind": "sample",
   "source": {
-    "file": "../../../language/samples/018_split_bill.lts",
-    "hash": "sha256:b2274d10c839052411ee80430ccf257171d89ceb63d4203046854e8b6d3eb1c7"
+    "file": "../../../samples/018_split_bill.lts",
+    "hash": "sha256:2b41eec4d84e219672f5ccba7966c44c4f3410d9f787847224be5269f6d01870"
   },
   "features": [
     "int.arithmetic",
@@ -11,7 +11,7 @@
     "scope.locals"
   ],
   "description": "Whole-cent bill split with remainder.",
-  "append": "outputLine(share_cents); outputLine(leftover_cents);",
+  "append": "io.outputLine(share_cents); io.outputLine(leftover_cents);",
   "cases": [
     {
       "name": "observed-values",

@@ -2,15 +2,15 @@
   "id": "sample.002-arithmetic-operations",
   "kind": "sample",
   "source": {
-    "file": "../../../language/samples/002_arithmetic_operations.lts",
-    "hash": "sha256:e20688c5f43c3a6ba98fffc022caeba65a6b70b66745869543e3e1ef7a5c987d"
+    "file": "../../../samples/002_arithmetic_operations.lts",
+    "hash": "sha256:a8d19e64a84a4f82a89d90aca1b39d29592662a180885e6d1d81b0bfcc21275b"
   },
   "features": [
     "int.arithmetic",
     "scope.locals"
   ],
   "description": "Four integer operations; the verification appends reports for each result.",
-  "append": "outputLine(sum); outputLine(difference); outputLine(product); outputLine(quotient);",
+  "append": "io.outputLine(sum); io.outputLine(difference); io.outputLine(product); io.outputLine(quotient);",
   "cases": [
     {
       "name": "four-operations",

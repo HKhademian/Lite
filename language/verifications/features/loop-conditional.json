@@ -3,7 +3,7 @@
   "kind": "feature",
   "source": {
     "file": "loop-conditional.lts",
-    "hash": "sha256:50eff40aea913b383f9b6b52bc6d9cba3fefdc17400fb42bb6b746351efd38d0"
+    "hash": "sha256:a5e2cbd1e763eff93bb55a78229a67833236d91e26f3d8d834ba26aa1fcd073d"
   },
   "features": [
     "loop.conditional"

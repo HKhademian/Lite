@@ -1,7 +1,9 @@
+io := import "core/io";
+
 stored := (width = 640, height = 480);
 point: (x: Int, y: Int) = stored;
 plain: (:Int, :Int) = point;
 mixed: (:Int, height: Int) = plain;
-outputLine(stored.width, stored.height);
-outputLine(point.x, point.y);
-outputLine(mixed.0, mixed.height);
+io.outputLine(stored.width, stored.height);
+io.outputLine(point.x, point.y);
+io.outputLine(mixed.0, mixed.height);

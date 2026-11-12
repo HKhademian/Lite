@@ -2,15 +2,15 @@
   "id": "sample.003-rectangle-measurements",
   "kind": "sample",
   "source": {
-    "file": "../../../language/samples/003_rectangle_measurements.lts",
-    "hash": "sha256:0897089376397436ee09ed2e7a72d24a50d5e3ea133ce175c0eb32cd66513a3f"
+    "file": "../../../samples/003_rectangle_measurements.lts",
+    "hash": "sha256:490ac85c9b1f31126e4f1d4fcf860b81f2aad742cc93c2922326183770273588"
   },
   "features": [
     "int.arithmetic",
     "scope.locals"
   ],
   "description": "Rectangle area and perimeter.",
-  "append": "outputLine(area); outputLine(perimeter);",
+  "append": "io.outputLine(area); io.outputLine(perimeter);",
   "cases": [
     {
       "name": "observed-values",

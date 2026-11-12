@@ -2,15 +2,15 @@
   "id": "sample.001-add-two-numbers",
   "kind": "sample",
   "source": {
-    "file": "../../../language/samples/001_add_two_numbers.lts",
-    "hash": "sha256:e60c4c300627602ff1df349431cec72b8a9186ba316182524e5d1774d1cab240"
+    "file": "../../../samples/001_add_two_numbers.lts",
+    "hash": "sha256:6033cdc8296507af4aabd12318f4ca2b247855738810b9e16dbcb73e5ae3705e"
   },
   "features": [
     "int.arithmetic",
     "scope.locals"
   ],
   "description": "Adds two supplied baskets; the verification appends outputLine(apples).",
-  "append": "outputLine(apples);",
+  "append": "io.outputLine(apples);",
   "cases": [
     {
       "name": "apples",

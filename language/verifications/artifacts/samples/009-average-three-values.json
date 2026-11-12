@@ -2,15 +2,19 @@
   "id": "sample.009-average-three-values",
   "kind": "sample",
   "source": {
-    "file": "../../../language/samples/009_average_three_values.lts",
-    "hash": "sha256:be3af748cd7c42a3916be6f2284886ce68ec83d51922f153374bc7ea8e41292c"
+    "file": "../../../samples/009_average_three_values.lts",
+    "hash": "sha256:0f6fd8b7e63535083d31a53ce3728561011b3fdc8616c3d340127beddcbce7e8"
   },
   "features": [
     "num.float",
     "scope.locals"
   ],
   "description": "Average of three daily values.",
-  "append": "outputLine(average_hours);",
+  "append": "io.outputLine(average_hours);",
+  "targets": [
+    "ts",
+    "c"
+  ],
   "cases": [
     {
       "name": "observed-values",
@@ -20,9 +24,5 @@
       },
       "exitCode": 0
     }
-  ],
-  "targets": [
-    "ts",
-    "c"
   ]
 }

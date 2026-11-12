@@ -2,15 +2,15 @@
   "id": "sample.015-weighted-average",
   "kind": "sample",
   "source": {
-    "file": "../../../language/samples/015_weighted_average.lts",
-    "hash": "sha256:396a278ee322e87a7c6446bac898e67754d3c22348788b5615e43448d6f7e262"
+    "file": "../../../samples/015_weighted_average.lts",
+    "hash": "sha256:6beb8d28c6bdf2f60cb9d981acf785fd80093d4142642197694a8800ef244b5e"
   },
   "features": [
     "int.arithmetic",
     "scope.locals"
   ],
   "description": "Weighted average of three scores.",
-  "append": "outputLine(final_grade);",
+  "append": "io.outputLine(final_grade);",
   "cases": [
     {
       "name": "observed-values",

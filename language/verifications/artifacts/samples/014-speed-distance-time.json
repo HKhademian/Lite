@@ -2,15 +2,19 @@
   "id": "sample.014-speed-distance-time",
   "kind": "sample",
   "source": {
-    "file": "../../../language/samples/014_speed_distance_time.lts",
-    "hash": "sha256:2cdfed62f3f81e3d538c3d5838cc83304cca933b8fcd434f28b2b9c3fc1a9851"
+    "file": "../../../samples/014_speed_distance_time.lts",
+    "hash": "sha256:ab7c1eaa91d987df43f1943c19d16718a42a5309758ceeda75d83a4c9d4cfc26"
   },
   "features": [
     "num.float",
     "scope.locals"
   ],
   "description": "Speed, distance and time relations.",
-  "append": "outputLine(speed); outputLine(distance); outputLine(time);",
+  "append": "io.outputLine(speed); io.outputLine(distance); io.outputLine(time);",
+  "targets": [
+    "ts",
+    "c"
+  ],
   "cases": [
     {
       "name": "observed-values",
@@ -20,9 +24,5 @@
       },
       "exitCode": 0
     }
-  ],
-  "targets": [
-    "ts",
-    "c"
   ]
 }

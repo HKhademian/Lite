@@ -3,7 +3,7 @@
   "kind": "feature",
   "source": {
     "file": "string-escape.lts",
-    "hash": "sha256:97826ce8734978a8305bbb8c53def9c43b2e77b143ceeb5fd205771084867c17"
+    "hash": "sha256:5437de859077ef18b3b3dd57af404b1cf54b3f5501232cfc8e42660074caabb0"
   },
   "features": [
     "string.escape"

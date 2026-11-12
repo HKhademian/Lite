@@ -1,2 +1,4 @@
-outputLine("line\nnext");
-outputLine("quote: \"");
+io := import "core/io";
+
+io.outputLine("line\nnext");
+io.outputLine("quote: \"");

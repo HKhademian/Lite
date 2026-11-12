@@ -1,5 +1,8 @@
 /* Supply an integer. Try -4, 0, 5, and 12. */
-number := inputInt("Integer: ");
+
+io := import "core/io";
+
+number := io.inputInt("Integer: ");
 
 description := if number < 0 {
     "negative"
@@ -8,13 +11,13 @@ description := if number < 0 {
 } else {
     "positive"
 }
-outputLine(description);
+io.outputLine(description);
 
 if 0 <= number < 10 {
-    outputLine("between zero and nine");
+    io.outputLine("between zero and nine");
 }
 
 /* The division is skipped when number is zero. */
 if number =!= 0 and 100 / number > 5 {
-    outputLine("quotient exceeds five");
+    io.outputLine("quotient exceeds five");
 }

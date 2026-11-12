@@ -2,15 +2,19 @@
   "id": "sample.007-distance-conversion",
   "kind": "sample",
   "source": {
-    "file": "../../../language/samples/007_distance_conversion.lts",
-    "hash": "sha256:8edd2740d7e958194073a8a8875dace6ab23399ba56805c6f778c4076e8df956"
+    "file": "../../../samples/007_distance_conversion.lts",
+    "hash": "sha256:699331ffc396981cc815ee623d8a9f1c3713d50c86d5dc05a5a236391d8be8f4"
   },
   "features": [
     "num.float",
     "scope.locals"
   ],
   "description": "Meters converted to kilometers and centimeters.",
-  "append": "outputLine(kilometers); outputLine(centimeters);",
+  "append": "io.outputLine(kilometers); io.outputLine(centimeters);",
+  "targets": [
+    "ts",
+    "c"
+  ],
   "cases": [
     {
       "name": "observed-values",
@@ -20,9 +24,5 @@
       },
       "exitCode": 0
     }
-  ],
-  "targets": [
-    "ts",
-    "c"
   ]
 }

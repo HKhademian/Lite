@@ -2,15 +2,15 @@
   "id": "sample.012-tax-and-tip",
   "kind": "sample",
   "source": {
-    "file": "../../../language/samples/012_tax_and_tip.lts",
-    "hash": "sha256:fa70c39438e3e8aff2502a720de64a945a1841f7291b651d5f1b62a3335eb6c4"
+    "file": "../../../samples/012_tax_and_tip.lts",
+    "hash": "sha256:a97183ca4d2e263a9996fa62d32cb4d67ceb6956fec77cd6308f565c7e13ad77"
   },
   "features": [
     "int.arithmetic",
     "scope.locals"
   ],
   "description": "Tax and tip rounded to cents.",
-  "append": "outputLine(tax_cents); outputLine(tip_cents); outputLine(total_cents);",
+  "append": "io.outputLine(tax_cents); io.outputLine(tip_cents); io.outputLine(total_cents);",
   "cases": [
     {
       "name": "observed-values",

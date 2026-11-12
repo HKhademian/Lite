@@ -1,3 +1,4 @@
+io := import "core/io";
 /* A triangle is 5 meters across its base and 3 meters tall.
    Its area is half the area of a rectangle with the same base and height. */
 

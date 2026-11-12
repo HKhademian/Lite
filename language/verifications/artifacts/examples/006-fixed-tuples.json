@@ -2,7 +2,7 @@
   "id": "example.006-fixed-tuples",
   "kind": "example",
   "source": {
-    "file": "../../../language/examples/006-fixed-tuples.lts",
+    "file": "../../../examples/006-fixed-tuples.lts",
     "hash": "sha256:a62a877339247cc45ce0041cc3a23cbe28d33b51ed2a22ccbd2f59528816b2bf"
   },
   "features": [

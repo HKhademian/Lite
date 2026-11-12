@@ -1,13 +1,16 @@
+io := import "core/io";
+
+list := import "core/list";
 numbers: mut List<Int> = [];
 loop {
-    number := inputInt("Integer (0 to finish): ");
+    number := io.inputInt("Integer (0 to finish): ");
     if number == 0 { break; }
-    push_back(mut numbers, number);
+    list.pushBack(mut numbers, number);
 }
-outputLine("entered:");
+io.outputLine("entered:");
 var total := 0;
 loop numbers as number {
-    outputLine(number);
+    io.outputLine(number);
     total = total + number;
 }
-outputLine("sum:", total);
+io.outputLine("sum:", total);

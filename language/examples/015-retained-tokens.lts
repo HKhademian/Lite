@@ -1,4 +1,9 @@
 /* Tokenize first, then traverse the retained tokens. */
+
+io := import "core/io";
+text := import "core/text";
+
+list := import "core/list";
 isDigit := fn(text: String): Bool {
     or text == "0" or text == "1" or text == "2" or text == "3" or text == "4"
     or text == "5" or text == "6" or text == "7" or text == "8" or text == "9"
@@ -6,10 +11,10 @@ isDigit := fn(text: String): Bool {
 
 tokenize := fn(line: String): List<(kind: String, text: String)> {
     tokens: mut List<(kind: String, text: String)> = [];
-    size := textLength(line);
+    size := text.length(line);
     var position := 0;
     loop position < size {
-        ch := textAt(line, position);
+        ch := text.at(line, position);
         if ch == " " or ch == "\t" {
             position = position + 1;
             continue;
@@ -17,25 +22,25 @@ tokenize := fn(line: String): List<(kind: String, text: String)> {
         if isDigit(ch) {
             start := position;
             position = position + 1;
-            loop position < size and isDigit(textAt(line, position)) {
+            loop position < size and isDigit(text.at(line, position)) {
                 position = position + 1;
             }
-            push_back(mut tokens, (kind = "number", text = textSlice(line, start, position)));
+            list.pushBack(mut tokens, (kind = "number", text = text.slice(line, start, position)));
             continue;
         }
         if ch == "+" or ch == "-" or ch == "*" or ch == "/" or ch == "(" or ch == ")" {
-            push_back(mut tokens, (kind = "symbol", text = ch));
+            list.pushBack(mut tokens, (kind = "symbol", text = ch));
             position = position + 1;
             continue;
         }
-        reportError("unsupported symbol: " + ch);
-        exit(2);
+        io.errorLine("unsupported symbol: " + ch);
+        io.exit(2);
     }
     tokens
 }
 
-outputLine("Arithmetic expression:");
-tokens := tokenize(inputLine());
+io.outputLine("Arithmetic expression:");
+tokens := tokenize(io.inputLine());
 loop tokens as token {
-    outputLine(token.kind, token.text);
+    io.outputLine(token.kind, token.text);
 }

@@ -1,2 +1,4 @@
+io := import "core/io";
+
 x := 5;
-outputLine(x + 1);
+io.outputLine(x + 1);

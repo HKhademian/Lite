@@ -1,5 +1,8 @@
+io := import "core/io";
+
+list := import "core/list";
 Token := type (kind: String, text: String);
 Tokens := type List<Token>;
 tokens: mut Tokens = [];
-push_back(mut tokens, (kind = "num", text = "42"));
-outputLine(tokens[0].text);
+list.pushBack(mut tokens, (kind = "num", text = "42"));
+io.outputLine(tokens[0].text);

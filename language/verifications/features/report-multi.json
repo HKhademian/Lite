@@ -3,7 +3,7 @@
   "kind": "feature",
   "source": {
     "file": "report-multi.lts",
-    "hash": "sha256:ce3a21779321d57e2e84ac1a5a1be69a77e1d20cd35464713171826a27d59584"
+    "hash": "sha256:0605ac9e28e6d4f6b02eabcca454320c7f656c6672d2606ee9e7b186b308989f"
   },
   "features": [
     "report.multi"

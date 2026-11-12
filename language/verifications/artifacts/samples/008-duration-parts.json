@@ -2,8 +2,8 @@
   "id": "sample.008-duration-parts",
   "kind": "sample",
   "source": {
-    "file": "../../../language/samples/008_duration_parts.lts",
-    "hash": "sha256:f440482ff45767e9b89c629e6cec3523c706ed68390a193f495617d922832751"
+    "file": "../../../samples/008_duration_parts.lts",
+    "hash": "sha256:e65ed89937ef9106a729666839bf80911802e252f4962147839bde72db24f735"
   },
   "features": [
     "int.arithmetic",
@@ -11,7 +11,7 @@
     "scope.locals"
   ],
   "description": "Split seconds into hours, minutes and seconds.",
-  "append": "outputLine(hours); outputLine(minutes); outputLine(seconds);",
+  "append": "io.outputLine(hours); io.outputLine(minutes); io.outputLine(seconds);",
   "cases": [
     {
       "name": "observed-values",

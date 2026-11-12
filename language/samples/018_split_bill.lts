@@ -1,3 +1,4 @@
+io := import "core/io";
 /* Three friends split a 10 euro bill in whole cents.
    Find the equal share and any cents left to allocate. */
 

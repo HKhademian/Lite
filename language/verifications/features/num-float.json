@@ -3,13 +3,14 @@
   "kind": "feature",
   "source": {
     "file": "num-float.lts",
-    "hash": "sha256:76bea55fd03ab089674bd8e3c9a9ce2c8a0bd1c9af7f614b695bdfd98b93d235"
+    "hash": "sha256:362209871f48fb23eea0ba35cb3edb07720fbf6ccfdbb6117eb33d7d299675ea"
   },
   "features": [
     "num.float",
     "comparison.chains",
     "loop.conditional"
   ],
+  "guideline": "Checks finite binary64 arithmetic and pairwise mixed Int/Float promotion; later comparison operands stay lazy and integer pairs retain exact values.",
   "description": "Mixed binary64 arithmetic, pairwise comparison conversion and skipped arithmetic faults.",
   "targets": [
     "ts",
@@ -24,6 +25,5 @@
       },
       "exitCode": 0
     }
-  ],
-  "guideline": "Checks finite binary64 arithmetic and pairwise mixed Int/Float promotion; later comparison operands stay lazy and integer pairs retain exact values."
+  ]
 }

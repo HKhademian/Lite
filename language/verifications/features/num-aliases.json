@@ -3,7 +3,7 @@
   "kind": "feature",
   "source": {
     "file": "num-aliases.lts",
-    "hash": "sha256:e78ff3a3cdf2aa3451de0b582c8b5c25f3039cba0f67b04c9ea3e6f6a3453530"
+    "hash": "sha256:9fc4504be778366a2997af58a09b9a98bd4dc25b4fbfb6fd03ba3d6b8ddc1ef0"
   },
   "features": [
     "num.aliases",

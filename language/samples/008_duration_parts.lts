@@ -1,3 +1,4 @@
+io := import "core/io";
 /* A recording lasts 3661 seconds. How many hours, minutes, and seconds is that?
    Whole-number division finds complete units; remainder keeps what is left. */
 

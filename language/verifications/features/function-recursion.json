@@ -3,7 +3,7 @@
   "kind": "feature",
   "source": {
     "file": "function-recursion.lts",
-    "hash": "sha256:febe0f8667abf242bec38e1a7a4a33b7958de39a47763f05691382998a7cc9c6"
+    "hash": "sha256:31d05bcc67689e1c0a3c835331cc0962c62ed06c87ec8d80ea3c02db91a85c3e"
   },
   "features": [
     "function.recursion"

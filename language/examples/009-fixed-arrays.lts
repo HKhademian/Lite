@@ -1,13 +1,15 @@
+io := import "core/io";
+
 tokens := [
     (kind = "number", text = "12"),
     (kind = "symbol", text = "+"),
     (kind = "number", text = "30"),
 ];
 loop tokens as token {
-    outputLine(token.kind, token.text);
+    io.outputLine(token.kind, token.text);
 }
-index := inputInt("Token index: ");
-outputLine(tokens[index].text);
+index := io.inputInt("Token index: ");
+io.outputLine(tokens[index].text);
 
 sum := fn(values: [Int; 3]): Int {
     var total := 0;
@@ -16,4 +18,4 @@ sum := fn(values: [Int; 3]): Int {
     }
     total
 }
-outputLine("sum:", sum([10, 20, 30]));
+io.outputLine("sum:", sum([10, 20, 30]));

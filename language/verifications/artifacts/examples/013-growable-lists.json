@@ -2,7 +2,7 @@
   "id": "example.013-growable-lists",
   "kind": "example",
   "source": {
-    "file": "../../../language/examples/013-growable-lists.lts",
+    "file": "../../../examples/013-growable-lists.lts",
     "hash": "sha256:077f1deedeb470d24deaa96a98d86d411aab8d721c1a57389b991fec0275f8e1"
   },
   "features": [

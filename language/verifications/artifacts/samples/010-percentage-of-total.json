@@ -2,15 +2,19 @@
   "id": "sample.010-percentage-of-total",
   "kind": "sample",
   "source": {
-    "file": "../../../language/samples/010_percentage_of_total.lts",
-    "hash": "sha256:5c686ddba60f7ca9e1c54049460a7001841efb2608e73fb93af724295f0f9d54"
+    "file": "../../../samples/010_percentage_of_total.lts",
+    "hash": "sha256:e44cd03a1558e0c80f03a9d914cac6c67984877421f1fa9e46a2e173c0564ca0"
   },
   "features": [
     "num.float",
     "scope.locals"
   ],
   "description": "Completed percentage and a percentage of the total.",
-  "append": "outputLine(percent_done); outputLine(tasks);",
+  "append": "io.outputLine(percent_done); io.outputLine(tasks);",
+  "targets": [
+    "ts",
+    "c"
+  ],
   "cases": [
     {
       "name": "observed-values",
@@ -20,9 +24,5 @@
       },
       "exitCode": 0
     }
-  ],
-  "targets": [
-    "ts",
-    "c"
   ]
 }

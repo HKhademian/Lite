@@ -2,8 +2,8 @@
   "id": "io.report",
   "kind": "feature",
   "source": {
-    "text": "outputLine(1, \"two\", true);\n",
-    "hash": "sha256:6e75aa3581728cf893758e1997e6a2bef3ddd6160bd890ebc617a709a43d4f04"
+    "text": "io := import \"core/io\";\nio.outputLine(1, \"two\", true);\n",
+    "hash": "sha256:821665391c21e2a55bb48214e1a93037bafa5141dbac4efa8575fb3ed33d2abb"
   },
   "features": [
     "io.report"

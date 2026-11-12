@@ -2,15 +2,15 @@
   "id": "sample.019-currency-conversion",
   "kind": "sample",
   "source": {
-    "file": "../../../language/samples/019_currency_conversion.lts",
-    "hash": "sha256:3cf399a7c67f1ede768ed8ddb9ce21d6a9ed34846b5fa4a468e440a63d22892c"
+    "file": "../../../samples/019_currency_conversion.lts",
+    "hash": "sha256:497cfd0ef6a7603481a80288bb35070b6c9a9820a412d10e78072323fe5e4f6f"
   },
   "features": [
     "int.arithmetic",
     "scope.locals"
   ],
   "description": "Currency conversion rounded to target cents.",
-  "append": "outputLine(target_cents);",
+  "append": "io.outputLine(target_cents);",
   "cases": [
     {
       "name": "observed-values",

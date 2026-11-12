@@ -1,5 +1,7 @@
-outputLine(2 ** 3);
-outputLine(2 ** 3 ** 2);
-outputLine(4 ** 0.5);
-outputLine((-2) ** 3);
-outputLine(-(2 ** 2));
+io := import "core/io";
+
+io.outputLine(2 ** 3);
+io.outputLine(2 ** 3 ** 2);
+io.outputLine(4 ** 0.5);
+io.outputLine((-2) ** 3);
+io.outputLine(-(2 ** 2));

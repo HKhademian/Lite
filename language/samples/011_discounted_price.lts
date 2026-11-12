@@ -1,3 +1,4 @@
+io := import "core/io";
 /* A 19.99 euro item is 15 percent off. What do you pay?
    Work in cents, rounding the discount to the nearest cent; half a cent rounds up. */
 

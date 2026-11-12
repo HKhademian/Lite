@@ -1,8 +1,10 @@
+io := import "core/io";
+
 tea := "green";
 order := (7, =tea, cups = 2, true);
 describe := fn(order: (:Int, tea: String, cups: Int, :Bool)): String {
     order.tea
 }
 (number, drink, cups, ready) := order;
-outputLine(number, describe(order), cups, ready);
-outputLine(order.0, order.1, order.cups, order.3);
+io.outputLine(number, describe(order), cups, ready);
+io.outputLine(order.0, order.1, order.cups, order.3);

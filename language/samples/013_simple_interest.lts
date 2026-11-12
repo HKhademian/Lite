@@ -1,3 +1,4 @@
+io := import "core/io";
 /* Save 100 euros at 5 percent interest per year for 3 years.
    Earn interest only on the original savings. Round once at the end. */
 

@@ -2,15 +2,15 @@
   "id": "sample.013-simple-interest",
   "kind": "sample",
   "source": {
-    "file": "../../../language/samples/013_simple_interest.lts",
-    "hash": "sha256:6202620a2db831fd8e4b57ce38237c64436e70129882e6e037e95e422ad280a3"
+    "file": "../../../samples/013_simple_interest.lts",
+    "hash": "sha256:f681b5f7ae351ef173c7793710ccc308fd05053cedffe02b4a7a7e8ab0f585e3"
   },
   "features": [
     "int.arithmetic",
     "scope.locals"
   ],
   "description": "Simple interest over three years.",
-  "append": "outputLine(interest_cents); outputLine(balance_cents);",
+  "append": "io.outputLine(interest_cents); io.outputLine(balance_cents);",
   "cases": [
     {
       "name": "observed-values",

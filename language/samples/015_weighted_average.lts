@@ -1,3 +1,4 @@
+io := import "core/io";
 /* Three scores are 80, 90, and 100. They count for 2, 3, and 5 shares
    of the final grade, so the last score has the most influence. */
 

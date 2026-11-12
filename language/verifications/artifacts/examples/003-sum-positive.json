@@ -2,8 +2,8 @@
   "id": "example.003-sum-positive",
   "kind": "example",
   "source": {
-    "file": "../../../language/examples/003-sum-positive.lts",
-    "hash": "sha256:4f4b8b9316afe4d58673fb5e4e94492fa7b7ba80558acc033f73d478cf73ed2f"
+    "file": "../../../examples/003-sum-positive.lts",
+    "hash": "sha256:237f1d5ad1df74f75441010dd43ad98cddd1d7ea2df115a1f77a20f80cf18e45"
   },
   "features": [
     "io.input",

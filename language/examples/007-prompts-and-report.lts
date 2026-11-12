@@ -1,4 +1,6 @@
-first := inputInt("First number: ");
-second := inputInt("Second number: ");
-outputLine("sum:", first + second);
-outputLine("inputs:", first, second, "equal:", first == second);
+io := import "core/io";
+
+first := io.inputInt("First number: ");
+second := io.inputInt("Second number: ");
+io.outputLine("sum:", first + second);
+io.outputLine("inputs:", first, second, "equal:", first == second);

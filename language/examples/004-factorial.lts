@@ -1,10 +1,12 @@
+io := import "core/io";
+
 factorial := fn(n: Int): Int {
     if n < 0 {
-        reportError("expected a nonnegative integer");
-        exit(2);
+        io.errorLine("expected a nonnegative integer");
+        io.exit(2);
     }
     if n <= 1 { return 1; }
     n * self(n - 1)
 }
 
-outputLine(factorial(inputInt("Nonnegative integer: ")));
+io.outputLine(factorial(io.inputInt("Nonnegative integer: ")));

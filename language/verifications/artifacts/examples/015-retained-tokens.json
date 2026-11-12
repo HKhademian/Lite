@@ -2,8 +2,8 @@
   "id": "example.015-retained-tokens",
   "kind": "example",
   "source": {
-    "file": "../../../language/examples/015-retained-tokens.lts",
-    "hash": "sha256:dca8308318ad5c4ce5cd179f5ae7a47b25b66bf4467c3ebc9a54309a67fcb972"
+    "file": "../../../examples/015-retained-tokens.lts",
+    "hash": "sha256:c80f5c67bece49dc4c3940ddd9e79e28ba8b4f181478d9063fc5435e1f22b3ff"
   },
   "features": [
     "list.mutation",

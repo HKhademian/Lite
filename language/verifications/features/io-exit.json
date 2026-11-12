@@ -3,7 +3,7 @@
   "kind": "feature",
   "source": {
     "file": "io-exit.lts",
-    "hash": "sha256:8ad7dcd6761c6e7805d4649a3f1ae50aa50c9a85c15d8169e83d95f0174cd281"
+    "hash": "sha256:3ef7248cbd0b7d7901a23a5d4898523fc290db59353521588e95dd71c7401e7f"
   },
   "features": [
     "io.exit"

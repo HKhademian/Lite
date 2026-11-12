@@ -3,7 +3,7 @@
   "kind": "feature",
   "source": {
     "file": "text-helpers.lts",
-    "hash": "sha256:85fb2de5280a373555abf8f89a11624ace37d3be92ac0652fdc09310ab807b42"
+    "hash": "sha256:fb20991de2dea91135dc02ef2ac7ca9089cc5b4104ba8cff207ad25a32215ddc"
   },
   "features": [
     "text.helpers"

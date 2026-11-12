@@ -2,8 +2,8 @@
   "id": "example.014-input-history",
   "kind": "example",
   "source": {
-    "file": "../../../language/examples/014-input-history.lts",
-    "hash": "sha256:41e8a819a0712fe1516dc1b9c46a6e38a43cfc82189a76b526f8b3f87cbe3af7"
+    "file": "../../../examples/014-input-history.lts",
+    "hash": "sha256:3cc81125082dd016b033e0c0b7d2ebad14595d9e5f6bf7aa61219ab579dd3e61"
   },
   "features": [
     "list.mutation",

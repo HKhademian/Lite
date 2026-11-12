@@ -1,3 +1,5 @@
+io := import "core/io";
+
 makeToken := fn(kind: String, text: String): (:String, :String) {
     (kind, text)
 }
@@ -8,11 +10,11 @@ describe := fn(token: (:String, :String)): String {
 
 token := makeToken("number", "12");
 (kind, text) := token;
-outputLine(kind);
-outputLine(text);
-outputLine(describe(token));
+io.outputLine(kind);
+io.outputLine(text);
+io.outputLine(describe(token));
 
 one := (42,);
 (value,) := one;
-outputLine(value);
+io.outputLine(value);
 () := ();

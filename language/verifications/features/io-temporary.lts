@@ -1,8 +1,10 @@
-output(); outputLine();
-line := inputLine("Line: ");
-number := inputInt("Int: ");
-fraction := inputFloat("Float: ");
-rest := inputAll("All: ");
-output("values:", line, number, fraction); outputLine();
-outputLine([1, 2], (left = number, right = line), true);
-outputLine(rest);
+io := import "core/io";
+
+io.output(); io.outputLine();
+line := io.inputLine("Line: ");
+number := io.inputInt("Int: ");
+fraction := io.inputFloat("Float: ");
+rest := io.inputAll("All: ");
+io.output("values:", line, number, fraction); io.outputLine();
+io.outputLine([1, 2], (left = number, right = line), true);
+io.outputLine(rest);

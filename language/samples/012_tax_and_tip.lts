@@ -1,3 +1,4 @@
+io := import "core/io";
 /* A meal costs 19.99 euros before 8 percent tax and a 15 percent tip.
    Both percentages use the meal price before tax. Round each to the nearest cent. */
 
