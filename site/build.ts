@@ -27,6 +27,7 @@ const root = dirname(import.meta.dirname);
 const outputDir = join(root, 'dist', 'site');
 const entryPath = fileURLToPath(new URL('../compiler/entry.ts', import.meta.url));
 const brandWordmark = readFileSync(join(root, 'brand', 'lite-wordmark.svg'), 'utf8').trim();
+const proseLite = '<span class="prose-lite"><span class="brand-l">l</span>ite</span>';
 
 function readRepositoryUrl(): string {
   const configured = process.env['GITHUB_REPOSITORY']?.trim();
@@ -117,7 +118,7 @@ function renderFooter(rev: SourceRevision, repoUrl: string): string {
     : `<span class="commit-hash" title="Committed ${escapeHtml(rev.timestamp)}">${hashInner}</span>`;
   return `<footer class="site-footer">
   <div class="container footer-inner">
-    <span>Lite is licensed under Apache-2.0.</span>
+    <span>${proseLite} is licensed under Apache-2.0.</span>
     <span>Revision ${commitHtml}</span>
   </div>
 </footer>`;
@@ -233,7 +234,7 @@ cd LiteScript
     </div>
     <div class="pillar">
       <h3>Verified Toolchain</h3>
-      <p>Every showcased example is compiled and executed by the Lite compiler at build time.</p>
+      <p>Every showcased example is compiled and executed by the ${proseLite} compiler at build time.</p>
     </div>
   </div>
 </section>
@@ -293,7 +294,7 @@ function renderGalleryPage(rendered: ReadonlyMap<string, RenderedSample>, repoUr
   const body = `<section style="padding: 2rem 0 1rem;">
   <h1 style="margin: 0 0 0.5rem;">Gallery</h1>
   <p class="hero-lead" style="margin: 0;">
-    All ${String(rendered.size)} examples below are compiled and executed by the Lite compiler during the site build.
+    All ${String(rendered.size)} examples below are compiled and executed by the ${proseLite} compiler during the site build.
   </p>
 </section>
 ${sections}`;

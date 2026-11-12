@@ -104,8 +104,13 @@ a:hover { text-decoration: underline; }
   width: auto;
   display: block;
 }
-.brand-link .brand-l {
+.brand-link .brand-l,
+.prose-lite .brand-l {
   color: var(--accent);
+}
+.prose-lite {
+  font-weight: 600;
+  color: var(--ink);
 }
 .brand-badge {
   font-size: 0.72rem;
