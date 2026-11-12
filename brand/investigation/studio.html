@@ -274,6 +274,21 @@
       background: var(--bg); border: 1px solid var(--line); border-radius: 10px;
       padding: 8px 12px; display: flex; align-items: center; justify-content: space-between; gap: 10px;
     }
+
+    /* Compact Brand System Chips */
+    .bs-panel { display: flex; flex-direction: column; gap: 10px; padding: 14px 16px; }
+    .bs-row { display: grid; grid-template-columns: 145px 1fr; gap: 10px; align-items: center; }
+    @media (max-width: 720px) { .bs-row { grid-template-columns: 1fr; gap: 6px; } }
+    .bs-chips { display: flex; flex-wrap: wrap; gap: 6px; }
+    .bs-chip {
+      display: inline-flex; align-items: center; gap: 6px;
+      padding: 5px 10px; border-radius: 8px;
+      border: 1px solid var(--line); background: var(--bg); color: var(--ink);
+      font-size: 12px; cursor: pointer; transition: border-color .12s;
+    }
+    .bs-chip:hover { border-color: var(--muted); }
+    .bs-chip.active { border-color: var(--ink); box-shadow: 0 0 0 1px var(--ink); font-weight: 600; }
+    .sw-dot { width: 12px; height: 12px; border-radius: 4px; border: 1px solid rgba(128,128,128,.35); display: inline-block; }
     .inspector-stages {
       display: flex; align-items: flex-end; gap: 8px;
       background: var(--bg); border: 1px solid var(--line);
@@ -399,7 +414,7 @@
             <div id="bs-wordmark"></div>
             <div id="bs-headline" style="font-size:15px; font-weight:700; letter-spacing:-0.02em;">Lite is light.</div>
           </div>
-          <div style="background:var(--card); border:1px solid var(--line); border-radius:8px; padding:6px 9px; font-family:var(--mono); font-size:10.5px; line-height:1.45; shrink:0;">
+          <div id="bs-code-box" style="background:var(--card); border:1px solid var(--line); border-radius:8px; padding:6px 9px; font-family:var(--mono); font-size:10.5px; line-height:1.45; shrink:0;">
             <div><span id="bs-kw">fn</span> main() {</div>
             <div>&nbsp;print(<span id="bs-str">"Lite"</span>)</div>
             <div>}</div>
@@ -1155,46 +1170,66 @@ function renderSim() {
 
   const isDark = document.documentElement.getAttribute('data-ui') === 'dark';
   const ink = isDark ? '#F2F0EA' : '#101113';
-  const acc = logoColorMode === 'mono' ? ink : (isDark ? accDark : accLight);
+  const acc = activeBsAccent.id === 'mono' ? ink : (isDark ? accDark : accLight);
   document.getElementById('bs-wordmark').innerHTML = buildCustomWordmark(it, acc, ink, 22);
   document.getElementById('bs-headline').style.fontFamily = activeBsFont.display;
+  document.getElementById('bs-code-box').style.fontFamily = activeBsCodeFont.css;
   document.getElementById('bs-kw').style.color = acc;
   document.getElementById('bs-str').style.color = acc;
-  document.getElementById('bs-summary').textContent = `Logo: ${it.ref} (${it.title})  ·  Color: ${logoColorMode==='mono'?'Mono':activeBsAccent.name}  ·  Palette: ${activeBsPal.name}  ·  Logo Font: ${activeBsLogoFont.name}  ·  Site Font: ${activeBsFont.name}`;
+  document.getElementById('bs-summary').textContent = `Logo: ${it.ref} (${it.title})  ·  Accent: ${activeBsAccent.name}  ·  Palette: ${activeBsPal.name}  ·  Brand Font: ${activeBsLogoFont.name}  ·  Site Font: ${activeBsFont.name}  ·  Code Font: ${activeBsCodeFont.name}`;
 
   if (brandSystemOpen) renderBrandSystem();
 }
 
 const bsAccents = [
-  { id: 'filament', name: 'Filament Gold', note: 'Warm light source (#C97B14 / #F0B45A)', accL: '#C97B14', accD: '#F0B45A' },
-  { id: 'teal', name: 'Teal (VS Code)', note: 'Crisp editor teal (#0D9488 / #5EEAD4)', accL: '#0D9488', accD: '#5EEAD4' },
-  { id: 'sky', name: 'Sky (mini-aligned)', note: 'Clear sky blue (#0284C7 / #38BDF8)', accL: '#0284C7', accD: '#38BDF8' },
-  { id: 'indigo', name: 'Electric Indigo', note: 'High-energy spark (#4F46E5 / #818CF8)', accL: '#4F46E5', accD: '#818CF8' }
+  { id: 'filament', name: 'Filament Gold', accL: '#C97B14', accD: '#F0B45A' },
+  { id: 'teal', name: 'Teal (VS Code)', accL: '#0D9488', accD: '#5EEAD4' },
+  { id: 'sky', name: 'Sky (mini)', accL: '#0284C7', accD: '#38BDF8' },
+  { id: 'indigo', name: 'Electric Indigo', accL: '#4F46E5', accD: '#818CF8' },
+  { id: 'emerald', name: 'Emerald', accL: '#059669', accD: '#34D399' },
+  { id: 'coral', name: 'Warm Coral', accL: '#DC2626', accD: '#FB7185' },
+  { id: 'mono', name: 'Mono (Ink)', accL: '#101113', accD: '#F2F0EA' }
 ];
 const bsPalettes = [
-  { id: 'paper-warm', name: 'Warm Paper', note: 'Editorial paper #F5F3EE + #101113 ink', bg: '#F5F3EE', card: '#FBFAF7', ink: '#101113', ui: 'light' },
-  { id: 'ink-deep', name: 'Deep Ink', note: 'Dark ink #0B0C0E + #F2F0EA paper text', bg: '#0B0C0E', card: '#131519', ink: '#F2F0EA', ui: 'dark' },
-  { id: 'slate-editor', name: 'Editor Slate', note: 'Cool slate #0F1115 + #F3F4F6 text', bg: '#0F1115', card: '#161920', ink: '#F3F4F6', ui: 'dark' },
-  { id: 'cloud-crisp', name: 'Crisp Cloud', note: 'Clean white #F8FAFC + #0F172A ink', bg: '#F8FAFC', card: '#FFFFFF', ink: '#0F172A', ui: 'light' }
+  { id: 'paper-warm', name: 'Warm Paper', bg: '#F5F3EE', card: '#FBFAF7', ink: '#101113', ui: 'light' },
+  { id: 'ink-deep', name: 'Deep Ink', bg: '#0B0C0E', card: '#131519', ink: '#F2F0EA', ui: 'dark' },
+  { id: 'slate-editor', name: 'Editor Slate', bg: '#0F1115', card: '#161920', ink: '#F3F4F6', ui: 'dark' },
+  { id: 'cloud-crisp', name: 'Crisp Cloud', bg: '#F8FAFC', card: '#FFFFFF', ink: '#0F172A', ui: 'light' },
+  { id: 'stone-bone', name: 'Stone & Bone', bg: '#ECEAE4', card: '#F7F6F2', ink: '#1C1917', ui: 'light' },
+  { id: 'midnight-navy', name: 'Midnight Navy', bg: '#0A101F', card: '#11192E', ink: '#E2E8F0', ui: 'dark' },
+  { id: 'forest-charcoal', name: 'Forest Charcoal', bg: '#0D1412', card: '#141E1B', ink: '#E6EFEA', ui: 'dark' },
+  { id: 'solar-light', name: 'Solar Light', bg: '#FDF6E3', card: '#FAF3DC', ink: '#073642', ui: 'light' }
 ];
 const bsLogoFonts = [
-  { id: 'vector', name: 'Vector Monoline (mini-style)', note: '16-unit custom SVG paths matching ℓ stroke', css: null, weight: 600 },
-  { id: 'rounded', name: 'Rounded Sans', note: 'ui-rounded / SF Pro Rounded next to ℓ', css: 'ui-rounded, "SF Pro Rounded", system-ui, sans-serif', weight: 500 },
-  { id: 'serif', name: 'Editorial Serif', note: 'Georgia / Iowan Old Style next to ℓ', css: 'Georgia, "Iowan Old Style", serif', weight: 600 },
-  { id: 'mono', name: 'Technical Mono', note: 'JetBrains Mono / SF Mono next to ℓ', css: 'ui-monospace, "SF Mono", Menlo, monospace', weight: 600 }
+  { id: 'vector', name: 'Vector Monoline', css: null, weight: 600 },
+  { id: 'rounded', name: 'Rounded Sans', css: 'ui-rounded, "SF Pro Rounded", system-ui, sans-serif', weight: 500 },
+  { id: 'grotesque', name: 'Neutral Grotesque', css: 'ui-sans-serif, -apple-system, "Inter", sans-serif', weight: 600 },
+  { id: 'serif', name: 'Editorial Serif', css: 'Georgia, "Iowan Old Style", serif', weight: 600 },
+  { id: 'humanist', name: 'Geometric Humanist', css: '"Avenir Next", "Segoe UI", sans-serif', weight: 600 },
+  { id: 'mono', name: 'Technical Mono', css: 'ui-monospace, "SF Mono", Menlo, monospace', weight: 600 }
 ];
 const bsFonts = [
-  { id: 'grotesque', name: 'Neutral Grotesque', note: 'Inter / SF Pro — crisp system clarity', display: 'ui-sans-serif, -apple-system, "Inter", "Segoe UI", sans-serif', body: 'ui-sans-serif, -apple-system, "Inter", "Segoe UI", sans-serif' },
-  { id: 'rounded', name: 'Rounded (mini-style)', note: 'SF Pro Rounded / ui-rounded — friendly & soft', display: 'ui-rounded, "SF Pro Rounded", system-ui, sans-serif', body: 'ui-sans-serif, -apple-system, system-ui, sans-serif' },
-  { id: 'editorial', name: 'Editorial Serif + Sans', note: 'Georgia / Charter display + clean sans body', display: 'Georgia, "Iowan Old Style", "Palatino", serif', body: 'ui-sans-serif, -apple-system, system-ui, sans-serif' },
-  { id: 'mono-tech', name: 'Technical Mono', note: 'JetBrains Mono / SF Mono — compiler-first', display: 'ui-monospace, "SF Mono", "JetBrains Mono", Menlo, monospace', body: 'ui-sans-serif, -apple-system, system-ui, sans-serif' },
-  { id: 'plex', name: 'Geometric Humanist', note: 'Avenir Next / Segoe UI — airy & light', display: '"Avenir Next", "Segoe UI", sans-serif', body: '"Avenir Next", "Segoe UI", sans-serif' },
-  { id: 'classic-mono', name: 'All-Mono Minimal', note: 'Monospace everywhere — pure terminal aesthetic', display: 'ui-monospace, "SF Mono", Menlo, monospace', body: 'ui-monospace, "SF Mono", Menlo, monospace' }
+  { id: 'grotesque', name: 'Neutral Grotesque', display: 'ui-sans-serif, -apple-system, "Inter", "Segoe UI", sans-serif', body: 'ui-sans-serif, -apple-system, "Inter", "Segoe UI", sans-serif' },
+  { id: 'rounded', name: 'Rounded (mini)', display: 'ui-rounded, "SF Pro Rounded", system-ui, sans-serif', body: 'ui-sans-serif, -apple-system, system-ui, sans-serif' },
+  { id: 'editorial', name: 'Editorial Serif', display: 'Georgia, "Iowan Old Style", "Palatino", serif', body: 'ui-sans-serif, -apple-system, system-ui, sans-serif' },
+  { id: 'plex', name: 'Geometric Humanist', display: '"Avenir Next", "Segoe UI", sans-serif', body: '"Avenir Next", "Segoe UI", sans-serif' },
+  { id: 'system', name: 'System Classic', display: '-apple-system, BlinkMacSystemFont, "Helvetica Neue", sans-serif', body: '-apple-system, BlinkMacSystemFont, "Helvetica Neue", sans-serif' },
+  { id: 'mono-tech', name: 'Technical Mono', display: 'ui-monospace, "SF Mono", "JetBrains Mono", Menlo, monospace', body: 'ui-sans-serif, -apple-system, system-ui, sans-serif' },
+  { id: 'all-mono', name: 'All-Mono Minimal', display: 'ui-monospace, "SF Mono", Menlo, monospace', body: 'ui-monospace, "SF Mono", Menlo, monospace' }
+];
+const bsCodeFonts = [
+  { id: 'jetbrains', name: 'JetBrains Mono', css: '"JetBrains Mono", ui-monospace, monospace' },
+  { id: 'sf-mono', name: 'SF Mono', css: '"SF Mono", ui-monospace, monospace' },
+  { id: 'fira', name: 'Fira Code', css: '"Fira Code", "Cascadia Code", ui-monospace, monospace' },
+  { id: 'menlo', name: 'Menlo', css: 'Menlo, Consolas, monospace' },
+  { id: 'plex-mono', name: 'IBM Plex Mono', css: '"IBM Plex Mono", ui-monospace, monospace' },
+  { id: 'system-mono', name: 'System Mono', css: 'ui-monospace, monospace' }
 ];
 let activeBsAccent = bsAccents[0];
 let activeBsPal = bsPalettes[0];
 let activeBsLogoFont = bsLogoFonts[0];
 let activeBsFont = bsFonts[0];
+let activeBsCodeFont = bsCodeFonts[0];
 let logoColorMode = 'accent';
 
 function buildCustomWordmark(it, acc, ink, h, fontObj = activeBsLogoFont) {
@@ -1208,67 +1243,56 @@ function renderBrandSystem() {
   const it = items.find(x => x.id === selectedId) || items[0];
   const isDark = document.documentElement.getAttribute('data-ui') === 'dark';
   const ink = isDark ? '#F2F0EA' : '#101113';
-  const acc = logoColorMode === 'mono' ? ink : (isDark ? accDark : accLight);
+  const acc = activeBsAccent.id === 'mono' ? ink : (isDark ? accDark : accLight);
 
   document.getElementById('bs-accents').innerHTML = bsAccents.map(a => `
-    <div class="card ${a.id === activeBsAccent.id ? 'selected' : ''}" onclick="selectBsAccent('${a.id}')">
-      <div style="display:flex; gap:6px; margin-bottom:8px;">
-        <span style="width:22px;height:22px;border-radius:6px;background:${a.accL};border:1px solid rgba(128,128,128,.3)"></span>
-        <span style="width:22px;height:22px;border-radius:6px;background:${a.accD};border:1px solid rgba(128,128,128,.3)"></span>
-      </div>
-      <h3>${a.name}</h3>
-      <p class="desc">${a.note}</p>
-    </div>
+    <button class="bs-chip ${a.id === activeBsAccent.id ? 'active' : ''}" onclick="selectBsAccent('${a.id}')">
+      <span class="sw-dot" style="background:${a.accD}"></span>
+      <span>${a.name}</span>
+    </button>
   `).join('');
 
   document.getElementById('bs-palettes').innerHTML = bsPalettes.map(p => `
-    <div class="card ${p.id === activeBsPal.id ? 'selected' : ''}" onclick="selectBsPalette('${p.id}')">
-      <div style="display:flex; gap:6px; margin-bottom:8px;">
-        <span style="width:22px;height:22px;border-radius:6px;background:${p.bg};border:1px solid rgba(128,128,128,.3)"></span>
-        <span style="width:22px;height:22px;border-radius:6px;background:${p.card};border:1px solid rgba(128,128,128,.3)"></span>
-        <span style="width:22px;height:22px;border-radius:6px;background:${p.ink};border:1px solid rgba(128,128,128,.3)"></span>
-      </div>
-      <h3>${p.name}</h3>
-      <p class="desc">${p.note}</p>
-    </div>
+    <button class="bs-chip ${p.id === activeBsPal.id ? 'active' : ''}" onclick="selectBsPalette('${p.id}')">
+      <span class="sw-dot" style="background:${p.bg}"></span>
+      <span class="sw-dot" style="background:${p.ink}"></span>
+      <span>${p.name}</span>
+    </button>
   `).join('');
 
   document.getElementById('bs-logo-fonts').innerHTML = bsLogoFonts.map(lf => `
-    <div class="card ${lf.id === activeBsLogoFont.id ? 'selected' : ''}" onclick="selectBsLogoFont('${lf.id}')">
-      <div style="margin-bottom:8px;">${buildCustomWordmark(it, acc, ink, 26, lf)}</div>
-      <h3>${lf.name}</h3>
-      <p class="desc">${lf.note}</p>
-    </div>
+    <button class="bs-chip ${lf.id === activeBsLogoFont.id ? 'active' : ''}" onclick="selectBsLogoFont('${lf.id}')">
+      ${buildCustomWordmark(it, acc, ink, 15, lf)}
+      <span>${lf.name}</span>
+    </button>
   `).join('');
 
   document.getElementById('bs-fonts').innerHTML = bsFonts.map(f => `
-    <div class="card ${f.id === activeBsFont.id ? 'selected' : ''}" onclick="selectBsFont('${f.id}')">
-      <div style="font-family:${f.display}; font-size:20px; font-weight:700; margin-bottom:6px;">Lite is light.</div>
-      <h3>${f.name}</h3>
-      <p class="desc">${f.note}</p>
-    </div>
+    <button class="bs-chip ${f.id === activeBsFont.id ? 'active' : ''}" style="font-family:${f.display}" onclick="selectBsFont('${f.id}')">
+      <span>${f.name}</span>
+    </button>
   `).join('');
-}
 
-function setLogoColorMode(m) {
-  logoColorMode = m;
-  document.getElementById('bs-mode-accent').classList.toggle('active', m === 'accent');
-  document.getElementById('bs-mode-mono').classList.toggle('active', m === 'mono');
-  renderSim();
+  document.getElementById('bs-code-fonts').innerHTML = bsCodeFonts.map(cf => `
+    <button class="bs-chip ${cf.id === activeBsCodeFont.id ? 'active' : ''}" style="font-family:${cf.css}" onclick="selectBsCodeFont('${cf.id}')">
+      <span>${cf.name}</span>
+    </button>
+  `).join('');
 }
 
 function selectBsAccent(id) {
   activeBsAccent = bsAccents.find(x => x.id === id) || bsAccents[0];
   accLight = activeBsAccent.accL;
   accDark = activeBsAccent.accD;
-  logoColorMode = 'accent';
-  document.getElementById('bs-mode-accent').classList.add('active');
-  document.getElementById('bs-mode-mono').classList.remove('active');
+  logoColorMode = id === 'mono' ? 'mono' : 'accent';
   render(); renderSim();
 }
 
 function selectBsPalette(id) {
   activeBsPal = bsPalettes.find(x => x.id === id) || bsPalettes[0];
+  document.documentElement.style.setProperty('--bg', activeBsPal.bg);
+  document.documentElement.style.setProperty('--card', activeBsPal.card);
+  document.documentElement.style.setProperty('--ink', activeBsPal.ink);
   setUi(activeBsPal.ui);
   render(); renderSim();
 }
@@ -1281,6 +1305,11 @@ function selectBsLogoFont(id) {
 function selectBsFont(id) {
   activeBsFont = bsFonts.find(x => x.id === id) || bsFonts[0];
   document.body.style.fontFamily = activeBsFont.body;
+  renderSim();
+}
+
+function selectBsCodeFont(id) {
+  activeBsCodeFont = bsCodeFonts.find(x => x.id === id) || bsCodeFonts[0];
   renderSim();
 }
 
