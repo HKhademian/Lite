@@ -410,6 +410,7 @@
     <button class="tab-btn active" id="grp-all" onclick="setGroup('all')">All Candidates</button>
     <button class="tab-btn" id="grp-rev3" onclick="setGroup('rev3')">Rev 3 · The Quill (4)</button>
     <button class="tab-btn" id="grp-rev8" onclick="setGroup('rev8')">Rev 8 · Script ℓ / ℒ (6)</button>
+    <button class="tab-btn" id="grp-rev10" onclick="setGroup('rev10')">Rev 10 · Shortlist (6)</button>
     <button class="tab-btn" id="grp-rev9" onclick="setGroup('rev9')">Rev 9 · Letterforms (8)</button>
     <button class="tab-btn" id="grp-rev7" onclick="setGroup('rev7')">Rev 7 · Letter $ (8)</button>
     <button class="tab-btn" id="grp-rev6" onclick="setGroup('rev6')">Rev 6 · Letter Marks (6)</button>
@@ -469,7 +470,46 @@ const rev9Mark06 = (c) => `<g fill="none" stroke="${c}" stroke-width="1.8" strok
 const rev9Mark07 = (c) => `<g fill="none" stroke="${c}" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M3.3 2.4V12.8H9.5"/><path d="M6.1 2.4V10.1H9.5" stroke-width="1.15"/></g>`;
 const rev9Mark08 = (c) => `<g fill="none" stroke="${c}" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M2.4 10.8C5.3 8.7 8 5.6 8.1 3.2C8.2 2 6.9 1.8 6.1 3.1C5 4.8 4.5 8 4.6 10.4C4.7 12.4 5.8 13.2 8.2 12.6"/><path d="M4.7 9C6.6 8.5 7.8 7.5 8.5 6.2M5.1 6.8C6.5 6.4 7.4 5.6 7.9 4.7" stroke-width="1.05"/></g>`;
 
+const rev10Mark01 = (c) => `<g fill="none" stroke="${c}" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M2.4 10.1C5.1 8.1 8.2 5.1 8.1 3.1C8 1.8 6.8 1.8 5.9 3.2C4.7 5.1 4.3 8.3 4.5 10.5C4.6 12.4 5.9 13.2 8.1 12.5"/></g>`;
+const rev10Mark02 = (c) => `<g fill="none" stroke="${c}" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M2.3 10.1C5 8.1 8 5.1 8 3.1C8 1.9 6.8 1.8 5.9 3.2C4.7 5.1 4.3 8.1 4.5 10.4C4.7 12.2 5.8 13 7.3 13C8.5 13 9.5 12.3 10.2 11.4"/></g>`;
+const rev10Mark03 = (c) => `<g fill="none" stroke="${c}" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M8.8 2.9C7.6 2 6.3 2.4 5.6 3.8C4.6 5.7 4.3 8.4 4.5 10.5C4.7 12.4 5.9 13.1 8.2 12.5"/><path d="M2.7 9.9C5.4 8.3 7.7 6 8.8 3.9" stroke-width="1.45"/></g>`;
+const rev10Mark04 = (c) => `<g fill="none" stroke="${c}" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M2.4 10.1C5.1 8.1 8.2 5.1 8.1 3.1C8 1.8 6.8 1.8 5.9 3.2C4.7 5.1 4.3 8.3 4.5 10.5C4.6 12.4 5.9 13.2 8.1 12.5"/><path d="M5.1 10C6.8 9.7 8 8.9 8.8 7.7" stroke-width="1.15"/></g>`;
+const rev10Mark05 = (c) => `<g fill="none" stroke="${c}" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4.4 2.4V10.8C4.4 12.3 5.3 13 6.7 13H8.4"/><path d="M2.6 8.8L8.2 5.8" stroke-width="1.45"/></g>`;
+const rev10Mark06 = (c) => `<g fill="none" stroke="${c}" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4.4 2.4V10.8C4.4 12.3 5.3 13 6.7 13H8.4"/><path d="M2.8 9C5.4 8.1 7.1 6.8 8.3 5" stroke-width="1.4"/></g>`;
+
 const items = [
+  // ================= REV 10 SHORTLIST REFINEMENTS =================
+  {
+    ref: 'R10-01', author: 'gpt-6.1-terra', id: 'r10-clear-loop', groups: ['rev10'], badge: 'Rev 10 · 01', origin: 'Shortlist refinement',
+    title: 'Clear loop', desc: 'A balanced ℓ with a more open loop and a short, quiet exit.', note: 'Refines R8-01, R9-01 and R9-02; the letter stays the main idea.', vb: '0 0 16 16',
+    mark: rev10Mark01, first: rev10Mark01, off: 11.2
+  },
+  {
+    ref: 'R10-02', author: 'gpt-6.1-terra', id: 'r10-swept-loop', groups: ['rev10'], badge: 'Rev 10 · 02', origin: 'Shortlist refinement',
+    title: 'Swept loop', desc: 'A flowing ℓ with a slightly longer, lifted terminal.', note: 'Takes the livelier ending of R8-01 and keeps R9-01’s loop.', vb: '0 0 16 16',
+    mark: rev10Mark02, first: rev10Mark02, off: 12.8
+  },
+  {
+    ref: 'R10-03', author: 'gpt-6.1-terra', id: 'r10-open-quill', groups: ['rev10'], badge: 'Rev 10 · 03', origin: 'Shortlist refinement',
+    title: 'Open quill', desc: 'An open, narrow feather curve with a single crossing stroke.', note: 'Develops R8-02; the open top gives the feather more space.', vb: '0 0 16 16',
+    mark: rev10Mark03, first: rev10Mark03, off: 11.4
+  },
+  {
+    ref: 'R10-04', author: 'gpt-6.1-terra', id: 'r10-ribbon-lift', groups: ['rev10'], badge: 'Rev 10 · 04', origin: 'Shortlist refinement',
+    title: 'Ribbon lift', desc: 'A looped ℓ with one small feather-like exit stroke.', note: 'Refines R9-04 with a cleaner, separated accent.', vb: '0 0 16 16',
+    mark: rev10Mark04, first: rev10Mark04, off: 11.7
+  },
+  {
+    ref: 'R10-05', author: 'gpt-6.1-terra', id: 'r10-soft-ray', groups: ['rev10'], badge: 'Rev 10 · 05', origin: 'Shortlist refinement',
+    title: 'Soft ray', desc: 'A rounded l crossed by a gentle rising ray.', note: 'A softer, narrower version of R8-04.', vb: '0 0 16 16',
+    mark: rev10Mark05, first: rev10Mark05, off: 11.1
+  },
+  {
+    ref: 'R10-06', author: 'gpt-6.1-terra', id: 'r10-curved-ray', groups: ['rev10'], badge: 'Rev 10 · 06', origin: 'Shortlist refinement',
+    title: 'Curved ray', desc: 'A rounded l crossed by a short feather-shaped curve.', note: 'Connects R8-04’s simplicity with R8-02’s softer feather.', vb: '0 0 16 16',
+    mark: rev10Mark06, first: rev10Mark06, off: 11.1
+  },
+
   // ================= REV 9 LETTERFORM STUDIES =================
   {
     ref: 'R9-01', author: 'gpt-6.1-terra', id: 'r9-looped-l', groups: ['rev9'], badge: 'Rev 9 · 01', origin: 'Letterform study',
@@ -936,7 +976,7 @@ function renderSim() {
 
 function setGroup(grp) {
   activeGroup = grp;
-  ['rev9', 'rev8', 'rev7', 'rev6', 'top', 'rev3', 'rev4', 'rev1', 'all'].forEach(g => {
+  ['rev10', 'rev9', 'rev8', 'rev7', 'rev6', 'top', 'rev3', 'rev4', 'rev1', 'all'].forEach(g => {
     const el = document.getElementById('grp-' + g);
     if (el) el.classList.toggle('active', g === grp);
   });
