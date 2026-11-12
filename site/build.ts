@@ -1,11 +1,13 @@
 #!/usr/bin/env node
 /** Build the static public showcase site and playground into dist/site/. */
 import { spawnSync } from 'node:child_process';
-import { cpSync, mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
+import { cpSync, mkdirSync, mkdtempSync, readdirSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
+import { stripTypeScriptTypes } from 'node:module';
 import { tmpdir } from 'node:os';
 import { dirname, join, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { compileTs } from '../compiler/host.ts';
+import { sourceModuleIdentity } from '../compiler/source.ts';
 import { heroSample, sampleGroups, showcaseSamples, type ShowcaseSample } from './groups.ts';
 import { escapeHtml, highlightLite, highlightTs } from './highlight.ts';
 import { siteCss } from './styles.ts';
@@ -737,6 +739,17 @@ export function buildSite(): void {
   writeFileSync(join(outputDir, 'index.html'), renderHomePage(rendered, repoUrl, rev));
   writeFileSync(join(outputDir, 'gallery', 'index.html'), renderGalleryPage(rendered, repoUrl, rev));
   writeFileSync(join(outputDir, 'playground', 'index.html'), renderPlaygroundPage(rendered, repoUrl, rev));
+  const compilerTs = readFileSync(join(root, 'compiler', 'bootstrap', 'compiler.ts'), 'utf8');
+  writeFileSync(join(outputDir, 'playground', 'compiler.js'), stripTypeScriptTypes(compilerTs, { mode: 'strip' }));
+  const coreDir = join(root, 'lib', 'core');
+  const stdlib: Record<string, Readonly<{ path: string; display: string; identity: string; text: string }>> = {};
+  for (const name of readdirSync(coreDir).filter(f => f.endsWith('.lts')).sort()) {
+    const relPath = `lib/core/${name}`;
+    const text = readFileSync(join(coreDir, name), 'utf8');
+    const modName = `core/${name.slice(0, -4)}`;
+    stdlib[modName] = { path: relPath, display: relPath, identity: sourceModuleIdentity(text), text };
+  }
+  writeFileSync(join(outputDir, 'playground', 'stdlib.json'), JSON.stringify(stdlib));
   for (const sample of rendered.values()) {
     writeFileSync(
       join(outputDir, 'playground', 'samples', `${sample.id}.json`),

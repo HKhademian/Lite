@@ -3,6 +3,7 @@ import { execFileSync } from 'node:child_process';
 import { existsSync, readFileSync } from 'node:fs';
 import { dirname, join, resolve } from 'node:path';
 import { test } from 'node:test';
+import { pathToFileURL } from 'node:url';
 import { buildSite } from './build.ts';
 import { heroSample, sampleGroups, showcaseSamples } from './groups.ts';
 import { escapeHtml, highlightLite, highlightTs } from './highlight.ts';
@@ -111,5 +112,61 @@ test('stripLiteTs produces runnable JS matching compiler output for all showcase
     const fn = new Function('process', `${js.replace(/export function main\b/, 'function main')}\nreturn main();`) as (p: typeof fakeProcess) => string | undefined;
     const ret = fn(fakeProcess);
     assert.equal(stdout + (ret ?? ''), payload.output, `runtime parity mismatch for ${sample.id}`);
+  }
+});
+
+test('emitted playground compiler.js and stdlib.json compile and run Lite code', async () => {
+  const out = join(root, 'dist', 'site');
+  const compilerUrl = pathToFileURL(join(out, 'playground', 'compiler.js')).href;
+  const stdlib = JSON.parse(readFileSync(join(out, 'playground', 'stdlib.json'), 'utf8')) as Record<string, { path: string; display: string; identity: string; text: string }>;
+  assert(existsSync(join(out, 'playground', 'compiler.js')));
+  assert('core/io' in stdlib);
+
+  const imported = await import(compilerUrl) as { main: (w?: (t: string) => void, r?: (imp: string, spec: string) => unknown) => string };
+  const sample = JSON.parse(readFileSync(join(out, 'playground', 'samples', 'double-sum.json'), 'utf8')) as { source: string; stdin: string; output: string };
+  const stdinBytes = new TextEncoder().encode(sample.source);
+  let offset = 0;
+  let stdout = '';
+  let stderr = '';
+  const prevProcess = globalThis.process;
+  const stubProcess = {
+    argv: ['node', 'compiler.js', 'playground.lts', 'playground', 'playground.lts'],
+    exit(code: number): never {
+      throw new Error(`EXIT:${code}:${stderr}`);
+    },
+    getBuiltinModule(name: string) {
+      assert.equal(name, 'node:fs');
+      return {
+        readSync(_fd: number, buf: Uint8Array, bufOffset: number, length: number): number {
+          if (offset >= stdinBytes.length) return 0;
+          const n = Math.min(length, stdinBytes.length - offset);
+          buf.set(stdinBytes.subarray(offset, offset + n), bufOffset);
+          offset += n;
+          return n;
+        },
+        writeSync(fd: number, text: string): number {
+          if (fd === 1) stdout += text;
+          else stderr += text;
+          return text.length;
+        },
+      };
+    },
+  };
+  (globalThis as unknown as { process: typeof stubProcess }).process = stubProcess;
+  try {
+    const readSource = (importer: string, spec: string) => {
+      if (spec in stdlib) return stdlib[spec];
+      if (spec.startsWith('./') && importer.startsWith('lib/core/')) {
+        const name = `core/${spec.slice(2).replace(/\.lts$/, '')}`;
+        if (name in stdlib) return stdlib[name];
+      }
+      throw new Error(`cannot import ${spec} from ${importer}`);
+    };
+    const ret = imported.main((t) => { stdout += t; }, readSource);
+    const compiledTs = stdout + (ret ?? '');
+    assert(compiledTs.includes('export function main'));
+    assert.equal(stderr, '');
+  } finally {
+    globalThis.process = prevProcess;
   }
 });
