@@ -3,7 +3,7 @@
 import { spawnSync } from 'node:child_process';
 import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
-import { dirname, join, resolve } from 'node:path';
+import { dirname, join, relative, resolve, sep } from 'node:path';
 import { loadManifest } from '../igniter/loader.ts';
 import { readSourceInput } from '../compiler/source.ts';
 import { prepareTsArtifacts } from '../igniter/artifacts.ts';
@@ -25,7 +25,7 @@ function median(values: readonly number[]): number {
 function invoke(artifact: string, source: string, timeout: number, sourceRoot?: string): Timed {
   const start = performance.now();
   const actual = spawnSync(process.execPath, [join(repository, 'benchmark/compiler-worker.ts'), 'T11', artifact, sourceRoot ?? '', ...(sourceRoot === undefined ? [] : [sourceRoot])], {
-    input: source, stdio: ['pipe', 'pipe', 'pipe', 'pipe'], timeout, maxBuffer: 128 * 1024 * 1024,
+    cwd: repository, input: source, stdio: ['pipe', 'pipe', 'pipe', 'pipe'], timeout, maxBuffer: 128 * 1024 * 1024,
   });
   const processMs = performance.now() - start;
   if (actual.error !== undefined) throw actual.error;
@@ -47,6 +47,7 @@ export function compilerPerformance(args: readonly string[]): void {
   const manifest = loadManifest(manifestPath);
   if (manifest.files.length !== 1) throw new Error('compiler benchmark requires one TS source root');
   const source = readSourceInput(resolve(dirname(manifestPath), manifest.files[0]!));
+  const sourceName = relative(repository, source.path).split(sep).join('/');
   const { artifacts } = corpusContracts();
   const date = new Intl.DateTimeFormat('en-CA', { timeZone: 'Europe/Berlin', year: 'numeric', month: '2-digit', day: '2-digit' }).format(new Date());
   // A generated-only prefix cannot overwrite the preserved T00 comparison reports.
@@ -60,7 +61,7 @@ export function compilerPerformance(args: readonly string[]): void {
     if (validation.mismatches.length !== 0) throw new Error(`compiler contract mismatch: ${validation.mismatches.slice(0, 3).join(', ')}`);
     // A refreshed source may reach a new fixed point after the first old-seed build.
     // Validate the untimed self-build independently before using its bytes for timing checks.
-    const selfBuild = invoke(artifact, source.text, timeout, source.path);
+    const selfBuild = invoke(artifact, source.text, timeout, sourceName);
     if (selfBuild.status !== 0 || selfBuild.signal !== null || selfBuild.stderr.length !== 0) throw new Error('untimed self-build failed');
     const selfBuildValidation = validateCorpus(selfBuild.stdout.toString());
     if (selfBuildValidation.mismatches.length !== 0) throw new Error('self-built compiler failed recorded corpus contracts');
@@ -68,7 +69,7 @@ export function compilerPerformance(args: readonly string[]): void {
     const workloads: { name: string; inputs: Input[] }[] = [
       ...[1, 100, 1000].map(n => ({ name: `output-${n}`, inputs: [{ name: `output-${n}`, text: Array.from({ length: n }, (_, i) => `outputLine(${i});`).join('\n') + '\n' }] })),
       { name: 'compiler-corpus', inputs: compilerFixtures.map(fixture => ({ name: fixture.file + '/' + fixture.caseName, text: fixture.source, fixture })) },
-      { name: 'self-build', inputs: [{ name: 'S', text: source.text, sourceRoot: source.path }] },
+      { name: 'self-build', inputs: [{ name: 'S', text: source.text, sourceRoot: sourceName }] },
     ];
     const results: { workload: string; inputs: { name: string; sourceSha256: string; bytes: number }[];
       raw: { pass: number; input: string; processMs: number; metrics: Metrics; status: number | null; stdoutSha256: string; stderrSha256: string }[];

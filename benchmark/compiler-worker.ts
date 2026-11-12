@@ -1,11 +1,12 @@
 /** One fresh-process compiler measurement. Metrics use fd 3, separate from program streams. */
 import { writeSync } from 'node:fs';
 import { readFileSync, realpathSync } from 'node:fs';
-import { dirname, resolve } from 'node:path';
-import { pathToFileURL } from 'node:url';
+import { dirname, isAbsolute, relative, resolve, sep } from 'node:path';
+import { fileURLToPath, pathToFileURL } from 'node:url';
 
 const [engine, artifact, sourceName, sourceRoot] = process.argv.slice(2);
 if (artifact === undefined || sourceName === undefined) throw new Error('missing compiler artifact or source name');
+const projectRoot = resolve(dirname(fileURLToPath(import.meta.url)), '..');
 const started = performance.now();
 const cpuStarted = process.cpuUsage();
 let loaded = started;
@@ -32,7 +33,10 @@ if (engine === 'T11') {
     if (spec.length === 0 || spec.startsWith('/') || spec.includes('\\') || /^[A-Za-z]:/.test(spec)) throw new Error('invalid source import');
     const path = realpathSync(resolve(dirname(importer), spec));
     const bytes = readFileSync(path);
-    return { path, text: new TextDecoder('utf-8', { fatal: true }).decode(bytes) };
+    const projectRelative = relative(projectRoot, path);
+    const identity = projectRelative === '..' || projectRelative.startsWith(`..${sep}`) || isAbsolute(projectRelative)
+      ? path : projectRelative.split(sep).join('/');
+    return { path: identity, text: new TextDecoder('utf-8', { fatal: true }).decode(bytes) };
   };
   const main = (): string => {
     const value: unknown = sourceRoot === undefined ? entry() : entry(undefined, readSource);
