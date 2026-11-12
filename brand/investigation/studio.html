@@ -389,6 +389,7 @@
           <button class="tab-btn" style="padding:5px 10px; font-size:12px;" onclick="openVisibility()">Visibility Matrix ↗</button>
           <button class="tab-btn" style="padding:5px 10px; font-size:12px;" onclick="openHeaderDialog()">Headers ↗</button>
           <button class="tab-btn" style="padding:5px 10px; font-size:12px;" onclick="openSiteDialog()">Site &amp; Code ↗</button>
+          <button class="tab-btn" style="padding:5px 10px; font-size:12px;" onclick="openOverviewDialog()">Identity Overview ↗</button>
         </div>
         <div style="display:flex; align-items:center; gap:8px; flex-wrap:wrap;">
           <div class="seg">
@@ -547,6 +548,17 @@
     <button class="tab-btn" style="padding:5px 10px; font-size:12px;" onclick="document.getElementById('site-dialog').close()">Close ×</button>
   </div>
   <div class="vis-body" id="site-body"></div>
+</dialog>
+
+<dialog id="overview-dialog" class="vis-dialog" style="width:min(1040px, calc(100vw - 32px));" onclick="if(event.target===this) this.close()">
+  <div class="vis-head">
+    <div>
+      <div class="eyebrow">Lite · Final Identity Overview (Live)</div>
+      <h2 id="overview-title" style="font-size:18px; margin:4px 0 2px;">One small mark, across the project.</h2>
+    </div>
+    <button class="tab-btn" style="padding:5px 10px; font-size:12px;" onclick="document.getElementById('overview-dialog').close()">Close ×</button>
+  </div>
+  <div class="vis-body" id="overview-body" style="display:flex; flex-direction:column; gap:14px;"></div>
 </dialog>
 
 <script>
@@ -1506,6 +1518,66 @@ function openSiteDialog() {
     </div>
   `;
   document.getElementById('site-dialog').showModal();
+}
+
+function openOverviewDialog() {
+  const it = items.find(x => x.id === selectedId) || items[0];
+  const minIt = items.find(x => x.ref === 'R14-01') || it;
+  const isDark = document.documentElement.getAttribute('data-ui') === 'dark';
+  const ink = isDark ? '#F2F0EA' : '#171A19';
+  const acc = activeBsAccent.id === 'mono' ? ink : (isDark ? accDark : accLight);
+
+  document.getElementById('overview-title').textContent = `${it.ref} · ${activeBsAccent.ref} · ${activeBsPal.ref} · ${activeBsLogoFont.ref} · ${activeBsFont.ref} · ${activeBsCodeFont.ref}`;
+  document.getElementById('overview-body').innerHTML = `
+    <div style="background:var(--bg); border:1px solid var(--line); border-radius:12px; padding:20px; display:flex; flex-direction:column; gap:18px; font-family:${activeBsFont.display};">
+      <div style="display:flex; align-items:center; justify-content:space-between; flex-wrap:wrap; gap:12px;">
+        <div>${buildCustomWordmark(it, acc, ink, 30)}</div>
+        <span class="origin" style="font-family:${activeBsCodeFont.css};">LiteLang / language guide</span>
+      </div>
+      <div style="display:grid; grid-template-columns:160px 1fr; gap:20px; align-items:start;">
+        <div style="display:flex; flex-direction:column; gap:6px; font-size:13px;">
+          <span class="eyebrow">Language</span>
+          <span>Start here</span><span>Tour</span><span>Reference</span>
+        </div>
+        <div style="display:flex; flex-direction:column; gap:8px;">
+          <h3 style="margin:0; font-size:24px; letter-spacing:-0.02em;">Small language. Clear ideas.</h3>
+          <p class="sub">A compact, readable language for shaping tools around your needs.</p>
+          <div><span style="display:inline-block;padding:8px 14px;border-radius:6px;background:${ink};color:var(--bg);font-size:13px;font-weight:600;">Run your first file</span></div>
+        </div>
+      </div>
+    </div>
+    <div style="display:grid; grid-template-columns:1.5fr 1fr; gap:14px;">
+      <div style="background:#171A1F; color:#F1F2EE; border-radius:12px; padding:18px; display:flex; flex-direction:column; gap:12px;">
+        <div class="eyebrow" style="color:#A4AAA5;">Editor · Dark</div>
+        <div style="display:inline-flex; align-items:center; gap:8px; background:#242830; padding:7px 12px; border-radius:6px; width:fit-content; font-size:13px;">
+          <svg viewBox="${it.vb}" width="16" height="16">${it.mark('#5EEAD4')}</svg>
+          <span>hello.lts</span>
+        </div>
+        <div style="font-family:${activeBsCodeFont.css}; font-size:13px; line-height:1.65;">
+          <div><span style="color:#E6C07B;">fn</span> main() {</div>
+          <div>&nbsp;&nbsp;print_line(<span style="color:#98C379;">"Hello, Lite"</span>);</div>
+          <div>}</div>
+        </div>
+      </div>
+      <div style="background:var(--card); border:1px solid var(--line); border-radius:12px; padding:18px; display:flex; flex-direction:column; justify-content:space-between; gap:12px;">
+        <div class="eyebrow">Compact · ${minIt.ref} (16 px)</div>
+        <div style="display:flex; gap:10px;">
+          <div style="flex:1;height:74px;border-radius:8px;background:#171A19;display:grid;place-items:center;">
+            <svg viewBox="${minIt.vb}" width="40" height="40">${minIt.mark('#F4F3EF')}</svg>
+          </div>
+          <div style="flex:1;height:74px;border-radius:8px;background:#F4F3EF;border:1px solid #DDDED9;display:grid;place-items:center;">
+            <svg viewBox="${minIt.vb}" width="40" height="40">${minIt.mark('#171A19')}</svg>
+          </div>
+        </div>
+        <div style="display:flex; align-items:center; gap:12px;">
+          <svg viewBox="${minIt.vb}" width="16" height="16">${minIt.mark(accLight)}</svg>
+          <svg viewBox="${minIt.vb}" width="16" height="16">${minIt.mark('#171A19')}</svg>
+          <span class="origin">16 px · Favicon &amp; tight UI</span>
+        </div>
+      </div>
+    </div>
+  `;
+  document.getElementById('overview-dialog').showModal();
 }
 
 function openVisibility() {
