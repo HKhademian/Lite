@@ -236,7 +236,7 @@ cd LiteScript
     </div>
     <div class="pillar">
       <h3>Verified Toolchain</h3>
-      <p>Every showcased example is compiled and executed by the generated T13 compiler at build time.</p>
+      <p>Every showcased example is compiled and executed by the Lite compiler at build time.</p>
     </div>
   </div>
 </section>
@@ -367,8 +367,8 @@ function renderPlaygroundPage(rendered: ReadonlyMap<string, RenderedSample>, rep
 
     <div id="panel-c" class="pg-panel" role="tabpanel" hidden>
       <div style="padding: 1.25rem; color: var(--ink-muted); font-size: 0.92rem;">
-        <p style="margin-top: 0;"><strong>C backend status:</strong> C11 emission and native self-hosting are scheduled after the TypeScript compiler migration.</p>
-        <p style="margin-bottom: 0;">Run <code>./bin/lite-compile-c &lt;file.lts&gt;</code> locally to test the C emitter slot as coverage expands.</p>
+        <p style="margin-top: 0;"><strong>C output is not available yet.</strong></p>
+        <p style="margin-bottom: 0;">Use <code>Generated TS</code> or run <code>./bin/lite run</code> locally.</p>
       </div>
     </div>
 
@@ -507,7 +507,7 @@ function renderPlaygroundPage(rendered: ReadonlyMap<string, RenderedSample>, rep
 
   editorEl.addEventListener("input", () => {
     sourceEl.innerHTML = highlightLite(editorEl.value) + "\\n";
-    statusEl.textContent = "Modified (local sandbox deferred)";
+    statusEl.textContent = "Modified";
   });
 
   editorEl.addEventListener("scroll", () => {
