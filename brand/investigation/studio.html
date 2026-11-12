@@ -383,9 +383,12 @@
   <div class="sticky-preview">
     <div class="panel">
       <div class="sticky-top">
-        <div style="display:flex; align-items:center; gap:8px; flex-wrap:wrap;">
-          <button id="bs-top-btn" class="tab-btn active" style="padding:5px 11px; font-size:12px;" onclick="toggleBrandSystem()">Brand System ▴</button>
-          <button class="tab-btn" style="padding:5px 11px; font-size:12px;" onclick="openVisibility()">Visibility Matrix ↗</button>
+        <div style="display:flex; align-items:center; gap:6px; flex-wrap:wrap;">
+          <button id="bs-top-btn" class="tab-btn active" style="padding:5px 10px; font-size:12px;" onclick="toggleBrandSystem()">Brand System ▴</button>
+          <button class="tab-btn" style="padding:5px 10px; font-size:12px;" onclick="openScaleDialog()">Sizes (16–256) ↗</button>
+          <button class="tab-btn" style="padding:5px 10px; font-size:12px;" onclick="openVisibility()">Visibility Matrix ↗</button>
+          <button class="tab-btn" style="padding:5px 10px; font-size:12px;" onclick="openHeaderDialog()">Headers ↗</button>
+          <button class="tab-btn" style="padding:5px 10px; font-size:12px;" onclick="openSiteDialog()">Site &amp; Code ↗</button>
         </div>
         <div style="display:flex; align-items:center; gap:8px; flex-wrap:wrap;">
           <div class="seg">
@@ -420,9 +423,12 @@
           <div>&nbsp;&nbsp;print(<span id="bs-str">"Lite is light."</span>)</div>
           <div>}</div>
         </div>
-        <div class="inspector-stages" id="inspector-stages"></div>
+        <div class="inspector-stages" id="inspector-stages" style="cursor:pointer; justify-content:center; align-items:center;" onclick="openScaleDialog()" title="Click to inspect 16–256 px sizes"></div>
       </div>
-      <div id="bs-summary" class="eyebrow" style="margin-top:8px; padding-top:8px; border-top:1px solid var(--line); font-size:11px; text-transform:none; letter-spacing:0.01em;"></div>
+      <div style="display:flex; align-items:center; justify-content:space-between; gap:8px; flex-wrap:wrap; margin-top:8px; padding-top:8px; border-top:1px solid var(--line);">
+        <div id="bs-summary" style="display:flex; align-items:center; gap:6px; flex-wrap:wrap;"></div>
+        <button id="copy-refs-btn" class="tab-btn" style="padding:3px 9px; font-size:11px; font-family:var(--mono);" onclick="copyActiveRefs()">Copy Refs</button>
+      </div>
     </div>
   </div>
 
@@ -501,6 +507,46 @@
     </table>
     <div class="vis-meta" id="vis-contrast"></div>
   </div>
+</dialog>
+
+<dialog id="scale-dialog" class="vis-dialog" onclick="if(event.target===this) this.close()">
+  <div class="vis-head">
+    <div>
+      <div class="eyebrow">Scale &amp; Stroke Detail · 16 → 256 px</div>
+      <h2 id="scale-title" style="font-size:18px; margin:4px 0 2px;">Logo Sizes</h2>
+      <p class="sub">Inspect mono 16 px and full vector scaling up to 256 px.</p>
+    </div>
+    <div style="display:flex; align-items:center; gap:8px;">
+      <div class="seg">
+        <button id="sc-mode-solid" class="active" onclick="setRenderMode('solid'); openScaleDialog();">Solid</button>
+        <button id="sc-mode-xray" onclick="setRenderMode('xray'); openScaleDialog();">X-Ray</button>
+      </div>
+      <button class="tab-btn" style="padding:5px 10px; font-size:12px;" onclick="document.getElementById('scale-dialog').close()">Close ×</button>
+    </div>
+  </div>
+  <div class="vis-body" id="scale-body" style="display:flex; flex-wrap:wrap; align-items:flex-end; gap:16px;"></div>
+</dialog>
+
+<dialog id="header-dialog" class="vis-dialog" onclick="if(event.target===this) this.close()">
+  <div class="vis-head">
+    <div>
+      <div class="eyebrow">Header, 16 px Tabs &amp; Monograms Showcase</div>
+      <h2 id="header-title" style="font-size:18px; margin:4px 0 2px;">Navigation &amp; Wordmark Lockups</h2>
+    </div>
+    <button class="tab-btn" style="padding:5px 10px; font-size:12px;" onclick="document.getElementById('header-dialog').close()">Close ×</button>
+  </div>
+  <div class="vis-body" id="header-body" style="display:flex; flex-direction:column; gap:14px;"></div>
+</dialog>
+
+<dialog id="site-dialog" class="vis-dialog" onclick="if(event.target===this) this.close()">
+  <div class="vis-head">
+    <div>
+      <div class="eyebrow">Website &amp; Code Showcase</div>
+      <h2 id="site-title" style="font-size:18px; margin:4px 0 2px;">Lite Landing &amp; Code Preview</h2>
+    </div>
+    <button class="tab-btn" style="padding:5px 10px; font-size:12px;" onclick="document.getElementById('site-dialog').close()">Close ×</button>
+  </div>
+  <div class="vis-body" id="site-body"></div>
 </dialog>
 
 <script>
@@ -1149,18 +1195,12 @@ function renderSim() {
   stages.className = 'inspector-stages' + (renderMode === 'xray' ? ' xray' : '');
   stages.innerHTML = `
     <div class="stage-chip">
-      <div class="stage-box" style="background:#F5F3EE;color:#101113;border-color:rgba(0,0,0,.15);min-width:28px;min-height:28px;">
-        <svg viewBox="${it.vb}" width="16" height="16">${it.mark('#101113')}</svg>
+      <div class="stage-box" style="min-width:86px;min-height:86px;padding:10px;">
+        <svg viewBox="${it.vb}" width="64" height="64">${it.mark(accDark)}</svg>
       </div>
-      <span>mono 16</span>
-    </div>` + [16, 32, 64].map(px => `
-    <div class="stage-chip">
-      <div class="stage-box" style="min-width:${Math.max(px + 10, 28)}px;min-height:${Math.max(px + 10, 28)}px;">
-        <svg viewBox="${it.vb}" width="${px}" height="${px}">${it.mark(accDark)}</svg>
-      </div>
-      <span>${px}px</span>
+      <span>64px · Sizes ↗</span>
     </div>
-  `).join('');
+  `;
 
   const isDark = document.documentElement.getAttribute('data-ui') === 'dark';
   const ink = isDark ? '#F2F0EA' : '#101113';
@@ -1168,7 +1208,17 @@ function renderSim() {
   document.getElementById('bs-code-box').style.fontFamily = activeBsCodeFont.css;
   document.getElementById('bs-kw').style.color = acc;
   document.getElementById('bs-str').style.color = acc;
-  document.getElementById('bs-summary').textContent = `Logo: ${it.ref}  ·  Accent: ${activeBsAccent.ref}  ·  Palette: ${activeBsPal.ref}  ·  Brand Font: ${activeBsLogoFont.ref}  ·  Site Font: ${activeBsFont.ref}  ·  Code Font: ${activeBsCodeFont.ref}`;
+  const refChips = [
+    ['Logo', it.ref],
+    ['Accent', activeBsAccent.ref],
+    ['Palette', activeBsPal.ref],
+    ['Brand', activeBsLogoFont.ref],
+    ['Site', activeBsFont.ref],
+    ['Code', activeBsCodeFont.ref]
+  ];
+  document.getElementById('bs-summary').innerHTML = refChips.map(([k, v]) =>
+    `<span class="badge" style="font-size:11px;padding:3px 8px;"><span style="opacity:.65;">${k}:</span> <strong>${v}</strong></span>`
+  ).join('');
 
   if (brandSystemOpen) renderBrandSystem();
   saveState();
@@ -1356,6 +1406,7 @@ function setGroup(grp) {
     if (el) el.classList.toggle('active', g === grp);
   });
   render();
+  saveState();
 }
 
 function toggleArchive() {
@@ -1367,6 +1418,94 @@ function toggleArchive() {
 
 function setUi(mode) {
   document.documentElement.setAttribute('data-ui', mode === 'dark' ? 'dark' : 'light');
+}
+
+function copyActiveRefs() {
+  const it = items.find(x => x.id === selectedId) || items[0];
+  const txt = `Logo: ${it.ref} | Accent: ${activeBsAccent.ref} | Palette: ${activeBsPal.ref} | Brand: ${activeBsLogoFont.ref} | Site: ${activeBsFont.ref} | Code: ${activeBsCodeFont.ref}`;
+  if (navigator.clipboard) navigator.clipboard.writeText(txt).catch(() => {});
+  const btn = document.getElementById('copy-refs-btn');
+  btn.textContent = 'Copied ✓';
+  setTimeout(() => { btn.textContent = 'Copy Refs'; }, 1200);
+}
+
+function openScaleDialog() {
+  const it = items.find(x => x.id === selectedId) || items[0];
+  document.getElementById('scale-title').textContent = `${it.ref} · ${it.title} — 16 to 256 px`;
+  document.getElementById('sc-mode-solid').classList.toggle('active', renderMode === 'solid');
+  document.getElementById('sc-mode-xray').classList.toggle('active', renderMode === 'xray');
+  const body = document.getElementById('scale-body');
+  body.className = 'vis-body' + (renderMode === 'xray' ? ' xray' : '');
+  const monoCard = `
+    <div class="stage-chip">
+      <div class="stage-box" style="background:#F5F3EE;color:#101113;border-color:rgba(0,0,0,.15);padding:10px;">
+        <svg viewBox="${it.vb}" width="16" height="16">${it.mark('#101113')}</svg>
+      </div>
+      <span>mono 16px</span>
+    </div>`;
+  const sizesHtml = [16, 24, 32, 48, 64, 96, 128, 256].map(px => `
+    <div class="stage-chip">
+      <div class="stage-box" style="padding:${px >= 96 ? 14 : 8}px;">
+        <svg viewBox="${it.vb}" width="${px}" height="${px}">${it.mark(accDark)}</svg>
+      </div>
+      <span>${px}px</span>
+    </div>
+  `).join('');
+  body.innerHTML = monoCard + sizesHtml;
+  const dlg = document.getElementById('scale-dialog');
+  if (!dlg.open) dlg.showModal();
+}
+
+function openHeaderDialog() {
+  const it = items.find(x => x.id === selectedId) || items[0];
+  document.getElementById('header-title').textContent = `${it.ref} · Headers, 16 px Tabs & Monograms`;
+  document.getElementById('header-body').innerHTML = `
+    <div class="sim-box sim-dark" style="padding:16px;">
+      <div class="sim-tab-bar" style="padding-bottom:10px;">
+        <div class="browser-tab"><svg viewBox="${it.vb}" width="16" height="16">${it.mark(accDark)}</svg><span>Lite — Lite is light</span></div>
+        <span class="origin">Dark UI · 16 px favicon</span>
+      </div>
+      <div class="navbar-sim">
+        ${buildCustomWordmark(it, logoColorMode === 'mono' ? '#F3F4F6' : accDark, '#F3F4F6', 28)}
+        <div class="nav-links"><span>start</span><span>tour</span><span>spec</span><span>docs</span><span>github</span></div>
+      </div>
+    </div>
+    <div class="sim-box sim-light" style="padding:16px;">
+      <div class="sim-tab-bar" style="padding-bottom:10px;">
+        <div class="browser-tab"><svg viewBox="${it.vb}" width="16" height="16">${it.mark(accLight)}</svg><span>Lite — Lite is light</span></div>
+        <span class="origin">Paper UI · 16 px favicon</span>
+      </div>
+      <div class="navbar-sim">
+        ${buildCustomWordmark(it, logoColorMode === 'mono' ? '#111315' : accLight, '#111315', 28)}
+        <div class="nav-links"><span>start</span><span>tour</span><span>spec</span><span>docs</span><span>github</span></div>
+      </div>
+    </div>
+  `;
+  document.getElementById('header-dialog').showModal();
+}
+
+function openSiteDialog() {
+  const it = items.find(x => x.id === selectedId) || items[0];
+  const isDark = document.documentElement.getAttribute('data-ui') === 'dark';
+  const ink = isDark ? '#F2F0EA' : '#101113';
+  const acc = activeBsAccent.id === 'mono' ? ink : (isDark ? accDark : accLight);
+  document.getElementById('site-title').textContent = `${it.ref} · ${activeBsPal.name} · ${activeBsFont.name} · ${activeBsCodeFont.name}`;
+  document.getElementById('site-body').innerHTML = `
+    <div style="display:grid; grid-template-columns:1.2fr 1fr; gap:18px; align-items:center;">
+      <div style="display:flex; flex-direction:column; gap:10px;">
+        <div>${buildCustomWordmark(it, acc, ink, 30)}</div>
+        <h3 style="margin:0; font-size:26px; font-family:${activeBsFont.display}; letter-spacing:-0.025em;">Lite is light.</h3>
+        <p class="sub" style="font-family:${activeBsFont.display};">Fast native execution, small runtime support, and code that is easy to reason about, read, maintain, and distribute.</p>
+      </div>
+      <div style="background:var(--bg); border:1px solid var(--line); border-radius:10px; padding:14px 16px; font-family:${activeBsCodeFont.css}; font-size:12.5px; line-height:1.65;">
+        <div style="color:var(--muted); margin-bottom:6px;">$ ./bin/lite run hello.lts</div>
+        <div><span style="color:${acc};">fn</span> main() {</div>
+        <div>&nbsp;&nbsp;print(<span style="color:${acc};">"Lite is light."</span>)</div>
+        <div>}</div>
+      </div>
+    </div>
+  `;
+  document.getElementById('site-dialog').showModal();
 }
 
 function openVisibility() {
