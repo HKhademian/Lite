@@ -1,0 +1,23 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="720" viewBox="0 0 1200 720">
+<rect width="1200" height="720" fill="#faf9f6"/>
+<g font-family="Helvetica Neue,Arial,sans-serif" fill="#232827"><text x="70" y="85" font-size="31" font-weight="600">lite · mark explorations</text><text x="70" y="120" font-size="17" fill="#717a77">Four rough directions · single color · drawn to compare ideas</text></g>
+<g stroke="#dcded9" stroke-width="1"><path d="M70 153H1130M600 153V557M70 557H1130"/><path d="M70 355H1130"/></g>
+<!-- feather l -->
+<g transform="translate(155 199)" fill="none" stroke="#187b70" stroke-linecap="round" stroke-linejoin="round"><path d="M15 103 C38 80 72 46 89 10 C43 16 14 39 15 79 C15 88 15 97 15 103Z" stroke-width="5"/><path d="M15 103 C40 75 65 45 89 10 M32 75 L28 55 M48 56 L45 37" stroke-width="4"/></g>
+<g transform="translate(430 231)" font-family="Helvetica Neue,Arial,sans-serif"><text x="0" y="47" fill="#242927" font-size="56" letter-spacing="-2">lite</text></g>
+<g font-family="Helvetica Neue,Arial,sans-serif" fill="#242927"><text x="70" y="324" font-size="19" font-weight="600">01 / Feather stem</text><text x="70" y="345" font-size="14" fill="#747c78">A gentle feather with an l-like spine</text></g>
+<!-- curved nib -->
+<g transform="translate(680 200)" fill="none" stroke="#187b70" stroke-linecap="round" stroke-linejoin="round"><path d="M15 102 C43 84 78 46 89 10 C48 20 23 42 18 70 C16 81 15 92 15 102Z" stroke-width="6"/><path d="M15 102 Q47 75 89 10" stroke-width="4"/></g>
+<g transform="translate(943 231)" font-family="Helvetica Neue,Arial,sans-serif"><text x="0" y="47" fill="#242927" font-size="56" letter-spacing="-2">lite</text></g>
+<g font-family="Helvetica Neue,Arial,sans-serif" fill="#242927"><text x="630" y="324" font-size="19" font-weight="600">02 / Feather silhouette</text><text x="630" y="345" font-size="14" fill="#747c78">Fewer details; reads as feather or nib</text></g>
+<!-- l mark -->
+<g transform="translate(168 401)" fill="none" stroke="#187b70" stroke-width="9" stroke-linecap="round" stroke-linejoin="round"><path d="M30 8 V82 Q30 100 47 100 H65"/><path d="M30 64 Q56 59 67 33" stroke-width="6"/></g>
+<g transform="translate(430 434)" font-family="Helvetica Neue,Arial,sans-serif"><text x="0" y="47" fill="#242927" font-size="56" letter-spacing="-2">lite</text></g>
+<g font-family="Helvetica Neue,Arial,sans-serif" fill="#242927"><text x="70" y="526" font-size="19" font-weight="600">03 / Feathered l</text><text x="70" y="547" font-size="14" fill="#747c78">Letter first, feather suggested by one stroke</text></g>
+<!-- lightning -->
+<g transform="translate(698 404)" fill="none" stroke="#187b70" stroke-width="9" stroke-linecap="round" stroke-linejoin="round"><path d="M67 4 L30 50 H58 L24 101"/></g>
+<g transform="translate(943 434)" font-family="Helvetica Neue,Arial,sans-serif"><text x="0" y="47" fill="#242927" font-size="56" letter-spacing="-2">lite</text></g>
+<g font-family="Helvetica Neue,Arial,sans-serif" fill="#242927"><text x="630" y="526" font-size="19" font-weight="600">04 / Light stroke</text><text x="630" y="547" font-size="14" fill="#747c78">A quiet lightning gesture, more kinetic</text></g>
+<text x="70" y="620" font-family="Helvetica Neue,Arial,sans-serif" font-size="17" fill="#48514e">Exploratory sketches, not final logos. Wordmarks use a system font.</text>
+<text x="70" y="651" font-family="Helvetica Neue,Arial,sans-serif" font-size="15" fill="#747c78">Next: refine one direction as a custom glyph and test it at 16 px.</text>
+</svg>

@@ -1,0 +1,515 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Lite — Logo Exploration & Brand Identity (Revision 1)</title>
+  <style>
+    :root {
+      --bg: #090B0E;
+      --card-bg: #12161C;
+      --border: #1E2630;
+      --text: #F1F5F9;
+      --text-muted: #94A3B8;
+      --accent: #2DD4BF; /* Electric Mint / Light */
+      --accent-glow: rgba(45, 212, 191, 0.15);
+      --font: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", sans-serif;
+    }
+
+    body.light-theme {
+      --bg: #F8FAFC;
+      --card-bg: #FFFFFF;
+      --border: #E2E8F0;
+      --text: #0F172A;
+      --text-muted: #64748B;
+      --accent: #0D9488;
+      --accent-glow: rgba(13, 148, 136, 0.12);
+    }
+
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      background: var(--bg);
+      color: var(--text);
+      font-family: var(--font);
+      padding: 40px 24px;
+      line-height: 1.5;
+      transition: background 0.2s, color 0.2s;
+    }
+
+    .container {
+      max-width: 1100px;
+      margin: 0 auto;
+    }
+
+    header {
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-start;
+      margin-bottom: 32px;
+      border-bottom: 1px solid var(--border);
+      padding-bottom: 24px;
+    }
+
+    .brand-title {
+      font-size: 28px;
+      font-weight: 700;
+      letter-spacing: -0.03em;
+    }
+
+    .brand-subtitle {
+      color: var(--text-muted);
+      font-size: 15px;
+      margin-top: 4px;
+    }
+
+    .nav-actions {
+      display: flex;
+      gap: 12px;
+      align-items: center;
+    }
+
+    .theme-toggle {
+      background: var(--card-bg);
+      border: 1px solid var(--border);
+      color: var(--text);
+      padding: 8px 16px;
+      border-radius: 8px;
+      cursor: pointer;
+      font-size: 13px;
+      font-weight: 500;
+    }
+
+    .rev-badge {
+      display: inline-block;
+      font-size: 11px;
+      font-weight: 700;
+      padding: 3px 8px;
+      border-radius: 4px;
+      background: var(--accent);
+      color: #090B0E;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+      margin-left: 8px;
+      vertical-align: middle;
+    }
+
+    .grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
+      gap: 24px;
+      margin-bottom: 48px;
+    }
+
+    .concept-card {
+      background: var(--card-bg);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: 24px;
+      display: flex;
+      flex-direction: column;
+      position: relative;
+    }
+
+    .concept-badge {
+      position: absolute;
+      top: 18px;
+      right: 18px;
+      font-size: 11px;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+      color: var(--accent);
+      background: var(--accent-glow);
+      padding: 4px 8px;
+      border-radius: 4px;
+    }
+
+    .concept-title {
+      font-size: 18px;
+      font-weight: 600;
+      margin-bottom: 6px;
+      letter-spacing: -0.01em;
+    }
+
+    .concept-desc {
+      font-size: 13px;
+      color: var(--text-muted);
+      margin-bottom: 20px;
+      min-height: 40px;
+    }
+
+    .canvas-hero {
+      height: 180px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      background: rgba(0, 0, 0, 0.04);
+      border-radius: 8px;
+      margin-bottom: 20px;
+      border: 1px dashed var(--border);
+    }
+
+    body:not(.light-theme) .canvas-hero {
+      background: rgba(255, 255, 255, 0.02);
+    }
+
+    .scale-row {
+      display: flex;
+      align-items: center;
+      gap: 20px;
+      padding: 12px 0;
+      border-top: 1px solid var(--border);
+      margin-top: auto;
+    }
+
+    .scale-item {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 6px;
+    }
+
+    .scale-label {
+      font-size: 11px;
+      color: var(--text-muted);
+      font-family: monospace;
+    }
+
+    .lockup-preview {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      margin-top: 12px;
+      padding-top: 12px;
+      border-top: 1px solid var(--border);
+    }
+
+    .wordmark {
+      font-size: 22px;
+      font-weight: 700;
+      letter-spacing: -0.03em;
+    }
+
+    .wordmark span {
+      font-weight: 300;
+      color: var(--text-muted);
+    }
+
+    .icon-svg {
+      transition: transform 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+    }
+    .concept-card:hover .icon-svg {
+      transform: scale(1.05);
+    }
+
+    .file-ref {
+      font-family: monospace;
+      font-size: 11px;
+      color: var(--text-muted);
+      margin-top: 8px;
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <header>
+      <div>
+        <h1 class="brand-title">Lite Brand Identity <span class="rev-badge">Rev 1</span></h1>
+        <p class="brand-subtitle">Investigating minimalism, feather lightness, light / lightning, and letterform harmony.</p>
+      </div>
+      <div class="nav-actions">
+        <button class="theme-toggle" onclick="toggleTheme()">Toggle Light / Dark</button>
+      </div>
+    </header>
+
+    <div class="grid">
+      <!-- Concept 1: The Aero Feather -->
+      <div class="concept-card">
+        <span class="concept-badge">Direction 1</span>
+        <h2 class="concept-title">The Aero Feather (Feather + "l")</h2>
+        <p class="concept-desc">An ultra-minimal letter 'l' formed by a quill shaft and a single aerodynamic feather vane. Weightless, clear, iconic.</p>
+        
+        <div class="canvas-hero">
+          <svg class="icon-svg" width="96" height="96" viewBox="0 0 64 64" fill="none" xmlns="http://www.w3.org/2000/svg">
+            <path d="M22 10V54" stroke="currentColor" stroke-width="5" stroke-linecap="round"/>
+            <path d="M27 18C44 20 48 32 48 42C48 45 45 47 41 47C33 47 27 41 27 34" 
+                  stroke="var(--accent)" stroke-width="4.5" stroke-linecap="round" stroke-linejoin="round"/>
+          </svg>
+        </div>
+
+        <div class="scale-row">
+          <div class="scale-item">
+            <svg width="48" height="48" viewBox="0 0 64 64" fill="none">
+              <path d="M22 10V54" stroke="currentColor" stroke-width="5.5" stroke-linecap="round"/>
+              <path d="M27 18C44 20 48 32 48 42C48 45 45 47 41 47C33 47 27 41 27 34" stroke="var(--accent)" stroke-width="5" stroke-linecap="round"/>
+            </svg>
+            <span class="scale-label">48px</span>
+          </div>
+          <div class="scale-item">
+            <svg width="32" height="32" viewBox="0 0 64 64" fill="none">
+              <path d="M22 10V54" stroke="currentColor" stroke-width="6" stroke-linecap="round"/>
+              <path d="M27 18C44 20 48 32 48 42C48 45 45 47 41 47C33 47 27 41 27 34" stroke="var(--accent)" stroke-width="5.5" stroke-linecap="round"/>
+            </svg>
+            <span class="scale-label">32px</span>
+          </div>
+          <div class="scale-item">
+            <svg width="20" height="20" viewBox="0 0 64 64" fill="none">
+              <path d="M22 8V56" stroke="currentColor" stroke-width="7" stroke-linecap="round"/>
+              <path d="M27 18C44 20 48 32 48 42C48 45 45 47 41 47C33 47 27 41 27 34" stroke="var(--accent)" stroke-width="6.5" stroke-linecap="round"/>
+            </svg>
+            <span class="scale-label">16px</span>
+          </div>
+        </div>
+
+        <div class="lockup-preview">
+          <svg width="28" height="28" viewBox="0 0 64 64" fill="none">
+            <path d="M22 10V54" stroke="currentColor" stroke-width="6" stroke-linecap="round"/>
+            <path d="M27 18C44 20 48 32 48 42C48 45 45 47 41 47C33 47 27 41 27 34" stroke="var(--accent)" stroke-width="5.5" stroke-linecap="round"/>
+          </svg>
+          <div class="wordmark">Lite<span>Lang</span></div>
+        </div>
+        <div class="file-ref">tmp/branding/concept-1-aero-feather.svg</div>
+      </div>
+
+      <!-- Concept 2: The Lightning Feather -->
+      <div class="concept-card">
+        <span class="concept-badge">Direction 2</span>
+        <h2 class="concept-title">The Lightning Feather (Speed & Energy)</h2>
+        <p class="concept-desc">Synthesizing feather vanes with crisp lightning facets. Conveys instantaneous startup and native execution.</p>
+        
+        <div class="canvas-hero">
+          <svg class="icon-svg" width="96" height="96" viewBox="0 0 64 64" fill="none" xmlns="http://www.w3.org/2000/svg">
+            <path d="M18 52L46 12" stroke="currentColor" stroke-width="4.5" stroke-linecap="round"/>
+            <path d="M37 24L50 20L41 33" stroke="var(--accent)" stroke-width="4" stroke-linecap="round" stroke-linejoin="round"/>
+            <path d="M27 38L38 34L30 46" stroke="var(--accent)" stroke-width="4" stroke-linecap="round" stroke-linejoin="round"/>
+          </svg>
+        </div>
+
+        <div class="scale-row">
+          <div class="scale-item">
+            <svg width="48" height="48" viewBox="0 0 64 64" fill="none">
+              <path d="M18 52L46 12" stroke="currentColor" stroke-width="5" stroke-linecap="round"/>
+              <path d="M37 24L50 20L41 33" stroke="var(--accent)" stroke-width="4.5" stroke-linecap="round" stroke-linejoin="round"/>
+              <path d="M27 38L38 34L30 46" stroke="var(--accent)" stroke-width="4.5" stroke-linecap="round" stroke-linejoin="round"/>
+            </svg>
+            <span class="scale-label">48px</span>
+          </div>
+          <div class="scale-item">
+            <svg width="32" height="32" viewBox="0 0 64 64" fill="none">
+              <path d="M18 52L46 12" stroke="currentColor" stroke-width="5.5" stroke-linecap="round"/>
+              <path d="M37 24L50 20L41 33" stroke="var(--accent)" stroke-width="5" stroke-linecap="round" stroke-linejoin="round"/>
+              <path d="M27 38L38 34L30 46" stroke="var(--accent)" stroke-width="5" stroke-linecap="round" stroke-linejoin="round"/>
+            </svg>
+            <span class="scale-label">32px</span>
+          </div>
+          <div class="scale-item">
+            <svg width="20" height="20" viewBox="0 0 64 64" fill="none">
+              <path d="M18 52L46 12" stroke="currentColor" stroke-width="6.5" stroke-linecap="round"/>
+              <path d="M37 24L50 20L41 33" stroke="var(--accent)" stroke-width="6" stroke-linecap="round" stroke-linejoin="round"/>
+              <path d="M27 38L38 34L30 46" stroke="var(--accent)" stroke-width="6" stroke-linecap="round" stroke-linejoin="round"/>
+            </svg>
+            <span class="scale-label">16px</span>
+          </div>
+        </div>
+
+        <div class="lockup-preview">
+          <svg width="28" height="28" viewBox="0 0 64 64" fill="none">
+            <path d="M18 52L46 12" stroke="currentColor" stroke-width="5.5" stroke-linecap="round"/>
+            <path d="M37 24L50 20L41 33" stroke="var(--accent)" stroke-width="5" stroke-linecap="round" stroke-linejoin="round"/>
+            <path d="M27 38L38 34L30 46" stroke="var(--accent)" stroke-width="5" stroke-linecap="round" stroke-linejoin="round"/>
+          </svg>
+          <div class="wordmark">Lite<span>Lang</span></div>
+        </div>
+        <div class="file-ref">tmp/branding/concept-2-lightning-feather.svg</div>
+      </div>
+
+      <!-- Concept 3: The Photon Quill -->
+      <div class="concept-card">
+        <span class="concept-badge">Direction 3</span>
+        <h2 class="concept-title">The Photon Quill (Solid Silhouette)</h2>
+        <p class="concept-desc">A geometric feather silhouette slit by a beam of negative light. Monumental, clean, and unmistakable at 16px.</p>
+        
+        <div class="canvas-hero">
+          <svg class="icon-svg" width="96" height="96" viewBox="0 0 64 64" fill="none" xmlns="http://www.w3.org/2000/svg">
+            <path d="M29 10C29 10 16 26 16 42C16 47 19 52 24 54L29 54V10Z" fill="currentColor"/>
+            <path d="M35 10V54L39 54C46 51 48 43 48 36C48 24 35 10 35 10Z" fill="var(--accent)"/>
+          </svg>
+        </div>
+
+        <div class="scale-row">
+          <div class="scale-item">
+            <svg width="48" height="48" viewBox="0 0 64 64" fill="none">
+              <path d="M29 10C29 10 16 26 16 42C16 47 19 52 24 54L29 54V10Z" fill="currentColor"/>
+              <path d="M35 10V54L39 54C46 51 48 43 48 36C48 24 35 10 35 10Z" fill="var(--accent)"/>
+            </svg>
+            <span class="scale-label">48px</span>
+          </div>
+          <div class="scale-item">
+            <svg width="32" height="32" viewBox="0 0 64 64" fill="none">
+              <path d="M29 10C29 10 16 26 16 42C16 47 19 52 24 54L29 54V10Z" fill="currentColor"/>
+              <path d="M35 10V54L39 54C46 51 48 43 48 36C48 24 35 10 35 10Z" fill="var(--accent)"/>
+            </svg>
+            <span class="scale-label">32px</span>
+          </div>
+          <div class="scale-item">
+            <svg width="20" height="20" viewBox="0 0 64 64" fill="none">
+              <path d="M28 10C28 10 16 26 16 42C16 47 19 52 24 54L28 54V10Z" fill="currentColor"/>
+              <path d="M36 10V54L39 54C46 51 48 43 48 36C48 24 36 10 36 10Z" fill="var(--accent)"/>
+            </svg>
+            <span class="scale-label">16px</span>
+          </div>
+        </div>
+
+        <div class="lockup-preview">
+          <svg width="28" height="28" viewBox="0 0 64 64" fill="none">
+            <path d="M29 10C29 10 16 26 16 42C16 47 19 52 24 54L29 54V10Z" fill="currentColor"/>
+            <path d="M35 10V54L39 54C46 51 48 43 48 36C48 24 35 10 35 10Z" fill="var(--accent)"/>
+          </svg>
+          <div class="wordmark">Lite<span>Lang</span></div>
+        </div>
+        <div class="file-ref">tmp/branding/concept-3-photon-quill.svg</div>
+      </div>
+
+      <!-- Concept 4: The Prism "L" -->
+      <div class="concept-card">
+        <span class="concept-badge">Direction 4</span>
+        <h2 class="concept-title">The Beam "L" (Light Ray & Prism)</h2>
+        <p class="concept-desc">Inspired by pure light rays and optics. A 45° sheared capital 'L' with a light slit that evokes lightning speed.</p>
+        
+        <div class="canvas-hero">
+          <svg class="icon-svg" width="96" height="96" viewBox="0 0 64 64" fill="none" xmlns="http://www.w3.org/2000/svg">
+            <path d="M20 12V48C20 50.2091 21.7909 52 24 52H48" stroke="currentColor" stroke-width="5" stroke-linecap="round" stroke-linejoin="round"/>
+            <path d="M34 16L46 28M42 16L54 28" stroke="var(--accent)" stroke-width="4" stroke-linecap="round"/>
+          </svg>
+        </div>
+
+        <div class="scale-row">
+          <div class="scale-item">
+            <svg width="48" height="48" viewBox="0 0 64 64" fill="none">
+              <path d="M20 12V48C20 50.2091 21.7909 52 24 52H48" stroke="currentColor" stroke-width="5.5" stroke-linecap="round" stroke-linejoin="round"/>
+              <path d="M34 16L46 28M42 16L54 28" stroke="var(--accent)" stroke-width="4.5" stroke-linecap="round"/>
+            </svg>
+            <span class="scale-label">48px</span>
+          </div>
+          <div class="scale-item">
+            <svg width="32" height="32" viewBox="0 0 64 64" fill="none">
+              <path d="M20 12V48C20 50.2091 21.7909 52 24 52H48" stroke="currentColor" stroke-width="6" stroke-linecap="round" stroke-linejoin="round"/>
+              <path d="M34 16L46 28M42 16L54 28" stroke="var(--accent)" stroke-width="5" stroke-linecap="round"/>
+            </svg>
+            <span class="scale-label">32px</span>
+          </div>
+          <div class="scale-item">
+            <svg width="20" height="20" viewBox="0 0 64 64" fill="none">
+              <path d="M20 12V48C20 50.2091 21.7909 52 24 52H48" stroke="currentColor" stroke-width="7" stroke-linecap="round" stroke-linejoin="round"/>
+              <path d="M34 16L46 28M42 16L54 28" stroke="var(--accent)" stroke-width="6" stroke-linecap="round"/>
+            </svg>
+            <span class="scale-label">16px</span>
+          </div>
+        </div>
+
+        <div class="lockup-preview">
+          <svg width="28" height="28" viewBox="0 0 64 64" fill="none">
+            <path d="M20 12V48C20 50.2091 21.7909 52 24 52H48" stroke="currentColor" stroke-width="6" stroke-linecap="round" stroke-linejoin="round"/>
+            <path d="M34 16L46 28M42 16L54 28" stroke="var(--accent)" stroke-width="5" stroke-linecap="round"/>
+          </svg>
+          <div class="wordmark">Lite<span>Lang</span></div>
+        </div>
+        <div class="file-ref">tmp/branding/concept-4-beam-l.svg</div>
+      </div>
+
+      <!-- Concept 5: The Monoline Glyph -->
+      <div class="concept-card">
+        <span class="concept-badge">Direction 5</span>
+        <h2 class="concept-title">The Single-Stroke "l" (Monoline Feather)</h2>
+        <p class="concept-desc">Directly addressing the "Mini 'm'" inspiration: one single, unbroken continuous vector stroke forming a feather & letter 'l'.</p>
+        
+        <div class="canvas-hero">
+          <svg class="icon-svg" width="96" height="96" viewBox="0 0 64 64" fill="none" xmlns="http://www.w3.org/2000/svg">
+            <path d="M28 54V24C28 15 36 10 42 15C47 19 45 28 38 34C31 40 28 42 28 42L46 42" 
+                  stroke="var(--accent)" stroke-width="5" stroke-linecap="round" stroke-linejoin="round"/>
+          </svg>
+        </div>
+
+        <div class="scale-row">
+          <div class="scale-item">
+            <svg width="48" height="48" viewBox="0 0 64 64" fill="none">
+              <path d="M28 54V24C28 15 36 10 42 15C47 19 45 28 38 34C31 40 28 42 28 42L46 42" stroke="var(--accent)" stroke-width="5.5" stroke-linecap="round" stroke-linejoin="round"/>
+            </svg>
+            <span class="scale-label">48px</span>
+          </div>
+          <div class="scale-item">
+            <svg width="32" height="32" viewBox="0 0 64 64" fill="none">
+              <path d="M28 54V24C28 15 36 10 42 15C47 19 45 28 38 34C31 40 28 42 28 42L46 42" stroke="var(--accent)" stroke-width="6" stroke-linecap="round" stroke-linejoin="round"/>
+            </svg>
+            <span class="scale-label">32px</span>
+          </div>
+          <div class="scale-item">
+            <svg width="20" height="20" viewBox="0 0 64 64" fill="none">
+              <path d="M28 54V24C28 15 36 10 42 15C47 19 45 28 38 34C31 40 28 42 28 42L46 42" stroke="var(--accent)" stroke-width="7" stroke-linecap="round" stroke-linejoin="round"/>
+            </svg>
+            <span class="scale-label">16px</span>
+          </div>
+        </div>
+
+        <div class="lockup-preview">
+          <svg width="28" height="28" viewBox="0 0 64 64" fill="none">
+            <path d="M28 54V24C28 15 36 10 42 15C47 19 45 28 38 34C31 40 28 42 28 42L46 42" stroke="var(--accent)" stroke-width="6" stroke-linecap="round" stroke-linejoin="round"/>
+          </svg>
+          <div class="wordmark">Lite<span>Lang</span></div>
+        </div>
+        <div class="file-ref">tmp/branding/concept-5-monoline-l.svg</div>
+      </div>
+
+      <!-- Concept 6: The Spark Quill -->
+      <div class="concept-card">
+        <span class="concept-badge">Direction 6</span>
+        <h2 class="concept-title">The Spark Quill (Lightning Bolt + Nib)</h2>
+        <p class="concept-desc">A sharp, electric quill nib. Merges the tip of a pen with the dynamic angularity of a lightning flash.</p>
+        
+        <div class="canvas-hero">
+          <svg class="icon-svg" width="96" height="96" viewBox="0 0 64 64" fill="none" xmlns="http://www.w3.org/2000/svg">
+            <path d="M36 10L20 32H34L26 54L48 28H34L42 10H36Z" 
+                  fill="var(--accent)" stroke="currentColor" stroke-width="1.5" stroke-linejoin="round"/>
+            <circle cx="26" cy="54" r="2.5" fill="currentColor"/>
+          </svg>
+        </div>
+
+        <div class="scale-row">
+          <div class="scale-item">
+            <svg width="48" height="48" viewBox="0 0 64 64" fill="none">
+              <path d="M36 10L20 32H34L26 54L48 28H34L42 10H36Z" fill="var(--accent)"/>
+            </svg>
+            <span class="scale-label">48px</span>
+          </div>
+          <div class="scale-item">
+            <svg width="32" height="32" viewBox="0 0 64 64" fill="none">
+              <path d="M36 10L20 32H34L26 54L48 28H34L42 10H36Z" fill="var(--accent)"/>
+            </svg>
+            <span class="scale-label">32px</span>
+          </div>
+          <div class="scale-item">
+            <svg width="20" height="20" viewBox="0 0 64 64" fill="none">
+              <path d="M36 10L20 32H34L26 54L48 28H34L42 10H36Z" fill="var(--accent)"/>
+            </svg>
+            <span class="scale-label">16px</span>
+          </div>
+        </div>
+
+        <div class="lockup-preview">
+          <svg width="28" height="28" viewBox="0 0 64 64" fill="none">
+            <path d="M36 10L20 32H34L26 54L48 28H34L42 10H36Z" fill="var(--accent)"/>
+          </svg>
+          <div class="wordmark">Lite<span>Lang</span></div>
+        </div>
+        <div class="file-ref">tmp/branding/concept-6-spark-quill.svg</div>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    function toggleTheme() {
+      document.body.classList.toggle('light-theme');
+    }
+  </script>
+</body>
+</html>

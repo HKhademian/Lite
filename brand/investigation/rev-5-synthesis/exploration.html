@@ -1,0 +1,383 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="paper">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Lite — mark exploration 05 (Synthesis)</title>
+<style>
+  :root {
+    --paper: #F5F3EE;
+    --card: #FBFAF7;
+    --ink: #101113;
+    --muted: #6C7078;
+    --line: #DCD8CE;
+    --accent: #C97B14;
+    --filament: #F0B45A;
+    --font: ui-sans-serif, -apple-system, "Segoe UI", Inter, "Helvetica Neue", sans-serif;
+    --mono: ui-monospace, "SF Mono", "JetBrains Mono", Menlo, monospace;
+  }
+  html[data-theme="ink"] {
+    --paper: #0B0C0E; --card: #131519; --ink: #F2F0EA; --muted: #8B9099;
+    --line: #24272E; --accent: #F0B45A;
+  }
+  * { box-sizing: border-box; }
+  html, body { margin: 0; }
+  body {
+    background: var(--paper); color: var(--ink); font-family: var(--font);
+    -webkit-font-smoothing: antialiased; padding: 48px 28px 96px; line-height: 1.45;
+  }
+  .wrap { max-width: 1160px; margin: 0 auto; }
+
+  header { display: flex; justify-content: space-between; align-items: flex-start; gap: 24px; padding-bottom: 22px; border-bottom: 1px solid var(--line); }
+  .eyebrow { font-family: var(--mono); font-size: 11px; letter-spacing: .12em; text-transform: uppercase; color: var(--muted); }
+  h1 { font-size: 32px; line-height: 1.08; letter-spacing: -.035em; font-weight: 650; margin: 10px 0 8px; }
+  .sub { color: var(--muted); font-size: 14px; max-width: 66ch; }
+  .toggle { font: inherit; font-size: 12px; color: var(--ink); background: transparent; border: 1px solid var(--line); border-radius: 999px; padding: 7px 14px; cursor: pointer; white-space: nowrap; }
+  .toggle:hover { border-color: var(--muted); }
+
+  section { padding-top: 44px; }
+  .sec-head { display: flex; align-items: baseline; gap: 14px; margin-bottom: 18px; flex-wrap: wrap; }
+  .sec-num { font-family: var(--mono); font-size: 11px; color: var(--muted); }
+  h2 { font-size: 15px; font-weight: 650; letter-spacing: -.01em; margin: 0; }
+  .sec-note { font-size: 13px; color: var(--muted); margin-left: auto; max-width: 52ch; text-align: right; }
+
+  .dirs { display: grid; grid-template-columns: repeat(2, 1fr); gap: 1px; background: var(--line); border: 1px solid var(--line); }
+  .dir { background: var(--card); padding: 22px; display: flex; flex-direction: column; }
+  .dir-top { display: flex; justify-content: space-between; align-items: baseline; gap: 8px; }
+  .dir-id { font-family: var(--mono); font-size: 10px; color: var(--muted); letter-spacing: .08em; }
+  .dir-role { font-family: var(--mono); font-size: 9.5px; color: var(--accent); letter-spacing: .08em; text-transform: uppercase; }
+  .dir h4 { font-size: 18px; margin: 8px 0 4px; letter-spacing: -.02em; }
+  .dir .thesis { font-size: 13px; color: var(--muted); margin: 0 0 12px; min-height: 40px; }
+
+  .stage-row { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 14px; }
+  .stage { display: grid; place-items: center; height: 150px; border-radius: 6px; background: color-mix(in srgb, var(--paper) 60%, var(--card)); color: var(--ink); border: 1px solid var(--line); }
+  .stage.dark { background: #101113; color: #F5F3EE; border-color: #24272E; }
+
+  .sizes { display: flex; align-items: flex-end; justify-content: space-between; gap: 16px; padding: 12px 0; border-top: 1px solid var(--line); border-bottom: 1px solid var(--line); color: var(--ink); }
+  .size-group { display: flex; align-items: flex-end; gap: 16px; }
+  .size { display: flex; flex-direction: column; align-items: center; gap: 6px; color: var(--muted); font-family: var(--mono); font-size: 9px; }
+
+  .score-row { display: grid; grid-template-columns: repeat(4, 1fr); gap: 10px; font-family: var(--mono); font-size: 9px; color: var(--muted); margin-top: 12px; }
+  .score-row span b { display: block; color: var(--ink); font-size: 10.5px; font-weight: 600; margin-top: 2px; }
+
+  .checks { margin-top: 12px; font-size: 12px; color: var(--muted); }
+  .checks b { color: var(--ink); }
+
+  /* matrix */
+  .matrix { width: 100%; border-collapse: collapse; background: var(--card); border: 1px solid var(--line); font-size: 12.5px; }
+  .matrix th, .matrix td { padding: 12px 14px; border: 1px solid var(--line); text-align: left; vertical-align: top; }
+  .matrix th { font-family: var(--mono); font-size: 10px; text-transform: uppercase; letter-spacing: .08em; color: var(--muted); background: color-mix(in srgb, var(--paper) 45%, var(--card)); }
+  .pass { color: #0F766E; font-family: var(--mono); font-size: 11px; font-weight: 600; }
+  html[data-theme="ink"] .pass { color: #5EEAD4; }
+  .warn { color: var(--accent); font-family: var(--mono); font-size: 11px; font-weight: 600; }
+
+  /* apps */
+  .apps { display: grid; grid-template-columns: repeat(4, 1fr); gap: 1px; background: var(--line); border: 1px solid var(--line); }
+  .app { background: var(--card); padding: 16px; display: flex; flex-direction: column; gap: 12px; }
+  .app .cap { font-family: var(--mono); font-size: 10px; color: var(--muted); letter-spacing: .06em; }
+  .tab { display: flex; align-items: center; gap: 8px; border: 1px solid var(--line); border-radius: 6px; padding: 7px 10px; font-size: 12px; background: var(--paper); color: var(--ink); }
+  .app-tile { width: 64px; height: 64px; border-radius: 16px; background: #101113; color: #F5F3EE; display: grid; place-items: center; }
+
+  @media (max-width: 900px) {
+    .dirs, .apps { grid-template-columns: 1fr; }
+    .sec-note { margin-left: 0; text-align: left; }
+  }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <div>
+      <div class="eyebrow">Lite Brand Exploration · Rev 5 · Synthesis</div>
+      <h1>Rev 3 Craft + <code style="font-family:var(--mono);font-size:26px;">mini</code> Architecture</h1>
+      <p class="sub">
+        Built directly on the external evaluation in <code>rev-3-quill/</code> (no P/D/K letter collisions, no stock-icon genericism, crisp 16 px reads) combined with <code>mini</code>'s single-stroke monogram-to-wordmark discipline.
+      </p>
+    </div>
+    <button class="toggle" onclick="toggleTheme()">Switch Paper / Ink</button>
+  </header>
+
+  <section>
+    <div class="sec-head">
+      <span class="sec-num">01</span>
+      <h2>Four Synthesis Contenders</h2>
+      <span class="sec-note">Each mark is shown standalone (Mark) and locked into the <code>lite</code> wordmark, at 128 px down to 16 px.</span>
+    </div>
+
+    <div class="dirs">
+
+      <!-- 1: Tapered Quill -->
+      <div class="dir">
+        <div class="dir-top">
+          <span class="dir-id">R5-1 · NEXT CRAFT STEP FROM REV 3</span>
+          <span class="dir-role">Calligraphic Silhouette</span>
+        </div>
+        <h4>1 · The Tapered Quill</h4>
+        <p class="thesis">Executes Rev 3's requested filled, tapered-silhouette study: one crisp notch, needle nib, 35° lean. Wordmark <code>l</code> echoes the 35° cut.</p>
+        <div class="stage-row">
+          <div class="stage">
+            <svg viewBox="0 0 64 64" width="96" height="96"><use href="#m1"/></svg>
+          </div>
+          <div class="stage dark">
+            <svg viewBox="0 0 68 20" width="146" height="43">
+              <g transform="translate(0 1)" fill="#F5F3EE">
+                <svg viewBox="0 0 64 64" width="18" height="18"><use href="#m1"/></svg>
+              </g>
+              <g fill="none" stroke="#F5F3EE" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" transform="translate(22 2)">
+                <!-- l with 35-deg sheared top -->
+                <path d="M2 13V3L4.5 1.2"/>
+                <path d="M8.5 13V6.5"/>
+                <path d="M14 3.5V11.2a1.8 1.8 0 0 0 1.8 1.8H18"/>
+                <path d="M12.2 6.5H16.2"/>
+                <path d="M19.4 9.6H24.6V9.2a2.6 2.6 0 0 0-5.2 0v1.2a2.6 2.6 0 0 0 4.6 1.6"/>
+              </g>
+              <circle cx="30.5" cy="5.2" r="1.15" fill="#F0B45A"/>
+            </svg>
+          </div>
+        </div>
+        <div class="sizes">
+          <div class="size-group">
+            <div class="size"><svg viewBox="0 0 64 64" width="40" height="40"><use href="#m1"/></svg><span>40</span></div>
+            <div class="size"><svg viewBox="0 0 64 64" width="24" height="24"><use href="#m1"/></svg><span>24</span></div>
+            <div class="size"><svg viewBox="0 0 64 64" width="16" height="16"><use href="#m1"/></svg><span>16</span></div>
+          </div>
+          <span class="dir-id">35° · 1 PATH · NO STOCK ICON</span>
+        </div>
+        <div class="checks"><b>Rev 3 check:</b> Passes all 6 findings; single razor notch prevents "leaf/arrow" silhouette.</div>
+      </div>
+
+      <!-- 2: Slanted Quill-L -->
+      <div class="dir">
+        <div class="dir-top">
+          <span class="dir-id">R5-2 · MONOGRAM-AS-LETTER</span>
+          <span class="dir-role">mini-Style Lockup</span>
+        </div>
+        <h4>2 · The Slanted Quill-<em>l</em></h4>
+        <p class="thesis">Leans the <code>l</code> forward 18° with a single upward feather flick. Avoids the rigid vertical-stem <code>P/D/K</code> trap while serving directly as the <code>l</code> in <code>lite</code>.</p>
+        <div class="stage-row">
+          <div class="stage">
+            <svg viewBox="0 0 16 16" width="92" height="92"><use href="#m2"/></svg>
+          </div>
+          <div class="stage dark">
+            <svg viewBox="0 0 36 16" width="136" height="60">
+              <g fill="none" stroke="#F0B45A" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M2.5 13C3.3 9.2 4.6 5.5 6.4 2.5"/>
+                <path d="M3.7 9.3C6.2 8.4 7.8 6.8 8.8 4.6"/>
+              </g>
+              <g fill="none" stroke="#F5F3EE" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" transform="translate(12 0)">
+                <path d="M0.5 13V6.5"/>
+                <path d="M6 3.5V11.2a1.8 1.8 0 0 0 1.8 1.8H10"/>
+                <path d="M4.2 6.5H8.2"/>
+                <path d="M11.4 9.6H16.6V9.2a2.6 2.6 0 0 0-5.2 0v1.2a2.6 2.6 0 0 0 4.6 1.6"/>
+              </g>
+              <circle cx="12.5" cy="3.2" r="1.15" fill="#F5F3EE"/>
+            </svg>
+          </div>
+        </div>
+        <div class="sizes">
+          <div class="size-group">
+            <div class="size"><svg viewBox="0 0 16 16" width="40" height="40"><use href="#m2"/></svg><span>40</span></div>
+            <div class="size"><svg viewBox="0 0 16 16" width="24" height="24"><use href="#m2"/></svg><span>24</span></div>
+            <div class="size"><svg viewBox="0 0 16 16" width="16" height="16"><use href="#m2"/></svg><span>16</span></div>
+          </div>
+          <span class="dir-id">16×16 GRID · 2 STROKES · FEATHER + L</span>
+        </div>
+        <div class="checks"><b>Rev 3 check:</b> Only 1 barb + forward lean = motion &amp; feather without becoming a fern or <code>K</code>.</div>
+      </div>
+
+      <!-- 3: Spark li -->
+      <div class="dir">
+        <div class="dir-top">
+          <span class="dir-id">R5-3 · REV 3 HELD-OPEN "SPARK" REFINED</span>
+          <span class="dir-role">Light + Wordmark Bridge</span>
+        </div>
+        <h4>3 · Spark <em>li</em></h4>
+        <p class="thesis">Vertical <code>l</code> + 4-point Filament spark. In the <code>lite</code> wordmark, that exact spark becomes the dot of the <code>i</code>. Purest 16 px legibility.</p>
+        <div class="stage-row">
+          <div class="stage">
+            <svg viewBox="0 0 16 16" width="92" height="92"><use href="#m3"/></svg>
+          </div>
+          <div class="stage dark">
+            <svg viewBox="0 0 34 16" width="132" height="62">
+              <path d="M4 13V2.5" fill="none" stroke="#F5F3EE" stroke-width="2" stroke-linecap="round"/>
+              <path d="M10.2 1.2L10.8 2.8L12.4 3.4L10.8 4L10.2 5.6L9.6 4L8 3.4L9.6 2.8Z" fill="#F0B45A"/>
+              <g fill="none" stroke="#F5F3EE" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" transform="translate(10.2 0)">
+                <path d="M0 13V6.8"/>
+                <path d="M5.5 3.5V11.2a1.8 1.8 0 0 0 1.8 1.8H9.5"/>
+                <path d="M3.7 6.5H7.7"/>
+                <path d="M10.9 9.6H16.1V9.2a2.6 2.6 0 0 0-5.2 0v1.2a2.6 2.6 0 0 0 4.6 1.6"/>
+              </g>
+            </svg>
+          </div>
+        </div>
+        <div class="sizes">
+          <div class="size-group">
+            <div class="size"><svg viewBox="0 0 16 16" width="40" height="40"><use href="#m3"/></svg><span>40</span></div>
+            <div class="size"><svg viewBox="0 0 16 16" width="24" height="24"><use href="#m3"/></svg><span>24</span></div>
+            <div class="size"><svg viewBox="0 0 16 16" width="16" height="16"><use href="#m3"/></svg><span>16</span></div>
+          </div>
+          <span class="dir-id">16×16 GRID · NO OPTICAL CUT NEEDED</span>
+        </div>
+        <div class="checks"><b>Rev 3 check:</b> "Most mini-like and most legible at 16 px." Sacrifices feather for pure Light/Spark.</div>
+      </div>
+
+      <!-- 4: Split-Light Quill -->
+      <div class="dir">
+        <div class="dir-top">
+          <span class="dir-id">R5-4 · FEATHER + LIGHTNING HYBRID</span>
+          <span class="dir-role">35° Diagonal Monoline</span>
+        </div>
+        <h4>4 · Split-Light Quill</h4>
+        <p class="thesis">35° diagonal shaft with a single crisp lightning-step barb. Unifies Feather (silhouette), Light (sharp cut), and Lightning (step) in 2 strokes.</p>
+        <div class="stage-row">
+          <div class="stage">
+            <svg viewBox="0 0 16 16" width="92" height="92"><use href="#m4"/></svg>
+          </div>
+          <div class="stage dark">
+            <svg viewBox="0 0 56 16" width="144" height="41">
+              <svg viewBox="0 0 16 16" width="16" height="16" x="0" y="0" color="#F0B45A"><use href="#m4"/></svg>
+              <g fill="none" stroke="#F5F3EE" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" transform="translate(20 0)">
+                <path d="M2 13V2.5"/>
+                <path d="M7.5 13V6.5"/>
+                <path d="M13 3.5V11.2a1.8 1.8 0 0 0 1.8 1.8H17"/>
+                <path d="M11.2 6.5H15.2"/>
+                <path d="M18.4 9.6H23.6V9.2a2.6 2.6 0 0 0-5.2 0v1.2a2.6 2.6 0 0 0 4.6 1.6"/>
+              </g>
+              <circle cx="27.5" cy="3.2" r="1.15" fill="#F5F3EE"/>
+            </svg>
+          </div>
+        </div>
+        <div class="sizes">
+          <div class="size-group">
+            <div class="size"><svg viewBox="0 0 16 16" width="40" height="40"><use href="#m4"/></svg><span>40</span></div>
+            <div class="size"><svg viewBox="0 0 16 16" width="24" height="24"><use href="#m4"/></svg><span>24</span></div>
+            <div class="size"><svg viewBox="0 0 16 16" width="16" height="16"><use href="#m4"/></svg><span>16</span></div>
+          </div>
+          <span class="dir-id">16×16 GRID · 2 STROKES · 35°</span>
+        </div>
+        <div class="checks"><b>Rev 3 check:</b> Diagonal + monoline + one-sided. Distinct from stock 3-barb feathers.</div>
+      </div>
+
+    </div>
+  </section>
+
+  <!-- Scorecard vs Rev 3 -->
+  <section>
+    <div class="sec-head">
+      <span class="sec-num">02</span>
+      <h2>Scorecard Against Rev 3 Findings</h2>
+      <span class="sec-note">Evaluating every contender against the external entity's 6 rules + <code>mini</code>'s monogram fit.</span>
+    </div>
+    <table class="matrix">
+      <thead>
+        <tr>
+          <th>Contender</th>
+          <th>No P/D/K Trap (Findings 2–3)</th>
+          <th>16 px Crispness</th>
+          <th>Works as `l` in `lite` (`mini` move)</th>
+          <th>Distinct from Stock Icons</th>
+          <th>Pillars Hit</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td><b>1 · Tapered Quill</b></td>
+          <td class="pass">PASS (35° diagonal)</td>
+          <td class="warn">GOOD (needs clean notch)</td>
+          <td>Companion mark + sheared <code>l</code></td>
+          <td class="pass">HIGH (custom taper)</td>
+          <td>Feather · Lightness</td>
+        </tr>
+        <tr>
+          <td><b>2 · Slanted Quill-<em>l</em></b></td>
+          <td class="pass">PASS (18° lean, 1 flick)</td>
+          <td class="pass">PASS (2 strokes)</td>
+          <td class="pass">YES (is the <code>l</code>)</td>
+          <td class="pass">HIGH (monogram-letter)</td>
+          <td>Feather · Speed · `mini` fit</td>
+        </tr>
+        <tr>
+          <td><b>3 · Spark <em>li</em></b></td>
+          <td class="pass">PASS (no barbs)</td>
+          <td class="pass">BEST (zero blur)</td>
+          <td class="pass">YES (<code>l</code> + <code>i</code> spark)</td>
+          <td class="warn">MEDIUM (geometric)</td>
+          <td>Light · Lightning · `mini` fit</td>
+        </tr>
+        <tr>
+          <td><b>4 · Split-Light Quill</b></td>
+          <td class="pass">PASS (35° diagonal)</td>
+          <td class="pass">PASS (2 strokes)</td>
+          <td>Companion mark</td>
+          <td class="pass">HIGH (quill + bolt step)</td>
+          <td>Feather · Light · Lightning</td>
+        </tr>
+      </tbody>
+    </table>
+  </section>
+
+  <!-- Browser Tab & App Tile Simulation -->
+  <section>
+    <div class="sec-head">
+      <span class="sec-num">03</span>
+      <h2>16 px Browser Tab &amp; App Tile Check</h2>
+    </div>
+    <div class="apps">
+      <div class="app">
+        <span class="cap">1 · TAPERED QUILL</span>
+        <div class="tab"><svg viewBox="0 0 64 64" width="16" height="16"><use href="#m1"/></svg><span>Lite — Docs</span></div>
+        <div class="app-tile"><svg viewBox="0 0 64 64" width="38" height="38"><use href="#m1"/></svg></div>
+      </div>
+      <div class="app">
+        <span class="cap">2 · SLANTED QUILL-L</span>
+        <div class="tab"><svg viewBox="0 0 16 16" width="16" height="16"><use href="#m2"/></svg><span>Lite — Docs</span></div>
+        <div class="app-tile"><svg viewBox="0 0 16 16" width="38" height="38" style="color:#F0B45A"><use href="#m2"/></svg></div>
+      </div>
+      <div class="app">
+        <span class="cap">3 · SPARK LI</span>
+        <div class="tab"><svg viewBox="0 0 16 16" width="16" height="16"><use href="#m3"/></svg><span>Lite — Docs</span></div>
+        <div class="app-tile"><svg viewBox="0 0 16 16" width="38" height="38"><use href="#m3"/></svg></div>
+      </div>
+      <div class="app">
+        <span class="cap">4 · SPLIT-LIGHT QUILL</span>
+        <div class="tab"><svg viewBox="0 0 16 16" width="16" height="16"><use href="#m4"/></svg><span>Lite — Docs</span></div>
+        <div class="app-tile"><svg viewBox="0 0 16 16" width="38" height="38" style="color:#F0B45A"><use href="#m4"/></svg></div>
+      </div>
+    </div>
+  </section>
+</div>
+
+<svg width="0" height="0" style="position:absolute">
+  <defs>
+    <symbol id="m1" viewBox="0 0 64 64">
+      <g transform="translate(-2 0) rotate(35 32 32)" fill="currentColor">
+        <path d="M32 6C39 13 44 23 44 33L35.5 34.5L43 39C41 44 37 48 33 50L31.5 58L29.5 58C30 43 30 24 32 6Z"/>
+      </g>
+    </symbol>
+    <symbol id="m2" viewBox="0 0 16 16">
+      <g fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+        <path d="M5.2 13.5C6 9.5 7.4 5.5 9.2 2.5"/>
+        <path d="M6.4 9.5C9 8.6 10.8 6.8 11.8 4.4"/>
+      </g>
+    </symbol>
+    <symbol id="m3" viewBox="0 0 16 16">
+      <path d="M5.5 2.5V13.5" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+      <path d="M10.8 3.2L11.5 5L13.3 5.7L11.5 6.4L10.8 8.2L10.1 6.4L8.3 5.7L10.1 5Z" fill="#F0B45A"/>
+    </symbol>
+    <symbol id="m4" viewBox="0 0 16 16">
+      <g fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+        <path d="M3.5 13.5L12.5 2.5"/>
+        <path d="M6.2 10.2H10.8L8.8 7"/>
+      </g>
+    </symbol>
+  </defs>
+</svg>
+
+<script>
+function toggleTheme() {
+  const html = document.documentElement;
+  html.setAttribute('data-theme', html.getAttribute('data-theme') === 'paper' ? 'ink' : 'paper');
+}
+</script>
+</body>
+</html>

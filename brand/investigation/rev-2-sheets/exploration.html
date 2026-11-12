@@ -1,0 +1,600 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="paper">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Lite — mark exploration 01</title>
+<style>
+  :root {
+    --paper: #F5F3EE;
+    --card: #FBFAF7;
+    --ink: #101113;
+    --muted: #6C7078;
+    --line: #DCD8CE;
+    --accent: #C97B14;        /* filament, used sparingly */
+    --mark: #101113;
+    --font: ui-sans-serif, -apple-system, "Segoe UI", Inter, "Helvetica Neue", sans-serif;
+    --mono: ui-monospace, "SF Mono", "JetBrains Mono", Menlo, monospace;
+  }
+  html[data-theme="ink"] {
+    --paper: #0B0C0E;
+    --card: #131519;
+    --ink: #F2F0EA;
+    --muted: #8B9099;
+    --line: #24272E;
+    --accent: #F0B45A;
+    --mark: #F2F0EA;
+  }
+  * { box-sizing: border-box; }
+  html, body { margin: 0; }
+  body {
+    background: var(--paper);
+    color: var(--ink);
+    font-family: var(--font);
+    -webkit-font-smoothing: antialiased;
+    padding: 48px 28px 96px;
+    line-height: 1.45;
+  }
+  .wrap { max-width: 1160px; margin: 0 auto; }
+  a { color: inherit; }
+
+  /* header */
+  header { display: flex; justify-content: space-between; align-items: flex-start; gap: 24px; padding-bottom: 22px; border-bottom: 1px solid var(--line); }
+  .eyebrow { font-family: var(--mono); font-size: 11px; letter-spacing: .12em; text-transform: uppercase; color: var(--muted); }
+  h1 { font-size: 30px; line-height: 1.1; letter-spacing: -.035em; font-weight: 650; margin: 8px 0 6px; }
+  .sub { color: var(--muted); font-size: 14px; max-width: 54ch; }
+  .toggle { font: inherit; font-size: 12px; color: var(--ink); background: transparent; border: 1px solid var(--line); border-radius: 999px; padding: 7px 14px; cursor: pointer; white-space: nowrap; }
+  .toggle:hover { border-color: var(--muted); }
+
+  /* sections */
+  section { padding-top: 46px; }
+  .sec-head { display: flex; align-items: baseline; gap: 14px; margin-bottom: 18px; }
+  .sec-num { font-family: var(--mono); font-size: 11px; color: var(--muted); }
+  h2 { font-size: 15px; font-weight: 650; letter-spacing: -.01em; margin: 0; }
+  .sec-note { font-size: 13px; color: var(--muted); margin-left: auto; max-width: 46ch; text-align: right; }
+
+  /* brief */
+  .brief { display: grid; grid-template-columns: repeat(3, 1fr); gap: 1px; background: var(--line); border: 1px solid var(--line); }
+  .brief > div { background: var(--card); padding: 18px 20px; }
+  .brief h3 { font-size: 12px; letter-spacing: .08em; text-transform: uppercase; color: var(--muted); font-weight: 600; margin: 0 0 10px; }
+  .brief p { margin: 0; font-size: 13.5px; }
+  .brief p + p { margin-top: 8px; }
+  .brief b { font-weight: 650; }
+
+  /* contact sheet */
+  .sheet { display: grid; grid-template-columns: repeat(4, 1fr); gap: 1px; background: var(--line); border: 1px solid var(--line); }
+  .mark { background: var(--card); padding: 18px; display: flex; flex-direction: column; }
+  .mark-top { display: flex; justify-content: space-between; align-items: baseline; gap: 8px; }
+  .mark-id { font-family: var(--mono); font-size: 10px; color: var(--muted); letter-spacing: .08em; }
+  .mark-fam { font-family: var(--mono); font-size: 10px; color: var(--muted); }
+  .mark h4 { font-size: 14px; margin: 6px 0 2px; letter-spacing: -.01em; font-weight: 600; }
+  .mark .thesis { font-size: 12.5px; color: var(--muted); min-height: 36px; margin: 0 0 6px; }
+  .stage { display: flex; align-items: center; justify-content: center; height: 150px; border-radius: 6px; background: color-mix(in srgb, var(--paper) 55%, var(--card)); margin-bottom: 14px; }
+  .sizes { display: flex; align-items: flex-end; gap: 18px; margin-top: auto; padding-top: 12px; border-top: 1px solid var(--line); }
+  .size { display: flex; flex-direction: column; align-items: center; gap: 6px; color: var(--muted); font-family: var(--mono); font-size: 9px; }
+  .size :where(svg) { color: var(--mark); }
+
+  /* scoreboard */
+  .score { width: 100%; border-collapse: collapse; font-size: 13px; border: 1px solid var(--line); }
+  .score th, .score td { text-align: left; padding: 10px 12px; border-bottom: 1px solid var(--line); }
+  .score thead th { font-family: var(--mono); font-size: 10px; letter-spacing: .07em; text-transform: uppercase; color: var(--muted); font-weight: 500; }
+  .score td:first-child { font-weight: 600; white-space: nowrap; }
+  .score .dots { letter-spacing: .18em; color: var(--ink); font-size: 12px; }
+  .score .dots .off { color: var(--line); }
+  .score tr:last-child td { border-bottom: 0; }
+  .score .best { color: var(--accent); font-family: var(--mono); font-size: 10px; letter-spacing: .08em; text-transform: uppercase; }
+
+  /* finalist */
+  .finalist { display: grid; grid-template-columns: 1.05fr .95fr; gap: 20px; align-items: start; }
+  .panel { background: var(--card); border: 1px solid var(--line); padding: 22px; }
+  .panel h3 { margin: 0 0 3px; font-size: 16px; letter-spacing: -.015em; }
+  .panel .kicker { font-family: var(--mono); font-size: 10px; letter-spacing: .09em; text-transform: uppercase; color: var(--muted); }
+  .panel p { font-size: 13px; color: var(--muted); margin: 8px 0 0; }
+  .build { display: flex; justify-content: center; align-items: center; padding: 6px 0 14px; }
+  .legend { display: flex; gap: 16px; flex-wrap: wrap; font-family: var(--mono); font-size: 10px; color: var(--muted); border-top: 1px solid var(--line); padding-top: 12px; }
+  .legend i { display: inline-block; width: 18px; height: 0; border-top: 1px solid currentColor; vertical-align: middle; margin-right: 6px; }
+
+  .varstrip { display: grid; grid-template-columns: repeat(5, 1fr); gap: 1px; background: var(--line); border: 1px solid var(--line); margin-top: 20px; }
+  .varstrip > div { background: var(--card); padding: 14px 10px; text-align: center; }
+  .varstrip .cap { font-family: var(--mono); font-size: 9.5px; color: var(--muted); margin-top: 8px; }
+
+  /* applications */
+  .apps { display: grid; grid-template-columns: repeat(3, 1fr); gap: 20px; margin-top: 20px; }
+  .app { background: var(--card); border: 1px solid var(--line); padding: 18px; }
+  .app .cap { font-family: var(--mono); font-size: 10px; color: var(--muted); margin-bottom: 14px; letter-spacing: .06em; }
+  .app .body { min-height: 120px; display: flex; align-items: center; justify-content: center; }
+  .tabs { width: 100%; display: grid; gap: 6px; }
+  .tab { display: flex; align-items: center; gap: 8px; border: 1px solid var(--line); border-radius: 7px 7px 0 0; padding: 7px 10px; font-size: 12px; color: var(--muted); background: color-mix(in srgb, var(--paper) 50%, var(--card)); }
+  .tab.active { background: var(--paper); color: var(--ink); border-bottom-color: var(--paper); }
+  .tab .x { margin-left: auto; opacity: .35; font-size: 11px; }
+
+  .icon-tile { width: 104px; height: 104px; border-radius: 24px; display: grid; place-items: center; }
+  .tile-ink { background: #101113; color: #F5F3EE; }
+  .tile-paper { background: #F5F3EE; color: #101113; border: 1px solid #DCD8CE; }
+  .tile-beam { background: #F0B45A; color: #101113; }
+
+  .terminal { width: 100%; background: #0B0C0E; color: #EDEAE2; border-radius: 8px; padding: 14px 16px; font-family: var(--mono); font-size: 12px; line-height: 1.9; }
+  .terminal .p { color: #6E747E; }
+  .terminal .m { color: #F0B45A; }
+  .terminal .c { color: #9AA1AC; }
+
+  /* lockups */
+  .lockups { display: grid; grid-template-columns: repeat(3, 1fr); gap: 1px; background: var(--line); border: 1px solid var(--line); margin-top: 20px; }
+  .lockup { background: var(--card); min-height: 150px; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 4px; }
+  .lockup .cap { font-family: var(--mono); font-size: 9.5px; color: var(--muted); margin-top: 16px; }
+  .wordmark { display: flex; align-items: center; gap: 12px; }
+  .wordmark .type { font-size: 34px; font-weight: 600; letter-spacing: -.045em; }
+  .wordmark .type small { font-weight: 400; color: var(--muted); font-size: 15px; letter-spacing: 0; margin-left: 6px; }
+  .type-only { font-size: 42px; font-weight: 600; letter-spacing: -.05em; }
+  .type-only .dot { color: var(--accent); }
+
+  /* palette */
+  .palette { display: grid; grid-template-columns: repeat(4, 1fr); gap: 1px; background: var(--line); border: 1px solid var(--line); }
+  .swatch { background: var(--card); padding: 12px; }
+  .swatch .chip { height: 64px; border-radius: 4px; border: 1px solid var(--line); margin-bottom: 10px; }
+  .swatch .nm { font-size: 12.5px; font-weight: 600; }
+  .swatch .hex { font-family: var(--mono); font-size: 10.5px; color: var(--muted); }
+
+  /* questions */
+  .qs { counter-reset: q; display: grid; gap: 0; border-top: 1px solid var(--line); }
+  .q { display: grid; grid-template-columns: 34px 1fr; gap: 10px; padding: 14px 0; border-bottom: 1px solid var(--line); font-size: 13.5px; }
+  .q::before { counter-increment: q; content: "0" counter(q); font-family: var(--mono); font-size: 10px; color: var(--muted); padding-top: 3px; }
+  .q b { font-weight: 600; }
+  .q span { color: var(--muted); }
+
+  footer { margin-top: 56px; padding-top: 18px; border-top: 1px solid var(--line); display: flex; justify-content: space-between; font-family: var(--mono); font-size: 10px; color: var(--muted); letter-spacing: .06em; }
+
+  @media (max-width: 980px) {
+    .sheet { grid-template-columns: repeat(2, 1fr); }
+    .finalist, .apps, .lockups { grid-template-columns: 1fr; }
+    .brief { grid-template-columns: 1fr; }
+    .palette { grid-template-columns: repeat(2, 1fr); }
+  }
+</style>
+</head>
+<body>
+<div class="wrap">
+
+<header>
+  <div>
+    <div class="eyebrow">Lite · brand exploration 01</div>
+    <h1>The feather, reduced to a glyph.</h1>
+    <p class="sub">Lite is light. The mark should say that with one letterform, not an illustration — the way <b>m</b> does for mini. Eight directions, scored, then two finalists built out.</p>
+  </div>
+  <button class="toggle" onclick="document.documentElement.dataset.theme = document.documentElement.dataset.theme === 'ink' ? 'paper' : 'ink'">Paper / Ink</button>
+</header>
+
+<!-- ============ 01 ============ -->
+<section>
+  <div class="sec-head">
+    <span class="sec-num">01</span>
+    <h2>The brief, stated as constraints</h2>
+  </div>
+  <div class="brief">
+    <div>
+      <h3>The m-test</h3>
+      <p><b>One glyph, one stroke weight, one square.</b> It must survive as a favicon with no wordmark, invert cleanly, and look drawn rather than assembled.</p>
+      <p>If it needs a gradient, a glow, or an explanation, it is not the mark.</p>
+    </div>
+    <div>
+      <h3>What it must carry</h3>
+      <p><b>Feather:</b> lightness, writing, a quill. <b>Light:</b> speed, a spark. <b>L:</b> the name itself.</p>
+      <p>Two of the three is enough. All three, legibly, is the win.</p>
+    </div>
+    <div>
+      <h3>What to avoid</h3>
+      <p>The stock quill (Feather Icons already owns that shape in developer minds), the lightning bolt cliché, leaf/teardrop silhouettes, and anything that reads as an app-store illustration.</p>
+    </div>
+  </div>
+</section>
+
+<!-- ============ 02 ============ -->
+<section>
+  <div class="sec-head">
+    <span class="sec-num">02</span>
+    <h2>Territories &amp; candidates</h2>
+    <div class="sec-note">Four families. Each card shows the mark at 128, 32, 24 and 16 px.</div>
+  </div>
+
+  <div class="sheet">
+
+    <!-- 1 -->
+    <div class="mark">
+      <div class="mark-top"><span class="mark-id">01</span><span class="mark-fam">LETTERFORM</span></div>
+      <h4>Stem</h4>
+      <p class="thesis">The <b>l</b> is the quill shaft; three barbs make the vane and read as speed lines.</p>
+      <div class="stage"><svg width="128" height="128" viewBox="0 0 64 64" fill="none" stroke="currentColor" stroke-width="5" stroke-linecap="round" stroke-linejoin="round"><use href="#c1"/></svg></div>
+      <div class="sizes">
+        <div class="size"><svg width="32" height="32" viewBox="0 0 64 64" fill="none" stroke="currentColor" stroke-width="5" stroke-linecap="round"><use href="#c1"/></svg><span>32</span></div>
+        <div class="size"><svg width="24" height="24" viewBox="0 0 64 64" fill="none" stroke="currentColor" stroke-width="5" stroke-linecap="round"><use href="#c1"/></svg><span>24</span></div>
+        <div class="size"><svg width="16" height="16" viewBox="0 0 64 64" fill="none" stroke="currentColor" stroke-width="5" stroke-linecap="round"><use href="#c1"/></svg><span>16</span></div>
+      </div>
+    </div>
+
+    <!-- 2 -->
+    <div class="mark">
+      <div class="mark-top"><span class="mark-id">02</span><span class="mark-fam">LETTERFORM</span></div>
+      <h4>Bolt-l</h4>
+      <p class="thesis">The ascender kinks into a lightning turn. Energy without adding a second shape.</p>
+      <div class="stage"><svg width="128" height="128" viewBox="0 0 64 64" fill="none" stroke="currentColor" stroke-width="5" stroke-linecap="round" stroke-linejoin="round"><use href="#c2"/></svg></div>
+      <div class="sizes">
+        <div class="size"><svg width="32" height="32" viewBox="0 0 64 64" fill="none" stroke="currentColor" stroke-width="5" stroke-linecap="round"><use href="#c2"/></svg><span>32</span></div>
+        <div class="size"><svg width="24" height="24" viewBox="0 0 64 64" fill="none" stroke="currentColor" stroke-width="5" stroke-linecap="round"><use href="#c2"/></svg><span>24</span></div>
+        <div class="size"><svg width="16" height="16" viewBox="0 0 64 64" fill="none" stroke="currentColor" stroke-width="5" stroke-linecap="round"><use href="#c2"/></svg><span>16</span></div>
+      </div>
+    </div>
+
+    <!-- 3 -->
+    <div class="mark">
+      <div class="mark-top"><span class="mark-id">03</span><span class="mark-fam">LIGHT</span></div>
+      <h4>Spark</h4>
+      <p class="thesis">The <b>l</b> plus one dot: reads as <b>li</b> (Lite, light) and as a struck spark.</p>
+      <div class="stage"><svg width="128" height="128" viewBox="0 0 64 64" fill="none" stroke="currentColor" stroke-width="5" stroke-linecap="round"><use href="#c3"/><circle cx="40" cy="15" r="3.6" fill="currentColor" stroke="none"/></svg></div>
+      <div class="sizes">
+        <div class="size"><svg width="32" height="32" viewBox="0 0 64 64" fill="none" stroke="currentColor" stroke-width="5" stroke-linecap="round"><use href="#c3"/><circle cx="40" cy="15" r="3.6" fill="currentColor" stroke="none"/></svg><span>32</span></div>
+        <div class="size"><svg width="24" height="24" viewBox="0 0 64 64" fill="none" stroke="currentColor" stroke-width="5" stroke-linecap="round"><use href="#c3"/><circle cx="40" cy="15" r="3.6" fill="currentColor" stroke="none"/></svg><span>24</span></div>
+        <div class="size"><svg width="16" height="16" viewBox="0 0 64 64" fill="none" stroke="currentColor" stroke-width="5" stroke-linecap="round"><use href="#c3"/><circle cx="40" cy="15" r="4.2" fill="currentColor" stroke="none"/></svg><span>16</span></div>
+      </div>
+    </div>
+
+    <!-- 4 -->
+    <div class="mark">
+      <div class="mark-top"><span class="mark-id">04</span><span class="mark-fam">INSTRUMENT</span></div>
+      <h4>Nib</h4>
+      <p class="thesis">A pen nib drawn as the foot of the <b>l</b>: two bevels and a slit. Writing, no feather.</p>
+      <div class="stage"><svg width="128" height="128" viewBox="0 0 64 64" fill="none" stroke="currentColor" stroke-width="5" stroke-linecap="round" stroke-linejoin="round"><use href="#c4"/></svg></div>
+      <div class="sizes">
+        <div class="size"><svg width="32" height="32" viewBox="0 0 64 64" fill="none" stroke="currentColor" stroke-width="5" stroke-linecap="round" stroke-linejoin="round"><use href="#c4"/></svg><span>32</span></div>
+        <div class="size"><svg width="24" height="24" viewBox="0 0 64 64" fill="none" stroke="currentColor" stroke-width="5" stroke-linecap="round" stroke-linejoin="round"><use href="#c4"/></svg><span>24</span></div>
+        <div class="size"><svg width="16" height="16" viewBox="0 0 64 64" fill="none" stroke="currentColor" stroke-width="5" stroke-linecap="round" stroke-linejoin="round"><use href="#c4"/></svg><span>16</span></div>
+      </div>
+    </div>
+
+    <!-- 5 -->
+    <div class="mark">
+      <div class="mark-top"><span class="mark-id">05</span><span class="mark-fam">INSTRUMENT</span></div>
+      <h4>Quill</h4>
+      <p class="thesis">Two strokes: shaft and one vane edge. The most minimal feather possible, no letter.</p>
+      <div class="stage"><svg width="128" height="128" viewBox="0 0 64 64" fill="none" stroke="currentColor" stroke-width="5" stroke-linecap="round" stroke-linejoin="round"><use href="#c5"/></svg></div>
+      <div class="sizes">
+        <div class="size"><svg width="32" height="32" viewBox="0 0 64 64" fill="none" stroke="currentColor" stroke-width="5" stroke-linecap="round"><use href="#c5"/></svg><span>32</span></div>
+        <div class="size"><svg width="24" height="24" viewBox="0 0 64 64" fill="none" stroke="currentColor" stroke-width="5" stroke-linecap="round"><use href="#c5"/></svg><span>24</span></div>
+        <div class="size"><svg width="16" height="16" viewBox="0 0 64 64" fill="none" stroke="currentColor" stroke-width="5" stroke-linecap="round"><use href="#c5"/></svg><span>16</span></div>
+      </div>
+    </div>
+
+    <!-- 6 -->
+    <div class="mark">
+      <div class="mark-top"><span class="mark-id">06</span><span class="mark-fam">INSTRUMENT</span></div>
+      <h4>Vane</h4>
+      <p class="thesis">A solid feather split by negative space into two halves. The icon-native option.</p>
+      <div class="stage"><svg width="128" height="128" viewBox="0 0 64 64" fill="currentColor" stroke="none"><use href="#c6"/></svg></div>
+      <div class="sizes">
+        <div class="size"><svg width="32" height="32" viewBox="0 0 64 64" fill="currentColor"><use href="#c6"/></svg><span>32</span></div>
+        <div class="size"><svg width="24" height="24" viewBox="0 0 64 64" fill="currentColor"><use href="#c6"/></svg><span>24</span></div>
+        <div class="size"><svg width="16" height="16" viewBox="0 0 64 64" fill="currentColor"><use href="#c6"/></svg><span>16</span></div>
+      </div>
+    </div>
+
+    <!-- 7 -->
+    <div class="mark">
+      <div class="mark-top"><span class="mark-id">07</span><span class="mark-fam">ABSTRACT</span></div>
+      <h4>Blade</h4>
+      <p class="thesis">One tapered stroke. Feather, slash, wing — never a letter. Maximum motion, minimum parts.</p>
+      <div class="stage"><svg width="128" height="128" viewBox="0 0 64 64" fill="currentColor"><use href="#c7"/></svg></div>
+      <div class="sizes">
+        <div class="size"><svg width="32" height="32" viewBox="0 0 64 64" fill="currentColor"><use href="#c7"/></svg><span>32</span></div>
+        <div class="size"><svg width="24" height="24" viewBox="0 0 64 64" fill="currentColor"><use href="#c7"/></svg><span>24</span></div>
+        <div class="size"><svg width="16" height="16" viewBox="0 0 64 64" fill="currentColor"><use href="#c7"/></svg><span>16</span></div>
+      </div>
+    </div>
+
+    <!-- 8 -->
+    <div class="mark">
+      <div class="mark-top"><span class="mark-id">08</span><span class="mark-fam">LETTERFORM</span></div>
+      <h4>Loop</h4>
+      <p class="thesis">A cursive <b>l</b>: one unbroken stroke, the ascender loop doubling as the feather curl.</p>
+      <div class="stage"><svg width="128" height="128" viewBox="0 0 64 64" fill="none" stroke="currentColor" stroke-width="5" stroke-linecap="round"><use href="#c8"/></svg></div>
+      <div class="sizes">
+        <div class="size"><svg width="32" height="32" viewBox="0 0 64 64" fill="none" stroke="currentColor" stroke-width="5" stroke-linecap="round"><use href="#c8"/></svg><span>32</span></div>
+        <div class="size"><svg width="24" height="24" viewBox="0 0 64 64" fill="none" stroke="currentColor" stroke-width="5" stroke-linecap="round"><use href="#c8"/></svg><span>24</span></div>
+        <div class="size"><svg width="16" height="16" viewBox="0 0 64 64" fill="none" stroke="currentColor" stroke-width="5" stroke-linecap="round"><use href="#c8"/></svg><span>16</span></div>
+      </div>
+    </div>
+
+  </div>
+</section>
+
+<!-- ============ 03 ============ -->
+<section>
+  <div class="sec-head">
+    <span class="sec-num">03</span>
+    <h2>Scoreboard</h2>
+    <div class="sec-note">Scored against the m-test, not against taste. ●●● = strong, ●○○ = weak.</div>
+  </div>
+  <table class="score">
+    <thead>
+      <tr><th>Direction</th><th>Reads as L</th><th>Reads as feather</th><th>Survives 16px</th><th>Ownable</th><th>System potential</th><th></th></tr>
+    </thead>
+    <tbody>
+      <tr><td>01 Stem</td><td class="dots">●●●</td><td class="dots">●●<span class="off">●</span></td><td class="dots">●●<span class="off">●</span></td><td class="dots">●●<span class="off">●</span></td><td class="dots">●●●</td><td class="best">finalist</td></tr>
+      <tr><td>02 Bolt-l</td><td class="dots">●●<span class="off">●</span></td><td class="dots"><span class="off">●●●</span></td><td class="dots">●●●</td><td class="dots">●<span class="off">●●</span></td><td class="dots">●●<span class="off">●</span></td><td class="best">finalist</td></tr>
+      <tr><td>03 Spark</td><td class="dots">●●<span class="off">●</span></td><td class="dots"><span class="off">●●●</span></td><td class="dots">●●●</td><td class="dots">●<span class="off">●●</span></td><td class="dots">●●●</td><td></td></tr>
+      <tr><td>04 Nib</td><td class="dots">●●<span class="off">●</span></td><td class="dots">●<span class="off">●●</span></td><td class="dots"><span class="off">●●●</span></td><td class="dots">●●●</td><td class="dots">●●<span class="off">●</span></td><td></td></tr>
+      <tr><td>05 Quill</td><td class="dots"><span class="off">●●●</span></td><td class="dots">●●●</td><td class="dots">●●●</td><td class="dots"><span class="off">●●●</span></td><td class="dots">●●<span class="off">●</span></td><td></td></tr>
+      <tr><td>06 Vane</td><td class="dots">●<span class="off">●●</span></td><td class="dots">●●●</td><td class="dots">●●●</td><td class="dots">●●<span class="off">●</span></td><td class="dots">●●<span class="off">●</span></td><td></td></tr>
+      <tr><td>07 Blade</td><td class="dots"><span class="off">●●●</span></td><td class="dots">●●<span class="off">●</span></td><td class="dots">●●●</td><td class="dots">●●●</td><td class="dots">●<span class="off">●●</span></td><td></td></tr>
+      <tr><td>08 Loop</td><td class="dots">●●<span class="off">●</span></td><td class="dots">●●<span class="off">●</span></td><td class="dots">●<span class="off">●●</span></td><td class="dots">●●●</td><td class="dots">●●<span class="off">●</span></td><td></td></tr>
+    </tbody>
+  </table>
+  <p class="sub" style="margin-top:14px; font-size:12.5px;">The trade: <b>Stem</b> is the only direction that is simultaneously a letter, a feather and a speed mark — so it wins on system, and needs optical work at 16px. <b>Bolt-l</b> is the most electric and the most generic.</p>
+</section>
+
+<!-- ============ 04 ============ -->
+<section>
+  <div class="sec-head">
+    <span class="sec-num">04</span>
+    <h2>Finalist 01 · Stem, constructed</h2>
+    <div class="sec-note">64-unit grid, 5-unit stroke. Shaft on the vertical, barbs at a constant 45°.</div>
+  </div>
+
+  <div class="finalist">
+    <div class="panel">
+      <div class="kicker">Construction</div>
+      <h3>One stem. Three barbs. No outline.</h3>
+      <p>Everything is decided by the grid: shaft x=22, stroke 5, barbs at exactly 45°, lengths 15/20/13 so the vane is widest in the middle and narrows at the tip. Tip and tail sit on the 8-unit margin.</p>
+      <div class="build">
+        <svg width="360" height="360" viewBox="0 0 64 64">
+          <!-- grid -->
+          <g stroke="currentColor" stroke-opacity=".13" stroke-width=".25">
+            <path d="M8 8H56M8 16H56M8 24H56M8 32H56M8 40H56M8 48H56M8 56H56"/>
+            <path d="M8 8V56M16 8V56M24 8V56M32 8V56M40 8V56M48 8V56M56 8V56"/>
+          </g>
+          <g stroke="currentColor" stroke-opacity=".35" stroke-width=".4" stroke-dasharray="1 1.4">
+            <path d="M22 4V60"/><path d="M4 54H60"/>
+          </g>
+          <!-- mark -->
+          <g fill="none" stroke="currentColor" stroke-width="5" stroke-linecap="round" stroke-linejoin="round">
+            <use href="#c1"/>
+          </g>
+          <!-- annotations -->
+          <g fill="currentColor" font-family="ui-monospace, monospace" font-size="2.6" fill-opacity=".55">
+            <text x="24.5" y="58.5">x22</text>
+            <text x="50" y="57.5">y54</text>
+            <text x="39.5" y="29.5">45°</text>
+          </g>
+        </svg>
+      </div>
+      <div class="legend">
+        <span><i></i>8-unit grid</span>
+        <span><i style="border-top-style:dashed"></i>optical axes</span>
+        <span>stroke 5 / 64 = 1.25px at 16</span>
+      </div>
+    </div>
+
+    <div class="panel">
+      <div class="kicker">Size ramp &amp; inversion</div>
+      <h3>Where it holds, where it breaks</h3>
+      <p>At 24px and up the three barbs separate. At 16px they begin to fuse, which is why the small-size cut below drops to two barbs and thickens the stroke to 6.</p>
+      <div class="app" style="border:0; padding:0; background:transparent">
+        <div class="body" style="flex-direction:column; gap:22px; min-height:270px">
+          <div style="display:flex; align-items:flex-end; gap:26px">
+            <svg width="88" height="88" viewBox="0 0 64 64" fill="none" stroke="currentColor" stroke-width="5" stroke-linecap="round"><use href="#c1"/></svg>
+            <svg width="48" height="48" viewBox="0 0 64 64" fill="none" stroke="currentColor" stroke-width="5.4" stroke-linecap="round"><use href="#c1"/></svg>
+            <svg width="32" height="32" viewBox="0 0 64 64" fill="none" stroke="currentColor" stroke-width="5.8" stroke-linecap="round"><use href="#c1"/></svg>
+            <svg width="16" height="16" viewBox="0 0 64 64" fill="none" stroke="currentColor" stroke-width="6" stroke-linecap="round"><use href="#c1"/></svg>
+          </div>
+          <div style="display:flex; gap:14px">
+            <div style="background:#101113; color:#F5F3EE; border-radius:8px; padding:16px 22px"><svg width="40" height="40" viewBox="0 0 64 64" fill="none" stroke="currentColor" stroke-width="5" stroke-linecap="round"><use href="#c1"/></svg></div>
+            <div style="background:#F5F3EE; color:#101113; border:1px solid #DCD8CE; border-radius:8px; padding:16px 22px"><svg width="40" height="40" viewBox="0 0 64 64" fill="none" stroke="currentColor" stroke-width="5" stroke-linecap="round"><use href="#c1"/></svg></div>
+            <div style="background:#F0B45A; color:#101113; border-radius:8px; padding:16px 22px"><svg width="40" height="40" viewBox="0 0 64 64" fill="none" stroke="currentColor" stroke-width="5" stroke-linecap="round"><use href="#c1"/></svg></div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="varstrip">
+    <div><svg width="46" height="46" viewBox="0 0 64 64" fill="none" stroke="currentColor" stroke-width="5" stroke-linecap="round"><use href="#v1a"/></svg><div class="cap">2 barbs · 16px cut</div></div>
+    <div><svg width="46" height="46" viewBox="0 0 64 64" fill="none" stroke="currentColor" stroke-width="5" stroke-linecap="butt" stroke-linejoin="miter"><use href="#c1"/></svg><div class="cap">flat caps</div></div>
+    <div><svg width="46" height="46" viewBox="0 0 64 64" fill="none" stroke="currentColor" stroke-width="6.2" stroke-linecap="round"><use href="#c1"/></svg><div class="cap">weight 6.2</div></div>
+    <div><svg width="46" height="46" viewBox="0 0 64 64" fill="none" stroke="currentColor" stroke-width="5" stroke-linecap="round"><g transform="rotate(-8 32 32)"><use href="#c1"/></g></svg><div class="cap">leaning 8°</div></div>
+    <div><svg width="46" height="46" viewBox="0 0 64 64" fill="none" stroke="currentColor" stroke-width="5" stroke-linecap="round"><g transform="scale(-1,1) translate(-64,0)"><use href="#c1"/></g></svg><div class="cap">mirrored</div></div>
+  </div>
+</section>
+
+<!-- ============ 05 ============ -->
+<section>
+  <div class="sec-head">
+    <span class="sec-num">05</span>
+    <h2>Finalist 02 · Bolt-l, constructed</h2>
+    <div class="sec-note">The same monoline system, spent on energy instead of the feather.</div>
+  </div>
+  <div class="finalist">
+    <div class="panel">
+      <div class="kicker">Construction</div>
+      <h3>Lightning inside the ascender</h3>
+      <p>A single stem to the x-height, then three straight segments that kink right–left–right. The angles are 60° so it still reads as a stroke, not a zigzag graphic. It is the most “fast” of the set — and the one a competitor could arrive at independently.</p>
+      <div class="build">
+        <svg width="360" height="360" viewBox="0 0 64 64">
+          <g stroke="currentColor" stroke-opacity=".13" stroke-width=".25">
+            <path d="M8 8H56M8 16H56M8 24H56M8 32H56M8 40H56M8 48H56M8 56H56"/>
+            <path d="M8 8V56M16 8V56M24 8V56M32 8V56M40 8V56M48 8V56M56 8V56"/>
+          </g>
+          <g fill="none" stroke="currentColor" stroke-width="5" stroke-linecap="round" stroke-linejoin="round"><use href="#c2"/></g>
+          <g fill="currentColor" font-family="ui-monospace, monospace" font-size="2.6" fill-opacity=".55">
+            <text x="36" y="30">60°</text>
+            <text x="24.5" y="58.5">x22</text>
+          </g>
+        </svg>
+      </div>
+      <div class="legend"><span>stem x22</span><span>3 kinks</span><span>stroke 5 / 64</span></div>
+    </div>
+    <div class="panel">
+      <div class="kicker">Character</div>
+      <h3>Why it loses the tie</h3>
+      <p>It reads as speed and as an <b>l</b>, but it does not read as a feather, and the zigzag is a shape the eye has seen on every energy drink, battery and EV charger. It is the better <i>sticker</i>; Stem is the better <i>identity</i>.</p>
+      <p style="margin-top:14px">Keep it as the motion/announcement voice: the mark stays still, the bolt appears in transitions, loading and release notes.</p>
+      <div style="display:flex; gap:14px; margin-top:18px; align-items:center">
+        <svg width="64" height="64" viewBox="0 0 64 64" fill="none" stroke="currentColor" stroke-width="5" stroke-linecap="round"><use href="#c2"/></svg>
+        <span style="font-family:var(--mono); font-size:10px; color:var(--muted)">use as secondary / motion</span>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ============ 06 ============ -->
+<section>
+  <div class="sec-head">
+    <span class="sec-num">06</span>
+    <h2>If Stem wins: the system</h2>
+    <div class="sec-note">Glyph, square, wordmark, terminal. One weight everywhere.</div>
+  </div>
+
+  <div class="apps">
+    <div class="app">
+      <div class="cap">FAVICON / TAB STRIP</div>
+      <div class="body">
+        <div class="tabs">
+          <div class="tab active"><svg width="16" height="16" viewBox="0 0 64 64" fill="none" stroke="currentColor" stroke-width="6" stroke-linecap="round"><use href="#c1"/></svg> Lite — Docs <span class="x">×</span></div>
+          <div class="tab"><svg width="16" height="16" viewBox="0 0 64 64" fill="none" stroke="currentColor" stroke-width="6" stroke-linecap="round"><use href="#c1"/></svg> LiteLang reference <span class="x">×</span></div>
+        </div>
+      </div>
+    </div>
+    <div class="app">
+      <div class="cap">APP ICON / AVATAR</div>
+      <div class="body">
+        <div class="icon-tile tile-ink"><svg width="60" height="60" viewBox="0 0 64 64" fill="none" stroke="currentColor" stroke-width="5.6" stroke-linecap="round"><use href="#c1"/></svg></div>
+      </div>
+    </div>
+    <div class="app">
+      <div class="cap">TERMINAL</div>
+      <div class="body">
+        <div class="terminal">
+          <div><span class="p">~</span> <span class="m">❯</span> lite run hello.lts</div>
+          <div><span class="c">compiled · 12ms · 41kb</span></div>
+          <div><span class="c">hello, light.</span></div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="lockups">
+    <div class="lockup">
+      <div class="wordmark">
+        <svg width="34" height="34" viewBox="0 0 64 64" fill="none" stroke="currentColor" stroke-width="5" stroke-linecap="round"><use href="#c1"/></svg>
+        <span class="type">lite</span>
+      </div>
+      <div class="cap">LOCKUP · MARK + WORDMARK</div>
+    </div>
+    <div class="lockup">
+      <div class="wordmark">
+        <svg width="34" height="34" viewBox="0 0 64 64" fill="none" stroke="currentColor" stroke-width="5" stroke-linecap="round"><use href="#c1"/></svg>
+        <span class="type">lite <small>LiteLang</small></span>
+      </div>
+      <div class="cap">LOCKUP · SUB-BRAND</div>
+    </div>
+    <div class="lockup">
+      <div class="type-only"><span class="dot">l</span>ite</div>
+      <div class="cap">WORDMARK-ONLY · SPARK ON THE L</div>
+    </div>
+  </div>
+</section>
+
+<!-- ============ 07 ============ -->
+<section>
+  <div class="sec-head">
+    <span class="sec-num">07</span>
+    <h2>Color &amp; type, held back on purpose</h2>
+    <div class="sec-note">Lightness is the absence of noise: two neutrals and one heated accent.</div>
+  </div>
+  <div class="palette">
+    <div class="swatch"><div class="chip" style="background:#101113"></div><div class="nm">Ink</div><div class="hex">#101113</div></div>
+    <div class="swatch"><div class="chip" style="background:#F5F3EE"></div><div class="nm">Paper</div><div class="hex">#F5F3EE</div></div>
+    <div class="swatch"><div class="chip" style="background:#6C7078"></div><div class="nm">Graphite</div><div class="hex">#6C7078</div></div>
+    <div class="swatch"><div class="chip" style="background:#F0B45A"></div><div class="nm">Filament</div><div class="hex">#F0B45A</div></div>
+  </div>
+  <p class="sub" style="font-size:13px; margin-top:14px">Filament is a light <i>source</i>, not a fill: one dot, one underline, one focus ring. The mark itself is always ink-on-paper or paper-on-ink. Type: a neutral grotesque (Inter, Geist or IBM Plex Sans) at 600, tracking −4%, lowercase only. The final wordmark should be drawn, not set — the <b>l</b> must match the mark's 45° barbs.</p>
+</section>
+
+<!-- ============ 08 ============ -->
+<section>
+  <div class="sec-head">
+    <span class="sec-num">08</span>
+    <h2>What still needs a decision</h2>
+  </div>
+  <div class="qs">
+    <div class="q"><div><b>Mark family</b><span> — Stem (letter + feather) or Bolt-l (letter + light)? Stem is the identity; Bolt is a voice.</span></div></div>
+    <div class="q"><div><b>Terminal treatment</b><span> — round caps read softer and more “hand”; flat caps read sharper and more “type”. At 16px, flat caps gain a pixel of clarity.</span></div></div>
+    <div class="q"><div><b>Barb count</b><span> — three is a feather, two is a speed mark, one is a checkmark. Three at display sizes, two below 24px.</span></div></div>
+    <div class="q"><div><b>Letter case</b><span> — lowercase <b>l</b> matches “lite” and the mini precedent; uppercase would be more architectural but less warm.</span></div></div>
+    <div class="q"><div><b>Wordmark</b><span> — license a grotesque and accept the mismatch, or draw the four letters (l i t e) once and own them forever. The latter is the actual brand asset.</span></div></div>
+    <div class="q"><div><b>Accent</b><span> — Filament amber (warm, human, distinct from blue/purple devtools) vs. no accent at all (pure monochrome, maximum “light”).</span></div></div>
+  </div>
+</section>
+
+<footer>
+  <span>design/branding · exploration 01 · 2026-11-12</span>
+  <span>next: refine stem geometry → wordmark drawing → favicon set</span>
+</footer>
+
+</div>
+
+<!-- ============ SYMBOLS ============ -->
+<svg width="0" height="0" style="position:absolute" aria-hidden="true">
+  <defs>
+    <!-- 01 stem: shaft + 3 barbs at 45° -->
+    <symbol id="c1" viewBox="0 0 64 64">
+      <path d="M22 54V10"/>
+      <path d="M22 46C27 43 33 38 37 31"/>
+      <path d="M22 36C30 31 37 24 42 16"/>
+      <path d="M22 26C28 21 32 17 35 13"/>
+    </symbol>
+    <!-- 01a two-barb cut for 16px -->
+    <symbol id="v1a" viewBox="0 0 64 64">
+      <path d="M22 54V10"/>
+      <path d="M22 44C29 40 36 33 40 24"/>
+      <path d="M22 30C29 25 34 19 37 13"/>
+    </symbol>
+    <!-- 02 bolt-l -->
+    <symbol id="c2" viewBox="0 0 64 64">
+      <path d="M22 54V36"/>
+      <path d="M22 36L36 28L29 25L42 12"/>
+    </symbol>
+    <!-- 03 spark: stem + dot -->
+    <symbol id="c3" viewBox="0 0 64 64">
+      <path d="M24 54V12"/>
+    </symbol>
+    <!-- 04 nib -->
+    <symbol id="c4" viewBox="0 0 64 64">
+      <path d="M22 10V36"/>
+      <path d="M13 53L22 36L31 53"/>
+      <path d="M22 40V49"/>
+    </symbol>
+    <!-- 05 quill: spine + one vane edge -->
+    <symbol id="c5" viewBox="0 0 64 64">
+      <path d="M17 54C25 41 33 27 45 11"/>
+      <path d="M45 11C34 20 25 33 21 48"/>
+    </symbol>
+    <!-- 06 vane: solid, split by negative space -->
+    <symbol id="c6" viewBox="0 0 64 64">
+      <path d="M30 8C24 15 21 24 21 33C21 43 24 51 27 56C25 44 26 24 30 8Z"/>
+      <path d="M33 8C41 14 46 23 45 33C44 44 37 52 29 56C33 42 34 24 33 8Z"/>
+    </symbol>
+    <!-- 07 blade: one tapered stroke -->
+    <symbol id="c7" viewBox="0 0 64 64">
+      <path d="M44 8C40 24 32 39 20 55C27 54 35 42 39 29C42 20 43 13 44 8Z"/>
+    </symbol>
+    <!-- 08 loop: cursive l -->
+    <symbol id="c8" viewBox="0 0 64 64">
+      <path d="M24 56V28C24 18 32 11 39 15C46 19 43 30 35 29C30 28 28 23 31 20"/>
+    </symbol>
+  </defs>
+</svg>
+
+<script>
+  // keep the page honest: report actual rendered favicon pixel sizes
+  console.log('mark exploration loaded');
+</script>
+</body>
+</html>

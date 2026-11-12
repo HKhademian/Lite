@@ -1,0 +1,6 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 16 16" width="16" height="16" role="img" aria-label="lite — Spark li">
+  <title>lite — Spark li</title>
+  <path d="M5.5 2.5V13.5" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+  <!-- 4-point filament spark / i-dot -->
+  <path d="M10.8 3.2L11.5 5L13.3 5.7L11.5 6.4L10.8 8.2L10.1 6.4L8.3 5.7L10.1 5Z" fill="#F0B45A"/>
+</svg>

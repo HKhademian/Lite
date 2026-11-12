@@ -1,0 +1,7 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 16 16" width="16" height="16" role="img" aria-label="lite">
+  <title>lite — B2 Refracted Beam</title>
+  <g fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round">
+    <path d="M5.5 14V2.5"/>
+    <path d="M5.5 10C8.5 10 11 7.5 11.5 4"/>
+  </g>
+</svg>

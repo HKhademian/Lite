@@ -1,0 +1,5 @@
+<svg width="64" height="64" viewBox="0 0 64 64" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <!-- Concept 1: The Aero Feather (Stem 'l' + Single Aerodynamic Vane) -->
+  <path d="M22 10V54" stroke="#0F172A" stroke-width="5" stroke-linecap="round"/>
+  <path d="M27 18C44 20 48 32 48 42C48 45 45 47 41 47C33 47 27 41 27 34" stroke="#0D9488" stroke-width="4.5" stroke-linecap="round" stroke-linejoin="round"/>
+</svg>

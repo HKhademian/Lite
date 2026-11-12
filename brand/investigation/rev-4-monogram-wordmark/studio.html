@@ -1,0 +1,424 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <title>Lite Brand & Logo Ideation Studio</title>
+  <script src="https://www.gstatic.com/antigravity/web/dev/tailwindcss.min.js"></script>
+  <style>
+    .grid-bg {
+      background-image: 
+        linear-gradient(to right, rgba(128,128,128,0.12) 1px, transparent 1px),
+        linear-gradient(to bottom, rgba(128,128,128,0.12) 1px, transparent 1px);
+      background-size: 10px 10px;
+    }
+    .tab-btn.active {
+      background: var(--primary);
+      color: var(--primary-foreground);
+    }
+    .palette-btn.active {
+      outline: 2px solid var(--foreground);
+      outline-offset: 2px;
+    }
+  </style>
+</head>
+<body class="bg-[var(--background)] text-[var(--foreground)] antialiased p-6 space-y-6">
+
+  <!-- Header & Controls -->
+  <div class="bg-[var(--card)] border border-[var(--border)] rounded-xl p-5 shadow-sm flex flex-wrap items-center justify-between gap-4">
+    <div>
+      <div class="flex items-center gap-2.5">
+        <span class="text-xs font-mono uppercase tracking-wider px-2 py-0.5 rounded bg-[var(--secondary)] text-[var(--secondary-foreground)]">Brand Investigation</span>
+        <h1 class="text-lg font-semibold">Lite — Monogram & Wordmark Ideation</h1>
+      </div>
+      <p class="text-sm text-[var(--muted-foreground)] mt-1">
+        Strict 16×16 monoline grid (`stroke-width="2"`, round caps/joins) — matching <code class="font-mono text-xs">mini</code>'s architectural simplicity.
+      </p>
+    </div>
+
+    <!-- Accent Palette Switcher -->
+    <div class="flex items-center gap-4">
+      <div class="flex items-center gap-2">
+        <span class="text-xs text-[var(--muted-foreground)] font-medium">Accent:</span>
+        <button onclick="setAccent('#0D9488', '#5EEAD4', 'Teal (Current VS Code)')" id="pal-0" class="palette-btn active w-6 h-6 rounded-full bg-[#0D9488] border border-white/20" title="Teal"></button>
+        <button onclick="setAccent('#D97706', '#FBBF24', 'Amber / Photon Gold')" id="pal-1" class="palette-btn w-6 h-6 rounded-full bg-[#F59E0B] border border-white/20" title="Amber / Light"></button>
+        <button onclick="setAccent('#0284C7', '#38BDF8', 'Sky / Air')" id="pal-2" class="palette-btn w-6 h-6 rounded-full bg-[#0284C7] border border-white/20" title="Sky / Feather"></button>
+        <button onclick="setAccent('#4F46E5', '#818CF8', 'Electric Indigo')" id="pal-3" class="palette-btn w-6 h-6 rounded-full bg-[#4F46E5] border border-white/20" title="Electric"></button>
+        <button onclick="setAccent('#101113', '#F5F3EE', 'Pure Ink')" id="pal-4" class="palette-btn w-6 h-6 rounded-full bg-zinc-800 border border-white/20" title="Monochrome Ink"></button>
+      </div>
+      <div class="flex items-center rounded-lg border border-[var(--border)] p-0.5 bg-[var(--background)]">
+        <button onclick="setCase('lower')" id="case-lower" class="tab-btn active text-xs px-2.5 py-1 rounded-md font-mono transition">lite</button>
+        <button onclick="setCase('title')" id="case-title" class="tab-btn text-xs px-2.5 py-1 rounded-md font-mono transition">Lite</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Reference Benchmark: Why mini works -->
+  <div class="bg-[var(--card)] border border-[var(--border)] rounded-xl p-5 shadow-sm">
+    <div class="flex flex-col md:flex-row md:items-center justify-between gap-4">
+      <div class="space-y-1 max-w-xl">
+        <div class="text-xs font-mono uppercase tracking-wider text-[var(--muted-foreground)]">Reference Benchmark · Why <code class="text-[var(--foreground)]">mini</code> Works</div>
+        <h2 class="text-base font-semibold">1. Single Continuous Path &nbsp;·&nbsp; 2. First-Letter Lockup &nbsp;·&nbsp; 3. Zero Extra Garnish</h2>
+        <p class="text-xs text-[var(--muted-foreground)] leading-relaxed">
+          In <code class="font-mono">mini</code>, the mark isn't an illustration sitting next to the name—it <em>is</em> the first letter <code class="font-mono">m</code>. Earlier feather drafts in <code class="font-mono">design/branding/scratch*.html</code> had 3–4 separate strokes rotated at 35°, which reads like a leaf/branch at 16px and cannot act as the <code class="font-mono">l</code> in <code class="font-mono">lite</code>.
+        </p>
+      </div>
+      <div class="flex items-center gap-6 bg-[var(--background)] border border-[var(--border)] rounded-lg px-5 py-3 shrink-0">
+        <div class="text-center">
+          <div class="w-12 h-12 rounded-lg bg-[#0B0F17] text-[#F8FAFC] flex items-center justify-center mx-auto border border-white/10">
+            <svg viewBox="0 0 16 16" width="28" height="28" fill="none" stroke="#38BDF8" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M2.25 13V7.5a3 3 0 0 1 6 0V13M8.25 7.5a3 3 0 0 1 6 0V13"/>
+            </svg>
+          </div>
+          <div class="text-xs font-mono text-[var(--muted-foreground)] mt-1">mini (16×16)</div>
+        </div>
+        <div class="text-center">
+          <div class="h-12 px-4 rounded-lg bg-[#0B0F17] text-[#F8FAFC] flex items-center justify-center mx-auto border border-white/10">
+            <svg viewBox="0 0 36 16" width="63" height="28">
+              <g fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M2.25 13V7.5a3 3 0 0 1 6 0V13M8.25 7.5a3 3 0 0 1 6 0V13" stroke="#38BDF8"/>
+                <path d="M18.75 13V4.5" stroke="currentColor"/>
+                <path d="M23.25 13V7.5a3 3 0 0 1 6 0V13" stroke="currentColor"/>
+                <path d="M33.75 13V4.5" stroke="currentColor"/>
+              </g>
+              <g fill="currentColor">
+                <circle cx="18.75" cy="1.9" r="1.05"/>
+                <circle cx="33.75" cy="1.9" r="1.05"/>
+              </g>
+            </svg>
+          </div>
+          <div class="text-xs font-mono text-[var(--muted-foreground)] mt-1">mini wordmark (36×16)</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Filter Tabs -->
+  <div class="flex items-center gap-2 flex-wrap">
+    <button onclick="filterFamily('all')" id="fam-all" class="tab-btn active text-xs font-medium px-3 py-1.5 rounded-lg border border-[var(--border)] transition">All 6 Finalists</button>
+    <button onclick="filterFamily('feather')" id="fam-feather" class="tab-btn text-xs font-medium px-3 py-1.5 rounded-lg border border-[var(--border)] transition">A · Single-Feather "l" (Quill / Plume)</button>
+    <button onclick="filterFamily('light')" id="fam-light" class="tab-btn text-xs font-medium px-3 py-1.5 rounded-lg border border-[var(--border)] transition">B · Light / Ray / Photon "l"</button>
+    <button onclick="filterFamily('lightning')" id="fam-lightning" class="tab-btn text-xs font-medium px-3 py-1.5 rounded-lg border border-[var(--border)] transition">C · Lightning / Spark "l"</button>
+  </div>
+
+  <!-- Candidate Cards Grid -->
+  <div id="cards-grid" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5"></div>
+
+  <!-- Side-by-Side Wordmark & Header Bar Simulation -->
+  <div class="bg-[var(--card)] border border-[var(--border)] rounded-xl p-5 shadow-sm space-y-4">
+    <div class="flex items-center justify-between">
+      <div>
+        <h3 class="text-sm font-semibold">Live Header &amp; Favicon Bar Preview</h3>
+        <p class="text-xs text-[var(--muted-foreground)]">Click any concept card above to inspect how it anchors a site navbar, CLI badge, and 16px browser tab.</p>
+      </div>
+      <span id="selected-label" class="text-xs font-mono px-2.5 py-1 rounded bg-[var(--secondary)] text-[var(--secondary-foreground)]">Selected: #1 · Single-Stroke Loop Quill</span>
+    </div>
+
+    <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+      <!-- Dark Surface Simulation -->
+      <div class="rounded-xl bg-[#0F1115] text-[#F3F4F6] p-4 border border-white/10 space-y-4">
+        <div class="flex items-center justify-between border-b border-white/10 pb-3">
+          <div class="flex items-center gap-2">
+            <div class="w-3 h-3 rounded-full bg-white/15"></div>
+            <div class="flex items-center gap-1.5 bg-white/5 px-2.5 py-1 rounded-md text-xs font-mono text-zinc-300">
+              <span id="dark-favicon" class="inline-flex"></span>
+              <span>Lite — Lite is light</span>
+            </div>
+          </div>
+          <span class="text-xs font-mono text-zinc-500">Dark UI · 16px tab</span>
+        </div>
+        <div class="flex items-center justify-between pt-1">
+          <div id="dark-wordmark" class="flex items-center"></div>
+          <div class="flex items-center gap-4 text-xs text-zinc-400 font-mono">
+            <span>tour</span>
+            <span>spec</span>
+            <span>playground</span>
+            <span class="px-2 py-0.5 rounded bg-white/10 text-zinc-200">lite 0.3</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- Light Paper Surface Simulation -->
+      <div class="rounded-xl bg-[#F6F4EF] text-[#111315] p-4 border border-black/10 space-y-4">
+        <div class="flex items-center justify-between border-b border-black/10 pb-3">
+          <div class="flex items-center gap-2">
+            <div class="w-3 h-3 rounded-full bg-black/15"></div>
+            <div class="flex items-center gap-1.5 bg-black/5 px-2.5 py-1 rounded-md text-xs font-mono text-zinc-700">
+              <span id="light-favicon" class="inline-flex"></span>
+              <span>Lite — Lite is light</span>
+            </div>
+          </div>
+          <span class="text-xs font-mono text-zinc-500">Paper UI · 16px tab</span>
+        </div>
+        <div class="flex items-center justify-between pt-1">
+          <div id="light-wordmark" class="flex items-center"></div>
+          <div class="flex items-center gap-4 text-xs text-zinc-600 font-mono">
+            <span>tour</span>
+            <span>spec</span>
+            <span>playground</span>
+            <span class="px-2 py-0.5 rounded bg-black/10 text-zinc-900">lite 0.3</span>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+<script>
+const concepts = [
+  {
+    id: 'loop-quill',
+    num: 'A1',
+    family: 'feather',
+    badge: 'Feather · 1 Continuous Path',
+    title: 'The Loop Quill "l"',
+    subtitle: 'One unbroken stroke: rises up the stem, arcs out into a feather vane, and tucks back into the spine.',
+    why: 'Just like mini’s "m" is a single path of arches, this is a single monoline path that is simultaneously a lowercase "l" and a single feather.',
+    // Standalone 16x16 monogram
+    markSvg: (accent) => `
+      <path d="M5 14V2.5C10.5 2.5 12.5 5.5 12.5 8C12.5 10.5 9.5 11.5 5 11.5" fill="none" stroke="${accent}" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+    `,
+    // In wordmark (x shifted slightly left to sit before i-t-e)
+    wordmarkFirst: (accent, isTitle) => isTitle ? `
+      <path d="M3 13V2.5C8.5 2.5 10.5 5.2 10.5 7.5C10.5 9.8 7.8 10.8 3 10.8" fill="none" stroke="${accent}" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+      <path d="M3 13H9.5" fill="none" stroke="${accent}" stroke-width="2" stroke-linecap="round"/>
+    ` : `
+      <path d="M3.5 13V2.5C8.8 2.5 10.8 5.2 10.8 7.6C10.8 10 8 11 3.5 11" fill="none" stroke="${accent}" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+    `,
+    wordOffset: 15
+  },
+  {
+    id: 'split-vane',
+    num: 'A2',
+    family: 'feather',
+    badge: 'Feather · Notched Plume',
+    title: 'The Single-Barb Plume "l"',
+    subtitle: 'Vertical "l" stem with a single swept feather barb and upper plume arc.',
+    why: 'Distills your scratch5/scratch6 feather studies down to the minimum possible strokes so it never blurs at 16×16 and stands upright as the letter "l".',
+    markSvg: (accent) => `
+      <path d="M5.5 14V2.5C9.5 3.5 11.8 6 12 9.5" fill="none" stroke="${accent}" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+      <path d="M5.5 11C8.8 9.8 11 7.5 12 4.5" fill="none" stroke="${accent}" stroke-width="2" stroke-linecap="round"/>
+    `,
+    wordmarkFirst: (accent, isTitle) => `
+      <path d="M3.5 13V2.5C7.2 3.5 9.5 5.8 9.8 9" fill="none" stroke="${accent}" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+      <path d="M3.5 10.5C6.6 9.3 8.8 7.2 9.8 4.5" fill="none" stroke="${accent}" stroke-width="2" stroke-linecap="round"/>
+    `,
+    wordOffset: 14.5
+  },
+  {
+    id: 'wind-feather',
+    num: 'A3',
+    family: 'feather',
+    badge: 'Feather · Swept Rachis',
+    title: 'The Swept Quill "l"',
+    subtitle: 'A gently bowed feather shaft (rachis) with one clean vane stroke.',
+    why: 'Gives organic lift and weightlessness while keeping the vertical silhouette of an "l". Only 2 strokes on the 16×16 grid.',
+    markSvg: (accent) => `
+      <path d="M5.5 14C5 9.5 5.5 5.5 8 2.2" fill="none" stroke="${accent}" stroke-width="2" stroke-linecap="round"/>
+      <path d="M5.4 10.5C9.2 9.2 11.5 6.5 12.2 3.2" fill="none" stroke="${accent}" stroke-width="2" stroke-linecap="round"/>
+    `,
+    wordmarkFirst: (accent, isTitle) => `
+      <path d="M4 13C3.6 9 4 5.2 6.5 2.2" fill="none" stroke="${accent}" stroke-width="2" stroke-linecap="round"/>
+      <path d="M3.9 10C7.5 8.8 9.6 6.2 10.2 3.2" fill="none" stroke="${accent}" stroke-width="2" stroke-linecap="round"/>
+    `,
+    wordOffset: 14.5
+  },
+  {
+    id: 'photon-l',
+    num: 'B1',
+    family: 'light',
+    badge: 'Light · Photon + Stem',
+    title: 'The Photon "l" & "i" Bridge',
+    subtitle: 'Pure vertical "l" (or "L" foot) paired with a hovering photon dot/ray.',
+    why: 'Evolves your existing VS Code icon! In the wordmark, the hovering light dot of the mark literally becomes the dot of the "i" in "lite".',
+    markSvg: (accent) => `
+      <path d="M5.5 2.5V13.5" fill="none" stroke="${accent}" stroke-width="2" stroke-linecap="round"/>
+      <path d="M5.5 9.5L11.5 3.5" fill="none" stroke="${accent}" stroke-width="2" stroke-linecap="round"/>
+      <circle cx="11.5" cy="3.5" r="1.2" fill="${accent}"/>
+    `,
+    wordmarkFirst: (accent, isTitle) => isTitle ? `
+      <path d="M3.5 2.5V13H9.5" fill="none" stroke="${accent}" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+      <path d="M3.5 8.5L8.5 3.5" fill="none" stroke="${accent}" stroke-width="2" stroke-linecap="round"/>
+    ` : `
+      <path d="M4 2.5V13" fill="none" stroke="${accent}" stroke-width="2" stroke-linecap="round"/>
+      <path d="M4 8.5L9 3.5" fill="none" stroke="${accent}" stroke-width="2" stroke-linecap="round"/>
+    `,
+    wordOffset: 13.5
+  },
+  {
+    id: 'prism-ray',
+    num: 'B2',
+    family: 'light',
+    badge: 'Light · Refracted Ray',
+    title: 'The Refracted Beam "l"',
+    subtitle: 'A vertical beam of light that refracts upward at 45° — both a light ray and a minimal single-barb feather.',
+    why: 'Unifies "Feather" and "Light" into the exact same two-segment geometry: a stem and an upward ray.',
+    markSvg: (accent) => `
+      <path d="M5.5 14V2.5" fill="none" stroke="${accent}" stroke-width="2" stroke-linecap="round"/>
+      <path d="M5.5 10C8.5 10 11 7.5 11.5 4" fill="none" stroke="${accent}" stroke-width="2" stroke-linecap="round"/>
+    `,
+    wordmarkFirst: (accent, isTitle) => `
+      <path d="M4 13V2.5" fill="none" stroke="${accent}" stroke-width="2" stroke-linecap="round"/>
+      <path d="M4 9.8C7 9.8 9.2 7.5 9.8 4.2" fill="none" stroke="${accent}" stroke-width="2" stroke-linecap="round"/>
+    `,
+    wordOffset: 14
+  },
+  {
+    id: 'spark-bolt',
+    num: 'C1',
+    family: 'lightning',
+    badge: 'Lightning · 1 Continuous Path',
+    title: 'The Bolt "l" (Ignite)',
+    subtitle: 'A vertical "l" with a single crisp zig-zag kink — one stroke, zero extra parts.',
+    why: 'Captures "Lightning / Lite / Igniter" in a 3-vertex continuous polyline. Reads unmistakably as "l" in "lite" and as a bolt at 16×16.',
+    markSvg: (accent) => `
+      <path d="M9.5 2L5 8.5H10.5L6 14" fill="none" stroke="${accent}" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+    `,
+    wordmarkFirst: (accent, isTitle) => `
+      <path d="M7.8 2.2L3.8 8H8.8L4.8 13" fill="none" stroke="${accent}" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+    `,
+    wordOffset: 13.5
+  }
+];
+
+let currentAccentLight = '#0D9488';
+let currentAccentDark = '#5EEAD4';
+let currentFamily = 'all';
+let currentCase = 'lower';
+let selectedId = 'loop-quill';
+
+// Standard "-ite" suffix in mini's exact 16-unit monoline geometry
+function iteSuffixSvg(offsetX, color, accentDotColor) {
+  const iX = offsetX;
+  const tX = offsetX + 5.5;
+  const eX = offsetX + 13.5;
+  return `
+    <g fill="none" stroke="${color}" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+      <!-- i stem -->
+      <path d="M${iX} 13V6.5"/>
+      <!-- t stem + crossbar -->
+      <path d="M${tX} 3.5V11.2a1.8 1.8 0 0 0 1.8 1.8H${tX + 2.2}"/>
+      <path d="M${tX - 1.8} 6.5H${tX + 2.2}"/>
+      <!-- rounded monoline e -->
+      <path d="M${eX - 2.6} 9.6H${eX + 2.6}V9.2a2.6 2.6 0 0 0-5.2 0v1.2a2.6 2.6 0 0 0 4.6 1.6"/>
+    </g>
+    <circle cx="${iX}" cy="3.2" r="1.15" fill="${accentDotColor || color}"/>
+  `;
+}
+
+function buildWordmarkSvg(c, accent, textColor, heightPx = 28) {
+  const isTitle = currentCase === 'title';
+  const widthUnits = c.wordOffset + 18;
+  const wPx = Math.round((widthUnits / 16) * heightPx);
+  return `
+    <svg viewBox="0 0 ${widthUnits} 16" width="${wPx}" height="${heightPx}">
+      ${c.wordmarkFirst(accent, isTitle)}
+      ${iteSuffixSvg(c.wordOffset, textColor, c.id === 'photon-l' ? accent : textColor)}
+    </svg>
+  `;
+}
+
+function renderCards() {
+  const grid = document.getElementById('cards-grid');
+  grid.innerHTML = '';
+  const visible = concepts.filter(c => currentFamily === 'all' || c.family === currentFamily);
+
+  visible.forEach((c) => {
+    const isSel = c.id === selectedId;
+    const card = document.createElement('div');
+    card.className = `bg-[var(--card)] border ${isSel ? 'border-[var(--primary)] ring-1 ring-[var(--primary)]' : 'border-[var(--border)]'} rounded-xl p-4 shadow-sm flex flex-col justify-between cursor-pointer transition hover:border-[var(--foreground)]`;
+    card.onclick = () => {
+      selectedId = c.id;
+      renderCards();
+      renderSimulation();
+    };
+
+    card.innerHTML = `
+      <div>
+        <div class="flex items-center justify-between gap-2 mb-2">
+          <span class="text-xs font-mono font-semibold px-2 py-0.5 rounded bg-[var(--secondary)] text-[var(--secondary-foreground)]">${c.num} · ${c.badge}</span>
+          <span class="text-xs font-mono text-[var(--muted-foreground)]">16×16 grid</span>
+        </div>
+        <h3 class="text-base font-semibold">${c.title}</h3>
+        <p class="text-xs text-[var(--muted-foreground)] mt-1 leading-relaxed">${c.subtitle}</p>
+
+        <!-- Visual Showcase Row -->
+        <div class="mt-4 grid grid-cols-3 gap-2 items-center bg-[var(--background)] border border-[var(--border)] rounded-lg p-3">
+          <!-- Large 16x16 grid inspection -->
+          <div class="flex flex-col items-center">
+            <div class="w-20 h-20 rounded-lg grid-bg border border-[var(--border)] flex items-center justify-center">
+              <svg viewBox="0 0 16 16" width="64" height="64">${c.markSvg(currentAccentLight)}</svg>
+            </div>
+            <span class="text-xs font-mono text-[var(--muted-foreground)] mt-1.5">64px Grid</span>
+          </div>
+
+          <!-- Dark tile + actual 16px size ramp -->
+          <div class="flex flex-col items-center gap-2">
+            <div class="flex items-center gap-2">
+              <div class="w-11 h-11 rounded-lg bg-[#101113] flex items-center justify-center border border-white/10">
+                <svg viewBox="0 0 16 16" width="28" height="28">${c.markSvg(currentAccentDark)}</svg>
+              </div>
+              <div class="w-7 h-7 rounded bg-[#101113] flex items-center justify-center border border-white/10" title="Actual 16x16 favicon size">
+                <svg viewBox="0 0 16 16" width="16" height="16">${c.markSvg(currentAccentDark)}</svg>
+              </div>
+            </div>
+            <span class="text-xs font-mono text-[var(--muted-foreground)]">28px &amp; 16px</span>
+          </div>
+
+          <!-- Wordmark Lockup -->
+          <div class="flex flex-col items-center">
+            <div class="h-11 px-2.5 rounded-lg bg-[#101113] text-[#F5F3EE] flex items-center justify-center border border-white/10">
+              ${buildWordmarkSvg(c, currentAccentDark, '#F5F3EE', 22)}
+            </div>
+            <div class="h-8 px-2 mt-1 rounded bg-[#F5F3EE] text-[#101113] flex items-center justify-center border border-black/10">
+              ${buildWordmarkSvg(c, currentAccentLight, '#101113', 18)}
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="mt-3 pt-2.5 border-t border-[var(--border)] text-xs text-[var(--muted-foreground)] leading-relaxed">
+        <strong class="text-[var(--foreground)]">Why it fits:</strong> ${c.why}
+      </div>
+    `;
+    grid.appendChild(card);
+  });
+}
+
+function renderSimulation() {
+  const c = concepts.find(x => x.id === selectedId) || concepts[0];
+  document.getElementById('selected-label').textContent = `Selected: ${c.num} · ${c.title}`;
+  document.getElementById('dark-favicon').innerHTML = `<svg viewBox="0 0 16 16" width="16" height="16">${c.markSvg(currentAccentDark)}</svg>`;
+  document.getElementById('light-favicon').innerHTML = `<svg viewBox="0 0 16 16" width="16" height="16">${c.markSvg(currentAccentLight)}</svg>`;
+  document.getElementById('dark-wordmark').innerHTML = buildWordmarkSvg(c, currentAccentDark, '#F3F4F6', 28);
+  document.getElementById('light-wordmark').innerHTML = buildWordmarkSvg(c, currentAccentLight, '#111315', 28);
+}
+
+function setAccent(lightHex, darkHex, label) {
+  currentAccentLight = lightHex;
+  currentAccentDark = darkHex;
+  document.querySelectorAll('.palette-btn').forEach(b => b.classList.remove('active'));
+  event.currentTarget.classList.add('active');
+  renderCards();
+  renderSimulation();
+}
+
+function filterFamily(fam) {
+  currentFamily = fam;
+  ['all', 'feather', 'light', 'lightning'].forEach(f => {
+    document.getElementById('fam-' + f).classList.toggle('active', f === fam);
+  });
+  renderCards();
+}
+
+function setCase(mode) {
+  currentCase = mode;
+  document.getElementById('case-lower').classList.toggle('active', mode === 'lower');
+  document.getElementById('case-title').classList.toggle('active', mode === 'title');
+  renderCards();
+  renderSimulation();
+}
+
+renderCards();
+renderSimulation();
+</script>
+</body>
+</html>

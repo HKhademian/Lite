@@ -1,0 +1,53 @@
+# Lite Branding & Logo Exploration
+
+All branding assets, logo revisions, and preview sheets live in `brand/investigation/`.
+This is the tracked design archive — the single place where the trail of revisions is kept.
+
+---
+
+## Revision log
+
+| Rev | Folder | What it contains | Verdict |
+| --- | --- | --- | --- |
+| 1 | `rev-1-concepts/` | First pass: six written concepts (Aero Feather, Lightning Feather, Photon Quill, Beam-l, Monoline-l, Spark Quill) plus the C1–C4 refined round (Plume-l, Plume solid, Bolt-l, Ray) with its own sheet. | Superseded. Every mark was a literal picture of the idea; none read as a brand at 16 px. Kept as the starting evidence. |
+| 2 | `rev-2-sheets/` | Two exploration sheets: `exploration.html` (editorial mark study), `preview.html` (theme switcher, 128→16 px scale tests, lockups). | Superseded. Established the palette, scale tests, and the "one stroke" instinct, but still argued from theme rather than from drawing. |
+| 3 | `rev-3-quill/` | ~40 marks across 6 families, rendered at 256/64/32/24/16 px and inverted. Full sheet with findings, four directions, constructed geometry, applications, palette, open questions. Plus the mark assets. | **Active (Standalone Icon).** Recommendation: **The Quill** — one shaft, three barbs at 35°, monoline. Spark and Bolt held open. |
+| 4 | `rev-4-monogram-wordmark/` | 16×16 monoline monogram-to-wordmark study modeled directly on `MiniLang/brand/`: 6 candidates (`a1`–`a3` Feather `l`, `b1`–`b2` Light/Photon `l`, `c1` Bolt `l`) where the mark *is* the first letter `l` in `lite`, plus interactive `studio.html`. | **Active (Monogram + Wordmark Lockup).** Pairs directly with Rev 3 to compare standalone diagonal Quill vs. `mini`-style first-letter monogram. |
+| 5 | `rev-5-synthesis/` | Synthesis of Rev 3's 6 findings + craft bar with Rev 4's `mini`-style monogram lockup: `1-tapered-quill.svg` (Rev 3's requested calligraphic step), `2-slanted-quill-l.svg` (18° forward-leaning `l` + 1 flick), `3-spark-li.svg` (refined Spark `li`), `4-split-light-quill.svg` (35° quill + lightning step), plus `exploration.html` scorecard. | **Current.** Ready for final selection between standalone Tapered/Split-Light Quill and `mini`-style Slanted Quill-`l` / Spark `li`. |
+
+### Revision 3 files
+
+- `exploration.html` — the deliverable sheet. Open in a browser.
+- `lite-mark.svg` — primary mark (3 barbs), `currentColor`.
+- `lite-mark-16.svg` — optical cut for 16 px and below (2 barbs, thicker stroke).
+- `lite-mark.png` — 512 px transparent export.
+- `notes.md` — method, six findings, geometry spec, system rules, open questions.
+
+### Working conventions
+
+- One folder per revision, named `rev-N-slug/`.
+- Never overwrite an earlier revision; add the next number.
+- Record the verdict in the table above when a revision is superseded.
+- Sheets are self-contained HTML (inline SVG symbols) so a folder can be moved
+  or archived without breaking references.
+
+---
+
+## Current recommendation in one line
+
+**The Quill**: a single shaft leaning 35°, three barbs at the same angle, no
+outline, no nib. The *l* belongs to the wordmark — the same division of labour
+that makes mini's lowercase **m** work.
+
+Held open: **Spark** (shaft + detached dot, reads *li*, most mini-like at 16 px,
+no feather) and **Bolt** (the *l* as lightning; voice and motion only).
+
+---
+
+## Core Brand Pillars
+
+1. **Lightness of Weight (Feather)**: fast native execution, tiny footprint, no
+   garbage collector / VM bloat, minimal ceremony.
+2. **Speed & Energy (Lightning)**: instantaneous startup, zero compilation drag.
+3. **Clarity & Transparency (Light Ray)**: predictable semantics, readable code,
+   illuminating clarity.

@@ -1,0 +1,16 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="760" viewBox="0 0 1200 760">
+<rect width="1200" height="760" fill="#faf9f6"/>
+<g font-family="Helvetica Neue,Arial,sans-serif" fill="#252a28"><text x="70" y="80" font-size="30" font-weight="600">lite · refining the l</text><text x="70" y="115" font-size="17" fill="#737b77">Four early sketches · a letter first, a lightness cue second</text></g>
+<g fill="none" stroke="#dddfda"><path d="M70 145H1130M70 550H1130M335 145V550M600 145V550M865 145V550"/></g>
+<!-- soft feather: upright tapered vane with open l foot -->
+<g transform="translate(130 196)" fill="none" stroke="#147a70" stroke-linecap="round" stroke-linejoin="round"><path d="M55 5 C31 24 22 47 24 73 C25 94 34 107 55 110 C72 111 81 111 92 111" stroke-width="7"/><path d="M55 5 C69 34 68 60 55 80 C45 95 31 101 25 97" stroke-width="7"/><path d="M55 5 C53 45 40 74 25 97" stroke-width="3"/></g>
+<!-- tapered solid quill -->
+<g transform="translate(401 196)" fill="#147a70"><path d="M42 4 C64 31 69 61 53 84 C46 94 36 103 31 111 C32 98 29 86 27 75 C21 49 27 23 42 4 Z"/><path d="M31 105 C33 112 38 114 49 114 L84 114 L84 106 L53 106 C44 106 40 104 39 98 Z"/></g>
+<!-- plain l with feather cuts, one-sided slender contour -->
+<g transform="translate(677 198)" fill="none" stroke="#147a70" stroke-linecap="round" stroke-linejoin="round"><path d="M34 3 L34 90 Q34 109 53 109 H83" stroke-width="8"/><path d="M34 25 L51 13 M34 43 L54 29 M34 61 L54 47" stroke-width="4"/></g>
+<!-- l with spark -->
+<g transform="translate(937 198)" fill="none" stroke="#147a70" stroke-linecap="round" stroke-linejoin="round"><path d="M35 9 V88 Q35 109 55 109 H84" stroke-width="9"/><path d="M76 18 V38 M66 28 H86" stroke-width="4"/></g>
+<g font-family="Helvetica Neue,Arial,sans-serif"><g font-size="46" fill="#252a28"><text x="165" y="405" text-anchor="middle">lite</text><text x="435" y="405" text-anchor="middle">lite</text><text x="700" y="405" text-anchor="middle">lite</text><text x="965" y="405" text-anchor="middle">lite</text></g><g fill="#252a28" font-size="17" font-weight="600"><text x="90" y="468">01 / Feather curve</text><text x="355" y="468">02 / Quill silhouette</text><text x="620" y="468">03 / Feather strokes</text><text x="885" y="468">04 / Light spark</text></g><g fill="#737b77" font-size="14"><text x="90" y="493">An enclosing feather,</text><text x="90" y="513">flowing into an l.</text><text x="355" y="493">A single tapered shape</text><text x="355" y="513">meeting a short foot.</text><text x="620" y="493">An unmistakable l with</text><text x="620" y="513">small angled barbs.</text><text x="885" y="493">A simple l paired with</text><text x="885" y="513">a tiny glint of light.</text></g></g>
+<text x="70" y="611" font-family="Helvetica Neue,Arial,sans-serif" font-size="16" fill="#535b57">Rough concept sketches: shape and balance still need refinement.</text>
+<text x="70" y="642" font-family="Helvetica Neue,Arial,sans-serif" font-size="15" fill="#737b77">The final mark should remain recognizable in one color and at favicon size.</text>
+</svg>

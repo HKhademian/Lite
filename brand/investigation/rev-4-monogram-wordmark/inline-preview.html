@@ -1,0 +1,108 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <script src="https://www.gstatic.com/antigravity/web/dev/tailwindcss.min.js"></script>
+</head>
+<body class="bg-transparent text-[var(--foreground)] antialiased p-3">
+  <div class="bg-[var(--card)] border border-[var(--border)] rounded-xl p-4 shadow-sm space-y-3">
+    <div class="flex items-center justify-between gap-2">
+      <div>
+        <h2 class="text-sm font-semibold">Lite Monogram &amp; Wordmark Finalists (16×16 Monoline Grid)</h2>
+        <p class="text-xs text-[var(--muted-foreground)]">Click an accent or toggle <code class="font-mono">lite</code> / <code class="font-mono">Lite</code> — open the full studio artifact for size ramps &amp; header bar previews.</p>
+      </div>
+      <div class="flex items-center gap-2 shrink-0">
+        <button onclick="setCol('#0D9488','#5EEAD4')" class="w-4 h-4 rounded-full bg-[#14B8A6] ring-1 ring-white/30" title="Teal"></button>
+        <button onclick="setCol('#D97706','#FBBF24')" class="w-4 h-4 rounded-full bg-[#F59E0B] ring-1 ring-white/30" title="Amber/Light"></button>
+        <button onclick="setCol('#0284C7','#38BDF8')" class="w-4 h-4 rounded-full bg-[#38BDF8] ring-1 ring-white/30" title="Sky"></button>
+        <button onclick="setCol('#4F46E5','#818CF8')" class="w-4 h-4 rounded-full bg-[#818CF8] ring-1 ring-white/30" title="Electric"></button>
+      </div>
+    </div>
+
+    <div class="grid grid-cols-2 sm:grid-cols-3 gap-2.5" id="inline-grid"></div>
+  </div>
+
+<script>
+let darkAcc = '#5EEAD4';
+let lightAcc = '#0D9488';
+
+const items = [
+  {
+    code: 'A1 · Loop Quill',
+    note: '1 continuous path ("l" + feather loop)',
+    mark: (c) => `<path d="M5 14V2.5C10.5 2.5 12.5 5.5 12.5 8C12.5 10.5 9.5 11.5 5 11.5" fill="none" stroke="${c}" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>`,
+    first: (c) => `<path d="M3.5 13V2.5C8.8 2.5 10.8 5.2 10.8 7.6C10.8 10 8 11 3.5 11" fill="none" stroke="${c}" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>`,
+    off: 15
+  },
+  {
+    code: 'A2 · Single-Barb Plume',
+    note: 'Upright "l" + 1 feather barb',
+    mark: (c) => `<path d="M5.5 14V2.5C9.5 3.5 11.8 6 12 9.5" fill="none" stroke="${c}" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/><path d="M5.5 11C8.8 9.8 11 7.5 12 4.5" fill="none" stroke="${c}" stroke-width="2" stroke-linecap="round"/>`,
+    first: (c) => `<path d="M3.5 13V2.5C7.2 3.5 9.5 5.8 9.8 9" fill="none" stroke="${c}" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/><path d="M3.5 10.5C6.6 9.3 8.8 7.2 9.8 4.5" fill="none" stroke="${c}" stroke-width="2" stroke-linecap="round"/>`,
+    off: 14.5
+  },
+  {
+    code: 'A3 · Swept Rachis',
+    note: 'Bowed quill shaft + single vane',
+    mark: (c) => `<path d="M5.5 14C5 9.5 5.5 5.5 8 2.2" fill="none" stroke="${c}" stroke-width="2" stroke-linecap="round"/><path d="M5.4 10.5C9.2 9.2 11.5 6.5 12.2 3.2" fill="none" stroke="${c}" stroke-width="2" stroke-linecap="round"/>`,
+    first: (c) => `<path d="M4 13C3.6 9 4 5.2 6.5 2.2" fill="none" stroke="${c}" stroke-width="2" stroke-linecap="round"/><path d="M3.9 10C7.5 8.8 9.6 6.2 10.2 3.2" fill="none" stroke="${c}" stroke-width="2" stroke-linecap="round"/>`,
+    off: 14.5
+  },
+  {
+    code: 'B1 · Photon Ray "l"',
+    note: 'Ray dot bridges into the "i" of lite',
+    mark: (c) => `<path d="M5.5 2.5V13.5" fill="none" stroke="${c}" stroke-width="2" stroke-linecap="round"/><path d="M5.5 9.5L11.5 3.5" fill="none" stroke="${c}" stroke-width="2" stroke-linecap="round"/><circle cx="11.5" cy="3.5" r="1.2" fill="${c}"/>`,
+    first: (c) => `<path d="M4 2.5V13" fill="none" stroke="${c}" stroke-width="2" stroke-linecap="round"/><path d="M4 8.5L9 3.5" fill="none" stroke="${c}" stroke-width="2" stroke-linecap="round"/>`,
+    off: 13.5,
+    dotAccent: true
+  },
+  {
+    code: 'B2 · Refracted Beam',
+    note: 'Both a light ray & 1-barb feather',
+    mark: (c) => `<path d="M5.5 14V2.5" fill="none" stroke="${c}" stroke-width="2" stroke-linecap="round"/><path d="M5.5 10C8.5 10 11 7.5 11.5 4" fill="none" stroke="${c}" stroke-width="2" stroke-linecap="round"/>`,
+    first: (c) => `<path d="M4 13V2.5" fill="none" stroke="${c}" stroke-width="2" stroke-linecap="round"/><path d="M4 9.8C7 9.8 9.2 7.5 9.8 4.2" fill="none" stroke="${c}" stroke-width="2" stroke-linecap="round"/>`,
+    off: 14
+  },
+  {
+    code: 'C1 · Bolt "l" (Ignite)',
+    note: '1 continuous zig-zag "l" stroke',
+    mark: (c) => `<path d="M9.5 2L5 8.5H10.5L6 14" fill="none" stroke="${c}" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>`,
+    first: (c) => `<path d="M7.8 2.2L3.8 8H8.8L4.8 13" fill="none" stroke="${c}" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>`,
+    off: 13.5
+  }
+];
+
+function suffix(x, col, dotCol) {
+  const t = x + 5.5, e = x + 13.5;
+  return `<g fill="none" stroke="${col}" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+    <path d="M${x} 13V6.5"/><path d="M${t} 3.5V11.2a1.8 1.8 0 0 0 1.8 1.8H${t+2.2}"/><path d="M${t-1.8} 6.5H${t+2.2}"/>
+    <path d="M${e-2.6} 9.6H${e+2.6}V9.2a2.6 2.6 0 0 0-5.2 0v1.2a2.6 2.6 0 0 0 4.6 1.6"/>
+  </g><circle cx="${x}" cy="3.2" r="1.15" fill="${dotCol}"/>`;
+}
+
+function draw() {
+  const g = document.getElementById('inline-grid');
+  g.innerHTML = '';
+  items.forEach(it => {
+    const w = it.off + 18;
+    const wPx = Math.round((w / 16) * 22);
+    g.innerHTML += `
+      <div class="rounded-lg border border-[var(--border)] bg-[var(--background)] p-2.5 flex flex-col justify-between">
+        <div class="flex items-center justify-between gap-2 bg-[#101113] rounded-md px-2.5 py-2 border border-white/10">
+          <svg viewBox="0 0 16 16" width="24" height="24">${it.mark(darkAcc)}</svg>
+          <svg viewBox="0 0 ${w} 16" width="${wPx}" height="22">${it.first(darkAcc)}${suffix(it.off, '#F5F3EE', it.dotAccent ? darkAcc : '#F5F3EE')}</svg>
+        </div>
+        <div class="mt-2">
+          <div class="text-xs font-mono font-semibold">${it.code}</div>
+          <div class="text-xs text-[var(--muted-foreground)] truncate">${it.note}</div>
+        </div>
+      </div>
+    `;
+  });
+}
+
+function setCol(l, d) { lightAcc = l; darkAcc = d; draw(); }
+draw();
+</script>
+</body>
+</html>

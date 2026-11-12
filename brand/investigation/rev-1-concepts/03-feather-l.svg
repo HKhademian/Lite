@@ -1,0 +1,14 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="730" viewBox="0 0 1200 730">
+<rect width="1200" height="730" fill="#faf9f6"/>
+<g font-family="Helvetica Neue,Arial,sans-serif" fill="#222926"><text x="70" y="78" font-size="30" font-weight="600">lite · the feather l</text><text x="70" y="113" font-size="17" fill="#727b76">A narrower feather, a clearer letter · three variations of one idea</text></g>
+<path d="M70 145H1130M423 145V515M777 145V515M70 515H1130" fill="none" stroke="#dedfda"/>
+<!-- A: thin curved feather around left-side stem, barb details -->
+<g transform="translate(169 189)" fill="none" stroke="#197a70" stroke-linecap="round" stroke-linejoin="round"><path d="M38 9 C28 31 25 56 27 91 C28 112 29 128 30 137 Q31 154 48 154 H87" stroke-width="8"/><path d="M38 9 C63 33 69 59 64 84 C61 101 48 119 30 137" stroke-width="5"/><path d="M35 64 L53 48 M32 89 L54 70 M30 114 L50 96" stroke-width="3.5"/></g>
+<!-- B: upright thin profile, connected feather edge -->
+<g transform="translate(523 189)" fill="none" stroke="#197a70" stroke-linecap="round" stroke-linejoin="round"><path d="M36 9 C31 39 29 77 29 137 Q29 154 47 154 H87" stroke-width="8"/><path d="M36 9 C54 33 60 60 57 85 C55 108 43 125 29 137" stroke-width="4.5"/><path d="M33 69 L50 55 M31 95 L51 79 M30 119 L48 104" stroke-width="3"/></g>
+<!-- C: outer feather left and clear spine -->
+<g transform="translate(878 189)" fill="none" stroke="#197a70" stroke-linecap="round" stroke-linejoin="round"><path d="M48 9 C43 42 40 81 39 137 Q39 154 57 154 H96" stroke-width="8"/><path d="M48 9 C27 34 19 61 22 86 C24 108 29 122 39 137" stroke-width="4.5"/><path d="M41 68 L28 57 M40 93 L27 81 M39 117 L29 108" stroke-width="3"/></g>
+<g font-family="Helvetica Neue,Arial,sans-serif" fill="#252b28"><text x="95" y="418" font-size="18" font-weight="600">01 / Soft curve</text><text x="449" y="418" font-size="18" font-weight="600">02 / Slender</text><text x="803" y="418" font-size="18" font-weight="600">03 / Feather to the left</text></g>
+<g font-family="Helvetica Neue,Arial,sans-serif" fill="#737b77" font-size="15"><text x="95" y="447">A little more movement.</text><text x="449" y="447">The clearest upright l.</text><text x="803" y="447">The l leads into its foot.</text></g>
+<g font-family="Helvetica Neue,Arial,sans-serif" fill="#26302c"><text x="70" y="574" font-size="17">Working sketches: the spine and foot are the l; the thin outline and short strokes suggest a feather.</text><text x="70" y="608" font-size="15" fill="#737b77">Next refinement: tune the curves and test a simplified small-size version.</text></g>
+</svg>

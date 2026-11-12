@@ -1,0 +1,558 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="paper">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Lite — mark exploration 01</title>
+<style>
+  :root {
+    --paper: #F5F3EE;
+    --card: #FBFAF7;
+    --ink: #101113;
+    --muted: #6C7078;
+    --line: #DCD8CE;
+    --accent: #C97B14;
+    --font: ui-sans-serif, -apple-system, "Segoe UI", Inter, "Helvetica Neue", sans-serif;
+    --mono: ui-monospace, "SF Mono", "JetBrains Mono", Menlo, monospace;
+  }
+  html[data-theme="ink"] {
+    --paper: #0B0C0E; --card: #131519; --ink: #F2F0EA; --muted: #8B9099;
+    --line: #24272E; --accent: #F0B45A;
+  }
+  * { box-sizing: border-box; }
+  html, body { margin: 0; }
+  body {
+    background: var(--paper); color: var(--ink); font-family: var(--font);
+    -webkit-font-smoothing: antialiased; padding: 48px 28px 96px; line-height: 1.45;
+  }
+  .wrap { max-width: 1160px; margin: 0 auto; }
+
+  header { display: flex; justify-content: space-between; align-items: flex-start; gap: 24px; padding-bottom: 22px; border-bottom: 1px solid var(--line); }
+  .eyebrow { font-family: var(--mono); font-size: 11px; letter-spacing: .12em; text-transform: uppercase; color: var(--muted); }
+  h1 { font-size: 32px; line-height: 1.08; letter-spacing: -.035em; font-weight: 650; margin: 10px 0 8px; }
+  .sub { color: var(--muted); font-size: 14px; max-width: 62ch; }
+  .toggle { font: inherit; font-size: 12px; color: var(--ink); background: transparent; border: 1px solid var(--line); border-radius: 999px; padding: 7px 14px; cursor: pointer; white-space: nowrap; }
+  .toggle:hover { border-color: var(--muted); }
+
+  section { padding-top: 46px; }
+  .sec-head { display: flex; align-items: baseline; gap: 14px; margin-bottom: 18px; flex-wrap: wrap; }
+  .sec-num { font-family: var(--mono); font-size: 11px; color: var(--muted); }
+  h2 { font-size: 15px; font-weight: 650; letter-spacing: -.01em; margin: 0; }
+  .sec-note { font-size: 13px; color: var(--muted); margin-left: auto; max-width: 48ch; text-align: right; }
+
+  /* verdict */
+  .verdict { display: grid; grid-template-columns: 260px 1fr; gap: 1px; background: var(--line); border: 1px solid var(--line); }
+  .verdict .markbox { background: var(--card); display: grid; place-items: center; padding: 26px; }
+  .verdict .txt { background: var(--card); padding: 24px 26px; }
+  .verdict h3 { margin: 0 0 8px; font-size: 19px; letter-spacing: -.02em; }
+  .verdict p { margin: 0; font-size: 13.5px; color: var(--muted); }
+  .verdict b { color: var(--ink); font-weight: 600; }
+  .chips { display: flex; gap: 8px; flex-wrap: wrap; margin-top: 16px; }
+  .chip { font-family: var(--mono); font-size: 10.5px; letter-spacing: .04em; border: 1px solid var(--line); border-radius: 999px; padding: 5px 10px; color: var(--muted); }
+  .chip b { color: var(--ink); font-weight: 500; }
+
+  /* brief */
+  .brief { display: grid; grid-template-columns: repeat(3, 1fr); gap: 1px; background: var(--line); border: 1px solid var(--line); }
+  .brief > div { background: var(--card); padding: 18px 20px; }
+  .brief h3 { font-size: 11px; letter-spacing: .09em; text-transform: uppercase; color: var(--muted); font-weight: 600; margin: 0 0 10px; }
+  .brief p { margin: 0; font-size: 13.5px; }
+  .brief p + p { margin-top: 8px; }
+
+  /* findings */
+  .findings { display: grid; grid-template-columns: repeat(3, 1fr); gap: 1px; background: var(--line); border: 1px solid var(--line); }
+  .finding { background: var(--card); padding: 16px 18px; }
+  .finding .fid { font-family: var(--mono); font-size: 10px; color: var(--muted); }
+  .finding h4 { font-size: 13.5px; margin: 6px 0 4px; letter-spacing: -.01em; }
+  .finding p { margin: 0; font-size: 12.5px; color: var(--muted); }
+  .finding .proof { display: flex; gap: 14px; align-items: center; margin-bottom: 12px; color: var(--ink); }
+  .finding .proof .x { font-family: var(--mono); font-size: 9px; color: var(--accent); letter-spacing: .05em; }
+
+  /* directions */
+  .dirs { display: grid; grid-template-columns: repeat(2, 1fr); gap: 1px; background: var(--line); border: 1px solid var(--line); }
+  .dir { background: var(--card); padding: 20px; display: flex; flex-direction: column; }
+  .dir-top { display: flex; justify-content: space-between; align-items: baseline; gap: 8px; }
+  .dir-id { font-family: var(--mono); font-size: 10px; color: var(--muted); letter-spacing: .08em; }
+  .dir-role { font-family: var(--mono); font-size: 9.5px; color: var(--accent); letter-spacing: .08em; text-transform: uppercase; }
+  .dir h4 { font-size: 17px; margin: 8px 0 3px; letter-spacing: -.02em; }
+  .dir .thesis { font-size: 13px; color: var(--muted); margin: 0 0 8px; min-height: 38px; }
+  .stage { display: grid; place-items: center; height: 180px; border-radius: 6px; background: color-mix(in srgb, var(--paper) 55%, var(--card)); margin-bottom: 12px; color: var(--ink); }
+  .sizes { display: flex; align-items: flex-end; gap: 20px; padding-top: 12px; border-top: 1px solid var(--line); color: var(--ink); }
+  .size { display: flex; flex-direction: column; align-items: center; gap: 6px; color: var(--muted); font-family: var(--mono); font-size: 9px; }
+  .reads { font-size: 12px; color: var(--muted); margin-top: 12px; }
+  .reads b { color: var(--ink); font-weight: 600; }
+  .dots { font-size: 10px; letter-spacing: .16em; color: var(--ink); }
+  .dots .off { color: var(--line); }
+  .score-row { display: grid; grid-template-columns: repeat(4, auto); gap: 10px; font-family: var(--mono); font-size: 9px; color: var(--muted); margin-top: 10px; }
+  .score-row span b { display: block; color: var(--ink); letter-spacing: .12em; font-size: 10px; font-weight: 400; margin-top: 2px; }
+
+  /* construction */
+  .panel { background: var(--card); border: 1px solid var(--line); padding: 22px; }
+  .panel h3 { margin: 0 0 3px; font-size: 16px; letter-spacing: -.015em; }
+  .panel .kicker { font-family: var(--mono); font-size: 10px; letter-spacing: .09em; text-transform: uppercase; color: var(--muted); }
+  .panel p { font-size: 13px; color: var(--muted); margin: 8px 0 0; }
+  .panel p b { color: var(--ink); font-weight: 600; }
+  .build { display: grid; place-items: center; padding: 4px 0 10px; }
+  .legend { display: flex; gap: 18px; flex-wrap: wrap; font-family: var(--mono); font-size: 10px; color: var(--muted); border-top: 1px solid var(--line); padding-top: 12px; margin-top: 8px; }
+  .legend i { display: inline-block; width: 16px; height: 0; border-top: 1px solid currentColor; vertical-align: middle; margin-right: 6px; }
+
+  /* applications */
+  .apps { display: grid; grid-template-columns: repeat(3, 1fr); gap: 20px; margin-top: 20px; }
+  .app { background: var(--card); border: 1px solid var(--line); padding: 18px; }
+  .app .cap { font-family: var(--mono); font-size: 10px; color: var(--muted); margin-bottom: 14px; letter-spacing: .06em; }
+  .app .body { min-height: 116px; display: grid; place-items: center; }
+  .tabs { width: 100%; display: grid; gap: 6px; }
+  .tab { display: flex; align-items: center; gap: 8px; border: 1px solid var(--line); border-radius: 7px 7px 0 0; padding: 7px 10px; font-size: 12px; color: var(--muted); background: color-mix(in srgb, var(--paper) 50%, var(--card)); }
+  .tab.active { background: var(--paper); color: var(--ink); border-bottom-color: var(--paper); }
+  .tab .x { margin-left: auto; opacity: .35; font-size: 11px; }
+  .icon-tile { width: 104px; height: 104px; border-radius: 24px; display: grid; place-items: center; }
+  .tile-ink { background: #101113; color: #F5F3EE; }
+  .tile-paper { background: #F5F3EE; color: #101113; border: 1px solid #DCD8CE; }
+  .tile-beam { background: #F0B45A; color: #101113; }
+  .terminal { width: 100%; background: #0B0C0E; color: #EDEAE2; border-radius: 8px; padding: 14px 16px; font-family: var(--mono); font-size: 12px; line-height: 1.9; }
+  .terminal .p { color: #6E747E; }
+  .terminal .m { color: #F0B45A; }
+  .terminal .c { color: #9AA1AC; }
+
+  /* lockups */
+  .lockups { display: grid; grid-template-columns: repeat(3, 1fr); gap: 1px; background: var(--line); border: 1px solid var(--line); }
+  .lockup { background: var(--card); min-height: 160px; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 4px; }
+  .lockup .cap { font-family: var(--mono); font-size: 9.5px; color: var(--muted); margin-top: 18px; }
+  .wordmark { display: flex; align-items: center; gap: 12px; }
+  .wordmark .type { font-size: 36px; font-weight: 600; letter-spacing: -.05em; line-height: 1; }
+  .wordmark .type small { font-weight: 400; color: var(--muted); font-size: 15px; letter-spacing: 0; margin-left: 8px; }
+  .type-only { font-size: 46px; font-weight: 600; letter-spacing: -.055em; line-height: 1; }
+
+  /* palette */
+  .palette { display: grid; grid-template-columns: repeat(4, 1fr); gap: 1px; background: var(--line); border: 1px solid var(--line); }
+  .swatch { background: var(--card); padding: 12px; }
+  .swatch .chipbox { height: 64px; border-radius: 4px; border: 1px solid var(--line); margin-bottom: 10px; }
+  .swatch .nm { font-size: 12.5px; font-weight: 600; }
+  .swatch .hex { font-family: var(--mono); font-size: 10.5px; color: var(--muted); }
+
+  /* questions */
+  .qs { display: grid; border-top: 1px solid var(--line); counter-reset: q; }
+  .q { display: grid; grid-template-columns: 34px 1fr; gap: 10px; padding: 14px 0; border-bottom: 1px solid var(--line); font-size: 13.5px; }
+  .q::before { counter-increment: q; content: "0" counter(q); font-family: var(--mono); font-size: 10px; color: var(--muted); padding-top: 3px; }
+  .q b { font-weight: 600; }
+  .q span { color: var(--muted); }
+
+  footer { margin-top: 56px; padding-top: 18px; border-top: 1px solid var(--line); display: flex; justify-content: space-between; gap: 20px; font-family: var(--mono); font-size: 10px; color: var(--muted); letter-spacing: .06em; }
+
+  @media (max-width: 980px) {
+    .brief, .findings { grid-template-columns: 1fr; }
+    .dirs { grid-template-columns: 1fr; }
+    .verdict { grid-template-columns: 1fr; }
+    .apps, .lockups { grid-template-columns: 1fr; }
+    .palette { grid-template-columns: repeat(2, 1fr); }
+    .sec-note { text-align: left; margin-left: 0; }
+  }
+</style>
+</head>
+<body>
+<div class="wrap">
+
+<header>
+  <div>
+    <div class="eyebrow">Lite · brand exploration 01 · 2026-11-12</div>
+    <h1>The feather, reduced to a glyph.</h1>
+    <p class="sub">Lite is light. The mark should say that with one drawn stroke, not an illustration — the way <b>m</b> does for mini. This sheet is the result of testing the obvious feather first, then cutting it down until only what survives at 16 px is left.</p>
+  </div>
+  <button class="toggle" onclick="document.documentElement.dataset.theme = document.documentElement.dataset.theme === 'ink' ? 'paper' : 'ink'">Paper / Ink</button>
+</header>
+
+<!-- verdict -->
+<section style="padding-top:34px">
+  <div class="verdict">
+    <div class="markbox">
+      <svg width="150" height="150" viewBox="0 0 64 64" fill="none" stroke="currentColor" stroke-width="4.6" stroke-linecap="round"><use href="#quill"/></svg>
+    </div>
+    <div class="txt">
+      <div class="eyebrow" style="margin-bottom:8px">Recommendation</div>
+      <h3>The Quill — one shaft, three barbs, no outline.</h3>
+      <p>A shaft and three barbs at a 35° lean. It reads as a feather at 48 px, as motion at 24 px, and still as a deliberate mark at 16 px. The <b>l</b> link is carried by the wordmark, not forced into the icon; that keeps the glyph honest and the lockup typographic — the same division of labour that makes mini's <b>m</b> work.</p>
+      <div class="chips">
+        <span class="chip">Mark <b>Quill</b></span>
+        <span class="chip">Type <b>lowercase grotesque, −5%</b></span>
+        <span class="chip">Accent <b>Filament</b></span>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- 01 -->
+<section>
+  <div class="sec-head"><span class="sec-num">01</span><h2>The brief, stated as constraints</h2></div>
+  <div class="brief">
+    <div>
+      <h3>The m-test</h3>
+      <p><b>One glyph, one stroke weight, one square.</b> It must survive as a favicon with no wordmark, invert cleanly, and look drawn rather than assembled.</p>
+      <p>If it needs a gradient, a glow, or an explanation, it is not the mark.</p>
+    </div>
+    <div>
+      <h3>What it must carry</h3>
+      <p><b>Feather:</b> lightness, writing, a quill. <b>Light:</b> speed, a spark. <b>L:</b> the name.</p>
+      <p>Two of the three is enough. All three, legibly, is the win.</p>
+    </div>
+    <div>
+      <h3>What to avoid</h3>
+      <p>The stock quill, the lightning bolt cliché, leaf and teardrop silhouettes, anything that reads as an app-store illustration — and any mark that only works at one size.</p>
+    </div>
+  </div>
+</section>
+
+<!-- 02 -->
+<section>
+  <div class="sec-head">
+    <span class="sec-num">02</span>
+    <h2>What the first forty sketches proved</h2>
+    <div class="sec-note">Every failure below was drawn, rendered and looked at, not assumed.</div>
+  </div>
+  <div class="findings">
+
+    <div class="finding">
+      <div class="proof">
+        <svg width="44" height="44" viewBox="0 0 64 64" fill="currentColor"><use href="#x-arrow"/></svg>
+        <span class="x">REJECTED</span>
+      </div>
+      <div class="fid">FINDING 01</div>
+      <h4>A solid feather becomes an arrow or a leaf.</h4>
+      <p>Once the barbs are filled in, the silhouette loses the feather read and gains a paper-plane or leaf read. Icon-safe, meaning-wrong.</p>
+    </div>
+
+    <div class="finding">
+      <div class="proof">
+        <svg width="44" height="44" viewBox="0 0 64 64" fill="none" stroke="currentColor" stroke-width="5" stroke-linecap="round"><use href="#x-branch"/></svg>
+        <span class="x">REJECTED</span>
+      </div>
+      <div class="fid">FINDING 02</div>
+      <h4>Barbs on a vertical stem read as a branch, or a K.</h4>
+      <p>The letter-first version is the most tempting and the weakest: a stem with three ticks is a fern, a wheat ear, or a K — never an l.</p>
+    </div>
+
+    <div class="finding">
+      <div class="proof">
+        <svg width="44" height="44" viewBox="0 0 64 64" fill="none" stroke="currentColor" stroke-width="4.4" stroke-linecap="round"><use href="#x-d"/></svg>
+        <span class="x">REJECTED</span>
+      </div>
+      <div class="fid">FINDING 03</div>
+      <h4>A vane beside a stem reads as D, P or a flag.</h4>
+      <p>Any closed vane attached to a vertical shaft stops being a feather and becomes a letter we did not intend.</p>
+    </div>
+
+    <div class="finding">
+      <div class="proof">
+        <svg width="44" height="44" viewBox="0 0 64 64" fill="none" stroke="currentColor" stroke-width="4.6" stroke-linecap="round"><use href="#x-leaf"/></svg>
+        <span class="x">REJECTED</span>
+      </div>
+      <div class="fid">FINDING 04</div>
+      <h4>Symmetry kills the lightness.</h4>
+      <p>A feather with barbs on both sides reads as a wheat ear and loses all motion. The mark wants one side only.</p>
+    </div>
+
+    <div class="finding">
+      <div class="proof">
+        <svg width="44" height="44" viewBox="0 0 64 64" fill="currentColor"><use href="#x-blade"/></svg>
+        <span class="x">REJECTED</span>
+      </div>
+      <div class="fid">FINDING 05</div>
+      <h4>Pure abstraction has no anchor.</h4>
+      <p>A single tapered stroke is beautiful, but it reads as a slash, a comma, or a knife. Nothing says feather or Lite.</p>
+    </div>
+
+    <div class="finding">
+      <div class="proof">
+        <svg width="44" height="44" viewBox="0 0 64 64" fill="none" stroke="currentColor" stroke-width="4.6" stroke-linecap="round"><use href="#x-quill"/></svg>
+        <span class="x">SURVIVED</span>
+      </div>
+      <div class="fid">FINDING 06</div>
+      <h4>Diagonal, monoline, one-sided is the only survivor.</h4>
+      <p>It keeps the feather read at every size, keeps the stroke system, and turns the lean into speed. The letter link moves to the wordmark.</p>
+    </div>
+
+  </div>
+</section>
+
+<!-- 03 -->
+<section>
+  <div class="sec-head">
+    <span class="sec-num">03</span>
+    <h2>Four directions that earned a second look</h2>
+    <div class="sec-note">Sizes shown at 64, 32, 24 and 16 px. Scores are against the m-test, not taste.</div>
+  </div>
+  <div class="dirs">
+
+    <div class="dir">
+      <div class="dir-top"><span class="dir-id">A</span><span class="dir-role">Primary</span></div>
+      <h4>Quill</h4>
+      <p class="thesis">Shaft and three barbs at a 35° lean. A feather at large size; a stroke of motion at small size.</p>
+      <div class="stage"><svg width="150" height="150" viewBox="0 0 64 64" fill="none" stroke="currentColor" stroke-width="4.6" stroke-linecap="round"><use href="#quill"/></svg></div>
+      <div class="sizes">
+        <div class="size"><svg width="64" height="64" viewBox="0 0 64 64" fill="none" stroke="currentColor" stroke-width="4.6" stroke-linecap="round"><use href="#quill"/></svg><span>64</span></div>
+        <div class="size"><svg width="32" height="32" viewBox="0 0 64 64" fill="none" stroke="currentColor" stroke-width="4.6" stroke-linecap="round"><use href="#quill"/></svg><span>32</span></div>
+        <div class="size"><svg width="24" height="24" viewBox="0 0 64 64" fill="none" stroke="currentColor" stroke-width="5.2" stroke-linecap="round"><use href="#quill-cut"/></svg><span>24</span></div>
+        <div class="size"><svg width="16" height="16" viewBox="0 0 64 64" fill="none" stroke="currentColor" stroke-width="5.6" stroke-linecap="round"><use href="#quill-cut"/></svg><span>16</span></div>
+      </div>
+      <div class="reads">Reads as: <b>quill · speed · light</b>. Weakness: the silhouette is familiar; the identity must come from the drawing, not the idea.</div>
+      <div class="score-row">
+        <span>LINK<b class="dots">●<span class="off">●●</span></b></span>
+        <span>FEATHER<b class="dots">●●●</b></span>
+        <span>16PX<b class="dots">●●<span class="off">●</span></b></span>
+        <span>SYSTEM<b class="dots">●●●</b></span>
+      </div>
+    </div>
+
+    <div class="dir">
+      <div class="dir-top"><span class="dir-id">B</span><span class="dir-role">Rejected, instructive</span></div>
+      <h4>Stem</h4>
+      <p class="thesis">The literal "mini move": the l is the shaft, three barbs are the vane. The most conceptually satisfying — and the least legible.</p>
+      <div class="stage"><svg width="150" height="150" viewBox="0 0 64 64" fill="none" stroke="currentColor" stroke-width="5" stroke-linecap="round"><use href="#stem"/></svg></div>
+      <div class="sizes">
+        <div class="size"><svg width="64" height="64" viewBox="0 0 64 64" fill="none" stroke="currentColor" stroke-width="5" stroke-linecap="round"><use href="#stem"/></svg><span>64</span></div>
+        <div class="size"><svg width="32" height="32" viewBox="0 0 64 64" fill="none" stroke="currentColor" stroke-width="5" stroke-linecap="round"><use href="#stem"/></svg><span>32</span></div>
+        <div class="size"><svg width="24" height="24" viewBox="0 0 64 64" fill="none" stroke="currentColor" stroke-width="5" stroke-linecap="round"><use href="#stem-cut"/></svg><span>24</span></div>
+        <div class="size"><svg width="16" height="16" viewBox="0 0 64 64" fill="none" stroke="currentColor" stroke-width="5.6" stroke-linecap="round"><use href="#stem-cut"/></svg><span>16</span></div>
+      </div>
+      <div class="reads">Reads as: <b>K · branch · fern</b>. The idea is right; the drawing loses. Keep it as the sketch that got us to A.</div>
+      <div class="score-row">
+        <span>LINK<b class="dots">●●<span class="off">●</span></b></span>
+        <span>FEATHER<b class="dots">●<span class="off">●●</span></b></span>
+        <span>16PX<b class="dots">●<span class="off">●●</span></b></span>
+        <span>SYSTEM<b class="dots">●●<span class="off">●</span></b></span>
+      </div>
+    </div>
+
+    <div class="dir">
+      <div class="dir-top"><span class="dir-id">C</span><span class="dir-role">Minimal alternate</span></div>
+      <h4>Spark</h4>
+      <p class="thesis">A shaft and a detached dot: <b>li</b>, the start of Lite and of light. The most mini-like and the most legible at 16 px.</p>
+      <div class="stage"><svg width="150" height="150" viewBox="0 0 64 64" fill="none" stroke="currentColor" stroke-width="5.4" stroke-linecap="round"><use href="#spark"/><circle cx="43" cy="14" r="3.6" fill="currentColor" stroke="none"/></svg></div>
+      <div class="sizes">
+        <div class="size"><svg width="64" height="64" viewBox="0 0 64 64" fill="none" stroke="currentColor" stroke-width="5.4" stroke-linecap="round"><use href="#spark"/><circle cx="43" cy="14" r="3.6" fill="currentColor" stroke="none"/></svg><span>64</span></div>
+        <div class="size"><svg width="32" height="32" viewBox="0 0 64 64" fill="none" stroke="currentColor" stroke-width="5.4" stroke-linecap="round"><use href="#spark"/><circle cx="43" cy="14" r="3.6" fill="currentColor" stroke="none"/></svg><span>32</span></div>
+        <div class="size"><svg width="24" height="24" viewBox="0 0 64 64" fill="none" stroke="currentColor" stroke-width="5.6" stroke-linecap="round"><use href="#spark"/><circle cx="43" cy="14" r="4.2" fill="currentColor" stroke="none"/></svg><span>24</span></div>
+        <div class="size"><svg width="16" height="16" viewBox="0 0 64 64" fill="none" stroke="currentColor" stroke-width="6" stroke-linecap="round"><use href="#spark"/><circle cx="43" cy="14" r="4.6" fill="currentColor" stroke="none"/></svg><span>16</span></div>
+      </div>
+      <div class="reads">Reads as: <b>i · punctuation · a spark</b>. No feather, but this is the direction to pick if "light" should beat "quill".</div>
+      <div class="score-row">
+        <span>LINK<b class="dots">●●●</b></span>
+        <span>FEATHER<b class="dots"><span class="off">●●●</span></b></span>
+        <span>16PX<b class="dots">●●●</b></span>
+        <span>SYSTEM<b class="dots">●●<span class="off">●</span></b></span>
+      </div>
+    </div>
+
+    <div class="dir">
+      <div class="dir-top"><span class="dir-id">D</span><span class="dir-role">Voice, not mark</span></div>
+      <h4>Bolt</h4>
+      <p class="thesis">The <b>l</b> ascender kinks into lightning. Fast, loud, and already owned by every battery, charger and energy drink.</p>
+      <div class="stage"><svg width="150" height="150" viewBox="0 0 64 64" fill="none" stroke="currentColor" stroke-width="5" stroke-linecap="round" stroke-linejoin="round"><use href="#bolt"/></svg></div>
+      <div class="sizes">
+        <div class="size"><svg width="64" height="64" viewBox="0 0 64 64" fill="none" stroke="currentColor" stroke-width="5" stroke-linecap="round" stroke-linejoin="round"><use href="#bolt"/></svg><span>64</span></div>
+        <div class="size"><svg width="32" height="32" viewBox="0 0 64 64" fill="none" stroke="currentColor" stroke-width="5" stroke-linecap="round" stroke-linejoin="round"><use href="#bolt"/></svg><span>32</span></div>
+        <div class="size"><svg width="24" height="24" viewBox="0 0 64 64" fill="none" stroke="currentColor" stroke-width="5.4" stroke-linecap="round" stroke-linejoin="round"><use href="#bolt"/></svg><span>24</span></div>
+        <div class="size"><svg width="16" height="16" viewBox="0 0 64 64" fill="none" stroke="currentColor" stroke-width="5.8" stroke-linecap="round" stroke-linejoin="round"><use href="#bolt"/></svg><span>16</span></div>
+      </div>
+      <div class="reads">Reads as: <b>speed · a bolt</b>. Strong as a sticker; too generic as an identity. Use it in motion, release notes and loaders.</div>
+      <div class="score-row">
+        <span>LINK<b class="dots">●<span class="off">●●</span></b></span>
+        <span>FEATHER<b class="dots"><span class="off">●●●</span></b></span>
+        <span>16PX<b class="dots">●●●</b></span>
+        <span>SYSTEM<b class="dots">●<span class="off">●●</span></b></span>
+      </div>
+    </div>
+
+  </div>
+</section>
+
+<!-- 04 -->
+<section>
+  <div class="sec-head">
+    <span class="sec-num">04</span>
+    <h2>The Quill, constructed</h2>
+    <div class="sec-note">64-unit box, 4.4-unit stroke, shaft at 35°, barbs at 35° to the shaft.</div>
+  </div>
+  <div class="panel">
+    <div class="kicker">Geometry</div>
+    <h3>Nothing decorative, nothing accidental.</h3>
+    <p>The shaft is one slightly bowed stroke so the feather bends rather than points. Each barb starts on the shaft and sweeps <b>up and outward</b> at the same 35° the shaft leans from vertical, and the three barbs are evenly spaced. The barbs and the shaft are the same weight; the tip overshoots the top barb by one stroke, which is what makes it read as a quill instead of a wing.</p>
+    <div class="build">
+      <svg width="380" height="380" viewBox="0 0 64 64">
+        <g stroke="currentColor" stroke-opacity=".12" stroke-width=".25">
+          <path d="M8 8H56M8 16H56M8 24H56M8 32H56M8 40H56M8 48H56M8 56H56"/>
+          <path d="M8 8V56M16 8V56M24 8V56M32 8V56M40 8V56M48 8V56M56 8V56"/>
+        </g>
+        <g stroke="currentColor" stroke-opacity=".3" stroke-width=".35" stroke-dasharray="1 1.4">
+          <path d="M32 4V60"/>
+          <path d="M12.5 54L42.7 9.3"/>
+        </g>
+        <g fill="none" stroke="currentColor" stroke-width="4.4" stroke-linecap="round"><use href="#quill"/></g>
+        <g fill="currentColor" font-family="ui-monospace, monospace" font-size="2.4" fill-opacity=".55">
+          <text x="17" y="50">35°</text>
+          <text x="39" y="24">35°</text>
+          <text x="6" y="60">stroke 4.4</text>
+        </g>
+      </svg>
+    </div>
+    <div class="legend">
+      <span><i></i>8-unit construction grid</span>
+      <span><i style="border-top-style:dashed"></i>shaft and vertical</span>
+      <span>stroke 4.4 / 64 = 1.1 px at 16</span>
+    </div>
+  </div>
+</section>
+
+<!-- 05 -->
+<section>
+  <div class="sec-head">
+    <span class="sec-num">05</span>
+    <h2>Where it has to live</h2>
+    <div class="sec-note">Optical cuts, not resized art: two barbs and a thicker stroke below 24 px.</div>
+  </div>
+
+  <div class="apps">
+    <div class="app">
+      <div class="cap">FAVICON / TAB STRIP</div>
+      <div class="body">
+        <div class="tabs">
+          <div class="tab active"><svg width="16" height="16" viewBox="0 0 64 64" fill="none" stroke="currentColor" stroke-width="5.6" stroke-linecap="round"><use href="#quill-cut"/></svg> Lite — Docs <span class="x">×</span></div>
+          <div class="tab"><svg width="16" height="16" viewBox="0 0 64 64" fill="none" stroke="currentColor" stroke-width="5.6" stroke-linecap="round"><use href="#quill-cut"/></svg> LiteLang reference <span class="x">×</span></div>
+        </div>
+      </div>
+    </div>
+    <div class="app">
+      <div class="cap">APP ICON / AVATAR</div>
+      <div class="body" style="gap:14px; display:flex">
+        <div class="icon-tile tile-ink"><svg width="58" height="58" viewBox="0 0 64 64" fill="none" stroke="currentColor" stroke-width="4.8" stroke-linecap="round"><use href="#quill"/></svg></div>
+        <div class="icon-tile tile-beam"><svg width="58" height="58" viewBox="0 0 64 64" fill="none" stroke="currentColor" stroke-width="4.8" stroke-linecap="round"><use href="#quill"/></svg></div>
+      </div>
+    </div>
+    <div class="app">
+      <div class="cap">TERMINAL</div>
+      <div class="body">
+        <div class="terminal">
+          <div><span class="p">~</span> <span class="m">❯</span> lite run hello.lts</div>
+          <div><span class="c">compiled · 12 ms · 41 kb</span></div>
+          <div><span class="c">hello, light.</span></div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="apps">
+    <div class="app">
+      <div class="cap">LOCKUP · DEFAULT</div>
+      <div class="body"><div class="wordmark">
+        <svg width="38" height="38" viewBox="0 0 64 64" fill="none" stroke="currentColor" stroke-width="4.6" stroke-linecap="round"><use href="#quill"/></svg>
+        <span class="type">lite</span>
+      </div></div>
+    </div>
+    <div class="app">
+      <div class="cap">LOCKUP · SUB-BRAND</div>
+      <div class="body"><div class="wordmark">
+        <svg width="34" height="34" viewBox="0 0 64 64" fill="none" stroke="currentColor" stroke-width="4.6" stroke-linecap="round"><use href="#quill"/></svg>
+        <span class="type">lite <small>LiteLang</small></span>
+      </div></div>
+    </div>
+    <div class="app">
+      <div class="cap">WORDMARK ONLY</div>
+      <div class="body"><span class="type-only">lite</span></div>
+    </div>
+  </div>
+</section>
+
+<!-- 06 -->
+<section>
+  <div class="sec-head">
+    <span class="sec-num">06</span>
+    <h2>Color &amp; type, held back on purpose</h2>
+    <div class="sec-note">Lightness is the absence of noise: two neutrals and one heated accent.</div>
+  </div>
+  <div class="palette">
+    <div class="swatch"><div class="chipbox" style="background:#101113"></div><div class="nm">Ink</div><div class="hex">#101113</div></div>
+    <div class="swatch"><div class="chipbox" style="background:#F5F3EE"></div><div class="nm">Paper</div><div class="hex">#F5F3EE</div></div>
+    <div class="swatch"><div class="chipbox" style="background:#6C7078"></div><div class="nm">Graphite</div><div class="hex">#6C7078</div></div>
+    <div class="swatch"><div class="chipbox" style="background:#F0B45A"></div><div class="nm">Filament</div><div class="hex">#F0B45A</div></div>
+  </div>
+  <p class="sub" style="font-size:13px; margin-top:14px; max-width:none">
+    Filament is a light <i>source</i>, never a fill: one dot, one focus ring, one status line. The mark itself is always ink on paper or paper on ink. Type is a neutral grotesque (Inter, Geist, IBM Plex Sans) at 600, tracking −5%, lowercase only. The wordmark should eventually be drawn rather than set — the <b>l</b> is the one place where the feather's angle can echo into the type.
+  </p>
+</section>
+
+<!-- 07 -->
+<section>
+  <div class="sec-head"><span class="sec-num">07</span><h2>What still needs a decision</h2></div>
+  <div class="qs">
+    <div class="q"><div><b>Mark or wordmark first?</b><span> — the Quill is the icon; "lite" is the identity. If the wordmark gets drawn, the mark can get quieter still.</span></div></div>
+    <div class="q"><div><b>One icon or two?</b><span> — the recommendation uses three barbs above 32 px and two below, as an optical cut. The alternative is one drawing everywhere and a slightly muddier 16 px.</span></div></div>
+    <div class="q"><div><b>35° or 45°?</b><span> — 45° aligns with the square and looks engineered; 35° looks like a feather. The current recommendation is 35°.</span></div></div>
+    <div class="q"><div><b>Does the l need rescuing?</b><span> — if the name must be legible from the icon alone, direction C (Spark) is the honest choice; the Quill accepts that the wordmark carries the name.</span></div></div>
+    <div class="q"><div><b>Accent or no accent?</b><span> — Filament amber makes the mark feel warm and human; pure monochrome is more "light". Default: no accent in the mark, amber only in UI.</span></div></div>
+    <div class="q"><div><b>Own the sketch?</b><span> — the quill silhouette is familiar. The next step is to redraw it from scratch as a filled, tapered silhouette so it cannot be mistaken for a stock icon, then test that against this line version.</span></div></div>
+  </div>
+</section>
+
+<footer>
+  <span>design/branding · exploration 01 · 2026-11-12</span>
+  <span>next: taper study → wordmark drawing → favicon set</span>
+</footer>
+
+</div>
+
+<!-- symbols -->
+<svg width="0" height="0" style="position:absolute" aria-hidden="true"><defs>
+
+  <symbol id="quill" viewBox="0 0 64 64" fill="none" stroke="currentColor" stroke-linecap="round">
+    <g transform="translate(-4 0) rotate(35 32 32)">
+      <path d="M32 59C34 45 34 20 31 5" stroke-width="4.4"/>
+      <path d="M33.3 47C43 42 49 34 51 24" stroke-width="4.2"/>
+      <path d="M33.7 34C43 29 48 21 50 11" stroke-width="4.2"/>
+      <path d="M32.5 21C39 18 42 13 44 7" stroke-width="4.2"/>
+    </g>
+  </symbol>
+
+  <symbol id="quill-cut" viewBox="0 0 64 64" fill="none" stroke="currentColor" stroke-width="5.4" stroke-linecap="round">
+    <g transform="translate(-4 0) rotate(35 32 32)">
+      <path d="M32 58V9"/>
+      <path d="M32 44C43 38 50 29 52 19"/>
+      <path d="M31.5 25C40 20 46 12 48 5"/>
+    </g>
+  </symbol>
+
+  <symbol id="stem" viewBox="0 0 64 64" fill="none" stroke="currentColor" stroke-width="5" stroke-linecap="round">
+    <path d="M22 56V8"/><path d="M22 44C32 38 40 29 44 18"/><path d="M22 30C30 25 37 18 40 10"/>
+  </symbol>
+  <symbol id="stem-cut" viewBox="0 0 64 64" fill="none" stroke="currentColor" stroke-width="5.6" stroke-linecap="round">
+    <path d="M22 56V8"/><path d="M22 44C32 38 40 29 44 18"/>
+  </symbol>
+
+  <symbol id="spark" viewBox="0 0 64 64" fill="none" stroke="currentColor" stroke-width="5.4" stroke-linecap="round">
+    <path d="M24 56V12"/>
+  </symbol>
+
+  <symbol id="bolt" viewBox="0 0 64 64" fill="none" stroke="currentColor" stroke-width="5" stroke-linecap="round" stroke-linejoin="round">
+    <path d="M22 54V36"/><path d="M22 36L36 28L29 25L42 12"/>
+  </symbol>
+
+  <symbol id="x-arrow" viewBox="0 0 64 64" fill="currentColor">
+    <path d="M32 6C38 11 44 19 45 28L37 30L44 35L35 39L39 45L32 56C32 39 32 23 32 6Z" transform="rotate(35 32 32)"/>
+  </symbol>
+  <symbol id="x-branch" viewBox="0 0 64 64" fill="none" stroke="currentColor" stroke-width="5" stroke-linecap="round">
+    <path d="M22 54V10"/><path d="M22 46C27 43 33 38 37 31"/><path d="M22 36C30 31 37 24 42 16"/><path d="M22 26C28 21 32 17 35 13"/>
+  </symbol>
+  <symbol id="x-d" viewBox="0 0 64 64" fill="none" stroke="currentColor" stroke-width="4.4" stroke-linecap="round">
+    <path d="M24 56C31 52 38 45 40 35C42 24 34 12 24 8"/><path d="M24 8V58"/>
+    <path d="M24 22C30 23 35 25 38 28M24 34C30 34 35 33 39 31M24 46C29 45 33 43 36 40" stroke-width="3.2"/>
+  </symbol>
+  <symbol id="x-leaf" viewBox="0 0 64 64" fill="currentColor">
+    <path d="M32 6C39 12 45 22 45 32C45 42 39 51 32 56C25 51 19 42 19 32C19 22 25 12 32 6Z" transform="rotate(35 32 32)"/>
+  </symbol>
+  <symbol id="x-blade" viewBox="0 0 64 64" fill="currentColor">
+    <path d="M44 6C40 22 31 39 18 56C25 53 33 42 38 30C42 21 43 13 44 6Z"/>
+  </symbol>
+  <symbol id="x-quill" viewBox="0 0 64 64" fill="none" stroke="currentColor" stroke-width="4.6" stroke-linecap="round">
+    <g transform="rotate(35 32 32)"><path d="M32 59C34 45 34 20 31 5"/><path d="M33 44C42 39 48 31 50 21"/><path d="M33 27C41 23 46 16 48 8"/></g>
+  </symbol>
+
+</defs></svg>
+</body>
+</html>
