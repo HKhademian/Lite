@@ -1192,10 +1192,10 @@ function jumpToRef(ref) {
 function renderSim() {
   const it = items.find(x => x.id === selectedId) || items[0];
   document.getElementById('sel-pill').textContent = `Selected: ${it.ref} · ${it.title}`;
-  document.getElementById('sim-dark-fav').innerHTML = `<svg viewBox="${it.vb}" width="16" height="16">${it.mark(accDark)}</svg>`;
-  document.getElementById('sim-light-fav').innerHTML = `<svg viewBox="${it.vb}" width="16" height="16">${it.mark(accLight)}</svg>`;
-  document.getElementById('sim-dark-wm').innerHTML = buildWordmark(it, accDark, '#F3F4F6', 26);
-  document.getElementById('sim-light-wm').innerHTML = buildWordmark(it, accLight, '#111315', 26);
+  document.getElementById('sim-dark-fav').innerHTML = `<svg viewBox="${it.vb}" width="16" height="16">${it.mark(logoColorMode === 'mono' ? '#F3F4F6' : accDark)}</svg>`;
+  document.getElementById('sim-light-fav').innerHTML = `<svg viewBox="${it.vb}" width="16" height="16">${it.mark(logoColorMode === 'mono' ? '#111315' : accLight)}</svg>`;
+  document.getElementById('sim-dark-wm').innerHTML = buildCustomWordmark(it, logoColorMode === 'mono' ? '#F3F4F6' : accDark, '#F3F4F6', 24);
+  document.getElementById('sim-light-wm').innerHTML = buildCustomWordmark(it, logoColorMode === 'mono' ? '#111315' : accLight, '#111315', 24);
 
   const stages = document.getElementById('inspector-stages');
   stages.className = 'inspector-stages' + (renderMode === 'xray' ? ' xray' : '');
@@ -1224,10 +1224,10 @@ const bsPalettes = [
   { id: 'cloud-crisp', name: 'Crisp Cloud', note: 'Clean white #F8FAFC + #0F172A ink', bg: '#F8FAFC', card: '#FFFFFF', ink: '#0F172A', ui: 'light' }
 ];
 const bsLogoFonts = [
-  { id: 'vector', name: 'Vector Monoline (mini-style)', note: '16-unit custom SVG paths matching ℓ stroke', css: null },
-  { id: 'rounded', name: 'Rounded Sans', note: 'ui-rounded / SF Pro Rounded next to ℓ', css: 'ui-rounded, "SF Pro Rounded", system-ui, sans-serif' },
-  { id: 'grotesque', name: 'Neutral Grotesque', note: 'Inter / SF Pro Display next to ℓ', css: 'ui-sans-serif, -apple-system, "Inter", sans-serif' },
-  { id: 'mono', name: 'Technical Mono', note: 'JetBrains Mono / SF Mono next to ℓ', css: 'ui-monospace, "SF Mono", Menlo, monospace' }
+  { id: 'vector', name: 'Vector Monoline (mini-style)', note: '16-unit custom SVG paths matching ℓ stroke', css: null, weight: 600 },
+  { id: 'rounded', name: 'Rounded Sans', note: 'ui-rounded / SF Pro Rounded next to ℓ', css: 'ui-rounded, "SF Pro Rounded", system-ui, sans-serif', weight: 500 },
+  { id: 'serif', name: 'Editorial Serif', note: 'Georgia / Iowan Old Style next to ℓ', css: 'Georgia, "Iowan Old Style", serif', weight: 600 },
+  { id: 'mono', name: 'Technical Mono', note: 'JetBrains Mono / SF Mono next to ℓ', css: 'ui-monospace, "SF Mono", Menlo, monospace', weight: 600 }
 ];
 const bsFonts = [
   { id: 'grotesque', name: 'Neutral Grotesque', note: 'Inter / SF Pro — crisp system clarity', display: 'ui-sans-serif, -apple-system, "Inter", "Segoe UI", sans-serif', body: 'ui-sans-serif, -apple-system, "Inter", "Segoe UI", sans-serif' },
@@ -1243,11 +1243,10 @@ let activeBsLogoFont = bsLogoFonts[0];
 let activeBsFont = bsFonts[0];
 let logoColorMode = 'accent';
 
-function buildCustomWordmark(it, acc, ink, h) {
-  if (!activeBsLogoFont.css) return buildWordmark(it, acc, ink, h);
-  const textTail = wordCase === 'title' ? 'ite' : 'ite';
-  return `<span style="display:inline-flex;align-items:center;gap:2px;font-family:${activeBsLogoFont.css};font-size:${h}px;font-weight:600;letter-spacing:-0.03em;line-height:1;color:${ink};">
-    <svg viewBox="${it.vb}" width="${Math.round(h*0.95)}" height="${Math.round(h*0.95)}">${it.mark(acc)}</svg><span>${textTail}</span>
+function buildCustomWordmark(it, acc, ink, h, fontObj = activeBsLogoFont) {
+  if (!fontObj.css) return buildWordmark(it, acc, ink, h);
+  return `<span style="display:inline-flex;align-items:center;gap:2px;font-family:${fontObj.css};font-size:${h}px;font-weight:${fontObj.weight||600};letter-spacing:-0.02em;line-height:1;color:${ink};">
+    <svg viewBox="${it.vb}" width="${Math.round(h*0.92)}" height="${Math.round(h*0.92)}">${it.mark(acc)}</svg><span>ite</span>
   </span>`;
 }
 
@@ -1291,6 +1290,7 @@ function renderBrandSystem() {
 
   document.getElementById('bs-logo-fonts').innerHTML = bsLogoFonts.map(lf => `
     <div class="card ${lf.id === activeBsLogoFont.id ? 'selected' : ''}" onclick="selectBsLogoFont('${lf.id}')">
+      <div style="margin-bottom:8px;">${buildCustomWordmark(it, acc, ink, 26, lf)}</div>
       <h3>${lf.name}</h3>
       <p class="desc">${lf.note}</p>
     </div>
