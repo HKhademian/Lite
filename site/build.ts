@@ -640,10 +640,91 @@ function renderPlaygroundPage(rendered: ReadonlyMap<string, RenderedSample>, rep
     }
   }
 
+  function parseStdin() {
+    return stdinEl.value.replaceAll("\\\\n", "\\n");
+  }
+
+  function parseArgs() {
+    const raw = argsEl.value.trim();
+    return raw ? raw.split(/\\s+/) : [];
+  }
+
+  let worker = null;
+  let nextReqId = 1;
+  const pending = new Map();
+
+  function getWorker() {
+    if (!worker) {
+      worker = new Worker("./worker.js", { type: "module" });
+      worker.addEventListener("message", (event) => {
+        const msg = event.data;
+        const entry = pending.get(msg.id);
+        if (!entry) return;
+        pending.delete(msg.id);
+        entry.resolve(msg);
+      });
+      worker.addEventListener("error", (err) => {
+        for (const entry of pending.values()) {
+          entry.reject(new Error(err.message || "Worker error"));
+        }
+        pending.clear();
+        worker = null;
+      });
+    }
+    return worker;
+  }
+
+  function runInWorker(action, source, stdin, args) {
+    return new Promise((resolve, reject) => {
+      const id = nextReqId++;
+      pending.set(id, { resolve, reject });
+      getWorker().postMessage({ id, action, source, stdin, args });
+    });
+  }
+
+  async function runAction(action) {
+    const meta = byId.get(select.value);
+    if (action === "play" && meta && meta.canvas) {
+      showTab("canvas");
+      statusEl.textContent = "Canvas stage active";
+      return;
+    }
+    const source = editorEl.value;
+    const stdin = parseStdin();
+    const args = parseArgs();
+    statusEl.textContent = action === "compile" ? "Compiling in browser..." : "Running in browser...";
+    if (action === "play") {
+      showTab("output");
+      outputEl.textContent = "";
+    }
+    try {
+      const res = await runInWorker(action, source, stdin, args);
+      if (res.ts) tsEl.textContent = res.ts;
+      if (!res.ok) {
+        showTab("output");
+        outputEl.textContent = (res.stdout ? res.stdout + "\\n" : "") + (res.stderr || "Execution failed.");
+        statusEl.textContent = res.ts ? "Runtime error" : "Compile error";
+        return;
+      }
+      if (action === "compile") {
+        showTab("ts");
+        statusEl.textContent = "Compiled to TypeScript";
+      } else {
+        showTab("output");
+        outputEl.textContent = res.stdout + (res.stderr ? (res.stdout ? "\\n" : "") + res.stderr : "");
+        statusEl.textContent = "Exited 0 (in browser)";
+      }
+    } catch (err) {
+      showTab("output");
+      outputEl.textContent = err instanceof Error ? err.message : String(err);
+      statusEl.textContent = "Worker error";
+    }
+  }
+
   select.addEventListener("change", () => loadSample(select.value, "load"));
   resetBtn.addEventListener("click", () => loadSample(select.value, "load"));
-  compileBtn.addEventListener("click", () => loadSample(select.value, "compile"));
-  playBtn.addEventListener("click", () => loadSample(select.value, "play"));
+  compileBtn.addEventListener("click", () => runAction("compile"));
+  playBtn.addEventListener("click", () => runAction("play"));
 
   // Bouncing ℓite Canvas Stage with FPS / frametime reporting
   const canvas = document.getElementById("pg-canvas");

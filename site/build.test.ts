@@ -62,6 +62,7 @@ test('buildSite generates static pages and metadata in dist/site', () => {
   assert(playground.includes('Generated TS'));
   assert(playground.includes('id="pg-compile"'));
   assert(playground.includes('id="pg-play"'));
+  assert(playground.includes('new Worker("./worker.js"'));
   assert(playground.includes('id="tab-canvas"'));
   assert(playground.includes('id="pg-fps"'));
   for (const sample of showcaseSamples) {
