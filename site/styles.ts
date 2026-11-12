@@ -537,38 +537,24 @@ pre.code-block {
 .site-footer {
   flex: 0 0 auto;
   border-top: 1px solid var(--border);
-  padding: 1rem 0;
+  padding: 0.6rem 0;
   color: var(--ink-muted);
-  font-size: 0.84rem;
+  font-size: 0.8rem;
 }
 .footer-inner {
   display: flex;
   flex-wrap: wrap;
   justify-content: space-between;
-  gap: 0.75rem 1.5rem;
+  gap: 0.5rem 1.25rem;
   align-items: center;
-}
-.footer-commit {
-  display: flex;
-  flex-direction: column;
-  align-items: flex-end;
-  gap: 0.1rem;
-}
-@media (max-width: 680px) {
-  .footer-commit { align-items: flex-start; }
 }
 .commit-hash {
   font-family: var(--font-mono);
-  font-size: 0.78rem;
+  font-size: 0.76rem;
   color: var(--ink-muted);
   word-break: break-all;
 }
 .commit-hash strong {
   color: var(--ink);
-}
-.commit-time {
-  font-family: var(--font-mono);
-  font-size: 0.74rem;
-  color: var(--ink-muted);
 }
 `;

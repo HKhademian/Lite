@@ -113,15 +113,12 @@ function renderFooter(rev: SourceRevision, repoUrl: string): string {
   const rest = rev.commit.slice(12);
   const hashInner = `<code><strong>${escapeHtml(short)}</strong>${escapeHtml(rest)}</code>`;
   const commitHtml = repoUrl
-    ? `<a class="commit-hash" href="${escapeHtml(`${repoUrl}/commit/${rev.commit}`)}" title="Released ${escapeHtml(rev.timestamp)}">${hashInner}</a>`
-    : `<span class="commit-hash" title="Released ${escapeHtml(rev.timestamp)}">${hashInner}</span>`;
+    ? `<a class="commit-hash" href="${escapeHtml(`${repoUrl}/commit/${rev.commit}`)}" title="Committed ${escapeHtml(rev.timestamp)}">${hashInner}</a>`
+    : `<span class="commit-hash" title="Committed ${escapeHtml(rev.timestamp)}">${hashInner}</span>`;
   return `<footer class="site-footer">
   <div class="container footer-inner">
     <span>Lite is licensed under Apache-2.0.</span>
-    <div class="footer-commit">
-      <div>Revision ${commitHtml}</div>
-      <time class="commit-time" datetime="${escapeHtml(rev.timestamp)}">Committed ${escapeHtml(rev.timestamp)}</time>
-    </div>
+    <span>Revision ${commitHtml}</span>
   </div>
 </footer>`;
 }
