@@ -39,7 +39,7 @@
       "document": "docs/start-here.md",
       "source": "language/examples/001-double-sum.lts",
       "fence": 1,
-      "skipLines": 1
+      "skipLines": 2
     }
   ]
 }

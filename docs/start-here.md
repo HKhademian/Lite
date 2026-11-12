@@ -27,11 +27,13 @@ The [double-sum example](../language/examples/001-double-sum.lts) reads two inte
 prints twice their sum:
 
 ```text
-first := inputInt("First integer: ");
-second := inputInt("Second integer: ");
+io := import "core/io";
+
+first := io.inputInt("First integer: ");
+second := io.inputInt("Second integer: ");
 var total := first + second;
 total = total * 2;
-outputLine(total);
+io.outputLine(total);
 ```
 
 From the repository root:

@@ -8,11 +8,13 @@ contract, not a claim of executable coverage.
 ## Bindings and arithmetic
 
 ```text
+io := import "core/io";
+
 first := 7;
 second := 5;
 var total := first + second;
 total = total * 2;
-outputLine(total);
+io.outputLine(total);
 ```
 
 `:=` introduces a binding. `var` permits replacement. This fragment prints
