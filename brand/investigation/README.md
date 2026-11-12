@@ -25,7 +25,9 @@ Creators are recorded per revision; the same names appear on the cards in
 | 8 | `rev-8-script-l/` | `gemini-3.8-flash` | Six `ℓ` / `ℒ` variations (R8-01…06). |
 | 9 | `rev-9-letterforms/` | `gpt-6.1-terra` | Eight custom letterforms drawing on ℓ, ℒ, ł, ȴ and feather strokes. |
 | 11 | `rev-11-ell-finalists/` | `gemini-3.8-flash` | Six `ℓ` finalist refinements (`R11-01`–`R11-06`) synthesizing `R10-01`, `R10-02`, and `R10-04`. |
-| 14 | `rev-14-controlled-test/` | `gemini-3.8-flash` | Controlled A/B/C comparison (`R14-01`–`R14-03`) on `R13-01`'s exact spine: no flick vs `1.3` flick vs `1.45` flick. |
+| 14 | `rev-14-controlled-test/` | `gemini-3.8-flash` | Controlled A/B/C comparison (`R14-01`–`R14-03`) on `R13-01`'s exact spine: no flick vs `1.3` flick vs `1.7` flick. |
+
+**Selected decision (2026-11-12):** **`R14-02`** is the primary mark (`brand/lite-mark.svg`, `brand/lite-wordmark.svg`), and **`R14-01`** is the minimal / small-size reference (`brand/lite-mark-minimal.svg`, `brand/lite-favicon.svg`). See [`brand/README.md`](../README.md).
 | 12 | `rev-12-ell-refinements/` | `gpt-6.1-terra` | Five studies refining Rev 11’s ℓ, feather stroke, and swept foot. |
 | 13 | `rev-13-three-way/` | `gpt-6.1-terra` | Compare R12-01 and R12-04 with a visibly longer R12-02 sweep. |
 | — | root | `gemini-3.8-flash` | `concept-7-radiant-feather.svg`, `concept-8-celestial-quill.svg`. |
