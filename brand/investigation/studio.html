@@ -1,0 +1,703 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Lite — Brand & Logo Studio</title>
+  <style>
+    :root {
+      --bg: #F5F3EE;
+      --card: #FBFAF7;
+      --ink: #101113;
+      --muted: #6C7078;
+      --line: #DCD8CE;
+      --soft: #EDEAE2;
+      --font: ui-sans-serif, -apple-system, "Segoe UI", Inter, "Helvetica Neue", sans-serif;
+      --mono: ui-monospace, "SF Mono", "JetBrains Mono", Menlo, monospace;
+    }
+    html[data-ui="dark"] {
+      --bg: #0B0C0E;
+      --card: #131519;
+      --ink: #F2F0EA;
+      --muted: #8B9099;
+      --line: #24272E;
+      --soft: #1B1E24;
+    }
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      background: var(--bg);
+      color: var(--ink);
+      font-family: var(--font);
+      -webkit-font-smoothing: antialiased;
+      padding: 28px 24px 64px;
+      line-height: 1.45;
+    }
+    .wrap { max-width: 1200px; margin: 0 auto; display: flex; flex-direction: column; gap: 20px; }
+
+    .panel {
+      background: var(--card);
+      border: 1px solid var(--line);
+      border-radius: 12px;
+      padding: 18px 20px;
+    }
+    .topbar {
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      justify-content: space-between;
+      gap: 16px;
+    }
+    .eyebrow {
+      font-family: var(--mono);
+      font-size: 11px;
+      letter-spacing: .08em;
+      text-transform: uppercase;
+      color: var(--muted);
+    }
+    h1 { font-size: 20px; font-weight: 650; margin: 4px 0 4px; letter-spacing: -.02em; }
+    .sub { font-size: 13px; color: var(--muted); margin: 0; }
+    code { font-family: var(--mono); font-size: 12px; }
+
+    .controls { display: flex; flex-wrap: wrap; align-items: center; gap: 14px; }
+    .pal-row { display: flex; align-items: center; gap: 7px; }
+    .pal-btn {
+      width: 22px; height: 22px; border-radius: 999px; border: 1px solid rgba(128,128,128,.35);
+      cursor: pointer; padding: 0; transition: transform .12s;
+    }
+    .pal-btn:hover { transform: scale(1.08); }
+    .pal-btn.active { outline: 2px solid var(--ink); outline-offset: 2px; }
+
+    .seg {
+      display: inline-flex;
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      padding: 2px;
+      background: var(--bg);
+    }
+    .seg button {
+      font-family: var(--mono);
+      font-size: 12px;
+      border: 0;
+      background: transparent;
+      color: var(--muted);
+      padding: 5px 10px;
+      border-radius: 6px;
+      cursor: pointer;
+    }
+    .seg button.active {
+      background: var(--ink);
+      color: var(--bg);
+    }
+
+    /* Group / Category Navigation */
+    .nav-bar {
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+    }
+    .primary-tabs { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+    .tab-btn {
+      font-family: var(--font);
+      font-size: 13px;
+      font-weight: 500;
+      padding: 7px 14px;
+      border-radius: 8px;
+      border: 1px solid var(--line);
+      background: var(--card);
+      color: var(--ink);
+      cursor: pointer;
+      transition: border-color .12s, background .12s;
+    }
+    .tab-btn:hover { border-color: var(--muted); }
+    .tab-btn.active {
+      background: var(--ink);
+      color: var(--bg);
+      border-color: var(--ink);
+    }
+
+    /* Less accessible / secondary archive grouping */
+    .archive-drawer {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      flex-wrap: wrap;
+    }
+    .archive-label {
+      font-family: var(--mono);
+      font-size: 11px;
+      color: var(--muted);
+    }
+    .archive-select {
+      font-family: var(--mono);
+      font-size: 12px;
+      padding: 6px 10px;
+      border-radius: 8px;
+      border: 1px solid var(--line);
+      background: var(--card);
+      color: var(--ink);
+      cursor: pointer;
+    }
+
+    /* Benchmark bar */
+    .bench {
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      justify-content: space-between;
+      gap: 16px;
+      padding: 14px 18px;
+    }
+    .bench-tiles { display: flex; align-items: center; gap: 12px; }
+    .mini-tile {
+      height: 44px;
+      padding: 0 12px;
+      border-radius: 8px;
+      background: #0B0F17;
+      color: #F8FAFC;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      border: 1px solid rgba(255,255,255,.1);
+    }
+
+    /* Cards Grid */
+    .grid {
+      display: grid;
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+      gap: 16px;
+    }
+    @media (max-width: 980px) { .grid { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+    @media (max-width: 640px) { .grid { grid-template-columns: 1fr; } }
+
+    .card {
+      background: var(--card);
+      border: 1px solid var(--line);
+      border-radius: 12px;
+      padding: 16px;
+      display: flex;
+      flex-direction: column;
+      justify-content: space-between;
+      cursor: pointer;
+      transition: border-color .15s, box-shadow .15s;
+    }
+    .card:hover { border-color: var(--muted); }
+    .card.selected {
+      border-color: var(--ink);
+      box-shadow: 0 0 0 1px var(--ink);
+    }
+
+    .card-head { display: flex; align-items: center; justify-content: space-between; gap: 8px; margin-bottom: 8px; }
+    .badge {
+      font-family: var(--mono);
+      font-size: 11px;
+      padding: 3px 8px;
+      border-radius: 6px;
+      background: var(--soft);
+      color: var(--ink);
+    }
+    .origin { font-family: var(--mono); font-size: 11px; color: var(--muted); }
+    .card h3 { font-size: 16px; margin: 0 0 4px; letter-spacing: -.015em; }
+    .card .desc { font-size: 12.5px; color: var(--muted); margin: 0; min-height: 36px; }
+
+    .showcase {
+      margin-top: 14px;
+      background: var(--bg);
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      padding: 12px;
+      display: grid;
+      grid-template-columns: 82px 1fr;
+      gap: 12px;
+      align-items: center;
+    }
+    .grid-box {
+      width: 82px; height: 82px;
+      border-radius: 8px;
+      border: 1px solid var(--line);
+      background-image:
+        linear-gradient(to right, rgba(128,128,128,0.12) 1px, transparent 1px),
+        linear-gradient(to bottom, rgba(128,128,128,0.12) 1px, transparent 1px);
+      background-size: 10px 10px;
+      display: flex; align-items: center; justify-content: center;
+    }
+    .right-col { display: flex; flex-direction: column; gap: 8px; }
+    .ramp-row { display: flex; align-items: center; gap: 8px; }
+    .tile-dark {
+      background: #101113; color: #F5F3EE;
+      border-radius: 6px; padding: 6px;
+      display: inline-flex; align-items: center; justify-content: center;
+      border: 1px solid rgba(255,255,255,.1);
+    }
+    .tile-paper {
+      background: #F5F3EE; color: #101113;
+      border-radius: 6px; padding: 6px 10px;
+      display: inline-flex; align-items: center; justify-content: center;
+      border: 1px solid rgba(0,0,0,.1);
+    }
+    .wm-dark {
+      background: #101113; color: #F5F3EE;
+      border-radius: 6px; padding: 6px 10px;
+      display: inline-flex; align-items: center; justify-content: center;
+      border: 1px solid rgba(255,255,255,.1);
+    }
+    .card-foot {
+      margin-top: 12px;
+      padding-top: 10px;
+      border-top: 1px solid var(--line);
+      font-size: 12px;
+      color: var(--muted);
+    }
+    .card-foot b { color: var(--ink); }
+
+    /* Live Simulator */
+    .sim-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; margin-top: 12px; }
+    @media (max-width: 760px) { .sim-grid { grid-template-columns: 1fr; } }
+    .sim-box {
+      border-radius: 10px; padding: 14px 16px;
+      display: flex; flex-direction: column; gap: 14px;
+    }
+    .sim-dark { background: #0F1115; color: #F3F4F6; border: 1px solid rgba(255,255,255,.1); }
+    .sim-light { background: #F6F4EF; color: #111315; border: 1px solid rgba(0,0,0,.1); }
+    .sim-tab-bar {
+      display: flex; align-items: center; justify-content: space-between;
+      padding-bottom: 10px; border-bottom: 1px solid rgba(128,128,128,.2);
+    }
+    .browser-tab {
+      display: inline-flex; align-items: center; gap: 7px;
+      padding: 4px 10px; border-radius: 6px;
+      background: rgba(128,128,128,.12);
+      font-family: var(--mono); font-size: 12px;
+    }
+    .navbar-sim { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
+    .nav-links { display: flex; align-items: center; gap: 14px; font-family: var(--mono); font-size: 12px; opacity: .75; }
+  </style>
+</head>
+<body>
+<div class="wrap">
+
+  <!-- Header -->
+  <div class="panel topbar">
+    <div>
+      <div class="eyebrow">Lite Brand Investigation · Unified Studio</div>
+      <h1>Logo, Monogram &amp; Wordmark Studio</h1>
+      <p class="sub">Default view shows <strong>Top Picks</strong>. Switch to earlier or external-entity studies from the archive selector.</p>
+    </div>
+    <div class="controls">
+      <div class="pal-row" title="Accent color">
+        <button class="pal-btn active" style="background:#F0B45A" onclick="setAccent('#C97B14','#F0B45A',this)" title="Filament Gold"></button>
+        <button class="pal-btn" style="background:#14B8A6" onclick="setAccent('#0D9488','#5EEAD4',this)" title="Teal (VS Code)"></button>
+        <button class="pal-btn" style="background:#38BDF8" onclick="setAccent('#0284C7','#38BDF8',this)" title="Sky / mini Blue"></button>
+        <button class="pal-btn" style="background:#818CF8" onclick="setAccent('#4F46E5','#818CF8',this)" title="Electric Indigo"></button>
+        <button class="pal-btn" style="background:#18181B" onclick="setAccent('#101113','#F5F3EE',this)" title="Pure Ink"></button>
+      </div>
+      <div class="seg">
+        <button id="case-lower" class="active" onclick="setCase('lower')">lite</button>
+        <button id="case-title" onclick="setCase('title')">Lite</button>
+      </div>
+      <div class="seg">
+        <button id="ui-light" class="active" onclick="setUi('light')">Paper</button>
+        <button id="ui-dark" onclick="setUi('dark')">Ink</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Category Switcher: Top Picks primary, other entities' ideas tucked cleanly in Archive switcher -->
+  <div class="nav-bar">
+    <div class="primary-tabs">
+      <button class="tab-btn active" id="grp-top" onclick="setGroup('top')">★ Top Picks (6)</button>
+      <button class="tab-btn" id="grp-all" onclick="setGroup('all')">All Candidates</button>
+    </div>
+
+    <div class="archive-drawer">
+      <span class="archive-label">Other Entities &amp; Archive:</span>
+      <select id="archive-select" class="archive-select" onchange="onArchiveSelect(this.value)">
+        <option value="">— Select archived study —</option>
+        <option value="rev3">Rev 3 · External Eval (Quill, Spark, Bolt)</option>
+        <option value="rev4">Rev 4 · mini-Style Monograms</option>
+        <option value="rev1">Rev 1 · Early Literal Sketches</option>
+      </select>
+    </div>
+  </div>
+
+  <!-- Mini Reference Benchmark -->
+  <div class="panel bench">
+    <div>
+      <div class="eyebrow">Reference Benchmark · MiniLang/brand/</div>
+      <div style="font-size:13px; color:var(--muted); margin-top:2px;">
+        <code>mini</code> uses a single 16×16 monoline <code>m</code> as both its standalone mark and the first letter of its wordmark.
+      </div>
+    </div>
+    <div class="bench-tiles">
+      <div class="mini-tile" title="mini-mark.svg (16x16)">
+        <svg viewBox="0 0 16 16" width="24" height="24" fill="none" stroke="#38BDF8" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M2.25 13V7.5a3 3 0 0 1 6 0V13M8.25 7.5a3 3 0 0 1 6 0V13"/>
+        </svg>
+      </div>
+      <div class="mini-tile" title="mini-wordmark.svg (36x16)">
+        <svg viewBox="0 0 36 16" width="54" height="24">
+          <g fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M2.25 13V7.5a3 3 0 0 1 6 0V13M8.25 7.5a3 3 0 0 1 6 0V13" stroke="#38BDF8"/>
+            <path d="M18.75 13V4.5" stroke="currentColor"/>
+            <path d="M23.25 13V7.5a3 3 0 0 1 6 0V13" stroke="currentColor"/>
+            <path d="M33.75 13V4.5" stroke="currentColor"/>
+          </g>
+          <g fill="currentColor">
+            <circle cx="18.75" cy="1.9" r="1.05"/><circle cx="33.75" cy="1.9" r="1.05"/>
+          </g>
+        </svg>
+      </div>
+    </div>
+  </div>
+
+  <!-- Cards Grid -->
+  <div id="grid" class="grid"></div>
+
+  <!-- Live Header & Favicon Simulation -->
+  <div class="panel">
+    <div style="display:flex; align-items:center; justify-content:space-between; flex-wrap:wrap; gap:8px;">
+      <div>
+        <h2 style="font-size:15px; margin:0;">Live Header &amp; 16 px Browser Tab Preview</h2>
+        <p class="sub">Click any card above to inspect it in Dark &amp; Paper navbars.</p>
+      </div>
+      <span id="sel-pill" class="badge">Selected: Tapered Quill</span>
+    </div>
+    <div class="sim-grid">
+      <div class="sim-box sim-dark">
+        <div class="sim-tab-bar">
+          <div class="browser-tab"><span id="sim-dark-fav"></span><span>Lite — Lite is light</span></div>
+          <span class="origin">Dark UI · 16px</span>
+        </div>
+        <div class="navbar-sim">
+          <div id="sim-dark-wm"></div>
+          <div class="nav-links"><span>tour</span><span>spec</span><span>docs</span></div>
+        </div>
+      </div>
+      <div class="sim-box sim-light">
+        <div class="sim-tab-bar">
+          <div class="browser-tab"><span id="sim-light-fav"></span><span>Lite — Lite is light</span></div>
+          <span class="origin">Paper UI · 16px</span>
+        </div>
+        <div class="navbar-sim">
+          <div id="sim-light-wm"></div>
+          <div class="nav-links"><span>tour</span><span>spec</span><span>docs</span></div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+</div>
+
+<script>
+let accLight = '#C97B14';
+let accDark = '#F0B45A';
+let activeGroup = 'top';
+let wordCase = 'lower';
+let selectedId = 'r5-slanted-quill-l';
+
+const items = [
+  // ================= TOP PICKS =================
+  {
+    id: 'r5-tapered-quill',
+    groups: ['top'],
+    badge: 'Top Pick · Rev 5-1',
+    origin: 'Rev 3 Next Craft Step',
+    title: 'The Tapered Quill',
+    desc: 'Filled calligraphic quill at 35° with one razor notch and needle nib. Avoids stock-icon look.',
+    note: 'Companion mark + sheared-top "l" in wordmark.',
+    vb: '0 0 64 64',
+    mark: (c) => `<g transform="translate(-2 0) rotate(35 32 32)" fill="${c}"><path d="M32 6C39 13 44 23 44 33L35.5 34.5L43 39C41 44 37 48 33 50L31.5 58L29.5 58C30 43 30 24 32 6Z"/></g>`,
+    companion: true
+  },
+  {
+    id: 'r5-slanted-quill-l',
+    groups: ['top'],
+    badge: 'Top Pick · Rev 5-2',
+    origin: 'mini-Style Synthesis',
+    title: 'The Slanted Quill-l',
+    desc: '18° forward-leaning "l" with one upward feather flick. Acts directly as the "l" in lite.',
+    note: 'Avoids P/D/K traps while keeping mini’s first-letter lockup.',
+    vb: '0 0 16 16',
+    mark: (c) => `<g fill="none" stroke="${c}" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M5.2 13.5C6 9.5 7.4 5.5 9.2 2.5"/><path d="M6.4 9.5C9 8.6 10.8 6.8 11.8 4.4"/></g>`,
+    first: (c, isT) => `<g fill="none" stroke="${c}" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M2.5 13C3.3 9.2 4.6 5.5 6.4 2.5"/><path d="M3.7 9.3C6.2 8.4 7.8 6.8 8.8 4.6"/>${isT ? '<path d="M2.5 13H8.5"/>' : ''}</g>`,
+    off: 12.5
+  },
+  {
+    id: 'r5-spark-li',
+    groups: ['top'],
+    badge: 'Top Pick · Rev 5-3',
+    origin: 'Rev 3 Spark Refined',
+    title: 'Spark li',
+    desc: 'Pure vertical "l" + 4-point spark that literally becomes the dot of the "i" in lite.',
+    note: 'Highest 16px legibility; pure Light + Lightning.',
+    vb: '0 0 16 16',
+    mark: (c) => `<path d="M5.5 2.5V13.5" fill="none" stroke="${c}" stroke-width="2" stroke-linecap="round"/><path d="M10.8 3.2L11.5 5L13.3 5.7L11.5 6.4L10.8 8.2L10.1 6.4L8.3 5.7L10.1 5Z" fill="${c}"/>`,
+    first: (c, isT) => `<path d="M4 13V2.5${isT ? 'M4 13H8.5' : ''}" fill="none" stroke="${c}" stroke-width="2" stroke-linecap="round"/><path d="M10.2 1.2L10.8 2.8L12.4 3.4L10.8 4L10.2 5.6L9.6 4L8 3.4L9.6 2.8Z" fill="${c}"/>`,
+    off: 10.2,
+    noDot: true
+  },
+  {
+    id: 'r5-split-light',
+    groups: ['top'],
+    badge: 'Top Pick · Rev 5-4',
+    origin: 'Feather + Bolt Hybrid',
+    title: 'Split-Light Quill',
+    desc: '35° diagonal shaft with a crisp lightning-step barb. Unifies Feather, Light, and Lightning.',
+    note: '2 strokes on 16×16 grid; distinct from stock feathers.',
+    vb: '0 0 16 16',
+    mark: (c) => `<g fill="none" stroke="${c}" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3.5 13.5L12.5 2.5"/><path d="M6.2 10.2H10.8L8.8 7"/></g>`,
+    companion: true
+  },
+  {
+    id: 'r3-quill-main',
+    groups: ['top', 'rev3'],
+    badge: 'Top Pick · Rev 3',
+    origin: 'External Eval Rec',
+    title: 'The Quill (3-Barb 35°)',
+    desc: 'External entity’s primary recommendation: bowed shaft + 3 barbs at 35°, monoline.',
+    note: 'Uses 2-barb optical cut (lite-mark-16.svg) at 16px.',
+    vb: '0 0 64 64',
+    mark: (c) => `<g transform="translate(-4 0) rotate(35 32 32)" fill="none" stroke="${c}" stroke-linecap="round"><path d="M32 59C34 45 34 20 31 5" stroke-width="4.4"/><path d="M33.3 47C43 42 49 34 51 24" stroke-width="4.2"/><path d="M33.7 34C43 29 48 21 50 11" stroke-width="4.2"/><path d="M32.5 21C39 18 42 13 44 7" stroke-width="4.2"/></g>`,
+    companion: true
+  },
+  {
+    id: 'r4-refracted-beam',
+    groups: ['top', 'rev4'],
+    badge: 'Top Pick · Rev 4 B2',
+    origin: 'Light / Feather Bridge',
+    title: 'Refracted Beam l',
+    desc: 'Vertical "l" stem with one 45° upward curve—reads as both a light ray and 1-barb plume.',
+    note: 'Clean 2-stroke monogram that slots directly into lite.',
+    vb: '0 0 16 16',
+    mark: (c) => `<g fill="none" stroke="${c}" stroke-width="2" stroke-linecap="round"><path d="M5.5 14V2.5"/><path d="M5.5 10C8.5 10 11 7.5 11.5 4"/></g>`,
+    first: (c, isT) => `<g fill="none" stroke="${c}" stroke-width="2" stroke-linecap="round"><path d="M4 13V2.5${isT ? 'H4M4 13H9' : ''}"/><path d="M4 9.8C7 9.8 9.2 7.5 9.8 4.2"/></g>`,
+    off: 14
+  },
+
+  // ================= REV 3 ARCHIVE (EXTERNAL ENTITY) =================
+  {
+    id: 'r3-quill-16',
+    groups: ['rev3'],
+    badge: 'Rev 3 · Optical Cut',
+    origin: 'lite-mark-16.svg',
+    title: 'Quill 16 px Cut',
+    desc: '2-barb straight-shaft optical cut designed for 16px favicons so barbs do not fuse.',
+    note: 'Companion to Rev 3 primary 3-barb Quill.',
+    vb: '0 0 64 64',
+    mark: (c) => `<g transform="translate(-4 0) rotate(35 32 32)" fill="none" stroke="${c}" stroke-width="5.4" stroke-linecap="round"><path d="M32 58V9"/><path d="M32 44C43 38 50 29 52 19"/><path d="M31.5 25C40 20 46 12 48 5"/></g>`,
+    companion: true
+  },
+  {
+    id: 'r3-spark-orig',
+    groups: ['rev3'],
+    badge: 'Rev 3 · Held Open',
+    origin: 'External Eval · Spark',
+    title: 'Spark (Dot Variant)',
+    desc: 'Vertical shaft + detached circular dot. Reads as "li" and most mini-like at 16px.',
+    note: 'Held open in Rev 3 notes; no feather metaphor.',
+    vb: '0 0 64 64',
+    mark: (c) => `<path d="M24 54V10" fill="none" stroke="${c}" stroke-width="5.4" stroke-linecap="round"/><circle cx="41" cy="14" r="4.2" fill="${c}"/>`,
+    companion: true
+  },
+  {
+    id: 'r3-bolt-orig',
+    groups: ['rev3'],
+    badge: 'Rev 3 · Held Open',
+    origin: 'External Eval · Bolt',
+    title: 'Bolt (Kinked l)',
+    desc: 'The "l" ascender kinked into lightning. Suggested for motion, loaders, and release notes.',
+    note: '1 continuous path; kept for voice/motion.',
+    vb: '0 0 16 16',
+    mark: (c) => `<path d="M9.5 2L5 8.5H10.5L6 14" fill="none" stroke="${c}" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>`,
+    first: (c) => `<path d="M7.8 2.2L3.8 8H8.8L4.8 13" fill="none" stroke="${c}" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>`,
+    off: 13.5
+  },
+
+  // ================= REV 4 ARCHIVE (MINI-STYLE MONOGRAMS) =================
+  {
+    id: 'r4-loop-quill',
+    groups: ['rev4'],
+    badge: 'Rev 4 · A1',
+    origin: 'Loop Quill',
+    title: 'Loop Quill l',
+    desc: '1 continuous path rising up the stem and looping back into the spine.',
+    note: 'Critique (Rev 3 Finding 3): closed loop on vertical stem can read as P/D.',
+    vb: '0 0 16 16',
+    mark: (c) => `<path d="M5 14V2.5C10.5 2.5 12.5 5.5 12.5 8C12.5 10.5 9.5 11.5 5 11.5" fill="none" stroke="${c}" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>`,
+    first: (c) => `<path d="M3.5 13V2.5C8.8 2.5 10.8 5.2 10.8 7.6C10.8 10 8 11 3.5 11" fill="none" stroke="${c}" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>`,
+    off: 15
+  },
+  {
+    id: 'r4-single-barb',
+    groups: ['rev4'],
+    badge: 'Rev 4 · A2',
+    origin: 'Single-Barb Plume',
+    title: 'Single-Barb Plume l',
+    desc: 'Upright "l" stem with one swept barb and upper plume arc.',
+    note: '2 strokes on 16×16 grid.',
+    vb: '0 0 16 16',
+    mark: (c) => `<g fill="none" stroke="${c}" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M5.5 14V2.5C9.5 3.5 11.8 6 12 9.5"/><path d="M5.5 11C8.8 9.8 11 7.5 12 4.5"/></g>`,
+    first: (c) => `<g fill="none" stroke="${c}" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3.5 13V2.5C7.2 3.5 9.5 5.8 9.8 9"/><path d="M3.5 10.5C6.6 9.3 8.8 7.2 9.8 4.5"/></g>`,
+    off: 14.5
+  },
+  {
+    id: 'r4-photon-ray',
+    groups: ['rev4'],
+    badge: 'Rev 4 · B1',
+    origin: 'Photon Ray l',
+    title: 'Photon Ray l',
+    desc: 'Vertical stem + 45° ray pointing to a photon dot.',
+    note: 'Evolves the original VS Code icon.',
+    vb: '0 0 16 16',
+    mark: (c) => `<g fill="none" stroke="${c}" stroke-width="2" stroke-linecap="round"><path d="M5.5 2.5V13.5"/><path d="M5.5 9.5L11.5 3.5"/></g><circle cx="11.5" cy="3.5" r="1.2" fill="${c}"/>`,
+    first: (c) => `<g fill="none" stroke="${c}" stroke-width="2" stroke-linecap="round"><path d="M4 2.5V13"/><path d="M4 8.5L9 3.5"/></g>`,
+    off: 13.5
+  },
+
+  // ================= REV 1 ARCHIVE (EARLY LITERAL) =================
+  {
+    id: 'r1-aero-feather',
+    groups: ['rev1'],
+    badge: 'Rev 1 · Concept 1',
+    origin: 'Superseded Archive',
+    title: 'Aero Feather',
+    desc: 'Early curved feather outline with split quill tip.',
+    note: 'Superseded: too detailed for 16px favicon.',
+    vb: '0 0 64 64',
+    mark: (c) => `<path d="M16 50C22 38 30 22 48 12C44 26 36 38 24 44L16 50Z" fill="none" stroke="${c}" stroke-width="4" stroke-linejoin="round"/><path d="M14 52L38 24" stroke="${c}" stroke-width="3.5" stroke-linecap="round"/>`,
+    companion: true
+  },
+  {
+    id: 'r1-plume-solid',
+    groups: ['rev1'],
+    badge: 'Rev 1 · C2',
+    origin: 'Superseded Archive',
+    title: 'Solid Plume Silhouette',
+    desc: 'Filled leaf/feather shape with diagonal stem cutout.',
+    note: 'Superseded (Rev 3 Finding 1): reads as a leaf.',
+    vb: '0 0 64 64',
+    mark: (c) => `<path d="M46 10C30 14 18 28 16 48C34 46 46 32 46 10Z" fill="${c}"/>`,
+    companion: true
+  }
+];
+
+function suffixSvg(x, col, skipDot) {
+  const t = x + 5.5, e = x + 13.5;
+  return `<g fill="none" stroke="${col}" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+    <path d="M${x} 13V6.5"/><path d="M${t} 3.5V11.2a1.8 1.8 0 0 0 1.8 1.8H${t+2.2}"/><path d="M${t-1.8} 6.5H${t+2.2}"/>
+    <path d="M${e-2.6} 9.6H${e+2.6}V9.2a2.6 2.6 0 0 0-5.2 0v1.2a2.6 2.6 0 0 0 4.6 1.6"/>
+  </g>${skipDot ? '' : `<circle cx="${x}" cy="3.2" r="1.15" fill="${col}"/>`}`;
+}
+
+function buildWordmark(item, acc, txt, h = 24) {
+  const isT = wordCase === 'title';
+  if (item.companion) {
+    const w = 52;
+    const wPx = Math.round((w / 16) * h);
+    return `<svg viewBox="0 0 ${w} 16" width="${wPx}" height="${h}">
+      <svg viewBox="${item.vb}" width="15" height="15" x="0" y="0.5">${item.mark(acc)}</svg>
+      <g fill="none" stroke="${txt}" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" transform="translate(18 0)">
+        <path d="M2 13V2.5${isT ? 'M2 13H6.5' : ''}"/>
+      </g>
+      ${suffixSvg(24.5, txt, false)}
+    </svg>`;
+  }
+  const w = item.off + 18;
+  const wPx = Math.round((w / 16) * h);
+  return `<svg viewBox="0 0 ${w} 16" width="${wPx}" height="${h}">
+    ${item.first(acc, isT)}
+    ${suffixSvg(item.off, txt, item.noDot)}
+  </svg>`;
+}
+
+function render() {
+  const grid = document.getElementById('grid');
+  grid.innerHTML = '';
+  const list = activeGroup === 'all'
+    ? items
+    : items.filter(it => it.groups.includes(activeGroup));
+
+  list.forEach(it => {
+    const el = document.createElement('div');
+    el.className = 'card' + (it.id === selectedId ? ' selected' : '');
+    el.onclick = () => { selectedId = it.id; render(); renderSim(); };
+    el.innerHTML = `
+      <div>
+        <div class="card-head">
+          <span class="badge">${it.badge}</span>
+          <span class="origin">${it.origin}</span>
+        </div>
+        <h3>${it.title}</h3>
+        <p class="desc">${it.desc}</p>
+        <div class="showcase">
+          <div class="grid-box">
+            <svg viewBox="${it.vb}" width="58" height="58">${it.mark(accLight)}</svg>
+          </div>
+          <div class="right-col">
+            <div class="ramp-row">
+              <div class="tile-dark"><svg viewBox="${it.vb}" width="26" height="26">${it.mark(accDark)}</svg></div>
+              <div class="tile-dark" title="16px"><svg viewBox="${it.vb}" width="16" height="16">${it.mark(accDark)}</svg></div>
+              <div class="tile-paper" title="16px light"><svg viewBox="${it.vb}" width="16" height="16">${it.mark(accLight)}</svg></div>
+            </div>
+            <div class="wm-dark">${buildWordmark(it, accDark, '#F5F3EE', 20)}</div>
+          </div>
+        </div>
+      </div>
+      <div class="card-foot"><b>Note:</b> ${it.note}</div>
+    `;
+    grid.appendChild(el);
+  });
+}
+
+function renderSim() {
+  const it = items.find(x => x.id === selectedId) || items[0];
+  document.getElementById('sel-pill').textContent = 'Selected: ' + it.title;
+  document.getElementById('sim-dark-fav').innerHTML = `<svg viewBox="${it.vb}" width="16" height="16">${it.mark(accDark)}</svg>`;
+  document.getElementById('sim-light-fav').innerHTML = `<svg viewBox="${it.vb}" width="16" height="16">${it.mark(accLight)}</svg>`;
+  document.getElementById('sim-dark-wm').innerHTML = buildWordmark(it, accDark, '#F3F4F6', 26);
+  document.getElementById('sim-light-wm').innerHTML = buildWordmark(it, accLight, '#111315', 26);
+}
+
+function setGroup(grp) {
+  activeGroup = grp;
+  document.getElementById('grp-top').classList.toggle('active', grp === 'top');
+  document.getElementById('grp-all').classList.toggle('active', grp === 'all');
+  document.getElementById('archive-select').value = '';
+  render();
+}
+
+function onArchiveSelect(val) {
+  if (!val) { setGroup('top'); return; }
+  activeGroup = val;
+  document.getElementById('grp-top').classList.remove('active');
+  document.getElementById('grp-all').classList.remove('active');
+  render();
+}
+
+function setAccent(l, d, btn) {
+  accLight = l; accDark = d;
+  document.querySelectorAll('.pal-btn').forEach(b => b.classList.remove('active'));
+  btn.classList.add('active');
+  render(); renderSim();
+}
+
+function setCase(c) {
+  wordCase = c;
+  document.getElementById('case-lower').classList.toggle('active', c === 'lower');
+  document.getElementById('case-title').classList.toggle('active', c === 'title');
+  render(); renderSim();
+}
+
+function setUi(mode) {
+  document.documentElement.setAttribute('data-ui', mode === 'dark' ? 'dark' : 'light');
+  document.getElementById('ui-light').classList.toggle('active', mode === 'light');
+  document.getElementById('ui-dark').classList.toggle('active', mode === 'dark');
+}
+
+render();
+renderSim();
+</script>
+</body>
+</html>

@@ -3,6 +3,8 @@
 All branding assets, logo revisions, and preview sheets live in `brand/investigation/`.
 This is the tracked design archive — the single place where the trail of revisions is kept.
 
+- **[`studio.html`](studio.html)** — Unified interactive studio (defaults to **Top Picks**; includes an archive selector for Rev 3 external-entity studies, Rev 4 monograms, and Rev 1 early sketches).
+
 ---
 
 ## Revision log
