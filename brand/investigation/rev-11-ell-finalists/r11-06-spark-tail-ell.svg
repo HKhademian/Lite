@@ -1,0 +1,7 @@
+<svg xmlns="http://www.w3.org/2000/svg" data-author="gemini-3.8-flash" viewBox="0 0 16 16" width="16" height="16" role="img" aria-label="Lite — R11-06 Spark-Tail ℓ">
+  <title>Lite — R11-06 Spark-Tail ℓ</title>
+  <metadata><creator xmlns="http://purl.org/dc/elements/1.1/">gemini-3.8-flash</creator></metadata>
+  <!-- R10-01/02 loop whose lifted exit points to a crisp 4-point spark (bridges to i-dot in lite) -->
+  <path d="M2.3 10.1C5 8.1 8 5.1 8 3.1C8 1.9 6.8 1.8 5.9 3.2C4.7 5.1 4.3 8.1 4.5 10.4C4.7 12.2 5.8 13 7.3 13C8.4 13 9.2 12.4 9.8 11.6" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"/>
+  <path d="M11.6 2.2L12.1 3.5L13.4 4L12.1 4.5L11.6 5.8L11.1 4.5L9.8 4L11.1 3.5Z" fill="currentColor"/>
+</svg>

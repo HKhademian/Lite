@@ -408,6 +408,7 @@
   <!-- Single Unified Category Switcher -->
   <div class="nav-bar">
     <button class="tab-btn active" id="grp-all" onclick="setGroup('all')">All Candidates</button>
+    <button class="tab-btn" id="grp-rev11" onclick="setGroup('rev11')">Rev 11 · ℓ Finalists (6)</button>
     <button class="tab-btn" id="grp-rev3" onclick="setGroup('rev3')">Rev 3 · The Quill (4)</button>
     <button class="tab-btn" id="grp-rev8" onclick="setGroup('rev8')">Rev 8 · Script ℓ / ℒ (6)</button>
     <button class="tab-btn" id="grp-rev10" onclick="setGroup('rev10')">Rev 10 · Shortlist (6)</button>
@@ -478,6 +479,44 @@ const rev10Mark05 = (c) => `<g fill="none" stroke="${c}" stroke-width="1.8" stro
 const rev10Mark06 = (c) => `<g fill="none" stroke="${c}" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4.4 2.4V10.8C4.4 12.3 5.3 13 6.7 13H8.4"/><path d="M2.8 9C5.4 8.1 7.1 6.8 8.3 5" stroke-width="1.4"/></g>`;
 
 const items = [
+  // ================= REV 11 ℓ FINALIST REFINEMENTS =================
+  {
+    ref: 'R11-01', author: 'gemini-3.8-flash', id: 'r11-swept-feather-ell', groups: ['rev11'], badge: 'Rev 11 · 01', origin: 'R10-02 + R10-04',
+    title: 'Swept Feather ℓ', desc: 'Combines R10-02’s larger swept tail with R10-04’s feather lift at a 16px-safe 1.4 stroke.', note: 'Higher flick on spine stays crisp at 16 px while reading as feather + ℓ.', vb: '0 0 16 16',
+    mark: (c) => `<g fill="none" stroke="${c}" stroke-linecap="round" stroke-linejoin="round"><path d="M2.2 10.1C5 8.1 8.1 5.1 8 3.1C7.9 1.9 6.7 1.8 5.8 3.2C4.6 5.1 4.2 8.1 4.4 10.4C4.6 12.2 5.7 13 7.3 13C8.6 13 9.7 12.3 10.5 11.2" stroke-width="1.9"/><path d="M4.8 8.6C6.9 8.1 8.5 7 9.6 5.5" stroke-width="1.4"/></g>`,
+    first: (c) => `<g fill="none" stroke="${c}" stroke-linecap="round" stroke-linejoin="round"><path d="M2.2 10.1C5 8.1 8.1 5.1 8 3.1C7.9 1.9 6.7 1.8 5.8 3.2C4.6 5.1 4.2 8.1 4.4 10.4C4.6 12.2 5.7 13 7.3 13C8.6 13 9.7 12.3 10.5 11.2" stroke-width="1.9"/><path d="M4.8 8.6C6.9 8.1 8.5 7 9.6 5.5" stroke-width="1.4"/></g>`, off: 12.8
+  },
+  {
+    ref: 'R11-02', author: 'gemini-3.8-flash', id: 'r11-open-crest-ell', groups: ['rev11'], badge: 'Rev 11 · 02', origin: '1-Stroke Crest',
+    title: 'Open-Crest ℓ', desc: '1 continuous 2.0-weight stroke: open feather-crest top sweeping into R10-02’s lifted tail.', note: 'Zero thin strokes; keeps R10-01’s simplicity with feather lift.', vb: '0 0 16 16',
+    mark: (c) => `<path d="M9.6 4.2C8.8 2.2 7 1.9 5.9 3.3C4.6 5 4.2 8 4.4 10.4C4.6 12.2 5.8 13 7.4 13C8.8 13 9.8 12.2 10.6 11.1" fill="none" stroke="${c}" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>`,
+    first: (c) => `<path d="M9.6 4.2C8.8 2.2 7 1.9 5.9 3.3C4.6 5 4.2 8 4.4 10.4C4.6 12.2 5.8 13 7.4 13C8.8 13 9.8 12.2 10.6 11.1" fill="none" stroke="${c}" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>`, off: 12.8
+  },
+  {
+    ref: 'R11-03', author: 'gemini-3.8-flash', id: 'r11-mini-weight-ell', groups: ['rev11'], badge: 'Rev 11 · 03', origin: 'mini-Weight R10-02',
+    title: 'mini-Weight Swept ℓ', desc: 'R10-02 tuned to mini’s exact 2.0 stroke-width with a slightly wider 16px-safe loop.', note: 'Matches i-t-e weight 1:1 with maximum loop clarity.', vb: '0 0 16 16',
+    mark: (c) => `<path d="M2.2 10C5 8 8.3 5.1 8.2 3.1C8.1 1.8 6.8 1.8 5.8 3.2C4.6 5 4.3 8.1 4.5 10.4C4.7 12.2 5.8 13 7.4 13C8.7 13 9.7 12.2 10.4 11.2" fill="none" stroke="${c}" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>`,
+    first: (c) => `<path d="M2.2 10C5 8 8.3 5.1 8.2 3.1C8.1 1.8 6.8 1.8 5.8 3.2C4.6 5 4.3 8.1 4.5 10.4C4.7 12.2 5.8 13 7.4 13C8.7 13 9.7 12.2 10.4 11.2" fill="none" stroke="${c}" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>`, off: 12.8
+  },
+  {
+    ref: 'R11-04', author: 'gemini-3.8-flash', id: 'r11-quill-tip-ell', groups: ['rev11'], badge: 'Rev 11 · 04', origin: 'Quill-Tip ℓ',
+    title: 'Quill-Tip ℓ', desc: '1 continuous stroke: entry rises like a quill feather tip before looping into R10-02.', note: 'Adds subtle feather silhouette without a second stroke.', vb: '0 0 16 16',
+    mark: (c) => `<path d="M2.2 10.4C5.4 8 9.2 4.8 9.6 2.5C9.8 1.6 8.3 1.7 7.1 3C5.3 5 4.5 8 4.6 10.4C4.7 12.2 5.8 13 7.4 13C8.7 13 9.8 12.2 10.5 11.2" fill="none" stroke="${c}" stroke-width="1.85" stroke-linecap="round" stroke-linejoin="round"/>`,
+    first: (c) => `<path d="M2.2 10.4C5.4 8 9.2 4.8 9.6 2.5C9.8 1.6 8.3 1.7 7.1 3C5.3 5 4.5 8 4.6 10.4C4.7 12.2 5.8 13 7.4 13C8.7 13 9.8 12.2 10.5 11.2" fill="none" stroke="${c}" stroke-width="1.85" stroke-linecap="round" stroke-linejoin="round"/>`, off: 12.8
+  },
+  {
+    ref: 'R11-05', author: 'gemini-3.8-flash', id: 'r11-double-lift-ell', groups: ['rev11'], badge: 'Rev 11 · 05', origin: 'R10-04 Evolved',
+    title: 'Double-Lift ℓ', desc: 'R10-02 spine with two spaced upward feather flicks.', note: 'More explicitly feather-like than R10-04 while keeping ℓ readable.', vb: '0 0 16 16',
+    mark: (c) => `<g fill="none" stroke="${c}" stroke-linecap="round" stroke-linejoin="round"><path d="M2.2 10.1C5 8.1 8 5.1 8 3.1C7.9 1.9 6.7 1.8 5.8 3.2C4.6 5.1 4.2 8.1 4.4 10.4C4.6 12.2 5.7 13 7.3 13C8.5 13 9.5 12.3 10.2 11.4" stroke-width="1.85"/><path d="M4.8 9.8C6.7 9.4 8.1 8.5 9.1 7.2" stroke-width="1.25"/><path d="M5 7.2C6.7 6.8 7.9 6 8.7 4.8" stroke-width="1.25"/></g>`,
+    first: (c) => `<g fill="none" stroke="${c}" stroke-linecap="round" stroke-linejoin="round"><path d="M2.2 10.1C5 8.1 8 5.1 8 3.1C7.9 1.9 6.7 1.8 5.8 3.2C4.6 5.1 4.2 8.1 4.4 10.4C4.6 12.2 5.7 13 7.3 13C8.5 13 9.5 12.3 10.2 11.4" stroke-width="1.85"/><path d="M4.8 9.8C6.7 9.4 8.1 8.5 9.1 7.2" stroke-width="1.25"/><path d="M5 7.2C6.7 6.8 7.9 6 8.7 4.8" stroke-width="1.25"/></g>`, off: 12.6
+  },
+  {
+    ref: 'R11-06', author: 'gemini-3.8-flash', id: 'r11-spark-tail-ell', groups: ['rev11'], badge: 'Rev 11 · 06', origin: 'ℓ + Spark i-Dot',
+    title: 'Spark-Tail ℓ', desc: 'R10-02’s swept ℓ paired with a 4-point spark that becomes the i dot in lite.', note: 'Unifies ℓ simplicity with Light/Lightning in $ite.', vb: '0 0 16 16',
+    mark: (c) => `<path d="M2.3 10.1C5 8.1 8 5.1 8 3.1C8 1.9 6.8 1.8 5.9 3.2C4.7 5.1 4.3 8.1 4.5 10.4C4.7 12.2 5.8 13 7.3 13C8.4 13 9.2 12.4 9.8 11.6" fill="none" stroke="${c}" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"/><path d="M11.6 2.2L12.1 3.5L13.4 4L12.1 4.5L11.6 5.8L11.1 4.5L9.8 4L11.1 3.5Z" fill="${c}"/>`,
+    first: (c) => `<path d="M2.3 10.1C5 8.1 8 5.1 8 3.1C8 1.9 6.8 1.8 5.9 3.2C4.7 5.1 4.3 8.1 4.5 10.4C4.7 12.2 5.8 13 7.3 13C8.4 13 9.2 12.4 9.8 11.6" fill="none" stroke="${c}" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"/><path d="M12.4 1.6L12.9 2.9L14.2 3.4L12.9 3.9L12.4 5.2L11.9 3.9L10.6 3.4L11.9 2.9Z" fill="${c}"/>`, off: 12.4, noDot: true
+  },
+
   // ================= REV 10 SHORTLIST REFINEMENTS =================
   {
     ref: 'R10-01', author: 'gpt-6.1-terra', id: 'r10-clear-loop', groups: ['rev10'], badge: 'Rev 10 · 01', origin: 'Shortlist refinement',
@@ -976,7 +1015,7 @@ function renderSim() {
 
 function setGroup(grp) {
   activeGroup = grp;
-  ['rev10', 'rev9', 'rev8', 'rev7', 'rev6', 'top', 'rev3', 'rev4', 'rev1', 'all'].forEach(g => {
+  ['rev11', 'rev10', 'rev9', 'rev8', 'rev7', 'rev6', 'top', 'rev3', 'rev4', 'rev1', 'all'].forEach(g => {
     const el = document.getElementById('grp-' + g);
     if (el) el.classList.toggle('active', g === grp);
   });

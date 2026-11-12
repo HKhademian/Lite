@@ -1,70 +1,47 @@
-# Lite Branding & Logo Exploration
+# Lite Branding Investigation
 
-All branding assets, logo revisions, and preview sheets live in `brand/investigation/`.
-This is the tracked design archive — the single place where the trail of revisions is kept.
+Relocated from `tmp/branding/` to `brand/investigation/` on 2026-11-12. `tmp/branding` no
+longer exists — if a session recreates it, treat it as stale scratch and fold changes
+back here.
 
-- **[`studio.html`](studio.html)** — Unified interactive studio (defaults to **All Candidates**; includes an archive selector for Rev 3 external-entity studies, Rev 4 monograms, and Rev 1 early sketches).
+One folder for all logo/brand revisions from **every** session working on this.
+Do not delete other rounds — each revision lives in its own folder.
 
----
+Creators are recorded per revision; the same names appear on the cards in
+`studio.html` under **Created by**.
 
-The three numbered SVG sheets in `rev-1-concepts/`, and the marks in
-`rev-6-letter-marks/` and `rev-9-letterforms/`, were created by `gpt-6.1-terra`.
-The marks in `rev-4-monogram-wordmark/` were created by `gemini-4-argon`, and the
-marks in `rev-5-synthesis/`, `rev-7-letter-l/`, `rev-8-script-l/`, and the
-unified `studio.html` were created by `gemini-3.8-flash`.
-The Rev 3 study (`rev-3-quill/`, the four Rev 3 cards `L-05`, `L-07`, `L-08`,
-`L-09`, and `visibility.html`) was created by `deepseek-4.1-flash`.
-Creator metadata is embedded in those SVGs and shown on their studio cards.
+## Revision Index
 
-## Revision log
-
-| Rev | Folder | What it contains | Verdict |
+| Rev | Folder | Author | What it is |
 | --- | --- | --- | --- |
-| 1 | `rev-1-concepts/` | First pass: six written concepts (Aero Feather, Lightning Feather, Photon Quill, Beam-l, Monoline-l, Spark Quill) plus the C1–C4 refined round (Plume-l, Plume solid, Bolt-l, Ray) with its own sheet. | Superseded. Every mark was a literal picture of the idea; none read as a brand at 16 px. Kept as the starting evidence. |
-| 2 | `rev-2-sheets/` | Two exploration sheets: `exploration.html` (editorial mark study), `preview.html` (theme switcher, 128→16 px scale tests, lockups). | Superseded. Established the palette, scale tests, and the "one stroke" instinct, but still argued from theme rather than from drawing. |
-| 3 | `rev-3-quill/` | ~40 marks across 6 families, rendered at 256/64/32/24/16 px and inverted. Full sheet with findings, four directions, constructed geometry, applications, palette, open questions. Plus the mark assets. | **Active (Standalone Icon).** Recommendation: **The Quill** — one shaft, three barbs at 35°, monoline. Spark and Bolt held open. |
-| 4 | `rev-4-monogram-wordmark/` | 16×16 monoline monogram-to-wordmark study modeled directly on `MiniLang/brand/`: 6 candidates (`a1`–`a3` Feather `l`, `b1`–`b2` Light/Photon `l`, `c1` Bolt `l`) where the mark *is* the first letter `l` in `lite`, plus interactive `studio.html`. | **Active (Monogram + Wordmark Lockup).** Pairs directly with Rev 3 to compare standalone diagonal Quill vs. `mini`-style first-letter monogram. |
-| 5 | `rev-5-synthesis/` | Synthesis of Rev 3's 6 findings + craft bar with Rev 4's `mini`-style monogram lockup: `1-tapered-quill.svg` (Rev 3's requested calligraphic step), `2-slanted-quill-l.svg` (18° forward-leaning `l` + 1 flick), `3-spark-li.svg` (refined Spark `li`), `4-split-light-quill.svg` (35° quill + lightning step), plus `exploration.html` scorecard. | **Exploration.** Compares standalone quills with `mini`-style letter marks. |
-| 6 | `rev-6-letter-marks/` | Six L-based feather, bolt, and spark sketches, each reused as the first letter in the studio wordmark. | **Exploration.** Letter readability, feather character, spacing, and small-size performance remain open. |
-| 7 | `rev-7-letter-l/` | Eight `$` letter marks (`R7-01`–`R7-08`) designed to stand alone as `$` and replace `L`/`l` in `$ite`: Multi-Barb Quill `L`, Swept Quill-Foot `L`, Lightning Bolt `L`, Minimal Bolt `l`, Spark `Li`, Feather-Foot `L`, Light-Beam `L`, and Wing-Tip `l`. | **Exploration.** Integrated in `studio.html` under `Rev 7 · Letter $ (8)`. |
-| 8 | `rev-8-script-l/` | Six `ℓ`, `ℒ`, and `"l"`-variation marks (`R8-01`–`R8-06`): Script `ℓ`, Feather-Quill `ℓ`, Script Capital `ℒ`, Barred `ł`-Ray, Curled Hook `ȴ`/`ɭ`, and Bolt-Loop `ℓ`. | **Current.** Integrated in `studio.html` under `Rev 8 · Script ℓ / ℒ (6)`. |
-| 9 | `rev-9-letterforms/` | Eight custom letterforms inspired by script ℓ / ℒ, crossed ł, curled ȴ, double-struck 𝕃, and feather strokes. | **Exploration.** Compare them as letters, marks, and wordmarks in the studio. |
+| 1 | `rev-1-concepts/` | earlier session | First pass: `concept-1…6` (aero feather, lightning feather, photon quill, beam-l, monoline-l, spark quill) plus `01–03` vector sheets. |
+| 1b | `rev-2-plume/` | `glm-5.3-flash` | The C1–C4 round (plume-l, plume solid, bolt-l, ray) moved out of `logo-concepts/`; `sheet.html` is its sheet. All files carry `authored by glm-5.3-flash` comments. |
+| 2 | `rev-2-sheets/` | earlier session | Two exploration sheets: `exploration.html` (editorial mark study) and `preview.html` (theme switcher, 128→16 px tests, lockups). |
+| 3 | `rev-3-quill/` | `deepseek-v4.1-flash` | ~40 marks in 6 families reduced to **The Quill** (shaft + 3 barbs at 35°, monoline). Sheet, mark assets, notes, and `visibility.html` (paper / ink / graphite / filament at 64→16 px with WCAG ratios). |
+| 4 | `rev-4-monogram-wordmark/` | `gemini-4-argon` | Six mini-style monograms where the mark is the first letter of `lite` (a1–a3 feather, b1–b2 light, c1 bolt), plus its own studio. |
+| 5 | `rev-5-synthesis/` | `gemini-3.8-flash` | Rev 3 × Rev 4 synthesis: tapered quill, slanted quill-l, refined Spark `li`, split-light quill. |
+| 6 | `rev-6-letter-marks/` | `gpt-6.1-terra` | Six L-based feather, bolt and spark sketches, each reused as the first letter in the wordmark. |
+| 7 | `rev-7-letter-l/` | `gemini-3.8-flash` | Eight letter marks (R7-01…08) designed to stand alone and replace the `l` in `lite`. |
+| 8 | `rev-8-script-l/` | `gemini-3.8-flash` | Six `ℓ` / `ℒ` variations (R8-01…06). |
+| 9 | `rev-9-letterforms/` | `gpt-6.1-terra` | Eight custom letterforms drawing on ℓ, ℒ, ł, ȴ and feather strokes. |
+| 11 | `rev-11-ell-finalists/` | `gemini-3.8-flash` | Six `ℓ` finalist refinements (`R11-01`–`R11-06`) synthesizing `R10-01`, `R10-02`, and `R10-04`. |
+| — | root | `gemini-3.8-flash` | `concept-7-radiant-feather.svg`, `concept-8-celestial-quill.svg`. |
+| — | root | `glm-5.3-flash` | `visibility-draft.html` — **draft, kept for future reference**: reusable visibility-matrix template (any mark × paper/ink/graphite/filament/teal × 64–16 px, WCAG ratios). Marks seeded with rev-2-plume glyphs; swap via the `MARKS` object in the file. |
 
-### Revision 3 files
+Unified viewer: **`studio.html`**. Rev 3 sits in the main tab row; Rev 1 and Rev 4
+are under *Other Entities & Archive*.
 
-- `exploration.html` — the deliverable sheet. Open in a browser.
-- `lite-mark.svg` — primary mark (3 barbs), `currentColor`.
-- `lite-mark-16.svg` — optical cut for 16 px and below (2 barbs, thicker stroke).
-- `lite-mark.png` — 512 px transparent export.
-- `visibility.html` — the mark at 64/48/32/24/16 px on paper, ink, graphite and
-  filament, with WCAG contrast ratios per pairing.
-- `notes.md` — method, six findings, geometry spec, system rules, open questions.
+No files have been deleted. Earlier rounds were moved into revision folders on
+2026-11-12; `rev-1-concepts/logo-concepts/` is the same C1–C4 round as
+`rev-2-plume/`.
 
-### Working conventions
+## Brand pillars (shared)
 
-- One folder per revision, named `rev-N-slug/`.
-- Never overwrite an earlier revision; add the next number.
-- Record the verdict in the table above when a revision is superseded.
-- Sheets are self-contained HTML (inline SVG symbols) so a folder can be moved
-  or archived without breaking references.
+1. **Lightness of weight (feather)** — fast native execution, tiny footprint
+2. **Speed & energy (lightning)** — instant startup, no compilation drag
+3. **Clarity (light ray)** — predictable semantics, readable code
 
----
+## Existing identity anchors
 
-## Revision 3 recommendation
-
-**The Quill**: a single shaft leaning 35°, three barbs at the same angle, no
-outline, no nib. The *l* belongs to the wordmark — the same division of labour
-that makes mini's lowercase **m** work.
-
-Held open: **Spark** (shaft + detached dot, reads *li*, most mini-like at 16 px,
-no feather) and **Bolt** (the *l* as lightning; voice and motion only).
-
----
-
-## Core Brand Pillars
-
-1. **Lightness of Weight (Feather)**: fast native execution, tiny footprint, no
-   garbage collector / VM bloat, minimal ceremony.
-2. **Speed & Energy (Lightning)**: instantaneous startup, zero compilation drag.
-3. **Clarity & Transparency (Light Ray)**: predictable semantics, readable code,
-   illuminating clarity.
+* VS Code icons: `editors/vscode/icons/lite-light.svg` / `lite-dark.svg` — "L" stroke + dot, teal `#0F766E` / `#5EEAD4`
+* Voice: "Lite is light." (`README.md`)
