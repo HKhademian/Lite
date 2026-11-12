@@ -365,6 +365,7 @@
   <div class="nav-bar">
     <button class="tab-btn active" id="grp-all" onclick="setGroup('all')">All Candidates</button>
     <button class="tab-btn" id="grp-rev8" onclick="setGroup('rev8')">Rev 8 · Script ℓ / ℒ (6)</button>
+    <button class="tab-btn" id="grp-rev9" onclick="setGroup('rev9')">Rev 9 · Letterforms (8)</button>
     <button class="tab-btn" id="grp-rev7" onclick="setGroup('rev7')">Rev 7 · Letter $ (8)</button>
     <button class="tab-btn" id="grp-rev6" onclick="setGroup('rev6')">Rev 6 · Letter Marks (6)</button>
     <button class="tab-btn" id="grp-top" onclick="setGroup('top')">Top Picks (6)</button>
@@ -388,7 +389,58 @@ let activeGroup = 'all';
 let wordCase = 'lower';
 let selectedId = 'r6-feather-curve';
 
+const rev9Mark01 = (c) => `<g fill="none" stroke="${c}" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M2.3 10.7C5.1 8.8 8.1 5.5 8.2 3.3C8.3 1.9 6.9 1.6 6 2.8C4.9 4.4 4.4 7.9 4.5 10.5C4.5 12.5 5.7 13.2 7.8 12.6"/></g>`;
+const rev9Mark02 = (c) => `<g fill="none" stroke="${c}" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M2.6 9.4C5.8 7.1 8.1 4.6 7.8 2.9C7.6 1.9 6.6 1.9 5.9 3.1C4.8 4.9 4.5 7.9 4.6 10.5C4.7 12.3 5.8 13 8.1 12.4"/></g>`;
+const rev9Mark03 = (c) => `<g fill="none" stroke="${c}" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M3.1 4.5C3 2.6 5.3 1.6 7.3 2.5C8.9 3.2 8.3 5.4 7.3 7.3L4.3 12.6C6.9 11.8 8.9 12.2 10.4 13"/></g>`;
+const rev9Mark04 = (c) => `<g fill="none" stroke="${c}" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M2.5 10.7C5.1 9.1 8.2 5.4 8.1 3.1C8 1.9 6.8 1.8 6 3.2C4.9 5.2 4.3 8.4 4.5 10.7C4.7 12.8 6.2 13.3 8.5 12.3"/><path d="M4.5 10.7C6.5 10.4 7.9 9.4 8.7 8" stroke-width="1.15"/></g>`;
+const rev9Mark05 = (c) => `<g fill="none" stroke="${c}" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4 2.4V10.8C4 12.2 4.8 12.9 6.2 12.9H8.4"/><path d="M2.4 9L7.3 5.8" stroke-width="1.3"/></g>`;
+const rev9Mark06 = (c) => `<g fill="none" stroke="${c}" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4 2.4V10.4C4 12.4 5.1 13.4 6.8 12.8C8 12.3 8.2 11 7.5 10.3C6.8 9.7 5.9 10.1 5.8 10.9"/></g>`;
+const rev9Mark07 = (c) => `<g fill="none" stroke="${c}" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M3.3 2.4V12.8H9.5"/><path d="M6.1 2.4V10.1H9.5" stroke-width="1.15"/></g>`;
+const rev9Mark08 = (c) => `<g fill="none" stroke="${c}" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M2.4 10.8C5.3 8.7 8 5.6 8.1 3.2C8.2 2 6.9 1.8 6.1 3.1C5 4.8 4.5 8 4.6 10.4C4.7 12.4 5.8 13.2 8.2 12.6"/><path d="M4.7 9C6.6 8.5 7.8 7.5 8.5 6.2M5.1 6.8C6.5 6.4 7.4 5.6 7.9 4.7" stroke-width="1.05"/></g>`;
+
 const items = [
+  // ================= REV 9 LETTERFORM STUDIES =================
+  {
+    ref: 'R9-01', id: 'r9-looped-l', groups: ['rev9'], badge: 'Rev 9 · 01', origin: 'Letterform study',
+    title: 'Looped l', desc: 'A simple looped ascender inspired by ℓ.', note: 'A flowing single stroke; check that the loop stays open at 16 px.', vb: '0 0 16 16',
+    mark: rev9Mark01, first: rev9Mark01, off: 11.0
+  },
+  {
+    ref: 'R9-02', id: 'r9-open-script-l', groups: ['rev9'], badge: 'Rev 9 · 02', origin: 'Letterform study',
+    title: 'Open script l', desc: 'A lighter ℓ with an open shoulder and a curled base.', note: 'A reduced loop offers more breathing room but a subtler letter.', vb: '0 0 16 16',
+    mark: rev9Mark02, first: rev9Mark02, off: 11.0
+  },
+  {
+    ref: 'R9-03', id: 'r9-script-capital-l', groups: ['rev9'], badge: 'Rev 9 · 03', origin: 'Letterform study',
+    title: 'Script capital L', desc: 'A single flowing L with a top entry loop and broad foot, inspired by ℒ.', note: 'This sketch can read as a 2; the capital L needs refinement.', vb: '0 0 16 16',
+    mark: rev9Mark03, first: rev9Mark03, off: 13.4
+  },
+  {
+    ref: 'R9-04', id: 'r9-ribbon-l', groups: ['rev9'], badge: 'Rev 9 · 04', origin: 'Letterform study',
+    title: 'Ribbon l', desc: 'A looped l with a narrow crossing, inspired by script and curled l forms.', note: 'More feather-like movement with no added barbs; crossings can fill at small sizes.', vb: '0 0 16 16',
+    mark: rev9Mark04, first: rev9Mark04, off: 11.8
+  },
+  {
+    ref: 'R9-05', id: 'r9-slashed-l', groups: ['rev9'], badge: 'Rev 9 · 05', origin: 'Letterform study',
+    title: 'Slashed l', desc: 'A rounded l with one diagonal stroke, inspired by ł.', note: 'The stroke could suggest a ray or a feather barb; it may read as ł.', vb: '0 0 16 16',
+    mark: rev9Mark05, first: rev9Mark05, off: 11.0
+  },
+  {
+    ref: 'R9-06', id: 'r9-curl-l', groups: ['rev9'], badge: 'Rev 9 · 06', origin: 'Letterform study',
+    title: 'Curled l', desc: 'A minimal stem ending in a small curl, inspired by ȴ.', note: 'The curled foot can read as a b at small sizes.', vb: '0 0 16 16',
+    mark: rev9Mark06, first: rev9Mark06, off: 10.9
+  },
+  {
+    ref: 'R9-07', id: 'r9-double-line-l', groups: ['rev9'], badge: 'Rev 9 · 07', origin: 'Letterform study',
+    title: 'Double-line L', desc: 'An L with a slender parallel stroke, inspired by double-struck 𝕃.', note: 'A graphic light-beam idea; the two lines may merge at favicon size.', vb: '0 0 16 16',
+    mark: rev9Mark07, first: rev9Mark07, off: 12.1
+  },
+  {
+    ref: 'R9-08', id: 'r9-feather-script-l', groups: ['rev9'], badge: 'Rev 9 · 08', origin: 'Letterform study',
+    title: 'Feather script l', desc: 'A looped ℓ with two delicate feather strokes.', note: 'Blends the script-letter idea with the feather brief; test the crossings at 16 px.', vb: '0 0 16 16',
+    mark: rev9Mark08, first: rev9Mark08, off: 11.4
+  },
+
   // ================= REV 8 SCRIPT ℓ / ℒ & "l" VARIATIONS =================
   {
     ref: 'R8-01',
@@ -813,7 +865,7 @@ function renderSim() {
 
 function setGroup(grp) {
   activeGroup = grp;
-  ['rev8', 'rev7', 'rev6', 'top', 'rev3', 'rev4', 'rev1', 'all'].forEach(g => {
+  ['rev9', 'rev8', 'rev7', 'rev6', 'top', 'rev3', 'rev4', 'rev1', 'all'].forEach(g => {
     const el = document.getElementById('grp-' + g);
     if (el) el.classList.toggle('active', g === grp);
   });

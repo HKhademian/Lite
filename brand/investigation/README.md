@@ -3,7 +3,7 @@
 All branding assets, logo revisions, and preview sheets live in `brand/investigation/`.
 This is the tracked design archive — the single place where the trail of revisions is kept.
 
-- **[`studio.html`](studio.html)** — Unified interactive studio (defaults to **Rev 6 · Letter Marks**; includes an archive selector for Rev 3 external-entity studies, Rev 4 monograms, and Rev 1 early sketches).
+- **[`studio.html`](studio.html)** — Unified interactive studio (defaults to **All Candidates**; includes an archive selector for Rev 3 external-entity studies, Rev 4 monograms, and Rev 1 early sketches).
 
 ---
 
@@ -19,6 +19,7 @@ This is the tracked design archive — the single place where the trail of revis
 | 6 | `rev-6-letter-marks/` | Six L-based feather, bolt, and spark sketches, each reused as the first letter in the studio wordmark. | **Exploration.** Letter readability, feather character, spacing, and small-size performance remain open. |
 | 7 | `rev-7-letter-l/` | Eight `$` letter marks (`R7-01`–`R7-08`) designed to stand alone as `$` and replace `L`/`l` in `$ite`: Multi-Barb Quill `L`, Swept Quill-Foot `L`, Lightning Bolt `L`, Minimal Bolt `l`, Spark `Li`, Feather-Foot `L`, Light-Beam `L`, and Wing-Tip `l`. | **Exploration.** Integrated in `studio.html` under `Rev 7 · Letter $ (8)`. |
 | 8 | `rev-8-script-l/` | Six `ℓ`, `ℒ`, and `"l"`-variation marks (`R8-01`–`R8-06`): Script `ℓ`, Feather-Quill `ℓ`, Script Capital `ℒ`, Barred `ł`-Ray, Curled Hook `ȴ`/`ɭ`, and Bolt-Loop `ℓ`. | **Current.** Integrated in `studio.html` under `Rev 8 · Script ℓ / ℒ (6)`. |
+| 9 | `rev-9-letterforms/` | Eight custom letterforms inspired by script ℓ / ℒ, crossed ł, curled ȴ, double-struck 𝕃, and feather strokes. | **Exploration.** Compare them as letters, marks, and wordmarks in the studio. |
 
 ### Revision 3 files
 
