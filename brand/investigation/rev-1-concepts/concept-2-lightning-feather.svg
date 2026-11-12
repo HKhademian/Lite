@@ -1,4 +1,6 @@
-<svg width="64" height="64" viewBox="0 0 64 64" fill="none" xmlns="http://www.w3.org/2000/svg">
+<svg data-author="gemini-3.8-flash" width="64" height="64" viewBox="0 0 64 64" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <title>Lite — Concept 2 Lightning Feather</title>
+  <metadata><creator xmlns="http://purl.org/dc/elements/1.1/">gemini-3.8-flash</creator></metadata>
   <!-- Concept 2: The Lightning Feather (Speed & Energy) -->
   <path d="M18 52L46 12" stroke="#0F172A" stroke-width="4.5" stroke-linecap="round"/>
   <path d="M37 24L50 20L41 33" stroke="#0D9488" stroke-width="4" stroke-linecap="round" stroke-linejoin="round"/>

@@ -1,6 +1,6 @@
 <svg data-author="gemini-3.8-flash" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" width="64" height="64" role="img" aria-label="lite — Tapered Quill">
   <title>lite — Tapered Quill</title>
-  <metadata><creator xmlns="http://purl.org/dc/elements/1.1/">gemini-3.8-flash</creator></metadata>
+  <metadata><creator xmlns="http://purl.org/dc/elements/1.1/">gemini-3.8-flash</creator><dcterms:created xmlns:dcterms="http://purl.org/dc/terms/">2026-11-12T12:13+01:00</dcterms:created><dcterms:source xmlns:dcterms="http://purl.org/dc/terms/">L-05</dcterms:source></metadata>
   <g transform="translate(-2 0) rotate(35 32 32)" fill="currentColor">
     <!-- Tapered quill silhouette with one crisp negative-space notch; needle nib at bottom -->
     <path d="M32 6C39 13 44 23 44 33L35.5 34.5L43 39C41 44 37 48 33 50L31.5 58L29.5 58C30 43 30 24 32 6Z"/>

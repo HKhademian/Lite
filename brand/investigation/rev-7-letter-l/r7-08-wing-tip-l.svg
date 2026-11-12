@@ -1,6 +1,6 @@
 <svg data-author="gemini-3.8-flash" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 16 16" width="16" height="16" role="img" aria-label="Lite — R7-08 Wing-Tip l">
   <title>Lite — R7-08 Wing-Tip l</title>
-  <metadata><creator xmlns="http://purl.org/dc/elements/1.1/">gemini-3.8-flash</creator></metadata>
+  <metadata><creator xmlns="http://purl.org/dc/elements/1.1/">gemini-3.8-flash</creator><dcterms:created xmlns:dcterms="http://purl.org/dc/terms/">2026-11-12T12:36+01:00</dcterms:created><dcterms:source xmlns:dcterms="http://purl.org/dc/terms/">R7-06</dcterms:source></metadata>
   <!-- Ultra-minimal single-stroke l with a subtle feather-flare top & rounded foot -->
   <path d="M10.2 3C7.4 3 5.5 5 5.5 8V11.2A1.8 1.8 0 0 0 7.3 13H9.5" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
 </svg>

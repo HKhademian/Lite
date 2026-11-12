@@ -1,4 +1,6 @@
-<svg width="64" height="64" viewBox="0 0 64 64" fill="none" xmlns="http://www.w3.org/2000/svg">
+<svg data-author="gemini-3.8-flash" width="64" height="64" viewBox="0 0 64 64" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <title>Lite — Concept 5 Monoline L</title>
+  <metadata><creator xmlns="http://purl.org/dc/elements/1.1/">gemini-3.8-flash</creator></metadata>
   <!-- Concept 5: The Single-Stroke "l" (Monoline Glyph) -->
   <path d="M28 54V24C28 15 36 10 42 15C47 19 45 28 38 34C31 40 28 42 28 42L46 42" stroke="#0D9488" stroke-width="5" stroke-linecap="round" stroke-linejoin="round"/>
 </svg>

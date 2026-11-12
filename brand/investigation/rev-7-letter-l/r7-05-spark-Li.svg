@@ -1,6 +1,6 @@
 <svg data-author="gemini-3.8-flash" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 16 16" width="16" height="16" role="img" aria-label="Lite — R7-05 Spark Li">
   <title>Lite — R7-05 Spark Li</title>
-  <metadata><creator xmlns="http://purl.org/dc/elements/1.1/">gemini-3.8-flash</creator></metadata>
+  <metadata><creator xmlns="http://purl.org/dc/elements/1.1/">gemini-3.8-flash</creator><dcterms:created xmlns:dcterms="http://purl.org/dc/terms/">2026-11-12T12:36+01:00</dcterms:created><dcterms:source xmlns:dcterms="http://purl.org/dc/terms/">R6-05, L-03</dcterms:source></metadata>
   <!-- L with rounded corner + 4-point spark that becomes the i-dot in Lite -->
   <path d="M3.5 2.5V11.2A1.8 1.8 0 0 0 5.3 13H9.5" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
   <path d="M11.6 1.6L12.2 3.2L13.8 3.8L12.2 4.4L11.6 6L11 4.4L9.4 3.8L11 3.2Z" fill="currentColor"/>

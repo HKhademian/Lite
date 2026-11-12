@@ -1,6 +1,6 @@
 <svg xmlns="http://www.w3.org/2000/svg" data-author="gemini-3.8-flash" viewBox="0 0 16 16" width="16" height="16" role="img" aria-label="Lite — R11-03 Mini-Weight Swept ℓ">
   <title>Lite — R11-03 Mini-Weight Swept ℓ</title>
-  <metadata><creator xmlns="http://purl.org/dc/elements/1.1/">gemini-3.8-flash</creator></metadata>
+  <metadata><creator xmlns="http://purl.org/dc/elements/1.1/">gemini-3.8-flash</creator><dcterms:created xmlns:dcterms="http://purl.org/dc/terms/">2026-11-12T13:13+01:00</dcterms:created><dcterms:source xmlns:dcterms="http://purl.org/dc/terms/">R10-02</dcterms:source></metadata>
   <!-- R10-02 tuned to mini's exact 2.0 stroke-width with a slightly wider 16px-safe loop -->
   <path d="M2.2 10C5 8 8.3 5.1 8.2 3.1C8.1 1.8 6.8 1.8 5.8 3.2C4.6 5 4.3 8.1 4.5 10.4C4.7 12.2 5.8 13 7.4 13C8.7 13 9.7 12.2 10.4 11.2" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
 </svg>

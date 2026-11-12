@@ -1,6 +1,6 @@
 <svg data-author="gemini-3.8-flash" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 16 16" width="16" height="16" role="img" aria-label="lite — Split-Light Quill">
   <title>lite — Split-Light Quill</title>
-  <metadata><creator xmlns="http://purl.org/dc/elements/1.1/">gemini-3.8-flash</creator></metadata>
+  <metadata><creator xmlns="http://purl.org/dc/elements/1.1/">gemini-3.8-flash</creator><dcterms:created xmlns:dcterms="http://purl.org/dc/terms/">2026-11-12T12:13+01:00</dcterms:created><dcterms:source xmlns:dcterms="http://purl.org/dc/terms/">L-05, L-09</dcterms:source></metadata>
   <g fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
     <!-- Diagonal 35-deg quill shaft with a crisp lightning-step / light-ray barb -->
     <path d="M3.5 13.5L12.5 2.5"/>

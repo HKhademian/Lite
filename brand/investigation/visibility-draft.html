@@ -1,0 +1,156 @@
+<!doctype html>
+<!-- lite branding · visibility-table DRAFT · authored by glm-5.3-flash (opencode) · 2026-11-12 -->
+<!-- PURPOSE: reusable template. To test a new mark, paste its 64x64 viewBox inner markup
+     into the MARKS table below (string of inner elements; stroke/fill = currentColor)
+     and add it to the marks list. Nothing else needs changing. -->
+<html>
+<head>
+<meta charset="utf-8">
+<title>Lite — visibility matrix · draft template</title>
+<style>
+  :root{
+    --ink:#101113; --paper:#F5F3EE; --graphite:#6C7078; --filament:#F0B45A;
+    --teal:#0F766E; --teal-dark:#5EEAD4;
+  }
+  *{box-sizing:border-box}
+  body{margin:0;background:#EDEBE5;color:var(--ink);
+       font:13px/1.45 -apple-system,BlinkMacSystemFont,"Inter",system-ui,sans-serif;
+       -webkit-font-smoothing:antialiased}
+  .wrap{max-width:960px;margin:0 auto;padding:32px 28px 40px}
+  .eyebrow{font:10px/1 ui-monospace,monospace;letter-spacing:.14em;text-transform:uppercase;color:#8B8E96}
+  h1{font-size:24px;line-height:1.15;letter-spacing:-.02em;font-weight:650;margin:10px 0 6px}
+  p.lede{margin:0 0 22px;color:#4A4D54;max-width:62ch}
+  table{border-collapse:separate;border-spacing:0;width:100%;background:#fff;
+        border:1px solid #E1DED6;border-radius:6px;overflow:hidden}
+  th,td{padding:0;text-align:left}
+  thead th{font:10px/1 ui-monospace,monospace;letter-spacing:.1em;text-transform:uppercase;
+           color:#6C7078;padding:10px 12px;border-bottom:1px solid #E1DED6;font-weight:500}
+  tbody th{font:10px/1 ui-monospace,monospace;color:#6C7078;padding:0 12px;width:74px;
+           border-bottom:1px solid #E1DED6;font-weight:400}
+  td{border-bottom:1px solid #E1DED6}
+  tr:last-child td, tr:last-child th{border-bottom:0}
+  .cell{display:flex;align-items:center;justify-content:center;height:88px}
+  .paper{background:var(--paper);color:var(--ink)}
+  .ink{background:var(--ink);color:var(--paper)}
+  .graphite{background:var(--graphite);color:var(--paper)}
+  .filament{background:var(--filament);color:var(--ink)}
+  .teal{background:var(--teal);color:#fff}
+  .meta{display:flex;gap:18px;margin-top:16px;flex-wrap:wrap;color:#4A4D54}
+  .meta b{font-weight:600}
+  .bad{color:#9A3B2E}
+  .k{font:11px/1 ui-monospace,monospace;color:#6C7078}
+  .legend{display:flex;gap:14px;margin-top:10px;font:11px/1 ui-monospace,monospace;color:#6C7078;flex-wrap:wrap}
+  .sw{display:inline-block;width:9px;height:9px;border:1px solid rgba(0,0,0,.12);vertical-align:-1px;margin-right:5px}
+  .foot{margin-top:28px;padding-top:14px;border-top:1px solid #E1DED6;font:11px/1.6 ui-monospace,monospace;color:#8B8E96}
+  .marksel{margin:0 0 18px;display:flex;gap:8px}
+  .marksel button{font:11px/1 ui-monospace,monospace;padding:6px 10px;border:1px solid #D6D2C8;
+                  background:#fff;border-radius:4px;cursor:pointer;color:#4A4D54}
+  .marksel button.on{border-color:var(--teal);color:var(--teal);font-weight:700}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <div class="eyebrow">Draft template · glm-5.3-flash · 2026-11-12</div>
+  <h1>Does it stay visible?</h1>
+  <p class="lede">Reusable draft: the same marks on the surfaces they will actually meet, at real pixel
+     sizes (not zoomed crops). Swap marks by editing the <code>MARKS</code> object in this file's
+     source — inner markup of a 64×64 viewBox, colored with <code>currentColor</code>.</p>
+
+  <div class="marksel" id="marksel"></div>
+
+  <table>
+    <thead>
+      <tr>
+        <th></th>
+        <th>Paper · ink mark</th>
+        <th>Ink · paper mark</th>
+        <th>Graphite · paper</th>
+        <th>Filament · ink</th>
+        <th>Teal · white</th>
+      </tr>
+    </thead>
+    <tbody id="rows"></tbody>
+  </table>
+
+  <div class="meta" id="contrast"></div>
+  <div class="legend">
+    <span><i class="sw" style="background:#F5F3EE"></i>paper #F5F3EE</span>
+    <span><i class="sw" style="background:#101113"></i>ink #101113</span>
+    <span><i class="sw" style="background:#6C7078"></i>graphite #6C7078</span>
+    <span><i class="sw" style="background:#F0B45A"></i>filament #F0B45A</span>
+    <span><i class="sw" style="background:#0F766E"></i>teal #0F766E</span>
+  </div>
+
+  <div class="foot">
+    DRAFT · glm-5.3-flash (opencode) · brand/investigation/visibility-draft.html<br>
+    Surfaces borrowed from rev-3-quill's visibility check (Gemini session) and extended with the
+    brand-teal tile. Marks seeded with rev-2-plume C1 as a placeholder — replace freely.
+    Reference sizes: VS Code tab 16 px · GitHub avatar 32–64 px · README header 48–64 px.
+  </div>
+</div>
+
+<script>
+  // ---- MARKS: paste any mark here as 64x64 inner markup, using currentColor ----
+  const MARKS = {
+    'C1 plume (rev-2)': `
+      <g fill="none" stroke="currentColor" stroke-width="4.4" stroke-linecap="round" stroke-linejoin="round">
+        <path d="M36 6 C 20 14 13 32 20 48 C 22.5 53.5 26.5 55.5 30 52"/>
+        <path d="M36 6 C 33 20 31 38 30 52 L 27 60"/>
+      </g>`,
+    'Bolt-l (rev-2)': `
+      <g fill="none" stroke="currentColor" stroke-width="4.8" stroke-linecap="round" stroke-linejoin="round">
+        <path d="M40 6 L 31 20 L 38 20 C 36 32 33 44 30 57"/>
+      </g>`,
+    'Ray (rev-2)': `
+      <g fill="none" stroke="currentColor" stroke-width="4.8" stroke-linecap="round" stroke-linejoin="round">
+        <path d="M22 8 C 23 24 24 40 25 55"/>
+      </g>
+      <circle cx="42" cy="9" r="5" fill="currentColor"/>`
+  };
+
+  const SURFACES = [
+    ['paper',    'paper'],    // background class, mark color class
+    ['ink',      'ink'],
+    ['graphite', 'graphite'],
+    ['filament', 'filament'],
+    ['teal',     'teal']
+  ];
+  // mark color inside each surface cell (only used for contrast math display)
+  const MARK_ON = { paper:'#101113', ink:'#F5F3EE', graphite:'#F5F3EE', filament:'#101113', teal:'#ffffff' };
+
+  const SIZES = [64, 48, 32, 24, 16];
+  let current = Object.keys(MARKS)[0];
+
+  const glyph = px => `<svg width="${px}" height="${px}" viewBox="0 0 64 64">${MARKS[current]}</svg>`;
+
+  function render() {
+    document.getElementById('marksel').innerHTML = Object.keys(MARKS).map(k =>
+      `<button class="${k===current?'on':''}" data-k="${k}">${k}</button>`).join('');
+    document.querySelectorAll('.marksel button').forEach(b =>
+      b.onclick = () => { current = b.dataset.k; render(); });
+
+    document.getElementById('rows').innerHTML = SIZES.map(s =>
+      `<tr><th>${s} px</th>` + SURFACES.map(([bg]) =>
+        `<td><div class="cell ${bg}">${glyph(s)}</div></td>`).join('') + `</tr>`).join('');
+
+    const lum = hex => {
+      const [r,g,b] = hex.match(/\w\w/g).map(h => {
+        const c = parseInt(h,16)/255;
+        return c <= .03928 ? c/12.92 : Math.pow((c+.055)/1.055, 2.4);
+      });
+      return .2126*r + .7152*g + .0722*b;
+    };
+    const ratio = (a,b) => {
+      const [x,y] = [lum(a), lum(b)].sort((m,n)=>n-m);
+      return (x+.05)/(y+.05);
+    };
+    document.getElementById('contrast').innerHTML = SURFACES.map(([bg]) => {
+      const r = ratio(MARK_ON[bg], getComputedStyle(document.documentElement).getPropertyValue(`--${bg==='paper'?'paper':bg}`).trim() || '#fff');
+      const ok = r >= 4.5;
+      return `<span class="k">${bg}: mark <b class="${ok?'':'bad'}">${r.toFixed(1)}:1</b></span>`;
+    }).join('');
+  }
+  render();
+</script>
+</body>
+</html>

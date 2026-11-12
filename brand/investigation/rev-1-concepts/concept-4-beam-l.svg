@@ -1,4 +1,6 @@
-<svg width="64" height="64" viewBox="0 0 64 64" fill="none" xmlns="http://www.w3.org/2000/svg">
+<svg data-author="gemini-3.8-flash" width="64" height="64" viewBox="0 0 64 64" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <title>Lite — Concept 4 Beam L</title>
+  <metadata><creator xmlns="http://purl.org/dc/elements/1.1/">gemini-3.8-flash</creator></metadata>
   <!-- Concept 4: The Beam "L" (Light Ray & Prism) -->
   <path d="M20 12V48C20 50.2091 21.7909 52 24 52H48" stroke="#0F172A" stroke-width="5" stroke-linecap="round" stroke-linejoin="round"/>
   <path d="M34 16L46 28M42 16L54 28" stroke="#0D9488" stroke-width="4" stroke-linecap="round"/>

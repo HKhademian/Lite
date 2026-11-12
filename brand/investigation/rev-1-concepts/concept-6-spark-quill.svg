@@ -1,4 +1,6 @@
-<svg width="64" height="64" viewBox="0 0 64 64" fill="none" xmlns="http://www.w3.org/2000/svg">
+<svg data-author="gemini-3.8-flash" width="64" height="64" viewBox="0 0 64 64" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <title>Lite — Concept 6 Spark Quill</title>
+  <metadata><creator xmlns="http://purl.org/dc/elements/1.1/">gemini-3.8-flash</creator></metadata>
   <!-- Concept 6: The Spark Quill (Lightning Bolt + Writing Nib) -->
   <path d="M36 10L20 32H34L26 54L48 28H34L42 10H36Z" fill="#0D9488" stroke="#0F172A" stroke-width="1.5" stroke-linejoin="round"/>
   <circle cx="26" cy="54" r="2.5" fill="#0F172A"/>
