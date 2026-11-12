@@ -8,7 +8,7 @@ import { dirname, join, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { buildCCompiler, compileTs } from '../compiler/host.ts';
 import { sourceModuleIdentity } from '../compiler/source.ts';
-import { heroSample, sampleGroups, showcaseSamples, type ShowcaseSample } from './groups.ts';
+import { heroSample, playgroundDefaultSample, sampleGroups, showcaseSamples, type ShowcaseSample } from './groups.ts';
 import { escapeHtml, highlightLite, highlightTs } from './highlight.ts';
 import { playgroundWorkerJs } from './playground-worker.ts';
 import { siteCss } from './styles.ts';
@@ -814,7 +814,7 @@ function renderPlaygroundPage(rendered: ReadonlyMap<string, RenderedSample>, rep
     lastFrameAt = 0;
   }
 
-  const initial = new URLSearchParams(window.location.search).get("sample") ?? "${escapeHtml(heroSample.id)}";
+  const initial = new URLSearchParams(window.location.search).get("sample") ?? "${escapeHtml(playgroundDefaultSample.id)}";
   loadSample(initial, "load");
 </script>`;
 

@@ -1,0 +1,19 @@
+/* Variables, loops, and branches compiling cleanly to TypeScript and C. */
+
+io := import "core/io";
+
+var n := 1;
+var sum := 0;
+loop {
+    if n > 5 {
+        break;
+    }
+    sum = sum + n;
+    n = n + 1;
+}
+
+if sum == 15 {
+    io.outputLine("sum(1..5) =", sum);
+} else {
+    io.outputLine("unexpected:", sum);
+}

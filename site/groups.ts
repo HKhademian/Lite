@@ -54,7 +54,19 @@ export const heroSample: ShowcaseSample = {
   showOutput: true,
 };
 
+export const playgroundDefaultSample: ShowcaseSample = {
+  id: 'sum-loop',
+  group: 'control',
+  title: 'Sum loop (TS & C)',
+  note: 'Variables, loops, and branches compiling to both TypeScript and C.',
+  file: 'language/examples/022-sum-loop.lts',
+  args: [],
+  stdin: '',
+  showOutput: true,
+};
+
 export const showcaseSamples: readonly ShowcaseSample[] = [
+  playgroundDefaultSample,
   {
     id: 'double-sum',
     group: 'basics',
