@@ -24,6 +24,7 @@
       --soft: #1B1E24;
     }
     * { box-sizing: border-box; }
+    button { font-family: inherit; }
     body {
       margin: 0;
       background: var(--bg);
@@ -1210,12 +1211,12 @@ const bsFonts = [
   { ref: 'SF-07', id: 'all-mono', name: 'All-Mono Minimal', display: "ui-monospace, 'SF Mono', Menlo, monospace", body: "ui-monospace, 'SF Mono', Menlo, monospace" }
 ];
 const bsCodeFonts = [
-  { ref: 'CF-01', id: 'jetbrains', name: 'JetBrains Mono', css: "'JetBrains Mono', ui-monospace, monospace" },
-  { ref: 'CF-02', id: 'sf-mono', name: 'SF Mono', css: "'SF Mono', ui-monospace, monospace" },
-  { ref: 'CF-03', id: 'fira', name: 'Fira Code', css: "'Fira Code', 'Cascadia Code', ui-monospace, monospace" },
-  { ref: 'CF-04', id: 'menlo', name: 'Menlo', css: "Menlo, Consolas, monospace" },
-  { ref: 'CF-05', id: 'plex-mono', name: 'IBM Plex Mono', css: "'IBM Plex Mono', ui-monospace, monospace" },
-  { ref: 'CF-06', id: 'system-mono', name: 'System Mono', css: "ui-monospace, monospace" }
+  { ref: 'CF-01', id: 'sf-mono', name: 'SF Mono', css: "'SF Mono', ui-monospace, monospace" },
+  { ref: 'CF-02', id: 'menlo', name: 'Menlo', css: "Menlo, Consolas, monospace" },
+  { ref: 'CF-03', id: 'monaco', name: 'Monaco', css: "Monaco, monospace" },
+  { ref: 'CF-04', id: 'courier', name: 'Courier New', css: "'Courier New', Courier, monospace" },
+  { ref: 'CF-05', id: 'jetbrains', name: 'JetBrains / Menlo', css: "'JetBrains Mono', Menlo, monospace" },
+  { ref: 'CF-06', id: 'pt-mono', name: 'PT Mono / Andale', css: "'PT Mono', 'Andale Mono', monospace" }
 ];
 let activeBsAccent = bsAccents[0];
 let activeBsPal = bsPalettes[0];
@@ -1319,12 +1320,14 @@ function selectBsLogoFont(id) {
 
 function selectBsFont(id) {
   activeBsFont = bsFonts.find(x => x.id === id) || bsFonts[0];
+  document.documentElement.style.setProperty('--font', activeBsFont.body);
   document.body.style.fontFamily = activeBsFont.body;
   renderSim();
 }
 
 function selectBsCodeFont(id) {
   activeBsCodeFont = bsCodeFonts.find(x => x.id === id) || bsCodeFonts[0];
+  document.documentElement.style.setProperty('--mono', activeBsCodeFont.css);
   renderSim();
 }
 
@@ -1472,9 +1475,13 @@ function loadState() {
     if (st.logoFont) activeBsLogoFont = bsLogoFonts.find(x => x.id === st.logoFont) || activeBsLogoFont;
     if (st.siteFont) {
       activeBsFont = bsFonts.find(x => x.id === st.siteFont) || activeBsFont;
+      document.documentElement.style.setProperty('--font', activeBsFont.body);
       document.body.style.fontFamily = activeBsFont.body;
     }
-    if (st.codeFont) activeBsCodeFont = bsCodeFonts.find(x => x.id === st.codeFont) || activeBsCodeFont;
+    if (st.codeFont) {
+      activeBsCodeFont = bsCodeFonts.find(x => x.id === st.codeFont) || activeBsCodeFont;
+      document.documentElement.style.setProperty('--mono', activeBsCodeFont.css);
+    }
   } catch {}
 }
 
