@@ -170,3 +170,74 @@ test('emitted playground compiler.js and stdlib.json compile and run Lite code',
     globalThis.process = prevProcess;
   }
 });
+
+test('emitted playground worker.js compiles and runs edited Lite code', async () => {
+  const out = join(root, 'dist', 'site');
+  const workerPath = join(out, 'playground', 'worker.js');
+  const stdlibPath = join(out, 'playground', 'stdlib.json');
+  assert(existsSync(workerPath));
+  assert(existsSync(join(out, 'playground', 'strip-ts.js')));
+
+  const messages: Array<{ id: number; ok: boolean; ts: string; stdout: string; stderr: string }> = [];
+  let waiter: (() => void) | undefined;
+  const prevSelf = (globalThis as unknown as { self?: unknown }).self;
+  const prevFetch = globalThis.fetch;
+
+  const mockSelf: { onmessage?: (e: { data: unknown }) => Promise<void>; postMessage: (msg: { id: number; ok: boolean; ts: string; stdout: string; stderr: string }) => void } = {
+    postMessage(msg) {
+      messages.push(msg);
+      waiter?.();
+    },
+  };
+  const compilerPath = join(out, 'playground', 'compiler.js');
+  (globalThis as unknown as { self: unknown }).self = mockSelf;
+  globalThis.fetch = (async (url: string | URL) => {
+    const target = String(url);
+    if (target.endsWith('stdlib.json')) {
+      return { ok: true, status: 200, json: async () => JSON.parse(readFileSync(stdlibPath, 'utf8')) };
+    }
+    if (target.endsWith('compiler.js')) {
+      return { ok: true, status: 200, text: async () => readFileSync(compilerPath, 'utf8') };
+    }
+    return { ok: false, status: 404 };
+  }) as unknown as typeof fetch;
+
+  try {
+    await import(pathToFileURL(workerPath).href);
+    assert(typeof mockSelf.onmessage === 'function');
+
+    const send = async (data: unknown) => {
+      const done = new Promise<void>((resolve) => { waiter = resolve; });
+      await mockSelf.onmessage!({ data });
+      await done;
+      return messages.at(-1)!;
+    };
+
+    const runRes = await send({
+      id: 1,
+      action: 'run',
+      source: 'io := import "core/io";\nio.outputLine(21 * 2);',
+      stdin: '',
+      args: [],
+    });
+    assert.equal(runRes.id, 1);
+    assert.equal(runRes.ok, true);
+    assert(runRes.ts.includes('export function main'));
+    assert.equal(runRes.stdout, '42\n');
+    assert.equal(runRes.stderr, '');
+
+    const errRes = await send({
+      id: 2,
+      action: 'compile',
+      source: 'io := import "core/io";\nio.outputLine(unknownVar);',
+      stdin: '',
+      args: [],
+    });
+    assert.equal(errRes.id, 2);
+    assert.equal(errRes.ok, false);
+    assert(errRes.stderr.includes('unknownVar'));
+  } finally {
+    (globalThis as unknown as { self?: unknown }).self = prevSelf;
+    globalThis.fetch = prevFetch;
+  }
+});

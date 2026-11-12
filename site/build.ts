@@ -10,6 +10,7 @@ import { compileTs } from '../compiler/host.ts';
 import { sourceModuleIdentity } from '../compiler/source.ts';
 import { heroSample, sampleGroups, showcaseSamples, type ShowcaseSample } from './groups.ts';
 import { escapeHtml, highlightLite, highlightTs } from './highlight.ts';
+import { playgroundWorkerJs } from './playground-worker.ts';
 import { siteCss } from './styles.ts';
 
 type RenderedSample = ShowcaseSample & Readonly<{
@@ -741,6 +742,9 @@ export function buildSite(): void {
   writeFileSync(join(outputDir, 'playground', 'index.html'), renderPlaygroundPage(rendered, repoUrl, rev));
   const compilerTs = readFileSync(join(root, 'compiler', 'bootstrap', 'compiler.ts'), 'utf8');
   writeFileSync(join(outputDir, 'playground', 'compiler.js'), stripTypeScriptTypes(compilerTs, { mode: 'strip' }));
+  const stripTs = readFileSync(join(root, 'site', 'strip-ts.ts'), 'utf8');
+  writeFileSync(join(outputDir, 'playground', 'strip-ts.js'), stripTypeScriptTypes(stripTs, { mode: 'strip' }));
+  writeFileSync(join(outputDir, 'playground', 'worker.js'), playgroundWorkerJs);
   const coreDir = join(root, 'lib', 'core');
   const stdlib: Record<string, Readonly<{ path: string; display: string; identity: string; text: string }>> = {};
   for (const name of readdirSync(coreDir).filter(f => f.endsWith('.lts')).sort()) {
