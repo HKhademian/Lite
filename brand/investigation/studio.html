@@ -1533,14 +1533,14 @@ function openOverviewDialog() {
   const ink = isDark ? '#F2F0EA' : '#171A19';
   const acc = activeBsAccent.id === 'mono' ? ink : (isDark ? accDark : accLight);
   const inlineLite = (px) => buildCustomWordmark(it, acc, ink, px);
-  const proseLite = `<span style="font-weight:600;color:${ink};"><span style="color:${acc};">l</span>ite</span>`;
+  const proseLite = `<span style="font-weight:500;color:${ink};"><span style="color:${acc};">l</span>ite</span>`;
 
   document.getElementById('overview-title').textContent = `${it.ref} · ${activeBsAccent.ref} · ${activeBsPal.ref} · ${activeBsLogoFont.ref} · ${activeBsFont.ref} · ${activeBsCodeFont.ref}`;
   document.getElementById('overview-body').innerHTML = `
     <div style="background:var(--bg); border:1px solid var(--line); border-radius:12px; padding:20px; display:flex; flex-direction:column; gap:18px; font-family:${activeBsFont.display};">
       <div style="display:flex; align-items:center; justify-content:space-between; flex-wrap:wrap; gap:12px;">
         <div>${inlineLite(30)}</div>
-        <span class="origin" style="font-family:${activeBsCodeFont.css};">LiteLang / language guide</span>
+        <span class="origin" style="font-family:${activeBsCodeFont.css};">${proseLite} / language guide</span>
       </div>
       <div style="display:grid; grid-template-columns:160px 1fr; gap:20px; align-items:start;">
         <div style="display:flex; flex-direction:column; gap:6px; font-size:13px;">
@@ -1548,15 +1548,18 @@ function openOverviewDialog() {
           <span>Start with ${proseLite}</span><span>Tour</span><span>Reference</span>
         </div>
         <div style="display:flex; flex-direction:column; gap:10px;">
-          <h3 style="margin:0; font-size:24px; letter-spacing:-0.02em; display:flex; align-items:baseline; gap:6px; flex-wrap:wrap;">
-            ${inlineLite(24)} <span>is light.</span>
+          <h3 style="margin:0; font-size:24px; letter-spacing:-0.02em;">
+            ${proseLite} is light.
           </h3>
-          <p class="sub" style="line-height:1.65;">
-            ${proseLite} is a compact, readable project for shaping fast native tools around your needs.
-            Unlike heavy toolchains, ${inlineLite(14)} keeps ceremony low and makes light work of small scripts and compilers alike.
+          <p class="sub" style="line-height:1.65; margin:0;">
+            ${proseLite} is a compact, readable language for shaping fast native tools around your needs.
+            Unlike heavy toolchains, ${proseLite} keeps ceremony low and makes light work of small scripts and compilers alike.
           </p>
           <div><span style="display:inline-block;padding:8px 14px;border-radius:6px;background:${ink};color:var(--bg);font-size:13px;font-weight:600;">Run your first file</span></div>
         </div>
+      </div>
+      <div style="border-top:1px solid var(--line); padding-top:10px; display:flex; align-items:center; justify-content:space-between; flex-wrap:wrap; gap:10px; font-size:12px; color:var(--muted);">
+        <span>Wordmark: ${inlineLite(15)} · Site prose: ${proseLite} (accent on <code style="font-family:${activeBsCodeFont.css};">l</code> only) · Docs &amp; CLI: <code style="font-family:${activeBsCodeFont.css};">lite</code></span>
       </div>
     </div>
     <div style="display:grid; grid-template-columns:1.5fr 1fr; gap:14px;">
