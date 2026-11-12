@@ -126,11 +126,14 @@ function renderFooter(rev: SourceRevision, repoUrl: string): string {
 </footer>`;
 }
 
-function renderSampleCard(sample: RenderedSample, basePath: string): string {
+function renderSampleCard(sample: RenderedSample, basePath: string, includeNote = true): string {
   const inputParts: string[] = [];
   if (sample.args.length > 0) inputParts.push(`args: ${sample.args.join(' ')}`);
   if (sample.stdin !== '') inputParts.push(`stdin: ${JSON.stringify(sample.stdin)}`);
   const metaText = inputParts.length > 0 ? inputParts.join(' · ') : sample.file;
+  const noteBlock = includeNote
+    ? `<p class="sample-note">${escapeHtml(sample.note)}</p>`
+    : '';
   const outputBlock = sample.showOutput === true
     ? `<div class="output-block">
     <div class="output-label">Output</div>
@@ -143,7 +146,7 @@ function renderSampleCard(sample: RenderedSample, basePath: string): string {
     <span class="code-card-title">${escapeHtml(sample.title)}</span>
     <span class="code-card-meta">${escapeHtml(metaText)}</span>
   </div>
-  <p class="sample-note">${escapeHtml(sample.note)}</p>
+  ${noteBlock}
   <pre class="code-block"><code>${sample.sourceHtml}</code></pre>
   ${outputBlock}
   <footer class="sample-foot">
@@ -215,7 +218,7 @@ function renderHomePage(rendered: ReadonlyMap<string, RenderedSample>, repoUrl: 
 cd LiteScript
 ./bin/lite run ${escapeHtml(heroSample.file)}</pre></div>
   </div>
-  ${renderSampleCard(hero, '')}
+  ${renderSampleCard(hero, '', false)}
 </section>
 
 <section class="section">

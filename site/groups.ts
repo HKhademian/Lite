@@ -46,8 +46,8 @@ export const sampleGroups: readonly SampleGroup[] = [
 export const heroSample: ShowcaseSample = {
   id: 'type-aliases',
   group: 'types',
-  title: 'Type aliases and collections',
-  note: 'Transparent named contracts, mutable lists, and explicit iteration with zero hidden runtime overhead.',
+  title: 'Type aliases and lists',
+  note: 'Named type aliases, mutable lists, and loop iteration.',
   file: 'language/examples/021-type-aliases.lts',
   args: [],
   stdin: '',
