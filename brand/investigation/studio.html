@@ -1532,6 +1532,8 @@ function openOverviewDialog() {
   const isDark = document.documentElement.getAttribute('data-ui') === 'dark';
   const ink = isDark ? '#F2F0EA' : '#171A19';
   const acc = activeBsAccent.id === 'mono' ? ink : (isDark ? accDark : accLight);
+  const accOnDark = activeBsAccent.id === 'mono' ? '#F1F2EE' : accDark;
+  const accOnLight = activeBsAccent.id === 'mono' ? '#171A19' : accLight;
   const inlineLite = (px) => buildCustomWordmark(it, acc, ink, px);
   const proseLite = `<span style="font-weight:500;color:${ink};"><span style="color:${acc};">l</span>ite</span>`;
 
@@ -1566,7 +1568,7 @@ function openOverviewDialog() {
       <div style="background:#171A1F; color:#F1F2EE; border-radius:12px; padding:18px; display:flex; flex-direction:column; gap:12px;">
         <div class="eyebrow" style="color:#A4AAA5;">Editor · Dark</div>
         <div style="display:inline-flex; align-items:center; gap:8px; background:#242830; padding:7px 12px; border-radius:6px; width:fit-content; font-size:13px;">
-          <svg viewBox="${it.vb}" width="16" height="16">${it.mark('#5EEAD4')}</svg>
+          <svg viewBox="${it.vb}" width="16" height="16">${it.mark(accOnDark)}</svg>
           <span>hello.lts</span>
         </div>
         <div style="font-family:${activeBsCodeFont.css}; font-size:13px; line-height:1.65;">
@@ -1585,7 +1587,7 @@ function openOverviewDialog() {
           </div>
         </div>
         <div style="display:flex; align-items:center; gap:12px;">
-          <svg viewBox="${minIt.vb}" width="16" height="16">${minIt.mark(accLight)}</svg>
+          <svg viewBox="${minIt.vb}" width="16" height="16">${minIt.mark(accOnLight)}</svg>
           <svg viewBox="${minIt.vb}" width="16" height="16">${minIt.mark('#171A19')}</svg>
           <span class="origin">16 px · Favicon &amp; tight UI</span>
         </div>
