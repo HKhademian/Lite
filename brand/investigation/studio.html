@@ -277,7 +277,7 @@
     <div>
       <div class="eyebrow">Lite Brand Investigation · Unified Studio</div>
       <h1>Logo, Monogram &amp; Wordmark Studio</h1>
-      <p class="sub">Default view shows <strong>Top Picks</strong>. Switch to earlier or external-entity studies from the archive selector.</p>
+      <p class="sub">Compare a letter as both the standalone mark and the first character of lite. Earlier studies remain in the archive.</p>
     </div>
     <div class="controls">
       <div class="pal-row" title="Accent color">
@@ -300,7 +300,8 @@
 
   <!-- Single Unified Category Switcher -->
   <div class="nav-bar">
-    <button class="tab-btn active" id="grp-top" onclick="setGroup('top')">★ Top Picks (6)</button>
+    <button class="tab-btn active" id="grp-rev6" onclick="setGroup('rev6')">Rev 6 · Letter Marks (6)</button>
+    <button class="tab-btn" id="grp-top" onclick="setGroup('top')">Top Picks (6)</button>
     <button class="tab-btn subtle" id="archive-toggle" onclick="toggleArchive()">Other Entities &amp; Archive ▾</button>
     <div id="archive-menu" class="archive-menu">
       <button class="tab-btn subtle" id="grp-rev3" onclick="setGroup('rev3')">Rev 3 · External Eval</button>
@@ -350,7 +351,7 @@
         <h2 style="font-size:15px; margin:0;">Live Header &amp; 16 px Browser Tab Preview</h2>
         <p class="sub">Click any card above to inspect it in Dark &amp; Paper navbars.</p>
       </div>
-      <span id="sel-pill" class="badge">Selected: Tapered Quill</span>
+      <span id="sel-pill" class="badge">Selected: Feather curve</span>
     </div>
     <div class="sim-grid">
       <div class="sim-box sim-dark">
@@ -381,11 +382,49 @@
 <script>
 let accLight = '#C97B14';
 let accDark = '#F0B45A';
-let activeGroup = 'top';
+let activeGroup = 'rev6';
 let wordCase = 'lower';
-let selectedId = 'r5-slanted-quill-l';
+let selectedId = 'r6-feather-curve';
 
 const items = [
+  // ================= REV 6 LETTER MARKS =================
+  {
+    id: 'r6-feather-spine', groups: ['rev6'], badge: 'Rev 6 · 01', origin: 'Letter mark',
+    title: 'Feather spine', desc: 'Upright L with three fine, upward feather barbs.', note: 'The foot makes the letter clear; small barbs may merge at 16 px.', vb: '0 0 16 16',
+    mark: (c) => `<g fill="none" stroke="${c}" stroke-linecap="round" stroke-linejoin="round"><path d="M3.4 2.5V12.7H9.4" stroke-width="1.8"/><path d="M3.6 10C6 9.5 7.6 8.2 8.6 6.4M3.6 7.3C5.6 6.9 6.8 5.8 7.6 4.3M3.6 4.8C4.9 4.5 5.8 3.7 6.4 2.5" stroke-width="1.1"/></g>`,
+    first: (c) => `<g fill="none" stroke="${c}" stroke-linecap="round" stroke-linejoin="round"><path d="M3.4 2.5V12.7H9.4" stroke-width="1.8"/><path d="M3.6 10C6 9.5 7.6 8.2 8.6 6.4M3.6 7.3C5.6 6.9 6.8 5.8 7.6 4.3M3.6 4.8C4.9 4.5 5.8 3.7 6.4 2.5" stroke-width="1.1"/></g>`, off: 12.2
+  },
+  {
+    id: 'r6-feather-curve', groups: ['rev6'], badge: 'Rev 6 · 02', origin: 'Letter mark',
+    title: 'Feather curve', desc: 'A narrow, open feather follows a strong L-shaped spine.', note: 'The outline adds feather character without enclosing the stem.', vb: '0 0 16 16',
+    mark: (c) => `<g fill="none" stroke="${c}" stroke-linecap="round" stroke-linejoin="round"><path d="M3.4 2.3V12.7H9.5" stroke-width="1.8"/><path d="M3.5 2.4C7 3.1 8.7 5.3 8.8 7.2M3.5 10.2C5.8 9.5 7.5 8 8.6 6M3.5 7.7C5 7.2 6.1 6.3 6.8 5.1" stroke-width="1.1"/></g>`,
+    first: (c) => `<g fill="none" stroke="${c}" stroke-linecap="round" stroke-linejoin="round"><path d="M3.4 2.3V12.7H9.5" stroke-width="1.8"/><path d="M3.5 2.4C7 3.1 8.7 5.3 8.8 7.2M3.5 10.2C5.8 9.5 7.5 8 8.6 6M3.5 7.7C5 7.2 6.1 6.3 6.8 5.1" stroke-width="1.1"/></g>`, off: 12.2
+  },
+  {
+    id: 'r6-slanted-feather-l', groups: ['rev6'], badge: 'Rev 6 · 03', origin: 'Letter mark',
+    title: 'Slanted feather L', desc: 'A leaning L and three short feather strokes, inspired by the quill cut.', note: 'The foot anchors the letter while the shaft adds movement.', vb: '0 0 16 16',
+    mark: (c) => `<g fill="none" stroke="${c}" stroke-linecap="round" stroke-linejoin="round"><path d="M6.9 2.3L3.5 12.7H9.5" stroke-width="1.8"/><path d="M4.3 10.3C6.6 9.8 8.2 8.5 9.1 6.9M5.2 7.6C7.1 7.1 8.5 6 9.2 4.7M6.1 5C7.4 4.6 8.2 4 8.8 3" stroke-width="1.1"/></g>`,
+    first: (c) => `<g fill="none" stroke="${c}" stroke-linecap="round" stroke-linejoin="round"><path d="M6.9 2.3L3.5 12.7H9.5" stroke-width="1.8"/><path d="M4.3 10.3C6.6 9.8 8.2 8.5 9.1 6.9M5.2 7.6C7.1 7.1 8.5 6 9.2 4.7M6.1 5C7.4 4.6 8.2 4 8.8 3" stroke-width="1.1"/></g>`, off: 12.2
+  },
+  {
+    id: 'r6-kinked-bolt-l', groups: ['rev6'], badge: 'Rev 6 · 04', origin: 'Letter mark',
+    title: 'Kinked bolt L', desc: 'A continuous L with a lightning kink in its upright stroke.', note: 'The foot keeps an explicit L shape.', vb: '0 0 16 16',
+    mark: (c) => `<path d="M7.5 2.3L3.8 7.1H7L3.6 12.7H9.8" fill="none" stroke="${c}" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/>`,
+    first: (c) => `<path d="M7.5 2.3L3.8 7.1H7L3.6 12.7H9.8" fill="none" stroke="${c}" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/>`, off: 12.2
+  },
+  {
+    id: 'r6-spark-li', groups: ['rev6'], badge: 'Rev 6 · 05', origin: 'Letter mark',
+    title: 'Spark li', desc: 'A simple L with a spark that becomes the dot of the i.', note: 'The icon suggests li; the wordmark reuses the spark as the i dot.', vb: '0 0 16 16',
+    mark: (c) => `<g fill="none" stroke="${c}" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M3.2 2.4V12.7H8.2"/></g><path d="M11.2 1.3L11.7 2.7L13.1 3.2L11.7 3.7L11.2 5.1L10.7 3.7L9.3 3.2L10.7 2.7Z" fill="${c}"/>`,
+    first: (c) => `<g fill="none" stroke="${c}" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M3.2 2.4V12.7H8.2"/></g><path d="M11.2 1.3L11.7 2.7L13.1 3.2L11.7 3.7L11.2 5.1L10.7 3.7L9.3 3.2L10.7 2.7Z" fill="${c}"/>`, off: 11.2, noDot: true
+  },
+  {
+    id: 'r6-quill-cut-l', groups: ['rev6'], badge: 'Rev 6 · 06', origin: 'Letter mark',
+    title: 'Quill cut L', desc: 'A three-barb quill turns into an L at its base.', note: 'A more feather-forward option; watch the spacing at 16 px.', vb: '0 0 16 16',
+    mark: (c) => `<g fill="none" stroke="${c}" stroke-linecap="round" stroke-linejoin="round"><path d="M6.8 2.3C5.9 5.8 4.6 9.6 3.6 12.7H9.5" stroke-width="1.8"/><path d="M4.2 10.7C7.3 10.2 9 8.6 9.8 6.5M5.1 8C7.8 7.5 9.3 6.1 10 4.3M5.9 5.3C7.7 4.9 8.8 4 9.4 2.6" stroke-width="1.2"/></g>`,
+    first: (c) => `<g fill="none" stroke="${c}" stroke-linecap="round" stroke-linejoin="round"><path d="M6.8 2.3C5.9 5.8 4.6 9.6 3.6 12.7H9.5" stroke-width="1.8"/><path d="M4.2 10.7C7.3 10.2 9 8.6 9.8 6.5M5.1 8C7.8 7.5 9.3 6.1 10 4.3M5.9 5.3C7.7 4.9 8.8 4 9.4 2.6" stroke-width="1.2"/></g>`, off: 12.2
+  },
+
   // ================= TOP PICKS =================
   {
     id: 'r5-tapered-quill',
@@ -610,11 +649,11 @@ function render() {
   list.forEach(it => {
     const el = document.createElement('div');
     el.className = 'card' + (it.id === selectedId ? ' selected' : '');
-    el.onclick = () => { selectedId = it.id; render(); renderSim(); };
+    el.onclick = () => { selectedId = it.id; history.replaceState(null, '', '#' + it.ref); render(); renderSim(); };
     el.innerHTML = `
       <div>
         <div class="card-head">
-          <span class="badge">${it.badge}</span>
+          <span class="badge"><strong>${it.ref}</strong> · ${it.badge}</span>
           <span class="origin">${it.origin}</span>
         </div>
         <h3>${it.title}</h3>
@@ -650,7 +689,7 @@ function renderSim() {
 
 function setGroup(grp) {
   activeGroup = grp;
-  ['top', 'rev3', 'rev4', 'rev1', 'all'].forEach(g => {
+  ['rev6', 'top', 'rev3', 'rev4', 'rev1', 'all'].forEach(g => {
     const el = document.getElementById('grp-' + g);
     if (el) el.classList.toggle('active', g === grp);
   });

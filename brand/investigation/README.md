@@ -3,7 +3,7 @@
 All branding assets, logo revisions, and preview sheets live in `brand/investigation/`.
 This is the tracked design archive — the single place where the trail of revisions is kept.
 
-- **[`studio.html`](studio.html)** — Unified interactive studio (defaults to **Top Picks**; includes an archive selector for Rev 3 external-entity studies, Rev 4 monograms, and Rev 1 early sketches).
+- **[`studio.html`](studio.html)** — Unified interactive studio (defaults to **Rev 6 · Letter Marks**; includes an archive selector for Rev 3 external-entity studies, Rev 4 monograms, and Rev 1 early sketches).
 
 ---
 
@@ -15,7 +15,8 @@ This is the tracked design archive — the single place where the trail of revis
 | 2 | `rev-2-sheets/` | Two exploration sheets: `exploration.html` (editorial mark study), `preview.html` (theme switcher, 128→16 px scale tests, lockups). | Superseded. Established the palette, scale tests, and the "one stroke" instinct, but still argued from theme rather than from drawing. |
 | 3 | `rev-3-quill/` | ~40 marks across 6 families, rendered at 256/64/32/24/16 px and inverted. Full sheet with findings, four directions, constructed geometry, applications, palette, open questions. Plus the mark assets. | **Active (Standalone Icon).** Recommendation: **The Quill** — one shaft, three barbs at 35°, monoline. Spark and Bolt held open. |
 | 4 | `rev-4-monogram-wordmark/` | 16×16 monoline monogram-to-wordmark study modeled directly on `MiniLang/brand/`: 6 candidates (`a1`–`a3` Feather `l`, `b1`–`b2` Light/Photon `l`, `c1` Bolt `l`) where the mark *is* the first letter `l` in `lite`, plus interactive `studio.html`. | **Active (Monogram + Wordmark Lockup).** Pairs directly with Rev 3 to compare standalone diagonal Quill vs. `mini`-style first-letter monogram. |
-| 5 | `rev-5-synthesis/` | Synthesis of Rev 3's 6 findings + craft bar with Rev 4's `mini`-style monogram lockup: `1-tapered-quill.svg` (Rev 3's requested calligraphic step), `2-slanted-quill-l.svg` (18° forward-leaning `l` + 1 flick), `3-spark-li.svg` (refined Spark `li`), `4-split-light-quill.svg` (35° quill + lightning step), plus `exploration.html` scorecard. | **Current.** Ready for final selection between standalone Tapered/Split-Light Quill and `mini`-style Slanted Quill-`l` / Spark `li`. |
+| 5 | `rev-5-synthesis/` | Synthesis of Rev 3's 6 findings + craft bar with Rev 4's `mini`-style monogram lockup: `1-tapered-quill.svg` (Rev 3's requested calligraphic step), `2-slanted-quill-l.svg` (18° forward-leaning `l` + 1 flick), `3-spark-li.svg` (refined Spark `li`), `4-split-light-quill.svg` (35° quill + lightning step), plus `exploration.html` scorecard. | **Exploration.** Compares standalone quills with `mini`-style letter marks. |
+| 6 | `rev-6-letter-marks/` | Six L-based feather, bolt, and spark sketches, each reused as the first letter in the studio wordmark. | **Exploration.** Letter readability, feather character, spacing, and small-size performance remain open. |
 
 ### Revision 3 files
 
@@ -35,7 +36,7 @@ This is the tracked design archive — the single place where the trail of revis
 
 ---
 
-## Current recommendation in one line
+## Revision 3 recommendation
 
 **The Quill**: a single shaft leaning 35°, three barbs at the same angle, no
 outline, no nib. The *l* belongs to the wordmark — the same division of labour
