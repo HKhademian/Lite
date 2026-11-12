@@ -426,33 +426,27 @@
     </div>
   </div>
 
-  <!-- Unified Brand System Panel (toggled by Brand System ▴/▾ above All Candidates) -->
-  <div id="brand-system-view" style="display:flex; flex-direction:column; gap:14px;">
-
-    <div class="panel">
-      <div style="display:flex; align-items:center; justify-content:space-between; flex-wrap:wrap; gap:8px; margin-bottom:10px;">
-        <div class="eyebrow">1 · Accent (Logo Coloring) &amp; Mono Mode</div>
-        <div class="seg">
-          <button id="bs-mode-accent" class="active" onclick="setLogoColorMode('accent')">Two-Tone Accent</button>
-          <button id="bs-mode-mono" onclick="setLogoColorMode('mono')">Mono (Single Ink)</button>
-        </div>
-      </div>
-      <div class="grid" id="bs-accents"></div>
+  <!-- Compact Unified Brand System Panel (toggled by Brand System ▴/▾ above All Candidates) -->
+  <div id="brand-system-view" class="panel bs-panel" style="display:flex;">
+    <div class="bs-row">
+      <div class="eyebrow">1 · Accent</div>
+      <div class="bs-chips" id="bs-accents"></div>
     </div>
-
-    <div class="panel">
-      <div class="eyebrow" style="margin-bottom:10px;">2 · Palette (Website Surfaces)</div>
-      <div class="grid" id="bs-palettes"></div>
+    <div class="bs-row">
+      <div class="eyebrow">2 · Palette (Site)</div>
+      <div class="bs-chips" id="bs-palettes"></div>
     </div>
-
-    <div class="panel">
-      <div class="eyebrow" style="margin-bottom:10px;">3 · Fontface (Logo / Wordmark)</div>
-      <div class="grid" id="bs-logo-fonts"></div>
+    <div class="bs-row">
+      <div class="eyebrow">3 · Fontface (Brand)</div>
+      <div class="bs-chips" id="bs-logo-fonts"></div>
     </div>
-
-    <div class="panel">
-      <div class="eyebrow" style="margin-bottom:10px;">4 · Fontface (Website Typography)</div>
-      <div class="grid" id="bs-fonts"></div>
+    <div class="bs-row">
+      <div class="eyebrow">4 · Fontface (Site)</div>
+      <div class="bs-chips" id="bs-fonts"></div>
+    </div>
+    <div class="bs-row">
+      <div class="eyebrow">5 · Fontface (Code)</div>
+      <div class="bs-chips" id="bs-code-fonts"></div>
     </div>
   </div>
 
