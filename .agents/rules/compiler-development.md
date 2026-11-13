@@ -187,8 +187,24 @@ TS-hosted C emitter is not that evidence.
 
 Follow the [development workflow](../../docs/development-workflow.md). Define cases
 with proposals and implement approved increments before accumulating more design.
-Update affected samples, examples, reference pages, editor grammar and independently
-versioned editor packaging with language changes. Proposed pending cases never count
-as passes; accepted-language migration failures remain failures. Supporting tools
-may move to LiteLang when generated support and shared case comparisons establish
-their requirements. Internal kind/type centralization remains an investigation.
+When a language feature is implemented and promoted in the bootstrap seed, also
+adopt it where idiomatic across repository consumers rather than leaving it
+isolated in compiler tests:
+
+- **Compiler & core sources:** adopt clear improvements in `compiler/src/` and
+  `lib/core/` in a separate self-hosted source-adoption commit with its own
+  seed promotion and fixed-point check.
+- **Tools, site & editor support:** update repository tools, formatters,
+  playground highlighters and TypeScript strippers (`tools/`, `site/`), public
+  showcase pages (`site/groups.ts`), and `editors/vscode/` grammar/packaging
+  when new syntax, types, operators, or standalone showcase examples become
+  supported.
+- **Examples, samples & documentation:** update runnable `language/examples/`,
+  `language/samples/` (refreshing verification hashes without changing intended
+  behavior), reference docs under `docs/`, `compiler/README.md`, and
+  `language/examples/README.md`.
+
+Proposed pending cases never count as passes; accepted-language migration
+failures remain failures. Supporting tools may move to LiteLang when generated
+support and shared case comparisons establish their requirements. Internal
+kind/type centralization remains an investigation.
