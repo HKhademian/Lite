@@ -16,7 +16,7 @@ const liteKeywords = new Set([
 ]);
 
 const liteTypes = new Set([
-  'Bool', 'Int', 'Float', 'String', 'Void', 'List', 'Array',
+  'Bool', 'Int', 'Int64', 'Float', 'Float64', 'Double', 'String', 'Unit', 'Void', 'List', 'Array',
 ]);
 
 const tsKeywords = new Set([
@@ -116,12 +116,12 @@ function highlightCode(source: string, keywords: ReadonlySet<string>, types: Rea
     // Multi-char operators
     const two = source.slice(i, i + 2);
     const three = source.slice(i, i + 3);
-    if (three === '===' || three === '!==' || three === '=!=') {
+    if (['===', '!==', '=!=', ':/=', ':%=', '<!=', '>!='].includes(three)) {
       out.push(`<span class="tok-op">${escapeHtml(three)}</span>`);
       i += 3;
       continue;
     }
-    if ([':=', '==', '!=', '<=', '>=', '=>', '->'].includes(two)) {
+    if ([':=', '==', '!=', '<=', '>=', '=>', '->', '**', ':/', ':%', '+=', '-=', '*=', '/=', '%=', '<!', '>!'].includes(two)) {
       out.push(`<span class="tok-op">${escapeHtml(two)}</span>`);
       i += 2;
       continue;

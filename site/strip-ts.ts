@@ -190,29 +190,39 @@ export function stripLiteTs(source: string): string {
       continue;
     }
 
-    // `function name(...) : ReturnType {`
+    // `function name<T>(...) : ReturnType {`
     if (source.startsWith('function ', i) && (i === 0 || !/[a-zA-Z0-9_$]/.test(source[i - 1]!))) {
-      const parenStart = source.indexOf('(', i + 9);
-      if (parenStart !== -1) {
-        const parenEnd = skipBalanced(source, parenStart, '(', ')');
-        out.push(source.slice(i, parenStart + 1));
-        out.push(stripParamList(source.slice(parenStart + 1, parenEnd - 1)));
-        out.push(')');
-        i = parenEnd;
-        while (i < n && /\s/.test(source[i]!)) { out.push(source[i]!); i += 1; }
-        if (source[i] === ':') {
-          i = skipTypeAnnotation(source, i + 1, new Set(['{']));
-          while (source[i] === '{') {
-            const afterBrace = skipBalanced(source, i, '{', '}');
-            const nextStop = skipTypeAnnotation(source, afterBrace, new Set(['{', ';', '\n']));
-            if (source[nextStop] === '{') {
-              i = nextStop;
-            } else {
-              break;
+      const fnHead = /^function\s+[a-zA-Z_$][a-zA-Z0-9_$]*/.exec(source.slice(i));
+      if (fnHead !== null) {
+        let afterName = i + fnHead[0]!.length;
+        while (afterName < n && /\s/.test(source[afterName]!)) afterName += 1;
+        if (source[afterName] === '<') {
+          const genericEnd = skipGenericArgs(source, afterName);
+          if (genericEnd !== -1) afterName = genericEnd;
+        }
+        while (afterName < n && /\s/.test(source[afterName]!)) afterName += 1;
+        if (source[afterName] === '(') {
+          const parenStart = afterName;
+          const parenEnd = skipBalanced(source, parenStart, '(', ')');
+          out.push(`${fnHead[0]!}(`);
+          out.push(stripParamList(source.slice(parenStart + 1, parenEnd - 1)));
+          out.push(')');
+          i = parenEnd;
+          while (i < n && /\s/.test(source[i]!)) { out.push(source[i]!); i += 1; }
+          if (source[i] === ':') {
+            i = skipTypeAnnotation(source, i + 1, new Set(['{']));
+            while (source[i] === '{') {
+              const afterBrace = skipBalanced(source, i, '{', '}');
+              const nextStop = skipTypeAnnotation(source, afterBrace, new Set(['{', ';', '\n']));
+              if (source[nextStop] === '{') {
+                i = nextStop;
+              } else {
+                break;
+              }
             }
           }
+          continue;
         }
-        continue;
       }
     }
 
@@ -251,13 +261,19 @@ export function stripLiteTs(source: string): string {
       }
     }
 
-    // `const/let/var name: Type = ...;`
-    const declMatch = /^(const|let|var)\s+([a-zA-Z_$][a-zA-Z0-9_$]*)\s*:/.exec(source.slice(i));
+    // `const/let/var name: Type = ...;` and `let name!: Type;`
+    const declMatch = /^(const|let|var)\s+([a-zA-Z_$][a-zA-Z0-9_$]*)\s*!?\s*:/.exec(source.slice(i));
     if (declMatch !== null && (i === 0 || !/[a-zA-Z0-9_$]/.test(source[i - 1]!))) {
       out.push(`${declMatch[1]!} ${declMatch[2]!}`);
       i += declMatch[0]!.length;
       i = skipTypeAnnotation(source, i, new Set(['=', ';']));
       if (source[i] === '=') out.push(' ');
+      continue;
+    }
+
+    // `expr as Type` before `;`, `,`, `)`, or `]`
+    if (i > 0 && !/[a-zA-Z0-9_$]/.test(source[i - 1]!) && /^as\s+[a-zA-Z_$({[]/.test(source.slice(i))) {
+      i = skipTypeAnnotation(source, i + 2, new Set([';', ',', ')', ']']));
       continue;
     }
 

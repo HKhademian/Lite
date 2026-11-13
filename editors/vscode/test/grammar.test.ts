@@ -115,7 +115,7 @@ test('no line comments, invented builtin classification, or keyword matches with
   lacks(rows, 0, 'textAt', 'support.function.lite');
 });
 test('long operators stay intact; leading-dot access is not a fractional literal', async () => {
-  const operators = ['=!=', '<!=', '>!=', '<!', '>!', '<=', '>=', '==', '<', '>', ':/=', ':%=', ':/', ':%', ':='];
+  const operators = ['=!=', '<!=', '>!=', '<!', '>!', '<=', '>=', '==', '<', '>', ':/=', ':%=', ':/', ':%', ':=', '**'];
   const rows = await tokenize(operators.join(' ') + ' @outer .5 0.5');
   const operatorTokens = rows[0]!.tokens.filter(t => t.scopes.includes('keyword.operator.lite'))
     .map(t => rows[0]!.line.slice(t.startIndex, t.endIndex));
@@ -148,4 +148,14 @@ test('tokenize project samples and indexed examples using the real TextMate engi
   await visit(path.join(root, '../../language/examples'));
   await visit(path.join(root, '../../lib'));
   assert.ok(files >= 25, `expected lessons and examples, got ${files}`);
+});
+test('modules, self calls, sized numeric aliases, loop as, and power operator highlight cleanly', async () => {
+  const rows = await tokenize('pub countDown := fn(n: Int64, x: Float64, y: Double): Int { if n > 0 { return self(n - 1); } var s := 2 ** 3; loop items as item { break; } 0 }');
+  has(rows, 0, 'pub', 'storage.modifier.lite');
+  has(rows, 0, 'Int64', 'support.type.lite');
+  has(rows, 0, 'Float64', 'support.type.lite');
+  has(rows, 0, 'Double', 'support.type.lite');
+  has(rows, 0, 'self', 'variable.language.lite');
+  has(rows, 0, '**', 'keyword.operator.lite');
+  has(rows, 0, 'as', 'keyword.control.lite');
 });

@@ -14,12 +14,16 @@
       "match": "(?<![\\p{L}\\p{M}\\p{N}_])(?:true|false|Unit)(?![\\p{L}\\p{M}\\p{N}_])"
     },
     {
+      "name": "variable.language.lite",
+      "match": "(?<![\\p{L}\\p{M}\\p{N}_])self(?![\\p{L}\\p{M}\\p{N}_])"
+    },
+    {
       "name": "keyword.control.lite",
-      "match": "(?<![\\p{L}\\p{M}\\p{N}_])(?:if|else|match|loop|then|finally|return|break|continue|raise)(?![\\p{L}\\p{M}\\p{N}_])"
+      "match": "(?<![\\p{L}\\p{M}\\p{N}_])(?:if|else|match|loop|as|then|finally|return|break|continue|raise)(?![\\p{L}\\p{M}\\p{N}_])"
     },
     {
       "name": "storage.modifier.lite",
-      "match": "(?<![\\p{L}\\p{M}\\p{N}_])(?:var|mut)(?![\\p{L}\\p{M}\\p{N}_])"
+      "match": "(?<![\\p{L}\\p{M}\\p{N}_])(?:pub|var|mut)(?![\\p{L}\\p{M}\\p{N}_])"
     },
     {
       "name": "storage.type.lite",
@@ -35,7 +39,7 @@
     },
     {
       "name": "support.type.lite",
-      "match": "(?<![\\p{L}\\p{M}\\p{N}_])(?:Int|Float|String|Bool|List)(?![\\p{L}\\p{M}\\p{N}_])"
+      "match": "(?<![\\p{L}\\p{M}\\p{N}_])(?:Int64|Int|Float64|Float|Double|String|Bool|List)(?![\\p{L}\\p{M}\\p{N}_])"
     },
     {
       "name": "constant.numeric.lite",
@@ -55,7 +59,7 @@
     },
     {
       "name": "keyword.operator.lite",
-      "match": "(?:>!=|<!=|=!=|:/=|:%=|:=|==|>=|<=|>!|<!|\\+=|-=|\\*=|/=|%=|:/|:%|[+*/%=<>!?|&-])"
+      "match": "(?:>!=|<!=|=!=|:/=|:%=|:=|==|>=|<=|>!|<!|\\*\\*|\\+=|-=|\\*=|/=|%=|:/|:%|[+*/%=<>!?|&-])"
     },
     {
       "name": "punctuation.section.brackets.lite",
