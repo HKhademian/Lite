@@ -13,8 +13,8 @@ export type CompilerTarget = 'ts' | 'c';
 
 /** Raw streams and process-style status from a compiler invocation. */
 export type CompilerResult = Readonly<{ status: number; stdout: Buffer; stderr: Buffer }>;
-/** Complete source plus an optional diagnostic name. */
-export type CompilerInput = Readonly<{ text: string; name?: string; cwd?: string }>;
+/** Complete source plus an optional diagnostic name and canonical filesystem path. */
+export type CompilerInput = Readonly<{ text: string; name?: string; rootPath?: string; cwd?: string }>;
 /** Selected artifact and exact source/builder identities. */
 export type CompilerBuild = Readonly<{ target: CompilerTarget; path: string; sourceSha256: string; artifactSha256: string; builderSha256: string; dependencies: readonly string[]; cached: boolean }>;
 type DependencyIdentity = Readonly<{ path: string; sha256: string }>;
@@ -37,8 +37,8 @@ function selectBuild(indexPath: string, indexDirectory: string, target: Compiler
 }
 
 /** Executes one generated compiler with isolated process state and no stage-0 fallback. */
-function invoke(artifact: string, text: string, name?: string, cwd = process.cwd()): CompilerResult {
-  const rootPath = name === undefined || name === '' ? resolve(cwd, '__lite_stdin__.lts') : resolve(cwd, name);
+function invoke(artifact: string, text: string, name?: string, cwd = process.cwd(), explicitRootPath?: string): CompilerResult {
+  const rootPath = explicitRootPath ?? (name === undefined || name === '' ? resolve(cwd, '__lite_stdin__.lts') : resolve(cwd, name));
   const result = spawnSync(process.execPath, [entryPath, artifact, name ?? '', sourceModuleIdentity(text), rootPath], {
     input: text, cwd, timeout: 0, maxBuffer: 128 * 1024 * 1024,
   });
@@ -245,7 +245,7 @@ export function buildCCompiler(): CompilerBuild { return buildCompiler('c'); }
 
 /** Compiles one whole Lite source with a current Lite-written target compiler. */
 export function compileBuiltCompiler(build: CompilerBuild, input: CompilerInput): CompilerResult {
-  return invoke(build.path, input.text, input.name, input.cwd ?? process.cwd());
+  return invoke(build.path, input.text, input.name, input.cwd ?? process.cwd(), input.rootPath);
 }
 
 /** Selects the current graph then compiles one whole Lite source. */

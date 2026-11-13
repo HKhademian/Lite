@@ -1,8 +1,7 @@
 /** Internal default compiler CLI. Both targets run Lite-generated compilers, without T00. */
 import { writeSync } from 'node:fs';
-import { resolve } from 'node:path';
 import { compileTarget, type CompilerInput } from './host.ts';
-import { readSourceInput } from './source.ts';
+import { displaySourcePath, readSourceInput } from './source.ts';
 
 const [target, path] = process.argv.slice(2);
 if ((target !== 'ts' && target !== 'c') || path === undefined) {
@@ -12,7 +11,7 @@ if ((target !== 'ts' && target !== 'c') || path === undefined) {
   let input: CompilerInput | undefined;
   try {
     const source = readSourceInput(path);
-    input = { text: source.text, name: resolve(path) };
+    input = { text: source.text, name: displaySourcePath(source.path), rootPath: source.path };
   } catch (error: unknown) {
     const message = error instanceof Error ? error.message : String(error);
     const invalidUtf8 = message.includes('source is not valid UTF-8');

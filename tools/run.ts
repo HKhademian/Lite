@@ -6,7 +6,7 @@ import { tmpdir } from 'node:os';
 import { basename, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { compileTs } from '../compiler/host.ts';
-import { readSourceInput } from '../compiler/source.ts';
+import { displaySourcePath, readSourceInput } from '../compiler/source.ts';
 
 const entry = fileURLToPath(new URL('../compiler/entry.ts', import.meta.url));
 
@@ -52,7 +52,7 @@ try {
 // artifact is executed after a rejected program.
 let compiled: ReturnType<typeof compileTs>;
 try {
-  compiled = compileTs({ text: source.text, name: source.path });
+  compiled = compileTs({ text: source.text, name: displaySourcePath(source.path), rootPath: source.path });
 } catch (error: unknown) {
   process.stderr.write(`lite run: ${error instanceof Error ? error.message : String(error)}\n`);
   process.exit(1);

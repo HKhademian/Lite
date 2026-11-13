@@ -7,7 +7,7 @@ declare const process: {
     };
 };
 
-const lite$intLines: readonly number[] = [0, 12, 25, 54, 73, 92];
+const lite$intLines: readonly number[] = [0, 24, 25, 37, 50, 79, 98, 120];
 const lite$intSource = "language/cases/tour-bindings.lts:";
 const lite$intMin = -(1n << 63n), lite$intMax = (1n << 63n) - 1n;
 function lite$fault(category: string, at: number, message: string): never {
@@ -37,7 +37,7 @@ export function main(lite$write?: (text: string) => void): string {
     void lite_second;
     let lite_total = (lite_first + lite_second);
     void lite_total;
-    lite_total = lite$multiplyInt(lite_total, 2n, 68);
+    lite_total = lite$multiplyInt(lite_total, 2n, 93);
     const lite$report0 = (lite_total).toString();
     lite$emit(lite$report0 + "\n");
     return lite_out;

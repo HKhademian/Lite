@@ -70,7 +70,7 @@
         "text": ""
       },
       "stderr": {
-        "text": "language/cases/reject-effects.lts:2:1: unknown value unknown_name\n"
+        "text": "language/cases/reject-effects.lts:4:1: unknown value unknown_name\n"
       },
       "exitCode": 2
     },
