@@ -23,9 +23,10 @@ tsTupleType := fn(kind: String): String {
     result + " }"
 }
 
-/** Maps a restricted Lite scalar, flat named-tuple or List kind to its TypeScript type. */
+/** Maps a restricted Lite scalar, flat named-tuple, fixed-array or List kind to its TypeScript type. */
 tsFunctionType := fn(kind: String): String {
     if frontend.isListKind(kind) { tsFunctionType(frontend.listElementKind(kind)) + "[]" }
+    else if frontend.isArrayKind(kind) { tsFunctionType(frontend.arrayElementKind(kind)) + "[]" }
     else if frontend.isTupleKind(kind) { tsTupleType(kind) }
     else { tsLiteral.tsScalarType(kind) }
 }
@@ -72,8 +73,8 @@ displayValueCode := fn(kind: String, code: String): String {
     if kind == "Int" or kind == "Float" { return "(" + code + ").toString()"; }
     if kind == "Bool" { return "((" + code + ") ? \"true\" : \"false\")"; }
     if kind == "Unit" { return "((value: unknown): string => { void value; return \"Unit\"; })(" + code + ")"; }
-    if frontend.isListKind(kind) {
-        element := frontend.listElementKind(kind);
+    if frontend.isListKind(kind) or frontend.isArrayKind(kind) {
+        element := if frontend.isListKind(kind) { frontend.listElementKind(kind) } else { frontend.arrayElementKind(kind) };
         return "(\"[\" + (" + code + ").map((value: " + tsFunctionType(element) + ") => " + self(element, "value") + ").join(\", \") + \"]\")";
     }
     if frontend.isTupleKind(kind) {

@@ -378,6 +378,56 @@ pub listElementKind := fn(kind: String): String {
     textLib.slice(kind, 5, textLib.length(kind) - 1)
 }
 
+/** Finds the top-level `;` inside `[ElementKind;Extent]`, or -1 when `kind` is not a canonical fixed-array kind. */
+arraySemiIndex := fn(kind: String): Int {
+    size := textLib.length(kind);
+    if size < 5 or textLib.at(kind, 0) =!= "[" or textLib.at(kind, size - 1) =!= "]" { return -1; }
+    var cursor := 1;
+    var depth := 0;
+    loop cursor < size - 1 {
+        ch := textLib.at(kind, cursor);
+        if ch == "(" or ch == "[" or ch == "<" { depth = depth + 1; }
+        else if ch == ")" or ch == "]" or ch == ">" { depth = depth - 1; }
+        else if ch == ";" and depth == 0 { return cursor; }
+        cursor = cursor + 1;
+    }
+    -1
+}
+
+/** True when `kind` is this compiler's canonical fixed-array kind, written `[ElementKind;Extent]`. */
+pub isArrayKind := fn(kind: String): Bool {
+    arraySemiIndex(kind) > 1
+}
+
+/** Returns the canonical element kind from `[ElementKind;Extent]`. */
+pub arrayElementKind := fn(kind: String): String {
+    semi := arraySemiIndex(kind);
+    if semi <= 1 { return ""; }
+    textLib.slice(kind, 1, semi)
+}
+
+/** Parses non-negative decimal digits in `text` from `start` to `end`. */
+parseDigits := fn(text: String, start: Int, end: Int): Int {
+    var result := 0;
+    var cursor := start;
+    loop cursor < end {
+        ch := textLib.at(text, cursor);
+        digit := if ch == "0" { 0 } else if ch == "1" { 1 } else if ch == "2" { 2 }
+            else if ch == "3" { 3 } else if ch == "4" { 4 } else if ch == "5" { 5 }
+            else if ch == "6" { 6 } else if ch == "7" { 7 } else if ch == "8" { 8 } else { 9 };
+        result = result * 10 + digit;
+        cursor = cursor + 1;
+    }
+    result
+}
+
+/** Returns the integer extent from `[ElementKind;Extent]`. */
+pub arrayExtent := fn(kind: String): Int {
+    semi := arraySemiIndex(kind);
+    if semi <= 1 { return 0; }
+    parseDigits(kind, semi + 1, textLib.length(kind) - 1)
+}
+
 /** True when emitted target code calls `needle` outside quoted String literal text. */
 codeUsesTextCall := fn(code: String, needle: String): Bool {
     size := textLib.length(code);
@@ -436,6 +486,7 @@ tupleFieldKind := fn(kind: String, label: String): String {
 /** Renders one canonical kind for diagnostics, adding spaces inside flat tuples and lists. */
 displayKind := fn(kind: String): String {
     if isListKind(kind) { return "List<" + displayKind(listElementKind(kind)) + ">"; }
+    if isArrayKind(kind) { return "[" + displayKind(arrayElementKind(kind)) + "; " + integer.intText(arrayExtent(kind)) + "]"; }
     if not isTupleKind(kind) { return kind; }
     count := tupleComponentCount(kind);
     var result := "(";
@@ -533,6 +584,51 @@ resolveTypeText := fn(source: String, position: Int, prefix: String, aliases: Li
         }
         if count == 1 and singleLabel == "" and not hadComma { return singleKind; }
         return kindText + ")";
+    }
+    if textLib.at(text, cursor) == "[" {
+        var scan := cursor + 1;
+        var depth := 0;
+        var semi := -1;
+        var close := -1;
+        loop scan < size {
+            ch := textLib.at(text, scan);
+            if ch == "(" or ch == "[" or ch == "<" { depth = depth + 1; }
+            else if ch == ")" or ch == ">" { depth = depth - 1; }
+            else if ch == "]" {
+                if depth == 0 {
+                    close = scan;
+                    break;
+                }
+                depth = depth - 1;
+            } else if ch == ";" and depth == 0 and semi < 0 {
+                semi = scan;
+            }
+            scan = scan + 1;
+        }
+        if close < 0 or semi < 0 {
+            failAt(source, position, prefix, "expected [Type; Extent] in array type");
+            return "";
+        }
+        elemText := textLib.slice(text, cursor + 1, semi);
+        elemKind := resolveTypeText(source, position, prefix, aliases, elemText, seen);
+        if elemKind == "Unit" {
+            failAt(source, position, prefix, "unsupported array element type Unit");
+        }
+        extentStart := skipTrivia(text, semi + 1, prefix);
+        var extentEnd := extentStart;
+        loop extentEnd < close and textLib.isDigit(textLib.at(text, extentEnd)) { extentEnd = extentEnd + 1; }
+        if extentEnd == extentStart or skipTrivia(text, extentEnd, prefix) < close {
+            failAt(source, position, prefix, "expected positive integer extent in array type");
+        }
+        extent := parseDigits(text, extentStart, extentEnd);
+        if extent <= 0 {
+            failAt(source, position, prefix, "fixed array extent must be positive");
+        }
+        afterArray := skipTrivia(text, close + 1, prefix);
+        if afterArray < size {
+            failAt(source, position, prefix, "unexpected text after array type");
+        }
+        return "[" + elemKind + ";" + integer.intText(extent) + "]";
     }
     parsedName := typeNameAt(text, cursor, prefix);
     after := parsedName.next;
@@ -711,6 +807,28 @@ parseTypeAt := fn(source: String, position: Int, prefix: String, aliases: List<A
     start := skipTrivia(source, position, prefix);
     if start < textLib.length(source) and textLib.at(source, start) == "(" {
         return parseTupleTypeAt(source, position, prefix, aliases);
+    }
+    if start < textLib.length(source) and textLib.at(source, start) == "[" {
+        elemStart := skipTrivia(source, start + 1, prefix);
+        inner := self(source, elemStart, prefix, aliases, context, genericType);
+        if inner.kind == "Unit" {
+            failAt(source, elemStart, prefix, "unsupported array element type Unit");
+        }
+        semi := expectSymbol(source, skipTrivia(source, inner.next, prefix), ";", prefix);
+        extentStart := skipTrivia(source, semi, prefix);
+        var extentEnd := extentStart;
+        loop extentEnd < textLib.length(source) and textLib.isDigit(textLib.at(source, extentEnd)) {
+            extentEnd = extentEnd + 1;
+        }
+        if extentEnd == extentStart {
+            failAt(source, extentStart, prefix, "expected positive integer extent in array type");
+        }
+        extent := parseDigits(source, extentStart, extentEnd);
+        if extent <= 0 {
+            failAt(source, extentStart, prefix, "fixed array extent must be positive");
+        }
+        close := expectSymbol(source, skipTrivia(source, extentEnd, prefix), "]", prefix);
+        return (kind = "[" + inner.kind + ";" + integer.intText(extent) + "]", next = close);
     }
     parsedName := typeNameAt(source, start, prefix);
     after := parsedName.next;
@@ -1242,6 +1360,29 @@ collectTypeTarget := fn(source: String, position: Int, prefix: String): (text: S
             }
         }
         (text = textLib.slice(source, start, size), next = size)
+    } else if start < size and textLib.at(source, start) == "[" {
+        var cursor := start;
+        var depth := 0;
+        loop cursor < size {
+            ch := textLib.at(source, cursor);
+            if ch == "\"" {
+                cursor = skipAliasString(source, cursor);
+            } else if textLib.startsWithAt(source, cursor, "/*") {
+                cursor = skipComment(source, cursor, prefix);
+            } else if ch == "[" {
+                depth = depth + 1;
+                cursor = cursor + 1;
+            } else if ch == "]" {
+                depth = depth - 1;
+                cursor = cursor + 1;
+                if depth == 0 {
+                    return (text = textLib.slice(source, start, cursor), next = cursor);
+                }
+            } else {
+                cursor = cursor + 1;
+            }
+        }
+        (text = textLib.slice(source, start, size), next = size)
     } else {
         parsedName := typeNameAt(source, start, prefix);
         after := parsedName.next;
@@ -1355,7 +1496,7 @@ looksLikeTupleEntry := fn(source: String, position: Int, prefix: String): Bool {
 
 /** Wraps target code in the backend's list-copy hook when `kind` is a List; every other kind is unchanged. */
 copiedValueCode := fn(target: String, kind: String, code: String): String {
-    if isListKind(kind) { targetListCopyCode(target, code) } else { code }
+    if isListKind(kind) or isArrayKind(kind) { targetListCopyCode(target, code) } else { code }
 }
 
 /** Converts compatible tuple shapes on assignment/call/return, or copies lists when needed. */
@@ -1438,10 +1579,22 @@ tupleZeroParsed := fn(kind: String, next: Int): Parsed {
     (kind = kind, code = code + " }", intValue = 0, textValue = "", constant = false, next = next)
 }
 
-/** Builds the zero value for one supported local type, including a fresh flat named-tuple object and an empty list. */
+/** Builds the zero value for one supported local type, including a fresh flat named-tuple object, fixed array and an empty list. */
 zeroParsed := fn(target: String, kind: String, next: Int): Parsed {
     if isTupleKind(kind) { tupleZeroParsed(kind, next) }
     else if isListKind(kind) { (kind = kind, code = "[]", intValue = 0, textValue = "", constant = false, next = next) }
+    else if isArrayKind(kind) {
+        elemKind := arrayElementKind(kind);
+        extent := arrayExtent(kind);
+        elemZero := self(target, elemKind, next).code;
+        items: mut List<String> = [];
+        var i := 0;
+        loop i < extent {
+            listLib.pushBack(mut items, elemZero);
+            i = i + 1;
+        }
+        (kind = kind, code = "[" + textLib.joinTexts(items, ", ") + "]", intValue = 0, textValue = "", constant = false, next = next)
+    }
     else if kind == "Int" { intParsed(targetIntLiteralCode(target, 0, false, "0"), 0, true, next) }
     else if kind == "Float" { (kind = "Float", code = "0", intValue = 0, textValue = "", constant = false, next = next) }
     else if kind == "String" { textParsed(targetTextLiteralCode(target, ""), "", true, next) }
@@ -1618,8 +1771,11 @@ parseBinary := fn(target: String, source: String, position: Int, prefix: String,
         left = parseText(target, source, start, prefix);
     } else if ch == "[" {
         var cursor := skipTrivia(source, start + 1, prefix);
+        isTailList := textLib.startsWithAt(expected, 0, "TailList<");
         var elementKind := "";
         if isListKind(expected) { elementKind = listElementKind(expected); }
+        else if isTailList { elementKind = listElementKind(textLib.slice(expected, 4, textLib.length(expected))); }
+        else if isArrayKind(expected) { elementKind = arrayElementKind(expected); }
         elementCodes: mut List<String> = [];
         var count := 0;
         loop true {
@@ -1637,11 +1793,11 @@ parseBinary := fn(target: String, source: String, position: Int, prefix: String,
             }
             if elementKind == "" {
                 elementKind = element.kind;
-            } else if element.kind =!= elementKind {
+            } else if not isCompatibleKind(elementKind, element.kind) {
                 failAt(source, elementStart, prefix, "list element " + formatLib.decimalText(count + 1) + " must be " +
                     displayKind(elementKind) + ", got " + displayKind(element.kind));
             }
-            listLib.pushBack(mut elementCodes, element.code);
+            listLib.pushBack(mut elementCodes, assignValueCode(target, elementKind, element.kind, element.code));
             count = count + 1;
             cursor = skipTrivia(source, element.next, prefix);
             if cursor < textLib.length(source) and textLib.at(source, cursor) == "," {
@@ -1651,10 +1807,15 @@ parseBinary := fn(target: String, source: String, position: Int, prefix: String,
             }
         }
         cursor = expectSymbol(source, cursor, "]", prefix);
-        if count == 0 and elementKind == "" {
+        if count == 0 and not isListKind(expected) and not isTailList {
             failAt(source, start, prefix, "empty list literal requires a List element type");
         }
-        left = (kind = "List<" + elementKind + ">", code = "[" + textLib.joinTexts(elementCodes, ", ") + "]",
+        resultKind := if isListKind(expected) or (count == 0 and isTailList) {
+            "List<" + elementKind + ">"
+        } else {
+            "[" + elementKind + ";" + integer.intText(count) + "]"
+        };
+        left = (kind = resultKind, code = "[" + textLib.joinTexts(elementCodes, ", ") + "]",
             intValue = 0, textValue = "", constant = false, next = cursor);
     } else if ch == "{" {
         blockLocals: mut List<Local> = [];
@@ -2005,14 +2166,20 @@ parseBinary := fn(target: String, source: String, position: Int, prefix: String,
                     fieldIndex = fieldIndex * 10 + digit;
                     end = end + 1;
                 }
-                if not isTupleKind(left.kind) {
+                if isArrayKind(left.kind) {
+                    if fieldIndex >= arrayExtent(left.kind) {
+                        failAt(source, labelStart, prefix, "array index " + textLib.slice(source, labelStart, end) + " out of bounds");
+                    }
+                    left = (kind = arrayElementKind(left.kind), code = "(" + left.code + ")[" + integer.intText(fieldIndex) + "]!", intValue = 0, textValue = "", constant = false, next = end);
+                } else if not isTupleKind(left.kind) {
                     failAt(source, postPosition, prefix, "field access requires a tuple or module value");
+                } else {
+                    comp := tupleComponent(left.kind, fieldIndex);
+                    if comp.kind == "" {
+                        failAt(source, labelStart, prefix, "tuple has no field " + textLib.slice(source, labelStart, end));
+                    }
+                    left = (kind = comp.kind, code = "(" + left.code + ")." + comp.prop, intValue = 0, textValue = "", constant = false, next = end);
                 }
-                comp := tupleComponent(left.kind, fieldIndex);
-                if comp.kind == "" {
-                    failAt(source, labelStart, prefix, "tuple has no field " + textLib.slice(source, labelStart, end));
-                }
-                left = (kind = comp.kind, code = "(" + left.code + ")." + comp.prop, intValue = 0, textValue = "", constant = false, next = end);
             } else if labelStart >= textLib.length(source) or not textLib.isNameStart(textLib.at(source, labelStart)) {
                 break;
             } else {
@@ -2048,7 +2215,7 @@ parseBinary := fn(target: String, source: String, position: Int, prefix: String,
                 }
             }
         } else if postPosition < textLib.length(source) and textLib.at(source, postPosition) == "[" {
-            if not isListKind(left.kind) {
+            if not isListKind(left.kind) and not isArrayKind(left.kind) {
                 failAt(source, postPosition, prefix, "indexing requires a list value");
             }
             indexStart := skipTrivia(source, postPosition + 1, prefix);
@@ -2058,7 +2225,8 @@ parseBinary := fn(target: String, source: String, position: Int, prefix: String,
             }
             close := skipTrivia(source, index.next, prefix);
             next := expectSymbol(source, close, "]", prefix);
-            left = (kind = listElementKind(left.kind),
+            elemKind := if isListKind(left.kind) { listElementKind(left.kind) } else { arrayElementKind(left.kind) };
+            left = (kind = elemKind,
                 code = "lite$listAt((" + left.code + "), " + index.code + ", " + integer.intText(indexStart) + ")",
                 intValue = 0, textValue = "", constant = false, next = next);
         } else {
@@ -2303,14 +2471,14 @@ pub sourceModulePath := fn(): String {
 
 /** Collapses a tuple or list kind to its `Tuple`/`List` item suffix while leaving scalar item kinds unchanged. */
 storageKind := fn(kind: String): String {
-    if isListKind(kind) { "List" }
+    if isListKind(kind) or isArrayKind(kind) { "List" }
     else if isTupleKind(kind) { "Tuple" }
     else { kind }
 }
 
-/** Returns the text payload stored with one local item: the canonical List kind for List items, otherwise the parsed literal text. */
+/** Returns the text payload stored with one local item: the canonical List/Array kind for List/Array items, otherwise the parsed literal text. */
 itemTextPayload := fn(parsed: Parsed): String {
-    if isListKind(parsed.kind) { parsed.kind } else { parsed.textValue }
+    if isListKind(parsed.kind) or isArrayKind(parsed.kind) { parsed.kind } else { parsed.textValue }
 }
 
 /** Parses a direct or parenthesized partial if assignment into guarded Assign items; returns empty when total or not an if. */
@@ -2580,6 +2748,7 @@ scanExpressionItemEnd := fn(source: String, start: Int, prefix: String): Int {
 /** Parses an expression item once, retaining its evaluation and checking a function's final result across trailing separators. */
 parseExpressionItem := fn(target: String, source: String, position: Int, prefix: String, locals: List<Local>, functions: List<FunctionInfo>, params: List<String>, currentName: String, currentResult: String, valueTail: Bool): (next: Int, returned: Bool, code: String, valueKind: String) {
     var expected := currentResult;
+    if isListKind(currentResult) { expected = "Tail" + currentResult; }
     if currentResult == "Float" {
         expected = "";
         if valueTail {
@@ -3396,8 +3565,8 @@ pub parseProgramWithIdentity := fn(target: String, source: String, prefix: Strin
                 parsed := parseExpression(target, source, position, prefix, locals, functions, functionParams, currentName);
                 afterParsed := skipTrivia(source, parsed.next, prefix);
                 if textLib.wordAt(source, afterParsed, "as") {
-                    if not isListKind(parsed.kind) {
-                        failAt(source, position, prefix, "loop sequence must be a List, got " + displayKind(parsed.kind));
+                    if not isListKind(parsed.kind) and not isArrayKind(parsed.kind) {
+                        failAt(source, position, prefix, "loop sequence must be a List or Array, got " + displayKind(parsed.kind));
                     }
                     itemStart := skipTrivia(source, afterParsed + 2, prefix);
                     if itemStart >= size or not textLib.isNameStart(textLib.at(source, itemStart)) {
@@ -3406,7 +3575,7 @@ pub parseProgramWithIdentity := fn(target: String, source: String, prefix: Strin
                     itemEnd := textLib.skipName(source, itemStart);
                     itemName = textLib.slice(source, itemStart, itemEnd);
                     if isReservedWord(itemName) { unsupportedFeature(source, itemStart, itemName, prefix); }
-                    itemKind = listElementKind(parsed.kind);
+                    itemKind = if isListKind(parsed.kind) { listElementKind(parsed.kind) } else { arrayElementKind(parsed.kind) };
                     sequenceCode = parsed.code;
                     position = skipTrivia(source, itemEnd, prefix);
                 } else {

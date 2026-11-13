@@ -165,10 +165,9 @@ Keep dependencies explicit; split a topic further when its contracts warrant it.
 - [x] **Tuple shapes:** unnamed/mixed/unit/singleton tuples, shorthand fields,
   positional reads, destructuring, receiving-label conversion, display, and
   `["__proto__"]` computed property keys (TS).
-- [ ] **Fixed arrays:** inferred/explicit extents, function contracts, aliases,
-  copies and indexed/sequence access. Keep array/List distinctions in function
-  tails: T00 rejects `f := fn(): List<Int> { [1, 2] }` as an array result,
-  while T11 currently contextually admits it as a List.
+- [x] **Fixed arrays:** inferred/explicit extents, function contracts, aliases,
+  copies, zero values, and indexed/dot/sequence access (TS), preserving
+  array/List distinctions in function tails (`f := fn(): List<Int> { [1, 2] }`).
 - [ ] **Mutability and lists:** inferred mut/var mut, front operations,
   List<Unit>, all end operations and copy contracts.
 - [ ] **Storage and updates:** compound assignments, zero initialization,

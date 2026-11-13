@@ -2495,3 +2495,35 @@ test('tuple shapes support unnamed/mixed/singleton, shorthand, positional reads,
     assert.match(rejected.stderr.toString(), expectedMessage);
   }
 });
+
+test('fixed arrays support inferred/explicit extents, aliases, functions, zero values, dot/bracket/loop access, and List tail distinction', () => {
+  const source = [
+    'io := import "core/io";',
+    'Pair := type [Int; 2];',
+    'make := fn(): [Int; 2] { [1, 2] }',
+    'sum := fn(a: Pair): Int { a[0] + a.1 }',
+    'inferred := [10, 20, 30];',
+    'explicit: [Int; 2] = [4, 5];',
+    'aliased: Pair = make();',
+    'zeroed: [Int; 3];',
+    'var total := 0;',
+    'loop inferred as item { total = total + item; }',
+    'io.outputLine(inferred[0], inferred.2, sum(explicit), aliased, zeroed, total);',
+  ].join('\n');
+  const compiled = compileTs({ text: source });
+  assert.equal(compiled.status, 0, compiled.stderr.toString());
+  const actual = runTsArtifact(compiled.stdout.toString());
+  assert.equal(actual.phase, 'run'); assert.equal(actual.status, 0);
+  assert.equal(actual.stdout.toString(), '10 30 9 [1, 2] [0, 0, 0] 60\n');
+
+  for (const [bad, expectedMessage] of [
+    ['f := fn(): List<Int> { [1, 2] }', /cannot return \[Int; 2\] from function f returning List<Int>/],
+    ['x: [Int; 3] = [1, 2];', /cannot initialize \[Int; 3\] with \[Int; 2\]/],
+    ['x: [Int; 0];', /fixed array extent must be positive/],
+    ['io := import "core/io"; a := [1, 2]; io.outputLine(a.2);', /array index 2 out of bounds/],
+  ] as const) {
+    const rejected = compileTs({ text: bad });
+    assert.equal(rejected.status, 2, bad);
+    assert.match(rejected.stderr.toString(), expectedMessage);
+  }
+});
