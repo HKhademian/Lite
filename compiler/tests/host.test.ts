@@ -2437,3 +2437,46 @@ test('statement-bearing value blocks and Unit tails preserve lexical scope and t
   assert.equal(cRejected.status, 2);
   assert.match(cRejected.stderr.toString(), /C backend does not support statement-bearing value blocks yet/);
 });
+
+test('tuple shapes support unnamed/mixed/singleton, shorthand, positional reads, destructuring, receiving labels, and __proto__', () => {
+  const source = [
+    'io := import "core/io";',
+    'kind := "number";',
+    'token := (=kind, value = 12);',
+    'io.outputLine(token.kind, token.value);',
+    'mixed := (1, name = "first", false);',
+    'io.outputLine(mixed.0, mixed.name, mixed.2);',
+    'stored := (r = 20, l = 10);',
+    'renamed: (l: Int, r: Int) = stored;',
+    'io.outputLine(renamed.l, renamed.r);',
+    'pos := (x = 1, y = 2);',
+    'io.outputLine(pos.0);',
+    '(a, b) := (1, 2);',
+    'var (c, d) := (10, 20);',
+    'c = c + 1;',
+    'io.outputLine(a + b, c, d);',
+    'io.outputLine(Unit, (), (1,), (1, 2), (1, left = 2, right = 3, 4));',
+    'p := (__proto__ = 7);',
+    'io.outputLine(p.__proto__, p);',
+  ].join('\n');
+  const compiled = compileTs({ text: source });
+  assert.equal(compiled.status, 0, compiled.stderr.toString());
+  const actual = runTsArtifact(compiled.stdout.toString());
+  assert.equal(actual.phase, 'run'); assert.equal(actual.status, 0);
+  assert.equal(
+    actual.stdout.toString(),
+    'number 12\n1 first false\n20 10\n1\n3 11 20\nUnit Unit (1,) (1, 2) (1, left=2, right=3, 4)\n7 (__proto__=7)\n',
+  );
+
+  for (const [bad, expectedMessage] of [
+    ['A := type ();', /tuple type needs at least one field/],
+    ['x: (Int, String) = (1, 2);', /cannot initialize \(Int, String\) with \(Int, Int\)/],
+    ['(a, b) := 1;', /tuple destructuring requires a tuple value/],
+    ['(a, b) := (1, 2, 3);', /tuple destructuring expected 2 fields, got 3/],
+    ['io := import "core/io"; p := (1, 2); io.outputLine(p.2);', /tuple has no field 2/],
+  ] as const) {
+    const rejected = compileTs({ text: bad });
+    assert.equal(rejected.status, 2, bad);
+    assert.match(rejected.stderr.toString(), expectedMessage);
+  }
+});

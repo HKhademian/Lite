@@ -9,27 +9,16 @@ dedent := fn(indent: String): String {
     textLib.slice(indent, 0, textLib.length(indent) - 4)
 }
 
-/** Formats one canonical flat named-tuple kind as a TypeScript object type. */
+/** Formats one canonical flat tuple kind as a TypeScript object type. */
 tsTupleType := fn(kind: String): String {
-    size := textLib.length(kind);
-    var cursor := 1;
+    count := frontend.tupleComponentCount(kind);
     var result := "{ ";
-    var count := 0;
-    loop cursor < size and textLib.at(kind, cursor) =!= ")" {
-        nameStart := cursor;
-        cursor = textLib.skipName(kind, cursor);
-        label := textLib.slice(kind, nameStart, cursor);
-        if cursor < size and textLib.at(kind, cursor) == ":" { cursor = cursor + 1; }
-        typeStart := cursor;
-        cursor = textLib.skipName(kind, cursor);
-        fieldKind := textLib.slice(kind, typeStart, cursor);
-        if count > 0 { result = result + " "; }
-        result = result + label + ": " + tsLiteral.tsScalarType(fieldKind);
-        count = count + 1;
-        if cursor < size and textLib.at(kind, cursor) == "," {
-            result = result + ";";
-            cursor = cursor + 1;
-        }
+    var index := 0;
+    loop index < count {
+        comp := frontend.tupleComponent(kind, index);
+        if index > 0 { result = result + "; "; }
+        result = result + frontend.tupleObjectKey(comp.label, index) + ": " + tsLiteral.tsScalarType(comp.kind);
+        index = index + 1;
     }
     result + " }"
 }
@@ -89,22 +78,17 @@ displayValueCode := fn(kind: String, code: String): String {
     }
     if frontend.isTupleKind(kind) {
         var result := tsLiteral.textLiteralCode("(");
-        var cursor := 1;
-        var count := 0;
-        loop cursor < textLib.length(kind) and textLib.at(kind, cursor) =!= ")" {
-            start := cursor;
-            cursor = textLib.skipName(kind, cursor);
-            label := textLib.slice(kind, start, cursor);
-            cursor = cursor + 1;
-            typeStart := cursor;
-            cursor = textLib.skipName(kind, cursor);
-            component := textLib.slice(kind, typeStart, cursor);
-            separator := if count == 0 { "" } else { ", " };
-            result = result + " + " + tsLiteral.textLiteralCode(separator + label + "=") + " + " + self(component, "value." + label);
-            count = count + 1;
-            if cursor < textLib.length(kind) and textLib.at(kind, cursor) == "," { cursor = cursor + 1; }
+        count := frontend.tupleComponentCount(kind);
+        var index := 0;
+        loop index < count {
+            comp := frontend.tupleComponent(kind, index);
+            separator := if index == 0 { "" } else { ", " };
+            prefixText := if comp.label == "" { separator } else { separator + comp.label + "=" };
+            result = result + " + " + tsLiteral.textLiteralCode(prefixText) + " + " + self(comp.kind, "value." + comp.prop);
+            index = index + 1;
         }
-        ending := if count == 1 { ",)" } else { ")" };
+        firstComp := frontend.tupleComponent(kind, 0);
+        ending := if count == 1 and firstComp.label == "" { ",)" } else { ")" };
         return "((value: " + tsFunctionType(kind) + "): string => " + result + " + " + tsLiteral.textLiteralCode(ending) + ")(" + code + ")";
     }
     code

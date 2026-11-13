@@ -274,9 +274,97 @@ aliasIndexAt := fn(aliases: List<AliasDecl>, position: Int): Int {
     -1
 }
 
-/** True when `kind` is this compiler's canonical flat named-tuple kind, written `(label:Kind,label:Kind)`. */
+/** True when `kind` is this compiler's canonical flat tuple kind, written `(label:Kind,:Kind)`. */
 pub isTupleKind := fn(kind: String): Bool {
     textLib.length(kind) > 0 and textLib.at(kind, 0) == "("
+}
+
+/** Returns the runtime JS property name for a tuple field (`_0` when unnamed, otherwise the field label). */
+pub tupleRuntimeProp := fn(label: String, index: Int): String {
+    if label == "" { "_" + integer.intText(index) } else { label }
+}
+
+/** Returns the JS/TS object-literal property key for a tuple field, quoting `__proto__` to avoid prototype mutation. */
+pub tupleObjectKey := fn(label: String, index: Int): String {
+    if label == "" { "_" + integer.intText(index) }
+    else if label == "__proto__" { "[\"__proto__\"]" }
+    else { label }
+}
+
+/** Returns the number of components in one canonical flat tuple kind. */
+pub tupleComponentCount := fn(kind: String): Int {
+    if not isTupleKind(kind) { return 0; }
+    size := textLib.length(kind);
+    var cursor := 1;
+    var count := 0;
+    loop cursor < size and textLib.at(kind, cursor) =!= ")" {
+        if textLib.at(kind, cursor) =!= ":" { cursor = textLib.skipName(kind, cursor); }
+        if cursor < size and textLib.at(kind, cursor) == ":" { cursor = cursor + 1; }
+        cursor = textLib.skipName(kind, cursor);
+        count = count + 1;
+        if cursor < size and textLib.at(kind, cursor) == "," { cursor = cursor + 1; }
+    }
+    count
+}
+
+/** Returns the label, scalar kind and runtime property name of component `targetIndex` in a canonical tuple kind. */
+pub tupleComponent := fn(kind: String, targetIndex: Int): (label: String, kind: String, prop: String) {
+    size := textLib.length(kind);
+    var cursor := 1;
+    var index := 0;
+    loop cursor < size and textLib.at(kind, cursor) =!= ")" {
+        var label := "";
+        if textLib.at(kind, cursor) =!= ":" {
+            nameStart := cursor;
+            cursor = textLib.skipName(kind, cursor);
+            label = textLib.slice(kind, nameStart, cursor);
+        }
+        if cursor < size and textLib.at(kind, cursor) == ":" { cursor = cursor + 1; }
+        typeStart := cursor;
+        cursor = textLib.skipName(kind, cursor);
+        fieldKind := textLib.slice(kind, typeStart, cursor);
+        if index == targetIndex {
+            return (label = label, kind = fieldKind, prop = tupleRuntimeProp(label, index));
+        }
+        index = index + 1;
+        if cursor < size and textLib.at(kind, cursor) == "," { cursor = cursor + 1; }
+    }
+    (label = "", kind = "", prop = "")
+}
+
+/** True when `expectedKind` and `actualKind` are tuples with identical component counts and positional component types. */
+pub tupleShapeMatches := fn(expectedKind: String, actualKind: String): Bool {
+    if not isTupleKind(expectedKind) or not isTupleKind(actualKind) { return false; }
+    count := tupleComponentCount(expectedKind);
+    if count =!= tupleComponentCount(actualKind) { return false; }
+    var index := 0;
+    loop index < count {
+        if tupleComponent(expectedKind, index).kind =!= tupleComponent(actualKind, index).kind {
+            return false;
+        }
+        index = index + 1;
+    }
+    true
+}
+
+/** Converts one tuple expression to `expectedKind` by copying positional components into the receiving labels. */
+pub convertTupleValue := fn(expectedKind: String, actualKind: String, actualCode: String): String {
+    count := tupleComponentCount(expectedKind);
+    var fields := "";
+    var index := 0;
+    loop index < count {
+        expectedComp := tupleComponent(expectedKind, index);
+        actualComp := tupleComponent(actualKind, index);
+        if index > 0 { fields = fields + ", "; }
+        fields = fields + tupleObjectKey(expectedComp.label, index) + ": lite$t." + actualComp.prop;
+        index = index + 1;
+    }
+    "(() => { const lite$t = " + actualCode + "; return { " + fields + " }; })()"
+}
+
+/** True when `actualKind` is directly `expectedKind` or a tuple with matching positional component types. */
+pub isCompatibleKind := fn(expectedKind: String, actualKind: String): Bool {
+    expectedKind == actualKind or tupleShapeMatches(expectedKind, actualKind)
 }
 
 /** True when `kind` is this compiler's canonical one-argument list kind, written `List<ElementKind>`. */
@@ -335,43 +423,34 @@ pub codeUsesValueIf := fn(code: String): Bool {
 
 /** Returns the scalar kind of tuple field `label` in canonical `kind`, or empty text when the field is absent. */
 tupleFieldKind := fn(kind: String, label: String): String {
-    size := textLib.length(kind);
-    var cursor := 1;
-    loop cursor < size and textLib.at(kind, cursor) =!= ")" {
-        nameStart := cursor;
-        cursor = textLib.skipName(kind, cursor);
-        fieldName := textLib.slice(kind, nameStart, cursor);
-        if cursor < size and textLib.at(kind, cursor) == ":" { cursor = cursor + 1; }
-        typeStart := cursor;
-        cursor = textLib.skipName(kind, cursor);
-        fieldKind := textLib.slice(kind, typeStart, cursor);
-        if fieldName == label { return fieldKind; }
-        if cursor < size and textLib.at(kind, cursor) == "," { cursor = cursor + 1; }
+    count := tupleComponentCount(kind);
+    var index := 0;
+    loop index < count {
+        comp := tupleComponent(kind, index);
+        if comp.label =!= "" and comp.label == label { return comp.kind; }
+        index = index + 1;
     }
     ""
 }
 
-/** Renders one canonical kind for diagnostics, adding spaces inside flat named tuples and lists. */
+/** Renders one canonical kind for diagnostics, adding spaces inside flat tuples and lists. */
 displayKind := fn(kind: String): String {
     if isListKind(kind) { return "List<" + displayKind(listElementKind(kind)) + ">"; }
     if not isTupleKind(kind) { return kind; }
-    size := textLib.length(kind);
-    var cursor := 1;
+    count := tupleComponentCount(kind);
     var result := "(";
-    var count := 0;
-    loop cursor < size and textLib.at(kind, cursor) =!= ")" {
-        nameStart := cursor;
-        cursor = textLib.skipName(kind, cursor);
-        fieldName := textLib.slice(kind, nameStart, cursor);
-        if cursor < size and textLib.at(kind, cursor) == ":" { cursor = cursor + 1; }
-        typeStart := cursor;
-        cursor = textLib.skipName(kind, cursor);
-        fieldKind := textLib.slice(kind, typeStart, cursor);
-        if count > 0 { result = result + ", "; }
-        result = result + fieldName + ": " + displayKind(fieldKind);
-        count = count + 1;
-        if cursor < size and textLib.at(kind, cursor) == "," { cursor = cursor + 1; }
+    var index := 0;
+    loop index < count {
+        comp := tupleComponent(kind, index);
+        if index > 0 { result = result + ", "; }
+        if comp.label == "" {
+            result = result + displayKind(comp.kind);
+        } else {
+            result = result + comp.label + ": " + displayKind(comp.kind);
+        }
+        index = index + 1;
     }
+    if count == 1 and tupleComponent(kind, 0).label == "" { result = result + ","; }
     result + ")"
 }
 
@@ -384,36 +463,47 @@ resolveTypeText := fn(source: String, position: Int, prefix: String, aliases: Li
         labels: mut List<String> = [];
         var kindText := "(";
         var count := 0;
+        var hadComma := false;
+        var singleLabel := "";
+        var singleKind := "";
         loop true {
             if cursor >= size { failAt(source, position, prefix, "expected ) in tuple type"); }
             if textLib.at(text, cursor) == ")" {
                 cursor = cursor + 1;
                 break;
             }
+            if textLib.at(text, cursor) == "(" {
+                failAt(source, position, prefix, "nested tuple types are not supported");
+            }
             if not textLib.isNameStart(textLib.at(text, cursor)) {
                 failAt(source, position, prefix, "expected a tuple field name");
             }
-            labelStart := cursor;
-            cursor = textLib.skipName(text, cursor);
-            label := textLib.slice(text, labelStart, cursor);
-            if listLib.listContainsText(labels, label) {
-                failAt(source, position, prefix, "duplicate tuple field " + label);
+            firstStart := cursor;
+            firstEnd := textLib.skipName(text, cursor);
+            firstName := textLib.slice(text, firstStart, firstEnd);
+            afterFirst := skipTrivia(text, firstEnd, prefix);
+            var label := "";
+            var componentName := "";
+            if afterFirst < size and textLib.at(text, afterFirst) == ":" {
+                label = firstName;
+                if listLib.listContainsText(labels, label) {
+                    failAt(source, position, prefix, "duplicate tuple field " + label);
+                }
+                listLib.pushBack(mut labels, label);
+                cursor = skipTrivia(text, afterFirst + 1, prefix);
+                if cursor < size and textLib.at(text, cursor) == "(" {
+                    failAt(source, position, prefix, "nested tuple types are not supported");
+                }
+                if cursor >= size or not textLib.isNameStart(textLib.at(text, cursor)) {
+                    failAt(source, position, prefix, "expected a tuple field type");
+                }
+                componentStart := cursor;
+                cursor = textLib.skipName(text, cursor);
+                componentName = textLib.slice(text, componentStart, cursor);
+            } else {
+                componentName = firstName;
+                cursor = firstEnd;
             }
-            listLib.pushBack(mut labels, label);
-            cursor = skipTrivia(text, cursor, prefix);
-            if cursor >= size or textLib.at(text, cursor) =!= ":" {
-                failAt(source, position, prefix, "expected : after tuple field " + label);
-            }
-            cursor = skipTrivia(text, cursor + 1, prefix);
-            if cursor < size and textLib.at(text, cursor) == "(" {
-                failAt(source, position, prefix, "nested tuple types are not supported");
-            }
-            if cursor >= size or not textLib.isNameStart(textLib.at(text, cursor)) {
-                failAt(source, position, prefix, "expected a tuple field type");
-            }
-            componentStart := cursor;
-            cursor = textLib.skipName(text, cursor);
-            componentName := textLib.slice(text, componentStart, cursor);
             componentKind := resolveTypeText(source, position, prefix, aliases, componentName, seen);
             if isTupleKind(componentKind) {
                 failAt(source, position, prefix, "nested tuple types are not supported");
@@ -426,9 +516,11 @@ resolveTypeText := fn(source: String, position: Int, prefix: String, aliases: Li
             }
             if count > 0 { kindText = kindText + ","; }
             kindText = kindText + label + ":" + componentKind;
+            if count == 0 { singleLabel = label; singleKind = componentKind; }
             count = count + 1;
             cursor = skipTrivia(text, cursor, prefix);
             if cursor < size and textLib.at(text, cursor) == "," {
+                hadComma = true;
                 cursor = skipTrivia(text, cursor + 1, prefix);
             }
         }
@@ -439,6 +531,7 @@ resolveTypeText := fn(source: String, position: Int, prefix: String, aliases: Li
         if cursor < size {
             failAt(source, position, prefix, "unexpected text after tuple type");
         }
+        if count == 1 and singleLabel == "" and not hadComma { return singleKind; }
         return kindText + ")";
     }
     parsedName := typeNameAt(text, cursor, prefix);
@@ -526,38 +619,51 @@ parseTupleTypeAt := fn(source: String, position: Int, prefix: String, aliases: L
     labels: mut List<String> = [];
     var kindText := "(";
     var count := 0;
+    var hadComma := false;
+    var singleLabel := "";
+    var singleKind := "";
     loop true {
         if cursor >= size { failAt(source, cursor, prefix, "expected ) in tuple type"); }
         if textLib.at(source, cursor) == ")" {
             cursor = cursor + 1;
             break;
         }
+        if textLib.at(source, cursor) == "(" {
+            failAt(source, cursor, prefix, "nested tuple types are not supported");
+        }
         if not textLib.isNameStart(textLib.at(source, cursor)) {
             failAt(source, cursor, prefix, "expected a tuple field name");
         }
-        labelStart := cursor;
-        cursor = textLib.skipName(source, cursor);
-        label := textLib.slice(source, labelStart, cursor);
-        if isReservedWord(label) { unsupportedFeature(source, labelStart, label, prefix); }
-        if listLib.listContainsText(labels, label) {
-            failAt(source, labelStart, prefix, "duplicate tuple field " + label);
+        firstStart := cursor;
+        firstEnd := textLib.skipName(source, cursor);
+        firstName := textLib.slice(source, firstStart, firstEnd);
+        afterFirst := skipTrivia(source, firstEnd, prefix);
+        var label := "";
+        var componentStart := firstStart;
+        var componentName := firstName;
+        if afterFirst < size and textLib.at(source, afterFirst) == ":" {
+            label = firstName;
+            if isReservedWord(label) { unsupportedFeature(source, firstStart, label, prefix); }
+            if listLib.listContainsText(labels, label) {
+                failAt(source, firstStart, prefix, "duplicate tuple field " + label);
+            }
+            listLib.pushBack(mut labels, label);
+            cursor = skipTrivia(source, afterFirst + 1, prefix);
+            if cursor < size and textLib.at(source, cursor) == "(" {
+                failAt(source, cursor, prefix, "nested tuple types are not supported");
+            }
+            if cursor >= size or not textLib.isNameStart(textLib.at(source, cursor)) {
+                failAt(source, cursor, prefix, "expected a tuple field type");
+            }
+            componentStart = cursor;
+            parsedComponent := typeNameAt(source, cursor, prefix);
+            cursor = parsedComponent.next;
+            componentName = parsedComponent.name;
+        } else {
+            parsedComponent := typeNameAt(source, firstStart, prefix);
+            cursor = parsedComponent.next;
+            componentName = parsedComponent.name;
         }
-        listLib.pushBack(mut labels, label);
-        cursor = skipTrivia(source, cursor, prefix);
-        if cursor >= size or textLib.at(source, cursor) =!= ":" {
-            failAt(source, cursor, prefix, "expected : after tuple field " + label);
-        }
-        cursor = skipTrivia(source, cursor + 1, prefix);
-        if cursor < size and textLib.at(source, cursor) == "(" {
-            failAt(source, cursor, prefix, "nested tuple types are not supported");
-        }
-        if cursor >= size or not textLib.isNameStart(textLib.at(source, cursor)) {
-            failAt(source, cursor, prefix, "expected a tuple field type");
-        }
-        componentStart := cursor;
-        parsedComponent := typeNameAt(source, cursor, prefix);
-        cursor = parsedComponent.next;
-        componentName := parsedComponent.name;
         var componentKind := "";
         if componentName == "Int" or componentName == "Float" or componentName == "String" or componentName == "Bool" or componentName == "Unit" {
             componentKind = componentName;
@@ -583,14 +689,19 @@ parseTupleTypeAt := fn(source: String, position: Int, prefix: String, aliases: L
         }
         if count > 0 { kindText = kindText + ","; }
         kindText = kindText + label + ":" + componentKind;
+        if count == 0 { singleLabel = label; singleKind = componentKind; }
         count = count + 1;
         cursor = skipTrivia(source, cursor, prefix);
         if cursor < size and textLib.at(source, cursor) == "," {
+            hadComma = true;
             cursor = skipTrivia(source, cursor + 1, prefix);
         }
     }
     if count == 0 {
         failAt(source, position, prefix, "tuple type needs at least one field");
+    }
+    if count == 1 and singleLabel == "" and not hadComma {
+        return (kind = singleKind, next = cursor);
     }
     (kind = kindText + ")", next = cursor)
 }
@@ -1208,17 +1319,52 @@ isSingleEquals := fn(source: String, position: Int): Bool {
     textLib.startsWithAt(source, position, "=") and not textLib.startsWithAt(source, position, "==") and not textLib.startsWithAt(source, position, "=!=")
 }
 
-/** True when the text after an opening `(` starts a named tuple entry `label = ...`, rather than grouping. */
+/** True when the text after an opening `(` is a tuple literal (`label = ...`, `=name`, or contains a top-level `,`), rather than grouping. */
 looksLikeTupleEntry := fn(source: String, position: Int, prefix: String): Bool {
+    size := textLib.length(source);
     start := skipTrivia(source, position, prefix);
-    if start >= textLib.length(source) or not textLib.isNameStart(textLib.at(source, start)) { return false; }
-    afterName := skipTrivia(source, textLib.skipName(source, start), prefix);
-    isSingleEquals(source, afterName)
+    if start >= size { return false; }
+    if isSingleEquals(source, start) { return true; }
+    if textLib.isNameStart(textLib.at(source, start)) {
+        afterName := skipTrivia(source, textLib.skipName(source, start), prefix);
+        if isSingleEquals(source, afterName) { return true; }
+    }
+    var cursor := start;
+    var depth := 0;
+    loop cursor < size {
+        ch := textLib.at(source, cursor);
+        if ch == "\"" {
+            cursor = skipAliasString(source, cursor);
+        } else if textLib.startsWithAt(source, cursor, "/*") {
+            cursor = skipComment(source, cursor, prefix);
+        } else if ch == "(" or ch == "[" or ch == "{" {
+            depth = depth + 1;
+            cursor = cursor + 1;
+        } else if ch == ")" or ch == "]" or ch == "}" {
+            if depth == 0 { return false; }
+            depth = depth - 1;
+            cursor = cursor + 1;
+        } else if depth == 0 and ch == "," {
+            return true;
+        } else {
+            cursor = cursor + 1;
+        }
+    }
+    false
 }
 
 /** Wraps target code in the backend's list-copy hook when `kind` is a List; every other kind is unchanged. */
 copiedValueCode := fn(target: String, kind: String, code: String): String {
     if isListKind(kind) { targetListCopyCode(target, code) } else { code }
+}
+
+/** Converts compatible tuple shapes on assignment/call/return, or copies lists when needed. */
+assignValueCode := fn(target: String, expectedKind: String, actualKind: String, actualCode: String): String {
+    if expectedKind =!= actualKind and tupleShapeMatches(expectedKind, actualKind) {
+        convertTupleValue(expectedKind, actualKind, actualCode)
+    } else {
+        copiedValueCode(target, expectedKind, actualCode)
+    }
 }
 
 /** Closes a call after at least one parsed argument, consuming at most one trailing comma and its trivia. */
@@ -1274,28 +1420,20 @@ scanParenEnd := fn(source: String, open: Int, prefix: String): Int {
     -1
 }
 
-/** Builds the zero value for one flat named-tuple kind as a fresh object literal. */
+/** Builds the zero value for one flat tuple kind as a fresh object literal. */
 tupleZeroParsed := fn(kind: String, next: Int): Parsed {
-    size := textLib.length(kind);
-    var cursor := 1;
+    count := tupleComponentCount(kind);
     var code := "{ ";
-    var count := 0;
-    loop cursor < size and textLib.at(kind, cursor) =!= ")" {
-        nameStart := cursor;
-        cursor = textLib.skipName(kind, cursor);
-        label := textLib.slice(kind, nameStart, cursor);
-        if cursor < size and textLib.at(kind, cursor) == ":" { cursor = cursor + 1; }
-        typeStart := cursor;
-        cursor = textLib.skipName(kind, cursor);
-        fieldKind := textLib.slice(kind, typeStart, cursor);
-        if count > 0 { code = code + ", "; }
-        code = code + label + ": ";
-        if fieldKind == "Int" { code = code + "0n"; }
-        else if fieldKind == "Float" { code = code + "0"; }
-        else if fieldKind == "String" { code = code + "\"\""; }
+    var index := 0;
+    loop index < count {
+        comp := tupleComponent(kind, index);
+        if index > 0 { code = code + ", "; }
+        code = code + tupleObjectKey(comp.label, index) + ": ";
+        if comp.kind == "Int" { code = code + "0n"; }
+        else if comp.kind == "Float" { code = code + "0"; }
+        else if comp.kind == "String" { code = code + "\"\""; }
         else { code = code + "false"; }
-        count = count + 1;
-        if cursor < size and textLib.at(kind, cursor) == "," { cursor = cursor + 1; }
+        index = index + 1;
     }
     (kind = kind, code = code + " }", intValue = 0, textValue = "", constant = false, next = next)
 }
@@ -1368,25 +1506,42 @@ parseBinary := fn(target: String, source: String, position: Int, prefix: String,
             codes: mut List<String> = [];
             kinds: mut List<String> = [];
             var count := 0;
-            loop true {
-                if cursor >= textLib.length(source) or not textLib.isNameStart(textLib.at(source, cursor)) {
-                    failAt(source, cursor, prefix, "expected a tuple field name");
+            loop cursor < textLib.length(source) and textLib.at(source, cursor) =!= ")" {
+                var label := "";
+                var value := intParsed("", 0, true, cursor);
+                if isSingleEquals(source, cursor) {
+                    nameStart := skipTrivia(source, cursor + 1, prefix);
+                    if nameStart >= textLib.length(source) or not textLib.isNameStart(textLib.at(source, nameStart)) {
+                        failAt(source, nameStart, prefix, "expected a tuple field name after =");
+                    }
+                    nameEnd := textLib.skipName(source, nameStart);
+                    label = textLib.slice(source, nameStart, nameEnd);
+                    if isReservedWord(label) { unsupportedFeature(source, nameStart, label, prefix); }
+                    if listLib.listContainsText(labels, label) {
+                        failAt(source, nameStart, prefix, "duplicate tuple field " + label);
+                    }
+                    fieldExpected := if isTupleKind(expected) { tupleFieldKind(expected, label) } else { "" };
+                    value = self(target, source, nameStart, prefix, locals, functions, params, currentName, fieldExpected, 30);
+                } else if cursor < textLib.length(source) and textLib.isNameStart(textLib.at(source, cursor)) {
+                    nameEnd := textLib.skipName(source, cursor);
+                    afterName := skipTrivia(source, nameEnd, prefix);
+                    if isSingleEquals(source, afterName) {
+                        label = textLib.slice(source, cursor, nameEnd);
+                        if isReservedWord(label) { unsupportedFeature(source, cursor, label, prefix); }
+                        if listLib.listContainsText(labels, label) {
+                            failAt(source, cursor, prefix, "duplicate tuple field " + label);
+                        }
+                        exprStart := skipTrivia(source, afterName + 1, prefix);
+                        fieldExpected := if isTupleKind(expected) { tupleFieldKind(expected, label) } else { "" };
+                        value = self(target, source, exprStart, prefix, locals, functions, params, currentName, fieldExpected, 0);
+                    } else {
+                        fieldExpected := if isTupleKind(expected) and count < tupleComponentCount(expected) { tupleComponent(expected, count).kind } else { "" };
+                        value = self(target, source, cursor, prefix, locals, functions, params, currentName, fieldExpected, 0);
+                    }
+                } else {
+                    fieldExpected := if isTupleKind(expected) and count < tupleComponentCount(expected) { tupleComponent(expected, count).kind } else { "" };
+                    value = self(target, source, cursor, prefix, locals, functions, params, currentName, fieldExpected, 0);
                 }
-                labelStart := cursor;
-                cursor = textLib.skipName(source, cursor);
-                label := textLib.slice(source, labelStart, cursor);
-                if isReservedWord(label) { unsupportedFeature(source, labelStart, label, prefix); }
-                if listLib.listContainsText(labels, label) {
-                    failAt(source, labelStart, prefix, "duplicate tuple field " + label);
-                }
-                listLib.pushBack(mut labels, label);
-                cursor = skipTrivia(source, cursor, prefix);
-                if not isSingleEquals(source, cursor) {
-                    failAt(source, cursor, prefix, "expected = after tuple field " + label);
-                }
-                cursor = skipTrivia(source, cursor + 1, prefix);
-                fieldExpected := if isTupleKind(expected) { tupleFieldKind(expected, label) } else { "" };
-                value := self(target, source, cursor, prefix, locals, functions, params, currentName, fieldExpected, 0);
                 if isTupleKind(value.kind) {
                     failAt(source, cursor, prefix, "nested tuple values are not supported");
                 }
@@ -1394,8 +1549,10 @@ parseBinary := fn(target: String, source: String, position: Int, prefix: String,
                     failAt(source, cursor, prefix, "list values inside tuples are not supported");
                 }
                 if value.kind == "Unit" {
-                    failAt(source, cursor, prefix, "tuple field " + label + " cannot be Unit");
+                    failName := if label =!= "" { label } else { integer.intText(count) };
+                    failAt(source, cursor, prefix, "tuple field " + failName + " cannot be Unit");
                 }
+                listLib.pushBack(mut labels, label);
                 listLib.pushBack(mut codes, value.code);
                 listLib.pushBack(mut kinds, value.kind);
                 count = count + 1;
@@ -1416,7 +1573,7 @@ parseBinary := fn(target: String, source: String, position: Int, prefix: String,
                     codeText = codeText + ", ";
                 }
                 kindText = kindText + labels[index] + ":" + kinds[index];
-                codeText = codeText + labels[index] + ": " + codes[index];
+                codeText = codeText + tupleObjectKey(labels[index], index) + ": " + codes[index];
                 index = index + 1;
             }
             left = (kind = kindText + ")", code = codeText + " }", intValue = 0, textValue = "", constant = false, next = cursor);
@@ -1546,10 +1703,12 @@ parseBinary := fn(target: String, source: String, position: Int, prefix: String,
                         declWritable = typed.writable;
                         afterType := skipTrivia(source, typed.next, prefix);
                         if isSingleEquals(source, afterType) {
-                            declParsed = self(target, source, skipTrivia(source, afterType + 1, prefix), prefix, blockLocals, functions, params, currentName, typed.kind, 0);
-                            if declParsed.kind =!= typed.kind {
-                                failAt(source, localStart, prefix, "cannot initialize " + displayKind(typed.kind) + " with " + displayKind(declParsed.kind));
+                            initParsed := self(target, source, skipTrivia(source, afterType + 1, prefix), prefix, blockLocals, functions, params, currentName, typed.kind, 0);
+                            if not isCompatibleKind(typed.kind, initParsed.kind) {
+                                failAt(source, localStart, prefix, "cannot initialize " + displayKind(typed.kind) + " with " + displayKind(initParsed.kind));
                             }
+                            converted := assignValueCode(target, typed.kind, initParsed.kind, initParsed.code);
+                            declParsed = (kind = typed.kind, code = converted, intValue = initParsed.intValue, textValue = initParsed.textValue, constant = initParsed.constant, next = initParsed.next);
                         } else {
                             declParsed = zeroParsed(target, typed.kind, afterType);
                         }
@@ -1562,7 +1721,7 @@ parseBinary := fn(target: String, source: String, position: Int, prefix: String,
                     listLib.pushBack(mut blockLocals, (name = localName, runtime = runtime, kind = declParsed.kind,
                         mutable = true, writable = declWritable, depth = 1, constant = false, code = declParsed.code,
                         intValue = declParsed.intValue, textValue = declParsed.textValue));
-                    listLib.pushBack(mut statements, "let " + runtime + " = " + copiedValueCode(target, declParsed.kind, declParsed.code) + "; void " + runtime + ";");
+                    listLib.pushBack(mut statements, "let " + runtime + " = " + assignValueCode(target, declParsed.kind, declParsed.kind, declParsed.code) + "; void " + runtime + ";");
                     statementCount = statementCount + 1;
                     blockConstant = false;
                     cursor = statementNext;
@@ -1595,17 +1754,18 @@ parseBinary := fn(target: String, source: String, position: Int, prefix: String,
                     var declParsed := zeroParsed(target, typed.kind, afterType);
                     if isSingleEquals(source, afterType) {
                         declParsed = self(target, source, skipTrivia(source, afterType + 1, prefix), prefix, blockLocals, functions, params, currentName, typed.kind, 0);
-                        if declParsed.kind =!= typed.kind {
+                        if not isCompatibleKind(typed.kind, declParsed.kind) {
                             failAt(source, itemStart, prefix, "cannot initialize " + displayKind(typed.kind) + " with " + displayKind(declParsed.kind));
                         }
                     }
                     statementNext := consumeStatementEnd(source, declParsed.next, prefix);
                     if statementNext < 0 { failAt(source, skipTrivia(source, declParsed.next, prefix), prefix, "expected ; after local declaration " + itemName); }
                     runtime := localRuntimeName(blockLocals, itemName, itemStart, 0);
+                    declCode := assignValueCode(target, typed.kind, declParsed.kind, declParsed.code);
                     listLib.pushBack(mut blockLocals, (name = itemName, runtime = runtime, kind = typed.kind,
-                        mutable = false, writable = typed.writable, depth = 1, constant = declParsed.constant, code = declParsed.code,
+                        mutable = false, writable = typed.writable, depth = 1, constant = declParsed.constant, code = declCode,
                         intValue = declParsed.intValue, textValue = declParsed.textValue));
-                    listLib.pushBack(mut statements, "const " + runtime + " = " + copiedValueCode(target, typed.kind, declParsed.code) + "; void " + runtime + ";");
+                    listLib.pushBack(mut statements, "const " + runtime + " = " + declCode + "; void " + runtime + ";");
                     statementCount = statementCount + 1;
                     blockConstant = false;
                     cursor = statementNext;
@@ -1616,15 +1776,16 @@ parseBinary := fn(target: String, source: String, position: Int, prefix: String,
                     entry := blockLocals[index];
                     if not entry.mutable { failAt(source, itemStart, prefix, "cannot assign to immutable local " + itemName); }
                     rhs := self(target, source, skipTrivia(source, afterItemName + 1, prefix), prefix, blockLocals, functions, params, currentName, entry.kind, 0);
-                    if rhs.kind =!= entry.kind {
+                    if not isCompatibleKind(entry.kind, rhs.kind) {
                         failAt(source, itemStart, prefix, "cannot assign " + displayKind(rhs.kind) + " to " + displayKind(entry.kind) + " local " + itemName);
                     }
                     statementNext := consumeStatementEnd(source, rhs.next, prefix);
                     if statementNext < 0 { failAt(source, skipTrivia(source, rhs.next, prefix), prefix, "expected ; after assignment to " + itemName); }
+                    rhsCode := assignValueCode(target, entry.kind, rhs.kind, rhs.code);
                     listLib.pushBack(mut blockLocals, (name = entry.name, runtime = entry.runtime, kind = entry.kind,
-                        mutable = true, writable = entry.writable, depth = entry.depth, constant = false, code = rhs.code,
+                        mutable = true, writable = entry.writable, depth = entry.depth, constant = false, code = rhsCode,
                         intValue = rhs.intValue, textValue = rhs.textValue));
-                    listLib.pushBack(mut statements, entry.runtime + " = " + copiedValueCode(target, entry.kind, rhs.code) + ";");
+                    listLib.pushBack(mut statements, entry.runtime + " = " + rhsCode + ";");
                     statementCount = statementCount + 1;
                     blockConstant = false;
                     cursor = statementNext;
@@ -1790,11 +1951,11 @@ parseBinary := fn(target: String, source: String, position: Int, prefix: String,
                         }
                         expected := paramKindOf(params[info.first + argumentCount]);
                         argument := self(target, source, cursor, prefix, locals, functions, params, currentName, expected, 0);
-                        if argument.kind =!= expected {
+                        if not isCompatibleKind(expected, argument.kind) {
                             failAt(source, cursor, prefix, "argument " + formatLib.decimalText(argumentCount + 1) + " of " +
                                 calleeName + " must be " + displayKind(expected) + ", got " + displayKind(argument.kind));
                         }
-                        listLib.pushBack(mut argumentCodes, copiedValueCode(target, argument.kind, argument.code));
+                        listLib.pushBack(mut argumentCodes, assignValueCode(target, expected, argument.kind, argument.code));
                         argumentCount = argumentCount + 1;
                         cursor = skipTrivia(source, argument.next, prefix);
                         if cursor < textLib.length(source) and textLib.at(source, cursor) == "," {
@@ -1831,38 +1992,58 @@ parseBinary := fn(target: String, source: String, position: Int, prefix: String,
         postPosition := skipTrivia(source, left.next, prefix);
         if postPosition < textLib.length(source) and textLib.at(source, postPosition) == "." {
             labelStart := skipTrivia(source, postPosition + 1, prefix);
-            if labelStart >= textLib.length(source) or not textLib.isNameStart(textLib.at(source, labelStart)) {
-                break;
-            }
-            labelEnd := textLib.skipName(source, labelStart);
-            label := textLib.slice(source, labelStart, labelEnd);
-            if left.kind == "Module" {
-                qualified := left.textValue + "." + label;
-                functionIndex := findFunction(functions, qualified);
-                if functionIndex >= 0 {
-                    left = (kind = "ModuleFunction", code = "", intValue = functionIndex, textValue = qualified,
-                        constant = false, next = labelEnd);
-                } else {
-                    memberIndex := localIndex(locals, qualified);
-                    if memberIndex < 0 {
-                        failAt(source, labelStart, prefix, "unknown module member " + qualified);
-                    }
-                    if isSingleEquals(source, skipTrivia(source, labelEnd, prefix)) {
-                        failAt(source, labelStart, prefix, "module members are immutable");
-                    }
-                    member := locals[memberIndex];
-                    left = (kind = member.kind, code = member.runtime, intValue = member.intValue,
-                        textValue = member.textValue, constant = member.constant, next = labelEnd);
+            if labelStart < textLib.length(source) and textLib.isDigit(textLib.at(source, labelStart)) {
+                var end := labelStart;
+                var fieldIndex := 0;
+                loop end < textLib.length(source) and textLib.isDigit(textLib.at(source, end)) {
+                    digitText := textLib.at(source, end);
+                    digit := if digitText == "0" { 0 } else if digitText == "1" { 1 } else if digitText == "2" { 2 }
+                        else if digitText == "3" { 3 } else if digitText == "4" { 4 } else if digitText == "5" { 5 }
+                        else if digitText == "6" { 6 } else if digitText == "7" { 7 } else if digitText == "8" { 8 } else { 9 };
+                    fieldIndex = fieldIndex * 10 + digit;
+                    end = end + 1;
                 }
-            } else {
                 if not isTupleKind(left.kind) {
                     failAt(source, postPosition, prefix, "field access requires a tuple or module value");
                 }
-                fieldKind := tupleFieldKind(left.kind, label);
-                if fieldKind == "" {
-                    failAt(source, labelStart, prefix, "tuple has no field " + label);
+                comp := tupleComponent(left.kind, fieldIndex);
+                if comp.kind == "" {
+                    failAt(source, labelStart, prefix, "tuple has no field " + textLib.slice(source, labelStart, end));
                 }
-                left = (kind = fieldKind, code = "(" + left.code + ")." + label, intValue = 0, textValue = "", constant = false, next = labelEnd);
+                left = (kind = comp.kind, code = "(" + left.code + ")." + comp.prop, intValue = 0, textValue = "", constant = false, next = end);
+            } else if labelStart >= textLib.length(source) or not textLib.isNameStart(textLib.at(source, labelStart)) {
+                break;
+            } else {
+                labelEnd := textLib.skipName(source, labelStart);
+                label := textLib.slice(source, labelStart, labelEnd);
+                if left.kind == "Module" {
+                    qualified := left.textValue + "." + label;
+                    functionIndex := findFunction(functions, qualified);
+                    if functionIndex >= 0 {
+                        left = (kind = "ModuleFunction", code = "", intValue = functionIndex, textValue = qualified,
+                            constant = false, next = labelEnd);
+                    } else {
+                        memberIndex := localIndex(locals, qualified);
+                        if memberIndex < 0 {
+                            failAt(source, labelStart, prefix, "unknown module member " + qualified);
+                        }
+                        if isSingleEquals(source, skipTrivia(source, labelEnd, prefix)) {
+                            failAt(source, labelStart, prefix, "module members are immutable");
+                        }
+                        member := locals[memberIndex];
+                        left = (kind = member.kind, code = member.runtime, intValue = member.intValue,
+                            textValue = member.textValue, constant = member.constant, next = labelEnd);
+                    }
+                } else {
+                    if not isTupleKind(left.kind) {
+                        failAt(source, postPosition, prefix, "field access requires a tuple or module value");
+                    }
+                    fieldKind := tupleFieldKind(left.kind, label);
+                    if fieldKind == "" {
+                        failAt(source, labelStart, prefix, "tuple has no field " + label);
+                    }
+                    left = (kind = fieldKind, code = "(" + left.code + ")." + label, intValue = 0, textValue = "", constant = false, next = labelEnd);
+                }
             }
         } else if postPosition < textLib.length(source) and textLib.at(source, postPosition) == "[" {
             if not isListKind(left.kind) {
@@ -1924,11 +2105,11 @@ parseBinary := fn(target: String, source: String, position: Int, prefix: String,
                     }
                     expected := paramKindOf(params[info.first + argumentCount]);
                     argument := self(target, source, cursor, prefix, locals, functions, params, currentName, expected, 0);
-                    if argument.kind =!= expected {
+                    if not isCompatibleKind(expected, argument.kind) {
                         failAt(source, cursor, prefix, "argument " + formatLib.decimalText(argumentCount + 1) + " of " + left.textValue +
                             " must be " + displayKind(expected) + ", got " + displayKind(argument.kind));
                     }
-                    listLib.pushBack(mut argumentCodes, copiedValueCode(target, argument.kind, argument.code));
+                    listLib.pushBack(mut argumentCodes, assignValueCode(target, expected, argument.kind, argument.code));
                     argumentCount = argumentCount + 1;
                     cursor = skipTrivia(source, argument.next, prefix);
                     if cursor < textLib.length(source) and textLib.at(source, cursor) == "," {
@@ -2410,11 +2591,11 @@ parseExpressionItem := fn(target: String, source: String, position: Int, prefix:
     if ended < 0 { failAt(source, skipTrivia(source, parsed.next, prefix), prefix, "expected ; after expression statement"); }
     next := skipItemSeparators(source, ended, prefix);
     returned := currentName =!= "" and valueTail and next < textLib.length(source) and textLib.at(source, next) == "}";
-    if returned and parsed.kind =!= currentResult {
+    if returned and not isCompatibleKind(currentResult, parsed.kind) {
         failAt(source, position, prefix, "cannot return " + displayKind(parsed.kind) + " from function " + currentName +
             " returning " + displayKind(currentResult));
     }
-    (next = next, returned = returned, code = if returned { if parsed.kind == "Unit" { targetUnitEvaluationCode(target, parsed.code) } else { copiedValueCode(target, currentResult, parsed.code) } } else { parsed.code }, valueKind = parsed.kind)
+    (next = next, returned = returned, code = if returned { if parsed.kind == "Unit" { targetUnitEvaluationCode(target, parsed.code) } else { assignValueCode(target, currentResult, parsed.kind, parsed.code) } } else { parsed.code }, valueKind = parsed.kind)
 }
 
 /** Joins a block's definite completion: scopes preserve it, loops require a true header, and conditionals require every arm plus a final else. */
@@ -2703,6 +2884,39 @@ parseOutputStatement := fn(target: String, source: String, openPosition: Int, ou
     result
 }
 
+/** Parses `(name1, name2, ...)` for tuple destructuring declarations, rejecting empty, reserved or duplicate bindings. */
+parseTupleDestructureTarget := fn(source: String, open: Int, prefix: String): (namesText: String, count: Int, next: Int) {
+    size := textLib.length(source);
+    var cursor := skipTrivia(source, open + 1, prefix);
+    names: mut List<String> = [];
+    var count := 0;
+    loop cursor < size and textLib.at(source, cursor) =!= ")" {
+        if not textLib.isNameStart(textLib.at(source, cursor)) {
+            failAt(source, cursor, prefix, "expected a binding name in tuple destructuring");
+        }
+        nameStart := cursor;
+        cursor = textLib.skipName(source, cursor);
+        bindName := textLib.slice(source, nameStart, cursor);
+        if isReservedWord(bindName) { unsupportedFeature(source, nameStart, bindName, prefix); }
+        if listLib.listContainsText(names, bindName) {
+            failAt(source, nameStart, prefix, "duplicate tuple destructuring binding " + bindName);
+        }
+        listLib.pushBack(mut names, bindName);
+        count = count + 1;
+        cursor = skipTrivia(source, cursor, prefix);
+        if cursor < size and textLib.at(source, cursor) == "," {
+            cursor = skipTrivia(source, cursor + 1, prefix);
+        } else {
+            break;
+        }
+    }
+    if count == 0 {
+        failAt(source, open, prefix, "tuple destructuring needs at least one binding");
+    }
+    next := expectSymbol(source, cursor, ")", prefix);
+    (namesText = textLib.joinTexts(names, ","), count = count, next = next)
+}
+
 /** Parses complete source with imported public function signatures available in its root symbol table. Exits 2 on unsupported, malformed or faulting source. */
 pub parseProgramWithIdentity := fn(target: String, source: String, prefix: String, exports: Items, moduleId: Int,
     moduleIdentity: String): Items {
@@ -2888,6 +3102,74 @@ pub parseProgramWithIdentity := fn(target: String, source: String, prefix: Strin
             position = skipTrivia(source, position + 1, prefix);
             continue;
         }
+        var destructureOpen := -1;
+        var destructureMutable := false;
+        if ch == "(" {
+            parenEnd := scanParenEnd(source, position, prefix);
+            afterParen := if parenEnd >= 0 { skipTrivia(source, parenEnd, prefix) } else { -1 };
+            if afterParen >= 0 and textLib.startsWithAt(source, afterParen, ":=") {
+                destructureOpen = position;
+            }
+        } else if ch == "v" and textLib.wordAt(source, position, "var") {
+            afterVar := skipTrivia(source, position + 3, prefix);
+            if afterVar < size and textLib.at(source, afterVar) == "(" {
+                destructureOpen = afterVar;
+                destructureMutable = true;
+            }
+        }
+        if destructureOpen >= 0 {
+            destructure := parseTupleDestructureTarget(source, destructureOpen, prefix);
+            afterTarget := skipTrivia(source, destructure.next, prefix);
+            if not textLib.startsWithAt(source, afterTarget, ":=") {
+                failAt(source, afterTarget, prefix, "expected := after tuple destructuring target");
+            }
+            rhs := parseInitializerExpression(target, source, skipTrivia(source, afterTarget + 2, prefix), prefix, locals, functions, functionParams, currentName, "");
+            if not isTupleKind(rhs.kind) {
+                failAt(source, destructureOpen, prefix, "tuple destructuring requires a tuple value, got " + displayKind(rhs.kind));
+            }
+            if tupleComponentCount(rhs.kind) =!= destructure.count {
+                failAt(source, destructureOpen, prefix, "tuple destructuring expected " + integer.intText(destructure.count) +
+                    " fields, got " + integer.intText(tupleComponentCount(rhs.kind)));
+            }
+            statementNext := consumeStatementEnd(source, rhs.next, prefix);
+            if statementNext < 0 { failAt(source, skipTrivia(source, rhs.next, prefix), prefix, "expected ; after tuple destructuring"); }
+            position = statementNext;
+            tempRuntime := "lite$tuple_" + integer.intText(destructureOpen);
+            if currentLive and not currentStopped {
+                listLib.pushBack(mut items, (kind = "LocalTuple", name = "", runtime = tempRuntime,
+                    code = rhs.code, intValue = 0, textValue = ""));
+            }
+            var bindCursor := 0;
+            var bindIndex := 0;
+            namesLen := textLib.length(destructure.namesText);
+            loop bindIndex < destructure.count {
+                var bindEnd := bindCursor;
+                loop bindEnd < namesLen and textLib.at(destructure.namesText, bindEnd) =!= "," {
+                    bindEnd = bindEnd + 1;
+                }
+                bindName := textLib.slice(destructure.namesText, bindCursor, bindEnd);
+                bindCursor = bindEnd + 1;
+                if depth == 0 and blockCount == 0 {
+                    rootIndex := localIndex(locals, bindName);
+                    if rootIndex >= 0 and locals[rootIndex].depth == 0 {
+                        failAt(source, destructureOpen, prefix, "duplicate top-level value " + bindName);
+                    }
+                }
+                comp := tupleComponent(rhs.kind, bindIndex);
+                bindRuntime := localRuntimeName(locals, bindName, destructureOpen + bindIndex + 1, moduleId);
+                fieldCode := tempRuntime + "." + comp.prop;
+                listLib.pushBack(mut locals, (name = bindName, runtime = bindRuntime, kind = comp.kind,
+                    mutable = destructureMutable, writable = false, depth = depth, constant = false, code = fieldCode,
+                    intValue = 0, textValue = ""));
+                if currentLive and not currentStopped {
+                    itemPrefix := if destructureMutable { "Var" } else { "Local" };
+                    listLib.pushBack(mut items, (kind = itemPrefix + storageKind(comp.kind), name = bindName, runtime = bindRuntime,
+                        code = fieldCode, intValue = 0, textValue = ""));
+                }
+                bindIndex = bindIndex + 1;
+            }
+            continue;
+        }
         if textLib.isDigit(ch) or ch == "\"" or ch == "(" or ch == "[" or ch == "+" or ch == "-" or
             (ch == "a" and textLib.wordAt(source, position, "and")) or (ch == "o" and textLib.wordAt(source, position, "or")) or
             (ch == "n" and textLib.wordAt(source, position, "not")) or (ch == "t" and textLib.wordAt(source, position, "true")) or
@@ -2971,14 +3253,14 @@ pub parseProgramWithIdentity := fn(target: String, source: String, prefix: Strin
                 failAt(source, nameStart, prefix, "function " + currentName + " returns Unit and cannot return a value");
             }
             parsed := parseExpressionAs(target, source, position, prefix, locals, functions, functionParams, currentName, currentResult);
-            if parsed.kind =!= currentResult {
+            if not isCompatibleKind(currentResult, parsed.kind) {
                 failAt(source, valueStart, prefix, "cannot return " + displayKind(parsed.kind) + " from function " +
                     currentName + " returning " + displayKind(currentResult));
             }
             statementNext := consumeStatementEnd(source, parsed.next, prefix);
             if statementNext < 0 { failAt(source, skipTrivia(source, parsed.next, prefix), prefix, "expected ; after return"); }
             position = statementNext;
-            if currentLive and not currentStopped { listLib.pushBack(mut items, (kind = "Return", name = "", runtime = "", code = copiedValueCode(target, currentResult, parsed.code),
+            if currentLive and not currentStopped { listLib.pushBack(mut items, (kind = "Return", name = "", runtime = "", code = assignValueCode(target, currentResult, parsed.kind, parsed.code),
                 intValue = 0, textValue = "")); }
             if not currentStopped { currentReturned = true; }
             currentStopped = true;
@@ -3194,9 +3476,11 @@ pub parseProgramWithIdentity := fn(target: String, source: String, prefix: Strin
                 position = skipTrivia(source, typed.next, prefix);
                 if isSingleEquals(source, position) {
                     parsed = parseInitializerExpression(target, source, skipTrivia(source, position + 1, prefix), prefix, locals, functions, functionParams, currentName, typed.kind);
-                    if parsed.kind =!= typed.kind {
+                    if not isCompatibleKind(typed.kind, parsed.kind) {
                         failAt(source, localStart, prefix, "cannot initialize " + displayKind(typed.kind) + " with " + displayKind(parsed.kind));
                     }
+                    converted := assignValueCode(target, typed.kind, parsed.kind, parsed.code);
+                    parsed = (kind = typed.kind, code = converted, intValue = parsed.intValue, textValue = parsed.textValue, constant = parsed.constant, next = parsed.next);
                 } else {
                     parsed = zeroParsed(target, typed.kind, position);
                 }
@@ -3378,7 +3662,7 @@ pub parseProgramWithIdentity := fn(target: String, source: String, prefix: Strin
             var parsed := zeroParsed(target, typed.kind, position);
             if isSingleEquals(source, position) {
                 parsed = parseInitializerExpression(target, source, skipTrivia(source, position + 1, prefix), prefix, locals, functions, functionParams, currentName, typed.kind);
-                if parsed.kind =!= typed.kind {
+                if not isCompatibleKind(typed.kind, parsed.kind) {
                     failAt(source, nameStart, prefix, "cannot initialize " + displayKind(typed.kind) + " with " + displayKind(parsed.kind));
                 }
             }
@@ -3386,11 +3670,12 @@ pub parseProgramWithIdentity := fn(target: String, source: String, prefix: Strin
             if statementNext < 0 { failAt(source, skipTrivia(source, parsed.next, prefix), prefix, "expected ; after local declaration " + name); }
             position = statementNext;
             runtime := localRuntimeName(locals, name, nameStart, moduleId);
+            assignedCode := assignValueCode(target, typed.kind, parsed.kind, parsed.code);
             listLib.pushBack(mut locals, (name = name, runtime = runtime, kind = typed.kind,
-                mutable = false, writable = typed.writable, depth = depth, constant = parsed.constant, code = parsed.code,
+                mutable = false, writable = typed.writable, depth = depth, constant = parsed.constant, code = assignedCode,
                 intValue = parsed.intValue, textValue = parsed.textValue));
             if currentLive and not currentStopped { listLib.pushBack(mut items, (kind = "Local" + storageKind(typed.kind), name = name, runtime = runtime,
-                code = copiedValueCode(target, typed.kind, parsed.code), intValue = parsed.intValue, textValue = itemTextPayload(parsed))); }
+                code = assignedCode, intValue = parsed.intValue, textValue = itemTextPayload(parsed))); }
             continue;
         }
         if isSingleEquals(source, position) {
@@ -3420,17 +3705,18 @@ pub parseProgramWithIdentity := fn(target: String, source: String, prefix: Strin
                 continue;
             }
             parsed := parseExpressionAs(target, source, position, prefix, locals, functions, functionParams, currentName, entry.kind);
-            if parsed.kind =!= entry.kind {
+            if not isCompatibleKind(entry.kind, parsed.kind) {
                 failAt(source, nameStart, prefix, "cannot assign " + displayKind(parsed.kind) + " to " + displayKind(entry.kind) + " local " + name);
             }
             statementNext := consumeStatementEnd(source, parsed.next, prefix);
             if statementNext < 0 { failAt(source, skipTrivia(source, parsed.next, prefix), prefix, "expected ; after assignment to " + name); }
             position = statementNext;
+            assignedCode := assignValueCode(target, entry.kind, parsed.kind, parsed.code);
             listLib.pushBack(mut locals, (name = entry.name, runtime = entry.runtime, kind = entry.kind,
-                mutable = true, writable = entry.writable, depth = entry.depth, constant = false, code = parsed.code,
+                mutable = true, writable = entry.writable, depth = entry.depth, constant = false, code = assignedCode,
                 intValue = parsed.intValue, textValue = parsed.textValue));
             if currentLive and not currentStopped { listLib.pushBack(mut items, (kind = "Assign" + storageKind(entry.kind), name = name, runtime = entry.runtime,
-                code = copiedValueCode(target, entry.kind, parsed.code), intValue = parsed.intValue, textValue = itemTextPayload(parsed))); }
+                code = assignedCode, intValue = parsed.intValue, textValue = itemTextPayload(parsed))); }
             continue;
         }
         expression := parseExpressionItem(target, source, nameStart, prefix, locals, functions, functionParams, currentName,

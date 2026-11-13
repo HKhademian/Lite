@@ -162,12 +162,9 @@ Keep dependencies explicit; split a topic further when its contracts warrant it.
   if assignments and rejects statement-bearing value blocks cleanly). Function
   completion checking over currently admitted statement forms is recorded
   separately below.
-- [ ] **Tuple shapes:** unnamed/mixed/unit/singleton tuples, shorthand fields,
-  positional reads, destructuring, receiving-label conversion and display.
-  Preserve ordinary labels independently of JS object syntax: T00 prints 7 for
-  `p := (__proto__ = 7); outputLine(p.__proto__);`, while generated TS currently
-  prints [object Object]. Tuple construction/default lowering needs computed
-  property keys for the special prototype-setter spelling.
+- [x] **Tuple shapes:** unnamed/mixed/unit/singleton tuples, shorthand fields,
+  positional reads, destructuring, receiving-label conversion, display, and
+  `["__proto__"]` computed property keys (TS).
 - [ ] **Fixed arrays:** inferred/explicit extents, function contracts, aliases,
   copies and indexed/sequence access. Keep array/List distinctions in function
   tails: T00 rejects `f := fn(): List<Int> { [1, 2] }` as an array result,
