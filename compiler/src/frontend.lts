@@ -1508,6 +1508,7 @@ parseBinary := fn(target: String, source: String, position: Int, prefix: String,
             var count := 0;
             loop cursor < textLib.length(source) and textLib.at(source, cursor) =!= ")" {
                 var label := "";
+                var valueStart := cursor;
                 var value := intParsed("", 0, true, cursor);
                 if isSingleEquals(source, cursor) {
                     nameStart := skipTrivia(source, cursor + 1, prefix);
@@ -1520,6 +1521,7 @@ parseBinary := fn(target: String, source: String, position: Int, prefix: String,
                     if listLib.listContainsText(labels, label) {
                         failAt(source, nameStart, prefix, "duplicate tuple field " + label);
                     }
+                    valueStart = nameStart;
                     fieldExpected := if isTupleKind(expected) { tupleFieldKind(expected, label) } else { "" };
                     value = self(target, source, nameStart, prefix, locals, functions, params, currentName, fieldExpected, 30);
                 } else if cursor < textLib.length(source) and textLib.isNameStart(textLib.at(source, cursor)) {
@@ -1531,9 +1533,9 @@ parseBinary := fn(target: String, source: String, position: Int, prefix: String,
                         if listLib.listContainsText(labels, label) {
                             failAt(source, cursor, prefix, "duplicate tuple field " + label);
                         }
-                        exprStart := skipTrivia(source, afterName + 1, prefix);
+                        valueStart = skipTrivia(source, afterName + 1, prefix);
                         fieldExpected := if isTupleKind(expected) { tupleFieldKind(expected, label) } else { "" };
-                        value = self(target, source, exprStart, prefix, locals, functions, params, currentName, fieldExpected, 0);
+                        value = self(target, source, valueStart, prefix, locals, functions, params, currentName, fieldExpected, 0);
                     } else {
                         fieldExpected := if isTupleKind(expected) and count < tupleComponentCount(expected) { tupleComponent(expected, count).kind } else { "" };
                         value = self(target, source, cursor, prefix, locals, functions, params, currentName, fieldExpected, 0);
@@ -1543,14 +1545,14 @@ parseBinary := fn(target: String, source: String, position: Int, prefix: String,
                     value = self(target, source, cursor, prefix, locals, functions, params, currentName, fieldExpected, 0);
                 }
                 if isTupleKind(value.kind) {
-                    failAt(source, cursor, prefix, "nested tuple values are not supported");
+                    failAt(source, valueStart, prefix, "nested tuple values are not supported");
                 }
                 if isListKind(value.kind) {
-                    failAt(source, cursor, prefix, "list values inside tuples are not supported");
+                    failAt(source, valueStart, prefix, "list values inside tuples are not supported");
                 }
                 if value.kind == "Unit" {
                     failName := if label =!= "" { label } else { integer.intText(count) };
-                    failAt(source, cursor, prefix, "tuple field " + failName + " cannot be Unit");
+                    failAt(source, valueStart, prefix, "tuple field " + failName + " cannot be Unit");
                 }
                 listLib.pushBack(mut labels, label);
                 listLib.pushBack(mut codes, value.code);

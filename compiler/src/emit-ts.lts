@@ -87,8 +87,7 @@ displayValueCode := fn(kind: String, code: String): String {
             result = result + " + " + tsLiteral.textLiteralCode(prefixText) + " + " + self(comp.kind, "value." + comp.prop);
             index = index + 1;
         }
-        firstComp := frontend.tupleComponent(kind, 0);
-        ending := if count == 1 and firstComp.label == "" { ",)" } else { ")" };
+        ending := if count == 1 { ",)" } else { ")" };
         return "((value: " + tsFunctionType(kind) + "): string => " + result + " + " + tsLiteral.textLiteralCode(ending) + ")(" + code + ")";
     }
     code
