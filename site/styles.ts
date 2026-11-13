@@ -310,18 +310,18 @@ a:hover { text-decoration: underline; }
 .btn-primary:hover { filter: brightness(1.06); }
 
 .quickstart {
-  --shell-bg: #16181D;
-  --shell-head: #20232B;
-  --shell-border: #2C313C;
-  --shell-ink: #ECEAE4;
-  --shell-muted: #8E95A5;
-  --shell-prompt: #F0B45A;
-  --shell-cmd: #93C5FD;
+  --shell-bg: #FBFAF7;
+  --shell-head: #ECE8DF;
+  --shell-border: #D5CEC0;
+  --shell-ink: #17191E;
+  --shell-muted: #646873;
+  --shell-prompt: #C97B14;
+  --shell-cmd: #0D6678;
   background: var(--shell-bg);
   border: 1px solid var(--shell-border);
   border-radius: var(--radius);
   overflow: hidden;
-  box-shadow: 0 8px 24px rgba(16, 17, 19, 0.12);
+  box-shadow: 0 6px 18px rgba(16, 17, 19, 0.06), inset 0 1px 0 rgba(255, 255, 255, 0.8);
 }
 .quickstart-head {
   display: flex;
@@ -365,9 +365,6 @@ a:hover { text-decoration: underline; }
 .quickstart-body code {
   display: block;
 }
-.shell-line {
-  display: block;
-}
 .shell-line::before {
   content: "$ ";
   color: var(--shell-prompt);
@@ -383,6 +380,7 @@ a:hover { text-decoration: underline; }
     --shell-bg: #0E1015;
     --shell-head: #151820;
     --shell-border: #2A303C;
+    --shell-ink: #ECEAE4;
     --shell-muted: #8B93A3;
     --shell-prompt: #BFD7FF;
     --shell-cmd: #F0B45A;
@@ -393,6 +391,7 @@ a:hover { text-decoration: underline; }
   --shell-bg: #0E1015;
   --shell-head: #151820;
   --shell-border: #2A303C;
+  --shell-ink: #ECEAE4;
   --shell-muted: #8B93A3;
   --shell-prompt: #BFD7FF;
   --shell-cmd: #F0B45A;
