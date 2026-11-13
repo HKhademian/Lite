@@ -1,0 +1,24 @@
+{
+  "id": "sample.eml-play",
+  "kind": "sample",
+  "source": {
+    "file": "../../../samples/eml-play.lts",
+    "hash": "sha256:ccbfc34cae57894b1f490a3769dc6d437919de63d09f2a018f1608ef9fdeacd2"
+  },
+  "features": [
+    "num.float",
+    "io.report",
+    "function.recursion"
+  ],
+  "description": "Runs the EML stack machine and expression converter demo.",
+  "cases": [
+    {
+      "name": "eml-demo",
+      "stdout": {
+        "text": "=== 1. EML Stack Machine (Morse / Bit Stream) ===\nstream: - | 1 | status: valid | depth: 1 | underflows: 0\n  TOS = 1\nstream: . | underflow eml(1,1) | status: loose | depth: 1 | underflows: 2\n  TOS = 2.7182818284590446\nstream: --. | eml(1,1) = e | status: valid | depth: 1 | underflows: 0\n  TOS = 2.7182818284590446\nstream: ---. | 1, eml(1,1) | status: loose | depth: 2 | underflows: 0\n  TOS = 2.7182818284590446\nstream: ---.-.. | 0 = eml(1, exp(e)) | status: valid | depth: 1 | underflows: 0\n  TOS = 0\nstream: 1110100 | bits: 0 = 1110100 | status: valid | depth: 1 | underflows: 0\n  TOS = 0\n\n=== 2. EML Converter (Expression -> EML Tree & Stream -> Stack Eval) ===\nexpr: 1\n  tree  = 1\n  morse = -\n  bits  = 1\n  eval  = valid | ops: 1\n  TOS   = 1\nexpr: e\n  tree  = eml(1, 1)\n  morse = --.\n  bits  = 110\n  eval  = valid | ops: 3\n  TOS   = 2.7182818284590446\nexpr: 0\n  tree  = eml(1, eml(eml(1, 1), 1))\n  morse = ---.-..\n  bits  = 1110100\n  eval  = valid | ops: 7\n  TOS   = 0\nexpr: exp(1)\n  tree  = eml(1, 1)\n  morse = --.\n  bits  = 110\n  eval  = valid | ops: 3\n  TOS   = 2.7182818284590446\nexpr: ln(e)\n  tree  = eml(1, eml(eml(1, eml(1, 1)), 1))\n  morse = ----..-..\n  bits  = 111100100\n  eval  = valid | ops: 9\n  TOS   = 1\nexpr: -1\n  tree  = eml(eml(1, eml(eml(1, eml(1, eml(1, 1))), 1)), eml(eml(1, 1), 1))\n  morse = -----...-..--.-..\n  bits  = 11111000100110100\n  eval  = valid | ops: 17\n  TOS   = -1.0000000000000004\nexpr: 2 + 3\n  tree  = eml(eml(1, eml(eml(1, eml(eml(1, eml(eml(1, 1), 1)), eml(eml(eml(1, eml(eml(1, eml(1, eml(1, 1))), 1)), eml(eml(1, 1), 1)), 1))), 1)), eml(eml(eml(1, eml(eml(1, eml(eml(1, eml(eml(1, 1), 1)), eml(eml(eml(1, eml(eml(1, eml(eml(1, eml(eml(1, 1), 1)), eml(eml(eml(1, eml(eml(1, eml(1, eml(1, 1))), 1)), eml(eml(1, 1), 1)), 1))), 1)), eml(eml(eml(1, eml(eml(1, eml(1, eml(1, 1))), 1)), eml(eml(1, 1), 1)), 1)), 1))), 1)), eml(1, 1)), 1))\n  morse = -----.-..-----...-..--.-..-...-..-----.-..-----.-..-----...-..--.-..-...-..-----...-..--.-..-..-...-..--..-..\n  bits  = 1111101001111100010011010010001001111101001111101001111100010011010010001001111100010011010010010001001100100\n  eval  = valid | ops: 109\n  TOS   = 5\nexpr: 6 / 2\n  tree  = eml(eml(eml(1, eml(eml(1, eml(1, eml(eml(1, eml(eml(1, eml(eml(1, eml(eml(1, eml(eml(1, eml(eml(1, eml(eml(1, eml(eml(1, eml(eml(1, eml(eml(1, eml(eml(1, 1), 1)), eml(eml(eml(1, eml(eml(1, eml(1, eml(1, 1))), 1)), eml(eml(1, 1), 1)), 1))), 1)), eml(eml(eml(1, eml(eml(1, eml(1, eml(1, 1))), 1)), eml(eml(1, 1), 1)), 1))), 1)), eml(eml(eml(1, eml(eml(1, eml(1, eml(1, 1))), 1)), eml(eml(1, 1), 1)), 1))), 1)), eml(eml(eml(1, eml(eml(1, eml(1, eml(1, 1))), 1)), eml(eml(1, 1), 1)), 1))), 1)), eml(eml(eml(1, eml(eml(1, eml(1, eml(1, 1))), 1)), eml(eml(1, 1), 1)), 1))), 1))), 1)), eml(eml(1, eml(eml(1, eml(eml(1, eml(eml(1, 1), 1)), eml(eml(eml(1, eml(eml(1, eml(1, eml(1, 1))), 1)), eml(eml(1, 1), 1)), 1))), 1)), 1)), 1)\n  morse = ---------------.-..-----...-..--.-..-...-..-----...-..--.-..-...-..-----...-..--.-..-...-..-----...-..--.-..-...-..-----...-..--.-..-...-...-..-----.-..-----...-..--.-..-...-..-..-.\n  bits  = 1111111111111110100111110001001101001000100111110001001101001000100111110001001101001000100111110001001101001000100111110001001101001000100010011111010011111000100110100100010010010\n  eval  = valid | ops: 181\n  TOS   = 3\nexpr: 2 * 3 - 1\n  tree  = eml(eml(1, eml(eml(1, eml(eml(eml(1, eml(eml(1, eml(1, eml(eml(1, eml(eml(1, eml(eml(1, 1), 1)), eml(eml(eml(1, eml(eml(1, eml(1, eml(1, 1))), 1)), eml(eml(1, 1), 1)), 1))), 1))), 1)), eml(eml(eml(1, eml(eml(1, eml(eml(1, eml(eml(1, 1), 1)), eml(eml(1, eml(eml(1, eml(eml(1, eml(eml(1, eml(eml(1, eml(eml(1, 1), 1)), eml(eml(eml(1, eml(eml(1, eml(1, eml(1, 1))), 1)), eml(eml(1, 1), 1)), 1))), 1)), eml(eml(eml(1, eml(eml(1, eml(1, eml(1, 1))), 1)), eml(eml(1, 1), 1)), 1))), 1)), 1))), 1)), eml(1, 1)), 1)), 1)), 1)), eml(1, 1))\n  morse = ---------.-..-----...-..--.-..-...-...-..-----.-..-------.-..-----...-..--.-..-...-..-----...-..--.-..-...-..-...-..--..-..-..-..--..\n  bits  = 1111111110100111110001001101001000100010011111010011111110100111110001001101001000100111110001001101001000100100010011001001001001100\n  eval  = valid | ops: 133\n  TOS   = 5\n",
+        "hash": "sha256:185bc35cbfeebb9026baee1136ef1459433241c7bd0af63773517ceba86b170e"
+      },
+      "exitCode": 0
+    }
+  ]
+}

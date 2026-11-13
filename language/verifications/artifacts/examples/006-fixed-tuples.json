@@ -3,7 +3,7 @@
   "kind": "example",
   "source": {
     "file": "../../../examples/006-fixed-tuples.lts",
-    "hash": "sha256:a62a877339247cc45ce0041cc3a23cbe28d33b51ed2a22ccbd2f59528816b2bf"
+    "hash": "sha256:d20bddb2fd44078921e75a421432ba2eac67aad597d7097034bdea0571ebe433"
   },
   "features": [
     "tuple.shape",

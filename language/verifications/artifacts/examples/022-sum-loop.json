@@ -1,0 +1,25 @@
+{
+  "id": "example.022-sum-loop",
+  "kind": "example",
+  "source": {
+    "file": "../../../examples/022-sum-loop.lts",
+    "hash": "sha256:09ad619d50f5fbf1196596a8e1a3bbe351735725f690987501d0bd0eb3d794ee"
+  },
+  "features": [
+    "bool.conditions",
+    "int.arithmetic",
+    "io.report",
+    "scope.locals"
+  ],
+  "description": "Sums integers from 1 to 5 using a loop and branch.",
+  "cases": [
+    {
+      "name": "sum-one-to-five",
+      "stdout": {
+        "text": "sum(1..5) = 15\n",
+        "hash": "sha256:ad0c5d72e009065cd2a8270419536be91baa383cc7a4541f66e02f67c7037a30"
+      },
+      "exitCode": 0
+    }
+  ]
+}

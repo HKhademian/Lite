@@ -3,7 +3,7 @@
   "kind": "feature",
   "source": {
     "file": "num-widths.lts",
-    "hash": "sha256:a3ef4f767465d81a2958b618082ff6f6c6befe6e03a321d90a8889dd897e55a5"
+    "hash": "sha256:a54cc7a7758354c35efb5bd6e6808804fee3460bca9aadc470c487974dea705a"
   },
   "features": [
     "num.widths"

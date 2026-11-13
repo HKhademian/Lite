@@ -1,0 +1,24 @@
+{
+  "id": "sample.eml",
+  "kind": "sample",
+  "source": {
+    "file": "../../../samples/eml.lts",
+    "hash": "sha256:05fc0c820928d6eeced852aecb82e1b23a0dc0fa27d89f119af74d5fb985e987"
+  },
+  "features": [
+    "num.float",
+    "io.report",
+    "function.recursion"
+  ],
+  "description": "EML complex library, stack machine, and expression converter module.",
+  "cases": [
+    {
+      "name": "module-compile",
+      "stdout": {
+        "text": "",
+        "hash": "sha256:e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+      },
+      "exitCode": 0
+    }
+  ]
+}

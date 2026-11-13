@@ -3,7 +3,7 @@
   "kind": "example",
   "source": {
     "file": "../../../examples/008-named-tuples.lts",
-    "hash": "sha256:fcf10484649b31ced7aeb0117c8b67929390487b5312743d512d1769f8dc035e"
+    "hash": "sha256:79a4d57b15451c17c628a4aa6d18ae84cb9d7095f8649755a8131c96179fa7de"
   },
   "features": [
     "tuple.shape",

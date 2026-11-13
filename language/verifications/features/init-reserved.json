@@ -3,7 +3,7 @@
   "kind": "feature",
   "source": {
     "file": "init-reserved.lts",
-    "hash": "sha256:222af53e881b21b95fe086e7c27b47359f8df7521f2c3cbba7d342740baddba1"
+    "hash": "sha256:f425f0961ca44f5a220df2b42a0f9e4e94ac1460e9161412fe16080d6ecb2fd5"
   },
   "features": [
     "init.reserved"

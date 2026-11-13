@@ -3,7 +3,7 @@
   "kind": "feature",
   "source": {
     "file": "loop-value.lts",
-    "hash": "sha256:49df4498e16cd8e2cc0e27d0e096edde431986ee8ba86b134354bf2db62c3d52"
+    "hash": "sha256:63a94a4140985daf82c971c44f1e4820c159a6bc783e1246f6ffaaf4780f6ad0"
   },
   "features": [
     "loop.value"

@@ -3,7 +3,7 @@
   "kind": "feature",
   "source": {
     "file": "mut-inferred.lts",
-    "hash": "sha256:c45da179ce858d5e29388074fe9fb5966726c0e4e4c320c9c76c542772252a0f"
+    "hash": "sha256:8cfc57f8a9b61a225fe778524d2ba6cdfa0d27f4f0072b48c908ddf18ca2cf75"
   },
   "features": [
     "mut.inferred"

@@ -3,7 +3,7 @@
   "kind": "feature",
   "source": {
     "file": "scope-compound.lts",
-    "hash": "sha256:91905cc0f53d30198e4193af89cd61d6a134d7417f077e49b20da36696ede03a"
+    "hash": "sha256:96649e28069b34e560a1b0804303e2eecf283aa65e72f578ebe2db091575f044"
   },
   "features": [
     "scope.compound"

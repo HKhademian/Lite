@@ -5,6 +5,7 @@ import { existsSync, mkdirSync, readFileSync, readdirSync, renameSync, statSync,
 import { dirname, isAbsolute, relative, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { buildCompiler, compileTs } from '../compiler/host.ts';
+import { displaySourcePath } from '../compiler/source.ts';
 import { seed } from '../compiler/bootstrap/seed.ts';
 import { streamBytes as resolveStreamBytes } from '../tools/streams.ts';
 
@@ -508,9 +509,9 @@ function coverage(features: ReadonlyMap<string, RegistryEntry>, items: readonly 
     if (!existsSync(path)) return 0;
     return readdirSync(path).filter(name => name.endsWith('.lts')).length;
   };
-  const examples = sourceCount('examples');
-  const samples = sourceCount('samples');
-  const showcases = sourceCount('showcases');
+  const examples = sourceCount('language/examples');
+  const samples = sourceCount('language/samples');
+  const showcases = sourceCount('language/showcases');
   process.stdout.write(`features: ${features.size} registered, ${counts('feature')} cases\n`);
   process.stdout.write(`examples: ${counts('example')}/${examples} manifests\n`);
   process.stdout.write(`samples: ${counts('sample')}/${samples} manifests\n`);
@@ -649,7 +650,7 @@ function main(): void {
       processScenarios(() => { throw new Error('cached scenario unexpectedly executed'); });
     } else {
       try {
-        const compiled = sourcePath === undefined ? compileTs({ text: source }) : compileTs({ text: source, name: sourcePath });
+        const compiled = sourcePath === undefined ? compileTs({ text: source }) : compileTs({ text: source, name: displaySourcePath(sourcePath), rootPath: sourcePath });
         if (compiled.status !== 0) throw new Error(`compiler exited ${compiled.status}: ${compiled.stderr.toString('utf8').trim()}`);
         withTsArtifact(compiled.stdout.toString('utf8'), run => {
           processScenarios(scenario => runGenerated(run, scenario, dirname(item.file)));

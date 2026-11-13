@@ -3,7 +3,7 @@
   "kind": "example",
   "source": {
     "file": "../../../examples/011-tuple-label-conversion.lts",
-    "hash": "sha256:f5c996d9fcab80082bfef10eb82ce05b231a99c43821fabf52749db9e01d9e84"
+    "hash": "sha256:d7887335ecb36d1c6ba3e58fef747daa8c9cbde43637accfe58242a9295a6953"
   },
   "features": [
     "tuple.shape",

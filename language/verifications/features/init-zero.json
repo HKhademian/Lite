@@ -3,7 +3,7 @@
   "kind": "feature",
   "source": {
     "file": "init-zero.lts",
-    "hash": "sha256:6d197b05d74347eb21243d0ecff69986762a2ab7d6693f85dc7416d372767aa6"
+    "hash": "sha256:87d14d4e571f66c603e048e27a5c6f69bea3628b9e2d51ade0c4ba6083097842"
   },
   "features": [
     "init.zero"
