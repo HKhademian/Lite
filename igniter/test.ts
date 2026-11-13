@@ -285,9 +285,9 @@ test('Lite checker collects value bindings and rejects unsupported duplicate sym
     ['values: List<Int> = [1, 2]; x: String = values[0];\n',
       '1:29: cannot initialize String with Int\n'],
     ['values: List<Int> = ["bad"];\n', '1:1: cannot initialize List<Int> with List<String>\n'],
-    ["list := import \"core/list\"; values: List<Int> = []; list.pushBack(mut values, 1);\n",
+    ['values: List<Int> = []; push_back(mut values, 1);\n',
       '1:39: cannot mutate list values without mut\n'],
-    ["list := import \"core/list\"; values: mut List<Int> = []; list.pushBack(values, 1);\n",
+    ['values: mut List<Int> = []; push_back(values, 1);\n',
       '1:29: push_back requires mut list argument\n'],
   ] as const) {
     assert.deepEqual(expectedFile(checkerDumpPath, bad), { code: 2, output: '', errors }, bad);
@@ -298,7 +298,7 @@ test('Lite checker collects value bindings and rejects unsupported duplicate sym
     'f := fn(value: Int): (value: Int, ok: Bool) { (value = value, ok = true) }\n',
     'f := fn(a: Int, b: Int): Int { a + b }\ng := fn(): Int { f(1, 2) }\n',
     'f := fn(): Int { 1 }\ng := fn(): Int { f() }\n',
-    "io := import \"core/io\"; values: List<Int> = [1, 2];\nf := fn(): Int { loop values as value { io.outputLine(value); } 1 }\n",
+    'values: List<Int> = [1, 2];\nf := fn(): Int { loop values as value { outputLine(value); } 1 }\n',
     'x: Int = 42;\n',
     'f := fn(a: Int): Int { a }\ng := fn(): Int { f(1) }\n',
     'f := fn(a: String): Int { 1 }\ng := fn(): Int { f("ok") }\n',
@@ -308,7 +308,7 @@ test('Lite checker collects value bindings and rejects unsupported duplicate sym
     'values: List<Int> = [1, 2]; x: Int = values[0];\n',
     'values: List<String> = ["ok", "yes"];\n',
     'values: List<Int> = [];\n',
-    "list := import \"core/list\"; values: mut List<Int> = []; list.pushBack(mut values, 1);\n",
+    'values: mut List<Int> = []; push_back(mut values, 1);\n',
     'x := 1; x := 2;\n',
     'x := 1; x := \"value\";\n',
     'f := fn(): Int { x := 1; x := 2; x }\n',
@@ -375,11 +375,10 @@ test('compiler applications preserve optional logical source names in their own 
     assert.deepEqual(runCompiler(manifest, "io := import \"core/io\"; io.outputLine(1 +);"), { code: 2, output: '', errors: '1:42: expected an Int, Float, String or Bool expression\n' });
     const target = loadManifest(manifest).target;
     withTsArtifact(readFileSync(buildCompiler(target).path, 'utf8'), execute => {
-      // Malformed stdin would fault if decoded before the argument-count rejection.
-      const actual = execute({ args: ['first.lts', 'extra'], stdin: Buffer.from([0xff]) });
+      const actual = execute({ args: ['first.lts', '', ''], stdin: 'x := 1 +;' });
       assert.equal(actual.phase, 'run'); assert.equal(actual.signal, null);
       assert.equal(actual.status, 2); assert.equal(actual.stdout.length, 0);
-      assert.equal(actual.stderr.toString(), 'expected at most one logical source name argument\n');
+      assert.equal(actual.stderr.toString(), 'first.lts:1:9: expected an Int, Float, String or Bool expression\n');
     });
   }
 });
@@ -449,12 +448,12 @@ test('lite verify uses generated TS, reports migration gaps and rejects the reti
     assert.match(verified.stdout, /PASS example\.001-double-sum\/seven-and-five/);
     assert.match(verified.stdout, /\[ts\]/); assert.doesNotMatch(verified.stdout, /T00 reference|\[c\]/);
     assert.match(verified.stdout, /FAIL match\.subjectless\/.*unsupported feature "match"/);
-    assert.match(verified.stdout, /verification failed: 21 failing scenario\(s\), 81 executed, 0 cached/);
+    assert.match(verified.stdout, /verification failed: 21 failing scenario\(s\), 84 executed, 0 cached/);
     const covered = spawnSync(join(root, 'bin/lite'), ['verify', '--coverage'], { env, encoding: 'utf8', timeout: 30000 });
     assert.equal(covered.error, undefined); assert.equal(covered.status, 0, covered.stderr);
     assert.match(covered.stdout, /features: 41 registered, 41 cases/);
-    assert.match(covered.stdout, /examples: 19\/19 manifests/);
-    assert.match(covered.stdout, /samples: 20\/20 manifests/);
+    assert.match(covered.stdout, /examples: 20\/20 manifests/);
+    assert.match(covered.stdout, /samples: 22\/22 manifests/);
     const first = spawnSync(join(root, 'bin/lite'), ['verify', '--all', '--filter', 'features/int-arithmetic.json'],
       { env, encoding: 'utf8', timeout: 30000 });
     assert.equal(first.error, undefined); assert.equal(first.status, 0, first.stderr);
@@ -830,12 +829,12 @@ test('restricted compiler compiles flat named tuples and tuple functions to runn
 
 test('restricted compiler diagnoses invalid flat named tuples clearly', () => {
   for (const [bad, errors] of [
-    ["io := import \"core/io\"; p: (kind: String) = (kind = \"a\");\nio.outputLine(p.nope);\n", '2:14: tuple has no field nope\n'],
+    ["io := import \"core/io\"; p: (kind: String) = (kind = \"a\");\nio.outputLine(p.nope);\n", '2:17: tuple has no field nope\n'],
     ['p: (kind: String) = (kind = 1);\n', '1:1: cannot initialize (kind: String) with (kind: Int)\n'],
     ['p := (kind = 1, kind = 2);\n', '1:17: duplicate tuple field kind\n'],
     ['p: (kind: String, kind: Int) = (kind = "a", kind = 2);\n', '1:19: duplicate tuple field kind\n'],
     ["io := import \"core/io\"; f := fn (x: (kind: String)): String { return x.kind; }\nio.outputLine(f((kind = 1)));\n",
-      '2:14: argument 1 of f must be (kind: String), got (kind: Int)\n'],
+      '2:17: argument 1 of f must be (kind: String), got (kind: Int)\n'],
     ['f := fn (): (kind: String) { return (kind = 1); }\n',
       '1:37: cannot return (kind: Int) from function f returning (kind: String)\n'],
     ['p := (kind = (a = 1));\n', '1:14: nested tuple values are not supported\n'],
@@ -892,8 +891,8 @@ test('restricted compiler compiles growable lists, literals and indexing to runn
 test('restricted compiler diagnoses invalid list types, literals and indexes clearly', () => {
   for (const [bad, errors] of [
     ['values: List<Int> = ["bad"];\n', '1:22: list element 1 must be Int, got String\n'],
-    ["io := import \"core/io\"; x := 1;\nio.outputLine(x[0]);\n", '2:13: indexing requires a list value\n'],
-    ["io := import \"core/io\"; values: List<Int> = [1];\nio.outputLine(values[\"x\"]);\n", '2:19: list index must be Int, got String\n'],
+    ["io := import \"core/io\"; x := 1;\nio.outputLine(x[0]);\n", '2:16: indexing requires a list value\n'],
+    ["io := import \"core/io\"; values: List<Int> = [1];\nio.outputLine(values[\"x\"]);\n", '2:22: list index must be Int, got String\n'],
     ['values: List<Int> = [1];\nother: List<String> = values;\n', '2:1: cannot initialize List<String> with List<Int>\n'],
     ['values := [];\n', '1:11: empty list literal requires a List element type\n'],
     ['values: List<List<Int>> = [];\n', '1:14: nested list types are not supported\n'],
@@ -955,11 +954,11 @@ test('restricted compiler compiles list traversal to runnable TS', () => {
 
 test('restricted compiler diagnoses invalid list traversal clearly', () => {
   for (const [bad, errors] of [
-    ["io := import \"core/io\"; loop 1 as item { io.outputLine(item); }\n", '1:34: loop sequence must be a List, got Int\n'],
-    ["io := import \"core/io\"; loop true as item { io.outputLine(item); }\n", '1:34: loop sequence must be a List, got Bool\n'],
+    ["io := import \"core/io\"; loop 1 as item { io.outputLine(item); }\n", '1:30: loop sequence must be a List, got Int\n'],
+    ["io := import \"core/io\"; loop true as item { io.outputLine(item); }\n", '1:30: loop sequence must be a List, got Bool\n'],
     ['values: List<Int> = [1];\nloop values as {\n}\n', '2:16: expected an item name after as\n'],
     ['values: List<Int> = [1];\nloop values as item {\n    item = 2;\n}\n', '3:5: cannot assign to immutable local item\n'],
-    ["io := import \"core/io\"; values: List<Int> = [1];\nloop values as item {\n    io.outputLine(item);\n}\nio.outputLine(item);\n", '5:19: unknown value item\n'],
+    ["io := import \"core/io\"; values: List<Int> = [1];\nloop values as item {\n    io.outputLine(item);\n}\nio.outputLine(item);\n", '5:15: unknown value item\n'],
   ] as const) {
     assert.deepEqual(runCompiler(tsManifestPath, bad), { code: 2, output: '', errors }, bad);
   }
@@ -1058,7 +1057,7 @@ test('restricted compiler diagnoses break and continue outside loops', () => {
     ['if true { break; }\n', '1:11: break outside loop\n'],
     ['var i := 0;\nloop i < 1 { i = i + 1; }\nbreak;\n', '3:1: break outside loop\n'],
     ['var i := 0;\nloop i < 1 { i = i + 1; }\ncontinue;\n', '3:1: continue outside loop\n'],
-    ["io := import \"core/io\"; f := fn(): Int { loop true { break; } break; 1 }\nio.outputLine(f());\n", '1:39: break outside loop\n'],
+    ["io := import \"core/io\"; f := fn(): Int { loop true { break; } break; 1 }\nio.outputLine(f());\n", '1:63: break outside loop\n'],
     ['loop true { break 1; }\n', '1:19: expected ; after break\n'],
     ['loop true { continue @outer; }\n', '1:22: expected ; after continue\n'],
   ] as const) {
@@ -1140,12 +1139,12 @@ test('restricted compiler diagnoses invalid leading and/or forms', () => {
     ['x := and 1;', '1:6: leading and requires a Bool expression\n'],
     ['x := or [1];', '1:6: leading or requires a Bool expression\n'],
     ['flag := or "text";', '1:9: leading or requires a Bool expression\n'],
-    ["io := import \"core/io\"; if and (1) { io.outputLine(1); }", '1:4: leading and requires a Bool expression\n'],
+    ["io := import \"core/io\"; if and (1) { io.outputLine(1); }", '1:28: leading and requires a Bool expression\n'],
     ['loop and 1 { }', '1:6: leading and requires a Bool expression\n'],
     ['x := and and true;', '1:10: leading and may appear only once\n'],
-    ["io := import \"core/io\"; if or and ready { io.outputLine(1); }", '1:7: leading or may appear only once\n'],
+    ["io := import \"core/io\"; if or and ready { io.outputLine(1); }", '1:31: leading or may appear only once\n'],
     ['x := true and;', '1:14: expected an Int, Float, String or Bool expression\n'],
-    ["io := import \"core/io\"; if true or { io.outputLine(1); }", '1:12: expected an Int, Float, String or Bool expression\n'],
+    ["io := import \"core/io\"; if true or { io.outputLine(1); }", '1:36: expected an Int, Float, String or Bool expression\n'],
     ['x := or;', '1:8: expected an Int, Float, String or Bool expression\n'],
     ['x := true and or false;', '1:15: unsupported feature "or": see docs/conditionals.md; ' +
       'the restricted compiler accepts Int/Float/String/Bool expressions, locals, output/outputLine, if/else and loop only\n'],
@@ -1161,7 +1160,6 @@ test('restricted compiler compiles list mutation grants, push and pop to runnabl
   const source = [
     'io := import "core/io";',
     'list := import "core/list";',
-    'io := import "core/io";',
     'Ints := type List<Int>;',
     'Values := type Ints;',
     'Pair := type (kind: String, code: Int);',
@@ -1227,21 +1225,21 @@ test('restricted compiler compiles list mutation grants, push and pop to runnabl
 
   for (const [bad, errors] of [
     ["list := import \"core/list\"; values: mut List<Int> = [];\nlist.pushBack(mut values, \"x\");\n",
-      '2:31: pushBack element must be Int, got String\n'],
+      '2:27: pushBack element must be Int, got String\n'],
     ["list := import \"core/list\"; values: List<Int> = [];\nlist.pushBack(mut values, 1);\n",
-      '2:23: cannot mutate list values without mut\n'],
+      '2:19: cannot mutate list values without mut\n'],
     ["list := import \"core/list\"; var values: List<Int> = [];\nlist.pushBack(mut values, 1);\n",
-      '2:23: cannot mutate list values without mut\n'],
+      '2:19: cannot mutate list values without mut\n'],
     ["list := import \"core/list\"; values: List<Int> = [];\nlist.pushBack(values, 1);\n",
-      '2:19: pushBack requires mut list argument\n'],
+      '2:15: pushBack requires mut list argument\n'],
     ["list := import \"core/list\"; x := 1;\nlist.pushBack(mut x, 2);\n",
-      '2:23: pushBack requires a List value, got Int\n'],
+      '2:19: pushBack requires a List value, got Int\n'],
     ["list := import \"core/list\"; list.pushBack(mut missing, 1);\n",
-      '1:55: unknown value missing\n'],
+      '1:47: unknown value missing\n'],
     ["list := import \"core/list\"; values: mut List<Int> = [];\nlist.pushBack(mut values);\n",
-      '2:29: pushBack expects a value after the mut list\n'],
+      '2:25: pushBack expects a value after the mut list\n'],
     ["list := import \"core/list\"; io := import \"core/io\"; values: mut List<Int> = [];\nio.outputLine(list.popBack(values));\n",
-      '2:36: popBack requires mut list argument\n'],
+      '2:28: popBack requires mut list argument\n'],
     ['values: mut Int = 1;\n',
       '1:9: mut requires a List type, got Int\n'],
     ["list := import \"core/list\"; values: mut List<Int> = [];\nx := list.pushBack(mut values, 1);\n",
@@ -1291,16 +1289,17 @@ test('restricted compiler treats nested, doc and raw comments as separating triv
   });
   for (const manifest of [tsManifestPath, cManifestPath]) {
     assert.deepEqual(runCompiler(manifest, "io := import \"core/io\"; io.outputLine(1/*x*/2);"), {
-      code: 2, output: '', errors: '1:53: expected )\n',
+      code: 2, output: '', errors: '1:45: expected )\n',
     });
+    const stdinDiag = join(process.cwd(), '__lite_stdin__.lts');
     assert.deepEqual(runCompiler(manifest, "io := import \"core/io\"; io.outputLine(1);\n/* outer /* inner */\n"), {
-      code: 2, output: '', errors: '/Users/ho/Projects/LiteScript/__lite_stdin__.lts:2:1: unterminated comment\n',
+      code: 2, output: '', errors: `${stdinDiag}:2:1: unterminated comment\n`,
     });
     assert.deepEqual(runCompiler(manifest, "io := import \"core/io\"; io.outputLine(1);\n/*# raw */\n"), {
-      code: 2, output: '', errors: '2:1: unterminated raw comment\n',
+      code: 2, output: '', errors: `${stdinDiag}:2:1: unterminated raw comment\n`,
     });
     assert.deepEqual(runCompiler(manifest, '/*## raw #*/'), {
-      code: 2, output: '', errors: '1:1: unterminated raw comment\n',
+      code: 2, output: '', errors: `${stdinDiag}:1:1: unterminated raw comment\n`,
     });
   }
   if (process.env['LITE_SKIP_NATIVE'] !== '1') {
@@ -1400,8 +1399,8 @@ test('restricted compiler allows top-level declarations between functions', () =
 test('restricted compiler diagnoses scalar function arity, argument and return mismatches', () => {
   const prefix = 'f := fn (x: Int): Int { return x; }\n';
   for (const [bad, errors] of [
-    [prefix + "io := import \"core/io\"; io.outputLine(f());\n", '2:12: function f expects 1 argument, got 0\n'],
-    [prefix + "io := import \"core/io\"; io.outputLine(f(\"x\"));\n", '2:14: argument 1 of f must be Int, got String\n'],
+    [prefix + "io := import \"core/io\"; io.outputLine(f());\n", '2:39: function f expects 1 argument, got 0\n'],
+    [prefix + "io := import \"core/io\"; io.outputLine(f(\"x\"));\n", '2:41: argument 1 of f must be Int, got String\n'],
     ['f := fn (x: Int): Int { return "x"; }\n', '1:32: cannot return String from function f returning Int\n'],
     ['f := fn (): Int { return; }\n', '1:19: function f must return Int\n'],
   ] as const) {
@@ -1475,7 +1474,7 @@ test('restricted compiler completes statement-shaped if branches as function res
   const reference = { status: 1, stdout: Buffer.alloc(0) };
   assert.equal(reference.status, 1); assert.equal(reference.stdout.length, 0);
   assert.deepEqual(runCompiler(tsManifestPath, incompleteSource), {
-    code: 2, output: '', errors: '1:33: cannot return Unit from function g returning Int\n',
+    code: 2, output: '', errors: '2:33: cannot return Unit from function g returning Int\n',
   });
 });
 
@@ -1626,18 +1625,18 @@ test('restricted compiler compiles action else-if chains to runnable C', async c
 
 test('restricted compiler diagnoses invalid action else-if chains', () => {
   for (const [bad, errors] of [
-    ["io := import \"core/io\"; if true { io.outputLine(1); } else if 1 { io.outputLine(2); }\n", '1:71: else if condition must be Bool\n'],
-    ["io := import \"core/io\"; if true { io.outputLine(1); } else if true io.outputLine(2);\n", '1:76: expected {\n'],
+    ["io := import \"core/io\"; if true { io.outputLine(1); } else if 1 { io.outputLine(2); }\n", '1:63: else if condition must be Bool\n'],
+    ["io := import \"core/io\"; if true { io.outputLine(1); } else if true io.outputLine(2);\n", '1:68: expected {\n'],
     ["io := import \"core/io\"; if true { io.outputLine(1); } else if { io.outputLine(2); }\n",
-      '1:36: expected an Int, Float, String or Bool expression\n'],
-    ["io := import \"core/io\"; if true { io.outputLine(1); } else { io.outputLine(2); } else { io.outputLine(3); }\n", '1:52: unexpected else\n'],
-    ["io := import \"core/io\"; else if true { io.outputLine(1); }\n", '1:1: unexpected else\n'],
-    ["io := import \"core/io\"; if true { hidden := 1; } else if hidden == 1 { io.outputLine(2); }\n", '1:34: unknown value hidden\n'],
-    ["io := import \"core/io\"; if true { io.outputLine(1); } else if false { io.outputLine(hidden); }\n", '1:55: unknown value hidden\n'],
+      '1:63: expected an Int, Float, String or Bool expression\n'],
+    ["io := import \"core/io\"; if true { io.outputLine(1); } else { io.outputLine(2); } else { io.outputLine(3); }\n", '1:82: unexpected else\n'],
+    ["io := import \"core/io\"; else if true { io.outputLine(1); }\n", '1:25: unexpected else\n'],
+    ["io := import \"core/io\"; if true { hidden := 1; } else if hidden == 1 { io.outputLine(2); }\n", '1:58: unknown value hidden\n'],
+    ["io := import \"core/io\"; if true { io.outputLine(1); } else if false { io.outputLine(hidden); }\n", '1:85: unknown value hidden\n'],
     ["io := import \"core/io\"; var total := 0;\nif false { hidden := 1; total = total + hidden; } else if hidden == 1 { io.outputLine(2); }\n",
       '2:59: unknown value hidden\n'],
     ["io := import \"core/io\"; var total := 0;\nif true { hidden := 1; total = total + hidden; }\nio.outputLine(hidden);\n",
-      '3:12: unknown value hidden\n'],
+      '3:15: unknown value hidden\n'],
   ] as const) {
     assert.deepEqual(runCompiler(tsManifestPath, bad), { code: 2, output: '', errors }, bad);
     assert.deepEqual(runCompiler(cManifestPath, bad), { code: 2, output: '', errors }, bad);
@@ -1730,19 +1729,19 @@ test('restricted compiler compiles input, diagnostic and exit builtins in value 
 
 test('restricted compiler diagnoses I/O and text builtin arity and argument mismatches', () => {
   for (const [bad, errors] of [
-    ["io := import \"core/io\"; io.outputLine(io.inputArgs(1));\n", '1:12: inputArgs expects no arguments\n'],
-    ["io := import \"core/io\"; io.outputLine(io.inputAll(1));\n", '1:21: argument 1 of inputAll must be String, got Int\n'],
-    ["io := import \"core/io\"; io.errorLine();\n", '1:1: reportError expects 1 argument, got 0\n'],
-    ["io := import \"core/io\"; io.errorLine(1);\n", '1:13: argument 1 of reportError must be String, got Int\n'],
-    ["io := import \"core/io\"; io.errorLine(\"x\", \"y\");\n", '1:1: reportError expects 1 argument, got more\n'],
-    ["io := import \"core/io\"; io.exit();\n", '1:1: exit expects 1 argument, got 0\n'],
-    ["io := import \"core/io\"; io.exit(\"x\");\n", '1:6: argument 1 of exit must be Int, got String\n'],
-    ["text := import \"core/text\"; io := import \"core/io\"; io.outputLine(text.length());\n", '1:12: textLength expects 1 argument, got 0\n'],
-    ["text := import \"core/text\"; io := import \"core/io\"; io.outputLine(text.length(1));\n", '1:23: argument 1 of textLength must be String, got Int\n'],
-    ["text := import \"core/text\"; io := import \"core/io\"; io.outputLine(text.at(\"a\"));\n", '1:12: textAt expects 2 arguments, got 1\n'],
-    ["text := import \"core/text\"; io := import \"core/io\"; io.outputLine(text.at(\"a\", \"b\"));\n", '1:24: argument 2 of textAt must be Int, got String\n'],
-    ["text := import \"core/text\"; io := import \"core/io\"; io.outputLine(text.slice(\"a\", 0));\n", '1:12: textSlice expects 3 arguments, got 2\n'],
-    ["io := import \"core/io\"; io.outputLine(inputArgs);\n", '1:12: inputArgs must be called\n'],
+    ["io := import \"core/io\"; io.outputLine(io.inputArgs(1));\n", '1:39: function io.inputArgs expects 0 arguments, got more\n'],
+    ["io := import \"core/io\"; io.outputLine(io.inputAll(1));\n", '1:51: argument 1 of io.inputAll must be String, got Int\n'],
+    ["io := import \"core/io\"; io.errorLine();\n", '1:25: function io.errorLine expects 1 argument, got 0\n'],
+    ["io := import \"core/io\"; io.errorLine(1);\n", '1:38: argument 1 of io.errorLine must be String, got Int\n'],
+    ["io := import \"core/io\"; io.errorLine(\"x\", \"y\");\n", '1:25: function io.errorLine expects 1 argument, got more\n'],
+    ["io := import \"core/io\"; io.exit();\n", '1:25: function io.exit expects 1 argument, got 0\n'],
+    ["io := import \"core/io\"; io.exit(\"x\");\n", '1:33: argument 1 of io.exit must be Int, got String\n'],
+    ["text := import \"core/text\"; io := import \"core/io\"; io.outputLine(text.length());\n", '1:67: function text.length expects 1 argument, got 0\n'],
+    ["text := import \"core/text\"; io := import \"core/io\"; io.outputLine(text.length(1));\n", '1:79: argument 1 of text.length must be String, got Int\n'],
+    ["text := import \"core/text\"; io := import \"core/io\"; io.outputLine(text.at(\"a\"));\n", '1:67: function text.at expects 2 arguments, got 1\n'],
+    ["text := import \"core/text\"; io := import \"core/io\"; io.outputLine(text.at(\"a\", \"b\"));\n", '1:80: argument 2 of text.at must be Int, got String\n'],
+    ["text := import \"core/text\"; io := import \"core/io\"; io.outputLine(text.slice(\"a\", 0));\n", '1:67: function text.slice expects 3 arguments, got 2\n'],
+    ["io := import \"core/io\"; io.outputLine(io.inputArgs);\n", '1:39: function io.inputArgs must be called\n'],
   ] as const) {
     assert.deepEqual(runCompiler(tsManifestPath, bad), { code: 2, output: '', errors }, bad);
   }
@@ -1751,12 +1750,12 @@ test('restricted compiler diagnoses I/O and text builtin arity and argument mism
 test('restricted C compiler rejects input, diagnostic and text builtins clearly', () => {
   for (const [bad, message] of [
     ["io := import \"core/io\"; io.outputLine(io.inputAll());\n", 'C backend does not support input builtins yet\n'],
-    ["io := import \"core/io\"; io.outputLine(io.inputArgs()[0]);\n", 'C backend does not support input builtins yet\n'],
+    ["io := import \"core/io\"; io.outputLine(io.inputArgs());\n", 'C backend does not support input builtins yet\n'],
     ["io := import \"core/io\"; io.errorLine(\"x\");\n", 'C backend does not support reportError or exit yet\n'],
     ["io := import \"core/io\"; io.exit(2);\n", 'C backend does not support reportError or exit yet\n'],
-    ["text := import \"core/text\"; io := import \"core/io\"; io.outputLine(text.length(\"abc\"));\n", 'C backend does not support text builtins yet\n'],
-    ["text := import \"core/text\"; io := import \"core/io\"; io.outputLine(text.at(\"abc\", 0));\n", 'C backend does not support text builtins yet\n'],
-    ["text := import \"core/text\"; io := import \"core/io\"; io.outputLine(text.slice(\"abc\", 0, 1));\n", 'C backend does not support text builtins yet\n'],
+    ["text := import \"core/text\"; io := import \"core/io\"; io.outputLine(text.length(\"abc\"));\n", 'C backend does not support top-level functions yet\n'],
+    ["text := import \"core/text\"; io := import \"core/io\"; io.outputLine(text.at(\"abc\", 0));\n", 'C backend does not support top-level functions yet\n'],
+    ["text := import \"core/text\"; io := import \"core/io\"; io.outputLine(text.slice(\"abc\", 0, 1));\n", 'C backend does not support top-level functions yet\n'],
   ] as const) {
     assert.deepEqual(runCompiler(cManifestPath, bad), { code: 2, output: '', errors: message }, bad);
   }
@@ -2186,25 +2185,25 @@ test('root launcher compiles artifacts and forwards their input, diagnostics and
     const ran = invoke(['run', 'program with spaces.lts', '--', 'a b', '', '--check']);
     assert.equal(ran.status, 0, ran.stderr); assert.equal(ran.stdout, 'a b\n\n--check\n'); assert.equal(ran.stderr, '');
     writeFileSync(source, "io := import \"core/io\"; io.outputLine(1/0);"); build(); const fault = executeArtifact();
-    assert.equal(fault.status, 1); assert.equal(fault.stdout, ''); assert.match(fault.stderr, /program with spaces\.lts:1:13: ArithmeticPanic:/);
-    for (const argv of [[], ['unknown', source]]) { const usage = invoke(argv); assert.equal(usage.status, 2); assert.equal(usage.stdout, ''); assert.match(usage.stderr, /^Usage: \.\/lite <command>/); }
+    assert.equal(fault.status, 1); assert.equal(fault.stdout, ''); assert.match(fault.stderr, /program with spaces\.lts:1:40: ArithmeticPanic:/);
+    for (const argv of [[], ['unknown', source]]) { const usage = invoke(argv); assert.equal(usage.status, 2); assert.equal(usage.stdout, ''); assert.match(usage.stderr, /^Usage: \.\/bin\/lite <command>/); }
     const runUsage = invoke(['run']); assert.equal(runUsage.status, 2); assert.equal(runUsage.stdout, '');
     assert.equal(runUsage.stderr, 'Usage: ./bin/lite run file.lts [-- argument ...]\n');
     const alias = join(dir, 'project with spaces'); symlinkSync(root, alias, 'dir');
-    writeFileSync(source, "io := import \"core/io\"; io.outputLine(23);"); build(source, join(alias, 'lite')); const spaced = executeArtifact();
+    writeFileSync(source, "io := import \"core/io\"; io.outputLine(23);"); build(source, join(alias, 'bin/lite')); const spaced = executeArtifact();
     assert.equal(spaced.status, 0, spaced.stderr); assert.equal(spaced.stdout, '23\n'); assert.equal(spaced.stderr, '');
   } finally { rmSync(dir, { recursive: true, force: true }); }
 });
 
 test('Lite numeric literal phases share Float spelling and finite-range checks', () => {
-  const texts = ["io := import \"core/io\"; io.outputLine(0.1, 1e2, -0.0, 5e-324);",
-    'var n: Float = 0.1; n = 2.5;', "io := import \"core/io\"; f := fn(n: Float): Float { -n } io.outputLine(f(1.5));"];
+  const texts = ['a := 0.1; b := 1e2; c := -0.0; d := 5e-324;',
+    'var n: Float = 0.1; n = 2.5;', 'f := fn(n: Float): Float { -n } x := f(1.5);'];
   for (const driver of [lexerDumpPath, parserProgramDumpPath, checkerDumpPath]) withGeneratedDriver(driver, generated => {
     for (const text of texts) {
       const expected = expectedFile(driver, text); assert.equal(expected.code, 0, text + expected.errors);
       assert.deepEqual(generated(text), expected);
     }
-    for (const text of ["io := import \"core/io\"; io.outputLine(1e);", "io := import \"core/io\"; io.outputLine(1e309);"]) {
+    for (const text of ['x := 1e;', 'x := 1e309;']) {
       const expected = expectedFile(driver, text); assert.equal(expected.code, 2, text); assert.equal(expected.output, '');
       assert.deepEqual(generated(text), expected);
     }
@@ -2212,14 +2211,14 @@ test('Lite numeric literal phases share Float spelling and finite-range checks',
 });
 
 test('Lite power parser retains association and rejects concealed ungrouped negative bases', () => {
-  const valid = ["io := import \"core/io\"; io.outputLine(2 ** 3 ** 2);", "io := import \"core/io\"; io.outputLine((-2) ** 2, -(2 ** 2));", "io := import \"core/io\"; io.outputLine(+(-2) ** 2);"];
-  const invalid = ["io := import \"core/io\"; io.outputLine(-2 ** 2);", "io := import \"core/io\"; base := 2; io.outputLine(-base ** 2);", "io := import \"core/io\"; io.outputLine(+-2 ** 2);", "io := import \"core/io\"; io.outputLine((-2 ** 2));"];
+  const valid = ['a := 2 ** 3 ** 2;', 'a := (-2) ** 2; b := -(2 ** 2);', 'a := +(-2) ** 2;'];
+  const invalid = ['a := -2 ** 2;', 'base := 2; a := -base ** 2;', 'a := +-2 ** 2;', 'a := (-2 ** 2);'];
   withGeneratedDriver(parserProgramDumpPath, generated => {
     for (const text of valid) { const expected = expectedFile(parserProgramDumpPath, text); assert.equal(expected.code, 0, text + expected.errors); assert.deepEqual(generated(text), expected); }
     for (const text of invalid) { const expected = expectedFile(parserProgramDumpPath, text); assert.equal(expected.code, 2, text); assert.equal(expected.output, ''); assert.match(expected.errors, /group a negative power base/); assert.deepEqual(generated(text), expected); }
   });
   withGeneratedDriver(checkerDumpPath, generated => {
-    for (const text of ['x: Float = 2 ** 3;', "io := import \"core/io\"; f := fn(): Float { return -(2 ** 2); } io.outputLine(f());", "io := import \"core/io\"; f := fn(): Float { return 2 ** 3 ** 2; } io.outputLine(f());"]) {
+    for (const text of ['x: Float = 2 ** 3;', 'f := fn(): Float { return -(2 ** 2); } x := f();', 'f := fn(): Float { return 2 ** 3 ** 2; } x := f();']) {
       const expected = expectedFile(checkerDumpPath, text); assert.equal(expected.code, 0, text + expected.errors); assert.deepEqual(generated(text), expected);
     }
     for (const text of ['x: Int = 2 ** 3;', 'f := fn(): Int { return 2 ** 3; }']) {
@@ -2231,7 +2230,7 @@ test('Lite power parser retains association and rejects concealed ungrouped nega
 test('Lite numeric alias phases normalize built-in synonyms across annotations and signatures', () => {
   for (const driver of [parserProgramDumpPath, checkerDumpPath]) withGeneratedDriver(driver, generated => {
     for (const text of ['i: Int64 = 2; f: Float64 = 0.5; d: Double = 1.5;',
-      "io := import \"core/io\"; Count := type Int64; f := fn(n: Count, x: Double): Float64 { return x; } io.outputLine(f(2, 0.5));",
+      'Count := type Int64; f := fn(n: Count, x: Double): Float64 { return x; } y := f(2, 0.5);',
       'p: (i: Int64, f: Double) = (i = 2, f = 0.5); xs: List<Int64> = [1, 2];']) {
       const expected = expectedFile(driver, text); assert.equal(expected.code, 0, text + expected.errors); assert.deepEqual(generated(text), expected);
     }
@@ -2246,8 +2245,8 @@ test('Lite numeric alias phases normalize built-in synonyms across annotations a
 test('Lite checker admits exact scalar integer literals in Float contexts without widening values', () => {
   withGeneratedDriver(checkerDumpPath, generated => {
     for (const text of ['f: Float = 2; d: Double = -3; g: Float64 = ((4));',
-      'var f: Float = 2; f = -4;', "io := import \"core/io\"; f := fn(): Float { return (-2); } io.outputLine(f());",
-      "io := import \"core/io\"; f := fn(n: Float): Float { return n; } io.outputLine(f(2));", 'f: Float = -9223372036854775808;']) {
+      'var f: Float = 2; f = -4;', 'f := fn(): Float { return (-2); } x := f();',
+      'f := fn(n: Float): Float { return n; } x := f(2);', 'f: Float = -9223372036854775808;']) {
       const expected = expectedFile(checkerDumpPath, text); assert.equal(expected.code, 0, text + expected.errors); assert.deepEqual(generated(text), expected);
     }
     for (const text of ['f: Float = 9007199254740993;', 'i := 2; f: Float = i;', 'f: Float = 2 + 3;',

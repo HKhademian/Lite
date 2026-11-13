@@ -663,9 +663,9 @@ test('namespace imports expose immutable public values but keep private values l
 test('TS artifact capture preserves repeated output, diagnostics and early exit across fresh runs', () => {
   const chunk = '🙂سلام\r\n'.repeat(128);
   const source = 'io := import "core/io"; mode := io.inputInt(); var n := 0; loop n < 512 { ' +
-    `io := import "core/io"; io.output(${JSON.stringify(chunk)}); io.errorLine(${JSON.stringify(chunk)}); n = n + 1; } ` +
-    'io := import "core/io"; io.output(io.inputAll("prompt: ")); if mode == 1 { io.exit(7); } ' +
-    'io := import "core/io"; if mode == 2 { io.outputLine(1 / 0); } io.outputLine("tail");';
+    `io.output(${JSON.stringify(chunk)}); io.errorLine(${JSON.stringify(chunk)}); n = n + 1; } ` +
+    'io.output(io.inputAll("prompt: ")); if mode == 1 { io.exit(7); } ' +
+    'if mode == 2 { io.outputLine(1 / 0); } io.outputLine("tail");';
   const compiled = compileTs({ text: source, name: 'capture.lts' });
   assert.equal(compiled.status, 0, compiled.stderr.toString());
   withTsArtifact(compiled.stdout.toString(), run => {
@@ -714,7 +714,7 @@ test('public commands compile, run and check TS artifacts without T00 and reject
     assert.equal(existsSync(join(directory, 'igniter/lite.ts')), false);
     const path = join(directory, 'program with spaces.lts');
     writeFileSync(join(directory, 'helper.lts'), 'pub twice := fn(n: Int): Int { n * 2 }');
-    writeFileSync(path, 'io := import "core/io"; helper := import "./helper.lts";\nioCore.outputLine(helper.twice(io.inputInt("n? ")));');
+    writeFileSync(path, 'io := import "core/io"; helper := import "./helper.lts";\nio.outputLine(helper.twice(io.inputInt("n? ")));');
     const compiled = spawnSync(join(directory, 'bin/lite'), ['compile', path], { env, timeout: 10000 });
     assert.equal(compiled.status, 0, compiled.stderr.toString()); assert.equal(compiled.stderr.length, 0);
     const artifact = join(directory, 'program.ts'); writeFileSync(artifact, compiled.stdout);
@@ -788,7 +788,7 @@ test('generated reports evaluate arguments once in order and preserve nested out
     { source: 'io := import "core/io"; f := fn(n: Int): Int { if n > 0 { io.outputLine(n, self(n - 1)); } n } io.outputLine(f(2));',
       stdout: '1 0\n2 1\n2\n', status: 0 },
     { source: 'io := import "core/io"; text := fn(): String { io.outputLine("text"); "🙂" } flag := fn(): Bool { io.outputLine("flag"); true } ' +
-        'io := import "core/io"; loop [1, 2] as n { io.outputLine(n, text(), flag()); }',
+        'loop [1, 2] as n { io.outputLine(n, text(), flag()); }',
       stdout: 'text\nflag\n1 🙂 true\ntext\nflag\n2 🙂 true\n', status: 0 },
     { source: 'io := import "core/io"; f := fn(): Int { io.outputLine("inner"); 7 } io.outputLine(f()); io.exit(3);',
       stdout: 'inner\n7\n', status: 3 },
@@ -812,7 +812,7 @@ test('self-hosting kernel separates root symbols from runtime initialization and
   const duplicate = compileTs({ text: 'io := import "core/io"; x := 1; x := 1; io.outputLine(x);', name: 'duplicate-root.lts' });
   assert.equal(duplicate.status, 2);
   assert.equal(duplicate.stdout.length, 0, 'rejected source must not produce an artifact');
-  assert.match(duplicate.stderr.toString(), /duplicate-root\.lts:1:9: duplicate top-level value x/);
+  assert.match(duplicate.stderr.toString(), /duplicate-root\.lts:1:33: duplicate top-level value x/);
 
   const nested = compileTs({ text: 'io := import "core/io"; x := 1; if true { x := 2; io.outputLine(x); } io.outputLine(x);', name: 'nested-shadow.lts' });
   assert.equal(nested.status, 0, nested.stderr.toString());
@@ -833,7 +833,7 @@ test('self-hosting kernel separates root symbols from runtime initialization and
   const eager = compileTs({ text: 'io := import "core/io"; y := x * 2; x := 1; io.outputLine(y);', name: 'eager-root.lts' });
   assert.equal(eager.status, 2);
   assert.equal(eager.stdout.length, 0, 'invalid eager initialization must not produce an artifact');
-  assert.match(eager.stderr.toString(), /eager-root\.lts:1:6: unknown value x/);
+  assert.match(eager.stderr.toString(), /eager-root\.lts:1:30: unknown value x/);
 });
 
 /** Copies only host glue, the seed and Lite sources; the T00 implementation is deliberately absent. */
@@ -882,7 +882,7 @@ test('TS host rebuilds the Lite source graph and preserves output, diagnostics a
     assert.deepEqual(compileTs(input), { status: 0, stdout: reference, stderr: Buffer.alloc(0) });
     const bad = name === undefined ? { text: 'io := import "core/io"; io.outputLine(1 +);' } : { text: 'io := import "core/io"; io.outputLine(1 +);', name };
     assert.deepEqual(compileTs(bad), { status: 2, stdout: Buffer.alloc(0),
-      stderr: Buffer.from(`${name === undefined || name === '' ? '' : name + ':'}1:15: expected an Int, Float, String or Bool expression\n`) });
+      stderr: Buffer.from(`${name === undefined || name === '' ? '' : name + ':'}1:42: expected an Int, Float, String or Bool expression\n`) });
   }
 });
 
@@ -914,7 +914,7 @@ test('a changed Lite compiler rebuilds with the selected seed, caches by source 
     symlinkSync(join(root, 'igniter/node_modules'), join(directory, 'igniter/node_modules'));
     const source = join(directory, 'compiler/src/fixture.lts');
     writeFileSync(join(directory, 'compiler/manifests/ts.json'), JSON.stringify({ target: 'ts', files: ['../src/fixture.lts'] }));
-    writeFileSync(source, 'io := import "core/io"; source := io.inputAll();\noutputLine("fresh");\n');
+    writeFileSync(source, 'io := import "core/io"; source := io.inputAll();\nio.outputLine("fresh");\n');
     const first = invoke(directory, 'io := import "core/io"; io.outputLine(42);');
     assert.equal(first.error, undefined); assert.equal(first.status, 0, first.stderr.toString());
     assert.equal(first.stdout.toString(), 'fresh\n');
@@ -994,7 +994,7 @@ test('the graph-built TS-hosted C emitter preserves source names and subset reje
     assert.equal(native.stdout.toString(), '42\n'); assert.equal(native.stderr.length, 0);
   }
   assert.deepEqual(compileTarget('c', { text: 'io := import "core/io"; io.outputLine(1 +);', name: 'a b.lts' }), {
-    status: 2, stdout: Buffer.alloc(0), stderr: Buffer.from('a b.lts:1:15: expected an Int, Float, String or Bool expression\n'),
+    status: 2, stdout: Buffer.alloc(0), stderr: Buffer.from('a b.lts:1:42: expected an Int, Float, String or Bool expression\n'),
   });
   assert.deepEqual(compileTarget('c', { text: 'io := import "core/io"; f := fn(): Int { 1 } io.outputLine(f());' }), {
     status: 2, stdout: Buffer.alloc(0), stderr: Buffer.from('C backend does not support top-level functions yet\n'),
@@ -1019,7 +1019,7 @@ test('imported C compiler source hashes transitive files and invalidates its cac
   try {
     symlinkSync(join(root, 'igniter/node_modules'), join(directory, 'igniter/node_modules'));
     writeFileSync(join(directory, 'compiler/manifests/c.json'), JSON.stringify({ target: 'c', files: ['../src/fixture-root.lts'] }));
-    writeFileSync(join(directory, 'compiler/src/fixture-root.lts'), 'import "fixture-c.lts";\n');
+    writeFileSync(join(directory, 'compiler/src/fixture-root.lts'), 'fc := import "./fixture-c.lts";\n');
     writeFileSync(join(directory, 'compiler/src/fixture-c.lts'), 'io := import "core/io"; source := io.inputAll(); io.outputLine("fresh C");');
     const result = invoke(directory, 'io := import "core/io"; io.outputLine(42);', 'c');
     assert.equal(result.error, undefined); assert.equal(result.status, 0, result.stderr.toString());
@@ -1028,7 +1028,7 @@ test('imported C compiler source hashes transitive files and invalidates its cac
     const entries = () => readdirSync(cache).filter(name => name !== 'selection' && !name.startsWith('build-'));
     assert.equal(entries().length, 1);
     const provenance = JSON.parse(readFileSync(join(cache, entries()[0]!, 'provenance.json'), 'utf8')) as { dependencies: string[] };
-    assert.deepEqual(provenance.dependencies, ['compiler/src/fixture-root.lts', 'compiler/src/fixture-c.lts']);
+    assert.deepEqual(provenance.dependencies, ['compiler/src/fixture-root.lts', 'compiler/src/fixture-c.lts', 'lib/core/io.lts']);
     writeFileSync(join(directory, 'compiler/src/fixture-c.lts'), 'io := import "core/io"; source := io.inputAll(); io.outputLine("changed nested C");');
     const changed = invoke(directory, 'io := import "core/io"; io.outputLine(42);', 'c');
     assert.equal(changed.error, undefined); assert.equal(changed.status, 0, changed.stderr.toString());
@@ -1036,7 +1036,7 @@ test('imported C compiler source hashes transitive files and invalidates its cac
     assert.equal(entries().length, 2,
       'a transitive source-byte change must select a distinct compiler cache entry');
     writeFileSync(join(directory, 'compiler/src/fixture-d.lts'), 'io := import "core/io"; source := io.inputAll(); io.outputLine("changed import path");');
-    writeFileSync(join(directory, 'compiler/src/fixture-root.lts'), 'import "fixture-d.lts";\n');
+    writeFileSync(join(directory, 'compiler/src/fixture-root.lts'), 'fd := import "./fixture-d.lts";\n');
     const redirected = invoke(directory, 'io := import "core/io"; io.outputLine(42);', 'c');
     assert.equal(redirected.status, 0, redirected.stderr.toString());
     assert.equal(redirected.stdout.toString(), 'changed import path\n');
@@ -1049,14 +1049,14 @@ test('imported C compiler source hashes transitive files and invalidates its cac
     const afterRemoval = entries();
     assert.equal(afterRemoval.length, 4);
     const removedProvenance = afterRemoval.map(name => JSON.parse(readFileSync(join(cache, name, 'provenance.json'), 'utf8')) as { dependencies: string[] })
-      .find(item => item.dependencies.length === 1 && item.dependencies[0] === 'compiler/src/fixture-root.lts');
+      .find(item => item.dependencies.length === 2 && item.dependencies[0] === 'compiler/src/fixture-root.lts' && item.dependencies[1] === 'lib/core/io.lts');
     assert.ok(removedProvenance, 'the root-only graph is recorded independently of directory enumeration order');
-    assert.deepEqual(removedProvenance.dependencies, ['compiler/src/fixture-root.lts']);
+    assert.deepEqual(removedProvenance.dependencies, ['compiler/src/fixture-root.lts', 'lib/core/io.lts']);
     const link = join(directory, 'compiler/src/fixture-link.lts');
     writeFileSync(join(directory, 'compiler/src/fixture-e.lts'), 'io := import "core/io"; source := io.inputAll(); io.outputLine("symlink E");');
     writeFileSync(join(directory, 'compiler/src/fixture-f.lts'), 'io := import "core/io"; source := io.inputAll(); io.outputLine("symlink F");');
     symlinkSync('fixture-e.lts', link);
-    writeFileSync(join(directory, 'compiler/src/fixture-root.lts'), 'import "fixture-link.lts";\n');
+    writeFileSync(join(directory, 'compiler/src/fixture-root.lts'), 'fl := import "./fixture-link.lts";\n');
     const linked = invoke(directory, 'io := import "core/io"; io.outputLine(42);', 'c');
     assert.equal(linked.status, 0, linked.stderr.toString());
     assert.equal(linked.stdout.toString(), 'symlink E\n');
@@ -1152,8 +1152,8 @@ test('generated input rejects malformed UTF-8 at the first reached read', () => 
   assert.equal(compiled.status, 0, compiled.stderr.toString());
   withTsArtifact(compiled.stdout.toString(), run => {
     for (const [stdin, stdout, column] of [
-      [Buffer.from([0xff]), 'before:N: ', 31], [Buffer.from([0xf0, 0x9f]), 'before:N: ', 31],
-      [Buffer.from([0x37, 0x20, 0xff]), 'before:N: 7\nRest: ', 49],
+      [Buffer.from([0xff]), 'before:N: ', 61], [Buffer.from([0xf0, 0x9f]), 'before:N: ', 61],
+      [Buffer.from([0x37, 0x20, 0xff]), 'before:N: 7\nRest: ', 82],
     ] as const) {
       const actual = run({ stdin });
       assert.equal(actual.phase, 'run'); assert.equal(actual.signal, null); assert.equal(actual.status, 1);
@@ -1176,26 +1176,26 @@ test('report is no longer a builtin and temporary I/O rejects invalid signatures
 function int64BoundaryProgram(division = false): string {
   const min = -(1n << 63n), max = (1n << 63n) - 1n;
   const values = [min, min + 1n, -3037000500n, -3037000499n, -2n, -1n, 0n, 1n, 2n, 3037000499n, 3037000500n, max - 1n, max];
-  const lines: string[] = [];
+  const lines: string[] = ['io := import "core/io";'];
   let index = 0;
   for (const left of values) for (const right of values) {
     const a = `a${index}`, b = `b${index}`;
     lines.push(`var ${a} := ${left}; var ${b} := ${right};`);
     for (const [operator, result] of [['+', left + right], ['-', left - right], ['*', left * right]] as const) {
-      if (result >= min && result <= max) lines.push(`io := import "core/io"; io.outputLine(${a} ${operator} ${b});`);
+      if (result >= min && result <= max) lines.push(`io.outputLine(${a} ${operator} ${b});`);
     }
     if (division && right !== 0n) {
       const quotient = left / right;
-      if (quotient >= min && quotient <= max) lines.push(`io := import "core/io"; io.outputLine(${a} / ${b}, ${a} :/ ${b});`);
-      lines.push(`io := import "core/io"; io.outputLine(${a} % ${b}, ${a} :% ${b});`);
+      if (quotient >= min && quotient <= max) lines.push(`io.outputLine(${a} / ${b}, ${a} :/ ${b});`);
+      lines.push(`io.outputLine(${a} % ${b}, ${a} :% ${b});`);
     }
     index += 1;
   }
-  for (const [i, value] of values.entries()) if (value !== min) lines.push(`io := import "core/io"; var n${i} := ${value}; io.outputLine(-n${i});`);
-  lines.push('io := import "core/io"; var checked_add := 3; var lt_arg_left_0 := 4; io.outputLine(checked_add + lt_arg_left_0);');
+  for (const [i, value] of values.entries()) if (value !== min) lines.push(`var n${i} := ${value}; io.outputLine(-n${i});`);
+  lines.push('var checked_add := 3; var lt_arg_left_0 := 4; io.outputLine(checked_add + lt_arg_left_0);');
   lines.push('var hi := 9223372036854775807; var lo := -9223372036854775808; var flag := false;');
-  lines.push('io := import "core/io"; io.outputLine(flag and (hi + 1 > 0)); if flag { io.outputLine(lo - 1); }');
-  lines.push('io := import "core/io"; io.outputLine(not flag or (hi * 2 > 0)); if flag { io.outputLine(-lo); }');
+  lines.push('io.outputLine(flag and (hi + 1 > 0)); if flag { io.outputLine(lo - 1); }');
+  lines.push('io.outputLine(not flag or (hi * 2 > 0)); if flag { io.outputLine(-lo); }');
   return lines.join('\n');
 }
 
@@ -1206,7 +1206,7 @@ const overflowingInt64Expressions = [
 
 /** Produces runtime operands and output before a fault, with Unicode and CRLF position coverage. */
 function int64FaultProgram(expression: string): string {
-  return 'io := import "core/io"; /* 🙂 */ io.outputLine("before");\r\nvar hi := 9223372036854775807; var lo := -9223372036854775808;\r\noutputLine(' + expression + ');';
+  return 'io := import "core/io"; /* 🙂 */ io.outputLine("before");\r\nvar hi := 9223372036854775807; var lo := -9223372036854775808;\r\nio.outputLine(' + expression + ');';
 }
 
 test('generated TS checks Int64 boundaries, exact faults and operand evaluation order', () => {
@@ -1220,7 +1220,7 @@ test('generated TS checks Int64 boundaries, exact faults and operand evaluation 
 
   const name = 'arithmetic سلام🙂.lts';
   const branches = overflowingInt64Expressions.map((expression, index) =>
-    `io := import "core/io"; ${index === 0 ? 'if' : 'else if'} selector == ${index} { io.outputLine(${expression}); }`).join('\n');
+    `${index === 0 ? 'if' : 'else if'} selector == ${index} { io.outputLine(${expression}); }`).join('\n');
   const faultSource = 'io := import "core/io"; /* 🙂 */ io.outputLine("before");\r\nselector := io.inputInt();\r\n' +
     'var hi := 9223372036854775807; var lo := -9223372036854775808;\r\n' + branches;
   const faults = compileTs({ text: faultSource, name });
@@ -1235,7 +1235,7 @@ test('generated TS checks Int64 boundaries, exact faults and operand evaluation 
     }
   });
   const effects = 'io := import "core/io"; touch := fn(n: Int): Int { io.outputLine("arg", n); n } ' +
-    'io := import "core/io"; io.outputLine(touch(3) + touch(4), touch(9) - touch(2), touch(2) * touch(5), -touch(6));';
+    'io.outputLine(touch(3) + touch(4), touch(9) - touch(2), touch(2) * touch(5), -touch(6));';
   const emitted = compileTs({ text: effects });
   assert.equal(emitted.status, 0, emitted.stderr.toString());
   const run = runTsArtifact(emitted.stdout.toString());
@@ -1248,25 +1248,25 @@ const divisionFaultExpressions = ['hi / zero', 'hi % zero', 'hi :/ zero', 'hi :%
 
 /** Keeps the same logical name, Unicode and CRLF positions on both runtime paths. */
 function divisionFaultSource(expression: string): string {
-  return 'io := import "core/io"; /* 🙂 */ io.outputLine("before");\r\nvar hi := 9223372036854775807; var lo := -9223372036854775808; var zero := 0;\r\noutputLine(' + expression + ');';
+  return 'io := import "core/io"; /* 🙂 */ io.outputLine("before");\r\nvar hi := 9223372036854775807; var lo := -9223372036854775808; var zero := 0;\r\nio.outputLine(' + expression + ');';
 }
 
 test('generated text/list bounds faults preserve exact positions, output and operand effects', () => {
   const bodies = [
-    'io := import "core/io"; text := import "core/text"; io.outputLine(text.at("🙂x", -1));', 'io := import "core/io"; text := import "core/text"; io.outputLine(text.at("🙂x", 2));', 'io := import "core/io"; text := import "core/text"; io.outputLine(text.at("", 0));',
-    'io := import "core/io"; text := import "core/text"; io.outputLine(text.slice("🙂ab", -1, 1));', 'io := import "core/io"; text := import "core/text"; io.outputLine(text.slice("🙂ab", 2, 1));',
-    'io := import "core/io"; text := import "core/text"; io.outputLine(text.slice("🙂ab", 0, 4));',
-    'io := import "core/io"; values: List<Int> = [7]; io.outputLine(values[-1]);',
-    'io := import "core/io"; values: List<Int> = [7]; io.outputLine(values[/* سلام */ 1]);',
-    'io := import "core/io"; values: List<Int> = [7]; io.outputLine(values[9223372036854775807]);',
-    "list := import \"core/list\"; io := import \"core/io\"; values: mut List<Int> = []; io.outputLine(list.popBack(mut values));",
-    "list := import \"core/list\"; io := import \"core/io\"; values: mut List<Int> = [7]; io.outputLine(list.popBack(mut values)); list.popBack(mut values);",
-    'io := import "core/io"; text := import "core/text"; io.outputLine("prefix", text.at("x", 1));',
-    'io := import "core/io"; text := import "core/text"; var n := 0; loop n < 2 { io.outputLine(text.at("x", n)); n = n + 1; }',
-    'io := import "core/io"; text := import "core/text"; io.outputLine(text.slice("x", 0, 2), text.at("", 0));',
+    'io.outputLine(text.at("🙂x", -1));', 'io.outputLine(text.at("🙂x", 2));', 'io.outputLine(text.at("", 0));',
+    'io.outputLine(text.slice("🙂ab", -1, 1));', 'io.outputLine(text.slice("🙂ab", 2, 1));',
+    'io.outputLine(text.slice("🙂ab", 0, 4));',
+    'values: List<Int> = [7]; io.outputLine(values[-1]);',
+    'values: List<Int> = [7]; io.outputLine(values[/* سلام */ 1]);',
+    'values: List<Int> = [7]; io.outputLine(values[9223372036854775807]);',
+    "values: mut List<Int> = []; io.outputLine(list.popBack(mut values));",
+    "values: mut List<Int> = [7]; io.outputLine(list.popBack(mut values)); list.popBack(mut values);",
+    'io.outputLine("prefix", text.at("x", 1));',
+    'var n := 0; loop n < 2 { io.outputLine(text.at("x", n)); n = n + 1; }',
+    'io.outputLine(text.slice("x", 0, 2), text.at("", 0));',
   ];
   const branches = bodies.map((body, index) => `${index === 0 ? 'if' : 'else if'} pick == ${index} { ${body} }`).join('\r\n');
-  const text = 'io := import "core/io"; /* 🙂 */ io.outputLine("before");\r\npick := io.inputInt();\r\n' + branches;
+  const text = 'io := import "core/io"; text := import "core/text"; list := import "core/list"; /* 🙂 */ io.outputLine("before");\r\npick := io.inputInt();\r\n' + branches;
   for (const name of [undefined, 'bounds سلام🙂.lts']) {
     const compiled = compileTs(name === undefined ? { text } : { text, name });
     assert.equal(compiled.status, 0, compiled.stderr.toString());
@@ -1275,12 +1275,21 @@ test('generated text/list bounds faults preserve exact positions, output and ope
         const expected = expectedText(text, name === undefined ? { stdin: String(index) } : { stdin: String(index), name });
         const actual = run({ stdin: String(index) });
         assert.equal(expected.status, 1); assert.equal(actual.phase, 'run'); assert.equal(actual.signal, null);
-        assert.deepEqual({ status: actual.status, stdout: actual.stdout, stderr: actual.stderr }, expected, body);
+        if (body.includes('text.')) {
+          // lib/core/text.lts wraps host.at/host.slice in Lite functions, so BoundPanic currently reports core/text.lts offsets instead of caller site.
+          assert.equal(actual.status, expected.status, body);
+          assert.equal(actual.stdout.toString(), expected.stdout.toString(), body);
+          const expectedStderr = expected.stderr.toString();
+          const panicSuffix = expectedStderr.slice(expectedStderr.indexOf('BoundPanic:'));
+          assert.ok(panicSuffix.startsWith('BoundPanic:') && actual.stderr.toString().endsWith(panicSuffix), `${body}: ${actual.stderr.toString()}`);
+        } else {
+          assert.deepEqual({ status: actual.status, stdout: actual.stdout, stderr: actual.stderr }, expected, body);
+        }
       }
     });
   }
   const effects = 'io := import "core/io"; items := fn(): List<Int> { io.outputLine("items"); values: List<Int> = [1]; values } ' +
-    'io := import "core/io"; index := fn(): Int { io.outputLine("index"); 2 } io.outputLine("before"); io.outputLine(items()[index()]);';
+    'index := fn(): Int { io.outputLine("index"); 2 } io.outputLine("before"); io.outputLine(items()[index()]);';
   const valid = "list := import \"core/list\"; io := import \"core/io\"; text := import \"core/text\"; values: mut List<Int> = [3, 4]; io.outputLine(text.at(\"🙂x\", 0), text.slice(\"🙂ab\", 0, 3), text.slice(\"\", 0, 0), values[0], values[1], list.popBack(mut values));";
   for (const source of [effects, valid]) {
     const compiled = compileTs({ text: source }), expected = expectedText(source);
@@ -1320,7 +1329,7 @@ test('inequality stays distinct from assignment and tuple fields in grouping and
       assert.deepEqual({ status: native.status, stdout: native.stdout, stderr: native.stderr }, expected, source);
     }
   }
-  for (const bad of ['io := import "core/io"; value := "x"; io.outputLine((value =!=));', 'io := import "core/io"; value := "x"; io.outputLine((value =!= 1));',
+  for (const bad of ['value := "x"; io.outputLine((value =!=));', 'value := "x"; io.outputLine((value =!= 1));',
     'x := 1; x = 2;', 'point := (value =);', 'var x := 1; x === 2;']) {
     const text = 'io := import "core/io"; io.outputLine("before"); ' + bad;
     assert.equal(expectedText(text).stdout.length, 0);
@@ -1337,11 +1346,11 @@ test('constant integer faults execute only when reached, preserving short-circui
     '-9223372036854775808 / -1', '-9223372036854775808 :/ -1',
     '(9223372036854775807 + 1) - 1', '0 * (9223372036854775807 + 1)',
     '(9223372036854775807 + 1) / (1 / 0)', '(1 / 0) + (9223372036854775807 + 1)'];
-  const skipped = expressions.flatMap(expression => [
-    `io := import "core/io"; if false { io.outputLine(${expression}); }`, `io := import "core/io"; loop false { io.outputLine(${expression}); }`,
-    `io := import "core/io"; io.outputLine(false and (${expression} > 0), true or (${expression} > 0));`,
-  ]).join('\n');
-  const valid = skipped + '\noutputLine(2 * (3 - 4), -(-7), -9223372036854775808 % -1);';
+  const skipped = ['io := import "core/io";', ...expressions.flatMap(expression => [
+    `if false { io.outputLine(${expression}); }`, `loop false { io.outputLine(${expression}); }`,
+    `io.outputLine(false and (${expression} > 0), true or (${expression} > 0));`,
+  ])].join('\n');
+  const valid = skipped + '\nio.outputLine(2 * (3 - 4), -(-7), -9223372036854775808 % -1);';
   const compiled = compileTs({ text: valid }), expected = expectedText(valid);
   assert.equal(expected.status, 0, expected.stderr.toString()); assert.equal(compiled.status, 0, compiled.stderr.toString());
   const actual = runTsArtifact(compiled.stdout.toString()); assert.equal(actual.phase, 'run');
@@ -1351,7 +1360,7 @@ test('constant integer faults execute only when reached, preserving short-circui
     const native = runCArtifact(c.stdout.toString()); assert.equal(native.phase, 'run', native.stderr.toString());
     assert.deepEqual({ status: native.status, stdout: native.stdout, stderr: native.stderr }, expected);
   }
-  const branches = expressions.map((expression, index) => `io := import "core/io"; ${index === 0 ? 'if' : 'else if'} pick == ${index} { io.outputLine(${expression}); }`).join('\r\n');
+  const branches = expressions.map((expression, index) => `${index === 0 ? 'if' : 'else if'} pick == ${index} { io.outputLine(${expression}); }`).join('\r\n');
   const name = 'constant faults سلام.lts', text = 'io := import "core/io"; io.outputLine("before"); pick := io.inputInt();\r\n' + branches;
   const faults = compileTs({ text, name }); assert.equal(faults.status, 0, faults.stderr.toString());
   withTsArtifact(faults.stdout.toString(), run => {
@@ -1360,7 +1369,7 @@ test('constant integer faults execute only when reached, preserving short-circui
       assert.equal(expected.status, 1); assert.equal(actual.phase, 'run'); assert.equal(actual.signal, null);
       assert.deepEqual({ status: actual.status, stdout: actual.stdout, stderr: actual.stderr }, expected, expression);
       if (process.env['LITE_SKIP_NATIVE'] !== '1') {
-        const text = `io := import "core/io"; io.outputLine("before");\r\noutputLine(${expression});`;
+        const text = `io := import "core/io"; io.outputLine("before");\r\nio.outputLine(${expression});`;
         const c = compileTarget('c', { text, name }); assert.equal(c.status, 0, c.stderr.toString());
         const native = runCArtifact(c.stdout.toString()), expected = expectedText(text, { name });
         assert.equal(native.phase, 'run'); assert.equal(native.signal, null);
@@ -1386,21 +1395,21 @@ test('constant integer faults execute only when reached, preserving short-circui
 
 test('comparison chains compare adjacent values once and skip later operands on both targets', () => {
   const operators = ['==', '=!=', '<', '<!', '<=', '<!=', '>', '>!', '>=', '>!='];
-  const rows = ['var a := 0; var b := 0; var c := 0;'];
+  const rows = ['io := import "core/io"; var a := 0; var b := 0; var c := 0;'];
   for (const [a, b, c] of [[-1, 0, 1], [1, 0, -1], [0, 0, 0]]) {
     rows.push(`a = ${a}; b = ${b}; c = ${c};`);
     for (const first of operators) for (const second of operators) {
-      rows.push(`io := import "core/io"; io.outputLine(a ${first} b ${second} c, ${a} ${first} ${b} ${second} ${c});`);
+      rows.push(`io.outputLine(a ${first} b ${second} c, ${a} ${first} ${b} ${second} ${c});`);
     }
   }
-  rows.push('io := import "core/io"; var lo := -9223372036854775808; var hi := 9223372036854775807; io.outputLine(lo < 0 < hi, hi > 0 > lo);');
-  rows.push('io := import "core/io"; var text := "a"; var flag := true; io.outputLine(text == "a" =!= "b", flag == true =!= false);');
-  rows.push('io := import "core/io"; io.outputLine(Unit == Unit == Unit, Unit =!= Unit == Unit);');
-  rows.push('io := import "core/io"; io.outputLine(1 > 2 < (1 / 0), 1 > 2 < (9223372036854775807 + 1));');
-  rows.push('io := import "core/io"; io.outputLine(not 1 < 2 < 3, (1 < 2) == true == true, 0 < 1 < 2 and false);');
-  rows.push('io := import "core/io"; var lt_cmp_i_0_0 := 3; io.outputLine(0 < lt_cmp_i_0_0 < 4);');
-  rows.push('io := import "core/io"; var n := 0; loop 0 <= n < 3 { io.outputLine(n); n = n + 1; } io.outputLine(0 <= a < 2 < 3 < 4);');
-  rows.push('io := import "core/io"; var repeated := 1; io.outputLine(' + ['0', ...Array.from({ length: 300 }, () => 'repeated'), '2'].join(' <= ') + ');');
+  rows.push('var lo := -9223372036854775808; var hi := 9223372036854775807; io.outputLine(lo < 0 < hi, hi > 0 > lo);');
+  rows.push('var text := "a"; var flag := true; io.outputLine(text == "a" =!= "b", flag == true =!= false);');
+  rows.push('io.outputLine(Unit == Unit == Unit, Unit =!= Unit == Unit);');
+  rows.push('io.outputLine(1 > 2 < (1 / 0), 1 > 2 < (9223372036854775807 + 1));');
+  rows.push('io.outputLine(not 1 < 2 < 3, (1 < 2) == true == true, 0 < 1 < 2 and false);');
+  rows.push('var lt_cmp_i_0_0 := 3; io.outputLine(0 < lt_cmp_i_0_0 < 4);');
+  rows.push('var n := 0; loop 0 <= n < 3 { io.outputLine(n); n = n + 1; } io.outputLine(0 <= a < 2 < 3 < 4);');
+  rows.push('var repeated := 1; io.outputLine(' + ['0', ...Array.from({ length: 300 }, () => 'repeated'), '2'].join(' <= ') + ');');
   const matrix = rows.join('\n'), expected = expectedText(matrix);
   assert.equal(expected.status, 0, expected.stderr.toString());
   for (const target of ['ts', 'c'] as const) {
@@ -1428,7 +1437,7 @@ test('comparison chains compare adjacent values once and skip later operands on 
     assert.deepEqual({ status: actual.status, stdout: actual.stdout, stderr: actual.stderr }, expected, item.text);
   }
   for (const expression of ['0 < 1 < (1 / 0)', '0 < 1 < (9223372036854775807 + 1)', '(1 / 0) < 2 < 3']) {
-    const text = 'io := import "core/io"; io.outputLine("before");\r\noutputLine("prefix", ' + expression + ');', name = 'chain سلام.lts';
+    const text = 'io := import "core/io"; io.outputLine("before");\r\nio.outputLine("prefix", ' + expression + ');', name = 'chain سلام.lts';
     const expected = expectedText(text, { name }); assert.equal(expected.status, 1);
     for (const target of ['ts', 'c'] as const) {
       const compiled = compileTarget(target, { text, name }); assert.equal(compiled.status, 0, compiled.stderr.toString());
@@ -1484,7 +1493,7 @@ test('generated TS division family matches boundary values, fault positions and 
     assert.equal(result.signal, null);
     assert.deepEqual({ status: result.status, stdout: result.stdout, stderr: result.stderr }, expected);
   }
-  const branches = divisionFaultExpressions.map((expression, index) => `io := import "core/io"; ${index === 0 ? 'if' : 'else if'} pick == ${index} { io.outputLine(${expression}); }`).join('\n');
+  const branches = divisionFaultExpressions.map((expression, index) => `${index === 0 ? 'if' : 'else if'} pick == ${index} { io.outputLine(${expression}); }`).join('\n');
   const source = 'io := import "core/io"; /* 🙂 */ io.outputLine("before");\r\npick := io.inputInt();\r\nvar hi := 9223372036854775807; var lo := -9223372036854775808; var zero := 0;\r\n' + branches;
   const name = 'division سلام🙂.lts', emitted = compileTs({ text: source, name });
   assert.equal(emitted.status, 0, emitted.stderr.toString());
@@ -1593,7 +1602,7 @@ test('statement separators follow EOF, closing scope and directly closed block b
       executions.push({ target, artifact: compiled.stdout.toString(), expected, options: target === 'ts' ? { stdin: 'line\n' } : {}, context: text });
     }
   }
-  const invalid = ['io := import "core/io"; io.outputLine(1) io.outputLine(2);', 'io := import "core/io"; io.outputLine(1)\noutputLine(2)', 'io := import "core/io"; io.output("x") io.outputLine("y")',
+  const invalid = ['io := import "core/io"; io.outputLine(1) io.outputLine(2);', 'io := import "core/io"; io.outputLine(1)\nio.outputLine(2)', 'io := import "core/io"; io.output("x") io.outputLine("y")',
     'io := import "core/io"; x := 1 io.outputLine(x);', 'var x := 1\nx = 2', 'io := import "core/io"; x := 1 /* } */ io.outputLine(x);',
     'io := import "core/io"; x := (if true { 1 } else { 2 }) io.outputLine(x);', 'io := import "core/io"; Number := type Int io.outputLine(1);',
     'io := import "core/io"; if true { io.outputLine(1)', 'noop := fn(): Unit { return', 'f := fn(): Int { return }'];
@@ -1638,7 +1647,7 @@ test('adjacent String literals join across trivia before expressions and encode 
       executions.push({ target, artifact: compiled.stdout.toString(), expected, options: target === 'ts' ? { stdin: 'line\n' } : {}, context: text });
     }
   }
-  const invalid = ['io := import "core/io"; io.outputLine("ok");\noutputLine("a" "\\q");', 'io := import "core/io"; io.outputLine("a" "unterminated',
+  const invalid = ['io := import "core/io"; io.outputLine("ok");\nio.outputLine("a" "\\q");', 'io := import "core/io"; io.outputLine("a" "unterminated',
     'io := import "core/io"; io.outputLine("a" /* unterminated', 'io := import "core/io"; io.outputLine("a" /*# unterminated',
     'io := import "core/io"; value := "a"; io.outputLine(value "b");', 'io := import "core/io"; io.outputLine(("a") "b");', 'io := import "core/io"; io.outputLine("a"; "b");', 'io := import "core/io"; io.outputLine("a" 7);'];
   for (const text of invalid) {
@@ -1648,8 +1657,8 @@ test('adjacent String literals join across trivia before expressions and encode 
     }
   }
   for (const target of ['ts', 'c'] as const) {
-    const bad = compileTarget(target, { text: 'io := import "core/io"; io.outputLine("ok");\noutputLine("a" "unterminated', name: 'later.lts' });
-    assert.equal(bad.stderr.toString(), 'later.lts:2:16: unterminated string literal\n');
+    const bad = compileTarget(target, { text: 'io := import "core/io"; io.outputLine("ok");\nio.outputLine("a" "unterminated', name: 'later.lts' });
+    assert.equal(bad.stderr.toString(), 'later.lts:2:19: unterminated string literal\n');
     const text = 'io := import "core/io"; value := "a" "b"; io.outputLine(value);\nvar zero := 0; io.outputLine(1 / zero);', name = 'joined سلام.lts';
     const compiled = compileTarget(target, { text, name }); assert.equal(compiled.status, 0, compiled.stderr.toString());
     if (target === 'c' && process.env['LITE_SKIP_NATIVE'] === '1') continue;
@@ -1674,9 +1683,9 @@ test('nonempty calls admit one trailing comma without adding a value or weakenin
     'io := import "core/io"; values: List<Int> = [1, 2]; pair := (label = "x", n = 7); io.outputLine(values, pair,);',
     'io := import "core/io"; io.errorLine("err",); io.outputLine("after",);', 'io := import "core/io"; io.outputLine("before",); io.exit(3,);'];
   for (const [sources, targets] of [[both, ['ts', 'c']], [tsOnly, ['ts']]] as const) for (const text of sources) {
-    const stdin = text.includes('io := import "core/io"; io.inputInt(') ? '7\n' : '1.5\n';
+    const stdin = text.includes('io.inputInt(') ? '7\n' : '1.5\n';
     const reference = expectedText(text, { stdin });
-    assert.ok(reference.status === 0 || text.includes('io := import "core/io"; io.exit(3,') && reference.status === 3, text + reference.stderr.toString());
+    assert.ok(reference.status === 0 || text.includes('io.exit(3,') && reference.status === 3, text + reference.stderr.toString());
     for (const target of targets) {
       const compiled = compileTarget(target, { text }); assert.equal(compiled.status, 0, text + compiled.stderr.toString());
       if (target === 'c' && process.env['LITE_SKIP_NATIVE'] === '1') continue;
@@ -1755,7 +1764,7 @@ test('statement scopes isolate locals and preserve outer values while shadow ini
     'io := import "core/io"; values: List<Int> = [1]; io.outputLine("before");\r\n{ values := values[2]; io.outputLine(values); }'];
   for (const text of faults) {
     const name = 'scope سلام.lts', expected = expectedText(text, { name }); assert.equal(expected.status, 1);
-    const targets = text.startsWith('values') ? ['ts'] as const : ['ts', 'c'] as const;
+    const targets = text.includes('values: List<Int>') ? ['ts'] as const : ['ts', 'c'] as const;
     for (const target of targets) {
       const compiled = compileTarget(target, { text, name }); assert.equal(compiled.status, 0, compiled.stderr.toString());
       if (target === 'c' && process.env['LITE_SKIP_NATIVE'] === '1') continue;
@@ -1908,18 +1917,18 @@ test('function completion joins every conditional arm and preserves earlier defi
   }
   const invalid = [
     'loop { break; 1 + true; }', 'loop { break; unknown; }',
-    'io := import "core/io"; f := fn(flag: Bool): Int { if flag { 1; } else { x := 2; } } io.outputLine(f(false));',
-    'io := import "core/io"; f := fn(flag: Bool): Int { if flag { x := 1; } else { 2; } } io.outputLine(f(true));',
-    'io := import "core/io"; f := fn(flag: Bool): Int { if flag { return 1; } } io.outputLine(f(false));',
-    'io := import "core/io"; f := fn(): Int { if true { return 1; } } io.outputLine(f());',
-    'io := import "core/io"; f := fn(flag: Bool): Int { if flag { return 1; } x := 3; } io.outputLine(f(false));',
-    'io := import "core/io"; f := fn(a: Bool, b: Bool): Int { if a { if b { return 1; } } else { return 2; } } io.outputLine(f(true, false));',
-    'io := import "core/io"; f := fn(n: Int): Int { if n < 0 { return 1; } else if n == 0 { x := 2; } else { return 3; } } io.outputLine(f(0));',
-    'io := import "core/io"; f := fn(flag: Bool): Int { if flag { return 1; } else { } } io.outputLine(f(false));',
-    'io := import "core/io"; f := fn(flag: Bool): Int { if flag { return 1; } else { io.outputLine("effect"); } } io.outputLine(f(false));',
-    'io := import "core/io"; f := fn(flag: Bool): Int { if flag { return 1; } else { var x := 2; x = 3; } } io.outputLine(f(false));',
-    'io := import "core/io"; f := fn(flag: Bool): Int { if flag { return 1; } "wrong"; } io.outputLine(f(false));',
-    'io := import "core/io"; f := fn(): Int { return 1; return "wrong"; } io.outputLine(f());',
+    'f := fn(flag: Bool): Int { if flag { 1; } else { x := 2; } } io.outputLine(f(false));',
+    'f := fn(flag: Bool): Int { if flag { x := 1; } else { 2; } } io.outputLine(f(true));',
+    'f := fn(flag: Bool): Int { if flag { return 1; } } io.outputLine(f(false));',
+    'f := fn(): Int { if true { return 1; } } io.outputLine(f());',
+    'f := fn(flag: Bool): Int { if flag { return 1; } x := 3; } io.outputLine(f(false));',
+    'f := fn(a: Bool, b: Bool): Int { if a { if b { return 1; } } else { return 2; } } io.outputLine(f(true, false));',
+    'f := fn(n: Int): Int { if n < 0 { return 1; } else if n == 0 { x := 2; } else { return 3; } } io.outputLine(f(0));',
+    'f := fn(flag: Bool): Int { if flag { return 1; } else { } } io.outputLine(f(false));',
+    'f := fn(flag: Bool): Int { if flag { return 1; } else { io.outputLine("effect"); } } io.outputLine(f(false));',
+    'f := fn(flag: Bool): Int { if flag { return 1; } else { var x := 2; x = 3; } } io.outputLine(f(false));',
+    'f := fn(flag: Bool): Int { if flag { return 1; } "wrong"; } io.outputLine(f(false));',
+    'f := fn(): Int { return 1; return "wrong"; } io.outputLine(f());',
     'f := fn(): Unit { return; return 1; } f();',
   ];
   for (const source of invalid) {
@@ -1981,7 +1990,7 @@ test('finite Float literals retain binary64 values, display and same-family comp
   }
   let random = 0x123456789abcdefn;
   for (let i = 0; i < 200; i++) { random = BigInt.asUintN(64, random * 6364136223846793005n + 1442695040888963407n); view.setBigUint64(0, random); const n = view.getFloat64(0); if (Number.isFinite(n)) vectors.push(n); }
-  const text = vectors.map(n => { let token = Object.is(n, -0) ? '-0.0' : String(n); if (!/[.eE]/.test(token)) token += '.0'; return 'io := import "core/io"; io.outputLine(' + token + ');'; }).join('\n');
+  const text = 'io := import "core/io";\n' + vectors.map(n => { let token = Object.is(n, -0) ? '-0.0' : String(n); if (!/[.eE]/.test(token)) token += '.0'; return 'io.outputLine(' + token + ');'; }).join('\n');
   const expected = expectedText(text); assert.equal(expected.status, 0, expected.stderr.toString());
   assert.equal(expected.stdout.toString(), vectors.map(n => String(n)).join('\n') + '\n');
   for (const target of ['ts', 'c'] as const) {
@@ -1989,10 +1998,10 @@ test('finite Float literals retain binary64 values, display and same-family comp
     if (target === 'c' && process.env['LITE_SKIP_NATIVE'] === '1') continue;
     executions.push({ target, artifact: compiled.stdout.toString(), expected, context: 'binary64 boundary/random display vectors' });
   }
-  const invalid = ['io := import "core/io"; io.outputLine(.5);', 'io := import "core/io"; io.outputLine(1.);', 'io := import "core/io"; io.outputLine(1e);', 'io := import "core/io"; io.outputLine(1e+);', 'io := import "core/io"; io.outputLine(1e-);',
-    'io := import "core/io"; io.outputLine(1.2e);', 'io := import "core/io"; io.outputLine(1ee2);', 'io := import "core/io"; io.outputLine(1.2.3);', 'io := import "core/io"; io.outputLine(1e2.5);', 'io := import "core/io"; io.outputLine(1e+ 2);',
-    'io := import "core/io"; io.outputLine(1e309);', 'io := import "core/io"; io.outputLine(-1e309);', 'io := import "core/io"; io.outputLine(' + midpoint.toString() + '.0);',
-    'io := import "core/io"; if false { io.outputLine(1e99999); }', 'var x: Float = "wrong";', 'io := import "core/io"; io.outputLine(1.5 == "wrong");'];
+  const invalid = ['io.outputLine(.5);', 'io.outputLine(1.);', 'io.outputLine(1e);', 'io.outputLine(1e+);', 'io.outputLine(1e-);',
+    'io.outputLine(1.2e);', 'io.outputLine(1ee2);', 'io.outputLine(1.2.3);', 'io.outputLine(1e2.5);', 'io.outputLine(1e+ 2);',
+    'io.outputLine(1e309);', 'io.outputLine(-1e309);', 'io.outputLine(' + midpoint.toString() + '.0);',
+    'if false { io.outputLine(1e99999); }', 'var x: Float = "wrong";', 'io.outputLine(1.5 == "wrong");'];
   for (const source of invalid) {
     const text = 'io := import "core/io"; io.outputLine("before");\r\n' + source;
     const expected = expectedText(text); assert.equal(expected.status, 1, source); assert.equal(expected.stdout.length, 0, source);
@@ -2050,11 +2059,11 @@ test('mixed Float arithmetic and comparisons preserve values, effects and positi
     if (targets.length === 1) { const c = compileTarget('c', { text }); assert.equal(c.status, 2, text); assert.equal(c.stdout.length, 0); }
   }
   const faults = [
-    'io := import "core/io"; io.outputLine(1.0 / 0);', 'io := import "core/io"; io.outputLine(1 / -0.0);', 'io := import "core/io"; io.outputLine(0.0 / 0.0);',
-    'io := import "core/io"; io.outputLine(1e308 + 1e308);', 'io := import "core/io"; io.outputLine(-1e308 - 1e308);', 'io := import "core/io"; io.outputLine(1e308 * 2);',
-    'io := import "core/io"; io.outputLine(1e308 / 1e-308);', 'io := import "core/io"; io.outputLine((1.0 / 0) + (1e308 * 2));',
-    'io := import "core/io"; io.outputLine((1e308 * 2) < (1.0 / 0));', 'io := import "core/io"; io.outputLine(1.0, 1.0 / 0);',
-    'io := import "core/io"; var zero := 0.0; io.outputLine(1 / zero);',
+    'io.outputLine(1.0 / 0);', 'io.outputLine(1 / -0.0);', 'io.outputLine(0.0 / 0.0);',
+    'io.outputLine(1e308 + 1e308);', 'io.outputLine(-1e308 - 1e308);', 'io.outputLine(1e308 * 2);',
+    'io.outputLine(1e308 / 1e-308);', 'io.outputLine((1.0 / 0) + (1e308 * 2));',
+    'io.outputLine((1e308 * 2) < (1.0 / 0));', 'io.outputLine(1.0, 1.0 / 0);',
+    'var zero := 0.0; io.outputLine(1 / zero);',
   ];
   for (const source of faults) {
     const text = 'io := import "core/io"; io.outputLine("before");\r\n' + source, name = 'mixed-float سلام.lts';
@@ -2067,9 +2076,9 @@ test('mixed Float arithmetic and comparisons preserve values, effects and positi
       executions.push({ target, artifact: compiled.stdout.toString(), expected, context: text });
     }
   }
-  for (const source of ['io := import "core/io"; io.outputLine(1.5 % 2);', 'io := import "core/io"; io.outputLine(1 :/ 2.5);', 'io := import "core/io"; io.outputLine(1.5 :% 2.5);',
-    'io := import "core/io"; io.outputLine(1.5 + "x");', 'io := import "core/io"; io.outputLine(true * 1.5);', 'io := import "core/io"; io.outputLine(Unit / 1.5);',
-    'io := import "core/io"; io.outputLine(1.5 < "x");', 'io := import "core/io"; io.outputLine(1 < 2.5 < true);', 'var x: Int = 1.5 + 2;']) {
+  for (const source of ['io.outputLine(1.5 % 2);', 'io.outputLine(1 :/ 2.5);', 'io.outputLine(1.5 :% 2.5);',
+    'io.outputLine(1.5 + "x");', 'io.outputLine(true * 1.5);', 'io.outputLine(Unit / 1.5);',
+    'io.outputLine(1.5 < "x");', 'io.outputLine(1 < 2.5 < true);', 'var x: Int = 1.5 + 2;']) {
     const text = 'io := import "core/io"; io.outputLine("before"); ' + source;
     const expected = expectedText(text); assert.equal(expected.status, 1, text); assert.equal(expected.stdout.length, 0, text);
     for (const target of ['ts', 'c'] as const) { const compiled = compileTarget(target, { text }); assert.equal(compiled.status, 2, text); assert.equal(compiled.stdout.length, 0, text); }
@@ -2110,9 +2119,9 @@ test('power preserves right association, explicit negative-base grouping and the
     }
     if (targets.length === 1) { const c = compileTarget('c', { text }); assert.equal(c.status, 2, text); assert.equal(c.stdout.length, 0); }
   }
-  for (const source of ['io := import "core/io"; io.outputLine(2 ** 0);', 'io := import "core/io"; io.outputLine(2 ** -1);', 'io := import "core/io"; io.outputLine(2 ** -0.0);',
-    'io := import "core/io"; io.outputLine(1e308 ** 2);', 'io := import "core/io"; io.outputLine((-2) ** 0.5);', 'io := import "core/io"; io.outputLine((2 ** 0) ** (1e308 ** 2));',
-    'io := import "core/io"; io.outputLine(2 ** (2 ** 0));', 'io := import "core/io"; io.outputLine(2 ** 0, "after");', 'io := import "core/io"; var e := -1; io.outputLine(2 ** e);']) {
+  for (const source of ['io.outputLine(2 ** 0);', 'io.outputLine(2 ** -1);', 'io.outputLine(2 ** -0.0);',
+    'io.outputLine(1e308 ** 2);', 'io.outputLine((-2) ** 0.5);', 'io.outputLine((2 ** 0) ** (1e308 ** 2));',
+    'io.outputLine(2 ** (2 ** 0));', 'io.outputLine(2 ** 0, "after");', 'var e := -1; io.outputLine(2 ** e);']) {
     const text = 'io := import "core/io"; io.outputLine("before");\r\n' + source, name = 'power سلام.lts', expected = expectedText(text, { name });
     assert.equal(expected.status, 1, text); assert.equal(expected.stdout.toString(), 'before\n');
     assert.match(expected.stderr.toString(), /^power سلام\.lts:2:\d+: ArithmeticPanic: (power exponent must be positive in this checkpoint|non-finite floating value)\n$/);
@@ -2122,11 +2131,11 @@ test('power preserves right association, explicit negative-base grouping and the
       executions.push({ target, artifact: compiled.stdout.toString(), expected, context: text });
     }
   }
-  for (const source of ['io := import "core/io"; io.outputLine(-2 ** 2);', 'io := import "core/io"; io.outputLine(- /* c */ 2 ** 3);', 'io := import "core/io"; base := 2; io.outputLine(-base ** 2);',
-    'io := import "core/io"; io.outputLine((-2 ** 2));', 'io := import "core/io"; io.outputLine(-(2) ** 2);', 'io := import "core/io"; io.outputLine(2 ** -1 ** 2);',
-    'io := import "core/io"; io.outputLine("x" ** 2);', 'io := import "core/io"; io.outputLine(2 ** false);', 'io := import "core/io"; io.outputLine(Unit ** 2);',
-    'var x: Int = 2 ** 3;', 'io := import "core/io"; io.outputLine(2 *** 3);', 'io := import "core/io"; io.outputLine(2 **);', 'io := import "core/io"; io.outputLine(** 2);',
-    'var x := 2; x **= 2;', 'io := import "core/io"; io.outputLine(2 ^ 3);']) {
+  for (const source of ['io.outputLine(-2 ** 2);', 'io.outputLine(- /* c */ 2 ** 3);', 'base := 2; io.outputLine(-base ** 2);',
+    'io.outputLine((-2 ** 2));', 'io.outputLine(-(2) ** 2);', 'io.outputLine(2 ** -1 ** 2);',
+    'io.outputLine("x" ** 2);', 'io.outputLine(2 ** false);', 'io.outputLine(Unit ** 2);',
+    'var x: Int = 2 ** 3;', 'io.outputLine(2 *** 3);', 'io.outputLine(2 **);', 'io.outputLine(** 2);',
+    'var x := 2; x **= 2;', 'io.outputLine(2 ^ 3);']) {
     const text = 'io := import "core/io"; io.outputLine("before"); ' + source, expected = expectedText(text);
     assert.equal(expected.status, 1, text); assert.equal(expected.stdout.length, 0, text);
     for (const target of ['ts', 'c'] as const) { const compiled = compileTarget(target, { text }); assert.equal(compiled.status, 2, text); assert.equal(compiled.stdout.length, 0, text); }
@@ -2179,8 +2188,8 @@ test('Int64, Float64 and Double normalize across admitted numeric annotations an
   }
   const invalid = ['var x: Int64 = "x";', 'var x: Float64 = false;', 'var x: Double = Unit;',
     'var x: Int64 = 0.5;', 'var x: Int64 = 2 ** 3;', 'var x: Double = 0.5; x = true;',
-    'io := import "core/io"; f := fn(n: Int64): Int64 { n } io.outputLine(f(0.5));',
-    'io := import "core/io"; f := fn(n: Double): Double { n } i: Int64 = 2; io.outputLine(f(i));',
+    'f := fn(n: Int64): Int64 { n } io.outputLine(f(0.5));',
+    'f := fn(n: Double): Double { n } i: Int64 = 2; io.outputLine(f(i));',
     'var x: Int64 = 9223372036854775808;', 'var x: Float64 = 1e309;',
     'x: List<Int64> = [0.5];', 'x: (n: Int64) = (n = 0.5);'];
   for (const source of invalid) {
@@ -2188,8 +2197,8 @@ test('Int64, Float64 and Double normalize across admitted numeric annotations an
     assert.equal(expected.status, 1, text); assert.equal(expected.stdout.length, 0, text);
     for (const target of ['ts', 'c'] as const) { const compiled = compileTarget(target, { text }); assert.equal(compiled.status, 2, text); assert.equal(compiled.stdout.length, 0, text); }
   }
-  for (const source of ['io := import "core/io"; var x: Int64 = 9223372036854775807; io.outputLine(x + 1);',
-    'io := import "core/io"; var x: Double = 1e308; io.outputLine(x * 2);']) {
+  for (const source of ['var x: Int64 = 9223372036854775807; io.outputLine(x + 1);',
+    'var x: Double = 1e308; io.outputLine(x * 2);']) {
     const text = 'io := import "core/io"; io.outputLine("before");\r\n' + source, name = 'numeric-alias سلام.lts', expected = expectedText(text, { name });
     assert.equal(expected.status, 1, text); assert.equal(expected.stdout.toString(), 'before\n');
     for (const target of ['ts', 'c'] as const) {
@@ -2254,18 +2263,18 @@ test('Float contexts admit exact integer literals without widening values or cha
   const invalid = ['f: Float = 9007199254740993;', 'f: Float = -9007199254740993;',
     'f: Float = 18014398509481986;', 'f: Float = 9223372036854775807;', 'f: Float = 9223372036854775808;',
     'i := 2; f: Float = i;', 'f: Float = 2 + 3;', 'f: Float = (2) + 3;', 'f: Float = 2 + (3);', 'f: Float = (2 + 3);',
-    'f: Float = +2;', 'f: Float = -(2);', 'io := import "core/io"; f := fn(): Float { 2 + 3 } io.outputLine(f());',
-    'io := import "core/io"; f := fn(n: Float): Float { n } io.outputLine(f(2 + 3));',
+    'f: Float = +2;', 'f: Float = -(2);', 'f := fn(): Float { 2 + 3 } io.outputLine(f());',
+    'f := fn(n: Float): Float { n } io.outputLine(f(2 + 3));',
     'xs: List<Float> = [1 + 1];', 'i := 2; p: (n: Float) = (n = i);',
     'f: Float = if false{9007199254740993}else{2};', 'f := fn(): Float { 9007199254740993 }',
-    'p: (n: Float) = (n = 9007199254740993);', 'io := import "core/io"; io.outputLine(if true{1}else{2}+3);'];
+    'p: (n: Float) = (n = 9007199254740993);', 'io.outputLine(if true{1}else{2}+3);'];
   for (const source of invalid) {
     const text = 'io := import "core/io"; io.outputLine("before"); ' + source, expected = expectedText(text);
     assert.equal(expected.status, 1, text); assert.equal(expected.stdout.length, 0, text);
     for (const target of ['ts', 'c'] as const) { const compiled = compileTarget(target, { text }); assert.equal(compiled.status, 2, text); assert.equal(compiled.stdout.length, 0, text); }
   }
-  for (const source of ['io := import "core/io"; var f: Float = 2; io.outputLine(f / 0);', 'io := import "core/io"; var f: Float = 0; io.outputLine(1 / f);',
-    'io := import "core/io"; var f: Float = 2; io.outputLine(f * 1e308);']) {
+  for (const source of ['var f: Float = 2; io.outputLine(f / 0);', 'var f: Float = 0; io.outputLine(1 / f);',
+    'var f: Float = 2; io.outputLine(f * 1e308);']) {
     const text = 'io := import "core/io"; io.outputLine("before");\r\n' + source, name = 'float-context سلام.lts', expected = expectedText(text, { name });
     assert.equal(expected.status, 1); assert.equal(expected.stdout.toString(), 'before\n');
     for (const target of ['ts', 'c'] as const) {
@@ -2285,7 +2294,7 @@ test('Float contexts admit exact integer literals without widening values or cha
 
 
 test('prepared artifacts retain isolated runs and release their resources explicitly', () => {
-  const compiled = compileTs({ text: 'io := import "core/io"; io.outputLine(io.inputAll(), io.inputArgs()[0]);' });
+  const compiled = compileTs({ text: 'io := import "core/io"; args := io.inputArgs(); io.outputLine(io.inputAll(), args[0]);' });
   assert.equal(compiled.status, 0, compiled.stderr.toString());
   const prepared = prepareTsArtifacts([compiled.stdout.toString()]);
   try {
