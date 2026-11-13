@@ -63,8 +63,8 @@ export const siteCss = `:root {
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  width: 32px;
-  height: 32px;
+  width: 26px;
+  height: 26px;
   padding: 0;
   border: none;
   border-radius: 999px;
@@ -80,8 +80,8 @@ export const siteCss = `:root {
 }
 .theme-toggle .theme-icon {
   display: block;
-  width: 30px;
-  height: 30px;
+  width: 100%;
+  height: 100%;
   transition: filter 0.2s ease, transform 0.2s ease;
 }
 .theme-toggle .icon-moon {
@@ -89,17 +89,15 @@ export const siteCss = `:root {
 }
 .theme-toggle.theme-toggle-shine {
   --switch-shine-size: 26px;
-  --switch-shine-spread: 3px;
+  --switch-shine-spread: 4px;
   --switch-shine-icon-glow: 8px;
   --switch-color: #D97706;
-  --switch-shine-core: rgba(254, 240, 138, 0.85);
-  --switch-shine-mid: rgba(251, 191, 36, 0.55);
-  --switch-shine-outer: rgba(245, 158, 11, 0.34);
-  --switch-bg: radial-gradient(circle, rgba(254, 240, 138, 0.42), rgba(251, 191, 36, 0.12) 65%, transparent 100%);
+  --switch-shine-core: rgba(254, 240, 138, 0.9);
+  --switch-shine-mid: rgba(251, 191, 36, 0.62);
+  --switch-shine-outer: rgba(245, 158, 11, 0.36);
   --switch-shadow: 0 0 10px var(--switch-shine-mid), 0 0 var(--switch-shine-size) var(--switch-shine-spread) var(--switch-shine-outer);
   --switch-shadow-hover: 0 0 14px var(--switch-shine-core), 0 0 calc(var(--switch-shine-size) * 1.35) calc(var(--switch-shine-spread) + 3px) var(--switch-shine-mid);
   --switch-glow: drop-shadow(0 0 var(--switch-shine-icon-glow) var(--switch-shine-mid));
-  background: var(--switch-bg);
   color: var(--switch-color);
   box-shadow: var(--switch-shadow);
 }
@@ -120,10 +118,9 @@ export const siteCss = `:root {
 @media (prefers-color-scheme: dark) {
   :root:not([data-theme="light"]) .theme-toggle.theme-toggle-shine {
     --switch-color: #D8E8FF;
-    --switch-shine-core: rgba(239, 246, 255, 0.72);
-    --switch-shine-mid: rgba(147, 197, 253, 0.52);
-    --switch-shine-outer: rgba(191, 219, 254, 0.3);
-    --switch-bg: radial-gradient(circle, rgba(191, 219, 254, 0.3), rgba(147, 197, 253, 0.1) 65%, transparent 100%);
+    --switch-shine-core: rgba(239, 246, 255, 0.78);
+    --switch-shine-mid: rgba(147, 197, 253, 0.56);
+    --switch-shine-outer: rgba(191, 219, 254, 0.32);
   }
   :root:not([data-theme="light"]) .theme-toggle .icon-sun {
     display: none;
@@ -134,10 +131,9 @@ export const siteCss = `:root {
 }
 :root[data-theme="dark"] .theme-toggle.theme-toggle-shine {
   --switch-color: #D8E8FF;
-  --switch-shine-core: rgba(239, 246, 255, 0.72);
-  --switch-shine-mid: rgba(147, 197, 253, 0.52);
-  --switch-shine-outer: rgba(191, 219, 254, 0.3);
-  --switch-bg: radial-gradient(circle, rgba(191, 219, 254, 0.3), rgba(147, 197, 253, 0.1) 65%, transparent 100%);
+  --switch-shine-core: rgba(239, 246, 255, 0.78);
+  --switch-shine-mid: rgba(147, 197, 253, 0.56);
+  --switch-shine-outer: rgba(191, 219, 254, 0.32);
 }
 :root[data-theme="dark"] .theme-toggle .icon-sun {
   display: none;
