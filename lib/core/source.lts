@@ -18,12 +18,12 @@ pub lineColumn := fn(source: String, position: Int): (line: Int, column: Int) {
     var index := 0;
     loop index < cursor {
         if text.at(source, index) == "\n" {
-            line = line + 1;
+            line += 1;
             lineStart = index + 1;
         }
-        index = index + 1;
+        index += 1;
     }
-    (line = line, column = cursor - lineStart + 1)
+    (=line, column = cursor - lineStart + 1)
 }
 
 /** Number of source lines, counting the empty source as one line. */
@@ -32,8 +32,8 @@ pub lineCount := fn(source: String): Int {
     var count := 1;
     var index := 0;
     loop index < size {
-        if text.at(source, index) == "\n" { count = count + 1; }
-        index = index + 1;
+        if text.at(source, index) == "\n" { count += 1; }
+        index += 1;
     }
     count
 }
@@ -47,9 +47,9 @@ pub lineStartOffset := fn(source: String, line: Int): Int {
     loop index < size {
         if text.at(source, index) == "\n" {
             if current == line { return index + 1; }
-            current = current + 1;
+            current += 1;
         }
-        index = index + 1;
+        index += 1;
     }
     size
 }
@@ -60,7 +60,7 @@ pub lineEndOffset := fn(source: String, line: Int): Int {
     start := lineStartOffset(source, line);
     var index := start;
     loop index < size and text.at(source, index) =!= "\n" {
-        index = index + 1;
+        index += 1;
     }
     index
 }

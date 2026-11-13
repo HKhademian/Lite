@@ -32,7 +32,7 @@ moduleIdForPath := fn(graph: frontend.Items, path: String): Int {
 nextModuleId := fn(graph: frontend.Items): Int {
     var count := 0;
     loop graph as item {
-        if item.kind == "ModuleVisited" { count = count + 1; }
+        if item.kind == "ModuleVisited" { count += 1; }
     }
     count
 }
@@ -105,13 +105,13 @@ pub visitSourceModule := fn(target: String, path: String, display: String, ident
             diagLib.fail(display, "the compiler source reader is private to module traversal");
         }
         if not moduleVisited(graph, loaded.path) {
-            graph = visitSourceModule(target, loaded.path, loaded.display, loaded.identity, loaded.text, graph);
+            graph = self(=target, path = loaded.path, display = loaded.display, identity = loaded.identity, source = loaded.text, initialGraph = graph);
         }
         if moduleProcessed(graph, loaded.path) {
             importedExports = appendModuleExports(importedExports, moduleAliasExports(graph, loaded.path, clause.name), path);
         }
     }
-    localItems := frontend.parseProgramWithIdentity(target, source, display, importedExports, moduleId, identity);
+    localItems := frontend.parseProgramWithIdentity(=target, =source, prefix = display, exports = importedExports, =moduleId, moduleIdentity = identity);
     listLib.pushBack(mut graph, (kind = "ModuleStart", name = path, runtime = "", code = "", intValue = moduleId, textValue = display));
     loop localItems as item { listLib.pushBack(mut graph, item); }
     listLib.pushBack(mut graph, (kind = "ModuleEnd", name = path, runtime = "", code = "", intValue = moduleId, textValue = ""));

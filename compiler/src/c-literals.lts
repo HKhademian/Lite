@@ -19,14 +19,14 @@ pub textLiteralCode := fn(value: String): String {
     var position := 0;
     loop position < size {
         ch := textLib.at(value, position);
-        if ch == "\\" { encoded = encoded + "\\\\"; }
-        else if ch == "\"" { encoded = encoded + "\\\""; }
-        else if ch == "?" { encoded = encoded + "\\?"; }
-        else if ch == "\n" { encoded = encoded + "\\n"; }
-        else if ch == "\r" { encoded = encoded + "\\r"; }
-        else if ch == "\t" { encoded = encoded + "\\t"; }
-        else { encoded = encoded + ch; }
-        position = position + 1;
+        if ch == "\\" { encoded += "\\\\"; }
+        else if ch == "\"" { encoded += "\\\""; }
+        else if ch == "?" { encoded += "\\?"; }
+        else if ch == "\n" { encoded += "\\n"; }
+        else if ch == "\r" { encoded += "\\r"; }
+        else if ch == "\t" { encoded += "\\t"; }
+        else { encoded += ch; }
+        position += 1;
     }
     encoded + "\""
 }
@@ -196,8 +196,8 @@ pub comparisonChainCode := fn(codes: List<String>, kinds: List<String>, operator
     loop index <= count {
         name := comparisonTemp(kinds[index], position, index);
         pair := comparisonPairCode(operators[index - 1], kinds[index - 1], kinds[index], comparisonTemp(kinds[index - 1], position, index - 1), name);
-        result = result + " && (" + name + " = " + comparisonValueCode(kinds[index], codes[index]) + ", " + pair + ")";
-        index = index + 1;
+        result += " && (" + name + " = " + comparisonValueCode(kinds[index], codes[index]) + ", " + pair + ")";
+        index += 1;
     }
     result + ")"
 }

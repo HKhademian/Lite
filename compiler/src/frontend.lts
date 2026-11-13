@@ -2744,12 +2744,12 @@ parseBinary := fn(target: String, source: String, position: Int, prefix: String,
                             slotExplicit = setBoolAt(slotExplicit, slot, true);
                             slotEntry = setIntAt(slotEntry, slot, entryCount);
                             expected := paramKindOf(params[info.first + slot]);
-                            arg := self(target, source, argNameStart, prefix, locals, functions, params, currentName, expected, 30);
+                            arg := self(=target, =source, position = argNameStart, =prefix, =locals, =functions, =params, =currentName, =expected, minimum = 30);
                             listLib.pushBack(mut entryPositions, argNameStart);
                             listLib.pushBack(mut entrySlots, slot);
                             listLib.pushBack(mut entryKinds, arg.kind);
                             listLib.pushBack(mut entryCodes, arg.code);
-                            entryCount = entryCount + 1;
+                            entryCount += 1;
                             cursor = skipTrivia(source, arg.next, prefix);
                         } else {
                             var namedLabel := "";
@@ -2774,12 +2774,12 @@ parseBinary := fn(target: String, source: String, position: Int, prefix: String,
                                 slotExplicit = setBoolAt(slotExplicit, slot, true);
                                 slotEntry = setIntAt(slotEntry, slot, entryCount);
                                 expected := paramKindOf(params[info.first + slot]);
-                                arg := self(target, source, rhsStart, prefix, locals, functions, params, currentName, expected, 0);
+                                arg := self(=target, =source, position = rhsStart, =prefix, =locals, =functions, =params, =currentName, =expected, minimum = 0);
                                 listLib.pushBack(mut entryPositions, rhsStart);
                                 listLib.pushBack(mut entrySlots, slot);
                                 listLib.pushBack(mut entryKinds, arg.kind);
                                 listLib.pushBack(mut entryCodes, arg.code);
-                                entryCount = entryCount + 1;
+                                entryCount += 1;
                                 cursor = skipTrivia(source, arg.next, prefix);
                             } else {
                                 var nextSlot := -1;
@@ -2789,7 +2789,7 @@ parseBinary := fn(target: String, source: String, position: Int, prefix: String,
                                         nextSlot = scan;
                                         break;
                                     }
-                                    scan = scan + 1;
+                                    scan += 1;
                                 }
                                 if nextSlot < 0 {
                                     suffix := if info.count == 1 { " argument" } else { " arguments" };
@@ -2798,12 +2798,12 @@ parseBinary := fn(target: String, source: String, position: Int, prefix: String,
                                 slotName := paramNameOf(params[info.first + nextSlot]);
                                 posExpected := if listLib.listContainsText(explicitLabels, slotName) { "" } else { paramKindOf(params[info.first + nextSlot]) };
                                 slotEntry = setIntAt(slotEntry, nextSlot, entryCount);
-                                arg := self(target, source, cursor, prefix, locals, functions, params, currentName, posExpected, 0);
+                                arg := self(=target, =source, position = cursor, =prefix, =locals, =functions, =params, =currentName, expected = posExpected, minimum = 0);
                                 listLib.pushBack(mut entryPositions, cursor);
                                 listLib.pushBack(mut entrySlots, nextSlot);
                                 listLib.pushBack(mut entryKinds, arg.kind);
                                 listLib.pushBack(mut entryCodes, arg.code);
-                                entryCount = entryCount + 1;
+                                entryCount += 1;
                                 cursor = skipTrivia(source, arg.next, prefix);
                             }
                         }
@@ -2819,8 +2819,8 @@ parseBinary := fn(target: String, source: String, position: Int, prefix: String,
                 var filledCount := 0;
                 var checkSlot := 0;
                 loop checkSlot < info.count {
-                    if slotEntry[checkSlot] >= 0 { filledCount = filledCount + 1; }
-                    checkSlot = checkSlot + 1;
+                    if slotEntry[checkSlot] >= 0 { filledCount += 1; }
+                    checkSlot += 1;
                 }
                 if filledCount =!= info.count {
                     suffix := if info.count == 1 { " argument" } else { " arguments" };
@@ -2837,7 +2837,7 @@ parseBinary := fn(target: String, source: String, position: Int, prefix: String,
                         failAt(source, entryPositions[k], prefix, "argument " + formatLib.decimalText(slotIdx + 1) + " of " +
                             calleeDisplay + " must be " + displayKind(expected) + ", got " + displayKind(entryKinds[k]));
                     }
-                    slotIdx = slotIdx + 1;
+                    slotIdx += 1;
                 }
                 var emittedCode := "";
                 if isIdentityOrder {

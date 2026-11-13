@@ -8,10 +8,10 @@ pub run := fn(): Unit {
     prefix := frontend.sourcePrefix();
     source := io.inputAll();
     if frontend.sourceModulePath() =!= "" {
-        graph := modules.visitSourceModule("c", frontend.sourceModulePath(), prefix,
-            frontend.sourceModuleIdentity(), source, []);
-        emitter.emitProgram(modules.moduleItems(graph), source, prefix);
+        graph := modules.visitSourceModule(target = "c", path = frontend.sourceModulePath(), display = prefix,
+            identity = frontend.sourceModuleIdentity(), =source, initialGraph = []);
+        emitter.emitProgram(items = modules.moduleItems(graph), =source, =prefix);
     } else {
-        emitter.emitProgram(frontend.parseProgram("c", source, prefix), source, prefix);
+        emitter.emitProgram(items = frontend.parseProgram(target = "c", =source, =prefix), =source, =prefix);
     }
 }

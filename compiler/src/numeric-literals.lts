@@ -13,7 +13,7 @@ pub intExactlyFloat := fn(input: Int): Bool {
     var value := input;
     loop value > 9007199254740992 or value < -9007199254740992 {
         if value % 2 =!= 0 { return false; }
-        value = value / 2;
+        value /= 2;
     }
     true
 }
@@ -21,7 +21,7 @@ pub intExactlyFloat := fn(input: Int): Bool {
 /** Checks finite binary64 literal rounding using decimal digits, without requiring Float arithmetic in the bootstrap compiler. The excluded midpoint is 2^1024 - 2^970; a tie rounds to infinity. */
 pub finiteFloatDigits := fn(digits: String, fractionCount: Int, exponent: Int): Bool {
     var first := 0;
-    loop first < textLib.length(digits) and textLib.at(digits, first) == "0" { first = first + 1; }
+    loop first < textLib.length(digits) and textLib.at(digits, first) == "0" { first += 1; }
     if first == textLib.length(digits) { return true; }
     significant := textLib.slice(digits, first, textLib.length(digits));
     power := textLib.length(significant) - fractionCount + exponent;
@@ -36,7 +36,7 @@ pub finiteFloatDigits := fn(digits: String, fractionCount: Int, exponent: Int): 
         right := if index < textLib.length(midpoint) { textLib.digitValue(textLib.at(midpoint, index)) } else { 0 };
         if left < right { return true; }
         if left > right { return false; }
-        index = index + 1;
+        index += 1;
     }
     false
 }
@@ -53,7 +53,7 @@ pub scanNumericLiteral := fn(source: String, position: Int): (next: Int, integer
             if magnitude < (-9223372036854775808 + digit) / 10 { outsideInt = true; }
             else { magnitude = magnitude * 10 - digit; }
         }
-        cursor = cursor + 1;
+        cursor += 1;
     }
     integerEnd := cursor;
     var fractionStart := cursor;
@@ -61,9 +61,9 @@ pub scanNumericLiteral := fn(source: String, position: Int): (next: Int, integer
     var floating := false;
     if cursor + 1 < size and textLib.at(source, cursor) == "." and textLib.isDigit(textLib.at(source, cursor + 1)) {
         floating = true;
-        cursor = cursor + 1;
+        cursor += 1;
         fractionStart = cursor;
-        loop cursor < size and textLib.isDigit(textLib.at(source, cursor)) { cursor = cursor + 1; }
+        loop cursor < size and textLib.isDigit(textLib.at(source, cursor)) { cursor += 1; }
         fractionEnd = cursor;
     }
     var exponent := 0;
@@ -71,11 +71,11 @@ pub scanNumericLiteral := fn(source: String, position: Int): (next: Int, integer
     if cursor < size and (textLib.at(source, cursor) == "e" or textLib.at(source, cursor) == "E") {
         floating = true;
         exponentAt := cursor;
-        cursor = cursor + 1;
+        cursor += 1;
         var negativeExponent := false;
         if cursor < size and (textLib.at(source, cursor) == "+" or textLib.at(source, cursor) == "-") {
             negativeExponent = textLib.at(source, cursor) == "-";
-            cursor = cursor + 1;
+            cursor += 1;
         }
         exponentStart := cursor;
         limit := size + 310;
@@ -83,11 +83,11 @@ pub scanNumericLiteral := fn(source: String, position: Int): (next: Int, integer
             digit := textLib.digitValue(textLib.at(source, cursor));
             if exponent > (limit - digit) / 10 { exponent = limit; }
             else { exponent = exponent * 10 + digit; }
-            cursor = cursor + 1;
+            cursor += 1;
         }
         if cursor == exponentStart { exponentMissingAt = exponentAt; }
         if negativeExponent { exponent = -exponent; }
     }
-    (next = cursor, integerEnd = integerEnd, fractionStart = fractionStart, fractionEnd = fractionEnd,
-        exponent = exponent, floating = floating, exponentMissingAt = exponentMissingAt, magnitude = magnitude, outsideInt = outsideInt)
+    (next = cursor, =integerEnd, =fractionStart, =fractionEnd,
+        =exponent, =floating, =exponentMissingAt, =magnitude, =outsideInt)
 }

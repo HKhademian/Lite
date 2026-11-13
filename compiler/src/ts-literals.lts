@@ -26,13 +26,13 @@ pub textLiteralCode := fn(value: String): String {
     var position := 0;
     loop position < size {
         ch := textLib.at(value, position);
-        if ch == "\\" { encoded = encoded + "\\\\"; }
-        else if ch == "\"" { encoded = encoded + "\\\""; }
-        else if ch == "\n" { encoded = encoded + "\\n"; }
-        else if ch == "\r" { encoded = encoded + "\\r"; }
-        else if ch == "\t" { encoded = encoded + "\\t"; }
-        else { encoded = encoded + ch; }
-        position = position + 1;
+        if ch == "\\" { encoded += "\\\\"; }
+        else if ch == "\"" { encoded += "\\\""; }
+        else if ch == "\n" { encoded += "\\n"; }
+        else if ch == "\r" { encoded += "\\r"; }
+        else if ch == "\t" { encoded += "\\t"; }
+        else { encoded += ch; }
+        position += 1;
     }
     encoded + "\""
 }
@@ -173,13 +173,13 @@ pub comparisonChainCode := fn(codes: List<String>, kinds: List<String>, operator
     var index := 0;
     loop index <= count {
         name := "lite$compare" + integer.intText(index);
-        result = result + "const " + name + ": " + tsScalarType(kinds[index]) + " = " + codes[index] + "; ";
+        result += "const " + name + ": " + tsScalarType(kinds[index]) + " = " + codes[index] + "; ";
         if index > 0 {
             pair := comparisonPairCode(operators[index - 1], kinds[index - 1], kinds[index], "lite$compare" + integer.intText(index - 1), name);
-            if index < count { result = result + "if (!(" + pair + ")) return false; "; }
-            else { result = result + "return " + pair + "; "; }
+            if index < count { result += "if (!(" + pair + ")) return false; "; }
+            else { result += "return " + pair + "; "; }
         }
-        index = index + 1;
+        index += 1;
     }
     result + "})()"
 }
