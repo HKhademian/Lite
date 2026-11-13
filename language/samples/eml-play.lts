@@ -1,0 +1,43 @@
+/* Play: EML stack machine + EML expression converter in Lite. */
+
+io := import "core/io";
+eml := import "./eml.lts";
+
+showStream := fn(name: String, program: String): Unit {
+    res := eml.runStream(program);
+    status := if res.loose { "loose" } else { "valid" };
+    io.outputLine("stream:", program, "|", name, "| status:", status, "| depth:", res.depth, "| underflows:", res.underflows);
+    eml.printComplex("  TOS =", eml.cMake(res.tosRe, res.tosIm));
+}
+
+showConvert := fn(expr: String): Unit {
+    conv := eml.convertExpr(expr);
+    res := eml.runStream(conv.stream);
+    status := if res.loose { "loose" } else { "valid" };
+    io.outputLine("expr:", expr);
+    io.outputLine("  tree  =", conv.tree);
+    io.outputLine("  morse =", conv.stream);
+    io.outputLine("  bits  =", conv.bits);
+    io.outputLine("  eval  =", status, "| ops:", res.ops);
+    eml.printComplex("  TOS   =", eml.cMake(res.tosRe, res.tosIm));
+}
+
+io.outputLine("=== 1. EML Stack Machine (Morse / Bit Stream) ===");
+showStream("1", "-");
+showStream("underflow eml(1,1)", ".");
+showStream("eml(1,1) = e", "--.");
+showStream("1, eml(1,1)", "---.");
+showStream("0 = eml(1, exp(e))", "---.-..");
+showStream("bits: 0 = 1110100", "1110100");
+
+io.outputLine("");
+io.outputLine("=== 2. EML Converter (Expression -> EML Tree & Stream -> Stack Eval) ===");
+showConvert("1");
+showConvert("e");
+showConvert("0");
+showConvert("exp(1)");
+showConvert("ln(e)");
+showConvert("-1");
+showConvert("2 + 3");
+showConvert("6 / 2");
+showConvert("2 * 3 - 1");

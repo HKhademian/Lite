@@ -1,0 +1,526 @@
+/* EML (exp(x) - ln(y)) complex library, stack machine, and expression converter. */
+
+io := import "core/io";
+list := import "core/list";
+text := import "core/text";
+
+pub Complex := type (re: Float, im: Float);
+
+pub StreamResult := type (
+    tosRe: Float,
+    tosIm: Float,
+    depth: Int,
+    loose: Bool,
+    underflows: Int,
+    ops: Int
+);
+
+pub Converted := type (
+    tree: String,
+    stream: String,
+    bits: String
+);
+
+pi := fn(): Float { 3.141592653589793 }
+ln2 := fn(): Float { 0.6931471805599453 }
+
+absFloat := fn(x: Float): Float {
+    if x < 0.0 { return 0.0 - x; }
+    x
+}
+
+floorFloat := fn(x: Float): Float {
+    var k := 0.0;
+    if x >= 0.0 {
+        loop k + 1.0 <= x {
+            k = k + 1.0;
+        }
+        return k;
+    }
+    loop k > x {
+        k = k - 1.0;
+    }
+    k
+}
+
+roundFloat := fn(x: Float): Float {
+    if x >= 0.0 { return floorFloat(x + 0.5); }
+    0.0 - floorFloat(0.5 - x)
+}
+
+realSqrt := fn(x: Float): Float {
+    if x <= 0.0 { return 0.0; }
+    var g := if x > 1.0 { x } else { 1.0 };
+    var i := 0;
+    loop i < 32 {
+        g = 0.5 * (g + x / g);
+        i = i + 1;
+    }
+    g
+}
+
+realExp := fn(x: Float): Float {
+    l2 := ln2();
+    k := roundFloat(x / l2);
+    r := x - k * l2;
+    var sum := 1.0;
+    var term := 1.0;
+    var n := 1;
+    loop n <= 24 {
+        term = term * r / n;
+        sum = sum + term;
+        n = n + 1;
+    }
+    var scale := 1.0;
+    if k > 0.0 {
+        var i := 0.0;
+        loop i < k {
+            scale = scale * 2.0;
+            i = i + 1.0;
+        }
+    } else if k < 0.0 {
+        var i := 0.0;
+        loop i > k {
+            scale = scale * 0.5;
+            i = i - 1.0;
+        }
+    }
+    sum * scale
+}
+
+realLn := fn(x: Float): Float {
+    if x <= 0.0 { return 0.0; }
+    var v := x;
+    var k := 0.0;
+    loop v >= 1.4142135623730951 {
+        v = v * 0.5;
+        k = k + 1.0;
+    }
+    loop v < 0.7071067811865476 {
+        v = v * 2.0;
+        k = k - 1.0;
+    }
+    u := (v - 1.0) / (v + 1.0);
+    u2 := u * u;
+    var term := u;
+    var sum := u;
+    var n := 3;
+    loop n <= 39 {
+        term = term * u2;
+        sum = sum + term / n;
+        n = n + 2;
+    }
+    2.0 * sum + k * ln2()
+}
+
+wrapAngle := fn(x: Float): Float {
+    twoPi := 2.0 * pi();
+    k := roundFloat(x / twoPi);
+    x - k * twoPi
+}
+
+realSin := fn(x: Float): Float {
+    r := wrapAngle(x);
+    r2 := r * r;
+    var term := r;
+    var sum := r;
+    var n := 1;
+    loop n <= 14 {
+        denom := (2 * n) * (2 * n + 1);
+        term = (0.0 - term) * r2 / denom;
+        sum = sum + term;
+        n = n + 1;
+    }
+    sum
+}
+
+realCos := fn(x: Float): Float {
+    r := wrapAngle(x);
+    r2 := r * r;
+    var term := 1.0;
+    var sum := 1.0;
+    var n := 1;
+    loop n <= 14 {
+        denom := (2 * n - 1) * (2 * n);
+        term = (0.0 - term) * r2 / denom;
+        sum = sum + term;
+        n = n + 1;
+    }
+    sum
+}
+
+realAtan := fn(x: Float): Float {
+    if x < 0.0 { return 0.0 - self(0.0 - x); }
+    if x > 1.0 { return pi() * 0.5 - self(1.0 / x); }
+    /* Half-angle reduction twice so |t| < 0.27 for fast Taylor convergence. */
+    t1 := x / (1.0 + realSqrt(1.0 + x * x));
+    t2 := t1 / (1.0 + realSqrt(1.0 + t1 * t1));
+    t2sq := t2 * t2;
+    var term := t2;
+    var sum := t2;
+    var n := 1;
+    loop n <= 11 {
+        term = (0.0 - term) * t2sq;
+        sum = sum + term / (2 * n + 1);
+        n = n + 1;
+    }
+    4.0 * sum
+}
+
+realAtan2 := fn(y: Float, x: Float): Float {
+    if x > 0.0 { return realAtan(y / x); }
+    if x < 0.0 and y >= 0.0 { return realAtan(y / x) + pi(); }
+    if x < 0.0 and y < 0.0 { return realAtan(y / x) - pi(); }
+    if x == 0.0 and y > 0.0 { return pi() * 0.5; }
+    if x == 0.0 and y < 0.0 { return 0.0 - pi() * 0.5; }
+    0.0
+}
+
+pub cMake := fn(re: Float, im: Float): Complex { (re = re, im = im) }
+pub cOne := fn(): Complex { (re = 1.0, im = 0.0) }
+pub cZero := fn(): Complex { (re = 0.0, im = 0.0) }
+
+pub cAdd := fn(a: Complex, b: Complex): Complex {
+    (re = a.re + b.re, im = a.im + b.im)
+}
+
+pub cSub := fn(a: Complex, b: Complex): Complex {
+    (re = a.re - b.re, im = a.im - b.im)
+}
+
+pub cMul := fn(a: Complex, b: Complex): Complex {
+    (re = a.re * b.re - a.im * b.im, im = a.re * b.im + a.im * b.re)
+}
+
+pub cDiv := fn(a: Complex, b: Complex): Complex {
+    denom := b.re * b.re + b.im * b.im;
+    (
+        re = (a.re * b.re + a.im * b.im) / denom,
+        im = (a.im * b.re - a.re * b.im) / denom
+    )
+}
+
+pub cExp := fn(z: Complex): Complex {
+    ea := realExp(z.re);
+    (re = ea * realCos(z.im), im = ea * realSin(z.im))
+}
+
+pub cLn := fn(z: Complex): Complex {
+    r := realSqrt(z.re * z.re + z.im * z.im);
+    theta := realAtan2(z.im, z.re);
+    (re = realLn(r), im = theta)
+}
+
+/** Core primitive: eml(x, y) = exp(x) - ln(y). */
+pub eml := fn(x: Complex, y: Complex): Complex {
+    cSub(cExp(x), cLn(y))
+}
+
+pub emlE := fn(): Complex { eml(cOne(), cOne()) }
+pub emlZero := fn(): Complex { eml(cOne(), eml(eml(cOne(), cOne()), cOne())) }
+pub emlExp := fn(x: Complex): Complex { eml(x, cOne()) }
+pub emlLn := fn(x: Complex): Complex { eml(cOne(), eml(eml(cOne(), x), cOne())) }
+pub emlSub := fn(x: Complex, y: Complex): Complex { eml(emlLn(x), emlExp(y)) }
+
+pub emlMinusOne := fn(): Complex {
+    e := emlE();
+    emlSub(eml(cOne(), e), e)
+}
+
+pub emlNeg := fn(x: Complex): Complex {
+    if absFloat(x.re - 1.0) < 1e-12 and absFloat(x.im) < 1e-12 {
+        return emlMinusOne();
+    }
+    emlSub(eml(emlZero(), emlExp(x)), cOne())
+}
+
+pub emlAdd := fn(x: Complex, y: Complex): Complex {
+    if absFloat(x.re) < 1e-12 and absFloat(x.im) < 1e-12 {
+        return y;
+    }
+    emlSub(x, emlNeg(y))
+}
+
+pub emlMul := fn(x: Complex, y: Complex): Complex {
+    if (absFloat(x.re) < 1e-12 and absFloat(x.im) < 1e-12) or (absFloat(y.re) < 1e-12 and absFloat(y.im) < 1e-12) {
+        return emlZero();
+    }
+    emlExp(emlAdd(emlLn(x), emlLn(y)))
+}
+
+pub emlDiv := fn(x: Complex, y: Complex): Complex {
+    if absFloat(x.re) < 1e-12 and absFloat(x.im) < 1e-12 {
+        return emlZero();
+    }
+    emlExp(emlSub(emlLn(x), emlLn(y)))
+}
+
+/** Runs a '-'/'1' (push 1) and '.'/'0' (push eml(pop, pop)) stream program. */
+pub runStream := fn(program: String): StreamResult {
+    stack: mut List<Complex> = [];
+    var depth := 0;
+    var loose := false;
+    var underflows := 0;
+    var ops := 0;
+    size := text.length(program);
+    var i := 0;
+    loop i < size {
+        ch := text.at(program, i);
+        if ch == "-" or ch == "1" {
+            list.pushBack(mut stack, cOne());
+            depth = depth + 1;
+            ops = ops + 1;
+        } else if ch == "." or ch == "0" {
+            var y := cOne();
+            if depth > 0 {
+                y = list.popBack(mut stack);
+                depth = depth - 1;
+            } else {
+                loose = true;
+                underflows = underflows + 1;
+            }
+            var x := cOne();
+            if depth > 0 {
+                x = list.popBack(mut stack);
+                depth = depth - 1;
+            } else {
+                loose = true;
+                underflows = underflows + 1;
+            }
+            list.pushBack(mut stack, eml(x, y));
+            depth = depth + 1;
+            ops = ops + 1;
+        }
+        i = i + 1;
+    }
+    if depth =!= 1 {
+        loose = true;
+    }
+    tos := if depth > 0 { stack[depth - 1] } else { cOne() };
+    (tosRe = tos.re, tosIm = tos.im, depth = depth, loose = loose, underflows = underflows, ops = ops)
+}
+
+/* --- EML Converter: builds both eml(...) tree and '-'/'.' stream --- */
+
+cNodeOne := fn(): Converted {
+    (tree = "1", stream = "-", bits = "1")
+}
+
+cNodeEml := fn(x: Converted, y: Converted): Converted {
+    (
+        tree = "eml(" + x.tree + ", " + y.tree + ")",
+        stream = x.stream + y.stream + ".",
+        bits = x.bits + y.bits + "0"
+    )
+}
+
+cNodeE := fn(): Converted { cNodeEml(cNodeOne(), cNodeOne()) }
+cNodeZero := fn(): Converted { cNodeEml(cNodeOne(), cNodeEml(cNodeE(), cNodeOne())) }
+cNodeExp := fn(x: Converted): Converted { cNodeEml(x, cNodeOne()) }
+cNodeLn := fn(x: Converted): Converted { cNodeEml(cNodeOne(), cNodeEml(cNodeEml(cNodeOne(), x), cNodeOne())) }
+cNodeSub := fn(x: Converted, y: Converted): Converted { cNodeEml(cNodeLn(x), cNodeExp(y)) }
+
+cNodeMinusOne := fn(): Converted {
+    e := cNodeE();
+    cNodeSub(cNodeEml(cNodeOne(), e), e)
+}
+
+cNodeNeg := fn(x: Converted): Converted {
+    if x.tree == "1" { return cNodeMinusOne(); }
+    cNodeSub(cNodeEml(cNodeZero(), cNodeExp(x)), cNodeOne())
+}
+
+cNodeAdd := fn(x: Converted, y: Converted): Converted {
+    cNodeSub(x, cNodeNeg(y))
+}
+
+cNodeMul := fn(x: Converted, y: Converted): Converted {
+    cNodeExp(cNodeAdd(cNodeLn(x), cNodeLn(y)))
+}
+
+cNodeDiv := fn(x: Converted, y: Converted): Converted {
+    cNodeExp(cNodeSub(cNodeLn(x), cNodeLn(y)))
+}
+
+cNodeNat := fn(n: Int): Converted {
+    if n == 0 { return cNodeZero(); }
+    if n == 1 { return cNodeOne(); }
+    var acc := cNodeOne();
+    var i := 1;
+    loop i < n {
+        acc = cNodeAdd(acc, cNodeOne());
+        i = i + 1;
+    }
+    acc
+}
+
+isDigit := fn(ch: String): Bool {
+    or ch == "0" or ch == "1" or ch == "2" or ch == "3" or ch == "4"
+    or ch == "5" or ch == "6" or ch == "7" or ch == "8" or ch == "9"
+}
+
+isAlpha := fn(ch: String): Bool {
+    text.isAsciiLetter(ch)
+}
+
+tokenize := fn(src: String): List<(kind: String, text: String)> {
+    tokens: mut List<(kind: String, text: String)> = [];
+    size := text.length(src);
+    var i := 0;
+    loop i < size {
+        ch := text.at(src, i);
+        if ch == " " or ch == "\t" or ch == "\n" or ch == "\r" {
+            i = i + 1;
+            continue;
+        }
+        if isDigit(ch) {
+            start := i;
+            i = i + 1;
+            loop i < size and isDigit(text.at(src, i)) {
+                i = i + 1;
+            }
+            list.pushBack(mut tokens, (kind = "num", text = text.slice(src, start, i)));
+            continue;
+        }
+        if isAlpha(ch) {
+            start := i;
+            i = i + 1;
+            loop i < size and isAlpha(text.at(src, i)) {
+                i = i + 1;
+            }
+            list.pushBack(mut tokens, (kind = "id", text = text.slice(src, start, i)));
+            continue;
+        }
+        if ch == "+" or ch == "-" or ch == "*" or ch == "/" or ch == "(" or ch == ")" or ch == "," {
+            list.pushBack(mut tokens, (kind = "sym", text = ch));
+            i = i + 1;
+            continue;
+        }
+        io.errorLine("unsupported character in expression: " + ch);
+        io.exit(2);
+    }
+    tokens
+}
+
+parseInt := fn(s: String): Int {
+    size := text.length(s);
+    var i := 0;
+    var val := 0;
+    loop i < size {
+        ch := text.at(s, i);
+        d := if ch == "0" { 0 } else if ch == "1" { 1 } else if ch == "2" { 2 }
+            else if ch == "3" { 3 } else if ch == "4" { 4 } else if ch == "5" { 5 }
+            else if ch == "6" { 6 } else if ch == "7" { 7 } else if ch == "8" { 8 } else { 9 };
+        val = val * 10 + d;
+        i = i + 1;
+    }
+    val
+}
+
+prec := fn(op: String): Int {
+    if op == "+" or op == "-" { return 10; }
+    if op == "*" or op == "/" { return 20; }
+    0
+}
+
+parseExpr := fn(tokens: List<(kind: String, text: String)>, count: Int, start: Int, minPrec: Int): (tree: String, stream: String, bits: String, next: Int) {
+    if start >= count {
+        io.errorLine("unexpected end of expression");
+        io.exit(2);
+    }
+    tok := tokens[start];
+    var pos := start + 1;
+    var node := cNodeOne();
+    if tok.kind == "num" {
+        node = cNodeNat(parseInt(tok.text));
+    } else if tok.kind == "id" {
+        if tok.text == "e" {
+            node = cNodeE();
+        } else if pos < count and tokens[pos].text == "(" {
+            pos = pos + 1;
+            first := self(tokens, count, pos, 0);
+            firstNode := (tree = first.tree, stream = first.stream, bits = first.bits);
+            pos = first.next;
+            if tok.text == "exp" {
+                node = cNodeExp(firstNode);
+            } else if tok.text == "ln" {
+                node = cNodeLn(firstNode);
+            } else if tok.text == "eml" {
+                if pos >= count or tokens[pos].text =!= "," {
+                    io.errorLine("expected ',' in eml(x, y)");
+                    io.exit(2);
+                }
+                second := self(tokens, count, pos + 1, 0);
+                secondNode := (tree = second.tree, stream = second.stream, bits = second.bits);
+                pos = second.next;
+                node = cNodeEml(firstNode, secondNode);
+            } else {
+                io.errorLine("unknown function: " + tok.text);
+                io.exit(2);
+            }
+            if pos >= count or tokens[pos].text =!= ")" {
+                io.errorLine("expected ')'");
+                io.exit(2);
+            }
+            pos = pos + 1;
+        } else {
+            io.errorLine("unknown identifier: " + tok.text);
+            io.exit(2);
+        }
+    } else if tok.text == "-" {
+        inner := self(tokens, count, pos, 30);
+        innerNode := (tree = inner.tree, stream = inner.stream, bits = inner.bits);
+        node = cNodeNeg(innerNode);
+        pos = inner.next;
+    } else if tok.text == "(" {
+        inner := self(tokens, count, pos, 0);
+        node = (tree = inner.tree, stream = inner.stream, bits = inner.bits);
+        pos = inner.next;
+        if pos >= count or tokens[pos].text =!= ")" {
+            io.errorLine("expected ')'");
+            io.exit(2);
+        }
+        pos = pos + 1;
+    } else {
+        io.errorLine("unexpected token: " + tok.text);
+        io.exit(2);
+    }
+
+    loop pos < count {
+        op := tokens[pos].text;
+        p := prec(op);
+        if p == 0 or p < minPrec { break; }
+        rhs := self(tokens, count, pos + 1, p + 1);
+        rhsNode := (tree = rhs.tree, stream = rhs.stream, bits = rhs.bits);
+        node = if op == "+" { cNodeAdd(node, rhsNode) }
+            else if op == "-" { cNodeSub(node, rhsNode) }
+            else if op == "*" { cNodeMul(node, rhsNode) }
+            else { cNodeDiv(node, rhsNode) };
+        pos = rhs.next;
+    }
+    (tree = node.tree, stream = node.stream, bits = node.bits, next = pos)
+}
+
+/** Converts an arithmetic/math expression into a pure eml(..., 1) tree and stream. */
+pub convertExpr := fn(expr: String): Converted {
+    tokens := tokenize(expr);
+    var count := 0;
+    loop tokens as tok { count = count + 1; }
+    parsed := parseExpr(tokens, count, 0, 0);
+    if parsed.next =!= count {
+        io.errorLine("unexpected trailing token: " + tokens[parsed.next].text);
+        io.exit(2);
+    }
+    (tree = parsed.tree, stream = parsed.stream, bits = parsed.bits)
+}
+
+/** Prints a Complex number cleanly (hiding tiny imaginary rounding noise). */
+pub printComplex := fn(label: String, z: Complex): Unit {
+    reClean := if absFloat(z.re) < 1e-12 { 0.0 } else { z.re };
+    imClean := if absFloat(z.im) < 1e-12 { 0.0 } else { z.im };
+    if imClean == 0.0 {
+        io.outputLine(label, reClean);
+    } else {
+        io.outputLine(label, reClean, "+ i *", imClean);
+    }
+}
