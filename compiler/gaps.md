@@ -172,7 +172,7 @@ Keep dependencies explicit; split a topic further when its contracts warrant it.
   List<Unit>, all end operations and copy contracts.
 - [x] **Storage and updates:** compound assignments, zero initialization,
   reserved storage and first whole-value writes.
-- [ ] **Call routing:** named/positional/shorthand arguments, replacement of
+- [x] **Call routing:** named/positional/shorthand arguments, replacement of
   earlier contributions and trailing argument forms.
 - [ ] **Function values and environments:** static function lookup must respect
   later ordinary value shadowing: `f := fn(): Int { 1 } f := 2; outputLine(f());`

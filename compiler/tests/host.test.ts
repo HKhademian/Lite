@@ -2629,3 +2629,66 @@ test('storage and updates support compound assignments, zero init, reserved stor
     assert.match(rejected.stderr.toString(), expectedMessage);
   }
 });
+
+test('call routing supports named, positional, shorthand, replacement, recursion, trailing commas, module functions, and rejections', () => {
+  const source = [
+    'io := import "core/io";',
+    'step := fn(label: String, n: Int): Int { io.outputLine(label, n); n };',
+    'tag := fn(label: String): String { io.outputLine(label); label };',
+    'digits := fn(a: Int, b: Int, c: Int): Int { a * 100 + b * 10 + c };',
+    'a := 5; b := 2; c := 6;',
+    'r1 := digits(c = 3, 1, =b);',
+    'r2 := digits(9, a = 1, 2, 3,);',
+    'r3 := digits(tag("skip"), 2, a = step("keep", 1), c = step("tail", 3));',
+    'r4 := digits(tag("over"), 2, =a, =c,);',
+    'logUnit := fn(x: Int, y: String): Unit { io.outputLine(x, y); };',
+    'logUnit(y = "done", 7,);',
+    'sumDown := fn(n: Int, total: Int): Int {',
+    '  if n == 0 { total } else { self(total = total + n, n = n - 1) }',
+    '};',
+    'length := fn(text: String): Int { 4 };',
+    'io.outputLine(r1, r2, r3, r4, sumDown(4, 0), length(text = "abcd"));',
+  ].join('\n');
+  const compiled = compileTs({ text: source });
+  assert.equal(compiled.status, 0, compiled.stderr.toString());
+  const actual = runTsArtifact(compiled.stdout.toString());
+  assert.equal(actual.phase, 'run');
+  assert.equal(actual.status, 0, actual.stderr.toString());
+  assert.equal(actual.stdout.toString(), 'skip\nkeep 1\ntail 3\nover\n7 done\n123 123 123 526 10 4\n');
+
+  const directory = mkdtempSync(join(tmpdir(), 'lite-call-routing-'));
+  try {
+    const appPath = join(directory, 'app.lts');
+    const modPath = join(directory, 'mod.lts');
+    writeFileSync(modPath, 'pub pick := fn(a: Int, b: Int, c: Int): Int { a * 100 + b * 10 + c }\n');
+    writeFileSync(appPath, 'io := import "core/io"; m := import "./mod.lts"; b := 2; io.outputLine(m.pick("x", 9, a = 1, =b, 3,));\n');
+    const modCompiled = compileTs({ text: readFileSync(appPath, 'utf8'), name: realpathSync(appPath) });
+    assert.equal(modCompiled.status, 0, modCompiled.stderr.toString());
+    const modRun = runTsArtifact(modCompiled.stdout.toString());
+    assert.equal(modRun.phase, 'run');
+    assert.equal(modRun.status, 0, modRun.stderr.toString());
+    assert.equal(modRun.stdout.toString(), '123\n');
+  } finally {
+    rmSync(directory, { recursive: true, force: true });
+  }
+
+  for (const [bad, expectedMessage] of [
+    ['f := fn(a: Int, b: Int): Int { a + b }; f(a = 1, a = 2, b = 3);', /duplicate named argument a/],
+    ['f := fn(a: Int, b: Int): Int { a + b }; a := 1; f(a = 1, =a, b = 3);', /duplicate named argument a/],
+    ['f := fn(a: Int, b: Int): Int { a + b }; f(1, z = 2);', /unknown parameter z/],
+    ['f := fn(a: Int, b: Int, c: Int): Int { a + b + c }; f(c = 3, 1);', /function f expects 3 arguments, got 2/],
+    ['f := fn(a: Int, b: Int): Int { a + b }; f(1, 2, 3);', /function f expects 2 arguments, got more/],
+    ['f := fn(a: Int, b: Int): Int { a + b }; f(a = 1, 2, 3);', /function f expects 2 arguments, got more/],
+    ['f := fn(a: Int, b: Int): Int { a + b }; b := 2; f(1, =b + 1);', /shorthand argument requires a bare identifier/],
+    ['f := fn(a: Int, b: Int): Int { a + b }; f(1, b = "two");', /must be Int, got String/],
+    ['f := fn(a: Int, b: Int): Int { a + b }; f("superseded", a = "bad", 2);', /must be Int, got String/],
+    ['io := import "core/io"; io.inputInt(prompt = "n: ");', /named arguments are not supported for host function io\.inputInt/],
+    ['io := import "core/io"; text := "hi"; io.errorLine(=text);', /named arguments are not supported for host function io\.errorLine/],
+    ['text := import "core/text"; text.length(s = "hi");', /unknown parameter s in call to text\.length/],
+    ['io := import "core/io"; var x := 0; io.outputLine(x = 1);', /expected \)/],
+  ] as const) {
+    const rejected = compileTs({ text: bad });
+    assert.equal(rejected.status, 2, bad);
+    assert.match(rejected.stderr.toString(), expectedMessage, bad + ' -> ' + rejected.stderr.toString());
+  }
+});
