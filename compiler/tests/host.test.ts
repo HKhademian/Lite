@@ -2589,3 +2589,43 @@ test('mutability and lists support inferred mut/var mut, front/back ops, List<Un
     assert.match(rejected.stderr.toString(), expectedMessage);
   }
 });
+
+test('storage and updates support compound assignments, zero init, reserved storage, control-flow joins, and rejections', () => {
+  const source = [
+    'io := import "core/io";',
+    'var n := 10;',
+    'n += 5; n -= 3; n *= 2; n /= 4; n %= 3;',
+    'var f := -7;',
+    'f :/= 2; f :%= 3;',
+    'var s := "a";',
+    's += "b";',
+    'var fl := 1.5;',
+    'fl += 2;',
+    'z0: (:Int, :String) = 0;',
+    'z1: [Int; 2] = 0;',
+    'r: Int = ?;',
+    'r = 42;',
+    'c: Int = ?;',
+    'if n == 0 { c = 10; } else { c = 20; }',
+    'io.outputLine(n, f, s, fl, z0.0, z0.1, z1, r, c);',
+  ].join('\n');
+  const compiled = compileTs({ text: source });
+  assert.equal(compiled.status, 0, compiled.stderr.toString());
+  const actual = runTsArtifact(compiled.stdout.toString());
+  assert.equal(actual.phase, 'run'); assert.equal(actual.status, 0);
+  assert.equal(actual.stdout.toString(), '0 2 ab 3.5 0  [0, 0] 42 10\n');
+
+  for (const [bad, expectedMessage] of [
+    ['io := import "core/io"; a: Int = ?; io.outputLine(a);', /cannot read uninitialized local a/],
+    ['a: Int = ?; a = 1; a = 2;', /cannot assign to immutable local a/],
+    ['a: Int = ?; if true { a = 1; } a = 2;', /cannot assign to possibly initialized immutable local a/],
+    ['io := import "core/io"; a: Int = ?; if true { a = 1; } io.outputLine(a);', /cannot read uninitialized local a/],
+    ['io := import "core/io"; a: Int = ?; loop false { a = 1; } io.outputLine(a);', /cannot read uninitialized local a/],
+    ['x := 1; x += 2;', /cannot assign to immutable local x/],
+    ['x: (:Int);', /unnamed singleton tuple type needs trailing comma/],
+  ] as const) {
+    const rejected = compileTs({ text: bad });
+    assert.equal(rejected.status, 2, bad);
+    assert.match(rejected.stderr.toString(), expectedMessage);
+  }
+});
