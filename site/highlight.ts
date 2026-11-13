@@ -28,6 +28,18 @@ const tsKeywords = new Set([
   'var', 'void', 'while',
 ]);
 
+const cKeywords = new Set([
+  'break', 'case', 'const', 'continue', 'default', 'do', 'else', 'enum',
+  'extern', 'false', 'for', 'goto', 'if', 'inline', 'return', 'sizeof',
+  'static', 'struct', 'switch', 'true', 'typedef', 'union', 'volatile', 'while',
+]);
+
+const cTypes = new Set([
+  'bool', 'char', 'double', 'float', 'int', 'int8_t', 'int16_t', 'int32_t',
+  'int64_t', 'long', 'short', 'size_t', 'uint8_t', 'uint16_t', 'uint32_t',
+  'uint64_t', 'void', '_Noreturn',
+]);
+
 function highlightCode(source: string, keywords: ReadonlySet<string>, types: ReadonlySet<string>): string {
   const out: string[] = [];
   let i = 0;
@@ -50,6 +62,15 @@ function highlightCode(source: string, keywords: ReadonlySet<string>, types: Rea
       const end = source.indexOf('\n', i + 2);
       const slice = end === -1 ? source.slice(i) : source.slice(i, end);
       out.push(`<span class="tok-comment">${escapeHtml(slice)}</span>`);
+      i += slice.length;
+      continue;
+    }
+
+    // Preprocessor directive (#include, #define, etc.)
+    if (ch === '#' && (i === 0 || source[i - 1] === '\n')) {
+      const end = source.indexOf('\n', i + 1);
+      const slice = end === -1 ? source.slice(i) : source.slice(i, end);
+      out.push(`<span class="tok-keyword">${escapeHtml(slice)}</span>`);
       i += slice.length;
       continue;
     }
@@ -119,4 +140,8 @@ export function highlightLite(source: string): string {
 
 export function highlightTs(source: string): string {
   return highlightCode(source, tsKeywords, new Set(['bigint', 'boolean', 'number', 'string', 'void', 'never', 'unknown']));
+}
+
+export function highlightC(source: string): string {
+  return highlightCode(source, cKeywords, cTypes);
 }

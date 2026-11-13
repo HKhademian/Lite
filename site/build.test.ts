@@ -7,7 +7,7 @@ import { pathToFileURL } from 'node:url';
 import { buildSite } from './build.ts';
 import { formatCodeView } from './code-view.ts';
 import { heroSample, sampleGroups, showcaseSamples } from './groups.ts';
-import { escapeHtml, highlightLite, highlightTs } from './highlight.ts';
+import { escapeHtml, highlightC, highlightLite, highlightTs } from './highlight.ts';
 import { stripLiteTs } from './strip-ts.ts';
 
 const root = dirname(import.meta.dirname);
@@ -38,6 +38,11 @@ test('syntax highlighter escapes HTML and marks keywords, strings, and comments'
   const tsHtml = highlightTs('const x: bigint = 1n;');
   assert(tsHtml.includes('<span class="tok-keyword">const</span>'));
   assert(tsHtml.includes('<span class="tok-type">bigint</span>'));
+
+  const cHtml = highlightC('#include <stdio.h>\nint main(void) { return 0; }');
+  assert(cHtml.includes('<span class="tok-keyword">#include &lt;stdio.h&gt;</span>'));
+  assert(cHtml.includes('<span class="tok-type">int</span>'));
+  assert(cHtml.includes('<span class="tok-keyword">return</span>'));
 });
 
 test('buildSite generates static pages and metadata in dist/site', () => {
@@ -69,6 +74,7 @@ test('buildSite generates static pages and metadata in dist/site', () => {
   assert(playground.includes('id="mode-full"'));
   assert(playground.includes('new Worker("./worker.js"'));
   assert(existsSync(join(out, 'playground', 'code-view.js')));
+  assert(existsSync(join(out, 'playground', 'highlight.js')));
   assert(playground.includes('id="tab-canvas"'));
   assert(playground.includes('id="pg-fps"'));
   for (const sample of showcaseSamples) {

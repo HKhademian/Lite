@@ -437,6 +437,7 @@ function renderPlaygroundPage(rendered: ReadonlyMap<string, RenderedSample>, rep
 
 <script type="module">
   import { formatCodeView } from "./code-view.js";
+  import { highlightLite, highlightTs, highlightC } from "./highlight.js";
   const samples = ${serialized};
   const byId = new Map(samples.map(s => [s.id, s]));
   const cache = new Map();
@@ -476,8 +477,8 @@ function renderPlaygroundPage(rendered: ReadonlyMap<string, RenderedSample>, rep
   let lastFrameAt = 0;
 
   function renderCodeViews() {
-    tsEl.textContent = rawTs ? formatCodeView(rawTs, "ts", codeMode) : "";
-    cEl.textContent = rawC ? formatCodeView(rawC, "c", codeMode) : cMessage;
+    tsEl.innerHTML = rawTs ? highlightTs(formatCodeView(rawTs, "ts", codeMode)) : "";
+    cEl.innerHTML = rawC ? highlightC(formatCodeView(rawC, "c", codeMode)) : highlightC(cMessage);
   }
 
   for (const btn of modeButtons) {
@@ -488,83 +489,6 @@ function renderPlaygroundPage(rendered: ReadonlyMap<string, RenderedSample>, rep
       }
       renderCodeViews();
     });
-  }
-
-  function escapeHtml(text) {
-    return text.replaceAll("&", "&amp;").replaceAll("<", "&lt;").replaceAll(">", "&gt;").replaceAll('"', "&quot;").replaceAll("'", "&#39;");
-  }
-
-  const liteKeywords = new Set([
-    "as", "and", "break", "continue", "else", "false", "fn", "if",
-    "import", "loop", "mut", "not", "or", "pub", "return", "self",
-    "true", "type", "var", "while",
-  ]);
-  const liteTypes = new Set(["Bool", "Int", "Float", "String", "Void", "List", "Array"]);
-
-  function highlightLite(source) {
-    const out = [];
-    let i = 0;
-    const n = source.length;
-    while (i < n) {
-      const ch = source[i];
-      if (ch === "/" && source[i + 1] === "*") {
-        const end = source.indexOf("*/", i + 2);
-        const slice = end === -1 ? source.slice(i) : source.slice(i, end + 2);
-        out.push('<span class="tok-comment">' + escapeHtml(slice) + "</span>");
-        i += slice.length;
-        continue;
-      }
-      if (ch === "/" && source[i + 1] === "/") {
-        const end = source.indexOf("\\n", i + 2);
-        const slice = end === -1 ? source.slice(i) : source.slice(i, end);
-        out.push('<span class="tok-comment">' + escapeHtml(slice) + "</span>");
-        i += slice.length;
-        continue;
-      }
-      if (ch === '"' || ch === "'") {
-        let j = i + 1;
-        while (j < n) {
-          if (source[j] === "\\\\") { j += 2; continue; }
-          if (source[j] === ch) { j += 1; break; }
-          j += 1;
-        }
-        out.push('<span class="tok-string">' + escapeHtml(source.slice(i, j)) + "</span>");
-        i = j;
-        continue;
-      }
-      if (ch >= "0" && ch <= "9") {
-        let j = i + 1;
-        while (j < n && /[0-9_a-zA-Z.]/.test(source[j])) j += 1;
-        out.push('<span class="tok-number">' + escapeHtml(source.slice(i, j)) + "</span>");
-        i = j;
-        continue;
-      }
-      if (/[a-zA-Z_$]/.test(ch)) {
-        let j = i + 1;
-        while (j < n && /[a-zA-Z0-9_$]/.test(source[j])) j += 1;
-        const word = source.slice(i, j);
-        if (liteKeywords.has(word)) out.push('<span class="tok-keyword">' + escapeHtml(word) + "</span>");
-        else if (liteTypes.has(word)) out.push('<span class="tok-type">' + escapeHtml(word) + "</span>");
-        else out.push(escapeHtml(word));
-        i = j;
-        continue;
-      }
-      const three = source.slice(i, i + 3);
-      const two = source.slice(i, i + 2);
-      if (three === "===" || three === "!==" || three === "= !=" || three === "=!=") {
-        out.push('<span class="tok-op">' + escapeHtml(three) + "</span>");
-        i += 3;
-        continue;
-      }
-      if (two === ":=" || two === "==" || two === "!=" || two === "<=" || two === ">=" || two === "=>" || two === "->") {
-        out.push('<span class="tok-op">' + escapeHtml(two) + "</span>");
-        i += 2;
-        continue;
-      }
-      out.push(escapeHtml(ch));
-      i += 1;
-    }
-    return out.join("");
   }
 
   function showTab(name) {
@@ -901,6 +825,8 @@ export function buildSite(): void {
   writeFileSync(join(outputDir, 'playground', 'strip-ts.js'), stripTypeScriptTypes(stripTs, { mode: 'strip' }));
   const codeViewTs = readFileSync(join(root, 'site', 'code-view.ts'), 'utf8');
   writeFileSync(join(outputDir, 'playground', 'code-view.js'), stripTypeScriptTypes(codeViewTs, { mode: 'strip' }));
+  const highlightTsSrc = readFileSync(join(root, 'site', 'highlight.ts'), 'utf8');
+  writeFileSync(join(outputDir, 'playground', 'highlight.js'), stripTypeScriptTypes(highlightTsSrc, { mode: 'strip' }));
   writeFileSync(join(outputDir, 'playground', 'worker.js'), playgroundWorkerJs);
   const coreDir = join(root, 'lib', 'core');
   const stdlib: Record<string, Readonly<{ path: string; display: string; identity: string; text: string }>> = {};
