@@ -264,9 +264,15 @@ function renderHomePage(rendered: ReadonlyMap<string, RenderedSample>, repoUrl: 
       <a class="btn btn-primary" href="playground/">Play online</a>
       <a class="btn" href="${escapeHtml(docsStart)}">Get started</a>
     </div>
-    <div class="quickstart"><pre>git clone ${escapeHtml(cloneUrl)}
-cd LiteScript
-./bin/lite run ${escapeHtml(heroSample.file)}</pre></div>
+    <div class="quickstart" role="region" aria-label="Quickstart shell commands">
+      <div class="quickstart-head">
+        <span class="quickstart-dots" aria-hidden="true"><span></span><span></span><span></span></span>
+        <span class="quickstart-label">shell</span>
+      </div>
+      <pre class="quickstart-body"><code><span class="shell-line"><span class="shell-cmd">git</span> clone ${escapeHtml(cloneUrl)}</span>
+<span class="shell-line"><span class="shell-cmd">cd</span> LiteScript</span>
+<span class="shell-line"><span class="shell-cmd">./bin/lite</span> run ${escapeHtml(heroSample.file)}</span></code></pre>
+    </div>
   </div>
   ${renderSampleCard(hero, '', false)}
 </section>

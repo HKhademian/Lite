@@ -310,15 +310,94 @@ a:hover { text-decoration: underline; }
 .btn-primary:hover { filter: brightness(1.06); }
 
 .quickstart {
-  background: var(--surface);
-  border: 1px solid var(--border);
+  --shell-bg: #16181D;
+  --shell-head: #20232B;
+  --shell-border: #2C313C;
+  --shell-ink: #ECEAE4;
+  --shell-muted: #8E95A5;
+  --shell-prompt: #F0B45A;
+  --shell-cmd: #93C5FD;
+  background: var(--shell-bg);
+  border: 1px solid var(--shell-border);
   border-radius: var(--radius);
+  overflow: hidden;
+  box-shadow: 0 8px 24px rgba(16, 17, 19, 0.12);
+}
+.quickstart-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0.45rem 0.85rem;
+  background: var(--shell-head);
+  border-bottom: 1px solid var(--shell-border);
+}
+.quickstart-dots {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+.quickstart-dots span {
+  width: 9px;
+  height: 9px;
+  border-radius: 999px;
+  opacity: 0.85;
+}
+.quickstart-dots span:nth-child(1) { background: #FF5F56; }
+.quickstart-dots span:nth-child(2) { background: #FFBD2E; }
+.quickstart-dots span:nth-child(3) { background: #27C93F; }
+.quickstart-label {
+  font-family: var(--font-mono);
+  font-size: 0.72rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--shell-muted);
+}
+.quickstart-body {
+  margin: 0;
   padding: 0.85rem 1rem;
   font-family: var(--font-mono);
   font-size: 0.85rem;
+  line-height: 1.65;
+  color: var(--shell-ink);
   overflow-x: auto;
 }
-.quickstart pre { margin: 0; }
+.quickstart-body code {
+  display: block;
+}
+.shell-line {
+  display: block;
+}
+.shell-line::before {
+  content: "$ ";
+  color: var(--shell-prompt);
+  font-weight: 600;
+  user-select: none;
+  -webkit-user-select: none;
+}
+.shell-cmd {
+  color: var(--shell-cmd);
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) .quickstart {
+    --shell-bg: #0E1015;
+    --shell-head: #151820;
+    --shell-border: #2A303C;
+    --shell-muted: #8B93A3;
+    --shell-prompt: #BFD7FF;
+    --shell-cmd: #F0B45A;
+    box-shadow: 0 8px 24px rgba(0, 0, 0, 0.45), inset 0 1px 0 rgba(255, 255, 255, 0.04);
+  }
+}
+:root[data-theme="dark"] .quickstart {
+  --shell-bg: #0E1015;
+  --shell-head: #151820;
+  --shell-border: #2A303C;
+  --shell-muted: #8B93A3;
+  --shell-prompt: #BFD7FF;
+  --shell-cmd: #F0B45A;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.45), inset 0 1px 0 rgba(255, 255, 255, 0.04);
+}
 
 /* Code Panels & Cards */
 .code-card {
