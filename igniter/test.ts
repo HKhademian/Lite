@@ -448,7 +448,7 @@ test('lite verify uses generated TS, reports migration gaps and rejects the reti
     assert.match(verified.stdout, /PASS example\.001-double-sum\/seven-and-five/);
     assert.match(verified.stdout, /\[ts\]/); assert.doesNotMatch(verified.stdout, /T00 reference|\[c\]/);
     assert.match(verified.stdout, /FAIL match\.subjectless\/.*unsupported feature "match"/);
-    assert.match(verified.stdout, /verification failed: 21 failing scenario\(s\), 84 executed, 0 cached/);
+    assert.match(verified.stdout, /verification failed: 20 failing scenario\(s\), 84 executed, 0 cached/);
     const covered = spawnSync(join(root, 'bin/lite'), ['verify', '--coverage'], { env, encoding: 'utf8', timeout: 30000 });
     assert.equal(covered.error, undefined); assert.equal(covered.status, 0, covered.stderr);
     assert.match(covered.stdout, /features: 41 registered, 41 cases/);
@@ -1481,7 +1481,7 @@ test('restricted compiler completes statement-shaped if branches as function res
 test('restricted compiler diagnoses invalid value if expressions and rejects them in C', () => {
   for (const [bad, errors] of [
     ['x := if 1 { 2 } else { 3 };\n', '1:9: if condition must be Bool\n'],
-    ['x := if true { 2 };\n', '1:19: value if requires a final else\n'],
+    ['x := (if true { 2 }) + 1;\n', '1:20: value if requires a final else\n'],
     ['x := if true { 2 } else { "a" };\n',
       '1:27: value if branches must have the same kind, got Int and String\n'],
     ['x := if true { 1 } else if 1 { 2 } else { 3 };\n', '1:28: if condition must be Bool\n'],

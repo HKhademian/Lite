@@ -2341,3 +2341,66 @@ test('default test startup and generated baseline run in a source archive withou
     assert.equal(legacy.status, 2); assert.match(legacy.stderr, /Usage:/); assert.equal(legacy.stdout, '');
   } finally { rmSync(directory, { recursive: true, force: true }); }
 });
+
+test('partial conditionals default declarations to zero and skip false assignments', () => {
+  const condPartial = readFileSync(join(root, 'language/verifications/features/cond-partial.lts'), 'utf8');
+  const tsCond = compileTs({ text: condPartial });
+  assert.equal(tsCond.status, 0, tsCond.stderr.toString());
+  const runCond = runTsArtifact(tsCond.stdout.toString());
+  assert.equal(runCond.phase, 'run'); assert.equal(runCond.status, 0);
+  assert.equal(runCond.stdout.toString(), '0\n[]\n10\n3\n');
+
+  const tsRich = [
+    'io := import "core/io";',
+    'flag := false;',
+    'other := true;',
+    'a := (if flag { 5 } else if other { 9 });',
+    'b: Float = if flag { 1 };',
+    'c := if flag { "x" };',
+    'd := if flag { [1, 2] };',
+    'e := if flag { (x = 4, ok = true) };',
+    'var f := if flag { true };',
+    'f = ((if flag { false }));',
+    'var g := 10;',
+    'g = if flag { 1 } else if not other { 2 };',
+    'io.outputLine(a, b, "[" + c + "]", d, e.x, e.ok, f, g);',
+    'g = if flag { 1 } else if other { 42 };',
+    'io.outputLine(g);',
+  ].join('\n');
+  const compiledRich = compileTs({ text: tsRich });
+  assert.equal(compiledRich.status, 0, compiledRich.stderr.toString());
+  const runRich = runTsArtifact(compiledRich.stdout.toString());
+  assert.equal(runRich.phase, 'run'); assert.equal(runRich.status, 0);
+  assert.equal(runRich.stdout.toString(), '9 0 [] [] 0 false false 10\n42\n');
+
+  if (process.env['LITE_SKIP_NATIVE'] !== '1') {
+    const cSource = [
+      'io := import "core/io";',
+      'flag := false;',
+      'other := true;',
+      'var count := 10;',
+      'count = if flag { 7 };',
+      'io.outputLine(count);',
+      'count = (if flag { 1 } else if other { 3 });',
+      'io.outputLine(count);',
+    ].join('\n');
+    const c = compileTarget('c', { text: cSource });
+    assert.equal(c.status, 0, c.stderr.toString());
+    const native = runCArtifact(c.stdout.toString());
+    assert.equal(native.phase, 'run', native.stderr.toString()); assert.equal(native.status, 0);
+    assert.equal(native.stdout.toString(), '10\n3\n');
+  }
+
+  for (const [bad, expectedMessage] of [
+    ['io := import "core/io"; flag := false; io.outputLine(if flag { 1 });', /value if requires a final else/],
+    ['flag := false; x := (if flag { 1 }) + 2;', /value if requires a final else/],
+    ['flag := false; var count := 0; count = (if flag { 1 }) + 2;', /value if requires a final else/],
+    ['f := fn(flag: Bool): Int { return if flag { 1 }; }', /value if requires a final else/],
+    ['flag := false; x := if flag { Unit };', /cannot declare a Unit local x/],
+    ['flag := false; var count := 0; count = if flag { "bad" };', /cannot assign String to Int local count/],
+  ] as const) {
+    const rejected = compileTs({ text: bad });
+    assert.equal(rejected.status, 2, bad);
+    assert.match(rejected.stderr.toString(), expectedMessage);
+  }
+});
