@@ -621,9 +621,6 @@ resolveTypeText := fn(source: String, position: Int, prefix: String, aliases: Li
             failAt(source, position, prefix, "expected positive integer extent in array type");
         }
         extent := parseDigits(text, extentStart, extentEnd);
-        if extent <= 0 {
-            failAt(source, position, prefix, "fixed array extent must be positive");
-        }
         afterArray := skipTrivia(text, close + 1, prefix);
         if afterArray < size {
             failAt(source, position, prefix, "unexpected text after array type");
@@ -824,9 +821,6 @@ parseTypeAt := fn(source: String, position: Int, prefix: String, aliases: List<A
             failAt(source, extentStart, prefix, "expected positive integer extent in array type");
         }
         extent := parseDigits(source, extentStart, extentEnd);
-        if extent <= 0 {
-            failAt(source, extentStart, prefix, "fixed array extent must be positive");
-        }
         close := expectSymbol(source, skipTrivia(source, extentEnd, prefix), "]", prefix);
         return (kind = "[" + inner.kind + ";" + integer.intText(extent) + "]", next = close);
     }
@@ -1807,7 +1801,7 @@ parseBinary := fn(target: String, source: String, position: Int, prefix: String,
             }
         }
         cursor = expectSymbol(source, cursor, "]", prefix);
-        if count == 0 and not isListKind(expected) and not isTailList {
+        if count == 0 and not isListKind(expected) and not isTailList and not isArrayKind(expected) {
             failAt(source, start, prefix, "empty list literal requires a List element type");
         }
         resultKind := if isListKind(expected) or (count == 0 and isTailList) {

@@ -2506,20 +2506,22 @@ test('fixed arrays support inferred/explicit extents, aliases, functions, zero v
     'explicit: [Int; 2] = [4, 5];',
     'aliased: Pair = make();',
     'zeroed: [Int; 3];',
+    'emptyArr: [Int; 0] = [];',
+    'emptyZero: [Int; 0];',
     'var total := 0;',
     'loop inferred as item { total = total + item; }',
-    'io.outputLine(inferred[0], inferred.2, sum(explicit), aliased, zeroed, total);',
+    'io.outputLine(inferred[0], inferred.2, sum(explicit), aliased, zeroed, emptyArr, emptyZero, total);',
   ].join('\n');
   const compiled = compileTs({ text: source });
   assert.equal(compiled.status, 0, compiled.stderr.toString());
   const actual = runTsArtifact(compiled.stdout.toString());
   assert.equal(actual.phase, 'run'); assert.equal(actual.status, 0);
-  assert.equal(actual.stdout.toString(), '10 30 9 [1, 2] [0, 0, 0] 60\n');
+  assert.equal(actual.stdout.toString(), '10 30 9 [1, 2] [0, 0, 0] [] [] 60\n');
 
   for (const [bad, expectedMessage] of [
     ['f := fn(): List<Int> { [1, 2] }', /cannot return \[Int; 2\] from function f returning List<Int>/],
     ['x: [Int; 3] = [1, 2];', /cannot initialize \[Int; 3\] with \[Int; 2\]/],
-    ['x: [Int; 0];', /fixed array extent must be positive/],
+    ['x: [Int; 2] = [];', /cannot initialize \[Int; 2\] with \[Int; 0\]/],
     ['io := import "core/io"; a := [1, 2]; io.outputLine(a.2);', /array index 2 out of bounds/],
   ] as const) {
     const rejected = compileTs({ text: bad });
