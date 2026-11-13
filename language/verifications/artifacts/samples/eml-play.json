@@ -3,7 +3,7 @@
   "kind": "sample",
   "source": {
     "file": "../../../samples/eml-play.lts",
-    "hash": "sha256:ccbfc34cae57894b1f490a3769dc6d437919de63d09f2a018f1608ef9fdeacd2"
+    "hash": "sha256:fb374e807885b2ed58c6ad610981d0cab58c6ff9e5d960373c5c5d7530e1196f"
   },
   "features": [
     "num.float",

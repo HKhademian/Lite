@@ -8,8 +8,8 @@ loop {
     if n > 5 {
         break;
     }
-    sum = sum + n;
-    n = n + 1;
+    sum += n;
+    n += 1;
 }
 
 if sum == 15 {

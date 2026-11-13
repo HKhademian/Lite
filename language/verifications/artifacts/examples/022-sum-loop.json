@@ -3,7 +3,7 @@
   "kind": "example",
   "source": {
     "file": "../../../examples/022-sum-loop.lts",
-    "hash": "sha256:09ad619d50f5fbf1196596a8e1a3bbe351735725f690987501d0bd0eb3d794ee"
+    "hash": "sha256:1beab49784e5b6bdb3eecb7054d9896e7ee7f6eef9743512f0388d58ef02cc0a"
   },
   "features": [
     "bool.conditions",

@@ -11,6 +11,6 @@ io.outputLine("entered:");
 var total := 0;
 loop numbers as number {
     io.outputLine(number);
-    total = total + number;
+    total += number;
 }
 io.outputLine("sum:", total);

@@ -33,12 +33,12 @@ floorFloat := fn(x: Float): Float {
     var k := 0.0;
     if x >= 0.0 {
         loop k + 1.0 <= x {
-            k = k + 1.0;
+            k += 1.0;
         }
         return k;
     }
     loop k > x {
-        k = k - 1.0;
+        k -= 1.0;
     }
     k
 }
@@ -54,7 +54,7 @@ realSqrt := fn(x: Float): Float {
     var i := 0;
     loop i < 32 {
         g = 0.5 * (g + x / g);
-        i = i + 1;
+        i += 1;
     }
     g
 }
@@ -68,21 +68,21 @@ realExp := fn(x: Float): Float {
     var n := 1;
     loop n <= 24 {
         term = term * r / n;
-        sum = sum + term;
-        n = n + 1;
+        sum += term;
+        n += 1;
     }
     var scale := 1.0;
     if k > 0.0 {
         var i := 0.0;
         loop i < k {
-            scale = scale * 2.0;
-            i = i + 1.0;
+            scale *= 2.0;
+            i += 1.0;
         }
     } else if k < 0.0 {
         var i := 0.0;
         loop i > k {
-            scale = scale * 0.5;
-            i = i - 1.0;
+            scale *= 0.5;
+            i -= 1.0;
         }
     }
     sum * scale
@@ -93,12 +93,12 @@ realLn := fn(x: Float): Float {
     var v := x;
     var k := 0.0;
     loop v >= 1.4142135623730951 {
-        v = v * 0.5;
-        k = k + 1.0;
+        v *= 0.5;
+        k += 1.0;
     }
     loop v < 0.7071067811865476 {
-        v = v * 2.0;
-        k = k - 1.0;
+        v *= 2.0;
+        k -= 1.0;
     }
     u := (v - 1.0) / (v + 1.0);
     u2 := u * u;
@@ -106,9 +106,9 @@ realLn := fn(x: Float): Float {
     var sum := u;
     var n := 3;
     loop n <= 39 {
-        term = term * u2;
-        sum = sum + term / n;
-        n = n + 2;
+        term *= u2;
+        sum += term / n;
+        n += 2;
     }
     2.0 * sum + k * ln2()
 }
@@ -128,8 +128,8 @@ realSin := fn(x: Float): Float {
     loop n <= 14 {
         denom := (2 * n) * (2 * n + 1);
         term = (0.0 - term) * r2 / denom;
-        sum = sum + term;
-        n = n + 1;
+        sum += term;
+        n += 1;
     }
     sum
 }
@@ -143,8 +143,8 @@ realCos := fn(x: Float): Float {
     loop n <= 14 {
         denom := (2 * n - 1) * (2 * n);
         term = (0.0 - term) * r2 / denom;
-        sum = sum + term;
-        n = n + 1;
+        sum += term;
+        n += 1;
     }
     sum
 }
@@ -161,8 +161,8 @@ realAtan := fn(x: Float): Float {
     var n := 1;
     loop n <= 11 {
         term = (0.0 - term) * t2sq;
-        sum = sum + term / (2 * n + 1);
-        n = n + 1;
+        sum += term / (2 * n + 1);
+        n += 1;
     }
     4.0 * sum
 }
@@ -176,7 +176,7 @@ realAtan2 := fn(y: Float, x: Float): Float {
     0.0
 }
 
-pub cMake := fn(re: Float, im: Float): Complex { (re = re, im = im) }
+pub cMake := fn(re: Float, im: Float): Complex { (=re, =im) }
 pub cOne := fn(): Complex { (re = 1.0, im = 0.0) }
 pub cZero := fn(): Complex { (re = 0.0, im = 0.0) }
 

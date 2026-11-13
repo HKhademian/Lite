@@ -16,21 +16,21 @@ tokenize := fn(line: String): List<(kind: String, text: String)> {
     loop position < size {
         ch := text.at(line, position);
         if ch == " " or ch == "\t" {
-            position = position + 1;
+            position += 1;
             continue;
         }
         if isDigit(ch) {
             start := position;
-            position = position + 1;
+            position += 1;
             loop position < size and isDigit(text.at(line, position)) {
-                position = position + 1;
+                position += 1;
             }
             list.pushBack(mut tokens, (kind = "number", text = text.slice(line, start, position)));
             continue;
         }
         if ch == "+" or ch == "-" or ch == "*" or ch == "/" or ch == "(" or ch == ")" {
             list.pushBack(mut tokens, (kind = "symbol", text = ch));
-            position = position + 1;
+            position += 1;
             continue;
         }
         io.errorLine("unsupported symbol: " + ch);

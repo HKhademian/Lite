@@ -14,7 +14,7 @@ io.outputLine(tokens[index].text);
 sum := fn(values: [Int; 3]): Int {
     var total := 0;
     loop values as value {
-        total = total + value;
+        total += value;
     }
     total
 }
