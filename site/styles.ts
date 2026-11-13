@@ -63,23 +63,25 @@ export const siteCss = `:root {
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  width: 34px;
-  height: 34px;
+  width: 32px;
+  height: 32px;
   padding: 0;
-  border: 1px solid var(--border);
-  border-radius: 9px;
-  background: var(--surface-elevated);
+  border: none;
+  border-radius: 999px;
+  background: transparent;
   color: var(--ink-muted);
   cursor: pointer;
   line-height: 1;
-  transition: box-shadow 0.2s ease, border-color 0.2s ease, color 0.2s ease, transform 0.2s ease;
+  transition: box-shadow 0.2s ease, color 0.2s ease, transform 0.2s ease;
 }
 .theme-toggle:hover {
   color: var(--accent);
-  border-color: var(--accent);
+  transform: scale(1.06);
 }
 .theme-toggle .theme-icon {
   display: block;
+  width: 30px;
+  height: 30px;
   transition: filter 0.2s ease, transform 0.2s ease;
 }
 .theme-toggle .icon-moon {
@@ -88,17 +90,15 @@ export const siteCss = `:root {
 .theme-toggle.theme-toggle-shine {
   --switch-shine-size: 26px;
   --switch-shine-spread: 3px;
-  --switch-shine-icon-glow: 7px;
+  --switch-shine-icon-glow: 8px;
   --switch-color: #D97706;
-  --switch-border: rgba(217, 119, 6, 0.55);
-  --switch-shine-core: rgba(254, 240, 138, 0.95);
+  --switch-shine-core: rgba(254, 240, 138, 0.85);
   --switch-shine-mid: rgba(251, 191, 36, 0.55);
-  --switch-shine-outer: rgba(245, 158, 11, 0.32);
-  --switch-bg: radial-gradient(circle at 50% 42%, rgba(254, 240, 138, 0.52), rgba(251, 191, 36, 0.2) 60%, var(--surface-elevated) 100%);
-  --switch-shadow: inset 0 1px 2px var(--switch-shine-core), 0 0 8px var(--switch-shine-mid), 0 0 var(--switch-shine-size) var(--switch-shine-spread) var(--switch-shine-outer);
-  --switch-shadow-hover: inset 0 1px 3px var(--switch-shine-core), 0 0 12px var(--switch-shine-mid), 0 0 calc(var(--switch-shine-size) * 1.35) calc(var(--switch-shine-spread) + 2px) var(--switch-shine-mid);
+  --switch-shine-outer: rgba(245, 158, 11, 0.34);
+  --switch-bg: radial-gradient(circle, rgba(254, 240, 138, 0.42), rgba(251, 191, 36, 0.12) 65%, transparent 100%);
+  --switch-shadow: 0 0 10px var(--switch-shine-mid), 0 0 var(--switch-shine-size) var(--switch-shine-spread) var(--switch-shine-outer);
+  --switch-shadow-hover: 0 0 14px var(--switch-shine-core), 0 0 calc(var(--switch-shine-size) * 1.35) calc(var(--switch-shine-spread) + 3px) var(--switch-shine-mid);
   --switch-glow: drop-shadow(0 0 var(--switch-shine-icon-glow) var(--switch-shine-mid));
-  border-color: var(--switch-border);
   background: var(--switch-bg);
   color: var(--switch-color);
   box-shadow: var(--switch-shadow);
@@ -107,13 +107,9 @@ export const siteCss = `:root {
   filter: var(--switch-glow);
 }
 .theme-toggle.theme-toggle-shine:hover {
-  border-color: var(--switch-border);
   color: var(--switch-color);
   box-shadow: var(--switch-shadow-hover);
-  transform: translateY(-0.5px);
-}
-.theme-toggle.theme-toggle-shine:hover .theme-icon {
-  transform: scale(1.06);
+  transform: scale(1.08);
 }
 @media (prefers-reduced-motion: reduce) {
   .theme-toggle,
@@ -124,11 +120,10 @@ export const siteCss = `:root {
 @media (prefers-color-scheme: dark) {
   :root:not([data-theme="light"]) .theme-toggle.theme-toggle-shine {
     --switch-color: #D8E8FF;
-    --switch-border: rgba(147, 197, 253, 0.5);
-    --switch-shine-core: rgba(239, 246, 255, 0.65);
+    --switch-shine-core: rgba(239, 246, 255, 0.72);
     --switch-shine-mid: rgba(147, 197, 253, 0.52);
     --switch-shine-outer: rgba(191, 219, 254, 0.3);
-    --switch-bg: radial-gradient(circle at 50% 42%, rgba(191, 219, 254, 0.34), rgba(147, 197, 253, 0.14) 60%, var(--surface-elevated) 100%);
+    --switch-bg: radial-gradient(circle, rgba(191, 219, 254, 0.3), rgba(147, 197, 253, 0.1) 65%, transparent 100%);
   }
   :root:not([data-theme="light"]) .theme-toggle .icon-sun {
     display: none;
@@ -139,11 +134,10 @@ export const siteCss = `:root {
 }
 :root[data-theme="dark"] .theme-toggle.theme-toggle-shine {
   --switch-color: #D8E8FF;
-  --switch-border: rgba(147, 197, 253, 0.5);
-  --switch-shine-core: rgba(239, 246, 255, 0.65);
+  --switch-shine-core: rgba(239, 246, 255, 0.72);
   --switch-shine-mid: rgba(147, 197, 253, 0.52);
   --switch-shine-outer: rgba(191, 219, 254, 0.3);
-  --switch-bg: radial-gradient(circle at 50% 42%, rgba(191, 219, 254, 0.34), rgba(147, 197, 253, 0.14) 60%, var(--surface-elevated) 100%);
+  --switch-bg: radial-gradient(circle, rgba(191, 219, 254, 0.3), rgba(147, 197, 253, 0.1) 65%, transparent 100%);
 }
 :root[data-theme="dark"] .theme-toggle .icon-sun {
   display: none;

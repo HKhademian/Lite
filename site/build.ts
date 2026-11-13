@@ -113,13 +113,43 @@ function renderHeader(basePath: string, active: 'home' | 'playground' | 'gallery
       <a href="${escapeHtml(docsHref)}">Docs</a>
       <a href="${escapeHtml(repoHref)}">GitHub</a>
       <button id="theme-toggle" class="${toggleClass}" type="button" aria-label="Toggle light/dark theme" title="Switch theme">
-        <svg class="theme-icon icon-sun" viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
-          <circle cx="12" cy="12" r="4" fill="currentColor" fill-opacity="0.25"/>
-          <path d="M12 2v2M12 20v2M4.93 4.93l1.41 1.41M17.66 17.66l1.41 1.41M2 12h2M20 12h2M6.34 17.66l-1.41 1.41M19.07 4.93l-1.41 1.41"/>
+        <svg class="theme-icon icon-sun" viewBox="0 0 32 32" width="28" height="28" fill="none" aria-hidden="true">
+          <defs>
+            <radialGradient id="lite-sun-grad" cx="38%" cy="35%" r="68%">
+              <stop offset="0%" stop-color="#FFFDF0"/>
+              <stop offset="35%" stop-color="#FEF08A"/>
+              <stop offset="72%" stop-color="#FBBF24"/>
+              <stop offset="100%" stop-color="#D97706"/>
+            </radialGradient>
+            <radialGradient id="lite-sun-corona" cx="50%" cy="50%" r="50%">
+              <stop offset="68%" stop-color="#FDE047" stop-opacity="0.35"/>
+              <stop offset="100%" stop-color="#F59E0B" stop-opacity="0"/>
+            </radialGradient>
+          </defs>
+          <circle cx="16" cy="16" r="15" fill="url(#lite-sun-corona)"/>
+          <circle cx="16" cy="16" r="10.5" fill="url(#lite-sun-grad)" stroke="#F59E0B" stroke-opacity="0.55" stroke-width="0.75"/>
+          <circle cx="12.5" cy="12" r="3.2" fill="#FFFFFF" fill-opacity="0.28"/>
         </svg>
-        <svg class="theme-icon icon-moon" viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
-          <path d="M20.5 14.5A8.5 8.5 0 0 1 9.5 3.5a8.5 8.5 0 1 0 11 11z" fill="currentColor" fill-opacity="0.22"/>
-          <circle cx="17.5" cy="6.5" r="0.9" fill="currentColor" stroke="none"/>
+        <svg class="theme-icon icon-moon" viewBox="0 0 32 32" width="28" height="28" fill="none" aria-hidden="true">
+          <defs>
+            <radialGradient id="lite-moon-grad" cx="35%" cy="32%" r="70%">
+              <stop offset="0%" stop-color="#F8FAFC"/>
+              <stop offset="55%" stop-color="#CBD5E1"/>
+              <stop offset="100%" stop-color="#64748B"/>
+            </radialGradient>
+            <clipPath id="lite-moon-clip">
+              <circle cx="16" cy="16" r="10.5"/>
+            </clipPath>
+          </defs>
+          <g clip-path="url(#lite-moon-clip)">
+            <circle cx="16" cy="16" r="10.5" fill="url(#lite-moon-grad)"/>
+            <path d="M20.8 5.2A11 11 0 0 1 11.2 26.8 11 11 0 0 0 20.8 5.2Z" fill="#1E293B" fill-opacity="0.28"/>
+            <circle cx="12.2" cy="11.4" r="2.1" fill="#64748B" fill-opacity="0.26"/>
+            <circle cx="18.2" cy="14.5" r="1.35" fill="#475569" fill-opacity="0.24"/>
+            <circle cx="13.2" cy="19.6" r="2.4" fill="#64748B" fill-opacity="0.22"/>
+            <circle cx="18.8" cy="20.4" r="1.05" fill="#475569" fill-opacity="0.22"/>
+          </g>
+          <circle cx="16" cy="16" r="10.5" stroke="#E2E8F0" stroke-opacity="0.45" stroke-width="0.75"/>
         </svg>
       </button>
     </nav>
