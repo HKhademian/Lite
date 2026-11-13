@@ -2529,3 +2529,63 @@ test('fixed arrays support inferred/explicit extents, aliases, functions, zero v
     assert.match(rejected.stderr.toString(), expectedMessage);
   }
 });
+
+test('mutability and lists support inferred mut/var mut, front/back ops, List<Unit>, tuple copies, and rejections', () => {
+  const source = [
+    'io := import "core/io";',
+    'list := import "core/list";',
+    'values: mut List<Int> = [1, 2];',
+    'push_front(mut values, 0);',
+    'list.pushBack(mut values, 3);',
+    'front := pop_front(mut values);',
+    'back := list.popBack(mut values);',
+    'list.pushFront(mut values, 9);',
+    'front2 := list.popFront(mut values);',
+    'io.outputLine(front, back, front2, values);',
+    'mut args := io.inputArgs();',
+    'push_back(mut args, "z");',
+    'var mut other := io.inputArgs();',
+    'other = io.inputArgs();',
+    'push_front(mut other, "a");',
+    'io.outputLine(args, other);',
+    'units: mut List<Unit> = [Unit];',
+    'push_back(mut units, Unit);',
+    'io.outputLine(pop_front(mut units), pop_back(mut units), units);',
+    'tuples: mut List<(name: String, n: Int)> = [(name = "a", n = 1)];',
+    'item := pop_back(mut tuples);',
+    'io.outputLine(item.name, item.n, tuples);',
+  ].join('\n');
+  const compiled = compileTs({ text: source });
+  assert.equal(compiled.status, 0, compiled.stderr.toString());
+  const actual = runTsArtifact(compiled.stdout.toString());
+  assert.equal(actual.phase, 'run'); assert.equal(actual.status, 0);
+  assert.equal(
+    actual.stdout.toString(),
+    '0 3 9 [1, 2]\n[z] [a]\nUnit Unit []\na 1 []\n',
+  );
+
+  // Empty pop_front and pop_back on List<Unit> raise BoundPanic.
+  for (const op of ['pop_front', 'pop_back']) {
+    const panicSrc = [
+      'io := import "core/io";',
+      'empty: mut List<Unit> = [];',
+      `io.outputLine(${op}(mut empty));`,
+    ].join('\n');
+    const panicCompiled = compileTs({ text: panicSrc });
+    assert.equal(panicCompiled.status, 0, panicCompiled.stderr.toString());
+    const panicRun = runTsArtifact(panicCompiled.stdout.toString());
+    assert.equal(panicRun.status, 1);
+    assert.match(panicRun.stderr.toString(), new RegExp(`BoundPanic.*${op} on an empty list`));
+  }
+
+  for (const [bad, expectedMessage] of [
+    ['mut x := 1;', /mut requires a List value, got Int/],
+    ['var mut x: List<Int> = [];', /var mut cannot be combined with explicit type annotation/],
+    ['values: mut List<Int> = [1]; pop_front(values);', /pop_front requires mut list argument/],
+    ['values: mut List<Int> = [1]; push_front(values, 2);', /push_front requires mut list argument/],
+  ] as const) {
+    const rejected = compileTs({ text: bad });
+    assert.equal(rejected.status, 2, bad);
+    assert.match(rejected.stderr.toString(), expectedMessage);
+  }
+});

@@ -168,7 +168,7 @@ Keep dependencies explicit; split a topic further when its contracts warrant it.
 - [x] **Fixed arrays:** inferred/explicit extents, function contracts, aliases,
   copies, zero values, and indexed/dot/sequence access (TS), preserving
   array/List distinctions in function tails (`f := fn(): List<Int> { [1, 2] }`).
-- [ ] **Mutability and lists:** inferred mut/var mut, front operations,
+- [x] **Mutability and lists:** inferred mut/var mut, front operations,
   List<Unit>, all end operations and copy contracts.
 - [ ] **Storage and updates:** compound assignments, zero initialization,
   reserved storage and first whole-value writes.
