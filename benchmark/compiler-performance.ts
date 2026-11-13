@@ -57,17 +57,19 @@ export function compilerPerformance(args: readonly string[]): void {
     writeFileSync(join(directory, 'package.json'), '{"type":"module"}\n');
     const artifact = join(directory, 'compiler.ts'); writeFileSync(artifact, selected.bytes);
     const strictCompilerCheckMs = strictArtifact(selected.bytes.toString());
-    const validation = validateCorpus(selected.bytes.toString());
+    const validation = validateCorpus(artifact);
     if (validation.mismatches.length !== 0) throw new Error(`compiler contract mismatch: ${validation.mismatches.slice(0, 3).join(', ')}`);
     // A refreshed source may reach a new fixed point after the first old-seed build.
     // Validate the untimed self-build independently before using its bytes for timing checks.
     const selfBuild = invoke(artifact, source.text, timeout, sourceName);
     if (selfBuild.status !== 0 || selfBuild.signal !== null || selfBuild.stderr.length !== 0) throw new Error('untimed self-build failed');
-    const selfBuildValidation = validateCorpus(selfBuild.stdout.toString());
+    const selfBuildArtifact = join(directory, 'self-built.ts');
+    writeFileSync(selfBuildArtifact, selfBuild.stdout);
+    const selfBuildValidation = validateCorpus(selfBuildArtifact);
     if (selfBuildValidation.mismatches.length !== 0) throw new Error('self-built compiler failed recorded corpus contracts');
     const selfBuildArtifactSha256 = hashBytes(selfBuild.stdout);
     const workloads: { name: string; inputs: Input[] }[] = [
-      ...[1, 100, 1000].map(n => ({ name: `output-${n}`, inputs: [{ name: `output-${n}`, text: Array.from({ length: n }, (_, i) => `outputLine(${i});`).join('\n') + '\n' }] })),
+      ...[1, 100, 1000].map(n => ({ name: `output-${n}`, inputs: [{ name: `output-${n}`, text: 'io := import "core/io";\n' + Array.from({ length: n }, (_, i) => `io.outputLine(${i});`).join('\n') + '\n' }] })),
       { name: 'compiler-corpus', inputs: compilerFixtures.map(fixture => ({ name: fixture.file + '/' + fixture.caseName, text: fixture.source, fixture })) },
       { name: 'self-build', inputs: [{ name: 'S', text: source.text, sourceRoot: sourceName }] },
     ];
