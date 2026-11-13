@@ -32,11 +32,20 @@ and [operators](operators.md) for the selected contracts.
   continue with [functions](functions.md).
 - [Named tuples](../language/examples/008-named-tuples.lts): structured values and labels;
   continue with [tuples and patterns](tuples-and-patterns.md).
+- [Fixed arrays](../language/examples/009-fixed-arrays.lts): fixed-extent sequence literals,
+  checked indexing, and compound updates; continue with [arrays](arrays.md).
+- [Named arguments](../language/examples/012-named-arguments.lts): interleaved positional and named
+  arguments, `=name` shorthand, and named `self` calls; continue with
+  [named input routing](named-input-routing.md).
 - [Growable lists](../language/examples/013-growable-lists.lts): explicit storage and mutation;
   continue with [lists](lists.md).
 - [Integer calculator](../language/examples/016-integer-calculator.lts): a scanner and
   recursive parser composed from smaller features. Consult the current migration
   inventory before expecting generated-TS execution.
+- [Type aliases](../language/examples/021-type-aliases.lts): transparent `type` contracts for
+  tuples and growable lists; continue with [type aliases](type-aliases.md).
+- [Sum loop](../language/examples/022-sum-loop.lts): mutable accumulators, `+=` updates, and
+  explicit loop exit; continue with [loops](loops.md).
 
 Each example has a corresponding manifest under
 [artifact verifications](../language/verifications/artifacts/examples/). Cases preserve

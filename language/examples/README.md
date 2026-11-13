@@ -12,7 +12,7 @@ Run from the repository root with Node 26.13.0:
 node compiler/entry.ts /tmp/lite-example.ts
 ```
 
-`run` compiles to a temporary artifact and executes it. Eight examples still need TS ports; see the [current inventory](../../compiler/reports/current-t00-t11-inventory.md). Unsupported source fails without a T00 fallback. C output is deferred.
+`run` compiles to a temporary artifact and executes it. Eighteen of the twenty examples run through the generated TS compiler; two (`006` and `016`) still need generated-compiler parity—see [compiler gaps](../../compiler/gaps.md) and the [archived inventory](../../compiler/reports/current-t00-t11-inventory.md). Unsupported source fails without a T00 fallback. C output is deferred.
 
 The interactive examples display explicit prompts. Integer prompts leave the
 cursor on the same line; the scanner prints a heading before reading its line.
@@ -58,7 +58,8 @@ integer prompts may appear together in captured stdout.
   Reports 123, 123, and 10 on separate lines.
 
 - [013 — Growable lists](013-growable-lists.lts): typed list construction, all
-  four explicit mut end operations, and an independent saved sequence. Reports
+  four `core/list` mut end operations (`list.pushFront`, `list.pushBack`,
+  `list.popFront`, `list.popBack`), and an independent saved sequence. Reports
   0 3, then 1, then 2 on separate lines.
 
 - [014 — Input history](014-input-history.lts): collects integers until 0, then
@@ -92,6 +93,9 @@ examples. They live under [compiler/](../../compiler/README.md) and are run with
 - [021 — Type aliases](021-type-aliases.lts): demonstrates Alias := type TypeExpression
   defining transparent named contracts for tuples and growable lists with zero
   runtime memory overhead. Reports ident: total, op: +=, and num: 100.
+
+- [022 — Sum loop](022-sum-loop.lts): sums 1 through 5 with `var` bindings, `+=`
+  compound updates, and explicit `loop`/`break`. Reports `sum(1..5) = 15`.
 
 When a language feature lands, revisit these examples for obsolete workarounds. Keep an example that explicitly demonstrates the replaced construct; otherwise prefer the simpler current form. See the [artifact-refresh checklist](../../docs/tooling-and-learning.md#refreshing-artifacts-after-a-language-change).
 

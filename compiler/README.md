@@ -18,9 +18,11 @@ The [temporary I/O contract](../docs/tooling-and-learning.md#temporary-input-and
 now supplies optional String prompts on inputAll/inputLine/inputInt/inputFloat
 and replaces the report builtin with output and outputLine. The former adds no
 newline; the latter always adds one, including with zero arguments. Generated TS
-supports scalar/Unit, flat named-tuple and List display; inputFloat results can
-be stored, passed and displayed, while wider Float expressions and fixed-array
-contracts remain separate parity work. Process adapters stream output through an
+supports scalar/Unit, flat named-tuple, fixed-array, and List display; the
+generated compiler also supports `Float` expressions, fixed arrays, scalar and
+indexed compound updates, `**`, `core/*` module imports, tuple `=name`
+shorthand, and fixed-parameter named/`=name` call routing (see
+[`gaps.md`](gaps.md) for remaining parity items). Process adapters stream output through an
 optional main callback, preserving earlier output across faults. Calling main()
 without that callback retains the return-text contract. The [I/O seed refresh](parity.md#temporary-io-migration)
 records that snapshot's compiler artifacts. The subsequent
@@ -65,12 +67,14 @@ remain opt-in experiments, separate from accepted support.
 
 These Lite sources are also the bootstrap source **S**. S must remain inside the
 bootstrap subset **L** defined in the
-[bootstrap plan](../docs/bootstrap-plan.md#compiler-source-subset-l). Do not add
-`match`, records, enums, unions, `Float`, arrays, closures, `mut` parameters,
-modules, `finally`, loop metadata or compound operators to S just because the
-historical igniter supports them. Expand L through the guidelines' support and
-seed acceptance gates before adopting a construct in S: the selected generated
-compiler must parse, check and lower it too.
+[bootstrap plan](../docs/bootstrap-plan.md#compiler-source-subset-l). Namespace
+modules (`import "..."`, `pub`), tuple `=name` shorthand, named/`=name` call
+routing (including `self(...)`), scalar compound updates (`+=`, `-=`, `*=`,
+`/=`, `%=`, `:/=`, `:%=`), and `**` have passed the self-host and seed acceptance
+gates and are part of S. Do not add `match`, records, enums, unions, `Float`,
+arrays, closures, general user `mut` parameters, `finally`, or loop metadata to
+S until they pass those gates too: the selected generated compiler must parse,
+check and lower every construct used in S.
 
 Compiler sources under `src/` and `lib/core/` use Lite namespace imports. Each
 manifest names one root; active build, CLI, self-host, release and verification

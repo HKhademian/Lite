@@ -805,24 +805,29 @@ Allowed in S now:
 - Flat named tuples; `List<T>` whose element is a scalar or flat tuple; function
   signatures; transparent type aliases.
 - Declarations: `:=`, `var`, typed `: Type`, `: mut List<T> = []`, contextual
-  empty list literals.
-- Expressions: names, positional calls, tuple construction, field access, index
-  reads, parentheses, unary minus, `+ - * / % :/ :%`, comparisons,
+  empty list literals, `import "..."` namespace bindings, and `pub` module
+  exports.
+- Expressions: names, positional and named/`=name` routed calls (including named
+  `self(...)`), tuple construction (including `=name` shorthand), field access,
+  index reads, parentheses, unary minus, `+ - * / % :/ :% **`, comparisons,
   `and`/`or`/`not`, value `if`/`else if`/`else`.
-- Statements: action `if`/`else if`/`else`, loops, `break`, `return`, blocks,
-  `outputLine`, `reportError`, `exit`.
+- Statements: action `if`/`else if`/`else`, loops, `break`, `continue`,
+  `return`, scalar compound updates (`+=`, `-=`, `*=`, `/=`, `%=`, `:/=`,
+  `:%=`), blocks, `outputLine`, `reportError`, `exit`.
 - Functions: typed parameters/results, calls, recursion, `self`.
-- Builtins used by S: `inputArgs`, `inputAll`, `outputLine`, `reportError`, `exit`,
-  `textLength`, `textAt`, `textSlice`, `push_back`.
+- Library modules and builtins used by S: `core/io`, `core/list`, `core/text`,
+  `core/integer`, `core/format`, `core/source`, plus `inputArgs`, `inputAll`,
+  `outputLine`, `reportError`, `exit`, `readSource`.
 - List value semantics: copies on declaration/argument/return; iteration
   snapshots.
 
 Not allowed in S without an owner decision and a plan update:
 
-- Float, fixed arrays, `match`, records, enums, unions, `Option`/`Result`,
-  recovery, `finally`, loop metadata, closures, first-class callbacks,
-  `mut` parameters, modules/imports, generics, maps, compound assignments, `**`,
-  zero/reserved locals.
+- `Float`, fixed arrays, `match`, records, enums, unions, `Option`/`Result`,
+  recovery, `finally`, loop metadata, closures, first-class callbacks, general
+  user `mut` parameters, user generics, maps, zero/reserved locals (compiler
+  sources remain integer/text/tuple/list based even where generated targets
+  already compile `Float` and fixed arrays).
 
 Adding one of these to S means the compiler must parse/check/lower it too. That
 is a deliberate expansion, not an implementation detail.

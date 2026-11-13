@@ -48,6 +48,11 @@ Complex/simultaneous/reentrant grants, views, capacity, indexed writes, general
 user-function mut parameters, recovery and generic infrastructure remain outside
 this implementation. No native/performance claim follows.
 
+In the current self-hosted compiler, `core/list` exports `pushBack`, `popBack`,
+`pushFront`, and `popFront` for `mut List<T>` alongside indexed element writes
+(`items[i] = v`, `items[i] += v`), as used in
+[example 013](../language/examples/013-growable-lists.lts).
+
 ## Length, capacity, and initialization
 
 Conceptually:

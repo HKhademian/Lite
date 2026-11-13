@@ -10,6 +10,14 @@ fit their destination slots. Defaults, spread, full contextual tuple routing,
 access grants and builtin public labels remain outside this implementation.
 See [INV-031 evidence](../research/investigations/INV-031-fvp-named-calls.md).
 
+In the current self-hosted compiler (TS and C targets), fixed-parameter call
+routing is also supported—covering interleaved positional and named arguments,
+`=name` shorthand, named replacement of an earlier positional contribution with
+source-order once-only evaluation, module-qualified calls, and named `self(...)`
+calls—verified in [example 012](../language/examples/012-named-arguments.lts) and
+compiler parity cases. Defaults, spread, and full contextual tuple destination
+routing remain open.
+
 ## Selected value shorthand and positional access
 
 In tuple value context, (cake, tea) remains unnamed without an expected named destination. The selected (= cake, = tea) shorthand expands to (cake = cake, tea = tea); only identifiers qualify for this shorthand. Both tuple forms expose zero-based .0, .1, and subsequent fixed positions in stored order, with out-of-range positions rejected at compile time. Existing expected named tuples still accept positional initializers. See [entry forms, access, and remaining edge cases](tuple-entries-and-access.md).

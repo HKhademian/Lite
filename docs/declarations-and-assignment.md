@@ -55,6 +55,7 @@ Assume the three inputs are Bool. This infers Bool and evaluates exactly like re
 - An assignment RHS that is a partial no-`else` conditional is a guarded update: a matching branch supplies the value to assign; no match performs no write. A final `else { ? }` is the explicit no-write form. The target's fixed/var first-write or replacement rules still apply.
 - A conditional initializer without a final `else` leaves the declaration default on no match. With `else { ? }` it leaves the binding reserved on that path, subject to definite-initialization checks.
 - `:=` never means "declare if absent, otherwise update."
+- Compound update statements (`+=`, `-=`, `*=`, `/=`, `%=`, `:/=`, `:%=`) update an initialized `var` scalar binding (or writable indexed sequence element with `mut`) as `Unit`-producing statements using checked arithmetic and single target evaluation; see [operators](operators.md).
 - Declarations and assignments are statements producing `Unit`.
 - Assignment cannot be embedded in a condition or chained as a value-producing expression.
 
