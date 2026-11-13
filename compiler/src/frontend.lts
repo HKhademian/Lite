@@ -1843,6 +1843,98 @@ skipItemSeparators := fn(source: String, position: Int, prefix: String): Int {
     next
 }
 
+/** Returns a copy of `values` with element `index` replaced by `value`. */
+setIntAt := fn(values: List<Int>, index: Int, value: Int): List<Int> {
+    updated: mut List<Int> = [];
+    var i := 0;
+    loop values as item {
+        listLib.pushBack(mut updated, if i == index { value } else { item });
+        i = i + 1;
+    }
+    updated
+}
+
+/** Returns a copy of `values` with element `index` replaced by `value`. */
+setBoolAt := fn(values: List<Bool>, index: Int, value: Bool): List<Bool> {
+    updated: mut List<Bool> = [];
+    var i := 0;
+    loop values as item {
+        listLib.pushBack(mut updated, if i == index { value } else { item });
+        i = i + 1;
+    }
+    updated
+}
+
+/** Returns the 0-based parameter slot index matching `label` in `[first, first + count)`, or -1 when absent. */
+findParamSlot := fn(params: List<String>, first: Int, count: Int, label: String): Int {
+    var i := 0;
+    loop i < count {
+        if paramNameOf(params[first + i]) == label { return i; }
+        i = i + 1;
+    }
+    -1
+}
+
+/** Scans from `position` to the next top-level `,` or `)` at paren/bracket/brace depth 0. */
+skipBalancedArgument := fn(source: String, position: Int, prefix: String): Int {
+    size := textLib.length(source);
+    var cursor := position;
+    var depth := 0;
+    loop cursor < size {
+        ch := textLib.at(source, cursor);
+        if ch == "\"" {
+            cursor = skipAliasString(source, cursor);
+        } else if textLib.startsWithAt(source, cursor, "/*") {
+            cursor = skipComment(source, cursor, prefix);
+        } else if ch == "(" or ch == "[" or ch == "{" {
+            depth = depth + 1;
+            cursor = cursor + 1;
+        } else if ch == ")" {
+            if depth == 0 { return cursor; }
+            depth = depth - 1;
+            cursor = cursor + 1;
+        } else if ch == "]" or ch == "}" {
+            if depth > 0 { depth = depth - 1; }
+            cursor = cursor + 1;
+        } else if ch == "," and depth == 0 {
+            return cursor;
+        } else {
+            cursor = cursor + 1;
+        }
+    }
+    cursor
+}
+
+/** Collects explicit `name = ...` and `=name` parameter labels present in a call argument list starting at `openParen`. */
+collectExplicitCallLabels := fn(source: String, openParen: Int, prefix: String): List<String> {
+    labels: mut List<String> = [];
+    size := textLib.length(source);
+    var cursor := skipTrivia(source, openParen + 1, prefix);
+    loop cursor < size and textLib.at(source, cursor) =!= ")" {
+        if isSingleEquals(source, cursor) {
+            nameStart := skipTrivia(source, cursor + 1, prefix);
+            if nameStart < size and textLib.isNameStart(textLib.at(source, nameStart)) {
+                nameEnd := textLib.skipName(source, nameStart);
+                listLib.pushBack(mut labels, textLib.slice(source, nameStart, nameEnd));
+            }
+        } else if textLib.isNameStart(textLib.at(source, cursor)) {
+            nameEnd := textLib.skipName(source, cursor);
+            afterName := skipTrivia(source, nameEnd, prefix);
+            if isSingleEquals(source, afterName) {
+                listLib.pushBack(mut labels, textLib.slice(source, cursor, nameEnd));
+            }
+        }
+        cursor = skipBalancedArgument(source, cursor, prefix);
+        if cursor < size and textLib.at(source, cursor) == "," {
+            cursor = skipTrivia(source, cursor + 1, prefix);
+            if cursor < size and textLib.at(source, cursor) == ")" { break; }
+        } else {
+            break;
+        }
+    }
+    labels
+}
+
 /** Precedence-climbing parser for arithmetic, comparisons, `and`/`or`, parentheses, named tuple and list values, field access, indexing, calls, unary signs and `not`. Folds constants, lowers dynamic Int arithmetic, and exits 2 on mixed types, unsupported dynamic operations or range faults. `expected` supplies a contextual kind for empty list literals. self(..., 30) parses a unary operand without binary operators. */
 parseBinary := fn(target: String, source: String, position: Int, prefix: String, locals: List<Local>, functions: List<FunctionInfo>, params: List<String>, currentName: String, expected: String, minimum: Int): Parsed {
     var start := skipTrivia(source, position, prefix);
@@ -2391,47 +2483,9 @@ parseBinary := fn(target: String, source: String, position: Int, prefix: String,
                 calleeName = currentName;
                 callableIndex = findFunction(functions, currentName);
             }
-            if callableIndex >= 0 and afterName < textLib.length(source) and textLib.at(source, afterName) == "(" {
-                info := functions[callableIndex];
-                if info.count < 0 {
-                    failAt(source, nameStart, prefix, "host output functions are standalone statements");
-                }
-                var cursor := skipTrivia(source, afterName + 1, prefix);
-                argumentCodes: mut List<String> = [];
-                var argumentCount := 0;
-                if cursor < textLib.length(source) and textLib.at(source, cursor) =!= ")" {
-                    loop true {
-                        if argumentCount >= info.count {
-                            suffix := if info.count == 1 { " argument" } else { " arguments" };
-                            failAt(source, nameStart, prefix, "function " + calleeName + " expects " + formatLib.decimalText(info.count) + suffix + ", got more");
-                        }
-                        expected := paramKindOf(params[info.first + argumentCount]);
-                        argument := self(target, source, cursor, prefix, locals, functions, params, currentName, expected, 0);
-                        if not isCompatibleKind(expected, argument.kind) {
-                            failAt(source, cursor, prefix, "argument " + formatLib.decimalText(argumentCount + 1) + " of " +
-                                calleeName + " must be " + displayKind(expected) + ", got " + displayKind(argument.kind));
-                        }
-                        listLib.pushBack(mut argumentCodes, assignValueCode(target, expected, argument.kind, argument.code));
-                        argumentCount = argumentCount + 1;
-                        cursor = skipTrivia(source, argument.next, prefix);
-                        if cursor < textLib.length(source) and textLib.at(source, cursor) == "," {
-                            cursor = skipTrivia(source, cursor + 1, prefix);
-                            if cursor < textLib.length(source) and textLib.at(source, cursor) == ")" { break; }
-                        } else {
-                            break;
-                        }
-                    }
-                }
-                cursor = expectSymbol(source, cursor, ")", prefix);
-                if argumentCount =!= info.count {
-                    suffix := if info.count == 1 { " argument" } else { " arguments" };
-                    failAt(source, nameStart, prefix, "function " + calleeName + " expects " + formatLib.decimalText(info.count) +
-                        suffix + ", got " + formatLib.decimalText(argumentCount));
-                }
-                left = (kind = info.result, code = info.runtime + "(" + textLib.joinTexts(argumentCodes, ", ") + ")",
-                    intValue = 0, textValue = "", constant = false, next = cursor);
-            } else if callableIndex >= 0 {
-                failAt(source, nameStart, prefix, "function " + calleeName + " must be called");
+            if callableIndex >= 0 {
+                left = (kind = "ModuleFunction", code = integer.intText(nameStart), intValue = callableIndex,
+                    textValue = calleeName, constant = false, next = next);
             } else if (name == "push_back" or name == "pop_back" or name == "push_front" or name == "pop_front") and
                 afterName < textLib.length(source) and textLib.at(source, afterName) == "(" {
                 left = (kind = "ListOp", code = name, intValue = 0, textValue = name, constant = false, next = afterName);
@@ -2488,7 +2542,7 @@ parseBinary := fn(target: String, source: String, position: Int, prefix: String,
                     qualified := left.textValue + "." + label;
                     functionIndex := findFunction(functions, qualified);
                     if functionIndex >= 0 {
-                        left = (kind = "ModuleFunction", code = "", intValue = functionIndex, textValue = qualified,
+                        left = (kind = "ModuleFunction", code = integer.intText(start), intValue = functionIndex, textValue = qualified,
                             constant = false, next = labelEnd);
                     } else {
                         memberIndex := localIndex(locals, qualified);
@@ -2528,103 +2582,304 @@ parseBinary := fn(target: String, source: String, position: Int, prefix: String,
             left = (kind = elemKind,
                 code = "lite$listAt((" + left.code + "), " + index.code + ", " + integer.intText(indexStart) + ")",
                 intValue = 0, textValue = "", constant = false, next = next);
-        } else {
-            break;
-        }
-    }
-    var listOpName := "";
-    var listOpOpen := left.next;
-    var listOpDisplay := "";
-    if left.kind == "ListOp" {
-        listOpName = left.textValue;
-        listOpDisplay = left.code;
-    } else if left.kind == "ModuleFunction" {
-        info := functions[left.intValue];
-        if info.runtime == "lite$core$list$pushBack:v1" { listOpName = "push_back"; listOpDisplay = "pushBack"; }
-        else if info.runtime == "lite$core$list$popBack:v1" { listOpName = "pop_back"; listOpDisplay = "popBack"; }
-        else if info.runtime == "lite$core$list$pushFront:v1" { listOpName = "push_front"; listOpDisplay = "pushFront"; }
-        else if info.runtime == "lite$core$list$popFront:v1" { listOpName = "pop_front"; listOpDisplay = "popFront"; }
-    }
-    if listOpName =!= "" {
-        grant := parseListGrant(source, listOpOpen, prefix, locals, listOpDisplay);
-        if listOpName == "push_back" or listOpName == "push_front" {
-            var cursor := skipTrivia(source, grant.next, prefix);
-            if cursor >= textLib.length(source) or textLib.at(source, cursor) =!= "," {
-                failAt(source, cursor, prefix, listOpDisplay + " expects a value after the mut list");
+        } else if left.kind == "ListOp" {
+            grant := parseListGrant(source, left.next, prefix, locals, left.code);
+            if left.textValue == "push_back" or left.textValue == "push_front" {
+                var cursor := skipTrivia(source, grant.next, prefix);
+                if cursor >= textLib.length(source) or textLib.at(source, cursor) =!= "," {
+                    failAt(source, cursor, prefix, left.code + " expects a value after the mut list");
+                }
+                valueStart := skipTrivia(source, cursor + 1, prefix);
+                elementKind := listElementKind(grant.kind);
+                value := self(target, source, valueStart, prefix, locals, functions, params, currentName, elementKind, 0);
+                if not isCompatibleKind(elementKind, value.kind) {
+                    failAt(source, valueStart, prefix, left.code + " element must be " + displayKind(elementKind) +
+                        ", got " + displayKind(value.kind));
+                }
+                close := expectNonemptyCallClose(source, value.next, prefix);
+                method := if left.textValue == "push_back" { ".push(" } else { ".unshift(" };
+                left = (kind = "Unit", code = grant.runtime + method + assignValueCode(target, elementKind, value.kind, value.code) + ")",
+                    intValue = 0, textValue = "", constant = false, next = close);
+            } else {
+                close := expectNonemptyCallClose(source, grant.next, prefix);
+                helper := if left.textValue == "pop_back" { "lite$listPopBack(" } else { "lite$listPopFront(" };
+                left = (kind = listElementKind(grant.kind), code = helper + grant.runtime + ", " + integer.intText(start) + ")",
+                    intValue = 0, textValue = "", constant = false, next = close);
             }
-            valueStart := skipTrivia(source, cursor + 1, prefix);
-            elementKind := listElementKind(grant.kind);
-            value := self(target, source, valueStart, prefix, locals, functions, params, currentName, elementKind, 0);
-            if not isCompatibleKind(elementKind, value.kind) {
-                failAt(source, valueStart, prefix, listOpDisplay + " element must be " + displayKind(elementKind) +
-                    ", got " + displayKind(value.kind));
-            }
-            close := expectNonemptyCallClose(source, value.next, prefix);
-            method := if listOpName == "push_back" { ".push(" } else { ".unshift(" };
-            left = (kind = "Unit", code = grant.runtime + method + assignValueCode(target, elementKind, value.kind, value.code) + ")",
-                intValue = 0, textValue = "", constant = false, next = close);
-        } else {
-            close := expectNonemptyCallClose(source, grant.next, prefix);
-            helper := if listOpName == "pop_back" { "lite$listPopBack(" } else { "lite$listPopFront(" };
-            left = (kind = listElementKind(grant.kind), code = helper + grant.runtime + ", " + integer.intText(start) + ")",
-                intValue = 0, textValue = "", constant = false, next = close);
-        }
-    } else if left.kind == "ModuleFunction" {
-        info := functions[left.intValue];
-        if true {
-            if info.count < 0 {
-                failAt(source, start, prefix, "host output functions are standalone statements");
-            }
-            callOpen := skipTrivia(source, left.next, prefix);
-            if callOpen >= textLib.length(source) or textLib.at(source, callOpen) =!= "(" {
-                failAt(source, start, prefix, "function " + left.textValue + " must be called");
-            }
-            var cursor := skipTrivia(source, callOpen + 1, prefix);
-            argumentCodes: mut List<String> = [];
-            var argumentCount := 0;
-            if cursor < textLib.length(source) and textLib.at(source, cursor) =!= ")" {
-                loop true {
-                    if argumentCount >= info.count {
-                        suffix := if info.count == 1 { " argument" } else { " arguments" };
-                        failAt(source, start, prefix, "function " + left.textValue + " expects " + formatLib.decimalText(info.count) + suffix + ", got more");
+        } else if left.kind == "ModuleFunction" {
+            info := functions[left.intValue];
+            calleeDisplay := left.textValue;
+            errPos := if left.code =!= "" { parseDigits(left.code, 0, textLib.length(left.code)) } else { start };
+            var listOpName := "";
+            var listOpDisplay := "";
+            if info.runtime == "lite$core$list$pushBack:v1" { listOpName = "push_back"; listOpDisplay = "pushBack"; }
+            else if info.runtime == "lite$core$list$popBack:v1" { listOpName = "pop_back"; listOpDisplay = "popBack"; }
+            else if info.runtime == "lite$core$list$pushFront:v1" { listOpName = "push_front"; listOpDisplay = "pushFront"; }
+            else if info.runtime == "lite$core$list$popFront:v1" { listOpName = "pop_front"; listOpDisplay = "popFront"; }
+            if listOpName =!= "" {
+                grant := parseListGrant(source, left.next, prefix, locals, listOpDisplay);
+                if listOpName == "push_back" or listOpName == "push_front" {
+                    var cursor := skipTrivia(source, grant.next, prefix);
+                    if cursor >= textLib.length(source) or textLib.at(source, cursor) =!= "," {
+                        failAt(source, cursor, prefix, listOpDisplay + " expects a value after the mut list");
                     }
-                    expected := paramKindOf(params[info.first + argumentCount]);
-                    argument := self(target, source, cursor, prefix, locals, functions, params, currentName, expected, 0);
-                    if not isCompatibleKind(expected, argument.kind) {
-                        failAt(source, cursor, prefix, "argument " + formatLib.decimalText(argumentCount + 1) + " of " + left.textValue +
-                            " must be " + displayKind(expected) + ", got " + displayKind(argument.kind));
+                    valueStart := skipTrivia(source, cursor + 1, prefix);
+                    elementKind := listElementKind(grant.kind);
+                    value := self(target, source, valueStart, prefix, locals, functions, params, currentName, elementKind, 0);
+                    if not isCompatibleKind(elementKind, value.kind) {
+                        failAt(source, valueStart, prefix, listOpDisplay + " element must be " + displayKind(elementKind) +
+                            ", got " + displayKind(value.kind));
                     }
-                    listLib.pushBack(mut argumentCodes, assignValueCode(target, expected, argument.kind, argument.code));
-                    argumentCount = argumentCount + 1;
-                    cursor = skipTrivia(source, argument.next, prefix);
-                    if cursor < textLib.length(source) and textLib.at(source, cursor) == "," {
-                        cursor = skipTrivia(source, cursor + 1, prefix);
-                        if cursor < textLib.length(source) and textLib.at(source, cursor) == ")" { break; }
-                    } else {
-                        break;
+                    close := expectNonemptyCallClose(source, value.next, prefix);
+                    method := if listOpName == "push_back" { ".push(" } else { ".unshift(" };
+                    left = (kind = "Unit", code = grant.runtime + method + assignValueCode(target, elementKind, value.kind, value.code) + ")",
+                        intValue = 0, textValue = "", constant = false, next = close);
+                } else {
+                    close := expectNonemptyCallClose(source, grant.next, prefix);
+                    helper := if listOpName == "pop_back" { "lite$listPopBack(" } else { "lite$listPopFront(" };
+                    left = (kind = listElementKind(grant.kind), code = helper + grant.runtime + ", " + integer.intText(start) + ")",
+                        intValue = 0, textValue = "", constant = false, next = close);
+                }
+            } else if info.count < 0 {
+                failAt(source, errPos, prefix, "host output functions are standalone statements");
+            } else if postPosition >= textLib.length(source) or textLib.at(source, postPosition) =!= "(" {
+                failAt(source, errPos, prefix, "function " + calleeDisplay + " must be called");
+            } else if textLib.startsWithAt(info.runtime, 0, "lite$") {
+                var cursor := skipTrivia(source, postPosition + 1, prefix);
+                argumentCodes: mut List<String> = [];
+                var argumentCount := 0;
+                size := textLib.length(source);
+                if cursor < size and textLib.at(source, cursor) =!= ")" {
+                    loop true {
+                        isNamed := if isSingleEquals(source, cursor) { true }
+                            else if cursor < size and textLib.isNameStart(textLib.at(source, cursor)) {
+                                isSingleEquals(source, skipTrivia(source, textLib.skipName(source, cursor), prefix))
+                            } else { false };
+                        if isNamed {
+                            failAt(source, cursor, prefix, "named arguments are not supported for host function " + calleeDisplay);
+                        }
+                        if argumentCount >= info.count {
+                            suffix := if info.count == 1 { " argument" } else { " arguments" };
+                            failAt(source, errPos, prefix, "function " + calleeDisplay + " expects " + formatLib.decimalText(info.count) + suffix + ", got more");
+                        }
+                        expected := paramKindOf(params[info.first + argumentCount]);
+                        argument := self(target, source, cursor, prefix, locals, functions, params, currentName, expected, 0);
+                        if not isCompatibleKind(expected, argument.kind) {
+                            failAt(source, cursor, prefix, "argument " + formatLib.decimalText(argumentCount + 1) + " of " + calleeDisplay +
+                                " must be " + displayKind(expected) + ", got " + displayKind(argument.kind));
+                        }
+                        listLib.pushBack(mut argumentCodes, assignValueCode(target, expected, argument.kind, argument.code));
+                        argumentCount = argumentCount + 1;
+                        cursor = skipTrivia(source, argument.next, prefix);
+                        if cursor < size and textLib.at(source, cursor) == "," {
+                            cursor = skipTrivia(source, cursor + 1, prefix);
+                            if cursor < size and textLib.at(source, cursor) == ")" { break; }
+                        } else {
+                            break;
+                        }
                     }
                 }
+                cursor = expectSymbol(source, cursor, ")", prefix);
+                optionalPrompt := info.runtime == "lite$inputAll" or info.runtime == "lite$inputLine" or
+                    info.runtime == "lite$inputInt" or info.runtime == "lite$inputFloat";
+                if argumentCount =!= info.count and not (optionalPrompt and argumentCount == 0) {
+                    suffix := if info.count == 1 { " argument" } else { " arguments" };
+                    failAt(source, errPos, prefix, "function " + calleeDisplay + " expects " + formatLib.decimalText(info.count) +
+                        suffix + ", got " + formatLib.decimalText(argumentCount));
+                }
+                if optionalPrompt {
+                    if argumentCount == 0 { listLib.pushBack(mut argumentCodes, "undefined"); }
+                    place := sourceLib.lineColumn(source, errPos);
+                    location := (if prefix == "" { "" } else { prefix + ":" }) + formatLib.decimalText(place.line) + ":" +
+                        formatLib.decimalText(place.column) + ": InputFault: ";
+                    listLib.pushBack(mut argumentCodes, targetTextLiteralCode(target, location));
+                }
+                if info.runtime == "lite$textAt" or info.runtime == "lite$textSlice" {
+                    listLib.pushBack(mut argumentCodes, integer.intText(errPos));
+                }
+                left = (kind = info.result, code = info.runtime + "(" + textLib.joinTexts(argumentCodes, ", ") + ")",
+                    intValue = 0, textValue = "", constant = false, next = cursor);
+            } else {
+                size := textLib.length(source);
+                explicitLabels := collectExplicitCallLabels(source, postPosition, prefix);
+                var slotEntry: List<Int> = [];
+                var slotExplicit: List<Bool> = [];
+                initSlots: mut List<Int> = [];
+                initExplicit: mut List<Bool> = [];
+                var initIdx := 0;
+                loop initIdx < info.count {
+                    listLib.pushBack(mut initSlots, -1);
+                    listLib.pushBack(mut initExplicit, false);
+                    initIdx = initIdx + 1;
+                }
+                slotEntry = initSlots;
+                slotExplicit = initExplicit;
+                entryPositions: mut List<Int> = [];
+                entrySlots: mut List<Int> = [];
+                entryKinds: mut List<String> = [];
+                entryCodes: mut List<String> = [];
+                var entryCount := 0;
+                var cursor := skipTrivia(source, postPosition + 1, prefix);
+                if cursor < size and textLib.at(source, cursor) =!= ")" {
+                    loop true {
+                        if isSingleEquals(source, cursor) {
+                            argNameStart := skipTrivia(source, cursor + 1, prefix);
+                            if argNameStart >= size or not textLib.isNameStart(textLib.at(source, argNameStart)) {
+                                failAt(source, argNameStart, prefix, "expected parameter name after =");
+                            }
+                            argNameEnd := textLib.skipName(source, argNameStart);
+                            label := textLib.slice(source, argNameStart, argNameEnd);
+                            if isReservedWord(label) { unsupportedFeature(source, argNameStart, label, prefix); }
+                            afterIdent := skipTrivia(source, argNameEnd, prefix);
+                            if afterIdent < size and textLib.at(source, afterIdent) =!= "," and textLib.at(source, afterIdent) =!= ")" {
+                                failAt(source, afterIdent, prefix, "shorthand argument requires a bare identifier");
+                            }
+                            slot := findParamSlot(params, info.first, info.count, label);
+                            if slot < 0 {
+                                failAt(source, argNameStart, prefix, "unknown parameter " + label + " in call to " + calleeDisplay);
+                            }
+                            if slotExplicit[slot] {
+                                failAt(source, argNameStart, prefix, "duplicate named argument " + label + " in call to " + calleeDisplay);
+                            }
+                            slotExplicit = setBoolAt(slotExplicit, slot, true);
+                            slotEntry = setIntAt(slotEntry, slot, entryCount);
+                            expected := paramKindOf(params[info.first + slot]);
+                            arg := self(target, source, argNameStart, prefix, locals, functions, params, currentName, expected, 30);
+                            listLib.pushBack(mut entryPositions, argNameStart);
+                            listLib.pushBack(mut entrySlots, slot);
+                            listLib.pushBack(mut entryKinds, arg.kind);
+                            listLib.pushBack(mut entryCodes, arg.code);
+                            entryCount = entryCount + 1;
+                            cursor = skipTrivia(source, arg.next, prefix);
+                        } else {
+                            var namedLabel := "";
+                            var rhsStart := -1;
+                            if cursor < size and textLib.isNameStart(textLib.at(source, cursor)) {
+                                labelEnd := textLib.skipName(source, cursor);
+                                afterLabel := skipTrivia(source, labelEnd, prefix);
+                                if isSingleEquals(source, afterLabel) {
+                                    namedLabel = textLib.slice(source, cursor, labelEnd);
+                                    rhsStart = skipTrivia(source, afterLabel + 1, prefix);
+                                }
+                            }
+                            if namedLabel =!= "" {
+                                if isReservedWord(namedLabel) { unsupportedFeature(source, cursor, namedLabel, prefix); }
+                                slot := findParamSlot(params, info.first, info.count, namedLabel);
+                                if slot < 0 {
+                                    failAt(source, cursor, prefix, "unknown parameter " + namedLabel + " in call to " + calleeDisplay);
+                                }
+                                if slotExplicit[slot] {
+                                    failAt(source, cursor, prefix, "duplicate named argument " + namedLabel + " in call to " + calleeDisplay);
+                                }
+                                slotExplicit = setBoolAt(slotExplicit, slot, true);
+                                slotEntry = setIntAt(slotEntry, slot, entryCount);
+                                expected := paramKindOf(params[info.first + slot]);
+                                arg := self(target, source, rhsStart, prefix, locals, functions, params, currentName, expected, 0);
+                                listLib.pushBack(mut entryPositions, rhsStart);
+                                listLib.pushBack(mut entrySlots, slot);
+                                listLib.pushBack(mut entryKinds, arg.kind);
+                                listLib.pushBack(mut entryCodes, arg.code);
+                                entryCount = entryCount + 1;
+                                cursor = skipTrivia(source, arg.next, prefix);
+                            } else {
+                                var nextSlot := -1;
+                                var scan := 0;
+                                loop scan < info.count {
+                                    if slotEntry[scan] < 0 {
+                                        nextSlot = scan;
+                                        break;
+                                    }
+                                    scan = scan + 1;
+                                }
+                                if nextSlot < 0 {
+                                    suffix := if info.count == 1 { " argument" } else { " arguments" };
+                                    failAt(source, errPos, prefix, "function " + calleeDisplay + " expects " + formatLib.decimalText(info.count) + suffix + ", got more");
+                                }
+                                slotName := paramNameOf(params[info.first + nextSlot]);
+                                posExpected := if listLib.listContainsText(explicitLabels, slotName) { "" } else { paramKindOf(params[info.first + nextSlot]) };
+                                slotEntry = setIntAt(slotEntry, nextSlot, entryCount);
+                                arg := self(target, source, cursor, prefix, locals, functions, params, currentName, posExpected, 0);
+                                listLib.pushBack(mut entryPositions, cursor);
+                                listLib.pushBack(mut entrySlots, nextSlot);
+                                listLib.pushBack(mut entryKinds, arg.kind);
+                                listLib.pushBack(mut entryCodes, arg.code);
+                                entryCount = entryCount + 1;
+                                cursor = skipTrivia(source, arg.next, prefix);
+                            }
+                        }
+                        if cursor < size and textLib.at(source, cursor) == "," {
+                            cursor = skipTrivia(source, cursor + 1, prefix);
+                            if cursor < size and textLib.at(source, cursor) == ")" { break; }
+                        } else {
+                            break;
+                        }
+                    }
+                }
+                cursor = expectSymbol(source, cursor, ")", prefix);
+                var filledCount := 0;
+                var checkSlot := 0;
+                loop checkSlot < info.count {
+                    if slotEntry[checkSlot] >= 0 { filledCount = filledCount + 1; }
+                    checkSlot = checkSlot + 1;
+                }
+                if filledCount =!= info.count {
+                    suffix := if info.count == 1 { " argument" } else { " arguments" };
+                    failAt(source, errPos, prefix, "function " + calleeDisplay + " expects " + formatLib.decimalText(info.count) +
+                        suffix + ", got " + formatLib.decimalText(filledCount));
+                }
+                var isIdentityOrder := entryCount == info.count;
+                var slotIdx := 0;
+                loop slotIdx < info.count {
+                    k := slotEntry[slotIdx];
+                    if k =!= slotIdx { isIdentityOrder = false; }
+                    expected := paramKindOf(params[info.first + slotIdx]);
+                    if not isCompatibleKind(expected, entryKinds[k]) {
+                        failAt(source, entryPositions[k], prefix, "argument " + formatLib.decimalText(slotIdx + 1) + " of " +
+                            calleeDisplay + " must be " + displayKind(expected) + ", got " + displayKind(entryKinds[k]));
+                    }
+                    slotIdx = slotIdx + 1;
+                }
+                var emittedCode := "";
+                if isIdentityOrder {
+                    finalArgs: mut List<String> = [];
+                    var pIdx := 0;
+                    loop pIdx < info.count {
+                        expected := paramKindOf(params[info.first + pIdx]);
+                        listLib.pushBack(mut finalArgs, assignValueCode(target, expected, entryKinds[pIdx], entryCodes[pIdx]));
+                        pIdx = pIdx + 1;
+                    }
+                    emittedCode = info.runtime + "(" + textLib.joinTexts(finalArgs, ", ") + ")";
+                } else {
+                    if target =!= "ts" {
+                        failAt(source, errPos, prefix, "C backend does not support named or reordered call arguments yet");
+                    }
+                    evalStmts: mut List<String> = [];
+                    var kIdx := 0;
+                    loop kIdx < entryCount {
+                        targetSlot := entrySlots[kIdx];
+                        if slotEntry[targetSlot] == kIdx {
+                            temp := "lite$arg_" + integer.intText(postPosition) + "_" + integer.intText(kIdx);
+                            expected := paramKindOf(params[info.first + targetSlot]);
+                            listLib.pushBack(mut evalStmts, "const " + temp + " = " + assignValueCode(target, expected, entryKinds[kIdx], entryCodes[kIdx]) + ";");
+                        } else {
+                            listLib.pushBack(mut evalStmts, "void (" + entryCodes[kIdx] + ");");
+                        }
+                        kIdx = kIdx + 1;
+                    }
+                    slotTemps: mut List<String> = [];
+                    var sIdx := 0;
+                    loop sIdx < info.count {
+                        listLib.pushBack(mut slotTemps, "lite$arg_" + integer.intText(postPosition) + "_" + integer.intText(slotEntry[sIdx]));
+                        sIdx = sIdx + 1;
+                    }
+                    callExpr := info.runtime + "(" + textLib.joinTexts(slotTemps, ", ") + ")";
+                    retStmt := if info.result == "Unit" { "void (" + callExpr + "); return undefined;" } else { "return " + callExpr + ";" };
+                    emittedCode = "(() => { " + textLib.joinTexts(evalStmts, " ") + " " + retStmt + " })()";
+                }
+                left = (kind = info.result, code = emittedCode, intValue = 0, textValue = "", constant = false, next = cursor);
             }
-            cursor = expectSymbol(source, cursor, ")", prefix);
-            optionalPrompt := info.runtime == "lite$inputAll" or info.runtime == "lite$inputLine" or
-                info.runtime == "lite$inputInt" or info.runtime == "lite$inputFloat";
-            if argumentCount =!= info.count and not (optionalPrompt and argumentCount == 0) {
-                suffix := if info.count == 1 { " argument" } else { " arguments" };
-                failAt(source, start, prefix, "function " + left.textValue + " expects " + formatLib.decimalText(info.count) +
-                    suffix + ", got " + formatLib.decimalText(argumentCount));
-            }
-            if optionalPrompt {
-                if argumentCount == 0 { listLib.pushBack(mut argumentCodes, "undefined"); }
-                place := sourceLib.lineColumn(source, start);
-                location := (if prefix == "" { "" } else { prefix + ":" }) + formatLib.decimalText(place.line) + ":" +
-                    formatLib.decimalText(place.column) + ": InputFault: ";
-                listLib.pushBack(mut argumentCodes, targetTextLiteralCode(target, location));
-            }
-            if info.runtime == "lite$textAt" or info.runtime == "lite$textSlice" {
-                listLib.pushBack(mut argumentCodes, integer.intText(start));
-            }
-            left = (kind = info.result, code = info.runtime + "(" + textLib.joinTexts(argumentCodes, ", ") + ")",
-                intValue = 0, textValue = "", constant = false, next = cursor);
+        } else {
+            break;
         }
     }
     loop true {

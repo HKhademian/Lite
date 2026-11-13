@@ -1,8 +1,8 @@
 {
   "note": "Reviewed 2026-11-12 after namespace alias migration and scoped core list signatures. TS/C artifact hashes refreshed after strict checks and exact runtime parity for all 69 programs; rejection diagnostics were position-refreshed after normalized parity for all 25 cases.",
   "recorded": "2026-11-12",
-  "sourceSha256": "cf46de3e0e9ed1a161536152f6b47c90d3e223ad314d000236db4735886d37a2",
-  "compilerSha256": "37affb62b0fad8e51bfcfd850bc2644bcbe2cd47f0f46e5672e443717a627f3c",
+  "sourceSha256": "d82992f0f1ecb4c3f5478500a5949fd8e457193bbc0d4a8b34bce8ec9edb0c5b",
+  "compilerSha256": "a8e5c1102138de350881fef3f1c5fb216f8b5d3230a57054154b89a5702e91eb",
   "programCases": 69,
   "rejectedCases": 25,
   "artifacts": [
