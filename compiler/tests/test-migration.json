@@ -111,7 +111,7 @@
       "route": "default generated compiler/phase/artifact execution with independent expectations"
     },
     {
-      "title": "Lite parser parses L0 libraries and every program case",
+      "title": "Lite parser parses L0 libraries and original program cases",
       "destination": "igniter/test.ts",
       "originalLine": 252,
       "dependencies": [
