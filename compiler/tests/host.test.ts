@@ -2404,3 +2404,36 @@ test('partial conditionals default declarations to zero and skip false assignmen
     assert.match(rejected.stderr.toString(), expectedMessage);
   }
 });
+
+test('statement-bearing value blocks and Unit tails preserve lexical scope and types', () => {
+  const source = [
+    'io := import "core/io";',
+    'y := 100;',
+    'x := { y := 2; y * 3;;;; };',
+    'a := if true { y := 2; y * 3 } else { 0 };',
+    'b := if false { 1 } else if true { var z: Int = 4; z = z + 5; z } else { 0 };',
+    'c: Float = { k := 2; 1 };',
+    'io.outputLine(y, x, a, b, c);',
+    'io.outputLine({ x := 3; });',
+    'io.outputLine({});',
+  ].join('\n');
+  const compiled = compileTs({ text: source });
+  assert.equal(compiled.status, 0, compiled.stderr.toString());
+  const actual = runTsArtifact(compiled.stdout.toString());
+  assert.equal(actual.phase, 'run'); assert.equal(actual.status, 0);
+  assert.equal(actual.stdout.toString(), '100 6 6 9 1\nUnit\nUnit\n');
+
+  for (const [bad, expectedMessage] of [
+    ['y := { x := 3; };', /cannot declare a Unit local y/],
+    ['y := {};', /cannot declare a Unit local y/],
+    ['io := import "core/io"; io.outputLine({ 1 2 });', /expected ; or \}/],
+  ] as const) {
+    const rejected = compileTs({ text: bad });
+    assert.equal(rejected.status, 2, bad);
+    assert.match(rejected.stderr.toString(), expectedMessage);
+  }
+
+  const cRejected = compileTarget('c', { text: 'io := import "core/io"; x := { y := 2; y * 3 }; io.outputLine(x);' });
+  assert.equal(cRejected.status, 2);
+  assert.match(cRejected.stderr.toString(), /C backend does not support statement-bearing value blocks yet/);
+});

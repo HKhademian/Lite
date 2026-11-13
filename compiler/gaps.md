@@ -157,9 +157,11 @@ Keep dependencies explicit; split a topic further when its contracts warrant it.
   actual function tails preserve the context.
 - [ ] **Numeric widths:** narrow types, promotion, lossless widening, checked
   narrow results and Float32 rounding; exhaustive matrices follow the cutover.
-- [ ] **Block and conditional values:** statement-bearing blocks, Unit tails,
-  partial defaults and false-branch no-write assignments. Function completion
-  checking over currently admitted statement forms is recorded separately below.
+- [x] **Block and conditional values:** statement-bearing blocks, Unit tails,
+  partial defaults and false-branch no-write assignments (TS; C supports partial
+  if assignments and rejects statement-bearing value blocks cleanly). Function
+  completion checking over currently admitted statement forms is recorded
+  separately below.
 - [ ] **Tuple shapes:** unnamed/mixed/unit/singleton tuples, shorthand fields,
   positional reads, destructuring, receiving-label conversion and display.
   Preserve ordinary labels independently of JS object syntax: T00 prints 7 for

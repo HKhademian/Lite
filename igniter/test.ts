@@ -1144,7 +1144,7 @@ test('restricted compiler diagnoses invalid leading and/or forms', () => {
     ['x := and and true;', '1:10: leading and may appear only once\n'],
     ["io := import \"core/io\"; if or and ready { io.outputLine(1); }", '1:31: leading or may appear only once\n'],
     ['x := true and;', '1:14: expected an Int, Float, String or Bool expression\n'],
-    ["io := import \"core/io\"; if true or { io.outputLine(1); }", '1:36: expected an Int, Float, String or Bool expression\n'],
+    ["io := import \"core/io\"; if true or { io.outputLine(1); }", '1:38: host output functions are standalone statements\n'],
     ['x := or;', '1:8: expected an Int, Float, String or Bool expression\n'],
     ['x := true and or false;', '1:15: unsupported feature "or": see docs/conditionals.md; ' +
       'the restricted compiler accepts Int/Float/String/Bool expressions, locals, output/outputLine, if/else and loop only\n'],
@@ -1628,7 +1628,7 @@ test('restricted compiler diagnoses invalid action else-if chains', () => {
     ["io := import \"core/io\"; if true { io.outputLine(1); } else if 1 { io.outputLine(2); }\n", '1:63: else if condition must be Bool\n'],
     ["io := import \"core/io\"; if true { io.outputLine(1); } else if true io.outputLine(2);\n", '1:68: expected {\n'],
     ["io := import \"core/io\"; if true { io.outputLine(1); } else if { io.outputLine(2); }\n",
-      '1:63: expected an Int, Float, String or Bool expression\n'],
+      '1:65: host output functions are standalone statements\n'],
     ["io := import \"core/io\"; if true { io.outputLine(1); } else { io.outputLine(2); } else { io.outputLine(3); }\n", '1:82: unexpected else\n'],
     ["io := import \"core/io\"; else if true { io.outputLine(1); }\n", '1:25: unexpected else\n'],
     ["io := import \"core/io\"; if true { hidden := 1; } else if hidden == 1 { io.outputLine(2); }\n", '1:58: unknown value hidden\n'],

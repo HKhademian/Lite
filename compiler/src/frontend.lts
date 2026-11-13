@@ -1310,6 +1310,35 @@ zeroParsed := fn(target: String, kind: String, next: Int): Parsed {
     else { boolParsed(targetBoolLiteralCode(target, false), false, true, next) }
 }
 
+/** Parses one local type annotation: an optional `mut` list grant, then a scalar, a transparent alias or a flat named tuple; Unit has no local zero value. */
+parseLocalType := fn(source: String, position: Int, prefix: String, aliases: List<AliasDecl>): (kind: String, writable: Bool, next: Int) {
+    start := skipTrivia(source, position, prefix);
+    var cursor := start;
+    var writable := false;
+    if textLib.wordAt(source, cursor, "mut") {
+        writable = true;
+        cursor = skipTrivia(source, cursor + 3, prefix);
+    }
+    typed := parseTypeAt(source, cursor, prefix, aliases, "local", "");
+    if typed.kind == "Unit" {
+        name := textLib.slice(source, cursor, textLib.skipName(source, cursor));
+        failAt(source, cursor, prefix, "unsupported local type " + name);
+    }
+    if writable and not isListKind(typed.kind) {
+        failAt(source, start, prefix, "mut requires a List type, got " + displayKind(typed.kind));
+    }
+    (kind = typed.kind, writable = writable, next = typed.next)
+}
+
+/** Skips empty item separators without changing the final ordinary item's result. */
+skipItemSeparators := fn(source: String, position: Int, prefix: String): Int {
+    var next := skipTrivia(source, position, prefix);
+    loop next < textLib.length(source) and textLib.at(source, next) == ";" {
+        next = skipTrivia(source, next + 1, prefix);
+    }
+    next
+}
+
 /** Precedence-climbing parser for arithmetic, comparisons, `and`/`or`, parentheses, named tuple and list values, field access, indexing, calls, unary signs and `not`. Folds constants, lowers dynamic Int arithmetic, and exits 2 on mixed types, unsupported dynamic operations or range faults. `expected` supplies a contextual kind for empty list literals. self(..., 30) parses a unary operand without binary operators. */
 parseBinary := fn(target: String, source: String, position: Int, prefix: String, locals: List<Local>, functions: List<FunctionInfo>, params: List<String>, currentName: String, expected: String, minimum: Int): Parsed {
     var start := skipTrivia(source, position, prefix);
@@ -1468,6 +1497,174 @@ parseBinary := fn(target: String, source: String, position: Int, prefix: String,
         }
         left = (kind = "List<" + elementKind + ">", code = "[" + textLib.joinTexts(elementCodes, ", ") + "]",
             intValue = 0, textValue = "", constant = false, next = cursor);
+    } else if ch == "{" {
+        blockLocals: mut List<Local> = [];
+        loop locals as entry { listLib.pushBack(mut blockLocals, entry); }
+        statements: mut List<String> = [];
+        var statementCount := 0;
+        var cursor := skipItemSeparators(source, start + 1, prefix);
+        var blockKind := "Unit";
+        var blockCode := targetUnitLiteralCode(target);
+        var blockInt := 0;
+        var blockText := "";
+        var blockConstant := true;
+        loop true {
+            cursor = skipItemSeparators(source, cursor, prefix);
+            if cursor >= textLib.length(source) {
+                failAt(source, start, prefix, "expected }");
+            }
+            if textLib.at(source, cursor) == "}" {
+                cursor = cursor + 1;
+                break;
+            }
+            var isStatement := false;
+            if textLib.isNameStart(textLib.at(source, cursor)) {
+                itemStart := cursor;
+                itemEnd := textLib.skipName(source, itemStart);
+                itemName := textLib.slice(source, itemStart, itemEnd);
+                afterItemName := skipTrivia(source, itemEnd, prefix);
+                if itemName == "var" {
+                    isStatement = true;
+                    localStart := skipTrivia(source, itemEnd, prefix);
+                    if localStart >= textLib.length(source) or not textLib.isNameStart(textLib.at(source, localStart)) {
+                        failAt(source, localStart, prefix, "expected local name after var");
+                    }
+                    localEnd := textLib.skipName(source, localStart);
+                    localName := textLib.slice(source, localStart, localEnd);
+                    if isReservedWord(localName) { unsupportedFeature(source, localStart, localName, prefix); }
+                    var afterLocal := skipTrivia(source, localEnd, prefix);
+                    var declParsed := intParsed("", 0, true, afterLocal);
+                    var declWritable := false;
+                    if textLib.startsWithAt(source, afterLocal, ":=") {
+                        declParsed = self(target, source, skipTrivia(source, afterLocal + 2, prefix), prefix, blockLocals, functions, params, currentName, "", 0);
+                        if declParsed.kind == "Unit" {
+                            failAt(source, localStart, prefix, "cannot declare a Unit local " + localName);
+                        }
+                    } else if afterLocal < textLib.length(source) and textLib.at(source, afterLocal) == ":" {
+                        emptyAliases: List<AliasDecl> = [];
+                        typed := parseLocalType(source, afterLocal + 1, prefix, emptyAliases);
+                        declWritable = typed.writable;
+                        afterType := skipTrivia(source, typed.next, prefix);
+                        if isSingleEquals(source, afterType) {
+                            declParsed = self(target, source, skipTrivia(source, afterType + 1, prefix), prefix, blockLocals, functions, params, currentName, typed.kind, 0);
+                            if declParsed.kind =!= typed.kind {
+                                failAt(source, localStart, prefix, "cannot initialize " + displayKind(typed.kind) + " with " + displayKind(declParsed.kind));
+                            }
+                        } else {
+                            declParsed = zeroParsed(target, typed.kind, afterType);
+                        }
+                    } else {
+                        failAt(source, afterLocal, prefix, "expected := or : after local name " + localName);
+                    }
+                    statementNext := consumeStatementEnd(source, declParsed.next, prefix);
+                    if statementNext < 0 { failAt(source, skipTrivia(source, declParsed.next, prefix), prefix, "expected ; after local declaration " + localName); }
+                    runtime := localRuntimeName(blockLocals, localName, localStart, 0);
+                    listLib.pushBack(mut blockLocals, (name = localName, runtime = runtime, kind = declParsed.kind,
+                        mutable = true, writable = declWritable, depth = 1, constant = false, code = declParsed.code,
+                        intValue = declParsed.intValue, textValue = declParsed.textValue));
+                    listLib.pushBack(mut statements, "let " + runtime + " = " + copiedValueCode(target, declParsed.kind, declParsed.code) + "; void " + runtime + ";");
+                    statementCount = statementCount + 1;
+                    blockConstant = false;
+                    cursor = statementNext;
+                } else if textLib.startsWithAt(source, afterItemName, ":=") and
+                    not textLib.wordAt(source, skipTrivia(source, afterItemName + 2, prefix), "fn") and
+                    not textLib.wordAt(source, skipTrivia(source, afterItemName + 2, prefix), "type") and
+                    not textLib.wordAt(source, skipTrivia(source, afterItemName + 2, prefix), "import") {
+                    isStatement = true;
+                    if isReservedWord(itemName) { unsupportedFeature(source, itemStart, itemName, prefix); }
+                    declParsed := self(target, source, skipTrivia(source, afterItemName + 2, prefix), prefix, blockLocals, functions, params, currentName, "", 0);
+                    if declParsed.kind == "Unit" {
+                        failAt(source, itemStart, prefix, "cannot declare a Unit local " + itemName);
+                    }
+                    statementNext := consumeStatementEnd(source, declParsed.next, prefix);
+                    if statementNext < 0 { failAt(source, skipTrivia(source, declParsed.next, prefix), prefix, "expected ; after local declaration " + itemName); }
+                    runtime := localRuntimeName(blockLocals, itemName, itemStart, 0);
+                    listLib.pushBack(mut blockLocals, (name = itemName, runtime = runtime, kind = declParsed.kind,
+                        mutable = false, writable = false, depth = 1, constant = declParsed.constant, code = declParsed.code,
+                        intValue = declParsed.intValue, textValue = declParsed.textValue));
+                    listLib.pushBack(mut statements, "const " + runtime + " = " + copiedValueCode(target, declParsed.kind, declParsed.code) + "; void " + runtime + ";");
+                    statementCount = statementCount + 1;
+                    blockConstant = false;
+                    cursor = statementNext;
+                } else if afterItemName < textLib.length(source) and textLib.at(source, afterItemName) == ":" {
+                    isStatement = true;
+                    if isReservedWord(itemName) { unsupportedFeature(source, itemStart, itemName, prefix); }
+                    emptyAliases: List<AliasDecl> = [];
+                    typed := parseLocalType(source, afterItemName + 1, prefix, emptyAliases);
+                    afterType := skipTrivia(source, typed.next, prefix);
+                    var declParsed := zeroParsed(target, typed.kind, afterType);
+                    if isSingleEquals(source, afterType) {
+                        declParsed = self(target, source, skipTrivia(source, afterType + 1, prefix), prefix, blockLocals, functions, params, currentName, typed.kind, 0);
+                        if declParsed.kind =!= typed.kind {
+                            failAt(source, itemStart, prefix, "cannot initialize " + displayKind(typed.kind) + " with " + displayKind(declParsed.kind));
+                        }
+                    }
+                    statementNext := consumeStatementEnd(source, declParsed.next, prefix);
+                    if statementNext < 0 { failAt(source, skipTrivia(source, declParsed.next, prefix), prefix, "expected ; after local declaration " + itemName); }
+                    runtime := localRuntimeName(blockLocals, itemName, itemStart, 0);
+                    listLib.pushBack(mut blockLocals, (name = itemName, runtime = runtime, kind = typed.kind,
+                        mutable = false, writable = typed.writable, depth = 1, constant = declParsed.constant, code = declParsed.code,
+                        intValue = declParsed.intValue, textValue = declParsed.textValue));
+                    listLib.pushBack(mut statements, "const " + runtime + " = " + copiedValueCode(target, typed.kind, declParsed.code) + "; void " + runtime + ";");
+                    statementCount = statementCount + 1;
+                    blockConstant = false;
+                    cursor = statementNext;
+                } else if isSingleEquals(source, afterItemName) {
+                    isStatement = true;
+                    index := localIndex(blockLocals, itemName);
+                    if index < 0 { failAt(source, itemStart, prefix, "unknown value " + itemName); }
+                    entry := blockLocals[index];
+                    if not entry.mutable { failAt(source, itemStart, prefix, "cannot assign to immutable local " + itemName); }
+                    rhs := self(target, source, skipTrivia(source, afterItemName + 1, prefix), prefix, blockLocals, functions, params, currentName, entry.kind, 0);
+                    if rhs.kind =!= entry.kind {
+                        failAt(source, itemStart, prefix, "cannot assign " + displayKind(rhs.kind) + " to " + displayKind(entry.kind) + " local " + itemName);
+                    }
+                    statementNext := consumeStatementEnd(source, rhs.next, prefix);
+                    if statementNext < 0 { failAt(source, skipTrivia(source, rhs.next, prefix), prefix, "expected ; after assignment to " + itemName); }
+                    listLib.pushBack(mut blockLocals, (name = entry.name, runtime = entry.runtime, kind = entry.kind,
+                        mutable = true, writable = entry.writable, depth = entry.depth, constant = false, code = rhs.code,
+                        intValue = rhs.intValue, textValue = rhs.textValue));
+                    listLib.pushBack(mut statements, entry.runtime + " = " + copiedValueCode(target, entry.kind, rhs.code) + ";");
+                    statementCount = statementCount + 1;
+                    blockConstant = false;
+                    cursor = statementNext;
+                }
+            }
+            if not isStatement {
+                expr := self(target, source, cursor, prefix, blockLocals, functions, params, currentName, expected, 0);
+                statementNext := consumeStatementEnd(source, expr.next, prefix);
+                if statementNext < 0 { failAt(source, skipTrivia(source, expr.next, prefix), prefix, "expected ; or }"); }
+                afterExpr := skipItemSeparators(source, statementNext, prefix);
+                if afterExpr < textLib.length(source) and textLib.at(source, afterExpr) == "}" {
+                    blockKind = expr.kind;
+                    blockCode = expr.code;
+                    blockInt = expr.intValue;
+                    blockText = expr.textValue;
+                    blockConstant = expr.constant;
+                    cursor = afterExpr + 1;
+                    break;
+                }
+                listLib.pushBack(mut statements, "void (" + expr.code + ");");
+                statementCount = statementCount + 1;
+                blockConstant = false;
+                cursor = statementNext;
+            }
+        }
+        if statementCount == 0 {
+            left = (kind = blockKind, code = blockCode, intValue = blockInt, textValue = blockText, constant = blockConstant, next = cursor);
+        } else {
+            if target =!= "ts" {
+                failAt(source, start, prefix, "C backend does not support statement-bearing value blocks yet");
+            }
+            returnCode := if blockKind == "Unit" {
+                if blockCode == targetUnitLiteralCode(target) { "return undefined;" }
+                else { "void (" + blockCode + "); return undefined;" }
+            } else {
+                "return " + copiedValueCode(target, blockKind, blockCode) + ";"
+            };
+            left = (kind = blockKind, code = "(() => { " + textLib.joinTexts(statements, " ") + " " + returnCode + " })()",
+                intValue = 0, textValue = "", constant = false, next = cursor);
+        }
     } else if textLib.isNameStart(ch) {
         nameStart := start;
         next := textLib.skipName(source, start);
@@ -1502,9 +1699,8 @@ parseBinary := fn(target: String, source: String, position: Int, prefix: String,
                 condition.code
             };
             cursor = expectSymbol(source, skipTrivia(source, condition.next, prefix), "{", prefix);
-            branchStart := skipTrivia(source, cursor, prefix);
-            first := self(target, source, branchStart, prefix, locals, functions, params, currentName, expected, 0);
-            cursor = expectSymbol(source, skipTrivia(source, first.next, prefix), "}", prefix);
+            first := self(target, source, cursor - 1, prefix, locals, functions, params, currentName, expected, 0);
+            cursor = first.next;
             conditionCodes: mut List<String> = [];
             branchCodes: mut List<String> = [];
             listLib.pushBack(mut conditionCodes, conditionCode);
@@ -1536,24 +1732,24 @@ parseBinary := fn(target: String, source: String, position: Int, prefix: String,
                     };
                     open := expectSymbol(source, skipTrivia(source, elseCondition.next, prefix), "{", prefix);
                     elseBranchStart := skipTrivia(source, open, prefix);
-                    branch := self(target, source, elseBranchStart, prefix, locals, functions, params, currentName, expected, 0);
+                    branch := self(target, source, open - 1, prefix, locals, functions, params, currentName, expected, 0);
                     if branch.kind =!= resultKind {
                         failAt(source, elseBranchStart, prefix, "value if branches must have the same kind, got " +
                             displayKind(resultKind) + " and " + displayKind(branch.kind));
                     }
-                    cursor = expectSymbol(source, skipTrivia(source, branch.next, prefix), "}", prefix);
+                    cursor = branch.next;
                     listLib.pushBack(mut conditionCodes, elseConditionCode);
                     listLib.pushBack(mut branchCodes, branch.code);
                     branchCount = branchCount + 1;
                 } else {
                     open := expectSymbol(source, afterElse, "{", prefix);
                     elseBranchStart := skipTrivia(source, open, prefix);
-                    branch := self(target, source, elseBranchStart, prefix, locals, functions, params, currentName, expected, 0);
+                    branch := self(target, source, open - 1, prefix, locals, functions, params, currentName, expected, 0);
                     if branch.kind =!= resultKind {
                         failAt(source, elseBranchStart, prefix, "value if branches must have the same kind, got " +
                             displayKind(resultKind) + " and " + displayKind(branch.kind));
                     }
-                    cursor = expectSymbol(source, skipTrivia(source, branch.next, prefix), "}", prefix);
+                    cursor = branch.next;
                     listLib.pushBack(mut branchCodes, branch.code);
                     branchCount = branchCount + 1;
                     break;
@@ -1922,26 +2118,6 @@ pub sourceModulePath := fn(): String {
     path
 }
 
-/** Parses one local type annotation: an optional `mut` list grant, then a scalar, a transparent alias or a flat named tuple; Unit has no local zero value. */
-parseLocalType := fn(source: String, position: Int, prefix: String, aliases: List<AliasDecl>): (kind: String, writable: Bool, next: Int) {
-    start := skipTrivia(source, position, prefix);
-    var cursor := start;
-    var writable := false;
-    if textLib.wordAt(source, cursor, "mut") {
-        writable = true;
-        cursor = skipTrivia(source, cursor + 3, prefix);
-    }
-    typed := parseTypeAt(source, cursor, prefix, aliases, "local", "");
-    if typed.kind == "Unit" {
-        name := textLib.slice(source, cursor, textLib.skipName(source, cursor));
-        failAt(source, cursor, prefix, "unsupported local type " + name);
-    }
-    if writable and not isListKind(typed.kind) {
-        failAt(source, start, prefix, "mut requires a List type, got " + displayKind(typed.kind));
-    }
-    (kind = typed.kind, writable = writable, next = typed.next)
-}
-
 /** Collapses a tuple or list kind to its `Tuple`/`List` item suffix while leaving scalar item kinds unchanged. */
 storageKind := fn(kind: String): String {
     if isListKind(kind) { "List" }
@@ -2197,15 +2373,6 @@ insideLoop := fn(blocks: List<String>): Bool {
         if kind == "loop" { return true; }
     }
     false
-}
-
-/** Skips empty item separators without changing the final ordinary item's result. */
-skipItemSeparators := fn(source: String, position: Int, prefix: String): Int {
-    var next := skipTrivia(source, position, prefix);
-    loop next < textLib.length(source) and textLib.at(source, next) == ";" {
-        next = skipTrivia(source, next + 1, prefix);
-    }
-    next
 }
 
 /** Locates an ordinary item's separator or enclosing close for contextual tail typing, without interpreting values. */
