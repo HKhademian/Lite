@@ -21,6 +21,10 @@ type RenderedSample = ShowcaseSample & Readonly<{
   output: string;
 }>;
 
+export type BuildSiteOptions = Readonly<{
+  lightSwitchShine?: boolean;
+}>;
+
 type SourceRevision = Readonly<{
   commit: string;
   timestamp: string;
@@ -92,9 +96,10 @@ function compileAndRunSample(sample: ShowcaseSample): RenderedSample {
   }
 }
 
-function renderHeader(basePath: string, active: 'home' | 'playground' | 'gallery', repoUrl: string): string {
+function renderHeader(basePath: string, active: 'home' | 'playground' | 'gallery', repoUrl: string, lightSwitchShine: boolean): string {
   const docsHref = repoUrl ? `${repoUrl}/blob/main/docs/README.md` : '#';
   const repoHref = repoUrl || '#';
+  const toggleClass = lightSwitchShine ? 'theme-toggle theme-toggle-shine' : 'theme-toggle';
   return `<header class="site-header">
   <div class="container header-inner">
     <a class="brand-link" href="${basePath}index.html" aria-label="Lite home">
@@ -107,7 +112,16 @@ function renderHeader(basePath: string, active: 'home' | 'playground' | 'gallery
       <a href="${basePath}gallery/"${active === 'gallery' ? ' class="active"' : ''}>Gallery</a>
       <a href="${escapeHtml(docsHref)}">Docs</a>
       <a href="${escapeHtml(repoHref)}">GitHub</a>
-      <button id="theme-toggle" class="theme-toggle" type="button" aria-label="Toggle light/dark theme" title="Switch theme">&#9728;</button>
+      <button id="theme-toggle" class="${toggleClass}" type="button" aria-label="Toggle light/dark theme" title="Switch theme">
+        <svg class="theme-icon icon-sun" viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+          <circle cx="12" cy="12" r="4" fill="currentColor" fill-opacity="0.25"/>
+          <path d="M12 2v2M12 20v2M4.93 4.93l1.41 1.41M17.66 17.66l1.41 1.41M2 12h2M20 12h2M6.34 17.66l-1.41 1.41M19.07 4.93l-1.41 1.41"/>
+        </svg>
+        <svg class="theme-icon icon-moon" viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+          <path d="M20.5 14.5A8.5 8.5 0 0 1 9.5 3.5a8.5 8.5 0 1 0 11 11z" fill="currentColor" fill-opacity="0.22"/>
+          <circle cx="17.5" cy="6.5" r="0.9" fill="currentColor" stroke="none"/>
+        </svg>
+      </button>
     </nav>
   </div>
 </header>`;
@@ -166,9 +180,11 @@ function renderPage(options: Readonly<{
   body: string;
   bodyClass?: string;
   mainClass?: string;
+  lightSwitchShine?: boolean;
 }>): string {
   const bodyAttr = options.bodyClass ? ` class="${escapeHtml(options.bodyClass)}"` : '';
   const mainAttr = ` class="${escapeHtml(options.mainClass ?? 'container')}"`;
+  const lightSwitchShine = options.lightSwitchShine ?? true;
   return `<!doctype html>
 <html lang="en">
 <head>
@@ -187,7 +203,7 @@ function renderPage(options: Readonly<{
   <link rel="stylesheet" href="${options.basePath}style.css">
 </head>
 <body${bodyAttr}>
-${renderHeader(options.basePath, options.active, options.repoUrl)}
+${renderHeader(options.basePath, options.active, options.repoUrl, lightSwitchShine)}
 <main${mainAttr}>
 ${options.body}
 </main>
@@ -203,9 +219,9 @@ ${renderFooter(options.rev, options.repoUrl)}
     }
     function syncIcon() {
       var dark = currentTheme() === "dark";
-      btn.textContent = dark ? "\\u2600" : "\\u263E";
-      btn.title = dark ? "Switch to light mode" : "Switch to dark mode";
+      btn.title = dark ? "Night mode (moonshine) — switch to sun mode" : "Light mode (sunshine) — switch to moon mode";
       btn.setAttribute("aria-label", btn.title);
+      btn.setAttribute("aria-pressed", String(dark));
     }
     btn.addEventListener("click", function () {
       var next = currentTheme() === "dark" ? "light" : "dark";
@@ -221,7 +237,7 @@ ${renderFooter(options.rev, options.repoUrl)}
 `;
 }
 
-function renderHomePage(rendered: ReadonlyMap<string, RenderedSample>, repoUrl: string, rev: SourceRevision): string {
+function renderHomePage(rendered: ReadonlyMap<string, RenderedSample>, repoUrl: string, rev: SourceRevision, lightSwitchShine: boolean): string {
   const hero = rendered.get(heroSample.id);
   if (hero === undefined) throw new Error('missing rendered hero sample');
   const featuredIds = ['double-sum', 'factorial', 'decisions', 'script-arguments'];
@@ -292,6 +308,7 @@ cd LiteScript
     repoUrl,
     rev,
     body,
+    lightSwitchShine,
   });
 }
 
@@ -312,7 +329,7 @@ function renderGalleryCard(sample: RenderedSample, basePath: string): string {
 </article>`;
 }
 
-function renderGalleryPage(rendered: ReadonlyMap<string, RenderedSample>, repoUrl: string, rev: SourceRevision): string {
+function renderGalleryPage(rendered: ReadonlyMap<string, RenderedSample>, repoUrl: string, rev: SourceRevision, lightSwitchShine: boolean): string {
   const sections = sampleGroups.map(group => {
     const cards = showcaseSamples
       .filter(s => s.group === group.id)
@@ -346,10 +363,11 @@ ${sections}`;
     repoUrl,
     rev,
     body,
+    lightSwitchShine,
   });
 }
 
-function renderPlaygroundPage(rendered: ReadonlyMap<string, RenderedSample>, repoUrl: string, rev: SourceRevision): string {
+function renderPlaygroundPage(rendered: ReadonlyMap<string, RenderedSample>, repoUrl: string, rev: SourceRevision, lightSwitchShine: boolean): string {
   const optionsHtml = sampleGroups.map(group => {
     const items = showcaseSamples
       .filter(s => s.group === group.id)
@@ -796,10 +814,26 @@ function renderPlaygroundPage(rendered: ReadonlyMap<string, RenderedSample>, rep
     body,
     bodyClass: 'playground-page',
     mainClass: 'playground-main',
+    lightSwitchShine,
   });
 }
 
-export function buildSite(): void {
+export function parseBuildArgs(argv: readonly string[]): BuildSiteOptions {
+  let lightSwitchShine = true;
+  for (const arg of argv) {
+    if (arg === '--no-light-switch-shine' || arg === '--light-switch-shine=false') {
+      lightSwitchShine = false;
+    } else if (arg === '--light-switch-shine' || arg === '--light-switch-shine=true') {
+      lightSwitchShine = true;
+    } else {
+      throw new Error(`unknown site build flag: ${arg}`);
+    }
+  }
+  return { lightSwitchShine };
+}
+
+export function buildSite(options?: BuildSiteOptions): void {
+  const lightSwitchShine = options?.lightSwitchShine ?? true;
   const repoUrl = readRepositoryUrl();
   const rev = readSourceRevision();
   const rendered = new Map<string, RenderedSample>();
@@ -814,9 +848,9 @@ export function buildSite(): void {
 
   writeFileSync(join(outputDir, 'style.css'), siteCss);
   cpSync(join(root, 'brand', 'lite-favicon.svg'), join(outputDir, 'favicon.svg'));
-  writeFileSync(join(outputDir, 'index.html'), renderHomePage(rendered, repoUrl, rev));
-  writeFileSync(join(outputDir, 'gallery', 'index.html'), renderGalleryPage(rendered, repoUrl, rev));
-  writeFileSync(join(outputDir, 'playground', 'index.html'), renderPlaygroundPage(rendered, repoUrl, rev));
+  writeFileSync(join(outputDir, 'index.html'), renderHomePage(rendered, repoUrl, rev, lightSwitchShine));
+  writeFileSync(join(outputDir, 'gallery', 'index.html'), renderGalleryPage(rendered, repoUrl, rev, lightSwitchShine));
+  writeFileSync(join(outputDir, 'playground', 'index.html'), renderPlaygroundPage(rendered, repoUrl, rev, lightSwitchShine));
   const compilerTs = readFileSync(join(root, 'compiler', 'bootstrap', 'compiler.ts'), 'utf8');
   writeFileSync(join(outputDir, 'playground', 'compiler.js'), stripTypeScriptTypes(compilerTs, { mode: 'strip' }));
   const compilerCTs = readFileSync(buildCCompiler().path, 'utf8');
@@ -854,12 +888,12 @@ export function buildSite(): void {
   }
   writeFileSync(
     join(outputDir, 'build.json'),
-    JSON.stringify({ commit: rev.commit, shortCommit: rev.commit.slice(0, 12), timestamp: rev.timestamp, samples: rendered.size }, null, 2) + '\n',
+    JSON.stringify({ commit: rev.commit, shortCommit: rev.commit.slice(0, 12), timestamp: rev.timestamp, samples: rendered.size, lightSwitchShine }, null, 2) + '\n',
   );
 
   console.log(`Built Lite site (${String(rendered.size)} verified samples) -> dist/site/`);
 }
 
 if (import.meta.main) {
-  buildSite();
+  buildSite(parseBuildArgs(process.argv.slice(2)));
 }

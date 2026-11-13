@@ -63,20 +63,87 @@ export const siteCss = `:root {
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  width: 32px;
-  height: 32px;
+  width: 34px;
+  height: 34px;
   padding: 0;
   border: 1px solid var(--border);
-  border-radius: 8px;
+  border-radius: 9px;
   background: var(--surface-elevated);
   color: var(--ink-muted);
   cursor: pointer;
-  font-size: 0.95rem;
   line-height: 1;
+  transition: box-shadow 0.2s ease, border-color 0.2s ease, color 0.2s ease, transform 0.2s ease;
 }
 .theme-toggle:hover {
   color: var(--accent);
   border-color: var(--accent);
+}
+.theme-toggle .theme-icon {
+  display: block;
+  transition: filter 0.2s ease, transform 0.2s ease;
+}
+.theme-toggle .icon-moon {
+  display: none;
+}
+.theme-toggle.theme-toggle-shine {
+  --switch-color: #D97706;
+  --switch-border: rgba(217, 119, 6, 0.38);
+  --switch-bg: radial-gradient(circle at 50% 45%, rgba(251, 191, 36, 0.28), rgba(245, 158, 11, 0.08) 68%, var(--surface-elevated) 100%);
+  --switch-shadow: inset 0 1px 0 rgba(255, 250, 224, 0.9), 0 0 10px rgba(245, 158, 11, 0.28), 0 0 2px rgba(217, 119, 6, 0.3);
+  --switch-shadow-hover: inset 0 1px 0 rgba(255, 252, 232, 0.95), 0 0 16px rgba(245, 158, 11, 0.45), 0 0 4px rgba(217, 119, 6, 0.45);
+  --switch-glow: drop-shadow(0 0 4px rgba(245, 158, 11, 0.55));
+  border-color: var(--switch-border);
+  background: var(--switch-bg);
+  color: var(--switch-color);
+  box-shadow: var(--switch-shadow);
+}
+.theme-toggle.theme-toggle-shine .theme-icon {
+  filter: var(--switch-glow);
+}
+.theme-toggle.theme-toggle-shine:hover {
+  border-color: var(--switch-border);
+  color: var(--switch-color);
+  box-shadow: var(--switch-shadow-hover);
+  transform: translateY(-0.5px);
+}
+.theme-toggle.theme-toggle-shine:hover .theme-icon {
+  transform: scale(1.06);
+}
+@media (prefers-reduced-motion: reduce) {
+  .theme-toggle,
+  .theme-toggle .theme-icon {
+    transition: none;
+  }
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) .theme-toggle.theme-toggle-shine {
+    --switch-color: #BFD7FF;
+    --switch-border: rgba(147, 197, 253, 0.35);
+    --switch-bg: radial-gradient(circle at 50% 45%, rgba(147, 197, 253, 0.22), rgba(191, 219, 254, 0.06) 68%, var(--surface-elevated) 100%);
+    --switch-shadow: inset 0 1px 0 rgba(226, 238, 255, 0.28), 0 0 12px rgba(147, 197, 253, 0.26), 0 0 3px rgba(191, 219, 254, 0.3);
+    --switch-shadow-hover: inset 0 1px 0 rgba(226, 238, 255, 0.42), 0 0 18px rgba(147, 197, 253, 0.42), 0 0 4px rgba(191, 219, 254, 0.45);
+    --switch-glow: drop-shadow(0 0 5px rgba(147, 197, 253, 0.65));
+  }
+  :root:not([data-theme="light"]) .theme-toggle .icon-sun {
+    display: none;
+  }
+  :root:not([data-theme="light"]) .theme-toggle .icon-moon {
+    display: block;
+  }
+}
+:root[data-theme="dark"] .theme-toggle.theme-toggle-shine {
+  --switch-color: #BFD7FF;
+  --switch-border: rgba(147, 197, 253, 0.35);
+  --switch-bg: radial-gradient(circle at 50% 45%, rgba(147, 197, 253, 0.22), rgba(191, 219, 254, 0.06) 68%, var(--surface-elevated) 100%);
+  --switch-shadow: inset 0 1px 0 rgba(226, 238, 255, 0.28), 0 0 12px rgba(147, 197, 253, 0.26), 0 0 3px rgba(191, 219, 254, 0.3);
+  --switch-shadow-hover: inset 0 1px 0 rgba(226, 238, 255, 0.42), 0 0 18px rgba(147, 197, 253, 0.42), 0 0 4px rgba(191, 219, 254, 0.45);
+  --switch-glow: drop-shadow(0 0 5px rgba(147, 197, 253, 0.65));
+}
+:root[data-theme="dark"] .theme-toggle .icon-sun {
+  display: none;
+}
+:root[data-theme="dark"] .theme-toggle .icon-moon {
+  display: block;
 }
 
 * { box-sizing: border-box; }
