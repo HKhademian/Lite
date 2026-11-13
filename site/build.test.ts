@@ -4,7 +4,7 @@ import { existsSync, readFileSync } from 'node:fs';
 import { dirname, join, resolve } from 'node:path';
 import { test } from 'node:test';
 import { pathToFileURL } from 'node:url';
-import { buildSite } from './build.ts';
+import { buildSite, parseBuildArgs } from './build.ts';
 import { formatCodeView } from './code-view.ts';
 import { heroSample, sampleGroups, showcaseSamples } from './groups.ts';
 import { escapeHtml, highlightC, highlightLite, highlightTs } from './highlight.ts';
@@ -62,6 +62,11 @@ test('buildSite generates static pages and metadata in dist/site', () => {
   assert(!index.includes('Inspect generated TypeScript'));
   assert(index.includes('commit-hash'));
   assert(index.includes('title="Committed '));
+  assert(index.includes('class="theme-toggle theme-toggle-shine"'));
+  assert(index.includes('class="theme-icon icon-sun"'));
+  assert(index.includes('class="theme-icon icon-moon"'));
+  const styleCss = readFileSync(join(out, 'style.css'), 'utf8');
+  assert(styleCss.includes('.theme-toggle.theme-toggle-shine'));
   const playground = readFileSync(join(out, 'playground/index.html'), 'utf8');
   assert(playground.includes('playground-page'));
   assert(playground.includes('highlightLite(editorEl.value)'));
@@ -80,10 +85,31 @@ test('buildSite generates static pages and metadata in dist/site', () => {
   for (const sample of showcaseSamples) {
     assert(existsSync(join(out, 'playground', 'samples', `${sample.id}.json`)), `missing playground payload for ${sample.id}`);
   }
-  const buildInfo = JSON.parse(readFileSync(join(out, 'build.json'), 'utf8')) as { samples: number; shortCommit: string; timestamp: string };
+  const buildInfo = JSON.parse(readFileSync(join(out, 'build.json'), 'utf8')) as { samples: number; shortCommit: string; timestamp: string; lightSwitchShine: boolean };
   assert.equal(buildInfo.samples, showcaseSamples.length);
   assert.equal(buildInfo.shortCommit.length, 12);
   assert(buildInfo.timestamp.length > 0);
+  assert.equal(buildInfo.lightSwitchShine, true);
+});
+
+test('light-switch shine build flag defaults to active and can be disabled', () => {
+  assert.deepEqual(parseBuildArgs([]), { lightSwitchShine: true });
+  assert.deepEqual(parseBuildArgs(['--light-switch-shine']), { lightSwitchShine: true });
+  assert.deepEqual(parseBuildArgs(['--light-switch-shine=true']), { lightSwitchShine: true });
+  assert.deepEqual(parseBuildArgs(['--no-light-switch-shine']), { lightSwitchShine: false });
+  assert.deepEqual(parseBuildArgs(['--light-switch-shine=false']), { lightSwitchShine: false });
+  assert.throws(() => parseBuildArgs(['--unknown-flag']), /unknown site build flag/);
+
+  buildSite({ lightSwitchShine: false });
+  const out = join(root, 'dist', 'site');
+  const indexDisabled = readFileSync(join(out, 'index.html'), 'utf8');
+  assert(indexDisabled.includes('class="theme-toggle"'));
+  assert(!indexDisabled.includes('theme-toggle-shine'));
+  const buildInfoDisabled = JSON.parse(readFileSync(join(out, 'build.json'), 'utf8')) as { lightSwitchShine: boolean };
+  assert.equal(buildInfoDisabled.lightSwitchShine, false);
+
+  // Restore default active build output in dist/site.
+  buildSite();
 });
 
 test('stripLiteTs produces runnable JS matching compiler output for all showcase samples', () => {
@@ -286,6 +312,13 @@ test('formatCodeView filters TS and C output for Program, Portable, and Full mod
   const portableTs = formatCodeView(sample.ts, 'ts', 'portable');
   assert(!portableTs.includes('declare const process'));
   assert(portableTs.includes('export function main'));
+
+  const sumLoop = JSON.parse(readFileSync(join(out, 'playground', 'samples', 'sum-loop.json'), 'utf8')) as { ts: string };
+  const sumProgram = formatCodeView(sumLoop.ts, 'ts', 'program');
+  assert(sumProgram.includes('while (true)'));
+  assert(!sumProgram.includes('Boolean(true)'));
+  assert(sumProgram.includes('if (lite_sum === 15n)'));
+  assert(sumProgram.includes('lite$emit(lite$report0, "\\n")'));
 
   assert.equal(formatCodeView(sample.ts, 'ts', 'full'), sample.ts);
 

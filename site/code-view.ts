@@ -122,11 +122,32 @@ function extractCPortable(source: string): string {
     .join('\n');
 }
 
+function simplifyTsDisplay(source: string): string {
+  // Replace outside string literals by splitting on quoted strings first.
+  const parts = source.split(/("(?:\\.|[^"\\])*"|'(?:\\.|[^'\\])*')/g);
+  for (let i = 0; i < parts.length; i += 2) {
+    let chunk = parts[i]!;
+    chunk = chunk.replace(/\bBoolean\((true|false)\)/g, '$1');
+    // Unwrap `(atom)` only when NOT preceded by an identifier/call (so `fn(x)` stays `fn(x)`)
+    chunk = chunk.replace(/(^|[^a-zA-Z0-9_$.)\]])(\(([a-zA-Z_$][a-zA-Z0-9_$]*|\d+n?)\))(?=\s*(?:===|!==|<=|>=|<|>|\+|-|\*|\/|%|\)|&&|\|\||\.toString\b))/g, '$1$3');
+    // Collapse redundant double parens in if ((...)) / while ((...))
+    let prev: string;
+    do {
+      prev = chunk;
+      chunk = chunk.replace(/\b(if|while)\s*\(\(([^()\n]+)\)\)/g, '$1 ($2)');
+    } while (chunk !== prev);
+    parts[i] = chunk;
+  }
+  // Format `lite$emit(expr + "\n")` -> `lite$emit(expr, "\n")`
+  return parts.join('').replace(/lite\$emit\(([^\n;]+?)\s*\+\s*"\\n"\)/g, 'lite$emit($1, "\\n")');
+}
+
 /** Formats generated TypeScript or C according to the selected playground view mode. */
 export function formatCodeView(source: string, lang: 'ts' | 'c', mode: CodeViewMode): string {
   if (!source || mode === 'full') return source;
   if (lang === 'c') {
     return mode === 'program' ? extractCProgram(source) : extractCPortable(source);
   }
-  return mode === 'program' ? extractTsProgram(source) : extractTsPortable(source);
+  const sliced = mode === 'program' ? extractTsProgram(source) : extractTsPortable(source);
+  return simplifyTsDisplay(sliced);
 }
