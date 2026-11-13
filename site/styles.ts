@@ -569,6 +569,33 @@ details.gallery-code pre.code-block {
   overflow: auto;
 }
 .pg-panel[hidden] { display: none; }
+.code-modes {
+  display: flex;
+  align-items: center;
+  gap: 0.35rem;
+  padding: 0.45rem 0.9rem;
+  border-bottom: 1px solid var(--border);
+  background: var(--bg-elev);
+}
+.code-modes[hidden] { display: none; }
+.code-mode-btn {
+  border: 1px solid transparent;
+  background: transparent;
+  color: var(--ink-muted);
+  font-family: var(--font-sans);
+  font-size: 0.78rem;
+  padding: 0.22rem 0.6rem;
+  border-radius: 5px;
+  cursor: pointer;
+}
+.code-mode-btn:hover {
+  color: var(--ink);
+}
+.code-mode-btn[aria-pressed="true"] {
+  color: var(--accent);
+  border-color: var(--border);
+  background: var(--code-bg);
+}
 .pg-canvas-wrap {
   position: relative;
   flex: 1 1 auto;

@@ -408,6 +408,12 @@ function renderPlaygroundPage(rendered: ReadonlyMap<string, RenderedSample>, rep
       <span id="pg-status" class="pg-status">Ready</span>
     </div>
 
+    <div id="pg-code-modes" class="code-modes" role="group" aria-label="Generated code view" hidden>
+      <button id="mode-program" class="code-mode-btn" type="button" data-mode="program" aria-pressed="true">Program</button>
+      <button id="mode-portable" class="code-mode-btn" type="button" data-mode="portable" aria-pressed="false">Portable</button>
+      <button id="mode-full" class="code-mode-btn" type="button" data-mode="full" aria-pressed="false">Full</button>
+    </div>
+
     <div id="panel-output" class="pg-panel" role="tabpanel">
       <pre class="code-block"><code id="pg-output"></code></pre>
     </div>
@@ -430,6 +436,7 @@ function renderPlaygroundPage(rendered: ReadonlyMap<string, RenderedSample>, rep
 </div>
 
 <script type="module">
+  import { formatCodeView } from "./code-view.js";
   const samples = ${serialized};
   const byId = new Map(samples.map(s => [s.id, s]));
   const cache = new Map();
@@ -446,6 +453,8 @@ function renderPlaygroundPage(rendered: ReadonlyMap<string, RenderedSample>, rep
   const outputEl = document.getElementById("pg-output");
   const tsEl = document.getElementById("pg-ts");
   const cEl = document.getElementById("pg-c");
+  const codeModesBar = document.getElementById("pg-code-modes");
+  const modeButtons = Array.from(document.querySelectorAll(".code-mode-btn"));
   const tabCanvas = document.getElementById("tab-canvas");
   const fpsEl = document.getElementById("pg-fps");
   const tabs = Array.from(document.querySelectorAll(".pg-tab"));
@@ -457,10 +466,29 @@ function renderPlaygroundPage(rendered: ReadonlyMap<string, RenderedSample>, rep
   };
 
   let activeTab = "output";
+  let codeMode = "program";
+  let rawTs = "";
+  let rawC = "";
+  let cMessage = "";
   let currentSample = null;
   let lastCSource = null;
   let animFrame = 0;
   let lastFrameAt = 0;
+
+  function renderCodeViews() {
+    tsEl.textContent = rawTs ? formatCodeView(rawTs, "ts", codeMode) : "";
+    cEl.textContent = rawC ? formatCodeView(rawC, "c", codeMode) : cMessage;
+  }
+
+  for (const btn of modeButtons) {
+    btn.addEventListener("click", () => {
+      codeMode = btn.dataset.mode || "program";
+      for (const b of modeButtons) {
+        b.setAttribute("aria-pressed", b.dataset.mode === codeMode ? "true" : "false");
+      }
+      renderCodeViews();
+    });
+  }
 
   function escapeHtml(text) {
     return text.replaceAll("&", "&amp;").replaceAll("<", "&lt;").replaceAll(">", "&gt;").replaceAll('"', "&quot;").replaceAll("'", "&#39;");
@@ -547,6 +575,7 @@ function renderPlaygroundPage(rendered: ReadonlyMap<string, RenderedSample>, rep
     for (const [key, panel] of Object.entries(panels)) {
       panel.hidden = key !== name;
     }
+    codeModesBar.hidden = name !== "ts" && name !== "c";
     if (name === "canvas") startCanvas();
     else stopCanvas();
     if (name === "c") void compileCForEditor();
@@ -616,9 +645,11 @@ function renderPlaygroundPage(rendered: ReadonlyMap<string, RenderedSample>, rep
       sourceEl.parentElement.scrollTop = 0;
       sourceEl.parentElement.scrollLeft = 0;
     }
-    tsEl.innerHTML = sample.tsHtml;
+    rawTs = sample.ts ?? "";
+    rawC = "";
+    cMessage = "/* Press Compile or open Generated C to emit C. */";
     lastCSource = null;
-    cEl.textContent = "/* Press Compile or open Generated C to emit C. */";
+    renderCodeViews();
     if (activeTab === "c") void compileCForEditor();
     argsEl.value = sample.args.join(" ");
     stdinEl.value = sample.stdin.replaceAll("\\n", "\\\\n");
@@ -694,14 +725,25 @@ function renderPlaygroundPage(rendered: ReadonlyMap<string, RenderedSample>, rep
   async function compileCForEditor() {
     const source = editorEl.value;
     if (lastCSource === source) return;
-    cEl.textContent = "/* Compiling C in browser... */";
+    rawC = "";
+    cMessage = "/* Compiling C in browser... */";
+    renderCodeViews();
     try {
       const res = await runInWorker("compile-c", source, "", []);
       if (editorEl.value !== source) return;
       lastCSource = source;
-      cEl.textContent = formatCOutput(res.c, res.stderr);
+      if (res.c) {
+        rawC = res.c;
+        cMessage = "";
+      } else {
+        rawC = "";
+        cMessage = formatCOutput("", res.stderr);
+      }
+      renderCodeViews();
     } catch (err) {
-      cEl.textContent = "/* " + (err instanceof Error ? err.message : String(err)) + " */";
+      rawC = "";
+      cMessage = "/* " + (err instanceof Error ? err.message : String(err)) + " */";
+      renderCodeViews();
     }
   }
 
@@ -722,11 +764,18 @@ function renderPlaygroundPage(rendered: ReadonlyMap<string, RenderedSample>, rep
     }
     try {
       const res = await runInWorker(action, source, stdin, args);
-      if (res.ts) tsEl.textContent = res.ts;
+      if (res.ts) rawTs = res.ts;
       if (action === "compile" && (res.c !== undefined || res.cError !== undefined)) {
         lastCSource = source;
-        cEl.textContent = formatCOutput(res.c, res.cError);
+        if (res.c) {
+          rawC = res.c;
+          cMessage = "";
+        } else {
+          rawC = "";
+          cMessage = formatCOutput("", res.cError);
+        }
       }
+      renderCodeViews();
       if (!res.ok) {
         showTab("output");
         outputEl.textContent = (res.stdout ? res.stdout + "\\n" : "") + (res.stderr || "Execution failed.");
@@ -850,6 +899,8 @@ export function buildSite(): void {
   writeFileSync(join(outputDir, 'playground', 'compiler-c.js'), stripTypeScriptTypes(compilerCTs, { mode: 'strip' }));
   const stripTs = readFileSync(join(root, 'site', 'strip-ts.ts'), 'utf8');
   writeFileSync(join(outputDir, 'playground', 'strip-ts.js'), stripTypeScriptTypes(stripTs, { mode: 'strip' }));
+  const codeViewTs = readFileSync(join(root, 'site', 'code-view.ts'), 'utf8');
+  writeFileSync(join(outputDir, 'playground', 'code-view.js'), stripTypeScriptTypes(codeViewTs, { mode: 'strip' }));
   writeFileSync(join(outputDir, 'playground', 'worker.js'), playgroundWorkerJs);
   const coreDir = join(root, 'lib', 'core');
   const stdlib: Record<string, Readonly<{ path: string; display: string; identity: string; text: string }>> = {};
@@ -869,6 +920,7 @@ export function buildSite(): void {
         stdin: sample.stdin,
         source: sample.source,
         sourceHtml: sample.sourceHtml,
+        ts: sample.generatedTs,
         tsHtml: sample.tsHtml,
         output: sample.output,
       }),

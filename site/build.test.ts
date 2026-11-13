@@ -5,6 +5,7 @@ import { dirname, join, resolve } from 'node:path';
 import { test } from 'node:test';
 import { pathToFileURL } from 'node:url';
 import { buildSite } from './build.ts';
+import { formatCodeView } from './code-view.ts';
 import { heroSample, sampleGroups, showcaseSamples } from './groups.ts';
 import { escapeHtml, highlightLite, highlightTs } from './highlight.ts';
 import { stripLiteTs } from './strip-ts.ts';
@@ -63,7 +64,11 @@ test('buildSite generates static pages and metadata in dist/site', () => {
   assert(playground.includes('id="pg-compile"'));
   assert(playground.includes('id="pg-play"'));
   assert(playground.includes('id="pg-c"'));
+  assert(playground.includes('id="mode-program"'));
+  assert(playground.includes('id="mode-portable"'));
+  assert(playground.includes('id="mode-full"'));
   assert(playground.includes('new Worker("./worker.js"'));
+  assert(existsSync(join(out, 'playground', 'code-view.js')));
   assert(playground.includes('id="tab-canvas"'));
   assert(playground.includes('id="pg-fps"'));
   for (const sample of showcaseSamples) {
@@ -259,4 +264,42 @@ test('emitted playground worker.js compiles and runs edited Lite code', async ()
     (globalThis as unknown as { self?: unknown }).self = prevSelf;
     globalThis.fetch = prevFetch;
   }
+});
+
+test('formatCodeView filters TS and C output for Program, Portable, and Full modes', () => {
+  const out = join(root, 'dist', 'site');
+  const sample = JSON.parse(readFileSync(join(out, 'playground', 'samples', 'scan-arithmetic.json'), 'utf8')) as { ts: string };
+
+  const programTs = formatCodeView(sample.ts, 'ts', 'program');
+  assert(!programTs.includes('declare const process'));
+  assert(!programTs.includes('liteFn_m3_intAdd'));
+  assert(!programTs.includes('let lite_out = "";'));
+  assert(programTs.includes('function liteFn_isDigit'));
+  assert(programTs.includes('const lite_line'));
+
+  const portableTs = formatCodeView(sample.ts, 'ts', 'portable');
+  assert(!portableTs.includes('declare const process'));
+  assert(portableTs.includes('export function main'));
+
+  assert.equal(formatCodeView(sample.ts, 'ts', 'full'), sample.ts);
+
+  const sampleC = [
+    '#include <stdio.h>',
+    'static const size_t lt_int_lines[] = {0, 10};',
+    'static const char *lt_int_source = "a.lts:";',
+    'int main(void) {',
+    '    int64_t lite_x = INT64_C(42);',
+    '    (void)lite_x;',
+    '    return 0;',
+    '}',
+  ].join('\n');
+  const programC = formatCodeView(sampleC, 'c', 'program');
+  assert(!programC.includes('#include'));
+  assert(!programC.includes('(void)lite_x;'));
+  assert(programC.startsWith('int main(void) {'));
+
+  const portableC = formatCodeView(sampleC, 'c', 'portable');
+  assert(portableC.includes('#include <stdio.h>'));
+  assert(!portableC.includes('(void)lite_x;'));
+  assert.equal(formatCodeView(sampleC, 'c', 'full'), sampleC);
 });
