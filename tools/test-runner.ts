@@ -35,8 +35,8 @@ if (!showToolVersion('tester', 'test')) {
 
   const testEnv: NodeJS.ProcessEnv = {
     ...process.env,
-    LITE_SKIP_NATIVE: '1',
-    ...(mode === '--fast' ? { LITE_SKIP_HEAVY: '1' } : {}),
+    ...(process.env['LITE_TEST_NATIVE'] === '1' ? {} : { LITE_SKIP_NATIVE: '1' }),
+    ...(mode === '--fast' && process.env['LITE_TEST_HEAVY'] !== '1' ? { LITE_SKIP_HEAVY: '1' } : {}),
   };
   delete testEnv['NODE_TEST_CONTEXT'];
   const files = mode === '--smoke' ? fastTestFiles : generatedTestFiles;

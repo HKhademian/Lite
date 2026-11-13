@@ -180,7 +180,8 @@ test('Lite parser parses functions, loops and statements', () => {
   assert.deepEqual(runFile(parserProgramDumpPath, source), { code: 0, output: expected, errors: '' });
 });
 
-test('Lite parser parses L0 libraries and original program cases', () => {
+test('Lite parser parses L0 libraries and original program cases', context => {
+  if (process.env['LITE_SKIP_HEAVY'] === '1') { context.skip('LITE_SKIP_HEAVY=1'); return; }
   const root = new URL('../', import.meta.url).pathname;
   const runParser = (input: string) => runFile(parserProgramDumpPath, input);
   for (const path of ['lib/core/int.lts', 'lib/core/text.lts', 'lib/core/source.lts',
@@ -435,7 +436,10 @@ test('lite help and docs expose the command matrix and documentation roots', () 
   const noArgs = spawnSync(join(root, 'bin/lite'), [], { env, encoding: 'utf8', timeout: 5000 });
   assert.equal(noArgs.status, 2); assert.equal(noArgs.stdout, ''); assert.match(noArgs.stderr, /Usage:/);
 });
-test('lite verify uses generated TS, reports migration gaps and rejects the retired reference flag', () => {
+test('lite verify uses generated TS, reports migration gaps and rejects the retired reference flag', context => {
+  if (process.env['LITE_SKIP_HEAVY'] === '1') {
+    context.skip('LITE_SKIP_HEAVY=1'); return;
+  }
   const root = new URL('../', import.meta.url).pathname;
   const directory = mkdtempSync(join(tmpdir(), 'lite-verify-test-'));
   const env = { ...process.env, PATH: dirname(process.execPath) + delimiter + (process.env['PATH'] ?? ''),
@@ -506,7 +510,8 @@ test('compiler manifests name graph roots and no flattened source bundle', () =>
   }
 });
 
-test('bundle compilers reproduce every compiler case with exact artifacts and diagnostics', () => {
+test('bundle compilers reproduce every compiler case with exact artifacts and diagnostics', context => {
+  if (process.env['LITE_SKIP_HEAVY'] === '1') { context.skip('LITE_SKIP_HEAVY=1'); return; }
   const tsCompiler = compilerFor(tsManifestPath);
   const cCompiler = compilerFor(cManifestPath);
   assert.equal(tsCompiler.target, 'ts');

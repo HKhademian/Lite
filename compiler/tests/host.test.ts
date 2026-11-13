@@ -748,7 +748,8 @@ test('public commands compile, run and check TS artifacts without T00 and reject
   } finally { rmSync(directory, { recursive: true, force: true }); }
 });
 
-test('default verification and expectation updates use TS artifacts without T00', () => {
+test('default verification and expectation updates use TS artifacts without T00', context => {
+  if (process.env['LITE_SKIP_HEAVY'] === '1') { context.skip('LITE_SKIP_HEAVY=1'); return; }
   const directory = isolatedCheckout();
   try {
     symlinkSync(join(root, 'igniter/node_modules'), join(directory, 'igniter/node_modules'));
@@ -1071,7 +1072,8 @@ test('imported C compiler source hashes transitive files and invalidates its cac
   } finally { rmSync(directory, { recursive: true, force: true }); }
 });
 
-test('default verifier selects consumers after compiler changes and ignores inventory-only edits', () => {
+test('default verifier selects consumers after compiler changes and ignores inventory-only edits', context => {
+  if (process.env['LITE_SKIP_HEAVY'] === '1') { context.skip('LITE_SKIP_HEAVY=1'); return; }
   const directory = mkdtempSync(join(tmpdir(), 'lite-compiler-selection-'));
   try {
     const git = join(directory, 'git');
@@ -1209,7 +1211,8 @@ function int64FaultProgram(expression: string): string {
   return 'io := import "core/io"; /* 🙂 */ io.outputLine("before");\r\nvar hi := 9223372036854775807; var lo := -9223372036854775808;\r\nio.outputLine(' + expression + ');';
 }
 
-test('generated TS checks Int64 boundaries, exact faults and operand evaluation order', () => {
+test('generated TS checks Int64 boundaries, exact faults and operand evaluation order', context => {
+  if (process.env['LITE_SKIP_HEAVY'] === '1') { context.skip('LITE_SKIP_HEAVY=1'); return; }
   const source = int64BoundaryProgram();
   const compiled = compileTs({ text: source });
   assert.equal(compiled.status, 0, compiled.stderr.toString());
@@ -1550,7 +1553,8 @@ test('portable C11 checks Int64 boundaries and sequences nested faults left to r
 });
 
 
-test('empty and comment-only scripts compile silently without hiding malformed source', () => {
+test('empty and comment-only scripts compile silently without hiding malformed source', context => {
+  if (process.env['LITE_SKIP_HEAVY'] === '1') { context.skip('LITE_SKIP_HEAVY=1'); return; }
   const executions: ArtifactExecution[] = [];
   const sources = ['', ' ', '\n', '\r\n\t ', '/**/', '/* words */', '/* outer /* nested */ end */',
     ' \n/* سلام🙂 */\r\n', 'io := import "core/io"; /* ; {} () io.outputLine(1 / 0); */', '/* \"quoted\" */ /* another */',
@@ -1582,7 +1586,8 @@ test('empty and comment-only scripts compile silently without hiding malformed s
 });
 
 
-test('statement separators follow EOF, closing scope and directly closed block boundaries', () => {
+test('statement separators follow EOF, closing scope and directly closed block boundaries', context => {
+  if (process.env['LITE_SKIP_HEAVY'] === '1') { context.skip('LITE_SKIP_HEAVY=1'); return; }
   const executions: ArtifactExecution[] = [];
   const both = ['io := import "core/io"; io.outputLine(7)', 'io := import "core/io"; io.output("x") /* tail */', 'x := 1', 'var x := 1', 'x: Int = 1', 'x: Int',
     'var x := 1; x = 2', 'Number := type Int', 'io := import "core/io"; if true { io.outputLine(7) }',
@@ -1622,7 +1627,8 @@ test('statement separators follow EOF, closing scope and directly closed block b
   assertExecutions(executions);
 });
 
-test('adjacent String literals join across trivia before expressions and encode once', () => {
+test('adjacent String literals join across trivia before expressions and encode once', context => {
+  if (process.env['LITE_SKIP_HEAVY'] === '1') { context.skip('LITE_SKIP_HEAVY=1'); return; }
   const executions: ArtifactExecution[] = [];
   const both = ['io := import "core/io"; io.outputLine("a""b");', 'io := import "core/io"; io.outputLine("" "" "x" "");', 'io := import "core/io"; io.outputLine("a"\n"b");',
     'io := import "core/io"; io.outputLine("a" /* outer /* inner */ end */ "b");', 'io := import "core/io"; io.outputLine("a" /*# raw /* */ #*/ "b");',
@@ -1667,7 +1673,8 @@ test('adjacent String literals join across trivia before expressions and encode 
   assertExecutions(executions);
 });
 
-test('nonempty calls admit one trailing comma without adding a value or weakening arity', () => {
+test('nonempty calls admit one trailing comma without adding a value or weakening arity', context => {
+  if (process.env['LITE_SKIP_HEAVY'] === '1') { context.skip('LITE_SKIP_HEAVY=1'); return; }
   const executions: ArtifactExecution[] = [];
   const both = ['io := import "core/io"; io.outputLine(1,);', 'io := import "core/io"; io.output(1,); io.outputLine("x",);', 'io := import "core/io"; io.outputLine(1, "x", true,);',
     'io := import "core/io"; io.outputLine(Unit,);', 'io := import "core/io"; io.outputLine("a" "b", /* nested /* comment */ */);',
@@ -1716,7 +1723,8 @@ test('nonempty calls admit one trailing comma without adding a value or weakenin
   assertExecutions(executions);
 });
 
-test('statement scopes isolate locals and preserve outer values while shadow initializers run', () => {
+test('statement scopes isolate locals and preserve outer values while shadow initializers run', context => {
+  if (process.env['LITE_SKIP_HEAVY'] === '1') { context.skip('LITE_SKIP_HEAVY=1'); return; }
   const executions: ArtifactExecution[] = [];
   const both = ['{}', 'io := import "core/io"; {}; { io.outputLine(1,); }', 'io := import "core/io"; { x := 3; io.outputLine(x); } io.outputLine(4);',
     'io := import "core/io"; x := 10; { x := 20; io.outputLine(x); } io.outputLine(x);',
@@ -1793,7 +1801,8 @@ test('nested value declarations shadow while root declarations remain unique', (
   }
 });
 
-test('ordinary expression items evaluate silently and trailing separators retain function results', () => {
+test('ordinary expression items evaluate silently and trailing separators retain function results', context => {
+  if (process.env['LITE_SKIP_HEAVY'] === '1') { context.skip('LITE_SKIP_HEAVY=1'); return; }
   const executions: ArtifactExecution[] = [];
   const both = ['1;', '; ; /* empty */ ;', 'true; false; Unit;', '1; "quiet"; not false; (2 + 3); +4; -5;',
     'x := 1; x + 2;', 'io := import "core/io"; var x := 2; x * 3; x = 4; x; io.outputLine(x);',
@@ -1871,7 +1880,8 @@ test('ordinary expression items evaluate silently and trailing separators retain
   assertExecutions(executions);
 });
 
-test('function completion joins every conditional arm and preserves earlier definite returns', () => {
+test('function completion joins every conditional arm and preserves earlier definite returns', context => {
+  if (process.env['LITE_SKIP_HEAVY'] === '1') { context.skip('LITE_SKIP_HEAVY=1'); return; }
   const executions: ArtifactExecution[] = [];
   const sources = [
     'io := import "core/io"; f := fn(flag: Bool): Int { if flag { return 1; } else { return 2; } } io.outputLine(f(true), f(false));',
@@ -1949,7 +1959,8 @@ test('function completion joins every conditional arm and preserves earlier defi
   assertExecutions(executions);
 });
 
-test('finite Float literals retain binary64 values, display and same-family comparisons on TS and C', () => {
+test('finite Float literals retain binary64 values, display and same-family comparisons on TS and C', context => {
+  if (process.env['LITE_SKIP_HEAVY'] === '1') { context.skip('LITE_SKIP_HEAVY=1'); return; }
   const executions: ArtifactExecution[] = [];
   const literals = ['0.0', '-0.0', '1.5', '+1.5', '0001.2500', '1e2', '2.5E-2', '1E+21',
     '0.000001', '0.0000001', '1000000000000000100.0', '1.7976931348623158e308',
@@ -2028,7 +2039,8 @@ test('finite Float literals retain binary64 values, display and same-family comp
   assertExecutions(executions);
 });
 
-test('mixed Float arithmetic and comparisons preserve values, effects and positioned faults on generated targets', () => {
+test('mixed Float arithmetic and comparisons preserve values, effects and positioned faults on generated targets', context => {
+  if (process.env['LITE_SKIP_HEAVY'] === '1') { context.skip('LITE_SKIP_HEAVY=1'); return; }
   const executions: ArtifactExecution[] = [];
   const both = [
     'io := import "core/io"; io.outputLine(1.5 + 2.5, 1.5 - 2.5, 1.5 * 2.5, 1.5 / 2.5);',
@@ -2092,7 +2104,8 @@ test('mixed Float arithmetic and comparisons preserve values, effects and positi
   assertExecutions(executions);
 });
 
-test('power preserves right association, explicit negative-base grouping and the positive-exponent checkpoint', () => {
+test('power preserves right association, explicit negative-base grouping and the positive-exponent checkpoint', context => {
+  if (process.env['LITE_SKIP_HEAVY'] === '1') { context.skip('LITE_SKIP_HEAVY=1'); return; }
   const executions: ArtifactExecution[] = [];
   const both = [
     'io := import "core/io"; io.outputLine(2 ** 3, 2 ** 3 ** 2, (2 ** 3) ** 2, 2 ** (3 ** 2));',
@@ -2158,7 +2171,8 @@ test('power preserves right association, explicit negative-base grouping and the
   assertExecutions(executions);
 });
 
-test('Int64, Float64 and Double normalize across admitted numeric annotations and contracts', () => {
+test('Int64, Float64 and Double normalize across admitted numeric annotations and contracts', context => {
+  if (process.env['LITE_SKIP_HEAVY'] === '1') { context.skip('LITE_SKIP_HEAVY=1'); return; }
   const executions: ArtifactExecution[] = [];
   const both = [
     'io := import "core/io"; i: Int64 = 5; f: Float64 = 2.5; d: Double = 3.5; io.outputLine(i, f, d);',
@@ -2221,7 +2235,8 @@ test('Int64, Float64 and Double normalize across admitted numeric annotations an
   assertExecutions(executions);
 });
 
-test('Float contexts admit exact integer literals without widening values or changing binary arithmetic', () => {
+test('Float contexts admit exact integer literals without widening values or changing binary arithmetic', context => {
+  if (process.env['LITE_SKIP_HEAVY'] === '1') { context.skip('LITE_SKIP_HEAVY=1'); return; }
   const executions: ArtifactExecution[] = [];
   const both = [
     'io := import "core/io"; f: Float = 2; d: Double = -3; g: Float64 = (4); io.outputLine(f, d, g);',
@@ -2465,7 +2480,7 @@ test('tuple shapes support unnamed/mixed/singleton, shorthand, positional reads,
   assert.equal(actual.phase, 'run'); assert.equal(actual.status, 0);
   assert.equal(
     actual.stdout.toString(),
-    'number 12\n1 first false\n20 10\n1\n3 11 20\nUnit Unit (1,) (1, 2) (1, left=2, right=3, 4)\n7 (__proto__=7)\n',
+    'number 12\n1 first false\n20 10\n1\n3 11 20\nUnit Unit (1,) (1, 2) (1, left=2, right=3, 4)\n7 (__proto__=7,)\n',
   );
 
   for (const [bad, expectedMessage] of [

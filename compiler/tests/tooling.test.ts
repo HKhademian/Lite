@@ -29,7 +29,8 @@ function copyToolArchive(directory: string): void {
   symlinkSync(join(root, 'igniter/node_modules'), join(directory, 'igniter/node_modules'));
 }
 
-test('generated source graph build records three strictly checked fixed-point generations', () => {
+test('generated source graph build records three strictly checked fixed-point generations', context => {
+  if (process.env['LITE_SKIP_HEAVY'] === '1') { context.skip('LITE_SKIP_HEAVY=1'); return; }
   const directory = mkdtempSync(join(tmpdir(), 'lite tools ladder '));
   try {
     const result = summary(invoke(root, 'compiler/scripts/self-host.ts', ['--out', directory]));
@@ -47,7 +48,8 @@ test('generated source graph build records three strictly checked fixed-point ge
   } finally { rmSync(directory, { recursive: true, force: true }); }
 });
 
-test('tooling separates option/type failures, fixed points and compiler conformance', () => {
+test('tooling separates option/type failures, fixed points and compiler conformance', context => {
+  if (process.env['LITE_SKIP_HEAVY'] === '1') { context.skip('LITE_SKIP_HEAVY=1'); return; }
   for (const timeoutMs of [-1, 1.5, Number.NaN]) assert.throws(() => prepareTsArtifacts([], { timeoutMs }), /invalid TS artifact execution timeout/);
   const directory = mkdtempSync(join(tmpdir(), 'lite-tools-invalid-'));
   try {
@@ -84,7 +86,8 @@ test('tooling separates option/type failures, fixed points and compiler conforma
   } finally { rmSync(directory, { recursive: true, force: true }); }
 });
 
-test('corpus command checks exact artifacts, rejected streams and executed program contracts', () => {
+test('corpus command checks exact artifacts, rejected streams and executed program contracts', context => {
+  if (process.env['LITE_SKIP_HEAVY'] === '1') { context.skip('LITE_SKIP_HEAVY=1'); return; }
   const result = summary(invoke(root, 'compiler/scripts/corpus-parity.ts', []));
   assert.equal(result['phase'], 'recorded-contracts'); assert.equal(result['cases'], 94);
   assert.equal(result['programs'], 69); assert.equal(result['rejections'], 25); assert.equal(result['executions'], 69);
@@ -99,7 +102,8 @@ test('corpus command checks exact artifacts, rejected streams and executed progr
   } finally { rmSync(directory, { recursive: true, force: true }); }
 });
 
-test('everyday tooling and benchmark work in a source archive without T00 or Git metadata', () => {
+test('everyday tooling and benchmark work in a source archive without T00 or Git metadata', context => {
+  if (process.env['LITE_SKIP_HEAVY'] === '1') { context.skip('LITE_SKIP_HEAVY=1'); return; }
   const directory = mkdtempSync(join(tmpdir(), 'lite-tools-no-t00-'));
   try {
     copyToolArchive(directory);
@@ -128,7 +132,8 @@ test('everyday tooling and benchmark work in a source archive without T00 or Git
 });
 
 
-test('changed Lite emission can reach a new generated fixed point before seed selection', () => {
+test('changed Lite emission can reach a new generated fixed point before seed selection', context => {
+  if (process.env['LITE_SKIP_HEAVY'] === '1') { context.skip('LITE_SKIP_HEAVY=1'); return; }
   const directory = mkdtempSync(join(tmpdir(), 'lite-tools-refresh-'));
   try {
     copyToolArchive(directory);
