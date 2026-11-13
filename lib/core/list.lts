@@ -6,6 +6,12 @@ pub pushBack := fn<T>(values: mut List<T>, value: T): Unit;
 /** Registered list mutation intrinsic; returns the element type of the granted list. */
 pub popBack := fn<T>(values: mut List<T>): T;
 
+/** Registered list mutation intrinsic; prepends `value` to `values`. */
+pub pushFront := fn<T>(values: mut List<T>, value: T): Unit;
+
+/** Registered list mutation intrinsic; removes and returns the first element of `values`. */
+pub popFront := fn<T>(values: mut List<T>): T;
+
 /** Returns the index of `target` in `values`, or -1 when absent. */
 pub listIndexOfText := fn(values: List<String>, target: String): Int {
     var index := 0;

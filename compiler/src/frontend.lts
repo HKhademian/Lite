@@ -461,9 +461,9 @@ pub codeUsesListIndex := fn(code: String): Bool {
     codeUsesTextCall(code, "lite$listAt(")
 }
 
-/** True when emitted target code calls the checked list-pop helper outside quoted String literal text. */
+/** True when emitted target code calls a checked list-pop helper outside quoted String literal text. */
 pub codeUsesListPop := fn(code: String): Bool {
-    codeUsesTextCall(code, "lite$listPopBack(")
+    codeUsesTextCall(code, "lite$listPopBack(") or codeUsesTextCall(code, "lite$listPopFront(")
 }
 
 /** True when emitted target code contains a value-if conditional expression outside quoted String literal text. */
@@ -660,9 +660,6 @@ resolveTypeText := fn(source: String, position: Int, prefix: String, aliases: Li
         if isListKind(innerKind) {
             failAt(source, position, prefix, "nested list types are not supported");
         }
-        if innerKind == "Unit" {
-            failAt(source, position, prefix, "unsupported list element type Unit");
-        }
         afterList := skipTrivia(text, close + 1, prefix);
         if afterList < size {
             failAt(source, position, prefix, "unexpected text after list type");
@@ -837,9 +834,6 @@ parseTypeAt := fn(source: String, position: Int, prefix: String, aliases: List<A
         if isListKind(inner.kind) {
             failAt(source, innerStart, prefix, "nested list types are not supported");
         }
-        if inner.kind == "Unit" {
-            failAt(source, innerStart, prefix, "unsupported list element type Unit");
-        }
         var close := skipTrivia(source, inner.next, prefix);
         close = expectSymbol(source, close, ">", prefix);
         return (kind = "List<" + inner.kind + ">", next = close);
@@ -962,6 +956,8 @@ coreHostFunction := fn(moduleIdentity: String, name: String, params: String, res
     } else if moduleIdentity == "lite.core.list.v1" {
         if name == "pushBack" and params == "values=mut List<T>|value=T" and result == "Unit" { "lite$core$list$pushBack:v1" }
         else if name == "popBack" and params == "values=mut List<T>" and result == "T" { "lite$core$list$popBack:v1" }
+        else if name == "pushFront" and params == "values=mut List<T>|value=T" and result == "Unit" { "lite$core$list$pushFront:v1" }
+        else if name == "popFront" and params == "values=mut List<T>" and result == "T" { "lite$core$list$popFront:v1" }
         else { "" }
     } else if moduleIdentity == "lite.compiler.source-reader.v1" and name == "read" and
         params == "importer=String|spec=String" and result == "(path:String,display:String,identity:String,text:String)" {
@@ -1779,7 +1775,7 @@ parseBinary := fn(target: String, source: String, position: Int, prefix: String,
             if textLib.at(source, cursor) == "]" { break; }
             elementStart := cursor;
             element := self(target, source, cursor, prefix, locals, functions, params, currentName, elementKind, 0);
-            if element.kind == "Unit" {
+            if element.kind == "Unit" and elementKind =!= "Unit" {
                 failAt(source, elementStart, prefix, "list element " + formatLib.decimalText(count + 1) + " cannot be Unit");
             }
             if isListKind(element.kind) {
@@ -1839,7 +1835,12 @@ parseBinary := fn(target: String, source: String, position: Int, prefix: String,
                 afterItemName := skipTrivia(source, itemEnd, prefix);
                 if itemName == "var" {
                     isStatement = true;
-                    localStart := skipTrivia(source, itemEnd, prefix);
+                    var localStart := skipTrivia(source, itemEnd, prefix);
+                    var declWritable := false;
+                    if textLib.wordAt(source, localStart, "mut") {
+                        declWritable = true;
+                        localStart = skipTrivia(source, localStart + 3, prefix);
+                    }
                     if localStart >= textLib.length(source) or not textLib.isNameStart(textLib.at(source, localStart)) {
                         failAt(source, localStart, prefix, "expected local name after var");
                     }
@@ -1848,13 +1849,16 @@ parseBinary := fn(target: String, source: String, position: Int, prefix: String,
                     if isReservedWord(localName) { unsupportedFeature(source, localStart, localName, prefix); }
                     var afterLocal := skipTrivia(source, localEnd, prefix);
                     var declParsed := intParsed("", 0, true, afterLocal);
-                    var declWritable := false;
                     if textLib.startsWithAt(source, afterLocal, ":=") {
                         declParsed = self(target, source, skipTrivia(source, afterLocal + 2, prefix), prefix, blockLocals, functions, params, currentName, "", 0);
                         if declParsed.kind == "Unit" {
                             failAt(source, localStart, prefix, "cannot declare a Unit local " + localName);
                         }
+                        if declWritable and not isListKind(declParsed.kind) {
+                            failAt(source, localStart, prefix, "mut requires a List value, got " + displayKind(declParsed.kind));
+                        }
                     } else if afterLocal < textLib.length(source) and textLib.at(source, afterLocal) == ":" {
+                        if declWritable { failAt(source, localStart, prefix, "var mut cannot be combined with explicit type annotation"); }
                         emptyAliases: List<AliasDecl> = [];
                         typed := parseLocalType(source, afterLocal + 1, prefix, emptyAliases);
                         declWritable = typed.writable;
@@ -1879,6 +1883,33 @@ parseBinary := fn(target: String, source: String, position: Int, prefix: String,
                         mutable = true, writable = declWritable, depth = 1, constant = false, code = declParsed.code,
                         intValue = declParsed.intValue, textValue = declParsed.textValue));
                     listLib.pushBack(mut statements, "let " + runtime + " = " + assignValueCode(target, declParsed.kind, declParsed.kind, declParsed.code) + "; void " + runtime + ";");
+                    statementCount = statementCount + 1;
+                    blockConstant = false;
+                    cursor = statementNext;
+                } else if itemName == "mut" {
+                    isStatement = true;
+                    localStart := skipTrivia(source, itemEnd, prefix);
+                    if localStart >= textLib.length(source) or not textLib.isNameStart(textLib.at(source, localStart)) {
+                        failAt(source, localStart, prefix, "expected local name after mut");
+                    }
+                    localEnd := textLib.skipName(source, localStart);
+                    localName := textLib.slice(source, localStart, localEnd);
+                    if isReservedWord(localName) { unsupportedFeature(source, localStart, localName, prefix); }
+                    afterLocal := skipTrivia(source, localEnd, prefix);
+                    if not textLib.startsWithAt(source, afterLocal, ":=") {
+                        failAt(source, afterLocal, prefix, "expected := after mut local name " + localName);
+                    }
+                    declParsed := self(target, source, skipTrivia(source, afterLocal + 2, prefix), prefix, blockLocals, functions, params, currentName, "", 0);
+                    if not isListKind(declParsed.kind) {
+                        failAt(source, localStart, prefix, "mut requires a List value, got " + displayKind(declParsed.kind));
+                    }
+                    statementNext := consumeStatementEnd(source, declParsed.next, prefix);
+                    if statementNext < 0 { failAt(source, skipTrivia(source, declParsed.next, prefix), prefix, "expected ; after local declaration " + localName); }
+                    runtime := localRuntimeName(blockLocals, localName, localStart, 0);
+                    listLib.pushBack(mut blockLocals, (name = localName, runtime = runtime, kind = declParsed.kind,
+                        mutable = false, writable = true, depth = 1, constant = false, code = declParsed.code,
+                        intValue = declParsed.intValue, textValue = declParsed.textValue));
+                    listLib.pushBack(mut statements, "const " + runtime + " = " + copiedValueCode(target, declParsed.kind, declParsed.code) + "; void " + runtime + ";");
                     statementCount = statementCount + 1;
                     blockConstant = false;
                     cursor = statementNext;
@@ -2133,6 +2164,9 @@ parseBinary := fn(target: String, source: String, position: Int, prefix: String,
                     intValue = 0, textValue = "", constant = false, next = cursor);
             } else if callableIndex >= 0 {
                 failAt(source, nameStart, prefix, "function " + calleeName + " must be called");
+            } else if (name == "push_back" or name == "pop_back" or name == "push_front" or name == "pop_front") and
+                afterName < textLib.length(source) and textLib.at(source, afterName) == "(" {
+                left = (kind = "ListOp", code = name, intValue = 0, textValue = name, constant = false, next = afterName);
             } else {
                 index := localIndex(locals, name);
                 if index < 0 {
@@ -2227,30 +2261,46 @@ parseBinary := fn(target: String, source: String, position: Int, prefix: String,
             break;
         }
     }
-    if left.kind == "ModuleFunction" {
+    var listOpName := "";
+    var listOpOpen := left.next;
+    var listOpDisplay := "";
+    if left.kind == "ListOp" {
+        listOpName = left.textValue;
+        listOpDisplay = left.code;
+    } else if left.kind == "ModuleFunction" {
         info := functions[left.intValue];
-        if info.runtime == "lite$core$list$pushBack:v1" {
-            grant := parseListGrant(source, left.next, prefix, locals, "pushBack");
+        if info.runtime == "lite$core$list$pushBack:v1" { listOpName = "push_back"; listOpDisplay = "pushBack"; }
+        else if info.runtime == "lite$core$list$popBack:v1" { listOpName = "pop_back"; listOpDisplay = "popBack"; }
+        else if info.runtime == "lite$core$list$pushFront:v1" { listOpName = "push_front"; listOpDisplay = "pushFront"; }
+        else if info.runtime == "lite$core$list$popFront:v1" { listOpName = "pop_front"; listOpDisplay = "popFront"; }
+    }
+    if listOpName =!= "" {
+        grant := parseListGrant(source, listOpOpen, prefix, locals, listOpDisplay);
+        if listOpName == "push_back" or listOpName == "push_front" {
             var cursor := skipTrivia(source, grant.next, prefix);
             if cursor >= textLib.length(source) or textLib.at(source, cursor) =!= "," {
-                failAt(source, cursor, prefix, "pushBack expects a value after the mut list");
+                failAt(source, cursor, prefix, listOpDisplay + " expects a value after the mut list");
             }
             valueStart := skipTrivia(source, cursor + 1, prefix);
             elementKind := listElementKind(grant.kind);
             value := self(target, source, valueStart, prefix, locals, functions, params, currentName, elementKind, 0);
-            if value.kind =!= elementKind {
-                failAt(source, valueStart, prefix, "pushBack element must be " + displayKind(elementKind) +
+            if not isCompatibleKind(elementKind, value.kind) {
+                failAt(source, valueStart, prefix, listOpDisplay + " element must be " + displayKind(elementKind) +
                     ", got " + displayKind(value.kind));
             }
             close := expectNonemptyCallClose(source, value.next, prefix);
-            left = (kind = "Unit", code = grant.runtime + ".push(" + value.code + ")",
-                intValue = 0, textValue = "", constant = false, next = close);
-        } else if info.runtime == "lite$core$list$popBack:v1" {
-            grant := parseListGrant(source, left.next, prefix, locals, "popBack");
-            close := expectNonemptyCallClose(source, grant.next, prefix);
-            left = (kind = listElementKind(grant.kind), code = "lite$listPopBack(" + grant.runtime + ", " + integer.intText(start) + ")",
+            method := if listOpName == "push_back" { ".push(" } else { ".unshift(" };
+            left = (kind = "Unit", code = grant.runtime + method + assignValueCode(target, elementKind, value.kind, value.code) + ")",
                 intValue = 0, textValue = "", constant = false, next = close);
         } else {
+            close := expectNonemptyCallClose(source, grant.next, prefix);
+            helper := if listOpName == "pop_back" { "lite$listPopBack(" } else { "lite$listPopFront(" };
+            left = (kind = listElementKind(grant.kind), code = helper + grant.runtime + ", " + integer.intText(start) + ")",
+                intValue = 0, textValue = "", constant = false, next = close);
+        }
+    } else if left.kind == "ModuleFunction" {
+        info := functions[left.intValue];
+        if true {
             if info.count < 0 {
                 failAt(source, start, prefix, "host output functions are standalone statements");
             }
@@ -3487,7 +3537,7 @@ pub parseProgramWithIdentity := fn(target: String, source: String, prefix: Strin
             callName = currentName;
             callableIndex = findFunction(functions, currentName);
         }
-        if callableIndex >= 0 and
+        if (callableIndex >= 0 or name == "push_back" or name == "pop_back" or name == "push_front" or name == "pop_front") and
             position < size and textLib.at(source, position) == "(" {
             expression := parseExpressionItem(target, source, nameStart, prefix, locals, functions, functionParams, currentName,
                 currentResult, atValueTail(blocks, blockCount) and not currentStopped);
@@ -3611,8 +3661,46 @@ pub parseProgramWithIdentity := fn(target: String, source: String, prefix: Strin
             position = skipTrivia(source, position + 1, prefix);
             continue;
         }
+        if name == "mut" {
+            localStart := skipTrivia(source, position, prefix);
+            if localStart >= size or not textLib.isNameStart(textLib.at(source, localStart)) {
+                failAt(source, localStart, prefix, "expected local name after mut");
+            }
+            localEnd := textLib.skipName(source, localStart);
+            localName := textLib.slice(source, localStart, localEnd);
+            if isReservedWord(localName) { unsupportedFeature(source, localStart, localName, prefix); }
+            if depth == 0 and blockCount == 0 {
+                rootIndex := localIndex(locals, localName);
+                if rootIndex >= 0 and locals[rootIndex].depth == 0 {
+                    failAt(source, localStart, prefix, "duplicate top-level value " + localName);
+                }
+            }
+            afterName := skipTrivia(source, localEnd, prefix);
+            if not textLib.startsWithAt(source, afterName, ":=") {
+                failAt(source, afterName, prefix, "expected := after mut local name " + localName);
+            }
+            parsed := parseInitializerExpression(target, source, skipTrivia(source, afterName + 2, prefix), prefix, locals, functions, functionParams, currentName, "");
+            if not isListKind(parsed.kind) {
+                failAt(source, localStart, prefix, "mut requires a List value, got " + displayKind(parsed.kind));
+            }
+            statementNext := consumeStatementEnd(source, parsed.next, prefix);
+            if statementNext < 0 { failAt(source, skipTrivia(source, parsed.next, prefix), prefix, "expected ; after local declaration " + localName); }
+            position = statementNext;
+            runtime := localRuntimeName(locals, localName, localStart, moduleId);
+            listLib.pushBack(mut locals, (name = localName, runtime = runtime, kind = parsed.kind,
+                mutable = false, writable = true, depth = depth, constant = false, code = parsed.code,
+                intValue = parsed.intValue, textValue = parsed.textValue));
+            if currentLive and not currentStopped { listLib.pushBack(mut items, (kind = "Local" + storageKind(parsed.kind), name = localName, runtime = runtime,
+                code = copiedValueCode(target, parsed.kind, parsed.code), intValue = parsed.intValue, textValue = itemTextPayload(parsed))); }
+            continue;
+        }
         if name == "var" {
             position = skipTrivia(source, position, prefix);
+            var declaredWritable := false;
+            if textLib.wordAt(source, position, "mut") {
+                declaredWritable = true;
+                position = skipTrivia(source, position + 3, prefix);
+            }
             if position >= size or not textLib.isNameStart(textLib.at(source, position)) {
                 failAt(source, position, prefix, "expected local name after var");
             }
@@ -3628,14 +3716,17 @@ pub parseProgramWithIdentity := fn(target: String, source: String, prefix: Strin
             }
             position = skipTrivia(source, position, prefix);
             var parsed := intParsed("", 0, true, position);
-            var declaredWritable := false;
             if textLib.startsWithAt(source, position, ":=") {
                 position = skipTrivia(source, position + 2, prefix);
                 parsed = parseInitializerExpression(target, source, position, prefix, locals, functions, functionParams, currentName, "");
                 if parsed.kind == "Unit" {
                     failAt(source, localStart, prefix, "cannot declare a Unit local " + localName);
                 }
+                if declaredWritable and not isListKind(parsed.kind) {
+                    failAt(source, localStart, prefix, "mut requires a List value, got " + displayKind(parsed.kind));
+                }
             } else if position < size and textLib.at(source, position) == ":" {
+                if declaredWritable { failAt(source, localStart, prefix, "var mut cannot be combined with explicit type annotation"); }
                 typed := parseLocalType(source, position + 1, prefix, aliases);
                 declaredWritable = typed.writable;
                 position = skipTrivia(source, typed.next, prefix);
@@ -3713,7 +3804,7 @@ pub parseProgramWithIdentity := fn(target: String, source: String, prefix: Strin
                     failAt(source, nameStart, prefix, "duplicate top-level value " + name);
                 }
                 position = skipTrivia(source, afterDeclare + 2, prefix);
-                listIntrinsic := moduleIdentity == "lite.core.list.v1" and (name == "pushBack" or name == "popBack");
+                listIntrinsic := moduleIdentity == "lite.core.list.v1" and (name == "pushBack" or name == "popBack" or name == "pushFront" or name == "popFront");
                 header := parseFunctionHeader(source, position, prefix, aliases, listIntrinsic);
                 position = skipTrivia(source, header.next, prefix);
                 if position < size and textLib.at(source, position) == ";" {

@@ -110,9 +110,14 @@ usesListIndex := fn(calls: String): Bool {
     usesBuiltin(calls, "listAt")
 }
 
-/** True when any emitted item pops a list element through the checked helper. */
+/** True when any emitted item pops a list back element through the checked helper. */
 usesListPop := fn(calls: String): Bool {
     usesBuiltin(calls, "listPopBack")
+}
+
+/** True when any emitted item pops a list front element through the checked helper. */
+usesListPopFront := fn(calls: String): Bool {
+    usesBuiltin(calls, "listPopFront")
 }
 
 
@@ -151,7 +156,7 @@ emitFloatArithmeticHelpers := fn(calls: String): Unit {
 
 /** True when positioned bounds faults may be raised by text or list helpers. */
 usesBounds := fn(calls: String): Bool {
-    usesBuiltin(calls, "textAt") or usesBuiltin(calls, "textSlice") or usesListIndex(calls) or usesListPop(calls)
+    usesBuiltin(calls, "textAt") or usesBuiltin(calls, "textSlice") or usesListIndex(calls) or usesListPop(calls) or usesListPopFront(calls)
 }
 
 /** Emits shared position metadata once, exact runtime faults, and the arithmetic helpers actually used. */
@@ -396,14 +401,24 @@ emitListIndexHelper := fn(): Unit {
     io.outputLine("");
 }
 
-/** Emits the checked list-pop helper used by generated programs that pop a list tail. */
+/** Emits the checked list-pop-back helper used by generated programs that pop the back of a list. */
 emitListPopHelper := fn(): Unit {
     io.outputLine("function lite$listPopBack<T>(items: T[], at: number): T {");
-    io.outputLine("    const value = items.pop();");
-    io.outputLine("    if (value === undefined) {");
+    io.outputLine("    if (items.length === 0) {");
     io.outputLine("        lite$fault(\"BoundPanic\", at, \"pop_back on an empty list\");");
     io.outputLine("    }");
-    io.outputLine("    return value;");
+    io.outputLine("    return items.pop() as T;");
+    io.outputLine("}");
+    io.outputLine("");
+}
+
+/** Emits the checked list-pop-front helper used by generated programs that pop the front of a list. */
+emitListPopFrontHelper := fn(): Unit {
+    io.outputLine("function lite$listPopFront<T>(items: T[], at: number): T {");
+    io.outputLine("    if (items.length === 0) {");
+    io.outputLine("        lite$fault(\"BoundPanic\", at, \"pop_front on an empty list\");");
+    io.outputLine("    }");
+    io.outputLine("    return items.shift() as T;");
     io.outputLine("}");
     io.outputLine("");
 }
@@ -466,6 +481,7 @@ pub emitProgram := fn(items: frontend.Items, source: String, prefix: String): Un
     emitBuiltinHelpers(calls);
     if usesListIndex(calls) { emitListIndexHelper(); }
     if usesListPop(calls) { emitListPopHelper(); }
+    if usesListPopFront(calls) { emitListPopFrontHelper(); }
     emitIntArithmeticHelpers(calls, source, prefix);
     emitFloatArithmeticHelpers(calls);
     emitIntDivisionHelpers(calls);
