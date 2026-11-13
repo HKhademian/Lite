@@ -103,8 +103,8 @@ function renderHeader(basePath: string, active: 'home' | 'playground' | 'gallery
     </a>
     <nav class="site-nav" aria-label="Main navigation">
       <a href="${basePath}index.html"${active === 'home' ? ' class="active"' : ''}>Overview</a>
-      <a href="${basePath}playground/index.html"${active === 'playground' ? ' class="active"' : ''}>Play</a>
-      <a href="${basePath}gallery/index.html"${active === 'gallery' ? ' class="active"' : ''}>Gallery</a>
+      <a href="${basePath}playground/"${active === 'playground' ? ' class="active"' : ''}>Play</a>
+      <a href="${basePath}gallery/"${active === 'gallery' ? ' class="active"' : ''}>Gallery</a>
       <a href="${escapeHtml(docsHref)}">Docs</a>
       <a href="${escapeHtml(repoHref)}">GitHub</a>
       <button id="theme-toggle" class="theme-toggle" type="button" aria-label="Toggle light/dark theme" title="Switch theme">&#9728;</button>
@@ -152,7 +152,7 @@ function renderSampleCard(sample: RenderedSample, basePath: string, includeNote 
   <pre class="code-block"><code>${sample.sourceHtml}</code></pre>
   ${outputBlock}
   <footer class="sample-foot">
-    <a href="${basePath}playground/index.html?sample=${escapeHtml(sample.id)}">Play &rarr;</a>
+    <a href="${basePath}playground/?sample=${escapeHtml(sample.id)}">Play &rarr;</a>
   </footer>
 </article>`;
 }
@@ -232,7 +232,7 @@ function renderHomePage(rendered: ReadonlyMap<string, RenderedSample>, repoUrl: 
     .join('\n');
 
   const cloneUrl = repoUrl ? `${repoUrl}.git` : '<repository-url>';
-  const docsStart = repoUrl ? `${repoUrl}/blob/main/docs/start-here.md` : 'gallery/index.html';
+  const docsStart = repoUrl ? `${repoUrl}/blob/main/docs/start-here.md` : 'gallery/';
 
   const body = `<section class="hero">
   <div>
@@ -245,7 +245,7 @@ function renderHomePage(rendered: ReadonlyMap<string, RenderedSample>, repoUrl: 
       clear consequences, and readable code.
     </p>
     <div class="hero-actions">
-      <a class="btn btn-primary" href="playground/index.html">Play online</a>
+      <a class="btn btn-primary" href="playground/">Play online</a>
       <a class="btn" href="${escapeHtml(docsStart)}">Get started</a>
     </div>
     <div class="quickstart"><pre>git clone ${escapeHtml(cloneUrl)}
@@ -278,7 +278,7 @@ cd LiteScript
 <section class="section">
   <div class="section-head">
     <h2>Featured Examples</h2>
-    <a href="gallery/index.html">Explore Gallery (${String(rendered.size)} samples) &rarr;</a>
+    <a href="gallery/">Explore Gallery (${String(rendered.size)} samples) &rarr;</a>
   </div>
   <div class="sample-grid">
     ${featuredCards}
@@ -307,7 +307,7 @@ function renderGalleryCard(sample: RenderedSample, basePath: string): string {
     <pre class="code-block"><code>${sample.sourceHtml}</code></pre>
   </details>
   <footer class="sample-foot">
-    <a href="${basePath}playground/index.html?sample=${escapeHtml(sample.id)}">Play &rarr;</a>
+    <a href="${basePath}playground/?sample=${escapeHtml(sample.id)}">Play &rarr;</a>
   </footer>
 </article>`;
 }
