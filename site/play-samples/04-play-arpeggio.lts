@@ -1,14 +1,16 @@
-/* Synth arpeggio: press Space to toggle playback, Arrows to step notes. */
+/* High-res synth arpeggio: press Space to toggle playback, Arrows or Click pads to step. */
 
 audio := import "extra/audio";
 board := import "extra/board";
 canvas := import "extra/canvas";
 io := import "core/io";
 
-ctx := canvas.play(width = 16, height = 12, title = "Synth Arpeggio · Space or Click Pads");
+ctx := canvas.play(width = 320, height = 180, title = "Synth Arpeggio (320x180) · Space or Click Pads");
 bg := canvas.rgb(10, 12, 20);
-dimPad := canvas.rgba(255, 255, 255, 34);
-activeGlow := canvas.rgba(255, 255, 255, 210);
+frame := canvas.rgba(255, 255, 255, 28);
+dimPad := canvas.rgba(255, 255, 255, 24);
+specular := canvas.rgba(255, 255, 255, 65);
+activeGlow := canvas.rgba(255, 255, 255, 220);
 padColors: List<canvas.Color> = [
 canvas.rgb(110, 196, 216),
 canvas.rgb(137, 201, 131),
@@ -29,20 +31,25 @@ var spaceHeld := false;
 
 drawPads := fn(): Unit {
     canvas.clear(bg);
+    board.drawRect(8, 8, ctx.width - 16, ctx.height - 16, frame);
+    if playing {
+        board.fillCircle(28, 26, 6, canvas.rgb(137, 201, 131));
+    } else {
+        board.fillCircle(28, 26, 6, canvas.rgba(255, 255, 255, 50));
+    }
     var idx := 0;
     loop idx < 4 {
-        x := 2 + (idx * 3);
-        canvas.fillRect(x, 4, 2, 4, dimPad);
+        x := 26 + (idx * 70);
+        canvas.fillRect(x, 46, 54, 96, dimPad);
         if idx == stepIndex {
-            canvas.fillRect(x, 3, 2, 5, padColors[idx]);
-            canvas.fillRect(x, 9, 2, 1, activeGlow);
+            canvas.fillRect(x, 42, 54, 100, padColors[idx]);
+            canvas.fillRect(x + 4, 46, 46, 8, specular);
+            canvas.fillRect(x + 6, 150, 42, 5, activeGlow);
         } else {
-            canvas.fillRect(x, 5, 2, 3, padColors[idx]);
+            canvas.fillRect(x, 66, 54, 76, padColors[idx]);
+            canvas.fillRect(x + 4, 70, 46, 5, specular);
         }
         idx += 1;
-    }
-    if playing {
-        board.fillCircle(2, 2, 1, canvas.rgb(137, 201, 131));
     }
 }
 
@@ -88,11 +95,16 @@ onCanvasKeyUp := fn(key: String): Unit {
 
 onCanvasPointerDown := fn(col: Int, row: Int, button: Int): Unit {
     voidBtn := button;
-    if row >= 3 and row <= 9 and col >= 2 and col <= 13 {
-        idx := (col - 2) / 3;
-        if idx >= 0 and idx < 4 {
-            stepIndex = idx;
-            triggerStep();
+    if row >= 42 and row <= 156 {
+        var idx := 0;
+        loop idx < 4 {
+            px := 26 + (idx * 70);
+            if col >= px and col < px + 54 {
+                stepIndex = idx;
+                triggerStep();
+                return;
+            }
+            idx += 1;
         }
     }
 }

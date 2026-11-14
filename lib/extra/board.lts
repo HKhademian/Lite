@@ -47,37 +47,44 @@ pub drawLine := fn(x0: Int, y0: Int, x1: Int, y1: Int, color: canvas.Color): Uni
     }
 }
 
-/** Fills a raster disk centered at `(cx, cy)` with inclusive integer radius. */
+/** Fills a raster disk centered at `(cx, cy)` using horizontal span rects. */
 pub fillCircle := fn(cx: Int, cy: Int, radius: Int, color: canvas.Color): Unit {
     if radius < 0 { return; }
     limit := radius * radius;
     var dy := 0 - radius;
     loop dy <= radius {
-        var dx := 0 - radius;
-        loop dx <= radius {
-            if (dx * dx) + (dy * dy) <= limit {
-                canvas.setPixel(cx + dx, cy + dy, color);
-            }
-            dx += 1;
+        var span := 0;
+        loop (span * span) + (dy * dy) <= limit {
+            span += 1;
+        }
+        span -= 1;
+        if span >= 0 {
+            canvas.fillRect(cx - span, cy + dy, (span * 2) + 1, 1, color);
         }
         dy += 1;
     }
 }
 
-/** Draws every occurrence of `glyph` from `rows` at top-left `(x, y)` in `color`. */
-pub drawSprite := fn(x: Int, y: Int, rows: List<String>, glyph: String, color: canvas.Color): Unit {
+/** Draws every occurrence of `glyph` from `rows` at `(x, y)` scaled into `scale * scale` blocks. */
+pub drawSpriteScaled := fn(x: Int, y: Int, rows: List<String>, glyph: String, scale: Int, color: canvas.Color): Unit {
+    if scale <= 0 { return; }
     var rowIdx := 0;
     loop rows as line {
         cols := text.length(line);
         var colIdx := 0;
         loop colIdx < cols {
             if text.at(line, colIdx) == glyph {
-                canvas.setPixel(x + colIdx, y + rowIdx, color);
+                canvas.fillRect(x + (colIdx * scale), y + (rowIdx * scale), scale, scale, color);
             }
             colIdx += 1;
         }
         rowIdx += 1;
     }
+}
+
+/** Draws every occurrence of `glyph` from `rows` at top-left `(x, y)` in `color`. */
+pub drawSprite := fn(x: Int, y: Int, rows: List<String>, glyph: String, color: canvas.Color): Unit {
+    drawSpriteScaled(x, y, rows, glyph, 1, color);
 }
 
 /** Creates a row-major pixel buffer matching the latest canvas dimensions filled with `color`. */

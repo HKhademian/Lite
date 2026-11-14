@@ -1,33 +1,49 @@
-/* Static RGBA canvas composition with layered translucent geometry. */
+/* High-resolution RGBA composition with sky gradient and translucent glass circles. */
 
 board := import "extra/board";
 canvas := import "extra/canvas";
 io := import "core/io";
 
-ctx := canvas.create(width = 36, height = 24, title = "Layered RGBA Composition");
-backdrop := canvas.rgb(13, 17, 28);
-gridTint := canvas.rgba(255, 255, 255, 16);
-amberGlass := canvas.rgba(240, 180, 90, 190);
-cyanGlass := canvas.rgba(110, 196, 216, 175);
-plumGlass := canvas.rgba(198, 154, 232, 165);
-frameTint := canvas.rgba(240, 180, 90, 220);
+ctx := canvas.create(width = 360, height = 240, title = "Layered RGBA Composition (360x240)");
+backdrop := canvas.rgb(12, 16, 28);
+gridTint := canvas.rgba(255, 255, 255, 14);
+cyanGlass := canvas.rgba(110, 196, 216, 165);
+amberGlass := canvas.rgba(240, 180, 90, 175);
+plumGlass := canvas.rgba(198, 154, 232, 155);
+highlight := canvas.rgba(255, 255, 255, 42);
+frameTint := canvas.rgba(240, 180, 90, 210);
 
 canvas.clear(backdrop);
-var x := 0;
-loop x < ctx.width {
-    canvas.fillRect(x, 0, 1, ctx.height, gridTint);
-    x += 4;
-}
-var y := 0;
-loop y < ctx.height {
-    canvas.fillRect(0, y, ctx.width, 1, gridTint);
-    y += 4;
+
+var band := 0;
+loop band < ctx.height {
+    r := 12 + ((band * 18) / ctx.height);
+    g := 16 + ((band * 14) / ctx.height);
+    b := 28 + ((band * 24) / ctx.height);
+    canvas.fillRect(0, band, ctx.width, 4, canvas.rgb(r, g, b));
+    band += 4;
 }
 
-board.fillCircle(12, 11, 7, cyanGlass);
-board.fillCircle(20, 10, 7, amberGlass);
-board.fillCircle(17, 15, 6, plumGlass);
-board.drawRect(1, 1, ctx.width - 2, ctx.height - 2, frameTint);
-board.drawLine(3, 20, 32, 3, canvas.rgba(255, 255, 255, 110));
+var gx := 24;
+loop gx < ctx.width {
+    canvas.fillRect(gx, 0, 1, ctx.height, gridTint);
+    gx += 24;
+}
+var gy := 24;
+loop gy < ctx.height {
+    canvas.fillRect(0, gy, ctx.width, 1, gridTint);
+    gy += 24;
+}
+
+board.fillCircle(126, 108, 62, cyanGlass);
+board.fillCircle(206, 98, 56, amberGlass);
+board.fillCircle(174, 150, 50, plumGlass);
+board.fillCircle(120, 96, 24, highlight);
+board.fillCircle(198, 86, 20, highlight);
+
+board.drawRect(8, 8, ctx.width - 16, ctx.height - 16, frameTint);
+board.drawRect(14, 14, ctx.width - 28, ctx.height - 28, canvas.rgba(255, 255, 255, 36));
+canvas.fillRect(24, 24, 36, 4, canvas.rgb(240, 180, 90));
+canvas.fillRect(24, 32, 22, 3, canvas.rgba(110, 196, 216, 210));
 
 io.outputLine("Rendered:", ctx.title, ctx.width, "x", ctx.height);

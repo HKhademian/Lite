@@ -1,14 +1,21 @@
-/* Bouncing Lite mark with RGBA shadow and wall-bounce chimes. */
+/* High-resolution bouncing ℓite emblem with RGBA halo and wall-bounce chimes. */
 
 audio := import "extra/audio";
 board := import "extra/board";
 canvas := import "extra/canvas";
 io := import "core/io";
 
-ctx := canvas.play(width = 48, height = 32, title = "Bounce · ℓite Mark");
+ctx := canvas.play(width = 320, height = 200, title = "Bounce · ℓite Mark (320x200)");
 bg := canvas.rgb(11, 14, 24);
-shadow := canvas.rgba(0, 0, 0, 110);
-border := canvas.rgba(255, 255, 255, 28);
+gridTint := canvas.rgba(255, 255, 255, 10);
+border := canvas.rgba(255, 255, 255, 36);
+shadow := canvas.rgba(0, 0, 0, 115);
+haloColors: List<canvas.Color> = [
+canvas.rgba(240, 180, 90, 32),
+canvas.rgba(110, 196, 216, 32),
+canvas.rgba(137, 201, 131, 32),
+canvas.rgba(198, 154, 232, 32),
+];
 palette: List<canvas.Color> = [
 canvas.rgb(240, 180, 90),
 canvas.rgb(110, 196, 216),
@@ -25,21 +32,33 @@ sprite: List<String> = [
 ".#..#..",
 "..###..",
 ];
-spriteW := 7;
-spriteH := 7;
+scale := 6;
+spriteW := 7 * scale;
+spriteH := 7 * scale;
 
-var px := 4;
-var py := 4;
-var dx := 1;
-var dy := 1;
+var px := 32;
+var py := 28;
+var dx := 2;
+var dy := 2;
 var colorIdx := 0;
 var acc := 0.0;
 
 render := fn(): Unit {
     canvas.clear(bg);
+    var gx := 40;
+    loop gx < ctx.width {
+        canvas.fillRect(gx, 2, 1, ctx.height - 4, gridTint);
+        gx += 40;
+    }
+    var gy := 40;
+    loop gy < ctx.height {
+        canvas.fillRect(2, gy, ctx.width - 4, 1, gridTint);
+        gy += 40;
+    }
     board.drawRect(0, 0, ctx.width, ctx.height, border);
-    board.drawSprite(px + 1, py + 1, sprite, "#", shadow);
-    board.drawSprite(px, py, sprite, "#", palette[colorIdx]);
+    board.fillCircle(px + (spriteW / 2), py + (spriteH / 2), 34, haloColors[colorIdx]);
+    board.drawSpriteScaled(px + 4, py + 4, sprite, "#", scale, shadow);
+    board.drawSpriteScaled(px, py, sprite, "#", scale, palette[colorIdx]);
 }
 
 onCanvasInit := fn(): Unit {
@@ -48,18 +67,18 @@ onCanvasInit := fn(): Unit {
 
 onCanvasUpdate := fn(dt: Float): Int {
     acc = acc + dt;
-    if acc >= 0.05 {
+    if acc >= 0.016 {
         acc = 0.0;
         nx := px + dx;
         ny := py + dy;
         var bounced := false;
-        if nx < 1 or nx > ctx.width - spriteW - 1 {
+        if nx < 4 or nx > ctx.width - spriteW - 4 {
             dx = 0 - dx;
             bounced = true;
         } else {
             px = nx;
         }
-        if ny < 1 or ny > ctx.height - spriteH - 1 {
+        if ny < 4 or ny > ctx.height - spriteH - 4 {
             dy = 0 - dy;
             bounced = true;
         } else {

@@ -1,46 +1,111 @@
-/* Interactive pixel canvas: move or drag pointer to paint, Space clears. */
+/* High-res pointer canvas: move to mist, drag or click to paint, swatches or 1-4 pick color. */
 
 audio := import "extra/audio";
+board := import "extra/board";
 canvas := import "extra/canvas";
 io := import "core/io";
 
-ctx := canvas.play(width = 24, height = 18, title = "Pointer Paint · Move to Draw, Space Clears");
+ctx := canvas.play(width = 240, height = 160, title = "Pointer Paint (240x160) · Drag to Paint, Space Clears");
 bg := canvas.rgb(12, 18, 30);
-softTrail := canvas.rgba(110, 196, 216, 125);
+barBg := canvas.rgb(20, 26, 40);
+barLine := canvas.rgba(255, 255, 255, 32);
+softTrail := canvas.rgba(110, 196, 216, 70);
 palette: List<canvas.Color> = [
 canvas.rgb(240, 180, 90),
 canvas.rgb(137, 201, 131),
 canvas.rgb(198, 154, 232),
 canvas.rgb(110, 196, 216),
 ];
+barTop := ctx.height - 22;
 var colorIdx := 0;
+var brushDown := false;
+
+drawPaletteBar := fn(): Unit {
+    canvas.fillRect(0, barTop, ctx.width, 22, barBg);
+    canvas.fillRect(0, barTop, ctx.width, 1, barLine);
+    var idx := 0;
+    loop idx < 4 {
+        sx := 12 + (idx * 34);
+        canvas.fillRect(sx, barTop + 5, 24, 12, palette[idx]);
+        if idx == colorIdx {
+            board.drawRect(sx - 2, barTop + 3, 28, 16, canvas.rgb(255, 255, 255));
+        }
+        idx += 1;
+    }
+}
+
+resetCanvas := fn(): Unit {
+    canvas.clear(bg);
+    drawPaletteBar();
+}
 
 onCanvasInit := fn(): Unit {
-    canvas.clear(bg);
-    canvas.setPixel(ctx.width / 2, ctx.height / 2, palette[colorIdx]);
+    resetCanvas();
+    board.fillCircle(ctx.width / 2, barTop / 2, 5, palette[colorIdx]);
 }
 
 onCanvasPointerMove := fn(col: Int, row: Int): Unit {
-    canvas.setPixel(col, row, softTrail);
+    if row >= barTop - 4 { return; }
+    if brushDown {
+        board.fillCircle(col, row, 4, palette[colorIdx]);
+    } else {
+        canvas.fillRect(col - 1, row - 1, 3, 3, softTrail);
+    }
 }
 
 onCanvasPointerDown := fn(col: Int, row: Int, button: Int): Unit {
+    if row >= barTop {
+        var idx := 0;
+        loop idx < 4 {
+            sx := 12 + (idx * 34);
+            if col >= sx - 2 and col <= sx + 26 {
+                colorIdx = idx;
+                drawPaletteBar();
+                audio.tone(frequency = 360 + (colorIdx * 90), durationMs = 55, volume = 15);
+                return;
+            }
+            idx += 1;
+        }
+        return;
+    }
     if button =!= 0 {
         colorIdx = (colorIdx + 1) % 4;
+        drawPaletteBar();
     }
-    canvas.fillRect(col, row, 2, 2, palette[colorIdx]);
+    brushDown = true;
+    board.fillCircle(col, row, 5, palette[colorIdx]);
     audio.tone(frequency = 330 + (colorIdx * 110), durationMs = 60, volume = 16);
+}
+
+onCanvasPointerUp := fn(col: Int, row: Int, button: Int): Unit {
+    voidCol := col;
+    voidRow := row;
+    voidBtn := button;
+    brushDown = false;
 }
 
 onCanvasKeyDown := fn(key: String): Unit {
     if key == " " or key == "c" {
-        canvas.clear(bg);
+        resetCanvas();
         audio.tone(frequency = 220, durationMs = 80, volume = 15);
     } else if key == "ArrowRight" or key == "ArrowLeft" {
         colorIdx = (colorIdx + 1) % 4;
+        drawPaletteBar();
         audio.tone(frequency = 440 + (colorIdx * 65), durationMs = 50, volume = 15);
+    } else if key == "1" {
+        colorIdx = 0;
+        drawPaletteBar();
+    } else if key == "2" {
+        colorIdx = 1;
+        drawPaletteBar();
+    } else if key == "3" {
+        colorIdx = 2;
+        drawPaletteBar();
+    } else if key == "4" {
+        colorIdx = 3;
+        drawPaletteBar();
     }
 }
 
-canvas.clear(bg);
+resetCanvas();
 io.outputLine("Canvas:", ctx.title, ctx.width, "x", ctx.height);
