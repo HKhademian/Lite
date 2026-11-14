@@ -6,7 +6,7 @@ proc := import "core/process";
 text := import "core/text";
 list := import "core/list";
 cli := import "util/cli";
-fsUtil := import "util/fs";
+path := import "core/path";
 project := import "util/project";
 
 scanLineBraces := fn(line: String, startInBlock: Bool): (leadingCloses: Int, netChange: Int, normalized: String, inBlockComment: Bool) {
@@ -185,7 +185,7 @@ run := fn(args: List<String>): Unit {
         io.exit(0);
     }
 
-    files := fsUtil.collectFiles(proc.cwd(), targets, ".lts", fsUtil.defaultIgnoredDirs(), true);
+    files := path.collectFiles(proc.cwd(), targets, ".lts", path.defaultIgnoredDirs(), true);
 
     var dirty := 0;
     loop files as file {

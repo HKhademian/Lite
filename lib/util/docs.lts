@@ -5,7 +5,6 @@ integer := import "core/int";
 text := import "core/text";
 list := import "core/list";
 path := import "core/path";
-fsUtil := import "util/fs";
 json := import "util/json";
 md := import "util/markdown";
 
@@ -18,7 +17,7 @@ pub defaultIgnoredDirs := fn(): List<String> {
 /** Collects sorted Markdown file paths under `directory`, ignoring VCS/build/cache folders. */
 pub listDocFiles := fn(directory: String): List<String> {
     targets: List<String> = [directory];
-    fsUtil.collectFiles(directory, targets, ".md", defaultIgnoredDirs(), false)
+    path.collectFiles(directory, targets, ".md", defaultIgnoredDirs(), false)
 }
 
 isSchemeChar := fn(ch: String): Bool {

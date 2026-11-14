@@ -1,4 +1,5 @@
 file := import "core/file";
+list := import "core/list";
 path := import "core/path";
 test := import "core/test";
 
@@ -48,5 +49,53 @@ test.checkBool("isFile file", true, path.isFile(sample));
 test.checkBool("isDirectory file", false, path.isDirectory(sample));
 test.checkBool("exists missing", false, path.exists(path.join(tmp.path, "absent")));
 _rm := file.remove(tmp.path);
+
+walkTmp := file.makeTempDir("lite-path-walk-");
+test.checkBool("walk temp dir ok", true, walkTmp.ok);
+walkRoot := walkTmp.path;
+nested := path.join(walkRoot, "sub/inner");
+ignoreDir := path.join(walkRoot, "node_modules");
+distDir := path.join(walkRoot, "dist");
+dotDir := path.join(walkRoot, ".hidden");
+_mk1 := file.makeDir(nested);
+_mk2 := file.makeDir(ignoreDir);
+_mk3 := file.makeDir(distDir);
+_mk4 := file.makeDir(dotDir);
+aFile := path.join(walkRoot, "a.lts");
+bFile := path.join(nested, "b.lts");
+txtFile := path.join(nested, "notes.txt");
+_w1 := file.writeText(aFile, "x := 1;\n");
+_w2 := file.writeText(bFile, "y := 2;\n");
+_w3 := file.writeText(txtFile, "skip\n");
+_w4 := file.writeText(path.join(ignoreDir, "ignored.lts"), "x := 3;\n");
+_w5 := file.writeText(path.join(distDir, "ignored2.lts"), "x := 4;\n");
+_w6 := file.writeText(path.join(dotDir, "ignored3.lts"), "x := 5;\n");
+
+targets: List<String> = [walkRoot];
+collected := path.collectFiles(walkRoot, targets, ".lts", path.defaultIgnoredDirs(), true);
+test.checkInt("collected lts count", 2, list.listCountText(collected));
+test.checkText("collected first", aFile, collected[0]);
+test.checkText("collected second", bFile, collected[1]);
+
+allFiles := path.collectFiles(walkRoot, targets, "", path.defaultIgnoredDirs(), true);
+test.checkInt("collected all count", 3, list.listCountText(allFiles));
+
+_wNestedSkip := file.makeDir(path.join(nested, "node_modules"));
+_wNestedIgnored := file.writeText(path.join(nested, "node_modules/pkg.txt"), "skip\n");
+_wLink := file.symlink("a.lts", path.join(walkRoot, "link.lts"));
+
+copyTmp := file.makeTempDir("lite-path-copy-");
+test.checkBool("make copy temp dir ok", true, copyTmp.ok);
+copyDst := copyTmp.path;
+copyRes := path.copyFiltered(walkRoot, copyDst, ["node_modules", "dist"], ["node_modules"]);
+test.checkText("copyFiltered error", "", copyRes.error);
+test.checkBool("copyFiltered ok", true, copyRes.ok);
+test.checkText("copied top file", "file", file.kind(path.join(copyDst, "a.lts")));
+test.checkText("copied nested file", "file", file.kind(path.join(copyDst, "sub/inner/b.lts")));
+test.checkText("copied symlink preserved", "file", file.kind(path.join(copyDst, "link.lts")));
+test.checkText("skipped top node_modules", "missing", file.kind(path.join(copyDst, "node_modules")));
+test.checkText("skipped nested node_modules", "missing", file.kind(path.join(copyDst, "sub/inner/node_modules")));
+_rmCopy := file.remove(copyDst);
+_rmWalk := file.remove(walkRoot);
 
 test.done("util-path");

@@ -7,7 +7,6 @@ integer := import "core/int";
 text := import "core/text";
 list := import "core/list";
 path := import "core/path";
-fsUtil := import "util/fs";
 json := import "util/json";
 streams := import "util/streams";
 
@@ -228,7 +227,7 @@ pub validateCaseFile := fn(rootDir: String, caseFile: String): (ok: Bool, id: St
 pub discoverAllCaseFiles := fn(rootDir: String): List<String> {
     roots: List<String> = [path.join(rootDir, "language/cases"), path.join(rootDir, "tools/cases")];
     ignored: List<String> = [];
-    fsUtil.collectFiles(rootDir, roots, ".case.json", ignored, false)
+    path.collectFiles(rootDir, roots, ".case.json", ignored, false)
 }
 
 /** Validates all discovered cases, ensures unique IDs, and verifies at least one case matches `filter`. */
@@ -435,7 +434,7 @@ prepareToolWorkspace := fn(rootDir: String, caseText: String, sPos: Int, workDir
     projDir := path.join(workDir, "project");
     topSkip: List<String> = [".git", "node_modules", "dist", ".cache"];
     nestedSkip: List<String> = ["node_modules"];
-    copied := fsUtil.copyFiltered(rootDir, projDir, topSkip, nestedSkip);
+    copied := path.copyFiltered(rootDir, projDir, topSkip, nestedSkip);
     if not copied.ok { return (ok = false, workspace = "", error = copied.error); }
 
     g1 := runCaseGit(projDir, ["init", "-b", "main"]);
