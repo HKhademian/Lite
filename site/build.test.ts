@@ -80,6 +80,7 @@ test('buildSite generates static pages and metadata in dist/site', () => {
   assert(styleCss.includes('.theme-toggle.theme-toggle-shine'));
   assert(styleCss.includes('.shell-line::before'));
   assert(styleCss.includes('.quickstart-copy'));
+  assert(!styleCss.includes('var(--bg-elev)'));
   const playground = readFileSync(join(out, 'playground/index.html'), 'utf8');
   assert(playground.includes('playground-page'));
   assert(playground.includes('highlightLite(editorEl.value)'));

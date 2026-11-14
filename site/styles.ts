@@ -823,7 +823,7 @@ details.gallery-code pre.code-block {
   gap: 0.35rem;
   padding: 0.45rem 0.9rem;
   border-bottom: 1px solid var(--border);
-  background: var(--bg-elev);
+  background: var(--surface);
 }
 .code-modes[hidden] { display: none; }
 .code-mode-btn {
