@@ -1,7 +1,7 @@
 # Implicit known values and module initialization
 
-Status: **bounded investigation, 2026-11-14; options and recommendations, not
-selected rules or implementation evidence**. Relates to INV-062.01–.02 and
+Status: **bounded investigation, 2026-11-14; pure calls with known inputs
+subsequently selected, remaining options unselected; no implementation evidence**. Relates to INV-062.01–.02 and
 INV-003.05. The user would like ordinary literal arithmetic and ordinary
 function calls with known inputs to be usable as compile-time-known values,
 and asks whether module top-level definitions should require compile-time-known
@@ -36,8 +36,9 @@ b := square(a);
 The desired candidate behavior is that `a` is known as `16` and `b` as `256`
 during compilation, without an annotation or explicit compile-time block.
 The function definition is itself usable as a callable, while executing its
-body is a separate event. This behavior is **proposed**, not an accepted
-general inference algorithm or a compiler pass.
+body is a separate event. The user subsequently selected known pure calls as
+compile-time known; the full inference algorithm and compiler support remain
+open. See [pure calls with known inputs](../../docs/compile-time-evaluation.md#pure-calls-with-known-inputs).
 
 Three concepts must not be conflated:
 
@@ -54,8 +55,9 @@ call preserves its effects.
 
 ## Implicit evaluation options
 
-These are alternatives for evaluation and diagnostics, not a list of
-constraints already placed on Lite's compile-time engine.
+The following alternatives predate the selected pure-call rule and remain useful
+for its unresolved boundaries and for effectful operations. They are not a
+list of constraints already placed on Lite's compile-time engine.
 
 ### A. Required-context evaluation
 
@@ -65,10 +67,9 @@ satisfy that requirement. Outside a required context, evaluating early is an
 optimization subject to ordinary observable behavior. This keeps a normal
 runtime call's stage unless a surrounding rule requires compile-time evaluation.
 
-The open issue is whether a value declared in an ordinary runtime context
-automatically acquires a compile-time-known contract for a later required use,
-or whether that later use can only reevaluate/prove the earlier expression
-under a defined rule. Reexecuting an effectful initializer would be observable.
+The subsequent selection makes a pure computation with known inputs known;
+proof boundaries and the treatment of other ordinary initializers remain open.
+Reexecuting an effectful initializer would be observable.
 
 ### B. Implicit early evaluation when justified
 
@@ -220,9 +221,9 @@ Whether effectful initializers must be explicit or may be implicit is open.
 All examples below are design probes, not current compiler conformance passes.
 Some require later decisions and are intentionally shown as alternatives.
 
-1. `a := 4 * 4; b := square(a);`: an implicit-known candidate gives `16` for
-   `a` and `256` for `b`, and a compile-time-required consumer can use `b` if the rule is
-   selected. Use both direct and nested calls and distinct valid input values.
+1. `a := 4 * 4; b := square(a);`: the selected pure-call direction gives `16`
+   for `a` and `256` for `b`, usable by a compatible compile-time-required
+   consumer. Use both direct and nested calls and distinct valid input values.
 2. `x := readRuntimeInput();`: a fixed binding is not sufficient to use `x`
    as a compile-time array extent. Under the module-constant option, a runtime
    top-level initializer is rejected or must be moved to an explicit runtime
@@ -281,8 +282,9 @@ Some require later decisions and are intentionally shown as alternatives.
 
 ## Working recommendation
 
-Investigate a stable language-level known-value contract for the simple
-`square` example, independent of optimization flags. Separately investigate
+The user selected a language-level known-value direction for pure computations
+with known inputs, including `square`, independent of optimization flags.
+Investigate its proof and failure boundaries. Separately investigate
 the compile-time-initialized module option, with function declarations not
 invoked merely by definition, mutable globals distinguished from their initial
 values, and explicit runtime initialization available for runtime-only needs.

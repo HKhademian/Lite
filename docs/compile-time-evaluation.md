@@ -50,22 +50,45 @@ can be preserved remain open. The compiler need not already know an external
 input before executing an explicit compile-time operation: its result becomes
 known after the operation successfully completes.
 
-## Possible implicit evaluation
+## Pure calls with known inputs
 
-The user also raised allowing more implicit compile-time evaluation, including
-ordinary function calls whose results can be determined during compilation.
-This remains a **question**, not a selected general rule. For example, whether
-`x := one()` is implicitly known when `one := fn { 1 }` needs a decision;
-the existence of an explicit `comptime` block does not decide it.
+Selected 2026-11-14: a pure, side-effect-free computation with
+compile-time-known inputs is itself compile-time known. In particular,
+`f(known)` is known when `f` and everything its result depends on are known
+and the computation is pure. The same inputs lead to the same result regardless
+of how many times the computation is called. This is a language direction, not
+an optional optimization or an assertion that the current compiler supports it.
+
+```text
+square := fn (x: Int): Int { x * x }
+a := 4 * 4;     /* compile-time known: 16 */
+b := square(a); /* compile-time known: 256 */
+```
+
+The callable's ordinary declaration need not acquire a new `pure` or
+`comptime` marker for this direction. A pure function called with a
+runtime-dependent argument does not thereby produce a known value. Purity and
+known inputs must account for transitive calls and other dependencies, including
+captured state; an external or changing input is not made known merely by
+wrapping it in a function. A known result is distinct from a guarantee that a
+particular machine instruction must or must not execute at runtime.
+
+This direction does not decide the complete purity/effect system, how the
+compiler establishes these facts, incomplete proofs, materializable result
+types, nontermination, faults, resource limits, or their diagnostics. It does
+not require rejecting ordinary runtime calls just because their inputs are not
+known. The proposed explicit runtime counterpart and its interaction with a
+known pure result remain open.
 
 The user's example `a := 4 * 4; b := square(a);` and a possible rule for
 module-level definitions are analyzed in the [implicit-known values and module
 initialization investigation](../research/investigations/INV-062-implicit-known-values-and-module-initialization.md).
-That investigation compares alternatives; it does not select them.
+That investigation records the selected pure-call direction and compares
+remaining alternatives.
 It also investigates an [explicit runtime counterpart](../research/investigations/INV-062-implicit-known-values-and-module-initialization.md#possible-explicit-runtime-counterpart)
 for expressing the opposite stage intent. Its syntax and exact guarantees are open.
 
-The staging boundary matters for effects. Reading a line or fetching a URL
+The staging boundary still matters for effects. Reading a line or fetching a URL
 while compiling is a different observable action from doing so when the
 compiled program runs. Any implicit policy must make clear which invocation
 occurs, at what stage, and how build inputs and repeated builds behave. Do not
@@ -110,6 +133,15 @@ These are contract examples to develop; they are not executable passes:
 
 - **known literal:** a binding initialized with `1` can supply an otherwise
   compatible compile-time-required input without an explicit block.
+- **pure call with known input:** `square(4)` and `square(a)` in the example
+  are known as `16` and `256` respectively without an explicit block; both can
+  feed an otherwise compatible compile-time-required input.
+- **runtime argument:** `square(runtimeValue)` is not known merely because
+  `square` is pure; it remains an ordinary runtime call where permitted.
+- **transitive dependencies:** a function wrapping a read or depending on
+  mutable runtime state is not proven pure and known merely by its name or by
+  an immutable local binding. Nested pure calls with known inputs follow the
+  selected pure-call direction.
 - **runtime dependency:** an immutable binding initialized from runtime input
   cannot supply that input; the source is rejected rather than checked at
   runtime as if it had a static extent.
@@ -140,8 +172,8 @@ independent executable cases when implementation is authorized.
 
 ## Open questions
 
-The exact `comptime` syntax and block result rules; which expressions are
-automatically proven known; eligible value types and materialization; calls
+The exact `comptime` syntax and block result rules; the complete rules for
+proving purity and automatically known values; eligible value types and materialization; calls
 whose operations are unavailable to a compilation host; host versus target
 semantics; effects and their ordering; file/environment dependency tracking,
 caching and rebuilds; execution limits; permission and isolation policies;
