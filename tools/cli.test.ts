@@ -69,8 +69,8 @@ test('lite check routes through ./bin/lite to the standalone checker', () => {
   assert.equal(command('lite-check', ['language/examples/001-double-sum.lts']).status, 0);
 });
 
-test('generated checker and doctor artifacts match their Lite sources and pass strict TS checking', () => {
-  for (const name of ['checker', 'check'] as const) {
+test('generated cli, checker, doctor, verify, and test-runner artifacts match their Lite sources and pass strict TS checking', () => {
+  for (const name of ['cli', 'checker', 'check', 'verify', 'test-runner'] as const) {
     const sourcePath = join(root, `tools/src/${name}.lts`);
     const compiled = compileTs({ text: readFileSync(sourcePath, 'utf8'), name: `tools/src/${name}.lts`, rootPath: sourcePath });
     assert.equal(compiled.status, 0, compiled.stderr.toString());
@@ -79,4 +79,21 @@ test('generated checker and doctor artifacts match their Lite sources and pass s
     const checked = checkTsArtifact(generated);
     assert.equal(checked.status, 0, `${checked.stdout}\n${checked.stderr}`);
   }
+});
+
+test('lite router help, version, and unknown command handling match exit and output contracts', () => {
+  const help = command('lite', ['help']);
+  assert.equal(help.status, 0);
+  assert.match(help.stdout, /^Usage: \.\/bin\/lite <command> \[options\]/);
+  assert.deepEqual(command('lite', ['--help']), help);
+  assert.deepEqual(command('lite', ['-h']), help);
+
+  const missing = command('lite', []);
+  assert.equal(missing.status, 2);
+  assert.equal(missing.stdout, '');
+  assert.equal(missing.stderr, help.stdout);
+
+  const version = command('lite', ['--version']);
+  assert.equal(version.status, 0);
+  assert.match(version.stdout, /^lite cli \S+\n$/);
 });

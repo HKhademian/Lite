@@ -1,0 +1,126 @@
+/** Standalone generated test runner (`lite-test`); handles smoke/fast/full suites and `--cases`. */
+
+io := import "core/io";
+fs := import "core/fs";
+proc := import "core/process";
+text := import "core/text";
+list := import "core/list";
+path := import "util/path";
+project := import "util/project";
+
+smokeTestFiles := fn(): List<String> {
+    files: List<String> = [
+    "../tools/cli.test.ts",
+    "../tools/run.test.ts",
+    "../tools/docs.test.ts",
+    "../tools/release.test.ts",
+    "../compiler/scripts/release-streams.test.ts",
+    "../site/build.test.ts",
+    "source-files.test.ts"
+    ];
+    files
+};
+
+readGeneratedTestFiles := fn(root: String): List<String> {
+    files: mut List<String> = [];
+    readRes := fs.readText(path.resolve(root, "igniter/test-suites.ts"));
+    if not readRes.ok {
+        io.errorLine(readRes.error);
+        io.exit(1);
+    }
+    source := readRes.text;
+    openBracket := text.indexOfText(source, "[", 0);
+    closeBracket := text.indexOfText(source, "]", openBracket + 1);
+    if openBracket < 0 or closeBracket < 0 {
+        io.errorLine("igniter/test-suites.ts: missing generatedTestFiles list");
+        io.exit(1);
+    }
+    var pos := openBracket + 1;
+    loop pos < closeBracket {
+        q1 := text.indexOfText(source, "'", pos);
+        if q1 < 0 or q1 >= closeBracket { break; }
+        q2 := text.indexOfText(source, "'", q1 + 1);
+        if q2 < 0 or q2 >= closeBracket { break; }
+        list.pushBack(mut files, text.slice(source, q1 + 1, q2));
+        pos = q2 + 1;
+    }
+    files
+};
+
+emitErrorChunk := fn(chunk: String): Unit {
+    if chunk == "" { return; }
+    len := text.length(chunk);
+    if text.at(chunk, len - 1) == "\n" {
+        io.errorLine(text.slice(chunk, 0, len - 1));
+    } else {
+        io.errorLine(chunk);
+    }
+};
+
+main := fn(): Unit {
+    args := io.inputArgs();
+    project.handleVersionFlag(args, "tester", "test");
+    argCount := list.listCountText(args);
+    if argCount > 0 and args[0] == "--cases" {
+        rest: mut List<String> = [];
+        var i := 1;
+        loop i < argCount {
+            list.pushBack(mut rest, args[i]);
+            i = i + 1;
+        }
+        project.forwardNode("tools/test.ts", rest);
+    }
+
+    var requestedMode := "";
+    var outputMode := "";
+    loop args as arg {
+        if (arg == "--smoke" or arg == "--fast" or arg == "--full") and requestedMode == "" {
+            requestedMode = arg;
+        } else if (arg == "--verbose" or arg == "--mute" or arg == "--silence") and outputMode == "" {
+            outputMode = arg;
+        } else {
+            io.errorLine("Usage: ./bin/lite test [--smoke|--fast|--full] [--verbose|--mute|--silence]");
+            io.exit(2);
+        }
+    }
+
+    mode := if requestedMode == "" { "--smoke" } else { requestedMode };
+    reporter := if outputMode == "--verbose" { "spec" } else { "dot" };
+    quiet := outputMode == "--mute" or outputMode == "--silence";
+
+    envOverrides: mut List<String> = ["=NODE_TEST_CONTEXT"];
+    nativeVar := proc.envGet("LITE_TEST_NATIVE");
+    if not nativeVar.found or nativeVar.value =!= "1" {
+        list.pushBack(mut envOverrides, "LITE_SKIP_NATIVE=1");
+    }
+    heavyVar := proc.envGet("LITE_TEST_HEAVY");
+    if mode == "--fast" and (not heavyVar.found or heavyVar.value =!= "1") {
+        list.pushBack(mut envOverrides, "LITE_SKIP_HEAVY=1");
+    }
+
+    root := project.findRepoRoot();
+    suites := if mode == "--smoke" { smokeTestFiles() } else { readGeneratedTestFiles(root) };
+    nodeArgs: mut List<String> = ["--test", "--test-reporter=" + reporter];
+    loop suites as suite {
+        list.pushBack(mut nodeArgs, suite);
+    }
+    igniterDir := if root == "" { "igniter" } else { path.resolve(root, "igniter") };
+    res := proc.run(proc.execPath(), nodeArgs, igniterDir, envOverrides, quiet, "");
+    if res.error =!= "" {
+        if outputMode =!= "--silence" {
+            io.errorLine(res.error);
+        }
+        io.exit(1);
+    }
+    if outputMode == "--mute" {
+        if res.status == 0 {
+            io.outputLine("Tests passed.");
+        } else {
+            io.output(res.stdout);
+            emitErrorChunk(res.stderr);
+        }
+    }
+    io.exit(res.status);
+};
+
+main();

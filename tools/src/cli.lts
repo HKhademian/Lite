@@ -1,0 +1,69 @@
+/** Lite CLI router (`./bin/lite`); delegates subcommands to the dedicated tool entrypoints. */
+
+io := import "core/io";
+list := import "core/list";
+project := import "util/project";
+
+usageText := fn(): String {
+    "Usage: ./bin/lite <command> [options]\n\nCommands:\n" +
+    "  check file.lts                            Check source only\n" +
+    "  fmt [--check] [FILE_OR_DIR... | -]        Format Lite source files\n" +
+    "  compile [--target ts] file.lts            Compile to a TS artifact\n" +
+    "  run file.lts [-- argument ...]            Compile to a temporary artifact and execute it\n" +
+    "  verify [--all|--update|--coverage]        Verify generated TS artifacts\n" +
+    "  test [--smoke|--fast|--full] [--verbose|--mute|--silence]  Fast, quiet smoke by default\n" +
+    "  docs [QUERY|--json|--check]               Browse and search documentation\n" +
+    "  doctor [--docs]                           Check repository consistency\n" +
+    "  test --cases [FILTER|FILE.case.json]      Run declarative cases\n" +
+    "  verify FILE.case.json                     Verify one declarative manifest\n" +
+    "  bench OUTPUT [FILTER]                     Benchmark verified cases\n" +
+    "  release OUTPUT [TAG]                      Package a verified source snapshot\n" +
+    "  help                                      Show this help\n\n" +
+    "Compiler entry points: ./bin/lite-compile, ./bin/lite compile\n" +
+    "Target commands: ./bin/lite-compile-ts, ./bin/lite-compile-c\n" +
+    "C output is deferred until after the TS compiler migration.\n" +
+    "Reserved names: ./ltl/lite link"
+};
+
+routeTarget := fn(command: String): String {
+    if command == "check" { return "lite-check"; }
+    if command == "fmt" { return "lite-fmt"; }
+    if command == "compile" { return "lite-compile"; }
+    if command == "run" { return "lite-run"; }
+    if command == "verify" { return "lite-verify"; }
+    if command == "test" { return "lite-test"; }
+    if command == "docs" { return "lite-docs"; }
+    if command == "doctor" { return "lite-doctor"; }
+    if command == "bench" { return "lite-bench"; }
+    if command == "release" { return "lite-release"; }
+    ""
+};
+
+main := fn(): Unit {
+    args := io.inputArgs();
+    project.handleVersionFlag(args, "cli", "cli");
+    argCount := list.listCountText(args);
+    if argCount == 0 {
+        io.errorLine(usageText());
+        io.exit(2);
+    }
+    command := args[0];
+    if command == "help" or command == "--help" or command == "-h" {
+        io.outputLine(usageText());
+        io.exit(0);
+    }
+    target := routeTarget(command);
+    if target == "" {
+        io.errorLine(usageText());
+        io.exit(2);
+    }
+    rest: mut List<String> = [];
+    var i := 1;
+    loop i < argCount {
+        list.pushBack(mut rest, args[i]);
+        i = i + 1;
+    }
+    project.forwardNode("bin/" + target, rest);
+};
+
+main();

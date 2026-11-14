@@ -1,0 +1,18 @@
+/** Standalone verifier command (`lite-verify`); forwards compiler cases or declarative manifests. */
+
+io := import "core/io";
+list := import "core/list";
+text := import "core/text";
+project := import "util/project";
+
+main := fn(): Unit {
+    args := io.inputArgs();
+    project.handleVersionFlag(args, "verifier", "verify");
+    if list.listCountText(args) == 1 and text.endsWith(args[0], ".json") {
+        project.forwardNode("tools/test.ts", args);
+    } else {
+        project.forwardNode("igniter/verify.ts", args);
+    }
+};
+
+main();
