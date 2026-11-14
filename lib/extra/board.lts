@@ -47,6 +47,47 @@ pub drawLine := fn(x0: Int, y0: Int, x1: Int, y1: Int, color: canvas.Color): Uni
     }
 }
 
+/** Draws a crisp 1-pixel circle outline centered at `(cx, cy)` without overlapping octant pixels. */
+pub drawCircle := fn(cx: Int, cy: Int, radius: Int, color: canvas.Color): Unit {
+    if radius < 0 { return; }
+    if radius == 0 {
+        canvas.setPixel(cx, cy, color);
+        return;
+    }
+    var x := radius;
+    var y := 0;
+    var err := 1 - x;
+    loop x >= y {
+        if y == 0 {
+            canvas.setPixel(cx + x, cy, color);
+            canvas.setPixel(cx - x, cy, color);
+            canvas.setPixel(cx, cy + x, color);
+            canvas.setPixel(cx, cy - x, color);
+        } else if x == y {
+            canvas.setPixel(cx + x, cy + y, color);
+            canvas.setPixel(cx - x, cy + y, color);
+            canvas.setPixel(cx + x, cy - y, color);
+            canvas.setPixel(cx - x, cy - y, color);
+        } else {
+            canvas.setPixel(cx + x, cy + y, color);
+            canvas.setPixel(cx - x, cy + y, color);
+            canvas.setPixel(cx + x, cy - y, color);
+            canvas.setPixel(cx - x, cy - y, color);
+            canvas.setPixel(cx + y, cy + x, color);
+            canvas.setPixel(cx - y, cy + x, color);
+            canvas.setPixel(cx + y, cy - x, color);
+            canvas.setPixel(cx - y, cy - x, color);
+        }
+        y += 1;
+        if err < 0 {
+            err += (2 * y) + 1;
+        } else {
+            x -= 1;
+            err += (2 * (y - x)) + 1;
+        }
+    }
+}
+
 /** Fills a raster disk centered at `(cx, cy)` using horizontal span rects. */
 pub fillCircle := fn(cx: Int, cy: Int, radius: Int, color: canvas.Color): Unit {
     if radius < 0 { return; }

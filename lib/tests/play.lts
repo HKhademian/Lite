@@ -57,7 +57,9 @@ test.checkInt("drawn buffer length", 16 * 14, countList(canvas.getPixels()));
 
 board.drawRect(1, 1, 4, 3, canvas.rgb(255, 255, 255));
 board.drawLine(0, 0, 3, 3, canvas.rgb(255, 0, 255));
+board.drawCircle(8, 7, 3, canvas.rgba(100, 180, 255, 160));
 board.fillCircle(8, 7, 1, canvas.rgb(0, 255, 0));
+board.drawSpriteScaled(2, 2, ["#.", ".#"], "#", 2, canvas.rgb(255, 255, 0));
 board.drawSprite(2, 2, ["#.", ".#"], "#", canvas.rgb(255, 255, 0));
 test.checkBool("board helpers emit ops", true, countList(canvas.takeOps()) > 0);
 
