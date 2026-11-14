@@ -34,7 +34,7 @@ pub isNarrowNumericKind := fn(kind: String): Bool {
 }
 
 /** Returns the signed integer bit width for a numeric integer scalar kind. */
-pub narrowIntBits := fn(kind: String): Int {
+pub narrowIntBits := fn(kind: String): Int8 {
     if kind == "Int8" { 8 }
     else if kind == "Int16" { 16 }
     else if kind == "Int32" { 32 }
@@ -50,7 +50,7 @@ pub intKindFits := fn(kind: String, value: Int): Bool {
 }
 
 /** Returns the width rank inside a numeric family (`1` for `Int8`/`Float32`, up to `4` for `Int`/`Float`). */
-pub numericRank := fn(kind: String): Int {
+pub numericRank := fn(kind: String): Int8 {
     if kind == "Int8" or kind == "Float32" { 1 }
     else if kind == "Int16" { 2 }
     else if kind == "Int32" { 3 }
@@ -100,7 +100,7 @@ pub intExactlyFloat32 := fn(input: Int): Bool {
 }
 
 /** Compares a decimal literal's significant digits and power against an excluded overflow midpoint without runtime float math. */
-finiteDigitsWithin := fn(digits: String, fractionCount: Int, exponent: Int, maxPower: Int, midpoint: String): Bool {
+finiteDigitsWithin := fn(digits: String, fractionCount: Int, exponent: Int, maxPower: Int16, midpoint: String): Bool {
     var first := 0;
     loop first < textLib.length(digits) and textLib.at(digits, first) == "0" { first += 1; }
     if first == textLib.length(digits) { return true; }

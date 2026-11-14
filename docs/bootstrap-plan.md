@@ -396,11 +396,11 @@ requires the project owner's explicit selection and an update to this page and t
    compare the declared self-hosting subset. Avoid unrelated syntax, builtins,
    standard modules, host APIs and CLI behavior. The bounded top-level import
    step is already owner-approved for after the current kernel.
-4. **S stays inside L.** Do not use subject `match`, records, enums, unions, Float,
+4. **S stays inside L.** Do not use subject `match`, records, enums, unions, `Float`, `Float32`,
    arrays, closures, `mut` parameters, modules, `finally`, loop metadata or
    compound operators in S unless they have passed the self-host and seed
-   acceptance gates (unnamed `loop`, compound updates, and subjectless Boolean
-   `match { ... }` are accepted in S).
+   acceptance gates (narrow integers `Int8`/`Int16`/`Int32`, unnamed `loop`,
+   compound updates, and subjectless Boolean `match { ... }` are accepted in S).
 5. **No official std.** Shared code lives under a clearly provisional location
    such as `lib/`; it is not `lite-stdlib`, has no stable API, is not imported by
    examples or samples and is not added to the design specification.
@@ -803,7 +803,7 @@ Allowed in S now:
 
 - UTF-8 source; whitespace; semicolons; block/doc comments; nested/raw comments
   if the corpus uses them.
-- Int, String, Bool, Unit; Int64 bounds; String escapes `\n \r \t \" \\`.
+- `Int`, `Int8`, `Int16`, `Int32` (plus `Int64` alias), `String`, `Bool`, `Unit`; Int64 bounds; String escapes `\n \r \t \" \\`.
 - Flat named tuples; `List<T>` whose element is a scalar or flat tuple; function
   signatures; transparent type aliases.
 - Declarations: `:=`, `var`, typed `: Type`, `: mut List<T> = []`, contextual
@@ -828,11 +828,11 @@ Allowed in S now:
 
 Not allowed in S without an owner decision and a plan update:
 
-- `Float`, fixed arrays, subject `match <expr> { ... }`, records, enums, unions, `Option`/`Result`,
+- `Float`, `Float32`, fixed arrays, subject `match <expr> { ... }`, records, enums, unions, `Option`/`Result`,
   recovery, `finally`, loop metadata, closures, first-class callbacks, general
   user `mut` parameters, user generics, maps, zero/reserved locals (compiler
   sources remain integer/text/tuple/list based even where generated targets
-  already compile `Float` and fixed arrays).
+  already compile `Float`, `Float32`, and fixed arrays).
 
 Adding one of these to S means the compiler must parse/check/lower it too. That
 is a deliberate expansion, not an implementation detail.

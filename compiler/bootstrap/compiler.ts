@@ -843,11 +843,11 @@ export function main(lite$write?: (text: string) => void, lite$sourceProviderInp
         void lite_limit;
         let lite_m11_value = lite_input;
         void lite_m11_value;
-        while (((((lite_m11_value) > (lite_limit))) || (((lite_m11_value) < (lite$negateInt(lite_limit, 3729)))))) {
-            if (((lite$remainderInt(lite_m11_value, 2n, 3755)) !== (0n))) {
+        while (((((lite_m11_value) > (lite_limit))) || (((lite_m11_value) < (lite$negateInt(lite_limit, 3731)))))) {
+            if (((lite$remainderInt(lite_m11_value, 2n, 3757)) !== (0n))) {
                 return false;
             }
-            lite_m11_value = lite$divideInt(lite_m11_value, 2n, 3797);
+            lite_m11_value = lite$divideInt(lite_m11_value, 2n, 3799);
         }
         return true;
     }
@@ -871,14 +871,14 @@ export function main(lite$write?: (text: string) => void, lite$sourceProviderInp
         let lite_m11_first = 0n;
         void lite_m11_first;
         while (((((lite_m11_first) < (liteFn_m6_length(lite_digits)))) && (((liteFn_m6_at(lite_digits, lite_m11_first)) === ("0"))))) {
-            lite_m11_first = lite$addInt(lite_m11_first, 1n, 4540);
+            lite_m11_first = lite$addInt(lite_m11_first, 1n, 4544);
         }
         if (((lite_m11_first) === (liteFn_m6_length(lite_digits)))) {
             return true;
         }
         const lite_m11_significant = liteFn_m6_slice(lite_digits, lite_m11_first, liteFn_m6_length(lite_digits));
         void lite_m11_significant;
-        const lite_m11_power = lite$addInt(lite$subtractInt(liteFn_m6_length(lite_m11_significant), lite_fractionCount, 4718), lite_exponent, 4734);
+        const lite_m11_power = lite$addInt(lite$subtractInt(liteFn_m6_length(lite_m11_significant), lite_fractionCount, 4722), lite_exponent, 4738);
         void lite_m11_power;
         if (((lite_m11_power) < (lite_maxPower))) {
             return true;
@@ -904,7 +904,7 @@ export function main(lite$write?: (text: string) => void, lite$sourceProviderInp
             if (((lite_m11_left) > (lite_m11_right))) {
                 return false;
             }
-            lite_m11_index = lite$addInt(lite_m11_index, 1n, 5334);
+            lite_m11_index = lite$addInt(lite_m11_index, 1n, 5338);
         }
         return false;
     }
@@ -938,13 +938,13 @@ export function main(lite$write?: (text: string) => void, lite$sourceProviderInp
             const lite_m11_digit = liteFn_m6_digitValue(liteFn_m6_at(lite_source, lite_m11_cursor));
             void lite_m11_digit;
             if ((!(lite_m11_outsideInt))) {
-                if (((lite_m11_magnitude) < (lite$divideInt((lite$addInt((-9223372036854775808n), lite_m11_digit, 7151)), 10n, 7160)))) {
+                if (((lite_m11_magnitude) < (lite$divideInt((lite$addInt((-9223372036854775808n), lite_m11_digit, 7155)), 10n, 7164)))) {
                     lite_m11_outsideInt = true;
                 } else {
-                    lite_m11_magnitude = lite$subtractInt(lite$multiplyInt(lite_m11_magnitude, 10n, 7229), lite_m11_digit, 7234);
+                    lite_m11_magnitude = lite$subtractInt(lite$multiplyInt(lite_m11_magnitude, 10n, 7233), lite_m11_digit, 7238);
                 }
             }
-            lite_m11_cursor = lite$addInt(lite_m11_cursor, 1n, 7270);
+            lite_m11_cursor = lite$addInt(lite_m11_cursor, 1n, 7274);
         }
         const lite_m11_integerEnd = lite_m11_cursor;
         void lite_m11_integerEnd;
@@ -954,12 +954,12 @@ export function main(lite$write?: (text: string) => void, lite$sourceProviderInp
         void lite_m11_fractionEnd;
         let lite_m11_floating = false;
         void lite_m11_floating;
-        if (((((((lite$addInt(lite_m11_cursor, 1n, 7413)) < (lite_m11_size))) && (((liteFn_m6_at(lite_source, lite_m11_cursor)) === ("."))))) && (liteFn_m6_isDigit(liteFn_m6_at(lite_source, lite$addInt(lite_m11_cursor, 1n, 7508)))))) {
+        if (((((((lite$addInt(lite_m11_cursor, 1n, 7417)) < (lite_m11_size))) && (((liteFn_m6_at(lite_source, lite_m11_cursor)) === ("."))))) && (liteFn_m6_isDigit(liteFn_m6_at(lite_source, lite$addInt(lite_m11_cursor, 1n, 7512)))))) {
             lite_m11_floating = true;
-            lite_m11_cursor = lite$addInt(lite_m11_cursor, 1n, 7556);
+            lite_m11_cursor = lite$addInt(lite_m11_cursor, 1n, 7560);
             lite_m11_fractionStart = lite_m11_cursor;
             while (((((lite_m11_cursor) < (lite_m11_size))) && (liteFn_m6_isDigit(liteFn_m6_at(lite_source, lite_m11_cursor))))) {
-                lite_m11_cursor = lite$addInt(lite_m11_cursor, 1n, 7678);
+                lite_m11_cursor = lite$addInt(lite_m11_cursor, 1n, 7682);
             }
             lite_m11_fractionEnd = lite_m11_cursor;
         }
@@ -971,32 +971,32 @@ export function main(lite$write?: (text: string) => void, lite$sourceProviderInp
             lite_m11_floating = true;
             const lite_m11_exponentAt = lite_m11_cursor;
             void lite_m11_exponentAt;
-            lite_m11_cursor = lite$addInt(lite_m11_cursor, 1n, 7948);
+            lite_m11_cursor = lite$addInt(lite_m11_cursor, 1n, 7952);
             let lite_m11_negativeExponent = false;
             void lite_m11_negativeExponent;
             if (((((lite_m11_cursor) < (lite_m11_size))) && ((((((liteFn_m6_at(lite_source, lite_m11_cursor)) === ("+"))) || (((liteFn_m6_at(lite_source, lite_m11_cursor)) === ("-")))))))) {
                 lite_m11_negativeExponent = ((liteFn_m6_at(lite_source, lite_m11_cursor)) === ("-"));
-                lite_m11_cursor = lite$addInt(lite_m11_cursor, 1n, 8182);
+                lite_m11_cursor = lite$addInt(lite_m11_cursor, 1n, 8186);
             }
             const lite_m11_exponentStart = lite_m11_cursor;
             void lite_m11_exponentStart;
-            const lite_m11_limit = lite$addInt(lite_m11_size, 310n, 8253);
+            const lite_m11_limit = lite$addInt(lite_m11_size, 310n, 8257);
             void lite_m11_limit;
             while (((((lite_m11_cursor) < (lite_m11_size))) && (liteFn_m6_isDigit(liteFn_m6_at(lite_source, lite_m11_cursor))))) {
                 const lite_m11_digit = liteFn_m6_digitValue(liteFn_m6_at(lite_source, lite_m11_cursor));
                 void lite_m11_digit;
-                if (((lite_m11_exponent) > (lite$divideInt((lite$subtractInt(lite_m11_limit, lite_m11_digit, 8439)), 10n, 8448)))) {
+                if (((lite_m11_exponent) > (lite$divideInt((lite$subtractInt(lite_m11_limit, lite_m11_digit, 8443)), 10n, 8452)))) {
                     lite_m11_exponent = lite_m11_limit;
                 } else {
-                    lite_m11_exponent = lite$addInt(lite$multiplyInt(lite_m11_exponent, 10n, 8514), lite_m11_digit, 8519);
+                    lite_m11_exponent = lite$addInt(lite$multiplyInt(lite_m11_exponent, 10n, 8518), lite_m11_digit, 8523);
                 }
-                lite_m11_cursor = lite$addInt(lite_m11_cursor, 1n, 8549);
+                lite_m11_cursor = lite$addInt(lite_m11_cursor, 1n, 8553);
             }
             if (((lite_m11_cursor) === (lite_m11_exponentStart))) {
                 lite_m11_exponentMissingAt = lite_m11_exponentAt;
             }
             if (lite_m11_negativeExponent) {
-                lite_m11_exponent = lite$negateInt(lite_m11_exponent, 8677);
+                lite_m11_exponent = lite$negateInt(lite_m11_exponent, 8681);
             }
         }
         return { next: lite_m11_cursor, integerEnd: lite_m11_integerEnd, fractionStart: lite_m11_fractionStart, fractionEnd: lite_m11_fractionEnd, exponent: lite_m11_exponent, floating: lite_m11_floating, exponentMissingAt: lite_m11_exponentMissingAt, magnitude: lite_m11_magnitude, outsideInt: lite_m11_outsideInt };

@@ -19,7 +19,9 @@ now supplies optional String prompts on inputAll/inputLine/inputInt/inputFloat
 and replaces the report builtin with output and outputLine. The former adds no
 newline; the latter always adds one, including with zero arguments. Generated TS
 supports scalar/Unit, flat named-tuple, fixed-array, and List display; the
-generated compiler also supports `Float` expressions, fixed arrays, scalar and
+generated compiler also supports `Int8`/`Int16`/`Int32`/`Float32`/`Float`
+numeric widths (promotion, lossless widening, checked narrow arithmetic, and
+binary32 rounding), fixed arrays, scalar and
 indexed compound updates, `**`, `core/*` module imports, tuple `=name`
 shorthand, fixed-parameter named/`=name` call routing, `Never`-valued `io.exit`
 (with default `io.exit()`), unnamed `loop sequence { ... }` traversal,
@@ -73,9 +75,10 @@ bootstrap subset **L** defined in the
 [bootstrap plan](../docs/bootstrap-plan.md#compiler-source-subset-l). Namespace
 modules (`import "..."`, `pub`), tuple `=name` shorthand, named/`=name` call
 routing (including `self(...)`), scalar compound updates (`+=`, `-=`, `*=`, `/=`, `%=`, `:/=`, `:%=`), `**`,
+narrow fixed integer widths (`Int8`, `Int16`, `Int32`),
 unnamed `loop sequence { ... }` traversal, and subjectless Boolean `match { ... }`
 have passed the self-host and seed acceptance gates and are part of S. Do not
-add subject `match <expr> { ... }`, records, enums, unions, `Float`, arrays,
+add subject `match <expr> { ... }`, records, enums, unions, `Float`, `Float32`, arrays,
 closures, general user `mut` parameters, `finally`, or loop metadata to S until
 they pass those gates too: the selected generated compiler must parse, check and
 lower every construct used in S.
