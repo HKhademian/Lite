@@ -1487,7 +1487,8 @@ pub skipAliasString := fn(source: String, position: Int): Int {
 
 /** Collects distinct target helper call names, skipping quoted text and consuming whole identifiers. Existing names avoid duplicate work across items. */
 pub targetCodeCalls := fn(code: String, existing: String): String {
-    if textLib.indexOfText(code, "lite", 0) < 0 and textLib.indexOfText(code, "lt_", 0) < 0 { return existing; }
+    if textLib.indexOfText(code, "lite", 0) < 0 and textLib.indexOfText(code, "lt_", 0) < 0 and
+        textLib.indexOfText(code, "finally", 0) < 0 { return existing; }
     var calls := existing;
     var cursor := 0;
     loop cursor < textLib.length(code) {
@@ -1500,14 +1501,22 @@ pub targetCodeCalls := fn(code: String, existing: String): String {
             loop cursor < textLib.length(code) and textLib.at(code, cursor) == "$" {
                 cursor = textLib.skipName(code, cursor + 1);
             }
+            name := textLib.slice(code, start, cursor);
             if cursor < textLib.length(code) and textLib.at(code, cursor) == "(" {
-                name := textLib.slice(code, start, cursor);
                 if (textLib.startsWithAt(name, 0, "lite$") and not textLib.startsWithAt(name, 0, "lite$m$")) or
                     textLib.startsWithAt(name, 0, "lite_") or
                     (textLib.startsWithAt(name, 0, "lt_") and not textLib.startsWithAt(name, 0, "lt_fn_") and
                         not textLib.startsWithAt(name, 0, "lt_m_") and not textLib.startsWithAt(name, 0, "lt_s")) {
                     token := name + "(|";
                     if textLib.indexOfText(calls, "|" + token, 0) < 0 { calls = calls + token; }
+                }
+            } else if name == "finally" {
+                var afterFin := cursor;
+                loop afterFin < textLib.length(code) and (textLib.at(code, afterFin) == " " or textLib.at(code, afterFin) == "\t" or textLib.at(code, afterFin) == "\n") {
+                    afterFin = afterFin + 1;
+                }
+                if afterFin < textLib.length(code) and textLib.at(code, afterFin) == "{" {
+                    if textLib.indexOfText(calls, "|lite$finally(|", 0) < 0 { calls = calls + "lite$finally(|"; }
                 }
             }
         } else { cursor = cursor + 1; }
@@ -2611,6 +2620,16 @@ scanTrailingThenEnd := fn(source: String, position: Int, prefix: String, require
     thenEnd
 }
 
+/** Scans an optional trailing `finally { ... }` clause; returns `position` if absent, or `-1` if malformed. */
+scanTrailingFinallyEnd := fn(source: String, position: Int, prefix: String): Int {
+    size := textLib.length(source);
+    after := skipTrivia(source, position, prefix);
+    if after >= size or not textLib.wordAt(source, after, "finally") { return position; }
+    finOpen := skipTrivia(source, after + 7, prefix);
+    if finOpen >= size or textLib.at(source, finOpen) =!= "{" { return -1; }
+    scanBraceEnd(source, finOpen, prefix)
+}
+
 /** Scans the raw `[@tag] if ... [else ...]` header+branches ending before any `then` clause; returns -1 on mismatch. */
 scanRawIfChainEnd := fn(source: String, position: Int, prefix: String, allowPartial: Bool): Int {
     size := textLib.length(source);
@@ -2655,7 +2674,8 @@ scanIfChainEnd := fn(source: String, position: Int, prefix: String, requireValue
         if not textLib.wordAt(source, after, "else") {
             if not allowPartial { return -1; }
             if textLib.wordAt(source, after, "then") { return -1; }
-            return if requireValueBranches and not allBranchesValue { -1 } else { end };
+            if requireValueBranches and not allBranchesValue { return -1; }
+            return scanTrailingFinallyEnd(source, end, prefix);
         }
         afterElse := skipTrivia(source, after + 4, prefix);
         if textLib.wordAt(source, afterElse, "if") {
@@ -2666,10 +2686,14 @@ scanIfChainEnd := fn(source: String, position: Int, prefix: String, requireValue
             if finalEnd < 0 { return -1; }
             if requireValueBranches and not valueIfBranchAt(source, afterElse, finalEnd - 1, prefix) { allBranchesValue = false; }
             thenEnd := scanTrailingThenEnd(source, finalEnd, prefix, requireValueBranches);
-            if thenEnd == -2 {
-                return if requireValueBranches and not allBranchesValue { -1 } else { finalEnd };
-            }
-            return thenEnd;
+            if thenEnd == -1 { return -1; }
+            baseEnd := if thenEnd == -2 {
+                if requireValueBranches and not allBranchesValue { -1 } else { finalEnd }
+            } else {
+                thenEnd
+            };
+            if baseEnd < 0 { return -1; }
+            return scanTrailingFinallyEnd(source, baseEnd, prefix);
         }
     }
     -1
@@ -2734,10 +2758,14 @@ scanValueMatchEnd := fn(source: String, position: Int, prefix: String, requireVa
         if isFallback {
             if afterArm < size and textLib.at(source, afterArm) == "}" {
                 thenEnd := scanTrailingThenEnd(source, afterArm + 1, prefix, requireValueBranches);
-                if thenEnd == -2 {
-                    return if requireValueBranches and not allArmsValue { -1 } else { afterArm + 1 };
-                }
-                return thenEnd;
+                if thenEnd == -1 { return -1; }
+                baseEnd := if thenEnd == -2 {
+                    if requireValueBranches and not allArmsValue { -1 } else { afterArm + 1 }
+                } else {
+                    thenEnd
+                };
+                if baseEnd < 0 { return -1; }
+                return scanTrailingFinallyEnd(source, baseEnd, prefix);
             }
             return -1;
         }
@@ -3270,6 +3298,46 @@ parseBinaryCtx := fn(target: String, source: String, position: Int, prefix: Stri
                 left = self(target, source, afterTag, prefix, locals, functions, params, currentName,
                     pass2Expected, 0, appendCtx(ctxs, pass2Ctx), iifeDepth + 1, false, "tagged");
             }
+            afterTaggedClose := skipTrivia(source, left.next, prefix);
+            if afterTaggedClose < tagSourceSize and textLib.wordAt(source, afterTaggedClose, "then") {
+                failAt(source, afterTaggedClose, prefix, "then requires an if, match, or loop");
+            }
+            if afterTaggedClose < tagSourceSize and textLib.wordAt(source, afterTaggedClose, "finally") {
+                afterFinKw := skipTrivia(source, afterTaggedClose + 7, prefix);
+                rejectMisplacedTag(source, afterFinKw, prefix, "block tag cannot appear after finally");
+                finOpen := expectSymbol(source, afterFinKw, "{", prefix);
+                taggedFinCtx := (id = blockId, tag = tagInfo.tag, kind = "block", phase = "finally",
+                    iifeDepth = iifeDepth + 1, valKind = left.kind, valVar = blockValVar, label = blockLabel,
+                    iterLabel = "", countVar = "", itemVar = "", itemKind = "", indexVar = "", hasIndex = false);
+                finBarrierCtx := (id = 0, tag = "", kind = "finally", phase = "finally",
+                    iifeDepth = iifeDepth + 1, valKind = "Unit", valVar = "", label = "",
+                    iterLabel = "", countVar = "", itemVar = "", itemKind = "", indexVar = "", hasIndex = false);
+                finCtxs := appendCtx(appendCtx(ctxs, taggedFinCtx), finBarrierCtx);
+                finParsed := self(target, source, finOpen - 1, prefix, locals, functions, params, currentName,
+                    "", 0, finCtxs, iifeDepth + 1, inferMode, "finally");
+                afterFinClose := skipTrivia(source, finParsed.next, prefix);
+                if afterFinClose < tagSourceSize and textLib.wordAt(source, afterFinClose, "then") {
+                    failAt(source, afterFinClose, prefix, "then must appear before finally");
+                }
+                if afterFinClose < tagSourceSize and textLib.wordAt(source, afterFinClose, "finally") {
+                    failAt(source, afterFinClose, prefix, "duplicate finally block");
+                }
+                finalTaggedKind := if finParsed.kind == "Never" { "Never" } else { left.kind };
+                if inferMode {
+                    mergedTaggedMarkers := collectParsedMarkers(collectParsedMarkers("", left), finParsed);
+                    left = withMarkers((kind = finalTaggedKind, code = "", intValue = 0, textValue = "", constant = false, next = finParsed.next), mergedTaggedMarkers);
+                } else {
+                    taggedTryBody := if left.kind == "Unit" {
+                        "void (" + left.code + "); return undefined;"
+                    } else if left.kind == "Never" {
+                        "(" + left.code + ");"
+                    } else {
+                        "return " + left.code + ";"
+                    };
+                    left = (kind = finalTaggedKind, code = "(() => { try { " + taggedTryBody + " } finally { " + finParsed.code + " } })()",
+                        intValue = 0, textValue = "", constant = false, next = finParsed.next);
+                }
+            }
         } else if afterTag < tagSourceSize and textLib.wordAt(source, afterTag, "if") {
             condParseKind = "if";
             condParseStart = afterTag;
@@ -3292,9 +3360,12 @@ parseBinaryCtx := fn(target: String, source: String, position: Int, prefix: Stri
         isTaggedBody := bodySink == "tagged";
         isLoopBody := bodySink == "loopBody";
         isStmtBody := bodySink == "stmt";
-        allowOutput := isTaggedBody or isLoopBody or isStmtBody or (bodySink == "exprOut");
-        bodyDepth := if isTaggedBody or isLoopBody or isStmtBody { iifeDepth } else { iifeDepth + 1 };
-        stmtReturnPrefix := if isTaggedBody or isLoopBody or isStmtBody { "" } else { "return " };
+        isFinallyBody := bodySink == "finally";
+        isBranchBody := bodySink == "branch";
+        isStandaloneBlock := not isTaggedBody and not isLoopBody and not isStmtBody and not isFinallyBody and not isBranchBody;
+        allowOutput := isTaggedBody or isLoopBody or isStmtBody or isFinallyBody or isBranchBody or (bodySink == "exprOut");
+        bodyDepth := if isTaggedBody or isLoopBody or isStmtBody or isFinallyBody { iifeDepth } else { iifeDepth + 1 };
+        stmtReturnPrefix := if isTaggedBody or isLoopBody or isStmtBody or isFinallyBody { "" } else { "return " };
         blockLocals: mut List<Local> = [];
         loop locals as entry { listLib.pushBack(mut blockLocals, entry); }
         statements: mut List<String> = [];
@@ -3430,13 +3501,45 @@ parseBinaryCtx := fn(target: String, source: String, position: Int, prefix: Stri
                 }
             } else if chAtCursor == "{" {
                 braceEnd := scanBraceEnd(source, cursor, prefix);
-                afterBrace := if braceEnd >= 0 { skipItemSeparators(source, braceEnd, prefix) } else { -1 };
+                fullBraceEnd := if braceEnd >= 0 { scanTrailingFinallyEnd(source, braceEnd, prefix) } else { -1 };
+                afterBrace := if fullBraceEnd >= 0 { skipItemSeparators(source, fullBraceEnd, prefix) } else { -1 };
                 atTailBrace := (not isStmtBody) and afterBrace >= 0 and afterBrace < blockSourceSize and textLib.at(source, afterBrace) == "}";
                 if not atTailBrace {
                     isStatement = true;
                     stmtBlock := self(target, source, cursor, prefix, blockLocals, functions, params, currentName, "", 0, ctxs, bodyDepth, inferMode, "stmt");
                     if inferMode { blockMarkers = collectParsedMarkers(blockMarkers, stmtBlock); }
-                    if not blockExits {
+                    afterStmtBlock := skipTrivia(source, stmtBlock.next, prefix);
+                    if afterStmtBlock < blockSourceSize and textLib.wordAt(source, afterStmtBlock, "then") {
+                        failAt(source, afterStmtBlock, prefix, "then requires an if, match, or loop");
+                    }
+                    var stmtEndPos := stmtBlock.next;
+                    if afterStmtBlock < blockSourceSize and textLib.wordAt(source, afterStmtBlock, "finally") {
+                        if target =!= "ts" {
+                            failAt(source, afterStmtBlock, prefix, "C backend does not support finally blocks yet");
+                        }
+                        afterStmtFinKw := skipTrivia(source, afterStmtBlock + 7, prefix);
+                        rejectMisplacedTag(source, afterStmtFinKw, prefix, "block tag cannot appear after finally");
+                        stmtFinOpen := expectSymbol(source, afterStmtFinKw, "{", prefix);
+                        stmtFinCtx := (id = 0, tag = "", kind = "finally", phase = "finally",
+                            iifeDepth = bodyDepth, valKind = "Unit", valVar = "", label = "",
+                            iterLabel = "", countVar = "", itemVar = "", itemKind = "", indexVar = "", hasIndex = false);
+                        stmtFin := self(target, source, stmtFinOpen - 1, prefix, blockLocals, functions, params, currentName,
+                            "", 0, appendCtx(ctxs, stmtFinCtx), bodyDepth, inferMode, "finally");
+                        afterStmtFinClose := skipTrivia(source, stmtFin.next, prefix);
+                        if afterStmtFinClose < blockSourceSize and textLib.wordAt(source, afterStmtFinClose, "then") {
+                            failAt(source, afterStmtFinClose, prefix, "then must appear before finally");
+                        }
+                        if afterStmtFinClose < blockSourceSize and textLib.wordAt(source, afterStmtFinClose, "finally") {
+                            failAt(source, afterStmtFinClose, prefix, "duplicate finally block");
+                        }
+                        if inferMode { blockMarkers = collectParsedMarkers(blockMarkers, stmtFin); }
+                        if not blockExits {
+                            listLib.pushBack(mut statements, "try { " + stmtBlock.code + " } finally { " + stmtFin.code + " }");
+                            if stmtBlock.kind == "Never" or stmtFin.kind == "Never" { blockExits = true; }
+                            statementCount = statementCount + 1;
+                        }
+                        stmtEndPos = stmtFin.next;
+                    } else if not blockExits {
                         if stmtBlock.code =!= "" {
                             listLib.pushBack(mut statements, "{ " + stmtBlock.code + " }");
                         }
@@ -3444,8 +3547,8 @@ parseBinaryCtx := fn(target: String, source: String, position: Int, prefix: Stri
                         statementCount = statementCount + 1;
                     }
                     blockConstant = false;
-                    stmtNext := consumeStatementEnd(source, stmtBlock.next, prefix);
-                    cursor = if stmtNext >= 0 { stmtNext } else { stmtBlock.next };
+                    stmtNext := consumeStatementEnd(source, stmtEndPos, prefix);
+                    cursor = if stmtNext >= 0 { stmtNext } else { stmtEndPos };
                 }
             } else if chAtCursor == "@" {
                 tagPeek := parseTagAt(source, cursor, prefix);
@@ -3625,6 +3728,9 @@ parseBinaryCtx := fn(target: String, source: String, position: Int, prefix: Stri
                     } else {
                         fnIdx := findCtxByKindIndex(ctxs, "fn");
                         if fnIdx < 0 {
+                            if hasFinallyAbove(ctxs, -1) {
+                                failAt(source, itemStart, prefix, "cannot return out of finally block");
+                            }
                             failAt(source, itemStart, prefix, "return outside a function");
                         }
                         if hasFinallyAbove(ctxs, fnIdx) {
@@ -3704,6 +3810,9 @@ parseBinaryCtx := fn(target: String, source: String, position: Int, prefix: Stri
                     } else {
                         targetLoopIdx = findActiveLoopCtxIndex(ctxs);
                         if targetLoopIdx < 0 {
+                            if hasFinallyAbove(ctxs, -1) {
+                                failAt(source, itemStart, prefix, "cannot " + itemName + " out of finally block");
+                            }
                             failAt(source, itemStart, prefix, itemName + " outside loop");
                         }
                     }
@@ -3802,7 +3911,8 @@ parseBinaryCtx := fn(target: String, source: String, position: Int, prefix: Stri
                     failAt(source, itemStart, prefix, "unexpected else");
                 } else if itemName == "if" {
                     rawStmtIfEnd := scanRawIfChainEnd(source, itemStart, prefix, true);
-                    stmtIfHasThen := rawStmtIfEnd >= 0 and textLib.wordAt(source, skipTrivia(source, rawStmtIfEnd, prefix), "then");
+                    afterRawStmtIf := if rawStmtIfEnd >= 0 { skipTrivia(source, rawStmtIfEnd, prefix) } else { -1 };
+                    stmtIfHasThen := afterRawStmtIf >= 0 and (textLib.wordAt(source, afterRawStmtIf, "then") or textLib.wordAt(source, afterRawStmtIf, "finally"));
                     var useValueIf := stmtIfHasThen;
                     if (not isStmtBody) and not useValueIf {
                         valIfEnd := scanValueIfEnd(source, itemStart, prefix, false);
@@ -3883,7 +3993,8 @@ parseBinaryCtx := fn(target: String, source: String, position: Int, prefix: Stri
                         unsupportedFeature(source, itemStart, "match", prefix);
                     }
                     rawStmtMatchEnd := scanRawMatchEnd(source, itemStart, prefix);
-                    stmtMatchHasThen := rawStmtMatchEnd >= 0 and textLib.wordAt(source, skipTrivia(source, rawStmtMatchEnd, prefix), "then");
+                    afterRawStmtMatch := if rawStmtMatchEnd >= 0 { skipTrivia(source, rawStmtMatchEnd, prefix) } else { -1 };
+                    stmtMatchHasThen := afterRawStmtMatch >= 0 and (textLib.wordAt(source, afterRawStmtMatch, "then") or textLib.wordAt(source, afterRawStmtMatch, "finally"));
                     var useValueMatch := stmtMatchHasThen;
                     if (not isStmtBody) and target == "ts" and not useValueMatch {
                         valMatchEnd := scanValueMatchEnd(source, itemStart, prefix, false);
@@ -4350,6 +4461,22 @@ parseBinaryCtx := fn(target: String, source: String, position: Int, prefix: Stri
             stmtKind := if blockExits { "Never" } else { "Unit" };
             left = withMarkers((kind = stmtKind, code = stmtCode, intValue = 0, textValue = "", constant = false, next = cursor),
                 if inferMode { blockMarkers } else { "" });
+        } else if isFinallyBody {
+            if not blockExits and sawTailExpr {
+                if blockKind =!= "Unit" and blockKind =!= "Never" {
+                    failAt(source, start, prefix, "finally block must produce Unit, got " + displayKind(blockKind));
+                }
+                if blockKind == "Never" {
+                    listLib.pushBack(mut statements, "(" + blockCode + ");");
+                    blockExits = true;
+                } else if blockCode =!= targetUnitLiteralCode(target) {
+                    listLib.pushBack(mut statements, "void (" + blockCode + ");");
+                }
+            }
+            finCode := textLib.joinTexts(statements, " ");
+            finKind := if blockExits { "Never" } else { "Unit" };
+            left = withMarkers((kind = finKind, code = finCode, intValue = 0, textValue = "", constant = false, next = cursor),
+                if inferMode { blockMarkers } else { "" });
         } else if isLoopBody {
             topLoopCtx := ctxs[ctxCount(ctxs) - 1];
             topLoopId := topLoopCtx.id;
@@ -4482,31 +4609,87 @@ parseBinaryCtx := fn(target: String, source: String, position: Int, prefix: Stri
                 left = withMarkers((kind = topValKind, code = finalIife, intValue = 0, textValue = "", constant = false, next = cursor),
                     if inferMode { filterOtherMarkers(blockMarkers, topId) } else { "" });
             }
-        } else if blockExits {
-            if target =!= "ts" {
-                failAt(source, start, prefix, "C backend does not support statement-bearing value blocks yet");
-            }
-            left = withMarkers((kind = "Never", code = "(() => { " + textLib.joinTexts(statements, " ") + " })()",
-                intValue = 0, textValue = "", constant = false, next = cursor),
-                if inferMode { blockMarkers } else { "" });
-        } else if statementCount == 0 {
-            baseBlock := (kind = blockKind, code = blockCode, intValue = blockInt, textValue = blockText, constant = blockConstant, next = cursor);
-            left = if inferMode and blockMarkers =!= "" { withMarkers(baseBlock, blockMarkers) } else { baseBlock };
         } else {
-            if target =!= "ts" {
-                failAt(source, start, prefix, "C backend does not support statement-bearing value blocks yet");
+            var hasStandaloneFinally := false;
+            var standaloneFinEnd := -1;
+            if isStandaloneBlock {
+                afterUntaggedClose := skipTrivia(source, cursor, prefix);
+                if afterUntaggedClose < blockSourceSize and textLib.wordAt(source, afterUntaggedClose, "then") {
+                    failAt(source, afterUntaggedClose, prefix, "then requires an if, match, or loop");
+                }
+                if afterUntaggedClose < blockSourceSize and textLib.wordAt(source, afterUntaggedClose, "finally") {
+                    if target =!= "ts" {
+                        failAt(source, afterUntaggedClose, prefix, "C backend does not support finally blocks yet");
+                    }
+                    hasStandaloneFinally = true;
+                    afterFinKw := skipTrivia(source, afterUntaggedClose + 7, prefix);
+                    rejectMisplacedTag(source, afterFinKw, prefix, "block tag cannot appear after finally");
+                    finOpen := expectSymbol(source, afterFinKw, "{", prefix);
+                    finBarrierCtx := (id = 0, tag = "", kind = "finally", phase = "finally",
+                        iifeDepth = bodyDepth, valKind = "Unit", valVar = "", label = "",
+                        iterLabel = "", countVar = "", itemVar = "", itemKind = "", indexVar = "", hasIndex = false);
+                    finParsed := self(target, source, finOpen - 1, prefix, locals, functions, params, currentName,
+                        "", 0, appendCtx(ctxs, finBarrierCtx), bodyDepth, inferMode, "finally");
+                    afterFinClose := skipTrivia(source, finParsed.next, prefix);
+                    if afterFinClose < blockSourceSize and textLib.wordAt(source, afterFinClose, "then") {
+                        failAt(source, afterFinClose, prefix, "then must appear before finally");
+                    }
+                    if afterFinClose < blockSourceSize and textLib.wordAt(source, afterFinClose, "finally") {
+                        failAt(source, afterFinClose, prefix, "duplicate finally block");
+                    }
+                    if inferMode { blockMarkers = collectParsedMarkers(blockMarkers, finParsed); }
+                    stmtsJoined := textLib.joinTexts(statements, " ");
+                    standaloneTryBody := if blockExits {
+                        stmtsJoined
+                    } else if blockKind == "Unit" {
+                        unitRet := if blockCode == targetUnitLiteralCode(target) {
+                            "return undefined;"
+                        } else {
+                            "void (" + blockCode + "); return undefined;"
+                        };
+                        if stmtsJoined == "" { unitRet } else { stmtsJoined + " " + unitRet }
+                    } else if blockKind == "Never" {
+                        if stmtsJoined == "" { "return " + blockCode + ";" } else { stmtsJoined + " return " + blockCode + ";" }
+                    } else {
+                        valRet := "return " + copiedValueCode(target, blockKind, blockCode) + ";";
+                        if stmtsJoined == "" { valRet } else { stmtsJoined + " " + valRet }
+                    };
+                    finalStandaloneKind := if blockExits or finParsed.kind == "Never" { "Never" } else { blockKind };
+                    standaloneFinEnd = finParsed.next;
+                    left = withMarkers((kind = finalStandaloneKind,
+                        code = "(() => { try { " + standaloneTryBody + " } finally { " + finParsed.code + " } })()",
+                        intValue = 0, textValue = "", constant = false, next = standaloneFinEnd),
+                        if inferMode { blockMarkers } else { "" });
+                }
             }
-            returnCode := if blockKind == "Unit" {
-                if blockCode == targetUnitLiteralCode(target) { "return undefined;" }
-                else { "void (" + blockCode + "); return undefined;" }
-            } else if blockKind == "Never" {
-                "return " + blockCode + ";"
-            } else {
-                "return " + copiedValueCode(target, blockKind, blockCode) + ";"
-            };
-            left = withMarkers((kind = blockKind, code = "(() => { " + textLib.joinTexts(statements, " ") + " " + returnCode + " })()",
-                intValue = 0, textValue = "", constant = false, next = cursor),
-                if inferMode { blockMarkers } else { "" });
+            if not hasStandaloneFinally {
+                if blockExits {
+                    if target =!= "ts" {
+                        failAt(source, start, prefix, "C backend does not support statement-bearing value blocks yet");
+                    }
+                    left = withMarkers((kind = "Never", code = "(() => { " + textLib.joinTexts(statements, " ") + " })()",
+                        intValue = 0, textValue = "", constant = false, next = cursor),
+                        if inferMode { blockMarkers } else { "" });
+                } else if statementCount == 0 {
+                    baseBlock := (kind = blockKind, code = blockCode, intValue = blockInt, textValue = blockText, constant = blockConstant, next = cursor);
+                    left = if inferMode and blockMarkers =!= "" { withMarkers(baseBlock, blockMarkers) } else { baseBlock };
+                } else {
+                    if target =!= "ts" {
+                        failAt(source, start, prefix, "C backend does not support statement-bearing value blocks yet");
+                    }
+                    returnCode := if blockKind == "Unit" {
+                        if blockCode == targetUnitLiteralCode(target) { "return undefined;" }
+                        else { "void (" + blockCode + "); return undefined;" }
+                    } else if blockKind == "Never" {
+                        "return " + blockCode + ";"
+                    } else {
+                        "return " + copiedValueCode(target, blockKind, blockCode) + ";"
+                    };
+                    left = withMarkers((kind = blockKind, code = "(() => { " + textLib.joinTexts(statements, " ") + " " + returnCode + " })()",
+                        intValue = 0, textValue = "", constant = false, next = cursor),
+                        if inferMode { blockMarkers } else { "" });
+                }
+            }
         }
     } else if textLib.isNameStart(ch) {
         nameStart := start;
@@ -4596,14 +4779,21 @@ parseBinaryCtx := fn(target: String, source: String, position: Int, prefix: Stri
         failAt(source, start, prefix, "expected an Int, Float, String or Bool expression");
     }
     if condParseKind == "loop" {
+        rawLoopEnd := scanRawLoopEnd(source, condParseStart, prefix);
+        afterRawLoop := if rawLoopEnd >= 0 { skipTrivia(source, rawLoopEnd, prefix) } else { -1 };
+        hasActualThen := afterRawLoop >= 0 and textLib.wordAt(source, afterRawLoop, "then");
+        afterOptLoopThen := if hasActualThen { scanTrailingThenEnd(source, rawLoopEnd, prefix, false) } else { rawLoopEnd };
+        afterOptLoopThenTrivia := if afterOptLoopThen >= 0 { skipTrivia(source, afterOptLoopThen, prefix) } else { -1 };
+        hasLoopFinally := afterOptLoopThenTrivia >= 0 and textLib.wordAt(source, afterOptLoopThenTrivia, "finally");
         if target =!= "ts" {
             if condParseTag =!= "" {
                 failAt(source, condParseTagAt, prefix, "C backend does not support tagged loops yet");
             }
+            if hasLoopFinally {
+                failAt(source, afterOptLoopThenTrivia, prefix, "C backend does not support finally blocks yet");
+            }
             unsupportedFeature(source, condParseStart, "loop", prefix);
         }
-        rawLoopEnd := scanRawLoopEnd(source, condParseStart, prefix);
-        hasActualThen := rawLoopEnd >= 0 and textLib.wordAt(source, skipTrivia(source, rawLoopEnd, prefix), "then");
         loopId := nextCtxId(ctxs);
         loopIdStr := integer.intText(loopId);
         loopValVar := "lite$val" + loopIdStr;
@@ -4838,6 +5028,7 @@ parseBinaryCtx := fn(target: String, source: String, position: Int, prefix: Stri
                     zeroParsed(target, resolvedPreThenKind, 0).code + "; void " + loopValVar + "; ";
             }
         }
+        var loopIifeBody := "";
         if hasActualThen {
             thenKwPos := skipTrivia(source, loopEndCursor, prefix);
             afterThenKw := skipTrivia(source, thenKwPos + 4, prefix);
@@ -4848,13 +5039,14 @@ parseBinaryCtx := fn(target: String, source: String, position: Int, prefix: Stri
                 iterLabel = "", countVar = loopCountVar, itemVar = loopItemMetaVar, itemKind = finalSeqItemKind,
                 indexVar = loopIdxVar, hasIndex = finalIsSeqLoop);
             thenParsed := self(target, source, thenOpen - 1, prefix, locals, functions, params, currentName,
-                normExpected, 0, appendCtx(ctxs, loopThenCtx), iifeDepth, inferMode, "exprOut");
+                normExpected, 0, appendCtx(ctxs, loopThenCtx), iifeDepth, inferMode, "branch");
             if inferMode {
                 thenMarkers := loopOuterMarkers + collectParsedMarkers("", thenParsed);
                 finalKind := if resolvedPreThenKind == "Never" { "Never" } else { thenParsed.kind };
                 left = withMarkers((kind = finalKind, code = "", intValue = 0, textValue = "", constant = false, next = thenParsed.next), thenMarkers);
             } else if resolvedPreThenKind == "Never" {
-                left = (kind = "Never", code = "(() => { " + decls + loopStmtCode + " throw new Error(\"unreachable\"); })()",
+                loopIifeBody = decls + loopStmtCode + " throw new Error(\"unreachable\");";
+                left = (kind = "Never", code = "(() => { " + loopIifeBody + " })()",
                     intValue = 0, textValue = "", constant = false, next = thenParsed.next);
             } else {
                 thenRet := if thenParsed.kind == "Unit" {
@@ -4864,7 +5056,8 @@ parseBinaryCtx := fn(target: String, source: String, position: Int, prefix: Stri
                 } else {
                     "return " + thenParsed.code + ";"
                 };
-                left = (kind = thenParsed.kind, code = "(() => { " + decls + loopStmtCode + " " + thenRet + " })()",
+                loopIifeBody = decls + loopStmtCode + " " + thenRet;
+                left = (kind = thenParsed.kind, code = "(() => { " + loopIifeBody + " })()",
                     intValue = 0, textValue = "", constant = false, next = thenParsed.next);
             }
         } else {
@@ -4878,28 +5071,68 @@ parseBinaryCtx := fn(target: String, source: String, position: Int, prefix: Stri
                 } else {
                     " return " + loopValVar + ";"
                 };
-                left = (kind = resolvedPreThenKind, code = "(() => { " + decls + loopStmtCode + finalRet + " })()",
+                loopIifeBody = decls + loopStmtCode + finalRet;
+                left = (kind = resolvedPreThenKind, code = "(() => { " + loopIifeBody + " })()",
                     intValue = 0, textValue = "", constant = false, next = loopEndCursor);
             }
         }
+        afterLoopConstruct := skipTrivia(source, left.next, prefix);
+        if hasActualThen and afterLoopConstruct < textLib.length(source) and textLib.wordAt(source, afterLoopConstruct, "then") {
+            failAt(source, afterLoopConstruct, prefix, "duplicate then block");
+        }
+        if afterLoopConstruct < textLib.length(source) and textLib.wordAt(source, afterLoopConstruct, "finally") {
+            afterFinKw := skipTrivia(source, afterLoopConstruct + 7, prefix);
+            rejectMisplacedTag(source, afterFinKw, prefix, "block tag cannot appear after finally");
+            finOpen := expectSymbol(source, afterFinKw, "{", prefix);
+            loopFinCtx := (id = loopId, tag = condParseTag, kind = "loop", phase = "finally",
+                iifeDepth = loopDepth, valKind = resolvedPreThenKind, valVar = loopValVar, label = loopLabel,
+                iterLabel = "", countVar = loopCountVar, itemVar = loopItemMetaVar, itemKind = finalSeqItemKind,
+                indexVar = loopIdxVar, hasIndex = finalIsSeqLoop);
+            finBarrierCtx := (id = 0, tag = "", kind = "finally", phase = "finally",
+                iifeDepth = loopDepth, valKind = "Unit", valVar = "", label = "",
+                iterLabel = "", countVar = "", itemVar = "", itemKind = "", indexVar = "", hasIndex = false);
+            loopFinCtxs := appendCtx(appendCtx(ctxs, loopFinCtx), finBarrierCtx);
+            finParsed := self(target, source, finOpen - 1, prefix, locals, functions, params, currentName,
+                "", 0, loopFinCtxs, loopDepth, inferMode, "finally");
+            afterFinClose := skipTrivia(source, finParsed.next, prefix);
+            if textLib.wordAt(source, afterFinClose, "then") {
+                failAt(source, afterFinClose, prefix, "then must appear before finally");
+            }
+            if textLib.wordAt(source, afterFinClose, "finally") {
+                failAt(source, afterFinClose, prefix, "duplicate finally block");
+            }
+            finalLoopKind := if finParsed.kind == "Never" { "Never" } else { left.kind };
+            if inferMode {
+                mergedLoopMarkers := collectParsedMarkers(collectParsedMarkers("", left), finParsed);
+                left = withMarkers((kind = finalLoopKind, code = "", intValue = 0, textValue = "", constant = false, next = finParsed.next), mergedLoopMarkers);
+            } else {
+                left = (kind = finalLoopKind, code = "(() => { try { " + loopIifeBody + " } finally { " + finParsed.code + " } })()",
+                    intValue = 0, textValue = "", constant = false, next = finParsed.next);
+            }
+        }
     } else if condParseKind =!= "" {
-        if condParseKind == "match" {
+        rawCondEnd := if condParseKind == "if" {
+            scanRawIfChainEnd(source, condParseStart, prefix, true)
+        } else {
             openMatchCheck := skipTrivia(source, condParseStart + 5, prefix);
             rejectMisplacedTag(source, openMatchCheck, prefix, "block tag cannot appear before { in match");
             if openMatchCheck >= textLib.length(source) or textLib.at(source, openMatchCheck) =!= "{" {
                 unsupportedFeature(source, condParseStart, "match", prefix);
             }
-            if target =!= "ts" {
-                failAt(source, condParseStart, prefix, "C backend does not support value match expressions yet");
-            }
-        }
-        rawCondEnd := if condParseKind == "if" {
-            scanRawIfChainEnd(source, condParseStart, prefix, true)
-        } else {
             scanRawMatchEnd(source, condParseStart, prefix)
         };
-        hasActualThen := rawCondEnd >= 0 and textLib.wordAt(source, skipTrivia(source, rawCondEnd, prefix), "then");
-        useIifeCond := condParseTag =!= "" or hasActualThen;
+        afterRawCond := if rawCondEnd >= 0 { skipTrivia(source, rawCondEnd, prefix) } else { -1 };
+        hasActualThen := afterRawCond >= 0 and textLib.wordAt(source, afterRawCond, "then");
+        afterOptThen := if hasActualThen { scanTrailingThenEnd(source, rawCondEnd, prefix, false) } else { rawCondEnd };
+        afterOptThenTrivia := if afterOptThen >= 0 { skipTrivia(source, afterOptThen, prefix) } else { -1 };
+        hasActualFinally := afterOptThenTrivia >= 0 and textLib.wordAt(source, afterOptThenTrivia, "finally");
+        if hasActualFinally and target =!= "ts" {
+            failAt(source, afterOptThenTrivia, prefix, "C backend does not support finally blocks yet");
+        }
+        if condParseKind == "match" and target =!= "ts" {
+            failAt(source, condParseStart, prefix, "C backend does not support value match expressions yet");
+        }
+        useIifeCond := condParseTag =!= "" or hasActualThen or hasActualFinally;
         if useIifeCond and condParseKind == "if" and target =!= "ts" {
             if condParseTag =!= "" {
                 failAt(source, condParseTagAt, prefix, "C backend does not support tagged conditionals yet");
@@ -4929,7 +5162,7 @@ parseBinaryCtx := fn(target: String, source: String, position: Int, prefix: Stri
                 beforeFirstOpen := skipTrivia(source, condition.next, prefix);
                 rejectMisplacedTag(source, beforeFirstOpen, prefix, "block tag cannot appear before { in if");
                 cursor = expectSymbol(source, beforeFirstOpen, "{", prefix);
-                first := self(target, source, cursor - 1, prefix, locals, functions, params, currentName, expected, 0, condBarrierCtxs, iifeDepth, inferMode, "exprOut");
+                first := self(target, source, cursor - 1, prefix, locals, functions, params, currentName, expected, 0, condBarrierCtxs, iifeDepth, inferMode, "branch");
                 if inferMode { ifMarkers = collectParsedMarkers(ifMarkers, first); }
                 cursor = first.next;
                 conditionCodes: mut List<String> = [];
@@ -4977,7 +5210,7 @@ parseBinaryCtx := fn(target: String, source: String, position: Int, prefix: Stri
                         rejectMisplacedTag(source, beforeElseIfOpen, prefix, "block tag cannot appear before { in else if");
                         open := expectSymbol(source, beforeElseIfOpen, "{", prefix);
                         elseBranchStart := skipTrivia(source, open, prefix);
-                        branch := self(target, source, open - 1, prefix, locals, functions, params, currentName, expected, 0, condBarrierCtxs, iifeDepth, inferMode, "exprOut");
+                        branch := self(target, source, open - 1, prefix, locals, functions, params, currentName, expected, 0, condBarrierCtxs, iifeDepth, inferMode, "branch");
                         if inferMode { ifMarkers = collectParsedMarkers(ifMarkers, branch); }
                         joinedKind := joinBranchKind(resultKind, branch.kind);
                         if joinedKind == "" {
@@ -4993,7 +5226,7 @@ parseBinaryCtx := fn(target: String, source: String, position: Int, prefix: Stri
                     } else {
                         open := expectSymbol(source, afterElse, "{", prefix);
                         elseBranchStart := skipTrivia(source, open, prefix);
-                        branch := self(target, source, open - 1, prefix, locals, functions, params, currentName, expected, 0, condBarrierCtxs, iifeDepth, inferMode, "exprOut");
+                        branch := self(target, source, open - 1, prefix, locals, functions, params, currentName, expected, 0, condBarrierCtxs, iifeDepth, inferMode, "branch");
                         if inferMode { ifMarkers = collectParsedMarkers(ifMarkers, branch); }
                         joinedKind := joinBranchKind(resultKind, branch.kind);
                         if joinedKind == "" {
@@ -5077,7 +5310,7 @@ parseBinaryCtx := fn(target: String, source: String, position: Int, prefix: Stri
                         listLib.pushBack(mut conditionCodes, conditionCode);
                     }
                     armBodyStart := skipTrivia(source, armOpen + 1, prefix);
-                    branch := self(target, source, armOpen, prefix, locals, functions, params, currentName, expected, 0, condBarrierCtxs, iifeDepth, inferMode, "exprOut");
+                    branch := self(target, source, armOpen, prefix, locals, functions, params, currentName, expected, 0, condBarrierCtxs, iifeDepth, inferMode, "branch");
                     if inferMode { matchMarkers = collectParsedMarkers(matchMarkers, branch); }
                     joinedKind := joinBranchKind(resultKind, branch.kind);
                     if joinedKind == "" {
@@ -5158,7 +5391,7 @@ parseBinaryCtx := fn(target: String, source: String, position: Int, prefix: Stri
                     beforeFirstOpen := skipTrivia(source, cond0.next, prefix);
                     rejectMisplacedTag(source, beforeFirstOpen, prefix, "block tag cannot appear before { in if");
                     cursor = expectSymbol(source, beforeFirstOpen, "{", prefix);
-                    first := self(target, source, cursor - 1, prefix, locals, functions, params, currentName, passBranchExpected, 0, condPassCtxs, condDepth, passInfer, "exprOut");
+                    first := self(target, source, cursor - 1, prefix, locals, functions, params, currentName, passBranchExpected, 0, condPassCtxs, condDepth, passInfer, "branch");
                     if passInfer { passMarkers = collectParsedMarkers(passMarkers, first); }
                     cursor = first.next;
                     listLib.pushBack(mut passCondCodes, cond0Code);
@@ -5194,7 +5427,7 @@ parseBinaryCtx := fn(target: String, source: String, position: Int, prefix: Stri
                             rejectMisplacedTag(source, beforeElseIfOpen, prefix, "block tag cannot appear before { in else if");
                             open := expectSymbol(source, beforeElseIfOpen, "{", prefix);
                             elseBranchStart := skipTrivia(source, open, prefix);
-                            branch := self(target, source, open - 1, prefix, locals, functions, params, currentName, passBranchExpected, 0, condPassCtxs, condDepth, passInfer, "exprOut");
+                            branch := self(target, source, open - 1, prefix, locals, functions, params, currentName, passBranchExpected, 0, condPassCtxs, condDepth, passInfer, "branch");
                             if passInfer { passMarkers = collectParsedMarkers(passMarkers, branch); }
                             joinedKind := joinBranchKind(passResultKind, branch.kind);
                             if joinedKind == "" {
@@ -5211,7 +5444,7 @@ parseBinaryCtx := fn(target: String, source: String, position: Int, prefix: Stri
                             passHasElse = true;
                             open := expectSymbol(source, afterElse, "{", prefix);
                             elseBranchStart := skipTrivia(source, open, prefix);
-                            branch := self(target, source, open - 1, prefix, locals, functions, params, currentName, passBranchExpected, 0, condPassCtxs, condDepth, passInfer, "exprOut");
+                            branch := self(target, source, open - 1, prefix, locals, functions, params, currentName, passBranchExpected, 0, condPassCtxs, condDepth, passInfer, "branch");
                             if passInfer { passMarkers = collectParsedMarkers(passMarkers, branch); }
                             joinedKind := joinBranchKind(passResultKind, branch.kind);
                             if joinedKind == "" {
@@ -5288,7 +5521,7 @@ parseBinaryCtx := fn(target: String, source: String, position: Int, prefix: Stri
                             listLib.pushBack(mut passCondCodes, condCode);
                         }
                         armBodyStart := skipTrivia(source, armOpen + 1, prefix);
-                        branch := self(target, source, armOpen, prefix, locals, functions, params, currentName, passBranchExpected, 0, condPassCtxs, condDepth, passInfer, "exprOut");
+                        branch := self(target, source, armOpen, prefix, locals, functions, params, currentName, passBranchExpected, 0, condPassCtxs, condDepth, passInfer, "branch");
                         if passInfer { passMarkers = collectParsedMarkers(passMarkers, branch); }
                         joinedKind := joinBranchKind(passResultKind, branch.kind);
                         if joinedKind == "" {
@@ -5366,6 +5599,7 @@ parseBinaryCtx := fn(target: String, source: String, position: Int, prefix: Stri
                 }
                 pass = pass + 1;
             }
+            var condIifeBody := "";
             if hasActualThen {
                 thenKwPos := skipTrivia(source, condEndCursor, prefix);
                 afterThenKw := skipTrivia(source, thenKwPos + 4, prefix);
@@ -5393,7 +5627,8 @@ parseBinaryCtx := fn(target: String, source: String, position: Int, prefix: Stri
                     thenPass2 := self(target, source, thenOpen - 1, prefix, locals, functions, params, currentName,
                         thenPass2Expected, 0, appendCtx(ctxs, thenPass2Ctx), condDepth, false, "tagged");
                     if resolvedPreThenKind == "Never" {
-                        left = (kind = "Never", code = "(() => { " + condStmtCode + " })()",
+                        condIifeBody = condStmtCode;
+                        left = (kind = "Never", code = "(() => { " + condIifeBody + " })()",
                             intValue = 0, textValue = "", constant = false, next = thenPass2.next);
                     } else {
                         valDecl := if resolvedPreThenKind == "Unit" {
@@ -5406,7 +5641,8 @@ parseBinaryCtx := fn(target: String, source: String, position: Int, prefix: Stri
                         } else {
                             "return " + thenPass2.code + ";"
                         };
-                        left = (kind = thenValKind, code = "(() => { " + valDecl + condStmtCode + " " + thenRet + " })()",
+                        condIifeBody = valDecl + condStmtCode + " " + thenRet;
+                        left = (kind = thenValKind, code = "(() => { " + condIifeBody + " })()",
                             intValue = 0, textValue = "", constant = false, next = thenPass2.next);
                     }
                 }
@@ -5426,8 +5662,45 @@ parseBinaryCtx := fn(target: String, source: String, position: Int, prefix: Stri
                     } else {
                         " return " + condValVar + ";"
                     };
-                    left = (kind = resolvedPreThenKind, code = "(() => { " + valDecl + condStmtCode + finalRet + " })()",
+                    condIifeBody = valDecl + condStmtCode + finalRet;
+                    left = (kind = resolvedPreThenKind, code = "(() => { " + condIifeBody + " })()",
                         intValue = 0, textValue = "", constant = false, next = condEndCursor);
+                }
+            }
+            afterCondConstruct := skipTrivia(source, left.next, prefix);
+            if hasActualThen and afterCondConstruct < textLib.length(source) and textLib.wordAt(source, afterCondConstruct, "then") {
+                failAt(source, afterCondConstruct, prefix, "duplicate then block");
+            }
+            if afterCondConstruct < textLib.length(source) and textLib.wordAt(source, afterCondConstruct, "finally") {
+                if target =!= "ts" {
+                    failAt(source, afterCondConstruct, prefix, "C backend does not support finally blocks yet");
+                }
+                afterFinKw := skipTrivia(source, afterCondConstruct + 7, prefix);
+                rejectMisplacedTag(source, afterFinKw, prefix, "block tag cannot appear after finally");
+                finOpen := expectSymbol(source, afterFinKw, "{", prefix);
+                condFinCtx := (id = condId, tag = condParseTag, kind = condParseKind, phase = "finally",
+                    iifeDepth = condDepth, valKind = resolvedPreThenKind, valVar = condValVar, label = condLabel,
+                    iterLabel = "", countVar = "", itemVar = "", itemKind = "", indexVar = "", hasIndex = false);
+                finBarrierCtx := (id = 0, tag = "", kind = "finally", phase = "finally",
+                    iifeDepth = condDepth, valKind = "Unit", valVar = "", label = "",
+                    iterLabel = "", countVar = "", itemVar = "", itemKind = "", indexVar = "", hasIndex = false);
+                condFinCtxs := appendCtx(appendCtx(ctxs, condFinCtx), finBarrierCtx);
+                finParsed := self(target, source, finOpen - 1, prefix, locals, functions, params, currentName,
+                    "", 0, condFinCtxs, condDepth, inferMode, "finally");
+                afterFinClose := skipTrivia(source, finParsed.next, prefix);
+                if textLib.wordAt(source, afterFinClose, "then") {
+                    failAt(source, afterFinClose, prefix, "then must appear before finally");
+                }
+                if textLib.wordAt(source, afterFinClose, "finally") {
+                    failAt(source, afterFinClose, prefix, "duplicate finally block");
+                }
+                finalCondKind := if finParsed.kind == "Never" { "Never" } else { left.kind };
+                if inferMode {
+                    mergedCondMarkers := collectParsedMarkers(collectParsedMarkers("", left), finParsed);
+                    left = withMarkers((kind = finalCondKind, code = "", intValue = 0, textValue = "", constant = false, next = finParsed.next), mergedCondMarkers);
+                } else {
+                    left = (kind = finalCondKind, code = "(() => { try { " + condIifeBody + " } finally { " + finParsed.code + " } })()",
+                        intValue = 0, textValue = "", constant = false, next = finParsed.next);
                 }
             }
         }
@@ -6255,11 +6528,10 @@ parseExpressionItem := fn(target: String, source: String, position: Int, prefix:
     } else {
         ""
     };
-    parsed := if not isTailClose or currentResult == "Unit" {
-        parseStatementExpressionCtx(target, source, position, prefix, locals, functions, params, currentName, expected, ctxs)
-    } else {
-        parseExpressionAsCtx(target, source, position, prefix, locals, functions, params, currentName, expected, ctxs)
-    };
+    trimmedStart := skipTrivia(source, position, prefix);
+    stmtSink := if trimmedStart < textLib.length(source) and textLib.at(source, trimmedStart) == "{" { "exprOut" } else { "" };
+    stmtMin := if not isTailClose or currentResult == "Unit" { -2 } else { 0 };
+    parsed := parseBinaryCtx(target, source, position, prefix, locals, functions, params, currentName, expected, stmtMin, ctxs, 0, false, stmtSink);
     ended := consumeStatementEnd(source, parsed.next, prefix);
     if ended < 0 { failAt(source, skipTrivia(source, parsed.next, prefix), prefix, "expected ; after expression statement"); }
     next := skipItemSeparators(source, ended, prefix);
@@ -6886,6 +7158,23 @@ pub parseProgramWithModule := fn(target: String, source: String, prefix: String,
             continue;
         }
         if ch == "{" {
+            rawBraceEnd := scanBraceEnd(source, position, prefix);
+            afterRawBrace := if rawBraceEnd >= 0 { skipTrivia(source, rawBraceEnd, prefix) } else { -1 };
+            if afterRawBrace >= 0 and textLib.wordAt(source, afterRawBrace, "then") {
+                failAt(source, afterRawBrace, prefix, "then requires an if, match, or loop");
+            }
+            if afterRawBrace >= 0 and textLib.wordAt(source, afterRawBrace, "finally") {
+                expression := parseExpressionItem(target, source, position, prefix, locals, functions, functionParams, currentName,
+                    currentResult, atValueTail(blocks, blockCount) and not currentStopped, stmtCtxs);
+                if currentLive and not currentStopped { listLib.pushBack(mut items, (kind = expressionStatementKind(expression.valueKind, expression.returned, "Discard", currentResult), name = expression.valueKind,
+                    runtime = "", code = expression.code, intValue = 0, textValue = "")); }
+                if expression.returned or expression.valueKind == "Never" {
+                    if not currentStopped { currentReturned = true; }
+                    currentStopped = true;
+                }
+                position = expression.next;
+                continue;
+            }
             if currentLive and not currentStopped { listLib.pushBack(mut items, (kind = "Scope", name = "", runtime = "", code = "", intValue = 0, textValue = "")); }
             listLib.pushBack(mut savedStates, (returned = currentReturned, stopped = currentStopped,
                 branchesReturned = branchesReturned, branchesStopped = branchesStopped, hasElse = hasElse, loopForever = loopForever, live = currentLive,
@@ -7254,7 +7543,8 @@ pub parseProgramWithModule := fn(target: String, source: String, prefix: String,
         }
         if name == "if" {
             rawIfEnd := scanRawIfChainEnd(source, nameStart, prefix, true);
-            if rawIfEnd >= 0 and textLib.wordAt(source, skipTrivia(source, rawIfEnd, prefix), "then") {
+            afterRawIf := if rawIfEnd >= 0 { skipTrivia(source, rawIfEnd, prefix) } else { -1 };
+            if afterRawIf >= 0 and (textLib.wordAt(source, afterRawIf, "then") or textLib.wordAt(source, afterRawIf, "finally")) {
                 expression := parseExpressionItem(target, source, nameStart, prefix, locals, functions, functionParams, currentName,
                     currentResult, atValueTail(blocks, blockCount) and not currentStopped, stmtCtxs);
                 if currentLive and not currentStopped { listLib.pushBack(mut items, (kind = expressionStatementKind(expression.valueKind, expression.returned, "Discard", currentResult), name = expression.valueKind,
@@ -7334,7 +7624,8 @@ pub parseProgramWithModule := fn(target: String, source: String, prefix: String,
                 unsupportedFeature(source, nameStart, "match", prefix);
             }
             rawMatchEnd := scanRawMatchEnd(source, nameStart, prefix);
-            if rawMatchEnd >= 0 and textLib.wordAt(source, skipTrivia(source, rawMatchEnd, prefix), "then") {
+            afterRawMatch := if rawMatchEnd >= 0 { skipTrivia(source, rawMatchEnd, prefix) } else { -1 };
+            if afterRawMatch >= 0 and (textLib.wordAt(source, afterRawMatch, "then") or textLib.wordAt(source, afterRawMatch, "finally")) {
                 expression := parseExpressionItem(target, source, nameStart, prefix, locals, functions, functionParams, currentName,
                     currentResult, atValueTail(blocks, blockCount) and not currentStopped, stmtCtxs);
                 if currentLive and not currentStopped { listLib.pushBack(mut items, (kind = expressionStatementKind(expression.valueKind, expression.returned, "Discard", currentResult), name = expression.valueKind,
@@ -7448,7 +7739,9 @@ pub parseProgramWithModule := fn(target: String, source: String, prefix: String,
         }
         if name == "loop" {
             rawStmtLoopEnd := scanRawLoopEnd(source, nameStart, prefix);
-            hasStmtLoopThen := rawStmtLoopEnd >= 0 and textLib.wordAt(source, skipTrivia(source, rawStmtLoopEnd, prefix), "then");
+            afterRawStmtLoopTok := if rawStmtLoopEnd >= 0 { skipTrivia(source, rawStmtLoopEnd, prefix) } else { -1 };
+            hasStmtLoopThen := afterRawStmtLoopTok >= 0 and textLib.wordAt(source, afterRawStmtLoopTok, "then");
+            hasStmtLoopFin := afterRawStmtLoopTok >= 0 and textLib.wordAt(source, afterRawStmtLoopTok, "finally");
             var atFnTailLoop := false;
             if currentName =!= "" and currentResult =!= "Unit" and atValueTail(blocks, blockCount) and not currentStopped and rawStmtLoopEnd >= 0 {
                 afterRawStmtLoop := skipItemSeparators(source, rawStmtLoopEnd, prefix);
@@ -7456,8 +7749,11 @@ pub parseProgramWithModule := fn(target: String, source: String, prefix: String,
                     atFnTailLoop = true;
                 }
             }
-            if hasStmtLoopThen or loopNeedsExprLowering(source, nameStart, prefix) or (target == "ts" and atFnTailLoop) {
+            if hasStmtLoopThen or hasStmtLoopFin or loopNeedsExprLowering(source, nameStart, prefix) or (target == "ts" and atFnTailLoop) {
                 if target =!= "ts" {
+                    if hasStmtLoopFin {
+                        failAt(source, afterRawStmtLoopTok, prefix, "C backend does not support finally blocks yet");
+                    }
                     if hasStmtLoopThen {
                         failAt(source, nameStart, prefix, "C backend does not support loop then blocks yet");
                     }

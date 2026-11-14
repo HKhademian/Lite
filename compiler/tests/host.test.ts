@@ -3746,3 +3746,202 @@ test('loop values, metadata, then clauses, barriers, and payload exits', () => {
     assert.match(rejectedC.stderr.toString(), expectedMessage, badC);
   }
 });
+
+test('construct-level finally cleanup, LIFO unwinding, barriers, and failure precedence', () => {
+  const cleanupFeature = readFileSync(join(root, 'language/verifications/features/finally-cleanup.lts'), 'utf8');
+  const compiledFeature = compileTs({ text: cleanupFeature });
+  assert.equal(compiledFeature.status, 0, compiledFeature.stderr.toString());
+  const featureTs = compiledFeature.stdout.toString();
+  assert.ok(!featureTs.includes('declare const process'), 'pure finally should not declare process');
+  assert.ok(!featureTs.includes('lite$abruptToken'), 'pure finally without process exit/fault should not emit abruptToken');
+  const featureRun = runTsArtifact(featureTs);
+  assert.equal(featureRun.phase, 'run', featureRun.stdout.toString() + featureRun.stderr.toString());
+  assert.equal(featureRun.status, 0, featureRun.stderr.toString());
+  assert.equal(featureRun.stdout.toString(), '1\n2\nthen\nfinally\ncond\n1\nreturn-cleanup\n5\n');
+
+  const source = [
+    'io := import "core/io";',
+    '{ io.outputLine("blk"); } finally { io.outputLine("blk-stmt-fin"); }',
+    'blkVal := { n := 9; n + 1 } finally { io.outputLine("blk-fin"); };',
+    'tagVal := @b { return @b 20; } finally { io.outputLine("tagged-fin"); };',
+    'ifVal := @c if true { 30 } else { 40 } then { @c.value + 1 } finally { io.outputLine("if-fin"); };',
+    'if true { io.outputLine("partial-yes"); } finally { io.outputLine("partial-fin"); }',
+    'partialVal := (if false { 7 } finally { io.outputLine("partial-val-fin"); });',
+    'matchVal := @m match { false { 1 } _ { 50 } } then { @m.value } finally { io.outputLine("match-fin"); };',
+    'loopVal := @lp loop [1, 2] as n { .value + n } then { io.outputLine("loop-then", .count); .value * 2 } finally { io.outputLine("loop-fin"); };',
+    'io.outputLine(blkVal, tagVal, ifVal, partialVal, matchVal, loopVal);',
+    'fnRet := fn(): Int {',
+    '  @outer loop [1] {',
+    '    { io.outputLine("ret-blk"); return 77; } finally { io.outputLine("ret-inner"); }',
+    '  } finally { io.outputLine("ret-outer"); }',
+    '};',
+    'io.outputLine(fnRet());',
+    'tagRet := @outer {',
+    '  @inner if true { return @outer 88; } else { 0 } then { io.outputLine("skip-inner-then"); 0 } finally { io.outputLine("unwind-if"); }',
+    '} finally { io.outputLine("unwind-outer"); };',
+    'io.outputLine(tagRet);',
+    'loopCtrl := @outer loop [1, 2] as i {',
+    '  loop [10] {',
+    '    if i == 1 { continue @outer 100; }',
+    '    break @outer (@outer.value + 5);',
+    '  } then {',
+    '    io.outputLine("skip-inner-loop-then");',
+    '  } finally {',
+    '    io.outputLine("unwind-loop", i);',
+    '  }',
+    '  0',
+    '} then {',
+    '  io.outputLine("outer-then", .count);',
+    '  .value',
+    '} finally {',
+    '  io.outputLine("outer-loop-fin");',
+    '};',
+    'io.outputLine(loopCtrl);',
+    'loop [1] { io.outputLine("body"); } finally {',
+    '  loop [8, 9] as k { if k == 8 { continue; } io.outputLine("in-fin", k); }',
+    '}',
+  ].join('\n');
+  const compiled = compileTs({ text: source });
+  assert.equal(compiled.status, 0, compiled.stderr.toString());
+  const run = runTsArtifact(compiled.stdout.toString());
+  assert.equal(run.phase, 'run', run.stdout.toString() + run.stderr.toString());
+  assert.equal(run.status, 0, run.stderr.toString());
+  assert.equal(
+    run.stdout.toString(),
+    [
+      'blk',
+      'blk-stmt-fin',
+      'blk-fin',
+      'tagged-fin',
+      'if-fin',
+      'partial-yes',
+      'partial-fin',
+      'partial-val-fin',
+      'match-fin',
+      'loop-then 2',
+      'loop-fin',
+      '10 20 31 0 50 6',
+      'ret-blk',
+      'ret-inner',
+      'ret-outer',
+      '77',
+      'unwind-if',
+      'unwind-outer',
+      '88',
+      'unwind-loop 1',
+      'unwind-loop 2',
+      'outer-then 2',
+      'outer-loop-fin',
+      '105',
+      'body',
+      'in-fin 9',
+      '',
+    ].join('\n'),
+  );
+
+  const exitCompiled = compileTs({
+    text: [
+      'io := import "core/io";',
+      'loop [1] {',
+      '  if true { io.exit(3); } finally { io.outputLine("exit-if-fin"); }',
+      '} finally {',
+      '  io.outputLine("exit-loop-fin");',
+      '}',
+    ].join('\n'),
+  });
+  assert.equal(exitCompiled.status, 0, exitCompiled.stderr.toString());
+  const exitRun = runTsArtifact(exitCompiled.stdout.toString());
+  assert.equal(exitRun.phase, 'run');
+  assert.equal(exitRun.status, 3);
+  assert.equal(exitRun.stdout.toString(), 'exit-if-fin\nexit-loop-fin\n');
+  assert.equal(exitRun.stderr.toString(), '');
+
+  const faultCompiled = compileTs({
+    text: [
+      'io := import "core/io";',
+      'd := 0;',
+      '{',
+      '  io.outputLine("before-fault");',
+      '  _q := 10 / d;',
+      '  io.outputLine("after-fault");',
+      '} finally {',
+      '  io.outputLine("fault-fin");',
+      '}',
+    ].join('\n'),
+  });
+  assert.equal(faultCompiled.status, 0, faultCompiled.stderr.toString());
+  const faultRun = runTsArtifact(faultCompiled.stdout.toString());
+  assert.equal(faultRun.phase, 'run');
+  assert.equal(faultRun.status, 1);
+  assert.equal(faultRun.stdout.toString(), 'before-fault\nfault-fin\n');
+  assert.match(faultRun.stderr.toString(), /ArithmeticPanic: division by zero/);
+
+  const doubleFaultCompiled = compileTs({
+    text: [
+      'io := import "core/io";',
+      'd := 0;',
+      'xs := [1, 2];',
+      '{',
+      '  _q := 10 / d;',
+      '} finally {',
+      '  io.outputLine("fin-before-sec");',
+      '  _bad := xs[5];',
+      '}',
+    ].join('\n'),
+  });
+  assert.equal(doubleFaultCompiled.status, 0, doubleFaultCompiled.stderr.toString());
+  const doubleFaultRun = runTsArtifact(doubleFaultCompiled.stdout.toString());
+  assert.equal(doubleFaultRun.phase, 'run');
+  assert.equal(doubleFaultRun.status, 1);
+  assert.equal(doubleFaultRun.stdout.toString(), 'fin-before-sec\n');
+  const dfStderr = doubleFaultRun.stderr.toString();
+  const arithPos = dfStderr.indexOf('ArithmeticPanic: division by zero');
+  const boundPos = dfStderr.indexOf('BoundPanic');
+  assert.ok(arithPos >= 0, dfStderr);
+  assert.ok(boundPos > arithPos, `primary ArithmeticPanic must precede secondary BoundPanic: ${dfStderr}`);
+
+  const cancelNormalCompiled = compileTs({
+    text: [
+      'io := import "core/io";',
+      'xs := [1, 2];',
+      'x := { 42 } finally { io.outputLine("cleanup-fail"); _bad := xs[5]; };',
+      'io.outputLine("unreachable", x);',
+    ].join('\n'),
+  });
+  assert.equal(cancelNormalCompiled.status, 0, cancelNormalCompiled.stderr.toString());
+  const cancelNormalRun = runTsArtifact(cancelNormalCompiled.stdout.toString());
+  assert.equal(cancelNormalRun.phase, 'run');
+  assert.equal(cancelNormalRun.status, 1);
+  assert.equal(cancelNormalRun.stdout.toString(), 'cleanup-fail\n');
+  assert.match(cancelNormalRun.stderr.toString(), /BoundPanic/);
+
+  for (const [bad, expectedMessage] of [
+    ['{ 1 } finally { 123 }', /finally block must produce Unit/],
+    ['f := fn(): Int { { 1 } finally { return 2; } 3 };', /cannot return out of finally block/],
+    ['x := @t { 1 } finally { return @t 2; };', /cannot return out of finally block/],
+    ['loop [1] { 1 } finally { break; }', /cannot break out of finally block/],
+    ['loop [1] { 1 } finally { continue; }', /cannot continue out of finally block/],
+    ['x := @t loop [1] { 1 } finally { break @t; };', /cannot break out of finally block/],
+    ['x := loop [1] { 1 } finally { .count; };', /not available in finally/],
+    ['x := @t loop [1] { 1 } finally { @t.count; };', /not available in finally/],
+    ['x := @t if true { 1 } else { 2 } finally { @t.value; };', /not available in finally/],
+    ['loop [1] { } finally { } then { }', /then must appear before finally/],
+    ['loop [1] { } finally { } finally { }', /duplicate finally block/],
+    ['x := { 1 } finally { } finally { };', /duplicate finally block/],
+  ] as const) {
+    const rejected = compileTs({ text: bad });
+    assert.equal(rejected.status, 2, bad);
+    assert.match(rejected.stderr.toString(), expectedMessage, bad);
+  }
+
+  for (const badC of [
+    '{ 1 } finally { }',
+    'if true { } finally { }',
+    'loop [1] { } finally { }',
+    'x := match { _ { 1 } } finally { };',
+  ]) {
+    const rejectedC = compileTarget('c', { text: badC });
+    assert.equal(rejectedC.status, 2, badC);
+    assert.match(rejectedC.stderr.toString(), /C backend does not support finally blocks yet/, badC);
+  }
+});

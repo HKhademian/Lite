@@ -134,6 +134,20 @@ usesBounds := fn(calls: String): Bool {
     usesBuiltin(calls, "textAt") or usesBuiltin(calls, "textSlice") or usesListIndex(calls) or usesListPop(calls) or usesListPopFront(calls)
 }
 
+/** True when runtime faults or input failures may require construct-level `finally` unwinding. */
+usesAbruptFault := fn(calls: String): Bool {
+    usesBuiltin(calls, "finally") and (
+        usesBuiltin(calls, "inputAll") or usesBuiltin(calls, "inputLine") or
+        usesBuiltin(calls, "inputInt") or usesBuiltin(calls, "inputFloat") or usesIntArithmetic(calls) or
+        usesIntDivision(calls) or usesBounds(calls) or usesFloatArithmetic(calls)
+    )
+}
+
+/** True when construct-level `finally` must intercept process-terminating exits or runtime faults to unwind cleanups first. */
+usesAbruptUnwind := fn(calls: String): Bool {
+    usesAbruptFault(calls) or (usesBuiltin(calls, "finally") and usesBuiltin(calls, "exit"))
+}
+
 /** Emits shared position metadata once, exact runtime faults, and the arithmetic helpers actually used. */
 emitIntArithmeticHelpers := fn(calls: String, source: String, prefix: String): Unit {
     integers := usesIntArithmetic(calls) or usesIntDivision(calls);
@@ -149,8 +163,12 @@ emitIntArithmeticHelpers := fn(calls: String, source: String, prefix: String): U
     io.outputLine("    let line = 0;");
     io.outputLine("    while (line + 1 < lite$intLines.length && (lite$intLines[line + 1] ?? Infinity) <= at) line += 1;");
     io.outputLine("    const column = at - (lite$intLines[line] ?? 0) + 1;");
-    io.outputLine("    process.getBuiltinModule(\"node:fs\").writeSync(2, lite$intSource + (line + 1) + \":\" + column + \": \" + category + \": \" + message + \"\\n\");");
-    io.outputLine("    process.exit(1);");
+    if usesAbruptUnwind(calls) {
+        io.outputLine("    return lite$throwAbruptFault(lite$intSource + (line + 1) + \":\" + column + \": \" + category + \": \" + message + \"\\n\");");
+    } else {
+        io.outputLine("    process.getBuiltinModule(\"node:fs\").writeSync(2, lite$intSource + (line + 1) + \":\" + column + \": \" + category + \": \" + message + \"\\n\");");
+        io.outputLine("    process.exit(1);");
+    }
     io.outputLine("}");
     if integers {
         io.outputLine("function lite$intFault(at: number, message: string): never { return lite$fault(\"ArithmeticPanic\", at, message); }");
@@ -193,8 +211,12 @@ emitInputHelpers := fn(calls: String): Unit {
     io.outputLine("let lite$ended = false;");
     io.outputLine("let lite$pending: string | null | undefined;");
     io.outputLine("function lite$inputFault(at: string, message: string): never {");
-    io.outputLine("    process.getBuiltinModule(\"node:fs\").writeSync(2, at + message + \"\\n\");");
-    io.outputLine("    process.exit(1);");
+    if usesAbruptUnwind(calls) {
+        io.outputLine("    return lite$throwAbruptFault(at + message + \"\\n\");");
+    } else {
+        io.outputLine("    process.getBuiltinModule(\"node:fs\").writeSync(2, at + message + \"\\n\");");
+        io.outputLine("    process.exit(1);");
+    }
     io.outputLine("}");
     io.outputLine("function lite$prompt(text: string | undefined): void {");
     io.outputLine("    if (text === undefined) return;");
@@ -278,6 +300,9 @@ emitInputHelpers := fn(calls: String): Unit {
 
 /** Emits the self-contained declarations and helpers for the I/O and text builtins a program uses. */
 emitBuiltinHelpers := fn(calls: String): Unit {
+    abruptFault := usesAbruptFault(calls);
+    abruptExit := usesBuiltin(calls, "finally") and usesBuiltin(calls, "exit");
+    abruptUnwind := usesAbruptUnwind(calls);
     if usesBuiltin(calls, "inputArgs") or usesBuiltin(calls, "inputAll") or usesBuiltin(calls, "inputLine") or usesBuiltin(calls, "inputInt") or usesBuiltin(calls, "inputFloat") or
         usesBuiltin(calls, "reportError") or usesBuiltin(calls, "exit") or usesIntArithmetic(calls) or usesIntDivision(calls) or usesBounds(calls) or usesFloatArithmetic(calls) {
         io.outputLine("declare const process: {");
@@ -288,6 +313,40 @@ emitBuiltinHelpers := fn(calls: String): Unit {
         io.outputLine("        writeSync(fd: number, text: string): number;");
         io.outputLine("    };");
         io.outputLine("};");
+        io.outputLine("");
+    }
+    if abruptUnwind {
+        io.outputLine("const lite$abruptToken = {};");
+        io.outputLine("let lite$abruptActive: boolean = false;");
+        if abruptFault { io.outputLine("let lite$abruptHasFault: boolean = false;"); }
+        io.outputLine("let lite$abruptStderr: string = \"\";");
+        io.outputLine("let lite$abruptStatus: number = 0;");
+        if abruptFault {
+            io.outputLine("function lite$throwAbruptFault(text: string): never {");
+            io.outputLine("    if (!lite$abruptActive) {");
+            io.outputLine("        lite$abruptActive = true;");
+            io.outputLine("        lite$abruptHasFault = true;");
+            io.outputLine("        lite$abruptStderr = text;");
+            io.outputLine("        lite$abruptStatus = 1;");
+            io.outputLine("    } else if (!lite$abruptHasFault) {");
+            io.outputLine("        lite$abruptHasFault = true;");
+            io.outputLine("        lite$abruptStderr = text;");
+            io.outputLine("        lite$abruptStatus = 1;");
+            io.outputLine("    } else {");
+            io.outputLine("        lite$abruptStderr += text;");
+            io.outputLine("    }");
+            io.outputLine("    throw lite$abruptToken;");
+            io.outputLine("}");
+        }
+        if abruptExit {
+            io.outputLine("function lite$throwAbruptExit(status: number): never {");
+            io.outputLine("    if (!lite$abruptActive) {");
+            io.outputLine("        lite$abruptActive = true;");
+            io.outputLine("        lite$abruptStatus = status;");
+            io.outputLine("    }");
+            io.outputLine("    throw lite$abruptToken;");
+            io.outputLine("}");
+        }
         io.outputLine("");
     }
     if usesBuiltin(calls, "readSource") {
@@ -313,8 +372,12 @@ emitBuiltinHelpers := fn(calls: String): Unit {
     }
     if usesBuiltin(calls, "exit") {
         io.outputLine("function lite$exit(status: bigint): never {");
-        io.outputLine("    process.getBuiltinModule(\"node:fs\").writeSync(1, lite$out);");
-        io.outputLine("    process.exit(Number(status));");
+        if abruptUnwind {
+            io.outputLine("    return lite$throwAbruptExit(Number(status));");
+        } else {
+            io.outputLine("    process.getBuiltinModule(\"node:fs\").writeSync(1, lite$out);");
+            io.outputLine("    process.exit(Number(status));");
+        }
         io.outputLine("}");
         io.outputLine("");
     }
@@ -472,7 +535,9 @@ emitIntDivisionHelpers := fn(calls: String): Unit {
 /** Emits the TS module from the flat item stream. Report arguments evaluate once, left to right, before reading and appending to `lite$out`, preserving reports made by argument calls. */
 pub emitProgram := fn(items: frontend.Items, source: String, prefix: String): Unit {
     calls := frontend.targetHelperCalls(items);
-    hasExit := usesBuiltin(calls, "exit") or usesBuiltin(calls, "inputAll") or usesBuiltin(calls, "inputLine") or usesBuiltin(calls, "inputInt") or usesBuiltin(calls, "inputFloat");
+    abruptFault := usesAbruptFault(calls);
+    abruptUnwind := usesAbruptUnwind(calls);
+    hasExit := usesBuiltin(calls, "exit") or usesBuiltin(calls, "inputAll") or usesBuiltin(calls, "inputLine") or usesBuiltin(calls, "inputInt") or usesBuiltin(calls, "inputFloat") or abruptUnwind;
     if hasExit {
         io.outputLine("let lite$out = \"\";");
         io.outputLine("");
@@ -497,6 +562,14 @@ pub emitProgram := fn(items: frontend.Items, source: String, prefix: String): Un
     io.outputLine("    }");
     io.outputLine("    void lite$emit;");
     var indent := "    ";
+    if abruptUnwind {
+        io.outputLine("    lite$abruptActive = false;");
+        if abruptFault { io.outputLine("    lite$abruptHasFault = false;"); }
+        io.outputLine("    lite$abruptStderr = \"\";");
+        io.outputLine("    lite$abruptStatus = 0;");
+        io.outputLine("    try {");
+        indent = "        ";
+    }
     var line := "";
     var count := 0;
     var mainStopped := false;
@@ -624,6 +697,21 @@ pub emitProgram := fn(items: frontend.Items, source: String, prefix: String): Un
             count = count + 1;
         }
     }
-    if not mainStopped { io.outputLine("    return lite$out;"); }
+    if not mainStopped { io.outputLine(indent + "return lite$out;"); }
+    if abruptUnwind {
+        io.outputLine("    } catch (lite$err) {");
+        io.outputLine("        if (lite$err === lite$abruptToken) {");
+        io.outputLine("            if (lite$out !== \"\") {");
+        io.outputLine("                process.getBuiltinModule(\"node:fs\").writeSync(1, lite$out);");
+        io.outputLine("                lite$out = \"\";");
+        io.outputLine("            }");
+        io.outputLine("            if (lite$abruptStderr !== \"\") {");
+        io.outputLine("                process.getBuiltinModule(\"node:fs\").writeSync(2, lite$abruptStderr);");
+        io.outputLine("            }");
+        io.outputLine("            process.exit(lite$abruptStatus);");
+        io.outputLine("        }");
+        io.outputLine("        throw lite$err;");
+        io.outputLine("    }");
+    }
     io.outputLine("}");
 }
