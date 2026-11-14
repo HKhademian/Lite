@@ -7,6 +7,91 @@ import { selectComponentRelease, type ComponentRelease } from '../compiler/relea
 import { root, run, sha256, versions } from './project.ts';
 import { showToolVersion } from './tool-version.ts';
 
+/** Supported compiler/language readiness verification summary attached to compiler and language distributions. */
+export type ReleaseBootstrapSummary = Readonly<{
+  ladder: Readonly<{ fixedPoint: boolean; generations: readonly unknown[] }>;
+  corpus: Readonly<{ cases?: number; programs?: number; rejections?: number; executions?: number; mismatches: readonly unknown[] }>;
+  support: string;
+}>;
+
+/** Inputs used to render human-readable release notes for packaged archives and GitHub releases. */
+export type ReleaseNotesInput = Readonly<{
+  label: string;
+  commit: string;
+  profile: 'tools' | 'compiler' | 'language';
+  releasedComponent: ComponentRelease | null;
+  archive: string;
+  archiveSha256: string;
+  manifestSha256: string;
+  vsix: Readonly<{ file: string; sha256: string }> | null;
+  bootstrap: ReleaseBootstrapSummary | null;
+}>;
+
+const profileSummaries: Record<'tools' | 'compiler' | 'language', string> = {
+  tools: 'Tool/source snapshot validated for CLI, docs, and extracted TS compilation; does not establish full language conformance.',
+  compiler: 'Compiler preview verified across the three-generation fixed-point bootstrap ladder and recorded corpus contracts; native C remains deferred.',
+  language: 'Language release verified across the three-generation bootstrap ladder, recorded corpus contracts, and full `lite verify --all --no-cache` conformance.',
+};
+
+/** Renders concise Markdown release notes describing component identity, verification evidence, and SHA-256 artifacts. */
+export function formatReleaseNotes(input: ReleaseNotesInput): string {
+  const componentText = input.releasedComponent === null
+    ? 'unpublished snapshot'
+    : `${input.releasedComponent.component} v${input.releasedComponent.version}`;
+  const verificationLines = [
+    '- Extracted archive validated with `./bin/lite doctor --docs`',
+    '- Node-only TypeScript emission & execution roundtrip verified on `001-001-report-int-42.lts` (output `42`)',
+  ];
+  if (input.bootstrap !== null) {
+    const gens = input.bootstrap.ladder.generations.length;
+    const corpusStats = input.bootstrap.corpus.cases === undefined
+      ? `mismatches=${input.bootstrap.corpus.mismatches.length}`
+      : `${input.bootstrap.corpus.cases} cases (${input.bootstrap.corpus.programs ?? 0} programs, ${input.bootstrap.corpus.rejections ?? 0} rejections, ${input.bootstrap.corpus.executions ?? 0} executions), mismatches=${input.bootstrap.corpus.mismatches.length}`;
+    verificationLines.push(
+      `- Self-hosting fixed-point ladder: ${input.bootstrap.ladder.fixedPoint ? 'passed' : 'failed'} (${gens} generations)`,
+      `- Generated corpus parity: ${corpusStats}`,
+    );
+    if (input.profile === 'language') {
+      verificationLines.push('- Full repository verification: `./bin/lite verify --all --no-cache` passed');
+    }
+    verificationLines.push(`- Embedded archive evidence: \`release/compiler.ts\`, \`release/compiler-source.lts\`, \`release/verification.json\` (${input.bootstrap.support})`);
+  }
+  const artifactLines = [
+    `- \`${input.archive}\` — sha256: \`${input.archiveSha256}\``,
+    ...(input.vsix === null ? [] : [`- \`${input.vsix.file}\` — sha256: \`${input.vsix.sha256}\``]),
+    `- \`manifest.json\` — sha256: \`${input.manifestSha256}\``,
+    '- `RELEASE-NOTES.md` — these release notes',
+    '- `SHA256SUMS` — checksum manifest for all release files',
+  ];
+  return [
+    `# ${input.label}`,
+    '',
+    `- **Source commit**: \`${input.commit}\``,
+    `- **Released component**: ${componentText}`,
+    `- **Readiness profile**: \`${input.profile}\` — ${profileSummaries[input.profile]}`,
+    '- **Native C backend**: deferred (`nativeCompiler: false`)',
+    '',
+    '## Verification',
+    '',
+    ...verificationLines,
+    '',
+    '## Artifacts',
+    '',
+    ...artifactLines,
+    '',
+    '## Verify and extract',
+    '',
+    '```sh',
+    'shasum -a 256 -c SHA256SUMS',
+    `mkdir -p lite-${input.label} && tar -xzf ${input.archive} -C lite-${input.label}`,
+    `cd lite-${input.label} && ./bin/lite doctor --docs`,
+    '```',
+    '',
+    'See `docs/start-here.md`, `docs/release-automation.md`, and `compiler/transition-plan.md` in the archive.',
+    '',
+  ].join('\n');
+}
+
 /** Tool releases validate their own surface; language releases also require full conformance. */
 export function releaseProfile(release: ComponentRelease | null): 'tools' | 'compiler' | 'language' {
   if (release === null || ['cli', 'checker', 'tester', 'verifier', 'benchmark', 'release', 'docs', 'vscode', 'doctor', 'formatter', 'linker'].includes(release.component)) return 'tools';
@@ -33,7 +118,7 @@ export function prepareRelease(directory: string, output: string, tag?: string) 
     writeFileSync(tar, run('git', ['archive', '--format=tar', commit], directory));
     run('tar', ['-xf', tar, '-C', source], work);
     run(process.execPath, [join(source, 'bin/lite'), 'doctor', '--docs'], source);
-    let bootstrap: unknown = null;
+    let bootstrap: ReleaseBootstrapSummary | null = null;
     if (profile !== 'tools') {
       const dependencies = join(directory, 'igniter/node_modules');
       assert(existsSync(dependencies), 'install locked igniter development dependencies for compiler release verification');
@@ -42,7 +127,7 @@ export function prepareRelease(directory: string, output: string, tag?: string) 
         const ladderDirectory = join(work, 'ladder');
         const ladder = JSON.parse(run(process.execPath, [join(source, 'compiler/scripts/self-host.ts'), '--out', ladderDirectory], source).toString()) as { fixedPoint: boolean; generations: unknown[] };
         assert(ladder.fixedPoint, 'compiler release requires a generated fixed point');
-        const corpus = JSON.parse(run(process.execPath, [join(source, 'compiler/scripts/corpus-parity.ts'), '--artifact', join(ladderDirectory, 'generation-3.ts')], source).toString()) as { mismatches: unknown[] };
+        const corpus = JSON.parse(run(process.execPath, [join(source, 'compiler/scripts/corpus-parity.ts'), '--artifact', join(ladderDirectory, 'generation-3.ts')], source).toString()) as ReleaseBootstrapSummary['corpus'];
         assert.equal(corpus.mismatches.length, 0);
         if (profile === 'language') run(process.execPath, [join(source, 'bin/lite'), 'verify', '--all', '--no-cache'], source);
         bootstrap = { ladder, corpus, support: profile === 'language' ? 'current canonical contracts passed' : 'restricted generated-TS subset; consult migration inventory' };
@@ -76,11 +161,16 @@ export function prepareRelease(directory: string, output: string, tag?: string) 
     const emitted = run(process.execPath, [join(extracted, 'bin/lite-compile'), 'igniter/tests/compiler/001-001-report-int-42.lts'], extracted);
     const program = join(work, 'hello.ts'); writeFileSync(program, emitted);
     assert.equal(run(process.execPath, [join(extracted, 'compiler/entry.ts'), program], extracted).toString(), '42\n');
+    const archiveBytes = readFileSync(join(work, archive));
+    const archiveSha256 = sha256(archiveBytes);
+    const manifestSha256 = sha256(record);
     mkdirSync(output, { recursive: true });
     copyFileSync(join(work, archive), join(output, archive));
     if (vsix) copyFileSync(join(work, vsix.file), join(output, vsix.file));
     writeFileSync(join(output, 'manifest.json'), record);
-    writeFileSync(join(output, 'RELEASE-NOTES.md'), `# ${label}\n\nSource: ${commit}\n\nReleased component: ${releasedComponent?.component ?? 'unpublished snapshot'}.\n\nReadiness profile: ${profile}. Native C remains deferred. Tool/source snapshots do not establish full language conformance.\n\nSee docs/start-here.md, docs/release-automation.md and compiler/transition-plan.md in the archive.\n`);
+    writeFileSync(join(output, 'RELEASE-NOTES.md'), formatReleaseNotes({
+      label, commit, profile, releasedComponent, archive, archiveSha256, manifestSha256, vsix, bootstrap,
+    }));
     writeFileSync(join(output, 'SHA256SUMS'), readdirSync(output).sort().map(file => `${sha256(readFileSync(join(output, file)))}  ${file}\n`).join(''));
     return manifest;
   } finally { rmSync(work, { recursive: true, force: true }); }
