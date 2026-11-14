@@ -506,11 +506,11 @@ test('lite verify uses generated TS, reports migration gaps and rejects the reti
     assert.match(verified.stdout, /PASS example\.001-double-sum\/seven-and-five/);
     assert.match(verified.stdout, /\[ts\]/); assert.doesNotMatch(verified.stdout, /T00 reference|\[c\]/);
     assert.match(verified.stdout, /PASS match\.subjectless\/first-true-and-fallback \[ts\]/);
-    assert.match(verified.stdout, /verification failed: 4 failing scenario\(s\), 84 executed, 0 cached/);
+    assert.match(verified.stdout, /verification failed: 4 failing scenario\(s\), 85 executed, 0 cached/);
     const covered = spawnSync(join(root, 'bin/lite'), ['verify', '--coverage'], { env, encoding: 'utf8', timeout: 30000 });
     assert.equal(covered.error, undefined); assert.equal(covered.status, 0, covered.stderr);
     assert.match(covered.stdout, /features: 41 registered, 41 cases/);
-    assert.match(covered.stdout, /examples: 20\/20 manifests/);
+    assert.match(covered.stdout, /examples: 21\/21 manifests/);
     assert.match(covered.stdout, /samples: 22\/22 manifests/);
     const first = spawnSync(join(root, 'bin/lite'), ['verify', '--all', '--filter', 'features/int-arithmetic.json'],
       { env, encoding: 'utf8', timeout: 30000 });

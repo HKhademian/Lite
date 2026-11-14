@@ -1,0 +1,23 @@
+{
+  "id": "example.023-subjectless-match",
+  "kind": "example",
+  "source": {
+    "file": "../../../examples/023-subjectless-match.lts",
+    "hash": "sha256:303cd66255c19b172b1ae6e19df95c3c4583e5d1e5cdecb7c200f113a25a60ea"
+  },
+  "features": [
+    "match.subjectless",
+    "loop.sequence"
+  ],
+  "description": "Ordered subjectless Boolean match for both value selection and action branches.",
+  "cases": [
+    {
+      "name": "value-and-action-match",
+      "stdout": {
+        "text": "95 -> excellent top tier\n72 -> pass on track\n40 -> retry review needed\n",
+        "hash": "sha256:b0d1e9707777b9acafe02c57ced664381c6cb69246d217246fb1068ca1bacc48"
+      },
+      "exitCode": 0
+    }
+  ]
+}

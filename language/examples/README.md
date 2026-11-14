@@ -97,6 +97,10 @@ examples. They live under [compiler/](../../compiler/README.md) and are run with
 - [022 — Sum loop](022-sum-loop.lts): sums 1 through 5 with `var` bindings, `+=`
   compound updates, and explicit `loop`/`break`. Reports `sum(1..5) = 15`.
 
+- [023 — Subjectless match](023-subjectless-match.lts): demonstrates subjectless
+  Boolean `match { ... }` for both value selection and action statements with
+  ordered guards and a final `_` fallback.
+
 ## Play canvas & audio examples (`play/`)
 
 Interactive programs using `extra/canvas`, `extra/board`, and `extra/audio`:

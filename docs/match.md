@@ -4,11 +4,13 @@ Status: **subject-based pattern matching and subjectless Boolean selection selec
 
 Branch-result union inference is selected 2026-10-21; explicit/expected result contracts remain constraints.
 
-Implementation checkpoint, 2026-11-01: the igniter implements the subjectless
-Boolean form only. Arms evaluate in order and the first true body wins; a final
-`_` fallback is required; action and value arms work. Subject-based patterns,
-guards, alternatives, nested patterns and branch-result unions remain
-unimplemented. Value arms must currently share one result type.
+Implementation checkpoint: subjectless Boolean `match { ... }` is implemented
+across the TS backend (both value expressions and action/tail statements) and as
+action/tail statements in C. Arms evaluate in order, the first true condition
+wins, and a final `_` fallback is required. Subject-based patterns (`match x { ... }`),
+C value `match` expressions, guards, alternatives, nested patterns, and branch-result
+unions remain deferred. Value `match` arms must share one result kind (allowing
+`Never` arms such as `io.exit` to unify with the peer result kind).
 
 ## Purpose and template
 

@@ -80,3 +80,27 @@ test('lite fmt CLI routes through ./bin/lite and supports --check and file forma
     rmSync(tmp, { recursive: true, force: true });
   }
 });
+
+test('lite fmt formats subjectless match blocks consistently and passes --check', () => {
+  const tmp = mkdtempSync(join(tmpdir(), 'lite-fmt-match-test-'));
+  try {
+    const sample = join(tmp, 'match.lts');
+    writeFileSync(sample, 'match{\ntier==3{\nnote="top tier";\n}\n_{\nnote="other";\n}\n}\n\n', 'utf8');
+    const formatted = spawnSync(process.execPath, [join(root, 'bin', 'lite'), 'fmt', sample], {
+      cwd: root,
+      encoding: 'utf8',
+    });
+    assert.equal(formatted.status, 0);
+    const checkPass = spawnSync(process.execPath, [join(root, 'bin', 'lite'), 'fmt', '--check', sample], {
+      cwd: root,
+      encoding: 'utf8',
+    });
+    assert.equal(checkPass.status, 0);
+    assert.equal(
+      readFileSync(sample, 'utf8'),
+      'match {\n    tier==3 {\n        note="top tier";\n    }\n    _ {\n        note="other";\n    }\n}\n',
+    );
+  } finally {
+    rmSync(tmp, { recursive: true, force: true });
+  }
+});

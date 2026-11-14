@@ -40,18 +40,22 @@ tokenize := fn(line: String): List<(kind: String, text: String)> {
 }
 
 digitValue := fn(text: String): Int {
-    if text == "0" { return 0; }
-    if text == "1" { return 1; }
-    if text == "2" { return 2; }
-    if text == "3" { return 3; }
-    if text == "4" { return 4; }
-    if text == "5" { return 5; }
-    if text == "6" { return 6; }
-    if text == "7" { return 7; }
-    if text == "8" { return 8; }
-    if text == "9" { return 9; }
-    io.errorLine("expected a decimal digit");
-    io.exit(2);
+    match {
+        text == "0" { 0 }
+        text == "1" { 1 }
+        text == "2" { 2 }
+        text == "3" { 3 }
+        text == "4" { 4 }
+        text == "5" { 5 }
+        text == "6" { 6 }
+        text == "7" { 7 }
+        text == "8" { 8 }
+        text == "9" { 9 }
+        _ {
+            io.errorLine("expected a decimal digit");
+            io.exit(2);
+        }
+    }
 }
 
 numberValue := fn(text: String): Int {
@@ -66,9 +70,11 @@ numberValue := fn(text: String): Int {
 }
 
 precedence := fn(operator: String): Int {
-    if operator == "+" or operator == "-" { return 10; }
-    if operator == "*" or operator == "/" { return 20; }
-    0
+    match {
+        operator == "+" or operator == "-" { 10 }
+        operator == "*" or operator == "/" { 20 }
+        _ { 0 }
+    }
 }
 
 /* Returns the calculated value and the first unconsumed token position. */

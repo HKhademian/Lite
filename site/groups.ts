@@ -134,6 +134,16 @@ export const showcaseSamples: readonly ShowcaseSample[] = [
     args: [],
     stdin: '12 + 30\n',
   },
+  {
+    id: 'subjectless-match',
+    group: 'control',
+    title: 'Subjectless match',
+    note: 'Ordered Boolean match guards for values and actions with a final _ fallback.',
+    file: 'language/examples/023-subjectless-match.lts',
+    args: [],
+    stdin: '',
+    showOutput: true,
+  },
   heroSample,
   {
     id: 'fixed-tuples',

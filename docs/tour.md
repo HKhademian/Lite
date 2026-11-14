@@ -49,6 +49,9 @@ and [operators](operators.md) for the selected contracts.
   tuples and growable lists; continue with [type aliases](type-aliases.md).
 - [Sum loop](../language/examples/022-sum-loop.lts): mutable accumulators, `+=` updates, and
   explicit loop exit; continue with [loops](loops.md).
+- [Subjectless match](../language/examples/023-subjectless-match.lts): ordered
+  Boolean `match { ... }` arms with a required `_` fallback for values and
+  actions; continue with [match](match.md).
 
 Each example has a corresponding manifest under
 [artifact verifications](../language/verifications/artifacts/examples/). Cases preserve

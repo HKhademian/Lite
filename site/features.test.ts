@@ -38,10 +38,11 @@ test('stripLiteTs strips definite assignments, generic helpers, and as casts for
 });
 
 test('highlightLite highlights newer built-in types and operators', () => {
-  const html = highlightLite('pub f := fn(a: Int64, b: Float64, c: Double): Unit { var x := a ** 2; x += 1; }');
+  const html = highlightLite('pub f := fn(a: Int64, b: Float64, c: Double): Unit { var x := a ** 2; x += 1; } match { x > 0 { x } _ { 0 } }');
   for (const typeName of ['Int64', 'Float64', 'Double', 'Unit']) {
     assert(html.includes(`<span class="tok-type">${typeName}</span>`), `missing type highlight: ${typeName}`);
   }
+  assert(html.includes('<span class="tok-keyword">match</span>'), 'missing keyword highlight: match');
   const opHtml = highlightLite('a ** b += c :/= d :%= e <!= f >!= g <! h >! i');
   for (const op of ['**', '+=', ':/=', ':%=', '&lt;!=', '&gt;!=', '&lt;!', '&gt;!']) {
     assert(opHtml.includes(`<span class="tok-op">${op}</span>`), `missing operator highlight: ${op}`);
@@ -51,6 +52,7 @@ test('highlightLite highlights newer built-in types and operators', () => {
 test('showcaseSamples includes examples covering named calls, tuples, arrays, and lists', () => {
   const ids = new Set(showcaseSamples.map(sample => sample.id));
   for (const expected of [
+    'subjectless-match',
     'fixed-tuples',
     'named-arguments',
     'named-tuples',
