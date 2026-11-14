@@ -17,6 +17,7 @@ test('project-owned code uses Lite, TypeScript, JSON and generated C files', () 
     // Source archives have no Git metadata; inspect their shipped files directly.
     const visit = (directory: string): string[] => readdirSync(resolve(root, directory), { withFileTypes: true }).flatMap(entry => {
       if (['.git', '.cache', 'node_modules'].includes(entry.name)) return [];
+      if (directory === '' && ['dist', 'tmp', '.agent'].includes(entry.name)) return [];
       const name = directory + entry.name;
       return entry.isDirectory() ? visit(name + '/') : [name];
     });
