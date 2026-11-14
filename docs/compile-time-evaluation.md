@@ -34,7 +34,11 @@ The intended use includes calling ordinary user functions, reading a file,
 reading a line of input, or fetching a resource during compilation. The
 resulting supported value is available to the compiled program. The user
 intends normal calls to be eligible broadly, including calls with effects; this
-must not be reduced to a pure-only constant-folding feature.
+must not be reduced to a pure-only constant-folding feature. The compiler runs
+the compile-time code as the execution environment for that stage: effects
+actually happen during compilation, and supported results can be used to
+generate the program. This describes semantics without choosing an interpreter,
+native execution engine, host API or representation.
 
 ```text
 /* Illustrative API names and syntax, not supported programs. */
@@ -75,7 +79,7 @@ particular machine instruction must or must not execute at runtime.
 
 This direction does not decide the complete purity/effect system, how the
 compiler establishes these facts, incomplete proofs, materializable result
-types, nontermination, faults, resource limits, or their diagnostics. It does
+types, exact evaluation limits, or their diagnostics. It does
 not require rejecting ordinary runtime calls just because their inputs are not
 known. The proposed explicit runtime counterpart and its interaction with a
 known pure result remain open.
@@ -127,6 +131,33 @@ parsed, which constant types are allowed, or how size validity and overflow are
 diagnosed. Whether compile-time values and type parameters share the angle
 brackets is a separate design decision.
 
+## Failure and evaluation limits
+
+Selected 2026-11-14: when code runs during compilation, failures happen at that
+stage and follow Lite's ordinary error and panic channels. A failed token read,
+parse, or other fallible operation remains the kind of failure specified by
+that operation; compile-time execution does not automatically turn every error
+into a panic. Applicable language-level handling and propagation remain in
+effect during evaluation. If evaluation cannot produce the required value and
+its failure is not successfully handled, compilation fails rather than
+fabricating a value or silently deferring the required work to runtime.
+
+An evaluation that runs indefinitely, or exceeds the compiler's evaluation
+limits, is intended to fail with a **panic** during compilation. In general a
+compiler cannot determine in advance whether every arbitrary computation will
+terminate. A practical execution limit can stop an evaluation once that limit
+is reached, but exceeding a limit does not prove that the computation would
+never have terminated. Limit kinds, defaults, configuration, the panic's type,
+recovery boundaries and exact diagnostics remain open. Nothing here selects a
+specific limit or says that an unbounded evaluator can detect every infinite
+loop.
+
+Ordinary failure timing and branch execution still matter: do not execute an
+untaken branch to discover a fault. A reached failing operation is not a
+successful compile-time-known value simply because its inputs were known.
+Explicit runtime staging and its interaction with known pure expressions remain
+future investigation.
+
 ## Pending cases
 
 These are contract examples to develop; they are not executable passes:
@@ -162,9 +193,17 @@ These are contract examples to develop; they are not executable passes:
 - **no duplicate execution:** the explicitly compiled computation is not
   repeated by the generated program merely to recover its result; effects
   occur at the stage at which the computation actually runs.
-- **failure:** an evaluation that cannot produce a required compile-time value
-  cannot be treated as a successful known value; exact error reporting and
-  supported recovery remain to be designed.
+- **handled failure:** a compile-time parser or read that reports an ordinary
+  error can use applicable language handling at that stage and yield a valid
+  fallback; an ordinary error is not automatically converted to panic.
+- **unhandled failure:** a reached failing operation that is not successfully
+  handled cannot produce the required value; compilation fails, with exact
+  diagnostics and reporting still to design.
+- **evaluation limit:** a computation that exceeds an applicable evaluation
+  limit raises a compile-time panic. An infinite loop is a case to stop by a
+  suitable limit; a finite but costly computation can also reach that limit.
+- **untaken failure:** an unreachable branch containing a fault or nonterminating
+  loop is not executed merely to infer a value.
 
 Examples combining known arguments, runtime-dependent arguments, nonnegative
 and invalid array extents, user-defined functions, and explicit file input need
@@ -176,8 +215,8 @@ The exact `comptime` syntax and block result rules; the complete rules for
 proving purity and automatically known values; eligible value types and materialization; calls
 whose operations are unavailable to a compilation host; host versus target
 semantics; effects and their ordering; file/environment dependency tracking,
-caching and rebuilds; execution limits; permission and isolation policies;
-failures and diagnostics; and target-dependent results remain open. These
+caching and rebuilds; exact execution limits and panic recovery; permission and
+isolation policies; diagnostics; and target-dependent results remain open. These
 questions do not negate the intended ability to request compile-time execution
 of ordinary functions, including file, interactive-input, and network use cases.
 

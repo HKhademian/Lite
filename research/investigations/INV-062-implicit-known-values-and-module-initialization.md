@@ -197,8 +197,11 @@ Whether effectful initializers must be explicit or may be implicit is open.
   file handle as an assumed valid runtime handle.
 - **Calls and control flow:** known arguments alone do not prove a body returns,
   avoid a fault, or avoid runtime-only inputs. Specify recursion/loop limits,
-  indirect calls, branch reachability, error and panic behavior, and whether
-  unsupported evaluation is a diagnostic or a runtime fallback in each context.
+  indirect calls, branch reachability, exact limits and panic recovery, and how
+  unsupported evaluation is diagnosed in each context. The user selected
+  ordinary failure channels at compile time and panic for evaluation-limit
+  exhaustion; unhandled failure cannot silently fall back to runtime when a
+  compile-time value is required.
   An untaken branch must not be executed merely to infer a value.
 - **External observations:** explicit build-time file, terminal and network
   interactions require defined order and invocation timing. Track changed
@@ -243,7 +246,8 @@ Some require later decisions and are intentionally shown as alternatives.
    permitted update require their own evidence.
 7. `x := if false { 1 / 0 } else { 1 }`: a candidate evaluator follows
    selected conditional execution; the untaken fault must not be performed.
-   Reached arithmetic faults, compile-time catches and diagnostics are separate.
+   Reached faults follow applicable compile-time failure channels; exact
+   recovery boundaries and diagnostics remain to be specified.
 8. Mutually dependent top-level value initializers and recursive function
    definitions must be distinguished: a declaration cycle is not necessarily
    an execution cycle; a cycle requiring unavailable values needs a defined
