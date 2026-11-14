@@ -142,7 +142,7 @@ test('lite fmt formats tagged loops with then clauses and metadata reads', () =>
     const sample = join(tmp, 'tagged_loop.lts');
     writeFileSync(
       sample,
-      '@outer loop [1,2,3] {if .item==2 {break .value+10;}} then {.count+.value}\n',
+      '@outer loop [1, 2, 3]{\nif .item==2{\nbreak .value+10;\n}\n}then{\n.count+.value\n}\n\n',
       'utf8',
     );
     const formatted = spawnSync(process.execPath, [join(root, 'bin', 'lite'), 'fmt', sample], {
@@ -159,6 +159,50 @@ test('lite fmt formats tagged loops with then clauses and metadata reads', () =>
       readFileSync(sample, 'utf8'),
       '@outer loop [1, 2, 3] {\n    if .item==2 {\n        break .value+10;\n    }\n} then {\n    .count+.value\n}\n',
     );
+  } finally {
+    rmSync(tmp, { recursive: true, force: true });
+  }
+});
+
+test('lite fmt formats construct-level then and finally clauses idempotently', () => {
+  const tmp = mkdtempSync(join(tmpdir(), 'lite-fmt-finally-test-'));
+  try {
+    const sample = join(tmp, 'then_finally.lts');
+    writeFileSync(
+      sample,
+      'io := import "core/io";\n\n\n@outer loop [1, 2]{\nio.outputLine(.item);\n}then{\nio.outputLine("then");\n}finally{\nio.outputLine("fin");\n}\nx := if true{ 1 }else{ 2 }finally{ io.outputLine("cond"); }\n\n',
+      'utf8',
+    );
+    const formatted = spawnSync(process.execPath, [join(root, 'bin', 'lite'), 'fmt', sample], {
+      cwd: root,
+      encoding: 'utf8',
+    });
+    assert.equal(formatted.status, 0, formatted.stderr);
+    const expected = [
+      'io := import "core/io";',
+      '',
+      '@outer loop [1, 2] {',
+      '    io.outputLine(.item);',
+      '} then {',
+      '    io.outputLine("then");',
+      '} finally {',
+      '    io.outputLine("fin");',
+      '}',
+      'x := if true { 1 } else { 2 } finally { io.outputLine("cond"); }',
+      '',
+    ].join('\n');
+    assert.equal(readFileSync(sample, 'utf8'), expected);
+    const checkPass = spawnSync(process.execPath, [join(root, 'bin', 'lite'), 'fmt', '--check', sample], {
+      cwd: root,
+      encoding: 'utf8',
+    });
+    assert.equal(checkPass.status, 0, checkPass.stderr);
+    const secondRun = spawnSync(process.execPath, [join(root, 'bin', 'lite'), 'fmt', sample], {
+      cwd: root,
+      encoding: 'utf8',
+    });
+    assert.equal(secondRun.status, 0, secondRun.stderr);
+    assert.equal(readFileSync(sample, 'utf8'), expected);
   } finally {
     rmSync(tmp, { recursive: true, force: true });
   }

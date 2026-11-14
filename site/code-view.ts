@@ -73,6 +73,28 @@ function extractTsProgram(source: string): string {
       i = !trimmed.endsWith(';') && trimmed.includes('{') ? skipBraceBlock(body, i) : i + 1;
       continue;
     }
+    if (/^lite\$abrupt(?:Active|HasFault|Stderr|Status)\s*=/.test(trimmed)) {
+      i += 1;
+      continue;
+    }
+    if (trimmed === 'try {') {
+      const fullEnd = skipBraceBlock(body, i);
+      let catchIdx = -1;
+      for (let k = i + 1; k < fullEnd - 1; k += 1) {
+        if (
+          body[k] === '    } catch (lite$err) {' &&
+          body[k + 1]?.trim().startsWith('if (lite$err === lite$abruptToken)')
+        ) {
+          catchIdx = k;
+          break;
+        }
+      }
+      if (catchIdx !== -1) {
+        const inner = body.slice(i + 1, catchIdx).map((l) => dedent(l, 4));
+        body.splice(i, fullEnd - i, ...inner);
+        continue;
+      }
+    }
 
     out.push(dedent(line));
     i += 1;

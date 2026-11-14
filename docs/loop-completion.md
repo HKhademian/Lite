@@ -15,8 +15,10 @@ conditional tags (`@name if`/`@name match ... then { ... }`), `@name.value`/
 `.count`/`.item`/`.index`, payload `break`/`continue`, `break @name`,
 `continue @name`, and `return @name` are implemented. `.item`/`.index` in `then`
 expose the last entered entry, or a typed zero item and index 0 after zero
-entries. Cleanup ordering with `finally` remains open until construct-level
-`finally` lands.
+entries. When a loop or conditional also carries construct-level
+`finally { ... }`, `then` runs before `finally` on normal completion and is
+skipped on abrupt exit (implemented in the TypeScript backend and igniter; C
+backend support remains deferred).
 
 ## Template
 

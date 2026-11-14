@@ -2,18 +2,21 @@
 
 Status: **cleanup-only `finally`, completion ordering, panic unwinding, returned-error cleanup, same-scope typed-panic recovery ordering, and cleanup-failure precedence selected, 2026-10-20; order-insensitive `A & B` co-occurrence patterns and ordered failure tuples added 2026-10-25, with the `&` form binding no value**. `finally` has no receiver, does not recover failures, and cannot transform the pending outcome. When a loop or conditional has both `then` and `finally`, `then` finishes first and `finally` runs afterward as the construct exits. On a normal exit, cleanup preserves the completed result; on an abrupt exit, it preserves that pending exit if cleanup completes normally. A typed panic matched by a handler in the same scope is recovered before that scope's `finally` runs once as it exits. During language-managed panic propagation toward an outer matching handler, exited scopes' applicable `finally` blocks run inner-to-outer. Postfix `!` returned-error propagation runs the same applicable construct-level cleanup before the error leaves the enclosing function or closure; body-wide cleanup remains deferred. If any failure is already pending, keep it primary and retain each new cleanup failure as secondary; if only normal completion is pending, the first cleanup failure becomes primary and cancels that completion. The `&` form's public value/operations/inspection, attachment grammar/scope, no-handler policy, and hard-abort behavior remain open. The example below uses only Unit cleanup.
 
-Implementation checkpoint, 2026-11-01: the igniter implements a
-construct-level `finally { ... }` on `if` and on `loop` (after an optional
-`then`). A normally completing construct runs its `then` first (when present),
-then `finally`; the construct keeps its normal result and the cleanup block's
-`Unit` does not replace it. `finally` also runs when the construct is left by a
-`return`, by a targeted `break`/`continue` that exits its scope, by an
-arithmetic/bounds fault, and by `exit`. An inner loop's `finally` runs before a
-targeted exit reaches an outer loop, and that inner loop's `then` is skipped.
-`finally` is checked as a cleanup action and cannot read loop metadata. A
-faulting `finally` currently replaces any pending exit; the selected
-primary/secondary failure retention is not implemented yet, and body-wide
-cleanup sections and operation-level recovery `finally` remain deferred.
+Implementation checkpoint, 2026-11-14: both the igniter and the TypeScript
+backend implement construct-level `finally { ... }` across general blocks
+(`{ ... }`), tagged blocks (`@name { ... }`), `if`, `match`, and `loop` (after
+an optional `then`). Normal completion runs `then` first (when present) and
+`finally` afterward while preserving the completed result (`Unit` from cleanup
+does not replace it). Abrupt exits (`return`, targeted `return @name`, `break`,
+`continue`, `io.exit`, and runtime faults) unwind enclosed `finally` blocks
+inner-to-outer while skipping any `then` clauses. `finally` acts as a
+control/metadata barrier (disallowing escapes or enclosing loop/conditional
+metadata reads) and produces `Unit`/`Never`. In the TypeScript backend, if a
+fault is already pending when cleanup faults, the original fault stays primary
+and secondary cleanup fault diagnostics are retained after it; if only normal
+completion or a non-fault exit (`io.exit`) was pending, the cleanup fault becomes
+primary with exit status `1`. C backend support, body-wide cleanup sections,
+and operation-level recovery `finally` remain deferred.
 
 Body-wide special cleanup sections are now explicitly deferred for a joint [defer and resource-management review](deferred-cleanup-and-resources.md). The illustrations here do not finalize that feature or its syntax.
 

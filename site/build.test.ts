@@ -742,3 +742,73 @@ test('playground inline module initializes without TDZ or ReferenceError', async
   await new Promise(resolve => setTimeout(resolve, 25));
   assert.equal(els.get('pg-pause')?.getAttribute('aria-pressed'), 'false');
 });
+
+test('stripLiteTs and formatCodeView handle construct-level finally and abrupt unwinding', () => {
+  const compiler = sharedTsCompiler();
+  const runStripped = (tsSource: string) => {
+    const js = stripLiteTs(tsSource);
+    let stdout = '';
+    let stderr = '';
+    const fakeProcess = {
+      argv: ['node', 'playground.js'],
+      exit(code: number): never {
+        throw new Error(`EXIT:${code}`);
+      },
+      getBuiltinModule(name: string) {
+        assert.equal(name, 'node:fs');
+        return {
+          readSync: () => 0,
+          writeSync(fd: number, text: string): number {
+            if (fd === 1) stdout += text;
+            else if (fd === 2) stderr += text;
+            return text.length;
+          },
+        };
+      },
+    };
+    const fn = new Function('process', `${js.replace(/export function main\b/, 'function main')}\nreturn main();`) as (
+      p: typeof fakeProcess,
+    ) => string | undefined;
+    try {
+      const ret = fn(fakeProcess);
+      return { exitCode: null as number | null, stdout: stdout + (ret ?? ''), stderr };
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : String(err);
+      if (msg.startsWith('EXIT:')) {
+        return { exitCode: Number(msg.slice(5)), stdout, stderr };
+      }
+      throw err;
+    }
+  };
+
+  const cleanupSource = readFileSync(join(root, 'language/verifications/features/finally-cleanup.lts'), 'utf8');
+  const cleanupTs = compileBuiltCompiler(compiler, { name: 'finally-cleanup.lts', text: cleanupSource });
+  assert.equal(cleanupTs.status, 0, cleanupTs.stderr.toString());
+  const cleanupRes = runStripped(cleanupTs.stdout.toString());
+  assert.equal(cleanupRes.exitCode, null);
+  assert.equal(cleanupRes.stdout, '1\n2\nthen\nfinally\ncond\n1\nreturn-cleanup\n5\n');
+  assert.equal(cleanupRes.stderr, '');
+
+  const faultSource = [
+    'io := import "core/io";',
+    'var zero := 0;',
+    '{',
+    '    { io.outputLine(1 / zero); } finally { io.outputLine("inner"); }',
+    '} finally {',
+    '    io.outputLine("outer");',
+    '}',
+    '',
+  ].join('\n');
+  const faultCompiled = compileBuiltCompiler(compiler, { name: 'fault.lts', text: faultSource });
+  assert.equal(faultCompiled.status, 0, faultCompiled.stderr.toString());
+  const faultTs = faultCompiled.stdout.toString();
+
+  const programView = formatCodeView(faultTs, 'ts', 'program');
+  assert(!programView.includes('lite$abrupt'), programView);
+  assert(!programView.includes('return lite$out;'), programView);
+
+  const faultRes = runStripped(faultTs);
+  assert.equal(faultRes.exitCode, 1);
+  assert.equal(faultRes.stdout, 'inner\nouter\n');
+  assert.equal(faultRes.stderr, 'fault.lts:4:23: ArithmeticPanic: division by zero\n');
+});

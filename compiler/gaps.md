@@ -193,7 +193,7 @@ Keep dependencies explicit; split a topic further when its contracts warrant it.
   outputLine(f(false));`. The earlier generated compiler accepted this but emitted
   a function that failed strict TS checking. Completing loop-result lowering is
   separate from proving statement-block returns.
-- [ ] **Cleanup:** construct-level finally and exit/fault interactions.
+- [x] **Cleanup:** construct-level finally and exit/fault interactions.
 - [x] **Match:** subjectless Boolean `match { ... }` in TypeScript and action `match` in C (C value `match` expressions and subject `match` remain deferred; `docs/match.md`).
 - [ ] **Other existing builtins:** audit and port remaining reference helpers,
   including inputWord (default-argument `io.exit()` exiting zero is now
