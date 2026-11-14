@@ -70,11 +70,12 @@ bootstrap subset **L** defined in the
 [bootstrap plan](../docs/bootstrap-plan.md#compiler-source-subset-l). Namespace
 modules (`import "..."`, `pub`), tuple `=name` shorthand, named/`=name` call
 routing (including `self(...)`), scalar compound updates (`+=`, `-=`, `*=`,
-`/=`, `%=`, `:/=`, `:%=`), and `**` have passed the self-host and seed acceptance
-gates and are part of S. Do not add `match`, records, enums, unions, `Float`,
-arrays, closures, general user `mut` parameters, `finally`, or loop metadata to
-S until they pass those gates too: the selected generated compiler must parse,
-check and lower every construct used in S.
+`/=`, `%=`, `:/=`, `:%=`), `**`, and unnamed `loop sequence { ... }` traversal
+have passed the self-host and seed acceptance gates and are part of S. Do not
+add `match`, records, enums, unions, `Float`, arrays, closures, general user
+`mut` parameters, `finally`, or loop metadata to S until they pass those gates
+too: the selected generated compiler must parse, check and lower every construct
+used in S.
 
 Compiler sources under `src/` and `lib/core/` use Lite namespace imports. Each
 manifest names one root; active build, CLI, self-host, release and verification

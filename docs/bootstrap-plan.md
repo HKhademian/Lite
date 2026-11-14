@@ -811,7 +811,8 @@ Allowed in S now:
   `self(...)`), tuple construction (including `=name` shorthand), field access,
   index reads, parentheses, unary minus, `+ - * / % :/ :% **`, comparisons,
   `and`/`or`/`not`, value `if`/`else if`/`else`.
-- Statements: action `if`/`else if`/`else`, loops, `break`, `continue`,
+- Statements: action `if`/`else if`/`else`, loops (including unnamed
+  `loop sequence { ... }` traversal), `break`, `continue`,
   `return`, scalar compound updates (`+=`, `-=`, `*=`, `/=`, `%=`, `:/=`,
   `:%=`), blocks, `outputLine`, `reportError`, `exit`.
 - Functions: typed parameters/results, calls, recursion, `self`.

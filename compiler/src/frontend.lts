@@ -1686,7 +1686,7 @@ compoundAssignCode := fn(target: String, source: String, opPos: Int, prefix: Str
 /** Counts entries in `locals`. */
 localsCount := fn(locals: List<Local>): Int {
     var count := 0;
-    loop locals as _ { count = count + 1; }
+    loop locals { count += 1; }
     count
 }
 
@@ -1717,7 +1717,7 @@ recordBranchUpdates := fn(locals: List<Local>, preLen: Int, maxDepth: Int, branc
     }
     emitted: mut List<String> = [];
     var rev := 0;
-    loop branchRuntimes as _ { rev = rev + 1; }
+    loop branchRuntimes { rev += 1; }
     loop rev > 0 {
         rev = rev - 1;
         rt := branchRuntimes[rev];
@@ -3946,7 +3946,7 @@ pub parseProgramWithIdentity := fn(target: String, source: String, prefix: Strin
             if (blockKind == "if" or blockKind == "ifvalue") and after < size and textLib.wordAt(source, after, "else") {
                 locals = visibleLocals(locals, depth);
                 var stateCount := 0;
-                loop savedStates as _ { stateCount = stateCount + 1; }
+                loop savedStates { stateCount += 1; }
                 branchPreLen := savedStates[stateCount - 1].preLocalsLen;
                 if currentLive and not currentStopped {
                     nextBranchUpdates := recordBranchUpdates(locals, branchPreLen, depth - 1, blockCount, branchUpdates);
