@@ -155,7 +155,8 @@ skipComment := fn(source: String, position: Int, prefix: String): Int {
         if cursor >= size {
             failAt(source, position, prefix, "unterminated comment");
         }
-        if textLib.startsWithAt(source, cursor, "/*") {
+        ch := textLib.at(source, cursor);
+        if ch == "/" and textLib.startsWithAt(source, cursor, "/*") {
             innerFence := rawFenceLength(source, cursor);
             if innerFence > 0 {
                 cursor = skipRawComment(source, cursor, innerFence, prefix);
@@ -163,7 +164,7 @@ skipComment := fn(source: String, position: Int, prefix: String): Int {
                 depth = depth + 1;
                 cursor = cursor + 2;
             }
-        } else if textLib.startsWithAt(source, cursor, "*/") {
+        } else if ch == "*" and textLib.startsWithAt(source, cursor, "*/") {
             depth = depth - 1;
             cursor = cursor + 2;
             if depth == 0 { return cursor; }
@@ -182,7 +183,7 @@ skipTrivia := fn(source: String, start: Int, prefix: String): Int {
         ch := textLib.at(source, position);
         if ch == " " or ch == "\t" or ch == "\r" or ch == "\n" {
             position = position + 1;
-        } else if textLib.startsWithAt(source, position, "/*") {
+        } else if ch == "/" and textLib.startsWithAt(source, position, "/*") {
             position = skipComment(source, position, prefix);
         } else {
             break;
@@ -508,7 +509,12 @@ pub tsDisplayValueCode := fn(kind: String, code: String): String {
 
 /** True when emitted target code calls `needle` outside quoted String literal text. */
 codeUsesTextCall := fn(code: String, needle: String): Bool {
+    if textLib.indexOfText(code, needle, 0) < 0 { return false; }
     size := textLib.length(code);
+    if size == 0 { return false; }
+    width := textLib.length(needle);
+    if width == 0 { return true; }
+    first := textLib.at(needle, 0);
     var cursor := 0;
     loop cursor < size {
         ch := textLib.at(code, cursor);
@@ -525,7 +531,7 @@ codeUsesTextCall := fn(code: String, needle: String): Bool {
                     cursor = cursor + 1;
                 }
             }
-        } else if textLib.startsWithAt(code, cursor, needle) {
+        } else if ch == first and textLib.startsWithAt(code, cursor, needle) {
             return true;
         } else {
             cursor = cursor + 1;
@@ -1489,34 +1495,37 @@ pub skipAliasString := fn(source: String, position: Int): Int {
 pub targetCodeCalls := fn(code: String, existing: String): String {
     if textLib.indexOfText(code, "lite", 0) < 0 and textLib.indexOfText(code, "lt_", 0) < 0 and
         textLib.indexOfText(code, "finally", 0) < 0 { return existing; }
+    size := textLib.length(code);
     var calls := existing;
     var cursor := 0;
-    loop cursor < textLib.length(code) {
+    loop cursor < size {
         ch := textLib.at(code, cursor);
         if ch == "\"" {
             cursor = skipAliasString(code, cursor);
         } else if textLib.isNameStart(ch) {
             start := cursor;
             cursor = textLib.skipName(code, cursor);
-            loop cursor < textLib.length(code) and textLib.at(code, cursor) == "$" {
+            loop cursor < size and textLib.at(code, cursor) == "$" {
                 cursor = textLib.skipName(code, cursor + 1);
             }
-            name := textLib.slice(code, start, cursor);
-            if cursor < textLib.length(code) and textLib.at(code, cursor) == "(" {
-                if (textLib.startsWithAt(name, 0, "lite$") and not textLib.startsWithAt(name, 0, "lite$m$")) or
-                    textLib.startsWithAt(name, 0, "lite_") or
-                    (textLib.startsWithAt(name, 0, "lt_") and not textLib.startsWithAt(name, 0, "lt_fn_") and
-                        not textLib.startsWithAt(name, 0, "lt_m_") and not textLib.startsWithAt(name, 0, "lt_s")) {
-                    token := name + "(|";
-                    if textLib.indexOfText(calls, "|" + token, 0) < 0 { calls = calls + token; }
-                }
-            } else if name == "finally" {
-                var afterFin := cursor;
-                loop afterFin < textLib.length(code) and (textLib.at(code, afterFin) == " " or textLib.at(code, afterFin) == "\t" or textLib.at(code, afterFin) == "\n") {
-                    afterFin = afterFin + 1;
-                }
-                if afterFin < textLib.length(code) and textLib.at(code, afterFin) == "{" {
-                    if textLib.indexOfText(calls, "|lite$finally(|", 0) < 0 { calls = calls + "lite$finally(|"; }
+            if ch == "l" or ch == "f" {
+                name := textLib.slice(code, start, cursor);
+                if cursor < size and textLib.at(code, cursor) == "(" {
+                    if (textLib.startsWithAt(name, 0, "lite$") and not textLib.startsWithAt(name, 0, "lite$m$")) or
+                        textLib.startsWithAt(name, 0, "lite_") or
+                        (textLib.startsWithAt(name, 0, "lt_") and not textLib.startsWithAt(name, 0, "lt_fn_") and
+                            not textLib.startsWithAt(name, 0, "lt_m_") and not textLib.startsWithAt(name, 0, "lt_s")) {
+                        token := name + "(|";
+                        if textLib.indexOfText(calls, "|" + token, 0) < 0 { calls = calls + token; }
+                    }
+                } else if name == "finally" {
+                    var afterFin := cursor;
+                    loop afterFin < size and (textLib.at(code, afterFin) == " " or textLib.at(code, afterFin) == "\t" or textLib.at(code, afterFin) == "\n") {
+                        afterFin = afterFin + 1;
+                    }
+                    if afterFin < size and textLib.at(code, afterFin) == "{" {
+                        if textLib.indexOfText(calls, "|lite$finally(|", 0) < 0 { calls = calls + "lite$finally(|"; }
+                    }
                 }
             }
         } else { cursor = cursor + 1; }
@@ -1542,7 +1551,7 @@ collectTypeTarget := fn(source: String, position: Int, prefix: String): (text: S
             ch := textLib.at(source, cursor);
             if ch == "\"" {
                 cursor = skipAliasString(source, cursor);
-            } else if textLib.startsWithAt(source, cursor, "/*") {
+            } else if ch == "/" and textLib.startsWithAt(source, cursor, "/*") {
                 cursor = skipComment(source, cursor, prefix);
             } else if ch == "(" {
                 depth = depth + 1;
@@ -1565,7 +1574,7 @@ collectTypeTarget := fn(source: String, position: Int, prefix: String): (text: S
             ch := textLib.at(source, cursor);
             if ch == "\"" {
                 cursor = skipAliasString(source, cursor);
-            } else if textLib.startsWithAt(source, cursor, "/*") {
+            } else if ch == "/" and textLib.startsWithAt(source, cursor, "/*") {
                 cursor = skipComment(source, cursor, prefix);
             } else if ch == "[" {
                 depth = depth + 1;
@@ -1590,7 +1599,7 @@ collectTypeTarget := fn(source: String, position: Int, prefix: String): (text: S
             var depth := 0;
             loop cursor < size {
                 ch := textLib.at(source, cursor);
-                if textLib.startsWithAt(source, cursor, "/*") {
+                if ch == "/" and textLib.startsWithAt(source, cursor, "/*") {
                     cursor = skipComment(source, cursor, prefix);
                 } else if ch == "<" {
                     depth = depth + 1;
@@ -1674,7 +1683,7 @@ looksLikeTupleEntry := fn(source: String, position: Int, prefix: String): Bool {
         ch := textLib.at(source, cursor);
         if ch == "\"" {
             cursor = skipAliasString(source, cursor);
-        } else if textLib.startsWithAt(source, cursor, "/*") {
+        } else if ch == "/" and textLib.startsWithAt(source, cursor, "/*") {
             cursor = skipComment(source, cursor, prefix);
         } else if ch == "(" or ch == "[" or ch == "{" {
             depth = depth + 1;
@@ -1774,7 +1783,7 @@ scanParenEnd := fn(source: String, open: Int, prefix: String): Int {
     loop cursor < size {
         ch := textLib.at(source, cursor);
         if ch == "\"" { cursor = skipAliasString(source, cursor); }
-        else if textLib.startsWithAt(source, cursor, "/*") { cursor = skipComment(source, cursor, prefix); }
+        else if ch == "/" and textLib.startsWithAt(source, cursor, "/*") { cursor = skipComment(source, cursor, prefix); }
         else if ch == "(" { depth = depth + 1; cursor = cursor + 1; }
         else if ch == ")" {
             depth = depth - 1;
@@ -2086,7 +2095,7 @@ skipBalancedArgument := fn(source: String, position: Int, prefix: String): Int {
         ch := textLib.at(source, cursor);
         if ch == "\"" {
             cursor = skipAliasString(source, cursor);
-        } else if textLib.startsWithAt(source, cursor, "/*") {
+        } else if ch == "/" and textLib.startsWithAt(source, cursor, "/*") {
             cursor = skipComment(source, cursor, prefix);
         } else if ch == "(" or ch == "[" or ch == "{" {
             depth = depth + 1;
@@ -2175,7 +2184,7 @@ scanConditionOpen := fn(source: String, start: Int, prefix: String): Int {
         ch := textLib.at(source, cursor);
         if ch == "\"" {
             cursor = skipAliasString(source, cursor);
-        } else if textLib.startsWithAt(source, cursor, "/*") {
+        } else if ch == "/" and textLib.startsWithAt(source, cursor, "/*") {
             cursor = skipComment(source, cursor, prefix);
         } else if ch == "(" or ch == "[" {
             depth = depth + 1;
@@ -2200,7 +2209,7 @@ scanExpressionItemEnd := fn(source: String, start: Int, prefix: String): Int {
     loop cursor < size {
         ch := textLib.at(source, cursor);
         if ch == "\"" { cursor = skipAliasString(source, cursor); }
-        else if textLib.startsWithAt(source, cursor, "/*") { cursor = skipComment(source, cursor, prefix); }
+        else if ch == "/" and textLib.startsWithAt(source, cursor, "/*") { cursor = skipComment(source, cursor, prefix); }
         else if depth == 0 and (ch == ";" or ch == "}") { return cursor; }
         else {
             if ch == "(" or ch == "[" or ch == "{" {
@@ -2492,7 +2501,7 @@ callReordersArgs := fn(source: String, openParen: Int, prefix: String, params: L
         ch := textLib.at(source, cursor);
         if ch == "\"" {
             cursor = skipAliasString(source, cursor);
-        } else if textLib.startsWithAt(source, cursor, "/*") {
+        } else if ch == "/" and textLib.startsWithAt(source, cursor, "/*") {
             cursor = skipComment(source, cursor, prefix);
         } else if ch == "(" or ch == "[" or ch == "{" {
             depth = depth + 1;
@@ -2525,7 +2534,7 @@ scanBraceEnd := fn(source: String, open: Int, prefix: String): Int {
         ch := textLib.at(source, cursor);
         if ch == "\"" {
             cursor = skipAliasString(source, cursor);
-        } else if textLib.startsWithAt(source, cursor, "/*") {
+        } else if ch == "/" and textLib.startsWithAt(source, cursor, "/*") {
             cursor = skipComment(source, cursor, prefix);
         } else if ch == "{" {
             depth = depth + 1;
@@ -2557,9 +2566,9 @@ valueIfBranchAt := fn(source: String, open: Int, close: Int, prefix: String): Bo
         ch := textLib.at(source, scan);
         if ch == "\"" {
             scan = skipAliasString(source, scan);
-        } else if textLib.startsWithAt(source, scan, "/*") {
+        } else if ch == "/" and textLib.startsWithAt(source, scan, "/*") {
             scan = skipComment(source, scan, prefix);
-        } else if ch == ";" or textLib.startsWithAt(source, scan, ".output") {
+        } else if ch == ";" or (ch == "." and textLib.startsWithAt(source, scan, ".output")) {
             return false;
         } else {
             scan = scan + 1;
@@ -2817,7 +2826,7 @@ loopNeedsExprLowering := fn(source: String, position: Int, prefix: String): Bool
         if ch == "\"" {
             cursor = skipAliasString(source, cursor);
             prevExpr = true;
-        } else if textLib.startsWithAt(source, cursor, "/*") {
+        } else if ch == "/" and textLib.startsWithAt(source, cursor, "/*") {
             cursor = skipComment(source, cursor, prefix);
         } else if ch == " " or ch == "\t" or ch == "\r" or ch == "\n" {
             cursor = cursor + 1;
@@ -6525,7 +6534,7 @@ collectFutureValues := fn(target: String, source: String, prefix: String, module
         ch := textLib.at(source, cursor);
         if ch == "\"" {
             cursor = skipAliasString(source, cursor);
-        } else if textLib.startsWithAt(source, cursor, "/*") {
+        } else if ch == "/" and textLib.startsWithAt(source, cursor, "/*") {
             cursor = skipComment(source, cursor, prefix);
         } else if ch == "{" {
             braceDepth = braceDepth + 1;
