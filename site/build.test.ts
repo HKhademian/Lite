@@ -108,6 +108,8 @@ test('buildSite generates static pages and metadata in dist/site', () => {
   assert(playground.includes('id="pg-canvas-title"'));
   assert(playground.includes('id="pg-canvas-size"'));
   assert(playground.includes('id="pg-mute"'));
+  assert(playground.includes('class="pg-sound-wave"'));
+  assert(playground.includes('class="pg-sound-slash"'));
   assert(playground.includes('id="pg-fps"'));
   const sizePos = playground.indexOf('id="pg-canvas-size"');
   const fpsPos = playground.indexOf('id="pg-fps"');

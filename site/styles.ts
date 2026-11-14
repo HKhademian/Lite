@@ -1000,22 +1000,43 @@ details.gallery-code pre.code-block {
   opacity: 0.65;
 }
 .pg-mute-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 1.7rem;
+  height: 1.5rem;
+  padding: 0;
   border: 1px solid var(--border);
   border-radius: 5px;
   background: var(--surface-elevated);
-  color: var(--ink-muted);
-  font-family: var(--font-sans);
-  font-size: 0.74rem;
-  padding: 0.16rem 0.5rem;
+  color: var(--ink);
   cursor: pointer;
 }
+.pg-mute-btn svg {
+  display: block;
+  width: 14px;
+  height: 14px;
+}
+.pg-mute-btn .pg-sound-slash {
+  display: none;
+}
 .pg-mute-btn:hover {
-  color: var(--ink);
+  color: var(--accent);
   border-color: var(--accent);
 }
 .pg-mute-btn[aria-pressed="true"] {
-  color: var(--accent);
+  color: var(--ink-muted);
   border-color: var(--accent);
+}
+.pg-mute-btn[aria-pressed="true"] .pg-sound-body {
+  opacity: 0.6;
+}
+.pg-mute-btn[aria-pressed="true"] .pg-sound-wave {
+  display: none;
+}
+.pg-mute-btn[aria-pressed="true"] .pg-sound-slash {
+  display: block;
+  color: var(--accent);
 }
 .pg-canvas-stage {
   position: relative;

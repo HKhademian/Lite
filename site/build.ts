@@ -740,7 +740,14 @@ function renderPlaygroundPage(
             <span class="pg-sep" aria-hidden="true">&middot;</span>
             <span id="pg-fps" class="pg-status">0.0 fps &middot; 0.0 ms</span>
             <span class="pg-sep" aria-hidden="true">&middot;</span>
-            <button id="pg-mute" class="pg-mute-btn" type="button" aria-pressed="false" title="Toggle Web Audio tones">Sound: On</button>
+            <button id="pg-mute" class="pg-mute-btn" type="button" aria-pressed="false" aria-label="Sound on — click to mute" title="Sound on — click to mute">
+              <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                <path class="pg-sound-body" d="M11 5 6 9H3a1 1 0 0 0-1 1v4a1 1 0 0 0 1 1h3l5 4V5Z" fill="currentColor" fill-opacity="0.16"/>
+                <path class="pg-sound-wave" d="M15.5 8.5a5 5 0 0 1 0 7"/>
+                <path class="pg-sound-wave" d="M18.5 5.5a9 9 0 0 1 0 13"/>
+                <line class="pg-sound-slash" x1="3.5" y1="3.5" x2="20.5" y2="20.5" stroke-width="2.2"/>
+              </svg>
+            </button>
           </div>
         </div>
         <div class="pg-canvas-stage">
@@ -1078,10 +1085,17 @@ function renderPlaygroundPage(
   compileBtn.addEventListener("click", () => { void runAction("compile"); });
   playBtn.addEventListener("click", () => { unlockAudio(); void runAction("play"); });
 
+  function syncMuteUi() {
+    muteBtn.setAttribute("aria-pressed", audioMuted ? "true" : "false");
+    const label = audioMuted ? "Sound off — click to turn sound on" : "Sound on — click to mute";
+    muteBtn.title = label;
+    muteBtn.setAttribute("aria-label", label);
+  }
+  syncMuteUi();
+
   muteBtn.addEventListener("click", () => {
     audioMuted = !audioMuted;
-    muteBtn.setAttribute("aria-pressed", audioMuted ? "true" : "false");
-    muteBtn.textContent = audioMuted ? "Sound: Muted" : "Sound: On";
+    syncMuteUi();
     if (!audioMuted) unlockAudio();
   });
 
