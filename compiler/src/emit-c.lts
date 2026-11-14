@@ -353,6 +353,9 @@ pub emitProgram := fn(items: frontend.Items, source: String, prefix: String): Un
         if frontend.isListKind(item.kind) or (item.kind == "Discard" and frontend.isListKind(item.name)) or item.kind == "LocalList" or item.kind == "VarList" or item.kind == "AssignList" {
             diagLib.fail("", "C backend does not support list values yet");
         }
+        if frontend.isArrayKind(item.kind) or (item.kind == "Discard" and frontend.isArrayKind(item.name)) {
+            diagLib.fail("", "C backend does not support array values yet");
+        }
         if item.kind == "LoopSeq" {
             diagLib.fail("", "C backend does not support list traversal yet");
         }

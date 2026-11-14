@@ -863,7 +863,7 @@ test('restricted compiler compiles growable lists, literals and indexing to runn
     'Pair := type (kind: String, code: String);',
     'Pairs := type List<Pair>;',
     'first := fn (values: Ints): Int { values[0] }',
-    'make := fn (): Chain { [6, 7] }',
+    'make := fn (): Chain { res: Chain = [6, 7]; res }',
     'none := fn (): List<Int> { [] }',
     'copy := fn (words: Words): Words { words }',
     'count := fn (values: List<Int>): Int { 0 }',
@@ -918,8 +918,8 @@ test('restricted compiler compiles list traversal to runnable TS', () => {
     'Chain := type Ints;',
     'Pair := type (kind: String, code: Int);',
     'Pairs := type List<Pair>;',
-    'make := fn (): Chain { [6, 7] }',
-    'pairs := fn (): Pairs { [(kind = "number", code = 12), (kind = "symbol", code = 3)] }',
+    'make := fn (): Chain { res: Chain = [6, 7]; res }',
+    'pairs := fn (): Pairs { res: Pairs = [(kind = "number", code = 12), (kind = "symbol", code = 3)]; res }',
     'values: Ints = [10, 20];',
     'names: List<String> = ["alpha", "beta"];',
     'loop values as value {',
@@ -959,8 +959,8 @@ test('restricted compiler compiles list traversal to runnable TS', () => {
 
 test('restricted compiler diagnoses invalid list traversal clearly', () => {
   for (const [bad, errors] of [
-    ["io := import \"core/io\"; loop 1 as item { io.outputLine(item); }\n", '1:30: loop sequence must be a List, got Int\n'],
-    ["io := import \"core/io\"; loop true as item { io.outputLine(item); }\n", '1:30: loop sequence must be a List, got Bool\n'],
+    ["io := import \"core/io\"; loop 1 as item { io.outputLine(item); }\n", '1:30: loop sequence must be a List or Array, got Int\n'],
+    ["io := import \"core/io\"; loop true as item { io.outputLine(item); }\n", '1:30: loop sequence must be a List or Array, got Bool\n'],
     ['values: List<Int> = [1];\nloop values as {\n}\n', '2:16: expected an item name after as\n'],
     ['values: List<Int> = [1];\nloop values as item {\n    item = 2;\n}\n', '3:5: cannot assign to immutable local item\n'],
     ["io := import \"core/io\"; values: List<Int> = [1];\nloop values as item {\n    io.outputLine(item);\n}\nio.outputLine(item);\n", '5:15: unknown value item\n'],

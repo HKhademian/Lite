@@ -165,7 +165,7 @@ test('host operations and source reads are not available as unqualified globals'
     'outputLine(1);', 'output("x");', 'reportError("x");', 'inputArgs();', 'inputAll();',
     'inputLine();', 'inputInt();', 'inputFloat();', 'exit(0);', 'textLength("x");',
     'textAt("x", 0);', 'textSlice("x", 0, 1);', 'readSource("main.lts", "./dep");',
-    'values: mut List<Int> = []; push_back(mut values, 1);', 'values: mut List<Int> = []; pop_back(mut values);',
+    'values: mut List<Int> = []; pushBack(mut values, 1);', 'values: mut List<Int> = []; popBack(mut values);',
   ]) {
     const result = compileTs({ text: source });
     assert.equal(result.status, 2, source);
@@ -199,7 +199,7 @@ test('core list mutations use an import alias and retain element and mutability 
     'list := import "core/list"; values: mut List<Int> = []; list.pushBack(mut values, "x");',
     'list := import "core/list"; values: List<Int> = []; list.pushBack(mut values, 1);',
     'list := import "core/list"; values: List<Int> = []; list.popBack(mut values);',
-    'values: mut List<Int> = []; push_back(mut values, 1);',
+    'values: mut List<Int> = []; pushBack(mut values, 1);',
   ]) {
     const compiled = compileTs({ text: invalid });
     assert.equal(compiled.status, 2, invalid);
@@ -2386,7 +2386,7 @@ test('partial conditionals default declarations to zero and skip false assignmen
   assert.equal(compiledRich.status, 0, compiledRich.stderr.toString());
   const runRich = runTsArtifact(compiledRich.stdout.toString());
   assert.equal(runRich.phase, 'run'); assert.equal(runRich.status, 0);
-  assert.equal(runRich.stdout.toString(), '9 0 [] [] 0 false false 10\n42\n');
+  assert.equal(runRich.stdout.toString(), '9 0 [] [0, 0] 0 false false 10\n42\n');
 
   if (process.env['LITE_SKIP_NATIVE'] !== '1') {
     const cSource = [
