@@ -190,6 +190,23 @@ export function stripLiteTs(source: string): string {
       continue;
     }
 
+    // `if ((import.meta as ...).main === true) { ... }` Node CLI entrypoint wrapper
+    if (
+      source.startsWith('if ', i) &&
+      (i === 0 || !/[a-zA-Z0-9_$]/.test(source[i - 1]!)) &&
+      /^if\s*\(\s*\(?\s*import\.meta\b/.test(source.slice(i, i + 64))
+    ) {
+      const parenStart = source.indexOf('(', i + 2);
+      const parenEnd = skipBalanced(source, parenStart, '(', ')');
+      let bodyStart = parenEnd;
+      while (bodyStart < n && /\s/.test(source[bodyStart]!)) bodyStart += 1;
+      if (source[bodyStart] === '{') {
+        i = skipBalanced(source, bodyStart, '{', '}');
+        while (i < n && (source[i] === '\n' || source[i] === '\r')) i += 1;
+        continue;
+      }
+    }
+
     // `function name<T>(...) : ReturnType {`
     if (source.startsWith('function ', i) && (i === 0 || !/[a-zA-Z0-9_$]/.test(source[i - 1]!))) {
       const fnHead = /^function\s+[a-zA-Z_$][a-zA-Z0-9_$]*/.exec(source.slice(i));
