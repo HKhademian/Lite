@@ -64,6 +64,8 @@ test('buildSite generates static pages and metadata in dist/site', () => {
   assert(!gallery.includes('<details class="gallery-code" open>'));
   const index = readFileSync(join(out, 'index.html'), 'utf8');
   assert(index.includes('is light.'));
+  assert(index.includes('<meta name="color-scheme" content="light dark">'));
+  assert(index.includes('<meta name="description"'));
   assert(index.includes('Play &rarr;'));
   assert(!index.includes('Inspect generated TypeScript'));
   assert(index.includes('commit-hash'));

@@ -1,6 +1,7 @@
 /** Stylesheet for the static Lite public showcase site and playground, emitted to dist/site/style.css. */
 
 export const siteCss = `:root {
+  color-scheme: light dark;
   --bg: #F5F3EE;
   --surface: #ECE8DF;
   --surface-elevated: #FBFAF7;
@@ -41,7 +42,12 @@ export const siteCss = `:root {
   }
 }
 
+:root[data-theme="light"] {
+  color-scheme: light;
+}
+
 :root[data-theme="dark"] {
+  color-scheme: dark;
   --bg: #0B0C0E;
   --surface: #1A1D22;
   --surface-elevated: #131519;

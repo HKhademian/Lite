@@ -225,6 +225,7 @@ function renderSampleCard(sample: RenderedSample, basePath: string, includeNote 
 
 function renderPage(options: Readonly<{
   title: string;
+  description?: string;
   basePath: string;
   active: 'home' | 'playground' | 'gallery';
   repoUrl: string;
@@ -237,18 +238,24 @@ function renderPage(options: Readonly<{
   const bodyAttr = options.bodyClass ? ` class="${escapeHtml(options.bodyClass)}"` : '';
   const mainAttr = ` class="${escapeHtml(options.mainClass ?? 'container')}"`;
   const lightSwitchShine = options.lightSwitchShine ?? true;
+  const description = options.description ?? 'Lite is a small, explicit language and self-hosted compiler designed for low runtime weight, clear consequences, and readable code.';
   return `<!doctype html>
 <html lang="en">
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="color-scheme" content="light dark">
+  <meta name="description" content="${escapeHtml(description)}">
   <title>${escapeHtml(options.title)}</title>
   <link rel="icon" type="image/svg+xml" href="${options.basePath}favicon.svg">
   <script>
     (function () {
       try {
         var t = localStorage.getItem("lite-theme");
-        if (t === "light" || t === "dark") document.documentElement.dataset.theme = t;
+        if (t === "light" || t === "dark") {
+          document.documentElement.dataset.theme = t;
+          document.documentElement.style.colorScheme = t;
+        }
       } catch (e) {}
     })();
   </script>
@@ -289,6 +296,7 @@ ${renderFooter(options.rev, options.repoUrl)}
       btn.title = title;
       btn.setAttribute("aria-label", title);
       btn.dataset.mode = mode;
+      document.documentElement.style.colorScheme = mode === "system" ? "" : mode;
     }
     btn.addEventListener("click", function () {
       var root = document.documentElement;
@@ -485,6 +493,7 @@ ${sections}`;
 
   return renderPage({
     title: 'Gallery — Lite',
+    description: 'Verified Lite example programs compiled and executed at build time.',
     basePath: '../',
     active: 'gallery',
     repoUrl,
@@ -934,6 +943,7 @@ function renderPlaygroundPage(rendered: ReadonlyMap<string, RenderedSample>, rep
 
   return renderPage({
     title: 'Playground — Lite',
+    description: 'Write, compile to TypeScript or C, and run Lite programs in your browser.',
     basePath: '../',
     active: 'playground',
     repoUrl,
