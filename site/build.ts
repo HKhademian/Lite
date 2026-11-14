@@ -676,7 +676,7 @@ function renderPlaygroundPage(
   ];
   const serialized = JSON.stringify(payload).replaceAll('<', '\\u003c');
 
-  const body = `<div class="workbench">
+  const body = `<div id="pg-workbench" class="workbench">
   <section class="pane" aria-label="Source editor">
     <div class="pane-head">
       <div class="sample-picker">
@@ -698,6 +698,8 @@ function renderPlaygroundPage(
       <span id="pg-file" class="pg-status"></span>
     </div>
   </section>
+
+  <div id="pg-split" class="pg-split" role="separator" aria-orientation="vertical" aria-label="Resize editor and inspector panes" aria-valuemin="20" aria-valuemax="80" aria-valuenow="50" tabindex="0" title="Drag to resize panes (double-click to reset 50/50)"></div>
 
   <section class="pane" aria-label="Compiler and output inspector">
     <div class="pane-head">
@@ -772,6 +774,8 @@ function renderPlaygroundPage(
   const byId = new Map(samples.map(s => [s.id, s]));
   const cache = new Map();
   const select = document.getElementById("pg-samples");
+  const workbenchEl = document.getElementById("pg-workbench");
+  const splitEl = document.getElementById("pg-split");
   const resetBtn = document.getElementById("pg-reset");
   const compileBtn = document.getElementById("pg-compile");
   const playBtn = document.getElementById("pg-play");
@@ -819,6 +823,61 @@ function renderPlaygroundPage(
   let playExitStatus = 0;
   let audioMuted = false;
   let audioContext = null;
+
+  const SPLIT_KEY = "lite.pg.split";
+  let splitPct = 50;
+  function applySplit(pct, save) {
+    const clamped = Math.max(20, Math.min(80, Math.round(pct * 10) / 10));
+    splitPct = clamped;
+    workbenchEl.style.setProperty("--pg-split", clamped + "%");
+    splitEl.setAttribute("aria-valuenow", String(Math.round(clamped)));
+    if (save) {
+      try { window.localStorage.setItem(SPLIT_KEY, String(clamped)); } catch {}
+    }
+  }
+  try {
+    const savedSplit = Number(window.localStorage.getItem(SPLIT_KEY));
+    if (Number.isFinite(savedSplit) && savedSplit >= 20 && savedSplit <= 80) {
+      applySplit(savedSplit, false);
+    }
+  } catch {}
+
+  let dragSplitId = null;
+  splitEl.addEventListener("pointerdown", (event) => {
+    if (event.button !== 0 && event.pointerType === "mouse") return;
+    event.preventDefault();
+    dragSplitId = event.pointerId;
+    splitEl.setPointerCapture(event.pointerId);
+    splitEl.classList.add("dragging");
+    document.body.classList.add("pg-resizing");
+  });
+  splitEl.addEventListener("pointermove", (event) => {
+    if (dragSplitId !== event.pointerId) return;
+    const rect = workbenchEl.getBoundingClientRect();
+    if (!rect.width) return;
+    applySplit(((event.clientX - rect.left) / rect.width) * 100, false);
+  });
+  function stopSplitDrag(event) {
+    if (dragSplitId !== event.pointerId) return;
+    dragSplitId = null;
+    if (splitEl.hasPointerCapture(event.pointerId)) {
+      splitEl.releasePointerCapture(event.pointerId);
+    }
+    splitEl.classList.remove("dragging");
+    document.body.classList.remove("pg-resizing");
+    applySplit(splitPct, true);
+  }
+  splitEl.addEventListener("pointerup", stopSplitDrag);
+  splitEl.addEventListener("pointercancel", stopSplitDrag);
+  splitEl.addEventListener("dblclick", () => { applySplit(50, true); });
+  splitEl.addEventListener("keydown", (event) => {
+    const step = event.shiftKey ? 5 : 2;
+    if (event.key === "ArrowLeft") { event.preventDefault(); applySplit(splitPct - step, true); }
+    else if (event.key === "ArrowRight") { event.preventDefault(); applySplit(splitPct + step, true); }
+    else if (event.key === "Home") { event.preventDefault(); applySplit(20, true); }
+    else if (event.key === "End") { event.preventDefault(); applySplit(80, true); }
+    else if (event.key === "0") { event.preventDefault(); applySplit(50, true); }
+  });
 
   function renderCodeViews() {
     tsEl.innerHTML = rawTs ? highlightTs(formatCodeView(rawTs, "ts", codeMode)) : "";

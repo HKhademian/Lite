@@ -91,6 +91,8 @@ test('buildSite generates static pages and metadata in dist/site', () => {
   assert(styleCss.includes('.pg-panel { min-height: 240px; }'));
   const playground = readFileSync(join(out, 'playground/index.html'), 'utf8');
   assert(playground.includes('playground-page'));
+  assert(playground.includes('id="pg-workbench"'));
+  assert(playground.includes('id="pg-split"'));
   assert(playground.includes('highlightLite(editorEl.value)'));
   assert(playground.includes('Generated TS'));
   assert(playground.includes('id="pg-compile"'));
