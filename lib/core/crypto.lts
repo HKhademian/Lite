@@ -1,4 +1,4 @@
-/* Provisional core host digest/CSPRNG primitives and pure-Lite encodings and HMAC. This module adds no host authority by itself. */
+/* Core cryptography primitives (host CSPRNG plus pure-Lite SHA-256, SHA-512, HMAC, and encodings). This module adds no host authority by itself. */
 
 diag := import "core/diag";
 file := import "core/file";
@@ -8,9 +8,6 @@ list := import "core/list";
 text := import "core/text";
 unicode := import "core/unicode";
 
-/** Returns the lowercase hexadecimal message digest (`"sha256"` or `"sha512"`) of raw `0..255` byte values. */
-pub digestBytes := fn(algorithm: String, bytes: List<Int>): String;
-
 /** Generates `count` cryptographically strong random `0..255` byte values. */
 pub randomBytes := fn(count: Int): List<Int>;
 
@@ -18,6 +15,7 @@ b64Alphabet := "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/
 hexAlphabet := "0123456789abcdef";
 pow32 := 4294967296;
 
+/** Validates that every integer in `bytes` falls within `0..255`. */
 checkByteRange := fn(bytes: List<Int>): Unit {
     loop bytes as b {
         if b < 0 or b > 255 {
@@ -27,6 +25,7 @@ checkByteRange := fn(bytes: List<Int>): Unit {
     }
 };
 
+/** Precomputes a 256-entry 4-bit bitwise lookup table for XOR (`isXor`) or AND. */
 buildNibbleTable := fn(isXor: Bool): List<Int> {
     out: mut List<Int> = [];
     var a := 0;
@@ -96,6 +95,7 @@ k512Lo: List<Int> = [
 587496836, 1086792851, 365543100, 2618297676, 3409855158, 4234509866, 987167468, 1246189591
 ];
 
+/** Computes 32-bit three-way bitwise XOR via precomputed 4-bit lookup tables. */
 xor3_32 := fn(a: Int, b: Int, c: Int): Int {
     var x := a;
     var y := b;
@@ -115,6 +115,7 @@ xor3_32 := fn(a: Int, b: Int, c: Int): Int {
     acc
 };
 
+/** Computes the SHA-256 `Ch(e, f, g)` 32-bit bitwise choice function. */
 ch32 := fn(e: Int, f: Int, g: Int): Int {
     var ve := e;
     var vf := f;
@@ -137,6 +138,7 @@ ch32 := fn(e: Int, f: Int, g: Int): Int {
     acc
 };
 
+/** Computes the SHA-256 `Maj(a, b, c)` 32-bit bitwise majority function. */
 maj32 := fn(a: Int, b: Int, c: Int): Int {
     var va := a;
     var vb := b;
@@ -160,6 +162,7 @@ maj32 := fn(a: Int, b: Int, c: Int): Int {
     acc
 };
 
+/** Formats an unsigned 32-bit integer as 8 lowercase hexadecimal digits. */
 word32Hex := fn(word: Int): String {
     var out := "";
     var div := 268435456;
@@ -173,6 +176,7 @@ word32Hex := fn(word: Int): String {
     out
 };
 
+/** Compresses one 64-byte SHA-256 block into the eight 32-bit state words. */
 sha256Compress := fn(
 h0In: Int, h1In: Int, h2In: Int, h3In: Int,
 h4In: Int, h5In: Int, h6In: Int, h7In: Int,
@@ -248,6 +252,7 @@ block: List<Int>, offset: Int
     )
 };
 
+/** Pads and hashes the remaining SHA-256 tail block(s) and returns the lowercase hex digest. */
 sha256FinalizeTail := fn(
 h0In: Int, h1In: Int, h2In: Int, h3In: Int,
 h4In: Int, h5In: Int, h6In: Int, h7In: Int,
@@ -292,8 +297,8 @@ tail: List<Int>, totalBytes: Int
     word32Hex(h4) + word32Hex(h5) + word32Hex(h6) + word32Hex(h7)
 };
 
-/** Streams raw bytes from `reader` and returns the lowercase hexadecimal SHA-256 digest in pure Lite. */
-pub sha256PureReader := fn(reader: io.Reader): (ok: Bool, hex: String, error: String) {
+/** Streams raw bytes from `reader` and returns the lowercase hexadecimal SHA-256 digest. */
+pub sha256Reader := fn(reader: io.Reader): (ok: Bool, hex: String, error: String) {
     if not io.readerOk(reader) {
         return (ok = false, hex = "", error = io.readerError(reader));
     }
@@ -345,8 +350,8 @@ pub sha256PureReader := fn(reader: io.Reader): (ok: Bool, hex: String, error: St
     (ok = true, hex = sha256FinalizeTail(h0, h1, h2, h3, h4, h5, h6, h7, tail, totalBytes), error = "")
 };
 
-/** Returns the lowercase hexadecimal SHA-256 digest of raw `0..255` byte values in pure Lite. */
-pub sha256PureBytes := fn(bytes: List<Int>): String {
+/** Returns the lowercase hexadecimal SHA-256 digest of raw `0..255` byte values. */
+pub sha256Bytes := fn(bytes: List<Int>): String {
     checkByteRange(bytes);
     total := list.listCountInt(bytes);
     var h0 := 1779033703;
@@ -372,18 +377,18 @@ pub sha256PureBytes := fn(bytes: List<Int>): String {
     sha256FinalizeTail(h0, h1, h2, h3, h4, h5, h6, h7, tail, total)
 };
 
-/** Returns the lowercase hexadecimal SHA-256 digest of UTF-8 `value` in pure Lite. */
-pub sha256PureText := fn(value: String): String {
-    sha256PureBytes(unicode.utf8Encode(value))
+/** Returns the lowercase hexadecimal SHA-256 digest of UTF-8 `value`. */
+pub sha256Text := fn(value: String): String {
+    sha256Bytes(unicode.utf8Encode(value))
 };
 
-/** Streams the raw bytes of the file at `path` and returns its lowercase hexadecimal SHA-256 digest in pure Lite. */
-pub sha256PureFile := fn(path: String): (ok: Bool, hex: String, error: String) {
+/** Returns the lowercase hexadecimal SHA-256 digest of the raw bytes of the file at `path`. */
+pub sha256File := fn(path: String): (ok: Bool, hex: String, error: String) {
     reader := file.openReader(path);
     if not io.readerOk(reader) {
         return (ok = false, hex = "", error = io.readerError(reader));
     }
-    hashed := sha256PureReader(reader);
+    hashed := sha256Reader(reader);
     closed := io.closeReader(reader);
     if not hashed.ok {
         return hashed;
@@ -394,6 +399,7 @@ pub sha256PureFile := fn(path: String): (ok: Bool, hex: String, error: String) {
     hashed
 };
 
+/** Returns `2^bits` for unsigned 32-bit shift computations. */
 pow2Arr := fn(bits: Int): Int {
     var out := 1;
     var i := 0;
@@ -404,6 +410,7 @@ pow2Arr := fn(bits: Int): Int {
     out
 };
 
+/** Rotates a 64-bit word (`hi`, `lo`) right by `shift` bits. */
 rotr64 := fn(hi: Int, lo: Int, shift: Int): (hi: Int, lo: Int) {
     if shift == 0 { return (hi = hi, lo = lo); }
     if shift < 32 {
@@ -418,14 +425,15 @@ rotr64 := fn(hi: Int, lo: Int, shift: Int): (hi: Int, lo: Int) {
     (hi = (lo / d) + (hi % d) * m, lo = (hi / d) + (lo % d) * m)
 };
 
+/** Logically shifts a 64-bit word (`hi`, `lo`) right by `shift` bits (`shift < 32`). */
 shr64 := fn(hi: Int, lo: Int, shift: Int): (hi: Int, lo: Int) {
     d := pow2Arr(shift);
     m := pow2Arr(32 - shift);
     (hi = hi / d, lo = (lo / d) + (hi % d) * m)
 };
 
-/** Returns the lowercase hexadecimal SHA-512 digest of raw `0..255` byte values in pure Lite. */
-pub sha512PureBytes := fn(bytes: List<Int>): String {
+/** Returns the lowercase hexadecimal SHA-512 digest of raw `0..255` byte values. */
+pub sha512Bytes := fn(bytes: List<Int>): String {
     checkByteRange(bytes);
     total := list.listCountInt(bytes);
     padded: mut List<Int> = [];
@@ -552,57 +560,22 @@ pub sha512PureBytes := fn(bytes: List<Int>): String {
     word32Hex(h6Hi) + word32Hex(h6Lo) + word32Hex(h7Hi) + word32Hex(h7Lo)
 };
 
-/** Returns the lowercase hexadecimal SHA-512 digest of UTF-8 `value` in pure Lite. */
-pub sha512PureText := fn(value: String): String {
-    sha512PureBytes(unicode.utf8Encode(value))
-};
-
-/** Returns the lowercase hexadecimal SHA-256 digest of the raw bytes of the file at `path`. */
-pub sha256File := fn(path: String): (ok: Bool, hex: String, error: String) {
-    reader := file.openReader(path);
-    if not io.readerOk(reader) {
-        return (ok = false, hex = "", error = io.readerError(reader));
-    }
-    bytes := io.readAll(reader);
-    readErr := io.readerError(reader);
-    closed := io.closeReader(reader);
-    if readErr =!= "" {
-        return (ok = false, hex = "", error = readErr);
-    }
-    if not closed.ok {
-        return (ok = false, hex = "", error = closed.error);
-    }
-    (ok = true, hex = digestBytes("sha256", bytes), error = "")
-}
-
-/** Returns the lowercase hexadecimal SHA-256 digest of UTF-8 `value`. */
-pub sha256Text := fn(value: String): String {
-    digestBytes("sha256", unicode.utf8Encode(value))
-}
-
-/** Returns the lowercase hexadecimal SHA-256 digest of raw `0..255` byte values. */
-pub sha256Bytes := fn(bytes: List<Int>): String {
-    digestBytes("sha256", bytes)
-}
-
 /** Returns the lowercase hexadecimal SHA-512 digest of UTF-8 `value`. */
 pub sha512Text := fn(value: String): String {
-    digestBytes("sha512", unicode.utf8Encode(value))
-}
+    sha512Bytes(unicode.utf8Encode(value))
+};
 
-/** Returns the lowercase hexadecimal SHA-512 digest of raw `0..255` byte values. */
-pub sha512Bytes := fn(bytes: List<Int>): String {
-    digestBytes("sha512", bytes)
-}
-
+/** True when `ch` is one of the 64 non-padding Base64 alphabet characters. */
 isBase64DataChar := fn(ch: String): Bool {
     text.indexOfText(b64Alphabet, ch, 0) >= 0
 }
 
+/** True when `ch` is an ASCII hexadecimal digit (`0-9`, `a-f`, `A-F`). */
 isHexChar := fn(ch: String): Bool {
     text.indexOfText("0123456789abcdefABCDEF", ch, 0) >= 0
 }
 
+/** Computes the bitwise XOR of two byte values (`0..255`). */
 byteXor := fn(left: Int, right: Int): Int {
     var a := left;
     var b := right;

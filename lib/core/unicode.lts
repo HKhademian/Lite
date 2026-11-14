@@ -105,6 +105,7 @@ pub utf8Encode := fn(text: String): List<Int> {
     out
 }
 
+/** Decodes UTF-8 `bytes`, either failing on invalid sequences (`strict`) or substituting U+FFFD. */
 utf8DecodeInternal := fn(bytes: List<Int>, strict: Bool): (ok: Bool, text: String, error: String) {
     count := list.listCountInt(bytes);
     var points: mut List<Int> = [];

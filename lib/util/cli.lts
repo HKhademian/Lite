@@ -185,3 +185,59 @@ pub normalizeSubcommand := fn(token: String, commands: List<String>): String {
     }
     ""
 };
+
+/** Scans leading/non-trailing repeatable `--builtin-mode` flags (`want`: `"check"`, `"options"`, or `"rest"`). */
+scanCompilerOptions := fn(args: List<String>, stopAtPositional: Bool, want: String): List<String> {
+    options: mut List<String> = [];
+    restArgs: mut List<String> = [];
+    errors: mut List<String> = [];
+    count := list.listCountText(args);
+    var stop := false;
+    var i := 0;
+    loop i < count {
+        arg := args[i];
+        if stop {
+            list.pushBack(mut restArgs, arg);
+            i = i + 1;
+        } else if arg == "--" {
+            stop = true;
+            list.pushBack(mut restArgs, arg);
+            i = i + 1;
+        } else if arg == "--builtin-mode" {
+            if i + 1 >= count or args[i + 1] == "--" {
+                list.pushBack(mut errors, arg);
+                return if want == "check" { errors } else if want == "options" { options } else { restArgs };
+            }
+            list.pushBack(mut options, arg);
+            list.pushBack(mut options, args[i + 1]);
+            i = i + 2;
+        } else if text.startsWithAt(arg, 0, "--builtin-mode=") {
+            list.pushBack(mut options, arg);
+            i = i + 1;
+        } else {
+            list.pushBack(mut restArgs, arg);
+            if stopAtPositional and not text.startsWithAt(arg, 0, "-") {
+                stop = true;
+            }
+            i = i + 1;
+        }
+    }
+    if want == "check" { return errors; }
+    if want == "options" { return options; }
+    restArgs
+};
+
+/** True when all repeatable compiler options in `args` are well-formed. */
+pub validCompilerOptions := fn(args: List<String>, stopAtPositional: Bool): Bool {
+    list.listCountText(scanCompilerOptions(args, stopAtPositional, "check")) == 0
+};
+
+/** Extracts repeatable compiler flags (`--builtin-mode SPEC`, `--builtin-mode=SPEC`) before `--` (or first positional arg). */
+pub compilerOptions := fn(args: List<String>, stopAtPositional: Bool): List<String> {
+    scanCompilerOptions(args, stopAtPositional, "options")
+};
+
+/** Returns `args` with repeatable compiler flags removed before `--` (or first positional arg). */
+pub withoutCompilerOptions := fn(args: List<String>, stopAtPositional: Bool): List<String> {
+    scanCompilerOptions(args, stopAtPositional, "rest")
+};

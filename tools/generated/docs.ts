@@ -29,12 +29,6 @@ declare const process: {
         realpathSync(path: string): string;
         mkdtempSync(prefix: string): string;
     };
-    getBuiltinModule(name: "node:path"): { join(...paths: string[]): string };
-    getBuiltinModule(name: "node:os"): { tmpdir(): string };
-    getBuiltinModule(name: "node:child_process"): {
-        spawnSync(command: string, args: readonly string[], options: { cwd?: string; env: Record<string, string | undefined>; encoding?: "utf8"; input?: string; stdio: "inherit" | readonly ["pipe", "pipe", "pipe"]; maxBuffer: number }): { status: number | null; signal: string | null; stdout: string | null; stderr: string | null; error?: Error };
-        spawnSync(command: string, args: readonly string[], options: { cwd?: string; env: Record<string, string | undefined>; input: Uint8Array; stdio: readonly ["pipe", "pipe", "pipe"]; timeout?: number; maxBuffer: number }): { status: number | null; signal: string | null; stdout: Uint8Array | null; stderr: Uint8Array | null; error?: Error };
-    };
 };
 declare const TextDecoder: { new (label: string, options?: { fatal?: boolean }): { decode(input?: Uint8Array, options?: { stream?: boolean }): string } };
 declare const TextEncoder: { new (): { encode(input?: string): Uint8Array } };
@@ -60,17 +54,6 @@ function lite$fromBytes(bytes: Uint8Array): bigint[] {
     for (let i = 0; i < bytes.length; i += 1) { out[i] = BigInt(bytes[i] ?? 0); }
     return out;
 }
-function lite$toBytes(bytes: readonly bigint[]): Uint8Array {
-    const out = new Uint8Array(bytes.length);
-    for (let i = 0; i < bytes.length; i += 1) {
-        const byte = bytes[i];
-        if (byte === undefined || byte < 0n || byte > 255n) {
-            throw new Error("byte value outside 0..255: " + String(byte));
-        }
-        out[i] = Number(byte);
-    }
-    return out;
-}
 function lite$fileKind(path: string): string {
     try {
         const st = process.getBuiltinModule("node:fs").statSync(path);
@@ -82,24 +65,6 @@ function lite$fileKind(path: string): string {
 function lite$fileListDir(path: string): string[] {
     return process.getBuiltinModule("node:fs").readdirSync(path).sort();
 }
-function lite$fileMakeDir(path: string): { ok: boolean; error: string } {
-    try { process.getBuiltinModule("node:fs").mkdirSync(path, { recursive: true }); return { ok: true, error: "" }; }
-    catch (error) { return { ok: false, error: lite$errMsg(error) }; }
-}
-function lite$fileRemove(path: string): { ok: boolean; error: string } {
-    try { process.getBuiltinModule("node:fs").rmSync(path, { recursive: true, force: true }); return { ok: true, error: "" }; }
-    catch (error) { return { ok: false, error: lite$errMsg(error) }; }
-}
-function lite$fileCopy(fromPath: string, toPath: string): { ok: boolean; error: string } {
-    try { process.getBuiltinModule("node:fs").cpSync(fromPath, toPath, { recursive: true, force: true, verbatimSymlinks: true }); return { ok: true, error: "" }; }
-    catch (error) { return { ok: false, error: lite$errMsg(error) }; }
-}
-function lite$fileMakeTempDir(prefix: string): { ok: boolean; path: string; error: string } {
-    try {
-        const joined = process.getBuiltinModule("node:path").join(process.getBuiltinModule("node:os").tmpdir(), prefix);
-        return { ok: true, path: process.getBuiltinModule("node:fs").mkdtempSync(joined), error: "" };
-    } catch (error) { return { ok: false, path: "", error: lite$errMsg(error) }; }
-}
 type Lite$StreamHandle = { kind: string; handle: bigint };
 type Lite$StreamEntry =
     | { kind: "file"; fd: number; eof: boolean; closed: boolean; error: string }
@@ -108,6 +73,7 @@ type Lite$StreamEntry =
     | { kind: "error"; closed: boolean; error: string };
 let lite$streams: Lite$StreamEntry[] = [];
 let lite$stdinState = { eof: false, error: "" };
+void lite$stdinState;
 function lite$resetStreams(): void {
     const fs = process.getBuiltinModule("node:fs");
     for (const entry of lite$streams) {
@@ -126,17 +92,6 @@ function lite$lookupStream(handle: bigint): Lite$StreamEntry | undefined {
     if (index < 0 || index >= lite$streams.length) return undefined;
     return lite$streams[index];
 }
-function lite$checkBytes(bytes: readonly bigint[]): { ok: true; data: Uint8Array } | { ok: false; error: string } {
-    const data = new Uint8Array(bytes.length);
-    for (let i = 0; i < bytes.length; i += 1) {
-        const byte = bytes[i];
-        if (byte === undefined || byte < 0n || byte > 255n) {
-            return { ok: false, error: "byte value outside 0..255: " + String(byte) };
-        }
-        data[i] = Number(byte);
-    }
-    return { ok: true, data };
-}
 function lite$fileOpenStream(path: string, flags: string, forWrite: boolean): Lite$StreamHandle {
     const fs = process.getBuiltinModule("node:fs");
     let fd = -1;
@@ -154,8 +109,6 @@ function lite$fileOpenStream(path: string, flags: string, forWrite: boolean): Li
     }
 }
 function lite$fileOpenReader(path: string): Lite$StreamHandle { return lite$fileOpenStream(path, "r", false); }
-function lite$fileOpenWriter(path: string): Lite$StreamHandle { return lite$fileOpenStream(path, "w", true); }
-function lite$fileOpenAppender(path: string): Lite$StreamHandle { return lite$fileOpenStream(path, "a", true); }
 function lite$ioReaderError(reader: Lite$StreamHandle): string {
     if (reader.kind === "stdin" && reader.handle === 0n) return lite$stdinState.error;
     const entry = lite$lookupStream(reader.handle);
@@ -175,36 +128,6 @@ function lite$ioReaderAtEof(reader: Lite$StreamHandle): boolean {
     const entry = lite$lookupStream(reader.handle);
     if (entry !== undefined && (entry.kind === "file" || entry.kind === "bufferReader")) return entry.eof;
     return true;
-}
-function lite$ioRead(reader: Lite$StreamHandle, maxBytes: bigint): bigint[] {
-    if (maxBytes <= 0n) return [];
-    if (reader.kind === "stdin" && reader.handle === 0n) {
-        if (lite$stdinState.error !== "" || lite$stdinState.eof) return [];
-        const cap = maxBytes > 16777216n ? 16777216 : Number(maxBytes);
-        const buf = new Uint8Array(cap);
-        try {
-            const read = process.getBuiltinModule("node:fs").readSync(0, buf, 0, cap, null);
-            if (read === 0) { lite$stdinState.eof = true; return []; }
-            return lite$fromBytes(buf.subarray(0, read));
-        } catch (error) { lite$stdinState.error = lite$errMsg(error); return []; }
-    }
-    const entry = lite$lookupStream(reader.handle);
-    if (entry === undefined || entry.closed || entry.error !== "" || entry.kind === "error" || entry.kind === "bufferWriter") return [];
-    if (entry.eof) return [];
-    if (entry.kind === "bufferReader") {
-        const take = maxBytes > BigInt(entry.bytes.length - entry.pos) ? entry.bytes.length - entry.pos : Number(maxBytes);
-        if (take <= 0) { entry.eof = true; return []; }
-        const out = entry.bytes.subarray(entry.pos, entry.pos + take);
-        entry.pos += take;
-        return lite$fromBytes(out);
-    }
-    const cap = maxBytes > 16777216n ? 16777216 : Number(maxBytes);
-    const buf = new Uint8Array(cap);
-    try {
-        const read = process.getBuiltinModule("node:fs").readSync(entry.fd, buf, 0, cap, null);
-        if (read === 0) { entry.eof = true; return []; }
-        return lite$fromBytes(buf.subarray(0, read));
-    } catch (error) { entry.error = lite$errMsg(error); return []; }
 }
 function lite$readAllRaw(reader: Lite$StreamHandle): { ok: true; data: Uint8Array } | { ok: false; error: string } {
     if (!lite$ioReaderOk(reader)) return { ok: false, error: lite$ioReaderError(reader) };
@@ -263,75 +186,8 @@ function lite$ioCloseReader(reader: Lite$StreamHandle): { ok: boolean; error: st
     entry.closed = true;
     return { ok: true, error: "" };
 }
-function lite$ioWriterError(writer: Lite$StreamHandle): string {
-    if ((writer.kind === "stdout" && writer.handle === 1n) || (writer.kind === "stderr" && writer.handle === 2n)) return "";
-    const entry = lite$lookupStream(writer.handle);
-    if (entry === undefined) return "invalid writer handle";
-    if (entry.kind === "bufferReader") return "handle is a reader, not a writer";
-    if (entry.error !== "") return entry.error;
-    if (entry.closed) return "writer is closed";
-    return "";
-}
-function lite$ioWriterOk(writer: Lite$StreamHandle): boolean {
-    if ((writer.kind === "stdout" && writer.handle === 1n) || (writer.kind === "stderr" && writer.handle === 2n)) return true;
-    const entry = lite$lookupStream(writer.handle);
-    return entry !== undefined && (entry.kind === "file" || entry.kind === "bufferWriter") && !entry.closed && entry.error === "";
-}
-function lite$writeRaw(writer: Lite$StreamHandle, data: Uint8Array): { ok: boolean; written: bigint; error: string } {
-    if (writer.kind === "stdout" && writer.handle === 1n) {
-        try {
-            const fs = process.getBuiltinModule("node:fs");
-            let off = 0;
-            while (off < data.length) off += fs.writeSync(1, data, off, data.length - off);
-            return { ok: true, written: BigInt(data.length), error: "" };
-        } catch (error) { return { ok: false, written: 0n, error: lite$errMsg(error) }; }
-    }
-    if (writer.kind === "stderr" && writer.handle === 2n) {
-        try {
-            const fs = process.getBuiltinModule("node:fs");
-            let off = 0;
-            while (off < data.length) off += fs.writeSync(2, data, off, data.length - off);
-            return { ok: true, written: BigInt(data.length), error: "" };
-        } catch (error) { return { ok: false, written: 0n, error: lite$errMsg(error) }; }
-    }
-    const entry = lite$lookupStream(writer.handle);
-    if (entry === undefined) return { ok: false, written: 0n, error: "invalid writer handle" };
-    if (entry.kind === "error") return { ok: false, written: 0n, error: entry.error };
-    if (entry.kind === "bufferReader") return { ok: false, written: 0n, error: "handle is a reader, not a writer" };
-    if (entry.closed) return { ok: false, written: 0n, error: "writer is closed" };
-    if (entry.error !== "") return { ok: false, written: 0n, error: entry.error };
-    if (entry.kind === "bufferWriter") {
-        for (let i = 0; i < data.length; i += 1) entry.bytes.push(data[i] ?? 0);
-        return { ok: true, written: BigInt(data.length), error: "" };
-    }
-    try {
-        const fs = process.getBuiltinModule("node:fs");
-        let off = 0;
-        while (off < data.length) off += fs.writeSync(entry.fd, data, off, data.length - off);
-        return { ok: true, written: BigInt(data.length), error: "" };
-    } catch (error) { const msg = lite$errMsg(error); entry.error = msg; return { ok: false, written: 0n, error: msg }; }
-}
-function lite$ioWrite(writer: Lite$StreamHandle, bytes: readonly bigint[]): { ok: boolean; written: bigint; error: string } {
-    const checked = lite$checkBytes(bytes);
-    if (!checked.ok) return { ok: false, written: 0n, error: checked.error };
-    return lite$writeRaw(writer, checked.data);
-}
-function lite$ioCloseWriter(writer: Lite$StreamHandle): { ok: boolean; error: string } {
-    if ((writer.kind === "stdout" && writer.handle === 1n) || (writer.kind === "stderr" && writer.handle === 2n)) return { ok: true, error: "" };
-    const entry = lite$lookupStream(writer.handle);
-    if (entry === undefined) return { ok: false, error: "invalid writer handle" };
-    if (entry.kind === "error") return { ok: false, error: entry.error };
-    if (entry.kind === "bufferReader") return { ok: false, error: "handle is a reader, not a writer" };
-    if (entry.kind === "file" && !entry.closed) {
-        try { process.getBuiltinModule("node:fs").closeSync(entry.fd); }
-        catch (error) { entry.closed = true; return { ok: false, error: lite$errMsg(error) }; }
-    }
-    entry.closed = true;
-    return { ok: true, error: "" };
-}
 
 function lite$processCwd(): string { return process.cwd(); }
-function lite$processExecPath(): string { return process.execPath; }
 function lite$processEntryPath(): string { return process.argv[1] ?? ""; }
 function lite$processPlatform(): string { return process.platform; }
 function lite$processEnvGet(name: string): { found: boolean; value: string } {
@@ -339,57 +195,7 @@ function lite$processEnvGet(name: string): { found: boolean; value: string } {
     const raw = process.env[name];
     return raw === undefined ? { found: false, value: "" } : { found: true, value: raw };
 }
-function lite$buildEnv(envOverrides: readonly string[]): { ok: true; env: Record<string, string | undefined> } | { ok: false; error: string } {
-    const env: Record<string, string | undefined> = { ...process.env };
-    for (const entry of envOverrides) {
-        const eq = entry.indexOf("=");
-        if (eq === 0) { delete env[entry.slice(1)]; }
-        else if (eq > 0) { env[entry.slice(0, eq)] = entry.slice(eq + 1); }
-        else { return { ok: false, error: "invalid environment override: " + entry }; }
-    }
-    return { ok: true, env };
-}
-function lite$processRun(command: string, args: string[], cwd: string, envOverrides: string[], capture: boolean, stdinText: string): { status: bigint; stdout: string; stderr: string; error: string } {
-    const built = lite$buildEnv(envOverrides);
-    if (!built.ok) return { status: -1n, stdout: "", stderr: "", error: built.error };
-    const opts: { cwd?: string; env: Record<string, string | undefined>; encoding?: "utf8"; input?: string; stdio: "inherit" | readonly ["pipe", "pipe", "pipe"]; maxBuffer: number } = capture
-        ? { env: built.env, encoding: "utf8", input: stdinText, stdio: ["pipe", "pipe", "pipe"], maxBuffer: 128 * 1024 * 1024 }
-        : { env: built.env, stdio: "inherit", maxBuffer: 128 * 1024 * 1024 };
-    if (cwd !== "") opts.cwd = cwd;
-    const res = process.getBuiltinModule("node:child_process").spawnSync(command, args, opts);
-    const stdout = res.stdout ?? "";
-    const stderr = res.stderr ?? "";
-    if (res.error !== undefined) return { status: -1n, stdout, stderr, error: res.error instanceof Error ? res.error.message : String(res.error) };
-    if (res.signal !== null) return { status: -1n, stdout, stderr, error: "terminated by signal " + res.signal };
-    return { status: BigInt(res.status ?? 1), stdout, stderr, error: "" };
-}
-function lite$processRunBytes(command: string, args: string[], cwd: string, envOverrides: string[], timeoutMs: bigint, stdinBytes: readonly bigint[], stdoutPath: string, stderrPath: string): { status: bigint; error: string } {
-    const built = lite$buildEnv(envOverrides);
-    if (!built.ok) return { status: -1n, error: built.error };
-    const fs = process.getBuiltinModule("node:fs");
-    let input: Uint8Array;
-    try { input = lite$toBytes(stdinBytes); }
-    catch (error) { return { status: -1n, error: lite$errMsg(error) }; }
-    const opts: { cwd?: string; env: Record<string, string | undefined>; input: Uint8Array; stdio: readonly ["pipe", "pipe", "pipe"]; timeout?: number; maxBuffer: number } = {
-        env: built.env, input, stdio: ["pipe", "pipe", "pipe"], maxBuffer: 128 * 1024 * 1024,
-    };
-    if (cwd !== "") opts.cwd = cwd;
-    if (timeoutMs > 0n) opts.timeout = Number(timeoutMs);
-    const res = process.getBuiltinModule("node:child_process").spawnSync(command, args, opts);
-    try {
-        if (stdoutPath !== "") fs.writeFileSync(stdoutPath, res.stdout ?? new Uint8Array(0));
-        if (stderrPath !== "") fs.writeFileSync(stderrPath, res.stderr ?? new Uint8Array(0));
-    } catch (error) { return { status: -1n, error: lite$errMsg(error) }; }
-    if (res.error !== undefined) return { status: -1n, error: lite$errMsg(res.error) };
-    if (res.signal !== null) return { status: -1n, error: "terminated by signal " + res.signal };
-    return { status: BigInt(res.status ?? 1), error: "" };
-}
 
-function lite$unicodeToCodePoints(text: string): bigint[] {
-    const out: bigint[] = [];
-    for (const ch of text) { out.push(BigInt(ch.codePointAt(0) ?? 0)); }
-    return out;
-}
 function lite$unicodeFromCodePoints(points: readonly bigint[]): { ok: boolean; text: string; error: string } {
     let text = "";
     let chunk = "";
@@ -582,111 +388,6 @@ export function main(lite$write?: (text: string) => void): string {
         return 9223372036854775807n;
     }
     void liteFn$lib$core$int$intMax;
-    function liteFn$lib$core$int$intAdd(lite_left: bigint, lite_right: bigint): { value: bigint; ok: boolean } {
-        void lite_left;
-        void lite_right;
-        if (((((lite_right) > (0n))) && (((lite_left) > (lite$subtractInt(liteFn$lib$core$int$intMax(), lite_right, 475)))))) {
-            return { value: 0n, ok: false };
-        }
-        if (((((lite_right) < (0n))) && (((lite_left) < (lite$subtractInt(liteFn$lib$core$int$intMin(), lite_right, 556)))))) {
-            return { value: 0n, ok: false };
-        }
-        return { value: lite$addInt(lite_left, lite_right, 618), ok: true };
-    }
-    void liteFn$lib$core$int$intAdd;
-    function liteFn$lib$core$int$intSubtract(lite_left: bigint, lite_right: bigint): { value: bigint; ok: boolean } {
-        void lite_left;
-        void lite_right;
-        if (((((lite_right) < (0n))) && (((lite_left) > (lite$addInt(liteFn$lib$core$int$intMax(), lite_right, 840)))))) {
-            return { value: 0n, ok: false };
-        }
-        if (((((lite_right) > (0n))) && (((lite_left) < (lite$addInt(liteFn$lib$core$int$intMin(), lite_right, 921)))))) {
-            return { value: 0n, ok: false };
-        }
-        return { value: lite$subtractInt(lite_left, lite_right, 983), ok: true };
-    }
-    void liteFn$lib$core$int$intSubtract;
-    function liteFn$lib$core$int$intMultiply(lite_left: bigint, lite_right: bigint): { value: bigint; ok: boolean } {
-        void lite_left;
-        void lite_right;
-        if (((((lite_left) === (0n))) || (((lite_right) === (0n))))) {
-            return { value: 0n, ok: true };
-        }
-        if (((lite_left) > (0n))) {
-            if (((lite_right) > (0n))) {
-                if (((lite_left) > (lite$divideInt(liteFn$lib$core$int$intMax(), lite_right, 1309)))) {
-                    return { value: 0n, ok: false };
-                }
-            } else if (((lite_right) < (lite$divideInt(liteFn$lib$core$int$intMin(), lite_left, 1388)))) {
-                return { value: 0n, ok: false };
-            }
-        } else if (((lite_right) > (0n))) {
-            if (((lite_left) < (lite$divideInt(liteFn$lib$core$int$intMin(), lite_right, 1504)))) {
-                return { value: 0n, ok: false };
-            }
-        } else if (((lite_right) < (lite$divideInt(liteFn$lib$core$int$intMax(), lite_left, 1579)))) {
-            return { value: 0n, ok: false };
-        }
-        return { value: lite$multiplyInt(lite_left, lite_right, 1652), ok: true };
-    }
-    void liteFn$lib$core$int$intMultiply;
-    function liteFn$lib$core$int$intDivide(lite_left: bigint, lite_right: bigint): { value: bigint; ok: boolean } {
-        void lite_left;
-        void lite_right;
-        if (((lite_right) === (0n))) {
-            return { value: 0n, ok: false };
-        }
-        if (((((lite_left) === (liteFn$lib$core$int$intMin()))) && (((lite_right) === ((-1n)))))) {
-            return { value: 0n, ok: false };
-        }
-        return { value: lite$divideInt(lite_left, lite_right, 1989), ok: true };
-    }
-    void liteFn$lib$core$int$intDivide;
-    function liteFn$lib$core$int$intRemainder(lite_left: bigint, lite_right: bigint): { value: bigint; ok: boolean } {
-        void lite_left;
-        void lite_right;
-        if (((lite_right) === (0n))) {
-            return { value: 0n, ok: false };
-        }
-        if (((((lite_left) === (liteFn$lib$core$int$intMin()))) && (((lite_right) === ((-1n)))))) {
-            return { value: 0n, ok: true };
-        }
-        return { value: lite$remainderInt(lite_left, lite_right, 2347), ok: true };
-    }
-    void liteFn$lib$core$int$intRemainder;
-    function liteFn$lib$core$int$intFloorDivide(lite_left: bigint, lite_right: bigint): { value: bigint; ok: boolean } {
-        void lite_left;
-        void lite_right;
-        if (((lite_right) === (0n))) {
-            return { value: 0n, ok: false };
-        }
-        if (((((lite_left) === (liteFn$lib$core$int$intMin()))) && (((lite_right) === ((-1n)))))) {
-            return { value: 0n, ok: false };
-        }
-        const lite_quotient = lite$divideInt(lite_left, lite_right, 2680);
-        void lite_quotient;
-        return (Boolean(((((lite$remainderInt(lite_left, lite_right, 2701)) !== (0n))) && ((Boolean((((lite_left) < (0n)))) !== Boolean((((lite_right) < (0n)))))))) ? { value: lite$subtractInt(lite_quotient, 1n, 2774), ok: true } : { value: lite_quotient, ok: true });
-    }
-    void liteFn$lib$core$int$intFloorDivide;
-    function liteFn$lib$core$int$intFloorModulo(lite_left: bigint, lite_right: bigint): { value: bigint; ok: boolean } {
-        void lite_left;
-        void lite_right;
-        if (((lite_right) === (0n))) {
-            return { value: 0n, ok: false };
-        }
-        const lite_remainder = lite$remainderInt(lite_left, lite_right, 3067);
-        void lite_remainder;
-        return (Boolean(((((lite_remainder) !== (0n))) && ((Boolean((((lite_remainder) < (0n)))) !== Boolean((((lite_right) < (0n)))))))) ? { value: lite$addInt(lite_remainder, lite_right, 3164), ok: true } : { value: lite_remainder, ok: true });
-    }
-    void liteFn$lib$core$int$intFloorModulo;
-    function liteFn$lib$core$int$intNegate(lite_value: bigint): { value: bigint; ok: boolean } {
-        void lite_value;
-        if (((lite_value) === (liteFn$lib$core$int$intMin()))) {
-            return { value: 0n, ok: false };
-        }
-        return { value: lite$subtractInt(0n, lite_value, 3448), ok: true };
-    }
-    void liteFn$lib$core$int$intNegate;
     function liteFn$lib$core$int$digitChar(lite_digit: bigint): string {
         void lite_digit;
         return (Boolean(((lite_digit) === (0n))) ? "0" : (Boolean(((lite_digit) === (1n))) ? "1" : (Boolean(((lite_digit) === (2n))) ? "2" : (Boolean(((lite_digit) === (3n))) ? "3" : (Boolean(((lite_digit) === (4n))) ? "4" : (Boolean(((lite_digit) === (5n))) ? "5" : (Boolean(((lite_digit) === (6n))) ? "6" : (Boolean(((lite_digit) === (7n))) ? "7" : (Boolean(((lite_digit) === (8n))) ? "8" : "9")))))))));
@@ -701,17 +402,17 @@ export function main(lite$write?: (text: string) => void): string {
             return "-9223372036854775808";
         }
         if (((lite_value) < (0n))) {
-            return (("-") + (liteFn$lib$core$int$intText(lite$subtractInt(0n, lite_value, 4021))));
+            return (("-") + (liteFn$lib$core$int$intText(lite$subtractInt(0n, lite_value, 4091))));
         }
         let lite_remaining = lite_value;
         void lite_remaining;
         let lite_digits = "";
         void lite_digits;
         while (((lite_remaining) > (0n))) {
-            const lite_digit = lite$remainderInt(lite_remaining, 10n, 4135);
+            const lite_digit = lite$remainderInt(lite_remaining, 10n, 4205);
             void lite_digit;
             lite_digits = ((liteFn$lib$core$int$digitChar(lite_digit)) + (lite_digits));
-            lite_remaining = lite$divideInt(lite_remaining, 10n, 4215);
+            lite_remaining = lite$divideInt(lite_remaining, 10n, 4285);
         }
         return lite_digits;
     }
@@ -737,48 +438,6 @@ export function main(lite$write?: (text: string) => void): string {
         return ((liteFn$lib$core$list$listIndexOfText([...(lite_values)], lite_target)) >= (0n));
     }
     void liteFn$lib$core$list$listContainsText;
-    function liteFn$lib$core$list$listIndexOfInt(lite_values: bigint[], lite_target: bigint): bigint {
-        void lite_values;
-        void lite_target;
-        let lite_index = 0n;
-        void lite_index;
-        for (const lite_value of [...(lite_values)]) {
-            void lite_value;
-            if (((lite_value) === (lite_target))) {
-                return lite_index;
-            }
-            lite_index = lite$addInt(lite_index, 1n, 1326);
-        }
-        return (-1n);
-    }
-    void liteFn$lib$core$list$listIndexOfInt;
-    function liteFn$lib$core$list$listContainsInt(lite_values: bigint[], lite_target: bigint): boolean {
-        void lite_values;
-        void lite_target;
-        return ((liteFn$lib$core$list$listIndexOfInt([...(lite_values)], lite_target)) >= (0n));
-    }
-    void liteFn$lib$core$list$listContainsInt;
-    function liteFn$lib$core$list$listIndexOfBool(lite_values: boolean[], lite_target: boolean): bigint {
-        void lite_values;
-        void lite_target;
-        let lite_index = 0n;
-        void lite_index;
-        for (const lite_value of [...(lite_values)]) {
-            void lite_value;
-            if ((Boolean(lite_value) === Boolean(lite_target))) {
-                return lite_index;
-            }
-            lite_index = lite$addInt(lite_index, 1n, 1746);
-        }
-        return (-1n);
-    }
-    void liteFn$lib$core$list$listIndexOfBool;
-    function liteFn$lib$core$list$listContainsBool(lite_values: boolean[], lite_target: boolean): boolean {
-        void lite_values;
-        void lite_target;
-        return ((liteFn$lib$core$list$listIndexOfBool([...(lite_values)], lite_target)) >= (0n));
-    }
-    void liteFn$lib$core$list$listContainsBool;
     function liteFn$lib$core$list$listCountText(lite_values: string[]): bigint {
         void lite_values;
         let lite_count = 0n;
@@ -801,46 +460,6 @@ export function main(lite$write?: (text: string) => void): string {
         return lite_count;
     }
     void liteFn$lib$core$list$listCountInt;
-    function liteFn$lib$core$list$listCountBool(lite_values: boolean[]): bigint {
-        void lite_values;
-        let lite_count = 0n;
-        void lite_count;
-        for (const lite_value of [...(lite_values)]) {
-            void lite_value;
-            lite_count = lite$addInt(lite_count, 1n, 2489);
-        }
-        return lite_count;
-    }
-    void liteFn$lib$core$list$listCountBool;
-    function liteFn$lib$core$diag$diagnosticExit(): bigint {
-        return 2n;
-    }
-    void liteFn$lib$core$diag$diagnosticExit;
-    const lite$m$lib$core$diag$sourceErrorCategory = "SourceError";
-    void lite$m$lib$core$diag$sourceErrorCategory;
-    const lite$m$lib$core$diag$typeErrorCategory = "TypeError";
-    void lite$m$lib$core$diag$typeErrorCategory;
-    function liteFn$lib$core$diag$fail(lite_prefix: string, lite_message: string): void {
-        void lite_prefix;
-        void lite_message;
-        if (((lite_prefix) === (""))) {
-            lite$reportError(lite_message);
-        } else {
-            lite$reportError(((((lite_prefix) + (":"))) + (lite_message)));
-        }
-        lite$exit(liteFn$lib$core$diag$diagnosticExit());
-    }
-    void liteFn$lib$core$diag$fail;
-    function liteFn$lib$core$diag$expect(lite_prefix: string, lite_condition: boolean, lite_message: string): void {
-        void lite_prefix;
-        void lite_condition;
-        void lite_message;
-        if ((!(lite_condition))) {
-            return (void (liteFn$lib$core$diag$fail(lite_prefix, lite_message)));
-        } else {
-        }
-    }
-    void liteFn$lib$core$diag$expect;
     function liteFn$lib$core$text$isDigit(lite_text: string): boolean {
         void lite_text;
         return ((((((((((((((((((((lite_text) === ("0"))) || (((lite_text) === ("1"))))) || (((lite_text) === ("2"))))) || (((lite_text) === ("3"))))) || (((lite_text) === ("4"))))) || (((lite_text) === ("5"))))) || (((lite_text) === ("6"))))) || (((lite_text) === ("7"))))) || (((lite_text) === ("8"))))) || (((lite_text) === ("9"))));
@@ -893,38 +512,6 @@ export function main(lite$write?: (text: string) => void): string {
         return ((liteFn$lib$core$text$isNameStart(lite_ch)) || (liteFn$lib$core$text$isDigit(lite_ch)));
     }
     void liteFn$lib$core$text$isNameContinue;
-    function liteFn$lib$core$text$skipSpaces(lite_source: string, lite_start: bigint): bigint {
-        void lite_source;
-        void lite_start;
-        const lite_size = lite$textLength(lite_source);
-        void lite_size;
-        let lite_position = lite_start;
-        void lite_position;
-        while (((lite_position) < (lite_size))) {
-            const lite_ch = lite$textAt(lite_source, lite_position, 2694);
-            void lite_ch;
-            if (((((((((lite_ch) === (" "))) || (((lite_ch) === ("\t"))))) || (((lite_ch) === ("\r"))))) || (((lite_ch) === ("\n"))))) {
-                lite_position = lite$addInt(lite_position, 1n, 2813);
-            } else {
-                return lite_position;
-            }
-        }
-        return lite_position;
-    }
-    void liteFn$lib$core$text$skipSpaces;
-    function liteFn$lib$core$text$skipName(lite_source: string, lite_start: bigint): bigint {
-        void lite_source;
-        void lite_start;
-        const lite_size = lite$textLength(lite_source);
-        void lite_size;
-        let lite_position = lite_start;
-        void lite_position;
-        while (((((lite_position) < (lite_size))) && (liteFn$lib$core$text$isNameContinue(lite$textAt(lite_source, lite_position, 3123))))) {
-            lite_position = lite$addInt(lite_position, 1n, 3175);
-        }
-        return lite_position;
-    }
-    void liteFn$lib$core$text$skipName;
     function liteFn$lib$core$text$startsWithAt(lite_source: string, lite_position: bigint, lite_text: string): boolean {
         void lite_source;
         void lite_position;
@@ -948,18 +535,6 @@ export function main(lite$write?: (text: string) => void): string {
         return ((lite$textSlice(lite_source, lite_position, lite$addInt(lite_position, lite_width, 3639), 3606)) === (lite_text));
     }
     void liteFn$lib$core$text$startsWithAt;
-    function liteFn$lib$core$text$wordAt(lite_source: string, lite_position: bigint, lite_word: string): boolean {
-        void lite_source;
-        void lite_position;
-        void lite_word;
-        if ((!(liteFn$lib$core$text$startsWithAt(lite_source, lite_position, lite_word)))) {
-            return false;
-        }
-        const lite_after = lite$addInt(lite_position, lite$textLength(lite_word), 3936);
-        void lite_after;
-        return ((((lite_after) >= (lite$textLength(lite_source)))) || ((!(liteFn$lib$core$text$isNameContinue(lite$textAt(lite_source, lite_after, 4002))))));
-    }
-    void liteFn$lib$core$text$wordAt;
     function liteFn$lib$core$text$indexOfText(lite_source: string, lite_needle: string, lite_start: bigint): bigint {
         void lite_source;
         void lite_needle;
@@ -1037,33 +612,6 @@ export function main(lite$write?: (text: string) => void): string {
         return ((((((((lite_ch) === (" "))) || (((lite_ch) === ("\t"))))) || (((lite_ch) === ("\r"))))) || (((lite_ch) === ("\n"))));
     }
     void liteFn$lib$core$text$isWhitespace;
-    function liteFn$lib$core$text$trimStart(lite_source: string): string {
-        void lite_source;
-        const lite_size = lite$textLength(lite_source);
-        void lite_size;
-        let lite_start = 0n;
-        void lite_start;
-        while (((((lite_start) < (lite_size))) && (liteFn$lib$core$text$isWhitespace(lite$textAt(lite_source, lite_start, 6056))))) {
-            lite_start = lite$addInt(lite_start, 1n, 6099);
-        }
-        return lite$textSlice(lite_source, lite_start, lite_size, 6114);
-    }
-    void liteFn$lib$core$text$trimStart;
-    function liteFn$lib$core$text$trimEnd(lite_source: string): string {
-        void lite_source;
-        let lite_end = lite$textLength(lite_source);
-        void lite_end;
-        while (((((lite_end) > (0n))) && (liteFn$lib$core$text$isWhitespace(lite$textAt(lite_source, lite$subtractInt(lite_end, 1n, 6337), 6322))))) {
-            lite_end = lite$subtractInt(lite_end, 1n, 6363);
-        }
-        return lite$textSlice(lite_source, 0n, lite_end, 6378);
-    }
-    void liteFn$lib$core$text$trimEnd;
-    function liteFn$lib$core$text$trim(lite_source: string): string {
-        void lite_source;
-        return liteFn$lib$core$text$trimEnd(liteFn$lib$core$text$trimStart(lite_source));
-    }
-    void liteFn$lib$core$text$trim;
     function liteFn$lib$core$text$endsWith(lite_source: string, lite_suffix: string): boolean {
         void lite_source;
         void lite_suffix;
@@ -1216,117 +764,10 @@ export function main(lite$write?: (text: string) => void): string {
         return lite_out;
     }
     void liteFn$lib$core$text$toLowerAscii;
-    function liteFn$lib$core$unicode$isValidScalar(lite_point: bigint): boolean {
-        void lite_point;
-        return ((((((lite_point) >= (0n))) && (((lite_point) <= (1114111n))))) && ((((((lite_point) < (55296n))) || (((lite_point) > (57343n)))))));
-    }
-    void liteFn$lib$core$unicode$isValidScalar;
-    function liteFn$lib$core$unicode$fromCodePoint(lite_point: bigint): { ok: boolean; text: string; error: string } {
-        void lite_point;
-        const lite_points: bigint[] = [...([lite_point])];
-        void lite_points;
-        return lite$unicodeFromCodePoints([...(lite_points)]);
-    }
-    void liteFn$lib$core$unicode$fromCodePoint;
-    function liteFn$lib$core$unicode$codePointAt(lite_text: string, lite_position: bigint): bigint {
-        void lite_text;
-        void lite_position;
-        const lite_ch = lite$textAt(lite_text, lite_position, 1120);
-        void lite_ch;
-        const lite_points: bigint[] = [...(lite$unicodeToCodePoints(lite_ch))];
-        void lite_points;
-        return lite$listAt((lite_points), 0n, 1191);
-    }
-    void liteFn$lib$core$unicode$codePointAt;
-    function liteFn$lib$core$unicode$utf16Length(lite_text: string): bigint {
-        void lite_text;
-        let lite_total = 0n;
-        void lite_total;
-        for (const lite_cp of [...(lite$unicodeToCodePoints(lite_text))]) {
-            void lite_cp;
-            lite_total = lite$addInt(lite_total, (Boolean(((lite_cp) <= (65535n))) ? 1n : 2n), 1368);
-        }
-        return lite_total;
-    }
-    void liteFn$lib$core$unicode$utf16Length;
-    function liteFn$lib$core$unicode$utf16Encode(lite_text: string): bigint[] {
-        void lite_text;
-        let lite_out: bigint[] = [...([...([])])];
-        void lite_out;
-        for (const lite_cp of [...(lite$unicodeToCodePoints(lite_text))]) {
-            void lite_cp;
-            if (((lite_cp) <= (65535n))) {
-                lite_out.push(lite_cp);
-            } else {
-                const lite_adjusted = lite$subtractInt(lite_cp, 65536n, 1711);
-                void lite_adjusted;
-                lite_out.push(lite$addInt(55296n, (lite$divideInt(lite_adjusted, 1024n, 1773)), 1761));
-                lite_out.push(lite$addInt(56320n, (lite$remainderInt(lite_adjusted, 1024n, 1836)), 1824));
-            }
-        }
-        return [...(lite_out)];
-    }
-    void liteFn$lib$core$unicode$utf16Encode;
-    function liteFn$lib$core$unicode$utf16DecodeStrict(lite_units: bigint[]): { ok: boolean; text: string; error: string } {
-        void lite_units;
-        const lite_count = liteFn$lib$core$list$listCountInt([...(lite_units)]);
-        void lite_count;
-        let lite_points: bigint[] = [...([...([])])];
-        void lite_points;
-        let lite_index = 0n;
-        void lite_index;
-        while (((lite_index) < (lite_count))) {
-            const lite_code = lite$listAt((lite_units), lite_index, 2211);
-            void lite_code;
-            if (((((lite_code) < (0n))) || (((lite_code) > (65535n))))) {
-                return { ok: false, text: "", error: (("UTF-16 code unit outside 0..65535: ") + (liteFn$lib$core$int$intText(lite_code))) };
-            }
-            if (((((lite_code) >= (55296n))) && (((lite_code) <= (56319n))))) {
-                if (((lite$addInt(lite_index, 1n, 2448)) >= (lite_count))) {
-                    return { ok: false, text: "", error: "unpaired UTF-16 high surrogate" };
-                }
-                const lite_next = lite$listAt((lite_units), lite$addInt(lite_index, 1n, 2599), 2593);
-                void lite_next;
-                if (((((lite_next) < (56320n))) || (((lite_next) > (57343n))))) {
-                    return { ok: false, text: "", error: "unpaired UTF-16 high surrogate" };
-                }
-                lite_points.push(lite$addInt(lite$addInt(65536n, lite$multiplyInt((lite$subtractInt(lite_code, 55296n, 2807)), 1024n, 2816), 2799), (lite$subtractInt(lite_next, 56320n, 2831)), 2823));
-                lite_index = lite$addInt(lite_index, 2n, 2860);
-            } else if (((((lite_code) >= (56320n))) && (((lite_code) <= (57343n))))) {
-                return { ok: false, text: "", error: "unpaired UTF-16 low surrogate" };
-            } else {
-                lite_points.push(lite_code);
-                lite_index = lite$addInt(lite_index, 1n, 3083);
-            }
-        }
-        return lite$unicodeFromCodePoints([...(lite_points)]);
-    }
-    void liteFn$lib$core$unicode$utf16DecodeStrict;
-    function liteFn$lib$core$unicode$utf8Encode(lite_text: string): bigint[] {
-        void lite_text;
-        let lite_out: bigint[] = [...([...([])])];
-        void lite_out;
-        for (const lite_cp of [...(lite$unicodeToCodePoints(lite_text))]) {
-            void lite_cp;
-            if (((lite_cp) <= (127n))) {
-                lite_out.push(lite_cp);
-            } else if (((lite_cp) <= (2047n))) {
-                lite_out.push(lite$addInt(192n, (lite$divideInt(lite_cp, 64n, 3444)), 3438));
-                lite_out.push(lite$addInt(128n, (lite$remainderInt(lite_cp, 64n, 3497)), 3491));
-            } else if (((lite_cp) <= (65535n))) {
-                lite_out.push(lite$addInt(224n, (lite$divideInt(lite_cp, 4096n, 3582)), 3576));
-                lite_out.push(lite$addInt(128n, (lite$remainderInt((lite$divideInt(lite_cp, 64n, 3638)), 64n, 3644)), 3631));
-                lite_out.push(lite$addInt(128n, (lite$remainderInt(lite_cp, 64n, 3697)), 3691));
-            } else {
-                lite_out.push(lite$addInt(240n, (lite$divideInt(lite_cp, 262144n, 3767)), 3761));
-                lite_out.push(lite$addInt(128n, (lite$remainderInt((lite$divideInt(lite_cp, 4096n, 3825)), 64n, 3833)), 3818));
-                lite_out.push(lite$addInt(128n, (lite$remainderInt((lite$divideInt(lite_cp, 64n, 3887)), 64n, 3893)), 3880));
-                lite_out.push(lite$addInt(128n, (lite$remainderInt(lite_cp, 64n, 3946)), 3940));
-            }
-        }
-        return [...(lite_out)];
-    }
-    void liteFn$lib$core$unicode$utf8Encode;
+    const lite$m$lib$core$diag$sourceErrorCategory = "SourceError";
+    void lite$m$lib$core$diag$sourceErrorCategory;
+    const lite$m$lib$core$diag$typeErrorCategory = "TypeError";
+    void lite$m$lib$core$diag$typeErrorCategory;
     function liteFn$lib$core$unicode$utf8DecodeInternal(lite_bytes: bigint[], lite_strict: boolean): { ok: boolean; text: string; error: string } {
         void lite_bytes;
         void lite_strict;
@@ -1347,7 +788,7 @@ export function main(lite$write?: (text: string) => void): string {
         let lite_index = 0n;
         void lite_index;
         while (((lite_index) < (lite_count))) {
-            const lite_b = lite$listAt((lite_bytes), lite_index, 4344);
+            const lite_b = lite$listAt((lite_bytes), lite_index, 4445);
             void lite_b;
             if (((((lite_b) < (0n))) || (((lite_b) > (255n))))) {
                 if (lite_strict) {
@@ -1359,13 +800,13 @@ export function main(lite$write?: (text: string) => void): string {
                 lite_lowerBoundary = 128n;
                 lite_upperBoundary = 191n;
                 lite_points.push(65533n);
-                lite_index = lite$addInt(lite_index, 1n, 4731);
+                lite_index = lite$addInt(lite_index, 1n, 4832);
             } else if (((lite_needed) === (0n))) {
                 if (((lite_b) <= (127n))) {
                     lite_points.push(lite_b);
                 } else if (((((lite_b) >= (194n))) && (((lite_b) <= (223n))))) {
                     lite_needed = 1n;
-                    lite_codePoint = lite$subtractInt(lite_b, 192n, 4945);
+                    lite_codePoint = lite$subtractInt(lite_b, 192n, 5046);
                 } else if (((((lite_b) >= (224n))) && (((lite_b) <= (239n))))) {
                     if (((lite_b) === (224n))) {
                         lite_lowerBoundary = 160n;
@@ -1374,7 +815,7 @@ export function main(lite$write?: (text: string) => void): string {
                         lite_upperBoundary = 159n;
                     }
                     lite_needed = 2n;
-                    lite_codePoint = lite$subtractInt(lite_b, 224n, 5162);
+                    lite_codePoint = lite$subtractInt(lite_b, 224n, 5263);
                 } else if (((((lite_b) >= (240n))) && (((lite_b) <= (244n))))) {
                     if (((lite_b) === (240n))) {
                         lite_lowerBoundary = 144n;
@@ -1383,14 +824,14 @@ export function main(lite$write?: (text: string) => void): string {
                         lite_upperBoundary = 143n;
                     }
                     lite_needed = 3n;
-                    lite_codePoint = lite$subtractInt(lite_b, 240n, 5379);
+                    lite_codePoint = lite$subtractInt(lite_b, 240n, 5480);
                 } else {
                     if (lite_strict) {
                         return { ok: false, text: "", error: "invalid UTF-8 lead byte" };
                     }
                     lite_points.push(65533n);
                 }
-                lite_index = lite$addInt(lite_index, 1n, 5622);
+                lite_index = lite$addInt(lite_index, 1n, 5723);
             } else if (((((lite_b) < (lite_lowerBoundary))) || (((lite_b) > (lite_upperBoundary))))) {
                 if (lite_strict) {
                     return { ok: false, text: "", error: "invalid UTF-8 continuation byte" };
@@ -1404,15 +845,15 @@ export function main(lite$write?: (text: string) => void): string {
             } else {
                 lite_lowerBoundary = 128n;
                 lite_upperBoundary = 191n;
-                lite_codePoint = lite$addInt(lite$multiplyInt(lite_codePoint, 64n, 6118), (lite$subtractInt(lite_b, 128n, 6128)), 6123);
-                lite_seen = lite$addInt(lite_seen, 1n, 6153);
+                lite_codePoint = lite$addInt(lite$multiplyInt(lite_codePoint, 64n, 6219), (lite$subtractInt(lite_b, 128n, 6229)), 6224);
+                lite_seen = lite$addInt(lite_seen, 1n, 6254);
                 if (((lite_seen) === (lite_needed))) {
                     lite_points.push(lite_codePoint);
                     lite_codePoint = 0n;
                     lite_needed = 0n;
                     lite_seen = 0n;
                 }
-                lite_index = lite$addInt(lite_index, 1n, 6362);
+                lite_index = lite$addInt(lite_index, 1n, 6463);
             }
         }
         if (((lite_needed) > (0n))) {
@@ -1429,16 +870,6 @@ export function main(lite$write?: (text: string) => void): string {
         return liteFn$lib$core$unicode$utf8DecodeInternal([...(lite_bytes)], true);
     }
     void liteFn$lib$core$unicode$utf8DecodeStrict;
-    function liteFn$lib$core$unicode$utf8DecodeLossy(lite_bytes: bigint[]): string {
-        void lite_bytes;
-        return (liteFn$lib$core$unicode$utf8DecodeInternal([...(lite_bytes)], false)).text;
-    }
-    void liteFn$lib$core$unicode$utf8DecodeLossy;
-    function liteFn$lib$core$unicode$isValidUtf8(lite_bytes: bigint[]): boolean {
-        void lite_bytes;
-        return (liteFn$lib$core$unicode$utf8DecodeStrict([...(lite_bytes)])).ok;
-    }
-    void liteFn$lib$core$unicode$isValidUtf8;
     function liteFn$lib$util$json$isJsonSpace(lite_ch: string): boolean {
         void lite_ch;
         return ((((((((lite_ch) === (" "))) || (((lite_ch) === ("\t"))))) || (((lite_ch) === ("\r"))))) || (((lite_ch) === ("\n"))));
@@ -1801,16 +1232,6 @@ export function main(lite$write?: (text: string) => void): string {
         return { ok: true, error: "" };
     }
     void liteFn$lib$util$json$validate;
-    function liteFn$lib$util$json$valueSpan(lite_source: string, lite_start: bigint): { ok: boolean; start: bigint; end: bigint; error: string } {
-        void lite_source;
-        void lite_start;
-        const lite_valStart = liteFn$lib$util$json$skipJsonSpaces(lite_source, lite_start);
-        void lite_valStart;
-        const lite_skipped = liteFn$lib$util$json$skipValue(lite_source, lite_valStart);
-        void lite_skipped;
-        return { ok: (lite_skipped).ok, start: lite_valStart, end: (lite_skipped).next, error: (lite_skipped).error };
-    }
-    void liteFn$lib$util$json$valueSpan;
     function liteFn$lib$util$json$readStringAt(lite_source: string, lite_start: bigint): { ok: boolean; value: string; next: bigint; error: string } {
         void lite_source;
         void lite_start;
@@ -1921,26 +1342,6 @@ export function main(lite$write?: (text: string) => void): string {
         return { found: true, ok: (lite_num).ok, value: (lite_num).value };
     }
     void liteFn$lib$util$json$readObjectInt;
-    function liteFn$lib$util$json$readObjectBool(lite_source: string, lite_objectStart: bigint, lite_key: string): { found: boolean; ok: boolean; value: boolean } {
-        void lite_source;
-        void lite_objectStart;
-        void lite_key;
-        const lite_field = liteFn$lib$util$json$findObjectField(lite_source, lite_objectStart, lite_key);
-        void lite_field;
-        if ((!((lite_field).found))) {
-            return { found: false, ok: false, value: false };
-        }
-        const lite_pos = liteFn$lib$util$json$skipJsonSpaces(lite_source, (lite_field).valuePos);
-        void lite_pos;
-        if (liteFn$lib$core$text$startsWithAt(lite_source, lite_pos, "true")) {
-            return { found: true, ok: true, value: true };
-        }
-        if (liteFn$lib$core$text$startsWithAt(lite_source, lite_pos, "false")) {
-            return { found: true, ok: true, value: false };
-        }
-        return { found: true, ok: false, value: false };
-    }
-    void liteFn$lib$util$json$readObjectBool;
     function liteFn$lib$util$json$arrayElementOffsets(lite_source: string, lite_arrayStart: bigint): bigint[] {
         void lite_source;
         void lite_arrayStart;
@@ -1974,48 +1375,6 @@ export function main(lite$write?: (text: string) => void): string {
         return [...(lite_offsets)];
     }
     void liteFn$lib$util$json$arrayElementOffsets;
-    function liteFn$lib$util$json$objectKeys(lite_source: string, lite_objectStart: bigint): string[] {
-        void lite_source;
-        void lite_objectStart;
-        const lite_keys: string[] = [...([])];
-        void lite_keys;
-        const lite_size = lite$textLength(lite_source);
-        void lite_size;
-        let lite_pos = liteFn$lib$util$json$skipJsonSpaces(lite_source, lite_objectStart);
-        void lite_pos;
-        if (((((lite_pos) >= (lite_size))) || (((lite$textAt(lite_source, lite_pos, 17036)) !== ("{"))))) {
-            return [...(lite_keys)];
-        }
-        lite_pos = liteFn$lib$util$json$skipJsonSpaces(lite_source, lite$addInt(lite_pos, 1n, 17119));
-        if (((((lite_pos) < (lite_size))) && (((lite$textAt(lite_source, lite_pos, 17147)) === ("}"))))) {
-            return [...(lite_keys)];
-        }
-        while (((lite_pos) < (lite_size))) {
-            const lite_keyRes = liteFn$lib$util$json$scanStringToken(lite_source, lite_pos, true);
-            void lite_keyRes;
-            if ((!((lite_keyRes).ok))) {
-                return [...(lite_keys)];
-            }
-            lite_keys.push((lite_keyRes).value);
-            lite_pos = liteFn$lib$util$json$skipJsonSpaces(lite_source, (lite_keyRes).next);
-            if (((((lite_pos) >= (lite_size))) || (((lite$textAt(lite_source, lite_pos, 17434)) !== (":"))))) {
-                return [...(lite_keys)];
-            }
-            const lite_skipped = liteFn$lib$util$json$skipValue(lite_source, lite$addInt(lite_pos, 1n, 17521));
-            void lite_skipped;
-            if ((!((lite_skipped).ok))) {
-                return [...(lite_keys)];
-            }
-            lite_pos = liteFn$lib$util$json$skipJsonSpaces(lite_source, (lite_skipped).next);
-            if (((((lite_pos) < (lite_size))) && (((lite$textAt(lite_source, lite_pos, 17648)) === (","))))) {
-                lite_pos = liteFn$lib$util$json$skipJsonSpaces(lite_source, lite$addInt(lite_pos, 1n, 17723));
-            } else {
-                return [...(lite_keys)];
-            }
-        }
-        return [...(lite_keys)];
-    }
-    void liteFn$lib$util$json$objectKeys;
     function liteFn$lib$util$json$quoteString(lite_value: string): string {
         void lite_value;
         const lite_size = lite$textLength(lite_value);
@@ -2596,61 +1955,6 @@ export function main(lite$write?: (text: string) => void): string {
         return [...(lite_bodies)];
     }
     void liteFn$lib$util$markdown$extractBacktickFenceBodies;
-    function liteFn$lib$core$file$validateBytes(lite_bytes: bigint[]): { ok: boolean; error: string } {
-        void lite_bytes;
-        for (const lite_byte of [...(lite_bytes)]) {
-            void lite_byte;
-            if (((((lite_byte) < (0n))) || (((lite_byte) > (255n))))) {
-                return { ok: false, error: (("byte value outside 0..255: ") + (liteFn$lib$core$int$intText(lite_byte))) };
-            }
-        }
-        return { ok: true, error: "" };
-    }
-    void liteFn$lib$core$file$validateBytes;
-    function liteFn$lib$core$file$writeWithHandle(lite_writer: { kind: string; handle: bigint }, lite_bytes: bigint[]): { ok: boolean; error: string } {
-        void lite_writer;
-        void lite_bytes;
-        if ((!(lite$ioWriterOk(lite_writer)))) {
-            return { ok: false, error: lite$ioWriterError(lite_writer) };
-        }
-        const lite_wrote = lite$ioWrite(lite_writer, [...(lite_bytes)]);
-        void lite_wrote;
-        const lite_closed = lite$ioCloseWriter(lite_writer);
-        void lite_closed;
-        if ((!((lite_wrote).ok))) {
-            return { ok: false, error: (lite_wrote).error };
-        }
-        if ((!((lite_closed).ok))) {
-            return { ok: false, error: (lite_closed).error };
-        }
-        return { ok: true, error: "" };
-    }
-    void liteFn$lib$core$file$writeWithHandle;
-    function liteFn$lib$core$file$readBytes(lite_path: string): bigint[] {
-        void lite_path;
-        const lite_reader = lite$fileOpenReader(lite_path);
-        void lite_reader;
-        if ((!(lite$ioReaderOk(lite_reader)))) {
-            liteFn$lib$core$diag$fail("", lite$ioReaderError(lite_reader));
-            return [...([])];
-        }
-        const lite_bytes: bigint[] = [...(lite$ioReadAll(lite_reader))];
-        void lite_bytes;
-        const lite_readErr = lite$ioReaderError(lite_reader);
-        void lite_readErr;
-        const lite_closed = lite$ioCloseReader(lite_reader);
-        void lite_closed;
-        if (((lite_readErr) !== (""))) {
-            liteFn$lib$core$diag$fail("", lite_readErr);
-            return [...([])];
-        }
-        if ((!((lite_closed).ok))) {
-            liteFn$lib$core$diag$fail("", (lite_closed).error);
-            return [...([])];
-        }
-        return [...(lite_bytes)];
-    }
-    void liteFn$lib$core$file$readBytes;
     function liteFn$lib$core$file$readText(lite_path: string): { ok: boolean; text: string; error: string } {
         void lite_path;
         const lite_reader = lite$fileOpenReader(lite_path);
@@ -2673,137 +1977,6 @@ export function main(lite$write?: (text: string) => void): string {
         return liteFn$lib$core$unicode$utf8DecodeStrict([...(lite_bytes)]);
     }
     void liteFn$lib$core$file$readText;
-    function liteFn$lib$core$file$writeBytes(lite_path: string, lite_bytes: bigint[]): { ok: boolean; error: string } {
-        void lite_path;
-        void lite_bytes;
-        const lite_checked = liteFn$lib$core$file$validateBytes([...(lite_bytes)]);
-        void lite_checked;
-        if ((!((lite_checked).ok))) {
-            return lite_checked;
-        }
-        return liteFn$lib$core$file$writeWithHandle(lite$fileOpenWriter(lite_path), [...(lite_bytes)]);
-    }
-    void liteFn$lib$core$file$writeBytes;
-    function liteFn$lib$core$file$writeText(lite_path: string, lite_text: string): { ok: boolean; error: string } {
-        void lite_path;
-        void lite_text;
-        return liteFn$lib$core$file$writeBytes(lite_path, [...(liteFn$lib$core$unicode$utf8Encode(lite_text))]);
-    }
-    void liteFn$lib$core$file$writeText;
-    function liteFn$lib$core$file$appendBytes(lite_path: string, lite_bytes: bigint[]): { ok: boolean; error: string } {
-        void lite_path;
-        void lite_bytes;
-        const lite_checked = liteFn$lib$core$file$validateBytes([...(lite_bytes)]);
-        void lite_checked;
-        if ((!((lite_checked).ok))) {
-            return lite_checked;
-        }
-        return liteFn$lib$core$file$writeWithHandle(lite$fileOpenAppender(lite_path), [...(lite_bytes)]);
-    }
-    void liteFn$lib$core$file$appendBytes;
-    function liteFn$lib$core$file$appendText(lite_path: string, lite_text: string): { ok: boolean; error: string } {
-        void lite_path;
-        void lite_text;
-        return liteFn$lib$core$file$appendBytes(lite_path, [...(liteFn$lib$core$unicode$utf8Encode(lite_text))]);
-    }
-    void liteFn$lib$core$file$appendText;
-    function liteFn$lib$core$file$copyStream(lite_reader: { kind: string; handle: bigint }, lite_writer: { kind: string; handle: bigint }): { ok: boolean; copied: bigint; error: string } {
-        void lite_reader;
-        void lite_writer;
-        if ((!(lite$ioReaderOk(lite_reader)))) {
-            return { ok: false, copied: 0n, error: lite$ioReaderError(lite_reader) };
-        }
-        if ((!(lite$ioWriterOk(lite_writer)))) {
-            return { ok: false, copied: 0n, error: lite$ioWriterError(lite_writer) };
-        }
-        let lite_total = 0n;
-        void lite_total;
-        while (((lite$ioReaderOk(lite_reader)) && ((!(lite$ioReaderAtEof(lite_reader)))))) {
-            const lite_chunk: bigint[] = [...(lite$ioRead(lite_reader, 65536n))];
-            void lite_chunk;
-            const lite_err = lite$ioReaderError(lite_reader);
-            void lite_err;
-            if (((lite_err) !== (""))) {
-                return { ok: false, copied: lite_total, error: lite_err };
-            }
-            if (((liteFn$lib$core$list$listCountInt([...(lite_chunk)])) === (0n))) {
-                break;
-            }
-            const lite_wrote = lite$ioWrite(lite_writer, [...(lite_chunk)]);
-            void lite_wrote;
-            if ((!((lite_wrote).ok))) {
-                return { ok: false, copied: lite_total, error: (lite_wrote).error };
-            }
-            lite_total = lite$addInt(lite_total, (lite_wrote).written, 5678);
-        }
-        return { ok: true, copied: lite_total, error: "" };
-    }
-    void liteFn$lib$core$file$copyStream;
-    function liteFn$lib$core$process$runStreams(lite_command: string, lite_args: string[], lite_workDir: string, lite_envOverrides: string[], lite_timeoutMs: bigint, lite_stdinReader: { kind: string; handle: bigint }, lite_stdoutWriter: { kind: string; handle: bigint }, lite_stderrWriter: { kind: string; handle: bigint }): { status: bigint; error: string } {
-        void lite_command;
-        void lite_args;
-        void lite_workDir;
-        void lite_envOverrides;
-        void lite_timeoutMs;
-        void lite_stdinReader;
-        void lite_stdoutWriter;
-        void lite_stderrWriter;
-        if ((!(lite$ioReaderOk(lite_stdinReader)))) {
-            return { status: (-1n), error: lite$ioReaderError(lite_stdinReader) };
-        }
-        const lite_stdinBytes: bigint[] = [...(lite$ioReadAll(lite_stdinReader))];
-        void lite_stdinBytes;
-        if (((lite$ioReaderError(lite_stdinReader)) !== (""))) {
-            return { status: (-1n), error: lite$ioReaderError(lite_stdinReader) };
-        }
-        const lite_tmp = lite$fileMakeTempDir("lite-proc-streams-");
-        void lite_tmp;
-        if ((!((lite_tmp).ok))) {
-            return { status: (-1n), error: (lite_tmp).error };
-        }
-        const lite_outPath = (((lite_tmp).path) + ("/stdout.bin"));
-        void lite_outPath;
-        const lite_errPath = (((lite_tmp).path) + ("/stderr.bin"));
-        void lite_errPath;
-        const lite_res = lite$processRunBytes(lite_command, [...(lite_args)], lite_workDir, [...(lite_envOverrides)], lite_timeoutMs, [...(lite_stdinBytes)], lite_outPath, lite_errPath);
-        void lite_res;
-        const lite_outReader = lite$fileOpenReader(lite_outPath);
-        void lite_outReader;
-        if (lite$ioReaderOk(lite_outReader)) {
-            const lite_outCopy = liteFn$lib$core$file$copyStream(lite_outReader, lite_stdoutWriter);
-            void lite_outCopy;
-            const lite__closeOut = lite$ioCloseReader(lite_outReader);
-            void lite__closeOut;
-            if ((!((lite_outCopy).ok))) {
-                const lite__rm = lite$fileRemove((lite_tmp).path);
-                void lite__rm;
-                return { status: (-1n), error: (lite_outCopy).error };
-            }
-        } else {
-            const lite__closeOut = lite$ioCloseReader(lite_outReader);
-            void lite__closeOut;
-        }
-        const lite_errReader = lite$fileOpenReader(lite_errPath);
-        void lite_errReader;
-        if (lite$ioReaderOk(lite_errReader)) {
-            const lite_errCopy = liteFn$lib$core$file$copyStream(lite_errReader, lite_stderrWriter);
-            void lite_errCopy;
-            const lite__closeErr = lite$ioCloseReader(lite_errReader);
-            void lite__closeErr;
-            if ((!((lite_errCopy).ok))) {
-                const lite__rm = lite$fileRemove((lite_tmp).path);
-                void lite__rm;
-                return { status: (-1n), error: (lite_errCopy).error };
-            }
-        } else {
-            const lite__closeErr = lite$ioCloseReader(lite_errReader);
-            void lite__closeErr;
-        }
-        const lite__rm = lite$fileRemove((lite_tmp).path);
-        void lite__rm;
-        return lite_res;
-    }
-    void liteFn$lib$core$process$runStreams;
     function liteFn$lib$core$path$isWin32(): boolean {
         return ((lite$processPlatform()) === ("win32"));
     }
@@ -2835,10 +2008,10 @@ export function main(lite$write?: (text: string) => void): string {
         }
         const lite_win = liteFn$lib$core$path$isWin32();
         void lite_win;
-        if (liteFn$lib$core$path$isSepWith(lite$textAt(lite_target, 0n, 862), lite_win)) {
+        if (liteFn$lib$core$path$isSepWith(lite$textAt(lite_target, 0n, 1003), lite_win)) {
             return true;
         }
-        return ((((((lite_win) && (((lite_size) >= (2n))))) && (liteFn$lib$core$text$isAsciiLetter(lite$textAt(lite_target, 0n, 949))))) && (((lite$textAt(lite_target, 1n, 973)) === (":"))));
+        return ((((((lite_win) && (((lite_size) >= (2n))))) && (liteFn$lib$core$text$isAsciiLetter(lite$textAt(lite_target, 0n, 1090))))) && (((lite$textAt(lite_target, 1n, 1114)) === (":"))));
     }
     void liteFn$lib$core$path$isAbsolute;
     function liteFn$lib$core$path$normalize(lite_raw: string): string {
@@ -2856,17 +2029,17 @@ export function main(lite$write?: (text: string) => void): string {
         void lite_rootPrefix;
         let lite_start = 0n;
         void lite_start;
-        if (((((((lite_win) && (((lite_size) >= (2n))))) && (liteFn$lib$core$text$isAsciiLetter(lite$textAt(lite_raw, 0n, 1345))))) && (((lite$textAt(lite_raw, 1n, 1366)) === (":"))))) {
-            const lite_drive = lite$textSlice(lite_raw, 0n, 2n, 1408);
+        if (((((((lite_win) && (((lite_size) >= (2n))))) && (liteFn$lib$core$text$isAsciiLetter(lite$textAt(lite_raw, 0n, 1486))))) && (((lite$textAt(lite_raw, 1n, 1507)) === (":"))))) {
+            const lite_drive = lite$textSlice(lite_raw, 0n, 2n, 1549);
             void lite_drive;
-            if (((((lite_size) >= (3n))) && (liteFn$lib$core$path$isSepWith(lite$textAt(lite_raw, 2n, 1466), true)))) {
+            if (((((lite_size) >= (3n))) && (liteFn$lib$core$path$isSepWith(lite$textAt(lite_raw, 2n, 1607), true)))) {
                 lite_rootPrefix = ((lite_drive) + (lite_separator));
                 lite_start = 3n;
             } else {
                 lite_rootPrefix = lite_drive;
                 lite_start = 2n;
             }
-        } else if (liteFn$lib$core$path$isSepWith(lite$textAt(lite_raw, 0n, 1664), lite_win)) {
+        } else if (liteFn$lib$core$path$isSepWith(lite$textAt(lite_raw, 0n, 1805), lite_win)) {
             lite_rootPrefix = lite_separator;
             lite_start = 1n;
         }
@@ -2889,25 +2062,25 @@ export function main(lite$write?: (text: string) => void): string {
             const lite_i = (Boolean(((lite_sepPos) < (0n))) ? lite_size : lite_sepPos);
             void lite_i;
             if (((lite_i) > (lite_segStart))) {
-                const lite_seg = lite$textSlice(lite_raw, lite_segStart, lite_i, 2186);
+                const lite_seg = lite$textSlice(lite_raw, lite_segStart, lite_i, 2327);
                 void lite_seg;
                 if (((lite_seg) === (".."))) {
-                    if (((((lite_partsCount) > (0n))) && ((((((lite_rootPrefix) !== (""))) || (((lite$listAt((lite_parts), lite$subtractInt(lite_partsCount, 1n, 2322), 2311)) !== ("..")))))))) {
-                        lite$listPopBack(lite_parts, 2359);
-                        lite_partsCount = lite$subtractInt(lite_partsCount, 1n, 2428);
+                    if (((((lite_partsCount) > (0n))) && ((((((lite_rootPrefix) !== (""))) || (((lite$listAt((lite_parts), lite$subtractInt(lite_partsCount, 1n, 2463), 2452)) !== ("..")))))))) {
+                        lite$listPopBack(lite_parts, 2500);
+                        lite_partsCount = lite$subtractInt(lite_partsCount, 1n, 2569);
                     } else if (((lite_rootPrefix) === (""))) {
                         lite_parts.push("..");
-                        lite_partsCount = lite$addInt(lite_partsCount, 1n, 2574);
+                        lite_partsCount = lite$addInt(lite_partsCount, 1n, 2715);
                     }
                 } else if (((lite_seg) !== ("."))) {
                     lite_parts.push(lite_seg);
-                    lite_partsCount = lite$addInt(lite_partsCount, 1n, 2720);
+                    lite_partsCount = lite$addInt(lite_partsCount, 1n, 2861);
                 }
             }
             if (((lite_sepPos) < (0n))) {
                 break;
             }
-            lite_segStart = lite$addInt(lite_i, 1n, 2803);
+            lite_segStart = lite$addInt(lite_i, 1n, 2944);
         }
         if (((lite_partsCount) === (0n))) {
             if (((lite_rootPrefix) !== (""))) {
@@ -2930,29 +2103,6 @@ export function main(lite$write?: (text: string) => void): string {
         return liteFn$lib$core$path$normalize(((((lite_baseDir) + (liteFn$lib$core$path$sep()))) + (lite_target)));
     }
     void liteFn$lib$core$path$join;
-    function liteFn$lib$core$path$joinAll(lite_parts: string[]): string {
-        void lite_parts;
-        let lite_acc = "";
-        void lite_acc;
-        let lite_hasAny = false;
-        void lite_hasAny;
-        for (const lite_part of [...(lite_parts)]) {
-            void lite_part;
-            if (((lite_part) !== (""))) {
-                if ((!(lite_hasAny))) {
-                    lite_acc = lite_part;
-                    lite_hasAny = true;
-                } else {
-                    lite_acc = ((((lite_acc) + (liteFn$lib$core$path$sep()))) + (lite_part));
-                }
-            }
-        }
-        if ((!(lite_hasAny))) {
-            return ".";
-        }
-        return liteFn$lib$core$path$normalize(lite_acc);
-    }
-    void liteFn$lib$core$path$joinAll;
     function liteFn$lib$core$path$resolve(lite_baseDir: string, lite_target: string): string {
         void lite_baseDir;
         void lite_target;
@@ -2971,18 +2121,18 @@ export function main(lite$write?: (text: string) => void): string {
         void lite_target;
         let lite_end = lite$textLength(lite_target);
         void lite_end;
-        while (((((lite_end) > (0n))) && (liteFn$lib$core$path$isSep(lite$textAt(lite_target, lite$subtractInt(lite_end, 1n, 4273), 4253))))) {
-            lite_end = lite$subtractInt(lite_end, 1n, 4299);
+        while (((((lite_end) > (0n))) && (liteFn$lib$core$path$isSep(lite$textAt(lite_target, lite$subtractInt(lite_end, 1n, 4414), 4394))))) {
+            lite_end = lite$subtractInt(lite_end, 1n, 4440);
         }
         if (((lite_end) === (0n))) {
             return "";
         }
         let lite_pos = lite_end;
         void lite_pos;
-        while (((((lite_pos) > (0n))) && ((!(liteFn$lib$core$path$isSep(lite$textAt(lite_target, lite$subtractInt(lite_pos, 1n, 4412), 4392))))))) {
-            lite_pos = lite$subtractInt(lite_pos, 1n, 4438);
+        while (((((lite_pos) > (0n))) && ((!(liteFn$lib$core$path$isSep(lite$textAt(lite_target, lite$subtractInt(lite_pos, 1n, 4553), 4533))))))) {
+            lite_pos = lite$subtractInt(lite_pos, 1n, 4579);
         }
-        return lite$textSlice(lite_target, lite_pos, lite_end, 4453);
+        return lite$textSlice(lite_target, lite_pos, lite_end, 4594);
     }
     void liteFn$lib$core$path$baseName;
     function liteFn$lib$core$path$extName(lite_target: string): string {
@@ -2994,58 +2144,17 @@ export function main(lite$write?: (text: string) => void): string {
         }
         const lite_size = lite$textLength(lite_base);
         void lite_size;
-        let lite_i = lite$subtractInt(lite_size, 1n, 4770);
+        let lite_i = lite$subtractInt(lite_size, 1n, 4911);
         void lite_i;
         while (((lite_i) > (0n))) {
-            if (((lite$textAt(lite_base, lite_i, 4803)) === ("."))) {
-                return lite$textSlice(lite_base, lite_i, lite_size, 4848);
+            if (((lite$textAt(lite_base, lite_i, 4944)) === ("."))) {
+                return lite$textSlice(lite_base, lite_i, lite_size, 4989);
             }
-            lite_i = lite$subtractInt(lite_i, 1n, 4899);
+            lite_i = lite$subtractInt(lite_i, 1n, 5040);
         }
         return "";
     }
     void liteFn$lib$core$path$extName;
-    function liteFn$lib$core$path$stem(lite_target: string): string {
-        void lite_target;
-        const lite_base = liteFn$lib$core$path$baseName(lite_target);
-        void lite_base;
-        const lite_ext = liteFn$lib$core$path$extName(lite_target);
-        void lite_ext;
-        if (((lite_ext) === (""))) {
-            return lite_base;
-        }
-        return lite$textSlice(lite_base, 0n, lite$subtractInt(lite$textLength(lite_base), lite$textLength(lite_ext), 5156), 5118);
-    }
-    void liteFn$lib$core$path$stem;
-    function liteFn$lib$core$path$withExt(lite_target: string, lite_ext: string): string {
-        void lite_target;
-        void lite_ext;
-        const lite_base = liteFn$lib$core$path$baseName(lite_target);
-        void lite_base;
-        if (((((((lite_base) === (""))) || (((lite_base) === ("."))))) || (((lite_base) === (".."))))) {
-            return lite_target;
-        }
-        let lite_end = lite$textLength(lite_target);
-        void lite_end;
-        while (((((lite_end) > (0n))) && (liteFn$lib$core$path$isSep(lite$textAt(lite_target, lite$subtractInt(lite_end, 1n, 5515), 5495))))) {
-            lite_end = lite$subtractInt(lite_end, 1n, 5541);
-        }
-        const lite_oldExt = liteFn$lib$core$path$extName(lite_target);
-        void lite_oldExt;
-        const lite_stemEnd = lite$subtractInt(lite_end, lite$textLength(lite_oldExt), 5602);
-        void lite_stemEnd;
-        const lite_prefix = lite$textSlice(lite_target, 0n, lite_stemEnd, 5639);
-        void lite_prefix;
-        const lite_suffix = lite$textSlice(lite_target, lite_end, lite$textLength(lite_target), 5685);
-        void lite_suffix;
-        if (((lite_ext) === (""))) {
-            return ((lite_prefix) + (lite_suffix));
-        }
-        const lite_normalizedExt = (Boolean(liteFn$lib$core$text$startsWithAt(lite_ext, 0n, ".")) ? lite_ext : ((".") + (lite_ext)));
-        void lite_normalizedExt;
-        return ((((lite_prefix) + (lite_normalizedExt))) + (lite_suffix));
-    }
-    void liteFn$lib$core$path$withExt;
     function liteFn$lib$core$path$splitSegments(lite_normalized: string): string[] {
         void lite_normalized;
         const lite_parts: string[] = [...([])];
@@ -3054,13 +2163,13 @@ export function main(lite$write?: (text: string) => void): string {
         void lite_size;
         let lite_start = 0n;
         void lite_start;
-        if (((((((liteFn$lib$core$path$isWin32()) && (((lite_size) >= (2n))))) && (liteFn$lib$core$text$isAsciiLetter(lite$textAt(lite_normalized, 0n, 6099))))) && (((lite$textAt(lite_normalized, 1n, 6127)) === (":"))))) {
-            if (((((lite_size) >= (3n))) && (liteFn$lib$core$path$isSep(lite$textAt(lite_normalized, 2n, 6190))))) {
+        if (((((((liteFn$lib$core$path$isWin32()) && (((lite_size) >= (2n))))) && (liteFn$lib$core$text$isAsciiLetter(lite$textAt(lite_normalized, 0n, 6333))))) && (((lite$textAt(lite_normalized, 1n, 6361)) === (":"))))) {
+            if (((((lite_size) >= (3n))) && (liteFn$lib$core$path$isSep(lite$textAt(lite_normalized, 2n, 6424))))) {
                 lite_start = 3n;
             } else {
                 lite_start = 2n;
             }
-        } else if (((((lite_size) > (0n))) && (liteFn$lib$core$path$isSep(lite$textAt(lite_normalized, 0n, 6282))))) {
+        } else if (((((lite_size) > (0n))) && (liteFn$lib$core$path$isSep(lite$textAt(lite_normalized, 0n, 6516))))) {
             lite_start = 1n;
         }
         let lite_segStart = lite_start;
@@ -3070,13 +2179,13 @@ export function main(lite$write?: (text: string) => void): string {
         while (((lite_i) <= (lite_size))) {
             const lite_atEnd = ((lite_i) === (lite_size));
             void lite_atEnd;
-            if (((lite_atEnd) || (liteFn$lib$core$path$isSep(lite$textAt(lite_normalized, lite_i, 6455))))) {
+            if (((lite_atEnd) || (liteFn$lib$core$path$isSep(lite$textAt(lite_normalized, lite_i, 6689))))) {
                 if (((lite_i) > (lite_segStart))) {
-                    lite_parts.push(lite$textSlice(lite_normalized, lite_segStart, lite_i, 6552));
+                    lite_parts.push(lite$textSlice(lite_normalized, lite_segStart, lite_i, 6786));
                 }
-                lite_segStart = lite$addInt(lite_i, 1n, 6629);
+                lite_segStart = lite$addInt(lite_i, 1n, 6863);
             }
-            lite_i = lite$addInt(lite_i, 1n, 6658);
+            lite_i = lite$addInt(lite_i, 1n, 6892);
         }
         return [...(lite_parts)];
     }
@@ -3103,8 +2212,8 @@ export function main(lite$write?: (text: string) => void): string {
         void lite_toLen;
         let lite_common = 0n;
         void lite_common;
-        while (((((((lite_common) < (lite_fromLen))) && (((lite_common) < (lite_toLen))))) && (((lite$listAt((lite_fromSegs), lite_common, 7230)) === (lite$listAt((lite_toSegs), lite_common, 7248)))))) {
-            lite_common = lite$addInt(lite_common, 1n, 7282);
+        while (((((((lite_common) < (lite_fromLen))) && (((lite_common) < (lite_toLen))))) && (((lite$listAt((lite_fromSegs), lite_common, 7464)) === (lite$listAt((lite_toSegs), lite_common, 7482)))))) {
+            lite_common = lite$addInt(lite_common, 1n, 7516);
         }
         const lite_out: string[] = [...([])];
         void lite_out;
@@ -3112,13 +2221,13 @@ export function main(lite$write?: (text: string) => void): string {
         void lite_up;
         while (((lite_up) < (lite_fromLen))) {
             lite_out.push("..");
-            lite_up = lite$addInt(lite_up, 1n, 7425);
+            lite_up = lite$addInt(lite_up, 1n, 7659);
         }
         let lite_down = lite_common;
         void lite_down;
         while (((lite_down) < (lite_toLen))) {
-            lite_out.push(lite$listAt((lite_toSegs), lite_down, 7522));
-            lite_down = lite$addInt(lite_down, 1n, 7550);
+            lite_out.push(lite$listAt((lite_toSegs), lite_down, 7756));
+            lite_down = lite$addInt(lite_down, 1n, 7784);
         }
         if (((liteFn$lib$core$list$listCountText([...(lite_out)])) === (0n))) {
             return "";
@@ -3126,27 +2235,6 @@ export function main(lite$write?: (text: string) => void): string {
         return liteFn$lib$core$text$joinTexts([...(lite_out)], liteFn$lib$core$path$sep());
     }
     void liteFn$lib$core$path$relative;
-    function liteFn$lib$core$path$exists(lite_target: string): boolean {
-        void lite_target;
-        return ((lite$fileKind(lite_target)) !== ("missing"));
-    }
-    void liteFn$lib$core$path$exists;
-    function liteFn$lib$core$path$isFile(lite_target: string): boolean {
-        void lite_target;
-        return ((lite$fileKind(lite_target)) === ("file"));
-    }
-    void liteFn$lib$core$path$isFile;
-    function liteFn$lib$core$path$isDirectory(lite_target: string): boolean {
-        void lite_target;
-        return ((lite$fileKind(lite_target)) === ("dir"));
-    }
-    void liteFn$lib$core$path$isDirectory;
-    function liteFn$lib$core$path$defaultIgnoredDirs(): string[] {
-        const lite_dirs: string[] = [...(["node_modules", "dist"])];
-        void lite_dirs;
-        return [...(lite_dirs)];
-    }
-    void liteFn$lib$core$path$defaultIgnoredDirs;
     function liteFn$lib$core$path$collectFiles(lite_baseDir: string, lite_targets: string[], lite_extension: string, lite_ignoredNames: string[], lite_skipDotEntries: boolean): string[] {
         void lite_baseDir;
         void lite_targets;
@@ -3159,17 +2247,17 @@ export function main(lite$write?: (text: string) => void): string {
         void lite_stack;
         let lite_stackCount = 0n;
         void lite_stackCount;
-        let lite_targetIdx = lite$subtractInt(liteFn$lib$core$list$listCountText([...(lite_targets)]), 1n, 8717);
+        let lite_targetIdx = lite$subtractInt(liteFn$lib$core$list$listCountText([...(lite_targets)]), 1n, 8951);
         void lite_targetIdx;
         while (((lite_targetIdx) >= (0n))) {
-            lite_stack.push(liteFn$lib$core$path$resolve(lite_baseDir, lite$listAt((lite_targets), lite_targetIdx, 8806)));
-            lite_stackCount = lite$addInt(lite_stackCount, 1n, 8852);
-            lite_targetIdx = lite$subtractInt(lite_targetIdx, 1n, 8887);
+            lite_stack.push(liteFn$lib$core$path$resolve(lite_baseDir, lite$listAt((lite_targets), lite_targetIdx, 9040)));
+            lite_stackCount = lite$addInt(lite_stackCount, 1n, 9086);
+            lite_targetIdx = lite$subtractInt(lite_targetIdx, 1n, 9121);
         }
         while (((lite_stackCount) > (0n))) {
-            const lite_resolved = lite$listPopBack(lite_stack, 8945);
+            const lite_resolved = lite$listPopBack(lite_stack, 9179);
             void lite_resolved;
-            lite_stackCount = lite$subtractInt(lite_stackCount, 1n, 9002);
+            lite_stackCount = lite$subtractInt(lite_stackCount, 1n, 9236);
             const lite_entryKind = lite$fileKind(lite_resolved);
             void lite_entryKind;
             if (((lite_entryKind) === ("missing"))) {
@@ -3179,18 +2267,18 @@ export function main(lite$write?: (text: string) => void): string {
             if (((lite_entryKind) === ("dir"))) {
                 const lite_entries: string[] = [...(lite$fileListDir(lite_resolved))];
                 void lite_entries;
-                let lite_entryIdx = lite$subtractInt(liteFn$lib$core$list$listCountText([...(lite_entries)]), 1n, 9342);
+                let lite_entryIdx = lite$subtractInt(liteFn$lib$core$list$listCountText([...(lite_entries)]), 1n, 9576);
                 void lite_entryIdx;
                 while (((lite_entryIdx) >= (0n))) {
-                    const lite_entry = lite$listAt((lite_entries), lite_entryIdx, 9413);
+                    const lite_entry = lite$listAt((lite_entries), lite_entryIdx, 9647);
                     void lite_entry;
                     const lite_isDot = ((lite_skipDotEntries) && (liteFn$lib$core$text$startsWithAt(lite_entry, 0n, ".")));
                     void lite_isDot;
                     if ((((!(lite_isDot))) && ((!(liteFn$lib$core$list$listContainsText([...(lite_ignoredNames)], lite_entry)))))) {
                         lite_stack.push(liteFn$lib$core$path$resolve(lite_resolved, lite_entry));
-                        lite_stackCount = lite$addInt(lite_stackCount, 1n, 9700);
+                        lite_stackCount = lite$addInt(lite_stackCount, 1n, 9934);
                     }
-                    lite_entryIdx = lite$subtractInt(lite_entryIdx, 1n, 9759);
+                    lite_entryIdx = lite$subtractInt(lite_entryIdx, 1n, 9993);
                 }
             } else if (((((lite_extension) === (""))) || (liteFn$lib$core$text$endsWith(lite_resolved, lite_extension)))) {
                 lite_files.push(lite_resolved);
@@ -3199,80 +2287,6 @@ export function main(lite$write?: (text: string) => void): string {
         return [...(lite_files)];
     }
     void liteFn$lib$core$path$collectFiles;
-    function liteFn$lib$core$path$copyFiltered(lite_srcDir: string, lite_dstDir: string, lite_topSkipNames: string[], lite_nestedSkipNames: string[]): { ok: boolean; error: string } {
-        void lite_srcDir;
-        void lite_dstDir;
-        void lite_topSkipNames;
-        void lite_nestedSkipNames;
-        const lite_mkRoot = lite$fileMakeDir(lite_dstDir);
-        void lite_mkRoot;
-        if ((!((lite_mkRoot).ok))) {
-            return { ok: false, error: (lite_mkRoot).error };
-        }
-        const lite_srcStack: string[] = [...([])];
-        void lite_srcStack;
-        const lite_dstStack: string[] = [...([])];
-        void lite_dstStack;
-        const lite_depthStack: bigint[] = [...([])];
-        void lite_depthStack;
-        let lite_stackCount = 0n;
-        void lite_stackCount;
-        lite_srcStack.push(lite_srcDir);
-        lite_dstStack.push(lite_dstDir);
-        lite_depthStack.push(0n);
-        lite_stackCount = 1n;
-        while (((lite_stackCount) > (0n))) {
-            const lite_curSrc = lite$listPopBack(lite_srcStack, 10609);
-            void lite_curSrc;
-            const lite_curDst = lite$listPopBack(lite_dstStack, 10655);
-            void lite_curDst;
-            const lite_curDepth = lite$listPopBack(lite_depthStack, 10703);
-            void lite_curDepth;
-            lite_stackCount = lite$subtractInt(lite_stackCount, 1n, 10765);
-            const lite_entries: string[] = [...(lite$fileListDir(lite_curSrc))];
-            void lite_entries;
-            const lite_skipList: string[] = [...((Boolean(((lite_curDepth) === (0n))) ? [...(lite_topSkipNames)] : [...(lite_nestedSkipNames)]))];
-            void lite_skipList;
-            for (const lite_entry of [...(lite_entries)]) {
-                void lite_entry;
-                if ((!(liteFn$lib$core$list$listContainsText([...(lite_skipList)], lite_entry)))) {
-                    const lite_nextSrc = liteFn$lib$core$path$join(lite_curSrc, lite_entry);
-                    void lite_nextSrc;
-                    const lite_nextDst = liteFn$lib$core$path$join(lite_curDst, lite_entry);
-                    void lite_nextDst;
-                    const lite_entryKind = lite$fileKind(lite_nextSrc);
-                    void lite_entryKind;
-                    if (((lite_entryKind) === ("dir"))) {
-                        const lite_mkSub = lite$fileMakeDir(lite_nextDst);
-                        void lite_mkSub;
-                        if ((!((lite_mkSub).ok))) {
-                            return { ok: false, error: (lite_mkSub).error };
-                        }
-                        lite_srcStack.push(lite_nextSrc);
-                        lite_dstStack.push(lite_nextDst);
-                        lite_depthStack.push(lite$addInt(lite_curDepth, 1n, 11478));
-                        lite_stackCount = lite$addInt(lite_stackCount, 1n, 11528);
-                    } else if (((lite_entryKind) === ("file"))) {
-                        const lite_copied = lite$fileCopy(lite_nextSrc, lite_nextDst);
-                        void lite_copied;
-                        if ((!((lite_copied).ok))) {
-                            return { ok: false, error: (lite_copied).error };
-                        }
-                    }
-                }
-            }
-        }
-        return { ok: true, error: "" };
-    }
-    void liteFn$lib$core$path$copyFiltered;
-    function liteFn$lib$util$cli$head(lite_args: string[]): string {
-        void lite_args;
-        if (((liteFn$lib$core$list$listCountText([...(lite_args)])) === (0n))) {
-            return "";
-        }
-        return lite$listAt((lite_args), 0n, 362);
-    }
-    void liteFn$lib$util$cli$head;
     function liteFn$lib$util$cli$rest(lite_args: string[], lite_start: bigint): string[] {
         void lite_args;
         void lite_start;
@@ -3304,200 +2318,6 @@ export function main(lite$write?: (text: string) => void): string {
         return [...(liteFn$lib$util$cli$rest([...(lite_args)], 0n))];
     }
     void liteFn$lib$util$cli$dropIf;
-    function liteFn$lib$util$cli$stripLeadingSeparator(lite_args: string[]): string[] {
-        void lite_args;
-        return [...(liteFn$lib$util$cli$dropIf([...(lite_args)], "--"))];
-    }
-    void liteFn$lib$util$cli$stripLeadingSeparator;
-    function liteFn$lib$util$cli$hasOption(lite_args: string[], lite_option: string): boolean {
-        void lite_args;
-        void lite_option;
-        for (const lite_arg of [...(lite_args)]) {
-            void lite_arg;
-            if (((lite_arg) === ("--"))) {
-                return false;
-            }
-            if (((lite_arg) === (lite_option))) {
-                return true;
-            }
-        }
-        return false;
-    }
-    void liteFn$lib$util$cli$hasOption;
-    function liteFn$lib$util$cli$withoutOptions(lite_args: string[], lite_options: string[]): string[] {
-        void lite_args;
-        void lite_options;
-        const lite_out: string[] = [...([])];
-        void lite_out;
-        let lite_stop = false;
-        void lite_stop;
-        for (const lite_arg of [...(lite_args)]) {
-            void lite_arg;
-            if (lite_stop) {
-                lite_out.push(lite_arg);
-            } else if (((lite_arg) === ("--"))) {
-                lite_stop = true;
-                lite_out.push(lite_arg);
-            } else if ((!(liteFn$lib$core$list$listContainsText([...(lite_options)], lite_arg)))) {
-                lite_out.push(lite_arg);
-            }
-        }
-        return [...(lite_out)];
-    }
-    void liteFn$lib$util$cli$withoutOptions;
-    function liteFn$lib$util$cli$withoutOption(lite_args: string[], lite_option: string): string[] {
-        void lite_args;
-        void lite_option;
-        const lite_options: string[] = [...([lite_option])];
-        void lite_options;
-        return [...(liteFn$lib$util$cli$withoutOptions([...(lite_args)], [...(lite_options)]))];
-    }
-    void liteFn$lib$util$cli$withoutOption;
-    function liteFn$lib$util$cli$pickSingleOption(lite_args: string[], lite_choices: string[]): { ok: boolean; value: string } {
-        void lite_args;
-        void lite_choices;
-        let lite_picked = "";
-        void lite_picked;
-        for (const lite_arg of [...(lite_args)]) {
-            void lite_arg;
-            if (((lite_arg) === ("--"))) {
-                break;
-            }
-            if (liteFn$lib$core$list$listContainsText([...(lite_choices)], lite_arg)) {
-                if (((lite_picked) !== (""))) {
-                    return { ok: false, value: "" };
-                }
-                lite_picked = lite_arg;
-            }
-        }
-        return { ok: true, value: lite_picked };
-    }
-    void liteFn$lib$util$cli$pickSingleOption;
-    function liteFn$lib$util$cli$readOptionValue(lite_args: string[], lite_option: string): { found: boolean; valid: boolean; value: string } {
-        void lite_args;
-        void lite_option;
-        const lite_count = liteFn$lib$core$list$listCountText([...(lite_args)]);
-        void lite_count;
-        let lite_found = false;
-        void lite_found;
-        let lite_valid = true;
-        void lite_valid;
-        let lite_value = "";
-        void lite_value;
-        let lite_i = 0n;
-        void lite_i;
-        while (((lite_i) < (lite_count))) {
-            const lite_arg = lite$listAt((lite_args), lite_i, 3298);
-            void lite_arg;
-            if (((lite_arg) === ("--"))) {
-                break;
-            }
-            if (((lite_arg) === (lite_option))) {
-                if (((((lite_found) || (((lite$addInt(lite_i, 1n, 3389)) >= (lite_count))))) || (((lite$listAt((lite_args), lite$addInt(lite_i, 1n, 3412), 3410)) === ("--"))))) {
-                    lite_valid = false;
-                    lite_found = true;
-                    lite_i = lite$addInt(lite_i, 1n, 3510);
-                } else {
-                    lite_found = true;
-                    lite_value = lite$listAt((lite_args), lite$addInt(lite_i, 1n, 3597), 3595);
-                    lite_i = lite$addInt(lite_i, 2n, 3625);
-                }
-            } else {
-                lite_i = lite$addInt(lite_i, 1n, 3679);
-            }
-        }
-        return { found: lite_found, valid: lite_valid, value: lite_value };
-    }
-    void liteFn$lib$util$cli$readOptionValue;
-    function liteFn$lib$util$cli$withoutOptionValue(lite_args: string[], lite_option: string): string[] {
-        void lite_args;
-        void lite_option;
-        const lite_out: string[] = [...([])];
-        void lite_out;
-        const lite_count = liteFn$lib$core$list$listCountText([...(lite_args)]);
-        void lite_count;
-        let lite_stop = false;
-        void lite_stop;
-        let lite_i = 0n;
-        void lite_i;
-        while (((lite_i) < (lite_count))) {
-            const lite_arg = lite$listAt((lite_args), lite_i, 4096);
-            void lite_arg;
-            if (lite_stop) {
-                lite_out.push(lite_arg);
-                lite_i = lite$addInt(lite_i, 1n, 4177);
-            } else if (((lite_arg) === ("--"))) {
-                lite_stop = true;
-                lite_out.push(lite_arg);
-                lite_i = lite$addInt(lite_i, 1n, 4298);
-            } else if (((lite_arg) === (lite_option))) {
-                if (((((lite$addInt(lite_i, 1n, 4354)) < (lite_count))) && (((lite$listAt((lite_args), lite$addInt(lite_i, 1n, 4377), 4375)) !== ("--"))))) {
-                    lite_i = lite$addInt(lite_i, 2n, 4415);
-                } else {
-                    lite_i = lite$addInt(lite_i, 1n, 4463);
-                }
-            } else {
-                lite_out.push(lite_arg);
-                lite_i = lite$addInt(lite_i, 1n, 4558);
-            }
-        }
-        return [...(lite_out)];
-    }
-    void liteFn$lib$util$cli$withoutOptionValue;
-    function liteFn$lib$util$cli$stripSuffix(lite_value: string, lite_suffix: string): string {
-        void lite_value;
-        void lite_suffix;
-        if (liteFn$lib$core$text$endsWith(lite_value, lite_suffix)) {
-            return lite$textSlice(lite_value, 0n, lite$subtractInt(lite$textLength(lite_value), lite$textLength(lite_suffix), 4743), 4703);
-        }
-        return lite_value;
-    }
-    void liteFn$lib$util$cli$stripSuffix;
-    function liteFn$lib$util$cli$entryCommand(lite_entryPath: string): string {
-        void lite_entryPath;
-        let lite_name = liteFn$lib$core$path$baseName(lite_entryPath);
-        void lite_name;
-        lite_name = liteFn$lib$util$cli$stripSuffix(lite_name, ".ts");
-        lite_name = liteFn$lib$util$cli$stripSuffix(lite_name, ".js");
-        lite_name = liteFn$lib$util$cli$stripSuffix(lite_name, ".exe");
-        if (liteFn$lib$core$text$startsWithAt(lite_name, 0n, "lite-")) {
-            lite_name = lite$textSlice(lite_name, 5n, lite$textLength(lite_name), 5164);
-        }
-        if (((((lite_name) === ("cli"))) || (((lite_name) === ("lite"))))) {
-            return "lite";
-        }
-        if (((lite_name) === ("checker"))) {
-            return "check";
-        }
-        if (((lite_name) === ("check"))) {
-            return "doctor";
-        }
-        if (((lite_name) === ("test-runner"))) {
-            return "test";
-        }
-        return lite_name;
-    }
-    void liteFn$lib$util$cli$entryCommand;
-    function liteFn$lib$util$cli$currentEntryCommand(): string {
-        return liteFn$lib$util$cli$entryCommand(lite$processEntryPath());
-    }
-    void liteFn$lib$util$cli$currentEntryCommand;
-    function liteFn$lib$util$cli$normalizeSubcommand(lite_token: string, lite_commands: string[]): string {
-        void lite_token;
-        void lite_commands;
-        if (liteFn$lib$core$list$listContainsText([...(lite_commands)], lite_token)) {
-            return lite_token;
-        }
-        if (liteFn$lib$core$text$startsWithAt(lite_token, 0n, "--")) {
-            const lite_candidate = lite$textSlice(lite_token, 2n, lite$textLength(lite_token), 5908);
-            void lite_candidate;
-            if (liteFn$lib$core$list$listContainsText([...(lite_commands)], lite_candidate)) {
-                return lite_candidate;
-            }
-        }
-        return "";
-    }
-    void liteFn$lib$util$cli$normalizeSubcommand;
     function liteFn$lib$util$docs$defaultIgnoredDirs(): string[] {
         const lite_dirs: string[] = [...([".git", ".cache", "node_modules", "dist", ".agent"])];
         void lite_dirs;
@@ -4039,44 +2859,6 @@ export function main(lite$write?: (text: string) => void): string {
         }
     }
     void liteFn$lib$util$project$handleVersionFlag;
-    function liteFn$lib$util$project$errorText(lite_chunk: string): void {
-        void lite_chunk;
-        if (((lite_chunk) === (""))) {
-            return;
-        }
-        const lite_len = lite$textLength(lite_chunk);
-        void lite_len;
-        if (((lite$textAt(lite_chunk, lite$subtractInt(lite_len, 1n, 2348), 2329)) === ("\n"))) {
-            return (void (lite$reportError(lite$textSlice(lite_chunk, 0n, lite$subtractInt(lite_len, 1n, 2409), 2384))));
-        } else {
-            return (void (lite$reportError(lite_chunk)));
-        }
-    }
-    void liteFn$lib$util$project$errorText;
-    function liteFn$lib$util$project$forwardNode(lite_scriptRelPath: string, lite_args: string[]): void {
-        void lite_scriptRelPath;
-        void lite_args;
-        const lite_root = liteFn$lib$util$project$findRepoRoot();
-        void lite_root;
-        const lite_scriptPath = (Boolean(((lite_root) === (""))) ? lite_scriptRelPath : liteFn$lib$core$path$resolve(lite_root, lite_scriptRelPath));
-        void lite_scriptPath;
-        const lite_nodeArgs: string[] = [...([lite_scriptPath])];
-        void lite_nodeArgs;
-        for (const lite_arg of [...(lite_args)]) {
-            void lite_arg;
-            lite_nodeArgs.push(lite_arg);
-        }
-        const lite_emptyEnv: string[] = [...([])];
-        void lite_emptyEnv;
-        const lite_res = lite$processRun(lite$processExecPath(), [...(lite_nodeArgs)], "", [...(lite_emptyEnv)], false, "");
-        void lite_res;
-        if ((((lite_res).error) !== (""))) {
-            lite$reportError((lite_res).error);
-            lite$exit(1n);
-        }
-        lite$exit((lite_res).status);
-    }
-    void liteFn$lib$util$project$forwardNode;
     function liteFn_run(lite_args: string[]): void {
         void lite_args;
         liteFn$lib$util$project$handleVersionFlag([...(lite_args)], "docs", "docs");

@@ -1,5 +1,7 @@
 /* Provisional core host signatures and target-independent synchronous streams. This module adds no host authority by itself. */
 
+list := import "core/list";
+
 /** Handle to a synchronous byte/text input source (`"stdin"`, `"buffer"`, `"file"`, or `"error"`). */
 pub Reader := type (kind: String, handle: Int);
 
@@ -104,3 +106,28 @@ pub flush := fn(writer: Writer): (ok: Bool, error: String);
 
 /** Closes `writer` when backed by an owned resource. */
 pub closeWriter := fn(writer: Writer): (ok: Bool, error: String);
+
+/** Streams all remaining bytes synchronously from `reader` into `writer`. */
+pub copyStream := fn(reader: Reader, writer: Writer): (ok: Bool, copied: Int, error: String) {
+    if not readerOk(reader) {
+        return (ok = false, copied = 0, error = readerError(reader));
+    }
+    if not writerOk(writer) {
+        return (ok = false, copied = 0, error = writerError(writer));
+    }
+    var total := 0;
+    loop readerOk(reader) and not readerAtEof(reader) {
+        chunk := read(reader, 65536);
+        err := readerError(reader);
+        if err =!= "" {
+            return (ok = false, copied = total, error = err);
+        }
+        if list.listCountInt(chunk) == 0 { break; }
+        wrote := write(writer, chunk);
+        if not wrote.ok {
+            return (ok = false, copied = total, error = wrote.error);
+        }
+        total += wrote.written;
+    }
+    (ok = true, copied = total, error = "")
+}

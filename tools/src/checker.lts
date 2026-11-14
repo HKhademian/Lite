@@ -12,9 +12,13 @@ cases := import "util/cases";
 
 run := fn(rawArgs: List<String>): Unit {
     project.handleVersionFlag(rawArgs, "checker", "check");
-    args := cli.stripLeadingSeparator(rawArgs);
+    if not cli.validCompilerOptions(rawArgs, false) {
+        io.errorLine("Usage: ./bin/lite check [--builtin-mode SPEC]... file.lts");
+        io.exit(2);
+    }
+    args := cli.stripLeadingSeparator(cli.withoutCompilerOptions(rawArgs, false));
     if list.listCountText(args) =!= 1 {
-        io.errorLine("Usage: ./bin/lite check file.lts");
+        io.errorLine("Usage: ./bin/lite check [--builtin-mode SPEC]... file.lts");
         io.exit(2);
     }
 
@@ -33,7 +37,11 @@ run := fn(rawArgs: List<String>): Unit {
     work := tmpRes.path;
 
     cliScript := path.resolve(root, "compiler/cli.ts");
-    compArgs: List<String> = [cliScript, "ts", target];
+    compArgs: mut List<String> = [cliScript, "ts"];
+    loop cli.compilerOptions(rawArgs, false) as opt {
+        list.pushBack(mut compArgs, opt);
+    }
+    list.pushBack(mut compArgs, target);
     outTsPath := path.join(work, "artifact.ts");
     errPath := path.join(work, "compile.stderr");
     emptyBytes: List<Int> = [];

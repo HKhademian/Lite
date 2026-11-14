@@ -7,7 +7,7 @@ cli := import "util/cli";
 project := import "util/project";
 
 usageExit := fn(): Unit {
-    io.errorLine("Usage: ./bin/lite-compile [--target ts|c] file.lts");
+    io.errorLine("Usage: ./bin/lite-compile [--target ts|c] [--builtin-mode SPEC]... file.lts");
     io.exit(2);
 };
 

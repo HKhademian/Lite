@@ -20,6 +20,7 @@ pub epochMs := fn(): Int {
     epochNs() / 1000000
 }
 
+/** Formats `value` zero-padded on the left to at least `width` characters. */
 padFixed := fn(value: Int, width: Int): String {
     var out := integer.intText(value);
     loop textLib.length(out) < width {

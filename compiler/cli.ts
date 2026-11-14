@@ -4,15 +4,35 @@ import { resolve } from 'node:path';
 import { compileTarget, type CompilerInput } from './host.ts';
 import { displaySourcePath, readSourceInput } from './source.ts';
 
-const [target, path] = process.argv.slice(2);
-if ((target !== 'ts' && target !== 'c') || path === undefined) {
-  process.stderr.write('Usage: node compiler/cli.ts ts|c file.lts\n');
+const rawArgs = process.argv.slice(2);
+const options: string[] = [];
+const positional: string[] = [];
+let optionError = false;
+for (let i = 0; i < rawArgs.length; i += 1) {
+  const arg = rawArgs[i]!;
+  if (arg === '--builtin-mode') {
+    const val = rawArgs[i + 1];
+    if (val === undefined) {
+      optionError = true;
+      break;
+    }
+    options.push(arg, val);
+    i += 1;
+  } else if (arg.startsWith('--builtin-mode=')) {
+    options.push(arg);
+  } else {
+    positional.push(arg);
+  }
+}
+const [target, path] = positional;
+if (optionError || (target !== 'ts' && target !== 'c') || path === undefined || positional.length !== 2) {
+  process.stderr.write('Usage: node compiler/cli.ts ts|c [--builtin-mode SPEC]... file.lts\n');
   process.exitCode = 2;
 } else {
   let input: CompilerInput | undefined;
   try {
     const source = readSourceInput(path);
-    input = { text: source.text, name: displaySourcePath(resolve(path)), rootPath: source.path };
+    input = { text: source.text, name: displaySourcePath(resolve(path)), rootPath: source.path, options };
   } catch (error: unknown) {
     const message = error instanceof Error ? error.message : String(error);
     const invalidUtf8 = message.includes('source is not valid UTF-8');

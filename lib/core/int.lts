@@ -80,6 +80,7 @@ pub intNegate := fn(value: Int): (value: Int, ok: Bool) {
     (value = 0 - value, ok = true)
 }
 
+/** Converts one `0..9` digit value into its ASCII numeral string. */
 digitChar := fn(digit: Int): String {
     match {
         digit == 0 { "0" }

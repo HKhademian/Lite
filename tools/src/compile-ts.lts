@@ -8,7 +8,7 @@ cli := import "util/cli";
 project := import "util/project";
 
 usageExit := fn(): Unit {
-    io.errorLine("Usage: ./bin/lite-compile-ts file.lts");
+    io.errorLine("Usage: ./bin/lite-compile-ts [--builtin-mode SPEC]... file.lts");
     io.exit(2);
 };
 
@@ -18,7 +18,11 @@ run := fn(rawArgs: List<String>): Unit {
         io.exit(0);
     }
 
-    var args := rawArgs;
+    if not cli.validCompilerOptions(rawArgs, false) {
+        usageExit();
+    }
+
+    var args := cli.withoutCompilerOptions(rawArgs, false);
     if list.listCountText(args) >= 2 and args[0] == "--target" and args[1] == "ts" {
         args = cli.rest(args, 2);
     } else if cli.head(args) == "--target=ts" {
@@ -38,7 +42,11 @@ run := fn(rawArgs: List<String>): Unit {
         io.exit(2);
     }
 
-    forwardArgs: List<String> = ["ts", source];
+    forwardArgs: mut List<String> = ["ts"];
+    loop cli.compilerOptions(rawArgs, false) as opt {
+        list.pushBack(mut forwardArgs, opt);
+    }
+    list.pushBack(mut forwardArgs, source);
     project.forwardNode("compiler/cli.ts", forwardArgs);
 };
 

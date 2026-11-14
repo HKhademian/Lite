@@ -550,6 +550,11 @@ pub codeUsesListPop := fn(code: String): Bool {
     codeUsesTextCall(code, "lite$listPopBack(") or codeUsesTextCall(code, "lite$listPopFront(")
 }
 
+/** True when emitted target code contains a C list-copy placeholder outside quoted String literal text. */
+pub codeUsesListCopy := fn(code: String): Bool {
+    codeUsesTextCall(code, "lt_list_copy(")
+}
+
 /** True when emitted target code contains a value-if conditional expression outside quoted String literal text. */
 pub codeUsesValueIf := fn(code: String): Bool {
     codeUsesTextCall(code, "Boolean(")
@@ -1131,8 +1136,7 @@ coreHostFunction := fn(moduleIdentity: String, name: String, params: String, res
         result == "(status:Int,error:String)" { "lite$processRunBytes" }
         else { "" }
     } else if moduleIdentity == "lite.core.crypto.v1" {
-        if name == "digestBytes" and params == "algorithm=String|bytes=List<Int>" and result == "String" { "lite$cryptoDigestBytes" }
-        else if name == "randomBytes" and params == "count=Int" and result == "List<Int>" { "lite$cryptoRandomBytes" }
+        if name == "randomBytes" and params == "count=Int" and result == "List<Int>" { "lite$cryptoRandomBytes" }
         else { "" }
     } else if moduleIdentity == "lite.core.time.v1" {
         if name == "monotonicNs" and params == "" and result == "Int" { "lite$timeMonotonicNs" }
@@ -1557,10 +1561,10 @@ pub skipAliasString := fn(source: String, position: Int): Int {
     size
 }
 
-/** Collects distinct target helper call names, skipping quoted text and consuming whole identifiers. Existing names avoid duplicate work across items. */
-pub targetCodeCalls := fn(code: String, existing: String): String {
+/** Collects distinct target or user-function call tokens, skipping quoted text and consuming whole identifiers. */
+scanCodeCalls := fn(code: String, existing: String, userFnsOnly: Bool): String {
     if textLib.indexOfText(code, "lite", 0) < 0 and textLib.indexOfText(code, "lt_", 0) < 0 and
-    textLib.indexOfText(code, "finally", 0) < 0 { return existing; }
+    (userFnsOnly or textLib.indexOfText(code, "finally", 0) < 0) { return existing; }
     size := textLib.length(code);
     var calls := existing;
     var cursor := 0;
@@ -1574,17 +1578,23 @@ pub targetCodeCalls := fn(code: String, existing: String): String {
             loop cursor < size and textLib.at(code, cursor) == "$" {
                 cursor = textLib.skipName(code, cursor + 1);
             }
-            if ch == "l" or ch == "f" {
+            if ch == "l" or (not userFnsOnly and ch == "f") {
                 name := textLib.slice(code, start, cursor);
                 if cursor < size and textLib.at(code, cursor) == "(" {
-                    if (textLib.startsWithAt(name, 0, "lite$") and not textLib.startsWithAt(name, 0, "lite$m$")) or
-                    textLib.startsWithAt(name, 0, "lite_") or
-                    (textLib.startsWithAt(name, 0, "lt_") and not textLib.startsWithAt(name, 0, "lt_fn_") and
-                    not textLib.startsWithAt(name, 0, "lt_m_") and not textLib.startsWithAt(name, 0, "lt_s")) {
+                    matched := if userFnsOnly {
+                        textLib.startsWithAt(name, 0, "lt_fn_") or textLib.startsWithAt(name, 0, "liteFn$") or
+                        textLib.startsWithAt(name, 0, "liteFn_")
+                    } else {
+                        (textLib.startsWithAt(name, 0, "lite$") and not textLib.startsWithAt(name, 0, "lite$m$")) or
+                        textLib.startsWithAt(name, 0, "lite_") or
+                        (textLib.startsWithAt(name, 0, "lt_") and not textLib.startsWithAt(name, 0, "lt_fn_") and
+                        not textLib.startsWithAt(name, 0, "lt_m_") and not textLib.startsWithAt(name, 0, "lt_s"))
+                    };
+                    if matched {
                         token := name + "(|";
                         if textLib.indexOfText(calls, "|" + token, 0) < 0 { calls = calls + token; }
                     }
-                } else if name == "finally" {
+                } else if not userFnsOnly and name == "finally" {
                     var afterFin := cursor;
                     loop afterFin < size and (textLib.at(code, afterFin) == " " or textLib.at(code, afterFin) == "\t" or textLib.at(code, afterFin) == "\n") {
                         afterFin = afterFin + 1;
@@ -1599,11 +1609,87 @@ pub targetCodeCalls := fn(code: String, existing: String): String {
     calls
 }
 
+/** Collects distinct target helper call names, skipping quoted text and consuming whole identifiers. Existing names avoid duplicate work across items. */
+pub targetCodeCalls := fn(code: String, existing: String): String {
+    scanCodeCalls(code, existing, false)
+}
+
+/** Collects distinct C user-function call tokens (`lt_fn_*(`) from `code`, skipping quoted text. */
+pub userFunctionCalls := fn(code: String, existing: String): String {
+    scanCodeCalls(code, existing, true)
+}
+
 /** Collects a program's target helper requirements once, with a bounded distinct-name result. */
 pub targetHelperCalls := fn(items: Items): String {
     var calls := "|";
     loop items as item { calls = targetCodeCalls(item.code, calls); }
     calls
+}
+
+/** True when `calls` already contains the pipe-delimited call token `needle`. */
+hasHelperToken := fn(calls: String, needle: String): Bool {
+    textLib.indexOfText(calls, "|" + needle + "|", 0) >= 0
+}
+
+/** Removes unreachable top-level function bodies so unused helpers in imported modules do not pull in extra dependencies. */
+pub filterReachableItems := fn(items: Items): Items {
+    var hasFunction := false;
+    var seedCalls := "|";
+    var fnDepth := 0;
+    loop items as item {
+        if item.kind == "FunctionStart" {
+            hasFunction = true;
+            fnDepth = fnDepth + 1;
+        } else if item.kind == "FunctionEnd" {
+            if fnDepth > 0 { fnDepth = fnDepth - 1; }
+        } else if fnDepth == 0 {
+            seedCalls = userFunctionCalls(item.code, seedCalls);
+        }
+    }
+    if not hasFunction { return items; }
+
+    var reachable := seedCalls;
+    var scanned := "|";
+    loop true {
+        before := reachable;
+        var scanDepth := 0;
+        var scanBody := false;
+        loop items as item {
+            if item.kind == "FunctionStart" {
+                if scanDepth == 0 {
+                    token := item.runtime + "(";
+                    scanBody = hasHelperToken(reachable, token) and not hasHelperToken(scanned, token);
+                    if scanBody { scanned = scanned + token + "|"; }
+                }
+                scanDepth = scanDepth + 1;
+            } else if item.kind == "FunctionEnd" {
+                if scanDepth > 0 { scanDepth = scanDepth - 1; }
+                if scanDepth == 0 { scanBody = false; }
+            } else if scanBody {
+                reachable = userFunctionCalls(item.code, reachable);
+            }
+        }
+        if reachable == before { break; }
+    }
+
+    filtered: mut Items = [];
+    var keepDepth := 0;
+    var keepFn := false;
+    loop items as item {
+        if item.kind == "FunctionStart" {
+            if keepDepth == 0 { keepFn = hasHelperToken(reachable, item.runtime + "("); }
+            keepDepth = keepDepth + 1;
+            if keepFn { listLib.pushBack(mut filtered, item); }
+        } else if item.kind == "FunctionEnd" {
+            wasKeeping := keepFn;
+            if keepDepth > 0 { keepDepth = keepDepth - 1; }
+            if keepDepth == 0 { keepFn = false; }
+            if wasKeeping { listLib.pushBack(mut filtered, item); }
+        } else if keepDepth == 0 or keepFn {
+            listLib.pushBack(mut filtered, item);
+        }
+    }
+    filtered
 }
 
 /** Reads one raw alias target type from `position`, capturing a parenthesized tuple type or a generic `List<...>` application through its matching close, or a single name. */
@@ -6424,6 +6510,115 @@ pub sourceModulePath := fn(): String {
         argumentIndex = argumentIndex + 1;
     }
     path
+}
+
+/** Normalizes a compiler builtin-mode module name (`core/crypto`, `lib/core/crypto.lts`, `./foo.lts`) to its logical module path. */
+normalizeBuiltinModule := fn(raw: String): String {
+    var out := "";
+    var i := 0;
+    size := textLib.length(raw);
+    loop i < size {
+        ch := textLib.at(raw, i);
+        out = out + if ch == "\\" { "/" } else { ch };
+        i = i + 1;
+    }
+    loop textLib.startsWithAt(out, 0, "./") {
+        out = textLib.slice(out, 2, textLib.length(out));
+    }
+    outLen := textLib.length(out);
+    if outLen > 4 and textLib.startsWithAt(out, outLen - 4, ".lts") {
+        out = textLib.slice(out, 0, outLen - 4);
+    }
+    if textLib.startsWithAt(out, 0, "core/") or textLib.startsWithAt(out, 0, "util/") {
+        return "lib/" + out;
+    }
+    out
+}
+
+/** Parses one `--builtin-mode` spec (`pure`, `builtin`, `module=mode`, `module.fn=mode`). */
+parseBuiltinModeSpec := fn(prefix: String, spec: String): Item {
+    if spec == "builtin" or spec == "pure" {
+        return (kind = "project", name = "", runtime = spec, code = "", intValue = 0, textValue = "");
+    }
+    eq := textLib.indexOfText(spec, "=", 0);
+    if eq <= 0 {
+        diagLib.fail(prefix, "invalid --builtin-mode specification: " + spec);
+    }
+    target := textLib.slice(spec, 0, eq);
+    mode := textLib.slice(spec, eq + 1, textLib.length(spec));
+    if mode =!= "builtin" and mode =!= "pure" {
+        diagLib.fail(prefix, "invalid --builtin-mode value: " + mode);
+    }
+    tLen := textLib.length(target);
+    isLtsFile := tLen > 4 and textLib.startsWithAt(target, tLen - 4, ".lts");
+    var lastDot := -1;
+    var scan := 0;
+    loop true {
+        found := textLib.indexOfText(target, ".", scan);
+        if found < 0 { break; }
+        lastDot = found;
+        scan = found + 1;
+    }
+    if not isLtsFile and lastDot > 0 and textLib.indexOfText(target, "/", lastDot + 1) < 0 {
+        modPart := textLib.slice(target, 0, lastDot);
+        fnPart := textLib.slice(target, lastDot + 1, tLen);
+        if modPart =!= "." and modPart =!= ".." and fnPart =!= "" {
+            return (kind = "fn", name = normalizeBuiltinModule(modPart) + "." + fnPart, runtime = mode,
+            code = "", intValue = 0, textValue = "");
+        }
+        diagLib.fail(prefix, "invalid --builtin-mode function target: " + target);
+    }
+    normMod := normalizeBuiltinModule(target);
+    if normMod == "" {
+        diagLib.fail(prefix, "invalid --builtin-mode module target: " + target);
+    }
+    (kind = "module", name = normMod, runtime = mode, code = "", intValue = 0, textValue = "")
+}
+
+/** Parses compiler `--builtin-mode` flags from process arguments after host metadata. */
+pub parseBuiltinModes := fn(prefix: String): Items {
+    rules: mut Items = [];
+    var argumentIndex := 0;
+    var expectModeValue := false;
+    loop io.inputArgs() as argument {
+        if argumentIndex >= 3 {
+            if expectModeValue {
+                listLib.pushBack(mut rules, parseBuiltinModeSpec(prefix, argument));
+                expectModeValue = false;
+            } else if argument == "--builtin-mode" {
+                expectModeValue = true;
+            } else if textLib.startsWithAt(argument, 0, "--builtin-mode=") {
+                listLib.pushBack(mut rules, parseBuiltinModeSpec(prefix, textLib.slice(argument, 15, textLib.length(argument))));
+            } else {
+                diagLib.fail(prefix, "unknown compiler option " + argument);
+            }
+        }
+        argumentIndex = argumentIndex + 1;
+    }
+    if expectModeValue {
+        diagLib.fail(prefix, "missing value for --builtin-mode");
+    }
+    rules
+}
+
+/** Resolves effective builtin mode (`builtin` or `pure`) by precedence: function > module > project > default builtin. */
+pub resolveBuiltinMode := fn(rules: Items, moduleName: String, fnName: String): String {
+    var mode := "builtin";
+    var precedence := 0;
+    fnTarget := if moduleName == "" { "" } else { moduleName + "." + fnName };
+    loop rules as rule {
+        if rule.kind == "project" and precedence <= 1 {
+            mode = rule.runtime;
+            precedence = 1;
+        } else if rule.kind == "module" and rule.name == moduleName and precedence <= 2 {
+            mode = rule.runtime;
+            precedence = 2;
+        } else if rule.kind == "fn" and fnTarget =!= "" and rule.name == fnTarget and precedence <= 3 {
+            mode = rule.runtime;
+            precedence = 3;
+        }
+    }
+    mode
 }
 
 /** Collapses a numeric scalar, tuple or list kind to its canonical item suffix (`Int`, `Float`, `Tuple`, `List`) while leaving other scalar kinds unchanged. */

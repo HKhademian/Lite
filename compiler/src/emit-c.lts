@@ -68,7 +68,7 @@ unsupportedBuiltinCode := fn(calls: String): String {
         usesIntHelper(calls, "lite$processRunBytes(") {
             "C backend does not support process builtins yet"
         }
-        usesIntHelper(calls, "lite$cryptoDigestBytes(") or usesIntHelper(calls, "lite$cryptoRandomBytes(") {
+        usesIntHelper(calls, "lite$cryptoRandomBytes(") {
             "C backend does not support crypto builtins yet"
         }
         usesIntHelper(calls, "lite$timeMonotonicNs(") or usesIntHelper(calls, "lite$timeEpochNs(") or
@@ -390,13 +390,15 @@ outputWriteCode := fn(kind: String, code: String, indent: String): String {
 
 /** Emits the C program from the flat item stream. Multi-value output evaluates its arguments before any write; every printf keeps the shared write-failure status. */
 pub emitProgram := fn(items: frontend.Items, source: String, prefix: String): Unit {
-    calls := frontend.targetHelperCalls(items);
+    _modes := frontend.parseBuiltinModes(prefix);
+    reachable := frontend.filterReachableItems(items);
+    calls := frontend.targetHelperCalls(reachable);
     var floatOutput := false;
     floatLiterals := usesIntHelper(calls, "lt_float_literal(");
     float32Literals := usesIntHelper(calls, "lt_float32_literal(");
     var float32Values := float32Literals or usesIntHelper(calls, "lt_float32_op(");
     var floatValues := floatLiterals or float32Values or usesFloatArithmetic(calls);
-    loop items as item {
+    loop reachable as item {
         if frontend.isFloatScalarKind(item.kind) { floatOutput = true; }
         if frontend.isFloatScalarKind(item.kind) or item.kind == "LocalFloat" or item.kind == "VarFloat" or item.kind == "AssignFloat" or
         (item.kind == "Discard" and frontend.isFloatScalarKind(item.name)) { floatValues = true; }
@@ -420,7 +422,7 @@ pub emitProgram := fn(items: frontend.Items, source: String, prefix: String): Un
         if item.kind == "LoopSeq" {
             diagLib.fail("", "C backend does not support list traversal yet");
         }
-        if frontend.codeUsesListIndex(item.code) or frontend.codeUsesListPop(item.code) {
+        if frontend.codeUsesListIndex(item.code) or frontend.codeUsesListPop(item.code) or frontend.codeUsesListCopy(item.code) {
             diagLib.fail("", "C backend does not support list values yet");
         }
         if frontend.codeUsesValueIf(item.code) {
@@ -449,7 +451,7 @@ pub emitProgram := fn(items: frontend.Items, source: String, prefix: String): Un
     if usesStringConcat(calls) { emitStringConcatHelper(); }
     io.outputLine("int main(void) {");
     io.outputLine("    int status = 0;");
-    emitArithmeticTemporaries(items);
+    emitArithmeticTemporaries(reachable);
     var indent := "    ";
     var count := 0;
     var tempIndex := 0;
@@ -457,7 +459,7 @@ pub emitProgram := fn(items: frontend.Items, source: String, prefix: String): Un
     var firstCode := "";
     var firstTemp := "";
     var writes := "";
-    loop items as item {
+    loop reachable as item {
         if item.kind == "LocalInt" or item.kind == "VarInt" {
             io.outputLine(indent + "int64_t " + item.runtime + " = " + item.code + ";");
             io.outputLine(indent + "(void)" + item.runtime + ";");

@@ -6,10 +6,12 @@ list := import "core/list";
 proc := import "core/process";
 text := import "core/text";
 
+/** True when the active host platform uses Windows path rules. */
 isWin32 := fn(): Bool {
     proc.platform() == "win32"
 }
 
+/** True when `ch` is a path separator under POSIX or Windows (`win`). */
 isSepWith := fn(ch: String, win: Bool): Bool {
     ch == "/" or (win and ch == "\\")
 }
@@ -182,6 +184,7 @@ pub withExt := fn(target: String, ext: String): String {
     prefix + normalizedExt + suffix
 }
 
+/** Splits a separator-normalized path (after its root prefix) into non-empty components. */
 splitSegments := fn(normalized: String): List<String> {
     parts: mut List<String> = [];
     size := text.length(normalized);

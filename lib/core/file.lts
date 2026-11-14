@@ -39,6 +39,7 @@ pub realPath := fn(path: String): (ok: Bool, path: String, error: String);
 /** Creates a new unique temporary directory whose name starts with `prefix`. */
 pub makeTempDir := fn(prefix: String): (ok: Bool, path: String, error: String);
 
+/** Validates that every integer in `bytes` fits in `0..255`. */
 validateBytes := fn(bytes: List<Int>): (ok: Bool, error: String) {
     loop bytes as byte {
         if byte < 0 or byte > 255 {
@@ -48,6 +49,7 @@ validateBytes := fn(bytes: List<Int>): (ok: Bool, error: String) {
     (ok = true, error = "")
 }
 
+/** Writes `bytes` to `writer` and closes the stream, returning any write or close error. */
 writeWithHandle := fn(writer: io.Writer, bytes: List<Int>): (ok: Bool, error: String) {
     if not io.writerOk(writer) {
         return (ok = false, error = io.writerError(writer));
@@ -128,25 +130,5 @@ pub appendText := fn(path: String, text: String): (ok: Bool, error: String) {
 
 /** Streams all remaining bytes synchronously from `reader` into `writer`. */
 pub copyStream := fn(reader: io.Reader, writer: io.Writer): (ok: Bool, copied: Int, error: String) {
-    if not io.readerOk(reader) {
-        return (ok = false, copied = 0, error = io.readerError(reader));
-    }
-    if not io.writerOk(writer) {
-        return (ok = false, copied = 0, error = io.writerError(writer));
-    }
-    var total := 0;
-    loop io.readerOk(reader) and not io.readerAtEof(reader) {
-        chunk := io.read(reader, 65536);
-        err := io.readerError(reader);
-        if err =!= "" {
-            return (ok = false, copied = total, error = err);
-        }
-        if list.listCountInt(chunk) == 0 { break; }
-        wrote := io.write(writer, chunk);
-        if not wrote.ok {
-            return (ok = false, copied = total, error = wrote.error);
-        }
-        total += wrote.written;
-    }
-    (ok = true, copied = total, error = "")
+    io.copyStream(reader, writer)
 }

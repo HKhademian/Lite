@@ -1884,9 +1884,9 @@ test('restricted C compiler rejects input, diagnostic and text builtins clearly'
     ["io := import \"core/io\"; io.outputLine(io.inputArgs());\n", 'C backend does not support input builtins yet\n'],
     ["io := import \"core/io\"; io.errorLine(\"x\");\n", 'C backend does not support reportError or exit yet\n'],
     ["io := import \"core/io\"; io.exit(2);\n", 'C backend does not support reportError or exit yet\n'],
-    ["text := import \"core/text\"; io := import \"core/io\"; io.outputLine(text.length(\"abc\"));\n", 'C backend does not support top-level functions yet\n'],
-    ["text := import \"core/text\"; io := import \"core/io\"; io.outputLine(text.at(\"abc\", 0));\n", 'C backend does not support top-level functions yet\n'],
-    ["text := import \"core/text\"; io := import \"core/io\"; io.outputLine(text.slice(\"abc\", 0, 1));\n", 'C backend does not support top-level functions yet\n'],
+    ["text := import \"core/text\"; io := import \"core/io\"; io.outputLine(text.length(\"abc\"));\n", 'C backend does not support text builtins yet\n'],
+    ["text := import \"core/text\"; io := import \"core/io\"; io.outputLine(text.at(\"abc\", 0));\n", 'C backend does not support text builtins yet\n'],
+    ["text := import \"core/text\"; io := import \"core/io\"; io.outputLine(text.slice(\"abc\", 0, 1));\n", 'C backend does not support text builtins yet\n'],
   ] as const) {
     assert.deepEqual(runCompiler(cManifestPath, bad), { code: 2, output: '', errors: message }, bad);
   }
@@ -2323,7 +2323,7 @@ test('root launcher compiles artifacts and forwards their input, diagnostics and
     assert.equal(fault.status, 1); assert.equal(fault.stdout, ''); assert.match(fault.stderr, /program with spaces\.lts:1:40: ArithmeticPanic:/);
     for (const argv of [[], ['unknown', source]]) { const usage = invoke(argv); assert.equal(usage.status, 2); assert.equal(usage.stdout, ''); assert.match(usage.stderr, /^Usage: \.\/bin\/lite <command>/); }
     const runUsage = invoke(['run']); assert.equal(runUsage.status, 2); assert.equal(runUsage.stdout, '');
-    assert.equal(runUsage.stderr, 'Usage: ./bin/lite run file.lts [-- argument ...]\n');
+    assert.equal(runUsage.stderr, 'Usage: ./bin/lite run [--builtin-mode SPEC]... file.lts [-- argument ...]\n');
     const alias = join(dir, 'project with spaces'); symlinkSync(root, alias, 'dir');
     writeFileSync(source, "io := import \"core/io\"; io.outputLine(23);"); build(source, join(alias, 'bin/lite')); const spaced = executeArtifact();
     assert.equal(spaced.status, 0, spaced.stderr); assert.equal(spaced.stdout, '23\n'); assert.equal(spaced.stderr, '');

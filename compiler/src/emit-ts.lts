@@ -1,6 +1,7 @@
 tsLiteral := import "./ts-literals.lts";
 frontend := import "./frontend.lts";
 io := import "core/io";
+listLib := import "core/list";
 textLib := import "core/text";
 
 /** Removes one four-space indentation level from `indent`. */
@@ -123,7 +124,8 @@ usesHostErrorResult := fn(calls: String): Bool {
     usesBuiltin(calls, "ioRead") or usesBuiltin(calls, "ioReadAll") or usesBuiltin(calls, "ioReadAllText") or
     usesBuiltin(calls, "ioReadLine") or usesBuiltin(calls, "ioCloseReader") or usesBuiltin(calls, "ioWrite") or
     usesBuiltin(calls, "ioWriteText") or usesBuiltin(calls, "ioWriteLine") or usesBuiltin(calls, "ioFlush") or
-    usesBuiltin(calls, "ioCloseWriter") or usesBuiltin(calls, "ioWriterText") or usesBuiltin(calls, "processRunBytes")
+    usesBuiltin(calls, "ioCloseWriter") or usesBuiltin(calls, "ioWriterText") or usesBuiltin(calls, "processRunBytes") or
+    usesBuiltin(calls, "cryptoDigestFile")
 }
 
 /** True when any emitted item calls a host process builtin. */
@@ -136,7 +138,8 @@ usesProcess := fn(calls: String): Bool {
 
 /** True when any emitted item uses Node `node:crypto` digest or CSPRNG builtins. */
 usesCrypto := fn(calls: String): Bool {
-    usesBuiltin(calls, "cryptoDigestBytes") or usesBuiltin(calls, "cryptoRandomBytes")
+    usesBuiltin(calls, "cryptoDigestBytes") or usesBuiltin(calls, "cryptoDigestText") or
+    usesBuiltin(calls, "cryptoDigestFile") or usesBuiltin(calls, "cryptoRandomBytes")
 }
 
 /** True when any emitted item calls a host time builtin. */
@@ -379,7 +382,8 @@ emitProcessDecl := fn(calls: String): Unit {
     usesBuiltin(calls, "exit") or usesIntArithmetic(calls) or usesIntDivision(calls) or usesBounds(calls) or usesFloatArithmetic(calls);
     needOsHost := usesHostOs(calls);
     if not needBaseProcess and not needOsHost { return; }
-    needFs := needBaseProcess or usesFile(calls) or usesStreamRuntime(calls) or usesBuiltin(calls, "processRunBytes");
+    needFs := needBaseProcess or usesFile(calls) or usesStreamRuntime(calls) or usesBuiltin(calls, "processRunBytes") or
+    usesBuiltin(calls, "cryptoDigestFile");
     io.outputLine("declare const process: {");
     io.outputLine("    argv: string[];");
     io.outputLine("    exit(code: number): never;");
@@ -405,7 +409,7 @@ emitProcessDecl := fn(calls: String): Unit {
             io.outputLine("        fstatSync(fd: number): { isFile(): boolean; isDirectory(): boolean };");
             io.outputLine("        fsyncSync(fd: number): void;");
         }
-        if usesFile(calls) or usesBuiltin(calls, "processRunBytes") {
+        if usesFile(calls) or usesBuiltin(calls, "processRunBytes") or usesBuiltin(calls, "cryptoDigestFile") {
             io.outputLine("        statSync(path: string): { isFile(): boolean; isDirectory(): boolean };");
             io.outputLine("        readFileSync(path: string): Uint8Array;");
             io.outputLine("        writeFileSync(path: string, data: string, encoding: \"utf8\"): void;");
@@ -436,7 +440,7 @@ emitProcessDecl := fn(calls: String): Unit {
     }
     if usesCrypto(calls) {
         io.outputLine("    getBuiltinModule(name: \"node:crypto\"): {");
-        io.outputLine("        createHash(algorithm: string): { update(data: Uint8Array): { digest(encoding: \"hex\"): string } };");
+        io.outputLine("        createHash(algorithm: string): { update(data: Uint8Array): { digest(encoding: \"hex\"): string }; update(data: string, inputEncoding: \"utf8\"): { digest(encoding: \"hex\"): string } };");
         io.outputLine("        randomBytes(size: number): Uint8Array;");
         io.outputLine("    };");
     }
@@ -561,6 +565,7 @@ emitFsHelpers := fn(calls: String): Unit {
         io.outputLine("    | { kind: \"error\"; closed: boolean; error: string };");
         io.outputLine("let lite$streams: Lite$StreamEntry[] = [];");
         io.outputLine("let lite$stdinState = { eof: false, error: \"\" };");
+        io.outputLine("void lite$stdinState;");
         io.outputLine("function lite$resetStreams(): void {");
         io.outputLine("    const fs = process.getBuiltinModule(\"node:fs\");");
         io.outputLine("    for (const entry of lite$streams) {");
@@ -1019,6 +1024,27 @@ emitCryptoAndTimeHelpers := fn(calls: String): Unit {
         io.outputLine("    return process.getBuiltinModule(\"node:crypto\").createHash(algorithm).update(lite$toBytes(bytes)).digest(\"hex\");");
         io.outputLine("}");
     }
+    if usesBuiltin(calls, "cryptoDigestText") {
+        io.outputLine("function lite$cryptoDigestText(algorithm: string, value: string): string {");
+        io.outputLine("    if (algorithm !== \"sha256\" && algorithm !== \"sha512\") {");
+        io.outputLine("        throw new Error(\"unsupported digest algorithm: \" + algorithm);");
+        io.outputLine("    }");
+        io.outputLine("    return process.getBuiltinModule(\"node:crypto\").createHash(algorithm).update(value, \"utf8\").digest(\"hex\");");
+        io.outputLine("}");
+    }
+    if usesBuiltin(calls, "cryptoDigestFile") {
+        io.outputLine("function lite$cryptoDigestFile(algorithm: string, path: string): { ok: boolean; hex: string; error: string } {");
+        io.outputLine("    if (algorithm !== \"sha256\" && algorithm !== \"sha512\") {");
+        io.outputLine("        throw new Error(\"unsupported digest algorithm: \" + algorithm);");
+        io.outputLine("    }");
+        io.outputLine("    try {");
+        io.outputLine("        const bytes = process.getBuiltinModule(\"node:fs\").readFileSync(path);");
+        io.outputLine("        return { ok: true, hex: process.getBuiltinModule(\"node:crypto\").createHash(algorithm).update(bytes).digest(\"hex\"), error: \"\" };");
+        io.outputLine("    } catch (error) {");
+        io.outputLine("        return { ok: false, hex: \"\", error: lite$errMsg(error) };");
+        io.outputLine("    }");
+        io.outputLine("}");
+    }
     if usesBuiltin(calls, "cryptoRandomBytes") {
         io.outputLine("function lite$cryptoRandomBytes(count: bigint): bigint[] {");
         io.outputLine("    if (count < 0n || count > 2147483647n) {");
@@ -1380,9 +1406,71 @@ emitIntDivisionHelpers := fn(calls: String): Unit {
     return;
 }
 
+/** Extracts the runtime identifier of the first parameter from encoded `name=kind` entries. */
+firstParamRuntime := fn(encoded: String): String {
+    eq := textLib.indexOfText(encoded, "=", 0);
+    if eq <= 0 { return ""; }
+    "lite_" + textLib.slice(encoded, 0, eq)
+}
+
+/** Returns the soft-builtin return expression for an overridable module function, or `""` when none exists. */
+softBuiltinExpr := fn(moduleName: String, fnName: String, params: String): String {
+    if moduleName == "lib/core/crypto" {
+        arg := firstParamRuntime(params);
+        if fnName == "sha256Bytes" { return "lite$cryptoDigestBytes(\"sha256\", " + arg + ")"; }
+        if fnName == "sha256Text" { return "lite$cryptoDigestText(\"sha256\", " + arg + ")"; }
+        if fnName == "sha256File" { return "lite$cryptoDigestFile(\"sha256\", " + arg + ")"; }
+        if fnName == "sha512Bytes" { return "lite$cryptoDigestBytes(\"sha512\", " + arg + ")"; }
+        if fnName == "sha512Text" { return "lite$cryptoDigestText(\"sha512\", " + arg + ")"; }
+    }
+    ""
+}
+
+/** Resolves the logical module name for a soft-builtin candidate function from its runtime symbol or root identity. */
+softBuiltinModule := fn(runtime: String, fnName: String, rootCrypto: Bool): String {
+    if runtime == "liteFn$lib$core$crypto$" + fnName { return "lib/core/crypto"; }
+    if rootCrypto and runtime == "liteFn_" + fnName { return "lib/core/crypto"; }
+    ""
+}
+
+/** Replaces eligible soft-builtin function bodies with host overrides unless switched to `pure` by `--builtin-mode`. */
+applySoftBuiltins := fn(rawItems: frontend.Items, prefix: String): frontend.Items {
+    rules := frontend.parseBuiltinModes(prefix);
+    out: mut frontend.Items = [];
+    rootCrypto := frontend.sourceModuleIdentity() == "lite.core.crypto.v1";
+    var skippingDepth := 0;
+    loop rawItems as item {
+        if skippingDepth > 0 {
+            if item.kind == "FunctionStart" {
+                skippingDepth = skippingDepth + 1;
+            } else if item.kind == "FunctionEnd" {
+                skippingDepth = skippingDepth - 1;
+                if skippingDepth == 0 {
+                    listLib.pushBack(mut out, item);
+                }
+            }
+            continue;
+        }
+        listLib.pushBack(mut out, item);
+        if item.kind == "FunctionStart" {
+            modName := softBuiltinModule(item.runtime, item.name, rootCrypto);
+            if modName =!= "" {
+                overrideCode := softBuiltinExpr(modName, item.name, item.textValue);
+                if overrideCode =!= "" and frontend.resolveBuiltinMode(rules, modName, item.name) == "builtin" {
+                    listLib.pushBack(mut out, (kind = "Return", name = "", runtime = "", code = overrideCode,
+                    intValue = 0, textValue = ""));
+                    skippingDepth = 1;
+                }
+            }
+        }
+    }
+    out
+}
+
 /** Emits the TS module from the flat item stream. Report arguments evaluate once, left to right, before reading and appending to `lite$out`, preserving reports made by argument calls. */
 pub emitProgram := fn(items: frontend.Items, source: String, prefix: String): Unit {
-    calls := frontend.targetHelperCalls(items);
+    effectiveItems := frontend.filterReachableItems(applySoftBuiltins(items, prefix));
+    calls := frontend.targetHelperCalls(effectiveItems);
     abruptFault := usesAbruptFault(calls);
     abruptUnwind := usesAbruptUnwind(calls);
     hasInput := usesBuiltin(calls, "inputAll") or usesBuiltin(calls, "inputLine") or usesBuiltin(calls, "inputInt") or usesBuiltin(calls, "inputFloat");
@@ -1426,12 +1514,12 @@ pub emitProgram := fn(items: frontend.Items, source: String, prefix: String): Un
     var count := 0;
     var mainStopped := false;
     var activeTries := "|";
-    loop items as tryItem {
+    loop effectiveItems as tryItem {
         if (tryItem.kind == "TransferCatch" or tryItem.kind == "LoopTransferCatch") and tryItem.runtime =!= "" {
             activeTries = activeTries + tryItem.runtime + "|";
         }
     }
-    loop items as item {
+    loop effectiveItems as item {
         if item.kind == "FunctionStart" {
             io.outputLine(indent + "function " + item.runtime + "(" + tsParameterList(item.textValue) + "): " +
             tsFunctionType(item.code) + " {");

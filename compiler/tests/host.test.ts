@@ -1038,7 +1038,7 @@ test('imported C compiler source hashes transitive files and invalidates its cac
     const entries = () => readdirSync(cache).filter(name => name !== 'selection' && !name.startsWith('build-'));
     assert.equal(entries().length, 1);
     const provenance = JSON.parse(readFileSync(join(cache, entries()[0]!, 'provenance.json'), 'utf8')) as { dependencies: string[] };
-    assert.deepEqual(provenance.dependencies, ['compiler/src/fixture-root.lts', 'compiler/src/fixture-c.lts', 'lib/core/io.lts']);
+    assert.deepEqual(provenance.dependencies, ['compiler/src/fixture-root.lts', 'compiler/src/fixture-c.lts', 'lib/core/io.lts', 'lib/core/list.lts']);
     writeFileSync(join(directory, 'compiler/src/fixture-c.lts'), 'io := import "core/io"; source := io.inputAll(); io.outputLine("changed nested C");');
     const changed = invoke(directory, 'io := import "core/io"; io.outputLine(42);', 'c');
     assert.equal(changed.error, undefined); assert.equal(changed.status, 0, changed.stderr.toString());
@@ -1059,9 +1059,9 @@ test('imported C compiler source hashes transitive files and invalidates its cac
     const afterRemoval = entries();
     assert.equal(afterRemoval.length, 4);
     const removedProvenance = afterRemoval.map(name => JSON.parse(readFileSync(join(cache, name, 'provenance.json'), 'utf8')) as { dependencies: string[] })
-      .find(item => item.dependencies.length === 2 && item.dependencies[0] === 'compiler/src/fixture-root.lts' && item.dependencies[1] === 'lib/core/io.lts');
+      .find(item => item.dependencies.length === 3 && item.dependencies[0] === 'compiler/src/fixture-root.lts' && item.dependencies[1] === 'lib/core/io.lts' && item.dependencies[2] === 'lib/core/list.lts');
     assert.ok(removedProvenance, 'the root-only graph is recorded independently of directory enumeration order');
-    assert.deepEqual(removedProvenance.dependencies, ['compiler/src/fixture-root.lts', 'lib/core/io.lts']);
+    assert.deepEqual(removedProvenance.dependencies, ['compiler/src/fixture-root.lts', 'lib/core/io.lts', 'lib/core/list.lts']);
     const link = join(directory, 'compiler/src/fixture-link.lts');
     writeFileSync(join(directory, 'compiler/src/fixture-e.lts'), 'io := import "core/io"; source := io.inputAll(); io.outputLine("symlink E");');
     writeFileSync(join(directory, 'compiler/src/fixture-f.lts'), 'io := import "core/io"; source := io.inputAll(); io.outputLine("symlink F");');
@@ -4283,11 +4283,16 @@ test('core os/fs/process/crypto/time host bindings, standalone CLI execution, an
         'var big: mut List<Int> = [];',
         'loop list.listCountInt(big) < 20000 { list.pushBack(mut big, (list.listCountInt(big) * 13) % 256); }',
         '_wb := file.writeBytes(bigFile, big);',
-        'hPureFile := crypto.sha256PureFile(bigFile);',
+        'rBig := file.openReader(bigFile);',
+        'hStreamFile := crypto.sha256Reader(rBig);',
+        '_rc := io.closeReader(rBig);',
         'hFastFile := crypto.sha256File(bigFile);',
-        'hPureStream := crypto.sha256PureReader(io.textReader("hello"));',
-        'hPure512 := crypto.sha512PureText("abc");',
-        'io.outputLine(res.status, res.error == "", outBytes, errTxt.ok, errTxt.text == "warn\\n", hPureFile.ok, hPureFile.hex == hFastFile.hex, hPureStream.ok, hPureStream.hex == crypto.sha256Text("hello"), hPure512 == crypto.sha512Text("abc"));',
+        'hStream := crypto.sha256Reader(io.textReader("hello"));',
+        'h512 := crypto.sha512Text("abc");',
+        'ioW := io.bufferWriter();',
+        'ioCopied := io.copyStream(io.textReader("via-io"), ioW);',
+        'ioWTxt := io.writerText(ioW);',
+        'io.outputLine(res.status, res.error == "", outBytes, errTxt.ok, errTxt.text == "warn\\n", hStreamFile.ok, hStreamFile.hex == hFastFile.hex, hStream.ok, hStream.hex == crypto.sha256Text("hello"), h512 == crypto.sha512Text("abc"), ioCopied.ok, ioCopied.copied, ioWTxt.ok, ioWTxt.text);',
       ].join('\n'),
       name: fixtureName,
     });
@@ -4296,7 +4301,7 @@ test('core os/fs/process/crypto/time host bindings, standalone CLI execution, an
     withTsArtifact(parentCompiled.stdout.toString(), run => {
       const actual = run();
       assert.equal(actual.status, 0, actual.stderr.toString());
-      assert.equal(actual.stdout.toString(), '0 true [65, 0, 66, 124, 100, 111, 110, 101] true true true true true true true\n');
+      assert.equal(actual.stdout.toString(), '0 true [65, 0, 66, 124, 100, 111, 110, 101] true true true true true true true true 6 true via-io\n');
     });
   } finally { rmSync(streamDir, { recursive: true, force: true }); }
 
@@ -4313,13 +4318,21 @@ test('core os/fs/process/crypto/time host bindings, standalone CLI execution, an
     assert.match(badAbi.stderr.toString(), /bodyless function declaration has no matching core host binding/);
   } finally { rmSync(directory, { recursive: true, force: true }); }
 
+  const reachableC = compileTarget('c', {
+    text: 'unused := fn(): List<Int> { xs: List<Int> = [1, 2]; xs }; io := import "core/io"; io.outputLine(42);',
+    name: fixtureName,
+  });
+  assert.equal(reachableC.status, 0, reachableC.stderr.toString());
+  assert.match(reachableC.stdout.toString(), /42/);
+
   for (const [sourceText, pattern] of [
-    ['fs := import "core/file"; x := fs.kind(".");', /C backend does not support (filesystem builtins|list values|top-level functions) yet/],
+    ['unused := fn(): Int { 1 }; used := fn(): Int { 2 }; io := import "core/io"; io.outputLine(used());', /C backend does not support top-level functions yet/],
+    ['fs := import "core/file"; x := fs.kind(".");', /C backend does not support filesystem builtins yet/],
     ['fs := import "core/file"; x := fs.readBytes(".");', /C backend does not support (filesystem builtins|list values|top-level functions) yet/],
     ['fs := import "core/file"; x := fs.writeBytes(".", []);', /C backend does not support (filesystem builtins|list values|top-level functions) yet/],
     ['io := import "core/io"; x := io.bufferWriter();', /C backend does not support (stream builtins|tuple values) yet/],
     ['io := import "core/io"; x := io.stdinReader();', /C backend does not support (stream builtins|tuple values) yet/],
-    ['proc := import "core/process"; x := proc.cwd();', /C backend does not support (process builtins|list values|tuple values|top-level functions) yet/],
+    ['proc := import "core/process"; x := proc.cwd();', /C backend does not support process builtins yet/],
     ['proc := import "core/process"; x := proc.runBytes("true", [], "", [], 0, [], "", "");', /C backend does not support (process builtins|list values|tuple values|top-level functions) yet/],
     ['c := import "core/crypto"; x := c.sha256Text("a");', /C backend does not support (crypto builtins|list values|top-level functions) yet/],
     ['c := import "core/crypto"; x := c.sha256Bytes([]);', /C backend does not support (crypto builtins|list values|top-level functions) yet/],
@@ -4337,5 +4350,141 @@ test('core os/fs/process/crypto/time host bindings, standalone CLI execution, an
     const rejectedC = compileTarget('c', { text: sourceText, name: fixtureName });
     assert.equal(rejectedC.status, 2, sourceText);
     assert.match(rejectedC.stderr.toString(), pattern, sourceText);
+  }
+});
+
+test('soft-builtin emitter overrides and --builtin-mode flags work at function, module, and project scope', () => {
+  const workDir = mkdtempSync(join(tmpdir(), 'lite-builtin-mode-'));
+  try {
+    const sampleFile = join(workDir, 'sample.txt');
+    const sourceFile = join(workDir, 'digest.lts');
+    writeFileSync(sampleFile, 'hello world\n');
+    const source = [
+      'crypto := import "core/crypto";',
+      'io := import "core/io";',
+      `fileHash := crypto.sha256File(${JSON.stringify(sampleFile)});`,
+      'sha256T := crypto.sha256Text("hello");',
+      'sha256B := crypto.sha256Bytes([104, 101, 108, 108, 111]);',
+      'sha512T := crypto.sha512Text("abc");',
+      'sha512B := crypto.sha512Bytes([97, 98, 99]);',
+      'hmac := crypto.hmacSha256Bytes([107, 101, 121], [97, 98, 99]);',
+      'io.outputLine(fileHash.ok, fileHash.hex, sha256T == sha256B, sha256T, sha512T == sha512B, hmac);',
+    ].join('\n');
+    writeFileSync(sourceFile, source);
+
+    const expectedLine = [
+      'true',
+      'a948904f2f0f479b8f8197694b30184b0d2ed1c1cd2a1ec0fb85d299a192a447',
+      'true',
+      '2cf24dba5fb0a30e26e83b2ac5b9e29e1b161e5c1fa7425e73043362938b9824',
+      'true',
+      '9c196e32dc0175f86f4b1cb89289d6619de6bee699e4c378e68309ed97a1a6ab',
+    ].join(' ') + '\n';
+
+    const compileAndVerify = (options: readonly string[], label: string): string => {
+      const compiled = compileTs({ text: source, name: sourceFile, options });
+      assert.equal(compiled.status, 0, `${label}: ${compiled.stderr.toString()}`);
+      const tsCode = compiled.stdout.toString();
+      assert.equal(checkTsArtifact(tsCode).status, 0, `${label}: strict TS check`);
+      withTsArtifact(tsCode, run => {
+        const res = run();
+        assert.equal(res.status, 0, `${label}: runtime`);
+        assert.equal(res.stdout.toString(), expectedLine, `${label}: output`);
+      });
+      return tsCode;
+    };
+
+    const defaultTs = compileAndVerify([], 'default builtin');
+    assert.match(defaultTs, /function lite\$cryptoDigestBytes\(/);
+    assert.match(defaultTs, /function lite\$cryptoDigestText\(/);
+    assert.match(defaultTs, /function lite\$cryptoDigestFile\(/);
+    assert.match(defaultTs, /node:crypto/);
+
+    const pureProjectTs = compileAndVerify(['--builtin-mode', 'pure'], 'project pure');
+    assert.doesNotMatch(pureProjectTs, /function lite\$cryptoDigest/);
+    assert.doesNotMatch(pureProjectTs, /node:crypto/);
+
+    const pureProjectEqTs = compileAndVerify(['--builtin-mode=pure'], 'project pure =');
+    assert.doesNotMatch(pureProjectEqTs, /function lite\$cryptoDigest/);
+
+    const pureModuleTs = compileAndVerify(['--builtin-mode', 'core/crypto=pure'], 'module core/crypto pure');
+    assert.doesNotMatch(pureModuleTs, /function lite\$cryptoDigest/);
+    assert.doesNotMatch(pureModuleTs, /node:crypto/);
+
+    const pureLibModuleTs = compileAndVerify(['--builtin-mode=lib/core/crypto.lts=pure'], 'module lib/core/crypto.lts pure');
+    assert.doesNotMatch(pureLibModuleTs, /function lite\$cryptoDigest/);
+
+    const fnBytesPureTs = compileAndVerify(['--builtin-mode', 'core/crypto.sha256Bytes=pure'], 'fn sha256Bytes pure');
+    assert.match(fnBytesPureTs, /function lite\$cryptoDigestBytes\(/); // sha512Bytes still builtin
+    assert.match(fnBytesPureTs, /function lite\$cryptoDigestText\(/);
+    assert.match(fnBytesPureTs, /function lite\$cryptoDigestFile\(/);
+
+    const bothBytesPureTs = compileAndVerify([
+      '--builtin-mode', 'core/crypto.sha256Bytes=pure',
+      '--builtin-mode', 'core/crypto.sha512Bytes=pure',
+    ], 'both bytes pure');
+    assert.doesNotMatch(bothBytesPureTs, /function lite\$cryptoDigestBytes\(/);
+    assert.match(bothBytesPureTs, /function lite\$cryptoDigestText\(/);
+    assert.match(bothBytesPureTs, /function lite\$cryptoDigestFile\(/);
+
+    const fnFileOverrideTs = compileAndVerify([
+      '--builtin-mode', 'pure',
+      '--builtin-mode', 'core/crypto.sha256File=builtin',
+    ], 'project pure + fn sha256File builtin');
+    assert.doesNotMatch(fnFileOverrideTs, /function lite\$cryptoDigestBytes\(/);
+    assert.doesNotMatch(fnFileOverrideTs, /function lite\$cryptoDigestText\(/);
+    assert.match(fnFileOverrideTs, /function lite\$cryptoDigestFile\(/);
+
+    const precedenceOrderTs = compileAndVerify([
+      '--builtin-mode', 'core/crypto.sha256File=pure',
+      '--builtin-mode', 'core/crypto=builtin',
+      '--builtin-mode', 'pure',
+    ], 'specificity wins regardless of flag order');
+    assert.match(precedenceOrderTs, /function lite\$cryptoDigestBytes\(/);
+    assert.match(precedenceOrderTs, /function lite\$cryptoDigestText\(/);
+    assert.doesNotMatch(precedenceOrderTs, /function lite\$cryptoDigestFile\(/);
+
+    const fileOnlyTextBytesSource = [
+      'crypto := import "core/crypto";',
+      'io := import "core/io";',
+      'io.outputLine(crypto.sha256Bytes([1]), crypto.sha512Text("x"));',
+    ].join('\n');
+    const fn512PureOnly = compileTs({
+      text: fileOnlyTextBytesSource,
+      name: join(workDir, 'fn512.lts'),
+      options: ['--builtin-mode', 'pure', '--builtin-mode', 'core/crypto.sha256Bytes=builtin'],
+    });
+    assert.equal(fn512PureOnly.status, 0);
+    assert.match(fn512PureOnly.stdout.toString(), /function lite\$cryptoDigestBytes\(/);
+    assert.doesNotMatch(fn512PureOnly.stdout.toString(), /function lite\$cryptoDigestText\(/);
+
+    for (const badOptions of [
+      ['--builtin-mode'],
+      ['--builtin-mode', 'bogus'],
+      ['--builtin-mode', 'core/crypto=bogus'],
+      ['--builtin-mode', '=pure'],
+      ['--builtin-mode', 'core/crypto.=pure'],
+      ['--unknown-flag'],
+    ] as const) {
+      for (const target of ['ts', 'c'] as const) {
+        const bad = compileTarget(target, { text: 'io := import "core/io"; io.outputLine(1);', name: sourceFile, options: badOptions });
+        assert.equal(bad.status, 2, `${target} ${badOptions.join(' ')}`);
+      }
+    }
+
+    const cliPure = spawnSync(process.execPath, [join(root, 'compiler/cli.ts'), 'ts', '--builtin-mode=pure', sourceFile], { env, encoding: 'utf8', timeout: 10000 });
+    assert.equal(cliPure.status, 0, cliPure.stderr);
+    assert.doesNotMatch(cliPure.stdout, /function lite\$cryptoDigest/);
+
+    const liteCliCompile = spawnSync(join(root, 'bin/lite'), ['compile', '--builtin-mode', 'core/crypto.sha256File=pure', sourceFile], { env, encoding: 'utf8', timeout: 10000 });
+    assert.equal(liteCliCompile.status, 0, liteCliCompile.stderr);
+    assert.doesNotMatch(liteCliCompile.stdout, /function lite\$cryptoDigestFile\(/);
+    assert.match(liteCliCompile.stdout, /function lite\$cryptoDigestText\(/);
+
+    const liteCliRun = spawnSync(join(root, 'bin/lite'), ['run', '--builtin-mode', 'pure', sourceFile], { env, encoding: 'utf8', timeout: 10000 });
+    assert.equal(liteCliRun.status, 0, liteCliRun.stderr);
+    assert.equal(liteCliRun.stdout, expectedLine);
+  } finally {
+    rmSync(workDir, { recursive: true, force: true });
   }
 });

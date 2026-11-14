@@ -18,7 +18,7 @@ export type CompilerTarget = 'ts' | 'c';
 /** Raw streams and process-style status from a compiler invocation. */
 export type CompilerResult = Readonly<{ status: number; stdout: Buffer; stderr: Buffer }>;
 /** Complete source plus an optional diagnostic name and canonical filesystem path. */
-export type CompilerInput = Readonly<{ text: string; name?: string; rootPath?: string; cwd?: string }>;
+export type CompilerInput = Readonly<{ text: string; name?: string; rootPath?: string; cwd?: string; options?: readonly string[] }>;
 /** Selected artifact and exact source/builder identities. */
 export type CompilerBuild = Readonly<{ target: CompilerTarget; path: string; sourceSha256: string; artifactSha256: string; builderSha256: string; dependencies: readonly string[]; cached: boolean }>;
 type DependencyIdentity = Readonly<{ path: string; sha256: string }>;
@@ -116,9 +116,9 @@ function selectBuild(indexPath: string, indexDirectory: string, target: Compiler
 }
 
 /** Spawns compiler/entry.ts in a fresh subprocess when in-process execution cannot be reused. */
-function invokeSubprocess(artifact: string, text: string, name?: string, cwd = process.cwd(), explicitRootPath?: string): CompilerResult {
+function invokeSubprocess(artifact: string, text: string, name?: string, cwd = process.cwd(), explicitRootPath?: string, options: readonly string[] = []): CompilerResult {
   const rootPath = explicitRootPath ?? (name === undefined || name === '' ? resolve(cwd, '__lite_stdin__.lts') : resolve(cwd, name));
-  const result = spawnSync(process.execPath, [entryPath, artifact, name ?? '', sourceModuleIdentity(text), rootPath], {
+  const result = spawnSync(process.execPath, [entryPath, artifact, name ?? '', sourceModuleIdentity(text), rootPath, ...options], {
     input: text, cwd, timeout: 0, maxBuffer: 128 * 1024 * 1024,
   });
   if (result.error !== undefined) throw result.error;
@@ -127,7 +127,7 @@ function invokeSubprocess(artifact: string, text: string, name?: string, cwd = p
 }
 
 /** Runs an already-loaded generated compiler in-process while isolating stdio, argv, exit, and cwd-relative imports. */
-function invokeInProcess(main: CompilerMain, resolvedArtifact: string, text: string, name: string | undefined, cwd: string, rootPath: string): CompilerResult {
+function invokeInProcess(main: CompilerMain, resolvedArtifact: string, text: string, name: string | undefined, cwd: string, rootPath: string, options: readonly string[] = []): CompilerResult {
   const unnamedRootPath = name === undefined || name === '' ? resolve(cwd, rootPath) : undefined;
   const sourceCache = new Map<string, SourceRecord>();
   const sourceFailure = (path: string, message: string): SourceReadFailure => {
@@ -242,7 +242,7 @@ function invokeInProcess(main: CompilerMain, resolvedArtifact: string, text: str
   inProcessActive = true;
   let status = 0;
   try {
-    process.argv = [process.execPath, resolvedArtifact, name ?? '', sourceModuleIdentity(text), rootPath];
+    process.argv = [process.execPath, resolvedArtifact, name ?? '', sourceModuleIdentity(text), rootPath, ...options];
     process.exit = ((code?: number | string | null): never => {
       const numeric = code === undefined || code === null ? 0 : Number(code);
       throw new CompilerExit(Number.isFinite(numeric) ? numeric : 1);
@@ -281,32 +281,32 @@ function invokeInProcess(main: CompilerMain, resolvedArtifact: string, text: str
 }
 
 /** Executes one generated compiler with warm in-process reuse when safe, falling back to a subprocess otherwise. */
-function invoke(artifact: string, text: string, name?: string, cwd = process.cwd(), explicitRootPath?: string): CompilerResult {
+function invoke(artifact: string, text: string, name?: string, cwd = process.cwd(), explicitRootPath?: string, options: readonly string[] = []): CompilerResult {
   const rootPath = explicitRootPath ?? (name === undefined || name === '' ? resolve(cwd, '__lite_stdin__.lts') : resolve(cwd, name));
   const resolvedArtifact = resolve(artifact);
   const currentStamp = fileStamp(resolvedArtifact);
   if (inProcessActive || currentStamp === undefined) {
-    return invokeSubprocess(artifact, text, name, cwd, explicitRootPath);
+    return invokeSubprocess(artifact, text, name, cwd, explicitRootPath, options);
   }
   let cached = loadedCompilers.get(resolvedArtifact);
   if (cached !== undefined) {
     if (cached.stamp !== currentStamp.stamp) {
-      return invokeSubprocess(artifact, text, name, cwd, explicitRootPath);
+      return invokeSubprocess(artifact, text, name, cwd, explicitRootPath, options);
     }
   } else {
     let loaded: unknown;
     try {
       loaded = hostRequire(resolvedArtifact);
     } catch {
-      return invokeSubprocess(artifact, text, name, cwd, explicitRootPath);
+      return invokeSubprocess(artifact, text, name, cwd, explicitRootPath, options);
     }
     if (typeof loaded !== 'object' || loaded === null || !('main' in loaded) || typeof loaded.main !== 'function') {
-      return invokeSubprocess(artifact, text, name, cwd, explicitRootPath);
+      return invokeSubprocess(artifact, text, name, cwd, explicitRootPath, options);
     }
     cached = { stamp: currentStamp.stamp, main: loaded.main as CompilerMain };
     loadedCompilers.set(resolvedArtifact, cached);
   }
-  return invokeInProcess(cached.main, resolvedArtifact, text, name, cwd, rootPath);
+  return invokeInProcess(cached.main, resolvedArtifact, text, name, cwd, rootPath, options);
 }
 
 /** Compiles a source root and captures the dependency paths actually read by the Lite graph visitor on fd 3. */
@@ -521,7 +521,7 @@ export function buildCCompiler(): CompilerBuild { return buildCompiler('c'); }
 
 /** Compiles one whole Lite source through a generated compiler artifact path. */
 export function invokeCompilerArtifact(artifact: string, input: CompilerInput): CompilerResult {
-  return invoke(artifact, input.text, input.name, input.cwd ?? process.cwd(), input.rootPath);
+  return invoke(artifact, input.text, input.name, input.cwd ?? process.cwd(), input.rootPath, input.options ?? []);
 }
 
 /** Compiles one whole Lite source with a current Lite-written target compiler. */

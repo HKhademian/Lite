@@ -10,12 +10,15 @@ cli := import "util/cli";
 project := import "util/project";
 
 usageExit := fn(): Unit {
-    io.errorLine("Usage: ./bin/lite run file.lts [-- argument ...]");
+    io.errorLine("Usage: ./bin/lite run [--builtin-mode SPEC]... file.lts [-- argument ...]");
     io.exit(2);
 };
 
 run := fn(rawArgs: List<String>): Unit {
-    args := cli.stripLeadingSeparator(rawArgs);
+    if not cli.validCompilerOptions(rawArgs, true) {
+        usageExit();
+    }
+    args := cli.stripLeadingSeparator(cli.withoutCompilerOptions(rawArgs, true));
     scriptPath := cli.head(args);
     if scriptPath == "" {
         usageExit();
@@ -44,7 +47,11 @@ run := fn(rawArgs: List<String>): Unit {
     entryScript := if root == "" { "compiler/entry.ts" } else { path.resolve(root, "compiler/entry.ts") };
     emptyEnv: List<String> = [];
 
-    compileArgs: List<String> = [cliScript, "ts", scriptPath];
+    compileArgs: mut List<String> = [cliScript, "ts"];
+    loop cli.compilerOptions(rawArgs, true) as opt {
+        list.pushBack(mut compileArgs, opt);
+    }
+    list.pushBack(mut compileArgs, scriptPath);
     compiled := proc.run(proc.execPath(), compileArgs, "", emptyEnv, true, "");
     if compiled.error =!= "" {
         io.errorLine("lite run: " + compiled.error);

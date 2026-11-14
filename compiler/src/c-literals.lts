@@ -2,7 +2,6 @@
 
 integer := import "core/int";
 numeric := import "./numeric-literals.lts";
-diagLib := import "core/diag";
 textLib := import "core/text";
 
 /** Formats a checked Int value as a C signed 64-bit literal (`INT64_C`, `INT64_MIN`). */
@@ -55,10 +54,9 @@ pub boolLiteralCode := fn(value: Bool): String {
     if value { "true" } else { "false" }
 }
 
-/** Rejects the ordinary list value copy this backend does not implement; list values are unsupported in C. */
+/** Marks a list value copy for C reachability validation; reachable list values are rejected by `emitProgram`. */
 pub listCopyCode := fn(code: String): String {
-    diagLib.fail("", "C backend does not support list values yet");
-    code
+    "lt_list_copy(" + code + ")"
 }
 
 /** Emits a checked UTF-8 byte concatenation call; the bootstrap C backend intentionally leaks each result. */
@@ -84,15 +82,15 @@ pub comparisonCode := fn(op: String, kind: String, left: String, right: String):
         else { "strcmp(" + left + ", " + right + ") != 0" }
     } else {
         operator := if op == "==" { "==" }
-            else if op == "=!=" { "!=" }
-            else if op == "<" { "<" }
-            else if op == "<!" { ">=" }
-            else if op == "<=" { "<=" }
-            else if op == "<!=" { ">" }
-            else if op == ">" { ">" }
-            else if op == ">!" { "<=" }
-            else if op == ">=" { ">=" }
-            else { "<" };
+        else if op == "=!=" { "!=" }
+        else if op == "<" { "<" }
+        else if op == "<!" { ">=" }
+        else if op == "<=" { "<=" }
+        else if op == "<!=" { ">" }
+        else if op == ">" { ">" }
+        else if op == ">!" { "<=" }
+        else if op == ">=" { ">=" }
+        else { "<" };
         "(" + left + ") " + operator + " (" + right + ")"
     }
 }
