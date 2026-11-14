@@ -22,8 +22,9 @@ supports scalar/Unit, flat named-tuple, fixed-array, and List display; the
 generated compiler also supports `Float` expressions, fixed arrays, scalar and
 indexed compound updates, `**`, `core/*` module imports, tuple `=name`
 shorthand, fixed-parameter named/`=name` call routing, `Never`-valued `io.exit`
-(with default `io.exit()`), unnamed `loop sequence { ... }` traversal, and
-empty/grouped/singleton tuple patterns (see [`gaps.md`](gaps.md) for remaining
+(with default `io.exit()`), unnamed `loop sequence { ... }` traversal,
+subjectless Boolean `match { ... }` (TS value and action forms; C action form),
+and empty/grouped/singleton tuple patterns (see [`gaps.md`](gaps.md) for remaining
 parity items). Process adapters stream output through an
 optional main callback, preserving earlier output across faults. Calling main()
 without that callback retains the return-text contract. The [I/O seed refresh](parity.md#temporary-io-migration)
@@ -71,13 +72,13 @@ These Lite sources are also the bootstrap source **S**. S must remain inside the
 bootstrap subset **L** defined in the
 [bootstrap plan](../docs/bootstrap-plan.md#compiler-source-subset-l). Namespace
 modules (`import "..."`, `pub`), tuple `=name` shorthand, named/`=name` call
-routing (including `self(...)`), scalar compound updates (`+=`, `-=`, `*=`,
-`/=`, `%=`, `:/=`, `:%=`), `**`, and unnamed `loop sequence { ... }` traversal
+routing (including `self(...)`), scalar compound updates (`+=`, `-=`, `*=`, `/=`, `%=`, `:/=`, `:%=`), `**`,
+unnamed `loop sequence { ... }` traversal, and subjectless Boolean `match { ... }`
 have passed the self-host and seed acceptance gates and are part of S. Do not
-add `match`, records, enums, unions, `Float`, arrays, closures, general user
-`mut` parameters, `finally`, or loop metadata to S until they pass those gates
-too: the selected generated compiler must parse, check and lower every construct
-used in S.
+add subject `match <expr> { ... }`, records, enums, unions, `Float`, arrays,
+closures, general user `mut` parameters, `finally`, or loop metadata to S until
+they pass those gates too: the selected generated compiler must parse, check and
+lower every construct used in S.
 
 Compiler sources under `src/` and `lib/core/` use Lite namespace imports. Each
 manifest names one root; active build, CLI, self-host, release and verification

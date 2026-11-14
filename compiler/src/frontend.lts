@@ -197,18 +197,19 @@ isReservedWord := fn(name: String): Bool {
 
 /** Returns the documentation path for one reserved Lite feature. */
 featureDoc := fn(name: String): String {
-    if name == "loop" { "docs/loops.md" }
-    else if name == "if" or name == "else" or name == "and" or name == "or" or name == "not" or
-        name == "true" or name == "false" { "docs/conditionals.md" }
-    else if name == "var" or name == "mut" { "docs/declarations-and-assignment.md" }
-    else if name == "fn" or name == "return" { "docs/functions.md" }
-    else if name == "match" { "docs/match.md" }
-    else if name == "pub" { "docs/modules-and-packages.md" }
-    else if name == "import" or name == "using" { "docs/modules-and-packages.md" }
-    else if name == "record" or name == "type" { "docs/types-and-inference.md" }
-    else if name == "break" or name == "continue" { "docs/control-flow.md" }
-    else if name == "then" or name == "finally" { "docs/finally.md" }
-    else { "docs/grammar-sketch.md" }
+    match {
+        name == "loop" { "docs/loops.md" }
+        name == "if" or name == "else" or name == "and" or name == "or" or name == "not" or
+            name == "true" or name == "false" { "docs/conditionals.md" }
+        name == "var" or name == "mut" { "docs/declarations-and-assignment.md" }
+        name == "fn" or name == "return" { "docs/functions.md" }
+        name == "match" { "docs/match.md" }
+        name == "pub" or name == "import" or name == "using" { "docs/modules-and-packages.md" }
+        name == "record" or name == "type" { "docs/types-and-inference.md" }
+        name == "break" or name == "continue" { "docs/control-flow.md" }
+        name == "then" or name == "finally" { "docs/finally.md" }
+        _ { "docs/grammar-sketch.md" }
+    }
 }
 
 /** Reports a reserved Lite feature this compiler checkpoint cannot translate, with its documentation reference, then exits 2. */
@@ -408,16 +409,28 @@ pub arrayElementKind := fn(kind: String): String {
     textLib.slice(kind, 1, semi)
 }
 
+/** Maps one ASCII decimal digit character to its integer value 0..9. */
+decimalDigit := fn(ch: String): Int {
+    match {
+        ch == "0" { 0 }
+        ch == "1" { 1 }
+        ch == "2" { 2 }
+        ch == "3" { 3 }
+        ch == "4" { 4 }
+        ch == "5" { 5 }
+        ch == "6" { 6 }
+        ch == "7" { 7 }
+        ch == "8" { 8 }
+        _ { 9 }
+    }
+}
+
 /** Parses non-negative decimal digits in `text` from `start` to `end`. */
 parseDigits := fn(text: String, start: Int, end: Int): Int {
     var result := 0;
     var cursor := start;
     loop cursor < end {
-        ch := textLib.at(text, cursor);
-        digit := if ch == "0" { 0 } else if ch == "1" { 1 } else if ch == "2" { 2 }
-            else if ch == "3" { 3 } else if ch == "4" { 4 } else if ch == "5" { 5 }
-            else if ch == "6" { 6 } else if ch == "7" { 7 } else if ch == "8" { 8 } else { 9 };
-        result = result * 10 + digit;
+        result = result * 10 + decimalDigit(textLib.at(text, cursor));
         cursor = cursor + 1;
     }
     result
@@ -1006,9 +1019,11 @@ coreHostFunction := fn(moduleIdentity: String, name: String, params: String, res
 
 /** Maps one registered output intrinsic identity to its source special-statement name. */
 coreOutputName := fn(runtime: String): String {
-    if runtime == "lite$core$io$output:v1" { "output" }
-    else if runtime == "lite$core$io$outputLine:v1" { "outputLine" }
-    else { "" }
+    match {
+        runtime == "lite$core$io$output:v1" { "output" }
+        runtime == "lite$core$io$outputLine:v1" { "outputLine" }
+        _ { "" }
+    }
 }
 
 /** Returns the source name from one encoded `name=kind` function parameter entry. */
@@ -2828,11 +2843,7 @@ parseBinary := fn(target: String, source: String, position: Int, prefix: String,
                 var end := labelStart;
                 var fieldIndex := 0;
                 loop end < textLib.length(source) and textLib.isDigit(textLib.at(source, end)) {
-                    digitText := textLib.at(source, end);
-                    digit := if digitText == "0" { 0 } else if digitText == "1" { 1 } else if digitText == "2" { 2 }
-                        else if digitText == "3" { 3 } else if digitText == "4" { 4 } else if digitText == "5" { 5 }
-                        else if digitText == "6" { 6 } else if digitText == "7" { 7 } else if digitText == "8" { 8 } else { 9 };
-                    fieldIndex = fieldIndex * 10 + digit;
+                    fieldIndex = fieldIndex * 10 + decimalDigit(textLib.at(source, end));
                     end = end + 1;
                 }
                 if isArrayKind(left.kind) {
@@ -3374,9 +3385,11 @@ pub sourceModulePath := fn(): String {
 
 /** Collapses a tuple or list kind to its `Tuple`/`List` item suffix while leaving scalar item kinds unchanged. */
 storageKind := fn(kind: String): String {
-    if isListKind(kind) or isArrayKind(kind) { "List" }
-    else if isTupleKind(kind) { "Tuple" }
-    else { kind }
+    match {
+        isListKind(kind) or isArrayKind(kind) { "List" }
+        isTupleKind(kind) { "Tuple" }
+        _ { kind }
+    }
 }
 
 /** Returns the text payload stored with one local item: the canonical List/Array kind for List/Array items, otherwise the parsed literal text. */

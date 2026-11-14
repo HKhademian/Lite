@@ -396,9 +396,11 @@ requires the project owner's explicit selection and an update to this page and t
    compare the declared self-hosting subset. Avoid unrelated syntax, builtins,
    standard modules, host APIs and CLI behavior. The bounded top-level import
    step is already owner-approved for after the current kernel.
-4. **S stays inside L.** Do not use `match`, records, enums, unions, Float,
+4. **S stays inside L.** Do not use subject `match`, records, enums, unions, Float,
    arrays, closures, `mut` parameters, modules, `finally`, loop metadata or
-   compound operators in S just because the igniter supports them.
+   compound operators in S unless they have passed the self-host and seed
+   acceptance gates (unnamed `loop`, compound updates, and subjectless Boolean
+   `match { ... }` are accepted in S).
 5. **No official std.** Shared code lives under a clearly provisional location
    such as `lib/`; it is not `lite-stdlib`, has no stable API, is not imported by
    examples or samples and is not added to the design specification.
@@ -810,8 +812,10 @@ Allowed in S now:
 - Expressions: names, positional and named/`=name` routed calls (including named
   `self(...)`), tuple construction (including `=name` shorthand), field access,
   index reads, parentheses, unary minus, `+ - * / % :/ :% **`, comparisons,
-  `and`/`or`/`not`, value `if`/`else if`/`else`.
-- Statements: action `if`/`else if`/`else`, loops (including unnamed
+  `and`/`or`/`not`, value `if`/`else if`/`else`, value subjectless Boolean
+  `match { ... }`.
+- Statements: action `if`/`else if`/`else`, action subjectless Boolean
+  `match { ... }`, loops (including unnamed
   `loop sequence { ... }` traversal), `break`, `continue`,
   `return`, scalar compound updates (`+=`, `-=`, `*=`, `/=`, `%=`, `:/=`,
   `:%=`), blocks, `outputLine`, `reportError`, `exit`.
@@ -824,7 +828,7 @@ Allowed in S now:
 
 Not allowed in S without an owner decision and a plan update:
 
-- `Float`, fixed arrays, `match`, records, enums, unions, `Option`/`Result`,
+- `Float`, fixed arrays, subject `match <expr> { ... }`, records, enums, unions, `Option`/`Result`,
   recovery, `finally`, loop metadata, closures, first-class callbacks, general
   user `mut` parameters, user generics, maps, zero/reserved locals (compiler
   sources remain integer/text/tuple/list based even where generated targets

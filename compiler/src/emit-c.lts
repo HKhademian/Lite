@@ -12,16 +12,12 @@ dedent := fn(indent: String): String {
 
 /** Builds one checked printf call for an Int, String or Bool report value without a trailing newline. */
 cCall := fn(kind: String, code: String): String {
-    if kind == "Unit" {
-        "printf(\"Unit\")"
-    } else if kind == "Float" {
-        "lt_print_float((double)(" + code + "))"
-    } else if kind == "Int" {
-        "printf(\"%\" PRId64, (int64_t)(" + code + "))"
-    } else if kind == "Bool" {
-        "printf(\"%s\", ((" + code + ") ? \"true\" : \"false\"))"
-    } else {
-        "printf(\"%s\", " + code + ")"
+    match {
+        kind == "Unit" { "printf(\"Unit\")" }
+        kind == "Float" { "lt_print_float((double)(" + code + "))" }
+        kind == "Int" { "printf(\"%\" PRId64, (int64_t)(" + code + "))" }
+        kind == "Bool" { "printf(\"%s\", ((" + code + ") ? \"true\" : \"false\"))" }
+        _ { "printf(\"%s\", " + code + ")" }
     }
 }
 
@@ -33,17 +29,17 @@ usesIntHelper := fn(calls: String, name: String): Bool {
 
 /** Returns the C rejection message for one emitted expression that calls an unsupported I/O or text builtin, or empty text. */
 unsupportedBuiltinCode := fn(calls: String): String {
-    if usesIntHelper(calls, "lite$readSource(") {
-        "C backend does not support compiler source reads"
-    } else if usesIntHelper(calls, "lite$inputArgs(") or usesIntHelper(calls, "lite$inputAll(") or usesIntHelper(calls, "lite$inputLine(") or usesIntHelper(calls, "lite$inputInt(") or usesIntHelper(calls, "lite$inputFloat(") {
-        "C backend does not support input builtins yet"
-    } else if usesIntHelper(calls, "lite$reportError(") or usesIntHelper(calls, "lite$exit(") {
-        "C backend does not support reportError or exit yet"
-    } else if usesIntHelper(calls, "lite$textLength(") or usesIntHelper(calls, "lite$textAt(") or
-        usesIntHelper(calls, "lite$textSlice(") {
-        "C backend does not support text builtins yet"
-    } else {
-        ""
+    match {
+        usesIntHelper(calls, "lite$readSource(") { "C backend does not support compiler source reads" }
+        usesIntHelper(calls, "lite$inputArgs(") or usesIntHelper(calls, "lite$inputAll(") or
+            usesIntHelper(calls, "lite$inputLine(") or usesIntHelper(calls, "lite$inputInt(") or
+            usesIntHelper(calls, "lite$inputFloat(") { "C backend does not support input builtins yet" }
+        usesIntHelper(calls, "lite$reportError(") or usesIntHelper(calls, "lite$exit(") {
+            "C backend does not support reportError or exit yet"
+        }
+        usesIntHelper(calls, "lite$textLength(") or usesIntHelper(calls, "lite$textAt(") or
+            usesIntHelper(calls, "lite$textSlice(") { "C backend does not support text builtins yet" }
+        _ { "" }
     }
 }
 
