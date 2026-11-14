@@ -2728,7 +2728,8 @@ test('call routing supports named, positional, shorthand, replacement, recursion
     ['f := fn(a: Int, b: Int): Int { a + b }; f("superseded", a = "bad", 2);', /must be Int, got String/],
     ['io := import "core/io"; io.inputInt(prompt = "n: ");', /named arguments are not supported for host function io\.inputInt/],
     ['io := import "core/io"; text := "hi"; io.errorLine(=text);', /named arguments are not supported for host function io\.errorLine/],
-    ['text := import "core/text"; text.length(s = "hi");', /unknown parameter s in call to text\.length/],
+    ['text := import "core/text"; text.length(s = "hi");', /named arguments are not supported for host function text\.length/],
+    ['text := import "core/text"; text.trim(s = "hi");', /unknown parameter s in call to text\.trim/],
     ['io := import "core/io"; var x := 0; io.outputLine(x = 1);', /expected \)/],
   ] as const) {
     const rejected = compileTs({ text: bad });
@@ -4068,13 +4069,13 @@ test('core os/fs/process/crypto/time host bindings, standalone CLI execution, an
     ].join('\n'));
   });
 
-  const textHostOnly = compileTs({
-    text: 'textHost := import "core/text-host"; io := import "core/io"; io.outputLine(textHost.length("A🙂"), textHost.at("A🙂", 1));',
+  const textOnly = compileTs({
+    text: 'textLib := import "core/text"; io := import "core/io"; io.outputLine(textLib.length("A🙂"), textLib.at("A🙂", 1));',
     name: fixtureName,
   });
-  assert.equal(textHostOnly.status, 0, textHostOnly.stderr.toString());
-  assert.equal(checkTsArtifact(textHostOnly.stdout.toString()).status, 0);
-  withTsArtifact(textHostOnly.stdout.toString(), run => {
+  assert.equal(textOnly.status, 0, textOnly.stderr.toString());
+  assert.equal(checkTsArtifact(textOnly.stdout.toString()).status, 0);
+  withTsArtifact(textOnly.stdout.toString(), run => {
     const actual = run();
     assert.equal(actual.status, 0, actual.stderr.toString());
     assert.equal(actual.stdout.toString(), '2 🙂\n');
@@ -4241,7 +4242,7 @@ test('core os/fs/process/crypto/time host bindings, standalone CLI execution, an
     ['t := import "core/time"; x := t.monotonicNs();', /C backend does not support (time builtins|top-level functions) yet/],
     ['t := import "core/time"; t.sleepMs(1);', /C backend does not support (time builtins|top-level functions) yet/],
     ['t := import "core/time"; x := t.localDate();', /C backend does not support (time builtins|top-level functions) yet/],
-    ['host := import "core/text-host"; x := host.indexOf("ab", "b", 0);', /C backend does not support text builtins yet/],
+    ['textLib := import "core/text"; x := textLib.indexOf("ab", "b", 0);', /C backend does not support (text builtins|top-level functions) yet/],
     ['u := import "core/unicode"; x := u.utf8Encode("ab");', /C backend does not support (unicode builtins|list values|top-level functions) yet/],
     ['u := import "core/unicode"; x := u.utf16Length("ab");', /C backend does not support (unicode builtins|list values|top-level functions) yet/],
     ['u := import "core/unicode"; x := u.codePointAt("ab", 0);', /C backend does not support (unicode builtins|list values|top-level functions) yet/],

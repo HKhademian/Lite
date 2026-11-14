@@ -7,7 +7,7 @@ const projectRoot = fileURLToPath(new URL('../', import.meta.url));
 const hostModules = [
   ['lite.core.io.v1', 'lib/core/io.lts'],
   ['lite.core.list.v1', 'lib/core/list.lts'],
-  ['lite.core.text.v1', 'lib/core/text-host.lts'],
+  ['lite.core.text.v1', 'lib/core/text.lts'],
   ['lite.core.fs.v1', 'lib/core/fs.lts'],
   ['lite.core.process.v1', 'lib/core/process.lts'],
   ['lite.core.crypto.v1', 'lib/core/crypto.lts'],

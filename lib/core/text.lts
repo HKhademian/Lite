@@ -1,7 +1,18 @@
-/* Provisional bootstrap text support. Not an official standard library. */
+/* Provisional core text host primitives and pure-Lite helpers. */
 
 integer := import "core/int";
-host := import "core/text-host";
+
+/** Returns Unicode scalar count for one text value. */
+pub length := fn(text: String): Int;
+
+/** Returns the Unicode scalar at a zero-based position, faulting outside the text. */
+pub at := fn(text: String, position: Int): String;
+
+/** Returns the half-open Unicode scalar interval `[start, end)`, faulting outside the text. */
+pub slice := fn(text: String, start: Int, end: Int): String;
+
+/** Returns the first zero-based Unicode scalar index at or after `start` where `needle` occurs, or -1 when absent. */
+pub indexOf := fn(source: String, needle: String, start: Int): Int;
 
 /** True when `text` is exactly one ASCII decimal digit. */
 pub isDigit := fn(text: String): Bool {
@@ -47,10 +58,10 @@ pub isNameContinue := fn(ch: String): Bool {
 
 /** Returns the first position at or after `start` that is not Lite whitespace. */
 pub skipSpaces := fn(source: String, start: Int): Int {
-    size := host.length(source);
+    size := length(source);
     var position := start;
     loop position < size {
-        ch := host.at(source, position);
+        ch := at(source, position);
         if ch == " " or ch == "\t" or ch == "\r" or ch == "\n" {
             position = position + 1;
         } else {
@@ -62,9 +73,9 @@ pub skipSpaces := fn(source: String, start: Int): Int {
 
 /** Returns the position after the identifier run starting at `start`. */
 pub skipName := fn(source: String, start: Int): Int {
-    size := host.length(source);
+    size := length(source);
     var position := start;
-    loop position < size and isNameContinue(host.at(source, position)) {
+    loop position < size and isNameContinue(at(source, position)) {
         position = position + 1;
     }
     position
@@ -72,25 +83,25 @@ pub skipName := fn(source: String, start: Int): Int {
 
 /** True when `text` occurs at `position` and stays inside `source`. */
 pub startsWithAt := fn(source: String, position: Int, text: String): Bool {
-    width := host.length(text);
-    size := host.length(source);
+    width := length(text);
+    size := length(source);
     if position < 0 or position + width > size { return false; }
     if width == 0 { return true; }
-    if host.at(source, position) =!= host.at(text, 0) { return false; }
+    if at(source, position) =!= at(text, 0) { return false; }
     if width == 1 { return true; }
-    host.slice(source, position, position + width) == text
+    slice(source, position, position + width) == text
 }
 
 /** True when the whole identifier `word` occurs at `position`, not a longer identifier that merely starts with it. */
 pub wordAt := fn(source: String, position: Int, word: String): Bool {
     if not startsWithAt(source, position, word) { return false; }
-    after := position + host.length(word);
-    after >= host.length(source) or not isNameContinue(host.at(source, after))
+    after := position + length(word);
+    after >= length(source) or not isNameContinue(at(source, after))
 }
 
 /** Returns the first index at or after `start` where `needle` occurs, or -1 when absent. */
 pub indexOfText := fn(source: String, needle: String, start: Int): Int {
-    host.indexOf(source, needle, start)
+    indexOf(source, needle, start)
 }
 
 /** Joins text values in list order with `separator` between adjacent values. */
@@ -110,20 +121,20 @@ pub joinTexts := fn(values: List<String>, separator: String): String {
 
 /** Parses optional-sign decimal Int64 text; `ok` is false for empty, malformed or out-of-range text. */
 pub textToInt := fn(text: String): (value: Int, ok: Bool) {
-    size := host.length(text);
+    size := length(text);
     if size == 0 { return (value = 0, ok = false); }
     var position := 0;
     var negative := false;
-    if host.at(text, 0) == "-" {
+    if at(text, 0) == "-" {
         negative = true;
         position = 1;
-    } else if host.at(text, 0) == "+" {
+    } else if at(text, 0) == "+" {
         position = 1;
     }
     if position >= size { return (value = 0, ok = false); }
     var value := 0;
     loop position < size {
-        ch := host.at(text, position);
+        ch := at(text, position);
         if not isDigit(ch) { return (value = 0, ok = false); }
         digit := digitValue(ch);
         if negative {
@@ -138,15 +149,6 @@ pub textToInt := fn(text: String): (value: Int, ok: Bool) {
     (value = value, ok = true)
 }
 
-/** Returns Unicode scalar count for one text value. */
-pub length := fn(text: String): Int { host.length(text) }
-
-/** Returns the Unicode scalar at a zero-based position, faulting outside the text. */
-pub at := fn(text: String, position: Int): String { host.at(text, position) }
-
-/** Returns the half-open Unicode scalar interval `[start, end)`, faulting outside the text. */
-pub slice := fn(text: String, start: Int, end: Int): String { host.slice(text, start, end) }
-
 /** True when `ch` is Lite ASCII whitespace (` `, `\\t`, `\\r`, or `\\n`). */
 pub isWhitespace := fn(ch: String): Bool {
     ch == " " or ch == "\t" or ch == "\r" or ch == "\n"
@@ -154,21 +156,21 @@ pub isWhitespace := fn(ch: String): Bool {
 
 /** Returns `source` with leading Lite ASCII whitespace removed. */
 pub trimStart := fn(source: String): String {
-    size := host.length(source);
+    size := length(source);
     var start := 0;
-    loop start < size and isWhitespace(host.at(source, start)) {
+    loop start < size and isWhitespace(at(source, start)) {
         start = start + 1;
     }
-    host.slice(source, start, size)
+    slice(source, start, size)
 }
 
 /** Returns `source` with trailing Lite ASCII whitespace removed. */
 pub trimEnd := fn(source: String): String {
-    var end := host.length(source);
-    loop end > 0 and isWhitespace(host.at(source, end - 1)) {
+    var end := length(source);
+    loop end > 0 and isWhitespace(at(source, end - 1)) {
         end = end - 1;
     }
-    host.slice(source, 0, end)
+    slice(source, 0, end)
 }
 
 /** Returns `source` with both leading and trailing Lite ASCII whitespace removed. */
@@ -178,8 +180,8 @@ pub trim := fn(source: String): String {
 
 /** True when `source` ends with `suffix`. */
 pub endsWith := fn(source: String, suffix: String): Bool {
-    sourceLen := host.length(source);
-    suffixLen := host.length(suffix);
+    sourceLen := length(source);
+    suffixLen := length(suffix);
     if suffixLen > sourceLen { return false; }
     startsWithAt(source, sourceLen - suffixLen, suffix)
 }
@@ -234,21 +236,21 @@ lowerAsciiChar := fn(ch: String): String {
 
 /** Returns `source` with ASCII uppercase letters `A`-`Z` converted to lowercase `a`-`z`. */
 pub toLowerAscii := fn(source: String): String {
-    size := host.length(source);
+    size := length(source);
     var out := "";
     var runStart := 0;
     var i := 0;
     loop i < size {
-        ch := host.at(source, i);
+        ch := at(source, i);
         lower := lowerAsciiChar(ch);
         if lower =!= ch {
-            if i > runStart { out = out + host.slice(source, runStart, i); }
+            if i > runStart { out = out + slice(source, runStart, i); }
             out = out + lower;
             runStart = i + 1;
         }
         i = i + 1;
     }
     if runStart == 0 { return source; }
-    if runStart < size { out = out + host.slice(source, runStart, size); }
+    if runStart < size { out = out + slice(source, runStart, size); }
     out
 }

@@ -2,7 +2,7 @@
 
 integer := import "core/int";
 list := import "core/list";
-textHost := import "core/text-host";
+textLib := import "core/text";
 
 /** Returns the UTF-32 Unicode scalar code point list of `text`. */
 pub toCodePoints := fn(text: String): List<Int>;
@@ -23,7 +23,7 @@ pub fromCodePoint := fn(point: Int): (ok: Bool, text: String, error: String) {
 
 /** Returns the Unicode scalar code point at zero-based scalar index `position`. */
 pub codePointAt := fn(text: String, position: Int): Int {
-    ch := textHost.at(text, position);
+    ch := textLib.at(text, position);
     points := toCodePoints(ch);
     points[0]
 }

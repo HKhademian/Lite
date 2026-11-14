@@ -1,8 +1,8 @@
 {
   "note": "Reviewed 2026-11-14 after the power exponent update. All 69 TS corpus artifact hashes and 25 rejection cases verified.",
   "recorded": "2026-11-14",
-  "sourceSha256": "391e6b7ebc295840e76ca5f772bd9008f205b862763fc237a0038a22bfc6494d",
-  "compilerSha256": "79b550e0d6fbd6daac667093d5bf95b0c05a0ae5b689556198cfb7c12a5ed9a6",
+  "sourceSha256": "3ea5a9939314779fd76fedf6f2b5c61f1719c862cf1024bb521f7de5b9ddc9fa",
+  "compilerSha256": "7b14b1de571b04cc67f2b77605cb7b50e4b5a07115b636bd1cac0440645fbb61",
   "programCases": 69,
   "rejectedCases": 25,
   "artifacts": [
