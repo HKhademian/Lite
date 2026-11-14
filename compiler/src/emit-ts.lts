@@ -88,17 +88,18 @@ usesListPopFront := fn(calls: String): Bool {
 
 /** True when any emitted item calls a host filesystem builtin. */
 usesFs := fn(calls: String): Bool {
-    usesBuiltin(calls, "fsKind") or usesBuiltin(calls, "fsReadText") or usesBuiltin(calls, "fsWriteText") or
-    usesBuiltin(calls, "fsListDir") or usesBuiltin(calls, "fsMakeDir") or usesBuiltin(calls, "fsRemove") or
-    usesBuiltin(calls, "fsCopy") or usesBuiltin(calls, "fsSymlink") or usesBuiltin(calls, "fsRealPath") or
-    usesBuiltin(calls, "fsMakeTempDir")
+    usesBuiltin(calls, "fsKind") or usesBuiltin(calls, "fsReadText") or usesBuiltin(calls, "fsReadBytes") or
+    usesBuiltin(calls, "fsWriteText") or usesBuiltin(calls, "fsWriteBytes") or usesBuiltin(calls, "fsListDir") or
+    usesBuiltin(calls, "fsMakeDir") or usesBuiltin(calls, "fsRemove") or usesBuiltin(calls, "fsCopy") or
+    usesBuiltin(calls, "fsSymlink") or usesBuiltin(calls, "fsRealPath") or usesBuiltin(calls, "fsMakeTempDir")
 }
 
 /** True when any emitted item calls a host filesystem or file-hash helper returning `(ok, ..., error)`. */
 usesHostErrorResult := fn(calls: String): Bool {
-    usesBuiltin(calls, "fsReadText") or usesBuiltin(calls, "fsWriteText") or usesBuiltin(calls, "fsMakeDir") or
-    usesBuiltin(calls, "fsRemove") or usesBuiltin(calls, "fsCopy") or usesBuiltin(calls, "fsSymlink") or
-    usesBuiltin(calls, "fsRealPath") or usesBuiltin(calls, "fsMakeTempDir") or usesBuiltin(calls, "cryptoSha256File")
+    usesBuiltin(calls, "fsReadText") or usesBuiltin(calls, "fsWriteText") or usesBuiltin(calls, "fsWriteBytes") or
+    usesBuiltin(calls, "fsMakeDir") or usesBuiltin(calls, "fsRemove") or usesBuiltin(calls, "fsCopy") or
+    usesBuiltin(calls, "fsSymlink") or usesBuiltin(calls, "fsRealPath") or usesBuiltin(calls, "fsMakeTempDir") or
+    usesBuiltin(calls, "cryptoSha256File")
 }
 
 /** True when any emitted item calls a host process builtin. */
@@ -111,7 +112,7 @@ usesProcess := fn(calls: String): Bool {
 
 /** True when any emitted item calls a host crypto builtin. */
 usesCrypto := fn(calls: String): Bool {
-    usesBuiltin(calls, "cryptoSha256Text") or usesBuiltin(calls, "cryptoSha256File")
+    usesBuiltin(calls, "cryptoSha256Text") or usesBuiltin(calls, "cryptoSha256Bytes") or usesBuiltin(calls, "cryptoSha256File")
 }
 
 /** True when any emitted item calls a host time builtin. */
@@ -372,6 +373,7 @@ emitProcessDecl := fn(calls: String): Unit {
             io.outputLine("        statSync(path: string): { isFile(): boolean; isDirectory(): boolean };");
             io.outputLine("        readFileSync(path: string): Uint8Array;");
             io.outputLine("        writeFileSync(path: string, data: string, encoding: \"utf8\"): void;");
+            io.outputLine("        writeFileSync(path: string, data: Uint8Array): void;");
             io.outputLine("        readdirSync(path: string): string[];");
             io.outputLine("        mkdirSync(path: string, options: { recursive: boolean }): void;");
             io.outputLine("        rmSync(path: string, options: { recursive: boolean; force: boolean }): void;");
@@ -411,6 +413,19 @@ emitFsHelpers := fn(calls: String): Unit {
         io.outputLine("    return error instanceof Error ? error.message : String(error);");
         io.outputLine("}");
     }
+    if usesBuiltin(calls, "fsWriteBytes") or usesBuiltin(calls, "cryptoSha256Bytes") {
+        io.outputLine("function lite$toBytes(bytes: readonly bigint[]): Uint8Array {");
+        io.outputLine("    const out = new Uint8Array(bytes.length);");
+        io.outputLine("    for (let i = 0; i < bytes.length; i += 1) {");
+        io.outputLine("        const byte = bytes[i];");
+        io.outputLine("        if (byte === undefined || byte < 0n || byte > 255n) {");
+        io.outputLine("            throw new Error(\"byte value outside 0..255: \" + String(byte));");
+        io.outputLine("        }");
+        io.outputLine("        out[i] = Number(byte);");
+        io.outputLine("    }");
+        io.outputLine("    return out;");
+        io.outputLine("}");
+    }
     if usesBuiltin(calls, "fsKind") {
         io.outputLine("function lite$fsKind(path: string): string {");
         io.outputLine("    try {");
@@ -429,9 +444,23 @@ emitFsHelpers := fn(calls: String): Unit {
         io.outputLine("    } catch (error) { return { ok: false, text: \"\", error: lite$errMsg(error) }; }");
         io.outputLine("}");
     }
+    if usesBuiltin(calls, "fsReadBytes") {
+        io.outputLine("function lite$fsReadBytes(path: string): bigint[] {");
+        io.outputLine("    const bytes = process.getBuiltinModule(\"node:fs\").readFileSync(path);");
+        io.outputLine("    const out: bigint[] = new Array<bigint>(bytes.length);");
+        io.outputLine("    for (let i = 0; i < bytes.length; i += 1) { out[i] = BigInt(bytes[i] ?? 0); }");
+        io.outputLine("    return out;");
+        io.outputLine("}");
+    }
     if usesBuiltin(calls, "fsWriteText") {
         io.outputLine("function lite$fsWriteText(path: string, text: string): { ok: boolean; error: string } {");
         io.outputLine("    try { process.getBuiltinModule(\"node:fs\").writeFileSync(path, text, \"utf8\"); return { ok: true, error: \"\" }; }");
+        io.outputLine("    catch (error) { return { ok: false, error: lite$errMsg(error) }; }");
+        io.outputLine("}");
+    }
+    if usesBuiltin(calls, "fsWriteBytes") {
+        io.outputLine("function lite$fsWriteBytes(path: string, bytes: readonly bigint[]): { ok: boolean; error: string } {");
+        io.outputLine("    try { process.getBuiltinModule(\"node:fs\").writeFileSync(path, lite$toBytes(bytes)); return { ok: true, error: \"\" }; }");
         io.outputLine("    catch (error) { return { ok: false, error: lite$errMsg(error) }; }");
         io.outputLine("}");
     }
@@ -526,6 +555,11 @@ emitCryptoAndTimeHelpers := fn(calls: String): Unit {
     if usesBuiltin(calls, "cryptoSha256Text") {
         io.outputLine("function lite$cryptoSha256Text(text: string): string {");
         io.outputLine("    return process.getBuiltinModule(\"node:crypto\").createHash(\"sha256\").update(text, \"utf8\").digest(\"hex\");");
+        io.outputLine("}");
+    }
+    if usesBuiltin(calls, "cryptoSha256Bytes") {
+        io.outputLine("function lite$cryptoSha256Bytes(bytes: readonly bigint[]): string {");
+        io.outputLine("    return process.getBuiltinModule(\"node:crypto\").createHash(\"sha256\").update(lite$toBytes(bytes)).digest(\"hex\");");
         io.outputLine("}");
     }
     if usesBuiltin(calls, "cryptoSha256File") {

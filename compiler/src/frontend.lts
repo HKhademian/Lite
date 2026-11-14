@@ -1082,7 +1082,9 @@ coreHostFunction := fn(moduleIdentity: String, name: String, params: String, res
     } else if moduleIdentity == "lite.core.fs.v1" {
         if name == "kind" and params == "path=String" and result == "String" { "lite$fsKind" }
         else if name == "readText" and params == "path=String" and result == "(ok:Bool,text:String,error:String)" { "lite$fsReadText" }
+        else if name == "readBytes" and params == "path=String" and result == "List<Int>" { "lite$fsReadBytes" }
         else if name == "writeText" and params == "path=String|text=String" and result == "(ok:Bool,error:String)" { "lite$fsWriteText" }
+        else if name == "writeBytes" and params == "path=String|bytes=List<Int>" and result == "(ok:Bool,error:String)" { "lite$fsWriteBytes" }
         else if name == "listDir" and params == "path=String" and result == "List<String>" { "lite$fsListDir" }
         else if name == "makeDir" and params == "path=String" and result == "(ok:Bool,error:String)" { "lite$fsMakeDir" }
         else if name == "remove" and params == "path=String" and result == "(ok:Bool,error:String)" { "lite$fsRemove" }
@@ -1104,6 +1106,7 @@ coreHostFunction := fn(moduleIdentity: String, name: String, params: String, res
         else { "" }
     } else if moduleIdentity == "lite.core.crypto.v1" {
         if name == "sha256Text" and params == "text=String" and result == "String" { "lite$cryptoSha256Text" }
+        else if name == "sha256Bytes" and params == "bytes=List<Int>" and result == "String" { "lite$cryptoSha256Bytes" }
         else if name == "sha256File" and params == "path=String" and result == "(ok:Bool,hex:String,error:String)" { "lite$cryptoSha256File" }
         else { "" }
     } else if moduleIdentity == "lite.core.time.v1" {

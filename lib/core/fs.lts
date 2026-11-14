@@ -6,8 +6,14 @@ pub kind := fn(path: String): String;
 /** Reads strict UTF-8 text from `path`. */
 pub readText := fn(path: String): (ok: Bool, text: String, error: String);
 
+/** Reads raw `0..255` byte values from `path`. */
+pub readBytes := fn(path: String): List<Int>;
+
 /** Writes UTF-8 `text` to `path`, creating or truncating the file. */
 pub writeText := fn(path: String, text: String): (ok: Bool, error: String);
+
+/** Writes raw `0..255` byte values to `path`, creating or truncating the file. */
+pub writeBytes := fn(path: String, bytes: List<Int>): (ok: Bool, error: String);
 
 /** Returns direct entry names in directory `path` in sorted order, faulting when `path` cannot be read as a directory. */
 pub listDir := fn(path: String): List<String>;

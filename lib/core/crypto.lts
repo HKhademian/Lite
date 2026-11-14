@@ -3,5 +3,8 @@
 /** Returns the lowercase hexadecimal SHA-256 digest of UTF-8 `text`. */
 pub sha256Text := fn(text: String): String;
 
+/** Returns the lowercase hexadecimal SHA-256 digest of raw `0..255` byte values. */
+pub sha256Bytes := fn(bytes: List<Int>): String;
+
 /** Returns the lowercase hexadecimal SHA-256 digest of the raw bytes of the file at `path`. */
 pub sha256File := fn(path: String): (ok: Bool, hex: String, error: String);
