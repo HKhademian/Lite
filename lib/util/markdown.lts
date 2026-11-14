@@ -4,13 +4,9 @@ integer := import "core/int";
 text := import "core/text";
 list := import "core/list";
 
-findLineEnd := fn(source: String, start: Int): Int {
-    size := text.length(source);
-    var pos := start;
-    loop pos < size and text.at(source, pos) =!= "\n" {
-        pos = pos + 1;
-    }
-    pos
+findLineEnd := fn(source: String, start: Int, size: Int): Int {
+    idx := text.indexOfText(source, "\n", start);
+    if idx < 0 { size } else { idx }
 }
 
 isBlankRest := fn(source: String, fromPos: Int, lineEnd: Int): Bool {
@@ -32,6 +28,9 @@ countRepeatedAt := fn(source: String, start: Int, limit: Int, ch: String): Int {
 
 /** Removes fenced code blocks delimited at column 0 (` ``` ` or `~~~`) so prose scanners skip example code. */
 pub stripCodeBlocks := fn(source: String): String {
+    if text.indexOfText(source, "```", 0) < 0 and text.indexOfText(source, "~~~", 0) < 0 {
+        return source;
+    }
     size := text.length(source);
     var out := "";
     var runStart := 0;
@@ -42,7 +41,7 @@ pub stripCodeBlocks := fn(source: String): String {
     var fenceStart := 0;
 
     loop pos <= size {
-        lineEnd := findLineEnd(source, pos);
+        lineEnd := findLineEnd(source, pos, size);
         if not inFence {
             if pos < size {
                 ch := text.at(source, pos);
@@ -84,13 +83,16 @@ pub stripCodeBlocks := fn(source: String): String {
 
 /** True when `source` leaves a fenced code block (with up to 3 leading spaces) unclosed at EOF. */
 pub hasUnclosedFence := fn(source: String): Bool {
+    if text.indexOfText(source, "```", 0) < 0 and text.indexOfText(source, "~~~", 0) < 0 {
+        return false;
+    }
     size := text.length(source);
     var pos := 0;
     var fenceChar := "";
     var fenceLen := 0;
 
     loop pos < size {
-        lineEnd := findLineEnd(source, pos);
+        lineEnd := findLineEnd(source, pos, size);
         var lead := pos;
         var spaces := 0;
         loop lead < lineEnd and spaces < 3 and text.isWhitespace(text.at(source, lead)) {
@@ -121,10 +123,11 @@ pub hasUnclosedFence := fn(source: String): Bool {
 /** Extracts ATX headings (`#`..`######`) from already code-stripped prose. */
 pub extractHeadings := fn(proseText: String): List<String> {
     headings: mut List<String> = [];
+    if text.indexOfText(proseText, "#", 0) < 0 { return headings; }
     size := text.length(proseText);
     var pos := 0;
     loop pos < size {
-        lineEnd := findLineEnd(proseText, pos);
+        lineEnd := findLineEnd(proseText, pos, size);
         var cleanEnd := lineEnd;
         if cleanEnd > pos and text.at(proseText, cleanEnd - 1) == "\r" {
             cleanEnd = cleanEnd - 1;
@@ -164,17 +167,15 @@ stripHtmlTags := fn(source: String): String {
     var runStart := 0;
     var i := 0;
     loop i < size {
-        if text.at(source, i) == "<" {
-            close := text.indexOfText(source, ">", i + 1);
-            if close >= 0 {
-                if i > runStart { out = out + text.slice(source, runStart, i); }
-                i = close + 1;
-                runStart = i;
-            } else {
-                i = i + 1;
-            }
+        open := text.indexOfText(source, "<", i);
+        if open < 0 { break; }
+        close := text.indexOfText(source, ">", open + 1);
+        if close >= 0 {
+            if open > runStart { out = out + text.slice(source, runStart, open); }
+            i = close + 1;
+            runStart = i;
         } else {
-            i = i + 1;
+            i = open + 1;
         }
     }
     if runStart == 0 { return source; }
@@ -230,19 +231,24 @@ pub collectAnchors := fn(docText: String): List<String> {
         }
     }
 
+    if text.indexOfText(docText, "id=", 0) < 0 and text.indexOfText(docText, "name=", 0) < 0 {
+        return found;
+    }
     size := text.length(docText);
     var pos := 0;
     loop pos < size {
-        ch := text.at(docText, pos);
-        var attrLen := 0;
-        if pos == 0 or not text.isNameContinue(text.at(docText, pos - 1)) {
-            if text.startsWithAt(docText, pos, "id=") { attrLen = 3; }
-            else if text.startsWithAt(docText, pos, "name=") { attrLen = 5; }
+        eq := text.indexOfText(docText, "=", pos);
+        if eq < 0 { break; }
+        var isMatch := false;
+        if eq - 2 >= pos and text.startsWithAt(docText, eq - 2, "id=") {
+            isMatch = eq - 2 == 0 or not text.isNameContinue(text.at(docText, eq - 3));
+        } else if eq - 4 >= pos and text.startsWithAt(docText, eq - 4, "name=") {
+            isMatch = eq - 4 == 0 or not text.isNameContinue(text.at(docText, eq - 5));
         }
-        if attrLen > 0 and pos + attrLen < size {
-            q := text.at(docText, pos + attrLen);
+        if isMatch and eq + 1 < size {
+            q := text.at(docText, eq + 1);
             if q == "\"" or q == "'" {
-                valStart := pos + attrLen + 1;
+                valStart := eq + 2;
                 valEnd := text.indexOfText(docText, q, valStart);
                 if valEnd > valStart {
                     val := text.slice(docText, valStart, valEnd);
@@ -251,13 +257,13 @@ pub collectAnchors := fn(docText: String): List<String> {
                     }
                     pos = valEnd + 1;
                 } else {
-                    pos = pos + attrLen;
+                    pos = eq + 1;
                 }
             } else {
-                pos = pos + attrLen;
+                pos = eq + 1;
             }
         } else {
-            pos = pos + 1;
+            pos = eq + 1;
         }
     }
     found
@@ -269,21 +275,18 @@ stripInlineCode := fn(proseText: String): String {
     var runStart := 0;
     var pos := 0;
     loop pos < size {
-        ch := text.at(proseText, pos);
-        if ch == "`" {
-            ticks := countRepeatedAt(proseText, pos, size, "`");
-            closeNeedle := text.repeatText("`", ticks);
-            lineEnd := findLineEnd(proseText, pos + ticks);
-            closeAt := text.indexOfText(proseText, closeNeedle, pos + ticks);
-            if closeAt >= 0 and closeAt + ticks <= lineEnd {
-                if pos > runStart { out = out + text.slice(proseText, runStart, pos); }
-                pos = closeAt + ticks;
-                runStart = pos;
-            } else {
-                pos = pos + ticks;
-            }
+        tickPos := text.indexOfText(proseText, "`", pos);
+        if tickPos < 0 { break; }
+        ticks := countRepeatedAt(proseText, tickPos, size, "`");
+        closeNeedle := text.repeatText("`", ticks);
+        lineEnd := findLineEnd(proseText, tickPos + ticks, size);
+        closeAt := text.indexOfText(proseText, closeNeedle, tickPos + ticks);
+        if closeAt >= 0 and closeAt + ticks <= lineEnd {
+            if tickPos > runStart { out = out + text.slice(proseText, runStart, tickPos); }
+            pos = closeAt + ticks;
+            runStart = pos;
         } else {
-            pos = pos + 1;
+            pos = tickPos + ticks;
         }
     }
     if runStart == 0 { return proseText; }
@@ -294,83 +297,81 @@ stripInlineCode := fn(proseText: String): String {
 /** Extracts inline Markdown link and image destination targets from code-stripped prose. */
 pub extractLinkTargets := fn(proseText: String): List<String> {
     links: mut List<String> = [];
+    if text.indexOfText(proseText, "](", 0) < 0 { return links; }
     clean := stripInlineCode(proseText);
     size := text.length(clean);
     var pos := 0;
 
     loop pos < size {
-        if text.at(clean, pos) == "[" {
-            var labelEnd := pos + 1;
-            loop labelEnd < size and text.at(clean, labelEnd) =!= "]" and text.at(clean, labelEnd) =!= "\n" {
-                labelEnd = labelEnd + 1;
-            }
-            if labelEnd + 1 < size and text.at(clean, labelEnd) == "]" and text.at(clean, labelEnd + 1) == "(" {
-                var targetStart := labelEnd + 2;
-                if targetStart < size {
-                    if text.at(clean, targetStart) == "<" {
-                        gtPos := text.indexOfText(clean, ">", targetStart + 1);
-                        if gtPos > targetStart + 1 {
-                            var afterGt := gtPos + 1;
-                            var validClose := afterGt < size and text.at(clean, afterGt) == ")";
-                            if not validClose and afterGt < size and text.isWhitespace(text.at(clean, afterGt)) {
-                                loop afterGt < size and text.isWhitespace(text.at(clean, afterGt)) {
-                                    afterGt = afterGt + 1;
-                                }
-                                if afterGt < size and text.at(clean, afterGt) == "\"" {
-                                    titleEnd := text.indexOfText(clean, "\"", afterGt + 1);
-                                    if titleEnd >= 0 and titleEnd + 1 < size and text.at(clean, titleEnd + 1) == ")" {
-                                        afterGt = titleEnd + 1;
-                                        validClose = true;
-                                    }
+        openPos := text.indexOfText(clean, "[", pos);
+        if openPos < 0 { break; }
+        labelEnd := text.indexOfText(clean, "]", openPos + 1);
+        if labelEnd < 0 { break; }
+        nlPos := text.indexOfText(clean, "\n", openPos + 1);
+        if (nlPos < 0 or labelEnd < nlPos) and labelEnd + 1 < size and text.at(clean, labelEnd + 1) == "(" {
+            var targetStart := labelEnd + 2;
+            if targetStart < size {
+                if text.at(clean, targetStart) == "<" {
+                    gtPos := text.indexOfText(clean, ">", targetStart + 1);
+                    if gtPos > targetStart + 1 {
+                        var afterGt := gtPos + 1;
+                        var validClose := afterGt < size and text.at(clean, afterGt) == ")";
+                        if not validClose and afterGt < size and text.isWhitespace(text.at(clean, afterGt)) {
+                            loop afterGt < size and text.isWhitespace(text.at(clean, afterGt)) {
+                                afterGt = afterGt + 1;
+                            }
+                            if afterGt < size and text.at(clean, afterGt) == "\"" {
+                                titleEnd := text.indexOfText(clean, "\"", afterGt + 1);
+                                if titleEnd >= 0 and titleEnd + 1 < size and text.at(clean, titleEnd + 1) == ")" {
+                                    afterGt = titleEnd + 1;
+                                    validClose = true;
                                 }
                             }
-                            if validClose {
-                                list.pushBack(mut links, text.slice(clean, targetStart + 1, gtPos));
-                                pos = afterGt + 1;
-                            } else {
-                                pos = pos + 1;
-                            }
+                        }
+                        if validClose {
+                            list.pushBack(mut links, text.slice(clean, targetStart + 1, gtPos));
+                            pos = afterGt + 1;
                         } else {
-                            pos = pos + 1;
+                            pos = openPos + 1;
                         }
                     } else {
-                        var targetEnd := targetStart;
-                        loop targetEnd < size and not text.isWhitespace(text.at(clean, targetEnd)) and text.at(clean, targetEnd) =!= ")" {
-                            targetEnd = targetEnd + 1;
-                        }
-                        if targetEnd > targetStart and targetEnd < size {
-                            var afterTarget := targetEnd;
-                            var validClose := text.at(clean, afterTarget) == ")";
-                            if not validClose and text.isWhitespace(text.at(clean, afterTarget)) {
-                                loop afterTarget < size and text.isWhitespace(text.at(clean, afterTarget)) {
-                                    afterTarget = afterTarget + 1;
-                                }
-                                if afterTarget < size and text.at(clean, afterTarget) == "\"" {
-                                    titleEnd := text.indexOfText(clean, "\"", afterTarget + 1);
-                                    if titleEnd >= 0 and titleEnd + 1 < size and text.at(clean, titleEnd + 1) == ")" {
-                                        afterTarget = titleEnd + 1;
-                                        validClose = true;
-                                    }
-                                }
-                            }
-                            if validClose {
-                                list.pushBack(mut links, text.slice(clean, targetStart, targetEnd));
-                                pos = afterTarget + 1;
-                            } else {
-                                pos = pos + 1;
-                            }
-                        } else {
-                            pos = pos + 1;
-                        }
+                        pos = openPos + 1;
                     }
                 } else {
-                    pos = pos + 1;
+                    var targetEnd := targetStart;
+                    loop targetEnd < size and not text.isWhitespace(text.at(clean, targetEnd)) and text.at(clean, targetEnd) =!= ")" {
+                        targetEnd = targetEnd + 1;
+                    }
+                    if targetEnd > targetStart and targetEnd < size {
+                        var afterTarget := targetEnd;
+                        var validClose := text.at(clean, afterTarget) == ")";
+                        if not validClose and text.isWhitespace(text.at(clean, afterTarget)) {
+                            loop afterTarget < size and text.isWhitespace(text.at(clean, afterTarget)) {
+                                afterTarget = afterTarget + 1;
+                            }
+                            if afterTarget < size and text.at(clean, afterTarget) == "\"" {
+                                titleEnd := text.indexOfText(clean, "\"", afterTarget + 1);
+                                if titleEnd >= 0 and titleEnd + 1 < size and text.at(clean, titleEnd + 1) == ")" {
+                                    afterTarget = titleEnd + 1;
+                                    validClose = true;
+                                }
+                            }
+                        }
+                        if validClose {
+                            list.pushBack(mut links, text.slice(clean, targetStart, targetEnd));
+                            pos = afterTarget + 1;
+                        } else {
+                            pos = openPos + 1;
+                        }
+                    } else {
+                        pos = openPos + 1;
+                    }
                 }
             } else {
-                pos = pos + 1;
+                pos = openPos + 1;
             }
         } else {
-            pos = pos + 1;
+            pos = openPos + 1;
         }
     }
     links
@@ -379,13 +380,14 @@ pub extractLinkTargets := fn(proseText: String): List<String> {
 /** Extracts bodies of backtick fences delimited at column 0 (` ``` `) in document order. */
 pub extractBacktickFenceBodies := fn(docText: String): List<String> {
     bodies: mut List<String> = [];
+    if text.indexOfText(docText, "```", 0) < 0 { return bodies; }
     size := text.length(docText);
     var pos := 0;
     var inFence := false;
     var bodyStart := 0;
 
     loop pos <= size {
-        lineEnd := findLineEnd(docText, pos);
+        lineEnd := findLineEnd(docText, pos, size);
         if text.startsWithAt(docText, pos, "```") {
             if not inFence {
                 if lineEnd < size {

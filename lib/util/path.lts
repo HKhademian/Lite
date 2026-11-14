@@ -8,6 +8,10 @@ isWin32 := fn(): Bool {
     proc.platform() == "win32"
 }
 
+isSepWith := fn(ch: String, win: Bool): Bool {
+    ch == "/" or (win and ch == "\\")
+}
+
 /** Platform-native path separator (`/` on POSIX, `\` on Windows). */
 pub sep := fn(): String {
     if isWin32() { return "\\"; }
@@ -16,34 +20,36 @@ pub sep := fn(): String {
 
 /** True when `ch` is a path separator for the active platform. */
 pub isSep := fn(ch: String): Bool {
-    ch == "/" or (isWin32() and ch == "\\")
+    isSepWith(ch, isWin32())
 }
 
 /** True when `target` is an absolute path on the active platform. */
 pub isAbsolute := fn(target: String): Bool {
     size := text.length(target);
     if size == 0 { return false; }
-    if isSep(text.at(target, 0)) { return true; }
-    isWin32() and size >= 2 and text.isAsciiLetter(text.at(target, 0)) and text.at(target, 1) == ":"
+    win := isWin32();
+    if isSepWith(text.at(target, 0), win) { return true; }
+    win and size >= 2 and text.isAsciiLetter(text.at(target, 0)) and text.at(target, 1) == ":"
 }
 
 /** Normalizes `.` and `..` segments and repeated separators in `raw`. */
 pub normalize := fn(raw: String): String {
     size := text.length(raw);
     if size == 0 { return "."; }
-    separator := sep();
+    win := isWin32();
+    separator := if win { "\\" } else { "/" };
     var rootPrefix := "";
     var start := 0;
-    if isWin32() and size >= 2 and text.isAsciiLetter(text.at(raw, 0)) and text.at(raw, 1) == ":" {
+    if win and size >= 2 and text.isAsciiLetter(text.at(raw, 0)) and text.at(raw, 1) == ":" {
         drive := text.slice(raw, 0, 2);
-        if size >= 3 and isSep(text.at(raw, 2)) {
+        if size >= 3 and isSepWith(text.at(raw, 2), true) {
             rootPrefix = drive + separator;
             start = 3;
         } else {
             rootPrefix = drive;
             start = 2;
         }
-    } else if isSep(text.at(raw, 0)) {
+    } else if isSepWith(text.at(raw, 0), win) {
         rootPrefix = separator;
         start = 1;
     }
@@ -51,28 +57,30 @@ pub normalize := fn(raw: String): String {
     parts: mut List<String> = [];
     var partsCount := 0;
     var segStart := start;
-    var i := start;
-    loop i <= size {
-        atEnd := i == size;
-        if atEnd or isSep(text.at(raw, i)) {
-            if i > segStart {
-                seg := text.slice(raw, segStart, i);
-                if seg == ".." {
-                    if partsCount > 0 and (rootPrefix =!= "" or parts[partsCount - 1] =!= "..") {
-                        list.popBack(mut parts);
-                        partsCount = partsCount - 1;
-                    } else if rootPrefix == "" {
-                        list.pushBack(mut parts, "..");
-                        partsCount = partsCount + 1;
-                    }
-                } else if seg =!= "." {
-                    list.pushBack(mut parts, seg);
+    loop segStart <= size {
+        var sepPos := text.indexOfText(raw, "/", segStart);
+        if win {
+            bsPos := text.indexOfText(raw, "\\", segStart);
+            if bsPos >= 0 and (sepPos < 0 or bsPos < sepPos) { sepPos = bsPos; }
+        }
+        i := if sepPos < 0 { size } else { sepPos };
+        if i > segStart {
+            seg := text.slice(raw, segStart, i);
+            if seg == ".." {
+                if partsCount > 0 and (rootPrefix =!= "" or parts[partsCount - 1] =!= "..") {
+                    list.popBack(mut parts);
+                    partsCount = partsCount - 1;
+                } else if rootPrefix == "" {
+                    list.pushBack(mut parts, "..");
                     partsCount = partsCount + 1;
                 }
+            } else if seg =!= "." {
+                list.pushBack(mut parts, seg);
+                partsCount = partsCount + 1;
             }
-            segStart = i + 1;
         }
-        i = i + 1;
+        if sepPos < 0 { break; }
+        segStart = i + 1;
     }
 
     if partsCount == 0 {

@@ -4052,6 +4052,7 @@ test('core os/fs/process/crypto/time host bindings, standalone CLI execution, an
     ['proc := import "core/process"; x := proc.cwd();', /C backend does not support process builtins yet/],
     ['c := import "core/crypto"; x := c.sha256Text("a");', /C backend does not support crypto builtins yet/],
     ['t := import "core/time"; x := t.monotonicNs();', /C backend does not support time builtins yet/],
+    ['host := import "core/text-host"; x := host.indexOf("ab", "b", 0);', /C backend does not support text builtins yet/],
   ] as const) {
     const rejectedC = compileTarget('c', { text: sourceText, name: fixtureName });
     assert.equal(rejectedC.status, 2, sourceText);

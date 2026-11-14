@@ -21,6 +21,12 @@ test.checkBool("word not boundary", false, text.wordAt("foobar", 0, "foo"));
 test.checkInt("index of", 4, text.indexOfText("abcabc", "bc", 2));
 test.checkInt("index absent", -1, text.indexOfText("abc", "z", 0));
 test.checkInt("index empty", 2, text.indexOfText("abc", "", 2));
+test.checkInt("index empty at end", 3, text.indexOfText("abc", "", 3));
+test.checkInt("index empty past end", -1, text.indexOfText("abc", "", 4));
+test.checkInt("index negative start", -1, text.indexOfText("abc", "a", -1));
+test.checkInt("index non-bmp after emoji", 2, text.indexOfText("a🙂bc", "bc", 1));
+test.checkInt("index non-bmp emoji", 1, text.indexOfText("a🙂bc", "🙂", 0));
+test.checkInt("index non-bmp empty", 4, text.indexOfText("a🙂bc", "", 4));
 
 values: List<String> = ["a", "b", "c"];
 test.checkText("join texts", "a,b,c", text.joinTexts(values, ","));

@@ -90,24 +90,7 @@ pub wordAt := fn(source: String, position: Int, word: String): Bool {
 
 /** Returns the first index at or after `start` where `needle` occurs, or -1 when absent. */
 pub indexOfText := fn(source: String, needle: String, start: Int): Int {
-    size := host.length(source);
-    width := host.length(needle);
-    var position := start;
-    if position < 0 or position > size { return -1; }
-    if width == 0 { return position; }
-    first := host.at(needle, 0);
-    if width == 1 {
-        loop position < size {
-            if host.at(source, position) == first { return position; }
-            position = position + 1;
-        }
-        return -1;
-    }
-    loop position + width <= size {
-        if host.at(source, position) == first and startsWithAt(source, position, needle) { return position; }
-        position = position + 1;
-    }
-    -1
+    host.indexOf(source, needle, start)
 }
 
 /** Joins text values in list order with `separator` between adjacent values. */

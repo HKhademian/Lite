@@ -8,3 +8,6 @@ pub at := fn(text: String, position: Int): String;
 
 /** Returns the half-open Unicode scalar interval `[start, end)`, faulting outside the text. */
 pub slice := fn(text: String, start: Int, end: Int): String;
+
+/** Returns the first zero-based Unicode scalar index at or after `start` where `needle` occurs, or -1 when absent. */
+pub indexOf := fn(source: String, needle: String, start: Int): Int;
