@@ -537,7 +537,7 @@ function renderPlaygroundPage(rendered: ReadonlyMap<string, RenderedSample>, rep
       </div>
       <div class="pg-actions">
         <button id="pg-compile" class="btn" type="button">Compile</button>
-        <button id="pg-play" class="btn btn-primary" type="button">&#9654; Play</button>
+        <button id="pg-play" class="btn btn-primary" type="button" title="Run (Ctrl/Cmd + Enter)">&#9654; Play</button>
       </div>
     </div>
     <div class="pg-editor-wrap">
@@ -559,7 +559,10 @@ function renderPlaygroundPage(rendered: ReadonlyMap<string, RenderedSample>, rep
         <button class="pg-tab" role="tab" data-tab="c" aria-selected="false" type="button">Generated C</button>
         <button id="tab-canvas" class="pg-tab" role="tab" data-tab="canvas" aria-selected="false" type="button" hidden>Canvas</button>
       </div>
-      <span id="pg-status" class="pg-status">Ready</span>
+      <div class="pg-actions">
+        <span id="pg-status" class="pg-status" aria-live="polite">Ready</span>
+        <button id="pg-copy" class="pg-copy-btn" type="button" aria-label="Copy inspector content">Copy</button>
+      </div>
     </div>
 
     <div id="pg-code-modes" class="code-modes" role="group" aria-label="Generated code view" hidden>
@@ -599,6 +602,7 @@ function renderPlaygroundPage(rendered: ReadonlyMap<string, RenderedSample>, rep
   const resetBtn = document.getElementById("pg-reset");
   const compileBtn = document.getElementById("pg-compile");
   const playBtn = document.getElementById("pg-play");
+  const copyBtn = document.getElementById("pg-copy");
   const statusEl = document.getElementById("pg-status");
   const fileEl = document.getElementById("pg-file");
   const editorEl = document.getElementById("pg-editor");
@@ -654,6 +658,7 @@ function renderPlaygroundPage(rendered: ReadonlyMap<string, RenderedSample>, rep
       panel.hidden = key !== name;
     }
     codeModesBar.hidden = name !== "ts" && name !== "c";
+    copyBtn.hidden = name === "canvas";
     if (name === "canvas") startCanvas();
     else stopCanvas();
     if (name === "c") void compileCForEditor();
@@ -666,6 +671,22 @@ function renderPlaygroundPage(rendered: ReadonlyMap<string, RenderedSample>, rep
   editorEl.addEventListener("input", () => {
     sourceEl.innerHTML = highlightLite(editorEl.value) + "\\n";
     statusEl.textContent = "Modified";
+  });
+
+  editorEl.addEventListener("keydown", (event) => {
+    if ((event.metaKey || event.ctrlKey) && event.key === "Enter") {
+      event.preventDefault();
+      void runAction("play");
+      return;
+    }
+    if (event.key === "Tab" && !event.metaKey && !event.ctrlKey && !event.altKey) {
+      event.preventDefault();
+      const start = editorEl.selectionStart;
+      const end = editorEl.selectionEnd;
+      editorEl.setRangeText("  ", start, end, "end");
+      sourceEl.innerHTML = highlightLite(editorEl.value) + "\\n";
+      statusEl.textContent = "Modified";
+    }
   });
 
   editorEl.addEventListener("scroll", () => {
@@ -879,6 +900,25 @@ function renderPlaygroundPage(rendered: ReadonlyMap<string, RenderedSample>, rep
   resetBtn.addEventListener("click", () => loadSample(select.value, "load"));
   compileBtn.addEventListener("click", () => runAction("compile"));
   playBtn.addEventListener("click", () => runAction("play"));
+
+  let copyTimer = 0;
+  copyBtn.addEventListener("click", () => {
+    const target = activeTab === "ts" ? tsEl : activeTab === "c" ? cEl : outputEl;
+    const text = target.textContent || "";
+    if (!text) return;
+    const markCopied = () => {
+      copyBtn.textContent = "Copied";
+      copyBtn.classList.add("copied");
+      if (copyTimer) window.clearTimeout(copyTimer);
+      copyTimer = window.setTimeout(() => {
+        copyBtn.textContent = "Copy";
+        copyBtn.classList.remove("copied");
+      }, 1600);
+    };
+    if (navigator.clipboard && navigator.clipboard.writeText) {
+      navigator.clipboard.writeText(text).then(markCopied, () => {});
+    }
+  });
 
   // Full-panel bouncing ℓite logo mark with FPS / frametime reporting
   const canvas = document.getElementById("pg-canvas");

@@ -815,6 +815,28 @@ details.gallery-code pre.code-block {
   color: var(--ink-muted);
   font-family: var(--font-mono);
 }
+.pg-copy-btn {
+  appearance: none;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  background: var(--surface-elevated);
+  color: var(--ink-muted);
+  font-family: var(--font-mono);
+  font-size: 0.74rem;
+  font-weight: 600;
+  line-height: 1;
+  padding: 0.28rem 0.55rem;
+  cursor: pointer;
+}
+.pg-copy-btn:hover {
+  color: var(--ink);
+  border-color: var(--accent);
+}
+.pg-copy-btn.copied {
+  color: var(--accent);
+  border-color: var(--accent);
+}
+.pg-copy-btn[hidden] { display: none; }
 .pg-panel {
   flex: 1 1 auto;
   min-height: 0;

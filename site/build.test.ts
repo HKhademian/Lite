@@ -90,6 +90,8 @@ test('buildSite generates static pages and metadata in dist/site', () => {
   assert(playground.includes('Generated TS'));
   assert(playground.includes('id="pg-compile"'));
   assert(playground.includes('id="pg-play"'));
+  assert(playground.includes('id="pg-copy"'));
+  assert(playground.includes('event.key === "Tab"'));
   assert(playground.includes('id="pg-c"'));
   assert(playground.includes('id="mode-program"'));
   assert(playground.includes('id="mode-portable"'));
