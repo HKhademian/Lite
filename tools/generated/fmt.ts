@@ -29,8 +29,11 @@ declare const process: {
         realpathSync(path: string): string;
         mkdtempSync(prefix: string): string;
     };
+    getBuiltinModule(name: "node:path"): { join(...paths: string[]): string };
+    getBuiltinModule(name: "node:os"): { tmpdir(): string };
     getBuiltinModule(name: "node:child_process"): {
         spawnSync(command: string, args: readonly string[], options: { cwd?: string; env: Record<string, string | undefined>; encoding?: "utf8"; input?: string; stdio: "inherit" | readonly ["pipe", "pipe", "pipe"]; maxBuffer: number }): { status: number | null; signal: string | null; stdout: string | null; stderr: string | null; error?: Error };
+        spawnSync(command: string, args: readonly string[], options: { cwd?: string; env: Record<string, string | undefined>; input: Uint8Array; stdio: readonly ["pipe", "pipe", "pipe"]; timeout?: number; maxBuffer: number }): { status: number | null; signal: string | null; stdout: Uint8Array | null; stderr: Uint8Array | null; error?: Error };
     };
 };
 declare const TextDecoder: { new (label: string, options?: { fatal?: boolean }): { decode(input?: Uint8Array, options?: { stream?: boolean }): string } };
@@ -38,58 +41,6 @@ declare const TextEncoder: { new (): { encode(input?: string): Uint8Array } };
 
 function lite$inputArgs(): string[] {
     return process.argv.slice(2);
-}
-
-let lite$decoder = new TextDecoder("utf-8", { fatal: true });
-const lite$bytes = new Uint8Array(4096);
-let lite$byteAt = 0, lite$byteEnd = 0;
-let lite$ended = false;
-let lite$pending: string | null | undefined;
-function lite$resetInput(): void {
-    lite$decoder = new TextDecoder("utf-8", { fatal: true });
-    lite$byteAt = 0;
-    lite$byteEnd = 0;
-    lite$ended = false;
-    lite$pending = undefined;
-}
-function lite$inputFault(at: string, message: string): never {
-    process.getBuiltinModule("node:fs").writeSync(2, at + message + "\n");
-    process.exit(1);
-}
-function lite$prompt(text: string | undefined): void {
-    if (text === undefined) return;
-    process.getBuiltinModule("node:fs").writeSync(1, lite$out + text);
-    lite$out = "";
-}
-function lite$peek(at: string): string | null {
-    if (lite$pending !== undefined) return lite$pending;
-    if (lite$ended) return null;
-    try {
-        while (true) {
-            if (lite$byteAt === lite$byteEnd) {
-                lite$byteEnd = process.getBuiltinModule("node:fs").readSync(0, lite$bytes, 0, lite$bytes.length, null);
-                lite$byteAt = 0;
-                if (lite$byteEnd === 0) {
-                    lite$ended = true;
-                    lite$pending = lite$decoder.decode() || null;
-                    return lite$pending;
-                }
-            }
-            const text = lite$decoder.decode(lite$bytes.subarray(lite$byteAt, ++lite$byteAt), { stream: true });
-            if (text !== "") { lite$pending = text; return text; }
-        }
-    } catch (error) {
-        return lite$inputFault(at, "cannot read input: " + (error instanceof Error ? error.message : String(error)));
-    }
-}
-function lite$take(at: string): string | null {
-    const text = lite$peek(at); lite$pending = undefined; return text;
-}
-function lite$inputAll(prompt: string | undefined, at: string): string {
-    lite$prompt(prompt);
-    let text = "";
-    for (let ch = lite$take(at); ch !== null; ch = lite$take(at)) text += ch;
-    return text;
 }
 
 function lite$reportError(text: string): void {
@@ -109,6 +60,17 @@ function lite$fromBytes(bytes: Uint8Array): bigint[] {
     for (let i = 0; i < bytes.length; i += 1) { out[i] = BigInt(bytes[i] ?? 0); }
     return out;
 }
+function lite$toBytes(bytes: readonly bigint[]): Uint8Array {
+    const out = new Uint8Array(bytes.length);
+    for (let i = 0; i < bytes.length; i += 1) {
+        const byte = bytes[i];
+        if (byte === undefined || byte < 0n || byte > 255n) {
+            throw new Error("byte value outside 0..255: " + String(byte));
+        }
+        out[i] = Number(byte);
+    }
+    return out;
+}
 function lite$fileKind(path: string): string {
     try {
         const st = process.getBuiltinModule("node:fs").statSync(path);
@@ -124,9 +86,19 @@ function lite$fileMakeDir(path: string): { ok: boolean; error: string } {
     try { process.getBuiltinModule("node:fs").mkdirSync(path, { recursive: true }); return { ok: true, error: "" }; }
     catch (error) { return { ok: false, error: lite$errMsg(error) }; }
 }
+function lite$fileRemove(path: string): { ok: boolean; error: string } {
+    try { process.getBuiltinModule("node:fs").rmSync(path, { recursive: true, force: true }); return { ok: true, error: "" }; }
+    catch (error) { return { ok: false, error: lite$errMsg(error) }; }
+}
 function lite$fileCopy(fromPath: string, toPath: string): { ok: boolean; error: string } {
     try { process.getBuiltinModule("node:fs").cpSync(fromPath, toPath, { recursive: true, force: true, verbatimSymlinks: true }); return { ok: true, error: "" }; }
     catch (error) { return { ok: false, error: lite$errMsg(error) }; }
+}
+function lite$fileMakeTempDir(prefix: string): { ok: boolean; path: string; error: string } {
+    try {
+        const joined = process.getBuiltinModule("node:path").join(process.getBuiltinModule("node:os").tmpdir(), prefix);
+        return { ok: true, path: process.getBuiltinModule("node:fs").mkdtempSync(joined), error: "" };
+    } catch (error) { return { ok: false, path: "", error: lite$errMsg(error) }; }
 }
 type Lite$StreamHandle = { kind: string; handle: bigint };
 type Lite$StreamEntry =
@@ -184,6 +156,7 @@ function lite$fileOpenStream(path: string, flags: string, forWrite: boolean): Li
 function lite$fileOpenReader(path: string): Lite$StreamHandle { return lite$fileOpenStream(path, "r", false); }
 function lite$fileOpenWriter(path: string): Lite$StreamHandle { return lite$fileOpenStream(path, "w", true); }
 function lite$fileOpenAppender(path: string): Lite$StreamHandle { return lite$fileOpenStream(path, "a", true); }
+function lite$ioStdinReader(): Lite$StreamHandle { return { kind: "stdin", handle: 0n }; }
 function lite$ioReaderError(reader: Lite$StreamHandle): string {
     if (reader.kind === "stdin" && reader.handle === 0n) return lite$stdinState.error;
     const entry = lite$lookupStream(reader.handle);
@@ -277,6 +250,12 @@ function lite$readAllRaw(reader: Lite$StreamHandle): { ok: true; data: Uint8Arra
 function lite$ioReadAll(reader: Lite$StreamHandle): bigint[] {
     const raw = lite$readAllRaw(reader);
     return raw.ok ? lite$fromBytes(raw.data) : [];
+}
+function lite$ioReadAllText(reader: Lite$StreamHandle): { ok: boolean; text: string; error: string } {
+    const raw = lite$readAllRaw(reader);
+    if (!raw.ok) return { ok: false, text: "", error: raw.error };
+    try { return { ok: true, text: new TextDecoder("utf-8", { fatal: true }).decode(raw.data), error: "" }; }
+    catch (error) { return { ok: false, text: "", error: lite$errMsg(error) }; }
 }
 function lite$ioCloseReader(reader: Lite$StreamHandle): { ok: boolean; error: string } {
     if (reader.kind === "stdin" && reader.handle === 0n) return { ok: true, error: "" };
@@ -385,6 +364,27 @@ function lite$processRun(command: string, args: string[], cwd: string, envOverri
     if (res.error !== undefined) return { status: -1n, stdout, stderr, error: res.error instanceof Error ? res.error.message : String(res.error) };
     if (res.signal !== null) return { status: -1n, stdout, stderr, error: "terminated by signal " + res.signal };
     return { status: BigInt(res.status ?? 1), stdout, stderr, error: "" };
+}
+function lite$processRunBytes(command: string, args: string[], cwd: string, envOverrides: string[], timeoutMs: bigint, stdinBytes: readonly bigint[], stdoutPath: string, stderrPath: string): { status: bigint; error: string } {
+    const built = lite$buildEnv(envOverrides);
+    if (!built.ok) return { status: -1n, error: built.error };
+    const fs = process.getBuiltinModule("node:fs");
+    let input: Uint8Array;
+    try { input = lite$toBytes(stdinBytes); }
+    catch (error) { return { status: -1n, error: lite$errMsg(error) }; }
+    const opts: { cwd?: string; env: Record<string, string | undefined>; input: Uint8Array; stdio: readonly ["pipe", "pipe", "pipe"]; timeout?: number; maxBuffer: number } = {
+        env: built.env, input, stdio: ["pipe", "pipe", "pipe"], maxBuffer: 128 * 1024 * 1024,
+    };
+    if (cwd !== "") opts.cwd = cwd;
+    if (timeoutMs > 0n) opts.timeout = Number(timeoutMs);
+    const res = process.getBuiltinModule("node:child_process").spawnSync(command, args, opts);
+    try {
+        if (stdoutPath !== "") fs.writeFileSync(stdoutPath, res.stdout ?? new Uint8Array(0));
+        if (stderrPath !== "") fs.writeFileSync(stderrPath, res.stderr ?? new Uint8Array(0));
+    } catch (error) { return { status: -1n, error: lite$errMsg(error) }; }
+    if (res.error !== undefined) return { status: -1n, error: lite$errMsg(res.error) };
+    if (res.signal !== null) return { status: -1n, error: "terminated by signal " + res.signal };
+    return { status: BigInt(res.status ?? 1), error: "" };
 }
 
 function lite$unicodeToCodePoints(text: string): bigint[] {
@@ -539,7 +539,7 @@ function lite$listPopBack<T>(items: T[], at: number): T {
     return items.pop() as T;
 }
 
-const lite$intLines: readonly number[] = [0, 79, 80, 104, 130, 161, 189, 217, 243, 271, 305, 306, 443, 476, 500, 528, 554, 578, 597, 621, 655, 671, 672, 695, 727, 748, 776, 803, 882, 915, 947, 980, 1007, 1028, 1055, 1069, 1105, 1133, 1160, 1208, 1256, 1292, 1327, 1354, 1375, 1428, 1455, 1469, 1551, 1605, 1624, 1706, 1736, 1764, 1792, 1820, 1843, 1887, 1914, 1942, 1970, 1997, 2020, 2050, 2152, 2181, 2209, 2237, 2315, 2348, 2380, 2394, 2417, 2447, 2558, 2591, 2605, 2644, 2673, 2701, 2729, 2752, 2769, 2830, 2858, 2885, 2908, 2918, 2924, 2925, 2968, 3084, 3086, 3087, 3196, 3243, 3281, 3310, 3330, 3363, 3386, 3419, 3437, 3460, 3461, 3481, 3509, 3539, 3583, 3634, 3669, 3679, 3732, 3761, 3786, 3903, 3934, 3951, 3982, 3992, 3993, 4035, 4078, 4132, 4182, 4235, 4265, 4279, 4314, 4365, 4414, 4468, 4521, 4547, 4564, 4609, 4661, 4721, 4769, 4868, 4917, 4964, 5004, 5057, 5083, 5093, 5099, 5100, 5170, 5207, 5252, 5258, 5300, 5343, 5345, 5346, 5384, 5441, 5442, 5510, 5529, 5598, 5621, 5693, 5704, 5724, 5730, 5731, 5780, 5833, 5911, 5959, 5960, 5986, 6064, 6084, 6090, 6091, 6139, 6173, 6210, 6233, 6301, 6311, 6338, 6358, 6364, 6365, 6459, 6460, 6480, 6505, 6543, 6571, 6626, 6650, 6660, 6703, 6739, 6770, 6797, 6834, 6855, 6910, 6947, 7011, 7043, 7061, 7075, 7085, 7091, 7092, 7139, 7142, 7143, 7164];
+const lite$intLines: readonly number[] = [0, 79, 80, 104, 130, 161, 189, 217, 243, 271, 305, 306, 443, 476, 500, 528, 554, 578, 597, 621, 655, 671, 672, 695, 727, 748, 776, 803, 882, 915, 947, 980, 1007, 1028, 1055, 1069, 1105, 1133, 1160, 1208, 1256, 1292, 1327, 1354, 1375, 1428, 1455, 1469, 1551, 1605, 1624, 1706, 1736, 1764, 1792, 1820, 1843, 1887, 1914, 1942, 1970, 1997, 2020, 2050, 2152, 2181, 2209, 2237, 2315, 2348, 2380, 2394, 2417, 2447, 2558, 2591, 2605, 2644, 2673, 2701, 2729, 2752, 2769, 2830, 2858, 2885, 2908, 2918, 2924, 2925, 2968, 3084, 3086, 3087, 3196, 3243, 3281, 3310, 3330, 3363, 3386, 3419, 3437, 3460, 3461, 3481, 3509, 3539, 3583, 3634, 3669, 3679, 3732, 3761, 3786, 3903, 3934, 3951, 3982, 3992, 3993, 4035, 4078, 4132, 4182, 4235, 4265, 4279, 4314, 4365, 4414, 4468, 4521, 4547, 4564, 4609, 4661, 4721, 4769, 4868, 4917, 4964, 5004, 5057, 5083, 5093, 5099, 5100, 5170, 5207, 5252, 5258, 5300, 5343, 5345, 5346, 5384, 5441, 5442, 5510, 5529, 5598, 5621, 5693, 5704, 5724, 5730, 5731, 5780, 5833, 5911, 5959, 5960, 5986, 6064, 6084, 6090, 6091, 6139, 6193, 6222, 6264, 6288, 6298, 6343, 6366, 6442, 6452, 6479, 6499, 6505, 6506, 6600, 6601, 6621, 6646, 6684, 6712, 6767, 6791, 6801, 6844, 6880, 6911, 6938, 6975, 6996, 7051, 7088, 7152, 7184, 7202, 7216, 7226, 7232, 7233, 7280, 7283, 7284, 7305];
 const lite$intSource = "tools/src/fmt.lts:";
 const lite$intMin = -(1n << 63n), lite$intMax = (1n << 63n) - 1n;
 function lite$fault(category: string, at: number, message: string): never {
@@ -570,7 +570,6 @@ function lite$remainderInt(left: bigint, right: bigint, at: number): bigint {
 
 export function main(lite$write?: (text: string) => void): string {
     lite$out = "";
-    lite$resetInput();
     lite$resetStreams();
     function lite$emit(text: string): void {
         if (lite$write === undefined) lite$out += text;
@@ -2203,6 +2202,71 @@ export function main(lite$write?: (text: string) => void): string {
         return { ok: true, copied: lite_total, error: "" };
     }
     void liteFn$lib$core$file$copyStream;
+    function liteFn$lib$core$process$runStreams(lite_command: string, lite_args: string[], lite_workDir: string, lite_envOverrides: string[], lite_timeoutMs: bigint, lite_stdinReader: { kind: string; handle: bigint }, lite_stdoutWriter: { kind: string; handle: bigint }, lite_stderrWriter: { kind: string; handle: bigint }): { status: bigint; error: string } {
+        void lite_command;
+        void lite_args;
+        void lite_workDir;
+        void lite_envOverrides;
+        void lite_timeoutMs;
+        void lite_stdinReader;
+        void lite_stdoutWriter;
+        void lite_stderrWriter;
+        if ((!(lite$ioReaderOk(lite_stdinReader)))) {
+            return { status: (-1n), error: lite$ioReaderError(lite_stdinReader) };
+        }
+        const lite_stdinBytes: bigint[] = [...(lite$ioReadAll(lite_stdinReader))];
+        void lite_stdinBytes;
+        if (((lite$ioReaderError(lite_stdinReader)) !== (""))) {
+            return { status: (-1n), error: lite$ioReaderError(lite_stdinReader) };
+        }
+        const lite_tmp = lite$fileMakeTempDir("lite-proc-streams-");
+        void lite_tmp;
+        if ((!((lite_tmp).ok))) {
+            return { status: (-1n), error: (lite_tmp).error };
+        }
+        const lite_outPath = (((lite_tmp).path) + ("/stdout.bin"));
+        void lite_outPath;
+        const lite_errPath = (((lite_tmp).path) + ("/stderr.bin"));
+        void lite_errPath;
+        const lite_res = lite$processRunBytes(lite_command, [...(lite_args)], lite_workDir, [...(lite_envOverrides)], lite_timeoutMs, [...(lite_stdinBytes)], lite_outPath, lite_errPath);
+        void lite_res;
+        const lite_outReader = lite$fileOpenReader(lite_outPath);
+        void lite_outReader;
+        if (lite$ioReaderOk(lite_outReader)) {
+            const lite_outCopy = liteFn$lib$core$file$copyStream(lite_outReader, lite_stdoutWriter);
+            void lite_outCopy;
+            const lite__closeOut = lite$ioCloseReader(lite_outReader);
+            void lite__closeOut;
+            if ((!((lite_outCopy).ok))) {
+                const lite__rm = lite$fileRemove((lite_tmp).path);
+                void lite__rm;
+                return { status: (-1n), error: (lite_outCopy).error };
+            }
+        } else {
+            const lite__closeOut = lite$ioCloseReader(lite_outReader);
+            void lite__closeOut;
+        }
+        const lite_errReader = lite$fileOpenReader(lite_errPath);
+        void lite_errReader;
+        if (lite$ioReaderOk(lite_errReader)) {
+            const lite_errCopy = liteFn$lib$core$file$copyStream(lite_errReader, lite_stderrWriter);
+            void lite_errCopy;
+            const lite__closeErr = lite$ioCloseReader(lite_errReader);
+            void lite__closeErr;
+            if ((!((lite_errCopy).ok))) {
+                const lite__rm = lite$fileRemove((lite_tmp).path);
+                void lite__rm;
+                return { status: (-1n), error: (lite_errCopy).error };
+            }
+        } else {
+            const lite__closeErr = lite$ioCloseReader(lite_errReader);
+            void lite__closeErr;
+        }
+        const lite__rm = lite$fileRemove((lite_tmp).path);
+        void lite__rm;
+        return lite_res;
+    }
+    void liteFn$lib$core$process$runStreams;
     function liteFn$lib$core$path$isWin32(): boolean {
         return ((lite$processPlatform()) === ("win32"));
     }
@@ -3216,12 +3280,16 @@ export function main(lite$write?: (text: string) => void): string {
             lite$exit(2n);
         }
         if (((((lite_targetCount) === (1n))) && (((lite$listAt((lite_targets), 0n, 6127)) === ("-"))))) {
-            const lite_input = lite$inputAll("", "tools/src/fmt.lts:179:18: InputFault: ");
-            void lite_input;
-            const lite_output = liteFn_formatLite(lite_input);
+            const lite_stdinRes = lite$ioReadAllText(lite$ioStdinReader());
+            void lite_stdinRes;
+            if ((!((lite_stdinRes).ok))) {
+                lite$reportError((lite_stdinRes).error);
+                lite$exit(1n);
+            }
+            const lite_output = liteFn_formatLite((lite_stdinRes).text);
             void lite_output;
             if (lite_checkOnly) {
-                if (((lite_input) === (lite_output))) {
+                if ((((lite_stdinRes).text) === (lite_output))) {
                     lite$exit(0n);
                 } else {
                     lite$exit(1n);
@@ -3245,7 +3313,7 @@ export function main(lite$write?: (text: string) => void): string {
             const lite_after = liteFn_formatLite((lite_readRes).text);
             void lite_after;
             if ((((lite_readRes).text) !== (lite_after))) {
-                lite_dirty = lite$addInt(lite_dirty, 1n, 6765);
+                lite_dirty = lite$addInt(lite_dirty, 1n, 6906);
                 if (lite_checkOnly) {
                     lite$emit(lite_file + "\n");
                 } else {

@@ -16,6 +16,546 @@ pub randomBytes := fn(count: Int): List<Int>;
 
 b64Alphabet := "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/";
 hexAlphabet := "0123456789abcdef";
+pow32 := 4294967296;
+
+checkByteRange := fn(bytes: List<Int>): Unit {
+    loop bytes as b {
+        if b < 0 or b > 255 {
+            diag.fail("", "byte value outside 0..255: " + integer.intText(b));
+            return;
+        }
+    }
+};
+
+buildNibbleTable := fn(isXor: Bool): List<Int> {
+    out: mut List<Int> = [];
+    var a := 0;
+    loop a < 16 {
+        var b := 0;
+        loop b < 16 {
+            var x := a;
+            var y := b;
+            var res := 0;
+            var bit := 1;
+            var k := 0;
+            loop k < 4 {
+                ax := x % 2;
+                by := y % 2;
+                hit := if isXor { ax =!= by } else { ax == 1 and by == 1 };
+                if hit { res += bit; }
+                x /= 2;
+                y /= 2;
+                bit *= 2;
+                k += 1;
+            }
+            list.pushBack(mut out, res);
+            b += 1;
+        }
+        a += 1;
+    }
+    out
+};
+
+xor4 := buildNibbleTable(true);
+and4 := buildNibbleTable(false);
+
+k256: List<Int> = [
+1116352408, 1899447441, 3049323471, 3921009573, 961987163, 1508970993, 2453635748, 2870763221,
+3624381080, 310598401, 607225278, 1426881987, 1925078388, 2162078206, 2614888103, 3248222580,
+3835390401, 4022224774, 264347078, 604807628, 770255983, 1249150122, 1555081692, 1996064986,
+2554220882, 2821834349, 2952996808, 3210313671, 3336571891, 3584528711, 113926993, 338241895,
+666307205, 773529912, 1294757372, 1396182291, 1695183700, 1986661051, 2177026350, 2456956037,
+2730485921, 2820302411, 3259730800, 3345764771, 3516065817, 3600352804, 4094571909, 275423344,
+430227734, 506948616, 659060556, 883997877, 958139571, 1322822218, 1537002063, 1747873779,
+1955562222, 2024104815, 2227730452, 2361852424, 2428436474, 2756734187, 3204031479, 3329325298
+];
+
+k512Hi: List<Int> = [
+1116352408, 1899447441, 3049323471, 3921009573, 961987163, 1508970993, 2453635748, 2870763221,
+3624381080, 310598401, 607225278, 1426881987, 1925078388, 2162078206, 2614888103, 3248222580,
+3835390401, 4022224774, 264347078, 604807628, 770255983, 1249150122, 1555081692, 1996064986,
+2554220882, 2821834349, 2952996808, 3210313671, 3336571891, 3584528711, 113926993, 338241895,
+666307205, 773529912, 1294757372, 1396182291, 1695183700, 1986661051, 2177026350, 2456956037,
+2730485921, 2820302411, 3259730800, 3345764771, 3516065817, 3600352804, 4094571909, 275423344,
+430227734, 506948616, 659060556, 883997877, 958139571, 1322822218, 1537002063, 1747873779,
+1955562222, 2024104815, 2227730452, 2361852424, 2428436474, 2756734187, 3204031479, 3329325298,
+3391569614, 3515267271, 3940187606, 4118630271, 116418474, 174292421, 289380356, 460393269,
+685471733, 852142971, 1017036298, 1126000580, 1288033470, 1501505948, 1607167915, 1816402316
+];
+
+k512Lo: List<Int> = [
+3609767458, 602891725, 3964484399, 2173295548, 4081628472, 3053834265, 2937671579, 3664609560,
+2734883394, 1164996542, 1323610764, 3590304994, 4068182383, 991336113, 633803317, 3479774868,
+2666613458, 944711139, 2341262773, 2007800933, 1495990901, 1856431235, 3175218132, 2198950837,
+3999719339, 766784016, 2566594879, 3203337956, 1034457026, 2466948901, 3758326383, 168717936,
+1188179964, 1546045734, 1522805485, 2643833823, 2343527390, 1014477480, 1206759142, 344077627,
+1290863460, 3158454273, 3505952657, 106217008, 3606008344, 1432725776, 1467031594, 851169720,
+3100823752, 1363258195, 3750685593, 3785050280, 3318307427, 3812723403, 2003034995, 3602036899,
+1575990012, 1125592928, 2716904306, 442776044, 593698344, 3733110249, 2999351573, 3815920427,
+3928383900, 566280711, 3454069534, 4000239992, 1914138554, 2731055270, 3203993006, 320620315,
+587496836, 1086792851, 365543100, 2618297676, 3409855158, 4234509866, 987167468, 1246189591
+];
+
+xor3_32 := fn(a: Int, b: Int, c: Int): Int {
+    var x := a;
+    var y := b;
+    var z := c;
+    var acc := 0;
+    var mul := 1;
+    var step := 0;
+    loop step < 8 {
+        xy := xor4[(x % 16) * 16 + (y % 16)];
+        acc += xor4[xy * 16 + (z % 16)] * mul;
+        x /= 16;
+        y /= 16;
+        z /= 16;
+        mul *= 16;
+        step += 1;
+    }
+    acc
+};
+
+ch32 := fn(e: Int, f: Int, g: Int): Int {
+    var ve := e;
+    var vf := f;
+    var vg := g;
+    var acc := 0;
+    var mul := 1;
+    var step := 0;
+    loop step < 8 {
+        ne := ve % 16;
+        nf := vf % 16;
+        ng := vg % 16;
+        fxor := xor4[nf * 16 + ng];
+        acc += xor4[ng * 16 + and4[ne * 16 + fxor]] * mul;
+        ve /= 16;
+        vf /= 16;
+        vg /= 16;
+        mul *= 16;
+        step += 1;
+    }
+    acc
+};
+
+maj32 := fn(a: Int, b: Int, c: Int): Int {
+    var va := a;
+    var vb := b;
+    var vc := c;
+    var acc := 0;
+    var mul := 1;
+    var step := 0;
+    loop step < 8 {
+        na := va % 16;
+        nb := vb % 16;
+        nc := vc % 16;
+        abAnd := and4[na * 16 + nb];
+        abXor := xor4[na * 16 + nb];
+        acc += xor4[abAnd * 16 + and4[nc * 16 + abXor]] * mul;
+        va /= 16;
+        vb /= 16;
+        vc /= 16;
+        mul *= 16;
+        step += 1;
+    }
+    acc
+};
+
+word32Hex := fn(word: Int): String {
+    var out := "";
+    var div := 268435456;
+    var step := 0;
+    loop step < 8 {
+        nib := (word / div) % 16;
+        out += text.at(hexAlphabet, nib);
+        div /= 16;
+        step += 1;
+    }
+    out
+};
+
+sha256Compress := fn(
+h0In: Int, h1In: Int, h2In: Int, h3In: Int,
+h4In: Int, h5In: Int, h6In: Int, h7In: Int,
+block: List<Int>, offset: Int
+): (h0: Int, h1: Int, h2: Int, h3: Int, h4: Int, h5: Int, h6: Int, h7: Int) {
+    w: mut List<Int> = [];
+    var i := 0;
+    loop i < 16 {
+        p := offset + i * 4;
+        list.pushBack(mut w, block[p] * 16777216 + block[p + 1] * 65536 + block[p + 2] * 256 + block[p + 3]);
+        i += 1;
+    }
+    loop i < 64 {
+        w15 := w[i - 15];
+        s0 := xor3_32(
+        (w15 / 128) + (w15 % 128) * 33554432,
+        (w15 / 262144) + (w15 % 262144) * 16384,
+        w15 / 8
+        );
+        w2 := w[i - 2];
+        s1 := xor3_32(
+        (w2 / 131072) + (w2 % 131072) * 32768,
+        (w2 / 524288) + (w2 % 524288) * 8192,
+        w2 / 1024
+        );
+        list.pushBack(mut w, (w[i - 16] + s0 + w[i - 7] + s1) % pow32);
+        i += 1;
+    }
+
+    var a := h0In;
+    var b := h1In;
+    var c := h2In;
+    var d := h3In;
+    var e := h4In;
+    var f := h5In;
+    var g := h6In;
+    var h := h7In;
+    var r := 0;
+    loop r < 64 {
+        capS1 := xor3_32(
+        (e / 64) + (e % 64) * 67108864,
+        (e / 2048) + (e % 2048) * 2097152,
+        (e / 33554432) + (e % 33554432) * 128
+        );
+        ch := ch32(e, f, g);
+        temp1 := (h + capS1 + ch + k256[r] + w[r]) % pow32;
+        capS0 := xor3_32(
+        (a / 4) + (a % 4) * 1073741824,
+        (a / 8192) + (a % 8192) * 524288,
+        (a / 4194304) + (a % 4194304) * 1024
+        );
+        maj := maj32(a, b, c);
+        temp2 := (capS0 + maj) % pow32;
+        h = g;
+        g = f;
+        f = e;
+        e = (d + temp1) % pow32;
+        d = c;
+        c = b;
+        b = a;
+        a = (temp1 + temp2) % pow32;
+        r += 1;
+    }
+    (
+    h0 = (h0In + a) % pow32,
+    h1 = (h1In + b) % pow32,
+    h2 = (h2In + c) % pow32,
+    h3 = (h3In + d) % pow32,
+    h4 = (h4In + e) % pow32,
+    h5 = (h5In + f) % pow32,
+    h6 = (h6In + g) % pow32,
+    h7 = (h7In + h) % pow32
+    )
+};
+
+sha256FinalizeTail := fn(
+h0In: Int, h1In: Int, h2In: Int, h3In: Int,
+h4In: Int, h5In: Int, h6In: Int, h7In: Int,
+tail: List<Int>, totalBytes: Int
+): String {
+    var h0 := h0In;
+    var h1 := h1In;
+    var h2 := h2In;
+    var h3 := h3In;
+    var h4 := h4In;
+    var h5 := h5In;
+    var h6 := h6In;
+    var h7 := h7In;
+    padded: mut List<Int> = [];
+    loop tail as b {
+        list.pushBack(mut padded, b);
+    }
+    list.pushBack(mut padded, 128);
+    loop (list.listCountInt(padded) % 64) =!= 56 {
+        list.pushBack(mut padded, 0);
+    }
+    var bitLen := totalBytes * 8;
+    lenBytes: mut List<Int> = [];
+    var k := 0;
+    loop k < 8 {
+        list.pushFront(mut lenBytes, bitLen % 256);
+        bitLen /= 256;
+        k += 1;
+    }
+    loop lenBytes as lb {
+        list.pushBack(mut padded, lb);
+    }
+    totalPadded := list.listCountInt(padded);
+    var pos := 0;
+    loop pos < totalPadded {
+        st := sha256Compress(h0, h1, h2, h3, h4, h5, h6, h7, padded, pos);
+        h0 = st.h0; h1 = st.h1; h2 = st.h2; h3 = st.h3;
+        h4 = st.h4; h5 = st.h5; h6 = st.h6; h7 = st.h7;
+        pos += 64;
+    }
+    word32Hex(h0) + word32Hex(h1) + word32Hex(h2) + word32Hex(h3) +
+    word32Hex(h4) + word32Hex(h5) + word32Hex(h6) + word32Hex(h7)
+};
+
+/** Streams raw bytes from `reader` and returns the lowercase hexadecimal SHA-256 digest in pure Lite. */
+pub sha256PureReader := fn(reader: io.Reader): (ok: Bool, hex: String, error: String) {
+    if not io.readerOk(reader) {
+        return (ok = false, hex = "", error = io.readerError(reader));
+    }
+    var h0 := 1779033703;
+    var h1 := 3144134277;
+    var h2 := 1013904242;
+    var h3 := 2773480762;
+    var h4 := 1359893119;
+    var h5 := 2600822924;
+    var h6 := 528734635;
+    var h7 := 1541459225;
+    var totalBytes := 0;
+    var tail: mut List<Int> = [];
+    loop true {
+        chunk := io.read(reader, 16384);
+        if not io.readerOk(reader) {
+            return (ok = false, hex = "", error = io.readerError(reader));
+        }
+        chunkLen := list.listCountInt(chunk);
+        if chunkLen == 0 {
+            if io.readerAtEof(reader) { break; }
+            continue;
+        }
+        totalBytes += chunkLen;
+        var pos := 0;
+        if list.listCountInt(tail) > 0 {
+            loop list.listCountInt(tail) < 64 and pos < chunkLen {
+                list.pushBack(mut tail, chunk[pos]);
+                pos += 1;
+            }
+            if list.listCountInt(tail) == 64 {
+                st := sha256Compress(h0, h1, h2, h3, h4, h5, h6, h7, tail, 0);
+                h0 = st.h0; h1 = st.h1; h2 = st.h2; h3 = st.h3;
+                h4 = st.h4; h5 = st.h5; h6 = st.h6; h7 = st.h7;
+                tail = [];
+            }
+        }
+        loop pos + 64 <= chunkLen {
+            st := sha256Compress(h0, h1, h2, h3, h4, h5, h6, h7, chunk, pos);
+            h0 = st.h0; h1 = st.h1; h2 = st.h2; h3 = st.h3;
+            h4 = st.h4; h5 = st.h5; h6 = st.h6; h7 = st.h7;
+            pos += 64;
+        }
+        loop pos < chunkLen {
+            list.pushBack(mut tail, chunk[pos]);
+            pos += 1;
+        }
+    }
+    (ok = true, hex = sha256FinalizeTail(h0, h1, h2, h3, h4, h5, h6, h7, tail, totalBytes), error = "")
+};
+
+/** Returns the lowercase hexadecimal SHA-256 digest of raw `0..255` byte values in pure Lite. */
+pub sha256PureBytes := fn(bytes: List<Int>): String {
+    checkByteRange(bytes);
+    total := list.listCountInt(bytes);
+    var h0 := 1779033703;
+    var h1 := 3144134277;
+    var h2 := 1013904242;
+    var h3 := 2773480762;
+    var h4 := 1359893119;
+    var h5 := 2600822924;
+    var h6 := 528734635;
+    var h7 := 1541459225;
+    var pos := 0;
+    loop pos + 64 <= total {
+        st := sha256Compress(h0, h1, h2, h3, h4, h5, h6, h7, bytes, pos);
+        h0 = st.h0; h1 = st.h1; h2 = st.h2; h3 = st.h3;
+        h4 = st.h4; h5 = st.h5; h6 = st.h6; h7 = st.h7;
+        pos += 64;
+    }
+    tail: mut List<Int> = [];
+    loop pos < total {
+        list.pushBack(mut tail, bytes[pos]);
+        pos += 1;
+    }
+    sha256FinalizeTail(h0, h1, h2, h3, h4, h5, h6, h7, tail, total)
+};
+
+/** Returns the lowercase hexadecimal SHA-256 digest of UTF-8 `value` in pure Lite. */
+pub sha256PureText := fn(value: String): String {
+    sha256PureBytes(unicode.utf8Encode(value))
+};
+
+/** Streams the raw bytes of the file at `path` and returns its lowercase hexadecimal SHA-256 digest in pure Lite. */
+pub sha256PureFile := fn(path: String): (ok: Bool, hex: String, error: String) {
+    reader := file.openReader(path);
+    if not io.readerOk(reader) {
+        return (ok = false, hex = "", error = io.readerError(reader));
+    }
+    hashed := sha256PureReader(reader);
+    closed := io.closeReader(reader);
+    if not hashed.ok {
+        return hashed;
+    }
+    if not closed.ok {
+        return (ok = false, hex = "", error = closed.error);
+    }
+    hashed
+};
+
+pow2Arr := fn(bits: Int): Int {
+    var out := 1;
+    var i := 0;
+    loop i < bits {
+        out *= 2;
+        i += 1;
+    }
+    out
+};
+
+rotr64 := fn(hi: Int, lo: Int, shift: Int): (hi: Int, lo: Int) {
+    if shift == 0 { return (hi = hi, lo = lo); }
+    if shift < 32 {
+        d := pow2Arr(shift);
+        m := pow2Arr(32 - shift);
+        return (hi = (hi / d) + (lo % d) * m, lo = (lo / d) + (hi % d) * m);
+    }
+    s := shift - 32;
+    if s == 0 { return (hi = lo, lo = hi); }
+    d := pow2Arr(s);
+    m := pow2Arr(32 - s);
+    (hi = (lo / d) + (hi % d) * m, lo = (hi / d) + (lo % d) * m)
+};
+
+shr64 := fn(hi: Int, lo: Int, shift: Int): (hi: Int, lo: Int) {
+    d := pow2Arr(shift);
+    m := pow2Arr(32 - shift);
+    (hi = hi / d, lo = (lo / d) + (hi % d) * m)
+};
+
+/** Returns the lowercase hexadecimal SHA-512 digest of raw `0..255` byte values in pure Lite. */
+pub sha512PureBytes := fn(bytes: List<Int>): String {
+    checkByteRange(bytes);
+    total := list.listCountInt(bytes);
+    padded: mut List<Int> = [];
+    loop bytes as b {
+        list.pushBack(mut padded, b);
+    }
+    list.pushBack(mut padded, 128);
+    loop (list.listCountInt(padded) % 128) =!= 112 {
+        list.pushBack(mut padded, 0);
+    }
+    var bitLen := total * 8;
+    lenBytes: mut List<Int> = [];
+    var k := 0;
+    loop k < 16 {
+        list.pushFront(mut lenBytes, bitLen % 256);
+        bitLen /= 256;
+        k += 1;
+    }
+    loop lenBytes as lb {
+        list.pushBack(mut padded, lb);
+    }
+
+    var h0Hi := 1779033703; var h0Lo := 4089235720;
+    var h1Hi := 3144134277; var h1Lo := 2227873595;
+    var h2Hi := 1013904242; var h2Lo := 4271175723;
+    var h3Hi := 2773480762; var h3Lo := 1595750129;
+    var h4Hi := 1359893119; var h4Lo := 2917565137;
+    var h5Hi := 2600822924; var h5Lo := 725511199;
+    var h6Hi := 528734635; var h6Lo := 4215389547;
+    var h7Hi := 1541459225; var h7Lo := 327033209;
+
+    totalPadded := list.listCountInt(padded);
+    var offset := 0;
+    loop offset < totalPadded {
+        wHi: mut List<Int> = [];
+        wLo: mut List<Int> = [];
+        var i := 0;
+        loop i < 16 {
+            p := offset + i * 8;
+            list.pushBack(mut wHi, padded[p] * 16777216 + padded[p + 1] * 65536 + padded[p + 2] * 256 + padded[p + 3]);
+            list.pushBack(mut wLo, padded[p + 4] * 16777216 + padded[p + 5] * 65536 + padded[p + 6] * 256 + padded[p + 7]);
+            i += 1;
+        }
+        loop i < 80 {
+            x0 := rotr64(wHi[i - 15], wLo[i - 15], 1);
+            x1 := rotr64(wHi[i - 15], wLo[i - 15], 8);
+            x2 := shr64(wHi[i - 15], wLo[i - 15], 7);
+            s0Hi := xor3_32(x0.hi, x1.hi, x2.hi);
+            s0Lo := xor3_32(x0.lo, x1.lo, x2.lo);
+            y0 := rotr64(wHi[i - 2], wLo[i - 2], 19);
+            y1 := rotr64(wHi[i - 2], wLo[i - 2], 61);
+            y2 := shr64(wHi[i - 2], wLo[i - 2], 6);
+            s1Hi := xor3_32(y0.hi, y1.hi, y2.hi);
+            s1Lo := xor3_32(y0.lo, y1.lo, y2.lo);
+            sumLo := wLo[i - 16] + s0Lo + wLo[i - 7] + s1Lo;
+            sumHi := wHi[i - 16] + s0Hi + wHi[i - 7] + s1Hi + (sumLo / pow32);
+            list.pushBack(mut wHi, sumHi % pow32);
+            list.pushBack(mut wLo, sumLo % pow32);
+            i += 1;
+        }
+
+        var aHi := h0Hi; var aLo := h0Lo;
+        var bHi := h1Hi; var bLo := h1Lo;
+        var cHi := h2Hi; var cLo := h2Lo;
+        var dHi := h3Hi; var dLo := h3Lo;
+        var eHi := h4Hi; var eLo := h4Lo;
+        var fHi := h5Hi; var fLo := h5Lo;
+        var gHi := h6Hi; var gLo := h6Lo;
+        var hHi := h7Hi; var hLo := h7Lo;
+
+        var r := 0;
+        loop r < 80 {
+            r14 := rotr64(eHi, eLo, 14);
+            r18 := rotr64(eHi, eLo, 18);
+            r41 := rotr64(eHi, eLo, 41);
+            sig1Hi := xor3_32(r14.hi, r18.hi, r41.hi);
+            sig1Lo := xor3_32(r14.lo, r18.lo, r41.lo);
+            chHi := ch32(eHi, fHi, gHi);
+            chLo := ch32(eLo, fLo, gLo);
+            t1Lo := hLo + sig1Lo + chLo + k512Lo[r] + wLo[r];
+            t1Hi := (hHi + sig1Hi + chHi + k512Hi[r] + wHi[r] + (t1Lo / pow32)) % pow32;
+            t1LoMod := t1Lo % pow32;
+
+            r28 := rotr64(aHi, aLo, 28);
+            r34 := rotr64(aHi, aLo, 34);
+            r39 := rotr64(aHi, aLo, 39);
+            sig0Hi := xor3_32(r28.hi, r34.hi, r39.hi);
+            sig0Lo := xor3_32(r28.lo, r34.lo, r39.lo);
+            majHi := maj32(aHi, bHi, cHi);
+            majLo := maj32(aLo, bLo, cLo);
+            t2Lo := sig0Lo + majLo;
+            t2Hi := (sig0Hi + majHi + (t2Lo / pow32)) % pow32;
+            t2LoMod := t2Lo % pow32;
+
+            hHi = gHi; hLo = gLo;
+            gHi = fHi; gLo = fLo;
+            fHi = eHi; fLo = eLo;
+            neLo := dLo + t1LoMod;
+            eHi = (dHi + t1Hi + (neLo / pow32)) % pow32;
+            eLo = neLo % pow32;
+            dHi = cHi; dLo = cLo;
+            cHi = bHi; cLo = bLo;
+            bHi = aHi; bLo = aLo;
+            naLo := t1LoMod + t2LoMod;
+            aHi = (t1Hi + t2Hi + (naLo / pow32)) % pow32;
+            aLo = naLo % pow32;
+            r += 1;
+        }
+
+        s0 := h0Lo + aLo; h0Hi = (h0Hi + aHi + (s0 / pow32)) % pow32; h0Lo = s0 % pow32;
+        s1 := h1Lo + bLo; h1Hi = (h1Hi + bHi + (s1 / pow32)) % pow32; h1Lo = s1 % pow32;
+        s2 := h2Lo + cLo; h2Hi = (h2Hi + cHi + (s2 / pow32)) % pow32; h2Lo = s2 % pow32;
+        s3 := h3Lo + dLo; h3Hi = (h3Hi + dHi + (s3 / pow32)) % pow32; h3Lo = s3 % pow32;
+        s4 := h4Lo + eLo; h4Hi = (h4Hi + eHi + (s4 / pow32)) % pow32; h4Lo = s4 % pow32;
+        s5 := h5Lo + fLo; h5Hi = (h5Hi + fHi + (s5 / pow32)) % pow32; h5Lo = s5 % pow32;
+        s6 := h6Lo + gLo; h6Hi = (h6Hi + gHi + (s6 / pow32)) % pow32; h6Lo = s6 % pow32;
+        s7 := h7Lo + hLo; h7Hi = (h7Hi + hHi + (s7 / pow32)) % pow32; h7Lo = s7 % pow32;
+        offset += 128;
+    }
+
+    word32Hex(h0Hi) + word32Hex(h0Lo) + word32Hex(h1Hi) + word32Hex(h1Lo) +
+    word32Hex(h2Hi) + word32Hex(h2Lo) + word32Hex(h3Hi) + word32Hex(h3Lo) +
+    word32Hex(h4Hi) + word32Hex(h4Lo) + word32Hex(h5Hi) + word32Hex(h5Lo) +
+    word32Hex(h6Hi) + word32Hex(h6Lo) + word32Hex(h7Hi) + word32Hex(h7Lo)
+};
+
+/** Returns the lowercase hexadecimal SHA-512 digest of UTF-8 `value` in pure Lite. */
+pub sha512PureText := fn(value: String): String {
+    sha512PureBytes(unicode.utf8Encode(value))
+};
 
 /** Returns the lowercase hexadecimal SHA-256 digest of the raw bytes of the file at `path`. */
 pub sha256File := fn(path: String): (ok: Bool, hex: String, error: String) {
@@ -61,15 +601,6 @@ isBase64DataChar := fn(ch: String): Bool {
 
 isHexChar := fn(ch: String): Bool {
     text.indexOfText("0123456789abcdefABCDEF", ch, 0) >= 0
-}
-
-checkByteRange := fn(bytes: List<Int>): Unit {
-    loop bytes as b {
-        if b < 0 or b > 255 {
-            diag.fail("", "byte value outside 0..255: " + integer.intText(b));
-            return;
-        }
-    }
 }
 
 byteXor := fn(left: Int, right: Int): Int {

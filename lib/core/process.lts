@@ -1,4 +1,7 @@
-/* Provisional core host process signatures. This module adds no host authority by itself. */
+/* Provisional core host process signatures and stream-based execution helper. This module adds no host authority by itself. */
+
+file := import "core/file";
+io := import "core/io";
 
 /** Returns the current process working directory. */
 pub cwd := fn(): String;
@@ -28,3 +31,54 @@ stdinText: String): (status: Int, stdout: String, stderr: String, error: String)
 /** Runs `command` with `args`, raw `stdinBytes`, and `timeoutMs` (`<= 0` disables timeout), writing captured stdout/stderr bytes to `stdoutPath` and `stderrPath`. */
 pub runBytes := fn(command: String, args: List<String>, cwd: String, envOverrides: List<String>, timeoutMs: Int,
 stdinBytes: List<Int>, stdoutPath: String, stderrPath: String): (status: Int, error: String);
+
+/** Runs `command` with `args`, feeding `stdinReader` and streaming captured stdout/stderr synchronously into `stdoutWriter` and `stderrWriter`. */
+pub runStreams := fn(
+command: String,
+args: List<String>,
+workDir: String,
+envOverrides: List<String>,
+timeoutMs: Int,
+stdinReader: io.Reader,
+stdoutWriter: io.Writer,
+stderrWriter: io.Writer
+): (status: Int, error: String) {
+    if not io.readerOk(stdinReader) {
+        return (status = -1, error = io.readerError(stdinReader));
+    }
+    stdinBytes := io.readAll(stdinReader);
+    if io.readerError(stdinReader) =!= "" {
+        return (status = -1, error = io.readerError(stdinReader));
+    }
+    tmp := file.makeTempDir("lite-proc-streams-");
+    if not tmp.ok {
+        return (status = -1, error = tmp.error);
+    }
+    outPath := tmp.path + "/stdout.bin";
+    errPath := tmp.path + "/stderr.bin";
+    res := runBytes(command, args, workDir, envOverrides, timeoutMs, stdinBytes, outPath, errPath);
+    outReader := file.openReader(outPath);
+    if io.readerOk(outReader) {
+        outCopy := file.copyStream(outReader, stdoutWriter);
+        _closeOut := io.closeReader(outReader);
+        if not outCopy.ok {
+            _rm := file.remove(tmp.path);
+            return (status = -1, error = outCopy.error);
+        }
+    } else {
+        _closeOut := io.closeReader(outReader);
+    }
+    errReader := file.openReader(errPath);
+    if io.readerOk(errReader) {
+        errCopy := file.copyStream(errReader, stderrWriter);
+        _closeErr := io.closeReader(errReader);
+        if not errCopy.ok {
+            _rm := file.remove(tmp.path);
+            return (status = -1, error = errCopy.error);
+        }
+    } else {
+        _closeErr := io.closeReader(errReader);
+    }
+    _rm := file.remove(tmp.path);
+    res
+}

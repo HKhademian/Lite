@@ -4247,6 +4247,59 @@ test('core os/fs/process/crypto/time host bindings, standalone CLI execution, an
     assert.equal(direct.stdout, 'true [alpha, beta]\n');
   } finally { rmSync(standaloneDir, { recursive: true, force: true }); }
 
+  const streamChild = compileTs({
+    text: [
+      'io := import "core/io";',
+      'bytes := io.readAll(io.stdinReader());',
+      'out := io.stdoutWriter();',
+      'err := io.stderrWriter();',
+      '_w1 := io.write(out, bytes);',
+      '_w2 := io.writeText(out, "|done");',
+      '_f1 := io.flush(out);',
+      '_w3 := io.writeLine(err, "warn");',
+      '_f2 := io.flush(err);',
+    ].join('\n'),
+    name: fixtureName,
+  });
+  assert.equal(streamChild.status, 0, streamChild.stderr.toString());
+  assert.equal(checkTsArtifact(streamChild.stdout.toString()).status, 0);
+  const streamDir = mkdtempSync(join(tmpdir(), 'lite-proc-streams-test-'));
+  try {
+    const childScript = join(streamDir, 'echo-stream.ts');
+    writeFileSync(childScript, streamChild.stdout);
+    const parentCompiled = compileTs({
+      text: [
+        'crypto := import "core/crypto";',
+        'file := import "core/file";',
+        'io := import "core/io";',
+        'list := import "core/list";',
+        'proc := import "core/process";',
+        'outW := io.bufferWriter();',
+        'errW := io.bufferWriter();',
+        `res := proc.runStreams(proc.execPath(), [${JSON.stringify(childScript)}], "", [], 10000, io.bufferReader([65, 0, 66]), outW, errW);`,
+        'outBytes := io.writerBytes(outW);',
+        'errTxt := io.writerText(errW);',
+        'bigFile := ' + JSON.stringify(join(streamDir, 'multi-chunk.bin')) + ';',
+        'var big: mut List<Int> = [];',
+        'loop list.listCountInt(big) < 20000 { list.pushBack(mut big, (list.listCountInt(big) * 13) % 256); }',
+        '_wb := file.writeBytes(bigFile, big);',
+        'hPureFile := crypto.sha256PureFile(bigFile);',
+        'hFastFile := crypto.sha256File(bigFile);',
+        'hPureStream := crypto.sha256PureReader(io.textReader("hello"));',
+        'hPure512 := crypto.sha512PureText("abc");',
+        'io.outputLine(res.status, res.error == "", outBytes, errTxt.ok, errTxt.text == "warn\\n", hPureFile.ok, hPureFile.hex == hFastFile.hex, hPureStream.ok, hPureStream.hex == crypto.sha256Text("hello"), hPure512 == crypto.sha512Text("abc"));',
+      ].join('\n'),
+      name: fixtureName,
+    });
+    assert.equal(parentCompiled.status, 0, parentCompiled.stderr.toString());
+    assert.equal(checkTsArtifact(parentCompiled.stdout.toString()).status, 0);
+    withTsArtifact(parentCompiled.stdout.toString(), run => {
+      const actual = run();
+      assert.equal(actual.status, 0, actual.stderr.toString());
+      assert.equal(actual.stdout.toString(), '0 true [65, 0, 66, 124, 100, 111, 110, 101] true true true true true true true\n');
+    });
+  } finally { rmSync(streamDir, { recursive: true, force: true }); }
+
   const directory = mkdtempSync(join(tmpdir(), 'lite-core-os-unbound-'));
   try {
     writeFileSync(join(directory, 'file.lts'), 'pub kind := fn(path: String): String;\n');
@@ -4266,8 +4319,8 @@ test('core os/fs/process/crypto/time host bindings, standalone CLI execution, an
     ['fs := import "core/file"; x := fs.writeBytes(".", []);', /C backend does not support (filesystem builtins|list values|top-level functions) yet/],
     ['io := import "core/io"; x := io.bufferWriter();', /C backend does not support (stream builtins|tuple values) yet/],
     ['io := import "core/io"; x := io.stdinReader();', /C backend does not support (stream builtins|tuple values) yet/],
-    ['proc := import "core/process"; x := proc.cwd();', /C backend does not support process builtins yet/],
-    ['proc := import "core/process"; x := proc.runBytes("true", [], "", [], 0, [], "", "");', /C backend does not support (process builtins|list values) yet/],
+    ['proc := import "core/process"; x := proc.cwd();', /C backend does not support (process builtins|list values|tuple values|top-level functions) yet/],
+    ['proc := import "core/process"; x := proc.runBytes("true", [], "", [], 0, [], "", "");', /C backend does not support (process builtins|list values|tuple values|top-level functions) yet/],
     ['c := import "core/crypto"; x := c.sha256Text("a");', /C backend does not support (crypto builtins|list values|top-level functions) yet/],
     ['c := import "core/crypto"; x := c.sha256Bytes([]);', /C backend does not support (crypto builtins|list values|top-level functions) yet/],
     ['c := import "core/crypto"; x := c.sha512Text("a");', /C backend does not support (crypto builtins|list values|top-level functions) yet/],

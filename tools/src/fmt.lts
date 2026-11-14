@@ -176,10 +176,14 @@ run := fn(args: List<String>): Unit {
     }
 
     if targetCount == 1 and targets[0] == "-" {
-        input := io.inputAll("");
-        output := formatLite(input);
+        stdinRes := io.readAllText(io.stdinReader());
+        if not stdinRes.ok {
+            io.errorLine(stdinRes.error);
+            io.exit(1);
+        }
+        output := formatLite(stdinRes.text);
         if checkOnly {
-            if input == output { io.exit(0); } else { io.exit(1); }
+            if stdinRes.text == output { io.exit(0); } else { io.exit(1); }
         }
         io.output(output);
         io.exit(0);

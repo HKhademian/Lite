@@ -29,8 +29,11 @@ declare const process: {
         realpathSync(path: string): string;
         mkdtempSync(prefix: string): string;
     };
+    getBuiltinModule(name: "node:path"): { join(...paths: string[]): string };
+    getBuiltinModule(name: "node:os"): { tmpdir(): string };
     getBuiltinModule(name: "node:child_process"): {
         spawnSync(command: string, args: readonly string[], options: { cwd?: string; env: Record<string, string | undefined>; encoding?: "utf8"; input?: string; stdio: "inherit" | readonly ["pipe", "pipe", "pipe"]; maxBuffer: number }): { status: number | null; signal: string | null; stdout: string | null; stderr: string | null; error?: Error };
+        spawnSync(command: string, args: readonly string[], options: { cwd?: string; env: Record<string, string | undefined>; input: Uint8Array; stdio: readonly ["pipe", "pipe", "pipe"]; timeout?: number; maxBuffer: number }): { status: number | null; signal: string | null; stdout: Uint8Array | null; stderr: Uint8Array | null; error?: Error };
     };
 };
 declare const TextDecoder: { new (label: string, options?: { fatal?: boolean }): { decode(input?: Uint8Array, options?: { stream?: boolean }): string } };
@@ -57,6 +60,17 @@ function lite$fromBytes(bytes: Uint8Array): bigint[] {
     for (let i = 0; i < bytes.length; i += 1) { out[i] = BigInt(bytes[i] ?? 0); }
     return out;
 }
+function lite$toBytes(bytes: readonly bigint[]): Uint8Array {
+    const out = new Uint8Array(bytes.length);
+    for (let i = 0; i < bytes.length; i += 1) {
+        const byte = bytes[i];
+        if (byte === undefined || byte < 0n || byte > 255n) {
+            throw new Error("byte value outside 0..255: " + String(byte));
+        }
+        out[i] = Number(byte);
+    }
+    return out;
+}
 function lite$fileKind(path: string): string {
     try {
         const st = process.getBuiltinModule("node:fs").statSync(path);
@@ -72,9 +86,19 @@ function lite$fileMakeDir(path: string): { ok: boolean; error: string } {
     try { process.getBuiltinModule("node:fs").mkdirSync(path, { recursive: true }); return { ok: true, error: "" }; }
     catch (error) { return { ok: false, error: lite$errMsg(error) }; }
 }
+function lite$fileRemove(path: string): { ok: boolean; error: string } {
+    try { process.getBuiltinModule("node:fs").rmSync(path, { recursive: true, force: true }); return { ok: true, error: "" }; }
+    catch (error) { return { ok: false, error: lite$errMsg(error) }; }
+}
 function lite$fileCopy(fromPath: string, toPath: string): { ok: boolean; error: string } {
     try { process.getBuiltinModule("node:fs").cpSync(fromPath, toPath, { recursive: true, force: true, verbatimSymlinks: true }); return { ok: true, error: "" }; }
     catch (error) { return { ok: false, error: lite$errMsg(error) }; }
+}
+function lite$fileMakeTempDir(prefix: string): { ok: boolean; path: string; error: string } {
+    try {
+        const joined = process.getBuiltinModule("node:path").join(process.getBuiltinModule("node:os").tmpdir(), prefix);
+        return { ok: true, path: process.getBuiltinModule("node:fs").mkdtempSync(joined), error: "" };
+    } catch (error) { return { ok: false, path: "", error: lite$errMsg(error) }; }
 }
 type Lite$StreamHandle = { kind: string; handle: bigint };
 type Lite$StreamEntry =
@@ -338,6 +362,27 @@ function lite$processRun(command: string, args: string[], cwd: string, envOverri
     if (res.error !== undefined) return { status: -1n, stdout, stderr, error: res.error instanceof Error ? res.error.message : String(res.error) };
     if (res.signal !== null) return { status: -1n, stdout, stderr, error: "terminated by signal " + res.signal };
     return { status: BigInt(res.status ?? 1), stdout, stderr, error: "" };
+}
+function lite$processRunBytes(command: string, args: string[], cwd: string, envOverrides: string[], timeoutMs: bigint, stdinBytes: readonly bigint[], stdoutPath: string, stderrPath: string): { status: bigint; error: string } {
+    const built = lite$buildEnv(envOverrides);
+    if (!built.ok) return { status: -1n, error: built.error };
+    const fs = process.getBuiltinModule("node:fs");
+    let input: Uint8Array;
+    try { input = lite$toBytes(stdinBytes); }
+    catch (error) { return { status: -1n, error: lite$errMsg(error) }; }
+    const opts: { cwd?: string; env: Record<string, string | undefined>; input: Uint8Array; stdio: readonly ["pipe", "pipe", "pipe"]; timeout?: number; maxBuffer: number } = {
+        env: built.env, input, stdio: ["pipe", "pipe", "pipe"], maxBuffer: 128 * 1024 * 1024,
+    };
+    if (cwd !== "") opts.cwd = cwd;
+    if (timeoutMs > 0n) opts.timeout = Number(timeoutMs);
+    const res = process.getBuiltinModule("node:child_process").spawnSync(command, args, opts);
+    try {
+        if (stdoutPath !== "") fs.writeFileSync(stdoutPath, res.stdout ?? new Uint8Array(0));
+        if (stderrPath !== "") fs.writeFileSync(stderrPath, res.stderr ?? new Uint8Array(0));
+    } catch (error) { return { status: -1n, error: lite$errMsg(error) }; }
+    if (res.error !== undefined) return { status: -1n, error: lite$errMsg(res.error) };
+    if (res.signal !== null) return { status: -1n, error: "terminated by signal " + res.signal };
+    return { status: BigInt(res.status ?? 1), error: "" };
 }
 
 function lite$unicodeToCodePoints(text: string): bigint[] {
@@ -2694,6 +2739,71 @@ export function main(lite$write?: (text: string) => void): string {
         return { ok: true, copied: lite_total, error: "" };
     }
     void liteFn$lib$core$file$copyStream;
+    function liteFn$lib$core$process$runStreams(lite_command: string, lite_args: string[], lite_workDir: string, lite_envOverrides: string[], lite_timeoutMs: bigint, lite_stdinReader: { kind: string; handle: bigint }, lite_stdoutWriter: { kind: string; handle: bigint }, lite_stderrWriter: { kind: string; handle: bigint }): { status: bigint; error: string } {
+        void lite_command;
+        void lite_args;
+        void lite_workDir;
+        void lite_envOverrides;
+        void lite_timeoutMs;
+        void lite_stdinReader;
+        void lite_stdoutWriter;
+        void lite_stderrWriter;
+        if ((!(lite$ioReaderOk(lite_stdinReader)))) {
+            return { status: (-1n), error: lite$ioReaderError(lite_stdinReader) };
+        }
+        const lite_stdinBytes: bigint[] = [...(lite$ioReadAll(lite_stdinReader))];
+        void lite_stdinBytes;
+        if (((lite$ioReaderError(lite_stdinReader)) !== (""))) {
+            return { status: (-1n), error: lite$ioReaderError(lite_stdinReader) };
+        }
+        const lite_tmp = lite$fileMakeTempDir("lite-proc-streams-");
+        void lite_tmp;
+        if ((!((lite_tmp).ok))) {
+            return { status: (-1n), error: (lite_tmp).error };
+        }
+        const lite_outPath = (((lite_tmp).path) + ("/stdout.bin"));
+        void lite_outPath;
+        const lite_errPath = (((lite_tmp).path) + ("/stderr.bin"));
+        void lite_errPath;
+        const lite_res = lite$processRunBytes(lite_command, [...(lite_args)], lite_workDir, [...(lite_envOverrides)], lite_timeoutMs, [...(lite_stdinBytes)], lite_outPath, lite_errPath);
+        void lite_res;
+        const lite_outReader = lite$fileOpenReader(lite_outPath);
+        void lite_outReader;
+        if (lite$ioReaderOk(lite_outReader)) {
+            const lite_outCopy = liteFn$lib$core$file$copyStream(lite_outReader, lite_stdoutWriter);
+            void lite_outCopy;
+            const lite__closeOut = lite$ioCloseReader(lite_outReader);
+            void lite__closeOut;
+            if ((!((lite_outCopy).ok))) {
+                const lite__rm = lite$fileRemove((lite_tmp).path);
+                void lite__rm;
+                return { status: (-1n), error: (lite_outCopy).error };
+            }
+        } else {
+            const lite__closeOut = lite$ioCloseReader(lite_outReader);
+            void lite__closeOut;
+        }
+        const lite_errReader = lite$fileOpenReader(lite_errPath);
+        void lite_errReader;
+        if (lite$ioReaderOk(lite_errReader)) {
+            const lite_errCopy = liteFn$lib$core$file$copyStream(lite_errReader, lite_stderrWriter);
+            void lite_errCopy;
+            const lite__closeErr = lite$ioCloseReader(lite_errReader);
+            void lite__closeErr;
+            if ((!((lite_errCopy).ok))) {
+                const lite__rm = lite$fileRemove((lite_tmp).path);
+                void lite__rm;
+                return { status: (-1n), error: (lite_errCopy).error };
+            }
+        } else {
+            const lite__closeErr = lite$ioCloseReader(lite_errReader);
+            void lite__closeErr;
+        }
+        const lite__rm = lite$fileRemove((lite_tmp).path);
+        void lite__rm;
+        return lite_res;
+    }
+    void liteFn$lib$core$process$runStreams;
     function liteFn$lib$core$path$isWin32(): boolean {
         return ((lite$processPlatform()) === ("win32"));
     }
