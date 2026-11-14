@@ -218,7 +218,7 @@ function lite$listPopBack<T>(items: T[], at: number): T {
     return items.pop() as T;
 }
 
-const lite$intLines: readonly number[] = [0, 79, 80, 104, 128, 159, 187, 215, 216, 254, 310, 312, 313, 351, 385, 444, 467, 473, 502, 504, 505, 545, 576, 596, 658, 685, 691, 725, 727, 728, 782, 818, 856, 902, 961, 963, 964, 1005, 1024, 1040, 1061, 1089, 1108, 1114, 1122, 1124, 1125, 1262, 1295, 1319, 1347, 1373, 1397, 1416, 1440, 1474, 1490, 1491, 1514, 1546, 1567, 1595, 1622, 1701, 1734, 1766, 1799, 1826, 1847, 1874, 1888, 1924, 1952, 1979, 2027, 2075, 2111, 2146, 2173, 2194, 2247, 2274, 2288, 2370, 2424, 2443, 2525, 2555, 2583, 2611, 2639, 2662, 2706, 2733, 2761, 2789, 2816, 2839, 2869, 2971, 3000, 3028, 3056, 3134, 3167, 3199, 3213, 3236, 3266, 3371, 3404, 3418, 3457, 3486, 3514, 3542, 3565, 3582, 3637, 3665, 3692, 3715, 3725, 3731, 3732, 3775, 3886, 3888, 3889, 3998, 4045, 4083, 4112, 4132, 4165, 4188, 4221, 4239, 4262, 4263, 4283, 4311, 4341, 4385, 4436, 4471, 4481, 4534, 4563, 4588, 4705, 4736, 4753, 4784, 4794, 4795, 4832, 4870, 4924, 4974, 5027, 5057, 5071, 5106, 5157, 5206, 5260, 5313, 5339, 5356, 5396, 5448, 5508, 5556, 5644, 5693, 5740, 5780, 5833, 5859, 5869, 5875, 5876, 5946, 5983, 6028, 6034, 6076, 6119, 6121, 6122, 6146, 6177, 6179, 6180, 6206, 6240, 6248, 6250, 6251, 6287, 6331, 6333, 6334, 6379, 6412, 6447, 6501, 6602, 6604, 6605, 6648, 6678, 6711, 6733, 6759, 6779, 6879, 6919, 6973, 7011, 7034, 7051, 7083, 7106, 7116, 7159, 7185, 7204, 7210, 7211, 7245, 7270, 7297, 7317, 7338, 7366, 7415, 7445, 7498, 7531, 7629, 7678, 7731, 7780, 7836, 7889, 7911, 7951, 8002, 8051, 8069, 8083, 8113, 8123, 8142, 8148, 8149, 8174, 8226, 8246, 8252, 8296, 8298, 8299, 8360, 8424, 8446, 8501, 8543, 8545, 8546, 8588, 8618, 8620, 8621, 8673, 8711, 8752, 8808, 8828, 8850, 8916, 8975, 9007, 9041, 9061, 9088, 9094, 9101, 9103, 9104, 9143, 9195, 9254, 9297, 9360, 9402, 9449, 9450, 9479, 9540, 9583, 9637, 9671, 9748, 9793, 9865, 9943, 9962, 9980, 10002, 10039, 10063, 10090, 10121, 10173, 10190, 10217, 10227, 10233, 10250, 10252, 10253, 10301, 10321, 10346, 10373, 10379, 10389, 10391, 10392, 10453, 10487, 10521, 10546, 10595, 10621, 10700, 10737, 10772, 10778, 10804, 10849, 10886, 10921, 10952, 11040, 11064, 11074, 11101, 11146, 11202, 11235, 11279, 11387, 11463, 11512, 11530, 11571, 11585, 11632, 11680, 11690, 11696, 11706, 11708, 11709, 11733, 11766, 11811, 11835, 11886, 11906, 11912, 11969, 11985, 11987, 11988, 12012, 12044, 12066, 12085, 12125, 12144, 12213, 12236, 12308, 12319, 12339, 12372, 12398, 12432, 12473, 12512, 12518, 12520, 12521, 12543, 12617, 12633, 12635, 12636, 12680, 12710, 12743, 12762, 12826, 12832, 12855, 12871, 12873, 12874, 12909, 12910, 12926, 12947, 12981, 13005, 13056, 13076, 13082, 13121, 13153, 13180, 13203, 13236, 13253, 13304, 13337, 13397, 13425, 13439, 13449, 13455, 13457, 13458, 13501];
+const lite$intLines: readonly number[] = [0, 79, 80, 104, 128, 159, 187, 215, 243, 277, 278, 415, 448, 472, 500, 526, 550, 569, 593, 627, 643, 644, 667, 699, 720, 748, 775, 854, 887, 919, 952, 979, 1000, 1027, 1041, 1077, 1105, 1132, 1180, 1228, 1264, 1299, 1326, 1347, 1400, 1427, 1441, 1523, 1577, 1596, 1678, 1708, 1736, 1764, 1792, 1815, 1859, 1886, 1914, 1942, 1969, 1992, 2022, 2124, 2153, 2181, 2209, 2287, 2320, 2352, 2366, 2389, 2419, 2530, 2563, 2577, 2616, 2645, 2673, 2701, 2724, 2741, 2802, 2830, 2857, 2880, 2890, 2896, 2897, 2940, 3056, 3058, 3059, 3168, 3215, 3253, 3282, 3302, 3335, 3358, 3391, 3409, 3432, 3433, 3453, 3481, 3511, 3555, 3606, 3641, 3651, 3704, 3733, 3758, 3875, 3906, 3923, 3954, 3964, 3965, 4007, 4050, 4104, 4154, 4207, 4237, 4251, 4286, 4337, 4386, 4440, 4493, 4519, 4536, 4581, 4633, 4693, 4741, 4840, 4889, 4936, 4976, 5029, 5055, 5065, 5071, 5072, 5142, 5179, 5224, 5230, 5272, 5315, 5317, 5318, 5342, 5395, 5396, 5420, 5452, 5474, 5493, 5533, 5552, 5621, 5644, 5716, 5727, 5747, 5780, 5806, 5840, 5881, 5920, 5926, 5928, 5929, 5951, 6025, 6041, 6043, 6044, 6088, 6118, 6151, 6170, 6234, 6240, 6263, 6279, 6281, 6282, 6376, 6377, 6393, 6414, 6448, 6472, 6523, 6543, 6549, 6588, 6620, 6647, 6670, 6703, 6720, 6771, 6804, 6864, 6892, 6906, 6916, 6922, 6924, 6925, 6968];
 const lite$intSource = "tools/src/fmt.lts:";
 const lite$intMin = -(1n << 63n), lite$intMax = (1n << 63n) - 1n;
 function lite$fault(category: string, at: number, message: string): never {
@@ -318,6 +318,39 @@ export function main(lite$write?: (text: string) => void): string {
         return ((liteFn$lib$core$list$listIndexOfBool([...(lite_values)], lite_target)) >= (0n));
     }
     void liteFn$lib$core$list$listContainsBool;
+    function liteFn$lib$core$list$listCountText(lite_values: string[]): bigint {
+        void lite_values;
+        let lite_count = 0n;
+        void lite_count;
+        for (const lite_value of [...(lite_values)]) {
+            void lite_value;
+            lite_count = lite$addInt(lite_count, 1n, 2101);
+        }
+        return lite_count;
+    }
+    void liteFn$lib$core$list$listCountText;
+    function liteFn$lib$core$list$listCountInt(lite_values: bigint[]): bigint {
+        void lite_values;
+        let lite_count = 0n;
+        void lite_count;
+        for (const lite_value of [...(lite_values)]) {
+            void lite_value;
+            lite_count = lite$addInt(lite_count, 1n, 2294);
+        }
+        return lite_count;
+    }
+    void liteFn$lib$core$list$listCountInt;
+    function liteFn$lib$core$list$listCountBool(lite_values: boolean[]): bigint {
+        void lite_values;
+        let lite_count = 0n;
+        void lite_count;
+        for (const lite_value of [...(lite_values)]) {
+            void lite_value;
+            lite_count = lite$addInt(lite_count, 1n, 2489);
+        }
+        return lite_count;
+    }
+    void liteFn$lib$core$list$listCountBool;
     function liteFn$lib$core$int$intMin(): bigint {
         return (-9223372036854775808n);
     }
@@ -693,59 +726,402 @@ export function main(lite$write?: (text: string) => void): string {
         return lite$textSlice(lite_text, lite_start, lite_end, 6228);
     }
     void liteFn$lib$core$text$slice;
-    function liteFn_isSpaceChar(lite_ch: string): boolean {
+    function liteFn$lib$core$text$isWhitespace(lite_ch: string): boolean {
         void lite_ch;
         return ((((((((lite_ch) === (" "))) || (((lite_ch) === ("\t"))))) || (((lite_ch) === ("\r"))))) || (((lite_ch) === ("\n"))));
     }
-    void liteFn_isSpaceChar;
-    function liteFn_trimEnd(lite_line: string): string {
-        void lite_line;
-        let lite_end = liteFn$lib$core$text$length(lite_line);
-        void lite_end;
-        while (((((lite_end) > (0n))) && (liteFn_isSpaceChar(liteFn$lib$core$text$at(lite_line, lite$subtractInt(lite_end, 1n, 436)))))) {
-            lite_end = lite$subtractInt(lite_end, 1n, 462);
-        }
-        return liteFn$lib$core$text$slice(lite_line, 0n, lite_end);
-    }
-    void liteFn_trimEnd;
-    function liteFn_trimStart(lite_line: string): string {
-        void lite_line;
-        const lite_size = liteFn$lib$core$text$length(lite_line);
+    void liteFn$lib$core$text$isWhitespace;
+    function liteFn$lib$core$text$trimStart(lite_source: string): string {
+        void lite_source;
+        const lite_size = lite$textLength(lite_source);
         void lite_size;
         let lite_start = 0n;
         void lite_start;
-        while (((((lite_start) < (lite_size))) && (liteFn_isSpaceChar(liteFn$lib$core$text$at(lite_line, lite_start))))) {
-            lite_start = lite$addInt(lite_start, 1n, 680);
+        while (((((lite_start) < (lite_size))) && (liteFn$lib$core$text$isWhitespace(lite$textAt(lite_source, lite_start, 6646))))) {
+            lite_start = lite$addInt(lite_start, 1n, 6694);
         }
-        return liteFn$lib$core$text$slice(lite_line, lite_start, lite_size);
+        return lite$textSlice(lite_source, lite_start, lite_size, 6709);
     }
-    void liteFn_trimStart;
-    function liteFn_endsWith(lite_value: string, lite_suffix: string): boolean {
-        void lite_value;
+    void liteFn$lib$core$text$trimStart;
+    function liteFn$lib$core$text$trimEnd(lite_source: string): string {
+        void lite_source;
+        let lite_end = lite$textLength(lite_source);
+        void lite_end;
+        while (((((lite_end) > (0n))) && (liteFn$lib$core$text$isWhitespace(lite$textAt(lite_source, lite$subtractInt(lite_end, 1n, 6947), 6927))))) {
+            lite_end = lite$subtractInt(lite_end, 1n, 6973);
+        }
+        return lite$textSlice(lite_source, 0n, lite_end, 6988);
+    }
+    void liteFn$lib$core$text$trimEnd;
+    function liteFn$lib$core$text$trim(lite_source: string): string {
+        void lite_source;
+        return liteFn$lib$core$text$trimEnd(liteFn$lib$core$text$trimStart(lite_source));
+    }
+    void liteFn$lib$core$text$trim;
+    function liteFn$lib$core$text$endsWith(lite_source: string, lite_suffix: string): boolean {
+        void lite_source;
         void lite_suffix;
-        const lite_valueLen = liteFn$lib$core$text$length(lite_value);
-        void lite_valueLen;
-        const lite_suffixLen = liteFn$lib$core$text$length(lite_suffix);
+        const lite_sourceLen = lite$textLength(lite_source);
+        void lite_sourceLen;
+        const lite_suffixLen = lite$textLength(lite_suffix);
         void lite_suffixLen;
-        if (((lite_suffixLen) > (lite_valueLen))) {
+        if (((lite_suffixLen) > (lite_sourceLen))) {
             return false;
         }
-        return liteFn$lib$core$text$startsWithAt(lite_value, lite$subtractInt(lite_valueLen, lite_suffixLen, 940), lite_suffix);
+        return liteFn$lib$core$text$startsWithAt(lite_source, lite$subtractInt(lite_sourceLen, lite_suffixLen, 7442), lite_suffix);
     }
-    void liteFn_endsWith;
-    function liteFn_indentSpaces(lite_depth: bigint): string {
-        void lite_depth;
+    void liteFn$lib$core$text$endsWith;
+    function liteFn$lib$core$text$repeatText(lite_value: string, lite_count: bigint): string {
+        void lite_value;
+        void lite_count;
+        if (((lite_count) <= (0n))) {
+            return "";
+        }
         let lite_out = "";
         void lite_out;
         let lite_i = 0n;
         void lite_i;
-        while (((lite_i) < (lite_depth))) {
-            lite_out = ((lite_out) + ("    "));
-            lite_i = lite$addInt(lite_i, 1n, 1103);
+        while (((lite_i) < (lite_count))) {
+            lite_out = ((lite_out) + (lite_value));
+            lite_i = lite$addInt(lite_i, 1n, 7734);
         }
         return lite_out;
     }
-    void liteFn_indentSpaces;
+    void liteFn$lib$core$text$repeatText;
+    function liteFn$lib$util$path$isWin32(): boolean {
+        return ((lite$processPlatform()) === ("win32"));
+    }
+    void liteFn$lib$util$path$isWin32;
+    function liteFn$lib$util$path$sep(): string {
+        if (liteFn$lib$util$path$isWin32()) {
+            return "\\";
+        }
+        return "/";
+    }
+    void liteFn$lib$util$path$sep;
+    function liteFn$lib$util$path$isSep(lite_ch: string): boolean {
+        void lite_ch;
+        return ((((lite_ch) === ("/"))) || ((((liteFn$lib$util$path$isWin32()) && (((lite_ch) === ("\\")))))));
+    }
+    void liteFn$lib$util$path$isSep;
+    function liteFn$lib$util$path$isAbsolute(lite_target: string): boolean {
+        void lite_target;
+        const lite_size = liteFn$lib$core$text$length(lite_target);
+        void lite_size;
+        if (((lite_size) === (0n))) {
+            return false;
+        }
+        if (liteFn$lib$util$path$isSep(liteFn$lib$core$text$at(lite_target, 0n))) {
+            return true;
+        }
+        return ((((((liteFn$lib$util$path$isWin32()) && (((lite_size) >= (2n))))) && (liteFn$lib$core$text$isAsciiLetter(liteFn$lib$core$text$at(lite_target, 0n))))) && (((liteFn$lib$core$text$at(lite_target, 1n)) === (":"))));
+    }
+    void liteFn$lib$util$path$isAbsolute;
+    function liteFn$lib$util$path$normalize(lite_raw: string): string {
+        void lite_raw;
+        const lite_size = liteFn$lib$core$text$length(lite_raw);
+        void lite_size;
+        if (((lite_size) === (0n))) {
+            return ".";
+        }
+        const lite_separator = liteFn$lib$util$path$sep();
+        void lite_separator;
+        let lite_rootPrefix = "";
+        void lite_rootPrefix;
+        let lite_start = 0n;
+        void lite_start;
+        if (((((((liteFn$lib$util$path$isWin32()) && (((lite_size) >= (2n))))) && (liteFn$lib$core$text$isAsciiLetter(liteFn$lib$core$text$at(lite_raw, 0n))))) && (((liteFn$lib$core$text$at(lite_raw, 1n)) === (":"))))) {
+            const lite_drive = liteFn$lib$core$text$slice(lite_raw, 0n, 2n);
+            void lite_drive;
+            if (((((lite_size) >= (3n))) && (liteFn$lib$util$path$isSep(liteFn$lib$core$text$at(lite_raw, 2n))))) {
+                lite_rootPrefix = ((lite_drive) + (lite_separator));
+                lite_start = 3n;
+            } else {
+                lite_rootPrefix = lite_drive;
+                lite_start = 2n;
+            }
+        } else if (liteFn$lib$util$path$isSep(liteFn$lib$core$text$at(lite_raw, 0n))) {
+            lite_rootPrefix = lite_separator;
+            lite_start = 1n;
+        }
+        const lite_parts: string[] = [...([])];
+        void lite_parts;
+        let lite_partsCount = 0n;
+        void lite_partsCount;
+        let lite_segStart = lite_start;
+        void lite_segStart;
+        let lite_i = lite_start;
+        void lite_i;
+        while (((lite_i) <= (lite_size))) {
+            const lite_atEnd = ((lite_i) === (lite_size));
+            void lite_atEnd;
+            if (((lite_atEnd) || (liteFn$lib$util$path$isSep(liteFn$lib$core$text$at(lite_raw, lite_i))))) {
+                if (((lite_i) > (lite_segStart))) {
+                    const lite_seg = liteFn$lib$core$text$slice(lite_raw, lite_segStart, lite_i);
+                    void lite_seg;
+                    if (((lite_seg) === (".."))) {
+                        if (((((lite_partsCount) > (0n))) && ((((((lite_rootPrefix) !== (""))) || (((lite$listAt((lite_parts), lite$subtractInt(lite_partsCount, 1n, 1941), 1930)) !== ("..")))))))) {
+                            lite$listPopBack(lite_parts, 1982);
+                            lite_partsCount = lite$subtractInt(lite_partsCount, 1n, 2055);
+                        } else if (((lite_rootPrefix) === (""))) {
+                            lite_parts.push("..");
+                            lite_partsCount = lite$addInt(lite_partsCount, 1n, 2213);
+                        }
+                    } else if (((lite_seg) !== ("."))) {
+                        lite_parts.push(lite_seg);
+                        lite_partsCount = lite$addInt(lite_partsCount, 1n, 2375);
+                    }
+                }
+                lite_segStart = lite$addInt(lite_i, 1n, 2437);
+            }
+            lite_i = lite$addInt(lite_i, 1n, 2466);
+        }
+        if (((lite_partsCount) === (0n))) {
+            if (((lite_rootPrefix) !== (""))) {
+                return lite_rootPrefix;
+            }
+            return ".";
+        }
+        return ((lite_rootPrefix) + (liteFn$lib$core$text$joinTexts([...(lite_parts)], lite_separator)));
+    }
+    void liteFn$lib$util$path$normalize;
+    function liteFn$lib$util$path$join(lite_baseDir: string, lite_target: string): string {
+        void lite_baseDir;
+        void lite_target;
+        if (((lite_baseDir) === (""))) {
+            return liteFn$lib$util$path$normalize(lite_target);
+        }
+        if (((lite_target) === (""))) {
+            return liteFn$lib$util$path$normalize(lite_baseDir);
+        }
+        return liteFn$lib$util$path$normalize(((((lite_baseDir) + (liteFn$lib$util$path$sep()))) + (lite_target)));
+    }
+    void liteFn$lib$util$path$join;
+    function liteFn$lib$util$path$resolve(lite_baseDir: string, lite_target: string): string {
+        void lite_baseDir;
+        void lite_target;
+        if (liteFn$lib$util$path$isAbsolute(lite_target)) {
+            return liteFn$lib$util$path$normalize(lite_target);
+        }
+        return liteFn$lib$util$path$join(lite_baseDir, lite_target);
+    }
+    void liteFn$lib$util$path$resolve;
+    function liteFn$lib$util$path$parentDir(lite_target: string): string {
+        void lite_target;
+        return liteFn$lib$util$path$resolve(lite_target, "..");
+    }
+    void liteFn$lib$util$path$parentDir;
+    function liteFn$lib$util$path$baseName(lite_target: string): string {
+        void lite_target;
+        let lite_end = liteFn$lib$core$text$length(lite_target);
+        void lite_end;
+        while (((((lite_end) > (0n))) && (liteFn$lib$util$path$isSep(liteFn$lib$core$text$at(lite_target, lite$subtractInt(lite_end, 1n, 3483)))))) {
+            lite_end = lite$subtractInt(lite_end, 1n, 3509);
+        }
+        if (((lite_end) === (0n))) {
+            return "";
+        }
+        let lite_pos = lite_end;
+        void lite_pos;
+        while (((((lite_pos) > (0n))) && ((!(liteFn$lib$util$path$isSep(liteFn$lib$core$text$at(lite_target, lite$subtractInt(lite_pos, 1n, 3622)))))))) {
+            lite_pos = lite$subtractInt(lite_pos, 1n, 3648);
+        }
+        return liteFn$lib$core$text$slice(lite_target, lite_pos, lite_end);
+    }
+    void liteFn$lib$util$path$baseName;
+    function liteFn$lib$util$path$extName(lite_target: string): string {
+        void lite_target;
+        const lite_base = liteFn$lib$util$path$baseName(lite_target);
+        void lite_base;
+        if (((((((lite_base) === (""))) || (((lite_base) === ("."))))) || (((lite_base) === (".."))))) {
+            return "";
+        }
+        const lite_size = liteFn$lib$core$text$length(lite_base);
+        void lite_size;
+        let lite_i = lite$subtractInt(lite_size, 1n, 3980);
+        void lite_i;
+        while (((lite_i) > (0n))) {
+            if (((liteFn$lib$core$text$at(lite_base, lite_i)) === ("."))) {
+                return liteFn$lib$core$text$slice(lite_base, lite_i, lite_size);
+            }
+            lite_i = lite$subtractInt(lite_i, 1n, 4109);
+        }
+        return "";
+    }
+    void liteFn$lib$util$path$extName;
+    function liteFn$lib$util$fs$defaultIgnoredDirs(): string[] {
+        const lite_dirs: string[] = [...(["node_modules", "dist"])];
+        void lite_dirs;
+        return [...(lite_dirs)];
+    }
+    void liteFn$lib$util$fs$defaultIgnoredDirs;
+    function liteFn$lib$util$fs$collectFiles(lite_baseDir: string, lite_targets: string[], lite_extension: string, lite_ignoredNames: string[], lite_skipDotEntries: boolean): string[] {
+        void lite_baseDir;
+        void lite_targets;
+        void lite_extension;
+        void lite_ignoredNames;
+        void lite_skipDotEntries;
+        const lite_files: string[] = [...([])];
+        void lite_files;
+        const lite_stack: string[] = [...([])];
+        void lite_stack;
+        let lite_stackCount = 0n;
+        void lite_stackCount;
+        let lite_targetIdx = lite$subtractInt(liteFn$lib$core$list$listCountText([...(lite_targets)]), 1n, 838);
+        void lite_targetIdx;
+        while (((lite_targetIdx) >= (0n))) {
+            lite_stack.push(liteFn$lib$util$path$resolve(lite_baseDir, lite$listAt((lite_targets), lite_targetIdx, 932)));
+            lite_stackCount = lite$addInt(lite_stackCount, 1n, 978);
+            lite_targetIdx = lite$subtractInt(lite_targetIdx, 1n, 1013);
+        }
+        while (((lite_stackCount) > (0n))) {
+            const lite_resolved = lite$listPopBack(lite_stack, 1071);
+            void lite_resolved;
+            lite_stackCount = lite$subtractInt(lite_stackCount, 1n, 1128);
+            const lite_kind = lite$fsKind(lite_resolved);
+            void lite_kind;
+            if (((lite_kind) === ("missing"))) {
+                lite$reportError((((("ENOENT: no such file or directory, stat '") + (lite_resolved))) + ("'")));
+                return lite$exit(1n);
+            }
+            if (((lite_kind) === ("dir"))) {
+                const lite_entries: string[] = [...(lite$fsListDir(lite_resolved))];
+                void lite_entries;
+                let lite_entryIdx = lite$subtractInt(liteFn$lib$core$list$listCountText([...(lite_entries)]), 1n, 1449);
+                void lite_entryIdx;
+                while (((lite_entryIdx) >= (0n))) {
+                    const lite_entry = lite$listAt((lite_entries), lite_entryIdx, 1520);
+                    void lite_entry;
+                    const lite_isDot = ((lite_skipDotEntries) && (liteFn$lib$core$text$startsWithAt(lite_entry, 0n, ".")));
+                    void lite_isDot;
+                    if ((((!(lite_isDot))) && ((!(liteFn$lib$core$list$listContainsText([...(lite_ignoredNames)], lite_entry)))))) {
+                        lite_stack.push(liteFn$lib$util$path$resolve(lite_resolved, lite_entry));
+                        lite_stackCount = lite$addInt(lite_stackCount, 1n, 1812);
+                    }
+                    lite_entryIdx = lite$subtractInt(lite_entryIdx, 1n, 1871);
+                }
+            } else if (((((lite_extension) === (""))) || (liteFn$lib$core$text$endsWith(lite_resolved, lite_extension)))) {
+                lite_files.push(lite_resolved);
+            }
+        }
+        return [...(lite_files)];
+    }
+    void liteFn$lib$util$fs$collectFiles;
+    function liteFn$lib$util$project$findRepoRootFrom(lite_startPath: string): string {
+        void lite_startPath;
+        if (((lite_startPath) === (""))) {
+            return "";
+        }
+        let lite_dir = liteFn$lib$util$path$normalize(lite_startPath);
+        void lite_dir;
+        if (((lite$fsKind(lite_dir)) !== ("dir"))) {
+            lite_dir = liteFn$lib$util$path$parentDir(lite_dir);
+        }
+        let lite_steps = 0n;
+        void lite_steps;
+        while (((lite_steps) < (16n))) {
+            const lite_versionsPath = liteFn$lib$util$path$resolve(lite_dir, "config/versions.json");
+            void lite_versionsPath;
+            if (((lite$fsKind(lite_versionsPath)) === ("file"))) {
+                return lite_dir;
+            }
+            const lite_next = liteFn$lib$util$path$parentDir(lite_dir);
+            void lite_next;
+            if (((lite_next) === (lite_dir))) {
+                break;
+            }
+            lite_dir = lite_next;
+            lite_steps = lite$addInt(lite_steps, 1n, 724);
+        }
+        return "";
+    }
+    void liteFn$lib$util$project$findRepoRootFrom;
+    function liteFn$lib$util$project$findRepoRoot(): string {
+        const lite_root = liteFn$lib$util$project$findRepoRootFrom(lite$processEntryPath());
+        void lite_root;
+        if (((lite_root) !== (""))) {
+            return lite_root;
+        }
+        return liteFn$lib$util$project$findRepoRootFrom(lite$processCwd());
+    }
+    void liteFn$lib$util$project$findRepoRoot;
+    function liteFn$lib$util$project$readComponentVersion(lite_component: string): string {
+        void lite_component;
+        const lite_root = liteFn$lib$util$project$findRepoRoot();
+        void lite_root;
+        if (((lite_root) === (""))) {
+            return "unassigned";
+        }
+        const lite_versionsPath = liteFn$lib$util$path$resolve(lite_root, "config/versions.json");
+        void lite_versionsPath;
+        const lite_readRes = lite$fsReadText(lite_versionsPath);
+        void lite_readRes;
+        if ((!((lite_readRes).ok))) {
+            return "unassigned";
+        }
+        const lite_content = (lite_readRes).text;
+        void lite_content;
+        const lite_size = liteFn$lib$core$text$length(lite_content);
+        void lite_size;
+        const lite_needle = (((("\"") + (lite_component))) + ("\""));
+        void lite_needle;
+        const lite_needleLen = liteFn$lib$core$text$length(lite_needle);
+        void lite_needleLen;
+        let lite_searchFrom = 0n;
+        void lite_searchFrom;
+        while (((lite_searchFrom) < (lite_size))) {
+            const lite_keyPos = liteFn$lib$core$text$indexOfText(lite_content, lite_needle, lite_searchFrom);
+            void lite_keyPos;
+            if (((lite_keyPos) < (0n))) {
+                return "unassigned";
+            }
+            const lite_afterKey = liteFn$lib$core$text$skipSpaces(lite_content, lite$addInt(lite_keyPos, lite_needleLen, 1792));
+            void lite_afterKey;
+            if (((((lite_afterKey) < (lite_size))) && (((liteFn$lib$core$text$at(lite_content, lite_afterKey)) === (":"))))) {
+                let lite_pos = liteFn$lib$core$text$skipSpaces(lite_content, lite$addInt(lite_afterKey, 1n, 1930));
+                void lite_pos;
+                if (liteFn$lib$core$text$startsWithAt(lite_content, lite_pos, "null")) {
+                    return "unassigned";
+                }
+                if (((((lite_pos) < (lite_size))) && (((liteFn$lib$core$text$at(lite_content, lite_pos)) === ("\""))))) {
+                    lite_pos = lite$addInt(lite_pos, 1n, 2104);
+                    const lite_start = lite_pos;
+                    void lite_start;
+                    while (((lite_pos) < (lite_size))) {
+                        const lite_ch = liteFn$lib$core$text$at(lite_content, lite_pos);
+                        void lite_ch;
+                        if (((lite_ch) === ("\\"))) {
+                            lite_pos = lite$addInt(lite_pos, 2n, 2292);
+                        } else if (((lite_ch) === ("\""))) {
+                            return liteFn$lib$core$text$slice(lite_content, lite_start, lite_pos);
+                        } else {
+                            lite_pos = lite$addInt(lite_pos, 1n, 2467);
+                        }
+                    }
+                    return "unassigned";
+                }
+            }
+            lite_searchFrom = lite$addInt(lite_keyPos, lite_needleLen, 2601);
+        }
+        return "unassigned";
+    }
+    void liteFn$lib$util$project$readComponentVersion;
+    function liteFn$lib$util$project$handleVersionFlag(lite_args: string[], lite_component: string, lite_command: string): void {
+        void lite_args;
+        void lite_component;
+        void lite_command;
+        const lite_argCount = liteFn$lib$core$list$listCountText([...(lite_args)]);
+        void lite_argCount;
+        if (((((lite_argCount) > (0n))) && (((lite$listAt((lite_args), 0n, 2897)) === ("--version"))))) {
+            if (((lite_argCount) !== (1n))) {
+                lite$reportError((((("Usage: lite ") + (lite_command))) + (" --version")));
+                lite$exit(2n);
+            }
+            lite$emit((((((("lite ") + (lite_command))) + (" "))) + (liteFn$lib$util$project$readComponentVersion(lite_component))) + "\n");
+            lite$exit(0n);
+        }
+    }
+    void liteFn$lib$util$project$handleVersionFlag;
     function liteFn_scanLineBraces(lite_line: string, lite_startInBlock: boolean): { leadingCloses: bigint; netChange: bigint; normalized: string; inBlockComment: boolean } {
         void lite_line;
         void lite_startInBlock;
@@ -773,79 +1149,79 @@ export function main(lite$write?: (text: string) => void): string {
             if (lite_inBlock) {
                 lite_out = ((lite_out) + (lite_ch));
                 lite_lastChar = lite_ch;
-                if (((((((lite_ch) === ("*"))) && (((lite$addInt(lite_i, 1n, 1653)) < (lite_lineLen))))) && (((liteFn$lib$core$text$at(lite_line, lite$addInt(lite_i, 1n, 1687))) === ("/"))))) {
+                if (((((((lite_ch) === ("*"))) && (((lite$addInt(lite_i, 1n, 806)) < (lite_lineLen))))) && (((liteFn$lib$core$text$at(lite_line, lite$addInt(lite_i, 1n, 840))) === ("/"))))) {
                     lite_out = ((lite_out) + ("/"));
                     lite_lastChar = "/";
                     lite_inBlock = false;
-                    lite_i = lite$addInt(lite_i, 2n, 1821);
+                    lite_i = lite$addInt(lite_i, 2n, 974);
                 } else {
-                    lite_i = lite$addInt(lite_i, 1n, 1869);
+                    lite_i = lite$addInt(lite_i, 1n, 1022);
                 }
             } else if (((lite_inString) !== (""))) {
                 lite_out = ((lite_out) + (lite_ch));
                 lite_lastChar = lite_ch;
-                if (((((lite_ch) === ("\\"))) && (((lite$addInt(lite_i, 1n, 2011)) < (lite_lineLen))))) {
-                    const lite_nextCh = liteFn$lib$core$text$at(lite_line, lite$addInt(lite_i, 1n, 2069));
+                if (((((lite_ch) === ("\\"))) && (((lite$addInt(lite_i, 1n, 1164)) < (lite_lineLen))))) {
+                    const lite_nextCh = liteFn$lib$core$text$at(lite_line, lite$addInt(lite_i, 1n, 1222));
                     void lite_nextCh;
                     lite_out = ((lite_out) + (lite_nextCh));
                     lite_lastChar = lite_nextCh;
-                    lite_i = lite$addInt(lite_i, 2n, 2168);
+                    lite_i = lite$addInt(lite_i, 2n, 1321);
                 } else {
                     if (((lite_ch) === (lite_inString))) {
                         lite_inString = "";
                     }
-                    lite_i = lite$addInt(lite_i, 1n, 2269);
+                    lite_i = lite$addInt(lite_i, 1n, 1422);
                 }
-            } else if (((((((lite_ch) === ("/"))) && (((lite$addInt(lite_i, 1n, 2322)) < (lite_lineLen))))) && (((liteFn$lib$core$text$at(lite_line, lite$addInt(lite_i, 1n, 2356))) === ("/"))))) {
+            } else if (((((((lite_ch) === ("/"))) && (((lite$addInt(lite_i, 1n, 1475)) < (lite_lineLen))))) && (((liteFn$lib$core$text$at(lite_line, lite$addInt(lite_i, 1n, 1509))) === ("/"))))) {
                 lite_out = ((lite_out) + (liteFn$lib$core$text$slice(lite_line, lite_i, lite_lineLen)));
                 break;
-            } else if (((((((lite_ch) === ("/"))) && (((lite$addInt(lite_i, 1n, 2477)) < (lite_lineLen))))) && (((liteFn$lib$core$text$at(lite_line, lite$addInt(lite_i, 1n, 2511))) === ("*"))))) {
+            } else if (((((((lite_ch) === ("/"))) && (((lite$addInt(lite_i, 1n, 1630)) < (lite_lineLen))))) && (((liteFn$lib$core$text$at(lite_line, lite$addInt(lite_i, 1n, 1664))) === ("*"))))) {
                 lite_out = ((lite_out) + ("/*"));
                 lite_lastChar = "*";
                 lite_inBlock = true;
                 lite_sawCode = true;
-                lite_i = lite$addInt(lite_i, 2n, 2657);
+                lite_i = lite$addInt(lite_i, 2n, 1810);
             } else if (((((lite_ch) === ("\""))) || (((lite_ch) === ("'"))))) {
                 lite_inString = lite_ch;
                 lite_sawCode = true;
                 lite_out = ((lite_out) + (lite_ch));
                 lite_lastChar = lite_ch;
-                lite_i = lite$addInt(lite_i, 1n, 2834);
+                lite_i = lite$addInt(lite_i, 1n, 1987);
             } else if (((lite_ch) === ("}"))) {
                 if ((!(lite_sawCode))) {
-                    lite_leadingCloses = lite$addInt(lite_leadingCloses, 1n, 2928);
+                    lite_leadingCloses = lite$addInt(lite_leadingCloses, 1n, 2081);
                 } else {
-                    lite_netChange = lite$subtractInt(lite_netChange, 1n, 2964);
+                    lite_netChange = lite$subtractInt(lite_netChange, 1n, 2117);
                 }
                 lite_out = ((lite_out) + ("}"));
                 lite_lastChar = "}";
                 lite_sawCode = true;
-                if (((((lite$addInt(lite_i, 1n, 3073)) < (lite_lineLen))) && (liteFn$lib$core$text$isAsciiLetter(liteFn$lib$core$text$at(lite_line, lite$addInt(lite_i, 1n, 3126)))))) {
+                if (((((lite$addInt(lite_i, 1n, 2226)) < (lite_lineLen))) && (liteFn$lib$core$text$isAsciiLetter(liteFn$lib$core$text$at(lite_line, lite$addInt(lite_i, 1n, 2279)))))) {
                     lite_out = ((lite_out) + (" "));
                     lite_lastChar = " ";
                 }
-                lite_i = lite$addInt(lite_i, 1n, 3231);
+                lite_i = lite$addInt(lite_i, 1n, 2384);
             } else if (((lite_ch) === ("{"))) {
-                if (((((((((lite_lastChar) !== (""))) && ((!(liteFn_isSpaceChar(lite_lastChar)))))) && (((lite_lastChar) !== ("("))))) && (((lite_lastChar) !== ("["))))) {
+                if (((((((((lite_lastChar) !== (""))) && ((!(liteFn$lib$core$text$isWhitespace(lite_lastChar)))))) && (((lite_lastChar) !== ("("))))) && (((lite_lastChar) !== ("["))))) {
                     lite_out = ((lite_out) + (" "));
                 }
-                lite_netChange = lite$addInt(lite_netChange, 1n, 3452);
+                lite_netChange = lite$addInt(lite_netChange, 1n, 2611);
                 lite_out = ((lite_out) + ("{"));
                 lite_lastChar = "{";
                 lite_sawCode = true;
-                lite_i = lite$addInt(lite_i, 1n, 3560);
+                lite_i = lite$addInt(lite_i, 1n, 2719);
             } else {
-                if ((!(liteFn_isSpaceChar(lite_ch)))) {
+                if ((!(liteFn$lib$core$text$isWhitespace(lite_ch)))) {
                     lite_sawCode = true;
                 }
                 lite_out = ((lite_out) + (lite_ch));
                 lite_lastChar = lite_ch;
-                lite_i = lite$addInt(lite_i, 1n, 3710);
+                lite_i = lite$addInt(lite_i, 1n, 2875);
             }
         }
-        const lite_totalNet = lite$subtractInt(lite_netChange, lite_leadingCloses, 3758);
+        const lite_totalNet = lite$subtractInt(lite_netChange, lite_leadingCloses, 2923);
         void lite_totalNet;
-        return { leadingCloses: lite_leadingCloses, netChange: lite_totalNet, normalized: liteFn_trimEnd(lite_out), inBlockComment: lite_inBlock };
+        return { leadingCloses: lite_leadingCloses, netChange: lite_totalNet, normalized: liteFn$lib$core$text$trimEnd(lite_out), inBlockComment: lite_inBlock };
     }
     void liteFn_scanLineBraces;
     function liteFn_formatLite(lite_source: string): string {
@@ -875,45 +1251,45 @@ export function main(lite$write?: (text: string) => void): string {
                 if (((((lite_ch) === ("\n"))) || (((lite_ch) === ("\r"))))) {
                     break;
                 }
-                lite_lineEnd = lite$addInt(lite_lineEnd, 1n, 4466);
+                lite_lineEnd = lite$addInt(lite_lineEnd, 1n, 3636);
             }
             const lite_rawLine = liteFn$lib$core$text$slice(lite_source, lite_pos, lite_lineEnd);
             void lite_rawLine;
             if (((lite_lineEnd) >= (lite_size))) {
                 lite_done = true;
-            } else if (((((((liteFn$lib$core$text$at(lite_source, lite_lineEnd)) === ("\r"))) && (((lite$addInt(lite_lineEnd, 1n, 4651)) < (lite_size))))) && (((liteFn$lib$core$text$at(lite_source, lite$addInt(lite_lineEnd, 1n, 4690))) === ("\n"))))) {
-                lite_pos = lite$addInt(lite_lineEnd, 2n, 4731);
+            } else if (((((((liteFn$lib$core$text$at(lite_source, lite_lineEnd)) === ("\r"))) && (((lite$addInt(lite_lineEnd, 1n, 3821)) < (lite_size))))) && (((liteFn$lib$core$text$at(lite_source, lite$addInt(lite_lineEnd, 1n, 3860))) === ("\n"))))) {
+                lite_pos = lite$addInt(lite_lineEnd, 2n, 3901);
             } else {
-                lite_pos = lite$addInt(lite_lineEnd, 1n, 4779);
+                lite_pos = lite$addInt(lite_lineEnd, 1n, 3949);
             }
-            const lite_trimmed = liteFn_trimEnd(lite_rawLine);
+            const lite_trimmed = liteFn$lib$core$text$trimEnd(lite_rawLine);
             void lite_trimmed;
-            if (((liteFn_trimStart(lite_trimmed)) === (""))) {
+            if (((liteFn$lib$core$text$trimStart(lite_trimmed)) === (""))) {
                 if (((((lite_formattedCount) > (0n))) && (((lite_blankRun) === (0n))))) {
                     lite_formatted.push("");
-                    lite_formattedCount = lite$addInt(lite_formattedCount, 1n, 5022);
+                    lite_formattedCount = lite$addInt(lite_formattedCount, 1n, 4202);
                     lite_blankRun = 1n;
                 }
             } else if (lite_inBlockComment) {
                 lite_formatted.push(lite_trimmed);
-                lite_formattedCount = lite$addInt(lite_formattedCount, 1n, 5201);
+                lite_formattedCount = lite$addInt(lite_formattedCount, 1n, 4381);
                 const lite_scanned = liteFn_scanLineBraces(lite_trimmed, true);
                 void lite_scanned;
                 lite_inBlockComment = (lite_scanned).inBlockComment;
                 lite_blankRun = 0n;
             } else {
-                const lite_body = liteFn_trimStart(lite_trimmed);
+                const lite_body = liteFn$lib$core$text$trimStart(lite_trimmed);
                 void lite_body;
                 const lite_scanned = liteFn_scanLineBraces(lite_body, false);
                 void lite_scanned;
-                let lite_lineDepth = lite$subtractInt(lite_depth, (lite_scanned).leadingCloses, 5483);
+                let lite_lineDepth = lite$subtractInt(lite_depth, (lite_scanned).leadingCloses, 4668);
                 void lite_lineDepth;
                 if (((lite_lineDepth) < (0n))) {
                     lite_lineDepth = 0n;
                 }
-                lite_formatted.push(((liteFn_indentSpaces(lite_lineDepth)) + ((lite_scanned).normalized)));
-                lite_formattedCount = lite$addInt(lite_formattedCount, 1n, 5688);
-                lite_depth = lite$addInt(lite_depth, (lite_scanned).netChange, 5719);
+                lite_formatted.push(((liteFn$lib$core$text$repeatText("    ", lite_lineDepth)) + ((lite_scanned).normalized)));
+                lite_formattedCount = lite$addInt(lite_formattedCount, 1n, 4884);
+                lite_depth = lite$addInt(lite_depth, (lite_scanned).netChange, 4915);
                 if (((lite_depth) < (0n))) {
                     lite_depth = 0n;
                 }
@@ -921,9 +1297,9 @@ export function main(lite$write?: (text: string) => void): string {
                 lite_blankRun = 0n;
             }
         }
-        while (((((lite_formattedCount) > (0n))) && (((lite$listAt((lite_formatted), lite$subtractInt(lite_formattedCount, 1n, 5933), 5918)) === (""))))) {
-            lite$listPopBack(lite_formatted, 5954);
-            lite_formattedCount = lite$subtractInt(lite_formattedCount, 1n, 6023);
+        while (((((lite_formattedCount) > (0n))) && (((lite$listAt((lite_formatted), lite$subtractInt(lite_formattedCount, 1n, 5129), 5114)) === (""))))) {
+            lite$listPopBack(lite_formatted, 5150);
+            lite_formattedCount = lite$subtractInt(lite_formattedCount, 1n, 5219);
         }
         if (((lite_formattedCount) === (0n))) {
             return "";
@@ -931,274 +1307,9 @@ export function main(lite$write?: (text: string) => void): string {
         return ((liteFn$lib$core$text$joinTexts([...(lite_formatted)], "\n")) + ("\n"));
     }
     void liteFn_formatLite;
-    function liteFn_isWin32(): boolean {
-        return ((lite$processPlatform()) === ("win32"));
-    }
-    void liteFn_isWin32;
-    function liteFn_pathSep(): string {
-        if (liteFn_isWin32()) {
-            return "\\";
-        }
-        return "/";
-    }
-    void liteFn_pathSep;
-    function liteFn_isPathSep(lite_ch: string): boolean {
-        void lite_ch;
-        return ((((lite_ch) === ("/"))) || ((((liteFn_isWin32()) && (((lite_ch) === ("\\")))))));
-    }
-    void liteFn_isPathSep;
-    function liteFn_isAbsolutePath(lite_target: string): boolean {
-        void lite_target;
-        const lite_size = liteFn$lib$core$text$length(lite_target);
-        void lite_size;
-        if (((lite_size) === (0n))) {
-            return false;
-        }
-        if (liteFn_isPathSep(liteFn$lib$core$text$at(lite_target, 0n))) {
-            return true;
-        }
-        return ((((((liteFn_isWin32()) && (((lite_size) >= (2n))))) && (liteFn$lib$core$text$isAsciiLetter(liteFn$lib$core$text$at(lite_target, 0n))))) && (((liteFn$lib$core$text$at(lite_target, 1n)) === (":"))));
-    }
-    void liteFn_isAbsolutePath;
-    function liteFn_normalizePath(lite_raw: string): string {
-        void lite_raw;
-        const lite_size = liteFn$lib$core$text$length(lite_raw);
-        void lite_size;
-        if (((lite_size) === (0n))) {
-            return ".";
-        }
-        const lite_sep = liteFn_pathSep();
-        void lite_sep;
-        let lite_rootPrefix = "";
-        void lite_rootPrefix;
-        let lite_start = 0n;
-        void lite_start;
-        if (((((((liteFn_isWin32()) && (((lite_size) >= (2n))))) && (liteFn$lib$core$text$isAsciiLetter(liteFn$lib$core$text$at(lite_raw, 0n))))) && (((liteFn$lib$core$text$at(lite_raw, 1n)) === (":"))))) {
-            const lite_drive = liteFn$lib$core$text$slice(lite_raw, 0n, 2n);
-            void lite_drive;
-            if (((((lite_size) >= (3n))) && (liteFn_isPathSep(liteFn$lib$core$text$at(lite_raw, 2n))))) {
-                lite_rootPrefix = ((lite_drive) + (lite_sep));
-                lite_start = 3n;
-            } else {
-                lite_rootPrefix = lite_drive;
-                lite_start = 2n;
-            }
-        } else if (liteFn_isPathSep(liteFn$lib$core$text$at(lite_raw, 0n))) {
-            lite_rootPrefix = lite_sep;
-            lite_start = 1n;
-        }
-        const lite_parts: string[] = [...([])];
-        void lite_parts;
-        let lite_partsCount = 0n;
-        void lite_partsCount;
-        let lite_segStart = lite_start;
-        void lite_segStart;
-        let lite_i = lite_start;
-        void lite_i;
-        while (((lite_i) <= (lite_size))) {
-            const lite_atEnd = ((lite_i) === (lite_size));
-            void lite_atEnd;
-            if (((lite_atEnd) || (liteFn_isPathSep(liteFn$lib$core$text$at(lite_raw, lite_i))))) {
-                if (((lite_i) > (lite_segStart))) {
-                    const lite_seg = liteFn$lib$core$text$slice(lite_raw, lite_segStart, lite_i);
-                    void lite_seg;
-                    if (((lite_seg) === (".."))) {
-                        if (((((lite_partsCount) > (0n))) && ((((((lite_rootPrefix) !== (""))) || (((lite$listAt((lite_parts), lite$subtractInt(lite_partsCount, 1n, 7612), 7601)) !== ("..")))))))) {
-                            lite$listPopBack(lite_parts, 7653);
-                            lite_partsCount = lite$subtractInt(lite_partsCount, 1n, 7726);
-                        } else if (((lite_rootPrefix) === (""))) {
-                            lite_parts.push("..");
-                            lite_partsCount = lite$addInt(lite_partsCount, 1n, 7884);
-                        }
-                    } else if (((lite_seg) !== ("."))) {
-                        lite_parts.push(lite_seg);
-                        lite_partsCount = lite$addInt(lite_partsCount, 1n, 8046);
-                    }
-                }
-                lite_segStart = lite$addInt(lite_i, 1n, 8108);
-            }
-            lite_i = lite$addInt(lite_i, 1n, 8137);
-        }
-        if (((lite_partsCount) === (0n))) {
-            if (((lite_rootPrefix) !== (""))) {
-                return lite_rootPrefix;
-            }
-            return ".";
-        }
-        return ((lite_rootPrefix) + (liteFn$lib$core$text$joinTexts([...(lite_parts)], lite_sep)));
-    }
-    void liteFn_normalizePath;
-    function liteFn_resolvePath(lite_baseDir: string, lite_target: string): string {
-        void lite_baseDir;
-        void lite_target;
-        if (liteFn_isAbsolutePath(lite_target)) {
-            return liteFn_normalizePath(lite_target);
-        }
-        const lite_sep = liteFn_pathSep();
-        void lite_sep;
-        if (((lite_baseDir) === (""))) {
-            return liteFn_normalizePath(lite_target);
-        }
-        return liteFn_normalizePath(((((lite_baseDir) + (lite_sep))) + (lite_target)));
-    }
-    void liteFn_resolvePath;
-    function liteFn_parentDir(lite_target: string): string {
-        void lite_target;
-        return liteFn_resolvePath(lite_target, "..");
-    }
-    void liteFn_parentDir;
-    function liteFn_findRepoRootFrom(lite_startPath: string): string {
-        void lite_startPath;
-        if (((lite_startPath) === (""))) {
-            return "";
-        }
-        let lite_dir = liteFn_normalizePath(lite_startPath);
-        void lite_dir;
-        if (((lite$fsKind(lite_dir)) !== ("dir"))) {
-            lite_dir = liteFn_parentDir(lite_dir);
-        }
-        let lite_steps = 0n;
-        void lite_steps;
-        while (((lite_steps) < (16n))) {
-            const lite_versionsPath = liteFn_resolvePath(lite_dir, "config/versions.json");
-            void lite_versionsPath;
-            if (((lite$fsKind(lite_versionsPath)) === ("file"))) {
-                return lite_dir;
-            }
-            const lite_next = liteFn_parentDir(lite_dir);
-            void lite_next;
-            if (((lite_next) === (lite_dir))) {
-                break;
-            }
-            lite_dir = lite_next;
-            lite_steps = lite$addInt(lite_steps, 1n, 9083);
-        }
-        return "";
-    }
-    void liteFn_findRepoRootFrom;
-    function liteFn_readFormatterVersion(): string {
-        let lite_root = liteFn_findRepoRootFrom(lite$processEntryPath());
-        void lite_root;
-        if (((lite_root) === (""))) {
-            lite_root = liteFn_findRepoRootFrom(lite$processCwd());
-        }
-        if (((lite_root) === (""))) {
-            return "unassigned";
-        }
-        const lite_versionsPath = liteFn_resolvePath(lite_root, "config/versions.json");
-        void lite_versionsPath;
-        const lite_readRes = lite$fsReadText(lite_versionsPath);
-        void lite_readRes;
-        if ((!((lite_readRes).ok))) {
-            return "unassigned";
-        }
-        const lite_content = (lite_readRes).text;
-        void lite_content;
-        const lite_keyPos = liteFn$lib$core$text$indexOfText(lite_content, "\"formatter\"", 0n);
-        void lite_keyPos;
-        if (((lite_keyPos) < (0n))) {
-            return "unassigned";
-        }
-        let lite_pos = liteFn$lib$core$text$skipSpaces(lite_content, lite$addInt(lite_keyPos, 11n, 9630));
-        void lite_pos;
-        const lite_size = liteFn$lib$core$text$length(lite_content);
-        void lite_size;
-        if (((((lite_pos) >= (lite_size))) || (((liteFn$lib$core$text$at(lite_content, lite_pos)) !== (":"))))) {
-            return "unassigned";
-        }
-        lite_pos = liteFn$lib$core$text$skipSpaces(lite_content, lite$addInt(lite_pos, 1n, 9787));
-        if (liteFn$lib$core$text$startsWithAt(lite_content, lite_pos, "null")) {
-            return "unassigned";
-        }
-        if (((((lite_pos) >= (lite_size))) || (((liteFn$lib$core$text$at(lite_content, lite_pos)) !== ("\""))))) {
-            return "unassigned";
-        }
-        lite_pos = lite$addInt(lite_pos, 1n, 9957);
-        const lite_start = lite_pos;
-        void lite_start;
-        while (((lite_pos) < (lite_size))) {
-            const lite_ch = liteFn$lib$core$text$at(lite_content, lite_pos);
-            void lite_ch;
-            if (((lite_ch) === ("\\"))) {
-                lite_pos = lite$addInt(lite_pos, 2n, 10085);
-            } else if (((lite_ch) === ("\""))) {
-                return liteFn$lib$core$text$slice(lite_content, lite_start, lite_pos);
-            } else {
-                lite_pos = lite$addInt(lite_pos, 1n, 10212);
-            }
-        }
-        return "unassigned";
-    }
-    void liteFn_readFormatterVersion;
-    function liteFn_textListCount(lite_items: string[]): bigint {
-        void lite_items;
-        let lite_count = 0n;
-        void lite_count;
-        for (const lite_item of [...(lite_items)]) {
-            void lite_item;
-            lite_count = lite$addInt(lite_count, 1n, 10368);
-        }
-        return lite_count;
-    }
-    void liteFn_textListCount;
-    function liteFn_collectLtsFiles(lite_targets: string[]): string[] {
-        void lite_targets;
-        const lite_files: string[] = [...([])];
-        void lite_files;
-        const lite_stack: string[] = [...([])];
-        void lite_stack;
-        let lite_stackCount = 0n;
-        void lite_stackCount;
-        let lite_targetIdx = lite$subtractInt(liteFn_textListCount([...(lite_targets)]), 1n, 10590);
-        void lite_targetIdx;
-        while (((lite_targetIdx) >= (0n))) {
-            lite_stack.push(liteFn_resolvePath(lite$processCwd(), lite$listAt((lite_targets), lite_targetIdx, 10686)));
-            lite_stackCount = lite$addInt(lite_stackCount, 1n, 10732);
-            lite_targetIdx = lite$subtractInt(lite_targetIdx, 1n, 10767);
-        }
-        while (((lite_stackCount) > (0n))) {
-            const lite_resolved = lite$listPopBack(lite_stack, 10824);
-            void lite_resolved;
-            lite_stackCount = lite$subtractInt(lite_stackCount, 1n, 10881);
-            const lite_kind = lite$fsKind(lite_resolved);
-            void lite_kind;
-            if (((lite_kind) === ("missing"))) {
-                lite$reportError((((("ENOENT: no such file or directory, stat '") + (lite_resolved))) + ("'")));
-                return lite$exit(1n);
-            }
-            if (((lite_kind) === ("dir"))) {
-                const lite_entries: string[] = [...(lite$fsListDir(lite_resolved))];
-                void lite_entries;
-                let lite_entryIdx = lite$subtractInt(liteFn_textListCount([...(lite_entries)]), 1n, 11197);
-                void lite_entryIdx;
-                while (((lite_entryIdx) >= (0n))) {
-                    const lite_entry = lite$listAt((lite_entries), lite_entryIdx, 11268);
-                    void lite_entry;
-                    if (((((((lite_entry) !== ("node_modules"))) && (((lite_entry) !== ("dist"))))) && ((!(liteFn$lib$core$text$startsWithAt(lite_entry, 0n, ".")))))) {
-                        lite_stack.push(liteFn_resolvePath(lite_resolved, lite_entry));
-                        lite_stackCount = lite$addInt(lite_stackCount, 1n, 11507);
-                    }
-                    lite_entryIdx = lite$subtractInt(lite_entryIdx, 1n, 11566);
-                }
-            } else if (liteFn_endsWith(lite_resolved, ".lts")) {
-                lite_files.push(lite_resolved);
-            }
-        }
-        return [...(lite_files)];
-    }
-    void liteFn_collectLtsFiles;
     const lite_args: string[] = [...(lite$inputArgs())];
     void lite_args;
-    const lite_argCount = liteFn_textListCount([...(lite_args)]);
-    void lite_argCount;
-    if (((((lite_argCount) > (0n))) && (((lite$listAt((lite_args), 0n, 11791)) === ("--version"))))) {
-        if (((lite_argCount) !== (1n))) {
-            lite$reportError("Usage: lite fmt --version");
-            return lite$exit(2n);
-        }
-        lite$emit((("lite fmt ") + (liteFn_readFormatterVersion())) + "\n");
-        return lite$exit(0n);
-    }
+    liteFn$lib$util$project$handleVersionFlag([...(lite_args)], "formatter", "fmt");
     let lite_checkOnly = false;
     void lite_checkOnly;
     const lite_targets: string[] = [...([])];
@@ -1214,15 +1325,15 @@ export function main(lite$write?: (text: string) => void): string {
             lite_checkOnly = true;
         } else if (((lite_arg) !== ("--write"))) {
             lite_targets.push(lite_arg);
-            lite_targetCount = lite$addInt(lite_targetCount, 1n, 12507);
+            lite_targetCount = lite$addInt(lite_targetCount, 1n, 5915);
         }
     }
     if (((lite_targetCount) === (0n))) {
         lite$reportError("Usage: ./bin/lite fmt [--check] [FILE_OR_DIR... | -]");
         return lite$exit(2n);
     }
-    if (((((lite_targetCount) === (1n))) && (((lite$listAt((lite_targets), 0n, 12668)) === ("-"))))) {
-        const lite_input = lite$inputAll("", "tools/src/fmt.lts:404:14: InputFault: ");
+    if (((((lite_targetCount) === (1n))) && (((lite$listAt((lite_targets), 0n, 6076)) === ("-"))))) {
+        const lite_input = lite$inputAll("", "tools/src/fmt.lts:183:14: InputFault: ");
         void lite_input;
         const lite_output = liteFn_formatLite(lite_input);
         void lite_output;
@@ -1236,7 +1347,7 @@ export function main(lite$write?: (text: string) => void): string {
         lite$emit(lite_output);
         return lite$exit(0n);
     }
-    const lite_files: string[] = [...(liteFn_collectLtsFiles([...(lite_targets)]))];
+    const lite_files: string[] = [...(liteFn$lib$util$fs$collectFiles(lite$processCwd(), [...(lite_targets)], ".lts", [...(liteFn$lib$util$fs$defaultIgnoredDirs())], true))];
     void lite_files;
     let lite_dirty = 0n;
     void lite_dirty;
@@ -1251,7 +1362,7 @@ export function main(lite$write?: (text: string) => void): string {
         const lite_after = liteFn_formatLite((lite_readRes).text);
         void lite_after;
         if ((((lite_readRes).text) !== (lite_after))) {
-            lite_dirty = lite$addInt(lite_dirty, 1n, 13175);
+            lite_dirty = lite$addInt(lite_dirty, 1n, 6642);
             if (lite_checkOnly) {
                 lite$emit(lite_file + "\n");
             } else {
