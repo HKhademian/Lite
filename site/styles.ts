@@ -581,10 +581,41 @@ details.gallery-code pre.code-block {
   border-top: 1px solid var(--border);
 }
 
-/* Pillars */
+/* Pillars & Gallery */
+.gallery-jumps {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+}
+.gallery-jump {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  padding: 0.3rem 0.72rem;
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  background: var(--surface-elevated);
+  color: var(--ink);
+  font-size: 0.84rem;
+  font-weight: 500;
+}
+.gallery-jump:hover {
+  text-decoration: none;
+  border-color: var(--accent);
+  color: var(--accent);
+}
+.gallery-jump span {
+  font-family: var(--font-mono);
+  font-size: 0.75rem;
+  color: var(--ink-muted);
+}
 .section {
   padding: 2.25rem 0;
   border-top: 1px solid var(--border);
+  scroll-margin-top: 76px;
+}
+.code-card {
+  scroll-margin-top: 76px;
 }
 .section-head {
   display: flex;

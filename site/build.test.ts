@@ -59,6 +59,7 @@ test('buildSite generates static pages and metadata in dist/site', () => {
   }
   const gallery = readFileSync(join(out, 'gallery/index.html'), 'utf8');
   assert(gallery.includes('<title>Gallery — Lite</title>'));
+  assert(gallery.includes('class="gallery-jumps"'));
   assert(gallery.includes('Play &rarr;'));
   assert(gallery.includes('<details class="gallery-code">'));
   assert(!gallery.includes('<details class="gallery-code" open>'));
@@ -84,6 +85,7 @@ test('buildSite generates static pages and metadata in dist/site', () => {
   assert(styleCss.includes('.shell-line::before'));
   assert(styleCss.includes('.quickstart-copy'));
   assert(!styleCss.includes('var(--bg-elev)'));
+  assert(styleCss.includes('scroll-margin-top: 76px;'));
   const playground = readFileSync(join(out, 'playground/index.html'), 'utf8');
   assert(playground.includes('playground-page'));
   assert(playground.includes('highlightLite(editorEl.value)'));

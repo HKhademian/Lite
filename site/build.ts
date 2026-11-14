@@ -465,6 +465,11 @@ function renderGalleryCard(sample: RenderedSample, basePath: string): string {
 }
 
 function renderGalleryPage(rendered: ReadonlyMap<string, RenderedSample>, repoUrl: string, rev: SourceRevision, lightSwitchShine: boolean): string {
+  const jumpLinks = sampleGroups.map(group => {
+    const count = showcaseSamples.filter(s => s.group === group.id && rendered.has(s.id)).length;
+    return `<a class="gallery-jump" href="#group-${escapeHtml(group.id)}">${escapeHtml(group.title)} <span>${String(count)}</span></a>`;
+  }).join('\n    ');
+
   const sections = sampleGroups.map(group => {
     const cards = showcaseSamples
       .filter(s => s.group === group.id)
@@ -483,11 +488,14 @@ function renderGalleryPage(rendered: ReadonlyMap<string, RenderedSample>, repoUr
 </section>`;
   }).join('\n');
 
-  const body = `<section style="padding: 2rem 0 1rem;">
+  const body = `<section style="padding: 2rem 0 1.25rem;">
   <h1 style="margin: 0 0 0.5rem;">Gallery</h1>
-  <p class="hero-lead" style="margin: 0;">
+  <p class="hero-lead" style="margin: 0 0 1rem;">
     All ${String(rendered.size)} examples below are compiled and executed by the ${proseLite} compiler during the site build.
   </p>
+  <nav class="gallery-jumps" aria-label="Gallery categories">
+    ${jumpLinks}
+  </nav>
 </section>
 ${sections}`;
 
