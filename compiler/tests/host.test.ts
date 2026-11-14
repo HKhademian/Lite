@@ -770,11 +770,11 @@ test('default verification and expectation updates use TS artifacts without T00'
     const updated = invoke('--filter', 'features/int-arithmetic.json', '--update');
     assert.equal(updated.status, 0, updated.stdout + updated.stderr); assert.match(updated.stdout, /updated/);
     assert.deepEqual(JSON.parse(readFileSync(manifest, 'utf8')), JSON.parse(expected.toString()));
-    const unsupported = join(directory, 'language/verifications/features/loop-value.json');
-    const before = readFileSync(unsupported);
-    const failed = invoke('--filter', 'loop.value', '--update');
-    assert.equal(failed.status, 1); assert.match(failed.stdout, /unsupported feature "loop"/);
-    assert.deepEqual(readFileSync(unsupported), before, 'unsupported source must not rewrite expectations');
+    writeFileSync(join(directory, 'language/verifications/features/int-arithmetic.lts'), 'x := record { };\n', 'utf8');
+    const before = readFileSync(manifest);
+    const failed = invoke('--filter', 'features/int-arithmetic.json', '--update');
+    assert.equal(failed.status, 1); assert.match(failed.stdout, /unsupported feature "record"/);
+    assert.deepEqual(readFileSync(manifest), before, 'unsupported source must not rewrite expectations');
     const legacy = invoke('--reference', '--filter', 'int.arithmetic');
     assert.equal(legacy.status, 2); assert.match(legacy.stderr, /unknown argument --reference/);
   } finally { rmSync(directory, { recursive: true, force: true }); }
@@ -3476,8 +3476,8 @@ test('tagged blocks, targeted non-local transfers, and misplaced tag diagnostics
     ['match { _ @bad {} }', /block tag cannot appear after _ in match arm/],
     ['loop @bad {}', /unexpected block tag @bad in loop header/],
     ['loop false @bad {}', /block tag cannot appear before \{ in loop/],
-    ['@bad f := fn(): Int { 1 };', /expected \{, if, match or \. after block tag @bad/],
-    ['f := @bad fn(): Int { 1 };', /expected \{, if, match or \. after block tag @bad/],
+    ['@bad f := fn(): Int { 1 };', /expected \{, if, match, loop or \. after block tag @bad/],
+    ['f := @bad fn(): Int { 1 };', /expected \{, if, match, loop or \. after block tag @bad/],
     ['f := fn(): Int @bad { 1 };', /unexpected block tag in function header/],
   ] as const) {
     const rejected = compileTs({ text: bad });
@@ -3603,7 +3603,7 @@ test('tagged conditionals and conditional then blocks', () => {
     ['x := if true { 1 } then { 2 };', /value if requires a final else/],
     ['if true { 1 } then { 2 }', /value if requires a final else/],
     ['x := @t if true { 1 } else { 2 } then @bad { 3 };', /block tag cannot appear after then/],
-    ['@bad; x := 1;', /expected \{, if, match or \. after block tag @bad/],
+    ['@bad; x := 1;', /expected \{, if, match, loop or \. after block tag @bad/],
   ] as const) {
     const rejected = compileTs({ text: bad });
     assert.equal(rejected.status, 2, bad);
@@ -3614,6 +3614,132 @@ test('tagged conditionals and conditional then blocks', () => {
     ['x := @t if true { 1 } else { 2 };', /C backend does not support tagged conditionals yet/],
     ['x := if true { 1 } else { 2 } then { 3 };', /C backend does not support conditional then blocks yet/],
     ['x := @m match { _ { 1 } };', /C backend does not support value match expressions yet/],
+  ] as const) {
+    const rejectedC = compileTarget('c', { text: badC });
+    assert.equal(rejectedC.status, 2, badC);
+    assert.match(rejectedC.stderr.toString(), expectedMessage, badC);
+  }
+});
+
+test('loop values, metadata, then clauses, barriers, and payload exits', () => {
+  const source = [
+    'io := import "core/io";',
+    'integer := import "core/int";',
+    'emptySrc: List<Int> = [];',
+    'emptyInts := loop emptySrc as n { n };',
+    'emptyStrs: String = loop false { break "never"; };',
+    'emptyTuple: (a: Int, b: Bool) = loop emptySrc { break (a = 7, b = true); };',
+    'io.outputLine(emptyInts, emptyStrs, emptyTuple.0, emptyTuple.1);',
+    'pres := @pres loop [1, 2, 3, 4] as n {',
+    '  if n == 2 { continue (@pres.value + 10); }',
+    '  if n == 3 { break; }',
+    '  .value + n',
+    '};',
+    'io.outputLine(pres);',
+    'anonSeq := loop [4, 5] { .value + .item + .index + .count };',
+    'io.outputLine(anonSeq);',
+    'condCnt := loop .count < 3 { io.outputLine("c", .count); .value + .count } then { io.outputLine("done", .count); .value };',
+    'io.outputLine(condCnt);',
+    'thenInf := loop [10, 20] as n { .value + n } then { .value * 2 };',
+    'io.outputLine(thenInf);',
+    'unitThen := loop [1] { continue; } then { .value == Unit };',
+    'io.outputLine(unitThen);',
+    'emptyThenMeta := loop emptySrc as n { n } then { io.outputLine("empty-meta", .item, .index, .count, .value); 7 };',
+    'io.outputLine(emptyThenMeta);',
+    'retLoop := fn(): String {',
+    '  @outer loop [1, 2, 3] as n {',
+    '    @inner if n == 2 {',
+    '      return @outer "hit-" + integer.intText(n);',
+    '    } else {',
+    '    } then {',
+    '      io.outputLine("inner-then", n);',
+    '    };',
+    '    io.outputLine("outer-meta", @outer.item, @outer.index, @outer.count, @outer.value);',
+    '    "miss"',
+    '  } then {',
+    '    "then(" + .value + "," + integer.intText(.item) + ")"',
+    '  }',
+    '};',
+    'io.outputLine(retLoop());',
+    'nestedCont := @outer loop [1, 2, 3] as a {',
+    '  _inner := loop [10, 20] as b {',
+    '    if b == 20 { continue @outer (@outer.value + a); }',
+    '    b',
+    '  };',
+    '  .value + 100',
+    '};',
+    'io.outputLine(nestedCont);',
+    'tailVal := fn(xs: List<Int>): Int {',
+    '  loop xs as n {',
+    '    .value + n',
+    '  }',
+    '};',
+    'tailDiv := fn(): Int {',
+    '  loop {',
+    '    return 99;',
+    '  }',
+    '};',
+    'io.outputLine(tailVal([3, 4, 5]), tailDiv());',
+    '@u loop [1, 2] { if @u.count == 1 { return @u; } io.outputLine("skip"); };',
+    'io.outputLine("unit-ok");',
+  ].join('\n');
+  const compiled = compileTs({ text: source });
+  assert.equal(compiled.status, 0, compiled.stderr.toString());
+  const actual = runTsArtifact(compiled.stdout.toString());
+  assert.equal(actual.phase, 'run', actual.stdout.toString() + actual.stderr.toString());
+  assert.equal(actual.status, 0, actual.stderr.toString());
+  assert.equal(
+    actual.stdout.toString(),
+    [
+      '0  0 false',
+      '11',
+      '13',
+      'c 1',
+      'c 2',
+      'c 3',
+      'done 3',
+      '6',
+      '60',
+      'true',
+      'empty-meta 0 0 0 0',
+      '7',
+      'inner-then 1',
+      'outer-meta 1 0 1 ',
+      'then(hit-2,2)',
+      '6',
+      '12 99',
+      'unit-ok',
+      '',
+    ].join('\n'),
+  );
+
+  for (const [bad, expectedMessage] of [
+    ['x := loop [1] { if .item == 1 { 1 } else { 2 } };', /leading-dot \.item is not available inside a conditional; use an explicit loop @tag/],
+    ['x := loop [1] { if true { .count } else { 0 } };', /leading-dot \.count is not available inside a conditional; use an explicit loop @tag/],
+    ['x := loop [1] { match { (.item == 1) { 1 } _ { 2 } } };', /leading-dot \.item is not available inside a conditional; use an explicit loop @tag/],
+    ['loop [1] { if .count == 1 { } }', /leading-dot \.count is not available inside a conditional; use an explicit loop @tag/],
+    ['loop [1] { match { (.count == 1) { } _ { } } }', /leading-dot \.count is not available inside a conditional; use an explicit loop @tag/],
+    ['x := loop .item == 1 { 1 };', /\.item is not available in loop header/],
+    ['x := loop .index == 1 { 1 };', /\.index is not available in loop header/],
+    ['x := loop .count < 1 { .index };', /loop does not expose \.index without a sequence source/],
+    ['x := loop [1] { .value };', /cannot infer loop \.value type; add a type annotation/],
+    ['x := loop [1] { if true { break "a"; } 1 };', /loop cannot produce both String and Int/],
+    ['x := @t loop [1] { break @t.value; 1 };', /break @t followed by \. is ambiguous; wrap the payload in parentheses/],
+    ['x := loop @t true { 1 };', /unexpected block tag @t in loop header/],
+    ['x := loop (if true { break; true } else { false }) { 1 };', /cannot break from loop header/],
+    ['x := @t loop [1] { break @t; } then { break @t; 1 };', /cannot break @t from inside its own then block/],
+    ['x := @t loop [1] { 1 } then { return @t 2; };', /cannot return to @t from inside its own then block/],
+  ] as const) {
+    const rejected = compileTs({ text: bad });
+    assert.equal(rejected.status, 2, bad);
+    assert.match(rejected.stderr.toString(), expectedMessage, bad);
+  }
+
+  for (const [badC, expectedMessage] of [
+    ['x := @t loop [1] { 1 };', /C backend does not support tagged loops yet/],
+    ['loop [1] { } then { }', /C backend does not support loop then blocks yet/],
+    ['loop [1] { .item; }', /C backend does not support loop metadata yet/],
+    ['loop true { break 1; }', /C backend does not support break payloads yet/],
   ] as const) {
     const rejectedC = compileTarget('c', { text: badC });
     assert.equal(rejectedC.status, 2, badC);

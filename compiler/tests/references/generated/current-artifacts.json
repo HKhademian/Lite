@@ -1,8 +1,8 @@
 {
   "note": "Reviewed 2026-11-14 after VCS-stable canonical module ordering, scope-local runtime naming, and lite$out hygiene. TS/C artifact hashes refreshed after strict checks and exact runtime parity for all 69 programs; all 25 rejection cases unchanged.",
   "recorded": "2026-11-14",
-  "sourceSha256": "d4d4cbccfab6b354cd5c322af7a52e9e8085cb222688165ee8fcea41d783b8ba",
-  "compilerSha256": "587646f7295a2ffb920207abd3bf79b04e14b36e94f43f0a38e58a2937fdef52",
+  "sourceSha256": "e7cd10a00fae3a61c632c7c861e31425e5786478534114380bedfdee7af6d3a2",
+  "compilerSha256": "9aa58ef7f0e0bad83d183b3cf6ca310334bb448915e6fa6c0d9e8f3b099ca8e9",
   "programCases": 69,
   "rejectedCases": 25,
   "artifacts": [

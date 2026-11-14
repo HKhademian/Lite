@@ -1,0 +1,21 @@
+{
+  "name": "unsupported-record",
+  "source": {
+    "file": "002-006-unsupported-record.lts",
+    "hash": "sha256:64e2b4dc4758283571c5bc9a4d1e4f34b08377488b179b63e1a09a80df3c4ef7"
+  },
+  "cases": [
+    {
+      "name": "default",
+      "stdout": {
+        "text": "",
+        "hash": "sha256:e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+      },
+      "stderr": {
+        "text": "1:6: unsupported feature \"record\": see docs/types-and-inference.md; the restricted compiler accepts Int/Float/String/Bool expressions, locals, output/outputLine, if/else and loop only\n",
+        "hash": "sha256:640d83d1577e58ac2465b68e0448f85b64bf1c2ead9e3b650649cf0f42c52eca"
+      },
+      "exitCode": 2
+    }
+  ]
+}

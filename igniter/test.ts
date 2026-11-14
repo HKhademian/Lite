@@ -565,7 +565,7 @@ test('lite verify uses generated TS, reports migration gaps and rejects the reti
     assert.match(verified.stdout, /\[ts\]/); assert.doesNotMatch(verified.stdout, /T00 reference|\[c\]/);
     assert.match(verified.stdout, /PASS match\.subjectless\/first-true-and-fallback \[ts\]/);
     assert.match(verified.stdout, /PASS num\.widths\/widths \[ts\]/);
-    assert.match(verified.stdout, /verification failed: 3 failing scenario\(s\), 86 executed, 0 cached/);
+    assert.match(verified.stdout, /verification failed: 1 failing scenario\(s\), 86 executed, 0 cached/);
     const covered = spawnSync(join(root, 'bin/lite'), ['verify', '--coverage'], { env, encoding: 'utf8', timeout: 30000 });
     assert.equal(covered.error, undefined); assert.equal(covered.status, 0, covered.stderr);
     assert.match(covered.stdout, /features: 41 registered, 41 cases/);
@@ -1176,12 +1176,16 @@ test('restricted compiler diagnoses break and continue outside loops', () => {
     ['var i := 0;\nloop i < 1 { i = i + 1; }\nbreak;\n', '3:1: break outside loop\n'],
     ['var i := 0;\nloop i < 1 { i = i + 1; }\ncontinue;\n', '3:1: continue outside loop\n'],
     ["io := import \"core/io\"; f := fn(): Int { loop true { break; } break; 1 }\nio.outputLine(f());\n", '1:63: break outside loop\n'],
-    ['loop true { break 1; }\n', '1:19: expected ; after break\n'],
     ['loop true { continue @outer; }\n', '1:22: unknown block tag @outer\n'],
   ] as const) {
     assert.deepEqual(runCompiler(tsManifestPath, bad), { code: 2, output: '', errors }, bad);
     assert.deepEqual(runCompiler(cManifestPath, bad), { code: 2, output: '', errors }, bad);
   }
+  assert.deepEqual(runCompiler(cManifestPath, 'loop true { break 1; }\n'), {
+    code: 2,
+    output: '',
+    errors: '1:13: C backend does not support break payloads yet\n',
+  });
 });
 
 const leadingSeparatorTsSource = [
@@ -2228,14 +2232,18 @@ test('compiler applications reject fixture sources with exact diagnostics, posit
   // Focused location checks: the reserved word starts at column 6, and a missing
   // expression on line 2 reports the offending semicolon rather than the file start.
   for (const manifest of [tsManifestPath, cManifestPath]) {
-    assert.deepEqual(runCompiler(manifest, 'x := loop { 1 };'), {
-      code: 2, output: '', errors: '1:6: unsupported feature "loop": see docs/loops.md; ' +
+    assert.deepEqual(runCompiler(manifest, 'x := record { };'), {
+      code: 2, output: '', errors: '1:6: unsupported feature "record": see docs/types-and-inference.md; ' +
         'the restricted compiler accepts Int/Float/String/Bool expressions, locals, output/outputLine, if/else and loop only\n',
     });
     assert.deepEqual(runCompiler(manifest, 'x := 1;\ny := ;\n'), {
       code: 2, output: '', errors: '2:6: expected an Int, Float, String or Bool expression\n',
     });
   }
+  assert.deepEqual(runCompiler(cManifestPath, 'x := loop { 1 };'), {
+    code: 2, output: '', errors: '1:6: unsupported feature "loop": see docs/loops.md; ' +
+      'the restricted compiler accepts Int/Float/String/Bool expressions, locals, output/outputLine, if/else and loop only\n',
+  });
 });
 test('restricted TS compiler emits a deterministic report sequence', () => {
   assert.equal(runCompiler(tsManifestPath, "io := import \"core/io\"; io.outputLine(42);\nio.outputLine(9);").output,
