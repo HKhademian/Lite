@@ -1112,10 +1112,33 @@ coreHostFunction := fn(moduleIdentity: String, name: String, params: String, res
         if name == "sha256Text" and params == "text=String" and result == "String" { "lite$cryptoSha256Text" }
         else if name == "sha256Bytes" and params == "bytes=List<Int>" and result == "String" { "lite$cryptoSha256Bytes" }
         else if name == "sha256File" and params == "path=String" and result == "(ok:Bool,hex:String,error:String)" { "lite$cryptoSha256File" }
+        else if name == "sha512Text" and params == "text=String" and result == "String" { "lite$cryptoSha512Text" }
+        else if name == "sha512Bytes" and params == "bytes=List<Int>" and result == "String" { "lite$cryptoSha512Bytes" }
+        else if name == "hmacSha256Bytes" and params == "key=List<Int>|data=List<Int>" and result == "String" { "lite$cryptoHmacSha256Bytes" }
+        else if name == "base64Encode" and params == "bytes=List<Int>" and result == "String" { "lite$cryptoBase64Encode" }
+        else if name == "base64Decode" and params == "encoded=String" and result == "List<Int>" { "lite$cryptoBase64Decode" }
+        else if name == "hexEncode" and params == "bytes=List<Int>" and result == "String" { "lite$cryptoHexEncode" }
+        else if name == "hexDecode" and params == "encoded=String" and result == "List<Int>" { "lite$cryptoHexDecode" }
+        else if name == "randomBytes" and params == "count=Int" and result == "List<Int>" { "lite$cryptoRandomBytes" }
         else { "" }
     } else if moduleIdentity == "lite.core.time.v1" {
         if name == "monotonicNs" and params == "" and result == "Int" { "lite$timeMonotonicNs" }
         else if name == "utcIsoNow" and params == "" and result == "String" { "lite$timeUtcIsoNow" }
+        else if name == "epochMs" and params == "" and result == "Int" { "lite$timeEpochMs" }
+        else if name == "epochNs" and params == "" and result == "Int" { "lite$timeEpochNs" }
+        else if name == "sleepMs" and params == "ms=Int" and result == "Unit" { "lite$timeSleepMs" }
+        else if name == "localDate" and params == "" and result == "String" { "lite$timeLocalDate" }
+        else { "" }
+    } else if moduleIdentity == "lite.core.unicode.v1" {
+        if name == "utf8Encode" and params == "text=String" and result == "List<Int>" { "lite$unicodeUtf8Encode" }
+        else if name == "utf8DecodeStrict" and params == "bytes=List<Int>" and result == "(ok:Bool,text:String,error:String)" { "lite$unicodeUtf8DecodeStrict" }
+        else if name == "utf8DecodeLossy" and params == "bytes=List<Int>" and result == "String" { "lite$unicodeUtf8DecodeLossy" }
+        else if name == "utf16Encode" and params == "text=String" and result == "List<Int>" { "lite$unicodeUtf16Encode" }
+        else if name == "utf16DecodeStrict" and params == "units=List<Int>" and result == "(ok:Bool,text:String,error:String)" { "lite$unicodeUtf16DecodeStrict" }
+        else if name == "utf16Length" and params == "text=String" and result == "Int" { "lite$unicodeUtf16Length" }
+        else if name == "toCodePoints" and params == "text=String" and result == "List<Int>" { "lite$unicodeToCodePoints" }
+        else if name == "fromCodePoints" and params == "points=List<Int>" and result == "(ok:Bool,text:String,error:String)" { "lite$unicodeFromCodePoints" }
+        else if name == "codePointAt" and params == "text=String|position=Int" and result == "Int" { "lite$unicodeCodePointAt" }
         else { "" }
     } else if moduleIdentity == "lite.compiler.source-reader.v1" and name == "read" and
         params == "importer=String|spec=String" and result == "(path:String,display:String,identity:String,text:String)" {
@@ -8217,6 +8240,17 @@ pub parseProgramWithModule := fn(target: String, source: String, prefix: String,
                     position = skipTrivia(source, position + 1, prefix);
                     listLib.pushBack(mut functions, (name = name, runtime = hostRuntime, result = header.result,
                         first = parameterTotal, count = header.count));
+                    var hostEntryStart := 0;
+                    var hostEntryIndex := 0;
+                    loop hostEntryIndex < header.count {
+                        separator := textLib.indexOfText(header.params, "|", hostEntryStart);
+                        var entryEnd := textLib.length(header.params);
+                        if separator >= 0 { entryEnd = separator; }
+                        listLib.pushBack(mut functionParams, textLib.slice(header.params, hostEntryStart, entryEnd));
+                        parameterTotal = parameterTotal + 1;
+                        hostEntryStart = entryEnd + 1;
+                        hostEntryIndex = hostEntryIndex + 1;
+                    }
                     if currentLive {
                         listLib.pushBack(mut items, (kind = "PublicFunction", name = name, runtime = hostRuntime, code = header.result,
                             intValue = header.count, textValue = header.params));

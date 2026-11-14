@@ -99,7 +99,8 @@ usesHostErrorResult := fn(calls: String): Bool {
     usesBuiltin(calls, "fsReadText") or usesBuiltin(calls, "fsWriteText") or usesBuiltin(calls, "fsWriteBytes") or
     usesBuiltin(calls, "fsMakeDir") or usesBuiltin(calls, "fsRemove") or usesBuiltin(calls, "fsCopy") or
     usesBuiltin(calls, "fsSymlink") or usesBuiltin(calls, "fsRealPath") or usesBuiltin(calls, "fsMakeTempDir") or
-    usesBuiltin(calls, "cryptoSha256File") or usesBuiltin(calls, "processRunBytes")
+    usesBuiltin(calls, "cryptoSha256File") or usesBuiltin(calls, "processRunBytes") or
+    usesBuiltin(calls, "unicodeUtf8DecodeStrict")
 }
 
 /** True when any emitted item calls a host process builtin. */
@@ -110,14 +111,38 @@ usesProcess := fn(calls: String): Bool {
     usesBuiltin(calls, "processEnvGet") or usesBuiltin(calls, "processRun") or usesBuiltin(calls, "processRunBytes")
 }
 
+/** True when any emitted item uses Node `node:crypto` hash, HMAC, or CSPRNG builtins. */
+usesCryptoNode := fn(calls: String): Bool {
+    usesBuiltin(calls, "cryptoSha256Text") or usesBuiltin(calls, "cryptoSha256Bytes") or usesBuiltin(calls, "cryptoSha256File") or
+    usesBuiltin(calls, "cryptoSha512Text") or usesBuiltin(calls, "cryptoSha512Bytes") or
+    usesBuiltin(calls, "cryptoHmacSha256Bytes") or usesBuiltin(calls, "cryptoRandomBytes")
+}
+
+/** True when any emitted item uses Node `node:buffer` codecs in `core/crypto`. */
+usesCryptoCodec := fn(calls: String): Bool {
+    usesBuiltin(calls, "cryptoBase64Encode") or usesBuiltin(calls, "cryptoBase64Decode") or
+    usesBuiltin(calls, "cryptoHexEncode") or usesBuiltin(calls, "cryptoHexDecode")
+}
+
 /** True when any emitted item calls a host crypto builtin. */
 usesCrypto := fn(calls: String): Bool {
-    usesBuiltin(calls, "cryptoSha256Text") or usesBuiltin(calls, "cryptoSha256Bytes") or usesBuiltin(calls, "cryptoSha256File")
+    usesCryptoNode(calls) or usesCryptoCodec(calls)
 }
 
 /** True when any emitted item calls a host time builtin. */
 usesTime := fn(calls: String): Bool {
-    usesBuiltin(calls, "timeMonotonicNs") or usesBuiltin(calls, "timeUtcIsoNow")
+    usesBuiltin(calls, "timeMonotonicNs") or usesBuiltin(calls, "timeUtcIsoNow") or
+    usesBuiltin(calls, "timeEpochMs") or usesBuiltin(calls, "timeEpochNs") or
+    usesBuiltin(calls, "timeSleepMs") or usesBuiltin(calls, "timeLocalDate")
+}
+
+/** True when any emitted item calls a Unicode host codec builtin. */
+usesUnicode := fn(calls: String): Bool {
+    usesBuiltin(calls, "unicodeUtf8Encode") or usesBuiltin(calls, "unicodeUtf8DecodeStrict") or
+    usesBuiltin(calls, "unicodeUtf8DecodeLossy") or usesBuiltin(calls, "unicodeUtf16Encode") or
+    usesBuiltin(calls, "unicodeUtf16DecodeStrict") or usesBuiltin(calls, "unicodeUtf16Length") or
+    usesBuiltin(calls, "unicodeToCodePoints") or usesBuiltin(calls, "unicodeFromCodePoints") or
+    usesBuiltin(calls, "unicodeCodePointAt")
 }
 
 /** True when any emitted item calls any OS/host tool builtin beyond basic I/O and text. */
@@ -349,10 +374,16 @@ emitProcessDecl := fn(calls: String): Unit {
         usesBuiltin(calls, "inputInt") or usesBuiltin(calls, "inputFloat") or usesBuiltin(calls, "reportError") or
         usesBuiltin(calls, "exit") or usesIntArithmetic(calls) or usesIntDivision(calls) or usesBounds(calls) or usesFloatArithmetic(calls);
     needOsHost := usesHostOs(calls);
-    needTextEncoder := usesBuiltin(calls, "textUtf8Bytes");
+    needTextEncoder := usesBuiltin(calls, "textUtf8Bytes") or usesBuiltin(calls, "unicodeUtf8Encode");
+    needUnicodeDecoder := usesBuiltin(calls, "unicodeUtf8DecodeStrict") or usesBuiltin(calls, "unicodeUtf8DecodeLossy");
     if not needBaseProcess and not needOsHost {
         if needTextEncoder {
             io.outputLine("declare const TextEncoder: { new (): { encode(input?: string): Uint8Array } };");
+        }
+        if needUnicodeDecoder {
+            io.outputLine("declare const TextDecoder: { new (label: string, options?: { fatal?: boolean }): { decode(input?: Uint8Array, options?: { stream?: boolean }): string } };");
+        }
+        if needTextEncoder or needUnicodeDecoder {
             io.outputLine("");
         }
         return;
@@ -405,14 +436,24 @@ emitProcessDecl := fn(calls: String): Unit {
         }
         io.outputLine("    };");
     }
-    if usesCrypto(calls) {
+    if usesCryptoNode(calls) {
         io.outputLine("    getBuiltinModule(name: \"node:crypto\"): {");
         io.outputLine("        createHash(algorithm: string): { update(data: string | Uint8Array, encoding?: string): { digest(encoding: \"hex\"): string } };");
+        io.outputLine("        createHmac(algorithm: string, key: Uint8Array): { update(data: Uint8Array): { digest(encoding: \"hex\"): string } };");
+        io.outputLine("        randomBytes(size: number): Uint8Array;");
+        io.outputLine("    };");
+    }
+    if usesCryptoCodec(calls) {
+        io.outputLine("    getBuiltinModule(name: \"node:buffer\"): {");
+        io.outputLine("        Buffer: {");
+        io.outputLine("            from(data: Uint8Array): { toString(encoding: \"base64\" | \"hex\"): string };");
+        io.outputLine("            from(text: string, encoding: \"base64\" | \"hex\"): Uint8Array;");
+        io.outputLine("        };");
         io.outputLine("    };");
     }
     io.outputLine("};");
     needInputDecoder := usesBuiltin(calls, "inputAll") or usesBuiltin(calls, "inputLine") or usesBuiltin(calls, "inputInt") or usesBuiltin(calls, "inputFloat");
-    if needInputDecoder or usesBuiltin(calls, "fsReadText") {
+    if needInputDecoder or usesBuiltin(calls, "fsReadText") or needUnicodeDecoder {
         io.outputLine("declare const TextDecoder: { new (label: string, options?: { fatal?: boolean }): { decode(input?: Uint8Array, options?: { stream?: boolean }): string } };");
     }
     if needTextEncoder {
@@ -423,19 +464,27 @@ emitProcessDecl := fn(calls: String): Unit {
 
 /** Emits host filesystem helpers used by the program. */
 emitFsHelpers := fn(calls: String): Unit {
+    needFromBytes := usesBuiltin(calls, "fsReadBytes") or usesBuiltin(calls, "textUtf8Bytes") or
+        usesBuiltin(calls, "cryptoBase64Decode") or usesBuiltin(calls, "cryptoHexDecode") or
+        usesBuiltin(calls, "cryptoRandomBytes") or usesBuiltin(calls, "unicodeUtf8Encode");
+    needToBytes := usesBuiltin(calls, "fsWriteBytes") or usesBuiltin(calls, "cryptoSha256Bytes") or
+        usesBuiltin(calls, "cryptoSha512Bytes") or usesBuiltin(calls, "cryptoHmacSha256Bytes") or
+        usesBuiltin(calls, "cryptoBase64Encode") or usesBuiltin(calls, "cryptoHexEncode") or
+        usesBuiltin(calls, "processRunBytes") or usesBuiltin(calls, "unicodeUtf8DecodeStrict") or
+        usesBuiltin(calls, "unicodeUtf8DecodeLossy");
     if usesHostErrorResult(calls) {
         io.outputLine("function lite$errMsg(error: unknown): string {");
         io.outputLine("    return error instanceof Error ? error.message : String(error);");
         io.outputLine("}");
     }
-    if usesBuiltin(calls, "fsReadBytes") or usesBuiltin(calls, "textUtf8Bytes") {
+    if needFromBytes {
         io.outputLine("function lite$fromBytes(bytes: Uint8Array): bigint[] {");
         io.outputLine("    const out: bigint[] = new Array<bigint>(bytes.length);");
         io.outputLine("    for (let i = 0; i < bytes.length; i += 1) { out[i] = BigInt(bytes[i] ?? 0); }");
         io.outputLine("    return out;");
         io.outputLine("}");
     }
-    if usesBuiltin(calls, "fsWriteBytes") or usesBuiltin(calls, "cryptoSha256Bytes") or usesBuiltin(calls, "processRunBytes") {
+    if needToBytes {
         io.outputLine("function lite$toBytes(bytes: readonly bigint[]): Uint8Array {");
         io.outputLine("    const out = new Uint8Array(bytes.length);");
         io.outputLine("    for (let i = 0; i < bytes.length; i += 1) {");
@@ -619,13 +668,176 @@ emitCryptoAndTimeHelpers := fn(calls: String): Unit {
         io.outputLine("    } catch (error) { return { ok: false, hex: \"\", error: lite$errMsg(error) }; }");
         io.outputLine("}");
     }
+    if usesBuiltin(calls, "cryptoSha512Text") {
+        io.outputLine("function lite$cryptoSha512Text(text: string): string {");
+        io.outputLine("    return process.getBuiltinModule(\"node:crypto\").createHash(\"sha512\").update(text, \"utf8\").digest(\"hex\");");
+        io.outputLine("}");
+    }
+    if usesBuiltin(calls, "cryptoSha512Bytes") {
+        io.outputLine("function lite$cryptoSha512Bytes(bytes: readonly bigint[]): string {");
+        io.outputLine("    return process.getBuiltinModule(\"node:crypto\").createHash(\"sha512\").update(lite$toBytes(bytes)).digest(\"hex\");");
+        io.outputLine("}");
+    }
+    if usesBuiltin(calls, "cryptoHmacSha256Bytes") {
+        io.outputLine("function lite$cryptoHmacSha256Bytes(key: readonly bigint[], data: readonly bigint[]): string {");
+        io.outputLine("    return process.getBuiltinModule(\"node:crypto\").createHmac(\"sha256\", lite$toBytes(key)).update(lite$toBytes(data)).digest(\"hex\");");
+        io.outputLine("}");
+    }
+    if usesBuiltin(calls, "cryptoBase64Encode") {
+        io.outputLine("function lite$cryptoBase64Encode(bytes: readonly bigint[]): string {");
+        io.outputLine("    return process.getBuiltinModule(\"node:buffer\").Buffer.from(lite$toBytes(bytes)).toString(\"base64\");");
+        io.outputLine("}");
+    }
+    if usesBuiltin(calls, "cryptoBase64Decode") {
+        io.outputLine("function lite$cryptoBase64Decode(encoded: string): bigint[] {");
+        io.outputLine("    if (encoded.length % 4 !== 0 || !/^(?:[A-Za-z0-9+/]{4})*(?:[A-Za-z0-9+/]{2}==|[A-Za-z0-9+/]{3}=)?$/.test(encoded)) {");
+        io.outputLine("        throw new Error(\"invalid base64 input\");");
+        io.outputLine("    }");
+        io.outputLine("    return lite$fromBytes(process.getBuiltinModule(\"node:buffer\").Buffer.from(encoded, \"base64\"));");
+        io.outputLine("}");
+    }
+    if usesBuiltin(calls, "cryptoHexEncode") {
+        io.outputLine("function lite$cryptoHexEncode(bytes: readonly bigint[]): string {");
+        io.outputLine("    return process.getBuiltinModule(\"node:buffer\").Buffer.from(lite$toBytes(bytes)).toString(\"hex\");");
+        io.outputLine("}");
+    }
+    if usesBuiltin(calls, "cryptoHexDecode") {
+        io.outputLine("function lite$cryptoHexDecode(encoded: string): bigint[] {");
+        io.outputLine("    if (encoded.length % 2 !== 0 || !/^[0-9a-fA-F]*$/.test(encoded)) {");
+        io.outputLine("        throw new Error(\"invalid hex input\");");
+        io.outputLine("    }");
+        io.outputLine("    return lite$fromBytes(process.getBuiltinModule(\"node:buffer\").Buffer.from(encoded, \"hex\"));");
+        io.outputLine("}");
+    }
+    if usesBuiltin(calls, "cryptoRandomBytes") {
+        io.outputLine("function lite$cryptoRandomBytes(count: bigint): bigint[] {");
+        io.outputLine("    if (count < 0n || count > 2147483647n) {");
+        io.outputLine("        throw new Error(\"randomBytes count out of range: \" + String(count));");
+        io.outputLine("    }");
+        io.outputLine("    return lite$fromBytes(process.getBuiltinModule(\"node:crypto\").randomBytes(Number(count)));");
+        io.outputLine("}");
+    }
     if usesBuiltin(calls, "timeMonotonicNs") {
         io.outputLine("function lite$timeMonotonicNs(): bigint { return process.hrtime.bigint(); }");
     }
     if usesBuiltin(calls, "timeUtcIsoNow") {
         io.outputLine("function lite$timeUtcIsoNow(): string { return new Date().toISOString(); }");
     }
+    if usesBuiltin(calls, "timeEpochMs") {
+        io.outputLine("function lite$timeEpochMs(): bigint { return BigInt(Date.now()); }");
+    }
+    if usesBuiltin(calls, "timeEpochNs") {
+        io.outputLine("function lite$timeEpochNs(): bigint { return BigInt(Date.now()) * 1000000n; }");
+    }
+    if usesBuiltin(calls, "timeSleepMs") {
+        io.outputLine("function lite$timeSleepMs(ms: bigint): void {");
+        io.outputLine("    if (ms <= 0n) return;");
+        io.outputLine("    const limit = ms > 2147483647n ? 2147483647 : Number(ms);");
+        io.outputLine("    Atomics.wait(new Int32Array(new SharedArrayBuffer(4)), 0, 0, limit);");
+        io.outputLine("}");
+    }
+    if usesBuiltin(calls, "timeLocalDate") {
+        io.outputLine("function lite$timeLocalDate(): string {");
+        io.outputLine("    const now = new Date();");
+        io.outputLine("    return String(now.getFullYear()).padStart(4, \"0\") + \"-\" + String(now.getMonth() + 1).padStart(2, \"0\") + \"-\" + String(now.getDate()).padStart(2, \"0\");");
+        io.outputLine("}");
+    }
     if usesCrypto(calls) or usesTime(calls) { io.outputLine(""); }
+}
+
+/** Emits host Unicode encoding and code-point helpers used by the program. */
+emitUnicodeHelpers := fn(calls: String): Unit {
+    if not usesUnicode(calls) { return; }
+    if usesBuiltin(calls, "unicodeUtf8Encode") {
+        io.outputLine("function lite$unicodeUtf8Encode(text: string): bigint[] {");
+        io.outputLine("    return lite$fromBytes(new TextEncoder().encode(text));");
+        io.outputLine("}");
+    }
+    if usesBuiltin(calls, "unicodeUtf8DecodeStrict") {
+        io.outputLine("function lite$unicodeUtf8DecodeStrict(bytes: readonly bigint[]): { ok: boolean; text: string; error: string } {");
+        io.outputLine("    try {");
+        io.outputLine("        return { ok: true, text: new TextDecoder(\"utf-8\", { fatal: true }).decode(lite$toBytes(bytes)), error: \"\" };");
+        io.outputLine("    } catch (error) { return { ok: false, text: \"\", error: lite$errMsg(error) }; }");
+        io.outputLine("}");
+    }
+    if usesBuiltin(calls, "unicodeUtf8DecodeLossy") {
+        io.outputLine("function lite$unicodeUtf8DecodeLossy(bytes: readonly bigint[]): string {");
+        io.outputLine("    return new TextDecoder(\"utf-8\", { fatal: false }).decode(lite$toBytes(bytes));");
+        io.outputLine("}");
+    }
+    if usesBuiltin(calls, "unicodeUtf16Encode") {
+        io.outputLine("function lite$unicodeUtf16Encode(text: string): bigint[] {");
+        io.outputLine("    const out: bigint[] = new Array<bigint>(text.length);");
+        io.outputLine("    for (let i = 0; i < text.length; i += 1) { out[i] = BigInt(text.charCodeAt(i)); }");
+        io.outputLine("    return out;");
+        io.outputLine("}");
+    }
+    if usesBuiltin(calls, "unicodeUtf16DecodeStrict") {
+        io.outputLine("function lite$unicodeUtf16DecodeStrict(units: readonly bigint[]): { ok: boolean; text: string; error: string } {");
+        io.outputLine("    let text = \"\";");
+        io.outputLine("    let chunk = \"\";");
+        io.outputLine("    for (let i = 0; i < units.length; i += 1) {");
+        io.outputLine("        const raw = units[i];");
+        io.outputLine("        if (raw === undefined || raw < 0n || raw > 65535n) {");
+        io.outputLine("            return { ok: false, text: \"\", error: \"UTF-16 code unit outside 0..65535: \" + String(raw) };");
+        io.outputLine("        }");
+        io.outputLine("        const code = Number(raw);");
+        io.outputLine("        if (code >= 0xd800 && code <= 0xdbff) {");
+        io.outputLine("            const next = i + 1 < units.length ? units[i + 1] : undefined;");
+        io.outputLine("            if (next === undefined || next < 0xdc00n || next > 0xdfffn) {");
+        io.outputLine("                return { ok: false, text: \"\", error: \"unpaired UTF-16 high surrogate\" };");
+        io.outputLine("            }");
+        io.outputLine("            chunk += String.fromCharCode(code, Number(next));");
+        io.outputLine("            i += 1;");
+        io.outputLine("        } else if (code >= 0xdc00 && code <= 0xdfff) {");
+        io.outputLine("            return { ok: false, text: \"\", error: \"unpaired UTF-16 low surrogate\" };");
+        io.outputLine("        } else {");
+        io.outputLine("            chunk += String.fromCharCode(code);");
+        io.outputLine("        }");
+        io.outputLine("        if (chunk.length >= 4096) { text += chunk; chunk = \"\"; }");
+        io.outputLine("    }");
+        io.outputLine("    return { ok: true, text: text + chunk, error: \"\" };");
+        io.outputLine("}");
+    }
+    if usesBuiltin(calls, "unicodeUtf16Length") {
+        io.outputLine("function lite$unicodeUtf16Length(text: string): bigint {");
+        io.outputLine("    return BigInt(text.length);");
+        io.outputLine("}");
+    }
+    if usesBuiltin(calls, "unicodeToCodePoints") {
+        io.outputLine("function lite$unicodeToCodePoints(text: string): bigint[] {");
+        io.outputLine("    const out: bigint[] = [];");
+        io.outputLine("    for (const ch of text) { out.push(BigInt(ch.codePointAt(0) ?? 0)); }");
+        io.outputLine("    return out;");
+        io.outputLine("}");
+    }
+    if usesBuiltin(calls, "unicodeFromCodePoints") {
+        io.outputLine("function lite$unicodeFromCodePoints(points: readonly bigint[]): { ok: boolean; text: string; error: string } {");
+        io.outputLine("    let text = \"\";");
+        io.outputLine("    let chunk = \"\";");
+        io.outputLine("    for (let i = 0; i < points.length; i += 1) {");
+        io.outputLine("        const point = points[i];");
+        io.outputLine("        if (point === undefined || point < 0n || point > 1114111n || (point >= 55296n && point <= 57343n)) {");
+        io.outputLine("            return { ok: false, text: \"\", error: \"invalid Unicode scalar code point: \" + String(point) };");
+        io.outputLine("        }");
+        io.outputLine("        chunk += String.fromCodePoint(Number(point));");
+        io.outputLine("        if (chunk.length >= 4096) { text += chunk; chunk = \"\"; }");
+        io.outputLine("    }");
+        io.outputLine("    return { ok: true, text: text + chunk, error: \"\" };");
+        io.outputLine("}");
+    }
+    if usesBuiltin(calls, "unicodeCodePointAt") {
+        io.outputLine("function lite$unicodeCodePointAt(text: string, position: bigint): bigint {");
+        io.outputLine("    if (position < 0n) throw new Error(\"BoundPanic: codePointAt index outside text\");");
+        io.outputLine("    let count = 0n;");
+        io.outputLine("    for (const ch of text) {");
+        io.outputLine("        if (count === position) return BigInt(ch.codePointAt(0) ?? 0);");
+        io.outputLine("        count += 1n;");
+        io.outputLine("    }");
+        io.outputLine("    throw new Error(\"BoundPanic: codePointAt index outside text\");");
+        io.outputLine("}");
+    }
+    io.outputLine("");
 }
 
 /** Emits the self-contained declarations and helpers for the I/O and text builtins a program uses. */
@@ -703,6 +915,7 @@ emitBuiltinHelpers := fn(calls: String): Unit {
     emitFsHelpers(calls);
     emitProcessHelpers(calls);
     emitCryptoAndTimeHelpers(calls);
+    emitUnicodeHelpers(calls);
     if usesBuiltin(calls, "textLength") or usesBuiltin(calls, "textAt") or usesBuiltin(calls, "textSlice") or usesBuiltin(calls, "textIndexOf") {
         io.outputLine("let lite$lastBmp = \"\";");
         io.outputLine("const lite$bmpSet = new Set<string>();");

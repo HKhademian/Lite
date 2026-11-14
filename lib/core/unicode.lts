@@ -1,0 +1,44 @@
+/* Provisional host and helper Unicode primitives covering UTF-8, UTF-16, and UTF-32 code points. */
+
+/** Encodes `text` as UTF-8 `0..255` byte values. */
+pub utf8Encode := fn(text: String): List<Int>;
+
+/** Decodes raw `0..255` UTF-8 bytes to text, rejecting invalid byte values or invalid UTF-8 sequences. */
+pub utf8DecodeStrict := fn(bytes: List<Int>): (ok: Bool, text: String, error: String);
+
+/** Decodes raw `0..255` UTF-8 bytes to text, replacing malformed byte sequences with U+FFFD. */
+pub utf8DecodeLossy := fn(bytes: List<Int>): String;
+
+/** Encodes `text` as UTF-16 `0..65535` code unit values. */
+pub utf16Encode := fn(text: String): List<Int>;
+
+/** Decodes UTF-16 `0..65535` code units to text, rejecting out-of-range values or unpaired surrogates. */
+pub utf16DecodeStrict := fn(units: List<Int>): (ok: Bool, text: String, error: String);
+
+/** Returns the number of UTF-16 code units in `text`. */
+pub utf16Length := fn(text: String): Int;
+
+/** Returns the UTF-32 Unicode scalar code point list of `text`. */
+pub toCodePoints := fn(text: String): List<Int>;
+
+/** Encodes UTF-32 Unicode scalar code points into text, rejecting invalid scalar values or surrogates. */
+pub fromCodePoints := fn(points: List<Int>): (ok: Bool, text: String, error: String);
+
+/** Returns the Unicode scalar code point at zero-based scalar index `position`. */
+pub codePointAt := fn(text: String, position: Int): Int;
+
+/** Returns true when `point` is a valid Unicode scalar value (`0..0x10FFFF` excluding surrogates `0xD800..0xDFFF`). */
+pub isValidScalar := fn(point: Int): Bool {
+    point >= 0 and point <= 1114111 and (point < 55296 or point > 57343)
+}
+
+/** Returns true when `bytes` is a valid `0..255` byte list forming strict UTF-8. */
+pub isValidUtf8 := fn(bytes: List<Int>): Bool {
+    utf8DecodeStrict(bytes).ok
+}
+
+/** Encodes a single Unicode scalar code point into a one-character string when valid. */
+pub fromCodePoint := fn(point: Int): (ok: Bool, text: String, error: String) {
+    points: List<Int> = [point];
+    fromCodePoints(points)
+}

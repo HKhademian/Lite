@@ -33,6 +33,8 @@ declare const process: {
     };
     getBuiltinModule(name: "node:crypto"): {
         createHash(algorithm: string): { update(data: string | Uint8Array, encoding?: string): { digest(encoding: "hex"): string } };
+        createHmac(algorithm: string, key: Uint8Array): { update(data: Uint8Array): { digest(encoding: "hex"): string } };
+        randomBytes(size: number): Uint8Array;
     };
 };
 declare const TextDecoder: { new (label: string, options?: { fatal?: boolean }): { decode(input?: Uint8Array, options?: { stream?: boolean }): string } };
@@ -981,6 +983,68 @@ export function main(lite$write?: (text: string) => void): string {
         return lite_out;
     }
     void liteFn$lib$core$text$toLowerAscii;
+    function liteFn$lib$core$crypto$isBase64DataChar(lite_ch: string): boolean {
+        void lite_ch;
+        return ((liteFn$lib$core$text$indexOfText("ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/", lite_ch, 0n)) >= (0n));
+    }
+    void liteFn$lib$core$crypto$isBase64DataChar;
+    function liteFn$lib$core$crypto$isHexChar(lite_ch: string): boolean {
+        void lite_ch;
+        return ((liteFn$lib$core$text$indexOfText("0123456789abcdefABCDEF", lite_ch, 0n)) >= (0n));
+    }
+    void liteFn$lib$core$crypto$isHexChar;
+    function liteFn$lib$core$crypto$isValidBase64(lite_encoded: string): boolean {
+        void lite_encoded;
+        const lite_size = liteFn$lib$core$text$length(lite_encoded);
+        void lite_size;
+        if (((lite_size) === (0n))) {
+            return true;
+        }
+        if (((lite$remainderInt(lite_size, 4n, 2088)) !== (0n))) {
+            return false;
+        }
+        let lite_padding = 0n;
+        void lite_padding;
+        if (((liteFn$lib$core$text$at(lite_encoded, lite$subtractInt(lite_size, 1n, 2167))) === ("="))) {
+            lite_padding = lite$addInt(lite_padding, 1n, 2189);
+        }
+        if (((liteFn$lib$core$text$at(lite_encoded, lite$subtractInt(lite_size, 2n, 2226))) === ("="))) {
+            if (((lite_padding) === (0n))) {
+                return false;
+            }
+            lite_padding = lite$addInt(lite_padding, 1n, 2298);
+        }
+        const lite_dataEnd = lite$subtractInt(lite_size, lite_padding, 2330);
+        void lite_dataEnd;
+        let lite_index = 0n;
+        void lite_index;
+        while (((lite_index) < (lite_dataEnd))) {
+            if ((!(liteFn$lib$core$crypto$isBase64DataChar(liteFn$lib$core$text$at(lite_encoded, lite_index))))) {
+                return false;
+            }
+            lite_index = lite$addInt(lite_index, 1n, 2477);
+        }
+        return true;
+    }
+    void liteFn$lib$core$crypto$isValidBase64;
+    function liteFn$lib$core$crypto$isValidHex(lite_encoded: string): boolean {
+        void lite_encoded;
+        const lite_size = liteFn$lib$core$text$length(lite_encoded);
+        void lite_size;
+        if (((lite$remainderInt(lite_size, 2n, 2672)) !== (0n))) {
+            return false;
+        }
+        let lite_index = 0n;
+        void lite_index;
+        while (((lite_index) < (lite_size))) {
+            if ((!(liteFn$lib$core$crypto$isHexChar(liteFn$lib$core$text$at(lite_encoded, lite_index))))) {
+                return false;
+            }
+            lite_index = lite$addInt(lite_index, 1n, 2826);
+        }
+        return true;
+    }
+    void liteFn$lib$core$crypto$isValidHex;
     function liteFn$lib$util$json$isJsonSpace(lite_ch: string): boolean {
         void lite_ch;
         return ((((((((lite_ch) === (" "))) || (((lite_ch) === ("\t"))))) || (((lite_ch) === ("\r"))))) || (((lite_ch) === ("\n"))));

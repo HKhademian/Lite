@@ -3947,7 +3947,7 @@ test('construct-level finally cleanup, LIFO unwinding, barriers, and failure pre
   }
 });
 
-test('core os/fs/process/crypto/time host bindings, standalone CLI execution, and target rejections work cleanly', () => {
+test('core os/fs/process/crypto/time host bindings, standalone CLI execution, and target rejections work cleanly', async () => {
   const fixtureName = resolve(root, 'compiler/tests/fixtures/core-host-os.lts');
   const compiled = compileTs({
     text: [
@@ -4046,6 +4046,97 @@ test('core os/fs/process/crypto/time host bindings, standalone CLI execution, an
     assert.equal(actual.stdout.toString(), '[104, 105]\n');
   });
 
+  const extendedCore = compileTs({
+    text: [
+      'crypto := import "core/crypto";',
+      'list := import "core/list";',
+      'time := import "core/time";',
+      'uni := import "core/unicode";',
+      'io := import "core/io";',
+      'raw: List<Int> = [0, 65, 255];',
+      'b64 := crypto.base64Encode(raw);',
+      'b64Ok := crypto.isValidBase64(b64);',
+      'b64Dec := crypto.base64Decode(b64);',
+      'b64Bad1 := crypto.isValidBase64("not-base64!");',
+      'b64Bad2 := crypto.isValidBase64("YWJj=");',
+      'hex := crypto.hexEncode(raw);',
+      'hexOk := crypto.isValidHex("0041FF");',
+      'hexDec := crypto.hexDecode("0041FF");',
+      'hexBadOdd := crypto.isValidHex("abc");',
+      'hexBadChar := crypto.isValidHex("zz");',
+      'sha512 := crypto.sha512Text("abc");',
+      'sha512b := crypto.sha512Bytes([97, 98, 99]);',
+      'hmac := crypto.hmacSha256Bytes([107, 101, 121], [97, 98, 99]);',
+      'rand0 := crypto.randomBytes(0);',
+      'rand16 := crypto.randomBytes(16);',
+      'ms0 := time.epochMs();',
+      'ns0 := time.epochNs();',
+      'mono0 := time.monotonicNs();',
+      'time.sleepMs(15);',
+      'mono1 := time.monotonicNs();',
+      'ldate := time.localDate();',
+      'u8 := uni.utf8Encode("A€🙂");',
+      'u8Ok := uni.utf8DecodeStrict(u8);',
+      'u8Bad := uni.utf8DecodeStrict([255]);',
+      'u8BadVal := uni.utf8DecodeStrict([256]);',
+      'u8Lossy := uni.utf8DecodeLossy([65, 255, 66]);',
+      'u16 := uni.utf16Encode("A🙂");',
+      'u16Ok := uni.utf16DecodeStrict(u16);',
+      'u16BadHigh := uni.utf16DecodeStrict([55357]);',
+      'u16BadLow := uni.utf16DecodeStrict([56898]);',
+      'u16BadRange := uni.utf16DecodeStrict([65536]);',
+      'cps := uni.toCodePoints("A€🙂");',
+      'cpOk := uni.fromCodePoints(cps);',
+      'cpBadSur := uni.fromCodePoints([55296]);',
+      'cpBadHi := uni.fromCodePoints([1114112]);',
+      'oneCp := uni.fromCodePoint(128578);',
+      'io.outputLine(b64, b64Ok, b64Dec, not b64Bad1, not b64Bad2);',
+      'io.outputLine(hex, hexOk, hexDec, not hexBadOdd, not hexBadChar);',
+      'io.outputLine(sha512 == "ddaf35a193617abacc417349ae20413112e6fa4e89a97ea20a9eeee64b55d39a2192992a274fc1a836ba3c23a3feebbd454d4423643ce80e2a9ac94fa54ca49f", sha512 == sha512b);',
+      'io.outputLine(hmac, list.listCountInt(rand0), list.listCountInt(rand16));',
+      'io.outputLine(ms0 > 1700000000000, ns0 >= ms0 * 1000000, mono1 > mono0, ldate);',
+      'io.outputLine(u8, u8Ok.ok, u8Ok.text == "A€🙂", not u8Bad.ok, not u8BadVal.ok, u8Lossy);',
+      'io.outputLine(uni.isValidUtf8(u8), not uni.isValidUtf8([255]), uni.utf16Length("A🙂"), u16, u16Ok.ok, u16Ok.text == "A🙂");',
+      'io.outputLine(not u16BadHigh.ok, not u16BadLow.ok, not u16BadRange.ok);',
+      'io.outputLine(cps, cpOk.ok, cpOk.text == "A€🙂", not cpBadSur.ok, not cpBadHi.ok);',
+      'io.outputLine(oneCp.ok, oneCp.text == "🙂", uni.codePointAt("A€🙂", 2), uni.isValidScalar(65), not uni.isValidScalar(55296), not uni.isValidScalar(1114112));',
+    ].join('\n'),
+    name: fixtureName,
+  });
+  assert.equal(extendedCore.status, 0, extendedCore.stderr.toString());
+  assert.equal(checkTsArtifact(extendedCore.stdout.toString()).status, 0);
+  const { createHmac } = await import('node:crypto');
+  const expectedHmac = createHmac('sha256', Buffer.from([107, 101, 121])).update(Buffer.from([97, 98, 99])).digest('hex');
+  withTsArtifact(extendedCore.stdout.toString(), run => {
+    const actual = run();
+    assert.equal(actual.status, 0, actual.stderr.toString());
+    const lines = actual.stdout.toString().trimEnd().split('\n');
+    assert.equal(lines.length, 10, actual.stdout.toString());
+    assert.equal(lines[0], 'AEH/ true [0, 65, 255] true true');
+    assert.equal(lines[1], '0041ff true [0, 65, 255] true true');
+    assert.equal(lines[2], 'true true');
+    assert.equal(lines[3], `${expectedHmac} 0 16`);
+    assert.match(lines[4]!, /^true true true \d{4}-\d{2}-\d{2}$/);
+    assert.equal(lines[5], '[65, 226, 130, 172, 240, 159, 153, 130] true true true true A\ufffdB');
+    assert.equal(lines[6], 'true true 3 [65, 55357, 56898] true true');
+    assert.equal(lines[7], 'true true true');
+    assert.equal(lines[8], '[65, 8364, 128578] true true true true');
+    assert.equal(lines[9], 'true true 128578 true true true');
+  });
+
+  const unicodeOnly = compileTs({
+    text: 'uni := import "core/unicode"; io := import "core/io"; io.outputLine(uni.utf8DecodeStrict(uni.utf8Encode("hi")).text, uni.toCodePoints("🙂"));',
+    name: fixtureName,
+  });
+  assert.equal(unicodeOnly.status, 0, unicodeOnly.stderr.toString());
+  assert.equal(checkTsArtifact(unicodeOnly.stdout.toString()).status, 0);
+  assert.doesNotMatch(unicodeOnly.stdout.toString(), /declare const process/);
+  withTsArtifact(unicodeOnly.stdout.toString(), run => {
+    const actual = run();
+    assert.equal(actual.status, 0, actual.stderr.toString());
+    assert.equal(actual.stdout.toString(), 'hi [128578]\n');
+  });
+
   const standaloneCompiled = compileTs({
     text: [
       'fs := import "core/fs";',
@@ -4087,11 +4178,19 @@ test('core os/fs/process/crypto/time host bindings, standalone CLI execution, an
     ['fs := import "core/fs"; x := fs.writeBytes(".", []);', /C backend does not support (filesystem builtins|list values) yet/],
     ['proc := import "core/process"; x := proc.cwd();', /C backend does not support process builtins yet/],
     ['proc := import "core/process"; x := proc.runBytes("true", [], "", [], 0, [], "", "");', /C backend does not support (process builtins|list values) yet/],
-    ['c := import "core/crypto"; x := c.sha256Text("a");', /C backend does not support crypto builtins yet/],
-    ['c := import "core/crypto"; x := c.sha256Bytes([]);', /C backend does not support (crypto builtins|list values) yet/],
+    ['c := import "core/crypto"; x := c.sha256Text("a");', /C backend does not support (crypto builtins|top-level functions) yet/],
+    ['c := import "core/crypto"; x := c.sha256Bytes([]);', /C backend does not support (crypto builtins|list values|top-level functions) yet/],
+    ['c := import "core/crypto"; x := c.sha512Text("a");', /C backend does not support (crypto builtins|top-level functions) yet/],
+    ['c := import "core/crypto"; x := c.base64Decode("YQ==");', /C backend does not support (crypto builtins|list values|top-level functions) yet/],
+    ['c := import "core/crypto"; x := c.randomBytes(4);', /C backend does not support (crypto builtins|list values|top-level functions) yet/],
     ['t := import "core/time"; x := t.monotonicNs();', /C backend does not support time builtins yet/],
+    ['t := import "core/time"; t.sleepMs(1);', /C backend does not support time builtins yet/],
+    ['t := import "core/time"; x := t.localDate();', /C backend does not support time builtins yet/],
     ['host := import "core/text-host"; x := host.indexOf("ab", "b", 0);', /C backend does not support text builtins yet/],
     ['host := import "core/text-host"; x := host.utf8Bytes("ab");', /C backend does not support (text builtins|list values) yet/],
+    ['u := import "core/unicode"; x := u.utf8Encode("ab");', /C backend does not support (unicode builtins|list values|top-level functions) yet/],
+    ['u := import "core/unicode"; x := u.utf16Length("ab");', /C backend does not support (unicode builtins|list values|top-level functions) yet/],
+    ['u := import "core/unicode"; x := u.codePointAt("ab", 0);', /C backend does not support (unicode builtins|list values|top-level functions) yet/],
   ] as const) {
     const rejectedC = compileTarget('c', { text: sourceText, name: fixtureName });
     assert.equal(rejectedC.status, 2, sourceText);

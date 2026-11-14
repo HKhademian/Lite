@@ -1,5 +1,7 @@
 /* Provisional core host cryptography signatures. This module adds no host authority by itself. */
 
+text := import "core/text";
+
 /** Returns the lowercase hexadecimal SHA-256 digest of UTF-8 `text`. */
 pub sha256Text := fn(text: String): String;
 
@@ -8,3 +10,67 @@ pub sha256Bytes := fn(bytes: List<Int>): String;
 
 /** Returns the lowercase hexadecimal SHA-256 digest of the raw bytes of the file at `path`. */
 pub sha256File := fn(path: String): (ok: Bool, hex: String, error: String);
+
+/** Returns the lowercase hexadecimal SHA-512 digest of UTF-8 `text`. */
+pub sha512Text := fn(text: String): String;
+
+/** Returns the lowercase hexadecimal SHA-512 digest of raw `0..255` byte values. */
+pub sha512Bytes := fn(bytes: List<Int>): String;
+
+/** Returns the lowercase hexadecimal HMAC-SHA256 tag of `data` using secret `key` bytes. */
+pub hmacSha256Bytes := fn(key: List<Int>, data: List<Int>): String;
+
+/** Encodes raw `0..255` byte values as standard RFC 4648 base64 text. */
+pub base64Encode := fn(bytes: List<Int>): String;
+
+/** Decodes standard RFC 4648 base64 text into `0..255` byte values, faulting on malformed input. */
+pub base64Decode := fn(encoded: String): List<Int>;
+
+/** Encodes raw `0..255` byte values as lowercase hexadecimal text. */
+pub hexEncode := fn(bytes: List<Int>): String;
+
+/** Decodes hexadecimal text into `0..255` byte values, faulting on malformed input. */
+pub hexDecode := fn(encoded: String): List<Int>;
+
+/** Generates `count` cryptographically strong random `0..255` byte values. */
+pub randomBytes := fn(count: Int): List<Int>;
+
+isBase64DataChar := fn(ch: String): Bool {
+    text.indexOfText("ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/", ch, 0) >= 0
+}
+
+isHexChar := fn(ch: String): Bool {
+    text.indexOfText("0123456789abcdefABCDEF", ch, 0) >= 0
+}
+
+/** Returns true when `encoded` is valid standard RFC 4648 padded base64 text. */
+pub isValidBase64 := fn(encoded: String): Bool {
+    size := text.length(encoded);
+    if size == 0 { return true; }
+    if size % 4 =!= 0 { return false; }
+    var padding := 0;
+    if text.at(encoded, size - 1) == "=" { padding += 1; }
+    if text.at(encoded, size - 2) == "=" {
+        if padding == 0 { return false; }
+        padding += 1;
+    }
+    dataEnd := size - padding;
+    var index := 0;
+    loop index < dataEnd {
+        if not isBase64DataChar(text.at(encoded, index)) { return false; }
+        index += 1;
+    }
+    true
+}
+
+/** Returns true when `encoded` is valid even-length hexadecimal byte text. */
+pub isValidHex := fn(encoded: String): Bool {
+    size := text.length(encoded);
+    if size % 2 =!= 0 { return false; }
+    var index := 0;
+    loop index < size {
+        if not isHexChar(text.at(encoded, index)) { return false; }
+        index += 1;
+    }
+    true
+}

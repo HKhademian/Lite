@@ -1,8 +1,8 @@
 {
-  "note": "Reviewed 2026-11-14 after extending core/text-host (utf8Bytes), core/process (runBytes), and fs.copy (verbatimSymlinks). All 69 TS/C corpus artifact hashes and 25 rejection cases verified.",
+  "note": "Reviewed 2026-11-14 after extending core/crypto, core/time, and adding core/unicode. All 69 TS/C corpus artifact hashes and 25 rejection cases verified.",
   "recorded": "2026-11-14",
-  "sourceSha256": "89c714ee8e00a8f3b675ae10ee3698106f0cf1f43780762c592145f444a8630e",
-  "compilerSha256": "94fdd0a0e907405767c3b80f26e68f3fe0c3b5eed98b0cb4b7eab20c7ad304f6",
+  "sourceSha256": "4abe153a859bfde24e4126397b7236c1407daf238d1b28a39afbd3f454f54829",
+  "compilerSha256": "cb9899b78d3c7fb8b0557b1b7328d9cbf3ca695fdf3f76dc1dfb316286d8f638",
   "programCases": 69,
   "rejectedCases": 25,
   "artifacts": [

@@ -5,3 +5,15 @@ pub monotonicNs := fn(): Int;
 
 /** Returns the current UTC wall-clock timestamp formatted as ISO-8601 text. */
 pub utcIsoNow := fn(): String;
+
+/** Returns wall-clock milliseconds since the Unix epoch. */
+pub epochMs := fn(): Int;
+
+/** Returns wall-clock nanoseconds since the Unix epoch. */
+pub epochNs := fn(): Int;
+
+/** Blocks execution synchronously for at least `ms` milliseconds when `ms > 0`. */
+pub sleepMs := fn(ms: Int): Unit;
+
+/** Returns the current local calendar date formatted as `YYYY-MM-DD`. */
+pub localDate := fn(): String;

@@ -12,6 +12,7 @@ const hostModules = [
   ['lite.core.process.v1', 'lib/core/process.lts'],
   ['lite.core.crypto.v1', 'lib/core/crypto.lts'],
   ['lite.core.time.v1', 'lib/core/time.lts'],
+  ['lite.core.unicode.v1', 'lib/core/unicode.lts'],
   ['lite.compiler.modules.v1', 'compiler/src/modules.lts'],
   ['lite.compiler.source-reader.v1', 'compiler/src/source-reader.lts'],
 ] as const;
