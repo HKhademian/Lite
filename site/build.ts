@@ -794,6 +794,8 @@ function renderPlaygroundPage(
   const codeModesBar = document.getElementById("pg-code-modes");
   const modeButtons = Array.from(document.querySelectorAll(".code-mode-btn"));
   const tabCanvas = document.getElementById("tab-canvas");
+  const canvas = document.getElementById("pg-canvas");
+  const ctx = canvas.getContext("2d");
   const canvasTitleEl = document.getElementById("pg-canvas-title");
   const canvasSizeEl = document.getElementById("pg-canvas-size");
   const muteBtn = document.getElementById("pg-mute");
@@ -823,6 +825,14 @@ function renderPlaygroundPage(
   let playExitStatus = 0;
   let audioMuted = false;
   let audioContext = null;
+  let stageImage = null;
+  let stageWidth = 0;
+  let stageHeight = 0;
+  let hasPlayLoop = false;
+  let lastPointerMoveAt = 0;
+  let worker = null;
+  let nextReqId = 1;
+  const pending = new Map();
 
   const SPLIT_KEY = "lite.pg.split";
   let splitPct = 50;
@@ -1021,10 +1031,6 @@ function renderPlaygroundPage(
     const raw = argsEl.value.trim();
     return raw ? raw.split(/\\s+/) : [];
   }
-
-  let worker = null;
-  let nextReqId = 1;
-  const pending = new Map();
 
   function getWorker() {
     if (!worker) {
@@ -1239,15 +1245,6 @@ function renderPlaygroundPage(
       navigator.clipboard.writeText(text).then(markCopied, () => {});
     }
   });
-
-  // Web Audio tone player + RGBA pixel stage for Lite Play programs
-  const canvas = document.getElementById("pg-canvas");
-  const ctx = canvas.getContext("2d");
-  let stageImage = null;
-  let stageWidth = 0;
-  let stageHeight = 0;
-  let hasPlayLoop = false;
-  let lastPointerMoveAt = 0;
 
   function unlockAudio() {
     if (audioMuted) return;

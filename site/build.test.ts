@@ -3,6 +3,7 @@ import { existsSync, readFileSync } from 'node:fs';
 import { dirname, join, resolve } from 'node:path';
 import { test } from 'node:test';
 import { pathToFileURL } from 'node:url';
+import { runInNewContext } from 'node:vm';
 import { buildTsCompiler, compileBuiltCompiler, type CompilerBuild } from '../compiler/host.ts';
 import { buildSite, parseBuildArgs } from './build.ts';
 import { formatCodeView } from './code-view.ts';
@@ -608,4 +609,136 @@ test('formatCodeView simplifies Program identifiers without collisions on TS and
   const cPortable = formatCodeView(cSource, 'c', 'portable');
   assert(cPortable.includes('int64_t lt_m_left_s_util__val = INT64_C(10);'));
   assert(cPortable.includes('int64_t lt_s2_x = INT64_C(6);'));
+});
+
+test('playground inline module initializes without TDZ or ReferenceError', async () => {
+  const html = readFileSync(join(root, 'dist', 'site', 'playground', 'index.html'), 'utf8');
+  const scriptMatch = html.match(/<script type="module">([\s\S]*?)<\/script>/);
+  assert(scriptMatch, 'missing playground inline module script');
+  const scriptBody = scriptMatch[1]
+    .replace(/^\s*import\s+\{[^}]+\}\s+from\s+"\.\/code-view\.js";\s*/m, '')
+    .replace(/^\s*import\s+\{[^}]+\}\s+from\s+"\.\/highlight\.js";\s*/m, '');
+
+  const makeEl = (id = '') => {
+    const attrs = new Map<string, string>();
+    const classes = new Set<string>();
+    const listeners = new Map<string, Array<(ev: unknown) => void>>();
+    const el: Record<string, unknown> = {
+      id,
+      value: '',
+      hidden: false,
+      textContent: '',
+      innerHTML: '',
+      title: '',
+      width: 320,
+      height: 200,
+      scrollTop: 0,
+      scrollLeft: 0,
+      selectionStart: 0,
+      selectionEnd: 0,
+      dataset: { tab: 'output', mode: 'program' },
+      style: { setProperty() {} },
+      classList: {
+        add(c: string) { classes.add(c); },
+        remove(c: string) { classes.delete(c); },
+      },
+      setAttribute(k: string, v: string) { attrs.set(k, String(v)); },
+      getAttribute(k: string) { return attrs.get(k) ?? null; },
+      addEventListener(type: string, fn: (ev: unknown) => void) {
+        const list = listeners.get(type) ?? [];
+        list.push(fn);
+        listeners.set(type, list);
+      },
+      focus() {},
+      getBoundingClientRect() { return { left: 0, top: 0, width: 640, height: 400 }; },
+      getContext() {
+        return {
+          createImageData: (w: number, h: number) => ({ data: new Uint8ClampedArray(w * h * 4) }),
+          putImageData() {},
+        };
+      },
+      setPointerCapture() {},
+      hasPointerCapture() { return false; },
+      releasePointerCapture() {},
+      setRangeText() {},
+    };
+    return el;
+  };
+
+  const els = new Map<string, ReturnType<typeof makeEl>>();
+  const docEl = {
+    body: makeEl('body'),
+    getElementById(id: string) {
+      let el = els.get(id);
+      if (!el) { el = makeEl(id); els.set(id, el); }
+      return el;
+    },
+    querySelectorAll(sel: string) {
+      if (sel === '.pg-tab') return ['output', 'ts', 'c', 'canvas'].map(tab => {
+        const el = makeEl(`tab-${tab}`);
+        el.dataset = { tab };
+        return el;
+      });
+      if (sel === '.code-mode-btn') return ['program', 'portable', 'full'].map(mode => {
+        const el = makeEl(`mode-${mode}`);
+        el.dataset = { mode };
+        return el;
+      });
+      return [];
+    },
+  };
+
+  const sampleJsonPath = join(root, 'dist', 'site', 'playground', 'samples');
+  const firstSampleId = showcaseSamples[0].id;
+  const mockWin = {
+    location: { href: `https://example.test/playground/?sample=${firstSampleId}`, search: `?sample=${firstSampleId}` },
+    history: { replaceState() {} },
+    localStorage: { getItem: () => null, setItem() {} },
+    navigator: {},
+    requestAnimationFrame: () => 1,
+    cancelAnimationFrame() {},
+    setTimeout,
+    clearTimeout,
+  };
+
+  const sandbox = {
+    formatCodeView,
+    highlightLite,
+    highlightTs,
+    highlightC,
+    document: docEl,
+    window: mockWin,
+    navigator: mockWin.navigator,
+    URL,
+    URLSearchParams,
+    Map,
+    Set,
+    Array,
+    Number,
+    String,
+    Boolean,
+    Math,
+    Object,
+    Promise,
+    Error,
+    BigInt,
+    Uint8ClampedArray,
+    performance: { now: () => 0 },
+    requestAnimationFrame: mockWin.requestAnimationFrame,
+    cancelAnimationFrame: mockWin.cancelAnimationFrame,
+    setTimeout,
+    clearTimeout,
+    Worker: class { addEventListener() {} postMessage() {} },
+    fetch: async (url: string) => {
+      const m = String(url).match(/\/([^/]+\.json)$/);
+      if (m && existsSync(join(sampleJsonPath, m[1]))) {
+        return { ok: true, status: 200, json: async () => JSON.parse(readFileSync(join(sampleJsonPath, m[1]), 'utf8')) };
+      }
+      return { ok: false, status: 404 };
+    },
+  };
+
+  runInNewContext(`(async () => {\n${scriptBody}\n})()`, sandbox);
+  await new Promise(resolve => setTimeout(resolve, 25));
+  assert.equal(els.get('pg-pause')?.getAttribute('aria-pressed'), 'false');
 });
