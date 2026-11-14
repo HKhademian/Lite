@@ -121,7 +121,12 @@ jobs:
         with:
           node-version-file: igniter/.node-version
           cache: npm
-      - name: Report and preserve the known TS migration failures
+          cache-dependency-path: |
+            igniter/package-lock.json
+            editors/vscode/package-lock.json
+      - name: Install locked development tools
+        run: install
+      - name: Verify full TS scenario migration baseline
         run: migration
 
   package:
@@ -138,11 +143,20 @@ jobs:
         with:
           node-version-file: igniter/.node-version
           cache: npm
-          cache-dependency-path: igniter/package-lock.json
+          cache-dependency-path: |
+            igniter/package-lock.json
+            editors/vscode/package-lock.json
       - name: Install locked development tools
         run: install
       - name: Extracted source distribution smoke test
         run: package
+      - uses: actions/upload-artifact@v7
+        with:
+          name: snapshot-release
+          path: dist/release/*
+          if-no-files-found: error
+          compression-level: 0
+          retention-days: 7
 
   generated-archive:
     strategy:
@@ -184,7 +198,9 @@ jobs:
         with:
           node-version-file: igniter/.node-version
           cache: npm
-          cache-dependency-path: igniter/package-lock.json
+          cache-dependency-path: |
+            igniter/package-lock.json
+            editors/vscode/package-lock.json
       - name: Install locked development tools
         run: install
       - name: Build and verify public showcase site

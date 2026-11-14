@@ -50,14 +50,23 @@ if (import.meta.main) {
         invoke('npm', ['ci', '--ignore-scripts', '--no-audit', '--no-fund'], join(root, 'editors/vscode')); break;
       case 'check': lite('doctor'); break;
       case 'test': lite('test', '--full'); break;
-      case 'editor': invoke(process.execPath, ['--test', 'editors/vscode/test/grammar.test.ts']); break;
+      case 'editor':
+        invoke(process.execPath, ['editors/vscode/scripts/build.ts']);
+        invoke(process.execPath, ['--test', 'editors/vscode/test/grammar.test.ts', 'editors/vscode/test/extension.test.ts']); break;
       case 'site': invoke(process.execPath, ['--test', 'site/build.test.ts']); break;
       case 'coverage': lite('verify', '--coverage'); break;
       case 'migration': verifyMigration(); break;
       case 'release-doctor': lite('doctor'); break;
       case 'release-unit':
-        invoke(process.execPath, ['--test', 'tools/docs.test.ts', 'tools/cases.test.ts', 'tools/cli.test.ts', 'tools/release.test.ts', 'compiler/scripts/release-streams.test.ts']); break;
-      case 'release-editor': invoke(process.execPath, ['--test', 'editors/vscode/test/grammar.test.ts']); break;
+        invoke(process.execPath, [
+          '--test',
+          'tools/docs.test.ts', 'tools/cases.test.ts', 'tools/cli.test.ts',
+          'tools/fmt.test.ts', 'tools/run.test.ts', 'tools/release.test.ts',
+          'compiler/scripts/release-streams.test.ts', 'site/build.test.ts',
+        ]); break;
+      case 'release-editor':
+        invoke(process.execPath, ['editors/vscode/scripts/build.ts']);
+        invoke(process.execPath, ['--test', 'editors/vscode/test/grammar.test.ts', 'editors/vscode/test/extension.test.ts']); break;
       case 'release-regressions': if (releaseNeedsCompilerGates()) lite('test', '--full'); break;
       case 'release-coverage': if (releaseNeedsCompilerGates()) lite('verify', '--coverage'); break;
       case 'release-migration': if (releaseNeedsCompilerGates()) verifyMigration(); break;

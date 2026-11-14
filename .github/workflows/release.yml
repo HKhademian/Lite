@@ -49,6 +49,10 @@ jobs:
       - uses: actions/setup-node@v7
         with:
           node-version-file: igniter/.node-version
+          cache: npm
+          cache-dependency-path: |
+            igniter/package-lock.json
+            editors/vscode/package-lock.json
       - name: Install locked checking tools
         run: install
       - name: Run the component-scoped release gate
@@ -68,6 +72,10 @@ jobs:
       - uses: actions/setup-node@v7
         with:
           node-version-file: igniter/.node-version
+          cache: npm
+          cache-dependency-path: |
+            igniter/package-lock.json
+            editors/vscode/package-lock.json
       - name: Install development and packaging tools
         run: install
       - name: Validate component readiness and package exact tagged sources

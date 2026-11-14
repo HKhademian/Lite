@@ -1,30 +1,8 @@
 {
   "schemaVersion": 1,
-  "recorded": "2026-11-03",
+  "recorded": "2026-11-14",
   "compilerSourceChanged": false,
-  "scenarios": 84,
-  "failures": [
-    "FAIL cond.partial/defaults-and-no-write [ts]: compiler exited 2: language/verifications/features/cond-partial.lts:4:19: value if requires a final else",
-    "FAIL example.006-fixed-tuples/tuple-demo [ts]: compiler exited 2: language/examples/006-fixed-tuples.lts:3:47: expected a tuple field name",
-    "FAIL example.008-named-tuples/named-tuple [ts]: compiler exited 2: language/examples/008-named-tuples.lts:4:6: expected an Int, Float, String or Bool expression",
-    "FAIL example.009-fixed-arrays/token-index [ts]: compiler exited 2: language/examples/009-fixed-arrays.lts:14:19: unsupported function type",
-    "FAIL example.010-mixed-tuples/mixed-tuple [ts]: compiler exited 2: language/examples/010-mixed-tuples.lts:4:12: expected )",
-    "FAIL example.011-tuple-label-conversion/relabel [ts]: compiler exited 2: language/examples/011-tuple-label-conversion.lts:4:1: cannot initialize (x: Int, y: Int) with (width: Int, height: Int)",
-    "FAIL example.012-named-arguments/named-args [ts]: compiler exited 2: language/examples/012-named-arguments.lts:7:22: unknown value c",
-    "FAIL example.013-growable-lists/list-ends [ts]: compiler exited 2: language/examples/013-growable-lists.lts:6:1: unknown value push_front",
-    "FAIL example.016-integer-calculator/precedence [ts]: compiler exited 2: language/examples/016-integer-calculator.lts:54:5: cannot return Unit from function digitValue returning Int",
-    "FAIL finally.cleanup/cleanup [ts]: compiler exited 2: language/verifications/features/finally-cleanup.lts:3:34: expected an Int, Float, String or Bool expression",
-    "FAIL init.reserved/first-write [ts]: compiler exited 2: language/verifications/features/init-reserved.lts:3:10: expected an Int, Float, String or Bool expression",
-    "FAIL init.zero/zero-values [ts]: compiler exited 2: language/verifications/features/init-zero.lts:5:5: expected a tuple field name",
-    "FAIL list.mutation/push-front-back [ts]: compiler exited 2: language/verifications/features/list-mutation.lts:6:1: unknown value push_front",
-    "FAIL loop.metadata/metadata-and-targets [ts]: compiler exited 2: language/verifications/features/loop-metadata.lts:3:6: unsupported feature \"loop\": see docs/loops.md; the restricted compiler accepts Int/Float/String/Bool expressions, locals, output/outputLine, if/else and loop only",
-    "FAIL loop.value/value-and-then [ts]: compiler exited 2: language/verifications/features/loop-value.lts:3:8: unsupported feature \"loop\": see docs/loops.md; the restricted compiler accepts Int/Float/String/Bool expressions, locals, output/outputLine, if/else and loop only",
-    "FAIL match.subjectless/first-true-and-fallback [ts]: compiler exited 2: language/verifications/features/match-subjectless.lts:4:10: unsupported feature \"match\": see docs/match.md; the restricted compiler accepts Int/Float/String/Bool expressions, locals, output/outputLine, if/else and loop only",
-    "FAIL mut.inferred/writable-lists [ts]: compiler exited 2: language/verifications/features/mut-inferred.lts:4:1: unsupported feature \"mut\": see docs/declarations-and-assignment.md; the restricted compiler accepts Int/Float/String/Bool expressions, locals, output/outputLine, if/else and loop only",
-    "FAIL num.widths/widths [ts]: compiler exited 2: language/verifications/features/num-widths.lts:3:4: unsupported local type Int8",
-    "FAIL report.tuple/tuple-display [ts]: compiler exited 2: language/verifications/features/report-tuple.lts:3:32: expected )",
-    "FAIL scope.compound/compound-chain [ts]: compiler exited 2: language/verifications/features/scope-compound.lts:4:8: expected an Int, Float, String or Bool expression",
-    "FAIL tuple.shape/named-and-positional [ts]: compiler exited 2: language/verifications/features/tuple-shape.lts:5:2: unknown value one"
-  ],
-  "note": "Known accepted-language failures remain FAIL in the ordinary verifier. This baseline gate detects changed support or regressions; language releases require zero failures."
+  "scenarios": 86,
+  "failures": [],
+  "note": "Baseline gate detects scenario inventory changes or regressions against the reviewed TS verification suite; zero failures currently remain across the 86 verified scenarios."
 }
