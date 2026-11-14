@@ -169,7 +169,14 @@ export function buildCompiler(target: CompilerTarget): CompilerBuild {
         realpathSync(resolveImportPath(resolve(root, edge.importer), edge.spec, root)) === realpathSync(resolve(root, edge.path)); }
       catch { return false; }
     });
-    if (valid && edgesValid) return cachedBuild(join(cache, index.cacheKey), hash(JSON.stringify({ version: 5, sourceName, sourceBridgeSha256, dependencyHashes, edges })), target, dependencies, dependencyHashes, edges);
+    if (valid && edgesValid) {
+      const sourceSha256 = hash(JSON.stringify({ version: 5, sourceName, sourceBridgeSha256, dependencyHashes, edges }));
+      if (target === 'ts' && sourceSha256 === seed.sourceSha256 && index.cacheKey === seed.artifactSha256) {
+        return { target, path: seedPath, sourceSha256, artifactSha256: seed.artifactSha256,
+          builderSha256: seed.artifactSha256, dependencies, cached: false };
+      }
+      return cachedBuild(join(cache, index.cacheKey), sourceSha256, target, dependencies, dependencyHashes, edges);
+    }
   }
   mkdirSync(cache, { recursive: true });
   const temporary = mkdtempSync(join(cache, 'build-'));
@@ -205,6 +212,7 @@ export function buildCompiler(target: CompilerTarget): CompilerBuild {
       if (artifactSha256 !== seed.artifactSha256) {
         throw new Error('selected TS bootstrap seed does not reproduce its recorded source graph');
       }
+      selectBuild(indexPath, indexDirectory, target, sourcePath, sourceRootSha256, seed.artifactSha256, dependencies, dependencyHashes, edges);
       return { target, path: seedPath, sourceSha256, artifactSha256, builderSha256: seed.artifactSha256,
         dependencies, cached: false };
     }

@@ -966,15 +966,24 @@ test('the unchanged selected TS source graph uses its verified seed without a lo
   try {
     assert.equal(existsSync(join(directory, 'igniter/node_modules/typescript/bin/tsc')), false);
     const selected = spawnSync(process.execPath, ['--input-type=module', '-e',
-      'import {buildTsCompiler} from "./compiler/host.ts"; process.stdout.write(JSON.stringify(buildTsCompiler()));'],
+      'import {buildTsCompiler} from "./compiler/host.ts"; const first = buildTsCompiler(); const t0 = performance.now(); const second = buildTsCompiler(); process.stdout.write(JSON.stringify({ first, second, secondMs: performance.now() - t0 }));'],
     { cwd: directory, env, encoding: 'utf8', timeout: 20000 });
     assert.equal(selected.error, undefined);
     assert.equal(selected.status, 0, selected.stderr);
-    const result = JSON.parse(selected.stdout) as { path: string; sourceSha256: string; artifactSha256: string; cached: boolean };
-    assert.equal(result.path, realpathSync(join(directory, `compiler/bootstrap/${seed.artifact}`)));
-    assert.equal(result.sourceSha256, seed.sourceSha256);
-    assert.equal(result.artifactSha256, seed.artifactSha256);
-    assert.equal(result.cached, false);
+    const result = JSON.parse(selected.stdout) as {
+      first: { path: string; sourceSha256: string; artifactSha256: string; cached: boolean };
+      second: { path: string; sourceSha256: string; artifactSha256: string; cached: boolean };
+      secondMs: number;
+    };
+    const expectedPath = realpathSync(join(directory, `compiler/bootstrap/${seed.artifact}`));
+    for (const item of [result.first, result.second]) {
+      assert.equal(item.path, expectedPath);
+      assert.equal(item.sourceSha256, seed.sourceSha256);
+      assert.equal(item.artifactSha256, seed.artifactSha256);
+      assert.equal(item.cached, false);
+    }
+    assert.equal(readdirSync(join(directory, 'dist/compiler-cache/selection')).length, 1);
+    assert.ok(result.secondMs < 200, `expected persisted selection reuse under 200ms, took ${result.secondMs.toFixed(1)}ms`);
   } finally { rmSync(directory, { recursive: true, force: true }); }
 });
 
