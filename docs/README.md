@@ -107,6 +107,7 @@ Generic forms such as `Array<Float, 3>`, `List<Int>`, and `Option<User>` are tem
 - [Generic collection performance](generic-collection-performance.md): unified scalar/record APIs, static specialization versus runtime erasure, element representation, and reference comparisons.
 
 - [Temporary generic notation](generic-notation.md): angle brackets explain type-family concepts while generic source syntax remains deferred; type inputs and compile-time values are distinct concerns.
+- [Type parameter reference comparison](type-parameters-reference-comparison.md): named generic parameters, compile-time type inputs, call-site inference, and open choices for Lite.
 
 - [Sequence types compared](sequence-types-comparison.md): fixed arrays, growable lists, slices, and copy/storage tradeoffs across Odin, Rust, Zig, V, Go, Swift, Kotlin, and Dart.
 - [Sequence storage families](sequence-types.md): fixed-array inference for fresh known-size literals, element-wise fixed-array value widening without added write permission, explicit growable Lists, proposed owners/views, and separate permissions and storage contracts.
