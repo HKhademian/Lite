@@ -2,6 +2,9 @@
 
 export type CodeViewMode = 'program' | 'portable' | 'full';
 
+const suppressedTsVoidPattern =
+  /^void\s+(?:lite\$(?:emit|tuple(?:\$\d+)?|item(?:\$\d+)?|m\$[a-zA-Z0-9_$]+|val\d+|cnt\d+|lidx\d+|litem\d+|iter\d+)|lite_[a-zA-Z0-9_$]+|liteFn(?:\$|[a-zA-Z0-9_])[a-zA-Z0-9_$]*);$/;
+
 function skipBraceBlock(lines: readonly string[], startIndex: number): number {
   let depth = 0;
   let sawOpen = false;
@@ -58,7 +61,7 @@ function extractTsProgram(source: string): string {
       i = skipBraceBlock(body, i);
       continue;
     }
-    if (/^void\s+(?:lite\$emit|lite\$tuple(?:\$\d+)?|lite\$item(?:\$\d+)?|lite\$m\$[a-zA-Z0-9_$]+|lite_[a-zA-Z0-9_$]+|liteFn(?:\$|[a-zA-Z0-9_])[a-zA-Z0-9_$]*);$/.test(trimmed)) {
+    if (suppressedTsVoidPattern.test(trimmed)) {
       i += 1;
       continue;
     }
@@ -96,7 +99,7 @@ function extractTsPortable(source: string): string {
       i = skipBraceBlock(lines, i);
       continue;
     }
-    if (/^void\s+(?:lite\$emit|lite\$tuple(?:\$\d+)?|lite\$item(?:\$\d+)?|lite\$m\$[a-zA-Z0-9_$]+|lite_[a-zA-Z0-9_$]+|liteFn(?:\$|[a-zA-Z0-9_])[a-zA-Z0-9_$]*);$/.test(trimmed)) {
+    if (suppressedTsVoidPattern.test(trimmed)) {
       i += 1;
       continue;
     }

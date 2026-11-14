@@ -186,7 +186,7 @@ Keep dependencies explicit; split a topic further when its contracts warrant it.
   frontend treats exit as Unit and accepts it. Conversely, an Int-returning
   function whose tail exits needs the supported bottom-type flow contract.
 - [x] **Traversal forms:** unnamed item bindings and consistent scope.
-- [ ] **Loop values and exits:** value/then completion, metadata, payloads,
+- [x] **Loop values and exits:** value/then completion, metadata, payloads,
   tagged break/continue and the reference's supported tagged returns. A final
   conditional loop must produce its selected zero/last value when it does not
   return: T00 prints 0 for `f := fn(flag: Bool): Int { loop flag { return 1; } }

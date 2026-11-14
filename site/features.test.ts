@@ -4,6 +4,7 @@ import { join, relative, sep } from 'node:path';
 import { test } from 'node:test';
 import { fileURLToPath } from 'node:url';
 import { heroSample, sampleGroups, showcaseSamples } from './groups.ts';
+import { formatCodeView } from './code-view.ts';
 import { highlightLite } from './highlight.ts';
 import { playGroups, playSamples } from './play-samples.ts';
 import { stripLiteTs } from './strip-ts.ts';
@@ -57,6 +58,25 @@ test('highlightLite highlights newer built-in types and operators', () => {
   for (const op of ['**', '+=', ':/=', ':%=', '&lt;!=', '&gt;!=', '&lt;!', '&gt;!']) {
     assert(opHtml.includes(`<span class="tok-op">${op}</span>`), `missing operator highlight: ${op}`);
   }
+  const flowHtml = highlightLite('@outer loop items { if .count > 0 then { .value } finally { outputLine("done"); } return @outer .item; }');
+  for (const kw of ['@outer', 'then', 'finally']) {
+    assert(flowHtml.includes(`<span class="tok-keyword">${kw}</span>`), `missing control-flow highlight: ${kw}`);
+  }
+  assert(highlightLite('fail := fn(): Never { exit(1); }').includes('<span class="tok-type">Never</span>'));
+
+  const programView = formatCodeView([
+    'export function main(): string {',
+    '    let lite$out = "";',
+    '    let lite$val1: bigint = 0n;',
+    '    void lite$val1;',
+    '    void lite$cnt1;',
+    '    lite$val1 = 5n;',
+    '    lite$emit(String(lite$val1) + "\\n");',
+    '    return lite$out;',
+    '}',
+  ].join('\n'), 'ts', 'program');
+  assert(!programView.includes('void lite$'));
+  assert(programView.includes('let val1: bigint = 0n;'));
 });
 
 test('showcaseSamples includes examples covering named calls, tuples, arrays, and lists', () => {

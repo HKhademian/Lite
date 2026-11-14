@@ -135,3 +135,31 @@ test('lite fmt formats narrow numeric width declarations and passes --check', ()
     rmSync(tmp, { recursive: true, force: true });
   }
 });
+
+test('lite fmt formats tagged loops with then clauses and metadata reads', () => {
+  const tmp = mkdtempSync(join(tmpdir(), 'lite-fmt-loop-test-'));
+  try {
+    const sample = join(tmp, 'tagged_loop.lts');
+    writeFileSync(
+      sample,
+      '@outer loop [1,2,3] {if .item==2 {break .value+10;}} then {.count+.value}\n',
+      'utf8',
+    );
+    const formatted = spawnSync(process.execPath, [join(root, 'bin', 'lite'), 'fmt', sample], {
+      cwd: root,
+      encoding: 'utf8',
+    });
+    assert.equal(formatted.status, 0);
+    const checkPass = spawnSync(process.execPath, [join(root, 'bin', 'lite'), 'fmt', '--check', sample], {
+      cwd: root,
+      encoding: 'utf8',
+    });
+    assert.equal(checkPass.status, 0);
+    assert.equal(
+      readFileSync(sample, 'utf8'),
+      '@outer loop [1, 2, 3] {\n    if .item==2 {\n        break .value+10;\n    }\n} then {\n    .count+.value\n}\n',
+    );
+  } finally {
+    rmSync(tmp, { recursive: true, force: true });
+  }
+});

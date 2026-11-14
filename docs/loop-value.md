@@ -4,23 +4,24 @@ Status: **typed, universally zero-initialized .value replaces the optional accum
 
 Normative page for `.value` type, initialization, and commit rules. Loop forms are in [loops](loops.md); completion is in [loop completion](loop-completion.md); inference is in [loop type inference](loop-type-inference.md).
 
-Implementation checkpoint, 2026-11-01: the igniter implements a typed `.value`
-for value-producing loops and loops with `then`. It is zero-initialized before
-the first condition check. A normally completing body commits its tail value;
-plain `continue` and bare `break` preserve the committed value. Without `then`,
-the loop result is the final `.value`. Type `T` comes from an expected
-destination (typed declaration, assignment, return or function result), from a
-named sequence source's element type when the body reads `.value`, or otherwise
-from the body tail. Reading `.value` in a body with none of those sources is an
-error rather than a guess. Action loops without `then` keep `Unit` and commit
-nothing. `.count`, `.item` and, for positional sources, `.index` are readable in
-the body; `then` also sees the last entered item/index and the final count.
-`break value` and `continue value` commit to the nearest loop; `break @tag` and
-`continue @tag` target a tagged enclosing loop; `return @tag` commits and stops
-its target loop, running that loop's `then`. Tagged `@tag.value`, `@tag.count`,
-`@tag.item` and `@tag.index` access an enclosing loop from nested code. A body
-tail that is a partial conditional without `else`, payload exits whose loop
-value type cannot be inferred yet, and conditional tags remain unimplemented.
+Implementation checkpoint, 2026-11-14: the TypeScript backend implements a typed,
+zero-initialized `.value` for value-producing loops and loops with `then`. A
+normally completing body commits its tail value; plain `continue` and bare
+`break` preserve the committed value. Without `then`, the loop result is the
+final `.value`. Type `T` comes from an expected destination (typed declaration,
+assignment, return, or function result), a `then` body's `.value`/`@tag.value`
+reads, payload `break`/`continue` expressions, a named sequence source's element
+type when the body reads `.value`, or the body tail; reading `.value` with none
+of those sources is rejected rather than guessed. Action loops without `then`
+keep `Unit` and commit nothing. `.count`, `.item`, and (for positional sources)
+`.index` are readable in the body; `then` also sees the last entered item/index
+(or typed zero/0 after zero entries) and the final count. `break value` and
+`continue value` commit to the nearest loop; `break @tag` and `continue @tag`
+target a tagged enclosing loop; `return @tag` commits and stops its target
+loop, running that loop's `then`. Tagged `@tag.value`, `@tag.count`, `@tag.item`,
+and `@tag.index` access an enclosing loop from nested code, and conditional tags
+(`@tag if`/`@tag match ... then { ... }`) are supported as well. C backend
+support for loop values and payload exits remains deferred.
 
 ## Core rule
 

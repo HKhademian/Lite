@@ -4,17 +4,19 @@ Status: **one receiverless then block using loop metadata selected; .value typed
 
 Normative page for `then`, targeted exits, and the completion result. `.value` type/commits are in [loop value](loop-value.md); loop forms are in [loops](loops.md); inference is in [loop type inference](loop-type-inference.md).
 
-Implementation checkpoint, 2026-11-01: the igniter implements one optional
-receiverless `then { ... }` after a loop body. `then` receives the loop's final
-`.value` and `.count` (entered iterations, including skipped entries); its tail
-is the loop result, so `then { .value }`, `then { .count }`, a transformed
-value, and `then { "text" }` work. Without `then`, the result is the final
-`.value`. A statement loop may also carry `then`; its result is discarded. Tagged loops (`@name loop ...`), `@name.value`/`.count`/`.item`/`.index`,
-payload `break`/`continue`, `break @name`, `continue @name` and
-`return @name` are implemented. `.item`/`.index` in `then` expose the last
-entered entry, or a typed zero item and index 0 after zero entries. Cleanup
-ordering with `finally`, conditional tags, and payload exits whose target value
-type cannot be inferred yet remain unimplemented.
+Implementation checkpoint, 2026-11-14: the TypeScript backend implements one
+optional receiverless `then { ... }` after a loop or conditional body. `then`
+receives the final `.value` and (for loops) `.count` (entered iterations,
+including skipped entries); its tail is the construct result, so `then { .value }`,
+`then { .count }`, a transformed value, and `then { "text" }` work. Without
+`then`, the result is the final `.value`. A statement loop or conditional may
+also carry `then`; its result is discarded. Tagged loops (`@name loop ...`),
+conditional tags (`@name if`/`@name match ... then { ... }`), `@name.value`/
+`.count`/`.item`/`.index`, payload `break`/`continue`, `break @name`,
+`continue @name`, and `return @name` are implemented. `.item`/`.index` in `then`
+expose the last entered entry, or a typed zero item and index 0 after zero
+entries. Cleanup ordering with `finally` remains open until construct-level
+`finally` lands.
 
 ## Template
 

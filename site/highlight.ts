@@ -10,13 +10,13 @@ export function escapeHtml(text: string): string {
 }
 
 const liteKeywords = new Set([
-  'as', 'and', 'break', 'continue', 'else', 'false', 'fn', 'if',
+  'as', 'and', 'break', 'continue', 'else', 'false', 'finally', 'fn', 'if',
   'import', 'loop', 'match', 'mut', 'not', 'or', 'pub', 'return',
-  'self', 'true', 'type', 'var', 'while',
+  'self', 'then', 'true', 'type', 'var', 'while',
 ]);
 
 const liteTypes = new Set([
-  'Bool', 'Int', 'Int8', 'Int16', 'Int32', 'Int64', 'Float', 'Float32', 'Float64', 'Double', 'String', 'Unit', 'Void', 'List', 'Array',
+  'Bool', 'Int', 'Int8', 'Int16', 'Int32', 'Int64', 'Float', 'Float32', 'Float64', 'Double', 'String', 'Unit', 'Void', 'Never', 'List', 'Array',
 ]);
 
 const tsKeywords = new Set([
@@ -40,7 +40,7 @@ const cTypes = new Set([
   'uint64_t', 'void', '_Noreturn',
 ]);
 
-function highlightCode(source: string, keywords: ReadonlySet<string>, types: ReadonlySet<string>): string {
+function highlightCode(source: string, keywords: ReadonlySet<string>, types: ReadonlySet<string>, highlightTags = false): string {
   const out: string[] = [];
   let i = 0;
   const n = source.length;
@@ -97,6 +97,15 @@ function highlightCode(source: string, keywords: ReadonlySet<string>, types: Rea
       continue;
     }
 
+    // Tagged control-flow labels (@tag) in LiteScript
+    if (highlightTags && ch === '@' && i + 1 < n && /[a-zA-Z_]/.test(source[i + 1]!)) {
+      let j = i + 2;
+      while (j < n && /[a-zA-Z0-9_]/.test(source[j]!)) j += 1;
+      out.push(`<span class="tok-keyword">${escapeHtml(source.slice(i, j))}</span>`);
+      i = j;
+      continue;
+    }
+
     // Identifiers, keywords, built-in types
     if (/[a-zA-Z_$]/.test(ch)) {
       let j = i + 1;
@@ -135,7 +144,7 @@ function highlightCode(source: string, keywords: ReadonlySet<string>, types: Rea
 }
 
 export function highlightLite(source: string): string {
-  return highlightCode(source, liteKeywords, liteTypes);
+  return highlightCode(source, liteKeywords, liteTypes, true);
 }
 
 export function highlightTs(source: string): string {
