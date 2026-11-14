@@ -24,3 +24,7 @@ pub envGet := fn(name: String): (found: Bool, value: String);
 /** Runs `command` with `args`; empty `cwd` inherits current directory, `envOverrides` applies `KEY=VALUE` entries, and `capture` pipes stdout/stderr with `stdinText` instead of inheriting stdio. */
 pub run := fn(command: String, args: List<String>, cwd: String, envOverrides: List<String>, capture: Bool,
 stdinText: String): (status: Int, stdout: String, stderr: String, error: String);
+
+/** Runs `command` with `args`, raw `stdinBytes`, and `timeoutMs` (`<= 0` disables timeout), writing captured stdout/stderr bytes to `stdoutPath` and `stderrPath`. */
+pub runBytes := fn(command: String, args: List<String>, cwd: String, envOverrides: List<String>, timeoutMs: Int,
+stdinBytes: List<Int>, stdoutPath: String, stderrPath: String): (status: Int, error: String);

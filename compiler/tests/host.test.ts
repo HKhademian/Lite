@@ -3955,6 +3955,7 @@ test('core os/fs/process/crypto/time host bindings, standalone CLI execution, an
       'proc := import "core/process";',
       'crypto := import "core/crypto";',
       'time := import "core/time";',
+      'textHost := import "core/text-host";',
       'io := import "core/io";',
       'tmp := fs.makeTempDir("lite-os-host-");',
       'if not tmp.ok { io.outputLine("mkdir-temp-fail", tmp.error); io.exit(1); }',
@@ -3986,6 +3987,11 @@ test('core os/fs/process/crypto/time host bindings, standalone CLI execution, an
       'homeEnv := proc.envGet("PATH");',
       'childOk := proc.run(proc.execPath(), ["-e", "process.stdout.write(process.env.LITE_ENV_CHILD + \':\' + process.getBuiltinModule(\'node:fs\').readFileSync(0,\'utf8\'))"], dir, ["LITE_ENV_CHILD=ok"], true, "ping");',
       'childFail := proc.run("/no/such/binary-lite-xyz", [], "", [], true, "");',
+      'bytesOutPath := dir + "/child-out.bin";',
+      'bytesErrPath := dir + "/child-err.bin";',
+      'childBytes := proc.runBytes(proc.execPath(), ["-e", "const b = process.getBuiltinModule(\'node:fs\').readFileSync(0); process.stdout.write(b); process.stderr.write(Buffer.from([b.length, 42])); process.exit(3);"], dir, [], 5000, rawBytes, bytesOutPath, bytesErrPath);',
+      'childTimeout := proc.runBytes(proc.execPath(), ["-e", "setTimeout(() => {}, 2000)"], dir, [], 50, [], dir + "/t-out.bin", dir + "/t-err.bin");',
+      'utfBytes := textHost.utf8Bytes("A€");',
       'hashText := crypto.sha256Text("hello");',
       'hashBytes := crypto.sha256Bytes(rawBytes);',
       'hashEmptyBytes := crypto.sha256Bytes([]);',
@@ -4001,6 +4007,7 @@ test('core os/fs/process/crypto/time host bindings, standalone CLI execution, an
       'io.outputLine(entries, linked.ok, real.ok, real.path == fs.realPath(file).path, removed.ok, removedMissing.ok);',
       'io.outputLine(proc.cwd() =!= "", proc.execPath() =!= "", proc.platform() =!= "", proc.arch() =!= "", proc.runtimeVersion() =!= "", not unsetEnv.found, unsetEnv.value == "", homeEnv.found);',
       'io.outputLine(childOk.status, childOk.stdout, childOk.stderr == "", childOk.error == "", childFail.status, childFail.error =!= "");',
+      'io.outputLine(childBytes.status, childBytes.error == "", fs.readBytes(bytesOutPath), fs.readBytes(bytesErrPath), childTimeout.status, childTimeout.error =!= "", utfBytes, textHost.utf8Bytes(""));',
       'io.outputLine(hashText == "2cf24dba5fb0a30e26e83b2ac5b9e29e1b161e5c1fa7425e73043362938b9824", hashBytes == hashRawFile.hex, hashEmptyBytes == crypto.sha256Text(""), hashFile.ok, hashFile.hex == crypto.sha256Text("hello world\\n"), not hashMissing.ok);',
       'io.outputLine(t1 >= t0, iso =!= "");',
       'clean := fs.remove(dir);',
@@ -4019,11 +4026,24 @@ test('core os/fs/process/crypto/time host bindings, standalone CLI execution, an
       '[sub, sub-copy] true true true true true',
       'true true true true true true true true',
       '0 ok:ping true true -1 true',
+      '3 true [0, 65, 255, 13, 10] [5, 42] -1 true [65, 226, 130, 172] []',
       'true true true true true true',
       'true true',
       'true missing',
       '',
     ].join('\n'));
+  });
+
+  const textOnlyBytes = compileTs({
+    text: 'textHost := import "core/text-host"; io := import "core/io"; io.outputLine(textHost.utf8Bytes("hi"));',
+    name: fixtureName,
+  });
+  assert.equal(textOnlyBytes.status, 0, textOnlyBytes.stderr.toString());
+  assert.equal(checkTsArtifact(textOnlyBytes.stdout.toString()).status, 0);
+  withTsArtifact(textOnlyBytes.stdout.toString(), run => {
+    const actual = run();
+    assert.equal(actual.status, 0, actual.stderr.toString());
+    assert.equal(actual.stdout.toString(), '[104, 105]\n');
   });
 
   const standaloneCompiled = compileTs({
@@ -4066,10 +4086,12 @@ test('core os/fs/process/crypto/time host bindings, standalone CLI execution, an
     ['fs := import "core/fs"; x := fs.readBytes(".");', /C backend does not support (filesystem builtins|list values) yet/],
     ['fs := import "core/fs"; x := fs.writeBytes(".", []);', /C backend does not support (filesystem builtins|list values) yet/],
     ['proc := import "core/process"; x := proc.cwd();', /C backend does not support process builtins yet/],
+    ['proc := import "core/process"; x := proc.runBytes("true", [], "", [], 0, [], "", "");', /C backend does not support (process builtins|list values) yet/],
     ['c := import "core/crypto"; x := c.sha256Text("a");', /C backend does not support crypto builtins yet/],
     ['c := import "core/crypto"; x := c.sha256Bytes([]);', /C backend does not support (crypto builtins|list values) yet/],
     ['t := import "core/time"; x := t.monotonicNs();', /C backend does not support time builtins yet/],
     ['host := import "core/text-host"; x := host.indexOf("ab", "b", 0);', /C backend does not support text builtins yet/],
+    ['host := import "core/text-host"; x := host.utf8Bytes("ab");', /C backend does not support (text builtins|list values) yet/],
   ] as const) {
     const rejectedC = compileTarget('c', { text: sourceText, name: fixtureName });
     assert.equal(rejectedC.status, 2, sourceText);

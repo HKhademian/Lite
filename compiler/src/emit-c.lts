@@ -38,7 +38,8 @@ unsupportedBuiltinCode := fn(calls: String): String {
             "C backend does not support reportError or exit yet"
         }
         usesIntHelper(calls, "lite$textLength(") or usesIntHelper(calls, "lite$textAt(") or
-            usesIntHelper(calls, "lite$textSlice(") or usesIntHelper(calls, "lite$textIndexOf(") { "C backend does not support text builtins yet" }
+            usesIntHelper(calls, "lite$textSlice(") or usesIntHelper(calls, "lite$textIndexOf(") or
+            usesIntHelper(calls, "lite$textUtf8Bytes(") { "C backend does not support text builtins yet" }
         usesIntHelper(calls, "lite$fsKind(") or usesIntHelper(calls, "lite$fsReadText(") or
             usesIntHelper(calls, "lite$fsReadBytes(") or usesIntHelper(calls, "lite$fsWriteText(") or
             usesIntHelper(calls, "lite$fsWriteBytes(") or usesIntHelper(calls, "lite$fsListDir(") or
@@ -50,7 +51,8 @@ unsupportedBuiltinCode := fn(calls: String): String {
         usesIntHelper(calls, "lite$processCwd(") or usesIntHelper(calls, "lite$processExecPath(") or
             usesIntHelper(calls, "lite$processEntryPath(") or usesIntHelper(calls, "lite$processPlatform(") or
             usesIntHelper(calls, "lite$processArch(") or usesIntHelper(calls, "lite$processRuntimeVersion(") or
-            usesIntHelper(calls, "lite$processEnvGet(") or usesIntHelper(calls, "lite$processRun(") {
+            usesIntHelper(calls, "lite$processEnvGet(") or usesIntHelper(calls, "lite$processRun(") or
+            usesIntHelper(calls, "lite$processRunBytes(") {
             "C backend does not support process builtins yet"
         }
         usesIntHelper(calls, "lite$cryptoSha256Text(") or usesIntHelper(calls, "lite$cryptoSha256Bytes(") or

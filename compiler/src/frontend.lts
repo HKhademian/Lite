@@ -1072,6 +1072,7 @@ coreHostFunction := fn(moduleIdentity: String, name: String, params: String, res
         else if name == "at" and params == "text=String|position=Int" and result == "String" { "lite$textAt" }
         else if name == "slice" and params == "text=String|start=Int|end=Int" and result == "String" { "lite$textSlice" }
         else if name == "indexOf" and params == "source=String|needle=String|start=Int" and result == "Int" { "lite$textIndexOf" }
+        else if name == "utf8Bytes" and params == "text=String" and result == "List<Int>" { "lite$textUtf8Bytes" }
         else { "" }
     } else if moduleIdentity == "lite.core.list.v1" {
         if name == "pushBack" and params == "values=mut List<T>|value=T" and result == "Unit" { "lite$core$list$pushBack:v1" }
@@ -1103,6 +1104,9 @@ coreHostFunction := fn(moduleIdentity: String, name: String, params: String, res
         else if name == "envGet" and params == "name=String" and result == "(found:Bool,value:String)" { "lite$processEnvGet" }
         else if name == "run" and params == "command=String|args=List<String>|cwd=String|envOverrides=List<String>|capture=Bool|stdinText=String" and
             result == "(status:Int,stdout:String,stderr:String,error:String)" { "lite$processRun" }
+        else if name == "runBytes" and
+            params == "command=String|args=List<String>|cwd=String|envOverrides=List<String>|timeoutMs=Int|stdinBytes=List<Int>|stdoutPath=String|stderrPath=String" and
+            result == "(status:Int,error:String)" { "lite$processRunBytes" }
         else { "" }
     } else if moduleIdentity == "lite.core.crypto.v1" {
         if name == "sha256Text" and params == "text=String" and result == "String" { "lite$cryptoSha256Text" }

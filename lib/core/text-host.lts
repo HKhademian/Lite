@@ -11,3 +11,6 @@ pub slice := fn(text: String, start: Int, end: Int): String;
 
 /** Returns the first zero-based Unicode scalar index at or after `start` where `needle` occurs, or -1 when absent. */
 pub indexOf := fn(source: String, needle: String, start: Int): Int;
+
+/** Encodes `text` as strict UTF-8 `0..255` byte values. */
+pub utf8Bytes := fn(text: String): List<Int>;

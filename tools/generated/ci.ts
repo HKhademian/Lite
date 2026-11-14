@@ -19,7 +19,7 @@ declare const process: {
         readdirSync(path: string): string[];
         mkdirSync(path: string, options: { recursive: boolean }): void;
         rmSync(path: string, options: { recursive: boolean; force: boolean }): void;
-        cpSync(src: string, dest: string, options: { recursive: boolean; force: boolean }): void;
+        cpSync(src: string, dest: string, options: { recursive: boolean; force: boolean; verbatimSymlinks?: boolean }): void;
         symlinkSync(target: string, path: string): void;
         realpathSync(path: string): string;
         mkdtempSync(prefix: string): string;
@@ -89,17 +89,22 @@ function lite$processEnvGet(name: string): { found: boolean; value: string } {
     const raw = process.env[name];
     return raw === undefined ? { found: false, value: "" } : { found: true, value: raw };
 }
-function lite$processRun(command: string, args: string[], cwd: string, envOverrides: string[], capture: boolean, stdinText: string): { status: bigint; stdout: string; stderr: string; error: string } {
+function lite$buildEnv(envOverrides: readonly string[]): { ok: true; env: Record<string, string | undefined> } | { ok: false; error: string } {
     const env: Record<string, string | undefined> = { ...process.env };
     for (const entry of envOverrides) {
         const eq = entry.indexOf("=");
         if (eq === 0) { delete env[entry.slice(1)]; }
         else if (eq > 0) { env[entry.slice(0, eq)] = entry.slice(eq + 1); }
-        else { return { status: -1n, stdout: "", stderr: "", error: "invalid environment override: " + entry }; }
+        else { return { ok: false, error: "invalid environment override: " + entry }; }
     }
+    return { ok: true, env };
+}
+function lite$processRun(command: string, args: string[], cwd: string, envOverrides: string[], capture: boolean, stdinText: string): { status: bigint; stdout: string; stderr: string; error: string } {
+    const built = lite$buildEnv(envOverrides);
+    if (!built.ok) return { status: -1n, stdout: "", stderr: "", error: built.error };
     const opts: { cwd?: string; env: Record<string, string | undefined>; encoding?: "utf8"; input?: string; stdio: "inherit" | readonly ["pipe", "pipe", "pipe"]; maxBuffer: number } = capture
-        ? { env, encoding: "utf8", input: stdinText, stdio: ["pipe", "pipe", "pipe"], maxBuffer: 128 * 1024 * 1024 }
-        : { env, stdio: "inherit", maxBuffer: 128 * 1024 * 1024 };
+        ? { env: built.env, encoding: "utf8", input: stdinText, stdio: ["pipe", "pipe", "pipe"], maxBuffer: 128 * 1024 * 1024 }
+        : { env: built.env, stdio: "inherit", maxBuffer: 128 * 1024 * 1024 };
     if (cwd !== "") opts.cwd = cwd;
     const res = process.getBuiltinModule("node:child_process").spawnSync(command, args, opts);
     const stdout = res.stdout ?? "";
