@@ -73,9 +73,11 @@ test('buildSite generates static pages and metadata in dist/site', () => {
   assert(index.includes('class="theme-icon icon-moon"'));
   assert(index.includes('class="quickstart-head"'));
   assert(index.includes('class="shell-line"'));
+  assert(index.includes('id="quickstart-copy"'));
   const styleCss = readFileSync(join(out, 'style.css'), 'utf8');
   assert(styleCss.includes('.theme-toggle.theme-toggle-shine'));
   assert(styleCss.includes('.shell-line::before'));
+  assert(styleCss.includes('.quickstart-copy'));
   const playground = readFileSync(join(out, 'playground/index.html'), 'utf8');
   assert(playground.includes('playground-page'));
   assert(playground.includes('highlightLite(editorEl.value)'));

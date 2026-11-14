@@ -291,13 +291,52 @@ function renderHomePage(rendered: ReadonlyMap<string, RenderedSample>, repoUrl: 
     </div>
     <div class="quickstart" role="region" aria-label="Quickstart shell commands">
       <div class="quickstart-head">
-        <span class="quickstart-dots" aria-hidden="true"><span></span><span></span><span></span></span>
-        <span class="quickstart-label">shell</span>
+        <span class="quickstart-title">
+          <span class="quickstart-dots" aria-hidden="true"><span></span><span></span><span></span></span>
+          <span class="quickstart-label">shell</span>
+        </span>
+        <button id="quickstart-copy" class="quickstart-copy" type="button" aria-label="Copy shell commands">Copy</button>
       </div>
       <pre class="quickstart-body"><code><span class="shell-line"><span class="shell-cmd">git</span> clone ${escapeHtml(cloneUrl)}</span>
 <span class="shell-line"><span class="shell-cmd">cd</span> LiteScript</span>
 <span class="shell-line"><span class="shell-cmd">./bin/lite</span> run ${escapeHtml(heroSample.file)}</span></code></pre>
     </div>
+    <script>
+      (function () {
+        var copyBtn = document.getElementById("quickstart-copy");
+        if (!copyBtn) return;
+        var timer = 0;
+        copyBtn.addEventListener("click", function () {
+          var lines = Array.prototype.map.call(
+            document.querySelectorAll(".quickstart-body .shell-line"),
+            function (el) { return el.textContent || ""; }
+          );
+          var text = lines.join("\\n");
+          function markCopied() {
+            copyBtn.textContent = "Copied";
+            copyBtn.classList.add("copied");
+            if (timer) window.clearTimeout(timer);
+            timer = window.setTimeout(function () {
+              copyBtn.textContent = "Copy";
+              copyBtn.classList.remove("copied");
+            }, 1600);
+          }
+          if (navigator.clipboard && navigator.clipboard.writeText) {
+            navigator.clipboard.writeText(text).then(markCopied, function () {});
+          } else {
+            var ta = document.createElement("textarea");
+            ta.value = text;
+            ta.setAttribute("readonly", "");
+            ta.style.position = "fixed";
+            ta.style.opacity = "0";
+            document.body.appendChild(ta);
+            ta.select();
+            try { if (document.execCommand("copy")) markCopied(); } catch (e) {}
+            document.body.removeChild(ta);
+          }
+        });
+      })();
+    </script>
   </div>
   ${renderSampleCard(hero, '', false)}
 </section>

@@ -107,34 +107,94 @@ export const siteCss = `:root {
 .theme-toggle.theme-toggle-shine:hover {
   color: var(--switch-color);
   box-shadow: var(--switch-shadow-hover);
-  transform: scale(1.08);
+  transform: translateY(-1px) scale(1.14);
+  animation: lite-shine-pulse 1.8s ease-in-out infinite;
+}
+.theme-toggle.theme-toggle-shine:active {
+  transform: translateY(0) scale(0.92);
+  animation: none;
+}
+@keyframes lite-shine-pulse {
+  0%, 100% {
+    box-shadow: var(--switch-shadow-hover);
+  }
+  50% {
+    box-shadow: 0 0 18px var(--switch-shine-core), 0 0 calc(var(--switch-shine-size) * 1.6) calc(var(--switch-shine-spread) + 5px) var(--switch-shine-mid);
+  }
+}
+@keyframes lite-orb-rise {
+  0% {
+    opacity: 0.45;
+    transform: scale(0.76) rotate(-24deg);
+  }
+  100% {
+    opacity: 1;
+    transform: scale(1) rotate(0deg);
+  }
+}
+:root[data-theme-switching="true"] .theme-toggle .theme-icon {
+  animation: lite-orb-rise 0.34s cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+:root[data-theme-switching="true"] body,
+:root[data-theme-switching="true"] .site-header,
+:root[data-theme-switching="true"] .quickstart,
+:root[data-theme-switching="true"] .quickstart-head,
+:root[data-theme-switching="true"] .code-card,
+:root[data-theme-switching="true"] .pillar,
+:root[data-theme-switching="true"] .btn {
+  transition: background-color 0.28s ease, color 0.22s ease, border-color 0.28s ease, box-shadow 0.28s ease;
 }
 @media (prefers-reduced-motion: reduce) {
   .theme-toggle,
   .theme-toggle .theme-icon {
     transition: none;
   }
+  .theme-toggle:hover,
+  .theme-toggle:active,
+  .theme-toggle:hover .icon-auto,
+  .theme-toggle:hover .icon-sun,
+  .theme-toggle:hover .icon-moon,
+  .theme-toggle.theme-toggle-shine:hover,
+  :root[data-theme-switching="true"] .theme-toggle .theme-icon {
+    transform: none;
+    animation: none;
+  }
+  :root[data-theme-switching="true"] body,
+  :root[data-theme-switching="true"] .site-header,
+  :root[data-theme-switching="true"] .quickstart,
+  :root[data-theme-switching="true"] .quickstart-head,
+  :root[data-theme-switching="true"] .code-card,
+  :root[data-theme-switching="true"] .pillar,
+  :root[data-theme-switching="true"] .btn {
+    transition: none;
+  }
 }
-@media (prefers-color-scheme: dark) {
-  :root:not([data-theme="light"]) .theme-toggle.theme-toggle-shine {
-    --switch-color: #D8E8FF;
-    --switch-shine-core: rgba(239, 246, 255, 0.78);
-    --switch-shine-mid: rgba(147, 197, 253, 0.56);
-    --switch-shine-outer: rgba(191, 219, 254, 0.32);
-  }
-  :root:not([data-theme="light"]) .theme-toggle .icon-sun {
-    display: none;
-  }
-  :root:not([data-theme="light"]) .theme-toggle .icon-moon {
-    display: block;
-  }
+:root[data-theme="light"] .theme-toggle.theme-toggle-shine {
+  --switch-color: #D97706;
+  --switch-shine-core: rgba(254, 240, 138, 0.9);
+  --switch-shine-mid: rgba(251, 191, 36, 0.62);
+  --switch-shine-outer: rgba(245, 158, 11, 0.36);
+  --switch-shadow: 0 0 10px var(--switch-shine-mid), 0 0 var(--switch-shine-size) var(--switch-shine-spread) var(--switch-shine-outer);
+  --switch-shadow-hover: 0 0 14px var(--switch-shine-core), 0 0 calc(var(--switch-shine-size) * 1.35) calc(var(--switch-shine-spread) + 3px) var(--switch-shine-mid);
+  --switch-glow: drop-shadow(0 0 var(--switch-shine-icon-glow) var(--switch-shine-mid));
+}
+:root[data-theme="light"] .theme-toggle .icon-auto,
+:root[data-theme="light"] .theme-toggle .icon-moon {
+  display: none;
+}
+:root[data-theme="light"] .theme-toggle .icon-sun {
+  display: block;
 }
 :root[data-theme="dark"] .theme-toggle.theme-toggle-shine {
   --switch-color: #D8E8FF;
   --switch-shine-core: rgba(239, 246, 255, 0.78);
   --switch-shine-mid: rgba(147, 197, 253, 0.56);
   --switch-shine-outer: rgba(191, 219, 254, 0.32);
+  --switch-shadow: 0 0 10px var(--switch-shine-mid), 0 0 var(--switch-shine-size) var(--switch-shine-spread) var(--switch-shine-outer);
+  --switch-shadow-hover: 0 0 14px var(--switch-shine-core), 0 0 calc(var(--switch-shine-size) * 1.35) calc(var(--switch-shine-spread) + 3px) var(--switch-shine-mid);
+  --switch-glow: drop-shadow(0 0 var(--switch-shine-icon-glow) var(--switch-shine-mid));
 }
+:root[data-theme="dark"] .theme-toggle .icon-auto,
 :root[data-theme="dark"] .theme-toggle .icon-sun {
   display: none;
 }
@@ -321,6 +381,11 @@ a:hover { text-decoration: underline; }
   background: var(--shell-head);
   border-bottom: 1px solid var(--shell-border);
 }
+.quickstart-title {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.65rem;
+}
 .quickstart-dots {
   display: inline-flex;
   align-items: center;
@@ -342,6 +407,28 @@ a:hover { text-decoration: underline; }
   text-transform: uppercase;
   letter-spacing: 0.06em;
   color: var(--shell-muted);
+}
+.quickstart-copy {
+  appearance: none;
+  border: 1px solid var(--shell-border);
+  border-radius: 6px;
+  background: transparent;
+  color: var(--shell-muted);
+  font-family: var(--font-mono);
+  font-size: 0.72rem;
+  font-weight: 600;
+  line-height: 1;
+  padding: 0.28rem 0.55rem;
+  cursor: pointer;
+  transition: color 0.15s ease, border-color 0.15s ease, background-color 0.15s ease;
+}
+.quickstart-copy:hover {
+  color: var(--shell-ink);
+  border-color: var(--shell-prompt);
+}
+.quickstart-copy.copied {
+  color: var(--shell-prompt);
+  border-color: var(--shell-prompt);
 }
 .quickstart-body {
   margin: 0;
