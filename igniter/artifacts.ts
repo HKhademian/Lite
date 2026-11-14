@@ -1,9 +1,10 @@
 /** Internal artifact runner for emitted bootstrap TS and C. */
 
 import { spawnSync } from 'node:child_process';
-import { closeSync, mkdirSync, mkdtempSync, openSync, readFileSync, rmSync, statSync, writeFileSync } from 'node:fs';
+import { closeSync, existsSync, mkdirSync, mkdtempSync, openSync, readFileSync, rmSync, statSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
+import { fileURLToPath } from 'node:url';
 
 /** Which artifact step produced the captured result. */
 export type ArtifactPhase = 'typecheck' | 'compile' | 'run';
@@ -25,8 +26,22 @@ function inputBytes(input: string | Uint8Array | undefined): Buffer {
   return input === undefined ? Buffer.alloc(0) : Buffer.from(input);
 }
 
-/** Reads the checking config that emitted TS artifacts must satisfy. */
+let cachedCheckOptions: Record<string, unknown> | undefined;
+let cachedNativeTsc: string | null | undefined;
+
+/** Resolves the native TS 7 compiler binary lazily when present, caching the path lookup. */
+function nativeTscPath(): string | undefined {
+  if (cachedNativeTsc === undefined) {
+    const exeName = process.platform === 'win32' ? 'tsc.exe' : 'tsc';
+    const candidate = fileURLToPath(new URL(`./node_modules/@typescript/typescript-${process.platform}-${process.arch}/lib/${exeName}`, import.meta.url));
+    cachedNativeTsc = existsSync(candidate) ? candidate : null;
+  }
+  return cachedNativeTsc ?? undefined;
+}
+
+/** Reads and memoizes the checking config that emitted TS artifacts must satisfy. */
 function checkOptions(): Record<string, unknown> {
+  if (cachedCheckOptions !== undefined) return cachedCheckOptions;
   const parsed: unknown = JSON.parse(readFileSync(new URL('./tsconfig.json', import.meta.url), 'utf8'));
   if (typeof parsed !== 'object' || parsed === null || Array.isArray(parsed)) {
     throw new Error('igniter tsconfig is not an object');
@@ -35,7 +50,8 @@ function checkOptions(): Record<string, unknown> {
   if (typeof options !== 'object' || options === null || Array.isArray(options)) {
     throw new Error('igniter tsconfig has no compilerOptions object');
   }
-  return options as Record<string, unknown>;
+  cachedCheckOptions = options as Record<string, unknown>;
+  return cachedCheckOptions;
 }
 
 /** Runs one prepared TS artifact in an isolated process with fixed input. */
@@ -108,8 +124,10 @@ export function prepareTsArtifacts(sources: readonly string[], options: Readonly
       compilerOptions: { ...checkOptions(), types: [], typeRoots: [], lib: ['ESNext'] },
       files: artifacts,
     }));
-    const tsc = new URL('./node_modules/typescript/bin/tsc', import.meta.url).pathname;
-    const checked = spawnSync(process.execPath, [tsc, '-p', config], { encoding: 'utf8', timeout: 30000 });
+    const nativeTsc = nativeTscPath();
+    const checked = nativeTsc !== undefined
+      ? spawnSync(nativeTsc, ['-p', config], { encoding: 'utf8', timeout: 30000 })
+      : spawnSync(process.execPath, [fileURLToPath(new URL('./node_modules/typescript/bin/tsc', import.meta.url)), '-p', config], { encoding: 'utf8', timeout: 30000 });
     if (checked.error !== undefined) throw checked.error;
     const check: ArtifactRun = {
       phase: 'typecheck', status: checked.status, signal: checked.signal,
