@@ -359,21 +359,21 @@ buildTsConfigText := fn(rootDir: String, artifactPath: String): (ok: Bool, text:
     (ok = true, text = body, error = "")
 }
 
-/** Strict-typechecks emitted TypeScript `artifactPath` inside `workDir` using native or JS `tsc`. */
-pub checkTsArtifactFile := fn(rootDir: String, artifactPath: String, workDir: String): (ok: Bool, error: String) {
+/** Strict-typechecks emitted TypeScript `artifactPath` inside `workDir` with `timeoutMs` (`<= 0` disables timeout). */
+pub checkTsArtifactFileWithStatus := fn(rootDir: String, artifactPath: String, workDir: String, timeoutMs: Int): (ok: Bool, status: Int, error: String) {
     mkRes := fs.makeDir(workDir);
-    if not mkRes.ok { return (ok = false, error = mkRes.error); }
+    if not mkRes.ok { return (ok = false, status = -1, error = mkRes.error); }
     pkgRes := fs.writeText(path.join(workDir, "package.json"), "{\"type\":\"module\"}\n");
-    if not pkgRes.ok { return (ok = false, error = pkgRes.error); }
+    if not pkgRes.ok { return (ok = false, status = -1, error = pkgRes.error); }
     localArtifact := path.join(workDir, "artifact.ts");
     copyArt := fs.copy(artifactPath, localArtifact);
-    if not copyArt.ok { return (ok = false, error = copyArt.error); }
+    if not copyArt.ok { return (ok = false, status = -1, error = copyArt.error); }
 
     cfgRes := buildTsConfigText(rootDir, localArtifact);
-    if not cfgRes.ok { return (ok = false, error = cfgRes.error); }
+    if not cfgRes.ok { return (ok = false, status = -1, error = cfgRes.error); }
     tsconfigPath := path.join(workDir, "tsconfig.json");
     wCfg := fs.writeText(tsconfigPath, cfgRes.text);
-    if not wCfg.ok { return (ok = false, error = wCfg.error); }
+    if not wCfg.ok { return (ok = false, status = -1, error = wCfg.error); }
 
     exeName := if proc.platform() == "win32" { "tsc.exe" } else { "tsc" };
     nativeTsc := path.join(rootDir, "igniter/node_modules/@typescript/typescript-" + proc.platform() + "-" + proc.arch() + "/lib/" + exeName);
@@ -386,24 +386,30 @@ pub checkTsArtifactFile := fn(rootDir: String, artifactPath: String, workDir: St
     var procErr := "";
     if fs.kind(nativeTsc) == "file" {
         args: List<String> = ["-p", tsconfigPath];
-        res := proc.runBytes(nativeTsc, args, workDir, emptyEnv, 30000, emptyBytes, outPath, errPath);
+        res := proc.runBytes(nativeTsc, args, workDir, emptyEnv, timeoutMs, emptyBytes, outPath, errPath);
         status = res.status;
         procErr = res.error;
     } else {
         args: List<String> = [path.join(rootDir, "igniter/node_modules/typescript/bin/tsc"), "-p", tsconfigPath];
-        res := proc.runBytes(proc.execPath(), args, workDir, emptyEnv, 30000, emptyBytes, outPath, errPath);
+        res := proc.runBytes(proc.execPath(), args, workDir, emptyEnv, timeoutMs, emptyBytes, outPath, errPath);
         status = res.status;
         procErr = res.error;
     }
 
-    if procErr =!= "" { return (ok = false, error = procErr); }
+    if procErr =!= "" { return (ok = false, status = status, error = procErr); }
     if status =!= 0 {
         errBytes := fs.readBytes(errPath);
         outBytes := fs.readBytes(outPath);
         msg := if list.listCountInt(errBytes) > 0 { readFileDiagnostic(errPath, list.listCountInt(errBytes)) } else { readFileDiagnostic(outPath, list.listCountInt(outBytes)) };
-        return (ok = false, error = msg);
+        return (ok = false, status = status, error = msg);
     }
-    (ok = true, error = "")
+    (ok = true, status = 0, error = "")
+}
+
+/** Strict-typechecks emitted TypeScript `artifactPath` inside `workDir` using native or JS `tsc`. */
+pub checkTsArtifactFile := fn(rootDir: String, artifactPath: String, workDir: String): (ok: Bool, error: String) {
+    checked := checkTsArtifactFileWithStatus(rootDir, artifactPath, workDir, 30000);
+    (ok = checked.ok, error = checked.error)
 }
 
 runCaseGit := fn(projDir: String, gitArgs: List<String>): (ok: Bool, error: String) {

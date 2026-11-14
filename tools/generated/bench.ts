@@ -3528,38 +3528,39 @@ export function main(lite$write?: (text: string) => void): string {
         return { ok: true, text: lite_body, error: "" };
     }
     void liteFn$lib$util$cases$buildTsConfigText;
-    function liteFn$lib$util$cases$checkTsArtifactFile(lite_rootDir: string, lite_artifactPath: string, lite_workDir: string): { ok: boolean; error: string } {
+    function liteFn$lib$util$cases$checkTsArtifactFileWithStatus(lite_rootDir: string, lite_artifactPath: string, lite_workDir: string, lite_timeoutMs: bigint): { ok: boolean; status: bigint; error: string } {
         void lite_rootDir;
         void lite_artifactPath;
         void lite_workDir;
+        void lite_timeoutMs;
         const lite_mkRes = lite$fsMakeDir(lite_workDir);
         void lite_mkRes;
         if ((!((lite_mkRes).ok))) {
-            return { ok: false, error: (lite_mkRes).error };
+            return { ok: false, status: (-1n), error: (lite_mkRes).error };
         }
         const lite_pkgRes = lite$fsWriteText(liteFn$lib$util$path$join(lite_workDir, "package.json"), "{\"type\":\"module\"}\n");
         void lite_pkgRes;
         if ((!((lite_pkgRes).ok))) {
-            return { ok: false, error: (lite_pkgRes).error };
+            return { ok: false, status: (-1n), error: (lite_pkgRes).error };
         }
         const lite_localArtifact = liteFn$lib$util$path$join(lite_workDir, "artifact.ts");
         void lite_localArtifact;
         const lite_copyArt = lite$fsCopy(lite_artifactPath, lite_localArtifact);
         void lite_copyArt;
         if ((!((lite_copyArt).ok))) {
-            return { ok: false, error: (lite_copyArt).error };
+            return { ok: false, status: (-1n), error: (lite_copyArt).error };
         }
         const lite_cfgRes = liteFn$lib$util$cases$buildTsConfigText(lite_rootDir, lite_localArtifact);
         void lite_cfgRes;
         if ((!((lite_cfgRes).ok))) {
-            return { ok: false, error: (lite_cfgRes).error };
+            return { ok: false, status: (-1n), error: (lite_cfgRes).error };
         }
         const lite_tsconfigPath = liteFn$lib$util$path$join(lite_workDir, "tsconfig.json");
         void lite_tsconfigPath;
         const lite_wCfg = lite$fsWriteText(lite_tsconfigPath, (lite_cfgRes).text);
         void lite_wCfg;
         if ((!((lite_wCfg).ok))) {
-            return { ok: false, error: (lite_wCfg).error };
+            return { ok: false, status: (-1n), error: (lite_wCfg).error };
         }
         const lite_exeName = (Boolean(((lite$processPlatform()) === ("win32"))) ? "tsc.exe" : "tsc");
         void lite_exeName;
@@ -3580,20 +3581,20 @@ export function main(lite$write?: (text: string) => void): string {
         if (((lite$fsKind(lite_nativeTsc)) === ("file"))) {
             const lite_args: string[] = [...(["-p", lite_tsconfigPath])];
             void lite_args;
-            const lite_res = lite$processRunBytes(lite_nativeTsc, [...(lite_args)], lite_workDir, [...(lite_emptyEnv)], 30000n, [...(lite_emptyBytes)], lite_outPath, lite_errPath);
+            const lite_res = lite$processRunBytes(lite_nativeTsc, [...(lite_args)], lite_workDir, [...(lite_emptyEnv)], lite_timeoutMs, [...(lite_emptyBytes)], lite_outPath, lite_errPath);
             void lite_res;
             lite_status = (lite_res).status;
             lite_procErr = (lite_res).error;
         } else {
             const lite_args: string[] = [...([liteFn$lib$util$path$join(lite_rootDir, "igniter/node_modules/typescript/bin/tsc"), "-p", lite_tsconfigPath])];
             void lite_args;
-            const lite_res = lite$processRunBytes(lite$processExecPath(), [...(lite_args)], lite_workDir, [...(lite_emptyEnv)], 30000n, [...(lite_emptyBytes)], lite_outPath, lite_errPath);
+            const lite_res = lite$processRunBytes(lite$processExecPath(), [...(lite_args)], lite_workDir, [...(lite_emptyEnv)], lite_timeoutMs, [...(lite_emptyBytes)], lite_outPath, lite_errPath);
             void lite_res;
             lite_status = (lite_res).status;
             lite_procErr = (lite_res).error;
         }
         if (((lite_procErr) !== (""))) {
-            return { ok: false, error: lite_procErr };
+            return { ok: false, status: lite_status, error: lite_procErr };
         }
         if (((lite_status) !== (0n))) {
             const lite_errBytes: bigint[] = [...(lite$fsReadBytes(lite_errPath))];
@@ -3602,9 +3603,18 @@ export function main(lite$write?: (text: string) => void): string {
             void lite_outBytes;
             const lite_msg = (Boolean(((liteFn$lib$core$list$listCountInt([...(lite_errBytes)])) > (0n))) ? liteFn$lib$util$cases$readFileDiagnostic(lite_errPath, liteFn$lib$core$list$listCountInt([...(lite_errBytes)])) : liteFn$lib$util$cases$readFileDiagnostic(lite_outPath, liteFn$lib$core$list$listCountInt([...(lite_outBytes)])));
             void lite_msg;
-            return { ok: false, error: lite_msg };
+            return { ok: false, status: lite_status, error: lite_msg };
         }
-        return { ok: true, error: "" };
+        return { ok: true, status: 0n, error: "" };
+    }
+    void liteFn$lib$util$cases$checkTsArtifactFileWithStatus;
+    function liteFn$lib$util$cases$checkTsArtifactFile(lite_rootDir: string, lite_artifactPath: string, lite_workDir: string): { ok: boolean; error: string } {
+        void lite_rootDir;
+        void lite_artifactPath;
+        void lite_workDir;
+        const lite_checked = liteFn$lib$util$cases$checkTsArtifactFileWithStatus(lite_rootDir, lite_artifactPath, lite_workDir, 30000n);
+        void lite_checked;
+        return { ok: (lite_checked).ok, error: (lite_checked).error };
     }
     void liteFn$lib$util$cases$checkTsArtifactFile;
     function liteFn$lib$util$cases$runCaseGit(lite_projDir: string, lite_gitArgs: string[]): { ok: boolean; error: string } {
@@ -3738,7 +3748,7 @@ export function main(lite$write?: (text: string) => void): string {
         if (((((lite_scenarioIdx) < (0n))) || (((lite_scenarioIdx) >= (liteFn$lib$core$list$listCountInt([...(lite_scenarios)])))))) {
             return { ok: false, artifactSha: "", error: ((lite_caseId) + (": invalid scenario index")) };
         }
-        const lite_sPos = lite$listAt((lite_scenarios), lite_scenarioIdx, 24216);
+        const lite_sPos = lite$listAt((lite_scenarios), lite_scenarioIdx, 24742);
         void lite_sPos;
         const lite_sName = (liteFn$lib$util$json$readObjectString(lite_caseText, lite_sPos, "name")).value;
         void lite_sName;

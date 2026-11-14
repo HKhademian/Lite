@@ -1,0 +1,161 @@
+/** Strict-typechecks and runs an emitted TS artifact with fixed stdin and no timeout (`compiler/scripts/run-ts-artifact.ts`). */
+
+io := import "core/io";
+fs := import "core/fs";
+proc := import "core/process";
+integer := import "core/int";
+text := import "core/text";
+list := import "core/list";
+path := import "util/path";
+cli := import "util/cli";
+json := import "util/json";
+project := import "util/project";
+cases := import "util/cases";
+
+splitNonEmptyCsv := fn(raw: String): List<String> {
+    out: mut List<String> = [];
+    size := text.length(raw);
+    if size == 0 { return out; }
+    var start := 0;
+    var i := 0;
+    loop i <= size {
+        atEnd := i == size;
+        if atEnd or text.at(raw, i) == "," {
+            if i > start {
+                list.pushBack(mut out, text.slice(raw, start, i));
+            }
+            start = i + 1;
+        }
+        i = i + 1;
+    }
+    out
+};
+
+run := fn(rawArgs: List<String>): Unit {
+    root := project.findRepoRoot();
+    if root == "" {
+        io.errorLine("could not locate LiteScript repository root");
+        io.exit(1);
+    }
+
+    args := cli.stripLeadingSeparator(rawArgs);
+    artOpt := cli.readOptionValue(args, "--artifact");
+    outOpt := cli.readOptionValue(args, "--out");
+    srcOpt := cli.readOptionValue(args, "--source");
+    errOpt := cli.readOptionValue(args, "--err");
+    argOpt := cli.readOptionValue(args, "--args");
+    noCheck := cli.hasOption(args, "--no-check");
+
+    if not artOpt.valid or not outOpt.valid or not srcOpt.valid or not errOpt.valid or not argOpt.valid {
+        io.errorLine("invalid option value");
+        io.exit(64);
+    }
+    if not artOpt.found {
+        io.errorLine("missing --artifact");
+        io.exit(64);
+    }
+    if not outOpt.found {
+        io.errorLine("missing --out");
+        io.exit(64);
+    }
+
+    var leftover := cli.withoutOption(args, "--no-check");
+    leftover = cli.withoutOptionValue(leftover, "--artifact");
+    leftover = cli.withoutOptionValue(leftover, "--out");
+    leftover = cli.withoutOptionValue(leftover, "--source");
+    leftover = cli.withoutOptionValue(leftover, "--err");
+    leftover = cli.withoutOptionValue(leftover, "--args");
+    if list.listCountText(leftover) > 0 {
+        io.errorLine("unexpected argument: " + leftover[0]);
+        io.exit(64);
+    }
+
+    cwd := proc.cwd();
+    artifact := path.resolve(cwd, artOpt.value);
+    outPath := path.resolve(cwd, outOpt.value);
+    errPath := if errOpt.found { path.resolve(cwd, errOpt.value) } else { outPath + ".err" };
+    extraArgs := if argOpt.found { splitNonEmptyCsv(argOpt.value) } else { leftover };
+
+    tmpRes := fs.makeTempDir("lite-self-host-");
+    if not tmpRes.ok {
+        io.errorLine(tmpRes.error);
+        io.exit(1);
+    }
+    work := tmpRes.path;
+
+    artifactPath := path.join(work, "artifact.ts");
+    copyArt := fs.copy(artifact, artifactPath);
+    if not copyArt.ok {
+        _rm := fs.remove(work);
+        io.errorLine(copyArt.error);
+        io.exit(1);
+    }
+    pkgWrite := fs.writeText(path.join(work, "package.json"), "{\"type\":\"module\"}\n");
+    if not pkgWrite.ok {
+        _rm := fs.remove(work);
+        io.errorLine(pkgWrite.error);
+        io.exit(1);
+    }
+    runnerPath := path.join(work, "runner.ts");
+    runnerCode := "import { main } from './artifact.ts';\nimport { writeSync } from 'node:fs';\nprocess.stdout.write(main((text: string): void => { writeSync(1, text); }));\n";
+    runWrite := fs.writeText(runnerPath, runnerCode);
+    if not runWrite.ok {
+        _rm := fs.remove(work);
+        io.errorLine(runWrite.error);
+        io.exit(1);
+    }
+
+    if not noCheck {
+        checked := cases.checkTsArtifactFileWithStatus(root, artifactPath, path.join(work, "tsc"), 0);
+        if not checked.ok {
+            _wErr := fs.writeText(errPath, checked.error);
+            _rm := fs.remove(work);
+            exitStatus := if checked.status > 0 { checked.status } else { 1 };
+            io.errorLine("{\"phase\":\"typecheck\",\"status\":" + integer.intText(exitStatus) + ",\"err\":" + json.quoteString(errPath) + "}");
+            io.exit(exitStatus);
+        }
+    }
+
+    emptyBytes: List<Int> = [];
+    stdinBytes := if srcOpt.found { fs.readBytes(path.resolve(cwd, srcOpt.value)) } else { emptyBytes };
+    cmdArgs: mut List<String> = [runnerPath];
+    loop extraArgs as a {
+        list.pushBack(mut cmdArgs, a);
+    }
+    tempOutPath := path.join(work, "run.stdout");
+    tempErrPath := path.join(work, "run.stderr");
+    emptyEnv: List<String> = [];
+
+    runRes := proc.runBytes(proc.execPath(), cmdArgs, "", emptyEnv, 0, stdinBytes, tempOutPath, tempErrPath);
+    if runRes.error =!= "" {
+        _rm := fs.remove(work);
+        io.errorLine(runRes.error);
+        io.exit(1);
+    }
+
+    outBytesCount := list.listCountInt(fs.readBytes(tempOutPath));
+    errBytesCount := list.listCountInt(fs.readBytes(tempErrPath));
+    cpOut := fs.copy(tempOutPath, outPath);
+    if not cpOut.ok {
+        _rm := fs.remove(work);
+        io.errorLine(cpOut.error);
+        io.exit(1);
+    }
+    cpErr := fs.copy(tempErrPath, errPath);
+    if not cpErr.ok {
+        _rm := fs.remove(work);
+        io.errorLine(cpErr.error);
+        io.exit(1);
+    }
+    _rm := fs.remove(work);
+
+    summary := "{\"phase\":\"run\",\"status\":" + integer.intText(runRes.status)
+    + ",\"signal\":null,\"out\":" + json.quoteString(outPath)
+    + ",\"outBytes\":" + integer.intText(outBytesCount)
+    + ",\"err\":" + json.quoteString(errPath)
+    + ",\"errBytes\":" + integer.intText(errBytesCount) + "}";
+    io.errorLine(summary);
+    io.exit(runRes.status);
+};
+
+run(io.inputArgs());

@@ -77,7 +77,7 @@ test('lite check routes through ./bin/lite to the standalone checker', () => {
 });
 
 test('generated cli, compile, checker, doctor, run, verify, test-runner, test, bench, ci, and release artifacts match their Lite sources and pass strict TS checking', () => {
-  for (const name of ['cli', 'compile', 'compile-c', 'compile-ts', 'checker', 'check', 'run', 'verify', 'test-runner', 'test', 'bench', 'ci', 'release'] as const) {
+  for (const name of ['cli', 'compile', 'compile-c', 'compile-ts', 'checker', 'check', 'run', 'run-ts-artifact', 'verify', 'test-runner', 'test', 'bench', 'ci', 'release'] as const) {
     const sourcePath = join(root, `tools/src/${name}.lts`);
     const compiled = compileTs({ text: readFileSync(sourcePath, 'utf8'), name: `tools/src/${name}.lts`, rootPath: sourcePath });
     assert.equal(compiled.status, 0, compiled.stderr.toString());
