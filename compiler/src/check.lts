@@ -33,7 +33,8 @@ SYMBOL_KIND_VALUE := fn(): String { "value" }
 
 /** True for a built-in type name accepted by the bootstrap subset. */
 isBuiltinType := fn(name: String): Bool {
-    name == "Int" or name == "Float" or name == "String" or name == "Bool" or name == "Unit" or name == "List" or numeric.numericAliasKind(name) =!= ""
+    name == "Int" or name == "Float" or name == "String" or name == "Bool" or name == "Unit" or name == "List" or
+    numeric.isNarrowNumericKind(name) or numeric.numericAliasKind(name) =!= ""
 }
 
 /** True when a read-only text list contains `target`. */
@@ -67,7 +68,8 @@ findLocalAtDepth := fn(locals: Locals, name: String, depth: Int): Int {
 
 /** True for the admitted built-in scalar type names. */
 isScalarType := fn(typeText: String): Bool {
-    typeText == "Int" or typeText == "Float" or typeText == "String" or typeText == "Bool" or typeText == "Unit"
+    typeText == "Int" or typeText == "Float" or typeText == "String" or typeText == "Bool" or typeText == "Unit" or
+    numeric.isNarrowNumericKind(typeText)
 }
 
 /** Returns `List<T>`'s element type, or empty text when the type is not a list. */
@@ -227,16 +229,53 @@ tupleComponentType := fn(typeText: String, member: String): String {
     ""
 }
 
-/** True when two type texts are compatible for the checked subset. */
+/** Trims trailing ASCII spaces from a normalized operand slice. */
+trimTrailingSpaces := fn(text: String): String {
+    var end := textLib.length(text);
+    loop end > 0 and textLib.at(text, end - 1) == " " { end = end - 1; }
+    textLib.slice(text, 0, end)
+}
+
+/** Splits a normalized binary expression `(left op right)` at top-level parenthesis depth 1. */
+splitBinaryOperands := fn(text: String): (left: String, op: String, right: String) {
+    tokens := lexer.tokenize(text, "");
+    count := parser.tokenCount(tokens);
+    if count < 5 or not parser.isSymbol(parser.tokenAt(tokens, 0), "(") or not parser.isSymbol(parser.tokenAt(tokens, count - 2), ")") {
+        return (left = "", op = "", right = "");
+    }
+    var cursor := 1;
+    var depth := 1;
+    loop cursor < count - 2 {
+        token := parser.tokenAt(tokens, cursor);
+        if parser.isSymbol(token, "(") or parser.isSymbol(token, "[") or parser.isSymbol(token, "{") {
+            depth = depth + 1;
+        } else if parser.isSymbol(token, ")") or parser.isSymbol(token, "]") or parser.isSymbol(token, "}") {
+            depth = depth - 1;
+        } else if depth == 1 and cursor > 1 and token.kind == lexer.TOKEN_KIND_SYMBOL() and
+            (token.text == "+" or token.text == "-" or token.text == "*" or token.text == "/" or
+                token.text == "%" or token.text == ":/" or token.text == ":%" or token.text == "**") {
+            leftText := trimTrailingSpaces(textLib.slice(text, parser.tokenOffsetAt(tokens, 1), token.offset));
+            rightStart := parser.tokenOffsetAt(tokens, cursor + 1);
+            rightEnd := parser.tokenOffsetAt(tokens, count - 2);
+            rightText := trimTrailingSpaces(textLib.slice(text, rightStart, rightEnd));
+            return (left = leftText, op = token.text, right = rightText);
+        }
+        cursor = cursor + 1;
+    }
+    (left = "", op = "", right = "")
+}
+
+/** True when two type texts are compatible for the checked subset, allowing lossless numeric widening on scalars. */
 typesCompatible := fn(symbols: Symbols, expected: String, actual: String): Bool {
     if expected == "" or actual == "" { return true; }
     expectedType := resolveAliasName(symbols, expected, 0);
     actualType := resolveAliasName(symbols, actual, 0);
     if isScalarType(expectedType) or isScalarType(actualType) {
-        return expectedType == actualType;
+        return expectedType == actualType or numeric.numericWidens(expectedType, actualType);
     }
     if textLib.startsWithAt(expectedType, 0, "List<") and textLib.startsWithAt(actualType, 0, "List<") {
-        return typesCompatible(symbols, listElementType(expectedType), listElementType(actualType));
+        return resolveAliasName(symbols, listElementType(expectedType), 0) ==
+            resolveAliasName(symbols, listElementType(actualType), 0);
     }
     if textLib.startsWithAt(expectedType, 0, "(") and textLib.startsWithAt(actualType, 0, "(") {
         return expectedType == actualType;
@@ -258,7 +297,8 @@ simpleType := fn(symbols: Symbols, locals: Locals, text: String): String {
     }
     if textLib.startsWithAt(text, 0, "(-") or textLib.startsWithAt(text, 0, "(+") {
         operand := self(symbols, locals, textLib.slice(text, 2, size - 1));
-        if operand == "Float" { return "Float"; }
+        resolvedOperand := resolveAliasName(symbols, operand, 0);
+        if numeric.isNumericKind(resolvedOperand) { return resolvedOperand; }
         return "Int";
     }
     if textLib.startsWithAt(text, 0, "not ") { return "Bool"; }
@@ -356,13 +396,21 @@ simpleType := fn(symbols: Symbols, locals: Locals, text: String): String {
             operator == ">=" or operator == ">!=" {
             return "Bool";
         }
-        if operator == "+" {
-            if firstOperandType(symbols, locals, text) == "String" { return "String"; }
-            return "Int";
-        }
         if operator == "**" { return "Float"; }
-        if operator == "-" or operator == "*" or operator == "/" or operator == "%" or
-            operator == ":/" or operator == ":%" {
+        if operator == "+" or operator == "-" or operator == "*" or operator == "/" or
+            operator == "%" or operator == ":/" or operator == ":%" {
+            split := splitBinaryOperands(text);
+            if split.op =!= "" {
+                leftType := resolveAliasName(symbols, simpleType(symbols, locals, split.left), 0);
+                rightType := resolveAliasName(symbols, simpleType(symbols, locals, split.right), 0);
+                if operator == "+" and (leftType == "String" or rightType == "String") { return "String"; }
+                promoted := numeric.promoteNumericKind(leftType, rightType);
+                if promoted =!= "" { return promoted; }
+                if numeric.isFloatKind(leftType) { return leftType; }
+                if numeric.isFloatKind(rightType) { return rightType; }
+                return "Int";
+            }
+            if operator == "+" and firstOperandType(symbols, locals, text) == "String" { return "String"; }
             return "Int";
         }
         if textLib.indexOfText(text, ",", 0) >= 0 or textLib.indexOfText(text, " = ", 0) >= 0 { return ""; }
@@ -409,8 +457,8 @@ simpleType := fn(symbols: Symbols, locals: Locals, text: String): String {
     ""
 }
 
-/** Recognizes the normalized direct/grouped Int literal forms that can enter a scalar Float context without widening an established value. */
-exactFloatLiteral := fn(text: String): Bool {
+/** Recognizes direct/grouped signed-or-unsigned numeric literals admitted into an expected numeric width without widening arbitrary values. */
+contextualNumericLiteralType := fn(text: String, expectedType: String): String {
     tokens := lexer.tokenize(text, "");
     var first := 0;
     var last := parser.tokenCount(tokens) - 2;
@@ -431,18 +479,65 @@ exactFloatLiteral := fn(text: String): Bool {
     }
     negative := parser.isSymbol(parser.tokenAt(tokens, first), "-");
     if negative { first = first + 1; }
-    if first =!= last or parser.tokenKindAt(tokens, first) =!= lexer.TOKEN_KIND_INT() { return false; }
-    scanned := numeric.scanNumericLiteral(parser.tokenTextAt(tokens, first), 0);
-    if scanned.outsideInt or (not negative and scanned.magnitude == -9223372036854775808) { return false; }
+    if first =!= last { return ""; }
+    kind := parser.tokenKindAt(tokens, first);
+    literal := parser.tokenTextAt(tokens, first);
+    scanned := numeric.scanNumericLiteral(literal, 0);
+    if kind == lexer.TOKEN_KIND_FLOAT() {
+        if expectedType == "Float32" {
+            digits := textLib.slice(literal, 0, scanned.integerEnd) + textLib.slice(literal, scanned.fractionStart, scanned.fractionEnd);
+            if numeric.finiteFloat32Digits(digits, scanned.fractionEnd - scanned.fractionStart, scanned.exponent) { return "Float32"; }
+            return "Float";
+        }
+        return "";
+    }
+    if kind =!= lexer.TOKEN_KIND_INT() { return ""; }
+    if scanned.outsideInt or (not negative and scanned.magnitude == -9223372036854775808) { return ""; }
     value := if negative { scanned.magnitude } else { 0 - scanned.magnitude };
-    numeric.intExactlyFloat(value)
+    if numeric.isNarrowIntKind(expectedType) and numeric.intKindFits(expectedType, value) { return expectedType; }
+    if expectedType == "Float32" and numeric.intExactlyFloat32(value) { return "Float32"; }
+    if expectedType == "Float" and numeric.intExactlyFloat(value) { return "Float"; }
+    ""
 }
 
-/** Infers a scalar expression with the checkpoint's exact integer-literal Float context; ordinary values and binary results retain their types. */
+/** Infers a scalar or contextual list literal expression with fixed-width numeric literal admission. */
 contextualSimpleType := fn(symbols: Symbols, locals: Locals, text: String, expected: String): String {
-    actual := simpleType(symbols, locals, text);
-    if actual == "Int" and resolveAliasName(symbols, expected, 0) == "Float" and exactFloatLiteral(text) { return "Float"; }
-    actual
+    resolvedExpected := resolveAliasName(symbols, expected, 0);
+    if textLib.startsWithAt(resolvedExpected, 0, "List<") and textLib.startsWithAt(text, 0, "[") {
+        elementExpected := listElementType(resolvedExpected);
+        tokens := lexer.tokenize(text, "");
+        count := parser.tokenCount(tokens);
+        var cursor := 1;
+        if parser.isSymbol(parser.tokenAt(tokens, cursor), "]") { return resolvedExpected; }
+        var itemStart := parser.tokenOffsetAt(tokens, cursor);
+        var depth := 0;
+        var allFit := true;
+        loop cursor < count {
+            token := parser.tokenAt(tokens, cursor);
+            if token.kind == lexer.TOKEN_KIND_EOF() { allFit = false; break; }
+            if parser.isSymbol(token, "(") or parser.isSymbol(token, "[") or parser.isSymbol(token, "{") {
+                depth = depth + 1;
+            } else if parser.isSymbol(token, ")") or parser.isSymbol(token, "]") or parser.isSymbol(token, "}") {
+                if depth == 0 and parser.isSymbol(token, "]") {
+                    itemText := textLib.slice(text, itemStart, token.offset);
+                    itemType := self(symbols, locals, itemText, elementExpected);
+                    if not typesCompatible(symbols, elementExpected, itemType) { allFit = false; }
+                    break;
+                }
+                depth = depth - 1;
+            } else if parser.isSymbol(token, ",") and depth == 0 {
+                itemText := textLib.slice(text, itemStart, token.offset);
+                itemType := self(symbols, locals, itemText, elementExpected);
+                if not typesCompatible(symbols, elementExpected, itemType) { allFit = false; break; }
+                if cursor + 1 < count { itemStart = parser.tokenOffsetAt(tokens, cursor + 1); }
+            }
+            cursor = cursor + 1;
+        }
+        if allFit { return "List<" + resolveAliasName(symbols, elementExpected, 0) + ">"; }
+    }
+    contextual := contextualNumericLiteralType(text, resolvedExpected);
+    if contextual =!= "" { return contextual; }
+    simpleType(symbols, locals, text)
 }
 
 /** Builds a token-shaped source position for a symbol diagnostic. */

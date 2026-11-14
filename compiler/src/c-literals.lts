@@ -1,6 +1,7 @@
 /* C backend for the temporary Lite compiler. */
 
 integer := import "core/int";
+numeric := import "./numeric-literals.lts";
 diagLib := import "core/diag";
 textLib := import "core/text";
 
@@ -34,6 +35,12 @@ pub textLiteralCode := fn(value: String): String {
 /** Encodes a finite decimal Float token through the target's correctly rounded binary64 parser, preserving signed zero and gradual underflow. */
 pub floatLiteralCode := fn(digits: String, negative: Bool): String {
     parsed := "lt_float_literal(" + textLiteralCode(digits) + ")";
+    if negative { "(-" + parsed + ")" } else { parsed }
+}
+
+/** Encodes a finite decimal Float32 token parsed as binary32 float and promoted to binary64 storage for uniform C emission. */
+pub float32LiteralCode := fn(digits: String, negative: Bool): String {
+    parsed := "((double)lt_float32_literal(" + textLiteralCode(digits) + "))";
     if negative { "(-" + parsed + ")" } else { parsed }
 }
 
@@ -90,23 +97,42 @@ pub comparisonCode := fn(op: String, kind: String, left: String, right: String):
     }
 }
 
-/** Converts an Int operand only at a mixed Float operation, retaining original values for later comparison-chain pairs. */
+/** Converts an Int* operand only at a mixed Float operation, retaining original values for later comparison-chain pairs. */
 pub floatOperandCode := fn(kind: String, code: String): String {
-    if kind == "Int" { "((double)(" + code + "))" } else { code }
+    if numeric.isIntKind(kind) { "((double)(" + code + "))" } else { code }
+}
+
+/** Converts an Int* or Float operand into a binary32 value (held as double) when targeting Float32. */
+pub float32OperandCode := fn(kind: String, code: String): String {
+    if numeric.isIntKind(kind) or kind == "Float" { "((double)((float)(" + code + ")))" } else { code }
 }
 
 /** Emits one numeric comparison using the pair's common family. */
 comparisonPairCode := fn(op: String, leftKind: String, rightKind: String, left: String, right: String): String {
-    if leftKind =!= rightKind and (leftKind == "Float" or rightKind == "Float") {
+    if numeric.isFloatKind(leftKind) or numeric.isFloatKind(rightKind) {
         comparisonCode(op, "Float", floatOperandCode(leftKind, left), floatOperandCode(rightKind, right))
     } else { comparisonCode(op, leftKind, left, right) }
 }
 
+/** Encodes the arithmetic operator tag expected by runtime float helpers. */
+floatOpTag := fn(op: String): String {
+    if op == "+" { "0" } else if op == "-" { "1" } else if op == "*" { "2" } else { "3" }
+}
+
 /** Sequences operands into binary64 temporaries before the checked operation. */
-pub floatBinaryCode := fn(op: String, left: String, right: String, position: Int): String {
-    tag := if op == "+" { "0" } else if op == "-" { "1" } else if op == "*" { "2" } else { "3" };
+floatBinaryCall := fn(helper: String, op: String, left: String, right: String, position: Int): String {
     id := integer.intText(position);
-    "(lt_arg_f_left_" + id + " = " + left + ", lt_arg_f_right_" + id + " = " + right + ", lt_float_op(lt_arg_f_left_" + id + ", lt_arg_f_right_" + id + ", " + tag + ", " + id + "))"
+    "(lt_arg_f_left_" + id + " = " + left + ", lt_arg_f_right_" + id + " = " + right + ", " + helper + "(lt_arg_f_left_" + id + ", lt_arg_f_right_" + id + ", " + floatOpTag(op) + ", " + id + "))"
+}
+
+/** Sequences operands into binary64 temporaries before the checked binary64 operation. */
+pub floatBinaryCode := fn(op: String, left: String, right: String, position: Int): String {
+    floatBinaryCall("lt_float_op", op, left, right, position)
+}
+
+/** Sequences operands into temporaries before the checked binary32 operation. */
+pub float32BinaryCode := fn(op: String, left: String, right: String, position: Int): String {
+    floatBinaryCall("lt_float32_op", op, left, right, position)
 }
 
 /** Sequences both operands before the selected Float-default power checkpoint. */
@@ -171,9 +197,14 @@ pub intNegateCode := fn(value: String, position: Int): String {
     "lt_checked_negate(" + value + ", " + integer.intText(position) + ")"
 }
 
+/** Emits a checked signed range check for narrow integer arithmetic results. */
+pub checkedNarrowIntCode := fn(kind: String, value: String, position: Int): String {
+    "lt_checked_narrow_int(" + value + ", " + integer.intText(numeric.narrowIntBits(kind)) + ", " + textLiteralCode(kind) + ", " + integer.intText(position) + ")"
+}
+
 /** Names a typed, source-position-hygienic C comparison operand temporary. */
 comparisonTemp := fn(kind: String, position: Int, index: Int): String {
-    tag := if kind == "String" { "s" } else if kind == "Bool" { "b" } else if kind == "Float" { "f" } else { "i" };
+    tag := if kind == "String" { "s" } else if kind == "Bool" { "b" } else if numeric.isFloatKind(kind) { "f" } else { "i" };
     "lt_cmp_" + tag + "_" + integer.intText(position) + "_" + integer.intText(index)
 }
 

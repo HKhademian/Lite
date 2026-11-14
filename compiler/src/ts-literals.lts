@@ -1,13 +1,14 @@
 /* TypeScript backend for the temporary Lite compiler. */
 
 integer := import "core/int";
+numeric := import "./numeric-literals.lts";
 textLib := import "core/text";
 
 /** Maps a restricted Lite scalar kind to its TypeScript type. */
 pub tsScalarType := fn(kind: String): String {
-    if kind == "Int" { "bigint" }
+    if numeric.isIntKind(kind) { "bigint" }
     else if kind == "String" { "string" }
-    else if kind == "Float" { "number" }
+    else if numeric.isFloatKind(kind) { "number" }
     else if kind == "Bool" { "boolean" }
     else { "void" }
 }
@@ -40,6 +41,12 @@ pub textLiteralCode := fn(value: String): String {
 /** Encodes a finite decimal Float token through the target's correctly rounded binary64 parser, preserving signed zero and gradual underflow. */
 pub floatLiteralCode := fn(digits: String, negative: Bool): String {
     parsed := "Number(" + textLiteralCode(digits) + ")";
+    if negative { "(-" + parsed + ")" } else { parsed }
+}
+
+/** Encodes a finite decimal Float32 token rounded to IEEE-754 binary32 precision, preserving signed zero. */
+pub float32LiteralCode := fn(digits: String, negative: Bool): String {
+    parsed := "Math.fround(Number(" + textLiteralCode(digits) + "))";
     if negative { "(-" + parsed + ")" } else { parsed }
 }
 
@@ -94,22 +101,38 @@ pub comparisonCode := fn(op: String, kind: String, left: String, right: String):
     }
 }
 
-/** Converts an Int operand only at a mixed Float operation, retaining original values for later comparison-chain pairs. */
+/** Converts an Int* operand only at a mixed Float operation, retaining original values for later comparison-chain pairs. */
 pub floatOperandCode := fn(kind: String, code: String): String {
-    if kind == "Int" { "Number(" + code + ")" } else { code }
+    if numeric.isIntKind(kind) { "Number(" + code + ")" } else { code }
+}
+
+/** Converts an Int* or Float operand into a binary32 value when targeting Float32. */
+pub float32OperandCode := fn(kind: String, code: String): String {
+    if numeric.isIntKind(kind) { "Math.fround(Number(" + code + "))" }
+    else if kind == "Float" { "Math.fround(" + code + ")" }
+    else { code }
 }
 
 /** Emits one numeric comparison using the pair's common family. */
 comparisonPairCode := fn(op: String, leftKind: String, rightKind: String, left: String, right: String): String {
-    if leftKind =!= rightKind and (leftKind == "Float" or rightKind == "Float") {
+    if numeric.isFloatKind(leftKind) or numeric.isFloatKind(rightKind) {
         comparisonCode(op, "Float", floatOperandCode(leftKind, left), floatOperandCode(rightKind, right))
     } else { comparisonCode(op, leftKind, left, right) }
 }
 
+/** Encodes the arithmetic operator tag expected by runtime float helpers. */
+floatOpTag := fn(op: String): String {
+    if op == "+" { "0" } else if op == "-" { "1" } else if op == "*" { "2" } else { "3" }
+}
+
 /** Emits checked binary64 arithmetic; target calls evaluate operands once in source order. */
 pub floatBinaryCode := fn(op: String, left: String, right: String, position: Int): String {
-    tag := if op == "+" { "0" } else if op == "-" { "1" } else if op == "*" { "2" } else { "3" };
-    "lite$floatOp(" + left + ", " + right + ", " + tag + ", " + integer.intText(position) + ")"
+    "lite$floatOp(" + left + ", " + right + ", " + floatOpTag(op) + ", " + integer.intText(position) + ")"
+}
+
+/** Emits checked binary32 arithmetic; target calls evaluate operands once in source order. */
+pub float32BinaryCode := fn(op: String, left: String, right: String, position: Int): String {
+    "lite$float32Op(" + left + ", " + right + ", " + floatOpTag(op) + ", " + integer.intText(position) + ")"
 }
 
 /** Emits the selected Float-default, positive-exponent power checkpoint. */
@@ -165,6 +188,11 @@ pub intMultiplyCode := fn(left: String, right: String, position: Int): String {
 /** Emits checked Int64 negation, evaluating the operand once. */
 pub intNegateCode := fn(value: String, position: Int): String {
     "lite$negateInt(" + value + ", " + integer.intText(position) + ")"
+}
+
+/** Emits a checked signed range check for narrow integer arithmetic results. */
+pub checkedNarrowIntCode := fn(kind: String, value: String, position: Int): String {
+    "lite$checkedNarrowInt(" + value + ", " + integer.intText(numeric.narrowIntBits(kind)) + "n, " + textLiteralCode(kind) + ", " + integer.intText(position) + ")"
 }
 
 /** Emits a chain with one evaluation per operand and lazy later operands in a private expression scope. */

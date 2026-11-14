@@ -20,9 +20,21 @@ targetConcatCode := fn(target: String, left: String, right: String): String { if
 /** Selects the TS or C backend implementation for one emitted literal operation. */
 targetFloatBinaryCode := fn(target: String, op: String, left: String, right: String, position: Int): String { if target == "ts" { tsLiteral.floatBinaryCode(op, left, right, position) } else { cLiteral.floatBinaryCode(op, left, right, position) } }
 /** Selects the TS or C backend implementation for one emitted literal operation. */
+targetFloat32BinaryCode := fn(target: String, op: String, left: String, right: String, position: Int): String { if target == "ts" { tsLiteral.float32BinaryCode(op, left, right, position) } else { cLiteral.float32BinaryCode(op, left, right, position) } }
+/** Selects the TS or C backend implementation for one emitted literal operation. */
 targetFloatLiteralCode := fn(target: String, digits: String, negative: Bool): String { if target == "ts" { tsLiteral.floatLiteralCode(digits, negative) } else { cLiteral.floatLiteralCode(digits, negative) } }
 /** Selects the TS or C backend implementation for one emitted literal operation. */
+targetFloat32LiteralCode := fn(target: String, digits: String, negative: Bool): String { if target == "ts" { tsLiteral.float32LiteralCode(digits, negative) } else { cLiteral.float32LiteralCode(digits, negative) } }
+/** Selects the TS or C backend implementation for one emitted literal operation. */
 targetFloatOperandCode := fn(target: String, kind: String, code: String): String { if target == "ts" { tsLiteral.floatOperandCode(kind, code) } else { cLiteral.floatOperandCode(kind, code) } }
+/** Selects the TS or C backend implementation for one emitted literal operation. */
+targetFloat32OperandCode := fn(target: String, kind: String, code: String): String { if target == "ts" { tsLiteral.float32OperandCode(kind, code) } else { cLiteral.float32OperandCode(kind, code) } }
+/** Selects the TS or C backend implementation for checked narrow integer arithmetic. */
+targetCheckedNarrowIntCode := fn(target: String, kind: String, value: String, position: Int): String { if target == "ts" { tsLiteral.checkedNarrowIntCode(kind, value, position) } else { cLiteral.checkedNarrowIntCode(kind, value, position) } }
+/** True when `kind` is one of the signed integer scalar types (`Int8`, `Int16`, `Int32`, `Int`). */
+pub isIntScalarKind := fn(kind: String): Bool { numeric.isIntKind(kind) }
+/** True when `kind` is one of the binary float scalar types (`Float32`, `Float`). */
+pub isFloatScalarKind := fn(kind: String): Bool { numeric.isFloatKind(kind) }
 /** Selects the TS or C backend implementation for one emitted literal operation. */
 targetFloatPowerCode := fn(target: String, left: String, right: String, position: Int): String { if target == "ts" { tsLiteral.floatPowerCode(left, right, position) } else { cLiteral.floatPowerCode(left, right, position) } }
 /** Selects the TS or C backend implementation for one emitted literal operation. */
@@ -365,9 +377,10 @@ pub convertTupleValue := fn(expectedKind: String, actualKind: String, actualCode
     "(() => { const lite$t = " + actualCode + "; return { " + fields + " }; })()"
 }
 
-/** True when `actualKind` is directly `expectedKind`, `Never` into a known target, or a tuple with matching positional component types. */
+/** True when `actualKind` is directly `expectedKind`, `Never` into a known target, losslessly widens numerically, or is a tuple with matching positional component types. */
 pub isCompatibleKind := fn(expectedKind: String, actualKind: String): Bool {
-    (expectedKind =!= "" and actualKind == "Never") or expectedKind == actualKind or tupleShapeMatches(expectedKind, actualKind)
+    (expectedKind =!= "" and actualKind == "Never") or expectedKind == actualKind or
+    numeric.numericWidens(expectedKind, actualKind) or tupleShapeMatches(expectedKind, actualKind)
 }
 
 /** True when `kind` is this compiler's canonical one-argument list kind, written `List<ElementKind>`. */
@@ -702,7 +715,7 @@ resolveTypeText := fn(source: String, position: Int, prefix: String, aliases: Li
     if afterTrivia < size {
         failAt(source, position, prefix, "unexpected text after type " + name);
     }
-    if name == "Int" or name == "Float" or name == "String" or name == "Bool" or name == "Unit" { return name; }
+    if name == "Int" or name == "Float" or name == "String" or name == "Bool" or name == "Unit" or numeric.isNarrowNumericKind(name) { return name; }
     numericKind := numeric.numericAliasKind(name);
     if numericKind =!= "" { return numericKind; }
     if isUnsupportedAliasTarget(name) {
@@ -804,7 +817,7 @@ parseTupleTypeAt := fn(source: String, position: Int, prefix: String, aliases: L
             }
         }
         var componentKind := "";
-        if componentName == "Int" or componentName == "Float" or componentName == "String" or componentName == "Bool" or componentName == "Unit" {
+        if componentName == "Int" or componentName == "Float" or componentName == "String" or componentName == "Bool" or componentName == "Unit" or numeric.isNarrowNumericKind(componentName) {
             componentKind = componentName;
         } else {
             componentKind = numeric.numericAliasKind(componentName);
@@ -889,7 +902,7 @@ parseTypeAt := fn(source: String, position: Int, prefix: String, aliases: List<A
         return (kind = "List<" + inner.kind + ">", next = close);
     }
     if genericType =!= "" and name == genericType { return (kind = genericType, next = after); }
-    if name == "Int" or name == "Float" or name == "String" or name == "Bool" or name == "Unit" {
+    if name == "Int" or name == "Float" or name == "String" or name == "Bool" or name == "Unit" or numeric.isNarrowNumericKind(name) {
         return (kind = name, next = after);
     }
     numericKind := numeric.numericAliasKind(name);
@@ -1040,9 +1053,14 @@ paramKindOf := fn(entry: String): String {
     textLib.slice(entry, separator + 1, textLib.length(entry))
 }
 
+/** Builds an integer parsed value with explicit scalar kind `kind`; `textValue` is empty. */
+typedIntParsed := fn(kind: String, code: String, value: Int, constant: Bool, next: Int): Parsed {
+    (kind = kind, code = code, intValue = value, textValue = "", constant = constant, next = next)
+}
+
 /** Builds an Int parsed value; `textValue` is empty. */
 intParsed := fn(code: String, value: Int, constant: Bool, next: Int): Parsed {
-    (kind = "Int", code = code, intValue = value, textValue = "", constant = constant, next = next)
+    typedIntParsed("Int", code, value, constant, next)
 }
 
 /** Builds a String parsed value; `intValue` is zero. */
@@ -1075,6 +1093,15 @@ runtimeIntegerCode := fn(target: String, operator: String, left: String, right: 
     if operator == "%" { return targetIntRemainderCode(target, left, right, position); }
     if operator == ":/" { return targetIntFloorDivideCode(target, left, right, position); }
     targetIntFloorModuloCode(target, left, right, position)
+}
+
+/** Lowers a checked integer operation at `kind`, adding a runtime range guard for narrow integer widths outside remainders. */
+runtimeTypedIntegerCode := fn(target: String, kind: String, operator: String, left: String, right: String, position: Int): String {
+    raw := runtimeIntegerCode(target, operator, left, right, position);
+    if numeric.isNarrowIntKind(kind) and operator =!= "%" and operator =!= ":%" {
+        return targetCheckedNarrowIntCode(target, kind, raw, position);
+    }
+    raw
 }
 
 /** Returns the index of the newest visible `name` in `locals`, or -1 when it is not visible. */
@@ -1187,13 +1214,20 @@ compareBools := fn(operator: String, left: Bool, right: Bool): Bool {
 
 /** Checks and folds or lowers one comparison expression at operator offset `at`, then returns its Bool parsed value. */
 compareParsed := fn(target: String, source: String, at: Int, operator: String, left: Parsed, right: Parsed, prefix: String): Parsed {
-    if left.kind =!= right.kind {
-        if (left.kind == "Int" or left.kind == "Float") and (right.kind == "Int" or right.kind == "Float") {
-            codes: List<String> = [left.code, right.code];
-            kinds: List<String> = [left.kind, right.kind];
-            operators: List<String> = [operator];
-            return boolParsed(targetComparisonChainCode(target, codes, kinds, operators, 1, at), false, false, right.next);
+    if numeric.isIntKind(left.kind) and numeric.isIntKind(right.kind) {
+        if left.constant and right.constant {
+            value := compareIntegers(operator, left.intValue, right.intValue);
+            return boolParsed(targetBoolLiteralCode(target, value), value, true, right.next);
         }
+        return boolParsed(targetComparisonCode(target, operator, "Int", left.code, right.code), false, false, right.next);
+    }
+    if numeric.isNumericKind(left.kind) and numeric.isNumericKind(right.kind) {
+        codes: List<String> = [left.code, right.code];
+        kinds: List<String> = [left.kind, right.kind];
+        operators: List<String> = [operator];
+        return boolParsed(targetComparisonChainCode(target, codes, kinds, operators, 1, at), false, false, right.next);
+    }
+    if left.kind =!= right.kind {
         failAt(source, at, prefix, "cannot compare " + displayKind(left.kind) + " and " + displayKind(right.kind));
     }
     if left.kind == "Never" {
@@ -1204,19 +1238,6 @@ compareParsed := fn(target: String, source: String, at: Int, operator: String, l
     }
     if isListKind(left.kind) {
         failAt(source, at, prefix, "cannot compare list values");
-    }
-    if left.kind == "Int" {
-        if left.constant and right.constant {
-            value := compareIntegers(operator, left.intValue, right.intValue);
-            return boolParsed(targetBoolLiteralCode(target, value), value, true, right.next);
-        }
-        return boolParsed(targetComparisonCode(target, operator, left.kind, left.code, right.code), false, false, right.next);
-    }
-    if left.kind == "Float" {
-        codes: List<String> = [left.code, right.code];
-        kinds: List<String> = [left.kind, right.kind];
-        operators: List<String> = [operator];
-        return boolParsed(targetComparisonChainCode(target, codes, kinds, operators, 1, at), false, false, right.next);
     }
     if operator =!= "==" and operator =!= "=!=" {
         failAt(source, at, prefix, "operator " + operator + " requires Int operands");
@@ -1232,8 +1253,33 @@ compareParsed := fn(target: String, source: String, at: Int, operator: String, l
     boolParsed(targetComparisonCode(target, operator, left.kind, left.code, right.code), false, false, right.next)
 }
 
-/** Parses signed decimal Int/Float literals in one digit scan; finite/range admission happens after fractional/exponent classification. */
-parseNumber := fn(target: String, source: String, position: Int, prefix: String): Parsed {
+/** Admits an integer literal into a narrow Int or exact Float/Float32 storage context only when not followed by a binary operator at `minimum`. */
+contextualIntegerParsed := fn(target: String, source: String, position: Int, prefix: String, expected: String, minimum: Int, value: Int, code: String, next: Int): Parsed {
+    if expected =!= "" and expected =!= "Int" and not binaryFollows(source, next, prefix, minimum) {
+        if numeric.isNarrowIntKind(expected) {
+            if not numeric.intKindFits(expected, value) {
+                failAt(source, position, prefix, "integer literal outside " + expected + " range");
+            }
+            return typedIntParsed(expected, code, value, true, next);
+        }
+        if expected == "Float32" {
+            if not numeric.intExactlyFloat32(value) {
+                failAt(source, position, prefix, "integer literal is not exactly representable in Float32");
+            }
+            return (kind = "Float32", code = targetFloat32OperandCode(target, "Int", code), intValue = 0, textValue = "", constant = false, next = next);
+        }
+        if expected == "Float" {
+            if not numeric.intExactlyFloat(value) {
+                failAt(source, position, prefix, "integer literal is not exactly representable in Float");
+            }
+            return (kind = "Float", code = targetFloatOperandCode(target, "Int", code), intValue = 0, textValue = "", constant = false, next = next);
+        }
+    }
+    intParsed(code, value, true, next)
+}
+
+/** Parses signed decimal numeric literals in one scan, applying contextual narrow/Float width checks when the atom completes the expression. */
+parseNumber := fn(target: String, source: String, position: Int, prefix: String, expected: String, minimum: Int): Parsed {
     var cursor := position;
     var negative := false;
     ch := textLib.at(source, cursor);
@@ -1245,10 +1291,11 @@ parseNumber := fn(target: String, source: String, position: Int, prefix: String)
     afterDigit := cursor + 1;
     following := if afterDigit < textLib.length(source) { textLib.at(source, afterDigit) } else { "" };
     if textLib.isDigit(textLib.at(source, cursor)) and not textLib.isDigit(following) and following =!= "." and following =!= "e" and following =!= "E" {
-        /* A lone decimal digit is always an Int: avoid the general scanner record and range arithmetic on this hot path. */
+        /* A lone decimal digit is always small: skip the general scanner record on this hot path. */
         digit := textLib.digitValue(textLib.at(source, cursor));
         value := if negative { -digit } else { digit };
-        return intParsed(targetIntLiteralCode(target, value, negative, textLib.slice(source, cursor, afterDigit)), value, true, afterDigit);
+        code := targetIntLiteralCode(target, value, negative, textLib.slice(source, cursor, afterDigit));
+        return contextualIntegerParsed(target, source, position, prefix, expected, minimum, value, code, afterDigit);
     }
     scanned := numeric.scanNumericLiteral(source, cursor);
     cursor = scanned.next;
@@ -1259,28 +1306,29 @@ parseNumber := fn(target: String, source: String, position: Int, prefix: String)
     loop digitStart + 1 < integerEnd and textLib.at(source, digitStart) == "0" { digitStart = digitStart + 1; }
     if scanned.floating {
         digits := textLib.slice(source, start, integerEnd) + textLib.slice(source, scanned.fractionStart, scanned.fractionEnd);
-        if not numeric.finiteFloatDigits(digits, scanned.fractionEnd - scanned.fractionStart, scanned.exponent) {
+        fractionCount := scanned.fractionEnd - scanned.fractionStart;
+        raw := textLib.slice(source, digitStart, cursor);
+        if expected == "Float32" and not binaryFollows(source, cursor, prefix, minimum) {
+            if not numeric.finiteFloat32Digits(digits, fractionCount, scanned.exponent) {
+                failAt(source, position, prefix, "floating literal outside Float32 range");
+            }
+            return (kind = "Float32", code = targetFloat32LiteralCode(target, raw, negative), intValue = 0, textValue = "", constant = false, next = cursor);
+        }
+        if not numeric.finiteFloatDigits(digits, fractionCount, scanned.exponent) {
             failAt(source, position, prefix, "floating literal is not finite");
         }
-        raw := textLib.slice(source, digitStart, cursor);
         code := targetFloatLiteralCode(target, raw, negative);
         return (kind = "Float", code = code, intValue = 0, textValue = "", constant = false, next = cursor);
     }
     if scanned.outsideInt or (not negative and scanned.magnitude == -9223372036854775808) {
+        if numeric.isNarrowIntKind(expected) and not binaryFollows(source, cursor, prefix, minimum) {
+            failAt(source, position, prefix, "integer literal outside " + expected + " range");
+        }
         failAt(source, position, prefix, "integer literal outside signed 64-bit range");
     }
     value := if negative { scanned.magnitude } else { 0 - scanned.magnitude };
     code := targetIntLiteralCode(target, value, negative, textLib.slice(source, digitStart, cursor));
-    intParsed(code, value, true, cursor)
-}
-
-/** Admits an exact integer literal into a Float context only when the atom is the complete expression, preserving ordinary binary operand typing. */
-floatContextNumber := fn(target: String, source: String, start: Int, prefix: String, parsed: Parsed, minimum: Int): Parsed {
-    if parsed.kind =!= "Int" or binaryFollows(source, parsed.next, prefix, minimum) { return parsed; }
-    if not numeric.intExactlyFloat(parsed.intValue) {
-        failAt(source, start, prefix, "integer literal is not exactly representable in Float");
-    }
-    (kind = "Float", code = targetFloatOperandCode(target, "Int", parsed.code), intValue = 0, textValue = "", constant = false, next = parsed.next)
+    contextualIntegerParsed(target, source, position, prefix, expected, minimum, value, code, cursor)
 }
 
 /** Joins adjacent double-quoted literal tokens across trivia in one scan and encodes the complete value once. Escapes and malformed later tokens retain their own source positions. */
@@ -1546,10 +1594,14 @@ copiedValueCode := fn(target: String, kind: String, code: String): String {
     else { code }
 }
 
-/** Converts compatible tuple shapes on assignment/call/return, or copies lists when needed; `Never` passes through unchanged. */
+/** Converts compatible tuples or widening integer-to-float values on assignment/call/return, or copies lists when needed; `Never` passes through unchanged. */
 assignValueCode := fn(target: String, expectedKind: String, actualKind: String, actualCode: String): String {
     if actualKind == "Never" {
         actualCode
+    } else if expectedKind == "Float32" and numeric.isIntKind(actualKind) {
+        targetFloat32OperandCode(target, actualKind, actualCode)
+    } else if expectedKind == "Float" and numeric.isIntKind(actualKind) {
+        targetFloatOperandCode(target, actualKind, actualCode)
     } else if expectedKind =!= actualKind and tupleShapeMatches(expectedKind, actualKind) {
         convertTupleValue(expectedKind, actualKind, actualCode)
     } else {
@@ -1637,8 +1689,8 @@ tupleZeroParsed := fn(kind: String, next: Int): Parsed {
         comp := tupleComponent(kind, index);
         if index > 0 { code = code + ", "; }
         code = code + tupleObjectKey(comp.label, index) + ": ";
-        if comp.kind == "Int" { code = code + "0n"; }
-        else if comp.kind == "Float" { code = code + "0"; }
+        if numeric.isIntKind(comp.kind) { code = code + "0n"; }
+        else if numeric.isFloatKind(comp.kind) { code = code + "0"; }
         else if comp.kind == "String" { code = code + "\"\""; }
         else { code = code + "false"; }
         index = index + 1;
@@ -1682,15 +1734,19 @@ compoundAssignOp := fn(source: String, position: Int): (op: String, baseOp: Stri
     (op = "", baseOp = "", width = 0)
 }
 
-/** Lowers a compound assignment RHS computation for Int, Float, or String (`+=`). */
+/** Lowers a compound assignment RHS computation for Int*, Float*, or String (`+=`). */
 compoundAssignCode := fn(target: String, source: String, opPos: Int, prefix: String, entryKind: String, lhsCode: String, baseOp: String, rhs: Parsed): String {
-    if entryKind == "Int" and rhs.kind == "Int" {
-        return runtimeIntegerCode(target, baseOp, lhsCode, rhs.code, opPos);
+    if numeric.isIntKind(entryKind) and numeric.isIntKind(rhs.kind) and numeric.numericWidens(entryKind, rhs.kind) {
+        return runtimeTypedIntegerCode(target, entryKind, baseOp, lhsCode, rhs.code, opPos);
     }
     if entryKind == "String" and rhs.kind == "String" and baseOp == "+" {
         return targetConcatCode(target, lhsCode, rhs.code);
     }
-    if entryKind == "Float" and (rhs.kind == "Int" or rhs.kind == "Float") and
+    if entryKind == "Float32" and (numeric.isIntKind(rhs.kind) or rhs.kind == "Float32") and
+        (baseOp == "+" or baseOp == "-" or baseOp == "*" or baseOp == "/") {
+        return targetFloat32BinaryCode(target, baseOp, lhsCode, targetFloat32OperandCode(target, rhs.kind, rhs.code), opPos);
+    }
+    if entryKind == "Float" and numeric.isNumericKind(rhs.kind) and
         (baseOp == "+" or baseOp == "-" or baseOp == "*" or baseOp == "/") {
         return targetFloatBinaryCode(target, baseOp, lhsCode, targetFloatOperandCode(target, rhs.kind, rhs.code), opPos);
     }
@@ -1848,8 +1904,8 @@ zeroParsed := fn(target: String, kind: String, next: Int): Parsed {
         }
         (kind = kind, code = "[" + textLib.joinTexts(items, ", ") + "]", intValue = 0, textValue = "", constant = false, next = next)
     }
-    else if kind == "Int" { intParsed(targetIntLiteralCode(target, 0, false, "0"), 0, true, next) }
-    else if kind == "Float" { (kind = "Float", code = "0", intValue = 0, textValue = "", constant = false, next = next) }
+    else if numeric.isIntKind(kind) { typedIntParsed(kind, targetIntLiteralCode(target, 0, false, "0"), 0, true, next) }
+    else if numeric.isFloatKind(kind) { (kind = kind, code = "0", intValue = 0, textValue = "", constant = false, next = next) }
     else if kind == "String" { textParsed(targetTextLiteralCode(target, ""), "", true, next) }
     else { boolParsed(targetBoolLiteralCode(target, false), false, true, next) }
 }
@@ -2030,6 +2086,46 @@ scanConditionOpen := fn(source: String, start: Int, prefix: String): Int {
     -1
 }
 
+/** Locates an ordinary item's separator or enclosing close for contextual tail typing, without interpreting values. */
+scanExpressionItemEnd := fn(source: String, start: Int, prefix: String): Int {
+    var cursor := start;
+    var depth := 0;
+    size := textLib.length(source);
+    loop cursor < size {
+        ch := textLib.at(source, cursor);
+        if ch == "\"" { cursor = skipAliasString(source, cursor); }
+        else if textLib.startsWithAt(source, cursor, "/*") { cursor = skipComment(source, cursor, prefix); }
+        else if depth == 0 and (ch == ";" or ch == "}") { return cursor; }
+        else {
+            if ch == "(" or ch == "[" or ch == "{" { depth = depth + 1; }
+            else if ch == ")" or ch == "]" or ch == "}" { depth = depth - 1; }
+            cursor = cursor + 1;
+        }
+    }
+    cursor
+}
+
+/** Unifies two conditional branch kinds when one is `Never`, both match, or one losslessly widens to the other. */
+joinBranchKind := fn(current: String, nextKind: String): String {
+    if current == "" or current == "Never" { return nextKind; }
+    if nextKind == "Never" or nextKind == current { return current; }
+    if numeric.numericWidens(current, nextKind) { return current; }
+    if numeric.numericWidens(nextKind, current) { return nextKind; }
+    ""
+}
+
+/** Builds a nested conditional expression while converting any branch that widens to `resultKind`. */
+ternaryChainCode := fn(target: String, resultKind: String, conditionCodes: List<String>, branchCodes: List<String>, branchKinds: List<String>, branchCount: Int): String {
+    var code := assignValueCode(target, resultKind, branchKinds[branchCount - 1], branchCodes[branchCount - 1]);
+    var index := branchCount - 2;
+    loop index >= 0 {
+        branchCode := assignValueCode(target, resultKind, branchKinds[index], branchCodes[index]);
+        code = "(Boolean(" + conditionCodes[index] + ") ? " + branchCode + " : " + code + ")";
+        index = index - 1;
+    }
+    code
+}
+
 /** Precedence-climbing parser for arithmetic, comparisons, `and`/`or`, parentheses, named tuple and list values, field access, indexing, calls, unary signs and `not`. Folds constants, lowers dynamic Int arithmetic, and exits 2 on mixed types, unsupported dynamic operations or range faults. `expected` supplies a contextual kind for empty list literals. self(..., 30) parses a unary operand without binary operators. */
 parseBinary := fn(target: String, source: String, position: Int, prefix: String, locals: List<Local>, functions: List<FunctionInfo>, params: List<String>, currentName: String, expected: String, minimum: Int): Parsed {
     var start := skipTrivia(source, position, prefix);
@@ -2134,7 +2230,7 @@ parseBinary := fn(target: String, source: String, position: Int, prefix: String,
             left = (kind = kindText + ")", code = codeText + " }", intValue = 0, textValue = "", constant = false, next = cursor);
         } else {
             var groupedExpected := expected;
-            if expected == "Float" {
+            if numeric.isNumericKind(expected) {
                 groupEnd := scanParenEnd(source, start, prefix);
                 if groupEnd >= 0 and binaryFollows(source, groupEnd, prefix, minimum) { groupedExpected = ""; }
             }
@@ -2145,33 +2241,45 @@ parseBinary := fn(target: String, source: String, position: Int, prefix: String,
     } else if ch == "+" or ch == "-" {
         after := skipTrivia(source, start + 1, prefix);
         if after < textLib.length(source) and textLib.isDigit(textLib.at(source, after)) {
-            left = parseNumber(target, source, start, prefix);
-            if expected == "Float" and ch == "-" { left = floatContextNumber(target, source, start, prefix, left, minimum); }
+            litExpected := if ch == "-" { expected } else { "" };
+            left = parseNumber(target, source, start, prefix, litExpected, minimum);
         } else {
             operand := self(target, source, start + 1, prefix, locals, functions, params, currentName, "", 30);
-            if operand.kind =!= "Int" and operand.kind =!= "Float" {
+            if not numeric.isNumericKind(operand.kind) {
                 failAt(source, start, prefix, "unary " + ch + " requires an Int or Float operand");
             }
             code := if ch == "-" { "(-" + operand.code + ")" } else { "(" + operand.code + ")" };
-            if operand.kind == "Float" {
-                left = (kind = "Float", code = code, intValue = 0, textValue = "", constant = false, next = operand.next);
+            if numeric.isFloatKind(operand.kind) {
+                left = (kind = operand.kind, code = code, intValue = 0, textValue = "", constant = false, next = operand.next);
             } else if operand.constant {
                 folded := if ch == "-" { integer.intNegate(operand.intValue) } else { (value = operand.intValue, ok = true) };
-                if folded.ok { left = intParsed(code, folded.value, true, operand.next); }
-                else { left = intParsed(targetIntNegateCode(target, operand.code, start), 0, false, operand.next); }
+                if folded.ok and numeric.intKindFits(operand.kind, folded.value) {
+                    left = typedIntParsed(operand.kind, code, folded.value, true, operand.next);
+                } else {
+                    rawNeg := targetIntNegateCode(target, operand.code, start);
+                    checkedNeg := if numeric.isNarrowIntKind(operand.kind) {
+                        targetCheckedNarrowIntCode(target, operand.kind, rawNeg, start)
+                    } else { rawNeg };
+                    left = typedIntParsed(operand.kind, checkedNeg, 0, false, operand.next);
+                }
             } else {
-                runtimeCode := if ch == "-" { targetIntNegateCode(target, operand.code, start) } else { code };
-                left = intParsed(runtimeCode, 0, false, operand.next);
+                runtimeCode := if ch == "-" {
+                    rawNeg := targetIntNegateCode(target, operand.code, start);
+                    if numeric.isNarrowIntKind(operand.kind) {
+                        targetCheckedNarrowIntCode(target, operand.kind, rawNeg, start)
+                    } else { rawNeg }
+                } else { code };
+                left = typedIntParsed(operand.kind, runtimeCode, 0, false, operand.next);
             }
         }
     } else if textLib.isDigit(ch) {
-        left = parseNumber(target, source, start, prefix);
-        if expected == "Float" { left = floatContextNumber(target, source, start, prefix, left, minimum); }
+        left = parseNumber(target, source, start, prefix, expected, minimum);
     } else if ch == "\"" {
         left = parseText(target, source, start, prefix);
     } else if ch == "[" {
         var cursor := skipTrivia(source, start + 1, prefix);
         isTailList := textLib.startsWithAt(expected, 0, "TailList<");
+        isListTarget := isListKind(expected) or isTailList;
         var elementKind := "";
         if isListKind(expected) { elementKind = listElementKind(expected); }
         else if isTailList { elementKind = listElementKind(textLib.slice(expected, 4, textLib.length(expected))); }
@@ -2193,9 +2301,13 @@ parseBinary := fn(target: String, source: String, position: Int, prefix: String,
             }
             if elementKind == "" {
                 if element.kind =!= "Never" { elementKind = element.kind; }
-            } else if not isCompatibleKind(elementKind, element.kind) {
-                failAt(source, elementStart, prefix, "list element " + formatLib.decimalText(count + 1) + " must be " +
-                    displayKind(elementKind) + ", got " + displayKind(element.kind));
+            } else {
+                compatible := if isListTarget { isCompatibleKind(elementKind, element.kind) }
+                    else { element.kind == "Never" or element.kind == elementKind };
+                if not compatible {
+                    failAt(source, elementStart, prefix, "list element " + formatLib.decimalText(count + 1) + " must be " +
+                        displayKind(elementKind) + ", got " + displayKind(element.kind));
+                }
             }
             listLib.pushBack(mut elementCodes, assignValueCode(target, elementKind, element.kind, element.code));
             count = count + 1;
@@ -2383,7 +2495,7 @@ parseBinary := fn(target: String, source: String, position: Int, prefix: String,
                                 if isListKind(typed.kind) { failAt(source, localStart, prefix, "reserved storage is not supported for List"); }
                                 declInitState = "uninit";
                                 declParsed = zeroParsed(target, typed.kind, reservedEnd);
-                            } else if zeroEnd >= 0 and typed.kind =!= "Int" and typed.kind =!= "Float" {
+                            } else if zeroEnd >= 0 and not numeric.isNumericKind(typed.kind) {
                                 declParsed = zeroParsed(target, typed.kind, zeroEnd);
                             } else {
                                 initParsed := self(target, source, rhsStart, prefix, blockLocals, functions, params, currentName, typed.kind, 0);
@@ -2482,7 +2594,7 @@ parseBinary := fn(target: String, source: String, position: Int, prefix: String,
                             if isListKind(typed.kind) { failAt(source, itemStart, prefix, "reserved storage is not supported for List"); }
                             declInitState = "uninit";
                             declParsed = zeroParsed(target, typed.kind, reservedEnd);
-                        } else if zeroEnd >= 0 and typed.kind =!= "Int" and typed.kind =!= "Float" {
+                        } else if zeroEnd >= 0 and not numeric.isNumericKind(typed.kind) {
                             declParsed = zeroParsed(target, typed.kind, zeroEnd);
                         } else {
                             declParsed = self(target, source, rhsStart, prefix, blockLocals, functions, params, currentName, typed.kind, 0);
@@ -2496,7 +2608,7 @@ parseBinary := fn(target: String, source: String, position: Int, prefix: String,
                     runtime := localRuntimeName(blockLocals, itemName, itemStart, 0);
                     declCode := assignValueCode(target, typed.kind, declParsed.kind, declParsed.code);
                     listLib.pushBack(mut blockLocals, (name = itemName, runtime = runtime, kind = typed.kind,
-                        mutable = false, writable = typed.writable, depth = 1, constant = if declInitState == "init" { declParsed.constant } else { false },
+                        mutable = false, writable = typed.writable, depth = 1, constant = if declInitState == "init" and not numeric.isFloatKind(typed.kind) { declParsed.constant } else { false },
                         code = declCode, intValue = declParsed.intValue, textValue = declParsed.textValue, initState = declInitState));
                     if not blockExits {
                         if declParsed.kind == "Never" {
@@ -2562,7 +2674,14 @@ parseBinary := fn(target: String, source: String, position: Int, prefix: String,
                 }
             }
             if not isStatement {
-                expr := self(target, source, cursor, prefix, blockLocals, functions, params, currentName, expected, 0);
+                var itemExpected := expected;
+                if numeric.isNumericKind(expected) {
+                    itemExpected = "";
+                    itemEnd := scanExpressionItemEnd(source, cursor, prefix);
+                    itemAfter := skipItemSeparators(source, itemEnd, prefix);
+                    if itemAfter < textLib.length(source) and textLib.at(source, itemAfter) == "}" { itemExpected = expected; }
+                }
+                expr := self(target, source, cursor, prefix, blockLocals, functions, params, currentName, itemExpected, 0);
                 statementNext := consumeStatementEnd(source, expr.next, prefix);
                 if statementNext < 0 { failAt(source, skipTrivia(source, expr.next, prefix), prefix, "expected ; or }"); }
                 afterExpr := skipItemSeparators(source, statementNext, prefix);
@@ -2649,8 +2768,10 @@ parseBinary := fn(target: String, source: String, position: Int, prefix: String,
             cursor = first.next;
             conditionCodes: mut List<String> = [];
             branchCodes: mut List<String> = [];
+            branchKinds: mut List<String> = [];
             listLib.pushBack(mut conditionCodes, conditionCode);
             listLib.pushBack(mut branchCodes, first.code);
+            listLib.pushBack(mut branchKinds, first.kind);
             var resultKind := first.kind;
             var branchCount := 1;
             loop true {
@@ -2667,6 +2788,7 @@ parseBinary := fn(target: String, source: String, position: Int, prefix: String,
                     }
                     fallback := zeroParsed(target, resultKind, cursor);
                     listLib.pushBack(mut branchCodes, fallback.code);
+                    listLib.pushBack(mut branchKinds, resultKind);
                     branchCount = branchCount + 1;
                     break;
                 }
@@ -2685,38 +2807,35 @@ parseBinary := fn(target: String, source: String, position: Int, prefix: String,
                     open := expectSymbol(source, skipTrivia(source, elseCondition.next, prefix), "{", prefix);
                     elseBranchStart := skipTrivia(source, open, prefix);
                     branch := self(target, source, open - 1, prefix, locals, functions, params, currentName, expected, 0);
-                    if resultKind == "Never" {
-                        resultKind = branch.kind;
-                    } else if branch.kind =!= "Never" and branch.kind =!= resultKind {
+                    joinedKind := joinBranchKind(resultKind, branch.kind);
+                    if joinedKind == "" {
                         failAt(source, elseBranchStart, prefix, "value if branches must have the same kind, got " +
                             displayKind(resultKind) + " and " + displayKind(branch.kind));
                     }
+                    resultKind = joinedKind;
                     cursor = branch.next;
                     listLib.pushBack(mut conditionCodes, elseConditionCode);
                     listLib.pushBack(mut branchCodes, branch.code);
+                    listLib.pushBack(mut branchKinds, branch.kind);
                     branchCount = branchCount + 1;
                 } else {
                     open := expectSymbol(source, afterElse, "{", prefix);
                     elseBranchStart := skipTrivia(source, open, prefix);
                     branch := self(target, source, open - 1, prefix, locals, functions, params, currentName, expected, 0);
-                    if resultKind == "Never" {
-                        resultKind = branch.kind;
-                    } else if branch.kind =!= "Never" and branch.kind =!= resultKind {
+                    joinedKind := joinBranchKind(resultKind, branch.kind);
+                    if joinedKind == "" {
                         failAt(source, elseBranchStart, prefix, "value if branches must have the same kind, got " +
                             displayKind(resultKind) + " and " + displayKind(branch.kind));
                     }
+                    resultKind = joinedKind;
                     cursor = branch.next;
                     listLib.pushBack(mut branchCodes, branch.code);
+                    listLib.pushBack(mut branchKinds, branch.kind);
                     branchCount = branchCount + 1;
                     break;
                 }
             }
-            var code := branchCodes[branchCount - 1];
-            var index := branchCount - 2;
-            loop index >= 0 {
-                code = "(Boolean(" + conditionCodes[index] + ") ? " + branchCodes[index] + " : " + code + ")";
-                index = index - 1;
-            }
+            code := ternaryChainCode(target, resultKind, conditionCodes, branchCodes, branchKinds, branchCount);
             left = (kind = resultKind, code = code, intValue = 0, textValue = "", constant = false, next = cursor);
         } else if name == "match" {
             openMatchPos := skipTrivia(source, next, prefix);
@@ -2730,6 +2849,7 @@ parseBinary := fn(target: String, source: String, position: Int, prefix: String,
             var cursor := skipItemSeparators(source, openMatchPos + 1, prefix);
             conditionCodes: mut List<String> = [];
             branchCodes: mut List<String> = [];
+            branchKinds: mut List<String> = [];
             var resultKind := "";
             var branchCount := 0;
             var sawFallback := false;
@@ -2784,22 +2904,18 @@ parseBinary := fn(target: String, source: String, position: Int, prefix: String,
                 }
                 armBodyStart := skipTrivia(source, armOpen + 1, prefix);
                 branch := self(target, source, armOpen, prefix, locals, functions, params, currentName, expected, 0);
-                if resultKind == "" or resultKind == "Never" {
-                    resultKind = branch.kind;
-                } else if branch.kind =!= "Never" and branch.kind =!= resultKind {
+                joinedKind := joinBranchKind(resultKind, branch.kind);
+                if joinedKind == "" {
                     failAt(source, armBodyStart, prefix, "value match arms must have the same kind, got " +
                         displayKind(resultKind) + " and " + displayKind(branch.kind));
                 }
+                resultKind = joinedKind;
                 listLib.pushBack(mut branchCodes, branch.code);
+                listLib.pushBack(mut branchKinds, branch.kind);
                 branchCount = branchCount + 1;
                 cursor = branch.next;
             }
-            var code := branchCodes[branchCount - 1];
-            var index := branchCount - 2;
-            loop index >= 0 {
-                code = "(Boolean(" + conditionCodes[index] + ") ? " + branchCodes[index] + " : " + code + ")";
-                index = index - 1;
-            }
+            code := ternaryChainCode(target, resultKind, conditionCodes, branchCodes, branchKinds, branchCount);
             left = (kind = resultKind, code = code, intValue = 0, textValue = "", constant = false, next = cursor);
         } else {
             if isReservedWord(name) { unsupportedFeature(source, nameStart, name, prefix); }
@@ -3292,26 +3408,27 @@ parseBinary := fn(target: String, source: String, position: Int, prefix: String,
                 else { left = boolParsed(targetComparisonChainCode(target, codes, kinds, operators, count, operatorPosition), false, false, end); }
             }
         } else if operator.text == "**" {
-            if (left.kind =!= "Int" and left.kind =!= "Float") or (right.kind =!= "Int" and right.kind =!= "Float") {
+            if not numeric.isNumericKind(left.kind) or not numeric.isNumericKind(right.kind) {
                 failAt(source, operatorPosition, prefix, "power requires Int or Float operands");
             }
             code := targetFloatPowerCode(target, targetFloatOperandCode(target, left.kind, left.code), targetFloatOperandCode(target, right.kind, right.code), operatorPosition);
             left = (kind = "Float", code = code, intValue = 0, textValue = "", constant = false, next = right.next);
-        } else if left.kind == "Int" and right.kind == "Int" {
+        } else if numeric.isIntKind(left.kind) and numeric.isIntKind(right.kind) {
+            promoted := numeric.promoteNumericKind(left.kind, right.kind);
             if left.constant and right.constant {
                 folded := tryFoldInteger(operator.text, left.intValue, right.intValue);
-                if folded.ok {
+                if folded.ok and numeric.intKindFits(promoted, folded.value) {
                     code := if (operator.text == "%" or operator.text == ":%") and left.intValue == integer.intMin() and right.intValue == -1 {
                             targetIntLiteralCode(target, 0, false, "0")
                         } else if operator.text == ":/" { targetFloorDivCode(target, left.code, right.code) }
                         else if operator.text == ":%" { targetFloorModCode(target, left.code, right.code) }
                         else { "(" + left.code + " " + operator.text + " " + right.code + ")" };
-                    left = intParsed(code, folded.value, true, right.next);
+                    left = typedIntParsed(promoted, code, folded.value, true, right.next);
                 } else {
-                    left = intParsed(runtimeIntegerCode(target, operator.text, left.code, right.code, operatorPosition), 0, false, right.next);
+                    left = typedIntParsed(promoted, runtimeTypedIntegerCode(target, promoted, operator.text, left.code, right.code, operatorPosition), 0, false, right.next);
                 }
             } else {
-                left = intParsed(runtimeIntegerCode(target, operator.text, left.code, right.code, operatorPosition), 0, false, right.next);
+                left = typedIntParsed(promoted, runtimeTypedIntegerCode(target, promoted, operator.text, left.code, right.code, operatorPosition), 0, false, right.next);
             }
         } else if operator.text == "+" and left.kind == "String" and right.kind == "String" {
             if left.constant and right.constant {
@@ -3320,12 +3437,18 @@ parseBinary := fn(target: String, source: String, position: Int, prefix: String,
             } else {
                 left = textParsed(targetConcatCode(target, left.code, right.code), "", false, right.next);
             }
-        } else if (left.kind == "Int" or left.kind == "Float") and (right.kind == "Int" or right.kind == "Float") {
+        } else if numeric.isNumericKind(left.kind) and numeric.isNumericKind(right.kind) {
             if operator.text =!= "+" and operator.text =!= "-" and operator.text =!= "*" and operator.text =!= "/" {
                 failAt(source, operatorPosition, prefix, "operator " + operator.text + " requires Int operands");
             }
-            code := targetFloatBinaryCode(target, operator.text, targetFloatOperandCode(target, left.kind, left.code), targetFloatOperandCode(target, right.kind, right.code), operatorPosition);
-            left = (kind = "Float", code = code, intValue = 0, textValue = "", constant = false, next = right.next);
+            promotedFloat := numeric.promoteNumericKind(left.kind, right.kind);
+            floatKind := if promotedFloat =!= "" { promotedFloat } else if numeric.isFloatKind(left.kind) { left.kind } else { right.kind };
+            code := if floatKind == "Float32" {
+                targetFloat32BinaryCode(target, operator.text, targetFloat32OperandCode(target, left.kind, left.code), targetFloat32OperandCode(target, right.kind, right.code), operatorPosition)
+            } else {
+                targetFloatBinaryCode(target, operator.text, targetFloatOperandCode(target, left.kind, left.code), targetFloatOperandCode(target, right.kind, right.code), operatorPosition)
+            };
+            left = (kind = floatKind, code = code, intValue = 0, textValue = "", constant = false, next = right.next);
         } else if isListKind(left.kind) or isListKind(right.kind) {
             failAt(source, operatorPosition, prefix, "operator " + operator.text + " is not supported for list values");
         } else if operator.text == "+" {
@@ -3383,11 +3506,13 @@ pub sourceModulePath := fn(): String {
     path
 }
 
-/** Collapses a tuple or list kind to its `Tuple`/`List` item suffix while leaving scalar item kinds unchanged. */
+/** Collapses a numeric scalar, tuple or list kind to its canonical item suffix (`Int`, `Float`, `Tuple`, `List`) while leaving other scalar kinds unchanged. */
 storageKind := fn(kind: String): String {
     match {
         isListKind(kind) or isArrayKind(kind) { "List" }
         isTupleKind(kind) { "Tuple" }
+        numeric.isIntKind(kind) { "Int" }
+        numeric.isFloatKind(kind) { "Float" }
         _ { kind }
     }
 }
@@ -3647,35 +3772,16 @@ insideLoop := fn(blocks: List<String>): Bool {
     false
 }
 
-/** Locates an ordinary item's separator or enclosing close for contextual tail typing, without interpreting values. */
-scanExpressionItemEnd := fn(source: String, start: Int, prefix: String): Int {
-    var cursor := start;
-    var depth := 0;
-    size := textLib.length(source);
-    loop cursor < size {
-        ch := textLib.at(source, cursor);
-        if ch == "\"" { cursor = skipAliasString(source, cursor); }
-        else if textLib.startsWithAt(source, cursor, "/*") { cursor = skipComment(source, cursor, prefix); }
-        else if depth == 0 and (ch == ";" or ch == "}") { return cursor; }
-        else {
-            if ch == "(" or ch == "[" or ch == "{" { depth = depth + 1; }
-            else if ch == ")" or ch == "]" or ch == "}" { depth = depth - 1; }
-            cursor = cursor + 1;
-        }
-    }
-    cursor
-}
-
 /** Parses an expression item once, retaining its evaluation and checking a function's final result across trailing separators. */
 parseExpressionItem := fn(target: String, source: String, position: Int, prefix: String, locals: List<Local>, functions: List<FunctionInfo>, params: List<String>, currentName: String, currentResult: String, valueTail: Bool): (next: Int, returned: Bool, code: String, valueKind: String) {
     var expected := currentResult;
     if isListKind(currentResult) { expected = "Tail" + currentResult; }
-    if currentResult == "Float" {
+    if numeric.isNumericKind(currentResult) {
         expected = "";
         if valueTail {
             end := scanExpressionItemEnd(source, position, prefix);
             next := skipItemSeparators(source, end, prefix);
-            if next < textLib.length(source) and textLib.at(source, next) == "}" { expected = "Float"; }
+            if next < textLib.length(source) and textLib.at(source, next) == "}" { expected = currentResult; }
         }
     }
     parsed := parseExpressionAs(target, source, position, prefix, locals, functions, params, currentName, expected);
@@ -3727,7 +3833,7 @@ collectFutureValues := fn(target: String, source: String, prefix: String, module
                     var intValue := 0;
                     var textValue := "";
                     if textLib.isDigit(valueCh) or valueCh == "+" or valueCh == "-" {
-                        parsed := parseNumber(target, source, valueStart, prefix);
+                        parsed := parseNumber(target, source, valueStart, prefix, "", 0);
                         kind = parsed.kind;
                         intValue = parsed.intValue;
                     } else if valueCh == "\"" {
@@ -4868,7 +4974,7 @@ pub parseProgramWithIdentity := fn(target: String, source: String, prefix: Strin
                         if isListKind(typed.kind) { failAt(source, localStart, prefix, "reserved storage is not supported for List"); }
                         declInitState = "uninit";
                         parsed = zeroParsed(target, typed.kind, reservedEnd);
-                    } else if zeroEnd >= 0 and typed.kind =!= "Int" and typed.kind =!= "Float" {
+                    } else if zeroEnd >= 0 and not numeric.isNumericKind(typed.kind) {
                         parsed = zeroParsed(target, typed.kind, zeroEnd);
                     } else {
                         parsed = parseInitializerExpression(target, source, rhsStart, prefix, locals, functions, functionParams, currentName, typed.kind);
@@ -5078,7 +5184,7 @@ pub parseProgramWithIdentity := fn(target: String, source: String, prefix: Strin
                     if isListKind(typed.kind) { failAt(source, nameStart, prefix, "reserved storage is not supported for List"); }
                     declInitState = "uninit";
                     parsed = zeroParsed(target, typed.kind, reservedEnd);
-                } else if zeroEnd >= 0 and typed.kind =!= "Int" and typed.kind =!= "Float" {
+                } else if zeroEnd >= 0 and not numeric.isNumericKind(typed.kind) {
                     parsed = zeroParsed(target, typed.kind, zeroEnd);
                 } else {
                     parsed = parseInitializerExpression(target, source, rhsStart, prefix, locals, functions, functionParams, currentName, typed.kind);
@@ -5094,7 +5200,7 @@ pub parseProgramWithIdentity := fn(target: String, source: String, prefix: Strin
             rhsDiverged := parsed.kind == "Never";
             assignedCode := assignValueCode(target, typed.kind, parsed.kind, parsed.code);
             listLib.pushBack(mut locals, (name = name, runtime = runtime, kind = typed.kind,
-                mutable = false, writable = typed.writable, depth = depth, constant = if declInitState == "init" { parsed.constant } else { false },
+                mutable = false, writable = typed.writable, depth = depth, constant = if declInitState == "init" and not numeric.isFloatKind(typed.kind) { parsed.constant } else { false },
                 code = assignedCode, intValue = parsed.intValue, textValue = parsed.textValue, initState = declInitState));
             declItemPrefix := if declInitState == "init" { "Local" } else { "Var" };
             if currentLive and not currentStopped {

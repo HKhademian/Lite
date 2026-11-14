@@ -506,7 +506,8 @@ test('lite verify uses generated TS, reports migration gaps and rejects the reti
     assert.match(verified.stdout, /PASS example\.001-double-sum\/seven-and-five/);
     assert.match(verified.stdout, /\[ts\]/); assert.doesNotMatch(verified.stdout, /T00 reference|\[c\]/);
     assert.match(verified.stdout, /PASS match\.subjectless\/first-true-and-fallback \[ts\]/);
-    assert.match(verified.stdout, /verification failed: 4 failing scenario\(s\), 85 executed, 0 cached/);
+    assert.match(verified.stdout, /PASS num\.widths\/widths \[ts\]/);
+    assert.match(verified.stdout, /verification failed: 3 failing scenario\(s\), 85 executed, 0 cached/);
     const covered = spawnSync(join(root, 'bin/lite'), ['verify', '--coverage'], { env, encoding: 'utf8', timeout: 30000 });
     assert.equal(covered.error, undefined); assert.equal(covered.status, 0, covered.stderr);
     assert.match(covered.stdout, /features: 41 registered, 41 cases/);
@@ -853,8 +854,8 @@ test('restricted compiler resolves transparent scalar aliases', async context =>
       '1:11: expected a list element type\n'],
     ['A := type ();\n',
       '1:11: tuple type needs at least one field\n'],
-    ['A := type Float32;\n',
-      '1:11: unknown type alias Float32\n'],
+    ['A := type Float16;\n',
+      '1:11: unknown type alias Float16\n'],
   ] as const) {
     assert.deepEqual(runCompiler(tsManifestPath, bad), { code: 2, output: '', errors }, bad);
     assert.deepEqual(runCompiler(cManifestPath, bad), { code: 2, output: '', errors }, bad);

@@ -8,26 +8,106 @@ pub numericAliasKind := fn(name: String): String {
     else { "" }
 }
 
-/** True when an admitted Int64 value has no nonzero bits beyond binary64 precision. Division avoids taking the absolute value of Int64.MIN. */
-pub intExactlyFloat := fn(input: Int): Bool {
+/** True when `kind` is one of the signed integer scalar types (`Int8`, `Int16`, `Int32`, `Int`). */
+pub isIntKind := fn(kind: String): Bool {
+    kind == "Int8" or kind == "Int16" or kind == "Int32" or kind == "Int"
+}
+
+/** True when `kind` is one of the IEEE binary float scalar types (`Float32`, `Float`). */
+pub isFloatKind := fn(kind: String): Bool {
+    kind == "Float32" or kind == "Float"
+}
+
+/** True when `kind` is any signed integer or binary float scalar type. */
+pub isNumericKind := fn(kind: String): Bool {
+    isIntKind(kind) or isFloatKind(kind)
+}
+
+/** True when `kind` is a bounded fixed-width signed integer type narrower than `Int`. */
+pub isNarrowIntKind := fn(kind: String): Bool {
+    kind == "Int8" or kind == "Int16" or kind == "Int32"
+}
+
+/** True when `kind` is one of the four narrow numeric scalar types (`Int8`, `Int16`, `Int32`, `Float32`). */
+pub isNarrowNumericKind := fn(kind: String): Bool {
+    isNarrowIntKind(kind) or kind == "Float32"
+}
+
+/** Returns the signed integer bit width for a numeric integer scalar kind. */
+pub narrowIntBits := fn(kind: String): Int {
+    if kind == "Int8" { 8 }
+    else if kind == "Int16" { 16 }
+    else if kind == "Int32" { 32 }
+    else { 64 }
+}
+
+/** True when `value` fits in the signed range of integer scalar kind `kind`. */
+pub intKindFits := fn(kind: String, value: Int): Bool {
+    if kind == "Int8" { value >= -128 and value <= 127 }
+    else if kind == "Int16" { value >= -32768 and value <= 32767 }
+    else if kind == "Int32" { value >= -2147483648 and value <= 2147483647 }
+    else { kind == "Int" }
+}
+
+/** Returns the width rank inside a numeric family (`1` for `Int8`/`Float32`, up to `4` for `Int`/`Float`). */
+pub numericRank := fn(kind: String): Int {
+    if kind == "Int8" or kind == "Float32" { 1 }
+    else if kind == "Int16" { 2 }
+    else if kind == "Int32" { 3 }
+    else if kind == "Int" or kind == "Float" { 4 }
+    else { 0 }
+}
+
+/** Promotes two numeric kinds inside the same family (`Int*` or `Float*`) to the wider kind, or returns empty text across families. */
+pub promoteNumericKind := fn(leftKind: String, rightKind: String): String {
+    if isIntKind(leftKind) and isIntKind(rightKind) {
+        if numericRank(leftKind) >= numericRank(rightKind) { leftKind } else { rightKind }
+    } else if isFloatKind(leftKind) and isFloatKind(rightKind) {
+        if numericRank(leftKind) >= numericRank(rightKind) { leftKind } else { rightKind }
+    } else { "" }
+}
+
+/** True when `actual` losslessly widens to `expected` under LiteScript's fixed-width numeric rules. */
+pub numericWidens := fn(expected: String, actual: String): Bool {
+    if isIntKind(expected) and isIntKind(actual) {
+        numericRank(actual) <= numericRank(expected)
+    } else if isFloatKind(expected) and isFloatKind(actual) {
+        numericRank(actual) <= numericRank(expected)
+    } else if isFloatKind(expected) and isIntKind(actual) {
+        if expected == "Float32" { actual == "Int8" or actual == "Int16" }
+        else { actual == "Int8" or actual == "Int16" or actual == "Int32" }
+    } else { false }
+}
+
+/** True when an admitted Int64 value has no nonzero bits beyond the positive binary float significand limit. Division avoids taking the absolute value of Int64.MIN. */
+intWithinFloatLimit := fn(input: Int, limit: Int): Bool {
     var value := input;
-    loop value > 9007199254740992 or value < -9007199254740992 {
+    loop value > limit or value < -limit {
         if value % 2 =!= 0 { return false; }
         value /= 2;
     }
     true
 }
 
-/** Checks finite binary64 literal rounding using decimal digits, without requiring Float arithmetic in the bootstrap compiler. The excluded midpoint is 2^1024 - 2^970; a tie rounds to infinity. */
-pub finiteFloatDigits := fn(digits: String, fractionCount: Int, exponent: Int): Bool {
+/** True when an admitted Int64 value has no nonzero bits beyond binary64 precision. */
+pub intExactlyFloat := fn(input: Int): Bool {
+    intWithinFloatLimit(input, 9007199254740992)
+}
+
+/** True when an admitted Int64 value has no nonzero bits beyond binary32 precision. */
+pub intExactlyFloat32 := fn(input: Int): Bool {
+    intWithinFloatLimit(input, 16777216)
+}
+
+/** Compares a decimal literal's significant digits and power against an excluded overflow midpoint without runtime float math. */
+finiteDigitsWithin := fn(digits: String, fractionCount: Int, exponent: Int, maxPower: Int, midpoint: String): Bool {
     var first := 0;
     loop first < textLib.length(digits) and textLib.at(digits, first) == "0" { first += 1; }
     if first == textLib.length(digits) { return true; }
     significant := textLib.slice(digits, first, textLib.length(digits));
     power := textLib.length(significant) - fractionCount + exponent;
-    if power < 309 { return true; }
-    if power > 309 { return false; }
-    midpoint := "179769313486231580793728971405303415079934132710037826936173778980444968292764750946649017977587207096330286416692887910946555547851940402630657488671505820681908902000708383676273854845817711531764475730270069855571366959622842914819860834936475292719074168444365510704342711559699508093042880177904174497792";
+    if power < maxPower { return true; }
+    if power > maxPower { return false; }
     var count := textLib.length(significant);
     if count < textLib.length(midpoint) { count = textLib.length(midpoint); }
     var index := 0;
@@ -39,6 +119,17 @@ pub finiteFloatDigits := fn(digits: String, fractionCount: Int, exponent: Int): 
         index += 1;
     }
     false
+}
+
+/** Checks finite binary64 literal rounding using decimal digits, without requiring Float arithmetic in the bootstrap compiler. The excluded midpoint is 2^1024 - 2^970; a tie rounds to infinity. */
+pub finiteFloatDigits := fn(digits: String, fractionCount: Int, exponent: Int): Bool {
+    finiteDigitsWithin(digits, fractionCount, exponent, 309,
+        "179769313486231580793728971405303415079934132710037826936173778980444968292764750946649017977587207096330286416692887910946555547851940402630657488671505820681908902000708383676273854845817711531764475730270069855571366959622842914819860834936475292719074168444365510704342711559699508093042880177904174497792")
+}
+
+/** Checks finite binary32 literal rounding using decimal digits so both TS Math.fround(Number(...)) and C strtof produce finite values. */
+pub finiteFloat32Digits := fn(digits: String, fractionCount: Int, exponent: Int): Bool {
+    finiteDigitsWithin(digits, fractionCount, exponent, 39, "340282356779733642748073463979561713664")
 }
 
 /** Scans one unsigned decimal numeric token, retaining an Int-range witness and Float grammar/range components without target code or diagnostics. Exponent saturation preserves every possible cancellation with the literal's digits. */
