@@ -194,7 +194,7 @@ Keep dependencies explicit; split a topic further when its contracts warrant it.
   a function that failed strict TS checking. Completing loop-result lowering is
   separate from proving statement-block returns.
 - [ ] **Cleanup:** construct-level finally and exit/fault interactions.
-- [ ] **Match:** supported subjectless Boolean selection and combinations.
+- [x] **Match:** subjectless Boolean `match { ... }` in TypeScript and action `match` in C (C value `match` expressions and subject `match` remain deferred; `docs/match.md`).
 - [ ] **Other existing builtins:** audit and port remaining reference helpers,
   including inputWord (default-argument `io.exit()` exiting zero is now
   supported on generated TS); preserve the selected six-helper public contract.

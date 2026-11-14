@@ -770,10 +770,10 @@ test('default verification and expectation updates use TS artifacts without T00'
     const updated = invoke('--filter', 'features/int-arithmetic.json', '--update');
     assert.equal(updated.status, 0, updated.stdout + updated.stderr); assert.match(updated.stdout, /updated/);
     assert.deepEqual(JSON.parse(readFileSync(manifest, 'utf8')), JSON.parse(expected.toString()));
-    const unsupported = join(directory, 'language/verifications/features/match-subjectless.json');
+    const unsupported = join(directory, 'language/verifications/features/loop-value.json');
     const before = readFileSync(unsupported);
-    const failed = invoke('--filter', 'match.subjectless', '--update');
-    assert.equal(failed.status, 1); assert.match(failed.stdout, /unsupported feature "match"/);
+    const failed = invoke('--filter', 'loop.value', '--update');
+    assert.equal(failed.status, 1); assert.match(failed.stdout, /unsupported feature "loop"/);
     assert.deepEqual(readFileSync(unsupported), before, 'unsupported source must not rewrite expectations');
     const legacy = invoke('--reference', '--filter', 'int.arithmetic');
     assert.equal(legacy.status, 2); assert.match(legacy.stderr, /unknown argument --reference/);
@@ -2928,4 +2928,109 @@ test('unnamed loop sequence traversal supports lists, fixed arrays, empty lists,
     assert.equal(rejected.status, 2, bad);
     assert.match(rejected.stderr.toString(), expectedMessage, bad + ' -> ' + rejected.stderr.toString());
   }
+});
+
+test('subjectless Boolean match supports value and statement forms in TS and action match in C', () => {
+  const executions: { target: 'ts' | 'c'; artifact: string; expected: ReturnType<typeof expectedText>; context: string }[] = [];
+  const tsValueSource = [
+    'io := import "core/io";',
+    'probe := fn(label: String, result: Bool): Bool { io.outputLine("probe:" + label); result }',
+    'choose := fn(n: Int): String {',
+    '    match {',
+    '        probe("first", n == 1) { "one" }',
+    '        probe("second", n == 2) { "two" }',
+    '        _ { "other" }',
+    '    }',
+    '}',
+    'direct := match {',
+    '    false { io.exit(9) }',
+    '    _ { 1 + match { true { 4 } _ { 9 } } }',
+    '};',
+    'grouped := (match {',
+    '    (if true { false } else { true }) { (a = 10) }',
+    '    _ { (a = 20) }',
+    '}).a;',
+    'single := match { _ { 7 } };',
+    'nested := match {',
+    '    (match { false { false } _ { true } }) { "nested" }',
+    '    _ { io.exit(8) }',
+    '};',
+    'tailScore := fn(n: Int): Int {',
+    '    match {',
+    '        n < 0 { 10 }',
+    '        n == 0 { return 20; }',
+    '        _ { 30 }',
+    '    }',
+    '}',
+    'loopMatch := fn(limit: Int): Int {',
+    '    var total := 0;',
+    '    var i := 0;',
+    '    loop i < limit {',
+    '        match {',
+    '            i == 2 { break; }',
+    '            _ { total += 10; }',
+    '        }',
+    '        i += 1;',
+    '    }',
+    '    total',
+    '}',
+    'io.outputLine(choose(1), choose(2), choose(3), direct, grouped, single, nested, tailScore(-1), tailScore(0), tailScore(5), loopMatch(5));',
+  ].join('\n');
+  const tsCompiled = compileTarget('ts', { text: tsValueSource });
+  assert.equal(tsCompiled.status, 0, tsCompiled.stderr.toString());
+  const tsRun = runTsArtifact(tsCompiled.stdout.toString());
+  assert.equal(tsRun.phase, 'run');
+  assert.equal(tsRun.status, 0, tsRun.stderr.toString());
+  assert.equal(tsRun.stdout.toString(), [
+    'probe:first',
+    'probe:first',
+    'probe:second',
+    'probe:first',
+    'probe:second',
+    'one two other 5 20 7 nested 10 20 30 20',
+    '',
+  ].join('\n'));
+
+  const actionSource = [
+    'io := import "core/io";',
+    'var total := 0;',
+    'match {',
+    '    false { x := 100; total += x; }',
+    '    true { x := 5; total += x; }',
+    '    _ { total += 1; }',
+    '}',
+    'match { _ { total += 2; } }',
+    'out: Int = ?;',
+    'match {',
+    '    total > 10 { out = 99; }',
+    '    _ { out = 44; }',
+    '}',
+    'io.outputLine(total, out);',
+  ].join('\n');
+  const actionExpected = { status: 0, stdout: Buffer.from('7 44\n'), stderr: Buffer.alloc(0) };
+  for (const target of ['ts', 'c'] as const) {
+    const compiled = compileTarget(target, { text: actionSource });
+    assert.equal(compiled.status, 0, `${target}: ${compiled.stderr.toString()}`);
+    if (target === 'c' && process.env['LITE_SKIP_NATIVE'] === '1') continue;
+    executions.push({ target, artifact: compiled.stdout.toString(), expected: actionExpected, context: actionSource });
+  }
+  assertExecutions(executions);
+
+  for (const [bad, expectedMessage] of [
+    ['x := match { true { 1 } };', /subjectless match requires a final _ fallback arm/],
+    ['x := match { _ { 1 } true { 2 } };', /match fallback _ must be the final arm/],
+    ['x := match { 1 { 2 } _ { 3 } };', /match arm condition must be Bool/],
+    ['x := match { true { 1 } _ { "two" } };', /value match arms must have the same kind/],
+    ['x := match { { true } { 1 } _ { 2 } };', /match arm header requires grouping/],
+    ['x := match { if true { true } else { false } { 1 } _ { 2 } };', /ungrouped \{ in match arm header/],
+    ['match x { _ => 1 }', /unsupported feature "match"/],
+  ] as const) {
+    const rejected = compileTarget('ts', { text: bad });
+    assert.equal(rejected.status, 2, bad);
+    assert.match(rejected.stderr.toString(), expectedMessage, bad + ' -> ' + rejected.stderr.toString());
+  }
+
+  const cValueRejected = compileTarget('c', { text: 'x := match { true { 1 } _ { 2 } };' });
+  assert.equal(cValueRejected.status, 2);
+  assert.match(cValueRejected.stderr.toString(), /C backend does not support value match expressions yet/);
 });

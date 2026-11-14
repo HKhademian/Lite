@@ -332,6 +332,60 @@ test('Lite checker collects value bindings and rejects unsupported duplicate sym
   });
 });
 
+test('Lite parser and checker support subjectless Boolean match', () => {
+  withGeneratedDriver(parserProgramDumpPath, runParser => {
+    const parsedValue = runParser('x := match { a == 1 { 10 } _ { 20 } };\n');
+    assert.equal(parsedValue.code, 0, parsedValue.errors);
+    assert.match(parsedValue.output, /Program\|\|x := match \{ \(a == 1\) \{ 10 \} _ \{ 20 \} \}\|/);
+
+    const parsedAction = runParser('match { true { outputLine(1); } _ { outputLine(2); } }\n');
+    assert.equal(parsedAction.code, 0, parsedAction.errors);
+    assert.match(parsedAction.output, /Program\|\|match \{ true \{ outputLine\(1\) \} _ \{ outputLine\(2\) \} \}\|/);
+
+    for (const [bad, pattern] of [
+      ['match x { _ => 1 }\n', /^1:1: unsupported feature "match"$/m],
+      ['match { true { outputLine(1); } }\n', /subjectless match requires a final _ fallback arm/],
+      ['match { _ { outputLine(1); } true { outputLine(2); } }\n', /match fallback _ must be the final arm/],
+      ['x := match { { true } { 1 } _ { 2 } };\n', /match arm header requires grouping/],
+    ] as const) {
+      const rejected = runParser(bad);
+      assert.equal(rejected.code, 2, bad);
+      assert.match(rejected.errors, pattern, bad + ' -> ' + rejected.errors);
+    }
+  });
+
+  withGeneratedDriver(checkerDumpPath, runChecker => {
+    const checked = runChecker([
+      'label := match { true { "yes" } _ { "no" } };',
+      'classify := fn(n: Int): Int {',
+      '    match {',
+      '        n > 0 { a := 1; return a; }',
+      '        _ { a := 2; return a; }',
+      '    }',
+      '}',
+      'match { (if true { false } else { true }) { b := 1; } _ { b := 2; } }',
+    ].join('\n'));
+    assert.equal(checked.code, 0, checked.errors);
+    assert.match(checked.output, /value\|label\|:= match \{ true \{ "yes" \} _ \{ "no" \} \}\|/);
+    assert.match(checked.output, /function\|classify\|\(n: Int\): Int\|/);
+
+    for (const [bad, pattern] of [
+      ['match x { _ => 1 }\n', /^1:1: unsupported feature "match"$/m],
+      ['match { true { x := 1; } }\n', /subjectless match requires a final _ fallback arm/],
+      ['match { _ { x := 1; } true { y := 2; } }\n', /match fallback _ must be the final arm/],
+      ['match { 1 { x := 2; } _ { y := 3; } }\n', /match arm condition must be Bool/],
+      ['x := match { 1 { 2 } _ { 3 } };\n', /match arm condition must be Bool/],
+      ['f := fn(): Int { return match { 1 { 2 } _ { 3 } }; }\n', /match arm condition must be Bool/],
+      ['f := fn(): String { return match { true { 1 } _ { 2 } }; }\n', /cannot return Int from function returning String/],
+      ['x: String = match { true { 1 } _ { 2 } };\n', /cannot initialize String with Int/],
+    ] as const) {
+      const rejected = runChecker(bad);
+      assert.equal(rejected.code, 2, bad);
+      assert.match(rejected.errors, pattern, bad + ' -> ' + rejected.errors);
+    }
+  });
+});
+
 test('Lite checker collects symbols from the assembled S', context => {
   if (process.env['LITE_SKIP_HEAVY'] === '1') {
     context.skip('LITE_SKIP_HEAVY=1'); return;
