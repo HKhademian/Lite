@@ -19,17 +19,23 @@ function command(name: string, args: string[]) {
 }
 
 test('lite compile routes through the compiler router to its TypeScript target', () => {
+  const sample = 'language/examples/001-double-sum.lts';
+  const expected = command('lite-compile-ts', [sample]);
+  assert.deepEqual(command('lite', ['compile', sample]), expected);
+  assert.deepEqual(command('lite', ['--compile', sample]), expected);
+  assert.deepEqual(command('lite-compile', [sample]), expected);
+  assert.deepEqual(command('lite-compile', ['ts', sample]), expected);
+  assert.deepEqual(command('lite-compile', ['--target', 'ts', sample]), expected);
+  assert.deepEqual(command('lite-compile', ['--target=ts', sample]), expected);
+  assert.deepEqual(command('lite-compile-ts', ['--target', 'ts', sample]), expected);
+  assert.deepEqual(command('lite-compile-ts', ['--target=ts', sample]), expected);
   assert.deepEqual(
-    command('lite', ['compile', 'language/examples/001-double-sum.lts']),
-    command('lite-compile', ['language/examples/001-double-sum.lts']),
+    command('lite-compile', ['--target', 'c', sample]),
+    command('lite-compile-c', [sample]),
   );
   assert.deepEqual(
-    command('lite-compile', ['language/examples/001-double-sum.lts']),
-    command('lite-compile-ts', ['language/examples/001-double-sum.lts']),
-  );
-  assert.deepEqual(
-    command('lite-compile', ['--target', 'c', 'language/examples/001-double-sum.lts']),
-    command('lite-compile-c', ['language/examples/001-double-sum.lts']),
+    command('lite-compile', ['--target=c', sample]),
+    command('lite-compile-c', [sample]),
   );
 });
 
@@ -70,8 +76,8 @@ test('lite check routes through ./bin/lite to the standalone checker', () => {
   assert.equal(command('lite-check', ['language/examples/001-double-sum.lts']).status, 0);
 });
 
-test('generated cli, checker, doctor, run, verify, test-runner, test, bench, ci, and release artifacts match their Lite sources and pass strict TS checking', () => {
-  for (const name of ['cli', 'checker', 'check', 'run', 'verify', 'test-runner', 'test', 'bench', 'ci', 'release'] as const) {
+test('generated cli, compile, checker, doctor, run, verify, test-runner, test, bench, ci, and release artifacts match their Lite sources and pass strict TS checking', () => {
+  for (const name of ['cli', 'compile', 'compile-c', 'compile-ts', 'checker', 'check', 'run', 'verify', 'test-runner', 'test', 'bench', 'ci', 'release'] as const) {
     const sourcePath = join(root, `tools/src/${name}.lts`);
     const compiled = compileTs({ text: readFileSync(sourcePath, 'utf8'), name: `tools/src/${name}.lts`, rootPath: sourcePath });
     assert.equal(compiled.status, 0, compiled.stderr.toString());

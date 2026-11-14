@@ -1,0 +1,17 @@
+/** Reserved C compiler target command (`lite-compile-c`); defers C output until post-TS migration. */
+
+io := import "core/io";
+list := import "core/list";
+cli := import "util/cli";
+project := import "util/project";
+
+run := fn(rawArgs: List<String>): Unit {
+    if list.listCountText(rawArgs) == 1 and cli.head(rawArgs) == "--version" {
+        io.outputLine("lite-compile-c " + project.readComponentVersion("compiler"));
+        io.exit(0);
+    }
+    io.errorLine("lite-compile-c: C output is deferred until after the TS compiler migration");
+    io.exit(2);
+};
+
+run(io.inputArgs());

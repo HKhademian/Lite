@@ -1,0 +1,43 @@
+/** Standalone compiler router (`lite-compile`); munches target selection and forwards to `bin/lite-compile-<target>`. */
+
+io := import "core/io";
+list := import "core/list";
+text := import "core/text";
+cli := import "util/cli";
+project := import "util/project";
+
+usageExit := fn(): Unit {
+    io.errorLine("Usage: ./bin/lite-compile [--target ts|c] file.lts");
+    io.exit(2);
+};
+
+run := fn(rawArgs: List<String>): Unit {
+    if list.listCountText(rawArgs) == 1 and cli.head(rawArgs) == "--version" {
+        io.outputLine("lite-compile " + project.readComponentVersion("compiler"));
+        io.exit(0);
+    }
+
+    var target := "ts";
+    var restArgs := rawArgs;
+    first := cli.head(rawArgs);
+    if first == "ts" or first == "c" {
+        target = first;
+        restArgs = cli.rest(rawArgs, 1);
+    } else if first == "--target" {
+        if list.listCountText(rawArgs) < 2 {
+            usageExit();
+        }
+        target = rawArgs[1];
+        restArgs = cli.rest(rawArgs, 2);
+    } else if text.startsWithAt(first, 0, "--target=") {
+        target = text.slice(first, 9, text.length(first));
+        restArgs = cli.rest(rawArgs, 1);
+    }
+
+    if target =!= "ts" and target =!= "c" {
+        usageExit();
+    }
+    project.forwardNode("bin/lite-compile-" + target, restArgs);
+};
+
+run(io.inputArgs());

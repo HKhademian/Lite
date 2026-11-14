@@ -1,10 +1,9 @@
 #!/usr/bin/env node
-/** Reserved C target command; the public C backend is not implemented yet. */
-import { versions } from '../tools/project.ts';
+/** Host entrypoint for deferred C compiler command (tools/src/compile-c.lts -> tools/generated/compile-c.ts). */
+import { writeSync } from 'node:fs';
 
-if (process.argv[2] === '--version') {
-  console.log(`lite-compile-c ${versions().compiler ?? 'unassigned'}`);
-  process.exit(0);
-}
-process.stderr.write('lite-compile-c: C output is deferred until after the TS compiler migration\n');
-process.exit(2);
+const entry = new URL('../tools/generated/compile-c.ts', import.meta.url).href;
+const mod = (await import(entry)) as { main: (write?: (text: string) => void) => string };
+mod.main((text: string): void => {
+  writeSync(1, text);
+});
