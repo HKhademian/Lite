@@ -1,8 +1,8 @@
 {
-  "note": "Reviewed 2026-11-14 after VCS-stable canonical module ordering, scope-local runtime naming, and lite$out hygiene. TS/C artifact hashes refreshed after strict checks and exact runtime parity for all 69 programs; all 25 rejection cases unchanged.",
+  "note": "Reviewed 2026-11-14 after BMP fast path, non-churning text cache, and input state reset in emit-ts. Affected TS corpus artifact hashes refreshed with exact runtime parity for all 69 programs; all 25 rejection cases and C hashes unchanged.",
   "recorded": "2026-11-14",
-  "sourceSha256": "146a3796d3326b4680881ea98605233bc472060af932fc2590a312c57f812ba3",
-  "compilerSha256": "3a703f7a541d8291c4e8a92f345fbd05d4fca8a25e73e03bb1b0d40ae0425705",
+  "sourceSha256": "8e98043a83ae17707e7a11c40d94096ec6bb6f7a185c8908177af4d3446e84b4",
+  "compilerSha256": "281aa7c0fa7376aac8f0da58708e6da3dd918c56687fdcfa9a42811ea2245036",
   "programCases": 69,
   "rejectedCases": 25,
   "artifacts": [

@@ -20,11 +20,18 @@ function lite$inputArgs(): string[] {
 }
 
 declare const TextDecoder: { new(label: string, options: { fatal: boolean }): { decode(input?: Uint8Array, options?: { stream: boolean }): string } };
-const lite$decoder = new TextDecoder("utf-8", { fatal: true });
+let lite$decoder = new TextDecoder("utf-8", { fatal: true });
 const lite$bytes = new Uint8Array(4096);
 let lite$byteAt = 0, lite$byteEnd = 0;
 let lite$ended = false;
 let lite$pending: string | null | undefined;
+function lite$resetInput(): void {
+    lite$decoder = new TextDecoder("utf-8", { fatal: true });
+    lite$byteAt = 0;
+    lite$byteEnd = 0;
+    lite$ended = false;
+    lite$pending = undefined;
+}
 function lite$inputFault(at: string, message: string): never {
     process.getBuiltinModule("node:fs").writeSync(2, at + message + "\n");
     process.exit(1);
@@ -74,28 +81,61 @@ function lite$exit(status: bigint): never {
     process.exit(Number(status));
 }
 
+let lite$lastBmp = "";
+const lite$bmpSet = new Set<string>();
 const lite$textCache = new Map<string, readonly string[]>();
+function lite$isBmp(text: string): boolean {
+    if (text === lite$lastBmp) return true;
+    const len = text.length;
+    if (len === 0) return true;
+    if (len === 1) {
+        const c = text.charCodeAt(0);
+        return c < 0xd800 || c > 0xdfff;
+    }
+    if (len > 64) {
+        if (lite$bmpSet.has(text)) {
+            lite$lastBmp = text;
+            return true;
+        }
+        if (lite$textCache.has(text)) return false;
+    }
+    for (let i = 0; i < len; i += 1) {
+        const c = text.charCodeAt(i);
+        if (c >= 0xd800 && c <= 0xdfff) return false;
+    }
+    if (len > 64) {
+        if (lite$bmpSet.size >= 64) lite$bmpSet.clear();
+        lite$bmpSet.add(text);
+        lite$lastBmp = text;
+    }
+    return true;
+}
 function lite$textPoints(text: string): readonly string[] {
     const found = lite$textCache.get(text);
-    if (found !== undefined) {
-        lite$textCache.delete(text);
-        lite$textCache.set(text, found);
-        return found;
-    }
+    if (found !== undefined) return found;
     const points = Array.from(text);
+    if (lite$textCache.size >= 64) lite$textCache.clear();
     lite$textCache.set(text, points);
-    if (lite$textCache.size > 8) {
-        const oldest = lite$textCache.keys().next();
-        if (oldest.done !== true) lite$textCache.delete(oldest.value);
-    }
     return points;
 }
 
 function lite$textLength(text: string): bigint {
+    if (lite$isBmp(text)) return BigInt(text.length);
     return BigInt(lite$textPoints(text).length);
 }
 
 function lite$textAt(text: string, position: bigint, at: number): string {
+    if (lite$isBmp(text)) {
+        const idx = Number(position);
+        if (position < 0n || position >= BigInt(text.length)) {
+            lite$fault("BoundPanic", at, "textAt index outside text");
+        }
+        const bmpValue = text[idx];
+        if (bmpValue === undefined) {
+            throw new Error("BoundPanic: textAt index outside text");
+        }
+        return bmpValue;
+    }
     const points = lite$textPoints(text);
     if (position < 0n || position >= BigInt(points.length)) {
         lite$fault("BoundPanic", at, "textAt index outside text");
@@ -108,6 +148,12 @@ function lite$textAt(text: string, position: bigint, at: number): string {
 }
 
 function lite$textSlice(text: string, start: bigint, end: bigint, at: number): string {
+    if (lite$isBmp(text)) {
+        if (start < 0n || end < start || end > BigInt(text.length)) {
+            lite$fault("BoundPanic", at, "textSlice requires 0 <= start <= end <= textLength(text)");
+        }
+        return text.slice(Number(start), Number(end));
+    }
     const points = lite$textPoints(text);
     if (start < 0n || end < start || end > BigInt(points.length)) {
         lite$fault("BoundPanic", at, "textSlice requires 0 <= start <= end <= textLength(text)");
@@ -165,6 +211,8 @@ function lite$remainderInt(left: bigint, right: bigint, at: number): bigint {
 
 export function main(lite$write?: (text: string) => void, lite$sourceProviderInput?: (importer: string, spec: string) => { path: string; display: string; identity: string; text: string }): string {
     lite$sourceProvider = lite$sourceProviderInput;
+    lite$out = "";
+    lite$resetInput();
     function lite$emit(text: string): void {
         if (lite$write === undefined) lite$out += text;
         else lite$write(text);
@@ -12647,11 +12695,18 @@ export function main(lite$write?: (text: string) => void, lite$sourceProviderInp
             return;
         }
         lite$emit(("declare const TextDecoder: { new(label: string, options: { fatal: boolean }): { decode(input?: Uint8Array, options?: { stream: boolean }): string } };") + "\n");
-        lite$emit("const lite$decoder = new TextDecoder(\"utf-8\", { fatal: true });" + "\n");
+        lite$emit("let lite$decoder = new TextDecoder(\"utf-8\", { fatal: true });" + "\n");
         lite$emit("const lite$bytes = new Uint8Array(4096);" + "\n");
         lite$emit("let lite$byteAt = 0, lite$byteEnd = 0;" + "\n");
         lite$emit("let lite$ended = false;" + "\n");
         lite$emit("let lite$pending: string | null | undefined;" + "\n");
+        lite$emit("function lite$resetInput(): void {" + "\n");
+        lite$emit("    lite$decoder = new TextDecoder(\"utf-8\", { fatal: true });" + "\n");
+        lite$emit("    lite$byteAt = 0;" + "\n");
+        lite$emit("    lite$byteEnd = 0;" + "\n");
+        lite$emit("    lite$ended = false;" + "\n");
+        lite$emit("    lite$pending = undefined;" + "\n");
+        lite$emit("}" + "\n");
         lite$emit("function lite$inputFault(at: string, message: string): never {" + "\n");
         if (liteFn$emit__ts$usesAbruptUnwind(lite_calls)) {
             lite$emit("    return lite$throwAbruptFault(at + message + \"\\n\");" + "\n");
@@ -12828,32 +12883,65 @@ export function main(lite$write?: (text: string) => void, lite$sourceProviderInp
             lite$emit("" + "\n");
         }
         if (((((liteFn$emit__ts$usesBuiltin(lite_calls, "textLength")) || (liteFn$emit__ts$usesBuiltin(lite_calls, "textAt")))) || (liteFn$emit__ts$usesBuiltin(lite_calls, "textSlice")))) {
+            lite$emit("let lite$lastBmp = \"\";" + "\n");
+            lite$emit("const lite$bmpSet = new Set<string>();" + "\n");
             lite$emit("const lite$textCache = new Map<string, readonly string[]>();" + "\n");
+            lite$emit("function lite$isBmp(text: string): boolean {" + "\n");
+            lite$emit("    if (text === lite$lastBmp) return true;" + "\n");
+            lite$emit("    const len = text.length;" + "\n");
+            lite$emit("    if (len === 0) return true;" + "\n");
+            lite$emit("    if (len === 1) {" + "\n");
+            lite$emit("        const c = text.charCodeAt(0);" + "\n");
+            lite$emit("        return c < 0xd800 || c > 0xdfff;" + "\n");
+            lite$emit("    }" + "\n");
+            lite$emit("    if (len > 64) {" + "\n");
+            lite$emit("        if (lite$bmpSet.has(text)) {" + "\n");
+            lite$emit("            lite$lastBmp = text;" + "\n");
+            lite$emit("            return true;" + "\n");
+            lite$emit("        }" + "\n");
+            lite$emit("        if (lite$textCache.has(text)) return false;" + "\n");
+            lite$emit("    }" + "\n");
+            lite$emit("    for (let i = 0; i < len; i += 1) {" + "\n");
+            lite$emit("        const c = text.charCodeAt(i);" + "\n");
+            lite$emit("        if (c >= 0xd800 && c <= 0xdfff) return false;" + "\n");
+            lite$emit("    }" + "\n");
+            lite$emit("    if (len > 64) {" + "\n");
+            lite$emit("        if (lite$bmpSet.size >= 64) lite$bmpSet.clear();" + "\n");
+            lite$emit("        lite$bmpSet.add(text);" + "\n");
+            lite$emit("        lite$lastBmp = text;" + "\n");
+            lite$emit("    }" + "\n");
+            lite$emit("    return true;" + "\n");
+            lite$emit("}" + "\n");
             lite$emit("function lite$textPoints(text: string): readonly string[] {" + "\n");
             lite$emit("    const found = lite$textCache.get(text);" + "\n");
-            lite$emit("    if (found !== undefined) {" + "\n");
-            lite$emit("        lite$textCache.delete(text);" + "\n");
-            lite$emit("        lite$textCache.set(text, found);" + "\n");
-            lite$emit("        return found;" + "\n");
-            lite$emit("    }" + "\n");
+            lite$emit("    if (found !== undefined) return found;" + "\n");
             lite$emit("    const points = Array.from(text);" + "\n");
+            lite$emit("    if (lite$textCache.size >= 64) lite$textCache.clear();" + "\n");
             lite$emit("    lite$textCache.set(text, points);" + "\n");
-            lite$emit("    if (lite$textCache.size > 8) {" + "\n");
-            lite$emit("        const oldest = lite$textCache.keys().next();" + "\n");
-            lite$emit("        if (oldest.done !== true) lite$textCache.delete(oldest.value);" + "\n");
-            lite$emit("    }" + "\n");
             lite$emit("    return points;" + "\n");
             lite$emit("}" + "\n");
             lite$emit("" + "\n");
         }
         if (liteFn$emit__ts$usesBuiltin(lite_calls, "textLength")) {
             lite$emit("function lite$textLength(text: string): bigint {" + "\n");
+            lite$emit("    if (lite$isBmp(text)) return BigInt(text.length);" + "\n");
             lite$emit("    return BigInt(lite$textPoints(text).length);" + "\n");
             lite$emit("}" + "\n");
             lite$emit("" + "\n");
         }
         if (liteFn$emit__ts$usesBuiltin(lite_calls, "textAt")) {
             lite$emit("function lite$textAt(text: string, position: bigint, at: number): string {" + "\n");
+            lite$emit("    if (lite$isBmp(text)) {" + "\n");
+            lite$emit("        const idx = Number(position);" + "\n");
+            lite$emit("        if (position < 0n || position >= BigInt(text.length)) {" + "\n");
+            lite$emit("            lite$fault(\"BoundPanic\", at, \"textAt index outside text\");" + "\n");
+            lite$emit("        }" + "\n");
+            lite$emit("        const bmpValue = text[idx];" + "\n");
+            lite$emit("        if (bmpValue === undefined) {" + "\n");
+            lite$emit("            throw new Error(\"BoundPanic: textAt index outside text\");" + "\n");
+            lite$emit("        }" + "\n");
+            lite$emit("        return bmpValue;" + "\n");
+            lite$emit("    }" + "\n");
             lite$emit("    const points = lite$textPoints(text);" + "\n");
             lite$emit("    if (position < 0n || position >= BigInt(points.length)) {" + "\n");
             lite$emit("        lite$fault(\"BoundPanic\", at, \"textAt index outside text\");" + "\n");
@@ -12868,6 +12956,12 @@ export function main(lite$write?: (text: string) => void, lite$sourceProviderInp
         }
         if (liteFn$emit__ts$usesBuiltin(lite_calls, "textSlice")) {
             lite$emit("function lite$textSlice(text: string, start: bigint, end: bigint, at: number): string {" + "\n");
+            lite$emit("    if (lite$isBmp(text)) {" + "\n");
+            lite$emit("        if (start < 0n || end < start || end > BigInt(text.length)) {" + "\n");
+            lite$emit("            lite$fault(\"BoundPanic\", at, \"textSlice requires 0 <= start <= end <= textLength(text)\");" + "\n");
+            lite$emit("        }" + "\n");
+            lite$emit("        return text.slice(Number(start), Number(end));" + "\n");
+            lite$emit("    }" + "\n");
             lite$emit("    const points = lite$textPoints(text);" + "\n");
             lite$emit("    if (start < 0n || end < start || end > BigInt(points.length)) {" + "\n");
             lite$emit("        lite$fault(\"BoundPanic\", at, \"textSlice requires 0 <= start <= end <= textLength(text)\");" + "\n");
@@ -12989,7 +13083,9 @@ export function main(lite$write?: (text: string) => void, lite$sourceProviderInp
         void lite_abruptFault;
         const lite_abruptUnwind = liteFn$emit__ts$usesAbruptUnwind(lite_calls);
         void lite_abruptUnwind;
-        const lite_hasExit = ((((((((((liteFn$emit__ts$usesBuiltin(lite_calls, "exit")) || (liteFn$emit__ts$usesBuiltin(lite_calls, "inputAll")))) || (liteFn$emit__ts$usesBuiltin(lite_calls, "inputLine")))) || (liteFn$emit__ts$usesBuiltin(lite_calls, "inputInt")))) || (liteFn$emit__ts$usesBuiltin(lite_calls, "inputFloat")))) || (lite_abruptUnwind));
+        const lite_hasInput = ((((((liteFn$emit__ts$usesBuiltin(lite_calls, "inputAll")) || (liteFn$emit__ts$usesBuiltin(lite_calls, "inputLine")))) || (liteFn$emit__ts$usesBuiltin(lite_calls, "inputInt")))) || (liteFn$emit__ts$usesBuiltin(lite_calls, "inputFloat")));
+        void lite_hasInput;
+        const lite_hasExit = ((((liteFn$emit__ts$usesBuiltin(lite_calls, "exit")) || (lite_hasInput))) || (lite_abruptUnwind));
         void lite_hasExit;
         if (lite_hasExit) {
             lite$emit("let lite$out = \"\";" + "\n");
@@ -13013,6 +13109,12 @@ export function main(lite$write?: (text: string) => void, lite$sourceProviderInp
             lite$emit("    lite$sourceProvider = lite$sourceProviderInput;" + "\n");
         } else {
             lite$emit(("export function main(lite$write?: (text: string) => void): string {") + "\n");
+        }
+        if (lite_hasExit) {
+            lite$emit("    lite$out = \"\";" + "\n");
+        }
+        if (lite_hasInput) {
+            lite$emit("    lite$resetInput();" + "\n");
         }
         if ((!(lite_hasExit))) {
             lite$emit("    let lite$out = \"\";" + "\n");
@@ -13154,7 +13256,7 @@ export function main(lite$write?: (text: string) => void, lite$sourceProviderInp
                     lite_line = ((lite_line) + (" + \" \" + "));
                 }
                 lite_line = ((lite_line) + (liteFn$emit__ts$reportArgumentCode(lite_item)));
-                lite_count = lite$addInt(lite_count, 1n, 38215);
+                lite_count = lite$addInt(lite_count, 1n, 41057);
             }
         }
         if ((!(lite_mainStopped))) {

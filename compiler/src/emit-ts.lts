@@ -205,11 +205,18 @@ emitIntArithmeticHelpers := fn(calls: String, source: String, prefix: String): U
 emitInputHelpers := fn(calls: String): Unit {
     if not (usesBuiltin(calls, "inputAll") or usesBuiltin(calls, "inputLine") or usesBuiltin(calls, "inputInt") or usesBuiltin(calls, "inputFloat")) { return; }
     io.outputLine("declare const TextDecoder: { new(label: string, options: { fatal: boolean }): { decode(input?: Uint8Array, options?: { stream: boolean }): string } };");
-    io.outputLine("const lite$decoder = new TextDecoder(\"utf-8\", { fatal: true });");
+    io.outputLine("let lite$decoder = new TextDecoder(\"utf-8\", { fatal: true });");
     io.outputLine("const lite$bytes = new Uint8Array(4096);");
     io.outputLine("let lite$byteAt = 0, lite$byteEnd = 0;");
     io.outputLine("let lite$ended = false;");
     io.outputLine("let lite$pending: string | null | undefined;");
+    io.outputLine("function lite$resetInput(): void {");
+    io.outputLine("    lite$decoder = new TextDecoder(\"utf-8\", { fatal: true });");
+    io.outputLine("    lite$byteAt = 0;");
+    io.outputLine("    lite$byteEnd = 0;");
+    io.outputLine("    lite$ended = false;");
+    io.outputLine("    lite$pending = undefined;");
+    io.outputLine("}");
     io.outputLine("function lite$inputFault(at: string, message: string): never {");
     if usesAbruptUnwind(calls) {
         io.outputLine("    return lite$throwAbruptFault(at + message + \"\\n\");");
@@ -382,32 +389,65 @@ emitBuiltinHelpers := fn(calls: String): Unit {
         io.outputLine("");
     }
     if usesBuiltin(calls, "textLength") or usesBuiltin(calls, "textAt") or usesBuiltin(calls, "textSlice") {
+        io.outputLine("let lite$lastBmp = \"\";");
+        io.outputLine("const lite$bmpSet = new Set<string>();");
         io.outputLine("const lite$textCache = new Map<string, readonly string[]>();");
+        io.outputLine("function lite$isBmp(text: string): boolean {");
+        io.outputLine("    if (text === lite$lastBmp) return true;");
+        io.outputLine("    const len = text.length;");
+        io.outputLine("    if (len === 0) return true;");
+        io.outputLine("    if (len === 1) {");
+        io.outputLine("        const c = text.charCodeAt(0);");
+        io.outputLine("        return c < 0xd800 || c > 0xdfff;");
+        io.outputLine("    }");
+        io.outputLine("    if (len > 64) {");
+        io.outputLine("        if (lite$bmpSet.has(text)) {");
+        io.outputLine("            lite$lastBmp = text;");
+        io.outputLine("            return true;");
+        io.outputLine("        }");
+        io.outputLine("        if (lite$textCache.has(text)) return false;");
+        io.outputLine("    }");
+        io.outputLine("    for (let i = 0; i < len; i += 1) {");
+        io.outputLine("        const c = text.charCodeAt(i);");
+        io.outputLine("        if (c >= 0xd800 && c <= 0xdfff) return false;");
+        io.outputLine("    }");
+        io.outputLine("    if (len > 64) {");
+        io.outputLine("        if (lite$bmpSet.size >= 64) lite$bmpSet.clear();");
+        io.outputLine("        lite$bmpSet.add(text);");
+        io.outputLine("        lite$lastBmp = text;");
+        io.outputLine("    }");
+        io.outputLine("    return true;");
+        io.outputLine("}");
         io.outputLine("function lite$textPoints(text: string): readonly string[] {");
         io.outputLine("    const found = lite$textCache.get(text);");
-        io.outputLine("    if (found !== undefined) {");
-        io.outputLine("        lite$textCache.delete(text);");
-        io.outputLine("        lite$textCache.set(text, found);");
-        io.outputLine("        return found;");
-        io.outputLine("    }");
+        io.outputLine("    if (found !== undefined) return found;");
         io.outputLine("    const points = Array.from(text);");
+        io.outputLine("    if (lite$textCache.size >= 64) lite$textCache.clear();");
         io.outputLine("    lite$textCache.set(text, points);");
-        io.outputLine("    if (lite$textCache.size > 8) {");
-        io.outputLine("        const oldest = lite$textCache.keys().next();");
-        io.outputLine("        if (oldest.done !== true) lite$textCache.delete(oldest.value);");
-        io.outputLine("    }");
         io.outputLine("    return points;");
         io.outputLine("}");
         io.outputLine("");
     }
     if usesBuiltin(calls, "textLength") {
         io.outputLine("function lite$textLength(text: string): bigint {");
+        io.outputLine("    if (lite$isBmp(text)) return BigInt(text.length);");
         io.outputLine("    return BigInt(lite$textPoints(text).length);");
         io.outputLine("}");
         io.outputLine("");
     }
     if usesBuiltin(calls, "textAt") {
         io.outputLine("function lite$textAt(text: string, position: bigint, at: number): string {");
+        io.outputLine("    if (lite$isBmp(text)) {");
+        io.outputLine("        const idx = Number(position);");
+        io.outputLine("        if (position < 0n || position >= BigInt(text.length)) {");
+        io.outputLine("            lite$fault(\"BoundPanic\", at, \"textAt index outside text\");");
+        io.outputLine("        }");
+        io.outputLine("        const bmpValue = text[idx];");
+        io.outputLine("        if (bmpValue === undefined) {");
+        io.outputLine("            throw new Error(\"BoundPanic: textAt index outside text\");");
+        io.outputLine("        }");
+        io.outputLine("        return bmpValue;");
+        io.outputLine("    }");
         io.outputLine("    const points = lite$textPoints(text);");
         io.outputLine("    if (position < 0n || position >= BigInt(points.length)) {");
         io.outputLine("        lite$fault(\"BoundPanic\", at, \"textAt index outside text\");");
@@ -422,6 +462,12 @@ emitBuiltinHelpers := fn(calls: String): Unit {
     }
     if usesBuiltin(calls, "textSlice") {
         io.outputLine("function lite$textSlice(text: string, start: bigint, end: bigint, at: number): string {");
+        io.outputLine("    if (lite$isBmp(text)) {");
+        io.outputLine("        if (start < 0n || end < start || end > BigInt(text.length)) {");
+        io.outputLine("            lite$fault(\"BoundPanic\", at, \"textSlice requires 0 <= start <= end <= textLength(text)\");");
+        io.outputLine("        }");
+        io.outputLine("        return text.slice(Number(start), Number(end));");
+        io.outputLine("    }");
         io.outputLine("    const points = lite$textPoints(text);");
         io.outputLine("    if (start < 0n || end < start || end > BigInt(points.length)) {");
         io.outputLine("        lite$fault(\"BoundPanic\", at, \"textSlice requires 0 <= start <= end <= textLength(text)\");");
@@ -537,7 +583,8 @@ pub emitProgram := fn(items: frontend.Items, source: String, prefix: String): Un
     calls := frontend.targetHelperCalls(items);
     abruptFault := usesAbruptFault(calls);
     abruptUnwind := usesAbruptUnwind(calls);
-    hasExit := usesBuiltin(calls, "exit") or usesBuiltin(calls, "inputAll") or usesBuiltin(calls, "inputLine") or usesBuiltin(calls, "inputInt") or usesBuiltin(calls, "inputFloat") or abruptUnwind;
+    hasInput := usesBuiltin(calls, "inputAll") or usesBuiltin(calls, "inputLine") or usesBuiltin(calls, "inputInt") or usesBuiltin(calls, "inputFloat");
+    hasExit := usesBuiltin(calls, "exit") or hasInput or abruptUnwind;
     if hasExit {
         io.outputLine("let lite$out = \"\";");
         io.outputLine("");
@@ -555,6 +602,8 @@ pub emitProgram := fn(items: frontend.Items, source: String, prefix: String): Un
     } else {
         io.outputLine("export function main(lite$write?: (text: string) => void): string {");
     }
+    if hasExit { io.outputLine("    lite$out = \"\";"); }
+    if hasInput { io.outputLine("    lite$resetInput();"); }
     if not hasExit { io.outputLine("    let lite$out = \"\";"); }
     io.outputLine("    function lite$emit(text: string): void {");
     io.outputLine("        if (lite$write === undefined) lite$out += text;");
