@@ -137,6 +137,15 @@ test('L0 shared libraries have direct bootstrap tests', () => {
   });
 });
 
+test('shared utility libraries under lib/util pass direct Lite tests', () => {
+  const root = new URL('../', import.meta.url).pathname;
+  for (const name of ['util-path', 'util-fs', 'util-project']) {
+    assert.deepEqual(runFile(join(root, 'lib/tests', `${name}.lts`)), {
+      code: 0, output: `${name}: ok\n`, errors: '',
+    }, name);
+  }
+});
+
 test('Lite lexer tokenizes lexical fixtures exactly', () => {
   for (const name of ['tokens', 'symbols', 'comments', 'strings', 'int']) {
     const source = readFileSync(new URL(`../compiler/tests/lexer/${name}.lts`, import.meta.url), 'utf8');

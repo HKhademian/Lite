@@ -17,4 +17,8 @@ flags: List<Bool> = [false, true];
 test.checkInt("list index bool", 1, list.listIndexOfBool(flags, true));
 test.checkBool("list contains bool", true, list.listContainsBool(flags, false));
 
+test.checkInt("list count text", 3, list.listCountText(texts));
+test.checkInt("list count int", 3, list.listCountInt(ints));
+test.checkInt("list count bool", 2, list.listCountBool(flags));
+
 test.done("list");

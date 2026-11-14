@@ -56,3 +56,30 @@ pub listIndexOfBool := fn(values: List<Bool>, target: Bool): Int {
 pub listContainsBool := fn(values: List<Bool>, target: Bool): Bool {
     listIndexOfBool(=values, =target) >= 0
 }
+
+/** Returns the number of elements in `values`. */
+pub listCountText := fn(values: List<String>): Int {
+    var count := 0;
+    loop values as value {
+        count = count + 1;
+    }
+    count
+}
+
+/** Returns the number of elements in `values`. */
+pub listCountInt := fn(values: List<Int>): Int {
+    var count := 0;
+    loop values as value {
+        count = count + 1;
+    }
+    count
+}
+
+/** Returns the number of elements in `values`. */
+pub listCountBool := fn(values: List<Bool>): Int {
+    var count := 0;
+    loop values as value {
+        count = count + 1;
+    }
+    count
+}

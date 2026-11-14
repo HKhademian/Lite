@@ -1,0 +1,52 @@
+/** Provisional filesystem traversal utilities built on `core/fs`. */
+
+io := import "core/io";
+fs := import "core/fs";
+text := import "core/text";
+list := import "core/list";
+path := import "util/path";
+
+/** Standard directory names skipped during repository tool walks. */
+pub defaultIgnoredDirs := fn(): List<String> {
+    dirs: List<String> = ["node_modules", "dist"];
+    dirs
+}
+
+/** Walks `targets` in sorted depth-first order, skipping ignored/dot directories and keeping files ending in `extension` (or all files when `extension == ""`). */
+pub collectFiles := fn(baseDir: String, targets: List<String>, extension: String, ignoredNames: List<String>, skipDotEntries: Bool): List<String> {
+    files: mut List<String> = [];
+    stack: mut List<String> = [];
+    var stackCount := 0;
+    var targetIdx := list.listCountText(targets) - 1;
+    loop targetIdx >= 0 {
+        list.pushBack(mut stack, path.resolve(baseDir, targets[targetIdx]));
+        stackCount = stackCount + 1;
+        targetIdx = targetIdx - 1;
+    }
+
+    loop stackCount > 0 {
+        resolved := list.popBack(mut stack);
+        stackCount = stackCount - 1;
+        kind := fs.kind(resolved);
+        if kind == "missing" {
+            io.errorLine("ENOENT: no such file or directory, stat '" + resolved + "'");
+            io.exit(1);
+        }
+        if kind == "dir" {
+            entries := fs.listDir(resolved);
+            var entryIdx := list.listCountText(entries) - 1;
+            loop entryIdx >= 0 {
+                entry := entries[entryIdx];
+                isDot := skipDotEntries and text.startsWithAt(entry, 0, ".");
+                if not isDot and not list.listContainsText(ignoredNames, entry) {
+                    list.pushBack(mut stack, path.resolve(resolved, entry));
+                    stackCount = stackCount + 1;
+                }
+                entryIdx = entryIdx - 1;
+            }
+        } else if extension == "" or text.endsWith(resolved, extension) {
+            list.pushBack(mut files, resolved);
+        }
+    }
+    files
+}

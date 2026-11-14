@@ -1,0 +1,41 @@
+fs := import "core/fs";
+list := import "core/list";
+test := import "core/test";
+fsUtil := import "util/fs";
+path := import "util/path";
+
+tmpRes := fs.makeTempDir("lite-util-fs-");
+test.checkBool("make temp dir ok", true, tmpRes.ok);
+rootDir := tmpRes.path;
+
+nested := path.join(rootDir, "sub/inner");
+ignoreDir := path.join(rootDir, "node_modules");
+distDir := path.join(rootDir, "dist");
+dotDir := path.join(rootDir, ".hidden");
+
+_mk1 := fs.makeDir(nested);
+_mk2 := fs.makeDir(ignoreDir);
+_mk3 := fs.makeDir(distDir);
+_mk4 := fs.makeDir(dotDir);
+
+aFile := path.join(rootDir, "a.lts");
+bFile := path.join(nested, "b.lts");
+txtFile := path.join(nested, "notes.txt");
+_w1 := fs.writeText(aFile, "x := 1;\n");
+_w2 := fs.writeText(bFile, "y := 2;\n");
+_w3 := fs.writeText(txtFile, "skip\n");
+_w4 := fs.writeText(path.join(ignoreDir, "ignored.lts"), "x := 3;\n");
+_w5 := fs.writeText(path.join(distDir, "ignored2.lts"), "x := 4;\n");
+_w6 := fs.writeText(path.join(dotDir, "ignored3.lts"), "x := 5;\n");
+
+targets: List<String> = [rootDir];
+collected := fsUtil.collectFiles(rootDir, targets, ".lts", fsUtil.defaultIgnoredDirs(), true);
+test.checkInt("collected lts count", 2, list.listCountText(collected));
+test.checkText("collected first", aFile, collected[0]);
+test.checkText("collected second", bFile, collected[1]);
+
+allFiles := fsUtil.collectFiles(rootDir, targets, "", fsUtil.defaultIgnoredDirs(), true);
+test.checkInt("collected all count", 3, list.listCountText(allFiles));
+
+_rm := fs.remove(rootDir);
+test.done("util-fs");

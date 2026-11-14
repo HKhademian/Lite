@@ -43,4 +43,17 @@ test.checkBool("text to int empty", false, emptyParsed.ok);
 signOnly := text.textToInt("-");
 test.checkBool("text to int sign only", false, signOnly.ok);
 
+test.checkBool("whitespace space", true, text.isWhitespace(" "));
+test.checkBool("whitespace tab", true, text.isWhitespace("\t"));
+test.checkBool("whitespace char", false, text.isWhitespace("a"));
+test.checkText("trim start", "hi ", text.trimStart(" \t\nhi "));
+test.checkText("trim end", " hi", text.trimEnd(" hi \r\n"));
+test.checkText("trim", "hi", text.trim(" \thi\n "));
+test.checkText("trim blank", "", text.trim(" \t\r\n"));
+test.checkBool("ends with match", true, text.endsWith("sample.lts", ".lts"));
+test.checkBool("ends with miss", false, text.endsWith("sample.ts", ".lts"));
+test.checkBool("ends with longer", false, text.endsWith("a", "abc"));
+test.checkText("repeat text", "ababab", text.repeatText("ab", 3));
+test.checkText("repeat zero", "", text.repeatText("ab", 0));
+
 test.done("text");

@@ -1,0 +1,86 @@
+/** Shared repository discovery and component-version CLI helpers for Lite tools. */
+
+io := import "core/io";
+fs := import "core/fs";
+proc := import "core/process";
+text := import "core/text";
+list := import "core/list";
+path := import "util/path";
+
+findRepoRootFrom := fn(startPath: String): String {
+    if startPath == "" { return ""; }
+    var dir := path.normalize(startPath);
+    if fs.kind(dir) =!= "dir" { dir = path.parentDir(dir); }
+    var steps := 0;
+    loop steps < 16 {
+        versionsPath := path.resolve(dir, "config/versions.json");
+        if fs.kind(versionsPath) == "file" { return dir; }
+        next := path.parentDir(dir);
+        if next == dir { break; }
+        dir = next;
+        steps = steps + 1;
+    }
+    ""
+}
+
+/** Walks up from the running entrypoint or working directory to find the repo root containing `config/versions.json`, or `""`. */
+pub findRepoRoot := fn(): String {
+    root := findRepoRootFrom(proc.entryPath());
+    if root =!= "" { return root; }
+    findRepoRootFrom(proc.cwd())
+}
+
+/** Reads the version string for `component` from `config/versions.json`, or `"unassigned"` when null or missing. */
+pub readComponentVersion := fn(component: String): String {
+    root := findRepoRoot();
+    if root == "" { return "unassigned"; }
+    versionsPath := path.resolve(root, "config/versions.json");
+    readRes := fs.readText(versionsPath);
+    if not readRes.ok { return "unassigned"; }
+
+    content := readRes.text;
+    size := text.length(content);
+    needle := "\"" + component + "\"";
+    needleLen := text.length(needle);
+    var searchFrom := 0;
+
+    loop searchFrom < size {
+        keyPos := text.indexOfText(content, needle, searchFrom);
+        if keyPos < 0 { return "unassigned"; }
+        afterKey := text.skipSpaces(content, keyPos + needleLen);
+        if afterKey < size and text.at(content, afterKey) == ":" {
+            var pos := text.skipSpaces(content, afterKey + 1);
+            if text.startsWithAt(content, pos, "null") { return "unassigned"; }
+            if pos < size and text.at(content, pos) == "\"" {
+                pos = pos + 1;
+                start := pos;
+                loop pos < size {
+                    ch := text.at(content, pos);
+                    if ch == "\\" {
+                        pos = pos + 2;
+                    } else if ch == "\"" {
+                        return text.slice(content, start, pos);
+                    } else {
+                        pos = pos + 1;
+                    }
+                }
+                return "unassigned";
+            }
+        }
+        searchFrom = keyPos + needleLen;
+    }
+    "unassigned"
+}
+
+/** Handles `lite <command> --version` cleanly when `--version` is the first CLI argument. */
+pub handleVersionFlag := fn(args: List<String>, component: String, command: String): Unit {
+    argCount := list.listCountText(args);
+    if argCount > 0 and args[0] == "--version" {
+        if argCount =!= 1 {
+            io.errorLine("Usage: lite " + command + " --version");
+            io.exit(2);
+        }
+        io.outputLine("lite " + command + " " + readComponentVersion(component));
+        io.exit(0);
+    }
+}

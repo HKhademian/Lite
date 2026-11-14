@@ -281,6 +281,39 @@ export function main(lite$write?: (text: string) => void, lite$sourceProviderInp
         return ((liteFn$lib$core$list$listIndexOfBool([...(lite_values)], lite_target)) >= (0n));
     }
     void liteFn$lib$core$list$listContainsBool;
+    function liteFn$lib$core$list$listCountText(lite_values: string[]): bigint {
+        void lite_values;
+        let lite_count = 0n;
+        void lite_count;
+        for (const lite_value of [...(lite_values)]) {
+            void lite_value;
+            lite_count = lite$addInt(lite_count, 1n, 2101);
+        }
+        return lite_count;
+    }
+    void liteFn$lib$core$list$listCountText;
+    function liteFn$lib$core$list$listCountInt(lite_values: bigint[]): bigint {
+        void lite_values;
+        let lite_count = 0n;
+        void lite_count;
+        for (const lite_value of [...(lite_values)]) {
+            void lite_value;
+            lite_count = lite$addInt(lite_count, 1n, 2294);
+        }
+        return lite_count;
+    }
+    void liteFn$lib$core$list$listCountInt;
+    function liteFn$lib$core$list$listCountBool(lite_values: boolean[]): bigint {
+        void lite_values;
+        let lite_count = 0n;
+        void lite_count;
+        for (const lite_value of [...(lite_values)]) {
+            void lite_value;
+            lite_count = lite$addInt(lite_count, 1n, 2489);
+        }
+        return lite_count;
+    }
+    void liteFn$lib$core$list$listCountBool;
     function liteFn$lib$core$diag$diagnosticExit(): bigint {
         return 2n;
     }
@@ -685,6 +718,68 @@ export function main(lite$write?: (text: string) => void, lite$sourceProviderInp
         return lite$textSlice(lite_text, lite_start, lite_end, 6228);
     }
     void liteFn$lib$core$text$slice;
+    function liteFn$lib$core$text$isWhitespace(lite_ch: string): boolean {
+        void lite_ch;
+        return ((((((((lite_ch) === (" "))) || (((lite_ch) === ("\t"))))) || (((lite_ch) === ("\r"))))) || (((lite_ch) === ("\n"))));
+    }
+    void liteFn$lib$core$text$isWhitespace;
+    function liteFn$lib$core$text$trimStart(lite_source: string): string {
+        void lite_source;
+        const lite_size = lite$textLength(lite_source);
+        void lite_size;
+        let lite_start = 0n;
+        void lite_start;
+        while (((((lite_start) < (lite_size))) && (liteFn$lib$core$text$isWhitespace(lite$textAt(lite_source, lite_start, 6646))))) {
+            lite_start = lite$addInt(lite_start, 1n, 6694);
+        }
+        return lite$textSlice(lite_source, lite_start, lite_size, 6709);
+    }
+    void liteFn$lib$core$text$trimStart;
+    function liteFn$lib$core$text$trimEnd(lite_source: string): string {
+        void lite_source;
+        let lite_end = lite$textLength(lite_source);
+        void lite_end;
+        while (((((lite_end) > (0n))) && (liteFn$lib$core$text$isWhitespace(lite$textAt(lite_source, lite$subtractInt(lite_end, 1n, 6947), 6927))))) {
+            lite_end = lite$subtractInt(lite_end, 1n, 6973);
+        }
+        return lite$textSlice(lite_source, 0n, lite_end, 6988);
+    }
+    void liteFn$lib$core$text$trimEnd;
+    function liteFn$lib$core$text$trim(lite_source: string): string {
+        void lite_source;
+        return liteFn$lib$core$text$trimEnd(liteFn$lib$core$text$trimStart(lite_source));
+    }
+    void liteFn$lib$core$text$trim;
+    function liteFn$lib$core$text$endsWith(lite_source: string, lite_suffix: string): boolean {
+        void lite_source;
+        void lite_suffix;
+        const lite_sourceLen = lite$textLength(lite_source);
+        void lite_sourceLen;
+        const lite_suffixLen = lite$textLength(lite_suffix);
+        void lite_suffixLen;
+        if (((lite_suffixLen) > (lite_sourceLen))) {
+            return false;
+        }
+        return liteFn$lib$core$text$startsWithAt(lite_source, lite$subtractInt(lite_sourceLen, lite_suffixLen, 7442), lite_suffix);
+    }
+    void liteFn$lib$core$text$endsWith;
+    function liteFn$lib$core$text$repeatText(lite_value: string, lite_count: bigint): string {
+        void lite_value;
+        void lite_count;
+        if (((lite_count) <= (0n))) {
+            return "";
+        }
+        let lite_out = "";
+        void lite_out;
+        let lite_i = 0n;
+        void lite_i;
+        while (((lite_i) < (lite_count))) {
+            lite_out = ((lite_out) + (lite_value));
+            lite_i = lite$addInt(lite_i, 1n, 7734);
+        }
+        return lite_out;
+    }
+    void liteFn$lib$core$text$repeatText;
     function liteFn$lib$core$format$decimalText(lite_value: bigint): string {
         void lite_value;
         return liteFn$lib$core$int$intText(lite_value);

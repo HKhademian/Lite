@@ -1,0 +1,27 @@
+path := import "util/path";
+test := import "core/test";
+
+test.checkText("normalize empty", ".", path.normalize(""));
+test.checkText("normalize dots", "a/c", path.normalize("a/./b/../c"));
+test.checkText("normalize leading parent", "../../c", path.normalize("../../c"));
+test.checkText("normalize root", "/", path.normalize("/a/b/../.."));
+test.checkText("normalize rooted clamp", "/c", path.normalize("/../../c"));
+
+test.checkText("join relative", "a/c", path.join("a/b", "../c"));
+test.checkText("join keeps subpath", "/a/b/c", path.join("/a/b", "/c"));
+test.checkText("resolve relative", "/a/c", path.resolve("/a/b", "../c"));
+test.checkText("resolve absolute", "/x/y", path.resolve("/a/b", "/x/y"));
+
+test.checkText("parent dir", "/a", path.parentDir("/a/b"));
+test.checkText("parent dir root", "/", path.parentDir("/"));
+test.checkText("base name", "fmt.lts", path.baseName("/tools/src/fmt.lts"));
+test.checkText("base name trailing sep", "src", path.baseName("/tools/src/"));
+test.checkText("base name root", "", path.baseName("/"));
+test.checkText("ext name lts", ".lts", path.extName("/tools/src/fmt.lts"));
+test.checkText("ext name dotfile", "", path.extName("/repo/.gitignore"));
+test.checkText("ext name dir dot", "", path.extName("a.b/c"));
+
+test.checkBool("is abs root", true, path.isAbsolute("/tmp"));
+test.checkBool("is abs rel", false, path.isAbsolute("tools/src"));
+
+test.done("util-path");

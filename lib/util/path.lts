@@ -1,0 +1,130 @@
+/** Provisional path manipulation utilities for LiteScript tools and libraries. */
+
+proc := import "core/process";
+text := import "core/text";
+list := import "core/list";
+
+isWin32 := fn(): Bool {
+    proc.platform() == "win32"
+}
+
+/** Platform-native path separator (`/` on POSIX, `\` on Windows). */
+pub sep := fn(): String {
+    if isWin32() { return "\\"; }
+    "/"
+}
+
+/** True when `ch` is a path separator for the active platform. */
+pub isSep := fn(ch: String): Bool {
+    ch == "/" or (isWin32() and ch == "\\")
+}
+
+/** True when `target` is an absolute path on the active platform. */
+pub isAbsolute := fn(target: String): Bool {
+    size := text.length(target);
+    if size == 0 { return false; }
+    if isSep(text.at(target, 0)) { return true; }
+    isWin32() and size >= 2 and text.isAsciiLetter(text.at(target, 0)) and text.at(target, 1) == ":"
+}
+
+/** Normalizes `.` and `..` segments and repeated separators in `raw`. */
+pub normalize := fn(raw: String): String {
+    size := text.length(raw);
+    if size == 0 { return "."; }
+    separator := sep();
+    var rootPrefix := "";
+    var start := 0;
+    if isWin32() and size >= 2 and text.isAsciiLetter(text.at(raw, 0)) and text.at(raw, 1) == ":" {
+        drive := text.slice(raw, 0, 2);
+        if size >= 3 and isSep(text.at(raw, 2)) {
+            rootPrefix = drive + separator;
+            start = 3;
+        } else {
+            rootPrefix = drive;
+            start = 2;
+        }
+    } else if isSep(text.at(raw, 0)) {
+        rootPrefix = separator;
+        start = 1;
+    }
+
+    parts: mut List<String> = [];
+    var partsCount := 0;
+    var segStart := start;
+    var i := start;
+    loop i <= size {
+        atEnd := i == size;
+        if atEnd or isSep(text.at(raw, i)) {
+            if i > segStart {
+                seg := text.slice(raw, segStart, i);
+                if seg == ".." {
+                    if partsCount > 0 and (rootPrefix =!= "" or parts[partsCount - 1] =!= "..") {
+                        list.popBack(mut parts);
+                        partsCount = partsCount - 1;
+                    } else if rootPrefix == "" {
+                        list.pushBack(mut parts, "..");
+                        partsCount = partsCount + 1;
+                    }
+                } else if seg =!= "." {
+                    list.pushBack(mut parts, seg);
+                    partsCount = partsCount + 1;
+                }
+            }
+            segStart = i + 1;
+        }
+        i = i + 1;
+    }
+
+    if partsCount == 0 {
+        if rootPrefix =!= "" { return rootPrefix; }
+        return ".";
+    }
+    rootPrefix + text.joinTexts(parts, separator)
+}
+
+/** Joins `baseDir` and `target` and normalizes the combined path. */
+pub join := fn(baseDir: String, target: String): String {
+    if baseDir == "" { return normalize(target); }
+    if target == "" { return normalize(baseDir); }
+    normalize(baseDir + sep() + target)
+}
+
+/** Resolves `target` against `baseDir`, matching absolute-path override behavior. */
+pub resolve := fn(baseDir: String, target: String): String {
+    if isAbsolute(target) { return normalize(target); }
+    join(baseDir, target)
+}
+
+/** Returns the parent directory of `target`. */
+pub parentDir := fn(target: String): String {
+    resolve(target, "..")
+}
+
+/** Returns the final path segment of `target` without any trailing extension stripping. */
+pub baseName := fn(target: String): String {
+    var end := text.length(target);
+    loop end > 0 and isSep(text.at(target, end - 1)) {
+        end = end - 1;
+    }
+    if end == 0 { return ""; }
+    var pos := end;
+    loop pos > 0 and not isSep(text.at(target, pos - 1)) {
+        pos = pos - 1;
+    }
+    text.slice(target, pos, end)
+}
+
+/** Returns the file extension (including leading `.`) of `target`, or empty text when absent. */
+pub extName := fn(target: String): String {
+    base := baseName(target);
+    if base == "" or base == "." or base == ".." { return ""; }
+    size := text.length(base);
+    var i := size - 1;
+    loop i > 0 {
+        if text.at(base, i) == "." {
+            return text.slice(base, i, size);
+        }
+        i = i - 1;
+    }
+    ""
+}

@@ -1,8 +1,8 @@
 {
-  "note": "Reviewed 2026-11-14 after deduplicating ambient TextDecoder declarations in emit-ts.lts across input and fs.readText. All 69 TS/C corpus artifact hashes and 25 rejection cases verified.",
+  "note": "Reviewed 2026-11-14 after extending core/text and core/list helpers during Stage 4 library extraction. All 69 TS/C corpus artifact hashes and 25 rejection cases verified.",
   "recorded": "2026-11-14",
-  "sourceSha256": "d3dac02368d6a45c62fc3abea02ea83772e7965a64f00d23615fa5b35a856b0c",
-  "compilerSha256": "ed0280e940adc031255a5d55d37e5f179215f3ba94930c5fdc0d4ce4e31b8bbb",
+  "sourceSha256": "33fb1465c054a8d8e6a49e38d80273eb2c287b16460b0adf0b1ae5570db68c17",
+  "compilerSha256": "9f7c067962f89ba1156addc206f04bf7b87ff865881bd507835ce0bd12f53303",
   "programCases": 69,
   "rejectedCases": 25,
   "artifacts": [

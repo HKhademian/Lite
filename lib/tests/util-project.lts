@@ -1,0 +1,10 @@
+project := import "util/project";
+test := import "core/test";
+
+root := project.findRepoRoot();
+test.checkBool("repo root found", true, root =!= "");
+test.checkText("formatter null version", "unassigned", project.readComponentVersion("formatter"));
+test.checkBool("compiler version assigned", true, project.readComponentVersion("compiler") =!= "unassigned");
+test.checkText("unknown component", "unassigned", project.readComponentVersion("nonexistentComponent"));
+
+test.done("util-project");

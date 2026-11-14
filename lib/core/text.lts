@@ -163,3 +163,52 @@ pub at := fn(text: String, position: Int): String { host.at(text, position) }
 
 /** Returns the half-open Unicode scalar interval `[start, end)`, faulting outside the text. */
 pub slice := fn(text: String, start: Int, end: Int): String { host.slice(text, start, end) }
+
+/** True when `ch` is Lite ASCII whitespace (` `, `\\t`, `\\r`, or `\\n`). */
+pub isWhitespace := fn(ch: String): Bool {
+    ch == " " or ch == "\t" or ch == "\r" or ch == "\n"
+}
+
+/** Returns `source` with leading Lite ASCII whitespace removed. */
+pub trimStart := fn(source: String): String {
+    size := host.length(source);
+    var start := 0;
+    loop start < size and isWhitespace(host.at(source, start)) {
+        start = start + 1;
+    }
+    host.slice(source, start, size)
+}
+
+/** Returns `source` with trailing Lite ASCII whitespace removed. */
+pub trimEnd := fn(source: String): String {
+    var end := host.length(source);
+    loop end > 0 and isWhitespace(host.at(source, end - 1)) {
+        end = end - 1;
+    }
+    host.slice(source, 0, end)
+}
+
+/** Returns `source` with both leading and trailing Lite ASCII whitespace removed. */
+pub trim := fn(source: String): String {
+    trimEnd(trimStart(source))
+}
+
+/** True when `source` ends with `suffix`. */
+pub endsWith := fn(source: String, suffix: String): Bool {
+    sourceLen := host.length(source);
+    suffixLen := host.length(suffix);
+    if suffixLen > sourceLen { return false; }
+    startsWithAt(source, sourceLen - suffixLen, suffix)
+}
+
+/** Returns `value` repeated `count` times, or empty text when `count <= 0`. */
+pub repeatText := fn(value: String, count: Int): String {
+    if count <= 0 { return ""; }
+    var out := "";
+    var i := 0;
+    loop i < count {
+        out = out + value;
+        i = i + 1;
+    }
+    out
+}
