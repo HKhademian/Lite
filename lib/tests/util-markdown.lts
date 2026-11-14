@@ -1,0 +1,31 @@
+md := import "util/markdown";
+list := import "core/list";
+test := import "core/test";
+
+doc := "# Title\n\n## A `name` <T>\n\n## A `name` <T>\n\n`[skip](ignored.md)`\n\n[one](topic.md#a-name-) [two](<space path.md> \"t\")\n\n```lts\n[in-code](missing.md)\n```\n";
+
+prose := md.stripCodeBlocks(doc);
+headings := md.extractHeadings(prose);
+test.checkInt("heading count", 3, list.listCountText(headings));
+test.checkText("first heading", "Title", headings[0]);
+test.checkText("second heading", "A `name` <T>", headings[1]);
+
+anchors := md.collectAnchors(doc + "<a id=\"explicit-id\"></a>\n");
+test.checkBool("title anchor", true, list.listContainsText(anchors, "title"));
+test.checkBool("dedup first", true, list.listContainsText(anchors, "a-name-"));
+test.checkBool("dedup second", true, list.listContainsText(anchors, "a-name--1"));
+test.checkBool("explicit html id", true, list.listContainsText(anchors, "explicit-id"));
+
+links := md.extractLinkTargets(prose);
+test.checkInt("link count", 2, list.listCountText(links));
+test.checkText("first link", "topic.md#a-name-", links[0]);
+test.checkText("second link", "space path.md", links[1]);
+
+test.checkBool("closed fence", false, md.hasUnclosedFence(doc));
+test.checkBool("unclosed fence", true, md.hasUnclosedFence("   ```text\nhello\n"));
+
+bodies := md.extractBacktickFenceBodies(doc);
+test.checkInt("fence body count", 1, list.listCountText(bodies));
+test.checkText("fence body", "[in-code](missing.md)\n", bodies[0]);
+
+test.done("util-markdown");

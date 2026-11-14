@@ -55,5 +55,8 @@ test.checkBool("ends with miss", false, text.endsWith("sample.ts", ".lts"));
 test.checkBool("ends with longer", false, text.endsWith("a", "abc"));
 test.checkText("repeat text", "ababab", text.repeatText("ab", 3));
 test.checkText("repeat zero", "", text.repeatText("ab", 0));
+test.checkBool("contains match", true, text.containsText("LiteScript", "Script"));
+test.checkBool("contains miss", false, text.containsText("LiteScript", "Java"));
+test.checkText("to lower ascii", "hello world 123!", text.toLowerAscii("HeLLo WoRLd 123!"));
 
 test.done("text");

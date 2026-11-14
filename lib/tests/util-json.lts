@@ -1,0 +1,39 @@
+json := import "util/json";
+list := import "core/list";
+test := import "core/test";
+
+sample := "{\n  \"name\": \"lite\",\n  \"nested\": { \"name\": \"inner\", \"count\": 2 },\n  \"items\": [\"a\", \"b\\n\\\"c\\\"\", \"\\u003cok\\u003e\"],\n  \"flag\": true\n}";
+
+valCheck := json.validate(sample);
+test.checkBool("valid json", true, valCheck.ok);
+
+badCheck := json.validate("{\"a\": [1,]}");
+test.checkBool("reject trailing comma", false, badCheck.ok);
+
+topName := json.readObjectString(sample, 0, "name");
+test.checkBool("top name found", true, topName.found);
+test.checkText("top name does not shadow nested", "lite", topName.value);
+
+nestedField := json.findObjectField(sample, 0, "nested");
+test.checkBool("nested found", true, nestedField.found);
+innerCount := json.readObjectInt(sample, nestedField.valuePos, "count");
+test.checkInt("nested count", 2, innerCount.value);
+
+flagField := json.readObjectBool(sample, 0, "flag");
+test.checkBool("flag bool", true, flagField.value);
+
+itemsField := json.findObjectField(sample, 0, "items");
+offsets := json.arrayElementOffsets(sample, itemsField.valuePos);
+test.checkInt("array len", 3, list.listCountInt(offsets));
+second := json.readStringAt(sample, offsets[1]);
+test.checkText("escaped string", "b\n\"c\"", second.value);
+third := json.readStringAt(sample, offsets[2]);
+test.checkText("unicode escape", "<ok>", third.value);
+
+keys := json.objectKeys(sample, 0);
+test.checkInt("object keys count", 4, list.listCountText(keys));
+test.checkText("last key", "flag", keys[3]);
+
+test.checkText("quote string", "\"a\\n\\\"b\\\"\\\\c\"", json.quoteString("a\n\"b\"\\c"));
+
+test.done("util-json");

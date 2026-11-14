@@ -1,0 +1,321 @@
+/** Offline documentation discovery, search formatting, and Markdown integrity verification. */
+
+fs := import "core/fs";
+integer := import "core/int";
+text := import "core/text";
+list := import "core/list";
+path := import "util/path";
+fsUtil := import "util/fs";
+json := import "util/json";
+md := import "util/markdown";
+
+/** Default directory names excluded when discovering repository Markdown files. */
+pub defaultIgnoredDirs := fn(): List<String> {
+    dirs: List<String> = [".git", ".cache", "node_modules", "dist", ".agent"];
+    dirs
+}
+
+/** Collects sorted Markdown file paths under `directory`, ignoring VCS/build/cache folders. */
+pub listDocFiles := fn(directory: String): List<String> {
+    targets: List<String> = [directory];
+    fsUtil.collectFiles(directory, targets, ".md", defaultIgnoredDirs(), false)
+}
+
+isSchemeChar := fn(ch: String): Bool {
+    text.isAsciiLetter(ch) or text.isDigit(ch) or ch == "+" or ch == "." or ch == "-"
+}
+
+isExternalUri := fn(target: String): Bool {
+    if text.startsWithAt(target, 0, "//") { return true; }
+    size := text.length(target);
+    if size < 2 or not text.isAsciiLetter(text.at(target, 0)) { return false; }
+    var i := 1;
+    loop i < size {
+        ch := text.at(target, i);
+        if ch == ":" { return true; }
+        if not isSchemeChar(ch) { return false; }
+        i = i + 1;
+    }
+    false
+}
+
+isHex := fn(ch: String): Bool {
+    text.isDigit(ch) or
+    ch == "a" or ch == "b" or ch == "c" or ch == "d" or ch == "e" or ch == "f" or
+    ch == "A" or ch == "B" or ch == "C" or ch == "D" or ch == "E" or ch == "F"
+}
+
+hexVal := fn(ch: String): Int {
+    if text.isDigit(ch) { return text.digitValue(ch); }
+    lower := text.toLowerAscii(ch);
+    if lower == "a" { return 10; }
+    if lower == "b" { return 11; }
+    if lower == "c" { return 12; }
+    if lower == "d" { return 13; }
+    if lower == "e" { return 14; }
+    15
+}
+
+asciiChar := fn(code: Int): String {
+    if code >= 32 and code <= 126 {
+        table := " !\"#$%&'()*+,-./0123456789:;<=>?@ABCDEFGHIJKLMNOPQRSTUVWXYZ[\\]^_`abcdefghijklmnopqrstuvwxyz{|}~";
+        return text.at(table, code - 32);
+    }
+    ""
+}
+
+decodePercentUri := fn(target: String): (ok: Bool, value: String) {
+    size := text.length(target);
+    var out := "";
+    var runStart := 0;
+    var i := 0;
+    loop i < size {
+        if text.at(target, i) == "%" {
+            if i + 2 >= size or not isHex(text.at(target, i + 1)) or not isHex(text.at(target, i + 2)) {
+                return (ok = false, value = "");
+            }
+            code := hexVal(text.at(target, i + 1)) * 16 + hexVal(text.at(target, i + 2));
+            if i > runStart { out = out + text.slice(target, runStart, i); }
+            decoded := asciiChar(code);
+            if decoded =!= "" {
+                out = out + decoded;
+            } else if code < 128 {
+                if code == 9 { out = out + "\t"; }
+                else if code == 10 { out = out + "\n"; }
+                else if code == 13 { out = out + "\r"; }
+                else { return (ok = false, value = ""); }
+            } else {
+                out = out + text.slice(target, i, i + 3);
+            }
+            i = i + 3;
+            runStart = i;
+        } else {
+            i = i + 1;
+        }
+    }
+    if runStart == 0 { return (ok = true, value = target); }
+    if runStart < size { out = out + text.slice(target, runStart, size); }
+    (ok = true, value = out)
+}
+
+dropFirstLines := fn(source: String, skipLines: Int): String {
+    if skipLines <= 0 { return source; }
+    size := text.length(source);
+    var pos := 0;
+    var skipped := 0;
+    loop pos < size and skipped < skipLines {
+        if text.at(source, pos) == "\n" {
+            skipped = skipped + 1;
+        }
+        pos = pos + 1;
+    }
+    if skipped < skipLines { return ""; }
+    text.slice(source, pos, size)
+}
+
+packAnchors := fn(anchors: List<String>): String {
+    if list.listCountText(anchors) == 0 { return "\n"; }
+    "\n" + text.joinTexts(anchors, "\n") + "\n"
+}
+
+/** Verifies Markdown fences, links, heading fragments, and `config/documentation.json` entries under `directory`. */
+pub checkDocuments := fn(directory: String): List<String> {
+    failures: mut List<String> = [];
+    cachePaths: mut List<String> = [];
+    cachePacked: mut List<String> = [];
+    files := listDocFiles(directory);
+
+    loop files as fullFile {
+        relPath := path.relative(directory, fullFile);
+        readRes := fs.readText(fullFile);
+        if not readRes.ok {
+            list.pushBack(mut failures, relPath + ": " + readRes.error);
+        } else {
+            docText := readRes.text;
+            if md.hasUnclosedFence(docText) {
+                list.pushBack(mut failures, relPath + ": unclosed code fence");
+            }
+            links := md.extractLinkTargets(md.stripCodeBlocks(docText));
+            loop links as rawTarget {
+                if not isExternalUri(rawTarget) {
+                    decodedRes := decodePercentUri(rawTarget);
+                    if not decodedRes.ok {
+                        list.pushBack(mut failures, relPath + ": invalid link " + rawTarget);
+                    } else {
+                        target := decodedRes.value;
+                        hashPos := text.indexOfText(target, "#", 0);
+                        namePart := if hashPos < 0 { target } else { text.slice(target, 0, hashPos) };
+                        fragment := if hashPos < 0 { "" } else { text.slice(target, hashPos + 1, text.length(target)) };
+                        destination := if namePart == "" { fullFile } else { path.resolve(path.parentDir(fullFile), namePart) };
+                        destKind := fs.kind(destination);
+                        if destKind == "missing" {
+                            list.pushBack(mut failures, relPath + ": missing link " + target);
+                        } else if fragment =!= "" and path.extName(destination) == ".md" and destKind == "file" {
+                            cacheIdx := list.listIndexOfText(cachePaths, destination);
+                            var packed := "";
+                            if cacheIdx >= 0 {
+                                packed = cachePacked[cacheIdx];
+                            } else {
+                                targetRead := fs.readText(destination);
+                                packed = if targetRead.ok { packAnchors(md.collectAnchors(targetRead.text)) } else { "\n" };
+                                list.pushBack(mut cachePaths, destination);
+                                list.pushBack(mut cachePacked, packed);
+                            }
+                            if not text.containsText(packed, "\n" + fragment + "\n") {
+                                list.pushBack(mut failures, relPath + ": missing fragment " + target);
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+    configPath := path.join(directory, "config/documentation.json");
+    if fs.kind(configPath) == "file" {
+        cfgRead := fs.readText(configPath);
+        if not cfgRead.ok {
+            list.pushBack(mut failures, "config/documentation.json: " + cfgRead.error);
+            return failures;
+        }
+        cfgText := cfgRead.text;
+        cfgCheck := json.validate(cfgText);
+        if not cfgCheck.ok {
+            list.pushBack(mut failures, "config/documentation.json: " + cfgCheck.error);
+            return failures;
+        }
+        navField := json.findObjectField(cfgText, 0, "navigation");
+        if navField.found {
+            navItems := json.arrayElementOffsets(cfgText, navField.valuePos);
+            loop navItems as navPos {
+                labelRes := json.readObjectString(cfgText, navPos, "label");
+                pathRes := json.readObjectString(cfgText, navPos, "path");
+                navPath := if pathRes.found and pathRes.ok { pathRes.value } else { "" };
+                navLabel := if labelRes.found and labelRes.ok { labelRes.value } else { "" };
+                if navLabel == "" or fs.kind(path.resolve(directory, navPath)) == "missing" {
+                    list.pushBack(mut failures, "config/documentation.json: missing navigation destination " + navPath);
+                }
+            }
+        }
+        snipField := json.findObjectField(cfgText, 0, "snippets");
+        if snipField.found {
+            snipItems := json.arrayElementOffsets(cfgText, snipField.valuePos);
+            loop snipItems as snipPos {
+                srcRes := json.readObjectString(cfgText, snipPos, "source");
+                docRes := json.readObjectString(cfgText, snipPos, "document");
+                fenceRes := json.readObjectInt(cfgText, snipPos, "fence");
+                skipRes := json.readObjectInt(cfgText, snipPos, "skipLines");
+                srcRel := if srcRes.found and srcRes.ok { srcRes.value } else { "" };
+                docRel := if docRes.found and docRes.ok { docRes.value } else { "" };
+                srcFull := path.resolve(directory, srcRel);
+                docFull := path.resolve(directory, docRel);
+                if fs.kind(srcFull) == "missing" or fs.kind(docFull) == "missing" {
+                    list.pushBack(mut failures, "config/documentation.json: missing snippet source/document " + srcRel);
+                } else {
+                    docRead := fs.readText(docFull);
+                    srcRead := fs.readText(srcFull);
+                    if not docRead.ok or not srcRead.ok {
+                        list.pushBack(mut failures, "config/documentation.json: cannot read snippet " + srcRel);
+                    } else {
+                        fences := md.extractBacktickFenceBodies(docRead.text);
+                        skipCount := if skipRes.found and skipRes.ok { skipRes.value } else { 0 };
+                        expected := dropFirstLines(srcRead.text, skipCount);
+                        fenceIdx := if fenceRes.found and fenceRes.ok { fenceRes.value } else { -1 };
+                        if fenceIdx < 0 or fenceIdx >= list.listCountText(fences) or fences[fenceIdx] =!= expected {
+                            list.pushBack(mut failures, docRel + ": code fence " + integer.intText(fenceIdx) + " differs from " + srcRel);
+                        }
+                    }
+                }
+            }
+        }
+    }
+    failures
+}
+
+/** Formats the curated navigation overview from `config/documentation.json`. */
+pub navigationSummary := fn(directory: String): (ok: Bool, text: String, error: String) {
+    configPath := path.join(directory, "config/documentation.json");
+    if fs.kind(configPath) =!= "file" {
+        return (ok = false, text = "", error = "documentation navigation configuration is missing");
+    }
+    cfgRead := fs.readText(configPath);
+    if not cfgRead.ok {
+        return (ok = false, text = "", error = cfgRead.error);
+    }
+    navField := json.findObjectField(cfgRead.text, 0, "navigation");
+    if not navField.found {
+        return (ok = false, text = "", error = "documentation navigation configuration is missing");
+    }
+    lines: mut List<String> = [];
+    navItems := json.arrayElementOffsets(cfgRead.text, navField.valuePos);
+    loop navItems as navPos {
+        labelRes := json.readObjectString(cfgRead.text, navPos, "label");
+        pathRes := json.readObjectString(cfgRead.text, navPos, "path");
+        label := if labelRes.found and labelRes.ok { labelRes.value } else { "" };
+        navPath := if pathRes.found and pathRes.ok { pathRes.value } else { "" };
+        list.pushBack(mut lines, label + ": " + navPath);
+    }
+    list.pushBack(mut lines, "Search: lite docs QUERY | --json [QUERY] | --check");
+    (ok = true, text = text.joinTexts(lines, "\n"), error = "")
+}
+
+docMatchesQuery := fn(relPath: String, title: String, headings: List<String>, queryLower: String): Bool {
+    if queryLower == "" { return true; }
+    if text.containsText(text.toLowerAscii(relPath), queryLower) { return true; }
+    if text.containsText(text.toLowerAscii(title), queryLower) { return true; }
+    loop headings as heading {
+        if text.containsText(text.toLowerAscii(heading), queryLower) { return true; }
+    }
+    false
+}
+
+/** Searches documentation paths, titles, and headings matching case-insensitive `query`. */
+pub searchDocsText := fn(directory: String, query: String): (count: Int, text: String) {
+    queryLower := text.toLowerAscii(query);
+    lines: mut List<String> = [];
+    var count := 0;
+    files := listDocFiles(directory);
+
+    loop files as fullFile {
+        relPath := path.relative(directory, fullFile);
+        readRes := fs.readText(fullFile);
+        docText := if readRes.ok { readRes.text } else { "" };
+        headings := md.extractHeadings(md.stripCodeBlocks(docText));
+        title := if list.listCountText(headings) > 0 { headings[0] } else { path.baseName(fullFile) };
+        if docMatchesQuery(relPath, title, headings, queryLower) {
+            list.pushBack(mut lines, title + "\n  " + relPath);
+            count = count + 1;
+        }
+    }
+    (count = count, text = text.joinTexts(lines, "\n"))
+}
+
+/** Formats matching documentation records as 2-space indented JSON (`JSON.stringify(..., null, 2)` parity). */
+pub docsJson := fn(directory: String, query: String): String {
+    queryLower := text.toLowerAscii(query);
+    entries: mut List<String> = [];
+    files := listDocFiles(directory);
+
+    loop files as fullFile {
+        relPath := path.relative(directory, fullFile);
+        readRes := fs.readText(fullFile);
+        docText := if readRes.ok { readRes.text } else { "" };
+        headings := md.extractHeadings(md.stripCodeBlocks(docText));
+        title := if list.listCountText(headings) > 0 { headings[0] } else { path.baseName(fullFile) };
+        if docMatchesQuery(relPath, title, headings, queryLower) {
+            hCount := list.listCountText(headings);
+            var headingsJson := "[]";
+            if hCount > 0 {
+                hLines: mut List<String> = [];
+                loop headings as h {
+                    list.pushBack(mut hLines, "      " + json.quoteString(h));
+                }
+                headingsJson = "[\n" + text.joinTexts(hLines, ",\n") + "\n    ]";
+            }
+            entry := "  {\n    \"path\": " + json.quoteString(relPath) + ",\n    \"title\": " + json.quoteString(title) + ",\n    \"headings\": " + headingsJson + "\n  }";
+            list.pushBack(mut entries, entry);
+        }
+    }
+    if list.listCountText(entries) == 0 { return "[]"; }
+    "[\n" + text.joinTexts(entries, ",\n") + "\n]"
+}

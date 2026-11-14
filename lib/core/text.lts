@@ -212,3 +212,60 @@ pub repeatText := fn(value: String, count: Int): String {
     }
     out
 }
+
+/** True when `needle` occurs anywhere inside `source`. */
+pub containsText := fn(source: String, needle: String): Bool {
+    indexOfText(source, needle, 0) >= 0
+}
+
+/** Returns `ch` in lowercase when it is an ASCII uppercase letter `A`-`Z`. */
+lowerAsciiChar := fn(ch: String): String {
+    if ch == "A" { return "a"; }
+    if ch == "B" { return "b"; }
+    if ch == "C" { return "c"; }
+    if ch == "D" { return "d"; }
+    if ch == "E" { return "e"; }
+    if ch == "F" { return "f"; }
+    if ch == "G" { return "g"; }
+    if ch == "H" { return "h"; }
+    if ch == "I" { return "i"; }
+    if ch == "J" { return "j"; }
+    if ch == "K" { return "k"; }
+    if ch == "L" { return "l"; }
+    if ch == "M" { return "m"; }
+    if ch == "N" { return "n"; }
+    if ch == "O" { return "o"; }
+    if ch == "P" { return "p"; }
+    if ch == "Q" { return "q"; }
+    if ch == "R" { return "r"; }
+    if ch == "S" { return "s"; }
+    if ch == "T" { return "t"; }
+    if ch == "U" { return "u"; }
+    if ch == "V" { return "v"; }
+    if ch == "W" { return "w"; }
+    if ch == "X" { return "x"; }
+    if ch == "Y" { return "y"; }
+    if ch == "Z" { return "z"; }
+    ch
+}
+
+/** Returns `source` with ASCII uppercase letters `A`-`Z` converted to lowercase `a`-`z`. */
+pub toLowerAscii := fn(source: String): String {
+    size := host.length(source);
+    var out := "";
+    var runStart := 0;
+    var i := 0;
+    loop i < size {
+        ch := host.at(source, i);
+        lower := lowerAsciiChar(ch);
+        if lower =!= ch {
+            if i > runStart { out = out + host.slice(source, runStart, i); }
+            out = out + lower;
+            runStart = i + 1;
+        }
+        i = i + 1;
+    }
+    if runStart == 0 { return source; }
+    if runStart < size { out = out + host.slice(source, runStart, size); }
+    out
+}

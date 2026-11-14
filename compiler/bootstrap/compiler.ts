@@ -780,6 +780,128 @@ export function main(lite$write?: (text: string) => void, lite$sourceProviderInp
         return lite_out;
     }
     void liteFn$lib$core$text$repeatText;
+    function liteFn$lib$core$text$containsText(lite_source: string, lite_needle: string): boolean {
+        void lite_source;
+        void lite_needle;
+        return ((liteFn$lib$core$text$indexOfText(lite_source, lite_needle, 0n)) >= (0n));
+    }
+    void liteFn$lib$core$text$containsText;
+    function liteFn$lib$core$text$lowerAsciiChar(lite_ch: string): string {
+        void lite_ch;
+        if (((lite_ch) === ("A"))) {
+            return "a";
+        }
+        if (((lite_ch) === ("B"))) {
+            return "b";
+        }
+        if (((lite_ch) === ("C"))) {
+            return "c";
+        }
+        if (((lite_ch) === ("D"))) {
+            return "d";
+        }
+        if (((lite_ch) === ("E"))) {
+            return "e";
+        }
+        if (((lite_ch) === ("F"))) {
+            return "f";
+        }
+        if (((lite_ch) === ("G"))) {
+            return "g";
+        }
+        if (((lite_ch) === ("H"))) {
+            return "h";
+        }
+        if (((lite_ch) === ("I"))) {
+            return "i";
+        }
+        if (((lite_ch) === ("J"))) {
+            return "j";
+        }
+        if (((lite_ch) === ("K"))) {
+            return "k";
+        }
+        if (((lite_ch) === ("L"))) {
+            return "l";
+        }
+        if (((lite_ch) === ("M"))) {
+            return "m";
+        }
+        if (((lite_ch) === ("N"))) {
+            return "n";
+        }
+        if (((lite_ch) === ("O"))) {
+            return "o";
+        }
+        if (((lite_ch) === ("P"))) {
+            return "p";
+        }
+        if (((lite_ch) === ("Q"))) {
+            return "q";
+        }
+        if (((lite_ch) === ("R"))) {
+            return "r";
+        }
+        if (((lite_ch) === ("S"))) {
+            return "s";
+        }
+        if (((lite_ch) === ("T"))) {
+            return "t";
+        }
+        if (((lite_ch) === ("U"))) {
+            return "u";
+        }
+        if (((lite_ch) === ("V"))) {
+            return "v";
+        }
+        if (((lite_ch) === ("W"))) {
+            return "w";
+        }
+        if (((lite_ch) === ("X"))) {
+            return "x";
+        }
+        if (((lite_ch) === ("Y"))) {
+            return "y";
+        }
+        if (((lite_ch) === ("Z"))) {
+            return "z";
+        }
+        return lite_ch;
+    }
+    void liteFn$lib$core$text$lowerAsciiChar;
+    function liteFn$lib$core$text$toLowerAscii(lite_source: string): string {
+        void lite_source;
+        const lite_size = lite$textLength(lite_source);
+        void lite_size;
+        let lite_out = "";
+        void lite_out;
+        let lite_runStart = 0n;
+        void lite_runStart;
+        let lite_i = 0n;
+        void lite_i;
+        while (((lite_i) < (lite_size))) {
+            const lite_ch = lite$textAt(lite_source, lite_i, 9178);
+            void lite_ch;
+            const lite_lower = liteFn$lib$core$text$lowerAsciiChar(lite_ch);
+            void lite_lower;
+            if (((lite_lower) !== (lite_ch))) {
+                if (((lite_i) > (lite_runStart))) {
+                    lite_out = ((lite_out) + (lite$textSlice(lite_source, lite_runStart, lite_i, 9303)));
+                }
+                lite_out = ((lite_out) + (lite_lower));
+                lite_runStart = lite$addInt(lite_i, 1n, 9394);
+            }
+            lite_i = lite$addInt(lite_i, 1n, 9423);
+        }
+        if (((lite_runStart) === (0n))) {
+            return lite_source;
+        }
+        if (((lite_runStart) < (lite_size))) {
+            lite_out = ((lite_out) + (lite$textSlice(lite_source, lite_runStart, lite_size, 9511)));
+        }
+        return lite_out;
+    }
+    void liteFn$lib$core$text$toLowerAscii;
     function liteFn$lib$core$format$decimalText(lite_value: bigint): string {
         void lite_value;
         return liteFn$lib$core$int$intText(lite_value);

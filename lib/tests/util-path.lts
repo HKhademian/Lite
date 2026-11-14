@@ -24,4 +24,8 @@ test.checkText("ext name dir dot", "", path.extName("a.b/c"));
 test.checkBool("is abs root", true, path.isAbsolute("/tmp"));
 test.checkBool("is abs rel", false, path.isAbsolute("tools/src"));
 
+test.checkText("relative child", "docs/README.md", path.relative("/repo", "/repo/docs/README.md"));
+test.checkText("relative sibling", "../other/a.lts", path.relative("/repo/tools", "/repo/other/a.lts"));
+test.checkText("relative same", "", path.relative("/repo", "/repo"));
+
 test.done("util-path");

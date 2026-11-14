@@ -1,0 +1,320 @@
+/** Provisional case manifest validation utilities for `.case.json` fixtures. */
+
+crypto := import "core/crypto";
+fs := import "core/fs";
+text := import "core/text";
+list := import "core/list";
+path := import "util/path";
+fsUtil := import "util/fs";
+json := import "util/json";
+
+isHex64 := fn(value: String): Bool {
+    if text.length(value) =!= 64 { return false; }
+    var i := 0;
+    loop i < 64 {
+        ch := text.at(value, i);
+        ok := text.isDigit(ch) or ch == "a" or ch == "b" or ch == "c" or ch == "d" or ch == "e" or ch == "f";
+        if not ok { return false; }
+        i = i + 1;
+    }
+    true
+}
+
+hasDotDotSegment := fn(relPath: String): Bool {
+    size := text.length(relPath);
+    var segStart := 0;
+    var i := 0;
+    loop i <= size {
+        atEnd := i == size;
+        if atEnd or text.at(relPath, i) == "/" or text.at(relPath, i) == "\\" {
+            if text.slice(relPath, segStart, i) == ".." { return true; }
+            segStart = i + 1;
+        }
+        i = i + 1;
+    }
+    false
+}
+
+validateStream := fn(source: String, streamPos: Int, directory: String, label: String): (ok: Bool, error: String) {
+    keys := json.objectKeys(source, streamPos);
+    if list.listCountText(keys) == 0 {
+        return (ok = false, error = label + ": stream must be an object");
+    }
+    allowed: List<String> = ["text", "bytes", "file", "hash"];
+    var form := "";
+    var formCount := 0;
+    loop keys as k {
+        if not list.listContainsText(allowed, k) {
+            return (ok = false, error = label + ": unexpected stream key");
+        }
+        if k =!= "hash" {
+            form = k;
+            formCount = formCount + 1;
+        }
+    }
+    if formCount =!= 1 {
+        return (ok = false, error = label + ": exactly one of text, bytes or file required");
+    }
+
+    hashField := json.findObjectField(source, streamPos, "hash");
+    var expectedHash := "";
+    if hashField.found {
+        hStr := json.readStringAt(source, hashField.valuePos);
+        if not hStr.ok or not text.startsWithAt(hStr.value, 0, "sha256:") or not isHex64(text.slice(hStr.value, 7, text.length(hStr.value))) {
+            return (ok = false, error = label + ".hash must be sha256:<64 lowercase hex>");
+        }
+        expectedHash = text.slice(hStr.value, 7, text.length(hStr.value));
+    }
+
+    if form == "text" {
+        tRes := json.readObjectString(source, streamPos, "text");
+        if not tRes.ok { return (ok = false, error = label + ".text must be a string"); }
+        if expectedHash =!= "" and crypto.sha256Text(tRes.value) =!= expectedHash {
+            return (ok = false, error = label + ".hash does not match content");
+        }
+    } else if form == "bytes" {
+        bField := json.findObjectField(source, streamPos, "bytes");
+        bOffsets := json.arrayElementOffsets(source, bField.valuePos);
+        if list.listCountInt(bOffsets) == 0 {
+            s := text.trimStart(text.slice(source, bField.valuePos, text.length(source)));
+            if not text.startsWithAt(s, 0, "[") {
+                return (ok = false, error = label + ".bytes must contain integers 0-255");
+            }
+        }
+        loop bOffsets as bPos {
+            byteRes := json.readIntAt(source, bPos);
+            if not byteRes.ok or byteRes.value < 0 or byteRes.value > 255 {
+                return (ok = false, error = label + ".bytes must contain integers 0-255");
+            }
+        }
+    } else {
+        fRes := json.readObjectString(source, streamPos, "file");
+        if not fRes.ok or fRes.value == "" {
+            return (ok = false, error = label + ".file must be a nonempty file path");
+        }
+        fullFile := path.resolve(directory, fRes.value);
+        if fs.kind(fullFile) =!= "file" {
+            return (ok = false, error = label + ".file missing: " + fullFile);
+        }
+        if expectedHash =!= "" {
+            fHash := crypto.sha256File(fullFile);
+            if not fHash.ok or fHash.hex =!= expectedHash {
+                return (ok = false, error = label + ".hash does not match content");
+            }
+        }
+    }
+    (ok = true, error = "")
+}
+
+/** Validates one `.case.json` manifest file cleanly, returning `id` on success. */
+pub validateCaseFile := fn(rootDir: String, caseFile: String): (ok: Bool, id: String, error: String) {
+    readRes := fs.readText(caseFile);
+    if not readRes.ok { return (ok = false, id = "", error = caseFile + ": " + readRes.error); }
+    textSrc := readRes.text;
+    validJson := json.validate(textSrc);
+    if not validJson.ok { return (ok = false, id = "", error = caseFile + ": " + validJson.error); }
+
+    topKeys := json.objectKeys(textSrc, 0);
+    allowedTop: List<String> = ["id", "kind", "pending", "features", "cases", "benchmark", "tool", "source"];
+    loop topKeys as k {
+        if not list.listContainsText(allowedTop, k) {
+            return (ok = false, id = "", error = caseFile + ": unexpected case key " + k);
+        }
+    }
+
+    idRes := json.readObjectString(textSrc, 0, "id");
+    if not idRes.found or not idRes.ok or idRes.value == "" {
+        return (ok = false, id = "", error = caseFile + ": case ID required");
+    }
+    caseId := idRes.value;
+
+    kindRes := json.readObjectString(textSrc, 0, "kind");
+    validKinds: List<String> = ["tool", "feature", "reject", "compile", "sample", "example"];
+    if not kindRes.found or not kindRes.ok or not list.listContainsText(validKinds, kindRes.value) {
+        return (ok = false, id = "", error = caseFile + ": invalid case kind");
+    }
+    kind := kindRes.value;
+
+    pendingField := json.findObjectField(textSrc, 0, "pending");
+    if pendingField.found {
+        pStr := json.readStringAt(textSrc, pendingField.valuePos);
+        if kind == "tool" or not pStr.ok or text.trim(pStr.value) == "" {
+            return (ok = false, id = "", error = caseFile + ": pending needs a language case and reason");
+        }
+    }
+
+    caseDir := path.parentDir(caseFile);
+    if kind == "tool" {
+        if json.findObjectField(textSrc, 0, "source").found {
+            return (ok = false, id = "", error = caseFile + ": tool cases name a tool, not a case executable");
+        }
+        toolRes := json.readObjectString(textSrc, 0, "tool");
+        if not toolRes.found or not toolRes.ok or text.containsText(toolRes.value, "/") or fs.kind(path.join(rootDir, "bin/" + toolRes.value)) == "missing" {
+            return (ok = false, id = "", error = caseFile + ": unknown tool");
+        }
+    } else {
+        srcRes := json.readObjectString(textSrc, 0, "source");
+        if not srcRes.found or not srcRes.ok or not text.endsWith(srcRes.value, ".lts") {
+            return (ok = false, id = "", error = caseFile + ": Lite source must use .lts");
+        }
+        if fs.kind(path.resolve(caseDir, srcRes.value)) =!= "file" {
+            return (ok = false, id = "", error = caseFile + ": missing case source " + srcRes.value);
+        }
+    }
+
+    featField := json.findObjectField(textSrc, 0, "features");
+    if not featField.found { return (ok = false, id = "", error = caseFile + ": features must be an array"); }
+    seenFeatures: mut List<String> = [];
+    loop json.arrayElementOffsets(textSrc, featField.valuePos) as fPos {
+        fStr := json.readStringAt(textSrc, fPos);
+        if not fStr.ok { return (ok = false, id = "", error = caseFile + ": features must be strings"); }
+        if list.listContainsText(seenFeatures, fStr.value) {
+            return (ok = false, id = "", error = caseFile + ": duplicate feature IDs");
+        }
+        list.pushBack(mut seenFeatures, fStr.value);
+    }
+
+    casesField := json.findObjectField(textSrc, 0, "cases");
+    if not casesField.found { return (ok = false, id = "", error = caseFile + ": case scenarios required"); }
+    scenarios := json.arrayElementOffsets(textSrc, casesField.valuePos);
+    if list.listCountInt(scenarios) == 0 {
+        return (ok = false, id = "", error = caseFile + ": case scenarios required");
+    }
+
+    allowedScenario: List<String> = ["name", "args", "stdin", "stdout", "stderr", "exitCode", "timeoutMs", "artifact", "inputFiles", "outputFiles", "workspace", "tag", "files"];
+    seenScenarios: mut List<String> = [];
+    loop scenarios as sPos {
+        loop json.objectKeys(textSrc, sPos) as sk {
+            if not list.listContainsText(allowedScenario, sk) {
+                return (ok = false, id = "", error = caseFile + ": unexpected scenario key " + sk);
+            }
+        }
+        nameRes := json.readObjectString(textSrc, sPos, "name");
+        if not nameRes.found or not nameRes.ok or nameRes.value == "" or list.listContainsText(seenScenarios, nameRes.value) {
+            return (ok = false, id = "", error = caseFile + ": scenario names must be unique");
+        }
+        list.pushBack(mut seenScenarios, nameRes.value);
+
+        codeRes := json.readObjectInt(textSrc, sPos, "exitCode");
+        if not codeRes.found or not codeRes.ok or codeRes.value < 0 or codeRes.value > 255 {
+            return (ok = false, id = "", error = caseFile + ": invalid exit status");
+        }
+        timeoutRes := json.readObjectInt(textSrc, sPos, "timeoutMs");
+        if timeoutRes.found and (not timeoutRes.ok or timeoutRes.value <= 0 or timeoutRes.value > 600000) {
+            return (ok = false, id = "", error = caseFile + ": invalid timeout");
+        }
+        argsField := json.findObjectField(textSrc, sPos, "args");
+        if argsField.found {
+            loop json.arrayElementOffsets(textSrc, argsField.valuePos) as aPos {
+                aStr := json.readStringAt(textSrc, aPos);
+                if not aStr.ok { return (ok = false, id = "", error = caseFile + ": invalid arguments"); }
+            }
+        }
+
+        stdinField := json.findObjectField(textSrc, sPos, "stdin");
+        stdoutField := json.findObjectField(textSrc, sPos, "stdout");
+        stderrField := json.findObjectField(textSrc, sPos, "stderr");
+        if not stdinField.found or not stdoutField.found or not stderrField.found {
+            return (ok = false, id = "", error = caseFile + ": missing stream");
+        }
+        s1 := validateStream(textSrc, stdinField.valuePos, caseDir, caseFile + " stdin");
+        if not s1.ok { return (ok = false, id = "", error = s1.error); }
+        s2 := validateStream(textSrc, stdoutField.valuePos, caseDir, caseFile + " stdout");
+        if not s2.ok { return (ok = false, id = "", error = s2.error); }
+        s3 := validateStream(textSrc, stderrField.valuePos, caseDir, caseFile + " stderr");
+        if not s3.ok { return (ok = false, id = "", error = s3.error); }
+
+        inFilesField := json.findObjectField(textSrc, sPos, "inputFiles");
+        if inFilesField.found {
+            if kind =!= "feature" and kind =!= "sample" and kind =!= "example" {
+                return (ok = false, id = "", error = caseFile + ": file fixtures need a runnable Lite case");
+            }
+            loop json.objectKeys(textSrc, inFilesField.valuePos) as fname {
+                if fname == "" or path.isAbsolute(fname) or hasDotDotSegment(fname) {
+                    return (ok = false, id = "", error = caseFile + ": file fixture paths must stay inside the case workspace");
+                }
+                fv := json.findObjectField(textSrc, inFilesField.valuePos, fname);
+                vs := validateStream(textSrc, fv.valuePos, caseDir, caseFile + " inputFiles." + fname);
+                if not vs.ok { return (ok = false, id = "", error = vs.error); }
+            }
+        }
+        outFilesField := json.findObjectField(textSrc, sPos, "outputFiles");
+        if outFilesField.found {
+            if kind =!= "feature" and kind =!= "sample" and kind =!= "example" {
+                return (ok = false, id = "", error = caseFile + ": file fixtures need a runnable Lite case");
+            }
+            loop json.objectKeys(textSrc, outFilesField.valuePos) as fname {
+                if fname == "" or path.isAbsolute(fname) or hasDotDotSegment(fname) {
+                    return (ok = false, id = "", error = caseFile + ": file fixture paths must stay inside the case workspace");
+                }
+                fv := json.findObjectField(textSrc, outFilesField.valuePos, fname);
+                vs := validateStream(textSrc, fv.valuePos, caseDir, caseFile + " outputFiles." + fname);
+                if not vs.ok { return (ok = false, id = "", error = vs.error); }
+            }
+        }
+        artField := json.findObjectField(textSrc, sPos, "artifact");
+        if artField.found {
+            if kind =!= "compile" { return (ok = false, id = "", error = caseFile + ": only compile cases compare generated artifacts"); }
+            vs := validateStream(textSrc, artField.valuePos, caseDir, caseFile + " artifact");
+            if not vs.ok { return (ok = false, id = "", error = vs.error); }
+        }
+        wsRes := json.readObjectString(textSrc, sPos, "workspace");
+        if wsRes.found and (kind =!= "tool" or not wsRes.ok or (wsRes.value =!= "clean" and wsRes.value =!= "dirty")) {
+            return (ok = false, id = "", error = caseFile + ": invalid workspace");
+        }
+        tagField := json.findObjectField(textSrc, sPos, "tag");
+        if tagField.found {
+            tName := json.readObjectString(textSrc, tagField.valuePos, "name");
+            tAnn := json.readObjectBool(textSrc, tagField.valuePos, "annotated");
+            if not wsRes.found or not tName.found or not tName.ok or not tAnn.found or not tAnn.ok {
+                return (ok = false, id = "", error = caseFile + ": invalid fixture tag");
+            }
+        }
+        filesField := json.findObjectField(textSrc, sPos, "files");
+        if filesField.found {
+            if kind =!= "tool" { return (ok = false, id = "", error = caseFile + ": invalid artifact paths"); }
+            loop json.arrayElementOffsets(textSrc, filesField.valuePos) as fpPos {
+                fpStr := json.readStringAt(textSrc, fpPos);
+                if not fpStr.ok or fpStr.value == "" or path.isAbsolute(fpStr.value) or hasDotDotSegment(fpStr.value) {
+                    return (ok = false, id = "", error = caseFile + ": invalid artifact paths");
+                }
+            }
+        }
+    }
+
+    benchField := json.findObjectField(textSrc, 0, "benchmark");
+    if benchField.found {
+        allowedBench: List<String> = ["warmups", "samples"];
+        loop json.objectKeys(textSrc, benchField.valuePos) as bk {
+            if not list.listContainsText(allowedBench, bk) {
+                return (ok = false, id = "", error = caseFile + ": unexpected benchmark key " + bk);
+            }
+        }
+        wRes := json.readObjectInt(textSrc, benchField.valuePos, "warmups");
+        smRes := json.readObjectInt(textSrc, benchField.valuePos, "samples");
+        if not wRes.found or not wRes.ok or wRes.value < 0 or not smRes.found or not smRes.ok or smRes.value < 1 {
+            return (ok = false, id = "", error = caseFile + ": invalid benchmark counts");
+        }
+    }
+    (ok = true, id = caseId, error = "")
+}
+
+/** Discovers and validates all `.case.json` manifests under `language/cases` and `tools/cases`. */
+pub validateAllCases := fn(rootDir: String): (ok: Bool, error: String) {
+    roots: List<String> = [path.join(rootDir, "language/cases"), path.join(rootDir, "tools/cases")];
+    ignored: List<String> = [];
+    files := fsUtil.collectFiles(rootDir, roots, ".case.json", ignored, false);
+    if list.listCountText(files) == 0 {
+        return (ok = false, error = "no cases found");
+    }
+    seenIds: mut List<String> = [];
+    loop files as caseFile {
+        checked := validateCaseFile(rootDir, caseFile);
+        if not checked.ok { return (ok = false, error = checked.error); }
+        if list.listContainsText(seenIds, checked.id) {
+            return (ok = false, error = "duplicate case IDs");
+        }
+        list.pushBack(mut seenIds, checked.id);
+    }
+    (ok = true, error = "")
+}

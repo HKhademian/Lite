@@ -128,3 +128,56 @@ pub extName := fn(target: String): String {
     }
     ""
 }
+
+splitSegments := fn(normalized: String): List<String> {
+    parts: mut List<String> = [];
+    size := text.length(normalized);
+    var start := 0;
+    if isWin32() and size >= 2 and text.isAsciiLetter(text.at(normalized, 0)) and text.at(normalized, 1) == ":" {
+        if size >= 3 and isSep(text.at(normalized, 2)) { start = 3; } else { start = 2; }
+    } else if size > 0 and isSep(text.at(normalized, 0)) {
+        start = 1;
+    }
+    var segStart := start;
+    var i := start;
+    loop i <= size {
+        atEnd := i == size;
+        if atEnd or isSep(text.at(normalized, i)) {
+            if i > segStart {
+                list.pushBack(mut parts, text.slice(normalized, segStart, i));
+            }
+            segStart = i + 1;
+        }
+        i = i + 1;
+    }
+    parts
+}
+
+/** Computes the relative path from `fromDir` to `toPath`, resolving relative inputs against `proc.cwd()`. */
+pub relative := fn(fromDir: String, toPath: String): String {
+    cwd := proc.cwd();
+    fromAbs := resolve(cwd, fromDir);
+    toAbs := resolve(cwd, toPath);
+    if fromAbs == toAbs { return ""; }
+    fromSegs := splitSegments(fromAbs);
+    toSegs := splitSegments(toAbs);
+    fromLen := list.listCountText(fromSegs);
+    toLen := list.listCountText(toSegs);
+    var common := 0;
+    loop common < fromLen and common < toLen and fromSegs[common] == toSegs[common] {
+        common = common + 1;
+    }
+    out: mut List<String> = [];
+    var up := common;
+    loop up < fromLen {
+        list.pushBack(mut out, "..");
+        up = up + 1;
+    }
+    var down := common;
+    loop down < toLen {
+        list.pushBack(mut out, toSegs[down]);
+        down = down + 1;
+    }
+    if list.listCountText(out) == 0 { return ""; }
+    text.joinTexts(out, sep())
+}

@@ -1,0 +1,33 @@
+fs := import "core/fs";
+list := import "core/list";
+test := import "core/test";
+docs := import "util/docs";
+path := import "util/path";
+
+tmpRes := fs.makeTempDir("lite-util-docs-");
+test.checkBool("make temp dir", true, tmpRes.ok);
+dir := tmpRes.path;
+
+_w1 := fs.writeText(path.join(dir, "topic.md"), "# Topic\n\n## A `name`\n\n## A `name`\n");
+_w2 := fs.writeText(path.join(dir, "README.md"), "# Index\n\n[one](topic.md#a-name) [two](topic.md#a-name-1)\n`[not a link](missing.md)`\n```text\n[fake](missing.md)\n```\n");
+_mk := fs.makeDir(path.join(dir, "node_modules"));
+_w3 := fs.writeText(path.join(dir, "node_modules/ignored.md"), "[broken](absent.md)\n");
+
+test.checkInt("clean docs failures", 0, list.listCountText(docs.checkDocuments(dir)));
+test.checkInt("listed docs count", 2, list.listCountText(docs.listDocFiles(dir)));
+
+_w4 := fs.writeText(path.join(dir, "README.md"), "# Index\n\n[bad](topic.md#missing)\n[absent](absent.md)\n```text\nunclosed\n");
+failures := docs.checkDocuments(dir);
+test.checkInt("broken docs failures count", 3, list.listCountText(failures));
+
+_mkc := fs.makeDir(path.join(dir, "config"));
+_w5 := fs.writeText(path.join(dir, "source.lts"), "outputLine(24);\n");
+_w6 := fs.writeText(path.join(dir, "README.md"), "# Example\n\n```text\noutputLine(24);\n```\n");
+_w7 := fs.writeText(path.join(dir, "config/documentation.json"), "{\"navigation\":[{\"label\":\"Start\",\"path\":\"README.md\"}],\"snippets\":[{\"document\":\"README.md\",\"source\":\"source.lts\",\"fence\":0}]}");
+test.checkInt("snippet matches", 0, list.listCountText(docs.checkDocuments(dir)));
+
+_w8 := fs.writeText(path.join(dir, "source.lts"), "outputLine(25);\n");
+test.checkInt("snippet mismatch", 1, list.listCountText(docs.checkDocuments(dir)));
+
+_rm := fs.remove(dir);
+test.done("util-docs");

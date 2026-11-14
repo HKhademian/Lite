@@ -1,0 +1,404 @@
+/** Provisional Markdown parsing, heading/anchor extraction, link scanning, and fence checks. */
+
+integer := import "core/int";
+text := import "core/text";
+list := import "core/list";
+
+findLineEnd := fn(source: String, start: Int): Int {
+    size := text.length(source);
+    var pos := start;
+    loop pos < size and text.at(source, pos) =!= "\n" {
+        pos = pos + 1;
+    }
+    pos
+}
+
+isBlankRest := fn(source: String, fromPos: Int, lineEnd: Int): Bool {
+    var i := fromPos;
+    loop i < lineEnd {
+        if not text.isWhitespace(text.at(source, i)) { return false; }
+        i = i + 1;
+    }
+    true
+}
+
+countRepeatedAt := fn(source: String, start: Int, limit: Int, ch: String): Int {
+    var count := 0;
+    loop start + count < limit and text.at(source, start + count) == ch {
+        count = count + 1;
+    }
+    count
+}
+
+/** Removes fenced code blocks delimited at column 0 (` ``` ` or `~~~`) so prose scanners skip example code. */
+pub stripCodeBlocks := fn(source: String): String {
+    size := text.length(source);
+    var out := "";
+    var runStart := 0;
+    var pos := 0;
+    var inFence := false;
+    var fenceChar := "";
+    var fenceLen := 0;
+    var fenceStart := 0;
+
+    loop pos <= size {
+        lineEnd := findLineEnd(source, pos);
+        if not inFence {
+            if pos < size {
+                ch := text.at(source, pos);
+                if ch == "`" or ch == "~" {
+                    cnt := countRepeatedAt(source, pos, lineEnd, ch);
+                    if cnt >= 3 {
+                        if pos > runStart {
+                            out = out + text.slice(source, runStart, pos);
+                        }
+                        inFence = true;
+                        fenceChar = ch;
+                        fenceLen = cnt;
+                        fenceStart = pos;
+                    }
+                }
+            }
+        } else {
+            if pos + fenceLen <= lineEnd {
+                matches := countRepeatedAt(source, pos, lineEnd, fenceChar);
+                if matches == fenceLen and isBlankRest(source, pos + fenceLen, lineEnd) {
+                    inFence = false;
+                    fenceChar = "";
+                    fenceLen = 0;
+                    runStart = lineEnd;
+                }
+            }
+        }
+        if lineEnd >= size { break; }
+        pos = lineEnd + 1;
+    }
+
+    if inFence {
+        out = out + text.slice(source, fenceStart, size);
+    } else if runStart < size {
+        out = out + text.slice(source, runStart, size);
+    }
+    out
+}
+
+/** True when `source` leaves a fenced code block (with up to 3 leading spaces) unclosed at EOF. */
+pub hasUnclosedFence := fn(source: String): Bool {
+    size := text.length(source);
+    var pos := 0;
+    var fenceChar := "";
+    var fenceLen := 0;
+
+    loop pos < size {
+        lineEnd := findLineEnd(source, pos);
+        var lead := pos;
+        var spaces := 0;
+        loop lead < lineEnd and spaces < 3 and text.isWhitespace(text.at(source, lead)) {
+            lead = lead + 1;
+            spaces = spaces + 1;
+        }
+        if lead < lineEnd {
+            ch := text.at(source, lead);
+            if ch == "`" or ch == "~" {
+                cnt := countRepeatedAt(source, lead, lineEnd, ch);
+                if cnt >= 3 {
+                    if fenceLen == 0 {
+                        fenceChar = ch;
+                        fenceLen = cnt;
+                    } else if ch == fenceChar and cnt >= fenceLen {
+                        fenceChar = "";
+                        fenceLen = 0;
+                    }
+                }
+            }
+        }
+        if lineEnd >= size { break; }
+        pos = lineEnd + 1;
+    }
+    fenceLen > 0
+}
+
+/** Extracts ATX headings (`#`..`######`) from already code-stripped prose. */
+pub extractHeadings := fn(proseText: String): List<String> {
+    headings: mut List<String> = [];
+    size := text.length(proseText);
+    var pos := 0;
+    loop pos < size {
+        lineEnd := findLineEnd(proseText, pos);
+        var cleanEnd := lineEnd;
+        if cleanEnd > pos and text.at(proseText, cleanEnd - 1) == "\r" {
+            cleanEnd = cleanEnd - 1;
+        }
+        hashes := countRepeatedAt(proseText, pos, cleanEnd, "#");
+        if hashes >= 1 and hashes <= 6 and pos + hashes < cleanEnd {
+            afterHash := text.at(proseText, pos + hashes);
+            if afterHash == " " or afterHash == "\t" {
+                var bodyStart := pos + hashes + 1;
+                loop bodyStart < cleanEnd and text.isWhitespace(text.at(proseText, bodyStart)) {
+                    bodyStart = bodyStart + 1;
+                }
+                var bodyEnd := cleanEnd;
+                loop bodyEnd > bodyStart and text.isWhitespace(text.at(proseText, bodyEnd - 1)) {
+                    bodyEnd = bodyEnd - 1;
+                }
+                loop bodyEnd > bodyStart and text.at(proseText, bodyEnd - 1) == "#" {
+                    bodyEnd = bodyEnd - 1;
+                }
+                loop bodyEnd > bodyStart and text.isWhitespace(text.at(proseText, bodyEnd - 1)) {
+                    bodyEnd = bodyEnd - 1;
+                }
+                if bodyEnd > bodyStart {
+                    list.pushBack(mut headings, text.slice(proseText, bodyStart, bodyEnd));
+                }
+            }
+        }
+        if lineEnd >= size { break; }
+        pos = lineEnd + 1;
+    }
+    headings
+}
+
+stripHtmlTags := fn(source: String): String {
+    size := text.length(source);
+    var out := "";
+    var runStart := 0;
+    var i := 0;
+    loop i < size {
+        if text.at(source, i) == "<" {
+            close := text.indexOfText(source, ">", i + 1);
+            if close >= 0 {
+                if i > runStart { out = out + text.slice(source, runStart, i); }
+                i = close + 1;
+                runStart = i;
+            } else {
+                i = i + 1;
+            }
+        } else {
+            i = i + 1;
+        }
+    }
+    if runStart == 0 { return source; }
+    if runStart < size { out = out + text.slice(source, runStart, size); }
+    out
+}
+
+isAsciiPrintablePunct := fn(ch: String): Bool {
+    text.containsText("!\"#$%&'()*+,./:;<=>?@[\\]^`{|}~", ch)
+}
+
+isUnicodeNonWordSymbol := fn(ch: String): Bool {
+    text.containsText("—–…“”‘’•·×°§→←↔«»‹›", ch)
+}
+
+/** GitHub-style heading slug for fragment matching. */
+pub headingAnchor := fn(heading: String): String {
+    cleaned := stripHtmlTags(text.toLowerAscii(heading));
+    size := text.length(cleaned);
+    var out := "";
+    var i := 0;
+    loop i < size {
+        ch := text.at(cleaned, i);
+        if text.isWhitespace(ch) {
+            out = out + "-";
+        } else if ch == "_" or ch == "-" or text.isAsciiLetter(ch) or text.isDigit(ch) {
+            out = out + ch;
+        } else if isAsciiPrintablePunct(ch) or isUnicodeNonWordSymbol(ch) {
+        } else {
+            out = out + ch;
+        }
+        i = i + 1;
+    }
+    out
+}
+
+/** Collects GitHub-style heading anchors (including `-1`, `-2` duplicate suffixes) and explicit HTML `id=`/`name=` anchors. */
+pub collectAnchors := fn(docText: String): List<String> {
+    found: mut List<String> = [];
+    seenSlugs: mut List<String> = [];
+    headings := extractHeadings(stripCodeBlocks(docText));
+
+    loop headings as heading {
+        slug := headingAnchor(heading);
+        var dupCount := 0;
+        loop seenSlugs as prev {
+            if prev == slug { dupCount = dupCount + 1; }
+        }
+        list.pushBack(mut seenSlugs, slug);
+        anchor := if dupCount == 0 { slug } else { slug + "-" + integer.intText(dupCount) };
+        if not list.listContainsText(found, anchor) {
+            list.pushBack(mut found, anchor);
+        }
+    }
+
+    size := text.length(docText);
+    var pos := 0;
+    loop pos < size {
+        ch := text.at(docText, pos);
+        var attrLen := 0;
+        if pos == 0 or not text.isNameContinue(text.at(docText, pos - 1)) {
+            if text.startsWithAt(docText, pos, "id=") { attrLen = 3; }
+            else if text.startsWithAt(docText, pos, "name=") { attrLen = 5; }
+        }
+        if attrLen > 0 and pos + attrLen < size {
+            q := text.at(docText, pos + attrLen);
+            if q == "\"" or q == "'" {
+                valStart := pos + attrLen + 1;
+                valEnd := text.indexOfText(docText, q, valStart);
+                if valEnd > valStart {
+                    val := text.slice(docText, valStart, valEnd);
+                    if not list.listContainsText(found, val) {
+                        list.pushBack(mut found, val);
+                    }
+                    pos = valEnd + 1;
+                } else {
+                    pos = pos + attrLen;
+                }
+            } else {
+                pos = pos + attrLen;
+            }
+        } else {
+            pos = pos + 1;
+        }
+    }
+    found
+}
+
+stripInlineCode := fn(proseText: String): String {
+    size := text.length(proseText);
+    var out := "";
+    var runStart := 0;
+    var pos := 0;
+    loop pos < size {
+        ch := text.at(proseText, pos);
+        if ch == "`" {
+            ticks := countRepeatedAt(proseText, pos, size, "`");
+            closeNeedle := text.repeatText("`", ticks);
+            lineEnd := findLineEnd(proseText, pos + ticks);
+            closeAt := text.indexOfText(proseText, closeNeedle, pos + ticks);
+            if closeAt >= 0 and closeAt + ticks <= lineEnd {
+                if pos > runStart { out = out + text.slice(proseText, runStart, pos); }
+                pos = closeAt + ticks;
+                runStart = pos;
+            } else {
+                pos = pos + ticks;
+            }
+        } else {
+            pos = pos + 1;
+        }
+    }
+    if runStart == 0 { return proseText; }
+    if runStart < size { out = out + text.slice(proseText, runStart, size); }
+    out
+}
+
+/** Extracts inline Markdown link and image destination targets from code-stripped prose. */
+pub extractLinkTargets := fn(proseText: String): List<String> {
+    links: mut List<String> = [];
+    clean := stripInlineCode(proseText);
+    size := text.length(clean);
+    var pos := 0;
+
+    loop pos < size {
+        if text.at(clean, pos) == "[" {
+            var labelEnd := pos + 1;
+            loop labelEnd < size and text.at(clean, labelEnd) =!= "]" and text.at(clean, labelEnd) =!= "\n" {
+                labelEnd = labelEnd + 1;
+            }
+            if labelEnd + 1 < size and text.at(clean, labelEnd) == "]" and text.at(clean, labelEnd + 1) == "(" {
+                var targetStart := labelEnd + 2;
+                if targetStart < size {
+                    if text.at(clean, targetStart) == "<" {
+                        gtPos := text.indexOfText(clean, ">", targetStart + 1);
+                        if gtPos > targetStart + 1 {
+                            var afterGt := gtPos + 1;
+                            var validClose := afterGt < size and text.at(clean, afterGt) == ")";
+                            if not validClose and afterGt < size and text.isWhitespace(text.at(clean, afterGt)) {
+                                loop afterGt < size and text.isWhitespace(text.at(clean, afterGt)) {
+                                    afterGt = afterGt + 1;
+                                }
+                                if afterGt < size and text.at(clean, afterGt) == "\"" {
+                                    titleEnd := text.indexOfText(clean, "\"", afterGt + 1);
+                                    if titleEnd >= 0 and titleEnd + 1 < size and text.at(clean, titleEnd + 1) == ")" {
+                                        afterGt = titleEnd + 1;
+                                        validClose = true;
+                                    }
+                                }
+                            }
+                            if validClose {
+                                list.pushBack(mut links, text.slice(clean, targetStart + 1, gtPos));
+                                pos = afterGt + 1;
+                            } else {
+                                pos = pos + 1;
+                            }
+                        } else {
+                            pos = pos + 1;
+                        }
+                    } else {
+                        var targetEnd := targetStart;
+                        loop targetEnd < size and not text.isWhitespace(text.at(clean, targetEnd)) and text.at(clean, targetEnd) =!= ")" {
+                            targetEnd = targetEnd + 1;
+                        }
+                        if targetEnd > targetStart and targetEnd < size {
+                            var afterTarget := targetEnd;
+                            var validClose := text.at(clean, afterTarget) == ")";
+                            if not validClose and text.isWhitespace(text.at(clean, afterTarget)) {
+                                loop afterTarget < size and text.isWhitespace(text.at(clean, afterTarget)) {
+                                    afterTarget = afterTarget + 1;
+                                }
+                                if afterTarget < size and text.at(clean, afterTarget) == "\"" {
+                                    titleEnd := text.indexOfText(clean, "\"", afterTarget + 1);
+                                    if titleEnd >= 0 and titleEnd + 1 < size and text.at(clean, titleEnd + 1) == ")" {
+                                        afterTarget = titleEnd + 1;
+                                        validClose = true;
+                                    }
+                                }
+                            }
+                            if validClose {
+                                list.pushBack(mut links, text.slice(clean, targetStart, targetEnd));
+                                pos = afterTarget + 1;
+                            } else {
+                                pos = pos + 1;
+                            }
+                        } else {
+                            pos = pos + 1;
+                        }
+                    }
+                } else {
+                    pos = pos + 1;
+                }
+            } else {
+                pos = pos + 1;
+            }
+        } else {
+            pos = pos + 1;
+        }
+    }
+    links
+}
+
+/** Extracts bodies of backtick fences delimited at column 0 (` ``` `) in document order. */
+pub extractBacktickFenceBodies := fn(docText: String): List<String> {
+    bodies: mut List<String> = [];
+    size := text.length(docText);
+    var pos := 0;
+    var inFence := false;
+    var bodyStart := 0;
+
+    loop pos <= size {
+        lineEnd := findLineEnd(docText, pos);
+        if text.startsWithAt(docText, pos, "```") {
+            if not inFence {
+                if lineEnd < size {
+                    inFence = true;
+                    bodyStart = lineEnd + 1;
+                }
+            } else {
+                list.pushBack(mut bodies, text.slice(docText, bodyStart, pos));
+                inFence = false;
+            }
+        }
+        if lineEnd >= size { break; }
+        pos = lineEnd + 1;
+    }
+    bodies
+}

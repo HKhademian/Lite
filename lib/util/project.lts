@@ -6,6 +6,7 @@ proc := import "core/process";
 text := import "core/text";
 list := import "core/list";
 path := import "util/path";
+json := import "util/json";
 
 findRepoRootFrom := fn(startPath: String): String {
     if startPath == "" { return ""; }
@@ -37,39 +38,9 @@ pub readComponentVersion := fn(component: String): String {
     versionsPath := path.resolve(root, "config/versions.json");
     readRes := fs.readText(versionsPath);
     if not readRes.ok { return "unassigned"; }
-
-    content := readRes.text;
-    size := text.length(content);
-    needle := "\"" + component + "\"";
-    needleLen := text.length(needle);
-    var searchFrom := 0;
-
-    loop searchFrom < size {
-        keyPos := text.indexOfText(content, needle, searchFrom);
-        if keyPos < 0 { return "unassigned"; }
-        afterKey := text.skipSpaces(content, keyPos + needleLen);
-        if afterKey < size and text.at(content, afterKey) == ":" {
-            var pos := text.skipSpaces(content, afterKey + 1);
-            if text.startsWithAt(content, pos, "null") { return "unassigned"; }
-            if pos < size and text.at(content, pos) == "\"" {
-                pos = pos + 1;
-                start := pos;
-                loop pos < size {
-                    ch := text.at(content, pos);
-                    if ch == "\\" {
-                        pos = pos + 2;
-                    } else if ch == "\"" {
-                        return text.slice(content, start, pos);
-                    } else {
-                        pos = pos + 1;
-                    }
-                }
-                return "unassigned";
-            }
-        }
-        searchFrom = keyPos + needleLen;
-    }
-    "unassigned"
+    found := json.readObjectString(readRes.text, 0, component);
+    if not found.found or not found.ok { return "unassigned"; }
+    found.value
 }
 
 /** Handles `lite <command> --version` cleanly when `--version` is the first CLI argument. */
@@ -83,4 +54,21 @@ pub handleVersionFlag := fn(args: List<String>, component: String, command: Stri
         io.outputLine("lite " + command + " " + readComponentVersion(component));
         io.exit(0);
     }
+}
+
+/** Forwards CLI arguments to a Node script under the repo root, inheriting streams and exiting with its status. */
+pub forwardNode := fn(scriptRelPath: String, args: List<String>): Unit {
+    root := findRepoRoot();
+    scriptPath := if root == "" { scriptRelPath } else { path.resolve(root, scriptRelPath) };
+    nodeArgs: mut List<String> = [scriptPath];
+    loop args as arg {
+        list.pushBack(mut nodeArgs, arg);
+    }
+    emptyEnv: List<String> = [];
+    res := proc.run(proc.execPath(), nodeArgs, "", emptyEnv, false, "");
+    if res.error =!= "" {
+        io.errorLine(res.error);
+        io.exit(1);
+    }
+    io.exit(res.status);
 }
