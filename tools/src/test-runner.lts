@@ -51,7 +51,7 @@ readGeneratedTestFiles := fn(root: String): List<String> {
 run := fn(args: List<String>): Unit {
     project.handleVersionFlag(args, "tester", "test");
     if cli.startsWith(args, "--cases") {
-        project.forwardNode("tools/test.ts", cli.rest(args, 1));
+        project.forwardNode("tools/generated/test.ts", cli.rest(args, 1));
     }
 
     modeFlags: List<String> = ["--smoke", "--fast", "--full"];

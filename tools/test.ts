@@ -1,36 +1,41 @@
-import { loadCase, loadCases, verifyScenario } from './cases.ts';
+/** Host entrypoint and library adapter for Lite-implemented declarative case runner (`tools/src/test.lts` -> `tools/generated/test.ts`). */
+import { spawnSync } from 'node:child_process';
+import { existsSync, mkdtempSync, readFileSync, rmSync, writeSync } from 'node:fs';
+import { tmpdir } from 'node:os';
+import { join } from 'node:path';
+import { fileURLToPath } from 'node:url';
+import { root } from './project.ts';
 
+const generatedUrl = new URL('./generated/test.ts', import.meta.url);
+const generatedPath = fileURLToPath(generatedUrl);
+
+/** Runs declarative language and tool cases matching `filter` or single manifest `file`, returning summary counts. */
 export function testCases(filter = '', file?: string): { count: number; failures: number; pending: number } {
-  let failures = 0;
-  let count = 0;
-  let pending = 0;
-  for (const fixture of file === undefined ? loadCases(filter) : [loadCase(file)]) {
-    for (const scenario of fixture.definition.cases) {
-      if (fixture.definition.pending !== undefined) {
-        pending++;
-        console.log(`PENDING ${fixture.definition.id}/${scenario.name}: ${fixture.definition.pending}`);
-        continue;
-      }
-      count++;
-      try {
-        verifyScenario(fixture, scenario);
-        console.log(`PASS ${fixture.definition.id}/${scenario.name}`);
-      } catch (error) {
-        failures++;
-        console.error(`FAIL ${fixture.definition.id}/${scenario.name}: ${error instanceof Error ? error.message : error}`);
-      }
+  const work = mkdtempSync(join(tmpdir(), 'lite-test-summary-'));
+  const summaryPath = join(work, 'summary.json');
+  const args = file !== undefined ? [file] : filter !== '' ? [filter] : [];
+  try {
+    const result = spawnSync(process.execPath, [generatedPath, ...args], {
+      cwd: root,
+      env: { ...process.env, LITE_TEST_SUMMARY_FILE: summaryPath },
+      stdio: ['ignore', 'inherit', 'inherit'],
+    });
+    if (result.error) throw result.error;
+    if (result.signal !== null) throw new Error(`lite test terminated by signal ${result.signal}`);
+    if (!existsSync(summaryPath)) {
+      throw new Error(`lite test exited with status ${result.status}`);
     }
+    const summary = JSON.parse(readFileSync(summaryPath, 'utf8')) as { count: number; failures: number; pending: number };
+    if (result.status !== 0) process.exitCode = result.status;
+    return summary;
+  } finally {
+    rmSync(work, { recursive: true, force: true });
   }
-  console.log(`${count - failures}/${count} scenarios passed`);
-  if (pending) console.log(`${pending} scenarios pending`);
-  if (failures || (pending > 0 && (file !== undefined || count === 0))) process.exitCode = 1;
-  return { count, failures, pending };
 }
 
 if (import.meta.main) {
-  try {
-    const [selection, ...extra] = process.argv.slice(2);
-    if (extra.length) throw new Error('usage: lite test --cases [FILTER|FILE.case.json]');
-    testCases(selection?.endsWith('.json') ? '' : selection, selection?.endsWith('.json') ? selection : undefined);
-  } catch (error) { console.error(error instanceof Error ? error.message : String(error)); process.exitCode = 1; }
+  const mod = (await import(generatedUrl.href)) as { main: (write?: (text: string) => void) => string };
+  mod.main((text: string): void => {
+    writeSync(1, text);
+  });
 }

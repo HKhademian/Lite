@@ -26,8 +26,8 @@ hasDotDotSegment := fn(relPath: String): Bool {
     false
 }
 
-validateStream := fn(source: String, streamPos: Int, directory: String, label: String): (ok: Bool, error: String) {
-    checked := streams.validateStream(source, streamPos, directory, label, false, false, true);
+validateStream := fn(source: String, streamPos: Int, directory: String): (ok: Bool, error: String) {
+    checked := streams.validateStream(source, streamPos, directory, "stream", false, false, true);
     (ok = checked.ok, error = checked.error)
 }
 
@@ -142,11 +142,11 @@ pub validateCaseFile := fn(rootDir: String, caseFile: String): (ok: Bool, id: St
         if not stdinField.found or not stdoutField.found or not stderrField.found {
             return (ok = false, id = "", error = caseFile + ": missing stream");
         }
-        s1 := validateStream(textSrc, stdinField.valuePos, caseDir, caseFile + " stdin");
+        s1 := validateStream(textSrc, stdinField.valuePos, caseDir);
         if not s1.ok { return (ok = false, id = "", error = s1.error); }
-        s2 := validateStream(textSrc, stdoutField.valuePos, caseDir, caseFile + " stdout");
+        s2 := validateStream(textSrc, stdoutField.valuePos, caseDir);
         if not s2.ok { return (ok = false, id = "", error = s2.error); }
-        s3 := validateStream(textSrc, stderrField.valuePos, caseDir, caseFile + " stderr");
+        s3 := validateStream(textSrc, stderrField.valuePos, caseDir);
         if not s3.ok { return (ok = false, id = "", error = s3.error); }
 
         inFilesField := json.findObjectField(textSrc, sPos, "inputFiles");
@@ -159,7 +159,7 @@ pub validateCaseFile := fn(rootDir: String, caseFile: String): (ok: Bool, id: St
                     return (ok = false, id = "", error = caseFile + ": file fixture paths must stay inside the case workspace");
                 }
                 fv := json.findObjectField(textSrc, inFilesField.valuePos, fname);
-                vs := validateStream(textSrc, fv.valuePos, caseDir, caseFile + " inputFiles." + fname);
+                vs := validateStream(textSrc, fv.valuePos, caseDir);
                 if not vs.ok { return (ok = false, id = "", error = vs.error); }
             }
         }
@@ -173,14 +173,14 @@ pub validateCaseFile := fn(rootDir: String, caseFile: String): (ok: Bool, id: St
                     return (ok = false, id = "", error = caseFile + ": file fixture paths must stay inside the case workspace");
                 }
                 fv := json.findObjectField(textSrc, outFilesField.valuePos, fname);
-                vs := validateStream(textSrc, fv.valuePos, caseDir, caseFile + " outputFiles." + fname);
+                vs := validateStream(textSrc, fv.valuePos, caseDir);
                 if not vs.ok { return (ok = false, id = "", error = vs.error); }
             }
         }
         artField := json.findObjectField(textSrc, sPos, "artifact");
         if artField.found {
             if kind =!= "compile" { return (ok = false, id = "", error = caseFile + ": only compile cases compare generated artifacts"); }
-            vs := validateStream(textSrc, artField.valuePos, caseDir, caseFile + " artifact");
+            vs := validateStream(textSrc, artField.valuePos, caseDir);
             if not vs.ok { return (ok = false, id = "", error = vs.error); }
         }
         wsRes := json.readObjectString(textSrc, sPos, "workspace");

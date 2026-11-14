@@ -3116,12 +3116,11 @@ export function main(lite$write?: (text: string) => void): string {
         return false;
     }
     void liteFn$lib$util$cases$hasDotDotSegment;
-    function liteFn$lib$util$cases$validateStream(lite_source: string, lite_streamPos: bigint, lite_directory: string, lite_label: string): { ok: boolean; error: string } {
+    function liteFn$lib$util$cases$validateStream(lite_source: string, lite_streamPos: bigint, lite_directory: string): { ok: boolean; error: string } {
         void lite_source;
         void lite_streamPos;
         void lite_directory;
-        void lite_label;
-        const lite_checked = liteFn$lib$util$streams$validateStream(lite_source, lite_streamPos, lite_directory, lite_label, false, false, true);
+        const lite_checked = liteFn$lib$util$streams$validateStream(lite_source, lite_streamPos, lite_directory, "stream", false, false, true);
         void lite_checked;
         return { ok: (lite_checked).ok, error: (lite_checked).error };
     }
@@ -3275,17 +3274,17 @@ export function main(lite$write?: (text: string) => void): string {
             if ((((((!((lite_stdinField).found))) || ((!((lite_stdoutField).found))))) || ((!((lite_stderrField).found))))) {
                 return { ok: false, id: "", error: ((lite_caseFile) + (": missing stream")) };
             }
-            const lite_s1 = liteFn$lib$util$cases$validateStream(lite_textSrc, (lite_stdinField).valuePos, lite_caseDir, ((lite_caseFile) + (" stdin")));
+            const lite_s1 = liteFn$lib$util$cases$validateStream(lite_textSrc, (lite_stdinField).valuePos, lite_caseDir);
             void lite_s1;
             if ((!((lite_s1).ok))) {
                 return { ok: false, id: "", error: (lite_s1).error };
             }
-            const lite_s2 = liteFn$lib$util$cases$validateStream(lite_textSrc, (lite_stdoutField).valuePos, lite_caseDir, ((lite_caseFile) + (" stdout")));
+            const lite_s2 = liteFn$lib$util$cases$validateStream(lite_textSrc, (lite_stdoutField).valuePos, lite_caseDir);
             void lite_s2;
             if ((!((lite_s2).ok))) {
                 return { ok: false, id: "", error: (lite_s2).error };
             }
-            const lite_s3 = liteFn$lib$util$cases$validateStream(lite_textSrc, (lite_stderrField).valuePos, lite_caseDir, ((lite_caseFile) + (" stderr")));
+            const lite_s3 = liteFn$lib$util$cases$validateStream(lite_textSrc, (lite_stderrField).valuePos, lite_caseDir);
             void lite_s3;
             if ((!((lite_s3).ok))) {
                 return { ok: false, id: "", error: (lite_s3).error };
@@ -3303,7 +3302,7 @@ export function main(lite$write?: (text: string) => void): string {
                     }
                     const lite_fv = liteFn$lib$util$json$findObjectField(lite_textSrc, (lite_inFilesField).valuePos, lite_fname);
                     void lite_fv;
-                    const lite_vs = liteFn$lib$util$cases$validateStream(lite_textSrc, (lite_fv).valuePos, lite_caseDir, ((((lite_caseFile) + (" inputFiles."))) + (lite_fname)));
+                    const lite_vs = liteFn$lib$util$cases$validateStream(lite_textSrc, (lite_fv).valuePos, lite_caseDir);
                     void lite_vs;
                     if ((!((lite_vs).ok))) {
                         return { ok: false, id: "", error: (lite_vs).error };
@@ -3323,7 +3322,7 @@ export function main(lite$write?: (text: string) => void): string {
                     }
                     const lite_fv = liteFn$lib$util$json$findObjectField(lite_textSrc, (lite_outFilesField).valuePos, lite_fname);
                     void lite_fv;
-                    const lite_vs = liteFn$lib$util$cases$validateStream(lite_textSrc, (lite_fv).valuePos, lite_caseDir, ((((lite_caseFile) + (" outputFiles."))) + (lite_fname)));
+                    const lite_vs = liteFn$lib$util$cases$validateStream(lite_textSrc, (lite_fv).valuePos, lite_caseDir);
                     void lite_vs;
                     if ((!((lite_vs).ok))) {
                         return { ok: false, id: "", error: (lite_vs).error };
@@ -3336,7 +3335,7 @@ export function main(lite$write?: (text: string) => void): string {
                 if (((lite_kind) !== ("compile"))) {
                     return { ok: false, id: "", error: ((lite_caseFile) + (": only compile cases compare generated artifacts")) };
                 }
-                const lite_vs = liteFn$lib$util$cases$validateStream(lite_textSrc, (lite_artField).valuePos, lite_caseDir, ((lite_caseFile) + (" artifact")));
+                const lite_vs = liteFn$lib$util$cases$validateStream(lite_textSrc, (lite_artField).valuePos, lite_caseDir);
                 void lite_vs;
                 if ((!((lite_vs).ok))) {
                     return { ok: false, id: "", error: (lite_vs).error };
@@ -3429,7 +3428,7 @@ export function main(lite$write?: (text: string) => void): string {
             }
             lite_seenIds.push((lite_checked).id);
             if (((((lite_filter) === (""))) || (liteFn$lib$core$text$containsText((lite_checked).id, lite_filter)))) {
-                lite_matches = lite$addInt(lite_matches, 1n, 13236);
+                lite_matches = lite$addInt(lite_matches, 1n, 13064);
             }
         }
         if (((lite_matches) === (0n))) {
@@ -3527,7 +3526,7 @@ export function main(lite$write?: (text: string) => void): string {
         if (((((lite_scenarioIdx) < (0n))) || (((lite_scenarioIdx) >= (liteFn$lib$core$list$listCountInt([...(lite_scenarios)])))))) {
             return "";
         }
-        return (liteFn$lib$util$json$readObjectString((lite_readRes).text, lite$listAt((lite_scenarios), lite_scenarioIdx, 16704), "name")).value;
+        return (liteFn$lib$util$json$readObjectString((lite_readRes).text, lite$listAt((lite_scenarios), lite_scenarioIdx, 16532), "name")).value;
     }
     void liteFn$lib$util$cases$readScenarioName;
     function liteFn$lib$util$cases$readFileDiagnostic(lite_filePath: string, lite_byteCount: bigint): string {
@@ -3789,7 +3788,7 @@ export function main(lite$write?: (text: string) => void): string {
         if (((((lite_scenarioIdx) < (0n))) || (((lite_scenarioIdx) >= (liteFn$lib$core$list$listCountInt([...(lite_scenarios)])))))) {
             return { ok: false, artifactSha: "", error: ((lite_caseId) + (": invalid scenario index")) };
         }
-        const lite_sPos = lite$listAt((lite_scenarios), lite_scenarioIdx, 24388);
+        const lite_sPos = lite$listAt((lite_scenarios), lite_scenarioIdx, 24216);
         void lite_sPos;
         const lite_sName = (liteFn$lib$util$json$readObjectString(lite_caseText, lite_sPos, "name")).value;
         void lite_sName;

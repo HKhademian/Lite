@@ -9,7 +9,7 @@ project := import "util/project";
 run := fn(args: List<String>): Unit {
     project.handleVersionFlag(args, "verifier", "verify");
     if list.listCountText(args) == 1 and text.endsWith(cli.head(args), ".json") {
-        project.forwardNode("tools/test.ts", args);
+        project.forwardNode("tools/generated/test.ts", args);
     } else {
         project.forwardNode("igniter/verify.ts", args);
     }

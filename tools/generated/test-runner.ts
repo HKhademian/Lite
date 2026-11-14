@@ -228,7 +228,7 @@ function lite$listPopBack<T>(items: T[], at: number): T {
     return items.pop() as T;
 }
 
-const lite$intLines: readonly number[] = [0, 101, 102, 126, 150, 181, 209, 237, 265, 291, 325, 326, 365, 393, 421, 449, 478, 510, 561, 590, 617, 624, 634, 637, 638, 697, 731, 805, 829, 866, 886, 892, 920, 973, 1041, 1086, 1167, 1187, 1193, 1225, 1255, 1305, 1356, 1409, 1460, 1526, 1548, 1554, 1564, 1567, 1568, 1606, 1661, 1702, 1767, 1773, 1774, 1837, 1907, 1961, 2016, 2102, 2179, 2280, 2300, 2306, 2307, 2380, 2412, 2484, 2550, 2551, 2612, 2662, 2718, 2781, 2787, 2835, 2912, 2974, 2980, 2981, 3017, 3112, 3188, 3215, 3259, 3265, 3351, 3436, 3462, 3502, 3539, 3549, 3569, 3575, 3607, 3636, 3680, 3697, 3732, 3775, 3785, 3791, 3816, 3819, 3820, 3841];
+const lite$intLines: readonly number[] = [0, 101, 102, 126, 150, 181, 209, 237, 265, 291, 325, 326, 365, 393, 421, 449, 478, 510, 561, 590, 617, 624, 634, 637, 638, 697, 731, 805, 829, 866, 886, 892, 920, 973, 1041, 1086, 1167, 1187, 1193, 1225, 1255, 1305, 1356, 1409, 1460, 1526, 1548, 1554, 1564, 1567, 1568, 1606, 1661, 1702, 1777, 1783, 1784, 1847, 1917, 1971, 2026, 2112, 2189, 2290, 2310, 2316, 2317, 2390, 2422, 2494, 2560, 2561, 2622, 2672, 2728, 2791, 2797, 2845, 2922, 2984, 2990, 2991, 3027, 3122, 3198, 3225, 3269, 3275, 3361, 3446, 3472, 3512, 3549, 3559, 3579, 3585, 3617, 3646, 3690, 3707, 3742, 3785, 3795, 3801, 3826, 3829, 3830, 3851];
 const lite$intSource = "tools/src/test-runner.lts:";
 const lite$intMin = -(1n << 63n), lite$intMax = (1n << 63n) - 1n;
 function lite$fault(category: string, at: number, message: string): never {
@@ -2162,7 +2162,7 @@ export function main(lite$write?: (text: string) => void): string {
         void lite_args;
         liteFn$lib$util$project$handleVersionFlag([...(lite_args)], "tester", "test");
         if (liteFn$lib$util$cli$startsWith([...(lite_args)], "--cases")) {
-            liteFn$lib$util$project$forwardNode("tools/test.ts", [...(liteFn$lib$util$cli$rest([...(lite_args)], 1n))]);
+            liteFn$lib$util$project$forwardNode("tools/generated/test.ts", [...(liteFn$lib$util$cli$rest([...(lite_args)], 1n))]);
         }
         const lite_modeFlags: string[] = [...(["--smoke", "--fast", "--full"])];
         void lite_modeFlags;
