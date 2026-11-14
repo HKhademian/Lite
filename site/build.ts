@@ -10,10 +10,13 @@ import { buildCCompiler, buildTsCompiler, compileBuiltCompiler, type CompilerBui
 import { sourceModuleIdentity } from '../compiler/source.ts';
 import { heroSample, playgroundDefaultSample, sampleGroups, showcaseSamples, type ShowcaseSample } from './groups.ts';
 import { escapeHtml, highlightLite, highlightTs } from './highlight.ts';
+import { playSamples, type PlaySample } from './play-samples.ts';
 import { playgroundWorkerJs } from './playground-worker.ts';
 import { siteCss } from './styles.ts';
 
-type RenderedSample = ShowcaseSample & Readonly<{
+type AnySample = ShowcaseSample | PlaySample;
+
+type RenderedSample = AnySample & Readonly<{
   source: string;
   sourceHtml: string;
   generatedTs: string;
@@ -61,7 +64,7 @@ function readSourceRevision(): SourceRevision {
   };
 }
 
-function compileAndRunSample(sample: ShowcaseSample, tsCompiler: CompilerBuild): RenderedSample {
+function compileAndRunSample(sample: AnySample, tsCompiler: CompilerBuild): RenderedSample {
   const fullPath = resolve(root, sample.file);
   const source = readFileSync(fullPath, 'utf8');
   const compiled = compileBuiltCompiler(tsCompiler, { text: source, name: sample.file, cwd: root });
@@ -464,11 +467,20 @@ function renderGalleryCard(sample: RenderedSample, basePath: string): string {
 </article>`;
 }
 
-function renderGalleryPage(rendered: ReadonlyMap<string, RenderedSample>, repoUrl: string, rev: SourceRevision, lightSwitchShine: boolean): string {
-  const jumpLinks = sampleGroups.map(group => {
-    const count = showcaseSamples.filter(s => s.group === group.id && rendered.has(s.id)).length;
-    return `<a class="gallery-jump" href="#group-${escapeHtml(group.id)}">${escapeHtml(group.title)} <span>${String(count)}</span></a>`;
-  }).join('\n    ');
+function renderGalleryPage(
+  rendered: ReadonlyMap<string, RenderedSample>,
+  renderedPlay: ReadonlyMap<string, RenderedSample>,
+  repoUrl: string,
+  rev: SourceRevision,
+  lightSwitchShine: boolean,
+): string {
+  const jumpLinks = [
+    ...sampleGroups.map(group => {
+      const count = showcaseSamples.filter(s => s.group === group.id && rendered.has(s.id)).length;
+      return `<a class="gallery-jump" href="#group-${escapeHtml(group.id)}">${escapeHtml(group.title)} <span>${String(count)}</span></a>`;
+    }),
+    `<a class="gallery-jump" href="#group-play">Play &mdash; Canvas &amp; Audio <span>${String(renderedPlay.size)}</span></a>`,
+  ].join('\n    ');
 
   const sections = sampleGroups.map(group => {
     const cards = showcaseSamples
@@ -488,16 +500,32 @@ function renderGalleryPage(rendered: ReadonlyMap<string, RenderedSample>, repoUr
 </section>`;
   }).join('\n');
 
+  const playCards = playSamples
+    .map(s => renderedPlay.get(s.id))
+    .filter((s): s is RenderedSample => s !== undefined)
+    .map(s => renderGalleryCard(s, '../'))
+    .join('\n');
+  const playSection = `<section class="section" id="group-play">
+  <div class="section-head">
+    <h2>Play &mdash; Canvas &amp; Audio</h2>
+  </div>
+  <p class="section-note">Optional browser stage modules (<code>extra/canvas</code>, <code>extra/board</code>, <code>extra/audio</code>) with typed RGBA contexts, pointer/key hooks, and Web Audio tones.</p>
+  <div class="sample-grid">
+    ${playCards}
+  </div>
+</section>`;
+
   const body = `<section style="padding: 2rem 0 1.25rem;">
   <h1 style="margin: 0 0 0.5rem;">Gallery</h1>
   <p class="hero-lead" style="margin: 0 0 1rem;">
-    All ${String(rendered.size)} examples below are compiled and executed by the ${proseLite} compiler during the site build.
+    All ${String(rendered.size)} core examples and ${String(renderedPlay.size)} interactive Play demos below are compiled and executed by the ${proseLite} compiler during the site build.
   </p>
   <nav class="gallery-jumps" aria-label="Gallery categories">
     ${jumpLinks}
   </nav>
 </section>
-${sections}`;
+${sections}
+${playSection}`;
 
   return renderPage({
     title: 'Gallery — Lite',
@@ -511,29 +539,39 @@ ${sections}`;
   });
 }
 
-function renderPlaygroundPage(rendered: ReadonlyMap<string, RenderedSample>, repoUrl: string, rev: SourceRevision, lightSwitchShine: boolean): string {
+function renderPlaygroundPage(
+  rendered: ReadonlyMap<string, RenderedSample>,
+  renderedPlay: ReadonlyMap<string, RenderedSample>,
+  repoUrl: string,
+  rev: SourceRevision,
+  lightSwitchShine: boolean,
+): string {
   const optionsHtml = sampleGroups.map(group => {
     const items = showcaseSamples
       .filter(s => s.group === group.id)
       .map(s => `<option value="${escapeHtml(s.id)}">${escapeHtml(s.title)}</option>`)
       .join('');
     return `<optgroup label="${escapeHtml(group.title)}">${items}</optgroup>`;
-  }).join('') + `<optgroup label="Visual Stage"><option value="canvas-bounce">ℓite Canvas Stage</option></optgroup>`;
+  }).join('') + `<optgroup label="Play — Canvas &amp; Audio">${playSamples
+    .map(s => `<option value="${escapeHtml(s.id)}">${escapeHtml(s.title)}</option>`)
+    .join('')}</optgroup>`;
 
-  const payload = Array.from(rendered.values()).map(s => ({
-    id: s.id,
-    title: s.title,
-    file: s.file,
-    showOutput: s.showOutput === true,
-    canvas: false,
-  }));
-  payload.push({
-    id: 'canvas-bounce',
-    title: 'ℓite Canvas Stage',
-    file: 'playground/canvas-stage',
-    showOutput: false,
-    canvas: true,
-  });
+  const payload = [
+    ...Array.from(rendered.values()).map(s => ({
+      id: s.id,
+      title: s.title,
+      file: s.file,
+      showOutput: s.showOutput === true,
+      play: false,
+    })),
+    ...Array.from(renderedPlay.values()).map(s => ({
+      id: s.id,
+      title: s.title,
+      file: s.file,
+      showOutput: false,
+      play: true,
+    })),
+  ];
   const serialized = JSON.stringify(payload).replaceAll('<', '\\u003c');
 
   const body = `<div class="workbench">
@@ -593,8 +631,16 @@ function renderPlaygroundPage(rendered: ReadonlyMap<string, RenderedSample>, rep
 
     <div id="panel-canvas" class="pg-panel" role="tabpanel" hidden>
       <div class="pg-canvas-wrap">
-        <canvas id="pg-canvas" class="pg-canvas" width="460" height="260"></canvas>
-        <span id="pg-fps" class="pg-status">0.0 fps &middot; 0.0 ms</span>
+        <div class="pg-canvas-bar">
+          <span id="pg-canvas-title" class="pg-canvas-title">Canvas Stage</span>
+          <div class="pg-canvas-tools">
+            <button id="pg-mute" class="pg-mute-btn" type="button" aria-pressed="false" title="Toggle Web Audio tones">Sound: On</button>
+            <span id="pg-fps" class="pg-status">0.0 fps &middot; 0.0 ms</span>
+          </div>
+        </div>
+        <div class="pg-canvas-stage">
+          <canvas id="pg-canvas" class="pg-canvas" tabindex="0" width="320" height="200" aria-label="Lite Play canvas stage"></canvas>
+        </div>
       </div>
     </div>
   </section>
@@ -623,6 +669,8 @@ function renderPlaygroundPage(rendered: ReadonlyMap<string, RenderedSample>, rep
   const codeModesBar = document.getElementById("pg-code-modes");
   const modeButtons = Array.from(document.querySelectorAll(".code-mode-btn"));
   const tabCanvas = document.getElementById("tab-canvas");
+  const canvasTitleEl = document.getElementById("pg-canvas-title");
+  const muteBtn = document.getElementById("pg-mute");
   const fpsEl = document.getElementById("pg-fps");
   const tabs = Array.from(document.querySelectorAll(".pg-tab"));
   const panels = {
@@ -641,6 +689,11 @@ function renderPlaygroundPage(rendered: ReadonlyMap<string, RenderedSample>, rep
   let lastCSource = null;
   let animFrame = 0;
   let lastFrameAt = 0;
+  let playInFlight = false;
+  let activePlay = false;
+  let activeCanvas = false;
+  let audioMuted = false;
+  let audioContext = null;
 
   function renderCodeViews() {
     tsEl.innerHTML = rawTs ? highlightTs(formatCodeView(rawTs, "ts", codeMode)) : "";
@@ -667,16 +720,20 @@ function renderPlaygroundPage(rendered: ReadonlyMap<string, RenderedSample>, rep
     }
     codeModesBar.hidden = name !== "ts" && name !== "c";
     copyBtn.hidden = name === "canvas";
-    if (name === "canvas") startCanvas();
-    else stopCanvas();
+    if (name === "canvas") resumeCanvasLoop();
+    else pauseCanvasLoop();
     if (name === "c") void compileCForEditor();
   }
 
   for (const tab of tabs) {
-    tab.addEventListener("click", () => showTab(tab.dataset.tab));
+    tab.addEventListener("click", () => {
+      showTab(tab.dataset.tab);
+      if (tab.dataset.tab === "canvas") canvas.focus({ preventScroll: true });
+    });
   }
 
   editorEl.addEventListener("input", () => {
+    pauseCanvasLoop();
     sourceEl.innerHTML = highlightLite(editorEl.value) + "\\n";
     statusEl.textContent = "Modified";
   });
@@ -684,6 +741,7 @@ function renderPlaygroundPage(rendered: ReadonlyMap<string, RenderedSample>, rep
   editorEl.addEventListener("keydown", (event) => {
     if ((event.metaKey || event.ctrlKey) && event.key === "Enter") {
       event.preventDefault();
+      unlockAudio();
       void runAction("play");
       return;
     }
@@ -717,6 +775,7 @@ function renderPlaygroundPage(rendered: ReadonlyMap<string, RenderedSample>, rep
   async function loadSample(id, mode) {
     const meta = byId.get(id) ?? samples[0];
     if (!meta) return;
+    stopPlay(true);
     select.value = meta.id;
     fileEl.textContent = meta.file;
     statusEl.textContent = "Loading " + meta.file + "...";
@@ -724,23 +783,6 @@ function renderPlaygroundPage(rendered: ReadonlyMap<string, RenderedSample>, rep
     const url = new URL(window.location.href);
     url.searchParams.set("sample", meta.id);
     window.history.replaceState({}, "", url);
-
-    if (meta.canvas) {
-      const demoSource = "/* Interactive ℓite Canvas Stage */\\nio := import \\"core/io\\";\\nio.outputLine(\\"Rendering ℓite mark on canvas...\\");";
-      const demoHtml = highlightLite(demoSource);
-      currentSample = { id: meta.id, source: demoSource, sourceHtml: demoHtml, tsHtml: "// Canvas stage runs directly in browser", output: "Canvas stage active\\n", args: [], stdin: "" };
-      editorEl.value = demoSource;
-      sourceEl.innerHTML = demoHtml + "\\n";
-      tsEl.textContent = "// Canvas stage runs directly in browser";
-      argsEl.value = "";
-      stdinEl.value = "";
-      tabCanvas.hidden = false;
-      showTab("canvas");
-      return;
-    }
-
-    tabCanvas.hidden = true;
-    if (activeTab === "canvas") showTab("output");
 
     const sample = await fetchSample(meta.id);
     currentSample = sample;
@@ -764,6 +806,8 @@ function renderPlaygroundPage(rendered: ReadonlyMap<string, RenderedSample>, rep
     if (mode === "compile") {
       showTab("ts");
       statusEl.textContent = "Compiled to TypeScript";
+    } else if (meta.play) {
+      await runAction("play");
     } else if (mode === "play") {
       showTab("output");
       outputEl.textContent = "";
@@ -815,11 +859,11 @@ function renderPlaygroundPage(rendered: ReadonlyMap<string, RenderedSample>, rep
     return worker;
   }
 
-  function runInWorker(action, source, stdin, args) {
+  function runInWorker(action, source, stdin, args, extra) {
     return new Promise((resolve, reject) => {
       const id = nextReqId++;
       pending.set(id, { resolve, reject });
-      getWorker().postMessage({ id, action, source, stdin, args });
+      getWorker().postMessage({ id, action, source, stdin, args, ...(extra || {}) });
     });
   }
 
@@ -855,18 +899,12 @@ function renderPlaygroundPage(rendered: ReadonlyMap<string, RenderedSample>, rep
   }
 
   async function runAction(action) {
-    const meta = byId.get(select.value);
-    if (action === "play" && meta && meta.canvas) {
-      showTab("canvas");
-      statusEl.textContent = "Canvas stage active";
-      return;
-    }
+    stopPlay(false);
     const source = editorEl.value;
     const stdin = parseStdin();
     const args = parseArgs();
     statusEl.textContent = action === "compile" ? "Compiling in browser..." : "Running in browser...";
     if (action === "play") {
-      showTab("output");
       outputEl.textContent = "";
     }
     try {
@@ -884,6 +922,7 @@ function renderPlaygroundPage(rendered: ReadonlyMap<string, RenderedSample>, rep
       }
       renderCodeViews();
       if (!res.ok) {
+        tabCanvas.hidden = true;
         showTab("output");
         outputEl.textContent = (res.stdout ? res.stdout + "\\n" : "") + (res.stderr || "Execution failed.");
         statusEl.textContent = res.ts ? "Runtime error" : "Compile error";
@@ -892,22 +931,53 @@ function renderPlaygroundPage(rendered: ReadonlyMap<string, RenderedSample>, rep
       if (action === "compile") {
         if (activeTab !== "c") showTab("ts");
         statusEl.textContent = "Compiled to TypeScript" + (res.c ? " & C" : "");
+        return;
+      }
+
+      outputEl.textContent = res.stdout + (res.stderr ? (res.stdout ? "\\n" : "") + res.stderr : "");
+      if (Array.isArray(res.tones) && res.tones.length > 0) playToneEvents(res.tones);
+
+      const frame = res.play || res.canvas;
+      if (frame && frame.width > 0 && frame.height > 0) {
+        applyPlayFrame(frame);
+        tabCanvas.hidden = false;
+        activeCanvas = true;
+        if (res.play) {
+          hasPlayLoop = Boolean(res.play.hasUpdate);
+          activePlay = hasPlayLoop && res.play.status === 0;
+          statusEl.textContent = activePlay ? "Playing" : (hasPlayLoop ? "Stopped (" + res.play.status + ")" : "Interactive ready");
+          showTab("canvas");
+          canvas.focus({ preventScroll: true });
+        } else {
+          hasPlayLoop = false;
+          activePlay = false;
+          statusEl.textContent = "Rendered canvas (in browser)";
+          showTab("canvas");
+        }
       } else {
+        tabCanvas.hidden = true;
         showTab("output");
-        outputEl.textContent = res.stdout + (res.stderr ? (res.stdout ? "\\n" : "") + res.stderr : "");
         statusEl.textContent = "Exited 0 (in browser)";
       }
     } catch (err) {
+      tabCanvas.hidden = true;
       showTab("output");
       outputEl.textContent = err instanceof Error ? err.message : String(err);
       statusEl.textContent = "Worker error";
     }
   }
 
-  select.addEventListener("change", () => loadSample(select.value, "load"));
-  resetBtn.addEventListener("click", () => loadSample(select.value, "load"));
-  compileBtn.addEventListener("click", () => runAction("compile"));
-  playBtn.addEventListener("click", () => runAction("play"));
+  select.addEventListener("change", () => { unlockAudio(); void loadSample(select.value, "load"); });
+  resetBtn.addEventListener("click", () => { unlockAudio(); void loadSample(select.value, "load"); });
+  compileBtn.addEventListener("click", () => { void runAction("compile"); });
+  playBtn.addEventListener("click", () => { unlockAudio(); void runAction("play"); });
+
+  muteBtn.addEventListener("click", () => {
+    audioMuted = !audioMuted;
+    muteBtn.setAttribute("aria-pressed", audioMuted ? "true" : "false");
+    muteBtn.textContent = audioMuted ? "Sound: Muted" : "Sound: On";
+    if (!audioMuted) unlockAudio();
+  });
 
   let copyTimer = 0;
   copyBtn.addEventListener("click", () => {
@@ -928,65 +998,295 @@ function renderPlaygroundPage(rendered: ReadonlyMap<string, RenderedSample>, rep
     }
   });
 
-  // Full-panel bouncing ℓite logo mark with FPS / frametime reporting
+  // Web Audio tone player + RGBA pixel stage for Lite Play programs
   const canvas = document.getElementById("pg-canvas");
   const ctx = canvas.getContext("2d");
-  const markMain = new Path2D("M2.2 10C5 7.9 8.6 5 8.5 3C8.4 1.7 6.9 1.7 5.9 3.1C4.6 4.9 4.2 8 4.4 10.4C4.6 12.2 5.8 13 7.4 13C8.6 13 9.5 12.4 10.2 11.4");
-  const markBar = new Path2D("M4.7 9.4C6.3 9.1 7.4 8.5 8.1 7.6");
-  let bx = 48, by = 48, vx = 2.4, vy = 1.8;
+  let stageImage = null;
+  let stageWidth = 0;
+  let stageHeight = 0;
+  let hasPlayLoop = false;
+  let lastPointerMoveAt = 0;
 
-  function drawFrame(now) {
+  function unlockAudio() {
+    if (audioMuted) return;
+    const AudioCtx = window.AudioContext || window.webkitAudioContext;
+    if (!AudioCtx) return;
+    if (!audioContext) audioContext = new AudioCtx();
+    if (audioContext.state === "suspended") {
+      const resumed = audioContext.resume();
+      if (resumed && resumed.catch) resumed.catch(() => {});
+    }
+  }
+
+  function playToneEvents(values) {
+    if (audioMuted || !Array.isArray(values) || values.length < 3) return;
+    unlockAudio();
+    if (!audioContext || audioContext.state !== "running") return;
+    let index = 0;
+    while (index + 2 < values.length) {
+      const frequency = Number(values[index]);
+      const durationMs = Number(values[index + 1]);
+      const volumePercent = Number(values[index + 2]);
+      index += 3;
+      if (!Number.isFinite(frequency) || frequency < 20 || frequency > 20000
+        || !Number.isFinite(durationMs) || durationMs <= 0 || durationMs > 3000
+        || !Number.isFinite(volumePercent) || volumePercent <= 0 || volumePercent > 100) {
+        continue;
+      }
+      const duration = durationMs / 1000;
+      const volume = (volumePercent / 100) * 0.45;
+      const oscillator = audioContext.createOscillator();
+      const gain = audioContext.createGain();
+      const startAt = audioContext.currentTime;
+      const ramp = Math.min(duration / 4, 0.01);
+      oscillator.type = "sine";
+      oscillator.frequency.setValueAtTime(frequency, startAt);
+      gain.gain.setValueAtTime(0, startAt);
+      gain.gain.linearRampToValueAtTime(volume, startAt + ramp);
+      gain.gain.setValueAtTime(volume, Math.max(startAt + ramp, startAt + duration - ramp));
+      gain.gain.linearRampToValueAtTime(0, startAt + duration);
+      oscillator.connect(gain);
+      gain.connect(audioContext.destination);
+      oscillator.start(startAt);
+      oscillator.stop(startAt + duration);
+    }
+  }
+
+  function setStagePixel(idx, r, g, b, a) {
+    const data = stageImage.data;
+    const off = idx * 4;
+    if (a >= 255) {
+      data[off] = r;
+      data[off + 1] = g;
+      data[off + 2] = b;
+      data[off + 3] = 255;
+      return;
+    }
+    if (a <= 0) return;
+    const inv = 255 - a;
+    const dstA = data[off + 3];
+    if (dstA === 0) {
+      data[off] = r;
+      data[off + 1] = g;
+      data[off + 2] = b;
+      data[off + 3] = a;
+    } else {
+      data[off] = Math.round((r * a + data[off] * inv) / 255);
+      data[off + 1] = Math.round((g * a + data[off + 1] * inv) / 255);
+      data[off + 2] = Math.round((b * a + data[off + 2] * inv) / 255);
+      data[off + 3] = Math.min(255, dstA + Math.round((a * inv) / 255));
+    }
+  }
+
+  function applyPlayFrame(frame) {
+    if (!frame || frame.width < 1 || frame.height < 1) return;
+    if (stageWidth !== frame.width || stageHeight !== frame.height || !stageImage) {
+      stageWidth = frame.width;
+      stageHeight = frame.height;
+      canvas.width = stageWidth;
+      canvas.height = stageHeight;
+      stageImage = ctx.createImageData(stageWidth, stageHeight);
+    }
+    if (typeof frame.title === "string") {
+      canvasTitleEl.textContent = frame.title || "Canvas Stage";
+      canvas.title = frame.title || "Canvas Stage";
+    }
+    if (Array.isArray(frame.pixels)) {
+      const data = stageImage.data;
+      if (frame.pixels.length === 0) {
+        data.fill(0);
+      } else {
+        const count = Math.min(frame.pixels.length, stageWidth * stageHeight);
+        for (let i = 0; i < count; i += 1) {
+          const c = Number(frame.pixels[i]) >>> 0;
+          const off = i * 4;
+          data[off] = (c >>> 16) & 255;
+          data[off + 1] = (c >>> 8) & 255;
+          data[off + 2] = c & 255;
+          data[off + 3] = (c >>> 24) & 255;
+        }
+      }
+    }
+    const ops = frame.ops;
+    if (Array.isArray(ops) && ops.length > 0) {
+      let idx = 0;
+      while (idx < ops.length) {
+        const op = Number(ops[idx++]);
+        if (op === 1 && idx < ops.length) {
+          const c = Number(ops[idx++]) >>> 0;
+          const a = (c >>> 24) & 255;
+          const r = (c >>> 16) & 255;
+          const g = (c >>> 8) & 255;
+          const b = c & 255;
+          const data = stageImage.data;
+          for (let off = 0; off < data.length; off += 4) {
+            data[off] = r;
+            data[off + 1] = g;
+            data[off + 2] = b;
+            data[off + 3] = a;
+          }
+        } else if (op === 2 && idx + 4 < ops.length) {
+          const rx = Number(ops[idx++]);
+          const ry = Number(ops[idx++]);
+          const rw = Number(ops[idx++]);
+          const rh = Number(ops[idx++]);
+          const c = Number(ops[idx++]) >>> 0;
+          const a = (c >>> 24) & 255;
+          const r = (c >>> 16) & 255;
+          const g = (c >>> 8) & 255;
+          const b = c & 255;
+          const x0 = Math.max(0, Math.trunc(rx));
+          const y0 = Math.max(0, Math.trunc(ry));
+          const x1 = Math.min(stageWidth, Math.trunc(rx + rw));
+          const y1 = Math.min(stageHeight, Math.trunc(ry + rh));
+          for (let py = y0; py < y1; py += 1) {
+            const rowOff = py * stageWidth;
+            for (let px = x0; px < x1; px += 1) {
+              setStagePixel(rowOff + px, r, g, b, a);
+            }
+          }
+        } else {
+          break;
+        }
+      }
+    }
+    ctx.putImageData(stageImage, 0, 0);
+  }
+
+  function pauseCanvasLoop() {
+    if (animFrame) { cancelAnimationFrame(animFrame); animFrame = 0; }
+    playInFlight = false;
+    lastFrameAt = 0;
+  }
+
+  function resumeCanvasLoop() {
+    if (activePlay && hasPlayLoop && !animFrame) {
+      lastFrameAt = 0;
+      animFrame = requestAnimationFrame(stepCanvasFrame);
+    }
+  }
+
+  function stopPlay(hideTab) {
+    pauseCanvasLoop();
+    activePlay = false;
+    activeCanvas = false;
+    hasPlayLoop = false;
+    if (worker) worker.postMessage({ action: "stop" });
+    if (hideTab) {
+      tabCanvas.hidden = true;
+      if (activeTab === "canvas") showTab("output");
+    }
+  }
+
+  async function sendPlayInteraction(action, payload) {
+    if (!activeCanvas) return;
+    try {
+      const res = await new Promise((resolve, reject) => {
+        const id = nextReqId++;
+        pending.set(id, { resolve, reject });
+        getWorker().postMessage({ id, action, ...payload });
+      });
+      if (!activeCanvas) return;
+      if (Array.isArray(res.tones) && res.tones.length > 0) playToneEvents(res.tones);
+      if (res.frame) applyPlayFrame(res.frame);
+    } catch {
+      // Ignore superseded interaction replies
+    }
+  }
+
+  async function stepCanvasFrame(now) {
+    animFrame = 0;
+    if (!activePlay || activeTab !== "canvas") return;
+    if (playInFlight) {
+      animFrame = requestAnimationFrame(stepCanvasFrame);
+      return;
+    }
+    const dtMs = lastFrameAt === 0 ? 16.667 : Math.max(now - lastFrameAt, 1);
+    const dtSec = Math.min(dtMs / 1000, 0.1);
     if (lastFrameAt !== 0) {
-      const dt = Math.max(now - lastFrameAt, 0.1);
-      const fps = 1000 / dt;
-      fpsEl.textContent = fps.toFixed(1) + " fps · " + dt.toFixed(1) + " ms";
+      fpsEl.textContent = (1000 / dtMs).toFixed(1) + " fps · " + dtMs.toFixed(1) + " ms";
     }
     lastFrameAt = now;
-
-    const w = canvas.clientWidth || canvas.width;
-    const h = canvas.clientHeight || canvas.height;
-    if (canvas.width !== w) canvas.width = w;
-    if (canvas.height !== h) canvas.height = h;
-
-    ctx.fillStyle = "#0B0C0E";
-    ctx.fillRect(0, 0, w, h);
-
-    const scale = 4;
-    const markSize = 14 * scale;
-    bx += vx; by += vy;
-    if (bx <= 4) { bx = 4; vx = Math.abs(vx); }
-    else if (bx + markSize >= w - 4) { bx = Math.max(4, w - 4 - markSize); vx = -Math.abs(vx); }
-    if (by <= 4) { by = 4; vy = Math.abs(vy); }
-    else if (by + markSize >= h - 4) { by = Math.max(4, h - 4 - markSize); vy = -Math.abs(vy); }
-
-    ctx.save();
-    ctx.translate(bx, by);
-    ctx.scale(scale, scale);
-    ctx.strokeStyle = "#F0B45A";
-    ctx.lineCap = "round";
-    ctx.lineJoin = "round";
-    ctx.lineWidth = 2;
-    ctx.stroke(markMain);
-    ctx.lineWidth = 1.3;
-    ctx.stroke(markBar);
-    ctx.restore();
-
-    animFrame = requestAnimationFrame(drawFrame);
+    playInFlight = true;
+    try {
+      const res = await runInWorker("step", "", "", [], { dt: dtSec });
+      playInFlight = false;
+      if (!activePlay) return;
+      if (Array.isArray(res.tones) && res.tones.length > 0) playToneEvents(res.tones);
+      if (res.frame) applyPlayFrame(res.frame);
+      if (!res.ok) {
+        activePlay = false;
+        statusEl.textContent = "Play error";
+        outputEl.textContent = res.stderr || "Canvas update failed.";
+        showTab("output");
+        return;
+      }
+      if (res.status === 0) {
+        animFrame = requestAnimationFrame(stepCanvasFrame);
+      } else {
+        activePlay = false;
+        statusEl.textContent = "Stopped (" + res.status + ")";
+      }
+    } catch {
+      playInFlight = false;
+      activePlay = false;
+    }
   }
 
-  function startCanvas() {
-    lastFrameAt = 0;
-    if (!animFrame) animFrame = requestAnimationFrame(drawFrame);
-    statusEl.textContent = "Canvas stage active";
+  function getCanvasCell(event) {
+    const bounds = canvas.getBoundingClientRect();
+    const cw = stageWidth || canvas.width;
+    const ch = stageHeight || canvas.height;
+    if (!bounds.width || !bounds.height || !cw || !ch) return { x: 0, y: 0 };
+    const scale = Math.min(bounds.width / cw, bounds.height / ch);
+    const drawW = cw * scale;
+    const drawH = ch * scale;
+    const left = bounds.left + (bounds.width - drawW) / 2;
+    const top = bounds.top + (bounds.height - drawH) / 2;
+    const x = Math.max(0, Math.min(cw - 1, Math.floor((event.clientX - left) / scale)));
+    const y = Math.max(0, Math.min(ch - 1, Math.floor((event.clientY - top) / scale)));
+    return { x, y };
   }
 
-  function stopCanvas() {
-    if (animFrame) { cancelAnimationFrame(animFrame); animFrame = 0; }
-    lastFrameAt = 0;
-  }
+  canvas.addEventListener("keydown", (event) => {
+    if (!activeCanvas) return;
+    unlockAudio();
+    if (["ArrowLeft", "ArrowRight", "ArrowUp", "ArrowDown", " "].includes(event.key)) {
+      event.preventDefault();
+    }
+    void sendPlayInteraction("keydown", { key: event.key });
+  });
+
+  canvas.addEventListener("keyup", (event) => {
+    if (!activeCanvas) return;
+    void sendPlayInteraction("keyup", { key: event.key });
+  });
+
+  canvas.addEventListener("pointermove", (event) => {
+    if (!activeCanvas) return;
+    const now = performance.now();
+    if (now - lastPointerMoveAt < 16) return;
+    lastPointerMoveAt = now;
+    const cell = getCanvasCell(event);
+    void sendPlayInteraction("pointermove", cell);
+  });
+
+  canvas.addEventListener("pointerdown", (event) => {
+    if (!activeCanvas) return;
+    unlockAudio();
+    canvas.focus({ preventScroll: true });
+    const cell = getCanvasCell(event);
+    void sendPlayInteraction("pointerdown", { ...cell, button: event.button });
+  });
+
+  canvas.addEventListener("pointerup", (event) => {
+    if (!activeCanvas) return;
+    const cell = getCanvasCell(event);
+    void sendPlayInteraction("pointerup", { ...cell, button: event.button });
+  });
 
   const initial = new URLSearchParams(window.location.search).get("sample") ?? "${escapeHtml(playgroundDefaultSample.id)}";
-  loadSample(initial, "load");
+  void loadSample(initial, "load");
 </script>`;
 
   return renderPage({
@@ -1023,9 +1323,13 @@ export function buildSite(options?: BuildSiteOptions): void {
   const repoUrl = readRepositoryUrl();
   const rev = readSourceRevision();
   const rendered = new Map<string, RenderedSample>();
+  const renderedPlay = new Map<string, RenderedSample>();
 
   for (const sample of showcaseSamples) {
     rendered.set(sample.id, compileAndRunSample(sample, tsCompiler));
+  }
+  for (const sample of playSamples) {
+    renderedPlay.set(sample.id, compileAndRunSample(sample, tsCompiler));
   }
 
   rmSync(outputDir, { recursive: true, force: true });
@@ -1035,8 +1339,8 @@ export function buildSite(options?: BuildSiteOptions): void {
   writeFileSync(join(outputDir, 'style.css'), siteCss);
   cpSync(join(root, 'brand', 'lite-favicon.svg'), join(outputDir, 'favicon.svg'));
   writeFileSync(join(outputDir, 'index.html'), renderHomePage(rendered, repoUrl, rev, lightSwitchShine));
-  writeFileSync(join(outputDir, 'gallery', 'index.html'), renderGalleryPage(rendered, repoUrl, rev, lightSwitchShine));
-  writeFileSync(join(outputDir, 'playground', 'index.html'), renderPlaygroundPage(rendered, repoUrl, rev, lightSwitchShine));
+  writeFileSync(join(outputDir, 'gallery', 'index.html'), renderGalleryPage(rendered, renderedPlay, repoUrl, rev, lightSwitchShine));
+  writeFileSync(join(outputDir, 'playground', 'index.html'), renderPlaygroundPage(rendered, renderedPlay, repoUrl, rev, lightSwitchShine));
   const compilerTs = readFileSync(join(root, 'compiler', 'bootstrap', 'compiler.ts'), 'utf8');
   writeFileSync(join(outputDir, 'playground', 'compiler.js'), stripTypeScriptTypes(compilerTs, { mode: 'strip' }));
   const compilerCTs = readFileSync(buildCCompiler().path, 'utf8');
@@ -1048,16 +1352,18 @@ export function buildSite(options?: BuildSiteOptions): void {
   const highlightTsSrc = readFileSync(join(root, 'site', 'highlight.ts'), 'utf8');
   writeFileSync(join(outputDir, 'playground', 'highlight.js'), stripTypeScriptTypes(highlightTsSrc, { mode: 'strip' }));
   writeFileSync(join(outputDir, 'playground', 'worker.js'), playgroundWorkerJs);
-  const coreDir = join(root, 'lib', 'core');
   const stdlib: Record<string, Readonly<{ path: string; display: string; identity: string; text: string }>> = {};
-  for (const name of readdirSync(coreDir).filter(f => f.endsWith('.lts')).sort()) {
-    const relPath = `lib/core/${name}`;
-    const text = readFileSync(join(coreDir, name), 'utf8');
-    const modName = `core/${name.slice(0, -4)}`;
-    stdlib[modName] = { path: relPath, display: relPath, identity: sourceModuleIdentity(text), text };
+  for (const ns of ['core', 'extra'] as const) {
+    const libDir = join(root, 'lib', ns);
+    for (const name of readdirSync(libDir).filter(f => f.endsWith('.lts')).sort()) {
+      const relPath = `lib/${ns}/${name}`;
+      const text = readFileSync(join(libDir, name), 'utf8');
+      const modName = `${ns}/${name.slice(0, -4)}`;
+      stdlib[modName] = { path: relPath, display: relPath, identity: sourceModuleIdentity(text), text };
+    }
   }
   writeFileSync(join(outputDir, 'playground', 'stdlib.json'), JSON.stringify(stdlib));
-  for (const sample of rendered.values()) {
+  for (const sample of [...rendered.values(), ...renderedPlay.values()]) {
     writeFileSync(
       join(outputDir, 'playground', 'samples', `${sample.id}.json`),
       JSON.stringify({

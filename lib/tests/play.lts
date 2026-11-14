@@ -1,0 +1,81 @@
+audio := import "extra/audio";
+board := import "extra/board";
+canvas := import "extra/canvas";
+test := import "core/test";
+
+countList := fn(values: List<Int>): Int {
+    var count := 0;
+    loop values as value {
+        voidValue := value;
+        count += 1;
+    }
+    count
+}
+
+opaqueRed := canvas.rgb(255, 0, 0);
+test.checkInt("rgb opaque alpha", 4294901760, opaqueRed);
+
+semiBlue := canvas.rgba(-5, 300, 128, 128);
+expectedSemiBlue := (128 * 16777216) + (255 * 256) + 128;
+test.checkInt("rgba clamped pack", expectedSemiBlue, semiBlue);
+
+ctx := canvas.create(width = 8, height = 6, title = "Static Art");
+test.checkInt("create width", 8, ctx.width);
+test.checkInt("create height", 6, ctx.height);
+test.checkText("create title", "Static Art", ctx.title);
+test.checkBool("create not playing", false, canvas.isPlaying());
+
+canvas.clear(opaqueRed);
+canvas.setPixel(-1, 0, semiBlue);
+canvas.setPixel(8, 0, semiBlue);
+canvas.setPixel(2, 3, semiBlue);
+canvas.fillRect(0, 0, 0, 2, semiBlue);
+canvas.fillRect(1, 1, 2, 2, semiBlue);
+
+ops1 := canvas.takeOps();
+test.checkInt("clear + pixel + rect op length", 2 + 6 + 6, countList(ops1));
+test.checkInt("clear opcode", 1, ops1[0]);
+test.checkInt("clear color", opaqueRed, ops1[1]);
+test.checkInt("pixel opcode", 2, ops1[2]);
+test.checkInt("rect width", 2, ops1[11]);
+test.checkInt("ops drained", 0, countList(canvas.getOps()));
+
+playCtx := canvas.play(width = 12, height = 10, title = "Bounce");
+test.checkBool("play active", true, canvas.isPlaying());
+test.checkInt("play width", 12, playCtx.width);
+
+resized := canvas.resize(16, 14);
+test.checkInt("resize width", 16, resized.width);
+test.checkInt("resize height", 14, resized.height);
+test.checkText("resize preserves title", "Bounce", resized.title);
+test.checkBool("resize preserves play mode", true, canvas.isPlaying());
+
+grid := board.fillGrid(canvas.rgb(10, 20, 30));
+test.checkInt("fillGrid matches latest canvas size", 16 * 14, countList(grid));
+canvas.draw(grid);
+test.checkInt("drawn buffer length", 16 * 14, countList(canvas.getPixels()));
+
+board.drawRect(1, 1, 4, 3, canvas.rgb(255, 255, 255));
+board.drawLine(0, 0, 3, 3, canvas.rgb(255, 0, 255));
+board.fillCircle(8, 7, 1, canvas.rgb(0, 255, 0));
+board.drawSprite(2, 2, ["#.", ".#"], "#", canvas.rgb(255, 255, 0));
+test.checkBool("board helpers emit ops", true, countList(canvas.takeOps()) > 0);
+
+audio.tone(19, 100, 50);
+audio.tone(20001, 100, 50);
+audio.tone(440, 0, 50);
+audio.tone(440, 3001, 50);
+audio.tone(440, 100, 0);
+audio.tone(440, 100, 101);
+test.checkInt("invalid tones ignored", 0, countList(audio.drain()));
+
+audio.tone(440, 180, 25);
+note: audio.Note = (frequency = 523, durationMs = 120, volume = 40);
+audio.playNote(note);
+tones := audio.drain();
+test.checkInt("two valid tones queued", 6, countList(tones));
+test.checkInt("first tone freq", 440, tones[0]);
+test.checkInt("second tone volume", 40, tones[5]);
+test.checkInt("audio drain clears queue", 0, countList(audio.drain()));
+
+test.done("play");

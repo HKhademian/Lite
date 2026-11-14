@@ -923,22 +923,82 @@ details.gallery-code pre.code-block {
   flex: 1 1 auto;
   min-height: 0;
   display: flex;
+  flex-direction: column;
   padding: 0;
   overflow: hidden;
+  background: #0B0C0E;
+}
+.pg-canvas-bar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.5rem;
+  padding: 0.4rem 0.75rem;
+  border-bottom: 1px solid var(--border);
+  background: var(--surface);
+  font-size: 0.78rem;
+  color: var(--ink-muted);
+}
+.pg-canvas-title {
+  color: var(--ink);
+  font-weight: 500;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.pg-canvas-tools {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+  flex-shrink: 0;
+}
+.pg-mute-btn {
+  border: 1px solid var(--border);
+  border-radius: 5px;
+  background: var(--surface-elevated);
+  color: var(--ink-muted);
+  font-family: var(--font-sans);
+  font-size: 0.74rem;
+  padding: 0.16rem 0.5rem;
+  cursor: pointer;
+}
+.pg-mute-btn:hover {
+  color: var(--ink);
+  border-color: var(--accent);
+}
+.pg-mute-btn[aria-pressed="true"] {
+  color: var(--accent);
+  border-color: var(--accent);
+}
+.pg-canvas-stage {
+  position: relative;
+  flex: 1 1 auto;
+  min-height: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0.65rem;
   background: #0B0C0E;
 }
 .pg-canvas {
   display: block;
   width: 100%;
   height: 100%;
-  background: #0B0C0E;
+  object-fit: contain;
+  image-rendering: pixelated;
+  image-rendering: crisp-edges;
+  background: transparent;
+  outline: none;
+  cursor: crosshair;
+}
+.pg-canvas:focus-visible {
+  box-shadow: 0 0 0 2px var(--accent);
+  border-radius: 4px;
 }
 .pg-canvas-wrap .pg-status {
-  position: absolute;
-  right: 0.75rem;
-  bottom: 0.5rem;
-  pointer-events: none;
-  opacity: 0.7;
+  position: static;
+  pointer-events: auto;
+  opacity: 0.9;
 }
 
 /* Syntax tokens */

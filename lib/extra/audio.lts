@@ -1,0 +1,33 @@
+/* Optional Web Audio tone queue for Lite Play programs. */
+
+list := import "core/list";
+
+/** Validated tone request in hertz (20..20000), milliseconds (1..3000), and percent volume (1..100). */
+pub Note := type (frequency: Int, durationMs: Int, volume: Int);
+
+var toneQueue: mut List<Int> = [];
+
+/** Queues a tone in hertz (20..20000), milliseconds (1..3000), and volume (1..100); out-of-range calls are ignored. */
+pub tone := fn(frequency: Int, durationMs: Int, volume: Int): Unit {
+    if frequency < 20 or frequency > 20000 { return; }
+    if durationMs <= 0 or durationMs > 3000 { return; }
+    if volume <= 0 or volume > 100 { return; }
+    list.pushBack(mut toneQueue, frequency);
+    list.pushBack(mut toneQueue, durationMs);
+    list.pushBack(mut toneQueue, volume);
+}
+
+/** Queues one structured `Note` value if all fields are within valid playback bounds. */
+pub playNote := fn(note: Note): Unit {
+    tone(frequency = note.frequency, durationMs = note.durationMs, volume = note.volume);
+}
+
+/** Returns queued `[frequency, durationMs, volume, ...]` triples and clears the internal queue. */
+pub drain := fn(): List<Int> {
+    out := toneQueue;
+    toneQueue = [];
+    out
+}
+
+/** Host bridge: drains queued tone triples for the browser Play stage. */
+pub litePlayAudioDrain := fn(): List<Int> { drain() }

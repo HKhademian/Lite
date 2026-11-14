@@ -1,0 +1,150 @@
+/* Optional Play canvas drawing buffer and RGBA context support. */
+
+list := import "core/list";
+
+/** Packed 32-bit ARGB color (`0xAARRGGBB`) stored inside Int. */
+pub Color := type Int;
+
+/** Canvas dimensions and window title returned by setup and query calls. */
+pub Context := type (width: Int, height: Int, title: String);
+
+var canvasWidth := 0;
+var canvasHeight := 0;
+var canvasTitle := "";
+var canvasPlaying := false;
+var canvasDrawCount := 0;
+var canvasPixels: mut List<Int> = [];
+var canvasOps: mut List<Int> = [];
+
+clampByte := fn(value: Int): Int {
+    if value < 0 { 0 } else if value > 255 { 255 } else { value }
+}
+
+clampSize := fn(value: Int): Int {
+    if value < 0 { 0 } else { value }
+}
+
+/** Packs RGBA color channels (each clamped to 0..255) into one Color integer. */
+pub rgba := fn(red: Int, green: Int, blue: Int, alpha: Int): Color {
+    r := clampByte(red);
+    g := clampByte(green);
+    b := clampByte(blue);
+    a := clampByte(alpha);
+    (a * 16777216) + (r * 65536) + (g * 256) + b
+}
+
+/** Packs opaque RGB color channels (each clamped to 0..255) into one Color integer. */
+pub rgb := fn(red: Int, green: Int, blue: Int): Color {
+    rgba(=red, =green, =blue, alpha = 255)
+}
+
+/** Configures a static canvas context using `width`, `height`, and `title`. */
+pub create := fn(width: Int, height: Int, title: String): Context {
+    canvasWidth = clampSize(width);
+    canvasHeight = clampSize(height);
+    canvasTitle = title;
+    canvasPlaying = false;
+    canvasPixels = [];
+    canvasOps = [];
+    canvasDrawCount += 1;
+    (width = canvasWidth, height = canvasHeight, title = canvasTitle)
+}
+
+/** Configures an interactive animated canvas context and starts Play mode. */
+pub play := fn(width: Int, height: Int, title: String): Context {
+    canvasWidth = clampSize(width);
+    canvasHeight = clampSize(height);
+    canvasTitle = title;
+    canvasPlaying = true;
+    canvasPixels = [];
+    canvasOps = [];
+    canvasDrawCount += 1;
+    (width = canvasWidth, height = canvasHeight, title = canvasTitle)
+}
+
+/** Resizes the active canvas while keeping its play mode and title. */
+pub resize := fn(width: Int, height: Int): Context {
+    canvasWidth = clampSize(width);
+    canvasHeight = clampSize(height);
+    canvasPixels = [];
+    canvasOps = [];
+    canvasDrawCount += 1;
+    (width = canvasWidth, height = canvasHeight, title = canvasTitle)
+}
+
+/** Returns the active canvas context snapshot. */
+pub context := fn(): Context {
+    (width = canvasWidth, height = canvasHeight, title = canvasTitle)
+}
+
+/** Clears the active canvas using its latest configured dimensions and `color`. */
+pub clear := fn(color: Color): Unit {
+    canvasPixels = [];
+    canvasOps = [1, color];
+}
+
+/** Draws a single pixel at `(x, y)` on the active canvas. */
+pub setPixel := fn(x: Int, y: Int, color: Color): Unit {
+    if canvasWidth <= 0 or canvasHeight <= 0 { return; }
+    if x < 0 or x >= canvasWidth or y < 0 or y >= canvasHeight { return; }
+    list.pushBack(mut canvasOps, 2);
+    list.pushBack(mut canvasOps, x);
+    list.pushBack(mut canvasOps, y);
+    list.pushBack(mut canvasOps, 1);
+    list.pushBack(mut canvasOps, 1);
+    list.pushBack(mut canvasOps, color);
+}
+
+/** Fills an axis-aligned rectangle `(x, y, width, height)` using alpha blending. */
+pub fillRect := fn(x: Int, y: Int, width: Int, height: Int, color: Color): Unit {
+    if canvasWidth <= 0 or canvasHeight <= 0 or width <= 0 or height <= 0 { return; }
+    list.pushBack(mut canvasOps, 2);
+    list.pushBack(mut canvasOps, x);
+    list.pushBack(mut canvasOps, y);
+    list.pushBack(mut canvasOps, width);
+    list.pushBack(mut canvasOps, height);
+    list.pushBack(mut canvasOps, color);
+}
+
+/** Submits a row-major `width * height` pixel list for the latest canvas dimensions. */
+pub draw := fn(pixels: List<Color>): Unit {
+    canvasPixels = pixels;
+    canvasOps = [];
+    canvasDrawCount += 1;
+}
+
+/** Returns the latest canvas width in pixels. */
+pub getWidth := fn(): Int { canvasWidth }
+
+/** Returns the latest canvas height in pixels. */
+pub getHeight := fn(): Int { canvasHeight }
+
+/** Returns the latest canvas title. */
+pub getTitle := fn(): String { canvasTitle }
+
+/** True when interactive Play mode was started with `play(...)`. */
+pub isPlaying := fn(): Bool { canvasPlaying }
+
+/** Returns a snapshot of the most recently drawn row-major pixel buffer. */
+pub getPixels := fn(): List<Int> { canvasPixels }
+
+/** Returns pending draw commands without clearing them. */
+pub getOps := fn(): List<Int> { canvasOps }
+
+/** Returns pending draw commands and clears the internal command queue. */
+pub takeOps := fn(): List<Int> {
+    out := canvasOps;
+    canvasOps = [];
+    out
+}
+
+/** Host bridge: returns current canvas metadata for the browser Play stage. */
+pub litePlayCanvasSnapshot := fn(): (width: Int, height: Int, title: String, playing: Bool, drawCount: Int) {
+    (width = canvasWidth, height = canvasHeight, title = canvasTitle, playing = canvasPlaying, drawCount = canvasDrawCount)
+}
+
+/** Host bridge: returns current pixel buffer for the browser Play stage. */
+pub litePlayCanvasPixels := fn(): List<Int> { canvasPixels }
+
+/** Host bridge: drains queued draw ops for the browser Play stage. */
+pub litePlayCanvasTakeOps := fn(): List<Int> { takeOps() }

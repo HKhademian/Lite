@@ -1,0 +1,46 @@
+/* Interactive pixel canvas: move or drag pointer to paint, Space clears. */
+
+audio := import "extra/audio";
+canvas := import "extra/canvas";
+io := import "core/io";
+
+ctx := canvas.play(width = 24, height = 18, title = "Pointer Paint · Move to Draw, Space Clears");
+bg := canvas.rgb(12, 18, 30);
+softTrail := canvas.rgba(110, 196, 216, 125);
+palette: List<canvas.Color> = [
+canvas.rgb(240, 180, 90),
+canvas.rgb(137, 201, 131),
+canvas.rgb(198, 154, 232),
+canvas.rgb(110, 196, 216),
+];
+var colorIdx := 0;
+
+onCanvasInit := fn(): Unit {
+    canvas.clear(bg);
+    canvas.setPixel(ctx.width / 2, ctx.height / 2, palette[colorIdx]);
+}
+
+onCanvasPointerMove := fn(col: Int, row: Int): Unit {
+    canvas.setPixel(col, row, softTrail);
+}
+
+onCanvasPointerDown := fn(col: Int, row: Int, button: Int): Unit {
+    if button =!= 0 {
+        colorIdx = (colorIdx + 1) % 4;
+    }
+    canvas.fillRect(col, row, 2, 2, palette[colorIdx]);
+    audio.tone(frequency = 330 + (colorIdx * 110), durationMs = 60, volume = 16);
+}
+
+onCanvasKeyDown := fn(key: String): Unit {
+    if key == " " or key == "c" {
+        canvas.clear(bg);
+        audio.tone(frequency = 220, durationMs = 80, volume = 15);
+    } else if key == "ArrowRight" or key == "ArrowLeft" {
+        colorIdx = (colorIdx + 1) % 4;
+        audio.tone(frequency = 440 + (colorIdx * 65), durationMs = 50, volume = 15);
+    }
+}
+
+canvas.clear(bg);
+io.outputLine("Canvas:", ctx.title, ctx.width, "x", ctx.height);

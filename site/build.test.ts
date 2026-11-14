@@ -8,6 +8,7 @@ import { buildSite, parseBuildArgs } from './build.ts';
 import { formatCodeView } from './code-view.ts';
 import { heroSample, sampleGroups, showcaseSamples } from './groups.ts';
 import { escapeHtml, highlightC, highlightLite, highlightTs } from './highlight.ts';
+import { playSamples } from './play-samples.ts';
 import { stripLiteTs } from './strip-ts.ts';
 
 const root = dirname(import.meta.dirname);
@@ -104,9 +105,21 @@ test('buildSite generates static pages and metadata in dist/site', () => {
   assert(existsSync(join(out, 'playground', 'code-view.js')));
   assert(existsSync(join(out, 'playground', 'highlight.js')));
   assert(playground.includes('id="tab-canvas"'));
+  assert(playground.includes('id="pg-canvas-title"'));
+  assert(playground.includes('id="pg-mute"'));
   assert(playground.includes('id="pg-fps"'));
+  assert(gallery.includes('id="group-play"'));
+  const stdlib = JSON.parse(readFileSync(join(out, 'playground', 'stdlib.json'), 'utf8')) as Record<string, unknown>;
+  assert('extra/canvas' in stdlib);
+  assert('extra/board' in stdlib);
+  assert('extra/audio' in stdlib);
   for (const sample of showcaseSamples) {
     assert(existsSync(join(out, 'playground', 'samples', `${sample.id}.json`)), `missing playground payload for ${sample.id}`);
+  }
+  for (const sample of playSamples) {
+    assert(existsSync(join(out, 'playground', 'samples', `${sample.id}.json`)), `missing play payload for ${sample.id}`);
+    assert(playground.includes(`value="${sample.id}"`), `missing playground option for ${sample.id}`);
+    assert(gallery.includes(`sample-${sample.id}`), `missing gallery card for ${sample.id}`);
   }
   const buildInfo = JSON.parse(readFileSync(join(out, 'build.json'), 'utf8')) as { samples: number; shortCommit: string; timestamp: string; lightSwitchShine: boolean };
   assert.equal(buildInfo.samples, showcaseSamples.length);
@@ -318,6 +331,105 @@ test('emitted playground worker.js compiles and runs edited Lite code', async ()
     assert.equal(errRes.id, 3);
     assert.equal(errRes.ok, false);
     assert(errRes.stderr.includes('unknownVar'));
+
+    const staticRes = await send({
+      id: 4,
+      action: 'run',
+      source: [
+        'canvas := import "extra/canvas";',
+        'ctx := canvas.create(width = 8, height = 6, title = "Static");',
+        'canvas.clear(canvas.rgba(10, 20, 30, 128));',
+        'canvas.setPixel(2, 3, canvas.rgb(255, 0, 0));',
+      ].join('\n'),
+      stdin: '',
+      args: [],
+    }) as unknown as {
+      ok: boolean;
+      play: unknown;
+      canvas: { width: number; height: number; title: string; ops: number[] } | null;
+    };
+    assert.equal(staticRes.ok, true);
+    assert.equal(staticRes.play, null);
+    assert(staticRes.canvas !== null);
+    assert.equal(staticRes.canvas.width, 8);
+    assert.equal(staticRes.canvas.height, 6);
+    assert.equal(staticRes.canvas.title, 'Static');
+    assert.equal(staticRes.canvas.ops[0], 1);
+
+    const playRes = await send({
+      id: 5,
+      action: 'run',
+      source: [
+        'audio := import "extra/audio";',
+        'canvas := import "extra/canvas";',
+        'ctx := canvas.play(width = 16, height = 12, title = "Live");',
+        'bg := canvas.rgb(0, 0, 0);',
+        'var x := 1;',
+        'onCanvasInit := fn(): Unit { canvas.clear(bg); }',
+        'onCanvasUpdate := fn(dt: Float): Int { voidDt := dt; canvas.clear(bg); canvas.setPixel(x, 2, canvas.rgb(255, 255, 255)); 0 }',
+        'onCanvasKeyDown := fn(key: String): Unit { if key == "ArrowRight" { x += 1; audio.tone(440, 100, 20); } }',
+        'onCanvasPointerDown := fn(col: Int, row: Int, button: Int): Unit { voidBtn := button; canvas.setPixel(col, row, canvas.rgba(0, 255, 0, 180)); audio.tone(523, 80, 15); }',
+      ].join('\n'),
+      stdin: '',
+      args: [],
+    }) as unknown as {
+      ok: boolean;
+      play: { width: number; height: number; title: string; hasUpdate: boolean; status: number; ops: number[] } | null;
+      tones: number[];
+    };
+    assert.equal(playRes.ok, true);
+    assert(playRes.play !== null);
+    assert.equal(playRes.play.width, 16);
+    assert.equal(playRes.play.height, 12);
+    assert.equal(playRes.play.hasUpdate, true);
+    assert.equal(playRes.play.status, 0);
+
+    const stepRes = await send({ id: 6, action: 'step', dt: 0.016 }) as unknown as {
+      ok: boolean;
+      action: string;
+      status: number;
+      frame: { ops: number[] };
+    };
+    assert.equal(stepRes.ok, true);
+    assert.equal(stepRes.action, 'step');
+    assert.equal(stepRes.status, 0);
+    assert.equal(stepRes.frame.ops[0], 1);
+
+    const keyRes = await send({ id: 7, action: 'keydown', key: 'ArrowRight' }) as unknown as {
+      ok: boolean;
+      tones: number[];
+    };
+    assert.equal(keyRes.ok, true);
+    assert.deepEqual(keyRes.tones, [440, 100, 20]);
+
+    const ptrRes = await send({ id: 8, action: 'pointerdown', x: 5, y: 4, button: 0 }) as unknown as {
+      ok: boolean;
+      frame: { ops: number[] };
+      tones: number[];
+    };
+    assert.equal(ptrRes.ok, true);
+    assert.equal(ptrRes.frame.ops[0], 2);
+    assert.equal(ptrRes.frame.ops[1], 5);
+    assert.equal(ptrRes.frame.ops[2], 4);
+    assert.deepEqual(ptrRes.tones, [523, 80, 15]);
+
+    await mockSelf.onmessage!({ data: { action: 'stop' } });
+
+    const aliasRes = await send({
+      id: 9,
+      action: 'run',
+      source: [
+        'canvas := import "extra/canvas";',
+        'ctx := canvas.play(width = 4, height = 4, title = "Alias");',
+        'canvas_onUpdate := fn(dt: Float): Int { voidDt := dt; canvas.clear(canvas.rgb(1, 2, 3)); 0 }',
+      ].join('\n'),
+      stdin: '',
+      args: [],
+    }) as unknown as { ok: boolean; play: { hasUpdate: boolean; ops: number[] } | null };
+    assert.equal(aliasRes.ok, true);
+    assert.equal(aliasRes.play?.hasUpdate, true);
+    assert.equal(aliasRes.play?.ops[0], 1);
+    await mockSelf.onmessage!({ data: { action: 'stop' } });
   } finally {
     (globalThis as unknown as { self?: unknown }).self = prevSelf;
     globalThis.fetch = prevFetch;

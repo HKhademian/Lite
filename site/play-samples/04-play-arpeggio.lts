@@ -1,0 +1,101 @@
+/* Synth arpeggio: press Space to toggle playback, Arrows to step notes. */
+
+audio := import "extra/audio";
+board := import "extra/board";
+canvas := import "extra/canvas";
+io := import "core/io";
+
+ctx := canvas.play(width = 16, height = 12, title = "Synth Arpeggio · Space or Click Pads");
+bg := canvas.rgb(10, 12, 20);
+dimPad := canvas.rgba(255, 255, 255, 34);
+activeGlow := canvas.rgba(255, 255, 255, 210);
+padColors: List<canvas.Color> = [
+canvas.rgb(110, 196, 216),
+canvas.rgb(137, 201, 131),
+canvas.rgb(240, 180, 90),
+canvas.rgb(198, 154, 232),
+];
+notes: List<audio.Note> = [
+(frequency = 262, durationMs = 160, volume = 20),
+(frequency = 330, durationMs = 160, volume = 20),
+(frequency = 392, durationMs = 160, volume = 20),
+(frequency = 523, durationMs = 200, volume = 22),
+];
+
+var stepIndex := 0;
+var playing := false;
+var elapsed := 0.0;
+var spaceHeld := false;
+
+drawPads := fn(): Unit {
+    canvas.clear(bg);
+    var idx := 0;
+    loop idx < 4 {
+        x := 2 + (idx * 3);
+        canvas.fillRect(x, 4, 2, 4, dimPad);
+        if idx == stepIndex {
+            canvas.fillRect(x, 3, 2, 5, padColors[idx]);
+            canvas.fillRect(x, 9, 2, 1, activeGlow);
+        } else {
+            canvas.fillRect(x, 5, 2, 3, padColors[idx]);
+        }
+        idx += 1;
+    }
+    if playing {
+        board.fillCircle(2, 2, 1, canvas.rgb(137, 201, 131));
+    }
+}
+
+triggerStep := fn(): Unit {
+    audio.playNote(notes[stepIndex]);
+    drawPads();
+}
+
+onCanvasInit := fn(): Unit {
+    drawPads();
+}
+
+onCanvasUpdate := fn(dt: Float): Int {
+    if playing {
+        elapsed = elapsed + dt;
+        if elapsed >= 0.28 {
+            elapsed = 0.0;
+            stepIndex = (stepIndex + 1) % 4;
+            triggerStep();
+        }
+    }
+    0
+}
+
+onCanvasKeyDown := fn(key: String): Unit {
+    if key == " " and not spaceHeld {
+        spaceHeld = true;
+        playing = not playing;
+        elapsed = 0.0;
+        if playing { triggerStep(); } else { drawPads(); }
+    } else if key == "ArrowRight" or key == "d" {
+        stepIndex = (stepIndex + 1) % 4;
+        triggerStep();
+    } else if key == "ArrowLeft" or key == "a" {
+        stepIndex = (stepIndex + 3) % 4;
+        triggerStep();
+    }
+}
+
+onCanvasKeyUp := fn(key: String): Unit {
+    if key == " " { spaceHeld = false; }
+}
+
+onCanvasPointerDown := fn(col: Int, row: Int, button: Int): Unit {
+    voidBtn := button;
+    if row >= 3 and row <= 9 and col >= 2 and col <= 13 {
+        idx := (col - 2) / 3;
+        if idx >= 0 and idx < 4 {
+            stepIndex = idx;
+            triggerStep();
+        }
+    }
+}
+
+drawPads();
+io.outputLine("Canvas:", ctx.title, ctx.width, "x", ctx.height);
