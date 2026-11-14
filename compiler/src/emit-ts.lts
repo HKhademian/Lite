@@ -242,7 +242,6 @@ emitIntArithmeticHelpers := fn(calls: String, source: String, prefix: String): U
 /** Emits shared buffered byte input and strict incremental UTF-8 decoding for the temporary input helpers. */
 emitInputHelpers := fn(calls: String): Unit {
     if not (usesBuiltin(calls, "inputAll") or usesBuiltin(calls, "inputLine") or usesBuiltin(calls, "inputInt") or usesBuiltin(calls, "inputFloat")) { return; }
-    io.outputLine("declare const TextDecoder: { new(label: string, options: { fatal: boolean }): { decode(input?: Uint8Array, options?: { stream: boolean }): string } };");
     io.outputLine("let lite$decoder = new TextDecoder(\"utf-8\", { fatal: true });");
     io.outputLine("const lite$bytes = new Uint8Array(4096);");
     io.outputLine("let lite$byteAt = 0, lite$byteEnd = 0;");
@@ -398,8 +397,9 @@ emitProcessDecl := fn(calls: String): Unit {
         io.outputLine("    };");
     }
     io.outputLine("};");
-    if usesBuiltin(calls, "fsReadText") {
-        io.outputLine("declare const TextDecoder: { new (label: string, options?: { fatal?: boolean }): { decode(input: Uint8Array): string } };");
+    needInputDecoder := usesBuiltin(calls, "inputAll") or usesBuiltin(calls, "inputLine") or usesBuiltin(calls, "inputInt") or usesBuiltin(calls, "inputFloat");
+    if needInputDecoder or usesBuiltin(calls, "fsReadText") {
+        io.outputLine("declare const TextDecoder: { new (label: string, options?: { fatal?: boolean }): { decode(input?: Uint8Array, options?: { stream?: boolean }): string } };");
     }
     io.outputLine("");
 }

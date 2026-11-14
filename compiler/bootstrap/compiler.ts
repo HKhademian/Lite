@@ -8,6 +8,7 @@ declare const process: {
         writeSync(fd: number, text: string): number;
     };
 };
+declare const TextDecoder: { new (label: string, options?: { fatal?: boolean }): { decode(input?: Uint8Array, options?: { stream?: boolean }): string } };
 
 let lite$sourceProvider: ((importer: string, spec: string) => { path: string; display: string; identity: string; text: string }) | undefined;
 function lite$readSource(importer: string, spec: string): { path: string; display: string; identity: string; text: string } {
@@ -19,7 +20,6 @@ function lite$inputArgs(): string[] {
     return process.argv.slice(2);
 }
 
-declare const TextDecoder: { new(label: string, options: { fatal: boolean }): { decode(input?: Uint8Array, options?: { stream: boolean }): string } };
 let lite$decoder = new TextDecoder("utf-8", { fatal: true });
 const lite$bytes = new Uint8Array(4096);
 let lite$byteAt = 0, lite$byteEnd = 0;
@@ -12880,7 +12880,6 @@ export function main(lite$write?: (text: string) => void, lite$sourceProviderInp
         if ((!((((((((liteFn$emit__ts$usesBuiltin(lite_calls, "inputAll")) || (liteFn$emit__ts$usesBuiltin(lite_calls, "inputLine")))) || (liteFn$emit__ts$usesBuiltin(lite_calls, "inputInt")))) || (liteFn$emit__ts$usesBuiltin(lite_calls, "inputFloat"))))))) {
             return;
         }
-        lite$emit(("declare const TextDecoder: { new(label: string, options: { fatal: boolean }): { decode(input?: Uint8Array, options?: { stream: boolean }): string } };") + "\n");
         lite$emit("let lite$decoder = new TextDecoder(\"utf-8\", { fatal: true });" + "\n");
         lite$emit("const lite$bytes = new Uint8Array(4096);" + "\n");
         lite$emit("let lite$byteAt = 0, lite$byteEnd = 0;" + "\n");
@@ -13039,8 +13038,10 @@ export function main(lite$write?: (text: string) => void, lite$sourceProviderInp
             lite$emit("    };" + "\n");
         }
         lite$emit("};" + "\n");
-        if (liteFn$emit__ts$usesBuiltin(lite_calls, "fsReadText")) {
-            lite$emit(("declare const TextDecoder: { new (label: string, options?: { fatal?: boolean }): { decode(input: Uint8Array): string } };") + "\n");
+        const lite_needInputDecoder = ((((((liteFn$emit__ts$usesBuiltin(lite_calls, "inputAll")) || (liteFn$emit__ts$usesBuiltin(lite_calls, "inputLine")))) || (liteFn$emit__ts$usesBuiltin(lite_calls, "inputInt")))) || (liteFn$emit__ts$usesBuiltin(lite_calls, "inputFloat")));
+        void lite_needInputDecoder;
+        if (((lite_needInputDecoder) || (liteFn$emit__ts$usesBuiltin(lite_calls, "fsReadText")))) {
+            lite$emit(("declare const TextDecoder: { new (label: string, options?: { fatal?: boolean }): { decode(input?: Uint8Array, options?: { stream?: boolean }): string } };") + "\n");
         }
         lite$emit("" + "\n");
     }
@@ -13668,7 +13669,7 @@ export function main(lite$write?: (text: string) => void, lite$sourceProviderInp
                     lite_line = ((lite_line) + (" + \" \" + "));
                 }
                 lite_line = ((lite_line) + (liteFn$emit__ts$reportArgumentCode(lite_item)));
-                lite_count = lite$addInt(lite_count, 1n, 56730);
+                lite_count = lite$addInt(lite_count, 1n, 56771);
             }
         }
         if ((!(lite_mainStopped))) {

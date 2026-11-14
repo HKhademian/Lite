@@ -4014,8 +4014,10 @@ test('core os/fs/process/crypto/time host bindings, standalone CLI execution, an
 
   const standaloneCompiled = compileTs({
     text: [
+      'fs := import "core/fs";',
       'proc := import "core/process";',
       'io := import "core/io";',
+      'if proc.entryPath() == "" { _ := io.inputAll(""); _ := fs.readText("."); }',
       'io.outputLine(proc.entryPath() =!= "", io.inputArgs());',
     ].join('\n'),
     name: fixtureName,

@@ -1,8 +1,8 @@
 {
-  "note": "Reviewed 2026-11-14 after adding core/fs, core/process, core/crypto, core/time host bindings and standalone CLI entry execution. All 69 TS/C corpus artifact hashes and 25 rejection cases verified.",
+  "note": "Reviewed 2026-11-14 after deduplicating ambient TextDecoder declarations in emit-ts.lts across input and fs.readText. All 69 TS/C corpus artifact hashes and 25 rejection cases verified.",
   "recorded": "2026-11-14",
-  "sourceSha256": "e79d576b5e07329a5975ca52936fcb5e9447529a5229520549f4a80fcc833a1a",
-  "compilerSha256": "d936cf944f172c43b586b499d307b327a706c447eefa58fe36b0716b762b1f7e",
+  "sourceSha256": "d3dac02368d6a45c62fc3abea02ea83772e7965a64f00d23615fa5b35a856b0c",
+  "compilerSha256": "ed0280e940adc031255a5d55d37e5f179215f3ba94930c5fdc0d4ce4e31b8bbb",
   "programCases": 69,
   "rejectedCases": 25,
   "artifacts": [
