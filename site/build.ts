@@ -709,6 +709,13 @@ function renderPlaygroundPage(
       </div>
       <div class="pg-actions">
         <span id="pg-status" class="pg-status" aria-live="polite">Ready</span>
+        <button id="pg-pause" class="pg-pause-btn" type="button" aria-pressed="false" title="Pause canvas events" hidden>
+          <svg viewBox="0 0 16 16" width="11" height="11" fill="currentColor" aria-hidden="true">
+            <g class="pg-icon-pause"><rect x="3" y="2.5" width="3.5" height="11" rx="0.8"/><rect x="9.5" y="2.5" width="3.5" height="11" rx="0.8"/></g>
+            <path class="pg-icon-resume" d="M4 2.5v11l9-5.5-9-5.5Z"/>
+          </svg>
+          <span id="pg-pause-label">Pause</span>
+        </button>
         <button id="pg-copy" class="pg-copy-btn" type="button" aria-label="Copy inspector content">Copy</button>
       </div>
     </div>
@@ -768,6 +775,8 @@ function renderPlaygroundPage(
   const resetBtn = document.getElementById("pg-reset");
   const compileBtn = document.getElementById("pg-compile");
   const playBtn = document.getElementById("pg-play");
+  const pauseBtn = document.getElementById("pg-pause");
+  const pauseLabelEl = document.getElementById("pg-pause-label");
   const copyBtn = document.getElementById("pg-copy");
   const statusEl = document.getElementById("pg-status");
   const fileEl = document.getElementById("pg-file");
@@ -805,6 +814,9 @@ function renderPlaygroundPage(
   let playInFlight = false;
   let activePlay = false;
   let activeCanvas = false;
+  let playableCanvas = false;
+  let canvasPaused = false;
+  let playExitStatus = 0;
   let audioMuted = false;
   let audioContext = null;
 
@@ -833,6 +845,7 @@ function renderPlaygroundPage(
     }
     codeModesBar.hidden = name !== "ts" && name !== "c";
     copyBtn.hidden = name === "canvas";
+    pauseBtn.hidden = !(name === "canvas" && playableCanvas);
     if (name === "canvas") resumeCanvasLoop();
     else pauseCanvasLoop();
     if (name === "c") void compileCForEditor();
@@ -1055,19 +1068,27 @@ function renderPlaygroundPage(
         applyPlayFrame(frame);
         tabCanvas.hidden = false;
         activeCanvas = true;
+        canvasPaused = false;
         if (res.play) {
           hasPlayLoop = Boolean(res.play.hasUpdate);
-          activePlay = hasPlayLoop && res.play.status === 0;
-          statusEl.textContent = activePlay ? "Playing" : (hasPlayLoop ? "Stopped (" + res.play.status + ")" : "Interactive ready");
+          playExitStatus = Number(res.play.status ?? 0);
+          activePlay = hasPlayLoop && playExitStatus === 0;
+          playableCanvas = true;
           showTab("canvas");
+          syncPauseUi(true);
           canvas.focus({ preventScroll: true });
         } else {
           hasPlayLoop = false;
+          playExitStatus = 0;
           activePlay = false;
+          playableCanvas = false;
+          syncPauseUi(false);
           statusEl.textContent = "Rendered canvas (in browser)";
           showTab("canvas");
         }
       } else {
+        playableCanvas = false;
+        syncPauseUi(false);
         tabCanvas.hidden = true;
         showTab("output");
         statusEl.textContent = "Exited 0 (in browser)";
@@ -1084,6 +1105,39 @@ function renderPlaygroundPage(
   resetBtn.addEventListener("click", () => { unlockAudio(); void loadSample(select.value, "load"); });
   compileBtn.addEventListener("click", () => { void runAction("compile"); });
   playBtn.addEventListener("click", () => { unlockAudio(); void runAction("play"); });
+
+  function playReadyStatus() {
+    if (activePlay) return "Playing";
+    if (hasPlayLoop && playExitStatus !== 0) return "Stopped (" + playExitStatus + ")";
+    return "Interactive ready";
+  }
+
+  function syncPauseUi(updateStatus) {
+    pauseBtn.hidden = !(activeTab === "canvas" && playableCanvas);
+    pauseBtn.setAttribute("aria-pressed", canvasPaused ? "true" : "false");
+    pauseLabelEl.textContent = canvasPaused ? "Resume" : "Pause";
+    const label = canvasPaused ? "Resume canvas events" : "Pause canvas events";
+    pauseBtn.title = label;
+    pauseBtn.setAttribute("aria-label", label);
+    if (updateStatus && playableCanvas) {
+      statusEl.textContent = canvasPaused ? "Paused" : playReadyStatus();
+    }
+  }
+  syncPauseUi(false);
+
+  pauseBtn.addEventListener("click", () => {
+    if (!activeCanvas || !playableCanvas) return;
+    canvasPaused = !canvasPaused;
+    if (canvasPaused) {
+      pauseCanvasLoop();
+      fpsEl.textContent = "0.0 fps · 0.0 ms";
+    } else if (activeTab === "canvas") {
+      unlockAudio();
+      resumeCanvasLoop();
+      canvas.focus({ preventScroll: true });
+    }
+    syncPauseUi(true);
+  });
 
   function syncMuteUi() {
     muteBtn.setAttribute("aria-pressed", audioMuted ? "true" : "false");
@@ -1281,7 +1335,7 @@ function renderPlaygroundPage(
   }
 
   function resumeCanvasLoop() {
-    if (activePlay && hasPlayLoop && !animFrame) {
+    if (activePlay && hasPlayLoop && !canvasPaused && !animFrame) {
       lastFrameAt = 0;
       animFrame = requestAnimationFrame(stepCanvasFrame);
     }
@@ -1292,7 +1346,11 @@ function renderPlaygroundPage(
     activePlay = false;
     activeCanvas = false;
     hasPlayLoop = false;
+    playableCanvas = false;
+    canvasPaused = false;
+    playExitStatus = 0;
     fpsEl.textContent = "0.0 fps · 0.0 ms";
+    syncPauseUi(false);
     if (worker) worker.postMessage({ action: "stop" });
     if (hideTab) {
       tabCanvas.hidden = true;
@@ -1301,14 +1359,14 @@ function renderPlaygroundPage(
   }
 
   async function sendPlayInteraction(action, payload) {
-    if (!activeCanvas) return;
+    if (!activeCanvas || canvasPaused) return;
     try {
       const res = await new Promise((resolve, reject) => {
         const id = nextReqId++;
         pending.set(id, { resolve, reject });
         getWorker().postMessage({ id, action, ...payload });
       });
-      if (!activeCanvas) return;
+      if (!activeCanvas || canvasPaused) return;
       if (Array.isArray(res.tones) && res.tones.length > 0) playToneEvents(res.tones);
       if (res.frame) applyPlayFrame(res.frame);
     } catch {
@@ -1318,7 +1376,7 @@ function renderPlaygroundPage(
 
   async function stepCanvasFrame(now) {
     animFrame = 0;
-    if (!activePlay || activeTab !== "canvas") return;
+    if (!activePlay || canvasPaused || activeTab !== "canvas") return;
     if (playInFlight) {
       animFrame = requestAnimationFrame(stepCanvasFrame);
       return;
@@ -1333,7 +1391,7 @@ function renderPlaygroundPage(
     try {
       const res = await runInWorker("step", "", "", [], { dt: dtSec });
       playInFlight = false;
-      if (!activePlay) return;
+      if (!activePlay || canvasPaused) return;
       if (Array.isArray(res.tones) && res.tones.length > 0) playToneEvents(res.tones);
       if (res.frame) applyPlayFrame(res.frame);
       if (!res.ok) {
@@ -1344,9 +1402,10 @@ function renderPlaygroundPage(
         return;
       }
       if (res.status === 0) {
-        animFrame = requestAnimationFrame(stepCanvasFrame);
+        if (activeTab === "canvas") animFrame = requestAnimationFrame(stepCanvasFrame);
       } else {
         activePlay = false;
+        playExitStatus = res.status;
         statusEl.textContent = "Stopped (" + res.status + ")";
       }
     } catch {
@@ -1371,7 +1430,7 @@ function renderPlaygroundPage(
   }
 
   canvas.addEventListener("keydown", (event) => {
-    if (!activeCanvas) return;
+    if (!activeCanvas || canvasPaused) return;
     unlockAudio();
     if (["ArrowLeft", "ArrowRight", "ArrowUp", "ArrowDown", " "].includes(event.key)) {
       event.preventDefault();
@@ -1380,12 +1439,12 @@ function renderPlaygroundPage(
   });
 
   canvas.addEventListener("keyup", (event) => {
-    if (!activeCanvas) return;
+    if (!activeCanvas || canvasPaused) return;
     void sendPlayInteraction("keyup", { key: event.key });
   });
 
   canvas.addEventListener("pointermove", (event) => {
-    if (!activeCanvas) return;
+    if (!activeCanvas || canvasPaused) return;
     const now = performance.now();
     if (now - lastPointerMoveAt < 16) return;
     lastPointerMoveAt = now;
@@ -1394,7 +1453,7 @@ function renderPlaygroundPage(
   });
 
   canvas.addEventListener("pointerdown", (event) => {
-    if (!activeCanvas) return;
+    if (!activeCanvas || canvasPaused) return;
     unlockAudio();
     canvas.focus({ preventScroll: true });
     const cell = getCanvasCell(event);
@@ -1402,7 +1461,7 @@ function renderPlaygroundPage(
   });
 
   canvas.addEventListener("pointerup", (event) => {
-    if (!activeCanvas) return;
+    if (!activeCanvas || canvasPaused) return;
     const cell = getCanvasCell(event);
     void sendPlayInteraction("pointerup", { ...cell, button: event.button });
   });

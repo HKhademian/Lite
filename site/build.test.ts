@@ -105,6 +105,7 @@ test('buildSite generates static pages and metadata in dist/site', () => {
   assert(existsSync(join(out, 'playground', 'code-view.js')));
   assert(existsSync(join(out, 'playground', 'highlight.js')));
   assert(playground.includes('id="tab-canvas"'));
+  assert(playground.includes('id="pg-pause"'));
   assert(playground.includes('id="pg-canvas-title"'));
   assert(playground.includes('id="pg-canvas-size"'));
   assert(playground.includes('id="pg-mute"'));

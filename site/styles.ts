@@ -901,7 +901,8 @@ details.gallery-code pre.code-block {
   color: var(--ink-muted);
   font-family: var(--font-mono);
 }
-.pg-copy-btn {
+.pg-copy-btn,
+.pg-pause-btn {
   appearance: none;
   border: 1px solid var(--border);
   border-radius: 6px;
@@ -914,15 +915,26 @@ details.gallery-code pre.code-block {
   padding: 0.28rem 0.55rem;
   cursor: pointer;
 }
-.pg-copy-btn:hover {
+.pg-pause-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.32rem;
+}
+.pg-copy-btn:hover,
+.pg-pause-btn:hover {
   color: var(--ink);
   border-color: var(--accent);
 }
-.pg-copy-btn.copied {
+.pg-copy-btn.copied,
+.pg-pause-btn[aria-pressed="true"] {
   color: var(--accent);
   border-color: var(--accent);
 }
-.pg-copy-btn[hidden] { display: none; }
+.pg-pause-btn .pg-icon-resume { display: none; }
+.pg-pause-btn[aria-pressed="true"] .pg-icon-pause { display: none; }
+.pg-pause-btn[aria-pressed="true"] .pg-icon-resume { display: block; }
+.pg-copy-btn[hidden],
+.pg-pause-btn[hidden] { display: none; }
 .pg-panel {
   flex: 1 1 auto;
   min-height: 0;
