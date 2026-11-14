@@ -56,6 +56,17 @@ pub handleVersionFlag := fn(args: List<String>, component: String, command: Stri
     }
 }
 
+/** Writes captured process `stderr` chunk without adding a duplicate trailing newline. */
+pub errorText := fn(chunk: String): Unit {
+    if chunk == "" { return; }
+    len := text.length(chunk);
+    if text.at(chunk, len - 1) == "\n" {
+        io.errorLine(text.slice(chunk, 0, len - 1));
+    } else {
+        io.errorLine(chunk);
+    }
+};
+
 /** Forwards CLI arguments to a Node script under the repo root, inheriting streams and exiting with its status. */
 pub forwardNode := fn(scriptRelPath: String, args: List<String>): Unit {
     root := findRepoRoot();

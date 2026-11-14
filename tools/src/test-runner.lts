@@ -48,16 +48,6 @@ readGeneratedTestFiles := fn(root: String): List<String> {
     files
 };
 
-emitErrorChunk := fn(chunk: String): Unit {
-    if chunk == "" { return; }
-    len := text.length(chunk);
-    if text.at(chunk, len - 1) == "\n" {
-        io.errorLine(text.slice(chunk, 0, len - 1));
-    } else {
-        io.errorLine(chunk);
-    }
-};
-
 run := fn(args: List<String>): Unit {
     project.handleVersionFlag(args, "tester", "test");
     if cli.startsWith(args, "--cases") {
@@ -108,7 +98,7 @@ run := fn(args: List<String>): Unit {
             io.outputLine("Tests passed.");
         } else {
             io.output(res.stdout);
-            emitErrorChunk(res.stderr);
+            project.errorText(res.stderr);
         }
     }
     io.exit(res.status);

@@ -222,7 +222,7 @@ function lite$listPopBack<T>(items: T[], at: number): T {
     return items.pop() as T;
 }
 
-const lite$intLines: readonly number[] = [0, 101, 102, 126, 150, 181, 209, 237, 265, 291, 325, 326, 365, 393, 421, 449, 478, 510, 561, 590, 617, 624, 634, 637, 638, 697, 731, 805, 829, 866, 886, 892, 920, 973, 1041, 1086, 1167, 1187, 1193, 1225, 1255, 1305, 1356, 1409, 1460, 1526, 1548, 1554, 1564, 1567, 1568, 1612, 1643, 1674, 1715, 1768, 1781, 1810, 1816, 1819, 1820, 1858, 1913, 1954, 2019, 2025, 2026, 2089, 2159, 2213, 2268, 2354, 2431, 2532, 2552, 2558, 2559, 2632, 2664, 2736, 2802, 2803, 2864, 2914, 2970, 3033, 3039, 3087, 3164, 3226, 3232, 3233, 3269, 3364, 3440, 3467, 3511, 3517, 3603, 3688, 3714, 3754, 3791, 3801, 3821, 3827, 3859, 3888, 3932, 3949, 3984, 4024, 4034, 4040, 4065, 4068, 4069, 4090];
+const lite$intLines: readonly number[] = [0, 101, 102, 126, 150, 181, 209, 237, 265, 291, 325, 326, 365, 393, 421, 449, 478, 510, 561, 590, 617, 624, 634, 637, 638, 697, 731, 805, 829, 866, 886, 892, 920, 973, 1041, 1086, 1167, 1187, 1193, 1225, 1255, 1305, 1356, 1409, 1460, 1526, 1548, 1554, 1564, 1567, 1568, 1606, 1661, 1702, 1767, 1773, 1774, 1837, 1907, 1961, 2016, 2102, 2179, 2280, 2300, 2306, 2307, 2380, 2412, 2484, 2550, 2551, 2612, 2662, 2718, 2781, 2787, 2835, 2912, 2974, 2980, 2981, 3017, 3112, 3188, 3215, 3259, 3265, 3351, 3436, 3462, 3502, 3539, 3549, 3569, 3575, 3607, 3636, 3680, 3697, 3732, 3775, 3785, 3791, 3816, 3819, 3820, 3841];
 const lite$intSource = "tools/src/test-runner.lts:";
 const lite$intMin = -(1n << 63n), lite$intMax = (1n << 63n) - 1n;
 function lite$fault(category: string, at: number, message: string): never {
@@ -2059,6 +2059,20 @@ export function main(lite$write?: (text: string) => void): string {
         }
     }
     void liteFn$lib$util$project$handleVersionFlag;
+    function liteFn$lib$util$project$errorText(lite_chunk: string): void {
+        void lite_chunk;
+        if (((lite_chunk) === (""))) {
+            return;
+        }
+        const lite_len = liteFn$lib$core$text$length(lite_chunk);
+        void lite_len;
+        if (((liteFn$lib$core$text$at(lite_chunk, lite$subtractInt(lite_len, 1n, 2346))) === ("\n"))) {
+            return (void (lite$reportError(liteFn$lib$core$text$slice(lite_chunk, 0n, lite$subtractInt(lite_len, 1n, 2407)))));
+        } else {
+            return (void (lite$reportError(lite_chunk)));
+        }
+    }
+    void liteFn$lib$util$project$errorText;
     function liteFn$lib$util$project$forwardNode(lite_scriptRelPath: string, lite_args: string[]): void {
         void lite_scriptRelPath;
         void lite_args;
@@ -2128,20 +2142,6 @@ export function main(lite$write?: (text: string) => void): string {
         return [...(lite_files)];
     }
     void liteFn_readGeneratedTestFiles;
-    function liteFn_emitErrorChunk(lite_chunk: string): void {
-        void lite_chunk;
-        if (((lite_chunk) === (""))) {
-            return;
-        }
-        const lite_len = liteFn$lib$core$text$length(lite_chunk);
-        void lite_len;
-        if (((liteFn$lib$core$text$at(lite_chunk, lite$subtractInt(lite_len, 1n, 1700))) === ("\n"))) {
-            return (void (lite$reportError(liteFn$lib$core$text$slice(lite_chunk, 0n, lite$subtractInt(lite_len, 1n, 1761)))));
-        } else {
-            return (void (lite$reportError(lite_chunk)));
-        }
-    }
-    void liteFn_emitErrorChunk;
     function liteFn_run(lite_args: string[]): void {
         void lite_args;
         liteFn$lib$util$project$handleVersionFlag([...(lite_args)], "tester", "test");
@@ -2207,7 +2207,7 @@ export function main(lite$write?: (text: string) => void): string {
                 lite$emit("Tests passed." + "\n");
             } else {
                 lite$emit((lite_res).stdout);
-                liteFn_emitErrorChunk((lite_res).stderr);
+                liteFn$lib$util$project$errorText((lite_res).stderr);
             }
         }
         lite$exit((lite_res).status);

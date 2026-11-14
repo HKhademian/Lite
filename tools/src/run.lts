@@ -1,0 +1,88 @@
+/** Compile one script to a temporary artifact, execute it with the Node entry, and forward its status. */
+
+io := import "core/io";
+fs := import "core/fs";
+proc := import "core/process";
+text := import "core/text";
+list := import "core/list";
+path := import "util/path";
+cli := import "util/cli";
+project := import "util/project";
+
+usageExit := fn(): Unit {
+    io.errorLine("Usage: ./bin/lite run file.lts [-- argument ...]");
+    io.exit(2);
+};
+
+run := fn(rawArgs: List<String>): Unit {
+    args := cli.stripLeadingSeparator(rawArgs);
+    scriptPath := cli.head(args);
+    if scriptPath == "" {
+        usageExit();
+    }
+    if scriptPath == "--check" {
+        io.errorLine("lite run: --check is ./bin/lite check file.lts");
+        io.exit(2);
+    }
+    if text.startsWithAt(scriptPath, 0, "-") {
+        io.errorLine("lite run: unknown option " + scriptPath);
+        usageExit();
+    }
+    if not text.endsWith(scriptPath, ".lts") {
+        io.errorLine("lite run: source must be a .lts file");
+        io.exit(2);
+    }
+
+    programArgs := cli.stripLeadingSeparator(cli.rest(args, 1));
+    if fs.kind(scriptPath) =!= "file" {
+        io.errorLine("lite run: cannot read " + scriptPath);
+        io.exit(2);
+    }
+
+    root := project.findRepoRoot();
+    cliScript := if root == "" { "compiler/cli.ts" } else { path.resolve(root, "compiler/cli.ts") };
+    entryScript := if root == "" { "compiler/entry.ts" } else { path.resolve(root, "compiler/entry.ts") };
+    emptyEnv: List<String> = [];
+
+    compileArgs: List<String> = [cliScript, "ts", scriptPath];
+    compiled := proc.run(proc.execPath(), compileArgs, "", emptyEnv, true, "");
+    if compiled.error =!= "" {
+        io.errorLine("lite run: " + compiled.error);
+        io.exit(1);
+    }
+    if compiled.status =!= 0 {
+        project.errorText(compiled.stderr);
+        io.exit(compiled.status);
+    }
+
+    tempDir := fs.makeTempDir("lite-run-");
+    if not tempDir.ok {
+        io.errorLine("lite run: " + tempDir.error);
+        io.exit(1);
+    }
+
+    base := path.baseName(scriptPath);
+    baseNoExt := text.slice(base, 0, text.length(base) - 4);
+    artifact := path.join(tempDir.path, baseNoExt + ".ts");
+    writeRes := fs.writeText(artifact, compiled.stdout);
+    if not writeRes.ok {
+        fs.remove(tempDir.path);
+        io.errorLine("lite run: " + writeRes.error);
+        io.exit(1);
+    }
+
+    entryArgs: mut List<String> = [entryScript, artifact];
+    loop programArgs as arg {
+        list.pushBack(mut entryArgs, arg);
+    }
+    execRes := proc.run(proc.execPath(), entryArgs, "", emptyEnv, false, "");
+    fs.remove(tempDir.path);
+
+    if execRes.error =!= "" {
+        io.errorLine("lite run: " + execRes.error);
+        io.exit(1);
+    }
+    io.exit(execRes.status);
+};
+
+run(io.inputArgs());

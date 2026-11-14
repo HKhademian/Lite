@@ -1821,6 +1821,20 @@ export function main(lite$write?: (text: string) => void): string {
         }
     }
     void liteFn$lib$util$project$handleVersionFlag;
+    function liteFn$lib$util$project$errorText(lite_chunk: string): void {
+        void lite_chunk;
+        if (((lite_chunk) === (""))) {
+            return;
+        }
+        const lite_len = liteFn$lib$core$text$length(lite_chunk);
+        void lite_len;
+        if (((liteFn$lib$core$text$at(lite_chunk, lite$subtractInt(lite_len, 1n, 2346))) === ("\n"))) {
+            return (void (lite$reportError(liteFn$lib$core$text$slice(lite_chunk, 0n, lite$subtractInt(lite_len, 1n, 2407)))));
+        } else {
+            return (void (lite$reportError(lite_chunk)));
+        }
+    }
+    void liteFn$lib$util$project$errorText;
     function liteFn$lib$util$project$forwardNode(lite_scriptRelPath: string, lite_args: string[]): void {
         void lite_scriptRelPath;
         void lite_args;
