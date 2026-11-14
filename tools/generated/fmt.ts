@@ -119,6 +119,14 @@ function lite$fsWriteText(path: string, text: string): { ok: boolean; error: str
 function lite$fsListDir(path: string): string[] {
     return process.getBuiltinModule("node:fs").readdirSync(path).sort();
 }
+function lite$fsMakeDir(path: string): { ok: boolean; error: string } {
+    try { process.getBuiltinModule("node:fs").mkdirSync(path, { recursive: true }); return { ok: true, error: "" }; }
+    catch (error) { return { ok: false, error: lite$errMsg(error) }; }
+}
+function lite$fsCopy(fromPath: string, toPath: string): { ok: boolean; error: string } {
+    try { process.getBuiltinModule("node:fs").cpSync(fromPath, toPath, { recursive: true, force: true, verbatimSymlinks: true }); return { ok: true, error: "" }; }
+    catch (error) { return { ok: false, error: lite$errMsg(error) }; }
+}
 
 function lite$processCwd(): string { return process.cwd(); }
 function lite$processExecPath(): string { return process.execPath; }
@@ -2112,6 +2120,72 @@ export function main(lite$write?: (text: string) => void): string {
         return [...(lite_files)];
     }
     void liteFn$lib$util$fs$collectFiles;
+    function liteFn$lib$util$fs$copyFiltered(lite_srcDir: string, lite_dstDir: string, lite_topSkipNames: string[], lite_nestedSkipNames: string[]): { ok: boolean; error: string } {
+        void lite_srcDir;
+        void lite_dstDir;
+        void lite_topSkipNames;
+        void lite_nestedSkipNames;
+        const lite_mkRoot = lite$fsMakeDir(lite_dstDir);
+        void lite_mkRoot;
+        if ((!((lite_mkRoot).ok))) {
+            return { ok: false, error: (lite_mkRoot).error };
+        }
+        const lite_srcStack: string[] = [...([])];
+        void lite_srcStack;
+        const lite_dstStack: string[] = [...([])];
+        void lite_dstStack;
+        const lite_depthStack: bigint[] = [...([])];
+        void lite_depthStack;
+        let lite_stackCount = 0n;
+        void lite_stackCount;
+        lite_srcStack.push(lite_srcDir);
+        lite_dstStack.push(lite_dstDir);
+        lite_depthStack.push(0n);
+        lite_stackCount = 1n;
+        while (((lite_stackCount) > (0n))) {
+            const lite_curSrc = lite$listPopBack(lite_srcStack, 2743);
+            void lite_curSrc;
+            const lite_curDst = lite$listPopBack(lite_dstStack, 2789);
+            void lite_curDst;
+            const lite_curDepth = lite$listPopBack(lite_depthStack, 2837);
+            void lite_curDepth;
+            lite_stackCount = lite$subtractInt(lite_stackCount, 1n, 2899);
+            const lite_entries: string[] = [...(lite$fsListDir(lite_curSrc))];
+            void lite_entries;
+            const lite_skipList: string[] = [...((Boolean(((lite_curDepth) === (0n))) ? [...(lite_topSkipNames)] : [...(lite_nestedSkipNames)]))];
+            void lite_skipList;
+            for (const lite_entry of [...(lite_entries)]) {
+                void lite_entry;
+                if ((!(liteFn$lib$core$list$listContainsText([...(lite_skipList)], lite_entry)))) {
+                    const lite_nextSrc = liteFn$lib$util$path$join(lite_curSrc, lite_entry);
+                    void lite_nextSrc;
+                    const lite_nextDst = liteFn$lib$util$path$join(lite_curDst, lite_entry);
+                    void lite_nextDst;
+                    const lite_entryKind = lite$fsKind(lite_nextSrc);
+                    void lite_entryKind;
+                    if (((lite_entryKind) === ("dir"))) {
+                        const lite_mkSub = lite$fsMakeDir(lite_nextDst);
+                        void lite_mkSub;
+                        if ((!((lite_mkSub).ok))) {
+                            return { ok: false, error: (lite_mkSub).error };
+                        }
+                        lite_srcStack.push(lite_nextSrc);
+                        lite_dstStack.push(lite_nextDst);
+                        lite_depthStack.push(lite$addInt(lite_curDepth, 1n, 3616));
+                        lite_stackCount = lite$addInt(lite_stackCount, 1n, 3666);
+                    } else if (((lite_entryKind) === ("file"))) {
+                        const lite_copied = lite$fsCopy(lite_nextSrc, lite_nextDst);
+                        void lite_copied;
+                        if ((!((lite_copied).ok))) {
+                            return { ok: false, error: (lite_copied).error };
+                        }
+                    }
+                }
+            }
+        }
+        return { ok: true, error: "" };
+    }
+    void liteFn$lib$util$fs$copyFiltered;
     function liteFn$lib$util$project$findRepoRootFrom(lite_startPath: string): string {
         void lite_startPath;
         if (((lite_startPath) === (""))) {

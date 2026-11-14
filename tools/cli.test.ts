@@ -59,6 +59,7 @@ test('component versions belong to their tool commands', () => {
   assert.deepEqual(command('lite', ['doctor', '--version']), command('lite-doctor', ['--version']));
   assert.deepEqual(command('lite', ['check', '--version']), command('lite-check', ['--version']));
   assert.deepEqual(command('lite', ['docs', '--version']), command('lite-docs', ['--version']));
+  assert.deepEqual(command('lite', ['bench', '--version']), command('lite-bench', ['--version']));
 });
 
 test('lite check routes through ./bin/lite to the standalone checker', () => {
@@ -69,8 +70,8 @@ test('lite check routes through ./bin/lite to the standalone checker', () => {
   assert.equal(command('lite-check', ['language/examples/001-double-sum.lts']).status, 0);
 });
 
-test('generated cli, checker, doctor, run, verify, test-runner, ci, and release artifacts match their Lite sources and pass strict TS checking', () => {
-  for (const name of ['cli', 'checker', 'check', 'run', 'verify', 'test-runner', 'ci', 'release'] as const) {
+test('generated cli, checker, doctor, run, verify, test-runner, test, bench, ci, and release artifacts match their Lite sources and pass strict TS checking', () => {
+  for (const name of ['cli', 'checker', 'check', 'run', 'verify', 'test-runner', 'test', 'bench', 'ci', 'release'] as const) {
     const sourcePath = join(root, `tools/src/${name}.lts`);
     const compiled = compileTs({ text: readFileSync(sourcePath, 'utf8'), name: `tools/src/${name}.lts`, rootPath: sourcePath });
     assert.equal(compiled.status, 0, compiled.stderr.toString());

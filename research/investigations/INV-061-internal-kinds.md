@@ -12,8 +12,8 @@ serialized spellings, direct Node execution and generated bootstrap continuity.
 
 - [Semantic verification](../../igniter/verify.ts) has literal unions for kinds/targets.
 - [Compiler fixtures](../../igniter/test-fixtures.ts) use typed program/rejected categories.
-- [New declarative cases](../../tools/cases.ts) have local named as-const values;
-  that local use does not decide a project-wide refactor.
+- [Declarative cases](../../lib/util/cases.lts) originally used local named `as const` values in `tools/cases.ts` before migrating to Lite;
+  that local use did not decide a project-wide refactor.
 - [The Lite lexer](../../compiler/src/lexer.lts) stores String kinds and uses
   zero-argument canonical accessors because its source subset lacks enums and
   function capture of top-level constants.
