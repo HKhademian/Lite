@@ -3034,3 +3034,139 @@ test('subjectless Boolean match supports value and statement forms in TS and act
   assert.equal(cValueRejected.status, 2);
   assert.match(cValueRejected.stderr.toString(), /C backend does not support value match expressions yet/);
 });
+
+test('narrow numeric widths support bounds, promotions, widening, Float32 rounding, and panics across TS and C', () => {
+  const executions: ArtifactExecution[] = [];
+  const paritySource = [
+    'io := import "core/io";',
+    'aMin: Int8 = -128;',
+    'aMax: Int8 = 127;',
+    'bMin: Int16 = -32768;',
+    'bMax: Int16 = 32767;',
+    'cMin: Int32 = -2147483648;',
+    'cMax: Int32 = 2147483647;',
+    'fRound: Float32 = 0.1;',
+    'fExact: Float32 = 16777216;',
+    'var z8: Int8;',
+    'var zf: Float32;',
+    'w16: Int16 = aMax;',
+    'w32: Int32 = bMax;',
+    'w64: Int = cMax;',
+    'wf32a: Float32 = aMin;',
+    'wf32b: Float32 = bMax;',
+    'wf64: Float = cMin;',
+    'wff: Float = fRound;',
+    'bTen: Int16 = 10;',
+    'cTen: Int32 = 10;',
+    'p16 := aMax + bTen;',
+    'p32 := bMax + cTen;',
+    'pMix := aMax + fRound;',
+    'pMix32 := cMax + wf32b;',
+    'pPow := aMax ** 2;',
+    'var acc: Int8 = 10;',
+    'd8: Int8 = 120;',
+    'acc += aMax - d8;',
+    'acc -= 3;',
+    'acc *= 2;',
+    'acc /= 3;',
+    'acc %= 5;',
+    'acc :/= 2;',
+    'acc :%= 3;',
+    'var facc: Float32 = 1.5;',
+    'facc += 2.5;',
+    'facc *= 0.5;',
+    'exactCheck := (16777217 == fExact);',
+    'cmpWide := aMin < bMax and wf32b <= wff + 40000.0 and cMax > 0;',
+    'io.outputLine(aMin, aMax, bMin, bMax, cMin, cMax);',
+    'io.outputLine(fRound, z8, zf, w16, w32, w64, wf32a, wf32b, wf64);',
+    'io.outputLine(p16, p32, pMix, pMix32, pPow, acc, facc, exactCheck, cmpWide);',
+  ].join('\n');
+  const parityExpected = {
+    status: 0,
+    stdout: Buffer.from([
+      '-128 127 -32768 32767 -2147483648 2147483647',
+      '0.10000000149011612 0 0 127 32767 2147483647 -128 32767 -2147483648',
+      '137 32777 127.0999984741211 2147516416 16129 2 2 false true',
+      '',
+    ].join('\n')),
+    stderr: Buffer.alloc(0),
+  };
+  for (const target of ['ts', 'c'] as const) {
+    const compiled = compileTarget(target, { text: paritySource });
+    assert.equal(compiled.status, 0, `${target}: ${compiled.stderr.toString()}`);
+    if (target === 'c' && process.env['LITE_SKIP_NATIVE'] === '1') continue;
+    executions.push({ target, artifact: compiled.stdout.toString(), expected: parityExpected, context: paritySource });
+  }
+  assertExecutions(executions);
+
+  const panicCases: readonly [string, RegExp][] = [
+    ['var a: Int8 = 127; a += 1; io.outputLine(a);', /ArithmeticPanic: integer outside Int8 range/],
+    ['var a: Int8 = -128; io.outputLine(-a);', /ArithmeticPanic: integer outside Int8 range/],
+    ['a: Int8 = 127; b: Int16 = 32767; io.outputLine(a + b);', /ArithmeticPanic: integer outside Int16 range/],
+    ['a: Int16 = 32767; b: Int16 = 1; io.outputLine(a + b);', /ArithmeticPanic: integer outside Int16 range/],
+    ['a: Int32 = 2147483647; b: Int32 = 1; io.outputLine(a + b);', /ArithmeticPanic: integer outside Int32 range/],
+    ['a: Float32 = 3.4e38; b: Float32 = 2.0; io.outputLine(a * b);', /ArithmeticPanic: non-finite floating value/],
+    ['a: Float32 = 1.0; b: Float32 = 0.0; io.outputLine(a / b);', /ArithmeticPanic: division by zero/],
+  ];
+  for (const [body, pattern] of panicCases) {
+    const panicSource = `io := import "core/io";\nio.outputLine("before");\n${body}\n`;
+    for (const target of ['ts', 'c'] as const) {
+      const compiled = compileTarget(target, { text: panicSource });
+      assert.equal(compiled.status, 0, `${target} (${body}): ${compiled.stderr.toString()}`);
+      if (target === 'c' && process.env['LITE_SKIP_NATIVE'] === '1') continue;
+      const run = target === 'ts' ? runTsArtifact(compiled.stdout.toString()) : runCArtifact(compiled.stdout.toString());
+      assert.equal(run.phase, 'run', body);
+      assert.equal(run.status, 1, body);
+      assert.equal(run.stdout.toString(), 'before\n', body);
+      assert.match(run.stderr.toString(), pattern, `${target} (${body}) -> ${run.stderr.toString()}`);
+    }
+  }
+
+  const tsOnlySource = [
+    'io := import "core/io";',
+    'Byte := type Int8;',
+    'Half := type Float32;',
+    'widen := fn(x: Int16): Int32 { one: Int16 = 1; x + one }',
+    'toHalf := fn(x: Byte): Half { x }',
+    'a8: Byte = 5;',
+    'b16: Int16 = 300;',
+    'f32: Half = 0.25;',
+    'ifJoined := if true { a8 } else { b16 };',
+    'matchJoined := match { false { a8 } _ { f32 } };',
+    'bytes: List<Int8> = [1, -128, 127];',
+    'blankPair: (a: Int8, b: Float32);',
+    'io.outputLine(widen(a8), toHalf(a8), ifJoined, matchJoined, bytes, blankPair);',
+  ].join('\n');
+  const tsOnlyCompiled = compileTarget('ts', { text: tsOnlySource });
+  assert.equal(tsOnlyCompiled.status, 0, tsOnlyCompiled.stderr.toString());
+  const tsOnlyRun = runTsArtifact(tsOnlyCompiled.stdout.toString());
+  assert.equal(tsOnlyRun.phase, 'run');
+  assert.equal(tsOnlyRun.status, 0, tsOnlyRun.stderr.toString());
+  assert.equal(tsOnlyRun.stdout.toString(), '6 5 5 0.25 [1, -128, 127] (a=0, b=0)\n');
+
+  for (const [bad, pattern, checkC] of [
+    ['x: Int8 = 128;', /integer literal outside Int8 range|cannot initialize Int8/, true],
+    ['x: Int8 = -129;', /integer literal outside Int8 range|cannot initialize Int8/, true],
+    ['x: Int16 = 32768;', /integer literal outside Int16 range|cannot initialize Int16/, true],
+    ['x: Int32 = 2147483648;', /integer literal outside Int32 range|cannot initialize Int32/, true],
+    ['f: Float32 = 1e39;', /outside Float32 range|cannot initialize Float32/, true],
+    ['f: Float32 = 16777217;', /integer literal is not exactly representable in Float32/, true],
+    ['x: Int8 = +1;', /cannot initialize Int8 with Int/, true],
+    ['x: Int8 = -(1);', /cannot initialize Int8 with Int/, true],
+    ['x: Int8 = 1 + 2;', /cannot initialize Int8 with Int/, true],
+    ['var acc: Int8 = 10; a8: Int8 = 127; acc += a8 - 120;', /cannot apply \+= to Int8 and Int/, true],
+    ['a: Int16 = 1; b: Int8 = a;', /cannot initialize Int8 with Int16/, true],
+    ['c: Int32 = 1; f: Float32 = c;', /cannot initialize Float32 with Int32/, true],
+    ['g: Float = 1.0; h: Float32 = g;', /cannot initialize Float32 with Float/, true],
+    ['a32: Int32 = 1; f32: Float32 = 2.0; x := if true { a32 } else { f32 };', /value if branches must have the same kind/, false],
+    ['xs: List<Int8> = [1]; ys: List<Int16> = xs;', /cannot initialize List<Int16> with List<Int8>/, false],
+    ['a8: Int8 = 1; b16: Int16 = 2; arr := [a8, b16];', /list element 2 must be Int8, got Int16/, false],
+    ['xs := [10, 20]; i: Int8 = 0; y := xs[i];', /array index must be Int|index must be Int/, false],
+  ] as const) {
+    for (const target of checkC ? (['ts', 'c'] as const) : (['ts'] as const)) {
+      const rejected = compileTarget(target, { text: bad });
+      assert.equal(rejected.status, 2, `${target}: ${bad}`);
+      assert.match(rejected.stderr.toString(), pattern, `${target}: ${bad} -> ${rejected.stderr.toString()}`);
+    }
+  }
+});

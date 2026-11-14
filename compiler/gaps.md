@@ -155,7 +155,7 @@ Keep dependencies explicit; split a topic further when its contracts warrant it.
   admitted Float storage/call/result and aggregate contexts. Established Int
   values and Int-only binary results retain their types; brace boundaries and
   actual function tails preserve the context.
-- [ ] **Numeric widths:** narrow types, promotion, lossless widening, checked
+- [x] **Numeric widths:** narrow types, promotion, lossless widening, checked
   narrow results and Float32 rounding; exhaustive matrices follow the cutover.
 - [x] **Block and conditional values:** statement-bearing blocks, Unit tails,
   partial defaults and false-branch no-write assignments (TS; C supports partial

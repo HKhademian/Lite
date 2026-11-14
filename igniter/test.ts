@@ -386,6 +386,64 @@ test('Lite parser and checker support subjectless Boolean match', () => {
   });
 });
 
+test('Lite parser and checker support narrow numeric widths and literal contexts', () => {
+  withGeneratedDriver(parserProgramDumpPath, runParser => {
+    const parsed = runParser([
+      'Byte := type Int8;',
+      'a: Int8 = -128;',
+      'b: Int16 = 32767;',
+      'c: Int32 = 2147483647;',
+      'f: Float32 = 0.5;',
+      'widen := fn(x: Byte): Float32 { x }',
+      'xs: List<Int8> = [1, 2];',
+    ].join('\n'));
+    assert.equal(parsed.code, 0, parsed.errors);
+    assert.match(parsed.output, /Byte := type Int8/);
+    assert.match(parsed.output, /a Int8 = \(-128\)/);
+    assert.match(parsed.output, /b Int16 = 32767/);
+    assert.match(parsed.output, /c Int32 = 2147483647/);
+    assert.match(parsed.output, /f Float32 = 0\.5/);
+    assert.match(parsed.output, /widen := fn\(x: Byte\): Float32 \{ x \}/);
+    assert.match(parsed.output, /xs List<Int8> = \[1, 2\]/);
+  });
+
+  withGeneratedDriver(checkerDumpPath, runChecker => {
+    const checked = runChecker([
+      'a: Int8 = -128;',
+      'b: Int16 = 32767;',
+      'c: Int32 = 2147483647;',
+      'f: Float32 = 16777216;',
+      'x: Int16 = a;',
+      'y: Float32 = b;',
+      'z: Float = c;',
+      's: Int16 = a + b;',
+      'm: Float32 = a + f;',
+      'p: Float = a ** 2;',
+      'xs: List<Int8> = [1, -2];',
+    ].join('\n'));
+    assert.equal(checked.code, 0, checked.errors);
+    assert.match(checked.output, /value\|a\|Int8 = \(-128\)\|/);
+    assert.match(checked.output, /value\|m\|Float32 = \(a \+ f\)\|/);
+    assert.match(checked.output, /value\|xs\|List<Int8> = \[1, \(-2\)\]\|/);
+
+    for (const [bad, pattern] of [
+      ['x: Int8 = 128;\n', /cannot initialize Int8 with Int/],
+      ['f: Float32 = 16777217;\n', /cannot initialize Float32 with Int/],
+      ['f: Float32 = 1e39;\n', /cannot initialize Float32 with Float/],
+      ['a: Int16 = 1; b: Int8 = a;\n', /cannot initialize Int8 with Int16/],
+      ['c: Int32 = 1; f: Float32 = c;\n', /cannot initialize Float32 with Int32/],
+      ['x: Int8 = +1;\n', /cannot initialize Int8 with Int/],
+      ['x: Int8 = -(1);\n', /cannot initialize Int8 with Int/],
+      ['x: Int8 = 1 + 2;\n', /cannot initialize Int8 with Int/],
+      ['xs: List<Int8> = [1]; ys: List<Int16> = xs;\n', /cannot initialize List<Int16> with List<Int8>/],
+    ] as const) {
+      const rejected = runChecker(bad);
+      assert.equal(rejected.code, 2, bad);
+      assert.match(rejected.errors, pattern, bad + ' -> ' + rejected.errors);
+    }
+  });
+});
+
 test('Lite checker collects symbols from the assembled S', context => {
   if (process.env['LITE_SKIP_HEAVY'] === '1') {
     context.skip('LITE_SKIP_HEAVY=1'); return;
