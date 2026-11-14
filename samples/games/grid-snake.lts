@@ -9,7 +9,7 @@ list := import "core/list";
 tile := 16;
 cols := 20;
 rows := 12;
-ctx := canvas.play(width = cols * tile, height = rows * tile, title = "Grid Snake (320x192) · Arrows/WASD");
+ctx := canvas.play(width = cols * tile, height = rows * tile, title = "Grid Snake · Arrows/WASD");
 bg := canvas.rgb(10, 15, 22);
 
 Cell := type (x: Int, y: Int);

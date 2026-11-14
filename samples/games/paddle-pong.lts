@@ -5,7 +5,7 @@ board := import "extra/board";
 canvas := import "extra/canvas";
 io := import "core/io";
 
-ctx := canvas.play(width = 320, height = 200, title = "Paddle Pong (320x200) · W/S or Arrows");
+ctx := canvas.play(width = 320, height = 200, title = "Paddle Pong · W/S or Arrows");
 bg := canvas.rgb(10, 14, 24);
 padW := 8;
 padH := 42;

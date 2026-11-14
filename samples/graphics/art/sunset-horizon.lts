@@ -4,7 +4,7 @@ board := import "extra/board";
 canvas := import "extra/canvas";
 io := import "core/io";
 
-ctx := canvas.create(width = 360, height = 220, title = "Sunset Horizon (360x220)");
+ctx := canvas.create(width = 360, height = 220, title = "Sunset Horizon");
 canvas.clear(canvas.rgb(18, 16, 44));
 
 horizon := 136;

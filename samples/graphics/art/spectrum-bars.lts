@@ -4,7 +4,7 @@ board := import "extra/board";
 canvas := import "extra/canvas";
 io := import "core/io";
 
-ctx := canvas.create(width = 340, height = 200, title = "Spectrum & Alpha Bars (340x200)");
+ctx := canvas.create(width = 340, height = 200, title = "Spectrum & Alpha Bars");
 canvas.clear(canvas.rgb(14, 16, 26));
 
 baseR: List<Int> = [238, 240, 137, 94, 114, 198];

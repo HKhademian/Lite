@@ -5,7 +5,7 @@ board := import "extra/board";
 canvas := import "extra/canvas";
 io := import "core/io";
 
-ctx := canvas.play(width = 320, height = 180, title = "Tone Keyboard (320x180) · Click Keys or 1-8");
+ctx := canvas.play(width = 320, height = 180, title = "Tone Keyboard · Click Keys or 1-8");
 bg := canvas.rgb(12, 14, 24);
 freqs: List<Int> = [262, 294, 330, 349, 392, 440, 494, 523];
 var activeKey := 0;

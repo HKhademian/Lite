@@ -5,7 +5,7 @@ board := import "extra/board";
 canvas := import "extra/canvas";
 io := import "core/io";
 
-ctx := canvas.play(width = 240, height = 160, title = "Pointer Paint (240x160) · Drag to Paint, Space Clears");
+ctx := canvas.play(width = 240, height = 160, title = "Pointer Paint · Drag to Paint, Space Clears");
 bg := canvas.rgb(12, 18, 30);
 barBg := canvas.rgb(20, 26, 40);
 barLine := canvas.rgba(255, 255, 255, 32);

@@ -4,7 +4,7 @@ board := import "extra/board";
 canvas := import "extra/canvas";
 io := import "core/io";
 
-ctx := canvas.play(width = 320, height = 220, title = "Solar Orbit (320x220)");
+ctx := canvas.play(width = 320, height = 220, title = "Solar Orbit");
 bg := canvas.rgb(9, 12, 22);
 cx := ctx.width / 2;
 cy := ctx.height / 2;

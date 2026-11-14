@@ -5,7 +5,7 @@ board := import "extra/board";
 canvas := import "extra/canvas";
 io := import "core/io";
 
-ctx := canvas.play(width = 320, height = 180, title = "Chord Pad (320x180) · Click Cards or Keys 1-4");
+ctx := canvas.play(width = 320, height = 180, title = "Chord Pad · Click Cards or Keys 1-4");
 bg := canvas.rgb(11, 14, 24);
 padColors: List<canvas.Color> = [
 canvas.rgb(104, 196, 224),

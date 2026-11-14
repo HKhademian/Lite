@@ -5,7 +5,7 @@ board := import "extra/board";
 canvas := import "extra/canvas";
 io := import "core/io";
 
-ctx := canvas.play(width = 320, height = 200, title = "RGBA Color Mixer (320x200)");
+ctx := canvas.play(width = 320, height = 200, title = "RGBA Color Mixer");
 bg := canvas.rgb(13, 15, 24);
 var rVal := 110;
 var gVal := 196;

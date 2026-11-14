@@ -106,8 +106,13 @@ test('buildSite generates static pages and metadata in dist/site', () => {
   assert(existsSync(join(out, 'playground', 'highlight.js')));
   assert(playground.includes('id="tab-canvas"'));
   assert(playground.includes('id="pg-canvas-title"'));
+  assert(playground.includes('id="pg-canvas-size"'));
   assert(playground.includes('id="pg-mute"'));
   assert(playground.includes('id="pg-fps"'));
+  const sizePos = playground.indexOf('id="pg-canvas-size"');
+  const fpsPos = playground.indexOf('id="pg-fps"');
+  const mutePos = playground.indexOf('id="pg-mute"');
+  assert(sizePos > 0 && sizePos < fpsPos && fpsPos < mutePos, 'canvas tools order must be size · fps · mute');
   for (const group of playGroups) {
     assert(gallery.includes(`id="group-${group.id}"`), `missing gallery play category ${group.id}`);
   }

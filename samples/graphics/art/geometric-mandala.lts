@@ -4,7 +4,7 @@ board := import "extra/board";
 canvas := import "extra/canvas";
 io := import "core/io";
 
-ctx := canvas.create(width = 320, height = 240, title = "Geometric Mandala (320x240)");
+ctx := canvas.create(width = 320, height = 240, title = "Geometric Mandala");
 canvas.clear(canvas.rgb(10, 14, 24));
 
 cx := ctx.width / 2;

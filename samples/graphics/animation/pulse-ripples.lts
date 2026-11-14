@@ -4,7 +4,7 @@ board := import "extra/board";
 canvas := import "extra/canvas";
 io := import "core/io";
 
-ctx := canvas.play(width = 320, height = 200, title = "Pulse Ripples (320x200)");
+ctx := canvas.play(width = 320, height = 200, title = "Pulse Ripples");
 bg := canvas.rgb(10, 18, 30);
 var phase := 0;
 var acc := 0.0;

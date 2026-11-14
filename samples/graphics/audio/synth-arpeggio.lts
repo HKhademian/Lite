@@ -5,7 +5,7 @@ board := import "extra/board";
 canvas := import "extra/canvas";
 io := import "core/io";
 
-ctx := canvas.play(width = 320, height = 180, title = "Synth Arpeggio (320x180) · Space or Click Pads");
+ctx := canvas.play(width = 320, height = 180, title = "Synth Arpeggio · Space or Click Pads");
 bg := canvas.rgb(10, 12, 20);
 frame := canvas.rgba(255, 255, 255, 28);
 dimPad := canvas.rgba(255, 255, 255, 24);

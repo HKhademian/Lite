@@ -5,7 +5,7 @@ board := import "extra/board";
 canvas := import "extra/canvas";
 io := import "core/io";
 
-ctx := canvas.play(width = 320, height = 200, title = "Bounce · ℓite Mark (320x200)");
+ctx := canvas.play(width = 320, height = 200, title = "Bounce · ℓite Mark");
 bg := canvas.rgb(11, 14, 24);
 gridTint := canvas.rgba(255, 255, 255, 10);
 border := canvas.rgba(255, 255, 255, 36);

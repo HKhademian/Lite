@@ -736,8 +736,11 @@ function renderPlaygroundPage(
         <div class="pg-canvas-bar">
           <span id="pg-canvas-title" class="pg-canvas-title">Canvas Stage</span>
           <div class="pg-canvas-tools">
-            <button id="pg-mute" class="pg-mute-btn" type="button" aria-pressed="false" title="Toggle Web Audio tones">Sound: On</button>
+            <span id="pg-canvas-size" class="pg-status">(320x200)</span>
+            <span class="pg-sep" aria-hidden="true">&middot;</span>
             <span id="pg-fps" class="pg-status">0.0 fps &middot; 0.0 ms</span>
+            <span class="pg-sep" aria-hidden="true">&middot;</span>
+            <button id="pg-mute" class="pg-mute-btn" type="button" aria-pressed="false" title="Toggle Web Audio tones">Sound: On</button>
           </div>
         </div>
         <div class="pg-canvas-stage">
@@ -772,6 +775,7 @@ function renderPlaygroundPage(
   const modeButtons = Array.from(document.querySelectorAll(".code-mode-btn"));
   const tabCanvas = document.getElementById("tab-canvas");
   const canvasTitleEl = document.getElementById("pg-canvas-title");
+  const canvasSizeEl = document.getElementById("pg-canvas-size");
   const muteBtn = document.getElementById("pg-mute");
   const fpsEl = document.getElementById("pg-fps");
   const tabs = Array.from(document.querySelectorAll(".pg-tab"));
@@ -1189,6 +1193,7 @@ function renderPlaygroundPage(
       canvas.height = stageHeight;
       stageImage = ctx.createImageData(stageWidth, stageHeight);
     }
+    canvasSizeEl.textContent = "(" + stageWidth + "x" + stageHeight + ")";
     if (typeof frame.title === "string") {
       canvasTitleEl.textContent = frame.title || "Canvas Stage";
       canvas.title = frame.title || "Canvas Stage";
@@ -1273,6 +1278,7 @@ function renderPlaygroundPage(
     activePlay = false;
     activeCanvas = false;
     hasPlayLoop = false;
+    fpsEl.textContent = "0.0 fps · 0.0 ms";
     if (worker) worker.postMessage({ action: "stop" });
     if (hideTab) {
       tabCanvas.hidden = true;

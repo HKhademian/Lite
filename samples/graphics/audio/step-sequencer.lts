@@ -6,7 +6,7 @@ canvas := import "extra/canvas";
 io := import "core/io";
 list := import "core/list";
 
-ctx := canvas.play(width = 320, height = 200, title = "Step Sequencer (320x200) · Click Cells, Space Pause");
+ctx := canvas.play(width = 320, height = 200, title = "Step Sequencer · Click Cells, Space Pause");
 bg := canvas.rgb(10, 12, 22);
 rowFreqs: List<Int> = [523, 392, 330, 262];
 rowColors: List<canvas.Color> = [

@@ -4,7 +4,7 @@ board := import "extra/board";
 canvas := import "extra/canvas";
 io := import "core/io";
 
-ctx := canvas.create(width = 360, height = 240, title = "Layered RGBA Composition (360x240)");
+ctx := canvas.create(width = 360, height = 240, title = "Layered RGBA Composition");
 backdrop := canvas.rgb(12, 16, 28);
 gridTint := canvas.rgba(255, 255, 255, 14);
 cyanGlass := canvas.rgba(110, 196, 216, 165);

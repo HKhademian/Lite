@@ -972,7 +972,7 @@ details.gallery-code pre.code-block {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  gap: 0.5rem;
+  gap: 0.75rem;
   padding: 0.4rem 0.75rem;
   border-bottom: 1px solid var(--border);
   background: var(--surface);
@@ -980,6 +980,8 @@ details.gallery-code pre.code-block {
   color: var(--ink-muted);
 }
 .pg-canvas-title {
+  flex: 1 1 auto;
+  min-width: 0;
   color: var(--ink);
   font-weight: 500;
   overflow: hidden;
@@ -989,8 +991,13 @@ details.gallery-code pre.code-block {
 .pg-canvas-tools {
   display: flex;
   align-items: center;
-  gap: 0.6rem;
+  gap: 0.45rem;
   flex-shrink: 0;
+  white-space: nowrap;
+}
+.pg-sep {
+  color: var(--ink-muted);
+  opacity: 0.65;
 }
 .pg-mute-btn {
   border: 1px solid var(--border);

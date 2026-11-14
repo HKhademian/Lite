@@ -6,7 +6,7 @@ canvas := import "extra/canvas";
 io := import "core/io";
 list := import "core/list";
 
-ctx := canvas.play(width = 320, height = 200, title = "Brick Breaker (320x200) · Arrows or Pointer");
+ctx := canvas.play(width = 320, height = 200, title = "Brick Breaker · Arrows or Pointer");
 bg := canvas.rgb(11, 13, 24);
 brickColors: List<canvas.Color> = [
 canvas.rgb(235, 114, 126),
