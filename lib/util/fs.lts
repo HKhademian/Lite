@@ -50,3 +50,48 @@ pub collectFiles := fn(baseDir: String, targets: List<String>, extension: String
     }
     files
 }
+
+/** Recursively copies `srcDir` into `dstDir`, preserving symlinks and skipping `topSkipNames` at root and `nestedSkipNames` below. */
+pub copyFiltered := fn(srcDir: String, dstDir: String, topSkipNames: List<String>, nestedSkipNames: List<String>): (ok: Bool, error: String) {
+    mkRoot := fs.makeDir(dstDir);
+    if not mkRoot.ok { return (ok = false, error = mkRoot.error); }
+
+    srcStack: mut List<String> = [];
+    dstStack: mut List<String> = [];
+    depthStack: mut List<Int> = [];
+    var stackCount := 0;
+
+    list.pushBack(mut srcStack, srcDir);
+    list.pushBack(mut dstStack, dstDir);
+    list.pushBack(mut depthStack, 0);
+    stackCount = 1;
+
+    loop stackCount > 0 {
+        curSrc := list.popBack(mut srcStack);
+        curDst := list.popBack(mut dstStack);
+        curDepth := list.popBack(mut depthStack);
+        stackCount = stackCount - 1;
+
+        entries := fs.listDir(curSrc);
+        skipList := if curDepth == 0 { topSkipNames } else { nestedSkipNames };
+        loop entries as entry {
+            if not list.listContainsText(skipList, entry) {
+                nextSrc := path.join(curSrc, entry);
+                nextDst := path.join(curDst, entry);
+                entryKind := fs.kind(nextSrc);
+                if entryKind == "dir" {
+                    mkSub := fs.makeDir(nextDst);
+                    if not mkSub.ok { return (ok = false, error = mkSub.error); }
+                    list.pushBack(mut srcStack, nextSrc);
+                    list.pushBack(mut dstStack, nextDst);
+                    list.pushBack(mut depthStack, curDepth + 1);
+                    stackCount = stackCount + 1;
+                } else if entryKind == "file" {
+                    copied := fs.copy(nextSrc, nextDst);
+                    if not copied.ok { return (ok = false, error = copied.error); }
+                }
+            }
+        }
+    }
+    (ok = true, error = "")
+}

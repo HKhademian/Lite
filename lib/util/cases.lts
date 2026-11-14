@@ -1,6 +1,9 @@
-/** Provisional case manifest validation utilities for `.case.json` fixtures. */
+/** Provisional case manifest validation and scenario execution utilities for `.case.json` fixtures. */
 
 fs := import "core/fs";
+proc := import "core/process";
+crypto := import "core/crypto";
+integer := import "core/int";
 text := import "core/text";
 list := import "core/list";
 path := import "util/path";
@@ -221,22 +224,510 @@ pub validateCaseFile := fn(rootDir: String, caseFile: String): (ok: Bool, id: St
     (ok = true, id = caseId, error = "")
 }
 
-/** Discovers and validates all `.case.json` manifests under `language/cases` and `tools/cases`. */
-pub validateAllCases := fn(rootDir: String): (ok: Bool, error: String) {
+/** Discovers all `.case.json` manifest files under `language/cases` and `tools/cases` in sorted order. */
+pub discoverAllCaseFiles := fn(rootDir: String): List<String> {
     roots: List<String> = [path.join(rootDir, "language/cases"), path.join(rootDir, "tools/cases")];
     ignored: List<String> = [];
-    files := fsUtil.collectFiles(rootDir, roots, ".case.json", ignored, false);
+    fsUtil.collectFiles(rootDir, roots, ".case.json", ignored, false)
+}
+
+/** Validates all discovered cases, ensures unique IDs, and verifies at least one case matches `filter`. */
+pub validateCaseSet := fn(rootDir: String, filter: String): (ok: Bool, matchCount: Int, error: String) {
+    files := discoverAllCaseFiles(rootDir);
     if list.listCountText(files) == 0 {
-        return (ok = false, error = "no cases found");
+        return (ok = false, matchCount = 0, error = "no cases found");
     }
     seenIds: mut List<String> = [];
+    var matches := 0;
     loop files as caseFile {
         checked := validateCaseFile(rootDir, caseFile);
-        if not checked.ok { return (ok = false, error = checked.error); }
+        if not checked.ok { return (ok = false, matchCount = 0, error = checked.error); }
         if list.listContainsText(seenIds, checked.id) {
-            return (ok = false, error = "duplicate case IDs");
+            return (ok = false, matchCount = 0, error = "duplicate case IDs");
         }
         list.pushBack(mut seenIds, checked.id);
+        if filter == "" or text.containsText(checked.id, filter) {
+            matches = matches + 1;
+        }
+    }
+    if matches == 0 {
+        return (ok = false, matchCount = 0, error = "no cases match: " + filter);
+    }
+    (ok = true, matchCount = matches, error = "")
+}
+
+/** Returns discovered `.case.json` files whose manifest `id` matches `filter`. */
+pub selectCaseFiles := fn(rootDir: String, filter: String): List<String> {
+    files := discoverAllCaseFiles(rootDir);
+    if filter == "" { return files; }
+    selected: mut List<String> = [];
+    loop files as caseFile {
+        readRes := fs.readText(caseFile);
+        if readRes.ok {
+            idRes := json.readObjectString(readRes.text, 0, "id");
+            if idRes.found and idRes.ok and text.containsText(idRes.value, filter) {
+                list.pushBack(mut selected, caseFile);
+            }
+        }
+    }
+    selected
+}
+
+/** Discovers and validates all `.case.json` manifests under `language/cases` and `tools/cases`. */
+pub validateAllCases := fn(rootDir: String): (ok: Bool, error: String) {
+    checked := validateCaseSet(rootDir, "");
+    (ok = checked.ok, error = checked.error)
+}
+
+/** Validates `caseFile` and reads its top-level manifest metadata fields cleanly. */
+pub readCaseMeta := fn(rootDir: String, caseFile: String): (ok: Bool, id: String, kind: String, pending: String, hasPending: Bool, tool: String, source: String, hasBenchmark: Bool, warmups: Int, samples: Int, scenarioCount: Int, error: String) {
+    absFile := path.resolve(proc.cwd(), caseFile);
+    checked := validateCaseFile(rootDir, absFile);
+    if not checked.ok {
+        return (
+        ok = false, id = "", kind = "", pending = "", hasPending = false,
+        tool = "", source = "", hasBenchmark = false, warmups = 0, samples = 0,
+        scenarioCount = 0, error = checked.error,
+        );
+    }
+    src := fs.readText(absFile).text;
+    kind := json.readObjectString(src, 0, "kind").value;
+    pendRes := json.readObjectString(src, 0, "pending");
+    toolRes := json.readObjectString(src, 0, "tool");
+    srcRes := json.readObjectString(src, 0, "source");
+    benchField := json.findObjectField(src, 0, "benchmark");
+    var warmups := 0;
+    var samples := 0;
+    if benchField.found {
+        warmups = json.readObjectInt(src, benchField.valuePos, "warmups").value;
+        samples = json.readObjectInt(src, benchField.valuePos, "samples").value;
+    }
+    casesField := json.findObjectField(src, 0, "cases");
+    scenarios := json.arrayElementOffsets(src, casesField.valuePos);
+    (
+    ok = true, id = checked.id, kind = kind,
+    pending = if pendRes.found { pendRes.value } else { "" },
+    hasPending = pendRes.found,
+    tool = if toolRes.found { toolRes.value } else { "" },
+    source = if srcRes.found { srcRes.value } else { "" },
+    hasBenchmark = benchField.found,
+    warmups = warmups, samples = samples,
+    scenarioCount = list.listCountInt(scenarios),
+    error = "",
+    )
+}
+
+/** Returns the `name` field for scenario `scenarioIdx` in `caseFile`. */
+pub readScenarioName := fn(caseFile: String, scenarioIdx: Int): String {
+    absFile := path.resolve(proc.cwd(), caseFile);
+    readRes := fs.readText(absFile);
+    if not readRes.ok { return ""; }
+    casesField := json.findObjectField(readRes.text, 0, "cases");
+    if not casesField.found { return ""; }
+    scenarios := json.arrayElementOffsets(readRes.text, casesField.valuePos);
+    if scenarioIdx < 0 or scenarioIdx >= list.listCountInt(scenarios) { return ""; }
+    json.readObjectString(readRes.text, scenarios[scenarioIdx], "name").value
+}
+
+readFileDiagnostic := fn(filePath: String, byteCount: Int): String {
+    res := fs.readText(filePath);
+    if res.ok { return res.text; }
+    "(binary output, " + integer.intText(byteCount) + " bytes)"
+}
+
+buildTsConfigText := fn(rootDir: String, artifactPath: String): (ok: Bool, text: String, error: String) {
+    cfgPath := path.join(rootDir, "igniter/tsconfig.json");
+    cfgRes := fs.readText(cfgPath);
+    if not cfgRes.ok { return (ok = false, text = "", error = cfgPath + ": " + cfgRes.error); }
+    optsField := json.findObjectField(cfgRes.text, 0, "compilerOptions");
+    if not optsField.found { return (ok = false, text = "", error = cfgPath + ": missing compilerOptions"); }
+
+    parts: mut List<String> = [];
+    loop json.objectKeys(cfgRes.text, optsField.valuePos) as key {
+        if key =!= "types" and key =!= "typeRoots" and key =!= "lib" {
+            valField := json.findObjectField(cfgRes.text, optsField.valuePos, key);
+            span := json.valueSpan(cfgRes.text, valField.valuePos);
+            if not span.ok { return (ok = false, text = "", error = cfgPath + ": invalid compilerOptions." + key); }
+            list.pushBack(mut parts, json.quoteString(key) + ":" + text.slice(cfgRes.text, span.start, span.end));
+        }
+    }
+    list.pushBack(mut parts, "\"types\":[]");
+    list.pushBack(mut parts, "\"typeRoots\":[]");
+    list.pushBack(mut parts, "\"lib\":[\"ESNext\"]");
+
+    body := "{\"compilerOptions\":{" + text.joinTexts(parts, ",") + "},\"files\":[" + json.quoteString(artifactPath) + "]}\n";
+    (ok = true, text = body, error = "")
+}
+
+/** Strict-typechecks emitted TypeScript `artifactPath` inside `workDir` using native or JS `tsc`. */
+pub checkTsArtifactFile := fn(rootDir: String, artifactPath: String, workDir: String): (ok: Bool, error: String) {
+    mkRes := fs.makeDir(workDir);
+    if not mkRes.ok { return (ok = false, error = mkRes.error); }
+    pkgRes := fs.writeText(path.join(workDir, "package.json"), "{\"type\":\"module\"}\n");
+    if not pkgRes.ok { return (ok = false, error = pkgRes.error); }
+    localArtifact := path.join(workDir, "artifact.ts");
+    copyArt := fs.copy(artifactPath, localArtifact);
+    if not copyArt.ok { return (ok = false, error = copyArt.error); }
+
+    cfgRes := buildTsConfigText(rootDir, localArtifact);
+    if not cfgRes.ok { return (ok = false, error = cfgRes.error); }
+    tsconfigPath := path.join(workDir, "tsconfig.json");
+    wCfg := fs.writeText(tsconfigPath, cfgRes.text);
+    if not wCfg.ok { return (ok = false, error = wCfg.error); }
+
+    exeName := if proc.platform() == "win32" { "tsc.exe" } else { "tsc" };
+    nativeTsc := path.join(rootDir, "igniter/node_modules/@typescript/typescript-" + proc.platform() + "-" + proc.arch() + "/lib/" + exeName);
+    outPath := path.join(workDir, "tsc.stdout");
+    errPath := path.join(workDir, "tsc.stderr");
+    emptyBytes: List<Int> = [];
+    emptyEnv: List<String> = [];
+
+    var status := -1;
+    var procErr := "";
+    if fs.kind(nativeTsc) == "file" {
+        args: List<String> = ["-p", tsconfigPath];
+        res := proc.runBytes(nativeTsc, args, workDir, emptyEnv, 30000, emptyBytes, outPath, errPath);
+        status = res.status;
+        procErr = res.error;
+    } else {
+        args: List<String> = [path.join(rootDir, "igniter/node_modules/typescript/bin/tsc"), "-p", tsconfigPath];
+        res := proc.runBytes(proc.execPath(), args, workDir, emptyEnv, 30000, emptyBytes, outPath, errPath);
+        status = res.status;
+        procErr = res.error;
+    }
+
+    if procErr =!= "" { return (ok = false, error = procErr); }
+    if status =!= 0 {
+        errBytes := fs.readBytes(errPath);
+        outBytes := fs.readBytes(outPath);
+        msg := if list.listCountInt(errBytes) > 0 { readFileDiagnostic(errPath, list.listCountInt(errBytes)) } else { readFileDiagnostic(outPath, list.listCountInt(outBytes)) };
+        return (ok = false, error = msg);
     }
     (ok = true, error = "")
+}
+
+runCaseGit := fn(projDir: String, gitArgs: List<String>): (ok: Bool, error: String) {
+    args: mut List<String> = [
+    "-c", "user.name=Case fixture", "-c", "user.email=fixture@example.invalid",
+    "-c", "commit.gpgSign=false", "-c", "tag.gpgSign=false",
+    "-c", "maintenance.auto=false", "-c", "gc.auto=0",
+    ];
+    loop gitArgs as gArg {
+        list.pushBack(mut args, gArg);
+    }
+    emptyEnv: List<String> = [];
+    res := proc.run("git", args, projDir, emptyEnv, true, "");
+    if res.error =!= "" { return (ok = false, error = res.error); }
+    if res.status =!= 0 { return (ok = false, error = "git failed: " + res.stdout + res.stderr); }
+    (ok = true, error = "")
+}
+
+prepareToolWorkspace := fn(rootDir: String, caseText: String, sPos: Int, workDir: String): (ok: Bool, workspace: String, error: String) {
+    wsRes := json.readObjectString(caseText, sPos, "workspace");
+    if not wsRes.found { return (ok = true, workspace = rootDir, error = ""); }
+
+    projDir := path.join(workDir, "project");
+    topSkip: List<String> = [".git", "node_modules", "dist", ".cache"];
+    nestedSkip: List<String> = ["node_modules"];
+    copied := fsUtil.copyFiltered(rootDir, projDir, topSkip, nestedSkip);
+    if not copied.ok { return (ok = false, workspace = "", error = copied.error); }
+
+    g1 := runCaseGit(projDir, ["init", "-b", "main"]);
+    if not g1.ok { return (ok = false, workspace = "", error = g1.error); }
+    g2 := runCaseGit(projDir, ["add", "."]);
+    if not g2.ok { return (ok = false, workspace = "", error = g2.error); }
+    g3 := runCaseGit(projDir, ["commit", "-m", "case fixture"]);
+    if not g3.ok { return (ok = false, workspace = "", error = g3.error); }
+
+    tagField := json.findObjectField(caseText, sPos, "tag");
+    if tagField.found {
+        tName := json.readObjectString(caseText, tagField.valuePos, "name").value;
+        tAnn := json.readObjectBool(caseText, tagField.valuePos, "annotated").value;
+        if tAnn {
+            gt := runCaseGit(projDir, ["tag", "-a", tName, "-m", tName]);
+            if not gt.ok { return (ok = false, workspace = "", error = gt.error); }
+        } else {
+            gt := runCaseGit(projDir, ["tag", tName]);
+            if not gt.ok { return (ok = false, workspace = "", error = gt.error); }
+        }
+    }
+    if wsRes.value == "dirty" {
+        wDirty := fs.writeText(path.join(projDir, "uncommitted.txt"), "dirty\n");
+        if not wDirty.ok { return (ok = false, workspace = "", error = wDirty.error); }
+    }
+    (ok = true, workspace = projDir, error = "")
+}
+
+readStringListAt := fn(caseText: String, arrPos: Int): List<String> {
+    items: mut List<String> = [];
+    loop json.arrayElementOffsets(caseText, arrPos) as elPos {
+        s := json.readStringAt(caseText, elPos);
+        if s.ok { list.pushBack(mut items, s.value); }
+    }
+    items
+}
+
+verifyScenarioInWork := fn(rootDir: String, absFile: String, scenarioIdx: Int, work: String): (ok: Bool, artifactSha: String, error: String) {
+    checked := validateCaseFile(rootDir, absFile);
+    if not checked.ok { return (ok = false, artifactSha = "", error = checked.error); }
+    caseText := fs.readText(absFile).text;
+    caseId := checked.id;
+
+    pendRes := json.readObjectString(caseText, 0, "pending");
+    if pendRes.found {
+        return (ok = false, artifactSha = "", error = caseId + ": pending: " + pendRes.value);
+    }
+
+    casesField := json.findObjectField(caseText, 0, "cases");
+    scenarios := json.arrayElementOffsets(caseText, casesField.valuePos);
+    if scenarioIdx < 0 or scenarioIdx >= list.listCountInt(scenarios) {
+        return (ok = false, artifactSha = "", error = caseId + ": invalid scenario index");
+    }
+    sPos := scenarios[scenarioIdx];
+    sName := json.readObjectString(caseText, sPos, "name").value;
+    label := caseId + "/" + sName;
+    kind := json.readObjectString(caseText, 0, "kind").value;
+    caseDir := path.parentDir(absFile);
+
+    timeoutRes := json.readObjectInt(caseText, sPos, "timeoutMs");
+    timeoutMs := if timeoutRes.found { timeoutRes.value } else { 30000 };
+    argsField := json.findObjectField(caseText, sPos, "args");
+    emptyStrings: List<String> = [];
+    scenarioArgs := if argsField.found { readStringListAt(caseText, argsField.valuePos) } else { emptyStrings };
+
+    stdinField := json.findObjectField(caseText, sPos, "stdin");
+    stdoutField := json.findObjectField(caseText, sPos, "stdout");
+    stderrField := json.findObjectField(caseText, sPos, "stderr");
+    stdinBytes := streams.readStreamBytes(caseText, stdinField.valuePos, caseDir);
+    expectedStdout := streams.readStreamBytes(caseText, stdoutField.valuePos, caseDir);
+    expectedStderr := streams.readStreamBytes(caseText, stderrField.valuePos, caseDir);
+    expectedExit := json.readObjectInt(caseText, sPos, "exitCode").value;
+
+    emptyBytes: List<Int> = [];
+    emptyEnv: List<String> = [];
+
+    var actualStatus := -1;
+    var actualStdout: mut List<Int> = [];
+    var actualStderr: mut List<Int> = [];
+    var actualStderrPath := "";
+    var artifactSha := "";
+    var workspace := rootDir;
+
+    if kind == "tool" {
+        wsRes := prepareToolWorkspace(rootDir, caseText, sPos, work);
+        if not wsRes.ok { return (ok = false, artifactSha = "", error = wsRes.error); }
+        workspace = wsRes.workspace;
+        toolName := json.readObjectString(caseText, 0, "tool").value;
+
+        cmdArgs: mut List<String> = [path.join(workspace, "bin/" + toolName)];
+        loop scenarioArgs as arg {
+            list.pushBack(mut cmdArgs, arg);
+        }
+        outPath := path.join(work, "tool.stdout");
+        errPath := path.join(work, "tool.stderr");
+        runRes := proc.runBytes(proc.execPath(), cmdArgs, workspace, emptyEnv, timeoutMs, stdinBytes, outPath, errPath);
+        if runRes.error =!= "" { return (ok = false, artifactSha = "", error = runRes.error); }
+        actualStatus = runRes.status;
+        actualStdout = fs.readBytes(outPath);
+        actualStderr = fs.readBytes(errPath);
+        actualStderrPath = errPath;
+    } else {
+        sourceRel := json.readObjectString(caseText, 0, "source").value;
+        compileArg := path.relative(rootDir, path.resolve(caseDir, sourceRel));
+        compArgs: List<String> = [path.join(rootDir, "bin/lite-compile"), compileArg];
+        compOutPath := path.join(work, "compile.stdout");
+        compErrPath := path.join(work, "compile.stderr");
+        compiled := proc.runBytes(proc.execPath(), compArgs, rootDir, emptyEnv, timeoutMs, emptyBytes, compOutPath, compErrPath);
+        if compiled.error =!= "" { return (ok = false, artifactSha = "", error = compiled.error); }
+
+        compOutBytes := fs.readBytes(compOutPath);
+        compErrBytes := fs.readBytes(compErrPath);
+        outputTsPath := path.join(work, "program.lts.ts");
+
+        if compiled.status == 0 {
+            copied := fs.copy(compOutPath, outputTsPath);
+            if not copied.ok { return (ok = false, artifactSha = "", error = copied.error); }
+            tsCheck := checkTsArtifactFile(rootDir, outputTsPath, path.join(work, "tsc-check"));
+            if not tsCheck.ok { return (ok = false, artifactSha = "", error = tsCheck.error); }
+            hashRes := crypto.sha256File(outputTsPath);
+            if not hashRes.ok { return (ok = false, artifactSha = "", error = hashRes.error); }
+            artifactSha = hashRes.hex;
+        }
+
+        if kind == "compile" {
+            artField := json.findObjectField(caseText, sPos, "artifact");
+            if artField.found {
+                if fs.kind(outputTsPath) =!= "file" {
+                    return (ok = false, artifactSha = "", error = label + ": missing generated artifact");
+                }
+                expectedArt := streams.readStreamBytes(caseText, artField.valuePos, caseDir);
+                if not streams.equalBytes(fs.readBytes(outputTsPath), expectedArt) {
+                    return (ok = false, artifactSha = "", error = "generated artifact differs");
+                }
+            }
+        }
+        if kind == "reject" and fs.kind(outputTsPath) =!= "missing" {
+            return (ok = false, artifactSha = "", error = "rejection created an output artifact");
+        }
+
+        if kind == "reject" or kind == "compile" {
+            actualStatus = compiled.status;
+            actualStdout = if compiled.status == 0 { emptyBytes } else { compOutBytes };
+            actualStderr = compErrBytes;
+            actualStderrPath = compErrPath;
+        } else {
+            if compiled.status =!= 0 {
+                return (ok = false, artifactSha = "", error = readFileDiagnostic(compErrPath, list.listCountInt(compErrBytes)));
+            }
+            if list.listCountInt(compErrBytes) > 0 {
+                return (ok = false, artifactSha = "", error = "unexpected compiler diagnostics");
+            }
+            wPkg := fs.writeText(path.join(work, "package.json"), "{\"type\":\"module\"}\n");
+            if not wPkg.ok { return (ok = false, artifactSha = "", error = wPkg.error); }
+            filesDir := path.join(work, "files");
+            mkFiles := fs.makeDir(filesDir);
+            if not mkFiles.ok { return (ok = false, artifactSha = "", error = mkFiles.error); }
+
+            inFilesField := json.findObjectField(caseText, sPos, "inputFiles");
+            if inFilesField.found {
+                loop json.objectKeys(caseText, inFilesField.valuePos) as fname {
+                    fv := json.findObjectField(caseText, inFilesField.valuePos, fname);
+                    dstFile := path.join(filesDir, fname);
+                    mkParent := fs.makeDir(path.parentDir(dstFile));
+                    if not mkParent.ok { return (ok = false, artifactSha = "", error = mkParent.error); }
+                    wf := fs.writeBytes(dstFile, streams.readStreamBytes(caseText, fv.valuePos, caseDir));
+                    if not wf.ok { return (ok = false, artifactSha = "", error = wf.error); }
+                }
+            }
+
+            runArgs: mut List<String> = [path.join(rootDir, "compiler/entry.ts"), outputTsPath];
+            loop scenarioArgs as arg {
+                list.pushBack(mut runArgs, arg);
+            }
+            runOutPath := path.join(work, "run.stdout");
+            runErrPath := path.join(work, "run.stderr");
+            runRes := proc.runBytes(proc.execPath(), runArgs, filesDir, emptyEnv, timeoutMs, stdinBytes, runOutPath, runErrPath);
+            if runRes.error =!= "" { return (ok = false, artifactSha = "", error = runRes.error); }
+
+            outFilesField := json.findObjectField(caseText, sPos, "outputFiles");
+            if outFilesField.found {
+                loop json.objectKeys(caseText, outFilesField.valuePos) as fname {
+                    fv := json.findObjectField(caseText, outFilesField.valuePos, fname);
+                    outFile := path.join(filesDir, fname);
+                    if fs.kind(outFile) =!= "file" {
+                        return (ok = false, artifactSha = "", error = label + ": file " + fname);
+                    }
+                    expectedFileBytes := streams.readStreamBytes(caseText, fv.valuePos, caseDir);
+                    if not streams.equalBytes(fs.readBytes(outFile), expectedFileBytes) {
+                        return (ok = false, artifactSha = "", error = label + ": file " + fname);
+                    }
+                }
+            }
+
+            actualStatus = runRes.status;
+            actualStdout = fs.readBytes(runOutPath);
+            actualStderr = fs.readBytes(runErrPath);
+            actualStderrPath = runErrPath;
+        }
+    }
+
+    if actualStatus =!= expectedExit {
+        diag := readFileDiagnostic(actualStderrPath, list.listCountInt(actualStderr));
+        return (ok = false, artifactSha = "", error = label + ": exit status; " + diag);
+    }
+    if not streams.equalBytes(actualStdout, expectedStdout) {
+        return (ok = false, artifactSha = "", error = label + ": stdout");
+    }
+    if not streams.equalBytes(actualStderr, expectedStderr) {
+        return (ok = false, artifactSha = "", error = label + ": stderr");
+    }
+    if kind == "reject" {
+        if expectedExit == 0 or list.listCountInt(actualStdout) > 0 {
+            return (ok = false, artifactSha = "", error = label + ": unexpected reject output");
+        }
+    }
+    filesField := json.findObjectField(caseText, sPos, "files");
+    if filesField.found {
+        loop readStringListAt(caseText, filesField.valuePos) as artifactRel {
+            if fs.kind(path.resolve(workspace, artifactRel)) == "missing" {
+                return (ok = false, artifactSha = "", error = "missing artifact: " + artifactRel);
+            }
+        }
+    }
+    (ok = true, artifactSha = artifactSha, error = "")
+}
+
+/** Verifies scenario `scenarioIdx` of `caseFile` inside an isolated temporary workspace. */
+pub verifyCaseScenario := fn(rootDir: String, caseFile: String, scenarioIdx: Int): (ok: Bool, artifactSha: String, error: String) {
+    absFile := path.resolve(proc.cwd(), caseFile);
+    tmpRes := fs.makeTempDir("lite-case-");
+    if not tmpRes.ok { return (ok = false, artifactSha = "", error = tmpRes.error); }
+    res := verifyScenarioInWork(rootDir, absFile, scenarioIdx, tmpRes.path);
+    _rm := fs.remove(tmpRes.path);
+    res
+}
+
+hashFileMapJson := fn(caseText: String, objPos: Int, caseDir: String): String {
+    entries: mut List<String> = [];
+    loop json.objectKeys(caseText, objPos) as fname {
+        fv := json.findObjectField(caseText, objPos, fname);
+        digest := crypto.sha256Bytes(streams.readStreamBytes(caseText, fv.valuePos, caseDir));
+        list.pushBack(mut entries, json.quoteString(fname) + ":" + json.quoteString(digest));
+    }
+    "{" + text.joinTexts(entries, ",") + "}"
+}
+
+/** Builds deterministic JSON identity metadata (manifest, source, and scenario stream hashes) for `caseFile`. */
+pub caseIdentityJson := fn(rootDir: String, caseFile: String): (ok: Bool, jsonText: String, error: String) {
+    absFile := path.resolve(proc.cwd(), caseFile);
+    checked := validateCaseFile(rootDir, absFile);
+    if not checked.ok { return (ok = false, jsonText = "", error = checked.error); }
+    caseText := fs.readText(absFile).text;
+    caseDir := path.parentDir(absFile);
+    kind := json.readObjectString(caseText, 0, "kind").value;
+
+    manifestHash := crypto.sha256File(absFile);
+    if not manifestHash.ok { return (ok = false, jsonText = "", error = manifestHash.error); }
+    sourceTarget := if kind == "tool" {
+        path.join(rootDir, "bin/" + json.readObjectString(caseText, 0, "tool").value)
+    } else {
+        path.resolve(caseDir, json.readObjectString(caseText, 0, "source").value)
+    };
+    sourceHash := crypto.sha256File(sourceTarget);
+    if not sourceHash.ok { return (ok = false, jsonText = "", error = sourceHash.error); }
+
+    casesField := json.findObjectField(caseText, 0, "cases");
+    scenarioJsonList: mut List<String> = [];
+    loop json.arrayElementOffsets(caseText, casesField.valuePos) as sPos {
+        sName := json.readObjectString(caseText, sPos, "name").value;
+        stdinHash := crypto.sha256Bytes(streams.readStreamBytes(caseText, json.findObjectField(caseText, sPos, "stdin").valuePos, caseDir));
+        stdoutHash := crypto.sha256Bytes(streams.readStreamBytes(caseText, json.findObjectField(caseText, sPos, "stdout").valuePos, caseDir));
+        stderrHash := crypto.sha256Bytes(streams.readStreamBytes(caseText, json.findObjectField(caseText, sPos, "stderr").valuePos, caseDir));
+
+        fields: mut List<String> = [
+        "\"name\":" + json.quoteString(sName),
+        "\"stdin\":" + json.quoteString(stdinHash),
+        "\"stdout\":" + json.quoteString(stdoutHash),
+        "\"stderr\":" + json.quoteString(stderrHash),
+        ];
+        artField := json.findObjectField(caseText, sPos, "artifact");
+        if artField.found {
+            artHash := crypto.sha256Bytes(streams.readStreamBytes(caseText, artField.valuePos, caseDir));
+            list.pushBack(mut fields, "\"artifact\":" + json.quoteString(artHash));
+        }
+        inFilesField := json.findObjectField(caseText, sPos, "inputFiles");
+        if inFilesField.found {
+            list.pushBack(mut fields, "\"inputFiles\":" + hashFileMapJson(caseText, inFilesField.valuePos, caseDir));
+        }
+        outFilesField := json.findObjectField(caseText, sPos, "outputFiles");
+        if outFilesField.found {
+            list.pushBack(mut fields, "\"outputFiles\":" + hashFileMapJson(caseText, outFilesField.valuePos, caseDir));
+        }
+        list.pushBack(mut scenarioJsonList, "{" + text.joinTexts(fields, ",") + "}");
+    }
+
+    body := "{\"manifest\":" + json.quoteString(manifestHash.hex)
+    + ",\"source\":" + json.quoteString(sourceHash.hex)
+    + ",\"streams\":[" + text.joinTexts(scenarioJsonList, ",") + "]}";
+    (ok = true, jsonText = body, error = "")
 }

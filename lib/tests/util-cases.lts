@@ -1,11 +1,51 @@
 cases := import "util/cases";
 project := import "util/project";
+path := import "util/path";
+list := import "core/list";
 test := import "core/test";
+json := import "util/json";
 
 root := project.findRepoRoot();
 test.checkBool("repo root found", true, root =!= "");
 checked := cases.validateAllCases(root);
 test.checkText("validate all cases ok", "", checked.error);
 test.checkBool("validate all cases passed", true, checked.ok);
+
+allFiles := cases.discoverAllCaseFiles(root);
+test.checkBool("discovered multiple cases", true, list.listCountText(allFiles) > 0);
+
+matched := cases.validateCaseSet(root, "case.silent");
+test.checkBool("validateCaseSet matches silent", true, matched.ok);
+test.checkInt("validateCaseSet silent count", 1, matched.matchCount);
+
+missed := cases.validateCaseSet(root, "nonexistent-case-filter-xyz");
+test.checkBool("validateCaseSet misses empty", false, missed.ok);
+
+selected := cases.selectCaseFiles(root, "case.silent");
+test.checkInt("selectCaseFiles silent count", 1, list.listCountText(selected));
+
+meta := cases.readCaseMeta(root, selected[0]);
+test.checkText("meta error", "", meta.error);
+test.checkBool("meta ok", true, meta.ok);
+test.checkText("meta id", "case.silent", meta.id);
+test.checkBool("meta not pending", false, meta.hasPending);
+test.checkInt("meta scenario count", 1, meta.scenarioCount);
+test.checkText("scenario name", "no-output", cases.readScenarioName(selected[0], 0));
+
+ran := cases.verifyCaseScenario(root, selected[0], 0);
+test.checkText("verifyCaseScenario error", "", ran.error);
+test.checkBool("verifyCaseScenario ok", true, ran.ok);
+test.checkBool("artifact digest returned", true, ran.artifactSha =!= "");
+
+ident := cases.caseIdentityJson(root, selected[0]);
+test.checkText("identity error", "", ident.error);
+test.checkBool("identity ok", true, ident.ok);
+test.checkBool("identity valid json", true, json.validate(ident.jsonText).ok);
+
+propMeta := cases.readCaseMeta(root, path.join(root, "tools/cases/tooling/proposal.fixture.json"));
+test.checkBool("proposal meta ok", true, propMeta.ok);
+test.checkBool("proposal is pending", true, propMeta.hasPending);
+propRun := cases.verifyCaseScenario(root, path.join(root, "tools/cases/tooling/proposal.fixture.json"), 0);
+test.checkBool("pending scenario refuses to execute", false, propRun.ok);
 
 test.done("util-cases");
