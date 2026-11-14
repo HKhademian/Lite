@@ -45,7 +45,7 @@ test('TS artifact capture preserves large synchronous writes and the returned ta
     return "tail\\n";
   }`;
   const actual = runTsArtifact(artifact);
-  assert.equal(actual.phase, 'run');
+  assert.equal(actual.phase, 'run', actual.stdout.toString() + actual.stderr.toString());
   assert.equal(actual.status, 0, actual.stderr.toString());
   assert.equal(actual.signal, null);
   assert.equal(actual.stderr.length, 0);
@@ -671,7 +671,7 @@ test('TS artifact capture preserves repeated output, diagnostics and early exit 
   withTsArtifact(compiled.stdout.toString(), run => {
     for (const mode of [0, 1, 2, 0]) {
       const actual = run({ stdin: `${mode}\nreply\n` });
-      assert.equal(actual.phase, 'run');
+      assert.equal(actual.phase, 'run', actual.stdout.toString() + actual.stderr.toString());
       assert.equal(actual.signal, null);
       assert.equal(actual.status, mode === 0 ? 0 : mode === 1 ? 7 : 1, actual.stderr.subarray(-512).toString());
       const stdout = chunk.repeat(512) + 'prompt: \nreply\n' + (mode === 0 ? 'tail\n' : '');
@@ -1167,7 +1167,7 @@ test('generated input rejects malformed UTF-8 at the first reached read', () => 
       [Buffer.from([0x37, 0x20, 0xff]), 'before:N: 7\nRest: ', 82],
     ] as const) {
       const actual = run({ stdin });
-      assert.equal(actual.phase, 'run'); assert.equal(actual.signal, null); assert.equal(actual.status, 1);
+      assert.equal(actual.phase, 'run', actual.stdout.toString() + actual.stderr.toString()); assert.equal(actual.signal, null); assert.equal(actual.status, 1);
       assert.equal(actual.stdout.toString(), stdout);
       assert.equal(actual.stderr.toString(), `input.lts:1:${column}: InputFault: cannot read input: ${decodeError}\n`);
     }
@@ -1307,7 +1307,7 @@ test('generated text/list bounds faults preserve exact positions, output and ope
     const compiled = compileTs({ text: source }), expected = expectedText(source);
     assert.equal(compiled.status, 0, compiled.stderr.toString());
     const actual = runTsArtifact(compiled.stdout.toString());
-    assert.equal(actual.phase, 'run');
+    assert.equal(actual.phase, 'run', actual.stdout.toString() + actual.stderr.toString());
     assert.deepEqual({ status: actual.status, stdout: actual.stdout, stderr: actual.stderr }, expected);
   }
 });
@@ -2444,7 +2444,7 @@ test('statement-bearing value blocks and Unit tails preserve lexical scope and t
   const compiled = compileTs({ text: source });
   assert.equal(compiled.status, 0, compiled.stderr.toString());
   const actual = runTsArtifact(compiled.stdout.toString());
-  assert.equal(actual.phase, 'run'); assert.equal(actual.status, 0);
+  assert.equal(actual.phase, 'run', actual.stdout.toString() + actual.stderr.toString()); assert.equal(actual.status, 0);
   assert.equal(actual.stdout.toString(), '100 6 6 9 1\nUnit\nUnit\n');
 
   for (const [bad, expectedMessage] of [
@@ -2486,7 +2486,7 @@ test('tuple shapes support unnamed/mixed/singleton, shorthand, positional reads,
   const compiled = compileTs({ text: source });
   assert.equal(compiled.status, 0, compiled.stderr.toString());
   const actual = runTsArtifact(compiled.stdout.toString());
-  assert.equal(actual.phase, 'run'); assert.equal(actual.status, 0);
+  assert.equal(actual.phase, 'run', actual.stdout.toString() + actual.stderr.toString()); assert.equal(actual.status, 0);
   assert.equal(
     actual.stdout.toString(),
     'number 12\n1 first false\n20 10\n1\n3 11 20\nUnit Unit (1,) (1, 2) (1, left=2, right=3, 4)\n7 (__proto__=7,)\n',
@@ -2524,7 +2524,7 @@ test('fixed arrays support inferred/explicit extents, aliases, functions, zero v
   const compiled = compileTs({ text: source });
   assert.equal(compiled.status, 0, compiled.stderr.toString());
   const actual = runTsArtifact(compiled.stdout.toString());
-  assert.equal(actual.phase, 'run'); assert.equal(actual.status, 0);
+  assert.equal(actual.phase, 'run', actual.stdout.toString() + actual.stderr.toString()); assert.equal(actual.status, 0);
   assert.equal(actual.stdout.toString(), '10 30 9 [1, 2] [0, 0, 0] [] [] 60\n');
 
   for (const [bad, expectedMessage] of [
@@ -2567,7 +2567,7 @@ test('mutability and lists support inferred mut/var mut, front/back ops, List<Un
   const compiled = compileTs({ text: source });
   assert.equal(compiled.status, 0, compiled.stderr.toString());
   const actual = runTsArtifact(compiled.stdout.toString());
-  assert.equal(actual.phase, 'run'); assert.equal(actual.status, 0);
+  assert.equal(actual.phase, 'run', actual.stdout.toString() + actual.stderr.toString()); assert.equal(actual.status, 0);
   assert.equal(
     actual.stdout.toString(),
     '0 3 9 [1, 2]\n[z] [a]\nUnit Unit []\na 1 []\n',
@@ -2621,7 +2621,7 @@ test('storage and updates support compound assignments, zero init, reserved stor
   const compiled = compileTs({ text: source });
   assert.equal(compiled.status, 0, compiled.stderr.toString());
   const actual = runTsArtifact(compiled.stdout.toString());
-  assert.equal(actual.phase, 'run'); assert.equal(actual.status, 0);
+  assert.equal(actual.phase, 'run', actual.stdout.toString() + actual.stderr.toString()); assert.equal(actual.status, 0);
   assert.equal(actual.stdout.toString(), '0 2 ab 3.5 0  [0, 0] 42 10\n');
 
   for (const [bad, expectedMessage] of [
@@ -2661,7 +2661,7 @@ test('call routing supports named, positional, shorthand, replacement, recursion
   const compiled = compileTs({ text: source });
   assert.equal(compiled.status, 0, compiled.stderr.toString());
   const actual = runTsArtifact(compiled.stdout.toString());
-  assert.equal(actual.phase, 'run');
+  assert.equal(actual.phase, 'run', actual.stdout.toString() + actual.stderr.toString());
   assert.equal(actual.status, 0, actual.stderr.toString());
   assert.equal(actual.stdout.toString(), 'skip\nkeep 1\ntail 3\nover\n7 done\n123 123 123 526 10 4\n');
 
@@ -2721,7 +2721,7 @@ test('out local hygiene avoids main accumulator collisions at root, nested, and 
   assert(tsOut.includes('let lite_out$2 = "a";'));
   assert(tsOut.includes('return lite$out;'));
   const actual = runTsArtifact(tsOut);
-  assert.equal(actual.phase, 'run');
+  assert.equal(actual.phase, 'run', actual.stdout.toString() + actual.stderr.toString());
   assert.equal(actual.status, 0, actual.stderr.toString());
   assert.equal(actual.stdout.toString(), 'ok\nab\n7 9\n');
 
@@ -2773,7 +2773,7 @@ test('tuple destructuring supports empty (), grouped (x), var (x), singleton (x,
   const compiled = compileTs({ text: source });
   assert.equal(compiled.status, 0, compiled.stderr.toString());
   const actual = runTsArtifact(compiled.stdout.toString());
-  assert.equal(actual.phase, 'run');
+  assert.equal(actual.phase, 'run', actual.stdout.toString() + actual.stderr.toString());
   assert.equal(actual.status, 0, actual.stderr.toString());
   assert.equal(actual.stdout.toString(), '2\n2 42 15 99 11\n');
 
@@ -2916,7 +2916,7 @@ test('unnamed loop sequence traversal supports lists, fixed arrays, empty lists,
   const compiled = compileTs({ text: source });
   assert.equal(compiled.status, 0, compiled.stderr.toString());
   const actual = runTsArtifact(compiled.stdout.toString());
-  assert.equal(actual.phase, 'run');
+  assert.equal(actual.phase, 'run', actual.stdout.toString() + actual.stderr.toString());
   assert.equal(actual.status, 0, actual.stderr.toString());
   assert.equal(actual.stdout.toString(), '3 [10, 20, 30, 99, 99, 99] 3 0\n');
 
@@ -3429,7 +3429,7 @@ test('tagged blocks, targeted non-local transfers, and misplaced tag diagnostics
   const compiled = compileTs({ text: source });
   assert.equal(compiled.status, 0, compiled.stderr.toString());
   const actual = runTsArtifact(compiled.stdout.toString());
-  assert.equal(actual.phase, 'run');
+  assert.equal(actual.phase, 'run', actual.stdout.toString() + actual.stderr.toString());
   assert.equal(actual.status, 0, actual.stderr.toString());
   assert.equal(
     actual.stdout.toString(),
@@ -3476,8 +3476,8 @@ test('tagged blocks, targeted non-local transfers, and misplaced tag diagnostics
     ['match { _ @bad {} }', /block tag cannot appear after _ in match arm/],
     ['loop @bad {}', /unexpected block tag @bad in loop header/],
     ['loop false @bad {}', /block tag cannot appear before \{ in loop/],
-    ['@bad f := fn(): Int { 1 };', /expected \{ or \. after block tag @bad/],
-    ['f := @bad fn(): Int { 1 };', /expected \{ or \. after block tag @bad/],
+    ['@bad f := fn(): Int { 1 };', /expected \{, if, match or \. after block tag @bad/],
+    ['f := @bad fn(): Int { 1 };', /expected \{, if, match or \. after block tag @bad/],
     ['f := fn(): Int @bad { 1 };', /unexpected block tag in function header/],
   ] as const) {
     const rejected = compileTs({ text: bad });
@@ -3488,4 +3488,135 @@ test('tagged blocks, targeted non-local transfers, and misplaced tag diagnostics
   const cTagRejected = compileTarget('c', { text: 'io := import "core/io"; x := @blk { 1 }; io.outputLine(x);' });
   assert.equal(cTagRejected.status, 2);
   assert.match(cTagRejected.stderr.toString(), /C backend does not support tagged blocks yet/);
+});
+
+test('tagged conditionals and conditional then blocks', () => {
+  const source = [
+    'io := import "core/io";',
+    'textLib := import "core/text";',
+    'choose := fn(useChoice: Bool, earlyExit: Bool): Int {',
+    '  outcome: Int = @choose if useChoice {',
+    '    if earlyExit {',
+    '      return @choose "early";',
+    '    }',
+    '    "normal"',
+    '  } else {',
+    '    "none"',
+    '  } then {',
+    '    io.outputLine("choice", @choose.value);',
+    '    textLib.length(@choose.value)',
+    '  };',
+    '  outcome',
+    '};',
+    'skipThen := fn(jumpOuter: Bool): String {',
+    '  @outer {',
+    '    inner := @choose if true {',
+    '      if jumpOuter { return @outer "escaped"; }',
+    '      "kept"',
+    '    } else {',
+    '      "unused"',
+    '    } then {',
+    '      io.outputLine("then-ran", @choose.value);',
+    '      @choose.value + "!"',
+    '    };',
+    '    inner',
+    '  }',
+    '};',
+    'tailCond := fn(x: Int): Int {',
+    '  @t if x == 1 {',
+    '    return @t 10;',
+    '  } else if x == 2 {',
+    '    20',
+    '  } else {',
+    '    30',
+    '  } then {',
+    '    @t.value * 2',
+    '  }',
+    '};',
+    'tailMatch := fn(x: Int): String {',
+    '  @m match {',
+    '    x == 1 { return @m "one"; }',
+    '    x == 2 { "two" }',
+    '    _ { "other" }',
+    '  } then {',
+    '    "m=" + @m.value',
+    '  }',
+    '};',
+    'untaggedThen := fn(flag: Bool): Int {',
+    '  a := if flag { 1 } else { 2 } then { io.outputLine("untagged-if"); 40 };',
+    '  b := match { flag { 3 } _ { 4 } } then { io.outputLine("untagged-match"); 5 };',
+    '  a + b',
+    '};',
+    'io.outputLine(choose(true, true), choose(true, false), choose(false, false));',
+    'io.outputLine(skipThen(true), skipThen(false));',
+    'io.outputLine(tailCond(1), tailCond(2), tailCond(3));',
+    'io.outputLine(tailMatch(1), tailMatch(2), tailMatch(9));',
+    'io.outputLine(untaggedThen(true));',
+    'partZero: Int = @pz if false { 9 };',
+    'partJump: Int = @pj if true { return @pj 11; 0 };',
+    'io.outputLine(partZero, partJump);',
+    '@stmtIf if true {',
+    '  io.outputLine("stmt-if-1");',
+    '  return @stmtIf;',
+    '  io.outputLine("stmt-if-skip");',
+    '}',
+    'if true { 1 } else { 2 } then { io.outputLine("stmt-then"); };',
+    'match { true { 1 } _ { 2 } } then { io.outputLine("stmt-match-then"); };',
+    'io.outputLine(@cond if true { "t" } else { "f" });',
+  ].join('\n');
+  const compiled = compileTs({ text: source });
+  assert.equal(compiled.status, 0, compiled.stderr.toString());
+  const actual = runTsArtifact(compiled.stdout.toString());
+  assert.equal(actual.phase, 'run', actual.stdout.toString() + actual.stderr.toString());
+  assert.equal(actual.status, 0, actual.stderr.toString());
+  assert.equal(
+    actual.stdout.toString(),
+    [
+      'choice early',
+      'choice normal',
+      'choice none',
+      '5 6 4',
+      'then-ran kept',
+      'escaped kept!',
+      '20 40 60',
+      'm=one m=two m=other',
+      'untagged-if',
+      'untagged-match',
+      '45',
+      '0 11',
+      'stmt-if-1',
+      'stmt-then',
+      'stmt-match-then',
+      't',
+      '',
+    ].join('\n'),
+  );
+
+  for (const [bad, expectedMessage] of [
+    ['x := @t if (@t.value == 1) { 1 } else { 2 } then { 3 };', /@t\.value is only available inside that conditional's then block/],
+    ['x := @t if true { @t.value } else { 2 } then { 3 };', /@t\.value is only available inside that conditional's then block/],
+    ['@t if true { 1 } else { 2 } then { 3 }; x := @t.value;', /unknown block tag @t/],
+    ['io := import "core/io"; x := @t if true { io.outputLine("a"); } else { io.outputLine("b"); } then { @t.value };', /block tag @t does not expose \.value for Unit conditional/],
+    ['x := @outer { @t if true { return @outer 1; } else { return @outer 2; } then { @t.value } };', /block tag @t does not expose \.value for Never conditional/],
+    ['x := @t if true { 1 } else { 2 } then { @t.count };', /conditional tag @t only exposes \.value, not \.count/],
+    ['x := @t if true { 1 } else { 2 } then { return @t 3; 4 };', /cannot return to @t from inside its own then block/],
+    ['x := if true { 1 } then { 2 };', /value if requires a final else/],
+    ['if true { 1 } then { 2 }', /value if requires a final else/],
+    ['x := @t if true { 1 } else { 2 } then @bad { 3 };', /block tag cannot appear after then/],
+    ['@bad; x := 1;', /expected \{, if, match or \. after block tag @bad/],
+  ] as const) {
+    const rejected = compileTs({ text: bad });
+    assert.equal(rejected.status, 2, bad);
+    assert.match(rejected.stderr.toString(), expectedMessage, bad);
+  }
+
+  for (const [badC, expectedMessage] of [
+    ['x := @t if true { 1 } else { 2 };', /C backend does not support tagged conditionals yet/],
+    ['x := if true { 1 } else { 2 } then { 3 };', /C backend does not support conditional then blocks yet/],
+    ['x := @m match { _ { 1 } };', /C backend does not support value match expressions yet/],
+  ] as const) {
+    const rejectedC = compileTarget('c', { text: badC });
+    assert.equal(rejectedC.status, 2, badC);
+    assert.match(rejectedC.stderr.toString(), expectedMessage, badC);
+  }
 });
