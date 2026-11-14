@@ -1469,19 +1469,19 @@ test('comparison chains compare adjacent values once and skip later operands on 
 
 test('C output evaluates all arguments before writing, including mixed scalar and Unit values', context => {
   if (process.env['LITE_SKIP_NATIVE'] === '1') { context.skip('LITE_SKIP_NATIVE=1'); return; }
-  const prefix = '/* 🙂 */ var zero := 0; var maximum := 9223372036854775807;\r\n';
+  const prefix = 'io := import "core/io"; /* 🙂 */ var zero := 0; var maximum := 9223372036854775807;\r\n';
   const cases = [
-    'io := import "core/io"; io.outputLine("prefix", 1 / zero);', 'io := import "core/io"; io.output("prefix", 1 / zero);',
-    'io := import "core/io"; io.outputLine("prefix", true, maximum + 1);', 'io := import "core/io"; io.outputLine(Unit, 1 % zero);',
-    'io := import "core/io"; io.outputLine("prefix", 1 / zero, maximum + 1);', 'io := import "core/io"; io.outputLine("prefix", maximum + 1, 1 / zero);',
-    'io := import "core/io"; io.outputLine("before"); io.outputLine("prefix", 1 :/ zero);',
-    'io := import "core/io"; io.output("before"); io.output("prefix", 1 :% zero);',
-    'io := import "core/io"; var n := 2; loop n >= 0 { io.outputLine("value", 10 / n); n = n - 1; }',
-    'io := import "core/io"; var text := "value"; io.outputLine(text + "x", 1 / zero);',
-    'io := import "core/io"; io.outputLine(Unit, (), true, "text", 7);',
-    'io := import "core/io"; io.outputLine(Unit); io.output(); io.outputLine(); io.output("x", Unit); io.outputLine();',
-    'io := import "core/io"; var lt_output_0 := 3; io.outputLine(lt_output_0, "x", true);',
-    'io := import "core/io"; var n := 0; loop n < 2 { if n == 0 { io.output("a", n); } else { io.outputLine("b", n); } n = n + 1; }',
+    'io.outputLine("prefix", 1 / zero);', 'io.output("prefix", 1 / zero);',
+    'io.outputLine("prefix", true, maximum + 1);', 'io.outputLine(Unit, 1 % zero);',
+    'io.outputLine("prefix", 1 / zero, maximum + 1);', 'io.outputLine("prefix", maximum + 1, 1 / zero);',
+    'io.outputLine("before"); io.outputLine("prefix", 1 :/ zero);',
+    'io.output("before"); io.output("prefix", 1 :% zero);',
+    'var n := 2; loop n >= 0 { io.outputLine("value", 10 / n); n = n - 1; }',
+    'var text := "value"; io.outputLine(text + "x", 1 / zero);',
+    'io.outputLine(Unit, (), true, "text", 7);',
+    'io.outputLine(Unit); io.output(); io.outputLine(); io.output("x", Unit); io.outputLine();',
+    'var lt_output_0 := 3; io.outputLine(lt_output_0, "x", true);',
+    'var n := 0; loop n < 2 { if n == 0 { io.output("a", n); } else { io.outputLine("b", n); } n = n + 1; }',
   ];
   for (const body of cases) {
     const text = prefix + body, name = 'output سلام🙂.lts';

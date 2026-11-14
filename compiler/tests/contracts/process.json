@@ -1783,7 +1783,7 @@
       "name": "output سلام🙂.lts",
       "status": 1,
       "stdout": "before\n",
-      "stderr": "output سلام🙂.lts:2:46: ArithmeticPanic: division by zero\n"
+      "stderr": "output سلام🙂.lts:2:52: ArithmeticPanic: division by zero\n"
     },
     {
       "source": "1f211f3a0415bd5583f6a2bc06031ef4f1a6ad16131c9fc7ecd6436f055241d8",
@@ -2116,7 +2116,7 @@
       "name": "output سلام🙂.lts",
       "status": 1,
       "stdout": "",
-      "stderr": "output سلام🙂.lts:2:20: ArithmeticPanic: remainder by zero\n"
+      "stderr": "output سلام🙂.lts:2:23: ArithmeticPanic: remainder by zero\n"
     },
     {
       "source": "67f5c53dc50f9a1cae5a294c5e87bd909c94e383ea73b4bf87004fc6b570525c",
@@ -2800,7 +2800,7 @@
       "name": "output سلام🙂.lts",
       "status": 1,
       "stdout": "",
-      "stderr": "output سلام🙂.lts:2:47: ArithmeticPanic: division by zero\n"
+      "stderr": "output سلام🙂.lts:2:50: ArithmeticPanic: division by zero\n"
     },
     {
       "source": "8d1ce10ba75aea427eb461121811a638376a975ad8acc78dc812aa735f9b1efe",
@@ -3106,7 +3106,7 @@
       "name": "output سلام🙂.lts",
       "status": 1,
       "stdout": "",
-      "stderr": "output سلام🙂.lts:2:24: ArithmeticPanic: division by zero\n"
+      "stderr": "output سلام🙂.lts:2:27: ArithmeticPanic: division by zero\n"
     },
     {
       "source": "4b932094b1025c2c4481168f86ea34e5bccf7ecc61275e1c093d718d4895a339",
@@ -3286,7 +3286,7 @@
       "name": "output سلام🙂.lts",
       "status": 1,
       "stdout": "",
-      "stderr": "output سلام🙂.lts:2:36: ArithmeticPanic: integer outside Int range\n"
+      "stderr": "output سلام🙂.lts:2:39: ArithmeticPanic: integer outside Int range\n"
     },
     {
       "source": "2b85c8d8be0f916dd19b5aa12b28281fb1aac2b98a1165aa494e20ee36eec557",
@@ -3619,7 +3619,7 @@
       "name": "output سلام🙂.lts",
       "status": 1,
       "stdout": "before",
-      "stderr": "output سلام🙂.lts:2:38: ArithmeticPanic: modulo by zero\n"
+      "stderr": "output سلام🙂.lts:2:44: ArithmeticPanic: modulo by zero\n"
     },
     {
       "source": "e0f8f62a4f2a2280d6a6237722ee87df5e2bc9d76fabf93076776f5bf3c13207",
@@ -6229,7 +6229,7 @@
       "name": "output سلام🙂.lts",
       "status": 1,
       "stdout": "",
-      "stderr": "output سلام🙂.lts:2:30: ArithmeticPanic: integer outside Int range\n"
+      "stderr": "output سلام🙂.lts:2:33: ArithmeticPanic: integer outside Int range\n"
     },
     {
       "source": "c546072dba79b483f4bbca0f842c9ac32d7250226389198c5b57e4c666c95ca2",
@@ -6634,7 +6634,7 @@
       "name": "output سلام🙂.lts",
       "status": 1,
       "stdout": "",
-      "stderr": "output سلام🙂.lts:2:20: ArithmeticPanic: division by zero\n"
+      "stderr": "output سلام🙂.lts:2:23: ArithmeticPanic: division by zero\n"
     },
     {
       "source": "9f38ec1886906e9ef5449520f3570a92cf70a833c4afe822d0930870b35d40b1",
@@ -7228,7 +7228,7 @@
       "name": "output سلام🙂.lts",
       "status": 1,
       "stdout": "",
-      "stderr": "output سلام🙂.lts:2:24: ArithmeticPanic: division by zero\n"
+      "stderr": "output سلام🙂.lts:2:27: ArithmeticPanic: division by zero\n"
     },
     {
       "source": "a8c15da40c7384a5a2ba6c50e0a25bdbfb1651d3fd4f84740e961e8e43ccca35",
@@ -7480,7 +7480,7 @@
       "name": "output سلام🙂.lts",
       "status": 1,
       "stdout": "value 5\nvalue 10\n",
-      "stderr": "output سلام🙂.lts:2:50: ArithmeticPanic: division by zero\n"
+      "stderr": "output سلام🙂.lts:2:53: ArithmeticPanic: division by zero\n"
     },
     {
       "source": "9a063e9444f4aed6b8a0626b81287858de74371ac7830fb5e2deb755d7a8577e",
