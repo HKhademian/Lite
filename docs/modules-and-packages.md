@@ -1,6 +1,6 @@
 # Modules and packages
 
-Status: **distinct .lts scripts and .lt module files, module-owned facilities, and explicit module access selected 2026-10-30; header-free declaration lookup direction retained; exact syntax, initialization, and run-mode conveniences remain open or proposed**.
+Status: **distinct .lts scripts and .lt module files, module-owned facilities, and explicit module access selected 2026-10-30; compile-time-known module initial values selected 2026-11-14; exact module grammar, storage and runtime conveniences remain open or proposed**.
 
 ## Purpose
 
@@ -95,12 +95,62 @@ covers initializer effects, deferred function bodies, compile-time evaluation,
 transitive dependencies, and any explicit initialization entry. It is not started;
 no blanket ban or effect-checking mechanism is selected.
 
-The user's 2026-11-14 question about requiring compile-time-known module
-definitions is explored in [implicit-known values and module initialization](../research/investigations/INV-062-implicit-known-values-and-module-initialization.md).
-It remains an investigation, not an adopted module initialization rule.
+### Compile-time-known initial definitions
 
-Compile-time evaluation and metaprogramming remain possible investigations;
-declaration-oriented modules do not prohibit them. A future compile-time block
+Selected 2026-11-14: applicable top-level value definitions in `.lt` modules
+must have compile-time-known initial values. Literal arithmetic and pure
+ordinary function calls on known inputs can supply such values. An explicit
+compile-time computation can also produce one, including through the intended
+effectful compile-time capabilities. Evaluating the initializer for its value
+occurs during compilation rather than as an implicit runtime module-startup
+call. This is selected design direction, not current `.lt` compiler support or
+a complete module initialization algorithm.
+
+```text
+/* Illustrative module fragments: imports and visibility omitted. */
+square := fn (x: Int): Int { x * x }
+width := 4 * 4;         /* compile-time-known initial value: 16 */
+area := square(width);  /* compile-time-known initial value: 256 */
+```
+
+Defining `square` makes a callable definition available; it does not execute
+the body merely because the function is declared. The selected module
+direction permits safe forward declaration lookup, but discovering a name is
+distinct from proving a dependent value is initialized. Cycles, evaluation
+dependencies, scheduling, visibility, cross-file resolution and diagnostics
+remain open.
+
+An initializer requiring the eventual program's runtime input cannot supply
+the compile-time-known initial value. Applications may still perform runtime
+setup in runtime code; its placement and any dedicated initialization mechanism
+remain open. Explicit compile-time effects such as file reads are not banned.
+Storage and target materialization may require generated setup work; this rule
+does not forbid loaders, relocations or equivalent implementation steps.
+
+The permissions, read and write rules, and stage-specific knowledge of module
+`var` and `mut` bindings remain under discussion. A known initial value is not
+necessarily an always-known later mutable value. Omitted initializers, reserved
+storage, type and import declarations, nonmaterializable values and function
+captures need complete module contracts.
+
+Pending cases, not executable passes:
+
+- `width` and `area` above initialize to 16 and 256; `square`'s body does not
+  execute merely because its definition is encountered.
+- An explicit compile-time file read can supply an initial value when its
+  result is suitable for the target; that read is not repeated at program
+  startup merely to recover the result.
+- A runtime-input-dependent top-level initializer is rejected under this
+  module rule; declaring a function whose body reads runtime input is distinct.
+- Safe forward references need eventual resolution rules; a value dependency
+  cycle or unavailable initial value needs a defined diagnostic.
+- `.lts` script execution retains its existing top-to-bottom semantics.
+
+The alternatives and open questions are recorded in [implicit-known values and
+module initialization](../research/investigations/INV-062-implicit-known-values-and-module-initialization.md).
+
+Compile-time evaluation is a selected direction, while metaprogramming remains
+under investigation; declaration-oriented modules do not prohibit them. A future compile-time block
 would still need defined execution order, while scheduling dependencies between
 declarations is a separate question. Syntax, capabilities, permitted effects,
 cycles, and reproducibility rules are open under

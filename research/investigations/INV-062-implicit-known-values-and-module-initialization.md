@@ -1,7 +1,8 @@
 # Implicit known values and module initialization
 
-Status: **bounded investigation, 2026-11-14; pure calls with known inputs
-subsequently selected, remaining options unselected; no implementation evidence**. Relates to INV-062.01–.02 and
+Status: **bounded investigation, 2026-11-14; pure calls with known inputs and
+compile-time-known module initial values subsequently selected; remaining
+options unselected; no implementation evidence**. Relates to INV-062.01–.02 and
 INV-003.05. The user would like ordinary literal arithmetic and ordinary
 function calls with known inputs to be usable as compile-time-known values,
 and asks whether module top-level definitions should require compile-time-known
@@ -148,6 +149,77 @@ callable definition can be available during compilation without calling its
 body, and a mutable global's **initial value** can be known without its later
 runtime values remaining known.
 
+### Symbol visibility, forward functions, and value dependencies
+
+The user asks whether compile-time-known value definitions can share the module
+symbol visibility of function definitions and imports, and whether they can
+call functions declared later. The existing selected module direction permits
+safe forward declaration lookup without handwritten headers. A coherent
+candidate is to make ordinary module-level value names discoverable in the
+same module scope as function and import names, subject to their applicable
+visibility and qualification rules. A known value is not automatically public;
+whether a module `var` or `mut` is admitted, and its write/access rules, remain
+separate. A fixed `name := value` is not a new `const` keyword or a guarantee
+of deep immutability.
+
+```text
+/* Illustrative module fragments; imports and visibility omitted. */
+result := twice(base);
+base := 8;
+twice := fn (x: Int): Int { x * 2 }
+```
+
+Under the candidate, lookup finds `base` and `twice` without treating their
+source position as an implicit runtime execution. The compiler establishes
+the function and value dependencies needed to evaluate `result` as `16`.
+This example does not select all module resolution and initialization rules or
+establish current compiler support. Source order, compile-time effects, imports,
+declaration collisions, unavailable values and separate modules still need
+specific contracts.
+
+A dependency graph or equivalent visit-state mechanism can detect an active
+initializer cycle. For a depth-first approach, an initializer is unvisited,
+being evaluated, or successfully evaluated; demanding an initializer that is
+already being evaluated identifies a cycle along the active path. A completed
+value can be used by another initializer. A cycle should be diagnosed with the
+relevant dependency chain; exact diagnostics, caching and effect scheduling are
+open. This is an implementation-neutral investigation of an approach, not a
+selected algorithm.
+
+```text
+/* The call actually demands the value that is still being initialized. */
+first := compute();
+compute := fn (): Int { first + 1 }
+```
+
+Contrast a compile-time initializer calling a recursive function whose
+arguments get smaller: a recursive call graph alone is not a value
+initialization cycle, and a terminating recursion need not be rejected.
+Likewise, defining a function whose body mentions `first` does not evaluate
+that body or demand `first` merely by declaring it. An untaken branch should
+not cause an initializer read at runtime or compile time merely because it
+mentions a name. The eventual rule must distinguish dependency discovery,
+conditional reachability, actual value demands and loop/evaluation limits;
+it should not assume that every cycle in a conservative call graph necessarily
+executes. Cross-module cycles and compile-time effects need their own cases.
+
+Candidate cases, pending rather than compiler passes:
+
+- **forward-known-value:** `result` in the first example is `16`, with
+  independent cases for earlier and later value and function declarations.
+- **active-value-cycle:** `first := compute()` above cannot produce a known
+  initial value by recursively demanding itself; diagnose the dependency path.
+- **mutual-values:** `a := b + 1; b := a + 1;` is an active value cycle when
+  evaluated; it is distinct from a pair of functions referring to each other.
+- **terminating-recursion:** an ordinary recursive function with known input
+  can complete at compile time without being rejected merely for recursion.
+- **unreached-reference:** an untaken branch mentioning an otherwise cyclic
+  dependency does not by itself execute that read; exact static acceptance
+  versus analysis limits remain to be specified.
+- **effectful-order:** two explicitly effectful compile-time initializers and
+  a forward dependency need an ordering and no-duplication contract rather
+  than silent graph reordering.
+
 ```text
 /* Illustrative module declarations: imports/visibility omitted. */
 square := fn (x: Int): Int { x * x } /* do not call body to define it */
@@ -157,7 +229,7 @@ board := comptime { loadBoard() }    /* explicit build-time operation */
 live := readRuntimeSetting();         /* assume runtime-only input */
 ```
 
-- **Compile-time initialization:** require each applicable top-level value
+- **Compile-time initialization (direction selected 2026-11-14):** require each applicable top-level value
   initializer to produce a valid compile-time-known initial value. The first
   four examples can be considered for admission; `live` cannot be a runtime
   initializer under this option. Which definitions, storage forms, function
@@ -287,19 +359,18 @@ Some require later decisions and are intentionally shown as alternatives.
 ## Working recommendation
 
 The user selected a language-level known-value direction for pure computations
-with known inputs, including `square`, independent of optimization flags.
-Investigate its proof and failure boundaries. Separately investigate
-the compile-time-initialized module option, with function declarations not
-invoked merely by definition, mutable globals distinguished from their initial
-values, and explicit runtime initialization available for runtime-only needs.
+with known inputs, including `square`, independent of optimization flags, and
+the compile-time-known module-initialization direction. Investigate proof and
+failure boundaries, module `var` and `mut`, function declarations not invoked
+merely by definition, and runtime initialization for runtime-only needs.
 Preserve the user's requested effectful compile-time capability. Whether
 ordinary effects can run implicitly during compilation remains a user-facing
 design choice, not a conclusion of this note. Investigate an explicit runtime
 stage guarantee as a possible counterpart, including its effect timing and
 optimization implications; it is not yet selected.
 
-Before selection, resolve the scope of the module rule, how implicit evaluation
-is triggered and fails, materialization, initialization order, and the chosen
-behavior for explicit and implicit effects. Complete the aspect-to-case list
+To complete the selected direction, resolve its precise scope, how implicit
+evaluation is triggered and fails, materialization, initialization order,
+symbol lookup, and the chosen behavior for explicit and implicit effects. Complete the aspect-to-case list
 with independent cases for accepted programs, errors, stage-specific output,
 input variations, and combined features.

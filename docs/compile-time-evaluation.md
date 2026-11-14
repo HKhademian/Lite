@@ -84,8 +84,8 @@ not require rejecting ordinary runtime calls just because their inputs are not
 known. The proposed explicit runtime counterpart and its interaction with a
 known pure result remain open.
 
-The user's example `a := 4 * 4; b := square(a);` and a possible rule for
-module-level definitions are analyzed in the [implicit-known values and module
+The user's example `a := 4 * 4; b := square(a);` and the selected direction for
+module-level initial values are analyzed in the [implicit-known values and module
 initialization investigation](../research/investigations/INV-062-implicit-known-values-and-module-initialization.md).
 That investigation records the selected pure-call direction and compares
 remaining alternatives.
