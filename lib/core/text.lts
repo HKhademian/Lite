@@ -25,14 +25,14 @@ pub digitValue := fn(text: String): Int {
 
 /** True for one ASCII letter, `a`-`z` or `A`-`Z`. */
 pub isAsciiLetter := fn(ch: String): Bool {
-    letters := "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ";
-    size := host.length(letters);
-    var position := 0;
-    loop position < size {
-        if host.at(letters, position) == ch { return true; }
-        position = position + 1;
-    }
-    false
+    or ch == "a" or ch == "b" or ch == "c" or ch == "d" or ch == "e" or ch == "f" or ch == "g"
+    or ch == "h" or ch == "i" or ch == "j" or ch == "k" or ch == "l" or ch == "m" or ch == "n"
+    or ch == "o" or ch == "p" or ch == "q" or ch == "r" or ch == "s" or ch == "t" or ch == "u"
+    or ch == "v" or ch == "w" or ch == "x" or ch == "y" or ch == "z"
+    or ch == "A" or ch == "B" or ch == "C" or ch == "D" or ch == "E" or ch == "F" or ch == "G"
+    or ch == "H" or ch == "I" or ch == "J" or ch == "K" or ch == "L" or ch == "M" or ch == "N"
+    or ch == "O" or ch == "P" or ch == "Q" or ch == "R" or ch == "S" or ch == "T" or ch == "U"
+    or ch == "V" or ch == "W" or ch == "X" or ch == "Y" or ch == "Z"
 }
 
 /** True for an ASCII identifier start or underscore accepted by the compiler subset. */
@@ -49,8 +49,13 @@ pub isNameContinue := fn(ch: String): Bool {
 pub skipSpaces := fn(source: String, start: Int): Int {
     size := host.length(source);
     var position := start;
-    loop position < size and (host.at(source, position) == " " or host.at(source, position) == "\t" or host.at(source, position) == "\r" or host.at(source, position) == "\n") {
-        position = position + 1;
+    loop position < size {
+        ch := host.at(source, position);
+        if ch == " " or ch == "\t" or ch == "\r" or ch == "\n" {
+            position = position + 1;
+        } else {
+            return position;
+        }
     }
     position
 }
@@ -68,7 +73,11 @@ pub skipName := fn(source: String, start: Int): Int {
 /** True when `text` occurs at `position` and stays inside `source`. */
 pub startsWithAt := fn(source: String, position: Int, text: String): Bool {
     width := host.length(text);
-    if position < 0 or position + width > host.length(source) { return false; }
+    size := host.length(source);
+    if position < 0 or position + width > size { return false; }
+    if width == 0 { return true; }
+    if host.at(source, position) =!= host.at(text, 0) { return false; }
+    if width == 1 { return true; }
     host.slice(source, position, position + width) == text
 }
 
@@ -86,8 +95,16 @@ pub indexOfText := fn(source: String, needle: String, start: Int): Int {
     var position := start;
     if position < 0 or position > size { return -1; }
     if width == 0 { return position; }
+    first := host.at(needle, 0);
+    if width == 1 {
+        loop position < size {
+            if host.at(source, position) == first { return position; }
+            position = position + 1;
+        }
+        return -1;
+    }
     loop position + width <= size {
-        if startsWithAt(source, position, needle) { return position; }
+        if host.at(source, position) == first and startsWithAt(source, position, needle) { return position; }
         position = position + 1;
     }
     -1

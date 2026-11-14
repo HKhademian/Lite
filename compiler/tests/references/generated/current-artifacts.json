@@ -1,8 +1,8 @@
 {
-  "note": "Reviewed 2026-11-14 after BMP fast path, non-churning text cache, and input state reset in emit-ts. Affected TS corpus artifact hashes refreshed with exact runtime parity for all 69 programs; all 25 rejection cases and C hashes unchanged.",
+  "note": "Reviewed 2026-11-14 after eliminating linear scans and redundant slicing in lib/core/text. All 69 TS/C corpus artifact hashes and 25 rejection cases verified.",
   "recorded": "2026-11-14",
-  "sourceSha256": "8e98043a83ae17707e7a11c40d94096ec6bb6f7a185c8908177af4d3446e84b4",
-  "compilerSha256": "281aa7c0fa7376aac8f0da58708e6da3dd918c56687fdcfa9a42811ea2245036",
+  "sourceSha256": "f7506e01395f27be472443f7b23172240181bf038c764ec66bed25591c98fde6",
+  "compilerSha256": "ae181b79a5d24776fda493ab404566dec700fb191481888ebc80b34b0ee26e4e",
   "programCases": 69,
   "rejectedCases": 25,
   "artifacts": [
