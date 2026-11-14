@@ -844,7 +844,7 @@ function isolatedCheckout(): string {
   const paths = new Set([
     'bin/lite', 'bin/lite-compile', 'bin/lite-compile-ts', 'bin/lite-compile-c', 'bin/lite-check', 'bin/lite-run', 'bin/lite-verify',
     'compiler/host.ts', 'compiler/source.ts', 'compiler/entry.ts', 'compiler/cli.ts', 'compiler/launcher.ts', 'compiler/compile-ts.ts', 'compiler/compile-c.ts', 'compiler/package.json',
-    'igniter/launcher.ts', 'igniter/test-suites.ts', 'igniter/check.ts', 'igniter/artifacts.ts', 'igniter/package.json', 'igniter/verify.ts',
+    'igniter/launcher.ts', 'igniter/test-suites.ts', 'igniter/artifacts.ts', 'igniter/package.json', 'igniter/verify.ts',
     'tools/cli.ts', 'tools/generated/cli.ts', 'tools/generated/compile.ts', 'tools/generated/compile-c.ts', 'tools/generated/compile-ts.ts', 'tools/checker.ts', 'tools/generated/checker.ts', 'tools/verify.ts', 'tools/generated/verify.ts', 'tools/run.ts', 'tools/generated/run.ts', 'tools/project.ts',
     'compiler/release-streams.ts', 'config/versions.json',
     'tools/streams.ts',

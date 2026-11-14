@@ -1,11 +1,69 @@
-/** Standalone source-check command; `lite check` routes here. */
+/** Standalone source-check command (`lite check`); compiles via `compiler/cli.ts` and strict-typechecks emitted TS. */
 
 io := import "core/io";
+fs := import "core/fs";
+proc := import "core/process";
+integer := import "core/int";
+list := import "core/list";
+path := import "util/path";
+cli := import "util/cli";
 project := import "util/project";
+cases := import "util/cases";
 
-run := fn(args: List<String>): Unit {
-    project.handleVersionFlag(args, "checker", "check");
-    project.forwardNode("igniter/check.ts", args);
+run := fn(rawArgs: List<String>): Unit {
+    project.handleVersionFlag(rawArgs, "checker", "check");
+    args := cli.stripLeadingSeparator(rawArgs);
+    if list.listCountText(args) =!= 1 {
+        io.errorLine("Usage: ./bin/lite check file.lts");
+        io.exit(2);
+    }
+
+    target := args[0];
+    root := project.findRepoRoot();
+    if root == "" {
+        io.errorLine("lite check: could not locate LiteScript repository root");
+        io.exit(1);
+    }
+
+    tmpRes := fs.makeTempDir("lite-check-");
+    if not tmpRes.ok {
+        io.errorLine("lite check: " + tmpRes.error);
+        io.exit(1);
+    }
+    work := tmpRes.path;
+
+    cliScript := path.resolve(root, "compiler/cli.ts");
+    compArgs: List<String> = [cliScript, "ts", target];
+    outTsPath := path.join(work, "artifact.ts");
+    errPath := path.join(work, "compile.stderr");
+    emptyBytes: List<Int> = [];
+    emptyEnv: List<String> = [];
+
+    compiled := proc.runBytes(proc.execPath(), compArgs, "", emptyEnv, 0, emptyBytes, outTsPath, errPath);
+    if compiled.error =!= "" {
+        _rm := fs.remove(work);
+        io.errorLine(target + ": " + compiled.error);
+        io.exit(1);
+    }
+    if compiled.status =!= 0 {
+        errRead := fs.readText(errPath);
+        errBytes := fs.readBytes(errPath);
+        _rm := fs.remove(work);
+        if errRead.ok {
+            project.errorText(errRead.text);
+        } else {
+            io.errorLine(target + ": compilation failed (" + integer.intText(list.listCountInt(errBytes)) + " stderr bytes)");
+        }
+        io.exit(1);
+    }
+
+    checked := cases.checkTsArtifactFile(root, outTsPath, path.join(work, "tsc"));
+    _rm := fs.remove(work);
+    if not checked.ok {
+        io.errorLine(target + ": generated TS failed strict checking");
+        project.errorText(checked.error);
+        io.exit(1);
+    }
 };
 
 run(io.inputArgs());

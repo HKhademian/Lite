@@ -223,7 +223,7 @@ function lite$listPopBack<T>(items: T[], at: number): T {
     return items.pop() as T;
 }
 
-const lite$intLines: readonly number[] = [0, 102, 103, 127, 155, 183, 209, 243, 244, 282, 341, 423, 485, 498, 554, 560, 563, 564, 585];
+const lite$intLines: readonly number[] = [0, 102, 103, 127, 155, 183, 209, 243, 244, 285, 347, 395, 477, 539, 552, 608, 614, 617, 618, 639];
 const lite$intSource = "tools/src/verify.lts:";
 const lite$intMin = -(1n << 63n), lite$intMax = (1n << 63n) - 1n;
 function lite$fault(category: string, at: number, message: string): never {
@@ -2108,9 +2108,11 @@ export function main(lite$write?: (text: string) => void): string {
         lite$exit((lite_res).status);
     }
     void liteFn$lib$util$project$forwardNode;
-    function liteFn_run(lite_args: string[]): void {
+    function liteFn_run(lite_rawArgs: string[]): void {
+        void lite_rawArgs;
+        liteFn$lib$util$project$handleVersionFlag([...(lite_rawArgs)], "verifier", "verify");
+        const lite_args: string[] = [...(liteFn$lib$util$cli$stripLeadingSeparator([...(lite_rawArgs)]))];
         void lite_args;
-        liteFn$lib$util$project$handleVersionFlag([...(lite_args)], "verifier", "verify");
         if (((((liteFn$lib$core$list$listCountText([...(lite_args)])) === (1n))) && (liteFn$lib$core$text$endsWith(liteFn$lib$util$cli$head([...(lite_args)]), ".json")))) {
             return (void (liteFn$lib$util$project$forwardNode("tools/generated/test.ts", [...(lite_args)])));
         } else {

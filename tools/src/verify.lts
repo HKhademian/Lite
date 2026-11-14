@@ -6,8 +6,9 @@ text := import "core/text";
 cli := import "util/cli";
 project := import "util/project";
 
-run := fn(args: List<String>): Unit {
-    project.handleVersionFlag(args, "verifier", "verify");
+run := fn(rawArgs: List<String>): Unit {
+    project.handleVersionFlag(rawArgs, "verifier", "verify");
+    args := cli.stripLeadingSeparator(rawArgs);
     if list.listCountText(args) == 1 and text.endsWith(cli.head(args), ".json") {
         project.forwardNode("tools/generated/test.ts", args);
     } else {
