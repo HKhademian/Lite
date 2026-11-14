@@ -320,6 +320,18 @@ a:hover { text-decoration: underline; }
 .site-nav a { color: var(--ink-muted); }
 .site-nav a:hover,
 .site-nav a.active { color: var(--ink); text-decoration: none; }
+@media (max-width: 640px) {
+  .header-inner {
+    flex-wrap: wrap;
+    padding: 0.55rem 0;
+    gap: 0.55rem 0.75rem;
+  }
+  .site-nav {
+    flex-wrap: wrap;
+    gap: 0.55rem 0.9rem;
+    font-size: 0.9rem;
+  }
+}
 
 /* Hero */
 .hero {
@@ -704,6 +716,9 @@ details.gallery-code pre.code-block {
 @media (max-width: 900px) {
   .playground-page { height: auto; overflow: auto; }
   .workbench { grid-template-columns: 1fr; }
+  .pg-editor-wrap { min-height: 280px; }
+  .pg-panel { min-height: 240px; }
+  .pg-canvas-wrap { min-height: 240px; }
 }
 .pane {
   display: flex;
