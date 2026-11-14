@@ -3,10 +3,11 @@
   "kind": "sample",
   "source": {
     "file": "../../../samples/006_temperature_conversion.lts",
-    "hash": "sha256:0b26981191b4acf1b0eb2b97fd7238a40cee8978e3057630b0b5cb7d2198259f"
+    "hash": "sha256:521fee6faad8f11b3c82bf85143da6b5ffa1e9fa7fca218985976d6d9e966785"
   },
   "features": [
     "num.float",
+    "num.widths",
     "scope.locals"
   ],
   "description": "Celsius to Fahrenheit and back.",

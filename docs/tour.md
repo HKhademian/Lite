@@ -52,6 +52,9 @@ and [operators](operators.md) for the selected contracts.
 - [Subjectless match](../language/examples/023-subjectless-match.lts): ordered
   Boolean `match { ... }` arms with a required `_` fallback for values and
   actions; continue with [match](match.md).
+- [Numeric widths](../language/examples/024-numeric-widths.lts): explicit
+  `Int8`/`Int16`/`Int32` and `Float32` widths, promotion, lossless widening, and
+  binary32 rounding; continue with [numbers and ranges](numbers.md).
 
 Each example has a corresponding manifest under
 [artifact verifications](../language/verifications/artifacts/examples/). Cases preserve

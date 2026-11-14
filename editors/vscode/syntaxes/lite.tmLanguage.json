@@ -39,7 +39,7 @@
     },
     {
       "name": "support.type.lite",
-      "match": "(?<![\\p{L}\\p{M}\\p{N}_])(?:Int64|Int|Float64|Float|Double|String|Bool|List)(?![\\p{L}\\p{M}\\p{N}_])"
+      "match": "(?<![\\p{L}\\p{M}\\p{N}_])(?:Int64|Int32|Int16|Int8|Int|Float64|Float32|Float|Double|String|Bool|List)(?![\\p{L}\\p{M}\\p{N}_])"
     },
     {
       "name": "constant.numeric.lite",

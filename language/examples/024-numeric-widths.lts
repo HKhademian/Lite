@@ -1,0 +1,22 @@
+/* Fixed-width integer and binary32 float promotion, lossless widening, and rounding. */
+
+io := import "core/io";
+
+toMicro := fn(ms: Int16): Int32 {
+    scale: Int32 = 1000;
+    ms * scale
+}
+
+bias: Int8 = -12;
+step: Int16 = 300;
+total: Int32 = step + bias;
+micro := toMicro(step);
+
+samples: List<Int8> = [10, 20, -5];
+ratio: Float32 = 0.1;
+wide: Float = ratio;
+mixed := samples[0] + ratio;
+
+io.outputLine(total, micro);
+io.outputLine(samples, ratio, wide);
+io.outputLine(mixed, bias < ratio);

@@ -149,10 +149,14 @@ test('tokenize project samples and indexed examples using the real TextMate engi
   await visit(path.join(root, '../../lib'));
   assert.ok(files >= 25, `expected lessons and examples, got ${files}`);
 });
-test('modules, self calls, sized numeric aliases, loop as, and power operator highlight cleanly', async () => {
-  const rows = await tokenize('pub countDown := fn(n: Int64, x: Float64, y: Double): Int { if n > 0 { return self(n - 1); } var s := 2 ** 3; loop items as item { break; } 0 }');
+test('modules, self calls, sized numeric widths and aliases, loop as, and power operator highlight cleanly', async () => {
+  const rows = await tokenize('pub countDown := fn(a: Int8, b: Int16, c: Int32, n: Int64, f: Float32, x: Float64, y: Double): Int { if n > 0 { return self(a, b, c, n - 1, f, x, y); } var s := 2 ** 3; loop items as item { break; } 0 }');
   has(rows, 0, 'pub', 'storage.modifier.lite');
+  has(rows, 0, 'Int8', 'support.type.lite');
+  has(rows, 0, 'Int16', 'support.type.lite');
+  has(rows, 0, 'Int32', 'support.type.lite');
   has(rows, 0, 'Int64', 'support.type.lite');
+  has(rows, 0, 'Float32', 'support.type.lite');
   has(rows, 0, 'Float64', 'support.type.lite');
   has(rows, 0, 'Double', 'support.type.lite');
   has(rows, 0, 'self', 'variable.language.lite');

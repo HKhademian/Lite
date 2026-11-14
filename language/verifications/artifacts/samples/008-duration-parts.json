@@ -3,11 +3,12 @@
   "kind": "sample",
   "source": {
     "file": "../../../samples/008_duration_parts.lts",
-    "hash": "sha256:e65ed89937ef9106a729666839bf80911802e252f4962147839bde72db24f735"
+    "hash": "sha256:a36b6b72d79dc179effea2d7b94fcb112cea2e4edc72bc3d0cbd95dcb0ca5f83"
   },
   "features": [
     "int.arithmetic",
     "int.remainder",
+    "num.widths",
     "scope.locals"
   ],
   "description": "Split seconds into hours, minutes and seconds.",

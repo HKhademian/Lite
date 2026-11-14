@@ -1,0 +1,22 @@
+{
+  "id": "example.024-numeric-widths",
+  "kind": "example",
+  "source": {
+    "file": "../../../examples/024-numeric-widths.lts",
+    "hash": "sha256:9a06d58568991e9ba99c84b20a2bcb5b4c3398164853bb05959b91caa9719e28"
+  },
+  "features": [
+    "num.widths"
+  ],
+  "description": "Fixed-width integer and binary32 float promotion, lossless widening, and rounding.",
+  "cases": [
+    {
+      "name": "widths-promotion-and-widening",
+      "stdout": {
+        "text": "288 300000\n[10, 20, -5] 0.10000000149011612 0.10000000149011612\n10.100000381469727 true\n",
+        "hash": "sha256:856e07cd2e295a6e548d03ca1509fad87bde769a665285cc72da2fdc3417e629"
+      },
+      "exitCode": 0
+    }
+  ]
+}

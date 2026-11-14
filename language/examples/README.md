@@ -12,7 +12,7 @@ Run from the repository root with Node 26.13.0:
 node compiler/entry.ts /tmp/lite-example.ts
 ```
 
-`run` compiles to a temporary artifact and executes it. All twenty examples compile and run through the generated TS compiler; broader parity items live in [compiler gaps](../../compiler/gaps.md) and the [archived inventory](../../compiler/reports/current-t00-t11-inventory.md). Unsupported source fails without a T00 fallback. C output is deferred.
+`run` compiles to a temporary artifact and executes it. All twenty-two examples compile and run through the generated TS compiler; broader parity items live in [compiler gaps](../../compiler/gaps.md) and the [archived inventory](../../compiler/reports/current-t00-t11-inventory.md). Unsupported source fails without a T00 fallback. C output is deferred.
 
 The interactive examples display explicit prompts. Integer prompts leave the
 cursor on the same line; the scanner prints a heading before reading its line.
@@ -100,6 +100,9 @@ examples. They live under [compiler/](../../compiler/README.md) and are run with
 - [023 — Subjectless match](023-subjectless-match.lts): demonstrates subjectless
   Boolean `match { ... }` for both value selection and action statements with
   ordered guards and a final `_` fallback.
+- [024 — Numeric widths](024-numeric-widths.lts): demonstrates explicit
+  `Int8`, `Int16`, `Int32`, and `Float32` widths, same-family and mixed
+  promotion, lossless widening, contextual `List<Int8>`, and binary32 rounding.
 
 ## Play canvas & audio examples (`play/`)
 

@@ -47,13 +47,14 @@ types `Int8`, `Int16`, `Int32`, `Int64` and the floating types `Float32`,
 `Float64`. `Int` is an alias for `Int64`; `Float`, `Float64` and `Double` are
 one 64-bit floating type. Unannotated integer literals remain `Int` (Int64) and
 fractional literals remain `Float` (Float64); they do not become minimal-width.
-The Lite-generated TS/C targets also recognize these three 64-bit synonyms in
-their admitted annotations, aliases and aggregate/function contracts. This
-normalizes type names. The generated TS frontend also admits exactly representable
-integer literals in its supported Float storage/call/result contexts; established
-Int64 values and Int-only binary results do not acquire storage widening. Narrow
-numeric widths remain separate migration work. See the
-[numeric-synonym ledger](../compiler/parity.md#numeric-type-synonyms).
+The Lite-generated TS/C targets, standalone parser, and standalone checker now
+implement both the three 64-bit synonyms (`Int64`, `Float64`, `Double`) and the
+narrow fixed-width scalar types (`Int8`, `Int16`, `Int32`, `Float32`) across
+annotations, transparent aliases, aggregate/function contracts, contextual
+literal bounds, same-family and mixed promotion, lossless scalar widening,
+checked narrow integer overflow panics, and binary32 rounding (`Float32`).
+Established `Int64` values and `Int`-only binary results do not acquire storage
+widening. See the [numeric-synonym ledger](../compiler/parity.md#numeric-type-synonyms).
 A literal constant may initialize a narrow annotated type only when it fits:
 integer literals must be inside that width's range (and exactly representable
 for a floating destination), while a fractional literal stored as `Float32`
@@ -77,10 +78,13 @@ Generated FVP coverage, 2026-11-02: finite decimal/exponent Float literals,
 ordinary Float values, unary signs and same-family comparisons now compile on
 TS and C. The frontend and standalone literal phases share digit scanning and
 finite-range checks. C display searches shortest round-trip binary64 digits and
-uses the temporary TS display's decimal/exponent thresholds. Mixed arithmetic,
-width aliases/narrowing and power lowering remain queued. This is temporary
-profile implementation evidence; permanent formatting and native ABI choices
-remain open. See the [literal/value ledger](../compiler/parity.md#float-literals-and-display).
+uses the temporary TS display's decimal/exponent thresholds. Unsigned widths,
+explicit narrowing/casts, component-wise numeric widening of stored tuples or
+fixed arrays, and minimal-width literal typing remain queued; fixed-width scalar
+promotion, lossless widening, checked narrow arithmetic, `Float32` rounding,
+mixed arithmetic/comparisons, width aliases, and power lowering are implemented.
+Permanent formatting and native ABI choices remain open. See the
+[literal/value ledger](../compiler/parity.md#float-literals-and-display).
 
 ## Temporary FVP numeric profile
 

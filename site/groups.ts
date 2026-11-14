@@ -146,6 +146,16 @@ export const showcaseSamples: readonly ShowcaseSample[] = [
   },
   heroSample,
   {
+    id: 'numeric-widths',
+    group: 'types',
+    title: 'Numeric widths',
+    note: 'Fixed-width Int8/Int16/Int32 and Float32 promotion, lossless widening, and binary32 rounding.',
+    file: 'language/examples/024-numeric-widths.lts',
+    args: [],
+    stdin: '',
+    showOutput: true,
+  },
+  {
     id: 'fixed-tuples',
     group: 'types',
     title: 'Fixed tuples',

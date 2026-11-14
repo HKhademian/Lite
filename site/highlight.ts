@@ -16,7 +16,7 @@ const liteKeywords = new Set([
 ]);
 
 const liteTypes = new Set([
-  'Bool', 'Int', 'Int64', 'Float', 'Float64', 'Double', 'String', 'Unit', 'Void', 'List', 'Array',
+  'Bool', 'Int', 'Int8', 'Int16', 'Int32', 'Int64', 'Float', 'Float32', 'Float64', 'Double', 'String', 'Unit', 'Void', 'List', 'Array',
 ]);
 
 const tsKeywords = new Set([
