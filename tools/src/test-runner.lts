@@ -6,6 +6,7 @@ proc := import "core/process";
 text := import "core/text";
 list := import "core/list";
 path := import "util/path";
+cli := import "util/cli";
 project := import "util/project";
 
 smokeTestFiles := fn(): List<String> {
@@ -60,15 +61,8 @@ emitErrorChunk := fn(chunk: String): Unit {
 main := fn(): Unit {
     args := io.inputArgs();
     project.handleVersionFlag(args, "tester", "test");
-    argCount := list.listCountText(args);
-    if argCount > 0 and args[0] == "--cases" {
-        rest: mut List<String> = [];
-        var i := 1;
-        loop i < argCount {
-            list.pushBack(mut rest, args[i]);
-            i = i + 1;
-        }
-        project.forwardNode("tools/test.ts", rest);
+    if cli.startsWith(args, "--cases") {
+        project.forwardNode("tools/test.ts", cli.rest(args, 1));
     }
 
     var requestedMode := "";

@@ -97,3 +97,16 @@ test('lite router help, version, and unknown command handling match exit and out
   assert.equal(version.status, 0);
   assert.match(version.stdout, /^lite cli \S+\n$/);
 });
+
+test('munching routers, flag aliases, and direct generated entrypoints converge on identical output', () => {
+  const target = 'tools/src/fmt.lts';
+  const expected = command('lite-fmt', ['--check', target]);
+  assert.equal(expected.status, 0);
+  assert.deepEqual(command('lite', ['fmt', '--check', target]), expected);
+  assert.deepEqual(command('lite', ['--fmt', '--check', target]), expected);
+  assert.deepEqual(command('lite', ['--', 'fmt', '--check', target]), expected);
+  const direct = spawnSync(process.execPath, [join(root, 'tools/generated/fmt.ts'), '--check', target], {
+    cwd: root, encoding: 'utf8', timeout: 60_000,
+  });
+  assert.deepEqual({ status: direct.status, stdout: direct.stdout, stderr: direct.stderr }, expected);
+});

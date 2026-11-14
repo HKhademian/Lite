@@ -6,6 +6,7 @@ proc := import "core/process";
 text := import "core/text";
 list := import "core/list";
 path := import "util/path";
+cli := import "util/cli";
 json := import "util/json";
 docsUtil := import "util/docs";
 casesUtil := import "util/cases";
@@ -35,11 +36,11 @@ runCheckedTsc := fn(rootDir: String, configPath: String): Unit {
 args := io.inputArgs();
 project.handleVersionFlag(args, "doctor", "doctor");
 
-argCount := list.listCountText(args);
-if not (argCount == 0 or (argCount == 1 and args[0] == "--docs")) {
+docsOnly := cli.startsWith(args, "--docs");
+remaining := cli.dropIf(args, "--docs");
+if list.listCountText(remaining) > 0 {
     failDoctor("usage: lite doctor [--docs]");
 }
-docsOnly := argCount == 1 and args[0] == "--docs";
 
 rootDir := project.findRepoRoot();
 if rootDir == "" {

@@ -1,0 +1,57 @@
+text := import "core/text";
+list := import "core/list";
+cli := import "util/cli";
+test := import "core/test";
+
+args0: List<String> = ["fmt", "--check", "fileX.lts"];
+test.checkText("head non-empty", "fmt", cli.head(args0));
+emptyArgs: List<String> = [];
+test.checkText("head empty", "", cli.head(emptyArgs));
+test.checkText("rest from 1", "--check,fileX.lts", text.joinTexts(cli.rest(args0, 1), ","));
+test.checkText("rest clamp negative", "fmt,--check,fileX.lts", text.joinTexts(cli.rest(args0, -3), ","));
+test.checkInt("rest past end", 0, list.listCountText(cli.rest(args0, 9)));
+
+afterCmd := cli.rest(args0, 1);
+test.checkBool("startsWith hit", true, cli.startsWith(afterCmd, "--check"));
+test.checkBool("startsWith miss", false, cli.startsWith(afterCmd, "--json"));
+test.checkText("dropIf hit", "fileX.lts", text.joinTexts(cli.dropIf(afterCmd, "--check"), ","));
+test.checkText("dropIf miss", "--check,fileX.lts", text.joinTexts(cli.dropIf(afterCmd, "--json"), ","));
+
+sepArgs: List<String> = ["--", "a.lts", "--", "--flag"];
+test.checkText("stripLeadingSeparator", "a.lts,--,--flag", text.joinTexts(cli.stripLeadingSeparator(sepArgs), ","));
+
+optArgs: List<String> = ["a.lts", "--check", "--", "--check"];
+test.checkBool("hasOption hits before --", true, cli.hasOption(optArgs, "--check"));
+optRest := cli.withoutOption(optArgs, "--check");
+test.checkText("withoutOption preserves --", "a.lts,--,--check", text.joinTexts(optRest, ","));
+test.checkBool("hasOption stops at --", false, cli.hasOption(optRest, "--check"));
+
+valArgs: List<String> = ["--target", "c", "main.lts", "--", "--target", "ts"];
+val1 := cli.readOptionValue(valArgs, "--target");
+test.checkBool("readOptionValue found", true, val1.found);
+test.checkBool("readOptionValue valid", true, val1.valid);
+test.checkText("readOptionValue value", "c", val1.value);
+test.checkText("withoutOptionValue preserves --", "main.lts,--,--target,ts", text.joinTexts(cli.withoutOptionValue(valArgs, "--target"), ","));
+
+valMissing: List<String> = ["--target"];
+val2 := cli.readOptionValue(valMissing, "--target");
+test.checkBool("readOptionValue missing valid", false, val2.valid);
+
+valDup: List<String> = ["--target", "ts", "--target", "c"];
+val3 := cli.readOptionValue(valDup, "--target");
+test.checkBool("readOptionValue dup valid", false, val3.valid);
+
+test.checkText("entry bin/lite", "lite", cli.entryCommand("/repo/bin/lite"));
+test.checkText("entry generated cli", "lite", cli.entryCommand("/repo/tools/generated/cli.ts"));
+test.checkText("entry bin/lite-fmt", "fmt", cli.entryCommand("/repo/bin/lite-fmt"));
+test.checkText("entry generated fmt", "fmt", cli.entryCommand("/repo/tools/generated/fmt.ts"));
+test.checkText("entry checker", "check", cli.entryCommand("tools/checker.ts"));
+test.checkText("entry doctor", "doctor", cli.entryCommand("tools/check.ts"));
+test.checkText("entry test-runner", "test", cli.entryCommand("tools/test-runner.ts"));
+
+supported: List<String> = ["check", "fmt", "docs", "doctor", "verify", "test"];
+test.checkText("subcommand bare", "fmt", cli.normalizeSubcommand("fmt", supported));
+test.checkText("subcommand flag", "fmt", cli.normalizeSubcommand("--fmt", supported));
+test.checkText("subcommand unknown", "", cli.normalizeSubcommand("--help", supported));
+
+test.done("util-cli");

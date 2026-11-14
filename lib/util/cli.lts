@@ -1,0 +1,166 @@
+/** Shared CLI argument munching and entrypoint normalization helpers. */
+
+list := import "core/list";
+proc := import "core/process";
+text := import "core/text";
+path := import "util/path";
+
+/** Returns the first argument in `args`, or `""` when empty. */
+pub head := fn(args: List<String>): String {
+    if list.listCountText(args) == 0 { return ""; }
+    args[0]
+};
+
+/** Returns arguments starting at `start`, preserving order and clamping negative offsets. */
+pub rest := fn(args: List<String>, start: Int): List<String> {
+    out: mut List<String> = [];
+    count := list.listCountText(args);
+    var i := if start < 0 { 0 } else { start };
+    loop i < count {
+        list.pushBack(mut out, args[i]);
+        i = i + 1;
+    }
+    out
+};
+
+/** True when `args` starts with `token`. */
+pub startsWith := fn(args: List<String>, token: String): Bool {
+    list.listCountText(args) > 0 and args[0] == token
+};
+
+/** Drops the leading argument when it matches `token`; otherwise preserves `args`. */
+pub dropIf := fn(args: List<String>, token: String): List<String> {
+    if startsWith(args, token) {
+        return rest(args, 1);
+    }
+    rest(args, 0)
+};
+
+/** Strips a leading `--` argument separator when present. */
+pub stripLeadingSeparator := fn(args: List<String>): List<String> {
+    dropIf(args, "--")
+};
+
+/** True when `option` appears in `args` before any `--` separator. */
+pub hasOption := fn(args: List<String>, option: String): Bool {
+    loop args as arg {
+        if arg == "--" { return false; }
+        if arg == option { return true; }
+    }
+    false
+};
+
+/** Returns `args` with all occurrences of `option` before `--` removed, keeping `--` and trailing args intact. */
+pub withoutOption := fn(args: List<String>, option: String): List<String> {
+    out: mut List<String> = [];
+    var stop := false;
+    loop args as arg {
+        if stop {
+            list.pushBack(mut out, arg);
+        } else if arg == "--" {
+            stop = true;
+            list.pushBack(mut out, arg);
+        } else if arg =!= option {
+            list.pushBack(mut out, arg);
+        }
+    }
+    out
+};
+
+/** Reads `option <value>` before `--`; sets `valid = false` when missing a value or repeated. */
+pub readOptionValue := fn(args: List<String>, option: String): (found: Bool, valid: Bool, value: String) {
+    count := list.listCountText(args);
+    var found := false;
+    var valid := true;
+    var value := "";
+    var i := 0;
+    loop i < count {
+        arg := args[i];
+        if arg == "--" { break; }
+        if arg == option {
+            if found or i + 1 >= count or args[i + 1] == "--" {
+                valid = false;
+                found = true;
+                i = i + 1;
+            } else {
+                found = true;
+                value = args[i + 1];
+                i = i + 2;
+            }
+        } else {
+            i = i + 1;
+        }
+    }
+    (found = found, valid = valid, value = value)
+};
+
+/** Returns `args` with `option` and its value removed before `--`, keeping `--` and trailing args intact. */
+pub withoutOptionValue := fn(args: List<String>, option: String): List<String> {
+    out: mut List<String> = [];
+    count := list.listCountText(args);
+    var stop := false;
+    var i := 0;
+    loop i < count {
+        arg := args[i];
+        if stop {
+            list.pushBack(mut out, arg);
+            i = i + 1;
+        } else if arg == "--" {
+            stop = true;
+            list.pushBack(mut out, arg);
+            i = i + 1;
+        } else if arg == option {
+            if i + 1 < count and args[i + 1] =!= "--" {
+                i = i + 2;
+            } else {
+                i = i + 1;
+            }
+        } else {
+            list.pushBack(mut out, arg);
+            i = i + 1;
+        }
+    }
+    out
+};
+
+stripSuffix := fn(value: String, suffix: String): String {
+    if text.endsWith(value, suffix) {
+        return text.slice(value, 0, text.length(value) - text.length(suffix));
+    }
+    value
+};
+
+/** Normalizes an entrypoint path (`bin/lite`, `tools/generated/fmt.ts`, `bin/lite-fmt`) to a command name. */
+pub entryCommand := fn(entryPath: String): String {
+    var name := path.baseName(entryPath);
+    name = stripSuffix(name, ".ts");
+    name = stripSuffix(name, ".js");
+    name = stripSuffix(name, ".exe");
+    if text.startsWithAt(name, 0, "lite-") {
+        name = text.slice(name, 5, text.length(name));
+    }
+    if name == "cli" or name == "lite" { return "lite"; }
+    if name == "checker" { return "check"; }
+    if name == "check" { return "doctor"; }
+    if name == "test-runner" { return "test"; }
+    name
+};
+
+/** Normalizes the running process entrypoint path (`core/process.entryPath()`). */
+pub currentEntryCommand := fn(): String {
+    entryCommand(proc.entryPath())
+};
+
+/** Matches a router token (`cmd` or `--cmd`) against supported `commands`, returning `""` if unknown. */
+pub normalizeSubcommand := fn(token: String, commands: List<String>): String {
+    if list.listContainsText(commands, token) {
+        return token;
+    }
+    if text.startsWithAt(token, 0, "--") {
+        candidate := text.slice(token, 2, text.length(token));
+        if list.listContainsText(commands, candidate) {
+            return candidate;
+        }
+    }
+    ""
+};

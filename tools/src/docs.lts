@@ -4,6 +4,7 @@ io := import "core/io";
 proc := import "core/process";
 text := import "core/text";
 list := import "core/list";
+cli := import "util/cli";
 docsUtil := import "util/docs";
 project := import "util/project";
 
@@ -13,8 +14,7 @@ project.handleVersionFlag(args, "docs", "docs");
 envRoot := proc.envGet("LITE_DOCS_ROOT");
 rootDir := if envRoot.found and envRoot.value =!= "" { envRoot.value } else { project.findRepoRoot() };
 
-argCount := list.listCountText(args);
-if argCount == 1 and args[0] == "--check" {
+if list.listCountText(args) == 1 and cli.startsWith(args, "--check") {
     failures := docsUtil.checkDocuments(rootDir);
     if list.listCountText(failures) > 0 {
         io.errorLine(text.joinTexts(failures, "\n"));
@@ -24,14 +24,8 @@ if argCount == 1 and args[0] == "--check" {
     io.exit(0);
 }
 
-isJson := argCount > 0 and args[0] == "--json";
-queryParts: mut List<String> = [];
-var idx := if isJson { 1 } else { 0 };
-loop idx < argCount {
-    list.pushBack(mut queryParts, args[idx]);
-    idx = idx + 1;
-}
-query := text.joinTexts(queryParts, " ");
+isJson := cli.startsWith(args, "--json");
+query := text.joinTexts(cli.dropIf(args, "--json"), " ");
 
 if isJson {
     io.outputLine(docsUtil.docsJson(rootDir, query));
