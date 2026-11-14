@@ -262,6 +262,64 @@ simpleType := fn(symbols: Symbols, locals: Locals, text: String): String {
         return "Int";
     }
     if textLib.startsWithAt(text, 0, "not ") { return "Bool"; }
+    if textLib.startsWithAt(text, 0, "match {") {
+        tokens := lexer.tokenize(text, "");
+        count := parser.tokenCount(tokens);
+        var cursor := 2;
+        var depth := 1;
+        var parens := 0;
+        var brackets := 0;
+        loop cursor < count {
+            token := parser.tokenAt(tokens, cursor);
+            if token.kind == lexer.TOKEN_KIND_EOF() { return ""; }
+            if depth == 1 and parens == 0 and brackets == 0 and
+                token.kind == lexer.TOKEN_KIND_NAME() and token.text == "_" and
+                parser.isSymbol(parser.tokenAt(tokens, cursor + 1), "{") {
+                if parser.isSymbol(parser.tokenAt(tokens, cursor + 2), "}") { return "Unit"; }
+                startOffset := parser.tokenOffsetAt(tokens, cursor + 2);
+                var armCursor := cursor + 2;
+                var armDepth := 1;
+                var endOffset := 0;
+                loop armCursor < count {
+                    armToken := parser.tokenAt(tokens, armCursor);
+                    if armToken.kind == lexer.TOKEN_KIND_EOF() { return ""; }
+                    if parser.isSymbol(armToken, "{") {
+                        armDepth = armDepth + 1;
+                    } else if parser.isSymbol(armToken, "}") {
+                        armDepth = armDepth - 1;
+                        if armDepth == 0 {
+                            endOffset = armToken.offset;
+                            break;
+                        }
+                    }
+                    armCursor = armCursor + 1;
+                }
+                loop endOffset > startOffset and textLib.at(text, endOffset - 1) == " " {
+                    endOffset = endOffset - 1;
+                }
+                if endOffset <= startOffset { return "Unit"; }
+                fallbackText := textLib.slice(text, startOffset, endOffset);
+                if fallbackText == "Unit" { return "Unit"; }
+                return self(symbols, locals, fallbackText);
+            }
+            if parser.isSymbol(token, "{") {
+                depth = depth + 1;
+            } else if parser.isSymbol(token, "}") {
+                depth = depth - 1;
+                if depth == 0 { return ""; }
+            } else if parser.isSymbol(token, "(") {
+                parens = parens + 1;
+            } else if parser.isSymbol(token, ")") {
+                if parens > 0 { parens = parens - 1; }
+            } else if parser.isSymbol(token, "[") {
+                brackets = brackets + 1;
+            } else if parser.isSymbol(token, "]") {
+                if brackets > 0 { brackets = brackets - 1; }
+            }
+            cursor = cursor + 1;
+        }
+        return "";
+    }
     if textLib.startsWithAt(text, 0, "[") {
         if size == 2 { return ""; }
         tokens := lexer.tokenize(text, "");
@@ -518,6 +576,12 @@ collectSymbols := fn(tokens: lexer.Tokens, prefix: String): Symbols {
             }
             cursor = skipBraces(tokens, body, prefix);
             if parser.isSymbol(parser.tokenAt(tokens, cursor), ";") { cursor = cursor + 1; }
+        } else if token.kind == lexer.TOKEN_KIND_KEYWORD() and token.text == "match" {
+            if not parser.isSymbol(parser.tokenAt(tokens, cursor + 1), "{") {
+                checkFail(token, prefix, "unsupported feature \"match\"");
+            }
+            cursor = skipBraces(tokens, cursor + 1, prefix);
+            if parser.isSymbol(parser.tokenAt(tokens, cursor), ";") { cursor = cursor + 1; }
         } else if token.kind == lexer.TOKEN_KIND_NAME() and parser.isSymbol(parser.tokenAt(tokens, cursor + 1), "=") {
             value := parser.parseExpression(tokens, cursor + 2, prefix, 0);
             cursor = parser.consumeStatementEnd(tokens, value.next, prefix);
@@ -528,6 +592,75 @@ collectSymbols := fn(tokens: lexer.Tokens, prefix: String): Symbols {
         }
     }
     symbols
+}
+
+/** Validates subjectless Boolean match arms embedded inside one expression token span. */
+checkEmbeddedMatches := fn(tokens: lexer.Tokens, start: Int, end: Int, symbols: Symbols, locals: Locals, prefix: String): Unit {
+    var cursor := start;
+    loop cursor < end {
+        token := parser.tokenAt(tokens, cursor);
+        if token.kind == lexer.TOKEN_KIND_EOF() { break; }
+        if token.kind == lexer.TOKEN_KIND_KEYWORD() and token.text == "match" {
+            if not parser.isSymbol(parser.tokenAt(tokens, cursor + 1), "{") {
+                checkFail(token, prefix, "unsupported feature \"match\"");
+            }
+            var armCursor := cursor + 2;
+            var sawFallback := false;
+            loop true {
+                if armCursor >= end {
+                    checkFail(token, prefix, "expected } to close match");
+                }
+                if parser.isSymbol(parser.tokenAt(tokens, armCursor), ";") {
+                    armCursor = armCursor + 1;
+                    continue;
+                }
+                armToken := parser.tokenAt(tokens, armCursor);
+                if armToken.kind == lexer.TOKEN_KIND_EOF() {
+                    checkFail(armToken, prefix, "expected } to close match");
+                }
+                if parser.isSymbol(armToken, "}") {
+                    if not sawFallback {
+                        checkFail(armToken, prefix, "subjectless match requires a final _ fallback arm");
+                    }
+                    armCursor = armCursor + 1;
+                    break;
+                }
+                if sawFallback {
+                    checkFail(armToken, prefix, "match fallback _ must be the final arm");
+                }
+                var armOpen := -1;
+                if armToken.kind == lexer.TOKEN_KIND_NAME() and armToken.text == "_" and
+                    parser.isSymbol(parser.tokenAt(tokens, armCursor + 1), "{") {
+                    sawFallback = true;
+                    armOpen = armCursor + 1;
+                } else {
+                    brace := parser.scanMatchArmBrace(tokens, armCursor);
+                    if brace < 0 or brace >= end {
+                        checkFail(armToken, prefix, "expected { after match arm condition");
+                    }
+                    if brace == armCursor {
+                        checkFail(armToken, prefix, "match arm header requires grouping for { ... } expressions");
+                    }
+                    condition := parser.parseExpression(tokens, armCursor, prefix, 0);
+                    if condition.next > brace {
+                        checkFail(parser.tokenAt(tokens, brace), prefix, "ungrouped { in match arm header starts the arm body; parenthesize block or conditional expressions");
+                    }
+                    armOpen = parser.expectSymbol(tokens, condition.next, "{", prefix) - 1;
+                    self(tokens, armCursor, brace, symbols, locals, prefix);
+                    conditionType := simpleType(symbols, locals, condition.text);
+                    if isScalarType(conditionType) and conditionType =!= "Bool" {
+                        checkFail(armToken, prefix, "match arm condition must be Bool");
+                    }
+                }
+                afterArm := skipBraces(tokens, armOpen, prefix);
+                self(tokens, armOpen + 1, afterArm - 1, symbols, locals, prefix);
+                armCursor = afterArm;
+            }
+            cursor = armCursor;
+            continue;
+        }
+        cursor = cursor + 1;
+    }
 }
 
 /** Checks block-local declarations, parameter scopes and statement assignments. */
@@ -544,14 +677,72 @@ checkLocals := fn(tokens: lexer.Tokens, prefix: String, symbols: Symbols): Unit 
     var pendingLoop := false;
     var loopDepth := 0;
     loopBodies: mut List<Int> = [];
+    var pendingMatch := false;
+    var matchCount := 0;
+    matchDepths: mut List<Int> = [];
+    matchParens: mut List<Int> = [];
+    matchBrackets: mut List<Int> = [];
+    matchFallbacks: mut List<Int> = [];
     loop cursor < count {
         token := parser.tokenAt(tokens, cursor);
         if token.kind == lexer.TOKEN_KIND_EOF() { break; }
+        if matchCount > 0 and depth == matchDepths[matchCount - 1] and
+            parens == matchParens[matchCount - 1] and brackets == matchBrackets[matchCount - 1] {
+            if parser.isSymbol(token, ";") { cursor = cursor + 1; continue; }
+            if parser.isSymbol(token, "}") {
+                if matchFallbacks[matchCount - 1] == 0 {
+                    checkFail(token, prefix, "subjectless match requires a final _ fallback arm");
+                }
+                list.popBack(mut matchDepths);
+                list.popBack(mut matchParens);
+                list.popBack(mut matchBrackets);
+                list.popBack(mut matchFallbacks);
+                matchCount = matchCount - 1;
+            } else {
+                if matchFallbacks[matchCount - 1] =!= 0 {
+                    checkFail(token, prefix, "match fallback _ must be the final arm");
+                }
+                if token.kind == lexer.TOKEN_KIND_NAME() and token.text == "_" and
+                    parser.isSymbol(parser.tokenAt(tokens, cursor + 1), "{") {
+                    list.popBack(mut matchFallbacks);
+                    list.pushBack(mut matchFallbacks, 1);
+                    depth = depth + 1;
+                    cursor = cursor + 2;
+                    continue;
+                }
+                brace := parser.scanMatchArmBrace(tokens, cursor);
+                if brace < 0 { checkFail(token, prefix, "expected { after match arm condition"); }
+                if brace == cursor {
+                    checkFail(token, prefix, "match arm header requires grouping for { ... } expressions");
+                }
+                condition := parser.parseExpression(tokens, cursor, prefix, 0);
+                if condition.next > brace {
+                    checkFail(parser.tokenAt(tokens, brace), prefix, "ungrouped { in match arm header starts the arm body; parenthesize block or conditional expressions");
+                }
+                armOpen := parser.expectSymbol(tokens, condition.next, "{", prefix) - 1;
+                checkEmbeddedMatches(tokens, cursor, brace, symbols, locals, prefix);
+                conditionType := simpleType(symbols, locals, condition.text);
+                if isScalarType(conditionType) and conditionType =!= "Bool" {
+                    checkFail(token, prefix, "match arm condition must be Bool");
+                }
+                depth = depth + 1;
+                cursor = armOpen + 1;
+                continue;
+            }
+        }
         if parser.isSymbol(token, "{") {
             if pendingLoop {
                 list.pushBack(mut loopBodies, depth + 1);
                 loopDepth = loopDepth + 1;
                 pendingLoop = false;
+            }
+            if pendingMatch {
+                list.pushBack(mut matchDepths, depth + 1);
+                list.pushBack(mut matchParens, parens);
+                list.pushBack(mut matchBrackets, brackets);
+                list.pushBack(mut matchFallbacks, 0);
+                matchCount = matchCount + 1;
+                pendingMatch = false;
             }
             depth = depth + 1;
             cursor = cursor + 1;
@@ -630,6 +821,7 @@ checkLocals := fn(tokens: lexer.Tokens, prefix: String, symbols: Symbols): Unit 
                 cursor = afterReturn;
             } else {
                 value := parser.parseExpression(tokens, afterReturn, prefix, 0);
+                checkEmbeddedMatches(tokens, afterReturn, value.next, symbols, locals, prefix);
                 inferred := contextualSimpleType(symbols, locals, value.text, functionResult);
                 if not typesCompatible(symbols, functionResult, inferred) {
                     checkFail(token, prefix, "cannot return " + inferred + " from function returning " + functionResult);
@@ -650,11 +842,20 @@ checkLocals := fn(tokens: lexer.Tokens, prefix: String, symbols: Symbols): Unit 
         }
         if token.kind == lexer.TOKEN_KIND_KEYWORD() and token.text == "if" {
             condition := parser.parseExpression(tokens, cursor + 1, prefix, 0);
+            checkEmbeddedMatches(tokens, cursor + 1, condition.next, symbols, locals, prefix);
             conditionType := simpleType(symbols, locals, condition.text);
             if isScalarType(conditionType) and conditionType =!= "Bool" {
                 checkFail(token, prefix, "if condition must be Bool");
             }
             cursor = condition.next;
+            continue;
+        }
+        if token.kind == lexer.TOKEN_KIND_KEYWORD() and token.text == "match" {
+            if not parser.isSymbol(parser.tokenAt(tokens, cursor + 1), "{") {
+                checkFail(token, prefix, "unsupported feature \"match\"");
+            }
+            pendingMatch = true;
+            cursor = cursor + 1;
             continue;
         }
         if token.kind == lexer.TOKEN_KIND_KEYWORD() and token.text == "loop" {
@@ -664,6 +865,7 @@ checkLocals := fn(tokens: lexer.Tokens, prefix: String, symbols: Symbols): Unit 
                 continue;
             }
             source := parser.parseExpression(tokens, cursor + 1, prefix, 0);
+            checkEmbeddedMatches(tokens, cursor + 1, source.next, symbols, locals, prefix);
             if parser.tokenKindAt(tokens, source.next) == lexer.TOKEN_KIND_NAME() and parser.tokenTextAt(tokens, source.next) == "as" {
                 itemToken := parser.tokenAt(tokens, source.next + 1);
                 if itemToken.kind =!= lexer.TOKEN_KIND_NAME() {
@@ -719,6 +921,7 @@ checkLocals := fn(tokens: lexer.Tokens, prefix: String, symbols: Symbols): Unit 
                     }
                 }
             }
+            checkEmbeddedMatches(tokens, cursor, declaration.next, symbols, locals, prefix);
             list.pushBack(mut locals, (name = declaration.name, typeText = typeText, mutable = mutable,
                 writable = writable, depth = depth, kind = "local"));
             localCount = localCount + 1;
@@ -740,6 +943,7 @@ checkLocals := fn(tokens: lexer.Tokens, prefix: String, symbols: Symbols): Unit 
                 checkFail(token, prefix, "cannot assign to immutable local " + token.text);
             }
             value := parser.parseExpression(tokens, cursor + 2, prefix, 0);
+            checkEmbeddedMatches(tokens, cursor + 2, value.next, symbols, locals, prefix);
             localType := locals[index].typeText;
             inferred := contextualSimpleType(symbols, locals, value.text, localType);
             if not typesCompatible(symbols, localType, inferred) {

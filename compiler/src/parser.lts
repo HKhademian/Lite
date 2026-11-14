@@ -155,11 +155,26 @@ isBinaryToken := fn(token: lexer.Token): Bool {
     token.kind == lexer.TOKEN_KIND_SYMBOL() and binaryLevel(token.text) > 0
 }
 
-/**
- * Parses one expression and returns a fully parenthesized normalized text.
- * `if` value expressions are the next slice; this function reports them
- * explicitly instead of guessing a block boundary.
- */
+/** Returns the token index of the ungrouped `{` that ends a subjectless match arm header, or -1 when absent. */
+pub scanMatchArmBrace := fn(tokens: lexer.Tokens, start: Int): Int {
+    var cursor := start;
+    var depth := 0;
+    loop true {
+        token := tokenAt(tokens, cursor);
+        if token.kind == lexer.TOKEN_KIND_EOF() { return -1; }
+        if isSymbol(token, "(") or isSymbol(token, "[") {
+            depth = depth + 1;
+        } else if isSymbol(token, ")") or isSymbol(token, "]") {
+            if depth > 0 { depth = depth - 1; }
+        } else if isSymbol(token, "{") and depth == 0 {
+            return cursor;
+        }
+        cursor = cursor + 1;
+    }
+    -1
+}
+
+/** Parses one expression and returns a fully parenthesized normalized text. */
 pub parseExpression := fn(tokens: lexer.Tokens, index: Int, prefix: String, minimum: Int): (next: Int, text: String) {
     token := tokenAt(tokens, index);
     var cursor := index;
@@ -306,11 +321,69 @@ pub parseExpression := fn(tokens: lexer.Tokens, index: Int, prefix: String, mini
             }
         }
         leftText = ifText;
+    } else if token.kind == lexer.TOKEN_KIND_KEYWORD() and token.text == "match" {
+        if not isSymbol(tokenAt(tokens, index + 1), "{") {
+            parseFail(token, prefix, "unsupported feature \"match\"");
+        }
+        cursor = index + 2;
+        var matchText := "match {";
+        var sawFallback := false;
+        loop true {
+            if isSymbol(tokenAt(tokens, cursor), ";") { cursor = cursor + 1; continue; }
+            armToken := tokenAt(tokens, cursor);
+            if armToken.kind == lexer.TOKEN_KIND_EOF() {
+                parseFail(armToken, prefix, "expected } to close match");
+            }
+            if isSymbol(armToken, "}") {
+                if not sawFallback { parseFail(armToken, prefix, "subjectless match requires a final _ fallback arm"); }
+                cursor = cursor + 1;
+                break;
+            }
+            if sawFallback {
+                parseFail(armToken, prefix, "match fallback _ must be the final arm");
+            }
+            isFallback := armToken.kind == lexer.TOKEN_KIND_NAME() and armToken.text == "_" and
+                isSymbol(tokenAt(tokens, cursor + 1), "{");
+            var armHeaderText := "";
+            var armOpen := -1;
+            if isFallback {
+                armHeaderText = "_";
+                armOpen = cursor + 1;
+                sawFallback = true;
+            } else {
+                brace := scanMatchArmBrace(tokens, cursor);
+                if brace < 0 { parseFail(armToken, prefix, "expected { after match arm condition"); }
+                if brace == cursor { parseFail(armToken, prefix, "match arm header requires grouping for { ... } expressions"); }
+                condition := self(tokens, cursor, prefix, 0);
+                if condition.next > brace {
+                    parseFail(tokenAt(tokens, brace), prefix, "ungrouped { in match arm header starts the arm body; parenthesize block or conditional expressions");
+                }
+                armOpen = expectSymbol(tokens, condition.next, "{", prefix) - 1;
+                armHeaderText = condition.text;
+            }
+            var bodyCursor := armOpen + 1;
+            loop isSymbol(tokenAt(tokens, bodyCursor), ";") { bodyCursor = bodyCursor + 1; }
+            var armBodyText := "";
+            if isSymbol(tokenAt(tokens, bodyCursor), "}") {
+                armBodyText = "Unit";
+                bodyCursor = bodyCursor + 1;
+            } else {
+                armValue := self(tokens, bodyCursor, prefix, 0);
+                bodyCursor = armValue.next;
+                loop isSymbol(tokenAt(tokens, bodyCursor), ";") { bodyCursor = bodyCursor + 1; }
+                bodyCursor = expectSymbol(tokens, bodyCursor, "}", prefix);
+                armBodyText = armValue.text;
+            }
+            matchText = matchText + " " + armHeaderText + " { " + armBodyText + " }";
+            cursor = bodyCursor;
+        }
+        leftText = matchText + " }";
     } else {
         parseFail(token, prefix, "expected an expression");
         return (next = index, text = "");
     }
     loop true {
+        if cursor > 0 and isSymbol(tokenAt(tokens, cursor - 1), "}") { break; }
         current := tokenAt(tokens, cursor);
         if isSymbol(current, ".") {
             member := tokenAt(tokens, cursor + 1);
@@ -330,6 +403,7 @@ pub parseExpression := fn(tokens: lexer.Tokens, index: Int, prefix: String, mini
         }
     }
     loop true {
+        if cursor > 0 and isSymbol(tokenAt(tokens, cursor - 1), "}") { break; }
         operator := tokenAt(tokens, cursor);
         if not isBinaryToken(operator) { break; }
         level := binaryLevel(operator.text);
@@ -439,7 +513,7 @@ pub parseBlock := fn(tokens: lexer.Tokens, index: Int, prefix: String, closed: B
             parseFail(token, prefix, "unexpected }");
         }
         if token.kind == lexer.TOKEN_KIND_KEYWORD() and
-            (token.text == "match" or token.text == "record" or token.text == "import" or
+            (token.text == "record" or token.text == "import" or
                 token.text == "using" or token.text == "then" or token.text == "finally") {
             parseFail(token, prefix, "unsupported feature \"" + token.text + "\"");
         }
@@ -476,6 +550,55 @@ pub parseBlock := fn(tokens: lexer.Tokens, index: Int, prefix: String, closed: B
             }
             cursor = consumeStatementEnd(tokens, cursor, prefix);
             itemText = branchText;
+        } else if token.kind == lexer.TOKEN_KIND_KEYWORD() and token.text == "match" {
+            if not isSymbol(tokenAt(tokens, cursor + 1), "{") {
+                parseFail(token, prefix, "unsupported feature \"match\"");
+            }
+            var armCursor := cursor + 2;
+            var armsText := "";
+            var armCount := 0;
+            var sawFallback := false;
+            loop true {
+                if isSymbol(tokenAt(tokens, armCursor), ";") { armCursor = armCursor + 1; continue; }
+                armToken := tokenAt(tokens, armCursor);
+                if armToken.kind == lexer.TOKEN_KIND_EOF() {
+                    parseFail(armToken, prefix, "expected } to close match");
+                }
+                if isSymbol(armToken, "}") {
+                    if not sawFallback { parseFail(armToken, prefix, "subjectless match requires a final _ fallback arm"); }
+                    armCursor = armCursor + 1;
+                    break;
+                }
+                if sawFallback {
+                    parseFail(armToken, prefix, "match fallback _ must be the final arm");
+                }
+                isFallback := armToken.kind == lexer.TOKEN_KIND_NAME() and armToken.text == "_" and
+                    isSymbol(tokenAt(tokens, armCursor + 1), "{");
+                var armHeaderText := "";
+                var armOpen := -1;
+                if isFallback {
+                    armHeaderText = "_";
+                    armOpen = armCursor + 1;
+                    sawFallback = true;
+                } else {
+                    brace := scanMatchArmBrace(tokens, armCursor);
+                    if brace < 0 { parseFail(armToken, prefix, "expected { after match arm condition"); }
+                    if brace == armCursor { parseFail(armToken, prefix, "match arm header requires grouping for { ... } expressions"); }
+                    condition := parseExpression(tokens, armCursor, prefix, 0);
+                    if condition.next > brace {
+                        parseFail(tokenAt(tokens, brace), prefix, "ungrouped { in match arm header starts the arm body; parenthesize block or conditional expressions");
+                    }
+                    armOpen = expectSymbol(tokens, condition.next, "{", prefix) - 1;
+                    armHeaderText = condition.text;
+                }
+                armBranch := self(tokens, armOpen, prefix, true);
+                if armCount > 0 { armsText = armsText + " "; }
+                armsText = armsText + armHeaderText + " " + armBranch.text;
+                armCount = armCount + 1;
+                armCursor = armBranch.next;
+            }
+            cursor = consumeStatementEnd(tokens, armCursor, prefix);
+            itemText = "match { " + armsText + " }";
         } else if token.kind == lexer.TOKEN_KIND_KEYWORD() and token.text == "loop" {
             source := parseExpression(tokens, cursor + 1, prefix, 0);
             if tokenAt(tokens, source.next).kind == lexer.TOKEN_KIND_NAME() and tokenAt(tokens, source.next).text == "as" {

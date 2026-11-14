@@ -738,7 +738,7 @@ test('public commands compile, run and check TS artifacts without T00 and reject
     const deferred = spawnSync(join(directory, 'bin/lite'), ['compile', '--target', 'c', path], { env, timeout: 10000 });
     assert.equal(deferred.status, 2); assert.equal(deferred.stdout.length, 0);
     assert.match(deferred.stderr.toString(), /C output is deferred/);
-    writeFileSync(path, 'io := import "core/io"; io.outputLine("before"); match { true { 1 } _ { 2 } }');
+    writeFileSync(path, 'io := import "core/io"; io.outputLine("before"); match 1 { _ => 2 }');
     const unsupported = spawnSync(join(directory, 'bin/lite'), ['check', path], { env, timeout: 10000 });
     assert.equal(unsupported.status, 1); assert.equal(unsupported.stdout.length, 0);
     assert.match(unsupported.stderr.toString(), /unsupported feature "match"/);

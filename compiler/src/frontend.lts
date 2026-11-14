@@ -1989,6 +1989,32 @@ parseTupleDestructureTarget := fn(source: String, open: Int, prefix: String): (n
     (namesText = textLib.joinTexts(names, ","), count = count, grouped = count == 1 and not hadComma, next = next)
 }
 
+/** Returns the position of the `{` that opens the branch after the condition starting at `start`, or -1 when absent. */
+scanConditionOpen := fn(source: String, start: Int, prefix: String): Int {
+    size := textLib.length(source);
+    var cursor := start;
+    var depth := 0;
+    loop cursor < size {
+        ch := textLib.at(source, cursor);
+        if ch == "\"" {
+            cursor = skipAliasString(source, cursor);
+        } else if textLib.startsWithAt(source, cursor, "/*") {
+            cursor = skipComment(source, cursor, prefix);
+        } else if ch == "(" or ch == "[" {
+            depth = depth + 1;
+            cursor = cursor + 1;
+        } else if ch == ")" or ch == "]" {
+            if depth > 0 { depth = depth - 1; }
+            cursor = cursor + 1;
+        } else if ch == "{" and depth == 0 {
+            return cursor;
+        } else {
+            cursor = cursor + 1;
+        }
+    }
+    -1
+}
+
 /** Precedence-climbing parser for arithmetic, comparisons, `and`/`or`, parentheses, named tuple and list values, field access, indexing, calls, unary signs and `not`. Folds constants, lowers dynamic Int arithmetic, and exits 2 on mixed types, unsupported dynamic operations or range faults. `expected` supplies a contextual kind for empty list literals. self(..., 30) parses a unary operand without binary operators. */
 parseBinary := fn(target: String, source: String, position: Int, prefix: String, locals: List<Local>, functions: List<FunctionInfo>, params: List<String>, currentName: String, expected: String, minimum: Int): Parsed {
     var start := skipTrivia(source, position, prefix);
@@ -2677,6 +2703,89 @@ parseBinary := fn(target: String, source: String, position: Int, prefix: String,
                 index = index - 1;
             }
             left = (kind = resultKind, code = code, intValue = 0, textValue = "", constant = false, next = cursor);
+        } else if name == "match" {
+            openMatchPos := skipTrivia(source, next, prefix);
+            size := textLib.length(source);
+            if openMatchPos >= size or textLib.at(source, openMatchPos) =!= "{" {
+                unsupportedFeature(source, nameStart, "match", prefix);
+            }
+            if target =!= "ts" {
+                failAt(source, nameStart, prefix, "C backend does not support value match expressions yet");
+            }
+            var cursor := skipItemSeparators(source, openMatchPos + 1, prefix);
+            conditionCodes: mut List<String> = [];
+            branchCodes: mut List<String> = [];
+            var resultKind := "";
+            var branchCount := 0;
+            var sawFallback := false;
+            loop true {
+                cursor = skipItemSeparators(source, cursor, prefix);
+                if cursor >= size {
+                    failAt(source, openMatchPos, prefix, "expected } to close match");
+                }
+                if textLib.at(source, cursor) == "}" {
+                    if not sawFallback {
+                        failAt(source, cursor, prefix, "subjectless match requires a final _ fallback arm");
+                    }
+                    cursor = cursor + 1;
+                    break;
+                }
+                if sawFallback {
+                    failAt(source, cursor, prefix, "match fallback _ must be the final arm");
+                }
+                afterUnderscore := skipTrivia(source, cursor + 1, prefix);
+                isFallback := textLib.wordAt(source, cursor, "_") and afterUnderscore < size and
+                    textLib.at(source, afterUnderscore) == "{";
+                var armOpen := -1;
+                if isFallback {
+                    armOpen = afterUnderscore;
+                    sawFallback = true;
+                } else {
+                    armOpen = scanConditionOpen(source, cursor, prefix);
+                    if armOpen < 0 {
+                        failAt(source, cursor, prefix, "expected { after match arm condition");
+                    }
+                    if armOpen == cursor {
+                        failAt(source, cursor, prefix, "match arm header requires grouping for { ... } expressions");
+                    }
+                    condStart := cursor;
+                    condition := self(target, source, condStart, prefix, locals, functions, params, currentName, "", 0);
+                    afterCond := skipTrivia(source, condition.next, prefix);
+                    if afterCond > armOpen {
+                        failAt(source, armOpen, prefix, "ungrouped { in match arm header starts the arm body; parenthesize block or conditional expressions");
+                    }
+                    if afterCond =!= armOpen {
+                        _ := expectSymbol(source, afterCond, "{", prefix);
+                    }
+                    if condition.kind =!= "Bool" {
+                        failAt(source, condStart, prefix, "match arm condition must be Bool");
+                    }
+                    conditionCode := if condition.constant {
+                        targetBoolLiteralCode(target, condition.intValue =!= 0)
+                    } else {
+                        condition.code
+                    };
+                    listLib.pushBack(mut conditionCodes, conditionCode);
+                }
+                armBodyStart := skipTrivia(source, armOpen + 1, prefix);
+                branch := self(target, source, armOpen, prefix, locals, functions, params, currentName, expected, 0);
+                if resultKind == "" or resultKind == "Never" {
+                    resultKind = branch.kind;
+                } else if branch.kind =!= "Never" and branch.kind =!= resultKind {
+                    failAt(source, armBodyStart, prefix, "value match arms must have the same kind, got " +
+                        displayKind(resultKind) + " and " + displayKind(branch.kind));
+                }
+                listLib.pushBack(mut branchCodes, branch.code);
+                branchCount = branchCount + 1;
+                cursor = branch.next;
+            }
+            var code := branchCodes[branchCount - 1];
+            var index := branchCount - 2;
+            loop index >= 0 {
+                code = "(Boolean(" + conditionCodes[index] + ") ? " + branchCodes[index] + " : " + code + ")";
+                index = index - 1;
+            }
+            left = (kind = resultKind, code = code, intValue = 0, textValue = "", constant = false, next = cursor);
         } else {
             if isReservedWord(name) { unsupportedFeature(source, nameStart, name, prefix); }
             afterName := skipTrivia(source, next, prefix);
@@ -2711,6 +2820,7 @@ parseBinary := fn(target: String, source: String, position: Int, prefix: String,
         failAt(source, start, prefix, "expected an Int, Float, String or Bool expression");
     }
     loop true {
+        if left.next > 0 and textLib.at(source, left.next - 1) == "}" { break; }
         postPosition := skipTrivia(source, left.next, prefix);
         if postPosition < textLib.length(source) and textLib.at(source, postPosition) == "." {
             labelStart := skipTrivia(source, postPosition + 1, prefix);
@@ -3364,32 +3474,6 @@ scanBraceEnd := fn(source: String, open: Int, prefix: String): Int {
     -1
 }
 
-/** Returns the position of the `{` that opens the branch after the condition starting at `start`, or -1 when absent. */
-scanConditionOpen := fn(source: String, start: Int, prefix: String): Int {
-    size := textLib.length(source);
-    var cursor := start;
-    var depth := 0;
-    loop cursor < size {
-        ch := textLib.at(source, cursor);
-        if ch == "\"" {
-            cursor = skipAliasString(source, cursor);
-        } else if textLib.startsWithAt(source, cursor, "/*") {
-            cursor = skipComment(source, cursor, prefix);
-        } else if ch == "(" or ch == "[" {
-            depth = depth + 1;
-            cursor = cursor + 1;
-        } else if ch == ")" or ch == "]" {
-            if depth > 0 { depth = depth - 1; }
-            cursor = cursor + 1;
-        } else if ch == "{" and depth == 0 {
-            return cursor;
-        } else {
-            cursor = cursor + 1;
-        }
-    }
-    -1
-}
-
 /** True when the braced body from `open` to `close` is a nonempty single expression: no semicolon and no statement keyword first. */
 valueIfBranchAt := fn(source: String, open: Int, close: Int, prefix: String): Bool {
     var cursor := skipTrivia(source, open + 1, prefix);
@@ -3408,7 +3492,7 @@ valueIfBranchAt := fn(source: String, open: Int, close: Int, prefix: String): Bo
             scan = skipAliasString(source, scan);
         } else if textLib.startsWithAt(source, scan, "/*") {
             scan = skipComment(source, scan, prefix);
-        } else if ch == ";" {
+        } else if ch == ";" or textLib.startsWithAt(source, scan, ".output") {
             return false;
         } else {
             scan = scan + 1;
@@ -3456,6 +3540,37 @@ scanIfChainEnd := fn(source: String, position: Int, prefix: String, requireValue
 /** Scans a total value-if chain ending with a final else block. */
 scanValueIfEnd := fn(source: String, position: Int, prefix: String, requireValueBranches: Bool): Int {
     scanIfChainEnd(source, position, prefix, requireValueBranches, false)
+}
+
+/** Scans a subjectless Boolean match ending with a final _ fallback arm and closing brace. */
+scanValueMatchEnd := fn(source: String, position: Int, prefix: String, requireValueBranches: Bool): Int {
+    size := textLib.length(source);
+    var cursor := skipTrivia(source, position, prefix);
+    if not textLib.wordAt(source, cursor, "match") { return -1; }
+    openMatch := skipTrivia(source, cursor + 5, prefix);
+    if openMatch >= size or textLib.at(source, openMatch) =!= "{" { return -1; }
+    var armCursor := skipItemSeparators(source, openMatch + 1, prefix);
+    loop armCursor < size {
+        if textLib.at(source, armCursor) == "}" { return -1; }
+        afterUnderscore := skipTrivia(source, armCursor + 1, prefix);
+        isFallback := textLib.wordAt(source, armCursor, "_") and afterUnderscore < size and
+            textLib.at(source, afterUnderscore) == "{";
+        armOpen := if isFallback { afterUnderscore }
+            else { scanConditionOpen(source, armCursor, prefix) };
+        if armOpen < 0 or (not isFallback and armOpen == armCursor) { return -1; }
+        armEnd := scanBraceEnd(source, armOpen, prefix);
+        if armEnd < 0 { return -1; }
+        if requireValueBranches and not valueIfBranchAt(source, armOpen, armEnd - 1, prefix) { return -1; }
+        afterArm := skipItemSeparators(source, armEnd, prefix);
+        if isFallback {
+            if afterArm < size and textLib.at(source, afterArm) == "}" {
+                return afterArm + 1;
+            }
+            return -1;
+        }
+        armCursor = afterArm;
+    }
+    -1
 }
 
 /** Parses one declaration initializer, allowing a direct or parenthesized partial if to default to zero(T). */
@@ -3508,7 +3623,7 @@ visibleLocals := fn(locals: List<Local>, depth: Int): List<Local> {
 atValueTail := fn(blocks: List<String>, blockCount: Int): Bool {
     if blockCount <= 0 { return false; }
     kind := blocks[blockCount - 1];
-    kind == "function" or kind == "ifvalue"
+    kind == "function" or kind == "ifvalue" or kind == "matchvalue" or kind == "matchelseval" or kind == "matchsingleval"
 }
 
 /** True when `blocks` contains an enclosing loop body, so a bare break or continue has a nearest loop to target. */
@@ -3564,7 +3679,7 @@ parseExpressionItem := fn(target: String, source: String, position: Int, prefix:
 
 /** Joins a block's definite completion: scopes preserve it, loops require a true header, and conditionals require every arm plus a final else. */
 blockCompletion := fn(kind: String, completed: Bool, branchesComplete: Bool, hasElse: Bool, loopForever: Bool): Bool {
-    if kind == "scope" { completed }
+    if kind == "scope" or kind == "matchsingle" or kind == "matchsingleval" { completed }
     else if kind == "loop" { loopForever and completed }
     else { hasElse and branchesComplete and completed }
 }
@@ -3939,7 +4054,8 @@ pub parseProgramWithIdentity := fn(target: String, source: String, prefix: Strin
                 failAt(source, position, prefix, "unexpected }");
             }
             blockKind := blocks[blockCount - 1];
-            if blockKind == "ifvalue" and currentResult =!= "Unit" and not currentReturned {
+            if (blockKind == "ifvalue" or blockKind == "matchvalue" or blockKind == "matchelseval" or blockKind == "matchsingleval") and
+                currentResult =!= "Unit" and not currentReturned {
                 failAt(source, position, prefix, "branch of function " + currentName + " must return " + displayKind(currentResult));
             }
             after := skipTrivia(source, position + 1, prefix);
@@ -3990,6 +4106,86 @@ pub parseProgramWithIdentity := fn(target: String, source: String, prefix: Strin
                 position = skipTrivia(source, position + 1, prefix);
                 continue;
             }
+            if blockKind == "match" or blockKind == "matchvalue" {
+                nextArmStart := skipItemSeparators(source, position + 1, prefix);
+                if nextArmStart >= size {
+                    failAt(source, position + 1, prefix, "expected } to close match");
+                }
+                if textLib.at(source, nextArmStart) == "}" {
+                    failAt(source, nextArmStart, prefix, "subjectless match requires a final _ fallback arm");
+                }
+                locals = visibleLocals(locals, depth);
+                var stateCount := 0;
+                loop savedStates { stateCount += 1; }
+                branchPreLen := savedStates[stateCount - 1].preLocalsLen;
+                if currentLive and not currentStopped {
+                    nextBranchUpdates := recordBranchUpdates(locals, branchPreLen, depth - 1, blockCount, branchUpdates);
+                    branchUpdates = [];
+                    loop nextBranchUpdates as u { listLib.pushBack(mut branchUpdates, u); }
+                    liveBranchCount = liveBranchCount + 1;
+                }
+                nextLocals := truncateLocals(locals, branchPreLen);
+                locals = [];
+                loop nextLocals as l { listLib.pushBack(mut locals, l); }
+                branchesReturned = branchesReturned and currentReturned;
+                branchesStopped = branchesStopped and currentStopped;
+                currentReturned = false;
+                currentStopped = false;
+                droppedMatch := listLib.popBack(mut blocks);
+                blockCount = blockCount - 1;
+                afterUnderscore := skipTrivia(source, nextArmStart + 1, prefix);
+                isFallback := textLib.wordAt(source, nextArmStart, "_") and afterUnderscore < size and
+                    textLib.at(source, afterUnderscore) == "{";
+                var armOpen := -1;
+                if isFallback {
+                    armOpen = afterUnderscore;
+                    hasElse = true;
+                    if currentLive { listLib.pushBack(mut items, (kind = "Else", name = "", runtime = "", code = "", intValue = 0, textValue = "")); }
+                    listLib.pushBack(mut blocks, if blockKind == "matchvalue" { "matchelseval" } else { "matchelse" });
+                    blockCount = blockCount + 1;
+                } else {
+                    armOpen = scanConditionOpen(source, nextArmStart, prefix);
+                    if armOpen < 0 {
+                        failAt(source, nextArmStart, prefix, "expected { after match arm condition");
+                    }
+                    if armOpen == nextArmStart {
+                        failAt(source, nextArmStart, prefix, "match arm header requires grouping for { ... } expressions");
+                    }
+                    condition := parseExpression(target, source, nextArmStart, prefix, locals, functions, functionParams, currentName);
+                    afterCond := skipTrivia(source, condition.next, prefix);
+                    if afterCond > armOpen {
+                        failAt(source, armOpen, prefix, "ungrouped { in match arm header starts the arm body; parenthesize block or conditional expressions");
+                    }
+                    if afterCond =!= armOpen {
+                        _ := expectSymbol(source, afterCond, "{", prefix);
+                    }
+                    if condition.kind =!= "Bool" {
+                        failAt(source, nextArmStart, prefix, "match arm condition must be Bool");
+                    }
+                    conditionCode := if condition.constant {
+                        targetBoolLiteralCode(target, condition.intValue =!= 0)
+                    } else {
+                        condition.code
+                    };
+                    if currentLive { listLib.pushBack(mut items, (kind = "ElseIf", name = "", runtime = "", code = conditionCode,
+                        intValue = 0, textValue = "")); }
+                    listLib.pushBack(mut blocks, blockKind);
+                    blockCount = blockCount + 1;
+                }
+                position = skipTrivia(source, armOpen + 1, prefix);
+                continue;
+            }
+            var closeBracePos := position;
+            if blockKind == "matchelse" or blockKind == "matchelseval" or blockKind == "matchsingle" or blockKind == "matchsingleval" {
+                afterFallback := skipItemSeparators(source, position + 1, prefix);
+                if afterFallback >= size {
+                    failAt(source, position + 1, prefix, "expected } to close match");
+                }
+                if textLib.at(source, afterFallback) =!= "}" {
+                    failAt(source, afterFallback, prefix, "match fallback _ must be the final arm");
+                }
+                closeBracePos = afterFallback;
+            }
             locals = visibleLocals(locals, depth);
             depth = depth - 1;
             if blockKind == "function" {
@@ -4006,7 +4202,7 @@ pub parseProgramWithIdentity := fn(target: String, source: String, prefix: Strin
                 currentReturned = false;
             } else if blockKind == "loop" {
                 if currentLive { listLib.pushBack(mut items, (kind = "EndLoop", name = "", runtime = "", code = "", intValue = 0, textValue = "")); }
-            } else if blockKind == "scope" {
+            } else if blockKind == "scope" or blockKind == "matchsingle" or blockKind == "matchsingleval" {
                 if currentLive { listLib.pushBack(mut items, (kind = "EndScope", name = "", runtime = "", code = "", intValue = 0, textValue = "")); }
             } else {
                 if currentLive { listLib.pushBack(mut items, (kind = "EndIf", name = "", runtime = "", code = "", intValue = 0, textValue = "")); }
@@ -4018,7 +4214,7 @@ pub parseProgramWithIdentity := fn(target: String, source: String, prefix: Strin
                 listLib.pushBack(mut items, (kind = "Unreachable", name = "", runtime = "", code = "", intValue = 0, textValue = ""));
             }
             parent := listLib.popBack(mut savedStates);
-            if blockKind == "if" or blockKind == "ifvalue" or blockKind == "else" {
+            if blockKind == "if" or blockKind == "ifvalue" or blockKind == "else" or blockKind == "matchelse" or blockKind == "matchelseval" {
                 if currentLive and not currentStopped {
                     nextBranchUpdates := recordBranchUpdates(locals, parent.preLocalsLen, depth, blockCount, branchUpdates);
                     branchUpdates = [];
@@ -4047,7 +4243,7 @@ pub parseProgramWithIdentity := fn(target: String, source: String, prefix: Strin
             currentLive = parent.live;
             droppedBlock := listLib.popBack(mut blocks);
             blockCount = blockCount - 1;
-            position = skipTrivia(source, position + 1, prefix);
+            position = skipTrivia(source, closeBracePos + 1, prefix);
             if position < size and textLib.at(source, position) == ";" {
                 position = skipTrivia(source, position + 1, prefix);
             }
@@ -4415,6 +4611,100 @@ pub parseProgramWithIdentity := fn(target: String, source: String, prefix: Strin
             blockCount = blockCount + 1;
             depth = depth + 1;
             position = skipTrivia(source, position + 1, prefix);
+            continue;
+        }
+        if name == "match" {
+            if position >= size or textLib.at(source, position) =!= "{" {
+                unsupportedFeature(source, nameStart, "match", prefix);
+            }
+            var valueTailBranch := false;
+            if currentName =!= "" and currentResult =!= "Unit" and atValueTail(blocks, blockCount) and not currentStopped {
+                if target == "ts" {
+                    valueEnd := scanValueMatchEnd(source, nameStart, prefix, true);
+                    if valueEnd >= 0 {
+                        afterMatch := skipItemSeparators(source, valueEnd, prefix);
+                        if afterMatch < size and textLib.at(source, afterMatch) == "}" {
+                            expression := parseExpressionItem(target, source, nameStart, prefix, locals, functions, functionParams, currentName,
+                                currentResult, true);
+                            if currentLive and not currentStopped { listLib.pushBack(mut items, (kind = "Return", name = "", runtime = "", code = expression.code,
+                                intValue = 0, textValue = "")); }
+                            currentReturned = true;
+                            currentStopped = true;
+                            position = expression.next;
+                            continue;
+                        }
+                    }
+                }
+                statementEnd := scanValueMatchEnd(source, nameStart, prefix, false);
+                if statementEnd >= 0 {
+                    afterStatement := skipItemSeparators(source, statementEnd, prefix);
+                    if afterStatement < size and textLib.at(source, afterStatement) == "}" {
+                        valueTailBranch = true;
+                    }
+                }
+            }
+            firstArmStart := skipItemSeparators(source, position + 1, prefix);
+            if firstArmStart >= size {
+                failAt(source, position, prefix, "expected } to close match");
+            }
+            if textLib.at(source, firstArmStart) == "}" {
+                failAt(source, firstArmStart, prefix, "subjectless match requires a final _ fallback arm");
+            }
+            afterUnderscore := skipTrivia(source, firstArmStart + 1, prefix);
+            isFirstFallback := textLib.wordAt(source, firstArmStart, "_") and afterUnderscore < size and
+                textLib.at(source, afterUnderscore) == "{";
+            var firstArmOpen := -1;
+            if isFirstFallback {
+                firstArmOpen = afterUnderscore;
+                if currentLive and not currentStopped { listLib.pushBack(mut items, (kind = "Scope", name = "", runtime = "", code = "",
+                    intValue = 0, textValue = "")); }
+            } else {
+                firstArmOpen = scanConditionOpen(source, firstArmStart, prefix);
+                if firstArmOpen < 0 {
+                    failAt(source, firstArmStart, prefix, "expected { after match arm condition");
+                }
+                if firstArmOpen == firstArmStart {
+                    failAt(source, firstArmStart, prefix, "match arm header requires grouping for { ... } expressions");
+                }
+                condition := parseExpression(target, source, firstArmStart, prefix, locals, functions, functionParams, currentName);
+                afterCond := skipTrivia(source, condition.next, prefix);
+                if afterCond > firstArmOpen {
+                    failAt(source, firstArmOpen, prefix, "ungrouped { in match arm header starts the arm body; parenthesize block or conditional expressions");
+                }
+                if afterCond =!= firstArmOpen {
+                    _ := expectSymbol(source, afterCond, "{", prefix);
+                }
+                if condition.kind =!= "Bool" {
+                    failAt(source, firstArmStart, prefix, "match arm condition must be Bool");
+                }
+                conditionCode := if condition.constant {
+                    targetBoolLiteralCode(target, condition.intValue =!= 0)
+                } else {
+                    condition.code
+                };
+                if currentLive and not currentStopped { listLib.pushBack(mut items, (kind = "If", name = "", runtime = "", code = conditionCode,
+                    intValue = 0, textValue = "")); }
+            }
+            listLib.pushBack(mut savedStates, (returned = currentReturned, stopped = currentStopped,
+                branchesReturned = branchesReturned, branchesStopped = branchesStopped, hasElse = hasElse, loopForever = loopForever, live = currentLive,
+                preLocalsLen = localsCount(locals), liveBranchCount = liveBranchCount));
+            liveBranchCount = 0;
+            currentLive = currentLive and not currentStopped;
+            currentReturned = false;
+            currentStopped = false;
+            branchesReturned = true;
+            branchesStopped = true;
+            hasElse = isFirstFallback;
+            loopForever = false;
+            firstBlockKind := if isFirstFallback {
+                if valueTailBranch { "matchsingleval" } else { "matchsingle" }
+            } else {
+                if valueTailBranch { "matchvalue" } else { "match" }
+            };
+            listLib.pushBack(mut blocks, firstBlockKind);
+            blockCount = blockCount + 1;
+            depth = depth + 1;
+            position = skipTrivia(source, firstArmOpen + 1, prefix);
             continue;
         }
         if name == "loop" {
