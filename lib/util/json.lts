@@ -297,7 +297,14 @@ pub validate := fn(source: String): (ok: Bool, error: String) {
         return (ok = false, error = "unexpected trailing JSON content");
     }
     (ok = true, error = "")
-}
+};
+
+/** Returns the trimmed slice bounds `(start, end)` of one JSON value at or after `start`. */
+pub valueSpan := fn(source: String, start: Int): (ok: Bool, start: Int, end: Int, error: String) {
+    valStart := skipJsonSpaces(source, start);
+    skipped := skipValue(source, valStart);
+    (ok = skipped.ok, start = valStart, end = skipped.next, error = skipped.error)
+};
 
 /** Reads and unescapes a JSON string value at or after `start`. */
 pub readStringAt := fn(source: String, start: Int): (ok: Bool, value: String, next: Int, error: String) {

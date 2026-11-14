@@ -1,6 +1,7 @@
 /** Shared component release stream parsing, SemVer validation, and readiness profile helpers. */
 
 fs := import "core/fs";
+integer := import "core/int";
 text := import "core/text";
 list := import "core/list";
 path := import "util/path";
@@ -237,4 +238,114 @@ pub releaseProfile := fn(hasTag: Bool, component: String, version: String): Stri
         return "language";
     }
     "compiler"
+};
+
+profileSummary := fn(profile: String): String {
+    if profile == "compiler" {
+        return "Compiler preview verified across the three-generation fixed-point bootstrap ladder and recorded corpus contracts; native C remains deferred.";
+    }
+    if profile == "language" {
+        return "Language release verified across the three-generation bootstrap ladder, recorded corpus contracts, and full `lite verify --all --no-cache` conformance.";
+    }
+    "Tool/source snapshot validated for CLI, docs, and extracted TS compilation; does not establish full language conformance."
+};
+
+/** Renders concise Markdown release notes describing component identity, verification evidence, and SHA-256 artifacts. */
+pub formatReleaseNotes := fn(
+label: String, commit: String, profile: String,
+hasComponent: Bool, componentName: String, componentVersion: String,
+archive: String, archiveSha256: String, manifestSha256: String,
+hasVsix: Bool, vsixFile: String, vsixSha256: String,
+hasBootstrap: Bool, bootstrapGenerations: Int, bootstrapFixedPoint: Bool,
+hasCorpusCases: Bool, corpusCases: Int, corpusPrograms: Int, corpusRejections: Int, corpusExecutions: Int, corpusMismatches: Int,
+bootstrapSupport: String
+): String {
+    componentText := if not hasComponent { "unpublished snapshot" } else { componentName + " v" + componentVersion };
+    lines: mut List<String> = [
+    "# " + label,
+    "",
+    "- **Source commit**: `" + commit + "`",
+    "- **Released component**: " + componentText,
+    "- **Readiness profile**: `" + profile + "` — " + profileSummary(profile),
+    "- **Native C backend**: deferred (`nativeCompiler: false`)",
+    "",
+    "## Verification",
+    "",
+    "- Extracted archive validated with `./bin/lite doctor --docs`",
+    "- Node-only TypeScript emission & execution roundtrip verified on `001-001-report-int-42.lts` (output `42`)"
+    ];
+    if hasBootstrap {
+        ladderStatus := if bootstrapFixedPoint { "passed" } else { "failed" };
+        corpusStats := if not hasCorpusCases {
+            "mismatches=" + integer.intText(corpusMismatches)
+        } else {
+            integer.intText(corpusCases) + " cases (" +
+            integer.intText(corpusPrograms) + " programs, " +
+            integer.intText(corpusRejections) + " rejections, " +
+            integer.intText(corpusExecutions) + " executions), mismatches=" +
+            integer.intText(corpusMismatches)
+        };
+        list.pushBack(mut lines, "- Self-hosting fixed-point ladder: " + ladderStatus + " (" + integer.intText(bootstrapGenerations) + " generations)");
+        list.pushBack(mut lines, "- Generated corpus parity: " + corpusStats);
+        if profile == "language" {
+            list.pushBack(mut lines, "- Full repository verification: `./bin/lite verify --all --no-cache` passed");
+        }
+        list.pushBack(mut lines, "- Embedded archive evidence: `release/compiler.ts`, `release/compiler-source.lts`, `release/verification.json` (" + bootstrapSupport + ")");
+    }
+    list.pushBack(mut lines, "");
+    list.pushBack(mut lines, "## Artifacts");
+    list.pushBack(mut lines, "");
+    list.pushBack(mut lines, "- `" + archive + "` — sha256: `" + archiveSha256 + "`");
+    if hasVsix {
+        list.pushBack(mut lines, "- `" + vsixFile + "` — sha256: `" + vsixSha256 + "`");
+    }
+    list.pushBack(mut lines, "- `manifest.json` — sha256: `" + manifestSha256 + "`");
+    list.pushBack(mut lines, "- `RELEASE-NOTES.md` — these release notes");
+    list.pushBack(mut lines, "- `SHA256SUMS` — checksum manifest for all release files");
+    list.pushBack(mut lines, "");
+    list.pushBack(mut lines, "## Verify and extract");
+    list.pushBack(mut lines, "");
+    list.pushBack(mut lines, "```sh");
+    list.pushBack(mut lines, "shasum -a 256 -c SHA256SUMS");
+    list.pushBack(mut lines, "mkdir -p lite-" + label + " && tar -xzf " + archive + " -C lite-" + label);
+    list.pushBack(mut lines, "cd lite-" + label + " && ./bin/lite doctor --docs");
+    list.pushBack(mut lines, "```");
+    list.pushBack(mut lines, "");
+    list.pushBack(mut lines, "See `docs/start-here.md`, `docs/release-automation.md`, and `compiler/transition-plan.md` in the archive.");
+    list.pushBack(mut lines, "");
+    text.joinTexts(lines, "\n")
+};
+
+/** Serializes the validated component versions map as formatted JSON lines for `manifest.json`. */
+pub formatComponentVersionsJson := fn(rootDir: String, indent: String): (ok: Bool, jsonText: String, error: String) {
+    igniterRes := readIgniterVersion(rootDir);
+    if not igniterRes.ok {
+        return (ok = false, jsonText = "", error = igniterRes.error);
+    }
+    verRead := fs.readText(path.join(rootDir, "config/versions.json"));
+    if not verRead.ok {
+        return (ok = false, jsonText = "", error = verRead.error);
+    }
+    components := allComponents();
+    entries: mut List<String> = [];
+    loop components as component {
+        if component == "igniter" {
+            list.pushBack(mut entries, indent + "  \"igniter\": " + json.quoteString(igniterRes.version));
+        } else {
+            field := json.findObjectField(verRead.text, 0, component);
+            if not field.found {
+                return (ok = false, jsonText = "", error = "missing version for " + component);
+            }
+            if text.startsWithAt(verRead.text, field.valuePos, "null") {
+                list.pushBack(mut entries, indent + "  " + json.quoteString(component) + ": null");
+            } else {
+                strRes := json.readStringAt(verRead.text, field.valuePos);
+                if not strRes.ok {
+                    return (ok = false, jsonText = "", error = "invalid version for " + component);
+                }
+                list.pushBack(mut entries, indent + "  " + json.quoteString(component) + ": " + json.quoteString(strRes.value));
+            }
+        }
+    }
+    (ok = true, jsonText = "{\n" + text.joinTexts(entries, ",\n") + "\n" + indent + "}", error = "")
 };

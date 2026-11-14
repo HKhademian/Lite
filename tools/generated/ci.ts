@@ -1265,6 +1265,16 @@ export function main(lite$write?: (text: string) => void): string {
         return { ok: true, error: "" };
     }
     void liteFn$lib$util$json$validate;
+    function liteFn$lib$util$json$valueSpan(lite_source: string, lite_start: bigint): { ok: boolean; start: bigint; end: bigint; error: string } {
+        void lite_source;
+        void lite_start;
+        const lite_valStart = liteFn$lib$util$json$skipJsonSpaces(lite_source, lite_start);
+        void lite_valStart;
+        const lite_skipped = liteFn$lib$util$json$skipValue(lite_source, lite_valStart);
+        void lite_skipped;
+        return { ok: (lite_skipped).ok, start: lite_valStart, end: (lite_skipped).next, error: (lite_skipped).error };
+    }
+    void liteFn$lib$util$json$valueSpan;
     function liteFn$lib$util$json$readStringAt(lite_source: string, lite_start: bigint): { ok: boolean; value: string; next: bigint; error: string } {
         void lite_source;
         void lite_start;
@@ -1283,10 +1293,10 @@ export function main(lite$write?: (text: string) => void): string {
         let lite_end = lite_pos;
         void lite_end;
         if (((((lite_end) < (lite_size))) && ((((((liteFn$lib$core$text$at(lite_source, lite_end)) === ("-"))) || (((liteFn$lib$core$text$at(lite_source, lite_end)) === ("+")))))))) {
-            lite_end = lite$addInt(lite_end, 1n, 11980);
+            lite_end = lite$addInt(lite_end, 1n, 12352);
         }
         while (((((lite_end) < (lite_size))) && (liteFn$lib$core$text$isDigit(liteFn$lib$core$text$at(lite_source, lite_end))))) {
-            lite_end = lite$addInt(lite_end, 1n, 12070);
+            lite_end = lite$addInt(lite_end, 1n, 12442);
         }
         if (((lite_end) === (lite_pos))) {
             return { ok: false, value: 0n, next: lite_pos, error: "expected integer value" };
@@ -1313,7 +1323,7 @@ export function main(lite$write?: (text: string) => void): string {
         if (((((lite_pos) >= (lite_size))) || (((liteFn$lib$core$text$at(lite_source, lite_pos)) !== ("{"))))) {
             return { found: false, valuePos: (-1n) };
         }
-        lite_pos = liteFn$lib$util$json$skipJsonSpaces(lite_source, lite$addInt(lite_pos, 1n, 13106));
+        lite_pos = liteFn$lib$util$json$skipJsonSpaces(lite_source, lite$addInt(lite_pos, 1n, 13478));
         if (((((lite_pos) < (lite_size))) && (((liteFn$lib$core$text$at(lite_source, lite_pos)) === ("}"))))) {
             return { found: false, valuePos: (-1n) };
         }
@@ -1327,7 +1337,7 @@ export function main(lite$write?: (text: string) => void): string {
             if (((((lite_pos) >= (lite_size))) || (((liteFn$lib$core$text$at(lite_source, lite_pos)) !== (":"))))) {
                 return { found: false, valuePos: (-1n) };
             }
-            const lite_valStart = liteFn$lib$util$json$skipJsonSpaces(lite_source, lite$addInt(lite_pos, 1n, 13557));
+            const lite_valStart = liteFn$lib$util$json$skipJsonSpaces(lite_source, lite$addInt(lite_pos, 1n, 13929));
             void lite_valStart;
             if ((((lite_keyRes).value) === (lite_key))) {
                 return { found: true, valuePos: lite_valStart };
@@ -1339,7 +1349,7 @@ export function main(lite$write?: (text: string) => void): string {
             }
             lite_pos = liteFn$lib$util$json$skipJsonSpaces(lite_source, (lite_valEnd).next);
             if (((((lite_pos) < (lite_size))) && (((liteFn$lib$core$text$at(lite_source, lite_pos)) === (","))))) {
-                lite_pos = liteFn$lib$util$json$skipJsonSpaces(lite_source, lite$addInt(lite_pos, 1n, 13929));
+                lite_pos = liteFn$lib$util$json$skipJsonSpaces(lite_source, lite$addInt(lite_pos, 1n, 14301));
             } else {
                 return { found: false, valuePos: (-1n) };
             }
@@ -1407,7 +1417,7 @@ export function main(lite$write?: (text: string) => void): string {
         if (((((lite_pos) >= (lite_size))) || (((liteFn$lib$core$text$at(lite_source, lite_pos)) !== ("["))))) {
             return [...(lite_offsets)];
         }
-        lite_pos = liteFn$lib$util$json$skipJsonSpaces(lite_source, lite$addInt(lite_pos, 1n, 15908));
+        lite_pos = liteFn$lib$util$json$skipJsonSpaces(lite_source, lite$addInt(lite_pos, 1n, 16280));
         if (((((lite_pos) < (lite_size))) && (((liteFn$lib$core$text$at(lite_source, lite_pos)) === ("]"))))) {
             return [...(lite_offsets)];
         }
@@ -1420,7 +1430,7 @@ export function main(lite$write?: (text: string) => void): string {
             }
             lite_pos = liteFn$lib$util$json$skipJsonSpaces(lite_source, (lite_skipped).next);
             if (((((lite_pos) < (lite_size))) && (((liteFn$lib$core$text$at(lite_source, lite_pos)) === (","))))) {
-                lite_pos = liteFn$lib$util$json$skipJsonSpaces(lite_source, lite$addInt(lite_pos, 1n, 16289));
+                lite_pos = liteFn$lib$util$json$skipJsonSpaces(lite_source, lite$addInt(lite_pos, 1n, 16661));
             } else {
                 return [...(lite_offsets)];
             }
@@ -1440,7 +1450,7 @@ export function main(lite$write?: (text: string) => void): string {
         if (((((lite_pos) >= (lite_size))) || (((liteFn$lib$core$text$at(lite_source, lite_pos)) !== ("{"))))) {
             return [...(lite_keys)];
         }
-        lite_pos = liteFn$lib$util$json$skipJsonSpaces(lite_source, lite$addInt(lite_pos, 1n, 16747));
+        lite_pos = liteFn$lib$util$json$skipJsonSpaces(lite_source, lite$addInt(lite_pos, 1n, 17119));
         if (((((lite_pos) < (lite_size))) && (((liteFn$lib$core$text$at(lite_source, lite_pos)) === ("}"))))) {
             return [...(lite_keys)];
         }
@@ -1455,14 +1465,14 @@ export function main(lite$write?: (text: string) => void): string {
             if (((((lite_pos) >= (lite_size))) || (((liteFn$lib$core$text$at(lite_source, lite_pos)) !== (":"))))) {
                 return [...(lite_keys)];
             }
-            const lite_skipped = liteFn$lib$util$json$skipValue(lite_source, lite$addInt(lite_pos, 1n, 17149));
+            const lite_skipped = liteFn$lib$util$json$skipValue(lite_source, lite$addInt(lite_pos, 1n, 17521));
             void lite_skipped;
             if ((!((lite_skipped).ok))) {
                 return [...(lite_keys)];
             }
             lite_pos = liteFn$lib$util$json$skipJsonSpaces(lite_source, (lite_skipped).next);
             if (((((lite_pos) < (lite_size))) && (((liteFn$lib$core$text$at(lite_source, lite_pos)) === (","))))) {
-                lite_pos = liteFn$lib$util$json$skipJsonSpaces(lite_source, lite$addInt(lite_pos, 1n, 17351));
+                lite_pos = liteFn$lib$util$json$skipJsonSpaces(lite_source, lite$addInt(lite_pos, 1n, 17723));
             } else {
                 return [...(lite_keys)];
             }
@@ -1501,9 +1511,9 @@ export function main(lite$write?: (text: string) => void): string {
                     lite_out = ((lite_out) + (liteFn$lib$core$text$slice(lite_value, lite_runStart, lite_i)));
                 }
                 lite_out = ((lite_out) + (lite_esc));
-                lite_runStart = lite$addInt(lite_i, 1n, 18069);
+                lite_runStart = lite$addInt(lite_i, 1n, 18441);
             }
-            lite_i = lite$addInt(lite_i, 1n, 18098);
+            lite_i = lite$addInt(lite_i, 1n, 18470);
         }
         if (((lite_runStart) < (lite_size))) {
             lite_out = ((lite_out) + (liteFn$lib$core$text$slice(lite_value, lite_runStart, lite_size)));
@@ -2134,7 +2144,7 @@ export function main(lite$write?: (text: string) => void): string {
             if ((!(liteFn$lib$core$text$isDigit(liteFn$lib$core$text$at(lite_segment, lite_i))))) {
                 return false;
             }
-            lite_i = lite$addInt(lite_i, 1n, 567);
+            lite_i = lite$addInt(lite_i, 1n, 597);
         }
         return true;
     }
@@ -2178,11 +2188,11 @@ export function main(lite$write?: (text: string) => void): string {
                 if (((((lite_rejectLeadingZeroNumeric) && (liteFn$lib$util$release$isAllDigits(lite_seg)))) && ((!(liteFn$lib$util$release$isPlainNumericSegment(lite_seg)))))) {
                     return false;
                 }
-                lite_segStart = lite$addInt(lite_i, 1n, 1396);
+                lite_segStart = lite$addInt(lite_i, 1n, 1426);
             } else if ((!(liteFn$lib$util$release$isIdentChar(liteFn$lib$core$text$at(lite_part, lite_i))))) {
                 return false;
             }
-            lite_i = lite$addInt(lite_i, 1n, 1505);
+            lite_i = lite$addInt(lite_i, 1n, 1535);
         }
         return true;
     }
@@ -2199,7 +2209,7 @@ export function main(lite$write?: (text: string) => void): string {
         const lite_beforeBuild = (Boolean(((lite_plusPos) >= (0n))) ? liteFn$lib$core$text$slice(lite_version, 0n, lite_plusPos) : lite_version);
         void lite_beforeBuild;
         if (((lite_plusPos) >= (0n))) {
-            const lite_buildPart = liteFn$lib$core$text$slice(lite_version, lite$addInt(lite_plusPos, 1n, 1971), lite_size);
+            const lite_buildPart = liteFn$lib$core$text$slice(lite_version, lite$addInt(lite_plusPos, 1n, 2001), lite_size);
             void lite_buildPart;
             if ((!(liteFn$lib$util$release$validDotIdentifiers(lite_buildPart, false)))) {
                 return false;
@@ -2210,7 +2220,7 @@ export function main(lite$write?: (text: string) => void): string {
         const lite_corePart = (Boolean(((lite_dashPos) >= (0n))) ? liteFn$lib$core$text$slice(lite_beforeBuild, 0n, lite_dashPos) : lite_beforeBuild);
         void lite_corePart;
         if (((lite_dashPos) >= (0n))) {
-            const lite_prePart = liteFn$lib$core$text$slice(lite_beforeBuild, lite$addInt(lite_dashPos, 1n, 2281), liteFn$lib$core$text$length(lite_beforeBuild));
+            const lite_prePart = liteFn$lib$core$text$slice(lite_beforeBuild, lite$addInt(lite_dashPos, 1n, 2311), liteFn$lib$core$text$length(lite_beforeBuild));
             void lite_prePart;
             if ((!(liteFn$lib$util$release$validDotIdentifiers(lite_prePart, true)))) {
                 return false;
@@ -2221,15 +2231,15 @@ export function main(lite$write?: (text: string) => void): string {
         if (((lite_dot1) < (0n))) {
             return false;
         }
-        const lite_dot2 = liteFn$lib$core$text$indexOfText(lite_corePart, ".", lite$addInt(lite_dot1, 1n, 2518));
+        const lite_dot2 = liteFn$lib$core$text$indexOfText(lite_corePart, ".", lite$addInt(lite_dot1, 1n, 2548));
         void lite_dot2;
         if (((lite_dot2) < (0n))) {
             return false;
         }
-        if (((liteFn$lib$core$text$indexOfText(lite_corePart, ".", lite$addInt(lite_dot2, 1n, 2602))) >= (0n))) {
+        if (((liteFn$lib$core$text$indexOfText(lite_corePart, ".", lite$addInt(lite_dot2, 1n, 2632))) >= (0n))) {
             return false;
         }
-        return ((((liteFn$lib$util$release$isPlainNumericSegment(liteFn$lib$core$text$slice(lite_corePart, 0n, lite_dot1))) && (liteFn$lib$util$release$isPlainNumericSegment(liteFn$lib$core$text$slice(lite_corePart, lite$addInt(lite_dot1, 1n, 2743), lite_dot2))))) && (liteFn$lib$util$release$isPlainNumericSegment(liteFn$lib$core$text$slice(lite_corePart, lite$addInt(lite_dot2, 1n, 2811), liteFn$lib$core$text$length(lite_corePart)))));
+        return ((((liteFn$lib$util$release$isPlainNumericSegment(liteFn$lib$core$text$slice(lite_corePart, 0n, lite_dot1))) && (liteFn$lib$util$release$isPlainNumericSegment(liteFn$lib$core$text$slice(lite_corePart, lite$addInt(lite_dot1, 1n, 2773), lite_dot2))))) && (liteFn$lib$util$release$isPlainNumericSegment(liteFn$lib$core$text$slice(lite_corePart, lite$addInt(lite_dot2, 1n, 2841), liteFn$lib$core$text$length(lite_corePart)))));
     }
     void liteFn$lib$util$release$isValidSemver;
     function liteFn$lib$util$release$isPlainMajorMinorPatch(lite_version: string): boolean {
@@ -2449,6 +2459,122 @@ export function main(lite$write?: (text: string) => void): string {
         return "compiler";
     }
     void liteFn$lib$util$release$releaseProfile;
+    function liteFn$lib$util$release$profileSummary(lite_profile: string): string {
+        void lite_profile;
+        if (((lite_profile) === ("compiler"))) {
+            return "Compiler preview verified across the three-generation fixed-point bootstrap ladder and recorded corpus contracts; native C remains deferred.";
+        }
+        if (((lite_profile) === ("language"))) {
+            return "Language release verified across the three-generation bootstrap ladder, recorded corpus contracts, and full `lite verify --all --no-cache` conformance.";
+        }
+        return "Tool/source snapshot validated for CLI, docs, and extracted TS compilation; does not establish full language conformance.";
+    }
+    void liteFn$lib$util$release$profileSummary;
+    function liteFn$lib$util$release$formatReleaseNotes(lite_label: string, lite_commit: string, lite_profile: string, lite_hasComponent: boolean, lite_componentName: string, lite_componentVersion: string, lite_archive: string, lite_archiveSha256: string, lite_manifestSha256: string, lite_hasVsix: boolean, lite_vsixFile: string, lite_vsixSha256: string, lite_hasBootstrap: boolean, lite_bootstrapGenerations: bigint, lite_bootstrapFixedPoint: boolean, lite_hasCorpusCases: boolean, lite_corpusCases: bigint, lite_corpusPrograms: bigint, lite_corpusRejections: bigint, lite_corpusExecutions: bigint, lite_corpusMismatches: bigint, lite_bootstrapSupport: string): string {
+        void lite_label;
+        void lite_commit;
+        void lite_profile;
+        void lite_hasComponent;
+        void lite_componentName;
+        void lite_componentVersion;
+        void lite_archive;
+        void lite_archiveSha256;
+        void lite_manifestSha256;
+        void lite_hasVsix;
+        void lite_vsixFile;
+        void lite_vsixSha256;
+        void lite_hasBootstrap;
+        void lite_bootstrapGenerations;
+        void lite_bootstrapFixedPoint;
+        void lite_hasCorpusCases;
+        void lite_corpusCases;
+        void lite_corpusPrograms;
+        void lite_corpusRejections;
+        void lite_corpusExecutions;
+        void lite_corpusMismatches;
+        void lite_bootstrapSupport;
+        const lite_componentText = (Boolean((!(lite_hasComponent))) ? "unpublished snapshot" : ((((lite_componentName) + (" v"))) + (lite_componentVersion)));
+        void lite_componentText;
+        const lite_lines: string[] = [...([(("# ") + (lite_label)), "", (((("- **Source commit**: `") + (lite_commit))) + ("`")), (("- **Released component**: ") + (lite_componentText)), (((((("- **Readiness profile**: `") + (lite_profile))) + ("` — "))) + (liteFn$lib$util$release$profileSummary(lite_profile))), "- **Native C backend**: deferred (`nativeCompiler: false`)", "", "## Verification", "", "- Extracted archive validated with `./bin/lite doctor --docs`", "- Node-only TypeScript emission & execution roundtrip verified on `001-001-report-int-42.lts` (output `42`)"])];
+        void lite_lines;
+        if (lite_hasBootstrap) {
+            const lite_ladderStatus = (Boolean(lite_bootstrapFixedPoint) ? "passed" : "failed");
+            void lite_ladderStatus;
+            const lite_corpusStats = (Boolean((!(lite_hasCorpusCases))) ? (("mismatches=") + (liteFn$lib$core$int$intText(lite_corpusMismatches))) : ((((((((((((((((liteFn$lib$core$int$intText(lite_corpusCases)) + (" cases ("))) + (liteFn$lib$core$int$intText(lite_corpusPrograms)))) + (" programs, "))) + (liteFn$lib$core$int$intText(lite_corpusRejections)))) + (" rejections, "))) + (liteFn$lib$core$int$intText(lite_corpusExecutions)))) + (" executions), mismatches="))) + (liteFn$lib$core$int$intText(lite_corpusMismatches))));
+            void lite_corpusStats;
+            lite_lines.push((((((((("- Self-hosting fixed-point ladder: ") + (lite_ladderStatus))) + (" ("))) + (liteFn$lib$core$int$intText(lite_bootstrapGenerations)))) + (" generations)")));
+            lite_lines.push((("- Generated corpus parity: ") + (lite_corpusStats)));
+            if (((lite_profile) === ("language"))) {
+                lite_lines.push("- Full repository verification: `./bin/lite verify --all --no-cache` passed");
+            }
+            lite_lines.push((((("- Embedded archive evidence: `release/compiler.ts`, `release/compiler-source.lts`, `release/verification.json` (") + (lite_bootstrapSupport))) + (")")));
+        }
+        lite_lines.push("");
+        lite_lines.push("## Artifacts");
+        lite_lines.push("");
+        lite_lines.push((((((((("- `") + (lite_archive))) + ("` — sha256: `"))) + (lite_archiveSha256))) + ("`")));
+        if (lite_hasVsix) {
+            lite_lines.push((((((((("- `") + (lite_vsixFile))) + ("` — sha256: `"))) + (lite_vsixSha256))) + ("`")));
+        }
+        lite_lines.push((((("- `manifest.json` — sha256: `") + (lite_manifestSha256))) + ("`")));
+        lite_lines.push("- `RELEASE-NOTES.md` — these release notes");
+        lite_lines.push("- `SHA256SUMS` — checksum manifest for all release files");
+        lite_lines.push("");
+        lite_lines.push("## Verify and extract");
+        lite_lines.push("");
+        lite_lines.push("```sh");
+        lite_lines.push("shasum -a 256 -c SHA256SUMS");
+        lite_lines.push((((((((((("mkdir -p lite-") + (lite_label))) + (" && tar -xzf "))) + (lite_archive))) + (" -C lite-"))) + (lite_label)));
+        lite_lines.push((((("cd lite-") + (lite_label))) + (" && ./bin/lite doctor --docs")));
+        lite_lines.push("```");
+        lite_lines.push("");
+        lite_lines.push("See `docs/start-here.md`, `docs/release-automation.md`, and `compiler/transition-plan.md` in the archive.");
+        lite_lines.push("");
+        return liteFn$lib$core$text$joinTexts([...(lite_lines)], "\n");
+    }
+    void liteFn$lib$util$release$formatReleaseNotes;
+    function liteFn$lib$util$release$formatComponentVersionsJson(lite_rootDir: string, lite_indent: string): { ok: boolean; jsonText: string; error: string } {
+        void lite_rootDir;
+        void lite_indent;
+        const lite_igniterRes = liteFn$lib$util$release$readIgniterVersion(lite_rootDir);
+        void lite_igniterRes;
+        if ((!((lite_igniterRes).ok))) {
+            return { ok: false, jsonText: "", error: (lite_igniterRes).error };
+        }
+        const lite_verRead = lite$fsReadText(liteFn$lib$util$path$join(lite_rootDir, "config/versions.json"));
+        void lite_verRead;
+        if ((!((lite_verRead).ok))) {
+            return { ok: false, jsonText: "", error: (lite_verRead).error };
+        }
+        const lite_components: string[] = [...(liteFn$lib$util$release$allComponents())];
+        void lite_components;
+        const lite_entries: string[] = [...([])];
+        void lite_entries;
+        for (const lite_component of [...(lite_components)]) {
+            void lite_component;
+            if (((lite_component) === ("igniter"))) {
+                lite_entries.push(((((lite_indent) + ("  \"igniter\": "))) + (liteFn$lib$util$json$quoteString((lite_igniterRes).version))));
+            } else {
+                const lite_field = liteFn$lib$util$json$findObjectField((lite_verRead).text, 0n, lite_component);
+                void lite_field;
+                if ((!((lite_field).found))) {
+                    return { ok: false, jsonText: "", error: (("missing version for ") + (lite_component)) };
+                }
+                if (liteFn$lib$core$text$startsWithAt((lite_verRead).text, (lite_field).valuePos, "null")) {
+                    lite_entries.push(((((((lite_indent) + ("  "))) + (liteFn$lib$util$json$quoteString(lite_component)))) + (": null")));
+                } else {
+                    const lite_strRes = liteFn$lib$util$json$readStringAt((lite_verRead).text, (lite_field).valuePos);
+                    void lite_strRes;
+                    if ((!((lite_strRes).ok))) {
+                        return { ok: false, jsonText: "", error: (("invalid version for ") + (lite_component)) };
+                    }
+                    lite_entries.push(((((((((lite_indent) + ("  "))) + (liteFn$lib$util$json$quoteString(lite_component)))) + (": "))) + (liteFn$lib$util$json$quoteString((lite_strRes).value))));
+                }
+            }
+        }
+        return { ok: true, jsonText: (((((((("{\n") + (liteFn$lib$core$text$joinTexts([...(lite_entries)], ",\n")))) + ("\n"))) + (lite_indent))) + ("}")), error: "" };
+    }
+    void liteFn$lib$util$release$formatComponentVersionsJson;
     function liteFn_failCi(lite_message: string): void {
         void lite_message;
         lite$reportError(lite_message);

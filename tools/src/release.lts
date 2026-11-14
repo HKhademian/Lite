@@ -1,0 +1,442 @@
+/** Component-specific source distributions; never creates tags or rewrites releases. */
+
+io := import "core/io";
+fs := import "core/fs";
+proc := import "core/process";
+text := import "core/text";
+list := import "core/list";
+integer := import "core/int";
+crypto := import "core/crypto";
+path := import "util/path";
+json := import "util/json";
+cli := import "util/cli";
+project := import "util/project";
+rel := import "util/release";
+
+failRelease := fn(workToClean: String, message: String): Unit {
+    if workToClean =!= "" {
+        removed := fs.remove(workToClean);
+        if not removed.ok { io.errorLine(removed.error); }
+    }
+    io.errorLine(message);
+    io.exit(1);
+};
+
+runChecked := fn(workToClean: String, command: String, args: List<String>, cwd: String, customError: String): String {
+    emptyEnv: List<String> = [];
+    res := proc.run(command, args, cwd, emptyEnv, true, "");
+    if res.error =!= "" {
+        failRelease(workToClean, if customError =!= "" { customError } else { res.error });
+    }
+    if res.status =!= 0 {
+        if customError =!= "" {
+            failRelease(workToClean, customError);
+        }
+        failRelease(workToClean, command + " " + text.joinTexts(args, " ") + " failed:\n" + res.stdout + res.stderr);
+    }
+    res.stdout
+};
+
+readOptionalJsonString := fn(source: String, objPos: Int, key: String): (present: Bool, value: String) {
+    field := json.findObjectField(source, objPos, key);
+    if not field.found or text.startsWithAt(source, field.valuePos, "null") {
+        return (present = false, value = "");
+    }
+    str := json.readStringAt(source, field.valuePos);
+    if not str.ok { return (present = false, value = ""); }
+    (present = true, value = str.value)
+};
+
+readOptionalJsonInt := fn(source: String, objPos: Int, key: String, fallback: Int): (present: Bool, value: Int) {
+    field := json.findObjectField(source, objPos, key);
+    if not field.found or text.startsWithAt(source, field.valuePos, "null") {
+        return (present = false, value = fallback);
+    }
+    num := json.readIntAt(source, field.valuePos);
+    if not num.ok { return (present = false, value = fallback); }
+    (present = true, value = num.value)
+};
+
+handleInternalMode := fn(args: List<String>): Bool {
+    internalEnv := proc.envGet("LITE_RELEASE_INTERNAL");
+    if not internalEnv.found or internalEnv.value =!= "1" { return false; }
+
+    if cli.startsWith(args, "--profile") {
+        rest := cli.rest(args, 1);
+        if list.listCountText(rest) == 0 {
+            io.outputLine(rel.releaseProfile(false, "", ""));
+            return true;
+        }
+        if list.listCountText(rest) == 2 {
+            io.outputLine(rel.releaseProfile(true, rest[0], rest[1]));
+            return true;
+        }
+        failRelease("", "usage: lite release --profile [COMPONENT VERSION]");
+    }
+
+    if cli.startsWith(args, "--format-notes") {
+        payload := io.inputAll("");
+        valid := json.validate(payload);
+        if not valid.ok { failRelease("", valid.error); }
+
+        label := json.readObjectString(payload, 0, "label").value;
+        commit := json.readObjectString(payload, 0, "commit").value;
+        profile := json.readObjectString(payload, 0, "profile").value;
+        archive := json.readObjectString(payload, 0, "archive").value;
+        archiveSha := json.readObjectString(payload, 0, "archiveSha256").value;
+        manifestSha := json.readObjectString(payload, 0, "manifestSha256").value;
+
+        var hasComp := false;
+        var compName := "";
+        var compVer := "";
+        compField := json.findObjectField(payload, 0, "releasedComponent");
+        if compField.found and text.startsWithAt(payload, compField.valuePos, "{") {
+            hasComp = true;
+            compName = json.readObjectString(payload, compField.valuePos, "component").value;
+            compVer = json.readObjectString(payload, compField.valuePos, "version").value;
+        }
+
+        var hasVsix := false;
+        var vsixFile := "";
+        var vsixSha := "";
+        vsixField := json.findObjectField(payload, 0, "vsix");
+        if vsixField.found and text.startsWithAt(payload, vsixField.valuePos, "{") {
+            hasVsix = true;
+            vsixFile = json.readObjectString(payload, vsixField.valuePos, "file").value;
+            vsixSha = json.readObjectString(payload, vsixField.valuePos, "sha256").value;
+        }
+
+        var hasBoot := false;
+        var bootGens := 0;
+        var bootFixed := false;
+        var hasCases := false;
+        var corpusCases := 0;
+        var corpusPrograms := 0;
+        var corpusRejections := 0;
+        var corpusExecutions := 0;
+        var corpusMismatches := 0;
+        var bootSupport := "";
+        bootField := json.findObjectField(payload, 0, "bootstrap");
+        if bootField.found and text.startsWithAt(payload, bootField.valuePos, "{") {
+            hasBoot = true;
+            bootSupport = json.readObjectString(payload, bootField.valuePos, "support").value;
+            ladderField := json.findObjectField(payload, bootField.valuePos, "ladder");
+            if ladderField.found {
+                bootFixed = json.readObjectBool(payload, ladderField.valuePos, "fixedPoint").value;
+                gensField := json.findObjectField(payload, ladderField.valuePos, "generations");
+                if gensField.found {
+                    bootGens = list.listCountInt(json.arrayElementOffsets(payload, gensField.valuePos));
+                }
+            }
+            corpusField := json.findObjectField(payload, bootField.valuePos, "corpus");
+            if corpusField.found {
+                casesOpt := readOptionalJsonInt(payload, corpusField.valuePos, "cases", 0);
+                hasCases = casesOpt.present;
+                corpusCases = casesOpt.value;
+                corpusPrograms = readOptionalJsonInt(payload, corpusField.valuePos, "programs", 0).value;
+                corpusRejections = readOptionalJsonInt(payload, corpusField.valuePos, "rejections", 0).value;
+                corpusExecutions = readOptionalJsonInt(payload, corpusField.valuePos, "executions", 0).value;
+                mismatchField := json.findObjectField(payload, corpusField.valuePos, "mismatches");
+                if mismatchField.found {
+                    corpusMismatches = list.listCountInt(json.arrayElementOffsets(payload, mismatchField.valuePos));
+                }
+            }
+        }
+
+        rendered := rel.formatReleaseNotes(
+        label, commit, profile,
+        hasComp, compName, compVer,
+        archive, archiveSha, manifestSha,
+        hasVsix, vsixFile, vsixSha,
+        hasBoot, bootGens, bootFixed,
+        hasCases, corpusCases, corpusPrograms, corpusRejections, corpusExecutions, corpusMismatches,
+        bootSupport
+        );
+        io.output(rendered);
+        return true;
+    }
+    false
+};
+
+prepareRelease := fn(directory: String, output: String, tag: String): Unit {
+    statusArgs: List<String> = ["status", "--porcelain"];
+    porcelain := runChecked("", "git", statusArgs, directory, "");
+    if text.length(porcelain) > 0 {
+        failRelease("", "release needs a clean committed checkout");
+    }
+
+    headArgs: List<String> = ["rev-parse", "HEAD"];
+    commit := text.trim(runChecked("", "git", headArgs, directory, ""));
+
+    selected := rel.selectComponentRelease(directory, tag);
+    if not selected.ok {
+        failRelease("", selected.error);
+    }
+
+    if tag =!= "" {
+        tagTypeArgs: List<String> = ["cat-file", "-t", "refs/tags/" + tag];
+        tagType := text.trim(runChecked("", "git", tagTypeArgs, directory, "release tags must be annotated"));
+        if tagType =!= "tag" {
+            failRelease("", "release tags must be annotated");
+        }
+        tagCommitArgs: List<String> = ["rev-parse", "refs/tags/" + tag + "^{commit}"];
+        tagCommit := text.trim(runChecked("", "git", tagCommitArgs, directory, "release tag must point at HEAD"));
+        if tagCommit =!= commit {
+            failRelease("", "release tag must point at HEAD");
+        }
+    }
+
+    outKind := fs.kind(output);
+    if outKind =!= "missing" {
+        if outKind =!= "dir" or list.listCountText(fs.listDir(output)) > 0 {
+            failRelease("", "release output directory must be empty");
+        }
+    }
+
+    profile := rel.releaseProfile(selected.hasTag, selected.component, selected.version);
+    workRes := fs.makeTempDir("lite-release-");
+    if not workRes.ok { failRelease("", workRes.error); }
+    work := workRes.path;
+
+    source := path.join(work, "source");
+    mkSource := fs.makeDir(source);
+    if not mkSource.ok { failRelease(work, mkSource.error); }
+
+    tarPath := path.join(work, "source.tar");
+    archiveArgs: List<String> = ["archive", "--format=tar", "-o", tarPath, commit];
+    runChecked(work, "git", archiveArgs, directory, "");
+    untarArgs: List<String> = ["-xf", tarPath, "-C", source];
+    runChecked(work, "tar", untarArgs, work, "");
+
+    sourceDocArgs: List<String> = [path.join(source, "bin/lite"), "doctor", "--docs"];
+    runChecked(work, proc.execPath(), sourceDocArgs, source, "");
+
+    var hasBoot := false;
+    var bootJson := "null";
+    var bootGens := 0;
+    var bootFixed := false;
+    var hasCases := false;
+    var corpusCases := 0;
+    var corpusPrograms := 0;
+    var corpusRejections := 0;
+    var corpusExecutions := 0;
+    var corpusMismatches := 0;
+    var bootSupport := "";
+
+    if profile =!= "tools" {
+        dependencies := path.join(directory, "igniter/node_modules");
+        if fs.kind(dependencies) == "missing" {
+            failRelease(work, "install locked igniter development dependencies for compiler release verification");
+        }
+        srcDeps := path.join(source, "igniter/node_modules");
+        linkRes := fs.symlink(dependencies, srcDeps);
+        if not linkRes.ok { failRelease(work, linkRes.error); }
+
+        ladderDirectory := path.join(work, "ladder");
+        selfHostArgs: List<String> = [path.join(source, "compiler/scripts/self-host.ts"), "--out", ladderDirectory];
+        ladderRaw := runChecked(work, proc.execPath(), selfHostArgs, source, "");
+        ladderSpan := json.valueSpan(ladderRaw, 0);
+        if not ladderSpan.ok { failRelease(work, ladderSpan.error); }
+        fixedField := json.readObjectBool(ladderRaw, ladderSpan.start, "fixedPoint");
+        if not fixedField.found or not fixedField.ok or not fixedField.value {
+            failRelease(work, "compiler release requires a generated fixed point");
+        }
+        bootFixed = true;
+        gensField := json.findObjectField(ladderRaw, ladderSpan.start, "generations");
+        if gensField.found {
+            bootGens = list.listCountInt(json.arrayElementOffsets(ladderRaw, gensField.valuePos));
+        }
+
+        gen3 := path.join(ladderDirectory, "generation-3.ts");
+        parityArgs: List<String> = [path.join(source, "compiler/scripts/corpus-parity.ts"), "--artifact", gen3];
+        corpusRaw := runChecked(work, proc.execPath(), parityArgs, source, "");
+        corpusSpan := json.valueSpan(corpusRaw, 0);
+        if not corpusSpan.ok { failRelease(work, corpusSpan.error); }
+        mismatchField := json.findObjectField(corpusRaw, corpusSpan.start, "mismatches");
+        if not mismatchField.found { failRelease(work, "corpus parity output missing mismatches"); }
+        corpusMismatches = list.listCountInt(json.arrayElementOffsets(corpusRaw, mismatchField.valuePos));
+        if corpusMismatches =!= 0 { failRelease(work, "generated corpus parity had mismatches"); }
+
+        casesOpt := readOptionalJsonInt(corpusRaw, corpusSpan.start, "cases", 0);
+        hasCases = casesOpt.present;
+        corpusCases = casesOpt.value;
+        corpusPrograms = readOptionalJsonInt(corpusRaw, corpusSpan.start, "programs", 0).value;
+        corpusRejections = readOptionalJsonInt(corpusRaw, corpusSpan.start, "rejections", 0).value;
+        corpusExecutions = readOptionalJsonInt(corpusRaw, corpusSpan.start, "executions", 0).value;
+
+        if profile == "language" {
+            verifyArgs: List<String> = [path.join(source, "bin/lite"), "verify", "--all", "--no-cache"];
+            runChecked(work, proc.execPath(), verifyArgs, source, "");
+            bootSupport = "current canonical contracts passed";
+        } else {
+            bootSupport = "restricted generated-TS subset; consult migration inventory";
+        }
+
+        hasBoot = true;
+        bootJson = "{\n  \"ladder\": " + text.slice(ladderRaw, ladderSpan.start, ladderSpan.end) +
+        ",\n  \"corpus\": " + text.slice(corpusRaw, corpusSpan.start, corpusSpan.end) +
+        ",\n  \"support\": " + json.quoteString(bootSupport) + "\n}";
+
+        releaseDir := path.join(source, "release");
+        if fs.kind(releaseDir) =!= "missing" {
+            failRelease(work, "release/ is reserved for generated distribution evidence");
+        }
+        mkRel := fs.makeDir(releaseDir);
+        if not mkRel.ok { failRelease(work, mkRel.error); }
+        cpGen3 := fs.copy(gen3, path.join(releaseDir, "compiler.ts"));
+        if not cpGen3.ok { failRelease(work, cpGen3.error); }
+        cpSrc := fs.copy(path.join(ladderDirectory, "S.lts"), path.join(releaseDir, "compiler-source.lts"));
+        if not cpSrc.ok { failRelease(work, cpSrc.error); }
+        wrVerif := fs.writeText(path.join(releaseDir, "verification.json"), bootJson + "\n");
+        if not wrVerif.ok { failRelease(work, wrVerif.error); }
+
+        rmDeps := fs.remove(srcDeps);
+        if not rmDeps.ok { failRelease(work, rmDeps.error); }
+        rmCache := fs.remove(path.join(source, ".cache"));
+        if not rmCache.ok { failRelease(work, rmCache.error); }
+    }
+
+    var hasVsix := false;
+    var vsixFile := "";
+    var vsixSha := "";
+    if selected.hasTag and selected.component == "vscode" {
+        packager := path.join(directory, "editors/vscode/node_modules/@vscode/vsce/vsce");
+        if fs.kind(packager) == "missing" {
+            failRelease(work, "install locked editor packaging dependencies");
+        }
+        vsixFile = "lite-" + selected.version + ".vsix";
+        vsixArgs: List<String> = [packager, "package", "--no-dependencies", "--allow-missing-repository", "--skip-license", "--out", path.join(work, vsixFile)];
+        runChecked(work, proc.execPath(), vsixArgs, path.join(source, "editors/vscode"), "");
+        vsixDigest := crypto.sha256File(path.join(work, vsixFile));
+        if not vsixDigest.ok { failRelease(work, vsixDigest.error); }
+        hasVsix = true;
+        vsixSha = vsixDigest.hex;
+    }
+
+    label := if tag =!= "" { tag } else { "snapshot-" + text.slice(commit, 0, 12) };
+    compVersionsRes := rel.formatComponentVersionsJson(directory, "  ");
+    if not compVersionsRes.ok { failRelease(work, compVersionsRes.error); }
+
+    tagJson := if tag =!= "" { json.quoteString(tag) } else { "null" };
+    compJson := if not selected.hasTag {
+        "null"
+    } else {
+        "{\n    \"component\": " + json.quoteString(selected.component) +
+        ",\n    \"version\": " + json.quoteString(selected.version) + "\n  }"
+    };
+    vsixJson := if not hasVsix {
+        "null"
+    } else {
+        "{\n    \"file\": " + json.quoteString(vsixFile) +
+        ",\n    \"sha256\": " + json.quoteString(vsixSha) + "\n  }"
+    };
+
+    manifestJson := "{\n" +
+    "  \"schemaVersion\": 3,\n" +
+    "  \"tag\": " + tagJson + ",\n" +
+    "  \"commit\": " + json.quoteString(commit) + ",\n" +
+    "  \"releasedComponent\": " + compJson + ",\n" +
+    "  \"componentVersions\": " + compVersionsRes.jsonText + ",\n" +
+    "  \"profile\": " + json.quoteString(profile) + ",\n" +
+    "  \"bootstrap\": " + bootJson + ",\n" +
+    "  \"nativeCompiler\": false,\n" +
+    "  \"vsix\": " + vsixJson + "\n" +
+    "}\n";
+
+    releaseJsonPath := path.join(source, "RELEASE.json");
+    if fs.kind(releaseJsonPath) =!= "missing" {
+        failRelease(work, "RELEASE.json is reserved for packaged metadata");
+    }
+    wrRelJson := fs.writeText(releaseJsonPath, manifestJson);
+    if not wrRelJson.ok { failRelease(work, wrRelJson.error); }
+
+    archive := "lite-" + label + ".tar.gz";
+    archivePath := path.join(work, archive);
+    tgzArgs: List<String> = ["-czf", archivePath, "-C", source, "."];
+    runChecked(work, "tar", tgzArgs, work, "");
+
+    extracted := path.join(work, "extracted");
+    mkExt := fs.makeDir(extracted);
+    if not mkExt.ok { failRelease(work, mkExt.error); }
+    exTgzArgs: List<String> = ["-xf", archivePath, "-C", extracted];
+    runChecked(work, "tar", exTgzArgs, work, "");
+
+    extDocArgs: List<String> = [path.join(extracted, "bin/lite"), "doctor", "--docs"];
+    runChecked(work, proc.execPath(), extDocArgs, extracted, "");
+
+    compArgs: List<String> = [path.join(extracted, "bin/lite-compile"), "igniter/tests/compiler/001-001-report-int-42.lts"];
+    emitted := runChecked(work, proc.execPath(), compArgs, extracted, "");
+    helloPath := path.join(work, "hello.ts");
+    wrHello := fs.writeText(helloPath, emitted);
+    if not wrHello.ok { failRelease(work, wrHello.error); }
+
+    entryArgs: List<String> = [path.join(extracted, "compiler/entry.ts"), helloPath];
+    helloOut := runChecked(work, proc.execPath(), entryArgs, extracted, "");
+    if helloOut =!= "42\n" {
+        failRelease(work, "extracted compiler roundtrip produced unexpected output: " + helloOut);
+    }
+
+    archDigest := crypto.sha256File(archivePath);
+    if not archDigest.ok { failRelease(work, archDigest.error); }
+    archiveSha := archDigest.hex;
+    manifestSha := crypto.sha256Text(manifestJson);
+
+    mkOut := fs.makeDir(output);
+    if not mkOut.ok { failRelease(work, mkOut.error); }
+    cpArch := fs.copy(archivePath, path.join(output, archive));
+    if not cpArch.ok { failRelease(work, cpArch.error); }
+    if hasVsix {
+        cpVsix := fs.copy(path.join(work, vsixFile), path.join(output, vsixFile));
+        if not cpVsix.ok { failRelease(work, cpVsix.error); }
+    }
+    wrMan := fs.writeText(path.join(output, "manifest.json"), manifestJson);
+    if not wrMan.ok { failRelease(work, wrMan.error); }
+
+    notes := rel.formatReleaseNotes(
+    label, commit, profile,
+    selected.hasTag, selected.component, selected.version,
+    archive, archiveSha, manifestSha,
+    hasVsix, vsixFile, vsixSha,
+    hasBoot, bootGens, bootFixed,
+    hasCases, corpusCases, corpusPrograms, corpusRejections, corpusExecutions, corpusMismatches,
+    bootSupport
+    );
+    wrNotes := fs.writeText(path.join(output, "RELEASE-NOTES.md"), notes);
+    if not wrNotes.ok { failRelease(work, wrNotes.error); }
+
+    sumFiles := fs.listDir(output);
+    var sums := "";
+    loop sumFiles as file {
+        dRes := crypto.sha256File(path.join(output, file));
+        if not dRes.ok { failRelease(work, dRes.error); }
+        sums = sums + dRes.hex + "  " + file + "\n";
+    }
+    wrSums := fs.writeText(path.join(output, "SHA256SUMS"), sums);
+    if not wrSums.ok { failRelease(work, wrSums.error); }
+
+    rmWork := fs.remove(work);
+    if not rmWork.ok { io.errorLine(rmWork.error); }
+};
+
+run := fn(rawArgs: List<String>): Unit {
+    args := cli.stripLeadingSeparator(rawArgs);
+    if handleInternalMode(args) { return; }
+    project.handleVersionFlag(args, "release", "release");
+
+    outputArg := cli.head(args);
+    afterOutput := cli.rest(args, 1);
+    tag := cli.head(afterOutput);
+    if outputArg == "" or list.listCountText(cli.rest(afterOutput, 1)) > 0 {
+        failRelease("", "usage: lite release OUTPUT [TAG]");
+    }
+
+    envRoot := proc.envGet("LITE_RELEASE_ROOT");
+    directory := if envRoot.found and envRoot.value =!= "" { envRoot.value } else { project.findRepoRoot() };
+    if directory == "" {
+        failRelease("", "cannot locate repository root");
+    }
+    prepareRelease(directory, path.resolve(proc.cwd(), outputArg), tag);
+    io.outputLine("Release prepared.");
+};
+
+run(io.inputArgs());

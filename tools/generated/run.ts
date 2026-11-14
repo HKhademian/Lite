@@ -1257,6 +1257,16 @@ export function main(lite$write?: (text: string) => void): string {
         return { ok: true, error: "" };
     }
     void liteFn$lib$util$json$validate;
+    function liteFn$lib$util$json$valueSpan(lite_source: string, lite_start: bigint): { ok: boolean; start: bigint; end: bigint; error: string } {
+        void lite_source;
+        void lite_start;
+        const lite_valStart = liteFn$lib$util$json$skipJsonSpaces(lite_source, lite_start);
+        void lite_valStart;
+        const lite_skipped = liteFn$lib$util$json$skipValue(lite_source, lite_valStart);
+        void lite_skipped;
+        return { ok: (lite_skipped).ok, start: lite_valStart, end: (lite_skipped).next, error: (lite_skipped).error };
+    }
+    void liteFn$lib$util$json$valueSpan;
     function liteFn$lib$util$json$readStringAt(lite_source: string, lite_start: bigint): { ok: boolean; value: string; next: bigint; error: string } {
         void lite_source;
         void lite_start;
@@ -1275,10 +1285,10 @@ export function main(lite$write?: (text: string) => void): string {
         let lite_end = lite_pos;
         void lite_end;
         if (((((lite_end) < (lite_size))) && ((((((liteFn$lib$core$text$at(lite_source, lite_end)) === ("-"))) || (((liteFn$lib$core$text$at(lite_source, lite_end)) === ("+")))))))) {
-            lite_end = lite$addInt(lite_end, 1n, 11980);
+            lite_end = lite$addInt(lite_end, 1n, 12352);
         }
         while (((((lite_end) < (lite_size))) && (liteFn$lib$core$text$isDigit(liteFn$lib$core$text$at(lite_source, lite_end))))) {
-            lite_end = lite$addInt(lite_end, 1n, 12070);
+            lite_end = lite$addInt(lite_end, 1n, 12442);
         }
         if (((lite_end) === (lite_pos))) {
             return { ok: false, value: 0n, next: lite_pos, error: "expected integer value" };
@@ -1305,7 +1315,7 @@ export function main(lite$write?: (text: string) => void): string {
         if (((((lite_pos) >= (lite_size))) || (((liteFn$lib$core$text$at(lite_source, lite_pos)) !== ("{"))))) {
             return { found: false, valuePos: (-1n) };
         }
-        lite_pos = liteFn$lib$util$json$skipJsonSpaces(lite_source, lite$addInt(lite_pos, 1n, 13106));
+        lite_pos = liteFn$lib$util$json$skipJsonSpaces(lite_source, lite$addInt(lite_pos, 1n, 13478));
         if (((((lite_pos) < (lite_size))) && (((liteFn$lib$core$text$at(lite_source, lite_pos)) === ("}"))))) {
             return { found: false, valuePos: (-1n) };
         }
@@ -1319,7 +1329,7 @@ export function main(lite$write?: (text: string) => void): string {
             if (((((lite_pos) >= (lite_size))) || (((liteFn$lib$core$text$at(lite_source, lite_pos)) !== (":"))))) {
                 return { found: false, valuePos: (-1n) };
             }
-            const lite_valStart = liteFn$lib$util$json$skipJsonSpaces(lite_source, lite$addInt(lite_pos, 1n, 13557));
+            const lite_valStart = liteFn$lib$util$json$skipJsonSpaces(lite_source, lite$addInt(lite_pos, 1n, 13929));
             void lite_valStart;
             if ((((lite_keyRes).value) === (lite_key))) {
                 return { found: true, valuePos: lite_valStart };
@@ -1331,7 +1341,7 @@ export function main(lite$write?: (text: string) => void): string {
             }
             lite_pos = liteFn$lib$util$json$skipJsonSpaces(lite_source, (lite_valEnd).next);
             if (((((lite_pos) < (lite_size))) && (((liteFn$lib$core$text$at(lite_source, lite_pos)) === (","))))) {
-                lite_pos = liteFn$lib$util$json$skipJsonSpaces(lite_source, lite$addInt(lite_pos, 1n, 13929));
+                lite_pos = liteFn$lib$util$json$skipJsonSpaces(lite_source, lite$addInt(lite_pos, 1n, 14301));
             } else {
                 return { found: false, valuePos: (-1n) };
             }
@@ -1399,7 +1409,7 @@ export function main(lite$write?: (text: string) => void): string {
         if (((((lite_pos) >= (lite_size))) || (((liteFn$lib$core$text$at(lite_source, lite_pos)) !== ("["))))) {
             return [...(lite_offsets)];
         }
-        lite_pos = liteFn$lib$util$json$skipJsonSpaces(lite_source, lite$addInt(lite_pos, 1n, 15908));
+        lite_pos = liteFn$lib$util$json$skipJsonSpaces(lite_source, lite$addInt(lite_pos, 1n, 16280));
         if (((((lite_pos) < (lite_size))) && (((liteFn$lib$core$text$at(lite_source, lite_pos)) === ("]"))))) {
             return [...(lite_offsets)];
         }
@@ -1412,7 +1422,7 @@ export function main(lite$write?: (text: string) => void): string {
             }
             lite_pos = liteFn$lib$util$json$skipJsonSpaces(lite_source, (lite_skipped).next);
             if (((((lite_pos) < (lite_size))) && (((liteFn$lib$core$text$at(lite_source, lite_pos)) === (","))))) {
-                lite_pos = liteFn$lib$util$json$skipJsonSpaces(lite_source, lite$addInt(lite_pos, 1n, 16289));
+                lite_pos = liteFn$lib$util$json$skipJsonSpaces(lite_source, lite$addInt(lite_pos, 1n, 16661));
             } else {
                 return [...(lite_offsets)];
             }
@@ -1432,7 +1442,7 @@ export function main(lite$write?: (text: string) => void): string {
         if (((((lite_pos) >= (lite_size))) || (((liteFn$lib$core$text$at(lite_source, lite_pos)) !== ("{"))))) {
             return [...(lite_keys)];
         }
-        lite_pos = liteFn$lib$util$json$skipJsonSpaces(lite_source, lite$addInt(lite_pos, 1n, 16747));
+        lite_pos = liteFn$lib$util$json$skipJsonSpaces(lite_source, lite$addInt(lite_pos, 1n, 17119));
         if (((((lite_pos) < (lite_size))) && (((liteFn$lib$core$text$at(lite_source, lite_pos)) === ("}"))))) {
             return [...(lite_keys)];
         }
@@ -1447,14 +1457,14 @@ export function main(lite$write?: (text: string) => void): string {
             if (((((lite_pos) >= (lite_size))) || (((liteFn$lib$core$text$at(lite_source, lite_pos)) !== (":"))))) {
                 return [...(lite_keys)];
             }
-            const lite_skipped = liteFn$lib$util$json$skipValue(lite_source, lite$addInt(lite_pos, 1n, 17149));
+            const lite_skipped = liteFn$lib$util$json$skipValue(lite_source, lite$addInt(lite_pos, 1n, 17521));
             void lite_skipped;
             if ((!((lite_skipped).ok))) {
                 return [...(lite_keys)];
             }
             lite_pos = liteFn$lib$util$json$skipJsonSpaces(lite_source, (lite_skipped).next);
             if (((((lite_pos) < (lite_size))) && (((liteFn$lib$core$text$at(lite_source, lite_pos)) === (","))))) {
-                lite_pos = liteFn$lib$util$json$skipJsonSpaces(lite_source, lite$addInt(lite_pos, 1n, 17351));
+                lite_pos = liteFn$lib$util$json$skipJsonSpaces(lite_source, lite$addInt(lite_pos, 1n, 17723));
             } else {
                 return [...(lite_keys)];
             }
@@ -1493,9 +1503,9 @@ export function main(lite$write?: (text: string) => void): string {
                     lite_out = ((lite_out) + (liteFn$lib$core$text$slice(lite_value, lite_runStart, lite_i)));
                 }
                 lite_out = ((lite_out) + (lite_esc));
-                lite_runStart = lite$addInt(lite_i, 1n, 18069);
+                lite_runStart = lite$addInt(lite_i, 1n, 18441);
             }
-            lite_i = lite$addInt(lite_i, 1n, 18098);
+            lite_i = lite$addInt(lite_i, 1n, 18470);
         }
         if (((lite_runStart) < (lite_size))) {
             lite_out = ((lite_out) + (liteFn$lib$core$text$slice(lite_value, lite_runStart, lite_size)));
