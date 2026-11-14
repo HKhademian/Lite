@@ -1,6 +1,6 @@
 io := import "core/io";
-
 list := import "core/list";
+
 numbers: mut List<Int> = [];
 loop {
     number := io.inputInt("Integer (0 to finish): ");

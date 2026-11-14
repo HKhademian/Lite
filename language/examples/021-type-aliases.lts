@@ -1,8 +1,8 @@
 /* Type aliases: transparent named contracts with zero runtime memory. */
 
 io := import "core/io";
-
 list := import "core/list";
+
 Token := type (kind: String, text: String);
 Tokens := type List<Token>;
 

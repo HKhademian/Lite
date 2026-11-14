@@ -3,7 +3,7 @@
   "kind": "example",
   "source": {
     "file": "../../../examples/021-type-aliases.lts",
-    "hash": "sha256:79e4422c8ae28fac79b0afc857054a4ba25a1fb06d8bb04d2ff6f5995c55a310"
+    "hash": "sha256:a3d27803f0dbe29a73bbad9ed2866b3a2850313810adfb09201e8a0fa71b9db0"
   },
   "features": [
     "alias.transparent",

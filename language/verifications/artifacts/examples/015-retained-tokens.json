@@ -3,7 +3,7 @@
   "kind": "example",
   "source": {
     "file": "../../../examples/015-retained-tokens.lts",
-    "hash": "sha256:18e8f46f1048e95e49ead8507cdf662f95482a0f214821581a95d66d1f4440d6"
+    "hash": "sha256:f5ff6f0fda19502f2dec20de9d7675c91cca1a77a5727d8cd99b8ca0ae45012e"
   },
   "features": [
     "list.mutation",
