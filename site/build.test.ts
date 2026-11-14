@@ -444,19 +444,25 @@ test('formatCodeView filters TS and C output for Program, Portable, and Full mod
   assert(!programTs.includes('declare const process'));
   assert(!programTs.includes('liteFn$lib$core$int$intAdd'));
   assert(!programTs.includes('let lite$out = "";'));
-  assert(programTs.includes('function liteFn_isDigit'));
-  assert(programTs.includes('const lite_line'));
+  assert(programTs.includes('function isDigit('));
+  assert(programTs.includes('const line'));
+  assert(!programTs.includes('function liteFn_isDigit'));
+  assert(!programTs.includes('const lite_line'));
 
   const portableTs = formatCodeView(sample.ts, 'ts', 'portable');
   assert(!portableTs.includes('declare const process'));
   assert(portableTs.includes('export function main'));
+  assert(portableTs.includes('function liteFn_isDigit('));
+  assert(portableTs.includes('const lite_line'));
 
   const sumLoop = JSON.parse(readFileSync(join(out, 'playground', 'samples', 'sum-loop.json'), 'utf8')) as { ts: string };
   const sumProgram = formatCodeView(sumLoop.ts, 'ts', 'program');
   assert(sumProgram.includes('while (true)'));
   assert(!sumProgram.includes('Boolean(true)'));
-  assert(sumProgram.includes('if (lite_sum === 15n)'));
-  assert(sumProgram.includes('lite$emit("sum(1..5) =" + " " + lite_sum.toString(), "\\n")'));
+  assert(sumProgram.includes('if (sum === 15n)'));
+  assert(sumProgram.includes('lite$emit("sum(1..5) =" + " " + sum.toString(), "\\n")'));
+  const sumPortable = formatCodeView(sumLoop.ts, 'ts', 'portable');
+  assert(sumPortable.includes('if (lite_sum === 15n)'));
 
   assert.equal(formatCodeView(sample.ts, 'ts', 'full'), sample.ts);
 
@@ -474,9 +480,119 @@ test('formatCodeView filters TS and C output for Program, Portable, and Full mod
   assert(!programC.includes('#include'));
   assert(!programC.includes('(void)lite_x;'));
   assert(programC.startsWith('int main(void) {'));
+  assert(programC.includes('int64_t x = INT64_C(42);'));
 
   const portableC = formatCodeView(sampleC, 'c', 'portable');
   assert(portableC.includes('#include <stdio.h>'));
   assert(!portableC.includes('(void)lite_x;'));
+  assert(portableC.includes('int64_t lite_x = INT64_C(42);'));
   assert.equal(formatCodeView(sampleC, 'c', 'full'), sampleC);
+});
+
+test('formatCodeView simplifies Program identifiers without collisions on TS and C', () => {
+  const tsSource = [
+    'declare const process: { exit(code: number): never };',
+    'function liteFn$left$util$tag(): string { return "L"; }',
+    'function liteFn$right$util$tag(): string { return "R"; }',
+    'export function main(lite$write?: (text: string) => void): string {',
+    '    let lite$out = "";',
+    '    function lite$emit(text: string): void {',
+    '        if (lite$write === undefined) lite$out += text;',
+    '        else lite$write(text);',
+    '    }',
+    '    void lite$emit;',
+    '    const lite$m$left$util$val = 10n;',
+    '    void lite$m$left$util$val;',
+    '    const lite$m$right$util$val = 20n;',
+    '    void lite$m$right$util$val;',
+    '    function liteFn$left$util$tag(): string { return "L"; }',
+    '    void liteFn$left$util$tag;',
+    '    const lite_x = 1n;',
+    '    const lite_x_2 = 2n;',
+    '    const lite_class = 3n;',
+    '    const lite_Number = 4n;',
+    '    const lite_pair = { x: lite_x, y: 1n };',
+    '    {',
+    '        const lite_x$2 = 5n;',
+    '        const lite_msg = "lite_x liteFn_foo lt_s2_x";',
+    '        lite$emit((lite_x$2 + lite_x_2 + lite_class + lite_Number + lite_pair.x + lite$m$left$util$val + lite$m$right$util$val).toString() + liteFn$left$util$tag() + liteFn$right$util$tag() + lite_msg + "\\n");',
+    '    }',
+    '    return lite$out;',
+    '}',
+  ].join('\n');
+
+  const tsProgram = formatCodeView(tsSource, 'ts', 'program');
+  assert(!tsProgram.includes('lite$m$left$util$val = 10n'));
+  assert(!tsProgram.includes('lite$m$right$util$val = 20n'));
+  assert(tsProgram.includes('const x = 1n;'));
+  assert(tsProgram.includes('const x_2 = 2n;'));
+  assert(tsProgram.includes('const x_3 = 5n;'));
+  assert(tsProgram.includes('const class_2 = 3n;'));
+  assert(tsProgram.includes('const Number_2 = 4n;'));
+  assert(tsProgram.includes('const pair = { x: x, y: 1n };'));
+  assert(tsProgram.includes('const msg = "lite_x liteFn_foo lt_s2_x";'));
+  assert(tsProgram.includes('util$val + util$val_2'));
+  assert(tsProgram.includes('util$tag() + util$tag_2()'));
+  assert(tsProgram.includes('pair.x'));
+
+  const tsPortable = formatCodeView(tsSource, 'ts', 'portable');
+  assert(tsPortable.includes('const lite$m$left$util$val = 10n;'));
+  assert(tsPortable.includes('const lite_x = 1n;'));
+  assert(tsPortable.includes('const lite_x$2 = 5n;'));
+
+  const cSource = [
+    '#include <stdio.h>',
+    'static int64_t lite_divide_int(int64_t left, int64_t right, size_t at) { (void)at; return left / right; }',
+    'static const char *lite_concat(const char *left, const char *right) { (void)left; return right; }',
+    'int main(void) {',
+    '    int status = 0;',
+    '    int64_t lt_m_left_s_util__val = INT64_C(10);',
+    '    (void)lt_m_left_s_util__val;',
+    '    int64_t lt_m_right_s_util__val = INT64_C(20);',
+    '    (void)lt_m_right_s_util__val;',
+    '    int64_t lite_x = INT64_C(1);',
+    '    int64_t lite_x_2 = INT64_C(2);',
+    '    int64_t lite_double = INT64_C(3);',
+    '    int64_t lite_status = INT64_C(4);',
+    '    int64_t lite_printf = INT64_C(5);',
+    '    {',
+    '        int64_t lt_s2_x = INT64_C(6);',
+    '        const char *lite_msg = "lite_x liteFn_foo lt_s2_x";',
+    '        const char *lite_concat = lite_concat("a", lite_msg);',
+    '        printf("%" PRId64 "%s\\n", lite_divide_int(lt_s2_x + lite_x_2 + lite_double + lite_status + lite_printf + lt_m_left_s_util__val + lt_m_right_s_util__val, 2, 10), lite_concat);',
+    '    }',
+    '    return status;',
+    '}',
+  ].join('\n');
+
+  const cProgram = formatCodeView(cSource, 'c', 'program');
+  assert(!cProgram.includes('lt_m_left_s_util__val ='));
+  assert(!cProgram.includes('lt_m_right_s_util__val ='));
+  assert(cProgram.includes('int64_t x = INT64_C(1);'));
+  assert(cProgram.includes('int64_t x_2 = INT64_C(2);'));
+  assert(cProgram.includes('int64_t x_3 = INT64_C(6);'));
+  assert(cProgram.includes('int64_t double_2 = INT64_C(3);'));
+  assert(cProgram.includes('int64_t status_2 = INT64_C(4);'));
+  assert(cProgram.includes('int64_t printf_2 = INT64_C(5);'));
+  assert(cProgram.includes('util_val + util_val_2'));
+  assert(cProgram.includes('"lite_x liteFn_foo lt_s2_x"'));
+  assert(cProgram.includes('lite_divide_int(x_3'));
+
+  const cDivHelperOnly = [
+    'int main(void) {',
+    '    int status = 0;',
+    '    int64_t lite_a = lite_divide_int(INT64_C(6), INT64_C(2), 10);',
+    '    (void)lite_a;',
+    '    const char *lite_b = lite_concat("x", "y");',
+    '    (void)lite_b;',
+    '    return status;',
+    '}',
+  ].join('\n');
+  const cHelperProgram = formatCodeView(cDivHelperOnly, 'c', 'program');
+  assert(cHelperProgram.includes('int64_t a = lite_divide_int('));
+  assert(cHelperProgram.includes('const char *b = lite_concat('));
+
+  const cPortable = formatCodeView(cSource, 'c', 'portable');
+  assert(cPortable.includes('int64_t lt_m_left_s_util__val = INT64_C(10);'));
+  assert(cPortable.includes('int64_t lt_s2_x = INT64_C(6);'));
 });
