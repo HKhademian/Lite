@@ -1,11 +1,11 @@
 /** Shared repository discovery and component-version CLI helpers for Lite tools. */
 
 io := import "core/io";
-fs := import "core/fs";
+fs := import "core/file";
 proc := import "core/process";
 text := import "core/text";
 list := import "core/list";
-path := import "util/path";
+path := import "core/path";
 json := import "util/json";
 
 findRepoRootFrom := fn(startPath: String): String {

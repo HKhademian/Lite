@@ -1,13 +1,13 @@
 /** Component-specific source distributions; never creates tags or rewrites releases. */
 
 io := import "core/io";
-fs := import "core/fs";
+fs := import "core/file";
 proc := import "core/process";
 text := import "core/text";
 list := import "core/list";
 integer := import "core/int";
 crypto := import "core/crypto";
-path := import "util/path";
+path := import "core/path";
 json := import "util/json";
 cli := import "util/cli";
 project := import "util/project";

@@ -1,4 +1,10 @@
-/* Provisional core host signatures. This module adds no host authority by itself. */
+/* Provisional core host signatures and target-independent synchronous streams. This module adds no host authority by itself. */
+
+/** Handle to a synchronous byte/text input source (`"stdin"`, `"buffer"`, `"file"`, or `"error"`). */
+pub Reader := type (kind: String, handle: Int);
+
+/** Handle to a synchronous byte/text output sink (`"stdout"`, `"stderr"`, `"buffer"`, `"file"`, or `"error"`). */
+pub Writer := type (kind: String, handle: Int);
 
 /** Writes display values to the host output stream without adding a newline. */
 pub output := fn(...values): Unit;
@@ -26,3 +32,75 @@ pub inputFloat := fn(prompt: String): Float;
 
 /** Terminates the generated program with `status`. */
 pub exit := fn(status: Int): Unit;
+
+/** Returns the shared synchronous standard-input `Reader`. */
+pub stdinReader := fn(): Reader;
+
+/** Returns the shared synchronous standard-output `Writer`. */
+pub stdoutWriter := fn(): Writer;
+
+/** Returns the shared synchronous standard-error `Writer`. */
+pub stderrWriter := fn(): Writer;
+
+/** Creates an in-memory `Reader` backed by raw `0..255` byte values. */
+pub bufferReader := fn(bytes: List<Int>): Reader;
+
+/** Creates an in-memory `Reader` backed by UTF-8 bytes of `text`. */
+pub textReader := fn(text: String): Reader;
+
+/** Creates an in-memory `Writer` accumulating written bytes. */
+pub bufferWriter := fn(): Writer;
+
+/** Returns raw `0..255` byte values currently accumulated in buffer `writer`. */
+pub writerBytes := fn(writer: Writer): List<Int>;
+
+/** Decodes accumulated bytes in buffer `writer` as strict UTF-8 text. */
+pub writerText := fn(writer: Writer): (ok: Bool, text: String, error: String);
+
+/** Clears accumulated bytes in buffer `writer`. */
+pub clearWriter := fn(writer: Writer): Unit;
+
+/** True when `reader` is open and has no recorded error. */
+pub readerOk := fn(reader: Reader): Bool;
+
+/** True when `reader` has reached end-of-stream. */
+pub readerAtEof := fn(reader: Reader): Bool;
+
+/** Returns the recorded error message on `reader`, or empty text. */
+pub readerError := fn(reader: Reader): String;
+
+/** Reads up to `maxBytes` bytes synchronously from `reader`, returning `[]` on EOF or error. */
+pub read := fn(reader: Reader, maxBytes: Int): List<Int>;
+
+/** Reads all remaining bytes synchronously from `reader`. */
+pub readAll := fn(reader: Reader): List<Int>;
+
+/** Reads all remaining bytes synchronously from `reader` and decodes strict UTF-8 text. */
+pub readAllText := fn(reader: Reader): (ok: Bool, text: String, error: String);
+
+/** Reads one line synchronously from `reader`, stripping trailing `\n` or `\r\n`. */
+pub readLine := fn(reader: Reader): (ok: Bool, line: String, eof: Bool, error: String);
+
+/** Closes `reader` when backed by an owned resource. */
+pub closeReader := fn(reader: Reader): (ok: Bool, error: String);
+
+/** True when `writer` is open and has no recorded error. */
+pub writerOk := fn(writer: Writer): Bool;
+
+/** Returns the recorded error message on `writer`, or empty text. */
+pub writerError := fn(writer: Writer): String;
+
+/** Writes raw `0..255` byte values synchronously to `writer`. */
+pub write := fn(writer: Writer, bytes: List<Int>): (ok: Bool, written: Int, error: String);
+
+/** Writes UTF-8 `text` synchronously to `writer`. */
+pub writeText := fn(writer: Writer, text: String): (ok: Bool, error: String);
+
+/** Writes UTF-8 `text` followed by `\n` synchronously to `writer`. */
+pub writeLine := fn(writer: Writer, text: String): (ok: Bool, error: String);
+
+/** Flushes buffered output on `writer` if supported. */
+pub flush := fn(writer: Writer): (ok: Bool, error: String);
+
+/** Closes `writer` when backed by an owned resource. */
+pub closeWriter := fn(writer: Writer): (ok: Bool, error: String);

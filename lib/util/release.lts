@@ -1,10 +1,10 @@
 /** Shared component release stream parsing, SemVer validation, and readiness profile helpers. */
 
-fs := import "core/fs";
+fs := import "core/file";
 integer := import "core/int";
 text := import "core/text";
 list := import "core/list";
-path := import "util/path";
+path := import "core/path";
 json := import "util/json";
 
 isIdentChar := fn(ch: String): Bool {

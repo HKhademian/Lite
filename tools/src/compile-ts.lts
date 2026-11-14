@@ -1,7 +1,7 @@
 /** Standalone TS compiler command (`lite-compile-ts`); validates inputs and forwards to `compiler/cli.ts`. */
 
 io := import "core/io";
-fs := import "core/fs";
+fs := import "core/file";
 list := import "core/list";
 text := import "core/text";
 cli := import "util/cli";

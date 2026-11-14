@@ -1,7 +1,7 @@
 /** Standalone declarative benchmark runner (`lite bench OUTPUT [FILTER]`). */
 
 io := import "core/io";
-fs := import "core/fs";
+fs := import "core/file";
 proc := import "core/process";
 crypto := import "core/crypto";
 integer := import "core/int";
@@ -9,7 +9,7 @@ text := import "core/text";
 unicode := import "core/unicode";
 list := import "core/list";
 time := import "core/time";
-path := import "util/path";
+path := import "core/path";
 cli := import "util/cli";
 project := import "util/project";
 json := import "util/json";

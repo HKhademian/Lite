@@ -1,12 +1,12 @@
 /** Strict-typechecks and runs an emitted TS artifact with fixed stdin and no timeout (`compiler/scripts/run-ts-artifact.ts`). */
 
 io := import "core/io";
-fs := import "core/fs";
+fs := import "core/file";
 proc := import "core/process";
 integer := import "core/int";
 text := import "core/text";
 list := import "core/list";
-path := import "util/path";
+path := import "core/path";
 cli := import "util/cli";
 json := import "util/json";
 project := import "util/project";

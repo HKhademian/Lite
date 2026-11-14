@@ -1,11 +1,11 @@
 /** Byte-exact stream descriptor validation, hashing, and byte extraction for case manifests. */
 
 crypto := import "core/crypto";
-fs := import "core/fs";
+fs := import "core/file";
 text := import "core/text";
 unicode := import "core/unicode";
 list := import "core/list";
-path := import "util/path";
+path := import "core/path";
 json := import "util/json";
 
 isHex64 := fn(value: String): Bool {

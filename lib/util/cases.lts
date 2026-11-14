@@ -1,12 +1,12 @@
 /** Provisional case manifest validation and scenario execution utilities for `.case.json` fixtures. */
 
-fs := import "core/fs";
+fs := import "core/file";
 proc := import "core/process";
 crypto := import "core/crypto";
 integer := import "core/int";
 text := import "core/text";
 list := import "core/list";
-path := import "util/path";
+path := import "core/path";
 fsUtil := import "util/fs";
 json := import "util/json";
 streams := import "util/streams";

@@ -1,10 +1,10 @@
-/** Provisional filesystem traversal utilities built on `core/fs`. */
+/** Provisional filesystem traversal utilities built on `core/file`. */
 
 io := import "core/io";
-fs := import "core/fs";
+fs := import "core/file";
 text := import "core/text";
 list := import "core/list";
-path := import "util/path";
+path := import "core/path";
 
 /** Standard directory names skipped during repository tool walks. */
 pub defaultIgnoredDirs := fn(): List<String> {

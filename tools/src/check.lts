@@ -1,11 +1,11 @@
 /** Repository consistency checks; source checking remains `lite check FILE`. */
 
 io := import "core/io";
-fs := import "core/fs";
+fs := import "core/file";
 proc := import "core/process";
 text := import "core/text";
 list := import "core/list";
-path := import "util/path";
+path := import "core/path";
 cli := import "util/cli";
 json := import "util/json";
 docsUtil := import "util/docs";

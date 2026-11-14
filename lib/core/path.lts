@@ -1,8 +1,9 @@
-/** Provisional path manipulation utilities for LiteScript tools and libraries. */
+/** Core path manipulation and filesystem-kind query helpers. */
 
+file := import "core/file";
+list := import "core/list";
 proc := import "core/process";
 text := import "core/text";
-list := import "core/list";
 
 isWin32 := fn(): Bool {
     proc.platform() == "win32"
@@ -97,6 +98,24 @@ pub join := fn(baseDir: String, target: String): String {
     normalize(baseDir + sep() + target)
 }
 
+/** Joins all non-empty segments in `parts` and normalizes the result. */
+pub joinAll := fn(parts: List<String>): String {
+    var acc := "";
+    var hasAny := false;
+    loop parts as part {
+        if part =!= "" {
+            if not hasAny {
+                acc = part;
+                hasAny = true;
+            } else {
+                acc = acc + sep() + part;
+            }
+        }
+    }
+    if not hasAny { return "."; }
+    normalize(acc)
+}
+
 /** Resolves `target` against `baseDir`, matching absolute-path override behavior. */
 pub resolve := fn(baseDir: String, target: String): String {
     if isAbsolute(target) { return normalize(target); }
@@ -135,6 +154,31 @@ pub extName := fn(target: String): String {
         i = i - 1;
     }
     ""
+}
+
+/** Returns the final path segment without its extension. */
+pub stem := fn(target: String): String {
+    base := baseName(target);
+    ext := extName(target);
+    if ext == "" { return base; }
+    text.slice(base, 0, text.length(base) - text.length(ext))
+}
+
+/** Returns `target` with its file extension replaced by `ext` (or stripped when `ext == ""`). */
+pub withExt := fn(target: String, ext: String): String {
+    base := baseName(target);
+    if base == "" or base == "." or base == ".." { return target; }
+    var end := text.length(target);
+    loop end > 0 and isSep(text.at(target, end - 1)) {
+        end = end - 1;
+    }
+    oldExt := extName(target);
+    stemEnd := end - text.length(oldExt);
+    prefix := text.slice(target, 0, stemEnd);
+    suffix := text.slice(target, end, text.length(target));
+    if ext == "" { return prefix + suffix; }
+    normalizedExt := if text.startsWithAt(ext, 0, ".") { ext } else { "." + ext };
+    prefix + normalizedExt + suffix
 }
 
 splitSegments := fn(normalized: String): List<String> {
@@ -188,4 +232,19 @@ pub relative := fn(fromDir: String, toPath: String): String {
     }
     if list.listCountText(out) == 0 { return ""; }
     text.joinTexts(out, sep())
+}
+
+/** True when `target` resolves to an existing filesystem entry (file, directory, or other). */
+pub exists := fn(target: String): Bool {
+    file.kind(target) =!= "missing"
+}
+
+/** True when `target` resolves to a regular file. */
+pub isFile := fn(target: String): Bool {
+    file.kind(target) == "file"
+}
+
+/** True when `target` resolves to a directory. */
+pub isDirectory := fn(target: String): Bool {
+    file.kind(target) == "dir"
 }

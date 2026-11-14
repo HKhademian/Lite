@@ -32,34 +32,47 @@ unsupportedBuiltinCode := fn(calls: String): String {
     match {
         usesIntHelper(calls, "lite$readSource(") { "C backend does not support compiler source reads" }
         usesIntHelper(calls, "lite$inputArgs(") or usesIntHelper(calls, "lite$inputAll(") or
-            usesIntHelper(calls, "lite$inputLine(") or usesIntHelper(calls, "lite$inputInt(") or
-            usesIntHelper(calls, "lite$inputFloat(") { "C backend does not support input builtins yet" }
+        usesIntHelper(calls, "lite$inputLine(") or usesIntHelper(calls, "lite$inputInt(") or
+        usesIntHelper(calls, "lite$inputFloat(") { "C backend does not support input builtins yet" }
         usesIntHelper(calls, "lite$reportError(") or usesIntHelper(calls, "lite$exit(") {
             "C backend does not support reportError or exit yet"
         }
         usesIntHelper(calls, "lite$textLength(") or usesIntHelper(calls, "lite$textAt(") or
-            usesIntHelper(calls, "lite$textSlice(") or usesIntHelper(calls, "lite$textIndexOf(") { "C backend does not support text builtins yet" }
-        usesIntHelper(calls, "lite$fsKind(") or usesIntHelper(calls, "lite$fsReadText(") or
-            usesIntHelper(calls, "lite$fsReadBytes(") or usesIntHelper(calls, "lite$fsWriteText(") or
-            usesIntHelper(calls, "lite$fsWriteBytes(") or usesIntHelper(calls, "lite$fsListDir(") or
-            usesIntHelper(calls, "lite$fsMakeDir(") or usesIntHelper(calls, "lite$fsRemove(") or
-            usesIntHelper(calls, "lite$fsCopy(") or usesIntHelper(calls, "lite$fsSymlink(") or
-            usesIntHelper(calls, "lite$fsRealPath(") or usesIntHelper(calls, "lite$fsMakeTempDir(") {
+        usesIntHelper(calls, "lite$textSlice(") or usesIntHelper(calls, "lite$textIndexOf(") { "C backend does not support text builtins yet" }
+        usesIntHelper(calls, "lite$fileKind(") or usesIntHelper(calls, "lite$fileOpenReader(") or
+        usesIntHelper(calls, "lite$fileOpenWriter(") or usesIntHelper(calls, "lite$fileOpenAppender(") or
+        usesIntHelper(calls, "lite$fileListDir(") or usesIntHelper(calls, "lite$fileMakeDir(") or
+        usesIntHelper(calls, "lite$fileRemove(") or usesIntHelper(calls, "lite$fileCopy(") or
+        usesIntHelper(calls, "lite$fileSymlink(") or usesIntHelper(calls, "lite$fileRealPath(") or
+        usesIntHelper(calls, "lite$fileMakeTempDir(") {
             "C backend does not support filesystem builtins yet"
         }
+        usesIntHelper(calls, "lite$ioStdinReader(") or usesIntHelper(calls, "lite$ioStdoutWriter(") or
+        usesIntHelper(calls, "lite$ioStderrWriter(") or usesIntHelper(calls, "lite$ioBufferReader(") or
+        usesIntHelper(calls, "lite$ioTextReader(") or usesIntHelper(calls, "lite$ioBufferWriter(") or
+        usesIntHelper(calls, "lite$ioWriterBytes(") or usesIntHelper(calls, "lite$ioWriterText(") or
+        usesIntHelper(calls, "lite$ioClearWriter(") or usesIntHelper(calls, "lite$ioReaderOk(") or
+        usesIntHelper(calls, "lite$ioReaderAtEof(") or usesIntHelper(calls, "lite$ioReaderError(") or
+        usesIntHelper(calls, "lite$ioRead(") or usesIntHelper(calls, "lite$ioReadAll(") or
+        usesIntHelper(calls, "lite$ioReadAllText(") or usesIntHelper(calls, "lite$ioReadLine(") or
+        usesIntHelper(calls, "lite$ioCloseReader(") or usesIntHelper(calls, "lite$ioWriterOk(") or
+        usesIntHelper(calls, "lite$ioWriterError(") or usesIntHelper(calls, "lite$ioWrite(") or
+        usesIntHelper(calls, "lite$ioWriteText(") or usesIntHelper(calls, "lite$ioWriteLine(") or
+        usesIntHelper(calls, "lite$ioFlush(") or usesIntHelper(calls, "lite$ioCloseWriter(") {
+            "C backend does not support stream builtins yet"
+        }
         usesIntHelper(calls, "lite$processCwd(") or usesIntHelper(calls, "lite$processExecPath(") or
-            usesIntHelper(calls, "lite$processEntryPath(") or usesIntHelper(calls, "lite$processPlatform(") or
-            usesIntHelper(calls, "lite$processArch(") or usesIntHelper(calls, "lite$processRuntimeVersion(") or
-            usesIntHelper(calls, "lite$processEnvGet(") or usesIntHelper(calls, "lite$processRun(") or
-            usesIntHelper(calls, "lite$processRunBytes(") {
+        usesIntHelper(calls, "lite$processEntryPath(") or usesIntHelper(calls, "lite$processPlatform(") or
+        usesIntHelper(calls, "lite$processArch(") or usesIntHelper(calls, "lite$processRuntimeVersion(") or
+        usesIntHelper(calls, "lite$processEnvGet(") or usesIntHelper(calls, "lite$processRun(") or
+        usesIntHelper(calls, "lite$processRunBytes(") {
             "C backend does not support process builtins yet"
         }
-        usesIntHelper(calls, "lite$cryptoDigestBytes(") or usesIntHelper(calls, "lite$cryptoSha256File(") or
-            usesIntHelper(calls, "lite$cryptoRandomBytes(") {
+        usesIntHelper(calls, "lite$cryptoDigestBytes(") or usesIntHelper(calls, "lite$cryptoRandomBytes(") {
             "C backend does not support crypto builtins yet"
         }
         usesIntHelper(calls, "lite$timeMonotonicNs(") or usesIntHelper(calls, "lite$timeEpochNs(") or
-            usesIntHelper(calls, "lite$timeSleepMs(") or usesIntHelper(calls, "lite$timeLocalDate(") {
+        usesIntHelper(calls, "lite$timeSleepMs(") or usesIntHelper(calls, "lite$timeLocalDate(") {
             "C backend does not support time builtins yet"
         }
         usesIntHelper(calls, "lite$unicodeToCodePoints(") or usesIntHelper(calls, "lite$unicodeFromCodePoints(") {
@@ -68,7 +81,6 @@ unsupportedBuiltinCode := fn(calls: String): String {
         _ { "" }
     }
 }
-
 
 /** True when any emitted item needs one of the checked Int division helpers. */
 usesIntDivision := fn(calls: String): Bool {
@@ -79,8 +91,8 @@ usesIntDivision := fn(calls: String): Bool {
 /** True when a program needs checked dynamic Int* arithmetic or narrow range guards. */
 usesIntArithmetic := fn(calls: String): Bool {
     usesIntHelper(calls, "lt_checked_add(") or usesIntHelper(calls, "lt_checked_subtract(") or
-        usesIntHelper(calls, "lt_checked_multiply(") or usesIntHelper(calls, "lt_checked_negate(") or
-        usesIntHelper(calls, "lt_checked_narrow_int(")
+    usesIntHelper(calls, "lt_checked_multiply(") or usesIntHelper(calls, "lt_checked_negate(") or
+    usesIntHelper(calls, "lt_checked_narrow_int(")
 }
 
 /** True when binary64/binary32 operations need finite-result and zero-divisor guards. */
@@ -187,7 +199,7 @@ emitArithmeticTemporaries := fn(items: frontend.Items): Unit {
                 if textLib.startsWithAt(item.code, end, " = ") {
                     tag := if textLib.startsWithAt(item.code, cursor, "lt_cmp_") or textLib.startsWithAt(item.code, cursor, "lt_arg_f_") { textLib.at(item.code, cursor + 7) } else { "i" };
                     typeCode := if tag == "s" { "const char *" } else if tag == "b" { "bool " }
-                        else if tag == "f" { "double " } else { "int64_t " };
+                    else if tag == "f" { "double " } else { "int64_t " };
                     io.outputLine("    " + typeCode + textLib.slice(item.code, cursor, end) + ";");
                 }
                 cursor = end;
@@ -365,9 +377,9 @@ emitStringConcatHelper := fn(): Unit {
 emitOutputArgument := fn(kind: String, code: String, name: String, indent: String): Unit {
     if kind == "Unit" { return; }
     typeCode := if frontend.isIntScalarKind(kind) { "int64_t " }
-        else if kind == "Bool" { "bool " }
-        else if frontend.isFloatScalarKind(kind) { "double " }
-        else { "const char *" };
+    else if kind == "Bool" { "bool " }
+    else if frontend.isFloatScalarKind(kind) { "double " }
+    else { "const char *" };
     io.outputLine(indent + typeCode + name + " = " + code + ";");
 }
 
@@ -387,7 +399,7 @@ pub emitProgram := fn(items: frontend.Items, source: String, prefix: String): Un
     loop items as item {
         if frontend.isFloatScalarKind(item.kind) { floatOutput = true; }
         if frontend.isFloatScalarKind(item.kind) or item.kind == "LocalFloat" or item.kind == "VarFloat" or item.kind == "AssignFloat" or
-            (item.kind == "Discard" and frontend.isFloatScalarKind(item.name)) { floatValues = true; }
+        (item.kind == "Discard" and frontend.isFloatScalarKind(item.name)) { floatValues = true; }
         if item.kind == "Float32" or (item.kind == "Discard" and item.name == "Float32") { float32Values = true; }
         if item.kind == "FunctionStart" {
             diagLib.fail("", "C backend does not support top-level functions yet");

@@ -1,6 +1,6 @@
 cases := import "util/cases";
 project := import "util/project";
-path := import "util/path";
+path := import "core/path";
 list := import "core/list";
 test := import "core/test";
 json := import "util/json";

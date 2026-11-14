@@ -3986,12 +3986,32 @@ test('core os/fs/process/crypto/time host bindings, standalone CLI execution, an
   const fixtureName = resolve(root, 'compiler/tests/fixtures/core-host-os.lts');
   const compiled = compileTs({
     text: [
-      'fs := import "core/fs";',
+      'fs := import "core/file";',
+      'pathLib := import "core/path";',
       'proc := import "core/process";',
       'crypto := import "core/crypto";',
       'time := import "core/time";',
       'uni := import "core/unicode";',
       'io := import "core/io";',
+      'writeTwoLines := fn(w: io.Writer, a: String, b: String): Bool {',
+      '    r1 := io.writeLine(w, a);',
+      '    r2 := io.writeLine(w, b);',
+      '    r1.ok and r2.ok',
+      '};',
+      'collectAllLines := fn(r: io.Reader): String {',
+      '    var out := "";',
+      '    loop true {',
+      '        res := io.readLine(r);',
+      '        if not res.ok or res.eof { break; }',
+      '        if out =!= "" { out = out + "|"; }',
+      '        out = out + res.line;',
+      '    }',
+      '    out',
+      '};',
+      'bw := io.bufferWriter();',
+      'bwOk := writeTwoLines(bw, "alpha", "beta");',
+      'bwTxt := io.writerText(bw);',
+      'trLines := collectAllLines(io.textReader("alpha\\r\\nbeta\\ngamma"));',
       'tmp := fs.makeTempDir("lite-os-host-");',
       'if not tmp.ok { io.outputLine("mkdir-temp-fail", tmp.error); io.exit(1); }',
       'dir := tmp.path;',
@@ -4000,6 +4020,16 @@ test('core os/fs/process/crypto/time host bindings, standalone CLI execution, an
       'file := sub + "/target.txt";',
       'wrote := fs.writeText(file, "hello world\\n");',
       'readOk := fs.readText(file);',
+      'appFile := sub + "/append.txt";',
+      'fw := fs.openWriter(appFile);',
+      'fwOk := writeTwoLines(fw, "first", "second");',
+      '_fwFlush := io.flush(fw);',
+      '_fwClose := io.closeWriter(fw);',
+      'appRes := fs.appendText(appFile, "third\\n");',
+      'fr := fs.openReader(appFile);',
+      'frLines := collectAllLines(fr);',
+      '_frClose := io.closeReader(fr);',
+      'badOpen := fs.openReader(dir + "/absent.txt");',
       'rawFile := sub + "/raw.bin";',
       'rawBytes: List<Int> = [0, 65, 255, 13, 10];',
       'wroteRaw := fs.writeBytes(rawFile, rawBytes);',
@@ -4036,7 +4066,8 @@ test('core os/fs/process/crypto/time host bindings, standalone CLI execution, an
       't0 := time.monotonicNs();',
       't1 := time.monotonicNs();',
       'iso := time.utcIsoNow();',
-      'io.outputLine(fs.kind(dir), fs.kind(file), fs.kind(linkPath), fs.kind(dir + "/missing.txt"));',
+      'io.outputLine(fs.kind(dir), fs.kind(file), fs.kind(linkPath), fs.kind(dir + "/missing.txt"), pathLib.isDirectory(dir), pathLib.isFile(file), not pathLib.exists(dir + "/missing.txt"), pathLib.stem(file), pathLib.withExt(file, "md") == sub + "/target.md");',
+      'io.outputLine(bwOk, bwTxt.ok, bwTxt.text == "alpha\\nbeta\\n", trLines, fwOk, appRes.ok, frLines, not io.readerOk(badOpen), io.readerError(badOpen) =!= "");',
       'io.outputLine(made.ok, wrote.ok, readOk.ok, readOk.text == "hello world\\n", not badRead.ok, copied.ok);',
       'io.outputLine(wroteRaw.ok, readRaw, wroteEmpty.ok, readEmpty, not badByteHigh.ok, fs.kind(dir + "/bad-high.bin"), not badByteNeg.ok);',
       'io.outputLine(entries, linked.ok, real.ok, real.path == fs.realPath(file).path, removed.ok, removedMissing.ok);',
@@ -4055,7 +4086,8 @@ test('core os/fs/process/crypto/time host bindings, standalone CLI execution, an
     const actual = run();
     assert.equal(actual.status, 0, actual.stderr.toString());
     assert.equal(actual.stdout.toString(), [
-      'dir file file missing',
+      'dir file file missing true true true target true',
+      'true true true alpha|beta|gamma true true first|second|third true true',
       'true true true true true true',
       'true [0, 65, 255, 13, 10] true [] true missing true',
       '[sub, sub-copy] true true true true true',
@@ -4195,7 +4227,7 @@ test('core os/fs/process/crypto/time host bindings, standalone CLI execution, an
 
   const standaloneCompiled = compileTs({
     text: [
-      'fs := import "core/fs";',
+      'fs := import "core/file";',
       'proc := import "core/process";',
       'io := import "core/io";',
       'if proc.entryPath() == "" { _ := io.inputAll(""); _ := fs.readText("."); }',
@@ -4217,21 +4249,23 @@ test('core os/fs/process/crypto/time host bindings, standalone CLI execution, an
 
   const directory = mkdtempSync(join(tmpdir(), 'lite-core-os-unbound-'));
   try {
-    writeFileSync(join(directory, 'fs.lts'), 'pub kind := fn(path: String): String;\n');
-    writeFileSync(join(directory, 'app.lts'), 'fs := import "./fs.lts"; x := fs.kind(".");\n');
+    writeFileSync(join(directory, 'file.lts'), 'pub kind := fn(path: String): String;\n');
+    writeFileSync(join(directory, 'app.lts'), 'file := import "./file.lts"; x := file.kind(".");\n');
     const unbound = compileTs({ text: readFileSync(join(directory, 'app.lts'), 'utf8'), name: realpathSync(join(directory, 'app.lts')) });
     assert.equal(unbound.status, 2);
     assert.match(unbound.stderr.toString(), /bodyless function declaration has no matching core host binding/);
 
-    const badAbi = compileTs({ text: 'pub kind := fn(path: String): Int;', name: 'lib/core/fs.lts' });
+    const badAbi = compileTs({ text: 'pub kind := fn(path: String): Int;', name: 'lib/core/file.lts' });
     assert.equal(badAbi.status, 2);
     assert.match(badAbi.stderr.toString(), /bodyless function declaration has no matching core host binding/);
   } finally { rmSync(directory, { recursive: true, force: true }); }
 
   for (const [sourceText, pattern] of [
-    ['fs := import "core/fs"; x := fs.kind(".");', /C backend does not support filesystem builtins yet/],
-    ['fs := import "core/fs"; x := fs.readBytes(".");', /C backend does not support (filesystem builtins|list values) yet/],
-    ['fs := import "core/fs"; x := fs.writeBytes(".", []);', /C backend does not support (filesystem builtins|list values) yet/],
+    ['fs := import "core/file"; x := fs.kind(".");', /C backend does not support (filesystem builtins|list values|top-level functions) yet/],
+    ['fs := import "core/file"; x := fs.readBytes(".");', /C backend does not support (filesystem builtins|list values|top-level functions) yet/],
+    ['fs := import "core/file"; x := fs.writeBytes(".", []);', /C backend does not support (filesystem builtins|list values|top-level functions) yet/],
+    ['io := import "core/io"; x := io.bufferWriter();', /C backend does not support (stream builtins|tuple values) yet/],
+    ['io := import "core/io"; x := io.stdinReader();', /C backend does not support (stream builtins|tuple values) yet/],
     ['proc := import "core/process"; x := proc.cwd();', /C backend does not support process builtins yet/],
     ['proc := import "core/process"; x := proc.runBytes("true", [], "", [], 0, [], "", "");', /C backend does not support (process builtins|list values) yet/],
     ['c := import "core/crypto"; x := c.sha256Text("a");', /C backend does not support (crypto builtins|list values|top-level functions) yet/],

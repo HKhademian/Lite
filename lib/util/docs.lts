@@ -1,10 +1,10 @@
 /** Offline documentation discovery, search formatting, and Markdown integrity verification. */
 
-fs := import "core/fs";
+fs := import "core/file";
 integer := import "core/int";
 text := import "core/text";
 list := import "core/list";
-path := import "util/path";
+path := import "core/path";
 fsUtil := import "util/fs";
 json := import "util/json";
 md := import "util/markdown";

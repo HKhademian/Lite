@@ -197,7 +197,7 @@ consumeStatementEnd := fn(source: String, position: Int, prefix: String): Int {
     next := skipTrivia(source, position, prefix);
     if next < textLib.length(source) and textLib.at(source, next) == ";" { return skipTrivia(source, next + 1, prefix); }
     if next == textLib.length(source) or textLib.at(source, next) == "}" or
-        (position > 0 and textLib.at(source, position - 1) == "}") { return next; }
+    (position > 0 and textLib.at(source, position - 1) == "}") { return next; }
     -1
 }
 
@@ -215,7 +215,7 @@ featureDoc := fn(name: String): String {
     match {
         name == "loop" { "docs/loops.md" }
         name == "if" or name == "else" or name == "and" or name == "or" or name == "not" or
-            name == "true" or name == "false" { "docs/conditionals.md" }
+        name == "true" or name == "false" { "docs/conditionals.md" }
         name == "var" or name == "mut" { "docs/declarations-and-assignment.md" }
         name == "fn" or name == "return" { "docs/functions.md" }
         name == "match" { "docs/match.md" }
@@ -230,7 +230,7 @@ featureDoc := fn(name: String): String {
 /** Reports a reserved Lite feature this compiler checkpoint cannot translate, with its documentation reference, then exits 2. */
 unsupportedFeature := fn(source: String, position: Int, name: String, prefix: String): Unit {
     failAt(source, position, prefix, "unsupported feature \"" + name + "\": see " + featureDoc(name) +
-        "; the restricted compiler accepts Int/Float/String/Bool expressions, locals, output/outputLine, if/else and loop only");
+    "; the restricted compiler accepts Int/Float/String/Bool expressions, locals, output/outputLine, if/else and loop only");
 }
 
 /** Returns the index of the previously declared function named `name`, or -1. */
@@ -252,7 +252,7 @@ isUnsupportedAliasTarget := fn(name: String): Bool {
 /** Reports one unsupported transparent-alias target, naming a known type constructor when possible. */
 unsupportedAliasTarget := fn(source: String, position: Int, prefix: String, target: String): Unit {
     failAt(source, position, prefix, "unsupported type alias " + target +
-        "; only Int, Float, String, Bool, Unit, List<T>, flat named tuples and aliases are supported");
+    "; only Int, Float, String, Bool, Unit, List<T>, flat named tuples and aliases are supported");
 }
 
 /** Returns the index of the first top-level alias named `name`, or -1 when absent. */
@@ -1066,6 +1066,30 @@ coreHostFunction := fn(moduleIdentity: String, name: String, params: String, res
             if name == "inputAll" { "lite$inputAll" } else if name == "inputLine" { "lite$inputLine" } else { "" }
         } else if params == "prompt=String" and result == "Int" and name == "inputInt" { "lite$inputInt" }
         else if params == "prompt=String" and result == "Float" and name == "inputFloat" { "lite$inputFloat" }
+        else if name == "stdinReader" and params == "" and result == "(kind:String,handle:Int)" { "lite$ioStdinReader" }
+        else if name == "stdoutWriter" and params == "" and result == "(kind:String,handle:Int)" { "lite$ioStdoutWriter" }
+        else if name == "stderrWriter" and params == "" and result == "(kind:String,handle:Int)" { "lite$ioStderrWriter" }
+        else if name == "bufferReader" and params == "bytes=List<Int>" and result == "(kind:String,handle:Int)" { "lite$ioBufferReader" }
+        else if name == "textReader" and params == "text=String" and result == "(kind:String,handle:Int)" { "lite$ioTextReader" }
+        else if name == "bufferWriter" and params == "" and result == "(kind:String,handle:Int)" { "lite$ioBufferWriter" }
+        else if name == "writerBytes" and params == "writer=(kind:String,handle:Int)" and result == "List<Int>" { "lite$ioWriterBytes" }
+        else if name == "writerText" and params == "writer=(kind:String,handle:Int)" and result == "(ok:Bool,text:String,error:String)" { "lite$ioWriterText" }
+        else if name == "clearWriter" and params == "writer=(kind:String,handle:Int)" and result == "Unit" { "lite$ioClearWriter" }
+        else if name == "readerOk" and params == "reader=(kind:String,handle:Int)" and result == "Bool" { "lite$ioReaderOk" }
+        else if name == "readerAtEof" and params == "reader=(kind:String,handle:Int)" and result == "Bool" { "lite$ioReaderAtEof" }
+        else if name == "readerError" and params == "reader=(kind:String,handle:Int)" and result == "String" { "lite$ioReaderError" }
+        else if name == "read" and params == "reader=(kind:String,handle:Int)|maxBytes=Int" and result == "List<Int>" { "lite$ioRead" }
+        else if name == "readAll" and params == "reader=(kind:String,handle:Int)" and result == "List<Int>" { "lite$ioReadAll" }
+        else if name == "readAllText" and params == "reader=(kind:String,handle:Int)" and result == "(ok:Bool,text:String,error:String)" { "lite$ioReadAllText" }
+        else if name == "readLine" and params == "reader=(kind:String,handle:Int)" and result == "(ok:Bool,line:String,eof:Bool,error:String)" { "lite$ioReadLine" }
+        else if name == "closeReader" and params == "reader=(kind:String,handle:Int)" and result == "(ok:Bool,error:String)" { "lite$ioCloseReader" }
+        else if name == "writerOk" and params == "writer=(kind:String,handle:Int)" and result == "Bool" { "lite$ioWriterOk" }
+        else if name == "writerError" and params == "writer=(kind:String,handle:Int)" and result == "String" { "lite$ioWriterError" }
+        else if name == "write" and params == "writer=(kind:String,handle:Int)|bytes=List<Int>" and result == "(ok:Bool,written:Int,error:String)" { "lite$ioWrite" }
+        else if name == "writeText" and params == "writer=(kind:String,handle:Int)|text=String" and result == "(ok:Bool,error:String)" { "lite$ioWriteText" }
+        else if name == "writeLine" and params == "writer=(kind:String,handle:Int)|text=String" and result == "(ok:Bool,error:String)" { "lite$ioWriteLine" }
+        else if name == "flush" and params == "writer=(kind:String,handle:Int)" and result == "(ok:Bool,error:String)" { "lite$ioFlush" }
+        else if name == "closeWriter" and params == "writer=(kind:String,handle:Int)" and result == "(ok:Bool,error:String)" { "lite$ioCloseWriter" }
         else { "" }
     } else if moduleIdentity == "lite.core.text.v1" {
         if name == "length" and params == "text=String" and result == "Int" { "lite$textLength" }
@@ -1079,19 +1103,18 @@ coreHostFunction := fn(moduleIdentity: String, name: String, params: String, res
         else if name == "pushFront" and params == "values=mut List<T>|value=T" and result == "Unit" { "lite$core$list$pushFront:v1" }
         else if name == "popFront" and params == "values=mut List<T>" and result == "T" { "lite$core$list$popFront:v1" }
         else { "" }
-    } else if moduleIdentity == "lite.core.fs.v1" {
-        if name == "kind" and params == "path=String" and result == "String" { "lite$fsKind" }
-        else if name == "readText" and params == "path=String" and result == "(ok:Bool,text:String,error:String)" { "lite$fsReadText" }
-        else if name == "readBytes" and params == "path=String" and result == "List<Int>" { "lite$fsReadBytes" }
-        else if name == "writeText" and params == "path=String|text=String" and result == "(ok:Bool,error:String)" { "lite$fsWriteText" }
-        else if name == "writeBytes" and params == "path=String|bytes=List<Int>" and result == "(ok:Bool,error:String)" { "lite$fsWriteBytes" }
-        else if name == "listDir" and params == "path=String" and result == "List<String>" { "lite$fsListDir" }
-        else if name == "makeDir" and params == "path=String" and result == "(ok:Bool,error:String)" { "lite$fsMakeDir" }
-        else if name == "remove" and params == "path=String" and result == "(ok:Bool,error:String)" { "lite$fsRemove" }
-        else if name == "copy" and params == "fromPath=String|toPath=String" and result == "(ok:Bool,error:String)" { "lite$fsCopy" }
-        else if name == "symlink" and params == "targetPath=String|linkPath=String" and result == "(ok:Bool,error:String)" { "lite$fsSymlink" }
-        else if name == "realPath" and params == "path=String" and result == "(ok:Bool,path:String,error:String)" { "lite$fsRealPath" }
-        else if name == "makeTempDir" and params == "prefix=String" and result == "(ok:Bool,path:String,error:String)" { "lite$fsMakeTempDir" }
+    } else if moduleIdentity == "lite.core.file.v1" {
+        if name == "kind" and params == "path=String" and result == "String" { "lite$fileKind" }
+        else if name == "openReader" and params == "path=String" and result == "(kind:String,handle:Int)" { "lite$fileOpenReader" }
+        else if name == "openWriter" and params == "path=String" and result == "(kind:String,handle:Int)" { "lite$fileOpenWriter" }
+        else if name == "openAppender" and params == "path=String" and result == "(kind:String,handle:Int)" { "lite$fileOpenAppender" }
+        else if name == "listDir" and params == "path=String" and result == "List<String>" { "lite$fileListDir" }
+        else if name == "makeDir" and params == "path=String" and result == "(ok:Bool,error:String)" { "lite$fileMakeDir" }
+        else if name == "remove" and params == "path=String" and result == "(ok:Bool,error:String)" { "lite$fileRemove" }
+        else if name == "copy" and params == "fromPath=String|toPath=String" and result == "(ok:Bool,error:String)" { "lite$fileCopy" }
+        else if name == "symlink" and params == "targetPath=String|linkPath=String" and result == "(ok:Bool,error:String)" { "lite$fileSymlink" }
+        else if name == "realPath" and params == "path=String" and result == "(ok:Bool,path:String,error:String)" { "lite$fileRealPath" }
+        else if name == "makeTempDir" and params == "prefix=String" and result == "(ok:Bool,path:String,error:String)" { "lite$fileMakeTempDir" }
         else { "" }
     } else if moduleIdentity == "lite.core.process.v1" {
         if name == "cwd" and params == "" and result == "String" { "lite$processCwd" }
@@ -1102,14 +1125,13 @@ coreHostFunction := fn(moduleIdentity: String, name: String, params: String, res
         else if name == "runtimeVersion" and params == "" and result == "String" { "lite$processRuntimeVersion" }
         else if name == "envGet" and params == "name=String" and result == "(found:Bool,value:String)" { "lite$processEnvGet" }
         else if name == "run" and params == "command=String|args=List<String>|cwd=String|envOverrides=List<String>|capture=Bool|stdinText=String" and
-            result == "(status:Int,stdout:String,stderr:String,error:String)" { "lite$processRun" }
+        result == "(status:Int,stdout:String,stderr:String,error:String)" { "lite$processRun" }
         else if name == "runBytes" and
-            params == "command=String|args=List<String>|cwd=String|envOverrides=List<String>|timeoutMs=Int|stdinBytes=List<Int>|stdoutPath=String|stderrPath=String" and
-            result == "(status:Int,error:String)" { "lite$processRunBytes" }
+        params == "command=String|args=List<String>|cwd=String|envOverrides=List<String>|timeoutMs=Int|stdinBytes=List<Int>|stdoutPath=String|stderrPath=String" and
+        result == "(status:Int,error:String)" { "lite$processRunBytes" }
         else { "" }
     } else if moduleIdentity == "lite.core.crypto.v1" {
         if name == "digestBytes" and params == "algorithm=String|bytes=List<Int>" and result == "String" { "lite$cryptoDigestBytes" }
-        else if name == "sha256File" and params == "path=String" and result == "(ok:Bool,hex:String,error:String)" { "lite$cryptoSha256File" }
         else if name == "randomBytes" and params == "count=Int" and result == "List<Int>" { "lite$cryptoRandomBytes" }
         else { "" }
     } else if moduleIdentity == "lite.core.time.v1" {
@@ -1123,7 +1145,7 @@ coreHostFunction := fn(moduleIdentity: String, name: String, params: String, res
         else if name == "fromCodePoints" and params == "points=List<Int>" and result == "(ok:Bool,text:String,error:String)" { "lite$unicodeFromCodePoints" }
         else { "" }
     } else if moduleIdentity == "lite.compiler.source-reader.v1" and name == "read" and
-        params == "importer=String|spec=String" and result == "(path:String,display:String,identity:String,text:String)" {
+    params == "importer=String|spec=String" and result == "(path:String,display:String,identity:String,text:String)" {
         "lite$readSource"
     } else {
         ""
@@ -1262,7 +1284,7 @@ localRuntimeName := fn(target: String, locals: List<Local>, name: String, module
     var suffix := 2;
     loop true {
         candidate := if target == "ts" { "lite_" + name + "$" + integer.intText(suffix) }
-            else { "lt_s" + integer.intText(suffix) + "_" + name };
+        else { "lt_s" + integer.intText(suffix) + "_" + name };
         if not localsUseRuntime(locals, candidate) { return candidate; }
         suffix = suffix + 1;
     }
@@ -1538,7 +1560,7 @@ pub skipAliasString := fn(source: String, position: Int): Int {
 /** Collects distinct target helper call names, skipping quoted text and consuming whole identifiers. Existing names avoid duplicate work across items. */
 pub targetCodeCalls := fn(code: String, existing: String): String {
     if textLib.indexOfText(code, "lite", 0) < 0 and textLib.indexOfText(code, "lt_", 0) < 0 and
-        textLib.indexOfText(code, "finally", 0) < 0 { return existing; }
+    textLib.indexOfText(code, "finally", 0) < 0 { return existing; }
     size := textLib.length(code);
     var calls := existing;
     var cursor := 0;
@@ -1556,9 +1578,9 @@ pub targetCodeCalls := fn(code: String, existing: String): String {
                 name := textLib.slice(code, start, cursor);
                 if cursor < size and textLib.at(code, cursor) == "(" {
                     if (textLib.startsWithAt(name, 0, "lite$") and not textLib.startsWithAt(name, 0, "lite$m$")) or
-                        textLib.startsWithAt(name, 0, "lite_") or
-                        (textLib.startsWithAt(name, 0, "lt_") and not textLib.startsWithAt(name, 0, "lt_fn_") and
-                            not textLib.startsWithAt(name, 0, "lt_m_") and not textLib.startsWithAt(name, 0, "lt_s")) {
+                    textLib.startsWithAt(name, 0, "lite_") or
+                    (textLib.startsWithAt(name, 0, "lt_") and not textLib.startsWithAt(name, 0, "lt_fn_") and
+                    not textLib.startsWithAt(name, 0, "lt_m_") and not textLib.startsWithAt(name, 0, "lt_s")) {
                         token := name + "(|";
                         if textLib.indexOfText(calls, "|" + token, 0) < 0 { calls = calls + token; }
                     }
@@ -1901,11 +1923,11 @@ compoundAssignCode := fn(target: String, source: String, opPos: Int, prefix: Str
         return targetConcatCode(target, lhsCode, rhs.code);
     }
     if entryKind == "Float32" and (numeric.isIntKind(rhs.kind) or rhs.kind == "Float32") and
-        (baseOp == "+" or baseOp == "-" or baseOp == "*" or baseOp == "/") {
+    (baseOp == "+" or baseOp == "-" or baseOp == "*" or baseOp == "/") {
         return targetFloat32BinaryCode(target, baseOp, lhsCode, targetFloat32OperandCode(target, rhs.kind, rhs.code), opPos);
     }
     if entryKind == "Float" and numeric.isNumericKind(rhs.kind) and
-        (baseOp == "+" or baseOp == "-" or baseOp == "*" or baseOp == "/") {
+    (baseOp == "+" or baseOp == "-" or baseOp == "*" or baseOp == "/") {
         return targetFloatBinaryCode(target, baseOp, lhsCode, targetFloatOperandCode(target, rhs.kind, rhs.code), opPos);
     }
     failAt(source, opPos, prefix, "cannot apply " + baseOp + "= to " + displayKind(entryKind) + " and " + displayKind(rhs.kind));
@@ -1992,8 +2014,8 @@ joinBranchLocals := fn(locals: List<Local>, preLen: Int, blockDepth: Int, hasEls
                     if initCount == liveBranchCount { joined = "init"; }
                 }
                 listLib.pushBack(mut nextLocals, (name = pre.name, runtime = pre.runtime, kind = pre.kind,
-                    mutable = pre.mutable, writable = pre.writable, depth = pre.depth, constant = false,
-                    code = pre.code, intValue = 0, textValue = "", initState = joined));
+                mutable = pre.mutable, writable = pre.writable, depth = pre.depth, constant = false,
+                code = pre.code, intValue = 0, textValue = "", initState = joined));
             }
         }
     }
@@ -2038,8 +2060,8 @@ joinLoopUpdates := fn(locals: List<Local>, preLen: Int, maxDepth: Int): List<Loc
             pre := nextLocals[preIdx];
             if pre.initState == "uninit" {
                 listLib.pushBack(mut nextLocals, (name = pre.name, runtime = pre.runtime, kind = pre.kind,
-                    mutable = pre.mutable, writable = pre.writable, depth = pre.depth, constant = false,
-                    code = pre.code, intValue = 0, textValue = "", initState = "maybe"));
+                mutable = pre.mutable, writable = pre.writable, depth = pre.depth, constant = false,
+                code = pre.code, intValue = 0, textValue = "", initState = "maybe"));
             }
         }
     }
@@ -2264,8 +2286,8 @@ scanExpressionItemEnd := fn(source: String, start: Int, prefix: String): Int {
                 cursor = cursor + 1;
                 afterClose := skipTrivia(source, cursor, prefix);
                 if afterClose >= size or (not textLib.wordAt(source, afterClose, "else") and
-                    not textLib.wordAt(source, afterClose, "then") and
-                    not textLib.wordAt(source, afterClose, "finally")) {
+                not textLib.wordAt(source, afterClose, "then") and
+                not textLib.wordAt(source, afterClose, "finally")) {
                     return cursor;
                 }
             } else if ch == ")" or ch == "]" or ch == "}" {
@@ -2456,7 +2478,7 @@ wrapMarkers := fn(raw: String): String {
 withMarkers := fn(parsed: Parsed, raw: String): Parsed {
     if raw == "" { return parsed; }
     (kind = parsed.kind, code = parsed.code, intValue = parsed.intValue,
-        textValue = "__m:" + raw, constant = false, next = parsed.next)
+    textValue = "__m:" + raw, constant = false, next = parsed.next)
 }
 
 /** Retains all marker lines in `raw` whose target id is not `excludeId`. */
@@ -2499,7 +2521,7 @@ inferKindFromMarkers := fn(raw: String, targetId: Int, targetTag: String, source
                 joined := joinBranchKind(result, entryKind);
                 if joined == "" {
                     failAt(source, at, prefix, "block @" + targetTag + " cannot return both " +
-                        displayKind(result) + " and " + displayKind(entryKind));
+                    displayKind(result) + " and " + displayKind(entryKind));
                 }
                 result = joined;
             }
@@ -2601,7 +2623,7 @@ valueIfBranchAt := fn(source: String, open: Int, close: Int, prefix: String): Bo
     if textLib.isNameStart(textLib.at(source, cursor)) {
         word := textLib.slice(source, cursor, textLib.skipName(source, cursor));
         if word == "return" or word == "outputLine" or word == "output" or word == "var" or word == "loop" or
-            word == "break" or word == "continue" or word == "else" or word == "fn" {
+        word == "break" or word == "continue" or word == "else" or word == "fn" {
             return false;
         }
     }
@@ -2741,9 +2763,9 @@ scanRawMatchEnd := fn(source: String, position: Int, prefix: String): Int {
         if textLib.at(source, armCursor) == "}" { return -1; }
         afterUnderscore := skipTrivia(source, armCursor + 1, prefix);
         isFallback := textLib.wordAt(source, armCursor, "_") and afterUnderscore < size and
-            textLib.at(source, afterUnderscore) == "{";
+        textLib.at(source, afterUnderscore) == "{";
         armOpen := if isFallback { afterUnderscore }
-            else { scanConditionOpen(source, armCursor, prefix) };
+        else { scanConditionOpen(source, armCursor, prefix) };
         if armOpen < 0 or (not isFallback and armOpen == armCursor) { return -1; }
         armEnd := scanBraceEnd(source, armOpen, prefix);
         if armEnd < 0 { return -1; }
@@ -2772,9 +2794,9 @@ scanValueMatchEnd := fn(source: String, position: Int, prefix: String, requireVa
         if textLib.at(source, armCursor) == "}" { return -1; }
         afterUnderscore := skipTrivia(source, armCursor + 1, prefix);
         isFallback := textLib.wordAt(source, armCursor, "_") and afterUnderscore < size and
-            textLib.at(source, afterUnderscore) == "{";
+        textLib.at(source, afterUnderscore) == "{";
         armOpen := if isFallback { afterUnderscore }
-            else { scanConditionOpen(source, armCursor, prefix) };
+        else { scanConditionOpen(source, armCursor, prefix) };
         if armOpen < 0 or (not isFallback and armOpen == armCursor) { return -1; }
         armEnd := scanBraceEnd(source, armOpen, prefix);
         if armEnd < 0 { return -1; }
@@ -2896,9 +2918,9 @@ loopNeedsExprLowering := fn(source: String, position: Int, prefix: String): Bool
                 }
             }
             prevExpr = word =!= "and" and word =!= "or" and word =!= "not" and word =!= "if" and
-                word =!= "else" and word =!= "match" and word =!= "loop" and word =!= "then" and
-                word =!= "finally" and word =!= "return" and word =!= "break" and word =!= "continue" and
-                word =!= "as" and word =!= "var" and word =!= "mut";
+            word =!= "else" and word =!= "match" and word =!= "loop" and word =!= "then" and
+            word =!= "finally" and word =!= "return" and word =!= "break" and word =!= "continue" and
+            word =!= "as" and word =!= "var" and word =!= "mut";
             cursor = end;
         } else {
             cursor = cursor + 1;
@@ -2916,17 +2938,17 @@ resolveLoopField := fn(target: String, ctx: ConstructCtx, fieldName: String, exp
     if fieldName == "value" {
         if ctx.valKind == "__infer__" {
             if expected =!= "" and expected =!= "Unit" and expected =!= "Never" and
-                not textLib.startsWithAt(expected, 0, "TailList<") and not textLib.startsWithAt(expected, 0, "__loopVal:") {
+            not textLib.startsWithAt(expected, 0, "TailList<") and not textLib.startsWithAt(expected, 0, "__loopVal:") {
                 return withMarkers((kind = expected, code = ctx.valVar, intValue = 0, textValue = "", constant = false, next = fieldEnd),
-                    integer.intText(ctx.id) + "=" + expected + "\n");
+                integer.intText(ctx.id) + "=" + expected + "\n");
             }
             return withMarkers((kind = "__loopVal:" + integer.intText(ctx.id), code = ctx.valVar, intValue = 0, textValue = "", constant = false, next = fieldEnd),
-                if ctx.phase =!= "then" { integer.intText(ctx.id) + "=@read\n" } else { "" });
+            if ctx.phase =!= "then" { integer.intText(ctx.id) + "=@read\n" } else { "" });
         }
         if textLib.startsWithAt(ctx.valKind, 0, "__infer__:") {
             hint := textLib.slice(ctx.valKind, 10, textLib.length(ctx.valKind));
             return withMarkers((kind = hint, code = ctx.valVar, intValue = 0, textValue = "", constant = false, next = fieldEnd),
-                integer.intText(ctx.id) + "=" + hint + "\n");
+            integer.intText(ctx.id) + "=" + hint + "\n");
         }
         if ctx.valKind == "Unit" {
             return (kind = "Unit", code = targetUnitLiteralCode(target), intValue = 0, textValue = "", constant = true, next = fieldEnd);
@@ -3005,7 +3027,7 @@ inferLoopValueKind := fn(raw: String, loopId: Int, tagDisplay: String, source: S
                     if joined == "" {
                         labelPrefix := if tagDisplay =!= "loop" { "loop @" + tagDisplay } else { "loop" };
                         failAt(source, at, prefix, labelPrefix + " cannot produce both " +
-                            displayKind(result) + " and " + displayKind(entryKind));
+                        displayKind(result) + " and " + displayKind(entryKind));
                     }
                     result = joined;
                 }
@@ -3138,7 +3160,7 @@ parseBinaryCtx := fn(target: String, source: String, position: Int, prefix: Stri
             inner := self(target, source, start + 1, prefix, locals, functions, params, currentName, groupedExpected, 0, ctxs, iifeDepth, inferMode, "");
             next := expectSymbol(source, skipTrivia(source, inner.next, prefix), ")", prefix);
             left = withMarkers((kind = inner.kind, code = "(" + inner.code + ")", intValue = inner.intValue, textValue = inner.textValue, constant = inner.constant, next = next),
-                if inferMode { collectParsedMarkers("", inner) } else { "" });
+            if inferMode { collectParsedMarkers("", inner) } else { "" });
         }
     } else if ch == "+" or ch == "-" {
         after := skipTrivia(source, start + 1, prefix);
@@ -3151,10 +3173,10 @@ parseBinaryCtx := fn(target: String, source: String, position: Int, prefix: Stri
             if inferMode and operandLoopId >= 0 {
                 if expected =!= "" and expected =!= "Unit" and expected =!= "Never" and numeric.isNumericKind(expected) {
                     left = withMarkers((kind = expected, code = "", intValue = 0, textValue = "", constant = false, next = operand.next),
-                        collectParsedMarkers("", operand) + integer.intText(operandLoopId) + "=" + expected + "\n");
+                    collectParsedMarkers("", operand) + integer.intText(operandLoopId) + "=" + expected + "\n");
                 } else {
                     left = withMarkers((kind = operand.kind, code = "", intValue = 0, textValue = "", constant = false, next = operand.next),
-                        collectParsedMarkers("", operand));
+                    collectParsedMarkers("", operand));
                 }
             } else {
                 if not numeric.isNumericKind(operand.kind) {
@@ -3163,7 +3185,7 @@ parseBinaryCtx := fn(target: String, source: String, position: Int, prefix: Stri
                 code := if ch == "-" { "(-" + operand.code + ")" } else { "(" + operand.code + ")" };
                 if numeric.isFloatKind(operand.kind) {
                     left = withMarkers((kind = operand.kind, code = code, intValue = 0, textValue = "", constant = false, next = operand.next),
-                        if inferMode { collectParsedMarkers("", operand) } else { "" });
+                    if inferMode { collectParsedMarkers("", operand) } else { "" });
                 } else if operand.constant {
                     folded := if ch == "-" { integer.intNegate(operand.intValue) } else { (value = operand.intValue, ok = true) };
                     if folded.ok and numeric.intKindFits(operand.kind, folded.value) {
@@ -3183,7 +3205,7 @@ parseBinaryCtx := fn(target: String, source: String, position: Int, prefix: Stri
                         } else { rawNeg }
                     } else { code };
                     left = withMarkers(typedIntParsed(operand.kind, runtimeCode, 0, false, operand.next),
-                        if inferMode { collectParsedMarkers("", operand) } else { "" });
+                    if inferMode { collectParsedMarkers("", operand) } else { "" });
                 }
             }
         }
@@ -3220,10 +3242,10 @@ parseBinaryCtx := fn(target: String, source: String, position: Int, prefix: Stri
                 if element.kind =!= "Never" { elementKind = element.kind; }
             } else {
                 compatible := if isListTarget { isCompatibleKind(elementKind, element.kind) }
-                    else { element.kind == "Never" or element.kind == elementKind };
+                else { element.kind == "Never" or element.kind == elementKind };
                 if not compatible {
                     failAt(source, elementStart, prefix, "list element " + formatLib.decimalText(count + 1) + " must be " +
-                        displayKind(elementKind) + ", got " + displayKind(element.kind));
+                    displayKind(elementKind) + ", got " + displayKind(element.kind));
                 }
             }
             listLib.pushBack(mut elementCodes, assignValueCode(target, elementKind, element.kind, element.code));
@@ -3248,7 +3270,7 @@ parseBinaryCtx := fn(target: String, source: String, position: Int, prefix: Stri
             "[" + elementKind + ";" + integer.intText(count) + "]"
         };
         left = withMarkers((kind = resultKind, code = "[" + textLib.joinTexts(elementCodes, ", ") + "]",
-            intValue = 0, textValue = "", constant = false, next = cursor), listMarkers);
+        intValue = 0, textValue = "", constant = false, next = cursor), listMarkers);
     } else if ch == "@" {
         tagInfo := parseTagAt(source, start, prefix);
         afterTag := skipTrivia(source, tagInfo.next, prefix);
@@ -3275,7 +3297,7 @@ parseBinaryCtx := fn(target: String, source: String, position: Int, prefix: Stri
                     }
                     if ctx.itemKind == "Unit" or ctx.itemKind == "Never" or ctx.itemKind == "" {
                         failAt(source, fieldStart, prefix, "block tag @" + tagInfo.tag + " does not expose .value for " +
-                            displayKind(if ctx.itemKind == "" { "Unit" } else { ctx.itemKind }) + " conditional");
+                        displayKind(if ctx.itemKind == "" { "Unit" } else { ctx.itemKind }) + " conditional");
                     }
                     left = (kind = ctx.itemKind, code = ctx.itemVar, intValue = 0, textValue = "", constant = false, next = fieldEnd);
                 } else {
@@ -3308,20 +3330,20 @@ parseBinaryCtx := fn(target: String, source: String, position: Int, prefix: Stri
             blockValVar := "lite$val" + integer.intText(blockId);
             pass1ValKind := if hintExpected == "" { "__infer__" } else { "__infer__:" + hintExpected };
             pass1Ctx := (id = blockId, tag = tagInfo.tag, kind = "block", phase = "body",
-                iifeDepth = iifeDepth + 1, valKind = pass1ValKind, valVar = blockValVar, label = blockLabel,
-                iterLabel = "", countVar = "", itemVar = "", itemKind = "", indexVar = "", hasIndex = false);
+            iifeDepth = iifeDepth + 1, valKind = pass1ValKind, valVar = blockValVar, label = blockLabel,
+            iterLabel = "", countVar = "", itemVar = "", itemKind = "", indexVar = "", hasIndex = false);
             pass1 := self(target, source, afterTag, prefix, locals, functions, params, currentName,
-                hintExpected, 0, appendCtx(ctxs, pass1Ctx), iifeDepth + 1, true, "tagged");
+            hintExpected, 0, appendCtx(ctxs, pass1Ctx), iifeDepth + 1, true, "tagged");
             if inferMode {
                 left = pass1;
             } else {
                 inferredKind := pass1.kind;
                 pass2Expected := if inferredKind == "Unit" or inferredKind == "Never" { "" } else { inferredKind };
                 pass2Ctx := (id = blockId, tag = tagInfo.tag, kind = "block", phase = "body",
-                    iifeDepth = iifeDepth + 1, valKind = inferredKind, valVar = blockValVar, label = blockLabel,
-                    iterLabel = "", countVar = "", itemVar = "", itemKind = "", indexVar = "", hasIndex = false);
+                iifeDepth = iifeDepth + 1, valKind = inferredKind, valVar = blockValVar, label = blockLabel,
+                iterLabel = "", countVar = "", itemVar = "", itemKind = "", indexVar = "", hasIndex = false);
                 left = self(target, source, afterTag, prefix, locals, functions, params, currentName,
-                    pass2Expected, 0, appendCtx(ctxs, pass2Ctx), iifeDepth + 1, false, "tagged");
+                pass2Expected, 0, appendCtx(ctxs, pass2Ctx), iifeDepth + 1, false, "tagged");
             }
             afterTaggedClose := skipTrivia(source, left.next, prefix);
             if afterTaggedClose < tagSourceSize and textLib.wordAt(source, afterTaggedClose, "then") {
@@ -3332,14 +3354,14 @@ parseBinaryCtx := fn(target: String, source: String, position: Int, prefix: Stri
                 rejectMisplacedTag(source, afterFinKw, prefix, "block tag cannot appear after finally");
                 finOpen := expectSymbol(source, afterFinKw, "{", prefix);
                 taggedFinCtx := (id = blockId, tag = tagInfo.tag, kind = "block", phase = "finally",
-                    iifeDepth = iifeDepth + 1, valKind = left.kind, valVar = blockValVar, label = blockLabel,
-                    iterLabel = "", countVar = "", itemVar = "", itemKind = "", indexVar = "", hasIndex = false);
+                iifeDepth = iifeDepth + 1, valKind = left.kind, valVar = blockValVar, label = blockLabel,
+                iterLabel = "", countVar = "", itemVar = "", itemKind = "", indexVar = "", hasIndex = false);
                 finBarrierCtx := (id = 0, tag = "", kind = "finally", phase = "finally",
-                    iifeDepth = iifeDepth + 1, valKind = "Unit", valVar = "", label = "",
-                    iterLabel = "", countVar = "", itemVar = "", itemKind = "", indexVar = "", hasIndex = false);
+                iifeDepth = iifeDepth + 1, valKind = "Unit", valVar = "", label = "",
+                iterLabel = "", countVar = "", itemVar = "", itemKind = "", indexVar = "", hasIndex = false);
                 finCtxs := appendCtx(appendCtx(ctxs, taggedFinCtx), finBarrierCtx);
                 finParsed := self(target, source, finOpen - 1, prefix, locals, functions, params, currentName,
-                    "", 0, finCtxs, iifeDepth + 1, inferMode, "finally");
+                "", 0, finCtxs, iifeDepth + 1, inferMode, "finally");
                 afterFinClose := skipTrivia(source, finParsed.next, prefix);
                 if afterFinClose < tagSourceSize and textLib.wordAt(source, afterFinClose, "then") {
                     failAt(source, afterFinClose, prefix, "then must appear before finally");
@@ -3360,7 +3382,7 @@ parseBinaryCtx := fn(target: String, source: String, position: Int, prefix: Stri
                         "return " + left.code + ";"
                     };
                     left = (kind = finalTaggedKind, code = "(() => { try { " + taggedTryBody + " } finally { " + finParsed.code + " } })()",
-                        intValue = 0, textValue = "", constant = false, next = finParsed.next);
+                    intValue = 0, textValue = "", constant = false, next = finParsed.next);
                 }
             }
         } else if afterTag < tagSourceSize and textLib.wordAt(source, afterTag, "if") {
@@ -3472,8 +3494,8 @@ parseBinaryCtx := fn(target: String, source: String, position: Int, prefix: Stri
                     if statementNext < 0 { failAt(source, skipTrivia(source, rhs.next, prefix), prefix, "expected ; after tuple destructuring"); }
                     bindRuntime := localRuntimeName(target, blockLocals, bindName, "", 1);
                     listLib.pushBack(mut blockLocals, (name = bindName, runtime = bindRuntime, kind = rhs.kind,
-                        mutable = destructureMutable, writable = false, depth = 1, constant = false, code = rhs.code,
-                        intValue = rhs.intValue, textValue = rhs.textValue, initState = "init"));
+                    mutable = destructureMutable, writable = false, depth = 1, constant = false, code = rhs.code,
+                    intValue = rhs.intValue, textValue = rhs.textValue, initState = "init"));
                     if not blockExits {
                         declKw := if destructureMutable { "let " } else { "const " };
                         listLib.pushBack(mut statements, declKw + bindRuntime + " = " + copiedValueCode(target, rhs.kind, rhs.code) + "; void " + bindRuntime + ";");
@@ -3487,14 +3509,14 @@ parseBinaryCtx := fn(target: String, source: String, position: Int, prefix: Stri
                     }
                     if tupleComponentCount(rhs.kind) =!= destructure.count {
                         failAt(source, destructureOpen, prefix, "tuple destructuring expected " + integer.intText(destructure.count) +
-                            " fields, got " + integer.intText(tupleComponentCount(rhs.kind)));
+                        " fields, got " + integer.intText(tupleComponentCount(rhs.kind)));
                     }
                     statementNext := consumeStatementEnd(source, rhs.next, prefix);
                     if statementNext < 0 { failAt(source, skipTrivia(source, rhs.next, prefix), prefix, "expected ; after tuple destructuring"); }
                     tempRuntime := freshScopeTemp(blockLocals, "lite$tuple");
                     listLib.pushBack(mut blockLocals, (name = "$tuple", runtime = tempRuntime, kind = "Unit",
-                        mutable = false, writable = false, depth = 1, constant = false, code = "",
-                        intValue = 0, textValue = "", initState = "init"));
+                    mutable = false, writable = false, depth = 1, constant = false, code = "",
+                    intValue = 0, textValue = "", initState = "init"));
                     if not blockExits {
                         listLib.pushBack(mut statements, "const " + tempRuntime + " = " + rhs.code + "; void " + tempRuntime + ";");
                     }
@@ -3512,8 +3534,8 @@ parseBinaryCtx := fn(target: String, source: String, position: Int, prefix: Stri
                         bindRuntime := localRuntimeName(target, blockLocals, bindName, "", 1);
                         fieldCode := tempRuntime + "." + comp.prop;
                         listLib.pushBack(mut blockLocals, (name = bindName, runtime = bindRuntime, kind = comp.kind,
-                            mutable = destructureMutable, writable = false, depth = 1, constant = false, code = fieldCode,
-                            intValue = 0, textValue = "", initState = "init"));
+                        mutable = destructureMutable, writable = false, depth = 1, constant = false, code = fieldCode,
+                        intValue = 0, textValue = "", initState = "init"));
                         if not blockExits {
                             declKw := if destructureMutable { "let " } else { "const " };
                             listLib.pushBack(mut statements, declKw + bindRuntime + " = " + fieldCode + "; void " + bindRuntime + ";");
@@ -3546,10 +3568,10 @@ parseBinaryCtx := fn(target: String, source: String, position: Int, prefix: Stri
                         rejectMisplacedTag(source, afterStmtFinKw, prefix, "block tag cannot appear after finally");
                         stmtFinOpen := expectSymbol(source, afterStmtFinKw, "{", prefix);
                         stmtFinCtx := (id = 0, tag = "", kind = "finally", phase = "finally",
-                            iifeDepth = bodyDepth, valKind = "Unit", valVar = "", label = "",
-                            iterLabel = "", countVar = "", itemVar = "", itemKind = "", indexVar = "", hasIndex = false);
+                        iifeDepth = bodyDepth, valKind = "Unit", valVar = "", label = "",
+                        iterLabel = "", countVar = "", itemVar = "", itemKind = "", indexVar = "", hasIndex = false);
                         stmtFin := self(target, source, stmtFinOpen - 1, prefix, blockLocals, functions, params, currentName,
-                            "", 0, appendCtx(ctxs, stmtFinCtx), bodyDepth, inferMode, "finally");
+                        "", 0, appendCtx(ctxs, stmtFinCtx), bodyDepth, inferMode, "finally");
                         afterStmtFinClose := skipTrivia(source, stmtFin.next, prefix);
                         if afterStmtFinClose < blockSourceSize and textLib.wordAt(source, afterStmtFinClose, "then") {
                             failAt(source, afterStmtFinClose, prefix, "then must appear before finally");
@@ -3579,8 +3601,8 @@ parseBinaryCtx := fn(target: String, source: String, position: Int, prefix: Stri
                 tagPeek := parseTagAt(source, cursor, prefix);
                 afterPeek := skipTrivia(source, tagPeek.next, prefix);
                 if afterPeek >= blockSourceSize or (textLib.at(source, afterPeek) =!= "{" and textLib.at(source, afterPeek) =!= "." and
-                    not textLib.wordAt(source, afterPeek, "if") and not textLib.wordAt(source, afterPeek, "match") and
-                    not textLib.wordAt(source, afterPeek, "loop")) {
+                not textLib.wordAt(source, afterPeek, "if") and not textLib.wordAt(source, afterPeek, "match") and
+                not textLib.wordAt(source, afterPeek, "loop")) {
                     failAt(source, afterPeek, prefix, "expected {, if, match, loop or . after block tag @" + tagPeek.tag);
                 }
             } else if textLib.isNameStart(chAtCursor) {
@@ -3592,7 +3614,7 @@ parseBinaryCtx := fn(target: String, source: String, position: Int, prefix: Stri
                 var blockOutputOpen := afterItemName;
                 blockModIdx := localIndex(blockLocals, itemName);
                 if blockModIdx >= 0 and blockLocals[blockModIdx].kind == "Module" and
-                    afterItemName < blockSourceSize and textLib.at(source, afterItemName) == "." {
+                afterItemName < blockSourceSize and textLib.at(source, afterItemName) == "." {
                     memberStart := skipTrivia(source, afterItemName + 1, prefix);
                     memberEnd := textLib.skipName(source, memberStart);
                     if memberEnd > memberStart {
@@ -3682,7 +3704,7 @@ parseBinaryCtx := fn(target: String, source: String, position: Int, prefix: Stri
                         if retValStart >= blockSourceSize or textLib.at(source, retValStart) == ";" or textLib.at(source, retValStart) == "}" {
                             if not isInferTarget and targetCtx.valKind =!= "Unit" {
                                 failAt(source, itemStart, prefix, "block @" + targetCtx.tag + " returns " +
-                                    displayKind(targetCtx.valKind) + " and cannot return Unit");
+                                displayKind(targetCtx.valKind) + " and cannot return Unit");
                             }
                             stmtNext := consumeStatementEnd(source, retValStart, prefix);
                             if stmtNext < 0 { failAt(source, retValStart, prefix, "expected ; after return"); }
@@ -3720,7 +3742,7 @@ parseBinaryCtx := fn(target: String, source: String, position: Int, prefix: Stri
                                     }
                                 } else if rhs.kind =!= "Never" and not isCompatibleKind(targetCtx.valKind, rhs.kind) {
                                     failAt(source, retValStart, prefix, "cannot return " + displayKind(rhs.kind) +
-                                        " from block @" + targetCtx.tag + " returning " + displayKind(targetCtx.valKind));
+                                    " from block @" + targetCtx.tag + " returning " + displayKind(targetCtx.valKind));
                                 }
                             }
                             if inferMode and rhs.kind =!= "Never" and loopValMarkerId(rhs.kind) < 0 {
@@ -3731,8 +3753,8 @@ parseBinaryCtx := fn(target: String, source: String, position: Int, prefix: Stri
                                     listLib.pushBack(mut statements, stmtReturnPrefix + "(" + rhs.code + ");");
                                 } else {
                                     retValCode := if isInferTarget { rhs.code }
-                                        else if targetCtx.valKind == "Unit" { targetUnitEvaluationCode(target, rhs.code) }
-                                        else { assignValueCode(target, targetCtx.valKind, rhs.kind, rhs.code) };
+                                    else if targetCtx.valKind == "Unit" { targetUnitEvaluationCode(target, rhs.code) }
+                                    else { assignValueCode(target, targetCtx.valKind, rhs.kind, rhs.code) };
                                     if targetCtx.iifeDepth == bodyDepth {
                                         if targetCtx.valKind == "Unit" {
                                             listLib.pushBack(mut statements, "void (" + retValCode + "); break " + targetCtx.label + ";");
@@ -3789,7 +3811,7 @@ parseBinaryCtx := fn(target: String, source: String, position: Int, prefix: Stri
                             if inferMode { blockMarkers = collectParsedMarkers(blockMarkers, rhs); }
                             if not isCompatibleKind(fnResult, rhs.kind) {
                                 failAt(source, retValStart, prefix, "cannot return " + displayKind(rhs.kind) +
-                                    " from function " + currentName + " returning " + displayKind(fnResult));
+                                " from function " + currentName + " returning " + displayKind(fnResult));
                             }
                             stmtNext := consumeStatementEnd(source, rhs.next, prefix);
                             if stmtNext < 0 { failAt(source, skipTrivia(source, rhs.next, prefix), prefix, "expected ; after return"); }
@@ -3897,7 +3919,7 @@ parseBinaryCtx := fn(target: String, source: String, position: Int, prefix: Stri
                                 }
                             } else if rhs.kind =!= "Never" and not isCompatibleKind(loopCtx.valKind, rhs.kind) {
                                 failAt(source, afterExit, prefix, "cannot commit " + displayKind(rhs.kind) +
-                                    " to loop .value of kind " + displayKind(loopCtx.valKind));
+                                " to loop .value of kind " + displayKind(loopCtx.valKind));
                             }
                         }
                         if inferMode and rhs.kind =!= "Never" and loopValMarkerId(rhs.kind) < 0 {
@@ -3908,8 +3930,8 @@ parseBinaryCtx := fn(target: String, source: String, position: Int, prefix: Stri
                                 listLib.pushBack(mut statements, stmtReturnPrefix + "(" + rhs.code + ");");
                             } else {
                                 payCode := if isInferLoop { rhs.code }
-                                    else if loopCtx.valKind == "Unit" { targetUnitEvaluationCode(target, rhs.code) }
-                                    else { assignValueCode(target, loopCtx.valKind, rhs.kind, rhs.code) };
+                                else if loopCtx.valKind == "Unit" { targetUnitEvaluationCode(target, rhs.code) }
+                                else { assignValueCode(target, loopCtx.valKind, rhs.kind, rhs.code) };
                                 if loopCtx.iifeDepth == bodyDepth {
                                     jumpStmt := if loopCtx.label =!= "" and targetLoopIdx < findActiveLoopCtxIndex(ctxs) {
                                         itemName + " " + loopCtx.label + ";"
@@ -3956,8 +3978,8 @@ parseBinaryCtx := fn(target: String, source: String, position: Int, prefix: Stri
                         var ifCursor := afterItemName;
                         var isFirstIf := true;
                         ifBarrierCtxs := appendCtx(ctxs, (id = 0, tag = "", kind = "if", phase = "body",
-                            iifeDepth = bodyDepth, valKind = "Unit", valVar = "", label = "", iterLabel = "",
-                            countVar = "", itemVar = "", itemKind = "", indexVar = "", hasIndex = false));
+                        iifeDepth = bodyDepth, valKind = "Unit", valVar = "", label = "", iterLabel = "",
+                        countVar = "", itemVar = "", itemKind = "", indexVar = "", hasIndex = false));
                         loop true {
                             rejectHeaderBlockTag(source, ifCursor, prefix, if isFirstIf { "if" } else { "else if" });
                             condParsed := self(target, source, ifCursor, prefix, blockLocals, functions, params, currentName, "", 0, ifBarrierCtxs, bodyDepth, inferMode, "");
@@ -4038,8 +4060,8 @@ parseBinaryCtx := fn(target: String, source: String, position: Int, prefix: Stri
                         var armCount := 0;
                         var allArmsExit := true;
                         matchBarrierCtxs := appendCtx(ctxs, (id = 0, tag = "", kind = "match", phase = "body",
-                            iifeDepth = bodyDepth, valKind = "Unit", valVar = "", label = "", iterLabel = "",
-                            countVar = "", itemVar = "", itemKind = "", indexVar = "", hasIndex = false));
+                        iifeDepth = bodyDepth, valKind = "Unit", valVar = "", label = "", iterLabel = "",
+                        countVar = "", itemVar = "", itemKind = "", indexVar = "", hasIndex = false));
                         loop true {
                             matchCursor = skipItemSeparators(source, matchCursor, prefix);
                             if matchCursor >= blockSourceSize {
@@ -4060,7 +4082,7 @@ parseBinaryCtx := fn(target: String, source: String, position: Int, prefix: Stri
                                 rejectMisplacedTag(source, afterUnder, prefix, "block tag cannot appear after _ in match arm");
                             }
                             isFallback := textLib.wordAt(source, matchCursor, "_") and afterUnder < blockSourceSize and
-                                textLib.at(source, afterUnder) == "{";
+                            textLib.at(source, afterUnder) == "{";
                             if isFallback {
                                 sawFallback = true;
                                 arm := self(target, source, afterUnder, prefix, blockLocals, functions, params, currentName, "", 0, matchBarrierCtxs, bodyDepth, inferMode, "stmt");
@@ -4129,92 +4151,92 @@ parseBinaryCtx := fn(target: String, source: String, position: Int, prefix: Stri
                     if not useExprLoop {
                         isStatement = true;
                         rejectHeaderBlockTag(source, afterItemName, prefix, "loop");
-                    var loopHeaderPos := afterItemName;
-                    var loopCondCode := "";
-                    var loopSeqCode := "";
-                    var loopItemName := "";
-                    var loopItemKind := "";
-                    if loopHeaderPos < blockSourceSize and textLib.at(source, loopHeaderPos) =!= "{" {
-                        hdrParsed := self(target, source, loopHeaderPos, prefix, blockLocals, functions, params, currentName, "", 0, ctxs, bodyDepth, inferMode, "");
-                        if inferMode { blockMarkers = collectParsedMarkers(blockMarkers, hdrParsed); }
-                        afterHdr := skipTrivia(source, hdrParsed.next, prefix);
-                        if textLib.wordAt(source, afterHdr, "as") {
-                            if not isListKind(hdrParsed.kind) and not isArrayKind(hdrParsed.kind) {
-                                failAt(source, loopHeaderPos, prefix, "loop sequence must be a List or Array, got " + displayKind(hdrParsed.kind));
-                            }
-                            asNameStart := skipTrivia(source, afterHdr + 2, prefix);
-                            if asNameStart >= blockSourceSize or not textLib.isNameStart(textLib.at(source, asNameStart)) {
-                                failAt(source, asNameStart, prefix, "expected an item name after as");
-                            }
-                            asNameEnd := textLib.skipName(source, asNameStart);
-                            loopItemName = textLib.slice(source, asNameStart, asNameEnd);
-                            if isReservedWord(loopItemName) { unsupportedFeature(source, asNameStart, loopItemName, prefix); }
-                            loopItemKind = if isListKind(hdrParsed.kind) { listElementKind(hdrParsed.kind) } else { arrayElementKind(hdrParsed.kind) };
-                            loopSeqCode = hdrParsed.code;
-                            loopHeaderPos = skipTrivia(source, asNameEnd, prefix);
-                            rejectMisplacedTag(source, loopHeaderPos, prefix, "block tag cannot appear before { in loop");
-                        } else if isListKind(hdrParsed.kind) or isArrayKind(hdrParsed.kind) {
-                            loopItemKind = if isListKind(hdrParsed.kind) { listElementKind(hdrParsed.kind) } else { arrayElementKind(hdrParsed.kind) };
-                            loopSeqCode = hdrParsed.code;
-                            loopHeaderPos = afterHdr;
-                            rejectMisplacedTag(source, loopHeaderPos, prefix, "block tag cannot appear before { in loop");
-                        } else {
-                            if hdrParsed.kind =!= "Bool" {
-                                failAt(source, loopHeaderPos, prefix, "loop condition must be Bool");
-                            }
-                            if hdrParsed.constant {
-                                if hdrParsed.intValue == 0 { loopCondCode = "false"; }
+                        var loopHeaderPos := afterItemName;
+                        var loopCondCode := "";
+                        var loopSeqCode := "";
+                        var loopItemName := "";
+                        var loopItemKind := "";
+                        if loopHeaderPos < blockSourceSize and textLib.at(source, loopHeaderPos) =!= "{" {
+                            hdrParsed := self(target, source, loopHeaderPos, prefix, blockLocals, functions, params, currentName, "", 0, ctxs, bodyDepth, inferMode, "");
+                            if inferMode { blockMarkers = collectParsedMarkers(blockMarkers, hdrParsed); }
+                            afterHdr := skipTrivia(source, hdrParsed.next, prefix);
+                            if textLib.wordAt(source, afterHdr, "as") {
+                                if not isListKind(hdrParsed.kind) and not isArrayKind(hdrParsed.kind) {
+                                    failAt(source, loopHeaderPos, prefix, "loop sequence must be a List or Array, got " + displayKind(hdrParsed.kind));
+                                }
+                                asNameStart := skipTrivia(source, afterHdr + 2, prefix);
+                                if asNameStart >= blockSourceSize or not textLib.isNameStart(textLib.at(source, asNameStart)) {
+                                    failAt(source, asNameStart, prefix, "expected an item name after as");
+                                }
+                                asNameEnd := textLib.skipName(source, asNameStart);
+                                loopItemName = textLib.slice(source, asNameStart, asNameEnd);
+                                if isReservedWord(loopItemName) { unsupportedFeature(source, asNameStart, loopItemName, prefix); }
+                                loopItemKind = if isListKind(hdrParsed.kind) { listElementKind(hdrParsed.kind) } else { arrayElementKind(hdrParsed.kind) };
+                                loopSeqCode = hdrParsed.code;
+                                loopHeaderPos = skipTrivia(source, asNameEnd, prefix);
+                                rejectMisplacedTag(source, loopHeaderPos, prefix, "block tag cannot appear before { in loop");
+                            } else if isListKind(hdrParsed.kind) or isArrayKind(hdrParsed.kind) {
+                                loopItemKind = if isListKind(hdrParsed.kind) { listElementKind(hdrParsed.kind) } else { arrayElementKind(hdrParsed.kind) };
+                                loopSeqCode = hdrParsed.code;
+                                loopHeaderPos = afterHdr;
+                                rejectMisplacedTag(source, loopHeaderPos, prefix, "block tag cannot appear before { in loop");
                             } else {
-                                loopCondCode = hdrParsed.code;
+                                if hdrParsed.kind =!= "Bool" {
+                                    failAt(source, loopHeaderPos, prefix, "loop condition must be Bool");
+                                }
+                                if hdrParsed.constant {
+                                    if hdrParsed.intValue == 0 { loopCondCode = "false"; }
+                                } else {
+                                    loopCondCode = hdrParsed.code;
+                                }
+                                loopHeaderPos = afterHdr;
+                                rejectMisplacedTag(source, loopHeaderPos, prefix, "block tag cannot appear before { in loop");
                             }
-                            loopHeaderPos = afterHdr;
-                            rejectMisplacedTag(source, loopHeaderPos, prefix, "block tag cannot appear before { in loop");
                         }
-                    }
-                    loopOpen := expectSymbol(source, loopHeaderPos, "{", prefix);
-                    loopId := nextCtxId(ctxs);
-                    loopLabel := "lite$l" + integer.intText(loopId);
-                    loopLocals: mut List<Local> = [];
-                    loop blockLocals as entry { listLib.pushBack(mut loopLocals, entry); }
-                    var loopHeadCode := "";
-                    if loopItemName =!= "" {
-                        loopItemRuntime := localRuntimeName(target, loopLocals, loopItemName, "", 1);
-                        listLib.pushBack(mut loopLocals, (name = loopItemName, runtime = loopItemRuntime, kind = loopItemKind,
+                        loopOpen := expectSymbol(source, loopHeaderPos, "{", prefix);
+                        loopId := nextCtxId(ctxs);
+                        loopLabel := "lite$l" + integer.intText(loopId);
+                        loopLocals: mut List<Local> = [];
+                        loop blockLocals as entry { listLib.pushBack(mut loopLocals, entry); }
+                        var loopHeadCode := "";
+                        if loopItemName =!= "" {
+                            loopItemRuntime := localRuntimeName(target, loopLocals, loopItemName, "", 1);
+                            listLib.pushBack(mut loopLocals, (name = loopItemName, runtime = loopItemRuntime, kind = loopItemKind,
                             mutable = false, writable = false, depth = 1, constant = false, code = loopItemRuntime,
                             intValue = 0, textValue = "", initState = "init"));
-                        loopHeadCode = "for (const " + loopItemRuntime + " of " + targetListCopyCode(target, loopSeqCode) + ") { void " + loopItemRuntime + "; ";
-                    } else if loopSeqCode =!= "" {
-                        tempItemRuntime := freshScopeTemp(loopLocals, "lite$item");
-                        listLib.pushBack(mut loopLocals, (name = "$item", runtime = tempItemRuntime, kind = "Unit",
+                            loopHeadCode = "for (const " + loopItemRuntime + " of " + targetListCopyCode(target, loopSeqCode) + ") { void " + loopItemRuntime + "; ";
+                        } else if loopSeqCode =!= "" {
+                            tempItemRuntime := freshScopeTemp(loopLocals, "lite$item");
+                            listLib.pushBack(mut loopLocals, (name = "$item", runtime = tempItemRuntime, kind = "Unit",
                             mutable = false, writable = false, depth = 1, constant = false, code = "",
                             intValue = 0, textValue = "", initState = "init"));
-                        loopHeadCode = "for (const " + tempItemRuntime + " of " + targetListCopyCode(target, loopSeqCode) + ") { void " + tempItemRuntime + "; ";
-                    } else {
-                        condText := if loopCondCode == "" { "Boolean(true)" } else if loopCondCode == "false" { "Boolean(false)" } else { loopCondCode };
-                        loopHeadCode = "while (" + condText + ") { ";
-                    }
-                    loopCtx := (id = loopId, tag = "", kind = "loop", phase = "body",
+                            loopHeadCode = "for (const " + tempItemRuntime + " of " + targetListCopyCode(target, loopSeqCode) + ") { void " + tempItemRuntime + "; ";
+                        } else {
+                            condText := if loopCondCode == "" { "Boolean(true)" } else if loopCondCode == "false" { "Boolean(false)" } else { loopCondCode };
+                            loopHeadCode = "while (" + condText + ") { ";
+                        }
+                        loopCtx := (id = loopId, tag = "", kind = "loop", phase = "body",
                         iifeDepth = bodyDepth, valKind = "", valVar = "", label = loopLabel,
                         iterLabel = "", countVar = "", itemVar = "", itemKind = "", indexVar = "", hasIndex = false);
-                    loopBody := self(target, source, loopOpen - 1, prefix, loopLocals, functions, params, currentName,
+                        loopBody := self(target, source, loopOpen - 1, prefix, loopLocals, functions, params, currentName,
                         "", 0, appendCtx(ctxs, loopCtx), bodyDepth, inferMode, "stmt");
-                    if inferMode { blockMarkers = collectParsedMarkers(blockMarkers, loopBody); }
-                    hasCrossBreak := codeUsesTextCall(loopBody.code, "lite$throwTransfer(" + integer.intText(loopId) + ",");
-                    hasCrossCont := codeUsesTextCall(loopBody.code, "lite$throwTransfer(" + integer.intText(0 - loopId) + ",");
-                    needsLoopLabel := codeUsesTextCall(loopBody.code, "break " + loopLabel + ";") or codeUsesTextCall(loopBody.code, "continue " + loopLabel + ";");
-                    wrappedLoopBody := if hasCrossBreak or hasCrossCont {
-                        "try { " + loopBody.code + " } catch (lite$err) { if (lite$hasTransfer(lite$err, " + integer.intText(loopId) + ")) { break; } if (lite$hasTransfer(lite$err, " + integer.intText(0 - loopId) + ")) { continue; } throw lite$err; }"
-                    } else {
-                        loopBody.code
-                    };
-                    loopLabelPrefix := if needsLoopLabel { loopLabel + ": " } else { "" };
-                    if not blockExits {
-                        listLib.pushBack(mut statements, loopLabelPrefix + loopHeadCode + wrappedLoopBody + " }");
-                        statementCount = statementCount + 1;
-                    }
-                    blockConstant = false;
-                    stmtNext := consumeStatementEnd(source, loopBody.next, prefix);
-                    cursor = if stmtNext >= 0 { stmtNext } else { loopBody.next };
+                        if inferMode { blockMarkers = collectParsedMarkers(blockMarkers, loopBody); }
+                        hasCrossBreak := codeUsesTextCall(loopBody.code, "lite$throwTransfer(" + integer.intText(loopId) + ",");
+                        hasCrossCont := codeUsesTextCall(loopBody.code, "lite$throwTransfer(" + integer.intText(0 - loopId) + ",");
+                        needsLoopLabel := codeUsesTextCall(loopBody.code, "break " + loopLabel + ";") or codeUsesTextCall(loopBody.code, "continue " + loopLabel + ";");
+                        wrappedLoopBody := if hasCrossBreak or hasCrossCont {
+                            "try { " + loopBody.code + " } catch (lite$err) { if (lite$hasTransfer(lite$err, " + integer.intText(loopId) + ")) { break; } if (lite$hasTransfer(lite$err, " + integer.intText(0 - loopId) + ")) { continue; } throw lite$err; }"
+                        } else {
+                            loopBody.code
+                        };
+                        loopLabelPrefix := if needsLoopLabel { loopLabel + ": " } else { "" };
+                        if not blockExits {
+                            listLib.pushBack(mut statements, loopLabelPrefix + loopHeadCode + wrappedLoopBody + " }");
+                            statementCount = statementCount + 1;
+                        }
+                        blockConstant = false;
+                        stmtNext := consumeStatementEnd(source, loopBody.next, prefix);
+                        cursor = if stmtNext >= 0 { stmtNext } else { loopBody.next };
                     }
                 } else if itemName == "var" {
                     isStatement = true;
@@ -4277,8 +4299,8 @@ parseBinaryCtx := fn(target: String, source: String, position: Int, prefix: Stri
                     if statementNext < 0 { failAt(source, skipTrivia(source, declParsed.next, prefix), prefix, "expected ; after local declaration " + localName); }
                     runtime := localRuntimeName(target, blockLocals, localName, "", 1);
                     listLib.pushBack(mut blockLocals, (name = localName, runtime = runtime, kind = declParsed.kind,
-                        mutable = true, writable = declWritable, depth = 1, constant = false, code = declParsed.code,
-                        intValue = declParsed.intValue, textValue = declParsed.textValue, initState = declInitState));
+                    mutable = true, writable = declWritable, depth = 1, constant = false, code = declParsed.code,
+                    intValue = declParsed.intValue, textValue = declParsed.textValue, initState = declInitState));
                     if not blockExits {
                         if varDiverged {
                             listLib.pushBack(mut statements, stmtReturnPrefix + "(" + declParsed.code + ");");
@@ -4312,8 +4334,8 @@ parseBinaryCtx := fn(target: String, source: String, position: Int, prefix: Stri
                     if statementNext < 0 { failAt(source, skipTrivia(source, declParsed.next, prefix), prefix, "expected ; after local declaration " + localName); }
                     runtime := localRuntimeName(target, blockLocals, localName, "", 1);
                     listLib.pushBack(mut blockLocals, (name = localName, runtime = runtime, kind = declParsed.kind,
-                        mutable = false, writable = true, depth = 1, constant = false, code = declParsed.code,
-                        intValue = declParsed.intValue, textValue = declParsed.textValue, initState = "init"));
+                    mutable = false, writable = true, depth = 1, constant = false, code = declParsed.code,
+                    intValue = declParsed.intValue, textValue = declParsed.textValue, initState = "init"));
                     if not blockExits {
                         listLib.pushBack(mut statements, "const " + runtime + " = " + copiedValueCode(target, declParsed.kind, declParsed.code) + "; void " + runtime + ";");
                         statementCount = statementCount + 1;
@@ -4321,9 +4343,9 @@ parseBinaryCtx := fn(target: String, source: String, position: Int, prefix: Stri
                     blockConstant = false;
                     cursor = statementNext;
                 } else if textLib.startsWithAt(source, afterItemName, ":=") and
-                    not textLib.wordAt(source, skipTrivia(source, afterItemName + 2, prefix), "fn") and
-                    not textLib.wordAt(source, skipTrivia(source, afterItemName + 2, prefix), "type") and
-                    not textLib.wordAt(source, skipTrivia(source, afterItemName + 2, prefix), "import") {
+                not textLib.wordAt(source, skipTrivia(source, afterItemName + 2, prefix), "fn") and
+                not textLib.wordAt(source, skipTrivia(source, afterItemName + 2, prefix), "type") and
+                not textLib.wordAt(source, skipTrivia(source, afterItemName + 2, prefix), "import") {
                     isStatement = true;
                     if isReservedWord(itemName) { unsupportedFeature(source, itemStart, itemName, prefix); }
                     declParsed := self(target, source, skipTrivia(source, afterItemName + 2, prefix), prefix, blockLocals, functions, params, currentName, "", 0, ctxs, bodyDepth, inferMode, "");
@@ -4333,8 +4355,8 @@ parseBinaryCtx := fn(target: String, source: String, position: Int, prefix: Stri
                     if statementNext < 0 { failAt(source, skipTrivia(source, declParsed.next, prefix), prefix, "expected ; after local declaration " + itemName); }
                     runtime := localRuntimeName(target, blockLocals, itemName, "", 1);
                     listLib.pushBack(mut blockLocals, (name = itemName, runtime = runtime, kind = declParsed.kind,
-                        mutable = false, writable = false, depth = 1, constant = declParsed.constant, code = declParsed.code,
-                        intValue = declParsed.intValue, textValue = declParsed.textValue, initState = "init"));
+                    mutable = false, writable = false, depth = 1, constant = declParsed.constant, code = declParsed.code,
+                    intValue = declParsed.intValue, textValue = declParsed.textValue, initState = "init"));
                     if not blockExits {
                         listLib.pushBack(mut statements, "const " + runtime + " = " + copiedValueCode(target, declParsed.kind, declParsed.code) + "; void " + runtime + ";");
                         statementCount = statementCount + 1;
@@ -4372,8 +4394,8 @@ parseBinaryCtx := fn(target: String, source: String, position: Int, prefix: Stri
                     runtime := localRuntimeName(target, blockLocals, itemName, "", 1);
                     declCode := assignValueCode(target, typed.kind, declParsed.kind, declParsed.code);
                     listLib.pushBack(mut blockLocals, (name = itemName, runtime = runtime, kind = typed.kind,
-                        mutable = false, writable = typed.writable, depth = 1, constant = if declInitState == "init" and not numeric.isFloatKind(typed.kind) { declParsed.constant } else { false },
-                        code = declCode, intValue = declParsed.intValue, textValue = declParsed.textValue, initState = declInitState));
+                    mutable = false, writable = typed.writable, depth = 1, constant = if declInitState == "init" and not numeric.isFloatKind(typed.kind) { declParsed.constant } else { false },
+                    code = declCode, intValue = declParsed.intValue, textValue = declParsed.textValue, initState = declInitState));
                     if not blockExits {
                         if declParsed.kind == "Never" {
                             listLib.pushBack(mut statements, stmtReturnPrefix + "(" + declCode + ");");
@@ -4402,8 +4424,8 @@ parseBinaryCtx := fn(target: String, source: String, position: Int, prefix: Stri
                     if statementNext < 0 { failAt(source, skipTrivia(source, rhs.next, prefix), prefix, "expected ; after assignment to " + itemName); }
                     rhsCode := assignValueCode(target, entry.kind, rhs.kind, rhs.code);
                     listLib.pushBack(mut blockLocals, (name = entry.name, runtime = entry.runtime, kind = entry.kind,
-                        mutable = entry.mutable, writable = entry.writable, depth = entry.depth, constant = false, code = rhsCode,
-                        intValue = rhs.intValue, textValue = rhs.textValue, initState = "init"));
+                    mutable = entry.mutable, writable = entry.writable, depth = entry.depth, constant = false, code = rhsCode,
+                    intValue = rhs.intValue, textValue = rhs.textValue, initState = "init"));
                     if not blockExits {
                         if rhs.kind == "Never" {
                             listLib.pushBack(mut statements, stmtReturnPrefix + "(" + rhsCode + ");");
@@ -4429,8 +4451,8 @@ parseBinaryCtx := fn(target: String, source: String, position: Int, prefix: Stri
                     statementNext := consumeStatementEnd(source, rhs.next, prefix);
                     if statementNext < 0 { failAt(source, skipTrivia(source, rhs.next, prefix), prefix, "expected ; after assignment to " + itemName); }
                     listLib.pushBack(mut blockLocals, (name = entry.name, runtime = entry.runtime, kind = entry.kind,
-                        mutable = entry.mutable, writable = entry.writable, depth = entry.depth, constant = false, code = rhsCode,
-                        intValue = 0, textValue = "", initState = "init"));
+                    mutable = entry.mutable, writable = entry.writable, depth = entry.depth, constant = false, code = rhsCode,
+                    intValue = 0, textValue = "", initState = "init"));
                     if not blockExits {
                         listLib.pushBack(mut statements, entry.runtime + " = " + rhsCode + ";");
                         statementCount = statementCount + 1;
@@ -4448,7 +4470,7 @@ parseBinaryCtx := fn(target: String, source: String, position: Int, prefix: Stri
                 else if isTaggedBody and (expected == "Unit" or expected == "Never") { itemExpected = ""; }
                 itemSink := if (not isStmtBody) and allowOutput and itemAtClose { "exprOut" } else { "" };
                 itemMinimum := if isStmtBody or (not itemAtClose) or minimum == -2 or
-                    (isLoopBody and (expected == "" or expected == "Unit")) { -2 } else { 0 };
+                (isLoopBody and (expected == "" or expected == "Unit")) { -2 } else { 0 };
                 expr := self(target, source, cursor, prefix, blockLocals, functions, params, currentName, itemExpected, itemMinimum, ctxs, bodyDepth, inferMode, itemSink);
                 if inferMode { blockMarkers = collectParsedMarkers(blockMarkers, expr); }
                 statementNext := consumeStatementEnd(source, expr.next, prefix);
@@ -4485,7 +4507,7 @@ parseBinaryCtx := fn(target: String, source: String, position: Int, prefix: Stri
             stmtCode := textLib.joinTexts(statements, " ");
             stmtKind := if blockExits { "Never" } else { "Unit" };
             left = withMarkers((kind = stmtKind, code = stmtCode, intValue = 0, textValue = "", constant = false, next = cursor),
-                if inferMode { blockMarkers } else { "" });
+            if inferMode { blockMarkers } else { "" });
         } else if isFinallyBody {
             if not blockExits and sawTailExpr {
                 if blockKind =!= "Unit" and blockKind =!= "Never" {
@@ -4501,7 +4523,7 @@ parseBinaryCtx := fn(target: String, source: String, position: Int, prefix: Stri
             finCode := textLib.joinTexts(statements, " ");
             finKind := if blockExits { "Never" } else { "Unit" };
             left = withMarkers((kind = finKind, code = finCode, intValue = 0, textValue = "", constant = false, next = cursor),
-                if inferMode { blockMarkers } else { "" });
+            if inferMode { blockMarkers } else { "" });
         } else if isLoopBody {
             topLoopCtx := ctxs[ctxCount(ctxs) - 1];
             topLoopId := topLoopCtx.id;
@@ -4525,7 +4547,7 @@ parseBinaryCtx := fn(target: String, source: String, position: Int, prefix: Stri
                     "Unit"
                 };
                 left = withMarkers((kind = tailPlaceholderKind, code = "", intValue = if blockExits { 1 } else { 0 },
-                    textValue = "", constant = false, next = cursor), blockMarkers);
+                textValue = "", constant = false, next = cursor), blockMarkers);
             } else {
                 if not blockExits {
                     if sawTailExpr {
@@ -4539,7 +4561,7 @@ parseBinaryCtx := fn(target: String, source: String, position: Int, prefix: Stri
                             }
                         } else if not isCompatibleKind(topLoopValKind, blockKind) {
                             failAt(source, start, prefix, "cannot commit " + displayKind(blockKind) +
-                                " to loop .value of kind " + displayKind(topLoopValKind));
+                            " to loop .value of kind " + displayKind(topLoopValKind));
                         }
                         if blockKind == "Never" {
                             listLib.pushBack(mut statements, "(" + blockCode + ");");
@@ -4558,8 +4580,8 @@ parseBinaryCtx := fn(target: String, source: String, position: Int, prefix: Stri
                 }
                 loopBodyJoined := textLib.joinTexts(statements, " ");
                 left = withMarkers((kind = if blockExits { "Never" } else { topLoopValKind }, code = loopBodyJoined,
-                    intValue = 0, textValue = "", constant = false, next = cursor),
-                    if inferMode { filterOtherMarkers(blockMarkers, topLoopId) } else { "" });
+                intValue = 0, textValue = "", constant = false, next = cursor),
+                if inferMode { filterOtherMarkers(blockMarkers, topLoopId) } else { "" });
             }
         } else if isTaggedBody {
             topCtx := ctxs[ctxCount(ctxs) - 1];
@@ -4581,7 +4603,7 @@ parseBinaryCtx := fn(target: String, source: String, position: Int, prefix: Stri
                 inferredKind := inferKindFromMarkers(blockMarkers, topId, topTag, source, start, prefix, blockExits);
                 outerMarkers := filterOtherMarkers(blockMarkers, topId);
                 left = withMarkers((kind = inferredKind, code = "", intValue = if blockExits { 1 } else { 0 },
-                    textValue = "", constant = false, next = cursor), outerMarkers);
+                textValue = "", constant = false, next = cursor), outerMarkers);
             } else {
                 if not blockExits {
                     if sawTailExpr {
@@ -4632,7 +4654,7 @@ parseBinaryCtx := fn(target: String, source: String, position: Int, prefix: Stri
                     "(() => { let " + topValVar + ": " + tsFunctionType(topValKind) + " = " + zeroParsed(target, topValKind, 0).code + "; " + wrappedBody + " return " + topValVar + "; })()"
                 };
                 left = withMarkers((kind = topValKind, code = finalIife, intValue = 0, textValue = "", constant = false, next = cursor),
-                    if inferMode { filterOtherMarkers(blockMarkers, topId) } else { "" });
+                if inferMode { filterOtherMarkers(blockMarkers, topId) } else { "" });
             }
         } else {
             var hasStandaloneFinally := false;
@@ -4651,10 +4673,10 @@ parseBinaryCtx := fn(target: String, source: String, position: Int, prefix: Stri
                     rejectMisplacedTag(source, afterFinKw, prefix, "block tag cannot appear after finally");
                     finOpen := expectSymbol(source, afterFinKw, "{", prefix);
                     finBarrierCtx := (id = 0, tag = "", kind = "finally", phase = "finally",
-                        iifeDepth = bodyDepth, valKind = "Unit", valVar = "", label = "",
-                        iterLabel = "", countVar = "", itemVar = "", itemKind = "", indexVar = "", hasIndex = false);
+                    iifeDepth = bodyDepth, valKind = "Unit", valVar = "", label = "",
+                    iterLabel = "", countVar = "", itemVar = "", itemKind = "", indexVar = "", hasIndex = false);
                     finParsed := self(target, source, finOpen - 1, prefix, locals, functions, params, currentName,
-                        "", 0, appendCtx(ctxs, finBarrierCtx), bodyDepth, inferMode, "finally");
+                    "", 0, appendCtx(ctxs, finBarrierCtx), bodyDepth, inferMode, "finally");
                     afterFinClose := skipTrivia(source, finParsed.next, prefix);
                     if afterFinClose < blockSourceSize and textLib.wordAt(source, afterFinClose, "then") {
                         failAt(source, afterFinClose, prefix, "then must appear before finally");
@@ -4682,9 +4704,9 @@ parseBinaryCtx := fn(target: String, source: String, position: Int, prefix: Stri
                     finalStandaloneKind := if blockExits or finParsed.kind == "Never" { "Never" } else { blockKind };
                     standaloneFinEnd = finParsed.next;
                     left = withMarkers((kind = finalStandaloneKind,
-                        code = "(() => { try { " + standaloneTryBody + " } finally { " + finParsed.code + " } })()",
-                        intValue = 0, textValue = "", constant = false, next = standaloneFinEnd),
-                        if inferMode { blockMarkers } else { "" });
+                    code = "(() => { try { " + standaloneTryBody + " } finally { " + finParsed.code + " } })()",
+                    intValue = 0, textValue = "", constant = false, next = standaloneFinEnd),
+                    if inferMode { blockMarkers } else { "" });
                 }
             }
             if not hasStandaloneFinally {
@@ -4693,8 +4715,8 @@ parseBinaryCtx := fn(target: String, source: String, position: Int, prefix: Stri
                         failAt(source, start, prefix, "C backend does not support statement-bearing value blocks yet");
                     }
                     left = withMarkers((kind = "Never", code = "(() => { " + textLib.joinTexts(statements, " ") + " })()",
-                        intValue = 0, textValue = "", constant = false, next = cursor),
-                        if inferMode { blockMarkers } else { "" });
+                    intValue = 0, textValue = "", constant = false, next = cursor),
+                    if inferMode { blockMarkers } else { "" });
                 } else if statementCount == 0 {
                     baseBlock := (kind = blockKind, code = blockCode, intValue = blockInt, textValue = blockText, constant = blockConstant, next = cursor);
                     left = if inferMode and blockMarkers =!= "" { withMarkers(baseBlock, blockMarkers) } else { baseBlock };
@@ -4711,8 +4733,8 @@ parseBinaryCtx := fn(target: String, source: String, position: Int, prefix: Stri
                         "return " + copiedValueCode(target, blockKind, blockCode) + ";"
                     };
                     left = withMarkers((kind = blockKind, code = "(() => { " + textLib.joinTexts(statements, " ") + " " + returnCode + " })()",
-                        intValue = 0, textValue = "", constant = false, next = cursor),
-                        if inferMode { blockMarkers } else { "" });
+                    intValue = 0, textValue = "", constant = false, next = cursor),
+                    if inferMode { blockMarkers } else { "" });
                 }
             }
         }
@@ -4731,7 +4753,7 @@ parseBinaryCtx := fn(target: String, source: String, position: Int, prefix: Stri
             operandLoopId := loopValMarkerId(operand.kind);
             if inferMode and operandLoopId >= 0 {
                 left = withMarkers(boolParsed("", false, false, operand.next),
-                    collectParsedMarkers("", operand) + integer.intText(operandLoopId) + "=Bool\n");
+                collectParsedMarkers("", operand) + integer.intText(operandLoopId) + "=Bool\n");
             } else {
                 if operand.kind =!= "Bool" {
                     failAt(source, nameStart, prefix, "not requires a Bool operand");
@@ -4741,7 +4763,7 @@ parseBinaryCtx := fn(target: String, source: String, position: Int, prefix: Stri
                     left = boolParsed(targetBoolLiteralCode(target, value), value, true, operand.next);
                 } else {
                     left = withMarkers(boolParsed(targetNotCode(target, operand.code), false, false, operand.next),
-                        if inferMode { collectParsedMarkers("", operand) } else { "" });
+                    if inferMode { collectParsedMarkers("", operand) } else { "" });
                 }
             }
         } else if name == "if" or name == "match" or name == "loop" {
@@ -4763,9 +4785,9 @@ parseBinaryCtx := fn(target: String, source: String, position: Int, prefix: Stri
             }
             if callableIndex >= 0 {
                 left = (kind = "ModuleFunction", code = integer.intText(nameStart), intValue = callableIndex,
-                    textValue = calleeName, constant = false, next = next);
+                textValue = calleeName, constant = false, next = next);
             } else if (name == "push_back" or name == "pop_back" or name == "push_front" or name == "pop_front") and
-                afterName < textLib.length(source) and textLib.at(source, afterName) == "(" {
+            afterName < textLib.length(source) and textLib.at(source, afterName) == "(" {
                 left = (kind = "ListOp", code = name, intValue = 0, textValue = name, constant = false, next = afterName);
             } else {
                 index := localIndex(locals, name);
@@ -4861,8 +4883,8 @@ parseBinaryCtx := fn(target: String, source: String, position: Int, prefix: Stri
                 resolvedPreThenKind
             };
             headerCtx := (id = loopId, tag = condParseTag, kind = "loop", phase = "header",
-                iifeDepth = loopDepth, valKind = passCtxValKind, valVar = loopValVar, label = loopLabel,
-                iterLabel = loopLabel, countVar = loopCountVar, itemVar = "", itemKind = "", indexVar = "", hasIndex = false);
+            iifeDepth = loopDepth, valKind = passCtxValKind, valVar = loopValVar, label = loopLabel,
+            iterLabel = loopLabel, countVar = loopCountVar, itemVar = "", itemKind = "", indexVar = "", hasIndex = false);
             headerCtxs := appendCtx(ctxs, headerCtx);
             hdrStart := skipTrivia(source, condParseStart + 4, prefix);
             rejectHeaderBlockTag(source, hdrStart, prefix, "loop");
@@ -4924,21 +4946,21 @@ parseBinaryCtx := fn(target: String, source: String, position: Int, prefix: Stri
             if isSeqLoop and seqItemName =!= "" {
                 if seqItemKind == "Unit" {
                     listLib.pushBack(mut loopLocals, (name = seqItemName, runtime = targetUnitLiteralCode(target), kind = "Unit",
-                        mutable = false, writable = false, depth = 1, constant = true, code = targetUnitLiteralCode(target),
-                        intValue = 0, textValue = "", initState = "init"));
+                    mutable = false, writable = false, depth = 1, constant = true, code = targetUnitLiteralCode(target),
+                    intValue = 0, textValue = "", initState = "init"));
                 } else {
                     listLib.pushBack(mut loopLocals, (name = seqItemName, runtime = loopItemMetaVar, kind = seqItemKind,
-                        mutable = false, writable = false, depth = 1, constant = false, code = loopItemMetaVar,
-                        intValue = 0, textValue = "", initState = "init"));
+                    mutable = false, writable = false, depth = 1, constant = false, code = loopItemMetaVar,
+                    intValue = 0, textValue = "", initState = "init"));
                 }
             }
             bodyCtx := (id = loopId, tag = condParseTag, kind = "loop", phase = "body",
-                iifeDepth = loopDepth, valKind = passCtxValKind, valVar = loopValVar, label = loopLabel,
-                iterLabel = loopLabel, countVar = loopCountVar, itemVar = loopItemMetaVar, itemKind = seqItemKind,
-                indexVar = loopIdxVar, hasIndex = isSeqLoop);
+            iifeDepth = loopDepth, valKind = passCtxValKind, valVar = loopValVar, label = loopLabel,
+            iterLabel = loopLabel, countVar = loopCountVar, itemVar = loopItemMetaVar, itemKind = seqItemKind,
+            indexVar = loopIdxVar, hasIndex = isSeqLoop);
             bodyCtxs := appendCtx(ctxs, bodyCtx);
             bodyParsed := self(target, source, loopOpen - 1, prefix, loopLocals, functions, params, currentName,
-                passBodyExpected, 0, bodyCtxs, loopDepth, passInfer, "loopBody");
+            passBodyExpected, 0, bodyCtxs, loopDepth, passInfer, "loopBody");
             if passInfer { passMarkers = collectParsedMarkers(passMarkers, bodyParsed); }
             if isPass1 {
                 loopEndCursor = bodyParsed.next;
@@ -4955,11 +4977,11 @@ parseBinaryCtx := fn(target: String, source: String, position: Int, prefix: Stri
                         rejectMisplacedTag(source, probeAfterThen, prefix, "block tag cannot appear after then");
                         probeThenOpen := expectSymbol(source, probeAfterThen, "{", prefix);
                         thenProbeCtx := (id = loopId, tag = condParseTag, kind = "loop", phase = "then",
-                            iifeDepth = loopDepth, valKind = "__infer__", valVar = loopValVar, label = loopLabel,
-                            iterLabel = "", countVar = loopCountVar, itemVar = loopItemMetaVar, itemKind = seqItemKind,
-                            indexVar = loopIdxVar, hasIndex = isSeqLoop);
+                        iifeDepth = loopDepth, valKind = "__infer__", valVar = loopValVar, label = loopLabel,
+                        iterLabel = "", countVar = loopCountVar, itemVar = loopItemMetaVar, itemKind = seqItemKind,
+                        indexVar = loopIdxVar, hasIndex = isSeqLoop);
                         thenProbe := self(target, source, probeThenOpen - 1, prefix, locals, functions, params, currentName,
-                            normExpected, 0, appendCtx(ctxs, thenProbeCtx), iifeDepth, true, "exprOut");
+                        normExpected, 0, appendCtx(ctxs, thenProbeCtx), iifeDepth, true, "exprOut");
                         passMarkers = collectParsedMarkers(passMarkers, thenProbe);
                     }
                     resolvedPreThenKind = inferLoopValueKind(passMarkers, loopId, loopTagDisplay, source, condParseTagAt, prefix, loopHintExpected);
@@ -4985,7 +5007,7 @@ parseBinaryCtx := fn(target: String, source: String, position: Int, prefix: Stri
                 hasPayBrk := codeUsesTextCall(bodyParsed.code, "lite$throwTransfer(" + brkPayId + ",");
                 hasBareBrk := codeUsesTextCall(bodyParsed.code, "lite$throwTransfer(" + brkBareId + ",");
                 valAssign := if resolvedPreThenKind == "Unit" or resolvedPreThenKind == "Never" { "" }
-                    else { loopValVar + " = lite$transferVal; " };
+                else { loopValVar + " = lite$transferVal; " };
                 var wrappedBody := bodyParsed.code;
                 if hasPayCont or hasBareCont or hasPayBrk or hasBareBrk {
                     catchClauses: mut List<String> = [];
@@ -5002,7 +5024,7 @@ parseBinaryCtx := fn(target: String, source: String, position: Int, prefix: Stri
                         listLib.pushBack(mut catchClauses, "if (lite$hasTransfer(lite$err, " + brkBareId + ")) { break; }");
                     }
                     wrappedBody = "try { " + bodyParsed.code + " } catch (lite$err) { " +
-                        textLib.joinTexts(catchClauses, " else ") + " else { throw lite$err; } }";
+                    textLib.joinTexts(catchClauses, " else ") + " else { throw lite$err; } }";
                 }
                 rawLoopStmt := if isSeqLoop {
                     "for (const " + loopIterVar + " of " + targetListCopyCode(target, seqCode) + ") { " + metaStep + wrappedBody + " }"
@@ -5017,7 +5039,7 @@ parseBinaryCtx := fn(target: String, source: String, position: Int, prefix: Stri
                     "while (" + whileCond + ") { " + metaStep + wrappedBody + " }"
                 };
                 needsLoopLabel := codeUsesTextCall(rawLoopStmt, "break " + loopLabel + ";") or
-                    codeUsesTextCall(rawLoopStmt, "continue " + loopLabel + ";");
+                codeUsesTextCall(rawLoopStmt, "continue " + loopLabel + ";");
                 labeledLoop := if needsLoopLabel { loopLabel + ": " + rawLoopStmt } else { rawLoopStmt };
                 hdrCheckText := if isSeqLoop { seqCode } else { condCode };
                 hdrHasPayBrk := codeUsesTextCall(hdrCheckText, "lite$throwTransfer(" + brkPayId + ",");
@@ -5031,7 +5053,7 @@ parseBinaryCtx := fn(target: String, source: String, position: Int, prefix: Stri
                         listLib.pushBack(mut hdrClauses, "if (lite$hasTransfer(lite$err, " + brkBareId + ")) { }");
                     }
                     loopStmtCode = "try { " + labeledLoop + " } catch (lite$err) { " +
-                        textLib.joinTexts(hdrClauses, " else ") + " else { throw lite$err; } }";
+                    textLib.joinTexts(hdrClauses, " else ") + " else { throw lite$err; } }";
                 } else {
                     loopStmtCode = labeledLoop;
                 }
@@ -5045,12 +5067,12 @@ parseBinaryCtx := fn(target: String, source: String, position: Int, prefix: Stri
                 decls = decls + "let " + loopIdxVar + ": bigint = 0n; void " + loopIdxVar + "; ";
                 if finalSeqItemKind =!= "" and finalSeqItemKind =!= "Unit" {
                     decls = decls + "let " + loopItemMetaVar + ": " + tsFunctionType(finalSeqItemKind) + " = " +
-                        zeroParsed(target, finalSeqItemKind, 0).code + "; void " + loopItemMetaVar + "; ";
+                    zeroParsed(target, finalSeqItemKind, 0).code + "; void " + loopItemMetaVar + "; ";
                 }
             }
             if resolvedPreThenKind =!= "Unit" and resolvedPreThenKind =!= "Never" {
                 decls = decls + "let " + loopValVar + ": " + tsFunctionType(resolvedPreThenKind) + " = " +
-                    zeroParsed(target, resolvedPreThenKind, 0).code + "; void " + loopValVar + "; ";
+                zeroParsed(target, resolvedPreThenKind, 0).code + "; void " + loopValVar + "; ";
             }
         }
         var loopIifeBody := "";
@@ -5060,11 +5082,11 @@ parseBinaryCtx := fn(target: String, source: String, position: Int, prefix: Stri
             rejectMisplacedTag(source, afterThenKw, prefix, "block tag cannot appear after then");
             thenOpen := expectSymbol(source, afterThenKw, "{", prefix);
             loopThenCtx := (id = loopId, tag = condParseTag, kind = "loop", phase = "then",
-                iifeDepth = loopDepth, valKind = resolvedPreThenKind, valVar = loopValVar, label = loopLabel,
-                iterLabel = "", countVar = loopCountVar, itemVar = loopItemMetaVar, itemKind = finalSeqItemKind,
-                indexVar = loopIdxVar, hasIndex = finalIsSeqLoop);
+            iifeDepth = loopDepth, valKind = resolvedPreThenKind, valVar = loopValVar, label = loopLabel,
+            iterLabel = "", countVar = loopCountVar, itemVar = loopItemMetaVar, itemKind = finalSeqItemKind,
+            indexVar = loopIdxVar, hasIndex = finalIsSeqLoop);
             thenParsed := self(target, source, thenOpen - 1, prefix, locals, functions, params, currentName,
-                normExpected, 0, appendCtx(ctxs, loopThenCtx), iifeDepth, inferMode, "branch");
+            normExpected, 0, appendCtx(ctxs, loopThenCtx), iifeDepth, inferMode, "branch");
             if inferMode {
                 thenMarkers := loopOuterMarkers + collectParsedMarkers("", thenParsed);
                 finalKind := if resolvedPreThenKind == "Never" { "Never" } else { thenParsed.kind };
@@ -5072,7 +5094,7 @@ parseBinaryCtx := fn(target: String, source: String, position: Int, prefix: Stri
             } else if resolvedPreThenKind == "Never" {
                 loopIifeBody = decls + loopStmtCode + " throw new Error(\"unreachable\");";
                 left = (kind = "Never", code = "(() => { " + loopIifeBody + " })()",
-                    intValue = 0, textValue = "", constant = false, next = thenParsed.next);
+                intValue = 0, textValue = "", constant = false, next = thenParsed.next);
             } else {
                 thenRet := if thenParsed.kind == "Unit" {
                     "void (" + thenParsed.code + "); return undefined;"
@@ -5083,7 +5105,7 @@ parseBinaryCtx := fn(target: String, source: String, position: Int, prefix: Stri
                 };
                 loopIifeBody = decls + loopStmtCode + " " + thenRet;
                 left = (kind = thenParsed.kind, code = "(() => { " + loopIifeBody + " })()",
-                    intValue = 0, textValue = "", constant = false, next = thenParsed.next);
+                intValue = 0, textValue = "", constant = false, next = thenParsed.next);
             }
         } else {
             if inferMode {
@@ -5098,7 +5120,7 @@ parseBinaryCtx := fn(target: String, source: String, position: Int, prefix: Stri
                 };
                 loopIifeBody = decls + loopStmtCode + finalRet;
                 left = (kind = resolvedPreThenKind, code = "(() => { " + loopIifeBody + " })()",
-                    intValue = 0, textValue = "", constant = false, next = loopEndCursor);
+                intValue = 0, textValue = "", constant = false, next = loopEndCursor);
             }
         }
         afterLoopConstruct := skipTrivia(source, left.next, prefix);
@@ -5110,15 +5132,15 @@ parseBinaryCtx := fn(target: String, source: String, position: Int, prefix: Stri
             rejectMisplacedTag(source, afterFinKw, prefix, "block tag cannot appear after finally");
             finOpen := expectSymbol(source, afterFinKw, "{", prefix);
             loopFinCtx := (id = loopId, tag = condParseTag, kind = "loop", phase = "finally",
-                iifeDepth = loopDepth, valKind = resolvedPreThenKind, valVar = loopValVar, label = loopLabel,
-                iterLabel = "", countVar = loopCountVar, itemVar = loopItemMetaVar, itemKind = finalSeqItemKind,
-                indexVar = loopIdxVar, hasIndex = finalIsSeqLoop);
+            iifeDepth = loopDepth, valKind = resolvedPreThenKind, valVar = loopValVar, label = loopLabel,
+            iterLabel = "", countVar = loopCountVar, itemVar = loopItemMetaVar, itemKind = finalSeqItemKind,
+            indexVar = loopIdxVar, hasIndex = finalIsSeqLoop);
             finBarrierCtx := (id = 0, tag = "", kind = "finally", phase = "finally",
-                iifeDepth = loopDepth, valKind = "Unit", valVar = "", label = "",
-                iterLabel = "", countVar = "", itemVar = "", itemKind = "", indexVar = "", hasIndex = false);
+            iifeDepth = loopDepth, valKind = "Unit", valVar = "", label = "",
+            iterLabel = "", countVar = "", itemVar = "", itemKind = "", indexVar = "", hasIndex = false);
             loopFinCtxs := appendCtx(appendCtx(ctxs, loopFinCtx), finBarrierCtx);
             finParsed := self(target, source, finOpen - 1, prefix, locals, functions, params, currentName,
-                "", 0, loopFinCtxs, loopDepth, inferMode, "finally");
+            "", 0, loopFinCtxs, loopDepth, inferMode, "finally");
             afterFinClose := skipTrivia(source, finParsed.next, prefix);
             if textLib.wordAt(source, afterFinClose, "then") {
                 failAt(source, afterFinClose, prefix, "then must appear before finally");
@@ -5132,7 +5154,7 @@ parseBinaryCtx := fn(target: String, source: String, position: Int, prefix: Stri
                 left = withMarkers((kind = finalLoopKind, code = "", intValue = 0, textValue = "", constant = false, next = finParsed.next), mergedLoopMarkers);
             } else {
                 left = (kind = finalLoopKind, code = "(() => { try { " + loopIifeBody + " } finally { " + finParsed.code + " } })()",
-                    intValue = 0, textValue = "", constant = false, next = finParsed.next);
+                intValue = 0, textValue = "", constant = false, next = finParsed.next);
             }
         }
     } else if condParseKind =!= "" {
@@ -5167,8 +5189,8 @@ parseBinaryCtx := fn(target: String, source: String, position: Int, prefix: Stri
         }
         if not useIifeCond {
             condBarrierCtxs := appendCtx(ctxs, (id = 0, tag = "", kind = condParseKind, phase = "body",
-                iifeDepth = iifeDepth, valKind = "", valVar = "", label = "", iterLabel = "",
-                countVar = "", itemVar = "", itemKind = "", indexVar = "", hasIndex = false));
+            iifeDepth = iifeDepth, valKind = "", valVar = "", label = "", iterLabel = "",
+            countVar = "", itemVar = "", itemKind = "", indexVar = "", hasIndex = false));
             if condParseKind == "if" {
                 var cursor := skipTrivia(source, condParseStart + 2, prefix);
                 var ifMarkers := "";
@@ -5240,7 +5262,7 @@ parseBinaryCtx := fn(target: String, source: String, position: Int, prefix: Stri
                         joinedKind := joinBranchKind(resultKind, branch.kind);
                         if joinedKind == "" {
                             failAt(source, elseBranchStart, prefix, "value if branches must have the same kind, got " +
-                                displayKind(resultKind) + " and " + displayKind(branch.kind));
+                            displayKind(resultKind) + " and " + displayKind(branch.kind));
                         }
                         resultKind = joinedKind;
                         cursor = branch.next;
@@ -5256,7 +5278,7 @@ parseBinaryCtx := fn(target: String, source: String, position: Int, prefix: Stri
                         joinedKind := joinBranchKind(resultKind, branch.kind);
                         if joinedKind == "" {
                             failAt(source, elseBranchStart, prefix, "value if branches must have the same kind, got " +
-                                displayKind(resultKind) + " and " + displayKind(branch.kind));
+                            displayKind(resultKind) + " and " + displayKind(branch.kind));
                         }
                         resultKind = joinedKind;
                         cursor = branch.next;
@@ -5299,7 +5321,7 @@ parseBinaryCtx := fn(target: String, source: String, position: Int, prefix: Stri
                         rejectMisplacedTag(source, afterUnderscore, prefix, "block tag cannot appear after _ in match arm");
                     }
                     isFallback := textLib.wordAt(source, cursor, "_") and afterUnderscore < size and
-                        textLib.at(source, afterUnderscore) == "{";
+                    textLib.at(source, afterUnderscore) == "{";
                     var armOpen := -1;
                     if isFallback {
                         armOpen = afterUnderscore;
@@ -5340,7 +5362,7 @@ parseBinaryCtx := fn(target: String, source: String, position: Int, prefix: Stri
                     joinedKind := joinBranchKind(resultKind, branch.kind);
                     if joinedKind == "" {
                         failAt(source, armBodyStart, prefix, "value match arms must have the same kind, got " +
-                            displayKind(resultKind) + " and " + displayKind(branch.kind));
+                        displayKind(resultKind) + " and " + displayKind(branch.kind));
                     }
                     resultKind = joinedKind;
                     listLib.pushBack(mut branchCodes, branch.code);
@@ -5380,8 +5402,8 @@ parseBinaryCtx := fn(target: String, source: String, position: Int, prefix: Stri
                     resolvedPreThenKind
                 };
                 condCtx := (id = condId, tag = condParseTag, kind = condParseKind, phase = "body",
-                    iifeDepth = condDepth, valKind = passCtxValKind, valVar = condValVar, label = condLabel,
-                    iterLabel = "", countVar = "", itemVar = "", itemKind = "", indexVar = "", hasIndex = false);
+                iifeDepth = condDepth, valKind = passCtxValKind, valVar = condValVar, label = condLabel,
+                iterLabel = "", countVar = "", itemVar = "", itemKind = "", indexVar = "", hasIndex = false);
                 condPassCtxs := appendCtx(ctxs, condCtx);
                 passBranchExpected := if isPass1 {
                     condHintExpected
@@ -5457,7 +5479,7 @@ parseBinaryCtx := fn(target: String, source: String, position: Int, prefix: Stri
                             joinedKind := joinBranchKind(passResultKind, branch.kind);
                             if joinedKind == "" {
                                 failAt(source, elseBranchStart, prefix, "value if branches must have the same kind, got " +
-                                    displayKind(passResultKind) + " and " + displayKind(branch.kind));
+                                displayKind(passResultKind) + " and " + displayKind(branch.kind));
                             }
                             passResultKind = joinedKind;
                             cursor = branch.next;
@@ -5474,7 +5496,7 @@ parseBinaryCtx := fn(target: String, source: String, position: Int, prefix: Stri
                             joinedKind := joinBranchKind(passResultKind, branch.kind);
                             if joinedKind == "" {
                                 failAt(source, elseBranchStart, prefix, "value if branches must have the same kind, got " +
-                                    displayKind(passResultKind) + " and " + displayKind(branch.kind));
+                                displayKind(passResultKind) + " and " + displayKind(branch.kind));
                             }
                             passResultKind = joinedKind;
                             cursor = branch.next;
@@ -5509,7 +5531,7 @@ parseBinaryCtx := fn(target: String, source: String, position: Int, prefix: Stri
                             rejectMisplacedTag(source, afterUnderscore, prefix, "block tag cannot appear after _ in match arm");
                         }
                         isFallback := textLib.wordAt(source, cursor, "_") and afterUnderscore < size and
-                            textLib.at(source, afterUnderscore) == "{";
+                        textLib.at(source, afterUnderscore) == "{";
                         var armOpen := -1;
                         if isFallback {
                             armOpen = afterUnderscore;
@@ -5551,7 +5573,7 @@ parseBinaryCtx := fn(target: String, source: String, position: Int, prefix: Stri
                         joinedKind := joinBranchKind(passResultKind, branch.kind);
                         if joinedKind == "" {
                             failAt(source, armBodyStart, prefix, "value match arms must have the same kind, got " +
-                                displayKind(passResultKind) + " and " + displayKind(branch.kind));
+                            displayKind(passResultKind) + " and " + displayKind(branch.kind));
                         }
                         passResultKind = joinedKind;
                         listLib.pushBack(mut passBranchCodes, branch.code);
@@ -5615,9 +5637,9 @@ parseBinaryCtx := fn(target: String, source: String, position: Int, prefix: Stri
                     needsCondTry := condParseTag =!= "" and codeUsesTextCall(rawIfStmt, "lite$throwTransfer(" + integer.intText(condId) + ",");
                     if needsCondTry {
                         catchAssign := if resolvedPreThenKind == "Unit" or resolvedPreThenKind == "Never" { "" }
-                            else { condValVar + " = lite$transferVal;" };
+                        else { condValVar + " = lite$transferVal;" };
                         condStmtCode = "try { " + rawIfStmt + " } catch (lite$err) { if (lite$hasTransfer(lite$err, " +
-                            integer.intText(condId) + ")) { " + catchAssign + " } else { throw lite$err; } }";
+                        integer.intText(condId) + ")) { " + catchAssign + " } else { throw lite$err; } }";
                     } else {
                         condStmtCode = rawIfStmt;
                     }
@@ -5635,10 +5657,10 @@ parseBinaryCtx := fn(target: String, source: String, position: Int, prefix: Stri
                 thenLabel := "lite$b" + integer.intText(thenId);
                 thenPass1ValKind := if normExpected == "" { "__infer__" } else { "__infer__:" + normExpected };
                 thenPass1Ctx := (id = thenId, tag = condParseTag, kind = condParseKind, phase = "then",
-                    iifeDepth = condDepth, valKind = thenPass1ValKind, valVar = thenValVar, label = thenLabel,
-                    iterLabel = "", countVar = "", itemVar = condValVar, itemKind = resolvedPreThenKind, indexVar = "", hasIndex = false);
+                iifeDepth = condDepth, valKind = thenPass1ValKind, valVar = thenValVar, label = thenLabel,
+                iterLabel = "", countVar = "", itemVar = condValVar, itemKind = resolvedPreThenKind, indexVar = "", hasIndex = false);
                 thenPass1 := self(target, source, thenOpen - 1, prefix, locals, functions, params, currentName,
-                    normExpected, 0, appendCtx(ctxs, thenPass1Ctx), condDepth, true, "tagged");
+                normExpected, 0, appendCtx(ctxs, thenPass1Ctx), condDepth, true, "tagged");
                 if inferMode {
                     thenMarkers := condOuterMarkers + collectParsedMarkers("", thenPass1);
                     finalKind := if resolvedPreThenKind == "Never" { "Never" } else { thenPass1.kind };
@@ -5647,14 +5669,14 @@ parseBinaryCtx := fn(target: String, source: String, position: Int, prefix: Stri
                     thenValKind := thenPass1.kind;
                     thenPass2Expected := if thenValKind == "Unit" or thenValKind == "Never" { "" } else { thenValKind };
                     thenPass2Ctx := (id = thenId, tag = condParseTag, kind = condParseKind, phase = "then",
-                        iifeDepth = condDepth, valKind = thenValKind, valVar = thenValVar, label = thenLabel,
-                        iterLabel = "", countVar = "", itemVar = condValVar, itemKind = resolvedPreThenKind, indexVar = "", hasIndex = false);
+                    iifeDepth = condDepth, valKind = thenValKind, valVar = thenValVar, label = thenLabel,
+                    iterLabel = "", countVar = "", itemVar = condValVar, itemKind = resolvedPreThenKind, indexVar = "", hasIndex = false);
                     thenPass2 := self(target, source, thenOpen - 1, prefix, locals, functions, params, currentName,
-                        thenPass2Expected, 0, appendCtx(ctxs, thenPass2Ctx), condDepth, false, "tagged");
+                    thenPass2Expected, 0, appendCtx(ctxs, thenPass2Ctx), condDepth, false, "tagged");
                     if resolvedPreThenKind == "Never" {
                         condIifeBody = condStmtCode;
                         left = (kind = "Never", code = "(() => { " + condIifeBody + " })()",
-                            intValue = 0, textValue = "", constant = false, next = thenPass2.next);
+                        intValue = 0, textValue = "", constant = false, next = thenPass2.next);
                     } else {
                         valDecl := if resolvedPreThenKind == "Unit" {
                             ""
@@ -5668,7 +5690,7 @@ parseBinaryCtx := fn(target: String, source: String, position: Int, prefix: Stri
                         };
                         condIifeBody = valDecl + condStmtCode + " " + thenRet;
                         left = (kind = thenValKind, code = "(() => { " + condIifeBody + " })()",
-                            intValue = 0, textValue = "", constant = false, next = thenPass2.next);
+                        intValue = 0, textValue = "", constant = false, next = thenPass2.next);
                     }
                 }
             } else {
@@ -5689,7 +5711,7 @@ parseBinaryCtx := fn(target: String, source: String, position: Int, prefix: Stri
                     };
                     condIifeBody = valDecl + condStmtCode + finalRet;
                     left = (kind = resolvedPreThenKind, code = "(() => { " + condIifeBody + " })()",
-                        intValue = 0, textValue = "", constant = false, next = condEndCursor);
+                    intValue = 0, textValue = "", constant = false, next = condEndCursor);
                 }
             }
             afterCondConstruct := skipTrivia(source, left.next, prefix);
@@ -5704,14 +5726,14 @@ parseBinaryCtx := fn(target: String, source: String, position: Int, prefix: Stri
                 rejectMisplacedTag(source, afterFinKw, prefix, "block tag cannot appear after finally");
                 finOpen := expectSymbol(source, afterFinKw, "{", prefix);
                 condFinCtx := (id = condId, tag = condParseTag, kind = condParseKind, phase = "finally",
-                    iifeDepth = condDepth, valKind = resolvedPreThenKind, valVar = condValVar, label = condLabel,
-                    iterLabel = "", countVar = "", itemVar = "", itemKind = "", indexVar = "", hasIndex = false);
+                iifeDepth = condDepth, valKind = resolvedPreThenKind, valVar = condValVar, label = condLabel,
+                iterLabel = "", countVar = "", itemVar = "", itemKind = "", indexVar = "", hasIndex = false);
                 finBarrierCtx := (id = 0, tag = "", kind = "finally", phase = "finally",
-                    iifeDepth = condDepth, valKind = "Unit", valVar = "", label = "",
-                    iterLabel = "", countVar = "", itemVar = "", itemKind = "", indexVar = "", hasIndex = false);
+                iifeDepth = condDepth, valKind = "Unit", valVar = "", label = "",
+                iterLabel = "", countVar = "", itemVar = "", itemKind = "", indexVar = "", hasIndex = false);
                 condFinCtxs := appendCtx(appendCtx(ctxs, condFinCtx), finBarrierCtx);
                 finParsed := self(target, source, finOpen - 1, prefix, locals, functions, params, currentName,
-                    "", 0, condFinCtxs, condDepth, inferMode, "finally");
+                "", 0, condFinCtxs, condDepth, inferMode, "finally");
                 afterFinClose := skipTrivia(source, finParsed.next, prefix);
                 if textLib.wordAt(source, afterFinClose, "then") {
                     failAt(source, afterFinClose, prefix, "then must appear before finally");
@@ -5725,7 +5747,7 @@ parseBinaryCtx := fn(target: String, source: String, position: Int, prefix: Stri
                     left = withMarkers((kind = finalCondKind, code = "", intValue = 0, textValue = "", constant = false, next = finParsed.next), mergedCondMarkers);
                 } else {
                     left = (kind = finalCondKind, code = "(() => { try { " + condIifeBody + " } finally { " + finParsed.code + " } })()",
-                        intValue = 0, textValue = "", constant = false, next = finParsed.next);
+                    intValue = 0, textValue = "", constant = false, next = finParsed.next);
                 }
             }
         }
@@ -5747,8 +5769,8 @@ parseBinaryCtx := fn(target: String, source: String, position: Int, prefix: Stri
                         failAt(source, labelStart, prefix, "array index " + textLib.slice(source, labelStart, end) + " out of bounds");
                     }
                     left = withMarkers((kind = arrayElementKind(left.kind), code = "(" + left.code + ")[" + integer.intText(fieldIndex) + "]!",
-                        intValue = 0, textValue = "", constant = false, next = end),
-                        if inferMode { collectParsedMarkers("", left) } else { "" });
+                    intValue = 0, textValue = "", constant = false, next = end),
+                    if inferMode { collectParsedMarkers("", left) } else { "" });
                 } else if not isTupleKind(left.kind) {
                     failAt(source, postPosition, prefix, "field access requires a tuple or module value");
                 } else {
@@ -5757,8 +5779,8 @@ parseBinaryCtx := fn(target: String, source: String, position: Int, prefix: Stri
                         failAt(source, labelStart, prefix, "tuple has no field " + textLib.slice(source, labelStart, end));
                     }
                     left = withMarkers((kind = comp.kind, code = "(" + left.code + ")." + comp.prop,
-                        intValue = 0, textValue = "", constant = false, next = end),
-                        if inferMode { collectParsedMarkers("", left) } else { "" });
+                    intValue = 0, textValue = "", constant = false, next = end),
+                    if inferMode { collectParsedMarkers("", left) } else { "" });
                 }
             } else if labelStart >= textLib.length(source) or not textLib.isNameStart(textLib.at(source, labelStart)) {
                 break;
@@ -5770,7 +5792,7 @@ parseBinaryCtx := fn(target: String, source: String, position: Int, prefix: Stri
                     functionIndex := findFunction(functions, qualified);
                     if functionIndex >= 0 {
                         left = (kind = "ModuleFunction", code = integer.intText(start), intValue = functionIndex, textValue = qualified,
-                            constant = false, next = labelEnd);
+                        constant = false, next = labelEnd);
                     } else {
                         memberIndex := localIndex(locals, qualified);
                         if memberIndex < 0 {
@@ -5781,7 +5803,7 @@ parseBinaryCtx := fn(target: String, source: String, position: Int, prefix: Stri
                         }
                         member := locals[memberIndex];
                         left = (kind = member.kind, code = member.runtime, intValue = member.intValue,
-                            textValue = member.textValue, constant = member.constant, next = labelEnd);
+                        textValue = member.textValue, constant = member.constant, next = labelEnd);
                     }
                 } else {
                     if not isTupleKind(left.kind) {
@@ -5792,8 +5814,8 @@ parseBinaryCtx := fn(target: String, source: String, position: Int, prefix: Stri
                         failAt(source, labelStart, prefix, "tuple has no field " + label);
                     }
                     left = withMarkers((kind = fieldKind, code = "(" + left.code + ")." + label,
-                        intValue = 0, textValue = "", constant = false, next = labelEnd),
-                        if inferMode { collectParsedMarkers("", left) } else { "" });
+                    intValue = 0, textValue = "", constant = false, next = labelEnd),
+                    if inferMode { collectParsedMarkers("", left) } else { "" });
                 }
             }
         } else if postPosition < textLib.length(source) and textLib.at(source, postPosition) == "[" {
@@ -5809,9 +5831,9 @@ parseBinaryCtx := fn(target: String, source: String, position: Int, prefix: Stri
             next := expectSymbol(source, close, "]", prefix);
             elemKind := if isListKind(left.kind) { listElementKind(left.kind) } else { arrayElementKind(left.kind) };
             left = withMarkers((kind = elemKind,
-                code = "lite$listAt((" + left.code + "), " + index.code + ", " + integer.intText(indexStart) + ")",
-                intValue = 0, textValue = "", constant = false, next = next),
-                if inferMode { collectParsedMarkers(collectParsedMarkers("", left), index) } else { "" });
+            code = "lite$listAt((" + left.code + "), " + index.code + ", " + integer.intText(indexStart) + ")",
+            intValue = 0, textValue = "", constant = false, next = next),
+            if inferMode { collectParsedMarkers(collectParsedMarkers("", left), index) } else { "" });
         } else if left.kind == "ListOp" {
             grant := parseListGrant(source, left.next, prefix, locals, left.code);
             if left.textValue == "push_back" or left.textValue == "push_front" {
@@ -5824,18 +5846,18 @@ parseBinaryCtx := fn(target: String, source: String, position: Int, prefix: Stri
                 value := self(target, source, valueStart, prefix, locals, functions, params, currentName, elementKind, 0, ctxs, iifeDepth, inferMode, "");
                 if not isCompatibleKind(elementKind, value.kind) {
                     failAt(source, valueStart, prefix, left.code + " element must be " + displayKind(elementKind) +
-                        ", got " + displayKind(value.kind));
+                    ", got " + displayKind(value.kind));
                 }
                 close := expectNonemptyCallClose(source, value.next, prefix);
                 method := if left.textValue == "push_back" { ".push(" } else { ".unshift(" };
                 left = withMarkers((kind = "Unit", code = grant.runtime + method + assignValueCode(target, elementKind, value.kind, value.code) + ")",
-                    intValue = 0, textValue = "", constant = false, next = close),
-                    if inferMode { collectParsedMarkers("", value) } else { "" });
+                intValue = 0, textValue = "", constant = false, next = close),
+                if inferMode { collectParsedMarkers("", value) } else { "" });
             } else {
                 close := expectNonemptyCallClose(source, grant.next, prefix);
                 helper := if left.textValue == "pop_back" { "lite$listPopBack(" } else { "lite$listPopFront(" };
                 left = (kind = listElementKind(grant.kind), code = helper + grant.runtime + ", " + integer.intText(start) + ")",
-                    intValue = 0, textValue = "", constant = false, next = close);
+                intValue = 0, textValue = "", constant = false, next = close);
             }
         } else if left.kind == "ModuleFunction" {
             info := functions[left.intValue];
@@ -5859,18 +5881,18 @@ parseBinaryCtx := fn(target: String, source: String, position: Int, prefix: Stri
                     value := self(target, source, valueStart, prefix, locals, functions, params, currentName, elementKind, 0, ctxs, iifeDepth, inferMode, "");
                     if not isCompatibleKind(elementKind, value.kind) {
                         failAt(source, valueStart, prefix, listOpDisplay + " element must be " + displayKind(elementKind) +
-                            ", got " + displayKind(value.kind));
+                        ", got " + displayKind(value.kind));
                     }
                     close := expectNonemptyCallClose(source, value.next, prefix);
                     method := if listOpName == "push_back" { ".push(" } else { ".unshift(" };
                     left = withMarkers((kind = "Unit", code = grant.runtime + method + assignValueCode(target, elementKind, value.kind, value.code) + ")",
-                        intValue = 0, textValue = "", constant = false, next = close),
-                        if inferMode { collectParsedMarkers("", value) } else { "" });
+                    intValue = 0, textValue = "", constant = false, next = close),
+                    if inferMode { collectParsedMarkers("", value) } else { "" });
                 } else {
                     close := expectNonemptyCallClose(source, grant.next, prefix);
                     helper := if listOpName == "pop_back" { "lite$listPopBack(" } else { "lite$listPopFront(" };
                     left = (kind = listElementKind(grant.kind), code = helper + grant.runtime + ", " + integer.intText(start) + ")",
-                        intValue = 0, textValue = "", constant = false, next = close);
+                    intValue = 0, textValue = "", constant = false, next = close);
                 }
             } else if info.count < 0 {
                 failAt(source, errPos, prefix, "host output functions are standalone statements");
@@ -5885,9 +5907,9 @@ parseBinaryCtx := fn(target: String, source: String, position: Int, prefix: Stri
                 if cursor < size and textLib.at(source, cursor) =!= ")" {
                     loop true {
                         isNamed := if isSingleEquals(source, cursor) { true }
-                            else if cursor < size and textLib.isNameStart(textLib.at(source, cursor)) {
-                                isSingleEquals(source, skipTrivia(source, textLib.skipName(source, cursor), prefix))
-                            } else { false };
+                        else if cursor < size and textLib.isNameStart(textLib.at(source, cursor)) {
+                            isSingleEquals(source, skipTrivia(source, textLib.skipName(source, cursor), prefix))
+                        } else { false };
                         if isNamed {
                             failAt(source, cursor, prefix, "named arguments are not supported for host function " + calleeDisplay);
                         }
@@ -5900,7 +5922,7 @@ parseBinaryCtx := fn(target: String, source: String, position: Int, prefix: Stri
                         if inferMode { callMarkers = collectParsedMarkers(callMarkers, argument); }
                         if not isCompatibleKind(expected, argument.kind) {
                             failAt(source, cursor, prefix, "argument " + formatLib.decimalText(argumentCount + 1) + " of " + calleeDisplay +
-                                " must be " + displayKind(expected) + ", got " + displayKind(argument.kind));
+                            " must be " + displayKind(expected) + ", got " + displayKind(argument.kind));
                         }
                         listLib.pushBack(mut argumentCodes, assignValueCode(target, expected, argument.kind, argument.code));
                         argumentCount = argumentCount + 1;
@@ -5915,12 +5937,12 @@ parseBinaryCtx := fn(target: String, source: String, position: Int, prefix: Stri
                 }
                 cursor = expectSymbol(source, cursor, ")", prefix);
                 optionalPrompt := info.runtime == "lite$inputAll" or info.runtime == "lite$inputLine" or
-                    info.runtime == "lite$inputInt" or info.runtime == "lite$inputFloat";
+                info.runtime == "lite$inputInt" or info.runtime == "lite$inputFloat";
                 optionalExit := info.runtime == "lite$exit";
                 if argumentCount =!= info.count and not ((optionalPrompt or optionalExit) and argumentCount == 0) {
                     suffix := if info.count == 1 { " argument" } else { " arguments" };
                     failAt(source, errPos, prefix, "function " + calleeDisplay + " expects " + formatLib.decimalText(info.count) +
-                        suffix + ", got " + formatLib.decimalText(argumentCount));
+                    suffix + ", got " + formatLib.decimalText(argumentCount));
                 }
                 if optionalExit and argumentCount == 0 {
                     listLib.pushBack(mut argumentCodes, targetIntLiteralCode(target, 0, false, "0"));
@@ -5929,7 +5951,7 @@ parseBinaryCtx := fn(target: String, source: String, position: Int, prefix: Stri
                     if argumentCount == 0 { listLib.pushBack(mut argumentCodes, "undefined"); }
                     place := sourceLib.lineColumn(source, errPos);
                     location := (if prefix == "" { "" } else { prefix + ":" }) + formatLib.decimalText(place.line) + ":" +
-                        formatLib.decimalText(place.column) + ": InputFault: ";
+                    formatLib.decimalText(place.column) + ": InputFault: ";
                     listLib.pushBack(mut argumentCodes, targetTextLiteralCode(target, location));
                 }
                 if info.runtime == "lite$textAt" or info.runtime == "lite$textSlice" {
@@ -5937,7 +5959,7 @@ parseBinaryCtx := fn(target: String, source: String, position: Int, prefix: Stri
                 }
                 callResultKind := if optionalExit { "Never" } else { info.result };
                 left = withMarkers((kind = callResultKind, code = info.runtime + "(" + textLib.joinTexts(argumentCodes, ", ") + ")",
-                    intValue = 0, textValue = "", constant = false, next = cursor), callMarkers);
+                intValue = 0, textValue = "", constant = false, next = cursor), callMarkers);
             } else {
                 size := textLib.length(source);
                 explicitLabels := collectExplicitCallLabels(source, postPosition, prefix);
@@ -6073,7 +6095,7 @@ parseBinaryCtx := fn(target: String, source: String, position: Int, prefix: Stri
                 if filledCount =!= info.count {
                     suffix := if info.count == 1 { " argument" } else { " arguments" };
                     failAt(source, errPos, prefix, "function " + calleeDisplay + " expects " + formatLib.decimalText(info.count) +
-                        suffix + ", got " + formatLib.decimalText(filledCount));
+                    suffix + ", got " + formatLib.decimalText(filledCount));
                 }
                 var isIdentityOrder := entryCount == info.count;
                 var slotIdx := 0;
@@ -6083,7 +6105,7 @@ parseBinaryCtx := fn(target: String, source: String, position: Int, prefix: Stri
                     expected := paramKindOf(params[info.first + slotIdx]);
                     if not isCompatibleKind(expected, entryKinds[k]) {
                         failAt(source, entryPositions[k], prefix, "argument " + formatLib.decimalText(slotIdx + 1) + " of " +
-                            calleeDisplay + " must be " + displayKind(expected) + ", got " + displayKind(entryKinds[k]));
+                        calleeDisplay + " must be " + displayKind(expected) + ", got " + displayKind(entryKinds[k]));
                     }
                     slotIdx += 1;
                 }
@@ -6296,10 +6318,10 @@ parseBinaryCtx := fn(target: String, source: String, position: Int, prefix: Stri
                 folded := tryFoldInteger(operator.text, left.intValue, right.intValue);
                 if folded.ok and numeric.intKindFits(promoted, folded.value) {
                     code := if (operator.text == "%" or operator.text == ":%") and left.intValue == integer.intMin() and right.intValue == -1 {
-                            targetIntLiteralCode(target, 0, false, "0")
-                        } else if operator.text == ":/" { targetFloorDivCode(target, left.code, right.code) }
-                        else if operator.text == ":%" { targetFloorModCode(target, left.code, right.code) }
-                        else { "(" + left.code + " " + operator.text + " " + right.code + ")" };
+                        targetIntLiteralCode(target, 0, false, "0")
+                    } else if operator.text == ":/" { targetFloorDivCode(target, left.code, right.code) }
+                    else if operator.text == ":%" { targetFloorModCode(target, left.code, right.code) }
+                    else { "(" + left.code + " " + operator.text + " " + right.code + ")" };
                     left = typedIntParsed(promoted, code, folded.value, true, right.next);
                 } else {
                     left = typedIntParsed(promoted, runtimeTypedIntegerCode(target, promoted, operator.text, left.code, right.code, operatorPosition), 0, false, right.next);
@@ -6454,9 +6476,9 @@ parsePartialAssignIf := fn(target: String, source: String, position: Int, prefix
         }
         cursor = expectSymbol(source, skipTrivia(source, branch.next, prefix), "}", prefix);
         listLib.pushBack(mut result, (kind = if isFirst { "If" } else { "ElseIf" }, name = "", runtime = "", code = conditionCode,
-            intValue = 0, textValue = ""));
+        intValue = 0, textValue = ""));
         listLib.pushBack(mut result, (kind = "Assign" + storageKind(targetKind), name = targetName, runtime = targetRuntime,
-            code = assignValueCode(target, targetKind, branch.kind, branch.code), intValue = branch.intValue, textValue = itemTextPayload(branch)));
+        code = assignValueCode(target, targetKind, branch.kind, branch.code), intValue = branch.intValue, textValue = itemTextPayload(branch)));
         isFirst = false;
         afterBranch := skipTrivia(source, cursor, prefix);
         if not textLib.wordAt(source, afterBranch, "else") {
@@ -6515,7 +6537,7 @@ parseInitializerExpression := fn(target: String, source: String, position: Int, 
             if matched and consumeStatementEnd(source, end, prefix) >= 0 {
                 parsed := parseBinaryCtx(target, source, inner, prefix, locals, functions, params, currentName, expected, -1, ctxs, 0, false, "");
                 return (kind = parsed.kind, code = parsed.code, intValue = parsed.intValue,
-                    textValue = parsed.textValue, constant = parsed.constant, next = end);
+                textValue = parsed.textValue, constant = parsed.constant, next = end);
             }
         }
     }
@@ -6563,7 +6585,7 @@ parseExpressionItem := fn(target: String, source: String, position: Int, prefix:
     returned := currentName =!= "" and valueTail and next < textLib.length(source) and textLib.at(source, next) == "}";
     if returned and not isCompatibleKind(currentResult, parsed.kind) {
         failAt(source, position, prefix, "cannot return " + displayKind(parsed.kind) + " from function " + currentName +
-            " returning " + displayKind(currentResult));
+        " returning " + displayKind(currentResult));
     }
     (next = next, returned = returned, code = if returned { if parsed.kind == "Unit" { targetUnitEvaluationCode(target, parsed.code) } else { assignValueCode(target, currentResult, parsed.kind, parsed.code) } } else { parsed.code }, valueKind = parsed.kind)
 }
@@ -6613,7 +6635,7 @@ collectFutureValues := fn(target: String, source: String, prefix: String, module
                         valueName := textLib.slice(source, nameStart, nameEnd);
                         futureRuntime := moduleValueRuntime(target, moduleKey, valueName);
                         listLib.pushBack(mut values, (name = valueName, runtime = futureRuntime,
-                            kind = kind, at = nameStart, intValue = intValue, textValue = textValue));
+                        kind = kind, at = nameStart, intValue = intValue, textValue = textValue));
                     }
                 }
                 cursor = valueStart;
@@ -6767,7 +6789,7 @@ collectPublishedValues := fn(source: String, prefix: String): List<String> {
                 operator := skipTrivia(source, nameEnd, prefix);
                 value := skipTrivia(source, operator + 2, prefix);
                 if textLib.startsWithAt(source, operator, ":=") and
-                    not textLib.wordAt(source, value, "fn") and not textLib.wordAt(source, value, "type") {
+                not textLib.wordAt(source, value, "fn") and not textLib.wordAt(source, value, "type") {
                     listLib.pushBack(mut names, textLib.slice(source, declarationStart, nameEnd));
                 }
                 position = nameEnd;
@@ -6821,8 +6843,8 @@ collectPublishedTypes := fn(source: String, prefix: String): List<String> {
 
 /** Parses one legacy or imported output statement into the same ordered argument group and ending marker. */
 parseOutputStatement := fn(target: String, source: String, openPosition: Int, outputName: String, prefix: String,
-    locals: List<Local>, functions: List<FunctionInfo>, params: List<String>, currentName: String,
-    live: Bool, ctxs: List<ConstructCtx>): Items {
+locals: List<Local>, functions: List<FunctionInfo>, params: List<String>, currentName: String,
+live: Bool, ctxs: List<ConstructCtx>): Items {
     var position := openPosition;
     if position >= textLib.length(source) or textLib.at(source, position) =!= "(" {
         failAt(source, position, prefix, "expected ( after " + outputName);
@@ -6832,7 +6854,7 @@ parseOutputStatement := fn(target: String, source: String, openPosition: Int, ou
     loop position < textLib.length(source) and textLib.at(source, position) =!= ")" {
         argument := parseExpressionCtx(target, source, position, prefix, locals, functions, params, currentName, ctxs);
         listLib.pushBack(mut result, (kind = argument.kind, name = "", runtime = "", code = argument.code,
-            intValue = argument.intValue, textValue = argument.textValue));
+        intValue = argument.intValue, textValue = argument.textValue));
         position = skipTrivia(source, argument.next, prefix);
         if position < textLib.length(source) and textLib.at(source, position) == "," {
             position = skipTrivia(source, position + 1, prefix);
@@ -6844,13 +6866,13 @@ parseOutputStatement := fn(target: String, source: String, openPosition: Int, ou
     statementNext := consumeStatementEnd(source, position, prefix);
     if statementNext < 0 { failAt(source, skipTrivia(source, position, prefix), prefix, "expected ; after " + outputName); }
     listLib.pushBack(mut result, (kind = if outputName == "outputLine" { "End" } else { "EndOutput" },
-        name = "", runtime = "", code = "", intValue = statementNext, textValue = ""));
+    name = "", runtime = "", code = "", intValue = statementNext, textValue = ""));
     result
 }
 
 /** Parses complete source with imported public function signatures available in its root symbol table. Exits 2 on unsupported, malformed or faulting source. */
 pub parseProgramWithModule := fn(target: String, source: String, prefix: String, exports: Items, moduleKey: String,
-    moduleIdentity: String): Items {
+moduleIdentity: String): Items {
     size := textLib.length(source);
     var position := skipTrivia(source, 0, prefix);
     var items: mut Items = [];
@@ -6878,8 +6900,8 @@ pub parseProgramWithModule := fn(target: String, source: String, prefix: String,
                 diagLib.fail(prefix, "duplicate imported module name " + exported.name);
             }
             listLib.pushBack(mut locals, (name = exported.name, runtime = "", kind = "Module", mutable = false,
-                writable = false, depth = 0, constant = false, code = "", intValue = exported.intValue,
-                textValue = exported.name, initState = "init"));
+            writable = false, depth = 0, constant = false, code = "", intValue = exported.intValue,
+            textValue = exported.name, initState = "init"));
         } else if exported.kind == "PublicFunction" {
             if findFunction(functions, exported.name) >= 0 or localIndex(locals, exported.name) >= 0 {
                 diagLib.fail(prefix, "duplicate imported public name " + exported.name);
@@ -6897,14 +6919,14 @@ pub parseProgramWithModule := fn(target: String, source: String, prefix: String,
                 entryIndex = entryIndex + 1;
             }
             listLib.pushBack(mut functions, (name = exported.name, runtime = exported.runtime, result = exported.code,
-                first = first, count = exported.intValue));
+            first = first, count = exported.intValue));
         } else if exported.kind == "PublicValue" {
             if findFunction(functions, exported.name) >= 0 or localIndex(locals, exported.name) >= 0 {
                 diagLib.fail(prefix, "duplicate imported public name " + exported.name);
             }
             listLib.pushBack(mut locals, (name = exported.name, runtime = exported.runtime, kind = exported.code,
-                mutable = false, writable = false, depth = 0, constant = false, code = exported.runtime,
-                intValue = 0, textValue = "", initState = "init"));
+            mutable = false, writable = false, depth = 0, constant = false, code = exported.runtime,
+            intValue = 0, textValue = "", initState = "init"));
         } else if exported.kind == "PublicType" {
             if findAlias(aliases, exported.name) < 0 {
                 diagLib.fail(prefix, "unknown imported public type " + exported.name);
@@ -6946,7 +6968,7 @@ pub parseProgramWithModule := fn(target: String, source: String, prefix: String,
             }
             blockKind := blocks[blockCount - 1];
             if (blockKind == "ifvalue" or blockKind == "matchvalue" or blockKind == "matchelseval" or blockKind == "matchsingleval") and
-                currentResult =!= "Unit" and not currentReturned {
+            currentResult =!= "Unit" and not currentReturned {
                 failAt(source, position, prefix, "branch of function " + currentName + " must return " + displayKind(currentResult));
             }
             after := skipTrivia(source, position + 1, prefix);
@@ -6990,7 +7012,7 @@ pub parseProgramWithModule := fn(target: String, source: String, prefix: String,
                     position = expectSymbol(source, beforeOpen, "{", prefix);
                     if currentLive {
                         listLib.pushBack(mut items, (kind = "ElseIf", name = "", runtime = "", code = conditionCode,
-                            intValue = 0, textValue = ""));
+                        intValue = 0, textValue = ""));
                         if codeHasRawTransfer(conditionCode) {
                             listLib.pushBack(mut transferCodes, conditionCode);
                             transferCount = transferCount + 1;
@@ -7039,7 +7061,7 @@ pub parseProgramWithModule := fn(target: String, source: String, prefix: String,
                     rejectMisplacedTag(source, afterUnderscore, prefix, "block tag cannot appear after _ in match arm");
                 }
                 isFallback := textLib.wordAt(source, nextArmStart, "_") and afterUnderscore < size and
-                    textLib.at(source, afterUnderscore) == "{";
+                textLib.at(source, afterUnderscore) == "{";
                 var armOpen := -1;
                 if isFallback {
                     armOpen = afterUnderscore;
@@ -7075,7 +7097,7 @@ pub parseProgramWithModule := fn(target: String, source: String, prefix: String,
                     };
                     if currentLive {
                         listLib.pushBack(mut items, (kind = "ElseIf", name = "", runtime = "", code = conditionCode,
-                            intValue = 0, textValue = ""));
+                        intValue = 0, textValue = ""));
                         if codeHasRawTransfer(conditionCode) {
                             listLib.pushBack(mut transferCodes, conditionCode);
                             transferCount = transferCount + 1;
@@ -7149,7 +7171,7 @@ pub parseProgramWithModule := fn(target: String, source: String, prefix: String,
                     }
                     if (hasLoopBreak or hasLoopCont) and currentLive {
                         listLib.pushBack(mut items, (kind = "LoopTransferCatch", name = "", runtime = loopTryKey, code = integer.intText(loopId),
-                            intValue = loopId, textValue = integer.intText(0 - loopId)));
+                        intValue = loopId, textValue = integer.intText(0 - loopId)));
                     }
                     if hasLoopBreak {
                         currentReturned = false;
@@ -7168,7 +7190,7 @@ pub parseProgramWithModule := fn(target: String, source: String, prefix: String,
             }
             completedReturn := blockCompletion(blockKind, currentReturned, branchesReturned, hasElse, loopForever);
             completedStop := blockCompletion(blockKind, if blockKind == "loop" { currentReturned } else { currentStopped },
-                branchesStopped, hasElse, loopForever);
+            branchesStopped, hasElse, loopForever);
             if blockKind == "loop" and completedReturn and currentLive {
                 listLib.pushBack(mut items, (kind = "Unreachable", name = "", runtime = "", code = "", intValue = 0, textValue = ""));
             }
@@ -7216,10 +7238,10 @@ pub parseProgramWithModule := fn(target: String, source: String, prefix: String,
             }
             if afterRawBrace >= 0 and textLib.wordAt(source, afterRawBrace, "finally") {
                 expression := parseExpressionItem(target, source, position, prefix, locals, functions, functionParams, currentName,
-                    currentResult, atValueTail(blocks, blockCount) and not currentStopped, stmtCtxs);
+                currentResult, atValueTail(blocks, blockCount) and not currentStopped, stmtCtxs);
                 if currentLive and not currentStopped {
                     listLib.pushBack(mut items, (kind = expressionStatementKind(expression.valueKind, expression.returned, "Discard", currentResult), name = expression.valueKind,
-                        runtime = "", code = expression.code, intValue = 0, textValue = ""));
+                    runtime = "", code = expression.code, intValue = 0, textValue = ""));
                     if codeHasRawTransfer(expression.code) {
                         listLib.pushBack(mut transferCodes, expression.code);
                         transferCount = transferCount + 1;
@@ -7234,8 +7256,8 @@ pub parseProgramWithModule := fn(target: String, source: String, prefix: String,
             }
             if currentLive and not currentStopped { listLib.pushBack(mut items, (kind = "Scope", name = "", runtime = "", code = "", intValue = 0, textValue = "")); }
             listLib.pushBack(mut savedStates, (returned = currentReturned, stopped = currentStopped,
-                branchesReturned = branchesReturned, branchesStopped = branchesStopped, hasElse = hasElse, loopForever = loopForever, live = currentLive,
-                preLocalsLen = localsCount(locals), liveBranchCount = liveBranchCount));
+            branchesReturned = branchesReturned, branchesStopped = branchesStopped, hasElse = hasElse, loopForever = loopForever, live = currentLive,
+            preLocalsLen = localsCount(locals), liveBranchCount = liveBranchCount));
             liveBranchCount = 0;
             currentLive = currentLive and not currentStopped;
             currentReturned = false;
@@ -7287,7 +7309,7 @@ pub parseProgramWithModule := fn(target: String, source: String, prefix: String,
                 position = statementNext;
                 if currentLive and not currentStopped {
                     listLib.pushBack(mut items, (kind = "Discard", name = "Unit", runtime = "",
-                        code = rhs.code, intValue = 0, textValue = ""));
+                    code = rhs.code, intValue = 0, textValue = ""));
                     if codeHasRawTransfer(rhs.code) {
                         listLib.pushBack(mut transferCodes, rhs.code);
                         transferCount = transferCount + 1;
@@ -7309,13 +7331,13 @@ pub parseProgramWithModule := fn(target: String, source: String, prefix: String,
                 }
                 bindRuntime := localRuntimeName(target, locals, bindName, moduleKey, depth);
                 listLib.pushBack(mut locals, (name = bindName, runtime = bindRuntime, kind = rhs.kind,
-                    mutable = destructureMutable, writable = false, depth = depth, constant = false, code = rhs.code,
-                    intValue = rhs.intValue, textValue = rhs.textValue, initState = "init"));
+                mutable = destructureMutable, writable = false, depth = depth, constant = false, code = rhs.code,
+                intValue = rhs.intValue, textValue = rhs.textValue, initState = "init"));
                 if currentLive and not currentStopped {
                     itemPrefix := if destructureMutable { "Var" } else { "Local" };
                     destrCode := copiedValueCode(target, rhs.kind, rhs.code);
                     listLib.pushBack(mut items, (kind = itemPrefix + storageKind(rhs.kind), name = bindName, runtime = bindRuntime,
-                        code = destrCode, intValue = rhs.intValue, textValue = itemTextPayload(rhs)));
+                    code = destrCode, intValue = rhs.intValue, textValue = itemTextPayload(rhs)));
                     if codeHasRawTransfer(destrCode) {
                         listLib.pushBack(mut transferCodes, destrCode);
                         transferCount = transferCount + 1;
@@ -7328,18 +7350,18 @@ pub parseProgramWithModule := fn(target: String, source: String, prefix: String,
             }
             if tupleComponentCount(rhs.kind) =!= destructure.count {
                 failAt(source, destructureOpen, prefix, "tuple destructuring expected " + integer.intText(destructure.count) +
-                    " fields, got " + integer.intText(tupleComponentCount(rhs.kind)));
+                " fields, got " + integer.intText(tupleComponentCount(rhs.kind)));
             }
             statementNext := consumeStatementEnd(source, rhs.next, prefix);
             if statementNext < 0 { failAt(source, skipTrivia(source, rhs.next, prefix), prefix, "expected ; after tuple destructuring"); }
             position = statementNext;
             tempRuntime := freshScopeTemp(locals, "lite$tuple");
             listLib.pushBack(mut locals, (name = "$tuple", runtime = tempRuntime, kind = "Unit",
-                mutable = false, writable = false, depth = depth, constant = false, code = "",
-                intValue = 0, textValue = "", initState = "init"));
+            mutable = false, writable = false, depth = depth, constant = false, code = "",
+            intValue = 0, textValue = "", initState = "init"));
             if currentLive and not currentStopped {
                 listLib.pushBack(mut items, (kind = "LocalTuple", name = "", runtime = tempRuntime,
-                    code = rhs.code, intValue = 0, textValue = ""));
+                code = rhs.code, intValue = 0, textValue = ""));
                 if codeHasRawTransfer(rhs.code) {
                     listLib.pushBack(mut transferCodes, rhs.code);
                     transferCount = transferCount + 1;
@@ -7365,26 +7387,26 @@ pub parseProgramWithModule := fn(target: String, source: String, prefix: String,
                 bindRuntime := localRuntimeName(target, locals, bindName, moduleKey, depth);
                 fieldCode := tempRuntime + "." + comp.prop;
                 listLib.pushBack(mut locals, (name = bindName, runtime = bindRuntime, kind = comp.kind,
-                    mutable = destructureMutable, writable = false, depth = depth, constant = false, code = fieldCode,
-                    intValue = 0, textValue = "", initState = "init"));
+                mutable = destructureMutable, writable = false, depth = depth, constant = false, code = fieldCode,
+                intValue = 0, textValue = "", initState = "init"));
                 if currentLive and not currentStopped {
                     itemPrefix := if destructureMutable { "Var" } else { "Local" };
                     listLib.pushBack(mut items, (kind = itemPrefix + storageKind(comp.kind), name = bindName, runtime = bindRuntime,
-                        code = fieldCode, intValue = 0, textValue = ""));
+                    code = fieldCode, intValue = 0, textValue = ""));
                 }
                 bindIndex = bindIndex + 1;
             }
             continue;
         }
         if textLib.isDigit(ch) or ch == "\"" or ch == "(" or ch == "[" or ch == "+" or ch == "-" or ch == "." or
-            (ch == "a" and textLib.wordAt(source, position, "and")) or (ch == "o" and textLib.wordAt(source, position, "or")) or
-            (ch == "n" and textLib.wordAt(source, position, "not")) or (ch == "t" and textLib.wordAt(source, position, "true")) or
-            (ch == "f" and textLib.wordAt(source, position, "false")) {
+        (ch == "a" and textLib.wordAt(source, position, "and")) or (ch == "o" and textLib.wordAt(source, position, "or")) or
+        (ch == "n" and textLib.wordAt(source, position, "not")) or (ch == "t" and textLib.wordAt(source, position, "true")) or
+        (ch == "f" and textLib.wordAt(source, position, "false")) {
             expression := parseExpressionItem(target, source, position, prefix, locals, functions, functionParams, currentName,
-                currentResult, atValueTail(blocks, blockCount) and not currentStopped, stmtCtxs);
+            currentResult, atValueTail(blocks, blockCount) and not currentStopped, stmtCtxs);
             if currentLive and not currentStopped {
                 listLib.pushBack(mut items, (kind = expressionStatementKind(expression.valueKind, expression.returned, "Discard", currentResult), name = expression.valueKind,
-                    runtime = "", code = expression.code, intValue = 0, textValue = ""));
+                runtime = "", code = expression.code, intValue = 0, textValue = ""));
                 if codeHasRawTransfer(expression.code) {
                     listLib.pushBack(mut transferCodes, expression.code);
                     transferCount = transferCount + 1;
@@ -7401,15 +7423,15 @@ pub parseProgramWithModule := fn(target: String, source: String, prefix: String,
             tagInfo := parseTagAt(source, position, prefix);
             afterTag := skipTrivia(source, tagInfo.next, prefix);
             if afterTag >= size or (textLib.at(source, afterTag) =!= "{" and textLib.at(source, afterTag) =!= "." and
-                not textLib.wordAt(source, afterTag, "if") and not textLib.wordAt(source, afterTag, "match") and
-                not textLib.wordAt(source, afterTag, "loop")) {
+            not textLib.wordAt(source, afterTag, "if") and not textLib.wordAt(source, afterTag, "match") and
+            not textLib.wordAt(source, afterTag, "loop")) {
                 failAt(source, afterTag, prefix, "expected {, if, match, loop or . after block tag @" + tagInfo.tag);
             }
             expression := parseExpressionItem(target, source, position, prefix, locals, functions, functionParams, currentName,
-                currentResult, atValueTail(blocks, blockCount) and not currentStopped, stmtCtxs);
+            currentResult, atValueTail(blocks, blockCount) and not currentStopped, stmtCtxs);
             if currentLive and not currentStopped {
                 listLib.pushBack(mut items, (kind = expressionStatementKind(expression.valueKind, expression.returned, "Discard", currentResult), name = expression.valueKind,
-                    runtime = "", code = expression.code, intValue = 0, textValue = ""));
+                runtime = "", code = expression.code, intValue = 0, textValue = ""));
                 if codeHasRawTransfer(expression.code) {
                     listLib.pushBack(mut transferCodes, expression.code);
                     transferCount = transferCount + 1;
@@ -7472,7 +7494,7 @@ pub parseProgramWithModule := fn(target: String, source: String, prefix: String,
             afterDefinition = skipTrivia(source, position + 2, prefix);
         }
         definition := blockCount == 0 and textLib.startsWithAt(source, position, ":=") and
-            (textLib.wordAt(source, afterDefinition, "fn") or textLib.wordAt(source, afterDefinition, "type"));
+        (textLib.wordAt(source, afterDefinition, "fn") or textLib.wordAt(source, afterDefinition, "type"));
         if name == "return" {
             var targetTagPos := position;
             var targetTagName := "";
@@ -7513,7 +7535,7 @@ pub parseProgramWithModule := fn(target: String, source: String, prefix: String,
             parsed := parseExpressionAsCtx(target, source, position, prefix, locals, functions, functionParams, currentName, currentResult, stmtCtxs);
             if not isCompatibleKind(currentResult, parsed.kind) {
                 failAt(source, valueStart, prefix, "cannot return " + displayKind(parsed.kind) + " from function " +
-                    currentName + " returning " + displayKind(currentResult));
+                currentName + " returning " + displayKind(currentResult));
             }
             statementNext := consumeStatementEnd(source, parsed.next, prefix);
             if statementNext < 0 { failAt(source, skipTrivia(source, parsed.next, prefix), prefix, "expected ; after return"); }
@@ -7521,7 +7543,7 @@ pub parseProgramWithModule := fn(target: String, source: String, prefix: String,
             retCode := assignValueCode(target, currentResult, parsed.kind, parsed.code);
             if currentLive and not currentStopped {
                 listLib.pushBack(mut items, (kind = "Return", name = "", runtime = "", code = retCode,
-                    intValue = 0, textValue = ""));
+                intValue = 0, textValue = ""));
                 if codeHasRawTransfer(retCode) {
                     listLib.pushBack(mut transferCodes, retCode);
                     transferCount = transferCount + 1;
@@ -7580,7 +7602,7 @@ pub parseProgramWithModule := fn(target: String, source: String, prefix: String,
         }
         if importedOutputName =!= "" {
             parsedOutput := parseOutputStatement(target, source, importedOutputOpen, importedOutputName, prefix,
-                locals, functions, functionParams, currentName, currentLive and not currentStopped, stmtCtxs);
+            locals, functions, functionParams, currentName, currentLive and not currentStopped, stmtCtxs);
             var outputDiverged := false;
             loop parsedOutput as outputItem {
                 if outputItem.kind == "End" or outputItem.kind == "EndOutput" { position = outputItem.intValue; }
@@ -7604,10 +7626,10 @@ pub parseProgramWithModule := fn(target: String, source: String, prefix: String,
         }
         if moduleIndex >= 0 and locals[moduleIndex].kind == "Module" {
             expression := parseExpressionItem(target, source, nameStart, prefix, locals, functions, functionParams, currentName,
-                currentResult, atValueTail(blocks, blockCount) and not currentStopped, stmtCtxs);
+            currentResult, atValueTail(blocks, blockCount) and not currentStopped, stmtCtxs);
             if currentLive and not currentStopped {
                 listLib.pushBack(mut items, (kind = expressionStatementKind(expression.valueKind, expression.returned, "Call", currentResult),
-                    name = "", runtime = "", code = expression.code, intValue = 0, textValue = ""));
+                name = "", runtime = "", code = expression.code, intValue = 0, textValue = ""));
                 if codeHasRawTransfer(expression.code) {
                     listLib.pushBack(mut transferCodes, expression.code);
                     transferCount = transferCount + 1;
@@ -7630,12 +7652,12 @@ pub parseProgramWithModule := fn(target: String, source: String, prefix: String,
             callableIndex = findFunction(functions, currentName);
         }
         if (callableIndex >= 0 or name == "push_back" or name == "pop_back" or name == "push_front" or name == "pop_front") and
-            position < size and textLib.at(source, position) == "(" {
+        position < size and textLib.at(source, position) == "(" {
             expression := parseExpressionItem(target, source, nameStart, prefix, locals, functions, functionParams, currentName,
-                currentResult, atValueTail(blocks, blockCount) and not currentStopped, stmtCtxs);
+            currentResult, atValueTail(blocks, blockCount) and not currentStopped, stmtCtxs);
             if currentLive and not currentStopped {
                 listLib.pushBack(mut items, (kind = expressionStatementKind(expression.valueKind, expression.returned, "Call", currentResult), name = callName, runtime = "",
-                    code = expression.code, intValue = 0, textValue = ""));
+                code = expression.code, intValue = 0, textValue = ""));
                 if codeHasRawTransfer(expression.code) {
                     listLib.pushBack(mut transferCodes, expression.code);
                     transferCount = transferCount + 1;
@@ -7653,10 +7675,10 @@ pub parseProgramWithModule := fn(target: String, source: String, prefix: String,
             afterRawIf := if rawIfEnd >= 0 { skipTrivia(source, rawIfEnd, prefix) } else { -1 };
             if afterRawIf >= 0 and (textLib.wordAt(source, afterRawIf, "then") or textLib.wordAt(source, afterRawIf, "finally")) {
                 expression := parseExpressionItem(target, source, nameStart, prefix, locals, functions, functionParams, currentName,
-                    currentResult, atValueTail(blocks, blockCount) and not currentStopped, stmtCtxs);
+                currentResult, atValueTail(blocks, blockCount) and not currentStopped, stmtCtxs);
                 if currentLive and not currentStopped {
                     listLib.pushBack(mut items, (kind = expressionStatementKind(expression.valueKind, expression.returned, "Discard", currentResult), name = expression.valueKind,
-                        runtime = "", code = expression.code, intValue = 0, textValue = ""));
+                    runtime = "", code = expression.code, intValue = 0, textValue = ""));
                     if codeHasRawTransfer(expression.code) {
                         listLib.pushBack(mut transferCodes, expression.code);
                         transferCount = transferCount + 1;
@@ -7676,10 +7698,10 @@ pub parseProgramWithModule := fn(target: String, source: String, prefix: String,
                     afterChain := skipItemSeparators(source, valueEnd, prefix);
                     if afterChain < size and textLib.at(source, afterChain) == "}" {
                         expression := parseExpressionItem(target, source, nameStart, prefix, locals, functions, functionParams, currentName,
-                            currentResult, true, stmtCtxs);
+                        currentResult, true, stmtCtxs);
                         if currentLive and not currentStopped {
                             listLib.pushBack(mut items, (kind = "Return", name = "", runtime = "", code = expression.code,
-                                intValue = 0, textValue = ""));
+                            intValue = 0, textValue = ""));
                             if codeHasRawTransfer(expression.code) {
                                 listLib.pushBack(mut transferCodes, expression.code);
                                 transferCount = transferCount + 1;
@@ -7702,10 +7724,10 @@ pub parseProgramWithModule := fn(target: String, source: String, prefix: String,
             conditionStart := position;
             rejectHeaderBlockTag(source, conditionStart, prefix, "if");
             ifBarrierCtx := (id = 0, tag = "", kind = "if", phase = "body", iifeDepth = 0,
-                valKind = "", valVar = "", label = "", iterLabel = "", countVar = "",
-                itemVar = "", itemKind = "", indexVar = "", hasIndex = false);
+            valKind = "", valVar = "", label = "", iterLabel = "", countVar = "",
+            itemVar = "", itemKind = "", indexVar = "", hasIndex = false);
             condition := parseExpressionCtx(target, source, position, prefix, locals, functions, functionParams, currentName,
-                appendCtx(stmtCtxs, ifBarrierCtx));
+            appendCtx(stmtCtxs, ifBarrierCtx));
             if condition.kind =!= "Bool" {
                 failAt(source, conditionStart, prefix, "if condition must be Bool");
             }
@@ -7719,15 +7741,15 @@ pub parseProgramWithModule := fn(target: String, source: String, prefix: String,
             position = expectSymbol(source, beforeIfOpen, "{", prefix);
             if currentLive and not currentStopped {
                 listLib.pushBack(mut items, (kind = "If", name = "", runtime = "", code = conditionCode,
-                    intValue = 0, textValue = ""));
+                intValue = 0, textValue = ""));
                 if codeHasRawTransfer(conditionCode) {
                     listLib.pushBack(mut transferCodes, conditionCode);
                     transferCount = transferCount + 1;
                 }
             }
             listLib.pushBack(mut savedStates, (returned = currentReturned, stopped = currentStopped,
-                branchesReturned = branchesReturned, branchesStopped = branchesStopped, hasElse = hasElse, loopForever = loopForever, live = currentLive,
-                preLocalsLen = localsCount(locals), liveBranchCount = liveBranchCount));
+            branchesReturned = branchesReturned, branchesStopped = branchesStopped, hasElse = hasElse, loopForever = loopForever, live = currentLive,
+            preLocalsLen = localsCount(locals), liveBranchCount = liveBranchCount));
             liveBranchCount = 0;
             currentLive = currentLive and not currentStopped;
             currentReturned = false;
@@ -7752,10 +7774,10 @@ pub parseProgramWithModule := fn(target: String, source: String, prefix: String,
             afterRawMatch := if rawMatchEnd >= 0 { skipTrivia(source, rawMatchEnd, prefix) } else { -1 };
             if afterRawMatch >= 0 and (textLib.wordAt(source, afterRawMatch, "then") or textLib.wordAt(source, afterRawMatch, "finally")) {
                 expression := parseExpressionItem(target, source, nameStart, prefix, locals, functions, functionParams, currentName,
-                    currentResult, atValueTail(blocks, blockCount) and not currentStopped, stmtCtxs);
+                currentResult, atValueTail(blocks, blockCount) and not currentStopped, stmtCtxs);
                 if currentLive and not currentStopped {
                     listLib.pushBack(mut items, (kind = expressionStatementKind(expression.valueKind, expression.returned, "Discard", currentResult), name = expression.valueKind,
-                        runtime = "", code = expression.code, intValue = 0, textValue = ""));
+                    runtime = "", code = expression.code, intValue = 0, textValue = ""));
                     if codeHasRawTransfer(expression.code) {
                         listLib.pushBack(mut transferCodes, expression.code);
                         transferCount = transferCount + 1;
@@ -7776,10 +7798,10 @@ pub parseProgramWithModule := fn(target: String, source: String, prefix: String,
                         afterMatch := skipItemSeparators(source, valueEnd, prefix);
                         if afterMatch < size and textLib.at(source, afterMatch) == "}" {
                             expression := parseExpressionItem(target, source, nameStart, prefix, locals, functions, functionParams, currentName,
-                                currentResult, true, stmtCtxs);
+                            currentResult, true, stmtCtxs);
                             if currentLive and not currentStopped {
                                 listLib.pushBack(mut items, (kind = "Return", name = "", runtime = "", code = expression.code,
-                                    intValue = 0, textValue = ""));
+                                intValue = 0, textValue = ""));
                                 if codeHasRawTransfer(expression.code) {
                                     listLib.pushBack(mut transferCodes, expression.code);
                                     transferCount = transferCount + 1;
@@ -7812,10 +7834,10 @@ pub parseProgramWithModule := fn(target: String, source: String, prefix: String,
                 rejectMisplacedTag(source, afterUnderscore, prefix, "block tag cannot appear after _ in match arm");
             }
             isFirstFallback := textLib.wordAt(source, firstArmStart, "_") and afterUnderscore < size and
-                textLib.at(source, afterUnderscore) == "{";
+            textLib.at(source, afterUnderscore) == "{";
             matchBarrierCtx := (id = 0, tag = "", kind = "match", phase = "body", iifeDepth = 0,
-                valKind = "", valVar = "", label = "", iterLabel = "", countVar = "",
-                itemVar = "", itemKind = "", indexVar = "", hasIndex = false);
+            valKind = "", valVar = "", label = "", iterLabel = "", countVar = "",
+            itemVar = "", itemKind = "", indexVar = "", hasIndex = false);
             var firstArmOpen := -1;
             if isFirstFallback {
                 firstArmOpen = afterUnderscore;
@@ -7831,7 +7853,7 @@ pub parseProgramWithModule := fn(target: String, source: String, prefix: String,
                 }
                 rejectHeaderBlockTag(source, firstArmStart, prefix, "match arm");
                 condition := parseExpressionCtx(target, source, firstArmStart, prefix, locals, functions, functionParams, currentName,
-                    appendCtx(stmtCtxs, matchBarrierCtx));
+                appendCtx(stmtCtxs, matchBarrierCtx));
                 afterCond := skipTrivia(source, condition.next, prefix);
                 rejectMisplacedTag(source, afterCond, prefix, "block tag cannot appear before { in match arm");
                 if afterCond > firstArmOpen {
@@ -7850,7 +7872,7 @@ pub parseProgramWithModule := fn(target: String, source: String, prefix: String,
                 };
                 if currentLive and not currentStopped {
                     listLib.pushBack(mut items, (kind = "If", name = "", runtime = "", code = conditionCode,
-                        intValue = 0, textValue = ""));
+                    intValue = 0, textValue = ""));
                     if codeHasRawTransfer(conditionCode) {
                         listLib.pushBack(mut transferCodes, conditionCode);
                         transferCount = transferCount + 1;
@@ -7858,8 +7880,8 @@ pub parseProgramWithModule := fn(target: String, source: String, prefix: String,
                 }
             }
             listLib.pushBack(mut savedStates, (returned = currentReturned, stopped = currentStopped,
-                branchesReturned = branchesReturned, branchesStopped = branchesStopped, hasElse = hasElse, loopForever = loopForever, live = currentLive,
-                preLocalsLen = localsCount(locals), liveBranchCount = liveBranchCount));
+            branchesReturned = branchesReturned, branchesStopped = branchesStopped, hasElse = hasElse, loopForever = loopForever, live = currentLive,
+            preLocalsLen = localsCount(locals), liveBranchCount = liveBranchCount));
             liveBranchCount = 0;
             currentLive = currentLive and not currentStopped;
             currentReturned = false;
@@ -7902,10 +7924,10 @@ pub parseProgramWithModule := fn(target: String, source: String, prefix: String,
                     }
                 } else {
                     expression := parseExpressionItem(target, source, nameStart, prefix, locals, functions, functionParams, currentName,
-                        currentResult, atValueTail(blocks, blockCount) and not currentStopped, stmtCtxs);
+                    currentResult, atValueTail(blocks, blockCount) and not currentStopped, stmtCtxs);
                     if currentLive and not currentStopped {
                         listLib.pushBack(mut items, (kind = expressionStatementKind(expression.valueKind, expression.returned, "Discard", currentResult), name = expression.valueKind,
-                            runtime = "", code = expression.code, intValue = 0, textValue = ""));
+                        runtime = "", code = expression.code, intValue = 0, textValue = ""));
                         if codeHasRawTransfer(expression.code) {
                             listLib.pushBack(mut transferCodes, expression.code);
                             transferCount = transferCount + 1;
@@ -7963,11 +7985,11 @@ pub parseProgramWithModule := fn(target: String, source: String, prefix: String,
             if itemName =!= "" {
                 runtime := localRuntimeName(target, locals, itemName, moduleKey, depth + 1);
                 listLib.pushBack(mut locals, (name = itemName, runtime = runtime, kind = itemKind,
-                    mutable = false, writable = false, depth = depth + 1, constant = false, code = runtime,
-                    intValue = 0, textValue = "", initState = "init"));
+                mutable = false, writable = false, depth = depth + 1, constant = false, code = runtime,
+                intValue = 0, textValue = "", initState = "init"));
                 if currentLive and not currentStopped {
                     listLib.pushBack(mut items, (kind = "LoopSeq", name = itemName, runtime = runtime, code = sequenceCode,
-                        intValue = 0, textValue = itemKind));
+                    intValue = 0, textValue = itemKind));
                     if codeHasRawTransfer(sequenceCode) {
                         listLib.pushBack(mut transferCodes, sequenceCode);
                         transferCount = transferCount + 1;
@@ -7976,11 +7998,11 @@ pub parseProgramWithModule := fn(target: String, source: String, prefix: String,
             } else if sequenceCode =!= "" {
                 tempItemRuntime := freshScopeTemp(locals, "lite$item");
                 listLib.pushBack(mut locals, (name = "$item", runtime = tempItemRuntime, kind = "Unit",
-                    mutable = false, writable = false, depth = depth + 1, constant = false, code = "",
-                    intValue = 0, textValue = "", initState = "init"));
+                mutable = false, writable = false, depth = depth + 1, constant = false, code = "",
+                intValue = 0, textValue = "", initState = "init"));
                 if currentLive and not currentStopped {
                     listLib.pushBack(mut items, (kind = "LoopSeq", name = "", runtime = tempItemRuntime, code = sequenceCode,
-                        intValue = 0, textValue = itemKind));
+                    intValue = 0, textValue = itemKind));
                     if codeHasRawTransfer(sequenceCode) {
                         listLib.pushBack(mut transferCodes, sequenceCode);
                         transferCount = transferCount + 1;
@@ -7989,7 +8011,7 @@ pub parseProgramWithModule := fn(target: String, source: String, prefix: String,
             } else {
                 if currentLive and not currentStopped {
                     listLib.pushBack(mut items, (kind = "Loop", name = "", runtime = "", code = conditionCode,
-                        intValue = 0, textValue = ""));
+                    intValue = 0, textValue = ""));
                     if codeHasRawTransfer(conditionCode) {
                         listLib.pushBack(mut transferCodes, conditionCode);
                         transferCount = transferCount + 1;
@@ -8003,17 +8025,17 @@ pub parseProgramWithModule := fn(target: String, source: String, prefix: String,
             if target == "ts" and currentLive and not currentStopped {
                 loopTryKey = moduleKey + "#lp#" + integer.intText(stmtLoopId);
                 listLib.pushBack(mut items, (kind = "LoopTransferTry", name = "", runtime = loopTryKey, code = integer.intText(stmtLoopId),
-                    intValue = stmtLoopId, textValue = integer.intText(0 - stmtLoopId)));
+                intValue = stmtLoopId, textValue = integer.intText(0 - stmtLoopId)));
             }
             listLib.pushBack(mut loopIds, stmtLoopId);
             listLib.pushBack(mut loopTryKeys, loopTryKey);
             listLib.pushBack(mut loopTransferStarts, loopStartTransfers);
             listLib.pushBack(mut stmtCtxs, (id = stmtLoopId, tag = "", kind = "loop", phase = "body",
-                iifeDepth = 0, valKind = "", valVar = "", label = "",
-                iterLabel = "", countVar = "", itemVar = "", itemKind = "", indexVar = "", hasIndex = false));
+            iifeDepth = 0, valKind = "", valVar = "", label = "",
+            iterLabel = "", countVar = "", itemVar = "", itemKind = "", indexVar = "", hasIndex = false));
             listLib.pushBack(mut savedStates, (returned = currentReturned, stopped = currentStopped,
-                branchesReturned = branchesReturned, branchesStopped = branchesStopped, hasElse = hasElse, loopForever = loopForever, live = currentLive,
-                preLocalsLen = loopPreLocalsLen, liveBranchCount = liveBranchCount));
+            branchesReturned = branchesReturned, branchesStopped = branchesStopped, hasElse = hasElse, loopForever = loopForever, live = currentLive,
+            preLocalsLen = loopPreLocalsLen, liveBranchCount = liveBranchCount));
             liveBranchCount = 0;
             currentLive = currentLive and not currentStopped;
             currentReturned = false;
@@ -8055,12 +8077,12 @@ pub parseProgramWithModule := fn(target: String, source: String, prefix: String,
             position = statementNext;
             runtime := localRuntimeName(target, locals, localName, moduleKey, depth);
             listLib.pushBack(mut locals, (name = localName, runtime = runtime, kind = parsed.kind,
-                mutable = false, writable = true, depth = depth, constant = false, code = parsed.code,
-                intValue = parsed.intValue, textValue = parsed.textValue, initState = "init"));
+            mutable = false, writable = true, depth = depth, constant = false, code = parsed.code,
+            intValue = parsed.intValue, textValue = parsed.textValue, initState = "init"));
             if currentLive and not currentStopped {
                 itemCode := copiedValueCode(target, parsed.kind, parsed.code);
                 listLib.pushBack(mut items, (kind = "Local" + storageKind(parsed.kind), name = localName, runtime = runtime,
-                    code = itemCode, intValue = parsed.intValue, textValue = itemTextPayload(parsed)));
+                code = itemCode, intValue = parsed.intValue, textValue = itemTextPayload(parsed)));
                 if codeHasRawTransfer(itemCode) {
                     listLib.pushBack(mut transferCodes, itemCode);
                     transferCount = transferCount + 1;
@@ -8134,12 +8156,12 @@ pub parseProgramWithModule := fn(target: String, source: String, prefix: String,
             position = statementNext;
             runtime := localRuntimeName(target, locals, localName, moduleKey, depth);
             listLib.pushBack(mut locals, (name = localName, runtime = runtime, kind = parsed.kind,
-                mutable = true, writable = declaredWritable, depth = depth, constant = false, code = parsed.code,
-                intValue = parsed.intValue, textValue = parsed.textValue, initState = declInitState));
+            mutable = true, writable = declaredWritable, depth = depth, constant = false, code = parsed.code,
+            intValue = parsed.intValue, textValue = parsed.textValue, initState = declInitState));
             if currentLive and not currentStopped {
                 if rhsDiverged {
                     listLib.pushBack(mut items, (kind = expressionStatementKind("Never", false, "Call", currentResult), name = "", runtime = "",
-                        code = parsed.code, intValue = 0, textValue = ""));
+                    code = parsed.code, intValue = 0, textValue = ""));
                     if codeHasRawTransfer(parsed.code) {
                         listLib.pushBack(mut transferCodes, parsed.code);
                         transferCount = transferCount + 1;
@@ -8147,7 +8169,7 @@ pub parseProgramWithModule := fn(target: String, source: String, prefix: String,
                 } else {
                     itemCode := copiedValueCode(target, parsed.kind, parsed.code);
                     listLib.pushBack(mut items, (kind = "Var" + storageKind(parsed.kind), name = localName, runtime = runtime,
-                        code = itemCode, intValue = parsed.intValue, textValue = itemTextPayload(parsed)));
+                    code = itemCode, intValue = parsed.intValue, textValue = itemTextPayload(parsed)));
                     if codeHasRawTransfer(itemCode) {
                         listLib.pushBack(mut transferCodes, itemCode);
                         transferCount = transferCount + 1;
@@ -8189,7 +8211,7 @@ pub parseProgramWithModule := fn(target: String, source: String, prefix: String,
             resolvedType := resolveTypeText(source, targetStart, prefix, aliases, aliasEntry.target, seenAliases);
             if listLib.listContainsText(publishedTypes, name) {
                 listLib.pushBack(mut items, (kind = "PublicType", name = name, runtime = "", code = resolvedType,
-                    intValue = 0, textValue = ""));
+                intValue = 0, textValue = ""));
             }
             afterTarget := consumeStatementEnd(source, aliasEntry.end, prefix);
             if afterTarget < 0 { unsupportedAliasTarget(source, aliasEntry.at, prefix, "target"); }
@@ -8221,7 +8243,7 @@ pub parseProgramWithModule := fn(target: String, source: String, prefix: String,
                     }
                     position = skipTrivia(source, position + 1, prefix);
                     listLib.pushBack(mut functions, (name = name, runtime = hostRuntime, result = header.result,
-                        first = parameterTotal, count = header.count));
+                    first = parameterTotal, count = header.count));
                     var hostEntryStart := 0;
                     var hostEntryIndex := 0;
                     loop hostEntryIndex < header.count {
@@ -8235,7 +8257,7 @@ pub parseProgramWithModule := fn(target: String, source: String, prefix: String,
                     }
                     if currentLive {
                         listLib.pushBack(mut items, (kind = "PublicFunction", name = name, runtime = hostRuntime, code = header.result,
-                            intValue = header.count, textValue = header.params));
+                        intValue = header.count, textValue = header.params));
                     }
                     continue;
                 }
@@ -8248,10 +8270,10 @@ pub parseProgramWithModule := fn(target: String, source: String, prefix: String,
                 position = expectSymbol(source, position, "{", prefix);
                 functionRuntime := moduleFunctionRuntime(target, moduleKey, name);
                 listLib.pushBack(mut functions, (name = name, runtime = functionRuntime, result = header.result,
-                    first = parameterTotal, count = header.count));
+                first = parameterTotal, count = header.count));
                 if listLib.listContainsText(publishedFunctions, name) {
                     listLib.pushBack(mut items, (kind = "PublicFunction", name = name, runtime = functionRuntime, code = header.result,
-                        intValue = header.count, textValue = header.params));
+                    intValue = header.count, textValue = header.params));
                 }
                 if currentLive and not currentStopped { listLib.pushBack(mut items, (kind = "FunctionStart", name = name, runtime = functionRuntime,
                     code = header.result, intValue = header.count, textValue = header.params)); }
@@ -8264,15 +8286,15 @@ pub parseProgramWithModule := fn(target: String, source: String, prefix: String,
                     listLib.pushBack(mut items, (kind = "TransferTry", name = "", runtime = fnTryKey, code = "", intValue = 0, textValue = ""));
                 }
                 listLib.pushBack(mut stmtCtxs, (id = 0, tag = "", kind = "fn", phase = "body",
-                    iifeDepth = 0, valKind = header.result, valVar = "", label = "",
-                    iterLabel = "", countVar = "", itemVar = "", itemKind = "", indexVar = "", hasIndex = false));
+                iifeDepth = 0, valKind = header.result, valVar = "", label = "",
+                iterLabel = "", countVar = "", itemVar = "", itemKind = "", indexVar = "", hasIndex = false));
                 var entryStart := 0;
                 var entryIndex := 0;
                 loop futureValues as future {
                     if future.at > nameStart {
                         listLib.pushBack(mut locals, (name = future.name, runtime = future.runtime, kind = future.kind,
-                            mutable = false, writable = false, depth = -1, constant = false, code = future.runtime,
-                            intValue = 0, textValue = "", initState = "init"));
+                        mutable = false, writable = false, depth = -1, constant = false, code = future.runtime,
+                        intValue = 0, textValue = "", initState = "init"));
                     }
                 }
                 loop entryIndex < header.count {
@@ -8285,8 +8307,8 @@ pub parseProgramWithModule := fn(target: String, source: String, prefix: String,
                     runtime := "lite_" + parameterName;
                     listLib.pushBack(mut functionParams, entry);
                     listLib.pushBack(mut locals, (name = parameterName, runtime = runtime, kind = parameterKind,
-                        mutable = false, writable = false, depth = 1, constant = false, code = runtime,
-                        intValue = 0, textValue = "", initState = "init"));
+                    mutable = false, writable = false, depth = 1, constant = false, code = runtime,
+                    intValue = 0, textValue = "", initState = "init"));
                     parameterTotal = parameterTotal + 1;
                     entryStart = entryEnd + 1;
                     entryIndex = entryIndex + 1;
@@ -8294,8 +8316,8 @@ pub parseProgramWithModule := fn(target: String, source: String, prefix: String,
                 currentName = name;
                 currentResult = header.result;
                 listLib.pushBack(mut savedStates, (returned = currentReturned, stopped = currentStopped,
-                    branchesReturned = branchesReturned, branchesStopped = branchesStopped, hasElse = hasElse, loopForever = loopForever, live = currentLive,
-                    preLocalsLen = localsCount(locals), liveBranchCount = liveBranchCount));
+                branchesReturned = branchesReturned, branchesStopped = branchesStopped, hasElse = hasElse, loopForever = loopForever, live = currentLive,
+                preLocalsLen = localsCount(locals), liveBranchCount = liveBranchCount));
                 liveBranchCount = 0;
                 currentLive = currentLive and not currentStopped;
                 currentReturned = false;
@@ -8324,16 +8346,16 @@ pub parseProgramWithModule := fn(target: String, source: String, prefix: String,
             position = statementNext;
             runtime := localRuntimeName(target, locals, name, moduleKey, depth);
             listLib.pushBack(mut locals, (name = name, runtime = runtime, kind = parsed.kind,
-                mutable = false, writable = false, depth = depth, constant = parsed.constant, code = parsed.code,
-                intValue = parsed.intValue, textValue = parsed.textValue, initState = "init"));
+            mutable = false, writable = false, depth = depth, constant = parsed.constant, code = parsed.code,
+            intValue = parsed.intValue, textValue = parsed.textValue, initState = "init"));
             if depth == 0 and blockCount == 0 and listLib.listContainsText(publishedValues, name) {
                 listLib.pushBack(mut items, (kind = "PublicValue", name = name, runtime = runtime, code = parsed.kind,
-                    intValue = 0, textValue = ""));
+                intValue = 0, textValue = ""));
             }
             if currentLive and not currentStopped {
                 itemCode := copiedValueCode(target, parsed.kind, parsed.code);
                 listLib.pushBack(mut items, (kind = "Local" + storageKind(parsed.kind), name = name, runtime = runtime,
-                    code = itemCode, intValue = parsed.intValue, textValue = itemTextPayload(parsed)));
+                code = itemCode, intValue = parsed.intValue, textValue = itemTextPayload(parsed)));
                 if codeHasRawTransfer(itemCode) {
                     listLib.pushBack(mut transferCodes, itemCode);
                     transferCount = transferCount + 1;
@@ -8376,16 +8398,16 @@ pub parseProgramWithModule := fn(target: String, source: String, prefix: String,
             rhsDiverged := parsed.kind == "Never";
             assignedCode := assignValueCode(target, typed.kind, parsed.kind, parsed.code);
             listLib.pushBack(mut locals, (name = name, runtime = runtime, kind = typed.kind,
-                mutable = false, writable = typed.writable, depth = depth, constant = if declInitState == "init" and not numeric.isFloatKind(typed.kind) { parsed.constant } else { false },
-                code = assignedCode, intValue = parsed.intValue, textValue = parsed.textValue, initState = declInitState));
+            mutable = false, writable = typed.writable, depth = depth, constant = if declInitState == "init" and not numeric.isFloatKind(typed.kind) { parsed.constant } else { false },
+            code = assignedCode, intValue = parsed.intValue, textValue = parsed.textValue, initState = declInitState));
             declItemPrefix := if declInitState == "init" { "Local" } else { "Var" };
             if currentLive and not currentStopped {
                 if rhsDiverged {
                     listLib.pushBack(mut items, (kind = expressionStatementKind("Never", false, "Call", currentResult), name = "", runtime = "",
-                        code = assignedCode, intValue = 0, textValue = ""));
+                    code = assignedCode, intValue = 0, textValue = ""));
                 } else {
                     listLib.pushBack(mut items, (kind = declItemPrefix + storageKind(typed.kind), name = name, runtime = runtime,
-                        code = assignedCode, intValue = parsed.intValue, textValue = itemTextPayload(parsed)));
+                    code = assignedCode, intValue = parsed.intValue, textValue = itemTextPayload(parsed)));
                 }
                 if codeHasRawTransfer(assignedCode) {
                     listLib.pushBack(mut transferCodes, assignedCode);
@@ -8427,8 +8449,8 @@ pub parseProgramWithModule := fn(target: String, source: String, prefix: String,
             }
             if partialCount > 0 {
                 listLib.pushBack(mut locals, (name = entry.name, runtime = entry.runtime, kind = entry.kind,
-                    mutable = entry.mutable, writable = entry.writable, depth = entry.depth, constant = false, code = entry.runtime,
-                    intValue = 0, textValue = "", initState = "init"));
+                mutable = entry.mutable, writable = entry.writable, depth = entry.depth, constant = false, code = entry.runtime,
+                intValue = 0, textValue = "", initState = "init"));
                 continue;
             }
             parsed := parseExpressionAsCtx(target, source, position, prefix, locals, functions, functionParams, currentName, entry.kind, stmtCtxs);
@@ -8441,15 +8463,15 @@ pub parseProgramWithModule := fn(target: String, source: String, prefix: String,
             rhsDiverged := parsed.kind == "Never";
             assignedCode := assignValueCode(target, entry.kind, parsed.kind, parsed.code);
             listLib.pushBack(mut locals, (name = entry.name, runtime = entry.runtime, kind = entry.kind,
-                mutable = entry.mutable, writable = entry.writable, depth = entry.depth, constant = false, code = assignedCode,
-                intValue = parsed.intValue, textValue = parsed.textValue, initState = "init"));
+            mutable = entry.mutable, writable = entry.writable, depth = entry.depth, constant = false, code = assignedCode,
+            intValue = parsed.intValue, textValue = parsed.textValue, initState = "init"));
             if currentLive and not currentStopped {
                 if rhsDiverged {
                     listLib.pushBack(mut items, (kind = expressionStatementKind("Never", false, "Call", currentResult), name = "", runtime = "",
-                        code = assignedCode, intValue = 0, textValue = ""));
+                    code = assignedCode, intValue = 0, textValue = ""));
                 } else {
                     listLib.pushBack(mut items, (kind = "Assign" + storageKind(entry.kind), name = name, runtime = entry.runtime,
-                        code = assignedCode, intValue = parsed.intValue, textValue = itemTextPayload(parsed)));
+                    code = assignedCode, intValue = parsed.intValue, textValue = itemTextPayload(parsed)));
                 }
                 if codeHasRawTransfer(assignedCode) {
                     listLib.pushBack(mut transferCodes, assignedCode);
@@ -8483,11 +8505,11 @@ pub parseProgramWithModule := fn(target: String, source: String, prefix: String,
             if statementNext < 0 { failAt(source, skipTrivia(source, parsed.next, prefix), prefix, "expected ; after assignment to " + name); }
             position = statementNext;
             listLib.pushBack(mut locals, (name = entry.name, runtime = entry.runtime, kind = entry.kind,
-                mutable = entry.mutable, writable = entry.writable, depth = entry.depth, constant = false, code = assignedCode,
-                intValue = 0, textValue = "", initState = "init"));
+            mutable = entry.mutable, writable = entry.writable, depth = entry.depth, constant = false, code = assignedCode,
+            intValue = 0, textValue = "", initState = "init"));
             if currentLive and not currentStopped {
                 listLib.pushBack(mut items, (kind = "Assign" + storageKind(entry.kind), name = name, runtime = entry.runtime,
-                    code = assignedCode, intValue = 0, textValue = ""));
+                code = assignedCode, intValue = 0, textValue = ""));
                 if codeHasRawTransfer(assignedCode) {
                     listLib.pushBack(mut transferCodes, assignedCode);
                     transferCount = transferCount + 1;
@@ -8496,10 +8518,10 @@ pub parseProgramWithModule := fn(target: String, source: String, prefix: String,
             continue;
         }
         expression := parseExpressionItem(target, source, nameStart, prefix, locals, functions, functionParams, currentName,
-            currentResult, atValueTail(blocks, blockCount) and not currentStopped, stmtCtxs);
+        currentResult, atValueTail(blocks, blockCount) and not currentStopped, stmtCtxs);
         if currentLive and not currentStopped {
             listLib.pushBack(mut items, (kind = expressionStatementKind(expression.valueKind, expression.returned, "Discard", currentResult), name = expression.valueKind,
-                runtime = "", code = expression.code, intValue = 0, textValue = ""));
+            runtime = "", code = expression.code, intValue = 0, textValue = ""));
             if codeHasRawTransfer(expression.code) {
                 listLib.pushBack(mut transferCodes, expression.code);
                 transferCount = transferCount + 1;
@@ -8522,7 +8544,7 @@ pub parseProgramWithModule := fn(target: String, source: String, prefix: String,
 
 /** Transitional numeric-module-id adapter delegating to `parseProgramWithModule`. */
 pub parseProgramWithIdentity := fn(target: String, source: String, prefix: String, exports: Items, moduleId: Int,
-    moduleIdentity: String): Items {
+moduleIdentity: String): Items {
     moduleKey := if moduleId == 0 { "" } else { "m" + integer.intText(moduleId) };
     parseProgramWithModule(target, source, prefix, exports, moduleKey, moduleIdentity)
 }

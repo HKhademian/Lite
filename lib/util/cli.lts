@@ -3,7 +3,7 @@
 list := import "core/list";
 proc := import "core/process";
 text := import "core/text";
-path := import "util/path";
+path := import "core/path";
 
 /** Returns the first argument in `args`, or `""` when empty. */
 pub head := fn(args: List<String>): String {

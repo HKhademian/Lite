@@ -1,12 +1,12 @@
 /** Named CI tasks executed directly by Node; workflow YAML contains no shell programs. */
 
 io := import "core/io";
-fs := import "core/fs";
+fs := import "core/file";
 proc := import "core/process";
 text := import "core/text";
 list := import "core/list";
 integer := import "core/int";
-path := import "util/path";
+path := import "core/path";
 json := import "util/json";
 cli := import "util/cli";
 project := import "util/project";

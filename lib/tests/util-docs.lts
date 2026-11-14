@@ -1,8 +1,8 @@
-fs := import "core/fs";
+fs := import "core/file";
 list := import "core/list";
 test := import "core/test";
 docs := import "util/docs";
-path := import "util/path";
+path := import "core/path";
 
 tmpRes := fs.makeTempDir("lite-util-docs-");
 test.checkBool("make temp dir", true, tmpRes.ok);

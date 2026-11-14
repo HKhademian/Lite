@@ -1,11 +1,11 @@
 /** Compile one script to a temporary artifact, execute it with the Node entry, and forward its status. */
 
 io := import "core/io";
-fs := import "core/fs";
+fs := import "core/file";
 proc := import "core/process";
 text := import "core/text";
 list := import "core/list";
-path := import "util/path";
+path := import "core/path";
 cli := import "util/cli";
 project := import "util/project";
 

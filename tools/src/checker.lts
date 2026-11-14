@@ -1,11 +1,11 @@
 /** Standalone source-check command (`lite check`); compiles via `compiler/cli.ts` and strict-typechecks emitted TS. */
 
 io := import "core/io";
-fs := import "core/fs";
+fs := import "core/file";
 proc := import "core/process";
 integer := import "core/int";
 list := import "core/list";
-path := import "util/path";
+path := import "core/path";
 cli := import "util/cli";
 project := import "util/project";
 cases := import "util/cases";

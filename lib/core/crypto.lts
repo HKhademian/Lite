@@ -1,7 +1,9 @@
 /* Provisional core host digest/CSPRNG primitives and pure-Lite encodings and HMAC. This module adds no host authority by itself. */
 
 diag := import "core/diag";
+file := import "core/file";
 integer := import "core/int";
+io := import "core/io";
 list := import "core/list";
 text := import "core/text";
 unicode := import "core/unicode";
@@ -9,14 +11,29 @@ unicode := import "core/unicode";
 /** Returns the lowercase hexadecimal message digest (`"sha256"` or `"sha512"`) of raw `0..255` byte values. */
 pub digestBytes := fn(algorithm: String, bytes: List<Int>): String;
 
-/** Returns the lowercase hexadecimal SHA-256 digest of the raw bytes of the file at `path`. */
-pub sha256File := fn(path: String): (ok: Bool, hex: String, error: String);
-
 /** Generates `count` cryptographically strong random `0..255` byte values. */
 pub randomBytes := fn(count: Int): List<Int>;
 
 b64Alphabet := "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/";
 hexAlphabet := "0123456789abcdef";
+
+/** Returns the lowercase hexadecimal SHA-256 digest of the raw bytes of the file at `path`. */
+pub sha256File := fn(path: String): (ok: Bool, hex: String, error: String) {
+    reader := file.openReader(path);
+    if not io.readerOk(reader) {
+        return (ok = false, hex = "", error = io.readerError(reader));
+    }
+    bytes := io.readAll(reader);
+    readErr := io.readerError(reader);
+    closed := io.closeReader(reader);
+    if readErr =!= "" {
+        return (ok = false, hex = "", error = readErr);
+    }
+    if not closed.ok {
+        return (ok = false, hex = "", error = closed.error);
+    }
+    (ok = true, hex = digestBytes("sha256", bytes), error = "")
+}
 
 /** Returns the lowercase hexadecimal SHA-256 digest of UTF-8 `value`. */
 pub sha256Text := fn(value: String): String {

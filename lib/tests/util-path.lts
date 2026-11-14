@@ -1,4 +1,5 @@
-path := import "util/path";
+file := import "core/file";
+path := import "core/path";
 test := import "core/test";
 
 test.checkText("normalize empty", ".", path.normalize(""));
@@ -9,6 +10,8 @@ test.checkText("normalize rooted clamp", "/c", path.normalize("/../../c"));
 
 test.checkText("join relative", "a/c", path.join("a/b", "../c"));
 test.checkText("join keeps subpath", "/a/b/c", path.join("/a/b", "/c"));
+joinParts: List<String> = ["repo", "lib", "core", "path.lts"];
+test.checkText("joinAll", "repo/lib/core/path.lts", path.joinAll(joinParts));
 test.checkText("resolve relative", "/a/c", path.resolve("/a/b", "../c"));
 test.checkText("resolve absolute", "/x/y", path.resolve("/a/b", "/x/y"));
 
@@ -20,6 +23,11 @@ test.checkText("base name root", "", path.baseName("/"));
 test.checkText("ext name lts", ".lts", path.extName("/tools/src/fmt.lts"));
 test.checkText("ext name dotfile", "", path.extName("/repo/.gitignore"));
 test.checkText("ext name dir dot", "", path.extName("a.b/c"));
+test.checkText("stem lts", "fmt", path.stem("/tools/src/fmt.lts"));
+test.checkText("stem dotfile", ".gitignore", path.stem("/repo/.gitignore"));
+test.checkText("withExt replace", "/tools/src/fmt.ts", path.withExt("/tools/src/fmt.lts", "ts"));
+test.checkText("withExt dot", "/tools/src/fmt.md", path.withExt("/tools/src/fmt.lts", ".md"));
+test.checkText("withExt strip", "/tools/src/fmt", path.withExt("/tools/src/fmt.lts", ""));
 
 test.checkBool("is abs root", true, path.isAbsolute("/tmp"));
 test.checkBool("is abs rel", false, path.isAbsolute("tools/src"));
@@ -27,5 +35,18 @@ test.checkBool("is abs rel", false, path.isAbsolute("tools/src"));
 test.checkText("relative child", "docs/README.md", path.relative("/repo", "/repo/docs/README.md"));
 test.checkText("relative sibling", "../other/a.lts", path.relative("/repo/tools", "/repo/other/a.lts"));
 test.checkText("relative same", "", path.relative("/repo", "/repo"));
+
+tmp := file.makeTempDir("lite-core-path-");
+test.checkBool("path temp dir", true, tmp.ok);
+sample := path.join(tmp.path, "sample.txt");
+_w := file.writeText(sample, "ok");
+test.checkBool("exists dir", true, path.exists(tmp.path));
+test.checkBool("isDirectory dir", true, path.isDirectory(tmp.path));
+test.checkBool("isFile dir", false, path.isFile(tmp.path));
+test.checkBool("exists file", true, path.exists(sample));
+test.checkBool("isFile file", true, path.isFile(sample));
+test.checkBool("isDirectory file", false, path.isDirectory(sample));
+test.checkBool("exists missing", false, path.exists(path.join(tmp.path, "absent")));
+_rm := file.remove(tmp.path);
 
 test.done("util-path");

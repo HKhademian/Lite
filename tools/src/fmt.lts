@@ -1,7 +1,7 @@
 /** Format Lite (.lts) source files with canonical indentation and spacing. */
 
 io := import "core/io";
-fs := import "core/fs";
+fs := import "core/file";
 proc := import "core/process";
 text := import "core/text";
 list := import "core/list";

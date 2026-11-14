@@ -1,0 +1,152 @@
+/* Core synchronous filesystem operations and stream openers. This module adds no host authority by itself. */
+
+diag := import "core/diag";
+integer := import "core/int";
+io := import "core/io";
+list := import "core/list";
+unicode := import "core/unicode";
+
+/** Returns `"missing"`, `"file"`, `"dir"`, or `"other"` for the resolved filesystem entry at `path`. */
+pub kind := fn(path: String): String;
+
+/** Opens `path` as a synchronous `io.Reader` (recording open errors on the returned handle). */
+pub openReader := fn(path: String): io.Reader;
+
+/** Opens `path` for writing as a synchronous `io.Writer`, creating or truncating the file. */
+pub openWriter := fn(path: String): io.Writer;
+
+/** Opens `path` for appending as a synchronous `io.Writer`, creating the file when absent. */
+pub openAppender := fn(path: String): io.Writer;
+
+/** Returns direct entry names in directory `path` in sorted order, faulting when `path` cannot be read as a directory. */
+pub listDir := fn(path: String): List<String>;
+
+/** Ensures directory `path` and any missing parent directories exist. */
+pub makeDir := fn(path: String): (ok: Bool, error: String);
+
+/** Removes `path` recursively if present, succeeding when already absent. */
+pub remove := fn(path: String): (ok: Bool, error: String);
+
+/** Copies a file or directory recursively from `fromPath` to `toPath`, replacing an existing destination. */
+pub copy := fn(fromPath: String, toPath: String): (ok: Bool, error: String);
+
+/** Creates a symbolic link at `linkPath` pointing to `targetPath`. */
+pub symlink := fn(targetPath: String, linkPath: String): (ok: Bool, error: String);
+
+/** Resolves symlinks and relative segments in `path` to its canonical real path. */
+pub realPath := fn(path: String): (ok: Bool, path: String, error: String);
+
+/** Creates a new unique temporary directory whose name starts with `prefix`. */
+pub makeTempDir := fn(prefix: String): (ok: Bool, path: String, error: String);
+
+validateBytes := fn(bytes: List<Int>): (ok: Bool, error: String) {
+    loop bytes as byte {
+        if byte < 0 or byte > 255 {
+            return (ok = false, error = "byte value outside 0..255: " + integer.intText(byte));
+        }
+    }
+    (ok = true, error = "")
+}
+
+writeWithHandle := fn(writer: io.Writer, bytes: List<Int>): (ok: Bool, error: String) {
+    if not io.writerOk(writer) {
+        return (ok = false, error = io.writerError(writer));
+    }
+    wrote := io.write(writer, bytes);
+    closed := io.closeWriter(writer);
+    if not wrote.ok {
+        return (ok = false, error = wrote.error);
+    }
+    if not closed.ok {
+        return (ok = false, error = closed.error);
+    }
+    (ok = true, error = "")
+}
+
+/** Reads raw `0..255` byte values from `path`, faulting when `path` cannot be read. */
+pub readBytes := fn(path: String): List<Int> {
+    reader := openReader(path);
+    if not io.readerOk(reader) {
+        diag.fail("", io.readerError(reader));
+        return [];
+    }
+    bytes := io.readAll(reader);
+    readErr := io.readerError(reader);
+    closed := io.closeReader(reader);
+    if readErr =!= "" {
+        diag.fail("", readErr);
+        return [];
+    }
+    if not closed.ok {
+        diag.fail("", closed.error);
+        return [];
+    }
+    bytes
+}
+
+/** Reads strict UTF-8 text from `path`. */
+pub readText := fn(path: String): (ok: Bool, text: String, error: String) {
+    reader := openReader(path);
+    if not io.readerOk(reader) {
+        return (ok = false, text = "", error = io.readerError(reader));
+    }
+    bytes := io.readAll(reader);
+    readErr := io.readerError(reader);
+    closed := io.closeReader(reader);
+    if readErr =!= "" {
+        return (ok = false, text = "", error = readErr);
+    }
+    if not closed.ok {
+        return (ok = false, text = "", error = closed.error);
+    }
+    unicode.utf8DecodeStrict(bytes)
+}
+
+/** Writes raw `0..255` byte values to `path`, creating or truncating the file. */
+pub writeBytes := fn(path: String, bytes: List<Int>): (ok: Bool, error: String) {
+    checked := validateBytes(bytes);
+    if not checked.ok { return checked; }
+    writeWithHandle(openWriter(path), bytes)
+}
+
+/** Writes UTF-8 `text` to `path`, creating or truncating the file. */
+pub writeText := fn(path: String, text: String): (ok: Bool, error: String) {
+    writeBytes(path, unicode.utf8Encode(text))
+}
+
+/** Appends raw `0..255` byte values to `path`, creating the file when absent. */
+pub appendBytes := fn(path: String, bytes: List<Int>): (ok: Bool, error: String) {
+    checked := validateBytes(bytes);
+    if not checked.ok { return checked; }
+    writeWithHandle(openAppender(path), bytes)
+}
+
+/** Appends UTF-8 `text` to `path`, creating the file when absent. */
+pub appendText := fn(path: String, text: String): (ok: Bool, error: String) {
+    appendBytes(path, unicode.utf8Encode(text))
+}
+
+/** Streams all remaining bytes synchronously from `reader` into `writer`. */
+pub copyStream := fn(reader: io.Reader, writer: io.Writer): (ok: Bool, copied: Int, error: String) {
+    if not io.readerOk(reader) {
+        return (ok = false, copied = 0, error = io.readerError(reader));
+    }
+    if not io.writerOk(writer) {
+        return (ok = false, copied = 0, error = io.writerError(writer));
+    }
+    var total := 0;
+    loop io.readerOk(reader) and not io.readerAtEof(reader) {
+        chunk := io.read(reader, 65536);
+        err := io.readerError(reader);
+        if err =!= "" {
+            return (ok = false, copied = total, error = err);
+        }
+        if list.listCountInt(chunk) == 0 { break; }
+        wrote := io.write(writer, chunk);
+        if not wrote.ok {
+            return (ok = false, copied = total, error = wrote.error);
+        }
+        total += wrote.written;
+    }
+    (ok = true, copied = total, error = "")
+}

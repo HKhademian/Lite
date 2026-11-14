@@ -1,8 +1,8 @@
 {
-  "note": "Reviewed 2026-11-14 after the power exponent update. All 69 TS corpus artifact hashes and 25 rejection cases verified.",
+  "note": "Reviewed after adding core/io synchronous Reader/Writer streams, core/file, core/path, and pure-Lite sha256File. All 69 TS corpus artifact hashes and 25 rejection cases verified.",
   "recorded": "2026-11-14",
-  "sourceSha256": "3ea5a9939314779fd76fedf6f2b5c61f1719c862cf1024bb521f7de5b9ddc9fa",
-  "compilerSha256": "7b14b1de571b04cc67f2b77605cb7b50e4b5a07115b636bd1cac0440645fbb61",
+  "sourceSha256": "2d225cbdd1e8c36799fa16900c72114d228af626395513d93c23c103c5dddc8b",
+  "compilerSha256": "be6af71089a9dae68d72b1f2bf1ddfd8ad05b90ec478b22622c0205a72be9962",
   "programCases": 69,
   "rejectedCases": 25,
   "artifacts": [

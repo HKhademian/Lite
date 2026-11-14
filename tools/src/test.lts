@@ -1,12 +1,12 @@
 /** Standalone declarative case test runner (`lite test --cases` / `lite verify FILE.json`). */
 
 io := import "core/io";
-fs := import "core/fs";
+fs := import "core/file";
 proc := import "core/process";
 text := import "core/text";
 list := import "core/list";
 integer := import "core/int";
-path := import "util/path";
+path := import "core/path";
 cli := import "util/cli";
 project := import "util/project";
 cases := import "util/cases";
