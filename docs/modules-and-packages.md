@@ -1,6 +1,6 @@
 # Modules and packages
 
-Status: **distinct .lts scripts and .lt module files, module-owned facilities, and explicit module access selected 2026-10-30; compile-time-known module initial values selected 2026-11-14; exact module grammar, storage and runtime conveniences remain open or proposed**.
+Status: **distinct .lts scripts and .lt module files, module-owned facilities, and explicit module access selected 2026-10-30; first-stage compile-time-known module initial values, including var/mut, selected 2026-11-14; exact module grammar, storage and later-stage runtime initialization remain open**.
 
 ## Purpose
 
@@ -97,14 +97,19 @@ no blanket ban or effect-checking mechanism is selected.
 
 ### Compile-time-known initial definitions
 
-Selected 2026-11-14: applicable top-level value definitions in `.lt` modules
-must have compile-time-known initial values. Literal arithmetic and pure
+Selected 2026-11-14 for the **first compiler stage**: applicable top-level
+value definitions in `.lt` modules must have compile-time-known initial values.
+The user clarified this is a first-stage restriction, not a decision to ban
+runtime-dependent module initializers forever. Later compiler stages should
+reach full support as the wider language and module contracts are designed.
+Literal arithmetic and pure
 ordinary function calls on known inputs can supply such values. An explicit
 compile-time computation can also produce one, including through the intended
 effectful compile-time capabilities. Evaluating the initializer for its value
 occurs during compilation rather than as an implicit runtime module-startup
-call. This is selected design direction, not current `.lt` compiler support or
-a complete module initialization algorithm.
+call in this stage. This is selected design direction, not current `.lt`
+compiler support, a promise that every known expression is supported at once,
+or a complete module initialization algorithm.
 
 ```text
 /* Illustrative module fragments: imports and visibility omitted. */
@@ -121,17 +126,28 @@ dependencies, scheduling, visibility, cross-file resolution and diagnostics
 remain open.
 
 An initializer requiring the eventual program's runtime input cannot supply
-the compile-time-known initial value. Applications may still perform runtime
-setup in runtime code; its placement and any dedicated initialization mechanism
-remain open. Explicit compile-time effects such as file reads are not banned.
+the first stage's compile-time-known initial value. Applications may still
+perform runtime setup in runtime code; its placement, any dedicated
+initialization mechanism, and runtime-dependent module initialization in later
+stages remain open. Explicit compile-time effects such as file reads are not banned.
 Storage and target materialization may require generated setup work; this rule
 does not forbid loaders, relocations or equivalent implementation steps.
 
-The permissions, read and write rules, and stage-specific knowledge of module
-`var` and `mut` bindings remain under discussion. A known initial value is not
-necessarily an always-known later mutable value. Omitted initializers, reserved
-storage, type and import declarations, nonmaterializable values and function
-captures need complete module contracts.
+The user clarified that `var` and `mut` module bindings **are allowed in the
+first stage when their initial values are compile-time known**. The existing
+distinction remains: `var` permits replacement of the binding; `mut` permits
+writable access to held data; `var mut` grants both. A known initial value is
+not necessarily an always-known later mutable value. Precise module write grants,
+aliasing, visibility, and stage-specific access remain open. Omitted
+initializers, reserved storage, type and import declarations, nonmaterializable
+values and function captures need complete module contracts.
+
+```text
+/* Illustrative module fragments, not current compiler evidence. */
+var counter := 0;          /* known initial value; later replacement allowed */
+mut entries := [1, 2];     /* known initial value; writable held data */
+var mut current := [3, 4]; /* both permissions, subject to access rules */
+```
 
 Pending cases, not executable passes:
 
@@ -140,8 +156,11 @@ Pending cases, not executable passes:
 - An explicit compile-time file read can supply an initial value when its
   result is suitable for the target; that read is not repeated at program
   startup merely to recover the result.
-- A runtime-input-dependent top-level initializer is rejected under this
-  module rule; declaring a function whose body reads runtime input is distinct.
+- A runtime-input-dependent top-level initializer is rejected under the first
+  stage rule; declaring a function whose body reads runtime input is distinct.
+- Known initial values admit `var`, `mut` and `var mut` declarations in the
+  first stage; later writes follow the corresponding permission and access
+  rules, and do not automatically remain compile-time known.
 - Safe forward references need eventual resolution rules; a value dependency
   cycle or unavailable initial value needs a defined diagnostic.
 - `.lts` script execution retains its existing top-to-bottom semantics.

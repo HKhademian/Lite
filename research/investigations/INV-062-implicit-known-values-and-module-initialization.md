@@ -1,7 +1,7 @@
 # Implicit known values and module initialization
 
 Status: **bounded investigation, 2026-11-14; pure calls with known inputs and
-compile-time-known module initial values subsequently selected; remaining
+first-stage compile-time-known module initial values subsequently selected; remaining
 options unselected; no implementation evidence**. Relates to INV-062.01–.02 and
 INV-003.05. The user would like ordinary literal arithmetic and ordinary
 function calls with known inputs to be usable as compile-time-known values,
@@ -158,8 +158,8 @@ safe forward declaration lookup without handwritten headers. A coherent
 candidate is to make ordinary module-level value names discoverable in the
 same module scope as function and import names, subject to their applicable
 visibility and qualification rules. A known value is not automatically public;
-whether a module `var` or `mut` is admitted, and its write/access rules, remain
-separate. A fixed `name := value` is not a new `const` keyword or a guarantee
+module `var` and `mut` are admitted in the first stage with known initial
+values; their detailed write/access rules remain separate. A fixed `name := value` is not a new `const` keyword or a guarantee
 of deep immutability.
 
 ```text
@@ -229,10 +229,13 @@ board := comptime { loadBoard() }    /* explicit build-time operation */
 live := readRuntimeSetting();         /* assume runtime-only input */
 ```
 
-- **Compile-time initialization (direction selected 2026-11-14):** require each applicable top-level value
+- **Compile-time initialization (first-stage direction selected 2026-11-14):** require each applicable top-level value
   initializer to produce a valid compile-time-known initial value. The first
-  four examples can be considered for admission; `live` cannot be a runtime
-  initializer under this option. Which definitions, storage forms, function
+  four examples are intended to be admitted where their required features are
+  supported; `live` cannot be a runtime initializer in this stage. The user
+  explicitly allows `var` and `mut` when their initial values are known. Later
+  runtime initialization remains open, not permanently forbidden. Which
+  definitions, storage forms, function
   captures, foreign imports, and explicit effectful initializers are admitted
   needs separate specification. A build-time value is not automatically
   serializable or suitable for a target runtime.
@@ -360,8 +363,9 @@ Some require later decisions and are intentionally shown as alternatives.
 
 The user selected a language-level known-value direction for pure computations
 with known inputs, including `square`, independent of optimization flags, and
-the compile-time-known module-initialization direction. Investigate proof and
-failure boundaries, module `var` and `mut`, function declarations not invoked
+the first-stage compile-time-known module-initialization direction, with
+`var` and `mut` allowed for known initial values. Investigate proof and
+failure boundaries, detailed module write/access rules, function declarations not invoked
 merely by definition, and runtime initialization for runtime-only needs.
 Preserve the user's requested effectful compile-time capability. Whether
 ordinary effects can run implicitly during compilation remains a user-facing
