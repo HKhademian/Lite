@@ -170,8 +170,8 @@ function compileAndRunSample(sample: AnySample, tsCompiler: CompilerBuild, badge
       generatedTs,
       tsHtml: highlightTs(generatedTs.trimEnd()),
       output: run.stdout,
-      previewSvg,
-      badge,
+      ...(previewSvg !== undefined ? { previewSvg } : {}),
+      ...(badge !== undefined ? { badge } : {}),
     };
   } finally {
     rmSync(scratch, { recursive: true, force: true });

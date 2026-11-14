@@ -615,7 +615,7 @@ test('playground inline module initializes without TDZ or ReferenceError', async
   const html = readFileSync(join(root, 'dist', 'site', 'playground', 'index.html'), 'utf8');
   const scriptMatch = html.match(/<script type="module">([\s\S]*?)<\/script>/);
   assert(scriptMatch, 'missing playground inline module script');
-  const scriptBody = scriptMatch[1]
+  const scriptBody = (scriptMatch[1] ?? '')
     .replace(/^\s*import\s+\{[^}]+\}\s+from\s+"\.\/code-view\.js";\s*/m, '')
     .replace(/^\s*import\s+\{[^}]+\}\s+from\s+"\.\/highlight\.js";\s*/m, '');
 
@@ -623,7 +623,7 @@ test('playground inline module initializes without TDZ or ReferenceError', async
     const attrs = new Map<string, string>();
     const classes = new Set<string>();
     const listeners = new Map<string, Array<(ev: unknown) => void>>();
-    const el: Record<string, unknown> = {
+    const el = {
       id,
       value: '',
       hidden: false,
@@ -636,7 +636,7 @@ test('playground inline module initializes without TDZ or ReferenceError', async
       scrollLeft: 0,
       selectionStart: 0,
       selectionEnd: 0,
-      dataset: { tab: 'output', mode: 'program' },
+      dataset: { tab: 'output', mode: 'program' } as Record<string, string>,
       style: { setProperty() {} },
       classList: {
         add(c: string) { classes.add(c); },
@@ -689,7 +689,7 @@ test('playground inline module initializes without TDZ or ReferenceError', async
   };
 
   const sampleJsonPath = join(root, 'dist', 'site', 'playground', 'samples');
-  const firstSampleId = showcaseSamples[0].id;
+  const firstSampleId = showcaseSamples[0]!.id;
   const mockWin = {
     location: { href: `https://example.test/playground/?sample=${firstSampleId}`, search: `?sample=${firstSampleId}` },
     history: { replaceState() {} },
@@ -731,8 +731,9 @@ test('playground inline module initializes without TDZ or ReferenceError', async
     Worker: class { addEventListener() {} postMessage() {} },
     fetch: async (url: string) => {
       const m = String(url).match(/\/([^/]+\.json)$/);
-      if (m && existsSync(join(sampleJsonPath, m[1]))) {
-        return { ok: true, status: 200, json: async () => JSON.parse(readFileSync(join(sampleJsonPath, m[1]), 'utf8')) };
+      const sampleFile = m?.[1];
+      if (sampleFile !== undefined && existsSync(join(sampleJsonPath, sampleFile))) {
+        return { ok: true, status: 200, json: async () => JSON.parse(readFileSync(join(sampleJsonPath, sampleFile), 'utf8')) };
       }
       return { ok: false, status: 404 };
     },
