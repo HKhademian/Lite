@@ -2525,6 +2525,44 @@ export function main(lite$write?: (text: string) => void): string {
         return { ok: true, hasTag: true, component: lite_matchedComponent, version: lite_matchedVersion, error: "" };
     }
     void liteFn$lib$util$release$selectComponentRelease;
+    function liteFn$lib$util$release$versionsJson(lite_rootDir: string): { ok: boolean; jsonText: string; error: string } {
+        void lite_rootDir;
+        const lite_checked = liteFn$lib$util$release$selectComponentRelease(lite_rootDir, "");
+        void lite_checked;
+        if ((!((lite_checked).ok))) {
+            return { ok: false, jsonText: "", error: (lite_checked).error };
+        }
+        const lite_igniterRes = liteFn$lib$util$release$readIgniterVersion(lite_rootDir);
+        void lite_igniterRes;
+        if ((!((lite_igniterRes).ok))) {
+            return { ok: false, jsonText: "", error: (lite_igniterRes).error };
+        }
+        const lite_verRead = lite$fsReadText(liteFn$lib$util$path$join(lite_rootDir, "config/versions.json"));
+        void lite_verRead;
+        if ((!((lite_verRead).ok))) {
+            return { ok: false, jsonText: "", error: (lite_verRead).error };
+        }
+        const lite_entries: string[] = [...([])];
+        void lite_entries;
+        for (const lite_component of [...(liteFn$lib$util$release$allComponents())]) {
+            void lite_component;
+            if (((lite_component) === ("igniter"))) {
+                lite_entries.push((("\"igniter\":") + (liteFn$lib$util$json$quoteString((lite_igniterRes).version))));
+            } else {
+                const lite_field = liteFn$lib$util$json$findObjectField((lite_verRead).text, 0n, lite_component);
+                void lite_field;
+                if (liteFn$lib$core$text$startsWithAt((lite_verRead).text, (lite_field).valuePos, "null")) {
+                    lite_entries.push(((liteFn$lib$util$json$quoteString(lite_component)) + (":null")));
+                } else {
+                    const lite_strRes = liteFn$lib$util$json$readStringAt((lite_verRead).text, (lite_field).valuePos);
+                    void lite_strRes;
+                    lite_entries.push(((((liteFn$lib$util$json$quoteString(lite_component)) + (":"))) + (liteFn$lib$util$json$quoteString((lite_strRes).value))));
+                }
+            }
+        }
+        return { ok: true, jsonText: (((("{") + (liteFn$lib$core$text$joinTexts([...(lite_entries)], ",")))) + ("}")), error: "" };
+    }
+    void liteFn$lib$util$release$versionsJson;
     function liteFn$lib$util$release$releaseProfile(lite_hasTag: boolean, lite_component: string, lite_version: string): string {
         void lite_hasTag;
         void lite_component;

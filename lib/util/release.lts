@@ -223,6 +223,33 @@ pub selectComponentRelease := fn(rootDir: String, tag: String): (ok: Bool, hasTa
     (ok = true, hasTag = true, component = matchedComponent, version = matchedVersion, error = "")
 };
 
+/** Validates and serializes all repository component versions (including `igniter`) as a JSON object string. */
+pub versionsJson := fn(rootDir: String): (ok: Bool, jsonText: String, error: String) {
+    checked := selectComponentRelease(rootDir, "");
+    if not checked.ok { return (ok = false, jsonText = "", error = checked.error); }
+
+    igniterRes := readIgniterVersion(rootDir);
+    if not igniterRes.ok { return (ok = false, jsonText = "", error = igniterRes.error); }
+    verRead := fs.readText(path.join(rootDir, "config/versions.json"));
+    if not verRead.ok { return (ok = false, jsonText = "", error = verRead.error); }
+
+    entries: mut List<String> = [];
+    loop allComponents() as component {
+        if component == "igniter" {
+            list.pushBack(mut entries, "\"igniter\":" + json.quoteString(igniterRes.version));
+        } else {
+            field := json.findObjectField(verRead.text, 0, component);
+            if text.startsWithAt(verRead.text, field.valuePos, "null") {
+                list.pushBack(mut entries, json.quoteString(component) + ":null");
+            } else {
+                strRes := json.readStringAt(verRead.text, field.valuePos);
+                list.pushBack(mut entries, json.quoteString(component) + ":" + json.quoteString(strRes.value));
+            }
+        }
+    }
+    (ok = true, jsonText = "{" + text.joinTexts(entries, ",") + "}", error = "")
+};
+
 /** Classifies a release into `"tools"`, `"compiler"`, or `"language"` verification profiles. */
 pub releaseProfile := fn(hasTag: Bool, component: String, version: String): String {
     toolComponents: List<String> = [
