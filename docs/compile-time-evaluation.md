@@ -30,14 +30,40 @@ The user's proposed explicit spelling uses a `comptime` block:
 y := comptime { readGameBoard(io.readFile("gamemap.raw")) }
 ```
 
-The intended use includes calling ordinary user functions and reading a file
-during compilation, with the resulting game board available to the compiled
-program. `io.readFile` here is illustrative; it does not select a particular
-library API. Which host operations are available, how external inputs are
-tracked, and what value representations can be preserved are open. The example
-must not be reduced to a pure-only constant-folding feature. A compiler is not
-required to have read the file before it executes the explicit compile-time
-operation; the result is known after successful evaluation.
+The intended use includes calling ordinary user functions, reading a file,
+reading a line of input, or fetching a resource during compilation. The
+resulting supported value is available to the compiled program. The user
+intends normal calls to be eligible broadly, including calls with effects; this
+must not be reduced to a pure-only constant-folding feature.
+
+```text
+/* Illustrative API names and syntax, not supported programs. */
+name := comptime { io.readLine() }     /* read while compiling */
+asset := comptime { fetch(resourceLink) } /* fetch while compiling */
+```
+
+The names `io.readFile`, `io.readLine`, and `fetch` here illustrate behavior;
+they do not select particular library APIs. Actual evaluation requires the
+needed inputs and operations to be available at compilation. How host services
+are provided, how external inputs are tracked, and what value representations
+can be preserved remain open. The compiler need not already know an external
+input before executing an explicit compile-time operation: its result becomes
+known after the operation successfully completes.
+
+## Possible implicit evaluation
+
+The user also raised allowing more implicit compile-time evaluation, including
+ordinary function calls whose results can be determined during compilation.
+This remains a **question**, not a selected general rule. For example, whether
+`x := one()` is implicitly known when `one := fn { 1 }` needs a decision;
+the existence of an explicit `comptime` block does not decide it.
+
+The staging boundary matters for effects. Reading a line or fetching a URL
+while compiling is a different observable action from doing so when the
+compiled program runs. Any implicit policy must make clear which invocation
+occurs, at what stage, and how build inputs and repeated builds behave. Do not
+assume that a pure-only model is the user's chosen restriction, or silently
+move an ordinary runtime effect into the build under the existing design.
 
 ## Compile-time-required inputs
 
@@ -88,6 +114,12 @@ These are contract examples to develop; they are not executable passes:
 - **external input:** a compile-time block can call an ordinary parser on file
   contents when the necessary compile-time file access is available; its
   result can be incorporated into the compiled program where supported.
+- **interactive input:** a reached explicit compile-time read obtains its line
+  during compilation, and a program using its incorporated result does not
+  repeat that read just to recover the value.
+- **network input:** a reached explicit compile-time fetch requests the
+  resource during compilation, and its successful result can be incorporated
+  where supported; repeat-build and dependency rules remain open.
 - **no duplicate execution:** the explicitly compiled computation is not
   repeated by the generated program merely to recover its result; effects
   occur at the stage at which the computation actually runs.
@@ -107,8 +139,8 @@ whose operations are unavailable to a compilation host; host versus target
 semantics; effects and their ordering; file/environment dependency tracking,
 caching and rebuilds; execution limits; permission and isolation policies;
 failures and diagnostics; and target-dependent results remain open. These
-questions do not negate the selected ability to request compile-time execution
-of ordinary functions or the file-reading use case.
+questions do not negate the intended ability to request compile-time execution
+of ordinary functions, including file, interactive-input, and network use cases.
 
 Compile-time execution, compile-time-required arguments, and optional compiler
 optimization are related but distinct. The selection does not imply that an

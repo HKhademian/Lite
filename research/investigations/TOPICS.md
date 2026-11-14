@@ -862,8 +862,9 @@ project-wide adoption remains unselected.
 **Selected direction, 2026-11-14:** ordinary functions can be evaluated during
 compilation, explicit compile-time evaluation can incorporate its result, and
 compile-time-required inputs require known values. The requested direction
-includes file-reading use cases; execution effects, staging details, and syntax
-remain open. See [compile-time evaluation](../../docs/compile-time-evaluation.md).
+includes file-reading, interactive input, and network-fetch use cases. Broader
+implicit evaluation is under discussion; execution effects, staging details,
+and syntax remain open. See [compile-time evaluation](../../docs/compile-time-evaluation.md).
 
 **Investigation:** bounded design started; implementation not claimed.
 
