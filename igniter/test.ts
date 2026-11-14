@@ -1177,7 +1177,7 @@ test('restricted compiler diagnoses break and continue outside loops', () => {
     ['var i := 0;\nloop i < 1 { i = i + 1; }\ncontinue;\n', '3:1: continue outside loop\n'],
     ["io := import \"core/io\"; f := fn(): Int { loop true { break; } break; 1 }\nio.outputLine(f());\n", '1:63: break outside loop\n'],
     ['loop true { break 1; }\n', '1:19: expected ; after break\n'],
-    ['loop true { continue @outer; }\n', '1:22: expected ; after continue\n'],
+    ['loop true { continue @outer; }\n', '1:22: unknown block tag @outer\n'],
   ] as const) {
     assert.deepEqual(runCompiler(tsManifestPath, bad), { code: 2, output: '', errors }, bad);
     assert.deepEqual(runCompiler(cManifestPath, bad), { code: 2, output: '', errors }, bad);

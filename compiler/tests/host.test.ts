@@ -3358,3 +3358,134 @@ test('scope-local counters avoid source-offset churn in functions, destructuring
     assert.equal(cShadowRun.stdout.toString(), 'two\none\n');
   }
 });
+
+test('tagged blocks, targeted non-local transfers, and misplaced tag diagnostics', () => {
+  const source = [
+    'io := import "core/io";',
+    'pick := fn(first: String, second: String): String { first + "-" + second };',
+    'compute := fn(flag: Bool): Int {',
+    '  res := @blk {',
+    '    io.outputLine("inside", flag);',
+    '    if flag { return @blk 10; }',
+    '    @inner {',
+    '      if false { return @inner 1; }',
+    '      0',
+    '    };',
+    '    @blk {',
+    '      return @blk 99;',
+    '    };',
+    '    25',
+    '  };',
+    '  res',
+    '};',
+    'earlyFn := fn(stop: Bool): Int {',
+    '  x := @outer {',
+    '    if stop { return 77; }',
+    '    innerVal := @inner {',
+    '      if not stop { return @outer 12; }',
+    '      5',
+    '    };',
+    '    innerVal + 1',
+    '  };',
+    '  x + 1',
+    '};',
+    'reorderedTransfer := fn(): String {',
+    '  pick(second = @arg { return @arg "B"; "Z" }, first = "A")',
+    '};',
+    'unitFlow := fn(bail: Bool): Unit {',
+    '  @u {',
+    '    if bail { return; }',
+    '    io.outputLine("after-fn-check");',
+    '    return @u;',
+    '  }',
+    '  io.outputLine("after-u");',
+    '};',
+    'loopTransfers := fn(): Int {',
+    '  var i := 0;',
+    '  var sum := 0;',
+    '  loop true {',
+    '    i = i + 1;',
+    '    @step {',
+    '      if i == 2 { continue; }',
+    '      if i == 4 { break; }',
+    '      sum = sum + i;',
+    '    }',
+    '  }',
+    '  sum',
+    '};',
+    'io.outputLine(compute(true), compute(false));',
+    'io.outputLine(earlyFn(true), earlyFn(false));',
+    'io.outputLine(reorderedTransfer());',
+    'unitFlow(false);',
+    'unitFlow(true);',
+    'io.outputLine(loopTransfers());',
+    '@stmtBlk {',
+    '  io.outputLine("stmt-before");',
+    '  if true { return @stmtBlk; }',
+    '  io.outputLine("stmt-skipped");',
+    '}',
+    'io.outputLine("stmt-after");',
+  ].join('\n');
+  const compiled = compileTs({ text: source });
+  assert.equal(compiled.status, 0, compiled.stderr.toString());
+  const actual = runTsArtifact(compiled.stdout.toString());
+  assert.equal(actual.phase, 'run');
+  assert.equal(actual.status, 0, actual.stderr.toString());
+  assert.equal(
+    actual.stdout.toString(),
+    [
+      'inside true',
+      'inside false',
+      '10 25',
+      '77 13',
+      'A-B',
+      'after-fn-check',
+      'after-u',
+      '4',
+      'stmt-before',
+      'stmt-after',
+      '',
+    ].join('\n'),
+  );
+
+  for (const [bad, expectedMessage] of [
+    ['f := fn(): Int { @blk { return @blk.value; }; 1 };', /block tag @blk does not expose \.value/],
+    ['io := import "core/io"; loop { @blk { break @blk; }; }', /break @blk requires an enclosing loop/],
+    ['io := import "core/io"; loop { @blk { continue @blk; }; }', /continue @blk requires an enclosing loop/],
+    ['@blk { return @nope 1; };', /unknown block tag @nope/],
+    ['x := @blk { if true { return @blk 1; }; "a" };', /block @blk cannot return both/],
+    ['@inner { if false { return @inner 1; } };', /block @inner cannot return both Int and Unit/],
+    ['x := if @bad { 1 } else { 2 };', /unexpected block tag @bad in if header/],
+    ['x := if true @bad { 1 } else { 2 };', /block tag cannot appear before \{ in if/],
+    ['x := if true { 1 } else @bad { 2 };', /block tag cannot appear after else/],
+    ['x := if true { 1 } else @bad if true { 2 } else { 3 };', /block tag cannot appear after else/],
+    ['x := if false { 1 } else if @bad { 2 } else { 3 };', /unexpected block tag @bad in else if header/],
+    ['x := if false { 1 } else if true @bad { 2 } else { 3 };', /block tag cannot appear before \{ in else if/],
+    ['if @bad {}', /unexpected block tag @bad in if header/],
+    ['if true @bad {}', /block tag cannot appear before \{ in if/],
+    ['if true {} else @bad {}', /block tag cannot appear after else/],
+    ['if false {} else if @bad {}', /unexpected block tag @bad in else if header/],
+    ['if false {} else if true @bad {}', /block tag cannot appear before \{ in else if/],
+    ['x := match @bad { _ { 1 } };', /block tag cannot appear before \{ in match/],
+    ['x := match { true @bad { 1 } _ { 2 } };', /block tag cannot appear before \{ in match arm/],
+    ['x := match { @bad { 1 } _ { 2 } };', /unexpected block tag @bad in match arm header/],
+    ['x := match { _ @bad { 1 } };', /block tag cannot appear after _ in match arm/],
+    ['match @bad { _ {} }', /block tag cannot appear before \{ in match/],
+    ['match { true @bad {} _ {} }', /block tag cannot appear before \{ in match arm/],
+    ['match { @bad {} _ {} }', /unexpected block tag @bad in match arm header/],
+    ['match { _ @bad {} }', /block tag cannot appear after _ in match arm/],
+    ['loop @bad {}', /unexpected block tag @bad in loop header/],
+    ['loop false @bad {}', /block tag cannot appear before \{ in loop/],
+    ['@bad f := fn(): Int { 1 };', /expected \{ or \. after block tag @bad/],
+    ['f := @bad fn(): Int { 1 };', /expected \{ or \. after block tag @bad/],
+    ['f := fn(): Int @bad { 1 };', /unexpected block tag in function header/],
+  ] as const) {
+    const rejected = compileTs({ text: bad });
+    assert.equal(rejected.status, 2, bad);
+    assert.match(rejected.stderr.toString(), expectedMessage, bad);
+  }
+
+  const cTagRejected = compileTarget('c', { text: 'io := import "core/io"; x := @blk { 1 }; io.outputLine(x);' });
+  assert.equal(cTagRejected.status, 2);
+  assert.match(cTagRejected.stderr.toString(), /C backend does not support tagged blocks yet/);
+});

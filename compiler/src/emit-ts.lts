@@ -10,24 +10,12 @@ dedent := fn(indent: String): String {
 
 /** Formats one canonical flat tuple kind as a TypeScript object type. */
 tsTupleType := fn(kind: String): String {
-    count := frontend.tupleComponentCount(kind);
-    var result := "{ ";
-    var index := 0;
-    loop index < count {
-        comp := frontend.tupleComponent(kind, index);
-        if index > 0 { result = result + "; "; }
-        result = result + frontend.tupleObjectKey(comp.label, index) + ": " + tsLiteral.tsScalarType(comp.kind);
-        index = index + 1;
-    }
-    result + " }"
+    frontend.tsTupleType(kind)
 }
 
 /** Maps a restricted Lite scalar, flat named-tuple, fixed-array or List kind to its TypeScript type. */
 tsFunctionType := fn(kind: String): String {
-    if frontend.isListKind(kind) { tsFunctionType(frontend.listElementKind(kind)) + "[]" }
-    else if frontend.isArrayKind(kind) { tsFunctionType(frontend.arrayElementKind(kind)) + "[]" }
-    else if frontend.isTupleKind(kind) { tsTupleType(kind) }
-    else { tsLiteral.tsScalarType(kind) }
+    frontend.tsFunctionType(kind)
 }
 
 /** Formats a `|`-separated `name=kind` parameter list as a TypeScript parameter list. */
@@ -69,28 +57,7 @@ reportParameterReads := fn(encoded: String, indent: String): Unit {
 
 /** Formats an admitted output value using its static kind; aggregates evaluate once and retain tuple labels. */
 displayValueCode := fn(kind: String, code: String): String {
-    if frontend.isIntScalarKind(kind) or frontend.isFloatScalarKind(kind) { return "(" + code + ").toString()"; }
-    if kind == "Bool" { return "((" + code + ") ? \"true\" : \"false\")"; }
-    if kind == "Unit" { return "((value: unknown): string => { void value; return \"Unit\"; })(" + code + ")"; }
-    if frontend.isListKind(kind) or frontend.isArrayKind(kind) {
-        element := if frontend.isListKind(kind) { frontend.listElementKind(kind) } else { frontend.arrayElementKind(kind) };
-        return "(\"[\" + (" + code + ").map((value: " + tsFunctionType(element) + ") => " + self(element, "value") + ").join(\", \") + \"]\")";
-    }
-    if frontend.isTupleKind(kind) {
-        var result := tsLiteral.textLiteralCode("(");
-        count := frontend.tupleComponentCount(kind);
-        var index := 0;
-        loop index < count {
-            comp := frontend.tupleComponent(kind, index);
-            separator := if index == 0 { "" } else { ", " };
-            prefixText := if comp.label == "" { separator } else { separator + comp.label + "=" };
-            result = result + " + " + tsLiteral.textLiteralCode(prefixText) + " + " + self(comp.kind, "value." + comp.prop);
-            index = index + 1;
-        }
-        ending := if count == 1 { ",)" } else { ")" };
-        return "((value: " + tsFunctionType(kind) + "): string => " + result + " + " + tsLiteral.textLiteralCode(ending) + ")(" + code + ")";
-    }
-    code
+    frontend.tsDisplayValueCode(kind, code)
 }
 
 /** Formats one output argument without duplicating its evaluation. */
@@ -400,6 +367,21 @@ emitBuiltinHelpers := fn(calls: String): Unit {
         io.outputLine("}");
         io.outputLine("");
     }
+    if usesBuiltin(calls, "throwTransfer") {
+        io.outputLine("const lite$transferToken = {};");
+        io.outputLine("let lite$transferVal: any = undefined;");
+        io.outputLine("function lite$throwTransfer(id: number, value: unknown): never {");
+        io.outputLine("    throw { token: lite$transferToken, id, value };");
+        io.outputLine("}");
+        io.outputLine("function lite$hasTransfer(err: unknown, id: number): boolean {");
+        io.outputLine("    if (typeof err === \"object\" && err !== null && \"token\" in err && err.token === lite$transferToken && \"id\" in err && err.id === id && \"value\" in err) {");
+        io.outputLine("        lite$transferVal = err.value;");
+        io.outputLine("        return true;");
+        io.outputLine("    }");
+        io.outputLine("    return false;");
+        io.outputLine("}");
+        io.outputLine("");
+    }
     return;
 }
 
@@ -528,6 +510,25 @@ pub emitProgram := fn(items: frontend.Items, source: String, prefix: String): Un
             indent = dedent(indent);
             io.outputLine(indent + "}");
             io.outputLine(indent + "void " + item.runtime + ";");
+        } else if item.kind == "TransferTry" or item.kind == "LoopTransferTry" {
+            io.outputLine(indent + "try {");
+            indent = indent + "    ";
+        } else if item.kind == "TransferCatch" {
+            indent = dedent(indent);
+            io.outputLine(indent + "} catch (lite$err) {");
+            if item.code == "Unit" {
+                io.outputLine(indent + "    if (lite$hasTransfer(lite$err, 0)) { return; } else { throw lite$err; }");
+            } else {
+                io.outputLine(indent + "    if (lite$hasTransfer(lite$err, 0)) { return lite$transferVal; } else { throw lite$err; }");
+            }
+            io.outputLine(indent + "}");
+        } else if item.kind == "LoopTransferCatch" {
+            indent = dedent(indent);
+            io.outputLine(indent + "} catch (lite$err) {");
+            io.outputLine(indent + "    if (lite$hasTransfer(lite$err, " + item.code + ")) { break; }");
+            io.outputLine(indent + "    else if (lite$hasTransfer(lite$err, " + item.textValue + ")) { continue; }");
+            io.outputLine(indent + "    else { throw lite$err; }");
+            io.outputLine(indent + "}");
         } else if item.kind == "Return" {
             if item.code == "" {
                 io.outputLine(indent + "return;");
@@ -616,7 +617,7 @@ pub emitProgram := fn(items: frontend.Items, source: String, prefix: String): Un
             count = 0;
         } else if item.kind == "MainStop" {
             mainStopped = true;
-        } else if item.kind == "Import" or item.kind == "PublicFunction" or item.kind == "PublicValue" or item.kind == "PublicType" {
+        } else if item.kind == "Import" or item.kind == "PublicFunction" or item.kind == "PublicValue" or item.kind == "PublicType" or item.kind == "Noop" {
         } else {
             if count > 0 { line = line + " + \" \" + "; }
             line = line + reportArgumentCode(item);
