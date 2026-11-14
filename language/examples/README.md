@@ -97,6 +97,19 @@ examples. They live under [compiler/](../../compiler/README.md) and are run with
 - [022 — Sum loop](022-sum-loop.lts): sums 1 through 5 with `var` bindings, `+=`
   compound updates, and explicit `loop`/`break`. Reports `sum(1..5) = 15`.
 
+## Play canvas & audio examples (`play/`)
+
+Interactive programs using `extra/canvas`, `extra/board`, and `extra/audio`:
+
+- [play/01 — Bounce](play/01-bounce.lts): `320x200` animated mark with RGBA
+  halo and wall-bounce chimes.
+- [play/02 — RGBA composition](play/02-rgba-art.lts): `360x240` layered
+  translucent disks, gridlines, and frames.
+- [play/03 — Pointer paint](play/03-cursor-paint.lts): `240x160` interactive
+  canvas with drag drawing, palette swatches, and keyboard shortcuts.
+- [play/04 — Synth arpeggio](play/04-arpeggio.lts): `320x180` four-pad
+  sequencer using `audio.Note` and `onCanvas*` hooks.
+
 When a language feature lands, revisit these examples for obsolete workarounds. Keep an example that explicitly demonstrates the replaced construct; otherwise prefer the simpler current form. See the [artifact-refresh checklist](../../docs/tooling-and-learning.md#refreshing-artifacts-after-a-language-change).
 
 Each Lite file is self-contained. Its visible output is explicitly requested with

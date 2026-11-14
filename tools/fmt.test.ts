@@ -42,7 +42,7 @@ test('formatLite normalizes indentation, brace spacing, blank lines, and EOF new
 });
 
 test('formatLite is idempotent across all language examples and core library files', () => {
-  for (const dir of ['language/examples', 'lib/core']) {
+  for (const dir of ['language/examples', 'language/examples/play', 'lib/core', 'lib/extra']) {
     const absDir = join(root, dir);
     for (const name of readdirSync(absDir).filter(f => f.endsWith('.lts'))) {
       const src = readFileSync(join(absDir, name), 'utf8');

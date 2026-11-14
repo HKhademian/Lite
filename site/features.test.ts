@@ -1,8 +1,14 @@
 import assert from 'node:assert/strict';
+import { existsSync } from 'node:fs';
+import { join } from 'node:path';
 import { test } from 'node:test';
-import { showcaseSamples } from './groups.ts';
+import { fileURLToPath } from 'node:url';
+import { heroSample, showcaseSamples } from './groups.ts';
 import { highlightLite } from './highlight.ts';
+import { playSamples } from './play-samples.ts';
 import { stripLiteTs } from './strip-ts.ts';
+
+const root = fileURLToPath(new URL('..', import.meta.url));
 
 test('stripLiteTs strips definite assignments, generic helpers, and as casts for runnable JS', () => {
   const routedSource = [
@@ -55,5 +61,13 @@ test('showcaseSamples includes examples covering named calls, tuples, arrays, an
     'integer-calculator',
   ]) {
     assert(ids.has(expected), `missing showcase sample: ${expected}`);
+  }
+});
+
+test('all site showcase and play sample sources live outside site/', () => {
+  for (const sample of [heroSample, ...showcaseSamples, ...playSamples]) {
+    assert(!sample.file.startsWith('site/'), `sample source should not live in site/: ${sample.file}`);
+    assert(sample.file.startsWith('language/'), `expected language/ sample location: ${sample.file}`);
+    assert(existsSync(join(root, sample.file)), `missing sample file: ${sample.file}`);
   }
 });
