@@ -1,8 +1,8 @@
 /** Release requirements distinguish usable tools, compiler previews and language conformance. */
 import assert from 'node:assert/strict';
-import { existsSync, mkdirSync, mkdtempSync, readFileSync, readdirSync, rmSync, writeFileSync } from 'node:fs';
+import { cpSync, existsSync, mkdirSync, mkdtempSync, readFileSync, readdirSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
-import { join } from 'node:path';
+import { basename, join } from 'node:path';
 import { test } from 'node:test';
 import { root, run, sha256 } from './project.ts';
 import { formatReleaseNotes, prepareRelease, releaseProfile } from './release.ts';
@@ -86,17 +86,28 @@ test('formatReleaseNotes tailors profile summary, verification details, and arti
   assert.match(languageNotes, /lite verify --all --no-cache/);
 });
 
-test('prepareRelease packages committed HEAD into a verified archive with matching manifest, notes, and SHA256SUMS', () => {
+test('prepareRelease packages a clean checkout into a verified archive with matching manifest, notes, and SHA256SUMS', () => {
   const work = mkdtempSync(join(tmpdir(), 'lite-release-test-'));
   try {
     const repo = join(work, 'repo');
-    const archive = join(work, 'head.tar');
     const output = join(work, 'out');
     const extracted = join(work, 'extracted');
     mkdirSync(repo);
     mkdirSync(extracted);
-    writeFileSync(archive, run('git', ['archive', '--format=tar', 'HEAD'], root));
-    run('tar', ['-xf', archive, '-C', repo], work);
+    if (existsSync(join(root, '.git'))) {
+      const archive = join(work, 'head.tar');
+      writeFileSync(archive, run('git', ['archive', '--format=tar', 'HEAD'], root));
+      run('tar', ['-xf', archive, '-C', repo], work);
+    } else {
+      for (const name of readdirSync(root)) {
+        if (['.git', 'node_modules', 'dist', '.cache'].includes(name)) continue;
+        cpSync(join(root, name), join(repo, name), {
+          recursive: true,
+          verbatimSymlinks: true,
+          filter: path => basename(path) !== 'node_modules',
+        });
+      }
+    }
     run('git', ['init', '-q'], repo);
     run('git', ['config', 'user.name', 'Lite Release Test'], repo);
     run('git', ['config', 'user.email', 'release-test@example.invalid'], repo);
