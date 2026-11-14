@@ -960,9 +960,9 @@ body.pg-resizing {
   color: var(--accent);
   border-color: var(--accent);
 }
-.pg-pause-btn .pg-icon-resume { display: none; }
-.pg-pause-btn[aria-pressed="true"] .pg-icon-pause { display: none; }
-.pg-pause-btn[aria-pressed="true"] .pg-icon-resume { display: block; }
+.pg-pause-btn .pg-icon-paused { display: none; }
+.pg-pause-btn[aria-pressed="true"] .pg-icon-playing { display: none; }
+.pg-pause-btn[aria-pressed="true"] .pg-icon-paused { display: block; }
 .pg-copy-btn[hidden],
 .pg-pause-btn[hidden] { display: none; }
 .pg-panel {

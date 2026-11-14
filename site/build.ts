@@ -711,12 +711,12 @@ function renderPlaygroundPage(
       </div>
       <div class="pg-actions">
         <span id="pg-status" class="pg-status" aria-live="polite">Ready</span>
-        <button id="pg-pause" class="pg-pause-btn" type="button" aria-pressed="false" title="Pause canvas events" hidden>
+        <button id="pg-pause" class="pg-pause-btn" type="button" aria-pressed="false" title="Playing — click to pause canvas events" hidden>
           <svg viewBox="0 0 16 16" width="11" height="11" fill="currentColor" aria-hidden="true">
-            <g class="pg-icon-pause"><rect x="3" y="2.5" width="3.5" height="11" rx="0.8"/><rect x="9.5" y="2.5" width="3.5" height="11" rx="0.8"/></g>
-            <path class="pg-icon-resume" d="M4 2.5v11l9-5.5-9-5.5Z"/>
+            <path class="pg-icon-playing" d="M4 2.5v11l9-5.5-9-5.5Z"/>
+            <g class="pg-icon-paused"><rect x="3" y="2.5" width="3.5" height="11" rx="0.8"/><rect x="9.5" y="2.5" width="3.5" height="11" rx="0.8"/></g>
           </svg>
-          <span id="pg-pause-label">Pause</span>
+          <span id="pg-pause-label">Playing</span>
         </button>
         <button id="pg-copy" class="pg-copy-btn" type="button" aria-label="Copy inspector content">Copy</button>
       </div>
@@ -745,9 +745,9 @@ function renderPlaygroundPage(
         <div class="pg-canvas-bar">
           <span id="pg-canvas-title" class="pg-canvas-title">Canvas Stage</span>
           <div class="pg-canvas-tools">
-            <span id="pg-canvas-size" class="pg-status">(320x200)</span>
-            <span class="pg-sep" aria-hidden="true">&middot;</span>
             <span id="pg-fps" class="pg-status">0.0 fps &middot; 0.0 ms</span>
+            <span class="pg-sep" aria-hidden="true">&middot;</span>
+            <span id="pg-canvas-size" class="pg-status">(320x200)</span>
             <span class="pg-sep" aria-hidden="true">&middot;</span>
             <button id="pg-mute" class="pg-mute-btn" type="button" aria-pressed="false" aria-label="Sound on — click to mute" title="Sound on — click to mute">
               <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
@@ -902,9 +902,11 @@ function renderPlaygroundPage(
     for (const [key, panel] of Object.entries(panels)) {
       panel.hidden = key !== name;
     }
+    const showPause = name === "canvas" && playableCanvas;
     codeModesBar.hidden = name !== "ts" && name !== "c";
     copyBtn.hidden = name === "canvas";
-    pauseBtn.hidden = !(name === "canvas" && playableCanvas);
+    pauseBtn.hidden = !showPause;
+    statusEl.hidden = showPause && statusEl.textContent !== "Modified";
     if (name === "canvas") resumeCanvasLoop();
     else pauseCanvasLoop();
     if (name === "c") void compileCForEditor();
@@ -921,6 +923,7 @@ function renderPlaygroundPage(
     pauseCanvasLoop();
     sourceEl.innerHTML = highlightLite(editorEl.value) + "\\n";
     statusEl.textContent = "Modified";
+    statusEl.hidden = false;
   });
 
   editorEl.addEventListener("keydown", (event) => {
@@ -1088,6 +1091,7 @@ function renderPlaygroundPage(
     const source = editorEl.value;
     const stdin = parseStdin();
     const args = parseArgs();
+    statusEl.hidden = false;
     statusEl.textContent = action === "compile" ? "Compiling in browser..." : "Running in browser...";
     if (action === "play") {
       outputEl.textContent = "";
@@ -1168,19 +1172,24 @@ function renderPlaygroundPage(
   function playReadyStatus() {
     if (activePlay) return "Playing";
     if (hasPlayLoop && playExitStatus !== 0) return "Stopped (" + playExitStatus + ")";
-    return "Interactive ready";
+    return "Interactive";
   }
 
   function syncPauseUi(updateStatus) {
-    pauseBtn.hidden = !(activeTab === "canvas" && playableCanvas);
+    const showPause = activeTab === "canvas" && playableCanvas;
+    pauseBtn.hidden = !showPause;
     pauseBtn.setAttribute("aria-pressed", canvasPaused ? "true" : "false");
-    pauseLabelEl.textContent = canvasPaused ? "Resume" : "Pause";
-    const label = canvasPaused ? "Resume canvas events" : "Pause canvas events";
-    pauseBtn.title = label;
-    pauseBtn.setAttribute("aria-label", label);
+    const stateText = canvasPaused ? "Paused" : playReadyStatus();
+    pauseLabelEl.textContent = stateText;
+    const tip = canvasPaused
+      ? "Paused — click to resume canvas events"
+      : stateText + " — click to pause canvas events";
+    pauseBtn.title = tip;
+    pauseBtn.setAttribute("aria-label", tip);
     if (updateStatus && playableCanvas) {
-      statusEl.textContent = canvasPaused ? "Paused" : playReadyStatus();
+      statusEl.textContent = canvasPaused ? "Paused" : (stateText === "Interactive" ? "Interactive ready" : stateText);
     }
+    statusEl.hidden = showPause && statusEl.textContent !== "Modified";
   }
   syncPauseUi(false);
 
@@ -1465,7 +1474,7 @@ function renderPlaygroundPage(
       } else {
         activePlay = false;
         playExitStatus = res.status;
-        statusEl.textContent = "Stopped (" + res.status + ")";
+        syncPauseUi(true);
       }
     } catch {
       playInFlight = false;
