@@ -2692,3 +2692,231 @@ test('call routing supports named, positional, shorthand, replacement, recursion
     assert.match(rejected.stderr.toString(), expectedMessage, bad + ' -> ' + rejected.stderr.toString());
   }
 });
+
+test('out local hygiene avoids main accumulator collisions at root, nested, and imported module scopes', () => {
+  const source = [
+    'io := import "core/io";',
+    'out := "ok";',
+    'io.outputLine(out);',
+    '{ var out := "a"; out += "b"; io.outputLine(out); }',
+    'laterOut := fn(): Int { deferredOut };',
+    'deferredOut := 7;',
+    'f := fn(): Int { out2 };',
+    'out2 := 9;',
+    'io.outputLine(laterOut(), f());',
+  ].join('\n');
+  const compiled = compileTs({ text: source });
+  assert.equal(compiled.status, 0, compiled.stderr.toString());
+  const tsOut = compiled.stdout.toString();
+  assert(tsOut.includes('const lt_local_out_'));
+  assert(tsOut.includes('return lite_out;'));
+  const actual = runTsArtifact(tsOut);
+  assert.equal(actual.phase, 'run');
+  assert.equal(actual.status, 0, actual.stderr.toString());
+  assert.equal(actual.stdout.toString(), 'ok\nab\n7 9\n');
+
+  const rootOutDeferred = [
+    'io := import "core/io";',
+    'readOut := fn(): Int { out };',
+    'out := 17;',
+    'io.outputLine(readOut());',
+  ].join('\n');
+  const deferredCompiled = compileTs({ text: rootOutDeferred });
+  assert.equal(deferredCompiled.status, 0, deferredCompiled.stderr.toString());
+  const deferredRun = runTsArtifact(deferredCompiled.stdout.toString());
+  assert.equal(deferredRun.status, 0, deferredRun.stderr.toString());
+  assert.equal(deferredRun.stdout.toString(), '17\n');
+
+  const directory = mkdtempSync(join(tmpdir(), 'lite-out-hygiene-'));
+  try {
+    const appPath = join(directory, 'app.lts');
+    const modPath = join(directory, 'mod.lts');
+    writeFileSync(modPath, 'pub readK := fn(): Int { K }\npub K := 9;\npub out := "mod-out";\n');
+    writeFileSync(appPath, 'io := import "core/io"; m := import "./mod.lts"; out := "root-out"; io.outputLine(m.readK(), m.out, out);\n');
+    const modCompiled = compileTs({ text: readFileSync(appPath, 'utf8'), name: realpathSync(appPath) });
+    assert.equal(modCompiled.status, 0, modCompiled.stderr.toString());
+    const modRun = runTsArtifact(modCompiled.stdout.toString());
+    assert.equal(modRun.phase, 'run');
+    assert.equal(modRun.status, 0, modRun.stderr.toString());
+    assert.equal(modRun.stdout.toString(), '9 mod-out root-out\n');
+  } finally {
+    rmSync(directory, { recursive: true, force: true });
+  }
+});
+
+test('tuple destructuring supports empty (), grouped (x), var (x), singleton (x,), nested shadowing, value blocks, and rejections', () => {
+  const source = [
+    'io := import "core/io";',
+    'var ticks := 0;',
+    'bump := fn(): Unit { ticks += 1; };',
+    '() := ();',
+    '() := Unit;',
+    '() := bump();',
+    '(x) := 42;',
+    'var (y) := 10;',
+    'y += 5;',
+    '(z,) := (99,);',
+    '{ (a, a) := (1, 2); (_, _) := (3, 4); io.outputLine(a); }',
+    'v := { () := bump(); (p) := 3; var (q) := 4; q += 1; (r, s) := (q, p * 2); r + s };',
+    'io.outputLine(ticks, x, y, z, v);',
+  ].join('\n');
+  const compiled = compileTs({ text: source });
+  assert.equal(compiled.status, 0, compiled.stderr.toString());
+  const actual = runTsArtifact(compiled.stdout.toString());
+  assert.equal(actual.phase, 'run');
+  assert.equal(actual.status, 0, actual.stderr.toString());
+  assert.equal(actual.stdout.toString(), '2\n2 42 15 99 11\n');
+
+  for (const [bad, expectedMessage] of [
+    ['() := 42;', /tuple destructuring requires Unit for \(\), got Int/],
+    ['() := (1, 2);', /tuple destructuring expected 0 fields, got 2/],
+    ['io := import "core/io"; () := io.exit(1);', /tuple destructuring requires Unit for \(\), got Never/],
+    ['var () := ();', /var tuple destructuring needs at least one binding/],
+    ['(x,) := 42;', /tuple destructuring requires a tuple value, got Int/],
+    ['(x) := ();', /cannot declare a Unit local x/],
+    ['io := import "core/io"; (x) := io.exit(1);', /cannot declare a Never local x/],
+    ['(dup, dup) := (1, 2);', /duplicate top-level value dup/],
+    ['{ var x := { () := 1; x }; }', /tuple destructuring requires Unit for \(\), got Int/],
+  ] as const) {
+    const rejected = compileTs({ text: bad });
+    assert.equal(rejected.status, 2, bad);
+    assert.match(rejected.stderr.toString(), expectedMessage, bad + ' -> ' + rejected.stderr.toString());
+  }
+});
+
+test('Never-valued io.exit supports default status, value flow, control joins, dead-code checks, and rejections', () => {
+  const defaultExit = compileTs({ text: 'io := import "core/io"; io.output("ready"); io.exit();' });
+  assert.equal(defaultExit.status, 0, defaultExit.stderr.toString());
+  const defaultRun = runTsArtifact(defaultExit.stdout.toString());
+  assert.equal(defaultRun.phase, 'run');
+  assert.equal(defaultRun.status, 0);
+  assert.equal(defaultRun.stdout.toString(), 'ready');
+
+  const topExit = compileTs({ text: 'io := import "core/io"; io.exit(0);' });
+  assert.equal(topExit.status, 0, topExit.stderr.toString());
+  assert(!topExit.stdout.toString().includes('return lite_out;'));
+  const topRun = runTsArtifact(topExit.stdout.toString());
+  assert.equal(topRun.phase, 'run');
+  assert.equal(topRun.status, 0);
+
+  const flowSource = [
+    'io := import "core/io";',
+    'checkNonNeg := fn(n: Int): Int {',
+    '  if n < 0 { io.errorLine("neg"); io.exit(3); }',
+    '  n * 2',
+    '};',
+    'pair := fn(a: Int, b: Int): Int { a + b };',
+    'logExit := fn(): Int { io.outputLine(io.exit(7)); };',
+    'choose := fn(flag: Bool): Int {',
+    '  if flag { 10 } else { io.exit(4) }',
+    '};',
+    'pickList := fn(flag: Bool): List<Int> {',
+    '  xs: List<Int> = if flag { [1] } else { [io.exit(6)] };',
+    '  xs',
+    '};',
+    'pickPairArray := fn(flag: Bool): [Int; 2] {',
+    '  if flag { [1, 42] } else { [io.exit(6), 42] }',
+    '};',
+    'blockBail := fn(flag: Bool): Int {',
+    '  if flag { 12 } else { code := 6; io.exit(code) }',
+    '};',
+    'deadAfterExit := fn(flag: Bool): Int {',
+    '  if flag { 15 } else { io.exit(6); 99 }',
+    '};',
+    'blockSemiExit := fn(flag: Bool): Int {',
+    '  if flag { 16 } else { io.exit(6); }',
+    '};',
+    'reorderedExit := fn(flag: Bool): Int {',
+    '  if flag { 5 } else { pair(b = io.exit(8), a = 2) }',
+    '};',
+    'mode := io.inputInt();',
+    'if mode == 1 {',
+    '  io.outputLine(checkNonNeg(4), choose(true), pickList(true), pickPairArray(true), blockBail(true), deadAfterExit(true), blockSemiExit(true), reorderedExit(true));',
+    '  p: Int = if false { io.exit(5) };',
+    '  ps: List<Int> = if false { io.exit(5) };',
+    '  d: Int = ?;',
+    '  if false { io.exit(2); } else { d = 33; }',
+    '  io.outputLine(p, ps, d);',
+    '} else if mode == 2 {',
+    '  io.outputLine(checkNonNeg(-1));',
+    '} else if mode == 3 {',
+    '  io.outputLine(choose(false));',
+    '} else if mode == 4 {',
+    '  io.outputLine(logExit());',
+    '} else {',
+    '  io.outputLine(reorderedExit(false));',
+    '}',
+  ].join('\n');
+  const flowCompiled = compileTs({ text: flowSource });
+  assert.equal(flowCompiled.status, 0, flowCompiled.stderr.toString());
+  const flowTs = flowCompiled.stdout.toString();
+
+  withTsArtifact(flowTs, run => {
+    const run1 = run({ stdin: '1\n' });
+    assert.equal(run1.phase, 'run');
+    assert.equal(run1.status, 0, run1.stderr.toString());
+    assert.equal(run1.stdout.toString(), '8 10 [1] [1, 42] 12 15 16 5\n0 [] 33\n');
+
+    const run2 = run({ stdin: '2\n' });
+    assert.equal(run2.status, 3);
+    assert.equal(run2.stderr.toString(), 'neg\n');
+
+    const run3 = run({ stdin: '3\n' });
+    assert.equal(run3.status, 4);
+
+    const run4 = run({ stdin: '4\n' });
+    assert.equal(run4.status, 7);
+
+    const run5 = run({ stdin: '5\n' });
+    assert.equal(run5.status, 8);
+  });
+
+  for (const [bad, expectedMessage] of [
+    ['io := import "core/io"; _ := Unit == io.exit(3);', /cannot compare Unit values|cannot compare/],
+    ['io := import "core/io"; _ := io.exit(1) == io.exit(2);', /cannot compare Never values/],
+    ['io := import "core/io"; x := io.exit(1);', /cannot declare a Never local x/],
+    ['io := import "core/io"; var x := io.exit(1);', /cannot declare a Never local x/],
+    ['io := import "core/io"; t := (io.exit(1), 2);', /tuple field .* cannot be Never/],
+    ['io := import "core/io"; xs := [io.exit(1)];', /list element 1 cannot be Never/],
+    ['io := import "core/io"; x := if true { io.exit(1) };', /partial conditional declaration needs a normally completing value branch/],
+    ['io := import "core/io"; io.exit(1, 2);', /function io\.exit expects 1 argument, got more/],
+    ['io := import "core/io"; io.exit(1); bad: Int = "str";', /cannot initialize Int with String/],
+  ] as const) {
+    const rejected = compileTs({ text: bad });
+    assert.equal(rejected.status, 2, bad);
+    assert.match(rejected.stderr.toString(), expectedMessage, bad + ' -> ' + rejected.stderr.toString());
+  }
+});
+
+test('unnamed loop sequence traversal supports lists, fixed arrays, empty lists, snapshots, and scope checks', () => {
+  const source = [
+    'io := import "core/io";',
+    'list := import "core/list";',
+    'xs: mut List<Int> = [10, 20, 30];',
+    'var listCount := 0;',
+    'loop xs { list.pushBack(mut xs, 99); listCount += 1; }',
+    'arr: [String; 3] = ["a", "b", "c"];',
+    'var arrCount := 0;',
+    'loop arr { arrCount += 1; }',
+    'empty: List<Int> = [];',
+    'var emptyCount := 0;',
+    'loop empty { emptyCount += 1; }',
+    'io.outputLine(listCount, xs, arrCount, emptyCount);',
+  ].join('\n');
+  const compiled = compileTs({ text: source });
+  assert.equal(compiled.status, 0, compiled.stderr.toString());
+  const actual = runTsArtifact(compiled.stdout.toString());
+  assert.equal(actual.phase, 'run');
+  assert.equal(actual.status, 0, actual.stderr.toString());
+  assert.equal(actual.stdout.toString(), '3 [10, 20, 30, 99, 99, 99] 3 0\n');
+
+  for (const [bad, expectedMessage] of [
+    ['io := import "core/io"; loop [1, 2] { io.outputLine(item); }', /unknown value item/],
+    ['io := import "core/io"; x: Int = ?; loop [1, 2] as item { x = item; } io.outputLine(x);', /cannot read uninitialized local x/],
+    ['loop 123 { }', /loop condition must be Bool/],
+  ] as const) {
+    const rejected = compileTs({ text: bad });
+    assert.equal(rejected.status, 2, bad);
+    assert.match(rejected.stderr.toString(), expectedMessage, bad + ' -> ' + rejected.stderr.toString());
+  }
+});

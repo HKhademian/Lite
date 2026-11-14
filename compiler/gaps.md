@@ -181,11 +181,11 @@ Keep dependencies explicit; split a topic further when its contracts warrant it.
   surrounding runtime-data capture where the current reference rejects it: T00
   rejects `var x := 2; reader := fn(): Int { return x; }`, while T11 currently
   accepts it. Keep admitted helper references distinct from unsupported data capture.
-- [ ] **Never-valued exit:** preserve the reference's Never result in value
+- [x] **Never-valued exit:** preserve the reference's Never result in value
   contexts. T00 rejects `Unit == exit(3)` before effects, while the current TS
   frontend treats exit as Unit and accepts it. Conversely, an Int-returning
   function whose tail exits needs the supported bottom-type flow contract.
-- [ ] **Traversal forms:** unnamed item bindings and consistent scope.
+- [x] **Traversal forms:** unnamed item bindings and consistent scope.
 - [ ] **Loop values and exits:** value/then completion, metadata, payloads,
   tagged break/continue and the reference's supported tagged returns. A final
   conditional loop must produce its selected zero/last value when it does not
@@ -196,8 +196,8 @@ Keep dependencies explicit; split a topic further when its contracts warrant it.
 - [ ] **Cleanup:** construct-level finally and exit/fault interactions.
 - [ ] **Match:** supported subjectless Boolean selection and combinations.
 - [ ] **Other existing builtins:** audit and port remaining reference helpers,
-  including inputWord and default-argument `exit()` (T00 exits zero; T11
-  currently requires one argument); preserve the selected six-helper public contract.
+  including inputWord (default-argument `io.exit()` exiting zero is now
+  supported on generated TS); preserve the selected six-helper public contract.
 - [ ] **C target parity:** functions, aggregates/copies, text/input, control
   flow and complete runtime/memory support. Audit TS-only acceptance explicitly.
 - [x] **C output argument faults:** `var zero := 0;
