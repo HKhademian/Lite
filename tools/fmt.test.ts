@@ -1,11 +1,13 @@
 /** Unit and CLI tests for lite fmt. */
 import assert from 'node:assert/strict';
 import { spawnSync } from 'node:child_process';
-import { mkdtempSync, readdirSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
+import { mkdirSync, mkdtempSync, readdirSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
-import { join } from 'node:path';
+import { dirname, join, relative } from 'node:path';
 import { test } from 'node:test';
 import { fileURLToPath } from 'node:url';
+import { compileTs } from '../compiler/host.ts';
+import { checkTsArtifact } from '../igniter/artifacts.ts';
 import { formatLite } from './fmt.ts';
 
 const root = fileURLToPath(new URL('../', import.meta.url));
@@ -52,13 +54,82 @@ function collectLiteFiles(dir: string): string[] {
 }
 
 test('formatLite is idempotent across all language examples, samples, and library files', () => {
-  for (const dir of ['language/examples', 'samples', 'lib/core', 'lib/extra']) {
-    const absDir = join(root, dir);
-    for (const full of collectLiteFiles(absDir)) {
-      const src = readFileSync(full, 'utf8');
-      const once = formatLite(src);
-      assert.equal(formatLite(once), once, `not idempotent on ${full}`);
+  const tmp = mkdtempSync(join(tmpdir(), 'lite-fmt-corpus-test-'));
+  try {
+    const copied: string[] = [];
+    for (const dir of ['language/examples', 'samples', 'lib/core', 'lib/extra']) {
+      const absDir = join(root, dir);
+      for (const full of collectLiteFiles(absDir)) {
+        const rel = relative(root, full);
+        const dest = join(tmp, rel);
+        mkdirSync(dirname(dest), { recursive: true });
+        writeFileSync(dest, readFileSync(full, 'utf8'), 'utf8');
+        copied.push(dest);
+      }
     }
+    assert.ok(copied.length > 0);
+    const first = spawnSync(process.execPath, [join(root, 'bin', 'lite'), 'fmt', tmp], { cwd: root, encoding: 'utf8' });
+    assert.equal(first.status, 0, first.stderr);
+    const afterFirst = new Map(copied.map(file => [file, readFileSync(file, 'utf8')]));
+    const check = spawnSync(process.execPath, [join(root, 'bin', 'lite'), 'fmt', '--check', tmp], { cwd: root, encoding: 'utf8' });
+    assert.equal(check.status, 0, check.stdout + check.stderr);
+    const second = spawnSync(process.execPath, [join(root, 'bin', 'lite'), 'fmt', tmp], { cwd: root, encoding: 'utf8' });
+    assert.equal(second.status, 0, second.stderr);
+    for (const file of copied) {
+      assert.equal(readFileSync(file, 'utf8'), afterFirst.get(file), `not idempotent on ${file}`);
+    }
+  } finally {
+    rmSync(tmp, { recursive: true, force: true });
+  }
+});
+
+test('generated fmt artifact matches tools/src/fmt.lts and passes strict TS checking', () => {
+  const sourcePath = join(root, 'tools/src/fmt.lts');
+  const compiled = compileTs({ text: readFileSync(sourcePath, 'utf8'), name: 'tools/src/fmt.lts', rootPath: sourcePath });
+  assert.equal(compiled.status, 0, compiled.stderr.toString());
+  const generated = readFileSync(join(root, 'tools/generated/fmt.ts'), 'utf8');
+  assert.equal(compiled.stdout.toString('utf8'), generated);
+  const checked = checkTsArtifact(generated);
+  assert.equal(checked.status, 0, `${checked.stdout}\n${checked.stderr}`);
+});
+
+test('lite fmt CLI handles --version, --help, stdin -, missing args, and directory exclusions', () => {
+  const versionRun = spawnSync(process.execPath, [join(root, 'bin', 'lite'), 'fmt', '--version'], { cwd: root, encoding: 'utf8' });
+  assert.equal(versionRun.status, 0, versionRun.stderr);
+  assert.match(versionRun.stdout, /^lite fmt (?:unassigned|\d+\.\d+\.\d+.*)\n$/);
+
+  const helpRun = spawnSync(process.execPath, [join(root, 'bin', 'lite'), 'fmt', '--help'], { cwd: root, encoding: 'utf8' });
+  assert.equal(helpRun.status, 0, helpRun.stderr);
+  assert.match(helpRun.stdout, /Usage: \.\/bin\/lite fmt \[--check\] \[FILE_OR_DIR\.\.\. \| -\]/);
+
+  const missingArgs = spawnSync(process.execPath, [join(root, 'bin', 'lite'), 'fmt'], { cwd: root, encoding: 'utf8' });
+  assert.equal(missingArgs.status, 2);
+
+  const stdinCheckDirty = spawnSync(process.execPath, [join(root, 'bin', 'lite'), 'fmt', '--check', '-'], {
+    cwd: root,
+    input: 'if 1<2{\n}\n\n',
+    encoding: 'utf8',
+  });
+  assert.equal(stdinCheckDirty.status, 1);
+
+  const stdinCheckClean = spawnSync(process.execPath, [join(root, 'bin', 'lite'), 'fmt', '--check', '-'], {
+    cwd: root,
+    input: 'if 1<2 {\n}\n',
+    encoding: 'utf8',
+  });
+  assert.equal(stdinCheckClean.status, 0);
+
+  const tmp = mkdtempSync(join(tmpdir(), 'lite-fmt-exclude-test-'));
+  try {
+    for (const ignored of ['node_modules', 'dist', '.hidden']) {
+      mkdirSync(join(tmp, ignored), { recursive: true });
+      writeFileSync(join(tmp, ignored, 'bad.lts'), 'if 1<2{\n}\n\n', 'utf8');
+    }
+    writeFileSync(join(tmp, 'clean.lts'), 'x := 1;\n', 'utf8');
+    const checkIgnored = spawnSync(process.execPath, [join(root, 'bin', 'lite'), 'fmt', '--check', tmp], { cwd: root, encoding: 'utf8' });
+    assert.equal(checkIgnored.status, 0, checkIgnored.stdout + checkIgnored.stderr);
+  } finally {
+    rmSync(tmp, { recursive: true, force: true });
   }
 });
 

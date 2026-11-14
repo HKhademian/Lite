@@ -1,0 +1,437 @@
+/** Format Lite (.lts) source files with canonical indentation and spacing. */
+
+io := import "core/io";
+fs := import "core/fs";
+proc := import "core/process";
+text := import "core/text";
+list := import "core/list";
+
+isSpaceChar := fn(ch: String): Bool {
+    ch == " " or ch == "\t" or ch == "\r" or ch == "\n"
+}
+
+trimEnd := fn(line: String): String {
+    var end := text.length(line);
+    loop end > 0 and isSpaceChar(text.at(line, end - 1)) {
+        end = end - 1;
+    }
+    text.slice(line, 0, end)
+}
+
+trimStart := fn(line: String): String {
+    size := text.length(line);
+    var start := 0;
+    loop start < size and isSpaceChar(text.at(line, start)) {
+        start = start + 1;
+    }
+    text.slice(line, start, size)
+}
+
+endsWith := fn(value: String, suffix: String): Bool {
+    valueLen := text.length(value);
+    suffixLen := text.length(suffix);
+    if suffixLen > valueLen { return false; }
+    text.startsWithAt(value, valueLen - suffixLen, suffix)
+}
+
+indentSpaces := fn(depth: Int): String {
+    var out := "";
+    var i := 0;
+    loop i < depth {
+        out = out + "    ";
+        i = i + 1;
+    }
+    out
+}
+
+scanLineBraces := fn(line: String, startInBlock: Bool): (leadingCloses: Int, netChange: Int, normalized: String, inBlockComment: Bool) {
+    var inBlock := startInBlock;
+    var inString := "";
+    var leadingCloses := 0;
+    var sawCode := false;
+    var netChange := 0;
+    var out := "";
+    var lastChar := "";
+    lineLen := text.length(line);
+    var i := 0;
+
+    loop i < lineLen {
+        ch := text.at(line, i);
+        if inBlock {
+            out = out + ch;
+            lastChar = ch;
+            if ch == "*" and i + 1 < lineLen and text.at(line, i + 1) == "/" {
+                out = out + "/";
+                lastChar = "/";
+                inBlock = false;
+                i = i + 2;
+            } else {
+                i = i + 1;
+            }
+        } else if inString =!= "" {
+            out = out + ch;
+            lastChar = ch;
+            if ch == "\\" and i + 1 < lineLen {
+                nextCh := text.at(line, i + 1);
+                out = out + nextCh;
+                lastChar = nextCh;
+                i = i + 2;
+            } else {
+                if ch == inString { inString = ""; }
+                i = i + 1;
+            }
+        } else if ch == "/" and i + 1 < lineLen and text.at(line, i + 1) == "/" {
+            out = out + text.slice(line, i, lineLen);
+            break;
+        } else if ch == "/" and i + 1 < lineLen and text.at(line, i + 1) == "*" {
+            out = out + "/*";
+            lastChar = "*";
+            inBlock = true;
+            sawCode = true;
+            i = i + 2;
+        } else if ch == "\"" or ch == "'" {
+            inString = ch;
+            sawCode = true;
+            out = out + ch;
+            lastChar = ch;
+            i = i + 1;
+        } else if ch == "}" {
+            if not sawCode { leadingCloses = leadingCloses + 1; } else { netChange = netChange - 1; }
+            out = out + "}";
+            lastChar = "}";
+            sawCode = true;
+            if i + 1 < lineLen and text.isAsciiLetter(text.at(line, i + 1)) {
+                out = out + " ";
+                lastChar = " ";
+            }
+            i = i + 1;
+        } else if ch == "{" {
+            if lastChar =!= "" and not isSpaceChar(lastChar) and lastChar =!= "(" and lastChar =!= "[" {
+                out = out + " ";
+            }
+            netChange = netChange + 1;
+            out = out + "{";
+            lastChar = "{";
+            sawCode = true;
+            i = i + 1;
+        } else {
+            if not isSpaceChar(ch) { sawCode = true; }
+            out = out + ch;
+            lastChar = ch;
+            i = i + 1;
+        }
+    }
+
+    totalNet := netChange - leadingCloses;
+    (leadingCloses = leadingCloses, netChange = totalNet, normalized = trimEnd(out), inBlockComment = inBlock)
+}
+
+/** Formats Lite source text cleanly and idempotently (4-space indentation, LF, single trailing newline). */
+pub formatLite := fn(source: String): String {
+    formatted: mut List<String> = [];
+    var formattedCount := 0;
+    var depth := 0;
+    var inBlockComment := false;
+    var blankRun := 0;
+    size := text.length(source);
+    var pos := 0;
+    var done := false;
+
+    loop not done {
+        var lineEnd := pos;
+        loop lineEnd < size {
+            ch := text.at(source, lineEnd);
+            if ch == "\n" or ch == "\r" { break; }
+            lineEnd = lineEnd + 1;
+        }
+        rawLine := text.slice(source, pos, lineEnd);
+        if lineEnd >= size {
+            done = true;
+        } else if text.at(source, lineEnd) == "\r" and lineEnd + 1 < size and text.at(source, lineEnd + 1) == "\n" {
+            pos = lineEnd + 2;
+        } else {
+            pos = lineEnd + 1;
+        }
+
+        trimmed := trimEnd(rawLine);
+        if trimStart(trimmed) == "" {
+            if formattedCount > 0 and blankRun == 0 {
+                list.pushBack(mut formatted, "");
+                formattedCount = formattedCount + 1;
+                blankRun = 1;
+            }
+        } else if inBlockComment {
+            list.pushBack(mut formatted, trimmed);
+            formattedCount = formattedCount + 1;
+            scanned := scanLineBraces(trimmed, true);
+            inBlockComment = scanned.inBlockComment;
+            blankRun = 0;
+        } else {
+            body := trimStart(trimmed);
+            scanned := scanLineBraces(body, false);
+            var lineDepth := depth - scanned.leadingCloses;
+            if lineDepth < 0 { lineDepth = 0; }
+            list.pushBack(mut formatted, indentSpaces(lineDepth) + scanned.normalized);
+            formattedCount = formattedCount + 1;
+            depth = depth + scanned.netChange;
+            if depth < 0 { depth = 0; }
+            inBlockComment = scanned.inBlockComment;
+            blankRun = 0;
+        }
+    }
+
+    loop formattedCount > 0 and formatted[formattedCount - 1] == "" {
+        list.popBack(mut formatted);
+        formattedCount = formattedCount - 1;
+    }
+    if formattedCount == 0 { return ""; }
+    text.joinTexts(formatted, "\n") + "\n"
+}
+
+isWin32 := fn(): Bool {
+    proc.platform() == "win32"
+}
+
+pathSep := fn(): String {
+    if isWin32() { return "\\"; }
+    "/"
+}
+
+isPathSep := fn(ch: String): Bool {
+    ch == "/" or (isWin32() and ch == "\\")
+}
+
+isAbsolutePath := fn(target: String): Bool {
+    size := text.length(target);
+    if size == 0 { return false; }
+    if isPathSep(text.at(target, 0)) { return true; }
+    isWin32() and size >= 2 and text.isAsciiLetter(text.at(target, 0)) and text.at(target, 1) == ":"
+}
+
+normalizePath := fn(raw: String): String {
+    size := text.length(raw);
+    if size == 0 { return "."; }
+    sep := pathSep();
+    var rootPrefix := "";
+    var start := 0;
+    if isWin32() and size >= 2 and text.isAsciiLetter(text.at(raw, 0)) and text.at(raw, 1) == ":" {
+        drive := text.slice(raw, 0, 2);
+        if size >= 3 and isPathSep(text.at(raw, 2)) {
+            rootPrefix = drive + sep;
+            start = 3;
+        } else {
+            rootPrefix = drive;
+            start = 2;
+        }
+    } else if isPathSep(text.at(raw, 0)) {
+        rootPrefix = sep;
+        start = 1;
+    }
+
+    parts: mut List<String> = [];
+    var partsCount := 0;
+    var segStart := start;
+    var i := start;
+    loop i <= size {
+        atEnd := i == size;
+        if atEnd or isPathSep(text.at(raw, i)) {
+            if i > segStart {
+                seg := text.slice(raw, segStart, i);
+                if seg == ".." {
+                    if partsCount > 0 and (rootPrefix =!= "" or parts[partsCount - 1] =!= "..") {
+                        list.popBack(mut parts);
+                        partsCount = partsCount - 1;
+                    } else if rootPrefix == "" {
+                        list.pushBack(mut parts, "..");
+                        partsCount = partsCount + 1;
+                    }
+                } else if seg =!= "." {
+                    list.pushBack(mut parts, seg);
+                    partsCount = partsCount + 1;
+                }
+            }
+            segStart = i + 1;
+        }
+        i = i + 1;
+    }
+
+    if partsCount == 0 {
+        if rootPrefix =!= "" { return rootPrefix; }
+        return ".";
+    }
+    rootPrefix + text.joinTexts(parts, sep)
+}
+
+resolvePath := fn(baseDir: String, target: String): String {
+    if isAbsolutePath(target) { return normalizePath(target); }
+    sep := pathSep();
+    if baseDir == "" { return normalizePath(target); }
+    normalizePath(baseDir + sep + target)
+}
+
+parentDir := fn(target: String): String {
+    resolvePath(target, "..")
+}
+
+findRepoRootFrom := fn(startPath: String): String {
+    if startPath == "" { return ""; }
+    var dir := normalizePath(startPath);
+    if fs.kind(dir) =!= "dir" { dir = parentDir(dir); }
+    var steps := 0;
+    loop steps < 16 {
+        versionsPath := resolvePath(dir, "config/versions.json");
+        if fs.kind(versionsPath) == "file" { return dir; }
+        next := parentDir(dir);
+        if next == dir { break; }
+        dir = next;
+        steps = steps + 1;
+    }
+    ""
+}
+
+readFormatterVersion := fn(): String {
+    var root := findRepoRootFrom(proc.entryPath());
+    if root == "" { root = findRepoRootFrom(proc.cwd()); }
+    if root == "" { return "unassigned"; }
+    versionsPath := resolvePath(root, "config/versions.json");
+    readRes := fs.readText(versionsPath);
+    if not readRes.ok { return "unassigned"; }
+
+    content := readRes.text;
+    keyPos := text.indexOfText(content, "\"formatter\"", 0);
+    if keyPos < 0 { return "unassigned"; }
+    var pos := text.skipSpaces(content, keyPos + 11);
+    size := text.length(content);
+    if pos >= size or text.at(content, pos) =!= ":" { return "unassigned"; }
+    pos = text.skipSpaces(content, pos + 1);
+    if text.startsWithAt(content, pos, "null") { return "unassigned"; }
+    if pos >= size or text.at(content, pos) =!= "\"" { return "unassigned"; }
+    pos = pos + 1;
+    start := pos;
+    loop pos < size {
+        ch := text.at(content, pos);
+        if ch == "\\" {
+            pos = pos + 2;
+        } else if ch == "\"" {
+            return text.slice(content, start, pos);
+        } else {
+            pos = pos + 1;
+        }
+    }
+    "unassigned"
+}
+
+textListCount := fn(items: List<String>): Int {
+    var count := 0;
+    loop items as item {
+        count = count + 1;
+    }
+    count
+}
+
+collectLtsFiles := fn(targets: List<String>): List<String> {
+    files: mut List<String> = [];
+    stack: mut List<String> = [];
+    var stackCount := 0;
+    var targetIdx := textListCount(targets) - 1;
+    loop targetIdx >= 0 {
+        list.pushBack(mut stack, resolvePath(proc.cwd(), targets[targetIdx]));
+        stackCount = stackCount + 1;
+        targetIdx = targetIdx - 1;
+    }
+    loop stackCount > 0 {
+        resolved := list.popBack(mut stack);
+        stackCount = stackCount - 1;
+        kind := fs.kind(resolved);
+        if kind == "missing" {
+            io.errorLine("ENOENT: no such file or directory, stat '" + resolved + "'");
+            io.exit(1);
+        }
+        if kind == "dir" {
+            entries := fs.listDir(resolved);
+            var entryIdx := textListCount(entries) - 1;
+            loop entryIdx >= 0 {
+                entry := entries[entryIdx];
+                if entry =!= "node_modules" and entry =!= "dist" and not text.startsWithAt(entry, 0, ".") {
+                    list.pushBack(mut stack, resolvePath(resolved, entry));
+                    stackCount = stackCount + 1;
+                }
+                entryIdx = entryIdx - 1;
+            }
+        } else if endsWith(resolved, ".lts") {
+            list.pushBack(mut files, resolved);
+        }
+    }
+    files
+}
+
+args := io.inputArgs();
+argCount := textListCount(args);
+if argCount > 0 and args[0] == "--version" {
+    if argCount =!= 1 {
+        io.errorLine("Usage: lite fmt --version");
+        io.exit(2);
+    }
+    io.outputLine("lite fmt " + readFormatterVersion());
+    io.exit(0);
+}
+
+var checkOnly := false;
+targets: mut List<String> = [];
+var targetCount := 0;
+loop args as arg {
+    if arg == "--help" or arg == "-h" {
+        io.output(
+        "Usage: ./bin/lite fmt [--check] [FILE_OR_DIR... | -]\n\n" +
+        "Options:\n" +
+        "  --check   Exit with status 1 if any file is not formatted\n"
+        );
+        io.exit(0);
+    } else if arg == "--check" {
+        checkOnly = true;
+    } else if arg =!= "--write" {
+        list.pushBack(mut targets, arg);
+        targetCount = targetCount + 1;
+    }
+}
+
+if targetCount == 0 {
+    io.errorLine("Usage: ./bin/lite fmt [--check] [FILE_OR_DIR... | -]");
+    io.exit(2);
+}
+
+if targetCount == 1 and targets[0] == "-" {
+    input := io.inputAll("");
+    output := formatLite(input);
+    if checkOnly {
+        if input == output { io.exit(0); } else { io.exit(1); }
+    }
+    io.output(output);
+    io.exit(0);
+}
+
+files := collectLtsFiles(targets);
+
+var dirty := 0;
+loop files as file {
+    readRes := fs.readText(file);
+    if not readRes.ok {
+        io.errorLine(file + ": " + readRes.error);
+        io.exit(1);
+    }
+    after := formatLite(readRes.text);
+    if readRes.text =!= after {
+        dirty = dirty + 1;
+        if checkOnly {
+            io.outputLine(file);
+        } else {
+            writeRes := fs.writeText(file, after);
+            if not writeRes.ok {
+                io.errorLine(file + ": " + writeRes.error);
+                io.exit(1);
+            }
+        }
+    }
+}
+
+if checkOnly and dirty > 0 { io.exit(1); }
