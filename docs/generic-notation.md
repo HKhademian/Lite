@@ -1,6 +1,69 @@
 # Temporary generic notation
 
-Status: **documentation convention clarified by the user, 2026-10-19**. Generic concepts can be discussed before their source syntax is designed. Angle-bracket examples are temporary explanatory notation except for the explicitly approved builtin FVP List<T> family below; general generic grammar remains unselected.
+Status: **documentation convention clarified 2026-10-19; separate angle-bracket function type-parameter direction selected 2026-11-14**. The builtin `List<T>` slice is implemented. The function direction below is selected design, not compiler support or a complete generic grammar. Other type-family notation remains explanatory except where separately selected.
+
+## Separate function type parameters
+
+Selected 2026-11-14: a function's explicit type parameters belong in a
+separate angle-bracket list, distinct from its ordinary callable input tuple.
+The Kotlin-like separation gives readers a familiar visual distinction between
+type parameters and ordinary inputs. An illustrative anonymous-function form is:
+
+```text
+first := fn <T>(items: [T]): T { items[0] }
+```
+
+This is the current design choice, made for readability and developer
+familiarity; it may be revisited as the remaining language design develops.
+
+`T` names a type parameter; it is not an ordinary input tuple component. The
+function's ordinary input is `items`. The same name relates its element type
+to the result. `[T]` is the previously selected full indexed-sequence contract,
+including count and traversal; it is stronger than the minimal indexed-read
+requirement that a local omitted-input function can infer. See [the indexed
+contract](indexed-sequence-contract.md) and [local input inference](collection-function-signatures.md#local-inferred-indexing-and-explicit-public-contracts).
+
+The `fn <T>(...)` example illustrates the selected separate-list direction; it
+does not complete the declaration grammar, callable-type spelling, or parsing
+rules. The direction applies to functions as values and does not require a
+function name in its declaration. It does not decide the status or placement of
+compile-time value parameters, first-class type values, type-family declaration
+syntax, or whether any future feature can pass a type through a tuple.
+
+Keep the selected ordinary tuple application boundary: `f(pair)` supplies one
+tuple value and `f(...pair)` supplies its components. Introducing separate type
+parameters does not require inserting a type into an ordinary input tuple or
+unpacking a tuple-valued ordinary argument.
+
+### Pending contract cases
+
+These are specification examples, not executable passes:
+
+- **element relationship:** in the function above, `T = Int` gives an `Int`
+  result and `T = String` gives a `String` result, with suitable providers.
+- **inferred call:** `first(numbers)` can infer `T` from an appropriately typed
+  indexed input under the selected local-inference direction; the complete
+  inference algorithm and ambiguity rules remain open.
+- **tuple type:** a tuple type such as `(:Int, :String)` can be one type
+  argument, rather than automatically becoming two type parameters.
+- **union type:** `Int | String` can be one type argument, preserving the
+  selected plain-union normalization and ordinary admission rules.
+- **two types:** a function with type parameters `From` and `To` may relate
+  one to its input and the other to its result; how to supply just one while
+  inferring the other remains open.
+- **one tuple input:** a function with a tuple-valued ordinary input continues
+  to receive that value as one input; only explicit spread applies its
+  components as separate inputs under existing call rules.
+- **invalid type or contract:** a supplied type must satisfy an explicitly
+  declared complete contract; incompatible ordinary values must not be admitted
+  merely to make inference succeed. Exact inference and diagnostics are open.
+
+Explicit call-site syntax, omitted or partial type arguments, result-context
+inference, constraints, conflicts between type evidence, declaration scope,
+shadowing, callable values, and recursive grammar remain open. In particular,
+spellings such as `f<Int>(x)` or `f<Int | String>(x)` are examples to evaluate,
+not selected calls. No implicit union should be inferred for differing inputs
+without a separately selected inference rule.
 
 FVP exception selected by the user, **2026-10-31**: adopt List<T> for this builtin
 family in the [bounded INV-055 slice](../research/investigations/INV-055-fvp-list-slice.md).
@@ -18,9 +81,9 @@ Option<User>
 Result<User, LoadError>
 ```
 
-Except for the narrow List<T> approval above, read these as descriptions of type families and their inputs. They do not select angle brackets, argument separators, declaration syntax, parameter kinds, or explicit application syntax.
+Except for the narrow List<T> approval above, read these as descriptions of type families and their inputs. The function-parameter direction above does not select type-family argument separators, declaration syntax, parameter kinds, or explicit application syntax.
 
-The user selected a conditional type-boundary contract on 2026-10-23: if angle brackets are adopted for generic source syntax, grammatical type context must separate a closing > from an attached fallible-type ! suffix and any following initializer =. Box<Int>! = load(), Box<Int>!= load(), and Box<Int>!=load() preserve that boundary in a typed declaration; Box<Int> != load() has a detached suffix and is invalid shorthand. This reserves the attachment behavior without selecting generic application syntax, expression operators, or complete token-splitting implementation. See [fallible-type shorthand attachment](fallible-types-and-error-composition.md#fallible-type-shorthand-attachment-selected).
+The user selected a conditional type-boundary contract on 2026-10-23: if angle brackets are adopted for generic type application, grammatical type context must separate a closing > from an attached fallible-type ! suffix and any following initializer =. Box<Int>! = load(), Box<Int>!= load(), and Box<Int>!=load() preserve that boundary in a typed declaration; Box<Int> != load() has a detached suffix and is invalid shorthand. The separate function-parameter direction does not itself select generic type application syntax, expression operators, or complete token-splitting implementation. See [fallible-type shorthand attachment](fallible-types-and-error-composition.md#fallible-type-shorthand-attachment-selected).
 
 The same convention covers capability examples such as `Iterable<Icon>`. A capability written in a parameter sketch does not settle whether the final spelling is a generic constraint or a runtime interface value, and it does not mandate boxing or dynamic dispatch. The future generic/interface review must distinguish those mechanisms explicitly.
 
@@ -45,8 +108,8 @@ was explicitly approved for the builtin List<T> family after operation-name
 selection. That bounded exception does not adopt angle brackets for other
 families or settle their generic declaration/application design.
 
-The future review should consider declaration and application syntax together, distinguish type inputs from compile-time value inputs, and define inference, defaults, constraints, specialization, and type identity. These are topics for that review, not newly selected features or a replacement syntax proposal.
+The future review should complete declaration and application syntax together, distinguish type inputs from compile-time value inputs, and define inference, defaults, constraints, specialization, and type identity. The separate function type-parameter direction above does not settle those topics.
 
-For now, keep one consistent explanatory notation and link to this convention. Beyond the explicit builtin List exception, do not implement or treat the examples as a settled generic grammar. Once a source design is selected, migrate the examples together and retain this record as historical context.
+For now, keep one consistent explanatory notation and link to this convention. Beyond the explicit builtin List exception, the function direction is not an implementation or a settled generic grammar. Migrate explanatory examples only as the relevant source contracts are selected.
 
 Related: [types and inference](types-and-inference.md), [arrays](arrays.md), [sequence families](sequence-types.md), [fallible types](fallible-types-and-error-composition.md), and [grammar sketch](grammar-sketch.md).

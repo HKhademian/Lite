@@ -1,6 +1,6 @@
 # Type parameters: reference language comparison
 
-Status: **research, 2026-11-14; no new Lite syntax selected**. This compares
+Status: **research, 2026-11-14; separate angle-bracket function type-parameter direction subsequently selected**. This compares
 how a function names a type parameter, how a caller supplies or infers it,
 and whether types also appear as compile-time arguments. Examples are small
 excerpts of the cited documentation, not tested Lite programs. Jai remains
@@ -56,9 +56,9 @@ An explicit type parameter in a declaration and an explicit type argument at
 a call are independent choices. A separate parameter list can be inferred at
 the call; a type-valued ordinary parameter can be required at the call. The
 references also show shorthand inference and language-specific exceptions.
-Their punctuation does not select Lite's design.
+The later [Lite direction](generic-notation.md#separate-function-type-parameters) selects a separate angle-bracket list for function type parameters; it does not adopt the other languages' full grammars.
 
-Candidate shapes, only for comparison:
+Shapes considered in the comparison:
 
 ```text
 first := fn <T>(items: [T]): T { items[0] }
@@ -67,8 +67,9 @@ first := fn (T: type, items: [T]): T { items[0] }
 
 Both would state the input/result relationship, but the second raises a
 separate question: when may the type input be omitted or named at a call?
-`type` as a parameter type, generic parameter binding, angle brackets, argument
-omission, compile-time execution, and type-value semantics are **not selected**.
+The first illustrates the selected separate-list direction. `type` as an
+ordinary parameter type, complete generic binding, argument omission,
+compile-time execution, and type-value semantics are **not selected**.
 `[T]` is Lite's already selected full indexed-sequence contract, stronger than
 the minimum read requirement inferred in the local `first` example.
 
