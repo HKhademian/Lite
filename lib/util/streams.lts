@@ -1,0 +1,172 @@
+/** Byte-exact stream descriptor validation, hashing, and byte extraction for case manifests. */
+
+crypto := import "core/crypto";
+fs := import "core/fs";
+text := import "core/text";
+textHost := import "core/text-host";
+list := import "core/list";
+path := import "util/path";
+json := import "util/json";
+
+isHex64 := fn(value: String): Bool {
+    if text.length(value) =!= 64 { return false; }
+    var i := 0;
+    loop i < 64 {
+        ch := text.at(value, i);
+        ok := text.isDigit(ch) or ch == "a" or ch == "b" or ch == "c" or ch == "d" or ch == "e" or ch == "f";
+        if not ok { return false; }
+        i = i + 1;
+    }
+    true
+}
+
+isSiblingFileName := fn(name: String): Bool {
+    size := text.length(name);
+    if size == 0 { return false; }
+    first := text.at(name, 0);
+    if not (text.isAsciiLetter(first) or text.isDigit(first)) { return false; }
+    var i := 1;
+    loop i < size {
+        ch := text.at(name, i);
+        ok := text.isAsciiLetter(ch) or text.isDigit(ch) or ch == "." or ch == "_" or ch == "-";
+        if not ok { return false; }
+        i = i + 1;
+    }
+    true
+}
+
+isJsonPrefixAt := fn(source: String, start: Int, prefix: String): Bool {
+    pos := text.skipSpaces(source, start);
+    text.startsWithAt(source, pos, prefix)
+}
+
+parseBytesArray := fn(source: String, arrayPos: Int, label: String): (ok: Bool, error: String) {
+    if not isJsonPrefixAt(source, arrayPos, "[") {
+        return (ok = false, error = label + ".bytes must contain integers 0-255");
+    }
+    offsets := json.arrayElementOffsets(source, arrayPos);
+    loop offsets as bPos {
+        byteRes := json.readIntAt(source, bPos);
+        if not byteRes.ok or byteRes.value < 0 or byteRes.value > 255 {
+            return (ok = false, error = label + ".bytes must contain integers 0-255");
+        }
+    }
+    (ok = true, error = "")
+}
+
+collectBytesArray := fn(source: String, arrayPos: Int): List<Int> {
+    out: mut List<Int> = [];
+    offsets := json.arrayElementOffsets(source, arrayPos);
+    loop offsets as bPos {
+        byteRes := json.readIntAt(source, bPos);
+        list.pushBack(mut out, byteRes.value);
+    }
+    out
+}
+
+/** Validates one JSON stream descriptor at `streamPos` and returns `(ok, sha256, kind, error)`. */
+pub validateStream := fn(
+source: String,
+streamPos: Int,
+directory: String,
+label: String,
+requiredHash: Bool,
+siblingOnly: Bool,
+checkHash: Bool
+): (ok: Bool, sha256: String, kind: String, error: String) {
+    if not isJsonPrefixAt(source, streamPos, "{") {
+        return (ok = false, sha256 = "", kind = "", error = label + ": stream must be an object");
+    }
+    keys := json.objectKeys(source, streamPos);
+    allowed: List<String> = ["text", "bytes", "file", "hash"];
+    var form := "";
+    var formCount := 0;
+    loop keys as k {
+        if not list.listContainsText(allowed, k) {
+            return (ok = false, sha256 = "", kind = "", error = label + ": unexpected stream key");
+        }
+        if k =!= "hash" {
+            form = k;
+            formCount = formCount + 1;
+        }
+    }
+    if formCount =!= 1 {
+        return (ok = false, sha256 = "", kind = "", error = label + ": exactly one of text, bytes or file required");
+    }
+
+    var digest := "";
+    if form == "text" {
+        tRes := json.readObjectString(source, streamPos, "text");
+        if not tRes.ok { return (ok = false, sha256 = "", kind = "", error = label + ".text must be a string"); }
+        digest = "sha256:" + crypto.sha256Text(tRes.value);
+    } else if form == "bytes" {
+        bField := json.findObjectField(source, streamPos, "bytes");
+        parsed := parseBytesArray(source, bField.valuePos, label);
+        if not parsed.ok { return (ok = false, sha256 = "", kind = "", error = parsed.error); }
+        digest = "sha256:" + crypto.sha256Bytes(collectBytesArray(source, bField.valuePos));
+    } else {
+        fRes := json.readObjectString(source, streamPos, "file");
+        if not fRes.ok or fRes.value == "" or (siblingOnly and not isSiblingFileName(fRes.value)) {
+            kindMsg := if siblingOnly { "a sibling file name" } else { "a nonempty file path" };
+            return (ok = false, sha256 = "", kind = "", error = label + ".file must be " + kindMsg);
+        }
+        fullFile := path.resolve(directory, fRes.value);
+        if fs.kind(fullFile) =!= "file" {
+            return (ok = false, sha256 = "", kind = "", error = label + ".file missing: " + fullFile);
+        }
+        fHash := crypto.sha256File(fullFile);
+        if not fHash.ok {
+            return (ok = false, sha256 = "", kind = "", error = label + ".file hash failed: " + fHash.error);
+        }
+        digest = "sha256:" + fHash.hex;
+    }
+
+    hashField := json.findObjectField(source, streamPos, "hash");
+    if requiredHash or hashField.found {
+        var validHash := false;
+        var hashValue := "";
+        if hashField.found {
+            hStr := json.readStringAt(source, hashField.valuePos);
+            if hStr.ok and text.startsWithAt(hStr.value, 0, "sha256:") {
+                hexPart := text.slice(hStr.value, 7, text.length(hStr.value));
+                if isHex64(hexPart) {
+                    validHash = true;
+                    hashValue = hStr.value;
+                }
+            }
+        }
+        if not validHash {
+            return (ok = false, sha256 = "", kind = "", error = label + ".hash must be sha256:<64 lowercase hex>");
+        }
+        if checkHash and hashValue =!= digest {
+            return (ok = false, sha256 = "", kind = "", error = label + ".hash does not match content");
+        }
+    }
+    (ok = true, sha256 = digest, kind = form, error = "")
+}
+
+/** Reads the raw `0..255` byte list of a validated stream descriptor at `streamPos`. */
+pub readStreamBytes := fn(source: String, streamPos: Int, directory: String): List<Int> {
+    if json.findObjectField(source, streamPos, "text").found {
+        tRes := json.readObjectString(source, streamPos, "text");
+        return textHost.utf8Bytes(tRes.value);
+    }
+    bField := json.findObjectField(source, streamPos, "bytes");
+    if bField.found {
+        return collectBytesArray(source, bField.valuePos);
+    }
+    fRes := json.readObjectString(source, streamPos, "file");
+    fs.readBytes(path.resolve(directory, fRes.value))
+}
+
+/** Returns true when `left` and `right` contain identical byte sequences. */
+pub equalBytes := fn(left: List<Int>, right: List<Int>): Bool {
+    n := list.listCountInt(left);
+    if n =!= list.listCountInt(right) { return false; }
+    var i := 0;
+    loop i < n {
+        if left[i] =!= right[i] { return false; }
+        i = i + 1;
+    }
+    true
+}

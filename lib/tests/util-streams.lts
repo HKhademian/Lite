@@ -1,0 +1,65 @@
+crypto := import "core/crypto";
+fs := import "core/fs";
+test := import "core/test";
+path := import "util/path";
+streams := import "util/streams";
+
+tmp := fs.makeTempDir("lite-util-streams-");
+test.checkBool("temp dir ok", true, tmp.ok);
+dir := tmp.path;
+
+rawBytes: List<Int> = [0, 255, 13, 10];
+wrote := fs.writeBytes(path.join(dir, "raw.stdin"), rawBytes);
+test.checkBool("write raw bin ok", true, wrote.ok);
+rawHex := crypto.sha256Bytes(rawBytes);
+
+sText := "{\"text\": \"a\\r\\n\"}";
+vText := streams.validateStream(sText, 0, dir, "stream", false, false, true);
+test.checkBool("text valid", true, vText.ok);
+test.checkText("text sha", "sha256:" + crypto.sha256Text("a\r\n"), vText.sha256);
+test.checkBool("text bytes eq", true, streams.equalBytes(streams.readStreamBytes(sText, 0, dir), [97, 13, 10]));
+
+sBytes := "{\"bytes\": [0, 255, 13, 10], \"hash\": \"sha256:" + rawHex + "\"}";
+vBytes := streams.validateStream(sBytes, 0, dir, "stream", true, false, true);
+test.checkBool("bytes valid", true, vBytes.ok);
+test.checkBool("bytes read eq", true, streams.equalBytes(streams.readStreamBytes(sBytes, 0, dir), rawBytes));
+
+sFile := "{\"file\": \"raw.stdin\", \"hash\": \"sha256:" + rawHex + "\"}";
+vFile := streams.validateStream(sFile, 0, dir, "stream", true, true, true);
+test.checkBool("file valid", true, vFile.ok);
+test.checkBool("file read eq", true, streams.equalBytes(streams.readStreamBytes(sFile, 0, dir), rawBytes));
+
+vEmpty := streams.validateStream("{}", 0, dir, "stream", false, false, true);
+test.checkBool("empty object fails", false, vEmpty.ok);
+test.checkText("empty object err", "stream: exactly one of text, bytes or file required", vEmpty.error);
+
+vNonObj := streams.validateStream("\"file.stdin\"", 0, dir, "stream", false, false, true);
+test.checkBool("non-object fails", false, vNonObj.ok);
+test.checkText("non-object err", "stream: stream must be an object", vNonObj.error);
+
+vBoth := streams.validateStream("{\"text\": \"\", \"bytes\": []}", 0, dir, "stream", false, false, true);
+test.checkBool("two forms fail", false, vBoth.ok);
+
+vOob := streams.validateStream("{\"bytes\": [256]}", 0, dir, "stream", false, false, true);
+test.checkBool("byte 256 fails", false, vOob.ok);
+
+vFloat := streams.validateStream("{\"bytes\": [1.5]}", 0, dir, "stream", false, false, true);
+test.checkBool("float byte fails", false, vFloat.ok);
+
+vBadHash := streams.validateStream("{\"file\": \"raw.stdin\", \"hash\": \"sha256:0000000000000000000000000000000000000000000000000000000000000000\"}", 0, dir, "stream", false, false, true);
+test.checkBool("stale hash fails", false, vBadHash.ok);
+
+vBadBytesHash := streams.validateStream("{\"bytes\": [0, 1], \"hash\": \"sha256:0000000000000000000000000000000000000000000000000000000000000000\"}", 0, dir, "stream", false, false, true);
+test.checkBool("stale bytes hash fails", false, vBadBytesHash.ok);
+
+vReqHash := streams.validateStream("{\"text\": \"\"}", 0, dir, "stream", true, false, true);
+test.checkBool("required hash fails", false, vReqHash.ok);
+
+vSibling := streams.validateStream("{\"file\": \"../raw.stdin\"}", 0, dir, "stream", false, true, true);
+test.checkBool("sibling check fails", false, vSibling.ok);
+
+vExtra := streams.validateStream("{\"text\": \"\", \"typo\": 1}", 0, dir, "stream", false, false, true);
+test.checkBool("unexpected key fails", false, vExtra.ok);
+
+_ := fs.remove(dir);
+test.done("util-streams");

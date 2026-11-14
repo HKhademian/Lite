@@ -1,24 +1,12 @@
 /** Provisional case manifest validation utilities for `.case.json` fixtures. */
 
-crypto := import "core/crypto";
 fs := import "core/fs";
 text := import "core/text";
 list := import "core/list";
 path := import "util/path";
 fsUtil := import "util/fs";
 json := import "util/json";
-
-isHex64 := fn(value: String): Bool {
-    if text.length(value) =!= 64 { return false; }
-    var i := 0;
-    loop i < 64 {
-        ch := text.at(value, i);
-        ok := text.isDigit(ch) or ch == "a" or ch == "b" or ch == "c" or ch == "d" or ch == "e" or ch == "f";
-        if not ok { return false; }
-        i = i + 1;
-    }
-    true
-}
+streams := import "util/streams";
 
 hasDotDotSegment := fn(relPath: String): Bool {
     size := text.length(relPath);
@@ -36,74 +24,8 @@ hasDotDotSegment := fn(relPath: String): Bool {
 }
 
 validateStream := fn(source: String, streamPos: Int, directory: String, label: String): (ok: Bool, error: String) {
-    keys := json.objectKeys(source, streamPos);
-    if list.listCountText(keys) == 0 {
-        return (ok = false, error = label + ": stream must be an object");
-    }
-    allowed: List<String> = ["text", "bytes", "file", "hash"];
-    var form := "";
-    var formCount := 0;
-    loop keys as k {
-        if not list.listContainsText(allowed, k) {
-            return (ok = false, error = label + ": unexpected stream key");
-        }
-        if k =!= "hash" {
-            form = k;
-            formCount = formCount + 1;
-        }
-    }
-    if formCount =!= 1 {
-        return (ok = false, error = label + ": exactly one of text, bytes or file required");
-    }
-
-    hashField := json.findObjectField(source, streamPos, "hash");
-    var expectedHash := "";
-    if hashField.found {
-        hStr := json.readStringAt(source, hashField.valuePos);
-        if not hStr.ok or not text.startsWithAt(hStr.value, 0, "sha256:") or not isHex64(text.slice(hStr.value, 7, text.length(hStr.value))) {
-            return (ok = false, error = label + ".hash must be sha256:<64 lowercase hex>");
-        }
-        expectedHash = text.slice(hStr.value, 7, text.length(hStr.value));
-    }
-
-    if form == "text" {
-        tRes := json.readObjectString(source, streamPos, "text");
-        if not tRes.ok { return (ok = false, error = label + ".text must be a string"); }
-        if expectedHash =!= "" and crypto.sha256Text(tRes.value) =!= expectedHash {
-            return (ok = false, error = label + ".hash does not match content");
-        }
-    } else if form == "bytes" {
-        bField := json.findObjectField(source, streamPos, "bytes");
-        bOffsets := json.arrayElementOffsets(source, bField.valuePos);
-        if list.listCountInt(bOffsets) == 0 {
-            s := text.trimStart(text.slice(source, bField.valuePos, text.length(source)));
-            if not text.startsWithAt(s, 0, "[") {
-                return (ok = false, error = label + ".bytes must contain integers 0-255");
-            }
-        }
-        loop bOffsets as bPos {
-            byteRes := json.readIntAt(source, bPos);
-            if not byteRes.ok or byteRes.value < 0 or byteRes.value > 255 {
-                return (ok = false, error = label + ".bytes must contain integers 0-255");
-            }
-        }
-    } else {
-        fRes := json.readObjectString(source, streamPos, "file");
-        if not fRes.ok or fRes.value == "" {
-            return (ok = false, error = label + ".file must be a nonempty file path");
-        }
-        fullFile := path.resolve(directory, fRes.value);
-        if fs.kind(fullFile) =!= "file" {
-            return (ok = false, error = label + ".file missing: " + fullFile);
-        }
-        if expectedHash =!= "" {
-            fHash := crypto.sha256File(fullFile);
-            if not fHash.ok or fHash.hex =!= expectedHash {
-                return (ok = false, error = label + ".hash does not match content");
-            }
-        }
-    }
-    (ok = true, error = "")
+    checked := streams.validateStream(source, streamPos, directory, label, false, false, true);
+    (ok = checked.ok, error = checked.error)
 }
 
 /** Validates one `.case.json` manifest file cleanly, returning `id` on success. */

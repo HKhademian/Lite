@@ -32,6 +32,7 @@ declare const process: {
     };
 };
 declare const TextDecoder: { new (label: string, options?: { fatal?: boolean }): { decode(input?: Uint8Array, options?: { stream?: boolean }): string } };
+declare const TextEncoder: { new (): { encode(input?: string): Uint8Array } };
 
 function lite$inputArgs(): string[] {
     return process.argv.slice(2);
@@ -49,6 +50,22 @@ function lite$exit(status: bigint): never {
 function lite$errMsg(error: unknown): string {
     return error instanceof Error ? error.message : String(error);
 }
+function lite$fromBytes(bytes: Uint8Array): bigint[] {
+    const out: bigint[] = new Array<bigint>(bytes.length);
+    for (let i = 0; i < bytes.length; i += 1) { out[i] = BigInt(bytes[i] ?? 0); }
+    return out;
+}
+function lite$toBytes(bytes: readonly bigint[]): Uint8Array {
+    const out = new Uint8Array(bytes.length);
+    for (let i = 0; i < bytes.length; i += 1) {
+        const byte = bytes[i];
+        if (byte === undefined || byte < 0n || byte > 255n) {
+            throw new Error("byte value outside 0..255: " + String(byte));
+        }
+        out[i] = Number(byte);
+    }
+    return out;
+}
 function lite$fsKind(path: string): string {
     try {
         const st = process.getBuiltinModule("node:fs").statSync(path);
@@ -62,6 +79,9 @@ function lite$fsReadText(path: string): { ok: boolean; text: string; error: stri
         const bytes = process.getBuiltinModule("node:fs").readFileSync(path);
         return { ok: true, text: new TextDecoder("utf-8", { fatal: true }).decode(bytes), error: "" };
     } catch (error) { return { ok: false, text: "", error: lite$errMsg(error) }; }
+}
+function lite$fsReadBytes(path: string): bigint[] {
+    return lite$fromBytes(process.getBuiltinModule("node:fs").readFileSync(path));
 }
 function lite$fsListDir(path: string): string[] {
     return process.getBuiltinModule("node:fs").readdirSync(path).sort();
@@ -98,6 +118,9 @@ function lite$processRun(command: string, args: string[], cwd: string, envOverri
 
 function lite$cryptoSha256Text(text: string): string {
     return process.getBuiltinModule("node:crypto").createHash("sha256").update(text, "utf8").digest("hex");
+}
+function lite$cryptoSha256Bytes(bytes: readonly bigint[]): string {
+    return process.getBuiltinModule("node:crypto").createHash("sha256").update(lite$toBytes(bytes)).digest("hex");
 }
 function lite$cryptoSha256File(path: string): { ok: boolean; hex: string; error: string } {
     try {
@@ -219,6 +242,10 @@ function lite$textIndexOf(source: string, needle: string, start: bigint): bigint
         if (ok) return BigInt(i);
     }
     return -1n;
+}
+
+function lite$textUtf8Bytes(text: string): bigint[] {
+    return lite$fromBytes(new TextEncoder().encode(text));
 }
 
 function lite$listAt<T>(items: readonly T[], index: bigint, at: number): T {
@@ -2721,7 +2748,7 @@ export function main(lite$write?: (text: string) => void): string {
         lite$exit((lite_res).status);
     }
     void liteFn$lib$util$project$forwardNode;
-    function liteFn$lib$util$cases$isHex64(lite_value: string): boolean {
+    function liteFn$lib$util$streams$isHex64(lite_value: string): boolean {
         void lite_value;
         if (((liteFn$lib$core$text$length(lite_value)) !== (64n))) {
             return false;
@@ -2736,11 +2763,220 @@ export function main(lite$write?: (text: string) => void): string {
             if ((!(lite_ok))) {
                 return false;
             }
-            lite_i = lite$addInt(lite_i, 1n, 594);
+            lite_i = lite$addInt(lite_i, 1n, 619);
         }
         return true;
     }
-    void liteFn$lib$util$cases$isHex64;
+    void liteFn$lib$util$streams$isHex64;
+    function liteFn$lib$util$streams$isSiblingFileName(lite_name: string): boolean {
+        void lite_name;
+        const lite_size = liteFn$lib$core$text$length(lite_name);
+        void lite_size;
+        if (((lite_size) === (0n))) {
+            return false;
+        }
+        const lite_first = liteFn$lib$core$text$at(lite_name, 0n);
+        void lite_first;
+        if ((!((((liteFn$lib$core$text$isAsciiLetter(lite_first)) || (liteFn$lib$core$text$isDigit(lite_first))))))) {
+            return false;
+        }
+        let lite_i = 1n;
+        void lite_i;
+        while (((lite_i) < (lite_size))) {
+            const lite_ch = liteFn$lib$core$text$at(lite_name, lite_i);
+            void lite_ch;
+            const lite_ok = ((((((((liteFn$lib$core$text$isAsciiLetter(lite_ch)) || (liteFn$lib$core$text$isDigit(lite_ch)))) || (((lite_ch) === ("."))))) || (((lite_ch) === ("_"))))) || (((lite_ch) === ("-"))));
+            void lite_ok;
+            if ((!(lite_ok))) {
+                return false;
+            }
+            lite_i = lite$addInt(lite_i, 1n, 1080);
+        }
+        return true;
+    }
+    void liteFn$lib$util$streams$isSiblingFileName;
+    function liteFn$lib$util$streams$isJsonPrefixAt(lite_source: string, lite_start: bigint, lite_prefix: string): boolean {
+        void lite_source;
+        void lite_start;
+        void lite_prefix;
+        const lite_pos = liteFn$lib$core$text$skipSpaces(lite_source, lite_start);
+        void lite_pos;
+        return liteFn$lib$core$text$startsWithAt(lite_source, lite_pos, lite_prefix);
+    }
+    void liteFn$lib$util$streams$isJsonPrefixAt;
+    function liteFn$lib$util$streams$parseBytesArray(lite_source: string, lite_arrayPos: bigint, lite_label: string): { ok: boolean; error: string } {
+        void lite_source;
+        void lite_arrayPos;
+        void lite_label;
+        if ((!(liteFn$lib$util$streams$isJsonPrefixAt(lite_source, lite_arrayPos, "[")))) {
+            return { ok: false, error: ((lite_label) + (".bytes must contain integers 0-255")) };
+        }
+        const lite_offsets: bigint[] = [...(liteFn$lib$util$json$arrayElementOffsets(lite_source, lite_arrayPos))];
+        void lite_offsets;
+        for (const lite_bPos of [...(lite_offsets)]) {
+            void lite_bPos;
+            const lite_byteRes = liteFn$lib$util$json$readIntAt(lite_source, lite_bPos);
+            void lite_byteRes;
+            if ((((((!((lite_byteRes).ok))) || ((((lite_byteRes).value) < (0n))))) || ((((lite_byteRes).value) > (255n))))) {
+                return { ok: false, error: ((lite_label) + (".bytes must contain integers 0-255")) };
+            }
+        }
+        return { ok: true, error: "" };
+    }
+    void liteFn$lib$util$streams$parseBytesArray;
+    function liteFn$lib$util$streams$collectBytesArray(lite_source: string, lite_arrayPos: bigint): bigint[] {
+        void lite_source;
+        void lite_arrayPos;
+        const lite_out: bigint[] = [...([])];
+        void lite_out;
+        const lite_offsets: bigint[] = [...(liteFn$lib$util$json$arrayElementOffsets(lite_source, lite_arrayPos))];
+        void lite_offsets;
+        for (const lite_bPos of [...(lite_offsets)]) {
+            void lite_bPos;
+            const lite_byteRes = liteFn$lib$util$json$readIntAt(lite_source, lite_bPos);
+            void lite_byteRes;
+            lite_out.push((lite_byteRes).value);
+        }
+        return [...(lite_out)];
+    }
+    void liteFn$lib$util$streams$collectBytesArray;
+    function liteFn$lib$util$streams$validateStream(lite_source: string, lite_streamPos: bigint, lite_directory: string, lite_label: string, lite_requiredHash: boolean, lite_siblingOnly: boolean, lite_checkHash: boolean): { ok: boolean; sha256: string; kind: string; error: string } {
+        void lite_source;
+        void lite_streamPos;
+        void lite_directory;
+        void lite_label;
+        void lite_requiredHash;
+        void lite_siblingOnly;
+        void lite_checkHash;
+        if ((!(liteFn$lib$util$streams$isJsonPrefixAt(lite_source, lite_streamPos, "{")))) {
+            return { ok: false, sha256: "", kind: "", error: ((lite_label) + (": stream must be an object")) };
+        }
+        const lite_keys: string[] = [...(liteFn$lib$util$json$objectKeys(lite_source, lite_streamPos))];
+        void lite_keys;
+        const lite_allowed: string[] = [...(["text", "bytes", "file", "hash"])];
+        void lite_allowed;
+        let lite_form = "";
+        void lite_form;
+        let lite_formCount = 0n;
+        void lite_formCount;
+        for (const lite_k of [...(lite_keys)]) {
+            void lite_k;
+            if ((!(liteFn$lib$core$list$listContainsText([...(lite_allowed)], lite_k)))) {
+                return { ok: false, sha256: "", kind: "", error: ((lite_label) + (": unexpected stream key")) };
+            }
+            if (((lite_k) !== ("hash"))) {
+                lite_form = lite_k;
+                lite_formCount = lite$addInt(lite_formCount, 1n, 3023);
+            }
+        }
+        if (((lite_formCount) !== (1n))) {
+            return { ok: false, sha256: "", kind: "", error: ((lite_label) + (": exactly one of text, bytes or file required")) };
+        }
+        let lite_digest = "";
+        void lite_digest;
+        if (((lite_form) === ("text"))) {
+            const lite_tRes = liteFn$lib$util$json$readObjectString(lite_source, lite_streamPos, "text");
+            void lite_tRes;
+            if ((!((lite_tRes).ok))) {
+                return { ok: false, sha256: "", kind: "", error: ((lite_label) + (".text must be a string")) };
+            }
+            lite_digest = (("sha256:") + (lite$cryptoSha256Text((lite_tRes).value)));
+        } else if (((lite_form) === ("bytes"))) {
+            const lite_bField = liteFn$lib$util$json$findObjectField(lite_source, lite_streamPos, "bytes");
+            void lite_bField;
+            const lite_parsed = liteFn$lib$util$streams$parseBytesArray(lite_source, (lite_bField).valuePos, lite_label);
+            void lite_parsed;
+            if ((!((lite_parsed).ok))) {
+                return { ok: false, sha256: "", kind: "", error: (lite_parsed).error };
+            }
+            lite_digest = (("sha256:") + (lite$cryptoSha256Bytes([...(liteFn$lib$util$streams$collectBytesArray(lite_source, (lite_bField).valuePos))])));
+        } else {
+            const lite_fRes = liteFn$lib$util$json$readObjectString(lite_source, lite_streamPos, "file");
+            void lite_fRes;
+            if ((((((!((lite_fRes).ok))) || ((((lite_fRes).value) === (""))))) || ((((lite_siblingOnly) && ((!(liteFn$lib$util$streams$isSiblingFileName((lite_fRes).value))))))))) {
+                const lite_kindMsg = (Boolean(lite_siblingOnly) ? "a sibling file name" : "a nonempty file path");
+                void lite_kindMsg;
+                return { ok: false, sha256: "", kind: "", error: ((((lite_label) + (".file must be "))) + (lite_kindMsg)) };
+            }
+            const lite_fullFile = liteFn$lib$util$path$resolve(lite_directory, (lite_fRes).value);
+            void lite_fullFile;
+            if (((lite$fsKind(lite_fullFile)) !== ("file"))) {
+                return { ok: false, sha256: "", kind: "", error: ((((lite_label) + (".file missing: "))) + (lite_fullFile)) };
+            }
+            const lite_fHash = lite$cryptoSha256File(lite_fullFile);
+            void lite_fHash;
+            if ((!((lite_fHash).ok))) {
+                return { ok: false, sha256: "", kind: "", error: ((((lite_label) + (".file hash failed: "))) + ((lite_fHash).error)) };
+            }
+            lite_digest = (("sha256:") + ((lite_fHash).hex));
+        }
+        const lite_hashField = liteFn$lib$util$json$findObjectField(lite_source, lite_streamPos, "hash");
+        void lite_hashField;
+        if (((lite_requiredHash) || ((lite_hashField).found))) {
+            let lite_validHash = false;
+            void lite_validHash;
+            let lite_hashValue = "";
+            void lite_hashValue;
+            if ((lite_hashField).found) {
+                const lite_hStr = liteFn$lib$util$json$readStringAt(lite_source, (lite_hashField).valuePos);
+                void lite_hStr;
+                if ((((lite_hStr).ok) && (liteFn$lib$core$text$startsWithAt((lite_hStr).value, 0n, "sha256:")))) {
+                    const lite_hexPart = liteFn$lib$core$text$slice((lite_hStr).value, 7n, liteFn$lib$core$text$length((lite_hStr).value));
+                    void lite_hexPart;
+                    if (liteFn$lib$util$streams$isHex64(lite_hexPart)) {
+                        lite_validHash = true;
+                        lite_hashValue = (lite_hStr).value;
+                    }
+                }
+            }
+            if ((!(lite_validHash))) {
+                return { ok: false, sha256: "", kind: "", error: ((lite_label) + (".hash must be sha256:<64 lowercase hex>")) };
+            }
+            if (((lite_checkHash) && (((lite_hashValue) !== (lite_digest))))) {
+                return { ok: false, sha256: "", kind: "", error: ((lite_label) + (".hash does not match content")) };
+            }
+        }
+        return { ok: true, sha256: lite_digest, kind: lite_form, error: "" };
+    }
+    void liteFn$lib$util$streams$validateStream;
+    function liteFn$lib$util$streams$readStreamBytes(lite_source: string, lite_streamPos: bigint, lite_directory: string): bigint[] {
+        void lite_source;
+        void lite_streamPos;
+        void lite_directory;
+        if ((liteFn$lib$util$json$findObjectField(lite_source, lite_streamPos, "text")).found) {
+            const lite_tRes = liteFn$lib$util$json$readObjectString(lite_source, lite_streamPos, "text");
+            void lite_tRes;
+            return [...(lite$textUtf8Bytes((lite_tRes).value))];
+        }
+        const lite_bField = liteFn$lib$util$json$findObjectField(lite_source, lite_streamPos, "bytes");
+        void lite_bField;
+        if ((lite_bField).found) {
+            return [...(liteFn$lib$util$streams$collectBytesArray(lite_source, (lite_bField).valuePos))];
+        }
+        const lite_fRes = liteFn$lib$util$json$readObjectString(lite_source, lite_streamPos, "file");
+        void lite_fRes;
+        return [...(lite$fsReadBytes(liteFn$lib$util$path$resolve(lite_directory, (lite_fRes).value)))];
+    }
+    void liteFn$lib$util$streams$readStreamBytes;
+    function liteFn$lib$util$streams$equalBytes(lite_left: bigint[], lite_right: bigint[]): boolean {
+        void lite_left;
+        void lite_right;
+        const lite_n = liteFn$lib$core$list$listCountInt([...(lite_left)]);
+        void lite_n;
+        if (((lite_n) !== (liteFn$lib$core$list$listCountInt([...(lite_right)])))) {
+            return false;
+        }
+        let lite_i = 0n;
+        void lite_i;
+        while (((lite_i) < (lite_n))) {
+            if (((lite$listAt((lite_left), lite_i, 6547)) !== (lite$listAt((lite_right), lite_i, 6560)))) {
+                return false;
+            }
+            lite_i = lite$addInt(lite_i, 1n, 6595);
+        }
+        return true;
+    }
+    void liteFn$lib$util$streams$equalBytes;
     function liteFn$lib$util$cases$hasDotDotSegment(lite_relPath: string): boolean {
         void lite_relPath;
         const lite_size = liteFn$lib$core$text$length(lite_relPath);
@@ -2756,9 +2992,9 @@ export function main(lite$write?: (text: string) => void): string {
                 if (((liteFn$lib$core$text$slice(lite_relPath, lite_segStart, lite_i)) === (".."))) {
                     return true;
                 }
-                lite_segStart = lite$addInt(lite_i, 1n, 965);
+                lite_segStart = lite$addInt(lite_i, 1n, 629);
             }
-            lite_i = lite$addInt(lite_i, 1n, 994);
+            lite_i = lite$addInt(lite_i, 1n, 658);
         }
         return false;
     }
@@ -2768,91 +3004,9 @@ export function main(lite$write?: (text: string) => void): string {
         void lite_streamPos;
         void lite_directory;
         void lite_label;
-        const lite_keys: string[] = [...(liteFn$lib$util$json$objectKeys(lite_source, lite_streamPos))];
-        void lite_keys;
-        if (((liteFn$lib$core$list$listCountText([...(lite_keys)])) === (0n))) {
-            return { ok: false, error: ((lite_label) + (": stream must be an object")) };
-        }
-        const lite_allowed: string[] = [...(["text", "bytes", "file", "hash"])];
-        void lite_allowed;
-        let lite_form = "";
-        void lite_form;
-        let lite_formCount = 0n;
-        void lite_formCount;
-        for (const lite_k of [...(lite_keys)]) {
-            void lite_k;
-            if ((!(liteFn$lib$core$list$listContainsText([...(lite_allowed)], lite_k)))) {
-                return { ok: false, error: ((lite_label) + (": unexpected stream key")) };
-            }
-            if (((lite_k) !== ("hash"))) {
-                lite_form = lite_k;
-                lite_formCount = lite$addInt(lite_formCount, 1n, 1649);
-            }
-        }
-        if (((lite_formCount) !== (1n))) {
-            return { ok: false, error: ((lite_label) + (": exactly one of text, bytes or file required")) };
-        }
-        const lite_hashField = liteFn$lib$util$json$findObjectField(lite_source, lite_streamPos, "hash");
-        void lite_hashField;
-        let lite_expectedHash = "";
-        void lite_expectedHash;
-        if ((lite_hashField).found) {
-            const lite_hStr = liteFn$lib$util$json$readStringAt(lite_source, (lite_hashField).valuePos);
-            void lite_hStr;
-            if ((((((!((lite_hStr).ok))) || ((!(liteFn$lib$core$text$startsWithAt((lite_hStr).value, 0n, "sha256:")))))) || ((!(liteFn$lib$util$cases$isHex64(liteFn$lib$core$text$slice((lite_hStr).value, 7n, liteFn$lib$core$text$length((lite_hStr).value)))))))) {
-                return { ok: false, error: ((lite_label) + (".hash must be sha256:<64 lowercase hex>")) };
-            }
-            lite_expectedHash = liteFn$lib$core$text$slice((lite_hStr).value, 7n, liteFn$lib$core$text$length((lite_hStr).value));
-        }
-        if (((lite_form) === ("text"))) {
-            const lite_tRes = liteFn$lib$util$json$readObjectString(lite_source, lite_streamPos, "text");
-            void lite_tRes;
-            if ((!((lite_tRes).ok))) {
-                return { ok: false, error: ((lite_label) + (".text must be a string")) };
-            }
-            if (((((lite_expectedHash) !== (""))) && (((lite$cryptoSha256Text((lite_tRes).value)) !== (lite_expectedHash))))) {
-                return { ok: false, error: ((lite_label) + (".hash does not match content")) };
-            }
-        } else if (((lite_form) === ("bytes"))) {
-            const lite_bField = liteFn$lib$util$json$findObjectField(lite_source, lite_streamPos, "bytes");
-            void lite_bField;
-            const lite_bOffsets: bigint[] = [...(liteFn$lib$util$json$arrayElementOffsets(lite_source, (lite_bField).valuePos))];
-            void lite_bOffsets;
-            if (((liteFn$lib$core$list$listCountInt([...(lite_bOffsets)])) === (0n))) {
-                const lite_s = liteFn$lib$core$text$trimStart(liteFn$lib$core$text$slice(lite_source, (lite_bField).valuePos, liteFn$lib$core$text$length(lite_source)));
-                void lite_s;
-                if ((!(liteFn$lib$core$text$startsWithAt(lite_s, 0n, "[")))) {
-                    return { ok: false, error: ((lite_label) + (".bytes must contain integers 0-255")) };
-                }
-            }
-            for (const lite_bPos of [...(lite_bOffsets)]) {
-                void lite_bPos;
-                const lite_byteRes = liteFn$lib$util$json$readIntAt(lite_source, lite_bPos);
-                void lite_byteRes;
-                if ((((((!((lite_byteRes).ok))) || ((((lite_byteRes).value) < (0n))))) || ((((lite_byteRes).value) > (255n))))) {
-                    return { ok: false, error: ((lite_label) + (".bytes must contain integers 0-255")) };
-                }
-            }
-        } else {
-            const lite_fRes = liteFn$lib$util$json$readObjectString(lite_source, lite_streamPos, "file");
-            void lite_fRes;
-            if ((((!((lite_fRes).ok))) || ((((lite_fRes).value) === (""))))) {
-                return { ok: false, error: ((lite_label) + (".file must be a nonempty file path")) };
-            }
-            const lite_fullFile = liteFn$lib$util$path$resolve(lite_directory, (lite_fRes).value);
-            void lite_fullFile;
-            if (((lite$fsKind(lite_fullFile)) !== ("file"))) {
-                return { ok: false, error: ((((lite_label) + (".file missing: "))) + (lite_fullFile)) };
-            }
-            if (((lite_expectedHash) !== (""))) {
-                const lite_fHash = lite$cryptoSha256File(lite_fullFile);
-                void lite_fHash;
-                if ((((!((lite_fHash).ok))) || ((((lite_fHash).hex) !== (lite_expectedHash))))) {
-                    return { ok: false, error: ((lite_label) + (".hash does not match content")) };
-                }
-            }
-        }
-        return { ok: true, error: "" };
+        const lite_checked = liteFn$lib$util$streams$validateStream(lite_source, lite_streamPos, lite_directory, lite_label, false, false, true);
+        void lite_checked;
+        return { ok: (lite_checked).ok, error: (lite_checked).error };
     }
     void liteFn$lib$util$cases$validateStream;
     function liteFn$lib$util$cases$validateCaseFile(lite_rootDir: string, lite_caseFile: string): { ok: boolean; id: string; error: string } {
