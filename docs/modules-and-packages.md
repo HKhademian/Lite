@@ -95,6 +95,10 @@ covers initializer effects, deferred function bodies, compile-time evaluation,
 transitive dependencies, and any explicit initialization entry. It is not started;
 no blanket ban or effect-checking mechanism is selected.
 
+The user's 2026-11-14 question about requiring compile-time-known module
+definitions is explored in [implicit-known values and module initialization](../research/investigations/INV-062-implicit-known-values-and-module-initialization.md).
+It remains an investigation, not an adopted module initialization rule.
+
 Compile-time evaluation and metaprogramming remain possible investigations;
 declaration-oriented modules do not prohibit them. A future compile-time block
 would still need defined execution order, while scheduling dependencies between

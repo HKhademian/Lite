@@ -866,7 +866,9 @@ includes file-reading, interactive input, and network-fetch use cases. Broader
 implicit evaluation is under discussion; execution effects, staging details,
 and syntax remain open. See [compile-time evaluation](../../docs/compile-time-evaluation.md).
 
-**Investigation:** bounded design started; implementation not claimed.
+**Investigation:** [implicit-known values and module initialization](INV-062-implicit-known-values-and-module-initialization.md)
+compares the user's `square` example, evaluation stages and possible module
+initialization policies; its proposals are unselected. Implementation not claimed.
 
 <a id="inv-063"></a>
 

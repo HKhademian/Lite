@@ -58,6 +58,13 @@ This remains a **question**, not a selected general rule. For example, whether
 `x := one()` is implicitly known when `one := fn { 1 }` needs a decision;
 the existence of an explicit `comptime` block does not decide it.
 
+The user's example `a := 4 * 4; b := square(a);` and a possible rule for
+module-level definitions are analyzed in the [implicit-known values and module
+initialization investigation](../research/investigations/INV-062-implicit-known-values-and-module-initialization.md).
+That investigation compares alternatives; it does not select them.
+It also investigates an [explicit runtime counterpart](../research/investigations/INV-062-implicit-known-values-and-module-initialization.md#possible-explicit-runtime-counterpart)
+for expressing the opposite stage intent. Its syntax and exact guarantees are open.
+
 The staging boundary matters for effects. Reading a line or fetching a URL
 while compiling is a different observable action from doing so when the
 compiled program runs. Any implicit policy must make clear which invocation
