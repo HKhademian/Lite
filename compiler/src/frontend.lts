@@ -2340,37 +2340,9 @@ blockCompletion := fn(kind: String, completed: Bool, branchesComplete: Bool, has
     else { hasElse and branchesComplete and completed }
 }
 
-/** Returns the number of entries in `items`. */
-itemsCount := fn(items: Items): Int {
-    var count := 0;
-    loop items { count += 1; }
-    count
-}
-
-/** Returns a copy of `items` with `items[targetIndex]` replaced by `replacement`. */
-setItemAt := fn(items: Items, targetIndex: Int, replacement: Item): Items {
-    updated: mut List<Item> = [];
-    var index := 0;
-    loop items as existing {
-        if index == targetIndex {
-            listLib.pushBack(mut updated, replacement);
-        } else {
-            listLib.pushBack(mut updated, existing);
-        }
-        index = index + 1;
-    }
-    updated
-}
-
-/** True when any emitted item from `startIndex` onward contains a direct `needle` transfer call outside strings. */
-itemsUseTransferCall := fn(items: Items, startIndex: Int, needle: String): Bool {
-    var index := startIndex;
-    total := itemsCount(items);
-    loop index < total {
-        if codeUsesTextCall(items[index].code, needle) { return true; }
-        index = index + 1;
-    }
-    false
+/** True when emitted target code contains a raw `lite$throwTransfer(` substring worth quote-aware inspection. */
+codeHasRawTransfer := fn(code: String): Bool {
+    code =!= "" and textLib.indexOfText(code, "lite$throwTransfer(", 0) >= 0
 }
 
 /** Parses one `@tag` token starting at `atPos`. */
@@ -6902,9 +6874,13 @@ pub parseProgramWithModule := fn(target: String, source: String, prefix: String,
     var branchUpdates: mut List<BranchUpdate> = [];
     var stmtCtxs: mut List<ConstructCtx> = [];
     var nextStmtCtxId := 1;
-    var fnTryIndex := -1;
+    transferCodes: mut List<String> = [];
+    var transferCount := 0;
+    var fnTryKey := "";
+    var fnTransferStart := 0;
     loopIds: mut List<Int> = [];
-    loopTryIndices: mut List<Int> = [];
+    loopTryKeys: mut List<String> = [];
+    loopTransferStarts: mut List<Int> = [];
     loop position < size {
         ch := textLib.at(source, position);
         if ch == ";" {
@@ -6959,8 +6935,14 @@ pub parseProgramWithModule := fn(target: String, source: String, prefix: String,
                     beforeOpen := skipTrivia(source, condition.next, prefix);
                     rejectMisplacedTag(source, beforeOpen, prefix, "block tag cannot appear before { in else if");
                     position = expectSymbol(source, beforeOpen, "{", prefix);
-                    if currentLive { listLib.pushBack(mut items, (kind = "ElseIf", name = "", runtime = "", code = conditionCode,
-                        intValue = 0, textValue = "")); }
+                    if currentLive {
+                        listLib.pushBack(mut items, (kind = "ElseIf", name = "", runtime = "", code = conditionCode,
+                            intValue = 0, textValue = ""));
+                        if codeHasRawTransfer(conditionCode) {
+                            listLib.pushBack(mut transferCodes, conditionCode);
+                            transferCount = transferCount + 1;
+                        }
+                    }
                     listLib.pushBack(mut blocks, blockKind);
                     blockCount = blockCount + 1;
                 } else {
@@ -7038,8 +7020,14 @@ pub parseProgramWithModule := fn(target: String, source: String, prefix: String,
                     } else {
                         condition.code
                     };
-                    if currentLive { listLib.pushBack(mut items, (kind = "ElseIf", name = "", runtime = "", code = conditionCode,
-                        intValue = 0, textValue = "")); }
+                    if currentLive {
+                        listLib.pushBack(mut items, (kind = "ElseIf", name = "", runtime = "", code = conditionCode,
+                            intValue = 0, textValue = ""));
+                        if codeHasRawTransfer(conditionCode) {
+                            listLib.pushBack(mut transferCodes, conditionCode);
+                            transferCount = transferCount + 1;
+                        }
+                    }
                     listLib.pushBack(mut blocks, blockKind);
                     blockCount = blockCount + 1;
                 }
@@ -7065,17 +7053,20 @@ pub parseProgramWithModule := fn(target: String, source: String, prefix: String,
                     failAt(source, position, prefix, "function " + currentName + " must return " + currentResult);
                 }
                 droppedFnCtx := listLib.popBack(mut stmtCtxs);
-                if fnTryIndex >= 0 {
-                    if itemsUseTransferCall(items, fnTryIndex + 1, "lite$throwTransfer(0,") {
-                        if currentLive {
-                            listLib.pushBack(mut items, (kind = "TransferCatch", name = "", runtime = "", code = currentResult, intValue = 0, textValue = ""));
+                if fnTryKey =!= "" {
+                    var hasFnTransfer := false;
+                    var fnTi := fnTransferStart;
+                    loop fnTi < transferCount {
+                        if codeUsesTextCall(transferCodes[fnTi], "lite$throwTransfer(0,") {
+                            hasFnTransfer = true;
+                            break;
                         }
-                    } else {
-                        noopItems := setItemAt(items, fnTryIndex, (kind = "Noop", name = "", runtime = "", code = "", intValue = 0, textValue = ""));
-                        items = [];
-                        loop noopItems as noopItem { listLib.pushBack(mut items, noopItem); }
+                        fnTi = fnTi + 1;
                     }
-                    fnTryIndex = -1;
+                    if hasFnTransfer and currentLive {
+                        listLib.pushBack(mut items, (kind = "TransferCatch", name = "", runtime = fnTryKey, code = currentResult, intValue = 0, textValue = ""));
+                    }
+                    fnTryKey = "";
                 }
                 functionRuntime := moduleFunctionRuntime(target, moduleKey, currentName);
                 if currentLive { listLib.pushBack(mut items, (kind = "FunctionEnd", name = "", runtime = functionRuntime,
@@ -7085,20 +7076,27 @@ pub parseProgramWithModule := fn(target: String, source: String, prefix: String,
                 currentReturned = false;
             } else if blockKind == "loop" {
                 loopId := listLib.popBack(mut loopIds);
-                loopTryIdx := listLib.popBack(mut loopTryIndices);
+                loopTryKey := listLib.popBack(mut loopTryKeys);
+                loopStartTransfers := listLib.popBack(mut loopTransferStarts);
                 droppedLoopCtx := listLib.popBack(mut stmtCtxs);
-                if loopTryIdx >= 0 {
-                    hasLoopBreak := itemsUseTransferCall(items, loopTryIdx + 1, "lite$throwTransfer(" + integer.intText(loopId) + ",");
-                    hasLoopCont := itemsUseTransferCall(items, loopTryIdx + 1, "lite$throwTransfer(" + integer.intText(0 - loopId) + ",");
-                    if hasLoopBreak or hasLoopCont {
-                        if currentLive {
-                            listLib.pushBack(mut items, (kind = "LoopTransferCatch", name = "", runtime = "", code = integer.intText(loopId),
-                                intValue = loopId, textValue = integer.intText(0 - loopId)));
+                if loopTryKey =!= "" {
+                    var hasLoopBreak := false;
+                    var hasLoopCont := false;
+                    if transferCount > loopStartTransfers {
+                        brkNeedle := "lite$throwTransfer(" + integer.intText(loopId) + ",";
+                        contNeedle := "lite$throwTransfer(" + integer.intText(0 - loopId) + ",";
+                        var lpTi := loopStartTransfers;
+                        loop lpTi < transferCount {
+                            tCode := transferCodes[lpTi];
+                            if not hasLoopBreak and codeUsesTextCall(tCode, brkNeedle) { hasLoopBreak = true; }
+                            if not hasLoopCont and codeUsesTextCall(tCode, contNeedle) { hasLoopCont = true; }
+                            if hasLoopBreak and hasLoopCont { break; }
+                            lpTi = lpTi + 1;
                         }
-                    } else {
-                        noopItems := setItemAt(items, loopTryIdx, (kind = "Noop", name = "", runtime = "", code = "", intValue = 0, textValue = ""));
-                        items = [];
-                        loop noopItems as noopItem { listLib.pushBack(mut items, noopItem); }
+                    }
+                    if (hasLoopBreak or hasLoopCont) and currentLive {
+                        listLib.pushBack(mut items, (kind = "LoopTransferCatch", name = "", runtime = loopTryKey, code = integer.intText(loopId),
+                            intValue = loopId, textValue = integer.intText(0 - loopId)));
                     }
                     if hasLoopBreak {
                         currentReturned = false;
@@ -7166,8 +7164,14 @@ pub parseProgramWithModule := fn(target: String, source: String, prefix: String,
             if afterRawBrace >= 0 and textLib.wordAt(source, afterRawBrace, "finally") {
                 expression := parseExpressionItem(target, source, position, prefix, locals, functions, functionParams, currentName,
                     currentResult, atValueTail(blocks, blockCount) and not currentStopped, stmtCtxs);
-                if currentLive and not currentStopped { listLib.pushBack(mut items, (kind = expressionStatementKind(expression.valueKind, expression.returned, "Discard", currentResult), name = expression.valueKind,
-                    runtime = "", code = expression.code, intValue = 0, textValue = "")); }
+                if currentLive and not currentStopped {
+                    listLib.pushBack(mut items, (kind = expressionStatementKind(expression.valueKind, expression.returned, "Discard", currentResult), name = expression.valueKind,
+                        runtime = "", code = expression.code, intValue = 0, textValue = ""));
+                    if codeHasRawTransfer(expression.code) {
+                        listLib.pushBack(mut transferCodes, expression.code);
+                        transferCount = transferCount + 1;
+                    }
+                }
                 if expression.returned or expression.valueKind == "Never" {
                     if not currentStopped { currentReturned = true; }
                     currentStopped = true;
@@ -7231,6 +7235,10 @@ pub parseProgramWithModule := fn(target: String, source: String, prefix: String,
                 if currentLive and not currentStopped {
                     listLib.pushBack(mut items, (kind = "Discard", name = "Unit", runtime = "",
                         code = rhs.code, intValue = 0, textValue = ""));
+                    if codeHasRawTransfer(rhs.code) {
+                        listLib.pushBack(mut transferCodes, rhs.code);
+                        transferCount = transferCount + 1;
+                    }
                 }
                 continue;
             }
@@ -7252,8 +7260,13 @@ pub parseProgramWithModule := fn(target: String, source: String, prefix: String,
                     intValue = rhs.intValue, textValue = rhs.textValue, initState = "init"));
                 if currentLive and not currentStopped {
                     itemPrefix := if destructureMutable { "Var" } else { "Local" };
+                    destrCode := copiedValueCode(target, rhs.kind, rhs.code);
                     listLib.pushBack(mut items, (kind = itemPrefix + storageKind(rhs.kind), name = bindName, runtime = bindRuntime,
-                        code = copiedValueCode(target, rhs.kind, rhs.code), intValue = rhs.intValue, textValue = itemTextPayload(rhs)));
+                        code = destrCode, intValue = rhs.intValue, textValue = itemTextPayload(rhs)));
+                    if codeHasRawTransfer(destrCode) {
+                        listLib.pushBack(mut transferCodes, destrCode);
+                        transferCount = transferCount + 1;
+                    }
                 }
                 continue;
             }
@@ -7274,6 +7287,10 @@ pub parseProgramWithModule := fn(target: String, source: String, prefix: String,
             if currentLive and not currentStopped {
                 listLib.pushBack(mut items, (kind = "LocalTuple", name = "", runtime = tempRuntime,
                     code = rhs.code, intValue = 0, textValue = ""));
+                if codeHasRawTransfer(rhs.code) {
+                    listLib.pushBack(mut transferCodes, rhs.code);
+                    transferCount = transferCount + 1;
+                }
             }
             var bindCursor := 0;
             var bindIndex := 0;
@@ -7312,8 +7329,14 @@ pub parseProgramWithModule := fn(target: String, source: String, prefix: String,
             (ch == "f" and textLib.wordAt(source, position, "false")) {
             expression := parseExpressionItem(target, source, position, prefix, locals, functions, functionParams, currentName,
                 currentResult, atValueTail(blocks, blockCount) and not currentStopped, stmtCtxs);
-            if currentLive and not currentStopped { listLib.pushBack(mut items, (kind = expressionStatementKind(expression.valueKind, expression.returned, "Discard", currentResult), name = expression.valueKind,
-                runtime = "", code = expression.code, intValue = 0, textValue = "")); }
+            if currentLive and not currentStopped {
+                listLib.pushBack(mut items, (kind = expressionStatementKind(expression.valueKind, expression.returned, "Discard", currentResult), name = expression.valueKind,
+                    runtime = "", code = expression.code, intValue = 0, textValue = ""));
+                if codeHasRawTransfer(expression.code) {
+                    listLib.pushBack(mut transferCodes, expression.code);
+                    transferCount = transferCount + 1;
+                }
+            }
             if expression.returned or expression.valueKind == "Never" {
                 if not currentStopped { currentReturned = true; }
                 currentStopped = true;
@@ -7331,8 +7354,14 @@ pub parseProgramWithModule := fn(target: String, source: String, prefix: String,
             }
             expression := parseExpressionItem(target, source, position, prefix, locals, functions, functionParams, currentName,
                 currentResult, atValueTail(blocks, blockCount) and not currentStopped, stmtCtxs);
-            if currentLive and not currentStopped { listLib.pushBack(mut items, (kind = expressionStatementKind(expression.valueKind, expression.returned, "Discard", currentResult), name = expression.valueKind,
-                runtime = "", code = expression.code, intValue = 0, textValue = "")); }
+            if currentLive and not currentStopped {
+                listLib.pushBack(mut items, (kind = expressionStatementKind(expression.valueKind, expression.returned, "Discard", currentResult), name = expression.valueKind,
+                    runtime = "", code = expression.code, intValue = 0, textValue = ""));
+                if codeHasRawTransfer(expression.code) {
+                    listLib.pushBack(mut transferCodes, expression.code);
+                    transferCount = transferCount + 1;
+                }
+            }
             if expression.returned or expression.valueKind == "Never" {
                 if not currentStopped { currentReturned = true; }
                 currentStopped = true;
@@ -7436,8 +7465,15 @@ pub parseProgramWithModule := fn(target: String, source: String, prefix: String,
             statementNext := consumeStatementEnd(source, parsed.next, prefix);
             if statementNext < 0 { failAt(source, skipTrivia(source, parsed.next, prefix), prefix, "expected ; after return"); }
             position = statementNext;
-            if currentLive and not currentStopped { listLib.pushBack(mut items, (kind = "Return", name = "", runtime = "", code = assignValueCode(target, currentResult, parsed.kind, parsed.code),
-                intValue = 0, textValue = "")); }
+            retCode := assignValueCode(target, currentResult, parsed.kind, parsed.code);
+            if currentLive and not currentStopped {
+                listLib.pushBack(mut items, (kind = "Return", name = "", runtime = "", code = retCode,
+                    intValue = 0, textValue = ""));
+                if codeHasRawTransfer(retCode) {
+                    listLib.pushBack(mut transferCodes, retCode);
+                    transferCount = transferCount + 1;
+                }
+            }
             if not currentStopped { currentReturned = true; }
             currentStopped = true;
             continue;
@@ -7496,7 +7532,13 @@ pub parseProgramWithModule := fn(target: String, source: String, prefix: String,
             loop parsedOutput as outputItem {
                 if outputItem.kind == "End" or outputItem.kind == "EndOutput" { position = outputItem.intValue; }
                 if outputItem.kind == "Never" { outputDiverged = true; }
-                if currentLive and not currentStopped { listLib.pushBack(mut items, outputItem); }
+                if currentLive and not currentStopped {
+                    listLib.pushBack(mut items, outputItem);
+                    if codeHasRawTransfer(outputItem.code) {
+                        listLib.pushBack(mut transferCodes, outputItem.code);
+                        transferCount = transferCount + 1;
+                    }
+                }
             }
             if outputDiverged {
                 if currentLive and not currentStopped and currentResult =!= "Unit" {
@@ -7510,8 +7552,14 @@ pub parseProgramWithModule := fn(target: String, source: String, prefix: String,
         if moduleIndex >= 0 and locals[moduleIndex].kind == "Module" {
             expression := parseExpressionItem(target, source, nameStart, prefix, locals, functions, functionParams, currentName,
                 currentResult, atValueTail(blocks, blockCount) and not currentStopped, stmtCtxs);
-            if currentLive and not currentStopped { listLib.pushBack(mut items, (kind = expressionStatementKind(expression.valueKind, expression.returned, "Call", currentResult),
-                name = "", runtime = "", code = expression.code, intValue = 0, textValue = "")); }
+            if currentLive and not currentStopped {
+                listLib.pushBack(mut items, (kind = expressionStatementKind(expression.valueKind, expression.returned, "Call", currentResult),
+                    name = "", runtime = "", code = expression.code, intValue = 0, textValue = ""));
+                if codeHasRawTransfer(expression.code) {
+                    listLib.pushBack(mut transferCodes, expression.code);
+                    transferCount = transferCount + 1;
+                }
+            }
             if expression.returned or expression.valueKind == "Never" {
                 if not currentStopped { currentReturned = true; }
                 currentStopped = true;
@@ -7532,8 +7580,14 @@ pub parseProgramWithModule := fn(target: String, source: String, prefix: String,
             position < size and textLib.at(source, position) == "(" {
             expression := parseExpressionItem(target, source, nameStart, prefix, locals, functions, functionParams, currentName,
                 currentResult, atValueTail(blocks, blockCount) and not currentStopped, stmtCtxs);
-            if currentLive and not currentStopped { listLib.pushBack(mut items, (kind = expressionStatementKind(expression.valueKind, expression.returned, "Call", currentResult), name = callName, runtime = "",
-                code = expression.code, intValue = 0, textValue = "")); }
+            if currentLive and not currentStopped {
+                listLib.pushBack(mut items, (kind = expressionStatementKind(expression.valueKind, expression.returned, "Call", currentResult), name = callName, runtime = "",
+                    code = expression.code, intValue = 0, textValue = ""));
+                if codeHasRawTransfer(expression.code) {
+                    listLib.pushBack(mut transferCodes, expression.code);
+                    transferCount = transferCount + 1;
+                }
+            }
             if expression.returned or expression.valueKind == "Never" {
                 if not currentStopped { currentReturned = true; }
                 currentStopped = true;
@@ -7547,8 +7601,14 @@ pub parseProgramWithModule := fn(target: String, source: String, prefix: String,
             if afterRawIf >= 0 and (textLib.wordAt(source, afterRawIf, "then") or textLib.wordAt(source, afterRawIf, "finally")) {
                 expression := parseExpressionItem(target, source, nameStart, prefix, locals, functions, functionParams, currentName,
                     currentResult, atValueTail(blocks, blockCount) and not currentStopped, stmtCtxs);
-                if currentLive and not currentStopped { listLib.pushBack(mut items, (kind = expressionStatementKind(expression.valueKind, expression.returned, "Discard", currentResult), name = expression.valueKind,
-                    runtime = "", code = expression.code, intValue = 0, textValue = "")); }
+                if currentLive and not currentStopped {
+                    listLib.pushBack(mut items, (kind = expressionStatementKind(expression.valueKind, expression.returned, "Discard", currentResult), name = expression.valueKind,
+                        runtime = "", code = expression.code, intValue = 0, textValue = ""));
+                    if codeHasRawTransfer(expression.code) {
+                        listLib.pushBack(mut transferCodes, expression.code);
+                        transferCount = transferCount + 1;
+                    }
+                }
                 if expression.returned or expression.valueKind == "Never" {
                     if not currentStopped { currentReturned = true; }
                     currentStopped = true;
@@ -7564,8 +7624,14 @@ pub parseProgramWithModule := fn(target: String, source: String, prefix: String,
                     if afterChain < size and textLib.at(source, afterChain) == "}" {
                         expression := parseExpressionItem(target, source, nameStart, prefix, locals, functions, functionParams, currentName,
                             currentResult, true, stmtCtxs);
-                        if currentLive and not currentStopped { listLib.pushBack(mut items, (kind = "Return", name = "", runtime = "", code = expression.code,
-                            intValue = 0, textValue = "")); }
+                        if currentLive and not currentStopped {
+                            listLib.pushBack(mut items, (kind = "Return", name = "", runtime = "", code = expression.code,
+                                intValue = 0, textValue = ""));
+                            if codeHasRawTransfer(expression.code) {
+                                listLib.pushBack(mut transferCodes, expression.code);
+                                transferCount = transferCount + 1;
+                            }
+                        }
                         currentReturned = true;
                         currentStopped = true;
                         position = expression.next;
@@ -7598,8 +7664,14 @@ pub parseProgramWithModule := fn(target: String, source: String, prefix: String,
             beforeIfOpen := skipTrivia(source, condition.next, prefix);
             rejectMisplacedTag(source, beforeIfOpen, prefix, "block tag cannot appear before { in if");
             position = expectSymbol(source, beforeIfOpen, "{", prefix);
-            if currentLive and not currentStopped { listLib.pushBack(mut items, (kind = "If", name = "", runtime = "", code = conditionCode,
-                intValue = 0, textValue = "")); }
+            if currentLive and not currentStopped {
+                listLib.pushBack(mut items, (kind = "If", name = "", runtime = "", code = conditionCode,
+                    intValue = 0, textValue = ""));
+                if codeHasRawTransfer(conditionCode) {
+                    listLib.pushBack(mut transferCodes, conditionCode);
+                    transferCount = transferCount + 1;
+                }
+            }
             listLib.pushBack(mut savedStates, (returned = currentReturned, stopped = currentStopped,
                 branchesReturned = branchesReturned, branchesStopped = branchesStopped, hasElse = hasElse, loopForever = loopForever, live = currentLive,
                 preLocalsLen = localsCount(locals), liveBranchCount = liveBranchCount));
@@ -7628,8 +7700,14 @@ pub parseProgramWithModule := fn(target: String, source: String, prefix: String,
             if afterRawMatch >= 0 and (textLib.wordAt(source, afterRawMatch, "then") or textLib.wordAt(source, afterRawMatch, "finally")) {
                 expression := parseExpressionItem(target, source, nameStart, prefix, locals, functions, functionParams, currentName,
                     currentResult, atValueTail(blocks, blockCount) and not currentStopped, stmtCtxs);
-                if currentLive and not currentStopped { listLib.pushBack(mut items, (kind = expressionStatementKind(expression.valueKind, expression.returned, "Discard", currentResult), name = expression.valueKind,
-                    runtime = "", code = expression.code, intValue = 0, textValue = "")); }
+                if currentLive and not currentStopped {
+                    listLib.pushBack(mut items, (kind = expressionStatementKind(expression.valueKind, expression.returned, "Discard", currentResult), name = expression.valueKind,
+                        runtime = "", code = expression.code, intValue = 0, textValue = ""));
+                    if codeHasRawTransfer(expression.code) {
+                        listLib.pushBack(mut transferCodes, expression.code);
+                        transferCount = transferCount + 1;
+                    }
+                }
                 if expression.returned or expression.valueKind == "Never" {
                     if not currentStopped { currentReturned = true; }
                     currentStopped = true;
@@ -7646,8 +7724,14 @@ pub parseProgramWithModule := fn(target: String, source: String, prefix: String,
                         if afterMatch < size and textLib.at(source, afterMatch) == "}" {
                             expression := parseExpressionItem(target, source, nameStart, prefix, locals, functions, functionParams, currentName,
                                 currentResult, true, stmtCtxs);
-                            if currentLive and not currentStopped { listLib.pushBack(mut items, (kind = "Return", name = "", runtime = "", code = expression.code,
-                                intValue = 0, textValue = "")); }
+                            if currentLive and not currentStopped {
+                                listLib.pushBack(mut items, (kind = "Return", name = "", runtime = "", code = expression.code,
+                                    intValue = 0, textValue = ""));
+                                if codeHasRawTransfer(expression.code) {
+                                    listLib.pushBack(mut transferCodes, expression.code);
+                                    transferCount = transferCount + 1;
+                                }
+                            }
                             currentReturned = true;
                             currentStopped = true;
                             position = expression.next;
@@ -7711,8 +7795,14 @@ pub parseProgramWithModule := fn(target: String, source: String, prefix: String,
                 } else {
                     condition.code
                 };
-                if currentLive and not currentStopped { listLib.pushBack(mut items, (kind = "If", name = "", runtime = "", code = conditionCode,
-                    intValue = 0, textValue = "")); }
+                if currentLive and not currentStopped {
+                    listLib.pushBack(mut items, (kind = "If", name = "", runtime = "", code = conditionCode,
+                        intValue = 0, textValue = ""));
+                    if codeHasRawTransfer(conditionCode) {
+                        listLib.pushBack(mut transferCodes, conditionCode);
+                        transferCount = transferCount + 1;
+                    }
+                }
             }
             listLib.pushBack(mut savedStates, (returned = currentReturned, stopped = currentStopped,
                 branchesReturned = branchesReturned, branchesStopped = branchesStopped, hasElse = hasElse, loopForever = loopForever, live = currentLive,
@@ -7760,8 +7850,14 @@ pub parseProgramWithModule := fn(target: String, source: String, prefix: String,
                 } else {
                     expression := parseExpressionItem(target, source, nameStart, prefix, locals, functions, functionParams, currentName,
                         currentResult, atValueTail(blocks, blockCount) and not currentStopped, stmtCtxs);
-                    if currentLive and not currentStopped { listLib.pushBack(mut items, (kind = expressionStatementKind(expression.valueKind, expression.returned, "Discard", currentResult), name = expression.valueKind,
-                        runtime = "", code = expression.code, intValue = 0, textValue = "")); }
+                    if currentLive and not currentStopped {
+                        listLib.pushBack(mut items, (kind = expressionStatementKind(expression.valueKind, expression.returned, "Discard", currentResult), name = expression.valueKind,
+                            runtime = "", code = expression.code, intValue = 0, textValue = ""));
+                        if codeHasRawTransfer(expression.code) {
+                            listLib.pushBack(mut transferCodes, expression.code);
+                            transferCount = transferCount + 1;
+                        }
+                    }
                     if expression.returned or expression.valueKind == "Never" {
                         if not currentStopped { currentReturned = true; }
                         currentStopped = true;
@@ -7816,29 +7912,49 @@ pub parseProgramWithModule := fn(target: String, source: String, prefix: String,
                 listLib.pushBack(mut locals, (name = itemName, runtime = runtime, kind = itemKind,
                     mutable = false, writable = false, depth = depth + 1, constant = false, code = runtime,
                     intValue = 0, textValue = "", initState = "init"));
-                if currentLive and not currentStopped { listLib.pushBack(mut items, (kind = "LoopSeq", name = itemName, runtime = runtime, code = sequenceCode,
-                    intValue = 0, textValue = itemKind)); }
+                if currentLive and not currentStopped {
+                    listLib.pushBack(mut items, (kind = "LoopSeq", name = itemName, runtime = runtime, code = sequenceCode,
+                        intValue = 0, textValue = itemKind));
+                    if codeHasRawTransfer(sequenceCode) {
+                        listLib.pushBack(mut transferCodes, sequenceCode);
+                        transferCount = transferCount + 1;
+                    }
+                }
             } else if sequenceCode =!= "" {
                 tempItemRuntime := freshScopeTemp(locals, "lite$item");
                 listLib.pushBack(mut locals, (name = "$item", runtime = tempItemRuntime, kind = "Unit",
                     mutable = false, writable = false, depth = depth + 1, constant = false, code = "",
                     intValue = 0, textValue = "", initState = "init"));
-                if currentLive and not currentStopped { listLib.pushBack(mut items, (kind = "LoopSeq", name = "", runtime = tempItemRuntime, code = sequenceCode,
-                    intValue = 0, textValue = itemKind)); }
+                if currentLive and not currentStopped {
+                    listLib.pushBack(mut items, (kind = "LoopSeq", name = "", runtime = tempItemRuntime, code = sequenceCode,
+                        intValue = 0, textValue = itemKind));
+                    if codeHasRawTransfer(sequenceCode) {
+                        listLib.pushBack(mut transferCodes, sequenceCode);
+                        transferCount = transferCount + 1;
+                    }
+                }
             } else {
-                if currentLive and not currentStopped { listLib.pushBack(mut items, (kind = "Loop", name = "", runtime = "", code = conditionCode,
-                    intValue = 0, textValue = "")); }
+                if currentLive and not currentStopped {
+                    listLib.pushBack(mut items, (kind = "Loop", name = "", runtime = "", code = conditionCode,
+                        intValue = 0, textValue = ""));
+                    if codeHasRawTransfer(conditionCode) {
+                        listLib.pushBack(mut transferCodes, conditionCode);
+                        transferCount = transferCount + 1;
+                    }
+                }
             }
             stmtLoopId := nextStmtCtxId;
             nextStmtCtxId = nextStmtCtxId + 1;
-            var loopTryIdx := -1;
+            var loopTryKey := "";
+            loopStartTransfers := transferCount;
             if target == "ts" and currentLive and not currentStopped {
-                loopTryIdx = itemsCount(items);
-                listLib.pushBack(mut items, (kind = "LoopTransferTry", name = "", runtime = "", code = integer.intText(stmtLoopId),
+                loopTryKey = moduleKey + "#lp#" + integer.intText(stmtLoopId);
+                listLib.pushBack(mut items, (kind = "LoopTransferTry", name = "", runtime = loopTryKey, code = integer.intText(stmtLoopId),
                     intValue = stmtLoopId, textValue = integer.intText(0 - stmtLoopId)));
             }
             listLib.pushBack(mut loopIds, stmtLoopId);
-            listLib.pushBack(mut loopTryIndices, loopTryIdx);
+            listLib.pushBack(mut loopTryKeys, loopTryKey);
+            listLib.pushBack(mut loopTransferStarts, loopStartTransfers);
             listLib.pushBack(mut stmtCtxs, (id = stmtLoopId, tag = "", kind = "loop", phase = "body",
                 iifeDepth = 0, valKind = "", valVar = "", label = "",
                 iterLabel = "", countVar = "", itemVar = "", itemKind = "", indexVar = "", hasIndex = false));
@@ -7888,8 +8004,15 @@ pub parseProgramWithModule := fn(target: String, source: String, prefix: String,
             listLib.pushBack(mut locals, (name = localName, runtime = runtime, kind = parsed.kind,
                 mutable = false, writable = true, depth = depth, constant = false, code = parsed.code,
                 intValue = parsed.intValue, textValue = parsed.textValue, initState = "init"));
-            if currentLive and not currentStopped { listLib.pushBack(mut items, (kind = "Local" + storageKind(parsed.kind), name = localName, runtime = runtime,
-                code = copiedValueCode(target, parsed.kind, parsed.code), intValue = parsed.intValue, textValue = itemTextPayload(parsed))); }
+            if currentLive and not currentStopped {
+                itemCode := copiedValueCode(target, parsed.kind, parsed.code);
+                listLib.pushBack(mut items, (kind = "Local" + storageKind(parsed.kind), name = localName, runtime = runtime,
+                    code = itemCode, intValue = parsed.intValue, textValue = itemTextPayload(parsed)));
+                if codeHasRawTransfer(itemCode) {
+                    listLib.pushBack(mut transferCodes, itemCode);
+                    transferCount = transferCount + 1;
+                }
+            }
             continue;
         }
         if name == "var" {
@@ -7964,9 +8087,18 @@ pub parseProgramWithModule := fn(target: String, source: String, prefix: String,
                 if rhsDiverged {
                     listLib.pushBack(mut items, (kind = expressionStatementKind("Never", false, "Call", currentResult), name = "", runtime = "",
                         code = parsed.code, intValue = 0, textValue = ""));
+                    if codeHasRawTransfer(parsed.code) {
+                        listLib.pushBack(mut transferCodes, parsed.code);
+                        transferCount = transferCount + 1;
+                    }
                 } else {
+                    itemCode := copiedValueCode(target, parsed.kind, parsed.code);
                     listLib.pushBack(mut items, (kind = "Var" + storageKind(parsed.kind), name = localName, runtime = runtime,
-                        code = copiedValueCode(target, parsed.kind, parsed.code), intValue = parsed.intValue, textValue = itemTextPayload(parsed)));
+                        code = itemCode, intValue = parsed.intValue, textValue = itemTextPayload(parsed)));
+                    if codeHasRawTransfer(itemCode) {
+                        listLib.pushBack(mut transferCodes, itemCode);
+                        transferCount = transferCount + 1;
+                    }
                 }
             }
             if rhsDiverged {
@@ -8059,10 +8191,13 @@ pub parseProgramWithModule := fn(target: String, source: String, prefix: String,
                 }
                 if currentLive and not currentStopped { listLib.pushBack(mut items, (kind = "FunctionStart", name = name, runtime = functionRuntime,
                     code = header.result, intValue = header.count, textValue = header.params)); }
-                fnTryIndex = -1;
+                fnTryId := nextStmtCtxId;
+                nextStmtCtxId = nextStmtCtxId + 1;
+                fnTryKey = "";
                 if target == "ts" and currentLive and not currentStopped {
-                    fnTryIndex = itemsCount(items);
-                    listLib.pushBack(mut items, (kind = "TransferTry", name = "", runtime = "", code = "", intValue = 0, textValue = ""));
+                    fnTryKey = moduleKey + "#fn#" + integer.intText(fnTryId);
+                    fnTransferStart = transferCount;
+                    listLib.pushBack(mut items, (kind = "TransferTry", name = "", runtime = fnTryKey, code = "", intValue = 0, textValue = ""));
                 }
                 listLib.pushBack(mut stmtCtxs, (id = 0, tag = "", kind = "fn", phase = "body",
                     iifeDepth = 0, valKind = header.result, valVar = "", label = "",
@@ -8131,8 +8266,15 @@ pub parseProgramWithModule := fn(target: String, source: String, prefix: String,
                 listLib.pushBack(mut items, (kind = "PublicValue", name = name, runtime = runtime, code = parsed.kind,
                     intValue = 0, textValue = ""));
             }
-            if currentLive and not currentStopped { listLib.pushBack(mut items, (kind = "Local" + storageKind(parsed.kind), name = name, runtime = runtime,
-                code = copiedValueCode(target, parsed.kind, parsed.code), intValue = parsed.intValue, textValue = itemTextPayload(parsed))); }
+            if currentLive and not currentStopped {
+                itemCode := copiedValueCode(target, parsed.kind, parsed.code);
+                listLib.pushBack(mut items, (kind = "Local" + storageKind(parsed.kind), name = name, runtime = runtime,
+                    code = itemCode, intValue = parsed.intValue, textValue = itemTextPayload(parsed)));
+                if codeHasRawTransfer(itemCode) {
+                    listLib.pushBack(mut transferCodes, itemCode);
+                    transferCount = transferCount + 1;
+                }
+            }
             continue;
         }
         if position < size and textLib.at(source, position) == ":" and compoundAssignOp(source, position).width == 0 {
@@ -8181,6 +8323,10 @@ pub parseProgramWithModule := fn(target: String, source: String, prefix: String,
                     listLib.pushBack(mut items, (kind = declItemPrefix + storageKind(typed.kind), name = name, runtime = runtime,
                         code = assignedCode, intValue = parsed.intValue, textValue = itemTextPayload(parsed)));
                 }
+                if codeHasRawTransfer(assignedCode) {
+                    listLib.pushBack(mut transferCodes, assignedCode);
+                    transferCount = transferCount + 1;
+                }
             }
             if rhsDiverged {
                 if not currentStopped { currentReturned = true; }
@@ -8209,6 +8355,10 @@ pub parseProgramWithModule := fn(target: String, source: String, prefix: String,
                     position = partialItem.intValue;
                 } else if currentLive and not currentStopped {
                     listLib.pushBack(mut items, partialItem);
+                    if codeHasRawTransfer(partialItem.code) {
+                        listLib.pushBack(mut transferCodes, partialItem.code);
+                        transferCount = transferCount + 1;
+                    }
                 }
             }
             if partialCount > 0 {
@@ -8236,6 +8386,10 @@ pub parseProgramWithModule := fn(target: String, source: String, prefix: String,
                 } else {
                     listLib.pushBack(mut items, (kind = "Assign" + storageKind(entry.kind), name = name, runtime = entry.runtime,
                         code = assignedCode, intValue = parsed.intValue, textValue = itemTextPayload(parsed)));
+                }
+                if codeHasRawTransfer(assignedCode) {
+                    listLib.pushBack(mut transferCodes, assignedCode);
+                    transferCount = transferCount + 1;
                 }
             }
             if rhsDiverged {
@@ -8267,14 +8421,26 @@ pub parseProgramWithModule := fn(target: String, source: String, prefix: String,
             listLib.pushBack(mut locals, (name = entry.name, runtime = entry.runtime, kind = entry.kind,
                 mutable = entry.mutable, writable = entry.writable, depth = entry.depth, constant = false, code = assignedCode,
                 intValue = 0, textValue = "", initState = "init"));
-            if currentLive and not currentStopped { listLib.pushBack(mut items, (kind = "Assign" + storageKind(entry.kind), name = name, runtime = entry.runtime,
-                code = assignedCode, intValue = 0, textValue = "")); }
+            if currentLive and not currentStopped {
+                listLib.pushBack(mut items, (kind = "Assign" + storageKind(entry.kind), name = name, runtime = entry.runtime,
+                    code = assignedCode, intValue = 0, textValue = ""));
+                if codeHasRawTransfer(assignedCode) {
+                    listLib.pushBack(mut transferCodes, assignedCode);
+                    transferCount = transferCount + 1;
+                }
+            }
             continue;
         }
         expression := parseExpressionItem(target, source, nameStart, prefix, locals, functions, functionParams, currentName,
             currentResult, atValueTail(blocks, blockCount) and not currentStopped, stmtCtxs);
-        if currentLive and not currentStopped { listLib.pushBack(mut items, (kind = expressionStatementKind(expression.valueKind, expression.returned, "Discard", currentResult), name = expression.valueKind,
-            runtime = "", code = expression.code, intValue = 0, textValue = "")); }
+        if currentLive and not currentStopped {
+            listLib.pushBack(mut items, (kind = expressionStatementKind(expression.valueKind, expression.returned, "Discard", currentResult), name = expression.valueKind,
+                runtime = "", code = expression.code, intValue = 0, textValue = ""));
+            if codeHasRawTransfer(expression.code) {
+                listLib.pushBack(mut transferCodes, expression.code);
+                transferCount = transferCount + 1;
+            }
+        }
         if expression.returned or expression.valueKind == "Never" {
             if not currentStopped { currentReturned = true; }
             currentStopped = true;

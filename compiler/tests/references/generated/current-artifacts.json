@@ -1,8 +1,8 @@
 {
-  "note": "Reviewed 2026-11-14 after eliminating linear scans and redundant slicing in lib/core/text. All 69 TS/C corpus artifact hashes and 25 rejection cases verified.",
+  "note": "Reviewed 2026-11-14 after eliminating O(N^2) item list scans and redundant TransferTry rewrites. All 69 TS/C corpus artifact hashes and 25 rejection cases verified.",
   "recorded": "2026-11-14",
-  "sourceSha256": "f7506e01395f27be472443f7b23172240181bf038c764ec66bed25591c98fde6",
-  "compilerSha256": "ae181b79a5d24776fda493ab404566dec700fb191481888ebc80b34b0ee26e4e",
+  "sourceSha256": "a5593f0f27014736aecf167e1be7cfef750c810fcec839ba883ef7b4df87eb7f",
+  "compilerSha256": "df4b91adaec0531f2a9f41ef2357526c8c475625aa2d6efc2306a532757e8a3f",
   "programCases": 69,
   "rejectedCases": 25,
   "artifacts": [

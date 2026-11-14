@@ -622,6 +622,12 @@ pub emitProgram := fn(items: frontend.Items, source: String, prefix: String): Un
     var line := "";
     var count := 0;
     var mainStopped := false;
+    var activeTries := "|";
+    loop items as tryItem {
+        if (tryItem.kind == "TransferCatch" or tryItem.kind == "LoopTransferCatch") and tryItem.runtime =!= "" {
+            activeTries = activeTries + tryItem.runtime + "|";
+        }
+    }
     loop items as item {
         if item.kind == "FunctionStart" {
             io.outputLine(indent + "function " + item.runtime + "(" + tsParameterList(item.textValue) + "): " +
@@ -633,8 +639,10 @@ pub emitProgram := fn(items: frontend.Items, source: String, prefix: String): Un
             io.outputLine(indent + "}");
             io.outputLine(indent + "void " + item.runtime + ";");
         } else if item.kind == "TransferTry" or item.kind == "LoopTransferTry" {
-            io.outputLine(indent + "try {");
-            indent = indent + "    ";
+            if item.runtime =!= "" and activeTries =!= "|" and textLib.indexOfText(activeTries, "|" + item.runtime + "|", 0) >= 0 {
+                io.outputLine(indent + "try {");
+                indent = indent + "    ";
+            }
         } else if item.kind == "TransferCatch" {
             indent = dedent(indent);
             io.outputLine(indent + "} catch (lite$err) {");
