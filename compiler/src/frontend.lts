@@ -1072,7 +1072,6 @@ coreHostFunction := fn(moduleIdentity: String, name: String, params: String, res
         else if name == "at" and params == "text=String|position=Int" and result == "String" { "lite$textAt" }
         else if name == "slice" and params == "text=String|start=Int|end=Int" and result == "String" { "lite$textSlice" }
         else if name == "indexOf" and params == "source=String|needle=String|start=Int" and result == "Int" { "lite$textIndexOf" }
-        else if name == "utf8Bytes" and params == "text=String" and result == "List<Int>" { "lite$textUtf8Bytes" }
         else { "" }
     } else if moduleIdentity == "lite.core.list.v1" {
         if name == "pushBack" and params == "values=mut List<T>|value=T" and result == "Unit" { "lite$core$list$pushBack:v1" }
@@ -1109,36 +1108,19 @@ coreHostFunction := fn(moduleIdentity: String, name: String, params: String, res
             result == "(status:Int,error:String)" { "lite$processRunBytes" }
         else { "" }
     } else if moduleIdentity == "lite.core.crypto.v1" {
-        if name == "sha256Text" and params == "text=String" and result == "String" { "lite$cryptoSha256Text" }
-        else if name == "sha256Bytes" and params == "bytes=List<Int>" and result == "String" { "lite$cryptoSha256Bytes" }
+        if name == "digestBytes" and params == "algorithm=String|bytes=List<Int>" and result == "String" { "lite$cryptoDigestBytes" }
         else if name == "sha256File" and params == "path=String" and result == "(ok:Bool,hex:String,error:String)" { "lite$cryptoSha256File" }
-        else if name == "sha512Text" and params == "text=String" and result == "String" { "lite$cryptoSha512Text" }
-        else if name == "sha512Bytes" and params == "bytes=List<Int>" and result == "String" { "lite$cryptoSha512Bytes" }
-        else if name == "hmacSha256Bytes" and params == "key=List<Int>|data=List<Int>" and result == "String" { "lite$cryptoHmacSha256Bytes" }
-        else if name == "base64Encode" and params == "bytes=List<Int>" and result == "String" { "lite$cryptoBase64Encode" }
-        else if name == "base64Decode" and params == "encoded=String" and result == "List<Int>" { "lite$cryptoBase64Decode" }
-        else if name == "hexEncode" and params == "bytes=List<Int>" and result == "String" { "lite$cryptoHexEncode" }
-        else if name == "hexDecode" and params == "encoded=String" and result == "List<Int>" { "lite$cryptoHexDecode" }
         else if name == "randomBytes" and params == "count=Int" and result == "List<Int>" { "lite$cryptoRandomBytes" }
         else { "" }
     } else if moduleIdentity == "lite.core.time.v1" {
         if name == "monotonicNs" and params == "" and result == "Int" { "lite$timeMonotonicNs" }
-        else if name == "utcIsoNow" and params == "" and result == "String" { "lite$timeUtcIsoNow" }
-        else if name == "epochMs" and params == "" and result == "Int" { "lite$timeEpochMs" }
         else if name == "epochNs" and params == "" and result == "Int" { "lite$timeEpochNs" }
         else if name == "sleepMs" and params == "ms=Int" and result == "Unit" { "lite$timeSleepMs" }
         else if name == "localDate" and params == "" and result == "String" { "lite$timeLocalDate" }
         else { "" }
     } else if moduleIdentity == "lite.core.unicode.v1" {
-        if name == "utf8Encode" and params == "text=String" and result == "List<Int>" { "lite$unicodeUtf8Encode" }
-        else if name == "utf8DecodeStrict" and params == "bytes=List<Int>" and result == "(ok:Bool,text:String,error:String)" { "lite$unicodeUtf8DecodeStrict" }
-        else if name == "utf8DecodeLossy" and params == "bytes=List<Int>" and result == "String" { "lite$unicodeUtf8DecodeLossy" }
-        else if name == "utf16Encode" and params == "text=String" and result == "List<Int>" { "lite$unicodeUtf16Encode" }
-        else if name == "utf16DecodeStrict" and params == "units=List<Int>" and result == "(ok:Bool,text:String,error:String)" { "lite$unicodeUtf16DecodeStrict" }
-        else if name == "utf16Length" and params == "text=String" and result == "Int" { "lite$unicodeUtf16Length" }
-        else if name == "toCodePoints" and params == "text=String" and result == "List<Int>" { "lite$unicodeToCodePoints" }
+        if name == "toCodePoints" and params == "text=String" and result == "List<Int>" { "lite$unicodeToCodePoints" }
         else if name == "fromCodePoints" and params == "points=List<Int>" and result == "(ok:Bool,text:String,error:String)" { "lite$unicodeFromCodePoints" }
-        else if name == "codePointAt" and params == "text=String|position=Int" and result == "Int" { "lite$unicodeCodePointAt" }
         else { "" }
     } else if moduleIdentity == "lite.compiler.source-reader.v1" and name == "read" and
         params == "importer=String|spec=String" and result == "(path:String,display:String,identity:String,text:String)" {

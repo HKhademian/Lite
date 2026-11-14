@@ -38,8 +38,7 @@ unsupportedBuiltinCode := fn(calls: String): String {
             "C backend does not support reportError or exit yet"
         }
         usesIntHelper(calls, "lite$textLength(") or usesIntHelper(calls, "lite$textAt(") or
-            usesIntHelper(calls, "lite$textSlice(") or usesIntHelper(calls, "lite$textIndexOf(") or
-            usesIntHelper(calls, "lite$textUtf8Bytes(") { "C backend does not support text builtins yet" }
+            usesIntHelper(calls, "lite$textSlice(") or usesIntHelper(calls, "lite$textIndexOf(") { "C backend does not support text builtins yet" }
         usesIntHelper(calls, "lite$fsKind(") or usesIntHelper(calls, "lite$fsReadText(") or
             usesIntHelper(calls, "lite$fsReadBytes(") or usesIntHelper(calls, "lite$fsWriteText(") or
             usesIntHelper(calls, "lite$fsWriteBytes(") or usesIntHelper(calls, "lite$fsListDir(") or
@@ -55,24 +54,15 @@ unsupportedBuiltinCode := fn(calls: String): String {
             usesIntHelper(calls, "lite$processRunBytes(") {
             "C backend does not support process builtins yet"
         }
-        usesIntHelper(calls, "lite$cryptoSha256Text(") or usesIntHelper(calls, "lite$cryptoSha256Bytes(") or
-            usesIntHelper(calls, "lite$cryptoSha256File(") or usesIntHelper(calls, "lite$cryptoSha512Text(") or
-            usesIntHelper(calls, "lite$cryptoSha512Bytes(") or usesIntHelper(calls, "lite$cryptoHmacSha256Bytes(") or
-            usesIntHelper(calls, "lite$cryptoBase64Encode(") or usesIntHelper(calls, "lite$cryptoBase64Decode(") or
-            usesIntHelper(calls, "lite$cryptoHexEncode(") or usesIntHelper(calls, "lite$cryptoHexDecode(") or
+        usesIntHelper(calls, "lite$cryptoDigestBytes(") or usesIntHelper(calls, "lite$cryptoSha256File(") or
             usesIntHelper(calls, "lite$cryptoRandomBytes(") {
             "C backend does not support crypto builtins yet"
         }
-        usesIntHelper(calls, "lite$timeMonotonicNs(") or usesIntHelper(calls, "lite$timeUtcIsoNow(") or
-            usesIntHelper(calls, "lite$timeEpochMs(") or usesIntHelper(calls, "lite$timeEpochNs(") or
+        usesIntHelper(calls, "lite$timeMonotonicNs(") or usesIntHelper(calls, "lite$timeEpochNs(") or
             usesIntHelper(calls, "lite$timeSleepMs(") or usesIntHelper(calls, "lite$timeLocalDate(") {
             "C backend does not support time builtins yet"
         }
-        usesIntHelper(calls, "lite$unicodeUtf8Encode(") or usesIntHelper(calls, "lite$unicodeUtf8DecodeStrict(") or
-            usesIntHelper(calls, "lite$unicodeUtf8DecodeLossy(") or usesIntHelper(calls, "lite$unicodeUtf16Encode(") or
-            usesIntHelper(calls, "lite$unicodeUtf16DecodeStrict(") or usesIntHelper(calls, "lite$unicodeUtf16Length(") or
-            usesIntHelper(calls, "lite$unicodeToCodePoints(") or usesIntHelper(calls, "lite$unicodeFromCodePoints(") or
-            usesIntHelper(calls, "lite$unicodeCodePointAt(") {
+        usesIntHelper(calls, "lite$unicodeToCodePoints(") or usesIntHelper(calls, "lite$unicodeFromCodePoints(") {
             "C backend does not support unicode builtins yet"
         }
         _ { "" }

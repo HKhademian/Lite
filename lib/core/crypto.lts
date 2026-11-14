@@ -1,46 +1,74 @@
-/* Provisional core host cryptography signatures. This module adds no host authority by itself. */
+/* Provisional core host digest/CSPRNG primitives and pure-Lite encodings and HMAC. This module adds no host authority by itself. */
 
+diag := import "core/diag";
+integer := import "core/int";
+list := import "core/list";
 text := import "core/text";
+unicode := import "core/unicode";
 
-/** Returns the lowercase hexadecimal SHA-256 digest of UTF-8 `text`. */
-pub sha256Text := fn(text: String): String;
-
-/** Returns the lowercase hexadecimal SHA-256 digest of raw `0..255` byte values. */
-pub sha256Bytes := fn(bytes: List<Int>): String;
+/** Returns the lowercase hexadecimal message digest (`"sha256"` or `"sha512"`) of raw `0..255` byte values. */
+pub digestBytes := fn(algorithm: String, bytes: List<Int>): String;
 
 /** Returns the lowercase hexadecimal SHA-256 digest of the raw bytes of the file at `path`. */
 pub sha256File := fn(path: String): (ok: Bool, hex: String, error: String);
 
-/** Returns the lowercase hexadecimal SHA-512 digest of UTF-8 `text`. */
-pub sha512Text := fn(text: String): String;
-
-/** Returns the lowercase hexadecimal SHA-512 digest of raw `0..255` byte values. */
-pub sha512Bytes := fn(bytes: List<Int>): String;
-
-/** Returns the lowercase hexadecimal HMAC-SHA256 tag of `data` using secret `key` bytes. */
-pub hmacSha256Bytes := fn(key: List<Int>, data: List<Int>): String;
-
-/** Encodes raw `0..255` byte values as standard RFC 4648 base64 text. */
-pub base64Encode := fn(bytes: List<Int>): String;
-
-/** Decodes standard RFC 4648 base64 text into `0..255` byte values, faulting on malformed input. */
-pub base64Decode := fn(encoded: String): List<Int>;
-
-/** Encodes raw `0..255` byte values as lowercase hexadecimal text. */
-pub hexEncode := fn(bytes: List<Int>): String;
-
-/** Decodes hexadecimal text into `0..255` byte values, faulting on malformed input. */
-pub hexDecode := fn(encoded: String): List<Int>;
-
 /** Generates `count` cryptographically strong random `0..255` byte values. */
 pub randomBytes := fn(count: Int): List<Int>;
 
+b64Alphabet := "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/";
+hexAlphabet := "0123456789abcdef";
+
+/** Returns the lowercase hexadecimal SHA-256 digest of UTF-8 `value`. */
+pub sha256Text := fn(value: String): String {
+    digestBytes("sha256", unicode.utf8Encode(value))
+}
+
+/** Returns the lowercase hexadecimal SHA-256 digest of raw `0..255` byte values. */
+pub sha256Bytes := fn(bytes: List<Int>): String {
+    digestBytes("sha256", bytes)
+}
+
+/** Returns the lowercase hexadecimal SHA-512 digest of UTF-8 `value`. */
+pub sha512Text := fn(value: String): String {
+    digestBytes("sha512", unicode.utf8Encode(value))
+}
+
+/** Returns the lowercase hexadecimal SHA-512 digest of raw `0..255` byte values. */
+pub sha512Bytes := fn(bytes: List<Int>): String {
+    digestBytes("sha512", bytes)
+}
+
 isBase64DataChar := fn(ch: String): Bool {
-    text.indexOfText("ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/", ch, 0) >= 0
+    text.indexOfText(b64Alphabet, ch, 0) >= 0
 }
 
 isHexChar := fn(ch: String): Bool {
     text.indexOfText("0123456789abcdefABCDEF", ch, 0) >= 0
+}
+
+checkByteRange := fn(bytes: List<Int>): Unit {
+    loop bytes as b {
+        if b < 0 or b > 255 {
+            diag.fail("", "byte value outside 0..255: " + integer.intText(b));
+            return;
+        }
+    }
+}
+
+byteXor := fn(left: Int, right: Int): Int {
+    var a := left;
+    var b := right;
+    var bit := 1;
+    var out := 0;
+    loop bit < 256 {
+        if a % 2 =!= b % 2 {
+            out += bit;
+        }
+        a = a / 2;
+        b = b / 2;
+        bit *= 2;
+    }
+    out
 }
 
 /** Returns true when `encoded` is valid standard RFC 4648 padded base64 text. */
@@ -73,4 +101,119 @@ pub isValidHex := fn(encoded: String): Bool {
         index += 1;
     }
     true
+}
+
+/** Encodes raw `0..255` byte values as standard RFC 4648 base64 text. */
+pub base64Encode := fn(bytes: List<Int>): String {
+    checkByteRange(bytes);
+    count := list.listCountInt(bytes);
+    var out := "";
+    var index := 0;
+    loop index < count {
+        b0 := bytes[index];
+        out += text.at(b64Alphabet, b0 / 4);
+        rem0 := b0 % 4;
+        if index + 1 >= count {
+            out += text.at(b64Alphabet, rem0 * 16) + "==";
+            break;
+        }
+        b1 := bytes[index + 1];
+        out += text.at(b64Alphabet, rem0 * 16 + (b1 / 16));
+        rem1 := b1 % 16;
+        if index + 2 >= count {
+            out += text.at(b64Alphabet, rem1 * 4) + "=";
+            break;
+        }
+        b2 := bytes[index + 2];
+        out += text.at(b64Alphabet, rem1 * 4 + (b2 / 64)) + text.at(b64Alphabet, b2 % 64);
+        index += 3;
+    }
+    out
+}
+
+/** Decodes standard RFC 4648 base64 text into `0..255` byte values, faulting on malformed input. */
+pub base64Decode := fn(encoded: String): List<Int> {
+    if not isValidBase64(encoded) {
+        diag.fail("", "invalid base64 input");
+        return [];
+    }
+    size := text.length(encoded);
+    var out: mut List<Int> = [];
+    var index := 0;
+    loop index < size {
+        d0 := text.indexOfText(b64Alphabet, text.at(encoded, index), 0);
+        d1 := text.indexOfText(b64Alphabet, text.at(encoded, index + 1), 0);
+        list.pushBack(mut out, d0 * 4 + (d1 / 16));
+        c2 := text.at(encoded, index + 2);
+        if c2 =!= "=" {
+            d2 := text.indexOfText(b64Alphabet, c2, 0);
+            list.pushBack(mut out, (d1 % 16) * 16 + (d2 / 4));
+            c3 := text.at(encoded, index + 3);
+            if c3 =!= "=" {
+                d3 := text.indexOfText(b64Alphabet, c3, 0);
+                list.pushBack(mut out, (d2 % 4) * 64 + d3);
+            }
+        }
+        index += 4;
+    }
+    out
+}
+
+/** Encodes raw `0..255` byte values as lowercase hexadecimal text. */
+pub hexEncode := fn(bytes: List<Int>): String {
+    checkByteRange(bytes);
+    var out := "";
+    loop bytes as b {
+        out += text.at(hexAlphabet, b / 16) + text.at(hexAlphabet, b % 16);
+    }
+    out
+}
+
+/** Decodes hexadecimal text into `0..255` byte values, faulting on malformed input. */
+pub hexDecode := fn(encoded: String): List<Int> {
+    if not isValidHex(encoded) {
+        diag.fail("", "invalid hex input");
+        return [];
+    }
+    size := text.length(encoded);
+    var out: mut List<Int> = [];
+    var index := 0;
+    loop index < size {
+        hi := text.indexOfText(hexAlphabet, text.toLowerAscii(text.at(encoded, index)), 0);
+        lo := text.indexOfText(hexAlphabet, text.toLowerAscii(text.at(encoded, index + 1)), 0);
+        list.pushBack(mut out, hi * 16 + lo);
+        index += 2;
+    }
+    out
+}
+
+/** Returns the lowercase hexadecimal HMAC-SHA256 tag of `data` using secret `key` bytes. */
+pub hmacSha256Bytes := fn(key: List<Int>, data: List<Int>): String {
+    checkByteRange(key);
+    keySize := list.listCountInt(key);
+    normalized := if keySize > 64 { hexDecode(sha256Bytes(key)) } else { key };
+    var blockKey: mut List<Int> = [];
+    loop normalized as b {
+        list.pushBack(mut blockKey, b);
+    }
+    loop list.listCountInt(blockKey) < 64 {
+        list.pushBack(mut blockKey, 0);
+    }
+    var inner: mut List<Int> = [];
+    var outer: mut List<Int> = [];
+    var index := 0;
+    loop index < 64 {
+        kb := blockKey[index];
+        list.pushBack(mut inner, byteXor(kb, 54));
+        list.pushBack(mut outer, byteXor(kb, 92));
+        index += 1;
+    }
+    loop data as b {
+        list.pushBack(mut inner, b);
+    }
+    innerDigest := hexDecode(sha256Bytes(inner));
+    loop innerDigest as b {
+        list.pushBack(mut outer, b);
+    }
+    sha256Bytes(outer)
 }

@@ -32,13 +32,11 @@ declare const process: {
         spawnSync(command: string, args: readonly string[], options: { cwd?: string; env: Record<string, string | undefined>; input: Uint8Array; stdio: readonly ["pipe", "pipe", "pipe"]; timeout?: number; maxBuffer: number }): { status: number | null; signal: string | null; stdout: Uint8Array | null; stderr: Uint8Array | null; error?: Error };
     };
     getBuiltinModule(name: "node:crypto"): {
-        createHash(algorithm: string): { update(data: string | Uint8Array, encoding?: string): { digest(encoding: "hex"): string } };
-        createHmac(algorithm: string, key: Uint8Array): { update(data: Uint8Array): { digest(encoding: "hex"): string } };
+        createHash(algorithm: string): { update(data: Uint8Array): { digest(encoding: "hex"): string } };
         randomBytes(size: number): Uint8Array;
     };
 };
 declare const TextDecoder: { new (label: string, options?: { fatal?: boolean }): { decode(input?: Uint8Array, options?: { stream?: boolean }): string } };
-declare const TextEncoder: { new (): { encode(input?: string): Uint8Array } };
 
 function lite$inputArgs(): string[] {
     return process.argv.slice(2);
@@ -170,11 +168,11 @@ function lite$processRunBytes(command: string, args: string[], cwd: string, envO
     return { status: BigInt(res.status ?? 1), error: "" };
 }
 
-function lite$cryptoSha256Text(text: string): string {
-    return process.getBuiltinModule("node:crypto").createHash("sha256").update(text, "utf8").digest("hex");
-}
-function lite$cryptoSha256Bytes(bytes: readonly bigint[]): string {
-    return process.getBuiltinModule("node:crypto").createHash("sha256").update(lite$toBytes(bytes)).digest("hex");
+function lite$cryptoDigestBytes(algorithm: string, bytes: readonly bigint[]): string {
+    if (algorithm !== "sha256" && algorithm !== "sha512") {
+        throw new Error("unsupported digest algorithm: " + algorithm);
+    }
+    return process.getBuiltinModule("node:crypto").createHash(algorithm).update(lite$toBytes(bytes)).digest("hex");
 }
 function lite$cryptoSha256File(path: string): { ok: boolean; hex: string; error: string } {
     try {
@@ -183,6 +181,26 @@ function lite$cryptoSha256File(path: string): { ok: boolean; hex: string; error:
     } catch (error) { return { ok: false, hex: "", error: lite$errMsg(error) }; }
 }
 function lite$timeMonotonicNs(): bigint { return process.hrtime.bigint(); }
+function lite$timeEpochNs(): bigint { return BigInt(Date.now()) * 1000000n; }
+
+function lite$unicodeToCodePoints(text: string): bigint[] {
+    const out: bigint[] = [];
+    for (const ch of text) { out.push(BigInt(ch.codePointAt(0) ?? 0)); }
+    return out;
+}
+function lite$unicodeFromCodePoints(points: readonly bigint[]): { ok: boolean; text: string; error: string } {
+    let text = "";
+    let chunk = "";
+    for (let i = 0; i < points.length; i += 1) {
+        const point = points[i];
+        if (point === undefined || point < 0n || point > 1114111n || (point >= 55296n && point <= 57343n)) {
+            return { ok: false, text: "", error: "invalid Unicode scalar code point: " + String(point) };
+        }
+        chunk += String.fromCodePoint(Number(point));
+        if (chunk.length >= 4096) { text += chunk; chunk = ""; }
+    }
+    return { ok: true, text: text + chunk, error: "" };
+}
 
 let lite$lastBmp = "";
 const lite$bmpSet = new Set<string>();
@@ -299,10 +317,6 @@ function lite$textIndexOf(source: string, needle: string, start: bigint): bigint
     return -1n;
 }
 
-function lite$textUtf8Bytes(text: string): bigint[] {
-    return lite$fromBytes(new TextEncoder().encode(text));
-}
-
 function lite$listAt<T>(items: readonly T[], index: bigint, at: number): T {
     if (index < 0n || index >= BigInt(items.length)) {
         lite$fault("BoundPanic", at, "list index outside its extent");
@@ -321,7 +335,7 @@ function lite$listPopBack<T>(items: T[], at: number): T {
     return items.pop() as T;
 }
 
-const lite$intLines: readonly number[] = [0, 79, 80, 104, 128, 159, 191, 221, 249, 286, 314, 342, 370, 396, 430, 458, 488, 522, 523, 568, 613, 642, 689, 730, 751, 779, 808, 835, 841, 883, 886, 887, 933, 962, 991, 1014, 1039, 1077, 1110, 1116, 1140, 1166, 1186, 1214, 1253, 1282, 1296, 1319, 1329, 1375, 1409, 1429, 1457, 1488, 1537, 1551, 1574, 1584, 1612, 1659, 1696, 1706, 1734, 1776, 1813, 1823, 1829, 1837, 1840, 1841, 1893, 1930, 1953, 1954, 1999, 2025, 2140, 2179, 2223, 2259, 2310, 2387, 2422, 2481, 2503, 2538, 2605, 2664, 2686, 2741, 2792, 2851, 2873, 2891, 2905, 2915, 2921, 2957, 2960, 2961, 3048, 3081, 3157, 3232, 3319, 3422, 3482, 3587, 3673, 3761, 3848, 3917, 4011, 4017, 4078, 4135, 4198, 4243, 4246, 4247, 4285, 4344, 4395, 4443, 4481, 4540, 4560, 4566, 4567, 4622, 4684, 4723, 4806, 4826, 4832, 4833, 4869, 4889, 4958, 4978, 4984, 4985, 5040, 5067, 5107, 5127, 5133, 5187, 5188, 5228, 5261, 5313, 5338, 5376, 5400, 5410, 5441, 5474, 5544, 5572, 5586, 5647, 5677, 5720, 5748, 5762, 5789, 5834, 5899, 5927, 5967, 6043, 6080, 6130, 6166, 6188, 6219, 6237, 6284, 6312, 6352, 6398, 6474, 6520, 6557, 6607, 6643, 6665, 6724, 6755, 6773, 6820, 6887, 6888, 6937, 6982, 7059, 7077, 7078, 7107, 7163, 7224, 7285, 7337, 7403, 7481, 7555, 7578, 7633, 7666, 7680, 7690, 7696, 7697, 7749, 7775, 7828, 7848, 7854, 7855, 7888, 7950, 7980, 8009, 8025, 8080, 8150, 8206, 8310, 8334, 8344, 8409, 8410, 8470, 8542, 8600, 8699, 8723, 8733, 8817, 8823, 8824, 8866, 8889, 8925, 8945, 8951, 8990, 9014, 9051, 9071, 9077, 9122, 9123, 9172, 9194, 9229, 9249, 9255, 9294, 9377, 9397, 9403, 9404, 9519, 9539, 9583, 9625, 9676, 9728, 9792, 9852, 9936, 9949, 9950, 9993, 10015, 10050, 10070, 10076, 10172, 10175, 10176, 10197];
+const lite$intLines: readonly number[] = [0, 79, 80, 104, 128, 159, 191, 221, 249, 283, 311, 339, 367, 393, 427, 455, 485, 519, 520, 565, 610, 639, 686, 727, 748, 776, 805, 832, 838, 880, 883, 884, 930, 959, 988, 1011, 1036, 1074, 1107, 1113, 1137, 1163, 1183, 1211, 1250, 1279, 1293, 1316, 1326, 1372, 1406, 1426, 1454, 1485, 1534, 1548, 1571, 1581, 1609, 1656, 1693, 1703, 1731, 1773, 1810, 1820, 1826, 1834, 1837, 1838, 1890, 1927, 1950, 1951, 1996, 2022, 2137, 2176, 2220, 2256, 2307, 2384, 2419, 2478, 2500, 2535, 2602, 2661, 2683, 2738, 2789, 2848, 2870, 2888, 2902, 2912, 2918, 2954, 2957, 2958, 3045, 3078, 3154, 3229, 3316, 3419, 3479, 3584, 3670, 3758, 3845, 3914, 4008, 4014, 4075, 4132, 4195, 4240, 4243, 4244, 4282, 4341, 4392, 4440, 4478, 4537, 4557, 4563, 4564, 4619, 4681, 4720, 4803, 4823, 4829, 4830, 4866, 4886, 4955, 4975, 4981, 4982, 5037, 5064, 5104, 5124, 5130, 5184, 5185, 5225, 5258, 5310, 5335, 5373, 5397, 5407, 5438, 5471, 5541, 5569, 5583, 5644, 5674, 5717, 5745, 5759, 5786, 5831, 5896, 5924, 5964, 6040, 6077, 6127, 6163, 6185, 6216, 6234, 6281, 6309, 6349, 6395, 6471, 6517, 6554, 6604, 6640, 6662, 6721, 6752, 6770, 6817, 6884, 6885, 6934, 6979, 7056, 7074, 7075, 7104, 7160, 7221, 7282, 7334, 7400, 7478, 7552, 7575, 7630, 7663, 7677, 7687, 7693, 7694, 7746, 7772, 7825, 7845, 7851, 7852, 7885, 7947, 7977, 8006, 8022, 8077, 8147, 8203, 8307, 8331, 8341, 8406, 8407, 8467, 8539, 8597, 8696, 8720, 8730, 8814, 8820, 8821, 8863, 8886, 8922, 8942, 8948, 8987, 9011, 9048, 9068, 9074, 9119, 9120, 9169, 9191, 9226, 9246, 9252, 9291, 9374, 9394, 9400, 9401, 9516, 9536, 9580, 9622, 9673, 9725, 9789, 9849, 9933, 9946, 9947, 9990, 10012, 10047, 10067, 10073, 10169, 10172, 10173, 10194];
 const lite$intSource = "tools/src/bench.lts:";
 const lite$intMin = -(1n << 63n), lite$intMax = (1n << 63n) - 1n;
 function lite$fault(category: string, at: number, message: string): never {
@@ -339,6 +353,7 @@ function lite$checkedInt(value: bigint, at: number): bigint {
 function lite$addInt(left: bigint, right: bigint, at: number): bigint { return lite$checkedInt(left + right, at); }
 function lite$subtractInt(left: bigint, right: bigint, at: number): bigint { return lite$checkedInt(left - right, at); }
 function lite$multiplyInt(left: bigint, right: bigint, at: number): bigint { return lite$checkedInt(left * right, at); }
+function lite$negateInt(value: bigint, at: number): bigint { return lite$checkedInt(-value, at); }
 
 function lite$divideInt(left: bigint, right: bigint, at: number): bigint {
     if (right === 0n) lite$intFault(at, "division by zero");
@@ -453,6 +468,35 @@ export function main(lite$write?: (text: string) => void): string {
         return lite_count;
     }
     void liteFn$lib$core$list$listCountBool;
+    function liteFn$lib$core$diag$diagnosticExit(): bigint {
+        return 2n;
+    }
+    void liteFn$lib$core$diag$diagnosticExit;
+    const lite$m$lib$core$diag$sourceErrorCategory = "SourceError";
+    void lite$m$lib$core$diag$sourceErrorCategory;
+    const lite$m$lib$core$diag$typeErrorCategory = "TypeError";
+    void lite$m$lib$core$diag$typeErrorCategory;
+    function liteFn$lib$core$diag$fail(lite_prefix: string, lite_message: string): void {
+        void lite_prefix;
+        void lite_message;
+        if (((lite_prefix) === (""))) {
+            lite$reportError(lite_message);
+        } else {
+            lite$reportError(((((lite_prefix) + (":"))) + (lite_message)));
+        }
+        lite$exit(liteFn$lib$core$diag$diagnosticExit());
+    }
+    void liteFn$lib$core$diag$fail;
+    function liteFn$lib$core$diag$expect(lite_prefix: string, lite_condition: boolean, lite_message: string): void {
+        void lite_prefix;
+        void lite_condition;
+        void lite_message;
+        if ((!(lite_condition))) {
+            return (void (liteFn$lib$core$diag$fail(lite_prefix, lite_message)));
+        } else {
+        }
+    }
+    void liteFn$lib$core$diag$expect;
     function liteFn$lib$core$int$intMin(): bigint {
         return (-9223372036854775808n);
     }
@@ -983,9 +1027,313 @@ export function main(lite$write?: (text: string) => void): string {
         return lite_out;
     }
     void liteFn$lib$core$text$toLowerAscii;
+    function liteFn$lib$core$time$epochMs(): bigint {
+        return lite$divideInt(lite$timeEpochNs(), 1000000n, 729);
+    }
+    void liteFn$lib$core$time$epochMs;
+    function liteFn$lib$core$time$padFixed(lite_value: bigint, lite_width: bigint): string {
+        void lite_value;
+        void lite_width;
+        let lite_out = liteFn$lib$core$int$intText(lite_value);
+        void lite_out;
+        while (((lite$textLength(lite_out)) < (lite_width))) {
+            lite_out = (("0") + (lite_out));
+        }
+        return lite_out;
+    }
+    void liteFn$lib$core$time$padFixed;
+    function liteFn$lib$core$time$utcIsoNow(): string {
+        const lite_msTotal = liteFn$lib$core$time$epochMs();
+        void lite_msTotal;
+        const lite_msInDay = lite$remainderInt((lite$addInt((lite$remainderInt(lite_msTotal, 86400000n, 1075)), 86400000n, 1087)), 86400000n, 1099);
+        void lite_msInDay;
+        const lite_daysSinceEpoch = lite$divideInt((lite$subtractInt(lite_msTotal, lite_msInDay, 1142)), 86400000n, 1153);
+        void lite_daysSinceEpoch;
+        const lite_hour = lite$divideInt(lite_msInDay, 3600000n, 1185);
+        void lite_hour;
+        const lite_minute = lite$remainderInt((lite$divideInt(lite_msInDay, 60000n, 1219)), 60n, 1228);
+        void lite_minute;
+        const lite_second = lite$remainderInt((lite$divideInt(lite_msInDay, 1000n, 1257)), 60n, 1265);
+        void lite_second;
+        const lite_millisecond = lite$remainderInt(lite_msInDay, 1000n, 1298);
+        void lite_millisecond;
+        const lite_z = lite$addInt(lite_daysSinceEpoch, 719468n, 1330);
+        void lite_z;
+        const lite_adjusted = (Boolean(((lite_z) >= (0n))) ? lite_z : lite$subtractInt(lite_z, 146096n, 1381));
+        void lite_adjusted;
+        const lite_era = lite$divideInt(lite_adjusted, 146097n, 1413);
+        void lite_era;
+        const lite_doe = lite$subtractInt(lite_z, lite$multiplyInt(lite_era, 146097n, 1442), 1436);
+        void lite_doe;
+        const lite_yoe = lite$divideInt((lite$subtractInt(lite$addInt(lite$subtractInt(lite_doe, lite$divideInt(lite_doe, 1460n, 1474), 1468), lite$divideInt(lite_doe, 36524n, 1487), 1481), lite$divideInt(lite_doe, 146096n, 1501), 1495)), 365n, 1511);
+        void lite_yoe;
+        const lite_yBase = lite$addInt(lite_yoe, lite$multiplyInt(lite_era, 400n, 1541), 1535);
+        void lite_yBase;
+        const lite_doy = lite$subtractInt(lite_doe, (lite$subtractInt(lite$addInt(lite$multiplyInt(365n, lite_yoe, 1570), lite$divideInt(lite_yoe, 4n, 1582), 1576), lite$divideInt(lite_yoe, 100n, 1592), 1586)), 1563);
+        void lite_doy;
+        const lite_mp = lite$divideInt((lite$addInt(lite$multiplyInt(5n, lite_doy, 1613), 2n, 1619)), 153n, 1624);
+        void lite_mp;
+        const lite_day = lite$addInt(lite$subtractInt(lite_doy, lite$divideInt((lite$addInt(lite$multiplyInt(153n, lite_mp, 1653), 2n, 1658)), 5n, 1663), 1646), 1n, 1667);
+        void lite_day;
+        const lite_month = (Boolean(((lite_mp) < (10n))) ? lite$addInt(lite_mp, 3n, 1701) : lite$subtractInt(lite_mp, 9n, 1717));
+        void lite_month;
+        const lite_year = lite$addInt(lite_yBase, (Boolean(((lite_month) <= (2n))) ? 1n : 0n), 1742);
+        void lite_year;
+        const lite_yearText = (Boolean(((lite_year) < (0n))) ? (("-") + (liteFn$lib$core$time$padFixed(lite$negateInt(lite_year, 1829), 4n))) : liteFn$lib$core$time$padFixed(lite_year, 4n));
+        void lite_yearText;
+        return ((((((((((((((((((((((((((lite_yearText) + ("-"))) + (liteFn$lib$core$time$padFixed(lite_month, 2n)))) + ("-"))) + (liteFn$lib$core$time$padFixed(lite_day, 2n)))) + ("T"))) + (liteFn$lib$core$time$padFixed(lite_hour, 2n)))) + (":"))) + (liteFn$lib$core$time$padFixed(lite_minute, 2n)))) + (":"))) + (liteFn$lib$core$time$padFixed(lite_second, 2n)))) + ("."))) + (liteFn$lib$core$time$padFixed(lite_millisecond, 3n)))) + ("Z"));
+    }
+    void liteFn$lib$core$time$utcIsoNow;
+    function liteFn$lib$core$unicode$isValidScalar(lite_point: bigint): boolean {
+        void lite_point;
+        return ((((((lite_point) >= (0n))) && (((lite_point) <= (1114111n))))) && ((((((lite_point) < (55296n))) || (((lite_point) > (57343n)))))));
+    }
+    void liteFn$lib$core$unicode$isValidScalar;
+    function liteFn$lib$core$unicode$fromCodePoint(lite_point: bigint): { ok: boolean; text: string; error: string } {
+        void lite_point;
+        const lite_points: bigint[] = [...([lite_point])];
+        void lite_points;
+        return lite$unicodeFromCodePoints([...(lite_points)]);
+    }
+    void liteFn$lib$core$unicode$fromCodePoint;
+    function liteFn$lib$core$unicode$codePointAt(lite_text: string, lite_position: bigint): bigint {
+        void lite_text;
+        void lite_position;
+        const lite_ch = lite$textAt(lite_text, lite_position, 1126);
+        void lite_ch;
+        const lite_points: bigint[] = [...(lite$unicodeToCodePoints(lite_ch))];
+        void lite_points;
+        return lite$listAt((lite_points), 0n, 1198);
+    }
+    void liteFn$lib$core$unicode$codePointAt;
+    function liteFn$lib$core$unicode$utf16Length(lite_text: string): bigint {
+        void lite_text;
+        let lite_total = 0n;
+        void lite_total;
+        for (const lite_cp of [...(lite$unicodeToCodePoints(lite_text))]) {
+            void lite_cp;
+            lite_total = lite$addInt(lite_total, (Boolean(((lite_cp) <= (65535n))) ? 1n : 2n), 1375);
+        }
+        return lite_total;
+    }
+    void liteFn$lib$core$unicode$utf16Length;
+    function liteFn$lib$core$unicode$utf16Encode(lite_text: string): bigint[] {
+        void lite_text;
+        let lite_out: bigint[] = [...([...([])])];
+        void lite_out;
+        for (const lite_cp of [...(lite$unicodeToCodePoints(lite_text))]) {
+            void lite_cp;
+            if (((lite_cp) <= (65535n))) {
+                lite_out.push(lite_cp);
+            } else {
+                const lite_adjusted = lite$subtractInt(lite_cp, 65536n, 1718);
+                void lite_adjusted;
+                lite_out.push(lite$addInt(55296n, (lite$divideInt(lite_adjusted, 1024n, 1780)), 1768));
+                lite_out.push(lite$addInt(56320n, (lite$remainderInt(lite_adjusted, 1024n, 1843)), 1831));
+            }
+        }
+        return [...(lite_out)];
+    }
+    void liteFn$lib$core$unicode$utf16Encode;
+    function liteFn$lib$core$unicode$utf16DecodeStrict(lite_units: bigint[]): { ok: boolean; text: string; error: string } {
+        void lite_units;
+        const lite_count = liteFn$lib$core$list$listCountInt([...(lite_units)]);
+        void lite_count;
+        let lite_points: bigint[] = [...([...([])])];
+        void lite_points;
+        let lite_index = 0n;
+        void lite_index;
+        while (((lite_index) < (lite_count))) {
+            const lite_code = lite$listAt((lite_units), lite_index, 2218);
+            void lite_code;
+            if (((((lite_code) < (0n))) || (((lite_code) > (65535n))))) {
+                return { ok: false, text: "", error: (("UTF-16 code unit outside 0..65535: ") + (liteFn$lib$core$int$intText(lite_code))) };
+            }
+            if (((((lite_code) >= (55296n))) && (((lite_code) <= (56319n))))) {
+                if (((lite$addInt(lite_index, 1n, 2455)) >= (lite_count))) {
+                    return { ok: false, text: "", error: "unpaired UTF-16 high surrogate" };
+                }
+                const lite_next = lite$listAt((lite_units), lite$addInt(lite_index, 1n, 2606), 2600);
+                void lite_next;
+                if (((((lite_next) < (56320n))) || (((lite_next) > (57343n))))) {
+                    return { ok: false, text: "", error: "unpaired UTF-16 high surrogate" };
+                }
+                lite_points.push(lite$addInt(lite$addInt(65536n, lite$multiplyInt((lite$subtractInt(lite_code, 55296n, 2814)), 1024n, 2823), 2806), (lite$subtractInt(lite_next, 56320n, 2838)), 2830));
+                lite_index = lite$addInt(lite_index, 2n, 2867);
+            } else if (((((lite_code) >= (56320n))) && (((lite_code) <= (57343n))))) {
+                return { ok: false, text: "", error: "unpaired UTF-16 low surrogate" };
+            } else {
+                lite_points.push(lite_code);
+                lite_index = lite$addInt(lite_index, 1n, 3090);
+            }
+        }
+        return lite$unicodeFromCodePoints([...(lite_points)]);
+    }
+    void liteFn$lib$core$unicode$utf16DecodeStrict;
+    function liteFn$lib$core$unicode$utf8Encode(lite_text: string): bigint[] {
+        void lite_text;
+        let lite_out: bigint[] = [...([...([])])];
+        void lite_out;
+        for (const lite_cp of [...(lite$unicodeToCodePoints(lite_text))]) {
+            void lite_cp;
+            if (((lite_cp) <= (127n))) {
+                lite_out.push(lite_cp);
+            } else if (((lite_cp) <= (2047n))) {
+                lite_out.push(lite$addInt(192n, (lite$divideInt(lite_cp, 64n, 3451)), 3445));
+                lite_out.push(lite$addInt(128n, (lite$remainderInt(lite_cp, 64n, 3504)), 3498));
+            } else if (((lite_cp) <= (65535n))) {
+                lite_out.push(lite$addInt(224n, (lite$divideInt(lite_cp, 4096n, 3589)), 3583));
+                lite_out.push(lite$addInt(128n, (lite$remainderInt((lite$divideInt(lite_cp, 64n, 3645)), 64n, 3651)), 3638));
+                lite_out.push(lite$addInt(128n, (lite$remainderInt(lite_cp, 64n, 3704)), 3698));
+            } else {
+                lite_out.push(lite$addInt(240n, (lite$divideInt(lite_cp, 262144n, 3774)), 3768));
+                lite_out.push(lite$addInt(128n, (lite$remainderInt((lite$divideInt(lite_cp, 4096n, 3832)), 64n, 3840)), 3825));
+                lite_out.push(lite$addInt(128n, (lite$remainderInt((lite$divideInt(lite_cp, 64n, 3894)), 64n, 3900)), 3887));
+                lite_out.push(lite$addInt(128n, (lite$remainderInt(lite_cp, 64n, 3953)), 3947));
+            }
+        }
+        return [...(lite_out)];
+    }
+    void liteFn$lib$core$unicode$utf8Encode;
+    function liteFn$lib$core$unicode$utf8DecodeInternal(lite_bytes: bigint[], lite_strict: boolean): { ok: boolean; text: string; error: string } {
+        void lite_bytes;
+        void lite_strict;
+        const lite_count = liteFn$lib$core$list$listCountInt([...(lite_bytes)]);
+        void lite_count;
+        let lite_points: bigint[] = [...([...([])])];
+        void lite_points;
+        let lite_needed = 0n;
+        void lite_needed;
+        let lite_seen = 0n;
+        void lite_seen;
+        let lite_codePoint = 0n;
+        void lite_codePoint;
+        let lite_lowerBoundary = 128n;
+        void lite_lowerBoundary;
+        let lite_upperBoundary = 191n;
+        void lite_upperBoundary;
+        let lite_index = 0n;
+        void lite_index;
+        while (((lite_index) < (lite_count))) {
+            const lite_b = lite$listAt((lite_bytes), lite_index, 4351);
+            void lite_b;
+            if (((((lite_b) < (0n))) || (((lite_b) > (255n))))) {
+                if (lite_strict) {
+                    return { ok: false, text: "", error: (("byte value outside 0..255: ") + (liteFn$lib$core$int$intText(lite_b))) };
+                }
+                lite_codePoint = 0n;
+                lite_needed = 0n;
+                lite_seen = 0n;
+                lite_lowerBoundary = 128n;
+                lite_upperBoundary = 191n;
+                lite_points.push(65533n);
+                lite_index = lite$addInt(lite_index, 1n, 4738);
+            } else if (((lite_needed) === (0n))) {
+                if (((lite_b) <= (127n))) {
+                    lite_points.push(lite_b);
+                } else if (((((lite_b) >= (194n))) && (((lite_b) <= (223n))))) {
+                    lite_needed = 1n;
+                    lite_codePoint = lite$subtractInt(lite_b, 192n, 4952);
+                } else if (((((lite_b) >= (224n))) && (((lite_b) <= (239n))))) {
+                    if (((lite_b) === (224n))) {
+                        lite_lowerBoundary = 160n;
+                    }
+                    if (((lite_b) === (237n))) {
+                        lite_upperBoundary = 159n;
+                    }
+                    lite_needed = 2n;
+                    lite_codePoint = lite$subtractInt(lite_b, 224n, 5169);
+                } else if (((((lite_b) >= (240n))) && (((lite_b) <= (244n))))) {
+                    if (((lite_b) === (240n))) {
+                        lite_lowerBoundary = 144n;
+                    }
+                    if (((lite_b) === (244n))) {
+                        lite_upperBoundary = 143n;
+                    }
+                    lite_needed = 3n;
+                    lite_codePoint = lite$subtractInt(lite_b, 240n, 5386);
+                } else {
+                    if (lite_strict) {
+                        return { ok: false, text: "", error: "invalid UTF-8 lead byte" };
+                    }
+                    lite_points.push(65533n);
+                }
+                lite_index = lite$addInt(lite_index, 1n, 5629);
+            } else if (((((lite_b) < (lite_lowerBoundary))) || (((lite_b) > (lite_upperBoundary))))) {
+                if (lite_strict) {
+                    return { ok: false, text: "", error: "invalid UTF-8 continuation byte" };
+                }
+                lite_codePoint = 0n;
+                lite_needed = 0n;
+                lite_seen = 0n;
+                lite_lowerBoundary = 128n;
+                lite_upperBoundary = 191n;
+                lite_points.push(65533n);
+            } else {
+                lite_lowerBoundary = 128n;
+                lite_upperBoundary = 191n;
+                lite_codePoint = lite$addInt(lite$multiplyInt(lite_codePoint, 64n, 6125), (lite$subtractInt(lite_b, 128n, 6135)), 6130);
+                lite_seen = lite$addInt(lite_seen, 1n, 6160);
+                if (((lite_seen) === (lite_needed))) {
+                    lite_points.push(lite_codePoint);
+                    lite_codePoint = 0n;
+                    lite_needed = 0n;
+                    lite_seen = 0n;
+                }
+                lite_index = lite$addInt(lite_index, 1n, 6369);
+            }
+        }
+        if (((lite_needed) > (0n))) {
+            if (lite_strict) {
+                return { ok: false, text: "", error: "truncated UTF-8 sequence" };
+            }
+            lite_points.push(65533n);
+        }
+        return lite$unicodeFromCodePoints([...(lite_points)]);
+    }
+    void liteFn$lib$core$unicode$utf8DecodeInternal;
+    function liteFn$lib$core$unicode$utf8DecodeStrict(lite_bytes: bigint[]): { ok: boolean; text: string; error: string } {
+        void lite_bytes;
+        return liteFn$lib$core$unicode$utf8DecodeInternal([...(lite_bytes)], true);
+    }
+    void liteFn$lib$core$unicode$utf8DecodeStrict;
+    function liteFn$lib$core$unicode$utf8DecodeLossy(lite_bytes: bigint[]): string {
+        void lite_bytes;
+        return (liteFn$lib$core$unicode$utf8DecodeInternal([...(lite_bytes)], false)).text;
+    }
+    void liteFn$lib$core$unicode$utf8DecodeLossy;
+    function liteFn$lib$core$unicode$isValidUtf8(lite_bytes: bigint[]): boolean {
+        void lite_bytes;
+        return (liteFn$lib$core$unicode$utf8DecodeStrict([...(lite_bytes)])).ok;
+    }
+    void liteFn$lib$core$unicode$isValidUtf8;
+    const lite$m$lib$core$crypto$b64Alphabet = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/";
+    void lite$m$lib$core$crypto$b64Alphabet;
+    const lite$m$lib$core$crypto$hexAlphabet = "0123456789abcdef";
+    void lite$m$lib$core$crypto$hexAlphabet;
+    function liteFn$lib$core$crypto$sha256Text(lite_value: string): string {
+        void lite_value;
+        return lite$cryptoDigestBytes("sha256", [...(liteFn$lib$core$unicode$utf8Encode(lite_value))]);
+    }
+    void liteFn$lib$core$crypto$sha256Text;
+    function liteFn$lib$core$crypto$sha256Bytes(lite_bytes: bigint[]): string {
+        void lite_bytes;
+        return lite$cryptoDigestBytes("sha256", [...(lite_bytes)]);
+    }
+    void liteFn$lib$core$crypto$sha256Bytes;
+    function liteFn$lib$core$crypto$sha512Text(lite_value: string): string {
+        void lite_value;
+        return lite$cryptoDigestBytes("sha512", [...(liteFn$lib$core$unicode$utf8Encode(lite_value))]);
+    }
+    void liteFn$lib$core$crypto$sha512Text;
+    function liteFn$lib$core$crypto$sha512Bytes(lite_bytes: bigint[]): string {
+        void lite_bytes;
+        return lite$cryptoDigestBytes("sha512", [...(lite_bytes)]);
+    }
+    void liteFn$lib$core$crypto$sha512Bytes;
     function liteFn$lib$core$crypto$isBase64DataChar(lite_ch: string): boolean {
         void lite_ch;
-        return ((liteFn$lib$core$text$indexOfText("ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/", lite_ch, 0n)) >= (0n));
+        return ((liteFn$lib$core$text$indexOfText(lite$m$lib$core$crypto$b64Alphabet, lite_ch, 0n)) >= (0n));
     }
     void liteFn$lib$core$crypto$isBase64DataChar;
     function liteFn$lib$core$crypto$isHexChar(lite_ch: string): boolean {
@@ -993,6 +1341,39 @@ export function main(lite$write?: (text: string) => void): string {
         return ((liteFn$lib$core$text$indexOfText("0123456789abcdefABCDEF", lite_ch, 0n)) >= (0n));
     }
     void liteFn$lib$core$crypto$isHexChar;
+    function liteFn$lib$core$crypto$checkByteRange(lite_bytes: bigint[]): void {
+        void lite_bytes;
+        for (const lite_b of [...(lite_bytes)]) {
+            void lite_b;
+            if (((((lite_b) < (0n))) || (((lite_b) > (255n))))) {
+                liteFn$lib$core$diag$fail("", (("byte value outside 0..255: ") + (liteFn$lib$core$int$intText(lite_b))));
+                return;
+            }
+        }
+    }
+    void liteFn$lib$core$crypto$checkByteRange;
+    function liteFn$lib$core$crypto$byteXor(lite_left: bigint, lite_right: bigint): bigint {
+        void lite_left;
+        void lite_right;
+        let lite_a = lite_left;
+        void lite_a;
+        let lite_b = lite_right;
+        void lite_b;
+        let lite_bit = 1n;
+        void lite_bit;
+        let lite_out = 0n;
+        void lite_out;
+        while (((lite_bit) < (256n))) {
+            if (((lite$remainderInt(lite_a, 2n, 2136)) !== (lite$remainderInt(lite_b, 2n, 2146)))) {
+                lite_out = lite$addInt(lite_out, lite_bit, 2168);
+            }
+            lite_a = lite$divideInt(lite_a, 2n, 2200);
+            lite_b = lite$divideInt(lite_b, 2n, 2219);
+            lite_bit = lite$multiplyInt(lite_bit, 2n, 2236);
+        }
+        return lite_out;
+    }
+    void liteFn$lib$core$crypto$byteXor;
     function liteFn$lib$core$crypto$isValidBase64(lite_encoded: string): boolean {
         void lite_encoded;
         const lite_size = liteFn$lib$core$text$length(lite_encoded);
@@ -1000,21 +1381,21 @@ export function main(lite$write?: (text: string) => void): string {
         if (((lite_size) === (0n))) {
             return true;
         }
-        if (((lite$remainderInt(lite_size, 4n, 2088)) !== (0n))) {
+        if (((lite$remainderInt(lite_size, 4n, 2470)) !== (0n))) {
             return false;
         }
         let lite_padding = 0n;
         void lite_padding;
-        if (((liteFn$lib$core$text$at(lite_encoded, lite$subtractInt(lite_size, 1n, 2167))) === ("="))) {
-            lite_padding = lite$addInt(lite_padding, 1n, 2189);
+        if (((liteFn$lib$core$text$at(lite_encoded, lite$subtractInt(lite_size, 1n, 2549))) === ("="))) {
+            lite_padding = lite$addInt(lite_padding, 1n, 2571);
         }
-        if (((liteFn$lib$core$text$at(lite_encoded, lite$subtractInt(lite_size, 2n, 2226))) === ("="))) {
+        if (((liteFn$lib$core$text$at(lite_encoded, lite$subtractInt(lite_size, 2n, 2608))) === ("="))) {
             if (((lite_padding) === (0n))) {
                 return false;
             }
-            lite_padding = lite$addInt(lite_padding, 1n, 2298);
+            lite_padding = lite$addInt(lite_padding, 1n, 2680);
         }
-        const lite_dataEnd = lite$subtractInt(lite_size, lite_padding, 2330);
+        const lite_dataEnd = lite$subtractInt(lite_size, lite_padding, 2712);
         void lite_dataEnd;
         let lite_index = 0n;
         void lite_index;
@@ -1022,7 +1403,7 @@ export function main(lite$write?: (text: string) => void): string {
             if ((!(liteFn$lib$core$crypto$isBase64DataChar(liteFn$lib$core$text$at(lite_encoded, lite_index))))) {
                 return false;
             }
-            lite_index = lite$addInt(lite_index, 1n, 2477);
+            lite_index = lite$addInt(lite_index, 1n, 2859);
         }
         return true;
     }
@@ -1031,7 +1412,7 @@ export function main(lite$write?: (text: string) => void): string {
         void lite_encoded;
         const lite_size = liteFn$lib$core$text$length(lite_encoded);
         void lite_size;
-        if (((lite$remainderInt(lite_size, 2n, 2672)) !== (0n))) {
+        if (((lite$remainderInt(lite_size, 2n, 3054)) !== (0n))) {
             return false;
         }
         let lite_index = 0n;
@@ -1040,11 +1421,162 @@ export function main(lite$write?: (text: string) => void): string {
             if ((!(liteFn$lib$core$crypto$isHexChar(liteFn$lib$core$text$at(lite_encoded, lite_index))))) {
                 return false;
             }
-            lite_index = lite$addInt(lite_index, 1n, 2826);
+            lite_index = lite$addInt(lite_index, 1n, 3208);
         }
         return true;
     }
     void liteFn$lib$core$crypto$isValidHex;
+    function liteFn$lib$core$crypto$base64Encode(lite_bytes: bigint[]): string {
+        void lite_bytes;
+        liteFn$lib$core$crypto$checkByteRange([...(lite_bytes)]);
+        const lite_count = liteFn$lib$core$list$listCountInt([...(lite_bytes)]);
+        void lite_count;
+        let lite_out = "";
+        void lite_out;
+        let lite_index = 0n;
+        void lite_index;
+        while (((lite_index) < (lite_count))) {
+            const lite_b0 = lite$listAt((lite_bytes), lite_index, 3507);
+            void lite_b0;
+            lite_out = ((lite_out) + (liteFn$lib$core$text$at(lite$m$lib$core$crypto$b64Alphabet, lite$divideInt(lite_b0, 4n, 3554))));
+            const lite_rem0 = lite$remainderInt(lite_b0, 4n, 3579);
+            void lite_rem0;
+            if (((lite$addInt(lite_index, 1n, 3601)) >= (lite_count))) {
+                lite_out = ((lite_out) + (((liteFn$lib$core$text$at(lite$m$lib$core$crypto$b64Alphabet, lite$multiplyInt(lite_rem0, 16n, 3661))) + ("=="))));
+                break;
+            }
+            const lite_b1 = lite$listAt((lite_bytes), lite$addInt(lite_index, 1n, 3730), 3724);
+            void lite_b1;
+            lite_out = ((lite_out) + (liteFn$lib$core$text$at(lite$m$lib$core$crypto$b64Alphabet, lite$addInt(lite$multiplyInt(lite_rem0, 16n, 3777), (lite$divideInt(lite_b1, 16n, 3788)), 3782))));
+            const lite_rem1 = lite$remainderInt(lite_b1, 16n, 3815);
+            void lite_rem1;
+            if (((lite$addInt(lite_index, 2n, 3838)) >= (lite_count))) {
+                lite_out = ((lite_out) + (((liteFn$lib$core$text$at(lite$m$lib$core$crypto$b64Alphabet, lite$multiplyInt(lite_rem1, 4n, 3898))) + ("="))));
+                break;
+            }
+            const lite_b2 = lite$listAt((lite_bytes), lite$addInt(lite_index, 2n, 3965), 3959);
+            void lite_b2;
+            lite_out = ((lite_out) + (((liteFn$lib$core$text$at(lite$m$lib$core$crypto$b64Alphabet, lite$addInt(lite$multiplyInt(lite_rem1, 4n, 4012), (lite$divideInt(lite_b2, 64n, 4022)), 4016))) + (liteFn$lib$core$text$at(lite$m$lib$core$crypto$b64Alphabet, lite$remainderInt(lite_b2, 64n, 4055))))));
+            lite_index = lite$addInt(lite_index, 3n, 4076);
+        }
+        return lite_out;
+    }
+    void liteFn$lib$core$crypto$base64Encode;
+    function liteFn$lib$core$crypto$base64Decode(lite_encoded: string): bigint[] {
+        void lite_encoded;
+        if ((!(liteFn$lib$core$crypto$isValidBase64(lite_encoded)))) {
+            liteFn$lib$core$diag$fail("", "invalid base64 input");
+            return [...([])];
+        }
+        const lite_size = liteFn$lib$core$text$length(lite_encoded);
+        void lite_size;
+        let lite_out: bigint[] = [...([...([])])];
+        void lite_out;
+        let lite_index = 0n;
+        void lite_index;
+        while (((lite_index) < (lite_size))) {
+            const lite_d0 = liteFn$lib$core$text$indexOfText(lite$m$lib$core$crypto$b64Alphabet, liteFn$lib$core$text$at(lite_encoded, lite_index), 0n);
+            void lite_d0;
+            const lite_d1 = liteFn$lib$core$text$indexOfText(lite$m$lib$core$crypto$b64Alphabet, liteFn$lib$core$text$at(lite_encoded, lite$addInt(lite_index, 1n, 4612)), 0n);
+            void lite_d1;
+            lite_out.push(lite$addInt(lite$multiplyInt(lite_d0, 4n, 4656), (lite$divideInt(lite_d1, 16n, 4666)), 4660));
+            const lite_c2 = liteFn$lib$core$text$at(lite_encoded, lite$addInt(lite_index, 2n, 4711));
+            void lite_c2;
+            if (((lite_c2) !== ("="))) {
+                const lite_d2 = liteFn$lib$core$text$indexOfText(lite$m$lib$core$crypto$b64Alphabet, lite_c2, 0n);
+                void lite_d2;
+                lite_out.push(lite$addInt(lite$multiplyInt((lite$remainderInt(lite_d1, 16n, 4836)), 16n, 4842), (lite$divideInt(lite_d2, 4n, 4853)), 4847));
+                const lite_c3 = liteFn$lib$core$text$at(lite_encoded, lite$addInt(lite_index, 3n, 4901));
+                void lite_c3;
+                if (((lite_c3) !== ("="))) {
+                    const lite_d3 = liteFn$lib$core$text$indexOfText(lite$m$lib$core$crypto$b64Alphabet, lite_c3, 0n);
+                    void lite_d3;
+                    lite_out.push(lite$addInt(lite$multiplyInt((lite$remainderInt(lite_d2, 4n, 5038)), 64n, 5043), lite_d3, 5048));
+                }
+            }
+            lite_index = lite$addInt(lite_index, 4n, 5093);
+        }
+        return [...(lite_out)];
+    }
+    void liteFn$lib$core$crypto$base64Decode;
+    function liteFn$lib$core$crypto$hexEncode(lite_bytes: bigint[]): string {
+        void lite_bytes;
+        liteFn$lib$core$crypto$checkByteRange([...(lite_bytes)]);
+        let lite_out = "";
+        void lite_out;
+        for (const lite_b of [...(lite_bytes)]) {
+            void lite_b;
+            lite_out = ((lite_out) + (((liteFn$lib$core$text$at(lite$m$lib$core$crypto$hexAlphabet, lite$divideInt(lite_b, 16n, 5341))) + (liteFn$lib$core$text$at(lite$m$lib$core$crypto$hexAlphabet, lite$remainderInt(lite_b, 16n, 5372))))));
+        }
+        return lite_out;
+    }
+    void liteFn$lib$core$crypto$hexEncode;
+    function liteFn$lib$core$crypto$hexDecode(lite_encoded: string): bigint[] {
+        void lite_encoded;
+        if ((!(liteFn$lib$core$crypto$isValidHex(lite_encoded)))) {
+            liteFn$lib$core$diag$fail("", "invalid hex input");
+            return [...([])];
+        }
+        const lite_size = liteFn$lib$core$text$length(lite_encoded);
+        void lite_size;
+        let lite_out: bigint[] = [...([...([])])];
+        void lite_out;
+        let lite_index = 0n;
+        void lite_index;
+        while (((lite_index) < (lite_size))) {
+            const lite_hi = liteFn$lib$core$text$indexOfText(lite$m$lib$core$crypto$hexAlphabet, liteFn$lib$core$text$toLowerAscii(liteFn$lib$core$text$at(lite_encoded, lite_index)), 0n);
+            void lite_hi;
+            const lite_lo = liteFn$lib$core$text$indexOfText(lite$m$lib$core$crypto$hexAlphabet, liteFn$lib$core$text$toLowerAscii(liteFn$lib$core$text$at(lite_encoded, lite$addInt(lite_index, 1n, 5924))), 0n);
+            void lite_lo;
+            lite_out.push(lite$addInt(lite$multiplyInt(lite_hi, 16n, 5969), lite_lo, 5974));
+            lite_index = lite$addInt(lite_index, 2n, 5995);
+        }
+        return [...(lite_out)];
+    }
+    void liteFn$lib$core$crypto$hexDecode;
+    function liteFn$lib$core$crypto$hmacSha256Bytes(lite_key: bigint[], lite_data: bigint[]): string {
+        void lite_key;
+        void lite_data;
+        liteFn$lib$core$crypto$checkByteRange([...(lite_key)]);
+        const lite_keySize = liteFn$lib$core$list$listCountInt([...(lite_key)]);
+        void lite_keySize;
+        const lite_normalized: bigint[] = [...((Boolean(((lite_keySize) > (64n))) ? [...(liteFn$lib$core$crypto$hexDecode(liteFn$lib$core$crypto$sha256Bytes([...(lite_key)])))] : [...(lite_key)]))];
+        void lite_normalized;
+        let lite_blockKey: bigint[] = [...([...([])])];
+        void lite_blockKey;
+        for (const lite_b of [...(lite_normalized)]) {
+            void lite_b;
+            lite_blockKey.push(lite_b);
+        }
+        while (((liteFn$lib$core$list$listCountInt([...(lite_blockKey)])) < (64n))) {
+            lite_blockKey.push(0n);
+        }
+        let lite_inner: bigint[] = [...([...([])])];
+        void lite_inner;
+        let lite_outer: bigint[] = [...([...([])])];
+        void lite_outer;
+        let lite_index = 0n;
+        void lite_index;
+        while (((lite_index) < (64n))) {
+            const lite_kb = lite$listAt((lite_blockKey), lite_index, 6660);
+            void lite_kb;
+            lite_inner.push(liteFn$lib$core$crypto$byteXor(lite_kb, 54n));
+            lite_outer.push(liteFn$lib$core$crypto$byteXor(lite_kb, 92n));
+            lite_index = lite$addInt(lite_index, 1n, 6784);
+        }
+        for (const lite_b of [...(lite_data)]) {
+            void lite_b;
+            lite_inner.push(lite_b);
+        }
+        const lite_innerDigest: bigint[] = [...(liteFn$lib$core$crypto$hexDecode(liteFn$lib$core$crypto$sha256Bytes([...(lite_inner)])))];
+        void lite_innerDigest;
+        for (const lite_b of [...(lite_innerDigest)]) {
+            void lite_b;
+            lite_outer.push(lite_b);
+        }
+        return liteFn$lib$core$crypto$sha256Bytes([...(lite_outer)]);
+    }
+    void liteFn$lib$core$crypto$hmacSha256Bytes;
     function liteFn$lib$util$json$isJsonSpace(lite_ch: string): boolean {
         void lite_ch;
         return ((((((((lite_ch) === (" "))) || (((lite_ch) === ("\t"))))) || (((lite_ch) === ("\r"))))) || (((lite_ch) === ("\n"))));
@@ -2894,7 +3426,7 @@ export function main(lite$write?: (text: string) => void): string {
             if ((!(lite_ok))) {
                 return false;
             }
-            lite_i = lite$addInt(lite_i, 1n, 619);
+            lite_i = lite$addInt(lite_i, 1n, 616);
         }
         return true;
     }
@@ -2921,7 +3453,7 @@ export function main(lite$write?: (text: string) => void): string {
             if ((!(lite_ok))) {
                 return false;
             }
-            lite_i = lite$addInt(lite_i, 1n, 1080);
+            lite_i = lite$addInt(lite_i, 1n, 1077);
         }
         return true;
     }
@@ -2997,7 +3529,7 @@ export function main(lite$write?: (text: string) => void): string {
             }
             if (((lite_k) !== ("hash"))) {
                 lite_form = lite_k;
-                lite_formCount = lite$addInt(lite_formCount, 1n, 3023);
+                lite_formCount = lite$addInt(lite_formCount, 1n, 3020);
             }
         }
         if (((lite_formCount) !== (1n))) {
@@ -3011,7 +3543,7 @@ export function main(lite$write?: (text: string) => void): string {
             if ((!((lite_tRes).ok))) {
                 return { ok: false, sha256: "", kind: "", error: ((lite_label) + (".text must be a string")) };
             }
-            lite_digest = (("sha256:") + (lite$cryptoSha256Text((lite_tRes).value)));
+            lite_digest = (("sha256:") + (liteFn$lib$core$crypto$sha256Text((lite_tRes).value)));
         } else if (((lite_form) === ("bytes"))) {
             const lite_bField = liteFn$lib$util$json$findObjectField(lite_source, lite_streamPos, "bytes");
             void lite_bField;
@@ -3020,7 +3552,7 @@ export function main(lite$write?: (text: string) => void): string {
             if ((!((lite_parsed).ok))) {
                 return { ok: false, sha256: "", kind: "", error: (lite_parsed).error };
             }
-            lite_digest = (("sha256:") + (lite$cryptoSha256Bytes([...(liteFn$lib$util$streams$collectBytesArray(lite_source, (lite_bField).valuePos))])));
+            lite_digest = (("sha256:") + (liteFn$lib$core$crypto$sha256Bytes([...(liteFn$lib$util$streams$collectBytesArray(lite_source, (lite_bField).valuePos))])));
         } else {
             const lite_fRes = liteFn$lib$util$json$readObjectString(lite_source, lite_streamPos, "file");
             void lite_fRes;
@@ -3077,7 +3609,7 @@ export function main(lite$write?: (text: string) => void): string {
         if ((liteFn$lib$util$json$findObjectField(lite_source, lite_streamPos, "text")).found) {
             const lite_tRes = liteFn$lib$util$json$readObjectString(lite_source, lite_streamPos, "text");
             void lite_tRes;
-            return [...(lite$textUtf8Bytes((lite_tRes).value))];
+            return [...(liteFn$lib$core$unicode$utf8Encode((lite_tRes).value))];
         }
         const lite_bField = liteFn$lib$util$json$findObjectField(lite_source, lite_streamPos, "bytes");
         void lite_bField;
@@ -3100,10 +3632,10 @@ export function main(lite$write?: (text: string) => void): string {
         let lite_i = 0n;
         void lite_i;
         while (((lite_i) < (lite_n))) {
-            if (((lite$listAt((lite_left), lite_i, 6547)) !== (lite$listAt((lite_right), lite_i, 6560)))) {
+            if (((lite$listAt((lite_left), lite_i, 6544)) !== (lite$listAt((lite_right), lite_i, 6557)))) {
                 return false;
             }
-            lite_i = lite$addInt(lite_i, 1n, 6595);
+            lite_i = lite$addInt(lite_i, 1n, 6592);
         }
         return true;
     }
@@ -4089,7 +4621,7 @@ export function main(lite$write?: (text: string) => void): string {
             void lite_fname;
             const lite_fv = liteFn$lib$util$json$findObjectField(lite_caseText, lite_objPos, lite_fname);
             void lite_fv;
-            const lite_digest = lite$cryptoSha256Bytes([...(liteFn$lib$util$streams$readStreamBytes(lite_caseText, (lite_fv).valuePos, lite_caseDir))]);
+            const lite_digest = liteFn$lib$core$crypto$sha256Bytes([...(liteFn$lib$util$streams$readStreamBytes(lite_caseText, (lite_fv).valuePos, lite_caseDir))]);
             void lite_digest;
             lite_entries.push(((((liteFn$lib$util$json$quoteString(lite_fname)) + (":"))) + (liteFn$lib$util$json$quoteString(lite_digest))));
         }
@@ -4132,18 +4664,18 @@ export function main(lite$write?: (text: string) => void): string {
             void lite_sPos;
             const lite_sName = (liteFn$lib$util$json$readObjectString(lite_caseText, lite_sPos, "name")).value;
             void lite_sName;
-            const lite_stdinHash = lite$cryptoSha256Bytes([...(liteFn$lib$util$streams$readStreamBytes(lite_caseText, (liteFn$lib$util$json$findObjectField(lite_caseText, lite_sPos, "stdin")).valuePos, lite_caseDir))]);
+            const lite_stdinHash = liteFn$lib$core$crypto$sha256Bytes([...(liteFn$lib$util$streams$readStreamBytes(lite_caseText, (liteFn$lib$util$json$findObjectField(lite_caseText, lite_sPos, "stdin")).valuePos, lite_caseDir))]);
             void lite_stdinHash;
-            const lite_stdoutHash = lite$cryptoSha256Bytes([...(liteFn$lib$util$streams$readStreamBytes(lite_caseText, (liteFn$lib$util$json$findObjectField(lite_caseText, lite_sPos, "stdout")).valuePos, lite_caseDir))]);
+            const lite_stdoutHash = liteFn$lib$core$crypto$sha256Bytes([...(liteFn$lib$util$streams$readStreamBytes(lite_caseText, (liteFn$lib$util$json$findObjectField(lite_caseText, lite_sPos, "stdout")).valuePos, lite_caseDir))]);
             void lite_stdoutHash;
-            const lite_stderrHash = lite$cryptoSha256Bytes([...(liteFn$lib$util$streams$readStreamBytes(lite_caseText, (liteFn$lib$util$json$findObjectField(lite_caseText, lite_sPos, "stderr")).valuePos, lite_caseDir))]);
+            const lite_stderrHash = liteFn$lib$core$crypto$sha256Bytes([...(liteFn$lib$util$streams$readStreamBytes(lite_caseText, (liteFn$lib$util$json$findObjectField(lite_caseText, lite_sPos, "stderr")).valuePos, lite_caseDir))]);
             void lite_stderrHash;
             const lite_fields: string[] = [...([(("\"name\":") + (liteFn$lib$util$json$quoteString(lite_sName))), (("\"stdin\":") + (liteFn$lib$util$json$quoteString(lite_stdinHash))), (("\"stdout\":") + (liteFn$lib$util$json$quoteString(lite_stdoutHash))), (("\"stderr\":") + (liteFn$lib$util$json$quoteString(lite_stderrHash)))])];
             void lite_fields;
             const lite_artField = liteFn$lib$util$json$findObjectField(lite_caseText, lite_sPos, "artifact");
             void lite_artField;
             if ((lite_artField).found) {
-                const lite_artHash = lite$cryptoSha256Bytes([...(liteFn$lib$util$streams$readStreamBytes(lite_caseText, (lite_artField).valuePos, lite_caseDir))]);
+                const lite_artHash = liteFn$lib$core$crypto$sha256Bytes([...(liteFn$lib$util$streams$readStreamBytes(lite_caseText, (lite_artField).valuePos, lite_caseDir))]);
                 void lite_artHash;
                 lite_fields.push((("\"artifact\":") + (liteFn$lib$util$json$quoteString(lite_artHash))));
             }
@@ -4168,9 +4700,9 @@ export function main(lite$write?: (text: string) => void): string {
         void lite_nsRaw;
         const lite_ns = (Boolean(((lite_nsRaw) < (0n))) ? 0n : lite_nsRaw);
         void lite_ns;
-        const lite_wholeMs = lite$divideInt(lite_ns, 1000000n, 631);
+        const lite_wholeMs = lite$divideInt(lite_ns, 1000000n, 628);
         void lite_wholeMs;
-        const lite_micros = lite$divideInt((lite$subtractInt(lite_ns, lite$multiplyInt(lite_wholeMs, 1000000n, 670), 660)), 1000n, 681);
+        const lite_micros = lite$divideInt((lite$subtractInt(lite_ns, lite$multiplyInt(lite_wholeMs, 1000000n, 667), 657)), 1000n, 678);
         void lite_micros;
         let lite_frac = liteFn$lib$core$int$intText(lite_micros);
         void lite_frac;
@@ -4193,7 +4725,7 @@ export function main(lite$write?: (text: string) => void): string {
         for (const lite_item of [...(lite_items)]) {
             void lite_item;
             lite_rem.push(lite_item);
-            lite_remCount = lite$addInt(lite_remCount, 1n, 1105);
+            lite_remCount = lite$addInt(lite_remCount, 1n, 1102);
         }
         while (((lite_remCount) > (0n))) {
             let lite_bestIdx = 0n;
@@ -4201,31 +4733,31 @@ export function main(lite$write?: (text: string) => void): string {
             let lite_i = 1n;
             void lite_i;
             while (((lite_i) < (lite_remCount))) {
-                if (((lite$listAt((lite_rem), lite_i, 1233)) < (lite$listAt((lite_rem), lite_bestIdx, 1242)))) {
+                if (((lite$listAt((lite_rem), lite_i, 1230)) < (lite$listAt((lite_rem), lite_bestIdx, 1239)))) {
                     lite_bestIdx = lite_i;
                 }
-                lite_i = lite$addInt(lite_i, 1n, 1314);
+                lite_i = lite$addInt(lite_i, 1n, 1311);
             }
-            lite_out.push(lite$listAt((lite_rem), lite_bestIdx, 1364));
+            lite_out.push(lite$listAt((lite_rem), lite_bestIdx, 1361));
             const lite_next: bigint[] = [...([])];
             void lite_next;
             let lite_j = 0n;
             void lite_j;
             while (((lite_j) < (lite_remCount))) {
                 if (((lite_j) !== (lite_bestIdx))) {
-                    lite_next.push(lite$listAt((lite_rem), lite_j, 1532));
+                    lite_next.push(lite$listAt((lite_rem), lite_j, 1529));
                 }
-                lite_j = lite$addInt(lite_j, 1n, 1569);
+                lite_j = lite$addInt(lite_j, 1n, 1566);
             }
             while (((lite_remCount) > (0n))) {
-                const lite__dropped = lite$listPopBack(lite_rem, 1636);
+                const lite__dropped = lite$listPopBack(lite_rem, 1633);
                 void lite__dropped;
-                lite_remCount = lite$subtractInt(lite_remCount, 1n, 1691);
+                lite_remCount = lite$subtractInt(lite_remCount, 1n, 1688);
             }
             for (const lite_kept of [...(lite_next)]) {
                 void lite_kept;
                 lite_rem.push(lite_kept);
-                lite_remCount = lite$addInt(lite_remCount, 1n, 1808);
+                lite_remCount = lite$addInt(lite_remCount, 1n, 1805);
             }
         }
         return [...(lite_out)];
@@ -4255,7 +4787,7 @@ export function main(lite$write?: (text: string) => void): string {
                             lite_digestBytes.push(0n);
                         }
                         lite_first = false;
-                        for (const lite_b of [...(lite$textUtf8Bytes(((lite_prefix) + (lite_entry))))]) {
+                        for (const lite_b of [...(liteFn$lib$core$unicode$utf8Encode(((lite_prefix) + (lite_entry))))]) {
                             void lite_b;
                             lite_digestBytes.push(lite_b);
                         }
@@ -4268,7 +4800,7 @@ export function main(lite$write?: (text: string) => void): string {
                 }
             }
         }
-        return lite$cryptoSha256Bytes([...(lite_digestBytes)]);
+        return liteFn$lib$core$crypto$sha256Bytes([...(lite_digestBytes)]);
     }
     void liteFn_computeToolingHash;
     function liteFn_readCompilerJson(lite_rootDir: string): { ok: boolean; jsonText: string; error: string } {
@@ -4315,9 +4847,9 @@ export function main(lite$write?: (text: string) => void): string {
             lite$reportError("usage: lite bench OUTPUT [FILTER]");
             lite$exit(1n);
         }
-        const lite_output = liteFn$lib$util$path$resolve(lite$processCwd(), lite$listAt((lite_normalized), 0n, 4617));
+        const lite_output = liteFn$lib$util$path$resolve(lite$processCwd(), lite$listAt((lite_normalized), 0n, 4614));
         void lite_output;
-        const lite_filter = (Boolean(((lite_argCount) === (2n))) ? lite$listAt((lite_normalized), 1n, 4666) : "");
+        const lite_filter = (Boolean(((lite_argCount) === (2n))) ? lite$listAt((lite_normalized), 1n, 4663) : "");
         void lite_filter;
         if (((lite$fsKind(lite_output)) !== ("missing"))) {
             lite$reportError("benchmark output already exists; choose a new report path");
@@ -4372,7 +4904,7 @@ export function main(lite$write?: (text: string) => void): string {
                             lite$reportError((lite_wRes).error);
                             lite$exit(1n);
                         }
-                        lite_w = lite$addInt(lite_w, 1n, 6214);
+                        lite_w = lite$addInt(lite_w, 1n, 6211);
                     }
                     const lite_samplesNs: bigint[] = [...([])];
                     void lite_samplesNs;
@@ -4389,12 +4921,12 @@ export function main(lite$write?: (text: string) => void): string {
                             lite$reportError((lite_sRes).error);
                             lite$exit(1n);
                         }
-                        lite_samplesNs.push(lite$subtractInt(lite_t1, lite_t0, 6717));
-                        lite_s = lite$addInt(lite_s, 1n, 6750);
+                        lite_samplesNs.push(lite$subtractInt(lite_t1, lite_t0, 6714));
+                        lite_s = lite$addInt(lite_s, 1n, 6747);
                     }
                     const lite_sorted: bigint[] = [...(liteFn_sortInts([...(lite_samplesNs)]))];
                     void lite_sorted;
-                    const lite_medianNs = lite$listAt((lite_sorted), lite$divideInt(liteFn$lib$core$list$listCountInt([...(lite_sorted)]), 2n, 6881), 6855);
+                    const lite_medianNs = lite$listAt((lite_sorted), lite$divideInt(liteFn$lib$core$list$listCountInt([...(lite_sorted)]), 2n, 6878), 6852);
                     void lite_medianNs;
                     const lite_msFields: string[] = [...([])];
                     void lite_msFields;
@@ -4405,7 +4937,7 @@ export function main(lite$write?: (text: string) => void): string {
                     const lite_entry = (((((((((((((((((((((((((((((("{\"id\":") + (liteFn$lib$util$json$quoteString((lite_meta).id)))) + (",\"scenario\":"))) + (liteFn$lib$util$json$quoteString(lite_sName)))) + (",\"kind\":"))) + (liteFn$lib$util$json$quoteString((lite_meta).kind)))) + (",\"identity\":"))) + ((lite_ident).jsonText))) + (",\"warmups\":"))) + (liteFn$lib$core$int$intText((lite_meta).warmups)))) + (",\"milliseconds\":["))) + (liteFn$lib$core$text$joinTexts([...(lite_msFields)], ",")))) + ("]"))) + (",\"medianMilliseconds\":"))) + (liteFn_formatNsAsMsJson(lite_medianNs)))) + ("}"));
                     void lite_entry;
                     lite_resultsJson.push(lite_entry);
-                    lite_sIdx = lite$addInt(lite_sIdx, 1n, 7661);
+                    lite_sIdx = lite$addInt(lite_sIdx, 1n, 7658);
                 }
             }
         }

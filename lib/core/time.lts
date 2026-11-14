@@ -1,13 +1,10 @@
-/* Provisional core host time signatures. This module adds no host authority by itself. */
+/* Provisional core host time signatures and pure-Lite calendar derivations. This module adds no host authority by itself. */
+
+integer := import "core/int";
+textHost := import "core/text-host";
 
 /** Returns monotonic elapsed time in nanoseconds suitable for duration measurements. */
 pub monotonicNs := fn(): Int;
-
-/** Returns the current UTC wall-clock timestamp formatted as ISO-8601 text. */
-pub utcIsoNow := fn(): String;
-
-/** Returns wall-clock milliseconds since the Unix epoch. */
-pub epochMs := fn(): Int;
 
 /** Returns wall-clock nanoseconds since the Unix epoch. */
 pub epochNs := fn(): Int;
@@ -17,3 +14,46 @@ pub sleepMs := fn(ms: Int): Unit;
 
 /** Returns the current local calendar date formatted as `YYYY-MM-DD`. */
 pub localDate := fn(): String;
+
+/** Returns wall-clock milliseconds since the Unix epoch. */
+pub epochMs := fn(): Int {
+    epochNs() / 1000000
+}
+
+padFixed := fn(value: Int, width: Int): String {
+    var out := integer.intText(value);
+    loop textHost.length(out) < width {
+        out = "0" + out;
+    }
+    out
+}
+
+/** Returns the current UTC wall-clock timestamp formatted as ISO-8601 text. */
+pub utcIsoNow := fn(): String {
+    msTotal := epochMs();
+    msInDay := ((msTotal % 86400000) + 86400000) % 86400000;
+    daysSinceEpoch := (msTotal - msInDay) / 86400000;
+    hour := msInDay / 3600000;
+    minute := (msInDay / 60000) % 60;
+    second := (msInDay / 1000) % 60;
+    millisecond := msInDay % 1000;
+    z := daysSinceEpoch + 719468;
+    adjusted := if z >= 0 { z } else { z - 146096 };
+    era := adjusted / 146097;
+    doe := z - era * 146097;
+    yoe := (doe - doe / 1460 + doe / 36524 - doe / 146096) / 365;
+    yBase := yoe + era * 400;
+    doy := doe - (365 * yoe + yoe / 4 - yoe / 100);
+    mp := (5 * doy + 2) / 153;
+    day := doy - (153 * mp + 2) / 5 + 1;
+    month := if mp < 10 { mp + 3 } else { mp - 9 };
+    year := yBase + if month <= 2 { 1 } else { 0 };
+    yearText := if year < 0 {
+        "-" + padFixed(-year, 4)
+    } else {
+        padFixed(year, 4)
+    };
+    yearText + "-" + padFixed(month, 2) + "-" + padFixed(day, 2) + "T" +
+    padFixed(hour, 2) + ":" + padFixed(minute, 2) + ":" + padFixed(second, 2) + "." +
+    padFixed(millisecond, 3) + "Z"
+}

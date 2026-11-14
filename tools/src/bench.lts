@@ -6,7 +6,7 @@ proc := import "core/process";
 crypto := import "core/crypto";
 integer := import "core/int";
 text := import "core/text";
-hostText := import "core/text-host";
+unicode := import "core/unicode";
 list := import "core/list";
 time := import "core/time";
 path := import "util/path";
@@ -83,7 +83,7 @@ computeToolingHash := fn(rootDir: String): String {
                         list.pushBack(mut digestBytes, 0);
                     }
                     first = false;
-                    loop hostText.utf8Bytes(prefix + entry) as b {
+                    loop unicode.utf8Encode(prefix + entry) as b {
                         list.pushBack(mut digestBytes, b);
                     }
                     list.pushBack(mut digestBytes, 0);
