@@ -505,7 +505,7 @@ parseExpr := fn(tokens: List<(kind: String, text: String)>, count: Int, start: I
 pub convertExpr := fn(expr: String): Converted {
     tokens := tokenize(expr);
     var count := 0;
-    loop tokens as tok { count = count + 1; }
+    loop tokens { count += 1; }
     parsed := parseExpr(tokens, count, 0, 0);
     if parsed.next =!= count {
         io.errorLine("unexpected trailing token: " + tokens[parsed.next].text);

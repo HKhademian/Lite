@@ -45,12 +45,14 @@ test('highlightLite highlights newer built-in types and operators', () => {
 test('showcaseSamples includes examples covering named calls, tuples, arrays, and lists', () => {
   const ids = new Set(showcaseSamples.map(sample => sample.id));
   for (const expected of [
+    'fixed-tuples',
     'named-arguments',
     'named-tuples',
     'fixed-arrays',
     'mixed-tuples',
     'tuple-label-conversion',
     'growable-lists',
+    'integer-calculator',
   ]) {
     assert(ids.has(expected), `missing showcase sample: ${expected}`);
   }

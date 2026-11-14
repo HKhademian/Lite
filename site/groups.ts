@@ -136,6 +136,16 @@ export const showcaseSamples: readonly ShowcaseSample[] = [
   },
   heroSample,
   {
+    id: 'fixed-tuples',
+    group: 'types',
+    title: 'Fixed tuples',
+    note: 'Unit, singleton, grouped, and nested tuple destructuring.',
+    file: 'language/examples/006-fixed-tuples.lts',
+    args: [],
+    stdin: '',
+    showOutput: true,
+  },
+  {
     id: 'named-tuples',
     group: 'types',
     title: 'Named tuples',
@@ -202,6 +212,16 @@ export const showcaseSamples: readonly ShowcaseSample[] = [
     file: 'language/examples/015-retained-tokens.lts',
     args: [],
     stdin: '10 + 20 * 3\n',
+  },
+  {
+    id: 'integer-calculator',
+    group: 'input',
+    title: 'Integer calculator',
+    note: 'Tokenize and recursively evaluate integer arithmetic expressions.',
+    file: 'language/examples/016-integer-calculator.lts',
+    args: [],
+    stdin: '2 + 3 * (4 - 1)\n',
+    showOutput: true,
   },
   {
     id: 'whole-input',

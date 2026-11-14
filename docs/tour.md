@@ -1,9 +1,10 @@
 # A short LiteLang tour
 
-This tour introduces selected language ideas through existing sources. The
-generated compiler does not yet support every example. Check the linked case
-and [compiler status](../compiler/README.md); the wider reference is a design
-contract, not a claim of executable coverage.
+This tour introduces selected language ideas through existing sources. All
+linked tour examples compile and run through the generated TS compiler, while
+broader language features remain in progress—check
+[compiler status](../compiler/README.md); the wider reference is a design
+contract, not a claim of full executable coverage.
 
 ## Bindings and arithmetic
 
@@ -30,6 +31,9 @@ and [operators](operators.md) for the selected contracts.
   continue with [conditionals](conditionals.md).
 - [Factorial](../language/examples/004-factorial.lts): functions and recursion;
   continue with [functions](functions.md).
+- [Fixed tuples](../language/examples/006-fixed-tuples.lts): unit, singleton, and
+  nested tuple values and patterns; continue with
+  [tuples and patterns](tuples-and-patterns.md).
 - [Named tuples](../language/examples/008-named-tuples.lts): structured values and labels;
   continue with [tuples and patterns](tuples-and-patterns.md).
 - [Fixed arrays](../language/examples/009-fixed-arrays.lts): fixed-extent sequence literals,
@@ -40,8 +44,7 @@ and [operators](operators.md) for the selected contracts.
 - [Growable lists](../language/examples/013-growable-lists.lts): explicit storage and mutation;
   continue with [lists](lists.md).
 - [Integer calculator](../language/examples/016-integer-calculator.lts): a scanner and
-  recursive parser composed from smaller features. Consult the current migration
-  inventory before expecting generated-TS execution.
+  recursive parser composed from smaller features.
 - [Type aliases](../language/examples/021-type-aliases.lts): transparent `type` contracts for
   tuples and growable lists; continue with [type aliases](type-aliases.md).
 - [Sum loop](../language/examples/022-sum-loop.lts): mutable accumulators, `+=` updates, and

@@ -21,8 +21,10 @@ newline; the latter always adds one, including with zero arguments. Generated TS
 supports scalar/Unit, flat named-tuple, fixed-array, and List display; the
 generated compiler also supports `Float` expressions, fixed arrays, scalar and
 indexed compound updates, `**`, `core/*` module imports, tuple `=name`
-shorthand, and fixed-parameter named/`=name` call routing (see
-[`gaps.md`](gaps.md) for remaining parity items). Process adapters stream output through an
+shorthand, fixed-parameter named/`=name` call routing, `Never`-valued `io.exit`
+(with default `io.exit()`), unnamed `loop sequence { ... }` traversal, and
+empty/grouped/singleton tuple patterns (see [`gaps.md`](gaps.md) for remaining
+parity items). Process adapters stream output through an
 optional main callback, preserving earlier output across faults. Calling main()
 without that callback retains the return-text contract. The [I/O seed refresh](parity.md#temporary-io-migration)
 records that snapshot's compiler artifacts. The subsequent

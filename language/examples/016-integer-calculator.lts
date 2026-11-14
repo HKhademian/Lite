@@ -2,8 +2,8 @@
 
 io := import "core/io";
 textLib := import "core/text";
-
 list := import "core/list";
+
 isDigit := fn(text: String): Bool {
     or text == "0" or text == "1" or text == "2" or text == "3" or text == "4"
     or text == "5" or text == "6" or text == "7" or text == "8" or text == "9"
@@ -16,21 +16,21 @@ tokenize := fn(line: String): List<(kind: String, text: String)> {
     loop position < size {
         ch := textLib.at(line, position);
         if ch == " " or ch == "\t" {
-            position = position + 1;
+            position += 1;
             continue;
         }
         if isDigit(ch) {
             start := position;
-            position = position + 1;
+            position += 1;
             loop position < size and isDigit(textLib.at(line, position)) {
-                position = position + 1;
+                position += 1;
             }
             list.pushBack(mut tokens, (kind = "number", text = textLib.slice(line, start, position)));
             continue;
         }
         if ch == "+" or ch == "-" or ch == "*" or ch == "/" or ch == "(" or ch == ")" {
             list.pushBack(mut tokens, (kind = "symbol", text = ch));
-            position = position + 1;
+            position += 1;
             continue;
         }
         io.errorLine("unsupported symbol: " + ch);
@@ -60,7 +60,7 @@ numberValue := fn(text: String): Int {
     var value := 0;
     loop position < size {
         value = value * 10 + digitValue(textLib.at(text, position));
-        position = position + 1;
+        position += 1;
     }
     value
 }
@@ -94,7 +94,7 @@ parse := fn(tokens: List<(kind: String, text: String)>, count: Int, start: Int, 
             io.errorLine("expected ')'");
             io.exit(2);
         }
-        position = position + 1;
+        position += 1;
     } else {
         io.errorLine("expected a number or '('");
         io.exit(2);
@@ -116,7 +116,7 @@ parse := fn(tokens: List<(kind: String, text: String)>, count: Int, start: Int, 
 io.outputLine("Arithmetic expression:");
 tokens := tokenize(io.inputLine());
 var count := 0;
-loop tokens { count = count + 1; }
+loop tokens { count += 1; }
 parsed := parse(tokens, count, 0, 0);
 if parsed.1 =!= count {
     io.errorLine("unexpected trailing token: " + tokens[parsed.1].text);
