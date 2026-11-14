@@ -1,0 +1,8 @@
+/** Standalone source-check command; `lite check` routes here. */
+
+io := import "core/io";
+project := import "util/project";
+
+args := io.inputArgs();
+project.handleVersionFlag(args, "checker", "check");
+project.forwardNode("igniter/check.ts", args);

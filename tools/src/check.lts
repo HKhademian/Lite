@@ -1,0 +1,108 @@
+/** Repository consistency checks; source checking remains `lite check FILE`. */
+
+io := import "core/io";
+fs := import "core/fs";
+proc := import "core/process";
+text := import "core/text";
+list := import "core/list";
+path := import "util/path";
+json := import "util/json";
+docsUtil := import "util/docs";
+casesUtil := import "util/cases";
+project := import "util/project";
+
+failDoctor := fn(message: String): Unit {
+    io.errorLine(message);
+    io.exit(1);
+}
+
+runCheckedTsc := fn(rootDir: String, configPath: String): Unit {
+    tscScript := "igniter/node_modules/typescript/bin/tsc";
+    tscArgs: List<String> = [tscScript, "-p", configPath];
+    emptyEnv: List<String> = [];
+    res := proc.run(proc.execPath(), tscArgs, rootDir, emptyEnv, true, "");
+    if res.error =!= "" {
+        failDoctor(res.error);
+    }
+    if res.status =!= 0 {
+        failDoctor("node " + tscScript + " -p " + configPath + " failed:\n" + res.stdout + res.stderr);
+    }
+    if res.stdout =!= "" {
+        io.output(res.stdout);
+    }
+}
+
+args := io.inputArgs();
+project.handleVersionFlag(args, "doctor", "doctor");
+
+argCount := list.listCountText(args);
+if not (argCount == 0 or (argCount == 1 and args[0] == "--docs")) {
+    failDoctor("usage: lite doctor [--docs]");
+}
+docsOnly := argCount == 1 and args[0] == "--docs";
+
+rootDir := project.findRepoRoot();
+if rootDir == "" {
+    failDoctor("cannot locate repository root");
+}
+
+docCfgPath := path.join(rootDir, "config/documentation.json");
+docCfgRead := fs.readText(docCfgPath);
+if not docCfgRead.ok {
+    failDoctor("config/documentation.json: " + docCfgRead.error);
+}
+docCfgValid := json.validate(docCfgRead.text);
+if not docCfgValid.ok {
+    failDoctor("config/documentation.json: " + docCfgValid.error);
+}
+
+docFailures := docsUtil.checkDocuments(rootDir);
+if list.listCountText(docFailures) > 0 {
+    failDoctor(text.joinTexts(docFailures, "\n"));
+}
+
+registryVscode := project.readComponentVersion("vscode");
+editorPkgRead := fs.readText(path.join(rootDir, "editors/vscode/package.json"));
+if not editorPkgRead.ok {
+    failDoctor("editors/vscode/package.json: " + editorPkgRead.error);
+}
+editorVer := json.readObjectString(editorPkgRead.text, 0, "version");
+if not editorVer.found or not editorVer.ok {
+    failDoctor("editors/vscode/package.json: missing version");
+}
+if registryVscode =!= editorVer.value {
+    failDoctor("editor version differs from registry");
+}
+
+lockRead := fs.readText(path.join(rootDir, "editors/vscode/package-lock.json"));
+if not lockRead.ok {
+    failDoctor("editors/vscode/package-lock.json: " + lockRead.error);
+}
+lockVer := json.readObjectString(lockRead.text, 0, "version");
+if not lockVer.found or not lockVer.ok or lockVer.value =!= editorVer.value {
+    failDoctor("editor lockfile version differs");
+}
+pkgsField := json.findObjectField(lockRead.text, 0, "packages");
+if not pkgsField.found {
+    failDoctor("editor lockfile package version differs");
+}
+rootPkgField := json.findObjectField(lockRead.text, pkgsField.valuePos, "");
+if not rootPkgField.found {
+    failDoctor("editor lockfile package version differs");
+}
+rootPkgVer := json.readObjectString(lockRead.text, rootPkgField.valuePos, "version");
+if not rootPkgVer.found or not rootPkgVer.ok or rootPkgVer.value =!= editorVer.value {
+    failDoctor("editor lockfile package version differs");
+}
+
+casesRes := casesUtil.validateAllCases(rootDir);
+if not casesRes.ok {
+    failDoctor(casesRes.error);
+}
+
+if not docsOnly {
+    runCheckedTsc(rootDir, "igniter/tsconfig.json");
+    runCheckedTsc(rootDir, "compiler/bootstrap/tsconfig.json");
+}
+
+io.outputLine("Repository checks passed.");

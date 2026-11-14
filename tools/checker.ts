@@ -1,10 +1,11 @@
 #!/usr/bin/env node
-/** Standalone source-check command; `lite check` routes here. */
-import { fileURLToPath } from 'node:url';
-import { forward } from './forward.ts';
-import { showToolVersion } from './tool-version.ts';
+/** Host entrypoint for the Lite-implemented source check command (tools/src/checker.lts -> tools/generated/checker.ts). */
+import { writeSync } from 'node:fs';
 
-if (!showToolVersion('checker', 'check')) {
-  const path = fileURLToPath(new URL('../igniter/check.ts', import.meta.url));
-  forward(path, process.argv.slice(2));
+if (import.meta.main) {
+  const entry = new URL('./generated/checker.ts', import.meta.url).href;
+  const mod = (await import(entry)) as { main: (write?: (text: string) => void) => string };
+  mod.main((text: string): void => {
+    writeSync(1, text);
+  });
 }

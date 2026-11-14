@@ -1,10 +1,15 @@
 /** Markdown integrity boundaries that ordinary command fixtures cannot isolate. */
 import assert from 'node:assert/strict';
-import { mkdtempSync, mkdirSync, rmSync, writeFileSync } from 'node:fs';
+import { mkdtempSync, mkdirSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { test } from 'node:test';
+import { fileURLToPath } from 'node:url';
+import { compileTs } from '../compiler/host.ts';
+import { checkTsArtifact } from '../igniter/artifacts.ts';
 import { checkDocuments, documents } from './docs.ts';
+
+const root = fileURLToPath(new URL('../', import.meta.url));
 
 test('documentation checks anchors, duplicates, code and ignored dependencies', () => {
   const directory = mkdtempSync(join(tmpdir(), 'lite-docs-'));
@@ -35,4 +40,14 @@ test('registered documentation snippets must match their separately maintained s
     writeFileSync(join(directory, 'source.lts'), 'outputLine(25);\n');
     assert.match(checkDocuments(directory).join('\n'), /code fence 0 differs/);
   } finally { rmSync(directory, { recursive: true, force: true }); }
+});
+
+test('generated docs artifact matches tools/src/docs.lts and passes strict TS checking', () => {
+  const sourcePath = join(root, 'tools/src/docs.lts');
+  const compiled = compileTs({ text: readFileSync(sourcePath, 'utf8'), name: 'tools/src/docs.lts', rootPath: sourcePath });
+  assert.equal(compiled.status, 0, compiled.stderr.toString());
+  const generated = readFileSync(join(root, 'tools/generated/docs.ts'), 'utf8');
+  assert.equal(compiled.stdout.toString('utf8'), generated);
+  const checked = checkTsArtifact(generated);
+  assert.equal(checked.status, 0, `${checked.stdout}\n${checked.stderr}`);
 });

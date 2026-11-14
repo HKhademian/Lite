@@ -23,6 +23,9 @@ declare const process: {
         realpathSync(path: string): string;
         mkdtempSync(prefix: string): string;
     };
+    getBuiltinModule(name: "node:child_process"): {
+        spawnSync(command: string, args: readonly string[], options: { cwd?: string; env: Record<string, string | undefined>; encoding?: "utf8"; input?: string; stdio: "inherit" | readonly ["pipe", "pipe", "pipe"]; maxBuffer: number }): { status: number | null; signal: string | null; stdout: string | null; stderr: string | null; error?: Error };
+    };
 };
 declare const TextDecoder: { new (label: string, options?: { fatal?: boolean }): { decode(input?: Uint8Array, options?: { stream?: boolean }): string } };
 
@@ -117,8 +120,28 @@ function lite$fsListDir(path: string): string[] {
 }
 
 function lite$processCwd(): string { return process.cwd(); }
+function lite$processExecPath(): string { return process.execPath; }
 function lite$processEntryPath(): string { return process.argv[1] ?? ""; }
 function lite$processPlatform(): string { return process.platform; }
+function lite$processRun(command: string, args: string[], cwd: string, envOverrides: string[], capture: boolean, stdinText: string): { status: bigint; stdout: string; stderr: string; error: string } {
+    const env: Record<string, string | undefined> = { ...process.env };
+    for (const entry of envOverrides) {
+        const eq = entry.indexOf("=");
+        if (eq === 0) { delete env[entry.slice(1)]; }
+        else if (eq > 0) { env[entry.slice(0, eq)] = entry.slice(eq + 1); }
+        else { return { status: -1n, stdout: "", stderr: "", error: "invalid environment override: " + entry }; }
+    }
+    const opts: { cwd?: string; env: Record<string, string | undefined>; encoding?: "utf8"; input?: string; stdio: "inherit" | readonly ["pipe", "pipe", "pipe"]; maxBuffer: number } = capture
+        ? { env, encoding: "utf8", input: stdinText, stdio: ["pipe", "pipe", "pipe"], maxBuffer: 128 * 1024 * 1024 }
+        : { env, stdio: "inherit", maxBuffer: 128 * 1024 * 1024 };
+    if (cwd !== "") opts.cwd = cwd;
+    const res = process.getBuiltinModule("node:child_process").spawnSync(command, args, opts);
+    const stdout = res.stdout ?? "";
+    const stderr = res.stderr ?? "";
+    if (res.error !== undefined) return { status: -1n, stdout, stderr, error: res.error instanceof Error ? res.error.message : String(res.error) };
+    if (res.signal !== null) return { status: -1n, stdout, stderr, error: "terminated by signal " + res.signal };
+    return { status: BigInt(res.status ?? 1), stdout, stderr, error: "" };
+}
 
 let lite$lastBmp = "";
 const lite$bmpSet = new Set<string>();
@@ -788,6 +811,736 @@ export function main(lite$write?: (text: string) => void): string {
         return lite_out;
     }
     void liteFn$lib$core$text$repeatText;
+    function liteFn$lib$core$text$containsText(lite_source: string, lite_needle: string): boolean {
+        void lite_source;
+        void lite_needle;
+        return ((liteFn$lib$core$text$indexOfText(lite_source, lite_needle, 0n)) >= (0n));
+    }
+    void liteFn$lib$core$text$containsText;
+    function liteFn$lib$core$text$lowerAsciiChar(lite_ch: string): string {
+        void lite_ch;
+        if (((lite_ch) === ("A"))) {
+            return "a";
+        }
+        if (((lite_ch) === ("B"))) {
+            return "b";
+        }
+        if (((lite_ch) === ("C"))) {
+            return "c";
+        }
+        if (((lite_ch) === ("D"))) {
+            return "d";
+        }
+        if (((lite_ch) === ("E"))) {
+            return "e";
+        }
+        if (((lite_ch) === ("F"))) {
+            return "f";
+        }
+        if (((lite_ch) === ("G"))) {
+            return "g";
+        }
+        if (((lite_ch) === ("H"))) {
+            return "h";
+        }
+        if (((lite_ch) === ("I"))) {
+            return "i";
+        }
+        if (((lite_ch) === ("J"))) {
+            return "j";
+        }
+        if (((lite_ch) === ("K"))) {
+            return "k";
+        }
+        if (((lite_ch) === ("L"))) {
+            return "l";
+        }
+        if (((lite_ch) === ("M"))) {
+            return "m";
+        }
+        if (((lite_ch) === ("N"))) {
+            return "n";
+        }
+        if (((lite_ch) === ("O"))) {
+            return "o";
+        }
+        if (((lite_ch) === ("P"))) {
+            return "p";
+        }
+        if (((lite_ch) === ("Q"))) {
+            return "q";
+        }
+        if (((lite_ch) === ("R"))) {
+            return "r";
+        }
+        if (((lite_ch) === ("S"))) {
+            return "s";
+        }
+        if (((lite_ch) === ("T"))) {
+            return "t";
+        }
+        if (((lite_ch) === ("U"))) {
+            return "u";
+        }
+        if (((lite_ch) === ("V"))) {
+            return "v";
+        }
+        if (((lite_ch) === ("W"))) {
+            return "w";
+        }
+        if (((lite_ch) === ("X"))) {
+            return "x";
+        }
+        if (((lite_ch) === ("Y"))) {
+            return "y";
+        }
+        if (((lite_ch) === ("Z"))) {
+            return "z";
+        }
+        return lite_ch;
+    }
+    void liteFn$lib$core$text$lowerAsciiChar;
+    function liteFn$lib$core$text$toLowerAscii(lite_source: string): string {
+        void lite_source;
+        const lite_size = lite$textLength(lite_source);
+        void lite_size;
+        let lite_out = "";
+        void lite_out;
+        let lite_runStart = 0n;
+        void lite_runStart;
+        let lite_i = 0n;
+        void lite_i;
+        while (((lite_i) < (lite_size))) {
+            const lite_ch = lite$textAt(lite_source, lite_i, 9178);
+            void lite_ch;
+            const lite_lower = liteFn$lib$core$text$lowerAsciiChar(lite_ch);
+            void lite_lower;
+            if (((lite_lower) !== (lite_ch))) {
+                if (((lite_i) > (lite_runStart))) {
+                    lite_out = ((lite_out) + (lite$textSlice(lite_source, lite_runStart, lite_i, 9303)));
+                }
+                lite_out = ((lite_out) + (lite_lower));
+                lite_runStart = lite$addInt(lite_i, 1n, 9394);
+            }
+            lite_i = lite$addInt(lite_i, 1n, 9423);
+        }
+        if (((lite_runStart) === (0n))) {
+            return lite_source;
+        }
+        if (((lite_runStart) < (lite_size))) {
+            lite_out = ((lite_out) + (lite$textSlice(lite_source, lite_runStart, lite_size, 9511)));
+        }
+        return lite_out;
+    }
+    void liteFn$lib$core$text$toLowerAscii;
+    function liteFn$lib$util$json$isJsonSpace(lite_ch: string): boolean {
+        void lite_ch;
+        return ((((((((lite_ch) === (" "))) || (((lite_ch) === ("\t"))))) || (((lite_ch) === ("\r"))))) || (((lite_ch) === ("\n"))));
+    }
+    void liteFn$lib$util$json$isJsonSpace;
+    function liteFn$lib$util$json$skipJsonSpaces(lite_source: string, lite_start: bigint): bigint {
+        void lite_source;
+        void lite_start;
+        const lite_size = liteFn$lib$core$text$length(lite_source);
+        void lite_size;
+        let lite_pos = lite_start;
+        void lite_pos;
+        while (((((lite_pos) < (lite_size))) && (liteFn$lib$util$json$isJsonSpace(liteFn$lib$core$text$at(lite_source, lite_pos))))) {
+            lite_pos = lite$addInt(lite_pos, 1n, 421);
+        }
+        return lite_pos;
+    }
+    void liteFn$lib$util$json$skipJsonSpaces;
+    function liteFn$lib$util$json$isHexDigit(lite_ch: string): boolean {
+        void lite_ch;
+        return ((((((((((((((((((((((((liteFn$lib$core$text$isDigit(lite_ch)) || (((lite_ch) === ("a"))))) || (((lite_ch) === ("b"))))) || (((lite_ch) === ("c"))))) || (((lite_ch) === ("d"))))) || (((lite_ch) === ("e"))))) || (((lite_ch) === ("f"))))) || (((lite_ch) === ("A"))))) || (((lite_ch) === ("B"))))) || (((lite_ch) === ("C"))))) || (((lite_ch) === ("D"))))) || (((lite_ch) === ("E"))))) || (((lite_ch) === ("F"))));
+    }
+    void liteFn$lib$util$json$isHexDigit;
+    function liteFn$lib$util$json$hexDigitValue(lite_ch: string): bigint {
+        void lite_ch;
+        if (liteFn$lib$core$text$isDigit(lite_ch)) {
+            return liteFn$lib$core$text$digitValue(lite_ch);
+        }
+        const lite_lower = liteFn$lib$core$text$toLowerAscii(lite_ch);
+        void lite_lower;
+        if (((lite_lower) === ("a"))) {
+            return 10n;
+        }
+        if (((lite_lower) === ("b"))) {
+            return 11n;
+        }
+        if (((lite_lower) === ("c"))) {
+            return 12n;
+        }
+        if (((lite_lower) === ("d"))) {
+            return 13n;
+        }
+        if (((lite_lower) === ("e"))) {
+            return 14n;
+        }
+        return 15n;
+    }
+    void liteFn$lib$util$json$hexDigitValue;
+    function liteFn$lib$util$json$asciiFromCode(lite_code: bigint): string {
+        void lite_code;
+        if (((lite_code) === (9n))) {
+            return "\t";
+        }
+        if (((lite_code) === (10n))) {
+            return "\n";
+        }
+        if (((lite_code) === (13n))) {
+            return "\r";
+        }
+        if (((((lite_code) >= (32n))) && (((lite_code) <= (126n))))) {
+            const lite_table = " !\"#$%&'()*+,-./0123456789:;<=>?@ABCDEFGHIJKLMNOPQRSTUVWXYZ[\\]^_`abcdefghijklmnopqrstuvwxyz{|}~";
+            void lite_table;
+            return liteFn$lib$core$text$at(lite_table, lite$subtractInt(lite_code, 32n, 1318));
+        }
+        return "";
+    }
+    void liteFn$lib$util$json$asciiFromCode;
+    function liteFn$lib$util$json$scanStringToken(lite_source: string, lite_start: bigint, lite_decode: boolean): { ok: boolean; value: string; next: bigint; error: string } {
+        void lite_source;
+        void lite_start;
+        void lite_decode;
+        const lite_size = liteFn$lib$core$text$length(lite_source);
+        void lite_size;
+        if (((((lite_start) >= (lite_size))) || (((liteFn$lib$core$text$at(lite_source, lite_start)) !== ("\""))))) {
+            return { ok: false, value: "", next: lite_start, error: "expected JSON string" };
+        }
+        let lite_pos = lite$addInt(lite_start, 1n, 1665);
+        void lite_pos;
+        let lite_out = "";
+        void lite_out;
+        let lite_runStart = lite_pos;
+        void lite_runStart;
+        while (((lite_pos) < (lite_size))) {
+            const lite_ch = liteFn$lib$core$text$at(lite_source, lite_pos);
+            void lite_ch;
+            if (((lite_ch) === ("\""))) {
+                if (((lite_decode) && (((lite_pos) > (lite_runStart))))) {
+                    lite_out = ((lite_out) + (liteFn$lib$core$text$slice(lite_source, lite_runStart, lite_pos)));
+                }
+                return { ok: true, value: lite_out, next: lite$addInt(lite_pos, 1n, 1971), error: "" };
+            }
+            if (((lite_ch) === ("\\"))) {
+                if (((lite_decode) && (((lite_pos) > (lite_runStart))))) {
+                    lite_out = ((lite_out) + (liteFn$lib$core$text$slice(lite_source, lite_runStart, lite_pos)));
+                }
+                if (((lite$addInt(lite_pos, 1n, 2162)) >= (lite_size))) {
+                    return { ok: false, value: "", next: lite_pos, error: "unterminated string escape" };
+                }
+                const lite_esc = liteFn$lib$core$text$at(lite_source, lite$addInt(lite_pos, 1n, 2328));
+                void lite_esc;
+                if (((((((lite_esc) === ("\""))) || (((lite_esc) === ("\\"))))) || (((lite_esc) === ("/"))))) {
+                    if (lite_decode) {
+                        lite_out = ((lite_out) + (lite_esc));
+                    }
+                    lite_pos = lite$addInt(lite_pos, 2n, 2465);
+                    lite_runStart = lite_pos;
+                } else if (((lite_esc) === ("n"))) {
+                    if (lite_decode) {
+                        lite_out = ((lite_out) + ("\n"));
+                    }
+                    lite_pos = lite$addInt(lite_pos, 2n, 2611);
+                    lite_runStart = lite_pos;
+                } else if (((lite_esc) === ("r"))) {
+                    if (lite_decode) {
+                        lite_out = ((lite_out) + ("\r"));
+                    }
+                    lite_pos = lite$addInt(lite_pos, 2n, 2757);
+                    lite_runStart = lite_pos;
+                } else if (((lite_esc) === ("t"))) {
+                    if (lite_decode) {
+                        lite_out = ((lite_out) + ("\t"));
+                    }
+                    lite_pos = lite$addInt(lite_pos, 2n, 2903);
+                    lite_runStart = lite_pos;
+                } else if (((((lite_esc) === ("b"))) || (((lite_esc) === ("f"))))) {
+                    lite_pos = lite$addInt(lite_pos, 2n, 3015);
+                    lite_runStart = lite_pos;
+                } else if (((lite_esc) === ("u"))) {
+                    if (((lite$addInt(lite_pos, 5n, 3110)) >= (lite_size))) {
+                        return { ok: false, value: "", next: lite_pos, error: "incomplete unicode escape" };
+                    }
+                    const lite_h0 = liteFn$lib$core$text$at(lite_source, lite$addInt(lite_pos, 2n, 3286));
+                    void lite_h0;
+                    const lite_h1 = liteFn$lib$core$text$at(lite_source, lite$addInt(lite_pos, 3n, 3334));
+                    void lite_h1;
+                    const lite_h2 = liteFn$lib$core$text$at(lite_source, lite$addInt(lite_pos, 4n, 3382));
+                    void lite_h2;
+                    const lite_h3 = liteFn$lib$core$text$at(lite_source, lite$addInt(lite_pos, 5n, 3430));
+                    void lite_h3;
+                    if ((((((((!(liteFn$lib$util$json$isHexDigit(lite_h0)))) || ((!(liteFn$lib$util$json$isHexDigit(lite_h1)))))) || ((!(liteFn$lib$util$json$isHexDigit(lite_h2)))))) || ((!(liteFn$lib$util$json$isHexDigit(lite_h3)))))) {
+                        return { ok: false, value: "", next: lite_pos, error: "invalid unicode escape" };
+                    }
+                    if (lite_decode) {
+                        const lite_code = lite$addInt(lite$multiplyInt((lite$addInt(lite$multiplyInt((lite$addInt(lite$multiplyInt(liteFn$lib$util$json$hexDigitValue(lite_h0), 16n, 3735), liteFn$lib$util$json$hexDigitValue(lite_h1), 3740)), 16n, 3761), liteFn$lib$util$json$hexDigitValue(lite_h2), 3766)), 16n, 3787), liteFn$lib$util$json$hexDigitValue(lite_h3), 3792);
+                        void lite_code;
+                        const lite_decoded = liteFn$lib$util$json$asciiFromCode(lite_code);
+                        void lite_decoded;
+                        if (((lite_decoded) !== (""))) {
+                            lite_out = ((lite_out) + (lite_decoded));
+                        } else {
+                            lite_out = ((lite_out) + (liteFn$lib$core$text$slice(lite_source, lite_pos, lite$addInt(lite_pos, 6n, 4043))));
+                        }
+                    }
+                    lite_pos = lite$addInt(lite_pos, 6n, 4115);
+                    lite_runStart = lite_pos;
+                } else {
+                    return { ok: false, value: "", next: lite_pos, error: "invalid string escape" };
+                }
+            } else {
+                if (((((((lite_ch) === ("\n"))) || (((lite_ch) === ("\r"))))) || (((lite_ch) === ("\t"))))) {
+                    return { ok: false, value: "", next: lite_pos, error: "unescaped control character in string" };
+                }
+                lite_pos = lite$addInt(lite_pos, 1n, 4500);
+            }
+        }
+        return { ok: false, value: "", next: lite_pos, error: "unterminated string literal" };
+    }
+    void liteFn$lib$util$json$scanStringToken;
+    function liteFn$lib$util$json$scanNumberToken(lite_source: string, lite_start: bigint): { ok: boolean; next: bigint; error: string } {
+        void lite_source;
+        void lite_start;
+        const lite_size = liteFn$lib$core$text$length(lite_source);
+        void lite_size;
+        let lite_pos = lite_start;
+        void lite_pos;
+        if (((((lite_pos) < (lite_size))) && (((liteFn$lib$core$text$at(lite_source, lite_pos)) === ("-"))))) {
+            lite_pos = lite$addInt(lite_pos, 1n, 4819);
+        }
+        if (((((lite_pos) >= (lite_size))) || ((!(liteFn$lib$core$text$isDigit(liteFn$lib$core$text$at(lite_source, lite_pos))))))) {
+            return { ok: false, next: lite_pos, error: "expected JSON number digit" };
+        }
+        if (((liteFn$lib$core$text$at(lite_source, lite_pos)) === ("0"))) {
+            lite_pos = lite$addInt(lite_pos, 1n, 5033);
+            if (((((lite_pos) < (lite_size))) && (liteFn$lib$core$text$isDigit(liteFn$lib$core$text$at(lite_source, lite_pos))))) {
+                return { ok: false, next: lite_pos, error: "leading zero in JSON number" };
+            }
+        } else {
+            while (((((lite_pos) < (lite_size))) && (liteFn$lib$core$text$isDigit(liteFn$lib$core$text$at(lite_source, lite_pos))))) {
+                lite_pos = lite$addInt(lite_pos, 1n, 5295);
+            }
+        }
+        if (((((lite_pos) < (lite_size))) && (((liteFn$lib$core$text$at(lite_source, lite_pos)) === ("."))))) {
+            lite_pos = lite$addInt(lite_pos, 1n, 5386);
+            if (((((lite_pos) >= (lite_size))) || ((!(liteFn$lib$core$text$isDigit(liteFn$lib$core$text$at(lite_source, lite_pos))))))) {
+                return { ok: false, next: lite_pos, error: "expected fraction digit in JSON number" };
+            }
+            while (((((lite_pos) < (lite_size))) && (liteFn$lib$core$text$isDigit(liteFn$lib$core$text$at(lite_source, lite_pos))))) {
+                lite_pos = lite$addInt(lite_pos, 1n, 5650);
+            }
+        }
+        if (((((lite_pos) < (lite_size))) && ((((((liteFn$lib$core$text$at(lite_source, lite_pos)) === ("e"))) || (((liteFn$lib$core$text$at(lite_source, lite_pos)) === ("E")))))))) {
+            lite_pos = lite$addInt(lite_pos, 1n, 5774);
+            if (((((lite_pos) < (lite_size))) && ((((((liteFn$lib$core$text$at(lite_source, lite_pos)) === ("+"))) || (((liteFn$lib$core$text$at(lite_source, lite_pos)) === ("-")))))))) {
+                lite_pos = lite$addInt(lite_pos, 1n, 5890);
+            }
+            if (((((lite_pos) >= (lite_size))) || ((!(liteFn$lib$core$text$isDigit(liteFn$lib$core$text$at(lite_source, lite_pos))))))) {
+                return { ok: false, next: lite_pos, error: "expected exponent digit in JSON number" };
+            }
+            while (((((lite_pos) < (lite_size))) && (liteFn$lib$core$text$isDigit(liteFn$lib$core$text$at(lite_source, lite_pos))))) {
+                lite_pos = lite$addInt(lite_pos, 1n, 6164);
+            }
+        }
+        return { ok: true, next: lite_pos, error: "" };
+    }
+    void liteFn$lib$util$json$scanNumberToken;
+    function liteFn$lib$util$json$skipValue(lite_source: string, lite_start: bigint): { ok: boolean; next: bigint; error: string } {
+        void lite_source;
+        void lite_start;
+        const lite_size = liteFn$lib$core$text$length(lite_source);
+        void lite_size;
+        const lite_stack: string[] = [...([])];
+        void lite_stack;
+        let lite_stackCount = 0n;
+        void lite_stackCount;
+        let lite_pos = lite_start;
+        void lite_pos;
+        let lite_expectKey = false;
+        void lite_expectKey;
+        while (Boolean(true)) {
+            lite_pos = liteFn$lib$util$json$skipJsonSpaces(lite_source, lite_pos);
+            if (lite_expectKey) {
+                const lite_keyRes = liteFn$lib$util$json$scanStringToken(lite_source, lite_pos, false);
+                void lite_keyRes;
+                if ((!((lite_keyRes).ok))) {
+                    return { ok: false, next: lite_pos, error: "expected JSON object key" };
+                }
+                lite_pos = liteFn$lib$util$json$skipJsonSpaces(lite_source, (lite_keyRes).next);
+                if (((((lite_pos) >= (lite_size))) || (((liteFn$lib$core$text$at(lite_source, lite_pos)) !== (":"))))) {
+                    return { ok: false, next: lite_pos, error: "expected ':' after JSON object key" };
+                }
+                lite_pos = liteFn$lib$util$json$skipJsonSpaces(lite_source, lite$addInt(lite_pos, 1n, 7106));
+                lite_expectKey = false;
+            }
+            if (((lite_pos) >= (lite_size))) {
+                return { ok: false, next: lite_pos, error: "unexpected end of JSON input" };
+            }
+            const lite_ch = liteFn$lib$core$text$at(lite_source, lite_pos);
+            void lite_ch;
+            let lite_valueCompleted = false;
+            void lite_valueCompleted;
+            if (((lite_ch) === ("{"))) {
+                const lite_afterOpen = liteFn$lib$util$json$skipJsonSpaces(lite_source, lite$addInt(lite_pos, 1n, 7423));
+                void lite_afterOpen;
+                if (((((lite_afterOpen) < (lite_size))) && (((liteFn$lib$core$text$at(lite_source, lite_afterOpen)) === ("}"))))) {
+                    lite_pos = lite$addInt(lite_afterOpen, 1n, 7533);
+                    lite_valueCompleted = true;
+                } else {
+                    lite_stack.push("obj");
+                    lite_stackCount = lite$addInt(lite_stackCount, 1n, 7687);
+                    lite_pos = lite_afterOpen;
+                    lite_expectKey = true;
+                }
+            } else if (((lite_ch) === ("["))) {
+                const lite_afterOpen = liteFn$lib$util$json$skipJsonSpaces(lite_source, lite$addInt(lite_pos, 1n, 7855));
+                void lite_afterOpen;
+                if (((((lite_afterOpen) < (lite_size))) && (((liteFn$lib$core$text$at(lite_source, lite_afterOpen)) === ("]"))))) {
+                    lite_pos = lite$addInt(lite_afterOpen, 1n, 7965);
+                    lite_valueCompleted = true;
+                } else {
+                    lite_stack.push("arr");
+                    lite_stackCount = lite$addInt(lite_stackCount, 1n, 8119);
+                    lite_pos = lite_afterOpen;
+                }
+            } else if (((lite_ch) === ("\""))) {
+                const lite_strRes = liteFn$lib$util$json$scanStringToken(lite_source, lite_pos, false);
+                void lite_strRes;
+                if ((!((lite_strRes).ok))) {
+                    return { ok: false, next: (lite_strRes).next, error: (lite_strRes).error };
+                }
+                lite_pos = (lite_strRes).next;
+                lite_valueCompleted = true;
+            } else if (liteFn$lib$core$text$startsWithAt(lite_source, lite_pos, "true")) {
+                lite_pos = lite$addInt(lite_pos, 4n, 8532);
+                lite_valueCompleted = true;
+            } else if (liteFn$lib$core$text$startsWithAt(lite_source, lite_pos, "false")) {
+                lite_pos = lite$addInt(lite_pos, 5n, 8654);
+                lite_valueCompleted = true;
+            } else if (liteFn$lib$core$text$startsWithAt(lite_source, lite_pos, "null")) {
+                lite_pos = lite$addInt(lite_pos, 4n, 8775);
+                lite_valueCompleted = true;
+            } else if (((((lite_ch) === ("-"))) || (liteFn$lib$core$text$isDigit(lite_ch)))) {
+                const lite_numRes = liteFn$lib$util$json$scanNumberToken(lite_source, lite_pos);
+                void lite_numRes;
+                if ((!((lite_numRes).ok))) {
+                    return { ok: false, next: (lite_numRes).next, error: (lite_numRes).error };
+                }
+                lite_pos = (lite_numRes).next;
+                lite_valueCompleted = true;
+            } else {
+                return { ok: false, next: lite_pos, error: "unexpected token in JSON value" };
+            }
+            if (lite_valueCompleted) {
+                if (((lite_stackCount) === (0n))) {
+                    return { ok: true, next: lite_pos, error: "" };
+                }
+                while (((lite_stackCount) > (0n))) {
+                    lite_pos = liteFn$lib$util$json$skipJsonSpaces(lite_source, lite_pos);
+                    if (((lite_pos) >= (lite_size))) {
+                        return { ok: false, next: lite_pos, error: "unterminated JSON container" };
+                    }
+                    const lite_sep = liteFn$lib$core$text$at(lite_source, lite_pos);
+                    void lite_sep;
+                    const lite_top = lite$listAt((lite_stack), lite$subtractInt(lite_stackCount, 1n, 9670), 9659);
+                    void lite_top;
+                    if (((lite_top) === ("arr"))) {
+                        if (((lite_sep) === ("]"))) {
+                            lite$listPopBack(lite_stack, 9770);
+                            lite_stackCount = lite$subtractInt(lite_stackCount, 1n, 9843);
+                            lite_pos = lite$addInt(lite_pos, 1n, 9882);
+                        } else if (((lite_sep) === (","))) {
+                            lite_pos = lite$addInt(lite_pos, 1n, 9964);
+                            break;
+                        } else {
+                            return { ok: false, next: lite_pos, error: "expected ',' or ']' in JSON array" };
+                        }
+                    } else {
+                        if (((lite_sep) === ("}"))) {
+                            lite$listPopBack(lite_stack, 10238);
+                            lite_stackCount = lite$subtractInt(lite_stackCount, 1n, 10311);
+                            lite_pos = lite$addInt(lite_pos, 1n, 10350);
+                        } else if (((lite_sep) === (","))) {
+                            lite_pos = lite$addInt(lite_pos, 1n, 10432);
+                            lite_expectKey = true;
+                            break;
+                        } else {
+                            return { ok: false, next: lite_pos, error: "expected ',' or '}' in JSON object" };
+                        }
+                    }
+                }
+                if (((lite_stackCount) === (0n))) {
+                    return { ok: true, next: lite_pos, error: "" };
+                }
+            }
+        }
+        return { ok: false, next: lite_pos, error: "unexpected end of JSON input" };
+    }
+    void liteFn$lib$util$json$skipValue;
+    function liteFn$lib$util$json$validate(lite_source: string): { ok: boolean; error: string } {
+        void lite_source;
+        const lite_skipped = liteFn$lib$util$json$skipValue(lite_source, 0n);
+        void lite_skipped;
+        if ((!((lite_skipped).ok))) {
+            return { ok: false, error: (lite_skipped).error };
+        }
+        const lite_rest = liteFn$lib$util$json$skipJsonSpaces(lite_source, (lite_skipped).next);
+        void lite_rest;
+        if (((lite_rest) < (liteFn$lib$core$text$length(lite_source)))) {
+            return { ok: false, error: "unexpected trailing JSON content" };
+        }
+        return { ok: true, error: "" };
+    }
+    void liteFn$lib$util$json$validate;
+    function liteFn$lib$util$json$readStringAt(lite_source: string, lite_start: bigint): { ok: boolean; value: string; next: bigint; error: string } {
+        void lite_source;
+        void lite_start;
+        const lite_pos = liteFn$lib$util$json$skipJsonSpaces(lite_source, lite_start);
+        void lite_pos;
+        return liteFn$lib$util$json$scanStringToken(lite_source, lite_pos, true);
+    }
+    void liteFn$lib$util$json$readStringAt;
+    function liteFn$lib$util$json$readIntAt(lite_source: string, lite_start: bigint): { ok: boolean; value: bigint; next: bigint; error: string } {
+        void lite_source;
+        void lite_start;
+        const lite_size = liteFn$lib$core$text$length(lite_source);
+        void lite_size;
+        const lite_pos = liteFn$lib$util$json$skipJsonSpaces(lite_source, lite_start);
+        void lite_pos;
+        let lite_end = lite_pos;
+        void lite_end;
+        if (((((lite_end) < (lite_size))) && ((((((liteFn$lib$core$text$at(lite_source, lite_end)) === ("-"))) || (((liteFn$lib$core$text$at(lite_source, lite_end)) === ("+")))))))) {
+            lite_end = lite$addInt(lite_end, 1n, 11980);
+        }
+        while (((((lite_end) < (lite_size))) && (liteFn$lib$core$text$isDigit(liteFn$lib$core$text$at(lite_source, lite_end))))) {
+            lite_end = lite$addInt(lite_end, 1n, 12070);
+        }
+        if (((lite_end) === (lite_pos))) {
+            return { ok: false, value: 0n, next: lite_pos, error: "expected integer value" };
+        }
+        if (((((lite_end) < (lite_size))) && ((((((((liteFn$lib$core$text$at(lite_source, lite_end)) === ("."))) || (((liteFn$lib$core$text$at(lite_source, lite_end)) === ("e"))))) || (((liteFn$lib$core$text$at(lite_source, lite_end)) === ("E")))))))) {
+            return { ok: false, value: 0n, next: lite_pos, error: "expected integer value, got float" };
+        }
+        const lite_parsed = liteFn$lib$core$text$textToInt(liteFn$lib$core$text$slice(lite_source, lite_pos, lite_end));
+        void lite_parsed;
+        if ((!((lite_parsed).ok))) {
+            return { ok: false, value: 0n, next: lite_pos, error: "invalid integer value" };
+        }
+        return { ok: true, value: (lite_parsed).value, next: lite_end, error: "" };
+    }
+    void liteFn$lib$util$json$readIntAt;
+    function liteFn$lib$util$json$findObjectField(lite_source: string, lite_objectStart: bigint, lite_key: string): { found: boolean; valuePos: bigint } {
+        void lite_source;
+        void lite_objectStart;
+        void lite_key;
+        const lite_size = liteFn$lib$core$text$length(lite_source);
+        void lite_size;
+        let lite_pos = liteFn$lib$util$json$skipJsonSpaces(lite_source, lite_objectStart);
+        void lite_pos;
+        if (((((lite_pos) >= (lite_size))) || (((liteFn$lib$core$text$at(lite_source, lite_pos)) !== ("{"))))) {
+            return { found: false, valuePos: (-1n) };
+        }
+        lite_pos = liteFn$lib$util$json$skipJsonSpaces(lite_source, lite$addInt(lite_pos, 1n, 13106));
+        if (((((lite_pos) < (lite_size))) && (((liteFn$lib$core$text$at(lite_source, lite_pos)) === ("}"))))) {
+            return { found: false, valuePos: (-1n) };
+        }
+        while (((lite_pos) < (lite_size))) {
+            const lite_keyRes = liteFn$lib$util$json$scanStringToken(lite_source, lite_pos, true);
+            void lite_keyRes;
+            if ((!((lite_keyRes).ok))) {
+                return { found: false, valuePos: (-1n) };
+            }
+            lite_pos = liteFn$lib$util$json$skipJsonSpaces(lite_source, (lite_keyRes).next);
+            if (((((lite_pos) >= (lite_size))) || (((liteFn$lib$core$text$at(lite_source, lite_pos)) !== (":"))))) {
+                return { found: false, valuePos: (-1n) };
+            }
+            const lite_valStart = liteFn$lib$util$json$skipJsonSpaces(lite_source, lite$addInt(lite_pos, 1n, 13557));
+            void lite_valStart;
+            if ((((lite_keyRes).value) === (lite_key))) {
+                return { found: true, valuePos: lite_valStart };
+            }
+            const lite_valEnd = liteFn$lib$util$json$skipValue(lite_source, lite_valStart);
+            void lite_valEnd;
+            if ((!((lite_valEnd).ok))) {
+                return { found: false, valuePos: (-1n) };
+            }
+            lite_pos = liteFn$lib$util$json$skipJsonSpaces(lite_source, (lite_valEnd).next);
+            if (((((lite_pos) < (lite_size))) && (((liteFn$lib$core$text$at(lite_source, lite_pos)) === (","))))) {
+                lite_pos = liteFn$lib$util$json$skipJsonSpaces(lite_source, lite$addInt(lite_pos, 1n, 13929));
+            } else {
+                return { found: false, valuePos: (-1n) };
+            }
+        }
+        return { found: false, valuePos: (-1n) };
+    }
+    void liteFn$lib$util$json$findObjectField;
+    function liteFn$lib$util$json$readObjectString(lite_source: string, lite_objectStart: bigint, lite_key: string): { found: boolean; ok: boolean; value: string } {
+        void lite_source;
+        void lite_objectStart;
+        void lite_key;
+        const lite_field = liteFn$lib$util$json$findObjectField(lite_source, lite_objectStart, lite_key);
+        void lite_field;
+        if ((!((lite_field).found))) {
+            return { found: false, ok: false, value: "" };
+        }
+        const lite_str = liteFn$lib$util$json$readStringAt(lite_source, (lite_field).valuePos);
+        void lite_str;
+        return { found: true, ok: (lite_str).ok, value: (lite_str).value };
+    }
+    void liteFn$lib$util$json$readObjectString;
+    function liteFn$lib$util$json$readObjectInt(lite_source: string, lite_objectStart: bigint, lite_key: string): { found: boolean; ok: boolean; value: bigint } {
+        void lite_source;
+        void lite_objectStart;
+        void lite_key;
+        const lite_field = liteFn$lib$util$json$findObjectField(lite_source, lite_objectStart, lite_key);
+        void lite_field;
+        if ((!((lite_field).found))) {
+            return { found: false, ok: false, value: 0n };
+        }
+        const lite_num = liteFn$lib$util$json$readIntAt(lite_source, (lite_field).valuePos);
+        void lite_num;
+        return { found: true, ok: (lite_num).ok, value: (lite_num).value };
+    }
+    void liteFn$lib$util$json$readObjectInt;
+    function liteFn$lib$util$json$readObjectBool(lite_source: string, lite_objectStart: bigint, lite_key: string): { found: boolean; ok: boolean; value: boolean } {
+        void lite_source;
+        void lite_objectStart;
+        void lite_key;
+        const lite_field = liteFn$lib$util$json$findObjectField(lite_source, lite_objectStart, lite_key);
+        void lite_field;
+        if ((!((lite_field).found))) {
+            return { found: false, ok: false, value: false };
+        }
+        const lite_pos = liteFn$lib$util$json$skipJsonSpaces(lite_source, (lite_field).valuePos);
+        void lite_pos;
+        if (liteFn$lib$core$text$startsWithAt(lite_source, lite_pos, "true")) {
+            return { found: true, ok: true, value: true };
+        }
+        if (liteFn$lib$core$text$startsWithAt(lite_source, lite_pos, "false")) {
+            return { found: true, ok: true, value: false };
+        }
+        return { found: true, ok: false, value: false };
+    }
+    void liteFn$lib$util$json$readObjectBool;
+    function liteFn$lib$util$json$arrayElementOffsets(lite_source: string, lite_arrayStart: bigint): bigint[] {
+        void lite_source;
+        void lite_arrayStart;
+        const lite_offsets: bigint[] = [...([])];
+        void lite_offsets;
+        const lite_size = liteFn$lib$core$text$length(lite_source);
+        void lite_size;
+        let lite_pos = liteFn$lib$util$json$skipJsonSpaces(lite_source, lite_arrayStart);
+        void lite_pos;
+        if (((((lite_pos) >= (lite_size))) || (((liteFn$lib$core$text$at(lite_source, lite_pos)) !== ("["))))) {
+            return [...(lite_offsets)];
+        }
+        lite_pos = liteFn$lib$util$json$skipJsonSpaces(lite_source, lite$addInt(lite_pos, 1n, 15908));
+        if (((((lite_pos) < (lite_size))) && (((liteFn$lib$core$text$at(lite_source, lite_pos)) === ("]"))))) {
+            return [...(lite_offsets)];
+        }
+        while (((lite_pos) < (lite_size))) {
+            lite_offsets.push(lite_pos);
+            const lite_skipped = liteFn$lib$util$json$skipValue(lite_source, lite_pos);
+            void lite_skipped;
+            if ((!((lite_skipped).ok))) {
+                return [...(lite_offsets)];
+            }
+            lite_pos = liteFn$lib$util$json$skipJsonSpaces(lite_source, (lite_skipped).next);
+            if (((((lite_pos) < (lite_size))) && (((liteFn$lib$core$text$at(lite_source, lite_pos)) === (","))))) {
+                lite_pos = liteFn$lib$util$json$skipJsonSpaces(lite_source, lite$addInt(lite_pos, 1n, 16289));
+            } else {
+                return [...(lite_offsets)];
+            }
+        }
+        return [...(lite_offsets)];
+    }
+    void liteFn$lib$util$json$arrayElementOffsets;
+    function liteFn$lib$util$json$objectKeys(lite_source: string, lite_objectStart: bigint): string[] {
+        void lite_source;
+        void lite_objectStart;
+        const lite_keys: string[] = [...([])];
+        void lite_keys;
+        const lite_size = liteFn$lib$core$text$length(lite_source);
+        void lite_size;
+        let lite_pos = liteFn$lib$util$json$skipJsonSpaces(lite_source, lite_objectStart);
+        void lite_pos;
+        if (((((lite_pos) >= (lite_size))) || (((liteFn$lib$core$text$at(lite_source, lite_pos)) !== ("{"))))) {
+            return [...(lite_keys)];
+        }
+        lite_pos = liteFn$lib$util$json$skipJsonSpaces(lite_source, lite$addInt(lite_pos, 1n, 16747));
+        if (((((lite_pos) < (lite_size))) && (((liteFn$lib$core$text$at(lite_source, lite_pos)) === ("}"))))) {
+            return [...(lite_keys)];
+        }
+        while (((lite_pos) < (lite_size))) {
+            const lite_keyRes = liteFn$lib$util$json$scanStringToken(lite_source, lite_pos, true);
+            void lite_keyRes;
+            if ((!((lite_keyRes).ok))) {
+                return [...(lite_keys)];
+            }
+            lite_keys.push((lite_keyRes).value);
+            lite_pos = liteFn$lib$util$json$skipJsonSpaces(lite_source, (lite_keyRes).next);
+            if (((((lite_pos) >= (lite_size))) || (((liteFn$lib$core$text$at(lite_source, lite_pos)) !== (":"))))) {
+                return [...(lite_keys)];
+            }
+            const lite_skipped = liteFn$lib$util$json$skipValue(lite_source, lite$addInt(lite_pos, 1n, 17149));
+            void lite_skipped;
+            if ((!((lite_skipped).ok))) {
+                return [...(lite_keys)];
+            }
+            lite_pos = liteFn$lib$util$json$skipJsonSpaces(lite_source, (lite_skipped).next);
+            if (((((lite_pos) < (lite_size))) && (((liteFn$lib$core$text$at(lite_source, lite_pos)) === (","))))) {
+                lite_pos = liteFn$lib$util$json$skipJsonSpaces(lite_source, lite$addInt(lite_pos, 1n, 17351));
+            } else {
+                return [...(lite_keys)];
+            }
+        }
+        return [...(lite_keys)];
+    }
+    void liteFn$lib$util$json$objectKeys;
+    function liteFn$lib$util$json$quoteString(lite_value: string): string {
+        void lite_value;
+        const lite_size = liteFn$lib$core$text$length(lite_value);
+        void lite_size;
+        let lite_out = "\"";
+        void lite_out;
+        let lite_runStart = 0n;
+        void lite_runStart;
+        let lite_i = 0n;
+        void lite_i;
+        while (((lite_i) < (lite_size))) {
+            const lite_ch = liteFn$lib$core$text$at(lite_value, lite_i);
+            void lite_ch;
+            let lite_esc = "";
+            void lite_esc;
+            if (((lite_ch) === ("\""))) {
+                lite_esc = "\\\"";
+            } else if (((lite_ch) === ("\\"))) {
+                lite_esc = "\\\\";
+            } else if (((lite_ch) === ("\n"))) {
+                lite_esc = "\\n";
+            } else if (((lite_ch) === ("\r"))) {
+                lite_esc = "\\r";
+            } else if (((lite_ch) === ("\t"))) {
+                lite_esc = "\\t";
+            }
+            if (((lite_esc) !== (""))) {
+                if (((lite_i) > (lite_runStart))) {
+                    lite_out = ((lite_out) + (liteFn$lib$core$text$slice(lite_value, lite_runStart, lite_i)));
+                }
+                lite_out = ((lite_out) + (lite_esc));
+                lite_runStart = lite$addInt(lite_i, 1n, 18069);
+            }
+            lite_i = lite$addInt(lite_i, 1n, 18098);
+        }
+        if (((lite_runStart) < (lite_size))) {
+            lite_out = ((lite_out) + (liteFn$lib$core$text$slice(lite_value, lite_runStart, lite_size)));
+        }
+        return ((lite_out) + ("\""));
+    }
+    void liteFn$lib$util$json$quoteString;
     function liteFn$lib$util$path$isWin32(): boolean {
         return ((lite$processPlatform()) === ("win32"));
     }
@@ -949,6 +1702,86 @@ export function main(lite$write?: (text: string) => void): string {
         return "";
     }
     void liteFn$lib$util$path$extName;
+    function liteFn$lib$util$path$splitSegments(lite_normalized: string): string[] {
+        void lite_normalized;
+        const lite_parts: string[] = [...([])];
+        void lite_parts;
+        const lite_size = liteFn$lib$core$text$length(lite_normalized);
+        void lite_size;
+        let lite_start = 0n;
+        void lite_start;
+        if (((((((liteFn$lib$util$path$isWin32()) && (((lite_size) >= (2n))))) && (liteFn$lib$core$text$isAsciiLetter(liteFn$lib$core$text$at(lite_normalized, 0n))))) && (((liteFn$lib$core$text$at(lite_normalized, 1n)) === (":"))))) {
+            if (((((lite_size) >= (3n))) && (liteFn$lib$util$path$isSep(liteFn$lib$core$text$at(lite_normalized, 2n))))) {
+                lite_start = 3n;
+            } else {
+                lite_start = 2n;
+            }
+        } else if (((((lite_size) > (0n))) && (liteFn$lib$util$path$isSep(liteFn$lib$core$text$at(lite_normalized, 0n))))) {
+            lite_start = 1n;
+        }
+        let lite_segStart = lite_start;
+        void lite_segStart;
+        let lite_i = lite_start;
+        void lite_i;
+        while (((lite_i) <= (lite_size))) {
+            const lite_atEnd = ((lite_i) === (lite_size));
+            void lite_atEnd;
+            if (((lite_atEnd) || (liteFn$lib$util$path$isSep(liteFn$lib$core$text$at(lite_normalized, lite_i))))) {
+                if (((lite_i) > (lite_segStart))) {
+                    lite_parts.push(liteFn$lib$core$text$slice(lite_normalized, lite_segStart, lite_i));
+                }
+                lite_segStart = lite$addInt(lite_i, 1n, 4861);
+            }
+            lite_i = lite$addInt(lite_i, 1n, 4890);
+        }
+        return [...(lite_parts)];
+    }
+    void liteFn$lib$util$path$splitSegments;
+    function liteFn$lib$util$path$relative(lite_fromDir: string, lite_toPath: string): string {
+        void lite_fromDir;
+        void lite_toPath;
+        const lite_cwd = lite$processCwd();
+        void lite_cwd;
+        const lite_fromAbs = liteFn$lib$util$path$resolve(lite_cwd, lite_fromDir);
+        void lite_fromAbs;
+        const lite_toAbs = liteFn$lib$util$path$resolve(lite_cwd, lite_toPath);
+        void lite_toAbs;
+        if (((lite_fromAbs) === (lite_toAbs))) {
+            return "";
+        }
+        const lite_fromSegs: string[] = [...(liteFn$lib$util$path$splitSegments(lite_fromAbs))];
+        void lite_fromSegs;
+        const lite_toSegs: string[] = [...(liteFn$lib$util$path$splitSegments(lite_toAbs))];
+        void lite_toSegs;
+        const lite_fromLen = liteFn$lib$core$list$listCountText([...(lite_fromSegs)]);
+        void lite_fromLen;
+        const lite_toLen = liteFn$lib$core$list$listCountText([...(lite_toSegs)]);
+        void lite_toLen;
+        let lite_common = 0n;
+        void lite_common;
+        while (((((((lite_common) < (lite_fromLen))) && (((lite_common) < (lite_toLen))))) && (((lite$listAt((lite_fromSegs), lite_common, 5462)) === (lite$listAt((lite_toSegs), lite_common, 5480)))))) {
+            lite_common = lite$addInt(lite_common, 1n, 5514);
+        }
+        const lite_out: string[] = [...([])];
+        void lite_out;
+        let lite_up = lite_common;
+        void lite_up;
+        while (((lite_up) < (lite_fromLen))) {
+            lite_out.push("..");
+            lite_up = lite$addInt(lite_up, 1n, 5657);
+        }
+        let lite_down = lite_common;
+        void lite_down;
+        while (((lite_down) < (lite_toLen))) {
+            lite_out.push(lite$listAt((lite_toSegs), lite_down, 5754));
+            lite_down = lite$addInt(lite_down, 1n, 5782);
+        }
+        if (((liteFn$lib$core$list$listCountText([...(lite_out)])) === (0n))) {
+            return "";
+        }
+        return liteFn$lib$core$text$joinTexts([...(lite_out)], liteFn$lib$util$path$sep());
+    }
+    void liteFn$lib$util$path$relative;
     function liteFn$lib$util$fs$defaultIgnoredDirs(): string[] {
         const lite_dirs: string[] = [...(["node_modules", "dist"])];
         void lite_dirs;
@@ -1031,7 +1864,7 @@ export function main(lite$write?: (text: string) => void): string {
                 break;
             }
             lite_dir = lite_next;
-            lite_steps = lite$addInt(lite_steps, 1n, 724);
+            lite_steps = lite$addInt(lite_steps, 1n, 752);
         }
         return "";
     }
@@ -1059,51 +1892,12 @@ export function main(lite$write?: (text: string) => void): string {
         if ((!((lite_readRes).ok))) {
             return "unassigned";
         }
-        const lite_content = (lite_readRes).text;
-        void lite_content;
-        const lite_size = liteFn$lib$core$text$length(lite_content);
-        void lite_size;
-        const lite_needle = (((("\"") + (lite_component))) + ("\""));
-        void lite_needle;
-        const lite_needleLen = liteFn$lib$core$text$length(lite_needle);
-        void lite_needleLen;
-        let lite_searchFrom = 0n;
-        void lite_searchFrom;
-        while (((lite_searchFrom) < (lite_size))) {
-            const lite_keyPos = liteFn$lib$core$text$indexOfText(lite_content, lite_needle, lite_searchFrom);
-            void lite_keyPos;
-            if (((lite_keyPos) < (0n))) {
-                return "unassigned";
-            }
-            const lite_afterKey = liteFn$lib$core$text$skipSpaces(lite_content, lite$addInt(lite_keyPos, lite_needleLen, 1792));
-            void lite_afterKey;
-            if (((((lite_afterKey) < (lite_size))) && (((liteFn$lib$core$text$at(lite_content, lite_afterKey)) === (":"))))) {
-                let lite_pos = liteFn$lib$core$text$skipSpaces(lite_content, lite$addInt(lite_afterKey, 1n, 1930));
-                void lite_pos;
-                if (liteFn$lib$core$text$startsWithAt(lite_content, lite_pos, "null")) {
-                    return "unassigned";
-                }
-                if (((((lite_pos) < (lite_size))) && (((liteFn$lib$core$text$at(lite_content, lite_pos)) === ("\""))))) {
-                    lite_pos = lite$addInt(lite_pos, 1n, 2104);
-                    const lite_start = lite_pos;
-                    void lite_start;
-                    while (((lite_pos) < (lite_size))) {
-                        const lite_ch = liteFn$lib$core$text$at(lite_content, lite_pos);
-                        void lite_ch;
-                        if (((lite_ch) === ("\\"))) {
-                            lite_pos = lite$addInt(lite_pos, 2n, 2292);
-                        } else if (((lite_ch) === ("\""))) {
-                            return liteFn$lib$core$text$slice(lite_content, lite_start, lite_pos);
-                        } else {
-                            lite_pos = lite$addInt(lite_pos, 1n, 2467);
-                        }
-                    }
-                    return "unassigned";
-                }
-            }
-            lite_searchFrom = lite$addInt(lite_keyPos, lite_needleLen, 2601);
+        const lite_found = liteFn$lib$util$json$readObjectString((lite_readRes).text, 0n, lite_component);
+        void lite_found;
+        if ((((!((lite_found).found))) || ((!((lite_found).ok))))) {
+            return "unassigned";
         }
-        return "unassigned";
+        return (lite_found).value;
     }
     void liteFn$lib$util$project$readComponentVersion;
     function liteFn$lib$util$project$handleVersionFlag(lite_args: string[], lite_component: string, lite_command: string): void {
@@ -1112,7 +1906,7 @@ export function main(lite$write?: (text: string) => void): string {
         void lite_command;
         const lite_argCount = liteFn$lib$core$list$listCountText([...(lite_args)]);
         void lite_argCount;
-        if (((((lite_argCount) > (0n))) && (((lite$listAt((lite_args), 0n, 2897)) === ("--version"))))) {
+        if (((((lite_argCount) > (0n))) && (((lite$listAt((lite_args), 0n, 1864)) === ("--version"))))) {
             if (((lite_argCount) !== (1n))) {
                 lite$reportError((((("Usage: lite ") + (lite_command))) + (" --version")));
                 lite$exit(2n);
@@ -1122,6 +1916,30 @@ export function main(lite$write?: (text: string) => void): string {
         }
     }
     void liteFn$lib$util$project$handleVersionFlag;
+    function liteFn$lib$util$project$forwardNode(lite_scriptRelPath: string, lite_args: string[]): void {
+        void lite_scriptRelPath;
+        void lite_args;
+        const lite_root = liteFn$lib$util$project$findRepoRoot();
+        void lite_root;
+        const lite_scriptPath = (Boolean(((lite_root) === (""))) ? lite_scriptRelPath : liteFn$lib$util$path$resolve(lite_root, lite_scriptRelPath));
+        void lite_scriptPath;
+        const lite_nodeArgs: string[] = [...([lite_scriptPath])];
+        void lite_nodeArgs;
+        for (const lite_arg of [...(lite_args)]) {
+            void lite_arg;
+            lite_nodeArgs.push(lite_arg);
+        }
+        const lite_emptyEnv: string[] = [...([])];
+        void lite_emptyEnv;
+        const lite_res = lite$processRun(lite$processExecPath(), [...(lite_nodeArgs)], "", [...(lite_emptyEnv)], false, "");
+        void lite_res;
+        if ((((lite_res).error) !== (""))) {
+            lite$reportError((lite_res).error);
+            lite$exit(1n);
+        }
+        lite$exit((lite_res).status);
+    }
+    void liteFn$lib$util$project$forwardNode;
     function liteFn_scanLineBraces(lite_line: string, lite_startInBlock: boolean): { leadingCloses: bigint; netChange: bigint; normalized: string; inBlockComment: boolean } {
         void lite_line;
         void lite_startInBlock;
