@@ -58,27 +58,24 @@ emitErrorChunk := fn(chunk: String): Unit {
     }
 };
 
-main := fn(): Unit {
-    args := io.inputArgs();
+run := fn(args: List<String>): Unit {
     project.handleVersionFlag(args, "tester", "test");
     if cli.startsWith(args, "--cases") {
         project.forwardNode("tools/test.ts", cli.rest(args, 1));
     }
 
-    var requestedMode := "";
-    var outputMode := "";
-    loop args as arg {
-        if (arg == "--smoke" or arg == "--fast" or arg == "--full") and requestedMode == "" {
-            requestedMode = arg;
-        } else if (arg == "--verbose" or arg == "--mute" or arg == "--silence") and outputMode == "" {
-            outputMode = arg;
-        } else {
-            io.errorLine("Usage: ./bin/lite test [--smoke|--fast|--full] [--verbose|--mute|--silence]");
-            io.exit(2);
-        }
+    modeFlags: List<String> = ["--smoke", "--fast", "--full"];
+    outputFlags: List<String> = ["--verbose", "--mute", "--silence"];
+    modeOpt := cli.pickSingleOption(args, modeFlags);
+    outOpt := cli.pickSingleOption(args, outputFlags);
+    leftover := cli.withoutOptions(cli.withoutOptions(args, modeFlags), outputFlags);
+    if not modeOpt.ok or not outOpt.ok or list.listCountText(leftover) > 0 {
+        io.errorLine("Usage: ./bin/lite test [--smoke|--fast|--full] [--verbose|--mute|--silence]");
+        io.exit(2);
     }
 
-    mode := if requestedMode == "" { "--smoke" } else { requestedMode };
+    mode := if modeOpt.value == "" { "--smoke" } else { modeOpt.value };
+    outputMode := outOpt.value;
     reporter := if outputMode == "--verbose" { "spec" } else { "dot" };
     quiet := outputMode == "--mute" or outputMode == "--silence";
 
@@ -117,4 +114,4 @@ main := fn(): Unit {
     io.exit(res.status);
 };
 
-main();
+run(io.inputArgs());

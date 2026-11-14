@@ -276,7 +276,7 @@ function lite$listPopBack<T>(items: T[], at: number): T {
     return items.pop() as T;
 }
 
-const lite$intLines: readonly number[] = [0, 79, 80, 104, 128, 159, 187, 215, 241, 269, 303, 304, 441, 474, 498, 526, 552, 576, 595, 619, 653, 669, 670, 693, 725, 746, 774, 801, 880, 913, 945, 978, 1005, 1026, 1053, 1067, 1103, 1131, 1158, 1206, 1254, 1290, 1325, 1352, 1373, 1426, 1453, 1467, 1549, 1603, 1622, 1704, 1734, 1762, 1790, 1818, 1841, 1885, 1912, 1940, 1968, 1995, 2018, 2048, 2150, 2179, 2207, 2235, 2313, 2346, 2378, 2392, 2415, 2445, 2556, 2589, 2603, 2642, 2671, 2699, 2727, 2750, 2767, 2828, 2856, 2883, 2906, 2916, 2922, 2923, 2966, 3082, 3084, 3085, 3194, 3241, 3279, 3308, 3328, 3361, 3384, 3417, 3435, 3458, 3459, 3479, 3507, 3537, 3581, 3632, 3667, 3677, 3730, 3759, 3784, 3901, 3932, 3949, 3980, 3990, 3991, 4033, 4076, 4130, 4180, 4233, 4263, 4277, 4312, 4363, 4412, 4466, 4519, 4545, 4562, 4607, 4659, 4719, 4767, 4866, 4915, 4962, 5002, 5055, 5081, 5091, 5097, 5098, 5168, 5205, 5250, 5256, 5298, 5341, 5343, 5344, 5368, 5421, 5422, 5486, 5501, 5566, 5585, 5653, 5660, 5676, 5678, 5679, 5724, 5828, 5872, 5873, 5895, 5969, 5985, 5987, 5988, 6032, 6062, 6095, 6114, 6178, 6184, 6207, 6223, 6225, 6226, 6320, 6321, 6337, 6358, 6392, 6416, 6467, 6487, 6493, 6532, 6564, 6591, 6614, 6647, 6664, 6715, 6748, 6808, 6836, 6850, 6860, 6866, 6868, 6869, 6912];
+const lite$intLines: readonly number[] = [0, 79, 80, 104, 128, 159, 187, 215, 241, 269, 303, 304, 441, 474, 498, 526, 552, 576, 595, 619, 653, 669, 670, 693, 725, 746, 774, 801, 880, 913, 945, 978, 1005, 1026, 1053, 1067, 1103, 1131, 1158, 1206, 1254, 1290, 1325, 1352, 1373, 1426, 1453, 1467, 1549, 1603, 1622, 1704, 1734, 1762, 1790, 1818, 1841, 1885, 1912, 1940, 1968, 1995, 2018, 2048, 2150, 2179, 2207, 2235, 2313, 2346, 2378, 2392, 2415, 2445, 2556, 2589, 2603, 2642, 2671, 2699, 2727, 2750, 2767, 2828, 2856, 2883, 2906, 2916, 2922, 2923, 2966, 3082, 3084, 3085, 3194, 3241, 3279, 3308, 3328, 3361, 3384, 3417, 3435, 3458, 3459, 3479, 3507, 3537, 3581, 3632, 3667, 3677, 3730, 3759, 3784, 3901, 3932, 3949, 3980, 3990, 3991, 4033, 4076, 4130, 4180, 4233, 4263, 4277, 4312, 4363, 4412, 4466, 4519, 4545, 4562, 4607, 4659, 4719, 4767, 4866, 4915, 4962, 5002, 5055, 5081, 5091, 5097, 5098, 5168, 5205, 5250, 5256, 5298, 5341, 5343, 5344, 5382, 5439, 5440, 5508, 5527, 5596, 5619, 5691, 5702, 5722, 5728, 5729, 5778, 5831, 5909, 5957, 5958, 5984, 6062, 6082, 6088, 6089, 6137, 6171, 6208, 6231, 6299, 6309, 6336, 6356, 6362, 6363, 6461, 6462, 6482, 6507, 6545, 6573, 6628, 6652, 6662, 6705, 6741, 6772, 6799, 6836, 6857, 6912, 6949, 7013, 7045, 7063, 7077, 7087, 7093, 7094, 7141, 7144, 7145, 7166];
 const lite$intSource = "tools/src/fmt.lts:";
 const lite$intMin = -(1n << 63n), lite$intMax = (1n << 63n) - 1n;
 function lite$fault(category: string, at: number, message: string): never {
@@ -1864,9 +1864,9 @@ export function main(lite$write?: (text: string) => void): string {
         return false;
     }
     void liteFn$lib$util$cli$hasOption;
-    function liteFn$lib$util$cli$withoutOption(lite_args: string[], lite_option: string): string[] {
+    function liteFn$lib$util$cli$withoutOptions(lite_args: string[], lite_options: string[]): string[] {
         void lite_args;
-        void lite_option;
+        void lite_options;
         const lite_out: string[] = [...([])];
         void lite_out;
         let lite_stop = false;
@@ -1878,13 +1878,41 @@ export function main(lite$write?: (text: string) => void): string {
             } else if (((lite_arg) === ("--"))) {
                 lite_stop = true;
                 lite_out.push(lite_arg);
-            } else if (((lite_arg) !== (lite_option))) {
+            } else if ((!(liteFn$lib$core$list$listContainsText([...(lite_options)], lite_arg)))) {
                 lite_out.push(lite_arg);
             }
         }
         return [...(lite_out)];
     }
+    void liteFn$lib$util$cli$withoutOptions;
+    function liteFn$lib$util$cli$withoutOption(lite_args: string[], lite_option: string): string[] {
+        void lite_args;
+        void lite_option;
+        const lite_options: string[] = [...([lite_option])];
+        void lite_options;
+        return [...(liteFn$lib$util$cli$withoutOptions([...(lite_args)], [...(lite_options)]))];
+    }
     void liteFn$lib$util$cli$withoutOption;
+    function liteFn$lib$util$cli$pickSingleOption(lite_args: string[], lite_choices: string[]): { ok: boolean; value: string } {
+        void lite_args;
+        void lite_choices;
+        let lite_picked = "";
+        void lite_picked;
+        for (const lite_arg of [...(lite_args)]) {
+            void lite_arg;
+            if (((lite_arg) === ("--"))) {
+                break;
+            }
+            if (liteFn$lib$core$list$listContainsText([...(lite_choices)], lite_arg)) {
+                if (((lite_picked) !== (""))) {
+                    return { ok: false, value: "" };
+                }
+                lite_picked = lite_arg;
+            }
+        }
+        return { ok: true, value: lite_picked };
+    }
+    void liteFn$lib$util$cli$pickSingleOption;
     function liteFn$lib$util$cli$readOptionValue(lite_args: string[], lite_option: string): { found: boolean; valid: boolean; value: string } {
         void lite_args;
         void lite_option;
@@ -1899,23 +1927,23 @@ export function main(lite$write?: (text: string) => void): string {
         let lite_i = 0n;
         void lite_i;
         while (((lite_i) < (lite_count))) {
-            const lite_arg = lite$listAt((lite_args), lite_i, 2474);
+            const lite_arg = lite$listAt((lite_args), lite_i, 3298);
             void lite_arg;
             if (((lite_arg) === ("--"))) {
                 break;
             }
             if (((lite_arg) === (lite_option))) {
-                if (((((lite_found) || (((lite$addInt(lite_i, 1n, 2565)) >= (lite_count))))) || (((lite$listAt((lite_args), lite$addInt(lite_i, 1n, 2588), 2586)) === ("--"))))) {
+                if (((((lite_found) || (((lite$addInt(lite_i, 1n, 3389)) >= (lite_count))))) || (((lite$listAt((lite_args), lite$addInt(lite_i, 1n, 3412), 3410)) === ("--"))))) {
                     lite_valid = false;
                     lite_found = true;
-                    lite_i = lite$addInt(lite_i, 1n, 2686);
+                    lite_i = lite$addInt(lite_i, 1n, 3510);
                 } else {
                     lite_found = true;
-                    lite_value = lite$listAt((lite_args), lite$addInt(lite_i, 1n, 2773), 2771);
-                    lite_i = lite$addInt(lite_i, 2n, 2801);
+                    lite_value = lite$listAt((lite_args), lite$addInt(lite_i, 1n, 3597), 3595);
+                    lite_i = lite$addInt(lite_i, 2n, 3625);
                 }
             } else {
-                lite_i = lite$addInt(lite_i, 1n, 2855);
+                lite_i = lite$addInt(lite_i, 1n, 3679);
             }
         }
         return { found: lite_found, valid: lite_valid, value: lite_value };
@@ -1933,24 +1961,24 @@ export function main(lite$write?: (text: string) => void): string {
         let lite_i = 0n;
         void lite_i;
         while (((lite_i) < (lite_count))) {
-            const lite_arg = lite$listAt((lite_args), lite_i, 3272);
+            const lite_arg = lite$listAt((lite_args), lite_i, 4096);
             void lite_arg;
             if (lite_stop) {
                 lite_out.push(lite_arg);
-                lite_i = lite$addInt(lite_i, 1n, 3353);
+                lite_i = lite$addInt(lite_i, 1n, 4177);
             } else if (((lite_arg) === ("--"))) {
                 lite_stop = true;
                 lite_out.push(lite_arg);
-                lite_i = lite$addInt(lite_i, 1n, 3474);
+                lite_i = lite$addInt(lite_i, 1n, 4298);
             } else if (((lite_arg) === (lite_option))) {
-                if (((((lite$addInt(lite_i, 1n, 3530)) < (lite_count))) && (((lite$listAt((lite_args), lite$addInt(lite_i, 1n, 3553), 3551)) !== ("--"))))) {
-                    lite_i = lite$addInt(lite_i, 2n, 3591);
+                if (((((lite$addInt(lite_i, 1n, 4354)) < (lite_count))) && (((lite$listAt((lite_args), lite$addInt(lite_i, 1n, 4377), 4375)) !== ("--"))))) {
+                    lite_i = lite$addInt(lite_i, 2n, 4415);
                 } else {
-                    lite_i = lite$addInt(lite_i, 1n, 3639);
+                    lite_i = lite$addInt(lite_i, 1n, 4463);
                 }
             } else {
                 lite_out.push(lite_arg);
-                lite_i = lite$addInt(lite_i, 1n, 3734);
+                lite_i = lite$addInt(lite_i, 1n, 4558);
             }
         }
         return [...(lite_out)];
@@ -1960,7 +1988,7 @@ export function main(lite$write?: (text: string) => void): string {
         void lite_value;
         void lite_suffix;
         if (liteFn$lib$core$text$endsWith(lite_value, lite_suffix)) {
-            return liteFn$lib$core$text$slice(lite_value, 0n, lite$subtractInt(liteFn$lib$core$text$length(lite_value), liteFn$lib$core$text$length(lite_suffix), 3919));
+            return liteFn$lib$core$text$slice(lite_value, 0n, lite$subtractInt(liteFn$lib$core$text$length(lite_value), liteFn$lib$core$text$length(lite_suffix), 4743));
         }
         return lite_value;
     }
@@ -2353,69 +2381,74 @@ export function main(lite$write?: (text: string) => void): string {
         return ((liteFn$lib$core$text$joinTexts([...(lite_formatted)], "\n")) + ("\n"));
     }
     void liteFn_formatLite;
-    const lite_args: string[] = [...(lite$inputArgs())];
-    void lite_args;
-    liteFn$lib$util$project$handleVersionFlag([...(lite_args)], "formatter", "fmt");
-    if (((liteFn$lib$util$cli$hasOption([...(lite_args)], "--help")) || (liteFn$lib$util$cli$hasOption([...(lite_args)], "-h")))) {
-        lite$emit("Usage: ./bin/lite fmt [--check] [FILE_OR_DIR... | -]\n\nOptions:\n  --check   Exit with status 1 if any file is not formatted\n");
-        return lite$exit(0n);
-    }
-    const lite_checkOnly = liteFn$lib$util$cli$hasOption([...(lite_args)], "--check");
-    void lite_checkOnly;
-    const lite_targets: string[] = [...(liteFn$lib$util$cli$stripLeadingSeparator([...(liteFn$lib$util$cli$withoutOption([...(liteFn$lib$util$cli$withoutOption([...(lite_args)], "--check"))], "--write"))]))];
-    void lite_targets;
-    const lite_targetCount = liteFn$lib$core$list$listCountText([...(lite_targets)]);
-    void lite_targetCount;
-    if (((lite_targetCount) === (0n))) {
-        lite$reportError("Usage: ./bin/lite fmt [--check] [FILE_OR_DIR... | -]");
-        return lite$exit(2n);
-    }
-    if (((((lite_targetCount) === (1n))) && (((lite$listAt((lite_targets), 0n, 6020)) === ("-"))))) {
-        const lite_input = lite$inputAll("", "tools/src/fmt.lts:178:14: InputFault: ");
-        void lite_input;
-        const lite_output = liteFn_formatLite(lite_input);
-        void lite_output;
-        if (lite_checkOnly) {
-            if (((lite_input) === (lite_output))) {
-                return lite$exit(0n);
-            } else {
-                return lite$exit(1n);
-            }
+    function liteFn_run(lite_args: string[]): void {
+        void lite_args;
+        liteFn$lib$util$project$handleVersionFlag([...(lite_args)], "formatter", "fmt");
+        if (((liteFn$lib$util$cli$hasOption([...(lite_args)], "--help")) || (liteFn$lib$util$cli$hasOption([...(lite_args)], "-h")))) {
+            lite$emit("Usage: ./bin/lite fmt [--check] [FILE_OR_DIR... | -]\n\nOptions:\n  --check   Exit with status 1 if any file is not formatted\n");
+            lite$exit(0n);
         }
-        lite$emit(lite_output);
-        return lite$exit(0n);
-    }
-    const lite_files: string[] = [...(liteFn$lib$util$fs$collectFiles(lite$processCwd(), [...(lite_targets)], ".lts", [...(liteFn$lib$util$fs$defaultIgnoredDirs())], true))];
-    void lite_files;
-    let lite_dirty = 0n;
-    void lite_dirty;
-    for (const lite_file of [...(lite_files)]) {
-        void lite_file;
-        const lite_readRes = lite$fsReadText(lite_file);
-        void lite_readRes;
-        if ((!((lite_readRes).ok))) {
-            lite$reportError(((((lite_file) + (": "))) + ((lite_readRes).error)));
-            return lite$exit(1n);
+        const lite_checkOnly = liteFn$lib$util$cli$hasOption([...(lite_args)], "--check");
+        void lite_checkOnly;
+        const lite_fmtFlags: string[] = [...(["--check", "--write"])];
+        void lite_fmtFlags;
+        const lite_targets: string[] = [...(liteFn$lib$util$cli$stripLeadingSeparator([...(liteFn$lib$util$cli$withoutOptions([...(lite_args)], [...(lite_fmtFlags)]))]))];
+        void lite_targets;
+        const lite_targetCount = liteFn$lib$core$list$listCountText([...(lite_targets)]);
+        void lite_targetCount;
+        if (((lite_targetCount) === (0n))) {
+            lite$reportError("Usage: ./bin/lite fmt [--check] [FILE_OR_DIR... | -]");
+            lite$exit(2n);
         }
-        const lite_after = liteFn_formatLite((lite_readRes).text);
-        void lite_after;
-        if ((((lite_readRes).text) !== (lite_after))) {
-            lite_dirty = lite$addInt(lite_dirty, 1n, 6586);
+        if (((((lite_targetCount) === (1n))) && (((lite$listAt((lite_targets), 0n, 6125)) === ("-"))))) {
+            const lite_input = lite$inputAll("", "tools/src/fmt.lts:179:18: InputFault: ");
+            void lite_input;
+            const lite_output = liteFn_formatLite(lite_input);
+            void lite_output;
             if (lite_checkOnly) {
-                lite$emit(lite_file + "\n");
-            } else {
-                const lite_writeRes = lite$fsWriteText(lite_file, lite_after);
-                void lite_writeRes;
-                if ((!((lite_writeRes).ok))) {
-                    lite$reportError(((((lite_file) + (": "))) + ((lite_writeRes).error)));
-                    return lite$exit(1n);
+                if (((lite_input) === (lite_output))) {
+                    lite$exit(0n);
+                } else {
+                    lite$exit(1n);
+                }
+            }
+            lite$emit(lite_output);
+            lite$exit(0n);
+        }
+        const lite_files: string[] = [...(liteFn$lib$util$fs$collectFiles(lite$processCwd(), [...(lite_targets)], ".lts", [...(liteFn$lib$util$fs$defaultIgnoredDirs())], true))];
+        void lite_files;
+        let lite_dirty = 0n;
+        void lite_dirty;
+        for (const lite_file of [...(lite_files)]) {
+            void lite_file;
+            const lite_readRes = lite$fsReadText(lite_file);
+            void lite_readRes;
+            if ((!((lite_readRes).ok))) {
+                lite$reportError(((((lite_file) + (": "))) + ((lite_readRes).error)));
+                lite$exit(1n);
+            }
+            const lite_after = liteFn_formatLite((lite_readRes).text);
+            void lite_after;
+            if ((((lite_readRes).text) !== (lite_after))) {
+                lite_dirty = lite$addInt(lite_dirty, 1n, 6767);
+                if (lite_checkOnly) {
+                    lite$emit(lite_file + "\n");
+                } else {
+                    const lite_writeRes = lite$fsWriteText(lite_file, lite_after);
+                    void lite_writeRes;
+                    if ((!((lite_writeRes).ok))) {
+                        lite$reportError(((((lite_file) + (": "))) + ((lite_writeRes).error)));
+                        lite$exit(1n);
+                    }
                 }
             }
         }
+        if (((lite_checkOnly) && (((lite_dirty) > (0n))))) {
+            lite$exit(1n);
+        }
     }
-    if (((lite_checkOnly) && (((lite_dirty) > (0n))))) {
-        return lite$exit(1n);
-    }
+    void liteFn_run;
+    liteFn_run([...(lite$inputArgs())]);
     return lite$out;
 }
 

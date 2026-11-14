@@ -54,4 +54,15 @@ test.checkText("subcommand bare", "fmt", cli.normalizeSubcommand("fmt", supporte
 test.checkText("subcommand flag", "fmt", cli.normalizeSubcommand("--fmt", supported));
 test.checkText("subcommand unknown", "", cli.normalizeSubcommand("--help", supported));
 
+modes: List<String> = ["--smoke", "--fast", "--full"];
+singleOk: List<String> = ["--fast", "--mute"];
+p1 := cli.pickSingleOption(singleOk, modes);
+test.checkBool("pickSingleOption ok", true, p1.ok);
+test.checkText("pickSingleOption val", "--fast", p1.value);
+test.checkText("withoutOptions", "--mute", text.joinTexts(cli.withoutOptions(singleOk, modes), ","));
+
+singleDup: List<String> = ["--smoke", "--fast"];
+p2 := cli.pickSingleOption(singleDup, modes);
+test.checkBool("pickSingleOption rejects multiple", false, p2.ok);
+
 test.done("util-cli");

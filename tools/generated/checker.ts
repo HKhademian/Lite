@@ -217,7 +217,7 @@ function lite$listPopBack<T>(items: T[], at: number): T {
     return items.pop() as T;
 }
 
-const lite$intLines: readonly number[] = [0, 66, 67, 91, 125, 126, 150, 203, 250];
+const lite$intLines: readonly number[] = [0, 66, 67, 91, 125, 126, 164, 221, 272, 275, 276, 297];
 const lite$intSource = "tools/src/checker.lts:";
 const lite$intMin = -(1n << 63n), lite$intMax = (1n << 63n) - 1n;
 function lite$fault(category: string, at: number, message: string): never {
@@ -1845,10 +1845,13 @@ export function main(lite$write?: (text: string) => void): string {
         lite$exit((lite_res).status);
     }
     void liteFn$lib$util$project$forwardNode;
-    const lite_args: string[] = [...(lite$inputArgs())];
-    void lite_args;
-    liteFn$lib$util$project$handleVersionFlag([...(lite_args)], "checker", "check");
-    liteFn$lib$util$project$forwardNode("igniter/check.ts", [...(lite_args)]);
+    function liteFn_run(lite_args: string[]): void {
+        void lite_args;
+        liteFn$lib$util$project$handleVersionFlag([...(lite_args)], "checker", "check");
+        return (void (liteFn$lib$util$project$forwardNode("igniter/check.ts", [...(lite_args)])));
+    }
+    void liteFn_run;
+    liteFn_run([...(lite$inputArgs())]);
     return lite$out;
 }
 

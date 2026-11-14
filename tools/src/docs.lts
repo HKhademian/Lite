@@ -8,43 +8,46 @@ cli := import "util/cli";
 docsUtil := import "util/docs";
 project := import "util/project";
 
-args := io.inputArgs();
-project.handleVersionFlag(args, "docs", "docs");
+run := fn(args: List<String>): Unit {
+    project.handleVersionFlag(args, "docs", "docs");
 
-envRoot := proc.envGet("LITE_DOCS_ROOT");
-rootDir := if envRoot.found and envRoot.value =!= "" { envRoot.value } else { project.findRepoRoot() };
+    envRoot := proc.envGet("LITE_DOCS_ROOT");
+    rootDir := if envRoot.found and envRoot.value =!= "" { envRoot.value } else { project.findRepoRoot() };
 
-if list.listCountText(args) == 1 and cli.startsWith(args, "--check") {
-    failures := docsUtil.checkDocuments(rootDir);
-    if list.listCountText(failures) > 0 {
-        io.errorLine(text.joinTexts(failures, "\n"));
+    if list.listCountText(args) == 1 and cli.startsWith(args, "--check") {
+        failures := docsUtil.checkDocuments(rootDir);
+        if list.listCountText(failures) > 0 {
+            io.errorLine(text.joinTexts(failures, "\n"));
+            io.exit(1);
+        }
+        io.outputLine("Documentation links, fragments and fences passed.");
+        io.exit(0);
+    }
+
+    isJson := cli.startsWith(args, "--json");
+    query := text.joinTexts(cli.dropIf(args, "--json"), " ");
+
+    if isJson {
+        io.outputLine(docsUtil.docsJson(rootDir, query));
+        io.exit(0);
+    }
+
+    if query == "" {
+        nav := docsUtil.navigationSummary(rootDir);
+        if not nav.ok {
+            io.errorLine(nav.error);
+            io.exit(1);
+        }
+        io.outputLine(nav.text);
+        io.exit(0);
+    }
+
+    searched := docsUtil.searchDocsText(rootDir, query);
+    if searched.count == 0 {
+        io.errorLine("no documentation matches: " + text.toLowerAscii(query));
         io.exit(1);
     }
-    io.outputLine("Documentation links, fragments and fences passed.");
-    io.exit(0);
-}
+    io.outputLine(searched.text);
+};
 
-isJson := cli.startsWith(args, "--json");
-query := text.joinTexts(cli.dropIf(args, "--json"), " ");
-
-if isJson {
-    io.outputLine(docsUtil.docsJson(rootDir, query));
-    io.exit(0);
-}
-
-if query == "" {
-    nav := docsUtil.navigationSummary(rootDir);
-    if not nav.ok {
-        io.errorLine(nav.error);
-        io.exit(1);
-    }
-    io.outputLine(nav.text);
-    io.exit(0);
-}
-
-searched := docsUtil.searchDocsText(rootDir, query);
-if searched.count == 0 {
-    io.errorLine("no documentation matches: " + text.toLowerAscii(query));
-    io.exit(1);
-}
-io.outputLine(searched.text);
+run(io.inputArgs());

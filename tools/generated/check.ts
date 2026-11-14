@@ -233,7 +233,7 @@ function lite$listPopBack<T>(items: T[], at: number): T {
     return items.pop() as T;
 }
 
-const lite$intLines: readonly number[] = [0, 81, 82, 106, 130, 161, 189, 217, 245, 271, 299, 331, 365, 399, 400, 442, 469, 485, 487, 488, 553, 613, 672, 705, 781, 807, 838, 844, 870, 974, 980, 1007, 1038, 1044, 1046, 1047, 1071, 1124, 1125, 1169, 1210, 1249, 1296, 1298, 1299, 1334, 1353, 1402, 1404, 1405, 1468, 1507, 1530, 1596, 1598, 1645, 1669, 1736, 1738, 1739, 1788, 1829, 1880, 1882, 1883, 1941, 2022, 2048, 2119, 2121, 2191, 2236, 2300, 2302, 2342, 2398, 2400, 2401, 2482, 2503, 2574, 2576, 2639, 2717, 2768, 2770, 2835, 2860, 2919, 2921, 2998, 3026, 3085, 3087, 3173, 3260, 3319, 3321, 3322, 3371, 3392, 3424, 3426, 3427, 3445, 3498, 3562, 3564, 3565, 3609];
+const lite$intLines: readonly number[] = [0, 81, 82, 106, 130, 161, 189, 217, 245, 271, 299, 331, 365, 399, 400, 442, 469, 485, 487, 488, 553, 613, 672, 705, 781, 807, 838, 844, 870, 974, 980, 1007, 1038, 1044, 1046, 1047, 1085, 1142, 1143, 1191, 1236, 1279, 1330, 1336, 1337, 1376, 1399, 1452, 1458, 1459, 1526, 1569, 1596, 1666, 1672, 1723, 1751, 1822, 1828, 1829, 1882, 1927, 1982, 1988, 1989, 2051, 2136, 2166, 2241, 2247, 2321, 2370, 2438, 2444, 2488, 2548, 2554, 2555, 2640, 2665, 2740, 2746, 2813, 2895, 2950, 2956, 3025, 3054, 3117, 3123, 3204, 3236, 3299, 3305, 3395, 3486, 3549, 3555, 3556, 3609, 3634, 3670, 3676, 3677, 3699, 3756, 3824, 3830, 3831, 3879, 3882, 3883, 3904];
 const lite$intSource = "tools/src/check.lts:";
 const lite$intMin = -(1n << 63n), lite$intMax = (1n << 63n) - 1n;
 function lite$fault(category: string, at: number, message: string): never {
@@ -2359,9 +2359,9 @@ export function main(lite$write?: (text: string) => void): string {
         return false;
     }
     void liteFn$lib$util$cli$hasOption;
-    function liteFn$lib$util$cli$withoutOption(lite_args: string[], lite_option: string): string[] {
+    function liteFn$lib$util$cli$withoutOptions(lite_args: string[], lite_options: string[]): string[] {
         void lite_args;
-        void lite_option;
+        void lite_options;
         const lite_out: string[] = [...([])];
         void lite_out;
         let lite_stop = false;
@@ -2373,13 +2373,41 @@ export function main(lite$write?: (text: string) => void): string {
             } else if (((lite_arg) === ("--"))) {
                 lite_stop = true;
                 lite_out.push(lite_arg);
-            } else if (((lite_arg) !== (lite_option))) {
+            } else if ((!(liteFn$lib$core$list$listContainsText([...(lite_options)], lite_arg)))) {
                 lite_out.push(lite_arg);
             }
         }
         return [...(lite_out)];
     }
+    void liteFn$lib$util$cli$withoutOptions;
+    function liteFn$lib$util$cli$withoutOption(lite_args: string[], lite_option: string): string[] {
+        void lite_args;
+        void lite_option;
+        const lite_options: string[] = [...([lite_option])];
+        void lite_options;
+        return [...(liteFn$lib$util$cli$withoutOptions([...(lite_args)], [...(lite_options)]))];
+    }
     void liteFn$lib$util$cli$withoutOption;
+    function liteFn$lib$util$cli$pickSingleOption(lite_args: string[], lite_choices: string[]): { ok: boolean; value: string } {
+        void lite_args;
+        void lite_choices;
+        let lite_picked = "";
+        void lite_picked;
+        for (const lite_arg of [...(lite_args)]) {
+            void lite_arg;
+            if (((lite_arg) === ("--"))) {
+                break;
+            }
+            if (liteFn$lib$core$list$listContainsText([...(lite_choices)], lite_arg)) {
+                if (((lite_picked) !== (""))) {
+                    return { ok: false, value: "" };
+                }
+                lite_picked = lite_arg;
+            }
+        }
+        return { ok: true, value: lite_picked };
+    }
+    void liteFn$lib$util$cli$pickSingleOption;
     function liteFn$lib$util$cli$readOptionValue(lite_args: string[], lite_option: string): { found: boolean; valid: boolean; value: string } {
         void lite_args;
         void lite_option;
@@ -2394,23 +2422,23 @@ export function main(lite$write?: (text: string) => void): string {
         let lite_i = 0n;
         void lite_i;
         while (((lite_i) < (lite_count))) {
-            const lite_arg = lite$listAt((lite_args), lite_i, 2474);
+            const lite_arg = lite$listAt((lite_args), lite_i, 3298);
             void lite_arg;
             if (((lite_arg) === ("--"))) {
                 break;
             }
             if (((lite_arg) === (lite_option))) {
-                if (((((lite_found) || (((lite$addInt(lite_i, 1n, 2565)) >= (lite_count))))) || (((lite$listAt((lite_args), lite$addInt(lite_i, 1n, 2588), 2586)) === ("--"))))) {
+                if (((((lite_found) || (((lite$addInt(lite_i, 1n, 3389)) >= (lite_count))))) || (((lite$listAt((lite_args), lite$addInt(lite_i, 1n, 3412), 3410)) === ("--"))))) {
                     lite_valid = false;
                     lite_found = true;
-                    lite_i = lite$addInt(lite_i, 1n, 2686);
+                    lite_i = lite$addInt(lite_i, 1n, 3510);
                 } else {
                     lite_found = true;
-                    lite_value = lite$listAt((lite_args), lite$addInt(lite_i, 1n, 2773), 2771);
-                    lite_i = lite$addInt(lite_i, 2n, 2801);
+                    lite_value = lite$listAt((lite_args), lite$addInt(lite_i, 1n, 3597), 3595);
+                    lite_i = lite$addInt(lite_i, 2n, 3625);
                 }
             } else {
-                lite_i = lite$addInt(lite_i, 1n, 2855);
+                lite_i = lite$addInt(lite_i, 1n, 3679);
             }
         }
         return { found: lite_found, valid: lite_valid, value: lite_value };
@@ -2428,24 +2456,24 @@ export function main(lite$write?: (text: string) => void): string {
         let lite_i = 0n;
         void lite_i;
         while (((lite_i) < (lite_count))) {
-            const lite_arg = lite$listAt((lite_args), lite_i, 3272);
+            const lite_arg = lite$listAt((lite_args), lite_i, 4096);
             void lite_arg;
             if (lite_stop) {
                 lite_out.push(lite_arg);
-                lite_i = lite$addInt(lite_i, 1n, 3353);
+                lite_i = lite$addInt(lite_i, 1n, 4177);
             } else if (((lite_arg) === ("--"))) {
                 lite_stop = true;
                 lite_out.push(lite_arg);
-                lite_i = lite$addInt(lite_i, 1n, 3474);
+                lite_i = lite$addInt(lite_i, 1n, 4298);
             } else if (((lite_arg) === (lite_option))) {
-                if (((((lite$addInt(lite_i, 1n, 3530)) < (lite_count))) && (((lite$listAt((lite_args), lite$addInt(lite_i, 1n, 3553), 3551)) !== ("--"))))) {
-                    lite_i = lite$addInt(lite_i, 2n, 3591);
+                if (((((lite$addInt(lite_i, 1n, 4354)) < (lite_count))) && (((lite$listAt((lite_args), lite$addInt(lite_i, 1n, 4377), 4375)) !== ("--"))))) {
+                    lite_i = lite$addInt(lite_i, 2n, 4415);
                 } else {
-                    lite_i = lite$addInt(lite_i, 1n, 3639);
+                    lite_i = lite$addInt(lite_i, 1n, 4463);
                 }
             } else {
                 lite_out.push(lite_arg);
-                lite_i = lite$addInt(lite_i, 1n, 3734);
+                lite_i = lite$addInt(lite_i, 1n, 4558);
             }
         }
         return [...(lite_out)];
@@ -2455,7 +2483,7 @@ export function main(lite$write?: (text: string) => void): string {
         void lite_value;
         void lite_suffix;
         if (liteFn$lib$core$text$endsWith(lite_value, lite_suffix)) {
-            return liteFn$lib$core$text$slice(lite_value, 0n, lite$subtractInt(liteFn$lib$core$text$length(lite_value), liteFn$lib$core$text$length(lite_suffix), 3919));
+            return liteFn$lib$core$text$slice(lite_value, 0n, lite$subtractInt(liteFn$lib$core$text$length(lite_value), liteFn$lib$core$text$length(lite_suffix), 4743));
         }
         return lite_value;
     }
@@ -3588,88 +3616,91 @@ export function main(lite$write?: (text: string) => void): string {
         }
     }
     void liteFn_runCheckedTsc;
-    const lite_args: string[] = [...(lite$inputArgs())];
-    void lite_args;
-    liteFn$lib$util$project$handleVersionFlag([...(lite_args)], "doctor", "doctor");
-    const lite_docsOnly = liteFn$lib$util$cli$startsWith([...(lite_args)], "--docs");
-    void lite_docsOnly;
-    const lite_remaining: string[] = [...(liteFn$lib$util$cli$dropIf([...(lite_args)], "--docs"))];
-    void lite_remaining;
-    if (((liteFn$lib$core$list$listCountText([...(lite_remaining)])) > (0n))) {
-        liteFn_failDoctor("usage: lite doctor [--docs]");
+    function liteFn_run(lite_args: string[]): void {
+        void lite_args;
+        liteFn$lib$util$project$handleVersionFlag([...(lite_args)], "doctor", "doctor");
+        const lite_docsOnly = liteFn$lib$util$cli$startsWith([...(lite_args)], "--docs");
+        void lite_docsOnly;
+        const lite_remaining: string[] = [...(liteFn$lib$util$cli$dropIf([...(lite_args)], "--docs"))];
+        void lite_remaining;
+        if (((liteFn$lib$core$list$listCountText([...(lite_remaining)])) > (0n))) {
+            liteFn_failDoctor("usage: lite doctor [--docs]");
+        }
+        const lite_rootDir = liteFn$lib$util$project$findRepoRoot();
+        void lite_rootDir;
+        if (((lite_rootDir) === (""))) {
+            liteFn_failDoctor("cannot locate repository root");
+        }
+        const lite_docCfgPath = liteFn$lib$util$path$join(lite_rootDir, "config/documentation.json");
+        void lite_docCfgPath;
+        const lite_docCfgRead = lite$fsReadText(lite_docCfgPath);
+        void lite_docCfgRead;
+        if ((!((lite_docCfgRead).ok))) {
+            liteFn_failDoctor((("config/documentation.json: ") + ((lite_docCfgRead).error)));
+        }
+        const lite_docCfgValid = liteFn$lib$util$json$validate((lite_docCfgRead).text);
+        void lite_docCfgValid;
+        if ((!((lite_docCfgValid).ok))) {
+            liteFn_failDoctor((("config/documentation.json: ") + ((lite_docCfgValid).error)));
+        }
+        const lite_docFailures: string[] = [...(liteFn$lib$util$docs$checkDocuments(lite_rootDir))];
+        void lite_docFailures;
+        if (((liteFn$lib$core$list$listCountText([...(lite_docFailures)])) > (0n))) {
+            liteFn_failDoctor(liteFn$lib$core$text$joinTexts([...(lite_docFailures)], "\n"));
+        }
+        const lite_registryVscode = liteFn$lib$util$project$readComponentVersion("vscode");
+        void lite_registryVscode;
+        const lite_editorPkgRead = lite$fsReadText(liteFn$lib$util$path$join(lite_rootDir, "editors/vscode/package.json"));
+        void lite_editorPkgRead;
+        if ((!((lite_editorPkgRead).ok))) {
+            liteFn_failDoctor((("editors/vscode/package.json: ") + ((lite_editorPkgRead).error)));
+        }
+        const lite_editorVer = liteFn$lib$util$json$readObjectString((lite_editorPkgRead).text, 0n, "version");
+        void lite_editorVer;
+        if ((((!((lite_editorVer).found))) || ((!((lite_editorVer).ok))))) {
+            liteFn_failDoctor("editors/vscode/package.json: missing version");
+        }
+        if (((lite_registryVscode) !== ((lite_editorVer).value))) {
+            liteFn_failDoctor("editor version differs from registry");
+        }
+        const lite_lockRead = lite$fsReadText(liteFn$lib$util$path$join(lite_rootDir, "editors/vscode/package-lock.json"));
+        void lite_lockRead;
+        if ((!((lite_lockRead).ok))) {
+            liteFn_failDoctor((("editors/vscode/package-lock.json: ") + ((lite_lockRead).error)));
+        }
+        const lite_lockVer = liteFn$lib$util$json$readObjectString((lite_lockRead).text, 0n, "version");
+        void lite_lockVer;
+        if ((((((!((lite_lockVer).found))) || ((!((lite_lockVer).ok))))) || ((((lite_lockVer).value) !== ((lite_editorVer).value))))) {
+            liteFn_failDoctor("editor lockfile version differs");
+        }
+        const lite_pkgsField = liteFn$lib$util$json$findObjectField((lite_lockRead).text, 0n, "packages");
+        void lite_pkgsField;
+        if ((!((lite_pkgsField).found))) {
+            liteFn_failDoctor("editor lockfile package version differs");
+        }
+        const lite_rootPkgField = liteFn$lib$util$json$findObjectField((lite_lockRead).text, (lite_pkgsField).valuePos, "");
+        void lite_rootPkgField;
+        if ((!((lite_rootPkgField).found))) {
+            liteFn_failDoctor("editor lockfile package version differs");
+        }
+        const lite_rootPkgVer = liteFn$lib$util$json$readObjectString((lite_lockRead).text, (lite_rootPkgField).valuePos, "version");
+        void lite_rootPkgVer;
+        if ((((((!((lite_rootPkgVer).found))) || ((!((lite_rootPkgVer).ok))))) || ((((lite_rootPkgVer).value) !== ((lite_editorVer).value))))) {
+            liteFn_failDoctor("editor lockfile package version differs");
+        }
+        const lite_casesRes = liteFn$lib$util$cases$validateAllCases(lite_rootDir);
+        void lite_casesRes;
+        if ((!((lite_casesRes).ok))) {
+            liteFn_failDoctor((lite_casesRes).error);
+        }
+        if ((!(lite_docsOnly))) {
+            liteFn_runCheckedTsc(lite_rootDir, "igniter/tsconfig.json");
+            liteFn_runCheckedTsc(lite_rootDir, "compiler/bootstrap/tsconfig.json");
+        }
+        lite$emit("Repository checks passed." + "\n");
     }
-    const lite_rootDir = liteFn$lib$util$project$findRepoRoot();
-    void lite_rootDir;
-    if (((lite_rootDir) === (""))) {
-        liteFn_failDoctor("cannot locate repository root");
-    }
-    const lite_docCfgPath = liteFn$lib$util$path$join(lite_rootDir, "config/documentation.json");
-    void lite_docCfgPath;
-    const lite_docCfgRead = lite$fsReadText(lite_docCfgPath);
-    void lite_docCfgRead;
-    if ((!((lite_docCfgRead).ok))) {
-        liteFn_failDoctor((("config/documentation.json: ") + ((lite_docCfgRead).error)));
-    }
-    const lite_docCfgValid = liteFn$lib$util$json$validate((lite_docCfgRead).text);
-    void lite_docCfgValid;
-    if ((!((lite_docCfgValid).ok))) {
-        liteFn_failDoctor((("config/documentation.json: ") + ((lite_docCfgValid).error)));
-    }
-    const lite_docFailures: string[] = [...(liteFn$lib$util$docs$checkDocuments(lite_rootDir))];
-    void lite_docFailures;
-    if (((liteFn$lib$core$list$listCountText([...(lite_docFailures)])) > (0n))) {
-        liteFn_failDoctor(liteFn$lib$core$text$joinTexts([...(lite_docFailures)], "\n"));
-    }
-    const lite_registryVscode = liteFn$lib$util$project$readComponentVersion("vscode");
-    void lite_registryVscode;
-    const lite_editorPkgRead = lite$fsReadText(liteFn$lib$util$path$join(lite_rootDir, "editors/vscode/package.json"));
-    void lite_editorPkgRead;
-    if ((!((lite_editorPkgRead).ok))) {
-        liteFn_failDoctor((("editors/vscode/package.json: ") + ((lite_editorPkgRead).error)));
-    }
-    const lite_editorVer = liteFn$lib$util$json$readObjectString((lite_editorPkgRead).text, 0n, "version");
-    void lite_editorVer;
-    if ((((!((lite_editorVer).found))) || ((!((lite_editorVer).ok))))) {
-        liteFn_failDoctor("editors/vscode/package.json: missing version");
-    }
-    if (((lite_registryVscode) !== ((lite_editorVer).value))) {
-        liteFn_failDoctor("editor version differs from registry");
-    }
-    const lite_lockRead = lite$fsReadText(liteFn$lib$util$path$join(lite_rootDir, "editors/vscode/package-lock.json"));
-    void lite_lockRead;
-    if ((!((lite_lockRead).ok))) {
-        liteFn_failDoctor((("editors/vscode/package-lock.json: ") + ((lite_lockRead).error)));
-    }
-    const lite_lockVer = liteFn$lib$util$json$readObjectString((lite_lockRead).text, 0n, "version");
-    void lite_lockVer;
-    if ((((((!((lite_lockVer).found))) || ((!((lite_lockVer).ok))))) || ((((lite_lockVer).value) !== ((lite_editorVer).value))))) {
-        liteFn_failDoctor("editor lockfile version differs");
-    }
-    const lite_pkgsField = liteFn$lib$util$json$findObjectField((lite_lockRead).text, 0n, "packages");
-    void lite_pkgsField;
-    if ((!((lite_pkgsField).found))) {
-        liteFn_failDoctor("editor lockfile package version differs");
-    }
-    const lite_rootPkgField = liteFn$lib$util$json$findObjectField((lite_lockRead).text, (lite_pkgsField).valuePos, "");
-    void lite_rootPkgField;
-    if ((!((lite_rootPkgField).found))) {
-        liteFn_failDoctor("editor lockfile package version differs");
-    }
-    const lite_rootPkgVer = liteFn$lib$util$json$readObjectString((lite_lockRead).text, (lite_rootPkgField).valuePos, "version");
-    void lite_rootPkgVer;
-    if ((((((!((lite_rootPkgVer).found))) || ((!((lite_rootPkgVer).ok))))) || ((((lite_rootPkgVer).value) !== ((lite_editorVer).value))))) {
-        liteFn_failDoctor("editor lockfile package version differs");
-    }
-    const lite_casesRes = liteFn$lib$util$cases$validateAllCases(lite_rootDir);
-    void lite_casesRes;
-    if ((!((lite_casesRes).ok))) {
-        liteFn_failDoctor((lite_casesRes).error);
-    }
-    if ((!(lite_docsOnly))) {
-        liteFn_runCheckedTsc(lite_rootDir, "igniter/tsconfig.json");
-        liteFn_runCheckedTsc(lite_rootDir, "compiler/bootstrap/tsconfig.json");
-    }
-    lite$emit("Repository checks passed." + "\n");
+    void liteFn_run;
+    liteFn_run([...(lite$inputArgs())]);
     return lite$out;
 }
 

@@ -3,6 +3,9 @@
 io := import "core/io";
 project := import "util/project";
 
-args := io.inputArgs();
-project.handleVersionFlag(args, "checker", "check");
-project.forwardNode("igniter/check.ts", args);
+run := fn(args: List<String>): Unit {
+    project.handleVersionFlag(args, "checker", "check");
+    project.forwardNode("igniter/check.ts", args);
+};
+
+run(io.inputArgs());

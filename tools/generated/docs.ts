@@ -225,7 +225,7 @@ function lite$listPopBack<T>(items: T[], at: number): T {
     return items.pop() as T;
 }
 
-const lite$intLines: readonly number[] = [0, 76, 77, 101, 132, 160, 188, 214, 246, 280, 281, 305, 354, 355, 397, 501, 502, 573, 623, 665, 719, 739, 745, 817, 833, 835, 836, 878, 936, 937, 949, 1003, 1019, 1021, 1022, 1039, 1087, 1107, 1140, 1160, 1166, 1195, 1211, 1213, 1214, 1267, 1292, 1367, 1383, 1385, 1415];
+const lite$intLines: readonly number[] = [0, 76, 77, 101, 132, 160, 188, 214, 246, 280, 281, 319, 372, 373, 419, 527, 528, 603, 657, 703, 761, 785, 795, 871, 891, 897, 898, 944, 1006, 1007, 1023, 1081, 1101, 1107, 1108, 1129, 1181, 1205, 1242, 1266, 1276, 1309, 1329, 1335, 1336, 1393, 1422, 1501, 1521, 1527, 1561, 1564, 1565, 1586];
 const lite$intSource = "tools/src/docs.lts:";
 const lite$intMin = -(1n << 63n), lite$intMax = (1n << 63n) - 1n;
 function lite$fault(category: string, at: number, message: string): never {
@@ -2351,9 +2351,9 @@ export function main(lite$write?: (text: string) => void): string {
         return false;
     }
     void liteFn$lib$util$cli$hasOption;
-    function liteFn$lib$util$cli$withoutOption(lite_args: string[], lite_option: string): string[] {
+    function liteFn$lib$util$cli$withoutOptions(lite_args: string[], lite_options: string[]): string[] {
         void lite_args;
-        void lite_option;
+        void lite_options;
         const lite_out: string[] = [...([])];
         void lite_out;
         let lite_stop = false;
@@ -2365,13 +2365,41 @@ export function main(lite$write?: (text: string) => void): string {
             } else if (((lite_arg) === ("--"))) {
                 lite_stop = true;
                 lite_out.push(lite_arg);
-            } else if (((lite_arg) !== (lite_option))) {
+            } else if ((!(liteFn$lib$core$list$listContainsText([...(lite_options)], lite_arg)))) {
                 lite_out.push(lite_arg);
             }
         }
         return [...(lite_out)];
     }
+    void liteFn$lib$util$cli$withoutOptions;
+    function liteFn$lib$util$cli$withoutOption(lite_args: string[], lite_option: string): string[] {
+        void lite_args;
+        void lite_option;
+        const lite_options: string[] = [...([lite_option])];
+        void lite_options;
+        return [...(liteFn$lib$util$cli$withoutOptions([...(lite_args)], [...(lite_options)]))];
+    }
     void liteFn$lib$util$cli$withoutOption;
+    function liteFn$lib$util$cli$pickSingleOption(lite_args: string[], lite_choices: string[]): { ok: boolean; value: string } {
+        void lite_args;
+        void lite_choices;
+        let lite_picked = "";
+        void lite_picked;
+        for (const lite_arg of [...(lite_args)]) {
+            void lite_arg;
+            if (((lite_arg) === ("--"))) {
+                break;
+            }
+            if (liteFn$lib$core$list$listContainsText([...(lite_choices)], lite_arg)) {
+                if (((lite_picked) !== (""))) {
+                    return { ok: false, value: "" };
+                }
+                lite_picked = lite_arg;
+            }
+        }
+        return { ok: true, value: lite_picked };
+    }
+    void liteFn$lib$util$cli$pickSingleOption;
     function liteFn$lib$util$cli$readOptionValue(lite_args: string[], lite_option: string): { found: boolean; valid: boolean; value: string } {
         void lite_args;
         void lite_option;
@@ -2386,23 +2414,23 @@ export function main(lite$write?: (text: string) => void): string {
         let lite_i = 0n;
         void lite_i;
         while (((lite_i) < (lite_count))) {
-            const lite_arg = lite$listAt((lite_args), lite_i, 2474);
+            const lite_arg = lite$listAt((lite_args), lite_i, 3298);
             void lite_arg;
             if (((lite_arg) === ("--"))) {
                 break;
             }
             if (((lite_arg) === (lite_option))) {
-                if (((((lite_found) || (((lite$addInt(lite_i, 1n, 2565)) >= (lite_count))))) || (((lite$listAt((lite_args), lite$addInt(lite_i, 1n, 2588), 2586)) === ("--"))))) {
+                if (((((lite_found) || (((lite$addInt(lite_i, 1n, 3389)) >= (lite_count))))) || (((lite$listAt((lite_args), lite$addInt(lite_i, 1n, 3412), 3410)) === ("--"))))) {
                     lite_valid = false;
                     lite_found = true;
-                    lite_i = lite$addInt(lite_i, 1n, 2686);
+                    lite_i = lite$addInt(lite_i, 1n, 3510);
                 } else {
                     lite_found = true;
-                    lite_value = lite$listAt((lite_args), lite$addInt(lite_i, 1n, 2773), 2771);
-                    lite_i = lite$addInt(lite_i, 2n, 2801);
+                    lite_value = lite$listAt((lite_args), lite$addInt(lite_i, 1n, 3597), 3595);
+                    lite_i = lite$addInt(lite_i, 2n, 3625);
                 }
             } else {
-                lite_i = lite$addInt(lite_i, 1n, 2855);
+                lite_i = lite$addInt(lite_i, 1n, 3679);
             }
         }
         return { found: lite_found, valid: lite_valid, value: lite_value };
@@ -2420,24 +2448,24 @@ export function main(lite$write?: (text: string) => void): string {
         let lite_i = 0n;
         void lite_i;
         while (((lite_i) < (lite_count))) {
-            const lite_arg = lite$listAt((lite_args), lite_i, 3272);
+            const lite_arg = lite$listAt((lite_args), lite_i, 4096);
             void lite_arg;
             if (lite_stop) {
                 lite_out.push(lite_arg);
-                lite_i = lite$addInt(lite_i, 1n, 3353);
+                lite_i = lite$addInt(lite_i, 1n, 4177);
             } else if (((lite_arg) === ("--"))) {
                 lite_stop = true;
                 lite_out.push(lite_arg);
-                lite_i = lite$addInt(lite_i, 1n, 3474);
+                lite_i = lite$addInt(lite_i, 1n, 4298);
             } else if (((lite_arg) === (lite_option))) {
-                if (((((lite$addInt(lite_i, 1n, 3530)) < (lite_count))) && (((lite$listAt((lite_args), lite$addInt(lite_i, 1n, 3553), 3551)) !== ("--"))))) {
-                    lite_i = lite$addInt(lite_i, 2n, 3591);
+                if (((((lite$addInt(lite_i, 1n, 4354)) < (lite_count))) && (((lite$listAt((lite_args), lite$addInt(lite_i, 1n, 4377), 4375)) !== ("--"))))) {
+                    lite_i = lite$addInt(lite_i, 2n, 4415);
                 } else {
-                    lite_i = lite$addInt(lite_i, 1n, 3639);
+                    lite_i = lite$addInt(lite_i, 1n, 4463);
                 }
             } else {
                 lite_out.push(lite_arg);
-                lite_i = lite$addInt(lite_i, 1n, 3734);
+                lite_i = lite$addInt(lite_i, 1n, 4558);
             }
         }
         return [...(lite_out)];
@@ -2447,7 +2475,7 @@ export function main(lite$write?: (text: string) => void): string {
         void lite_value;
         void lite_suffix;
         if (liteFn$lib$core$text$endsWith(lite_value, lite_suffix)) {
-            return liteFn$lib$core$text$slice(lite_value, 0n, lite$subtractInt(liteFn$lib$core$text$length(lite_value), liteFn$lib$core$text$length(lite_suffix), 3919));
+            return liteFn$lib$core$text$slice(lite_value, 0n, lite$subtractInt(liteFn$lib$core$text$length(lite_value), liteFn$lib$core$text$length(lite_suffix), 4743));
         }
         return lite_value;
     }
@@ -3120,48 +3148,51 @@ export function main(lite$write?: (text: string) => void): string {
         return (((("[\n") + (liteFn$lib$core$text$joinTexts([...(lite_entries)], ",\n")))) + ("\n]"));
     }
     void liteFn$lib$util$docs$docsJson;
-    const lite_args: string[] = [...(lite$inputArgs())];
-    void lite_args;
-    liteFn$lib$util$project$handleVersionFlag([...(lite_args)], "docs", "docs");
-    const lite_envRoot = lite$processEnvGet("LITE_DOCS_ROOT");
-    void lite_envRoot;
-    const lite_rootDir = (Boolean((((lite_envRoot).found) && ((((lite_envRoot).value) !== (""))))) ? (lite_envRoot).value : liteFn$lib$util$project$findRepoRoot());
-    void lite_rootDir;
-    if (((((liteFn$lib$core$list$listCountText([...(lite_args)])) === (1n))) && (liteFn$lib$util$cli$startsWith([...(lite_args)], "--check")))) {
-        const lite_failures: string[] = [...(liteFn$lib$util$docs$checkDocuments(lite_rootDir))];
-        void lite_failures;
-        if (((liteFn$lib$core$list$listCountText([...(lite_failures)])) > (0n))) {
-            lite$reportError(liteFn$lib$core$text$joinTexts([...(lite_failures)], "\n"));
-            return lite$exit(1n);
+    function liteFn_run(lite_args: string[]): void {
+        void lite_args;
+        liteFn$lib$util$project$handleVersionFlag([...(lite_args)], "docs", "docs");
+        const lite_envRoot = lite$processEnvGet("LITE_DOCS_ROOT");
+        void lite_envRoot;
+        const lite_rootDir = (Boolean((((lite_envRoot).found) && ((((lite_envRoot).value) !== (""))))) ? (lite_envRoot).value : liteFn$lib$util$project$findRepoRoot());
+        void lite_rootDir;
+        if (((((liteFn$lib$core$list$listCountText([...(lite_args)])) === (1n))) && (liteFn$lib$util$cli$startsWith([...(lite_args)], "--check")))) {
+            const lite_failures: string[] = [...(liteFn$lib$util$docs$checkDocuments(lite_rootDir))];
+            void lite_failures;
+            if (((liteFn$lib$core$list$listCountText([...(lite_failures)])) > (0n))) {
+                lite$reportError(liteFn$lib$core$text$joinTexts([...(lite_failures)], "\n"));
+                lite$exit(1n);
+            }
+            lite$emit("Documentation links, fragments and fences passed." + "\n");
+            lite$exit(0n);
         }
-        lite$emit("Documentation links, fragments and fences passed." + "\n");
-        return lite$exit(0n);
-    }
-    const lite_isJson = liteFn$lib$util$cli$startsWith([...(lite_args)], "--json");
-    void lite_isJson;
-    const lite_query = liteFn$lib$core$text$joinTexts([...(liteFn$lib$util$cli$dropIf([...(lite_args)], "--json"))], " ");
-    void lite_query;
-    if (lite_isJson) {
-        lite$emit(liteFn$lib$util$docs$docsJson(lite_rootDir, lite_query) + "\n");
-        return lite$exit(0n);
-    }
-    if (((lite_query) === (""))) {
-        const lite_nav = liteFn$lib$util$docs$navigationSummary(lite_rootDir);
-        void lite_nav;
-        if ((!((lite_nav).ok))) {
-            lite$reportError((lite_nav).error);
-            return lite$exit(1n);
+        const lite_isJson = liteFn$lib$util$cli$startsWith([...(lite_args)], "--json");
+        void lite_isJson;
+        const lite_query = liteFn$lib$core$text$joinTexts([...(liteFn$lib$util$cli$dropIf([...(lite_args)], "--json"))], " ");
+        void lite_query;
+        if (lite_isJson) {
+            lite$emit(liteFn$lib$util$docs$docsJson(lite_rootDir, lite_query) + "\n");
+            lite$exit(0n);
         }
-        lite$emit((lite_nav).text + "\n");
-        return lite$exit(0n);
+        if (((lite_query) === (""))) {
+            const lite_nav = liteFn$lib$util$docs$navigationSummary(lite_rootDir);
+            void lite_nav;
+            if ((!((lite_nav).ok))) {
+                lite$reportError((lite_nav).error);
+                lite$exit(1n);
+            }
+            lite$emit((lite_nav).text + "\n");
+            lite$exit(0n);
+        }
+        const lite_searched = liteFn$lib$util$docs$searchDocsText(lite_rootDir, lite_query);
+        void lite_searched;
+        if ((((lite_searched).count) === (0n))) {
+            lite$reportError((("no documentation matches: ") + (liteFn$lib$core$text$toLowerAscii(lite_query))));
+            lite$exit(1n);
+        }
+        lite$emit((lite_searched).text + "\n");
     }
-    const lite_searched = liteFn$lib$util$docs$searchDocsText(lite_rootDir, lite_query);
-    void lite_searched;
-    if ((((lite_searched).count) === (0n))) {
-        lite$reportError((("no documentation matches: ") + (liteFn$lib$core$text$toLowerAscii(lite_query))));
-        return lite$exit(1n);
-    }
-    lite$emit((lite_searched).text + "\n");
+    void liteFn_run;
+    liteFn_run([...(lite$inputArgs())]);
     return lite$out;
 }
 

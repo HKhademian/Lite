@@ -50,8 +50,8 @@ pub hasOption := fn(args: List<String>, option: String): Bool {
     false
 };
 
-/** Returns `args` with all occurrences of `option` before `--` removed, keeping `--` and trailing args intact. */
-pub withoutOption := fn(args: List<String>, option: String): List<String> {
+/** Returns `args` with all occurrences of any flag in `options` before `--` removed, keeping `--` and trailing args intact. */
+pub withoutOptions := fn(args: List<String>, options: List<String>): List<String> {
     out: mut List<String> = [];
     var stop := false;
     loop args as arg {
@@ -60,11 +60,32 @@ pub withoutOption := fn(args: List<String>, option: String): List<String> {
         } else if arg == "--" {
             stop = true;
             list.pushBack(mut out, arg);
-        } else if arg =!= option {
+        } else if not list.listContainsText(options, arg) {
             list.pushBack(mut out, arg);
         }
     }
     out
+};
+
+/** Returns `args` with all occurrences of `option` before `--` removed, keeping `--` and trailing args intact. */
+pub withoutOption := fn(args: List<String>, option: String): List<String> {
+    options: List<String> = [option];
+    withoutOptions(args, options)
+};
+
+/** Reads at most one matching option from `choices` before `--`; sets `ok = false` if multiple or repeated. */
+pub pickSingleOption := fn(args: List<String>, choices: List<String>): (ok: Bool, value: String) {
+    var picked := "";
+    loop args as arg {
+        if arg == "--" { break; }
+        if list.listContainsText(choices, arg) {
+            if picked =!= "" {
+                return (ok = false, value = "");
+            }
+            picked = arg;
+        }
+    }
+    (ok = true, value = picked)
 };
 
 /** Reads `option <value>` before `--`; sets `valid = false` when missing a value or repeated. */

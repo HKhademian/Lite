@@ -46,8 +46,8 @@ routeTarget := fn(command: String): String {
     ""
 };
 
-main := fn(): Unit {
-    args := cli.stripLeadingSeparator(io.inputArgs());
+run := fn(rawArgs: List<String>): Unit {
+    args := cli.stripLeadingSeparator(rawArgs);
     project.handleVersionFlag(args, "cli", "cli");
     commandToken := cli.head(args);
     if commandToken == "" {
@@ -67,4 +67,4 @@ main := fn(): Unit {
     project.forwardNode("bin/" + target, cli.rest(args, 1));
 };
 
-main();
+run(io.inputArgs());

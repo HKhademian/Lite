@@ -153,59 +153,63 @@ pub formatLite := fn(source: String): String {
     text.joinTexts(formatted, "\n") + "\n"
 }
 
-args := io.inputArgs();
-project.handleVersionFlag(args, "formatter", "fmt");
+run := fn(args: List<String>): Unit {
+    project.handleVersionFlag(args, "formatter", "fmt");
 
-if cli.hasOption(args, "--help") or cli.hasOption(args, "-h") {
-    io.output(
-    "Usage: ./bin/lite fmt [--check] [FILE_OR_DIR... | -]\n\n" +
-    "Options:\n" +
-    "  --check   Exit with status 1 if any file is not formatted\n"
-    );
-    io.exit(0);
-}
-
-checkOnly := cli.hasOption(args, "--check");
-targets := cli.stripLeadingSeparator(cli.withoutOption(cli.withoutOption(args, "--check"), "--write"));
-targetCount := list.listCountText(targets);
-
-if targetCount == 0 {
-    io.errorLine("Usage: ./bin/lite fmt [--check] [FILE_OR_DIR... | -]");
-    io.exit(2);
-}
-
-if targetCount == 1 and targets[0] == "-" {
-    input := io.inputAll("");
-    output := formatLite(input);
-    if checkOnly {
-        if input == output { io.exit(0); } else { io.exit(1); }
+    if cli.hasOption(args, "--help") or cli.hasOption(args, "-h") {
+        io.output(
+        "Usage: ./bin/lite fmt [--check] [FILE_OR_DIR... | -]\n\n" +
+        "Options:\n" +
+        "  --check   Exit with status 1 if any file is not formatted\n"
+        );
+        io.exit(0);
     }
-    io.output(output);
-    io.exit(0);
-}
 
-files := fsUtil.collectFiles(proc.cwd(), targets, ".lts", fsUtil.defaultIgnoredDirs(), true);
+    checkOnly := cli.hasOption(args, "--check");
+    fmtFlags: List<String> = ["--check", "--write"];
+    targets := cli.stripLeadingSeparator(cli.withoutOptions(args, fmtFlags));
+    targetCount := list.listCountText(targets);
 
-var dirty := 0;
-loop files as file {
-    readRes := fs.readText(file);
-    if not readRes.ok {
-        io.errorLine(file + ": " + readRes.error);
-        io.exit(1);
+    if targetCount == 0 {
+        io.errorLine("Usage: ./bin/lite fmt [--check] [FILE_OR_DIR... | -]");
+        io.exit(2);
     }
-    after := formatLite(readRes.text);
-    if readRes.text =!= after {
-        dirty = dirty + 1;
+
+    if targetCount == 1 and targets[0] == "-" {
+        input := io.inputAll("");
+        output := formatLite(input);
         if checkOnly {
-            io.outputLine(file);
-        } else {
-            writeRes := fs.writeText(file, after);
-            if not writeRes.ok {
-                io.errorLine(file + ": " + writeRes.error);
-                io.exit(1);
+            if input == output { io.exit(0); } else { io.exit(1); }
+        }
+        io.output(output);
+        io.exit(0);
+    }
+
+    files := fsUtil.collectFiles(proc.cwd(), targets, ".lts", fsUtil.defaultIgnoredDirs(), true);
+
+    var dirty := 0;
+    loop files as file {
+        readRes := fs.readText(file);
+        if not readRes.ok {
+            io.errorLine(file + ": " + readRes.error);
+            io.exit(1);
+        }
+        after := formatLite(readRes.text);
+        if readRes.text =!= after {
+            dirty = dirty + 1;
+            if checkOnly {
+                io.outputLine(file);
+            } else {
+                writeRes := fs.writeText(file, after);
+                if not writeRes.ok {
+                    io.errorLine(file + ": " + writeRes.error);
+                    io.exit(1);
+                }
             }
         }
     }
-}
 
-if checkOnly and dirty > 0 { io.exit(1); }
+    if checkOnly and dirty > 0 { io.exit(1); }
+};
+
+run(io.inputArgs());
