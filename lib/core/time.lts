@@ -1,0 +1,7 @@
+/* Provisional core host time signatures. This module adds no host authority by itself. */
+
+/** Returns monotonic elapsed time in nanoseconds suitable for duration measurements. */
+pub monotonicNs := fn(): Int;
+
+/** Returns the current UTC wall-clock timestamp formatted as ISO-8601 text. */
+pub utcIsoNow := fn(): String;

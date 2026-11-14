@@ -1,0 +1,31 @@
+/* Provisional core host filesystem signatures. This module adds no host authority by itself. */
+
+/** Returns `"missing"`, `"file"`, `"dir"`, or `"other"` for the resolved filesystem entry at `path`. */
+pub kind := fn(path: String): String;
+
+/** Reads strict UTF-8 text from `path`. */
+pub readText := fn(path: String): (ok: Bool, text: String, error: String);
+
+/** Writes UTF-8 `text` to `path`, creating or truncating the file. */
+pub writeText := fn(path: String, text: String): (ok: Bool, error: String);
+
+/** Returns direct entry names in directory `path` in sorted order, faulting when `path` cannot be read as a directory. */
+pub listDir := fn(path: String): List<String>;
+
+/** Ensures directory `path` and any missing parent directories exist. */
+pub makeDir := fn(path: String): (ok: Bool, error: String);
+
+/** Removes `path` recursively if present, succeeding when already absent. */
+pub remove := fn(path: String): (ok: Bool, error: String);
+
+/** Copies a file or directory recursively from `fromPath` to `toPath`, replacing an existing destination. */
+pub copy := fn(fromPath: String, toPath: String): (ok: Bool, error: String);
+
+/** Creates a symbolic link at `linkPath` pointing to `targetPath`. */
+pub symlink := fn(targetPath: String, linkPath: String): (ok: Bool, error: String);
+
+/** Resolves symlinks and relative segments in `path` to its canonical real path. */
+pub realPath := fn(path: String): (ok: Bool, path: String, error: String);
+
+/** Creates a new unique temporary directory whose name starts with `prefix`. */
+pub makeTempDir := fn(prefix: String): (ok: Bool, path: String, error: String);

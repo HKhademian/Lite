@@ -86,6 +86,44 @@ usesListPopFront := fn(calls: String): Bool {
     usesBuiltin(calls, "listPopFront")
 }
 
+/** True when any emitted item calls a host filesystem builtin. */
+usesFs := fn(calls: String): Bool {
+    usesBuiltin(calls, "fsKind") or usesBuiltin(calls, "fsReadText") or usesBuiltin(calls, "fsWriteText") or
+    usesBuiltin(calls, "fsListDir") or usesBuiltin(calls, "fsMakeDir") or usesBuiltin(calls, "fsRemove") or
+    usesBuiltin(calls, "fsCopy") or usesBuiltin(calls, "fsSymlink") or usesBuiltin(calls, "fsRealPath") or
+    usesBuiltin(calls, "fsMakeTempDir")
+}
+
+/** True when any emitted item calls a host filesystem or file-hash helper returning `(ok, ..., error)`. */
+usesHostErrorResult := fn(calls: String): Bool {
+    usesBuiltin(calls, "fsReadText") or usesBuiltin(calls, "fsWriteText") or usesBuiltin(calls, "fsMakeDir") or
+    usesBuiltin(calls, "fsRemove") or usesBuiltin(calls, "fsCopy") or usesBuiltin(calls, "fsSymlink") or
+    usesBuiltin(calls, "fsRealPath") or usesBuiltin(calls, "fsMakeTempDir") or usesBuiltin(calls, "cryptoSha256File")
+}
+
+/** True when any emitted item calls a host process builtin. */
+usesProcess := fn(calls: String): Bool {
+    usesBuiltin(calls, "processCwd") or usesBuiltin(calls, "processExecPath") or
+    usesBuiltin(calls, "processEntryPath") or usesBuiltin(calls, "processPlatform") or
+    usesBuiltin(calls, "processArch") or usesBuiltin(calls, "processRuntimeVersion") or
+    usesBuiltin(calls, "processEnvGet") or usesBuiltin(calls, "processRun")
+}
+
+/** True when any emitted item calls a host crypto builtin. */
+usesCrypto := fn(calls: String): Bool {
+    usesBuiltin(calls, "cryptoSha256Text") or usesBuiltin(calls, "cryptoSha256File")
+}
+
+/** True when any emitted item calls a host time builtin. */
+usesTime := fn(calls: String): Bool {
+    usesBuiltin(calls, "timeMonotonicNs") or usesBuiltin(calls, "timeUtcIsoNow")
+}
+
+/** True when any emitted item calls any OS/host tool builtin beyond basic I/O and text. */
+usesHostOs := fn(calls: String): Bool {
+    usesFs(calls) or usesProcess(calls) or usesCrypto(calls) or usesTime(calls)
+}
+
 
 /** True when a program needs checked dynamic Int* arithmetic or narrow range guards. */
 usesIntArithmetic := fn(calls: String): Bool {
@@ -305,23 +343,214 @@ emitInputHelpers := fn(calls: String): Unit {
     io.outputLine("");
 }
 
+/** Emits the typed `process` ambient declaration covering every Node builtin required by `calls`. */
+emitProcessDecl := fn(calls: String): Unit {
+    needBaseProcess := usesBuiltin(calls, "inputArgs") or usesBuiltin(calls, "inputAll") or usesBuiltin(calls, "inputLine") or
+        usesBuiltin(calls, "inputInt") or usesBuiltin(calls, "inputFloat") or usesBuiltin(calls, "reportError") or
+        usesBuiltin(calls, "exit") or usesIntArithmetic(calls) or usesIntDivision(calls) or usesBounds(calls) or usesFloatArithmetic(calls);
+    needOsHost := usesHostOs(calls);
+    if not needBaseProcess and not needOsHost { return; }
+    needFs := needBaseProcess or usesFs(calls) or usesBuiltin(calls, "cryptoSha256File");
+    io.outputLine("declare const process: {");
+    io.outputLine("    argv: string[];");
+    io.outputLine("    exit(code: number): never;");
+    if usesProcess(calls) {
+        io.outputLine("    cwd(): string;");
+        io.outputLine("    execPath: string;");
+        io.outputLine("    platform: string;");
+        io.outputLine("    arch: string;");
+        io.outputLine("    version: string;");
+        io.outputLine("    env: Record<string, string | undefined>;");
+    }
+    if usesBuiltin(calls, "timeMonotonicNs") {
+        io.outputLine("    hrtime: { bigint(): bigint };");
+    }
+    if needFs {
+        io.outputLine("    getBuiltinModule(name: \"node:fs\"): {");
+        io.outputLine("        readSync(fd: number, buffer: Uint8Array, offset: number, length: number, position: null): number;");
+        io.outputLine("        writeSync(fd: number, text: string): number;");
+        if usesFs(calls) or usesBuiltin(calls, "cryptoSha256File") {
+            io.outputLine("        statSync(path: string): { isFile(): boolean; isDirectory(): boolean };");
+            io.outputLine("        readFileSync(path: string): Uint8Array;");
+            io.outputLine("        writeFileSync(path: string, data: string, encoding: \"utf8\"): void;");
+            io.outputLine("        readdirSync(path: string): string[];");
+            io.outputLine("        mkdirSync(path: string, options: { recursive: boolean }): void;");
+            io.outputLine("        rmSync(path: string, options: { recursive: boolean; force: boolean }): void;");
+            io.outputLine("        cpSync(src: string, dest: string, options: { recursive: boolean; force: boolean }): void;");
+            io.outputLine("        symlinkSync(target: string, path: string): void;");
+            io.outputLine("        realpathSync(path: string): string;");
+            io.outputLine("        mkdtempSync(prefix: string): string;");
+        }
+        io.outputLine("    };");
+    }
+    if usesBuiltin(calls, "fsMakeTempDir") {
+        io.outputLine("    getBuiltinModule(name: \"node:path\"): { join(...paths: string[]): string };");
+        io.outputLine("    getBuiltinModule(name: \"node:os\"): { tmpdir(): string };");
+    }
+    if usesBuiltin(calls, "processRun") {
+        io.outputLine("    getBuiltinModule(name: \"node:child_process\"): {");
+        io.outputLine("        spawnSync(command: string, args: readonly string[], options: { cwd?: string; env: Record<string, string | undefined>; encoding?: \"utf8\"; input?: string; stdio: \"inherit\" | readonly [\"pipe\", \"pipe\", \"pipe\"]; maxBuffer: number }): { status: number | null; signal: string | null; stdout: string | null; stderr: string | null; error?: Error };");
+        io.outputLine("    };");
+    }
+    if usesCrypto(calls) {
+        io.outputLine("    getBuiltinModule(name: \"node:crypto\"): {");
+        io.outputLine("        createHash(algorithm: string): { update(data: string | Uint8Array, encoding?: string): { digest(encoding: \"hex\"): string } };");
+        io.outputLine("    };");
+    }
+    io.outputLine("};");
+    if usesBuiltin(calls, "fsReadText") {
+        io.outputLine("declare const TextDecoder: { new (label: string, options?: { fatal?: boolean }): { decode(input: Uint8Array): string } };");
+    }
+    io.outputLine("");
+}
+
+/** Emits host filesystem helpers used by the program. */
+emitFsHelpers := fn(calls: String): Unit {
+    if usesHostErrorResult(calls) {
+        io.outputLine("function lite$errMsg(error: unknown): string {");
+        io.outputLine("    return error instanceof Error ? error.message : String(error);");
+        io.outputLine("}");
+    }
+    if usesBuiltin(calls, "fsKind") {
+        io.outputLine("function lite$fsKind(path: string): string {");
+        io.outputLine("    try {");
+        io.outputLine("        const st = process.getBuiltinModule(\"node:fs\").statSync(path);");
+        io.outputLine("        if (st.isFile()) return \"file\";");
+        io.outputLine("        if (st.isDirectory()) return \"dir\";");
+        io.outputLine("        return \"other\";");
+        io.outputLine("    } catch { return \"missing\"; }");
+        io.outputLine("}");
+    }
+    if usesBuiltin(calls, "fsReadText") {
+        io.outputLine("function lite$fsReadText(path: string): { ok: boolean; text: string; error: string } {");
+        io.outputLine("    try {");
+        io.outputLine("        const bytes = process.getBuiltinModule(\"node:fs\").readFileSync(path);");
+        io.outputLine("        return { ok: true, text: new TextDecoder(\"utf-8\", { fatal: true }).decode(bytes), error: \"\" };");
+        io.outputLine("    } catch (error) { return { ok: false, text: \"\", error: lite$errMsg(error) }; }");
+        io.outputLine("}");
+    }
+    if usesBuiltin(calls, "fsWriteText") {
+        io.outputLine("function lite$fsWriteText(path: string, text: string): { ok: boolean; error: string } {");
+        io.outputLine("    try { process.getBuiltinModule(\"node:fs\").writeFileSync(path, text, \"utf8\"); return { ok: true, error: \"\" }; }");
+        io.outputLine("    catch (error) { return { ok: false, error: lite$errMsg(error) }; }");
+        io.outputLine("}");
+    }
+    if usesBuiltin(calls, "fsListDir") {
+        io.outputLine("function lite$fsListDir(path: string): string[] {");
+        io.outputLine("    return process.getBuiltinModule(\"node:fs\").readdirSync(path).sort();");
+        io.outputLine("}");
+    }
+    if usesBuiltin(calls, "fsMakeDir") {
+        io.outputLine("function lite$fsMakeDir(path: string): { ok: boolean; error: string } {");
+        io.outputLine("    try { process.getBuiltinModule(\"node:fs\").mkdirSync(path, { recursive: true }); return { ok: true, error: \"\" }; }");
+        io.outputLine("    catch (error) { return { ok: false, error: lite$errMsg(error) }; }");
+        io.outputLine("}");
+    }
+    if usesBuiltin(calls, "fsRemove") {
+        io.outputLine("function lite$fsRemove(path: string): { ok: boolean; error: string } {");
+        io.outputLine("    try { process.getBuiltinModule(\"node:fs\").rmSync(path, { recursive: true, force: true }); return { ok: true, error: \"\" }; }");
+        io.outputLine("    catch (error) { return { ok: false, error: lite$errMsg(error) }; }");
+        io.outputLine("}");
+    }
+    if usesBuiltin(calls, "fsCopy") {
+        io.outputLine("function lite$fsCopy(fromPath: string, toPath: string): { ok: boolean; error: string } {");
+        io.outputLine("    try { process.getBuiltinModule(\"node:fs\").cpSync(fromPath, toPath, { recursive: true, force: true }); return { ok: true, error: \"\" }; }");
+        io.outputLine("    catch (error) { return { ok: false, error: lite$errMsg(error) }; }");
+        io.outputLine("}");
+    }
+    if usesBuiltin(calls, "fsSymlink") {
+        io.outputLine("function lite$fsSymlink(targetPath: string, linkPath: string): { ok: boolean; error: string } {");
+        io.outputLine("    try { process.getBuiltinModule(\"node:fs\").symlinkSync(targetPath, linkPath); return { ok: true, error: \"\" }; }");
+        io.outputLine("    catch (error) { return { ok: false, error: lite$errMsg(error) }; }");
+        io.outputLine("}");
+    }
+    if usesBuiltin(calls, "fsRealPath") {
+        io.outputLine("function lite$fsRealPath(path: string): { ok: boolean; path: string; error: string } {");
+        io.outputLine("    try { return { ok: true, path: process.getBuiltinModule(\"node:fs\").realpathSync(path), error: \"\" }; }");
+        io.outputLine("    catch (error) { return { ok: false, path: \"\", error: lite$errMsg(error) }; }");
+        io.outputLine("}");
+    }
+    if usesBuiltin(calls, "fsMakeTempDir") {
+        io.outputLine("function lite$fsMakeTempDir(prefix: string): { ok: boolean; path: string; error: string } {");
+        io.outputLine("    try {");
+        io.outputLine("        const joined = process.getBuiltinModule(\"node:path\").join(process.getBuiltinModule(\"node:os\").tmpdir(), prefix);");
+        io.outputLine("        return { ok: true, path: process.getBuiltinModule(\"node:fs\").mkdtempSync(joined), error: \"\" };");
+        io.outputLine("    } catch (error) { return { ok: false, path: \"\", error: lite$errMsg(error) }; }");
+        io.outputLine("}");
+    }
+    if usesFs(calls) or usesHostErrorResult(calls) { io.outputLine(""); }
+}
+
+/** Emits host process, env, and child-execution helpers used by the program. */
+emitProcessHelpers := fn(calls: String): Unit {
+    if not usesProcess(calls) { return; }
+    if usesBuiltin(calls, "processCwd") { io.outputLine("function lite$processCwd(): string { return process.cwd(); }"); }
+    if usesBuiltin(calls, "processExecPath") { io.outputLine("function lite$processExecPath(): string { return process.execPath; }"); }
+    if usesBuiltin(calls, "processEntryPath") { io.outputLine("function lite$processEntryPath(): string { return process.argv[1] ?? \"\"; }"); }
+    if usesBuiltin(calls, "processPlatform") { io.outputLine("function lite$processPlatform(): string { return process.platform; }"); }
+    if usesBuiltin(calls, "processArch") { io.outputLine("function lite$processArch(): string { return process.arch; }"); }
+    if usesBuiltin(calls, "processRuntimeVersion") { io.outputLine("function lite$processRuntimeVersion(): string { return process.version; }"); }
+    if usesBuiltin(calls, "processEnvGet") {
+        io.outputLine("function lite$processEnvGet(name: string): { found: boolean; value: string } {");
+        io.outputLine("    if (!Object.prototype.hasOwnProperty.call(process.env, name)) return { found: false, value: \"\" };");
+        io.outputLine("    const raw = process.env[name];");
+        io.outputLine("    return raw === undefined ? { found: false, value: \"\" } : { found: true, value: raw };");
+        io.outputLine("}");
+    }
+    if usesBuiltin(calls, "processRun") {
+        io.outputLine("function lite$processRun(command: string, args: string[], cwd: string, envOverrides: string[], capture: boolean, stdinText: string): { status: bigint; stdout: string; stderr: string; error: string } {");
+        io.outputLine("    const env: Record<string, string | undefined> = { ...process.env };");
+        io.outputLine("    for (const entry of envOverrides) {");
+        io.outputLine("        const eq = entry.indexOf(\"=\");");
+        io.outputLine("        if (eq === 0) { delete env[entry.slice(1)]; }");
+        io.outputLine("        else if (eq > 0) { env[entry.slice(0, eq)] = entry.slice(eq + 1); }");
+        io.outputLine("        else { return { status: -1n, stdout: \"\", stderr: \"\", error: \"invalid environment override: \" + entry }; }");
+        io.outputLine("    }");
+        io.outputLine("    const opts: { cwd?: string; env: Record<string, string | undefined>; encoding?: \"utf8\"; input?: string; stdio: \"inherit\" | readonly [\"pipe\", \"pipe\", \"pipe\"]; maxBuffer: number } = capture");
+        io.outputLine("        ? { env, encoding: \"utf8\", input: stdinText, stdio: [\"pipe\", \"pipe\", \"pipe\"], maxBuffer: 128 * 1024 * 1024 }");
+        io.outputLine("        : { env, stdio: \"inherit\", maxBuffer: 128 * 1024 * 1024 };");
+        io.outputLine("    if (cwd !== \"\") opts.cwd = cwd;");
+        io.outputLine("    const res = process.getBuiltinModule(\"node:child_process\").spawnSync(command, args, opts);");
+        io.outputLine("    const stdout = res.stdout ?? \"\";");
+        io.outputLine("    const stderr = res.stderr ?? \"\";");
+        io.outputLine("    if (res.error !== undefined) return { status: -1n, stdout, stderr, error: res.error instanceof Error ? res.error.message : String(res.error) };");
+        io.outputLine("    if (res.signal !== null) return { status: -1n, stdout, stderr, error: \"terminated by signal \" + res.signal };");
+        io.outputLine("    return { status: BigInt(res.status ?? 1), stdout, stderr, error: \"\" };");
+        io.outputLine("}");
+    }
+    io.outputLine("");
+}
+
+/** Emits host crypto and clock helpers used by the program. */
+emitCryptoAndTimeHelpers := fn(calls: String): Unit {
+    if usesBuiltin(calls, "cryptoSha256Text") {
+        io.outputLine("function lite$cryptoSha256Text(text: string): string {");
+        io.outputLine("    return process.getBuiltinModule(\"node:crypto\").createHash(\"sha256\").update(text, \"utf8\").digest(\"hex\");");
+        io.outputLine("}");
+    }
+    if usesBuiltin(calls, "cryptoSha256File") {
+        io.outputLine("function lite$cryptoSha256File(path: string): { ok: boolean; hex: string; error: string } {");
+        io.outputLine("    try {");
+        io.outputLine("        const bytes = process.getBuiltinModule(\"node:fs\").readFileSync(path);");
+        io.outputLine("        return { ok: true, hex: process.getBuiltinModule(\"node:crypto\").createHash(\"sha256\").update(bytes).digest(\"hex\"), error: \"\" };");
+        io.outputLine("    } catch (error) { return { ok: false, hex: \"\", error: lite$errMsg(error) }; }");
+        io.outputLine("}");
+    }
+    if usesBuiltin(calls, "timeMonotonicNs") {
+        io.outputLine("function lite$timeMonotonicNs(): bigint { return process.hrtime.bigint(); }");
+    }
+    if usesBuiltin(calls, "timeUtcIsoNow") {
+        io.outputLine("function lite$timeUtcIsoNow(): string { return new Date().toISOString(); }");
+    }
+    if usesCrypto(calls) or usesTime(calls) { io.outputLine(""); }
+}
+
 /** Emits the self-contained declarations and helpers for the I/O and text builtins a program uses. */
 emitBuiltinHelpers := fn(calls: String): Unit {
     abruptFault := usesAbruptFault(calls);
     abruptExit := usesBuiltin(calls, "finally") and usesBuiltin(calls, "exit");
     abruptUnwind := usesAbruptUnwind(calls);
-    if usesBuiltin(calls, "inputArgs") or usesBuiltin(calls, "inputAll") or usesBuiltin(calls, "inputLine") or usesBuiltin(calls, "inputInt") or usesBuiltin(calls, "inputFloat") or
-        usesBuiltin(calls, "reportError") or usesBuiltin(calls, "exit") or usesIntArithmetic(calls) or usesIntDivision(calls) or usesBounds(calls) or usesFloatArithmetic(calls) {
-        io.outputLine("declare const process: {");
-        io.outputLine("    argv: string[];");
-        io.outputLine("    exit(code: number): never;");
-        io.outputLine("    getBuiltinModule(name: \"node:fs\"): {");
-        io.outputLine("        readSync(fd: number, buffer: Uint8Array, offset: number, length: number, position: null): number;");
-        io.outputLine("        writeSync(fd: number, text: string): number;");
-        io.outputLine("    };");
-        io.outputLine("};");
-        io.outputLine("");
-    }
+    emitProcessDecl(calls);
     if abruptUnwind {
         io.outputLine("const lite$abruptToken = {};");
         io.outputLine("let lite$abruptActive: boolean = false;");
@@ -388,6 +617,9 @@ emitBuiltinHelpers := fn(calls: String): Unit {
         io.outputLine("}");
         io.outputLine("");
     }
+    emitFsHelpers(calls);
+    emitProcessHelpers(calls);
+    emitCryptoAndTimeHelpers(calls);
     if usesBuiltin(calls, "textLength") or usesBuiltin(calls, "textAt") or usesBuiltin(calls, "textSlice") {
         io.outputLine("let lite$lastBmp = \"\";");
         io.outputLine("const lite$bmpSet = new Set<string>();");
@@ -771,4 +1003,12 @@ pub emitProgram := fn(items: frontend.Items, source: String, prefix: String): Un
         io.outputLine("    }");
     }
     io.outputLine("}");
+    if not usesBuiltin(calls, "readSource") and (usesHostOs(calls) or usesBuiltin(calls, "inputArgs")) {
+        io.outputLine("");
+        io.outputLine("if ((import.meta as { readonly main?: boolean }).main === true) {");
+        io.outputLine("    main((text: string): void => {");
+        io.outputLine("        process.getBuiltinModule(\"node:fs\").writeSync(1, text);");
+        io.outputLine("    });");
+        io.outputLine("}");
+    }
 }

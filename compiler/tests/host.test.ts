@@ -3946,3 +3946,113 @@ test('construct-level finally cleanup, LIFO unwinding, barriers, and failure pre
     assert.match(rejectedC.stderr.toString(), /C backend does not support finally blocks yet/, badC);
   }
 });
+
+test('core os/fs/process/crypto/time host bindings, standalone CLI execution, and target rejections work cleanly', () => {
+  const fixtureName = resolve(root, 'compiler/tests/fixtures/core-host-os.lts');
+  const compiled = compileTs({
+    text: [
+      'fs := import "core/fs";',
+      'proc := import "core/process";',
+      'crypto := import "core/crypto";',
+      'time := import "core/time";',
+      'io := import "core/io";',
+      'tmp := fs.makeTempDir("lite-os-host-");',
+      'if not tmp.ok { io.outputLine("mkdir-temp-fail", tmp.error); io.exit(1); }',
+      'dir := tmp.path;',
+      'sub := dir + "/sub";',
+      'made := fs.makeDir(sub);',
+      'file := sub + "/target.txt";',
+      'wrote := fs.writeText(file, "hello world\\n");',
+      'readOk := fs.readText(file);',
+      'badRead := fs.readText(dir + "/missing.txt");',
+      'subCopy := dir + "/sub-copy";',
+      'copied := fs.copy(sub, subCopy);',
+      'entries := fs.listDir(dir);',
+      'linkPath := dir + "/link.txt";',
+      'linked := fs.symlink("sub/target.txt", linkPath);',
+      'real := fs.realPath(linkPath);',
+      'removed := fs.remove(subCopy);',
+      'removedMissing := fs.remove(subCopy);',
+      'unsetEnv := proc.envGet("LITE_DEFINITELY_UNSET_XYZ");',
+      'homeEnv := proc.envGet("PATH");',
+      'childOk := proc.run(proc.execPath(), ["-e", "process.stdout.write(process.env.LITE_ENV_CHILD + \':\' + process.getBuiltinModule(\'node:fs\').readFileSync(0,\'utf8\'))"], dir, ["LITE_ENV_CHILD=ok"], true, "ping");',
+      'childFail := proc.run("/no/such/binary-lite-xyz", [], "", [], true, "");',
+      'hashText := crypto.sha256Text("hello");',
+      'hashFile := crypto.sha256File(file);',
+      'hashMissing := crypto.sha256File(dir + "/missing.txt");',
+      't0 := time.monotonicNs();',
+      't1 := time.monotonicNs();',
+      'iso := time.utcIsoNow();',
+      'io.outputLine(fs.kind(dir), fs.kind(file), fs.kind(linkPath), fs.kind(dir + "/missing.txt"));',
+      'io.outputLine(made.ok, wrote.ok, readOk.ok, readOk.text == "hello world\\n", not badRead.ok, copied.ok);',
+      'io.outputLine(entries, linked.ok, real.ok, real.path == fs.realPath(file).path, removed.ok, removedMissing.ok);',
+      'io.outputLine(proc.cwd() =!= "", proc.execPath() =!= "", proc.platform() =!= "", proc.arch() =!= "", proc.runtimeVersion() =!= "", not unsetEnv.found, unsetEnv.value == "", homeEnv.found);',
+      'io.outputLine(childOk.status, childOk.stdout, childOk.stderr == "", childOk.error == "", childFail.status, childFail.error =!= "");',
+      'io.outputLine(hashText == "2cf24dba5fb0a30e26e83b2ac5b9e29e1b161e5c1fa7425e73043362938b9824", hashFile.ok, hashFile.hex == crypto.sha256Text("hello world\\n"), not hashMissing.ok);',
+      'io.outputLine(t1 >= t0, iso =!= "");',
+      'clean := fs.remove(dir);',
+      'io.outputLine(clean.ok, fs.kind(dir));',
+    ].join('\n'),
+    name: fixtureName,
+  });
+  assert.equal(compiled.status, 0, compiled.stderr.toString());
+  withTsArtifact(compiled.stdout.toString(), run => {
+    const actual = run();
+    assert.equal(actual.status, 0, actual.stderr.toString());
+    assert.equal(actual.stdout.toString(), [
+      'dir file file missing',
+      'true true true true true true',
+      '[sub, sub-copy] true true true true true',
+      'true true true true true true true true',
+      '0 ok:ping true true -1 true',
+      'true true true true',
+      'true true',
+      'true missing',
+      '',
+    ].join('\n'));
+  });
+
+  const standaloneCompiled = compileTs({
+    text: [
+      'proc := import "core/process";',
+      'io := import "core/io";',
+      'io.outputLine(proc.entryPath() =!= "", io.inputArgs());',
+    ].join('\n'),
+    name: fixtureName,
+  });
+  assert.equal(standaloneCompiled.status, 0, standaloneCompiled.stderr.toString());
+  assert.equal(checkTsArtifact(standaloneCompiled.stdout.toString()).status, 0);
+  const standaloneDir = mkdtempSync(join(tmpdir(), 'lite-standalone-cli-'));
+  try {
+    const script = join(standaloneDir, 'tool.ts');
+    writeFileSync(script, standaloneCompiled.stdout);
+    const direct = spawnSync(process.execPath, [script, 'alpha', 'beta'], { env, encoding: 'utf8', timeout: 10000 });
+    assert.equal(direct.error, undefined);
+    assert.equal(direct.status, 0, direct.stderr);
+    assert.equal(direct.stdout, 'true [alpha, beta]\n');
+  } finally { rmSync(standaloneDir, { recursive: true, force: true }); }
+
+  const directory = mkdtempSync(join(tmpdir(), 'lite-core-os-unbound-'));
+  try {
+    writeFileSync(join(directory, 'fs.lts'), 'pub kind := fn(path: String): String;\n');
+    writeFileSync(join(directory, 'app.lts'), 'fs := import "./fs.lts"; x := fs.kind(".");\n');
+    const unbound = compileTs({ text: readFileSync(join(directory, 'app.lts'), 'utf8'), name: realpathSync(join(directory, 'app.lts')) });
+    assert.equal(unbound.status, 2);
+    assert.match(unbound.stderr.toString(), /bodyless function declaration has no matching core host binding/);
+
+    const badAbi = compileTs({ text: 'pub kind := fn(path: String): Int;', name: 'lib/core/fs.lts' });
+    assert.equal(badAbi.status, 2);
+    assert.match(badAbi.stderr.toString(), /bodyless function declaration has no matching core host binding/);
+  } finally { rmSync(directory, { recursive: true, force: true }); }
+
+  for (const [sourceText, pattern] of [
+    ['fs := import "core/fs"; x := fs.kind(".");', /C backend does not support filesystem builtins yet/],
+    ['proc := import "core/process"; x := proc.cwd();', /C backend does not support process builtins yet/],
+    ['c := import "core/crypto"; x := c.sha256Text("a");', /C backend does not support crypto builtins yet/],
+    ['t := import "core/time"; x := t.monotonicNs();', /C backend does not support time builtins yet/],
+  ] as const) {
+    const rejectedC = compileTarget('c', { text: sourceText, name: fixtureName });
+    assert.equal(rejectedC.status, 2, sourceText);
+    assert.match(rejectedC.stderr.toString(), pattern, sourceText);
+  }
+});

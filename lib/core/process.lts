@@ -1,0 +1,26 @@
+/* Provisional core host process signatures. This module adds no host authority by itself. */
+
+/** Returns the current process working directory. */
+pub cwd := fn(): String;
+
+/** Returns the host runtime executable path. */
+pub execPath := fn(): String;
+
+/** Returns the executed entry path when running directly from a script entry, or `""`. */
+pub entryPath := fn(): String;
+
+/** Returns the host operating system identifier (such as `"darwin"` or `"linux"`). */
+pub platform := fn(): String;
+
+/** Returns the host CPU architecture identifier (such as `"arm64"` or `"x64"`). */
+pub arch := fn(): String;
+
+/** Returns the host runtime version string. */
+pub runtimeVersion := fn(): String;
+
+/** Reads environment variable `name`, reporting whether it is set in the process environment. */
+pub envGet := fn(name: String): (found: Bool, value: String);
+
+/** Runs `command` with `args`; empty `cwd` inherits current directory, `envOverrides` applies `KEY=VALUE` entries, and `capture` pipes stdout/stderr with `stdinText` instead of inheriting stdio. */
+pub run := fn(command: String, args: List<String>, cwd: String, envOverrides: List<String>, capture: Bool,
+stdinText: String): (status: Int, stdout: String, stderr: String, error: String);

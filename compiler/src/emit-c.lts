@@ -39,6 +39,25 @@ unsupportedBuiltinCode := fn(calls: String): String {
         }
         usesIntHelper(calls, "lite$textLength(") or usesIntHelper(calls, "lite$textAt(") or
             usesIntHelper(calls, "lite$textSlice(") { "C backend does not support text builtins yet" }
+        usesIntHelper(calls, "lite$fsKind(") or usesIntHelper(calls, "lite$fsReadText(") or
+            usesIntHelper(calls, "lite$fsWriteText(") or usesIntHelper(calls, "lite$fsListDir(") or
+            usesIntHelper(calls, "lite$fsMakeDir(") or usesIntHelper(calls, "lite$fsRemove(") or
+            usesIntHelper(calls, "lite$fsCopy(") or usesIntHelper(calls, "lite$fsSymlink(") or
+            usesIntHelper(calls, "lite$fsRealPath(") or usesIntHelper(calls, "lite$fsMakeTempDir(") {
+            "C backend does not support filesystem builtins yet"
+        }
+        usesIntHelper(calls, "lite$processCwd(") or usesIntHelper(calls, "lite$processExecPath(") or
+            usesIntHelper(calls, "lite$processEntryPath(") or usesIntHelper(calls, "lite$processPlatform(") or
+            usesIntHelper(calls, "lite$processArch(") or usesIntHelper(calls, "lite$processRuntimeVersion(") or
+            usesIntHelper(calls, "lite$processEnvGet(") or usesIntHelper(calls, "lite$processRun(") {
+            "C backend does not support process builtins yet"
+        }
+        usesIntHelper(calls, "lite$cryptoSha256Text(") or usesIntHelper(calls, "lite$cryptoSha256File(") {
+            "C backend does not support crypto builtins yet"
+        }
+        usesIntHelper(calls, "lite$timeMonotonicNs(") or usesIntHelper(calls, "lite$timeUtcIsoNow(") {
+            "C backend does not support time builtins yet"
+        }
         _ { "" }
     }
 }

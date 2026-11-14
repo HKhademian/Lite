@@ -8,6 +8,10 @@ const hostModules = [
   ['lite.core.io.v1', 'lib/core/io.lts'],
   ['lite.core.list.v1', 'lib/core/list.lts'],
   ['lite.core.text.v1', 'lib/core/text-host.lts'],
+  ['lite.core.fs.v1', 'lib/core/fs.lts'],
+  ['lite.core.process.v1', 'lib/core/process.lts'],
+  ['lite.core.crypto.v1', 'lib/core/crypto.lts'],
+  ['lite.core.time.v1', 'lib/core/time.lts'],
   ['lite.compiler.modules.v1', 'compiler/src/modules.lts'],
   ['lite.compiler.source-reader.v1', 'compiler/src/source-reader.lts'],
 ] as const;

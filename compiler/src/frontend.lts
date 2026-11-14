@@ -1078,6 +1078,37 @@ coreHostFunction := fn(moduleIdentity: String, name: String, params: String, res
         else if name == "pushFront" and params == "values=mut List<T>|value=T" and result == "Unit" { "lite$core$list$pushFront:v1" }
         else if name == "popFront" and params == "values=mut List<T>" and result == "T" { "lite$core$list$popFront:v1" }
         else { "" }
+    } else if moduleIdentity == "lite.core.fs.v1" {
+        if name == "kind" and params == "path=String" and result == "String" { "lite$fsKind" }
+        else if name == "readText" and params == "path=String" and result == "(ok:Bool,text:String,error:String)" { "lite$fsReadText" }
+        else if name == "writeText" and params == "path=String|text=String" and result == "(ok:Bool,error:String)" { "lite$fsWriteText" }
+        else if name == "listDir" and params == "path=String" and result == "List<String>" { "lite$fsListDir" }
+        else if name == "makeDir" and params == "path=String" and result == "(ok:Bool,error:String)" { "lite$fsMakeDir" }
+        else if name == "remove" and params == "path=String" and result == "(ok:Bool,error:String)" { "lite$fsRemove" }
+        else if name == "copy" and params == "fromPath=String|toPath=String" and result == "(ok:Bool,error:String)" { "lite$fsCopy" }
+        else if name == "symlink" and params == "targetPath=String|linkPath=String" and result == "(ok:Bool,error:String)" { "lite$fsSymlink" }
+        else if name == "realPath" and params == "path=String" and result == "(ok:Bool,path:String,error:String)" { "lite$fsRealPath" }
+        else if name == "makeTempDir" and params == "prefix=String" and result == "(ok:Bool,path:String,error:String)" { "lite$fsMakeTempDir" }
+        else { "" }
+    } else if moduleIdentity == "lite.core.process.v1" {
+        if name == "cwd" and params == "" and result == "String" { "lite$processCwd" }
+        else if name == "execPath" and params == "" and result == "String" { "lite$processExecPath" }
+        else if name == "entryPath" and params == "" and result == "String" { "lite$processEntryPath" }
+        else if name == "platform" and params == "" and result == "String" { "lite$processPlatform" }
+        else if name == "arch" and params == "" and result == "String" { "lite$processArch" }
+        else if name == "runtimeVersion" and params == "" and result == "String" { "lite$processRuntimeVersion" }
+        else if name == "envGet" and params == "name=String" and result == "(found:Bool,value:String)" { "lite$processEnvGet" }
+        else if name == "run" and params == "command=String|args=List<String>|cwd=String|envOverrides=List<String>|capture=Bool|stdinText=String" and
+            result == "(status:Int,stdout:String,stderr:String,error:String)" { "lite$processRun" }
+        else { "" }
+    } else if moduleIdentity == "lite.core.crypto.v1" {
+        if name == "sha256Text" and params == "text=String" and result == "String" { "lite$cryptoSha256Text" }
+        else if name == "sha256File" and params == "path=String" and result == "(ok:Bool,hex:String,error:String)" { "lite$cryptoSha256File" }
+        else { "" }
+    } else if moduleIdentity == "lite.core.time.v1" {
+        if name == "monotonicNs" and params == "" and result == "Int" { "lite$timeMonotonicNs" }
+        else if name == "utcIsoNow" and params == "" and result == "String" { "lite$timeUtcIsoNow" }
+        else { "" }
     } else if moduleIdentity == "lite.compiler.source-reader.v1" and name == "read" and
         params == "importer=String|spec=String" and result == "(path:String,display:String,identity:String,text:String)" {
         "lite$readSource"

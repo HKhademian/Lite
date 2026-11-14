@@ -1,8 +1,8 @@
 {
-  "note": "Reviewed 2026-11-14 after guarding comment checks and hoisting substring scans in frontend. All 69 TS/C corpus artifact hashes and 25 rejection cases verified.",
+  "note": "Reviewed 2026-11-14 after adding core/fs, core/process, core/crypto, core/time host bindings and standalone CLI entry execution. All 69 TS/C corpus artifact hashes and 25 rejection cases verified.",
   "recorded": "2026-11-14",
-  "sourceSha256": "e319fee2edc06a3d410ed87b5d84ca404491c16f99a320249aa4bb10ab23c2b9",
-  "compilerSha256": "91256ad3d03c594076b20f32f1d81544cdf113b05d8d774a305df189447bdaf6",
+  "sourceSha256": "e79d576b5e07329a5975ca52936fcb5e9447529a5229520549f4a80fcc833a1a",
+  "compilerSha256": "d936cf944f172c43b586b499d307b327a706c447eefa58fe36b0716b762b1f7e",
   "programCases": 69,
   "rejectedCases": 25,
   "artifacts": [
