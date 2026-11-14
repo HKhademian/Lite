@@ -72,32 +72,52 @@ export const siteCss = `:root {
   color: var(--ink-muted);
   cursor: pointer;
   line-height: 1;
-  transition: box-shadow 0.2s ease, color 0.2s ease, transform 0.2s ease;
+  transition: box-shadow 0.25s ease, color 0.2s ease, transform 0.28s cubic-bezier(0.34, 1.56, 0.64, 1);
 }
 .theme-toggle:hover {
   color: var(--accent);
-  transform: scale(1.06);
+  transform: translateY(-1px) scale(1.12);
+}
+.theme-toggle:active {
+  transform: translateY(0) scale(0.92);
+}
+.theme-toggle:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 4px;
 }
 .theme-toggle .theme-icon {
   display: block;
   width: 100%;
   height: 100%;
-  transition: filter 0.2s ease, transform 0.2s ease;
+  transition: filter 0.25s ease, transform 0.35s cubic-bezier(0.34, 1.56, 0.64, 1);
 }
+.theme-toggle:hover .icon-auto {
+  transform: rotate(15deg);
+}
+.theme-toggle:hover .icon-sun {
+  transform: rotate(18deg);
+}
+.theme-toggle:hover .icon-moon {
+  transform: rotate(-12deg);
+}
+.theme-toggle .icon-sun,
 .theme-toggle .icon-moon {
   display: none;
+}
+.theme-toggle .icon-auto {
+  display: block;
 }
 .theme-toggle.theme-toggle-shine {
   --switch-shine-size: 26px;
   --switch-shine-spread: 4px;
   --switch-shine-icon-glow: 8px;
-  --switch-color: #D97706;
-  --switch-shine-core: rgba(254, 240, 138, 0.9);
-  --switch-shine-mid: rgba(251, 191, 36, 0.62);
-  --switch-shine-outer: rgba(245, 158, 11, 0.36);
-  --switch-shadow: 0 0 10px var(--switch-shine-mid), 0 0 var(--switch-shine-size) var(--switch-shine-spread) var(--switch-shine-outer);
-  --switch-shadow-hover: 0 0 14px var(--switch-shine-core), 0 0 calc(var(--switch-shine-size) * 1.35) calc(var(--switch-shine-spread) + 3px) var(--switch-shine-mid);
-  --switch-glow: drop-shadow(0 0 var(--switch-shine-icon-glow) var(--switch-shine-mid));
+  --switch-color: #D9B991;
+  --switch-shine-core: rgba(254, 240, 138, 0.72);
+  --switch-shine-mid: rgba(251, 191, 36, 0.5);
+  --switch-shine-outer: rgba(147, 197, 253, 0.45);
+  --switch-shadow: -3px -3px 11px var(--switch-shine-mid), 3px 3px 11px var(--switch-shine-outer), 0 0 var(--switch-shine-size) var(--switch-shine-spread) rgba(217, 185, 145, 0.28);
+  --switch-shadow-hover: -4px -4px 15px var(--switch-shine-core), 4px 4px 15px rgba(191, 219, 254, 0.72), 0 0 calc(var(--switch-shine-size) * 1.35) calc(var(--switch-shine-spread) + 3px) rgba(217, 185, 145, 0.42);
+  --switch-glow: drop-shadow(0 0 var(--switch-shine-icon-glow) rgba(217, 185, 145, 0.55));
   color: var(--switch-color);
   box-shadow: var(--switch-shadow);
 }

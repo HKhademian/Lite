@@ -69,8 +69,10 @@ test('buildSite generates static pages and metadata in dist/site', () => {
   assert(index.includes('commit-hash'));
   assert(index.includes('title="Committed '));
   assert(index.includes('class="theme-toggle theme-toggle-shine"'));
+  assert(index.includes('class="theme-icon icon-auto"'));
   assert(index.includes('class="theme-icon icon-sun"'));
   assert(index.includes('class="theme-icon icon-moon"'));
+  assert(index.includes('Auto mode (system: '));
   assert(index.includes('class="quickstart-head"'));
   assert(index.includes('class="shell-line"'));
   assert(index.includes('id="quickstart-copy"'));

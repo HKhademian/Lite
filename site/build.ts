@@ -113,7 +113,34 @@ function renderHeader(basePath: string, active: 'home' | 'playground' | 'gallery
       <a href="${basePath}gallery/"${active === 'gallery' ? ' class="active"' : ''}>Gallery</a>
       <a href="${escapeHtml(docsHref)}">Docs</a>
       <a href="${escapeHtml(repoHref)}">GitHub</a>
-      <button id="theme-toggle" class="${toggleClass}" type="button" aria-label="Toggle light/dark theme" title="Switch theme">
+      <button id="theme-toggle" class="${toggleClass}" type="button" aria-label="Auto mode — switch to moon mode" title="Auto mode — switch to moon mode">
+        <svg class="theme-icon icon-auto" viewBox="0 0 32 32" width="26" height="26" fill="none" aria-hidden="true">
+          <defs>
+            <radialGradient id="lite-auto-sun" cx="32%" cy="28%" r="72%">
+              <stop offset="0%" stop-color="#FFFDF0"/>
+              <stop offset="35%" stop-color="#FEF08A"/>
+              <stop offset="75%" stop-color="#FBBF24"/>
+              <stop offset="100%" stop-color="#D97706"/>
+            </radialGradient>
+            <radialGradient id="lite-auto-moon" cx="62%" cy="62%" r="72%">
+              <stop offset="0%" stop-color="#E2E8F0"/>
+              <stop offset="58%" stop-color="#94A3B8"/>
+              <stop offset="100%" stop-color="#475569"/>
+            </radialGradient>
+            <clipPath id="lite-auto-clip">
+              <circle cx="16" cy="16" r="15.5"/>
+            </clipPath>
+          </defs>
+          <g clip-path="url(#lite-auto-clip)">
+            <path d="M0 0H32L0 32Z" fill="url(#lite-auto-sun)"/>
+            <path d="M32 0V32H0Z" fill="url(#lite-auto-moon)"/>
+            <circle cx="10.5" cy="9.5" r="3.6" fill="#FFFFFF" fill-opacity="0.28"/>
+            <circle cx="21.5" cy="19.5" r="2.7" fill="#334155" fill-opacity="0.26"/>
+            <circle cx="15.5" cy="24.5" r="1.8" fill="#1E293B" fill-opacity="0.24"/>
+            <circle cx="25.2" cy="13.5" r="1.4" fill="#334155" fill-opacity="0.22"/>
+            <line x1="30" y1="2" x2="2" y2="30" stroke="#FFFFFF" stroke-opacity="0.32" stroke-width="0.9"/>
+          </g>
+        </svg>
         <svg class="theme-icon icon-sun" viewBox="0 0 32 32" width="26" height="26" fill="none" aria-hidden="true">
           <defs>
             <radialGradient id="lite-sun-grad" cx="36%" cy="32%" r="70%">
@@ -237,23 +264,52 @@ ${renderFooter(options.rev, options.repoUrl)}
   (function () {
     var btn = document.getElementById("theme-toggle");
     if (!btn) return;
-    function currentTheme() {
+    function currentMode() {
       var explicit = document.documentElement.dataset.theme;
       if (explicit === "light" || explicit === "dark") return explicit;
+      return "system";
+    }
+    function resolvedTheme() {
+      var mode = currentMode();
+      if (mode === "light" || mode === "dark") return mode;
       return window.matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "light";
     }
+    function nextModeFor(mode) {
+      if (mode === "light") return "system";
+      if (mode === "system") return "dark";
+      return "light";
+    }
     function syncIcon() {
-      var dark = currentTheme() === "dark";
-      btn.title = dark ? "Night mode (moonshine) — switch to sun mode" : "Light mode (sunshine) — switch to moon mode";
-      btn.setAttribute("aria-label", btn.title);
-      btn.setAttribute("aria-pressed", String(dark));
+      var mode = currentMode();
+      var title = mode === "system"
+        ? "Auto mode (system: " + resolvedTheme() + ") — switch to moon mode"
+        : mode === "light"
+          ? "Sun mode (sunshine) — switch to auto mode"
+          : "Moon mode (moonshine) — switch to sun mode";
+      btn.title = title;
+      btn.setAttribute("aria-label", title);
+      btn.dataset.mode = mode;
     }
     btn.addEventListener("click", function () {
-      var next = currentTheme() === "dark" ? "light" : "dark";
-      document.documentElement.dataset.theme = next;
-      try { localStorage.setItem("lite-theme", next); } catch (e) {}
+      var root = document.documentElement;
+      var next = nextModeFor(currentMode());
+      root.dataset.themeSwitching = "true";
+      if (next === "system") {
+        delete root.dataset.theme;
+        try { localStorage.removeItem("lite-theme"); } catch (e) {}
+      } else {
+        root.dataset.theme = next;
+        try { localStorage.setItem("lite-theme", next); } catch (e) {}
+      }
       syncIcon();
+      window.setTimeout(function () {
+        delete root.dataset.themeSwitching;
+      }, 360);
     });
+    var media = window.matchMedia("(prefers-color-scheme: dark)");
+    if (media.addEventListener) {
+      media.addEventListener("change", syncIcon);
+    }
     syncIcon();
   })();
 </script>
