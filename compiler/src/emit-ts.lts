@@ -328,7 +328,7 @@ emitBuiltinHelpers := fn(calls: String): Unit {
         io.outputLine("");
     }
     if usesBuiltin(calls, "exit") {
-        io.outputLine("function lite$exit(status: bigint): void {");
+        io.outputLine("function lite$exit(status: bigint): never {");
         io.outputLine("    process.getBuiltinModule(\"node:fs\").writeSync(1, lite_out);");
         io.outputLine("    process.exit(Number(status));");
         io.outputLine("}");
@@ -501,6 +501,7 @@ pub emitProgram := fn(items: frontend.Items, source: String, prefix: String): Un
     var line := "";
     var count := 0;
     var reportIndex := 0;
+    var mainStopped := false;
     loop items as item {
         if item.kind == "FunctionStart" {
             io.outputLine(indent + "function " + item.runtime + "(" + tsParameterList(item.textValue) + "): " +
@@ -592,6 +593,8 @@ pub emitProgram := fn(items: frontend.Items, source: String, prefix: String): Un
             reportIndex = reportIndex + 1;
             line = "";
             count = 0;
+        } else if item.kind == "MainStop" {
+            mainStopped = true;
         } else if item.kind == "Import" or item.kind == "PublicFunction" or item.kind == "PublicValue" or item.kind == "PublicType" {
         } else {
             if count > 0 { line = line + " + \" \" + "; }
@@ -599,6 +602,6 @@ pub emitProgram := fn(items: frontend.Items, source: String, prefix: String): Un
             count = count + 1;
         }
     }
-    io.outputLine("    return lite_out;");
+    if not mainStopped { io.outputLine("    return lite_out;"); }
     io.outputLine("}");
 }

@@ -440,7 +440,7 @@ pub emitProgram := fn(items: frontend.Items, source: String, prefix: String): Un
             if item.kind == "End" { io.outputLine(indent + "if (printf(\"\\n\") < 0) { status = 1; }"); }
             count = 0;
             writes = "";
-        } else if item.kind == "Import" or item.kind == "PublicFunction" or item.kind == "PublicValue" or item.kind == "PublicType" {
+        } else if item.kind == "MainStop" or item.kind == "Import" or item.kind == "PublicFunction" or item.kind == "PublicValue" or item.kind == "PublicType" {
         } else {
             if count == 0 {
                 firstKind = item.kind;
