@@ -1,0 +1,29 @@
+project := import "util/project";
+rel := import "util/release";
+test := import "core/test";
+
+test.checkBool("semver valid plain", true, rel.isValidSemver("1.2.3"));
+test.checkBool("semver valid pre", true, rel.isValidSemver("0.2.0-rc.1+build.01"));
+test.checkBool("semver invalid leading zero core", false, rel.isValidSemver("01.2.3"));
+test.checkBool("semver invalid leading zero pre", false, rel.isValidSemver("1.2.3-01"));
+
+p1 := rel.parseComponentTag("lang-v0.1.0");
+test.checkBool("parse lang tag", true, p1.ok);
+test.checkText("parse lang component", "language", p1.component);
+test.checkText("parse lang version", "0.1.0", p1.version);
+
+pBad := rel.parseComponentTag("unknown-v1.0.0");
+test.checkBool("reject unknown tag", false, pBad.ok);
+
+root := project.findRepoRoot();
+selEmpty := rel.selectComponentRelease(root, "");
+test.checkBool("select empty tag", true, selEmpty.ok);
+test.checkBool("select empty hasTag", false, selEmpty.hasTag);
+
+test.checkText("profile snapshot", "tools", rel.releaseProfile(false, "", ""));
+test.checkText("profile docs", "tools", rel.releaseProfile(true, "docs", "1.0.0"));
+test.checkText("profile compiler pre", "compiler", rel.releaseProfile(true, "compiler", "0.2.0-pre"));
+test.checkText("profile compiler final", "language", rel.releaseProfile(true, "compiler", "0.2.0"));
+test.checkText("profile language", "language", rel.releaseProfile(true, "language", "0.1.0"));
+
+test.done("util-release");

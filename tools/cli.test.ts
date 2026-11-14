@@ -69,8 +69,8 @@ test('lite check routes through ./bin/lite to the standalone checker', () => {
   assert.equal(command('lite-check', ['language/examples/001-double-sum.lts']).status, 0);
 });
 
-test('generated cli, checker, doctor, run, verify, and test-runner artifacts match their Lite sources and pass strict TS checking', () => {
-  for (const name of ['cli', 'checker', 'check', 'run', 'verify', 'test-runner'] as const) {
+test('generated cli, checker, doctor, run, verify, test-runner, and ci artifacts match their Lite sources and pass strict TS checking', () => {
+  for (const name of ['cli', 'checker', 'check', 'run', 'verify', 'test-runner', 'ci'] as const) {
     const sourcePath = join(root, `tools/src/${name}.lts`);
     const compiled = compileTs({ text: readFileSync(sourcePath, 'utf8'), name: `tools/src/${name}.lts`, rootPath: sourcePath });
     assert.equal(compiled.status, 0, compiled.stderr.toString());

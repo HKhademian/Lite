@@ -1,0 +1,321 @@
+/** Named CI tasks executed directly by Node; workflow YAML contains no shell programs. */
+
+io := import "core/io";
+fs := import "core/fs";
+proc := import "core/process";
+text := import "core/text";
+list := import "core/list";
+integer := import "core/int";
+path := import "util/path";
+json := import "util/json";
+cli := import "util/cli";
+project := import "util/project";
+rel := import "util/release";
+
+failCi := fn(message: String): Unit {
+    io.errorLine(message);
+    io.exit(1);
+};
+
+invokeIn := fn(workDirToClean: String, command: String, args: List<String>, cwd: String): Unit {
+    emptyEnv: List<String> = [];
+    res := proc.run(command, args, cwd, emptyEnv, false, "");
+    if res.error =!= "" or res.status =!= 0 {
+        if workDirToClean =!= "" { fs.remove(workDirToClean); }
+        if res.error =!= "" { failCi(res.error); }
+        failCi("CI task failed: " + command + " " + text.joinTexts(args, " "));
+    }
+};
+
+invoke := fn(command: String, args: List<String>, cwd: String): Unit {
+    invokeIn("", command, args, cwd);
+};
+
+invokeNode := fn(scriptArgs: List<String>, cwd: String): Unit {
+    invoke(proc.execPath(), scriptArgs, cwd);
+};
+
+invokeLite := fn(root: String, subArgs: List<String>): Unit {
+    nodeArgs: mut List<String> = [path.join(root, "bin/lite")];
+    loop subArgs as arg {
+        list.pushBack(mut nodeArgs, arg);
+    }
+    invokeNode(nodeArgs, root);
+};
+
+countTextOccurrences := fn(items: List<String>, target: String): Int {
+    var count := 0;
+    loop items as item {
+        if item == target { count = count + 1; }
+    }
+    count
+};
+
+sameTextList := fn(left: List<String>, right: List<String>): Bool {
+    count := list.listCountText(left);
+    if count =!= list.listCountText(right) { return false; }
+    loop left as item {
+        if countTextOccurrences(left, item) =!= countTextOccurrences(right, item) {
+            return false;
+        }
+    }
+    true
+};
+
+parseExecutedCount := fn(output: String): (ok: Bool, count: Int) {
+    marker := " executed, ";
+    pos := text.indexOfText(output, marker, 0);
+    if pos <= 0 { return (ok = false, count = 0); }
+    var start := pos;
+    loop start > 0 and text.isDigit(text.at(output, start - 1)) {
+        start = start - 1;
+    }
+    if start == pos { return (ok = false, count = 0); }
+    parsed := text.textToInt(text.slice(output, start, pos));
+    (ok = parsed.ok, count = parsed.value)
+};
+
+collectFailureLines := fn(output: String): List<String> {
+    found: mut List<String> = [];
+    size := text.length(output);
+    var pos := 0;
+    loop pos < size {
+        nl := text.indexOfText(output, "\n", pos);
+        end := if nl < 0 { size } else { nl };
+        if text.startsWithAt(output, pos, "FAIL ") {
+            list.pushBack(mut found, text.slice(output, pos, end));
+        }
+        if nl < 0 { break; }
+        pos = nl + 1;
+    }
+    found
+};
+
+verifyMigration := fn(root: String): Unit {
+    cfgPath := path.join(root, "config/ts-migration.json");
+    cfgRead := fs.readText(cfgPath);
+    if not cfgRead.ok { failCi(cfgRead.error); }
+    expectedCount := json.readObjectInt(cfgRead.text, 0, "scenarios");
+    if not expectedCount.found or not expectedCount.ok { failCi("invalid config/ts-migration.json: scenarios"); }
+    failuresField := json.findObjectField(cfgRead.text, 0, "failures");
+    if not failuresField.found { failCi("invalid config/ts-migration.json: failures"); }
+    expectedFailures: mut List<String> = [];
+    offsets := json.arrayElementOffsets(cfgRead.text, failuresField.valuePos);
+    loop offsets as off {
+        item := json.readStringAt(cfgRead.text, off);
+        if not item.ok { failCi("invalid failure entry in config/ts-migration.json"); }
+        list.pushBack(mut expectedFailures, item.value);
+    }
+
+    verifyArgs: List<String> = [path.join(root, "bin/lite"), "verify", "--all", "--no-cache"];
+    emptyEnv: List<String> = [];
+    res := proc.run(proc.execPath(), verifyArgs, root, emptyEnv, true, "");
+    if res.error =!= "" { failCi(res.error); }
+    if res.stdout =!= "" { io.output(res.stdout); }
+    if res.stderr =!= "" { project.errorText(res.stderr); }
+
+    failures := collectFailureLines(res.stdout);
+    executed := parseExecutedCount(res.stdout);
+    if not executed.ok or executed.count =!= expectedCount.value {
+        failCi("migration scenario inventory changed; review baseline");
+    }
+    if not sameTextList(failures, expectedFailures) {
+        failCi("migration failures changed; review new support or regressions");
+    }
+    failCount := list.listCountText(failures);
+    expectedStatus := if failCount > 0 { 1 } else { 0 };
+    if res.status =!= expectedStatus {
+        failCi("migration exit status mismatch");
+    }
+    passCount := integer.intText(expectedCount.value - failCount);
+    failCountText := integer.intText(failCount);
+    io.outputLine("Migration baseline unchanged: " + passCount + " pass; " + failCountText + " accepted-language failures remain. This is not full conformance.");
+};
+
+envValue := fn(name: String): String {
+    res := proc.envGet(name);
+    if res.found { return res.value; }
+    ""
+};
+
+releaseTag := fn(): String {
+    if envValue("GITHUB_EVENT_NAME") == "push" and envValue("GITHUB_REF_TYPE") == "tag" {
+        return envValue("GITHUB_REF_NAME");
+    }
+    ""
+};
+
+releaseNeedsCompilerGates := fn(root: String): Bool {
+    selected := rel.selectComponentRelease(root, releaseTag());
+    if not selected.ok { failCi(selected.error); }
+    rel.releaseProfile(selected.hasTag, selected.component, selected.version) =!= "tools"
+};
+
+runSelfHost := fn(root: String): Unit {
+    workRes := fs.makeTempDir("lite-ci-self-host-");
+    if not workRes.ok { failCi(workRes.error); }
+    work := workRes.path;
+    tarPath := path.join(work, "source.tar");
+    archiveArgs: List<String> = ["archive", "--format=tar", "-o", tarPath, "HEAD"];
+    invokeIn(work, "git", archiveArgs, root);
+    untarArgs: List<String> = ["-xf", tarPath, "-C", work];
+    invokeIn(work, "tar", untarArgs, work);
+    fs.remove(tarPath);
+
+    linkRes := fs.symlink(path.join(root, "igniter/node_modules"), path.join(work, "igniter/node_modules"));
+    if not linkRes.ok {
+        fs.remove(work);
+        failCi(linkRes.error);
+    }
+
+    step1: List<String> = ["bin/lite", "test", "--full"];
+    step2: List<String> = ["compiler/scripts/build.ts"];
+    step3: List<String> = ["compiler/scripts/self-host.ts", "--out", "dist/ladder"];
+    step4: List<String> = ["compiler/scripts/corpus-parity.ts", "--artifact", "dist/ladder/generation-3.ts"];
+    invokeIn(work, proc.execPath(), step1, work);
+    invokeIn(work, proc.execPath(), step2, work);
+    invokeIn(work, proc.execPath(), step3, work);
+    invokeIn(work, proc.execPath(), step4, work);
+    cleanup := fs.remove(work);
+    if not cleanup.ok { io.errorLine(cleanup.error); }
+};
+
+runPublish := fn(root: String): Unit {
+    if envValue("GITHUB_EVENT_NAME") =!= "push" or envValue("GITHUB_REF_TYPE") =!= "tag" {
+        failCi("publish requires a pushed tag event");
+    }
+    tag := envValue("GITHUB_REF_NAME");
+    if tag == "" { failCi("GITHUB_REF_NAME required for publish"); }
+    directory := path.join(root, "dist/release");
+    manifestRead := fs.readText(path.join(directory, "manifest.json"));
+    if not manifestRead.ok { failCi(manifestRead.error); }
+    manifestTag := json.readObjectString(manifestRead.text, 0, "tag");
+    if not manifestTag.found or not manifestTag.ok or manifestTag.value =!= tag {
+        failCi("release manifest tag does not match GITHUB_REF_NAME");
+    }
+    var isPrerelease := false;
+    compField := json.findObjectField(manifestRead.text, 0, "releasedComponent");
+    if compField.found and text.startsWithAt(manifestRead.text, compField.valuePos, "{") {
+        compVer := json.readObjectString(manifestRead.text, compField.valuePos, "version");
+        if compVer.found and compVer.ok and text.indexOfText(compVer.value, "-", 0) >= 0 {
+            isPrerelease = true;
+        }
+    }
+
+    ghCreate: mut List<String> = ["release", "create", tag];
+    entries := fs.listDir(directory);
+    loop entries as entry {
+        list.pushBack(mut ghCreate, path.join(directory, entry));
+    }
+    list.pushBack(mut ghCreate, "--draft");
+    list.pushBack(mut ghCreate, "--verify-tag");
+    list.pushBack(mut ghCreate, "--latest=false");
+    list.pushBack(mut ghCreate, "--title");
+    list.pushBack(mut ghCreate, tag);
+    list.pushBack(mut ghCreate, "--notes-file");
+    list.pushBack(mut ghCreate, path.join(directory, "RELEASE-NOTES.md"));
+    if isPrerelease { list.pushBack(mut ghCreate, "--prerelease"); }
+    invoke("gh", ghCreate, root);
+    ghEdit: List<String> = ["release", "edit", tag, "--draft=false", "--latest=false"];
+    invoke("gh", ghEdit, root);
+};
+
+runTask := fn(root: String, task: String): Unit {
+    if task == "install" {
+        npmArgs: List<String> = ["ci", "--ignore-scripts", "--no-audit", "--no-fund"];
+        invoke("npm", npmArgs, path.join(root, "igniter"));
+        invoke("npm", npmArgs, path.join(root, "editors/vscode"));
+        return;
+    }
+    if task == "check" or task == "release-doctor" {
+        args: List<String> = ["doctor"];
+        invokeLite(root, args);
+        return;
+    }
+    if task == "test" {
+        args: List<String> = ["test", "--full"];
+        invokeLite(root, args);
+        return;
+    }
+    if task == "editor" or task == "release-editor" {
+        buildArgs: List<String> = ["editors/vscode/scripts/build.ts"];
+        testArgs: List<String> = ["--test", "editors/vscode/test/grammar.test.ts", "editors/vscode/test/extension.test.ts"];
+        invokeNode(buildArgs, root);
+        invokeNode(testArgs, root);
+        return;
+    }
+    if task == "site" {
+        args: List<String> = ["--test", "site/build.test.ts"];
+        invokeNode(args, root);
+        return;
+    }
+    if task == "coverage" {
+        args: List<String> = ["verify", "--coverage"];
+        invokeLite(root, args);
+        return;
+    }
+    if task == "migration" {
+        verifyMigration(root);
+        return;
+    }
+    if task == "release-unit" {
+        unitArgs: List<String> = [
+        "--test",
+        "tools/docs.test.ts", "tools/cases.test.ts", "tools/cli.test.ts",
+        "tools/fmt.test.ts", "tools/run.test.ts", "tools/release.test.ts",
+        "compiler/scripts/release-streams.test.ts", "site/build.test.ts"
+        ];
+        invokeNode(unitArgs, root);
+        return;
+    }
+    if task == "release-regressions" {
+        if releaseNeedsCompilerGates(root) {
+            args: List<String> = ["test", "--full"];
+            invokeLite(root, args);
+        }
+        return;
+    }
+    if task == "release-coverage" {
+        if releaseNeedsCompilerGates(root) {
+            args: List<String> = ["verify", "--coverage"];
+            invokeLite(root, args);
+        }
+        return;
+    }
+    if task == "release-migration" {
+        if releaseNeedsCompilerGates(root) { verifyMigration(root); }
+        return;
+    }
+    if task == "self-host" {
+        runSelfHost(root);
+        return;
+    }
+    if task == "package" {
+        tag := releaseTag();
+        pkgArgs: mut List<String> = [path.join(root, "bin/lite-release"), path.join(root, "dist/release")];
+        if tag =!= "" { list.pushBack(mut pkgArgs, tag); }
+        invokeNode(pkgArgs, root);
+        return;
+    }
+    if task == "publish" {
+        runPublish(root);
+        return;
+    }
+    failCi("unknown CI task: " + task);
+};
+
+run := fn(rawArgs: List<String>): Unit {
+    args := cli.stripLeadingSeparator(rawArgs);
+    taskFile := cli.head(args);
+    if taskFile == "" or list.listCountText(cli.rest(args, 1)) > 0 {
+        failCi("CI task file required");
+    }
+    taskRead := fs.readText(taskFile);
+    if not taskRead.ok { failCi(taskRead.error); }
+    task := text.trim(taskRead.text);
+    root := project.findRepoRoot();
+    if root == "" { failCi("cannot locate repository root"); }
+    runTask(root, task);
+};
+
+run(io.inputArgs());

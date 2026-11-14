@@ -1,0 +1,240 @@
+/** Shared component release stream parsing, SemVer validation, and readiness profile helpers. */
+
+fs := import "core/fs";
+text := import "core/text";
+list := import "core/list";
+path := import "util/path";
+json := import "util/json";
+
+isIdentChar := fn(ch: String): Bool {
+    text.isDigit(ch) or text.isAsciiLetter(ch) or ch == "-"
+};
+
+isAllDigits := fn(segment: String): Bool {
+    size := text.length(segment);
+    if size == 0 { return false; }
+    var i := 0;
+    loop i < size {
+        if not text.isDigit(text.at(segment, i)) { return false; }
+        i = i + 1;
+    }
+    true
+};
+
+isPlainNumericSegment := fn(segment: String): Bool {
+    if not isAllDigits(segment) { return false; }
+    size := text.length(segment);
+    if size > 1 and text.at(segment, 0) == "0" { return false; }
+    true
+};
+
+validDotIdentifiers := fn(part: String, rejectLeadingZeroNumeric: Bool): Bool {
+    size := text.length(part);
+    if size == 0 { return false; }
+    var segStart := 0;
+    var i := 0;
+    loop i <= size {
+        atEnd := i == size;
+        isDot := not atEnd and text.at(part, i) == ".";
+        if atEnd or isDot {
+            seg := text.slice(part, segStart, i);
+            if text.length(seg) == 0 { return false; }
+            if rejectLeadingZeroNumeric and isAllDigits(seg) and not isPlainNumericSegment(seg) {
+                return false;
+            }
+            segStart = i + 1;
+        } else if not isIdentChar(text.at(part, i)) {
+            return false;
+        }
+        i = i + 1;
+    }
+    true
+};
+
+/** Validates SemVer (`MAJOR.MINOR.PATCH[-PRERELEASE][+BUILD]`) without leading zeroes on numeric identifiers. */
+pub isValidSemver := fn(version: String): Bool {
+    size := text.length(version);
+    if size == 0 { return false; }
+    plusPos := text.indexOfText(version, "+", 0);
+    beforeBuild := if plusPos >= 0 { text.slice(version, 0, plusPos) } else { version };
+    if plusPos >= 0 {
+        buildPart := text.slice(version, plusPos + 1, size);
+        if not validDotIdentifiers(buildPart, false) { return false; }
+    }
+    dashPos := text.indexOfText(beforeBuild, "-", 0);
+    corePart := if dashPos >= 0 { text.slice(beforeBuild, 0, dashPos) } else { beforeBuild };
+    if dashPos >= 0 {
+        prePart := text.slice(beforeBuild, dashPos + 1, text.length(beforeBuild));
+        if not validDotIdentifiers(prePart, true) { return false; }
+    }
+    dot1 := text.indexOfText(corePart, ".", 0);
+    if dot1 < 0 { return false; }
+    dot2 := text.indexOfText(corePart, ".", dot1 + 1);
+    if dot2 < 0 { return false; }
+    if text.indexOfText(corePart, ".", dot2 + 1) >= 0 { return false; }
+    isPlainNumericSegment(text.slice(corePart, 0, dot1)) and
+    isPlainNumericSegment(text.slice(corePart, dot1 + 1, dot2)) and
+    isPlainNumericSegment(text.slice(corePart, dot2 + 1, text.length(corePart)))
+};
+
+/** Returns true when `version` is a plain `MAJOR.MINOR.PATCH` string (required for VS Code extension). */
+pub isPlainMajorMinorPatch := fn(version: String): Bool {
+    text.indexOfText(version, "-", 0) < 0 and
+    text.indexOfText(version, "+", 0) < 0 and
+    isValidSemver(version)
+};
+
+allComponents := fn(): List<String> {
+    items: List<String> = [
+    "project", "language", "scripting", "compiler", "igniter", "cli",
+    "formatter", "runtime", "stdlib", "builtins", "checker", "tester",
+    "verifier", "benchmark", "release", "docs", "vscode", "linker", "doctor"
+    ];
+    items
+};
+
+/** Maps a component name to its release tag prefix (before `-v`), or `""` when unknown. */
+pub componentTagPrefix := fn(component: String): String {
+    if component == "project" { return "lite"; }
+    if component == "language" { return "lang"; }
+    if component == "scripting" { return "script"; }
+    if component == "compiler" { return "compiler"; }
+    if component == "igniter" { return "igniter"; }
+    if component == "cli" { return "cli"; }
+    if component == "formatter" { return "formatter"; }
+    if component == "runtime" { return "runtime"; }
+    if component == "stdlib" { return "std"; }
+    if component == "builtins" { return "builtins"; }
+    if component == "checker" { return "check"; }
+    if component == "tester" { return "test"; }
+    if component == "verifier" { return "verify"; }
+    if component == "benchmark" { return "bench"; }
+    if component == "release" { return "release"; }
+    if component == "docs" { return "docs"; }
+    if component == "vscode" { return "vscode"; }
+    if component == "linker" { return "linker"; }
+    if component == "doctor" { return "doctor"; }
+    ""
+};
+
+/** Parses a component release tag such as `compiler-v0.2.0-pre` into `(component, version)`. */
+pub parseComponentTag := fn(tag: String): (ok: Bool, component: String, version: String, error: String) {
+    components := allComponents();
+    loop components as component {
+        prefix := componentTagPrefix(component) + "-v";
+        if text.startsWithAt(tag, 0, prefix) {
+            version := text.slice(tag, text.length(prefix), text.length(tag));
+            if not isValidSemver(version) {
+                return (ok = false, component = "", version = "", error = "invalid release version: " + tag);
+            }
+            return (ok = true, component = component, version = version, error = "");
+        }
+    }
+    (ok = false, component = "", version = "", error = "unsupported release tag: " + tag)
+};
+
+readIgniterVersion := fn(rootDir: String): (ok: Bool, version: String, error: String) {
+    pkgRead := fs.readText(path.join(rootDir, "igniter/package.json"));
+    if not pkgRead.ok {
+        return (ok = false, version = "", error = pkgRead.error);
+    }
+    ver := json.readObjectString(pkgRead.text, 0, "version");
+    if not ver.found or not ver.ok or not isValidSemver(ver.value) {
+        return (ok = false, version = "", error = "invalid igniter package version");
+    }
+    (ok = true, version = ver.value, error = "")
+};
+
+/** Validates `igniter/package.json` and `config/versions.json` and resolves an optional release `tag`. */
+pub selectComponentRelease := fn(rootDir: String, tag: String): (ok: Bool, hasTag: Bool, component: String, version: String, error: String) {
+    igniterRes := readIgniterVersion(rootDir);
+    if not igniterRes.ok {
+        return (ok = false, hasTag = false, component = "", version = "", error = igniterRes.error);
+    }
+    verRead := fs.readText(path.join(rootDir, "config/versions.json"));
+    if not verRead.ok {
+        return (ok = false, hasTag = false, component = "", version = "", error = verRead.error);
+    }
+    verValid := json.validate(verRead.text);
+    if not verValid.ok {
+        return (ok = false, hasTag = false, component = "", version = "", error = verValid.error);
+    }
+
+    components := allComponents();
+    keys := json.objectKeys(verRead.text, 0);
+    loop keys as key {
+        if key == "igniter" or not list.listContainsText(components, key) {
+            return (ok = false, hasTag = false, component = "", version = "", error = "unknown versions.json component: " + key);
+        }
+    }
+
+    var matchedComponent := "";
+    var matchedVersion := "";
+    var wantComponent := "";
+    var wantVersion := "";
+    if tag =!= "" {
+        parsed := parseComponentTag(tag);
+        if not parsed.ok {
+            return (ok = false, hasTag = false, component = "", version = "", error = parsed.error);
+        }
+        wantComponent = parsed.component;
+        wantVersion = parsed.version;
+    }
+
+    loop components as component {
+        var assigned := false;
+        var val := "";
+        if component == "igniter" {
+            assigned = true;
+            val = igniterRes.version;
+        } else {
+            field := json.findObjectField(verRead.text, 0, component);
+            if not field.found {
+                return (ok = false, hasTag = false, component = "", version = "", error = "versions.json: invalid or missing " + component + " version");
+            }
+            if text.startsWithAt(verRead.text, field.valuePos, "null") {
+                assigned = false;
+            } else {
+                strRes := json.readStringAt(verRead.text, field.valuePos);
+                if not strRes.ok or not isValidSemver(strRes.value) {
+                    return (ok = false, hasTag = false, component = "", version = "", error = "versions.json: invalid or missing " + component + " version");
+                }
+                if component == "vscode" and not isPlainMajorMinorPatch(strRes.value) {
+                    return (ok = false, hasTag = false, component = "", version = "", error = "vscode version requires plain MAJOR.MINOR.PATCH");
+                }
+                assigned = true;
+                val = strRes.value;
+            }
+        }
+        if component == wantComponent {
+            if not assigned or val =!= wantVersion {
+                authFile := if component == "igniter" { "igniter/package.json" } else { "versions.json" };
+                return (ok = false, hasTag = false, component = "", version = "", error = component + " tag/version mismatch: update " + authFile + " before tagging");
+            }
+            matchedComponent = component;
+            matchedVersion = val;
+        }
+    }
+
+    if tag == "" {
+        return (ok = true, hasTag = false, component = "", version = "", error = "");
+    }
+    (ok = true, hasTag = true, component = matchedComponent, version = matchedVersion, error = "")
+};
+
+/** Classifies a release into `"tools"`, `"compiler"`, or `"language"` verification profiles. */
+pub releaseProfile := fn(hasTag: Bool, component: String, version: String): String {
+    toolComponents: List<String> = [
+    "cli", "checker", "tester", "verifier", "benchmark", "release", "docs", "vscode", "formatter", "linker", "doctor"
+    ];
+    if not hasTag or list.listContainsText(toolComponents, component) {
+        return "tools";
+    }
+    if component == "project" or component == "language" or component == "scripting" {
+        return "language";
+    }
+    if component == "compiler" and text.indexOfText(version, "-", 0) < 0 {
+        return "language";
+    }
+    "compiler"
+};
