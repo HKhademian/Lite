@@ -1,8 +1,8 @@
 {
-  "note": "Reviewed 2026-11-14 after extending core/crypto, core/time, and adding core/unicode. All 69 TS/C corpus artifact hashes and 25 rejection cases verified.",
+  "note": "Reviewed 2026-11-14 after the power exponent update. All 69 TS corpus artifact hashes and 25 rejection cases verified.",
   "recorded": "2026-11-14",
-  "sourceSha256": "4abe153a859bfde24e4126397b7236c1407daf238d1b28a39afbd3f454f54829",
-  "compilerSha256": "cb9899b78d3c7fb8b0557b1b7328d9cbf3ca695fdf3f76dc1dfb316286d8f638",
+  "sourceSha256": "ad53e56f862da6b7f0ead48a77b5ad66253f8af73b79bb3f5988c7b8cfba2d13",
+  "compilerSha256": "5406d55c563b82c3dc019a179bf90a030c89d6bec4e91a8ec90edd0f28718399",
   "programCases": 69,
   "rejectedCases": 25,
   "artifacts": [

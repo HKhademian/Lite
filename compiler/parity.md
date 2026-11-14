@@ -1229,9 +1229,10 @@ The Lite frontend now implements existing `**` syntax at precedence 25, above
 multiplication and below the explicitly grouped unary boundary. Power associates
 right to left, accepts Int/Float operands, and produces Float. Both operands
 evaluate once from left to right, including nested right-associated calls.
-The existing positive-exponent checkpoint remains: zero and negative exponents
-raise positioned ArithmeticPanic only when reached, as do non-finite results.
-This does not decide their final language semantics. TS uses Math.pow; C uses
+The 2026-11-14 rule supersedes the positive-exponent checkpoint: zero exponents
+yield 1, negative exponents on nonzero bases yield reciprocal powers, and zero
+to a negative exponent raises a positioned ArithmeticPanic when reached.
+Non-finite results use the existing fault path. TS uses Math.pow; C uses
 the C math library's pow. Managed native runners link `-lm` after the source;
 manual C builds must link the math library where required.
 

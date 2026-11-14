@@ -2113,7 +2113,7 @@ test('mixed Float arithmetic and comparisons preserve values, effects and positi
   assertExecutions(executions);
 });
 
-test('power preserves right association, explicit negative-base grouping and the positive-exponent checkpoint', context => {
+test('power preserves right association and explicit negative-base grouping', context => {
   if (process.env['LITE_SKIP_HEAVY'] === '1') { context.skip('LITE_SKIP_HEAVY=1'); return; }
   const executions: ArtifactExecution[] = [];
   const both = [
@@ -2141,12 +2141,10 @@ test('power preserves right association, explicit negative-base grouping and the
     }
     if (targets.length === 1) { const c = compileTarget('c', { text }); assert.equal(c.status, 2, text); assert.equal(c.stdout.length, 0); }
   }
-  for (const source of ['io.outputLine(2 ** 0);', 'io.outputLine(2 ** -1);', 'io.outputLine(2 ** -0.0);',
-    'io.outputLine(1e308 ** 2);', 'io.outputLine((-2) ** 0.5);', 'io.outputLine((2 ** 0) ** (1e308 ** 2));',
-    'io.outputLine(2 ** (2 ** 0));', 'io.outputLine(2 ** 0, "after");', 'var e := -1; io.outputLine(2 ** e);']) {
+  for (const source of ['io.outputLine(1e308 ** 2);', 'io.outputLine((-2) ** 0.5);']) {
     const text = 'io := import "core/io"; io.outputLine("before");\r\n' + source, name = 'power سلام.lts', expected = expectedText(text, { name });
     assert.equal(expected.status, 1, text); assert.equal(expected.stdout.toString(), 'before\n');
-    assert.match(expected.stderr.toString(), /^power سلام\.lts:2:\d+: ArithmeticPanic: (power exponent must be positive in this checkpoint|non-finite floating value)\n$/);
+    assert.match(expected.stderr.toString(), /^power سلام\.lts:2:\d+: ArithmeticPanic: non-finite floating value\n$/);
     for (const target of ['ts', 'c'] as const) {
       const compiled = compileTarget(target, { text, name }); assert.equal(compiled.status, 0, text + compiled.stderr.toString());
       if (target === 'c' && process.env['LITE_SKIP_NATIVE'] === '1') continue;
@@ -2178,6 +2176,42 @@ test('power preserves right association, explicit negative-base grouping and the
     executions.push({ target: 'ts', artifact: compiled.stdout.toString(), expected, options: { stdin }, context: text });
   }
   assertExecutions(executions);
+});
+
+test('power accepts zero and negative exponents and panics on zero to a negative power', context => {
+  if (process.env['LITE_SKIP_HEAVY'] === '1') { context.skip('LITE_SKIP_HEAVY=1'); return; }
+  const success = 'io := import "core/io"; var e := -1; io.outputLine(2 ** 0, 0 ** 0, 2 ** -0.0, 2 ** -3, (-2) ** -3, (-2) ** -4, 4 ** e, 2 ** (2 ** 0)); if false { io.outputLine(0 ** -1); }';
+  const faults = ['io.outputLine(0 ** -1, "after");', 'var base := 0; var exponent := -2; io.outputLine(base ** exponent);'];
+  for (const target of ['ts', 'c'] as const) {
+    if (target === 'c' && process.env['LITE_SKIP_NATIVE'] === '1') continue;
+    const run = (source: string) => {
+      const compiled = compileTarget(target, { text: source, name: 'power-case.lts' });
+      assert.equal(compiled.status, 0, compiled.stderr.toString());
+      return target === 'ts' ? runTsArtifact(compiled.stdout.toString()) : runCArtifact(compiled.stdout.toString());
+    };
+    const result = run(success);
+    assert.equal(result.status, 0, result.stderr.toString());
+    assert.equal(result.stdout.toString(), '1 1 1 0.125 -0.125 0.0625 0.25 2\n');
+    for (const source of faults) {
+      const result = run('io := import "core/io"; io.outputLine("before");\n' + source);
+      assert.equal(result.status, 1);
+      assert.equal(result.stdout.toString(), 'before\n');
+      assert.match(result.stderr.toString(), /^power-case\.lts:2:\d+: ArithmeticPanic: zero cannot be raised to a negative power\n$/);
+    }
+  }
+  const effects = 'io := import "core/io"; f := fn(n: Int): Int { io.outputLine(n); n } io.outputLine(f(0) ** f(-1), f(9));';
+  const compiled = compileTarget('ts', { text: effects, name: 'power-effects.lts' });
+  assert.equal(compiled.status, 0, compiled.stderr.toString());
+  const result = runTsArtifact(compiled.stdout.toString());
+  assert.equal(result.status, 1);
+  assert.equal(result.stdout.toString(), '0\n-1\n');
+  assert.match(result.stderr.toString(), /ArithmeticPanic: zero cannot be raised to a negative power\n$/);
+  const throughFunction = 'io := import "core/io"; power := fn(base: Float, exponent: Int): Float { base ** exponent } value: Float = power(2, -3); io.outputLine(value, power(9, 0), power(4, -1));';
+  const functionArtifact = compileTarget('ts', { text: throughFunction });
+  assert.equal(functionArtifact.status, 0, functionArtifact.stderr.toString());
+  const functionResult = runTsArtifact(functionArtifact.stdout.toString());
+  assert.equal(functionResult.status, 0, functionResult.stderr.toString());
+  assert.equal(functionResult.stdout.toString(), '0.125 1 0.25\n');
 });
 
 test('Int64, Float64 and Double normalize across admitted numeric annotations and contracts', context => {

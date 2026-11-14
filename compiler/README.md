@@ -245,7 +245,7 @@ The component/package is `lite-compiler`. `./bin/lite-compile` routes to
 default. Public C requests fail explicitly until the post-migration C phase.
 
 Generated TS/C also lower the existing right-associative, Float-default `**`
-checkpoint with explicit negative-base grouping and positive exponents. C power
+semantics with explicit negative-base grouping and zero and negative exponents. C power
 uses the math library; link emitted C with `-lm` where required. See the
 [power ledger](parity.md#power-checkpoint) for current validation and limits.
 

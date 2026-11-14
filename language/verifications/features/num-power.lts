@@ -5,3 +5,8 @@ io.outputLine(2 ** 3 ** 2);
 io.outputLine(4 ** 0.5);
 io.outputLine((-2) ** 3);
 io.outputLine(-(2 ** 2));
+
+io.outputLine(2 ** 0, 0 ** 0, 2 ** -0.0);
+io.outputLine(2 ** -3, (-2) ** -3, (-2) ** -4);
+var exponent := -1;
+io.outputLine(4 ** exponent, 2 ** (2 ** 0));

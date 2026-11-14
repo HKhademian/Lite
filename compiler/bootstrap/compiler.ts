@@ -13030,7 +13030,7 @@ export function main(lite$write?: (text: string) => void, lite$sourceProviderInp
         }
         if (liteFn$emit__ts$usesBuiltin(lite_calls, "floatPower")) {
             lite$emit("function lite$floatPower(left: number, right: number, at: number): number {" + "\n");
-            lite$emit("    if (right <= 0) lite$fault(\"ArithmeticPanic\", at, \"power exponent must be positive in this checkpoint\");" + "\n");
+            lite$emit("    if (left === 0 && right < 0) lite$fault(\"ArithmeticPanic\", at, \"zero cannot be raised to a negative power\");" + "\n");
             lite$emit("    const value = Math.pow(left, right);" + "\n");
             lite$emit("    if (!Number.isFinite(value)) lite$fault(\"ArithmeticPanic\", at, \"non-finite floating value\");" + "\n");
             lite$emit("    return value;" + "\n");
@@ -14235,7 +14235,7 @@ export function main(lite$write?: (text: string) => void, lite$sourceProviderInp
                     lite_line = ((lite_line) + (" + \" \" + "));
                 }
                 lite_line = ((lite_line) + (liteFn$emit__ts$reportArgumentCode(lite_item)));
-                lite_count = lite$addInt(lite_count, 1n, 79046);
+                lite_count = lite$addInt(lite_count, 1n, 79050);
             }
         }
         if ((!(lite_mainStopped))) {

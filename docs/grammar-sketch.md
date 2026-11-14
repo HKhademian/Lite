@@ -748,7 +748,7 @@ Minus retains its ordinary negation/subtraction meaning. There is no redundant l
 
 Selected 2026-10-25: `**` is the power spelling; reject -base `**` exponent without grouping. Require (-base) `**` exponent or -(base `**` exponent). This includes -2 `**` 3 despite equal mathematical results for the two interpretations; (-base `**` exponent) remains invalid inside its outer group. Whitespace, comments, leading identity +, constant values, and type-check success do not resolve the boundary. See [power and negation](power-and-negation.md).
 
-The arithmetic fragment above does not complete recursive power integration. Do not extend its generic unary production in a way that admits an ungrouped unary-minus/power form. Right association, Float-default result typing and a positive-exponent checkpoint are selected 2026-11-01. Zero/negative exponents, exact overflow/faults and compiler-target lowering remain open. No `**=` or redundant power prefix is introduced.
+The arithmetic fragment above does not complete recursive power integration. Do not extend its generic unary production in a way that admits an ungrouped unary-minus/power form. Right association and Float-default result typing were selected 2026-11-01. Zero exponents yield 1, including `0 ** 0`; negative exponents produce reciprocal powers for nonzero bases and panic for a zero base, selected 2026-11-14. Exact overflow and remaining fault rules remain open. No `**=` or redundant power prefix is introduced.
 
 ## Logical grouping
 

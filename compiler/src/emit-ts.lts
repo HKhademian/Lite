@@ -170,7 +170,7 @@ emitFloatArithmeticHelpers := fn(calls: String): Unit {
     if not usesFloatArithmetic(calls) { return; }
     if usesBuiltin(calls, "floatPower") {
         io.outputLine("function lite$floatPower(left: number, right: number, at: number): number {");
-        io.outputLine("    if (right <= 0) lite$fault(\"ArithmeticPanic\", at, \"power exponent must be positive in this checkpoint\");");
+        io.outputLine("    if (left === 0 && right < 0) lite$fault(\"ArithmeticPanic\", at, \"zero cannot be raised to a negative power\");");
         io.outputLine("    const value = Math.pow(left, right);");
         io.outputLine("    if (!Number.isFinite(value)) lite$fault(\"ArithmeticPanic\", at, \"non-finite floating value\");");
         io.outputLine("    return value;");

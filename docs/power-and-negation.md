@@ -1,6 +1,6 @@
 # Power and negation
 
-Status: **`**` spelling and explicit unary-minus grouping selected 2026-10-25; right association, Float-default result typing and a positive-exponent checkpoint selected 2026-11-01. T00 and the Lite-generated TS/C targets implement that checkpoint; final zero/negative-exponent and exact overflow/fault rules remain open.**
+Status: **`**` spelling and explicit unary-minus grouping selected 2026-10-25; right association and Float-default result selected 2026-11-01; zero and negative exponent behavior selected 2026-11-14. Generated TS and the retained C emitter implement that rule. Exact overflow and other fault rules remain open.**
 
 ## Selected grouping requirement
 
@@ -91,18 +91,50 @@ The result is **Float by default** for admitted Int or Float operands;
 `2 ** 3` is Float 8. Int results wait for a future real NonNegInt exponent
 type. Int and Float operands may mix.
 
-The current igniter checkpoint admits only **positive exponents**. `x ** 0`
-and negative exponents raise `ArithmeticPanic` as explicitly unsupported, not
+The earlier igniter checkpoint admitted only **positive exponents**. `x ** 0`
+and negative exponents raised `ArithmeticPanic` as explicitly unsupported, not
 as final language semantics. Non-finite Float results use the existing
-arithmetic-fault path. Zero exponent, negative exponents, exact overflow and
-the complete power fault contract remain open.
+arithmetic-fault path. This checkpoint predates the zero and negative exponent
+selection below; exact overflow and the complete fault contract remain open.
 
-Migration implementation, 2026-11-02: the Lite frontend lowers this checkpoint
-to checked TS and C helpers. TS uses `Math.pow`; C uses the C math library's
-`pow`, linked with `-lm` where required. Both operands evaluate once, left to
-right; nonpositive exponents and non-finite results fault at the operator only
-when reached. This ports the existing checkpoint without selecting final
-zero/negative-exponent semantics or a universal cross-library rounding contract.
+## Zero and negative exponents selected 2026-11-14
+
+For the admitted Int and Float operands, retain the Float-default result for
+zero and negative exponents. A zero exponent yields 1, including `0 ** 0`.
+A nonzero base raised to a negative exponent yields its reciprocal power. A
+zero base with a negative exponent raises `ArithmeticPanic`; it does not
+return a recoverable error. Both operands are evaluated once, left to right,
+before a reached operation produces its value or panic.
+
+Contract cases for the implementation:
+
+- Zero exponent: `2 ** 0`, `0 ** 0`, and `2 ** -0.0` yield Float 1.
+- Negative exponent: `2 ** -3` yields 0.125; `(-2) ** -3` yields -0.125;
+  `(-2) ** -4` yields 0.0625. A runtime exponent of -1 has the same rule.
+- A zero base and negative exponent panic after earlier output and operand
+  effects, without evaluating later expressions. An untaken branch does not
+  evaluate the power or panic.
+- Chained powers retain right association; functions, arguments, and stored
+  Float results preserve the same behavior. Invalid ungrouped negative bases
+  remain rejected before any program effects.
+
+This selection does not decide negative-base fractional powers, signed-zero
+results, overflow, or universal cross-target rounding. Generated TS and the
+retained C emitter implement this selection.
+
+Verification, 2026-11-14: the `num.power` verification passes on generated
+TS. Focused host cases exercise successful zero and negative exponents,
+positioned zero-base panics, skipped paths, and evaluation order on TS, with
+the applicable numeric and panic cases also run through the retained C emitter.
+The generated TS compiler reached a three-generation fixed point; recorded TS
+corpus execution and TS/C artifact comparisons passed. The full test run had
+one unrelated existing failure: a missing doc comment in `lib/core/crypto.lts`.
+
+The Lite frontend lowers power to checked TS and C helpers. TS uses `Math.pow`;
+C uses the C math library's `pow`, linked with `-lm` where required. Both
+operands evaluate once, left to right. Non-finite results use the existing fault
+path; this does not select a universal cross-library rounding contract. The
+2026-11-02 positive-exponent checkpoint has been superseded by the rule above.
 The [power migration ledger](../compiler/parity.md#power-checkpoint) records
 target validation and remaining limits.
 
@@ -112,8 +144,8 @@ reference discrepancy; it does not override the explicit grouping requirement.
 
 ## Separate decisions still open
 
-The selected rule settles association and the first Float-default result/checkpoint.
-It does not settle zero/negative exponents, signed zero, exact overflow,
+The selected rules settle association, the Float-default result, and zero and
+negative exponent behavior described above. They do not settle signed zero, exact overflow,
 non-finite/domain faults, or universal cross-target rounding. The recursive grammar
 enforces the selected unary-minus boundary.
 

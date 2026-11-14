@@ -110,11 +110,10 @@ stream is selected. See the [transition plan](../compiler/transition-plan.md) an
 
 `**` is right-associative: `2 ** 3 ** 2` reads as `2 ** (3 ** 2) = 512`.
 Admitted Int or Float operands produce a Float result by default; Int results
-wait for a real NonNegInt exponent type. The current igniter checkpoint admits
-only positive exponents. `x ** 0` and negative exponents raise
-`ArithmeticPanic` as explicitly unsupported rather than final semantics.
-Exact zero/negative/overflow/fault contracts and compiler-target lowering
-remain open. `**=` and redundant power prefixes are not selected.
+wait for a real NonNegInt exponent type. Selected 2026-11-14: zero exponents yield 1, including `0 ** 0`; negative
+exponents yield reciprocal powers for nonzero bases. Zero to a negative exponent
+raises `ArithmeticPanic`. Signed zero, exact overflow, and other fault rules
+remain open. See [power and negation](power-and-negation.md). `**=` and redundant power prefixes are not selected.
 
 ## Feature and artifact verification registry, 2026-10-31
 
