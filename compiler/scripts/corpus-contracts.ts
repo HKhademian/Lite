@@ -1,12 +1,10 @@
 /** Recorded corpus contracts and generated TS execution; no live interpreter. */
 import { readFileSync } from 'node:fs';
-import { spawnSync } from 'node:child_process';
 import { join, resolve } from 'node:path';
 import { tmpdir } from 'node:os';
-import { buildCompiler } from '../host.ts';
+import { buildCompiler, invokeCompilerArtifact } from '../host.ts';
 import { checkTsArtifact, prepareTsArtifacts, type ArtifactRun } from '../../igniter/artifacts.ts';
 import { compilerFixtures, type CompilerFixture } from '../../igniter/test-fixtures.ts';
-import { sourceModuleIdentity } from '../source.ts';
 import { repository, hashBytes } from './tooling.ts';
 
 export type ArtifactContract = Readonly<{ ts: string; c: string }>;
@@ -38,13 +36,10 @@ export function validateCorpus(artifact: string): { cases: number; programs: num
     const key = sourcePath + '\0' + fixture.source;
     let actual = compiled.get(key);
     if (actual === undefined) {
-      const result = spawnSync(process.execPath, [join(repository, 'compiler/entry.ts'), resolve(artifact), '',
-        sourceModuleIdentity(Buffer.from(fixture.source, 'utf8')), sourcePath], {
-        cwd: tmpdir(), input: fixture.source, timeout: 10000, maxBuffer: 16 * 1024 * 1024,
+      const result = invokeCompilerArtifact(resolve(artifact), {
+        text: fixture.source, rootPath: sourcePath, cwd: tmpdir(),
       });
-      if (result.error !== undefined) throw result.error;
-      actual = { phase: 'run', status: result.status, signal: result.signal,
-        stdout: result.stdout ?? Buffer.alloc(0), stderr: result.stderr ?? Buffer.alloc(0) };
+      actual = { phase: 'run', status: result.status, signal: null, stdout: result.stdout, stderr: result.stderr };
       compiled.set(key, actual);
     }
     if (!compilerContractMatches(fixture, actual, artifacts)) {

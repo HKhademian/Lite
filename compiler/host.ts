@@ -1,11 +1,15 @@
 /** Host-only assembly and process glue. Both target compilers are Lite-generated TS programs. */
 import { spawnSync } from 'node:child_process';
 import { createHash } from 'node:crypto';
-import { existsSync, mkdirSync, mkdtempSync, readFileSync, realpathSync, renameSync, rmSync, writeFileSync } from 'node:fs';
-import { dirname, join, relative, resolve, sep } from 'node:path';
+import {
+  existsSync, lstatSync, mkdirSync, mkdtempSync, readFileSync, readlinkSync,
+  realpathSync, renameSync, rmSync, statSync, writeFileSync,
+} from 'node:fs';
+import { createRequire } from 'node:module';
+import { dirname, isAbsolute, join, relative, resolve, sep } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { loadManifest } from '../igniter/loader.ts';
-import { readSourceInput, resolveImportPath, sourceModuleIdentity } from './source.ts';
+import { displaySourcePath, readSourceInput, resolveImportPath, sourceModuleIdentity } from './source.ts';
 import { seed } from './bootstrap/seed.ts';
 
 /** Existing code-generation targets; this is host plumbing, not language syntax. */
@@ -19,13 +23,88 @@ export type CompilerInput = Readonly<{ text: string; name?: string; rootPath?: s
 export type CompilerBuild = Readonly<{ target: CompilerTarget; path: string; sourceSha256: string; artifactSha256: string; builderSha256: string; dependencies: readonly string[]; cached: boolean }>;
 type DependencyIdentity = Readonly<{ path: string; sha256: string }>;
 type SourceEdge = Readonly<{ importer: string; spec: string; path: string }>;
+type SourceRecord = Readonly<{ path: string; display: string; identity: string; text: string }>;
+type CompilerMain = (write?: (text: string) => void, sourceProvider?: (importer: string, spec: string) => SourceRecord) => unknown;
+type LoadedCompiler = Readonly<{ stamp: string; main: CompilerMain }>;
+type StatStamp = Readonly<{ linkPath: string; targetPath: string; stamp: string }>;
+type MemoizedBuild = Readonly<{ build: CompilerBuild; checks: readonly StatStamp[] }>;
+
+class CompilerExit extends Error {
+  readonly status: number;
+  constructor(status: number) {
+    super();
+    this.status = status;
+  }
+}
+
+class SourceReadFailure extends Error {}
 
 const root = fileURLToPath(new URL('../', import.meta.url));
 const seedPath = fileURLToPath(new URL(`./bootstrap/${seed.artifact}`, import.meta.url));
 const entryPath = fileURLToPath(new URL('./entry.ts', import.meta.url));
+const hostRequire = createRequire(import.meta.url);
+const loadedCompilers = new Map<string, LoadedCompiler>();
+const memoizedBuilds = new Map<CompilerTarget, MemoizedBuild>();
+let inProcessActive = false;
 
 /** Computes a lowercase SHA-256 identity without normalizing source bytes. */
 function hash(bytes: string | Buffer): string { return createHash('sha256').update(bytes).digest('hex'); }
+/** Captures link target, resolved path, and nanosecond file identity for cache invalidation. */
+function fileStamp(linkPath: string): StatStamp | undefined {
+  try {
+    const linkStat = lstatSync(linkPath, { bigint: true });
+    const targetPath = realpathSync(linkPath);
+    const isSymlink = linkStat.isSymbolicLink();
+    const targetStat = isSymlink ? statSync(targetPath, { bigint: true }) : linkStat;
+    const linkText = isSymlink ? `L:${readlinkSync(linkPath)}:` : '';
+    const stamp = `${linkText}${targetStat.dev}:${targetStat.ino}:${targetStat.size}:${targetStat.mtimeNs}:${targetStat.ctimeNs}`;
+    return { linkPath, targetPath, stamp };
+  } catch {
+    return undefined;
+  }
+}
+/** Returns true when every recorded path keeps the exact same resolved target and stat stamp. */
+function memoStillValid(checks: readonly StatStamp[]): boolean {
+  for (const expected of checks) {
+    const current = fileStamp(expected.linkPath);
+    if (current === undefined || current.targetPath !== expected.targetPath || current.stamp !== expected.stamp) {
+      return false;
+    }
+  }
+  return true;
+}
+/** Records a verified build selection alongside stat stamps for all graph and cache inputs. */
+function recordBuildMemo(
+  target: CompilerTarget,
+  build: CompilerBuild,
+  manifestPath: string,
+  sourcePath: string,
+  indexPath: string,
+  edges: readonly SourceEdge[],
+): CompilerBuild {
+  const paths = new Set<string>([
+    seedPath,
+    entryPath,
+    resolve(root, 'compiler/source.ts'),
+    manifestPath,
+    sourcePath,
+    indexPath,
+    ...build.dependencies.map(dep => resolve(root, dep)),
+    ...edges.map(edge => resolveImportPath(resolve(root, edge.importer), edge.spec, root)),
+  ]);
+  if (build.path !== seedPath) {
+    paths.add(build.path);
+    paths.add(join(dirname(build.path), 'provenance.json'));
+  }
+  const checks: StatStamp[] = [];
+  for (const candidate of paths) {
+    const stamp = fileStamp(candidate);
+    if (stamp === undefined) return build;
+    checks.push(stamp);
+  }
+  memoizedBuilds.set(target, { build, checks });
+  return build;
+}
 /** Writes the source-root selector only after the corresponding build has been verified. */
 function selectBuild(indexPath: string, indexDirectory: string, target: CompilerTarget, sourcePath: string, sourceRootSha256: string,
   cacheKey: string, dependencies: readonly string[], dependencyHashes: readonly DependencyIdentity[], edges: readonly SourceEdge[]): void {
@@ -36,8 +115,8 @@ function selectBuild(indexPath: string, indexDirectory: string, target: Compiler
   renameSync(indexTemporary, indexPath);
 }
 
-/** Executes one generated compiler with isolated process state and no stage-0 fallback. */
-function invoke(artifact: string, text: string, name?: string, cwd = process.cwd(), explicitRootPath?: string): CompilerResult {
+/** Spawns compiler/entry.ts in a fresh subprocess when in-process execution cannot be reused. */
+function invokeSubprocess(artifact: string, text: string, name?: string, cwd = process.cwd(), explicitRootPath?: string): CompilerResult {
   const rootPath = explicitRootPath ?? (name === undefined || name === '' ? resolve(cwd, '__lite_stdin__.lts') : resolve(cwd, name));
   const result = spawnSync(process.execPath, [entryPath, artifact, name ?? '', sourceModuleIdentity(text), rootPath], {
     input: text, cwd, timeout: 0, maxBuffer: 128 * 1024 * 1024,
@@ -45,6 +124,189 @@ function invoke(artifact: string, text: string, name?: string, cwd = process.cwd
   if (result.error !== undefined) throw result.error;
   if (result.signal !== null || result.status === null) throw new Error(`generated compiler terminated: ${result.signal ?? 'no exit status'}`);
   return { status: result.status, stdout: result.stdout ?? Buffer.alloc(0), stderr: result.stderr ?? Buffer.alloc(0) };
+}
+
+/** Runs an already-loaded generated compiler in-process while isolating stdio, argv, exit, and cwd-relative imports. */
+function invokeInProcess(main: CompilerMain, resolvedArtifact: string, text: string, name: string | undefined, cwd: string, rootPath: string): CompilerResult {
+  const unnamedRootPath = name === undefined || name === '' ? resolve(cwd, rootPath) : undefined;
+  const sourceCache = new Map<string, SourceRecord>();
+  const sourceFailure = (path: string, message: string): SourceReadFailure => {
+    const sourceName = path === unnamedRootPath ? '' : displaySourcePath(path);
+    return new SourceReadFailure(`${sourceName === '' ? '' : `${sourceName}: `}${message}`);
+  };
+  const readSource = (importer: string, spec: string): SourceRecord => {
+    const importerPath = isAbsolute(importer) ? importer : resolve(cwd, importer || '__lite_stdin__.lts');
+    let unresolved: string;
+    try {
+      unresolved = resolveImportPath(importerPath, spec, cwd);
+    } catch (error: unknown) {
+      const reason = error instanceof Error ? error.message : 'invalid import path';
+      throw sourceFailure(importerPath, reason);
+    }
+    let path: string;
+    try {
+      path = realpathSync(unresolved);
+    } catch (error: unknown) {
+      const code = typeof error === 'object' && error !== null && 'code' in error && typeof error.code === 'string' ? error.code : 'resolve error';
+      throw sourceFailure(importerPath, `cannot read imported source ${spec} (${code})`);
+    }
+    const cached = sourceCache.get(path);
+    if (cached !== undefined) return cached;
+    let bytes: Buffer;
+    try {
+      bytes = readFileSync(path);
+    } catch (error: unknown) {
+      const code = typeof error === 'object' && error !== null && 'code' in error && typeof error.code === 'string' ? error.code : 'read error';
+      throw sourceFailure(importerPath, `cannot read imported source ${spec} (${code})`);
+    }
+    let decoded: string;
+    try {
+      decoded = new TextDecoder('utf-8', { fatal: true }).decode(bytes);
+    } catch {
+      throw sourceFailure(importerPath, `imported source ${spec} is not valid UTF-8`);
+    }
+    const loadedRecord: SourceRecord = { path, display: displaySourcePath(path), identity: sourceModuleIdentity(bytes), text: decoded };
+    sourceCache.set(path, loadedRecord);
+    return loadedRecord;
+  };
+
+  const stdinBytes = Buffer.from(text, 'utf8');
+  let stdinOffset = 0;
+  const stdoutChunks: Buffer[] = [];
+  const stderrChunks: Buffer[] = [];
+  const savedArgv = process.argv;
+  const savedExit = process.exit;
+  const savedGetBuiltinModule = process.getBuiltinModule;
+  const rawGetBuiltinModule = savedGetBuiltinModule as (id: string) => unknown;
+  const realFs = rawGetBuiltinModule.call(process, 'node:fs') as Record<string, unknown> | undefined;
+  if (realFs === undefined) throw new Error('compiler host cannot access node:fs builtin module');
+  const fsProxy = new Proxy(realFs, {
+    get(target, prop, receiver) {
+      if (prop === 'readSync') {
+        return (...args: unknown[]): number => {
+          const [fd, buffer, offset, length] = args;
+          if (fd === 0) {
+            const out = buffer as Uint8Array;
+            const destOffset = typeof offset === 'number' ? offset : 0;
+            const maxLen = typeof length === 'number' ? length : out.byteLength - destOffset;
+            const available = Math.max(0, stdinBytes.length - stdinOffset);
+            const count = Math.max(0, Math.min(maxLen, available, out.byteLength - destOffset));
+            if (count > 0) {
+              out.set(stdinBytes.subarray(stdinOffset, stdinOffset + count), destOffset);
+              stdinOffset += count;
+            }
+            return count;
+          }
+          return Reflect.apply(target['readSync'] as (...a: unknown[]) => number, target, args);
+        };
+      }
+      if (prop === 'readFileSync') {
+        return (...args: unknown[]): unknown => {
+          const [pathOrFd, options] = args;
+          if (pathOrFd === 0) {
+            const rest = stdinBytes.subarray(stdinOffset);
+            stdinOffset = stdinBytes.length;
+            const encoding = typeof options === 'string'
+              ? options
+              : (typeof options === 'object' && options !== null && 'encoding' in options && typeof options.encoding === 'string'
+                ? options.encoding : undefined);
+            return encoding !== undefined ? Buffer.from(rest).toString(encoding as BufferEncoding) : Buffer.from(rest);
+          }
+          return Reflect.apply(target['readFileSync'] as (...a: unknown[]) => unknown, target, args);
+        };
+      }
+      if (prop === 'writeSync') {
+        return (...args: unknown[]): number => {
+          const [fd, data, ...rest] = args;
+          if (fd === 1 || fd === 2) {
+            const targetChunks = fd === 1 ? stdoutChunks : stderrChunks;
+            let chunk: Buffer;
+            if (typeof data === 'string') {
+              chunk = Buffer.from(data, 'utf8');
+            } else {
+              const view = data as Uint8Array;
+              const off = typeof rest[0] === 'number' ? rest[0] : 0;
+              const end = typeof rest[1] === 'number' ? off + rest[1] : view.byteLength;
+              chunk = Buffer.from(view.subarray(off, end));
+            }
+            targetChunks.push(chunk);
+            return chunk.length;
+          }
+          return Reflect.apply(target['writeSync'] as (...a: unknown[]) => number, target, args);
+        };
+      }
+      return Reflect.get(target, prop, receiver);
+    },
+  });
+
+  inProcessActive = true;
+  let status = 0;
+  try {
+    process.argv = [process.execPath, resolvedArtifact, name ?? '', sourceModuleIdentity(text), rootPath];
+    process.exit = ((code?: number | string | null): never => {
+      const numeric = code === undefined || code === null ? 0 : Number(code);
+      throw new CompilerExit(Number.isFinite(numeric) ? numeric : 1);
+    }) as typeof process.exit;
+    process.getBuiltinModule = ((moduleName: string) => (
+      moduleName === 'node:fs' ? fsProxy : rawGetBuiltinModule.call(process, moduleName)
+    )) as typeof process.getBuiltinModule;
+    try {
+      const output = main((textChunk: string): void => {
+        stdoutChunks.push(Buffer.from(textChunk, 'utf8'));
+      }, readSource);
+      if (output === undefined) {
+        status = 2;
+      } else if (typeof output !== 'string') {
+        throw new Error('compiler entry: main did not return text');
+      } else if (output.length > 0) {
+        stdoutChunks.push(Buffer.from(output, 'utf8'));
+      }
+    } catch (error: unknown) {
+      if (error instanceof CompilerExit) {
+        status = error.status;
+      } else if (error instanceof SourceReadFailure) {
+        stderrChunks.push(Buffer.from(`${error.message}\n`, 'utf8'));
+        status = 2;
+      } else {
+        throw error;
+      }
+    }
+  } finally {
+    process.argv = savedArgv;
+    process.exit = savedExit;
+    process.getBuiltinModule = savedGetBuiltinModule;
+    inProcessActive = false;
+  }
+  return { status, stdout: Buffer.concat(stdoutChunks), stderr: Buffer.concat(stderrChunks) };
+}
+
+/** Executes one generated compiler with warm in-process reuse when safe, falling back to a subprocess otherwise. */
+function invoke(artifact: string, text: string, name?: string, cwd = process.cwd(), explicitRootPath?: string): CompilerResult {
+  const rootPath = explicitRootPath ?? (name === undefined || name === '' ? resolve(cwd, '__lite_stdin__.lts') : resolve(cwd, name));
+  const resolvedArtifact = resolve(artifact);
+  const currentStamp = fileStamp(resolvedArtifact);
+  if (inProcessActive || currentStamp === undefined) {
+    return invokeSubprocess(artifact, text, name, cwd, explicitRootPath);
+  }
+  let cached = loadedCompilers.get(resolvedArtifact);
+  if (cached !== undefined) {
+    if (cached.stamp !== currentStamp.stamp) {
+      return invokeSubprocess(artifact, text, name, cwd, explicitRootPath);
+    }
+  } else {
+    let loaded: unknown;
+    try {
+      loaded = hostRequire(resolvedArtifact);
+    } catch {
+      return invokeSubprocess(artifact, text, name, cwd, explicitRootPath);
+    }
+    if (typeof loaded !== 'object' || loaded === null || !('main' in loaded) || typeof loaded.main !== 'function') {
+      return invokeSubprocess(artifact, text, name, cwd, explicitRootPath);
+    }
+    cached = { stamp: currentStamp.stamp, main: loaded.main as CompilerMain };
+    loadedCompilers.set(resolvedArtifact, cached);
+  }
+  return invokeInProcess(cached.main, resolvedArtifact, text, name, cwd, rootPath);
 }
 
 /** Compiles a source root and captures the dependency paths actually read by the Lite graph visitor on fd 3. */
@@ -80,9 +342,11 @@ function checkArtifact(artifact: string, directory: string): void {
   writeFileSync(config, JSON.stringify({
     extends: resolve(root, 'compiler/bootstrap/tsconfig.json'), include: [], files: [artifact],
   }));
-  const checked = spawnSync(process.execPath, [resolve(root, 'igniter/node_modules/typescript/bin/tsc'), '-p', config], {
-    encoding: 'utf8', timeout: 0,
-  });
+  const exeName = process.platform === 'win32' ? 'tsc.exe' : 'tsc';
+  const nativeTsc = resolve(root, 'igniter/node_modules', '@typescript', `typescript-${process.platform}-${process.arch}`, 'lib', exeName);
+  const checked = existsSync(nativeTsc)
+    ? spawnSync(nativeTsc, ['-p', config], { encoding: 'utf8', timeout: 0 })
+    : spawnSync(process.execPath, [resolve(root, 'igniter/node_modules/typescript/bin/tsc'), '-p', config], { encoding: 'utf8', timeout: 0 });
   if (checked.error !== undefined) throw checked.error;
   if (checked.status !== 0 || checked.signal !== null) {
     throw new Error(`rebuilt compiler failed strict TypeScript checking:\n${checked.stdout}${checked.stderr}`);
@@ -121,6 +385,9 @@ function cachedBuild(directory: string, sourceSha256: string, target: CompilerTa
  * seed and strict-checks it before atomic cache publication. No T00 code runs.
  */
 export function buildCompiler(target: CompilerTarget): CompilerBuild {
+  const memo = memoizedBuilds.get(target);
+  if (memo !== undefined && memoStillValid(memo.checks)) return memo.build;
+  memoizedBuilds.delete(target);
   if (hash(readFileSync(seedPath)) !== seed.artifactSha256) throw new Error('selected TS bootstrap seed hash mismatch');
   const manifestPath = resolve(root, 'compiler/manifests', `${target}.json`);
   const manifest = loadManifest(manifestPath);
@@ -172,10 +439,11 @@ export function buildCompiler(target: CompilerTarget): CompilerBuild {
     if (valid && edgesValid) {
       const sourceSha256 = hash(JSON.stringify({ version: 5, sourceName, sourceBridgeSha256, dependencyHashes, edges }));
       if (target === 'ts' && sourceSha256 === seed.sourceSha256 && index.cacheKey === seed.artifactSha256) {
-        return { target, path: seedPath, sourceSha256, artifactSha256: seed.artifactSha256,
-          builderSha256: seed.artifactSha256, dependencies, cached: false };
+        return recordBuildMemo(target, { target, path: seedPath, sourceSha256, artifactSha256: seed.artifactSha256,
+          builderSha256: seed.artifactSha256, dependencies, cached: false }, manifestPath, sourcePath, indexPath, edges);
       }
-      return cachedBuild(join(cache, index.cacheKey), sourceSha256, target, dependencies, dependencyHashes, edges);
+      return recordBuildMemo(target, cachedBuild(join(cache, index.cacheKey), sourceSha256, target, dependencies, dependencyHashes, edges),
+        manifestPath, sourcePath, indexPath, edges);
     }
   }
   mkdirSync(cache, { recursive: true });
@@ -213,15 +481,15 @@ export function buildCompiler(target: CompilerTarget): CompilerBuild {
         throw new Error('selected TS bootstrap seed does not reproduce its recorded source graph');
       }
       selectBuild(indexPath, indexDirectory, target, sourcePath, sourceRootSha256, seed.artifactSha256, dependencies, dependencyHashes, edges);
-      return { target, path: seedPath, sourceSha256, artifactSha256, builderSha256: seed.artifactSha256,
-        dependencies, cached: false };
+      return recordBuildMemo(target, { target, path: seedPath, sourceSha256, artifactSha256, builderSha256: seed.artifactSha256,
+        dependencies, cached: false }, manifestPath, sourcePath, indexPath, edges);
     }
     const key = hash(`${target}:${seed.artifactSha256}:${sourceSha256}:${JSON.stringify(dependencies)}`);
     const destination = join(cache, key);
     if (existsSync(destination)) {
       const selected = cachedBuild(destination, sourceSha256, target, dependencies, dependencyHashes, edges);
       selectBuild(indexPath, indexDirectory, target, sourcePath, sourceRootSha256, key, dependencies, dependencyHashes, edges);
-      return selected;
+      return recordBuildMemo(target, selected, manifestPath, sourcePath, indexPath, edges);
     }
     const artifact = join(temporary, 'compiler.ts');
     writeFileSync(artifact, generated.stdout);
@@ -239,7 +507,7 @@ export function buildCompiler(target: CompilerTarget): CompilerBuild {
     }
     const selected = cachedBuild(destination, sourceSha256, target, dependencies, dependencyHashes, edges);
     selectBuild(indexPath, indexDirectory, target, sourcePath, sourceRootSha256, key, dependencies, dependencyHashes, edges);
-    return selected;
+    return recordBuildMemo(target, selected, manifestPath, sourcePath, indexPath, edges);
   } finally {
     rmSync(temporary, { recursive: true, force: true });
   }
@@ -251,9 +519,14 @@ export function buildTsCompiler(): CompilerBuild { return buildCompiler('ts'); }
 /** Selects the current C compiler; builds and caches it from compiler sources if needed. */
 export function buildCCompiler(): CompilerBuild { return buildCompiler('c'); }
 
+/** Compiles one whole Lite source through a generated compiler artifact path. */
+export function invokeCompilerArtifact(artifact: string, input: CompilerInput): CompilerResult {
+  return invoke(artifact, input.text, input.name, input.cwd ?? process.cwd(), input.rootPath);
+}
+
 /** Compiles one whole Lite source with a current Lite-written target compiler. */
 export function compileBuiltCompiler(build: CompilerBuild, input: CompilerInput): CompilerResult {
-  return invoke(build.path, input.text, input.name, input.cwd ?? process.cwd(), input.rootPath);
+  return invokeCompilerArtifact(build.path, input);
 }
 
 /** Selects the current graph then compiles one whole Lite source. */

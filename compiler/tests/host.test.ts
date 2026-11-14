@@ -2337,7 +2337,8 @@ test('prepared artifacts retain isolated runs and release their resources explic
   assert.throws(() => bad.runs[0]!(), /artifacts have been disposed/);
 });
 
-test('default test startup and generated baseline run in a source archive without T00', () => {
+test('default test startup and generated baseline run in a source archive without T00', context => {
+  if (process.env['LITE_SKIP_HEAVY'] === '1') { context.skip('LITE_SKIP_HEAVY=1'); return; }
   const directory = isolatedCheckout();
   try {
     for (const path of ['igniter', 'tools', 'bin', 'config', 'compiler/tests', 'compiler/tests/references/generated', 'compiler/runtime', 'lib',
