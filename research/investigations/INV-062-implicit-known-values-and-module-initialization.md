@@ -33,7 +33,7 @@ a := 4 * 4;
 b := square(a);
 ```
 
-The desired candidate behavior is that `a` and `b` are both known as `16`
+The desired candidate behavior is that `a` is known as `16` and `b` as `256`
 during compilation, without an annotation or explicit compile-time block.
 The function definition is itself usable as a callable, while executing its
 body is a separate event. This behavior is **proposed**, not an accepted
@@ -221,7 +221,7 @@ All examples below are design probes, not current compiler conformance passes.
 Some require later decisions and are intentionally shown as alternatives.
 
 1. `a := 4 * 4; b := square(a);`: an implicit-known candidate gives `16` for
-   both, and a compile-time-required consumer can use `b` if the rule is
+   `a` and `256` for `b`, and a compile-time-required consumer can use `b` if the rule is
    selected. Use both direct and nested calls and distinct valid input values.
 2. `x := readRuntimeInput();`: a fixed binding is not sufficient to use `x`
    as a compile-time array extent. Under the module-constant option, a runtime
