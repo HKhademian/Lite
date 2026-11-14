@@ -1,0 +1,114 @@
+/* Grid snake mini-game: steer with Arrows or WASD, collect glowing fruit, Space restarts. */
+
+audio := import "extra/audio";
+board := import "extra/board";
+canvas := import "extra/canvas";
+io := import "core/io";
+list := import "core/list";
+
+tile := 16;
+cols := 20;
+rows := 12;
+ctx := canvas.play(width = cols * tile, height = rows * tile, title = "Grid Snake (320x192) · Arrows/WASD");
+bg := canvas.rgb(10, 15, 22);
+
+Cell := type (x: Int, y: Int);
+
+var snake: mut List<Cell> = [(x = 8, y = 6), (x = 7, y = 6), (x = 6, y = 6)];
+var dirX := 1;
+var dirY := 0;
+var foodX := 14;
+var foodY := 6;
+var seed := 7;
+var gameOver := false;
+var acc := 0.0;
+
+resetGame := fn(): Unit {
+    snake = [(x = 8, y = 6), (x = 7, y = 6), (x = 6, y = 6)];
+    dirX = 1;
+    dirY = 0;
+    foodX = 14;
+    foodY = 6;
+    gameOver = false;
+}
+
+render := fn(): Unit {
+    canvas.clear(bg);
+    board.drawRect(0, 0, ctx.width, ctx.height, canvas.rgba(255, 255, 255, 28));
+    /* Food pulse */
+    fx := (foodX * tile) + (tile / 2);
+    fy := (foodY * tile) + (tile / 2);
+    board.fillCircle(fx, fy, 7, canvas.rgba(240, 118, 128, 60));
+    board.fillCircle(fx, fy, 5, canvas.rgb(240, 118, 128));
+
+    var idx := 0;
+    loop snake as seg {
+        col := if gameOver {
+            canvas.rgb(214, 110, 118)
+        } else if idx == 0 {
+            canvas.rgb(154, 232, 162)
+        } else {
+            canvas.rgb(98, 186, 126)
+        };
+        canvas.fillRect((seg.x * tile) + 1, (seg.y * tile) + 1, tile - 2, tile - 2, col);
+        idx += 1;
+    }
+}
+
+onCanvasInit := fn(): Unit {
+    render();
+}
+
+onCanvasUpdate := fn(dt: Float): Int {
+    if gameOver { return 0; }
+    acc = acc + dt;
+    if acc >= 0.14 {
+        acc = 0.0;
+        head := snake[0];
+        nx := head.x + dirX;
+        ny := head.y + dirY;
+        if nx < 0 or nx >= cols or ny < 0 or ny >= rows {
+            gameOver = true;
+            audio.tone(frequency = 170, durationMs = 180, volume = 18);
+            render();
+            return 0;
+        }
+        var hitSelf := false;
+        loop snake as seg {
+            if seg.x == nx and seg.y == ny { hitSelf = true; }
+        }
+        if hitSelf {
+            gameOver = true;
+            audio.tone(frequency = 170, durationMs = 180, volume = 18);
+            render();
+            return 0;
+        }
+        ate := nx == foodX and ny == foodY;
+        list.pushFront(mut snake, (x = nx, y = ny));
+        if ate {
+            seed = (seed * 7) + 11;
+            foodX = 1 + (seed % (cols - 2));
+            foodY = 1 + ((seed / 3) % (rows - 2));
+            audio.tone(frequency = 587, durationMs = 80, volume = 16);
+        } else {
+            _ := list.popBack(mut snake);
+        }
+        render();
+    }
+    0
+}
+
+onCanvasKeyDown := fn(key: String): Unit {
+    if (key == "ArrowLeft" or key == "a") and dirX == 0 { dirX = -1; dirY = 0; }
+    else if (key == "ArrowRight" or key == "d") and dirX == 0 { dirX = 1; dirY = 0; }
+    else if (key == "ArrowUp" or key == "w") and dirY == 0 { dirX = 0; dirY = -1; }
+    else if (key == "ArrowDown" or key == "s") and dirY == 0 { dirX = 0; dirY = 1; }
+    else if key == " " {
+        resetGame();
+        render();
+        audio.tone(frequency = 440, durationMs = 60, volume = 14);
+    }
+}
+
+render();
+io.outputLine("Canvas:", ctx.title, ctx.width, "x", ctx.height);

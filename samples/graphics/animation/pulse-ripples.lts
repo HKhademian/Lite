@@ -1,0 +1,50 @@
+/* Expanding concentric water ripples using `board.drawCircle` and fading alpha. */
+
+board := import "extra/board";
+canvas := import "extra/canvas";
+io := import "core/io";
+
+ctx := canvas.play(width = 320, height = 200, title = "Pulse Ripples (320x200)");
+bg := canvas.rgb(10, 18, 30);
+var phase := 0;
+var acc := 0.0;
+
+drawWave := fn(cx: Int, cy: Int, offset: Int, red: Int, green: Int, blue: Int): Unit {
+    var wave := 0;
+    loop wave < 3 {
+        radius := 8 + ((phase + offset + (wave * 28)) % 84);
+        alpha := 220 - ((radius * 220) / 92);
+        if alpha > 8 {
+            board.drawCircle(cx, cy, radius, canvas.rgba(red, green, blue, alpha));
+            if radius > 12 {
+                board.drawCircle(cx, cy, radius - 1, canvas.rgba(red, green, blue, alpha / 2));
+            }
+        }
+        wave += 1;
+    }
+    board.fillCircle(cx, cy, 4, canvas.rgba(red, green, blue, 180));
+}
+
+render := fn(): Unit {
+    canvas.clear(bg);
+    drawWave(110, 96, 0, 108, 210, 232);
+    drawWave(214, 110, 14, 198, 152, 236);
+    board.drawRect(0, 0, ctx.width, ctx.height, canvas.rgba(255, 255, 255, 28));
+}
+
+onCanvasInit := fn(): Unit {
+    render();
+}
+
+onCanvasUpdate := fn(dt: Float): Int {
+    acc = acc + dt;
+    if acc >= 0.03 {
+        acc = 0.0;
+        phase = (phase + 2) % 84;
+        render();
+    }
+    0
+}
+
+render();
+io.outputLine("Canvas:", ctx.title, ctx.width, "x", ctx.height);

@@ -10,8 +10,9 @@ import { buildCCompiler, buildTsCompiler, compileBuiltCompiler, type CompilerBui
 import { sourceModuleIdentity } from '../compiler/source.ts';
 import { heroSample, playgroundDefaultSample, sampleGroups, showcaseSamples, type ShowcaseSample } from './groups.ts';
 import { escapeHtml, highlightLite, highlightTs } from './highlight.ts';
-import { playSamples, type PlaySample } from './play-samples.ts';
+import { playGroups, playSamples, type PlaySample } from './play-samples.ts';
 import { playgroundWorkerJs } from './playground-worker.ts';
+import { stripLiteTs } from './strip-ts.ts';
 import { siteCss } from './styles.ts';
 
 type AnySample = ShowcaseSample | PlaySample;
@@ -22,6 +23,8 @@ type RenderedSample = AnySample & Readonly<{
   generatedTs: string;
   tsHtml: string;
   output: string;
+  previewSvg?: string;
+  badge?: string;
 }>;
 
 export type BuildSiteOptions = Readonly<{
@@ -64,7 +67,79 @@ function readSourceRevision(): SourceRevision {
   };
 }
 
-function compileAndRunSample(sample: AnySample, tsCompiler: CompilerBuild): RenderedSample {
+function decodeArgb(packed: bigint): Readonly<{ fill: string; alphaAttr: string }> {
+  const value = Number(packed & 0xffffffffn);
+  const a = (value >>> 24) & 255;
+  const r = (value >>> 16) & 255;
+  const g = (value >>> 8) & 255;
+  const b = value & 255;
+  const fill = `rgb(${String(r)},${String(g)},${String(b)})`;
+  const alphaAttr = a < 255 ? ` fill-opacity="${(a / 255).toFixed(3)}"` : '';
+  return { fill, alphaAttr };
+}
+
+function renderOpsSvg(width: number, height: number, ops: readonly bigint[], title: string): string {
+  if (width <= 0 || height <= 0) return '';
+  let rects: string[] = [];
+  let i = 0;
+  while (i < ops.length) {
+    const op = Number(ops[i]);
+    if (op === 1 && i + 1 < ops.length) {
+      const { fill, alphaAttr } = decodeArgb(ops[i + 1]!);
+      rects = [`<rect width="${String(width)}" height="${String(height)}" fill="${fill}"${alphaAttr}/>`];
+      i += 2;
+    } else if (op === 2 && i + 5 < ops.length) {
+      const x = Number(ops[i + 1]!);
+      const y = Number(ops[i + 2]!);
+      const w = Number(ops[i + 3]!);
+      const h = Number(ops[i + 4]!);
+      const { fill, alphaAttr } = decodeArgb(ops[i + 5]!);
+      rects.push(`<rect x="${String(x)}" y="${String(y)}" width="${String(w)}" height="${String(h)}" fill="${fill}"${alphaAttr}/>`);
+      i += 6;
+    } else {
+      break;
+    }
+  }
+  return `<svg class="play-preview-svg" viewBox="0 0 ${String(width)} ${String(height)}" shape-rendering="crispEdges" role="img" aria-label="Initial frame preview for ${escapeHtml(title)}">${rects.join('')}</svg>`;
+}
+
+function captureCanvasPreview(generatedTs: string, title: string, badge?: string): string | undefined {
+  const snapFn = generatedTs.match(/\bfunction (liteFn\$[a-zA-Z0-9_$]+\$litePlayCanvasSnapshot)\b/)?.[1];
+  const opsFn = generatedTs.match(/\bfunction (liteFn\$[a-zA-Z0-9_$]+\$litePlayCanvasTakeOps)\b/)?.[1];
+  if (snapFn === undefined || opsFn === undefined) return undefined;
+
+  let runnable = stripLiteTs(generatedTs);
+  const tailReturn = /return lite\$out;\s*\}\s*$/;
+  if (!tailReturn.test(runnable)) return undefined;
+  runnable = runnable.replace(tailReturn, [
+    'const __pick = (a, b) => (typeof a === "function" ? a : typeof b === "function" ? b : null);',
+    'const __init = __pick(typeof liteFn_onCanvasInit !== "undefined" ? liteFn_onCanvasInit : undefined, typeof liteFn_canvas_onInit !== "undefined" ? liteFn_canvas_onInit : undefined);',
+    'if (__init) __init();',
+    `const __snap = ${snapFn}();`,
+    `const __ops = ${opsFn}();`,
+    'return { width: Number(__snap.width), height: Number(__snap.height), ops: __ops };',
+    '}',
+  ].join('\n'));
+  runnable = runnable.replace(/\bexport function main\b/, 'function main') + '\nreturn main(() => {});';
+
+  const prevProcess = (globalThis as unknown as { process: unknown }).process;
+  const stubProcess = {
+    argv: ['node', 'preview.js'],
+    exit: () => { throw new Error('unexpected exit'); },
+    getBuiltinModule: () => ({ readSync: () => 0, writeSync: (_fd: number, text: string) => text.length }),
+  };
+  try {
+    (globalThis as unknown as { process: unknown }).process = stubProcess;
+    const frame = (new Function('process', runnable) as (proc: unknown) => { width: number; height: number; ops: bigint[] })(stubProcess);
+    const svg = renderOpsSvg(frame.width, frame.height, frame.ops, title);
+    if (!svg) return undefined;
+    return badge ? `<div class="play-preview">${svg}</div>` : `<div class="play-preview">${svg}</div>`;
+  } finally {
+    (globalThis as unknown as { process: unknown }).process = prevProcess;
+  }
+}
+
+function compileAndRunSample(sample: AnySample, tsCompiler: CompilerBuild, badge?: string): RenderedSample {
   const fullPath = resolve(root, sample.file);
   const source = readFileSync(fullPath, 'utf8');
   const compiled = compileBuiltCompiler(tsCompiler, { text: source, name: sample.file, cwd: root });
@@ -87,6 +162,7 @@ function compileAndRunSample(sample: AnySample, tsCompiler: CompilerBuild): Rend
     if (run.status !== 0) {
       throw new Error(`failed to run ${sample.file} (exit ${String(run.status)}):\n${run.stderr}`);
     }
+    const previewSvg = captureCanvasPreview(generatedTs, sample.title, badge);
     return {
       ...sample,
       source,
@@ -94,6 +170,8 @@ function compileAndRunSample(sample: AnySample, tsCompiler: CompilerBuild): Rend
       generatedTs,
       tsHtml: highlightTs(generatedTs.trimEnd()),
       output: run.stdout,
+      previewSvg,
+      badge,
     };
   } finally {
     rmSync(scratch, { recursive: true, force: true });
@@ -451,14 +529,19 @@ function renderHomePage(rendered: ReadonlyMap<string, RenderedSample>, repoUrl: 
 }
 
 function renderGalleryCard(sample: RenderedSample, basePath: string): string {
+  const badgeHtml = sample.badge
+    ? `<span class="gallery-badge">${escapeHtml(sample.badge)}</span>`
+    : `<span class="code-card-meta">${escapeHtml(sample.file)}</span>`;
+  const previewBlock = sample.previewSvg ?? '';
   return `<article class="code-card" id="sample-${escapeHtml(sample.id)}">
   <div class="code-card-head">
     <span class="code-card-title">${escapeHtml(sample.title)}</span>
-    <span class="code-card-meta">${escapeHtml(sample.file)}</span>
+    ${badgeHtml}
   </div>
+  ${previewBlock}
   <p class="sample-note" style="flex: 1;">${escapeHtml(sample.note)}</p>
   <details class="gallery-code">
-    <summary>Source</summary>
+    <summary>Source (${escapeHtml(sample.file)})</summary>
     <pre class="code-block"><code>${sample.sourceHtml}</code></pre>
   </details>
   <footer class="sample-foot">
@@ -474,24 +557,28 @@ function renderGalleryPage(
   rev: SourceRevision,
   lightSwitchShine: boolean,
 ): string {
-  const jumpLinks = [
-    ...sampleGroups.map(group => {
-      const count = showcaseSamples.filter(s => s.group === group.id && rendered.has(s.id)).length;
-      return `<a class="gallery-jump" href="#group-${escapeHtml(group.id)}">${escapeHtml(group.title)} <span>${String(count)}</span></a>`;
-    }),
-    `<a class="gallery-jump" href="#group-play">Play &mdash; Canvas &amp; Audio <span>${String(renderedPlay.size)}</span></a>`,
-  ].join('\n    ');
+  const languageJumps = sampleGroups.map(group => {
+    const count = showcaseSamples.filter(s => s.group === group.id && rendered.has(s.id)).length;
+    return `<a class="gallery-jump" href="#group-${escapeHtml(group.id)}">${escapeHtml(group.title)} <span>${String(count)}</span></a>`;
+  }).join('\n      ');
 
-  const sections = sampleGroups.map(group => {
+  const playJumps = playGroups.map(group => {
+    const count = playSamples.filter(s => s.group === group.id && renderedPlay.has(s.id)).length;
+    return `<a class="gallery-jump" href="#group-${escapeHtml(group.id)}">${escapeHtml(group.title)} <span>${String(count)}</span></a>`;
+  }).join('\n      ');
+
+  const languageSections = sampleGroups.map(group => {
     const cards = showcaseSamples
       .filter(s => s.group === group.id)
       .map(s => rendered.get(s.id))
       .filter((s): s is RenderedSample => s !== undefined)
       .map(s => renderGalleryCard(s, '../'))
       .join('\n');
+    const badge = group.folder ? `<span class="gallery-badge">${escapeHtml(group.folder)}/</span>` : '';
     return `<section class="section" id="group-${escapeHtml(group.id)}">
   <div class="section-head">
     <h2>${escapeHtml(group.title)}</h2>
+    ${badge}
   </div>
   <p class="section-note">${escapeHtml(group.description)}</p>
   <div class="sample-grid">
@@ -500,36 +587,47 @@ function renderGalleryPage(
 </section>`;
   }).join('\n');
 
-  const playCards = playSamples
-    .map(s => renderedPlay.get(s.id))
-    .filter((s): s is RenderedSample => s !== undefined)
-    .map(s => renderGalleryCard(s, '../'))
-    .join('\n');
-  const playSection = `<section class="section" id="group-play">
+  const playSections = playGroups.map(group => {
+    const cards = playSamples
+      .filter(s => s.group === group.id)
+      .map(s => renderedPlay.get(s.id))
+      .filter((s): s is RenderedSample => s !== undefined)
+      .map(s => renderGalleryCard(s, '../'))
+      .join('\n');
+    return `<section class="section" id="group-${escapeHtml(group.id)}">
   <div class="section-head">
-    <h2>Play &mdash; Canvas &amp; Audio</h2>
+    <h2>${escapeHtml(group.title)}</h2>
+    <span class="gallery-badge">${escapeHtml(group.folder)}/</span>
   </div>
-  <p class="section-note">Optional browser stage modules (<code>extra/canvas</code>, <code>extra/board</code>, <code>extra/audio</code>) with typed RGBA contexts, pointer/key hooks, and Web Audio tones.</p>
+  <p class="section-note">${escapeHtml(group.description)}</p>
   <div class="sample-grid">
-    ${playCards}
+    ${cards}
   </div>
 </section>`;
+  }).join('\n');
 
   const body = `<section style="padding: 2rem 0 1.25rem;">
   <h1 style="margin: 0 0 0.5rem;">Gallery</h1>
   <p class="hero-lead" style="margin: 0 0 1rem;">
-    All ${String(rendered.size)} core examples and ${String(renderedPlay.size)} interactive Play demos below are compiled and executed by the ${proseLite} compiler during the site build.
+    All ${String(rendered.size)} core &amp; program examples and ${String(renderedPlay.size)} folder-grouped canvas, audio, and game showcases below are compiled and executed by the ${proseLite} compiler during the site build.
   </p>
   <nav class="gallery-jumps" aria-label="Gallery categories">
-    ${jumpLinks}
+    <div class="gallery-tier-line">
+      <span class="gallery-tier-label">Language &amp; Programs</span>
+      ${languageJumps}
+    </div>
+    <div class="gallery-tier-line">
+      <span class="gallery-tier-label">Play &mdash; Canvas, Audio &amp; Games</span>
+      ${playJumps}
+    </div>
   </nav>
 </section>
-${sections}
-${playSection}`;
+${languageSections}
+${playSections}`;
 
   return renderPage({
     title: 'Gallery — Lite',
-    description: 'Verified Lite example programs compiled and executed at build time.',
+    description: 'Verified Lite language examples and category-grouped canvas, audio, and game showcases.',
     basePath: '../',
     active: 'gallery',
     repoUrl,
@@ -552,9 +650,13 @@ function renderPlaygroundPage(
       .map(s => `<option value="${escapeHtml(s.id)}">${escapeHtml(s.title)}</option>`)
       .join('');
     return `<optgroup label="${escapeHtml(group.title)}">${items}</optgroup>`;
-  }).join('') + `<optgroup label="Play — Canvas &amp; Audio">${playSamples
-    .map(s => `<option value="${escapeHtml(s.id)}">${escapeHtml(s.title)}</option>`)
-    .join('')}</optgroup>`;
+  }).join('') + playGroups.map(group => {
+    const items = playSamples
+      .filter(s => s.group === group.id)
+      .map(s => `<option value="${escapeHtml(s.id)}">${escapeHtml(s.title)}</option>`)
+      .join('');
+    return `<optgroup label="Play — ${escapeHtml(group.title)}">${items}</optgroup>`;
+  }).join('');
 
   const payload = [
     ...Array.from(rendered.values()).map(s => ({
@@ -1325,11 +1427,12 @@ export function buildSite(options?: BuildSiteOptions): void {
   const rendered = new Map<string, RenderedSample>();
   const renderedPlay = new Map<string, RenderedSample>();
 
+  const playBadgeByGroup = new Map(playGroups.map(group => [group.id, group.badge]));
   for (const sample of showcaseSamples) {
     rendered.set(sample.id, compileAndRunSample(sample, tsCompiler));
   }
   for (const sample of playSamples) {
-    renderedPlay.set(sample.id, compileAndRunSample(sample, tsCompiler));
+    renderedPlay.set(sample.id, compileAndRunSample(sample, tsCompiler, playBadgeByGroup.get(sample.group)));
   }
 
   rmSync(outputDir, { recursive: true, force: true });

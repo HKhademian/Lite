@@ -1,0 +1,27 @@
+/* Reverse Polish Notation (RPN) stack evaluator using `core/list` and `core/text`. */
+
+io := import "core/io";
+list := import "core/list";
+text := import "core/text";
+
+evalRpn := fn(tokens: List<String>): Int {
+    stack: mut List<Int> = [];
+    loop tokens as tok {
+        if tok == "+" or tok == "-" or tok == "*" or tok == "/" {
+            right := list.popBack(mut stack);
+            left := list.popBack(mut stack);
+            res := if tok == "+" { left + right }
+            else if tok == "-" { left - right }
+            else if tok == "*" { left * right }
+            else { left / right };
+            list.pushBack(mut stack, res);
+        } else {
+            parsed := text.textToInt(tok);
+            list.pushBack(mut stack, parsed.value);
+        }
+    }
+    list.popBack(mut stack)
+}
+
+expr: List<String> = ["5", "1", "2", "+", "4", "*", "+", "3", "-"];
+io.outputLine("RPN(5 1 2 + 4 * + 3 -) =", evalRpn(expr));

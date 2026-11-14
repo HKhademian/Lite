@@ -1,14 +1,24 @@
 import assert from 'node:assert/strict';
-import { existsSync } from 'node:fs';
-import { join } from 'node:path';
+import { existsSync, readdirSync } from 'node:fs';
+import { join, relative, sep } from 'node:path';
 import { test } from 'node:test';
 import { fileURLToPath } from 'node:url';
-import { heroSample, showcaseSamples } from './groups.ts';
+import { heroSample, sampleGroups, showcaseSamples } from './groups.ts';
 import { highlightLite } from './highlight.ts';
-import { playSamples } from './play-samples.ts';
+import { playGroups, playSamples } from './play-samples.ts';
 import { stripLiteTs } from './strip-ts.ts';
 
 const root = fileURLToPath(new URL('..', import.meta.url));
+
+function listSampleFiles(dir: string): string[] {
+  const out: string[] = [];
+  for (const entry of readdirSync(dir, { withFileTypes: true })) {
+    const full = join(dir, entry.name);
+    if (entry.isDirectory()) out.push(...listSampleFiles(full));
+    else if (entry.name.endsWith('.lts')) out.push(relative(root, full).split(sep).join('/'));
+  }
+  return out;
+}
 
 test('stripLiteTs strips definite assignments, generic helpers, and as casts for runnable JS', () => {
   const routedSource = [
@@ -67,10 +77,39 @@ test('showcaseSamples includes examples covering named calls, tuples, arrays, an
   }
 });
 
-test('all site showcase and play sample sources live outside site/', () => {
-  for (const sample of [heroSample, ...showcaseSamples, ...playSamples]) {
+test('all site showcase and play sample sources live outside site/ and match samples/ folders 1:1', () => {
+  const folderByGroup = new Map<string, string>();
+  for (const group of sampleGroups) {
+    if (group.folder) folderByGroup.set(group.id, group.folder);
+  }
+  for (const group of playGroups) {
+    folderByGroup.set(group.id, group.folder);
+  }
+
+  const all = [heroSample, ...showcaseSamples, ...playSamples];
+  for (const sample of all) {
     assert(!sample.file.startsWith('site/'), `sample source should not live in site/: ${sample.file}`);
-    assert(sample.file.startsWith('language/'), `expected language/ sample location: ${sample.file}`);
     assert(existsSync(join(root, sample.file)), `missing sample file: ${sample.file}`);
+  }
+
+  const catalogFiles = [...showcaseSamples, ...playSamples]
+    .filter(s => s.file.startsWith('samples/'))
+    .map(s => s.file);
+  assert.equal(new Set(catalogFiles).size, catalogFiles.length, 'duplicate samples/ entry in catalog');
+  assert.deepEqual([...catalogFiles].sort(), listSampleFiles(join(root, 'samples')).sort());
+
+  for (const sample of [...showcaseSamples, ...playSamples]) {
+    const expectedFolder = folderByGroup.get(sample.group);
+    if (expectedFolder !== undefined) {
+      assert(
+        sample.file.startsWith(`${expectedFolder}/`),
+        `${sample.id} (${sample.file}) should live under ${expectedFolder}/`,
+      );
+    } else {
+      assert(
+        sample.file.startsWith('language/examples/') && !sample.file.slice('language/examples/'.length).includes('/'),
+        `${sample.id} should reference a top-level language/examples/ file`,
+      );
+    }
   }
 });

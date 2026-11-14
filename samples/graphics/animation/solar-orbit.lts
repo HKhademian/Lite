@@ -1,0 +1,62 @@
+/* Animated miniature solar orbit using integer LUT waypoints and concentric rings. */
+
+board := import "extra/board";
+canvas := import "extra/canvas";
+io := import "core/io";
+
+ctx := canvas.play(width = 320, height = 220, title = "Solar Orbit (320x220)");
+bg := canvas.rgb(9, 12, 22);
+cx := ctx.width / 2;
+cy := ctx.height / 2;
+
+/* 24 precomputed unit circle points * 100 for smooth integer orbits */
+cosTable: List<Int> = [100, 97, 87, 71, 50, 26, 0, -26, -50, -71, -87, -97, -100, -97, -87, -71, -50, -26, 0, 26, 50, 71, 87, 97];
+sinTable: List<Int> = [0, 26, 50, 71, 87, 97, 100, 97, 87, 71, 50, 26, 0, -26, -50, -71, -87, -97, -100, -97, -87, -71, -50, -26];
+
+var tick := 0;
+var acc := 0.0;
+
+render := fn(): Unit {
+    canvas.clear(bg);
+    board.drawCircle(cx, cy, 44, canvas.rgba(255, 255, 255, 34));
+    board.drawCircle(cx, cy, 72, canvas.rgba(255, 255, 255, 28));
+    board.drawCircle(cx, cy, 96, canvas.rgba(255, 255, 255, 22));
+
+    /* Central glowing star */
+    board.fillCircle(cx, cy, 22, canvas.rgba(255, 196, 86, 48));
+    board.fillCircle(cx, cy, 14, canvas.rgb(255, 212, 108));
+
+    i1 := (tick * 2) % 24;
+    i2 := tick % 24;
+    i3 := (tick + 12) % 24;
+
+    p1x := cx + ((cosTable[i1] * 44) / 100);
+    p1y := cy + ((sinTable[i1] * 44) / 100);
+    p2x := cx + ((cosTable[i2] * 72) / 100);
+    p2y := cy + ((sinTable[i2] * 72) / 100);
+    p3x := cx + ((cosTable[i3] * 96) / 100);
+    p3y := cy + ((sinTable[i3] * 96) / 100);
+
+    board.fillCircle(p1x, p1y, 5, canvas.rgb(232, 126, 108));
+    board.fillCircle(p2x, p2y, 8, canvas.rgb(104, 196, 228));
+    board.drawCircle(p2x, p2y, 12, canvas.rgba(104, 196, 228, 70));
+    board.fillCircle(p3x, p3y, 7, canvas.rgb(188, 152, 236));
+    board.drawRect(0, 0, ctx.width, ctx.height, canvas.rgba(255, 255, 255, 24));
+}
+
+onCanvasInit := fn(): Unit {
+    render();
+}
+
+onCanvasUpdate := fn(dt: Float): Int {
+    acc = acc + dt;
+    if acc >= 0.06 {
+        acc = 0.0;
+        tick = (tick + 1) % 24;
+        render();
+    }
+    0
+}
+
+render();
+io.outputLine("Canvas:", ctx.title, ctx.width, "x", ctx.height);

@@ -1,0 +1,36 @@
+/* Word frequency counter scanning tokens into a distinct-word list via `core/list`. */
+
+io := import "core/io";
+list := import "core/list";
+text := import "core/text";
+
+corpus := "lite is light and lite is explicit and clear";
+size := text.length(corpus);
+tokens: mut List<String> = [];
+unique: mut List<String> = [];
+
+var start := 0;
+var pos := 0;
+loop pos <= size {
+    atEnd := pos == size;
+    sep := if atEnd { true } else { text.at(corpus, pos) == " " };
+    if sep {
+        if pos > start {
+            word := text.slice(corpus, start, pos);
+            list.pushBack(mut tokens, word);
+            if not list.listContainsText(unique, word) {
+                list.pushBack(mut unique, word);
+            }
+        }
+        start = pos + 1;
+    }
+    pos += 1;
+}
+
+loop unique as w {
+    var hits := 0;
+    loop tokens as t {
+        if t == w { hits += 1; }
+    }
+    io.outputLine(w, ":", hits);
+}

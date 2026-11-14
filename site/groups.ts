@@ -1,11 +1,12 @@
 /** Curated showcase groups and verified examples for the public Lite site. */
 
-export type SampleGroupId = 'basics' | 'control' | 'types' | 'input';
+export type SampleGroupId = 'basics' | 'control' | 'types' | 'input' | 'programs';
 
 export type SampleGroup = Readonly<{
   id: SampleGroupId;
   title: string;
   description: string;
+  folder?: string;
 }>;
 
 export type ShowcaseSample = Readonly<{
@@ -40,6 +41,12 @@ export const sampleGroups: readonly SampleGroup[] = [
     id: 'input',
     title: 'Input & Arguments',
     description: 'Explicit stream reading, token retention, and command-line arguments.',
+  },
+  {
+    id: 'programs',
+    title: 'Programs & Algorithms',
+    description: 'Standalone folder-grouped project programs showcasing sequences, search, text transforms, histograms, and stack evaluation.',
+    folder: 'samples/programs',
   },
 ];
 
@@ -259,6 +266,66 @@ export const showcaseSamples: readonly ShowcaseSample[] = [
     note: 'Read and iterate over command-line arguments.',
     file: 'language/examples/020-script-arguments.lts',
     args: ['one', 'two', 'three'],
+    stdin: '',
+    showOutput: true,
+  },
+  {
+    id: 'fibonacci',
+    group: 'programs',
+    title: 'Fibonacci sequence',
+    note: 'Iterative Fibonacci generation with explicit core/int text conversion.',
+    file: 'samples/programs/fibonacci.lts',
+    args: [],
+    stdin: '',
+    showOutput: true,
+  },
+  {
+    id: 'primes-sieve',
+    group: 'programs',
+    title: 'Prime generator',
+    note: 'Collect primes up to 50 into a mutable typed list by trial division.',
+    file: 'samples/programs/primes-sieve.lts',
+    args: [],
+    stdin: '',
+    showOutput: true,
+  },
+  {
+    id: 'binary-search',
+    group: 'programs',
+    title: 'Binary search',
+    note: 'Sorted lookup returning a typed (index, found) tuple contract.',
+    file: 'samples/programs/binary-search.lts',
+    args: [],
+    stdin: '',
+    showOutput: true,
+  },
+  {
+    id: 'caesar-cipher',
+    group: 'programs',
+    title: 'Caesar cipher',
+    note: 'Shift-cipher encode and decode over explicit core/text scalar indexing.',
+    file: 'samples/programs/caesar-cipher.lts',
+    args: [],
+    stdin: '',
+    showOutput: true,
+  },
+  {
+    id: 'word-frequency',
+    group: 'programs',
+    title: 'Word frequency',
+    note: 'Count space-delimited token occurrences using core/list searches.',
+    file: 'samples/programs/word-frequency.lts',
+    args: [],
+    stdin: '',
+    showOutput: true,
+  },
+  {
+    id: 'rpn-evaluator',
+    group: 'programs',
+    title: 'RPN stack evaluator',
+    note: 'Evaluate postfix arithmetic tokens through explicit list stack operations.',
+    file: 'samples/programs/rpn-evaluator.lts',
+    args: [],
     stdin: '',
     showOutput: true,
   },

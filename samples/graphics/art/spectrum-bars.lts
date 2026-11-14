@@ -1,0 +1,36 @@
+/* High-res RGBA color spectrum cards and alpha-blended luminance overlay bars. */
+
+board := import "extra/board";
+canvas := import "extra/canvas";
+io := import "core/io";
+
+ctx := canvas.create(width = 340, height = 200, title = "Spectrum & Alpha Bars (340x200)");
+canvas.clear(canvas.rgb(14, 16, 26));
+
+baseR: List<Int> = [238, 240, 137, 94, 114, 198];
+baseG: List<Int> = [108, 178, 206, 196, 152, 140];
+baseB: List<Int> = [118, 88, 131, 212, 238, 232];
+
+var col := 0;
+loop col < 6 {
+    x := 22 + (col * 50);
+    r := baseR[col];
+    g := baseG[col];
+    b := baseB[col];
+    var step := 0;
+    loop step < 5 {
+        y := 22 + (step * 30);
+        alpha := 255 - (step * 42);
+        canvas.fillRect(x, y, 42, 24, canvas.rgba(r, g, b, alpha));
+        board.drawRect(x, y, 42, 24, canvas.rgba(255, 255, 255, 32));
+        step += 1;
+    }
+    col += 1;
+}
+
+/* Horizontal translucent glaze ribbon across all columns */
+canvas.fillRect(14, 86, ctx.width - 28, 28, canvas.rgba(255, 255, 255, 38));
+board.drawRect(14, 86, ctx.width - 28, 28, canvas.rgba(255, 255, 255, 110));
+board.drawRect(0, 0, ctx.width, ctx.height, canvas.rgba(255, 255, 255, 26));
+
+io.outputLine("Rendered:", ctx.title, ctx.width, "x", ctx.height);

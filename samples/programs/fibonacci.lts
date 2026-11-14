@@ -1,0 +1,36 @@
+/* Iterative and recursive Fibonacci sequence with zero heap churn. */
+
+intLib := import "core/int";
+io := import "core/io";
+list := import "core/list";
+
+fibIter := fn(n: Int): Int {
+    if n <= 1 { return n; }
+    var prev := 0;
+    var curr := 1;
+    var step := 2;
+    loop step <= n {
+        next := prev + curr;
+        prev = curr;
+        curr = next;
+        step += 1;
+    }
+    curr
+}
+
+terms: mut List<Int> = [];
+var i := 0;
+loop i < 10 {
+    list.pushBack(mut terms, fibIter(i));
+    i += 1;
+}
+
+var line := "";
+var idx := 0;
+loop terms as val {
+    if idx > 0 { line = line + ", "; }
+    line = line + intLib.intText(val);
+    idx += 1;
+}
+io.outputLine("fib(0..9):", line);
+io.outputLine("fib(12):", fibIter(12));

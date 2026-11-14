@@ -41,13 +41,23 @@ test('formatLite normalizes indentation, brace spacing, blank lines, and EOF new
   assert.equal(formatLite(once), expected);
 });
 
-test('formatLite is idempotent across all language examples and core library files', () => {
-  for (const dir of ['language/examples', 'language/examples/play', 'lib/core', 'lib/extra']) {
+function collectLiteFiles(dir: string): string[] {
+  const out: string[] = [];
+  for (const entry of readdirSync(dir, { withFileTypes: true })) {
+    const full = join(dir, entry.name);
+    if (entry.isDirectory()) out.push(...collectLiteFiles(full));
+    else if (entry.name.endsWith('.lts')) out.push(full);
+  }
+  return out;
+}
+
+test('formatLite is idempotent across all language examples, samples, and library files', () => {
+  for (const dir of ['language/examples', 'samples', 'lib/core', 'lib/extra']) {
     const absDir = join(root, dir);
-    for (const name of readdirSync(absDir).filter(f => f.endsWith('.lts'))) {
-      const src = readFileSync(join(absDir, name), 'utf8');
+    for (const full of collectLiteFiles(absDir)) {
+      const src = readFileSync(full, 'utf8');
       const once = formatLite(src);
-      assert.equal(formatLite(once), once, `not idempotent on ${dir}/${name}`);
+      assert.equal(formatLite(once), once, `not idempotent on ${full}`);
     }
   }
 });

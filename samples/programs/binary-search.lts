@@ -1,0 +1,28 @@
+/* Binary search returning a named tuple `(index, found)` over sorted integers. */
+
+io := import "core/io";
+
+SearchResult := type (index: Int, found: Bool);
+
+binarySearch := fn(items: List<Int>, len: Int, target: Int): SearchResult {
+    var lo := 0;
+    var hi := len - 1;
+    loop lo <= hi {
+        mid := lo + ((hi - lo) / 2);
+        val := items[mid];
+        if val == target {
+            return (index = mid, found = true);
+        } else if val < target {
+            lo = mid + 1;
+        } else {
+            hi = mid - 1;
+        }
+    }
+    (index = -1, found = false)
+}
+
+sorted: List<Int> = [4, 9, 15, 23, 31, 42, 58, 77];
+hit := binarySearch(items = sorted, len = 8, target = 42);
+miss := binarySearch(items = sorted, len = 8, target = 20);
+io.outputLine("find 42:", hit.found, "at", hit.index);
+io.outputLine("find 20:", miss.found, "at", miss.index);

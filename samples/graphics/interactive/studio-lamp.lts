@@ -1,0 +1,62 @@
+/* Interactive studio lamp: click the bulb or press Space/Enter to toggle glow & chime. */
+
+audio := import "extra/audio";
+board := import "extra/board";
+canvas := import "extra/canvas";
+io := import "core/io";
+
+ctx := canvas.play(width = 280, height = 180, title = "Studio Lamp (280x180) · Click or Space");
+bg := canvas.rgb(12, 16, 26);
+var lit := true;
+
+render := fn(): Unit {
+    canvas.clear(bg);
+    board.drawRect(8, 8, ctx.width - 16, ctx.height - 16, canvas.rgba(255, 255, 255, 24));
+    cx := ctx.width / 2;
+    cy := 84;
+    if lit {
+        board.fillCircle(cx, cy, 62, canvas.rgba(255, 224, 120, 26));
+        board.fillCircle(cx, cy, 44, canvas.rgba(255, 226, 130, 56));
+        board.fillCircle(cx, cy, 28, canvas.rgb(255, 232, 146));
+        board.fillCircle(cx - 8, cy - 8, 9, canvas.rgba(255, 255, 240, 130));
+    } else {
+        board.fillCircle(cx, cy, 28, canvas.rgb(42, 50, 68));
+        board.drawCircle(cx, cy, 28, canvas.rgba(160, 176, 200, 90));
+    }
+    /* Socket & base */
+    canvas.fillRect(cx - 14, cy + 26, 28, 12, canvas.rgb(98, 112, 136));
+    canvas.fillRect(cx - 24, cy + 38, 48, 8, canvas.rgb(72, 84, 104));
+    board.drawRect(cx - 28, cy + 54, 56, 14, canvas.rgba(255, 255, 255, 45));
+    indicator := if lit { canvas.rgb(137, 201, 131) } else { canvas.rgb(216, 112, 112) };
+    canvas.fillRect(cx - 24, cy + 57, 48, 8, indicator);
+}
+
+toggle := fn(): Unit {
+    lit = not lit;
+    render();
+    if lit {
+        audio.tone(frequency = 587, durationMs = 95, volume = 18);
+    } else {
+        audio.tone(frequency = 294, durationMs = 95, volume = 16);
+    }
+}
+
+onCanvasInit := fn(): Unit {
+    render();
+}
+
+onCanvasKeyDown := fn(key: String): Unit {
+    if key == " " or key == "Enter" {
+        toggle();
+    }
+}
+
+onCanvasPointerDown := fn(col: Int, row: Int, button: Int): Unit {
+    voidCol := col;
+    voidRow := row;
+    voidBtn := button;
+    toggle();
+}
+
+render();
+io.outputLine("Canvas:", ctx.title, ctx.width, "x", ctx.height);

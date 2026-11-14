@@ -1,0 +1,47 @@
+/* High-res sunset over water using layered RGBA gradient bands, sun glow, and shimmer. */
+
+board := import "extra/board";
+canvas := import "extra/canvas";
+io := import "core/io";
+
+ctx := canvas.create(width = 360, height = 220, title = "Sunset Horizon (360x220)");
+canvas.clear(canvas.rgb(18, 16, 44));
+
+horizon := 136;
+
+/* Dusk sky gradient bands */
+canvas.fillRect(0, 0, ctx.width, 34, canvas.rgb(24, 22, 58));
+canvas.fillRect(0, 34, ctx.width, 28, canvas.rgb(58, 34, 82));
+canvas.fillRect(0, 62, ctx.width, 26, canvas.rgb(112, 48, 86));
+canvas.fillRect(0, 88, ctx.width, 26, canvas.rgb(178, 76, 76));
+canvas.fillRect(0, 114, ctx.width, 22, canvas.rgb(228, 128, 72));
+
+/* Atmospheric RGBA sun halos and solar disk */
+board.fillCircle(180, 112, 54, canvas.rgba(255, 198, 92, 42));
+board.fillCircle(180, 112, 40, canvas.rgba(255, 212, 110, 74));
+board.fillCircle(180, 112, 28, canvas.rgb(255, 224, 124));
+board.fillCircle(174, 106, 12, canvas.rgba(255, 250, 210, 110));
+
+/* Deep water plane + translucent horizon glare */
+canvas.fillRect(0, horizon, ctx.width, ctx.height - horizon, canvas.rgb(14, 24, 52));
+canvas.fillRect(0, horizon, ctx.width, 14, canvas.rgba(235, 134, 78, 70));
+
+/* Water sun reflection ripples */
+var row := 0;
+loop row < 10 {
+    y := horizon + 6 + (row * 7);
+    halfW := 52 - (row * 4);
+    alpha := 175 - (row * 14);
+    offset := if row % 2 == 0 { -6 } else { 6 };
+    canvas.fillRect(180 - halfW + offset, y, halfW * 2, 3, canvas.rgba(255, 206, 108, alpha));
+    row += 1;
+}
+
+/* Distant silhouette ridge */
+board.drawLine(0, horizon, 64, horizon - 14, canvas.rgb(22, 18, 42));
+board.drawLine(64, horizon - 14, 118, horizon - 4, canvas.rgb(22, 18, 42));
+board.drawLine(238, horizon - 5, 296, horizon - 18, canvas.rgb(22, 18, 42));
+board.drawLine(296, horizon - 18, ctx.width - 1, horizon, canvas.rgb(22, 18, 42));
+board.drawRect(0, 0, ctx.width, ctx.height, canvas.rgba(255, 255, 255, 30));
+
+io.outputLine("Rendered:", ctx.title, ctx.width, "x", ctx.height);

@@ -1,0 +1,59 @@
+/* Neon digital rain animation using multiple streak columns and fading RGBA tails. */
+
+board := import "extra/board";
+canvas := import "extra/canvas";
+io := import "core/io";
+list := import "core/list";
+
+ctx := canvas.play(width = 320, height = 200, title = "Neon Rain (320x200)");
+bg := canvas.rgb(8, 14, 24);
+frameBorder := canvas.rgba(110, 210, 255, 36);
+
+cols: List<Int> = [24, 58, 92, 126, 160, 194, 228, 262, 296];
+speeds: List<Int> = [3, 5, 4, 6, 3, 5, 4, 6, 3];
+var ys: mut List<Int> = [10, 80, 140, 30, 110, 60, 170, 20, 95];
+var acc := 0.0;
+
+render := fn(): Unit {
+    canvas.clear(bg);
+    board.drawRect(0, 0, ctx.width, ctx.height, frameBorder);
+    var idx := 0;
+    loop idx < 9 {
+        x := cols[idx];
+        y := ys[idx];
+        var seg := 0;
+        loop seg < 6 {
+            sy := (y - (seg * 10) + ctx.height) % ctx.height;
+            alpha := 240 - (seg * 38);
+            col := if idx % 2 == 0 { canvas.rgba(96, 226, 210, alpha) } else { canvas.rgba(120, 178, 255, alpha) };
+            canvas.fillRect(x - 3, sy, 6, 8, col);
+            seg += 1;
+        }
+        board.fillCircle(x, y, 4, canvas.rgba(235, 252, 255, 210));
+        idx += 1;
+    }
+}
+
+onCanvasInit := fn(): Unit {
+    render();
+}
+
+onCanvasUpdate := fn(dt: Float): Int {
+    acc = acc + dt;
+    if acc >= 0.025 {
+        acc = 0.0;
+        nextYs: mut List<Int> = [];
+        var idx := 0;
+        loop idx < 9 {
+            ny := (ys[idx] + speeds[idx]) % ctx.height;
+            list.pushBack(mut nextYs, ny);
+            idx += 1;
+        }
+        ys = nextYs;
+        render();
+    }
+    0
+}
+
+render();
+io.outputLine("Canvas:", ctx.title, ctx.width, "x", ctx.height);

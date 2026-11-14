@@ -8,7 +8,7 @@ import { buildSite, parseBuildArgs } from './build.ts';
 import { formatCodeView } from './code-view.ts';
 import { heroSample, sampleGroups, showcaseSamples } from './groups.ts';
 import { escapeHtml, highlightC, highlightLite, highlightTs } from './highlight.ts';
-import { playSamples } from './play-samples.ts';
+import { playGroups, playSamples } from './play-samples.ts';
 import { stripLiteTs } from './strip-ts.ts';
 
 const root = dirname(import.meta.dirname);
@@ -108,7 +108,10 @@ test('buildSite generates static pages and metadata in dist/site', () => {
   assert(playground.includes('id="pg-canvas-title"'));
   assert(playground.includes('id="pg-mute"'));
   assert(playground.includes('id="pg-fps"'));
-  assert(gallery.includes('id="group-play"'));
+  for (const group of playGroups) {
+    assert(gallery.includes(`id="group-${group.id}"`), `missing gallery play category ${group.id}`);
+  }
+  assert(gallery.includes('class="play-preview-svg"'), 'missing gallery SVG preview thumbnails');
   const stdlib = JSON.parse(readFileSync(join(out, 'playground', 'stdlib.json'), 'utf8')) as Record<string, unknown>;
   assert('extra/canvas' in stdlib);
   assert('extra/board' in stdlib);

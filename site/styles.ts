@@ -596,8 +596,8 @@ details.gallery-code pre.code-block {
 /* Pillars & Gallery */
 .gallery-jumps {
   display: flex;
-  flex-wrap: wrap;
-  gap: 0.5rem;
+  flex-direction: column;
+  gap: 0.65rem;
 }
 .gallery-jump {
   display: inline-flex;
@@ -620,6 +620,46 @@ details.gallery-code pre.code-block {
   font-family: var(--font-mono);
   font-size: 0.75rem;
   color: var(--ink-muted);
+}
+.gallery-tier-line {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.5rem;
+}
+.gallery-tier-label {
+  font-size: 0.75rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--ink-muted);
+  margin-right: 0.25rem;
+}
+.gallery-badge {
+  display: inline-flex;
+  align-items: center;
+  padding: 0.14rem 0.48rem;
+  border-radius: 999px;
+  border: 1px solid var(--border);
+  background: var(--surface-elevated);
+  color: var(--ink-muted);
+  font-size: 0.72rem;
+  font-weight: 600;
+}
+.play-preview {
+  background: #080b14;
+  border-bottom: 1px solid var(--border);
+  padding: 0.65rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.play-preview-svg {
+  display: block;
+  width: 100%;
+  height: auto;
+  max-height: 185px;
+  border-radius: 6px;
 }
 .section {
   padding: 2.25rem 0;

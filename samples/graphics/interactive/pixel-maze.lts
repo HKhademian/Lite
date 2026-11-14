@@ -1,0 +1,102 @@
+/* Interactive maze walker: move with Arrows/WASD, reach the emerald goal tile, Space resets. */
+
+audio := import "extra/audio";
+board := import "extra/board";
+canvas := import "extra/canvas";
+io := import "core/io";
+text := import "core/text";
+
+mazeRows: List<String> = [
+"###########",
+"#@..#.....#",
+"#.#.#.###.#",
+"#.#...#...#",
+"#.#####.#.#",
+"#.....#.#*#",
+"###########",
+];
+tile := 26;
+cols := 11;
+rows := 7;
+ctx := canvas.play(width = cols * tile, height = rows * tile, title = "Pixel Maze · Arrows/WASD, Space Reset");
+
+var playerCol := 1;
+var playerRow := 1;
+var won := false;
+
+tileAt := fn(c: Int, r: Int): String {
+    if r < 0 or r >= rows or c < 0 or c >= cols { return "#"; }
+    text.at(mazeRows[r], c)
+}
+
+render := fn(): Unit {
+    canvas.clear(canvas.rgb(12, 16, 26));
+    var r := 0;
+    loop r < rows {
+        var c := 0;
+        loop c < cols {
+            ch := tileAt(c, r);
+            x := c * tile;
+            y := r * tile;
+            if ch == "#" {
+                canvas.fillRect(x + 1, y + 1, tile - 2, tile - 2, canvas.rgb(48, 60, 84));
+                board.drawRect(x + 1, y + 1, tile - 2, tile - 2, canvas.rgba(255, 255, 255, 24));
+            } else if ch == "*" {
+                canvas.fillRect(x + 4, y + 4, tile - 8, tile - 8, canvas.rgba(120, 224, 152, 65));
+                board.fillCircle(x + (tile / 2), y + (tile / 2), 7, canvas.rgb(132, 226, 152));
+            } else {
+                canvas.fillRect(x + 2, y + 2, tile - 4, tile - 4, canvas.rgba(255, 255, 255, 10));
+            }
+            c += 1;
+        }
+        r += 1;
+    }
+    px := (playerCol * tile) + (tile / 2);
+    py := (playerRow * tile) + (tile / 2);
+    playerColor := if won { canvas.rgb(255, 214, 104) } else { canvas.rgb(104, 198, 232) };
+    board.fillCircle(px, py, 10, canvas.rgba(104, 198, 232, 56));
+    board.fillCircle(px, py, 7, playerColor);
+}
+
+tryMove := fn(dc: Int, dr: Int): Unit {
+    if won { return; }
+    nc := playerCol + dc;
+    nr := playerRow + dr;
+    cell := tileAt(nc, nr);
+    if cell == "#" {
+        audio.tone(frequency = 150, durationMs = 45, volume = 12);
+        return;
+    }
+    playerCol = nc;
+    playerRow = nr;
+    if cell == "*" {
+        won = true;
+        audio.tone(frequency = 523, durationMs = 110, volume = 20);
+        audio.tone(frequency = 659, durationMs = 110, volume = 20);
+        audio.tone(frequency = 784, durationMs = 180, volume = 22);
+    } else {
+        audio.tone(frequency = 340 + (nc * 16), durationMs = 35, volume = 10);
+    }
+    render();
+}
+
+onCanvasInit := fn(): Unit {
+    render();
+}
+
+onCanvasKeyDown := fn(key: String): Unit {
+    if key == "ArrowLeft" or key == "a" { tryMove(-1, 0); }
+    else if key == "ArrowRight" or key == "d" { tryMove(1, 0); }
+    else if key == "ArrowUp" or key == "w" { tryMove(0, -1); }
+    else if key == "ArrowDown" or key == "s" { tryMove(0, 1); }
+    else if key == " " {
+        playerCol = 1;
+        playerRow = 1;
+        won = false;
+        render();
+        audio.tone(frequency = 262, durationMs = 60, volume = 14);
+    }
+}
+
+render();
+io.outputLine("Canvas:", ctx.title, ctx.width, "x", ctx.height);

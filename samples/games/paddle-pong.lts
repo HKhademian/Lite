@@ -1,0 +1,115 @@
+/* Classic two-paddle Pong: move left paddle with Up/Down, W/S, or pointer; Space resets scores. */
+
+audio := import "extra/audio";
+board := import "extra/board";
+canvas := import "extra/canvas";
+io := import "core/io";
+
+ctx := canvas.play(width = 320, height = 200, title = "Paddle Pong (320x200) · W/S or Arrows");
+bg := canvas.rgb(10, 14, 24);
+padW := 8;
+padH := 42;
+var leftY := 78;
+var rightY := 78;
+var bx := 160;
+var by := 100;
+var bdx := 3;
+var bdy := 2;
+var leftScore := 0;
+var rightScore := 0;
+var acc := 0.0;
+
+clampPad := fn(y: Int): Int {
+    if y < 10 { 10 } else if y > ctx.height - padH - 10 { ctx.height - padH - 10 } else { y }
+}
+
+render := fn(): Unit {
+    canvas.clear(bg);
+    board.drawRect(4, 4, ctx.width - 8, ctx.height - 8, canvas.rgba(255, 255, 255, 28));
+    /* Center dashed net */
+    var ny := 12;
+    loop ny < ctx.height - 12 {
+        canvas.fillRect((ctx.width / 2) - 1, ny, 2, 8, canvas.rgba(255, 255, 255, 42));
+        ny += 14;
+    }
+    /* Score pips */
+    var s := 0;
+    loop s < leftScore and s < 8 {
+        canvas.fillRect(40 + (s * 12), 14, 8, 5, canvas.rgb(104, 196, 224));
+        s += 1;
+    }
+    s = 0;
+    loop s < rightScore and s < 8 {
+        canvas.fillRect(ctx.width - 48 - (s * 12), 14, 8, 5, canvas.rgb(240, 180, 90));
+        s += 1;
+    }
+    /* Paddles & ball */
+    canvas.fillRect(18, leftY, padW, padH, canvas.rgb(104, 196, 224));
+    canvas.fillRect(ctx.width - 18 - padW, rightY, padW, padH, canvas.rgb(240, 180, 90));
+    board.fillCircle(bx, by, 5, canvas.rgb(248, 250, 252));
+}
+
+resetBall := fn(dir: Int): Unit {
+    bx = ctx.width / 2;
+    by = ctx.height / 2;
+    bdx = 3 * dir;
+    bdy = if bdy >= 0 { 2 } else { -2 };
+}
+
+onCanvasInit := fn(): Unit {
+    render();
+}
+
+onCanvasUpdate := fn(dt: Float): Int {
+    acc = acc + dt;
+    if acc >= 0.02 {
+        acc = 0.0;
+        bx += bdx;
+        by += bdy;
+        if by <= 10 or by >= ctx.height - 10 {
+            bdy = 0 - bdy;
+            audio.tone(frequency = 320, durationMs = 30, volume = 10);
+        }
+        /* AI tracks ball vertically */
+        target := by - (padH / 2);
+        if target > rightY + 2 { rightY = clampPad(rightY + 2); }
+        else if target < rightY - 2 { rightY = clampPad(rightY - 2); }
+
+        if bdx < 0 and bx <= 18 + padW + 4 and bx >= 16 and by >= leftY - 4 and by <= leftY + padH + 4 {
+            bdx = 0 - bdx;
+            audio.tone(frequency = 480, durationMs = 45, volume = 14);
+        } else if bdx > 0 and bx >= ctx.width - 18 - padW - 4 and bx <= ctx.width - 16 and by >= rightY - 4 and by <= rightY + padH + 4 {
+            bdx = 0 - bdx;
+            audio.tone(frequency = 420, durationMs = 45, volume = 14);
+        } else if bx < 6 {
+            rightScore += 1;
+            audio.tone(frequency = 220, durationMs = 120, volume = 16);
+            resetBall(1);
+        } else if bx > ctx.width - 6 {
+            leftScore += 1;
+            audio.tone(frequency = 660, durationMs = 120, volume = 16);
+            resetBall(-1);
+        }
+        render();
+    }
+    0
+}
+
+onCanvasKeyDown := fn(key: String): Unit {
+    if key == "ArrowUp" or key == "w" { leftY = clampPad(leftY - 14); render(); }
+    else if key == "ArrowDown" or key == "s" { leftY = clampPad(leftY + 14); render(); }
+    else if key == " " {
+        leftScore = 0;
+        rightScore = 0;
+        resetBall(1);
+        render();
+    }
+}
+
+onCanvasPointerMove := fn(col: Int, row: Int): Unit {
+    voidCol := col;
+    leftY = clampPad(row - (padH / 2));
+}
+
+render();
+io.outputLine("Canvas:", ctx.title, ctx.width, "x", ctx.height);

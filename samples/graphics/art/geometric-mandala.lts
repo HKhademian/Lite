@@ -1,0 +1,48 @@
+/* Radial geometric mandala combining concentric RGBA circles and symmetric spokes. */
+
+board := import "extra/board";
+canvas := import "extra/canvas";
+io := import "core/io";
+
+ctx := canvas.create(width = 320, height = 240, title = "Geometric Mandala (320x240)");
+canvas.clear(canvas.rgb(10, 14, 24));
+
+cx := ctx.width / 2;
+cy := ctx.height / 2;
+
+/* Outer glow and concentric dashed/solid rings */
+board.fillCircle(cx, cy, 98, canvas.rgba(72, 136, 224, 26));
+board.fillCircle(cx, cy, 74, canvas.rgba(198, 128, 226, 28));
+board.fillCircle(cx, cy, 48, canvas.rgba(110, 212, 188, 34));
+
+var r := 24;
+loop r <= 96 {
+    board.drawCircle(cx, cy, r, canvas.rgba(220, 236, 255, 72));
+    r += 18;
+}
+
+/* 16 symmetric spoke lines using precomputed Octant offsets scaled to radius 92 */
+offsetsX: List<Int> = [92, 85, 65, 35, 0, -35, -65, -85, -92, -85, -65, -35, 0, 35, 65, 85];
+offsetsY: List<Int> = [0, 35, 65, 85, 92, 85, 65, 35, 0, -35, -65, -85, -92, -85, -65, -35];
+petalColors: List<canvas.Color> = [
+canvas.rgba(110, 206, 232, 115),
+canvas.rgba(244, 178, 96, 115),
+canvas.rgba(196, 148, 236, 115),
+canvas.rgba(137, 210, 142, 115),
+];
+
+var idx := 0;
+loop idx < 16 {
+    dx := offsetsX[idx];
+    dy := offsetsY[idx];
+    board.drawLine(cx, cy, cx + dx, cy + dy, canvas.rgba(255, 255, 255, 75));
+    board.fillCircle(cx + ((dx * 2) / 3), cy + ((dy * 2) / 3), 14, petalColors[idx % 4]);
+    board.drawCircle(cx + dx, cy + dy, 8, canvas.rgba(255, 240, 200, 130));
+    idx += 1;
+}
+
+board.fillCircle(cx, cy, 18, canvas.rgb(244, 188, 98));
+board.drawCircle(cx, cy, 18, canvas.rgb(255, 246, 218));
+board.drawRect(8, 8, ctx.width - 16, ctx.height - 16, canvas.rgba(255, 255, 255, 28));
+
+io.outputLine("Rendered:", ctx.title, ctx.width, "x", ctx.height);

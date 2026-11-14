@@ -1,0 +1,120 @@
+/* Interactive RGBA mixer: click/drag horizontal channel sliders or use Keys 1-4 + Arrows. */
+
+audio := import "extra/audio";
+board := import "extra/board";
+canvas := import "extra/canvas";
+io := import "core/io";
+
+ctx := canvas.play(width = 320, height = 200, title = "RGBA Color Mixer (320x200)");
+bg := canvas.rgb(13, 15, 24);
+var rVal := 110;
+var gVal := 196;
+var bVal := 230;
+var aVal := 215;
+var activeChannel := 0;
+var dragging := false;
+
+clampByte := fn(v: Int): Int {
+    if v < 0 { 0 } else if v > 255 { 255 } else { v }
+}
+
+setChannelFromX := fn(ch: Int, col: Int): Unit {
+    val := clampByte(((col - 26) * 255) / 160);
+    if ch == 0 { rVal = val; }
+    else if ch == 1 { gVal = val; }
+    else if ch == 2 { bVal = val; }
+    else { aVal = val; }
+}
+
+renderSlider := fn(idx: Int, y: Int, value: Int, barColor: canvas.Color): Unit {
+    canvas.fillRect(26, y, 160, 14, canvas.rgba(255, 255, 255, 22));
+    fillW := (value * 160) / 255;
+    if fillW > 0 {
+        canvas.fillRect(26, y, fillW, 14, barColor);
+    }
+    outline := if idx == activeChannel { canvas.rgb(255, 255, 255) } else { canvas.rgba(255, 255, 255, 48) };
+    board.drawRect(26, y, 160, 14, outline);
+    knobX := 26 + fillW;
+    canvas.fillRect(knobX - 2, y - 3, 5, 20, canvas.rgb(248, 250, 252));
+}
+
+render := fn(): Unit {
+    canvas.clear(bg);
+    board.drawRect(8, 8, ctx.width - 16, ctx.height - 16, canvas.rgba(255, 255, 255, 26));
+    renderSlider(0, 32, rVal, canvas.rgb(235, 108, 118));
+    renderSlider(1, 68, gVal, canvas.rgb(130, 210, 142));
+    renderSlider(2, 104, bVal, canvas.rgb(104, 186, 238));
+    renderSlider(3, 140, aVal, canvas.rgba(220, 226, 240, aVal));
+
+    /* Checkerboard backdrop under preview swatch to visualize alpha blending */
+    var cy := 32;
+    loop cy < 154 {
+        var cx := 208;
+        loop cx < 292 {
+            dark := ((cx / 14) + (cy / 14)) % 2 == 0;
+            cell := if dark { canvas.rgb(34, 38, 52) } else { canvas.rgb(66, 72, 92) };
+            canvas.fillRect(cx, cy, 14, 14, cell);
+            cx += 14;
+        }
+        cy += 14;
+    }
+    mixed := canvas.rgba(rVal, gVal, bVal, aVal);
+    canvas.fillRect(208, 32, 84, 122, mixed);
+    board.fillCircle(250, 93, 30, canvas.rgba(rVal, gVal, bVal, 255));
+    board.drawRect(208, 32, 84, 122, canvas.rgba(255, 255, 255, 90));
+}
+
+onCanvasInit := fn(): Unit {
+    render();
+}
+
+onCanvasPointerDown := fn(col: Int, row: Int, button: Int): Unit {
+    voidBtn := button;
+    if col >= 20 and col <= 194 {
+        if row >= 26 and row <= 50 { activeChannel = 0; }
+        else if row >= 62 and row <= 86 { activeChannel = 1; }
+        else if row >= 98 and row <= 122 { activeChannel = 2; }
+        else if row >= 134 and row <= 158 { activeChannel = 3; }
+        dragging = true;
+        setChannelFromX(activeChannel, col);
+        render();
+        audio.tone(frequency = 320 + (activeChannel * 80), durationMs = 45, volume = 12);
+    }
+}
+
+onCanvasPointerMove := fn(col: Int, row: Int): Unit {
+    voidRow := row;
+    if dragging {
+        setChannelFromX(activeChannel, col);
+        render();
+    }
+}
+
+onCanvasPointerUp := fn(col: Int, row: Int, button: Int): Unit {
+    voidCol := col;
+    voidRow := row;
+    voidBtn := button;
+    dragging = false;
+}
+
+onCanvasKeyDown := fn(key: String): Unit {
+    if key == "ArrowUp" {
+        activeChannel = (activeChannel + 3) % 4;
+    } else if key == "ArrowDown" {
+        activeChannel = (activeChannel + 1) % 4;
+    } else if key == "ArrowLeft" or key == "ArrowRight" {
+        delta := if key == "ArrowRight" { 16 } else { -16 };
+        if activeChannel == 0 { rVal = clampByte(rVal + delta); }
+        else if activeChannel == 1 { gVal = clampByte(gVal + delta); }
+        else if activeChannel == 2 { bVal = clampByte(bVal + delta); }
+        else { aVal = clampByte(aVal + delta); }
+        audio.tone(frequency = 360 + (activeChannel * 70), durationMs = 40, volume = 12);
+    } else if key == "1" { activeChannel = 0; }
+    else if key == "2" { activeChannel = 1; }
+    else if key == "3" { activeChannel = 2; }
+    else if key == "4" { activeChannel = 3; }
+    render();
+}
+
+render();
+io.outputLine("Canvas:", ctx.title, ctx.width, "x", ctx.height);
