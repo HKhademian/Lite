@@ -6,7 +6,7 @@ import { stripTypeScriptTypes } from 'node:module';
 import { tmpdir } from 'node:os';
 import { dirname, join, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { buildCCompiler, compileTs } from '../compiler/host.ts';
+import { buildCCompiler, buildTsCompiler, compileBuiltCompiler, type CompilerBuild } from '../compiler/host.ts';
 import { sourceModuleIdentity } from '../compiler/source.ts';
 import { heroSample, playgroundDefaultSample, sampleGroups, showcaseSamples, type ShowcaseSample } from './groups.ts';
 import { escapeHtml, highlightLite, highlightTs } from './highlight.ts';
@@ -23,6 +23,7 @@ type RenderedSample = ShowcaseSample & Readonly<{
 
 export type BuildSiteOptions = Readonly<{
   lightSwitchShine?: boolean;
+  tsCompiler?: CompilerBuild;
 }>;
 
 type SourceRevision = Readonly<{
@@ -60,10 +61,10 @@ function readSourceRevision(): SourceRevision {
   };
 }
 
-function compileAndRunSample(sample: ShowcaseSample): RenderedSample {
+function compileAndRunSample(sample: ShowcaseSample, tsCompiler: CompilerBuild): RenderedSample {
   const fullPath = resolve(root, sample.file);
   const source = readFileSync(fullPath, 'utf8');
-  const compiled = compileTs({ text: source, name: sample.file, cwd: root });
+  const compiled = compileBuiltCompiler(tsCompiler, { text: source, name: sample.file, cwd: root });
   if (compiled.status !== 0) {
     throw new Error(`failed to compile ${sample.file}:\n${compiled.stderr.toString('utf8')}`);
   }
@@ -864,12 +865,13 @@ export function parseBuildArgs(argv: readonly string[]): BuildSiteOptions {
 
 export function buildSite(options?: BuildSiteOptions): void {
   const lightSwitchShine = options?.lightSwitchShine ?? true;
+  const tsCompiler = options?.tsCompiler ?? buildTsCompiler();
   const repoUrl = readRepositoryUrl();
   const rev = readSourceRevision();
   const rendered = new Map<string, RenderedSample>();
 
   for (const sample of showcaseSamples) {
-    rendered.set(sample.id, compileAndRunSample(sample));
+    rendered.set(sample.id, compileAndRunSample(sample, tsCompiler));
   }
 
   rmSync(outputDir, { recursive: true, force: true });

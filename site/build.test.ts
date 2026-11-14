@@ -1,9 +1,9 @@
 import assert from 'node:assert/strict';
-import { execFileSync } from 'node:child_process';
 import { existsSync, readFileSync } from 'node:fs';
 import { dirname, join, resolve } from 'node:path';
 import { test } from 'node:test';
 import { pathToFileURL } from 'node:url';
+import { buildTsCompiler, compileBuiltCompiler, type CompilerBuild } from '../compiler/host.ts';
 import { buildSite, parseBuildArgs } from './build.ts';
 import { formatCodeView } from './code-view.ts';
 import { heroSample, sampleGroups, showcaseSamples } from './groups.ts';
@@ -11,6 +11,12 @@ import { escapeHtml, highlightC, highlightLite, highlightTs } from './highlight.
 import { stripLiteTs } from './strip-ts.ts';
 
 const root = dirname(import.meta.dirname);
+let cachedTsCompiler: CompilerBuild | undefined;
+
+function sharedTsCompiler(): CompilerBuild {
+  if (cachedTsCompiler === undefined) cachedTsCompiler = buildTsCompiler();
+  return cachedTsCompiler;
+}
 
 test('showcase sample groups and files are valid and unique', () => {
   const groupIds = new Set(sampleGroups.map(g => g.id));
@@ -46,7 +52,7 @@ test('syntax highlighter escapes HTML and marks keywords, strings, and comments'
 });
 
 test('buildSite generates static pages and metadata in dist/site', () => {
-  buildSite();
+  buildSite({ tsCompiler: sharedTsCompiler() });
   const out = join(root, 'dist', 'site');
   for (const rel of ['index.html', 'style.css', 'favicon.svg', 'build.json', 'gallery/index.html', 'playground/index.html']) {
     assert(existsSync(join(out, rel)), `missing generated site file: ${rel}`);
@@ -103,7 +109,7 @@ test('light-switch shine build flag defaults to active and can be disabled', () 
   assert.deepEqual(parseBuildArgs(['--light-switch-shine=false']), { lightSwitchShine: false });
   assert.throws(() => parseBuildArgs(['--unknown-flag']), /unknown site build flag/);
 
-  buildSite({ lightSwitchShine: false });
+  buildSite({ lightSwitchShine: false, tsCompiler: sharedTsCompiler() });
   const out = join(root, 'dist', 'site');
   const indexDisabled = readFileSync(join(out, 'index.html'), 'utf8');
   assert(indexDisabled.includes('class="theme-toggle"'));
@@ -112,19 +118,22 @@ test('light-switch shine build flag defaults to active and can be disabled', () 
   assert.equal(buildInfoDisabled.lightSwitchShine, false);
 
   // Restore default active build output in dist/site.
-  buildSite();
+  buildSite({ tsCompiler: sharedTsCompiler() });
 });
 
 test('stripLiteTs produces runnable JS matching compiler output for all showcase samples', () => {
   const out = join(root, 'dist', 'site');
-  const liteBin = join(root, 'bin', 'lite');
+  const tsCompiler = sharedTsCompiler();
   const encoder = new TextEncoder();
 
   for (const sample of showcaseSamples) {
     const payload = JSON.parse(
       readFileSync(join(out, 'playground', 'samples', `${sample.id}.json`), 'utf8')
     ) as { stdin?: string; args?: string[]; output: string };
-    const ts = execFileSync(liteBin, ['compile', resolve(root, sample.file)], { encoding: 'utf8' });
+    const source = readFileSync(resolve(root, sample.file), 'utf8');
+    const compiled = compileBuiltCompiler(tsCompiler, { text: source, name: sample.file, cwd: root });
+    assert.equal(compiled.status, 0, compiled.stderr.toString('utf8'));
+    const ts = compiled.stdout.toString('utf8');
     const js = stripLiteTs(ts);
     const stdinBytes = encoder.encode(payload.stdin ?? '');
     let offset = 0;
