@@ -329,6 +329,7 @@ function renderHomePage(rendered: ReadonlyMap<string, RenderedSample>, repoUrl: 
     .join('\n');
 
   const cloneUrl = repoUrl ? `${repoUrl}.git` : '<repository-url>';
+  const cloneDir = repoUrl ? (repoUrl.split('/').pop() || 'Lite') : 'Lite';
   const docsStart = repoUrl ? `${repoUrl}/blob/main/docs/start-here.md` : 'gallery/';
 
   const body = `<section class="hero">
@@ -354,7 +355,7 @@ function renderHomePage(rendered: ReadonlyMap<string, RenderedSample>, repoUrl: 
         <button id="quickstart-copy" class="quickstart-copy" type="button" aria-label="Copy shell commands">Copy</button>
       </div>
       <pre class="quickstart-body"><code><span class="shell-line"><span class="shell-cmd">git</span> clone ${escapeHtml(cloneUrl)}</span>
-<span class="shell-line"><span class="shell-cmd">cd</span> LiteScript</span>
+<span class="shell-line"><span class="shell-cmd">cd</span> ${escapeHtml(cloneDir)}</span>
 <span class="shell-line"><span class="shell-cmd">./bin/lite</span> run ${escapeHtml(heroSample.file)}</span></code></pre>
     </div>
     <script>
