@@ -25,9 +25,9 @@ function lite$checkedInt(value: bigint, at: number): bigint {
 function lite$multiplyInt(left: bigint, right: bigint, at: number): bigint { return lite$checkedInt(left * right, at); }
 
 export function main(lite$write?: (text: string) => void): string {
-    let lite_out = "";
+    let lite$out = "";
     function lite$emit(text: string): void {
-        if (lite$write === undefined) lite_out += text;
+        if (lite$write === undefined) lite$out += text;
         else lite$write(text);
     }
     void lite$emit;
@@ -38,7 +38,6 @@ export function main(lite$write?: (text: string) => void): string {
     let lite_total = (lite_first + lite_second);
     void lite_total;
     lite_total = lite$multiplyInt(lite_total, 2n, 93);
-    const lite$report0 = (lite_total).toString();
-    lite$emit(lite$report0 + "\n");
-    return lite_out;
+    lite$emit((lite_total).toString() + "\n");
+    return lite$out;
 }

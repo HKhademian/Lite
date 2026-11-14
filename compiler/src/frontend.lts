@@ -1115,15 +1115,58 @@ localIndex := fn(locals: List<Local>, name: String): Int {
     found
 }
 
-/** Selects a fresh runtime name for a new binding, retaining the previous same-name binding while its initializer evaluates. */
-localRuntimeName := fn(locals: List<Local>, name: String, position: Int, moduleId: Int): String {
-    index := localIndex(locals, name);
-    if moduleId == 0 {
-        if index < 0 and name =!= "out" { return "lite_" + name; }
-        return "lt_local_" + name + "_" + integer.intText(position);
+/** True when `locals` already binds runtime identifier `runtime` in scope. */
+localsUseRuntime := fn(locals: List<Local>, runtime: String): Bool {
+    loop locals as local {
+        if local.runtime == runtime { return true; }
     }
-    if index < 0 { return "lite_m" + integer.intText(moduleId) + "_" + name; }
-    "lt_local_m" + integer.intText(moduleId) + "_" + name + "_" + integer.intText(position)
+    false
+}
+
+/** Target runtime identifier for an imported module's top-level value, or a root value. */
+moduleValueRuntime := fn(target: String, moduleKey: String, name: String): String {
+    if moduleKey == "" { return "lite_" + name; }
+    if target == "ts" { return "lite$m$" + moduleKey + "$" + name; }
+    "lt_m_" + moduleKey + "__" + name
+}
+
+/** Target runtime identifier for a user-defined top-level function. */
+moduleFunctionRuntime := fn(target: String, moduleKey: String, name: String): String {
+    if moduleKey == "" {
+        if target == "ts" { return "liteFn_" + name; }
+        return "lt_fn__" + name;
+    }
+    if target == "ts" { return "liteFn$" + moduleKey + "$" + name; }
+    "lt_fn_" + moduleKey + "__" + name
+}
+
+/** Allocates a collision-free compiler-internal temporary name scoped to `locals`. */
+freshScopeTemp := fn(locals: List<Local>, prefix: String): String {
+    if not localsUseRuntime(locals, prefix) { return prefix; }
+    var suffix := 2;
+    loop true {
+        candidate := prefix + "$" + integer.intText(suffix);
+        if not localsUseRuntime(locals, candidate) { return candidate; }
+        suffix = suffix + 1;
+    }
+    prefix
+}
+
+/** Selects a target-safe runtime name for a binding, using `lite_<name>` when unshadowed and a scope-local shadow suffix when shadowed. */
+localRuntimeName := fn(target: String, locals: List<Local>, name: String, moduleKey: String, depth: Int): String {
+    if depth == 0 and moduleKey =!= "" {
+        return moduleValueRuntime(target, moduleKey, name);
+    }
+    base := "lite_" + name;
+    if not localsUseRuntime(locals, base) { return base; }
+    var suffix := 2;
+    loop true {
+        candidate := if target == "ts" { "lite_" + name + "$" + integer.intText(suffix) }
+            else { "lt_s" + integer.intText(suffix) + "_" + name };
+        if not localsUseRuntime(locals, candidate) { return candidate; }
+        suffix = suffix + 1;
+    }
+    base
 }
 
 /** True for the ten comparison spellings accepted by this checkpoint. */
@@ -1404,12 +1447,15 @@ pub targetCodeCalls := fn(code: String, existing: String): String {
         } else if textLib.isNameStart(ch) {
             start := cursor;
             cursor = textLib.skipName(code, cursor);
-            if cursor < textLib.length(code) and textLib.at(code, cursor) == "$" {
+            loop cursor < textLib.length(code) and textLib.at(code, cursor) == "$" {
                 cursor = textLib.skipName(code, cursor + 1);
             }
             if cursor < textLib.length(code) and textLib.at(code, cursor) == "(" {
                 name := textLib.slice(code, start, cursor);
-                if textLib.startsWithAt(name, 0, "lite$") or textLib.startsWithAt(name, 0, "lite_") or textLib.startsWithAt(name, 0, "lt_") {
+                if (textLib.startsWithAt(name, 0, "lite$") and not textLib.startsWithAt(name, 0, "lite$m$")) or
+                    textLib.startsWithAt(name, 0, "lite_") or
+                    (textLib.startsWithAt(name, 0, "lt_") and not textLib.startsWithAt(name, 0, "lt_fn_") and
+                        not textLib.startsWithAt(name, 0, "lt_m_") and not textLib.startsWithAt(name, 0, "lt_s")) {
                     token := name + "(|";
                     if textLib.indexOfText(calls, "|" + token, 0) < 0 { calls = calls + token; }
                 }
@@ -2401,7 +2447,7 @@ parseBinary := fn(target: String, source: String, position: Int, prefix: String,
                     rejectNonValueBinding(source, destructureOpen, prefix, rhs.kind, bindName);
                     statementNext := consumeStatementEnd(source, rhs.next, prefix);
                     if statementNext < 0 { failAt(source, skipTrivia(source, rhs.next, prefix), prefix, "expected ; after tuple destructuring"); }
-                    bindRuntime := localRuntimeName(blockLocals, bindName, destructureOpen + 1, 0);
+                    bindRuntime := localRuntimeName(target, blockLocals, bindName, "", 1);
                     listLib.pushBack(mut blockLocals, (name = bindName, runtime = bindRuntime, kind = rhs.kind,
                         mutable = destructureMutable, writable = false, depth = 1, constant = false, code = rhs.code,
                         intValue = rhs.intValue, textValue = rhs.textValue, initState = "init"));
@@ -2422,7 +2468,10 @@ parseBinary := fn(target: String, source: String, position: Int, prefix: String,
                     }
                     statementNext := consumeStatementEnd(source, rhs.next, prefix);
                     if statementNext < 0 { failAt(source, skipTrivia(source, rhs.next, prefix), prefix, "expected ; after tuple destructuring"); }
-                    tempRuntime := "lite$tuple_" + integer.intText(destructureOpen);
+                    tempRuntime := freshScopeTemp(blockLocals, "lite$tuple");
+                    listLib.pushBack(mut blockLocals, (name = "$tuple", runtime = tempRuntime, kind = "Unit",
+                        mutable = false, writable = false, depth = 1, constant = false, code = "",
+                        intValue = 0, textValue = "", initState = "init"));
                     if not blockExits {
                         listLib.pushBack(mut statements, "const " + tempRuntime + " = " + rhs.code + "; void " + tempRuntime + ";");
                     }
@@ -2437,7 +2486,7 @@ parseBinary := fn(target: String, source: String, position: Int, prefix: String,
                         bindName := textLib.slice(destructure.namesText, bindCursor, bindEnd);
                         bindCursor = bindEnd + 1;
                         comp := tupleComponent(rhs.kind, bindIndex);
-                        bindRuntime := localRuntimeName(blockLocals, bindName, destructureOpen + bindIndex + 1, 0);
+                        bindRuntime := localRuntimeName(target, blockLocals, bindName, "", 1);
                         fieldCode := tempRuntime + "." + comp.prop;
                         listLib.pushBack(mut blockLocals, (name = bindName, runtime = bindRuntime, kind = comp.kind,
                             mutable = destructureMutable, writable = false, depth = 1, constant = false, code = fieldCode,
@@ -2514,7 +2563,7 @@ parseBinary := fn(target: String, source: String, position: Int, prefix: String,
                     }
                     statementNext := consumeStatementEnd(source, declParsed.next, prefix);
                     if statementNext < 0 { failAt(source, skipTrivia(source, declParsed.next, prefix), prefix, "expected ; after local declaration " + localName); }
-                    runtime := localRuntimeName(blockLocals, localName, localStart, 0);
+                    runtime := localRuntimeName(target, blockLocals, localName, "", 1);
                     listLib.pushBack(mut blockLocals, (name = localName, runtime = runtime, kind = declParsed.kind,
                         mutable = true, writable = declWritable, depth = 1, constant = false, code = declParsed.code,
                         intValue = declParsed.intValue, textValue = declParsed.textValue, initState = declInitState));
@@ -2548,7 +2597,7 @@ parseBinary := fn(target: String, source: String, position: Int, prefix: String,
                     }
                     statementNext := consumeStatementEnd(source, declParsed.next, prefix);
                     if statementNext < 0 { failAt(source, skipTrivia(source, declParsed.next, prefix), prefix, "expected ; after local declaration " + localName); }
-                    runtime := localRuntimeName(blockLocals, localName, localStart, 0);
+                    runtime := localRuntimeName(target, blockLocals, localName, "", 1);
                     listLib.pushBack(mut blockLocals, (name = localName, runtime = runtime, kind = declParsed.kind,
                         mutable = false, writable = true, depth = 1, constant = false, code = declParsed.code,
                         intValue = declParsed.intValue, textValue = declParsed.textValue, initState = "init"));
@@ -2568,7 +2617,7 @@ parseBinary := fn(target: String, source: String, position: Int, prefix: String,
                     rejectNonValueBinding(source, itemStart, prefix, declParsed.kind, itemName);
                     statementNext := consumeStatementEnd(source, declParsed.next, prefix);
                     if statementNext < 0 { failAt(source, skipTrivia(source, declParsed.next, prefix), prefix, "expected ; after local declaration " + itemName); }
-                    runtime := localRuntimeName(blockLocals, itemName, itemStart, 0);
+                    runtime := localRuntimeName(target, blockLocals, itemName, "", 1);
                     listLib.pushBack(mut blockLocals, (name = itemName, runtime = runtime, kind = declParsed.kind,
                         mutable = false, writable = false, depth = 1, constant = declParsed.constant, code = declParsed.code,
                         intValue = declParsed.intValue, textValue = declParsed.textValue, initState = "init"));
@@ -2605,7 +2654,7 @@ parseBinary := fn(target: String, source: String, position: Int, prefix: String,
                     }
                     statementNext := consumeStatementEnd(source, declParsed.next, prefix);
                     if statementNext < 0 { failAt(source, skipTrivia(source, declParsed.next, prefix), prefix, "expected ; after local declaration " + itemName); }
-                    runtime := localRuntimeName(blockLocals, itemName, itemStart, 0);
+                    runtime := localRuntimeName(target, blockLocals, itemName, "", 1);
                     declCode := assignValueCode(target, typed.kind, declParsed.kind, declParsed.code);
                     listLib.pushBack(mut blockLocals, (name = itemName, runtime = runtime, kind = typed.kind,
                         mutable = false, writable = typed.writable, depth = 1, constant = if declInitState == "init" and not numeric.isFloatKind(typed.kind) { declParsed.constant } else { false },
@@ -3312,7 +3361,7 @@ parseBinary := fn(target: String, source: String, position: Int, prefix: String,
                                 listLib.pushBack(mut evalStmts, "return " + entryCodes[kIdx] + ";");
                                 callDiverged = true;
                             } else if slotEntry[targetSlot] == kIdx {
-                                temp := "lite$arg_" + integer.intText(postPosition) + "_" + integer.intText(kIdx);
+                                temp := "lite$arg" + integer.intText(kIdx);
                                 expected := paramKindOf(params[info.first + targetSlot]);
                                 listLib.pushBack(mut evalStmts, "const " + temp + " = " + assignValueCode(target, expected, entryKinds[kIdx], entryCodes[kIdx]) + ";");
                             } else {
@@ -3328,7 +3377,7 @@ parseBinary := fn(target: String, source: String, position: Int, prefix: String,
                         slotTemps: mut List<String> = [];
                         var sIdx := 0;
                         loop sIdx < info.count {
-                            listLib.pushBack(mut slotTemps, "lite$arg_" + integer.intText(postPosition) + "_" + integer.intText(slotEntry[sIdx]));
+                            listLib.pushBack(mut slotTemps, "lite$arg" + integer.intText(slotEntry[sIdx]));
                             sIdx = sIdx + 1;
                         }
                         callExpr := info.runtime + "(" + textLib.joinTexts(slotTemps, ", ") + ")";
@@ -3804,7 +3853,7 @@ blockCompletion := fn(kind: String, completed: Bool, branchesComplete: Bool, has
 }
 
 /** Finds later root scalar definitions for deferred function-body name resolution; eager root expressions never receive this table. */
-collectFutureValues := fn(target: String, source: String, prefix: String, moduleId: Int): List<FutureValue> {
+collectFutureValues := fn(target: String, source: String, prefix: String, moduleKey: String): List<FutureValue> {
     values: mut List<FutureValue> = [];
     size := textLib.length(source);
     var cursor := 0;
@@ -3846,9 +3895,7 @@ collectFutureValues := fn(target: String, source: String, prefix: String, module
                     }
                     if kind =!= "" {
                         valueName := textLib.slice(source, nameStart, nameEnd);
-                        futureRuntime := if moduleId =!= 0 { "lite_m" + integer.intText(moduleId) + "_" + valueName }
-                            else if valueName == "out" { "lt_local_out_" + integer.intText(nameStart) }
-                            else { "lite_" + valueName };
+                        futureRuntime := moduleValueRuntime(target, moduleKey, valueName);
                         listLib.pushBack(mut values, (name = valueName, runtime = futureRuntime,
                             kind = kind, at = nameStart, intValue = intValue, textValue = textValue));
                     }
@@ -4086,7 +4133,7 @@ parseOutputStatement := fn(target: String, source: String, openPosition: Int, ou
 }
 
 /** Parses complete source with imported public function signatures available in its root symbol table. Exits 2 on unsupported, malformed or faulting source. */
-pub parseProgramWithIdentity := fn(target: String, source: String, prefix: String, exports: Items, moduleId: Int,
+pub parseProgramWithModule := fn(target: String, source: String, prefix: String, exports: Items, moduleKey: String,
     moduleIdentity: String): Items {
     size := textLib.length(source);
     var position := skipTrivia(source, 0, prefix);
@@ -4102,7 +4149,7 @@ pub parseProgramWithIdentity := fn(target: String, source: String, prefix: Strin
     publishedFunctions := collectPublishedFunctions(source, prefix);
     publishedValues := collectPublishedValues(source, prefix);
     publishedTypes := collectPublishedTypes(source, prefix);
-    futureValues := collectFutureValues(target, source, prefix, moduleId);
+    futureValues := collectFutureValues(target, source, prefix, moduleKey);
     var locals: mut List<Local> = [];
     blocks: mut List<String> = [];
     functions: mut List<FunctionInfo> = [];
@@ -4312,8 +4359,7 @@ pub parseProgramWithIdentity := fn(target: String, source: String, prefix: Strin
                 if currentResult =!= "Unit" and not currentReturned {
                     failAt(source, position, prefix, "function " + currentName + " must return " + currentResult);
                 }
-                functionRuntime := if moduleId == 0 { "liteFn_" + currentName }
-                    else { "liteFn_m" + integer.intText(moduleId) + "_" + currentName };
+                functionRuntime := moduleFunctionRuntime(target, moduleKey, currentName);
                 if currentLive { listLib.pushBack(mut items, (kind = "FunctionEnd", name = "", runtime = functionRuntime,
                     code = "", intValue = 0, textValue = "")); }
                 currentName = "";
@@ -4440,7 +4486,7 @@ pub parseProgramWithIdentity := fn(target: String, source: String, prefix: Strin
                         failAt(source, destructureOpen, prefix, "duplicate top-level value " + bindName);
                     }
                 }
-                bindRuntime := localRuntimeName(locals, bindName, destructureOpen + 1, moduleId);
+                bindRuntime := localRuntimeName(target, locals, bindName, moduleKey, depth);
                 listLib.pushBack(mut locals, (name = bindName, runtime = bindRuntime, kind = rhs.kind,
                     mutable = destructureMutable, writable = false, depth = depth, constant = false, code = rhs.code,
                     intValue = rhs.intValue, textValue = rhs.textValue, initState = "init"));
@@ -4461,7 +4507,10 @@ pub parseProgramWithIdentity := fn(target: String, source: String, prefix: Strin
             statementNext := consumeStatementEnd(source, rhs.next, prefix);
             if statementNext < 0 { failAt(source, skipTrivia(source, rhs.next, prefix), prefix, "expected ; after tuple destructuring"); }
             position = statementNext;
-            tempRuntime := "lite$tuple_" + integer.intText(destructureOpen);
+            tempRuntime := freshScopeTemp(locals, "lite$tuple");
+            listLib.pushBack(mut locals, (name = "$tuple", runtime = tempRuntime, kind = "Unit",
+                mutable = false, writable = false, depth = depth, constant = false, code = "",
+                intValue = 0, textValue = "", initState = "init"));
             if currentLive and not currentStopped {
                 listLib.pushBack(mut items, (kind = "LocalTuple", name = "", runtime = tempRuntime,
                     code = rhs.code, intValue = 0, textValue = ""));
@@ -4483,7 +4532,7 @@ pub parseProgramWithIdentity := fn(target: String, source: String, prefix: Strin
                     }
                 }
                 comp := tupleComponent(rhs.kind, bindIndex);
-                bindRuntime := localRuntimeName(locals, bindName, destructureOpen + bindIndex + 1, moduleId);
+                bindRuntime := localRuntimeName(target, locals, bindName, moduleKey, depth);
                 fieldCode := tempRuntime + "." + comp.prop;
                 listLib.pushBack(mut locals, (name = bindName, runtime = bindRuntime, kind = comp.kind,
                     mutable = destructureMutable, writable = false, depth = depth, constant = false, code = fieldCode,
@@ -4867,14 +4916,18 @@ pub parseProgramWithIdentity := fn(target: String, source: String, prefix: Strin
             position = expectSymbol(source, position, "{", prefix);
             loopPreLocalsLen := localsCount(locals);
             if itemName =!= "" {
-                runtime := localRuntimeName(locals, itemName, nameStart, moduleId);
+                runtime := localRuntimeName(target, locals, itemName, moduleKey, depth + 1);
                 listLib.pushBack(mut locals, (name = itemName, runtime = runtime, kind = itemKind,
                     mutable = false, writable = false, depth = depth + 1, constant = false, code = runtime,
                     intValue = 0, textValue = "", initState = "init"));
                 if currentLive and not currentStopped { listLib.pushBack(mut items, (kind = "LoopSeq", name = itemName, runtime = runtime, code = sequenceCode,
                     intValue = 0, textValue = itemKind)); }
             } else if sequenceCode =!= "" {
-                if currentLive and not currentStopped { listLib.pushBack(mut items, (kind = "LoopSeq", name = "", runtime = "lite$item_" + integer.intText(nameStart), code = sequenceCode,
+                tempItemRuntime := freshScopeTemp(locals, "lite$item");
+                listLib.pushBack(mut locals, (name = "$item", runtime = tempItemRuntime, kind = "Unit",
+                    mutable = false, writable = false, depth = depth + 1, constant = false, code = "",
+                    intValue = 0, textValue = "", initState = "init"));
+                if currentLive and not currentStopped { listLib.pushBack(mut items, (kind = "LoopSeq", name = "", runtime = tempItemRuntime, code = sequenceCode,
                     intValue = 0, textValue = itemKind)); }
             } else {
                 if currentLive and not currentStopped { listLib.pushBack(mut items, (kind = "Loop", name = "", runtime = "", code = conditionCode,
@@ -4922,7 +4975,7 @@ pub parseProgramWithIdentity := fn(target: String, source: String, prefix: Strin
             statementNext := consumeStatementEnd(source, parsed.next, prefix);
             if statementNext < 0 { failAt(source, skipTrivia(source, parsed.next, prefix), prefix, "expected ; after local declaration " + localName); }
             position = statementNext;
-            runtime := localRuntimeName(locals, localName, localStart, moduleId);
+            runtime := localRuntimeName(target, locals, localName, moduleKey, depth);
             listLib.pushBack(mut locals, (name = localName, runtime = runtime, kind = parsed.kind,
                 mutable = false, writable = true, depth = depth, constant = false, code = parsed.code,
                 intValue = parsed.intValue, textValue = parsed.textValue, initState = "init"));
@@ -4994,7 +5047,7 @@ pub parseProgramWithIdentity := fn(target: String, source: String, prefix: Strin
             statementNext := consumeStatementEnd(source, parsed.next, prefix);
             if statementNext < 0 { failAt(source, skipTrivia(source, parsed.next, prefix), prefix, "expected ; after local declaration " + localName); }
             position = statementNext;
-            runtime := localRuntimeName(locals, localName, localStart, moduleId);
+            runtime := localRuntimeName(target, locals, localName, moduleKey, depth);
             listLib.pushBack(mut locals, (name = localName, runtime = runtime, kind = parsed.kind,
                 mutable = true, writable = declaredWritable, depth = depth, constant = false, code = parsed.code,
                 intValue = parsed.intValue, textValue = parsed.textValue, initState = declInitState));
@@ -5087,8 +5140,7 @@ pub parseProgramWithIdentity := fn(target: String, source: String, prefix: Strin
                     failAt(source, nameStart, prefix, "generic function bodies are not supported");
                 }
                 position = expectSymbol(source, position, "{", prefix);
-                functionRuntime := if moduleId == 0 { "liteFn_" + name }
-                    else { "liteFn_m" + integer.intText(moduleId) + "_" + name };
+                functionRuntime := moduleFunctionRuntime(target, moduleKey, name);
                 listLib.pushBack(mut functions, (name = name, runtime = functionRuntime, result = header.result,
                     first = parameterTotal, count = header.count));
                 if listLib.listContainsText(publishedFunctions, name) {
@@ -5153,7 +5205,7 @@ pub parseProgramWithIdentity := fn(target: String, source: String, prefix: Strin
             statementNext := consumeStatementEnd(source, parsed.next, prefix);
             if statementNext < 0 { failAt(source, skipTrivia(source, parsed.next, prefix), prefix, "expected ; after local declaration " + name); }
             position = statementNext;
-            runtime := localRuntimeName(locals, name, nameStart, moduleId);
+            runtime := localRuntimeName(target, locals, name, moduleKey, depth);
             listLib.pushBack(mut locals, (name = name, runtime = runtime, kind = parsed.kind,
                 mutable = false, writable = false, depth = depth, constant = parsed.constant, code = parsed.code,
                 intValue = parsed.intValue, textValue = parsed.textValue, initState = "init"));
@@ -5196,7 +5248,7 @@ pub parseProgramWithIdentity := fn(target: String, source: String, prefix: Strin
             statementNext := consumeStatementEnd(source, parsed.next, prefix);
             if statementNext < 0 { failAt(source, skipTrivia(source, parsed.next, prefix), prefix, "expected ; after local declaration " + name); }
             position = statementNext;
-            runtime := localRuntimeName(locals, name, nameStart, moduleId);
+            runtime := localRuntimeName(target, locals, name, moduleKey, depth);
             rhsDiverged := parsed.kind == "Never";
             assignedCode := assignValueCode(target, typed.kind, parsed.kind, parsed.code);
             listLib.pushBack(mut locals, (name = name, runtime = runtime, kind = typed.kind,
@@ -5320,6 +5372,13 @@ pub parseProgramWithIdentity := fn(target: String, source: String, prefix: Strin
     items
 }
 
+/** Transitional numeric-module-id adapter delegating to `parseProgramWithModule`. */
+pub parseProgramWithIdentity := fn(target: String, source: String, prefix: String, exports: Items, moduleId: Int,
+    moduleIdentity: String): Items {
+    moduleKey := if moduleId == 0 { "" } else { "m" + integer.intText(moduleId) };
+    parseProgramWithModule(target, source, prefix, exports, moduleKey, moduleIdentity)
+}
+
 /** Transitional five-argument graph adapter retained until source identities reach every compiler caller. */
 pub parseProgramWithExports := fn(target: String, source: String, prefix: String, exports: Items, moduleId: Int): Items {
     parseProgramWithIdentity(target, source, prefix, exports, moduleId, "")
@@ -5327,7 +5386,7 @@ pub parseProgramWithExports := fn(target: String, source: String, prefix: String
 
 /** Parses one source without imported public symbols. */
 pub parseProgram := fn(target: String, source: String, prefix: String): Items {
-    parseProgramWithIdentity(target, source, prefix, [], 0, "")
+    parseProgramWithModule(target, source, prefix, [], "", "")
 }
 
 /** Encodes all line-start character offsets once for positioned runtime arithmetic faults. */

@@ -238,6 +238,11 @@ alias. Private declarations remain visible inside their defining source unit;
 an inaccessible member is unknown to an importer. Visibility for record fields,
 re-exports, and visibility modifiers on imported module aliases remains open.
 
+Within a compiled graph, modules are emitted in canonical topological
+`(level, logical, path)` order rather than source `import` order so swapping
+imports produces diff-stable output, and imported module symbols are keyed by
+encoded logical module paths rather than visit indices.
+
 ## Package contents
 
 The proposal includes a manifest for metadata and dependency declarations, a lockfile for exact resolved versions, and file-based modules. Manifest format, package identity, version constraints, registries, offline use, and reproducibility rules remain open.

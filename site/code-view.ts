@@ -50,7 +50,7 @@ function extractTsProgram(source: string): string {
     const line = body[i]!;
     const trimmed = line.trim();
 
-    if (trimmed === 'let lite_out = "";' || trimmed === 'return lite_out;') {
+    if (trimmed === 'let lite$out = "";' || trimmed === 'return lite$out;') {
       i += 1;
       continue;
     }
@@ -58,11 +58,11 @@ function extractTsProgram(source: string): string {
       i = skipBraceBlock(body, i);
       continue;
     }
-    if (/^void\s+(?:lite\$emit|lite_[a-zA-Z0-9_$]+|liteFn_[a-zA-Z0-9_$]+);$/.test(trimmed)) {
+    if (/^void\s+(?:lite\$emit|lite\$tuple(?:\$\d+)?|lite\$item(?:\$\d+)?|lite\$m\$[a-zA-Z0-9_$]+|lite_[a-zA-Z0-9_$]+|liteFn(?:\$|[a-zA-Z0-9_])[a-zA-Z0-9_$]*);$/.test(trimmed)) {
       i += 1;
       continue;
     }
-    if (/^function\s+liteFn_m\d+_/.test(trimmed)) {
+    if (/^function\s+liteFn\$/.test(trimmed)) {
       i = skipBraceBlock(body, i);
       continue;
     }
@@ -92,7 +92,7 @@ function extractTsPortable(source: string): string {
       i = skipBraceBlock(lines, i);
       continue;
     }
-    if (/^void\s+(?:lite\$emit|lite_[a-zA-Z0-9_$]+|liteFn_[a-zA-Z0-9_$]+);$/.test(trimmed)) {
+    if (/^void\s+(?:lite\$emit|lite\$tuple(?:\$\d+)?|lite\$item(?:\$\d+)?|lite\$m\$[a-zA-Z0-9_$]+|lite_[a-zA-Z0-9_$]+|liteFn(?:\$|[a-zA-Z0-9_])[a-zA-Z0-9_$]*);$/.test(trimmed)) {
       i += 1;
       continue;
     }
@@ -111,14 +111,14 @@ function extractCProgram(source: string): string {
   const mainEnd = skipBraceBlock(lines, mainIndex);
   return lines
     .slice(mainIndex, mainEnd)
-    .filter((line) => !/^\(void\)lite_[a-zA-Z0-9_]+;$/.test(line.trim()))
+    .filter((line) => !/^\(void\)(?:lite_|lt_m_|lt_s\d+_)[a-zA-Z0-9_]+;$/.test(line.trim()))
     .join('\n');
 }
 
 function extractCPortable(source: string): string {
   const lines = source.replace(/\r\n?/g, '\n').split('\n');
   return lines
-    .filter((line) => !/^\(void\)lite_[a-zA-Z0-9_]+;$/.test(line.trim()))
+    .filter((line) => !/^\(void\)(?:lite_|lt_m_|lt_s\d+_)[a-zA-Z0-9_]+;$/.test(line.trim()))
     .join('\n');
 }
 

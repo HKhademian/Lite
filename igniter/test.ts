@@ -1992,13 +1992,13 @@ test('Lite-written TS emitter produces a deterministic readable reference with n
   assert.equal(runCompiler(tsManifestPath, "io := import \"core/io\"; io.outputLine(42);").output, runCompiler(tsManifestPath, "io := import \"core/io\"; io.outputLine(42);").output);
   assert.equal(runCompiler(tsManifestPath, "io := import \"core/io\";  io.outputLine( +00042 ) ; ").output, expected);
   assert.equal(runCompiler(tsManifestPath, "io := import \"core/io\"; io.outputLine(-000);").output,
-    'export function main(lite$write?: (text: string) => void): string {\n    let lite_out = "";\n    function lite$emit(text: string): void {\n        if (lite$write === undefined) lite_out += text;\n        else lite$write(text);\n    }\n    void lite$emit;\n    const lite$report0 = (0n).toString();\n    lite$emit(lite$report0 + "\\n");\n    return lite_out;\n}\n');
+    'export function main(lite$write?: (text: string) => void): string {\n    let lite$out = "";\n    function lite$emit(text: string): void {\n        if (lite$write === undefined) lite$out += text;\n        else lite$write(text);\n    }\n    void lite$emit;\n    lite$emit((0n).toString() + "\\n");\n    return lite$out;\n}\n');
 });
 test('Lite-written TS and C compilers sequence multiple report statements deterministically', () => {
   const program = "io := import \"core/io\"; io.outputLine(10);\nio.outputLine(20);\nio.outputLine(-30);\n";
   const tsOutput = runCompiler(tsManifestPath, program);
   assert.equal(tsOutput.code, 0); assert.equal(tsOutput.errors, '');
-  assert.equal(tsOutput.output, 'export function main(lite$write?: (text: string) => void): string {\n    let lite_out = "";\n    function lite$emit(text: string): void {\n        if (lite$write === undefined) lite_out += text;\n        else lite$write(text);\n    }\n    void lite$emit;\n    const lite$report0 = (10n).toString();\n    lite$emit(lite$report0 + "\\n");\n    const lite$report1 = (20n).toString();\n    lite$emit(lite$report1 + "\\n");\n    const lite$report2 = ((-30n)).toString();\n    lite$emit(lite$report2 + "\\n");\n    return lite_out;\n}\n');
+  assert.equal(tsOutput.output, 'export function main(lite$write?: (text: string) => void): string {\n    let lite$out = "";\n    function lite$emit(text: string): void {\n        if (lite$write === undefined) lite$out += text;\n        else lite$write(text);\n    }\n    void lite$emit;\n    lite$emit((10n).toString() + "\\n");\n    lite$emit((20n).toString() + "\\n");\n    lite$emit(((-30n)).toString() + "\\n");\n    return lite$out;\n}\n');
   const cOutput = runCompiler(cManifestPath, program);
   assert.equal(cOutput.code, 0); assert.equal(cOutput.errors, '');
   assert.equal(cOutput.output, '#include <stdio.h>\n#include <inttypes.h>\n#include <stdbool.h>\n#include <string.h>\nint main(void) {\n    int status = 0;\n' +
@@ -2013,12 +2013,12 @@ test('Lite-written TS and C compilers sequence multiple report statements determ
 test('Lite-written TS and C compilers lower arithmetic expressions and immutable locals deterministically', () => {
   const program = "io := import \"core/io\"; x := 2 * (3 - 4);\nio.outputLine(x + 10);\nio.outputLine(-x);\n";
   assert.deepEqual(runCompiler(tsManifestPath, program), { code: 0, errors: '', output:
-    'export function main(lite$write?: (text: string) => void): string {\n    let lite_out = "";\n    function lite$emit(text: string): void {\n        if (lite$write === undefined) lite_out += text;\n        else lite$write(text);\n    }\n    void lite$emit;\n' +
+    'export function main(lite$write?: (text: string) => void): string {\n    let lite$out = "";\n    function lite$emit(text: string): void {\n        if (lite$write === undefined) lite$out += text;\n        else lite$write(text);\n    }\n    void lite$emit;\n' +
     '    const lite_x = (2n * ((3n - 4n)));\n' +
     '    void lite_x;\n' +
-    '    const lite$report0 = ((lite_x + 10n)).toString();\n    lite$emit(lite$report0 + "\\n");\n' +
-    '    const lite$report1 = ((-lite_x)).toString();\n    lite$emit(lite$report1 + "\\n");\n' +
-    '    return lite_out;\n}\n' });
+    '    lite$emit(((lite_x + 10n)).toString() + "\\n");\n' +
+    '    lite$emit(((-lite_x)).toString() + "\\n");\n' +
+    '    return lite$out;\n}\n' });
   assert.deepEqual(runCompiler(cManifestPath, program), { code: 0, errors: '', output:
     '#include <stdio.h>\n#include <inttypes.h>\n#include <stdbool.h>\n#include <string.h>\nint main(void) {\n' +
     '    int status = 0;\n' +
@@ -2190,12 +2190,12 @@ test('restricted compiler division faults preserve zero divisor and minimum/-1 s
 test('Lite-written TS and C compilers lower String values and multi-value reports deterministically', () => {
   const program = "io := import \"core/io\"; s := \"a\\\"b\";\nio.outputLine(s);\nio.outputLine(1, s, 2);\n";
   assert.deepEqual(runCompiler(tsManifestPath, program), { code: 0, errors: '', output:
-    'export function main(lite$write?: (text: string) => void): string {\n    let lite_out = "";\n    function lite$emit(text: string): void {\n        if (lite$write === undefined) lite_out += text;\n        else lite$write(text);\n    }\n    void lite$emit;\n' +
+    'export function main(lite$write?: (text: string) => void): string {\n    let lite$out = "";\n    function lite$emit(text: string): void {\n        if (lite$write === undefined) lite$out += text;\n        else lite$write(text);\n    }\n    void lite$emit;\n' +
     '    const lite_s = "a\\"b";\n' +
     '    void lite_s;\n' +
-    '    const lite$report0 = lite_s;\n    lite$emit(lite$report0 + "\\n");\n' +
-    '    const lite$report1 = (1n).toString() + " " + lite_s + " " + (2n).toString();\n    lite$emit(lite$report1 + "\\n");\n' +
-    '    return lite_out;\n}\n' });
+    '    lite$emit(lite_s + "\\n");\n' +
+    '    lite$emit((1n).toString() + " " + lite_s + " " + (2n).toString() + "\\n");\n' +
+    '    return lite$out;\n}\n' });
   assert.deepEqual(runCompiler(cManifestPath, program), { code: 0, errors: '', output:
     '#include <stdio.h>\n#include <inttypes.h>\n#include <stdbool.h>\n#include <string.h>\nint main(void) {\n' +
     '    int status = 0;\n' +
@@ -2239,7 +2239,7 @@ test('compiler applications reject fixture sources with exact diagnostics, posit
 });
 test('restricted TS compiler emits a deterministic report sequence', () => {
   assert.equal(runCompiler(tsManifestPath, "io := import \"core/io\"; io.outputLine(42);\nio.outputLine(9);").output,
-    'export function main(lite$write?: (text: string) => void): string {\n    let lite_out = "";\n    function lite$emit(text: string): void {\n        if (lite$write === undefined) lite_out += text;\n        else lite$write(text);\n    }\n    void lite$emit;\n    const lite$report0 = (42n).toString();\n    lite$emit(lite$report0 + "\\n");\n    const lite$report1 = (9n).toString();\n    lite$emit(lite$report1 + "\\n");\n    return lite_out;\n}\n');
+    'export function main(lite$write?: (text: string) => void): string {\n    let lite$out = "";\n    function lite$emit(text: string): void {\n        if (lite$write === undefined) lite$out += text;\n        else lite$write(text);\n    }\n    void lite$emit;\n    lite$emit((42n).toString() + "\\n");\n    lite$emit((9n).toString() + "\\n");\n    return lite$out;\n}\n');
 });
 test('emitted TS and igniter outputs match byte for byte across the admitted compiler corpus', async () => {
   const root = new URL('../', import.meta.url).pathname;

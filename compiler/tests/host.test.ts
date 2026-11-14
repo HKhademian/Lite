@@ -425,7 +425,7 @@ test('namespace imports resolve public functions and immutable values through al
     writeFileSync(rootSource, 'io := import "core/io"; left := import "./math.lts"; right := import "./math.lts"; io.outputLine(left.twice(10), right.twice(11));\n');
     const repeatedAliases = compileTs({ text: readFileSync(rootSource, 'utf8'), name: realpathSync(rootSource) });
     assert.equal(repeatedAliases.status, 0, repeatedAliases.stderr.toString());
-    assert.equal((repeatedAliases.stdout.toString().match(/function liteFn_m\d+_twice\(/g) ?? []).length, 1);
+    assert.equal((repeatedAliases.stdout.toString().match(/function liteFn\$math\$twice\(/g) ?? []).length, 1);
     withTsArtifact(repeatedAliases.stdout.toString(), run => {
       const actual = run();
       assert.equal(actual.status, 0, actual.stderr.toString());
@@ -2717,8 +2717,9 @@ test('out local hygiene avoids main accumulator collisions at root, nested, and 
   const compiled = compileTs({ text: source });
   assert.equal(compiled.status, 0, compiled.stderr.toString());
   const tsOut = compiled.stdout.toString();
-  assert(tsOut.includes('const lt_local_out_'));
-  assert(tsOut.includes('return lite_out;'));
+  assert(tsOut.includes('const lite_out = "ok";'));
+  assert(tsOut.includes('let lite_out$2 = "a";'));
+  assert(tsOut.includes('return lite$out;'));
   const actual = runTsArtifact(tsOut);
   assert.equal(actual.phase, 'run');
   assert.equal(actual.status, 0, actual.stderr.toString());
@@ -2803,7 +2804,7 @@ test('Never-valued io.exit supports default status, value flow, control joins, d
 
   const topExit = compileTs({ text: 'io := import "core/io"; io.exit(0);' });
   assert.equal(topExit.status, 0, topExit.stderr.toString());
-  assert(!topExit.stdout.toString().includes('return lite_out;'));
+  assert(!topExit.stdout.toString().includes('return lite$out;'));
   const topRun = runTsArtifact(topExit.stdout.toString());
   assert.equal(topRun.phase, 'run');
   assert.equal(topRun.status, 0);
@@ -3168,5 +3169,192 @@ test('narrow numeric widths support bounds, promotions, widening, Float32 roundi
       assert.equal(rejected.status, 2, `${target}: ${bad}`);
       assert.match(rejected.stderr.toString(), pattern, `${target}: ${bad} -> ${rejected.stderr.toString()}`);
     }
+  }
+});
+
+test('import order invariance and module-addition locality avoid module-index churn', () => {
+  const directory = mkdtempSync(join(tmpdir(), 'lite-vcs-import-order-'));
+  try {
+    const realDir = realpathSync(directory);
+    const aPath = join(realDir, 'a.lts');
+    const bPath = join(realDir, 'b.lts');
+    const cPath = join(realDir, 'c.lts');
+    const rootPath = join(realDir, 'root.lts');
+
+    writeFileSync(aPath, 'pub factor := 3;\npub apply := fn(n: Int): Int { localMul := n * factor; localMul + 1 }\n');
+    writeFileSync(bPath, 'pub offset := 10;\npub bump := fn(n: Int): Int { adjusted := n + offset; adjusted }\n');
+
+    const rootAB = 'io := import "core/io";\na := import "./a.lts";\nb := import "./b.lts";\nio.outputLine(b.bump(a.apply(2)));\n';
+    const rootBA = 'io := import "core/io";\nb := import "./b.lts";\na := import "./a.lts";\nio.outputLine(b.bump(a.apply(2)));\n';
+
+    const compiledAB = compileTs({ text: rootAB, name: rootPath });
+    const compiledBA = compileTs({ text: rootBA, name: rootPath });
+    assert.equal(compiledAB.status, 0, compiledAB.stderr.toString());
+    assert.equal(compiledBA.status, 0, compiledBA.stderr.toString());
+    assert.equal(compiledAB.stdout.toString(), compiledBA.stdout.toString());
+
+    const tsText = compiledAB.stdout.toString();
+    assert(tsText.includes('function liteFn$a$apply('));
+    assert(tsText.includes('function liteFn$b$bump('));
+    assert(tsText.includes('const lite$m$a$factor ='));
+    assert(tsText.includes('const lite$m$b$offset ='));
+    assert(tsText.includes('const lite_localMul ='));
+    assert(tsText.includes('const lite_adjusted ='));
+    assert(!/lite(?:Fn)?_m\d+_/.test(tsText));
+
+    const runAB = runTsArtifact(tsText);
+    assert.equal(runAB.phase, 'run');
+    assert.equal(runAB.status, 0, runAB.stderr.toString());
+    assert.equal(runAB.stdout.toString(), '17\n');
+
+    // Add a third sibling module `c` and verify `a` and `b` function blocks stay byte-identical.
+    writeFileSync(cPath, 'pub bonus := 5;\npub addBonus := fn(n: Int): Int { res := n + bonus; res }\n');
+    const rootABC = 'io := import "core/io";\nc := import "./c.lts";\na := import "./a.lts";\nb := import "./b.lts";\nio.outputLine(c.addBonus(b.bump(a.apply(2))));\n';
+    const compiledABC = compileTs({ text: rootABC, name: rootPath });
+    assert.equal(compiledABC.status, 0, compiledABC.stderr.toString());
+    const tsABC = compiledABC.stdout.toString();
+    const fnBlock = (text: string, name: string): string => {
+      const start = text.indexOf(`function ${name}(`);
+      assert(start >= 0, `missing ${name}`);
+      const end = text.indexOf(`void ${name};`, start);
+      assert(end >= 0, `missing void ${name}`);
+      return text.slice(start, end + `void ${name};`.length);
+    };
+    assert.equal(fnBlock(tsABC, 'liteFn$a$apply'), fnBlock(tsText, 'liteFn$a$apply'));
+    assert.equal(fnBlock(tsABC, 'liteFn$b$bump'), fnBlock(tsText, 'liteFn$b$bump'));
+    assert(tsABC.includes('function liteFn$c$addBonus('));
+    assert(tsABC.includes('const lite_res ='));
+
+    // Also verify C target import-order byte equality for value modules.
+    writeFileSync(aPath, 'pub factor := 3;\n');
+    writeFileSync(bPath, 'pub offset := 10;\n');
+    const cOrder1 = compileTarget('c', { text: 'io := import "core/io";\na := import "./a.lts";\nb := import "./b.lts";\nio.outputLine(a.factor, b.offset);\n', name: rootPath });
+    const cOrder2 = compileTarget('c', { text: 'io := import "core/io";\nb := import "./b.lts";\na := import "./a.lts";\nio.outputLine(a.factor, b.offset);\n', name: rootPath });
+    assert.equal(cOrder1.status, 0, cOrder1.stderr.toString());
+    assert.equal(cOrder2.status, 0, cOrder2.stderr.toString());
+    assert.equal(cOrder1.stdout.toString(), cOrder2.stdout.toString());
+    assert(cOrder1.stdout.toString().includes('lt_m_a__factor'));
+    assert(cOrder1.stdout.toString().includes('lt_m_b__offset'));
+  } finally {
+    rmSync(directory, { recursive: true, force: true });
+  }
+});
+
+test('path-based module slugs prevent collisions between underscore, hyphen, and slash paths on TS and C', () => {
+  const directory = mkdtempSync(join(tmpdir(), 'lite-slug-collision-'));
+  try {
+    const realDir = realpathSync(directory);
+    mkdirSync(join(realDir, 'a'), { recursive: true });
+    writeFileSync(join(realDir, 'a_b.lts'), 'pub val := 1;\npub tag := fn(): Int { val }\n');
+    writeFileSync(join(realDir, 'a-b.lts'), 'pub val := 2;\npub tag := fn(): Int { val }\n');
+    writeFileSync(join(realDir, 'a', 'b.lts'), 'pub val := 3;\npub tag := fn(): Int { val }\n');
+
+    const rootTsPath = join(realDir, 'root-ts.lts');
+    const rootTsSource = [
+      'io := import "core/io";',
+      'm1 := import "./a_b.lts";',
+      'm2 := import "./a-b.lts";',
+      'm3 := import "./a/b.lts";',
+      'io.outputLine(m1.tag(), m2.tag(), m3.tag());',
+    ].join('\n');
+    const tsCompiled = compileTs({ text: rootTsSource, name: rootTsPath });
+    assert.equal(tsCompiled.status, 0, tsCompiled.stderr.toString());
+    const tsOut = tsCompiled.stdout.toString();
+    assert(tsOut.includes('function liteFn$a_u_b$tag('));
+    assert(tsOut.includes('function liteFn$a__b$tag('));
+    assert(tsOut.includes('function liteFn$a$b$tag('));
+    assert(tsOut.includes('lite$m$a_u_b$val'));
+    assert(tsOut.includes('lite$m$a__b$val'));
+    assert(tsOut.includes('lite$m$a$b$val'));
+    const tsRun = runTsArtifact(tsOut);
+    assert.equal(tsRun.phase, 'run');
+    assert.equal(tsRun.status, 0, tsRun.stderr.toString());
+    assert.equal(tsRun.stdout.toString(), '1 2 3\n');
+
+    writeFileSync(join(realDir, 'a_b.lts'), 'pub val := 1;\n');
+    writeFileSync(join(realDir, 'a-b.lts'), 'pub val := 2;\n');
+    writeFileSync(join(realDir, 'a', 'b.lts'), 'pub val := 3;\n');
+    const rootCPath = join(realDir, 'root-c.lts');
+    const rootCSource = [
+      'io := import "core/io";',
+      'm1 := import "./a_b.lts";',
+      'm2 := import "./a-b.lts";',
+      'm3 := import "./a/b.lts";',
+      'io.outputLine(m1.val, m2.val, m3.val);',
+    ].join('\n');
+    const cCompiled = compileTarget('c', { text: rootCSource, name: rootCPath });
+    assert.equal(cCompiled.status, 0, cCompiled.stderr.toString());
+    const cOut = cCompiled.stdout.toString();
+    assert(cOut.includes('lt_m_a_u_b__val'));
+    assert(cOut.includes('lt_m_a_d_b__val'));
+    assert(cOut.includes('lt_m_a_s_b__val'));
+    if (process.env['LITE_SKIP_NATIVE'] !== '1') {
+      const cRun = runCArtifact(cOut);
+      assert.equal(cRun.phase, 'run');
+      assert.equal(cRun.status, 0, cRun.stderr.toString());
+      assert.equal(cRun.stdout.toString(), '1 2 3\n');
+    }
+  } finally {
+    rmSync(directory, { recursive: true, force: true });
+  }
+});
+
+test('scope-local counters avoid source-offset churn in functions, destructuring, loops, and C shadows', () => {
+  const workBody = [
+    'io := import "core/io";',
+    'pick := fn(first: String, second: String): String { first + "-" + second };',
+    'work := fn(x: String): String {',
+    '  var acc := x;',
+    '  {',
+    '    x := pick(second = "2", first = "1");',
+    '    { x := "3"; acc = acc + ":" + x; }',
+    '    acc = acc + ":" + x;',
+    '  }',
+    '  (p, q) := ("a", "b");',
+    '  loop ["u", "v"] { acc = acc + "."; }',
+    '  acc + ":" + p + q',
+    '};',
+    'io.outputLine(work("0"));',
+  ].join('\n');
+  const shiftedHeader = '/* extra top comment line 1\n   extra top comment line 2\n   extra top comment line 3 */\nunusedBanner := "header";\n\n';
+  const baseCompiled = compileTs({ text: workBody });
+  const shiftedCompiled = compileTs({ text: shiftedHeader + workBody });
+  assert.equal(baseCompiled.status, 0, baseCompiled.stderr.toString());
+  assert.equal(shiftedCompiled.status, 0, shiftedCompiled.stderr.toString());
+  const baseTs = baseCompiled.stdout.toString();
+  const shiftedTs = shiftedCompiled.stdout.toString();
+  const extractWork = (text: string): string => {
+    const start = text.indexOf('function liteFn_work(');
+    const end = text.indexOf('void liteFn_work;', start);
+    assert(start >= 0 && end >= 0);
+    return text.slice(start, end);
+  };
+  const workTs = extractWork(baseTs);
+  assert.equal(extractWork(shiftedTs), workTs);
+  assert(workTs.includes('const lite_x$2 ='));
+  assert(workTs.includes('const lite_x$3 ='));
+  assert(workTs.includes('const lite$tuple ='));
+  assert(workTs.includes('for (const lite$item of'));
+  assert(workTs.includes('const lite$arg0 ='));
+  assert(!/lt_local_|lite\$tuple_|lite\$item_|lite\$arg_|lite\$report/.test(baseTs));
+
+  const runWork = runTsArtifact(baseTs);
+  assert.equal(runWork.phase, 'run');
+  assert.equal(runWork.status, 0, runWork.stderr.toString());
+  assert.equal(runWork.stdout.toString(), '0:3:1-2..:ab\n');
+
+  const cShadowBase = 'io := import "core/io";\n{ x := "one"; { x := "two"; io.outputLine(x); } io.outputLine(x); }\n';
+  const cBaseCompiled = compileTarget('c', { text: cShadowBase });
+  const cShiftedCompiled = compileTarget('c', { text: '/* shift */\n/* shift */\n' + cShadowBase });
+  assert.equal(cBaseCompiled.status, 0, cBaseCompiled.stderr.toString());
+  assert.equal(cShiftedCompiled.status, 0, cShiftedCompiled.stderr.toString());
+  assert.equal(cBaseCompiled.stdout.toString(), cShiftedCompiled.stdout.toString());
+  assert(cBaseCompiled.stdout.toString().includes('const char *lite_x ='));
+  assert(cBaseCompiled.stdout.toString().includes('const char *lt_s2_x ='));
+  if (process.env['LITE_SKIP_NATIVE'] !== '1') {
+    const cShadowRun = runCArtifact(cBaseCompiled.stdout.toString());
+    assert.equal(cShadowRun.phase, 'run');
+    assert.equal(cShadowRun.status, 0, cShadowRun.stderr.toString());
+    assert.equal(cShadowRun.stdout.toString(), 'two\none\n');
   }
 });

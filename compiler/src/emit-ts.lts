@@ -1,6 +1,5 @@
 tsLiteral := import "./ts-literals.lts";
 frontend := import "./frontend.lts";
-integer := import "core/int";
 io := import "core/io";
 textLib := import "core/text";
 
@@ -232,8 +231,8 @@ emitInputHelpers := fn(calls: String): Unit {
     io.outputLine("}");
     io.outputLine("function lite$prompt(text: string | undefined): void {");
     io.outputLine("    if (text === undefined) return;");
-    io.outputLine("    process.getBuiltinModule(\"node:fs\").writeSync(1, lite_out + text);");
-    io.outputLine("    lite_out = \"\";");
+    io.outputLine("    process.getBuiltinModule(\"node:fs\").writeSync(1, lite$out + text);");
+    io.outputLine("    lite$out = \"\";");
     io.outputLine("}");
     io.outputLine("function lite$peek(at: string): string | null {");
     io.outputLine("    if (lite$pending !== undefined) return lite$pending;");
@@ -347,7 +346,7 @@ emitBuiltinHelpers := fn(calls: String): Unit {
     }
     if usesBuiltin(calls, "exit") {
         io.outputLine("function lite$exit(status: bigint): never {");
-        io.outputLine("    process.getBuiltinModule(\"node:fs\").writeSync(1, lite_out);");
+        io.outputLine("    process.getBuiltinModule(\"node:fs\").writeSync(1, lite$out);");
         io.outputLine("    process.exit(Number(status));");
         io.outputLine("}");
         io.outputLine("");
@@ -488,12 +487,12 @@ emitIntDivisionHelpers := fn(calls: String): Unit {
     return;
 }
 
-/** Emits the TS module from the flat item stream. Report arguments evaluate once, left to right, before reading and appending to `lite_out`, preserving reports made by argument calls. */
+/** Emits the TS module from the flat item stream. Report arguments evaluate once, left to right, before reading and appending to `lite$out`, preserving reports made by argument calls. */
 pub emitProgram := fn(items: frontend.Items, source: String, prefix: String): Unit {
     calls := frontend.targetHelperCalls(items);
     hasExit := usesBuiltin(calls, "exit") or usesBuiltin(calls, "inputAll") or usesBuiltin(calls, "inputLine") or usesBuiltin(calls, "inputInt") or usesBuiltin(calls, "inputFloat");
     if hasExit {
-        io.outputLine("let lite_out = \"\";");
+        io.outputLine("let lite$out = \"\";");
         io.outputLine("");
     }
     emitBuiltinHelpers(calls);
@@ -509,16 +508,15 @@ pub emitProgram := fn(items: frontend.Items, source: String, prefix: String): Un
     } else {
         io.outputLine("export function main(lite$write?: (text: string) => void): string {");
     }
-    if not hasExit { io.outputLine("    let lite_out = \"\";"); }
+    if not hasExit { io.outputLine("    let lite$out = \"\";"); }
     io.outputLine("    function lite$emit(text: string): void {");
-    io.outputLine("        if (lite$write === undefined) lite_out += text;");
+    io.outputLine("        if (lite$write === undefined) lite$out += text;");
     io.outputLine("        else lite$write(text);");
     io.outputLine("    }");
     io.outputLine("    void lite$emit;");
     var indent := "    ";
     var line := "";
     var count := 0;
-    var reportIndex := 0;
     var mainStopped := false;
     loop items as item {
         if item.kind == "FunctionStart" {
@@ -603,12 +601,17 @@ pub emitProgram := fn(items: frontend.Items, source: String, prefix: String): Un
             indent = dedent(indent);
             io.outputLine(indent + "}");
         } else if item.kind == "End" or item.kind == "EndOutput" {
-            if count == 0 { line = tsLiteral.textLiteralCode(""); }
-            temporary := "lite$report" + integer.intText(reportIndex);
-            io.outputLine(indent + "const " + temporary + " = " + line + ";");
-            ending := if item.kind == "End" { " + \"\\n\"" } else { "" };
-            io.outputLine(indent + "lite$emit(" + temporary + ending + ");");
-            reportIndex = reportIndex + 1;
+            if count == 0 {
+                io.outputLine(indent + "lite$emit(" + tsLiteral.textLiteralCode(if item.kind == "End" { "\n" } else { "" }) + ");");
+            } else {
+                ending := if item.kind == "End" { " + \"\\n\"" } else { "" };
+                emitted := if count == 1 and item.kind == "End" and not textLib.startsWithAt(line, 0, "(") and textLib.indexOfText(line, "?", 0) >= 0 {
+                    "(" + line + ")"
+                } else {
+                    line
+                };
+                io.outputLine(indent + "lite$emit(" + emitted + ending + ");");
+            }
             line = "";
             count = 0;
         } else if item.kind == "MainStop" {
@@ -620,6 +623,6 @@ pub emitProgram := fn(items: frontend.Items, source: String, prefix: String): Un
             count = count + 1;
         }
     }
-    if not mainStopped { io.outputLine("    return lite_out;"); }
+    if not mainStopped { io.outputLine("    return lite$out;"); }
     io.outputLine("}");
 }

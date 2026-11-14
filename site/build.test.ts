@@ -442,8 +442,8 @@ test('formatCodeView filters TS and C output for Program, Portable, and Full mod
 
   const programTs = formatCodeView(sample.ts, 'ts', 'program');
   assert(!programTs.includes('declare const process'));
-  assert(!programTs.includes('liteFn_m3_intAdd'));
-  assert(!programTs.includes('let lite_out = "";'));
+  assert(!programTs.includes('liteFn$lib$core$int$intAdd'));
+  assert(!programTs.includes('let lite$out = "";'));
   assert(programTs.includes('function liteFn_isDigit'));
   assert(programTs.includes('const lite_line'));
 
@@ -456,7 +456,7 @@ test('formatCodeView filters TS and C output for Program, Portable, and Full mod
   assert(sumProgram.includes('while (true)'));
   assert(!sumProgram.includes('Boolean(true)'));
   assert(sumProgram.includes('if (lite_sum === 15n)'));
-  assert(sumProgram.includes('lite$emit(lite$report0, "\\n")'));
+  assert(sumProgram.includes('lite$emit("sum(1..5) =" + " " + lite_sum.toString(), "\\n")'));
 
   assert.equal(formatCodeView(sample.ts, 'ts', 'full'), sample.ts);
 

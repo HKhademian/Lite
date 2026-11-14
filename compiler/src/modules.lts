@@ -1,5 +1,7 @@
 diagLib := import "core/diag";
+integer := import "core/int";
 listLib := import "core/list";
+textLib := import "core/text";
 frontend := import "./frontend.lts";
 sourceReader := import "./source-reader.lts";
 /* Initial source graph traversal for the generated TypeScript compiler. */
@@ -20,21 +22,248 @@ moduleProcessed := fn(graph: frontend.Items, path: String): Bool {
     false
 }
 
-/** Returns the graph identity assigned when one canonical source was first visited. */
-moduleIdForPath := fn(graph: frontend.Items, path: String): Int {
-    loop graph as item {
-        if item.kind == "ModuleVisited" and item.name == path { return item.intValue; }
+/** Returns true when `values` already contains integer `needle`. */
+listContainsInt := fn(values: List<Int>, needle: Int): Bool {
+    loop values as value {
+        if value == needle { return true; }
     }
+    false
+}
+
+/** Returns ASCII code point for printable ASCII and standard whitespace, or -1 for non-ASCII. */
+asciiCode := fn(ch: String): Int {
+    if textLib.length(ch) =!= 1 { return -1; }
+    printable := " !\"#$%&'()*+,-./0123456789:;<=>?@ABCDEFGHIJKLMNOPQRSTUVWXYZ[\\]^_`abcdefghijklmnopqrstuvwxyz{|}~";
+    found := textLib.indexOfText(printable, ch, 0);
+    if found >= 0 { return found + 32; }
+    if ch == "\t" { return 9; }
+    if ch == "\n" { return 10; }
+    if ch == "\r" { return 13; }
     -1
 }
 
-/** Assigns a stable ordinal to the next discovered source unit. */
-nextModuleId := fn(graph: frontend.Items): Int {
-    var count := 0;
-    loop graph as item {
-        if item.kind == "ModuleVisited" { count += 1; }
+/** Strict weak lexicographic comparison of two strings via ASCII codes (-1, 0, or 1). */
+compareText := fn(left: String, right: String): Int {
+    leftLen := textLib.length(left);
+    rightLen := textLib.length(right);
+    limit := if leftLen < rightLen { leftLen } else { rightLen };
+    var index := 0;
+    loop index < limit {
+        leftCh := textLib.at(left, index);
+        rightCh := textLib.at(right, index);
+        if leftCh =!= rightCh {
+            leftCode := asciiCode(leftCh);
+            rightCode := asciiCode(rightCh);
+            if leftCode < rightCode { return -1; }
+            if leftCode > rightCode { return 1; }
+        }
+        index = index + 1;
     }
-    count
+    if leftLen < rightLen { -1 } else if leftLen > rightLen { 1 } else { 0 }
+}
+
+/** Converts Windows backslashes to forward slashes so path slugs are platform-uniform. */
+normalizeSlashes := fn(path: String): String {
+    if textLib.indexOfText(path, "\\", 0) < 0 { return path; }
+    var result := "";
+    var index := 0;
+    size := textLib.length(path);
+    loop index < size {
+        ch := textLib.at(path, index);
+        result = result + if ch == "\\" { "/" } else { ch };
+        index = index + 1;
+    }
+    result
+}
+
+/** Drops one trailing `.lts` suffix when a non-empty stem precedes it. */
+stripLtsExtension := fn(name: String): String {
+    size := textLib.length(name);
+    if size > 4 and textLib.startsWithAt(name, size - 4, ".lts") {
+        return textLib.slice(name, 0, size - 4);
+    }
+    name
+}
+
+/** Returns the directory component of `path` without trailing slash (or `"/"`, or `""`). */
+dirnameOfPath := fn(path: String): String {
+    var index := textLib.length(path) - 1;
+    loop index >= 0 {
+        if textLib.at(path, index) == "/" {
+            if index == 0 { return "/"; }
+            return textLib.slice(path, 0, index);
+        }
+        index = index - 1;
+    }
+    ""
+}
+
+/** Returns the final path segment of `path`. */
+basenameOfPath := fn(path: String): String {
+    size := textLib.length(path);
+    var index := size - 1;
+    loop index >= 0 {
+        if textLib.at(path, index) == "/" {
+            return textLib.slice(path, index + 1, size);
+        }
+        index = index - 1;
+    }
+    path
+}
+
+/** Computes `path` relative to `rootDir` when they share a non-root tree, else `""`. */
+relativeFromDir := fn(rootDir: String, path: String): String {
+    normPath := normalizeSlashes(path);
+    if rootDir == "" {
+        if normPath == "" or textLib.startsWithAt(normPath, 0, "/") { return ""; }
+        return normPath;
+    }
+    if rootDir == "/" {
+        if textLib.startsWithAt(normPath, 0, "/") {
+            return textLib.slice(normPath, 1, textLib.length(normPath));
+        }
+        return "";
+    }
+    rootIsAbs := textLib.startsWithAt(rootDir, 0, "/");
+    pathIsAbs := textLib.startsWithAt(normPath, 0, "/");
+    if rootIsAbs =!= pathIsAbs { return ""; }
+    rootSlash := rootDir + "/";
+    rootLen := textLib.length(rootSlash);
+    pathLen := textLib.length(normPath);
+    limit := if rootLen < pathLen { rootLen } else { pathLen };
+    var index := 0;
+    var commonSlash := -1;
+    loop index < limit {
+        ch := textLib.at(rootSlash, index);
+        if ch =!= textLib.at(normPath, index) { break; }
+        if ch == "/" { commonSlash = index; }
+        index = index + 1;
+    }
+    if rootIsAbs and commonSlash <= 0 { return ""; }
+    var prefix := "";
+    var scan := commonSlash + 1;
+    loop scan < rootLen {
+        if textLib.at(rootSlash, scan) == "/" { prefix = prefix + "../"; }
+        scan = scan + 1;
+    }
+    prefix + textLib.slice(normPath, commonSlash + 1, pathLen)
+}
+
+/** Derives a repo-location-independent logical name for one module. */
+logicalModuleName := fn(rootDir: String, path: String, display: String): String {
+    normDisplay := normalizeSlashes(display);
+    if textLib.startsWithAt(normDisplay, 0, "lib/") {
+        cleanedStd := stripLtsExtension(normDisplay);
+        if cleanedStd =!= "" { return cleanedStd; }
+    }
+    relative := relativeFromDir(rootDir, path);
+    if relative =!= "" {
+        cleanedRel := stripLtsExtension(relative);
+        if cleanedRel =!= "" { return cleanedRel; }
+    }
+    cleanedDisp := stripLtsExtension(normDisplay);
+    if cleanedDisp =!= "" { return cleanedDisp; }
+    cleanedBase := stripLtsExtension(basenameOfPath(normalizeSlashes(path)));
+    if cleanedBase =!= "" { return cleanedBase; }
+    "module"
+}
+
+/** Prefix-free, injective target identifier slug for one logical module path. */
+encodeModuleSlug := fn(target: String, logical: String): String {
+    var result := "";
+    var index := 0;
+    size := textLib.length(logical);
+    loop index < size {
+        ch := textLib.at(logical, index);
+        if textLib.isAsciiLetter(ch) or textLib.isDigit(ch) {
+            result = result + ch;
+        } else if ch == "/" {
+            result = result + if target == "ts" { "$" } else { "_s_" };
+        } else if ch == "-" {
+            result = result + if target == "ts" { "__" } else { "_d_" };
+        } else if ch == "_" {
+            result = result + "_u_";
+        } else if ch == "." {
+            result = result + "_p_";
+        } else {
+            code := asciiCode(ch);
+            result = result + if code >= 0 { "_a" + integer.intText(code) + "_" } else { "_z_" };
+        }
+        index = index + 1;
+    }
+    if result == "" { return "module"; }
+    result
+}
+
+/** Returns true if any visited module already reserves `moduleKey`. */
+graphUsesModuleKey := fn(graph: frontend.Items, moduleKey: String): Bool {
+    loop graph as item {
+        if item.kind == "ModuleVisited" and item.textValue == moduleKey { return true; }
+    }
+    false
+}
+
+/** Assigns a unique module key, disambiguating rare non-ASCII `_z_` collisions cleanly. */
+uniqueModuleKey := fn(graph: frontend.Items, target: String, baseSlug: String): String {
+    if not graphUsesModuleKey(graph, baseSlug) { return baseSlug; }
+    var suffix := 2;
+    loop true {
+        candidate := if target == "ts" { baseSlug + "$" + integer.intText(suffix) }
+            else { baseSlug + "_k" + integer.intText(suffix) + "_" };
+        if not graphUsesModuleKey(graph, candidate) { return candidate; }
+        suffix = suffix + 1;
+    }
+    baseSlug
+}
+
+/** Returns the entry module's directory recorded on the root visit record. */
+rootDirForGraph := fn(graph: frontend.Items): String {
+    loop graph as item {
+        if item.kind == "ModuleVisited" and item.intValue == 1 { return item.runtime; }
+    }
+    ""
+}
+
+/** Returns the unique encoded module key assigned to `path`. */
+moduleKeyForPath := fn(graph: frontend.Items, path: String): String {
+    loop graph as item {
+        if item.kind == "ModuleVisited" and item.name == path { return item.textValue; }
+    }
+    ""
+}
+
+/** Returns the computed topological DAG level of a processed module `path`. */
+moduleLevelForPath := fn(graph: frontend.Items, path: String): Int {
+    loop graph as item {
+        if item.kind == "ModuleProcessed" and item.name == path { return item.intValue; }
+    }
+    0
+}
+
+/** Returns direct dependency indices `[0..count)` sorted deterministically by `(logical, path)`. */
+sortedDepIndices := fn(logicals: List<String>, paths: List<String>, count: Int): List<Int> {
+    picked: mut List<Int> = [];
+    var step := 0;
+    loop step < count {
+        var best := -1;
+        var idx := 0;
+        loop idx < count {
+            if not listContainsInt(picked, idx) {
+                if best < 0 {
+                    best = idx;
+                } else {
+                    cmpLogical := compareText(logicals[idx], logicals[best]);
+                    if cmpLogical < 0 or (cmpLogical == 0 and compareText(paths[idx], paths[best]) < 0) {
+                        best = idx;
+                    }
+                }
+            }
+            idx = idx + 1;
+        }
+        listLib.pushBack(mut picked, best);
+        step = step + 1;
+    }
+    picked
 }
 
 /** Returns public declaration records for one completed source module. */
@@ -82,8 +311,8 @@ appendModuleExports := fn(existing: frontend.Items, incoming: frontend.Items, pr
 
 /** Builds one aliased module namespace from its source-declared public interface. */
 moduleAliasExports := fn(graph: frontend.Items, path: String, alias: String): frontend.Items {
-    result: mut frontend.Items = [(kind = "ModuleAlias", name = alias, runtime = "", code = "",
-        intValue = moduleIdForPath(graph, path), textValue = path)];
+    result: mut frontend.Items = [(kind = "ModuleAlias", name = alias, runtime = moduleKeyForPath(graph, path), code = "",
+        intValue = 0, textValue = path)];
     loop modulePublicDeclarations(graph, path) as item {
         listLib.pushBack(mut result, (kind = item.kind, name = alias + "." + item.name, runtime = item.runtime,
             code = item.code, intValue = item.intValue, textValue = item.textValue));
@@ -91,42 +320,139 @@ moduleAliasExports := fn(graph: frontend.Items, path: String, alias: String): fr
     result
 }
 
-/** Reads and parses each canonical source once, marking it visited before recursion and processed after dependencies and local parsing. */
+/** Reads and parses each canonical source once, recursing into dependencies in canonical `(logical, path)` order and recording topological levels. */
 pub visitSourceModule := fn(target: String, path: String, display: String, identity: String, source: String,
     initialGraph: frontend.Items): frontend.Items {
     if moduleVisited(initialGraph, path) { return initialGraph; }
-    moduleId := nextModuleId(initialGraph);
+    var hasVisited := false;
+    loop initialGraph as item {
+        if item.kind == "ModuleVisited" {
+            hasVisited = true;
+            break;
+        }
+    }
+    isRoot := not hasVisited;
+    normPath := normalizeSlashes(path);
+    rootDir := if isRoot { dirnameOfPath(normPath) } else { rootDirForGraph(initialGraph) };
+    logical := logicalModuleName(rootDir, path, display);
+    moduleKey := if isRoot { "" } else { uniqueModuleKey(initialGraph, target, encodeModuleSlug(target, logical)) };
     var graph: mut frontend.Items = initialGraph;
-    listLib.pushBack(mut graph, (kind = "ModuleVisited", name = path, runtime = "", code = "", intValue = moduleId, textValue = ""));
-    var importedExports: mut frontend.Items = [];
-    loop frontend.collectImportClauses(target, source, path) as clause {
+    listLib.pushBack(mut graph, (kind = "ModuleVisited", name = path, runtime = rootDir, code = logical,
+        intValue = if isRoot { 1 } else { 0 }, textValue = moduleKey));
+
+    clauses := frontend.collectImportClauses(target, source, path);
+    clausePaths: mut List<String> = [];
+    depPaths: mut List<String> = [];
+    depDisplays: mut List<String> = [];
+    depIdentities: mut List<String> = [];
+    depTexts: mut List<String> = [];
+    depLogicals: mut List<String> = [];
+    var depCount := 0;
+    loop clauses as clause {
         loaded := sourceReader.read(path, clause.textValue);
         if loaded.identity == "lite.compiler.source-reader.v1" and identity =!= "lite.compiler.modules.v1" {
             diagLib.fail(display, "the compiler source reader is private to module traversal");
         }
-        if not moduleVisited(graph, loaded.path) {
-            graph = self(=target, path = loaded.path, display = loaded.display, identity = loaded.identity, source = loaded.text, initialGraph = graph);
-        }
-        if moduleProcessed(graph, loaded.path) {
-            importedExports = appendModuleExports(importedExports, moduleAliasExports(graph, loaded.path, clause.name), path);
+        listLib.pushBack(mut clausePaths, loaded.path);
+        if not listLib.listContainsText(depPaths, loaded.path) {
+            listLib.pushBack(mut depPaths, loaded.path);
+            listLib.pushBack(mut depDisplays, loaded.display);
+            listLib.pushBack(mut depIdentities, loaded.identity);
+            listLib.pushBack(mut depTexts, loaded.text);
+            listLib.pushBack(mut depLogicals, logicalModuleName(rootDir, loaded.path, loaded.display));
+            depCount = depCount + 1;
         }
     }
-    localItems := frontend.parseProgramWithIdentity(=target, =source, prefix = display, exports = importedExports, =moduleId, moduleIdentity = identity);
-    listLib.pushBack(mut graph, (kind = "ModuleStart", name = path, runtime = "", code = "", intValue = moduleId, textValue = display));
+
+    sortedOrder := sortedDepIndices(depLogicals, depPaths, depCount);
+    loop sortedOrder as depIdx {
+        depPath := depPaths[depIdx];
+        if not moduleVisited(graph, depPath) {
+            graph = self(=target, path = depPath, display = depDisplays[depIdx], identity = depIdentities[depIdx],
+                source = depTexts[depIdx], initialGraph = graph);
+        }
+    }
+
+    var maxChildLevel := -1;
+    loop sortedOrder as depIdx {
+        depPath := depPaths[depIdx];
+        if moduleProcessed(graph, depPath) {
+            childLevel := moduleLevelForPath(graph, depPath);
+            if childLevel > maxChildLevel { maxChildLevel = childLevel; }
+        }
+    }
+    level := maxChildLevel + 1;
+
+    var importedExports: mut frontend.Items = [];
+    var clauseIndex := 0;
+    loop clauses as clause {
+        depPath := clausePaths[clauseIndex];
+        if moduleProcessed(graph, depPath) {
+            importedExports = appendModuleExports(importedExports, moduleAliasExports(graph, depPath, clause.name), path);
+        }
+        clauseIndex = clauseIndex + 1;
+    }
+
+    localItems := frontend.parseProgramWithModule(=target, =source, prefix = display, exports = importedExports,
+        =moduleKey, moduleIdentity = identity);
+    listLib.pushBack(mut graph, (kind = "ModuleStart", name = path, runtime = moduleKey, code = logical,
+        intValue = level, textValue = display));
     loop localItems as item { listLib.pushBack(mut graph, item); }
-    listLib.pushBack(mut graph, (kind = "ModuleEnd", name = path, runtime = "", code = "", intValue = moduleId, textValue = ""));
-    listLib.pushBack(mut graph, (kind = "ModuleProcessed", name = path, runtime = "", code = "", intValue = 0, textValue = ""));
+    listLib.pushBack(mut graph, (kind = "ModuleEnd", name = path, runtime = moduleKey, code = logical,
+        intValue = level, textValue = ""));
+    listLib.pushBack(mut graph, (kind = "ModuleProcessed", name = path, runtime = moduleKey, code = logical,
+        intValue = level, textValue = ""));
     graph
 }
 
-/** Removes graph-only records while preserving dependency-first parsed item order. */
+/** Emits all parsed modules in canonical `(level, logical, path)` topological order, with root last. */
 pub moduleItems := fn(graph: frontend.Items): frontend.Items {
-    result: mut frontend.Items = [];
+    startIndices: mut List<Int> = [];
+    startLevels: mut List<Int> = [];
+    startLogicals: mut List<String> = [];
+    startPaths: mut List<String> = [];
+    var moduleCount := 0;
+    var index := 0;
     loop graph as item {
-        if item.kind =!= "ModuleVisited" and item.kind =!= "ModuleProcessed" and
-            item.kind =!= "ModuleStart" and item.kind =!= "ModuleEnd" {
-            listLib.pushBack(mut result, item);
+        if item.kind == "ModuleStart" {
+            listLib.pushBack(mut startIndices, index + 1);
+            listLib.pushBack(mut startLevels, item.intValue);
+            listLib.pushBack(mut startLogicals, item.code);
+            listLib.pushBack(mut startPaths, item.name);
+            moduleCount = moduleCount + 1;
         }
+        index = index + 1;
+    }
+    picked: mut List<Int> = [];
+    result: mut frontend.Items = [];
+    var step := 0;
+    loop step < moduleCount {
+        var best := -1;
+        var m := 0;
+        loop m < moduleCount {
+            if not listContainsInt(picked, m) {
+                if best < 0 {
+                    best = m;
+                } else if startLevels[m] < startLevels[best] {
+                    best = m;
+                } else if startLevels[m] == startLevels[best] {
+                    cmpLogical := compareText(startLogicals[m], startLogicals[best]);
+                    if cmpLogical < 0 or (cmpLogical == 0 and compareText(startPaths[m], startPaths[best]) < 0) {
+                        best = m;
+                    }
+                }
+            }
+            m = m + 1;
+        }
+        listLib.pushBack(mut picked, best);
+        var itemIndex := startIndices[best];
+        loop true {
+            entry := graph[itemIndex];
+            if entry.kind == "ModuleEnd" { break; }
+            listLib.pushBack(mut result, entry);
+            itemIndex = itemIndex + 1;
+        }
+        step = step + 1;
     }
     result
 }

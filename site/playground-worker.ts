@@ -110,10 +110,10 @@ function compileWith(compilerSource, readSource, source) {
 }
 
 function attachPlayBridge(js) {
-  const snapFn = js.match(/\\bfunction (liteFn_m\\d+_litePlayCanvasSnapshot)\\b/)?.[1] ?? '';
-  const pixelsFn = js.match(/\\bfunction (liteFn_m\\d+_litePlayCanvasPixels)\\b/)?.[1] ?? '';
-  const opsFn = js.match(/\\bfunction (liteFn_m\\d+_litePlayCanvasTakeOps)\\b/)?.[1] ?? '';
-  const audioFn = js.match(/\\bfunction (liteFn_m\\d+_litePlayAudioDrain)\\b/)?.[1] ?? '';
+  const snapFn = js.match(/\\bfunction (liteFn\\$[a-zA-Z0-9_$]+\\$litePlayCanvasSnapshot)\\b/)?.[1] ?? '';
+  const pixelsFn = js.match(/\\bfunction (liteFn\\$[a-zA-Z0-9_$]+\\$litePlayCanvasPixels)\\b/)?.[1] ?? '';
+  const opsFn = js.match(/\\bfunction (liteFn\\$[a-zA-Z0-9_$]+\\$litePlayCanvasTakeOps)\\b/)?.[1] ?? '';
+  const audioFn = js.match(/\\bfunction (liteFn\\$[a-zA-Z0-9_$]+\\$litePlayAudioDrain)\\b/)?.[1] ?? '';
   if (!snapFn && !audioFn) return js;
 
   const hooks = [
@@ -166,8 +166,8 @@ function attachPlayBridge(js) {
   }
 
   const snippet = hooks.map((line) => '    ' + line).join('\\n');
-  if (/return lite_out;\\s*\\}\\s*$/.test(js)) {
-    return js.replace(/return lite_out;\\s*\\}\\s*$/, snippet + '\\n    return lite_out;\\n}');
+  if (/return lite\\$out;\\s*\\}\\s*$/.test(js)) {
+    return js.replace(/return lite\\$out;\\s*\\}\\s*$/, snippet + '\\n    return lite\\$out;\\n}');
   }
   return js.replace(/\\}\\s*$/, snippet + '\\n}');
 }
