@@ -1071,6 +1071,7 @@ coreHostFunction := fn(moduleIdentity: String, name: String, params: String, res
         if name == "length" and params == "text=String" and result == "Int" { "lite$textLength" }
         else if name == "at" and params == "text=String|position=Int" and result == "String" { "lite$textAt" }
         else if name == "slice" and params == "text=String|start=Int|end=Int" and result == "String" { "lite$textSlice" }
+        else if name == "indexOf" and params == "source=String|needle=String|start=Int" and result == "Int" { "lite$textIndexOf" }
         else { "" }
     } else if moduleIdentity == "lite.core.list.v1" {
         if name == "pushBack" and params == "values=mut List<T>|value=T" and result == "Unit" { "lite$core$list$pushBack:v1" }

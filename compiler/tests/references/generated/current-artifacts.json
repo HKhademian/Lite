@@ -1,8 +1,8 @@
 {
   "note": "Reviewed 2026-11-14 after extending core/text with containsText and toLowerAscii for lib/util libraries. All 69 TS/C corpus artifact hashes and 25 rejection cases verified.",
   "recorded": "2026-11-14",
-  "sourceSha256": "ff72e9b19db568146f9bc79282c0006aca04ba1fea4ed346183625713f0f55ff",
-  "compilerSha256": "66ce037cd40cc6339644cfbeb3a19bf49e39c2663ac240e4e7a304d71d3fdda8",
+  "sourceSha256": "387a344e9d06c15289a6c8dab77720410aaefeb1c21f13cdf4d8e0ff9a6e42cc",
+  "compilerSha256": "a329ea6347f3efe0b7ecb33627623b231b41b7e6b560b5c2b55b1fcb280c23e2",
   "programCases": 69,
   "rejectedCases": 25,
   "artifacts": [

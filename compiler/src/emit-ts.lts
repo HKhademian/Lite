@@ -620,7 +620,7 @@ emitBuiltinHelpers := fn(calls: String): Unit {
     emitFsHelpers(calls);
     emitProcessHelpers(calls);
     emitCryptoAndTimeHelpers(calls);
-    if usesBuiltin(calls, "textLength") or usesBuiltin(calls, "textAt") or usesBuiltin(calls, "textSlice") {
+    if usesBuiltin(calls, "textLength") or usesBuiltin(calls, "textAt") or usesBuiltin(calls, "textSlice") or usesBuiltin(calls, "textIndexOf") {
         io.outputLine("let lite$lastBmp = \"\";");
         io.outputLine("const lite$bmpSet = new Set<string>();");
         io.outputLine("const lite$textCache = new Map<string, readonly string[]>();");
@@ -705,6 +705,43 @@ emitBuiltinHelpers := fn(calls: String): Unit {
         io.outputLine("        lite$fault(\"BoundPanic\", at, \"textSlice requires 0 <= start <= end <= textLength(text)\");");
         io.outputLine("    }");
         io.outputLine("    return points.slice(Number(start), Number(end)).join(\"\");");
+        io.outputLine("}");
+        io.outputLine("");
+    }
+    if usesBuiltin(calls, "textIndexOf") {
+        io.outputLine("function lite$textIndexOf(source: string, needle: string, start: bigint): bigint {");
+        io.outputLine("    if (start < 0n) return -1n;");
+        io.outputLine("    if (lite$isBmp(source)) {");
+        io.outputLine("        const len = source.length;");
+        io.outputLine("        if (start > BigInt(len)) return -1n;");
+        io.outputLine("        if (needle.length === 0) return start;");
+        io.outputLine("        const idx = source.indexOf(needle, Number(start));");
+        io.outputLine("        return idx < 0 ? -1n : BigInt(idx);");
+        io.outputLine("    }");
+        io.outputLine("    const points = lite$textPoints(source);");
+        io.outputLine("    if (start > BigInt(points.length)) return -1n;");
+        io.outputLine("    if (needle.length === 0) return start;");
+        io.outputLine("    if (source.indexOf(needle) < 0) return -1n;");
+        io.outputLine("    const s = Number(start);");
+        io.outputLine("    const nPoints = lite$isBmp(needle) ? null : lite$textPoints(needle);");
+        io.outputLine("    const nLen = nPoints === null ? needle.length : nPoints.length;");
+        io.outputLine("    const limit = points.length - nLen;");
+        io.outputLine("    if (nLen === 1) {");
+        io.outputLine("        for (let i = s; i <= limit; i += 1) {");
+        io.outputLine("            if (points[i] === needle) return BigInt(i);");
+        io.outputLine("        }");
+        io.outputLine("        return -1n;");
+        io.outputLine("    }");
+        io.outputLine("    const first = nPoints === null ? needle[0] : nPoints[0];");
+        io.outputLine("    for (let i = s; i <= limit; i += 1) {");
+        io.outputLine("        if (points[i] !== first) continue;");
+        io.outputLine("        let ok = true;");
+        io.outputLine("        for (let j = 1; j < nLen; j += 1) {");
+        io.outputLine("            if (points[i + j] !== (nPoints === null ? needle[j] : nPoints[j])) { ok = false; break; }");
+        io.outputLine("        }");
+        io.outputLine("        if (ok) return BigInt(i);");
+        io.outputLine("    }");
+        io.outputLine("    return -1n;");
         io.outputLine("}");
         io.outputLine("");
     }
