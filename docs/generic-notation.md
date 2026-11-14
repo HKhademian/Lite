@@ -110,6 +110,11 @@ families or settle their generic declaration/application design.
 
 The future review should complete declaration and application syntax together, distinguish type inputs from compile-time value inputs, and define inference, defaults, constraints, specialization, and type identity. The separate function type-parameter direction above does not settle those topics.
 
+The user subsequently selected general [compile-time evaluation and known-input
+requirements](compile-time-evaluation.md). Compile-time-required inputs accept
+only values known during compilation; that direction does not yet decide
+whether compile-time value parameters belong in the generic angle-bracket list.
+
 For now, keep one consistent explanatory notation and link to this convention. Beyond the explicit builtin List exception, the function direction is not an implementation or a settled generic grammar. Migrate explanatory examples only as the relevant source contracts are selected.
 
 Related: [types and inference](types-and-inference.md), [arrays](arrays.md), [sequence families](sequence-types.md), [fallible types](fallible-types-and-error-composition.md), and [grammar sketch](grammar-sketch.md).

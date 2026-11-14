@@ -859,7 +859,13 @@ project-wide adoption remains unselected.
 
 **Related boundaries:** [Module initializer effects](SUBTOPICS.md#inv-003-05), [generics](SUBTOPICS.md#inv-027), [lean code generation](SUBTOPICS.md#inv-063-05), and [replaceable standard modules](SUBTOPICS.md#inv-071). A module being declaration-oriented does not settle compile-time effect permissions.
 
-**Investigation:** not started; contributor: unassigned; note: none.
+**Selected direction, 2026-11-14:** ordinary functions can be evaluated during
+compilation, explicit compile-time evaluation can incorporate its result, and
+compile-time-required inputs require known values. The requested direction
+includes file-reading use cases; execution effects, staging details, and syntax
+remain open. See [compile-time evaluation](../../docs/compile-time-evaluation.md).
+
+**Investigation:** bounded design started; implementation not claimed.
 
 <a id="inv-063"></a>
 
