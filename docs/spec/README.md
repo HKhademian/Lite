@@ -95,6 +95,8 @@ Open: field-default mechanics, partial construction, and allocation/cleanup deta
 
 Selected:
 
+- A local function with an omitted input type can infer a reusable indexed-read requirement from its body, retaining the supplied provider's element type in the result across calls with different compatible providers. An explicit complete public contract exposes its requirements and relationships and cannot be silently strengthened by its body. This selected direction is not yet implemented; generic constraint and signature syntax remain open. See [local indexed inference](../collection-function-signatures.md#local-inferred-indexing-and-explicit-public-contracts).
+
 - self(...) explicitly invokes the implementation currently executing with its implementation environment, independently of later shadows or replacement of its named binding. Ordinary call evaluation/checking and failure/cleanup rules apply; no tail-call guarantee or header is implied. Ordinary named calls keep lexical lookup, and the earlier implicit no-earlier-target recursion remains valid. Only this self-call form is selected; first-class self, name collisions/reservation, and full nested/outer targeting remain open. See [explicit self calls](../functions.md#explicit-current-function-self-calls).
 
 - Function types and literals use `fn`; ordinary parameters are written `name: Type`.

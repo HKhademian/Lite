@@ -1,6 +1,66 @@
 # Collection contracts in function inputs and outputs
 
-Status: **signature and return-model proposal, 2026-10-19**. Operation-contract sugar and inference motivate this review. The later [indexed-sequence decision](indexed-sequence-contract.md) selects [T] for indexed traversal. Full generic grammar, opaque return behavior, first-class function representation, and ownership remain proposals here.
+Status: **inferred local indexed-input direction and explicit public contract direction selected 2026-11-14; other signature and return models remain proposals**. The [indexed-sequence decision](indexed-sequence-contract.md) selects [T] for indexed traversal. Full generic grammar, opaque return behavior, first-class function representation, and ownership remain open.
+
+## Local inferred indexing and explicit public contracts
+
+Selected 2026-11-14: a local function with an omitted input type can infer a
+reusable indexed-input requirement from an indexed read in its body. Its
+result preserves the supplied provider's element type. Different calls can
+therefore use different compatible element and provider types; the first call
+does not fix the definition to its own type. An out-of-bounds read retains the
+ordinary indexing fault behavior. This is a selected design direction, **not
+yet implemented** by the generated compiler.
+
+```text
+first := fn (items) { items[0] }
+numbers := [4, 5];
+words: List<String> = ["hello", "world"];
+first(numbers); /* Int 4 */
+first(words);   /* String "hello" */
+```
+
+The inferred read requirement is not automatically the complete `[T]` bundle:
+that written contract also promises count and ordered traversal. A static
+provider retains its own representation; inference does not require a boxed or
+runtime-erased value. Indexing does not by itself grant mutable access or
+replacement permission. The selected ordinary access and failure rules still
+apply.
+
+Provide an explicit, complete signature for stable public APIs: it exposes the
+requirements and type relationships that callers can rely on, and checks the
+implementation against that boundary. Adding an undeclared operation cannot
+silently strengthen an explicitly complete signature. This does not decide
+that every public function must have such a signature, or select generic
+parameter, constraint, export, or explicit-signature syntax.
+
+### Pending contract cases
+
+These cases describe intended behavior; they are not executable passes:
+
+- **different-providers:** the array and list calls above return `4` and
+  `"hello"` with their respective `Int` and `String` result types, regardless
+  of call order.
+- **same-element-different-provider:** an `Int` array and an `Int` list both
+  satisfy the indexed read without requiring the same storage layout.
+- **empty-input:** calling `first` with an empty compatible provider reaches
+  the existing bounds panic; an untaken call does not panic.
+- **missing-indexing:** a traversal-only input that cannot supply positional
+  reads is rejected without enumeration or materialization.
+- **result-type:** use of the returned `String` as `Int` is rejected, even if
+  an earlier call supplied an `Int` array.
+- **complete-public-boundary:** an explicit traversal-only input contract
+  rejects a body that also indexes it; an explicitly indexed contract admits
+  the indexed read under its existing access and bounds rules.
+- **permissions:** an inferred readable input does not authorize an indexed
+  write, and any future writable form must honor the caller's explicit grant.
+
+General inference and constraint solving, unresolved or contradictory input
+requirements, recursive and escaping functions, separate compilation, exact
+diagnostics, and a way to spell generic relationships remain open. The pending
+cases must be made independently observable and tested together with existing
+calls, control flow, permissions, and failure behavior before implementation is
+considered complete.
 
 ## One contract, two directions
 
@@ -26,7 +86,7 @@ This is the proposed semantic interpretation, not finalized source syntax. A kno
 
 ## Inferred versus explicitly complete inputs
 
-For a simple inferred definition:
+For a simple inferred definition (the general form remains a proposal):
 
 ```text
 third := fn (users): User! {
@@ -52,7 +112,7 @@ keep := fn (value) {
 }
 ```
 
-Under the proposed generic inference, the result preserves the supplied concrete value type, subject to legal ownership and access. It does not erase every caller's value into a shared runtime interface. A function choosing an element must similarly retain the relation between the provider's element type and the successful return type. Returning a view must retain its source lifetime/access relationship.
+The selected indexed-read case above retains the relation between provider element and result types. The broader proposed `keep` inference would preserve the supplied concrete value type, subject to legal ownership and access, without erasing it into a shared runtime interface. Returning a view must retain its source lifetime/access relationship.
 
 Naming an input and output with the same broad traversal contract alone does not promise the same concrete provider, ownership, element storage, or length. Generic type parameters, associated element/result types, and lifetime/access relationships need explicit semantic support even if their routine spelling is inferred. Generic syntax for writing these relationships is still deferred.
 

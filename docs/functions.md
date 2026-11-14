@@ -148,7 +148,7 @@ The [concrete named routing review](named-input-routing.md) records named permut
 
 ## Compact implementations under review
 
-Use one callable-literal model. `fn (parameters) { body }` and `(parameters) { body }` have identical meaning; the latter omits the keyword where the parenthesized header still identifies a function. Input shape/types come from annotations, an expected contract, or selected ordinary [parameter-default inference](parameter-default-inference.md). A nonrecursive local result may be inferred once inputs are established. No signature-only declaration is required. Independent unknown-input and recursive result inference remain separate.
+Use one callable-literal model. `fn (parameters) { body }` and `(parameters) { body }` have identical meaning; the latter omits the keyword where the parenthesized header still identifies a function. Input shape/types come from annotations, an expected contract, or selected ordinary [parameter-default inference](parameter-default-inference.md). A nonrecursive local result may be inferred once inputs are established. No signature-only declaration is required. The selected local indexed-input inference direction is described in [collection function signatures](collection-function-signatures.md#local-inferred-indexing-and-explicit-public-contracts); general unknown-input and recursive result inference remain open.
 
 ### Two scenarios: full definition and contextual implementation
 
@@ -328,7 +328,7 @@ operation := (x: Float): Float { x * 3 }
 
 Permit this result inference for nonrecursive local lambdas. Use the existing body-result rules: normal completion comes from the final item, an empty body or final declaration/assignment produces Unit, and explicit returns must satisfy the resulting type constraints. Require an annotation when the result cannot be determined unambiguously. Distinct completion payload types form a normalized plain union under the selected rule below.
 
-Keep the scope narrow: input types must already be established by annotations, an expected callable, or selected ordinary parameter defaults. This does not select generic inference for `(n) { n * 2 }` without such information. Recursive result inference, no-normal-completion types, and public/stable API signature policy remain separate. LP-0012 now permits eligible omitted outputs to infer escaping returned errors. Explicit/expected output contracts remain constraints and cannot silently gain failures. Result-valued bodies and nested Result boundaries retain their separate rules.
+Keep the scope narrow: input types must already be established by annotations, an expected callable, or selected ordinary parameter defaults. This does not select generic inference for `(n) { n * 2 }` without such information; the later local indexed-input direction is a separate selected case. Recursive result inference, no-normal-completion types, and public/stable API signature policy remain separate. LP-0012 now permits eligible omitted outputs to infer escaping returned errors. Explicit/expected output contracts remain constraints and cannot silently gain failures. Result-valued bodies and nested Result boundaries retain their separate rules.
 
 Requiring an expected result type or a written result annotation for every independent local lambda was considered and not chosen.
 
@@ -473,7 +473,7 @@ This selects invocation semantics. Complete callable type grammar, ownership and
 
 ## Collection input requirements
 
-Simple collection functions should not require beginner authors to know protocol names. The [inference proposal](collection-inference.md) explores fn (icons) with reusable requirements inferred from the body, plus contextual construction of collection elements. Generalization, public signatures, and any short annotation remain open; omitting a parameter type does not yet select a generic mechanism.
+Simple collection functions should not require beginner authors to know protocol names. The [collection inference review](collection-inference.md) explores reusable requirements and contextual construction. A local indexed read now has a [selected inference direction](collection-function-signatures.md#local-inferred-indexing-and-explicit-public-contracts), pending implementation. Broader traversal inference, generalization mechanisms, and complete generic signature syntax remain open.
 
 The [signature proposal](collection-function-signatures.md) separates required input behavior from guaranteed output behavior, inferred inputs from explicitly complete contracts, and static abstract returns from runtime-erased values. A common contract alone does not preserve concrete input/output identity or choose a stored representation. The [operation-contract model](collection-operation-contracts.md) resolves loop/bracket sugar statically and distinguishes unsupported operations from supported operations returning typed failures.
 
@@ -790,7 +790,7 @@ public callable dependency/effect list.
 
 Destructured parameter forms need both surface grammar and a mismatch policy. The [pattern context review](pattern-contexts.md#5-function-and-closure-parameters) recommends patterns irrefutable under the declared parameter contract; no implicit runtime dispatch, skipped call, or new failure channel is selected by writing a parameter pattern.
 
-The [direct self-reference rule](#direct-self-reference-without-an-earlier-target) permits the shown no-earlier-binding recursive definition without a separate header. [Explicit self calls](#explicit-current-function-self-calls) distinguish current-implementation recursion from ordinary named binding lookup. Mutual recursion and full declaration-resolution rules remain open without making arbitrary initialization order implicit. Unannotated parameter inference, public signature requirements, generic constraints, and recursive result inference are still open.
+The [direct self-reference rule](#direct-self-reference-without-an-earlier-target) permits the shown no-earlier-binding recursive definition without a separate header. [Explicit self calls](#explicit-current-function-self-calls) distinguish current-implementation recursion from ordinary named binding lookup. Mutual recursion and full declaration-resolution rules remain open without making arbitrary initialization order implicit. Beyond the selected local indexed-input direction, unannotated parameter inference remains open. Whether every public signature must be explicit, generic constraints, and recursive result inference are also open.
 
 ## Tagged exits
 

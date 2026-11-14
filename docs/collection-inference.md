@@ -1,6 +1,6 @@
 # Collection syntax for beginners
 
-Status: **beginner ergonomics goal selected by the user, 2026-10-19; `[T]` is selected as the indexed-sequence contract, while `Iterable<T>` is the traversal-only form and inference mechanisms remain proposals**. Students should be able to create, pass, traverse, and write simple functions over collections before learning names such as Iterable or Collection.
+Status: **beginner ergonomics selected 2026-10-19; local indexed-input inference direction selected 2026-11-14; broader inference remains proposed**. `[T]` is the indexed-sequence contract, while `Iterable<T>` is the traversal-only form. Students should be able to create, pass, traverse, and write simple functions over collections before learning names such as Iterable or Collection.
 
 ## Start with values
 
@@ -64,7 +64,7 @@ render_icons := fn (icons) {
 
 Assume render is a known read-only operation accepting Icon and returning Unit. The body supplies a traversal requirement and an element constraint without spelling an interface name. Compatible lists, arrays, sets, slices, and custom sources should then be usable under the eventual traversal/access contract.
 
-For this to deliver provider independence, the inferred function must generalize the provider requirement. Merely inferring List from one call would lock the function to that implementation. The proposal is to infer a reusable static requirement, with valid calls checked by the compiler. It is not yet a selected generic inference algorithm.
+For this to deliver provider independence, the inferred function must generalize the provider requirement. Merely inferring List from one call would lock the function to that implementation. The traversal-only example remains proposed; the later [indexed-input direction](collection-function-signatures.md#local-inferred-indexing-and-explicit-public-contracts) selects a reusable inferred requirement for a local indexed read, not a complete inference algorithm.
 
 Inference must respect explicit provider conformance, access, and lifetime rules. A field name alone must not cause a search for an arbitrary nominal record type. Calling a known typed operation, receiving an expected callable signature, or adding an annotation can resolve missing information. Difficult definitions may need annotations, especially recursion, overloads, captures, and functions returned or stored as values.
 
@@ -105,7 +105,7 @@ This proposal does not silently strengthen an explicitly complete public travers
 
 The later [signature review](collection-function-signatures.md) recommends distinguishing inferred input requirements from complete published contracts and separating inferred concrete results, static abstract results, and explicit runtime-varying representations. It preserves input/output type and lifetime relationships rather than treating every contract as a boxed value type.
 
-The subsequent [source-visibility correction](collection-signature-ergonomics.md#revised-recommendation-complete-visible-annotations) requires a written library contract to reveal indexing requirements. Inferring omitted parameters remains a candidate convenience; silently supplementing a complete-looking collection annotation is no longer recommended. The selected `[T]` meaning is the indexed sequence; `Iterable<T>` remains the traversal-only form for beginner ergonomics.
+The subsequent [source-visibility correction](collection-signature-ergonomics.md#revised-recommendation-complete-visible-annotations) requires a written library contract to reveal indexing requirements. Local indexed-read inference is now selected in the bounded direction above; silently supplementing a complete written contract is not allowed. The selected `[T]` meaning is the indexed sequence; `Iterable<T>` remains the traversal-only form for beginner ergonomics.
 
 ## Could a short collection annotation help?
 
@@ -119,14 +119,16 @@ render_icons := fn (icons: [Icon]) {
 }
 ```
 
-This is **unselected syntax**. Two possible meanings need a deliberate choice:
+The later indexed-sequence decision selects `[Icon]` as the complete indexed
+contract. The alternatives considered at the time were:
 
 - A concrete growable container of Icon. Easy to teach, but would constrain provider choice if used as the input requirement.
 - A traversal contract over Icon. Fits the consumer goal, but says nothing by itself about indexing, growth, storage, or runtime representation.
 
 It must not silently switch between those meanings in parameters, fields, and return types. If it is a constraint-only form, that restriction must be explicit; if it is a general type, stored and returned values need a representation and lifetime contract. A known-size bracket literal can still construct a concrete fixed array even when an annotation denotes an abstraction, provided that distinction is consistent and documented.
 
-Do not finalize this shorthand as a side effect of choosing generic punctuation. Its meaning needs review first.
+The selected indexed meaning does not settle general generic punctuation or
+the representation of stored and returned abstract values.
 
 ## Bracket spelling and the slice distinction
 
@@ -154,7 +156,7 @@ The later [order and shared-traversal review](collection-order-and-traversal.md)
 
 ## Recommendation and teaching progression
 
-Teach literal values, named loop receivers, and ordinary calls first. Extend contextual construction through known collection element types. Evaluate inferred generic requirements for simple functions, while keeping an explicit contract form available for libraries and advanced code.
+Teach literal values, named loop receivers, and ordinary calls first. Extend contextual construction through known collection element types. Develop the selected local indexed-input inference direction and evaluate broader inferred requirements, while keeping an explicit contract form available for libraries and advanced code.
 
 An editor can show a plain explanation such as "accepts a source of Icon values; traversed once" and offer to insert an explicit annotation. Beginners should not need a protocol vocabulary to understand a rejected call: "This operation needs Icon values; this source provides String values" is a useful first diagnostic.
 

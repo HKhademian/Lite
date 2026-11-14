@@ -92,7 +92,7 @@ Generic forms such as `Array<Float, 3>`, `List<Int>`, and `Option<User>` are tem
 ## Types and values
 
 - [Beginner collection syntax compared](collection-ergonomics-comparison.md): construction context, simple loops, closure inference, and generic function declarations across Rust, Zig, and V.
-- [Collection syntax for beginners](collection-inference.md): contextual nested literals, inferred function requirements, and an unselected element-oriented annotation, without mandatory protocol vocabulary in first lessons.
+- [Collection syntax for beginners](collection-inference.md): contextual nested literals, selected local indexed-input inference direction and broader proposals, without mandatory protocol vocabulary in first lessons.
 - [Collection consumer abstractions](collection-abstractions.md): selected direction of minimum behavioral inputs, interchangeable providers, unified element typing, and honest traversal semantics.
 - [Collection capabilities](collection-capabilities.md): proposed traversal, size, repeatability, indexing, contiguity, membership, and output requirements; no universal container superclass.
 - [Sequence end operations](sequence-end-operations.md): proposed push/pop names, aligned indexing/removal failure modes, structural capabilities, and List/deque costs.
