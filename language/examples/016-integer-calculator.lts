@@ -1,7 +1,7 @@
 /* A small integer calculator, written entirely in the supported Lite subset. */
 
 io := import "core/io";
-text := import "core/text";
+textLib := import "core/text";
 
 list := import "core/list";
 isDigit := fn(text: String): Bool {
@@ -11,10 +11,10 @@ isDigit := fn(text: String): Bool {
 
 tokenize := fn(line: String): List<(kind: String, text: String)> {
     tokens: mut List<(kind: String, text: String)> = [];
-    size := text.length(line);
+    size := textLib.length(line);
     var position := 0;
     loop position < size {
-        ch := text.at(line, position);
+        ch := textLib.at(line, position);
         if ch == " " or ch == "\t" {
             position = position + 1;
             continue;
@@ -22,10 +22,10 @@ tokenize := fn(line: String): List<(kind: String, text: String)> {
         if isDigit(ch) {
             start := position;
             position = position + 1;
-            loop position < size and isDigit(text.at(line, position)) {
+            loop position < size and isDigit(textLib.at(line, position)) {
                 position = position + 1;
             }
-            list.pushBack(mut tokens, (kind = "number", text = text.slice(line, start, position)));
+            list.pushBack(mut tokens, (kind = "number", text = textLib.slice(line, start, position)));
             continue;
         }
         if ch == "+" or ch == "-" or ch == "*" or ch == "/" or ch == "(" or ch == ")" {
@@ -55,11 +55,11 @@ digitValue := fn(text: String): Int {
 }
 
 numberValue := fn(text: String): Int {
-    size := text.length(text);
+    size := textLib.length(text);
     var position := 0;
     var value := 0;
     loop position < size {
-        value = value * 10 + digitValue(text.at(text, position));
+        value = value * 10 + digitValue(textLib.at(text, position));
         position = position + 1;
     }
     value
