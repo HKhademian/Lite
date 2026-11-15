@@ -63,7 +63,14 @@ id_from_literal := cast<UserID>("hello"); /* illustrative explicit conversion in
 ```
 
 The user describes a fresh `"..."` literal as string-like: it takes the shape
-of its destination rather than first requiring a stored String value. An
+of its destination rather than first requiring a stored String value. The user
+limits this direction to a type explicitly written at the literal's use site,
+so code remains easy to reason about and issues are easier to catch. In
+particular, the typed declaration `id: UserID = "hello"` qualifies; merely
+knowing that a called function's parameter is UserID does not make
+`find_user("hello")` valid under this rule. The complete set of explicit
+type-bearing forms and their placement remains to be defined; do not extend
+the rule to implicit return or aggregate contexts without a decision. An
 uncontextualized `raw := "hello"` is treated as String in current examples;
 complete literal typing and inference remain open. Once `raw` or `desc` has an
 established type, a destination annotation alone is insufficient to cross into
@@ -72,8 +79,8 @@ TeacherID: the underlying representation gives String no special implicit
 conversion privilege in either direction. This supersedes the earlier recommendation to treat that annotation
 as a conversion request. It does not revise the separately selected tuple-label
 conversion. Direct conversion eligibility between distinct types, validation,
-failure behavior, and literal use in arguments and other contexts all remain to
-review. The examples show explicit conversion intent, not a decision that every
+failure behavior, and literal use with explicitly written types in other
+contexts all remain to review. The examples show explicit conversion intent, not a decision that every
 pair of distinct types must admit conversion or that conversion is infallible.
 
 ## 1.5 Unions and value operations
