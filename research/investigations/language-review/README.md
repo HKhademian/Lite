@@ -46,6 +46,8 @@ The following notes are recorded as provisional starting points:
 
 - [9. Modules and public APIs](09-modules.md)
 
+- [10. Generics and compile-time evaluation](10-generics-comptime.md)
+
 ## Starting context
 
 - [Language specification map](../../../docs/spec/README.md) distinguishes selected language rules from open areas and limited implementation.
