@@ -986,8 +986,8 @@ retains that binding and successive calls observe its updates. The design must
 remain compatible with Lite's low-level character and low or no runtime
 overhead goals. Escaping mutable state can require storage and lifetime work,
 so this selects neither zero cost nor a particular allocation or runtime.
-Capture permissions, cost visibility and control, storage, general sharing
-semantics, resource cleanup, concurrency and general lifetime safety
+Capture permissions, cost visibility and control, storage, explicit sharing,
+resource cleanup, concurrency and general lifetime safety
 remain to be designed. The first compiler may leave this feature unsupported.
 
 #### Copying an independent counter
@@ -1010,6 +1010,24 @@ selects independent state for the owned scalar counter, not general recursive
 cloning of explicit references, shared resources or external locations. Copy
 eligibility, other capture forms, call permissions and costs remain open.
 Implementation and representation remain unspecified.
+
+#### Separate copies of functions from one block
+
+Selected direction **2026-11-15**: ordinary copying does not silently share
+owned mutable surrounding state between function values. For example, inside
+an active block `next` and `read` can both access its `var count`. If separate
+copies of those function values leave together while `count` is 0, each copy
+has independent current state: calling the copied `next` returns 1, and then
+calling the copied `read` returns 0. The exact construction and unpacking
+syntax and access requirements are separate.
+
+This follows the ordinary copy law even when both functions are returned as
+components of one value. A later copy of either function similarly begins with
+its state at the copy point. Optimizations may eliminate physical copies or
+reuse storage only when observable behavior, including independent updates and
+any required copy effects, is preserved. This does not select deep copying of
+explicit references or resource handles; their rules remain open. No compiler
+support is implied.
 
 #### Mutable surrounding blocks and escaping state
 

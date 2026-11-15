@@ -16,6 +16,10 @@ Compiler support may follow later.
 Copying the selected counter copies its current owned `count` state; subsequent
 updates are independent. See [copying an independent counter](functions.md#copying-an-independent-counter).
 This does not decide general copying of references or resources.
+Likewise, separately copied functions from the same block do not implicitly
+share owned mutable state when they escape together. Physical copies may be
+optimized when their observable copy behavior is preserved; see [separate
+function copies](functions.md#separate-copies-of-functions-from-one-block).
 
 Mutation is explicit. A fixed function symbol can update an explicitly `var`
 binding in its active surrounding block; the escaping counter example uses a
