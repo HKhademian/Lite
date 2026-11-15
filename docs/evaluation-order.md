@@ -14,6 +14,19 @@ Make expressions with calls and other observable effects predictable independent
 
 ## Executable block items
 
+Selected direction **2026-11-15**: the file's top level is also a code block
+for lexical scope and symbol lookup, not a separate scope model. Like other
+blocks, it has neighboring symbols and participates in lookup from inner
+scopes through lexical parents. The user identifies public visibility via
+`pub` as its special distinction; the precise `pub` and export rules remain
+to be specified. This direction is not a claim of compiler support.
+
+The previously selected [script/module restrictions](modules-and-packages.md#distinct-script-and-module-files)
+still distinguish which top-level items are admitted: ordinary top-level
+assignment is currently script-only, and first-stage module initial values
+must be compile-time known. How the long-term uniform-block direction and
+module restrictions fit together remains to be resolved.
+
 Selected 2026-10-28, clarified 2026-11-15: every executable code block evaluates
 its reached items from top to bottom. Symbols in the block can be discovered
 independently of textual execution order, including by an ordinary eager

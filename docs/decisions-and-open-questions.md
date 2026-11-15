@@ -6,6 +6,11 @@ original scope. Decisions do not establish compiler conformance; use
 
 ## Nearer forward value symbols, 2026-11-15
 
+The file top level is also a code block for scope and symbol lookup. The user
+identifies `pub` visibility as its special distinction; detailed export rules
+and reconciliation with existing script/module item restrictions remain open.
+See [executable block items](evaluation-order.md#executable-block-items).
+
 Each code block introduces a scope, including function bodies and `if`, loop,
 `match`, and ordinary blocks; lookup begins in the innermost scope and
 proceeds through lexical parents one by one. An additional nested deferred
