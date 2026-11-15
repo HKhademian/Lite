@@ -701,7 +701,7 @@ Mutation, retention, and escaping lifetimes keep
 their separate contracts. When no earlier same-name binding exists in the
 defining block, the same-block rule below selects its first subsequent
 declaration before falling back to the outer symbol in the selected case.
-Further nested-scope lookup, self-name collisions, and mutual recursion
+Further nested-scope cases, self-name collisions, and mutual recursion
 remain open. Ordinary local bindings
 inside the function body still follow their own sequential lexical scope.
 
@@ -737,7 +737,7 @@ This choice is about a nearer **value symbol**, not a special rule for
 functions: the selected same-block rule also applies to ordinary callable
 values. It preserves an earlier same-block symbol across later same-block
 shadows, as above, and does not permit unrestricted capture. Full multi-level
-forward search, conditional scopes, type/import name collisions, self-name and
+forward search beyond the case below, conditional scopes, type/import name collisions, self-name and
 mutual recursion rules, initialization proofs and escaping lifetimes remain
 open. It is language design, not an implementation claim or a request to
 implement advanced compiler analysis now.
@@ -748,6 +748,39 @@ initializer is rejected under the initial safety rule; without a suitable
 same-block `x`, the admitted outer `x` is used; and an earlier same-block `x`
 remains selected across a later same-block shadow. Apply the same identity
 boundaries to callable-valued symbols and to separately tested nested scopes.
+
+### A nearer value through nested deferred bodies
+
+Selected **2026-11-15**: each function introduces a scope. Lookup starts in
+the innermost scope and proceeds through lexical parent scopes, one by one.
+An admitted reference selects the nearer surrounding value in this case:
+
+```text
+x := 1;
+test := fn (): Int {
+    mylayer := fn {
+        get := fn (): Int { x }
+        get()
+    }
+    x := 2;
+    mylayer()
+}
+result := test(); /* 2 */
+```
+
+The `x` in `get` refers to the `x` in `test`, even though that symbol follows
+`mylayer` and the script's `x` is earlier. Execution defines the outer `x`
+and `test`, calls `test`, defines `mylayer`, initializes the inner `x`, then
+calls `mylayer`. It defines and calls `get`, which reads 2. Removing the outer
+`x` does not change the chosen symbol. Lookup passes through `get`'s scope,
+then `mylayer`'s, then finds `x` in `test`'s scope; it does not search runtime
+callers. Access and lifetimes are assumed valid.
+
+Neither function definition executes its body or moves the initializer. A
+call that reaches the inner read before initialization remains subject to the
+initial static-safety rule; it does not switch to the outer `x`. General
+collision and shadowing rules within each scope remain open. This is a selected
+language case, not a claim of current compiler support.
 
 ### First later binding in the defining block
 

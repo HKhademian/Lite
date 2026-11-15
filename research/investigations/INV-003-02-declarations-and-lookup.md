@@ -12,6 +12,13 @@ and recommendations do not select a language rule.
 
 ## Nearer forward value symbol, 2026-11-15
 
+The user extends the example with `mylayer` containing `get`: the `x` read
+by `get` still selects the later `x` in `test` over the outer `x`. Each
+function introduces a scope; lookup starts in the innermost and proceeds
+through lexical parents one by one. The
+[nested example and execution trace](../../docs/functions.md#a-nearer-value-through-nested-deferred-bodies)
+record this selected case; general multi-level collision rules remain open.
+
 The user selects the symbol in the deferred function's defining block over an
 earlier visible symbol in an outer block, in the case where the defining-block
 symbol occurs later and there is no earlier same-name symbol in that block.
@@ -35,7 +42,7 @@ without executing its body; initialize the inner `x`; call `get`; read that
 inner `x`; return 2. The selected symbol is the inner `x` even though it is
 declared later in the defining block. A call reaching its read before the
 inner initializer is rejected under the existing initial safety rule, rather
-than redirected to the outer `x`. Full multi-level lookup, conditional scopes,
+than redirected to the outer `x`. General multi-level lookup, conditional scopes,
 self-name collisions, capture and lifetime rules remain open. The
 [function reference](../../docs/functions.md#nearer-forward-symbols-before-outer-symbols)
 owns the selected direction; these are pending cases, not compiler passes.

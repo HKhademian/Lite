@@ -6,13 +6,21 @@ original scope. Decisions do not establish compiler conformance; use
 
 ## Nearer forward value symbols, 2026-11-15
 
+Each function introduces a scope; lookup begins in the innermost scope and
+proceeds through lexical parents one by one. An additional nested deferred
+function layer retains the nearer surrounding value in the
+[selected example](functions.md#a-nearer-value-through-nested-deferred-bodies):
+`get` reads the later `x` in `test`, producing 2 rather than reading the outer
+`x`. The execution trace still requires initialization before the read.
+Further within-scope collision and shadowing rules remain open.
+
 For an admitted deferred-body reference with no earlier same-name symbol in
 its defining executable block, a later ordinary value symbol in that block
 takes precedence over an already-visible symbol in an outer block. This keeps
 the selected local symbol stable when the containing function is moved to a
 context with an unrelated outer name. Its initializer is not hoisted; actual
 execution remains serial and reads require initialization. Earlier same-block
-bindings retain their identity across later same-block shadows. Further nested
+bindings retain their identity across later same-block shadows. Other nested
 lookup, control-flow scopes, self-name collisions, capture and lifetimes remain
 open. See [nearer forward symbols](functions.md#nearer-forward-symbols-before-outer-symbols).
 This selection supersedes the broader outer-binding priority in the 2026-10-29
