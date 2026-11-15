@@ -51,13 +51,14 @@ assignment is valid as a script/executable-block item; an ordinary standalone
 assignment is not a `.lt` module top-level item. It does not claim that a
 module's first-stage top-level value may be reserved.
 
-**Separate future question:** what if a function whose body expects `x` to be
-initialized is called before the serial block reaches `x = 5`? The user asks
-to think about that separately; no answer is selected by the body-analysis
-direction. Existing initial static enforcement rejects evident early reads and
-conservatively rejects calls whose safety cannot be proved in its supported
-subset. This investigation does not relax that selected enforcement or choose
-a new runtime fallback.
+**First-stage call rule, confirmed 2026-11-15:** a call that reads `x` before
+the serial block reaches `x = 5` is rejected; in the initial supported subset
+calls also require provable initialization safety. A call after successful
+initialization avoids this particular early-read problem. This retains the
+existing static-enforcement direction, does not choose a runtime fallback, and
+does not require implementing deeper compiler analysis now. Calls whose bodies
+write before reading, indirect calls and propagation of initialized state back
+to the caller remain separately open. See [initial static enforcement](../../docs/functions.md#initial-static-enforcement).
 
 Review call-before-write and call-after-write, conditional initialization,
 early exits, repeated or escaping calls, shadowing and symbol identity, nested

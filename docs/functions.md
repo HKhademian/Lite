@@ -584,7 +584,7 @@ public, or grant access. The term does not select a single namespace or change
 the separate lookup rules for different contexts.
 
 The selected independent analysis of deferred bodies against serial-block
-value state, and the separate question of calling before initialization, are
+value state, and the first-stage rule for calls that read an uninitialized value, are
 recorded in [INV-003.02](../research/investigations/INV-003-02-declarations-and-lookup.md#deferred-bodies-and-serial-block-value-state-2026-11-15).
 
 Selected direction, 2026-10-28: a function body may refer to identifiers declared
@@ -651,10 +651,10 @@ x = 5;
 ```
 
 This does not say that `x = 5` executes when either function is defined, or
-that an earlier call can safely read `x` before that assignment. The timing
-and admissibility of such calls are a separate open question; existing initial
-static enforcement continues to reject evident uninitialized reads and
-unprovable calls in its supported subset. No runtime fallback is selected.
+that an earlier call can safely read `x` before that assignment. The first-stage
+rule below rejects a call that reads the value before it is initialized and
+conservatively rejects a call when initialization safety cannot be established
+in the supported subset. No runtime fallback is selected.
 Likewise, this choice does not establish that a call's writes update definite
 initialization facts in the surrounding block; that is separately open.
 
@@ -671,7 +671,7 @@ their first write when the serial value remains reserved; both admit a read
 after their own successful write; both are analyzed with read access at entry
 when the serial block independently initializes `x`; and a write inside an
 uninvoked body does not initialize the serial block. Call-before-initialization
-and post-call propagation must be tested separately when their rules are chosen.
+and post-call propagation must be tested separately under their respective rules.
 Full compiler support and the required advanced analysis are future work; this
 decision alone does not authorize an implementation change or count proposed
 cases as passing.
@@ -856,6 +856,26 @@ long-term policy remain open. Review concrete callback cases before extending
 this conservative starting point into a universal rejection rule. This selects
 a design requirement, not an implemented analysis, lifetime guarantee, or new
 public callable dependency/effect list.
+
+Confirmed **2026-11-15** for the first stage, with surrounding access assumed
+valid and the same `x` selected by lookup:
+
+```text
+/* Independent illustrative cases, not compiler-pass claims. */
+read := fn (): Int { x }
+var x: Int = ?;
+early := read(); /* reject: x would be read before initialization */
+x = 5;
+late := read();  /* this initialization ordering is safe */
+```
+
+The invalid `early` line must be removed to form the safe program containing
+`late`. Function definition does not run the body or hoist `x = 5`.
+Conservative rejection for unavailable proof remains specific to the initial
+subset; it does not decide every future callback or call whose body writes
+before reading. Proving that a call initializes the surrounding value for a
+later read is a separate, later-stage question. This confirmation does not
+require implementing deeper compiler analysis now.
 
 ## Recursion and inference
 
