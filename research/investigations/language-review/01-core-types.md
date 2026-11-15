@@ -10,7 +10,31 @@ Status: **joint review in progress**. The bounded direction below was clarified 
 - [Records](../../../docs/records.md)
 - [Arrays](../../../docs/arrays.md)
 - [Union initialization policy](../../../docs/union-initialization-policy.md)
+- [Universal zero initialization](../../../docs/zero-initialization.md)
 - Related investigation catalog areas: INV-018, INV-019, INV-020, INV-022, INV-024, INV-029.
+
+## First layer: values, type and storage
+
+The user describes a value as having a type and storage with an address. Its
+type describes the memory layout, including its size and the locations of
+inner values identified by names or positions. This is the first-layer model
+for discussion; exact layouts, address observability and optimizer obligations
+remain to be reviewed. In particular, [Unit has zero-sized storage](../../../docs/unit.md)
+and unique addresses for zero-sized positions have not been selected.
+
+The user reaffirmed that **all-zero storage is an initialized, valid
+language-defined value for every type**. This matches the existing universal
+rule in [zero initialization](../../../docs/zero-initialization.md); it is not a
+claim that every type-specific zero mapping is complete or implemented. Zero
+initialization is distinct from reserved, uninitialized storage and from
+declared field defaults.
+
+For plain multi-member unions, the mapping from zero storage to an observable
+value remains unresolved. Existing source restrictions on omitted or `= 0`
+union initialization remain in force until deliberately revised. An earlier
+discussion example using `1 | 2` did not settle whether values can serve as
+types or whether that is valid union syntax; both are open. Record those
+questions for a later layer without choosing an active member or an extra value.
 
 ## 1.1 Primitives and literals
 
