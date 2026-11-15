@@ -44,6 +44,24 @@ Status: **preliminary, 2026-11-15; awaiting joint review**. All recommendations 
 
 Keep recoverable errors and panics distinguishable while making ordinary propagation and cleanup predictable. Compare handler boundaries with failures during argument evaluation; simple syntax should not obscure which effects have already happened.
 
+## Expanded assessment
+
+### Compiler evidence and boundaries
+
+`finally.cleanup` passes a finite generated TS scenario including normal and return paths. This does not prove retained secondary failures, typed recovery or a native unwinder. The tested `Int ! String` function signature rejects before execution. [Baseline](compiler-baseline.md); [selected recovery rules](../../../docs/spec/README.md#ls-008--errors-recovery-and-cleanup).
+
+### Benefits, costs, and constraints
+
+- **8.1 Categories:** separate returned errors and panics express whether failure is part of a function result or an implicit fault. Static knowledge can specialize common cases, but a runtime branch or tag may remain when success is not known. Avoid conflating process termination in a prototype with selected recovery semantics.
+- **8.2 Contracts:** an explicit failure type enables callers to handle errors without a universal exception hierarchy. Inferred contracts reduce annotation but need public API stability and transitive analysis. Result payload and metadata size can affect arrays and hot returns; specialized encodings may help when valid and observable behavior is preserved.
+- **8.3 Propagation:** `!` and cleanup must preserve order, origin and failure channel. Inlining error branches can make the success path small but duplicate code; shared paths can reduce size but introduce branches or calls. Both must be compared under identical semantics.
+- **8.4 Recovery:** operation-level and block-level handlers catch different fault boundaries. Static typing may remove unnecessary tests; dynamically retaining, filtering and propagating multiple occurrences requires representation and possibly storage. A broad handler must not accidentally catch an argument failure outside its selected boundary.
+- **8.5 Cleanup:** deterministic cleanup works without a tracing GC, but every applicable exit must execute it. The selected policy retains secondary cleanup failures rather than discarding them. Arbitrarily many retained occurrences with payloads cannot be guaranteed in a fixed bounded buffer without another limit or storage policy; OOM, recursion, hard abort and transport need explicit decisions. This is a real tension with absolute no runtime footprint, not proof of a mandatory heap or unwinder.
+
+### Blockers and cross-feature cases
+
+Trace nested cleanups that each fail after a primary error; a panic during argument evaluation; and a partially initialized record containing a list. Decide storage, no-allocation modes, truncation versus exact retention only through explicit design review. These cases connect resource lifetimes [2](02-bindings.md), payload identity [4](04-enums.md), control transfers [6](06-control-flow.md), and compile-time failures [10](10-generics-comptime.md).
+
 ## Cross-topic routing
 
 Control flow (6), resource lifetimes (2), and compile-time execution (10) share failure paths. Record new decisions with their owning area; return to this review after the dependency is understood.
