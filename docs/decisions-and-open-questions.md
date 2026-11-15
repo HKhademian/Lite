@@ -17,6 +17,12 @@ Copying the selected counter copies its current owned `count` state; subsequent
 updates are independent. See [copying an independent counter](functions.md#copying-an-independent-counter).
 This does not decide general copying of references or resources.
 
+Mutation is explicit. A fixed function symbol can update an explicitly `var`
+binding in its active surrounding block; the escaping counter example uses a
+`mut` result for calls that update retained state. See [mutable surrounding
+blocks](functions.md#mutable-surrounding-blocks-and-escaping-state). General
+callable access grants and retained-environment rules remain open.
+
 For calls that may reach an uninitialized value, the preferred long-term
 direction requires compile-time proof of safe initialization and rejects
 unproved calls, including indirect calls. A runtime-check fallback remains an

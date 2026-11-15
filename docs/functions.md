@@ -976,7 +976,7 @@ make_counter := fn {
     }
     next
 }
-counter := make_counter();
+mut counter := make_counter();
 a := counter(); /* 1 */
 b := counter(); /* 2 */
 ```
@@ -996,9 +996,9 @@ Selected **2026-11-15**: copying the counter function copies its current owned
 `count` state. The two resulting counters subsequently change independently.
 
 ```text
-counter := make_counter();
+mut counter := make_counter();
 first := counter();  /* 1 */
-other := counter;    /* copy count at 1 */
+mut other := counter; /* copy count at 1 */
 a := counter();      /* 2 */
 b := other();        /* 2 */
 c := counter();      /* 3; other's count remains 2 */
@@ -1010,6 +1010,51 @@ selects independent state for the owned scalar counter, not general recursive
 cloning of explicit references, shared resources or external locations. Copy
 eligibility, other capture forms, call permissions and costs remain open.
 Implementation and representation remain unspecified.
+
+#### Mutable surrounding blocks and escaping state
+
+Selected direction **2026-11-15**: mutation must be explicit, while a fixed
+function symbol does not by itself make its surrounding block immutable. In
+this illustrative block, `next` updates the surrounding `var count`; the
+function does not need a mutable binding merely to call it:
+
+```text
+{
+    var count := 0;
+    next := fn (): Int {
+        count = count + 1;
+        count
+    }
+    next(); /* 1 */
+    next(); /* 2 */
+    next(); /* 3 */
+}
+```
+
+When the function escapes as the block result, the user's selected example
+explicitly makes the resulting value mutable for calls that update retained
+state:
+
+```text
+mut counter := {
+    var count := 0;
+    next := fn (): Int {
+        count = count + 1;
+        count
+    }
+    next
+}
+counter(); /* 1 */
+counter(); /* 2 */
+counter(); /* 3 */
+```
+
+The first case mutates a surrounding binding while its block is active; the
+second retains state beyond its source block and grants mutable access to the
+result. This specifies the examples' behavior, not a storage representation or
+a general rule that every escaping function requires `mut`. How access grants,
+callable types, retained environments and ordinary copies interact remains to
+be designed. The first compiler need not support these cases yet.
 
 The 2026-10-29 discussion requires a defined eligibility policy for surrounding
 values, even read-only uses, while preserving ordinary helper calls. It does not
