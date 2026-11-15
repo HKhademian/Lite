@@ -1,8 +1,8 @@
 {
-  "note": "Reviewed after adding C-backend reachability filtering, io.copyStream, and soft-builtin overrides with --builtin-mode across core/crypto. All 69 TS corpus artifact hashes and 25 rejection cases verified.",
-  "recorded": "2026-11-14",
-  "sourceSha256": "98e7cb9b29e88b457836bc45c3964995836a85692a131a90d457e94e711f48ec",
-  "compilerSha256": "9e111c7755125aa23f2d58bf87b7cda1fb74102d322c329e24f847cc6c665241",
+  "note": "Reviewed after moving text.indexOf and core/io stream helpers to pure Lite with TS soft-builtin overrides. All 69 TS corpus artifact hashes and 25 rejection cases verified.",
+  "recorded": "2026-11-15",
+  "sourceSha256": "1dbb61dbe9ee79cf8d82266f6042127455bf880b478d1b8a16c1864b73a3f6e2",
+  "compilerSha256": "f8ef053a88f6edeea4ab8db89392a05978bed803f1f1527032be9f8f13f180f8",
   "programCases": 69,
   "rejectedCases": 25,
   "artifacts": [

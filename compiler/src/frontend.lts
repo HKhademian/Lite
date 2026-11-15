@@ -1075,7 +1075,6 @@ coreHostFunction := fn(moduleIdentity: String, name: String, params: String, res
         else if name == "stdoutWriter" and params == "" and result == "(kind:String,handle:Int)" { "lite$ioStdoutWriter" }
         else if name == "stderrWriter" and params == "" and result == "(kind:String,handle:Int)" { "lite$ioStderrWriter" }
         else if name == "bufferReader" and params == "bytes=List<Int>" and result == "(kind:String,handle:Int)" { "lite$ioBufferReader" }
-        else if name == "textReader" and params == "text=String" and result == "(kind:String,handle:Int)" { "lite$ioTextReader" }
         else if name == "bufferWriter" and params == "" and result == "(kind:String,handle:Int)" { "lite$ioBufferWriter" }
         else if name == "writerBytes" and params == "writer=(kind:String,handle:Int)" and result == "List<Int>" { "lite$ioWriterBytes" }
         else if name == "writerText" and params == "writer=(kind:String,handle:Int)" and result == "(ok:Bool,text:String,error:String)" { "lite$ioWriterText" }
@@ -1084,15 +1083,10 @@ coreHostFunction := fn(moduleIdentity: String, name: String, params: String, res
         else if name == "readerAtEof" and params == "reader=(kind:String,handle:Int)" and result == "Bool" { "lite$ioReaderAtEof" }
         else if name == "readerError" and params == "reader=(kind:String,handle:Int)" and result == "String" { "lite$ioReaderError" }
         else if name == "read" and params == "reader=(kind:String,handle:Int)|maxBytes=Int" and result == "List<Int>" { "lite$ioRead" }
-        else if name == "readAll" and params == "reader=(kind:String,handle:Int)" and result == "List<Int>" { "lite$ioReadAll" }
-        else if name == "readAllText" and params == "reader=(kind:String,handle:Int)" and result == "(ok:Bool,text:String,error:String)" { "lite$ioReadAllText" }
-        else if name == "readLine" and params == "reader=(kind:String,handle:Int)" and result == "(ok:Bool,line:String,eof:Bool,error:String)" { "lite$ioReadLine" }
         else if name == "closeReader" and params == "reader=(kind:String,handle:Int)" and result == "(ok:Bool,error:String)" { "lite$ioCloseReader" }
         else if name == "writerOk" and params == "writer=(kind:String,handle:Int)" and result == "Bool" { "lite$ioWriterOk" }
         else if name == "writerError" and params == "writer=(kind:String,handle:Int)" and result == "String" { "lite$ioWriterError" }
         else if name == "write" and params == "writer=(kind:String,handle:Int)|bytes=List<Int>" and result == "(ok:Bool,written:Int,error:String)" { "lite$ioWrite" }
-        else if name == "writeText" and params == "writer=(kind:String,handle:Int)|text=String" and result == "(ok:Bool,error:String)" { "lite$ioWriteText" }
-        else if name == "writeLine" and params == "writer=(kind:String,handle:Int)|text=String" and result == "(ok:Bool,error:String)" { "lite$ioWriteLine" }
         else if name == "flush" and params == "writer=(kind:String,handle:Int)" and result == "(ok:Bool,error:String)" { "lite$ioFlush" }
         else if name == "closeWriter" and params == "writer=(kind:String,handle:Int)" and result == "(ok:Bool,error:String)" { "lite$ioCloseWriter" }
         else { "" }
@@ -1100,7 +1094,6 @@ coreHostFunction := fn(moduleIdentity: String, name: String, params: String, res
         if name == "length" and params == "text=String" and result == "Int" { "lite$textLength" }
         else if name == "at" and params == "text=String|position=Int" and result == "String" { "lite$textAt" }
         else if name == "slice" and params == "text=String|start=Int|end=Int" and result == "String" { "lite$textSlice" }
-        else if name == "indexOf" and params == "source=String|needle=String|start=Int" and result == "Int" { "lite$textIndexOf" }
         else { "" }
     } else if moduleIdentity == "lite.core.list.v1" {
         if name == "pushBack" and params == "values=mut List<T>|value=T" and result == "Unit" { "lite$core$list$pushBack:v1" }

@@ -12,7 +12,33 @@ pub at := fn(text: String, position: Int): String;
 pub slice := fn(text: String, start: Int, end: Int): String;
 
 /** Returns the first zero-based Unicode scalar index at or after `start` where `needle` occurs, or -1 when absent. */
-pub indexOf := fn(source: String, needle: String, start: Int): Int;
+pub indexOf := fn(source: String, needle: String, start: Int): Int {
+    if start < 0 { return -1; }
+    srcLen := length(source);
+    if start > srcLen { return -1; }
+    needleLen := length(needle);
+    if needleLen == 0 { return start; }
+    limit := srcLen - needleLen;
+    if start > limit { return -1; }
+    first := at(needle, 0);
+    var i := start;
+    loop i <= limit {
+        if at(source, i) == first {
+            var j := 1;
+            var matched := true;
+            loop j < needleLen {
+                if at(source, i + j) =!= at(needle, j) {
+                    matched = false;
+                    break;
+                }
+                j += 1;
+            }
+            if matched { return i; }
+        }
+        i += 1;
+    }
+    -1
+}
 
 /** True when `text` is exactly one ASCII decimal digit. */
 pub isDigit := fn(text: String): Bool {

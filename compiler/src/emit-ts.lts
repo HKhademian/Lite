@@ -1406,30 +1406,68 @@ emitIntDivisionHelpers := fn(calls: String): Unit {
     return;
 }
 
-/** Extracts the runtime identifier of the first parameter from encoded `name=kind` entries. */
-firstParamRuntime := fn(encoded: String): String {
-    eq := textLib.indexOfText(encoded, "=", 0);
-    if eq <= 0 { return ""; }
-    "lite_" + textLib.slice(encoded, 0, eq)
-}
-
-/** Returns the soft-builtin return expression for an overridable module function, or `""` when none exists. */
-softBuiltinExpr := fn(moduleName: String, fnName: String, params: String): String {
-    if moduleName == "lib/core/crypto" {
-        arg := firstParamRuntime(params);
-        if fnName == "sha256Bytes" { return "lite$cryptoDigestBytes(\"sha256\", " + arg + ")"; }
-        if fnName == "sha256Text" { return "lite$cryptoDigestText(\"sha256\", " + arg + ")"; }
-        if fnName == "sha256File" { return "lite$cryptoDigestFile(\"sha256\", " + arg + ")"; }
-        if fnName == "sha512Bytes" { return "lite$cryptoDigestBytes(\"sha512\", " + arg + ")"; }
-        if fnName == "sha512Text" { return "lite$cryptoDigestText(\"sha512\", " + arg + ")"; }
+/** Extracts the runtime identifier of parameter `targetIndex` from encoded `|`-separated `name=kind` entries. */
+paramRuntimeAt := fn(encoded: String, targetIndex: Int): String {
+    if encoded == "" or targetIndex < 0 { return ""; }
+    var index := 0;
+    var start := 0;
+    loop true {
+        separator := textLib.indexOfText(encoded, "|", start);
+        var end := textLib.length(encoded);
+        if separator >= 0 { end = separator; }
+        if index == targetIndex {
+            entry := textLib.slice(encoded, start, end);
+            eq := textLib.indexOfText(entry, "=", 0);
+            if eq <= 0 { return ""; }
+            return "lite_" + textLib.slice(entry, 0, eq);
+        }
+        if separator < 0 { return ""; }
+        index += 1;
+        start = separator + 1;
     }
     ""
 }
 
+/** Returns the soft-builtin return expression for an overridable module function, or `""` when none exists. */
+softBuiltinExpr := fn(moduleName: String, fnName: String, params: String): String {
+    arg0 := paramRuntimeAt(params, 0);
+    if moduleName == "lib/core/crypto" {
+        if fnName == "sha256Bytes" { return "lite$cryptoDigestBytes(\"sha256\", " + arg0 + ")"; }
+        if fnName == "sha256Text" { return "lite$cryptoDigestText(\"sha256\", " + arg0 + ")"; }
+        if fnName == "sha256File" { return "lite$cryptoDigestFile(\"sha256\", " + arg0 + ")"; }
+        if fnName == "sha512Bytes" { return "lite$cryptoDigestBytes(\"sha512\", " + arg0 + ")"; }
+        if fnName == "sha512Text" { return "lite$cryptoDigestText(\"sha512\", " + arg0 + ")"; }
+    } else if moduleName == "lib/core/text" {
+        if fnName == "indexOf" {
+            return "lite$textIndexOf(" + arg0 + ", " + paramRuntimeAt(params, 1) + ", " + paramRuntimeAt(params, 2) + ")";
+        }
+    } else if moduleName == "lib/core/io" {
+        if fnName == "textReader" { return "lite$ioTextReader(" + arg0 + ")"; }
+        if fnName == "readAll" { return "lite$ioReadAll(" + arg0 + ")"; }
+        if fnName == "readAllText" { return "lite$ioReadAllText(" + arg0 + ")"; }
+        if fnName == "readLine" { return "lite$ioReadLine(" + arg0 + ")"; }
+        if fnName == "writeText" { return "lite$ioWriteText(" + arg0 + ", " + paramRuntimeAt(params, 1) + ")"; }
+        if fnName == "writeLine" { return "lite$ioWriteLine(" + arg0 + ", " + paramRuntimeAt(params, 1) + ")"; }
+    }
+    ""
+}
+
+/** Maps a verified core module identity to its logical module name when compiling a core module directly. */
+rootSoftBuiltinModule := fn(identity: String): String {
+    match {
+        identity == "lite.core.crypto.v1" { "lib/core/crypto" }
+        identity == "lite.core.text.v1" { "lib/core/text" }
+        identity == "lite.core.io.v1" { "lib/core/io" }
+        _ { "" }
+    }
+}
+
 /** Resolves the logical module name for a soft-builtin candidate function from its runtime symbol or root identity. */
-softBuiltinModule := fn(runtime: String, fnName: String, rootCrypto: Bool): String {
+softBuiltinModule := fn(runtime: String, fnName: String, rootModule: String): String {
     if runtime == "liteFn$lib$core$crypto$" + fnName { return "lib/core/crypto"; }
-    if rootCrypto and runtime == "liteFn_" + fnName { return "lib/core/crypto"; }
+    if runtime == "liteFn$lib$core$text$" + fnName { return "lib/core/text"; }
+    if runtime == "liteFn$lib$core$io$" + fnName { return "lib/core/io"; }
+    if rootModule =!= "" and runtime == "liteFn_" + fnName { return rootModule; }
     ""
 }
 
@@ -1437,7 +1475,7 @@ softBuiltinModule := fn(runtime: String, fnName: String, rootCrypto: Bool): Stri
 applySoftBuiltins := fn(rawItems: frontend.Items, prefix: String): frontend.Items {
     rules := frontend.parseBuiltinModes(prefix);
     out: mut frontend.Items = [];
-    rootCrypto := frontend.sourceModuleIdentity() == "lite.core.crypto.v1";
+    rootModule := rootSoftBuiltinModule(frontend.sourceModuleIdentity());
     var skippingDepth := 0;
     loop rawItems as item {
         if skippingDepth > 0 {
@@ -1453,7 +1491,7 @@ applySoftBuiltins := fn(rawItems: frontend.Items, prefix: String): frontend.Item
         }
         listLib.pushBack(mut out, item);
         if item.kind == "FunctionStart" {
-            modName := softBuiltinModule(item.runtime, item.name, rootCrypto);
+            modName := softBuiltinModule(item.runtime, item.name, rootModule);
             if modName =!= "" {
                 overrideCode := softBuiltinExpr(modName, item.name, item.textValue);
                 if overrideCode =!= "" and frontend.resolveBuiltinMode(rules, modName, item.name) == "builtin" {

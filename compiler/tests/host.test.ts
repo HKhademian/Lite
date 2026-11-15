@@ -1038,7 +1038,15 @@ test('imported C compiler source hashes transitive files and invalidates its cac
     const entries = () => readdirSync(cache).filter(name => name !== 'selection' && !name.startsWith('build-'));
     assert.equal(entries().length, 1);
     const provenance = JSON.parse(readFileSync(join(cache, entries()[0]!, 'provenance.json'), 'utf8')) as { dependencies: string[] };
-    assert.deepEqual(provenance.dependencies, ['compiler/src/fixture-root.lts', 'compiler/src/fixture-c.lts', 'lib/core/io.lts', 'lib/core/list.lts']);
+    assert.deepEqual(provenance.dependencies, [
+      'compiler/src/fixture-root.lts',
+      'compiler/src/fixture-c.lts',
+      'lib/core/io.lts',
+      'lib/core/list.lts',
+      'lib/core/unicode.lts',
+      'lib/core/int.lts',
+      'lib/core/text.lts',
+    ]);
     writeFileSync(join(directory, 'compiler/src/fixture-c.lts'), 'io := import "core/io"; source := io.inputAll(); io.outputLine("changed nested C");');
     const changed = invoke(directory, 'io := import "core/io"; io.outputLine(42);', 'c');
     assert.equal(changed.error, undefined); assert.equal(changed.status, 0, changed.stderr.toString());
@@ -1058,10 +1066,18 @@ test('imported C compiler source hashes transitive files and invalidates its cac
     assert.equal(removed.stdout.toString(), 'removed dependency\n');
     const afterRemoval = entries();
     assert.equal(afterRemoval.length, 4);
+    const expectedRemovedDeps = [
+      'compiler/src/fixture-root.lts',
+      'lib/core/io.lts',
+      'lib/core/list.lts',
+      'lib/core/unicode.lts',
+      'lib/core/int.lts',
+      'lib/core/text.lts',
+    ];
     const removedProvenance = afterRemoval.map(name => JSON.parse(readFileSync(join(cache, name, 'provenance.json'), 'utf8')) as { dependencies: string[] })
-      .find(item => item.dependencies.length === 3 && item.dependencies[0] === 'compiler/src/fixture-root.lts' && item.dependencies[1] === 'lib/core/io.lts' && item.dependencies[2] === 'lib/core/list.lts');
+      .find(item => item.dependencies.length === expectedRemovedDeps.length && expectedRemovedDeps.every((dep, idx) => item.dependencies[idx] === dep));
     assert.ok(removedProvenance, 'the root-only graph is recorded independently of directory enumeration order');
-    assert.deepEqual(removedProvenance.dependencies, ['compiler/src/fixture-root.lts', 'lib/core/io.lts', 'lib/core/list.lts']);
+    assert.deepEqual(removedProvenance.dependencies, expectedRemovedDeps);
     const link = join(directory, 'compiler/src/fixture-link.lts');
     writeFileSync(join(directory, 'compiler/src/fixture-e.lts'), 'io := import "core/io"; source := io.inputAll(); io.outputLine("symlink E");');
     writeFileSync(join(directory, 'compiler/src/fixture-f.lts'), 'io := import "core/io"; source := io.inputAll(); io.outputLine("symlink F");');
@@ -4484,6 +4500,163 @@ test('soft-builtin emitter overrides and --builtin-mode flags work at function, 
     const liteCliRun = spawnSync(join(root, 'bin/lite'), ['run', '--builtin-mode', 'pure', sourceFile], { env, encoding: 'utf8', timeout: 10000 });
     assert.equal(liteCliRun.status, 0, liteCliRun.stderr);
     assert.equal(liteCliRun.stdout, expectedLine);
+  } finally {
+    rmSync(workDir, { recursive: true, force: true });
+  }
+});
+
+test('pure and soft-builtin modes match for core/text.indexOf and core/io stream helpers', () => {
+  const workDir = mkdtempSync(join(tmpdir(), 'lite-pure-text-io-'));
+  try {
+    const bigFile = join(workDir, 'big.txt');
+    writeFileSync(bigFile, 'A'.repeat(70000) + '€');
+
+    const source = [
+      'io := import "core/io";',
+      'file := import "core/file";',
+      'list := import "core/list";',
+      'textLib := import "core/text";',
+      'uni := import "core/unicode";',
+      '',
+      '/* text.indexOf cases (ASCII, boundaries, empty needle, non-BMP scalars) */',
+      'u := "a😀b€c😀d";',
+      'textSummary := [',
+      '    textLib.indexOf("hello world", "world", 0),',
+      '    textLib.indexOf("banana", "ana", 2),',
+      '    textLib.indexOf("abc", "z", 0),',
+      '    textLib.indexOf("abc", "abcd", 0),',
+      '    textLib.indexOf("abc", "", 0),',
+      '    textLib.indexOf("abc", "", 3),',
+      '    textLib.indexOf("abc", "", 4),',
+      '    textLib.indexOf("abc", "a", -1),',
+      '    textLib.indexOf(u, "€", 0),',
+      '    textLib.indexOf(u, "😀", 2),',
+      '    textLib.indexOf(u, "d", 6),',
+      '    textLib.indexOf(u, "", 7),',
+      '    textLib.indexOf(u, "", 8)',
+      '];',
+      '',
+      '/* io stream helper cases */',
+      'tr := io.textReader("a€😀");',
+      'trBytes := io.readAll(tr);',
+      'trEofAfter := io.readerAtEof(tr);',
+      '',
+      'collectLines := fn(r: io.Reader): String {',
+      '    var out := "";',
+      '    loop true {',
+      '        res := io.readLine(r);',
+      '        if not res.ok { return "ERR:" + res.error; }',
+      '        if res.eof { break; }',
+      '        if out =!= "" { out = out + "|"; }',
+      '        out = out + "[" + res.line + "]";',
+      '    }',
+      '    out',
+      '};',
+      'linesCrlf := collectLines(io.textReader("alpha\\r\\n\\nbeta\\rgamma\\r\\n€😀"));',
+      'linesEmpty := collectLines(io.textReader(""));',
+      'badLine := io.readLine(io.bufferReader([195, 40]));',
+      '',
+      'bw := io.bufferWriter();',
+      'wt := io.writeText(bw, "A€");',
+      'wl := io.writeLine(bw, "😀");',
+      'wl2 := io.writeLine(bw, "");',
+      'bwBytes := io.writerBytes(bw);',
+      'bwTxt := io.writerText(bw);',
+      '_cw := io.closeWriter(bw);',
+      'wtClosed := io.writeText(bw, "x");',
+      'bwClosedTxt := io.writerText(bw);',
+      '',
+      'rtOk := io.readAllText(io.bufferReader(uni.utf8Encode("hi€😀")));',
+      'rtBad := io.readAllText(io.bufferReader([255, 128]));',
+      'cr := io.textReader("x");',
+      '_crClose := io.closeReader(cr);',
+      'rtClosed := io.readAllText(cr);',
+      'rlClosed := io.readLine(cr);',
+      '',
+      `bigReader := file.openReader(${JSON.stringify(bigFile)});`,
+      'bigRes := io.readAllText(bigReader);',
+      '_bigClose := io.closeReader(bigReader);',
+      '',
+      'io.outputLine(',
+      '    textSummary,',
+      '    trBytes,',
+      '    trEofAfter,',
+      '    linesCrlf,',
+      '    linesEmpty,',
+      '    badLine.ok,',
+      '    badLine.eof,',
+      '    badLine.error =!= "",',
+      '    wt.ok,',
+      '    wl.ok,',
+      '    wl2.ok,',
+      '    bwBytes,',
+      '    bwTxt.ok,',
+      '    bwClosedTxt.ok,',
+      '    bwTxt.text == bwClosedTxt.text,',
+      '    not wtClosed.ok,',
+      '    rtOk.ok,',
+      '    rtOk.text == "hi€😀",',
+      '    not rtBad.ok,',
+      '    not rtClosed.ok,',
+      '    not rlClosed.ok,',
+      '    bigRes.ok,',
+      '    textLib.length(bigRes.text),',
+      '    textLib.at(bigRes.text, 70000)',
+      ');',
+    ].join('\n');
+
+    const sourceFile = join(workDir, 'pure-text-io.lts');
+    writeFileSync(sourceFile, source);
+    const expectedLine = '[6, 3, -1, -1, 0, 3, -1, -1, 3, 5, 6, 7, -1] [97, 226, 130, 172, 240, 159, 152, 128] true [alpha]|[]|[beta\rgamma]|[€😀]  false false true true true true [65, 226, 130, 172, 240, 159, 152, 128, 10, 10] true true true true true true true true true true 70001 €\n';
+
+    const compileAndCheck = (options: readonly string[], label: string): string => {
+      const compiled = compileTs({ text: source, name: sourceFile, options });
+      assert.equal(compiled.status, 0, `${label}: ${compiled.stderr.toString()}`);
+      const tsCode = compiled.stdout.toString();
+      assert.equal(checkTsArtifact(tsCode).status, 0, `${label}: strict TS check`);
+      withTsArtifact(tsCode, run => {
+        const res = run();
+        assert.equal(res.status, 0, `${label}: runtime`);
+        assert.equal(res.stdout.toString(), expectedLine, `${label}: output`);
+      });
+      return tsCode;
+    };
+
+    const defaultTs = compileAndCheck([], 'default builtin');
+    assert.match(defaultTs, /function lite\$textIndexOf\(/);
+    assert.match(defaultTs, /function lite\$ioTextReader\(/);
+    assert.match(defaultTs, /function lite\$ioReadAll\(/);
+    assert.match(defaultTs, /function lite\$ioReadAllText\(/);
+    assert.match(defaultTs, /function lite\$ioReadLine\(/);
+    assert.match(defaultTs, /function lite\$ioWriteText\(/);
+    assert.match(defaultTs, /function lite\$ioWriteLine\(/);
+
+    const pureProjectTs = compileAndCheck(['--builtin-mode', 'pure'], 'project pure');
+    assert.doesNotMatch(pureProjectTs, /function lite\$textIndexOf\(/);
+    assert.doesNotMatch(pureProjectTs, /function lite\$ioTextReader\(/);
+    assert.doesNotMatch(pureProjectTs, /function lite\$ioReadAll\(/);
+    assert.doesNotMatch(pureProjectTs, /function lite\$ioReadAllText\(/);
+    assert.doesNotMatch(pureProjectTs, /function lite\$ioReadLine\(/);
+    assert.doesNotMatch(pureProjectTs, /function lite\$ioWriteText\(/);
+    assert.doesNotMatch(pureProjectTs, /function lite\$ioWriteLine\(/);
+
+    const textOnlyPureTs = compileAndCheck(['--builtin-mode', 'core/text.indexOf=pure'], 'fn core/text.indexOf=pure');
+    assert.doesNotMatch(textOnlyPureTs, /function lite\$textIndexOf\(/);
+    assert.match(textOnlyPureTs, /function lite\$ioReadLine\(/);
+
+    const ioPureTs = compileAndCheck(['--builtin-mode', 'core/io=pure'], 'module core/io=pure');
+    assert.match(ioPureTs, /function lite\$textIndexOf\(/);
+    assert.doesNotMatch(ioPureTs, /function lite\$ioTextReader\(/);
+    assert.doesNotMatch(ioPureTs, /function lite\$ioReadAll\(/);
+    assert.doesNotMatch(ioPureTs, /function lite\$ioReadAllText\(/);
+    assert.doesNotMatch(ioPureTs, /function lite\$ioReadLine\(/);
+    assert.doesNotMatch(ioPureTs, /function lite\$ioWriteText\(/);
+    assert.doesNotMatch(ioPureTs, /function lite\$ioWriteLine\(/);
+
+    const ioSingleFnPureTs = compileAndCheck(['--builtin-mode', 'core/io.readLine=pure'], 'fn core/io.readLine=pure');
+    assert.doesNotMatch(ioSingleFnPureTs, /function lite\$ioReadLine\(/);
+    assert.match(ioSingleFnPureTs, /function lite\$ioWriteLine\(/);
+    assert.match(ioSingleFnPureTs, /function lite\$ioTextReader\(/);
   } finally {
     rmSync(workDir, { recursive: true, force: true });
   }

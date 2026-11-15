@@ -1,6 +1,7 @@
 /* Provisional core host signatures and target-independent synchronous streams. This module adds no host authority by itself. */
 
 list := import "core/list";
+unicode := import "core/unicode";
 
 /** Handle to a synchronous byte/text input source (`"stdin"`, `"buffer"`, `"file"`, or `"error"`). */
 pub Reader := type (kind: String, handle: Int);
@@ -48,7 +49,9 @@ pub stderrWriter := fn(): Writer;
 pub bufferReader := fn(bytes: List<Int>): Reader;
 
 /** Creates an in-memory `Reader` backed by UTF-8 bytes of `text`. */
-pub textReader := fn(text: String): Reader;
+pub textReader := fn(text: String): Reader {
+    bufferReader(unicode.utf8Encode(text))
+}
 
 /** Creates an in-memory `Writer` accumulating written bytes. */
 pub bufferWriter := fn(): Writer;
@@ -74,14 +77,69 @@ pub readerError := fn(reader: Reader): String;
 /** Reads up to `maxBytes` bytes synchronously from `reader`, returning `[]` on EOF or error. */
 pub read := fn(reader: Reader, maxBytes: Int): List<Int>;
 
+/** Decodes accumulated line bytes as strict UTF-8 into a single `readLine` result record. */
+decodeLineBytes := fn(lineBytes: List<Int>): (ok: Bool, line: String, eof: Bool, error: String) {
+    decoded := unicode.utf8DecodeStrict(lineBytes);
+    if not decoded.ok {
+        return (ok = false, line = "", eof = false, error = decoded.error);
+    }
+    (ok = true, line = decoded.text, eof = false, error = "")
+}
+
 /** Reads all remaining bytes synchronously from `reader`. */
-pub readAll := fn(reader: Reader): List<Int>;
+pub readAll := fn(reader: Reader): List<Int> {
+    if not readerOk(reader) { return []; }
+    out: mut List<Int> = [];
+    loop readerOk(reader) and not readerAtEof(reader) {
+        chunk := read(reader, 65536);
+        if not readerOk(reader) { return []; }
+        if list.listCountInt(chunk) == 0 { break; }
+        loop chunk as byte {
+            list.pushBack(mut out, byte);
+        }
+    }
+    out
+}
 
 /** Reads all remaining bytes synchronously from `reader` and decodes strict UTF-8 text. */
-pub readAllText := fn(reader: Reader): (ok: Bool, text: String, error: String);
+pub readAllText := fn(reader: Reader): (ok: Bool, text: String, error: String) {
+    if not readerOk(reader) {
+        return (ok = false, text = "", error = readerError(reader));
+    }
+    bytes := readAll(reader);
+    if not readerOk(reader) {
+        return (ok = false, text = "", error = readerError(reader));
+    }
+    unicode.utf8DecodeStrict(bytes)
+}
 
 /** Reads one line synchronously from `reader`, stripping trailing `\n` or `\r\n`. */
-pub readLine := fn(reader: Reader): (ok: Bool, line: String, eof: Bool, error: String);
+pub readLine := fn(reader: Reader): (ok: Bool, line: String, eof: Bool, error: String) {
+    if not readerOk(reader) {
+        return (ok = false, line = "", eof = false, error = readerError(reader));
+    }
+    lineBytes: mut List<Int> = [];
+    loop not readerAtEof(reader) {
+        chunk := read(reader, 1);
+        if not readerOk(reader) {
+            return (ok = false, line = "", eof = false, error = readerError(reader));
+        }
+        if list.listCountInt(chunk) == 0 { break; }
+        nextByte := chunk[0];
+        if nextByte == 10 {
+            count := list.listCountInt(lineBytes);
+            if count > 0 and lineBytes[count - 1] == 13 {
+                list.popBack(mut lineBytes);
+            }
+            return decodeLineBytes(lineBytes);
+        }
+        list.pushBack(mut lineBytes, nextByte);
+    }
+    if list.listCountInt(lineBytes) == 0 {
+        return (ok = true, line = "", eof = true, error = "");
+    }
+    decodeLineBytes(lineBytes)
+}
 
 /** Closes `reader` when backed by an owned resource. */
 pub closeReader := fn(reader: Reader): (ok: Bool, error: String);
@@ -96,10 +154,15 @@ pub writerError := fn(writer: Writer): String;
 pub write := fn(writer: Writer, bytes: List<Int>): (ok: Bool, written: Int, error: String);
 
 /** Writes UTF-8 `text` synchronously to `writer`. */
-pub writeText := fn(writer: Writer, text: String): (ok: Bool, error: String);
+pub writeText := fn(writer: Writer, text: String): (ok: Bool, error: String) {
+    res := write(writer, unicode.utf8Encode(text));
+    (ok = res.ok, error = res.error)
+}
 
 /** Writes UTF-8 `text` followed by `\n` synchronously to `writer`. */
-pub writeLine := fn(writer: Writer, text: String): (ok: Bool, error: String);
+pub writeLine := fn(writer: Writer, text: String): (ok: Bool, error: String) {
+    writeText(writer, text + "\n")
+}
 
 /** Flushes buffered output on `writer` if supported. */
 pub flush := fn(writer: Writer): (ok: Bool, error: String);
