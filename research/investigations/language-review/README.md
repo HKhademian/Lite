@@ -32,6 +32,8 @@ The following notes are recorded as provisional starting points:
 
 - [2. Bindings, mutation, and lifetime](02-bindings.md)
 
+- [3. Records](03-records.md)
+
 ## Starting context
 
 - [Language specification map](../../../docs/spec/README.md) distinguishes selected language rules from open areas and limited implementation.
