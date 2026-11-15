@@ -583,6 +583,10 @@ symbol does not itself initialize its value, execute a function, make a name
 public, or grant access. The term does not select a single namespace or change
 the separate lookup rules for different contexts.
 
+The user's proposed simpler analysis of deferred bodies against serial-block
+value state, and the separate question of calling before initialization, are
+recorded as open in [INV-003.02](../research/investigations/INV-003-02-declarations-and-lookup.md#deferred-bodies-and-serial-block-value-state-2026-11-15).
+
 Selected direction, 2026-10-28: a function body may refer to identifiers declared
 later in its enclosing code block. Creating a function value does not execute
 its body. When invoked, the body's executable blocks still run top to bottom;
