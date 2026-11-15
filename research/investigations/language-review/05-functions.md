@@ -44,6 +44,24 @@ Status: **preliminary, 2026-11-15; awaiting joint review**. All recommendations 
 
 Preserve simple function signatures where sound; compare inference and specialization before exposing callback state requirements everywhere. Any approach must still explain whether calls mutate independent copied state or the caller’s retained state and how separate compilation checks it.
 
+## Expanded assessment
+
+### Compiler evidence and boundaries
+
+`function.recursion` passes on generated TS. The maintained compiler documents named argument routing, and the verifier executes named-argument consumers. The local capture declaration in the baseline is accepted, while the tested returned function type fails. Neither demonstrates closure lifetime, copyable counters, general callable variance, defaults or user-defined generics. Public output remains TS/Node. [Baseline](compiler-baseline.md).
+
+### Benefits, costs, and constraints
+
+- **5.1 Signatures:** concise inferred local signatures help usability; explicit public contracts support separate checking. Representing labels or types as compile-time information can avoid runtime metadata, but exported ABI, type inference complexity and recursive signatures need specification.
+- **5.2 Calls:** source-order argument evaluation and subsequent default handling preserve effects, but can require temporary values when named arguments are reordered. Do not reorder or omit overwritten expression effects merely to optimize. Fixed arguments can be passed in registers where the target ABI permits; no ABI is yet selected.
+- **5.3 Function values:** direct known calls can be inlined and specialized; an unknown function value generally needs a code address and, if it retains state, an environment or equivalent representation. No allocation is inherent for a statically known nonescaping environment, but arbitrary escape and copying need lifetime and storage contracts.
+- **5.4 Surrounding state:** preserving the selected independent copy of a stateful counter may require copying its environment; reference-like caller state has different lifetime and mutation obligations. The user's `run_twice(operation: fn (): Int)` asks whether the function author can avoid mutability annotations. Inference, specialization and an erased callable contract differ in code size, checkability and dynamic dispatch; none is automatically selected.
+- **5.5 Compatibility:** safe callable widening must account for inputs contravariantly, results covariantly, failure channels, omission/default contracts and writable permissions. Representation adapters can add indirect calls or copies; prove when they disappear rather than assuming every type conversion is free.
+
+### Blockers and cross-feature cases
+
+For `run_twice`, compare a stateless callback, independent copied counter, read-only borrowed callback and writable borrowed callback; observe original state after both calls and after escape. Contrast one compilation of an erased public function with specialization per callback and account for binary growth. Resolve access [2](02-bindings.md), failures [8](08-failure-cleanup.md), and generics [10](10-generics-comptime.md) before promising one mechanism.
+
 ## Cross-topic routing
 
 Bindings (2), errors (8), and generics (10) affect calls and callback contracts. Record new decisions with their owning area; return to this review after the dependency is understood.
