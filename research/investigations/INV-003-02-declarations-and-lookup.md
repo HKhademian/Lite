@@ -12,21 +12,21 @@ and recommendations do not select a language rule.
 
 ## Deferred bodies and serial-block value state, 2026-11-15
 
-The user proposes exploring a simpler way to analyze a deferred function body
+The user selected a simpler direction for analyzing a deferred function body
 that references a surrounding value symbol. The body is **not executed when
 the function is defined**. In particular, a function body before the symbol's
 declaration and another body after it can both be analyzed without treating
 their assignments as having executed in the surrounding serial block.
 
 ```text
-/* Illustrative script or executable block; not selected new syntax or passes. */
+/* Illustrative script or executable block; not executable passes. */
 before := fn { /* consider x write-only here */ x = 2; /* read/write x here */ }
 var x: Int = ?;
 after := fn { /* consider x write-only here */ x = 2; /* read/write x here */ }
 ```
 
 In the first situation, the serial block does not independently initialize
-`x`. The candidate body analysis begins with `x` not readable and allows an
+`x`. The selected body-analysis direction begins with `x` not readable and allows an
 initialization write; following a successful write inside that body, it is
 readable there. The user is deliberately exploring this **without** requiring
 the caller's state to be updated by proving what a function call writes.
@@ -43,10 +43,10 @@ after := fn { /* consider x read/write from entry */ x = 2; }
 x = 5;
 ```
 
-The candidate asks whether the serial block's eventual initialization state
-can make `x` readable at entry to both deferred bodies, regardless of whether
-the function symbol is defined before or after `x`. This is not a selected
-rule. The lowercase `x` represents the same symbol throughout. The standalone
+The selected direction analyzes `x` as readable at entry to both deferred
+bodies when the serial block independently establishes its initialization,
+regardless of whether the function symbol is defined before or after `x`.
+The lowercase `x` represents the same symbol throughout. The standalone
 assignment is valid as a script/executable-block item; an ordinary standalone
 assignment is not a `.lt` module top-level item. It does not claim that a
 module's first-stage top-level value may be reserved.
@@ -54,7 +54,7 @@ module's first-stage top-level value may be reserved.
 **Separate future question:** what if a function whose body expects `x` to be
 initialized is called before the serial block reaches `x = 5`? The user asks
 to think about that separately; no answer is selected by the body-analysis
-proposal. Existing initial static enforcement rejects evident early reads and
+direction. Existing initial static enforcement rejects evident early reads and
 conservatively rejects calls whose safety cannot be proved in its supported
 subset. This investigation does not relax that selected enforcement or choose
 a new runtime fallback.
@@ -66,9 +66,12 @@ that is not initialized from an initialized value whose runtime contents are
 not compile-time known. Also keep compile-time work and `.lt` module rules
 distinct from ordinary sequential script execution.
 
-These examples describe pending design cases, not executable passes. In
-particular, successful writes inside a deferred body do not yet establish the
-surrounding block's post-call initialization state under a new rule.
+These examples describe selected language direction and pending design cases,
+not executable passes. The user does not ask for deeper compiler analysis now.
+In particular, successful writes inside a deferred body do not yet establish
+the surrounding block's post-call initialization state under a new rule. The
+[function reference](../../docs/functions.md#independent-deferred-body-value-state)
+owns the selected direction and its boundaries.
 
 ## Investigation question
 

@@ -583,9 +583,9 @@ symbol does not itself initialize its value, execute a function, make a name
 public, or grant access. The term does not select a single namespace or change
 the separate lookup rules for different contexts.
 
-The user's proposed simpler analysis of deferred bodies against serial-block
+The selected independent analysis of deferred bodies against serial-block
 value state, and the separate question of calling before initialization, are
-recorded as open in [INV-003.02](../research/investigations/INV-003-02-declarations-and-lookup.md#deferred-bodies-and-serial-block-value-state-2026-11-15).
+recorded in [INV-003.02](../research/investigations/INV-003-02-declarations-and-lookup.md#deferred-bodies-and-serial-block-value-state-2026-11-15).
 
 Selected direction, 2026-10-28: a function body may refer to identifiers declared
 later in its enclosing code block. Creating a function value does not execute
@@ -616,6 +616,65 @@ initialization proofs through calls/callbacks, and inaccessible/cyclic future
 definitions remain open. Capture representation, ownership, and escaping
 lifetimes remain deferred; no public capture-parameter or checked panic-effect
 list is introduced. See [INV-003.02](../research/investigations/INV-003-02-declarations-and-lookup.md).
+
+### Independent deferred-body value state
+
+Selected 2026-11-15 as **language behavior**, not a request to implement deeper
+compiler analysis now: analyze each deferred function body independently with
+respect to an admitted surrounding value symbol. The body's assignment does
+not execute when the function is defined and does not initialize that symbol
+in the surrounding serial block merely by appearing in the body.
+
+When the serial block independently leaves the admitted `var` symbol reserved,
+the body initially has write-only access to that uninitialized value: it may
+perform an authorized whole-value first write but cannot read the value first.
+Following a successful write, the value is readable and remains writable
+inside that execution of the body, under ordinary `var` permissions.
+
+```text
+/* Illustrative executable block: pending language cases, not compiler passes. */
+before := fn { x = 2; x } /* x is readable after this body's successful write */
+var x: Int = ?;
+after := fn { x = 2; x }  /* analyzed independently of before's body */
+```
+
+When the serial block independently establishes the symbol's initialization,
+the two deferred bodies can be analyzed with read/write access at entry even
+when the serial assignment follows their definitions:
+
+```text
+/* Illustrative executable block; each body refers to the same x. */
+before := fn { x = x + 1; }
+var x: Int = ?;
+after := fn { x = x + 1; }
+x = 5;
+```
+
+This does not say that `x = 5` executes when either function is defined, or
+that an earlier call can safely read `x` before that assignment. The timing
+and admissibility of such calls are a separate open question; existing initial
+static enforcement continues to reject evident uninitialized reads and
+unprovable calls in its supported subset. No runtime fallback is selected.
+Likewise, this choice does not establish that a call's writes update definite
+initialization facts in the surrounding block; that is separately open.
+
+This selection illustrates whole-value access to an admitted `var` symbol,
+not a general write-only parameter, unconditional local capture, or a change
+to fixed bindings. Path joins, partial initialization, conditional exits,
+repeated calls, escaping lifetimes and access/aliasing proofs need their own
+contracts. A runtime-unknown but initialized value is not uninitialized. The
+standalone `x = 5` example is an executable-block/script case, not an allowed
+standalone `.lt` module top-level assignment.
+
+Pending cases, not compiler passes: both before/after bodies reject reads before
+their first write when the serial value remains reserved; both admit a read
+after their own successful write; both are analyzed with read access at entry
+when the serial block independently initializes `x`; and a write inside an
+uninvoked body does not initialize the serial block. Call-before-initialization
+and post-call propagation must be tested separately when their rules are chosen.
+Full compiler support and the required advanced analysis are future work; this
+decision alone does not authorize an implementation change or count proposed
+cases as passing.
 
 ### Existing bindings survive later shadowing
 
