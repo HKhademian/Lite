@@ -34,6 +34,8 @@ The following notes are recorded as provisional starting points:
 
 - [3. Records](03-records.md)
 
+- [4. Enums and variants](04-enums.md)
+
 ## Starting context
 
 - [Language specification map](../../../docs/spec/README.md) distinguishes selected language rules from open areas and limited implementation.
