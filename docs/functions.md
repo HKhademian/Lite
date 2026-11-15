@@ -575,6 +575,14 @@ LP-0012 selects custom failure capability and eligible omitted-output error infe
 
 ## Deferred-body lookup
 
+Terminology clarified 2026-11-15: **symbol** is the shared term for a named
+program entity in this lookup discussion, including types, functions, value
+bindings and imported module names. A value binding has an initialization
+state and access permissions in addition to its symbol identity. Resolving a
+symbol does not itself initialize its value, execute a function, make a name
+public, or grant access. The term does not select a single namespace or change
+the separate lookup rules for different contexts.
+
 Selected direction, 2026-10-28: a function body may refer to identifiers declared
 later in its enclosing code block. Creating a function value does not execute
 its body. When invoked, the body's executable blocks still run top to bottom;

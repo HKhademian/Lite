@@ -151,6 +151,12 @@ runtime values remaining known.
 
 ### Symbol visibility, forward functions, and value dependencies
 
+The user clarified 2026-11-15 that **symbols** is the common term for this
+discussion: it includes named types, functions and values, as well as imported
+module names. A symbol's visibility or resolvability is distinct from whether a
+value is initialized, readable, compile-time known or writable. Terminology
+alone does not select a unified namespace, new lookup rules or access grants.
+
 The user asks whether compile-time-known value definitions can share the module
 symbol visibility of function definitions and imports, and whether they can
 call functions declared later. The existing selected module direction permits
