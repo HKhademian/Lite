@@ -920,8 +920,9 @@ times-four replacement are different storage.
 This does not turn saved := double into a storage alias: that ordinary value
 initializer copies the callable value when it runs. Using a separate fixed
 saved binding can express deliberate value freezing where its use is admitted.
-That freezes the callable value, not transitive mutable state in its own
-environment; ordinary copying does not become deep cloning.
+For an escaping callable with owned mutable state, the selected counter-copy
+case below also copies that state. This does not establish general deep cloning
+of external references or resources.
 No new snapshot/capture-header syntax is selected.
 
 Preserve [callee-before-arguments evaluation](evaluation-order.md#function-calls).
@@ -985,9 +986,30 @@ retains that binding and successive calls observe its updates. The design must
 remain compatible with Lite's low-level character and low or no runtime
 overhead goals. Escaping mutable state can require storage and lifetime work,
 so this selects neither zero cost nor a particular allocation or runtime.
-Capture permissions, cost visibility and control, storage, callable-copy and
-sharing semantics, resource cleanup, concurrency and general lifetime safety
+Capture permissions, cost visibility and control, storage, general sharing
+semantics, resource cleanup, concurrency and general lifetime safety
 remain to be designed. The first compiler may leave this feature unsupported.
+
+#### Copying an independent counter
+
+Selected **2026-11-15**: copying the counter function copies its current owned
+`count` state. The two resulting counters subsequently change independently.
+
+```text
+counter := make_counter();
+first := counter();  /* 1 */
+other := counter;    /* copy count at 1 */
+a := counter();      /* 2 */
+b := other();        /* 2 */
+c := counter();      /* 3; other's count remains 2 */
+```
+
+Calling the counter advances its retained state; the ordinary selection of a
+callee for a call must not silently reset or detach that state. This example
+selects independent state for the owned scalar counter, not general recursive
+cloning of explicit references, shared resources or external locations. Copy
+eligibility, other capture forms, call permissions and costs remain open.
+Implementation and representation remain unspecified.
 
 The 2026-10-29 discussion requires a defined eligibility policy for surrounding
 values, even read-only uses, while preserving ordinary helper calls. It does not

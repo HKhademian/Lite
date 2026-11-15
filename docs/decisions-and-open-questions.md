@@ -13,6 +13,10 @@ low-level, low/no-runtime-overhead goals; retention mechanics, actual costs,
 permissions, sharing, resources and general lifetime rules remain open.
 Compiler support may follow later.
 
+Copying the selected counter copies its current owned `count` state; subsequent
+updates are independent. See [copying an independent counter](functions.md#copying-an-independent-counter).
+This does not decide general copying of references or resources.
+
 For calls that may reach an uninitialized value, the preferred long-term
 direction requires compile-time proof of safe initialization and rejects
 unproved calls, including indirect calls. A runtime-check fallback remains an
