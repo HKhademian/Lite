@@ -128,9 +128,12 @@ Keep dependencies explicit; split a topic further when its contracts warrant it.
 - [x] **Statement scopes:** lexical blocks, outer assignments and restoration;
   hygienic names preserve outer values during shadowed initializers, including
   existing if/loop scopes and TS traversal receiver bindings.
-- [x] **Sequential value bindings:** same-block declarations create fresh bindings;
-  initializers read the previous binding, copies retain values, and later uses
-  obey the newest type and mutation permission. Callable/type namespaces remain queued.
+- [x] **Same-block symbol uniqueness (2026-11-15, Unified Block Model Slice 1):**
+  redeclaring a symbol in the same file-root or inner `{ ... }` block is rejected
+  uniformly across value, `var`, `mut`, `fn`, `type`, `import`, parameter,
+  `loop ... as item`, and destructuring bindings on both targets; nested `{ ... }`
+  outer-block shadowing and single-statement inner-block tuple component
+  ordering remain preserved.
 - [x] **Script expressions:** discard ordinary expression values while retaining
   evaluation, effects and faults; accept empty item separators.
 - [x] **Function completion:** keep completion facts per block, join all conditional

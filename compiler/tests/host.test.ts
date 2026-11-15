@@ -4262,7 +4262,7 @@ test('core os/fs/process/crypto/time host bindings, standalone CLI execution, an
       'fs := import "core/file";',
       'proc := import "core/process";',
       'io := import "core/io";',
-      'if proc.entryPath() == "" { _ := io.inputAll(""); _ := fs.readText("."); }',
+      'if proc.entryPath() == "" { _in := io.inputAll(""); _txt := fs.readText("."); }',
       'io.outputLine(proc.entryPath() =!= "", io.inputArgs());',
     ].join('\n'),
     name: fixtureName,
@@ -5192,4 +5192,164 @@ test('first-class non-capturing function rejections cover captures, shadowing, t
     assert.equal(cRejected.status, 2, source);
     assert.match(cRejected.stderr.toString(), expectedMessage, source + ' -> stderr: ' + cRejected.stderr.toString());
   }
+});
+
+test('unified block Slice 1 enforces same-block uniqueness across root and inner blocks on TS and C', () => {
+  const duplicateRe = /duplicate (?:declaration \S+ in block|top-level value \S+|module alias \S+|function \S+|type alias \S+)/;
+  const topLevelOnlyRe = /(?:pub is only allowed on top-level declarations|import is only allowed at top level|type aliases are only allowed at top level)/;
+
+  const sharedRejections: ReadonlyArray<readonly [string, RegExp]> = [
+    // Root cross-kind and same-kind collisions
+    ['x := 1; x := fn(): Int { 2 };', duplicateRe],
+    ['x := fn(): Int { 2 }; x := 1;', duplicateRe],
+    ['var x := 1; x := fn(): Int { 2 };', duplicateRe],
+    ['x := fn(): Int { 2 }; x: Int = 1;', duplicateRe],
+    ['x := 1; x := type Int;', duplicateRe],
+    ['x := type Int; x := 1;', duplicateRe],
+    ['x := fn(): Int { 2 }; x := type Int;', duplicateRe],
+    ['x := type Int; x := fn(): Int { 2 };', duplicateRe],
+    ['io := import "core/io"; io := 1;', duplicateRe],
+    ['io := 1; io := import "core/io";', duplicateRe],
+    ['io := import "core/io"; io := fn(): Int { 1 };', duplicateRe],
+    ['io := fn(): Int { 1 }; io := import "core/io";', duplicateRe],
+    ['io := import "core/io"; io := type Int;', duplicateRe],
+    ['io := type Int; io := import "core/io";', duplicateRe],
+    ['(dup, dup) := (1, 2);', duplicateRe],
+    ['(a, b) := (1, 2); a := 3;', duplicateRe],
+    ['a := 1; (a, b) := (2, 3);', duplicateRe],
+    ['a := 1; a: Int = 2;', duplicateRe],
+    ['_ := 1; _ := 2;', duplicateRe],
+    // Statement-block, branch, match, loop, function, and value-block same-block collisions
+    ['{ x := 1; x := 2; }', duplicateRe],
+    ['{ x := 1; var x := 2; }', duplicateRe],
+    ['{ var x := 1; x: Int = 2; }', duplicateRe],
+    ['seed: List<Int> = [1]; { mut xs := seed; xs := [2]; }', duplicateRe],
+    ['{ (a, b) := (1, 2); a := 3; }', duplicateRe],
+    ['{ (a, a) := (1, 2); a := 3; }', duplicateRe],
+    ['{ a := 1; (a, b) := (2, 3); }', duplicateRe],
+    ['{ _ := 1; _ := 2; }', duplicateRe],
+    ['if true { x := 1; x := 2; }', duplicateRe],
+    ['if false { x := 1; } else { x := 2; x := 3; }', duplicateRe],
+    ['match { true { x := 1; x := 2; } _ { } }', duplicateRe],
+    ['match { false { x := 1; } _ { x := 2; x := 3; } }', duplicateRe],
+    ['loop [1] as item { item := 2; }', duplicateRe],
+    ['loop [1] as item { y := 1; y := 2; }', duplicateRe],
+    ['f := fn(x: Int): Int { x := 2; x };', duplicateRe],
+    ['f := fn(x: Int): Int { y := 1; var y := 2; x + y };', duplicateRe],
+    ['v := { x := 1; x := 2; x };', duplicateRe],
+    ['v := { y := { x := 1; x := 2; x }; y };', duplicateRe],
+    // Top-level-only forms inside inner blocks
+    ['{ pub x := 1; }', topLevelOnlyRe],
+    ['{ import "core/io"; }', topLevelOnlyRe],
+    ['{ io := import "core/io"; }', topLevelOnlyRe],
+    ['{ T := type Int; }', topLevelOnlyRe],
+    ['f := fn(): Unit { T := type Int; };', topLevelOnlyRe],
+    ['v := { pub x := 1; 0 };', topLevelOnlyRe],
+    ['v := { import "core/io"; 0 };', topLevelOnlyRe],
+    ['v := { io := import "core/io"; 0 };', topLevelOnlyRe],
+    ['v := { T := type Int; 0 };', topLevelOnlyRe],
+  ];
+
+  for (const target of ['ts', 'c'] as const) {
+    for (const [source, expectedRe] of sharedRejections) {
+      const rejected = compileTarget(target, { text: source });
+      assert.equal(rejected.status, 2, `${target} should reject:\n${source}\nstdout:\n${rejected.stdout.toString()}`);
+      assert.equal(rejected.stdout.toString(), '', `${target} rejected stdout should be empty:\n${source}`);
+      assert.match(rejected.stderr.toString(), expectedRe, `${target} stderr mismatch for:\n${source}`);
+    }
+  }
+
+  for (const tsOnlyRejected of [
+    '{ f := fn(): Int { 1 }; f := 2; 0 }',
+    '{ f := fn(): Int { 1 }; f := fn(): Int { 2 }; 0 }',
+    'v := { f := fn(x: Int): Int { x := 2; x }; f(1) };',
+    'v := @blk { x := 1; x := 2; x };',
+    'v := if true { 1 } else { 2 } then { x := 1; x := 2; x };',
+    'v := { 1 } finally { y := 1; y := 2; };',
+    'v := loop [1] as item { item := 2; item };',
+  ]) {
+    const rejected = compileTs({ text: tsOnlyRejected });
+    assert.equal(rejected.status, 2, `ts should reject:\n${tsOnlyRejected}\nstdout:\n${rejected.stdout.toString()}`);
+    assert.equal(rejected.stdout.toString(), '');
+    assert.match(rejected.stderr.toString(), duplicateRe, `ts stderr mismatch for:\n${tsOnlyRejected}`);
+  }
+
+  // Combined positive multi-feature program on both TS and C preserving nested
+  // outer-block shadowing, sibling branch independence, and intact outer bindings.
+  const combinedShared = [
+    'io := import "core/io";',
+    'Box := type Int;',
+    'x: Box = 10;',
+    'var sum: Int = 0;',
+    'if true {',
+    '  x := 20;',
+    '  {',
+    '    x := 30;',
+    '    sum += x;',
+    '  }',
+    '  sum += x;',
+    '} else {',
+    '  x := 40;',
+    '  sum += x;',
+    '}',
+    'match {',
+    '  false { y := 1; sum += y; }',
+    '  _ {',
+    '    y := 2;',
+    '    sum += y;',
+    '  }',
+    '}',
+    'var step := 0;',
+    'loop step < 2 {',
+    '  out := 5 + step;',
+    '  { out := 100; sum += out; }',
+    '  sum += out;',
+    '  step += 1;',
+    '}',
+    'if true { io := 99; sum += io; }',
+    'io.outputLine(x, sum);',
+  ].join('\n');
+
+  for (const target of ['ts', 'c'] as const) {
+    if (target === 'c' && process.env['LITE_SKIP_NATIVE'] === '1') { continue; }
+    const compiled = compileTarget(target, { text: combinedShared });
+    assert.equal(compiled.status, 0, `${target} compile failed:\n${compiled.stderr.toString()}`);
+    const artifact = compiled.stdout.toString();
+    if (target === 'ts') {
+      assert.equal(checkTsArtifact(artifact).status, 0);
+    }
+    const run = target === 'ts' ? runTsArtifact(artifact) : runCArtifact(artifact);
+    assert.equal(run.phase, 'run');
+    assert.equal(run.status, 0, `${target} run failed:\n${run.stderr.toString()}`);
+    assert.equal(run.stdout.toString(), '10 362\n');
+  }
+
+  // TS combined positive program covering functions, intra-pattern tuple destructuring,
+  // list loops, tagged blocks, finally blocks, value blocks, and local fn shadowing.
+  const tsCombined = [
+    'io := import "core/io";',
+    'helper := fn(a: Int): Int { var r := 0; { a := a + 10; r = a; } return r; };',
+    'outerVal := helper(5);',
+    'var acc := 0;',
+    'loop [5, 6] as n {',
+    '  var out := n;',
+    '  { n := 100; out += n; }',
+    '  acc += out;',
+    '}',
+    'tagVal := @t { tmp := 7; tmp } finally { tmp := 1; acc += tmp; };',
+    'v := {',
+    '  helper := 3;',
+    '  (p, p) := (4, 5);',
+    '  (_, _) := (6, 7);',
+    '  shadowed := { helper := fn(k: Int): Int { k * 2 }; helper(p) };',
+    '  helper + shadowed',
+    '};',
+    'io.outputLine(outerVal, v + acc, tagVal, helper(1));',
+  ].join('\n');
+  const tsFnCompiled = compileTs({ text: tsCombined });
+  assert.equal(tsFnCompiled.status, 0, tsFnCompiled.stderr.toString());
+  assert.equal(checkTsArtifact(tsFnCompiled.stdout.toString()).status, 0);
+  const tsFnRun = runTsArtifact(tsFnCompiled.stdout.toString());
+  assert.equal(tsFnRun.status, 0);
+  assert.equal(tsFnRun.stdout.toString(), '15 225 7 11\n');
 });

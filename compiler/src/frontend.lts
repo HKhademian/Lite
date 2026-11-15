@@ -84,6 +84,8 @@ pub Item := type (kind: String, name: String, runtime: String, code: String, int
 pub Items := type List<Item>;
 /** Completion facts saved while an inner block is parsed; earlier conditional arms are joined only after a final else. */
 BlockState := type (returned: Bool, stopped: Bool, branchesReturned: Bool, branchesStopped: Bool, hasElse: Bool, loopForever: Bool, live: Bool, preLocalsLen: Int, liveBranchCount: Int);
+/** Symbol declaration name owned directly by the block at `depth` for same-block uniqueness checks. */
+BlockDecl := type (name: String, depth: Int);
 /** One outer local initialization update recorded at the end of a conditional branch. */
 BranchUpdate := type (depth: Int, runtime: String, initState: String);
 /** One recognized binary operator spelling and the number of source bytes it occupies. */
@@ -3107,6 +3109,64 @@ visibleLocals := fn(locals: List<Local>, depth: Int): List<Local> {
     kept
 }
 
+/** True when `name` is already declared directly inside the block at `depth`. */
+hasBlockDecl := fn(decls: List<BlockDecl>, depth: Int, name: String): Bool {
+    loop decls as entry {
+        if entry.depth == depth and entry.name == name {
+            return true;
+        }
+    }
+    false
+}
+
+/** Drops current-block declaration records at or above `depth`, keeping enclosing blocks intact. */
+popBlockDecls := fn(decls: List<BlockDecl>, depth: Int): List<BlockDecl> {
+    kept: mut List<BlockDecl> = [];
+    loop decls as entry {
+        if entry.depth < depth {
+            listLib.pushBack(mut kept, entry);
+        }
+    }
+    kept
+}
+
+/** Rejects redeclaring `name` within the same file-root (`depth == 0`) or inner block. */
+rejectDuplicateBlockDecl := fn(source: String, at: Int, prefix: String, decls: List<BlockDecl>, depth: Int, name: String): Unit {
+    if hasBlockDecl(decls, depth, name) {
+        if depth == 0 {
+            failAt(source, at, prefix, "duplicate top-level value " + name);
+        }
+        failAt(source, at, prefix, "duplicate declaration " + name + " in block");
+    }
+}
+
+/** Rejects redeclaring `name` inside the current `parseBinaryCtx` `{ ... }` block. */
+rejectDuplicateInBlockNames := fn(source: String, at: Int, prefix: String, names: List<String>, name: String): Unit {
+    if listLib.listContainsText(names, name) {
+        failAt(source, at, prefix, "duplicate declaration " + name + " in block");
+    }
+}
+
+/** Extracts header-bound symbol names (parameters or loop items) owned by the opening `{ ... }` block. */
+seedBlockDeclaredNames := fn(bodySink: String): List<String> {
+    seeded: mut List<String> = [];
+    colonPos := textLib.indexOfText(bodySink, ":", 0);
+    if colonPos < 0 { return seeded; }
+    namesLen := textLib.length(bodySink);
+    var cursor := colonPos + 1;
+    loop cursor < namesLen {
+        var endPos := cursor;
+        loop endPos < namesLen and textLib.at(bodySink, endPos) =!= "," {
+            endPos = endPos + 1;
+        }
+        if endPos > cursor {
+            listLib.pushBack(mut seeded, textLib.slice(bodySink, cursor, endPos));
+        }
+        cursor = endPos + 1;
+    }
+    seeded
+}
+
 /** Joins a block's definite completion: scopes preserve it, loops require a true header, and conditionals require every arm plus a final else. */
 blockCompletion := fn(kind: String, completed: Bool, branchesComplete: Bool, hasElse: Bool, loopForever: Bool): Bool {
     if kind == "scope" or kind == "matchsingle" or kind == "matchsingleval" { completed }
@@ -4129,17 +4189,19 @@ parseBinaryCtx := fn(target: String, source: String, position: Int, prefix: Stri
         }
     } else if ch == "{" {
         isTaggedBody := bodySink == "tagged";
-        isLoopBody := bodySink == "loopBody";
-        isStmtBody := bodySink == "stmt";
+        isLoopBody := bodySink == "loopBody" or textLib.startsWithAt(bodySink, 0, "loopBody:");
+        isStmtBody := bodySink == "stmt" or textLib.startsWithAt(bodySink, 0, "stmt:");
         isFinallyBody := bodySink == "finally";
         isBranchBody := bodySink == "branch";
-        isFnBody := bodySink == "fnBody";
+        isFnBody := bodySink == "fnBody" or textLib.startsWithAt(bodySink, 0, "fnBody:");
         isStandaloneBlock := not isTaggedBody and not isLoopBody and not isStmtBody and not isFinallyBody and not isBranchBody and not isFnBody;
         allowOutput := isTaggedBody or isLoopBody or isStmtBody or isFinallyBody or isBranchBody or isFnBody or (bodySink == "exprOut");
         bodyDepth := if isTaggedBody or isLoopBody or isStmtBody or isFinallyBody or isFnBody { iifeDepth } else { iifeDepth + 1 };
         stmtReturnPrefix := if isTaggedBody or isLoopBody or isStmtBody or isFinallyBody or isFnBody { "" } else { "return " };
         blockLocals: mut List<Local> = [];
         loop locals as entry { listLib.pushBack(mut blockLocals, entry); }
+        declaredInBlock: mut List<String> = [];
+        loop seedBlockDeclaredNames(bodySink) as seededName { listLib.pushBack(mut declaredInBlock, seededName); }
         statements: mut List<String> = [];
         var statementCount := 0;
         var blockMarkers := "";
@@ -4215,9 +4277,11 @@ parseBinaryCtx := fn(target: String, source: String, position: Int, prefix: Stri
                 } else if destructure.grouped {
                     bindName := destructure.namesText;
                     rejectNonValueBinding(source, destructureOpen, prefix, rhs.kind, bindName);
+                    rejectDuplicateInBlockNames(source, destructureOpen, prefix, declaredInBlock, bindName);
                     statementNext := consumeStatementEnd(source, rhs.next, prefix);
                     if statementNext < 0 { failAt(source, skipTrivia(source, rhs.next, prefix), prefix, "expected ; after tuple destructuring"); }
                     bindRuntime := localRuntimeName(target, blockLocals, bindName, "", 1);
+                    listLib.pushBack(mut declaredInBlock, bindName);
                     listLib.pushBack(mut blockLocals, (name = bindName, runtime = bindRuntime, kind = rhs.kind,
                     mutable = destructureMutable, writable = false, depth = 1, constant = false, code = rhs.code,
                     intValue = rhs.intValue, textValue = rhs.textValue, initState = "init"));
@@ -4245,6 +4309,7 @@ parseBinaryCtx := fn(target: String, source: String, position: Int, prefix: Stri
                     if not blockExits {
                         listLib.pushBack(mut statements, "const " + tempRuntime + " = " + rhs.code + "; void " + tempRuntime + ";");
                     }
+                    pendingTupleNames: mut List<String> = [];
                     var bindCursor := 0;
                     var bindIndex := 0;
                     namesLen := textLib.length(destructure.namesText);
@@ -4255,6 +4320,10 @@ parseBinaryCtx := fn(target: String, source: String, position: Int, prefix: Stri
                         }
                         bindName := textLib.slice(destructure.namesText, bindCursor, bindEnd);
                         bindCursor = bindEnd + 1;
+                        rejectDuplicateInBlockNames(source, destructureOpen, prefix, declaredInBlock, bindName);
+                        if not listLib.listContainsText(pendingTupleNames, bindName) {
+                            listLib.pushBack(mut pendingTupleNames, bindName);
+                        }
                         comp := tupleComponent(rhs.kind, bindIndex);
                         bindRuntime := localRuntimeName(target, blockLocals, bindName, "", 1);
                         fieldCode := tempRuntime + "." + comp.prop;
@@ -4266,6 +4335,9 @@ parseBinaryCtx := fn(target: String, source: String, position: Int, prefix: Stri
                             listLib.pushBack(mut statements, declKw + bindRuntime + " = " + fieldCode + "; void " + bindRuntime + ";");
                         }
                         bindIndex = bindIndex + 1;
+                    }
+                    loop pendingTupleNames as tupleName {
+                        listLib.pushBack(mut declaredInBlock, tupleName);
                     }
                     if not blockExits { statementCount = statementCount + 1; }
                     blockConstant = false;
@@ -4947,8 +5019,9 @@ parseBinaryCtx := fn(target: String, source: String, position: Int, prefix: Stri
                         loopCtx := (id = loopId, tag = "", kind = "loop", phase = "body",
                         iifeDepth = bodyDepth, valKind = "", valVar = "", label = loopLabel,
                         iterLabel = "", countVar = "", itemVar = "", itemKind = "", indexVar = "", hasIndex = false);
+                        loopStmtSink := if loopItemName =!= "" { "stmt:" + loopItemName } else { "stmt" };
                         loopBody := self(target, source, loopOpen - 1, prefix, loopLocals, functions, params, currentName,
-                        "", 0, appendCtx(ctxs, loopCtx), bodyDepth, inferMode, "stmt", aliases);
+                        "", 0, appendCtx(ctxs, loopCtx), bodyDepth, inferMode, loopStmtSink, aliases);
                         if inferMode { blockMarkers = collectParsedMarkers(blockMarkers, loopBody); }
                         hasCrossBreak := codeUsesTextCall(loopBody.code, "lite$throwTransfer(" + integer.intText(loopId) + ",");
                         hasCrossCont := codeUsesTextCall(loopBody.code, "lite$throwTransfer(" + integer.intText(0 - loopId) + ",");
@@ -4972,6 +5045,16 @@ parseBinaryCtx := fn(target: String, source: String, position: Int, prefix: Stri
                         stmtNext := consumeStatementEnd(source, loopBody.next, prefix);
                         cursor = if stmtNext >= 0 { stmtNext } else { loopBody.next };
                     }
+                } else if itemName == "pub" {
+                    failAt(source, itemStart, prefix, "pub is only allowed on top-level declarations");
+                } else if itemName == "import" {
+                    failAt(source, itemStart, prefix, "import is only allowed at top level");
+                } else if textLib.startsWithAt(source, afterItemName, ":=") and
+                textLib.wordAt(source, skipTrivia(source, afterItemName + 2, prefix), "import") {
+                    failAt(source, itemStart, prefix, "import is only allowed at top level");
+                } else if textLib.startsWithAt(source, afterItemName, ":=") and
+                textLib.wordAt(source, skipTrivia(source, afterItemName + 2, prefix), "type") {
+                    failAt(source, itemStart, prefix, "type aliases are only allowed at top level");
                 } else if itemName == "var" {
                     isStatement = true;
                     var localStart := skipTrivia(source, itemEnd, prefix);
@@ -4986,6 +5069,7 @@ parseBinaryCtx := fn(target: String, source: String, position: Int, prefix: Stri
                     localEnd := textLib.skipName(source, localStart);
                     localName := textLib.slice(source, localStart, localEnd);
                     if isReservedWord(localName) { unsupportedFeature(source, localStart, localName, prefix); }
+                    rejectDuplicateInBlockNames(source, localStart, prefix, declaredInBlock, localName);
                     var afterLocal := skipTrivia(source, localEnd, prefix);
                     var declParsed := intParsed("", 0, true, afterLocal);
                     var declInitState := "init";
@@ -5031,6 +5115,7 @@ parseBinaryCtx := fn(target: String, source: String, position: Int, prefix: Stri
                     statementNext := consumeStatementEnd(source, declParsed.next, prefix);
                     if statementNext < 0 { failAt(source, skipTrivia(source, declParsed.next, prefix), prefix, "expected ; after local declaration " + localName); }
                     runtime := localRuntimeName(target, blockLocals, localName, "", 1);
+                    listLib.pushBack(mut declaredInBlock, localName);
                     listLib.pushBack(mut blockLocals, (name = localName, runtime = runtime, kind = declParsed.kind,
                     mutable = true, writable = declWritable, depth = 1, constant = false, code = declParsed.code,
                     intValue = declParsed.intValue, textValue = declParsed.textValue, initState = declInitState));
@@ -5054,6 +5139,7 @@ parseBinaryCtx := fn(target: String, source: String, position: Int, prefix: Stri
                     localEnd := textLib.skipName(source, localStart);
                     localName := textLib.slice(source, localStart, localEnd);
                     if isReservedWord(localName) { unsupportedFeature(source, localStart, localName, prefix); }
+                    rejectDuplicateInBlockNames(source, localStart, prefix, declaredInBlock, localName);
                     afterLocal := skipTrivia(source, localEnd, prefix);
                     if not textLib.startsWithAt(source, afterLocal, ":=") {
                         failAt(source, afterLocal, prefix, "expected := after mut local name " + localName);
@@ -5066,6 +5152,7 @@ parseBinaryCtx := fn(target: String, source: String, position: Int, prefix: Stri
                     statementNext := consumeStatementEnd(source, declParsed.next, prefix);
                     if statementNext < 0 { failAt(source, skipTrivia(source, declParsed.next, prefix), prefix, "expected ; after local declaration " + localName); }
                     runtime := localRuntimeName(target, blockLocals, localName, "", 1);
+                    listLib.pushBack(mut declaredInBlock, localName);
                     listLib.pushBack(mut blockLocals, (name = localName, runtime = runtime, kind = declParsed.kind,
                     mutable = false, writable = true, depth = 1, constant = false, code = declParsed.code,
                     intValue = declParsed.intValue, textValue = declParsed.textValue, initState = "init"));
@@ -5080,12 +5167,14 @@ parseBinaryCtx := fn(target: String, source: String, position: Int, prefix: Stri
                 not textLib.wordAt(source, skipTrivia(source, afterItemName + 2, prefix), "import") {
                     isStatement = true;
                     if isReservedWord(itemName) { unsupportedFeature(source, itemStart, itemName, prefix); }
+                    rejectDuplicateInBlockNames(source, itemStart, prefix, declaredInBlock, itemName);
                     declParsed := self(target, source, skipTrivia(source, afterItemName + 2, prefix), prefix, blockLocals, functions, params, currentName, "", 0, ctxs, bodyDepth, inferMode, "", aliases);
                     if inferMode { blockMarkers = collectParsedMarkers(blockMarkers, declParsed); }
                     rejectNonValueBinding(source, itemStart, prefix, declParsed.kind, itemName);
                     statementNext := consumeStatementEnd(source, declParsed.next, prefix);
                     if statementNext < 0 { failAt(source, skipTrivia(source, declParsed.next, prefix), prefix, "expected ; after local declaration " + itemName); }
                     runtime := localRuntimeName(target, blockLocals, itemName, "", 1);
+                    listLib.pushBack(mut declaredInBlock, itemName);
                     listLib.pushBack(mut blockLocals, (name = itemName, runtime = runtime, kind = declParsed.kind,
                     mutable = false, writable = false, depth = 1, constant = declParsed.constant, code = declParsed.code,
                     intValue = declParsed.intValue, textValue = declParsed.textValue, initState = "init"));
@@ -5098,6 +5187,7 @@ parseBinaryCtx := fn(target: String, source: String, position: Int, prefix: Stri
                 } else if afterItemName < textLib.length(source) and textLib.at(source, afterItemName) == ":" and compoundAssignOp(source, afterItemName).width == 0 {
                     isStatement = true;
                     if isReservedWord(itemName) { unsupportedFeature(source, itemStart, itemName, prefix); }
+                    rejectDuplicateInBlockNames(source, itemStart, prefix, declaredInBlock, itemName);
                     typed := parseLocalType(source, afterItemName + 1, prefix, aliases);
                     afterType := skipTrivia(source, typed.next, prefix);
                     var declParsed := zeroParsed(target, typed.kind, afterType);
@@ -5124,6 +5214,7 @@ parseBinaryCtx := fn(target: String, source: String, position: Int, prefix: Stri
                     if statementNext < 0 { failAt(source, skipTrivia(source, declParsed.next, prefix), prefix, "expected ; after local declaration " + itemName); }
                     runtime := localRuntimeName(target, blockLocals, itemName, "", 1);
                     declCode := assignValueCode(target, typed.kind, declParsed.kind, declParsed.code);
+                    listLib.pushBack(mut declaredInBlock, itemName);
                     listLib.pushBack(mut blockLocals, (name = itemName, runtime = runtime, kind = typed.kind,
                     mutable = false, writable = typed.writable, depth = 1, constant = if declInitState == "init" and not numeric.isFloatKind(typed.kind) { declParsed.constant } else { false },
                     code = declCode, intValue = declParsed.intValue, textValue = declParsed.textValue, initState = declInitState));
@@ -5651,8 +5742,18 @@ parseBinaryCtx := fn(target: String, source: String, position: Int, prefix: Stri
             itemKind = "", indexVar = "", hasIndex = false);
             emptyFnCtxs: List<ConstructCtx> = [];
             fnCtxs := appendCtx(emptyFnCtxs, fnCtx);
+            var fnBodySink := "fnBody";
+            if paramIdx > 0 {
+                fnBodySink = "fnBody:";
+                var pSeedIdx := 0;
+                loop pSeedIdx < paramIdx {
+                    if pSeedIdx > 0 { fnBodySink = fnBodySink + ","; }
+                    fnBodySink = fnBodySink + paramNames[pSeedIdx];
+                    pSeedIdx = pSeedIdx + 1;
+                }
+            }
             fnBody := self(target, source, cursor - 1, prefix, fnLocals, functions, params, "<fn>",
-            retKind, 0, fnCtxs, iifeDepth + 1, inferMode, "fnBody", aliases);
+            retKind, 0, fnCtxs, iifeDepth + 1, inferMode, fnBodySink, aliases);
             usesSelf := codeUsesTextCall(fnBody.code, selfRuntime);
             fnPrefix := if usesSelf { "(function " + selfRuntime } else { "(function " };
             fnFullCode := fnPrefix + "(" + tsParamsCode + "): " + tsFunctionType(retKind) + " { " + paramVoidStmts + fnBody.code + " })";
@@ -5868,8 +5969,9 @@ parseBinaryCtx := fn(target: String, source: String, position: Int, prefix: Stri
             iterLabel = loopLabel, countVar = loopCountVar, itemVar = loopItemMetaVar, itemKind = seqItemKind,
             indexVar = loopIdxVar, hasIndex = isSeqLoop);
             bodyCtxs := appendCtx(ctxs, bodyCtx);
+            loopBodySink := if isSeqLoop and seqItemName =!= "" { "loopBody:" + seqItemName } else { "loopBody" };
             bodyParsed := self(target, source, loopOpen - 1, prefix, loopLocals, functions, params, currentName,
-            passBodyExpected, 0, bodyCtxs, loopDepth, passInfer, "loopBody", aliases);
+            passBodyExpected, 0, bodyCtxs, loopDepth, passInfer, loopBodySink, aliases);
             if passInfer { passMarkers = collectParsedMarkers(passMarkers, bodyParsed); }
             if isPass1 {
                 loopEndCursor = bodyParsed.next;
@@ -7906,6 +8008,7 @@ moduleIdentity: String, neededFns: String, skipSoftBuiltins: Bool): Items {
         }
     }
     var locals: mut List<Local> = [];
+    var blockDecls: mut List<BlockDecl> = [];
     blocks: mut List<String> = [];
     functions: mut List<FunctionInfo> = [];
     functionParams: mut List<String> = [];
@@ -7937,6 +8040,9 @@ moduleIdentity: String, neededFns: String, skipSoftBuiltins: Bool): Items {
             }
             listLib.pushBack(mut functions, (name = exported.name, runtime = exported.runtime, result = exported.code,
             first = first, count = exported.intValue));
+            if textLib.indexOfText(exported.name, ".", 0) < 0 {
+                listLib.pushBack(mut blockDecls, (name = exported.name, depth = 0));
+            }
         } else if exported.kind == "PublicValue" {
             if findFunction(functions, exported.name) >= 0 or localIndex(locals, exported.name) >= 0 {
                 diagLib.fail(prefix, "duplicate imported public name " + exported.name);
@@ -7944,9 +8050,15 @@ moduleIdentity: String, neededFns: String, skipSoftBuiltins: Bool): Items {
             listLib.pushBack(mut locals, (name = exported.name, runtime = exported.runtime, kind = exported.code,
             mutable = false, writable = false, depth = 0, constant = false, code = exported.runtime,
             intValue = 0, textValue = "", initState = "init"));
+            if textLib.indexOfText(exported.name, ".", 0) < 0 {
+                listLib.pushBack(mut blockDecls, (name = exported.name, depth = 0));
+            }
         } else if exported.kind == "PublicType" {
             if findAlias(aliases, exported.name) < 0 {
                 diagLib.fail(prefix, "unknown imported public type " + exported.name);
+            }
+            if textLib.indexOfText(exported.name, ".", 0) < 0 {
+                listLib.pushBack(mut blockDecls, (name = exported.name, depth = 0));
             }
         }
     }
@@ -7991,6 +8103,9 @@ moduleIdentity: String, neededFns: String, skipSoftBuiltins: Bool): Items {
             after := skipTrivia(source, position + 1, prefix);
             if (blockKind == "if" or blockKind == "ifvalue") and after < size and textLib.wordAt(source, after, "else") {
                 locals = visibleLocals(locals, depth);
+                keptDecls := popBlockDecls(blockDecls, depth);
+                blockDecls = [];
+                loop keptDecls as d { listLib.pushBack(mut blockDecls, d); }
                 var stateCount := 0;
                 loop savedStates { stateCount += 1; }
                 branchPreLen := savedStates[stateCount - 1].preLocalsLen;
@@ -8055,6 +8170,9 @@ moduleIdentity: String, neededFns: String, skipSoftBuiltins: Bool): Items {
                     failAt(source, nextArmStart, prefix, "subjectless match requires a final _ fallback arm");
                 }
                 locals = visibleLocals(locals, depth);
+                keptDecls := popBlockDecls(blockDecls, depth);
+                blockDecls = [];
+                loop keptDecls as d { listLib.pushBack(mut blockDecls, d); }
                 var stateCount := 0;
                 loop savedStates { stateCount += 1; }
                 branchPreLen := savedStates[stateCount - 1].preLocalsLen;
@@ -8138,6 +8256,9 @@ moduleIdentity: String, neededFns: String, skipSoftBuiltins: Bool): Items {
                 closeBracePos = afterFallback;
             }
             locals = visibleLocals(locals, depth);
+            keptDecls := popBlockDecls(blockDecls, depth);
+            blockDecls = [];
+            loop keptDecls as d { listLib.pushBack(mut blockDecls, d); }
             depth = depth - 1;
             if blockKind == "function" {
                 locals = withoutFutureValues(locals);
@@ -8340,12 +8461,8 @@ moduleIdentity: String, neededFns: String, skipSoftBuiltins: Bool): Items {
                 statementNext := consumeStatementEnd(source, rhs.next, prefix);
                 if statementNext < 0 { failAt(source, skipTrivia(source, rhs.next, prefix), prefix, "expected ; after tuple destructuring"); }
                 position = statementNext;
-                if depth == 0 and blockCount == 0 {
-                    rootIndex := localIndex(locals, bindName);
-                    if rootIndex >= 0 and locals[rootIndex].depth == 0 {
-                        failAt(source, destructureOpen, prefix, "duplicate top-level value " + bindName);
-                    }
-                }
+                rejectDuplicateBlockDecl(source, destructureOpen, prefix, blockDecls, depth, bindName);
+                listLib.pushBack(mut blockDecls, (name = bindName, depth = depth));
                 bindRuntime := localRuntimeName(target, locals, bindName, moduleKey, depth);
                 listLib.pushBack(mut locals, (name = bindName, runtime = bindRuntime, kind = rhs.kind,
                 mutable = destructureMutable, writable = false, depth = depth, constant = false, code = rhs.code,
@@ -8384,6 +8501,7 @@ moduleIdentity: String, neededFns: String, skipSoftBuiltins: Bool): Items {
                     transferCount = transferCount + 1;
                 }
             }
+            pendingTupleNames: mut List<String> = [];
             var bindCursor := 0;
             var bindIndex := 0;
             namesLen := textLib.length(destructure.namesText);
@@ -8394,11 +8512,11 @@ moduleIdentity: String, neededFns: String, skipSoftBuiltins: Bool): Items {
                 }
                 bindName := textLib.slice(destructure.namesText, bindCursor, bindEnd);
                 bindCursor = bindEnd + 1;
-                if depth == 0 and blockCount == 0 {
-                    rootIndex := localIndex(locals, bindName);
-                    if rootIndex >= 0 and locals[rootIndex].depth == 0 {
-                        failAt(source, destructureOpen, prefix, "duplicate top-level value " + bindName);
-                    }
+                rejectDuplicateBlockDecl(source, destructureOpen, prefix, blockDecls, depth, bindName);
+                if depth == 0 {
+                    listLib.pushBack(mut blockDecls, (name = bindName, depth = depth));
+                } else if not listLib.listContainsText(pendingTupleNames, bindName) {
+                    listLib.pushBack(mut pendingTupleNames, bindName);
                 }
                 comp := tupleComponent(rhs.kind, bindIndex);
                 bindRuntime := localRuntimeName(target, locals, bindName, moduleKey, depth);
@@ -8412,6 +8530,9 @@ moduleIdentity: String, neededFns: String, skipSoftBuiltins: Bool): Items {
                     code = fieldCode, intValue = 0, textValue = storageTextPayload(comp.kind, "")));
                 }
                 bindIndex = bindIndex + 1;
+            }
+            loop pendingTupleNames as tupleName {
+                listLib.pushBack(mut blockDecls, (name = tupleName, depth = depth));
             }
             continue;
         }
@@ -8499,7 +8620,9 @@ moduleIdentity: String, neededFns: String, skipSoftBuiltins: Bool): Items {
                 if listLib.listContainsText(declaredImportAliases, name) {
                     failAt(source, nameStart, prefix, "duplicate module alias " + name);
                 }
+                rejectDuplicateBlockDecl(source, nameStart, prefix, blockDecls, depth, name);
                 listLib.pushBack(mut declaredImportAliases, name);
+                listLib.pushBack(mut blockDecls, (name = name, depth = depth));
                 imported := parseImportClause(target, source, afterImport, name, prefix);
                 listLib.pushBack(mut items, imported);
                 position = imported.intValue;
@@ -8603,7 +8726,9 @@ moduleIdentity: String, neededFns: String, skipSoftBuiltins: Bool): Items {
         var importedOutputName := "";
         var importedOutputOpen := position;
         moduleIndex := localIndex(locals, name);
-        if moduleIndex >= 0 and locals[moduleIndex].kind == "Module" {
+        isDeclFollow := textLib.startsWithAt(source, position, ":=") or
+        (position < size and textLib.at(source, position) == ":" and compoundAssignOp(source, position).width == 0);
+        if moduleIndex >= 0 and locals[moduleIndex].kind == "Module" and not isDeclFollow {
             if position >= size or textLib.at(source, position) =!= "." {
                 failAt(source, nameStart, prefix, "module namespace " + name + " requires a public member");
             }
@@ -8641,7 +8766,7 @@ moduleIdentity: String, neededFns: String, skipSoftBuiltins: Bool): Items {
             }
             continue;
         }
-        if moduleIndex >= 0 and locals[moduleIndex].kind == "Module" {
+        if moduleIndex >= 0 and locals[moduleIndex].kind == "Module" and not isDeclFollow {
             expression := parseExpressionItem(target, source, nameStart, prefix, locals, functions, functionParams, currentName,
             currentResult, atValueTail(blocks, blockCount) and not currentStopped, stmtCtxs, aliases);
             if currentLive and not currentStopped {
@@ -9013,6 +9138,7 @@ moduleIdentity: String, neededFns: String, skipSoftBuiltins: Bool): Items {
             loopPreLocalsLen := localsCount(locals);
             if itemName =!= "" {
                 runtime := localRuntimeName(target, locals, itemName, moduleKey, depth + 1);
+                listLib.pushBack(mut blockDecls, (name = itemName, depth = depth + 1));
                 listLib.pushBack(mut locals, (name = itemName, runtime = runtime, kind = itemKind,
                 mutable = false, writable = false, depth = depth + 1, constant = false, code = runtime,
                 intValue = 0, textValue = "", initState = "init"));
@@ -9087,12 +9213,7 @@ moduleIdentity: String, neededFns: String, skipSoftBuiltins: Bool): Items {
             localEnd := textLib.skipName(source, localStart);
             localName := textLib.slice(source, localStart, localEnd);
             if isReservedWord(localName) { unsupportedFeature(source, localStart, localName, prefix); }
-            if depth == 0 and blockCount == 0 {
-                rootIndex := localIndex(locals, localName);
-                if rootIndex >= 0 and locals[rootIndex].depth == 0 {
-                    failAt(source, localStart, prefix, "duplicate top-level value " + localName);
-                }
-            }
+            rejectDuplicateBlockDecl(source, localStart, prefix, blockDecls, depth, localName);
             afterName := skipTrivia(source, localEnd, prefix);
             if not textLib.startsWithAt(source, afterName, ":=") {
                 failAt(source, afterName, prefix, "expected := after mut local name " + localName);
@@ -9105,6 +9226,7 @@ moduleIdentity: String, neededFns: String, skipSoftBuiltins: Bool): Items {
             if statementNext < 0 { failAt(source, skipTrivia(source, parsed.next, prefix), prefix, "expected ; after local declaration " + localName); }
             position = statementNext;
             runtime := localRuntimeName(target, locals, localName, moduleKey, depth);
+            listLib.pushBack(mut blockDecls, (name = localName, depth = depth));
             listLib.pushBack(mut locals, (name = localName, runtime = runtime, kind = parsed.kind,
             mutable = false, writable = true, depth = depth, constant = false, code = parsed.code,
             intValue = parsed.intValue, textValue = parsed.textValue, initState = "init"));
@@ -9133,12 +9255,7 @@ moduleIdentity: String, neededFns: String, skipSoftBuiltins: Bool): Items {
             position = textLib.skipName(source, position);
             localName := textLib.slice(source, localStart, position);
             if isReservedWord(localName) { unsupportedFeature(source, localStart, localName, prefix); }
-            if depth == 0 and blockCount == 0 {
-                rootIndex := localIndex(locals, localName);
-                if rootIndex >= 0 and locals[rootIndex].depth == 0 {
-                    failAt(source, localStart, prefix, "duplicate top-level value " + localName);
-                }
-            }
+            rejectDuplicateBlockDecl(source, localStart, prefix, blockDecls, depth, localName);
             position = skipTrivia(source, position, prefix);
             var parsed := intParsed("", 0, true, position);
             var declInitState := "init";
@@ -9184,6 +9301,7 @@ moduleIdentity: String, neededFns: String, skipSoftBuiltins: Bool): Items {
             if statementNext < 0 { failAt(source, skipTrivia(source, parsed.next, prefix), prefix, "expected ; after local declaration " + localName); }
             position = statementNext;
             runtime := localRuntimeName(target, locals, localName, moduleKey, depth);
+            listLib.pushBack(mut blockDecls, (name = localName, depth = depth));
             listLib.pushBack(mut locals, (name = localName, runtime = runtime, kind = parsed.kind,
             mutable = true, writable = declaredWritable, depth = depth, constant = false, code = parsed.code,
             intValue = parsed.intValue, textValue = parsed.textValue, initState = declInitState));
@@ -9226,6 +9344,8 @@ moduleIdentity: String, neededFns: String, skipSoftBuiltins: Bool): Items {
             if earlierAlias {
                 failAt(source, nameStart, prefix, "duplicate type alias " + name);
             }
+            rejectDuplicateBlockDecl(source, nameStart, prefix, blockDecls, depth, name);
+            listLib.pushBack(mut blockDecls, (name = name, depth = depth));
             typePosition := skipTrivia(source, position + 2, prefix);
             targetStart := skipTrivia(source, typePosition + 4, prefix);
             aliasIndex := aliasIndexAt(aliases, nameStart);
@@ -9253,15 +9373,13 @@ moduleIdentity: String, neededFns: String, skipSoftBuiltins: Bool): Items {
                 if findFunction(functions, name) >= 0 {
                     failAt(source, nameStart, prefix, "duplicate function " + name);
                 }
-                rootIndex := localIndex(locals, name);
-                if rootIndex >= 0 and locals[rootIndex].depth == 0 {
-                    failAt(source, nameStart, prefix, "duplicate top-level value " + name);
-                }
+                rejectDuplicateBlockDecl(source, nameStart, prefix, blockDecls, 0, name);
                 position = skipTrivia(source, afterDeclare + 2, prefix);
                 listIntrinsic := moduleIdentity == "lite.core.list.v1" and (name == "pushBack" or name == "popBack" or name == "pushFront" or name == "popFront");
                 header := parseFunctionHeader(source, position, prefix, aliases, listIntrinsic);
                 position = skipTrivia(source, header.next, prefix);
                 rejectMisplacedTag(source, position, prefix, "unexpected block tag in function header");
+                listLib.pushBack(mut blockDecls, (name = name, depth = 0));
                 if position < size and textLib.at(source, position) == ";" {
                     hostRuntime := coreHostFunction(moduleIdentity, name, header.params, header.result);
                     if not listLib.listContainsText(publishedFunctions, name) or hostRuntime == "" {
@@ -9370,6 +9488,7 @@ moduleIdentity: String, neededFns: String, skipSoftBuiltins: Bool): Items {
                     parameterKind := paramKindOf(entry);
                     runtime := "lite_" + parameterName;
                     listLib.pushBack(mut functionParams, entry);
+                    listLib.pushBack(mut blockDecls, (name = parameterName, depth = 1));
                     listLib.pushBack(mut locals, (name = parameterName, runtime = runtime, kind = parameterKind,
                     mutable = false, writable = false, depth = 1, constant = false, code = runtime,
                     intValue = 0, textValue = "", initState = "init"));
@@ -9396,12 +9515,7 @@ moduleIdentity: String, neededFns: String, skipSoftBuiltins: Bool): Items {
                 position = skipTrivia(source, position, prefix);
                 continue;
             }
-            if depth == 0 and blockCount == 0 {
-                rootIndex := localIndex(locals, name);
-                if rootIndex >= 0 and locals[rootIndex].depth == 0 {
-                    failAt(source, nameStart, prefix, "duplicate top-level value " + name);
-                }
-            }
+            rejectDuplicateBlockDecl(source, nameStart, prefix, blockDecls, depth, name);
             position = afterDeclare;
             parsed := parseInitializerExpression(target, source, position, prefix, locals, functions, functionParams, currentName, "", stmtCtxs, aliases);
             rejectNonValueBinding(source, nameStart, prefix, parsed.kind, name);
@@ -9409,6 +9523,7 @@ moduleIdentity: String, neededFns: String, skipSoftBuiltins: Bool): Items {
             if statementNext < 0 { failAt(source, skipTrivia(source, parsed.next, prefix), prefix, "expected ; after local declaration " + name); }
             position = statementNext;
             runtime := localRuntimeName(target, locals, name, moduleKey, depth);
+            listLib.pushBack(mut blockDecls, (name = name, depth = depth));
             listLib.pushBack(mut locals, (name = name, runtime = runtime, kind = parsed.kind,
             mutable = false, writable = false, depth = depth, constant = parsed.constant, code = parsed.code,
             intValue = parsed.intValue, textValue = parsed.textValue, initState = "init"));
@@ -9431,12 +9546,7 @@ moduleIdentity: String, neededFns: String, skipSoftBuiltins: Bool): Items {
             continue;
         }
         if position < size and textLib.at(source, position) == ":" and compoundAssignOp(source, position).width == 0 {
-            if depth == 0 and blockCount == 0 {
-                rootIndex := localIndex(locals, name);
-                if rootIndex >= 0 and locals[rootIndex].depth == 0 {
-                    failAt(source, nameStart, prefix, "duplicate top-level value " + name);
-                }
-            }
+            rejectDuplicateBlockDecl(source, nameStart, prefix, blockDecls, depth, name);
             typed := parseLocalType(source, position + 1, prefix, aliases);
             position = skipTrivia(source, typed.next, prefix);
             var parsed := zeroParsed(target, typed.kind, position);
@@ -9464,6 +9574,7 @@ moduleIdentity: String, neededFns: String, skipSoftBuiltins: Bool): Items {
             runtime := localRuntimeName(target, locals, name, moduleKey, depth);
             rhsDiverged := parsed.kind == "Never";
             assignedCode := assignValueCode(target, typed.kind, parsed.kind, parsed.code);
+            listLib.pushBack(mut blockDecls, (name = name, depth = depth));
             listLib.pushBack(mut locals, (name = name, runtime = runtime, kind = typed.kind,
             mutable = false, writable = typed.writable, depth = depth, constant = if declInitState == "init" and not numeric.isFloatKind(typed.kind) { parsed.constant } else { false },
             code = assignedCode, intValue = parsed.intValue, textValue = parsed.textValue, initState = declInitState));

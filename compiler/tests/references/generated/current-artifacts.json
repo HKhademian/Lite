@@ -1,8 +1,8 @@
 {
-  "note": "Reviewed after Slice 4a (callable fn(...) types, non-capturing fn values, contextual inference, self recursion, local shadowing, and explicit capture/C-backend rejections). All 69 TS and C corpus artifact hashes and 25 rejection cases verified.",
+  "note": "Unified Block Model Slice 1 (uniform same-block symbol uniqueness across root and inner blocks, preserving nested outer-block shadowing and intra-pattern ordered destructuring). All 69 TS and C corpus artifact hashes and 25 rejection cases verified.",
   "recorded": "2026-11-15",
-  "sourceSha256": "a4b9a6f4e1188c8d6081df1e5f14965314ad84ae1ce94ce739c8197797049b16",
-  "compilerSha256": "2390c3e2f17f51995bd6a43d7d2279c1c4394fd3d7cabedaa7b0b2dc2de2fb4c",
+  "sourceSha256": "39d3b5535531c7ae00959d7944cce8db00442a4593c92f1da11268b43ee3f7b7",
+  "compilerSha256": "a7bca6455738a7bdb1ca4759ac39598f2ed8d03a2686d9eb0ed831df02341751",
   "programCases": 69,
   "rejectedCases": 25,
   "artifacts": [

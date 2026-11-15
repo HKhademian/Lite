@@ -13,12 +13,15 @@ all blocks remains deferred). Flow-sensitive type narrowing (without
 redeclaration) and shadowing an outer binding from a nested `{ ... }` block
 remain separate.
 
-Generated compiler transition behavior, 2026-11-02 (pre-postponement):
-sequential inner-block declarations currently create fresh bindings in both
-targets while file top-level declarations are unique. Initializers read the
-previous binding; stored copies and replacement/mutation permissions remain
-independent. Callable/type namespace interactions remain in the
-[transition queue](../compiler/gaps.md).
+Current compiler status (2026-11-15, Unified Block Model Slice 1):
+two declarations of the same symbol name inside the same block — whether the
+file-root block or any inner `{ ... }` block, and across value, `var`, `mut`,
+`fn`, `type`, `import`, parameter, `loop ... as item`, and destructuring kinds —
+are rejected at compile time. Nested `{ ... }` inner blocks still shadow outer
+bindings (including sibling `if`/`else` branches and `match` arms), and a
+single inner-block tuple destructuring statement such as `(a, a) := (1, 2);`
+retains its ordered per-component bindings (see [pattern-shadowing.md](pattern-shadowing.md)
+and the [compiler gap list](../compiler/gaps.md)).
 
 ```text
 /* Historical 2026-10-19 same-block shadow example (postponed 2026-11-15): */
