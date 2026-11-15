@@ -46,6 +46,24 @@ Status: **preliminary, 2026-11-15; awaiting joint review**. All recommendations 
 
 Prefer rules that make execution and cleanup traceable in source order. Avoid adding a special pattern or control transfer until it solves a concrete case the existing constructs cannot; account for value-required versus action contexts.
 
+## Expanded assessment
+
+### Compiler evidence and boundaries
+
+Generated TS passes `cond.partial`, `loop.sequence`, `loop.value`, `loop.metadata`, `match.subjectless`, and `finally.cleanup` for the recorded cases. The direct subject-based match probe rejects. A selected design rule or an older igniter claim must not be taken as proof of every combination on the current target. [Baseline](compiler-baseline.md).
+
+### Benefits, costs, and constraints
+
+- **6.1 Blocks:** predictable source order permits low-level lowering without a mandatory runtime object per block. Defer name resolution and definite initialization can add compile-time analysis. Semantics constrain reordering if reads, side effects or faults differ.
+- **6.2 Conditions:** one action/value model reduces concepts, but partial conditions have different consequences in declarations, assignments and value-required positions. Native lowering can use branches and join slots; semantic zero defaults may cause initialization work if not provably unnecessary.
+- **6.3 Patterns:** compile-time exhaustiveness and destructuring reduce manual mistakes. Tests on union tags or data values can generate branches; access, copies and failed nested patterns need consistent ordering. Record names versus tuple positions are selected separately. Guarded patterns complicate coverage and can have side effects.
+- **6.4 Loops:** one syntax can cover traversal and Boolean loops; statically known arrays offer bounds-check elimination or vectorization when proven safe. Generic traversal should not require allocating iterators, though specialization can increase binary size. Loop metadata and result semantics need concrete lowering, not an assumption of zero cost.
+- **6.5 Transfers:** `break`, `continue`, `return`, target tags, panic and cleanup interact; each exit must execute exactly the required cleanup. Static cleanup paths can be emitted inline, but duplication increases code size; general dynamic unwinding may require support. `return @tag value;` semantics remain unresolved and should not be inferred from loop-break tests.
+
+### Blockers and cross-feature cases
+
+Trace an empty loop, loop with failing iterator operation, nested targeted break, and return inside a guarded match with resource cleanup. Compare runtime work and code size for inlined versus shared cleanup paths. Dependencies include initialization [2](02-bindings.md), enum/union coverage [4](04-enums.md), traversal [7](07-collections.md), and cleanup [8](08-failure-cleanup.md).
+
 ## Cross-topic routing
 
 Bindings (2), enums (4), collections (7), and cleanup (8) supply important interaction cases. Record new decisions with their owning area; return to this review after the dependency is understood.
