@@ -101,6 +101,35 @@ Function/if/loop/match bodies remain executable blocks even when their expected 
 
 Separately declared record types are distinct even when their fields are identical, including unnamed inline types. Convert by explicitly reconstructing the destination through its exposed construction contract; equal fields alone do not permit assignment. Type-head omission in construction and deconstruction does not change that identity. See [record type identity](record-type-identity.md).
 
+### Records and labeled tuples
+
+Selected 2026-11-15: records are field-oriented values, distinct from ordered
+labeled tuples. Record construction, field access, and record deconstruction
+use field names, not positional component selection. Declaration order does not
+make a record field accessible by a tuple position. This is a source-level
+rule and does not determine physical field layout.
+
+```text
+User := record { name: String; age: Int; }
+user := User { name = "Ali", age = 10, }
+user.name;                         /* valid field access */
+{ person_name = name, years = age, } := user; /* named field pattern */
+User { "Ali", 10, };               /* rejected: positional field construction */
+user.0;                            /* rejected: record positional access */
+(name, age) := user;               /* rejected: tuple positional pattern */
+```
+
+These are specification cases, not claims of compiler support. Named-pattern
+coverage and omission rules remain open. Record construction supplies fields by
+name and still follows the separate rules for omitted fields and defaults. Tuple positions and labels
+keep their own rules; equal fields do not imply record/tuple compatibility.
+
+The user also favors a general distinct-type direction, for example
+`UserID := distinct String` and `UserData := distinct (name: String, age: Int)`.
+This is separate from record declarations and transparent aliases. Its syntax,
+conversions, inherited operations, and implementation remain to be reviewed;
+these examples do not settle those contracts.
+
 The [record creation and initialization overview](record-initialization.md) separates zero initialization, selected by an omitted simple typed initializer or explicit = 0, from declared-default construction with = {}. Both zero forms bypass declared field defaults. Every type, including all record fields, must map all-zero storage to a valid language value; there is no zeroability eligibility restriction. Empty contextual record initialization is selected. Field-default resolution and inline-type grammar still need formalization; they do not silently complete this document's other initialization/type-system contracts.
 
 Records support the composition-first direction: fields can contain other data types, and interfaces describe behavior. Declaration and field visibility follow the minimal-exposure goal; their modifier syntax remains open. Binding reassignment and writable held-data access remain independent var/mut capabilities.
@@ -117,7 +146,7 @@ Reference-valued fields instead copy their reference representation, retaining t
 - Complete contextual construction grammar/inference, defaults, required fields, and initialization order.
 - Inferred standalone record literals and generic declarations/instantiation.
 - Field visibility/accessor syntax and any per-field mutation rules.
-- Public matching schemas and named/positional destructuring.
+- Public matching schemas and the remaining named-pattern coverage rules.
 - Generated equality, hashing, formatting, and additional copy operations beyond the selected shallow record-copy rule.
 - Ownership, borrowing, reference identity, resource copy eligibility, and precise layout/ABI beyond inline record-value semantics.
 
