@@ -39,6 +39,10 @@ The following notes are recorded as provisional starting points:
 - [9. Modules and public APIs](09-modules.md)
 - [10. Generics and compile-time evaluation](10-generics-comptime.md)
 
+## Evidence and constraints
+
+[Compiler and performance baseline](compiler-baseline.md) records the active target, verification results, exact boundary probes, and what must be measured to substantiate the lightweight native goals.
+
 ## Starting context
 
 - [Language specification map](../../../docs/spec/README.md) distinguishes selected language rules from open areas and limited implementation.
