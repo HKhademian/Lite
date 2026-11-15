@@ -4895,6 +4895,7 @@ test('soft builtin overrides for core/int, core/text, and core/crypto match pure
     'io.outputLine(text.endsWith("A🙂bc", "🙂bc"), text.endsWith("A🙂bc", "xy"), text.containsText("A🙂bc", "🙂b"), text.repeatText("hi", 3), "[" + text.repeatText("hi", -2) + "]");',
     'io.outputLine(text.toLowerAscii("ÄÉΩABC_xyz🙂"), text.isDigit("5"), text.isAsciiLetter("Q"), text.isNameStart("_"), text.isNameContinue("9"), text.isWhitespace(nbsp));',
     'io.outputLine(text.skipSpaces(" \\t\\r\\n🙂x", 0), text.skipSpaces("🙂  foo", 1), text.skipSpaces("abc", 10), text.skipName("abc_12🙂", 0), text.skipName("🙂abc", 1), text.skipName("abc", 9));',
+    'io.outputLine(text.indexOfText("A🙂B🙂C", "🙂", 0), text.indexOfText("A🙂B🙂C", "🙂", 2), text.indexOfText("A🙂B", "", -1), text.indexOfText("A🙂B", "", 3), text.indexOfText("A🙂B", "", 4));',
   ].join('\n');
 
   const runVariant = (src: string, args: readonly string[], label: string): { code: string; stdout: string } => {
@@ -4936,6 +4937,9 @@ test('soft builtin overrides for core/int, core/text, and core/crypto match pure
   assert.equal(wordPure.stdout, textPure.stdout);
   assert.doesNotMatch(wordPure.code, /function lite\$textWordAt\(/);
   assert.match(wordPure.code, /function lite\$textStartsWithAt\(/);
+
+  const indexOfTextPure = runVariant(intTextSrc, ['--builtin-mode', 'core/text.indexOfText=pure'], 'core/text.indexOfText=pure');
+  assert.equal(indexOfTextPure.stdout, textPure.stdout);
 
   const cryptoSrc = [
     'crypto := import "core/crypto";',

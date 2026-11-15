@@ -288,13 +288,6 @@ export function main(lite$write?: (text: string) => void): string {
         return lite_count;
     }
     void liteFn$lib$core$list$listCountText;
-    function liteFn$lib$core$text$indexOf(lite_source: string, lite_needle: string, lite_start: bigint): bigint {
-        void lite_source;
-        void lite_needle;
-        void lite_start;
-        return lite$textIndexOf(lite_source, lite_needle, lite_start);
-    }
-    void liteFn$lib$core$text$indexOf;
     function liteFn$lib$core$text$isAsciiLetter(lite_ch: string): boolean {
         void lite_ch;
         return (lite_ch.length === 1 && ((lite_ch >= "a" && lite_ch <= "z") || (lite_ch >= "A" && lite_ch <= "Z")));
@@ -311,7 +304,7 @@ export function main(lite$write?: (text: string) => void): string {
         void lite_source;
         void lite_needle;
         void lite_start;
-        return liteFn$lib$core$text$indexOf(lite_source, lite_needle, lite_start);
+        return lite$textIndexOf(lite_source, lite_needle, lite_start);
     }
     void liteFn$lib$core$text$indexOfText;
     function liteFn$lib$core$text$joinTexts(lite_values: string[], lite_separator: string): string {

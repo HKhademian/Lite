@@ -1,8 +1,8 @@
 {
-  "note": "Reviewed after compiler frontend scan, text helper, and TokenBuckets optimizations. All 69 TS and C corpus artifact hashes and 25 rejection cases verified.",
+  "note": "Reviewed after core/text.indexOfText soft builtin, incremental core reachability, jump-based code/brace scans, and O(N) tuple kind lookup optimizations. All 69 TS and C corpus artifact hashes and 25 rejection cases verified.",
   "recorded": "2026-11-15",
-  "sourceSha256": "0064e508be66edf39adb6cf074a17ce4e8f2da31f696f796c586caaf7573cfa3",
-  "compilerSha256": "91e5d26c72197b3ccd4b9845819c45ae124b822f9de12e0506050fb17f7ac3fd",
+  "sourceSha256": "6991ab8e38d5633f5a8f81857a69deca7eb7a09e1d67d36cad83b632c7f58501",
+  "compilerSha256": "fdcf56f70271eaadbfb33032adb6d1a367fb8081aa14defb0678d59b427acc37",
   "programCases": 69,
   "rejectedCases": 25,
   "artifacts": [

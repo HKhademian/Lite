@@ -1730,7 +1730,7 @@ softBuiltinExpr := fn(moduleName: String, fnName: String, params: String): Strin
     } else if moduleName == "lib/core/text" {
         if fnName == "skipSpaces" { return "lite$textSkipWhile(" + arg0 + ", " + paramRuntimeAt(params, 1) + ", true)"; }
         if fnName == "skipName" { return "lite$textSkipWhile(" + arg0 + ", " + paramRuntimeAt(params, 1) + ", false)"; }
-        if fnName == "indexOf" {
+        if fnName == "indexOf" or fnName == "indexOfText" {
             return "lite$textIndexOf(" + arg0 + ", " + paramRuntimeAt(params, 1) + ", " + paramRuntimeAt(params, 2) + ")";
         }
         if fnName == "startsWithAt" {
