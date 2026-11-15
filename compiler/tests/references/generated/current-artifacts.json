@@ -1,8 +1,8 @@
 {
-  "note": "Reviewed after enforcing verified module identity, ABI, and canonical core path boundaries for soft-builtin replacement. All 69 TS corpus artifact hashes and 25 rejection cases verified.",
+  "note": "Reviewed after selective core-module parsing, side-effect-free dead top-level symbol purging, and core/unicode + core/file soft builtins. All 69 TS and C corpus artifact hashes and 25 rejection cases verified.",
   "recorded": "2026-11-15",
-  "sourceSha256": "b067bb60acb49f9b69687eeb0689769740f6f3f6ade5c43a1192c1752672b54c",
-  "compilerSha256": "9c4b11dd9d83dceb340d705dbcf9b1dbf25166dc7ec1e6b1b9012a1d8fb5d5b8",
+  "sourceSha256": "5533e72c24ea7f607b14b21246f8806870cd81b96b1fe43186625235ade4dffa",
+  "compilerSha256": "28c0c566d3a7ca1cbc3625b7f777dc59ef19f7e8bb4b5dedf8c6405ae8deef6b",
   "programCases": 69,
   "rejectedCases": 25,
   "artifacts": [
@@ -189,7 +189,7 @@
     {
       "name": "local-unused",
       "source": "001-004-local-unused.lts",
-      "ts": "sha256:ae79a042545880cc7d0db636e854182ebe53f8d1d1acc8d78980a4457dcde293",
+      "ts": "sha256:3ba83f077fce49021da8e8591261319bbe1429a3ecd44ef2a3ac41c3fe4017d9",
       "c": "sha256:5a8b322f2cafa7410547e03441fdb33f6156d9b4cc6630b872c56a019a686622"
     },
     {
@@ -249,7 +249,7 @@
     {
       "name": "local-missing-semicolon",
       "source": "001-005-local-missing-semicolon.lts",
-      "ts": "sha256:9a7907c792f52676b09e2662820ae11f1bccb2cdd3172590e81a53e721ec6824",
+      "ts": "sha256:18f6dbad387d6a7cc519b1590c763280315ccd0dd2b993e26a648a4679c53a8a",
       "c": "sha256:e2ba9c60b354fe083f0ed5469a4d90e7e078f79a96d57587c52df7f7b02ea62a"
     },
     {
@@ -285,8 +285,8 @@
     {
       "name": "string-local-chain",
       "source": "001-005-string-local-chain.lts",
-      "ts": "sha256:1cc5e8bd201885bba1bd9cf5d4de3a1503ec1f4eab855d06c52cf56acfa9cbec",
-      "c": "sha256:f9003f61404f853331332d5d9ad16fd5d9c49084a2eaeb620bbdfa8a1373eddf"
+      "ts": "sha256:c55bf0ece300e9b14bb95e7c9047db90bd12cc7b8ebf25be7a9d1ea727e837de",
+      "c": "sha256:18fa4cd92ef3b901aa1af43dbe251d01bd276e734db42a8134db5e15a0316615"
     },
     {
       "name": "string-percent-trigraph",
@@ -303,8 +303,8 @@
     {
       "name": "local-hygiene-string",
       "source": "001-006-local-hygiene-string.lts",
-      "ts": "sha256:2a70db96201ff9b20e910fe6587e550fc79ba4a8e999d41ee01334527ed9c5cb",
-      "c": "sha256:d01240f5bc99e5f9abaa3f2de0336a8b69f05badff1f4e62106734e1b17f60e7"
+      "ts": "sha256:9bea9f5fa51f93abeae8478df30bf4a5f0a2b14855203f72d53f941a3f7efb9a",
+      "c": "sha256:79c8bb3d8f4a23e1b06ae933ddc5ed8e2fef9767fb8d5d909dc6d52341949ed3"
     },
     {
       "name": "local-macro-name",

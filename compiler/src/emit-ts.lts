@@ -95,7 +95,10 @@ usesFile := fn(calls: String): Bool {
     usesBuiltin(calls, "fileListDir") or usesBuiltin(calls, "fileMakeDir") or
     usesBuiltin(calls, "fileRemove") or usesBuiltin(calls, "fileCopy") or
     usesBuiltin(calls, "fileSymlink") or usesBuiltin(calls, "fileRealPath") or
-    usesBuiltin(calls, "fileMakeTempDir")
+    usesBuiltin(calls, "fileMakeTempDir") or usesBuiltin(calls, "fileReadBytes") or
+    usesBuiltin(calls, "fileReadText") or usesBuiltin(calls, "fileWriteBytes") or
+    usesBuiltin(calls, "fileWriteText") or usesBuiltin(calls, "fileAppendBytes") or
+    usesBuiltin(calls, "fileAppendText")
 }
 
 /** True when any emitted item calls a core `io` synchronous `Reader`/`Writer` stream builtin. */
@@ -121,11 +124,13 @@ usesHostErrorResult := fn(calls: String): Bool {
     usesBuiltin(calls, "fileMakeDir") or usesBuiltin(calls, "fileRemove") or usesBuiltin(calls, "fileCopy") or
     usesBuiltin(calls, "fileSymlink") or usesBuiltin(calls, "fileRealPath") or usesBuiltin(calls, "fileMakeTempDir") or
     usesBuiltin(calls, "fileOpenReader") or usesBuiltin(calls, "fileOpenWriter") or usesBuiltin(calls, "fileOpenAppender") or
+    usesBuiltin(calls, "fileReadBytes") or usesBuiltin(calls, "fileReadText") or usesBuiltin(calls, "fileWriteBytes") or
+    usesBuiltin(calls, "fileWriteText") or usesBuiltin(calls, "fileAppendBytes") or usesBuiltin(calls, "fileAppendText") or
     usesBuiltin(calls, "ioRead") or usesBuiltin(calls, "ioReadAll") or usesBuiltin(calls, "ioReadAllText") or
     usesBuiltin(calls, "ioReadLine") or usesBuiltin(calls, "ioCloseReader") or usesBuiltin(calls, "ioWrite") or
     usesBuiltin(calls, "ioWriteText") or usesBuiltin(calls, "ioWriteLine") or usesBuiltin(calls, "ioFlush") or
     usesBuiltin(calls, "ioCloseWriter") or usesBuiltin(calls, "ioWriterText") or usesBuiltin(calls, "processRunBytes") or
-    usesBuiltin(calls, "cryptoDigestFile")
+    usesBuiltin(calls, "cryptoDigestFile") or usesBuiltin(calls, "unicodeUtf8DecodeStrict")
 }
 
 /** True when any emitted item calls a host process builtin. */
@@ -150,7 +155,9 @@ usesTime := fn(calls: String): Bool {
 
 /** True when any emitted item calls a Unicode scalar bridge builtin. */
 usesUnicode := fn(calls: String): Bool {
-    usesBuiltin(calls, "unicodeToCodePoints") or usesBuiltin(calls, "unicodeFromCodePoints")
+    usesBuiltin(calls, "unicodeToCodePoints") or usesBuiltin(calls, "unicodeFromCodePoints") or
+    usesBuiltin(calls, "unicodeUtf8Encode") or usesBuiltin(calls, "unicodeUtf8DecodeStrict") or
+    usesBuiltin(calls, "unicodeUtf8DecodeLossy")
 }
 
 /** True when any emitted item calls any OS/host tool builtin beyond basic I/O and text. */
@@ -216,7 +223,7 @@ usesAbruptFault := fn(calls: String): Bool {
 
 /** True when construct-level `finally` must intercept process-terminating exits or runtime faults to unwind cleanups first. */
 usesAbruptUnwind := fn(calls: String): Bool {
-    usesAbruptFault(calls) or (usesBuiltin(calls, "finally") and usesBuiltin(calls, "exit"))
+    usesAbruptFault(calls) or (usesBuiltin(calls, "finally") and (usesBuiltin(calls, "exit") or usesBuiltin(calls, "fileReadBytes")))
 }
 
 /** Emits shared position metadata once, exact runtime faults, and the arithmetic helpers actually used. */
@@ -381,75 +388,81 @@ emitProcessDecl := fn(calls: String): Unit {
     usesBuiltin(calls, "inputInt") or usesBuiltin(calls, "inputFloat") or usesBuiltin(calls, "reportError") or
     usesBuiltin(calls, "exit") or usesIntArithmetic(calls) or usesIntDivision(calls) or usesBounds(calls) or usesFloatArithmetic(calls);
     needOsHost := usesHostOs(calls);
-    if not needBaseProcess and not needOsHost { return; }
-    needFs := needBaseProcess or usesFile(calls) or usesStreamRuntime(calls) or usesBuiltin(calls, "processRunBytes") or
-    usesBuiltin(calls, "cryptoDigestFile");
-    io.outputLine("declare const process: {");
-    io.outputLine("    argv: string[];");
-    io.outputLine("    exit(code: number): never;");
-    if usesProcess(calls) {
-        io.outputLine("    cwd(): string;");
-        io.outputLine("    execPath: string;");
-        io.outputLine("    platform: string;");
-        io.outputLine("    arch: string;");
-        io.outputLine("    version: string;");
-        io.outputLine("    env: Record<string, string | undefined>;");
-    }
-    if usesBuiltin(calls, "timeMonotonicNs") {
-        io.outputLine("    hrtime: { bigint(): bigint };");
-    }
-    if needFs {
-        io.outputLine("    getBuiltinModule(name: \"node:fs\"): {");
-        io.outputLine("        readSync(fd: number, buffer: Uint8Array, offset: number, length: number, position: null): number;");
-        io.outputLine("        writeSync(fd: number, text: string): number;");
-        if usesStreamRuntime(calls) {
-            io.outputLine("        writeSync(fd: number, buffer: Uint8Array, offset: number, length: number): number;");
-            io.outputLine("        openSync(path: string, flags: string): number;");
-            io.outputLine("        closeSync(fd: number): void;");
-            io.outputLine("        fstatSync(fd: number): { isFile(): boolean; isDirectory(): boolean };");
-            io.outputLine("        fsyncSync(fd: number): void;");
-        }
-        if usesFile(calls) or usesBuiltin(calls, "processRunBytes") or usesBuiltin(calls, "cryptoDigestFile") {
-            io.outputLine("        statSync(path: string): { isFile(): boolean; isDirectory(): boolean };");
-            io.outputLine("        readFileSync(path: string): Uint8Array;");
-            io.outputLine("        writeFileSync(path: string, data: string, encoding: \"utf8\"): void;");
-            io.outputLine("        writeFileSync(path: string, data: Uint8Array): void;");
-            io.outputLine("        readdirSync(path: string): string[];");
-            io.outputLine("        mkdirSync(path: string, options: { recursive: boolean }): void;");
-            io.outputLine("        rmSync(path: string, options: { recursive: boolean; force: boolean }): void;");
-            io.outputLine("        cpSync(src: string, dest: string, options: { recursive: boolean; force: boolean; verbatimSymlinks?: boolean }): void;");
-            io.outputLine("        symlinkSync(target: string, path: string): void;");
-            io.outputLine("        realpathSync(path: string): string;");
-            io.outputLine("        mkdtempSync(prefix: string): string;");
-        }
-        io.outputLine("    };");
-    }
-    if usesBuiltin(calls, "fileMakeTempDir") {
-        io.outputLine("    getBuiltinModule(name: \"node:path\"): { join(...paths: string[]): string };");
-        io.outputLine("    getBuiltinModule(name: \"node:os\"): { tmpdir(): string };");
-    }
-    if usesBuiltin(calls, "processRun") or usesBuiltin(calls, "processRunBytes") {
-        io.outputLine("    getBuiltinModule(name: \"node:child_process\"): {");
-        if usesBuiltin(calls, "processRun") {
-            io.outputLine("        spawnSync(command: string, args: readonly string[], options: { cwd?: string; env: Record<string, string | undefined>; encoding?: \"utf8\"; input?: string; stdio: \"inherit\" | readonly [\"pipe\", \"pipe\", \"pipe\"]; maxBuffer: number }): { status: number | null; signal: string | null; stdout: string | null; stderr: string | null; error?: Error };");
-        }
-        if usesBuiltin(calls, "processRunBytes") {
-            io.outputLine("        spawnSync(command: string, args: readonly string[], options: { cwd?: string; env: Record<string, string | undefined>; input: Uint8Array; stdio: readonly [\"pipe\", \"pipe\", \"pipe\"]; timeout?: number; maxBuffer: number }): { status: number | null; signal: string | null; stdout: Uint8Array | null; stderr: Uint8Array | null; error?: Error };");
-        }
-        io.outputLine("    };");
-    }
-    if usesCrypto(calls) {
-        io.outputLine("    getBuiltinModule(name: \"node:crypto\"): {");
-        io.outputLine("        createHash(algorithm: string): { update(data: Uint8Array): { digest(encoding: \"hex\"): string }; update(data: string, inputEncoding: \"utf8\"): { digest(encoding: \"hex\"): string } };");
-        io.outputLine("        randomBytes(size: number): Uint8Array;");
-        io.outputLine("    };");
-    }
-    io.outputLine("};");
     needInputDecoder := usesBuiltin(calls, "inputAll") or usesBuiltin(calls, "inputLine") or usesBuiltin(calls, "inputInt") or usesBuiltin(calls, "inputFloat");
-    if needInputDecoder or usesStreamRuntime(calls) {
+    needTextDecoder := needInputDecoder or usesStreamRuntime(calls) or usesBuiltin(calls, "unicodeUtf8DecodeStrict") or
+    usesBuiltin(calls, "unicodeUtf8DecodeLossy") or usesBuiltin(calls, "fileReadText");
+    needTextEncoder := usesStreamRuntime(calls) or usesBuiltin(calls, "unicodeUtf8Encode");
+    if not needBaseProcess and not needOsHost and not needTextDecoder and not needTextEncoder { return; }
+    if needBaseProcess or needOsHost {
+        needFs := needBaseProcess or usesHostOs(calls);
+        io.outputLine("declare const process: {");
+        io.outputLine("    argv: string[];");
+        io.outputLine("    exit(code: number): never;");
+        if usesProcess(calls) {
+            io.outputLine("    cwd(): string;");
+            io.outputLine("    execPath: string;");
+            io.outputLine("    platform: string;");
+            io.outputLine("    arch: string;");
+            io.outputLine("    version: string;");
+            io.outputLine("    env: Record<string, string | undefined>;");
+        }
+        if usesBuiltin(calls, "timeMonotonicNs") {
+            io.outputLine("    hrtime: { bigint(): bigint };");
+        }
+        if needFs {
+            io.outputLine("    getBuiltinModule(name: \"node:fs\"): {");
+            io.outputLine("        readSync(fd: number, buffer: Uint8Array, offset: number, length: number, position: null): number;");
+            io.outputLine("        writeSync(fd: number, text: string): number;");
+            if usesStreamRuntime(calls) {
+                io.outputLine("        writeSync(fd: number, buffer: Uint8Array, offset: number, length: number): number;");
+                io.outputLine("        openSync(path: string, flags: string): number;");
+                io.outputLine("        closeSync(fd: number): void;");
+                io.outputLine("        fstatSync(fd: number): { isFile(): boolean; isDirectory(): boolean };");
+                io.outputLine("        fsyncSync(fd: number): void;");
+            }
+            if usesFile(calls) or usesBuiltin(calls, "processRunBytes") or usesBuiltin(calls, "cryptoDigestFile") {
+                io.outputLine("        statSync(path: string): { isFile(): boolean; isDirectory(): boolean };");
+                io.outputLine("        readFileSync(path: string): Uint8Array;");
+                io.outputLine("        writeFileSync(path: string, data: string, encoding: \"utf8\"): void;");
+                io.outputLine("        writeFileSync(path: string, data: Uint8Array): void;");
+                io.outputLine("        appendFileSync(path: string, data: string, encoding: \"utf8\"): void;");
+                io.outputLine("        appendFileSync(path: string, data: Uint8Array): void;");
+                io.outputLine("        readdirSync(path: string): string[];");
+                io.outputLine("        mkdirSync(path: string, options: { recursive: boolean }): void;");
+                io.outputLine("        rmSync(path: string, options: { recursive: boolean; force: boolean }): void;");
+                io.outputLine("        cpSync(src: string, dest: string, options: { recursive: boolean; force: boolean; verbatimSymlinks?: boolean }): void;");
+                io.outputLine("        symlinkSync(target: string, path: string): void;");
+                io.outputLine("        realpathSync(path: string): string;");
+                io.outputLine("        mkdtempSync(prefix: string): string;");
+            }
+            io.outputLine("    };");
+        }
+        if usesBuiltin(calls, "fileMakeTempDir") {
+            io.outputLine("    getBuiltinModule(name: \"node:path\"): { join(...paths: string[]): string };");
+            io.outputLine("    getBuiltinModule(name: \"node:os\"): { tmpdir(): string };");
+        }
+        if usesBuiltin(calls, "processRun") or usesBuiltin(calls, "processRunBytes") {
+            io.outputLine("    getBuiltinModule(name: \"node:child_process\"): {");
+            if usesBuiltin(calls, "processRun") {
+                io.outputLine("        spawnSync(command: string, args: readonly string[], options: { cwd?: string; env: Record<string, string | undefined>; encoding?: \"utf8\"; input?: string; stdio: \"inherit\" | readonly [\"pipe\", \"pipe\", \"pipe\"]; maxBuffer: number }): { status: number | null; signal: string | null; stdout: string | null; stderr: string | null; error?: Error };");
+            }
+            if usesBuiltin(calls, "processRunBytes") {
+                io.outputLine("        spawnSync(command: string, args: readonly string[], options: { cwd?: string; env: Record<string, string | undefined>; input: Uint8Array; stdio: readonly [\"pipe\", \"pipe\", \"pipe\"]; timeout?: number; maxBuffer: number }): { status: number | null; signal: string | null; stdout: Uint8Array | null; stderr: Uint8Array | null; error?: Error };");
+            }
+            io.outputLine("    };");
+        }
+        if usesCrypto(calls) {
+            io.outputLine("    getBuiltinModule(name: \"node:crypto\"): {");
+            io.outputLine("        createHash(algorithm: string): { update(data: Uint8Array): { digest(encoding: \"hex\"): string }; update(data: string, inputEncoding: \"utf8\"): { digest(encoding: \"hex\"): string } };");
+            io.outputLine("        randomBytes(size: number): Uint8Array;");
+            io.outputLine("    };");
+        }
+        io.outputLine("};");
+    }
+    if needTextDecoder {
         io.outputLine("declare const TextDecoder: { new (label: string, options?: { fatal?: boolean }): { decode(input?: Uint8Array, options?: { stream?: boolean }): string } };");
     }
-    if usesStreamRuntime(calls) {
+    if needTextEncoder {
         io.outputLine("declare const TextEncoder: { new (): { encode(input?: string): Uint8Array } };");
     }
     io.outputLine("");
@@ -458,8 +471,11 @@ emitProcessDecl := fn(calls: String): Unit {
 /** Emits host filesystem and synchronous stream helpers used by the program. */
 emitFsHelpers := fn(calls: String): Unit {
     needFromBytes := usesBuiltin(calls, "cryptoRandomBytes") or usesBuiltin(calls, "ioRead") or
-    usesBuiltin(calls, "ioReadAll") or usesBuiltin(calls, "ioWriterBytes");
-    needToBytes := usesBuiltin(calls, "cryptoDigestBytes") or usesBuiltin(calls, "processRunBytes");
+    usesBuiltin(calls, "ioReadAll") or usesBuiltin(calls, "ioWriterBytes") or
+    usesBuiltin(calls, "unicodeUtf8Encode") or usesBuiltin(calls, "fileReadBytes");
+    needToBytes := usesBuiltin(calls, "cryptoDigestBytes") or usesBuiltin(calls, "processRunBytes") or
+    usesBuiltin(calls, "fileWriteBytes") or usesBuiltin(calls, "fileAppendBytes") or
+    usesBuiltin(calls, "unicodeUtf8DecodeStrict");
     if usesHostErrorResult(calls) {
         io.outputLine("function lite$errMsg(error: unknown): string {");
         io.outputLine("    return error instanceof Error ? error.message : String(error);");
@@ -536,6 +552,44 @@ emitFsHelpers := fn(calls: String): Unit {
         io.outputLine("        const joined = process.getBuiltinModule(\"node:path\").join(process.getBuiltinModule(\"node:os\").tmpdir(), prefix);");
         io.outputLine("        return { ok: true, path: process.getBuiltinModule(\"node:fs\").mkdtempSync(joined), error: \"\" };");
         io.outputLine("    } catch (error) { return { ok: false, path: \"\", error: lite$errMsg(error) }; }");
+        io.outputLine("}");
+    }
+    if usesBuiltin(calls, "fileReadBytes") {
+        io.outputLine("function lite$fileReadBytes(path: string): bigint[] {");
+        io.outputLine("    try { return lite$fromBytes(process.getBuiltinModule(\"node:fs\").readFileSync(path)); }");
+        io.outputLine("    catch (error) { lite$reportError(lite$errMsg(error)); return lite$exit(2n); }");
+        io.outputLine("}");
+    }
+    if usesBuiltin(calls, "fileReadText") {
+        io.outputLine("function lite$fileReadText(path: string): { ok: boolean; text: string; error: string } {");
+        io.outputLine("    try {");
+        io.outputLine("        const raw = process.getBuiltinModule(\"node:fs\").readFileSync(path);");
+        io.outputLine("        return { ok: true, text: new TextDecoder(\"utf-8\", { fatal: true }).decode(raw), error: \"\" };");
+        io.outputLine("    } catch (error) { return { ok: false, text: \"\", error: lite$errMsg(error) }; }");
+        io.outputLine("}");
+    }
+    if usesBuiltin(calls, "fileWriteBytes") {
+        io.outputLine("function lite$fileWriteBytes(path: string, bytes: readonly bigint[]): { ok: boolean; error: string } {");
+        io.outputLine("    try { process.getBuiltinModule(\"node:fs\").writeFileSync(path, lite$toBytes(bytes)); return { ok: true, error: \"\" }; }");
+        io.outputLine("    catch (error) { return { ok: false, error: lite$errMsg(error) }; }");
+        io.outputLine("}");
+    }
+    if usesBuiltin(calls, "fileWriteText") {
+        io.outputLine("function lite$fileWriteText(path: string, text: string): { ok: boolean; error: string } {");
+        io.outputLine("    try { process.getBuiltinModule(\"node:fs\").writeFileSync(path, text, \"utf8\"); return { ok: true, error: \"\" }; }");
+        io.outputLine("    catch (error) { return { ok: false, error: lite$errMsg(error) }; }");
+        io.outputLine("}");
+    }
+    if usesBuiltin(calls, "fileAppendBytes") {
+        io.outputLine("function lite$fileAppendBytes(path: string, bytes: readonly bigint[]): { ok: boolean; error: string } {");
+        io.outputLine("    try { process.getBuiltinModule(\"node:fs\").appendFileSync(path, lite$toBytes(bytes)); return { ok: true, error: \"\" }; }");
+        io.outputLine("    catch (error) { return { ok: false, error: lite$errMsg(error) }; }");
+        io.outputLine("}");
+    }
+    if usesBuiltin(calls, "fileAppendText") {
+        io.outputLine("function lite$fileAppendText(path: string, text: string): { ok: boolean; error: string } {");
+        io.outputLine("    try { process.getBuiltinModule(\"node:fs\").appendFileSync(path, text, \"utf8\"); return { ok: true, error: \"\" }; }");
+        io.outputLine("    catch (error) { return { ok: false, error: lite$errMsg(error) }; }");
         io.outputLine("}");
     }
     if usesStreamRuntime(calls) {
@@ -1100,13 +1154,54 @@ emitUnicodeHelpers := fn(calls: String): Unit {
         io.outputLine("    return { ok: true, text: text + chunk, error: \"\" };");
         io.outputLine("}");
     }
+    if usesBuiltin(calls, "unicodeUtf8Encode") {
+        io.outputLine("let lite$utf8Encoder: { encode(input?: string): Uint8Array } | undefined;");
+        io.outputLine("function lite$unicodeUtf8Encode(text: string): bigint[] {");
+        io.outputLine("    const encoder = lite$utf8Encoder ?? (lite$utf8Encoder = new TextEncoder());");
+        io.outputLine("    return lite$fromBytes(encoder.encode(text));");
+        io.outputLine("}");
+    }
+    if usesBuiltin(calls, "unicodeUtf8DecodeStrict") {
+        io.outputLine("let lite$utf8StrictDecoder: { decode(input?: Uint8Array): string } | undefined;");
+        io.outputLine("function lite$unicodeUtf8DecodeStrict(bytes: readonly bigint[]): { ok: boolean; text: string; error: string } {");
+        io.outputLine("    const decoder = lite$utf8StrictDecoder ?? (lite$utf8StrictDecoder = new TextDecoder(\"utf-8\", { fatal: true }));");
+        io.outputLine("    try { return { ok: true, text: decoder.decode(lite$toBytes(bytes)), error: \"\" }; }");
+        io.outputLine("    catch (error) { return { ok: false, text: \"\", error: lite$errMsg(error) }; }");
+        io.outputLine("}");
+    }
+    if usesBuiltin(calls, "unicodeUtf8DecodeLossy") {
+        io.outputLine("let lite$utf8LossyDecoder: { decode(input?: Uint8Array): string } | undefined;");
+        io.outputLine("function lite$unicodeUtf8DecodeLossy(bytes: readonly bigint[]): string {");
+        io.outputLine("    const decoder = lite$utf8LossyDecoder ?? (lite$utf8LossyDecoder = new TextDecoder(\"utf-8\", { fatal: false }));");
+        io.outputLine("    const raw = new Uint8Array(bytes.length);");
+        io.outputLine("    for (let i = 0; i < bytes.length; i += 1) {");
+        io.outputLine("        const byte = bytes[i];");
+        io.outputLine("        if (byte === undefined || byte < 0n || byte > 255n) {");
+        io.outputLine("            let out = i > 0 ? decoder.decode(raw.subarray(0, i)) : \"\";");
+        io.outputLine("            out += \"\\ufffd\";");
+        io.outputLine("            let seg: number[] = [];");
+        io.outputLine("            for (let j = i + 1; j < bytes.length; j += 1) {");
+        io.outputLine("                const b = bytes[j];");
+        io.outputLine("                if (b === undefined || b < 0n || b > 255n) {");
+        io.outputLine("                    if (seg.length > 0) { out += decoder.decode(new Uint8Array(seg)); seg = []; }");
+        io.outputLine("                    out += \"\\ufffd\";");
+        io.outputLine("                } else { seg.push(Number(b)); }");
+        io.outputLine("            }");
+        io.outputLine("            if (seg.length > 0) out += decoder.decode(new Uint8Array(seg));");
+        io.outputLine("            return out;");
+        io.outputLine("        }");
+        io.outputLine("        raw[i] = Number(byte);");
+        io.outputLine("    }");
+        io.outputLine("    return decoder.decode(raw);");
+        io.outputLine("}");
+    }
     io.outputLine("");
 }
 
 /** Emits the self-contained declarations and helpers for the I/O and text builtins a program uses. */
 emitBuiltinHelpers := fn(calls: String): Unit {
     abruptFault := usesAbruptFault(calls);
-    abruptExit := usesBuiltin(calls, "finally") and usesBuiltin(calls, "exit");
+    abruptExit := usesBuiltin(calls, "finally") and (usesBuiltin(calls, "exit") or usesBuiltin(calls, "fileReadBytes"));
     abruptUnwind := usesAbruptUnwind(calls);
     emitProcessDecl(calls);
     if abruptUnwind {
@@ -1158,13 +1253,13 @@ emitBuiltinHelpers := fn(calls: String): Unit {
         io.outputLine("");
     }
     emitInputHelpers(calls);
-    if usesBuiltin(calls, "reportError") {
+    if usesBuiltin(calls, "reportError") or usesBuiltin(calls, "fileReadBytes") {
         io.outputLine("function lite$reportError(text: string): void {");
         io.outputLine("    process.getBuiltinModule(\"node:fs\").writeSync(2, text + \"\\n\");");
         io.outputLine("}");
         io.outputLine("");
     }
-    if usesBuiltin(calls, "exit") {
+    if usesBuiltin(calls, "exit") or usesBuiltin(calls, "fileReadBytes") {
         io.outputLine("function lite$exit(status: bigint): never {");
         if abruptUnwind {
             io.outputLine("    return lite$throwAbruptExit(Number(status));");
@@ -1448,6 +1543,17 @@ softBuiltinExpr := fn(moduleName: String, fnName: String, params: String): Strin
         if fnName == "readLine" { return "lite$ioReadLine(" + arg0 + ")"; }
         if fnName == "writeText" { return "lite$ioWriteText(" + arg0 + ", " + paramRuntimeAt(params, 1) + ")"; }
         if fnName == "writeLine" { return "lite$ioWriteLine(" + arg0 + ", " + paramRuntimeAt(params, 1) + ")"; }
+    } else if moduleName == "lib/core/unicode" {
+        if fnName == "utf8Encode" { return "lite$unicodeUtf8Encode(" + arg0 + ")"; }
+        if fnName == "utf8DecodeStrict" { return "lite$unicodeUtf8DecodeStrict(" + arg0 + ")"; }
+        if fnName == "utf8DecodeLossy" { return "lite$unicodeUtf8DecodeLossy(" + arg0 + ")"; }
+    } else if moduleName == "lib/core/file" {
+        if fnName == "readBytes" { return "lite$fileReadBytes(" + arg0 + ")"; }
+        if fnName == "readText" { return "lite$fileReadText(" + arg0 + ")"; }
+        if fnName == "writeBytes" { return "lite$fileWriteBytes(" + arg0 + ", " + paramRuntimeAt(params, 1) + ")"; }
+        if fnName == "writeText" { return "lite$fileWriteText(" + arg0 + ", " + paramRuntimeAt(params, 1) + ")"; }
+        if fnName == "appendBytes" { return "lite$fileAppendBytes(" + arg0 + ", " + paramRuntimeAt(params, 1) + ")"; }
+        if fnName == "appendText" { return "lite$fileAppendText(" + arg0 + ", " + paramRuntimeAt(params, 1) + ")"; }
     }
     ""
 }
@@ -1506,7 +1612,7 @@ pub emitProgram := fn(items: frontend.Items, source: String, prefix: String): Un
     abruptFault := usesAbruptFault(calls);
     abruptUnwind := usesAbruptUnwind(calls);
     hasInput := usesBuiltin(calls, "inputAll") or usesBuiltin(calls, "inputLine") or usesBuiltin(calls, "inputInt") or usesBuiltin(calls, "inputFloat");
-    hasExit := usesBuiltin(calls, "exit") or hasInput or abruptUnwind;
+    hasExit := usesBuiltin(calls, "exit") or usesBuiltin(calls, "fileReadBytes") or hasInput or abruptUnwind;
     if hasExit {
         io.outputLine("let lite$out = \"\";");
         io.outputLine("");

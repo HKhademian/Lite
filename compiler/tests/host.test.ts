@@ -4221,8 +4221,24 @@ test('core os/fs/process/crypto/time host bindings, standalone CLI execution, an
   });
   assert.equal(unicodeOnly.status, 0, unicodeOnly.stderr.toString());
   assert.equal(checkTsArtifact(unicodeOnly.stdout.toString()).status, 0);
-  assert.doesNotMatch(unicodeOnly.stdout.toString(), /TextEncoder|TextDecoder|node:buffer|node:crypto/);
+  assert.match(unicodeOnly.stdout.toString(), /lite\$unicodeUtf8Encode/);
+  assert.match(unicodeOnly.stdout.toString(), /lite\$unicodeUtf8DecodeStrict/);
+  assert.doesNotMatch(unicodeOnly.stdout.toString(), /node:buffer|node:crypto/);
   withTsArtifact(unicodeOnly.stdout.toString(), run => {
+    const actual = run();
+    assert.equal(actual.status, 0, actual.stderr.toString());
+    assert.equal(actual.stdout.toString(), 'hi [128578]\n');
+  });
+
+  const unicodeOnlyPure = compileTs({
+    text: 'uni := import "core/unicode"; io := import "core/io"; io.outputLine(uni.utf8DecodeStrict(uni.utf8Encode("hi")).text, uni.toCodePoints("🙂"));',
+    name: fixtureName,
+    options: ['--builtin-mode', 'pure'],
+  });
+  assert.equal(unicodeOnlyPure.status, 0, unicodeOnlyPure.stderr.toString());
+  assert.equal(checkTsArtifact(unicodeOnlyPure.stdout.toString()).status, 0);
+  assert.doesNotMatch(unicodeOnlyPure.stdout.toString(), /TextEncoder|TextDecoder|node:buffer|node:crypto/);
+  withTsArtifact(unicodeOnlyPure.stdout.toString(), run => {
     const actual = run();
     assert.equal(actual.status, 0, actual.stderr.toString());
     assert.equal(actual.stdout.toString(), 'hi [128578]\n');
@@ -4724,4 +4740,138 @@ test('pure and soft-builtin modes match for core/text.indexOf and core/io stream
   } finally {
     rmSync(workDir, { recursive: true, force: true });
   }
+});
+
+test('soft builtin overrides for core/unicode and core/file match pure implementations and respect --builtin-mode', () => {
+  const workDir = mkdtempSync(join(tmpdir(), 'litescript-soft-unicode-file-'));
+  try {
+    const textPath = join(workDir, 'note.txt');
+    const bytesPath = join(workDir, 'raw.bin');
+    const missingPath = join(workDir, 'missing.bin');
+    const src = [
+      'file := import "core/file";',
+      'io := import "core/io";',
+      'uni := import "core/unicode";',
+      'enc := uni.utf8Encode("A€🙂");',
+      'dec := uni.utf8DecodeStrict(enc);',
+      'badRange := uni.utf8DecodeStrict([256]);',
+      'badSeq := uni.utf8DecodeStrict([255]);',
+      'lossy := uni.utf8DecodeLossy([65, 255, 66]);',
+      'lossyRange := uni.utf8DecodeLossy([65, 999, 66]);',
+      `w1 := file.writeText(${JSON.stringify(textPath)}, "hi");`,
+      `a1 := file.appendText(${JSON.stringify(textPath)}, "🙂");`,
+      `r1 := file.readText(${JSON.stringify(textPath)});`,
+      `w2 := file.writeBytes(${JSON.stringify(bytesPath)}, [65, 66]);`,
+      `a2 := file.appendBytes(${JSON.stringify(bytesPath)}, [67]);`,
+      `rb := file.readBytes(${JSON.stringify(bytesPath)});`,
+      `badW := file.writeBytes(${JSON.stringify(bytesPath)}, [256]);`,
+      'io.outputLine(enc, dec.ok, dec.text, not badRange.ok, not badSeq.ok, lossy, lossyRange);',
+      'io.outputLine(w1.ok, a1.ok, r1.ok, r1.text, w2.ok, a2.ok, rb, not badW.ok);',
+    ].join('\n');
+
+    const compileAndCheck = (extraArgs: string[], label: string): string => {
+      const compiled = compileTs({ text: src, name: 'main.lts', options: extraArgs });
+      assert.equal(compiled.status, 0, `${label}: ${compiled.stderr.toString()}`);
+      const tsCode = compiled.stdout.toString();
+      assert.equal(checkTsArtifact(tsCode).status, 0, `${label}: strict TS check`);
+      withTsArtifact(tsCode, run => {
+        const res = run();
+        assert.equal(res.status, 0, `${label}: runtime ${res.stderr.toString()}`);
+        assert.equal(
+          res.stdout.toString(),
+          '[65, 226, 130, 172, 240, 159, 153, 130] true A€🙂 true true A\ufffdB A\ufffdB\ntrue true true hi🙂 true true [65, 66, 67] true\n',
+          `${label}: output`,
+        );
+      });
+      return tsCode;
+    };
+
+    const defaultTs = compileAndCheck([], 'default builtin');
+    assert.match(defaultTs, /function lite\$unicodeUtf8Encode\(/);
+    assert.match(defaultTs, /function lite\$unicodeUtf8DecodeStrict\(/);
+    assert.match(defaultTs, /function lite\$unicodeUtf8DecodeLossy\(/);
+    assert.match(defaultTs, /function lite\$fileReadBytes\(/);
+    assert.match(defaultTs, /function lite\$fileReadText\(/);
+    assert.match(defaultTs, /function lite\$fileWriteBytes\(/);
+    assert.match(defaultTs, /function lite\$fileWriteText\(/);
+    assert.match(defaultTs, /function lite\$fileAppendBytes\(/);
+    assert.match(defaultTs, /function lite\$fileAppendText\(/);
+
+    const pureTs = compileAndCheck(['--builtin-mode', 'pure'], 'project pure');
+    assert.doesNotMatch(pureTs, /function lite\$unicodeUtf8Encode\(/);
+    assert.doesNotMatch(pureTs, /function lite\$fileReadBytes\(/);
+
+    const uniPureTs = compileAndCheck(['--builtin-mode', 'core/unicode=pure'], 'module core/unicode=pure');
+    assert.doesNotMatch(uniPureTs, /function lite\$unicodeUtf8Encode\(/);
+    assert.match(uniPureTs, /function lite\$fileWriteText\(/);
+
+    const readTextPureTs = compileAndCheck(['--builtin-mode', 'core/file.readText=pure'], 'fn core/file.readText=pure');
+    assert.doesNotMatch(readTextPureTs, /function lite\$fileReadText\(/);
+    assert.match(readTextPureTs, /function lite\$fileWriteText\(/);
+
+    const readFailSrc = [
+      'file := import "core/file";',
+      'io := import "core/io";',
+      `{ _ := file.readBytes(${JSON.stringify(missingPath)}); } finally { io.outputLine("cleaned"); };`,
+    ].join('\n');
+    for (const [label, args] of [['default', []], ['pure', ['--builtin-mode', 'pure']]] as const) {
+      const compiled = compileTs({ text: readFailSrc, name: 'main.lts', options: [...args] });
+      assert.equal(compiled.status, 0, `${label} fail: ${compiled.stderr.toString()}`);
+      assert.equal(checkTsArtifact(compiled.stdout.toString()).status, 0);
+      withTsArtifact(compiled.stdout.toString(), run => {
+        const res = run();
+        assert.equal(res.status, 2, `${label} readBytes exit status`);
+        assert.equal(res.stdout.toString(), 'cleaned\n', `${label} defer cleanup`);
+      });
+    }
+  } finally {
+    rmSync(workDir, { recursive: true, force: true });
+  }
+});
+
+test('unreachable pure top-level symbols are purged while top-level side effects are preserved', () => {
+  const cryptoThin = compileTs({
+    text: 'crypto := import "core/crypto"; io := import "core/io"; io.outputLine(crypto.sha256Text("hi"));',
+    name: 'main.lts',
+  });
+  assert.equal(cryptoThin.status, 0, cryptoThin.stderr.toString());
+  const cryptoCode = cryptoThin.stdout.toString();
+  assert.equal(checkTsArtifact(cryptoCode).status, 0);
+  assert.doesNotMatch(cryptoCode, /buildNibbleTable|k256|k512Hi|k512Lo|b64Alphabet|hexAlphabet|xor4|and4/);
+  withTsArtifact(cryptoCode, run => {
+    const res = run();
+    assert.equal(res.status, 0, res.stderr.toString());
+    assert.equal(res.stdout.toString(), '8f434346648f6b96df89dda901c5176b10a6d83961dd3c1ac88b59b2dc327aa4\n');
+  });
+
+  const mixedSrc = [
+    'io := import "core/io";',
+    'unusedPure := "PURGED_PURE_MARKER";',
+    'unusedSum := 1 + 2;',
+    'sideEffectFn := fn(): Int { io.outputLine("kept-side-effect"); 7 };',
+    'keptSideEffect := sideEffectFn();',
+    'unusedHelper := fn(): String { "PURGED_FN_MARKER" };',
+  ].join('\n');
+  const mixedCompiled = compileTs({ text: mixedSrc, name: 'main.lts' });
+  assert.equal(mixedCompiled.status, 0, mixedCompiled.stderr.toString());
+  const mixedCode = mixedCompiled.stdout.toString();
+  assert.equal(checkTsArtifact(mixedCode).status, 0);
+  assert.doesNotMatch(mixedCode, /PURGED_PURE_MARKER|PURGED_FN_MARKER/);
+  withTsArtifact(mixedCode, run => {
+    const res = run();
+    assert.equal(res.status, 0, res.stderr.toString());
+    assert.equal(res.stdout.toString(), 'kept-side-effect\n');
+  });
+
+  const faultSrc = [
+    'unusedFault := 1 / 0;',
+  ].join('\n');
+  const faultCompiled = compileTs({ text: faultSrc, name: 'main.lts' });
+  assert.equal(faultCompiled.status, 0, faultCompiled.stderr.toString());
+  assert.equal(checkTsArtifact(faultCompiled.stdout.toString()).status, 0);
+  withTsArtifact(faultCompiled.stdout.toString(), run => {
+    const res = run();
+    assert.notEqual(res.status, 0);
+    assert.match(res.stderr.toString(), /division by zero/);
+  });
 });

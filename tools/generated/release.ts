@@ -12,15 +12,12 @@ declare const process: {
     getBuiltinModule(name: "node:fs"): {
         readSync(fd: number, buffer: Uint8Array, offset: number, length: number, position: null): number;
         writeSync(fd: number, text: string): number;
-        writeSync(fd: number, buffer: Uint8Array, offset: number, length: number): number;
-        openSync(path: string, flags: string): number;
-        closeSync(fd: number): void;
-        fstatSync(fd: number): { isFile(): boolean; isDirectory(): boolean };
-        fsyncSync(fd: number): void;
         statSync(path: string): { isFile(): boolean; isDirectory(): boolean };
         readFileSync(path: string): Uint8Array;
         writeFileSync(path: string, data: string, encoding: "utf8"): void;
         writeFileSync(path: string, data: Uint8Array): void;
+        appendFileSync(path: string, data: string, encoding: "utf8"): void;
+        appendFileSync(path: string, data: Uint8Array): void;
         readdirSync(path: string): string[];
         mkdirSync(path: string, options: { recursive: boolean }): void;
         rmSync(path: string, options: { recursive: boolean; force: boolean }): void;
@@ -40,7 +37,6 @@ declare const process: {
     };
 };
 declare const TextDecoder: { new (label: string, options?: { fatal?: boolean }): { decode(input?: Uint8Array, options?: { stream?: boolean }): string } };
-declare const TextEncoder: { new (): { encode(input?: string): Uint8Array } };
 
 function lite$inputArgs(): string[] {
     return process.argv.slice(2);
@@ -110,11 +106,6 @@ function lite$exit(status: bigint): never {
 function lite$errMsg(error: unknown): string {
     return error instanceof Error ? error.message : String(error);
 }
-function lite$fromBytes(bytes: Uint8Array): bigint[] {
-    const out: bigint[] = new Array<bigint>(bytes.length);
-    for (let i = 0; i < bytes.length; i += 1) { out[i] = BigInt(bytes[i] ?? 0); }
-    return out;
-}
 function lite$fileKind(path: string): string {
     try {
         const st = process.getBuiltinModule("node:fs").statSync(path);
@@ -148,204 +139,15 @@ function lite$fileMakeTempDir(prefix: string): { ok: boolean; path: string; erro
         return { ok: true, path: process.getBuiltinModule("node:fs").mkdtempSync(joined), error: "" };
     } catch (error) { return { ok: false, path: "", error: lite$errMsg(error) }; }
 }
-type Lite$StreamHandle = { kind: string; handle: bigint };
-type Lite$StreamEntry =
-    | { kind: "file"; fd: number; eof: boolean; closed: boolean; error: string }
-    | { kind: "bufferReader"; bytes: Uint8Array; pos: number; eof: boolean; closed: boolean; error: string }
-    | { kind: "bufferWriter"; bytes: number[]; closed: boolean; error: string }
-    | { kind: "error"; closed: boolean; error: string };
-let lite$streams: Lite$StreamEntry[] = [];
-let lite$stdinState = { eof: false, error: "" };
-void lite$stdinState;
-function lite$resetStreams(): void {
-    const fs = process.getBuiltinModule("node:fs");
-    for (const entry of lite$streams) {
-        if (entry.kind === "file" && !entry.closed) { try { fs.closeSync(entry.fd); } catch {} entry.closed = true; }
-    }
-    lite$streams = [];
-    lite$stdinState = { eof: false, error: "" };
-}
-function lite$allocStream(entry: Lite$StreamEntry): bigint {
-    const id = BigInt(lite$streams.length + 10);
-    lite$streams.push(entry);
-    return id;
-}
-function lite$lookupStream(handle: bigint): Lite$StreamEntry | undefined {
-    const index = Number(handle) - 10;
-    if (index < 0 || index >= lite$streams.length) return undefined;
-    return lite$streams[index];
-}
-function lite$checkBytes(bytes: readonly bigint[]): { ok: true; data: Uint8Array } | { ok: false; error: string } {
-    const data = new Uint8Array(bytes.length);
-    for (let i = 0; i < bytes.length; i += 1) {
-        const byte = bytes[i];
-        if (byte === undefined || byte < 0n || byte > 255n) {
-            return { ok: false, error: "byte value outside 0..255: " + String(byte) };
-        }
-        data[i] = Number(byte);
-    }
-    return { ok: true, data };
-}
-function lite$fileOpenStream(path: string, flags: string, forWrite: boolean): Lite$StreamHandle {
-    const fs = process.getBuiltinModule("node:fs");
-    let fd = -1;
+function lite$fileReadText(path: string): { ok: boolean; text: string; error: string } {
     try {
-        fd = fs.openSync(path, flags);
-        if (!forWrite && fs.fstatSync(fd).isDirectory()) {
-            try { fs.closeSync(fd); } catch {}
-            const msg = "EISDIR: illegal operation on a directory, open '" + path + "'";
-            return { kind: "error", handle: lite$allocStream({ kind: "error", closed: false, error: msg }) };
-        }
-        return { kind: "file", handle: lite$allocStream({ kind: "file", fd, eof: false, closed: false, error: "" }) };
-    } catch (error) {
-        if (fd >= 0) { try { fs.closeSync(fd); } catch {} }
-        return { kind: "error", handle: lite$allocStream({ kind: "error", closed: false, error: lite$errMsg(error) }) };
-    }
+        const raw = process.getBuiltinModule("node:fs").readFileSync(path);
+        return { ok: true, text: new TextDecoder("utf-8", { fatal: true }).decode(raw), error: "" };
+    } catch (error) { return { ok: false, text: "", error: lite$errMsg(error) }; }
 }
-function lite$fileOpenReader(path: string): Lite$StreamHandle { return lite$fileOpenStream(path, "r", false); }
-function lite$fileOpenWriter(path: string): Lite$StreamHandle { return lite$fileOpenStream(path, "w", true); }
-function lite$ioReaderError(reader: Lite$StreamHandle): string {
-    if (reader.kind === "stdin" && reader.handle === 0n) return lite$stdinState.error;
-    const entry = lite$lookupStream(reader.handle);
-    if (entry === undefined) return "invalid reader handle";
-    if (entry.kind === "bufferWriter") return "handle is a writer, not a reader";
-    if (entry.error !== "") return entry.error;
-    if (entry.closed) return "reader is closed";
-    return "";
-}
-function lite$ioReaderOk(reader: Lite$StreamHandle): boolean {
-    if (reader.kind === "stdin" && reader.handle === 0n) return lite$stdinState.error === "";
-    const entry = lite$lookupStream(reader.handle);
-    return entry !== undefined && (entry.kind === "file" || entry.kind === "bufferReader") && !entry.closed && entry.error === "";
-}
-function lite$ioReaderAtEof(reader: Lite$StreamHandle): boolean {
-    if (reader.kind === "stdin" && reader.handle === 0n) return lite$stdinState.eof;
-    const entry = lite$lookupStream(reader.handle);
-    if (entry !== undefined && (entry.kind === "file" || entry.kind === "bufferReader")) return entry.eof;
-    return true;
-}
-function lite$readAllRaw(reader: Lite$StreamHandle): { ok: true; data: Uint8Array } | { ok: false; error: string } {
-    if (!lite$ioReaderOk(reader)) return { ok: false, error: lite$ioReaderError(reader) };
-    if (!(reader.kind === "stdin" && reader.handle === 0n)) {
-        const entry = lite$lookupStream(reader.handle);
-        if (entry === undefined) return { ok: false, error: "invalid reader handle" };
-        if (entry.kind === "bufferReader") {
-            const rest = entry.bytes.subarray(entry.pos);
-            entry.pos = entry.bytes.length;
-            entry.eof = true;
-            return { ok: true, data: rest };
-        }
-        if (entry.kind !== "file") return { ok: false, error: "invalid reader handle" };
-    }
-    const fs = process.getBuiltinModule("node:fs");
-    const chunks: Uint8Array[] = [];
-    let total = 0;
-    const buf = new Uint8Array(65536);
-    while (!lite$ioReaderAtEof(reader)) {
-        const fd = reader.kind === "stdin" ? 0 : (lite$lookupStream(reader.handle) as { fd: number }).fd;
-        try {
-            const read = fs.readSync(fd, buf, 0, buf.length, null);
-            if (read === 0) {
-                if (reader.kind === "stdin") lite$stdinState.eof = true;
-                else { const e = lite$lookupStream(reader.handle); if (e && e.kind === "file") e.eof = true; }
-                break;
-            }
-            chunks.push(buf.slice(0, read));
-            total += read;
-        } catch (error) {
-            const msg = lite$errMsg(error);
-            if (reader.kind === "stdin") lite$stdinState.error = msg;
-            else { const e = lite$lookupStream(reader.handle); if (e && e.kind === "file") e.error = msg; }
-            return { ok: false, error: msg };
-        }
-    }
-    const merged = new Uint8Array(total);
-    let off = 0;
-    for (const chunk of chunks) { merged.set(chunk, off); off += chunk.length; }
-    return { ok: true, data: merged };
-}
-function lite$ioReadAll(reader: Lite$StreamHandle): bigint[] {
-    const raw = lite$readAllRaw(reader);
-    return raw.ok ? lite$fromBytes(raw.data) : [];
-}
-function lite$ioCloseReader(reader: Lite$StreamHandle): { ok: boolean; error: string } {
-    if (reader.kind === "stdin" && reader.handle === 0n) return { ok: true, error: "" };
-    const entry = lite$lookupStream(reader.handle);
-    if (entry === undefined) return { ok: false, error: "invalid reader handle" };
-    if (entry.kind === "error") return { ok: false, error: entry.error };
-    if (entry.kind === "bufferWriter") return { ok: false, error: "handle is a writer, not a reader" };
-    if (entry.kind === "file" && !entry.closed) {
-        try { process.getBuiltinModule("node:fs").closeSync(entry.fd); }
-        catch (error) { entry.closed = true; return { ok: false, error: lite$errMsg(error) }; }
-    }
-    entry.closed = true;
-    return { ok: true, error: "" };
-}
-function lite$ioWriterError(writer: Lite$StreamHandle): string {
-    if ((writer.kind === "stdout" && writer.handle === 1n) || (writer.kind === "stderr" && writer.handle === 2n)) return "";
-    const entry = lite$lookupStream(writer.handle);
-    if (entry === undefined) return "invalid writer handle";
-    if (entry.kind === "bufferReader") return "handle is a reader, not a writer";
-    if (entry.error !== "") return entry.error;
-    if (entry.closed) return "writer is closed";
-    return "";
-}
-function lite$ioWriterOk(writer: Lite$StreamHandle): boolean {
-    if ((writer.kind === "stdout" && writer.handle === 1n) || (writer.kind === "stderr" && writer.handle === 2n)) return true;
-    const entry = lite$lookupStream(writer.handle);
-    return entry !== undefined && (entry.kind === "file" || entry.kind === "bufferWriter") && !entry.closed && entry.error === "";
-}
-function lite$writeRaw(writer: Lite$StreamHandle, data: Uint8Array): { ok: boolean; written: bigint; error: string } {
-    if (writer.kind === "stdout" && writer.handle === 1n) {
-        try {
-            const fs = process.getBuiltinModule("node:fs");
-            let off = 0;
-            while (off < data.length) off += fs.writeSync(1, data, off, data.length - off);
-            return { ok: true, written: BigInt(data.length), error: "" };
-        } catch (error) { return { ok: false, written: 0n, error: lite$errMsg(error) }; }
-    }
-    if (writer.kind === "stderr" && writer.handle === 2n) {
-        try {
-            const fs = process.getBuiltinModule("node:fs");
-            let off = 0;
-            while (off < data.length) off += fs.writeSync(2, data, off, data.length - off);
-            return { ok: true, written: BigInt(data.length), error: "" };
-        } catch (error) { return { ok: false, written: 0n, error: lite$errMsg(error) }; }
-    }
-    const entry = lite$lookupStream(writer.handle);
-    if (entry === undefined) return { ok: false, written: 0n, error: "invalid writer handle" };
-    if (entry.kind === "error") return { ok: false, written: 0n, error: entry.error };
-    if (entry.kind === "bufferReader") return { ok: false, written: 0n, error: "handle is a reader, not a writer" };
-    if (entry.closed) return { ok: false, written: 0n, error: "writer is closed" };
-    if (entry.error !== "") return { ok: false, written: 0n, error: entry.error };
-    if (entry.kind === "bufferWriter") {
-        for (let i = 0; i < data.length; i += 1) entry.bytes.push(data[i] ?? 0);
-        return { ok: true, written: BigInt(data.length), error: "" };
-    }
-    try {
-        const fs = process.getBuiltinModule("node:fs");
-        let off = 0;
-        while (off < data.length) off += fs.writeSync(entry.fd, data, off, data.length - off);
-        return { ok: true, written: BigInt(data.length), error: "" };
-    } catch (error) { const msg = lite$errMsg(error); entry.error = msg; return { ok: false, written: 0n, error: msg }; }
-}
-function lite$ioWrite(writer: Lite$StreamHandle, bytes: readonly bigint[]): { ok: boolean; written: bigint; error: string } {
-    const checked = lite$checkBytes(bytes);
-    if (!checked.ok) return { ok: false, written: 0n, error: checked.error };
-    return lite$writeRaw(writer, checked.data);
-}
-function lite$ioCloseWriter(writer: Lite$StreamHandle): { ok: boolean; error: string } {
-    if ((writer.kind === "stdout" && writer.handle === 1n) || (writer.kind === "stderr" && writer.handle === 2n)) return { ok: true, error: "" };
-    const entry = lite$lookupStream(writer.handle);
-    if (entry === undefined) return { ok: false, error: "invalid writer handle" };
-    if (entry.kind === "error") return { ok: false, error: entry.error };
-    if (entry.kind === "bufferReader") return { ok: false, error: "handle is a reader, not a writer" };
-    if (entry.kind === "file" && !entry.closed) {
-        try { process.getBuiltinModule("node:fs").closeSync(entry.fd); }
-        catch (error) { entry.closed = true; return { ok: false, error: lite$errMsg(error) }; }
-    }
-    entry.closed = true;
-    return { ok: true, error: "" };
+function lite$fileWriteText(path: string, text: string): { ok: boolean; error: string } {
+    try { process.getBuiltinModule("node:fs").writeFileSync(path, text, "utf8"); return { ok: true, error: "" }; }
+    catch (error) { return { ok: false, error: lite$errMsg(error) }; }
 }
 
 function lite$processCwd(): string { return process.cwd(); }
@@ -398,25 +200,6 @@ function lite$cryptoDigestFile(algorithm: string, path: string): { ok: boolean; 
     } catch (error) {
         return { ok: false, hex: "", error: lite$errMsg(error) };
     }
-}
-
-function lite$unicodeToCodePoints(text: string): bigint[] {
-    const out: bigint[] = [];
-    for (const ch of text) { out.push(BigInt(ch.codePointAt(0) ?? 0)); }
-    return out;
-}
-function lite$unicodeFromCodePoints(points: readonly bigint[]): { ok: boolean; text: string; error: string } {
-    let text = "";
-    let chunk = "";
-    for (let i = 0; i < points.length; i += 1) {
-        const point = points[i];
-        if (point === undefined || point < 0n || point > 1114111n || (point >= 55296n && point <= 57343n)) {
-            return { ok: false, text: "", error: "invalid Unicode scalar code point: " + String(point) };
-        }
-        chunk += String.fromCodePoint(Number(point));
-        if (chunk.length >= 4096) { text += chunk; chunk = ""; }
-    }
-    return { ok: true, text: text + chunk, error: "" };
 }
 
 let lite$lastBmp = "";
@@ -584,7 +367,6 @@ function lite$remainderInt(left: bigint, right: bigint, at: number): bigint {
 export function main(lite$write?: (text: string) => void): string {
     lite$out = "";
     lite$resetInput();
-    lite$resetStreams();
     function lite$emit(text: string): void {
         if (lite$write === undefined) lite$out += text;
         else lite$write(text);
@@ -962,133 +744,6 @@ export function main(lite$write?: (text: string) => void): string {
         return lite_out;
     }
     void liteFn$lib$core$text$toLowerAscii;
-    function liteFn$lib$core$unicode$utf8Encode(lite_text: string): bigint[] {
-        void lite_text;
-        let lite_out: bigint[] = [...([...([])])];
-        void lite_out;
-        for (const lite_cp of [...(lite$unicodeToCodePoints(lite_text))]) {
-            void lite_cp;
-            if (((lite_cp) <= (127n))) {
-                lite_out.push(lite_cp);
-            } else if (((lite_cp) <= (2047n))) {
-                lite_out.push(lite$addInt(192n, (lite$divideInt(lite_cp, 64n, 3444)), 3438));
-                lite_out.push(lite$addInt(128n, (lite$remainderInt(lite_cp, 64n, 3497)), 3491));
-            } else if (((lite_cp) <= (65535n))) {
-                lite_out.push(lite$addInt(224n, (lite$divideInt(lite_cp, 4096n, 3582)), 3576));
-                lite_out.push(lite$addInt(128n, (lite$remainderInt((lite$divideInt(lite_cp, 64n, 3638)), 64n, 3644)), 3631));
-                lite_out.push(lite$addInt(128n, (lite$remainderInt(lite_cp, 64n, 3697)), 3691));
-            } else {
-                lite_out.push(lite$addInt(240n, (lite$divideInt(lite_cp, 262144n, 3767)), 3761));
-                lite_out.push(lite$addInt(128n, (lite$remainderInt((lite$divideInt(lite_cp, 4096n, 3825)), 64n, 3833)), 3818));
-                lite_out.push(lite$addInt(128n, (lite$remainderInt((lite$divideInt(lite_cp, 64n, 3887)), 64n, 3893)), 3880));
-                lite_out.push(lite$addInt(128n, (lite$remainderInt(lite_cp, 64n, 3946)), 3940));
-            }
-        }
-        return [...(lite_out)];
-    }
-    void liteFn$lib$core$unicode$utf8Encode;
-    function liteFn$lib$core$unicode$utf8DecodeInternal(lite_bytes: bigint[], lite_strict: boolean): { ok: boolean; text: string; error: string } {
-        void lite_bytes;
-        void lite_strict;
-        const lite_count = liteFn$lib$core$list$listCountInt([...(lite_bytes)]);
-        void lite_count;
-        let lite_points: bigint[] = [...([...([])])];
-        void lite_points;
-        let lite_needed = 0n;
-        void lite_needed;
-        let lite_seen = 0n;
-        void lite_seen;
-        let lite_codePoint = 0n;
-        void lite_codePoint;
-        let lite_lowerBoundary = 128n;
-        void lite_lowerBoundary;
-        let lite_upperBoundary = 191n;
-        void lite_upperBoundary;
-        let lite_index = 0n;
-        void lite_index;
-        while (((lite_index) < (lite_count))) {
-            const lite_b = lite$listAt((lite_bytes), lite_index, 4445);
-            void lite_b;
-            if (((((lite_b) < (0n))) || (((lite_b) > (255n))))) {
-                if (lite_strict) {
-                    return { ok: false, text: "", error: (("byte value outside 0..255: ") + (liteFn$lib$core$int$intText(lite_b))) };
-                }
-                lite_codePoint = 0n;
-                lite_needed = 0n;
-                lite_seen = 0n;
-                lite_lowerBoundary = 128n;
-                lite_upperBoundary = 191n;
-                lite_points.push(65533n);
-                lite_index = lite$addInt(lite_index, 1n, 4832);
-            } else if (((lite_needed) === (0n))) {
-                if (((lite_b) <= (127n))) {
-                    lite_points.push(lite_b);
-                } else if (((((lite_b) >= (194n))) && (((lite_b) <= (223n))))) {
-                    lite_needed = 1n;
-                    lite_codePoint = lite$subtractInt(lite_b, 192n, 5046);
-                } else if (((((lite_b) >= (224n))) && (((lite_b) <= (239n))))) {
-                    if (((lite_b) === (224n))) {
-                        lite_lowerBoundary = 160n;
-                    }
-                    if (((lite_b) === (237n))) {
-                        lite_upperBoundary = 159n;
-                    }
-                    lite_needed = 2n;
-                    lite_codePoint = lite$subtractInt(lite_b, 224n, 5263);
-                } else if (((((lite_b) >= (240n))) && (((lite_b) <= (244n))))) {
-                    if (((lite_b) === (240n))) {
-                        lite_lowerBoundary = 144n;
-                    }
-                    if (((lite_b) === (244n))) {
-                        lite_upperBoundary = 143n;
-                    }
-                    lite_needed = 3n;
-                    lite_codePoint = lite$subtractInt(lite_b, 240n, 5480);
-                } else {
-                    if (lite_strict) {
-                        return { ok: false, text: "", error: "invalid UTF-8 lead byte" };
-                    }
-                    lite_points.push(65533n);
-                }
-                lite_index = lite$addInt(lite_index, 1n, 5723);
-            } else if (((((lite_b) < (lite_lowerBoundary))) || (((lite_b) > (lite_upperBoundary))))) {
-                if (lite_strict) {
-                    return { ok: false, text: "", error: "invalid UTF-8 continuation byte" };
-                }
-                lite_codePoint = 0n;
-                lite_needed = 0n;
-                lite_seen = 0n;
-                lite_lowerBoundary = 128n;
-                lite_upperBoundary = 191n;
-                lite_points.push(65533n);
-            } else {
-                lite_lowerBoundary = 128n;
-                lite_upperBoundary = 191n;
-                lite_codePoint = lite$addInt(lite$multiplyInt(lite_codePoint, 64n, 6219), (lite$subtractInt(lite_b, 128n, 6229)), 6224);
-                lite_seen = lite$addInt(lite_seen, 1n, 6254);
-                if (((lite_seen) === (lite_needed))) {
-                    lite_points.push(lite_codePoint);
-                    lite_codePoint = 0n;
-                    lite_needed = 0n;
-                    lite_seen = 0n;
-                }
-                lite_index = lite$addInt(lite_index, 1n, 6463);
-            }
-        }
-        if (((lite_needed) > (0n))) {
-            if (lite_strict) {
-                return { ok: false, text: "", error: "truncated UTF-8 sequence" };
-            }
-            lite_points.push(65533n);
-        }
-        return lite$unicodeFromCodePoints([...(lite_points)]);
-    }
-    void liteFn$lib$core$unicode$utf8DecodeInternal;
-    function liteFn$lib$core$unicode$utf8DecodeStrict(lite_bytes: bigint[]): { ok: boolean; text: string; error: string } {
-        void lite_bytes;
-        return liteFn$lib$core$unicode$utf8DecodeInternal([...(lite_bytes)], true);
-    }
-    void liteFn$lib$core$unicode$utf8DecodeStrict;
     function liteFn$lib$util$json$isJsonSpace(lite_ch: string): boolean {
         void lite_ch;
         return ((((((((lite_ch) === (" "))) || (((lite_ch) === ("\t"))))) || (((lite_ch) === ("\r"))))) || (((lite_ch) === ("\n"))));
@@ -1693,143 +1348,17 @@ export function main(lite$write?: (text: string) => void): string {
         return ((lite_out) + ("\""));
     }
     void liteFn$lib$util$json$quoteString;
-    function liteFn$lib$core$io$readAll(lite_reader: { kind: string; handle: bigint }): bigint[] {
-        void lite_reader;
-        return lite$ioReadAll(lite_reader);
-    }
-    void liteFn$lib$core$io$readAll;
-    const lite$m$lib$core$diag$sourceErrorCategory = "SourceError";
-    void lite$m$lib$core$diag$sourceErrorCategory;
-    const lite$m$lib$core$diag$typeErrorCategory = "TypeError";
-    void lite$m$lib$core$diag$typeErrorCategory;
-    function liteFn$lib$core$file$validateBytes(lite_bytes: bigint[]): { ok: boolean; error: string } {
-        void lite_bytes;
-        for (const lite_byte of [...(lite_bytes)]) {
-            void lite_byte;
-            if (((((lite_byte) < (0n))) || (((lite_byte) > (255n))))) {
-                return { ok: false, error: (("byte value outside 0..255: ") + (liteFn$lib$core$int$intText(lite_byte))) };
-            }
-        }
-        return { ok: true, error: "" };
-    }
-    void liteFn$lib$core$file$validateBytes;
-    function liteFn$lib$core$file$writeWithHandle(lite_writer: { kind: string; handle: bigint }, lite_bytes: bigint[]): { ok: boolean; error: string } {
-        void lite_writer;
-        void lite_bytes;
-        if ((!(lite$ioWriterOk(lite_writer)))) {
-            return { ok: false, error: lite$ioWriterError(lite_writer) };
-        }
-        const lite_wrote = lite$ioWrite(lite_writer, [...(lite_bytes)]);
-        void lite_wrote;
-        const lite_closed = lite$ioCloseWriter(lite_writer);
-        void lite_closed;
-        if ((!((lite_wrote).ok))) {
-            return { ok: false, error: (lite_wrote).error };
-        }
-        if ((!((lite_closed).ok))) {
-            return { ok: false, error: (lite_closed).error };
-        }
-        return { ok: true, error: "" };
-    }
-    void liteFn$lib$core$file$writeWithHandle;
     function liteFn$lib$core$file$readText(lite_path: string): { ok: boolean; text: string; error: string } {
         void lite_path;
-        const lite_reader = lite$fileOpenReader(lite_path);
-        void lite_reader;
-        if ((!(lite$ioReaderOk(lite_reader)))) {
-            return { ok: false, text: "", error: lite$ioReaderError(lite_reader) };
-        }
-        const lite_bytes: bigint[] = [...(liteFn$lib$core$io$readAll(lite_reader))];
-        void lite_bytes;
-        const lite_readErr = lite$ioReaderError(lite_reader);
-        void lite_readErr;
-        const lite_closed = lite$ioCloseReader(lite_reader);
-        void lite_closed;
-        if (((lite_readErr) !== (""))) {
-            return { ok: false, text: "", error: lite_readErr };
-        }
-        if ((!((lite_closed).ok))) {
-            return { ok: false, text: "", error: (lite_closed).error };
-        }
-        return liteFn$lib$core$unicode$utf8DecodeStrict([...(lite_bytes)]);
+        return lite$fileReadText(lite_path);
     }
     void liteFn$lib$core$file$readText;
-    function liteFn$lib$core$file$writeBytes(lite_path: string, lite_bytes: bigint[]): { ok: boolean; error: string } {
-        void lite_path;
-        void lite_bytes;
-        const lite_checked = liteFn$lib$core$file$validateBytes([...(lite_bytes)]);
-        void lite_checked;
-        if ((!((lite_checked).ok))) {
-            return lite_checked;
-        }
-        return liteFn$lib$core$file$writeWithHandle(lite$fileOpenWriter(lite_path), [...(lite_bytes)]);
-    }
-    void liteFn$lib$core$file$writeBytes;
     function liteFn$lib$core$file$writeText(lite_path: string, lite_text: string): { ok: boolean; error: string } {
         void lite_path;
         void lite_text;
-        return liteFn$lib$core$file$writeBytes(lite_path, [...(liteFn$lib$core$unicode$utf8Encode(lite_text))]);
+        return lite$fileWriteText(lite_path, lite_text);
     }
     void liteFn$lib$core$file$writeText;
-    const lite$m$lib$core$crypto$b64Alphabet = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/";
-    void lite$m$lib$core$crypto$b64Alphabet;
-    const lite$m$lib$core$crypto$hexAlphabet = "0123456789abcdef";
-    void lite$m$lib$core$crypto$hexAlphabet;
-    const lite$m$lib$core$crypto$pow32 = 4294967296n;
-    void lite$m$lib$core$crypto$pow32;
-    function liteFn$lib$core$crypto$buildNibbleTable(lite_isXor: boolean): bigint[] {
-        void lite_isXor;
-        const lite_out: bigint[] = [...([])];
-        void lite_out;
-        let lite_a = 0n;
-        void lite_a;
-        while (((lite_a) < (16n))) {
-            let lite_b = 0n;
-            void lite_b;
-            while (((lite_b) < (16n))) {
-                let lite_x = lite_a;
-                void lite_x;
-                let lite_y = lite_b;
-                void lite_y;
-                let lite_res = 0n;
-                void lite_res;
-                let lite_bit = 1n;
-                void lite_bit;
-                let lite_k = 0n;
-                void lite_k;
-                while (((lite_k) < (4n))) {
-                    const lite_ax = lite$remainderInt(lite_x, 2n, 1316);
-                    void lite_ax;
-                    const lite_by = lite$remainderInt(lite_y, 2n, 1345);
-                    void lite_by;
-                    const lite_hit = (Boolean(lite_isXor) ? ((lite_ax) !== (lite_by)) : ((((lite_ax) === (1n))) && (((lite_by) === (1n)))));
-                    void lite_hit;
-                    if (lite_hit) {
-                        lite_res = lite$addInt(lite_res, lite_bit, 1455);
-                    }
-                    lite_x = lite$divideInt(lite_x, 2n, 1483);
-                    lite_y = lite$divideInt(lite_y, 2n, 1507);
-                    lite_bit = lite$multiplyInt(lite_bit, 2n, 1533);
-                    lite_k = lite$addInt(lite_k, 1n, 1557);
-                }
-                lite_out.push(lite_res);
-                lite_b = lite$addInt(lite_b, 1n, 1632);
-            }
-            lite_a = lite$addInt(lite_a, 1n, 1658);
-        }
-        return [...(lite_out)];
-    }
-    void liteFn$lib$core$crypto$buildNibbleTable;
-    const lite$m$lib$core$crypto$xor4: bigint[] = [...(liteFn$lib$core$crypto$buildNibbleTable(true))];
-    void lite$m$lib$core$crypto$xor4;
-    const lite$m$lib$core$crypto$and4: bigint[] = [...(liteFn$lib$core$crypto$buildNibbleTable(false))];
-    void lite$m$lib$core$crypto$and4;
-    const lite$m$lib$core$crypto$k256: bigint[] = [...([1116352408n, 1899447441n, 3049323471n, 3921009573n, 961987163n, 1508970993n, 2453635748n, 2870763221n, 3624381080n, 310598401n, 607225278n, 1426881987n, 1925078388n, 2162078206n, 2614888103n, 3248222580n, 3835390401n, 4022224774n, 264347078n, 604807628n, 770255983n, 1249150122n, 1555081692n, 1996064986n, 2554220882n, 2821834349n, 2952996808n, 3210313671n, 3336571891n, 3584528711n, 113926993n, 338241895n, 666307205n, 773529912n, 1294757372n, 1396182291n, 1695183700n, 1986661051n, 2177026350n, 2456956037n, 2730485921n, 2820302411n, 3259730800n, 3345764771n, 3516065817n, 3600352804n, 4094571909n, 275423344n, 430227734n, 506948616n, 659060556n, 883997877n, 958139571n, 1322822218n, 1537002063n, 1747873779n, 1955562222n, 2024104815n, 2227730452n, 2361852424n, 2428436474n, 2756734187n, 3204031479n, 3329325298n])];
-    void lite$m$lib$core$crypto$k256;
-    const lite$m$lib$core$crypto$k512Hi: bigint[] = [...([1116352408n, 1899447441n, 3049323471n, 3921009573n, 961987163n, 1508970993n, 2453635748n, 2870763221n, 3624381080n, 310598401n, 607225278n, 1426881987n, 1925078388n, 2162078206n, 2614888103n, 3248222580n, 3835390401n, 4022224774n, 264347078n, 604807628n, 770255983n, 1249150122n, 1555081692n, 1996064986n, 2554220882n, 2821834349n, 2952996808n, 3210313671n, 3336571891n, 3584528711n, 113926993n, 338241895n, 666307205n, 773529912n, 1294757372n, 1396182291n, 1695183700n, 1986661051n, 2177026350n, 2456956037n, 2730485921n, 2820302411n, 3259730800n, 3345764771n, 3516065817n, 3600352804n, 4094571909n, 275423344n, 430227734n, 506948616n, 659060556n, 883997877n, 958139571n, 1322822218n, 1537002063n, 1747873779n, 1955562222n, 2024104815n, 2227730452n, 2361852424n, 2428436474n, 2756734187n, 3204031479n, 3329325298n, 3391569614n, 3515267271n, 3940187606n, 4118630271n, 116418474n, 174292421n, 289380356n, 460393269n, 685471733n, 852142971n, 1017036298n, 1126000580n, 1288033470n, 1501505948n, 1607167915n, 1816402316n])];
-    void lite$m$lib$core$crypto$k512Hi;
-    const lite$m$lib$core$crypto$k512Lo: bigint[] = [...([3609767458n, 602891725n, 3964484399n, 2173295548n, 4081628472n, 3053834265n, 2937671579n, 3664609560n, 2734883394n, 1164996542n, 1323610764n, 3590304994n, 4068182383n, 991336113n, 633803317n, 3479774868n, 2666613458n, 944711139n, 2341262773n, 2007800933n, 1495990901n, 1856431235n, 3175218132n, 2198950837n, 3999719339n, 766784016n, 2566594879n, 3203337956n, 1034457026n, 2466948901n, 3758326383n, 168717936n, 1188179964n, 1546045734n, 1522805485n, 2643833823n, 2343527390n, 1014477480n, 1206759142n, 344077627n, 1290863460n, 3158454273n, 3505952657n, 106217008n, 3606008344n, 1432725776n, 1467031594n, 851169720n, 3100823752n, 1363258195n, 3750685593n, 3785050280n, 3318307427n, 3812723403n, 2003034995n, 3602036899n, 1575990012n, 1125592928n, 2716904306n, 442776044n, 593698344n, 3733110249n, 2999351573n, 3815920427n, 3928383900n, 566280711n, 3454069534n, 4000239992n, 1914138554n, 2731055270n, 3203993006n, 320620315n, 587496836n, 1086792851n, 365543100n, 2618297676n, 3409855158n, 4234509866n, 987167468n, 1246189591n])];
-    void lite$m$lib$core$crypto$k512Lo;
     function liteFn$lib$core$crypto$sha256Text(lite_value: string): string {
         void lite_value;
         return lite$cryptoDigestText("sha256", lite_value);
