@@ -5196,7 +5196,7 @@ test('first-class non-capturing function rejections cover captures, shadowing, t
 
 test('unified block Slice 1 enforces same-block uniqueness across root and inner blocks on TS and C', () => {
   const duplicateRe = /duplicate (?:declaration \S+ in block|top-level value \S+|module alias \S+|function \S+|type alias \S+)/;
-  const topLevelOnlyRe = /(?:pub is only allowed on top-level declarations|import is only allowed at top level|type aliases are only allowed at top level)/;
+  const topLevelOnlyRe = /(?:pub is only allowed on top-level declarations|import is only allowed at top level)/;
 
   const sharedRejections: ReadonlyArray<readonly [string, RegExp]> = [
     // Root cross-kind and same-kind collisions
@@ -5238,16 +5238,17 @@ test('unified block Slice 1 enforces same-block uniqueness across root and inner
     ['f := fn(x: Int): Int { y := 1; var y := 2; x + y };', duplicateRe],
     ['v := { x := 1; x := 2; x };', duplicateRe],
     ['v := { y := { x := 1; x := 2; x }; y };', duplicateRe],
-    // Top-level-only forms inside inner blocks
+    // Top-level-only forms inside inner blocks and inner-block type alias collisions
     ['{ pub x := 1; }', topLevelOnlyRe],
     ['{ import "core/io"; }', topLevelOnlyRe],
     ['{ io := import "core/io"; }', topLevelOnlyRe],
-    ['{ T := type Int; }', topLevelOnlyRe],
-    ['f := fn(): Unit { T := type Int; };', topLevelOnlyRe],
+    ['{ T := type Int; T := type String; }', duplicateRe],
+    ['{ T := type Int; T := 1; }', duplicateRe],
+    ['{ T := 1; T := type Int; }', duplicateRe],
     ['v := { pub x := 1; 0 };', topLevelOnlyRe],
     ['v := { import "core/io"; 0 };', topLevelOnlyRe],
     ['v := { io := import "core/io"; 0 };', topLevelOnlyRe],
-    ['v := { T := type Int; 0 };', topLevelOnlyRe],
+    ['v := { T := type Int; T := 1; 0 };', duplicateRe],
   ];
 
   for (const target of ['ts', 'c'] as const) {
@@ -5352,4 +5353,156 @@ test('unified block Slice 1 enforces same-block uniqueness across root and inner
   const tsFnRun = runTsArtifact(tsFnCompiled.stdout.toString());
   assert.equal(tsFnRun.status, 0);
   assert.equal(tsFnRun.stdout.toString(), '15 225 7 11\n');
+});
+
+test('unified block Slice 2a supports inner-block type aliases, parallel root wiring, and execution-trace safety on TS and C', () => {
+  const sharedPositive = [
+    'io := import "core/io";',
+    'Item := type Int;',
+    'Saved := type Item;',
+    'var acc: Item = 0;',
+    '{',
+    '  x: Box = 7;',
+    '  Box := type A;',
+    '  A := type Int;',
+    '  Item := type String;',
+    '  s: Item = "ok";',
+    '  n: Saved = 42;',
+    '  acc += x + n;',
+    '  io.outputLine(s);',
+    '}',
+    'if true {',
+    '  Tag := type Int;',
+    '  delta: Tag = 3;',
+    '  acc += delta;',
+    '} else {',
+    '  Tag := type String;',
+    '  unused: Tag = "no";',
+    '}',
+    'match {',
+    '  false {',
+    '    ArmT := type String;',
+    '    s2: ArmT = "unused";',
+    '  }',
+    '  _ {',
+    '    ArmT := type Int;',
+    '    v2: ArmT = 4;',
+    '    acc += v2;',
+    '  }',
+    '}',
+    'var step := 0;',
+    'loop step < 2 {',
+    '  IterT := type Int;',
+    '  inc: IterT = 5;',
+    '  acc += inc;',
+    '  step += 1;',
+    '}',
+    'pureVal := { ValT := type Int; 5 };',
+    'vOuter: Item = pureVal;',
+    'io.outputLine(acc, vOuter);',
+  ].join('\n');
+
+  for (const target of ['ts', 'c'] as const) {
+    if (target === 'c' && process.env['LITE_SKIP_NATIVE'] === '1') { continue; }
+    const compiled = compileTarget(target, { text: sharedPositive });
+    assert.equal(compiled.status, 0, `${target} compile failed:\n${compiled.stderr.toString()}`);
+    const artifact = compiled.stdout.toString();
+    if (target === 'ts') {
+      assert.equal(checkTsArtifact(artifact).status, 0);
+    }
+    const run = target === 'ts' ? runTsArtifact(artifact) : runCArtifact(artifact);
+    assert.equal(run.phase, 'run');
+    assert.equal(run.status, 0, `${target} run failed:\n${run.stderr.toString()}`);
+    assert.equal(run.stdout.toString(), 'ok\n66 5\n');
+  }
+
+  const sharedRejections: ReadonlyArray<readonly [string, RegExp]> = [
+    ['{ A := type A; }', /recursive type alias A/],
+    ['{ A := type B; B := type A; }', /recursive type alias B/],
+    ['T := type Int; { T := type T; }', /recursive type alias T/],
+    ['{ A := type Missing; }', /(?:unknown type alias Missing|unsupported \S+ type Missing)/],
+    ['{ Inner := type Int; } x: Inner = 1;', /(?:unknown type alias Inner|unsupported \S+ type Inner)/],
+    ['x := g(); g := fn(): Int { 7 };', /(?:cannot access g before initialization|cannot call before g is initialized)/],
+  ];
+
+  for (const target of ['ts', 'c'] as const) {
+    for (const [source, expectedRe] of sharedRejections) {
+      const rejected = compileTarget(target, { text: source });
+      assert.equal(rejected.status, 2, `${target} should reject:\n${source}\nstdout:\n${rejected.stdout.toString()}`);
+      assert.equal(rejected.stdout.toString(), '', `${target} rejected stdout should be empty:\n${source}`);
+      assert.match(rejected.stderr.toString(), expectedRe, `${target} stderr mismatch for:\n${source}`);
+    }
+  }
+
+  const tsPositive = [
+    'io := import "core/io";',
+    'list := import "core/list";',
+    'f := fn(): Int { g() };',
+    'g := fn(): Int { 7 };',
+    'even := fn(n: Int): Bool { if n == 0 { true } else { odd(n - 1) } };',
+    'odd := fn(n: Int): Bool { if n == 0 { false } else { even(n - 1) } };',
+    'apply := fn(cb: fn(): Int): Int { cb() };',
+    'useForward := fn(): Int {',
+    '  LocalInt := type Int;',
+    '  fromBase: LocalInt = base;',
+    '  p := pair;',
+    '  count = count + 1;',
+    '  list.pushBack(mut xs, 3);',
+    '  fromBase + p.a + p.b + left + right + xs[2]',
+    '};',
+    'read := fn(): Int { x };',
+    'before := fn(): Int { y = 9; y };',
+    'var saved: fn(): Int = fn(): Int { tmp2 };',
+    'blk := { saved2 := fn(): Int { tmp2 }; 5 };',
+    'blkFn := { saved3 := fn(): Int { tmp2 }; saved3 };',
+    'valBlk := { T := type Int; xVal: T = 3; xVal + 1 };',
+    'fnWithAlias := fn(): Int { FT := type Int; r: FT = 8; r };',
+    'thenResult := @t if true { 2 } else { 0 } then { TT := type Int; bonus: TT = 3; @t.value + bonus };',
+    'var finAcc := 0;',
+    'finVal := { 1 } finally { FT := type Int; fv: FT = 4; finAcc += fv; };',
+    'base := 3 + 4;',
+    'pair := (a = 2, b = 5);',
+    '(left, right) := (10, 20);',
+    'var count := 0;',
+    'seed: List<Int> = [1, 2];',
+    'mut xs := seed;',
+    'var x: Int = ?;',
+    'x = 5;',
+    'var y: Int = ?;',
+    'tmp2 := 11;',
+    'io.outputLine(f(), if even(4) { 1 } else { 0 }, apply(g), useForward(), count);',
+    'io.outputLine(read(), before(), saved(), blkFn(), blk, valBlk, fnWithAlias(), thenResult, finAcc, finVal);',
+  ].join('\n');
+
+  const tsCompiled = compileTs({ text: tsPositive });
+  assert.equal(tsCompiled.status, 0, tsCompiled.stderr.toString());
+  assert.equal(checkTsArtifact(tsCompiled.stdout.toString()).status, 0);
+  const tsRun = runTsArtifact(tsCompiled.stdout.toString());
+  assert.equal(tsRun.status, 0, tsRun.stderr.toString());
+  assert.equal(tsRun.stdout.toString(), '7 1 7 47 1\n5 9 11 11 5 4 8 5 4 1\n');
+
+  const tsRejections: ReadonlyArray<readonly [string, RegExp]> = [
+    ['fp := g; g := fn(): Int { 7 };', /cannot access g before initialization/],
+    ['op := fn(): Int { tmp2 }; tmp1 := op(); tmp2 := 1;', /cannot call before tmp2 is initialized/],
+    ['a := fn(): Int { b() }; b := fn(): Int { tmp2 }; early := a(); tmp2 := 1;', /cannot call before tmp2 is initialized/],
+    ['a := fn(): Int { b() }; early := a(); b := fn(): Int { 1 };', /cannot call before b is initialized/],
+    ['read := fn(): Int { x }; var x: Int = ?; early := read(); x = 5;', /cannot call before x is initialized/],
+    ['var x: Int = ?; read := fn(): Int { x }; early := read(); x = 5;', /cannot call before x is initialized/],
+    ['io := import "core/io"; var x: Int = ?; init := fn(): Unit { x = 2; }; io.outputLine(x);', /cannot read uninitialized local x/],
+    ['before := fn(): Unit { x = 2; }; before(); var x: Int = ?;', /cannot call before x is initialized/],
+    ['var saved: fn(): Int = fn(): Int { tmp2 }; early := saved(); tmp2 := 11;', /cannot call before tmp2 is initialized/],
+    ['apply := fn(cb: fn(): Int): Int { cb() }; op := fn(): Int { tmp2 }; early := apply(op); tmp2 := 1;', /cannot call before tmp2 is initialized/],
+    ['apply := fn(cb: fn(): Int): Int { cb() }; early := apply(fn(): Int { tmp2 }); tmp2 := 1;', /cannot call before tmp2 is initialized/],
+    ['var applyVar: fn(fn(): Int): Int = fn(cb: fn(): Int): Int { cb() }; early := applyVar(fn(): Int { tmp2 }); tmp2 := 1;', /cannot call before tmp2 is initialized/],
+    ['early := (fn(): Int { tmp2 })(); tmp2 := 1;', /cannot call before tmp2 is initialized/],
+    ['x := { saved := fn(): Int { tmp2 }; saved() }; tmp2 := 1;', /cannot call before tmp2 is initialized/],
+    ['early := ({ fn(): Int { tmp2 } })(); tmp2 := 1;', /cannot call before tmp2 is initialized/],
+  ];
+
+  for (const [source, expectedRe] of tsRejections) {
+    const rejected = compileTs({ text: source });
+    assert.equal(rejected.status, 2, `ts should reject:\n${source}\nstdout:\n${rejected.stdout.toString()}`);
+    assert.equal(rejected.stdout.toString(), '', `ts rejected stdout should be empty:\n${source}`);
+    assert.match(rejected.stderr.toString(), expectedRe, `ts stderr mismatch for:\n${source}`);
+  }
 });

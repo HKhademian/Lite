@@ -134,6 +134,15 @@ Keep dependencies explicit; split a topic further when its contracts warrant it.
   `loop ... as item`, and destructuring bindings on both targets; nested `{ ... }`
   outer-block shadowing and single-statement inner-block tuple component
   ordering remain preserved.
+- [x] **Inner-block type aliases and parallel root wiring (2026-11-15, Unified Block Model Slice 2a):**
+  `Name := type Target;` declarations work in all inner `{ ... }` blocks on
+  both TS and C with parallel forward type wiring, outer lexical alias
+  preservation under shadowing, and cycle/unknown-type rejection; file-root
+  `fn` and root bindings wire in parallel so forward/mutual `fn` calls and
+  deferred `fn` body references to later root declarations compile while
+  compile-time execution-trace analysis rejects early eager calls/reads before
+  targets initialize and preserves root `?` uninit states across uninvoked
+  `fn` definitions.
 - [x] **Script expressions:** discard ordinary expression values while retaining
   evaluation, effects and faults; accept empty item separators.
 - [x] **Function completion:** keep completion facts per block, join all conditional

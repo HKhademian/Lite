@@ -1,8 +1,8 @@
 {
-  "note": "Unified Block Model Slice 1 (uniform same-block symbol uniqueness across root and inner blocks, preserving nested outer-block shadowing and intra-pattern ordered destructuring). All 69 TS and C corpus artifact hashes and 25 rejection cases verified.",
+  "note": "Unified Block Model Slice 2a (inner-block type aliases on TS and C, parallel root fn and value wiring, and compile-time execution-trace initialization safety). All 69 TS and C corpus artifact hashes and 25 rejection cases verified.",
   "recorded": "2026-11-15",
-  "sourceSha256": "39d3b5535531c7ae00959d7944cce8db00442a4593c92f1da11268b43ee3f7b7",
-  "compilerSha256": "a7bca6455738a7bdb1ca4759ac39598f2ed8d03a2686d9eb0ed831df02341751",
+  "sourceSha256": "3d3819de5b47c966254f26be520a544a59a9e015357be1820dfe4463d3c148d0",
+  "compilerSha256": "88e9a919e71000f460975bbf6a02a1bb39d4b81520d51e210ef73b727c90e7c6",
   "programCases": 69,
   "rejectedCases": 25,
   "artifacts": [

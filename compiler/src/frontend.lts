@@ -91,11 +91,11 @@ BranchUpdate := type (depth: Int, runtime: String, initState: String);
 /** One recognized binary operator spelling and the number of source bytes it occupies. */
 Operator := type (text: String, width: Int);
 /** One previously declared top-level function: source name, result kind, first parameter entry and parameter count. */
-FunctionInfo := type (name: String, runtime: String, result: String, first: Int, count: Int);
+FunctionInfo := type (name: String, runtime: String, result: String, first: Int, count: Int, declAt: Int);
 /** A later top-level scalar definition visible only while checking a deferred function body. */
-FutureValue := type (name: String, runtime: String, kind: String, at: Int, intValue: Int, textValue: String);
-/** One top-level transparent type alias: source name, raw target type text, declaration position and the position just after that target. */
-AliasDecl := type (name: String, target: String, at: Int, end: Int);
+FutureValue := type (name: String, runtime: String, kind: String, at: Int, mutable: Bool, writable: Bool, initState: String);
+/** One transparent type alias: source name, raw target type text, declaration position, end position and enclosing block depth. */
+AliasDecl := type (name: String, target: String, at: Int, end: Int, depth: Int);
 /** Lexical control-flow and metadata context for an enclosing function, block, conditional, match, loop or finally scope. */
 ConstructCtx := type (id: Int, tag: String, kind: String, phase: String, iifeDepth: Int, valKind: String, valVar: String, label: String, iterLabel: String, countVar: String, itemVar: String, itemKind: String, indexVar: String, hasIndex: Bool);
 /** 32-bucket hashed string set for O(1) reachable-token membership checks across large module graphs. */
@@ -256,14 +256,19 @@ unsupportedAliasTarget := fn(source: String, position: Int, prefix: String, targ
     "; only Int, Float, String, Bool, Unit, List<T>, flat named tuples and aliases are supported");
 }
 
-/** Returns the index of the first top-level alias named `name`, or -1 when absent. */
+/** Returns the index of the first visible alias named `name` at the innermost active block depth, or -1 when absent. */
 findAlias := fn(aliases: List<AliasDecl>, name: String): Int {
     var index := 0;
+    var found := -1;
+    var foundDepth := -1;
     loop aliases as alias {
-        if alias.name == name { return index; }
+        if alias.name == name and alias.depth > foundDepth {
+            found = index;
+            foundDepth = alias.depth;
+        }
         index = index + 1;
     }
-    -1
+    found
 }
 
 /** Reads one local or module-qualified type name. */
@@ -291,6 +296,49 @@ aliasIndexAt := fn(aliases: List<AliasDecl>, position: Int): Int {
         index = index + 1;
     }
     -1
+}
+
+/** Returns the highest block depth present in `aliases`, or 0 when `aliases` is empty. */
+maxAliasDepth := fn(aliases: List<AliasDecl>): Int {
+    var highest := 0;
+    loop aliases as alias {
+        if alias.depth > highest { highest = alias.depth; }
+    }
+    highest
+}
+
+/** Drops aliases declared at block depth `depth` or deeper when exiting a block. */
+popBlockAliases := fn(aliases: List<AliasDecl>, depth: Int): List<AliasDecl> {
+    var hasDeeper := false;
+    loop aliases as alias {
+        if alias.depth >= depth {
+            hasDeeper = true;
+            break;
+        }
+    }
+    if not hasDeeper { return aliases; }
+    kept: mut List<AliasDecl> = [];
+    loop aliases as alias {
+        if alias.depth < depth { listLib.pushBack(mut kept, alias); }
+    }
+    kept
+}
+
+/** Filters `aliases` to declarations at or above `maxDepth` for lexical outer-alias expansion. */
+aliasesUpToDepth := fn(aliases: List<AliasDecl>, maxDepth: Int): List<AliasDecl> {
+    var hasDeeper := false;
+    loop aliases as alias {
+        if alias.depth > maxDepth {
+            hasDeeper = true;
+            break;
+        }
+    }
+    if not hasDeeper { return aliases; }
+    kept: mut List<AliasDecl> = [];
+    loop aliases as alias {
+        if alias.depth <= maxDepth { listLib.pushBack(mut kept, alias); }
+    }
+    kept
 }
 
 /** True when `kind` is this compiler's canonical flat tuple kind, written `(label:Kind,:Kind)`. */
@@ -1084,19 +1132,20 @@ parseTypeWithSeen := fn(errSource: String, errPos: Int, useLocalErr: Bool, sourc
     }
     index := findAlias(aliases, name);
     if index >= 0 {
-        if listLib.listContainsText(seen, name) {
-            alias := aliases[index];
+        alias := aliases[index];
+        seenKey := integer.intText(alias.depth) + ":" + name;
+        if listLib.listContainsText(seen, seenKey) {
             failAt(errSource, alias.at, prefix, "recursive type alias " + name);
             return (kind = "", next = after);
         }
-        alias := aliases[index];
         if alias.target == "" {
             unsupportedAliasTarget(errSource, alias.at, prefix, "target");
             return (kind = "", next = after);
         }
         nextSeen: mut List<String> = seen;
-        listLib.pushBack(mut nextSeen, name);
-        resolved := self(errSource, alias.at, false, alias.target, 0, prefix, aliases, "alias", "", nextSeen);
+        listLib.pushBack(mut nextSeen, seenKey);
+        scopedAliases := aliasesUpToDepth(aliases, alias.depth);
+        resolved := self(errSource, alias.at, false, alias.target, 0, prefix, scopedAliases, "alias", "", nextSeen);
         trailing := skipTrivia(alias.target, resolved.next, prefix);
         if trailing < textLib.length(alias.target) {
             failAt(errSource, alias.at, prefix, "unexpected text after type");
@@ -1538,7 +1587,7 @@ localIndex := fn(locals: List<Local>, name: String): Int {
     var index := 0;
     var found := -1;
     loop locals as local {
-        if local.name == name { found = index; }
+        if local.depth >= -1 and local.name == name { found = index; }
         index = index + 1;
     }
     found
@@ -1547,7 +1596,7 @@ localIndex := fn(locals: List<Local>, name: String): Int {
 /** True when `locals` already binds runtime identifier `runtime` in scope. */
 localsUseRuntime := fn(locals: List<Local>, runtime: String): Bool {
     loop locals as local {
-        if local.runtime == runtime { return true; }
+        if local.depth >= -1 and local.runtime == runtime { return true; }
     }
     false
 }
@@ -3826,6 +3875,1537 @@ inferLoopValueKind := fn(raw: String, loopId: Int, tagDisplay: String, source: S
     "Unit"
 }
 
+/** Pre-collects shallow `Name := type Target` aliases inside the `{ ... }` block opening at `openBracePos`, skipping nested `{ ... }` blocks. */
+collectBlockTypeAliases := fn(source: String, openBracePos: Int, prefix: String, blockDepth: Int, baseAliases: List<AliasDecl>): List<AliasDecl> {
+    size := textLib.length(source);
+    if openBracePos < 0 or openBracePos >= size or textLib.at(source, openBracePos) =!= "{" {
+        return baseAliases;
+    }
+    var nextTypeHit := textLib.indexOfText(source, "type", openBracePos + 1);
+    if nextTypeHit < 0 { return baseAliases; }
+    found: mut List<AliasDecl> = [];
+    var hasFound := false;
+    var cursor := openBracePos + 1;
+    var parenDepth := 0;
+    loop cursor < size {
+        cursor = skipTrivia(source, cursor, prefix);
+        if cursor >= size { break; }
+        if cursor > nextTypeHit {
+            nextTypeHit = textLib.indexOfText(source, "type", cursor);
+            if nextTypeHit < 0 { break; }
+        }
+        ch := textLib.at(source, cursor);
+        if ch == "\"" {
+            cursor = skipAliasString(source, cursor);
+        } else if ch == "{" {
+            closed := scanBraceEnd(source, cursor, prefix);
+            if closed < 0 { break; }
+            cursor = closed;
+        } else if ch == "}" {
+            if parenDepth == 0 { break; }
+            parenDepth = parenDepth - 1;
+            cursor = cursor + 1;
+        } else if ch == "(" or ch == "[" {
+            parenDepth = parenDepth + 1;
+            cursor = cursor + 1;
+        } else if ch == ")" or ch == "]" {
+            if parenDepth > 0 { parenDepth = parenDepth - 1; }
+            cursor = cursor + 1;
+        } else if parenDepth == 0 and textLib.isNameStart(ch) {
+            nameStart := cursor;
+            afterName := textLib.skipName(source, cursor);
+            name := textLib.slice(source, nameStart, afterName);
+            opPos := skipTrivia(source, afterName, prefix);
+            if name =!= "pub" and not isReservedWord(name) and textLib.startsWithAt(source, opPos, ":=") {
+                typePos := skipTrivia(source, opPos + 2, prefix);
+                if textLib.wordAt(source, typePos, "type") {
+                    targetStart := skipTrivia(source, typePos + 4, prefix);
+                    aliasTarget := collectTypeTarget(source, targetStart, prefix);
+                    listLib.pushBack(mut found, (name = name, target = aliasTarget.text, at = nameStart, end = aliasTarget.next, depth = blockDepth));
+                    hasFound = true;
+                    cursor = if aliasTarget.next > typePos + 4 { aliasTarget.next } else { typePos + 4 };
+                    continue;
+                }
+            }
+            cursor = opPos;
+        } else {
+            cursor = cursor + 1;
+        }
+    }
+    if not hasFound { return baseAliases; }
+    out: mut List<AliasDecl> = [];
+    loop baseAliases as entry { listLib.pushBack(mut out, entry); }
+    loop found as entry { listLib.pushBack(mut out, entry); }
+    out
+}
+
+/** Non-failing counterpart to `parseTypeWithSeen` used by root pre-registration and expression kind inference. */
+canResolveTypeAt := fn(source: String, position: Int, prefix: String, aliases: List<AliasDecl>, genericType: String, seen: List<String>, depthLeft: Int): (ok: Bool, kind: String, next: Int) {
+    if depthLeft <= 0 { return (ok = false, kind = "", next = position); }
+    size := textLib.length(source);
+    start := skipTrivia(source, position, prefix);
+    if start >= size { return (ok = false, kind = "", next = start); }
+    ch := textLib.at(source, start);
+    if ch == "(" {
+        var cursor := skipTrivia(source, start + 1, prefix);
+        labels: mut List<String> = [];
+        parts: mut List<String> = [];
+        var count := 0;
+        var hasNamed := false;
+        var hadComma := false;
+        loop cursor < size and textLib.at(source, cursor) =!= ")" {
+            if textLib.at(source, cursor) == "(" { return (ok = false, kind = "", next = cursor); }
+            var label := "";
+            var fieldStart := cursor;
+            if textLib.isNameStart(textLib.at(source, cursor)) {
+                afterName := textLib.skipName(source, cursor);
+                colonPos := skipTrivia(source, afterName, prefix);
+                if colonPos < size and textLib.at(source, colonPos) == ":" {
+                    candidate := textLib.slice(source, cursor, afterName);
+                    if isReservedWord(candidate) or listLib.listContainsText(labels, candidate) {
+                        return (ok = false, kind = "", next = cursor);
+                    }
+                    label = candidate;
+                    hasNamed = true;
+                    listLib.pushBack(mut labels, label);
+                    fieldStart = skipTrivia(source, colonPos + 1, prefix);
+                    if fieldStart >= size or textLib.at(source, fieldStart) == "(" {
+                        return (ok = false, kind = "", next = fieldStart);
+                    }
+                }
+            }
+            parsedField := self(source, fieldStart, prefix, aliases, genericType, seen, depthLeft - 1);
+            if not parsedField.ok { return (ok = false, kind = "", next = fieldStart); }
+            if isTupleKind(parsedField.kind) or isListKind(parsedField.kind) or parsedField.kind == "Unit" {
+                return (ok = false, kind = "", next = fieldStart);
+            }
+            listLib.pushBack(mut parts, label + ":" + parsedField.kind);
+            count = count + 1;
+            cursor = skipTrivia(source, parsedField.next, prefix);
+            if cursor < size and textLib.at(source, cursor) == "," {
+                hadComma = true;
+                cursor = skipTrivia(source, cursor + 1, prefix);
+            } else {
+                hadComma = false;
+                break;
+            }
+        }
+        if cursor >= size or textLib.at(source, cursor) =!= ")" {
+            return (ok = false, kind = "", next = cursor);
+        }
+        if count == 0 or (count == 1 and not hasNamed and not hadComma) {
+            return (ok = false, kind = "", next = start);
+        }
+        return (ok = true, kind = "(" + textLib.joinTexts(parts, ",") + ")", next = cursor + 1);
+    }
+    if ch == "[" {
+        elem := self(source, start + 1, prefix, aliases, genericType, seen, depthLeft - 1);
+        if not elem.ok or elem.kind == "Unit" { return (ok = false, kind = "", next = start); }
+        afterElem := skipTrivia(source, elem.next, prefix);
+        if afterElem >= size or textLib.at(source, afterElem) =!= ";" {
+            return (ok = false, kind = "", next = afterElem);
+        }
+        extentStart := skipTrivia(source, afterElem + 1, prefix);
+        var extentEnd := extentStart;
+        loop extentEnd < size and textLib.isDigit(textLib.at(source, extentEnd)) {
+            extentEnd = extentEnd + 1;
+        }
+        if extentEnd == extentStart { return (ok = false, kind = "", next = extentStart); }
+        extent := parseDigits(source, extentStart, extentEnd);
+        if extent <= 0 { return (ok = false, kind = "", next = extentStart); }
+        afterExtent := skipTrivia(source, extentEnd, prefix);
+        if afterExtent >= size or textLib.at(source, afterExtent) =!= "]" {
+            return (ok = false, kind = "", next = afterExtent);
+        }
+        return (ok = true, kind = "[" + elem.kind + ";" + integer.intText(extent) + "]", next = afterExtent + 1);
+    }
+    if textLib.wordAt(source, start, "fn") {
+        afterFn := skipTrivia(source, start + 2, prefix);
+        if afterFn >= size or textLib.at(source, afterFn) =!= "(" {
+            return (ok = false, kind = "", next = afterFn);
+        }
+        var pCursor := skipTrivia(source, afterFn + 1, prefix);
+        paramLabels: mut List<String> = [];
+        paramParts: mut List<String> = [];
+        loop pCursor < size and textLib.at(source, pCursor) =!= ")" {
+            var pLabel := "";
+            var pTypeStart := pCursor;
+            if textLib.isNameStart(textLib.at(source, pCursor)) {
+                afterPLabel := textLib.skipName(source, pCursor);
+                pColon := skipTrivia(source, afterPLabel, prefix);
+                if pColon < size and textLib.at(source, pColon) == ":" {
+                    candidate := textLib.slice(source, pCursor, afterPLabel);
+                    if isReservedWord(candidate) or listLib.listContainsText(paramLabels, candidate) {
+                        return (ok = false, kind = "", next = pCursor);
+                    }
+                    pLabel = candidate;
+                    listLib.pushBack(mut paramLabels, pLabel);
+                    pTypeStart = skipTrivia(source, pColon + 1, prefix);
+                }
+            }
+            parsedParam := self(source, pTypeStart, prefix, aliases, genericType, seen, depthLeft - 1);
+            if not parsedParam.ok { return (ok = false, kind = "", next = pTypeStart); }
+            listLib.pushBack(mut paramParts, pLabel + ":" + parsedParam.kind);
+            pCursor = skipTrivia(source, parsedParam.next, prefix);
+            if pCursor < size and textLib.at(source, pCursor) == "," {
+                pCursor = skipTrivia(source, pCursor + 1, prefix);
+            } else {
+                break;
+            }
+        }
+        if pCursor >= size or textLib.at(source, pCursor) =!= ")" {
+            return (ok = false, kind = "", next = pCursor);
+        }
+        afterClose := skipTrivia(source, pCursor + 1, prefix);
+        if afterClose >= size or textLib.at(source, afterClose) =!= ":" {
+            return (ok = false, kind = "", next = afterClose);
+        }
+        retType := self(source, afterClose + 1, prefix, aliases, genericType, seen, depthLeft - 1);
+        if not retType.ok { return (ok = false, kind = "", next = afterClose + 1); }
+        return (ok = true, kind = "fn(" + textLib.joinTexts(paramParts, ",") + "):" + retType.kind, next = retType.next);
+    }
+    if not textLib.isNameStart(ch) { return (ok = false, kind = "", next = start); }
+    afterName := textLib.skipName(source, start);
+    name := textLib.slice(source, start, afterName);
+    if name == "List" {
+        afterList := skipTrivia(source, afterName, prefix);
+        if afterList >= size or textLib.at(source, afterList) =!= "<" {
+            return (ok = false, kind = "", next = afterList);
+        }
+        elem := self(source, afterList + 1, prefix, aliases, genericType, seen, depthLeft - 1);
+        if not elem.ok or isListKind(elem.kind) or elem.kind == "Unit" {
+            return (ok = false, kind = "", next = afterList + 1);
+        }
+        close := skipTrivia(source, elem.next, prefix);
+        if close >= size or textLib.at(source, close) =!= ">" {
+            return (ok = false, kind = "", next = close);
+        }
+        return (ok = true, kind = "List<" + elem.kind + ">", next = close + 1);
+    }
+    if name == "Int" or name == "Float" or name == "String" or name == "Bool" or name == "Unit" {
+        return (ok = true, kind = name, next = afterName);
+    }
+    if numeric.numericAliasKind(name) =!= "" {
+        return (ok = true, kind = numeric.numericAliasKind(name), next = afterName);
+    }
+    if numeric.isNarrowNumericKind(name) {
+        return (ok = true, kind = name, next = afterName);
+    }
+    if genericType =!= "" and name == genericType {
+        return (ok = true, kind = genericType, next = afterName);
+    }
+    aliasIdx := findAlias(aliases, name);
+    if aliasIdx < 0 { return (ok = false, kind = "", next = afterName); }
+    alias := aliases[aliasIdx];
+    seenKey := integer.intText(alias.depth) + ":" + name;
+    if listLib.listContainsText(seen, seenKey) or alias.target == "" {
+        return (ok = false, kind = "", next = afterName);
+    }
+    nextSeen: mut List<String> = [];
+    loop seen as entry { listLib.pushBack(mut nextSeen, entry); }
+    listLib.pushBack(mut nextSeen, seenKey);
+    scopedAliases := aliasesUpToDepth(aliases, alias.depth);
+    resolved := self(alias.target, 0, prefix, scopedAliases, "", nextSeen, depthLeft - 1);
+    if not resolved.ok { return (ok = false, kind = "", next = afterName); }
+    if skipTrivia(alias.target, resolved.next, prefix) < textLib.length(alias.target) {
+        return (ok = false, kind = "", next = afterName);
+    }
+    (ok = true, kind = resolved.kind, next = afterName)
+}
+
+/** Non-failing guard checking whether `parseLocalType` can succeed at `position`. */
+canPreResolveLocalType := fn(source: String, position: Int, prefix: String, aliases: List<AliasDecl>): Bool {
+    var cursor := skipTrivia(source, position, prefix);
+    if textLib.wordAt(source, cursor, "mut") {
+        cursor = skipTrivia(source, cursor + 3, prefix);
+    }
+    emptySeen: List<String> = [];
+    canResolveTypeAt(source, cursor, prefix, aliases, "", emptySeen, 32).ok
+}
+
+/** Non-failing guard checking whether `parseFunctionHeader` can succeed at `position` without triggering diagnostics. */
+canPreParseFunctionHeader := fn(source: String, position: Int, prefix: String, aliases: List<AliasDecl>, listIntrinsic: Bool): Bool {
+    size := textLib.length(source);
+    var cursor := skipTrivia(source, position, prefix);
+    var genericType := "";
+    if cursor < size and textLib.at(source, cursor) == "<" {
+        if not listIntrinsic { return false; }
+        binderStart := skipTrivia(source, cursor + 1, prefix);
+        if binderStart >= size or not textLib.isNameStart(textLib.at(source, binderStart)) { return false; }
+        binderEnd := textLib.skipName(source, binderStart);
+        binder := textLib.slice(source, binderStart, binderEnd);
+        if binder =!= "T" { return false; }
+        afterBinder := skipTrivia(source, binderEnd, prefix);
+        if afterBinder >= size or textLib.at(source, afterBinder) =!= ">" { return false; }
+        genericType = "T";
+        cursor = skipTrivia(source, afterBinder + 1, prefix);
+    }
+    if cursor >= size or textLib.at(source, cursor) =!= "(" { return false; }
+    cursor = skipTrivia(source, cursor + 1, prefix);
+    names: mut List<String> = [];
+    emptySeen: List<String> = [];
+    var paramCount := 0;
+    loop cursor < size and textLib.at(source, cursor) =!= ")" {
+        if textLib.startsWithAt(source, cursor, "...") {
+            if not listIntrinsic or paramCount > 0 { return false; }
+            packStart := skipTrivia(source, cursor + 3, prefix);
+            if packStart >= size or not textLib.isNameStart(textLib.at(source, packStart)) { return false; }
+            packEnd := textLib.skipName(source, packStart);
+            if isReservedWord(textLib.slice(source, packStart, packEnd)) { return false; }
+            afterPack := skipTrivia(source, packEnd, prefix);
+            if afterPack >= size or textLib.at(source, afterPack) =!= ":" { return false; }
+            packType := canResolveTypeAt(source, afterPack + 1, prefix, aliases, genericType, emptySeen, 32);
+            if not packType.ok { return false; }
+            cursor = skipTrivia(source, packType.next, prefix);
+            break;
+        }
+        if not textLib.isNameStart(textLib.at(source, cursor)) { return false; }
+        nameStart := cursor;
+        nameEnd := textLib.skipName(source, nameStart);
+        pName := textLib.slice(source, nameStart, nameEnd);
+        if isReservedWord(pName) or listLib.listContainsText(names, pName) { return false; }
+        listLib.pushBack(mut names, pName);
+        afterPName := skipTrivia(source, nameEnd, prefix);
+        if afterPName >= size or textLib.at(source, afterPName) =!= ":" { return false; }
+        cursor = skipTrivia(source, afterPName + 1, prefix);
+        if textLib.wordAt(source, cursor, "mut") {
+            if not listIntrinsic { return false; }
+            cursor = skipTrivia(source, cursor + 3, prefix);
+        }
+        pType := canResolveTypeAt(source, cursor, prefix, aliases, genericType, emptySeen, 32);
+        if not pType.ok { return false; }
+        paramCount = paramCount + 1;
+        cursor = skipTrivia(source, pType.next, prefix);
+        if cursor < size and textLib.at(source, cursor) == "," {
+            cursor = skipTrivia(source, cursor + 1, prefix);
+        } else {
+            break;
+        }
+    }
+    if cursor >= size or textLib.at(source, cursor) =!= ")" { return false; }
+    afterParen := skipTrivia(source, cursor + 1, prefix);
+    if afterParen >= size or textLib.at(source, afterParen) =!= ":" { return false; }
+    retType := canResolveTypeAt(source, afterParen + 1, prefix, aliases, genericType, emptySeen, 32);
+    if not retType.ok { return false; }
+    afterHeader := skipTrivia(source, retType.next, prefix);
+    if afterHeader < size and textLib.at(source, afterHeader) == "@" { return false; }
+    true
+}
+
+/** Non-failing counterpart to `parseTupleDestructureTarget` for root pre-collection. */
+tryParseDestructureNames := fn(source: String, open: Int, prefix: String): (ok: Bool, namesText: String, count: Int, grouped: Bool) {
+    size := textLib.length(source);
+    if open < 0 or open >= size or textLib.at(source, open) =!= "(" {
+        return (ok = false, namesText = "", count = 0, grouped = false);
+    }
+    var cursor := skipTrivia(source, open + 1, prefix);
+    names: mut List<String> = [];
+    var count := 0;
+    var hadComma := false;
+    loop cursor < size and textLib.at(source, cursor) =!= ")" {
+        if not textLib.isNameStart(textLib.at(source, cursor)) {
+            return (ok = false, namesText = "", count = 0, grouped = false);
+        }
+        nameStart := cursor;
+        nameEnd := textLib.skipName(source, nameStart);
+        bindName := textLib.slice(source, nameStart, nameEnd);
+        if isReservedWord(bindName) {
+            return (ok = false, namesText = "", count = 0, grouped = false);
+        }
+        listLib.pushBack(mut names, bindName);
+        count = count + 1;
+        cursor = skipTrivia(source, nameEnd, prefix);
+        if cursor < size and textLib.at(source, cursor) == "," {
+            hadComma = true;
+            cursor = skipTrivia(source, cursor + 1, prefix);
+        } else {
+            break;
+        }
+    }
+    if cursor >= size or textLib.at(source, cursor) =!= ")" {
+        return (ok = false, namesText = "", count = 0, grouped = false);
+    }
+    (ok = true, namesText = textLib.joinTexts(names, ","), count = count, grouped = count == 1 and not hadComma)
+}
+
+/** Finds the start position of the final expression inside `{ ... }` from `openBracePos` to `closeBracePos`, or -1 when empty. */
+tryInferBlockTailStart := fn(source: String, openBracePos: Int, closeBracePos: Int, prefix: String): Int {
+    limit := closeBracePos - 1;
+    var cursor := skipTrivia(source, openBracePos + 1, prefix);
+    if cursor >= limit { return -1; }
+    var lastTailStart := cursor;
+    var parenDepth := 0;
+    loop cursor < limit {
+        ch := textLib.at(source, cursor);
+        if ch == "\"" {
+            cursor = skipAliasString(source, cursor);
+        } else if ch == "/" and textLib.startsWithAt(source, cursor, "/*") {
+            cursor = skipComment(source, cursor, prefix);
+        } else if ch == "(" or ch == "[" {
+            parenDepth = parenDepth + 1;
+            cursor = cursor + 1;
+        } else if ch == ")" or ch == "]" {
+            if parenDepth > 0 { parenDepth = parenDepth - 1; }
+            cursor = cursor + 1;
+        } else if ch == "{" {
+            closed := scanBraceEnd(source, cursor, prefix);
+            if closed < 0 or closed > limit { return -1; }
+            cursor = closed;
+        } else if parenDepth == 0 and ch == ";" {
+            cursor = skipTrivia(source, cursor + 1, prefix);
+            if cursor >= limit { return -1; }
+            lastTailStart = cursor;
+        } else {
+            cursor = cursor + 1;
+        }
+    }
+    lastTailStart
+}
+
+/** Best-effort non-failing expression kind inference for unannotated forward root declarations. */
+tryInferRootExprKind := fn(source: String, position: Int, prefix: String, aliases: List<AliasDecl>, functions: List<FunctionInfo>, params: List<String>, locals: List<Local>, futureValues: List<FutureValue>, expected: String, minimum: Int, depthLeft: Int): (kind: String, next: Int) {
+    if depthLeft <= 0 { return (kind = "", next = position); }
+    size := textLib.length(source);
+    start := skipTrivia(source, position, prefix);
+    if start >= size { return (kind = "", next = start); }
+    ch := textLib.at(source, start);
+    var leftKind := "";
+    var leftNext := start;
+    var curFnIdx := -1;
+    if ch == "+" or ch == "-" {
+        if start + 1 < size and (textLib.at(source, start + 1) == ">" or textLib.at(source, start + 1) == "-") {
+            return (kind = "", next = start);
+        }
+        operand := self(source, start + 1, prefix, aliases, functions, params, locals, futureValues, expected, 70, depthLeft - 1);
+        if operand.kind == "" or not numeric.isNumericKind(operand.kind) {
+            return (kind = "", next = start);
+        }
+        leftKind = operand.kind;
+        leftNext = operand.next;
+    } else if ch == "n" and textLib.wordAt(source, start, "not") {
+        operand := self(source, start + 3, prefix, aliases, functions, params, locals, futureValues, "Bool", 70, depthLeft - 1);
+        if operand.kind =!= "Bool" { return (kind = "", next = start); }
+        leftKind = "Bool";
+        leftNext = operand.next;
+    } else if textLib.isDigit(ch) {
+        scanned := numeric.scanNumericLiteral(source, start);
+        if scanned.exponentMissingAt >= 0 { return (kind = "", next = start); }
+        if scanned.floating {
+            leftKind = if expected == "Float32" { "Float32" } else { "Float" };
+        } else {
+            leftKind = if numeric.isNarrowNumericKind(expected) or expected == "Float" or expected == "Float32" {
+                expected
+            } else {
+                "Int"
+            };
+        }
+        leftNext = scanned.next;
+    } else if ch == "\"" {
+        leftKind = "String";
+        leftNext = skipAliasString(source, start);
+    } else if ch == "t" and textLib.wordAt(source, start, "true") {
+        leftKind = "Bool";
+        leftNext = start + 4;
+    } else if ch == "f" and textLib.wordAt(source, start, "false") {
+        leftKind = "Bool";
+        leftNext = start + 5;
+    } else if ch == "[" {
+        var cur := skipTrivia(source, start + 1, prefix);
+        if cur < size and textLib.at(source, cur) == "]" {
+            if isListKind(expected) {
+                leftKind = expected;
+                leftNext = cur + 1;
+            } else {
+                return (kind = "", next = start);
+            }
+        } else {
+            elemExp := if isListKind(expected) { listElementKind(expected) } else if isArrayKind(expected) { arrayElementKind(expected) } else { "" };
+            firstEl := self(source, cur, prefix, aliases, functions, params, locals, futureValues, elemExp, 0, depthLeft - 1);
+            if firstEl.kind == "" or firstEl.kind == "Unit" { return (kind = "", next = start); }
+            var elemCount := 1;
+            cur = skipTrivia(source, firstEl.next, prefix);
+            loop cur < size and textLib.at(source, cur) == "," {
+                cur = skipTrivia(source, cur + 1, prefix);
+                if cur < size and textLib.at(source, cur) == "]" { break; }
+                nextEl := self(source, cur, prefix, aliases, functions, params, locals, futureValues, firstEl.kind, 0, depthLeft - 1);
+                if nextEl.kind == "" { return (kind = "", next = start); }
+                elemCount = elemCount + 1;
+                cur = skipTrivia(source, nextEl.next, prefix);
+            }
+            if cur >= size or textLib.at(source, cur) =!= "]" { return (kind = "", next = start); }
+            leftKind = if isListKind(expected) {
+                "List<" + firstEl.kind + ">"
+            } else {
+                "[" + firstEl.kind + ";" + integer.intText(elemCount) + "]"
+            };
+            leftNext = cur + 1;
+        }
+    } else if ch == "(" {
+        parenClose := scanParenEnd(source, start, prefix);
+        if parenClose < 0 { return (kind = "", next = start); }
+        innerPos := skipTrivia(source, start + 1, prefix);
+        if innerPos >= parenClose - 1 {
+            leftKind = "Unit";
+            leftNext = parenClose;
+        } else {
+            if not looksLikeTupleEntry(source, innerPos, prefix) {
+                grouped := self(source, innerPos, prefix, aliases, functions, params, locals, futureValues, expected, 0, depthLeft - 1);
+                if grouped.kind =!= "" and skipTrivia(source, grouped.next, prefix) == parenClose - 1 {
+                    leftKind = grouped.kind;
+                    leftNext = parenClose;
+                }
+            }
+            if leftKind == "" {
+                tLabels: mut List<String> = [];
+                tParts: mut List<String> = [];
+                var tCur := innerPos;
+                var tCount := 0;
+                var tLabelCount := 0;
+                var tHadComma := false;
+                loop tCur < parenClose - 1 {
+                    var fLabel := "";
+                    var valStart := tCur;
+                    if textLib.at(source, tCur) == "=" {
+                        shStart := skipTrivia(source, tCur + 1, prefix);
+                        if shStart < parenClose - 1 and textLib.isNameStart(textLib.at(source, shStart)) {
+                            shEnd := textLib.skipName(source, shStart);
+                            shName := textLib.slice(source, shStart, shEnd);
+                            if isReservedWord(shName) or listLib.listContainsText(tLabels, shName) {
+                                return (kind = "", next = start);
+                            }
+                            fLabel = shName;
+                            tLabelCount = tLabelCount + 1;
+                            listLib.pushBack(mut tLabels, shName);
+                            valStart = shStart;
+                        } else {
+                            return (kind = "", next = start);
+                        }
+                    } else if textLib.isNameStart(textLib.at(source, tCur)) {
+                        afterLbl := textLib.skipName(source, tCur);
+                        eqPos := skipTrivia(source, afterLbl, prefix);
+                        if eqPos < parenClose - 1 and isSingleEquals(source, eqPos) {
+                            cand := textLib.slice(source, tCur, afterLbl);
+                            if isReservedWord(cand) or listLib.listContainsText(tLabels, cand) {
+                                return (kind = "", next = start);
+                            }
+                            fLabel = cand;
+                            tLabelCount = tLabelCount + 1;
+                            listLib.pushBack(mut tLabels, cand);
+                            valStart = skipTrivia(source, eqPos + 1, prefix);
+                        }
+                    }
+                    fVal := self(source, valStart, prefix, aliases, functions, params, locals, futureValues, "", 0, depthLeft - 1);
+                    if fVal.kind == "" or isTupleKind(fVal.kind) or isListKind(fVal.kind) or fVal.kind == "Unit" {
+                        return (kind = "", next = start);
+                    }
+                    listLib.pushBack(mut tParts, fLabel + ":" + fVal.kind);
+                    tCount = tCount + 1;
+                    tCur = skipTrivia(source, fVal.next, prefix);
+                    if tCur < parenClose - 1 and textLib.at(source, tCur) == "," {
+                        tHadComma = true;
+                        tCur = skipTrivia(source, tCur + 1, prefix);
+                    } else {
+                        break;
+                    }
+                }
+                if tCur =!= parenClose - 1 or tCount == 0 or (tCount == 1 and tLabelCount == 0 and not tHadComma) {
+                    return (kind = "", next = start);
+                }
+                leftKind = "(" + textLib.joinTexts(tParts, ",") + ")";
+                leftNext = parenClose;
+            }
+        }
+    } else if ch == "{" {
+        blockClose := scanBraceEnd(source, start, prefix);
+        if blockClose < 0 { return (kind = "", next = start); }
+        tailPos := tryInferBlockTailStart(source, start, blockClose, prefix);
+        if tailPos < 0 {
+            leftKind = "Unit";
+        } else {
+            tailParsed := self(source, tailPos, prefix, aliases, functions, params, locals, futureValues, expected, 0, depthLeft - 1);
+            if tailParsed.kind == "" or skipTrivia(source, tailParsed.next, prefix) =!= blockClose - 1 {
+                return (kind = "", next = start);
+            }
+            leftKind = tailParsed.kind;
+        }
+        var endAfterBlk := blockClose;
+        afterBlk := skipTrivia(source, blockClose, prefix);
+        if afterBlk < size and textLib.wordAt(source, afterBlk, "finally") {
+            finOpen := skipTrivia(source, afterBlk + 7, prefix);
+            if finOpen < size and textLib.at(source, finOpen) == "{" {
+                finClose := scanBraceEnd(source, finOpen, prefix);
+                if finClose < 0 { return (kind = "", next = start); }
+                endAfterBlk = finClose;
+            }
+        }
+        leftNext = endAfterBlk;
+    } else if ch == "i" and textLib.wordAt(source, start, "if") {
+        var curIf := start + 2;
+        var accKind := "";
+        var endPos := -1;
+        var hasElseBranch := false;
+        loop curIf < size {
+            openBr := scanConditionOpen(source, curIf, prefix);
+            if openBr < 0 { return (kind = "", next = start); }
+            closeBr := scanBraceEnd(source, openBr, prefix);
+            if closeBr < 0 { return (kind = "", next = start); }
+            tailPos := tryInferBlockTailStart(source, openBr, closeBr, prefix);
+            var brKind := "Unit";
+            if tailPos >= 0 {
+                tailParsed := self(source, tailPos, prefix, aliases, functions, params, locals, futureValues, expected, 0, depthLeft - 1);
+                if tailParsed.kind == "" or skipTrivia(source, tailParsed.next, prefix) =!= closeBr - 1 {
+                    return (kind = "", next = start);
+                }
+                brKind = tailParsed.kind;
+            }
+            accKind = if accKind == "" { brKind } else { joinBranchKind(accKind, brKind) };
+            afterBr := skipTrivia(source, closeBr, prefix);
+            if afterBr < size and textLib.wordAt(source, afterBr, "else") {
+                afterElse := skipTrivia(source, afterBr + 4, prefix);
+                if textLib.wordAt(source, afterElse, "if") {
+                    curIf = afterElse + 2;
+                    continue;
+                }
+                if afterElse < size and textLib.at(source, afterElse) == "{" {
+                    elseClose := scanBraceEnd(source, afterElse, prefix);
+                    if elseClose < 0 { return (kind = "", next = start); }
+                    hasElseBranch = true;
+                    elseTail := tryInferBlockTailStart(source, afterElse, elseClose, prefix);
+                    var elseKind := "Unit";
+                    if elseTail >= 0 {
+                        elseParsed := self(source, elseTail, prefix, aliases, functions, params, locals, futureValues, expected, 0, depthLeft - 1);
+                        if elseParsed.kind == "" or skipTrivia(source, elseParsed.next, prefix) =!= elseClose - 1 {
+                            return (kind = "", next = start);
+                        }
+                        elseKind = elseParsed.kind;
+                    }
+                    accKind = joinBranchKind(accKind, elseKind);
+                    endPos = elseClose;
+                    break;
+                }
+                return (kind = "", next = start);
+            }
+            endPos = closeBr;
+            break;
+        }
+        if endPos < 0 { return (kind = "", next = start); }
+        afterIf := skipTrivia(source, endPos, prefix);
+        if afterIf < size and (textLib.wordAt(source, afterIf, "then") or textLib.wordAt(source, afterIf, "finally")) {
+            return (kind = "", next = start);
+        }
+        leftKind = if hasElseBranch { accKind } else { "Unit" };
+        leftNext = endPos;
+    } else if ch == "f" and textLib.wordAt(source, start, "fn") {
+        hdrPos := skipTrivia(source, start + 2, prefix);
+        if not canPreParseFunctionHeader(source, hdrPos, prefix, aliases, false) {
+            return (kind = "", next = start);
+        }
+        if hdrPos >= size or textLib.at(source, hdrPos) =!= "(" {
+            return (kind = "", next = start);
+        }
+        var pCur := skipTrivia(source, hdrPos + 1, prefix);
+        fnParamParts: mut List<String> = [];
+        emptySeen: List<String> = [];
+        loop pCur < size and textLib.at(source, pCur) =!= ")" {
+            pEnd := textLib.skipName(source, pCur);
+            pName := textLib.slice(source, pCur, pEnd);
+            afterPColon := skipTrivia(source, pEnd, prefix);
+            pTyped := canResolveTypeAt(source, afterPColon + 1, prefix, aliases, "", emptySeen, 32);
+            if not pTyped.ok or pTyped.kind == "Unit" { return (kind = "", next = start); }
+            listLib.pushBack(mut fnParamParts, pName + ":" + pTyped.kind);
+            pCur = skipTrivia(source, pTyped.next, prefix);
+            if pCur < size and textLib.at(source, pCur) == "," { pCur = skipTrivia(source, pCur + 1, prefix); }
+            else { break; }
+        }
+        afterFnClose := skipTrivia(source, pCur + 1, prefix);
+        retTyped := canResolveTypeAt(source, afterFnClose + 1, prefix, aliases, "", emptySeen, 32);
+        if not retTyped.ok { return (kind = "", next = start); }
+        bodyOpen := skipTrivia(source, retTyped.next, prefix);
+        if bodyOpen >= size or textLib.at(source, bodyOpen) =!= "{" { return (kind = "", next = start); }
+        bodyClose := scanBraceEnd(source, bodyOpen, prefix);
+        if bodyClose < 0 { return (kind = "", next = start); }
+        leftKind = "fn(" + textLib.joinTexts(fnParamParts, ",") + "):" + retTyped.kind;
+        leftNext = bodyClose;
+    } else if textLib.isNameStart(ch) {
+        afterName := textLib.skipName(source, start);
+        name := textLib.slice(source, start, afterName);
+        if isReservedWord(name) { return (kind = "", next = start); }
+        locIdx := localIndex(locals, name);
+        if locIdx >= 0 and locals[locIdx].kind == "Module" {
+            afterDot := skipTrivia(source, afterName, prefix);
+            if afterDot >= size or textLib.at(source, afterDot) =!= "." { return (kind = "", next = start); }
+            memStart := skipTrivia(source, afterDot + 1, prefix);
+            if memStart >= size or not textLib.isNameStart(textLib.at(source, memStart)) { return (kind = "", next = start); }
+            memEnd := textLib.skipName(source, memStart);
+            qualified := name + "." + textLib.slice(source, memStart, memEnd);
+            qFnIdx := findFunction(functions, qualified);
+            if qFnIdx >= 0 {
+                curFnIdx = qFnIdx;
+                leftKind = "$fn";
+                leftNext = memEnd;
+            } else {
+                qLocIdx := localIndex(locals, qualified);
+                if qLocIdx >= 0 {
+                    leftKind = locals[qLocIdx].kind;
+                    leftNext = memEnd;
+                }
+            }
+        } else if locIdx >= 0 {
+            leftKind = locals[locIdx].kind;
+            leftNext = afterName;
+        } else {
+            var futIdx := -1;
+            var fi := 0;
+            loop futureValues as fut {
+                if fut.name == name { futIdx = fi; }
+                fi = fi + 1;
+            }
+            if futIdx >= 0 and futureValues[futIdx].kind =!= "" {
+                leftKind = futureValues[futIdx].kind;
+                leftNext = afterName;
+            } else {
+                fnIdx := findFunction(functions, name);
+                if fnIdx >= 0 {
+                    curFnIdx = fnIdx;
+                    leftKind = "$fn";
+                    leftNext = afterName;
+                }
+            }
+        }
+    }
+    if leftKind == "" { return (kind = "", next = start); }
+    loop true {
+        postPos := skipTrivia(source, leftNext, prefix);
+        if curFnIdx >= 0 and (postPos >= size or textLib.at(source, postPos) =!= "(") {
+            fnEntry := functions[curFnIdx];
+            if fnEntry.count < 0 { return (kind = "", next = start); }
+            fnParts: mut List<String> = [];
+            var pi := 0;
+            loop pi < fnEntry.count {
+                pEntry := params[fnEntry.first + pi];
+                listLib.pushBack(mut fnParts, paramNameOf(pEntry) + ":" + paramKindOf(pEntry));
+                pi = pi + 1;
+            }
+            leftKind = "fn(" + textLib.joinTexts(fnParts, ",") + "):" + fnEntry.result;
+            curFnIdx = -1;
+        }
+        if postPos >= size { break; }
+        if curFnIdx >= 0 and textLib.at(source, postPos) == "(" {
+            callClose := scanParenEnd(source, postPos, prefix);
+            if callClose < 0 { return (kind = "", next = start); }
+            leftKind = functions[curFnIdx].result;
+            leftNext = callClose;
+            curFnIdx = -1;
+            continue;
+        }
+        postCh := textLib.at(source, postPos);
+        if postCh == "(" and isFnKind(leftKind) {
+            callClose := scanParenEnd(source, postPos, prefix);
+            if callClose < 0 { return (kind = "", next = start); }
+            leftKind = fnResultKind(leftKind);
+            leftNext = callClose;
+        } else if postCh == "[" and (isListKind(leftKind) or isArrayKind(leftKind)) {
+            brClose := skipTrivia(source, postPos + 1, prefix);
+            idxExpr := self(source, brClose, prefix, aliases, functions, params, locals, futureValues, "Int", 0, depthLeft - 1);
+            afterIdx := skipTrivia(source, idxExpr.next, prefix);
+            if afterIdx >= size or textLib.at(source, afterIdx) =!= "]" { return (kind = "", next = start); }
+            leftKind = if isListKind(leftKind) { listElementKind(leftKind) } else { arrayElementKind(leftKind) };
+            leftNext = afterIdx + 1;
+        } else if postCh == "." {
+            fStart := skipTrivia(source, postPos + 1, prefix);
+            if fStart >= size { break; }
+            if textLib.isDigit(textLib.at(source, fStart)) {
+                var dEnd := fStart;
+                var fIdx := 0;
+                loop dEnd < size and textLib.isDigit(textLib.at(source, dEnd)) {
+                    fIdx = fIdx * 10 + decimalDigit(textLib.at(source, dEnd));
+                    dEnd = dEnd + 1;
+                }
+                if isArrayKind(leftKind) {
+                    if fIdx >= arrayExtent(leftKind) { return (kind = "", next = start); }
+                    leftKind = arrayElementKind(leftKind);
+                    leftNext = dEnd;
+                } else if isTupleKind(leftKind) {
+                    comp := tupleComponent(leftKind, fIdx);
+                    if comp.kind == "" { return (kind = "", next = start); }
+                    leftKind = comp.kind;
+                    leftNext = dEnd;
+                } else {
+                    break;
+                }
+            } else if textLib.isNameStart(textLib.at(source, fStart)) {
+                fEnd := textLib.skipName(source, fStart);
+                fName := textLib.slice(source, fStart, fEnd);
+                if isTupleKind(leftKind) {
+                    fKind := tupleFieldKind(leftKind, fName);
+                    if fKind == "" { return (kind = "", next = start); }
+                    leftKind = fKind;
+                    leftNext = fEnd;
+                } else {
+                    break;
+                }
+            } else {
+                break;
+            }
+        } else {
+            break;
+        }
+    }
+    loop true {
+        opPos := skipTrivia(source, leftNext, prefix);
+        if opPos >= size { break; }
+        operator := readOperator(source, opPos);
+        opLevel := operatorLevel(operator.text);
+        if operator.text == "" or opLevel < minimum { break; }
+        nextMinimum := if operator.text == "**" { opLevel } else { opLevel + 1 };
+        right := self(source, opPos + operator.width, prefix, aliases, functions, params, locals, futureValues, "", nextMinimum, depthLeft - 1);
+        if right.kind == "" { return (kind = "", next = start); }
+        if operator.text == "and" or operator.text == "or" {
+            if leftKind =!= "Bool" or right.kind =!= "Bool" { return (kind = "", next = start); }
+            leftKind = "Bool";
+            leftNext = right.next;
+        } else if isComparison(operator.text) {
+            var cmpNext := right.next;
+            loop true {
+                nextCmpPos := skipTrivia(source, cmpNext, prefix);
+                nextCmp := comparisonOperatorAt(source, nextCmpPos);
+                if nextCmp.text == "" { break; }
+                chained := self(source, nextCmpPos + nextCmp.width, prefix, aliases, functions, params, locals, futureValues, "", operatorLevel(nextCmp.text) + 1, depthLeft - 1);
+                if chained.kind == "" { return (kind = "", next = start); }
+                cmpNext = chained.next;
+            }
+            leftKind = "Bool";
+            leftNext = cmpNext;
+        } else if operator.text == "+" and leftKind == "String" and right.kind == "String" {
+            leftKind = "String";
+            leftNext = right.next;
+        } else if numeric.isNumericKind(leftKind) and numeric.isNumericKind(right.kind) {
+            leftKind = if leftKind == right.kind { leftKind } else { numeric.promoteNumericKind(leftKind, right.kind) };
+            leftNext = right.next;
+        } else {
+            return (kind = "", next = start);
+        }
+    }
+    (kind = leftKind, next = leftNext)
+}
+
+/** True for characters allowed in compiler-generated runtime identifiers. */
+isTraceIdentChar := fn(ch: String): Bool {
+    textLib.isNameContinue(ch) or ch == "$"
+}
+
+/** True when `tok` names a user function, module function, or local/root variable runtime. */
+tokenStartsWithRuntimePrefix := fn(tok: String): Bool {
+    textLib.startsWithAt(tok, 0, "liteFn") or textLib.startsWithAt(tok, 0, "lt_fn_") or
+    textLib.startsWithAt(tok, 0, "lite_") or textLib.startsWithAt(tok, 0, "lite$m$") or
+    textLib.startsWithAt(tok, 0, "lt_m_")
+}
+
+/** True when `bag` contains `tok` in `"|a|b|"` form. */
+tokenInPipeBag := fn(bag: String, tok: String): Bool {
+    tok =!= "" and textLib.indexOfText(bag, "|" + tok + "|", 0) >= 0
+}
+
+/** Appends `tok` to a pipe-delimited token set `"|a|b|"` when absent. */
+appendPipeBag := fn(bag: String, tok: String): String {
+    if tok == "" or textLib.indexOfText(bag, "|" + tok + "|", 0) >= 0 { return bag; }
+    if bag == "" { "|" + tok + "|" } else { bag + tok + "|" }
+}
+
+/** Advances past ASCII spaces/newlines in emitted code strings. */
+skipCodeSpaces := fn(code: String, pos: Int): Int {
+    len := textLib.length(code);
+    var p := pos;
+    loop p < len {
+        ch := textLib.at(code, p);
+        if ch == " " or ch == "\t" or ch == "\n" or ch == "\r" { p = p + 1; } else { break; }
+    }
+    p
+}
+
+/** Advances past a quoted string literal starting at `quotePos` inside emitted code. */
+skipCodeString := fn(code: String, quotePos: Int): Int {
+    len := textLib.length(code);
+    var p := quotePos + 1;
+    loop p < len {
+        ch := textLib.at(code, p);
+        if ch == "\\" {
+            p = p + 2;
+        } else if ch == "\"" {
+            return p + 1;
+        } else {
+            p = p + 1;
+        }
+    }
+    len
+}
+
+/** Collects referenced user/module/value runtime identifiers from emitted TS code, optionally skipping LHS declaration headers. */
+extractCodeRuntimeTokens := fn(code: String, skipLhsDecls: Bool): String {
+    var bag := "";
+    len := textLib.length(code);
+    var i := 0;
+    loop i < len {
+        ch := textLib.at(code, i);
+        if ch == "\"" {
+            i = skipCodeString(code, i);
+            continue;
+        }
+        if skipLhsDecls and ch == "v" and textLib.wordAt(code, i, "void") {
+            afterVoid := skipCodeSpaces(code, i + 4);
+            if afterVoid < len and isTraceIdentChar(textLib.at(code, afterVoid)) {
+                var vEnd := afterVoid;
+                loop vEnd < len and isTraceIdentChar(textLib.at(code, vEnd)) { vEnd = vEnd + 1; }
+                afterId := skipCodeSpaces(code, vEnd);
+                if afterId < len and textLib.at(code, afterId) == ";" {
+                    i = afterId + 1;
+                    continue;
+                }
+            }
+        }
+        if skipLhsDecls and ((ch == "c" and textLib.wordAt(code, i, "const")) or (ch == "l" and textLib.wordAt(code, i, "let"))) {
+            kwLen := if ch == "c" { 5 } else { 3 };
+            afterKw := skipCodeSpaces(code, i + kwLen);
+            if afterKw < len and isTraceIdentChar(textLib.at(code, afterKw)) {
+                var idEnd := afterKw;
+                loop idEnd < len and isTraceIdentChar(textLib.at(code, idEnd)) { idEnd = idEnd + 1; }
+                var eqScan := idEnd;
+                var foundEq := -1;
+                var tDepth := 0;
+                loop eqScan < len {
+                    ec := textLib.at(code, eqScan);
+                    if ec == "\"" {
+                        eqScan = skipCodeString(code, eqScan);
+                        continue;
+                    }
+                    if ec == "(" or ec == "[" or ec == "{" or ec == "<" {
+                        tDepth = tDepth + 1;
+                    } else if ec == ")" or ec == "]" or ec == "}" or ec == ">" {
+                        if tDepth > 0 and not textLib.startsWithAt(code, eqScan - 1, "=>") { tDepth = tDepth - 1; }
+                    } else if tDepth == 0 and ec == ";" {
+                        break;
+                    } else if ec == "=" and not textLib.startsWithAt(code, eqScan, "=>") and
+                    not textLib.startsWithAt(code, eqScan, "==") and
+                    (eqScan == 0 or (textLib.at(code, eqScan - 1) =!= "=" and textLib.at(code, eqScan - 1) =!= "!" and
+                    textLib.at(code, eqScan - 1) =!= "<" and textLib.at(code, eqScan - 1) =!= ">")) {
+                        foundEq = eqScan;
+                        break;
+                    }
+                    eqScan = eqScan + 1;
+                }
+                if foundEq >= 0 {
+                    i = foundEq + 1;
+                    continue;
+                }
+            }
+        }
+        if textLib.isNameStart(ch) or ch == "$" {
+            var tokEnd := i;
+            loop tokEnd < len and isTraceIdentChar(textLib.at(code, tokEnd)) { tokEnd = tokEnd + 1; }
+            tok := textLib.slice(code, i, tokEnd);
+            if tokenStartsWithRuntimePrefix(tok) { bag = appendPipeBag(bag, tok); }
+            i = tokEnd;
+        } else {
+            i = i + 1;
+        }
+    }
+    bag
+}
+
+/** Returns the `lite_*` local runtime being bound immediately before `= (function ...)` at `fnPos`, or `""` when not a local binding. */
+precedingAssignedLocalRuntime := fn(code: String, fnPos: Int): String {
+    var k := fnPos - 1;
+    loop k >= 0 {
+        kc := textLib.at(code, k);
+        if kc == " " or kc == "\t" or kc == "\n" or kc == "\r" { k = k - 1; } else { break; }
+    }
+    if k < 0 or textLib.at(code, k) =!= "=" { return ""; }
+    if k > 0 {
+        prev := textLib.at(code, k - 1);
+        if prev == "=" or prev == "<" or prev == ">" or prev == "!" { return ""; }
+    }
+    var scanBack := k - 1;
+    var depth := 0;
+    loop scanBack >= 0 {
+        sc := textLib.at(code, scanBack);
+        if sc == ")" or sc == "]" or sc == "}" {
+            depth = depth + 1;
+        } else if sc == "(" or sc == "[" or sc == "{" {
+            if depth == 0 {
+                scanBack = scanBack + 1;
+                break;
+            }
+            depth = depth - 1;
+        } else if sc == ";" and depth == 0 {
+            scanBack = scanBack + 1;
+            break;
+        }
+        scanBack = scanBack - 1;
+    }
+    if scanBack < 0 { scanBack = 0; }
+    stmtPos := skipCodeSpaces(code, scanBack);
+    var lhsPos := stmtPos;
+    if textLib.wordAt(code, lhsPos, "const") { lhsPos = skipCodeSpaces(code, lhsPos + 5); }
+    else if textLib.wordAt(code, lhsPos, "let") { lhsPos = skipCodeSpaces(code, lhsPos + 3); }
+    if lhsPos >= k or not (textLib.isNameStart(textLib.at(code, lhsPos)) or textLib.at(code, lhsPos) == "$") {
+        return "";
+    }
+    var lhsEnd := lhsPos;
+    loop lhsEnd < k and isTraceIdentChar(textLib.at(code, lhsEnd)) { lhsEnd = lhsEnd + 1; }
+    lhs := textLib.slice(code, lhsPos, lhsEnd);
+    if textLib.startsWithAt(lhs, 0, "lite_") or textLib.startsWithAt(lhs, 0, "lite$arg") or lhs == "lite$fn" { lhs } else { "" }
+}
+
+/** Finds the position just after the closing `)` matching the `(` at `openPos` in emitted code, or -1 if unclosed. */
+scanBalancedParenEnd := fn(code: String, openPos: Int): Int {
+    len := textLib.length(code);
+    if openPos < 0 or openPos >= len or textLib.at(code, openPos) =!= "(" { return -1; }
+    var p := openPos + 1;
+    var depth := 1;
+    loop p < len {
+        ch := textLib.at(code, p);
+        if ch == "\"" {
+            p = skipCodeString(code, p);
+        } else if ch == "(" {
+            depth = depth + 1;
+            p = p + 1;
+        } else if ch == ")" {
+            depth = depth - 1;
+            p = p + 1;
+            if depth == 0 { return p; }
+        } else {
+            p = p + 1;
+        }
+    }
+    -1
+}
+
+/** True when `code[openPos..closeEnd]` is a compiler-synthesized arrow function `((params)[: Ret] => body)`. */
+isCompilerArrowIife := fn(code: String, openPos: Int, closeEnd: Int): Bool {
+    if closeEnd <= openPos + 2 { return false; }
+    innerPos := skipCodeSpaces(code, openPos + 1);
+    if innerPos >= closeEnd - 1 or textLib.at(code, innerPos) =!= "(" { return false; }
+    paramsEnd := scanBalancedParenEnd(code, innerPos);
+    if paramsEnd < 0 or paramsEnd >= closeEnd - 1 { return false; }
+    afterParams := skipCodeSpaces(code, paramsEnd);
+    if textLib.startsWithAt(code, afterParams, "=>") { return true; }
+    afterParams < closeEnd - 1 and textLib.at(code, afterParams) == ":"
+}
+
+/** True when `code[openPos..closeEnd]` is a parenthesized user/local callable `<callee>` immediately followed by `(<args>)`. */
+isIndirectUserCallParens := fn(code: String, openPos: Int, closeEnd: Int): Bool {
+    len := textLib.length(code);
+    if closeEnd < 0 or closeEnd > len { return false; }
+    afterClose := skipCodeSpaces(code, closeEnd);
+    if afterClose >= len or textLib.at(code, afterClose) =!= "(" { return false; }
+    if isCompilerArrowIife(code, openPos, closeEnd) { return false; }
+    calleeText := textLib.slice(code, openPos + 1, closeEnd - 1);
+    textLib.indexOfText(calleeText, "lite", 0) >= 0 or
+    textLib.indexOfText(calleeText, "(function ", 0) >= 0 or
+    textLib.indexOfText(calleeText, "=>", 0) >= 0
+}
+
+/** Strips uninvoked `(function ...)` bodies into `"0"` while keeping immediately-invoked `fn` literals and call arguments intact. */
+stripDeferredFnBodies := fn(exprCode: String): (code: String, pairsText: String) {
+    len := textLib.length(exprCode);
+    outParts: mut List<String> = [];
+    pairParts: mut List<String> = [];
+    parenIsUserCall: mut List<Int> = [];
+    var stackCount := 0;
+    var indirectArgOpenBag := "";
+    var callDepth := 0;
+    var sliceStart := 0;
+    var pos := 0;
+    loop pos < len {
+        ch := textLib.at(exprCode, pos);
+        if ch == "\"" {
+            pos = skipCodeString(exprCode, pos);
+            continue;
+        }
+        if ch == "(" {
+            if textLib.startsWithAt(exprCode, pos, "(function ") {
+                fnEnd := scanBalancedParenEnd(exprCode, pos);
+                if fnEnd >= 0 {
+                    var la := fnEnd;
+                    loop true {
+                        la = skipCodeSpaces(exprCode, la);
+                        if la < len and textLib.at(exprCode, la) == ")" { la = la + 1; } else { break; }
+                    }
+                    la = skipCodeSpaces(exprCode, la);
+                    isDirectCall := la < len and textLib.at(exprCode, la) == "(";
+                    if callDepth == 0 and not isDirectCall {
+                        lhsName := precedingAssignedLocalRuntime(exprCode, pos);
+                        if lhsName =!= "lite$fn" and not textLib.startsWithAt(lhsName, 0, "lite$arg") {
+                            if lhsName =!= "" {
+                                fnToks := extractCodeRuntimeTokens(textLib.slice(exprCode, pos, fnEnd), false);
+                                listLib.pushBack(mut pairParts, lhsName + ":" + fnToks + "\n");
+                            }
+                            listLib.pushBack(mut outParts, textLib.slice(exprCode, sliceStart, pos));
+                            listLib.pushBack(mut outParts, "0");
+                            sliceStart = fnEnd;
+                            pos = fnEnd;
+                            continue;
+                        }
+                    }
+                }
+            }
+            var prev := pos - 1;
+            loop prev >= 0 {
+                pc := textLib.at(exprCode, prev);
+                if pc == " " or pc == "\t" or pc == "\n" or pc == "\r" { prev = prev - 1; } else { break; }
+            }
+            var isCall := 0;
+            if prev >= 0 and isTraceIdentChar(textLib.at(exprCode, prev)) {
+                var idStart := prev;
+                loop idStart > 0 and isTraceIdentChar(textLib.at(exprCode, idStart - 1)) { idStart = idStart - 1; }
+                ident := textLib.slice(exprCode, idStart, prev + 1);
+                if tokenStartsWithRuntimePrefix(ident) or ident == "lite$fn" { isCall = 1; }
+            }
+            if isCall == 0 and tokenInPipeBag(indirectArgOpenBag, integer.intText(pos)) {
+                isCall = 1;
+            }
+            if isCall == 0 {
+                closeParenEnd := scanBalancedParenEnd(exprCode, pos);
+                if isIndirectUserCallParens(exprCode, pos, closeParenEnd) {
+                    isCall = 1;
+                    indirectArgOpenBag = appendPipeBag(indirectArgOpenBag, integer.intText(skipCodeSpaces(exprCode, closeParenEnd)));
+                }
+            }
+            listLib.pushBack(mut parenIsUserCall, isCall);
+            stackCount = stackCount + 1;
+            callDepth = callDepth + isCall;
+            pos = pos + 1;
+            continue;
+        }
+        if ch == ")" {
+            if stackCount > 0 {
+                popped := listLib.popBack(mut parenIsUserCall);
+                stackCount = stackCount - 1;
+                callDepth = callDepth - popped;
+            }
+            pos = pos + 1;
+            continue;
+        }
+        pos = pos + 1;
+    }
+    listLib.pushBack(mut outParts, textLib.slice(exprCode, sliceStart, len));
+    pairsBody := textLib.joinTexts(pairParts, "");
+    pairsText := if pairsBody == "" { "" } else { "\n" + pairsBody };
+    (code = textLib.joinTexts(outParts, ""), pairsText = pairsText)
+}
+
+/** True when stripped eager code invokes a user/local/module callable or still contains an active `(function ` literal. */
+hasUserOrLocalCall := fn(eagerCode: String): Bool {
+    len := textLib.length(eagerCode);
+    var i := 0;
+    loop i < len {
+        ch := textLib.at(eagerCode, i);
+        if ch == "\"" {
+            i = skipCodeString(eagerCode, i);
+            continue;
+        }
+        if ch == "(" {
+            if textLib.startsWithAt(eagerCode, i, "(function ") {
+                return true;
+            }
+            closeParenEnd := scanBalancedParenEnd(eagerCode, i);
+            if isIndirectUserCallParens(eagerCode, i, closeParenEnd) {
+                return true;
+            }
+        }
+        if textLib.isNameStart(ch) or ch == "$" {
+            var tokEnd := i;
+            loop tokEnd < len and isTraceIdentChar(textLib.at(eagerCode, tokEnd)) { tokEnd = tokEnd + 1; }
+            tok := textLib.slice(eagerCode, i, tokEnd);
+            if tokenStartsWithRuntimePrefix(tok) or tok == "lite$fn" {
+                var after := skipCodeSpaces(eagerCode, tokEnd);
+                loop after < len and (textLib.at(eagerCode, after) == "." or textLib.at(eagerCode, after) == "[") {
+                    if textLib.at(eagerCode, after) == "." {
+                        var memEnd := skipCodeSpaces(eagerCode, after + 1);
+                        loop memEnd < len and isTraceIdentChar(textLib.at(eagerCode, memEnd)) { memEnd = memEnd + 1; }
+                        after = skipCodeSpaces(eagerCode, memEnd);
+                    } else {
+                        var bDepth := 1;
+                        var bScan := after + 1;
+                        loop bScan < len and bDepth > 0 {
+                            bc := textLib.at(eagerCode, bScan);
+                            if bc == "\"" { bScan = skipCodeString(eagerCode, bScan); continue; }
+                            if bc == "[" { bDepth = bDepth + 1; }
+                            else if bc == "]" { bDepth = bDepth - 1; }
+                            bScan = bScan + 1;
+                        }
+                        after = skipCodeSpaces(eagerCode, bScan);
+                    }
+                }
+                if after < len and textLib.at(eagerCode, after) == "(" { return true; }
+            }
+            if tok == "lite$listIndex" {
+                openPos := skipCodeSpaces(eagerCode, tokEnd);
+                if openPos < len and textLib.at(eagerCode, openPos) == "(" {
+                    endIdxCall := scanBalancedParenEnd(eagerCode, openPos);
+                    if endIdxCall >= 0 {
+                        afterIdxCall := skipCodeSpaces(eagerCode, endIdxCall);
+                        if afterIdxCall < len and textLib.at(eagerCode, afterIdxCall) == "(" { return true; }
+                    }
+                }
+            }
+            i = tokEnd;
+        } else {
+            i = i + 1;
+        }
+    }
+    false
+}
+
+/** True when any root-level variable binding currently in `locals` is not yet initialized. */
+hasRootUninitLocal := fn(locals: List<Local>): Bool {
+    loop locals as entry {
+        if entry.depth == 0 and entry.initState =!= "init" { return true; }
+    }
+    false
+}
+
+/** Finds the index of the function matching `runtime` in `functions`, or -1. */
+findFunctionByRuntime := fn(functions: List<FunctionInfo>, runtime: String): Int {
+    var i := 0;
+    loop functions as info {
+        if info.runtime == runtime { return i; }
+        i = i + 1;
+    }
+    -1
+}
+
+/** Finds the latest `FutureValue` matching `runtime`, or -1. */
+findFutureByRuntime := fn(futureValues: List<FutureValue>, runtime: String): Int {
+    var i := 0;
+    var found := -1;
+    loop futureValues as fut {
+        if fut.runtime == runtime { found = i; }
+        i = i + 1;
+    }
+    found
+}
+
+/** Finds the latest root-depth (`depth == 0`) local entry matching `runtime` in `locals`, or -1. */
+latestRootLocalByRuntime := fn(locals: List<Local>, runtime: String): Int {
+    var i := 0;
+    var found := -1;
+    loop locals as entry {
+        if entry.depth == 0 and entry.runtime == runtime { found = i; }
+        i = i + 1;
+    }
+    found
+}
+
+/** Extracts `"|lite_p1|lite_p2|"` parameter runtimes from a `FunctionStart` `textValue` payload. */
+parseParamRuntimesList := fn(paramsPayload: String): String {
+    var bag := "";
+    if paramsPayload == "" { return bag; }
+    len := textLib.length(paramsPayload);
+    var start := 0;
+    loop start < len {
+        sep := textLib.indexOfText(paramsPayload, "|", start);
+        end := if sep >= 0 { sep } else { len };
+        entry := textLib.slice(paramsPayload, start, end);
+        eqPos := textLib.indexOfText(entry, "=", 0);
+        if eqPos > 0 {
+            bag = appendPipeBag(bag, "lite_" + textLib.slice(entry, 0, eqPos));
+        }
+        start = end + 1;
+    }
+    bag
+}
+
+/** Finds the `FunctionStart` item index matching `runtime`, or -1 when absent. */
+findFunctionStartItem := fn(items: Items, runtime: String): Int {
+    var i := 0;
+    loop items as item {
+        if item.kind == "FunctionStart" and item.runtime == runtime { return i; }
+        i = i + 1;
+    }
+    -1
+}
+
+/** Appends `runtime` to tracked callable variable runtimes when not yet present. */
+recordCallableVarRuntimes := fn(runtime: String, runtimes: List<String>): List<String> {
+    if runtime == "" or listLib.listContainsText(runtimes, runtime) { return runtimes; }
+    nextRuntimes: mut List<String> = [];
+    loop runtimes as r { listLib.pushBack(mut nextRuntimes, r); }
+    listLib.pushBack(mut nextRuntimes, runtime);
+    nextRuntimes
+}
+
+/** Records or updates the runtime token dependencies list corresponding to `recordCallableVarRuntimes`. */
+recordCallableVarDeps := fn(runtime: String, rhsCode: String, depth: Int, runtimes: List<String>, deps: List<String>): List<String> {
+    if runtime == "" { return deps; }
+    rhsTokens := extractCodeRuntimeTokens(rhsCode, false);
+    nextDeps: mut List<String> = [];
+    var existingIdx := -1;
+    var i := 0;
+    loop runtimes as rt {
+        if rt == runtime {
+            existingIdx = i;
+            break;
+        }
+        i = i + 1;
+    }
+    if existingIdx < 0 {
+        loop deps as d { listLib.pushBack(mut nextDeps, d); }
+        listLib.pushBack(mut nextDeps, rhsTokens);
+        return nextDeps;
+    }
+    var idx := 0;
+    loop deps as oldDep {
+        if idx == existingIdx {
+            if depth == 0 {
+                listLib.pushBack(mut nextDeps, rhsTokens);
+            } else {
+                var merged := oldDep;
+                var pos := 0;
+                tLen := textLib.length(rhsTokens);
+                loop pos < tLen {
+                    if textLib.at(rhsTokens, pos) == "|" {
+                        nextSep := textLib.indexOfText(rhsTokens, "|", pos + 1);
+                        if nextSep > pos + 1 {
+                            tok := textLib.slice(rhsTokens, pos + 1, nextSep);
+                            merged = appendPipeBag(merged, tok);
+                            pos = nextSep;
+                            continue;
+                        }
+                    }
+                    pos = pos + 1;
+                }
+                listLib.pushBack(mut nextDeps, merged);
+            }
+        } else {
+            listLib.pushBack(mut nextDeps, oldDep);
+        }
+        idx = idx + 1;
+    }
+    nextDeps
+}
+
+/** Looks up recorded `"|tok|..."` dependencies for `runtime`, or `""` when absent. */
+lookupCallableVarDeps := fn(runtime: String, runtimes: List<String>, deps: List<String>): String {
+    var i := 0;
+    loop runtimes as rt {
+        if rt == runtime { return deps[i]; }
+        i = i + 1;
+    }
+    ""
+}
+
+/** Enforces execution-trace ordering on eager root expressions before later root functions or values initialize. */
+checkRootTraceSafety := fn(source: String, stmtAt: Int, prefix: String, exprCode: String, maxFutureAt: Int,
+locals: List<Local>, functions: List<FunctionInfo>, futureValues: List<FutureValue>, items: Items,
+callableVarRuntimes: List<String>, callableVarDeps: List<String>): Unit {
+    if stmtAt >= maxFutureAt and not hasRootUninitLocal(locals) { return; }
+    if exprCode == "" { return; }
+    stripped := stripDeferredFnBodies(exprCode);
+    eagerCode := stripped.code;
+    if not hasUserOrLocalCall(eagerCode) { return; }
+    initialTokens := extractCodeRuntimeTokens(eagerCode, true);
+    if initialTokens == "" { return; }
+    queue: mut List<String> = [];
+    var visitedBag := "";
+    var tPos := 0;
+    tLen := textLib.length(initialTokens);
+    loop tPos < tLen {
+        if textLib.at(initialTokens, tPos) == "|" {
+            sep := textLib.indexOfText(initialTokens, "|", tPos + 1);
+            if sep > tPos + 1 {
+                tok := textLib.slice(initialTokens, tPos + 1, sep);
+                if not tokenInPipeBag(visitedBag, tok) {
+                    visitedBag = appendPipeBag(visitedBag, tok);
+                    listLib.pushBack(mut queue, tok);
+                }
+                tPos = sep;
+                continue;
+            }
+        }
+        tPos = tPos + 1;
+    }
+    var qHead := 0;
+    var qCount := 0;
+    loop queue { qCount = qCount + 1; }
+    loop qHead < qCount {
+        curTok := queue[qHead];
+        qHead = qHead + 1;
+        var foundLocalFn := "";
+        if stripped.pairsText =!= "" {
+            needle := "\n" + curTok + ":";
+            var scanPos := 0;
+            pairsLen := textLib.length(stripped.pairsText);
+            loop scanPos < pairsLen {
+                hit := textLib.indexOfText(stripped.pairsText, needle, scanPos);
+                if hit < 0 { break; }
+                valStart := hit + textLib.length(needle);
+                lineEnd := textLib.indexOfText(stripped.pairsText, "\n", valStart);
+                nextEnd := if lineEnd >= 0 { lineEnd } else { pairsLen };
+                foundLocalFn = foundLocalFn + textLib.slice(stripped.pairsText, valStart, nextEnd);
+                scanPos = nextEnd;
+            }
+        }
+        if foundLocalFn =!= "" {
+            var k := 0;
+            fnLen := textLib.length(foundLocalFn);
+            loop k < fnLen {
+                if textLib.at(foundLocalFn, k) == "|" {
+                    sep := textLib.indexOfText(foundLocalFn, "|", k + 1);
+                    if sep > k + 1 {
+                        depTok := textLib.slice(foundLocalFn, k + 1, sep);
+                        if not tokenInPipeBag(visitedBag, depTok) {
+                            visitedBag = appendPipeBag(visitedBag, depTok);
+                            listLib.pushBack(mut queue, depTok);
+                            qCount = qCount + 1;
+                        }
+                        k = sep;
+                        continue;
+                    }
+                }
+                k = k + 1;
+            }
+        }
+        fnIdx := findFunctionByRuntime(functions, curTok);
+        if fnIdx >= 0 {
+            fnInfo := functions[fnIdx];
+            if fnInfo.declAt > stmtAt {
+                failAt(source, stmtAt, prefix, "cannot call before " + fnInfo.name + " is initialized");
+            }
+            startItem := findFunctionStartItem(items, curTok);
+            if startItem >= 0 {
+                paramBag := parseParamRuntimesList(items[startItem].textValue);
+                var bodyBranchDepth := 0;
+                var scopeDepth := 0;
+                localShadowRuntimes: mut List<String> = [];
+                localShadowDepths: mut List<Int> = [];
+                var defWrittenBag := "";
+                var itIdx := startItem + 1;
+                var totalItems := 0;
+                loop items { totalItems = totalItems + 1; }
+                loop itIdx < totalItems {
+                    it := items[itIdx];
+                    if it.kind == "FunctionEnd" and it.runtime == curTok { break; }
+                    if it.kind == "If" or it.kind == "Loop" or it.kind == "LoopSeq" {
+                        bodyBranchDepth = bodyBranchDepth + 1;
+                        scopeDepth = scopeDepth + 1;
+                    } else if it.kind == "Scope" {
+                        scopeDepth = scopeDepth + 1;
+                    } else if it.kind == "Else" or it.kind == "ElseIf" {
+                        var keepCnt := 0;
+                        loop localShadowDepths as sd {
+                            if sd < scopeDepth { keepCnt = keepCnt + 1; } else { break; }
+                        }
+                        var curCnt := 0;
+                        loop localShadowRuntimes { curCnt = curCnt + 1; }
+                        loop curCnt > keepCnt {
+                            _d1 := listLib.popBack(mut localShadowRuntimes);
+                            _d2 := listLib.popBack(mut localShadowDepths);
+                            curCnt = curCnt - 1;
+                        }
+                    } else if it.kind == "EndIf" or it.kind == "EndLoop" {
+                        var keepCnt := 0;
+                        loop localShadowDepths as sd {
+                            if sd < scopeDepth { keepCnt = keepCnt + 1; } else { break; }
+                        }
+                        var curCnt := 0;
+                        loop localShadowRuntimes { curCnt = curCnt + 1; }
+                        loop curCnt > keepCnt {
+                            _d1 := listLib.popBack(mut localShadowRuntimes);
+                            _d2 := listLib.popBack(mut localShadowDepths);
+                            curCnt = curCnt - 1;
+                        }
+                        if scopeDepth > 0 { scopeDepth = scopeDepth - 1; }
+                        if bodyBranchDepth > 0 { bodyBranchDepth = bodyBranchDepth - 1; }
+                    } else if it.kind == "EndScope" {
+                        var keepCnt := 0;
+                        loop localShadowDepths as sd {
+                            if sd < scopeDepth { keepCnt = keepCnt + 1; } else { break; }
+                        }
+                        var curCnt := 0;
+                        loop localShadowRuntimes { curCnt = curCnt + 1; }
+                        loop curCnt > keepCnt {
+                            _d1 := listLib.popBack(mut localShadowRuntimes);
+                            _d2 := listLib.popBack(mut localShadowDepths);
+                            curCnt = curCnt - 1;
+                        }
+                        if scopeDepth > 0 { scopeDepth = scopeDepth - 1; }
+                    }
+                    if it.code =!= "" {
+                        itTokens := extractCodeRuntimeTokens(it.code, true);
+                        var ik := 0;
+                        itLen := textLib.length(itTokens);
+                        loop ik < itLen {
+                            if textLib.at(itTokens, ik) == "|" {
+                                sep := textLib.indexOfText(itTokens, "|", ik + 1);
+                                if sep > ik + 1 {
+                                    depTok := textLib.slice(itTokens, ik + 1, sep);
+                                    if not tokenInPipeBag(paramBag, depTok) and
+                                    not listLib.listContainsText(localShadowRuntimes, depTok) and
+                                    not tokenInPipeBag(defWrittenBag, depTok) {
+                                        if not tokenInPipeBag(visitedBag, depTok) {
+                                            visitedBag = appendPipeBag(visitedBag, depTok);
+                                            listLib.pushBack(mut queue, depTok);
+                                            qCount = qCount + 1;
+                                        }
+                                    }
+                                    ik = sep;
+                                    continue;
+                                }
+                            }
+                            ik = ik + 1;
+                        }
+                    }
+                    if (textLib.startsWithAt(it.kind, 0, "Local") or textLib.startsWithAt(it.kind, 0, "Var")) and it.runtime =!= "" {
+                        if not listLib.listContainsText(localShadowRuntimes, it.runtime) {
+                            listLib.pushBack(mut localShadowRuntimes, it.runtime);
+                            listLib.pushBack(mut localShadowDepths, scopeDepth);
+                        }
+                    } else if bodyBranchDepth == 0 and textLib.startsWithAt(it.kind, 0, "Assign") and it.runtime =!= "" {
+                        if not tokenInPipeBag(paramBag, it.runtime) and not listLib.listContainsText(localShadowRuntimes, it.runtime) {
+                            assignFutIdx := findFutureByRuntime(futureValues, it.runtime);
+                            if assignFutIdx >= 0 and futureValues[assignFutIdx].at > stmtAt {
+                                failAt(source, stmtAt, prefix, "cannot call before " + futureValues[assignFutIdx].name + " is initialized");
+                            }
+                            defWrittenBag = appendPipeBag(defWrittenBag, it.runtime);
+                        }
+                    }
+                    itIdx = itIdx + 1;
+                }
+            }
+        }
+        futIdx := findFutureByRuntime(futureValues, curTok);
+        if futIdx >= 0 and futureValues[futIdx].at > stmtAt {
+            failAt(source, stmtAt, prefix, "cannot call before " + futureValues[futIdx].name + " is initialized");
+        }
+        rootLocIdx := latestRootLocalByRuntime(locals, curTok);
+        if rootLocIdx >= 0 and locals[rootLocIdx].initState =!= "init" {
+            failAt(source, stmtAt, prefix, "cannot call before " + locals[rootLocIdx].name + " is initialized");
+        }
+        varDeps := lookupCallableVarDeps(curTok, callableVarRuntimes, callableVarDeps);
+        if varDeps =!= "" {
+            var dk := 0;
+            dLen := textLib.length(varDeps);
+            loop dk < dLen {
+                if textLib.at(varDeps, dk) == "|" {
+                    sep := textLib.indexOfText(varDeps, "|", dk + 1);
+                    if sep > dk + 1 {
+                        depTok := textLib.slice(varDeps, dk + 1, sep);
+                        if not tokenInPipeBag(visitedBag, depTok) {
+                            visitedBag = appendPipeBag(visitedBag, depTok);
+                            listLib.pushBack(mut queue, depTok);
+                            qCount = qCount + 1;
+                        }
+                        dk = sep;
+                        continue;
+                    }
+                }
+                dk = dk + 1;
+            }
+        }
+    }
+}
+
 /** Precedence-climbing parser for arithmetic, comparisons, `and`/`or`, parentheses, named tuple and list values, field access, indexing, calls, unary signs and `not`, with construct context tracking. */
 parseBinaryCtx := fn(target: String, source: String, position: Int, prefix: String, locals: List<Local>, functions: List<FunctionInfo>, params: List<String>, currentName: String, expected: String, minimum: Int, ctxs: List<ConstructCtx>, iifeDepth: Int, inferMode: Bool, bodySink: String, aliases: List<AliasDecl>): Parsed {
     sourceSize := textLib.length(source);
@@ -4200,6 +5780,8 @@ parseBinaryCtx := fn(target: String, source: String, position: Int, prefix: Stri
         stmtReturnPrefix := if isTaggedBody or isLoopBody or isStmtBody or isFinallyBody or isFnBody { "" } else { "return " };
         blockLocals: mut List<Local> = [];
         loop locals as entry { listLib.pushBack(mut blockLocals, entry); }
+        nextAliasDepth := maxAliasDepth(aliases) + 1;
+        blockAliases := collectBlockTypeAliases(source, start, prefix, nextAliasDepth, aliases);
         declaredInBlock: mut List<String> = [];
         loop seedBlockDeclaredNames(bodySink) as seededName { listLib.pushBack(mut declaredInBlock, seededName); }
         statements: mut List<String> = [];
@@ -4249,7 +5831,7 @@ parseBinaryCtx := fn(target: String, source: String, position: Int, prefix: Stri
                 if not textLib.startsWithAt(source, afterTarget, ":=") {
                     failAt(source, afterTarget, prefix, "expected := after tuple destructuring target");
                 }
-                rhs := self(target, source, skipTrivia(source, afterTarget + 2, prefix), prefix, blockLocals, functions, params, currentName, "", 0, ctxs, bodyDepth, inferMode, "", aliases);
+                rhs := self(target, source, skipTrivia(source, afterTarget + 2, prefix), prefix, blockLocals, functions, params, currentName, "", 0, ctxs, bodyDepth, inferMode, "", blockAliases);
                 if inferMode { blockMarkers = collectParsedMarkers(blockMarkers, rhs); }
                 if destructure.count == 0 {
                     if destructureMutable {
@@ -4350,7 +5932,7 @@ parseBinaryCtx := fn(target: String, source: String, position: Int, prefix: Stri
                 atTailBrace := (not isStmtBody) and afterBrace >= 0 and afterBrace < blockSourceSize and textLib.at(source, afterBrace) == "}";
                 if not atTailBrace {
                     isStatement = true;
-                    stmtBlock := self(target, source, cursor, prefix, blockLocals, functions, params, currentName, "", 0, ctxs, bodyDepth, inferMode, "stmt", aliases);
+                    stmtBlock := self(target, source, cursor, prefix, blockLocals, functions, params, currentName, "", 0, ctxs, bodyDepth, inferMode, "stmt", blockAliases);
                     if inferMode { blockMarkers = collectParsedMarkers(blockMarkers, stmtBlock); }
                     afterStmtBlock := skipTrivia(source, stmtBlock.next, prefix);
                     if afterStmtBlock < blockSourceSize and textLib.wordAt(source, afterStmtBlock, "then") {
@@ -4368,7 +5950,7 @@ parseBinaryCtx := fn(target: String, source: String, position: Int, prefix: Stri
                         iifeDepth = bodyDepth, valKind = "Unit", valVar = "", label = "",
                         iterLabel = "", countVar = "", itemVar = "", itemKind = "", indexVar = "", hasIndex = false);
                         stmtFin := self(target, source, stmtFinOpen - 1, prefix, blockLocals, functions, params, currentName,
-                        "", 0, appendCtx(ctxs, stmtFinCtx), bodyDepth, inferMode, "finally", aliases);
+                        "", 0, appendCtx(ctxs, stmtFinCtx), bodyDepth, inferMode, "finally", blockAliases);
                         afterStmtFinClose := skipTrivia(source, stmtFin.next, prefix);
                         if afterStmtFinClose < blockSourceSize and textLib.wordAt(source, afterStmtFinClose, "then") {
                             failAt(source, afterStmtFinClose, prefix, "then must appear before finally");
@@ -4434,7 +6016,7 @@ parseBinaryCtx := fn(target: String, source: String, position: Int, prefix: Stri
                     var outDiverged := false;
                     loop outPos < blockSourceSize and textLib.at(source, outPos) =!= ")" {
                         outArgStart := outPos;
-                        outArg := self(target, source, outPos, prefix, blockLocals, functions, params, currentName, "", 0, ctxs, bodyDepth, inferMode, "", aliases);
+                        outArg := self(target, source, outPos, prefix, blockLocals, functions, params, currentName, "", 0, ctxs, bodyDepth, inferMode, "", blockAliases);
                         if inferMode { blockMarkers = collectParsedMarkers(blockMarkers, outArg); }
                         if containsFnKind(outArg.kind) {
                             failAt(source, outArgStart, prefix, "cannot output function value");
@@ -4532,7 +6114,7 @@ parseBinaryCtx := fn(target: String, source: String, position: Int, prefix: Stri
                             } else {
                                 targetCtx.valKind
                             };
-                            rhs := self(target, source, retValStart, prefix, blockLocals, functions, params, currentName, retExpected, 0, ctxs, bodyDepth, inferMode, "", aliases);
+                            rhs := self(target, source, retValStart, prefix, blockLocals, functions, params, currentName, retExpected, 0, ctxs, bodyDepth, inferMode, "", blockAliases);
                             if inferMode { blockMarkers = collectParsedMarkers(blockMarkers, rhs); }
                             stmtNext := consumeStatementEnd(source, rhs.next, prefix);
                             if stmtNext < 0 { failAt(source, skipTrivia(source, rhs.next, prefix), prefix, "expected ; after return"); }
@@ -4608,7 +6190,7 @@ parseBinaryCtx := fn(target: String, source: String, position: Int, prefix: Stri
                             if fnResult == "Unit" {
                                 failAt(source, itemStart, prefix, "function " + currentName + " returns Unit and cannot return a value");
                             }
-                            rhs := self(target, source, retValStart, prefix, blockLocals, functions, params, currentName, fnResult, 0, ctxs, bodyDepth, inferMode, "", aliases);
+                            rhs := self(target, source, retValStart, prefix, blockLocals, functions, params, currentName, fnResult, 0, ctxs, bodyDepth, inferMode, "", blockAliases);
                             if inferMode { blockMarkers = collectParsedMarkers(blockMarkers, rhs); }
                             if not isCompatibleKind(fnResult, rhs.kind) {
                                 failAt(source, retValStart, prefix, "cannot return " + displayKind(rhs.kind) +
@@ -4708,7 +6290,7 @@ parseBinaryCtx := fn(target: String, source: String, position: Int, prefix: Stri
                         } else {
                             loopCtx.valKind
                         };
-                        rhs := self(target, source, afterExit, prefix, blockLocals, functions, params, currentName, payExpected, 0, ctxs, bodyDepth, inferMode, "", aliases);
+                        rhs := self(target, source, afterExit, prefix, blockLocals, functions, params, currentName, payExpected, 0, ctxs, bodyDepth, inferMode, "", blockAliases);
                         if inferMode { blockMarkers = collectParsedMarkers(blockMarkers, rhs); }
                         stmtNext := consumeStatementEnd(source, rhs.next, prefix);
                         if stmtNext < 0 { failAt(source, skipTrivia(source, rhs.next, prefix), prefix, "expected ; after " + itemName); }
@@ -4783,7 +6365,7 @@ parseBinaryCtx := fn(target: String, source: String, position: Int, prefix: Stri
                         countVar = "", itemVar = "", itemKind = "", indexVar = "", hasIndex = false));
                         loop true {
                             rejectHeaderBlockTag(source, ifCursor, prefix, if isFirstIf { "if" } else { "else if" });
-                            condParsed := self(target, source, ifCursor, prefix, blockLocals, functions, params, currentName, "", 0, ifBarrierCtxs, bodyDepth, inferMode, "", aliases);
+                            condParsed := self(target, source, ifCursor, prefix, blockLocals, functions, params, currentName, "", 0, ifBarrierCtxs, bodyDepth, inferMode, "", blockAliases);
                             if inferMode { blockMarkers = collectParsedMarkers(blockMarkers, condParsed); }
                             if condParsed.kind =!= "Bool" {
                                 failAt(source, ifCursor, prefix, if isFirstIf { "if condition must be Bool" } else { "else if condition must be Bool" });
@@ -4796,7 +6378,7 @@ parseBinaryCtx := fn(target: String, source: String, position: Int, prefix: Stri
                             beforeOpen := skipTrivia(source, condParsed.next, prefix);
                             rejectMisplacedTag(source, beforeOpen, prefix, if isFirstIf { "block tag cannot appear before { in if" } else { "block tag cannot appear before { in else if" });
                             openPos := expectSymbol(source, beforeOpen, "{", prefix);
-                            branch := self(target, source, openPos - 1, prefix, blockLocals, functions, params, currentName, "", 0, ifBarrierCtxs, bodyDepth, inferMode, "stmt", aliases);
+                            branch := self(target, source, openPos - 1, prefix, blockLocals, functions, params, currentName, "", 0, ifBarrierCtxs, bodyDepth, inferMode, "stmt", blockAliases);
                             if inferMode { blockMarkers = collectParsedMarkers(blockMarkers, branch); }
                             if branch.kind =!= "Never" { allBranchesExit = false; }
                             prefixKw := if isFirstIf { "if (" } else { " else if (" };
@@ -4812,7 +6394,7 @@ parseBinaryCtx := fn(target: String, source: String, position: Int, prefix: Stri
                                 } else {
                                     hasElseBranch = true;
                                     elseOpen := expectSymbol(source, afterElse, "{", prefix);
-                                    elseBranch := self(target, source, elseOpen - 1, prefix, blockLocals, functions, params, currentName, "", 0, ifBarrierCtxs, bodyDepth, inferMode, "stmt", aliases);
+                                    elseBranch := self(target, source, elseOpen - 1, prefix, blockLocals, functions, params, currentName, "", 0, ifBarrierCtxs, bodyDepth, inferMode, "stmt", blockAliases);
                                     if inferMode { blockMarkers = collectParsedMarkers(blockMarkers, elseBranch); }
                                     if elseBranch.kind =!= "Never" { allBranchesExit = false; }
                                     ifParts = ifParts + " else { " + elseBranch.code + " }";
@@ -4886,7 +6468,7 @@ parseBinaryCtx := fn(target: String, source: String, position: Int, prefix: Stri
                             textLib.at(source, afterUnder) == "{";
                             if isFallback {
                                 sawFallback = true;
-                                arm := self(target, source, afterUnder, prefix, blockLocals, functions, params, currentName, "", 0, matchBarrierCtxs, bodyDepth, inferMode, "stmt", aliases);
+                                arm := self(target, source, afterUnder, prefix, blockLocals, functions, params, currentName, "", 0, matchBarrierCtxs, bodyDepth, inferMode, "stmt", blockAliases);
                                 if inferMode { blockMarkers = collectParsedMarkers(blockMarkers, arm); }
                                 if arm.kind =!= "Never" { allArmsExit = false; }
                                 if armCount == 0 {
@@ -4905,7 +6487,7 @@ parseBinaryCtx := fn(target: String, source: String, position: Int, prefix: Stri
                                     failAt(source, matchCursor, prefix, "match arm header requires grouping for { ... } expressions");
                                 }
                                 rejectHeaderBlockTag(source, matchCursor, prefix, "match arm");
-                                condParsed := self(target, source, matchCursor, prefix, blockLocals, functions, params, currentName, "", 0, matchBarrierCtxs, bodyDepth, inferMode, "", aliases);
+                                condParsed := self(target, source, matchCursor, prefix, blockLocals, functions, params, currentName, "", 0, matchBarrierCtxs, bodyDepth, inferMode, "", blockAliases);
                                 if inferMode { blockMarkers = collectParsedMarkers(blockMarkers, condParsed); }
                                 afterCond := skipTrivia(source, condParsed.next, prefix);
                                 rejectMisplacedTag(source, afterCond, prefix, "block tag cannot appear before { in match arm");
@@ -4923,7 +6505,7 @@ parseBinaryCtx := fn(target: String, source: String, position: Int, prefix: Stri
                                 } else {
                                     condParsed.code
                                 };
-                                arm := self(target, source, armOpen, prefix, blockLocals, functions, params, currentName, "", 0, matchBarrierCtxs, bodyDepth, inferMode, "stmt", aliases);
+                                arm := self(target, source, armOpen, prefix, blockLocals, functions, params, currentName, "", 0, matchBarrierCtxs, bodyDepth, inferMode, "stmt", blockAliases);
                                 if inferMode { blockMarkers = collectParsedMarkers(blockMarkers, arm); }
                                 if arm.kind =!= "Never" { allArmsExit = false; }
                                 armKw := if armCount == 0 { "if (" } else { " else if (" };
@@ -4958,7 +6540,7 @@ parseBinaryCtx := fn(target: String, source: String, position: Int, prefix: Stri
                         var loopItemName := "";
                         var loopItemKind := "";
                         if loopHeaderPos < blockSourceSize and textLib.at(source, loopHeaderPos) =!= "{" {
-                            hdrParsed := self(target, source, loopHeaderPos, prefix, blockLocals, functions, params, currentName, "", 0, ctxs, bodyDepth, inferMode, "", aliases);
+                            hdrParsed := self(target, source, loopHeaderPos, prefix, blockLocals, functions, params, currentName, "", 0, ctxs, bodyDepth, inferMode, "", blockAliases);
                             if inferMode { blockMarkers = collectParsedMarkers(blockMarkers, hdrParsed); }
                             afterHdr := skipTrivia(source, hdrParsed.next, prefix);
                             if textLib.wordAt(source, afterHdr, "as") {
@@ -5021,7 +6603,7 @@ parseBinaryCtx := fn(target: String, source: String, position: Int, prefix: Stri
                         iterLabel = "", countVar = "", itemVar = "", itemKind = "", indexVar = "", hasIndex = false);
                         loopStmtSink := if loopItemName =!= "" { "stmt:" + loopItemName } else { "stmt" };
                         loopBody := self(target, source, loopOpen - 1, prefix, loopLocals, functions, params, currentName,
-                        "", 0, appendCtx(ctxs, loopCtx), bodyDepth, inferMode, loopStmtSink, aliases);
+                        "", 0, appendCtx(ctxs, loopCtx), bodyDepth, inferMode, loopStmtSink, blockAliases);
                         if inferMode { blockMarkers = collectParsedMarkers(blockMarkers, loopBody); }
                         hasCrossBreak := codeUsesTextCall(loopBody.code, "lite$throwTransfer(" + integer.intText(loopId) + ",");
                         hasCrossCont := codeUsesTextCall(loopBody.code, "lite$throwTransfer(" + integer.intText(0 - loopId) + ",");
@@ -5054,7 +6636,34 @@ parseBinaryCtx := fn(target: String, source: String, position: Int, prefix: Stri
                     failAt(source, itemStart, prefix, "import is only allowed at top level");
                 } else if textLib.startsWithAt(source, afterItemName, ":=") and
                 textLib.wordAt(source, skipTrivia(source, afterItemName + 2, prefix), "type") {
-                    failAt(source, itemStart, prefix, "type aliases are only allowed at top level");
+                    isStatement = true;
+                    if isReservedWord(itemName) { unsupportedFeature(source, itemStart, itemName, prefix); }
+                    var earlierInnerAlias := false;
+                    loop blockAliases as alias {
+                        if alias.name == itemName and alias.depth == nextAliasDepth and alias.at < itemStart {
+                            earlierInnerAlias = true;
+                        }
+                    }
+                    if earlierInnerAlias {
+                        failAt(source, itemStart, prefix, "duplicate type alias " + itemName);
+                    }
+                    rejectDuplicateInBlockNames(source, itemStart, prefix, declaredInBlock, itemName);
+                    listLib.pushBack(mut declaredInBlock, itemName);
+                    typePos := skipTrivia(source, afterItemName + 2, prefix);
+                    targetStart := skipTrivia(source, typePos + 4, prefix);
+                    aliasIdx := aliasIndexAt(blockAliases, itemStart);
+                    if aliasIdx < 0 {
+                        unsupportedAliasTarget(source, targetStart, prefix, "target");
+                    }
+                    aliasEntry := blockAliases[aliasIdx];
+                    if aliasEntry.target == "" {
+                        unsupportedAliasTarget(source, targetStart, prefix, "target");
+                    }
+                    seenInner: mut List<String> = [];
+                    _resolvedInner := resolveTypeText(source, targetStart, prefix, aliasesUpToDepth(blockAliases, nextAliasDepth), aliasEntry.target, seenInner);
+                    afterAliasTarget := consumeStatementEnd(source, aliasEntry.end, prefix);
+                    if afterAliasTarget < 0 { unsupportedAliasTarget(source, aliasEntry.at, prefix, "target"); }
+                    cursor = afterAliasTarget;
                 } else if itemName == "var" {
                     isStatement = true;
                     var localStart := skipTrivia(source, itemEnd, prefix);
@@ -5075,7 +6684,7 @@ parseBinaryCtx := fn(target: String, source: String, position: Int, prefix: Stri
                     var declInitState := "init";
                     var varDiverged := false;
                     if textLib.startsWithAt(source, afterLocal, ":=") {
-                        declParsed = self(target, source, skipTrivia(source, afterLocal + 2, prefix), prefix, blockLocals, functions, params, currentName, "", 0, ctxs, bodyDepth, inferMode, "", aliases);
+                        declParsed = self(target, source, skipTrivia(source, afterLocal + 2, prefix), prefix, blockLocals, functions, params, currentName, "", 0, ctxs, bodyDepth, inferMode, "", blockAliases);
                         if inferMode { blockMarkers = collectParsedMarkers(blockMarkers, declParsed); }
                         rejectNonValueBinding(source, localStart, prefix, declParsed.kind, localName);
                         if declWritable and not isListKind(declParsed.kind) {
@@ -5083,7 +6692,7 @@ parseBinaryCtx := fn(target: String, source: String, position: Int, prefix: Stri
                         }
                     } else if afterLocal < textLib.length(source) and textLib.at(source, afterLocal) == ":" {
                         if declWritable { failAt(source, localStart, prefix, "var mut cannot be combined with explicit type annotation"); }
-                        typed := parseLocalType(source, afterLocal + 1, prefix, aliases);
+                        typed := parseLocalType(source, afterLocal + 1, prefix, blockAliases);
                         declWritable = typed.writable;
                         afterType := skipTrivia(source, typed.next, prefix);
                         if isSingleEquals(source, afterType) {
@@ -5097,7 +6706,7 @@ parseBinaryCtx := fn(target: String, source: String, position: Int, prefix: Stri
                             } else if zeroEnd >= 0 and not numeric.isNumericKind(typed.kind) {
                                 declParsed = zeroParsed(target, typed.kind, zeroEnd);
                             } else {
-                                initParsed := self(target, source, rhsStart, prefix, blockLocals, functions, params, currentName, typed.kind, 0, ctxs, bodyDepth, inferMode, "", aliases);
+                                initParsed := self(target, source, rhsStart, prefix, blockLocals, functions, params, currentName, typed.kind, 0, ctxs, bodyDepth, inferMode, "", blockAliases);
                                 if inferMode { blockMarkers = collectParsedMarkers(blockMarkers, initParsed); }
                                 if not isCompatibleKind(typed.kind, initParsed.kind) {
                                     failAt(source, localStart, prefix, "cannot initialize " + displayKind(typed.kind) + " with " + displayKind(initParsed.kind));
@@ -5144,7 +6753,7 @@ parseBinaryCtx := fn(target: String, source: String, position: Int, prefix: Stri
                     if not textLib.startsWithAt(source, afterLocal, ":=") {
                         failAt(source, afterLocal, prefix, "expected := after mut local name " + localName);
                     }
-                    declParsed := self(target, source, skipTrivia(source, afterLocal + 2, prefix), prefix, blockLocals, functions, params, currentName, "", 0, ctxs, bodyDepth, inferMode, "", aliases);
+                    declParsed := self(target, source, skipTrivia(source, afterLocal + 2, prefix), prefix, blockLocals, functions, params, currentName, "", 0, ctxs, bodyDepth, inferMode, "", blockAliases);
                     if inferMode { blockMarkers = collectParsedMarkers(blockMarkers, declParsed); }
                     if not isListKind(declParsed.kind) {
                         failAt(source, localStart, prefix, "mut requires a List value, got " + displayKind(declParsed.kind));
@@ -5168,7 +6777,7 @@ parseBinaryCtx := fn(target: String, source: String, position: Int, prefix: Stri
                     isStatement = true;
                     if isReservedWord(itemName) { unsupportedFeature(source, itemStart, itemName, prefix); }
                     rejectDuplicateInBlockNames(source, itemStart, prefix, declaredInBlock, itemName);
-                    declParsed := self(target, source, skipTrivia(source, afterItemName + 2, prefix), prefix, blockLocals, functions, params, currentName, "", 0, ctxs, bodyDepth, inferMode, "", aliases);
+                    declParsed := self(target, source, skipTrivia(source, afterItemName + 2, prefix), prefix, blockLocals, functions, params, currentName, "", 0, ctxs, bodyDepth, inferMode, "", blockAliases);
                     if inferMode { blockMarkers = collectParsedMarkers(blockMarkers, declParsed); }
                     rejectNonValueBinding(source, itemStart, prefix, declParsed.kind, itemName);
                     statementNext := consumeStatementEnd(source, declParsed.next, prefix);
@@ -5188,7 +6797,7 @@ parseBinaryCtx := fn(target: String, source: String, position: Int, prefix: Stri
                     isStatement = true;
                     if isReservedWord(itemName) { unsupportedFeature(source, itemStart, itemName, prefix); }
                     rejectDuplicateInBlockNames(source, itemStart, prefix, declaredInBlock, itemName);
-                    typed := parseLocalType(source, afterItemName + 1, prefix, aliases);
+                    typed := parseLocalType(source, afterItemName + 1, prefix, blockAliases);
                     afterType := skipTrivia(source, typed.next, prefix);
                     var declParsed := zeroParsed(target, typed.kind, afterType);
                     var declInitState := "init";
@@ -5203,7 +6812,7 @@ parseBinaryCtx := fn(target: String, source: String, position: Int, prefix: Stri
                         } else if zeroEnd >= 0 and not numeric.isNumericKind(typed.kind) {
                             declParsed = zeroParsed(target, typed.kind, zeroEnd);
                         } else {
-                            declParsed = self(target, source, rhsStart, prefix, blockLocals, functions, params, currentName, typed.kind, 0, ctxs, bodyDepth, inferMode, "", aliases);
+                            declParsed = self(target, source, rhsStart, prefix, blockLocals, functions, params, currentName, typed.kind, 0, ctxs, bodyDepth, inferMode, "", blockAliases);
                             if inferMode { blockMarkers = collectParsedMarkers(blockMarkers, declParsed); }
                             if not isCompatibleKind(typed.kind, declParsed.kind) {
                                 failAt(source, itemStart, prefix, "cannot initialize " + displayKind(typed.kind) + " with " + displayKind(declParsed.kind));
@@ -5238,7 +6847,7 @@ parseBinaryCtx := fn(target: String, source: String, position: Int, prefix: Stri
                     requireCaptureAllowedLocal(source, itemStart, prefix, entry, itemName);
                     if entry.initState == "init" and not entry.mutable { failAt(source, itemStart, prefix, "cannot assign to immutable local " + itemName); }
                     if entry.initState == "maybe" and not entry.mutable { failAt(source, itemStart, prefix, "cannot assign to possibly initialized immutable local " + itemName); }
-                    rhs := self(target, source, skipTrivia(source, afterItemName + 1, prefix), prefix, blockLocals, functions, params, currentName, entry.kind, 0, ctxs, bodyDepth, inferMode, "", aliases);
+                    rhs := self(target, source, skipTrivia(source, afterItemName + 1, prefix), prefix, blockLocals, functions, params, currentName, entry.kind, 0, ctxs, bodyDepth, inferMode, "", blockAliases);
                     if inferMode { blockMarkers = collectParsedMarkers(blockMarkers, rhs); }
                     if not isCompatibleKind(entry.kind, rhs.kind) {
                         failAt(source, itemStart, prefix, "cannot assign " + displayKind(rhs.kind) + " to " + displayKind(entry.kind) + " local " + itemName);
@@ -5269,7 +6878,7 @@ parseBinaryCtx := fn(target: String, source: String, position: Int, prefix: Stri
                     requireCaptureAllowedLocal(source, itemStart, prefix, entry, itemName);
                     if entry.initState =!= "init" { failAt(source, itemStart, prefix, "cannot read uninitialized local " + itemName); }
                     if not entry.mutable { failAt(source, itemStart, prefix, "cannot assign to immutable local " + itemName); }
-                    rhs := self(target, source, skipTrivia(source, afterItemName + compound.width, prefix), prefix, blockLocals, functions, params, currentName, entry.kind, 0, ctxs, bodyDepth, inferMode, "", aliases);
+                    rhs := self(target, source, skipTrivia(source, afterItemName + compound.width, prefix), prefix, blockLocals, functions, params, currentName, entry.kind, 0, ctxs, bodyDepth, inferMode, "", blockAliases);
                     if inferMode { blockMarkers = collectParsedMarkers(blockMarkers, rhs); }
                     rhsCode := compoundAssignCode(target, source, afterItemName, prefix, entry.kind, entry.runtime, compound.baseOp, rhs);
                     statementNext := consumeStatementEnd(source, rhs.next, prefix);
@@ -5297,7 +6906,7 @@ parseBinaryCtx := fn(target: String, source: String, position: Int, prefix: Stri
                 itemSink := if (not isStmtBody) and allowOutput and itemAtClose { "exprOut" } else { "" };
                 itemMinimum := if isStmtBody or (not itemAtClose) or minimum == -2 or
                 (isLoopBody and (expected == "" or expected == "Unit")) { -2 } else { 0 };
-                expr := self(target, source, cursor, prefix, blockLocals, functions, params, currentName, itemExpected, itemMinimum, ctxs, bodyDepth, inferMode, itemSink, aliases);
+                expr := self(target, source, cursor, prefix, blockLocals, functions, params, currentName, itemExpected, itemMinimum, ctxs, bodyDepth, inferMode, itemSink, blockAliases);
                 if inferMode { blockMarkers = collectParsedMarkers(blockMarkers, expr); }
                 statementNext := consumeStatementEnd(source, expr.next, prefix);
                 if statementNext < 0 { failAt(source, skipTrivia(source, expr.next, prefix), prefix, "expected ; or }"); }
@@ -5711,14 +7320,28 @@ parseBinaryCtx := fn(target: String, source: String, position: Int, prefix: Stri
             intValue = 0, textValue = "", initState = "init"));
             loop locals as outerEntry {
                 if outerEntry.name =!= "$self" {
-                    allowed := outerEntry.kind == "Module" or
-                    (outerEntry.depth <= 0 and not outerEntry.mutable and not outerEntry.writable and outerEntry.initState == "init");
-                    if allowed {
-                        listLib.pushBack(mut fnLocals, outerEntry);
+                    if outerEntry.depth == -2 {
+                        if localIndex(locals, outerEntry.name) < 0 and findFunction(functions, outerEntry.name) < 0 {
+                            if not outerEntry.mutable and not outerEntry.writable {
+                                listLib.pushBack(mut fnLocals, (name = outerEntry.name, runtime = outerEntry.runtime, kind = outerEntry.kind,
+                                mutable = false, writable = false, depth = -1, constant = false, code = outerEntry.runtime,
+                                intValue = 0, textValue = "", initState = outerEntry.initState));
+                            } else {
+                                listLib.pushBack(mut fnLocals, (name = outerEntry.name, runtime = "", kind = outerEntry.kind,
+                                mutable = false, writable = false, depth = iifeDepth + 1, constant = false, code = "",
+                                intValue = 0, textValue = "", initState = "capture_disallowed"));
+                            }
+                        }
                     } else {
-                        listLib.pushBack(mut fnLocals, (name = outerEntry.name, runtime = "", kind = outerEntry.kind,
-                        mutable = false, writable = false, depth = iifeDepth + 1, constant = false, code = "",
-                        intValue = 0, textValue = "", initState = "capture_disallowed"));
+                        allowed := outerEntry.kind == "Module" or
+                        (outerEntry.depth <= 0 and not outerEntry.mutable and not outerEntry.writable and outerEntry.initState == "init");
+                        if allowed {
+                            listLib.pushBack(mut fnLocals, outerEntry);
+                        } else {
+                            listLib.pushBack(mut fnLocals, (name = outerEntry.name, runtime = "", kind = outerEntry.kind,
+                            mutable = false, writable = false, depth = iifeDepth + 1, constant = false, code = "",
+                            intValue = 0, textValue = "", initState = "capture_disallowed"));
+                        }
                     }
                 }
             }
@@ -5752,7 +7375,7 @@ parseBinaryCtx := fn(target: String, source: String, position: Int, prefix: Stri
                     pSeedIdx = pSeedIdx + 1;
                 }
             }
-            fnBody := self(target, source, cursor - 1, prefix, fnLocals, functions, params, "<fn>",
+            fnBody := self(target, source, cursor, prefix, fnLocals, functions, params, "<fn>",
             retKind, 0, fnCtxs, iifeDepth + 1, inferMode, fnBodySink, aliases);
             usesSelf := codeUsesTextCall(fnBody.code, selfRuntime);
             fnPrefix := if usesSelf { "(function " + selfRuntime } else { "(function " };
@@ -5794,6 +7417,9 @@ parseBinaryCtx := fn(target: String, source: String, position: Int, prefix: Stri
                 } else {
                     callableIndex := findFunction(functions, name);
                     if callableIndex >= 0 {
+                        if currentName == "" and functions[callableIndex].declAt > nameStart {
+                            failAt(source, nameStart, prefix, "cannot access " + name + " before initialization");
+                        }
                         left = (kind = "ModuleFunction", code = integer.intText(nameStart), intValue = callableIndex,
                         textValue = name, constant = false, next = next);
                     } else if isCallSite and (name == "push_back" or name == "pop_back" or name == "push_front" or name == "pop_front") {
@@ -7762,12 +9388,14 @@ parseExpressionItem := fn(target: String, source: String, position: Int, prefix:
     (next = next, returned = returned, code = if returned { if parsed.kind == "Unit" { targetUnitEvaluationCode(target, parsed.code) } else { assignValueCode(target, currentResult, parsed.kind, parsed.code) } } else { parsed.code }, valueKind = parsed.kind)
 }
 
-/** Collects aliases, `pub` declarations, and later scalar values in a single pass over module source. */
+/** Collects aliases, `pub` declarations, inner-alias hints, root functions, root values, and root assignments in a single pass over module source. */
 collectModuleDecls := fn(target: String, source: String, prefix: String, moduleKey: String): Items {
     decls: mut List<Item> = [];
     size := textLib.length(source);
     var position := 0;
     var depth := 0;
+    var parenDepth := 0;
+    var hasInnerAlias := false;
     loop position < size {
         position = skipTrivia(source, position, prefix);
         if position >= size { break; }
@@ -7778,6 +9406,13 @@ collectModuleDecls := fn(target: String, source: String, prefix: String, moduleK
             if depth == 0 {
                 blockEnd := scanBraceEnd(source, position, prefix);
                 if blockEnd >= 0 {
+                    if not hasInnerAlias {
+                        typeHit := textLib.indexOfText(source, "type", position + 1);
+                        if typeHit >= 0 and typeHit < blockEnd {
+                            hasInnerAlias = true;
+                            listLib.pushBack(mut decls, (kind = "HasInnerAlias", name = "", runtime = "", code = "", intValue = 0, textValue = ""));
+                        }
+                    }
                     position = blockEnd;
                     continue;
                 }
@@ -7787,7 +9422,24 @@ collectModuleDecls := fn(target: String, source: String, prefix: String, moduleK
         } else if ch == "}" {
             if depth > 0 { depth = depth - 1; }
             position = position + 1;
-        } else if depth == 0 and textLib.isNameStart(ch) {
+        } else if ch == "(" or ch == "[" {
+            if ch == "(" and depth == 0 and parenDepth == 0 {
+                parenEnd := scanParenEnd(source, position, prefix);
+                afterParen := if parenEnd >= 0 { skipTrivia(source, parenEnd, prefix) } else { -1 };
+                if afterParen >= 0 and textLib.startsWithAt(source, afterParen, ":=") {
+                    rhsPos := skipTrivia(source, afterParen + 2, prefix);
+                    listLib.pushBack(mut decls, (kind = "FutureDestr", name = "", runtime = "val", code = integer.intText(position),
+                    intValue = position, textValue = integer.intText(rhsPos)));
+                    position = rhsPos;
+                    continue;
+                }
+            }
+            if depth == 0 { parenDepth = parenDepth + 1; }
+            position = position + 1;
+        } else if ch == ")" or ch == "]" {
+            if depth == 0 and parenDepth > 0 { parenDepth = parenDepth - 1; }
+            position = position + 1;
+        } else if depth == 0 and parenDepth == 0 and textLib.isNameStart(ch) {
             nameStart := position;
             afterName := textLib.skipName(source, position);
             name := textLib.slice(source, nameStart, afterName);
@@ -7811,6 +9463,97 @@ collectModuleDecls := fn(target: String, source: String, prefix: String, moduleK
                 position = afterName;
                 continue;
             }
+            if name == "var" {
+                afterVar := skipTrivia(source, afterName, prefix);
+                if afterVar < size and textLib.at(source, afterVar) == "(" {
+                    parenEnd := scanParenEnd(source, afterVar, prefix);
+                    afterParen := if parenEnd >= 0 { skipTrivia(source, parenEnd, prefix) } else { -1 };
+                    if afterParen >= 0 and textLib.startsWithAt(source, afterParen, ":=") {
+                        rhsPos := skipTrivia(source, afterParen + 2, prefix);
+                        listLib.pushBack(mut decls, (kind = "FutureDestr", name = "", runtime = "var", code = integer.intText(afterVar),
+                        intValue = nameStart, textValue = integer.intText(rhsPos)));
+                        position = rhsPos;
+                        continue;
+                    }
+                }
+                var isVarMut := false;
+                var varLocalPos := afterVar;
+                if textLib.wordAt(source, varLocalPos, "mut") {
+                    isVarMut = true;
+                    varLocalPos = skipTrivia(source, varLocalPos + 3, prefix);
+                }
+                if varLocalPos < size and textLib.isNameStart(textLib.at(source, varLocalPos)) {
+                    localStart := varLocalPos;
+                    localEnd := textLib.skipName(source, localStart);
+                    localName := textLib.slice(source, localStart, localEnd);
+                    if not isReservedWord(localName) {
+                        afterLocal := skipTrivia(source, localEnd, prefix);
+                        if textLib.startsWithAt(source, afterLocal, ":=") {
+                            rhsPos := skipTrivia(source, afterLocal + 2, prefix);
+                            kindTag := if isVarMut { "varmut|" } else { "varval|" };
+                            listLib.pushBack(mut decls, (kind = "FutureDecl", name = localName, runtime = moduleValueRuntime(target, moduleKey, localName),
+                            code = "", intValue = localStart, textValue = kindTag + integer.intText(rhsPos)));
+                            position = rhsPos;
+                            continue;
+                        } else if not isVarMut and afterLocal < size and textLib.at(source, afterLocal) == ":" and compoundAssignOp(source, afterLocal).width == 0 {
+                            annStart := afterLocal + 1;
+                            listLib.pushBack(mut decls, (kind = "FutureDecl", name = localName, runtime = moduleValueRuntime(target, moduleKey, localName),
+                            code = "", intValue = localStart, textValue = "varann|" + integer.intText(annStart)));
+                            var ts := annStart;
+                            var tp := 0;
+                            loop ts < size {
+                                ts = skipTrivia(source, ts, prefix);
+                                if ts >= size { break; }
+                                tc := textLib.at(source, ts);
+                                if tc == "\"" {
+                                    ts = skipAliasString(source, ts);
+                                } else if tc == "(" or tc == "[" or tc == "<" {
+                                    tp = tp + 1;
+                                    ts = ts + 1;
+                                } else if tc == ")" or tc == "]" or tc == ">" {
+                                    if tp > 0 { tp = tp - 1; }
+                                    ts = ts + 1;
+                                } else if tc == "{" or tc == "}" {
+                                    break;
+                                } else if tp == 0 and tc == ";" {
+                                    ts = ts + 1;
+                                    break;
+                                } else if tp == 0 and isSingleEquals(source, ts) {
+                                    ts = ts + 1;
+                                    break;
+                                } else {
+                                    ts = ts + 1;
+                                }
+                            }
+                            position = ts;
+                            continue;
+                        }
+                    }
+                }
+                position = afterName;
+                continue;
+            }
+            if name == "mut" {
+                localStart := skipTrivia(source, afterName, prefix);
+                if localStart < size and textLib.isNameStart(textLib.at(source, localStart)) {
+                    localEnd := textLib.skipName(source, localStart);
+                    localName := textLib.slice(source, localStart, localEnd);
+                    afterLocal := skipTrivia(source, localEnd, prefix);
+                    if not isReservedWord(localName) and textLib.startsWithAt(source, afterLocal, ":=") {
+                        rhsPos := skipTrivia(source, afterLocal + 2, prefix);
+                        listLib.pushBack(mut decls, (kind = "FutureDecl", name = localName, runtime = moduleValueRuntime(target, moduleKey, localName),
+                        code = "", intValue = localStart, textValue = "mutval|" + integer.intText(rhsPos)));
+                        position = rhsPos;
+                        continue;
+                    }
+                }
+                position = afterName;
+                continue;
+            }
+            if name == "else" or isReservedWord(name) {
+                position = afterName;
+                continue;
+            }
             aliasPosition := skipTrivia(source, afterName, prefix);
             if textLib.startsWithAt(source, aliasPosition, ":=") {
                 valueStart := skipTrivia(source, aliasPosition + 2, prefix);
@@ -7822,25 +9565,94 @@ collectModuleDecls := fn(target: String, source: String, prefix: String, moduleK
                     position = aliasTarget.next;
                     continue;
                 }
-                if not textLib.wordAt(source, valueStart, "fn") and valueStart < size {
-                    valueCh := textLib.at(source, valueStart);
-                    var kind := "";
-                    if textLib.isDigit(valueCh) or valueCh == "+" or valueCh == "-" {
-                        parsed := parseNumber(target, source, valueStart, prefix, "", 0);
-                        kind = parsed.kind;
-                    } else if valueCh == "\"" {
-                        parsed := parseText(target, source, valueStart, prefix);
-                        kind = parsed.kind;
-                    } else if textLib.wordAt(source, valueStart, "true") or textLib.wordAt(source, valueStart, "false") {
-                        kind = "Bool";
+                if textLib.wordAt(source, valueStart, "fn") {
+                    headerPos := skipTrivia(source, valueStart + 2, prefix);
+                    listLib.pushBack(mut decls, (kind = "FutureFn", name = name, runtime = "", code = "",
+                    intValue = nameStart, textValue = integer.intText(headerPos)));
+                    var fnCursor := headerPos;
+                    var fnParen := 0;
+                    loop fnCursor < size {
+                        fnCursor = skipTrivia(source, fnCursor, prefix);
+                        if fnCursor >= size { break; }
+                        fc := textLib.at(source, fnCursor);
+                        if fc == "\"" {
+                            fnCursor = skipAliasString(source, fnCursor);
+                        } else if fc == "(" or fc == "[" {
+                            fnParen = fnParen + 1;
+                            fnCursor = fnCursor + 1;
+                        } else if fc == ")" or fc == "]" {
+                            if fnParen > 0 { fnParen = fnParen - 1; }
+                            fnCursor = fnCursor + 1;
+                        } else if fnParen == 0 and fc == ";" {
+                            fnCursor = fnCursor + 1;
+                            break;
+                        } else if fnParen == 0 and fc == "{" {
+                            fnBodyEnd := scanBraceEnd(source, fnCursor, prefix);
+                            if fnBodyEnd >= 0 {
+                                if not hasInnerAlias {
+                                    fnTypeHit := textLib.indexOfText(source, "type", fnCursor + 1);
+                                    if fnTypeHit >= 0 and fnTypeHit < fnBodyEnd {
+                                        hasInnerAlias = true;
+                                        listLib.pushBack(mut decls, (kind = "HasInnerAlias", name = "", runtime = "", code = "", intValue = 0, textValue = ""));
+                                    }
+                                }
+                                fnCursor = fnBodyEnd;
+                            } else {
+                                fnCursor = size;
+                            }
+                            break;
+                        } else if fnParen == 0 and fc == "}" {
+                            break;
+                        } else {
+                            fnCursor = fnCursor + 1;
+                        }
                     }
-                    if kind =!= "" {
-                        futureRuntime := moduleValueRuntime(target, moduleKey, name);
-                        listLib.pushBack(mut decls, (kind = "FutureVal", name = name, runtime = futureRuntime,
-                        code = kind, intValue = nameStart, textValue = ""));
-                    }
+                    position = fnCursor;
+                    continue;
+                }
+                if not textLib.wordAt(source, valueStart, "import") {
+                    listLib.pushBack(mut decls, (kind = "FutureDecl", name = name, runtime = moduleValueRuntime(target, moduleKey, name),
+                    code = "", intValue = nameStart, textValue = "val|" + integer.intText(valueStart)));
                 }
                 position = valueStart;
+                continue;
+            }
+            if aliasPosition < size and textLib.at(source, aliasPosition) == ":" and compoundAssignOp(source, aliasPosition).width == 0 {
+                annStart := aliasPosition + 1;
+                listLib.pushBack(mut decls, (kind = "FutureDecl", name = name, runtime = moduleValueRuntime(target, moduleKey, name),
+                code = "", intValue = nameStart, textValue = "ann|" + integer.intText(annStart)));
+                var ts := annStart;
+                var tp := 0;
+                loop ts < size {
+                    ts = skipTrivia(source, ts, prefix);
+                    if ts >= size { break; }
+                    tc := textLib.at(source, ts);
+                    if tc == "\"" {
+                        ts = skipAliasString(source, ts);
+                    } else if tc == "(" or tc == "[" or tc == "<" {
+                        tp = tp + 1;
+                        ts = ts + 1;
+                    } else if tc == ")" or tc == "]" or tc == ">" {
+                        if tp > 0 { tp = tp - 1; }
+                        ts = ts + 1;
+                    } else if tc == "{" or tc == "}" {
+                        break;
+                    } else if tp == 0 and tc == ";" {
+                        ts = ts + 1;
+                        break;
+                    } else if tp == 0 and isSingleEquals(source, ts) {
+                        ts = ts + 1;
+                        break;
+                    } else {
+                        ts = ts + 1;
+                    }
+                }
+                position = ts;
+                continue;
+            }
+            if isSingleEquals(source, aliasPosition) {
+                listLib.pushBack(mut decls, (kind = "RootAssign", name = name, runtime = "", code = "", intValue = nameStart, textValue = ""));
+                position = skipTrivia(source, aliasPosition + 1, prefix);
                 continue;
             }
             position = afterName;
@@ -7855,7 +9667,7 @@ collectModuleDecls := fn(target: String, source: String, prefix: String, moduleK
 withoutFutureValues := fn(locals: List<Local>): List<Local> {
     kept: mut List<Local> = [];
     loop locals as entry {
-        if entry.depth >= 0 { listLib.pushBack(mut kept, entry); }
+        if entry.depth >= 0 or entry.depth == -2 { listLib.pushBack(mut kept, entry); }
     }
     kept
 }
@@ -7981,10 +9793,10 @@ moduleIdentity: String, neededFns: String, skipSoftBuiltins: Bool): Items {
     if skipSoftBuiltins and target == "ts" and textLib.startsWithAt(moduleIdentity, 0, "lite.core.") {
         builtinRules = parseBuiltinModes(prefix);
     }
-    aliases: mut List<AliasDecl> = [];
+    var aliases: mut List<AliasDecl> = [];
     loop exports as exported {
         if exported.kind == "PublicType" {
-            listLib.pushBack(mut aliases, (name = exported.name, target = exported.code, at = -1, end = 0));
+            listLib.pushBack(mut aliases, (name = exported.name, target = exported.code, at = -1, end = 0, depth = 0));
         }
     }
     decls := collectModuleDecls(target, source, prefix, moduleKey);
@@ -7992,19 +9804,22 @@ moduleIdentity: String, neededFns: String, skipSoftBuiltins: Bool): Items {
     publishedValues: mut List<String> = [];
     publishedTypes: mut List<String> = [];
     futureValues: mut List<FutureValue> = [];
+    var hasInnerAlias := false;
+    rootAssignedNames: mut List<String> = [];
     loop decls as decl {
         if decl.kind == "Alias" {
             endPos := parseDigits(decl.textValue, 0, textLib.length(decl.textValue));
-            listLib.pushBack(mut aliases, (name = decl.name, target = decl.code, at = decl.intValue, end = endPos));
+            listLib.pushBack(mut aliases, (name = decl.name, target = decl.code, at = decl.intValue, end = endPos, depth = 0));
         } else if decl.kind == "PubFn" {
             listLib.pushBack(mut publishedFunctions, decl.name);
         } else if decl.kind == "PubVal" {
             listLib.pushBack(mut publishedValues, decl.name);
         } else if decl.kind == "PubType" {
             listLib.pushBack(mut publishedTypes, decl.name);
-        } else if decl.kind == "FutureVal" {
-            listLib.pushBack(mut futureValues, (name = decl.name, runtime = decl.runtime, kind = decl.code,
-            at = decl.intValue, intValue = 0, textValue = ""));
+        } else if decl.kind == "HasInnerAlias" {
+            hasInnerAlias = true;
+        } else if decl.kind == "RootAssign" and not listLib.listContainsText(rootAssignedNames, decl.name) {
+            listLib.pushBack(mut rootAssignedNames, decl.name);
         }
     }
     var locals: mut List<Local> = [];
@@ -8039,7 +9854,7 @@ moduleIdentity: String, neededFns: String, skipSoftBuiltins: Bool): Items {
                 entryIndex = entryIndex + 1;
             }
             listLib.pushBack(mut functions, (name = exported.name, runtime = exported.runtime, result = exported.code,
-            first = first, count = exported.intValue));
+            first = first, count = exported.intValue, declAt = -1));
             if textLib.indexOfText(exported.name, ".", 0) < 0 {
                 listLib.pushBack(mut blockDecls, (name = exported.name, depth = 0));
             }
@@ -8062,6 +9877,167 @@ moduleIdentity: String, neededFns: String, skipSoftBuiltins: Bool): Items {
             }
         }
     }
+    loop decls as decl {
+        if decl.kind == "FutureFn" {
+            fnName := decl.name;
+            fnAt := decl.intValue;
+            if findFunction(functions, fnName) < 0 and localIndex(locals, fnName) < 0 {
+                var shadowedBefore := false;
+                loop decls as priorDecl {
+                    if priorDecl.name == fnName and priorDecl.intValue < fnAt and
+                    (priorDecl.kind == "Alias" or priorDecl.kind == "FutureDecl") {
+                        shadowedBefore = true;
+                        break;
+                    }
+                }
+                if not shadowedBefore {
+                    headerPos := parseDigits(decl.textValue, 0, textLib.length(decl.textValue));
+                    fnListIntrinsic := moduleIdentity == "lite.core.list.v1" and
+                    (fnName == "pushBack" or fnName == "popBack" or fnName == "pushFront" or fnName == "popFront");
+                    if canPreParseFunctionHeader(source, headerPos, prefix, aliases, fnListIntrinsic) {
+                        header := parseFunctionHeader(source, headerPos, prefix, aliases, fnListIntrinsic);
+                        afterHdr := skipTrivia(source, header.next, prefix);
+                        if afterHdr < size and textLib.at(source, afterHdr) == ";" {
+                            hostRuntime := coreHostFunction(moduleIdentity, fnName, header.params, header.result);
+                            if listLib.listContainsText(publishedFunctions, fnName) and hostRuntime =!= "" {
+                                listLib.pushBack(mut functions, (name = fnName, runtime = hostRuntime, result = header.result,
+                                first = parameterTotal, count = header.count, declAt = fnAt));
+                                var hStart := 0;
+                                var hIdx := 0;
+                                loop hIdx < header.count {
+                                    sep := textLib.indexOfText(header.params, "|", hStart);
+                                    var hEnd := textLib.length(header.params);
+                                    if sep >= 0 { hEnd = sep; }
+                                    listLib.pushBack(mut functionParams, textLib.slice(header.params, hStart, hEnd));
+                                    parameterTotal = parameterTotal + 1;
+                                    hStart = hEnd + 1;
+                                    hIdx = hIdx + 1;
+                                }
+                            }
+                        } else if header.count >= 0 and header.genericType == "" and afterHdr < size and textLib.at(source, afterHdr) == "{" {
+                            fnRuntime := moduleFunctionRuntime(target, moduleKey, fnName);
+                            listLib.pushBack(mut functions, (name = fnName, runtime = fnRuntime, result = header.result,
+                            first = parameterTotal, count = header.count, declAt = fnAt));
+                            var pStart := 0;
+                            var pIdx := 0;
+                            loop pIdx < header.count {
+                                sep := textLib.indexOfText(header.params, "|", pStart);
+                                var pEnd := textLib.length(header.params);
+                                if sep >= 0 { pEnd = sep; }
+                                listLib.pushBack(mut functionParams, textLib.slice(header.params, pStart, pEnd));
+                                parameterTotal = parameterTotal + 1;
+                                pStart = pEnd + 1;
+                                pIdx = pIdx + 1;
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    }
+    var resolvedDeclBag := "";
+    var futurePass := 0;
+    loop futurePass < 4 {
+        var progressed := false;
+        var declIdx := 0;
+        loop decls as decl {
+            keyText := integer.intText(declIdx);
+            if not tokenInPipeBag(resolvedDeclBag, keyText) {
+                if decl.kind == "FutureDecl" {
+                    sep := textLib.indexOfText(decl.textValue, "|", 0);
+                    declTag := textLib.slice(decl.textValue, 0, sep);
+                    posVal := parseDigits(decl.textValue, sep + 1, textLib.length(decl.textValue));
+                    if declTag == "ann" or declTag == "varann" {
+                        declMutable := declTag == "varann";
+                        if canPreResolveLocalType(source, posVal, prefix, aliases) {
+                            typed := parseLocalType(source, posVal, prefix, aliases);
+                            if not (declMutable and typed.writable) {
+                                afterType := skipTrivia(source, typed.next, prefix);
+                                var futInit := "init";
+                                if isSingleEquals(source, afterType) {
+                                    rhsStart := skipTrivia(source, afterType + 1, prefix);
+                                    if isReservedInitMarker(source, rhsStart, prefix) >= 0 and not isListKind(typed.kind) {
+                                        futInit = if listLib.listContainsText(rootAssignedNames, decl.name) { "init" } else { "uninit" };
+                                    }
+                                }
+                                listLib.pushBack(mut futureValues, (name = decl.name, runtime = decl.runtime, kind = typed.kind,
+                                at = decl.intValue, mutable = declMutable, writable = typed.writable, initState = futInit));
+                                resolvedDeclBag = appendPipeBag(resolvedDeclBag, keyText);
+                                progressed = true;
+                            }
+                        }
+                    } else {
+                        declMutable := declTag == "varval" or declTag == "varmut";
+                        declWritable := declTag == "varmut" or declTag == "mutval";
+                        inferred := tryInferRootExprKind(source, posVal, prefix, aliases, functions, functionParams, locals, futureValues, "", 0, 24);
+                        if inferred.kind =!= "" and inferred.kind =!= "Unit" and (not declWritable or isListKind(inferred.kind)) {
+                            listLib.pushBack(mut futureValues, (name = decl.name, runtime = decl.runtime, kind = inferred.kind,
+                            at = decl.intValue, mutable = declMutable, writable = declWritable, initState = "init"));
+                            resolvedDeclBag = appendPipeBag(resolvedDeclBag, keyText);
+                            progressed = true;
+                        }
+                    }
+                } else if decl.kind == "FutureDestr" {
+                    openPos := parseDigits(decl.code, 0, textLib.length(decl.code));
+                    rhsPos := parseDigits(decl.textValue, 0, textLib.length(decl.textValue));
+                    destr := tryParseDestructureNames(source, openPos, prefix);
+                    if destr.ok and destr.count > 0 {
+                        destrMutable := decl.runtime == "var";
+                        inferred := tryInferRootExprKind(source, rhsPos, prefix, aliases, functions, functionParams, locals, futureValues, "", 0, 24);
+                        if destr.grouped {
+                            if inferred.kind =!= "" and inferred.kind =!= "Unit" {
+                                bindName := destr.namesText;
+                                listLib.pushBack(mut futureValues, (name = bindName, runtime = moduleValueRuntime(target, moduleKey, bindName),
+                                kind = inferred.kind, at = decl.intValue, mutable = destrMutable, writable = false, initState = "init"));
+                                resolvedDeclBag = appendPipeBag(resolvedDeclBag, keyText);
+                                progressed = true;
+                            }
+                        } else if isTupleKind(inferred.kind) and tupleComponentCount(inferred.kind) == destr.count {
+                            var bindCursor := 0;
+                            var bindIndex := 0;
+                            namesLen := textLib.length(destr.namesText);
+                            loop bindIndex < destr.count {
+                                var bindEnd := bindCursor;
+                                loop bindEnd < namesLen and textLib.at(destr.namesText, bindEnd) =!= "," {
+                                    bindEnd = bindEnd + 1;
+                                }
+                                bindName := textLib.slice(destr.namesText, bindCursor, bindEnd);
+                                bindCursor = bindEnd + 1;
+                                comp := tupleComponent(inferred.kind, bindIndex);
+                                listLib.pushBack(mut futureValues, (name = bindName, runtime = moduleValueRuntime(target, moduleKey, bindName),
+                                kind = comp.kind, at = decl.intValue, mutable = destrMutable, writable = false, initState = "init"));
+                                bindIndex = bindIndex + 1;
+                            }
+                            resolvedDeclBag = appendPipeBag(resolvedDeclBag, keyText);
+                            progressed = true;
+                        }
+                    }
+                }
+            }
+            declIdx = declIdx + 1;
+        }
+        if not progressed { break; }
+        futurePass = futurePass + 1;
+    }
+    var placeholderNamesBag := "";
+    loop futureValues as future {
+        if localIndex(locals, future.name) < 0 and findFunction(functions, future.name) < 0 and
+        not tokenInPipeBag(placeholderNamesBag, future.name) {
+            placeholderNamesBag = appendPipeBag(placeholderNamesBag, future.name);
+            listLib.pushBack(mut locals, (name = future.name, runtime = future.runtime, kind = future.kind,
+            mutable = future.mutable, writable = future.writable, depth = -2, constant = false, code = future.runtime,
+            intValue = 0, textValue = "", initState = future.initState));
+        }
+    }
+    var maxFutureAt := -1;
+    loop functions as info {
+        if info.declAt > maxFutureAt { maxFutureAt = info.declAt; }
+    }
+    loop futureValues as future {
+        if future.at > maxFutureAt { maxFutureAt = future.at; }
+    }
+    var callableVarRuntimes: List<String> = [];
+    var callableVarDeps: List<String> = [];
     var blockCount := 0;
     var depth := 0;
     var currentName := "";
@@ -8106,6 +10082,7 @@ moduleIdentity: String, neededFns: String, skipSoftBuiltins: Bool): Items {
                 keptDecls := popBlockDecls(blockDecls, depth);
                 blockDecls = [];
                 loop keptDecls as d { listLib.pushBack(mut blockDecls, d); }
+                aliases = popBlockAliases(aliases, depth);
                 var stateCount := 0;
                 loop savedStates { stateCount += 1; }
                 branchPreLen := savedStates[stateCount - 1].preLocalsLen;
@@ -8127,12 +10104,17 @@ moduleIdentity: String, neededFns: String, skipSoftBuiltins: Bool): Items {
                 hasElse = not textLib.wordAt(source, afterElse, "if");
                 droppedIf := listLib.popBack(mut blocks);
                 blockCount = blockCount - 1;
+                var elseArmOpen := -1;
                 if textLib.wordAt(source, afterElse, "if") {
                     conditionStart := skipTrivia(source, afterElse + 2, prefix);
                     rejectHeaderBlockTag(source, conditionStart, prefix, "else if");
                     condition := parseExpressionCtx(target, source, conditionStart, prefix, locals, functions, functionParams, currentName, stmtCtxs, aliases);
                     if condition.kind =!= "Bool" {
                         failAt(source, conditionStart, prefix, "else if condition must be Bool");
+                    }
+                    if currentName == "" and currentLive {
+                        checkRootTraceSafety(source, conditionStart, prefix, condition.code, maxFutureAt, locals, functions,
+                        futureValues, items, callableVarRuntimes, callableVarDeps);
                     }
                     conditionCode := if condition.constant {
                         targetBoolLiteralCode(target, condition.intValue =!= 0)
@@ -8142,6 +10124,7 @@ moduleIdentity: String, neededFns: String, skipSoftBuiltins: Bool): Items {
                     beforeOpen := skipTrivia(source, condition.next, prefix);
                     rejectMisplacedTag(source, beforeOpen, prefix, "block tag cannot appear before { in else if");
                     position = expectSymbol(source, beforeOpen, "{", prefix);
+                    elseArmOpen = position - 1;
                     if currentLive {
                         listLib.pushBack(mut items, (kind = "ElseIf", name = "", runtime = "", code = conditionCode,
                         intValue = 0, textValue = ""));
@@ -8157,7 +10140,9 @@ moduleIdentity: String, neededFns: String, skipSoftBuiltins: Bool): Items {
                     listLib.pushBack(mut blocks, if blockKind == "ifvalue" { "ifvalue" } else { "else" });
                     blockCount = blockCount + 1;
                     position = expectSymbol(source, afterElse, "{", prefix);
+                    elseArmOpen = position - 1;
                 }
+                if hasInnerAlias { aliases = collectBlockTypeAliases(source, elseArmOpen, prefix, depth, aliases); }
                 position = skipTrivia(source, position, prefix);
                 continue;
             }
@@ -8173,6 +10158,7 @@ moduleIdentity: String, neededFns: String, skipSoftBuiltins: Bool): Items {
                 keptDecls := popBlockDecls(blockDecls, depth);
                 blockDecls = [];
                 loop keptDecls as d { listLib.pushBack(mut blockDecls, d); }
+                aliases = popBlockAliases(aliases, depth);
                 var stateCount := 0;
                 loop savedStates { stateCount += 1; }
                 branchPreLen := savedStates[stateCount - 1].preLocalsLen;
@@ -8225,6 +10211,10 @@ moduleIdentity: String, neededFns: String, skipSoftBuiltins: Bool): Items {
                     if condition.kind =!= "Bool" {
                         failAt(source, nextArmStart, prefix, "match arm condition must be Bool");
                     }
+                    if currentName == "" and currentLive {
+                        checkRootTraceSafety(source, nextArmStart, prefix, condition.code, maxFutureAt, locals, functions,
+                        futureValues, items, callableVarRuntimes, callableVarDeps);
+                    }
                     conditionCode := if condition.constant {
                         targetBoolLiteralCode(target, condition.intValue =!= 0)
                     } else {
@@ -8241,6 +10231,7 @@ moduleIdentity: String, neededFns: String, skipSoftBuiltins: Bool): Items {
                     listLib.pushBack(mut blocks, blockKind);
                     blockCount = blockCount + 1;
                 }
+                if hasInnerAlias { aliases = collectBlockTypeAliases(source, armOpen, prefix, depth, aliases); }
                 position = skipTrivia(source, armOpen + 1, prefix);
                 continue;
             }
@@ -8259,6 +10250,7 @@ moduleIdentity: String, neededFns: String, skipSoftBuiltins: Bool): Items {
             keptDecls := popBlockDecls(blockDecls, depth);
             blockDecls = [];
             loop keptDecls as d { listLib.pushBack(mut blockDecls, d); }
+            aliases = popBlockAliases(aliases, depth);
             depth = depth - 1;
             if blockKind == "function" {
                 locals = withoutFutureValues(locals);
@@ -8351,6 +10343,10 @@ moduleIdentity: String, neededFns: String, skipSoftBuiltins: Bool): Items {
                 loopJoined := joinLoopUpdates(locals, parent.preLocalsLen, depth);
                 locals = [];
                 loop loopJoined as l { listLib.pushBack(mut locals, l); }
+            } else if blockKind == "function" {
+                truncatedFn := truncateLocals(locals, parent.preLocalsLen);
+                locals = [];
+                loop truncatedFn as l { listLib.pushBack(mut locals, l); }
             }
             liveBranchCount = parent.liveBranchCount;
             currentReturned = parent.returned or (not parent.stopped and completedReturn and blockKind =!= "function");
@@ -8377,6 +10373,10 @@ moduleIdentity: String, neededFns: String, skipSoftBuiltins: Bool): Items {
             if afterRawBrace >= 0 and textLib.wordAt(source, afterRawBrace, "finally") {
                 expression := parseExpressionItem(target, source, position, prefix, locals, functions, functionParams, currentName,
                 currentResult, atValueTail(blocks, blockCount) and not currentStopped, stmtCtxs, aliases);
+                if currentName == "" and currentLive and not currentStopped {
+                    checkRootTraceSafety(source, position, prefix, expression.code, maxFutureAt, locals, functions,
+                    futureValues, items, callableVarRuntimes, callableVarDeps);
+                }
                 if currentLive and not currentStopped {
                     listLib.pushBack(mut items, (kind = expressionStatementKind(expression.valueKind, expression.returned, "Discard", currentResult), name = expression.valueKind,
                     runtime = "", code = expression.code, intValue = 0, textValue = ""));
@@ -8407,6 +10407,7 @@ moduleIdentity: String, neededFns: String, skipSoftBuiltins: Bool): Items {
             listLib.pushBack(mut blocks, "scope");
             blockCount = blockCount + 1;
             depth = depth + 1;
+            if hasInnerAlias { aliases = collectBlockTypeAliases(source, position, prefix, depth, aliases); }
             position = skipTrivia(source, position + 1, prefix);
             continue;
         }
@@ -8432,6 +10433,10 @@ moduleIdentity: String, neededFns: String, skipSoftBuiltins: Bool): Items {
                 failAt(source, afterTarget, prefix, "expected := after tuple destructuring target");
             }
             rhs := parseInitializerExpression(target, source, skipTrivia(source, afterTarget + 2, prefix), prefix, locals, functions, functionParams, currentName, "", stmtCtxs, aliases);
+            if currentName == "" and currentLive and not currentStopped {
+                checkRootTraceSafety(source, destructureOpen, prefix, rhs.code, maxFutureAt, locals, functions,
+                futureValues, items, callableVarRuntimes, callableVarDeps);
+            }
             if destructure.count == 0 {
                 if destructureMutable {
                     failAt(source, destructureOpen, prefix, "var tuple destructuring needs at least one binding");
@@ -8467,6 +10472,10 @@ moduleIdentity: String, neededFns: String, skipSoftBuiltins: Bool): Items {
                 listLib.pushBack(mut locals, (name = bindName, runtime = bindRuntime, kind = rhs.kind,
                 mutable = destructureMutable, writable = false, depth = depth, constant = false, code = rhs.code,
                 intValue = rhs.intValue, textValue = rhs.textValue, initState = "init"));
+                if currentName == "" and containsFnKind(rhs.kind) {
+                    callableVarDeps = recordCallableVarDeps(bindRuntime, rhs.code, depth, callableVarRuntimes, callableVarDeps);
+                    callableVarRuntimes = recordCallableVarRuntimes(bindRuntime, callableVarRuntimes);
+                }
                 if currentLive and not currentStopped {
                     itemPrefix := if destructureMutable { "Var" } else { "Local" };
                     destrCode := copiedValueCode(target, rhs.kind, rhs.code);
@@ -8493,6 +10502,10 @@ moduleIdentity: String, neededFns: String, skipSoftBuiltins: Bool): Items {
             listLib.pushBack(mut locals, (name = "$tuple", runtime = tempRuntime, kind = "Unit",
             mutable = false, writable = false, depth = depth, constant = false, code = "",
             intValue = 0, textValue = "", initState = "init"));
+            if currentName == "" and containsFnKind(rhs.kind) {
+                callableVarDeps = recordCallableVarDeps(tempRuntime, rhs.code, depth, callableVarRuntimes, callableVarDeps);
+                callableVarRuntimes = recordCallableVarRuntimes(tempRuntime, callableVarRuntimes);
+            }
             if currentLive and not currentStopped {
                 listLib.pushBack(mut items, (kind = "LocalTuple", name = "", runtime = tempRuntime,
                 code = rhs.code, intValue = 0, textValue = ""));
@@ -8524,6 +10537,10 @@ moduleIdentity: String, neededFns: String, skipSoftBuiltins: Bool): Items {
                 listLib.pushBack(mut locals, (name = bindName, runtime = bindRuntime, kind = comp.kind,
                 mutable = destructureMutable, writable = false, depth = depth, constant = false, code = fieldCode,
                 intValue = 0, textValue = "", initState = "init"));
+                if currentName == "" and containsFnKind(comp.kind) {
+                    callableVarDeps = recordCallableVarDeps(bindRuntime, fieldCode, depth, callableVarRuntimes, callableVarDeps);
+                    callableVarRuntimes = recordCallableVarRuntimes(bindRuntime, callableVarRuntimes);
+                }
                 if currentLive and not currentStopped {
                     itemPrefix := if destructureMutable { "Var" } else { "Local" };
                     listLib.pushBack(mut items, (kind = itemPrefix + storageKind(comp.kind), name = bindName, runtime = bindRuntime,
@@ -8542,6 +10559,10 @@ moduleIdentity: String, neededFns: String, skipSoftBuiltins: Bool): Items {
         (ch == "f" and textLib.wordAt(source, position, "false")) {
             expression := parseExpressionItem(target, source, position, prefix, locals, functions, functionParams, currentName,
             currentResult, atValueTail(blocks, blockCount) and not currentStopped, stmtCtxs, aliases);
+            if currentName == "" and currentLive and not currentStopped {
+                checkRootTraceSafety(source, position, prefix, expression.code, maxFutureAt, locals, functions,
+                futureValues, items, callableVarRuntimes, callableVarDeps);
+            }
             if currentLive and not currentStopped {
                 listLib.pushBack(mut items, (kind = expressionStatementKind(expression.valueKind, expression.returned, "Discard", currentResult), name = expression.valueKind,
                 runtime = "", code = expression.code, intValue = 0, textValue = ""));
@@ -8567,6 +10588,10 @@ moduleIdentity: String, neededFns: String, skipSoftBuiltins: Bool): Items {
             }
             expression := parseExpressionItem(target, source, position, prefix, locals, functions, functionParams, currentName,
             currentResult, atValueTail(blocks, blockCount) and not currentStopped, stmtCtxs, aliases);
+            if currentName == "" and currentLive and not currentStopped {
+                checkRootTraceSafety(source, position, prefix, expression.code, maxFutureAt, locals, functions,
+                futureValues, items, callableVarRuntimes, callableVarDeps);
+            }
             if currentLive and not currentStopped {
                 listLib.pushBack(mut items, (kind = expressionStatementKind(expression.valueKind, expression.returned, "Discard", currentResult), name = expression.valueKind,
                 runtime = "", code = expression.code, intValue = 0, textValue = ""));
@@ -8748,6 +10773,10 @@ moduleIdentity: String, neededFns: String, skipSoftBuiltins: Bool): Items {
             var outputDiverged := false;
             loop parsedOutput as outputItem {
                 if outputItem.kind == "End" or outputItem.kind == "EndOutput" { position = outputItem.intValue; }
+                else if currentName == "" and currentLive and not currentStopped {
+                    checkRootTraceSafety(source, nameStart, prefix, outputItem.code, maxFutureAt, locals, functions,
+                    futureValues, items, callableVarRuntimes, callableVarDeps);
+                }
                 if outputItem.kind == "Never" { outputDiverged = true; }
                 if currentLive and not currentStopped {
                     listLib.pushBack(mut items, outputItem);
@@ -8769,6 +10798,10 @@ moduleIdentity: String, neededFns: String, skipSoftBuiltins: Bool): Items {
         if moduleIndex >= 0 and locals[moduleIndex].kind == "Module" and not isDeclFollow {
             expression := parseExpressionItem(target, source, nameStart, prefix, locals, functions, functionParams, currentName,
             currentResult, atValueTail(blocks, blockCount) and not currentStopped, stmtCtxs, aliases);
+            if currentName == "" and currentLive and not currentStopped {
+                checkRootTraceSafety(source, nameStart, prefix, expression.code, maxFutureAt, locals, functions,
+                futureValues, items, callableVarRuntimes, callableVarDeps);
+            }
             if currentLive and not currentStopped {
                 listLib.pushBack(mut items, (kind = expressionStatementKind(expression.valueKind, expression.returned, "Call", currentResult),
                 name = "", runtime = "", code = expression.code, intValue = 0, textValue = ""));
@@ -8808,6 +10841,10 @@ moduleIdentity: String, neededFns: String, skipSoftBuiltins: Bool): Items {
             position < size and textLib.at(source, position) == "(" {
                 expression := parseExpressionItem(target, source, nameStart, prefix, locals, functions, functionParams, currentName,
                 currentResult, atValueTail(blocks, blockCount) and not currentStopped, stmtCtxs, aliases);
+                if currentName == "" and currentLive and not currentStopped {
+                    checkRootTraceSafety(source, nameStart, prefix, expression.code, maxFutureAt, locals, functions,
+                    futureValues, items, callableVarRuntimes, callableVarDeps);
+                }
                 if currentLive and not currentStopped {
                     listLib.pushBack(mut items, (kind = expressionStatementKind(expression.valueKind, expression.returned, "Call", currentResult), name = callName, runtime = "",
                     code = expression.code, intValue = 0, textValue = ""));
@@ -8830,6 +10867,10 @@ moduleIdentity: String, neededFns: String, skipSoftBuiltins: Bool): Items {
             if afterRawIf >= 0 and (textLib.wordAt(source, afterRawIf, "then") or textLib.wordAt(source, afterRawIf, "finally")) {
                 expression := parseExpressionItem(target, source, nameStart, prefix, locals, functions, functionParams, currentName,
                 currentResult, atValueTail(blocks, blockCount) and not currentStopped, stmtCtxs, aliases);
+                if currentName == "" and currentLive and not currentStopped {
+                    checkRootTraceSafety(source, nameStart, prefix, expression.code, maxFutureAt, locals, functions,
+                    futureValues, items, callableVarRuntimes, callableVarDeps);
+                }
                 if currentLive and not currentStopped {
                     listLib.pushBack(mut items, (kind = expressionStatementKind(expression.valueKind, expression.returned, "Discard", currentResult), name = expression.valueKind,
                     runtime = "", code = expression.code, intValue = 0, textValue = ""));
@@ -8885,6 +10926,10 @@ moduleIdentity: String, neededFns: String, skipSoftBuiltins: Bool): Items {
             if condition.kind =!= "Bool" {
                 failAt(source, conditionStart, prefix, "if condition must be Bool");
             }
+            if currentName == "" and currentLive and not currentStopped {
+                checkRootTraceSafety(source, conditionStart, prefix, condition.code, maxFutureAt, locals, functions,
+                futureValues, items, callableVarRuntimes, callableVarDeps);
+            }
             conditionCode := if condition.constant {
                 targetBoolLiteralCode(target, condition.intValue =!= 0)
             } else {
@@ -8893,6 +10938,7 @@ moduleIdentity: String, neededFns: String, skipSoftBuiltins: Bool): Items {
             beforeIfOpen := skipTrivia(source, condition.next, prefix);
             rejectMisplacedTag(source, beforeIfOpen, prefix, "block tag cannot appear before { in if");
             position = expectSymbol(source, beforeIfOpen, "{", prefix);
+            ifOpenBrace := position - 1;
             if currentLive and not currentStopped {
                 listLib.pushBack(mut items, (kind = "If", name = "", runtime = "", code = conditionCode,
                 intValue = 0, textValue = ""));
@@ -8916,6 +10962,9 @@ moduleIdentity: String, neededFns: String, skipSoftBuiltins: Bool): Items {
             listLib.pushBack(mut blocks, if valueTailBranch { "ifvalue" } else { "if" });
             blockCount = blockCount + 1;
             depth = depth + 1;
+            if hasInnerAlias {
+                aliases = collectBlockTypeAliases(source, ifOpenBrace, prefix, depth, aliases);
+            }
             position = skipTrivia(source, position, prefix);
             continue;
         }
@@ -8929,6 +10978,10 @@ moduleIdentity: String, neededFns: String, skipSoftBuiltins: Bool): Items {
             if afterRawMatch >= 0 and (textLib.wordAt(source, afterRawMatch, "then") or textLib.wordAt(source, afterRawMatch, "finally")) {
                 expression := parseExpressionItem(target, source, nameStart, prefix, locals, functions, functionParams, currentName,
                 currentResult, atValueTail(blocks, blockCount) and not currentStopped, stmtCtxs, aliases);
+                if currentName == "" and currentLive and not currentStopped {
+                    checkRootTraceSafety(source, nameStart, prefix, expression.code, maxFutureAt, locals, functions,
+                    futureValues, items, callableVarRuntimes, callableVarDeps);
+                }
                 if currentLive and not currentStopped {
                     listLib.pushBack(mut items, (kind = expressionStatementKind(expression.valueKind, expression.returned, "Discard", currentResult), name = expression.valueKind,
                     runtime = "", code = expression.code, intValue = 0, textValue = ""));
@@ -9019,6 +11072,10 @@ moduleIdentity: String, neededFns: String, skipSoftBuiltins: Bool): Items {
                 if condition.kind =!= "Bool" {
                     failAt(source, firstArmStart, prefix, "match arm condition must be Bool");
                 }
+                if currentName == "" and currentLive and not currentStopped {
+                    checkRootTraceSafety(source, firstArmStart, prefix, condition.code, maxFutureAt, locals, functions,
+                    futureValues, items, callableVarRuntimes, callableVarDeps);
+                }
                 conditionCode := if condition.constant {
                     targetBoolLiteralCode(target, condition.intValue =!= 0)
                 } else {
@@ -9053,6 +11110,9 @@ moduleIdentity: String, neededFns: String, skipSoftBuiltins: Bool): Items {
             listLib.pushBack(mut blocks, firstBlockKind);
             blockCount = blockCount + 1;
             depth = depth + 1;
+            if hasInnerAlias {
+                aliases = collectBlockTypeAliases(source, firstArmOpen, prefix, depth, aliases);
+            }
             position = skipTrivia(source, firstArmOpen + 1, prefix);
             continue;
         }
@@ -9079,6 +11139,10 @@ moduleIdentity: String, neededFns: String, skipSoftBuiltins: Bool): Items {
                 } else {
                     expression := parseExpressionItem(target, source, nameStart, prefix, locals, functions, functionParams, currentName,
                     currentResult, atValueTail(blocks, blockCount) and not currentStopped, stmtCtxs, aliases);
+                    if currentName == "" and currentLive and not currentStopped {
+                        checkRootTraceSafety(source, nameStart, prefix, expression.code, maxFutureAt, locals, functions,
+                        futureValues, items, callableVarRuntimes, callableVarDeps);
+                    }
                     if currentLive and not currentStopped {
                         listLib.pushBack(mut items, (kind = expressionStatementKind(expression.valueKind, expression.returned, "Discard", currentResult), name = expression.valueKind,
                         runtime = "", code = expression.code, intValue = 0, textValue = ""));
@@ -9101,7 +11165,12 @@ moduleIdentity: String, neededFns: String, skipSoftBuiltins: Bool): Items {
             var itemName := "";
             var itemKind := "";
             if position < size and textLib.at(source, position) =!= "{" {
+                loopHdrPos := position;
                 parsed := parseExpressionCtx(target, source, position, prefix, locals, functions, functionParams, currentName, stmtCtxs, aliases);
+                if currentName == "" and currentLive and not currentStopped {
+                    checkRootTraceSafety(source, loopHdrPos, prefix, parsed.code, maxFutureAt, locals, functions,
+                    futureValues, items, callableVarRuntimes, callableVarDeps);
+                }
                 afterParsed := skipTrivia(source, parsed.next, prefix);
                 if textLib.wordAt(source, afterParsed, "as") {
                     if not isListKind(parsed.kind) and not isArrayKind(parsed.kind) {
@@ -9135,6 +11204,7 @@ moduleIdentity: String, neededFns: String, skipSoftBuiltins: Bool): Items {
             }
             rejectMisplacedTag(source, position, prefix, "block tag cannot appear before { in loop");
             position = expectSymbol(source, position, "{", prefix);
+            loopOpenBrace := position - 1;
             loopPreLocalsLen := localsCount(locals);
             if itemName =!= "" {
                 runtime := localRuntimeName(target, locals, itemName, moduleKey, depth + 1);
@@ -9202,6 +11272,9 @@ moduleIdentity: String, neededFns: String, skipSoftBuiltins: Bool): Items {
             listLib.pushBack(mut blocks, "loop");
             blockCount = blockCount + 1;
             depth = depth + 1;
+            if hasInnerAlias {
+                aliases = collectBlockTypeAliases(source, loopOpenBrace, prefix, depth, aliases);
+            }
             position = skipTrivia(source, position, prefix);
             continue;
         }
@@ -9219,6 +11292,10 @@ moduleIdentity: String, neededFns: String, skipSoftBuiltins: Bool): Items {
                 failAt(source, afterName, prefix, "expected := after mut local name " + localName);
             }
             parsed := parseInitializerExpression(target, source, skipTrivia(source, afterName + 2, prefix), prefix, locals, functions, functionParams, currentName, "", stmtCtxs, aliases);
+            if currentName == "" and currentLive and not currentStopped {
+                checkRootTraceSafety(source, localStart, prefix, parsed.code, maxFutureAt, locals, functions,
+                futureValues, items, callableVarRuntimes, callableVarDeps);
+            }
             if not isListKind(parsed.kind) {
                 failAt(source, localStart, prefix, "mut requires a List value, got " + displayKind(parsed.kind));
             }
@@ -9226,6 +11303,10 @@ moduleIdentity: String, neededFns: String, skipSoftBuiltins: Bool): Items {
             if statementNext < 0 { failAt(source, skipTrivia(source, parsed.next, prefix), prefix, "expected ; after local declaration " + localName); }
             position = statementNext;
             runtime := localRuntimeName(target, locals, localName, moduleKey, depth);
+            if currentName == "" and containsFnKind(parsed.kind) {
+                callableVarDeps = recordCallableVarDeps(runtime, parsed.code, depth, callableVarRuntimes, callableVarDeps);
+                callableVarRuntimes = recordCallableVarRuntimes(runtime, callableVarRuntimes);
+            }
             listLib.pushBack(mut blockDecls, (name = localName, depth = depth));
             listLib.pushBack(mut locals, (name = localName, runtime = runtime, kind = parsed.kind,
             mutable = false, writable = true, depth = depth, constant = false, code = parsed.code,
@@ -9260,9 +11341,15 @@ moduleIdentity: String, neededFns: String, skipSoftBuiltins: Bool): Items {
             var parsed := intParsed("", 0, true, position);
             var declInitState := "init";
             var rhsDiverged := false;
+            var rawVarRhsCode := "";
             if textLib.startsWithAt(source, position, ":=") {
                 position = skipTrivia(source, position + 2, prefix);
                 parsed = parseInitializerExpression(target, source, position, prefix, locals, functions, functionParams, currentName, "", stmtCtxs, aliases);
+                rawVarRhsCode = parsed.code;
+                if currentName == "" and currentLive and not currentStopped {
+                    checkRootTraceSafety(source, localStart, prefix, rawVarRhsCode, maxFutureAt, locals, functions,
+                    futureValues, items, callableVarRuntimes, callableVarDeps);
+                }
                 rejectNonValueBinding(source, localStart, prefix, parsed.kind, localName);
                 if declaredWritable and not isListKind(parsed.kind) {
                     failAt(source, localStart, prefix, "mut requires a List value, got " + displayKind(parsed.kind));
@@ -9287,6 +11374,11 @@ moduleIdentity: String, neededFns: String, skipSoftBuiltins: Bool): Items {
                         if not isCompatibleKind(typed.kind, parsed.kind) {
                             failAt(source, localStart, prefix, "cannot initialize " + displayKind(typed.kind) + " with " + displayKind(parsed.kind));
                         }
+                        rawVarRhsCode = parsed.code;
+                        if currentName == "" and currentLive and not currentStopped {
+                            checkRootTraceSafety(source, localStart, prefix, rawVarRhsCode, maxFutureAt, locals, functions,
+                            futureValues, items, callableVarRuntimes, callableVarDeps);
+                        }
                         rhsDiverged = parsed.kind == "Never";
                         converted := assignValueCode(target, typed.kind, parsed.kind, parsed.code);
                         parsed = (kind = typed.kind, code = converted, intValue = parsed.intValue, textValue = parsed.textValue, constant = parsed.constant, next = parsed.next);
@@ -9301,6 +11393,10 @@ moduleIdentity: String, neededFns: String, skipSoftBuiltins: Bool): Items {
             if statementNext < 0 { failAt(source, skipTrivia(source, parsed.next, prefix), prefix, "expected ; after local declaration " + localName); }
             position = statementNext;
             runtime := localRuntimeName(target, locals, localName, moduleKey, depth);
+            if currentName == "" and declInitState == "init" and containsFnKind(parsed.kind) {
+                callableVarDeps = recordCallableVarDeps(runtime, rawVarRhsCode, depth, callableVarRuntimes, callableVarDeps);
+                callableVarRuntimes = recordCallableVarRuntimes(runtime, callableVarRuntimes);
+            }
             listLib.pushBack(mut blockDecls, (name = localName, depth = depth));
             listLib.pushBack(mut locals, (name = localName, runtime = runtime, kind = parsed.kind,
             mutable = true, writable = declaredWritable, depth = depth, constant = false, code = parsed.code,
@@ -9334,12 +11430,9 @@ moduleIdentity: String, neededFns: String, skipSoftBuiltins: Bool): Items {
         }
         if isReservedWord(name) { unsupportedFeature(source, nameStart, name, prefix); }
         if textLib.startsWithAt(source, position, ":=") and textLib.wordAt(source, afterDefinition, "type") {
-            if blockCount =!= 0 or depth =!= 0 {
-                failAt(source, nameStart, prefix, "type aliases are only allowed at top level");
-            }
             var earlierAlias := false;
             loop aliases as alias {
-                if alias.name == name and alias.at < nameStart { earlierAlias = true; }
+                if alias.name == name and alias.depth == depth and alias.at < nameStart { earlierAlias = true; }
             }
             if earlierAlias {
                 failAt(source, nameStart, prefix, "duplicate type alias " + name);
@@ -9357,8 +11450,8 @@ moduleIdentity: String, neededFns: String, skipSoftBuiltins: Bool): Items {
                 unsupportedAliasTarget(source, targetStart, prefix, "target");
             }
             seenAliases: mut List<String> = [];
-            resolvedType := resolveTypeText(source, targetStart, prefix, aliases, aliasEntry.target, seenAliases);
-            if listLib.listContainsText(publishedTypes, name) {
+            resolvedType := resolveTypeText(source, targetStart, prefix, aliasesUpToDepth(aliases, depth), aliasEntry.target, seenAliases);
+            if depth == 0 and blockCount == 0 and listLib.listContainsText(publishedTypes, name) {
                 listLib.pushBack(mut items, (kind = "PublicType", name = name, runtime = "", code = resolvedType,
                 intValue = 0, textValue = ""));
             }
@@ -9370,9 +11463,11 @@ moduleIdentity: String, neededFns: String, skipSoftBuiltins: Bool): Items {
         if textLib.startsWithAt(source, position, ":=") {
             afterDeclare := skipTrivia(source, position + 2, prefix);
             if textLib.wordAt(source, afterDeclare, "fn") and blockCount == 0 and depth == 0 {
-                if findFunction(functions, name) >= 0 {
+                existingFnIdx := findFunction(functions, name);
+                if existingFnIdx >= 0 and functions[existingFnIdx].declAt =!= nameStart {
                     failAt(source, nameStart, prefix, "duplicate function " + name);
                 }
+                wasPreRegistered := existingFnIdx >= 0 and functions[existingFnIdx].declAt == nameStart;
                 rejectDuplicateBlockDecl(source, nameStart, prefix, blockDecls, 0, name);
                 position = skipTrivia(source, afterDeclare + 2, prefix);
                 listIntrinsic := moduleIdentity == "lite.core.list.v1" and (name == "pushBack" or name == "popBack" or name == "pushFront" or name == "popFront");
@@ -9386,18 +11481,20 @@ moduleIdentity: String, neededFns: String, skipSoftBuiltins: Bool): Items {
                         failAt(source, nameStart, prefix, "bodyless function declaration has no matching core host binding");
                     }
                     position = skipTrivia(source, position + 1, prefix);
-                    listLib.pushBack(mut functions, (name = name, runtime = hostRuntime, result = header.result,
-                    first = parameterTotal, count = header.count));
-                    var hostEntryStart := 0;
-                    var hostEntryIndex := 0;
-                    loop hostEntryIndex < header.count {
-                        separator := textLib.indexOfText(header.params, "|", hostEntryStart);
-                        var entryEnd := textLib.length(header.params);
-                        if separator >= 0 { entryEnd = separator; }
-                        listLib.pushBack(mut functionParams, textLib.slice(header.params, hostEntryStart, entryEnd));
-                        parameterTotal = parameterTotal + 1;
-                        hostEntryStart = entryEnd + 1;
-                        hostEntryIndex = hostEntryIndex + 1;
+                    if not wasPreRegistered {
+                        listLib.pushBack(mut functions, (name = name, runtime = hostRuntime, result = header.result,
+                        first = parameterTotal, count = header.count, declAt = nameStart));
+                        var hostEntryStart := 0;
+                        var hostEntryIndex := 0;
+                        loop hostEntryIndex < header.count {
+                            separator := textLib.indexOfText(header.params, "|", hostEntryStart);
+                            var entryEnd := textLib.length(header.params);
+                            if separator >= 0 { entryEnd = separator; }
+                            listLib.pushBack(mut functionParams, textLib.slice(header.params, hostEntryStart, entryEnd));
+                            parameterTotal = parameterTotal + 1;
+                            hostEntryStart = entryEnd + 1;
+                            hostEntryIndex = hostEntryIndex + 1;
+                        }
                     }
                     if currentLive {
                         listLib.pushBack(mut items, (kind = "PublicFunction", name = name, runtime = hostRuntime, code = header.result,
@@ -9412,9 +11509,12 @@ moduleIdentity: String, neededFns: String, skipSoftBuiltins: Bool): Items {
                     failAt(source, nameStart, prefix, "generic function bodies are not supported");
                 }
                 position = expectSymbol(source, position, "{", prefix);
+                fnOpenBrace := position - 1;
                 functionRuntime := moduleFunctionRuntime(target, moduleKey, name);
-                listLib.pushBack(mut functions, (name = name, runtime = functionRuntime, result = header.result,
-                first = parameterTotal, count = header.count));
+                if not wasPreRegistered {
+                    listLib.pushBack(mut functions, (name = name, runtime = functionRuntime, result = header.result,
+                    first = parameterTotal, count = header.count, declAt = nameStart));
+                }
                 if listLib.listContainsText(publishedFunctions, name) {
                     listLib.pushBack(mut items, (kind = "PublicFunction", name = name, runtime = functionRuntime, code = header.result,
                     intValue = header.count, textValue = header.params));
@@ -9428,16 +11528,18 @@ moduleIdentity: String, neededFns: String, skipSoftBuiltins: Bool): Items {
                 resolveBuiltinMode(builtinRules, softModule, name) == "builtin";
                 skipAsUnneeded := neededFns =!= "*" and not skipAsSoft and not hasHelperToken(neededFns, functionRuntime + "(");
                 if skipAsSoft or skipAsUnneeded {
-                    var skipEntryStart := 0;
-                    var skipEntryIndex := 0;
-                    loop skipEntryIndex < header.count {
-                        separator := textLib.indexOfText(header.params, "|", skipEntryStart);
-                        var entryEnd := textLib.length(header.params);
-                        if separator >= 0 { entryEnd = separator; }
-                        listLib.pushBack(mut functionParams, textLib.slice(header.params, skipEntryStart, entryEnd));
-                        parameterTotal = parameterTotal + 1;
-                        skipEntryStart = entryEnd + 1;
-                        skipEntryIndex = skipEntryIndex + 1;
+                    if not wasPreRegistered {
+                        var skipEntryStart := 0;
+                        var skipEntryIndex := 0;
+                        loop skipEntryIndex < header.count {
+                            separator := textLib.indexOfText(header.params, "|", skipEntryStart);
+                            var entryEnd := textLib.length(header.params);
+                            if separator >= 0 { entryEnd = separator; }
+                            listLib.pushBack(mut functionParams, textLib.slice(header.params, skipEntryStart, entryEnd));
+                            parameterTotal = parameterTotal + 1;
+                            skipEntryStart = entryEnd + 1;
+                            skipEntryIndex = skipEntryIndex + 1;
+                        }
                     }
                     position = skipBraceBlock(source, position, prefix);
                     if skipAsSoft and currentLive and not currentStopped {
@@ -9470,13 +11572,39 @@ moduleIdentity: String, neededFns: String, skipSoftBuiltins: Bool): Items {
                 listLib.pushBack(mut stmtCtxs, (id = 0, tag = "", kind = "fn", phase = "body",
                 iifeDepth = 0, valKind = header.result, valVar = "", label = "",
                 iterLabel = "", countVar = "", itemVar = "", itemKind = "", indexVar = "", hasIndex = false));
+                fnPreLocalsLen := localsCount(locals);
+                var upgradedRootBag := "";
+                var rootIdx := 0;
+                loop rootIdx < fnPreLocalsLen {
+                    rootEntry := locals[rootIdx];
+                    if rootEntry.depth == 0 and rootEntry.initState =!= "init" and
+                    listLib.listContainsText(rootAssignedNames, rootEntry.name) and
+                    not tokenInPipeBag(upgradedRootBag, rootEntry.name) {
+                        newestIdx := localIndex(locals, rootEntry.name);
+                        if newestIdx == rootIdx {
+                            upgradedRootBag = appendPipeBag(upgradedRootBag, rootEntry.name);
+                            listLib.pushBack(mut locals, (name = rootEntry.name, runtime = rootEntry.runtime, kind = rootEntry.kind,
+                            mutable = rootEntry.mutable, writable = rootEntry.writable, depth = -1, constant = false, code = rootEntry.runtime,
+                            intValue = 0, textValue = "", initState = "init"));
+                        }
+                    }
+                    rootIdx = rootIdx + 1;
+                }
                 var entryStart := 0;
                 var entryIndex := 0;
+                var pushedFutureBag := "";
                 loop futureValues as future {
-                    if future.at > nameStart {
-                        listLib.pushBack(mut locals, (name = future.name, runtime = future.runtime, kind = future.kind,
-                        mutable = false, writable = false, depth = -1, constant = false, code = future.runtime,
-                        intValue = 0, textValue = "", initState = "init"));
+                    if future.at > nameStart and not tokenInPipeBag(pushedFutureBag, future.name) {
+                        existingLocalIdx := localIndex(locals, future.name);
+                        isShadowedLocal := existingLocalIdx >= 0 and locals[existingLocalIdx].depth >= 0;
+                        existingFnIdx2 := findFunction(functions, future.name);
+                        isShadowedFn := existingFnIdx2 >= 0 and functions[existingFnIdx2].declAt < nameStart;
+                        if not isShadowedLocal and not isShadowedFn {
+                            pushedFutureBag = appendPipeBag(pushedFutureBag, future.name);
+                            listLib.pushBack(mut locals, (name = future.name, runtime = future.runtime, kind = future.kind,
+                            mutable = future.mutable, writable = future.writable, depth = -1, constant = false, code = future.runtime,
+                            intValue = 0, textValue = "", initState = future.initState));
+                        }
                     }
                 }
                 loop entryIndex < header.count {
@@ -9487,12 +11615,14 @@ moduleIdentity: String, neededFns: String, skipSoftBuiltins: Bool): Items {
                     parameterName := paramNameOf(entry);
                     parameterKind := paramKindOf(entry);
                     runtime := "lite_" + parameterName;
-                    listLib.pushBack(mut functionParams, entry);
                     listLib.pushBack(mut blockDecls, (name = parameterName, depth = 1));
                     listLib.pushBack(mut locals, (name = parameterName, runtime = runtime, kind = parameterKind,
                     mutable = false, writable = false, depth = 1, constant = false, code = runtime,
                     intValue = 0, textValue = "", initState = "init"));
-                    parameterTotal = parameterTotal + 1;
+                    if not wasPreRegistered {
+                        listLib.pushBack(mut functionParams, entry);
+                        parameterTotal = parameterTotal + 1;
+                    }
                     entryStart = entryEnd + 1;
                     entryIndex = entryIndex + 1;
                 }
@@ -9500,7 +11630,7 @@ moduleIdentity: String, neededFns: String, skipSoftBuiltins: Bool): Items {
                 currentResult = header.result;
                 listLib.pushBack(mut savedStates, (returned = currentReturned, stopped = currentStopped,
                 branchesReturned = branchesReturned, branchesStopped = branchesStopped, hasElse = hasElse, loopForever = loopForever, live = currentLive,
-                preLocalsLen = localsCount(locals), liveBranchCount = liveBranchCount));
+                preLocalsLen = fnPreLocalsLen, liveBranchCount = liveBranchCount));
                 liveBranchCount = 0;
                 currentLive = currentLive and not currentStopped;
                 currentReturned = false;
@@ -9512,17 +11642,28 @@ moduleIdentity: String, neededFns: String, skipSoftBuiltins: Bool): Items {
                 listLib.pushBack(mut blocks, "function");
                 blockCount = blockCount + 1;
                 depth = depth + 1;
+                if hasInnerAlias {
+                    aliases = collectBlockTypeAliases(source, fnOpenBrace, prefix, depth, aliases);
+                }
                 position = skipTrivia(source, position, prefix);
                 continue;
             }
             rejectDuplicateBlockDecl(source, nameStart, prefix, blockDecls, depth, name);
             position = afterDeclare;
             parsed := parseInitializerExpression(target, source, position, prefix, locals, functions, functionParams, currentName, "", stmtCtxs, aliases);
+            if currentName == "" and currentLive and not currentStopped {
+                checkRootTraceSafety(source, nameStart, prefix, parsed.code, maxFutureAt, locals, functions,
+                futureValues, items, callableVarRuntimes, callableVarDeps);
+            }
             rejectNonValueBinding(source, nameStart, prefix, parsed.kind, name);
             statementNext := consumeStatementEnd(source, parsed.next, prefix);
             if statementNext < 0 { failAt(source, skipTrivia(source, parsed.next, prefix), prefix, "expected ; after local declaration " + name); }
             position = statementNext;
             runtime := localRuntimeName(target, locals, name, moduleKey, depth);
+            if currentName == "" and containsFnKind(parsed.kind) {
+                callableVarDeps = recordCallableVarDeps(runtime, parsed.code, depth, callableVarRuntimes, callableVarDeps);
+                callableVarRuntimes = recordCallableVarRuntimes(runtime, callableVarRuntimes);
+            }
             listLib.pushBack(mut blockDecls, (name = name, depth = depth));
             listLib.pushBack(mut locals, (name = name, runtime = runtime, kind = parsed.kind,
             mutable = false, writable = false, depth = depth, constant = parsed.constant, code = parsed.code,
@@ -9566,12 +11707,20 @@ moduleIdentity: String, neededFns: String, skipSoftBuiltins: Bool): Items {
                     if not isCompatibleKind(typed.kind, parsed.kind) {
                         failAt(source, nameStart, prefix, "cannot initialize " + displayKind(typed.kind) + " with " + displayKind(parsed.kind));
                     }
+                    if currentName == "" and currentLive and not currentStopped {
+                        checkRootTraceSafety(source, nameStart, prefix, parsed.code, maxFutureAt, locals, functions,
+                        futureValues, items, callableVarRuntimes, callableVarDeps);
+                    }
                 }
             }
             statementNext := consumeStatementEnd(source, parsed.next, prefix);
             if statementNext < 0 { failAt(source, skipTrivia(source, parsed.next, prefix), prefix, "expected ; after local declaration " + name); }
             position = statementNext;
             runtime := localRuntimeName(target, locals, name, moduleKey, depth);
+            if currentName == "" and declInitState == "init" and containsFnKind(typed.kind) {
+                callableVarDeps = recordCallableVarDeps(runtime, parsed.code, depth, callableVarRuntimes, callableVarDeps);
+                callableVarRuntimes = recordCallableVarRuntimes(runtime, callableVarRuntimes);
+            }
             rhsDiverged := parsed.kind == "Never";
             assignedCode := assignValueCode(target, typed.kind, parsed.kind, parsed.code);
             listLib.pushBack(mut blockDecls, (name = name, depth = depth));
@@ -9621,11 +11770,21 @@ moduleIdentity: String, neededFns: String, skipSoftBuiltins: Bool): Items {
                 partialCount = partialCount + 1;
                 if partialItem.kind == "End" {
                     position = partialItem.intValue;
-                } else if currentLive and not currentStopped {
-                    listLib.pushBack(mut items, partialItem);
-                    if codeHasRawTransfer(partialItem.code) {
-                        listLib.pushBack(mut transferCodes, partialItem.code);
-                        transferCount = transferCount + 1;
+                } else {
+                    if currentName == "" and currentLive and not currentStopped {
+                        checkRootTraceSafety(source, nameStart, prefix, partialItem.code, maxFutureAt, locals, functions,
+                        futureValues, items, callableVarRuntimes, callableVarDeps);
+                    }
+                    if currentName == "" and containsFnKind(entry.kind) and partialItem.code =!= "" {
+                        callableVarDeps = recordCallableVarDeps(entry.runtime, partialItem.code, 1, callableVarRuntimes, callableVarDeps);
+                        callableVarRuntimes = recordCallableVarRuntimes(entry.runtime, callableVarRuntimes);
+                    }
+                    if currentLive and not currentStopped {
+                        listLib.pushBack(mut items, partialItem);
+                        if codeHasRawTransfer(partialItem.code) {
+                            listLib.pushBack(mut transferCodes, partialItem.code);
+                            transferCount = transferCount + 1;
+                        }
                     }
                 }
             }
@@ -9638,6 +11797,14 @@ moduleIdentity: String, neededFns: String, skipSoftBuiltins: Bool): Items {
             parsed := parseExpressionAsCtx(target, source, position, prefix, locals, functions, functionParams, currentName, entry.kind, stmtCtxs, aliases);
             if not isCompatibleKind(entry.kind, parsed.kind) {
                 failAt(source, nameStart, prefix, "cannot assign " + displayKind(parsed.kind) + " to " + displayKind(entry.kind) + " local " + name);
+            }
+            if currentName == "" and currentLive and not currentStopped {
+                checkRootTraceSafety(source, nameStart, prefix, parsed.code, maxFutureAt, locals, functions,
+                futureValues, items, callableVarRuntimes, callableVarDeps);
+            }
+            if currentName == "" and containsFnKind(entry.kind) {
+                callableVarDeps = recordCallableVarDeps(entry.runtime, parsed.code, depth, callableVarRuntimes, callableVarDeps);
+                callableVarRuntimes = recordCallableVarRuntimes(entry.runtime, callableVarRuntimes);
             }
             statementNext := consumeStatementEnd(source, parsed.next, prefix);
             if statementNext < 0 { failAt(source, skipTrivia(source, parsed.next, prefix), prefix, "expected ; after assignment to " + name); }
@@ -9683,6 +11850,10 @@ moduleIdentity: String, neededFns: String, skipSoftBuiltins: Bool): Items {
             opPos := position;
             position = skipTrivia(source, position + compound.width, prefix);
             parsed := parseExpressionAsCtx(target, source, position, prefix, locals, functions, functionParams, currentName, entry.kind, stmtCtxs, aliases);
+            if currentName == "" and currentLive and not currentStopped {
+                checkRootTraceSafety(source, nameStart, prefix, parsed.code, maxFutureAt, locals, functions,
+                futureValues, items, callableVarRuntimes, callableVarDeps);
+            }
             assignedCode := compoundAssignCode(target, source, opPos, prefix, entry.kind, entry.runtime, compound.baseOp, parsed);
             statementNext := consumeStatementEnd(source, parsed.next, prefix);
             if statementNext < 0 { failAt(source, skipTrivia(source, parsed.next, prefix), prefix, "expected ; after assignment to " + name); }
@@ -9702,6 +11873,10 @@ moduleIdentity: String, neededFns: String, skipSoftBuiltins: Bool): Items {
         }
         expression := parseExpressionItem(target, source, nameStart, prefix, locals, functions, functionParams, currentName,
         currentResult, atValueTail(blocks, blockCount) and not currentStopped, stmtCtxs, aliases);
+        if currentName == "" and currentLive and not currentStopped {
+            checkRootTraceSafety(source, nameStart, prefix, expression.code, maxFutureAt, locals, functions,
+            futureValues, items, callableVarRuntimes, callableVarDeps);
+        }
         if currentLive and not currentStopped {
             listLib.pushBack(mut items, (kind = expressionStatementKind(expression.valueKind, expression.returned, "Discard", currentResult), name = expression.valueKind,
             runtime = "", code = expression.code, intValue = 0, textValue = ""));
