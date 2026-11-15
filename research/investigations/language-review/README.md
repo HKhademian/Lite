@@ -38,6 +38,8 @@ The following notes are recorded as provisional starting points:
 
 - [5. Functions and calls](05-functions.md)
 
+- [6. Control flow and patterns](06-control-flow.md)
+
 ## Starting context
 
 - [Language specification map](../../../docs/spec/README.md) distinguishes selected language rules from open areas and limited implementation.
