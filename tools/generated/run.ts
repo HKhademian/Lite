@@ -216,6 +216,32 @@ function lite$textIndexOf(source: string, needle: string, start: bigint): bigint
     return -1n;
 }
 
+function lite$textStartsWithAt(source: string, position: bigint, text: string): boolean {
+    if (position < 0n) return false;
+    if (lite$isBmp(source)) {
+        if (position > BigInt(source.length)) return false;
+        return source.startsWith(text, Number(position));
+    }
+    const points = lite$textPoints(source);
+    if (position > BigInt(points.length)) return false;
+    const pos = Number(position);
+    if (text.length === 0) return true;
+    if (lite$isBmp(text)) {
+        if (pos + text.length > points.length) return false;
+        for (let i = 0; i < text.length; i += 1) {
+            if (points[pos + i] !== text[i]) return false;
+        }
+        return true;
+    }
+    const tPoints = lite$textPoints(text);
+    if (pos + tPoints.length > points.length) return false;
+    for (let i = 0; i < tPoints.length; i += 1) {
+        const tp = tPoints[i];
+        if (tp === undefined || points[pos + i] !== tp) return false;
+    }
+    return true;
+}
+
 function lite$listAt<T>(items: readonly T[], index: bigint, at: number): T {
     if (index < 0n || index >= BigInt(items.length)) {
         lite$fault("BoundPanic", at, "list index outside its extent");
@@ -279,30 +305,14 @@ export function main(lite$write?: (text: string) => void): string {
     void liteFn$lib$core$text$indexOf;
     function liteFn$lib$core$text$isAsciiLetter(lite_ch: string): boolean {
         void lite_ch;
-        return ((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((lite_ch) === ("a"))) || (((lite_ch) === ("b"))))) || (((lite_ch) === ("c"))))) || (((lite_ch) === ("d"))))) || (((lite_ch) === ("e"))))) || (((lite_ch) === ("f"))))) || (((lite_ch) === ("g"))))) || (((lite_ch) === ("h"))))) || (((lite_ch) === ("i"))))) || (((lite_ch) === ("j"))))) || (((lite_ch) === ("k"))))) || (((lite_ch) === ("l"))))) || (((lite_ch) === ("m"))))) || (((lite_ch) === ("n"))))) || (((lite_ch) === ("o"))))) || (((lite_ch) === ("p"))))) || (((lite_ch) === ("q"))))) || (((lite_ch) === ("r"))))) || (((lite_ch) === ("s"))))) || (((lite_ch) === ("t"))))) || (((lite_ch) === ("u"))))) || (((lite_ch) === ("v"))))) || (((lite_ch) === ("w"))))) || (((lite_ch) === ("x"))))) || (((lite_ch) === ("y"))))) || (((lite_ch) === ("z"))))) || (((lite_ch) === ("A"))))) || (((lite_ch) === ("B"))))) || (((lite_ch) === ("C"))))) || (((lite_ch) === ("D"))))) || (((lite_ch) === ("E"))))) || (((lite_ch) === ("F"))))) || (((lite_ch) === ("G"))))) || (((lite_ch) === ("H"))))) || (((lite_ch) === ("I"))))) || (((lite_ch) === ("J"))))) || (((lite_ch) === ("K"))))) || (((lite_ch) === ("L"))))) || (((lite_ch) === ("M"))))) || (((lite_ch) === ("N"))))) || (((lite_ch) === ("O"))))) || (((lite_ch) === ("P"))))) || (((lite_ch) === ("Q"))))) || (((lite_ch) === ("R"))))) || (((lite_ch) === ("S"))))) || (((lite_ch) === ("T"))))) || (((lite_ch) === ("U"))))) || (((lite_ch) === ("V"))))) || (((lite_ch) === ("W"))))) || (((lite_ch) === ("X"))))) || (((lite_ch) === ("Y"))))) || (((lite_ch) === ("Z"))));
+        return (lite_ch.length === 1 && ((lite_ch >= "a" && lite_ch <= "z") || (lite_ch >= "A" && lite_ch <= "Z")));
     }
     void liteFn$lib$core$text$isAsciiLetter;
     function liteFn$lib$core$text$startsWithAt(lite_source: string, lite_position: bigint, lite_text: string): boolean {
         void lite_source;
         void lite_position;
         void lite_text;
-        const lite_width = lite$textLength(lite_text);
-        void lite_width;
-        const lite_size = lite$textLength(lite_source);
-        void lite_size;
-        if (((((lite_position) < (0n))) || (((lite$addInt(lite_position, lite_width, 4130)) > (lite_size))))) {
-            return false;
-        }
-        if (((lite_width) === (0n))) {
-            return true;
-        }
-        if (((lite$textAt(lite_source, lite_position, 4205)) !== (lite$textAt(lite_text, 0n, 4230)))) {
-            return false;
-        }
-        if (((lite_width) === (1n))) {
-            return true;
-        }
-        return ((lite$textSlice(lite_source, lite_position, lite$addInt(lite_position, lite_width, 4332), 4299)) === (lite_text));
+        return lite$textStartsWithAt(lite_source, lite_position, lite_text);
     }
     void liteFn$lib$core$text$startsWithAt;
     function liteFn$lib$core$text$indexOfText(lite_source: string, lite_needle: string, lite_start: bigint): bigint {
@@ -315,33 +325,13 @@ export function main(lite$write?: (text: string) => void): string {
     function liteFn$lib$core$text$joinTexts(lite_values: string[], lite_separator: string): string {
         void lite_values;
         void lite_separator;
-        let lite_result = "";
-        void lite_result;
-        let lite_first = true;
-        void lite_first;
-        for (const lite_value of [...(lite_values)]) {
-            void lite_value;
-            if (lite_first) {
-                lite_result = lite_value;
-                lite_first = false;
-            } else {
-                lite_result = ((((lite_result) + (lite_separator))) + (lite_value));
-            }
-        }
-        return lite_result;
+        return lite_values.join(lite_separator);
     }
     void liteFn$lib$core$text$joinTexts;
     function liteFn$lib$core$text$endsWith(lite_source: string, lite_suffix: string): boolean {
         void lite_source;
         void lite_suffix;
-        const lite_sourceLen = lite$textLength(lite_source);
-        void lite_sourceLen;
-        const lite_suffixLen = lite$textLength(lite_suffix);
-        void lite_suffixLen;
-        if (((lite_suffixLen) > (lite_sourceLen))) {
-            return false;
-        }
-        return liteFn$lib$core$text$startsWithAt(lite_source, lite$subtractInt(lite_sourceLen, lite_suffixLen, 7510), lite_suffix);
+        return lite_source.endsWith(lite_suffix);
     }
     void liteFn$lib$core$text$endsWith;
     function liteFn$lib$core$file$writeText(lite_path: string, lite_text: string): { ok: boolean; error: string } {

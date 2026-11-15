@@ -1154,6 +1154,7 @@ softBuiltinModuleForIdentity := fn(moduleIdentity: String): String {
     match {
         moduleIdentity == "lite.core.crypto.v1" { "lib/core/crypto" }
         moduleIdentity == "lite.core.file.v1" { "lib/core/file" }
+        moduleIdentity == "lite.core.int.v1" { "lib/core/int" }
         moduleIdentity == "lite.core.text.v1" { "lib/core/text" }
         moduleIdentity == "lite.core.io.v1" { "lib/core/io" }
         moduleIdentity == "lite.core.unicode.v1" { "lib/core/unicode" }
@@ -1163,7 +1164,7 @@ softBuiltinModuleForIdentity := fn(moduleIdentity: String): String {
 
 /** True when `moduleName` is a canonical core stdlib path with soft-builtin support. */
 isSoftBuiltinModule := fn(moduleName: String): Bool {
-    moduleName == "lib/core/crypto" or moduleName == "lib/core/file" or
+    moduleName == "lib/core/crypto" or moduleName == "lib/core/file" or moduleName == "lib/core/int" or
     moduleName == "lib/core/text" or moduleName == "lib/core/io" or moduleName == "lib/core/unicode"
 }
 
@@ -1179,6 +1180,18 @@ softBuiltinAbi := fn(moduleName: String, name: String): (params: String, result:
         if name == "sha256File" {
             return (params = "path=String", result = "(ok:Bool,hex:String,error:String)");
         }
+        if name == "hmacSha256Bytes" {
+            return (params = "key=List<Int>|data=List<Int>", result = "String");
+        }
+        if name == "isValidBase64" or name == "isValidHex" {
+            return (params = "encoded=String", result = "Bool");
+        }
+        if name == "base64Encode" or name == "hexEncode" {
+            return (params = "bytes=List<Int>", result = "String");
+        }
+        if name == "base64Decode" or name == "hexDecode" {
+            return (params = "encoded=String", result = "List<Int>");
+        }
     } else if moduleName == "lib/core/file" {
         if name == "readBytes" {
             return (params = "path=String", result = "List<Int>");
@@ -1192,9 +1205,43 @@ softBuiltinAbi := fn(moduleName: String, name: String): (params: String, result:
         if name == "writeText" or name == "appendText" {
             return (params = "path=String|text=String", result = "(ok:Bool,error:String)");
         }
+    } else if moduleName == "lib/core/int" {
+        if name == "intText" {
+            return (params = "value=Int", result = "String");
+        }
     } else if moduleName == "lib/core/text" {
         if name == "indexOf" {
             return (params = "source=String|needle=String|start=Int", result = "Int");
+        }
+        if name == "startsWithAt" {
+            return (params = "source=String|position=Int|text=String", result = "Bool");
+        }
+        if name == "wordAt" {
+            return (params = "source=String|position=Int|word=String", result = "Bool");
+        }
+        if name == "joinTexts" {
+            return (params = "values=List<String>|separator=String", result = "String");
+        }
+        if name == "textToInt" {
+            return (params = "text=String", result = "(value:Int,ok:Bool)");
+        }
+        if name == "trimStart" or name == "trimEnd" or name == "trim" or name == "toLowerAscii" {
+            return (params = "source=String", result = "String");
+        }
+        if name == "endsWith" {
+            return (params = "source=String|suffix=String", result = "Bool");
+        }
+        if name == "repeatText" {
+            return (params = "value=String|count=Int", result = "String");
+        }
+        if name == "containsText" {
+            return (params = "source=String|needle=String", result = "Bool");
+        }
+        if name == "isDigit" {
+            return (params = "text=String", result = "Bool");
+        }
+        if name == "isAsciiLetter" or name == "isNameStart" or name == "isNameContinue" or name == "isWhitespace" {
+            return (params = "ch=String", result = "Bool");
         }
     } else if moduleName == "lib/core/io" {
         if name == "textReader" {

@@ -1,8 +1,8 @@
 {
-  "note": "Reviewed after selective core-module parsing, side-effect-free dead top-level symbol purging, and core/unicode + core/file soft builtins. All 69 TS and C corpus artifact hashes and 25 rejection cases verified.",
+  "note": "Reviewed after adding core/int, core/text, and core/crypto soft builtins. All 69 TS and C corpus artifact hashes and 25 rejection cases verified.",
   "recorded": "2026-11-15",
-  "sourceSha256": "5533e72c24ea7f607b14b21246f8806870cd81b96b1fe43186625235ade4dffa",
-  "compilerSha256": "28c0c566d3a7ca1cbc3625b7f777dc59ef19f7e8bb4b5dedf8c6405ae8deef6b",
+  "sourceSha256": "b07fdc45f7ee401dc60ed9b94edff09cd0b194c5a32599b0ae5b9d1d90921a16",
+  "compilerSha256": "419afcefd23ad8e296ff9d3d90958da91cb4b647a3743eff0488e91e054c4e46",
   "programCases": 69,
   "rejectedCases": 25,
   "artifacts": [

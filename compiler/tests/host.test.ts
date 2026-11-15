@@ -4875,3 +4875,116 @@ test('unreachable pure top-level symbols are purged while top-level side effects
     assert.match(res.stderr.toString(), /division by zero/);
   });
 });
+
+test('soft builtin overrides for core/int, core/text, and core/crypto match pure implementations and respect --builtin-mode', () => {
+  const intTextSrc = [
+    'integer := import "core/int";',
+    'io := import "core/io";',
+    'text := import "core/text";',
+    'uni := import "core/unicode";',
+    'nbsp := uni.fromCodePoints([160]).text;',
+    'vtab := uni.fromCodePoints([11]).text;',
+    'io.outputLine(integer.intText(0), integer.intText(-42), integer.intText(integer.intMax()), integer.intText(integer.intMin()));',
+    'io.outputLine(text.startsWithAt("A🙂B", 1, "🙂"), text.startsWithAt("A🙂B", 2, "B"), text.startsWithAt("A🙂B", -1, "A"), text.startsWithAt("A🙂B", 3, ""));',
+    'io.outputLine(text.wordAt("if_x", 0, "if"), text.wordAt("if 🙂", 0, "if"), text.wordAt("a🙂b", 0, "a"), text.wordAt("if", 0, "if"));',
+    'io.outputLine(text.joinTexts([], ","), text.joinTexts(["x"], ","), text.joinTexts(["a", "b", "c"], "-"));',
+    'n0 := text.textToInt("-9223372036854775808"); n1 := text.textToInt("+42"); n2 := text.textToInt("9223372036854775808"); n3 := text.textToInt("1a");',
+    'io.outputLine(n0.ok, n0.value, n1.ok, n1.value, n2.ok, n3.ok);',
+    'padded := " \\t" + nbsp + "hi" + vtab + "\\r\\n ";',
+    'io.outputLine("[" + text.trimStart(padded) + "]", "[" + text.trimEnd(padded) + "]", "[" + text.trim(padded) + "]");',
+    'io.outputLine(text.endsWith("A🙂bc", "🙂bc"), text.endsWith("A🙂bc", "xy"), text.containsText("A🙂bc", "🙂b"), text.repeatText("hi", 3), "[" + text.repeatText("hi", -2) + "]");',
+    'io.outputLine(text.toLowerAscii("ÄÉΩABC_xyz🙂"), text.isDigit("5"), text.isAsciiLetter("Q"), text.isNameStart("_"), text.isNameContinue("9"), text.isWhitespace(nbsp));',
+  ].join('\n');
+
+  const runVariant = (src: string, args: readonly string[], label: string): { code: string; stdout: string } => {
+    const compiled = compileTs({ text: src, name: 'main.lts', options: [...args] });
+    assert.equal(compiled.status, 0, `${label}: ${compiled.stderr.toString()}`);
+    const code = compiled.stdout.toString();
+    assert.equal(checkTsArtifact(code).status, 0, `${label}: strict TS check`);
+    let stdout = '';
+    withTsArtifact(code, run => {
+      const res = run();
+      assert.equal(res.status, 0, `${label}: runtime ${res.stderr.toString()}`);
+      stdout = res.stdout.toString();
+    });
+    return { code, stdout };
+  };
+
+  const textDefault = runVariant(intTextSrc, [], 'int/text default');
+  assert.match(textDefault.code, /String\(lite_value\)/);
+  assert.match(textDefault.code, /function lite\$textStartsWithAt\(/);
+  assert.match(textDefault.code, /function lite\$textWordAt\(/);
+  assert.match(textDefault.code, /function lite\$textToInt\(/);
+  assert.match(textDefault.code, /function lite\$textTrim\(/);
+  assert.match(textDefault.code, /function lite\$textToLowerAscii\(/);
+
+  const textPure = runVariant(intTextSrc, ['--builtin-mode', 'pure'], 'int/text pure');
+  assert.equal(textDefault.stdout, textPure.stdout);
+  assert.doesNotMatch(textPure.code, /function lite\$textStartsWithAt\(/);
+  assert.doesNotMatch(textPure.code, /function lite\$textWordAt\(/);
+  assert.doesNotMatch(textPure.code, /function lite\$textTrim\(/);
+
+  const intPure = runVariant(intTextSrc, ['--builtin-mode', 'core/int=pure'], 'core/int=pure');
+  assert.equal(intPure.stdout, textPure.stdout);
+  assert.doesNotMatch(intPure.code, /String\(lite_value\)/);
+  assert.match(intPure.code, /function lite\$textWordAt\(/);
+
+  const wordPure = runVariant(intTextSrc, ['--builtin-mode', 'core/text.wordAt=pure'], 'core/text.wordAt=pure');
+  assert.equal(wordPure.stdout, textPure.stdout);
+  assert.doesNotMatch(wordPure.code, /function lite\$textWordAt\(/);
+  assert.match(wordPure.code, /function lite\$textStartsWithAt\(/);
+
+  const cryptoSrc = [
+    'crypto := import "core/crypto";',
+    'io := import "core/io";',
+    'io.outputLine(crypto.isValidBase64(""), crypto.isValidBase64("AEH/"), crypto.isValidBase64("YQ=="), crypto.isValidBase64("Y==="), crypto.isValidBase64("===="), crypto.isValidBase64("YW Jj"));',
+    'io.outputLine(crypto.isValidHex(""), crypto.isValidHex("0041ff"), crypto.isValidHex("ABCDEF"), crypto.isValidHex("abc"), crypto.isValidHex("00gg"));',
+    'raw: List<Int> = [0, 65, 255];',
+    'b64 := crypto.base64Encode(raw);',
+    'hex := crypto.hexEncode(raw);',
+    'io.outputLine(b64, crypto.base64Decode(b64), hex, crypto.hexDecode(hex), crypto.hexDecode("00FF"));',
+    'key: List<Int> = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10];',
+    'longKey := crypto.base64Decode("QUJDREVGR0hJSktMTU5PUFFSU1RVVldYWVowMTIzNDU2Nzg5QUJDREVGR0hJSktMTU5PUFFSU1RVVldYWVowMTIzNDU2Nzg5");',
+    'io.outputLine(crypto.hmacSha256Bytes(key, raw), crypto.hmacSha256Bytes(longKey, raw));',
+  ].join('\n');
+
+  const cryptoDefault = runVariant(cryptoSrc, [], 'crypto default');
+  assert.match(cryptoDefault.code, /function lite\$cryptoHmacSha256Bytes\(/);
+  assert.match(cryptoDefault.code, /function lite\$cryptoEncodeBytes\(/);
+  assert.match(cryptoDefault.code, /function lite\$cryptoDecodeBytes\(/);
+
+  const cryptoPure = runVariant(cryptoSrc, ['--builtin-mode', 'pure'], 'crypto pure');
+  assert.equal(cryptoDefault.stdout, cryptoPure.stdout);
+  assert.doesNotMatch(cryptoPure.code, /function lite\$cryptoHmacSha256Bytes\(/);
+  assert.doesNotMatch(cryptoPure.code, /node:buffer/);
+
+  const decodePure = runVariant(cryptoSrc, ['--builtin-mode', 'core/crypto.base64Decode=pure'], 'core/crypto.base64Decode=pure');
+  assert.equal(decodePure.stdout, cryptoPure.stdout);
+  assert.match(decodePure.code, /function lite\$cryptoEncodeBytes\(/);
+
+  for (const [faultLabel, faultStmt, expectedErr] of [
+    ['invalid base64Decode', 'crypto.base64Decode("Y===")', /invalid base64 input/],
+    ['invalid hexDecode', 'crypto.hexDecode("0g")', /invalid hex input/],
+    ['out-of-range base64Encode', 'crypto.base64Encode([256])', /byte value outside 0\.\.255: 256/],
+    ['out-of-range hexEncode', 'crypto.hexEncode([-1])', /byte value outside 0\.\.255: -1/],
+    ['out-of-range hmac key', 'crypto.hmacSha256Bytes([256], [1])', /byte value outside 0\.\.255: 256/],
+    ['out-of-range hmac data', 'crypto.hmacSha256Bytes([1], [256])', /byte value outside 0\.\.255: 256/],
+  ] as const) {
+    const faultCodeSrc = [
+      'crypto := import "core/crypto";',
+      'io := import "core/io";',
+      `{ _ := ${faultStmt}; } finally { io.outputLine("cleaned"); };`,
+    ].join('\n');
+    for (const [modeLabel, modeArgs] of [['default', []], ['pure', ['--builtin-mode', 'pure']]] as const) {
+      const compiled = compileTs({ text: faultCodeSrc, name: 'main.lts', options: [...modeArgs] });
+      assert.equal(compiled.status, 0, `${faultLabel} ${modeLabel}: ${compiled.stderr.toString()}`);
+      assert.equal(checkTsArtifact(compiled.stdout.toString()).status, 0);
+      withTsArtifact(compiled.stdout.toString(), run => {
+        const res = run();
+        assert.equal(res.status, 2, `${faultLabel} ${modeLabel} status`);
+        assert.equal(res.stdout.toString(), 'cleaned\n', `${faultLabel} ${modeLabel} finally`);
+        assert.match(res.stderr.toString(), expectedErr, `${faultLabel} ${modeLabel} stderr`);
+      });
+    }
+  }
+});
