@@ -1,0 +1,46 @@
+# 7. Collections — initial review
+
+Status: **preliminary, 2026-11-15; awaiting joint review**. All recommendations below are working hypotheses, not selected design or proof of compiler support. Recheck sources before a decision.
+
+## Baseline and sources
+
+- [Arrays](../../../docs/arrays.md)
+- [Tuple array shapes](../../../docs/tuple-array-shapes.md)
+- [Lists](../../../docs/lists.md)
+- [Slices](../../../docs/slices.md)
+- [Collection capabilities](../../../docs/collection-capabilities.md)
+- Related investigation catalog areas: INV-054–060, INV-044–045.
+
+## 7.1 Collection families
+
+**Baseline:** Fixed arrays have static extent and inline layout; runtime-length owner, list, and view differ in size, growth, or ownership.
+
+**Initial assessment and probes:** Compare `[Int; 3]`, a three-Int tuple, and a runtime-sized sequence. Ask which type and operation differences remain justified if layout is shared.
+
+## 7.2 Construction and inference
+
+**Baseline:** Known-size nonempty literals infer fixed arrays; heterogeneous established elements can infer a union. Empty literal element typing is unresolved.
+
+**Initial assessment and probes:** Compare `[1, 2]`, `[1, "tea"]`, and `[]` with and without an expected type. Check fixed extents, zero/singleton and no invented Any or Never default.
+
+## 7.3 Access and mutation
+
+**Baseline:** Fixed arrays have literal positional access and checked runtime indexing; mutation depends on access permissions.
+
+**Initial assessment and probes:** Compare `items.0`, `items[i]`, and a tuple position. Check out-of-bounds, source evaluation once, distinct element grants and unknown overlap.
+
+## 7.4 Iteration
+
+**Baseline:** The review direction favors consumer capabilities over forcing each API to require a particular collection.
+
+**Initial assessment and probes:** A sum should work over an array or suitable view without assuming allocation. Check item order, empty iteration, early exit, and whether iteration permits mutation.
+
+## 7.5 Storage, copies, and views
+
+**Baseline:** Fixed array layout is inline; a runtime-sized owner requires available length information. Borrowing and ownership of views are not a complete selected model.
+
+**Initial assessment and probes:** For a 2 GB list, compare independent value semantics, an optimized-away copy, and an explicit no-copy read-only view. Clarify lifetime, retention and mutation before choosing a mechanism.
+
+## Cross-topic routing
+
+Types (1), access and lifetimes (2), and generic capabilities (10) are prerequisites. Record new decisions with their owning area; return to this review after the dependency is understood.

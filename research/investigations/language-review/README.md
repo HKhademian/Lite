@@ -40,6 +40,8 @@ The following notes are recorded as provisional starting points:
 
 - [6. Control flow and patterns](06-control-flow.md)
 
+- [7. Collections](07-collections.md)
+
 ## Starting context
 
 - [Language specification map](../../../docs/spec/README.md) distinguishes selected language rules from open areas and limited implementation.
