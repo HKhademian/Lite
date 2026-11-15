@@ -45,6 +45,24 @@ Status: **preliminary, 2026-11-15; awaiting joint review**. All recommendations 
 
 Keep replacement and writable held-data access independent. Give a no-copy request a semantic contract separate from optimizable value passing; the practical cost is lifetime and alias analysis, which should be justified with real large-value and callback cases.
 
+## Expanded assessment
+
+### Compiler evidence and boundaries
+
+Generated TS passes `scope.locals`, `scope.assignment`, `mut.inferred`, `init.zero`, and `init.reserved`; consult those sources for exact programs. A plain `var` capture declaration passes `check`, but no call, escape, or copy was tested by that probe. The tested function-returning-function declaration fails type recognition. The proposed `ref` parameter fails; this does not establish that no other reference mechanism is possible. [Baseline](compiler-baseline.md).
+
+### Benefits, costs, and constraints
+
+- **2.1 Scope:** lexical lookup enables static resolution and avoids runtime name lookup. The deferred-body and source-order rules can require flow-sensitive initialization analysis; compiler effort grows without necessarily increasing runtime footprint. Preserve deterministic shadowing and distinguish definition from invocation.
+- **2.2 Assignment:** target-once, RHS-then-write semantics avoid re-evaluating effectful indexes. A native compiler may use temporaries or registers; assignment order constrains when it may reorder faults and side effects. Test aliasing target and RHS with a throwing RHS.
+- **2.3 Permissions:** `var` replacement and `mut` access carry useful static facts; an implementation can erase permissions after checking. They do not themselves prove exclusive references or absence of aliasing. Multiple disjoint element grants require sound proof; dynamically indexed paths can need rejection or a justified runtime check.
+- **2.4 Initialization:** definite initialization can avoid a mandatory zero pass for reserved storage, while preventing reads of uninitialized bytes. Partial initialization requires per-field or flow tracking and cleanup of already constructed resources; a compiler proof can remove runtime flags in simple cases but branching and escaping may require state or restrictions.
+- **2.5 Copies and lifetimes:** value semantics make independently copied state predictable, but copying large arrays or owned containers can be costly. Optimizing a copy away is not a promise of no copy. Explicit read-only noncopying access, writable access, and reference escape are independent dimensions. A no-GC design needs a lifetime, ownership or comparable safety rule and a destruction strategy; no particular borrow syntax or ownership model is selected.
+
+### Blockers and cross-feature cases
+
+Trace a 2 GB list passed read-only while an alias mutates or reallocates it; a counter copied then invoked twice; and a reference returned after its owner exits. A static-only rule may reject useful patterns; shared ownership or runtime checking can add state and cost. Decide whether the user demands a semantic no-copy guarantee, how long it applies, and which sources can outlive it. These decisions gate list views [7](07-collections.md), closure state [5](05-functions.md), and cleanup [8](08-failure-cleanup.md). Compiler acceptance of a local capture is not evidence for any of them.
+
 ## Cross-topic routing
 
 Functions (5), collections (7), and cleanup (8) share the copy, access, and lifetime boundaries. Record new decisions with their owning area; return to this review after the dependency is understood.
