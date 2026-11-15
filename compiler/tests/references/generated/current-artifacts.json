@@ -1,8 +1,8 @@
 {
-  "note": "Reviewed after adding core/int, core/text, and core/crypto soft builtins. All 69 TS and C corpus artifact hashes and 25 rejection cases verified.",
+  "note": "Reviewed after compiler frontend scan, text helper, and TokenBuckets optimizations. All 69 TS and C corpus artifact hashes and 25 rejection cases verified.",
   "recorded": "2026-11-15",
-  "sourceSha256": "b07fdc45f7ee401dc60ed9b94edff09cd0b194c5a32599b0ae5b9d1d90921a16",
-  "compilerSha256": "419afcefd23ad8e296ff9d3d90958da91cb4b647a3743eff0488e91e054c4e46",
+  "sourceSha256": "0064e508be66edf39adb6cf074a17ce4e8f2da31f696f796c586caaf7573cfa3",
+  "compilerSha256": "91e5d26c72197b3ccd4b9845819c45ae124b822f9de12e0506050fb17f7ac3fd",
   "programCases": 69,
   "rejectedCases": 25,
   "artifacts": [

@@ -96,6 +96,8 @@ FutureValue := type (name: String, runtime: String, kind: String, at: Int, intVa
 AliasDecl := type (name: String, target: String, at: Int, end: Int);
 /** Lexical control-flow and metadata context for an enclosing function, block, conditional, match, loop or finally scope. */
 ConstructCtx := type (id: Int, tag: String, kind: String, phase: String, iifeDepth: Int, valKind: String, valVar: String, label: String, iterLabel: String, countVar: String, itemVar: String, itemKind: String, indexVar: String, hasIndex: Bool);
+/** 32-bucket hashed string set for O(1) reachable-token membership checks across large module graphs. */
+pub TokenBuckets := type (count: Int, b0: String, b1: String, b2: String, b3: String, b4: String, b5: String, b6: String, b7: String, b8: String, b9: String, b10: String, b11: String, b12: String, b13: String, b14: String, b15: String, b16: String, b17: String, b18: String, b19: String, b20: String, b21: String, b22: String, b23: String, b24: String, b25: String, b26: String, b27: String, b28: String, b29: String, b30: String, b31: String);
 
 /** Reports one source-positioned diagnostic as `name:line:column: message`, or `line:column: message` when `prefix` is empty, then exits 2. */
 failAt := fn(source: String, position: Int, prefix: String, message: String): Unit {
@@ -146,33 +148,30 @@ skipRawComment := fn(source: String, position: Int, fence: Int, prefix: String):
 
 /** Returns the position after one ordinary comment, including nested comments and embedded raw comments. */
 skipComment := fn(source: String, position: Int, prefix: String): Int {
-    size := textLib.length(source);
     fence := rawFenceLength(source, position);
     if fence > 0 { return skipRawComment(source, position, fence, prefix); }
     var cursor := position + 2;
     var depth := 1;
-    loop true {
-        if cursor >= size {
+    loop depth > 0 {
+        closeAt := textLib.indexOfText(source, "*/", cursor);
+        if closeAt < 0 {
             failAt(source, position, prefix, "unterminated comment");
         }
-        ch := textLib.at(source, cursor);
-        if ch == "/" and textLib.startsWithAt(source, cursor, "/*") {
-            innerFence := rawFenceLength(source, cursor);
+        openAt := textLib.indexOfText(source, "/*", cursor);
+        if openAt >= 0 and openAt < closeAt {
+            innerFence := rawFenceLength(source, openAt);
             if innerFence > 0 {
-                cursor = skipRawComment(source, cursor, innerFence, prefix);
+                cursor = skipRawComment(source, openAt, innerFence, prefix);
             } else {
                 depth = depth + 1;
-                cursor = cursor + 2;
+                cursor = openAt + 2;
             }
-        } else if ch == "*" and textLib.startsWithAt(source, cursor, "*/") {
-            depth = depth - 1;
-            cursor = cursor + 2;
-            if depth == 0 { return cursor; }
         } else {
-            cursor = cursor + 1;
+            depth = depth - 1;
+            cursor = closeAt + 2;
         }
     }
-    size
+    cursor
 }
 
 /** Returns the first position at or after `start` that is neither whitespace nor a comment; comments separate tokens as whitespace does. */
@@ -1210,6 +1209,9 @@ softBuiltinAbi := fn(moduleName: String, name: String): (params: String, result:
             return (params = "value=Int", result = "String");
         }
     } else if moduleName == "lib/core/text" {
+        if name == "skipSpaces" or name == "skipName" {
+            return (params = "source=String|start=Int", result = "Int");
+        }
         if name == "indexOf" {
             return (params = "source=String|needle=String|start=Int", result = "Int");
         }
@@ -1674,19 +1676,20 @@ parseText := fn(target: String, source: String, position: Int, prefix: String): 
 
 /** Returns the position after one string literal, or the source end when it does not close; alias collection leaves lexical diagnostics to the main pass. */
 pub skipAliasString := fn(source: String, position: Int): Int {
-    size := textLib.length(source);
     var cursor := position + 1;
-    loop cursor < size {
-        ch := textLib.at(source, cursor);
-        if ch == "\\" {
-            cursor = cursor + 2;
-        } else if ch == "\"" {
-            return cursor + 1;
-        } else {
-            cursor = cursor + 1;
+    loop true {
+        quoteAt := textLib.indexOfText(source, "\"", cursor);
+        if quoteAt < 0 { return textLib.length(source); }
+        var unescaped := true;
+        var check := quoteAt - 1;
+        loop check >= cursor and textLib.at(source, check) == "\\" {
+            unescaped = not unescaped;
+            check = check - 1;
         }
+        if unescaped { return quoteAt + 1; }
+        cursor = quoteAt + 1;
     }
-    size
+    textLib.length(source)
 }
 
 /** Collects distinct target or user-function call tokens, skipping quoted text and consuming whole identifiers. */
@@ -1759,8 +1762,113 @@ pub hasHelperToken := fn(calls: String, needle: String): Bool {
     textLib.indexOfText(calls, "|" + needle + "|", 0) >= 0
 }
 
-/** Collects distinct `lite*` / `lt_*` call or value identifier tokens from `code`, skipping quoted strings. */
-pub codeReachableTokens := fn(code: String, existing: String): String {
+/** Creates an empty 32-bucket token set. */
+pub emptyTokenBuckets := fn(): TokenBuckets {
+    (count = 0, b0 = "|", b1 = "|", b2 = "|", b3 = "|", b4 = "|", b5 = "|", b6 = "|", b7 = "|",
+    b8 = "|", b9 = "|", b10 = "|", b11 = "|", b12 = "|", b13 = "|", b14 = "|", b15 = "|",
+    b16 = "|", b17 = "|", b18 = "|", b19 = "|", b20 = "|", b21 = "|", b22 = "|", b23 = "|",
+    b24 = "|", b25 = "|", b26 = "|", b27 = "|", b28 = "|", b29 = "|", b30 = "|", b31 = "|")
+}
+
+/** Maps a token string to its 0..31 bucket index using its code-point length. */
+tokenBucketSlot := fn(needle: String): Int {
+    n := textLib.length(needle);
+    n - (n / 32) * 32
+}
+
+/** Reads the bucket string stored at `slot` (0..31) in `s`. */
+tokenBucketGet := fn(s: TokenBuckets, slot: Int): String {
+    if slot < 16 {
+        if slot < 8 {
+            if slot == 0 { return s.b0; }
+            if slot == 1 { return s.b1; }
+            if slot == 2 { return s.b2; }
+            if slot == 3 { return s.b3; }
+            if slot == 4 { return s.b4; }
+            if slot == 5 { return s.b5; }
+            if slot == 6 { return s.b6; }
+            return s.b7;
+        }
+        if slot == 8 { return s.b8; }
+        if slot == 9 { return s.b9; }
+        if slot == 10 { return s.b10; }
+        if slot == 11 { return s.b11; }
+        if slot == 12 { return s.b12; }
+        if slot == 13 { return s.b13; }
+        if slot == 14 { return s.b14; }
+        return s.b15;
+    }
+    if slot < 24 {
+        if slot == 16 { return s.b16; }
+        if slot == 17 { return s.b17; }
+        if slot == 18 { return s.b18; }
+        if slot == 19 { return s.b19; }
+        if slot == 20 { return s.b20; }
+        if slot == 21 { return s.b21; }
+        if slot == 22 { return s.b22; }
+        return s.b23;
+    }
+    if slot == 24 { return s.b24; }
+    if slot == 25 { return s.b25; }
+    if slot == 26 { return s.b26; }
+    if slot == 27 { return s.b27; }
+    if slot == 28 { return s.b28; }
+    if slot == 29 { return s.b29; }
+    if slot == 30 { return s.b30; }
+    s.b31
+}
+
+/** Returns a copy of `s` with bucket `slot` replaced by `val` and `count` incremented. */
+withTokenBucket := fn(s: TokenBuckets, slot: Int, val: String): TokenBuckets {
+    (count = s.count + 1,
+    b0 = if slot == 0 { val } else { s.b0 }, b1 = if slot == 1 { val } else { s.b1 },
+    b2 = if slot == 2 { val } else { s.b2 }, b3 = if slot == 3 { val } else { s.b3 },
+    b4 = if slot == 4 { val } else { s.b4 }, b5 = if slot == 5 { val } else { s.b5 },
+    b6 = if slot == 6 { val } else { s.b6 }, b7 = if slot == 7 { val } else { s.b7 },
+    b8 = if slot == 8 { val } else { s.b8 }, b9 = if slot == 9 { val } else { s.b9 },
+    b10 = if slot == 10 { val } else { s.b10 }, b11 = if slot == 11 { val } else { s.b11 },
+    b12 = if slot == 12 { val } else { s.b12 }, b13 = if slot == 13 { val } else { s.b13 },
+    b14 = if slot == 14 { val } else { s.b14 }, b15 = if slot == 15 { val } else { s.b15 },
+    b16 = if slot == 16 { val } else { s.b16 }, b17 = if slot == 17 { val } else { s.b17 },
+    b18 = if slot == 18 { val } else { s.b18 }, b19 = if slot == 19 { val } else { s.b19 },
+    b20 = if slot == 20 { val } else { s.b20 }, b21 = if slot == 21 { val } else { s.b21 },
+    b22 = if slot == 22 { val } else { s.b22 }, b23 = if slot == 23 { val } else { s.b23 },
+    b24 = if slot == 24 { val } else { s.b24 }, b25 = if slot == 25 { val } else { s.b25 },
+    b26 = if slot == 26 { val } else { s.b26 }, b27 = if slot == 27 { val } else { s.b27 },
+    b28 = if slot == 28 { val } else { s.b28 }, b29 = if slot == 29 { val } else { s.b29 },
+    b30 = if slot == 30 { val } else { s.b30 }, b31 = if slot == 31 { val } else { s.b31 })
+}
+
+/** True when `s` contains `needle`. */
+pub tokenBucketHas := fn(s: TokenBuckets, needle: String): Bool {
+    if needle == "" { return false; }
+    textLib.indexOfText(tokenBucketGet(s, tokenBucketSlot(needle)), "|" + needle + "|", 0) >= 0
+}
+
+/** Returns `s` with `needle` inserted into its length-hashed bucket. */
+pub tokenBucketAdd := fn(s: TokenBuckets, needle: String): TokenBuckets {
+    if needle == "" { return s; }
+    slot := tokenBucketSlot(needle);
+    b := tokenBucketGet(s, slot);
+    if textLib.indexOfText(b, "|" + needle + "|", 0) >= 0 { return s; }
+    withTokenBucket(s, slot, b + needle + "|")
+}
+
+/** Serializes all 32 buckets into one `|`-delimited string. */
+pub flattenTokenBuckets := fn(s: TokenBuckets): String {
+    var out := "|";
+    var i := 0;
+    loop i < 32 {
+        b := tokenBucketGet(s, i);
+        bLen := textLib.length(b);
+        if bLen > 1 { out = out + textLib.slice(b, 1, bLen); }
+        i = i + 1;
+    }
+    out
+}
+
+/** Collects distinct `lite*` / `lt_*` call or value identifier tokens from `code` into `existing`. */
+pub codeReachableTokensSet := fn(code: String, existing: TokenBuckets): TokenBuckets {
     if textLib.indexOfText(code, "lite", 0) < 0 and textLib.indexOfText(code, "lt_", 0) < 0 { return existing; }
     size := textLib.length(code);
     var tokens := existing;
@@ -1785,7 +1893,7 @@ pub codeReachableTokens := fn(code: String, existing: String): String {
                     } else {
                         name
                     };
-                    if textLib.indexOfText(tokens, "|" + token + "|", 0) < 0 { tokens = tokens + token + "|"; }
+                    tokens = tokenBucketAdd(tokens, token);
                 }
             }
         } else { cursor = cursor + 1; }
@@ -1830,7 +1938,7 @@ isTopDeclKind := fn(kind: String): Bool {
 /** Removes unreachable top-level function bodies and side-effect-free declarations without dropping side effects. */
 pub filterReachableItems := fn(items: Items): Items {
     var hasPrunable := false;
-    var seedTokens := "|";
+    var seedTokens := emptyTokenBuckets();
     var fnDepth := 0;
     var blockDepth := 0;
     var nextIsPure := false;
@@ -1860,7 +1968,7 @@ pub filterReachableItems := fn(items: Items): Items {
         nextIsPure = false;
         if item.kind == "Scope" or item.kind == "If" or item.kind == "Loop" or item.kind == "LoopSeq" {
             blockDepth = blockDepth + 1;
-            seedTokens = codeReachableTokens(item.code, seedTokens);
+            seedTokens = codeReachableTokensSet(item.code, seedTokens);
         } else if item.kind == "EndScope" or item.kind == "EndIf" or item.kind == "EndLoop" {
             if blockDepth > 0 { blockDepth = blockDepth - 1; }
         } else if isPureDecl {
@@ -1868,19 +1976,18 @@ pub filterReachableItems := fn(items: Items): Items {
             listLib.pushBack(mut pureDecls, item.runtime);
         } else if item.kind =!= "Import" and item.kind =!= "PublicFunction" and item.kind =!= "PublicValue" and
         item.kind =!= "PublicType" and item.kind =!= "Noop" {
-            seedTokens = codeReachableTokens(item.code, seedTokens);
-            if textLib.startsWithAt(item.kind, 0, "Assign") and item.runtime =!= "" and
-            not hasHelperToken(seedTokens, item.runtime) {
-                seedTokens = seedTokens + item.runtime + "|";
+            seedTokens = codeReachableTokensSet(item.code, seedTokens);
+            if textLib.startsWithAt(item.kind, 0, "Assign") and item.runtime =!= "" {
+                seedTokens = tokenBucketAdd(seedTokens, item.runtime);
             }
         }
     }
     if not hasPrunable { return items; }
 
     var reachable := seedTokens;
-    var scanned := "|";
+    var scanned := emptyTokenBuckets();
     loop true {
-        before := reachable;
+        beforeCount := reachable.count;
         var scanFnDepth := 0;
         var scanBlockDepth := 0;
         var scanBody := false;
@@ -1890,21 +1997,21 @@ pub filterReachableItems := fn(items: Items): Items {
             } else if item.kind == "FunctionStart" {
                 if scanFnDepth == 0 {
                     token := item.runtime + "(";
-                    scanBody = hasHelperToken(reachable, token) and not hasHelperToken(scanned, token);
-                    if scanBody { scanned = scanned + token + "|"; }
+                    scanBody = tokenBucketHas(reachable, token) and not tokenBucketHas(scanned, token);
+                    if scanBody { scanned = tokenBucketAdd(scanned, token); }
                 }
                 scanFnDepth = scanFnDepth + 1;
             } else if item.kind == "FunctionEnd" {
                 if scanFnDepth > 0 { scanFnDepth = scanFnDepth - 1; }
                 if scanFnDepth == 0 { scanBody = false; }
             } else if scanFnDepth > 0 {
-                if scanBody { reachable = codeReachableTokens(item.code, reachable); }
+                if scanBody { reachable = codeReachableTokensSet(item.code, reachable); }
             } else {
                 if scanBlockDepth == 0 and isTopDeclKind(item.kind) {
-                    if listLib.listContainsText(pureDecls, item.runtime) and hasHelperToken(reachable, item.runtime) and
-                    not hasHelperToken(scanned, item.runtime) {
-                        scanned = scanned + item.runtime + "|";
-                        reachable = codeReachableTokens(item.code, reachable);
+                    if listLib.listContainsText(pureDecls, item.runtime) and tokenBucketHas(reachable, item.runtime) and
+                    not tokenBucketHas(scanned, item.runtime) {
+                        scanned = tokenBucketAdd(scanned, item.runtime);
+                        reachable = codeReachableTokensSet(item.code, reachable);
                     }
                 }
                 if item.kind == "Scope" or item.kind == "If" or item.kind == "Loop" or item.kind == "LoopSeq" {
@@ -1914,7 +2021,7 @@ pub filterReachableItems := fn(items: Items): Items {
                 }
             }
         }
-        if reachable == before { break; }
+        if reachable.count == beforeCount { break; }
     }
 
     filtered: mut Items = [];
@@ -1929,7 +2036,7 @@ pub filterReachableItems := fn(items: Items): Items {
         }
         if item.kind == "FunctionStart" {
             nextDeclPure = false;
-            if keepFnDepth == 0 { keepFn = hasHelperToken(reachable, item.runtime + "("); }
+            if keepFnDepth == 0 { keepFn = tokenBucketHas(reachable, item.runtime + "("); }
             keepFnDepth = keepFnDepth + 1;
             if keepFn { listLib.pushBack(mut filtered, item); }
         } else if item.kind == "FunctionEnd" {
@@ -1943,7 +2050,7 @@ pub filterReachableItems := fn(items: Items): Items {
             if keepFn { listLib.pushBack(mut filtered, item); }
         } else {
             dropDecl := keepBlockDepth == 0 and isTopDeclKind(item.kind) and
-            (nextDeclPure or codeHasNoCalls(item.code)) and not hasHelperToken(reachable, item.runtime);
+            (nextDeclPure or codeHasNoCalls(item.code)) and not tokenBucketHas(reachable, item.runtime);
             nextDeclPure = false;
             if item.kind == "Scope" or item.kind == "If" or item.kind == "Loop" or item.kind == "LoopSeq" {
                 keepBlockDepth = keepBlockDepth + 1;
@@ -2035,47 +2142,6 @@ collectTypeTarget := fn(source: String, position: Int, prefix: String): (text: S
             (text = textLib.slice(source, start, after), next = after)
         }
     }
-}
-
-/** Collects top-level `Name := type Target;` declarations before parsing so aliases may reference later aliases and cycles can be reported. */
-collectAliases := fn(source: String, prefix: String): List<AliasDecl> {
-    aliases: mut List<AliasDecl> = [];
-    size := textLib.length(source);
-    var position := 0;
-    var depth := 0;
-    loop position < size {
-        position = skipTrivia(source, position, prefix);
-        if position >= size { break; }
-        ch := textLib.at(source, position);
-        if ch == "\"" {
-            position = skipAliasString(source, position);
-        } else if ch == "{" {
-            depth = depth + 1;
-            position = position + 1;
-        } else if ch == "}" {
-            if depth > 0 { depth = depth - 1; }
-            position = position + 1;
-        } else if depth == 0 and textLib.isNameStart(ch) {
-            nameStart := position;
-            afterName := textLib.skipName(source, position);
-            name := textLib.slice(source, nameStart, afterName);
-            aliasPosition := skipTrivia(source, afterName, prefix);
-            if textLib.startsWithAt(source, aliasPosition, ":=") {
-                typePosition := skipTrivia(source, aliasPosition + 2, prefix);
-                if textLib.wordAt(source, typePosition, "type") {
-                    targetStart := skipTrivia(source, typePosition + 4, prefix);
-                    target := collectTypeTarget(source, targetStart, prefix);
-                    listLib.pushBack(mut aliases, (name = name, target = target.text, at = nameStart, end = target.next));
-                    position = target.next;
-                    continue;
-                }
-            }
-            position = afterName;
-        } else {
-            position = position + 1;
-        }
-    }
-    aliases
 }
 
 /** True for the single assignment/field equals token, excluding both equality and inequality operators. */
@@ -2941,11 +3007,11 @@ callReordersArgs := fn(source: String, openParen: Int, prefix: String, params: L
     entryIdx =!= paramCount
 }
 
-/** Returns the position after the braced block starting at `open`, or -1 when it never closes. Strings and comments are skipped. */
-scanBraceEnd := fn(source: String, open: Int, prefix: String): Int {
+/** Scans from `start` with initial brace `depthStart`, skipping strings and comments; returns the end position or -1 when unclosed. */
+scanBracedRange := fn(source: String, start: Int, depthStart: Int, prefix: String): Int {
     size := textLib.length(source);
-    var cursor := open;
-    var depth := 0;
+    var cursor := start;
+    var depth := depthStart;
     loop cursor < size {
         ch := textLib.at(source, cursor);
         if ch == "\"" {
@@ -2964,6 +3030,11 @@ scanBraceEnd := fn(source: String, open: Int, prefix: String): Int {
         }
     }
     -1
+}
+
+/** Returns the position after the braced block starting at `open`, or -1 when it never closes. Strings and comments are skipped. */
+scanBraceEnd := fn(source: String, open: Int, prefix: String): Int {
+    scanBracedRange(source, open, 0, prefix)
 }
 
 /** True when the braced body from `open` to `close` is a nonempty single expression: no semicolon and no statement keyword first. */
@@ -5124,31 +5195,53 @@ parseBinaryCtx := fn(target: String, source: String, position: Int, prefix: Stri
         } else {
             if isReservedWord(name) { unsupportedFeature(source, nameStart, name, prefix); }
             afterName := skipTrivia(source, next, prefix);
-            var callableIndex := findFunction(functions, name);
-            var calleeName := name;
+            isCallSite := afterName < textLib.length(source) and textLib.at(source, afterName) == "(";
             if name == "self" {
                 if currentName == "" {
                     failAt(source, nameStart, prefix, "self is only available inside a function");
                 }
-                calleeName = currentName;
-                callableIndex = findFunction(functions, currentName);
-            }
-            if callableIndex >= 0 {
-                left = (kind = "ModuleFunction", code = integer.intText(nameStart), intValue = callableIndex,
-                textValue = calleeName, constant = false, next = next);
-            } else if (name == "push_back" or name == "pop_back" or name == "push_front" or name == "pop_front") and
-            afterName < textLib.length(source) and textLib.at(source, afterName) == "(" {
-                left = (kind = "ListOp", code = name, intValue = 0, textValue = name, constant = false, next = afterName);
-            } else {
-                index := localIndex(locals, name);
-                if index < 0 {
+                selfIndex := findFunction(functions, currentName);
+                if selfIndex >= 0 {
+                    left = (kind = "ModuleFunction", code = integer.intText(nameStart), intValue = selfIndex,
+                    textValue = currentName, constant = false, next = next);
+                } else {
                     failAt(source, nameStart, prefix, "unknown value " + name);
                 }
-                entry := locals[index];
-                if entry.initState =!= "init" {
-                    failAt(source, nameStart, prefix, "cannot read uninitialized local " + name);
+            } else if isCallSite {
+                callableIndex := findFunction(functions, name);
+                if callableIndex >= 0 {
+                    left = (kind = "ModuleFunction", code = integer.intText(nameStart), intValue = callableIndex,
+                    textValue = name, constant = false, next = next);
+                } else if name == "push_back" or name == "pop_back" or name == "push_front" or name == "pop_front" {
+                    left = (kind = "ListOp", code = name, intValue = 0, textValue = name, constant = false, next = afterName);
+                } else {
+                    index := localIndex(locals, name);
+                    if index < 0 {
+                        failAt(source, nameStart, prefix, "unknown value " + name);
+                    }
+                    entry := locals[index];
+                    if entry.initState =!= "init" {
+                        failAt(source, nameStart, prefix, "cannot read uninitialized local " + name);
+                    }
+                    left = (kind = entry.kind, code = entry.runtime, intValue = entry.intValue, textValue = entry.textValue, constant = entry.constant, next = next);
                 }
-                left = (kind = entry.kind, code = entry.runtime, intValue = entry.intValue, textValue = entry.textValue, constant = entry.constant, next = next);
+            } else {
+                index := localIndex(locals, name);
+                if index >= 0 {
+                    entry := locals[index];
+                    if entry.initState =!= "init" {
+                        failAt(source, nameStart, prefix, "cannot read uninitialized local " + name);
+                    }
+                    left = (kind = entry.kind, code = entry.runtime, intValue = entry.intValue, textValue = entry.textValue, constant = entry.constant, next = next);
+                } else {
+                    callableIndex := findFunction(functions, name);
+                    if callableIndex >= 0 {
+                        left = (kind = "ModuleFunction", code = integer.intText(nameStart), intValue = callableIndex,
+                        textValue = name, constant = false, next = next);
+                    } else {
+                        failAt(source, nameStart, prefix, "unknown value " + name);
+                    }
+                }
             }
         }
     } else if ch == "." {
@@ -7053,63 +7146,93 @@ parseExpressionItem := fn(target: String, source: String, position: Int, prefix:
     (next = next, returned = returned, code = if returned { if parsed.kind == "Unit" { targetUnitEvaluationCode(target, parsed.code) } else { assignValueCode(target, currentResult, parsed.kind, parsed.code) } } else { parsed.code }, valueKind = parsed.kind)
 }
 
-/** Finds later root scalar definitions for deferred function-body name resolution; eager root expressions never receive this table. */
-collectFutureValues := fn(target: String, source: String, prefix: String, moduleKey: String): List<FutureValue> {
-    values: mut List<FutureValue> = [];
+/** Collects aliases, `pub` declarations, and later scalar values in a single pass over module source. */
+collectModuleDecls := fn(target: String, source: String, prefix: String, moduleKey: String): Items {
+    decls: mut List<Item> = [];
     size := textLib.length(source);
-    var cursor := 0;
-    var braceDepth := 0;
-    loop cursor < size {
-        ch := textLib.at(source, cursor);
+    var position := 0;
+    var depth := 0;
+    loop position < size {
+        position = skipTrivia(source, position, prefix);
+        if position >= size { break; }
+        ch := textLib.at(source, position);
         if ch == "\"" {
-            cursor = skipAliasString(source, cursor);
-        } else if ch == "/" and textLib.startsWithAt(source, cursor, "/*") {
-            cursor = skipComment(source, cursor, prefix);
+            position = skipAliasString(source, position);
         } else if ch == "{" {
-            braceDepth = braceDepth + 1;
-            cursor = cursor + 1;
+            if depth == 0 {
+                blockEnd := scanBraceEnd(source, position, prefix);
+                if blockEnd >= 0 {
+                    position = blockEnd;
+                    continue;
+                }
+            }
+            depth = depth + 1;
+            position = position + 1;
         } else if ch == "}" {
-            if braceDepth > 0 { braceDepth = braceDepth - 1; }
-            cursor = cursor + 1;
-        } else if braceDepth == 0 and textLib.isNameStart(ch) {
-            nameStart := cursor;
-            nameEnd := textLib.skipName(source, cursor);
-            afterName := skipTrivia(source, nameEnd, prefix);
-            if textLib.startsWithAt(source, afterName, ":=") {
-                valueStart := skipTrivia(source, afterName + 2, prefix);
-                if not textLib.wordAt(source, valueStart, "fn") and not textLib.wordAt(source, valueStart, "type") {
+            if depth > 0 { depth = depth - 1; }
+            position = position + 1;
+        } else if depth == 0 and textLib.isNameStart(ch) {
+            nameStart := position;
+            afterName := textLib.skipName(source, position);
+            name := textLib.slice(source, nameStart, afterName);
+            if name == "pub" {
+                declStart := skipTrivia(source, afterName, prefix);
+                if declStart < size and textLib.isNameStart(textLib.at(source, declStart)) {
+                    declEnd := textLib.skipName(source, declStart);
+                    operator := skipTrivia(source, declEnd, prefix);
+                    if textLib.startsWithAt(source, operator, ":=") {
+                        valStart := skipTrivia(source, operator + 2, prefix);
+                        declName := textLib.slice(source, declStart, declEnd);
+                        if textLib.wordAt(source, valStart, "fn") {
+                            listLib.pushBack(mut decls, (kind = "PubFn", name = declName, runtime = "", code = "", intValue = 0, textValue = ""));
+                        } else if textLib.wordAt(source, valStart, "type") {
+                            listLib.pushBack(mut decls, (kind = "PubType", name = declName, runtime = "", code = "", intValue = 0, textValue = ""));
+                        } else {
+                            listLib.pushBack(mut decls, (kind = "PubVal", name = declName, runtime = "", code = "", intValue = 0, textValue = ""));
+                        }
+                    }
+                }
+                position = afterName;
+                continue;
+            }
+            aliasPosition := skipTrivia(source, afterName, prefix);
+            if textLib.startsWithAt(source, aliasPosition, ":=") {
+                valueStart := skipTrivia(source, aliasPosition + 2, prefix);
+                if textLib.wordAt(source, valueStart, "type") {
+                    targetStart := skipTrivia(source, valueStart + 4, prefix);
+                    aliasTarget := collectTypeTarget(source, targetStart, prefix);
+                    listLib.pushBack(mut decls, (kind = "Alias", name = name, runtime = "", code = aliasTarget.text,
+                    intValue = nameStart, textValue = integer.intText(aliasTarget.next)));
+                    position = aliasTarget.next;
+                    continue;
+                }
+                if not textLib.wordAt(source, valueStart, "fn") and valueStart < size {
                     valueCh := textLib.at(source, valueStart);
                     var kind := "";
-                    var intValue := 0;
-                    var textValue := "";
                     if textLib.isDigit(valueCh) or valueCh == "+" or valueCh == "-" {
                         parsed := parseNumber(target, source, valueStart, prefix, "", 0);
                         kind = parsed.kind;
-                        intValue = parsed.intValue;
                     } else if valueCh == "\"" {
                         parsed := parseText(target, source, valueStart, prefix);
                         kind = parsed.kind;
-                        textValue = parsed.textValue;
                     } else if textLib.wordAt(source, valueStart, "true") or textLib.wordAt(source, valueStart, "false") {
                         kind = "Bool";
-                        intValue = if textLib.wordAt(source, valueStart, "true") { 1 } else { 0 };
                     }
                     if kind =!= "" {
-                        valueName := textLib.slice(source, nameStart, nameEnd);
-                        futureRuntime := moduleValueRuntime(target, moduleKey, valueName);
-                        listLib.pushBack(mut values, (name = valueName, runtime = futureRuntime,
-                        kind = kind, at = nameStart, intValue = intValue, textValue = textValue));
+                        futureRuntime := moduleValueRuntime(target, moduleKey, name);
+                        listLib.pushBack(mut decls, (kind = "FutureVal", name = name, runtime = futureRuntime,
+                        code = kind, intValue = nameStart, textValue = ""));
                     }
                 }
-                cursor = valueStart;
-            } else {
-                cursor = nameEnd;
+                position = valueStart;
+                continue;
             }
+            position = afterName;
         } else {
-            cursor = cursor + 1;
+            position = position + 1;
         }
     }
-    values
+    decls
 }
 
 /** Removes deferred-only entries after one function body has been checked. */
@@ -7189,121 +7312,6 @@ pub collectImportClauses := fn(target: String, source: String, prefix: String): 
     imports
 }
 
-/** Collects function names explicitly marked `pub`. */
-collectPublishedFunctions := fn(source: String, prefix: String): List<String> {
-    names: mut List<String> = [];
-    size := textLib.length(source);
-    var position := 0;
-    var depth := 0;
-    loop position < size {
-        position = skipTrivia(source, position, prefix);
-        if position >= size { break; }
-        ch := textLib.at(source, position);
-        if ch == "\"" {
-            position = skipAliasString(source, position);
-        } else if ch == "{" {
-            depth = depth + 1;
-            position = position + 1;
-        } else if ch == "}" {
-            if depth > 0 { depth = depth - 1; }
-            position = position + 1;
-        } else if depth == 0 and textLib.wordAt(source, position, "pub") {
-            declarationStart := skipTrivia(source, position + 3, prefix);
-            if declarationStart < size and textLib.isNameStart(textLib.at(source, declarationStart)) {
-                nameEnd := textLib.skipName(source, declarationStart);
-                operator := skipTrivia(source, nameEnd, prefix);
-                value := skipTrivia(source, operator + 2, prefix);
-                if textLib.startsWithAt(source, operator, ":=") and textLib.wordAt(source, value, "fn") {
-                    listLib.pushBack(mut names, textLib.slice(source, declarationStart, nameEnd));
-                }
-                position = nameEnd;
-            } else {
-                position = position + 3;
-            }
-        } else {
-            position = position + 1;
-        }
-    }
-    names
-}
-
-/** Collects immutable value names explicitly marked `pub`; imported type aliases remain pending. */
-collectPublishedValues := fn(source: String, prefix: String): List<String> {
-    names: mut List<String> = [];
-    size := textLib.length(source);
-    var position := 0;
-    var depth := 0;
-    loop position < size {
-        position = skipTrivia(source, position, prefix);
-        if position >= size { break; }
-        ch := textLib.at(source, position);
-        if ch == "\"" {
-            position = skipAliasString(source, position);
-        } else if ch == "{" {
-            depth = depth + 1;
-            position = position + 1;
-        } else if ch == "}" {
-            if depth > 0 { depth = depth - 1; }
-            position = position + 1;
-        } else if depth == 0 and textLib.wordAt(source, position, "pub") {
-            declarationStart := skipTrivia(source, position + 3, prefix);
-            if declarationStart < size and textLib.isNameStart(textLib.at(source, declarationStart)) {
-                nameEnd := textLib.skipName(source, declarationStart);
-                operator := skipTrivia(source, nameEnd, prefix);
-                value := skipTrivia(source, operator + 2, prefix);
-                if textLib.startsWithAt(source, operator, ":=") and
-                not textLib.wordAt(source, value, "fn") and not textLib.wordAt(source, value, "type") {
-                    listLib.pushBack(mut names, textLib.slice(source, declarationStart, nameEnd));
-                }
-                position = nameEnd;
-            } else {
-                position = position + 3;
-            }
-        } else {
-            position = position + 1;
-        }
-    }
-    names
-}
-
-/** Collects top-level transparent type aliases explicitly marked `pub`. */
-collectPublishedTypes := fn(source: String, prefix: String): List<String> {
-    names: mut List<String> = [];
-    size := textLib.length(source);
-    var position := 0;
-    var depth := 0;
-    loop position < size {
-        position = skipTrivia(source, position, prefix);
-        if position >= size { break; }
-        ch := textLib.at(source, position);
-        if ch == "\"" {
-            position = skipAliasString(source, position);
-        } else if ch == "{" {
-            depth = depth + 1;
-            position = position + 1;
-        } else if ch == "}" {
-            if depth > 0 { depth = depth - 1; }
-            position = position + 1;
-        } else if depth == 0 and textLib.wordAt(source, position, "pub") {
-            declarationStart := skipTrivia(source, position + 3, prefix);
-            if declarationStart < size and textLib.isNameStart(textLib.at(source, declarationStart)) {
-                nameEnd := textLib.skipName(source, declarationStart);
-                operator := skipTrivia(source, nameEnd, prefix);
-                typeStart := skipTrivia(source, operator + 2, prefix);
-                if textLib.startsWithAt(source, operator, ":=") and textLib.wordAt(source, typeStart, "type") {
-                    listLib.pushBack(mut names, textLib.slice(source, declarationStart, nameEnd));
-                }
-                position = nameEnd;
-            } else {
-                position = position + 3;
-            }
-        } else {
-            position = position + 1;
-        }
-    }
-    names
-}
-
 /** Parses one legacy or imported output statement into the same ordered argument group and ending marker. */
 parseOutputStatement := fn(target: String, source: String, openPosition: Int, outputName: String, prefix: String,
 locals: List<Local>, functions: List<FunctionInfo>, params: List<String>, currentName: String,
@@ -7335,28 +7343,10 @@ live: Bool, ctxs: List<ConstructCtx>): Items {
 
 /** Advances past one `{ ... }` function body while respecting strings and comments. */
 skipBraceBlock := fn(source: String, afterOpen: Int, prefix: String): Int {
-    size := textLib.length(source);
-    var cursor := afterOpen;
-    var braceDepth := 1;
-    loop cursor < size {
-        ch := textLib.at(source, cursor);
-        if ch == "\"" {
-            cursor = skipAliasString(source, cursor);
-        } else if ch == "/" and textLib.startsWithAt(source, cursor, "/*") {
-            cursor = skipComment(source, cursor, prefix);
-        } else if ch == "{" {
-            braceDepth = braceDepth + 1;
-            cursor = cursor + 1;
-        } else if ch == "}" {
-            braceDepth = braceDepth - 1;
-            cursor = cursor + 1;
-            if braceDepth == 0 { return cursor; }
-        } else {
-            cursor = cursor + 1;
-        }
-    }
+    end := scanBracedRange(source, afterOpen, 1, prefix);
+    if end >= 0 { return end; }
     failAt(source, afterOpen, prefix, "expected } before end of source");
-    cursor
+    textLib.length(source)
 }
 
 /** Parses complete source with selective function-body compilation (`neededFns = "*"` compiles every function). */
@@ -7376,11 +7366,26 @@ moduleIdentity: String, neededFns: String, skipSoftBuiltins: Bool): Items {
             listLib.pushBack(mut aliases, (name = exported.name, target = exported.code, at = -1, end = 0));
         }
     }
-    loop collectAliases(source, prefix) as alias { listLib.pushBack(mut aliases, alias); }
-    publishedFunctions := collectPublishedFunctions(source, prefix);
-    publishedValues := collectPublishedValues(source, prefix);
-    publishedTypes := collectPublishedTypes(source, prefix);
-    futureValues := collectFutureValues(target, source, prefix, moduleKey);
+    decls := collectModuleDecls(target, source, prefix, moduleKey);
+    publishedFunctions: mut List<String> = [];
+    publishedValues: mut List<String> = [];
+    publishedTypes: mut List<String> = [];
+    futureValues: mut List<FutureValue> = [];
+    loop decls as decl {
+        if decl.kind == "Alias" {
+            endPos := parseDigits(decl.textValue, 0, textLib.length(decl.textValue));
+            listLib.pushBack(mut aliases, (name = decl.name, target = decl.code, at = decl.intValue, end = endPos));
+        } else if decl.kind == "PubFn" {
+            listLib.pushBack(mut publishedFunctions, decl.name);
+        } else if decl.kind == "PubVal" {
+            listLib.pushBack(mut publishedValues, decl.name);
+        } else if decl.kind == "PubType" {
+            listLib.pushBack(mut publishedTypes, decl.name);
+        } else if decl.kind == "FutureVal" {
+            listLib.pushBack(mut futureValues, (name = decl.name, runtime = decl.runtime, kind = decl.code,
+            at = decl.intValue, intValue = 0, textValue = ""));
+        }
+    }
     var locals: mut List<Local> = [];
     blocks: mut List<String> = [];
     functions: mut List<FunctionInfo> = [];
@@ -8135,33 +8140,37 @@ moduleIdentity: String, neededFns: String, skipSoftBuiltins: Bool): Items {
             position = expression.next;
             continue;
         }
-        var callableIndex := findFunction(functions, name);
-        var callName := name;
-        if name == "self" {
-            if currentName == "" {
-                failAt(source, nameStart, prefix, "self is only available inside a function");
-            }
-            callName = currentName;
-            callableIndex = findFunction(functions, currentName);
-        }
-        if (callableIndex >= 0 or name == "push_back" or name == "pop_back" or name == "push_front" or name == "pop_front") and
-        position < size and textLib.at(source, position) == "(" {
-            expression := parseExpressionItem(target, source, nameStart, prefix, locals, functions, functionParams, currentName,
-            currentResult, atValueTail(blocks, blockCount) and not currentStopped, stmtCtxs);
-            if currentLive and not currentStopped {
-                listLib.pushBack(mut items, (kind = expressionStatementKind(expression.valueKind, expression.returned, "Call", currentResult), name = callName, runtime = "",
-                code = expression.code, intValue = 0, textValue = ""));
-                if codeHasRawTransfer(expression.code) {
-                    listLib.pushBack(mut transferCodes, expression.code);
-                    transferCount = transferCount + 1;
+        if (position < size and textLib.at(source, position) == "(") or name == "self" {
+            var callableIndex := -1;
+            var callName := name;
+            if name == "self" {
+                if currentName == "" {
+                    failAt(source, nameStart, prefix, "self is only available inside a function");
                 }
+                callName = currentName;
+                callableIndex = findFunction(functions, currentName);
+            } else if name =!= "push_back" and name =!= "pop_back" and name =!= "push_front" and name =!= "pop_front" {
+                callableIndex = findFunction(functions, name);
             }
-            if expression.returned or expression.valueKind == "Never" {
-                if not currentStopped { currentReturned = true; }
-                currentStopped = true;
+            if (callableIndex >= 0 or name == "push_back" or name == "pop_back" or name == "push_front" or name == "pop_front") and
+            position < size and textLib.at(source, position) == "(" {
+                expression := parseExpressionItem(target, source, nameStart, prefix, locals, functions, functionParams, currentName,
+                currentResult, atValueTail(blocks, blockCount) and not currentStopped, stmtCtxs);
+                if currentLive and not currentStopped {
+                    listLib.pushBack(mut items, (kind = expressionStatementKind(expression.valueKind, expression.returned, "Call", currentResult), name = callName, runtime = "",
+                    code = expression.code, intValue = 0, textValue = ""));
+                    if codeHasRawTransfer(expression.code) {
+                        listLib.pushBack(mut transferCodes, expression.code);
+                        transferCount = transferCount + 1;
+                    }
+                }
+                if expression.returned or expression.valueKind == "Never" {
+                    if not currentStopped { currentReturned = true; }
+                    currentStopped = true;
+                }
+                position = expression.next;
+                continue;
             }
-            position = expression.next;
-            continue;
         }
         if name == "if" {
             rawIfEnd := scanRawIfChainEnd(source, nameStart, prefix, true);

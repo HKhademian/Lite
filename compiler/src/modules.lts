@@ -369,18 +369,17 @@ collectCompiledFns := fn(graph: frontend.Items): String {
 }
 
 /** Adds identifier/call tokens referenced by one emitted item into `tokens`. */
-scanItemTokens := fn(item: frontend.Item, existing: String): String {
-    var updated := frontend.codeReachableTokens(item.code, existing);
-    if textLib.startsWithAt(item.kind, 0, "Assign") and item.runtime =!= "" and
-    not frontend.hasHelperToken(updated, item.runtime) {
-        updated = updated + item.runtime + "|";
+scanItemTokens := fn(item: frontend.Item, existing: frontend.TokenBuckets): frontend.TokenBuckets {
+    var updated := frontend.codeReachableTokensSet(item.code, existing);
+    if textLib.startsWithAt(item.kind, 0, "Assign") and item.runtime =!= "" {
+        updated = frontend.tokenBucketAdd(updated, item.runtime);
     }
     updated
 }
 
 /** Computes all reachable `lite*`/`lt_*` tokens across compiled modules in `graph`. */
 computeReachableTokens := fn(graph: frontend.Items): String {
-    var seed := "|";
+    var seed := frontend.emptyTokenBuckets();
     var fnDepth := 0;
     var blockDepth := 0;
     var nextIsPure := false;
@@ -421,7 +420,7 @@ computeReachableTokens := fn(graph: frontend.Items): String {
         nextIsPure = false;
         if item.kind == "Scope" or item.kind == "If" or item.kind == "Loop" or item.kind == "LoopSeq" {
             blockDepth = blockDepth + 1;
-            seed = frontend.codeReachableTokens(item.code, seed);
+            seed = frontend.codeReachableTokensSet(item.code, seed);
         } else if item.kind == "EndScope" or item.kind == "EndIf" or item.kind == "EndLoop" {
             if blockDepth > 0 { blockDepth = blockDepth - 1; }
         } else if not isPureDecl and item.kind =!= "Import" and item.kind =!= "PublicFunction" and
@@ -429,12 +428,12 @@ computeReachableTokens := fn(graph: frontend.Items): String {
             seed = scanItemTokens(item, seed);
         }
     }
-    if not hasConditional { return seed; }
+    if not hasConditional { return frontend.flattenTokenBuckets(seed); }
 
     var reachable := seed;
-    var scanned := "|";
+    var scanned := frontend.emptyTokenBuckets();
     loop true {
-        before := reachable;
+        beforeCount := reachable.count;
         fnDepth = 0;
         blockDepth = 0;
         nextIsPure = false;
@@ -461,9 +460,9 @@ computeReachableTokens := fn(graph: frontend.Items): String {
             if item.kind == "FunctionStart" {
                 if fnDepth == 0 {
                     activeFnToken = item.runtime + "(";
-                    activeFnWanted = frontend.hasHelperToken(reachable, activeFnToken) and
-                    not frontend.hasHelperToken(scanned, activeFnToken);
-                    if activeFnWanted { scanned = scanned + activeFnToken + "|"; }
+                    activeFnWanted = frontend.tokenBucketHas(reachable, activeFnToken) and
+                    not frontend.tokenBucketHas(scanned, activeFnToken);
+                    if activeFnWanted { scanned = frontend.tokenBucketAdd(scanned, activeFnToken); }
                 }
                 fnDepth = fnDepth + 1;
                 nextIsPure = false;
@@ -486,15 +485,15 @@ computeReachableTokens := fn(graph: frontend.Items): String {
                 blockDepth = blockDepth + 1;
             } else if item.kind == "EndScope" or item.kind == "EndIf" or item.kind == "EndLoop" {
                 if blockDepth > 0 { blockDepth = blockDepth - 1; }
-            } else if isPureDecl and item.runtime =!= "" and frontend.hasHelperToken(reachable, item.runtime) and
-            not frontend.hasHelperToken(scanned, item.runtime) {
-                scanned = scanned + item.runtime + "|";
-                reachable = frontend.codeReachableTokens(item.code, reachable);
+            } else if isPureDecl and item.runtime =!= "" and frontend.tokenBucketHas(reachable, item.runtime) and
+            not frontend.tokenBucketHas(scanned, item.runtime) {
+                scanned = frontend.tokenBucketAdd(scanned, item.runtime);
+                reachable = frontend.codeReachableTokensSet(item.code, reachable);
             }
         }
-        if reachable == before { break; }
+        if reachable.count == beforeCount { break; }
     }
-    reachable
+    frontend.flattenTokenBuckets(reachable)
 }
 
 /** Replaces the body items between `ModuleStart` and `ModuleEnd` for canonical `path`. */

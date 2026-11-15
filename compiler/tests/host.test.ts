@@ -4894,6 +4894,7 @@ test('soft builtin overrides for core/int, core/text, and core/crypto match pure
     'io.outputLine("[" + text.trimStart(padded) + "]", "[" + text.trimEnd(padded) + "]", "[" + text.trim(padded) + "]");',
     'io.outputLine(text.endsWith("A🙂bc", "🙂bc"), text.endsWith("A🙂bc", "xy"), text.containsText("A🙂bc", "🙂b"), text.repeatText("hi", 3), "[" + text.repeatText("hi", -2) + "]");',
     'io.outputLine(text.toLowerAscii("ÄÉΩABC_xyz🙂"), text.isDigit("5"), text.isAsciiLetter("Q"), text.isNameStart("_"), text.isNameContinue("9"), text.isWhitespace(nbsp));',
+    'io.outputLine(text.skipSpaces(" \\t\\r\\n🙂x", 0), text.skipSpaces("🙂  foo", 1), text.skipSpaces("abc", 10), text.skipName("abc_12🙂", 0), text.skipName("🙂abc", 1), text.skipName("abc", 9));',
   ].join('\n');
 
   const runVariant = (src: string, args: readonly string[], label: string): { code: string; stdout: string } => {
@@ -4917,12 +4918,14 @@ test('soft builtin overrides for core/int, core/text, and core/crypto match pure
   assert.match(textDefault.code, /function lite\$textToInt\(/);
   assert.match(textDefault.code, /function lite\$textTrim\(/);
   assert.match(textDefault.code, /function lite\$textToLowerAscii\(/);
+  assert.match(textDefault.code, /function lite\$textSkipWhile\(/);
 
   const textPure = runVariant(intTextSrc, ['--builtin-mode', 'pure'], 'int/text pure');
   assert.equal(textDefault.stdout, textPure.stdout);
   assert.doesNotMatch(textPure.code, /function lite\$textStartsWithAt\(/);
   assert.doesNotMatch(textPure.code, /function lite\$textWordAt\(/);
   assert.doesNotMatch(textPure.code, /function lite\$textTrim\(/);
+  assert.doesNotMatch(textPure.code, /function lite\$textSkipWhile\(/);
 
   const intPure = runVariant(intTextSrc, ['--builtin-mode', 'core/int=pure'], 'core/int=pure');
   assert.equal(intPure.stdout, textPure.stdout);
@@ -4984,6 +4987,30 @@ test('soft builtin overrides for core/int, core/text, and core/crypto match pure
         assert.equal(res.status, 2, `${faultLabel} ${modeLabel} status`);
         assert.equal(res.stdout.toString(), 'cleaned\n', `${faultLabel} ${modeLabel} finally`);
         assert.match(res.stderr.toString(), expectedErr, `${faultLabel} ${modeLabel} stderr`);
+      });
+    }
+  }
+
+  for (const [faultLabel, faultStmt] of [
+    ['negative skipSpaces on empty', 'text.skipSpaces("", -1)'],
+    ['negative skipSpaces on non-empty', 'text.skipSpaces("  a", -1)'],
+    ['negative skipName on empty', 'text.skipName("", -1)'],
+    ['negative skipName on non-empty', 'text.skipName("abc", -1)'],
+  ] as const) {
+    const boundSrc = [
+      'text := import "core/text";',
+      'io := import "core/io";',
+      `{ _ := ${faultStmt}; } finally { io.outputLine("cleaned"); };`,
+    ].join('\n');
+    for (const [modeLabel, modeArgs] of [['default', []], ['pure', ['--builtin-mode', 'pure']]] as const) {
+      const compiled = compileTs({ text: boundSrc, name: 'main.lts', options: [...modeArgs] });
+      assert.equal(compiled.status, 0, `${faultLabel} ${modeLabel}: ${compiled.stderr.toString()}`);
+      assert.equal(checkTsArtifact(compiled.stdout.toString()).status, 0);
+      withTsArtifact(compiled.stdout.toString(), run => {
+        const res = run();
+        assert.equal(res.status, 1, `${faultLabel} ${modeLabel} status`);
+        assert.equal(res.stdout.toString(), 'cleaned\n', `${faultLabel} ${modeLabel} finally`);
+        assert.match(res.stderr.toString(), /BoundPanic/, `${faultLabel} ${modeLabel} stderr`);
       });
     }
   }

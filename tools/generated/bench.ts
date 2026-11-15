@@ -212,8 +212,7 @@ function lite$isBmp(text: string): boolean {
     const len = text.length;
     if (len === 0) return true;
     if (len === 1) {
-        const c = text.charCodeAt(0);
-        return c < 0xd800 || c > 0xdfff;
+        return (text.charCodeAt(0) & 0xf800) !== 0xd800;
     }
     if (len > 64) {
         if (lite$bmpSet.has(text)) {
@@ -223,11 +222,10 @@ function lite$isBmp(text: string): boolean {
         if (lite$textCache.has(text)) return false;
     }
     for (let i = 0; i < len; i += 1) {
-        const c = text.charCodeAt(i);
-        if (c >= 0xd800 && c <= 0xdfff) return false;
+        if ((text.charCodeAt(i) & 0xf800) === 0xd800) return false;
     }
     if (len > 64) {
-        if (lite$bmpSet.size >= 64) lite$bmpSet.clear();
+        if (lite$bmpSet.size >= 128) lite$bmpSet.clear();
         lite$bmpSet.add(text);
         lite$lastBmp = text;
     }
@@ -237,7 +235,7 @@ function lite$textPoints(text: string): readonly string[] {
     const found = lite$textCache.get(text);
     if (found !== undefined) return found;
     const points = Array.from(text);
-    if (lite$textCache.size >= 64) lite$textCache.clear();
+    if (lite$textCache.size >= 128) lite$textCache.clear();
     lite$textCache.set(text, points);
     return points;
 }
@@ -250,54 +248,50 @@ function lite$textLength(text: string): bigint {
 function lite$textAt(text: string, position: bigint, at: number): string {
     if (lite$isBmp(text)) {
         const idx = Number(position);
-        if (position < 0n || position >= BigInt(text.length)) {
+        if (idx < 0 || idx >= text.length) {
             lite$fault("BoundPanic", at, "textAt index outside text");
         }
-        const bmpValue = text[idx];
-        if (bmpValue === undefined) {
-            throw new Error("BoundPanic: textAt index outside text");
-        }
-        return bmpValue;
+        return text.charAt(idx);
     }
     const points = lite$textPoints(text);
-    if (position < 0n || position >= BigInt(points.length)) {
+    const idx = Number(position);
+    if (idx < 0 || idx >= points.length) {
         lite$fault("BoundPanic", at, "textAt index outside text");
     }
-    const value = points[Number(position)];
-    if (value === undefined) {
-        throw new Error("BoundPanic: textAt index outside text");
-    }
-    return value;
+    return points[idx]!;
 }
 
 function lite$textSlice(text: string, start: bigint, end: bigint, at: number): string {
     if (lite$isBmp(text)) {
-        if (start < 0n || end < start || end > BigInt(text.length)) {
+        const s = Number(start);
+        const e = Number(end);
+        if (s < 0 || e < s || e > text.length) {
             lite$fault("BoundPanic", at, "textSlice requires 0 <= start <= end <= textLength(text)");
         }
-        return text.slice(Number(start), Number(end));
+        return text.slice(s, e);
     }
     const points = lite$textPoints(text);
-    if (start < 0n || end < start || end > BigInt(points.length)) {
+    const s = Number(start);
+    const e = Number(end);
+    if (s < 0 || e < s || e > points.length) {
         lite$fault("BoundPanic", at, "textSlice requires 0 <= start <= end <= textLength(text)");
     }
-    return points.slice(Number(start), Number(end)).join("");
+    return points.slice(s, e).join("");
 }
 
 function lite$textIndexOf(source: string, needle: string, start: bigint): bigint {
-    if (start < 0n) return -1n;
-    if (lite$isBmp(source)) {
-        const len = source.length;
-        if (start > BigInt(len)) return -1n;
-        if (needle.length === 0) return start;
-        const idx = source.indexOf(needle, Number(start));
-        return idx < 0 ? -1n : BigInt(idx);
-    }
-    const points = lite$textPoints(source);
-    if (start > BigInt(points.length)) return -1n;
-    if (needle.length === 0) return start;
-    if (source.indexOf(needle) < 0) return -1n;
     const s = Number(start);
+    if (s < 0 || s > source.length) return -1n;
+    if (needle.length === 0) {
+        if (s === 0) return 0n;
+        const len = lite$isBmp(source) ? source.length : lite$textPoints(source).length;
+        return s > len ? -1n : start;
+    }
+    const rawIdx = source.indexOf(needle, s);
+    if (rawIdx < 0) return -1n;
+    if (lite$isBmp(source)) return BigInt(rawIdx);
+    const points = lite$textPoints(source);
+    if (s > points.length) return -1n;
     const nPoints = lite$isBmp(needle) ? null : lite$textPoints(needle);
     const nLen = nPoints === null ? needle.length : nPoints.length;
     const limit = points.length - nLen;
@@ -319,15 +313,47 @@ function lite$textIndexOf(source: string, needle: string, start: bigint): bigint
     return -1n;
 }
 
-function lite$textStartsWithAt(source: string, position: bigint, text: string): boolean {
-    if (position < 0n) return false;
+function lite$textSkipWhile(source: string, start: bigint, spaces: boolean): bigint {
+    if (start < 0n) lite$fault("BoundPanic", 0, "textAt index outside text");
+    let pos = Number(start);
     if (lite$isBmp(source)) {
-        if (position > BigInt(source.length)) return false;
-        return source.startsWith(text, Number(position));
+        const len = source.length;
+        if (pos >= len) return start;
+        if (spaces) {
+            while (pos < len) {
+                const c = source.charCodeAt(pos);
+                if (c === 32 || c === 9 || c === 13 || c === 10) pos += 1;
+                else break;
+            }
+        } else {
+            while (pos < len) {
+                const c = source.charCodeAt(pos);
+                if ((c >= 97 && c <= 122) || (c >= 65 && c <= 90) || (c >= 48 && c <= 57) || c === 95) pos += 1;
+                else break;
+            }
+        }
+        return BigInt(pos);
     }
     const points = lite$textPoints(source);
-    if (position > BigInt(points.length)) return false;
+    const len = points.length;
+    if (pos >= len) return start;
+    while (pos < len) {
+        const p = points[pos]!;
+        if (p.length !== 1) break;
+        const c = p.charCodeAt(0);
+        if (spaces ? (c === 32 || c === 9 || c === 13 || c === 10) : ((c >= 97 && c <= 122) || (c >= 65 && c <= 90) || (c >= 48 && c <= 57) || c === 95)) pos += 1;
+        else break;
+    }
+    return BigInt(pos);
+}
+
+function lite$textStartsWithAt(source: string, position: bigint, text: string): boolean {
     const pos = Number(position);
+    if (pos < 0 || pos > source.length) return false;
+    if (pos === 0) return source.startsWith(text);
+    if (lite$isBmp(source)) return source.startsWith(text, pos);
+    const points = lite$textPoints(source);
+    if (pos > points.length) return false;
     if (text.length === 0) return true;
     if (lite$isBmp(text)) {
         if (pos + text.length > points.length) return false;
@@ -529,20 +555,7 @@ export function main(lite$write?: (text: string) => void): string {
     function liteFn$lib$core$text$skipSpaces(lite_source: string, lite_start: bigint): bigint {
         void lite_source;
         void lite_start;
-        const lite_size = lite$textLength(lite_source);
-        void lite_size;
-        let lite_position = lite_start;
-        void lite_position;
-        while (((lite_position) < (lite_size))) {
-            const lite_ch = lite$textAt(lite_source, lite_position, 3387);
-            void lite_ch;
-            if (((((((((lite_ch) === (" "))) || (((lite_ch) === ("\t"))))) || (((lite_ch) === ("\r"))))) || (((lite_ch) === ("\n"))))) {
-                lite_position = lite$addInt(lite_position, 1n, 3506);
-            } else {
-                return lite_position;
-            }
-        }
-        return lite_position;
+        return lite$textSkipWhile(lite_source, lite_start, true);
     }
     void liteFn$lib$core$text$skipSpaces;
     function liteFn$lib$core$text$startsWithAt(lite_source: string, lite_position: bigint, lite_text: string): boolean {
