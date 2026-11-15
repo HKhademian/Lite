@@ -46,6 +46,26 @@ Selected **2026-10-30**:
   module. A module's explicit dependencies do not change because a script uses
   it. Import syntax alone does not choose host authority or operation effects.
 
+Selected clarification **2026-11-15**: an ordinary assignment such as `x = 5`
+is an executable assignment, not a symbol declaration. At file top level it is
+allowed in a `.lts` script body and is not an allowed `.lt` module-level item.
+This does not prohibit assignments inside a function or other executable block
+belonging to a module. It also does not prohibit a declaration initializer from
+performing an explicitly requested compile-time effect. Those operations retain
+their own access, staging and failure rules.
+
+```text
+/* Illustrative script top level */
+var x: Int = ?;
+x = 5; /* assignment in the script's executable body */
+```
+
+The corresponding standalone top-level `x = 5;` is rejected in a module;
+putting an assignment inside a function body is a distinct case. This choice
+does not settle every other kind of module-level statement, reserved module
+storage, or the full `.lt` grammar. These are design cases, not compiler
+support claims.
+
 This revises the former single .lite suffix. Current lesson/catalog paths use
 .lts; .lite references in dated review snapshots remain historical. No legacy
 input alias or automatic .lt-to-script fallback is selected. The distinction is
@@ -88,9 +108,10 @@ a later declaration is distinct from executing its initializer. Arbitrary
 top-level runtime statements and import-time effects are not selected here.
 
 The user also requested a later investigation of whether .lt should prohibit
-top-level side-effect execution. Because declarations are assignments and their
-initializers may call effectful code, declaration-only source does not establish
-that restriction by itself. [INV-003.05](../research/investigations/SUBTOPICS.md#inv-003-05)
+top-level side-effect execution. Although ordinary standalone assignment is
+not a declaration or an allowed module-level item, declaration initializers
+may call effectful code, so that distinction alone does not ban such effects.
+[INV-003.05](../research/investigations/SUBTOPICS.md#inv-003-05)
 covers initializer effects, deferred function bodies, compile-time evaluation,
 transitive dependencies, and any explicit initialization entry. It is not started;
 no blanket ban or effect-checking mechanism is selected.
