@@ -4480,6 +4480,17 @@ test('soft-builtin emitter overrides and --builtin-mode flags work at function, 
       ['--builtin-mode', 'core/crypto=bogus'],
       ['--builtin-mode', '=pure'],
       ['--builtin-mode', 'core/crypto.=pure'],
+      ['--builtin-mode', './core/crypto=pure'],
+      ['--builtin-mode', './lib/core/crypto.lts=pure'],
+      ['--builtin-mode', '../core/crypto=pure'],
+      ['--builtin-mode', '/lib/core/crypto=pure'],
+      ['--builtin-mode', 'lib\\core\\crypto=pure'],
+      ['--builtin-mode', 'lib/core//crypto=pure'],
+      ['--builtin-mode', 'foo/bar=pure'],
+      ['--builtin-mode', 'core/unknown=pure'],
+      ['--builtin-mode', 'core/crypto.nonexistent=pure'],
+      ['--builtin-mode', 'core/crypto.randomBytes=pure'],
+      ['--builtin-mode', 'core/crypto.lts.sha256Text=pure'],
       ['--unknown-flag'],
     ] as const) {
       for (const target of ['ts', 'c'] as const) {
@@ -4500,6 +4511,59 @@ test('soft-builtin emitter overrides and --builtin-mode flags work at function, 
     const liteCliRun = spawnSync(join(root, 'bin/lite'), ['run', '--builtin-mode', 'pure', sourceFile], { env, encoding: 'utf8', timeout: 10000 });
     assert.equal(liteCliRun.status, 0, liteCliRun.stderr);
     assert.equal(liteCliRun.stdout, expectedLine);
+  } finally {
+    rmSync(workDir, { recursive: true, force: true });
+  }
+});
+
+test('soft-builtin replacement enforces verified core module identity and path boundaries', () => {
+  const workDir = mkdtempSync(join(tmpdir(), 'lite-soft-boundary-'));
+  try {
+    const localLibCore = join(workDir, 'lib/core');
+    mkdirSync(localLibCore, { recursive: true });
+    writeFileSync(
+      join(localLibCore, 'crypto.lts'),
+      'pub sha256Text := fn(text: String): String { "local:" + text }\n',
+    );
+    const appPath = join(workDir, 'app.lts');
+    const appSource = [
+      'io := import "core/io";',
+      'stdCrypto := import "core/crypto";',
+      'localCrypto := import "./lib/core/crypto.lts";',
+      'io.outputLine(localCrypto.sha256Text("hello"), stdCrypto.sha256Text("hello"));',
+    ].join('\n');
+    writeFileSync(appPath, appSource);
+
+    const compiled = compileTs({ text: appSource, name: appPath });
+    assert.equal(compiled.status, 0, compiled.stderr.toString());
+    const tsCode = compiled.stdout.toString();
+    assert.equal(checkTsArtifact(tsCode).status, 0);
+    assert.match(tsCode, /"local:"/);
+    assert.match(tsCode, /function lite\$cryptoDigestText\(/);
+    withTsArtifact(tsCode, run => {
+      const res = run();
+      assert.equal(res.status, 0, res.stderr.toString());
+      assert.equal(
+        res.stdout.toString(),
+        'local:hello 2cf24dba5fb0a30e26e83b2ac5b9e29e1b161e5c1fa7425e73043362938b9824\n',
+      );
+    });
+
+    const spoofedRoot = compileTs({
+      text: [
+        'io := import "core/io";',
+        'pub sha256Text := fn(text: String): String { "spoofed:" + text }',
+        'io.outputLine(sha256Text("hello"));',
+      ].join('\n'),
+      name: 'lib/core/crypto.lts',
+    });
+    assert.equal(spoofedRoot.status, 0, spoofedRoot.stderr.toString());
+    assert.doesNotMatch(spoofedRoot.stdout.toString(), /function lite\$cryptoDigestText\(/);
+    withTsArtifact(spoofedRoot.stdout.toString(), run => {
+      const res = run();
+      assert.equal(res.status, 0, res.stderr.toString());
+      assert.equal(res.stdout.toString(), 'spoofed:hello\n');
+    });
   } finally {
     rmSync(workDir, { recursive: true, force: true });
   }

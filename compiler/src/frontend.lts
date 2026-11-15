@@ -1149,6 +1149,68 @@ coreHostFunction := fn(moduleIdentity: String, name: String, params: String, res
     }
 }
 
+/** Maps a verified host core module identity to its soft-builtin logical path, or `""` outside soft-builtin stdlib modules. */
+softBuiltinModuleForIdentity := fn(moduleIdentity: String): String {
+    match {
+        moduleIdentity == "lite.core.crypto.v1" { "lib/core/crypto" }
+        moduleIdentity == "lite.core.text.v1" { "lib/core/text" }
+        moduleIdentity == "lite.core.io.v1" { "lib/core/io" }
+        _ { "" }
+    }
+}
+
+/** True when `moduleName` is a canonical core stdlib path with soft-builtin support. */
+isSoftBuiltinModule := fn(moduleName: String): Bool {
+    moduleName == "lib/core/crypto" or moduleName == "lib/core/text" or moduleName == "lib/core/io"
+}
+
+/** Returns the expected `(params, result)` ABI for a registered soft-builtin function, or empty fields when absent. */
+softBuiltinAbi := fn(moduleName: String, name: String): (params: String, result: String) {
+    if moduleName == "lib/core/crypto" {
+        if name == "sha256Bytes" or name == "sha512Bytes" {
+            return (params = "bytes=List<Int>", result = "String");
+        }
+        if name == "sha256Text" or name == "sha512Text" {
+            return (params = "value=String", result = "String");
+        }
+        if name == "sha256File" {
+            return (params = "path=String", result = "(ok:Bool,hex:String,error:String)");
+        }
+    } else if moduleName == "lib/core/text" {
+        if name == "indexOf" {
+            return (params = "source=String|needle=String|start=Int", result = "Int");
+        }
+    } else if moduleName == "lib/core/io" {
+        if name == "textReader" {
+            return (params = "text=String", result = "(kind:String,handle:Int)");
+        }
+        if name == "readAll" {
+            return (params = "reader=(kind:String,handle:Int)", result = "List<Int>");
+        }
+        if name == "readAllText" {
+            return (params = "reader=(kind:String,handle:Int)", result = "(ok:Bool,text:String,error:String)");
+        }
+        if name == "readLine" {
+            return (params = "reader=(kind:String,handle:Int)", result = "(ok:Bool,line:String,eof:Bool,error:String)");
+        }
+        if name == "writeText" or name == "writeLine" {
+            return (params = "writer=(kind:String,handle:Int)|text=String", result = "(ok:Bool,error:String)");
+        }
+    }
+    (params = "", result = "")
+}
+
+/** Returns the verified soft-builtin module path when `moduleIdentity`, `name`, `params`, and `result` match, else `""`. */
+coreSoftBuiltin := fn(moduleIdentity: String, name: String, params: String, result: String): String {
+    modName := softBuiltinModuleForIdentity(moduleIdentity);
+    if modName == "" { return ""; }
+    abi := softBuiltinAbi(modName, name);
+    if abi.result =!= "" and abi.params == params and abi.result == result {
+        return modName;
+    }
+    ""
+}
+
 /** Maps one registered output intrinsic identity to its source special-statement name. */
 coreOutputName := fn(runtime: String): String {
     match {
@@ -6505,26 +6567,27 @@ pub sourceModulePath := fn(): String {
     path
 }
 
-/** Normalizes a compiler builtin-mode module name (`core/crypto`, `lib/core/crypto.lts`, `./foo.lts`) to its logical module path. */
+/** Normalizes and validates a canonical soft-builtin core module path (`core/<name>` or `lib/core/<name>[.lts]`), returning `""` outside stdlib bounds. */
 normalizeBuiltinModule := fn(raw: String): String {
-    var out := "";
-    var i := 0;
-    size := textLib.length(raw);
-    loop i < size {
-        ch := textLib.at(raw, i);
-        out = out + if ch == "\\" { "/" } else { ch };
-        i = i + 1;
+    if raw == "" { return ""; }
+    if textLib.indexOfText(raw, "\\", 0) >= 0 or textLib.indexOfText(raw, ":", 0) >= 0 {
+        return "";
     }
-    loop textLib.startsWithAt(out, 0, "./") {
-        out = textLib.slice(out, 2, textLib.length(out));
+    if textLib.startsWithAt(raw, 0, "/") or textLib.indexOfText(raw, "//", 0) >= 0 {
+        return "";
     }
-    outLen := textLib.length(out);
-    if outLen > 4 and textLib.startsWithAt(out, outLen - 4, ".lts") {
-        out = textLib.slice(out, 0, outLen - 4);
+    rawLen := textLib.length(raw);
+    if textLib.at(raw, rawLen - 1) == "/" { return ""; }
+    var out := raw;
+    if rawLen > 4 and textLib.startsWithAt(raw, rawLen - 4, ".lts") {
+        out = textLib.slice(raw, 0, rawLen - 4);
     }
-    if textLib.startsWithAt(out, 0, "core/") or textLib.startsWithAt(out, 0, "util/") {
-        return "lib/" + out;
+    if textLib.indexOfText(out, ".", 0) >= 0 { return ""; }
+    if textLib.startsWithAt(out, 0, "core/") {
+        out = "lib/" + out;
     }
+    if not textLib.startsWithAt(out, 0, "lib/core/") { return ""; }
+    if not isSoftBuiltinModule(out) { return ""; }
     out
 }
 
@@ -6555,9 +6618,12 @@ parseBuiltinModeSpec := fn(prefix: String, spec: String): Item {
     if not isLtsFile and lastDot > 0 and textLib.indexOfText(target, "/", lastDot + 1) < 0 {
         modPart := textLib.slice(target, 0, lastDot);
         fnPart := textLib.slice(target, lastDot + 1, tLen);
-        if modPart =!= "." and modPart =!= ".." and fnPart =!= "" {
-            return (kind = "fn", name = normalizeBuiltinModule(modPart) + "." + fnPart, runtime = mode,
-            code = "", intValue = 0, textValue = "");
+        if textLib.indexOfText(modPart, ".", 0) < 0 and fnPart =!= "" {
+            normMod := normalizeBuiltinModule(modPart);
+            if normMod =!= "" and softBuiltinAbi(normMod, fnPart).result =!= "" {
+                return (kind = "fn", name = normMod + "." + fnPart, runtime = mode,
+                code = "", intValue = 0, textValue = "");
+            }
         }
         diagLib.fail(prefix, "invalid --builtin-mode function target: " + target);
     }
@@ -8463,8 +8529,17 @@ moduleIdentity: String): Items {
                     listLib.pushBack(mut items, (kind = "PublicFunction", name = name, runtime = functionRuntime, code = header.result,
                     intValue = header.count, textValue = header.params));
                 }
-                if currentLive and not currentStopped { listLib.pushBack(mut items, (kind = "FunctionStart", name = name, runtime = functionRuntime,
-                    code = header.result, intValue = header.count, textValue = header.params)); }
+                if currentLive and not currentStopped {
+                    listLib.pushBack(mut items, (kind = "FunctionStart", name = name, runtime = functionRuntime,
+                    code = header.result, intValue = header.count, textValue = header.params));
+                    if target == "ts" and listLib.listContainsText(publishedFunctions, name) {
+                        softModule := coreSoftBuiltin(moduleIdentity, name, header.params, header.result);
+                        if softModule =!= "" {
+                            listLib.pushBack(mut items, (kind = "SoftBuiltin", name = name, runtime = functionRuntime,
+                            code = softModule, intValue = header.count, textValue = header.params));
+                        }
+                    }
+                }
                 fnTryId := nextStmtCtxId;
                 nextStmtCtxId = nextStmtCtxId + 1;
                 fnTryKey = "";

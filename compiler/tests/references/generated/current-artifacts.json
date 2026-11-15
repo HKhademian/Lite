@@ -1,8 +1,8 @@
 {
-  "note": "Reviewed after moving text.indexOf and core/io stream helpers to pure Lite with TS soft-builtin overrides. All 69 TS corpus artifact hashes and 25 rejection cases verified.",
+  "note": "Reviewed after enforcing verified module identity, ABI, and canonical core path boundaries for soft-builtin replacement. All 69 TS corpus artifact hashes and 25 rejection cases verified.",
   "recorded": "2026-11-15",
-  "sourceSha256": "1dbb61dbe9ee79cf8d82266f6042127455bf880b478d1b8a16c1864b73a3f6e2",
-  "compilerSha256": "f8ef053a88f6edeea4ab8db89392a05978bed803f1f1527032be9f8f13f180f8",
+  "sourceSha256": "b067bb60acb49f9b69687eeb0689769740f6f3f6ade5c43a1192c1752672b54c",
+  "compilerSha256": "9c4b11dd9d83dceb340d705dbcf9b1dbf25166dc7ec1e6b1b9012a1d8fb5d5b8",
   "programCases": 69,
   "rejectedCases": 25,
   "artifacts": [

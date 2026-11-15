@@ -1452,31 +1452,14 @@ softBuiltinExpr := fn(moduleName: String, fnName: String, params: String): Strin
     ""
 }
 
-/** Maps a verified core module identity to its logical module name when compiling a core module directly. */
-rootSoftBuiltinModule := fn(identity: String): String {
-    match {
-        identity == "lite.core.crypto.v1" { "lib/core/crypto" }
-        identity == "lite.core.text.v1" { "lib/core/text" }
-        identity == "lite.core.io.v1" { "lib/core/io" }
-        _ { "" }
-    }
-}
-
-/** Resolves the logical module name for a soft-builtin candidate function from its runtime symbol or root identity. */
-softBuiltinModule := fn(runtime: String, fnName: String, rootModule: String): String {
-    if runtime == "liteFn$lib$core$crypto$" + fnName { return "lib/core/crypto"; }
-    if runtime == "liteFn$lib$core$text$" + fnName { return "lib/core/text"; }
-    if runtime == "liteFn$lib$core$io$" + fnName { return "lib/core/io"; }
-    if rootModule =!= "" and runtime == "liteFn_" + fnName { return rootModule; }
-    ""
-}
-
-/** Replaces eligible soft-builtin function bodies with host overrides unless switched to `pure` by `--builtin-mode`. */
+/** Replaces verified soft-builtin function bodies with host overrides unless switched to `pure` by `--builtin-mode`. */
 applySoftBuiltins := fn(rawItems: frontend.Items, prefix: String): frontend.Items {
     rules := frontend.parseBuiltinModes(prefix);
     out: mut frontend.Items = [];
-    rootModule := rootSoftBuiltinModule(frontend.sourceModuleIdentity());
     var skippingDepth := 0;
+    var pendingSoftFn := "";
+    var pendingSoftRuntime := "";
+    var pendingSoftParams := "";
     loop rawItems as item {
         if skippingDepth > 0 {
             if item.kind == "FunctionStart" {
@@ -1489,17 +1472,28 @@ applySoftBuiltins := fn(rawItems: frontend.Items, prefix: String): frontend.Item
             }
             continue;
         }
-        listLib.pushBack(mut out, item);
-        if item.kind == "FunctionStart" {
-            modName := softBuiltinModule(item.runtime, item.name, rootModule);
-            if modName =!= "" {
-                overrideCode := softBuiltinExpr(modName, item.name, item.textValue);
-                if overrideCode =!= "" and frontend.resolveBuiltinMode(rules, modName, item.name) == "builtin" {
+        if item.kind == "SoftBuiltin" {
+            if pendingSoftFn =!= "" and item.name == pendingSoftFn and item.runtime == pendingSoftRuntime and item.textValue == pendingSoftParams {
+                overrideCode := softBuiltinExpr(item.code, item.name, item.textValue);
+                if overrideCode =!= "" and frontend.resolveBuiltinMode(rules, item.code, item.name) == "builtin" {
                     listLib.pushBack(mut out, (kind = "Return", name = "", runtime = "", code = overrideCode,
                     intValue = 0, textValue = ""));
                     skippingDepth = 1;
                 }
             }
+            pendingSoftFn = "";
+            pendingSoftRuntime = "";
+            pendingSoftParams = "";
+            continue;
+        }
+        pendingSoftFn = "";
+        pendingSoftRuntime = "";
+        pendingSoftParams = "";
+        listLib.pushBack(mut out, item);
+        if item.kind == "FunctionStart" {
+            pendingSoftFn = item.name;
+            pendingSoftRuntime = item.runtime;
+            pendingSoftParams = item.textValue;
         }
     }
     out
