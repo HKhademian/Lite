@@ -958,10 +958,36 @@ result := reader(); /* 5 */
 the returned function needs it. The observable behavior does not prescribe
 allocation, garbage collection, capture syntax, or a representation. The
 earlier selected live-read rule remains relevant where mutable surrounding
-bindings are admitted; this example does not decide mutation, copy, resource,
+bindings are admitted; this example does not decide copy, resource,
 or escaping-grant rules. Initialization and other safety requirements still
 apply. The first compiler may reject this case until it can support it safely;
 this is a language direction, not a compiler-support claim.
+
+Selected direction **2026-11-15**: an escaping function can also retain and
+update its own safely accessible mutable surrounding binding:
+
+```text
+make_counter := fn {
+    var count := 0;
+    next := fn (): Int {
+        count = count + 1;
+        count
+    }
+    next
+}
+counter := make_counter();
+a := counter(); /* 1 */
+b := counter(); /* 2 */
+```
+
+Each call to `make_counter` creates a distinct `count`; its returned function
+retains that binding and successive calls observe its updates. The design must
+remain compatible with Lite's low-level character and low or no runtime
+overhead goals. Escaping mutable state can require storage and lifetime work,
+so this selects neither zero cost nor a particular allocation or runtime.
+Capture permissions, cost visibility and control, storage, callable-copy and
+sharing semantics, resource cleanup, concurrency and general lifetime safety
+remain to be designed. The first compiler may leave this feature unsupported.
 
 The 2026-10-29 discussion requires a defined eligibility policy for surrounding
 values, even read-only uses, while preserving ordinary helper calls. It does not

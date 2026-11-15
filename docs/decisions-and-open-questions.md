@@ -7,9 +7,11 @@ original scope. Decisions do not establish compiler conformance; use
 ## Nearer forward value symbols, 2026-11-15
 
 An escaping function may retain a safely available surrounding value beyond
-its creator's call, as in the [returned reader example](functions.md#surrounding-access-under-review).
-Retention mechanics, mutable capture, resources and general lifetime rules
-remain open. Compiler support may follow later.
+its creator's call, including the [returned reader and mutable counter examples](functions.md#surrounding-access-under-review).
+Each counter-producing call has distinct persistent state. Preserve Lite's
+low-level, low/no-runtime-overhead goals; retention mechanics, actual costs,
+permissions, sharing, resources and general lifetime rules remain open.
+Compiler support may follow later.
 
 For calls that may reach an uninitialized value, the preferred long-term
 direction requires compile-time proof of safe initialization and rejects
