@@ -58,11 +58,11 @@ Each [topic review](README.md#review-notes) identifies its narrower evidence.
 
 ### A. Branded ID in a record and a union
 
-Suppose `UserID` is distinct from String and `User` contains an ID. Compare an
-explicit type call, an annotated initializer, an ordinary assignment and a
-function argument. If annotated initialization permits conversion, it can
-remain consistent with two-way distinctness only if the rule identifies which
-contexts request conversion. Next ask whether an empty String is a valid zero
+Suppose `UserID` is distinct from String and `User` contains an ID. The user
+distinguishes a fresh string-like literal shaped by a destination from an
+established String or another distinct value, whose conversion into UserID
+requires an explicit operation. Compare other expression contexts and the
+illustrative `cast<UserID>(raw)` without assuming final syntax. Next ask whether an empty String is a valid zero
 UserID, whether a `UserID | String` retains which alternative is active, and
 whether record construction or matching can bypass validation. This trace
 belongs primarily to [types](01-core-types.md), with [records](03-records.md)
