@@ -43,6 +43,24 @@ Status: **preliminary, 2026-11-15; awaiting joint review**. All recommendations 
 
 Use explicit module qualification and minimal public surface as the starting point. Avoid coupling module identity to filesystem or package choices prematurely; compile-time-known initialization limits early flexibility but makes dependencies easier to reason about.
 
+## Expanded assessment
+
+### Compiler evidence and boundaries
+
+The generated compiler uses a Lite-written import graph; namespace aliases expose documented public functions, immutable scalar values and public types. The compiler and core sources themselves use namespace imports, and the full verifier passes module consumers. A direct `core/io` namespace source passes checking. Cycle termination does not prove mutual declaration resolution; runtime source spans, package resolution, complete visibility and runtime initialization remain limited or open. [Module implementation](../../../compiler/module-import-stages.md); [baseline](compiler-baseline.md).
+
+### Benefits, costs, and constraints
+
+- **9.1 Source units:** independent units support incremental compilation and encapsulation. Static namespace resolution can disappear in generated code; separate compilation and stable binary interfaces can limit cross-module inlining unless link-time information is available.
+- **9.2 Imports:** explicit aliases reduce collisions and clarify dependencies. Compile-time graph traversal and canonical identities need no required runtime module registry, though initialization and dynamic loading would impose their own costs. Cycles need well-defined declaration and initialization rules rather than merely a visited set.
+- **9.3 Visibility:** private-by-default boundaries support small APIs and optimization, especially when internal representations can change. Cross-module construction of records with private fields and public signatures containing private types must be checked explicitly. Reflection or dynamic discovery would need a separate footprint justification.
+- **9.4 Initialization:** compile-time-known module values can reduce startup work, but not every immutable value is compile-time known. Side-effect order, lazy initialization, cycles and concurrency may introduce guards or runtime dependencies; current first-stage known initialization does not settle later runtime policy.
+- **9.5 Packages:** dependency versions, reproducible sources, binary linkage and replacement of standard providers affect both build size and integration. A package manager is not itself runtime machinery; linked libraries, static duplication, generated glue and dynamic loading must be measured separately.
+
+### Blockers and cross-feature cases
+
+Analyze two modules importing each other, a public record with a private field, an initialized module list, and the same generic specialized in two modules. Imports and type identities [1](01-core-types.md), visibility [3](03-records.md), generic code generation [10](10-generics-comptime.md), and resource cleanup [8](08-failure-cleanup.md) determine whether modules remain link-time only or need runtime work.
+
 ## Cross-topic routing
 
 Records (3), functions (5), and compile-time effects (10) determine public and initialization contracts. Record new decisions with their owning area; return to this review after the dependency is understood.
