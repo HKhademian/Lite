@@ -26,7 +26,9 @@ resolve every edge case. No item below is acceptance of a recommendation.
 
 ## Review notes
 
-Individual review notes are added alongside this index as each initial review is recorded.
+The following notes are recorded as provisional starting points:
+
+- [1. Core types and values](01-core-types.md)
 
 ## Starting context
 
