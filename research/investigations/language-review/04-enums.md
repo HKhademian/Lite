@@ -44,6 +44,24 @@ Status: **preliminary, 2026-11-15; awaiting joint review**. All recommendations 
 
 Keep case identity separate from backing values and payload types. Exhaustive matching should be assessed with guarded arms and enum evolution; a designated zero may be more understandable than arbitrary ordering, but may constrain future case changes.
 
+## Expanded assessment
+
+### Compiler evidence and boundaries
+
+The exact `Status := enum { Ready; Busy; }` probe fails name resolution on `enum`. The passing `match.subjectless` case tests Boolean selection, not subject-based case matching or enum exhaustiveness. No native enum layout or enum-zero behavior is established by these probes. [Baseline](compiler-baseline.md); [selected enum direction](../../../docs/enums-and-variants.md).
+
+### Benefits, costs, and constraints
+
+- **4.1 Identity:** named enum types and case identities model domain alternatives and avoid ambiguous plain integers. Exhaustive checks can happen entirely at compile time. Public case additions can break exhaustive clients; that is an API evolution choice, not a runtime cost.
+- **4.2 Payloads:** payload variants unify data and alternatives, potentially with an inline tag and max-sized payload. Large or rare payloads may inflate every element in an array; explicit indirection can trade memory locality for allocation and pointer cost. Neither boxed storage nor automatic allocation is required by the idea alone.
+- **4.3 Construction:** contextual `.Ready` reduces repetition only when the expected enum is unambiguous. Assigned backing values do not make arbitrary underlying values valid enum cases. Check invalid numeric conversion, duplicate backing values and whether payload cases also have backing values.
+- **4.4 Matching:** compile-time coverage avoids missing cases; guarding a case does not automatically cover the unguarded remainder. Runtime dispatch may compile to a branch, jump table or be eliminated when known. Pattern extraction must avoid copying expensive/resource payloads without an agreed access mode.
+- **4.5 Zero and value behavior:** zero must identify a valid semantic case if the universal all-zero goal is retained. Source order, explicit designation and an added empty case have different evolution and footprint tradeoffs. Distinguish copying active payloads, equality and cleanup from simply copying raw bytes.
+
+### Blockers and cross-feature cases
+
+An `Option<UserID>`, an enum of owning-list versus empty, and an enum with explicit backing `0` should be traced through construction, matching, zero, copy and cleanup. They connect zero and identity [1](01-core-types.md), record/resource ownership [3](03-records.md), patterns [6](06-control-flow.md), and Result/error representation [8](08-failure-cleanup.md). Do not assume a user enum and the specialized outcome representation must have identical ABI.
+
 ## Cross-topic routing
 
 Types (1), patterns (6), and failure outcomes (8) interact with case identity and payloads. Record new decisions with their owning area; return to this review after the dependency is understood.
