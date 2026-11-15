@@ -38,7 +38,7 @@ tooling questions, not newly selected equivalences.
 
 ## Names and scope
 
-Identifier spelling determines which name is being referenced. Lexical scope determines which binding of that name is visible. Sequential local declarations may shadow earlier names in the same block. Resolve each ordinary initializer before introducing its new binding: var x := x reads the old x and introduces a new reassignable x. This does not change the old binding's permissions; see [local shadowing and copies](local-shadowing-and-copies.md).
+Identifier spelling determines which name is being referenced. Lexical scope determines which binding of that name is visible across a nested block hierarchy whose outermost level is the invisible-brace file block (with no parent block). As clarified on **2026-11-15**, **same-block shadowing through redeclarations is postponed completely**: two declarations of the same symbol inside one block — even of different kinds — are disallowed for now across both root file blocks and inner `{ ... }` blocks (nested inner `{ ... }` blocks and flow-sensitive type narrowing without redeclaration remain distinct; see [local shadowing and copies](local-shadowing-and-copies.md)).
 
 Pattern bindings may reuse the source value's name. A matching branch can shadow an outer union binding with a narrowed binding; the source expression is resolved before that new name becomes active. The shadow is limited to its matching branch and does not affect sibling branches or outer lookup. See [union type patterns](union-patterns.md) for examples using both same-name shadowing and a distinct pattern name.
 
@@ -46,22 +46,22 @@ An unmarked bare identifier in a pattern binds, even if an outer constant or typ
 
 The name after `@` in a tag follows the same identifier character rules. Tags retain their own namespace and construct-specific capabilities.
 
-Ordinary eager lookup is sequential in every executable block. The narrow
-[deferred function-body exception](functions.md#deferred-body-lookup) permits
-later-name references without making their values initialized. An already-visible
-binding is [retained across later shadowing](functions.md#existing-bindings-survive-later-shadowing)
-when that surrounding reference is permitted; this is not an implicit-capture grant.
-With no earlier target, the [same-block forward rule](functions.md#first-later-binding-in-the-defining-block)
-selects the first subsequent same-name ordinary binding and keeps that identity.
-The [direct self-reference case](functions.md#direct-self-reference-without-an-earlier-target)
-also admits a function's own binding when no earlier same-name binding exists.
-An [explicit self call](functions.md#explicit-current-function-self-calls) targets
+In every code block (the root file block and inner braced `{ ... }` blocks),
+symbol visibility is **parallel at compile time** ("circuit wiring") while
+values follow serial execution along the **execution trace**. The
+[deferred function-body rule](functions.md#deferred-body-lookup) permits
+late reads, writes, type references, and calls across siblings and parent
+blocks under one uniform rule, rejecting only uninitialized accesses (such as
+reserved `x: Int = ?;` or reading a later binding before its initializer runs).
+When no enclosing same-name binding conflicts, the
+[direct self-reference case](functions.md#direct-self-reference-without-an-earlier-target)
+admits a function's own binding, and an
+[explicit self call](functions.md#explicit-current-function-self-calls) targets
 the implementation currently executing instead of performing ordinary name lookup.
-Only self(...) is selected; standalone-value and self-named local/parameter
-collisions and keyword-reservation rules remain open.
-Nested-scope search and mutual recursion
-remain open. Module declaration namespaces
-have a separate [lookup direction](modules-and-packages.md#module-lookup-without-header-files).
+Only `self(...)` is selected; standalone-value and self-named local/parameter
+collisions, mutual recursion, and nested-scope edge cases remain open. See
+[executable block items](evaluation-order.md#executable-block-items) and
+[module lookup](modules-and-packages.md#module-lookup-without-header-files).
 
 ## Underscore-prefixed names, including standalone underscore
 

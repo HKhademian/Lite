@@ -41,7 +41,11 @@ graph visitor actually reads, rather than a parallel host-side import scanner.
 
 ## Selected import surface
 
-The initial module import is a top-level immutable binding:
+In the language design clarified **2026-11-15**, every LiteLang file is an
+invisible-brace root code block with **no parent block** and `pub` as its sole
+extra capability beyond an inner braced `{ ... }` block, and an `import` is an
+immutable **compile-time token** (not a runtime value) referring to `pub`
+symbols of sibling top-level file blocks:
 
 ```lite
 math := import "./math.lts";
@@ -52,10 +56,14 @@ import is also part of the migration sequence and introduces `pub` declarations
 into the importing file scope; whether this stays as permanent implicit
 unpacking or is replaced by an explicit unpack form remains open until source
 migration is complete. Package lookup, selective imports, and block-local
-imports are outside this sequence. Top-level declarations are intended to be
-private by default. `pub name := ...` will add a declaration to a module
-interface; a private `cos` will remain usable in its source unit but unknown to
-an importer.
+imports are outside this compilation sequence (even though scoped `import`
+tokens follow the same compile-time model in design, the compiler prevents
+deeper block-local `import`s for now). Top-level declarations are private by
+default. `pub name := ...` adds a declaration to a module interface; a private
+`cos` remains usable in its source unit under parallel symbol wiring but
+unknown to an importer. In design, `pub` can expose `fn`, `type`, immutable
+values, and `var`/`mut` bindings; the current compiler stage exports `pub`
+functions, immutable scalar values, and public types.
 
 Two aliases to the same canonical source denote the same module and definition
 identities. The module namespace is fixed; aliases cannot add or replace

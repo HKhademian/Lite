@@ -30,9 +30,9 @@ Status: **preliminary, 2026-11-15; awaiting joint review**. All recommendations 
 
 ## 5.4 Surrounding state
 
-**Baseline:** Selected escaping counter examples retain state, but capture eligibility, lifetime, costs and general access rules are open.
+**Baseline (updated 2026-11-15):** Root file blocks and inner braced blocks use the **same surrounding-access model**: symbols in block `X` share parallel compile-time visibility ("circuit wiring") and uniform late read/write/type/call access along the **execution trace**, rejecting only uninitialized reads (`x: Int = ?;` or early pre-init calls). Selected escaping counter examples retain state across calls; capture eligibility, lifetime, costs, and general Slice 4b/4c access rules remain open.
 
-**Initial assessment and probes:** Revisit `run_twice(operation: fn (): Int)` with copied and requested no-copy callbacks. The user questions requiring callback mutability in the signature; compare inference, specialization and explicit access without claiming a selected answer.
+**Initial assessment and probes:** Revisit `run_twice(operation: fn (): Int)` with copied and requested no-copy callbacks under the uniform root/inner rule. Note that root file storage has program-wide lifetime (no parent frame) whereas inner block state needs Slice 4b/4c escape/lifetime handling; compare inference, specialization, and explicit access without claiming a selected answer.
 
 ## 5.5 Callable compatibility
 

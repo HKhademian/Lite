@@ -13,9 +13,9 @@ Status: **preliminary, 2026-11-15; awaiting joint review**. All recommendations 
 
 ## 2.1 Scope and symbols
 
-**Baseline:** Ordinary shadowing is sequential; deferred bodies have selected lookup cases, but complete collisions and initialization safety remain open.
+**Baseline (updated 2026-11-15):** Every LiteLang file is an invisible-brace root code block with **no parent block** and `pub` as its sole extra capability, matching inner `{ ... }` blocks in scope and access rules. Within any block, symbol visibility is **parallel at compile time** ("circuit wiring") while values propagate top to bottom along the **execution trace**; deferred read/write/type/call access is uniform across root and inner blocks, rejecting only uninitialized reads (`x: Int = ?;` or pre-init reads). **Same-block redeclaration shadowing is postponed completely** (no two declarations of the same symbol in one block, even of different kinds, for now), while flow-sensitive narrowing without redeclaration and nested inner-block shadowing remain distinct. Side-effect-free dead code in any block may be eliminated by DCE.
 
-**Initial assessment and probes:** Trace a closure defined before a later shadow and called before and after initialization. Preserve binding identity separately from the value observed.
+**Initial assessment and probes:** Trace forward references, reserved storage (`x: Int = ?;`), nested `{ ... }` outer shadowing, and deferred bodies defining and calling before/after initialization along the execution trace. Keep binding identity and initialization proof separate from value flow and nested captures.
 
 ## 2.2 Bindings and assignment
 

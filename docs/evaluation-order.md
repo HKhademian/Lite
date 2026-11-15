@@ -14,59 +14,68 @@ Make expressions with calls and other observable effects predictable independent
 
 ## Executable block items
 
-Selected direction **2026-11-15**: the file's top level is also a code block
-for lexical scope and symbol lookup, not a separate scope model. Like other
-blocks, it has neighboring symbols and participates in lookup from inner
-scopes through lexical parents. The user identifies public visibility via
-`pub` as its special distinction; the precise `pub` and export rules remain
-to be specified. This direction is not a claim of compiler support.
+Selected direction **2026-11-15**: the file top level is an invisible-brace code
+block with **no parent block**, whereas every inner block requires `{ ... }`
+braces and has a parent block. Lexical scope, symbol visibility, and access
+rules are uniform between the root file block and inner braced blocks; the file
+block's sole extra capability is `pub`, which exposes chosen declarations across
+the file boundary (`fn`, `type`, `var`, `mut`, immutable values) because inner
+braced blocks cannot be imported. Precise `pub` and export rules remain to be
+specified. This direction is not a claim of full compiler support.
 
 The previously selected [script/module restrictions](modules-and-packages.md#distinct-script-and-module-files)
-still distinguish which top-level items are admitted: ordinary top-level
-assignment is currently script-only, and first-stage module initial values
-must be compile-time known. How the long-term uniform-block direction and
-module restrictions fit together remains to be resolved.
+still distinguish top-level evaluation: a `.lt` module shares the root-block
+structure without top-level runtime evaluation (admitting compile-time-known
+initial definitions such as `x := 1`), while ordinary top-level runtime
+statements and assignments remain `.lts` script-only (merging the two source
+kinds remains open for later discussion).
 
-Selected 2026-10-28, clarified 2026-11-15: every executable code block evaluates
-its reached items from top to bottom. Symbols in the block can be discovered
-independently of textual execution order, including by an ordinary eager
-expression, but discovery does not initialize a value. An eager read of a
-later uninitialized value is rejected; do not execute its initializer early.
-Sequential shadowing still applies: an ordinary initializer uses previously
-visible bindings before introducing its new binding. This includes the implicit
-script-file body and ordinary function bodies. The exact handling of symbol
-collisions and all nested scopes remains open; module namespaces have a separate
-[lookup direction](modules-and-packages.md#module-lookup-without-header-files).
+Selected 2026-10-28, clarified **2026-11-15**: symbols `A` and `B` declared in
+the same block `X` (root or inner) have **parallel compile-time visibility** —
+like fixed electrical circuit wiring, declaration order does not affect
+visibility between siblings or from inner blocks through lexical parents. By
+contrast, runtime values propagate in top-to-bottom execution order along the
+**execution trace** (like live values on those wires). Any deferred or post-init
+read, write, type reference, or call between symbols in a block follows the same
+uniform rule, except where the execution trace reaches an uninitialized symbol
+(such as reserved `x: Int = ?;` or reading a later runtime binding before its
+initializer executes).
+
+**Same-block redeclaration postponed (2026-11-15):** same-block shadowing
+through redeclarations is postponed completely: for now, two declarations of the
+same symbol name inside one block — even of different kinds (`value`, `var`,
+`fn`, `type`, `import`) — are not allowed in either the root file block or inner
+braced blocks. Flow-sensitive type narrowing (without redeclaration) and
+shadowing an outer parent block's symbol from a nested `{ ... }` block remain
+separate. Whether same-block redeclarations will be admitted uniformly later
+remains deferred; historical sequential same-block shadow notes describe the
+postponed model and current generated-compiler transition behavior.
 
 ```text
 /* Design cases, not compiler-pass claims. */
-first := later; /* later can be resolved, but this read is too early: reject */
+first := later; /* later is wired in scope, but this read is too early along the execution trace: reject */
 later := 5;
 ```
 
-Here `later` is a known symbol, not a known initialized value at the point of
-the read. The selected rule does not let compile-time knowledge silently reorder
-the execution of the serial block. An initializer such as `x := x` still
-follows the existing ordinary shadow-initializer rule.
+Here `later` is a known symbol at compile time, not a known initialized value
+when `first` executes. Parallel symbol wiring never reorders serial execution or
+hoists runtime initializers.
 
 A function literal's body is deferred: creating the callable does not execute
 that body. The [deferred-body lookup direction](functions.md#deferred-body-lookup)
-also permits references to later identifiers without moving their initialization
-or making the callable itself available early. Name visibility does not make an
-uninitialized value readable. The
-[initial static enforcement](functions.md#initial-static-enforcement) rejects
-evident early reads and conservatively rejects unproved calls in the initial
-subset. The [same-block forward target](functions.md#first-later-binding-in-the-defining-block)
-is the first subsequent same-name ordinary binding when no earlier same-block
-target exists; in the selected nested case it takes priority over an outer
-symbol. Its initializer still runs in order. A
-[direct recursive self-reference](functions.md#direct-self-reference-without-an-earlier-target)
-can resolve the current function binding when no earlier same-name binding
-exists, without making its value readable before initialization. Nested-scope
-search, self-name collisions, mutual recursion,
-capture mechanics and precise proof rules remain open. The preferred
-[long-term direction](functions.md#initial-static-enforcement) also requires
-proof for indirect calls; a runtime-check fallback remains an unselected alternative.
+permits references (reads, writes, types, calls) to any sibling or outer block
+symbols without moving their initialization or making the callable itself
+available early. Name visibility does not make an uninitialized value readable.
+The [initial static enforcement](functions.md#initial-static-enforcement) rejects
+evident early reads along the execution trace and conservatively rejects
+unproved calls in the initial subset. With same-block redeclaration postponed, a
+name refers unambiguously to its single symbol in that block or the nearest
+enclosing parent block; a [direct recursive self-reference](functions.md#direct-self-reference-without-an-earlier-target)
+resolves the function's own binding without making its value readable before
+initialization. Multi-level collisions, mutual recursion, capture mechanics, and
+precise proof rules remain open. The preferred [long-term direction](functions.md#initial-static-enforcement)
+also requires proof for indirect calls; a runtime-check fallback remains an
+unselected alternative.
 
 ## Operator operands
 

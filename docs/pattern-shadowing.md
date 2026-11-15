@@ -72,7 +72,7 @@ Failed alternatives/arms expose no bindings to later candidates, but a failed pa
 
 The former loop receiver-slot lists are retired. A loop now permits one optional item identifier; count/index/value use context metadata. Destructuring inside the body still follows the ordered shadowing rules above. See [current item naming](loop-receivers.md).
 
-Sequential local declarations may also shadow earlier bindings in the same block; see [local shadowing and copies](local-shadowing-and-copies.md). Repeated function parameter declarations and repeated record field declarations retain separate contracts. Nested lexical scopes can shadow ordinary names as before. Each match arm has its own scope, independent of sibling arms.
+Nested lexical scopes can shadow outer names as before. Statement-level same-block shadowing through redeclarations is postponed (2026-11-15; two declarations of the same symbol in one block are disallowed for now), distinct from intra-pattern `_` reuse and nested scopes; see [local shadowing and copies](local-shadowing-and-copies.md). Repeated function parameter declarations and repeated record field declarations retain separate contracts. Each match arm has its own scope, independent of sibling arms.
 
 ## Capabilities and lifetime
 

@@ -73,7 +73,7 @@ x: User = {}  /* default construction; apply declared field defaults */
 x: User = ?;   /* explicit reserved storage; payload not yet initialized */
 ```
 
-The first four declarations fully initialize their bindings immediately. The final = ? form explicitly reserves storage instead; it is not usable as an ordinary User before initialization. Its first whole-value x = value is permitted once per execution path without var; later replacement requires var. Every path reaching an ordinary use must have initialized the binding. The already-initialized fixed bindings cannot receive a later first assignment as an initialization exception. Var permits subsequent whole-binding replacement, but not field mutation without mut. Repeated x declarations use the selected sequential local shadowing rule. See [first initialization](first-initialization.md).
+The first four declarations fully initialize their bindings immediately. The final = ? form explicitly reserves storage instead; it is not usable as an ordinary User before initialization. Its first whole-value x = value is permitted once per execution path without var; later replacement requires var. Every path reaching an ordinary use must have initialized the binding. The already-initialized fixed bindings cannot receive a later first assignment as an initialization exception. Var permits subsequent whole-binding replacement, but not field mutation without mut. With same-block redeclaration postponed on 2026-11-15, redeclaring `x` in the same block is disallowed for now (nested blocks retain outer-shadowing). See [first initialization](first-initialization.md) and [local shadowing and copies](local-shadowing-and-copies.md).
 
 The first binding exposes User. The var binding exposes the writable storage contract var User: it reads User and accepts replacement User values. Reading that binding still produces a User value; it does not produce a writable reference or transfer its storage permission. See [var access](var-access-qualifier.md).
 
@@ -159,32 +159,13 @@ Selected tuple declarations include (left, right): (:Int, :Int) = (1, 2), inferr
 
 Destructuring declarations and possible future destructuring assignments need separate contracts: declarations introduce names, while assignments update permitted existing targets. Refutable declaration failure and tuple assignment behavior must not be inferred from match syntax. See the [pattern context review](pattern-contexts.md#1-ordinary-declarations).
 
-Sequential local declarations may shadow earlier bindings in the same block, just as nested scopes may shadow names. Resolve an ordinary initializer against the previously visible bindings before introducing its new names. Thus x := make_user(); var x := x; mut x := x; introduces three successive bindings, rather than upgrading the first binding's permissions. Duplicate parameter, record-field, and module declaration lists retain separate contracts. The deferred-body exception below permits later-name references without eager script hoisting; recursive binding selection and exact module resolution remain open. See [local shadowing and copies](local-shadowing-and-copies.md).
+*Postponed same-block redeclaration note (2026-11-15):* same-block shadowing through redeclarations is postponed completely: two declarations of the same symbol in the same block (even of different kinds) are not allowed for now in either the root file block or an inner `{ ... }` block. Flow-sensitive type narrowing (without redeclaration) and shadowing an outer binding inside a nested `{ ... }` block remain separate; the earlier compiler still supports sequential inner-block shadows during transition. See [local shadowing and copies](local-shadowing-and-copies.md).
 
 Within one destructuring pattern, names bind in recursive written order and later occurrences shadow earlier ones; former loop receiver lists are retired, while body-local loop destructuring uses the ordinary pattern rule. `_` is an ordinary readable underscore-prefixed name with permission to be unused, not a discard operation. Assignment to it needs var like assignment to any other binding. Tag shadowing follows its own explicit @name namespace and nearest-enclosing lookup. See [pattern binding and shadowing](pattern-shadowing.md).
 
 A conditional pattern binding may shadow the outer source name inside its matching branch. Resolve the source expression before introducing the narrowed name; the new binding does not alter the outer binding's type or mutability and is not visible in sibling branches. See [union type patterns](union-patterns.md).
 
-For every executable block, including a script body, later same-block symbols
-may be resolved independently of serial execution, but ordinary eager reads
-before their initialization are rejected. Deferred function bodies can also
-refer to later symbols without moving initialization. Neither visibility rule
-makes a callable usable before its initializer or permits uninitialized reads.
-For a permitted surrounding reference, an earlier binding in the defining
-block is [retained across later same-block shadows](functions.md#existing-bindings-survive-later-shadowing).
-When no earlier same-block symbol exists, a [later defining-block symbol takes
-priority over an outer symbol](functions.md#nearer-forward-symbols-before-outer-symbols)
-in the selected case. These rules do not grant implicit local capture. The
-[direct self-reference case](functions.md#direct-self-reference-without-an-earlier-target)
-permits a function's own name in its deferred body when no earlier target exists,
-without a separate header. Explicit [self(...) calls](functions.md#explicit-current-function-self-calls)
-target the current implementation rather than reading a named binding.
-Nested-scope search, mutual recursion, and exact proof rules remain open; the
-[initial static enforcement](functions.md#initial-static-enforcement) rejects
-evident early reads and unproved calls in the initial supported subset. Module
-declaration lookup follows its separately selected direction. See
-[block order](evaluation-order.md#executable-block-items) and
-[module lookup](modules-and-packages.md#module-lookup-without-header-files).
+In every block (the invisible-brace root file block and inner braced `{ ... }` blocks), symbol visibility is parallel at compile time while values follow the execution trace top to bottom: later same-block symbols can be resolved independently of order, but reading an uninitialized symbol (such as reserved `x: Int = ?;` or a later binding before its initializer runs) is rejected. Deferred function bodies have one uniform surrounding-access model across root and inner blocks, subject to initial safety checks and Slice 4b/4c lifetime contracts. See [block order](evaluation-order.md#executable-block-items), [deferred bodies](functions.md#deferred-body-lookup), and [module lookup](modules-and-packages.md#module-lookup-without-header-files).
 
 ## Rejected forms
 

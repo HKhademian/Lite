@@ -1,25 +1,37 @@
 # Local shadowing and mutable record copies
 
-Status: **selected direction, 2026-10-19**. Sequential local declarations may shadow earlier bindings. Mut-declaring a copy of an existing record produces a mutable shallow record copy: inline data is copied; referenced targets are not cloned. Noncopyable resources and complete ownership/representation contracts remain open.
+Status: **mutable shallow record copy direction selected 2026-10-19; same-block redeclaration shadowing postponed completely on 2026-11-15**. Nested inner `{ ... }` blocks may still shadow outer parent bindings; within a single block (root file block or inner braced block), two declarations of the same symbol — even of different kinds — are disallowed for now. Mut-declaring a copy of an existing record produces a mutable shallow record copy: inline data is copied; referenced targets are not cloned. Noncopyable resources and complete ownership/representation contracts remain open.
 
 ## New bindings rather than permission upgrades
 
-Generated compiler coverage, 2026-11-02: sequential ordinary value declarations
-now create fresh bindings in both targets over their admitted types. Initializers
-read the previous binding; stored copies and replacement/mutation permissions
-remain independent. Generated TS also covers parameter and traversal-receiver
-shadowing. Callable/type namespace interactions remain in the
+**Postponed same-block redeclaration note (2026-11-15):** same-block
+shadowing through redeclarations is postponed completely. For now, two
+declarations of the same symbol inside one block (even of different kinds) are
+disallowed across both the invisible-brace root file block and inner braced
+blocks (whether to admit or reject same-block redeclarations uniformly across
+all blocks remains deferred). Flow-sensitive type narrowing (without
+redeclaration) and shadowing an outer binding from a nested `{ ... }` block
+remain separate.
+
+Generated compiler transition behavior, 2026-11-02 (pre-postponement):
+sequential inner-block declarations currently create fresh bindings in both
+targets while file top-level declarations are unique. Initializers read the
+previous binding; stored copies and replacement/mutation permissions remain
+independent. Callable/type namespace interactions remain in the
 [transition queue](../compiler/gaps.md).
 
 ```text
+/* Historical 2026-10-19 same-block shadow example (postponed 2026-11-15): */
 x := make_user();
 var x := x;
 mut x := x;
 ```
 
-Each line declares a new binding. Resolve its initializer using the previously visible x, then make the new x visible to subsequent code. The second line creates a reassignable binding; it does not add mutable held-data access. The third creates a mutable record copy with a fixed binding. Use inferred var mut if both replacement and held-data mutation are needed.
-
-Earlier bindings and their existing aliases retain their own permissions and ownership obligations. Shadowing does not retroactively modify those bindings or upgrade any alias. Exact cleanup and captures remain subject to their eventual contracts; recursive function initialization is not settled by this ordinary initializer rule.
+In that postponed sequential-shadowing model, each line declared a new binding
+rather than upgrading permissions on the original `x`. Under the 2026-11-15
+postponement, use distinct binding names in the same block or a nested `{ ... }`
+block for inner shadows; creating a mutable shallow record copy (`mut copy := original`)
+retains its separate value-copy rule without upgrading the source binding.
 
 The typed equivalents place mut after the colon, as in x: mut User = source. The selected copy behavior concerns copying an existing record into the new mutable declaration, rather than upgrading a read-only access to the original object in place.
 

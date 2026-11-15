@@ -66,6 +66,16 @@ does not settle every other kind of module-level statement, reserved module
 storage, or the full `.lt` grammar. These are design cases, not compiler
 support claims.
 
+Clarified **2026-11-15**: structurally, both `.lts` and `.lt` files are root
+code blocks with **invisible braces**, **no parent block**, and `pub` as their
+only distinction from inner braced `{ ... }` blocks (see
+[source file body](blocks-and-results.md#source-file-body)). Merging `.lt` and
+`.lts` into one unified file form remains open for later discussion; for now,
+think of a `.lt` module file as having the same root-block structure and uniform
+lookup/access rules as `.lts`, except with **no top-level runtime evaluation**
+(compile-time-known initial definitions such as `x := 1`, types, `fn`
+definitions, and compile-time-known `var`/`mut` initializers are admitted).
+
 This revises the former single .lite suffix. Current lesson/catalog paths use
 .lts; .lite references in dated review snapshots remain historical. No legacy
 input alias or automatic .lt-to-script fallback is selected. The distinction is
@@ -103,7 +113,9 @@ Declaration dependency cycles, recursive inference, cross-file resolution,
 initialization scheduling, and exact admissibility/proof rules remain open.
 
 Every executed code block still follows
-[top-to-bottom evaluation](evaluation-order.md#executable-block-items). Resolving
+[top-to-bottom evaluation along the execution trace](evaluation-order.md#executable-block-items),
+while sibling declarations in the block (file-level or inner `{ ... }`) share
+**parallel compile-time symbol visibility** under one uniform rule. Resolving
 a later declaration is distinct from executing its initializer. Arbitrary
 top-level runtime statements and import-time effects are not selected here.
 
@@ -211,8 +223,13 @@ math := import "./math";
 text := import "core/text";
 ```
 
-An import is a top-level module definition. The left side gives the immutable
-module alias; imported members are accessed through that alias. Import paths
+An `import` declaration introduces an immutable **compile-time token**, not a
+runtime value, to refer to `pub` symbols from sibling top-level file blocks
+through a namespace alias (`math.sin(...)`). Because an import is a compile-time
+reference token, any compile-time initializations (or potential script-import
+side effects, still open to further discussion) in the imported file are
+independent of where in a file the `import` appears; deeper block-local `import`s
+are prevented by the compiler for now. Import paths
 use `/` separators and have three forms: `./name` and `../name` resolve from
 the importing file, `/path/name` is an absolute filesystem path, and a bare
 library path such as `core/text` resolves under the distribution's `lib/`
@@ -284,8 +301,13 @@ This is a provisional importable runtime surface, not a general foreign
 function interface or filesystem API. The compiler's `readSource` operation
 remains an internal source-loader capability.
 
-Visibility is explicit. A top-level declaration is private by default;
-`pub` makes it available through an importing module alias:
+Visibility is explicit. A file-block declaration is private by default;
+`pub` is the root file block's sole extra capability beyond an inner `{ ... }`
+block and exposes chosen symbols (`fn`, `type`, immutable values, and `var`/`mut`
+in the language model) through an importing module alias (authors may also keep
+mutable state private and expose `pub` getter/setter helpers when narrower
+encapsulation is wanted; the current generated TS compiler implements `pub`
+functions, immutable scalar values, and public types):
 
 ```lite
 // math.lts

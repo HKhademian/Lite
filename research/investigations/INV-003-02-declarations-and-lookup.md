@@ -2,13 +2,48 @@
 
 Status: in progress
 Contributor: project contributor (agent-assisted)
-Last updated: 2026-10-30
+Last updated: 2026-11-15
 Catalog brief: [INV-003](TOPICS.md#inv-003)
 Covered subtopics: INV-003.02 (partial direction selected; safety and binding details open)
 Subtopic brief: [INV-003.02](SUBTOPICS.md#inv-003-02)
 
 This is a non-normative investigation note outside the language draft. Options
 and recommendations do not select a language rule.
+
+## Invisible-brace file blocks, parallel symbol wiring, and postponed redeclarations, 2026-11-15
+
+Owner clarifications recorded across [source file body](../../docs/blocks-and-results.md#source-file-body),
+[executable block items](../../docs/evaluation-order.md#executable-block-items), and
+[modules and packages](../../docs/modules-and-packages.md#distinct-script-and-module-files):
+
+- **Root file block vs inner blocks:** every LiteLang file (`.lts` or `.lt`) is
+  modeled as an invisible-brace code block with **no parent block**, whereas
+  every inner block requires `{ ... }` braces and has a parent block. Its sole
+  difference is `pub`, exposing chosen symbols (`fn`, `type`, `var`, `mut`,
+  immutable values) because inner blocks cannot be imported.
+- **Parallel symbol wiring vs execution trace:** symbols `A` and `B` in block `X`
+  (root or inner) share **parallel compile-time visibility** (like fixed
+  electrical circuit wiring, independent of declaration order), while runtime
+  values follow top-to-bottom evaluation along the **execution trace** ("wire
+  values"). Deferred read/write/type-reference/call access is uniform across
+  root and inner blocks, rejecting only uninitialized reads (such as `x: Int = ?;`
+  or pre-init eager/call reads).
+- **`.lt` vs `.lts`:** merging them later remains open; for now, `.lt` mirrors
+  `.lts` without top-level runtime evaluation (compile-time-known definitions
+  such as `x := 1`, types, `fn`, and compile-time-known `var`/`mut` initializers
+  remain valid).
+- **Same-block redeclaration postponed:** same-block shadowing through
+  redeclarations is postponed completely (two declarations of the same symbol
+  in one block, even of different kinds, are disallowed for now across all
+  blocks; flow narrowing without redeclaration and nested inner-block shadowing
+  remain distinct).
+- **`import` compile-time tokens:** `import` binds a compile-time token to
+  sibling top-level file exports rather than creating a runtime value;
+  deeper block-local `import`s stay prevented in the compiler for now, and module
+  compile-time initialization is independent of import placement in the file.
+- **Side-effect-free block DCE:** pure dead declarations/expressions in any
+  block (such as unused locals/`fn`s in `{ y := 1; z := fn { ... } 5 }`) can be
+  removed cleanly.
 
 ## Nearer forward value symbol, 2026-11-15
 

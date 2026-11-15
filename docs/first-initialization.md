@@ -55,14 +55,14 @@ x = 74;
 /* x is readable as Int; another assignment is rejected without var. */
 
 var y: Int = ?;
-z := y; /* Rejected: y has no initialized value to read. */
-y = 1;  /* Valid first initialization. */
-z := y; /* Valid read. */
-y = 2;  /* Valid replacement through var. */
-z := y; /* Valid read. */
+z0 := y; /* Rejected: y has no initialized value to read. */
+y = 1;   /* Valid first initialization. */
+z1 := y; /* Valid read. */
+y = 2;   /* Valid replacement through var. */
+z2 := y; /* Valid read. */
 ```
 
-The marked rejected declaration illustrates a diagnostic; remove it for a valid sequence. The later z declarations use ordinary sequential local shadowing. Var never makes an uninitialized payload readable, and first-initialization permission does not give fixed x ongoing replacement access. Both single-write and multi-write bindings become readable after a successful write; the multi-write binding also retains replacement permission. Ordinary var parameters still require initialized readable input.
+The marked rejected declaration illustrates a diagnostic; remove it for a valid sequence (using distinct names `z1`/`z2` reflects the 2026-11-15 postponement of same-block redeclaration shadowing; see [local shadowing and copies](local-shadowing-and-copies.md)). Var never makes an uninitialized payload readable, and first-initialization permission does not give fixed x ongoing replacement access. Both single-write and multi-write bindings become readable after a successful write; the multi-write binding also retains replacement permission. Ordinary var parameters still require initialized readable input.
 
 The same checks apply to unions alongside the selected [assignment flow rules](type-tests-and-narrowing.md#flow-types-after-direct-assignment-selected):
 

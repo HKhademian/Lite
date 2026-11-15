@@ -126,22 +126,43 @@ The block's final expression does not exit the surrounding function. `return` do
 
 ## Source file body
 
-Selected **2026-10-28**: a source file that is run as a program is the outermost
-implicit executable block. The file boundary supplies the braces that explicit
-block constructs require, so "bodies always use braces" still governs every
-written `{ ... }` body; the source unit needs no written brace pair of its own.
+Selected **2026-10-28**, clarified **2026-11-15**: a LiteLang source file (`.lts`
+script or `.lt` module) is modeled as the outermost code block with **invisible
+braces** and **no parent block**, whereas every inner block construct requires
+written `{ ... }` braces and has a parent block. Its **only** structural
+difference from an inner braced block is `pub`, which exposes selected symbols
+(`fn`, `type`, `var`, `mut`, immutable values) across the file boundary because
+inner braced blocks cannot be imported as namespaces.
 
-Clarified **2026-10-30**: this is the .lts script source form. A .lt module file
-is a distinct, declaration-oriented source kind with explicit package/module
-access and no implicit imports. It does not become this implicit script body
-merely because a script loads it. See
+Four consequences follow directly from that model without separate top-level
+syntax rules:
+
+- Item, semicolon, and closing-brace boundaries apply identically at file level
+  and inside `{ ... }`.
+- `return`, `break`, `continue`, and `@tag` exits fail at file level simply
+  because the root file block has no parent `fn`, `loop`, or `@tag` block.
+- Because the root file block has no parent block to receive a result (and no
+  written closing `}` to attach `finally`), a trailing expression evaluates for
+  its effects and its value is unobserved; the file completes with `Unit`.
+- Inner `{ ... }` blocks have parent blocks and cannot be imported as modules,
+  so `pub` has meaning only in the root file block.
+
+Clarified **2026-10-30** and **2026-11-15**: `.lts` is the script source form
+with top-to-bottom runtime evaluation, while `.lt` shares the same invisible-brace
+root block structure and `pub` capability except that it prohibits top-level
+runtime evaluation (admitting compile-time-known initial definitions such as
+`x := 1`, types, `fn` definitions, and compile-time-known `var`/`mut`
+initializers; merging `.lt` and `.lts` into one source unit remains open). A `.lt`
+file has explicit package/module access and no implicit imports; it does not
+become an executable script body merely because a script loads it. See
 [source kinds](modules-and-packages.md#distinct-script-and-module-files).
 
-Its items execute in written order under the ordinary block rules, including the
-final-item rule. The final item's result is computed and then not observed: a
-trailing expression is evaluated for its effects, and its value is discarded
-rather than reported as an error. The file body completes with `Unit` whether it
-is empty, ends in a declaration or assignment, or ends in an expression.
+In a `.lts` script body, items execute in written order under the ordinary block
+rules, including the final-item rule. The final item's result is computed and
+then not observed: a trailing expression is evaluated for its effects, and its
+value is discarded rather than reported as an error. The file body completes
+with `Unit` whether it is empty, ends in a declaration or assignment, or ends
+in an expression.
 
 Reaffirmed 2026-10-28: this discarded result is never an implicit request for
 output. Scripts, demonstrators, and playgrounds require an explicit output
@@ -178,6 +199,23 @@ now select normal completion as status 0, rejected programs/unhandled fatal
 execution failures as nonzero, and exit(errCode?) for explicit program end.
 These do not change this block's Unit value or make top-level return valid;
 exit's omitted-code default and cleanup behavior remain open.
+
+## Dead-code elimination in blocks
+
+Clarified **2026-11-15**: dead declarations and side-effect-free dead code inside
+any block (the invisible-brace root file block or an inner `{ ... }` block) may
+be eliminated when doing so preserves observable effects:
+
+```text
+/* Design example */
+x := {
+    y := 1;
+    z := fn { ... }
+    5
+}
+/* reducible to */
+x := 5;
+```
 
 ## Declaration bodies
 

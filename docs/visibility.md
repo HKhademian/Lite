@@ -1,6 +1,6 @@
 # Visibility and capability defaults
 
-Status: **minimal exposure established as a goal; exact modifier grammar open**.
+Status: **minimal exposure established as a goal; file block `pub` clarified 2026-11-15; exact modifier grammar open**.
 
 ## Purpose
 
@@ -8,7 +8,7 @@ Declarations and values should expose less until a programmer explicitly supplie
 
 ## Initial visibility direction
 
-Module-private declarations and type-private fields were proposed as defaults. Public exports require explicit syntax. The precise privacy unit and modifier placement are not yet settled.
+Clarified **2026-11-15**: a LiteLang source file is an invisible-brace root code block with **no parent block**, and `pub` is its sole structural difference from an inner braced `{ ... }` block (which cannot be imported as a namespace). Declarations in a module/file block are private by default and type fields are private by default; `pub` exposes chosen top-level symbols (`fn`, `type`, `var`, `mut`, immutable values) across the file boundary. Exposing `pub var` or `pub mut` is valid in the design (keeping state private and exposing `pub` getter/setter helpers remains a common alternative; the current generated TS compiler exposes `pub` functions, types, and immutable scalar values). Detailed privacy units, modifier placement, and export contracts remain to be finalized.
 
 ## Conceptual template
 
@@ -17,7 +17,7 @@ name := definition;
 public_modifier name := definition;
 ```
 
-The placeholder `public_modifier` is not a keyword proposal. `pub` was used in early sketches but needs alignment with uniform definitions before it is normative.
+The placeholder `public_modifier` is not a keyword proposal. `pub` is used in current compiler/library sources and design discussions while its complete alignment with records, types, and `var`/`mut` exports is finished.
 
 ## Established mutability example
 

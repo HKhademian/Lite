@@ -42,13 +42,13 @@ Mut permits updates through supplied caller-data access, subject to visibility a
 
 ```text
 local_work := fn(value: Int): Int {
-    var value := value;
-    value = 5;
-    value
+    var current := value;
+    current = 5;
+    current
 }
 ```
 
-The ordinary body declaration creates a new reassignable binding and shadows the input. It does not replace the caller's variable or grant payload mutation. Var value := 5 would start at 5 instead of preserving the input. See [local shadowing and copies](local-shadowing-and-copies.md).
+The ordinary body declaration creates a new reassignable binding rather than mutating or replacing the caller's variable (using a distinct local name reflects the 2026-11-15 postponement of same-block redeclaration shadowing). `Var current := 5` would start at 5 instead of preserving the input. See [local shadowing and copies](local-shadowing-and-copies.md).
 
 The separate local-only var parameter feature is retired. A caller's own var declaration supplies whole-binding replacement authority for a caller-location operation; that is a different target from this local shadow.
 

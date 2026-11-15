@@ -18,12 +18,12 @@ Local-only var parameter headers are unnecessary: use an ordinary declaration in
 
 ```text
 local_only := fn(value: A | B) {
-    var value: A | B = value;
-    value = new_B()
+    var current: A | B = value;
+    current = new_B()
 }
 ```
 
-The assignment replaces the new local binding, not the caller's variable. Sequential same-block shadowing is allowed. Ordinary initializer/input transfers follow copy semantics with no implicit references; type-specific eligibility and future explicit modes remain deferred; see [local shadowing and copies](local-shadowing-and-copies.md).
+The assignment replaces the local `var` binding, not the caller's variable (using a distinct local name keeps the example compatible with the 2026-11-15 postponement of same-block redeclaration shadowing). Ordinary initializer/input transfers follow copy semantics with no implicit references; type-specific eligibility and future explicit modes remain deferred; see [local shadowing and copies](local-shadowing-and-copies.md).
 
 ## Var parameter and explicit call grant
 

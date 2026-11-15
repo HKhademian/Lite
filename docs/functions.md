@@ -596,12 +596,19 @@ The selected independent analysis of deferred bodies against serial-block
 value state, and the first-stage rule for calls that read an uninitialized value, are
 recorded in [INV-003.02](../research/investigations/INV-003-02-declarations-and-lookup.md#deferred-bodies-and-serial-block-value-state-2026-11-15).
 
-Selected direction, 2026-10-28, clarified 2026-11-15: a function body may
-refer to identifiers declared later in its enclosing code block. Creating a
-function value does not execute its body. When invoked, its executable blocks
-still run top to bottom. Ordinary eager expressions can also resolve later
-same-block symbols, but cannot read their values before initialization. This
-direction applies equally to full function literals and lambda spellings.
+Selected direction, 2026-10-28, clarified **2026-11-15**: symbol visibility in
+any code block `X` (either the invisible-brace root file block or an inner
+braced `{ ... }` block) is **parallel at compile time** — like fixed circuit
+wiring, declaration order does not hide sibling symbols — while runtime values
+propagate top to bottom along the **execution trace**. A function body is
+deferred: creating a function value does not execute its body, and any late
+read, write, type reference, or call between symbols in `X` (or enclosing blocks)
+follows one uniform rule without a separate root-vs-inner capture split, except
+that reaching an uninitialized symbol along the execution trace (such as
+reserved `x: Int = ?;` or reading a later runtime binding before its initializer
+runs) is rejected. Ordinary eager expressions can also resolve later
+same-block symbols at compile time, while still rejecting uninitialized reads.
+This direction applies equally to full function literals and lambda spellings.
 
 Deferred execution does not imply early availability of the containing
 binding. Calling an ordinary function-valued binding before its initializer is
@@ -687,6 +694,12 @@ decision alone does not authorize an implementation change or count proposed
 cases as passing.
 
 ### Existing bindings survive later shadowing
+
+*Postponement note (2026-11-15): same-block shadowing through redeclarations is
+postponed completely (two declarations of the same symbol in one block, even of
+different kinds, are currently disallowed). The historical 2026-10-29 rule below
+is preserved only for nested-block context and in case same-block redeclarations
+are reconsidered later.*
 
 Selected **2026-10-29**, clarified **2026-11-15**: for admitted surrounding
 references, an already-visible binding in the function's defining block
@@ -1083,19 +1096,17 @@ a general rule that every escaping function requires `mut`. How access grants,
 callable types, retained environments and ordinary copies interact remains to
 be designed. The first compiler need not support these cases yet.
 
-The 2026-10-29 discussion requires a defined eligibility policy for surrounding
-values, even read-only uses, while preserving ordinary helper calls. It does not
-select a blanket ban on outer names or unrestricted implicit local capture.
-Lookup/binding identity and permission to retain surrounding runtime state are
-separate questions.
-
-A statically resolved noncapturing helper can be called without retaining an
-enclosing stack environment. A runtime-selected callable or a helper carrying
-state may need different rules. Constant/type/module lookup is also distinct
-from capturing a runtime local. Each case must preserve scope, initialization,
-copy/access, and eventual lifetime contracts; assignment of a callable alone
-does not settle any of them. Exact permitted categories and capture syntax
-remain open in INV-003.02.
+Clarified **2026-11-15**: there is no separate surrounding-access rule between
+symbols in the root file block and symbols in an inner braced `{ ... }` block
+— symbols in block `X` share parallel compile-time visibility and uniform
+deferred read/write/type/call access along the execution trace, rejecting only
+uninitialized accesses (such as reserved `x: Int = ?;` or early pre-init
+reads). A statically resolved noncapturing helper can still be lowered without
+retaining an enclosing stack frame (and root file-block storage has program-wide
+lifetime because the root file block has no parent activation), while inner
+escaping closures that retain mutable or block-scoped state depend on Slice 4b/4c
+storage, copying, and lifetime contracts under
+[INV-003.02](../research/investigations/INV-003-02-declarations-and-lookup.md#surrounding-access-reconsideration-2026-10-29).
 
 ### Initial static enforcement
 

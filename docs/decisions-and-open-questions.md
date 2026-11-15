@@ -4,6 +4,60 @@ Dated decision ledger, updated through **2026-11-15**. Older entries retain thei
 original scope. Decisions do not establish compiler conformance; use
 [the transition](../compiler/transition-plan.md) for current execution evidence.
 
+## Invisible-brace file blocks, parallel symbol wiring, and postponed same-block redeclarations, 2026-11-15
+
+1. **File blocks as invisible-brace root code blocks (`pub` only):** every
+   LiteLang source file (`.lts` script or `.lt` module) is a code block with
+   invisible outer braces and **no parent block**, whereas every inner block
+   requires braces and has a parent block. Its sole difference from an inner
+   braced block is `pub`, which exposes chosen top-level symbols (`fn`, `type`,
+   `var`, `mut`, immutable values) because inner blocks cannot be imported.
+   Item/semicolon rules match inner blocks; top-level `return`, `break`,
+   `continue`, and `@tag` fail due to having no parent target; and the file's
+   final expression value is unobserved (`Unit`) with no closing `}` for
+   `finally`. See [source file body](blocks-and-results.md#source-file-body) and
+   [visibility](visibility.md#initial-visibility-direction).
+2. **Parallel symbol wiring and ordered execution trace across all blocks:**
+   if symbols `A` and `B` are declared in block `X` (either the root file block
+   or an inner braced block), symbol visibility is **parallel at compile time**
+   (like fixed circuit wiring, independent of declaration order), while runtime
+   values follow serial evaluation along the **execution trace** (like wire
+   values). Surrounding read, write, type-reference, and call rules apply
+   uniformly in root and inner blocks, rejecting only uninitialized reads (such
+   as reserved `x: Int = ?;` or early pre-init reads). See
+   [executable block items](evaluation-order.md#executable-block-items) and
+   [deferred bodies](functions.md#deferred-body-lookup).
+3. **`.lt` modules vs `.lts` scripts:** merging `.lt` and `.lts` into one source
+   unit remains open for future discussion; for now, `.lt` is modeled identically
+   to a `.lts` root block except with **no top-level runtime evaluation**
+   (compile-time-known definitions such as `x := 1`, types, `fn` definitions,
+   and compile-time-known `var`/`mut` initializers are allowed). See
+   [source kinds](modules-and-packages.md#distinct-script-and-module-files).
+4. **Same-block redeclaration shadowing postponed:** same-block shadowing
+   through redeclarations is postponed completely; for now, two declarations of
+   the same symbol in one block — even of different kinds — are disallowed in
+   both root file blocks and inner `{ ... }` blocks (flow-sensitive type
+   narrowing without redeclaration and nested inner-block shadowing remain
+   separate; uniform future policy remains deferred). See
+   [local shadowing and copies](local-shadowing-and-copies.md#new-bindings-rather-than-permission-upgrades).
+5. **`import` as a compile-time token:** importing another file introduces no
+   runtime value; it binds a **compile-time token** referring to `pub` symbols
+   from sibling top-level file blocks. Top-level compile-time initializations
+   (or potential script-import side effects, still open) are independent of
+   where in the file the `import` token appears; block-local `import`s remain
+   prevented by the compiler for now. See
+   [source imports](modules-and-packages.md#source-imports).
+6. **`pub var` / `pub mut` exports:** exposing `var`/`mut` symbols via `pub` is
+   admissible in the language model alongside `fn`, `type`, and immutable values
+   (getter/setter helper functions remain a clean alternative when encapsulated
+   mutation is preferred; the current generated TS compiler exposes `pub`
+   functions, types, and immutable scalar values). See
+   [visibility](visibility.md#initial-visibility-direction).
+7. **Side-effect-free dead-code elimination (DCE) in any block:** unused
+   declarations and pure dead code in any block (root or braced) may be
+   eliminated (for example reducing `x := { y := 1; z := fn { ... } 5 }` to
+   `x := 5;`). See [dead-code elimination in blocks](blocks-and-results.md#dead-code-elimination-in-blocks).
+
 ## Nearer forward value symbols, 2026-11-15
 
 An escaping function may retain a safely available surrounding value beyond

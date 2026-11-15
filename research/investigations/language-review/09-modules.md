@@ -11,19 +11,19 @@ Status: **preliminary, 2026-11-15; awaiting joint review**. All recommendations 
 
 ## 9.1 Files and modules
 
-**Baseline:** The design distinguishes `.lts` scripts and `.lt` modules; exact full module grammar remains open.
+**Baseline (updated 2026-11-15):** Every LiteLang file (`.lts` script or `.lt` module) is modeled as an **invisible-brace root code block** with **no parent block** and `pub` as its sole distinction from inner `{ ... }` blocks. Merging `.lt` and `.lts` later remains open; for now, `.lt` mirrors `.lts` without top-level runtime evaluation (admitting compile-time-known definitions such as `x := 1`, types, `fn`s, and compile-time-known `var`/`mut` initializers). Same-block redeclaration shadowing is postponed in both file blocks and inner blocks, and side-effect-free dead code in any block may be eliminated.
 
-**Initial assessment and probes:** Compare running a script with importing a module. Determine which code executes and which names or core facilities are available in each context.
+**Initial assessment and probes:** Compare running a `.lts` script with importing a `.lt` or `.lts` file. Determine which compile-time initializers evaluate, whether script-import side effects could ever be permitted, and verify that root-block symbol wiring matches inner braced blocks except for `pub`.
 
 ## 9.2 Imports and namespaces
 
-**Baseline:** Explicit module access is the selected direction; maintained Lite sources use explicit aliases.
+**Baseline (updated 2026-11-15):** An `import` is a **compile-time token** (not a runtime value) referring to `pub` symbols of sibling top-level file blocks through an explicit alias; maintained Lite sources use namespace aliases, and deeper block-local `import`s are prevented by the compiler for now even though any compile-time effects would be placement-independent.
 
-**Initial assessment and probes:** Two modules export `parse`; compare qualified access through different aliases with collision handling. Check import cycles and whether import itself causes initialization.
+**Initial assessment and probes:** Two modules export `parse`; compare qualified access through different aliases with collision handling. Check import cycles and verify compile-time initialization order independently of where the `import` token appears in the importing file.
 
 ## 9.3 Visibility
 
-**Baseline:** `pub` and private boundaries need coherent application to declarations and fields; complete visibility details remain under review.
+**Baseline (updated 2026-11-15):** `pub` is the root file block's sole capability beyond an inner braced block and can expose `fn`, `type`, immutable values, and `var`/`mut` bindings in the language model (getters/setters remain idiomatic for encapsulated state; current generated TS implements `pub` functions, types, and immutable scalar values). Private-by-default declarations and type fields remain baseline; complete visibility/export details remain under review.
 
 **Initial assessment and probes:** An external caller can see a public record type but may not be allowed to construct or inspect a private field. Test public signatures exposing private types.
 
