@@ -7,6 +7,10 @@ language draft in `docs/`. It records what can be investigated and where to begi
 Its questions, examples, options, and recommendations are non-normative. A topic's
 presence does not select a feature or commit it to the first milestone.
 
+## Foundational language review
+
+The [ten-area language review](language-review/README.md) keeps the agreed discussion order, five subtopics per area, and non-normative preliminary reviews together. It complements the numbered catalog without changing existing topic identities or language decisions.
+
 ## Context
 
 **Immediate focus, clarified 2026-10-30:** reach the tiny runnable
