@@ -45,6 +45,24 @@ Status: **preliminary, 2026-11-15; awaiting joint review**. All recommendations 
 
 Keep fixed extent, element homogeneity, growth, ownership, and view access as independent properties. Arrays may merit distinct behavior even with tuple-equivalent layout, but runtime indexing and length must earn any separate conceptual machinery.
 
+## Expanded assessment
+
+### Compiler evidence and boundaries
+
+The generated TS verifier passes fixed-array indexing, list-end mutation, named tuple and array traversal examples. These use Node-hosted arrays and helpers, not the selected native storage proof. The verified slice does not establish generic user collections, borrowed slices, arbitrary element mutation, list allocation policy or native layout. [Baseline](compiler-baseline.md).
+
+### Benefits, costs, and constraints
+
+- **7.1 Families:** static arrays, runtime-sized owners, growable lists and borrowed views solve different lifetime/size problems. A fixed array can be inline with statically known length; a growable owner needs capacity/reallocation policy, and a view needs accessible length and valid backing. Distinct surface types cost complexity; collapsing them can hide ownership or growth.
+- **7.2 Construction:** inferred `[T; N]` captures extent and can avoid storing length. Heterogeneous literals may require union element representation and per-element tags; empty inference remains unresolved. Initializing large buffers element by element versus uninitialized construction affects bandwidth, security, and partial cleanup.
+- **7.3 Access and mutation:** runtime indexing needs a valid bounds proof or check under the chosen safety semantics; invalid indexes must retain selected fault behavior. Statically proven bounds may remove checks. Writable aliases and reallocation invalidate views; permission alone is not a lifetime proof.
+- **7.4 Iteration:** specialized iteration over a known array can be a tight pointer/index loop without iterator allocation. General abstractions should expose sufficient structure for inlining and vectorization. Dynamic dispatch and monomorphization trade call overhead for binary size and compile time; user-defined providers need matching semantic guarantees.
+- **7.5 Storage:** passing a 2 GB owner by independent value may require a deep semantic copy, a cheap move, or an explicitly defined sharing strategy; copying only an owning descriptor cannot safely create independent owners. A no-copy view must specify retention and mutation constraints. Capacity, allocator injection, fragmentation, and failure handling are necessary costs of a growable list even in a no-GC program.
+
+### Blockers and cross-feature cases
+
+Benchmark summation, growth, filtering and map-like operations on fixed arrays, lists and views, with equivalent C safety and allocation behavior. Trace a view retained across list growth and a list of resource-owning records. Static ownership/borrow [2](02-bindings.md), aggregate zero/copy [3](03-records.md), generic dispatch [10](10-generics-comptime.md), and failure cleanup [8](08-failure-cleanup.md) must be resolved together.
+
 ## Cross-topic routing
 
 Types (1), access and lifetimes (2), and generic capabilities (10) are prerequisites. Record new decisions with their owning area; return to this review after the dependency is understood.
