@@ -36,6 +36,8 @@ The following notes are recorded as provisional starting points:
 
 - [4. Enums and variants](04-enums.md)
 
+- [5. Functions and calls](05-functions.md)
+
 ## Starting context
 
 - [Language specification map](../../../docs/spec/README.md) distinguishes selected language rules from open areas and limited implementation.
