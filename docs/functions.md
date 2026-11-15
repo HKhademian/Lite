@@ -930,14 +930,38 @@ If argument evaluation is permitted to replace the source binding, the already
 selected callable remains the callee for that invocation. A nested call can
 read a newer value; the outer call is not reevaluated afterward.
 
-Eligibility/permissions for surrounding values, capture representation,
-ownership, retention, and escaping lifetimes remain open. Live reads are not
+Except for the simple escaping case below, eligibility/permissions for surrounding
+values, capture representation, ownership, retention, and escaping lifetimes
+remain open. Live reads are not
 blanket permission to capture local state or to use an uninitialized/expired
 binding. Required safety must be established under the initial static-first
 direction; unknown access is not assumed safe. The implementation environment
 can remain private without adding its fields to the public callable inputs.
 
 ### Surrounding access under review
+
+Selected direction **2026-11-15**: a returned function may retain a safely
+available surrounding value beyond the call that created it. This simple
+immutable-value example returns 5:
+
+```text
+make_reader := fn {
+    x := 5;
+    get := fn (): Int { x }
+    get
+}
+reader := make_reader();
+result := reader(); /* 5 */
+```
+
+`get` retains access to its `x` after `make_reader` returns, for as long as
+the returned function needs it. The observable behavior does not prescribe
+allocation, garbage collection, capture syntax, or a representation. The
+earlier selected live-read rule remains relevant where mutable surrounding
+bindings are admitted; this example does not decide mutation, copy, resource,
+or escaping-grant rules. Initialization and other safety requirements still
+apply. The first compiler may reject this case until it can support it safely;
+this is a language direction, not a compiler-support claim.
 
 The 2026-10-29 discussion requires a defined eligibility policy for surrounding
 values, even read-only uses, while preserving ordinary helper calls. It does not
