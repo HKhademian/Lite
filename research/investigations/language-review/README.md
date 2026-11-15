@@ -1,17 +1,21 @@
 # Language review: ten foundational areas
 
-Status: **expanded reviews recorded, 2026-11-15; joint review pending**. This is a non-normative
+Status: **preliminary assessments recorded; joint first-layer review pending**. This is a non-normative
 investigation for the joint, one-at-a-time review. Current selections remain the
 baseline until explicitly revised; initial judgments are starting hypotheses,
 not approval, implementation evidence, or a substitute for concrete decisions.
 The latest source and owning pages must be rechecked when each discussion starts.
 
-Work through the areas in this order. Each review keeps five stable subtopics,
+The agreed [onion review method](review-method.md) works through all ten areas
+at one level of depth before returning for a deeper layer. The current position
+is the first layer, starting with core types and values. Each review keeps five stable subtopics,
 records baseline evidence, concrete probes, tradeoffs, open questions, and links
 to related areas. When a discussion exposes a cross-topic issue, record it at the
 owning topic and return to the active question; bring a prerequisite forward only
 when needed. Each initial review is intentionally broad and does not claim to
 resolve every edge case. No item below is acceptance of a recommendation.
+
+## Ten topics
 
 1. **Core types and values**: 1.1 primitives and literals; 1.2 identity and distinct types; 1.3 tuples, records, and arrays; 1.4 inference and conversion; 1.5 unions and value operations.
 2. **Bindings, mutation, and lifetime**: 2.1 scope and symbols; 2.2 bindings and assignment; 2.3 `var` and `mut`; 2.4 initialization; 2.5 copies, references, and lifetimes.

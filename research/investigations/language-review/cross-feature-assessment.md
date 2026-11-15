@@ -100,7 +100,12 @@ size and target, and an advanced C implementation can use the same algorithmic
 ideas. See [collections](07-collections.md), [modules](09-modules.md) and
 [generics](10-generics-comptime.md).
 
-## Suggested discussion order within the existing ten
+## Earlier suggested discussion checkpoints
+
+These checkpoints predate the agreed [onion review method](review-method.md).
+Use them as topic-specific prompts in the appropriate layer, not as a reason to
+finish one topic's detailed decisions before the other topics receive the same
+level of review.
 
 Keep the agreed topic order; these are discussion checkpoints, not a new
 implementation plan or approved prioritization:
