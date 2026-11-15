@@ -30,6 +30,8 @@ The following notes are recorded as provisional starting points:
 
 - [1. Core types and values](01-core-types.md)
 
+- [2. Bindings, mutation, and lifetime](02-bindings.md)
+
 ## Starting context
 
 - [Language specification map](../../../docs/spec/README.md) distinguishes selected language rules from open areas and limited implementation.
