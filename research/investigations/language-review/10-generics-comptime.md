@@ -43,6 +43,24 @@ Status: **preliminary, 2026-11-15; awaiting joint review**. All recommendations 
 
 Favor ordinary functions usable across stages and requirements driven by actual operations. Explicit effects and dependency tracking could improve reproducibility, but their cost and ergonomics need concrete builds; do not remove intended compile-time I/O by assumption.
 
+## Expanded assessment
+
+### Compiler evidence and boundaries
+
+The public compiler accepts the builtin `List<T>` slice but its parser explicitly restricts generic type names; the exact generic-function probe fails. The proposed `comptime` block probe also fails. Constant folding and known builtin types do not establish general compile-time evaluation, user generic inference, specialization, or compile-time I/O. [Baseline](compiler-baseline.md); [compile-time direction](../../../docs/compile-time-evaluation.md).
+
+### Benefits, costs, and constraints
+
+- **10.1 Type parameters:** specialization can produce direct calls and expose vectorization without boxing or runtime type dictionaries. Many instantiations can grow code and compile time; shared generic code can reduce size but introduce indirect operations or metadata. Compare per-type and shared strategies without changing semantic behavior.
+- **10.2 Value parameters:** making `N` part of `[T; N]` supports fixed inline layout and static bounds proofs. Specializing every N may multiply code; erasing N from a generic implementation can require passing a length. Compile-time integers need value identity, range and evaluability rules.
+- **10.3 Requirements:** inferred local capabilities keep algorithms concise and let one sum support arrays and views. Public signatures must expose sufficient contracts for separate checking; transitive requirements, method ambiguity and diagnostics can become a major compiler cost. No runtime interface table is inherent when concrete providers are statically known.
+- **10.4 Evaluation:** ordinary functions at compile time can generate tables or validate data and remove runtime computation. The compiler needs bounded execution, diagnostics, target-aware layout and materializable value rules; expensive evaluation can increase build time or embed large data in the binary. Compile-time behavior must not silently differ from runtime numeric and fault semantics.
+- **10.5 Effects:** the selected direction includes file, input and network effects during explicit compile-time execution. This enables generated assets but makes dependencies, reproducibility, credentials, host services, sandboxing, cache invalidation and offline builds consequential. Moving an effect between build and runtime changes observable behavior. Zero runtime cost is possible for work fully materialized at compile time, but embedded output still occupies binary/data space.
+
+### Blockers and cross-feature cases
+
+Compile a generic indexed sum over a fixed array and a borrowed view, then compare a runtime-selected provider; track generated code size, indirect calls, bounds proofs and allocation. For compile-time I/O, change an external file without changing source and verify cache invalidation. Generic identity [1](01-core-types.md), views/lifetime [2](02-bindings.md), modules [9](09-modules.md), and errors/limits [8](08-failure-cleanup.md) are required inputs.
+
 ## Cross-topic routing
 
 Types (1), functions (5), modules (9), and failures (8) affect generic and compile-time contracts. Record new decisions with their owning area; return to this review after the dependency is understood.
