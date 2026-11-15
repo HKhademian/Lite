@@ -14,7 +14,8 @@ and recommendations do not select a language rule.
 
 The user extends the example with `mylayer` containing `get`: the `x` read
 by `get` still selects the later `x` in `test` over the outer `x`. Each
-function introduces a scope; lookup starts in the innermost and proceeds
+code block introduces a scope, including function, ordinary, `if`, loop and
+`match` blocks; lookup starts in the innermost and proceeds
 through lexical parents one by one. The
 [nested example and execution trace](../../docs/functions.md#a-nearer-value-through-nested-deferred-bodies)
 record this selected case; general multi-level collision rules remain open.

@@ -737,7 +737,7 @@ This choice is about a nearer **value symbol**, not a special rule for
 functions: the selected same-block rule also applies to ordinary callable
 values. It preserves an earlier same-block symbol across later same-block
 shadows, as above, and does not permit unrestricted capture. Full multi-level
-forward search beyond the case below, conditional scopes, type/import name collisions, self-name and
+forward search beyond the cases below, control-flow details, type/import name collisions, self-name and
 mutual recursion rules, initialization proofs and escaping lifetimes remain
 open. It is language design, not an implementation claim or a request to
 implement advanced compiler analysis now.
@@ -751,8 +751,9 @@ boundaries to callable-valued symbols and to separately tested nested scopes.
 
 ### A nearer value through nested deferred bodies
 
-Selected **2026-11-15**: each function introduces a scope. Lookup starts in
-the innermost scope and proceeds through lexical parent scopes, one by one.
+Selected **2026-11-15**: each code block introduces a scope, including function
+bodies, ordinary blocks, and blocks in `if`, loops, and `match`. Lookup starts
+in the innermost scope and proceeds through lexical parent scopes, one by one.
 An admitted reference selects the nearer surrounding value in this case:
 
 ```text
@@ -781,6 +782,37 @@ call that reaches the inner read before initialization remains subject to the
 initial static-safety rule; it does not switch to the outer `x`. General
 collision and shadowing rules within each scope remain open. This is a selected
 language case, not a claim of current compiler support.
+
+An ordinary serial block also supplies the nearer scope:
+
+```text
+get := fn (): Int { x } /* selects the script's x, 1 */
+x := 1;
+test := fn (): Int {
+    get := fn (): Int { x } /* selects test's x, 2 */
+    mylayer := fn {
+        get := fn (): Int { x } /* selects mylayer's x, 3 */
+        x := 3;
+        get()
+    }
+    test := {
+        get := fn (): Int { x } /* selects this block's x, 4 */
+        x := 4;
+        get()
+    }
+    x := 2;
+    test * mylayer() * get()
+}
+result := test(); /* 4 * 3 * 2 = 24 */
+```
+
+Calling the outer `test` executes its ordinary inner block immediately: it
+defines that block's `get`, initializes its `x` to 4, calls `get`, and binds
+the block result to the inner `test`. The outer function then initializes its
+own `x` to 2, calls `mylayer` (which initializes and reads its `x` as 3), and
+calls its own `get` (which reads 2). The script's `get` is not called. Each
+read selects the nearer lexical block's value; none needs a later initializer
+to run early. This example assumes the relevant access and lifetime rules.
 
 ### First later binding in the defining block
 

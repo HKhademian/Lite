@@ -6,7 +6,8 @@ original scope. Decisions do not establish compiler conformance; use
 
 ## Nearer forward value symbols, 2026-11-15
 
-Each function introduces a scope; lookup begins in the innermost scope and
+Each code block introduces a scope, including function bodies and `if`, loop,
+`match`, and ordinary blocks; lookup begins in the innermost scope and
 proceeds through lexical parents one by one. An additional nested deferred
 function layer retains the nearer surrounding value in the
 [selected example](functions.md#a-nearer-value-through-nested-deferred-bodies):
@@ -21,7 +22,7 @@ the selected local symbol stable when the containing function is moved to a
 context with an unrelated outer name. Its initializer is not hoisted; actual
 execution remains serial and reads require initialization. Earlier same-block
 bindings retain their identity across later same-block shadows. Other nested
-lookup, control-flow scopes, self-name collisions, capture and lifetimes remain
+lookup, control-flow details, self-name collisions, capture and lifetimes remain
 open. See [nearer forward symbols](functions.md#nearer-forward-symbols-before-outer-symbols).
 This selection supersedes the broader outer-binding priority in the 2026-10-29
 historical entries below; it does not claim compiler support.
