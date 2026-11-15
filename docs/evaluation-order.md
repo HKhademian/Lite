@@ -64,8 +64,9 @@ symbol. Its initializer still runs in order. A
 can resolve the current function binding when no earlier same-name binding
 exists, without making its value readable before initialization. Nested-scope
 search, self-name collisions, mutual recursion,
-capture mechanics, precise proof rules, and
-the full language's long-term indirect-call policy remain open.
+capture mechanics and precise proof rules remain open. The preferred
+[long-term direction](functions.md#initial-static-enforcement) also requires
+proof for indirect calls; a runtime-check fallback remains an unselected alternative.
 
 ## Operator operands
 

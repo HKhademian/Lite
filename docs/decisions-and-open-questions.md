@@ -6,6 +6,12 @@ original scope. Decisions do not establish compiler conformance; use
 
 ## Nearer forward value symbols, 2026-11-15
 
+For calls that may reach an uninitialized value, the preferred long-term
+direction requires compile-time proof of safe initialization and rejects
+unproved calls, including indirect calls. A runtime-check fallback remains an
+unselected alternative. Proof mechanisms and compiler staging remain open;
+see [initial static enforcement](functions.md#initial-static-enforcement).
+
 The file top level is also a code block for scope and symbol lookup. The user
 identifies `pub` visibility as its special distinction; detailed export rules
 and reconciliation with existing script/module item restrictions remain open.
@@ -1210,10 +1216,9 @@ execution is claimed.
   binding. For the initial supported subset, conservatively reject calls whose
   initialization safety cannot be established as well. Distinguish demonstrated
   invalid access from insufficient proof in diagnostics.
-- No runtime readiness-check fallback is selected for that subset. Exact proof
-  rules, conditional/indirect callbacks, escaping functions, and the full
-  language's long-term policy remain open. Revisit concrete callback cases
-  before treating conservative rejection as a universal language rule.
+- No runtime readiness-check fallback is selected for that subset. The later
+  preferred direction requires proof for indirect calls as well; exact proof
+  rules, conditional callbacks and escaping functions remain open.
 
 Owner: [initial static enforcement](functions.md#initial-static-enforcement).
 [INV-003.02](../research/investigations/INV-003-02-declarations-and-lookup.md#initial-static-enforcement-selection-2026-10-29)

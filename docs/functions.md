@@ -955,6 +955,16 @@ remain open in INV-003.02.
 
 ### Initial static enforcement
 
+Preferred long-term direction, **2026-11-15**: require compile-time proof that
+a call cannot read a relevant binding before initialization. If safety cannot
+be established, reject the call; distinguish lack of proof from a demonstrated
+early read. This applies to indirect calls as a design direction as well as
+direct calls. The user considers runtime checks for uncertain cases a plausible
+alternative, but did not select that fallback. Exact proof rules, contracts,
+conditional calls, callbacks and escaping functions remain open. The first
+compiler may conservatively reject cases it cannot yet prove; this direction
+does not require advanced analysis now or claim compiler support.
+
 Selected starting direction, **2026-10-29**: reject a call at compile time when
 its reached body would read a binding before initialization. In the initial
 supported subset, also reject a call when its initialization safety cannot be
@@ -962,9 +972,8 @@ established. Distinguish a demonstrated early read from insufficient proof in
 diagnostics; uncertainty is not evidence that the program would actually fail.
 
 No runtime readiness-check fallback is selected for this subset. Exact proof
-rules, conditional/indirect callbacks, escaping functions, and the full language's
-long-term policy remain open. Review concrete callback cases before extending
-this conservative starting point into a universal rejection rule. This selects
+rules and conditional/indirect callback cases remain open, as clarified by the
+later preferred direction above. This selects
 a design requirement, not an implemented analysis, lifetime guarantee, or new
 public callable dependency/effect list.
 
