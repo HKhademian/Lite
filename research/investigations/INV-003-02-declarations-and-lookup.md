@@ -12,6 +12,10 @@ and recommendations do not select a language rule.
 
 ## Deferred bodies and serial-block value state, 2026-11-15
 
+Use [execution traces](README.md#execution-traces-for-ambiguity-analysis) to
+reason about reached definitions, calls and reads in each possible ordering;
+a trace does not select an unresolved lookup rule by itself.
+
 The user selected a simpler direction for analyzing a deferred function body
 that references a surrounding value symbol. The body is **not executed when
 the function is defined**. In particular, a function body before the symbol's

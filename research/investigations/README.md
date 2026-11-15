@@ -57,6 +57,25 @@ questions under lexical structure, tooling/diagnostics, and testing/verification
 with links to existing goals, API, Unicode, and footprint work. It does not select
 translated keywords, language packs, source conversion, or a learning outcome.
 
+## Execution traces for ambiguity analysis
+
+The user selected **execution trace** as the name for the reasoning method we
+use when investigating ambiguous behavior. For one possible execution, follow
+the actual order of reached operations and record the relevant symbol states,
+values, effects, and control transfers. Defining a function creates its value;
+its deferred body executes only when called. Check each read and write at the
+step where it occurs, using the rules under investigation and stating any
+assumptions about unresolved lookup or access.
+
+Use additional traces for different inputs, branches, errors, and invocation
+orders. One safe trace does not prove all paths safe, and a trace based on a
+proposed lookup rule does not itself select that rule. Separate compile-time
+from runtime execution when both stages are involved.
+
+This is a design-analysis method, not a requirement that the compiler enumerate
+every possible path or a claim that a program automatically emits an execution
+trace. Runtime observation remains a separate [explicit tooling facility](../../docs/tooling-and-learning.md#explicit-output-and-tracing).
+
 ## Start a topic
 
 1. Find its stable `INV-NNN` ID below and read the [topic brief](TOPICS.md).
