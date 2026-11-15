@@ -1,6 +1,6 @@
 # Language review: ten foundational areas
 
-Status: **initial reviews recorded, 2026-11-15; joint review pending**. This is a non-normative
+Status: **expanded reviews recorded, 2026-11-15; joint review pending**. This is a non-normative
 investigation for the joint, one-at-a-time review. Current selections remain the
 baseline until explicitly revised; initial judgments are starting hypotheses,
 not approval, implementation evidence, or a substitute for concrete decisions.
@@ -26,7 +26,7 @@ resolve every edge case. No item below is acceptance of a recommendation.
 
 ## Review notes
 
-The following notes are recorded as provisional starting points:
+The following notes include compiler evidence, benefits, costs, blockers and provisional judgments:
 
 - [1. Core types and values](01-core-types.md)
 - [2. Bindings, mutation, and lifetime](02-bindings.md)
@@ -38,6 +38,10 @@ The following notes are recorded as provisional starting points:
 - [8. Errors, panics, and cleanup](08-failure-cleanup.md)
 - [9. Modules and public APIs](09-modules.md)
 - [10. Generics and compile-time evaluation](10-generics-comptime.md)
+
+## Cross-feature assessment
+
+[Dependencies, worked traces, and native evidence](cross-feature-assessment.md) connect the reviews and identify the questions most likely to affect several areas.
 
 ## Evidence and constraints
 
