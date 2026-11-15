@@ -1935,18 +1935,18 @@ pub emitProgram := fn(items: frontend.Items, source: String, prefix: String): Un
         } else if item.kind == "LocalInt" or item.kind == "LocalString" or item.kind == "LocalBool" or item.kind == "LocalFloat" or item.kind == "LocalTuple" {
             io.outputLine(indent + "const " + item.runtime + " = " + item.code + ";");
             io.outputLine(indent + "void " + item.runtime + ";");
-        } else if item.kind == "LocalList" {
+        } else if item.kind == "LocalList" or item.kind == "LocalFn" {
             io.outputLine(indent + "const " + item.runtime + ": " + tsFunctionType(item.textValue) + " = " + item.code + ";");
             io.outputLine(indent + "void " + item.runtime + ";");
         } else if item.kind == "VarInt" or item.kind == "VarString" or item.kind == "VarBool" or item.kind == "VarFloat" or item.kind == "VarTuple" {
             io.outputLine(indent + "let " + item.runtime + " = " + item.code + ";");
             io.outputLine(indent + "void " + item.runtime + ";");
-        } else if item.kind == "VarList" {
+        } else if item.kind == "VarList" or item.kind == "VarFn" {
             io.outputLine(indent + "let " + item.runtime + ": " + tsFunctionType(item.textValue) + " = " + item.code + ";");
             io.outputLine(indent + "void " + item.runtime + ";");
         } else if item.kind == "AssignInt" or item.kind == "AssignString" or item.kind == "AssignBool" or item.kind == "AssignFloat" or item.kind == "AssignTuple" {
             io.outputLine(indent + item.runtime + " = " + item.code + ";");
-        } else if item.kind == "AssignList" {
+        } else if item.kind == "AssignList" or item.kind == "AssignFn" {
             io.outputLine(indent + item.runtime + " = " + item.code + ";");
         } else if item.kind == "Scope" {
             io.outputLine(indent + "{");

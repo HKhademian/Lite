@@ -1,0 +1,19 @@
+io := import "core/io";
+
+Op := type fn(Int): Int;
+
+apply := fn(op: Op, x: Int): Int {
+    op(x)
+};
+
+inc := fn(x: Int): Int {
+    x + 1
+};
+
+inputLineVal := io.inputLine("x: ");
+n := io.inputInt("n: ");
+step := if inputLineVal == "double" { fn(x: Int): Int { x * 2 } } else { inc };
+io.outputLine(apply(step, n));
+io.outputLine(apply(fn(k) { k + 10 }, n));
+fact := fn(k: Int): Int { if k <= 1 { 1 } else { k * self(k - 1) } };
+io.outputLine(fact(5));

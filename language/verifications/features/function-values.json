@@ -1,0 +1,41 @@
+{
+  "id": "function.values",
+  "kind": "feature",
+  "source": {
+    "file": "function-values.lts",
+    "hash": "sha256:ef5fbecaf5dd03293312beae5df2b13da8977163dde2828056ffce842b986e85"
+  },
+  "features": [
+    "function.values"
+  ],
+  "guideline": "Checks callable type aliases, passing top-level and non-capturing fn values, contextual inference, and local self recursion.",
+  "targets": [
+    "ts"
+  ],
+  "cases": [
+    {
+      "name": "double-five",
+      "stdin": {
+        "text": "double\n5\n",
+        "hash": "sha256:5da4e51c2f341c0d1c2de2fdd7dd8bbee96881b555ad624ee61bef188bc121be"
+      },
+      "stdout": {
+        "text": "x: n: 10\n15\n120\n",
+        "hash": "sha256:d2d1b29eda18cc7a97983c8ee1b2935d45fb3b599fe4af5f2a2a9f8fbf6172d9"
+      },
+      "exitCode": 0
+    },
+    {
+      "name": "inc-five",
+      "stdin": {
+        "text": "inc\n5\n",
+        "hash": "sha256:b47ea95f0f2f77867d9ebf1c8c02125bc2304832c60379e468aca12e3ddaa049"
+      },
+      "stdout": {
+        "text": "x: n: 6\n15\n120\n",
+        "hash": "sha256:3d7fe1d5d7c0612e8fb85821c2d66457680e294026df74d6ff6159e83c30310a"
+      },
+      "exitCode": 0
+    }
+  ]
+}

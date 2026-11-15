@@ -5019,3 +5019,177 @@ test('soft builtin overrides for core/int, core/text, and core/crypto match pure
     }
   }
 });
+
+test('first-class non-capturing function values, callable types, contextual inference, self recursion, and DCE work in TS', () => {
+  const directory = mkdtempSync(join(tmpdir(), 'lite-fn-values-'));
+  try {
+    const opsPath = join(directory, 'ops.lts');
+    const appPath = join(directory, 'app.lts');
+    writeFileSync(opsPath, [
+      'helper := fn(n: Int): Int { n * 2 };',
+      'pub double := fn(x: Int): Int { helper(x) };',
+      'pub unusedPub := fn(x: Int): Int { x + 999 };',
+    ].join('\n'));
+    writeFileSync(appPath, [
+      'io := import "core/io";',
+      'list := import "core/list";',
+      'opsMod := import "./ops.lts";',
+      'Op := type fn(Int): Int;',
+      'Combine := type fn(Int, String): String;',
+      'ZeroThunk := type fn(): Int;',
+      'PairOp := type (op: Op, offset: Int);',
+      'apply := fn(op: Op, x: Int): Int { op(x) };',
+      'applyPair := fn(p: PairOp): Int { p.op(p.offset) };',
+      'applyCombine := fn(f: Combine, n: Int, s: String): String { f(n, s) };',
+      'incByTen := fn(x: Int): Int { x + 10 };',
+      'bump := fn(x: Int): Int { x + 1 };',
+      'makeStep := fn(kind: Int): Op {',
+      '  if kind == 0 { fn(x) { x + 2 } } else { fn(x) { x * 3 } }',
+      '};',
+      'runNested := fn(flag: Bool): Int {',
+      '  localAdd := fn(a: Int, b: Int, c: Int): Int { a * 100 + b * 10 + c };',
+      '  b := 2; c := 3;',
+      '  routed := localAdd(9, a = 1, =b, =c);',
+      '  pair := (op = fn(n: Int): Int { n + 5 }, offset = 4);',
+      '  (extracted, offsetVal) := pair;',
+      '  matched := match { flag { fn(a: Int): Int { a + 1 } } _ { fn(b2: Int): Int { b2 * 10 } } };',
+      '  {',
+      '    bump := fn(x: Int): Int { x * 10 };',
+      '    io.outputLine("shadow", bump(3));',
+      '  }',
+      '  io.outputLine("outer", bump(3), routed, applyPair(pair), pair.0(1), extracted(offsetVal), matched(4));',
+      '  routed',
+      '};',
+      'orderTest := fn(): Unit {',
+      '  pick := fn(): fn(Int, Int): Int {',
+      '    io.outputLine("callee");',
+      '    fn(a: Int, b: Int): Int { io.outputLine("body", a, b); a - b }',
+      '  };',
+      '  arg := fn(tag: String, v: Int): Int { io.outputLine(tag); v };',
+      '  io.outputLine((pick())(arg("first", 10), arg("second", 3)));',
+      '};',
+      'var zf: fn(Int): Int;',
+      'var zt: ZeroThunk;',
+      'var zu: fn(): Unit;',
+      'var zs: fn(Int): String;',
+      'var zarr: [Op; 2];',
+      'var rf: fn(Int): Int = ?;',
+      'zu();',
+      'rf = fn(x) { x + 50 };',
+      'io.outputLine("zero", zf(9), zt(), zs(1), zarr[0](5), rf(7));',
+      'zf = fn(x) { x + 100 };',
+      'io.outputLine("reassigned", zf(7));',
+      'var dyn: fn(Int): Int = fn(n) { if n <= 1 { 1 } else { n * self(n - 1) } };',
+      'io.outputLine("rec", dyn(5), apply(fn(n) { if n <= 0 { 0 } else { n + self(n - 1) } }, 4));',
+      'dyn = fn(n) { n * 2 };',
+      'io.outputLine("reassigned2", dyn(6), apply(incByTen, 5), apply(opsMod.double, 7));',
+      'io.outputLine("step", makeStep(0)(10), makeStep(1)(10));',
+      'io.outputLine("comb", applyCombine(fn(n, s) { s + ":" }, 3, "k"));',
+      'arr: [Op; 2] = [fn(x) { x + 1 }, incByTen];',
+      'opList: mut List<Op> = [fn(x) { x * 2 }, opsMod.double];',
+      'list.pushBack(mut opList, fn(x) { x - 1 });',
+      'io.outputLine("colls", arr[0](4), arr[1](4), opList[0](5), opList[1](5), opList[2](5));',
+      'var sink: fn(Int): Unit = fn(n: Int): Unit { io.outputLine("sink", n); };',
+      'sink(42);',
+      '_ := runNested(false);',
+      'orderTest();',
+    ].join('\n'));
+    const compiled = compileTs({ text: readFileSync(appPath, 'utf8'), name: realpathSync(appPath) });
+    assert.equal(compiled.status, 0, compiled.stderr.toString());
+    const emitted = compiled.stdout.toString();
+    assert.doesNotMatch(emitted, /unusedPub/, 'unused exported function in imported module should stay pruned');
+    assert.equal(checkTsArtifact(emitted).status, 0, emitted);
+    const actual = runTsArtifact(emitted);
+    assert.equal(actual.phase, 'run', actual.stdout.toString() + actual.stderr.toString());
+    assert.equal(actual.status, 0, actual.stderr.toString());
+    assert.equal(actual.stdout.toString(), [
+      'zero 0 0  0 57',
+      'reassigned 107',
+      'rec 120 10',
+      'reassigned2 12 15 14',
+      'step 12 30',
+      'comb k:',
+      'colls 5 14 10 10 4',
+      'sink 42',
+      'shadow 30',
+      'outer 4 123 9 6 9 40',
+      'callee',
+      'first',
+      'second',
+      'body 10 3',
+      '7',
+    ].join('\n') + '\n');
+
+    const neverSrc = [
+      'io := import "core/io";',
+      'die := fn(code: Int): Int { io.exit(code); };',
+      'runExit := fn(f: fn(Int): Int): Int { f(4) };',
+      'io.outputLine(runExit(die));',
+    ].join('\n');
+    const neverCompiled = compileTs({ text: neverSrc });
+    assert.equal(neverCompiled.status, 0, neverCompiled.stderr.toString());
+    assert.equal(checkTsArtifact(neverCompiled.stdout.toString()).status, 0);
+    const neverRun = runTsArtifact(neverCompiled.stdout.toString());
+    assert.equal(neverRun.status, 4);
+    assert.equal(neverRun.stdout.toString(), '');
+
+    const neverArgSrc = [
+      'io := import "core/io";',
+      'badB := fn(): Int { io.outputLine("should-not-run"); 9 };',
+      'localAdd := fn(a: Int, b: Int): Int { a + b };',
+      'io.outputLine(localAdd(io.exit(5), badB()));',
+    ].join('\n');
+    const neverArgCompiled = compileTs({ text: neverArgSrc });
+    assert.equal(neverArgCompiled.status, 0, neverArgCompiled.stderr.toString());
+    assert.equal(checkTsArtifact(neverArgCompiled.stdout.toString()).status, 0);
+    const neverArgRun = runTsArtifact(neverArgCompiled.stdout.toString());
+    assert.equal(neverArgRun.status, 5);
+    assert.equal(neverArgRun.stdout.toString(), '');
+  } finally {
+    rmSync(directory, { recursive: true, force: true });
+  }
+});
+
+test('first-class non-capturing function rejections cover captures, shadowing, tags, cyclic aliases, and C backend', () => {
+  for (const [source, expectedMessage] of [
+    ['{ x := 1; f := fn(): Int { x }; _ := f(); }', /local functions cannot capture surrounding variable x yet/],
+    ['var x := 1; { f := fn(): Int { x }; _ := f(); }', /local functions cannot capture surrounding variable x yet/],
+    ['var x := 2; { reader := fn(): Int { return x; }; _ := reader(); }', /local functions cannot capture surrounding variable x yet/],
+    ['{ var x := 1; f := fn(): Int { x }; _ := f(); }', /local functions cannot capture surrounding variable x yet/],
+    ['var x := 1; { f := fn(): Unit { x = 2; }; f(); }', /local functions cannot capture surrounding variable x yet/],
+    ['outer := fn(p: Int): Int { inner := fn(): Int { p }; inner() }; outer(1);', /local functions cannot capture surrounding variable p yet/],
+    ['outer := fn(): Int { a := fn(): Int { 1 }; b := fn(): Int { a() }; b() }; outer();', /local functions cannot capture surrounding variable a yet/],
+    ['xs: mut List<Int> = [1]; { f := fn(): Int { xs[0] }; _ := f(); }', /local functions cannot capture surrounding variable xs yet/],
+    ['loop [1, 2] as item { f := fn(): Int { item }; _ := f(); }', /local functions cannot capture surrounding variable item yet/],
+    ['io := import "core/io"; f := fn(): Int { 1 }; { f := 2; io.outputLine(f()); }', /cannot call non-function value of type Int/],
+    ['x := "hi"; x();', /cannot call non-function value of type String/],
+    ['v := @outer { f := fn(): Int { return @outer 5; 1 }; _ := f(); 0 };', /unknown block tag @outer/],
+    ['@outer loop true { f := fn(): Unit { break @outer; }; f(); break; }', /unknown block tag @outer/],
+    ['var rf: fn(Int): Int = ?; _ := rf(1);', /cannot read uninitialized local rf/],
+    ['io := import "core/io"; f := fn(x: Int): Int { x }; g := fn(x: Int): Int { x }; io.outputLine(f == g);', /cannot compare function values/],
+    ['io := import "core/io"; f := fn(x: Int): Int { x }; g := fn(x: Int): Int { x }; io.outputLine(f =!= g);', /cannot compare function values/],
+    ['io := import "core/io"; f := fn(x: Int): Int { x }; io.outputLine(f);', /cannot output function value/],
+    ['Bad := type fn(Bad): Int; var f: Bad = ?;', /recursive type alias Bad/],
+    ['f: fn(Int): Int = fn(x, y) { x + y };', /expected : Type for parameter y/],
+    ['f: fn(Int): Int = fn(x: Int, y: Int): Int { x + y };', /cannot initialize/],
+    ['f: fn(Int): Int = fn(x) { "bad" };', /cannot return String from function/],
+    ['f := fn(x: Int): Unit { }; n: Int = f(1);', /cannot initialize Int with Unit|cannot assign/],
+    ['f := fn(a: Int): Int { a }; f(z = 1);', /unknown parameter z/],
+    ['io := import "core/io"; io.outputLine(io.inputArgs);', /function io\.inputArgs must be called/],
+  ] as const) {
+    const rejected = compileTs({ text: source });
+    assert.equal(rejected.status, 2, source + ' -> stdout:\n' + rejected.stdout.toString());
+    assert.match(rejected.stderr.toString(), expectedMessage, source + ' -> stderr: ' + rejected.stderr.toString());
+  }
+
+  for (const [source, expectedMessage] of [
+    ['{ f := fn(): Int { 1 }; _ := f(); }', /C backend does not support function values yet/],
+    ['var f: fn(Int): Int;', /C backend does not support function values yet/],
+    ['inc := fn(x: Int): Int { x + 1 }; ops: List<fn(Int): Int> = [inc];', /function inc must be called/],
+    ['inc := fn(x: Int): Int { x + 1 }; apply := fn(op: fn(Int): Int): Int { op(1) }; _ := apply(inc);', /C backend does not support indirect function calls yet/],
+  ] as const) {
+    const cRejected = compileTarget('c', { text: source });
+    assert.equal(cRejected.status, 2, source);
+    assert.match(cRejected.stderr.toString(), expectedMessage, source + ' -> stderr: ' + cRejected.stderr.toString());
+  }
+});

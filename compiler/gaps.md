@@ -174,13 +174,16 @@ Keep dependencies explicit; split a topic further when its contracts warrant it.
   reserved storage and first whole-value writes.
 - [x] **Call routing:** named/positional/shorthand arguments, replacement of
   earlier contributions and trailing argument forms.
-- [ ] **Function values and environments:** static function lookup must respect
-  later ordinary value shadowing: `f := fn(): Int { 1 } f := 2; outputLine(f());`
-  currently prints 1 on T11 while T00 rejects before effects. Compatible copies/replacement,
-  nested helpers, live captures and distinct escaped environments. Also reject
-  surrounding runtime-data capture where the current reference rejects it: T00
-  rejects `var x := 2; reader := fn(): Int { return x; }`, while T11 currently
-  accepts it. Keep admitted helper references distinct from unsupported data capture.
+- [ ] **Function values and environments:** Slice 4a (`compiler/src/`) now
+  supports `fn(Params): Return` callable types, aliases, composites/zero
+  initialization, non-capturing `fn` expressions with contextual inference and
+  `self(...)` recursion, top-level/imported functions passed as values, local
+  shadowing of top-level functions (`f := fn(): Int { 1 }; { f := 2; f(); }`),
+  and explicit rejection of surrounding mutable/local data captures
+  (`var x := 2; { reader := fn(): Int { return x; }; _ := reader(); }` and
+  nested local captures).
+  Remaining work: Slice 4b/4c general captures, mutable closure environments,
+  and escaped-closure lifetimes (plus C-backend function values).
 - [x] **Never-valued exit:** preserve the reference's Never result in value
   contexts. T00 rejects `Unit == exit(3)` before effects, while the current TS
   frontend treats exit as Unit and accepts it. Conversely, an Int-returning

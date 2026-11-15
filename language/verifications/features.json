@@ -133,6 +133,15 @@
       ]
     },
     {
+      "id": "function.values",
+      "summary": "Callable types and non-capturing function values on generated TS.",
+      "case": "features/function-values.json",
+      "status": "verified",
+      "docs": [
+        "docs/functions.md"
+      ]
+    },
+    {
       "id": "tuple.shape",
       "summary": "Flat tuple values and fields.",
       "case": "features/tuple-shape.json",

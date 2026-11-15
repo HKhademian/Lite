@@ -47,6 +47,15 @@ ordinary List<T> inputs/results with exact element contracts and preserved
 sequence copies. Mut grants are limited to the four temporary list operations;
 general user-function mut parameters remain unsupported.
 
+The generated TS compiler (Slice 4a) also supports `fn(Params): Return`
+callable types (in aliases, tuples, lists, fixed arrays, and zero-initialized
+bindings), non-capturing first-class `fn` expressions with contextual parameter
+and return inference and `self(...)` recursion, passing top-level and imported
+public functions as values, local declarations overriding/shadowing top-level
+functions, and direct/indirect calls preserving callee-before-arguments
+evaluation order. Surrounding runtime variable captures (`var`/local/`mut`) and
+C-backend function values remain explicitly rejected pending Slice 4b/4c.
+
 ## Template
 
 ```text
