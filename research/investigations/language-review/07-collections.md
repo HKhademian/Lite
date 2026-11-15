@@ -41,6 +41,12 @@ Status: **preliminary, 2026-11-15; awaiting joint review**. All recommendations 
 
 **Initial assessment and probes:** For a 2 GB list, compare independent value semantics, an optimized-away copy, and an explicit no-copy read-only view. Clarify lifetime, retention and mutation before choosing a mechanism.
 
+## Working judgment
+
+Keep fixed extent, element homogeneity, growth, ownership, and view access as independent properties. Arrays may merit distinct behavior even with tuple-equivalent layout, but runtime indexing and length must earn any separate conceptual machinery.
+
 ## Cross-topic routing
 
 Types (1), access and lifetimes (2), and generic capabilities (10) are prerequisites. Record new decisions with their owning area; return to this review after the dependency is understood.
+
+Related preliminary notes: [1](01-core-types.md), [2](02-bindings.md), [10](10-generics-comptime.md).

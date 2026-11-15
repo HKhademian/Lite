@@ -4,6 +4,7 @@ Status: **preliminary, 2026-11-15; awaiting joint review**. All recommendations 
 
 ## Baseline and sources
 
+- [Result and errors](../../../docs/result-and-errors.md)
 - [Expression recovery](../../../docs/expression-recovery.md)
 - [Finally](../../../docs/finally.md)
 - [Manual failures and inference](../../../docs/manual-failures-and-inference.md)
@@ -39,6 +40,12 @@ Status: **preliminary, 2026-11-15; awaiting joint review**. All recommendations 
 
 **Initial assessment and probes:** Trace normal return, returned error and panic through nested cleanup, then a cleanup failure. Resource lifetime, hard abort and full attachment grammar remain open.
 
+## Working judgment
+
+Keep recoverable errors and panics distinguishable while making ordinary propagation and cleanup predictable. Compare handler boundaries with failures during argument evaluation; simple syntax should not obscure which effects have already happened.
+
 ## Cross-topic routing
 
 Control flow (6), resource lifetimes (2), and compile-time execution (10) share failure paths. Record new decisions with their owning area; return to this review after the dependency is understood.
+
+Related preliminary notes: [2](02-bindings.md), [6](06-control-flow.md), [10](10-generics-comptime.md).

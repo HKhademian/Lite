@@ -1,6 +1,6 @@
 # Language review: ten foundational areas
 
-Status: **initial review in progress, 2026-11-15**. This is a non-normative
+Status: **initial reviews recorded, 2026-11-15; joint review pending**. This is a non-normative
 investigation for the joint, one-at-a-time review. Current selections remain the
 baseline until explicitly revised; initial judgments are starting hypotheses,
 not approval, implementation evidence, or a substitute for concrete decisions.
@@ -29,23 +29,14 @@ resolve every edge case. No item below is acceptance of a recommendation.
 The following notes are recorded as provisional starting points:
 
 - [1. Core types and values](01-core-types.md)
-
 - [2. Bindings, mutation, and lifetime](02-bindings.md)
-
 - [3. Records](03-records.md)
-
 - [4. Enums and variants](04-enums.md)
-
 - [5. Functions and calls](05-functions.md)
-
 - [6. Control flow and patterns](06-control-flow.md)
-
 - [7. Collections](07-collections.md)
-
 - [8. Errors, panics, and cleanup](08-failure-cleanup.md)
-
 - [9. Modules and public APIs](09-modules.md)
-
 - [10. Generics and compile-time evaluation](10-generics-comptime.md)
 
 ## Starting context

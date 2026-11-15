@@ -40,6 +40,12 @@ Status: **preliminary, 2026-11-15; awaiting joint review**. All recommendations 
 
 **Initial assessment and probes:** A function accepting only Int cannot safely stand in for one promising to accept Int or String. Check defaults, labels, effects, state access and error channels individually.
 
+## Working judgment
+
+Preserve simple function signatures where sound; compare inference and specialization before exposing callback state requirements everywhere. Any approach must still explain whether calls mutate independent copied state or the caller’s retained state and how separate compilation checks it.
+
 ## Cross-topic routing
 
 Bindings (2), errors (8), and generics (10) affect calls and callback contracts. Record new decisions with their owning area; return to this review after the dependency is understood.
+
+Related preliminary notes: [2](02-bindings.md), [8](08-failure-cleanup.md), [10](10-generics-comptime.md).

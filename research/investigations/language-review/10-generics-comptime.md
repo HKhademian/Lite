@@ -35,10 +35,16 @@ Status: **preliminary, 2026-11-15; awaiting joint review**. All recommendations 
 
 ## 10.5 Build-time effects
 
-**Baseline:** File, network, environment and other effects require a contract for dependencies, reproducibility and failures.
+**Baseline:** The selected direction intends compile-time I/O, including files, input and network resources; permissions, dependencies, reproducibility and failure details remain open.
 
-**Initial assessment and probes:** A compile-time read of a configuration file can change output without source changes. Compare rejecting effects, declaring dependencies, and allowing controlled effects; check caching and offline builds.
+**Initial assessment and probes:** A compile-time read of a configuration file can change output without source changes. Evaluate declared dependencies and controlled access against the selected effectful direction; check caching, offline builds and whether particular contexts need stricter limits. A general ban would revisit that direction.
+
+## Working judgment
+
+Favor ordinary functions usable across stages and requirements driven by actual operations. Explicit effects and dependency tracking could improve reproducibility, but their cost and ergonomics need concrete builds; do not remove intended compile-time I/O by assumption.
 
 ## Cross-topic routing
 
 Types (1), functions (5), modules (9), and failures (8) affect generic and compile-time contracts. Record new decisions with their owning area; return to this review after the dependency is understood.
+
+Related preliminary notes: [1](01-core-types.md), [5](05-functions.md), [8](08-failure-cleanup.md), [9](09-modules.md).

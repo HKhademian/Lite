@@ -4,6 +4,7 @@ Status: **preliminary, 2026-11-15; awaiting joint review**. All recommendations 
 
 ## Baseline and sources
 
+- [Loops](../../../docs/loops.md)
 - [Evaluation order](../../../docs/evaluation-order.md)
 - [Conditionals](../../../docs/conditionals.md)
 - [Match](../../../docs/match.md)
@@ -41,6 +42,12 @@ Status: **preliminary, 2026-11-15; awaiting joint review**. All recommendations 
 
 **Initial assessment and probes:** Trace nested loops where an inner break executes cleanup; compare return and panic. Do not invent semantics for `return @tag value;` while its contract is unresolved.
 
+## Working judgment
+
+Prefer rules that make execution and cleanup traceable in source order. Avoid adding a special pattern or control transfer until it solves a concrete case the existing constructs cannot; account for value-required versus action contexts.
+
 ## Cross-topic routing
 
 Bindings (2), enums (4), collections (7), and cleanup (8) supply important interaction cases. Record new decisions with their owning area; return to this review after the dependency is understood.
+
+Related preliminary notes: [2](02-bindings.md), [4](04-enums.md), [7](07-collections.md), [8](08-failure-cleanup.md).

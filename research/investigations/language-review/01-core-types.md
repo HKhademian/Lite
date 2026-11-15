@@ -42,6 +42,12 @@ Status: **preliminary, 2026-11-15; awaiting joint review**. All recommendations 
 
 **Initial assessment and probes:** Compare `Int | String` with `String | Int`; first-written-member zero would conflict with order-independent identity. Revisit equality, numeric operations, valid zero and distinct-type invariants together, without choosing a zero member now.
 
+## Working judgment
+
+Treat type identity, conversion, operations, and physical representation as separate decisions. Two-way nominal distinction appears useful for IDs; a typed declaration may itself be an explicit request, so compare it against the existing tuple-label rule before choosing. A direct literal deserves its own case.
+
 ## Cross-topic routing
 
 Records (3), enums (4), collections (7), and generic constraints (10) depend on these choices. Record new decisions with their owning area; return to this review after the dependency is understood.
+
+Related preliminary notes: [3](03-records.md), [4](04-enums.md), [7](07-collections.md), [10](10-generics-comptime.md).

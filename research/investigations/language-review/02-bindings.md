@@ -41,6 +41,12 @@ Status: **preliminary, 2026-11-15; awaiting joint review**. All recommendations 
 
 **Initial assessment and probes:** For a 2 GB list, distinguish a value copy that an optimizer may remove from a requested no-copy read-only access. Writable access is a separate question; revisit the user’s `run_twice` callback and escaping counter without choosing `ref` syntax.
 
+## Working judgment
+
+Keep replacement and writable held-data access independent. Give a no-copy request a semantic contract separate from optimizable value passing; the practical cost is lifetime and alias analysis, which should be justified with real large-value and callback cases.
+
 ## Cross-topic routing
 
 Functions (5), collections (7), and cleanup (8) share the copy, access, and lifetime boundaries. Record new decisions with their owning area; return to this review after the dependency is understood.
+
+Related preliminary notes: [5](05-functions.md), [7](07-collections.md), [8](08-failure-cleanup.md).

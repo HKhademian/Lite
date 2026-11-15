@@ -4,6 +4,7 @@ Status: **preliminary, 2026-11-15; awaiting joint review**. All recommendations 
 
 ## Baseline and sources
 
+- [Enums and variants](../../../docs/enums-and-variants.md)
 - [Union normalization](../../../docs/union-normalization.md)
 - [Match](../../../docs/match.md)
 - [Zero initialization](../../../docs/zero-initialization.md)
@@ -11,7 +12,7 @@ Status: **preliminary, 2026-11-15; awaiting joint review**. All recommendations 
 
 ## 4.1 Definition and identity
 
-**Baseline:** Enum cases and plain-union members are not automatically collapsed into their payloads. Complete enum declaration and identity details need their owning review.
+**Baseline:** Plain and payload-case matching, contextual case shorthand, backing-type headers, and assigned case values are selected. An enum case is not implicitly its backing value; complete declaration and identity details remain open.
 
 **Initial assessment and probes:** Compare two enums each having a `Ready` case and a plain union of their payloads. Determine what identifies a case across aliases and modules.
 
@@ -39,6 +40,12 @@ Status: **preliminary, 2026-11-15; awaiting joint review**. All recommendations 
 
 **Initial assessment and probes:** Compare declaration-order zero, an explicitly designated case, and a constrained enum with no obvious default. Consider case evolution, stable identity, and cleanup of payloads.
 
+## Working judgment
+
+Keep case identity separate from backing values and payload types. Exhaustive matching should be assessed with guarded arms and enum evolution; a designated zero may be more understandable than arbitrary ordering, but may constrain future case changes.
+
 ## Cross-topic routing
 
 Types (1), patterns (6), and failure outcomes (8) interact with case identity and payloads. Record new decisions with their owning area; return to this review after the dependency is understood.
+
+Related preliminary notes: [1](01-core-types.md), [6](06-control-flow.md), [8](08-failure-cleanup.md).

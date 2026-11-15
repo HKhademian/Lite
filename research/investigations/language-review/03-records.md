@@ -41,6 +41,12 @@ Status: **preliminary, 2026-11-15; awaiting joint review**. All recommendations 
 
 **Initial assessment and probes:** Compare independently changing a copied inline field with following a copied reference. Evaluate equality, visibility, and cleanup without presuming deep cloning.
 
+## Working judgment
+
+Keep field-oriented records as their own concept while reusing consistent field syntax and value rules where possible. Name-only access protects abstraction but makes positional interoperability less convenient; explicit reconstruction is the baseline for distinct record types.
+
 ## Cross-topic routing
 
 Types (1), bindings (2), patterns (6), and modules (9) own related boundaries. Record new decisions with their owning area; return to this review after the dependency is understood.
+
+Related preliminary notes: [1](01-core-types.md), [2](02-bindings.md), [6](06-control-flow.md), [9](09-modules.md).

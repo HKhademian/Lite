@@ -4,6 +4,7 @@ Status: **preliminary, 2026-11-15; awaiting joint review**. All recommendations 
 
 ## Baseline and sources
 
+- [Compiler module import stages](../../../compiler/module-import-stages.md)
 - [Modules and packages](../../../docs/modules-and-packages.md)
 - [Visibility](../../../docs/visibility.md)
 - Related investigation catalog areas: INV-006, INV-007, INV-071.
@@ -38,6 +39,12 @@ Status: **preliminary, 2026-11-15; awaiting joint review**. All recommendations 
 
 **Initial assessment and probes:** Compare a local module, a reusable library, and two versions of a dependency. Decide identity, discovery, reproducibility, and replacement boundaries before choosing package syntax.
 
+## Working judgment
+
+Use explicit module qualification and minimal public surface as the starting point. Avoid coupling module identity to filesystem or package choices prematurely; compile-time-known initialization limits early flexibility but makes dependencies easier to reason about.
+
 ## Cross-topic routing
 
 Records (3), functions (5), and compile-time effects (10) determine public and initialization contracts. Record new decisions with their owning area; return to this review after the dependency is understood.
+
+Related preliminary notes: [3](03-records.md), [5](05-functions.md), [10](10-generics-comptime.md).
