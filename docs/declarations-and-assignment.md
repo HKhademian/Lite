@@ -165,15 +165,16 @@ Within one destructuring pattern, names bind in recursive written order and late
 
 A conditional pattern binding may shadow the outer source name inside its matching branch. Resolve the source expression before introducing the narrowed name; the new binding does not alter the outer binding's type or mutability and is not visible in sibling branches. See [union type patterns](union-patterns.md).
 
-For every executable block, including a run file, ordinary eager code cannot use
-a later binding. The [deferred function-body exception](functions.md#deferred-body-lookup)
-permits later-name references without moving initialization. It does not make a
-callable available before its own initializer or permit uninitialized reads.
-For a permitted surrounding reference, an already-visible binding is
-[retained across later shadows](functions.md#existing-bindings-survive-later-shadowing).
-This binding-selection rule does not grant implicit local capture.
-With no earlier target, the [same-block forward rule](functions.md#first-later-binding-in-the-defining-block)
-selects the first subsequent same-name ordinary binding. The
+For every executable block, including a script body, later same-block symbols
+may be resolved independently of serial execution, but ordinary eager reads
+before their initialization are rejected. Deferred function bodies can also
+refer to later symbols without moving initialization. Neither visibility rule
+makes a callable usable before its initializer or permits uninitialized reads.
+For a permitted surrounding reference, an earlier binding in the defining
+block is [retained across later same-block shadows](functions.md#existing-bindings-survive-later-shadowing).
+When no earlier same-block symbol exists, a [later defining-block symbol takes
+priority over an outer symbol](functions.md#nearer-forward-symbols-before-outer-symbols)
+in the selected case. These rules do not grant implicit local capture. The
 [direct self-reference case](functions.md#direct-self-reference-without-an-earlier-target)
 permits a function's own name in its deferred body when no earlier target exists,
 without a separate header. Explicit [self(...) calls](functions.md#explicit-current-function-self-calls)

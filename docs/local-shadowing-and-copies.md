@@ -25,11 +25,11 @@ The typed equivalents place mut after the colon, as in x: mut User = source. The
 
 The later [deferred function-body direction](functions.md#deferred-body-lookup)
 permits references to lower declarations without executing the body or moving
-initialization. For permitted surrounding references, a body
-[retains an already-visible binding across later shadowing](functions.md#existing-bindings-survive-later-shadowing);
-this lookup rule does not itself grant implicit local capture.
-When no earlier binding exists, the [same-block forward rule](functions.md#first-later-binding-in-the-defining-block)
-selects the first subsequent same-name ordinary binding. A
+initialization. For permitted surrounding references, a body retains an
+[already-visible same-block binding across a later same-block shadow](functions.md#existing-bindings-survive-later-shadowing).
+When no earlier same-block binding exists, a [later defining-block symbol takes
+priority over an outer symbol](functions.md#nearer-forward-symbols-before-outer-symbols).
+These lookup rules do not themselves grant implicit local capture. A
 [direct self-reference](functions.md#direct-self-reference-without-an-earlier-target)
 may select the function's own binding when no earlier same-name binding exists.
 An [explicit self call](functions.md#explicit-current-function-self-calls) targets

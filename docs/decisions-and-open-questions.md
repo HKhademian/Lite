@@ -1,8 +1,35 @@
 # Decisions and open questions
 
-Dated decision ledger, updated through **2026-11-05**. Older entries retain their
+Dated decision ledger, updated through **2026-11-15**. Older entries retain their
 original scope. Decisions do not establish compiler conformance; use
 [the transition](../compiler/transition-plan.md) for current execution evidence.
+
+## Nearer forward value symbols, 2026-11-15
+
+For an admitted deferred-body reference with no earlier same-name symbol in
+its defining executable block, a later ordinary value symbol in that block
+takes precedence over an already-visible symbol in an outer block. This keeps
+the selected local symbol stable when the containing function is moved to a
+context with an unrelated outer name. Its initializer is not hoisted; actual
+execution remains serial and reads require initialization. Earlier same-block
+bindings retain their identity across later same-block shadows. Further nested
+lookup, control-flow scopes, self-name collisions, capture and lifetimes remain
+open. See [nearer forward symbols](functions.md#nearer-forward-symbols-before-outer-symbols).
+This selection supersedes the broader outer-binding priority in the 2026-10-29
+historical entries below; it does not claim compiler support.
+
+## Symbol discovery and serial execution, 2026-11-15
+
+Symbols in an executable block can be discovered independently of textual
+execution order, including from ordinary eager expressions. Execution of
+reached items remains serial: resolving a later value does not initialize it,
+and an eager read before initialization is rejected. Script and ordinary
+function bodies share this direction. Ordinary shadow-initializer rules remain
+in force; further collision and nested-scope details remain open. This revises
+the earlier description of eager code as unable to *resolve* a later symbol,
+without allowing an early read or hoisting a later initializer. See [block
+order](evaluation-order.md#executable-block-items). No compiler support is
+claimed.
 
 ## Compile-and-execute runner adapter, 2026-11-05
 
@@ -1102,7 +1129,8 @@ records the selection and next conflict probe. No compiler/runtime is implemente
 
 ## First later binding in the defining block, 2026-10-29
 
-- For an admitted deferred-body reference with no earlier lexical target,
+- Historical scope, clarified 2026-11-15: for an admitted deferred-body
+  reference with no earlier same-block target,
   select the first subsequent same-name ordinary binding declaration in the
   defining executable block. Keep that identity across later shadows and call
   positions; apply the same rule to callable and other ordinary values.
@@ -1138,6 +1166,9 @@ records the selection. No compiler/runtime or lifetime analysis is implemented.
 
 ## Deferred-body binding identity and shadowing, 2026-10-29
 
+- Historical scope, clarified 2026-11-15: the rule below holds for earlier
+  symbols in the defining block; a later defining-block symbol now takes
+  priority over an outer symbol in the selected nested case.
 - Source order still matters when function execution is deferred. For a
   surrounding reference admitted by the access/capture rules, a free
   reference retains the binding already visible under ordinary lexical lookup
@@ -1277,8 +1308,9 @@ semantics or a runner/compiler implementation.
 ## Block order, deferred bodies, and module lookup, 2026-10-28
 
 - Every executable code block, including a run-file body, evaluates reached
-  items top to bottom. Ordinary eager code cannot use later bindings; ordinary
-  shadowing preserves the order of the earlier and new bindings.
+  items top to bottom. The later 2026-11-15 clarification permits eager code
+  to resolve later symbols but not read their values before initialization;
+  ordinary shadowing preserves the order of the earlier and new bindings.
 - A deferred function body may refer to later identifiers. Creating the callable
   does not execute that body or move later initialization earlier. The callable
   binding itself is not hoisted. Name visibility does not permit uninitialized

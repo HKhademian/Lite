@@ -587,15 +587,16 @@ The selected independent analysis of deferred bodies against serial-block
 value state, and the first-stage rule for calls that read an uninitialized value, are
 recorded in [INV-003.02](../research/investigations/INV-003-02-declarations-and-lookup.md#deferred-bodies-and-serial-block-value-state-2026-11-15).
 
-Selected direction, 2026-10-28: a function body may refer to identifiers declared
-later in its enclosing code block. Creating a function value does not execute
-its body. When invoked, the body's executable blocks still run top to bottom;
-ordinary eager expressions inside them do not acquire general forward lookup.
-This direction applies equally to full function literals and lambda spellings.
+Selected direction, 2026-10-28, clarified 2026-11-15: a function body may
+refer to identifiers declared later in its enclosing code block. Creating a
+function value does not execute its body. When invoked, its executable blocks
+still run top to bottom. Ordinary eager expressions can also resolve later
+same-block symbols, but cannot read their values before initialization. This
+direction applies equally to full function literals and lambda spellings.
 
-The exception concerns a deferred body, not early availability of its containing
+Deferred execution does not imply early availability of the containing
 binding. Calling an ordinary function-valued binding before its initializer is
-not permitted by the exception. Nor does future-name visibility authorize reading
+not permitted. Nor does future-name visibility authorize reading
 an uninitialized value or implicitly run a later initializer early.
 
 ```text
@@ -678,12 +679,11 @@ cases as passing.
 
 ### Existing bindings survive later shadowing
 
-Selected **2026-10-29**, for surrounding references admitted by the applicable
-access/capture rules: a free reference in a deferred function body retains
-the binding already visible under ordinary lexical lookup where that function
-is defined. A later same-name declaration in the defining scope creates a new
-binding; it does not redirect that reference. Deferring execution does not erase
-source order for binding selection.
+Selected **2026-10-29**, clarified **2026-11-15**: for admitted surrounding
+references, an already-visible binding in the function's defining block
+retains its identity across a later same-block shadow. This does not give an
+earlier visible binding in an outer block priority over a later binding in the
+defining block; see [nearer forward symbols](#nearer-forward-symbols-before-outer-symbols).
 
 ```text
 value := 1;
@@ -698,17 +698,63 @@ binding's value; deliberate value copies retain their ordinary behavior.
 The permitted surrounding-access surface is under reconsideration in
 [INV-003.02](../research/investigations/INV-003-02-declarations-and-lookup.md#surrounding-access-reconsideration-2026-10-29).
 Mutation, retention, and escaping lifetimes keep
-their separate contracts. The forward-reference direction applies when no
-appropriate earlier binding is visible; the same-block rule below selects its
-first subsequent declaration. Nested-scope lookup, self-name collisions, and mutual recursion
+their separate contracts. When no earlier same-name binding exists in the
+defining block, the same-block rule below selects its first subsequent
+declaration before falling back to the outer symbol in the selected case.
+Further nested-scope lookup, self-name collisions, and mutual recursion
 remain open. Ordinary local bindings
 inside the function body still follow their own sequential lexical scope.
 
+### Nearer forward symbols before outer symbols
+
+Selected **2026-11-15**: for an admitted deferred-body reference, a later
+same-name ordinary value symbol in the function's defining executable block
+takes precedence over an already-visible symbol in an outer block when no
+earlier same-name symbol exists in the defining block. The same local target
+is chosen as if the outer symbol were absent. This keeps moving or copying the
+containing function to a context with an unrelated outer name from silently
+changing that reference's target.
+
+```text
+/* Illustrative script or function body; access and lifetimes assumed valid. */
+x := 1;
+test := fn (): Int {
+    get := fn (): Int { x }
+    x := 2;
+    get()
+}
+result := test(); /* 2: get refers to test's x, not the outer x */
+```
+
+The execution trace defines `get`, initializes the inner `x` to 2, and only
+then calls `get`, which reads that inner value. Removing the outer `x := 1`
+does not change this selection. Defining `get` does not execute its body or
+initialize the later symbol. If the call reaches a read before that symbol is
+initialized, the existing first-stage static-safety rule applies; do not fall
+back to the outer value.
+
+This choice is about a nearer **value symbol**, not a special rule for
+functions: the selected same-block rule also applies to ordinary callable
+values. It preserves an earlier same-block symbol across later same-block
+shadows, as above, and does not permit unrestricted capture. Full multi-level
+forward search, conditional scopes, type/import name collisions, self-name and
+mutual recursion rules, initialization proofs and escaping lifetimes remain
+open. It is language design, not an implementation claim or a request to
+implement advanced compiler analysis now.
+
+Pending cases, not compiler passes: the illustrated program gives 2 with and
+without the outer `x`; an early call that reaches the inner `x` before its
+initializer is rejected under the initial safety rule; without a suitable
+same-block `x`, the admitted outer `x` is used; and an earlier same-block `x`
+remains selected across a later same-block shadow. Apply the same identity
+boundaries to callable-valued symbols and to separately tested nested scopes.
+
 ### First later binding in the defining block
 
-Selected **2026-10-29**: for an admitted deferred-body reference with no earlier
-lexical binding target, select the first subsequent same-name ordinary binding
-declaration in the defining executable block. Keep that binding identity;
+Selected **2026-10-29**, clarified **2026-11-15**: for an admitted deferred-body
+reference with no earlier same-name binding in the defining executable block,
+select the first subsequent same-name ordinary binding in that block before an
+outer binding in the case above. Keep that binding identity;
 later shadows and call positions do not redirect the reference. This selection
 is the same for callable-valued and other ordinary bindings.
 
@@ -722,8 +768,8 @@ b := read_value(); /* 1 */
 
 Do not hoist the selected initializer. A call that reaches the binding before
 initialization is subject to the initial static-enforcement rule. An earlier
-visible binding, including an initialized zero callable, is retained under the
-preceding rule instead of falling through to a later declaration.
+same-block binding, including an initialized zero callable, is retained under
+the preceding rule instead of falling through to a later declaration.
 
 The direct self-reference rule below handles the declaration currently being
 initialized before falling through to strictly later declarations.

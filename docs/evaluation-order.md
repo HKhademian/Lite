@@ -14,23 +14,39 @@ Make expressions with calls and other observable effects predictable independent
 
 ## Executable block items
 
-Selected 2026-10-28: every executable code block evaluates its reached items from
-top to bottom. Ordinary eager code cannot use a binding introduced by a later
-item. Sequential shadowing preserves that order: an ordinary initializer uses
-previously visible bindings before its new binding is introduced. This includes
-the implicit run-file body. Module declaration namespaces have a separate
+Selected 2026-10-28, clarified 2026-11-15: every executable code block evaluates
+its reached items from top to bottom. Symbols in the block can be discovered
+independently of textual execution order, including by an ordinary eager
+expression, but discovery does not initialize a value. An eager read of a
+later uninitialized value is rejected; do not execute its initializer early.
+Sequential shadowing still applies: an ordinary initializer uses previously
+visible bindings before introducing its new binding. This includes the implicit
+script-file body and ordinary function bodies. The exact handling of symbol
+collisions and all nested scopes remains open; module namespaces have a separate
 [lookup direction](modules-and-packages.md#module-lookup-without-header-files).
+
+```text
+/* Design cases, not compiler-pass claims. */
+first := later; /* later can be resolved, but this read is too early: reject */
+later := 5;
+```
+
+Here `later` is a known symbol, not a known initialized value at the point of
+the read. The selected rule does not let compile-time knowledge silently reorder
+the execution of the serial block. An initializer such as `x := x` still
+follows the existing ordinary shadow-initializer rule.
 
 A function literal's body is deferred: creating the callable does not execute
 that body. The [deferred-body lookup direction](functions.md#deferred-body-lookup)
-permits references to later identifiers without moving their initialization or
-making the callable itself available early. Name visibility does not make an
+also permits references to later identifiers without moving their initialization
+or making the callable itself available early. Name visibility does not make an
 uninitialized value readable. The
 [initial static enforcement](functions.md#initial-static-enforcement) rejects
 evident early reads and conservatively rejects unproved calls in the initial
 subset. The [same-block forward target](functions.md#first-later-binding-in-the-defining-block)
-is the first subsequent same-name ordinary binding when no earlier target
-exists; its initializer still runs in order. A
+is the first subsequent same-name ordinary binding when no earlier same-block
+target exists; in the selected nested case it takes priority over an outer
+symbol. Its initializer still runs in order. A
 [direct recursive self-reference](functions.md#direct-self-reference-without-an-earlier-target)
 can resolve the current function binding when no earlier same-name binding
 exists, without making its value readable before initialization. Nested-scope

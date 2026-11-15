@@ -10,6 +10,54 @@ Subtopic brief: [INV-003.02](SUBTOPICS.md#inv-003-02)
 This is a non-normative investigation note outside the language draft. Options
 and recommendations do not select a language rule.
 
+## Nearer forward value symbol, 2026-11-15
+
+The user selects the symbol in the deferred function's defining block over an
+earlier visible symbol in an outer block, in the case where the defining-block
+symbol occurs later and there is no earlier same-name symbol in that block.
+The motivation is that moving or copying the containing function into another
+environment with an unrelated outer symbol should not silently retarget the
+reference. This revises the broad outer-binding priority in the historical
+2026-10-29 discussion below; its same-block shadowing example remains intact.
+
+```text
+x := 1;
+test := fn (): Int {
+    get := fn (): Int { x }
+    x := 2;
+    get()
+}
+result := test(); /* 2, with or without the outer x */
+```
+
+Execution trace: define the outer value and `test`; call `test`; define `get`
+without executing its body; initialize the inner `x`; call `get`; read that
+inner `x`; return 2. The selected symbol is the inner `x` even though it is
+declared later in the defining block. A call reaching its read before the
+inner initializer is rejected under the existing initial safety rule, rather
+than redirected to the outer `x`. Full multi-level lookup, conditional scopes,
+self-name collisions, capture and lifetime rules remain open. The
+[function reference](../../docs/functions.md#nearer-forward-symbols-before-outer-symbols)
+owns the selected direction; these are pending cases, not compiler passes.
+
+## Symbol discovery is separate from execution, 2026-11-15
+
+The user describes symbol discovery as knowing neighboring symbols without
+serial execution. The user confirms that an ordinary eager expression can
+resolve a later same-block symbol, but a read before that symbol is initialized
+is rejected. This is not concurrent execution. Reached executable items remain
+serial in scripts and ordinary function bodies; resolving a name does not hoist
+its initializer. In particular, `first := later; later := 5;` resolves `later`
+but rejects its early read. The ordinary `x := x` shadow initializer retains
+its selected previous-binding rule. Exact collision, scope and cycle handling
+remains open. This revises the historical statement below that eager code does
+not know later bindings, without relaxing initialization safety.
+
+Pending cases, not compiler passes: an eager reference to a later symbol is
+resolved and rejected as an early read; a reference after initialization reads
+the value; a deferred body reads after initialization when called safely; and
+an earlier same-block shadow initializer still reads the previous binding.
+
 ## Deferred bodies and serial-block value state, 2026-11-15
 
 Use [execution traces](README.md#execution-traces-for-ambiguity-analysis) to
