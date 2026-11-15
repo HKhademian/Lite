@@ -1,7 +1,11 @@
 # Compiler and performance baseline for the language review
 
 Snapshot: 2026-11-15, source revision `5b1dbdce`, before these review-only
-changes. Evidence applies to this checkout and the stated source forms, not every
+changes. The full execution and probes were repeated in a `git archive` copy of
+that revision after concurrent compiler edits appeared in the shared checkout.
+The archive used the checkout's installed TypeScript dependencies through a
+symlink; an initial run before linking them failed because `tsc` was missing,
+then the uncached rerun passed. Evidence applies to that snapshot and the stated source forms, not every
 form of a language feature. Later compiler changes require a fresh assessment.
 The design docs may describe a selected language rule before the generated
 compiler implements it. Older igniter or C results are historical evidence and
@@ -32,7 +36,7 @@ absence of a particular helper proves a native lowering cost.
 
 ## Commands and observed results
 
-- `./bin/lite verify --all`: **86 executed, 0 cached, all passed** on generated
+- `./bin/lite verify --all --no-cache`: **86 executed, 0 cached, all passed** on generated
   TS, including feature and consumer scenarios. This is the finite set in the
   maintained manifests, not exhaustive language coverage or C execution.
 - `./bin/lite verify --coverage`: 41 registered features, 41 feature cases,
