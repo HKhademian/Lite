@@ -230,6 +230,61 @@ pub discoverAllCaseFiles := fn(rootDir: String): List<String> {
     path.collectFiles(rootDir, roots, ".case.json", ignored, false)
 }
 
+/** Returns true when `candidate` matches `filter` (literal substring or `*` wildcard glob). */
+matchesCaseFilter := fn(candidate: String, filter: String): Bool {
+    if filter == "" { return true; }
+    if not text.containsText(filter, "*") {
+        return text.containsText(candidate, filter);
+    }
+    filterLen := text.length(filter);
+    startsWild := text.at(filter, 0) == "*";
+    endsWild := text.at(filter, filterLen - 1) == "*";
+    parts: mut List<String> = [];
+    var segStart := 0;
+    var i := 0;
+    loop i <= filterLen {
+        atEnd := i == filterLen;
+        if atEnd or text.at(filter, i) == "*" {
+            if i > segStart {
+                list.pushBack(mut parts, text.slice(filter, segStart, i));
+            }
+            segStart = i + 1;
+        }
+        i = i + 1;
+    }
+    partCount := list.listCountText(parts);
+    if partCount == 0 { return true; }
+    candLen := text.length(candidate);
+    var cursor := 0;
+    var idx := 0;
+    loop idx < partCount {
+        part := parts[idx];
+        partLen := text.length(part);
+        if idx == 0 and not startsWild {
+            if not text.startsWithAt(candidate, 0, part) { return false; }
+            cursor = partLen;
+        } else if idx == partCount - 1 and not endsWild {
+            if candLen < partLen or cursor > candLen - partLen or not text.endsWith(candidate, part) {
+                return false;
+            }
+            cursor = candLen;
+        } else {
+            found := text.indexOfText(candidate, part, cursor);
+            if found < 0 { return false; }
+            cursor = found + partLen;
+        }
+        idx = idx + 1;
+    }
+    true
+}
+
+matchesCaseEntry := fn(rootDir: String, caseId: String, caseFile: String, filter: String): Bool {
+    if filter == "" { return true; }
+    if matchesCaseFilter(caseId, filter) { return true; }
+    relFile := path.relative(rootDir, caseFile);
+    matchesCaseFilter(relFile, filter)
+}
+
 /** Validates all discovered cases, ensures unique IDs, and verifies at least one case matches `filter`. */
 pub validateCaseSet := fn(rootDir: String, filter: String): (ok: Bool, matchCount: Int, error: String) {
     files := discoverAllCaseFiles(rootDir);
@@ -245,7 +300,7 @@ pub validateCaseSet := fn(rootDir: String, filter: String): (ok: Bool, matchCoun
             return (ok = false, matchCount = 0, error = "duplicate case IDs");
         }
         list.pushBack(mut seenIds, checked.id);
-        if filter == "" or text.containsText(checked.id, filter) {
+        if matchesCaseEntry(rootDir, checked.id, caseFile, filter) {
             matches = matches + 1;
         }
     }
@@ -255,7 +310,7 @@ pub validateCaseSet := fn(rootDir: String, filter: String): (ok: Bool, matchCoun
     (ok = true, matchCount = matches, error = "")
 }
 
-/** Returns discovered `.case.json` files whose manifest `id` matches `filter`. */
+/** Returns discovered `.case.json` files whose manifest `id` or path matches `filter`. */
 pub selectCaseFiles := fn(rootDir: String, filter: String): List<String> {
     files := discoverAllCaseFiles(rootDir);
     if filter == "" { return files; }
@@ -264,7 +319,7 @@ pub selectCaseFiles := fn(rootDir: String, filter: String): List<String> {
         readRes := fs.readText(caseFile);
         if readRes.ok {
             idRes := json.readObjectString(readRes.text, 0, "id");
-            if idRes.found and idRes.ok and text.containsText(idRes.value, filter) {
+            if idRes.found and idRes.ok and matchesCaseEntry(rootDir, idRes.value, caseFile, filter) {
                 list.pushBack(mut selected, caseFile);
             }
         }

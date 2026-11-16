@@ -2912,6 +2912,93 @@ export function main(lite$write?: (text: string) => void): string {
         return [...(liteFn$lib$core$path$collectFiles(lite_rootDir, [...(lite_roots)], ".case.json", [...(lite_ignored)], false))];
     }
     void liteFn$lib$util$cases$discoverAllCaseFiles;
+    function liteFn$lib$util$cases$matchesCaseFilter(lite_candidate: string, lite_filter: string): boolean {
+        void lite_candidate;
+        void lite_filter;
+        if (((lite_filter) === (""))) {
+            return true;
+        }
+        if ((!(liteFn$lib$core$text$containsText(lite_filter, "*")))) {
+            return liteFn$lib$core$text$containsText(lite_candidate, lite_filter);
+        }
+        const lite_filterLen = lite$textLength(lite_filter);
+        void lite_filterLen;
+        const lite_startsWild = ((lite$textAt(lite_filter, 0n, 12498)) === ("*"));
+        void lite_startsWild;
+        const lite_endsWild = ((lite$textAt(lite_filter, lite$subtractInt(lite_filterLen, 1n, 12567), 12541)) === ("*"));
+        void lite_endsWild;
+        const lite_parts: string[] = [...([])];
+        void lite_parts;
+        let lite_segStart = 0n;
+        void lite_segStart;
+        let lite_i = 0n;
+        void lite_i;
+        while (((lite_i) <= (lite_filterLen))) {
+            const lite_atEnd = ((lite_i) === (lite_filterLen));
+            void lite_atEnd;
+            if (((lite_atEnd) || (((lite$textAt(lite_filter, lite_i, 12732)) === ("*"))))) {
+                if (((lite_i) > (lite_segStart))) {
+                    lite_parts.push(lite$textSlice(lite_filter, lite_segStart, lite_i, 12831));
+                }
+                lite_segStart = lite$addInt(lite_i, 1n, 12904);
+            }
+            lite_i = lite$addInt(lite_i, 1n, 12933);
+        }
+        const lite_partCount = liteFn$lib$core$list$listCountText([...(lite_parts)]);
+        void lite_partCount;
+        if (((lite_partCount) === (0n))) {
+            return true;
+        }
+        const lite_candLen = lite$textLength(lite_candidate);
+        void lite_candLen;
+        let lite_cursor = 0n;
+        void lite_cursor;
+        let lite_idx = 0n;
+        void lite_idx;
+        while (((lite_idx) < (lite_partCount))) {
+            const lite_part = lite$listAt((lite_parts), lite_idx, 13154);
+            void lite_part;
+            const lite_partLen = lite$textLength(lite_part);
+            void lite_partLen;
+            if (((((lite_idx) === (0n))) && ((!(lite_startsWild))))) {
+                if ((!(liteFn$lib$core$text$startsWithAt(lite_candidate, 0n, lite_part)))) {
+                    return false;
+                }
+                lite_cursor = lite_partLen;
+            } else if (((((lite_idx) === (lite$subtractInt(lite_partCount, 1n, 13379)))) && ((!(lite_endsWild))))) {
+                if (((((((lite_candLen) < (lite_partLen))) || (((lite_cursor) > (lite$subtractInt(lite_candLen, lite_partLen, 13455)))))) || ((!(liteFn$lib$core$text$endsWith(lite_candidate, lite_part)))))) {
+                    return false;
+                }
+                lite_cursor = lite_candLen;
+            } else {
+                const lite_found = liteFn$lib$core$text$indexOfText(lite_candidate, lite_part, lite_cursor);
+                void lite_found;
+                if (((lite_found) < (0n))) {
+                    return false;
+                }
+                lite_cursor = lite$addInt(lite_found, lite_partLen, 13730);
+            }
+            lite_idx = lite$addInt(lite_idx, 1n, 13769);
+        }
+        return true;
+    }
+    void liteFn$lib$util$cases$matchesCaseFilter;
+    function liteFn$lib$util$cases$matchesCaseEntry(lite_rootDir: string, lite_caseId: string, lite_caseFile: string, lite_filter: string): boolean {
+        void lite_rootDir;
+        void lite_caseId;
+        void lite_caseFile;
+        void lite_filter;
+        if (((lite_filter) === (""))) {
+            return true;
+        }
+        if (liteFn$lib$util$cases$matchesCaseFilter(lite_caseId, lite_filter)) {
+            return true;
+        }
+        const lite_relFile = liteFn$lib$core$path$relative(lite_rootDir, lite_caseFile);
+        void lite_relFile;
+        return liteFn$lib$util$cases$matchesCaseFilter(lite_relFile, lite_filter);
+    }
+    void liteFn$lib$util$cases$matchesCaseEntry;
     function liteFn$lib$util$cases$validateCaseSet(lite_rootDir: string, lite_filter: string): { ok: boolean; matchCount: bigint; error: string } {
         void lite_rootDir;
         void lite_filter;
@@ -2935,8 +3022,8 @@ export function main(lite$write?: (text: string) => void): string {
                 return { ok: false, matchCount: 0n, error: "duplicate case IDs" };
             }
             lite_seenIds.push((lite_checked).id);
-            if (((((lite_filter) === (""))) || (liteFn$lib$core$text$containsText((lite_checked).id, lite_filter)))) {
-                lite_matches = lite$addInt(lite_matches, 1n, 13036);
+            if (liteFn$lib$util$cases$matchesCaseEntry(lite_rootDir, (lite_checked).id, lite_caseFile, lite_filter)) {
+                lite_matches = lite$addInt(lite_matches, 1n, 14975);
             }
         }
         if (((lite_matches) === (0n))) {

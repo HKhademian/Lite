@@ -266,6 +266,20 @@ function manifest(file: string, kind: Kind, features: Map<string, RegistryEntry>
     ...(targetValues === undefined ? {} : { targets: targetValues as Target[] }), cases };
 }
 
+function collectJsonFiles(directory: string): string[] {
+  const result: string[] = [];
+  const walk = (current: string): void => {
+    for (const entry of readdirSync(current, { withFileTypes: true }).sort((a, b) => a.name.localeCompare(b.name))) {
+      if (entry.name.startsWith('.') || entry.name === 'helpers') continue;
+      const full = resolve(current, entry.name);
+      if (entry.isDirectory()) walk(full);
+      else if (entry.isFile() && entry.name.endsWith('.json')) result.push(full);
+    }
+  };
+  walk(directory);
+  return result.sort((a, b) => relative(directory, a).localeCompare(relative(directory, b)));
+}
+
 function manifests(features: Map<string, RegistryEntry>): readonly Manifest[] {
   const directories: readonly [Kind, string][] = [
     ['feature', 'features'],
@@ -278,8 +292,8 @@ function manifests(features: Map<string, RegistryEntry>): readonly Manifest[] {
   for (const [kind, relative] of directories) {
     const directory = resolve(verifications, relative);
     if (!existsSync(directory)) continue;
-    for (const file of readdirSync(directory).filter(name => name.endsWith('.json')).sort()) {
-      const item = manifest(resolve(directory, file), kind, features);
+    for (const file of collectJsonFiles(directory)) {
+      const item = manifest(file, kind, features);
       if (ids.has(item.id)) throw new Error(`${item.id}: duplicate manifest id`);
       ids.add(item.id);
       result.push(item);
@@ -407,9 +421,17 @@ function affected(item: Manifest, changed: ReadonlySet<string> | undefined,
   return item.features.some(feature => features.has(feature));
 }
 
+function globMatch(value: string, pattern: string): boolean {
+  if (!pattern.includes('*')) return value.includes(pattern);
+  const escaped = pattern.replace(/[.+?^${}()|[\]\\]/g, '\\$&').replace(/\*/g, '.*');
+  return new RegExp(`^${escaped}$`).test(value) || new RegExp(escaped).test(value);
+}
+
 function matches(item: Manifest, filter: string | undefined): boolean {
   if (filter === undefined) return true;
-  return item.id.includes(filter) || item.file.includes(filter) || item.features.some(feature => feature.includes(filter));
+  const relFile = relative(root, item.file).split('\\').join('/');
+  return globMatch(item.id, filter) || globMatch(relFile, filter) ||
+    item.features.some(feature => globMatch(feature, filter));
 }
 
 function describe(buffer: Buffer): string {

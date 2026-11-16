@@ -18,11 +18,18 @@ matched := cases.validateCaseSet(root, "case.silent");
 test.checkBool("validateCaseSet matches silent", true, matched.ok);
 test.checkInt("validateCaseSet silent count", 1, matched.matchCount);
 
+wildTool := cases.validateCaseSet(root, "tooling.*");
+test.checkBool("validateCaseSet matches wildcard tooling.*", true, wildTool.ok);
+test.checkInt("validateCaseSet tooling.* count", 6, wildTool.matchCount);
+
 missed := cases.validateCaseSet(root, "nonexistent-case-filter-xyz");
 test.checkBool("validateCaseSet misses empty", false, missed.ok);
 
 selected := cases.selectCaseFiles(root, "case.silent");
 test.checkInt("selectCaseFiles silent count", 1, list.listCountText(selected));
+
+wildSelected := cases.selectCaseFiles(root, "case.*");
+test.checkBool("selectCaseFiles matches wildcard case.*", true, list.listCountText(wildSelected) >= 5);
 
 meta := cases.readCaseMeta(root, selected[0]);
 test.checkText("meta error", "", meta.error);
