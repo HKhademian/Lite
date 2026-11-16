@@ -1679,4 +1679,59 @@ body.search-open {
 .module-sym-preview code {
   font-size: 0.78rem;
 }
+
+/* Docs Portal */
+.docs-layer-switch {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.5rem;
+  padding-bottom: 0.65rem;
+  margin-bottom: 0.75rem;
+  border-bottom: 1px solid var(--border);
+  font-size: 0.82rem;
+  font-weight: 600;
+}
+.docs-verified-toggle {
+  display: flex;
+  align-items: center;
+  gap: 0.45rem;
+  margin-bottom: 0.75rem;
+  font-size: 0.82rem;
+  color: var(--ink-muted);
+  cursor: pointer;
+}
+.docs-badge-row {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  flex-wrap: wrap;
+}
+.md-snippet-card {
+  margin: 0 0 1.1rem;
+}
+.md-snippet-card pre.code-block {
+  margin: 0;
+  border: 0;
+  border-radius: 0;
+}
+.docs-page-footer {
+  margin-top: 2rem;
+  padding-top: 1rem;
+  border-top: 1px solid var(--border);
+  display: flex;
+  flex-direction: column;
+  gap: 0.9rem;
+}
+.docs-source-row {
+  font-size: 0.85rem;
+  color: var(--ink-muted);
+}
+.docs-pager {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+  flex-wrap: wrap;
+}
 `;

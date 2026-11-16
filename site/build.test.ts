@@ -1,5 +1,5 @@
 import assert from 'node:assert/strict';
-import { existsSync, readFileSync } from 'node:fs';
+import { existsSync, readdirSync, readFileSync } from 'node:fs';
 import { dirname, join, resolve } from 'node:path';
 import { test } from 'node:test';
 import { pathToFileURL } from 'node:url';
@@ -133,6 +133,59 @@ test('buildSite generates static pages and metadata in dist/site', () => {
   assert(toolsHtml.includes('editors/vscode'));
   assert(toolsHtml.includes('node compiler/scripts/self-host.ts'));
   assert(toolsHtml.includes('onCanvasUpdate'));
+
+  for (const docRel of [
+    'docs/index.html',
+    'docs/spec/index.html',
+    'docs/handbook/single-page.html',
+    'docs/handbook/overview-and-setup.html',
+    'docs/handbook/bindings-and-mutability.html',
+    'docs/handbook/numbers-operators-and-strings.html',
+    'docs/handbook/conditionals-match-and-loops.html',
+    'docs/handbook/tuples-arrays-lists-and-aliases.html',
+    'docs/handbook/blocks-wiring-and-closures.html',
+    'docs/handbook/imports-visibility-and-io.html',
+    'docs/design/overview.html',
+    'docs/design/start-here.html',
+    'docs/proposals/LP-0001-operation-specific-panic-recovery.html',
+    'docs/compiler/overview.html',
+  ]) {
+    assert(existsSync(join(out, docRel)), `missing docs page: ${docRel}`);
+  }
+  const handbookSingle = readFileSync(join(out, 'docs/handbook/single-page.html'), 'utf8');
+  assert(handbookSingle.includes('The Lite Handbook (Single-Page Edition)'));
+  assert(handbookSingle.includes('id="chapter-bindings-and-mutability"'));
+  const startHereHtml = readFileSync(join(out, 'docs/design/start-here.html'), 'utf8');
+  assert(startHereHtml.includes('Open in Play &rarr;'));
+  assert(startHereHtml.includes('Verified in TS'));
+  const lpHtml = readFileSync(join(out, 'docs/proposals/LP-0001-operation-specific-panic-recovery.html'), 'utf8');
+  assert(lpHtml.includes('Working Proposal'));
+
+  const collectHtml = (dir: string): string[] => {
+    const outFiles: string[] = [];
+    for (const entry of readdirSync(dir, { withFileTypes: true })) {
+      const full = join(dir, entry.name);
+      if (entry.isDirectory()) outFiles.push(...collectHtml(full));
+      else if (entry.name.endsWith('.html')) outFiles.push(full);
+    }
+    return outFiles;
+  };
+  for (const htmlFile of collectHtml(join(out, 'docs'))) {
+    const content = readFileSync(htmlFile, 'utf8');
+    assert(!content.includes('data-md-href'), `unresolved data-md-href in ${htmlFile}`);
+    const hrefRe = /href="([^"]+)"/g;
+    for (let m = hrefRe.exec(content); m !== null; m = hrefRe.exec(content)) {
+      const raw = m[1]!;
+      if (raw.startsWith('http://') || raw.startsWith('https://') || raw.startsWith('#') || raw.startsWith('mailto:')) {
+        continue;
+      }
+      const noFrag = raw.split('#')[0]!.split('?')[0]!;
+      if (noFrag === '') continue;
+      const resolvedTarget = resolve(dirname(htmlFile), noFrag);
+      const fileCandidate = noFrag.endsWith('/') ? join(resolvedTarget, 'index.html') : resolvedTarget;
+      assert(existsSync(fileCandidate), `broken local href "${raw}" in ${htmlFile}`);
+    }
+  }
   const gallery = readFileSync(join(out, 'gallery/index.html'), 'utf8');
   assert(gallery.includes('<title>Gallery — Lite</title>'));
   assert(gallery.includes('class="gallery-jumps"'));
