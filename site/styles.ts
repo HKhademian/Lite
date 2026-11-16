@@ -1639,4 +1639,44 @@ body.search-open {
   color: var(--ink);
   min-width: 220px;
 }
+
+/* Modules & Tools */
+.module-symbol-list {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
+.module-symbol-card,
+.tools-cmd-card {
+  scroll-margin-top: 76px;
+}
+.module-sym-title {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 0.45rem;
+}
+.module-sym-anchor {
+  color: var(--ink-muted);
+  font-family: var(--font-mono);
+  font-weight: 700;
+  text-decoration: none;
+}
+.module-sym-anchor:hover {
+  color: var(--accent);
+}
+.module-sym-doc {
+  margin: 0.25rem 0 0;
+  color: var(--ink-muted);
+  font-size: 0.92rem;
+}
+.module-sym-preview {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.35rem;
+}
+.module-sym-preview code {
+  font-size: 0.78rem;
+}
 `;

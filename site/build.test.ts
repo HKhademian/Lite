@@ -82,8 +82,57 @@ test('buildSite generates static pages and metadata in dist/site', () => {
   ]) {
     assert(existsSync(join(out, rel)), `missing generated site file: ${rel}`);
   }
-  const searchIndex = JSON.parse(readFileSync(join(out, 'search-index.json'), 'utf8')) as Array<{ title: string; href: string }>;
-  assert(searchIndex.length > showcaseSamples.length);
+  const searchIndex = JSON.parse(readFileSync(join(out, 'search-index.json'), 'utf8')) as Array<{ kind: string; title: string; href: string }>;
+  assert(searchIndex.length > showcaseSamples.length + 100);
+  assert(searchIndex.some((entry) => entry.kind === 'module' && entry.href === 'modules/core/text.html'));
+  assert(searchIndex.some((entry) => entry.kind === 'symbol' && entry.title === 'extra/canvas.fillRect'));
+  assert(searchIndex.some((entry) => entry.kind === 'tool' && entry.title === 'lite fmt'));
+
+  for (const modRel of [
+    'modules/core/crypto.html',
+    'modules/core/diag.html',
+    'modules/core/file.html',
+    'modules/core/format.html',
+    'modules/core/int.html',
+    'modules/core/io.html',
+    'modules/core/list.html',
+    'modules/core/path.html',
+    'modules/core/process.html',
+    'modules/core/source.html',
+    'modules/core/test.html',
+    'modules/core/text.html',
+    'modules/core/time.html',
+    'modules/core/unicode.html',
+    'modules/extra/audio.html',
+    'modules/extra/board.html',
+    'modules/extra/canvas.html',
+  ]) {
+    assert(existsSync(join(out, modRel)), `missing module detail page: ${modRel}`);
+  }
+  const modulesIndex = readFileSync(join(out, 'modules/index.html'), 'utf8');
+  assert(modulesIndex.includes('Standard &amp; Play Modules'));
+  assert(modulesIndex.includes('Provisional Module Surface'));
+  assert(modulesIndex.includes('Browser + CLI'));
+  assert(modulesIndex.includes('Lite Play'));
+  assert(modulesIndex.includes('CLI / Host OS'));
+  const coreTextHtml = readFileSync(join(out, 'modules/core/text.html'), 'utf8');
+  assert(coreTextHtml.includes('Host-backed'));
+  assert(coreTextHtml.includes('<span class="tok-keyword">pub</span>'));
+  assert(coreTextHtml.includes('Browser + CLI'));
+  assert(coreTextHtml.includes('Used in Showcases &amp; Gallery'));
+  const coreFileHtml = readFileSync(join(out, 'modules/core/file.html'), 'utf8');
+  assert(coreFileHtml.includes('CLI / Host OS'));
+  const extraCanvasHtml = readFileSync(join(out, 'modules/extra/canvas.html'), 'utf8');
+  assert(extraCanvasHtml.includes('Lite Play'));
+  assert(extraCanvasHtml.includes('id="fillRect"'));
+  assert(extraCanvasHtml.includes('Used in Showcases &amp; Gallery'));
+
+  const toolsHtml = readFileSync(join(out, 'tools/index.html'), 'utf8');
+  assert(toolsHtml.includes('./bin/lite run'));
+  assert(toolsHtml.includes('./bin/lite fmt'));
+  assert(toolsHtml.includes('editors/vscode'));
+  assert(toolsHtml.includes('node compiler/scripts/self-host.ts'));
+  assert(toolsHtml.includes('onCanvasUpdate'));
   const gallery = readFileSync(join(out, 'gallery/index.html'), 'utf8');
   assert(gallery.includes('<title>Gallery — Lite</title>'));
   assert(gallery.includes('class="gallery-jumps"'));

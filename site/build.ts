@@ -8,6 +8,7 @@ import { dirname, join, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { buildCCompiler, buildTsCompiler, compileBuiltCompiler, type CompilerBuild } from '../compiler/host.ts';
 import { sourceModuleIdentity } from '../compiler/source.ts';
+import { extractModules } from '../tools/docs.ts';
 import {
   brandWordmark,
   proseLite,
@@ -18,12 +19,14 @@ import {
 } from './chrome.ts';
 import { heroSample, playgroundDefaultSample, sampleGroups, showcaseSamples, type ShowcaseSample } from './groups.ts';
 import { escapeHtml, highlightLite, highlightTs } from './highlight.ts';
+import { buildModulesSection } from './modules-pages.ts';
 import { playGroups, playSamples, type PlaySample } from './play-samples.ts';
 import { appendPlayKeepalive, stripPlayKeepaliveTs } from './play-keepalive.ts';
 import { playgroundWorkerJs } from './playground-worker.ts';
 import { searchClientJs, type SearchEntry } from './search.ts';
 import { stripLiteTs } from './strip-ts.ts';
 import { siteCss } from './styles.ts';
+import { buildToolsSection } from './tools-page.ts';
 
 type AnySample = ShowcaseSample | PlaySample;
 
@@ -1413,6 +1416,25 @@ export function buildSite(options?: BuildSiteOptions): void {
   }
   writeFileSync(join(outputDir, 'runtime', 'search.js'), searchClientJs);
 
+  const modulesOut = buildModulesSection({
+    modules: extractModules(root),
+    showcaseSamples,
+    playSamples,
+    playGroups,
+    repoUrl,
+    rev,
+    lightSwitchShine,
+  });
+  for (const [relPath, html] of modulesOut.files) {
+    const dest = join(outputDir, relPath);
+    mkdirSync(dirname(dest), { recursive: true });
+    writeFileSync(dest, html);
+  }
+
+  const toolsOut = buildToolsSection({ repoUrl, rev, lightSwitchShine });
+  mkdirSync(join(outputDir, 'tools'), { recursive: true });
+  writeFileSync(join(outputDir, 'tools', 'index.html'), toolsOut.html);
+
   const searchEntries: SearchEntry[] = [
     { kind: 'learn', title: 'Learn Lite', subtitle: 'Guided ability course, Quickstart, and project tutorials', href: 'learn/', keywords: 'learn course tour tutorials' },
     { kind: 'gym', title: 'Lite Gym', subtitle: 'Interactive drills and multi-test coding katas', href: 'gym/', keywords: 'gym exercises katas practice' },
@@ -1421,6 +1443,8 @@ export function buildSite(options?: BuildSiteOptions): void {
     { kind: 'tool', title: 'Lite Tools & CLI', subtitle: 'CLI commands, formatter, VS Code extension, and self-hosting', href: 'tools/', keywords: 'tools cli fmt verify doctor vscode' },
     { kind: 'gallery', title: 'Sample & Play Gallery', subtitle: 'Verified language programs, canvas art, audio, and games', href: 'gallery/', keywords: 'gallery examples samples canvas audio games' },
     { kind: 'tool', title: 'Browser Playground', subtitle: 'Write, compile to TypeScript or C, and run Lite in your browser', href: 'playground/', keywords: 'playground sandbox compile run' },
+    ...modulesOut.searchEntries,
+    ...toolsOut.searchEntries,
   ];
   for (const sample of [...rendered.values(), ...renderedPlay.values()]) {
     searchEntries.push({
@@ -1434,12 +1458,10 @@ export function buildSite(options?: BuildSiteOptions): void {
   }
   writeFileSync(join(outputDir, 'search-index.json'), JSON.stringify(searchEntries));
 
-  const sectionStubs: readonly { dir: string; active: 'learn' | 'gym' | 'docs' | 'modules' | 'tools'; title: string; lead: string }[] = [
+  const sectionStubs: readonly { dir: string; active: 'learn' | 'gym' | 'docs'; title: string; lead: string }[] = [
     { dir: 'learn', active: 'learn', title: 'Learn Lite', lead: 'Guided lessons and project tutorials are coming in this section.' },
     { dir: 'gym', active: 'gym', title: 'Lite Gym', lead: 'Interactive concept drills and coding workouts are coming in this section.' },
     { dir: 'docs', active: 'docs', title: 'Documentation', lead: 'Shipped Handbook and LiteLang design documentation.' },
-    { dir: 'modules', active: 'modules', title: 'Modules', lead: 'Core and Play module API documentation.' },
-    { dir: 'tools', active: 'tools', title: 'Tools', lead: 'CLI commands, formatter, editor support, and bootstrap guides.' },
   ];
   for (const stub of sectionStubs) {
     mkdirSync(join(outputDir, stub.dir), { recursive: true });
