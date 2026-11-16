@@ -847,6 +847,15 @@ function renderPlaygroundPage(
     return data;
   }
 
+  function setPlaygroundQuery(key, value) {
+    const nextUrl = new URL(window.location.href);
+    for (const k of ["sample", "snip", "draft", "item", "example", "case", "piece"]) {
+      nextUrl.searchParams.delete(k);
+    }
+    if (key && value) nextUrl.searchParams.set(key, value);
+    window.history.replaceState({}, "", nextUrl);
+  }
+
   async function loadSample(id, mode) {
     const meta = byId.get(id) ?? samples[0];
     if (!meta) return;
@@ -858,12 +867,7 @@ function renderPlaygroundPage(
     fileEl.textContent = meta.file;
     statusEl.textContent = "Loading " + meta.file + "...";
 
-    const url = new URL(window.location.href);
-    url.searchParams.delete("snip");
-    url.searchParams.delete("draft");
-    url.searchParams.delete("item");
-    url.searchParams.set("sample", meta.id);
-    window.history.replaceState({}, "", url);
+    setPlaygroundQuery("sample", meta.id);
 
     const sample = await fetchSample(meta.id);
     currentSample = sample;
@@ -1450,12 +1454,7 @@ function renderPlaygroundPage(
     setBaseline();
     outputEl.textContent = "(Press Play to run)";
     statusEl.textContent = "Loaded sketch: " + snip.title;
-    const nextUrl = new URL(window.location.href);
-    nextUrl.searchParams.delete("sample");
-    nextUrl.searchParams.delete("draft");
-    nextUrl.searchParams.delete("item");
-    nextUrl.searchParams.set("snip", snip.id);
-    window.history.replaceState({}, "", nextUrl);
+    setPlaygroundQuery("snip", snip.id);
     syncSnipsBadge();
     return true;
   }
@@ -1486,12 +1485,7 @@ function renderPlaygroundPage(
     setBaseline();
     outputEl.textContent = "(Press Play to run)";
     statusEl.textContent = "Loaded " + item.badge + ": " + item.title;
-    const nextUrl = new URL(window.location.href);
-    nextUrl.searchParams.delete("sample");
-    nextUrl.searchParams.delete("draft");
-    nextUrl.searchParams.delete("snip");
-    nextUrl.searchParams.set("item", item.id);
-    window.history.replaceState({}, "", nextUrl);
+    setPlaygroundQuery(item.category || "piece", item.slug || item.id);
   }
 
   const sketchesBtn = document.getElementById("pg-sketches-btn");
@@ -1743,12 +1737,7 @@ function renderPlaygroundPage(
           if (titleEl) titleEl.textContent = updated.title;
           fileEl.textContent = updated.title + " · " + updated.id.slice(0, 8);
           statusEl.textContent = "Saved sketch (" + updated.id.slice(0, 8) + ")";
-          const nextUrl = new URL(window.location.href);
-          nextUrl.searchParams.delete("sample");
-          nextUrl.searchParams.delete("draft");
-          nextUrl.searchParams.delete("item");
-          nextUrl.searchParams.set("snip", updated.id);
-          window.history.replaceState({}, "", nextUrl);
+          setPlaygroundQuery("snip", updated.id);
           syncSnipsBadge();
           return;
         }
@@ -1778,12 +1767,7 @@ function renderPlaygroundPage(
         if (titleEl) titleEl.textContent = created.title;
         fileEl.textContent = created.title + " · " + created.id.slice(0, 8);
         statusEl.textContent = "Saved new sketch (" + created.id.slice(0, 8) + ")";
-        const nextUrl = new URL(window.location.href);
-        nextUrl.searchParams.delete("sample");
-        nextUrl.searchParams.delete("draft");
-        nextUrl.searchParams.delete("item");
-        nextUrl.searchParams.set("snip", created.id);
-        window.history.replaceState({}, "", nextUrl);
+        setPlaygroundQuery("snip", created.id);
         syncSnipsBadge();
       }
     });
@@ -1858,12 +1842,19 @@ function renderPlaygroundPage(
   const urlParams = new URLSearchParams(window.location.search);
   const initial = urlParams.get("sample") ?? "${escapeHtml(playgroundDefaultSample.id)}";
   const snipIdParam = urlParams.get("snip");
+  const exampleParam = urlParams.get("example");
+  const caseParam = urlParams.get("case");
+  const pieceParam = urlParams.get("piece");
   const itemParam = urlParams.get("item");
   let loadedDraft = Boolean(snipIdParam && loadSnip(snipIdParam));
-  if (!loadedDraft && itemParam) {
+  if (!loadedDraft && (exampleParam || caseParam || pieceParam || itemParam)) {
     loadedDraft = true;
     void loadLibraryCatalog().then((items) => {
-      const found = items.find((entry) => entry.id === itemParam);
+      let found = null;
+      if (exampleParam) found = items.find((e) => e.category === "example" && e.slug === exampleParam);
+      else if (caseParam) found = items.find((e) => e.category === "case" && e.slug === caseParam);
+      else if (pieceParam) found = items.find((e) => e.category === "piece" && e.slug === pieceParam);
+      else if (itemParam) found = items.find((e) => e.id === itemParam || e.slug === itemParam);
       if (found) loadLibraryItem(found);
       else void loadSample(initial, "load");
     });

@@ -10,6 +10,7 @@ export type LibraryCategory = 'sample' | 'example' | 'case' | 'piece';
 
 export type PlaygroundLibraryItem = Readonly<{
   id: string;
+  slug: string;
   category: LibraryCategory;
   badge: string;
   title: string;
@@ -53,7 +54,19 @@ function slugToTitle(relPath: string): string {
     .join(' ');
 }
 
-function extractHandbookPieces(rootDir: string): PlaygroundLibraryItem[] {
+function allocateSlug(used: Set<string>, preferred: string): string {
+  const clean = preferred.toLowerCase().replace(/[^a-z0-9._-]+/g, '-').replace(/^-+|-+$/g, '') || 'item';
+  let candidate = clean;
+  let suffix = 2;
+  while (used.has(candidate)) {
+    candidate = `${clean}-${String(suffix)}`;
+    suffix += 1;
+  }
+  used.add(candidate);
+  return candidate;
+}
+
+function extractHandbookPieces(rootDir: string, usedSlugs: Set<string>): PlaygroundLibraryItem[] {
   const items: PlaygroundLibraryItem[] = [];
   const mdFiles = walkMarkdownFiles(join(rootDir, 'language', 'learn', 'handbook'), 'language/learn/handbook');
   const fenceRe = /^```(lite|lts)\r?\n([\s\S]*?)^```/gm;
@@ -78,8 +91,10 @@ function extractHandbookPieces(rootDir: string): PlaygroundLibraryItem[] {
           break;
         }
       }
+      const slug = allocateSlug(usedSlugs, `${chapterSlug}-${String(index)}`);
       items.push({
-        id: `piece:handbook:${chapterSlug}:${String(index)}`,
+        id: `piece/${slug}`,
+        slug,
         category: 'piece',
         badge: 'Handbook',
         title: heading,
@@ -94,18 +109,26 @@ function extractHandbookPieces(rootDir: string): PlaygroundLibraryItem[] {
   return items;
 }
 
-/** Collects Samples, Examples, Cases, and Pieces for Playground's unified Load explorer. */
+/** Collects Samples, Examples, Cases, and Pieces for Playground's unified Open explorer. */
 export function collectPlaygroundLibrary(options: Readonly<{
   rootDir: string;
   samples: readonly (ShowcaseSample | PlaySample)[];
 }>): readonly PlaygroundLibraryItem[] {
   const { rootDir, samples } = options;
   const items: PlaygroundLibraryItem[] = [];
+  const usedByCat: Record<LibraryCategory, Set<string>> = {
+    sample: new Set(),
+    example: new Set(),
+    case: new Set(),
+    piece: new Set(),
+  };
 
   for (const sample of samples) {
     const isPlaySample = sample.file.startsWith('samples/graphics/') || sample.file.startsWith('samples/games/');
+    const slug = allocateSlug(usedByCat.sample, sample.id);
     items.push({
-      id: `sample:${sample.id}`,
+      id: `sample/${slug}`,
+      slug,
       category: 'sample',
       badge: isPlaySample ? 'Play' : 'Sample',
       title: sample.title,
@@ -122,8 +145,12 @@ export function collectPlaygroundLibrary(options: Readonly<{
     ...walkLtsFiles(join(rootDir, 'language', 'showcases'), 'language/showcases'),
   ]) {
     if (relPath.includes('/helpers/')) continue;
+    const base = posix.basename(relPath, '.lts');
+    const preferred = relPath.startsWith('language/showcases/') ? `showcase-${base}` : base;
+    const slug = allocateSlug(usedByCat.example, preferred);
     items.push({
-      id: `example:${relPath}`,
+      id: `example/${slug}`,
+      slug,
       category: 'example',
       badge: relPath.startsWith('language/showcases/') ? 'Showcase' : 'Example',
       title: slugToTitle(relPath),
@@ -135,8 +162,10 @@ export function collectPlaygroundLibrary(options: Readonly<{
   }
 
   for (const relPath of walkLtsFiles(join(rootDir, 'language', 'cases'), 'language/cases')) {
+    const slug = allocateSlug(usedByCat.case, posix.basename(relPath, '.lts'));
     items.push({
-      id: `case:${relPath}`,
+      id: `case/${slug}`,
+      slug,
       category: 'case',
       badge: posix.basename(relPath).startsWith('reject-') ? 'Reject Case' : 'Case',
       title: slugToTitle(relPath),
@@ -152,8 +181,10 @@ export function collectPlaygroundLibrary(options: Readonly<{
     const learnCatalog = JSON.parse(readFileSync(learnCatalogPath, 'utf8')) as LearnCatalog;
     for (const track of [...learnCatalog.tracks].sort((a, b) => a.order - b.order)) {
       for (const lesson of track.lessons) {
+        const slug = allocateSlug(usedByCat.piece, lesson.slug);
         items.push({
-          id: `piece:learn:${lesson.id}`,
+          id: `piece/${slug}`,
+          slug,
           category: 'piece',
           badge: lesson.kind === 'tutorial' ? 'Tutorial' : 'Lesson',
           title: lesson.title,
@@ -171,8 +202,10 @@ export function collectPlaygroundLibrary(options: Readonly<{
     const gymCatalog = JSON.parse(readFileSync(join(rootDir, 'language', 'gym', 'catalog.json'), 'utf8')) as GymCatalog;
     for (const ex of gymCatalog.exercises) {
       const firstCase = ex.visibleCases[0];
+      const slug = allocateSlug(usedByCat.piece, `gym-${ex.slug}`);
       items.push({
-        id: `piece:gym:${ex.id}`,
+        id: `piece/${slug}`,
+        slug,
         category: 'piece',
         badge: ex.mode === 'drill' ? 'Drill' : 'Workout',
         title: `${ex.title} (Starter)`,
@@ -184,6 +217,6 @@ export function collectPlaygroundLibrary(options: Readonly<{
     }
   }
 
-  items.push(...extractHandbookPieces(rootDir));
+  items.push(...extractHandbookPieces(rootDir, usedByCat.piece));
   return items;
 }

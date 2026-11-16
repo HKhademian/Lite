@@ -297,11 +297,15 @@ test('buildSite generates static pages and metadata in dist/site', () => {
   assert(playground.includes('id="pg-copy"'));
   assert(index.includes('runtime/snips.js'));
   assert(existsSync(join(out, 'playground', 'library.json')));
-  const lib = JSON.parse(readFileSync(join(out, 'playground', 'library.json'), 'utf8')) as Array<{ category: string }>;
+  const lib = JSON.parse(readFileSync(join(out, 'playground', 'library.json'), 'utf8')) as Array<{ id: string; slug: string; category: string }>;
   const libCats = new Set(lib.map(item => item.category));
   for (const cat of ['sample', 'example', 'case', 'piece']) {
     assert(libCats.has(cat), `missing library.json category: ${cat}`);
   }
+  for (const item of lib) {
+    assert.match(item.slug, /^[a-z0-9._-]+$/, `invalid slug for ${item.id}: ${item.slug}`);
+  }
+  assert(lib.some(item => item.category === 'piece' && item.slug === 'hello-lite'));
   assert(playground.includes('event.key === "Tab"'));
   assert(playground.includes('id="pg-c"'));
   assert(playground.includes('id="mode-program"'));
