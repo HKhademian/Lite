@@ -1,0 +1,19 @@
+io := import "core/io";
+
+IntOp := type fn(Int): Int;
+
+applyAll := fn(seed: Int, steps: List<IntOp>): Int {
+    var cur := seed;
+    loop steps as step {
+        cur = step(cur);
+    }
+    cur
+};
+
+start := io.inputInt();
+steps: List<IntOp> = [
+fn(x) { x + 2 },
+fn(x) { x * 3 },
+fn(x) { x - 1 },
+];
+io.outputLine(applyAll(start, steps));

@@ -4,6 +4,7 @@ import { join, relative, sep } from 'node:path';
 import { test } from 'node:test';
 import { fileURLToPath } from 'node:url';
 import { heroSample, sampleGroups, showcaseSamples } from './groups.ts';
+import { verifyGymCorpus } from './gym-verify.ts';
 import { formatCodeView } from './code-view.ts';
 import { highlightLite } from './highlight.ts';
 import { playGroups, playSamples } from './play-samples.ts';
@@ -140,4 +141,21 @@ test('all site showcase and play sample sources live outside site/ and match sam
       );
     }
   }
+});
+
+test('stripLiteTs strips anonymous function parameter and return types', () => {
+  const src = 'const lite_steps = [(function (lite_x: bigint, lite_y: string): bigint { return lite_x + 1n; })];';
+  const stripped = stripLiteTs(src);
+  assert(!stripped.includes(': bigint'), stripped);
+  assert(!stripped.includes(': string'), stripped);
+  const fn = new Function(`${stripped}\nreturn lite_steps[0](4n, "a");`) as () => bigint;
+  assert.equal(fn(), 5n);
+});
+
+test('verifyGymCorpus compiles and executes all 42 Gym starters and solutions', () => {
+  const result = verifyGymCorpus();
+  assert.equal(result.exerciseCount, 42);
+  assert.equal(result.drillCount, 18);
+  assert.equal(result.kataCount, 24);
+  assert(result.caseCount >= 168, `expected at least 168 test cases, got ${String(result.caseCount)}`);
 });

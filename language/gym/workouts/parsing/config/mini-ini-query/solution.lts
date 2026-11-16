@@ -1,0 +1,73 @@
+io := import "core/io";
+list := import "core/list";
+text := import "core/text";
+
+splitLines := fn(raw: String): List<String> {
+    out: mut List<String> = [];
+    n := text.length(raw);
+    var pos := 0;
+    loop pos <= n {
+        nl := text.indexOfText(raw, "\n", pos);
+        endPos := if nl < 0 { n } else { nl };
+        var cleanEnd := endPos;
+        if cleanEnd > pos and text.at(raw, cleanEnd - 1) == "\r" {
+            cleanEnd -= 1;
+        }
+        list.pushBack(mut out, text.slice(raw, pos, cleanEnd));
+        if nl < 0 { break; }
+        pos = nl + 1;
+    }
+    out
+};
+
+withTextAt := fn(xs: List<String>, idx: Int, val: String): List<String> {
+    out: mut List<String> = [];
+    len := list.listCountText(xs);
+    var k := 0;
+    loop k < len {
+        list.pushBack(mut out, if k == idx { val } else { xs[k] });
+        k += 1;
+    }
+    out
+};
+
+raw := io.inputAll();
+lines := splitLines(raw);
+emptyTexts: List<String> = [];
+keys: mut List<String> = [];
+var mut vals := emptyTexts;
+var section := "";
+
+loop lines as line {
+    trimmed := text.trim(line);
+    n := text.length(trimmed);
+    if n == 0 { continue; }
+    first := text.at(trimmed, 0);
+    if first == ";" or first == "#" { continue; }
+
+    if text.startsWithAt(trimmed, 0, "QUERY ") {
+        qKey := text.trim(text.slice(trimmed, 6, n));
+        idx := list.listIndexOfText(keys, qKey);
+        io.outputLine(if idx >= 0 { vals[idx] } else { "MISSING" });
+        continue;
+    }
+
+    if first == "[" and text.endsWith(trimmed, "]") {
+        section = text.trim(text.slice(trimmed, 1, n - 1));
+        continue;
+    }
+
+    eq := text.indexOfText(trimmed, "=", 0);
+    if eq >= 0 {
+        k := text.trim(text.slice(trimmed, 0, eq));
+        v := text.trim(text.slice(trimmed, eq + 1, n));
+        fullKey := if section == "" { k } else { section + "." + k };
+        existing := list.listIndexOfText(keys, fullKey);
+        if existing >= 0 {
+            vals = withTextAt(vals, existing, v);
+        } else {
+            list.pushBack(mut keys, fullKey);
+            list.pushBack(mut vals, v);
+        }
+    }
+}

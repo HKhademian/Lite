@@ -1,0 +1,101 @@
+integer := import "core/int";
+io := import "core/io";
+list := import "core/list";
+text := import "core/text";
+
+textLessThan := fn(a: String, b: String): Bool {
+    la := text.length(a);
+    lb := text.length(b);
+    order := "0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZ_abcdefghijklmnopqrstuvwxyz";
+    minLen := if la < lb { la } else { lb };
+    var i := 0;
+    loop i < minLen {
+        ca := text.at(a, i);
+        cb := text.at(b, i);
+        if ca =!= cb {
+            pa := text.indexOfText(order, ca, 0);
+            pb := text.indexOfText(order, cb, 0);
+            return pa < pb;
+        }
+        i += 1;
+    }
+    la < lb
+};
+
+withTextAt := fn(xs: List<String>, idx: Int, val: String): List<String> {
+    out: mut List<String> = [];
+    len := list.listCountText(xs);
+    var k := 0;
+    loop k < len {
+        list.pushBack(mut out, if k == idx { val } else { xs[k] });
+        k += 1;
+    }
+    out
+};
+
+withIntAt := fn(xs: List<Int>, idx: Int, val: Int): List<Int> {
+    out: mut List<Int> = [];
+    len := list.listCountInt(xs);
+    var k := 0;
+    loop k < len {
+        list.pushBack(mut out, if k == idx { val } else { xs[k] });
+        k += 1;
+    }
+    out
+};
+
+raw := io.inputAll();
+n := text.length(raw);
+emptyTexts: List<String> = [];
+emptyInts: List<Int> = [];
+var mut words := emptyTexts;
+var mut counts := emptyInts;
+var uniqueCount := 0;
+var pos := 0;
+
+loop pos < n {
+    loop pos < n and not text.isNameContinue(text.at(raw, pos)) {
+        pos += 1;
+    }
+    if pos >= n { break; }
+    start := pos;
+    loop pos < n and text.isNameContinue(text.at(raw, pos)) {
+        pos += 1;
+    }
+    word := text.toLowerAscii(text.slice(raw, start, pos));
+    idx := list.listIndexOfText(words, word);
+    if idx >= 0 {
+        counts = withIntAt(counts, idx, counts[idx] + 1);
+    } else {
+        list.pushBack(mut words, word);
+        list.pushBack(mut counts, 1);
+        uniqueCount += 1;
+    }
+}
+
+if uniqueCount == 0 {
+    io.outputLine("EMPTY");
+} else {
+    var i := 1;
+    loop i < uniqueCount {
+        wKey := words[i];
+        cKey := counts[i];
+        var j := i - 1;
+        loop j >= 0 {
+            swap := counts[j] < cKey or (counts[j] == cKey and textLessThan(wKey, words[j]));
+            if not swap { break; }
+            words = withTextAt(words, j + 1, words[j]);
+            counts = withIntAt(counts, j + 1, counts[j]);
+            j -= 1;
+        }
+        words = withTextAt(words, j + 1, wKey);
+        counts = withIntAt(counts, j + 1, cKey);
+        i += 1;
+    }
+
+    var outIdx := 0;
+    loop outIdx < uniqueCount {
+        io.outputLine(words[outIdx] + ":", integer.intText(counts[outIdx]));
+        outIdx += 1;
+    }
+}

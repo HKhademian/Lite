@@ -1,0 +1,10 @@
+io := import "core/io";
+text := import "core/text";
+
+line := io.inputLine();
+len := text.length(line);
+if len == 0 {
+    io.outputLine("EMPTY");
+} else {
+    io.outputLine(len, text.at(line, 0), text.at(line, len - 1));
+}

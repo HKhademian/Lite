@@ -1,0 +1,6 @@
+io := import "core/io";
+
+n := io.inputInt();
+var count := n;
+count += 10;
+io.outputLine(count);

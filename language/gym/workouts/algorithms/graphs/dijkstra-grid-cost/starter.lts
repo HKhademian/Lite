@@ -1,0 +1,10 @@
+io := import "core/io";
+
+rows := io.inputInt();
+cols := io.inputInt();
+var total := rows * cols;
+loop total > 0 {
+    _v := io.inputInt();
+    total -= 1;
+}
+io.outputLine("0");

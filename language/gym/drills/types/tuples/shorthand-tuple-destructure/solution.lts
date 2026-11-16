@@ -1,0 +1,8 @@
+io := import "core/io";
+
+x := io.inputInt();
+y := io.inputInt();
+pt := (=x, =y);
+relabelled: (col: Int, row: Int) = pt;
+(c, r) := relabelled;
+io.outputLine(c * 10 + r);

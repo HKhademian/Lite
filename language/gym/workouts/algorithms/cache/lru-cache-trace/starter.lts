@@ -1,0 +1,4 @@
+io := import "core/io";
+
+_raw := io.inputAll();
+io.outputLine("ORDER:EMPTY");

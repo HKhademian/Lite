@@ -1,0 +1,12 @@
+integer := import "core/int";
+io := import "core/io";
+
+cents := io.inputInt();
+people := io.inputInt();
+if cents < 0 or people <= 0 {
+    io.outputLine("INVALID");
+} else {
+    each := cents / people;
+    rem := cents % people;
+    io.outputLine("each:" + integer.intText(each) + " rem:" + integer.intText(rem));
+}

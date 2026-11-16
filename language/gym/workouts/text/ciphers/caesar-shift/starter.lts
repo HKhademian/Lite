@@ -1,0 +1,5 @@
+io := import "core/io";
+
+line := io.inputLine();
+_shift := io.inputInt();
+io.outputLine(line);

@@ -1,0 +1,8 @@
+fmt := import "core/format";
+io := import "core/io";
+text := import "core/text";
+
+key := text.trim(io.inputLine());
+val := io.inputInt();
+row := fmt.padRightText(key, 10) + " : " + fmt.padLeftText(fmt.decimalText(val), 6);
+io.outputLine(row);

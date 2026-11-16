@@ -1,0 +1,15 @@
+integer := import "core/int";
+io := import "core/io";
+
+n := io.inputInt();
+if n <= 0 {
+    io.outputLine("EMPTY");
+} else {
+    var i := 0;
+    loop i < n {
+        s := io.inputInt();
+        e := io.inputInt();
+        io.outputLine(integer.intText(s) + ".." + integer.intText(e));
+        i += 1;
+    }
+}

@@ -212,9 +212,13 @@ export function stripLiteTs(source: string): string {
       }
     }
 
-    // `function name<T>(...) : ReturnType {`
-    if (source.startsWith('function ', i) && (i === 0 || !/[a-zA-Z0-9_$]/.test(source[i - 1]!))) {
-      const fnHead = /^function\s+[a-zA-Z_$][a-zA-Z0-9_$]*/.exec(source.slice(i));
+    // `function [name][<T>](...) : ReturnType {`
+    if (
+      source.startsWith('function', i) &&
+      (i === 0 || !/[a-zA-Z0-9_$]/.test(source[i - 1]!)) &&
+      (source[i + 8] === ' ' || source[i + 8] === '\t' || source[i + 8] === '\n' || source[i + 8] === '(' || source[i + 8] === '<')
+    ) {
+      const fnHead = /^function(?:\s+[a-zA-Z_$][a-zA-Z0-9_$]*)?/.exec(source.slice(i));
       if (fnHead !== null) {
         let afterName = i + fnHead[0]!.length;
         while (afterName < n && /\s/.test(source[afterName]!)) afterName += 1;

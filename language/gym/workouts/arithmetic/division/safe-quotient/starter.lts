@@ -1,0 +1,6 @@
+integer := import "core/int";
+io := import "core/io";
+
+a := io.inputInt();
+b := io.inputInt();
+io.outputLine("trunc:" + integer.intText(a / b), "floor:" + integer.intText(a :/ b));

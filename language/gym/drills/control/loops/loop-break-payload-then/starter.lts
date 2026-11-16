@@ -1,0 +1,15 @@
+io := import "core/io";
+
+target := io.inputInt();
+a := io.inputInt();
+b := io.inputInt();
+c := io.inputInt();
+ans := @scan loop [a, b, c] as v {
+    if v >= target {
+        break 0;
+    }
+    -1
+} then {
+    @scan.value
+};
+io.outputLine(ans);

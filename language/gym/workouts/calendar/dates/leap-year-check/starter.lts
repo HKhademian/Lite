@@ -1,0 +1,5 @@
+io := import "core/io";
+
+year := io.inputInt();
+isLeap := year > 0 and year % 4 == 0;
+io.outputLine(isLeap);

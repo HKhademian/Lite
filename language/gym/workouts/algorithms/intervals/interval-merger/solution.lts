@@ -1,0 +1,65 @@
+integer := import "core/int";
+io := import "core/io";
+list := import "core/list";
+
+withIntAt := fn(xs: List<Int>, idx: Int, val: Int): List<Int> {
+    out: mut List<Int> = [];
+    len := list.listCountInt(xs);
+    var k := 0;
+    loop k < len {
+        list.pushBack(mut out, if k == idx { val } else { xs[k] });
+        k += 1;
+    }
+    out
+};
+
+n := io.inputInt();
+if n <= 0 {
+    io.outputLine("EMPTY");
+} else {
+    emptyInts: List<Int> = [];
+    var mut starts := emptyInts;
+    var mut ends := emptyInts;
+    var k := 0;
+    loop k < n {
+        a := io.inputInt();
+        b := io.inputInt();
+        s := if a <= b { a } else { b };
+        e := if a <= b { b } else { a };
+        list.pushBack(mut starts, s);
+        list.pushBack(mut ends, e);
+        k += 1;
+    }
+
+    var i := 1;
+    loop i < n {
+        ks := starts[i];
+        ke := ends[i];
+        var j := i - 1;
+        loop j >= 0 {
+            before := starts[j] > ks or (starts[j] == ks and ends[j] > ke);
+            if not before { break; }
+            starts = withIntAt(starts, j + 1, starts[j]);
+            ends = withIntAt(ends, j + 1, ends[j]);
+            j -= 1;
+        }
+        starts = withIntAt(starts, j + 1, ks);
+        ends = withIntAt(ends, j + 1, ke);
+        i += 1;
+    }
+
+    var curS := starts[0];
+    var curE := ends[0];
+    var m := 1;
+    loop m < n {
+        if starts[m] <= curE {
+            if ends[m] > curE { curE = ends[m]; }
+        } else {
+            io.outputLine(integer.intText(curS) + ".." + integer.intText(curE));
+            curS = starts[m];
+            curE = ends[m];
+        }
+        m += 1;
+    }
+    io.outputLine(integer.intText(curS) + ".." + integer.intText(curE));
+}

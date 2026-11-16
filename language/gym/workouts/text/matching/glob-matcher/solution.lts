@@ -1,0 +1,66 @@
+io := import "core/io";
+list := import "core/list";
+text := import "core/text";
+
+splitLines := fn(raw: String): List<String> {
+    out: mut List<String> = [];
+    n := text.length(raw);
+    var pos := 0;
+    loop pos <= n {
+        nl := text.indexOfText(raw, "\n", pos);
+        endPos := if nl < 0 { n } else { nl };
+        var cleanEnd := endPos;
+        if cleanEnd > pos and text.at(raw, cleanEnd - 1) == "\r" { cleanEnd -= 1; }
+        list.pushBack(mut out, text.slice(raw, pos, cleanEnd));
+        if nl < 0 { break; }
+        pos = nl + 1;
+    }
+    out
+};
+
+globMatch := fn(pat: String, src: String): Bool {
+    pn := text.length(pat);
+    sn := text.length(src);
+    var pi := 0;
+    var si := 0;
+    var starP := -1;
+    var matchS := 0;
+
+    loop si < sn {
+        if pi < pn and (text.at(pat, pi) == "?" or text.at(pat, pi) == text.at(src, si)) {
+            pi += 1;
+            si += 1;
+        } else if pi < pn and text.at(pat, pi) == "*" {
+            starP = pi;
+            matchS = si;
+            pi += 1;
+        } else if starP >= 0 {
+            pi = starP + 1;
+            matchS += 1;
+            si = matchS;
+        } else {
+            return false;
+        }
+    }
+
+    loop pi < pn and text.at(pat, pi) == "*" {
+        pi += 1;
+    }
+    pi == pn
+};
+
+raw := io.inputAll();
+lines := splitLines(raw);
+var havePattern := false;
+var pattern := "";
+
+loop lines as line {
+    trimmed := text.trim(line);
+    if trimmed == "" { continue; }
+    if not havePattern {
+        pattern = trimmed;
+        havePattern = true;
+    } else {
+        io.outputLine(if globMatch(pattern, trimmed) { "MATCH" } else { "NO" });
+    }
+}

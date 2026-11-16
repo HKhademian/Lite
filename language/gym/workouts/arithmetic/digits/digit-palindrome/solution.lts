@@ -1,0 +1,17 @@
+integer := import "core/int";
+io := import "core/io";
+
+n := io.inputInt();
+mag := if n < 0 { 0 - n } else { n };
+var cur := mag;
+var rev := 0;
+var digitSum := 0;
+loop cur > 0 {
+    d := cur % 10;
+    rev = rev * 10 + d;
+    digitSum += d;
+    cur = cur / 10;
+}
+isPal := n >= 0 and rev == mag;
+palText := if isPal { "true" } else { "false" };
+io.outputLine("pal:" + palText, "sum:" + integer.intText(digitSum));

@@ -1,0 +1,10 @@
+io := import "core/io";
+
+n := io.inputInt();
+var label: String = ?;
+if n >= 0 {
+    label = "non-negative";
+} else {
+    label = "negative";
+}
+io.outputLine(label);

@@ -1,0 +1,85 @@
+io := import "core/io";
+list := import "core/list";
+
+withIntAt := fn(xs: List<Int>, idx: Int, val: Int): List<Int> {
+    out: mut List<Int> = [];
+    len := list.listCountInt(xs);
+    var k := 0;
+    loop k < len {
+        list.pushBack(mut out, if k == idx { val } else { xs[k] });
+        k += 1;
+    }
+    out
+};
+
+withBoolAt := fn(xs: List<Bool>, idx: Int, val: Bool): List<Bool> {
+    out: mut List<Bool> = [];
+    len := list.listCountBool(xs);
+    var k := 0;
+    loop k < len {
+        list.pushBack(mut out, if k == idx { val } else { xs[k] });
+        k += 1;
+    }
+    out
+};
+
+rows := io.inputInt();
+cols := io.inputInt();
+if rows <= 0 or cols <= 0 {
+    io.outputLine("INVALID");
+} else {
+    total := rows * cols;
+    emptyInts: List<Int> = [];
+    emptyBools: List<Bool> = [];
+    cost: mut List<Int> = [];
+    var mut dist := emptyInts;
+    var mut seen := emptyBools;
+    INF := 1000000000000;
+
+    var i := 0;
+    loop i < total {
+        list.pushBack(mut cost, io.inputInt());
+        list.pushBack(mut dist, INF);
+        list.pushBack(mut seen, false);
+        i += 1;
+    }
+
+    dist = withIntAt(dist, 0, cost[0]);
+    var step := 0;
+    loop step < total {
+        var bestIdx := -1;
+        var bestDist := INF;
+        var k := 0;
+        loop k < total {
+            if not seen[k] and dist[k] < bestDist {
+                bestDist = dist[k];
+                bestIdx = k;
+            }
+            k += 1;
+        }
+        if bestIdx < 0 { break; }
+        seen = withBoolAt(seen, bestIdx, true);
+        if bestIdx == total - 1 { break; }
+
+        r := bestIdx / cols;
+        c := bestIdx % cols;
+        dr := [-1, 1, 0, 0];
+        dc := [0, 0, -1, 1];
+        var d := 0;
+        loop d < 4 {
+            nr := r + dr[d];
+            nc := c + dc[d];
+            if nr >= 0 and nr < rows and nc >= 0 and nc < cols {
+                ni := nr * cols + nc;
+                cand := bestDist + cost[ni];
+                if cand < dist[ni] {
+                    dist = withIntAt(dist, ni, cand);
+                }
+            }
+            d += 1;
+        }
+        step += 1;
+    }
+
+    io.outputLine(dist[total - 1]);
+}

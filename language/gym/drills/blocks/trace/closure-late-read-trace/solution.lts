@@ -1,0 +1,10 @@
+io := import "core/io";
+
+n := io.inputInt();
+var bonus: Int = ?;
+readBonus := fn(): Int {
+    bonus + 100
+};
+bonus = n * 2;
+res := readBonus();
+io.outputLine(res);

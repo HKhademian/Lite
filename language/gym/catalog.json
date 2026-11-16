@@ -1,0 +1,1213 @@
+{
+  "schemaVersion": 1,
+  "title": "Lite Gym — Drills & Workouts Catalog",
+  "description": "42 browser-graded exercises combining 18 Litelings concept drills and 24 belt-ranked problem workouts across White, Amber, Emerald, and Obsidian tiers.",
+  "exercises": [
+    {
+      "id": "drills.foundations.bindings.immutable-vs-var",
+      "slug": "immutable-vs-var",
+      "title": "Immutable := vs Mutable var",
+      "mode": "drill",
+      "belt": "white",
+      "domain": "foundations",
+      "subGroup": "bindings",
+      "promptFile": "language/gym/drills/foundations/bindings/immutable-vs-var/README.md",
+      "starterFile": "language/gym/drills/foundations/bindings/immutable-vs-var/starter.lts",
+      "solutionFile": "language/gym/drills/foundations/bindings/immutable-vs-var/solution.lts",
+      "brokenStarterSyntax": false,
+      "expectedStarterFailure": "compile-error",
+      "hints": [
+        "By default `:=` introduces a read-only binding that cannot appear on the left side of `=` or `+=`.",
+        "Change `count := n;` to `var count := n;`."
+      ],
+      "relatedDocs": ["language/learn/handbook/foundations/bindings-and-mutability.md"],
+      "relatedLessons": ["learn.foundations.bindings.bindings-and-mutability"],
+      "visibleCases": [
+        { "name": "positive", "stdin": "5\n", "args": [], "expectedStdout": "15\n" },
+        { "name": "zero", "stdin": "0\n", "args": [], "expectedStdout": "10\n" }
+      ],
+      "hiddenCases": [
+        { "name": "negative", "stdin": "-12\n", "args": [], "expectedStdout": "-2\n" },
+        { "name": "cancels-to-zero", "stdin": "-10\n", "args": [], "expectedStdout": "0\n" }
+      ]
+    },
+    {
+      "id": "drills.foundations.bindings.reserved-init-before-read",
+      "slug": "reserved-init-before-read",
+      "title": "Reserved = ? Init Before Read",
+      "mode": "drill",
+      "belt": "white",
+      "domain": "foundations",
+      "subGroup": "bindings",
+      "promptFile": "language/gym/drills/foundations/bindings/reserved-init-before-read/README.md",
+      "starterFile": "language/gym/drills/foundations/bindings/reserved-init-before-read/starter.lts",
+      "solutionFile": "language/gym/drills/foundations/bindings/reserved-init-before-read/solution.lts",
+      "brokenStarterSyntax": false,
+      "expectedStarterFailure": "compile-error",
+      "hints": [
+        "`var label: String = ?;` is uninitialized until every possible control-flow branch assigns to it.",
+        "Add `else { label = \"negative\"; }` right after the `if n >= 0 { ... }` block."
+      ],
+      "relatedDocs": ["language/learn/handbook/foundations/bindings-and-mutability.md"],
+      "relatedLessons": ["learn.foundations.bindings.bindings-and-mutability"],
+      "visibleCases": [
+        { "name": "positive", "stdin": "4\n", "args": [], "expectedStdout": "non-negative\n" },
+        { "name": "negative", "stdin": "-3\n", "args": [], "expectedStdout": "negative\n" }
+      ],
+      "hiddenCases": [
+        { "name": "zero-boundary", "stdin": "0\n", "args": [], "expectedStdout": "non-negative\n" },
+        { "name": "minus-one", "stdin": "-1\n", "args": [], "expectedStdout": "negative\n" }
+      ]
+    },
+    {
+      "id": "drills.foundations.numeric.floor-vs-trunc-div",
+      "slug": "floor-vs-trunc-div",
+      "title": "Floor :/ :% vs Truncating / %",
+      "mode": "drill",
+      "belt": "white",
+      "domain": "foundations",
+      "subGroup": "numeric",
+      "promptFile": "language/gym/drills/foundations/numeric/floor-vs-trunc-div/README.md",
+      "starterFile": "language/gym/drills/foundations/numeric/floor-vs-trunc-div/starter.lts",
+      "solutionFile": "language/gym/drills/foundations/numeric/floor-vs-trunc-div/solution.lts",
+      "brokenStarterSyntax": false,
+      "expectedStarterFailure": "wrong-output",
+      "hints": [
+        "`/` and `%` truncate toward zero (`-7 / 2 == -3`, `-7 % 2 == -1`).",
+        "Replace `/` with `:/` and `%` with `:%`."
+      ],
+      "relatedDocs": ["language/learn/handbook/foundations/numbers-operators-and-strings.md"],
+      "relatedLessons": ["learn.foundations.numeric.numbers-and-division"],
+      "visibleCases": [
+        { "name": "positive", "stdin": "7 2\n", "args": [], "expectedStdout": "3 1\n" },
+        { "name": "negative-dividend", "stdin": "-7 2\n", "args": [], "expectedStdout": "-4 1\n" }
+      ],
+      "hiddenCases": [
+        { "name": "both-negative", "stdin": "-7 -2\n", "args": [], "expectedStdout": "3 -1\n" },
+        { "name": "exact-neg", "stdin": "-8 2\n", "args": [], "expectedStdout": "-4 0\n" }
+      ]
+    },
+    {
+      "id": "drills.control.branching.expression-if-else",
+      "slug": "expression-if-else",
+      "title": "Value-Returning if / else",
+      "mode": "drill",
+      "belt": "white",
+      "domain": "control",
+      "subGroup": "branching",
+      "promptFile": "language/gym/drills/control/branching/expression-if-else/README.md",
+      "starterFile": "language/gym/drills/control/branching/expression-if-else/starter.lts",
+      "solutionFile": "language/gym/drills/control/branching/expression-if-else/solution.lts",
+      "brokenStarterSyntax": false,
+      "expectedStarterFailure": "wrong-output",
+      "hints": [
+        "In Lite, a partial `if cond { \"pass\" }` without `else` evaluates to `\"\"` when `score < 60`.",
+        "Append `else { \"retry\" }` after `{ \"pass\" }`."
+      ],
+      "relatedDocs": ["language/learn/handbook/control/conditionals-match-and-loops.md"],
+      "relatedLessons": ["learn.control.branching.conditionals-and-match"],
+      "visibleCases": [
+        { "name": "pass", "stdin": "75\n", "args": [], "expectedStdout": "pass\n" },
+        { "name": "retry", "stdin": "42\n", "args": [], "expectedStdout": "retry\n" }
+      ],
+      "hiddenCases": [
+        { "name": "threshold-60", "stdin": "60\n", "args": [], "expectedStdout": "pass\n" },
+        { "name": "threshold-59", "stdin": "59\n", "args": [], "expectedStdout": "retry\n" }
+      ]
+    },
+    {
+      "id": "drills.control.branching.match-wildcard-arm",
+      "slug": "match-wildcard-arm",
+      "title": "Mandatory _ Arm in Match",
+      "mode": "drill",
+      "belt": "white",
+      "domain": "control",
+      "subGroup": "branching",
+      "promptFile": "language/gym/drills/control/branching/match-wildcard-arm/README.md",
+      "starterFile": "language/gym/drills/control/branching/match-wildcard-arm/starter.lts",
+      "solutionFile": "language/gym/drills/control/branching/match-wildcard-arm/solution.lts",
+      "brokenStarterSyntax": false,
+      "expectedStarterFailure": "compile-error",
+      "hints": [
+        "Subjectless `match { ... }` must terminate with a `_ { ... }` fallback arm.",
+        "Add `_ { \"C\" }` before the closing `}` of `match`."
+      ],
+      "relatedDocs": ["language/learn/handbook/control/conditionals-match-and-loops.md"],
+      "relatedLessons": ["learn.control.branching.conditionals-and-match"],
+      "visibleCases": [
+        { "name": "grade-a", "stdin": "95\n", "args": [], "expectedStdout": "A\n" },
+        { "name": "grade-c", "stdin": "55\n", "args": [], "expectedStdout": "C\n" }
+      ],
+      "hiddenCases": [
+        { "name": "grade-b-boundary", "stdin": "70\n", "args": [], "expectedStdout": "B\n" },
+        { "name": "grade-c-boundary", "stdin": "69\n", "args": [], "expectedStdout": "C\n" }
+      ]
+    },
+    {
+      "id": "drills.control.loops.loop-break-payload-then",
+      "slug": "loop-break-payload-then",
+      "title": "Loop break Payload & then Clause",
+      "mode": "drill",
+      "belt": "amber",
+      "domain": "control",
+      "subGroup": "loops",
+      "promptFile": "language/gym/drills/control/loops/loop-break-payload-then/README.md",
+      "starterFile": "language/gym/drills/control/loops/loop-break-payload-then/starter.lts",
+      "solutionFile": "language/gym/drills/control/loops/loop-break-payload-then/solution.lts",
+      "brokenStarterSyntax": false,
+      "expectedStarterFailure": "wrong-output",
+      "hints": [
+        "Tag the loop `@scan loop [a, b, c] as v` and use `break v;` to deliver the found element into `@scan.value`.",
+        "Inside `then`, leading-dot `.value` is unavailable inside conditionals—write `if @scan.value >= 0 { @scan.value + @scan.count } else { -1 }`."
+      ],
+      "relatedDocs": ["language/learn/handbook/control/conditionals-match-and-loops.md"],
+      "relatedLessons": ["learn.control.loops.loops-and-completion"],
+      "visibleCases": [
+        { "name": "second-element", "stdin": "50 10 60 80\n", "args": [], "expectedStdout": "62\n" },
+        { "name": "none-qualifies", "stdin": "90 10 20 30\n", "args": [], "expectedStdout": "-1\n" }
+      ],
+      "hiddenCases": [
+        { "name": "first-element", "stdin": "5 5 1 2\n", "args": [], "expectedStdout": "6\n" },
+        { "name": "last-element", "stdin": "100 1 2 100\n", "args": [], "expectedStdout": "103\n" }
+      ]
+    },
+    {
+      "id": "drills.types.tuples.shorthand-tuple-destructure",
+      "slug": "shorthand-tuple-destructure",
+      "title": "Shorthand Labels & Tuple Destructuring",
+      "mode": "drill",
+      "belt": "amber",
+      "domain": "types",
+      "subGroup": "tuples",
+      "promptFile": "language/gym/drills/types/tuples/shorthand-tuple-destructure/README.md",
+      "starterFile": "language/gym/drills/types/tuples/shorthand-tuple-destructure/starter.lts",
+      "solutionFile": "language/gym/drills/types/tuples/shorthand-tuple-destructure/solution.lts",
+      "brokenStarterSyntax": false,
+      "expectedStarterFailure": "wrong-output",
+      "hints": [
+        "Tuple destructuring `(a, b) := tuple;` binds fields positionally in order.",
+        "Change `(r, c) := relabelled;` to `(c, r) := relabelled;`."
+      ],
+      "relatedDocs": ["language/learn/handbook/types/tuples-arrays-lists-and-aliases.md"],
+      "relatedLessons": ["learn.types.tuples.tuples-and-destructuring"],
+      "visibleCases": [
+        { "name": "basic", "stdin": "3 7\n", "args": [], "expectedStdout": "37\n" },
+        { "name": "zeros", "stdin": "4 0\n", "args": [], "expectedStdout": "40\n" }
+      ],
+      "hiddenCases": [
+        { "name": "asymmetric", "stdin": "8 1\n", "args": [], "expectedStdout": "81\n" },
+        { "name": "negative", "stdin": "-2 5\n", "args": [], "expectedStdout": "-15\n" }
+      ]
+    },
+    {
+      "id": "drills.types.collections.mut-list-permission",
+      "slug": "mut-list-permission",
+      "title": "Explicit mut List Storage",
+      "mode": "drill",
+      "belt": "amber",
+      "domain": "types",
+      "subGroup": "collections",
+      "promptFile": "language/gym/drills/types/collections/mut-list-permission/README.md",
+      "starterFile": "language/gym/drills/types/collections/mut-list-permission/starter.lts",
+      "solutionFile": "language/gym/drills/types/collections/mut-list-permission/solution.lts",
+      "brokenStarterSyntax": false,
+      "expectedStarterFailure": "compile-error",
+      "hints": [
+        "In-place mutation (`mut items`) is rejected unless `items` was declared with `mut List<Int>`.",
+        "Change `items: List<Int> = [a];` to `items: mut List<Int> = [a];`."
+      ],
+      "relatedDocs": ["language/learn/handbook/types/tuples-arrays-lists-and-aliases.md", "lib/core/list.lts"],
+      "relatedLessons": ["learn.types.collections.arrays-and-lists"],
+      "visibleCases": [
+        { "name": "pair", "stdin": "4 9\n", "args": [], "expectedStdout": "4,9\n" },
+        { "name": "negatives", "stdin": "-1 2\n", "args": [], "expectedStdout": "-1,2\n" }
+      ],
+      "hiddenCases": [
+        { "name": "same-values", "stdin": "7 7\n", "args": [], "expectedStdout": "7,7\n" },
+        { "name": "zeros", "stdin": "0 0\n", "args": [], "expectedStdout": "0,0\n" }
+      ]
+    },
+    {
+      "id": "drills.types.aliases.inner-alias-shadowing",
+      "slug": "inner-alias-shadowing",
+      "title": "Inner Type Alias Shadowing",
+      "mode": "drill",
+      "belt": "amber",
+      "domain": "types",
+      "subGroup": "aliases",
+      "promptFile": "language/gym/drills/types/aliases/inner-alias-shadowing/README.md",
+      "starterFile": "language/gym/drills/types/aliases/inner-alias-shadowing/starter.lts",
+      "solutionFile": "language/gym/drills/types/aliases/inner-alias-shadowing/solution.lts",
+      "brokenStarterSyntax": false,
+      "expectedStarterFailure": "compile-error",
+      "hints": [
+        "Outer `NumOrText` is `String`, so `Pair` inside the block sees `String` fields unless shadowed.",
+        "Add `NumOrText := type Int;` inside `total := { ... }` (before or after `Pair`, since inner aliases wire forward!)."
+      ],
+      "relatedDocs": ["language/learn/handbook/types/tuples-arrays-lists-and-aliases.md"],
+      "relatedLessons": ["learn.types.aliases.type-aliases-and-scoping"],
+      "visibleCases": [
+        { "name": "positive", "stdin": "12 8\n", "args": [], "expectedStdout": "sum 20\n" },
+        { "name": "negative", "stdin": "-5 3\n", "args": [], "expectedStdout": "sum -2\n" }
+      ],
+      "hiddenCases": [
+        { "name": "zeros", "stdin": "0 0\n", "args": [], "expectedStdout": "sum 0\n" },
+        { "name": "large", "stdin": "100 250\n", "args": [], "expectedStdout": "sum 350\n" }
+      ]
+    },
+    {
+      "id": "drills.blocks.evaluation.value-block-semicolon",
+      "slug": "value-block-semicolon",
+      "title": "Block Final-Item Value Rule",
+      "mode": "drill",
+      "belt": "amber",
+      "domain": "blocks",
+      "subGroup": "evaluation",
+      "promptFile": "language/gym/drills/blocks/evaluation/value-block-semicolon/README.md",
+      "starterFile": "language/gym/drills/blocks/evaluation/value-block-semicolon/starter.lts",
+      "solutionFile": "language/gym/drills/blocks/evaluation/value-block-semicolon/solution.lts",
+      "brokenStarterSyntax": false,
+      "expectedStarterFailure": "compile-error",
+      "hints": [
+        "Ending `{ ... product := scaled * h; }` with a declaration makes the block yield `Unit` instead of `Int`.",
+        "Replace `product := scaled * h;` with the value expression `scaled * h`."
+      ],
+      "relatedDocs": ["language/learn/handbook/execution/blocks-wiring-and-closures.md"],
+      "relatedLessons": ["learn.blocks.evaluation.value-blocks-and-dce"],
+      "visibleCases": [
+        { "name": "basic", "stdin": "3 4\n", "args": [], "expectedStdout": "24\n" },
+        { "name": "zero", "stdin": "5 0\n", "args": [], "expectedStdout": "0\n" }
+      ],
+      "hiddenCases": [
+        { "name": "unit", "stdin": "1 1\n", "args": [], "expectedStdout": "2\n" },
+        { "name": "neg", "stdin": "-2 6\n", "args": [], "expectedStdout": "-24\n" }
+      ]
+    },
+    {
+      "id": "drills.blocks.wiring.mutual-recursion-order",
+      "slug": "mutual-recursion-order",
+      "title": "Parallel Wiring & Mutual Recursion",
+      "mode": "drill",
+      "belt": "emerald",
+      "domain": "blocks",
+      "subGroup": "wiring",
+      "promptFile": "language/gym/drills/blocks/wiring/mutual-recursion-order/README.md",
+      "starterFile": "language/gym/drills/blocks/wiring/mutual-recursion-order/starter.lts",
+      "solutionFile": "language/gym/drills/blocks/wiring/mutual-recursion-order/solution.lts",
+      "brokenStarterSyntax": false,
+      "expectedStarterFailure": "wrong-output",
+      "hints": [
+        "`isEven(0)` should return `true` and `isOdd(0)` should return `false`.",
+        "Also guard negative inputs with `if k < 0 { self(0 - k) }` so recursion terminates cleanly."
+      ],
+      "relatedDocs": ["language/learn/handbook/execution/blocks-wiring-and-closures.md"],
+      "relatedLessons": ["learn.blocks.wiring.parallel-symbol-wiring"],
+      "visibleCases": [
+        { "name": "zero", "stdin": "0\n", "args": [], "expectedStdout": "true false\n" },
+        { "name": "seven", "stdin": "7\n", "args": [], "expectedStdout": "false true\n" }
+      ],
+      "hiddenCases": [
+        { "name": "even-large", "stdin": "18\n", "args": [], "expectedStdout": "true false\n" },
+        { "name": "negative-odd", "stdin": "-5\n", "args": [], "expectedStdout": "false true\n" }
+      ]
+    },
+    {
+      "id": "drills.blocks.trace.closure-late-read-trace",
+      "slug": "closure-late-read-trace",
+      "title": "Trace Safety on Reserved Storage",
+      "mode": "drill",
+      "belt": "emerald",
+      "domain": "blocks",
+      "subGroup": "trace",
+      "promptFile": "language/gym/drills/blocks/trace/closure-late-read-trace/README.md",
+      "starterFile": "language/gym/drills/blocks/trace/closure-late-read-trace/starter.lts",
+      "solutionFile": "language/gym/drills/blocks/trace/closure-late-read-trace/solution.lts",
+      "brokenStarterSyntax": false,
+      "expectedStarterFailure": "compile-error",
+      "hints": [
+        "Executing `readBonus()` before `bonus = n * 2;` reads an uninitialized `= ?` variable.",
+        "Swap `res := readBonus();` and `bonus = n * 2;` so initialization happens first."
+      ],
+      "relatedDocs": ["language/learn/handbook/execution/blocks-wiring-and-closures.md"],
+      "relatedLessons": ["learn.blocks.trace.execution-trace-safety"],
+      "visibleCases": [
+        { "name": "five", "stdin": "5\n", "args": [], "expectedStdout": "110\n" },
+        { "name": "zero", "stdin": "0\n", "args": [], "expectedStdout": "100\n" }
+      ],
+      "hiddenCases": [
+        { "name": "negative", "stdin": "-20\n", "args": [], "expectedStdout": "60\n" },
+        { "name": "large", "stdin": "250\n", "args": [], "expectedStdout": "600\n" }
+      ]
+    },
+    {
+      "id": "drills.functions.calls.named-shorthand-self",
+      "slug": "named-shorthand-self",
+      "title": "Named Arguments & self Recursion",
+      "mode": "drill",
+      "belt": "emerald",
+      "domain": "functions",
+      "subGroup": "calls",
+      "promptFile": "language/gym/drills/functions/calls/named-shorthand-self/README.md",
+      "starterFile": "language/gym/drills/functions/calls/named-shorthand-self/starter.lts",
+      "solutionFile": "language/gym/drills/functions/calls/named-shorthand-self/solution.lts",
+      "brokenStarterSyntax": false,
+      "expectedStarterFailure": "wrong-output",
+      "hints": [
+        "In `self(n = n - 1, acc = acc)`, the accumulator never changes.",
+        "Change `acc = acc` to `acc = acc + n`."
+      ],
+      "relatedDocs": ["language/learn/handbook/execution/blocks-wiring-and-closures.md"],
+      "relatedLessons": ["learn.functions.calls.named-calls-and-recursion"],
+      "visibleCases": [
+        { "name": "five", "stdin": "5\n", "args": [], "expectedStdout": "15\n" },
+        { "name": "zero", "stdin": "0\n", "args": [], "expectedStdout": "0\n" }
+      ],
+      "hiddenCases": [
+        { "name": "ten", "stdin": "10\n", "args": [], "expectedStdout": "55\n" },
+        { "name": "negative", "stdin": "-3\n", "args": [], "expectedStdout": "0\n" }
+      ]
+    },
+    {
+      "id": "drills.functions.callables.callable-pipeline",
+      "slug": "callable-pipeline",
+      "title": "Callable Types & Inference",
+      "mode": "drill",
+      "belt": "emerald",
+      "domain": "functions",
+      "subGroup": "callables",
+      "promptFile": "language/gym/drills/functions/callables/callable-pipeline/README.md",
+      "starterFile": "language/gym/drills/functions/callables/callable-pipeline/starter.lts",
+      "solutionFile": "language/gym/drills/functions/callables/callable-pipeline/solution.lts",
+      "brokenStarterSyntax": false,
+      "expectedStarterFailure": "compile-error",
+      "hints": [
+        "`steps` requires functions of type `IntOp` (`fn(Int): Int`), not `String`.",
+        "Replace `fn(x) { \"triple\" }` with `fn(x) { x * 3 }`."
+      ],
+      "relatedDocs": ["language/learn/handbook/execution/blocks-wiring-and-closures.md"],
+      "relatedLessons": ["learn.functions.callables.first-class-functions"],
+      "visibleCases": [
+        { "name": "four", "stdin": "4\n", "args": [], "expectedStdout": "17\n" },
+        { "name": "zero", "stdin": "0\n", "args": [], "expectedStdout": "5\n" }
+      ],
+      "hiddenCases": [
+        { "name": "negative", "stdin": "-2\n", "args": [], "expectedStdout": "-1\n" },
+        { "name": "ten", "stdin": "10\n", "args": [], "expectedStdout": "35\n" }
+      ]
+    },
+    {
+      "id": "drills.functions.closures.loop-item-capture",
+      "slug": "loop-item-capture",
+      "title": "Independent Closure State Frames",
+      "mode": "drill",
+      "belt": "emerald",
+      "domain": "functions",
+      "subGroup": "closures",
+      "promptFile": "language/gym/drills/functions/closures/loop-item-capture/README.md",
+      "starterFile": "language/gym/drills/functions/closures/loop-item-capture/starter.lts",
+      "solutionFile": "language/gym/drills/functions/closures/loop-item-capture/solution.lts",
+      "brokenStarterSyntax": false,
+      "expectedStarterFailure": "wrong-output",
+      "hints": [
+        "Calling `makeCounter(s2, 5)` overwrites `sharedCurrent`, breaking `c1`.",
+        "Remove the outer `sharedCurrent` variable and declare `var current := start;` inside `makeCounter`."
+      ],
+      "relatedDocs": ["language/learn/handbook/execution/blocks-wiring-and-closures.md"],
+      "relatedLessons": ["learn.functions.closures.lexical-closures-and-state"],
+      "visibleCases": [
+        { "name": "zero-ten", "stdin": "0 10\n", "args": [], "expectedStdout": "2 15 4 20\n" },
+        { "name": "neg-pos", "stdin": "-4 100\n", "args": [], "expectedStdout": "-2 105 0 110\n" }
+      ],
+      "hiddenCases": [
+        { "name": "same-seed", "stdin": "50 50\n", "args": [], "expectedStdout": "52 55 54 60\n" },
+        { "name": "large", "stdin": "1000 1\n", "args": [], "expectedStdout": "1002 6 1004 11\n" }
+      ]
+    },
+    {
+      "id": "drills.modules.text.codepoint-trim-slice",
+      "slug": "codepoint-trim-slice",
+      "title": "core/text Trim & Code-Point Indexing",
+      "mode": "drill",
+      "belt": "emerald",
+      "domain": "modules",
+      "subGroup": "text",
+      "promptFile": "language/gym/drills/modules/text/codepoint-trim-slice/README.md",
+      "starterFile": "language/gym/drills/modules/text/codepoint-trim-slice/starter.lts",
+      "solutionFile": "language/gym/drills/modules/text/codepoint-trim-slice/solution.lts",
+      "brokenStarterSyntax": false,
+      "expectedStarterFailure": "wrong-output",
+      "hints": [
+        "Leading/trailing spaces or tabs count toward `text.length(line)` unless trimmed first.",
+        "Call `cleaned := text.trim(raw);` before reading `text.length(cleaned)` and `text.at(cleaned, ...)`."
+      ],
+      "relatedDocs": ["lib/core/text.lts", "language/learn/handbook/foundations/numbers-operators-and-strings.md"],
+      "relatedLessons": ["learn.foundations.strings.strings-and-unicode"],
+      "visibleCases": [
+        { "name": "padded-word", "stdin": "  LiteLang\t \n", "args": [], "expectedStdout": "8 L g\n" },
+        { "name": "whitespace-only", "stdin": "   \t  \n", "args": [], "expectedStdout": "EMPTY\n" }
+      ],
+      "hiddenCases": [
+        { "name": "single-unicode", "stdin": "  é \n", "args": [], "expectedStdout": "1 é é\n" },
+        { "name": "emoji", "stdin": " 🚀Lite🚀 \n", "args": [], "expectedStdout": "6 🚀 🚀\n" }
+      ]
+    },
+    {
+      "id": "drills.modules.format.aligned-column-row",
+      "slug": "aligned-column-row",
+      "title": "core/format Table Padding",
+      "mode": "drill",
+      "belt": "emerald",
+      "domain": "modules",
+      "subGroup": "format",
+      "promptFile": "language/gym/drills/modules/format/aligned-column-row/README.md",
+      "starterFile": "language/gym/drills/modules/format/aligned-column-row/starter.lts",
+      "solutionFile": "language/gym/drills/modules/format/aligned-column-row/solution.lts",
+      "brokenStarterSyntax": false,
+      "expectedStarterFailure": "wrong-output",
+      "hints": [
+        "Left-aligning text pads spaces on the right (`padRightText`); right-aligning numbers pads spaces on the left (`padLeftText`).",
+        "Swap `padLeftText` and `padRightText` in `row`."
+      ],
+      "relatedDocs": ["lib/core/format.lts", "language/learn/handbook/modules/imports-visibility-and-io.md"],
+      "relatedLessons": ["learn.tutorials.cli.text-manifest-digest"],
+      "visibleCases": [
+        { "name": "latency", "stdin": "latency\n42\n", "args": [], "expectedStdout": "latency    :     42\n" },
+        { "name": "ok-zero", "stdin": "ok\n0\n", "args": [], "expectedStdout": "ok         :      0\n" }
+      ],
+      "hiddenCases": [
+        { "name": "negative-val", "stdin": "delta\n-15\n", "args": [], "expectedStdout": "delta      :    -15\n" },
+        { "name": "wide-key", "stdin": "throughput12\n999999\n", "args": [], "expectedStdout": "throughput12 : 999999\n" }
+      ]
+    },
+    {
+      "id": "drills.modules.unicode.utf8-roundtrip-count",
+      "slug": "utf8-roundtrip-count",
+      "title": "core/unicode Scalars vs UTF-8 Bytes",
+      "mode": "drill",
+      "belt": "emerald",
+      "domain": "modules",
+      "subGroup": "unicode",
+      "promptFile": "language/gym/drills/modules/unicode/utf8-roundtrip-count/README.md",
+      "starterFile": "language/gym/drills/modules/unicode/utf8-roundtrip-count/starter.lts",
+      "solutionFile": "language/gym/drills/modules/unicode/utf8-roundtrip-count/solution.lts",
+      "brokenStarterSyntax": false,
+      "expectedStarterFailure": "wrong-output",
+      "hints": [
+        "Non-ASCII code points take 2–4 UTF-8 bytes even though they have scalar length 1.",
+        "Import `core/unicode` and `core/list` and compute `list.listCountInt(unicode.utf8Encode(s))`."
+      ],
+      "relatedDocs": ["lib/core/unicode.lts", "language/learn/handbook/foundations/numbers-operators-and-strings.md"],
+      "relatedLessons": ["learn.foundations.strings.strings-and-unicode"],
+      "visibleCases": [
+        { "name": "ascii", "stdin": "Lite\n", "args": [], "expectedStdout": "scalars:4 utf8Bytes:4\n" },
+        { "name": "mixed-emoji", "stdin": "Aé🚀\n", "args": [], "expectedStdout": "scalars:3 utf8Bytes:7\n" }
+      ],
+      "hiddenCases": [
+        { "name": "empty", "stdin": "\n", "args": [], "expectedStdout": "scalars:0 utf8Bytes:0\n" },
+        { "name": "accented", "stdin": "café\n", "args": [], "expectedStdout": "scalars:4 utf8Bytes:5\n" }
+      ]
+    },
+
+    {
+      "id": "workouts.units.conversions.temperature-scales",
+      "slug": "temperature-scales",
+      "title": "Temperature Scale Converter",
+      "mode": "kata",
+      "belt": "white",
+      "domain": "units",
+      "subGroup": "conversions",
+      "promptFile": "language/gym/workouts/units/conversions/temperature-scales/README.md",
+      "starterFile": "language/gym/workouts/units/conversions/temperature-scales/starter.lts",
+      "solutionFile": "language/gym/workouts/units/conversions/temperature-scales/solution.lts",
+      "brokenStarterSyntax": false,
+      "expectedStarterFailure": "wrong-output",
+      "hints": [
+        "Read `mode` first as a trimmed line, then `temp` as an integer.",
+        "In `C2F`, add `32` (do not subtract `32`)."
+      ],
+      "relatedDocs": ["language/learn/handbook/foundations/numbers-operators-and-strings.md"],
+      "relatedLessons": ["learn.foundations.numeric.numbers-and-division"],
+      "visibleCases": [
+        { "name": "boiling-c2f", "stdin": "C2F\n100\n", "args": [], "expectedStdout": "212F\n" },
+        { "name": "freezing-f2c", "stdin": "F2C\n32\n", "args": [], "expectedStdout": "0C\n" },
+        { "name": "minus-40-c2f", "stdin": "C2F\n-40\n", "args": [], "expectedStdout": "-40F\n" }
+      ],
+      "hiddenCases": [
+        { "name": "minus-40-f2c", "stdin": "F2C\n-40\n", "args": [], "expectedStdout": "-40C\n" },
+        { "name": "negative-floor", "stdin": "C2F\n-1\n", "args": [], "expectedStdout": "30F\n" },
+        { "name": "unknown-mode", "stdin": "K2C\n300\n", "args": [], "expectedStdout": "INVALID\n" }
+      ]
+    },
+    {
+      "id": "workouts.units.time.duration-hms",
+      "slug": "duration-hms",
+      "title": "Duration Breakdown (H/M/S)",
+      "mode": "kata",
+      "belt": "white",
+      "domain": "units",
+      "subGroup": "time",
+      "promptFile": "language/gym/workouts/units/time/duration-hms/README.md",
+      "starterFile": "language/gym/workouts/units/time/duration-hms/starter.lts",
+      "solutionFile": "language/gym/workouts/units/time/duration-hms/solution.lts",
+      "brokenStarterSyntax": false,
+      "expectedStarterFailure": "wrong-output",
+      "hints": [
+        "Take `remAfterHours := total % 3600;` before dividing by `60` for minutes.",
+        "Reject `total < 0` with `\"INVALID\"`."
+      ],
+      "relatedDocs": ["language/learn/handbook/foundations/numbers-operators-and-strings.md"],
+      "relatedLessons": ["learn.foundations.numeric.numbers-and-division"],
+      "visibleCases": [
+        { "name": "one-each", "stdin": "3661\n", "args": [], "expectedStdout": "1h 1m 1s\n" },
+        { "name": "zero", "stdin": "0\n", "args": [], "expectedStdout": "0h 0m 0s\n" },
+        { "name": "negative", "stdin": "-5\n", "args": [], "expectedStdout": "INVALID\n" }
+      ],
+      "hiddenCases": [
+        { "name": "only-seconds", "stdin": "59\n", "args": [], "expectedStdout": "0h 0m 59s\n" },
+        { "name": "multi-hour", "stdin": "86399\n", "args": [], "expectedStdout": "23h 59m 59s\n" }
+      ]
+    },
+    {
+      "id": "workouts.finance.splitting.split-bill-cents",
+      "slug": "split-bill-cents",
+      "title": "Split Bill in Minor Units",
+      "mode": "kata",
+      "belt": "white",
+      "domain": "finance",
+      "subGroup": "splitting",
+      "promptFile": "language/gym/workouts/finance/splitting/split-bill-cents/README.md",
+      "starterFile": "language/gym/workouts/finance/splitting/split-bill-cents/starter.lts",
+      "solutionFile": "language/gym/workouts/finance/splitting/split-bill-cents/solution.lts",
+      "brokenStarterSyntax": false,
+      "expectedStarterFailure": "wrong-output",
+      "hints": [
+        "Check `cents < 0 or people <= 0` BEFORE dividing.",
+        "Use integer `/` and `%` to print `each:<q> rem:<r>`."
+      ],
+      "relatedDocs": ["language/learn/handbook/foundations/numbers-operators-and-strings.md"],
+      "relatedLessons": ["learn.foundations.numeric.numbers-and-division"],
+      "visibleCases": [
+        { "name": "even-split", "stdin": "1000 4\n", "args": [], "expectedStdout": "each:250 rem:0\n" },
+        { "name": "leftover-cents", "stdin": "1000 3\n", "args": [], "expectedStdout": "each:333 rem:1\n" },
+        { "name": "zero-people", "stdin": "500 0\n", "args": [], "expectedStdout": "INVALID\n" }
+      ],
+      "hiddenCases": [
+        { "name": "negative-cents", "stdin": "-10 2\n", "args": [], "expectedStdout": "INVALID\n" },
+        { "name": "zero-cents", "stdin": "0 5\n", "args": [], "expectedStdout": "each:0 rem:0\n" }
+      ]
+    },
+    {
+      "id": "workouts.calendar.dates.leap-year-check",
+      "slug": "leap-year-check",
+      "title": "Gregorian Leap Year Rules",
+      "mode": "kata",
+      "belt": "white",
+      "domain": "calendar",
+      "subGroup": "dates",
+      "promptFile": "language/gym/workouts/calendar/dates/leap-year-check/README.md",
+      "starterFile": "language/gym/workouts/calendar/dates/leap-year-check/starter.lts",
+      "solutionFile": "language/gym/workouts/calendar/dates/leap-year-check/solution.lts",
+      "brokenStarterSyntax": false,
+      "expectedStarterFailure": "wrong-output",
+      "hints": [
+        "Century years divisible by `100` are NOT leap years unless also divisible by `400`.",
+        "Combine `(year % 400 == 0) or (year % 4 == 0 and year % 100 =!= 0)`."
+      ],
+      "relatedDocs": ["language/learn/handbook/foundations/numbers-operators-and-strings.md"],
+      "relatedLessons": ["learn.control.branching.conditionals-and-match"],
+      "visibleCases": [
+        { "name": "ordinary-leap", "stdin": "2024\n", "args": [], "expectedStdout": "true\n" },
+        { "name": "century-nonleap", "stdin": "1900\n", "args": [], "expectedStdout": "false\n" },
+        { "name": "four-century-leap", "stdin": "2000\n", "args": [], "expectedStdout": "true\n" }
+      ],
+      "hiddenCases": [
+        { "name": "ordinary-common", "stdin": "2025\n", "args": [], "expectedStdout": "false\n" },
+        { "name": "nonpositive", "stdin": "0\n", "args": [], "expectedStdout": "false\n" }
+      ]
+    },
+    {
+      "id": "workouts.arithmetic.bounds.clamp-and-sign",
+      "slug": "clamp-and-sign",
+      "title": "Clamp to Range & Sign Label",
+      "mode": "kata",
+      "belt": "white",
+      "domain": "arithmetic",
+      "subGroup": "bounds",
+      "promptFile": "language/gym/workouts/arithmetic/bounds/clamp-and-sign/README.md",
+      "starterFile": "language/gym/workouts/arithmetic/bounds/clamp-and-sign/starter.lts",
+      "solutionFile": "language/gym/workouts/arithmetic/bounds/clamp-and-sign/solution.lts",
+      "brokenStarterSyntax": false,
+      "expectedStarterFailure": "wrong-output",
+      "hints": [
+        "Check both `x < lo` and `x > hi` inside `match { ... }`.",
+        "Classify the clamped value (not original `x`) as `neg`, `zero`, or `pos`."
+      ],
+      "relatedDocs": ["language/learn/handbook/control/conditionals-match-and-loops.md"],
+      "relatedLessons": ["learn.control.branching.conditionals-and-match"],
+      "visibleCases": [
+        { "name": "above-hi", "stdin": "25 0 10\n", "args": [], "expectedStdout": "clamped:10 sign:pos\n" },
+        { "name": "below-lo-zero", "stdin": "-8 0 10\n", "args": [], "expectedStdout": "clamped:0 sign:zero\n" },
+        { "name": "negative-range", "stdin": "-12 -10 -2\n", "args": [], "expectedStdout": "clamped:-10 sign:neg\n" }
+      ],
+      "hiddenCases": [
+        { "name": "in-range", "stdin": "7 0 10\n", "args": [], "expectedStdout": "clamped:7 sign:pos\n" },
+        { "name": "exact-hi", "stdin": "10 -5 10\n", "args": [], "expectedStdout": "clamped:10 sign:pos\n" }
+      ]
+    },
+    {
+      "id": "workouts.arithmetic.division.safe-quotient",
+      "slug": "safe-quotient",
+      "title": "Safe Quotient Guard",
+      "mode": "kata",
+      "belt": "white",
+      "domain": "arithmetic",
+      "subGroup": "division",
+      "promptFile": "language/gym/workouts/arithmetic/division/safe-quotient/README.md",
+      "starterFile": "language/gym/workouts/arithmetic/division/safe-quotient/starter.lts",
+      "solutionFile": "language/gym/workouts/arithmetic/division/safe-quotient/solution.lts",
+      "brokenStarterSyntax": false,
+      "expectedStarterFailure": "wrong-output",
+      "hints": [
+        "Dividing by `0` panics at runtime unless guarded first.",
+        "Branch on `if b == 0 { io.outputLine(\"ERR:div-zero\"); } else { ... }`."
+      ],
+      "relatedDocs": ["language/learn/handbook/foundations/numbers-operators-and-strings.md"],
+      "relatedLessons": ["learn.foundations.numeric.numbers-and-division"],
+      "visibleCases": [
+        { "name": "negative-trunc-floor", "stdin": "-7 2\n", "args": [], "expectedStdout": "trunc:-3 floor:-4\n" },
+        { "name": "div-zero", "stdin": "10 0\n", "args": [], "expectedStdout": "ERR:div-zero\n" },
+        { "name": "exact", "stdin": "9 3\n", "args": [], "expectedStdout": "trunc:3 floor:3\n" }
+      ],
+      "hiddenCases": [
+        { "name": "zero-numerator", "stdin": "0 -5\n", "args": [], "expectedStdout": "trunc:0 floor:0\n" },
+        { "name": "pos-neg", "stdin": "7 -2\n", "args": [], "expectedStdout": "trunc:-3 floor:-4\n" }
+      ]
+    },
+
+    {
+      "id": "workouts.algorithms.sequences.collatz-steps",
+      "slug": "collatz-steps",
+      "title": "Collatz Steps & Peak Value",
+      "mode": "kata",
+      "belt": "amber",
+      "domain": "algorithms",
+      "subGroup": "sequences",
+      "promptFile": "language/gym/workouts/algorithms/sequences/collatz-steps/README.md",
+      "starterFile": "language/gym/workouts/algorithms/sequences/collatz-steps/starter.lts",
+      "solutionFile": "language/gym/workouts/algorithms/sequences/collatz-steps/solution.lts",
+      "brokenStarterSyntax": false,
+      "expectedStarterFailure": "wrong-output",
+      "hints": [
+        "Initialize `var peak := n;` and update `if cur > peak { peak = cur; }` on every step.",
+        "Loop while `cur > 1` (for `n == 1`, `steps` is `0` and `peak` is `1`)."
+      ],
+      "relatedDocs": ["language/learn/handbook/control/conditionals-match-and-loops.md"],
+      "relatedLessons": ["learn.control.loops.loops-and-completion"],
+      "visibleCases": [
+        { "name": "six", "stdin": "6\n", "args": [], "expectedStdout": "steps:8 peak:16\n" },
+        { "name": "one", "stdin": "1\n", "args": [], "expectedStdout": "steps:0 peak:1\n" },
+        { "name": "invalid", "stdin": "0\n", "args": [], "expectedStdout": "INVALID\n" }
+      ],
+      "hiddenCases": [
+        { "name": "three", "stdin": "3\n", "args": [], "expectedStdout": "steps:7 peak:16\n" },
+        { "name": "negative", "stdin": "-4\n", "args": [], "expectedStdout": "INVALID\n" }
+      ]
+    },
+    {
+      "id": "workouts.arithmetic.number-theory.gcd-and-lcm",
+      "slug": "gcd-and-lcm",
+      "title": "Euclid GCD & Zero-Safe LCM",
+      "mode": "kata",
+      "belt": "amber",
+      "domain": "arithmetic",
+      "subGroup": "number-theory",
+      "promptFile": "language/gym/workouts/arithmetic/number-theory/gcd-and-lcm/README.md",
+      "starterFile": "language/gym/workouts/arithmetic/number-theory/gcd-and-lcm/starter.lts",
+      "solutionFile": "language/gym/workouts/arithmetic/number-theory/gcd-and-lcm/solution.lts",
+      "brokenStarterSyntax": false,
+      "expectedStarterFailure": "wrong-output",
+      "hints": [
+        "Take magnitudes first with `absVal` before running `loop b =!= 0`.",
+        "When either input is `0`, `lcm` is `0` cleanly without dividing by zero."
+      ],
+      "relatedDocs": ["language/learn/handbook/control/conditionals-match-and-loops.md"],
+      "relatedLessons": ["learn.functions.calls.named-calls-and-recursion"],
+      "visibleCases": [
+        { "name": "coprime", "stdin": "7 13\n", "args": [], "expectedStdout": "gcd:1 lcm:91\n" },
+        { "name": "composite", "stdin": "12 18\n", "args": [], "expectedStdout": "gcd:6 lcm:36\n" },
+        { "name": "zero-input", "stdin": "0 5\n", "args": [], "expectedStdout": "gcd:5 lcm:0\n" }
+      ],
+      "hiddenCases": [
+        { "name": "both-zero", "stdin": "0 0\n", "args": [], "expectedStdout": "gcd:0 lcm:0\n" },
+        { "name": "negatives", "stdin": "-24 36\n", "args": [], "expectedStdout": "gcd:12 lcm:72\n" }
+      ]
+    },
+    {
+      "id": "workouts.arithmetic.digits.digit-palindrome",
+      "slug": "digit-palindrome",
+      "title": "Numeric Palindrome & Digit Sum",
+      "mode": "kata",
+      "belt": "amber",
+      "domain": "arithmetic",
+      "subGroup": "digits",
+      "promptFile": "language/gym/workouts/arithmetic/digits/digit-palindrome/README.md",
+      "starterFile": "language/gym/workouts/arithmetic/digits/digit-palindrome/starter.lts",
+      "solutionFile": "language/gym/workouts/arithmetic/digits/digit-palindrome/solution.lts",
+      "brokenStarterSyntax": false,
+      "expectedStarterFailure": "wrong-output",
+      "hints": [
+        "Build `rev = rev * 10 + (cur % 10);` while summing digits.",
+        "`isPal := n >= 0 and rev == mag;` ensures negative numbers are `false` while `0` is `true`."
+      ],
+      "relatedDocs": ["language/learn/handbook/control/conditionals-match-and-loops.md"],
+      "relatedLessons": ["learn.control.loops.loops-and-completion"],
+      "visibleCases": [
+        { "name": "pal", "stdin": "12321\n", "args": [], "expectedStdout": "pal:true sum:9\n" },
+        { "name": "non-pal", "stdin": "123\n", "args": [], "expectedStdout": "pal:false sum:6\n" },
+        { "name": "negative", "stdin": "-121\n", "args": [], "expectedStdout": "pal:false sum:4\n" }
+      ],
+      "hiddenCases": [
+        { "name": "zero", "stdin": "0\n", "args": [], "expectedStdout": "pal:true sum:0\n" },
+        { "name": "trailing-zero", "stdin": "10\n", "args": [], "expectedStdout": "pal:false sum:1\n" }
+      ]
+    },
+    {
+      "id": "workouts.algorithms.primes.prime-range-sum",
+      "slug": "prime-range-sum",
+      "title": "Prime Range Count & Sum",
+      "mode": "kata",
+      "belt": "amber",
+      "domain": "algorithms",
+      "subGroup": "primes",
+      "promptFile": "language/gym/workouts/algorithms/primes/prime-range-sum/README.md",
+      "starterFile": "language/gym/workouts/algorithms/primes/prime-range-sum/starter.lts",
+      "solutionFile": "language/gym/workouts/algorithms/primes/prime-range-sum/solution.lts",
+      "brokenStarterSyntax": false,
+      "expectedStarterFailure": "wrong-output",
+      "hints": [
+        "Handle `n == 2` explicitly (it is the only even prime), and check odd divisors up to `d * d <= n`.",
+        "Start iteration at `2` when `lo < 2`."
+      ],
+      "relatedDocs": ["language/learn/handbook/control/conditionals-match-and-loops.md"],
+      "relatedLessons": ["learn.control.loops.loops-and-completion"],
+      "visibleCases": [
+        { "name": "up-to-10", "stdin": "1 10\n", "args": [], "expectedStdout": "count:4 sum:17\n" },
+        { "name": "single-2", "stdin": "2 2\n", "args": [], "expectedStdout": "count:1 sum:2\n" },
+        { "name": "empty-inverted", "stdin": "20 10\n", "args": [], "expectedStdout": "count:0 sum:0\n" }
+      ],
+      "hiddenCases": [
+        { "name": "negative-to-five", "stdin": "-5 5\n", "args": [], "expectedStdout": "count:3 sum:10\n" },
+        { "name": "composite-window", "stdin": "24 28\n", "args": [], "expectedStdout": "count:0 sum:0\n" }
+      ]
+    },
+    {
+      "id": "workouts.text.ciphers.caesar-shift",
+      "slug": "caesar-shift",
+      "title": "Caesar Cipher Rotation",
+      "mode": "kata",
+      "belt": "amber",
+      "domain": "text",
+      "subGroup": "ciphers",
+      "promptFile": "language/gym/workouts/text/ciphers/caesar-shift/README.md",
+      "starterFile": "language/gym/workouts/text/ciphers/caesar-shift/starter.lts",
+      "solutionFile": "language/gym/workouts/text/ciphers/caesar-shift/solution.lts",
+      "brokenStarterSyntax": false,
+      "expectedStarterFailure": "wrong-output",
+      "hints": [
+        "Convert text to scalar code points via `unicode.toCodePoints(line)`.",
+        "Because `:% 26` always produces `0..25`, negative shifts like `-3` wrap cleanly: `65 + ((cp - 65 + (shift :% 26)) :% 26)`."
+      ],
+      "relatedDocs": ["lib/core/unicode.lts", "language/learn/handbook/foundations/numbers-operators-and-strings.md"],
+      "relatedLessons": ["learn.foundations.strings.strings-and-unicode"],
+      "visibleCases": [
+        { "name": "forward-3", "stdin": "Hello, Lite-2026!\n3\n", "args": [], "expectedStdout": "Khoor, Olwh-2026!\n" },
+        { "name": "wrap-around-z", "stdin": "xyz XYZ\n3\n", "args": [], "expectedStdout": "abc ABC\n" },
+        { "name": "negative-decrypt", "stdin": "Khoor!\n-3\n", "args": [], "expectedStdout": "Hello!\n" }
+      ],
+      "hiddenCases": [
+        { "name": "large-shift", "stdin": "Alpha\n53\n", "args": [], "expectedStdout": "Bmqib\n" },
+        { "name": "zero-shift", "stdin": "Stay 123\n0\n", "args": [], "expectedStdout": "Stay 123\n" }
+      ]
+    },
+    {
+      "id": "workouts.text.encoding.run-length-encode",
+      "slug": "run-length-encode",
+      "title": "Run-Length Encoder",
+      "mode": "kata",
+      "belt": "amber",
+      "domain": "text",
+      "subGroup": "encoding",
+      "promptFile": "language/gym/workouts/text/encoding/run-length-encode/README.md",
+      "starterFile": "language/gym/workouts/text/encoding/run-length-encode/starter.lts",
+      "solutionFile": "language/gym/workouts/text/encoding/run-length-encode/solution.lts",
+      "brokenStarterSyntax": false,
+      "expectedStarterFailure": "wrong-output",
+      "hints": [
+        "Handle empty strings early (`n == 0`).",
+        "Track `var cur := text.at(line, 0)` and `var run := 1;`, flushing `cur + integer.intText(run)` whenever the character changes and once after the loop."
+      ],
+      "relatedDocs": ["lib/core/text.lts"],
+      "relatedLessons": ["learn.foundations.strings.strings-and-unicode"],
+      "visibleCases": [
+        { "name": "runs", "stdin": "aaabbc\n", "args": [], "expectedStdout": "a3b2c1\n" },
+        { "name": "single", "stdin": "x\n", "args": [], "expectedStdout": "x1\n" },
+        { "name": "empty", "stdin": "\n", "args": [], "expectedStdout": "\n" }
+      ],
+      "hiddenCases": [
+        { "name": "reappearing", "stdin": "aabaa\n", "args": [], "expectedStdout": "a2b1a2\n" },
+        { "name": "unicode", "stdin": "éé🚀\n", "args": [], "expectedStdout": "é2🚀1\n" }
+      ]
+    },
+
+    {
+      "id": "workouts.parsing.stacks.balanced-brackets",
+      "slug": "balanced-brackets",
+      "title": "Balanced Brackets Validator",
+      "mode": "kata",
+      "belt": "emerald",
+      "domain": "parsing",
+      "subGroup": "stacks",
+      "promptFile": "language/gym/workouts/parsing/stacks/balanced-brackets/README.md",
+      "starterFile": "language/gym/workouts/parsing/stacks/balanced-brackets/starter.lts",
+      "solutionFile": "language/gym/workouts/parsing/stacks/balanced-brackets/solution.lts",
+      "brokenStarterSyntax": false,
+      "expectedStarterFailure": "wrong-output",
+      "hints": [
+        "Counting depth alone fails on crossed pairs like `\"([)]\"`.",
+        "Push opening brackets onto a `stack: mut List<String>` and verify `matchingClose(list.popBack(mut stack)) == ch` on every closing bracket."
+      ],
+      "relatedDocs": ["lib/core/list.lts", "language/learn/handbook/types/tuples-arrays-lists-and-aliases.md"],
+      "relatedLessons": ["learn.types.collections.arrays-and-lists"],
+      "visibleCases": [
+        { "name": "nested-valid", "stdin": "{a[0](1+2)}\n", "args": [], "expectedStdout": "balanced\n" },
+        { "name": "crossed-invalid", "stdin": "([)]\n", "args": [], "expectedStdout": "mismatch:2\n" },
+        { "name": "unclosed", "stdin": "{(x)\n", "args": [], "expectedStdout": "mismatch:4\n" }
+      ],
+      "hiddenCases": [
+        { "name": "extra-close", "stdin": "a)b\n", "args": [], "expectedStdout": "mismatch:1\n" },
+        { "name": "empty", "stdin": "\n", "args": [], "expectedStdout": "balanced\n" }
+      ]
+    },
+    {
+      "id": "workouts.parsing.evaluators.rpn-calculator",
+      "slug": "rpn-calculator",
+      "title": "Reverse Polish Notation Stack Calc",
+      "mode": "kata",
+      "belt": "emerald",
+      "domain": "parsing",
+      "subGroup": "evaluators",
+      "promptFile": "language/gym/workouts/parsing/evaluators/rpn-calculator/README.md",
+      "starterFile": "language/gym/workouts/parsing/evaluators/rpn-calculator/starter.lts",
+      "solutionFile": "language/gym/workouts/parsing/evaluators/rpn-calculator/solution.lts",
+      "brokenStarterSyntax": false,
+      "expectedStarterFailure": "wrong-output",
+      "hints": [
+        "Notice pop order matters for `-` and `/`: the first popped item is `right`, the second is `left`!",
+        "Validate stack depth `>= 2` before popping, `right =!= 0` before dividing, and final depth `== 1`."
+      ],
+      "relatedDocs": ["lib/core/text.lts", "lib/core/list.lts"],
+      "relatedLessons": ["learn.tutorials.parsing.expression-evaluator"],
+      "visibleCases": [
+        { "name": "basic", "stdin": "3 4 + 2 *\n", "args": [], "expectedStdout": "14\n" },
+        { "name": "sub-order", "stdin": "10 3 - 2 /\n", "args": [], "expectedStdout": "3\n" },
+        { "name": "div-zero", "stdin": "5 0 /\n", "args": [], "expectedStdout": "ERR\n" }
+      ],
+      "hiddenCases": [
+        { "name": "underflow", "stdin": "4 +\n", "args": [], "expectedStdout": "ERR\n" },
+        { "name": "trailing-operand", "stdin": "1 2 3 +\n", "args": [], "expectedStdout": "ERR\n" }
+      ]
+    },
+    {
+      "id": "workouts.arrays.matrices.matrix-saddle-point",
+      "slug": "matrix-saddle-point",
+      "title": "Matrix Saddle Point Search",
+      "mode": "kata",
+      "belt": "emerald",
+      "domain": "arrays",
+      "subGroup": "matrices",
+      "promptFile": "language/gym/workouts/arrays/matrices/matrix-saddle-point/README.md",
+      "starterFile": "language/gym/workouts/arrays/matrices/matrix-saddle-point/starter.lts",
+      "solutionFile": "language/gym/workouts/arrays/matrices/matrix-saddle-point/solution.lts",
+      "brokenStarterSyntax": false,
+      "expectedStarterFailure": "wrong-output",
+      "hints": [
+        "Store the matrix flat in `grid: mut List<Int>` at index `r * cols + c`.",
+        "Precompute `rowMin[r]` and `colMax[c]`, then scan row-major for the first cell with `val == rowMin[r] and val == colMax[c]`."
+      ],
+      "relatedDocs": ["language/learn/handbook/types/tuples-arrays-lists-and-aliases.md"],
+      "relatedLessons": ["learn.types.collections.arrays-and-lists"],
+      "visibleCases": [
+        { "name": "found-3x3", "stdin": "3 3\n3 7 8\n9 11 13\n15 16 17\n", "args": [], "expectedStdout": "2,0:15\n" },
+        { "name": "none-2x2", "stdin": "2 2\n1 2\n3 0\n", "args": [], "expectedStdout": "NONE\n" },
+        { "name": "ties", "stdin": "2 2\n5 5\n5 1\n", "args": [], "expectedStdout": "0,0:5\n" }
+      ],
+      "hiddenCases": [
+        { "name": "single-cell", "stdin": "1 1\n-9\n", "args": [], "expectedStdout": "0,0:-9\n" },
+        { "name": "zero-dim", "stdin": "0 3\n", "args": [], "expectedStdout": "NONE\n" }
+      ]
+    },
+    {
+      "id": "workouts.text.frequencies.word-tally",
+      "slug": "word-tally",
+      "title": "Word Frequency Tally & Ranking",
+      "mode": "kata",
+      "belt": "emerald",
+      "domain": "text",
+      "subGroup": "frequencies",
+      "promptFile": "language/gym/workouts/text/frequencies/word-tally/README.md",
+      "starterFile": "language/gym/workouts/text/frequencies/word-tally/starter.lts",
+      "solutionFile": "language/gym/workouts/text/frequencies/word-tally/solution.lts",
+      "brokenStarterSyntax": false,
+      "expectedStarterFailure": "wrong-output",
+      "hints": [
+        "Scan tokens made of `text.isNameContinue(ch)` and normalize each token with `text.toLowerAscii`.",
+        "Track counts in parallel `words` / `counts` lists and insertion-sort by descending `count` then alphabetical tiebreak."
+      ],
+      "relatedDocs": ["lib/core/text.lts", "lib/core/list.lts"],
+      "relatedLessons": ["learn.tutorials.cli.text-manifest-digest"],
+      "visibleCases": [
+        { "name": "basic", "stdin": "Lite is light, lite and clear!\n", "args": [], "expectedStdout": "lite: 2\nand: 1\nclear: 1\nis: 1\nlight: 1\n" },
+        { "name": "punctuation-only", "stdin": "--- ... !!!\n", "args": [], "expectedStdout": "EMPTY\n" },
+        { "name": "tie-sort", "stdin": "zoo alpha zoo beta alpha beta\n", "args": [], "expectedStdout": "alpha: 2\nbeta: 2\nzoo: 2\n" }
+      ],
+      "hiddenCases": [
+        { "name": "digits", "stdin": "v2 V2 v1\n", "args": [], "expectedStdout": "v2: 2\nv1: 1\n" },
+        { "name": "empty", "stdin": "", "args": [], "expectedStdout": "EMPTY\n" }
+      ]
+    },
+    {
+      "id": "workouts.algorithms.intervals.interval-merger",
+      "slug": "interval-merger",
+      "title": "Merge Overlapping Closed Intervals",
+      "mode": "kata",
+      "belt": "emerald",
+      "domain": "algorithms",
+      "subGroup": "intervals",
+      "promptFile": "language/gym/workouts/algorithms/intervals/interval-merger/README.md",
+      "starterFile": "language/gym/workouts/algorithms/intervals/interval-merger/starter.lts",
+      "solutionFile": "language/gym/workouts/algorithms/intervals/interval-merger/solution.lts",
+      "brokenStarterSyntax": false,
+      "expectedStarterFailure": "wrong-output",
+      "hints": [
+        "Sort `(starts[i], ends[i])` ascending by `start` then `end` before scanning.",
+        "Merge whenever `starts[m] <= curE`, extending `curE = max(curE, ends[m])`."
+      ],
+      "relatedDocs": ["language/learn/handbook/types/tuples-arrays-lists-and-aliases.md"],
+      "relatedLessons": ["learn.types.collections.arrays-and-lists"],
+      "visibleCases": [
+        { "name": "merge-three", "stdin": "4\n1 3\n2 6\n8 10\n15 18\n", "args": [], "expectedStdout": "1..6\n8..10\n15..18\n" },
+        { "name": "touching-unsorted", "stdin": "2\n4 5\n1 4\n", "args": [], "expectedStdout": "1..5\n" },
+        { "name": "empty", "stdin": "0\n", "args": [], "expectedStdout": "EMPTY\n" }
+      ],
+      "hiddenCases": [
+        { "name": "contained", "stdin": "3\n1 10\n3 5\n2 8\n", "args": [], "expectedStdout": "1..10\n" },
+        { "name": "negative-reversed", "stdin": "2\n-2 -8\n-3 4\n", "args": [], "expectedStdout": "-8..4\n" }
+      ]
+    },
+    {
+      "id": "workouts.text.numerals.roman-numerals",
+      "slug": "roman-numerals",
+      "title": "Canonical Roman Numerals",
+      "mode": "kata",
+      "belt": "emerald",
+      "domain": "text",
+      "subGroup": "numerals",
+      "promptFile": "language/gym/workouts/text/numerals/roman-numerals/README.md",
+      "starterFile": "language/gym/workouts/text/numerals/roman-numerals/starter.lts",
+      "solutionFile": "language/gym/workouts/text/numerals/roman-numerals/solution.lts",
+      "brokenStarterSyntax": false,
+      "expectedStarterFailure": "wrong-output",
+      "hints": [
+        "Store the 13 descending fixed arrays `values := [1000, 900, ...]` and `syms := [\"M\", \"CM\", ...]`.",
+        "Reject `n < 1 or n > 3999` with `\"INVALID\"`."
+      ],
+      "relatedDocs": ["language/learn/handbook/types/tuples-arrays-lists-and-aliases.md"],
+      "relatedLessons": ["learn.types.collections.arrays-and-lists"],
+      "visibleCases": [
+        { "name": "1994", "stdin": "1994\n", "args": [], "expectedStdout": "MCMXCIV\n" },
+        { "name": "58", "stdin": "58\n", "args": [], "expectedStdout": "LVIII\n" },
+        { "name": "zero-invalid", "stdin": "0\n", "args": [], "expectedStdout": "INVALID\n" }
+      ],
+      "hiddenCases": [
+        { "name": "max-3999", "stdin": "3999\n", "args": [], "expectedStdout": "MMMCMXCIX\n" },
+        { "name": "over-4000", "stdin": "4000\n", "args": [], "expectedStdout": "INVALID\n" }
+      ]
+    },
+
+    {
+      "id": "workouts.parsing.config.mini-ini-query",
+      "slug": "mini-ini-query",
+      "title": "INI Config Parser & Queries",
+      "mode": "kata",
+      "belt": "obsidian",
+      "domain": "parsing",
+      "subGroup": "config",
+      "promptFile": "language/gym/workouts/parsing/config/mini-ini-query/README.md",
+      "starterFile": "language/gym/workouts/parsing/config/mini-ini-query/starter.lts",
+      "solutionFile": "language/gym/workouts/parsing/config/mini-ini-query/solution.lts",
+      "brokenStarterSyntax": false,
+      "expectedStarterFailure": "wrong-output",
+      "hints": [
+        "Use `list.listIndexOfText(keys, fullKey)` to overwrite an existing key cleanly instead of appending duplicates.",
+        "Trim around `section` in `[section]` as well as around `=` in `key = value`."
+      ],
+      "relatedDocs": ["lib/core/text.lts", "lib/core/list.lts"],
+      "relatedLessons": ["learn.tutorials.cli.text-manifest-digest"],
+      "visibleCases": [
+        { "name": "sections-and-override", "stdin": "; comment\nport = 8080\n[db]\nhost = localhost\nhost = db.internal\nQUERY port\nQUERY db.host\nQUERY db.missing\n", "args": [], "expectedStdout": "8080\ndb.internal\nMISSING\n" },
+        { "name": "whitespace", "stdin": "# header\n  [ app ]  \n  mode   =  prod \nQUERY app.mode\n", "args": [], "expectedStdout": "prod\n" },
+        { "name": "all-missing", "stdin": "QUERY absent\n", "args": [], "expectedStdout": "MISSING\n" }
+      ],
+      "hiddenCases": [
+        { "name": "empty-value", "stdin": "[s]\nk =\nQUERY s.k\n", "args": [], "expectedStdout": "\n" },
+        { "name": "equals-in-value", "stdin": "[auth]\ntoken = a=b==\nQUERY auth.token\n", "args": [], "expectedStdout": "a=b==\n" }
+      ]
+    },
+    {
+      "id": "workouts.parsing.evaluators.expression-ast-eval",
+      "slug": "expression-ast-eval",
+      "title": "Precedence & Power Expression Evaluator",
+      "mode": "kata",
+      "belt": "obsidian",
+      "domain": "parsing",
+      "subGroup": "evaluators",
+      "promptFile": "language/gym/workouts/parsing/evaluators/expression-ast-eval/README.md",
+      "starterFile": "language/gym/workouts/parsing/evaluators/expression-ast-eval/starter.lts",
+      "solutionFile": "language/gym/workouts/parsing/evaluators/expression-ast-eval/solution.lts",
+      "brokenStarterSyntax": false,
+      "expectedStarterFailure": "wrong-output",
+      "hints": [
+        "Layer precedence cleanly: `parseExpr` (`+ -`) -> `parseTerm` (`* / % :/ :%`) -> `parseUnary` (`-`) -> `parsePow` (`**` calling `parseUnary` recursively).",
+        "Check `rest < text.length(trimmed)` after parsing to catch trailing tokens like `1 + 2 )`."
+      ],
+      "relatedDocs": ["language/learn/handbook/foundations/numbers-operators-and-strings.md", "language/learn/handbook/execution/blocks-wiring-and-closures.md"],
+      "relatedLessons": ["learn.tutorials.parsing.expression-evaluator"],
+      "visibleCases": [
+        { "name": "precedence-power", "stdin": "2 ** 3 ** 2\n(-2) ** 3\n-2 ** 3\n", "args": [], "expectedStdout": "512\n-8\n-8\n" },
+        { "name": "floor-div-parens", "stdin": "-7 :/ 2 + (3 * 4)\n", "args": [], "expectedStdout": "8\n" },
+        { "name": "errors", "stdin": "10 / 0\n2 ** -1\n(1 + 2\n", "args": [], "expectedStdout": "ERR\nERR\nERR\n" }
+      ],
+      "hiddenCases": [
+        { "name": "modulo-and-trailing", "stdin": "-7 :% 2\n1 + 2 3\n", "args": [], "expectedStdout": "1\nERR\n" },
+        { "name": "nested-unary", "stdin": "--5 * (10 % 4)\n", "args": [], "expectedStdout": "10\n" }
+      ]
+    },
+    {
+      "id": "workouts.algorithms.graphs.dijkstra-grid-cost",
+      "slug": "dijkstra-grid-cost",
+      "title": "Minimum-Cost Grid Path (Dijkstra)",
+      "mode": "kata",
+      "belt": "obsidian",
+      "domain": "algorithms",
+      "subGroup": "graphs",
+      "promptFile": "language/gym/workouts/algorithms/graphs/dijkstra-grid-cost/README.md",
+      "starterFile": "language/gym/workouts/algorithms/graphs/dijkstra-grid-cost/starter.lts",
+      "solutionFile": "language/gym/workouts/algorithms/graphs/dijkstra-grid-cost/solution.lts",
+      "brokenStarterSyntax": false,
+      "expectedStarterFailure": "wrong-output",
+      "hints": [
+        "Initialize cell `0`'s distance to `cost[0]` and all other cells to a large sentinel `INF`, updating distances via a `mut List<Int>` helper.",
+        "Note paths can step up/left around high walls (all 4 cardinal directions), not only down/right."
+      ],
+      "relatedDocs": ["language/learn/handbook/types/tuples-arrays-lists-and-aliases.md"],
+      "relatedLessons": ["learn.types.collections.arrays-and-lists"],
+      "visibleCases": [
+        { "name": "3x3-classic", "stdin": "3 3\n1 3 1\n1 5 1\n4 2 1\n", "args": [], "expectedStdout": "7\n" },
+        { "name": "detour-around-wall", "stdin": "3 3\n1 9 1\n1 9 1\n1 1 1\n", "args": [], "expectedStdout": "5\n" },
+        { "name": "1x1", "stdin": "1 1\n9\n", "args": [], "expectedStdout": "9\n" }
+      ],
+      "hiddenCases": [
+        { "name": "must-go-up", "stdin": "3 4\n1 9 1 1\n1 9 1 9\n1 1 1 1\n", "args": [], "expectedStdout": "6\n" },
+        { "name": "invalid", "stdin": "0 2\n", "args": [], "expectedStdout": "INVALID\n" }
+      ]
+    },
+    {
+      "id": "workouts.algorithms.cache.lru-cache-trace",
+      "slug": "lru-cache-trace",
+      "title": "LRU Cache Eviction Simulator",
+      "mode": "kata",
+      "belt": "obsidian",
+      "domain": "algorithms",
+      "subGroup": "cache",
+      "promptFile": "language/gym/workouts/algorithms/cache/lru-cache-trace/README.md",
+      "starterFile": "language/gym/workouts/algorithms/cache/lru-cache-trace/starter.lts",
+      "solutionFile": "language/gym/workouts/algorithms/cache/lru-cache-trace/solution.lts",
+      "brokenStarterSyntax": false,
+      "expectedStarterFailure": "wrong-output",
+      "hints": [
+        "Maintain parallel `keys` and `vals` lists with index `0` as most-recently-used.",
+        "Both `GET` (hit) and `SET` (update) must shift the accessed entry to index `0`; inserting when full pops from the back."
+      ],
+      "relatedDocs": ["lib/core/list.lts", "language/learn/handbook/types/tuples-arrays-lists-and-aliases.md"],
+      "relatedLessons": ["learn.types.collections.arrays-and-lists"],
+      "visibleCases": [
+        { "name": "evict-lru", "stdin": "2\nSET a 1\nSET b 2\nGET a\nSET c 3\nGET b\nGET c\n", "args": [], "expectedStdout": "1\nMISS\n3\nORDER:c,a\n" },
+        { "name": "update-promotes", "stdin": "2\nSET x 10\nSET y 20\nSET x 99\nSET z 30\nGET x\nGET y\n", "args": [], "expectedStdout": "99\nMISS\nORDER:x,z\n" },
+        { "name": "empty-ops", "stdin": "2\nGET k\n", "args": [], "expectedStdout": "MISS\nORDER:EMPTY\n" }
+      ],
+      "hiddenCases": [
+        { "name": "cap-one", "stdin": "1\nSET a 1\nSET b 2\nGET a\nGET b\n", "args": [], "expectedStdout": "MISS\n2\nORDER:b\n" },
+        { "name": "cap-three", "stdin": "3\nSET k1 v1\nSET k2 v2\nSET k3 v3\nGET k1\nSET k4 v4\n", "args": [], "expectedStdout": "v1\nORDER:k4,k1,k3\n" }
+      ]
+    },
+    {
+      "id": "workouts.text.matching.glob-matcher",
+      "slug": "glob-matcher",
+      "title": "Wildcard Glob Matcher (* & ?)",
+      "mode": "kata",
+      "belt": "obsidian",
+      "domain": "text",
+      "subGroup": "matching",
+      "promptFile": "language/gym/workouts/text/matching/glob-matcher/README.md",
+      "starterFile": "language/gym/workouts/text/matching/glob-matcher/starter.lts",
+      "solutionFile": "language/gym/workouts/text/matching/glob-matcher/solution.lts",
+      "brokenStarterSyntax": false,
+      "expectedStarterFailure": "wrong-output",
+      "hints": [
+        "Store the last `*` position (`starP`) and string position (`matchS`) so mismatches backtrack greedily without exponential blowup.",
+        "After the candidate string ends, skip any trailing `*` characters in the pattern."
+      ],
+      "relatedDocs": ["lib/core/text.lts", "language/learn/handbook/control/conditionals-match-and-loops.md"],
+      "relatedLessons": ["learn.control.loops.loops-and-completion"],
+      "visibleCases": [
+        { "name": "stars-and-q", "stdin": "a*b?c\nabxc\na123bZc\nabc\nab*c\n", "args": [], "expectedStdout": "MATCH\nMATCH\nNO\nMATCH\n" },
+        { "name": "leading-trailing-star", "stdin": "*lite*\nlite\nLiteScript_lite\nlit\n", "args": [], "expectedStdout": "MATCH\nMATCH\nNO\n" },
+        { "name": "star-runs", "stdin": "a**b\nab\na---b\na\n", "args": [], "expectedStdout": "MATCH\nMATCH\nNO\n" }
+      ],
+      "hiddenCases": [
+        { "name": "only-q", "stdin": "???\nabc\nab\nabcd\n", "args": [], "expectedStdout": "MATCH\nNO\nNO\n" },
+        { "name": "backtrack-star", "stdin": "*a*b\naaab\naaba\nb\n", "args": [], "expectedStdout": "MATCH\nNO\nNO\n" }
+      ]
+    },
+    {
+      "id": "workouts.algorithms.vm.bytecode-vm",
+      "slug": "bytecode-vm",
+      "title": "Stack Bytecode Virtual Machine",
+      "mode": "kata",
+      "belt": "obsidian",
+      "domain": "algorithms",
+      "subGroup": "vm",
+      "promptFile": "language/gym/workouts/algorithms/vm/bytecode-vm/README.md",
+      "starterFile": "language/gym/workouts/algorithms/vm/bytecode-vm/starter.lts",
+      "solutionFile": "language/gym/workouts/algorithms/vm/bytecode-vm/solution.lts",
+      "brokenStarterSyntax": false,
+      "expectedStarterFailure": "wrong-output",
+      "hints": [
+        "Pre-parse lines into parallel `ops: mut List<String>` and `args: mut List<Int>` so `JNZ <pc>` can jump to any instruction index `0..instrCount-1`.",
+        "Track `steps` and return `ERR:LOOP` when exceeding 1000 steps."
+      ],
+      "relatedDocs": ["language/learn/handbook/control/conditionals-match-and-loops.md", "language/learn/handbook/types/tuples-arrays-lists-and-aliases.md"],
+      "relatedLessons": ["learn.control.loops.loops-and-completion"],
+      "visibleCases": [
+        { "name": "arith-swap", "stdin": "PUSH 10\nPUSH 3\nSWAP\nSUB\nPUSH 4\nMUL\nHALT\n", "args": [], "expectedStdout": "-28\n" },
+        { "name": "loop-sum-1-to-4", "stdin": "PUSH 0\nPUSH 4\nSWAP\nPUSH 0\nADD\nDUP\nJNZ 9\nSWAP\nHALT\n", "args": [], "expectedStdout": "ERR\n" },
+        { "name": "loop-countdown", "stdin": "PUSH 0\nPUSH 4\nDUP\nPUSH 1\nSUB\nDUP\nJNZ 2\nADD\nADD\nADD\nADD\nHALT\n", "args": [], "expectedStdout": "10\n" }
+      ],
+      "hiddenCases": [
+        { "name": "infinite-loop", "stdin": "PUSH 1\nJNZ 0\n", "args": [], "expectedStdout": "ERR:LOOP\n" },
+        { "name": "empty-halt", "stdin": "HALT\n", "args": [], "expectedStdout": "EMPTY\n" },
+        { "name": "underflow", "stdin": "PUSH 5\nADD\n", "args": [], "expectedStdout": "ERR\n" }
+      ]
+    }
+  ]
+}

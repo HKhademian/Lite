@@ -1,0 +1,65 @@
+io := import "core/io";
+list := import "core/list";
+text := import "core/text";
+
+splitTokens := fn(line: String): List<String> {
+    tokens: mut List<String> = [];
+    n := text.length(line);
+    var pos := 0;
+    loop pos < n {
+        loop pos < n and text.isWhitespace(text.at(line, pos)) {
+            pos += 1;
+        }
+        if pos >= n { break; }
+        start := pos;
+        loop pos < n and not text.isWhitespace(text.at(line, pos)) {
+            pos += 1;
+        }
+        list.pushBack(mut tokens, text.slice(line, start, pos));
+    }
+    tokens
+};
+
+line := io.inputLine();
+tokens := splitTokens(line);
+stack: mut List<Int> = [];
+var depth := 0;
+var failed := false;
+
+loop tokens as tok {
+    if tok == "+" or tok == "-" or tok == "*" or tok == "/" {
+        if depth < 2 {
+            failed = true;
+            break;
+        }
+        right := list.popBack(mut stack);
+        left := list.popBack(mut stack);
+        depth -= 2;
+        if tok == "/" and right == 0 {
+            failed = true;
+            break;
+        }
+        res := match {
+            tok == "+" { left + right }
+            tok == "-" { left - right }
+            tok == "*" { left * right }
+            _ { left / right }
+        };
+        list.pushBack(mut stack, res);
+        depth += 1;
+    } else {
+        parsed := text.textToInt(tok);
+        if not parsed.ok {
+            failed = true;
+            break;
+        }
+        list.pushBack(mut stack, parsed.value);
+        depth += 1;
+    }
+}
+
+if failed or depth =!= 1 {
+    io.outputLine("ERR");
+} else {
+    io.outputLine(stack[0]);
+}

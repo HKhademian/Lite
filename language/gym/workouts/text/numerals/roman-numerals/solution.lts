@@ -1,0 +1,22 @@
+io := import "core/io";
+
+n := io.inputInt();
+if n < 1 or n > 3999 {
+    io.outputLine("INVALID");
+} else {
+    values := [1000, 900, 500, 400, 100, 90, 50, 40, 10, 9, 5, 4, 1];
+    syms := ["M", "CM", "D", "CD", "C", "XC", "L", "XL", "X", "IX", "V", "IV", "I"];
+    var cur := n;
+    var out := "";
+    var i := 0;
+    loop i < 13 {
+        v := values[i];
+        sym := syms[i];
+        loop cur >= v {
+            out += sym;
+            cur -= v;
+        }
+        i += 1;
+    }
+    io.outputLine(out);
+}

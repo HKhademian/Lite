@@ -1,0 +1,13 @@
+integer := import "core/int";
+io := import "core/io";
+
+total := io.inputInt();
+if total < 0 {
+    io.outputLine("INVALID");
+} else {
+    hours := total / 3600;
+    remAfterHours := total % 3600;
+    mins := remAfterHours / 60;
+    secs := remAfterHours % 60;
+    io.outputLine(integer.intText(hours) + "h", integer.intText(mins) + "m", integer.intText(secs) + "s");
+}

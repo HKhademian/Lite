@@ -1,0 +1,9 @@
+io := import "core/io";
+
+sumDown := fn(n: Int, acc: Int): Int {
+    if n <= 0 { acc } else { self(n = n - 1, acc = acc) }
+};
+
+limit := io.inputInt();
+ans := sumDown(acc = 0, n = limit);
+io.outputLine(ans);

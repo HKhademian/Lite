@@ -1,0 +1,13 @@
+io := import "core/io";
+
+n := io.inputInt();
+
+isEven := fn(k: Int): Bool {
+    if k == 0 { false } else { isOdd(k - 1) }
+};
+
+isOdd := fn(k: Int): Bool {
+    if k == 0 { true } else { isEven(k - 1) }
+};
+
+io.outputLine(isEven(n), isOdd(n));

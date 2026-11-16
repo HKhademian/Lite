@@ -1,0 +1,23 @@
+integer := import "core/int";
+io := import "core/io";
+
+absVal := fn(v: Int): Int {
+    if v < 0 { 0 - v } else { v }
+};
+
+gcd := fn(x: Int, y: Int): Int {
+    var a := x;
+    var b := y;
+    loop b =!= 0 {
+        next := a % b;
+        a = b;
+        b = next;
+    }
+    a
+};
+
+rawA := absVal(io.inputInt());
+rawB := absVal(io.inputInt());
+g := gcd(rawA, rawB);
+lcm := if rawA == 0 or rawB == 0 { 0 } else { (rawA / g) * rawB };
+io.outputLine("gcd:" + integer.intText(g), "lcm:" + integer.intText(lcm));

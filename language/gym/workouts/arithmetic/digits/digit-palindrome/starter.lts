@@ -1,0 +1,11 @@
+integer := import "core/int";
+io := import "core/io";
+
+n := io.inputInt();
+var digitSum := 0;
+var x := if n < 0 { 0 - n } else { n };
+loop x > 0 {
+    digitSum += x % 10;
+    x = x / 10;
+}
+io.outputLine("pal:false", "sum:" + integer.intText(digitSum));

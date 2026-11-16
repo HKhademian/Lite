@@ -1,0 +1,6 @@
+integer := import "core/int";
+io := import "core/io";
+
+cents := io.inputInt();
+people := io.inputInt();
+io.outputLine("each:" + integer.intText(cents / people) + " rem:" + integer.intText(cents % people));

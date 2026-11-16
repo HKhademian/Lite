@@ -1,0 +1,4 @@
+io := import "core/io";
+
+_line := io.inputLine();
+io.outputLine("0");

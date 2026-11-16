@@ -1,0 +1,14 @@
+io := import "core/io";
+
+n := io.inputInt();
+if n < 1 or n > 3999 {
+    io.outputLine("INVALID");
+} else {
+    var out := "";
+    var cur := n;
+    loop cur > 0 {
+        out += "I";
+        cur -= 1;
+    }
+    io.outputLine(out);
+}

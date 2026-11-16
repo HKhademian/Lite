@@ -1,0 +1,9 @@
+fmt := import "core/format";
+io := import "core/io";
+list := import "core/list";
+
+a := io.inputInt();
+b := io.inputInt();
+items: mut List<Int> = [a];
+list.pushBack(mut items, b);
+io.outputLine(fmt.joinIntTexts(items, ","));

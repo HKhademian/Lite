@@ -1,0 +1,19 @@
+integer := import "core/int";
+io := import "core/io";
+
+n := io.inputInt();
+if n <= 0 {
+    io.outputLine("INVALID");
+} else {
+    var cur := n;
+    var steps := 0;
+    loop cur > 1 {
+        if cur % 2 == 0 {
+            cur = cur / 2;
+        } else {
+            cur = 3 * cur + 1;
+        }
+        steps += 1;
+    }
+    io.outputLine("steps:" + integer.intText(steps), "peak:" + integer.intText(n));
+}

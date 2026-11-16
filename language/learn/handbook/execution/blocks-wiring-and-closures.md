@@ -4,7 +4,7 @@ A core strength of Lite is its **unified block model**: every file, function bod
 
 ## Value Blocks vs Statement Blocks
 
-In any `{ ... }` block, statements ending in `;` execute for their effects and binding introductions. A trailing expression **without** `;` becomes the block's result value (otherwise the block yields `Unit`):
+In any `{ ... }` block, statements (declarations and assignments ending in `;`) execute for their effects and bindings; ending a block with a declaration/assignment or `{ ...; () }` yields `Unit`, whereas a trailing value expression becomes the block's result value:
 
 ```lite
 io := import "core/io";

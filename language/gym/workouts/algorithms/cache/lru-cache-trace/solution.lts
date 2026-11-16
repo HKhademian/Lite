@@ -1,0 +1,110 @@
+io := import "core/io";
+list := import "core/list";
+text := import "core/text";
+
+splitLines := fn(raw: String): List<String> {
+    out: mut List<String> = [];
+    n := text.length(raw);
+    var pos := 0;
+    loop pos <= n {
+        nl := text.indexOfText(raw, "\n", pos);
+        endPos := if nl < 0 { n } else { nl };
+        var cleanEnd := endPos;
+        if cleanEnd > pos and text.at(raw, cleanEnd - 1) == "\r" { cleanEnd -= 1; }
+        list.pushBack(mut out, text.slice(raw, pos, cleanEnd));
+        if nl < 0 { break; }
+        pos = nl + 1;
+    }
+    out
+};
+
+splitSpace := fn(line: String): List<String> {
+    out: mut List<String> = [];
+    n := text.length(line);
+    var p := 0;
+    loop p < n {
+        loop p < n and text.isWhitespace(text.at(line, p)) { p += 1; }
+        if p >= n { break; }
+        s := p;
+        loop p < n and not text.isWhitespace(text.at(line, p)) { p += 1; }
+        list.pushBack(mut out, text.slice(line, s, p));
+    }
+    out
+};
+
+withTextAt := fn(xs: List<String>, idx: Int, val: String): List<String> {
+    out: mut List<String> = [];
+    len := list.listCountText(xs);
+    var k := 0;
+    loop k < len {
+        list.pushBack(mut out, if k == idx { val } else { xs[k] });
+        k += 1;
+    }
+    out
+};
+
+raw := io.inputAll();
+lines := splitLines(raw);
+var cap := 0;
+var haveCap := false;
+emptyTexts: List<String> = [];
+var mut keys := emptyTexts;
+var mut vals := emptyTexts;
+var size := 0;
+
+loop lines as line {
+    trimmed := text.trim(line);
+    if trimmed == "" { continue; }
+    parts := splitSpace(trimmed);
+    if not haveCap {
+        parsed := text.textToInt(parts[0]);
+        cap = if parsed.ok and parsed.value > 0 { parsed.value } else { 1 };
+        haveCap = true;
+        continue;
+    }
+
+    op := parts[0];
+    if op == "GET" and list.listCountText(parts) >= 2 {
+        k := parts[1];
+        idx := list.listIndexOfText(keys, k);
+        if idx < 0 {
+            io.outputLine("MISS");
+        } else {
+            v := vals[idx];
+            var shift := idx;
+            loop shift > 0 {
+                keys = withTextAt(keys, shift, keys[shift - 1]);
+                vals = withTextAt(vals, shift, vals[shift - 1]);
+                shift -= 1;
+            }
+            keys = withTextAt(keys, 0, k);
+            vals = withTextAt(vals, 0, v);
+            io.outputLine(v);
+        }
+    } else if op == "SET" and list.listCountText(parts) >= 3 {
+        k := parts[1];
+        v := parts[2];
+        idx := list.listIndexOfText(keys, k);
+        if idx >= 0 {
+            var shift := idx;
+            loop shift > 0 {
+                keys = withTextAt(keys, shift, keys[shift - 1]);
+                vals = withTextAt(vals, shift, vals[shift - 1]);
+                shift -= 1;
+            }
+            keys = withTextAt(keys, 0, k);
+            vals = withTextAt(vals, 0, v);
+        } else {
+            if size == cap {
+                _dk := list.popBack(mut keys);
+                _dv := list.popBack(mut vals);
+                size -= 1;
+            }
+            list.pushFront(mut keys, k);
+            list.pushFront(mut vals, v);
+            size += 1;
+        }
+    }
+}
+
+io.outputLine("ORDER:" + if size == 0 { "EMPTY" } else { text.joinTexts(keys, ",") });

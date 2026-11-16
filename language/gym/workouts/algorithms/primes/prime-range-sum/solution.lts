@@ -1,0 +1,28 @@
+integer := import "core/int";
+io := import "core/io";
+
+isPrime := fn(n: Int): Bool {
+    if n < 2 { return false; }
+    if n == 2 { return true; }
+    if n % 2 == 0 { return false; }
+    var d := 3;
+    loop d * d <= n {
+        if n % d == 0 { return false; }
+        d += 2;
+    }
+    true
+};
+
+lo := io.inputInt();
+hi := io.inputInt();
+var count := 0;
+var sum := 0;
+var k := if lo < 2 { 2 } else { lo };
+loop k <= hi {
+    if isPrime(k) {
+        count += 1;
+        sum += k;
+    }
+    k += 1;
+}
+io.outputLine("count:" + integer.intText(count), "sum:" + integer.intText(sum));

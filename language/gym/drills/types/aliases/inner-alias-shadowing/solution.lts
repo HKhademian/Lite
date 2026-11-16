@@ -1,0 +1,14 @@
+io := import "core/io";
+
+NumOrText := type String;
+
+x := io.inputInt();
+y := io.inputInt();
+tag: NumOrText = "sum";
+total := {
+    Pair := type (a: NumOrText, b: NumOrText);
+    NumOrText := type Int;
+    item: Pair = (a = x, b = y);
+    item.a + item.b
+};
+io.outputLine(tag, total);

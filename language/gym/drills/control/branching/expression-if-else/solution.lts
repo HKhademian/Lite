@@ -1,0 +1,5 @@
+io := import "core/io";
+
+score := io.inputInt();
+status := if score >= 60 { "pass" } else { "retry" };
+io.outputLine(status);

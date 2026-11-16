@@ -1,0 +1,13 @@
+integer := import "core/int";
+io := import "core/io";
+
+x := io.inputInt();
+lo := io.inputInt();
+hi := io.inputInt();
+clamped := if x < lo { lo } else { x };
+sign := match {
+    clamped < 0 { "neg" }
+    clamped == 0 { "zero" }
+    _ { "pos" }
+};
+io.outputLine("clamped:" + integer.intText(clamped), "sign:" + sign);

@@ -1,0 +1,4 @@
+io := import "core/io";
+
+_all := io.inputAll();
+io.outputLine("MISSING");

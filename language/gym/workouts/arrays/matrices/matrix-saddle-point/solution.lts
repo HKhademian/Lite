@@ -1,0 +1,64 @@
+integer := import "core/int";
+io := import "core/io";
+list := import "core/list";
+
+rows := io.inputInt();
+cols := io.inputInt();
+if rows <= 0 or cols <= 0 {
+    io.outputLine("NONE");
+} else {
+    grid: mut List<Int> = [];
+    var idx := 0;
+    total := rows * cols;
+    loop idx < total {
+        list.pushBack(mut grid, io.inputInt());
+        idx += 1;
+    }
+
+    rowMin: mut List<Int> = [];
+    var r := 0;
+    loop r < rows {
+        var lo := grid[r * cols];
+        var c := 1;
+        loop c < cols {
+            v := grid[r * cols + c];
+            if v < lo { lo = v; }
+            c += 1;
+        }
+        list.pushBack(mut rowMin, lo);
+        r += 1;
+    }
+
+    colMax: mut List<Int> = [];
+    var c2 := 0;
+    loop c2 < cols {
+        var hi := grid[c2];
+        var r2 := 1;
+        loop r2 < rows {
+            v := grid[r2 * cols + c2];
+            if v > hi { hi = v; }
+            r2 += 1;
+        }
+        list.pushBack(mut colMax, hi);
+        c2 += 1;
+    }
+
+    var found := false;
+    var rOut := 0;
+    loop rOut < rows and not found {
+        var cOut := 0;
+        loop cOut < cols {
+            val := grid[rOut * cols + cOut];
+            if val == rowMin[rOut] and val == colMax[cOut] {
+                io.outputLine(integer.intText(rOut) + "," + integer.intText(cOut) + ":" + integer.intText(val));
+                found = true;
+                break;
+            }
+            cOut += 1;
+        }
+        rOut += 1;
+    }
+    if not found {
+        io.outputLine("NONE");
+    }
+}

@@ -1,0 +1,10 @@
+integer := import "core/int";
+io := import "core/io";
+list := import "core/list";
+text := import "core/text";
+unicode := import "core/unicode";
+
+s := io.inputLine();
+scalars := text.length(s);
+byteCount := list.listCountInt(unicode.utf8Encode(s));
+io.outputLine("scalars:" + integer.intText(scalars) + " utf8Bytes:" + integer.intText(byteCount));

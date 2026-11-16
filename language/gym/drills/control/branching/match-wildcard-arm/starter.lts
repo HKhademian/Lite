@@ -1,0 +1,8 @@
+io := import "core/io";
+
+score := io.inputInt();
+band := match {
+    score >= 90 { "A" }
+    score >= 70 { "B" }
+};
+io.outputLine(band);

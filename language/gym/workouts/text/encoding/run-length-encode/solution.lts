@@ -1,0 +1,28 @@
+integer := import "core/int";
+io := import "core/io";
+list := import "core/list";
+text := import "core/text";
+
+line := io.inputLine();
+n := text.length(line);
+if n == 0 {
+    io.outputLine("");
+} else {
+    parts: mut List<String> = [];
+    var cur := text.at(line, 0);
+    var run := 1;
+    var i := 1;
+    loop i < n {
+        ch := text.at(line, i);
+        if ch == cur {
+            run += 1;
+        } else {
+            list.pushBack(mut parts, cur + integer.intText(run));
+            cur = ch;
+            run = 1;
+        }
+        i += 1;
+    }
+    list.pushBack(mut parts, cur + integer.intText(run));
+    io.outputLine(text.joinTexts(parts, ""));
+}

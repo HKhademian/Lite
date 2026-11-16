@@ -1,0 +1,17 @@
+io := import "core/io";
+
+var sharedCurrent := 0;
+
+makeCounter := fn(start: Int, step: Int): fn(): Int {
+    sharedCurrent = start;
+    fn(): Int {
+        sharedCurrent += step;
+        sharedCurrent
+    }
+};
+
+s1 := io.inputInt();
+s2 := io.inputInt();
+c1 := makeCounter(s1, 2);
+c2 := makeCounter(s2, 5);
+io.outputLine(c1(), c2(), c1(), c2());

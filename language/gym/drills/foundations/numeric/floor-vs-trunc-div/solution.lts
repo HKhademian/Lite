@@ -1,0 +1,5 @@
+io := import "core/io";
+
+a := io.inputInt();
+b := io.inputInt();
+io.outputLine(a :/ b, a :% b);

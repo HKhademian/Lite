@@ -1,0 +1,16 @@
+integer := import "core/int";
+io := import "core/io";
+
+lo := io.inputInt();
+hi := io.inputInt();
+var count := 0;
+var sum := 0;
+var k := lo;
+loop k <= hi {
+    if k >= 2 and k % 2 =!= 0 {
+        count += 1;
+        sum += k;
+    }
+    k += 1;
+}
+io.outputLine("count:" + integer.intText(count), "sum:" + integer.intText(sum));

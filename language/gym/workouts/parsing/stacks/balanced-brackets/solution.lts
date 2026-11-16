@@ -1,0 +1,47 @@
+integer := import "core/int";
+io := import "core/io";
+list := import "core/list";
+text := import "core/text";
+
+matchingClose := fn(openCh: String): String {
+    match {
+        openCh == "(" { ")" }
+        openCh == "[" { "]" }
+        _ { "}" }
+    }
+};
+
+line := io.inputLine();
+stack: mut List<String> = [];
+var depth := 0;
+n := text.length(line);
+var i := 0;
+var mismatchIdx := -1;
+
+loop i < n {
+    ch := text.at(line, i);
+    if ch == "(" or ch == "[" or ch == "{" {
+        list.pushBack(mut stack, ch);
+        depth += 1;
+    } else if ch == ")" or ch == "]" or ch == "}" {
+        if depth == 0 {
+            mismatchIdx = i;
+            break;
+        }
+        top := list.popBack(mut stack);
+        depth -= 1;
+        if matchingClose(top) =!= ch {
+            mismatchIdx = i;
+            break;
+        }
+    }
+    i += 1;
+}
+
+if mismatchIdx >= 0 {
+    io.outputLine("mismatch:" + integer.intText(mismatchIdx));
+} else if depth > 0 {
+    io.outputLine("mismatch:" + integer.intText(n));
+} else {
+    io.outputLine("balanced");
+}
