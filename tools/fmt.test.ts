@@ -57,7 +57,7 @@ test('formatLite is idempotent across all language examples, samples, and librar
   const tmp = mkdtempSync(join(tmpdir(), 'lite-fmt-corpus-test-'));
   try {
     const copied: string[] = [];
-    for (const dir of ['language/examples', 'language/showcases', 'samples', 'lib/core', 'lib/extra']) {
+    for (const dir of ['language/examples', 'language/showcases', 'language/learn/tutorials', 'samples', 'lib/core', 'lib/extra']) {
       const absDir = join(root, dir);
       for (const full of collectLiteFiles(absDir)) {
         const rel = relative(root, full);

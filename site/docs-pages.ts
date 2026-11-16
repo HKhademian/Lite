@@ -234,6 +234,29 @@ function discoverSpecDocs(verifiedSet: ReadonlySet<string>): readonly DocMeta[] 
   return metas;
 }
 
+export type DocOutMapOptions = Readonly<{
+  docOutBySource: ReadonlyMap<string, string>;
+  samplesByFile: ReadonlyMap<string, string>;
+}>;
+
+/** Builds the global source-path -> output-HTML map covering Handbook, Spec, and lib module docs. */
+export function buildDocOutMap(options: Readonly<{
+  modulesBase?: readonly { file: string; namespace: string; name: string }[];
+}>): ReadonlyMap<string, string> {
+  const map = new Map<string, string>();
+  for (const ch of HANDBOOK_CHAPTERS) {
+    map.set(ch.sourcePath, `docs/handbook/${ch.slug}.html`);
+  }
+  const verified = loadVerifiedDocsSet();
+  for (const m of discoverSpecDocs(verified)) {
+    map.set(m.sourcePath, m.outPath);
+  }
+  for (const mod of options.modulesBase ?? []) {
+    map.set(mod.file, `modules/${mod.namespace}/${mod.name}.html`);
+  }
+  return map;
+}
+
 function loadVerifiedDocsSet(): ReadonlySet<string> {
   const verified = new Set<string>(['docs/start-here.md', 'docs/tour.md']);
   const catalogPath = join(rootDir, 'language', 'showcases', 'catalog.json');

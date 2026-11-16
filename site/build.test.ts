@@ -170,7 +170,7 @@ test('buildSite generates static pages and metadata in dist/site', () => {
     }
     return outFiles;
   };
-  for (const htmlFile of collectHtml(join(out, 'docs'))) {
+  for (const htmlFile of [...collectHtml(join(out, 'docs')), ...collectHtml(join(out, 'learn'))]) {
     const content = readFileSync(htmlFile, 'utf8');
     assert(!content.includes('data-md-href'), `unresolved data-md-href in ${htmlFile}`);
     const hrefRe = /href="([^"]+)"/g;
@@ -186,6 +186,26 @@ test('buildSite generates static pages and metadata in dist/site', () => {
       assert(existsSync(fileCandidate), `broken local href "${raw}" in ${htmlFile}`);
     }
   }
+  const learnIndex = readFileSync(join(out, 'learn/index.html'), 'utf8');
+  assert(learnIndex.includes('0 / 23 completed'));
+  assert(learnIndex.includes('Track 0 — Getting Started'));
+  assert(learnIndex.includes('Track 7 — Standalone Project Tutorials'));
+  for (const learnRel of [
+    'learn/getting-started/hello-lite.html',
+    'learn/foundations/bindings-and-mutability.html',
+    'learn/modules/modules-and-visibility.html',
+    'learn/tutorials/expression-evaluator.html',
+    'learn/tutorials/text-manifest-digest.html',
+    'learn/tutorials/orb-catcher-game.html',
+    'learn/payloads/hello-lite.json',
+    'learn/payloads/modules-and-visibility.json',
+    'learn/payloads/orb-catcher-game.json',
+  ]) {
+    assert(existsSync(join(out, learnRel)), `missing learn artifact: ${learnRel}`);
+  }
+  const orbPage = readFileSync(join(out, 'learn/tutorials/orb-catcher-game.html'), 'utf8');
+  assert(orbPage.includes('id="ln-canvas"'));
+  assert(orbPage.includes('../../runtime/worker.js'));
   const gallery = readFileSync(join(out, 'gallery/index.html'), 'utf8');
   assert(gallery.includes('<title>Gallery — Lite</title>'));
   assert(gallery.includes('class="gallery-jumps"'));
@@ -576,6 +596,22 @@ test('emitted playground worker.js compiles and runs edited Lite code', async ()
     assert.equal(aliasRes.play?.hasUpdate, true);
     assert.equal(aliasRes.play?.ops[0], 1);
     await mockSelf.onmessage!({ data: { action: 'stop' } });
+
+    const modPayload = JSON.parse(readFileSync(join(out, 'learn/payloads/modules-and-visibility.json'), 'utf8')) as {
+      source: string;
+      output: string;
+      extraModules: Record<string, unknown>;
+    };
+    const modRes = await send({
+      id: 10,
+      action: 'run',
+      source: modPayload.source,
+      stdin: '',
+      args: [],
+      extraModules: modPayload.extraModules,
+    }) as unknown as { ok: boolean; stdout?: string; stderr: string };
+    assert.equal(modRes.ok, true, modRes.stderr);
+    assert.equal(modRes.stdout, modPayload.output);
   } finally {
     (globalThis as unknown as { self?: unknown }).self = prevSelf;
     globalThis.fetch = prevFetch;

@@ -1,0 +1,20 @@
+# Fixed `[T; N]` Arrays vs Mutable `List<T>` Snapshots
+
+Distinguish fixed-extent arrays from dynamically resizable `List<T>` storage and understand `mut` vs `var mut` value-snapshot semantics.
+
+## Walkthrough
+
+1. `fixed: [Int; 3] = [10, 20, 30];` checks element count at compile time (`fixed[1]` is bounds-checked at runtime).
+2. `queue: mut List<Int> = [2, 3];` allows in-place `push_front`/`push_back`/`pop_front`/`pop_back` (and `core/list` equivalents).
+3. `saved: List<Int> = queue;` captures an immutable value copy—mutating `queue` afterward leaves `saved` untouched.
+4. `var mut bag := seed;` permits *both* mutating elements (`list.pushBack(mut bag, 6)`) and replacing `bag = replacement;`.
+
+> [!TIP]
+> Notice `push_back(mut queue, 4)` marks `mut` at the call site too so mutations are always visible to readers.
+
+## Try Modifying This
+
+1. Try pushing another item onto `saved`—observe that `saved` lacks `mut` permission.
+2. Print `saved` before and after `pop_front(mut queue)` to confirm value-snapshot isolation.
+
+See [Handbook: Tuples, Arrays, Lists & Aliases](../../../handbook/types/tuples-arrays-lists-and-aliases.md) and [core/list](../../../../../lib/core/list.lts).

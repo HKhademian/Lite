@@ -1734,4 +1734,99 @@ body.search-open {
   gap: 0.75rem;
   flex-wrap: wrap;
 }
+
+/* Learn Curriculum & Live Lesson Runner */
+.learn-main {
+  width: min(1620px, 100% - 32px);
+  margin-inline: auto;
+  padding: 1.25rem 0 2.5rem;
+}
+.learn-progress-banner {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 1rem;
+  padding: 1rem 1.2rem;
+  background: var(--surface-elevated);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+}
+.learn-progress-stats {
+  flex: 1 1 260px;
+  display: flex;
+  flex-direction: column;
+  gap: 0.45rem;
+}
+.learn-bar-track {
+  height: 8px;
+  border-radius: 999px;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  overflow: hidden;
+}
+.learn-bar-fill {
+  height: 100%;
+  background: var(--accent);
+  border-radius: 999px;
+  transition: width 0.2s ease;
+}
+.learn-done-label {
+  color: var(--tok-string);
+  font-weight: 600;
+}
+.learn-workbench {
+  display: grid;
+  grid-template-columns: 240px minmax(0, 1fr) minmax(390px, 46%);
+  gap: 1.35rem;
+  align-items: start;
+}
+@media (max-width: 1180px) {
+  .learn-workbench {
+    grid-template-columns: minmax(0, 1fr) minmax(340px, 48%);
+  }
+  .learn-sidebar {
+    display: none;
+  }
+}
+@media (max-width: 860px) {
+  .learn-workbench {
+    grid-template-columns: 1fr;
+  }
+}
+.learn-runner {
+  position: sticky;
+  top: 76px;
+  max-height: calc(100vh - 94px);
+}
+@media (max-width: 860px) {
+  .learn-runner {
+    position: static;
+    max-height: none;
+  }
+}
+.learn-runner .pg-panel {
+  min-height: 190px;
+  max-height: 290px;
+}
+.learn-complete-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 0.75rem;
+  margin: 1.35rem 0 0.75rem;
+  padding-top: 1rem;
+  border-top: 1px solid var(--border);
+}
+.learn-done-dot {
+  width: 7px;
+  height: 7px;
+  border-radius: 999px;
+  background: transparent;
+  flex-shrink: 0;
+}
+a.is-completed .learn-done-dot {
+  background: var(--tok-string);
+}
 `;

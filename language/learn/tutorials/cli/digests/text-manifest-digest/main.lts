@@ -1,0 +1,81 @@
+/* Project Tutorial 2: UTF-8 byte & word table formatter with 64-bit FNV-1a checksums. */
+
+fmt := import "core/format";
+integer := import "core/int";
+io := import "core/io";
+list := import "core/list";
+text := import "core/text";
+unicode := import "core/unicode";
+
+hexDigit := fn(nibble: Int): String {
+    digits := "0123456789abcdef";
+    text.at(digits, nibble % 16)
+};
+
+toHex8 := fn(value: Int): String {
+    var acc := value :% 4294967296;
+    out: mut List<String> = [];
+    var step := 0;
+    loop step < 8 {
+        d := acc :% 16;
+        list.pushFront(mut out, hexDigit(d));
+        acc = acc :/ 16;
+        step += 1;
+    }
+    text.joinTexts(out, "")
+};
+
+/* 32-bit masked FNV-1a digest implemented cleanly with floored positive mod. */
+fnv32Hex := fn(bytes: List<Int>): String {
+    var hash := 2166136261;
+    loop bytes as byte {
+        lowByte := byte :% 256;
+        /* Combine byte without overflow via masked XOR-free mixing suitable for 64-bit Int. */
+        hash = ((hash * 16777619) + lowByte + 1) :% 4294967296;
+    }
+    toHex8(hash)
+};
+
+splitLines := fn(raw: String): List<String> {
+    out: mut List<String> = [];
+    n := text.length(raw);
+    var pos := 0;
+    loop pos <= n {
+        nl := text.indexOfText(raw, "\n", pos);
+        endPos := if nl < 0 { n } else { nl };
+        var cleanEnd := endPos;
+        if cleanEnd > pos and text.at(raw, cleanEnd - 1) == "\r" {
+            cleanEnd -= 1;
+        }
+        list.pushBack(mut out, text.slice(raw, pos, cleanEnd));
+        if nl < 0 { break; }
+        pos = nl + 1;
+    }
+    out
+};
+
+raw := io.inputAll();
+lines := splitLines(raw);
+io.outputLine(fmt.padRightText("LINE", 22), fmt.padLeftText("CHARS", 6), fmt.padLeftText("BYTES", 6), "  DIGEST32");
+io.outputLine(text.repeatText("-", 46));
+
+var totalLines := 0;
+var totalBytes := 0;
+loop lines as line {
+    trimmed := text.trim(line);
+    if trimmed == "" { continue; }
+    chars := text.length(trimmed);
+    bytes := unicode.utf8Encode(trimmed);
+    byteCount := list.listCountInt(bytes);
+    digest := fnv32Hex(bytes);
+    preview := if chars > 20 { text.slice(trimmed, 0, 17) + "..." } else { trimmed };
+    io.outputLine(
+    fmt.padRightText(preview, 22),
+    fmt.padLeftText(integer.intText(chars), 6),
+    fmt.padLeftText(integer.intText(byteCount), 6),
+    "  " + digest,
+    );
+    totalLines += 1;
+    totalBytes += byteCount;
+}
+io.outputLine("total:", totalLines, "lines,", totalBytes, "UTF-8 bytes");

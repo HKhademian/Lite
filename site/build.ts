@@ -17,15 +17,16 @@ import {
   renderPage,
   type SourceRevision,
 } from './chrome.ts';
+import { captureCanvasPreview } from './canvas-preview.ts';
 import { buildDocsSection } from './docs-pages.ts';
 import { heroSample, playgroundDefaultSample, sampleGroups, showcaseSamples, type ShowcaseSample } from './groups.ts';
 import { escapeHtml, highlightLite, highlightTs } from './highlight.ts';
+import { buildLearnSection } from './learn-pages.ts';
 import { buildModulesSection } from './modules-pages.ts';
 import { playGroups, playSamples, type PlaySample } from './play-samples.ts';
 import { appendPlayKeepalive, stripPlayKeepaliveTs } from './play-keepalive.ts';
 import { playgroundWorkerJs } from './playground-worker.ts';
 import { searchClientJs, type SearchEntry } from './search.ts';
-import { stripLiteTs } from './strip-ts.ts';
 import { siteCss } from './styles.ts';
 import { buildToolsSection } from './tools-page.ts';
 
@@ -49,78 +50,6 @@ export type BuildSiteOptions = Readonly<{
 const root = dirname(import.meta.dirname);
 const outputDir = join(root, 'dist', 'site');
 const entryPath = fileURLToPath(new URL('../compiler/entry.ts', import.meta.url));
-
-function decodeArgb(packed: bigint): Readonly<{ fill: string; alphaAttr: string }> {
-  const value = Number(packed & 0xffffffffn);
-  const a = (value >>> 24) & 255;
-  const r = (value >>> 16) & 255;
-  const g = (value >>> 8) & 255;
-  const b = value & 255;
-  const fill = `rgb(${String(r)},${String(g)},${String(b)})`;
-  const alphaAttr = a < 255 ? ` fill-opacity="${(a / 255).toFixed(3)}"` : '';
-  return { fill, alphaAttr };
-}
-
-function renderOpsSvg(width: number, height: number, ops: readonly bigint[], title: string): string {
-  if (width <= 0 || height <= 0) return '';
-  let rects: string[] = [];
-  let i = 0;
-  while (i < ops.length) {
-    const op = Number(ops[i]);
-    if (op === 1 && i + 1 < ops.length) {
-      const { fill, alphaAttr } = decodeArgb(ops[i + 1]!);
-      rects = [`<rect width="${String(width)}" height="${String(height)}" fill="${fill}"${alphaAttr}/>`];
-      i += 2;
-    } else if (op === 2 && i + 5 < ops.length) {
-      const x = Number(ops[i + 1]!);
-      const y = Number(ops[i + 2]!);
-      const w = Number(ops[i + 3]!);
-      const h = Number(ops[i + 4]!);
-      const { fill, alphaAttr } = decodeArgb(ops[i + 5]!);
-      rects.push(`<rect x="${String(x)}" y="${String(y)}" width="${String(w)}" height="${String(h)}" fill="${fill}"${alphaAttr}/>`);
-      i += 6;
-    } else {
-      break;
-    }
-  }
-  return `<svg class="play-preview-svg" viewBox="0 0 ${String(width)} ${String(height)}" shape-rendering="crispEdges" role="img" aria-label="Initial frame preview for ${escapeHtml(title)}">${rects.join('')}</svg>`;
-}
-
-function captureCanvasPreview(generatedTs: string, title: string, badge?: string): string | undefined {
-  const snapFn = generatedTs.match(/\bfunction (liteFn\$[a-zA-Z0-9_$]+\$litePlayCanvasSnapshot)\b/)?.[1];
-  const opsFn = generatedTs.match(/\bfunction (liteFn\$[a-zA-Z0-9_$]+\$litePlayCanvasTakeOps)\b/)?.[1];
-  if (snapFn === undefined || opsFn === undefined) return undefined;
-
-  let runnable = stripLiteTs(generatedTs);
-  const tailReturn = /return lite\$out;\s*\}\s*$/;
-  if (!tailReturn.test(runnable)) return undefined;
-  runnable = runnable.replace(tailReturn, [
-    'const __pick = (a, b) => (typeof a === "function" ? a : typeof b === "function" ? b : null);',
-    'const __init = __pick(typeof liteFn_onCanvasInit !== "undefined" ? liteFn_onCanvasInit : undefined, typeof liteFn_canvas_onInit !== "undefined" ? liteFn_canvas_onInit : undefined);',
-    'if (__init) __init();',
-    `const __snap = ${snapFn}();`,
-    `const __ops = ${opsFn}();`,
-    'return { width: Number(__snap.width), height: Number(__snap.height), ops: __ops };',
-    '}',
-  ].join('\n'));
-  runnable = runnable.replace(/\bexport function main\b/, 'function main') + '\nreturn main(() => {});';
-
-  const prevProcess = (globalThis as unknown as { process: unknown }).process;
-  const stubProcess = {
-    argv: ['node', 'preview.js'],
-    exit: () => { throw new Error('unexpected exit'); },
-    getBuiltinModule: () => ({ readSync: () => 0, writeSync: (_fd: number, text: string) => text.length }),
-  };
-  try {
-    (globalThis as unknown as { process: unknown }).process = stubProcess;
-    const frame = (new Function('process', runnable) as (proc: unknown) => { width: number; height: number; ops: bigint[] })(stubProcess);
-    const svg = renderOpsSvg(frame.width, frame.height, frame.ops, title);
-    if (!svg) return undefined;
-    return badge ? `<div class="play-preview">${svg}</div>` : `<div class="play-preview">${svg}</div>`;
-  } finally {
-    (globalThis as unknown as { process: unknown }).process = prevProcess;
-  }
-}
 
 function compileAndRunSample(sample: AnySample, tsCompiler: CompilerBuild, badge?: string): RenderedSample {
   const fullPath = resolve(root, sample.file);
@@ -158,7 +87,7 @@ function compileAndRunSample(sample: AnySample, tsCompiler: CompilerBuild, badge
     if (run.status !== 0) {
       throw new Error(`failed to run ${sample.file} (exit ${String(run.status)}):\n${run.stderr}`);
     }
-    const previewSvg = captureCanvasPreview(generatedTs, sample.title, badge);
+    const previewSvg = captureCanvasPreview(generatedTs, sample.title);
     return {
       ...sample,
       source,
@@ -1417,8 +1346,9 @@ export function buildSite(options?: BuildSiteOptions): void {
   }
   writeFileSync(join(outputDir, 'runtime', 'search.js'), searchClientJs);
 
+  const extractedModules = extractModules(root);
   const modulesOut = buildModulesSection({
-    modules: extractModules(root),
+    modules: extractedModules,
     showcaseSamples,
     playSamples,
     playGroups,
@@ -1449,6 +1379,21 @@ export function buildSite(options?: BuildSiteOptions): void {
     writeFileSync(dest, html);
   }
 
+  const learnOut = buildLearnSection({
+    tsCompiler,
+    modules: extractedModules,
+    showcaseSamples,
+    playSamples,
+    repoUrl,
+    rev,
+    lightSwitchShine,
+  });
+  for (const [relPath, html] of learnOut.files) {
+    const dest = join(outputDir, relPath);
+    mkdirSync(dirname(dest), { recursive: true });
+    writeFileSync(dest, html);
+  }
+
   const searchEntries: SearchEntry[] = [
     { kind: 'learn', title: 'Learn Lite', subtitle: 'Guided ability course, Quickstart, and project tutorials', href: 'learn/', keywords: 'learn course tour tutorials' },
     { kind: 'gym', title: 'Lite Gym', subtitle: 'Interactive drills and multi-test coding katas', href: 'gym/', keywords: 'gym exercises katas practice' },
@@ -1457,6 +1402,7 @@ export function buildSite(options?: BuildSiteOptions): void {
     { kind: 'tool', title: 'Lite Tools & CLI', subtitle: 'CLI commands, formatter, VS Code extension, and self-hosting', href: 'tools/', keywords: 'tools cli fmt verify doctor vscode' },
     { kind: 'gallery', title: 'Sample & Play Gallery', subtitle: 'Verified language programs, canvas art, audio, and games', href: 'gallery/', keywords: 'gallery examples samples canvas audio games' },
     { kind: 'tool', title: 'Browser Playground', subtitle: 'Write, compile to TypeScript or C, and run Lite in your browser', href: 'playground/', keywords: 'playground sandbox compile run' },
+    ...learnOut.searchEntries,
     ...docsOut.searchEntries,
     ...modulesOut.searchEntries,
     ...toolsOut.searchEntries,
@@ -1473,8 +1419,7 @@ export function buildSite(options?: BuildSiteOptions): void {
   }
   writeFileSync(join(outputDir, 'search-index.json'), JSON.stringify(searchEntries));
 
-  const sectionStubs: readonly { dir: string; active: 'learn' | 'gym'; title: string; lead: string }[] = [
-    { dir: 'learn', active: 'learn', title: 'Learn Lite', lead: 'Guided lessons and project tutorials are coming in this section.' },
+  const sectionStubs: readonly { dir: string; active: 'gym'; title: string; lead: string }[] = [
     { dir: 'gym', active: 'gym', title: 'Lite Gym', lead: 'Interactive concept drills and coding workouts are coming in this section.' },
   ];
   for (const stub of sectionStubs) {

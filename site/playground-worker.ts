@@ -85,8 +85,9 @@ function runWithProcessStub(argv, stdinText, fn) {
   }
 }
 
-function makeReadSource(stdlib) {
+function makeReadSource(stdlib, extraModules) {
   return (importer, spec) => {
+    if (extraModules && Object.prototype.hasOwnProperty.call(extraModules, spec)) return extraModules[spec];
     if (Object.prototype.hasOwnProperty.call(stdlib, spec)) return stdlib[spec];
     if (spec.startsWith('./')) {
       const prefix = importer.startsWith('lib/extra/') ? 'extra/' : importer.startsWith('lib/core/') ? 'core/' : '';
@@ -193,7 +194,7 @@ function drainTones() {
 
 self.onmessage = async (event) => {
   const payload = event.data ?? {};
-  const { id, action, source, stdin, args } = payload;
+  const { id, action, source, stdin, args, extraModules } = payload;
   try {
     if (action === 'stop') {
       globalThis.__litePlay = null;
@@ -243,7 +244,7 @@ self.onmessage = async (event) => {
     }
 
     const stdlib = await loadStdlib();
-    const readSource = makeReadSource(stdlib);
+    const readSource = makeReadSource(stdlib, extraModules ?? null);
 
     if (action === 'compile-c') {
       const cSource = await loadCompilerSource('compiler-c.js');
