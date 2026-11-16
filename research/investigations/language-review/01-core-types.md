@@ -123,6 +123,16 @@ literals may feed integer parameters remains explicitly unresolved. The
 string-like literal direction below has its own explicit-use-site requirement;
 do not silently generalize it to numeric literals or vice versa.
 
+**Parked for future discussion:** The user names five related concepts:
+`Float-Like`, `Int-Like`, `String-Like`, `Array-Like`, and `Record-Like`.
+Review them together, including their relationship to fresh expressions,
+established values, contextual typing, inference and explicit type boundaries.
+These labels do not yet select syntax, type identity, a common conversion rule,
+or whether they describe literals only, types, capabilities, or another concept.
+Preserve the already discussed distinctions until explicitly revised. The
+relationship to array and record construction belongs across topics 1, 3 and 7;
+record dependencies without leaving the current review layer.
+
 **Initial assessment and probes:** Compare a direct literal in a `UserID` destination with an already bound String; do not assume they must be treated identically. Check numeric bounds and contextual inference too.
 
 ## 1.2 Identity and distinct types
