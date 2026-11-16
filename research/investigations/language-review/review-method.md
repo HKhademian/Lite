@@ -72,11 +72,12 @@ the others still lack their current layer.
 
 ## Current position and parked work
 
-- **Active pass:** third layer, main rules and tradeoffs.
-- **Next topic:** 1. Core types and values; review its main rules and tradeoffs
-  at the same depth that will later be applied to the other nine areas.
-- **Joint layer completion:** the ten first-layer outlines and second-layer
-  connection summaries were discussed through topic 10. These breadth passes do
+- **Active pass:** fourth layer, concrete syntax and semantics.
+- **Next topic:** 1. Core types and values, beginning with primitives and
+  literals; keep comparable depth across the ten areas.
+- **Joint layer completion:** the ten first-layer outlines, second-layer
+  connection summaries, and third-layer main rules and tradeoffs were discussed
+  through topic 10. These breadth passes do
   not imply detailed design acceptance, complete investigation, or implementation
   support. The preliminary assessments remain starting material for deeper passes.
 - **Recent direction to preserve:** the user sees UserID as equally distinct
