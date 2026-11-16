@@ -337,9 +337,10 @@ test('buildSite generates static pages and metadata in dist/site', () => {
   for (const sample of showcaseSamples) {
     assert(existsSync(join(out, 'playground', 'samples', `${sample.id}.json`)), `missing playground payload for ${sample.id}`);
   }
+  assert(!playground.includes('id="pg-samples"'), 'playground should not render redundant sample <select> dropdown');
   for (const sample of playSamples) {
     assert(existsSync(join(out, 'playground', 'samples', `${sample.id}.json`)), `missing play payload for ${sample.id}`);
-    assert(playground.includes(`value="${sample.id}"`), `missing playground option for ${sample.id}`);
+    assert(playground.includes(`"id":"${sample.id}"`), `missing playground sample metadata for ${sample.id}`);
     assert(gallery.includes(`sample-${sample.id}`), `missing gallery card for ${sample.id}`);
   }
   const buildInfo = JSON.parse(readFileSync(join(out, 'build.json'), 'utf8')) as { samples: number; shortCommit: string; timestamp: string; lightSwitchShine: boolean };

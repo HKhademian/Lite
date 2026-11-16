@@ -2299,9 +2299,6 @@ a.is-completed .learn-done-dot {
   border-color: var(--accent);
   background: var(--accent-soft);
 }
-.snips-modal-tools .pg-select {
-  max-width: 220px;
-}
 .snips-cat-tabs {
   display: flex;
   align-items: center;

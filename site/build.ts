@@ -435,20 +435,6 @@ function renderPlaygroundPage(
   rev: SourceRevision,
   lightSwitchShine: boolean,
 ): string {
-  const optionsHtml = sampleGroups.map(group => {
-    const items = showcaseSamples
-      .filter(s => s.group === group.id)
-      .map(s => `<option value="${escapeHtml(s.id)}">${escapeHtml(s.title)}</option>`)
-      .join('');
-    return `<optgroup label="${escapeHtml(group.title)}">${items}</optgroup>`;
-  }).join('') + playGroups.map(group => {
-    const items = playSamples
-      .filter(s => s.group === group.id)
-      .map(s => `<option value="${escapeHtml(s.id)}">${escapeHtml(s.title)}</option>`)
-      .join('');
-    return `<optgroup label="Play — ${escapeHtml(group.title)}">${items}</optgroup>`;
-  }).join('');
-
   const payload = [
     ...Array.from(rendered.values()).map(s => ({
       id: s.id,
@@ -589,7 +575,6 @@ function renderPlaygroundPage(
       <button class="snips-cat-tab" type="button" data-cat="piece" aria-pressed="false">Pieces</button>
     </div>
     <div class="snips-modal-tools">
-      <select id="pg-samples" class="pg-select" aria-label="Quick sample selector">${optionsHtml}</select>
       <input id="pg-sketches-filter" type="search" placeholder="Filter stored sketches, samples, examples, cases, and pieces..." aria-label="Filter code entries">
       <span id="pg-sketches-summary" class="code-card-meta">0 items</span>
     </div>
@@ -603,7 +588,6 @@ function renderPlaygroundPage(
   const samples = ${serialized};
   const byId = new Map(samples.map(s => [s.id, s]));
   const cache = new Map();
-  const select = document.getElementById("pg-samples");
   const workbenchEl = document.getElementById("pg-workbench");
   const splitEl = document.getElementById("pg-split");
   const resetBtn = document.getElementById("pg-reset");
@@ -862,7 +846,6 @@ function renderPlaygroundPage(
     activeSnipId = null;
     activeLibraryItem = null;
     stopPlay(true);
-    if (select) select.value = meta.id;
     if (titleEl) titleEl.textContent = meta.title;
     fileEl.textContent = meta.file;
     statusEl.textContent = "Loading " + meta.file + "...";
@@ -1058,18 +1041,11 @@ function renderPlaygroundPage(
     }
   }
 
-  if (select) {
-    select.addEventListener("change", () => {
-      unlockAudio();
-      void loadSample(select.value, "load");
-      if (sketchesModal) sketchesModal.hidden = true;
-    });
-  }
   resetBtn.addEventListener("click", () => {
     unlockAudio();
     if (activeSnipId && loadSnip(activeSnipId)) return;
     if (activeLibraryItem) { loadLibraryItem(activeLibraryItem); return; }
-    void loadSample((currentSample && currentSample.id) || (select && select.value) || "${escapeHtml(playgroundDefaultSample.id)}", "load");
+    void loadSample((currentSample && currentSample.id) || "${escapeHtml(playgroundDefaultSample.id)}", "load");
   });
   compileBtn.addEventListener("click", () => { void runAction("compile"); });
   playBtn.addEventListener("click", () => { unlockAudio(); void runAction("play"); });
