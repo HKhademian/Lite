@@ -1,8 +1,8 @@
 {
-  "note": "Unified Block Model Slice 2b (side-effect-free dead-code elimination inside { ... } blocks and across root/function/statement blocks on TS and C; C hashes for local-unused and local-missing-semicolon refreshed as C scalar DCE now omits dead pure INT64_C declarations matching TS). All 69 TS and C corpus artifact hashes and 25 rejection cases verified.",
+  "note": "Unified Block Model Slice 3 (uniform lexical closures/captures, inner-block parallel compile-time symbol wiring, uniform execution-trace initialization safety, and escaping-closure checks on TS; C continues rejecting fn values explicitly). All 69 TS and C corpus artifact hashes and 25 rejection cases verified.",
   "recorded": "2026-11-16",
-  "sourceSha256": "330921ce118094a2ce68516bb89342639f50a7d056bddab26a68b665beea65ea",
-  "compilerSha256": "3fc2f2354eb3bcc11d58659c7cda3c3bc56c1435bdc7a97290da2fc6a2530f5f",
+  "sourceSha256": "c1bfd02e7310fcc8007c2c1c963537fb429b4dc577978203f8210e0cc18cf4ad",
+  "compilerSha256": "59f291216ee2ec34da4674382dff3bb3b59a2000c25fdf155ae9491205c1462e",
   "programCases": 69,
   "rejectedCases": 25,
   "artifacts": [

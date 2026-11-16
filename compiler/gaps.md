@@ -150,6 +150,18 @@ Keep dependencies explicit; split a topic further when its contracts warrant it.
   without IIFE wrappers on TS and pruning dead scalar items on C) after full
   type, duplicate-symbol, execution-trace, and target-subset validation, while
   preserving all calls, outer mutations, and runtime arithmetic/bounds faults.
+- [x] **Uniform lexical closures, inner-block wiring, and trace safety (2026-11-16, Unified Block Model Slice 3):**
+  local `fn` expressions on TS uniformly capture surrounding immutable,
+  mutable `var`, `mut List`, parameter, loop-item, and sibling `fn` bindings
+  across arbitrary nesting depths and escaping frames; all inner `{ ... }`
+  blocks share the LiteLang parallel compile-time symbol wiring model (forward/mutual
+  recursion, direct own-name recursion, forward value captures, nearer-forward
+  shadowing, eager outer-shadow reads, and two-pass inner-block DCE resolution);
+  and uniform execution-trace analysis distinguishes read-before-write (`uninit`
+  vs `uninit_assigned`), rejects early direct/transitive calls before targets
+  initialize, and rejects escaping closures that bypass uninitialized or skipped
+  same-block symbols across exited depths (while C continues rejecting `fn` values
+  explicitly).
 - [x] **Script expressions:** discard ordinary expression values while retaining
   evaluation, effects and faults; accept empty item separators.
 - [x] **Function completion:** keep completion facts per block, join all conditional

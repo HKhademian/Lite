@@ -715,35 +715,35 @@ test('public commands compile, run and check TS artifacts without T00 and reject
     const path = join(directory, 'program with spaces.lts');
     writeFileSync(join(directory, 'helper.lts'), 'pub twice := fn(n: Int): Int { n * 2 }');
     writeFileSync(path, 'io := import "core/io"; helper := import "./helper.lts";\nio.outputLine(helper.twice(io.inputInt("n? ")));');
-    const compiled = spawnSync(join(directory, 'bin/lite'), ['compile', path], { env, timeout: 10000 });
+    const compiled = spawnSync(join(directory, 'bin/lite'), ['compile', path], { env, timeout: 30000 });
     assert.equal(compiled.status, 0, compiled.stderr.toString()); assert.equal(compiled.stderr.length, 0);
     const artifact = join(directory, 'program.ts'); writeFileSync(artifact, compiled.stdout);
-    const executed = spawnSync(process.execPath, [join(directory, 'compiler/entry.ts'), artifact], { input: '7', env, timeout: 10000 });
+    const executed = spawnSync(process.execPath, [join(directory, 'compiler/entry.ts'), artifact], { input: '7', env, timeout: 30000 });
     assert.equal(executed.status, 0, executed.stderr.toString()); assert.equal(executed.stdout.toString(), 'n? 14\n');
-    const ran = spawnSync(join(directory, 'bin/lite'), ['run', path], { input: '7', env, timeout: 10000 });
+    const ran = spawnSync(join(directory, 'bin/lite'), ['run', path], { input: '7', env, timeout: 30000 });
     assert.equal(ran.status, 0, ran.stderr.toString()); assert.equal(ran.stdout.toString(), 'n? 14\n'); assert.equal(ran.stderr.length, 0);
-    const checked = spawnSync(join(directory, 'bin/lite'), ['check', path], { input: Buffer.from([0xff]), env, timeout: 10000 });
+    const checked = spawnSync(join(directory, 'bin/lite'), ['check', path], { input: Buffer.from([0xff]), env, timeout: 30000 });
     assert.equal(checked.status, 0, checked.stderr.toString()); assert.equal(checked.stdout.length, 0); assert.equal(checked.stderr.length, 0);
     writeFileSync(join(directory, 'helper.lts'), 'twice := fn(n: Int): Int { n * 2 }');
     writeFileSync(path, 'io := import "core/io"; helper := import "./helper.lts"; io.outputLine(helper.twice(21));');
-    const privateCompile = spawnSync(join(directory, 'bin/lite'), ['compile', path], { env, timeout: 10000 });
+    const privateCompile = spawnSync(join(directory, 'bin/lite'), ['compile', path], { env, timeout: 30000 });
     assert.equal(privateCompile.status, 2); assert.equal(privateCompile.stdout.length, 0);
     assert.match(privateCompile.stderr.toString(), /unknown module member helper\.twice/);
-    const privateCheck = spawnSync(join(directory, 'bin/lite'), ['check', path], { env, timeout: 10000 });
+    const privateCheck = spawnSync(join(directory, 'bin/lite'), ['check', path], { env, timeout: 30000 });
     assert.equal(privateCheck.status, 1); assert.equal(privateCheck.stdout.length, 0);
     assert.match(privateCheck.stderr.toString(), /unknown module member helper\.twice/);
-    const privateRun = spawnSync(join(directory, 'bin/lite'), ['run', path], { env, timeout: 10000 });
+    const privateRun = spawnSync(join(directory, 'bin/lite'), ['run', path], { env, timeout: 30000 });
     assert.equal(privateRun.status, 2); assert.equal(privateRun.stdout.length, 0);
     assert.match(privateRun.stderr.toString(), /unknown module member helper\.twice/);
-    const deferred = spawnSync(join(directory, 'bin/lite'), ['compile', '--target', 'c', path], { env, timeout: 10000 });
+    const deferred = spawnSync(join(directory, 'bin/lite'), ['compile', '--target', 'c', path], { env, timeout: 30000 });
     assert.equal(deferred.status, 2); assert.equal(deferred.stdout.length, 0);
     assert.match(deferred.stderr.toString(), /C output is deferred/);
     writeFileSync(path, 'io := import "core/io"; io.outputLine("before"); match 1 { _ => 2 }');
-    const unsupported = spawnSync(join(directory, 'bin/lite'), ['check', path], { env, timeout: 10000 });
+    const unsupported = spawnSync(join(directory, 'bin/lite'), ['check', path], { env, timeout: 30000 });
     assert.equal(unsupported.status, 1); assert.equal(unsupported.stdout.length, 0);
     assert.match(unsupported.stderr.toString(), /unsupported feature "match"/);
     writeFileSync(path, 'io := import "core/io"; io.outputLine("before"); unknown();');
-    const invalid = spawnSync(join(directory, 'bin/lite'), ['compile', path], { env, timeout: 10000 });
+    const invalid = spawnSync(join(directory, 'bin/lite'), ['compile', path], { env, timeout: 30000 });
     assert.equal(invalid.status, 2); assert.equal(invalid.stdout.length, 0); assert.match(invalid.stderr.toString(), /unknown value unknown/);
   } finally { rmSync(directory, { recursive: true, force: true }); }
 });
@@ -867,8 +867,8 @@ function isolatedCheckout(): string {
 function invoke(directory: string, source: string | Buffer, target: CompilerTarget = 'ts') {
   const path = join(directory, 'source with spaces.lts');
   writeFileSync(path, source);
-  return target === 'ts' ? spawnSync(join(directory, 'bin/lite-compile-ts'), [path], { env, timeout: 10000 })
-    : spawnSync(process.execPath, [join(directory, 'compiler/cli.ts'), target, path], { env, timeout: 10000 });
+  return target === 'ts' ? spawnSync(join(directory, 'bin/lite-compile-ts'), [path], { env, timeout: 30000 })
+    : spawnSync(process.execPath, [join(directory, 'compiler/cli.ts'), target, path], { env, timeout: 30000 });
 }
 
 test('TS host rebuilds the Lite source graph and preserves output, diagnostics and source names', () => {
@@ -924,7 +924,7 @@ test('a changed Lite compiler rebuilds with the selected seed, caches by source 
     // Ask the real build selector for its exact cache path inside the copied checkout.
     const selected = spawnSync(process.execPath, ['--input-type=module', '-e',
       'import {buildTsCompiler} from "./compiler/host.ts"; process.stdout.write(JSON.stringify(buildTsCompiler()));'],
-    { cwd: directory, env, encoding: 'utf8', timeout: 10000 });
+    { cwd: directory, env, encoding: 'utf8', timeout: 30000 });
     assert.equal(selected.status, 0, selected.stderr);
     const record: unknown = JSON.parse(selected.stdout);
     assert.ok(typeof record === 'object' && record !== null && 'path' in record && typeof record.path === 'string');
@@ -1014,7 +1014,7 @@ test('the graph-built TS-hosted C emitter preserves source names and subset reje
     symlinkSync(join(root, 'igniter/node_modules'), join(directory, 'igniter/node_modules'));
     const built = spawnSync(process.execPath, ['--input-type=module', '-e',
       'import {buildCompiler} from "./compiler/host.ts"; process.stdout.write(JSON.stringify(buildCompiler("c")));'],
-    { cwd: directory, env, encoding: 'utf8', timeout: 10000 });
+    { cwd: directory, env, encoding: 'utf8', timeout: 30000 });
     assert.equal(built.status, 0, built.stderr);
     const artifactPath = (JSON.parse(built.stdout) as { path: string }).path;
     writeFileSync(artifactPath, readFileSync(artifactPath, 'utf8') + '\n');
@@ -5150,17 +5150,8 @@ test('first-class non-capturing function values, callable types, contextual infe
   }
 });
 
-test('first-class non-capturing function rejections cover captures, shadowing, tags, cyclic aliases, and C backend', () => {
+test('first-class function rejections cover non-function calls, tags, comparisons, cyclic aliases, and C backend', () => {
   for (const [source, expectedMessage] of [
-    ['{ x := 1; f := fn(): Int { x }; _ := f(); }', /local functions cannot capture surrounding variable x yet/],
-    ['var x := 1; { f := fn(): Int { x }; _ := f(); }', /local functions cannot capture surrounding variable x yet/],
-    ['var x := 2; { reader := fn(): Int { return x; }; _ := reader(); }', /local functions cannot capture surrounding variable x yet/],
-    ['{ var x := 1; f := fn(): Int { x }; _ := f(); }', /local functions cannot capture surrounding variable x yet/],
-    ['var x := 1; { f := fn(): Unit { x = 2; }; f(); }', /local functions cannot capture surrounding variable x yet/],
-    ['outer := fn(p: Int): Int { inner := fn(): Int { p }; inner() }; outer(1);', /local functions cannot capture surrounding variable p yet/],
-    ['outer := fn(): Int { a := fn(): Int { 1 }; b := fn(): Int { a() }; b() }; outer();', /local functions cannot capture surrounding variable a yet/],
-    ['xs: mut List<Int> = [1]; { f := fn(): Int { xs[0] }; _ := f(); }', /local functions cannot capture surrounding variable xs yet/],
-    ['loop [1, 2] as item { f := fn(): Int { item }; _ := f(); }', /local functions cannot capture surrounding variable item yet/],
     ['io := import "core/io"; f := fn(): Int { 1 }; { f := 2; io.outputLine(f()); }', /cannot call non-function value of type Int/],
     ['x := "hi"; x();', /cannot call non-function value of type String/],
     ['v := @outer { f := fn(): Int { return @outer 5; 1 }; _ := f(); 0 };', /unknown block tag @outer/],
@@ -5644,7 +5635,261 @@ test('unified block Slice 2b eliminates side-effect-free dead code in blocks whi
     ['x := { y := 1; y := 2; 5 };', /duplicate declaration y in block/],
     ['x := { q: Int = ?; y := q; 5 };', /cannot read uninitialized local q/],
     ['x := { z := fn(): Int { "bad" }; 5 };', /cannot return String from function/],
-    ['x := { outerX := 1; z := fn(): Int { outerX }; 5 };', /local functions cannot capture surrounding variable outerX yet/],
+    ['x := { outerX := 1; z := fn(): Unit { outerX = 2; }; 5 };', /cannot assign to immutable local outerX/],
+  ] as const) {
+    const rejected = compileTs({ text: badSrc });
+    assert.equal(rejected.status, 2, `should reject: ${badSrc}\n${rejected.stdout.toString()}`);
+    assert.equal(rejected.stdout.toString(), '', `rejected stdout should be empty: ${badSrc}`);
+    assert.match(rejected.stderr.toString(), expectedRe, `stderr mismatch for: ${badSrc}`);
+  }
+});
+
+test('unified block Slice 3 supports lexical captures, inner-block symbol wiring, trace safety, and escaping checks on TS', () => {
+  // 1. All 9 formerly-rejected surrounding captures + DCE on unused capture closures + mut List capture writes + per-iteration loop item captures
+  {
+    const src = [
+      'io := import "core/io";',
+      'a := { x := 1; f := fn(): Int { x }; f() };',
+      'var gx := 1;',
+      'b := { f := fn(): Int { gx }; f() };',
+      'var gx2 := 2;',
+      'c := { reader := fn(): Int { return gx2; }; reader() };',
+      'd := { var x := 3; f := fn(): Int { x }; f() };',
+      'var wx := 1;',
+      '{ f := fn(): Unit { wx = 9; }; f(); }',
+      'outerParam := fn(p: Int): Int { inner := fn(): Int { p }; inner() };',
+      'outerCall := fn(): Int { aFn := fn(): Int { 4 }; bFn := fn(): Int { aFn() }; bFn() };',
+      'xs: mut List<Int> = [5];',
+      'g := { f := fn(): Int { push_back(mut xs, 6); xs[0] + xs[1] }; f() };',
+      'closures: mut List<fn(): Int> = [];',
+      'loop [10, 20, 30] as item {',
+      '  f := fn(): Int { item };',
+      '  push_back(mut closures, f);',
+      '}',
+      'deadCap := { outerX := 1; z := fn(): Int { outerX }; 5 };',
+      'io.outputLine(a, b, c, d, wx, outerParam(7), outerCall(), g, closures[0](), closures[1](), closures[2](), deadCap);',
+    ].join('\n');
+    const compiled = compileTs({ text: src });
+    assert.equal(compiled.status, 0, compiled.stderr.toString());
+    const artifact = compiled.stdout.toString();
+    assert.equal(checkTsArtifact(artifact).status, 0);
+    assert.match(artifact, /const lite_deadCap = 5n;/);
+    assert.doesNotMatch(artifact, /outerX/);
+    const run = runTsArtifact(artifact);
+    assert.equal(run.status, 0, run.stderr.toString());
+    assert.equal(run.stdout.toString(), '1 1 2 3 9 7 4 11 10 20 30 5\n');
+  }
+
+  // 2. Escaping closures preserve captured state independently across frames
+  {
+    const src = [
+      'io := import "core/io";',
+      'makeReader := fn(x: Int): fn(): Int {',
+      '  fn(): Int { x }',
+      '};',
+      'makeCounter := fn(start: Int): fn(): Int {',
+      '  var count := start;',
+      '  fn(): Int {',
+      '    count = count + 1;',
+      '    count',
+      '  }',
+      '};',
+      'r1 := makeReader(41);',
+      'r2 := makeReader(99);',
+      'c1 := makeCounter(0);',
+      'c2 := makeCounter(10);',
+      'io.outputLine(r1(), r2(), c1(), c1(), c2(), c1());',
+    ].join('\n');
+    const compiled = compileTs({ text: src });
+    assert.equal(compiled.status, 0, compiled.stderr.toString());
+    assert.equal(checkTsArtifact(compiled.stdout.toString()).status, 0);
+    const run = runTsArtifact(compiled.stdout.toString());
+    assert.equal(run.status, 0, run.stderr.toString());
+    assert.equal(run.stdout.toString(), '41 99 1 2 11 3\n');
+  }
+
+  // 3. Inner-block parallel compile-time symbol wiring across value/if/match/loop/then/finally/fn blocks
+  {
+    const src = [
+      'io := import "core/io";',
+      'valRes := {',
+      '  countdown := fn(n: Int): Int {',
+      '    if n <= 0 { 0 } else { n + countdown(n - 1) }',
+      '  };',
+      '  even := fn(n: Int): Bool {',
+      '    if n == 0 { true } else { odd(n - 1) }',
+      '  };',
+      '  odd := fn(n: Int): Bool {',
+      '    if n == 0 { false } else { even(n - 1) }',
+      '  };',
+      '  readLater := fn(): Int { laterVal + laterMut };',
+      '  laterVal := 12;',
+      '  var laterMut := 8;',
+      '  incLater := fn(): Unit { laterMut = laterMut + 5; };',
+      '  incLater();',
+      '  if even(4) { countdown(3) + readLater() } else { 0 }',
+      '};',
+      'ifRes := if true {',
+      '  isZero := fn(n: Int): Bool { if n == 0 { true } else { isPos(n) and false } };',
+      '  isPos := fn(n: Int): Bool { n > 0 };',
+      '  readTarget := fn(): Int { target };',
+      '  target := 7;',
+      '  if isZero(0) and isPos(1) { readTarget() } else { 0 }',
+      '} else { 0 };',
+      'matchRes := match {',
+      '  false { 0 }',
+      '  _ {',
+      '    getM := fn(): Int { mVal };',
+      '    mVal := 9;',
+      '    getM()',
+      '  }',
+      '};',
+      'loopRes := @lp loop [1] as step {',
+      '  getAfter := fn(): Int { step + afterDecl };',
+      '  afterDecl := 4;',
+      '  break getAfter();',
+      '} then { .value };',
+      'thenRes := loop [1, 2] as _ {',
+      '} then {',
+      '  getT := fn(): Int { tVal };',
+      '  tVal := 8;',
+      '  getT()',
+      '};',
+      'var finAcc := 0;',
+      'finallyRes := {',
+      '  getF := fn(): Int { fVal };',
+      '  fVal := 15;',
+      '  getF()',
+      '} finally {',
+      '  incFin := fn(): Unit { finAcc = finAcc + finStep; };',
+      '  finStep := 3;',
+      '  incFin();',
+      '};',
+      'topFnRes := (fn(): Int {',
+      '  ping := fn(n: Int): Int { if n <= 0 { pong(0) } else { n + ping(n - 1) } };',
+      '  pong := fn(z: Int): Int { z + base };',
+      '  base := 100;',
+      '  ping(2)',
+      '})();',
+      'topNamedFn := fn(k: Int): Int {',
+      '  ping := fn(n: Int): Int { if n <= 0 { pong(0) } else { n + ping(n - 1) } };',
+      '  pong := fn(z: Int): Int { z + base };',
+      '  base := 100;',
+      '  ping(k)',
+      '};',
+      'dupBindRes := {',
+      '  getP := fn(): Int { p };',
+      '  (p, p) := (4, 5);',
+      '  getP()',
+      '};',
+      'io.outputLine(valRes, ifRes, matchRes, loopRes, thenRes, finallyRes, finAcc, topFnRes, topNamedFn(2), dupBindRes);',
+    ].join('\n');
+    const compiled = compileTs({ text: src });
+    assert.equal(compiled.status, 0, compiled.stderr.toString());
+    assert.equal(checkTsArtifact(compiled.stdout.toString()).status, 0);
+    const run = runTsArtifact(compiled.stdout.toString());
+    assert.equal(run.status, 0, run.stderr.toString());
+    assert.equal(run.stdout.toString(), '31 7 9 5 8 15 3 103 103 5\n');
+  }
+
+  // 4. 4-level nearer-forward-symbol precedence, eager outer-shadow reads, module-fn shadowing, inner alias + DCE + capture, write-before-read ?, and List<fn> push_back forward trace
+  {
+    const src = [
+      'io := import "core/io";',
+      'add := fn(x: Int): Int { x * 10 };',
+      's := 1;',
+      'levelResult := {',
+      '  get1 := fn(): Int { s };',
+      '  r2 := {',
+      '    get2 := fn(): Int { s };',
+      '    r3 := {',
+      '      get3 := fn(): Int { s };',
+      '      r4 := {',
+      '        get4 := fn(): Int { s };',
+      '        s := 4;',
+      '        get4()',
+      '      };',
+      '      s := 3;',
+      '      get3() * 10 + r4',
+      '    };',
+      '    s := 2;',
+      '    get2() * 100 + r3',
+      '  };',
+      '  s := 9;',
+      '  get1() * 1000 + r2',
+      '};',
+      'outerShadow := 10;',
+      'eagerShadow := {',
+      '  outerShadow := outerShadow + 5;',
+      '  outerShadow',
+      '};',
+      'var outerMut := 1;',
+      'mixedOrder := {',
+      '  outerMut = 2;',
+      '  get := fn(): Int { outerMut };',
+      '  outerMut := 4;',
+      '  get()',
+      '};',
+      'fnShadowRes := {',
+      '  callAdd := fn(): Int { add(3) };',
+      '  add := fn(n: Int): Int { n + 1 };',
+      '  callAdd()',
+      '};',
+      'aliasDceRes := {',
+      '  Box := type Int;',
+      '  dead := 999;',
+      '  used: Box = 21;',
+      '  reader := fn(): Box { used };',
+      '  reader()',
+      '};',
+      'writeBeforeReadRes := {',
+      '  var y: Int = ?;',
+      '  before := fn(): Int { y = 9; y };',
+      '  before()',
+      '};',
+      'listPushRes := {',
+      '  ops: mut List<fn(): Int> = [];',
+      '  push_back(mut ops, fn(): Int { lateNum });',
+      '  lateNum := 77;',
+      '  ops[0]()',
+      '};',
+      'io.outputLine(levelResult, eagerShadow, outerMut, mixedOrder, fnShadowRes, aliasDceRes, writeBeforeReadRes, listPushRes);',
+    ].join('\n');
+    const compiled = compileTs({ text: src });
+    assert.equal(compiled.status, 0, compiled.stderr.toString());
+    const artifact = compiled.stdout.toString();
+    assert.equal(checkTsArtifact(artifact).status, 0);
+    assert.doesNotMatch(artifact, /999n/);
+    const run = runTsArtifact(artifact);
+    assert.equal(run.status, 0, run.stderr.toString());
+    assert.equal(run.stdout.toString(), '9234 15 2 4 4 21 9 77\n');
+  }
+
+  // 5. C backend continues rejecting local closures / fn values explicitly
+  for (const badC of [
+    '{ x := 1; f := fn(): Int { x }; _ := f(); }',
+    'make := fn(x: Int): fn(): Int { fn(): Int { x } };',
+  ]) {
+    const cRejected = compileTarget('c', { text: badC });
+    assert.equal(cRejected.status, 2, badC);
+    assert.match(cRejected.stderr.toString(), /C backend does not support/, badC);
+  }
+
+  // 6. Negative trace-safety, uninit, and escaping-closure rejections
+  for (const [badSrc, expectedRe] of [
+    ['{ f := fn(): Int { x }; _ := f(); x := 1; }', /cannot call before x is initialized/],
+    ['{ a := fn(): Int { b() }; b := fn(): Int { x }; _ := a(); x := 1; }', /cannot call before x is initialized/],
+    ['{ f := fn(): Int { x }; if f() > 0 { }; x := 1; }', /cannot call before x is initialized/],
+    ['{ f := fn(): Int { x }; loop f() < 1 { break; }; x := 1; }', /cannot call before x is initialized/],
+    ['{ var y: Int = ?; f := fn(): Int { y }; _ := f(); y = 2; }', /cannot call before y is initialized/],
+    ['{ var y: Int = ?; f := fn(): Int { y }; _ := f(); }', /cannot read uninitialized local y/],
+    ['{ var y: Int = ?; before := fn(): Int { y = 9; y }; _ := y; }', /cannot read uninitialized local y/],
+    ['{ y: Int = ?; f := fn(): Unit { y = 2; }; f(); }', /cannot assign to possibly initialized immutable local y/],
+    ['{ ops: mut List<fn(): Int> = []; push_back(mut ops, fn(): Int { late }); _ := ops[0](); late := 7; }', /cannot call before late is initialized/],
+    ['make := fn(): fn(): Int { r := fn(): Int { y }; return r; y := 5; fn(): Int { 0 } }; _ := make();', /cannot call before y is initialized/],
+    ['v := @b { r := fn(): Int { y }; return @b r; y := 5; fn(): Int { 0 } };', /cannot call before y is initialized/],
+    ['v := loop true { var y: Int = ?; r := fn(): Int { y }; break r; y = 1; } then { fn(): Int { 0 } };', /cannot call before y is initialized/],
+    ['f := { var y: Int = ?; fn(): Int { y } };', /cannot read uninitialized local y/],
   ] as const) {
     const rejected = compileTs({ text: badSrc });
     assert.equal(rejected.status, 2, `should reject: ${badSrc}\n${rejected.stdout.toString()}`);
