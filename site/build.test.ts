@@ -170,7 +170,7 @@ test('buildSite generates static pages and metadata in dist/site', () => {
     }
     return outFiles;
   };
-  for (const htmlFile of [...collectHtml(join(out, 'docs')), ...collectHtml(join(out, 'learn'))]) {
+  for (const htmlFile of [...collectHtml(join(out, 'docs')), ...collectHtml(join(out, 'learn')), ...collectHtml(join(out, 'gym'))]) {
     const content = readFileSync(htmlFile, 'utf8');
     assert(!content.includes('data-md-href'), `unresolved data-md-href in ${htmlFile}`);
     const hrefRe = /href="([^"]+)"/g;
@@ -206,6 +206,25 @@ test('buildSite generates static pages and metadata in dist/site', () => {
   const orbPage = readFileSync(join(out, 'learn/tutorials/orb-catcher-game.html'), 'utf8');
   assert(orbPage.includes('id="ln-canvas"'));
   assert(orbPage.includes('../../runtime/worker.js'));
+
+  const gymIndex = readFileSync(join(out, 'gym/index.html'), 'utf8');
+  assert(gymIndex.includes('0 / 42 solved'));
+  assert(gymIndex.includes('Concept Drills (18)'));
+  assert(gymIndex.includes('Problem Workouts (24)'));
+  assert(gymIndex.includes('Export JSON'));
+  assert(gymIndex.includes('Import JSON'));
+  for (const gymRel of [
+    'gym/drills/immutable-vs-var.html',
+    'gym/workouts/expression-ast-eval.html',
+    'gym/payloads/immutable-vs-var.json',
+    'gym/payloads/expression-ast-eval.json',
+  ]) {
+    assert(existsSync(join(out, gymRel)), `missing gym artifact: ${gymRel}`);
+  }
+  const astDojo = readFileSync(join(out, 'gym/workouts/expression-ast-eval.html'), 'utf8');
+  assert(astDojo.includes('Submit &amp; Grade'));
+  assert(astDojo.includes('../../runtime/worker.js'));
+  assert(astDojo.includes('Reveal Reference Solution'));
   const gallery = readFileSync(join(out, 'gallery/index.html'), 'utf8');
   assert(gallery.includes('<title>Gallery — Lite</title>'));
   assert(gallery.includes('class="gallery-jumps"'));
@@ -612,6 +631,57 @@ test('emitted playground worker.js compiles and runs edited Lite code', async ()
     }) as unknown as { ok: boolean; stdout?: string; stderr: string };
     assert.equal(modRes.ok, true, modRes.stderr);
     assert.equal(modRes.stdout, modPayload.output);
+
+    const gradePass = await send({
+      id: 11,
+      action: 'grade',
+      source: 'io := import "core/io";\nn := io.inputInt();\nio.outputLine(n * 2);',
+      cases: [
+        { name: 'vis-5', stdin: '5\n', args: [], expectedStdout: '10\n', hidden: false },
+        { name: 'hid-neg3', stdin: '-3\n', args: [], expectedStdout: '-6\n', hidden: true },
+      ],
+    }) as unknown as {
+      ok: boolean;
+      action: string;
+      allPassed: boolean;
+      results: Array<{ passed: boolean; hidden: boolean; expectedStdout?: string; actualStdout?: string }>;
+    };
+    assert.equal(gradePass.ok, true);
+    assert.equal(gradePass.action, 'grade');
+    assert.equal(gradePass.allPassed, true);
+    assert.equal(gradePass.results.length, 2);
+    assert.equal(gradePass.results[0]?.passed, true);
+    assert.equal(gradePass.results[0]?.expectedStdout, '10\n');
+    assert.equal(gradePass.results[0]?.actualStdout, '10\n');
+    assert.equal(gradePass.results[1]?.passed, true);
+    assert.equal(gradePass.results[1]?.hidden, true);
+    assert(!('expectedStdout' in (gradePass.results[1] ?? {})));
+    assert(!('actualStdout' in (gradePass.results[1] ?? {})));
+
+    const gradeFail = await send({
+      id: 12,
+      action: 'grade',
+      source: 'io := import "core/io";\nn := io.inputInt();\nio.outputLine(n * 2);',
+      cases: [
+        { name: 'vis-wrong', stdin: '5\n', args: [], expectedStdout: '99\n', hidden: false },
+      ],
+    }) as unknown as { ok: boolean; allPassed: boolean; results: Array<{ passed: boolean; actualStdout?: string }> };
+    assert.equal(gradeFail.ok, true);
+    assert.equal(gradeFail.allPassed, false);
+    assert.equal(gradeFail.results[0]?.passed, false);
+    assert.equal(gradeFail.results[0]?.actualStdout, '10\n');
+
+    const gradeErr = await send({
+      id: 13,
+      action: 'grade',
+      source: 'io := import "core/io";\nio.outputLine(nope);',
+      cases: [
+        { name: 'vis-err', stdin: '', args: [], expectedStdout: '0\n', hidden: false },
+      ],
+    }) as unknown as { ok: boolean; allPassed: boolean; stderr: string };
+    assert.equal(gradeErr.ok, false);
+    assert.equal(gradeErr.allPassed, false);
+    assert(gradeErr.stderr.includes('nope'));
   } finally {
     (globalThis as unknown as { self?: unknown }).self = prevSelf;
     globalThis.fetch = prevFetch;

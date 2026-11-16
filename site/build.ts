@@ -21,6 +21,7 @@ import { captureCanvasPreview } from './canvas-preview.ts';
 import { buildDocsSection } from './docs-pages.ts';
 import { heroSample, playgroundDefaultSample, sampleGroups, showcaseSamples, type ShowcaseSample } from './groups.ts';
 import { escapeHtml, highlightLite, highlightTs } from './highlight.ts';
+import { buildGymSection } from './gym-pages.ts';
 import { buildLearnSection } from './learn-pages.ts';
 import { buildModulesSection } from './modules-pages.ts';
 import { playGroups, playSamples, type PlaySample } from './play-samples.ts';
@@ -1256,8 +1257,33 @@ function renderPlaygroundPage(
     void sendPlayInteraction("pointerup", { ...cell, button: event.button });
   });
 
-  const initial = new URLSearchParams(window.location.search).get("sample") ?? "${escapeHtml(playgroundDefaultSample.id)}";
-  void loadSample(initial, "load");
+  const urlParams = new URLSearchParams(window.location.search);
+  const initial = urlParams.get("sample") ?? "${escapeHtml(playgroundDefaultSample.id)}";
+  let loadedDraft = false;
+  if (urlParams.get("draft") === "gym" && typeof sessionStorage !== "undefined") {
+    try {
+      const rawDraft = sessionStorage.getItem("lite-playground-draft-v1");
+      if (rawDraft) {
+        const draft = JSON.parse(rawDraft);
+        if (draft && typeof draft.source === "string") {
+          editorEl.value = draft.source;
+          sourceEl.innerHTML = highlightLite(draft.source) + "\\n";
+          stdinEl.value = String(draft.stdin || "").replaceAll("\\n", "\\\\n");
+          argsEl.value = "";
+          fileEl.textContent = (draft.title || "gym") + ".lts";
+          rawTs = "";
+          rawC = "";
+          cMessage = "/* Press Compile or open Generated C to emit C. */";
+          lastCSource = null;
+          renderCodeViews();
+          outputEl.textContent = "(Press Play to run)";
+          statusEl.textContent = "Loaded from Lite Gym — press Play";
+          loadedDraft = true;
+        }
+      }
+    } catch {}
+  }
+  if (!loadedDraft) void loadSample(initial, "load");
 </script>`;
 
   return renderPage({
@@ -1394,6 +1420,21 @@ export function buildSite(options?: BuildSiteOptions): void {
     writeFileSync(dest, html);
   }
 
+  const gymOut = buildGymSection({
+    tsCompiler,
+    modules: extractedModules,
+    showcaseSamples,
+    playSamples,
+    repoUrl,
+    rev,
+    lightSwitchShine,
+  });
+  for (const [relPath, content] of gymOut.files) {
+    const dest = join(outputDir, relPath);
+    mkdirSync(dirname(dest), { recursive: true });
+    writeFileSync(dest, content);
+  }
+
   const searchEntries: SearchEntry[] = [
     { kind: 'learn', title: 'Learn Lite', subtitle: 'Guided ability course, Quickstart, and project tutorials', href: 'learn/', keywords: 'learn course tour tutorials' },
     { kind: 'gym', title: 'Lite Gym', subtitle: 'Interactive drills and multi-test coding katas', href: 'gym/', keywords: 'gym exercises katas practice' },
@@ -1403,6 +1444,7 @@ export function buildSite(options?: BuildSiteOptions): void {
     { kind: 'gallery', title: 'Sample & Play Gallery', subtitle: 'Verified language programs, canvas art, audio, and games', href: 'gallery/', keywords: 'gallery examples samples canvas audio games' },
     { kind: 'tool', title: 'Browser Playground', subtitle: 'Write, compile to TypeScript or C, and run Lite in your browser', href: 'playground/', keywords: 'playground sandbox compile run' },
     ...learnOut.searchEntries,
+    ...gymOut.searchEntries,
     ...docsOut.searchEntries,
     ...modulesOut.searchEntries,
     ...toolsOut.searchEntries,
@@ -1418,26 +1460,6 @@ export function buildSite(options?: BuildSiteOptions): void {
     });
   }
   writeFileSync(join(outputDir, 'search-index.json'), JSON.stringify(searchEntries));
-
-  const sectionStubs: readonly { dir: string; active: 'gym'; title: string; lead: string }[] = [
-    { dir: 'gym', active: 'gym', title: 'Lite Gym', lead: 'Interactive concept drills and coding workouts are coming in this section.' },
-  ];
-  for (const stub of sectionStubs) {
-    mkdirSync(join(outputDir, stub.dir), { recursive: true });
-    writeFileSync(
-      join(outputDir, stub.dir, 'index.html'),
-      renderPage({
-        title: `${stub.title} — Lite`,
-        description: stub.lead,
-        basePath: '../',
-        active: stub.active,
-        repoUrl,
-        rev,
-        body: `<section class="page-hero"><h1>${escapeHtml(stub.title)}</h1><p class="hero-lead">${escapeHtml(stub.lead)}</p></section>`,
-        lightSwitchShine,
-      }),
-    );
-  }
 
   for (const sample of [...rendered.values(), ...renderedPlay.values()]) {
     writeFileSync(

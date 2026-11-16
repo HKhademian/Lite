@@ -265,11 +265,13 @@ self.onmessage = async (event) => {
       self.postMessage({
         id,
         ok: false,
+        action,
         ts: '',
         c: '',
         cError: '',
         stdout: '',
         stderr: compileResult.stderr || 'Compilation failed.',
+        ...(action === 'grade' ? { allPassed: false, results: [] } : {}),
       });
       return;
     }
@@ -286,6 +288,58 @@ self.onmessage = async (event) => {
         cError: cResult.ok ? '' : (cResult.stderr || 'C compilation failed.'),
         stdout: '',
         stderr: compileResult.stderr,
+      });
+      return;
+    }
+
+    if (action === 'grade') {
+      const stripped = stripLiteTs(ts).replace(/export function main\\b/, 'function main');
+      const runner = new Function('process', stripped + '\\nreturn main();');
+      const rawCases = Array.isArray(payload.cases) ? payload.cases : [];
+      const results = [];
+      let allPassed = true;
+      for (const tc of rawCases) {
+        globalThis.__litePlay = null;
+        globalThis.__liteAudioDrain = null;
+        const caseArgs = Array.isArray(tc.args) ? tc.args : [];
+        const expectedStdout = typeof tc.expectedStdout === 'string' ? tc.expectedStdout : '';
+        const runResult = runWithProcessStub(
+          ['node', 'gym.js', ...caseArgs],
+          typeof tc.stdin === 'string' ? tc.stdin : '',
+          (proc) => runner(proc),
+        );
+        const passed = Boolean(runResult.ok && runResult.exitCode === 0 && runResult.stdout === expectedStdout);
+        if (!passed) allPassed = false;
+        if (Boolean(tc.hidden)) {
+          results.push({
+            name: String(tc.name ?? 'hidden'),
+            hidden: true,
+            passed,
+            exitCode: runResult.exitCode,
+            stderr: runResult.stderr,
+          });
+        } else {
+          results.push({
+            name: String(tc.name ?? 'case'),
+            hidden: false,
+            passed,
+            exitCode: runResult.exitCode,
+            expectedStdout,
+            actualStdout: runResult.stdout,
+            stderr: runResult.stderr,
+          });
+        }
+      }
+      globalThis.__litePlay = null;
+      globalThis.__liteAudioDrain = null;
+      self.postMessage({
+        id,
+        ok: true,
+        action: 'grade',
+        allPassed,
+        ts,
+        stderr: compileResult.stderr,
+        results,
       });
       return;
     }

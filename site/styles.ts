@@ -1829,4 +1829,279 @@ body.search-open {
 a.is-completed .learn-done-dot {
   background: var(--tok-string);
 }
+
+/* Lite Gym Coding Dojo & Multi-Case Judge */
+.gym-progress-headline {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 0.75rem;
+  flex-wrap: wrap;
+}
+.gym-belt-grid {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(110px, 1fr));
+  gap: 0.65rem;
+  margin-top: 0.35rem;
+}
+@media (max-width: 680px) {
+  .gym-belt-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+.gym-belt-stat {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.5rem;
+  padding: 0.45rem 0.7rem;
+  border-radius: 8px;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  font-size: 0.85rem;
+}
+.belt-pill {
+  display: inline-flex;
+  align-items: center;
+  padding: 0.16rem 0.55rem;
+  border-radius: 999px;
+  font-size: 0.74rem;
+  font-weight: 700;
+  letter-spacing: 0.01em;
+  border: 1px solid var(--border);
+}
+.belt-white {
+  background: var(--surface-elevated);
+  color: var(--ink);
+}
+.belt-amber {
+  background: var(--accent-soft);
+  color: var(--tok-keyword);
+  border-color: var(--accent);
+}
+.belt-emerald {
+  background: rgba(44, 110, 49, 0.14);
+  color: var(--tok-string);
+  border-color: var(--tok-string);
+}
+.belt-obsidian {
+  background: rgba(122, 62, 157, 0.16);
+  color: var(--tok-number);
+  border-color: var(--tok-number);
+}
+.gym-filters {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 0.75rem 1.25rem;
+  padding: 0.85rem 1rem;
+  margin-bottom: 1.5rem;
+  background: var(--surface-elevated);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+}
+.gym-filter-group {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 0.4rem;
+}
+.gym-filter-btn {
+  appearance: none;
+  border: 1px solid var(--border);
+  background: var(--surface);
+  color: var(--ink-muted);
+  font-family: inherit;
+  font-size: 0.82rem;
+  font-weight: 600;
+  padding: 0.34rem 0.72rem;
+  border-radius: 7px;
+  cursor: pointer;
+}
+.gym-filter-btn:hover {
+  color: var(--ink);
+  border-color: var(--accent);
+}
+.gym-filter-btn[aria-pressed="true"] {
+  background: var(--accent-soft);
+  color: var(--ink);
+  border-color: var(--accent);
+}
+.gym-card-tags {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 0.45rem;
+  font-size: 0.8rem;
+}
+.gym-solved-label,
+.gym-solved-pill {
+  color: var(--tok-string);
+  border-color: var(--tok-string);
+  font-weight: 700;
+}
+.gym-topbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 0.75rem 1rem;
+  margin-bottom: 1.15rem;
+  padding-bottom: 0.85rem;
+  border-bottom: 1px solid var(--border);
+}
+.gym-breadcrumb {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 0.45rem;
+  font-size: 0.88rem;
+  color: var(--ink-muted);
+}
+.gym-dojo {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(420px, 50%);
+  gap: 1.5rem;
+  align-items: start;
+}
+@media (max-width: 960px) {
+  .gym-dojo {
+    grid-template-columns: 1fr;
+  }
+}
+.gym-prompt-col {
+  display: flex;
+  flex-direction: column;
+  gap: 1.35rem;
+  min-width: 0;
+}
+.gym-cases {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+.gym-case-spec,
+.gym-hints,
+.gym-solution-panel,
+.gym-related {
+  padding: 0.9rem 1rem;
+  background: var(--surface-elevated);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+}
+.gym-case-spec-head,
+.gym-hints-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.65rem;
+  flex-wrap: wrap;
+}
+.gym-hints-head h2,
+.gym-related h2,
+.gym-cases-section h2 {
+  font-size: 1.05rem;
+  margin: 0;
+}
+.gym-io-pair,
+.gym-diff {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 0.65rem;
+  margin-top: 0.55rem;
+}
+@media (max-width: 640px) {
+  .gym-io-pair,
+  .gym-diff {
+    grid-template-columns: 1fr;
+  }
+}
+.gym-io-label {
+  display: block;
+  font-size: 0.72rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: var(--ink-muted);
+  margin-bottom: 0.25rem;
+}
+.gym-io-pre,
+.gym-diff-pre,
+.gym-diag-pre {
+  margin: 0;
+  padding: 0.5rem 0.65rem;
+  border-radius: 6px;
+  background: var(--code-bg);
+  border: 1px solid var(--border);
+  font-family: var(--font-mono);
+  font-size: 0.8rem;
+  line-height: 1.45;
+  overflow-x: auto;
+  white-space: pre-wrap;
+}
+.gym-hints-list {
+  margin: 0.7rem 0 0;
+  padding-left: 1.25rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.45rem;
+}
+.gym-solution-panel pre {
+  margin-top: 0.75rem;
+  margin-bottom: 0;
+}
+.gym-related ul {
+  margin: 0.65rem 0 0;
+  padding-left: 1.2rem;
+}
+.gym-results-panel {
+  padding: 0.85rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+.gym-result-empty {
+  color: var(--ink-muted);
+  font-size: 0.9rem;
+}
+.gym-judge-banner {
+  padding: 0.55rem 0.8rem;
+  border-radius: 8px;
+  font-weight: 700;
+  font-size: 0.9rem;
+  border: 1px solid var(--border);
+}
+.gym-judge-pass {
+  background: rgba(44, 110, 49, 0.14);
+  color: var(--tok-string);
+  border-color: var(--tok-string);
+}
+.gym-judge-fail {
+  background: rgba(201, 123, 20, 0.14);
+  color: var(--tok-keyword);
+  border-color: var(--tok-keyword);
+}
+.gym-result-cards {
+  display: flex;
+  flex-direction: column;
+  gap: 0.65rem;
+}
+.gym-case-card {
+  padding: 0.65rem 0.8rem;
+  border-radius: 8px;
+  border: 1px solid var(--border);
+  background: var(--surface-elevated);
+}
+.gym-case-pass {
+  border-left: 3px solid var(--tok-string);
+}
+.gym-case-fail {
+  border-left: 3px solid var(--tok-keyword);
+}
+.gym-case-meta {
+  font-size: 0.8rem;
+  color: var(--ink-muted);
+  margin-top: 0.3rem;
+}
 `;
