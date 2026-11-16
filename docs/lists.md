@@ -43,7 +43,7 @@ empty lists), scalar/flat-tuple elements, readable indexing/traversal, ordinary
 sequence copies, and temporary positional end-operation bindings with explicit
 mut grants to named writable list bindings. Bounds/empty pops use terminal
 BoundPanic; catchable host resource failures retain terminal CLI handling.
-Strict checking and 120 interpreter groups pass, including [example 013](../language/examples/013-growable-lists.lts).
+Strict checking and 120 interpreter groups pass, including [example 013](../language/examples/types/collections/growable-lists.lts).
 Complex/simultaneous/reentrant grants, views, capacity, indexed writes, general
 user-function mut parameters, recovery and generic infrastructure remain outside
 this implementation. No native/performance claim follows.
@@ -51,7 +51,7 @@ this implementation. No native/performance claim follows.
 In the current self-hosted compiler, `core/list` exports `pushBack`, `popBack`,
 `pushFront`, and `popFront` for `mut List<T>` alongside indexed element writes
 (`items[i] = v`, `items[i] += v`), as used in
-[example 013](../language/examples/013-growable-lists.lts).
+[example 013](../language/examples/types/collections/growable-lists.lts).
 
 ## Length, capacity, and initialization
 

@@ -41,7 +41,7 @@ before effects, and rejecting invented builtin labels. Runtime preparation keeps
 the written expressions and a private checked slot-to-contribution map; no public
 reflection or runtime label API is added.
 
-The real launcher runs [012](../../language/examples/012-named-arguments.lts), reporting
+The real launcher runs [012](../../language/examples/functions/calls/named-arguments.lts), reporting
 123, 123 and 10 on separate lines; check-only emits nothing. Editor checks cover
 the expanded corpus. No native compiler, cleanup/ownership or ABI claim follows.
 

@@ -60,7 +60,7 @@ interpolation, formatting, and full Unicode policy remain unimplemented/open.
 
 ## Concrete experiment and evidence
 
-The [arithmetic tokenizer](../../language/examples/005-scan-arithmetic.lts) is written
+The [arithmetic tokenizer](../../language/examples/parsing/scanning/scan-arithmetic.lts) is written
 in Lite using ordinary functions, loops, short-circuit logic and the helpers.
 It groups ASCII decimal runs, skips spaces/tabs, and reports individual
 `+ - * / ( )` symbols. It preserves leading zeroes and emits tokens explicitly.
@@ -130,7 +130,7 @@ calling convention. No new text operator, API or String representation is added.
 The detailed FVP text/Unicode profile remains deferred. Approval here comes from
 the user's explicit reply, not from prior tags, tests or unrelated feature work.
 
-[015-retained-tokens.lts](../../language/examples/015-retained-tokens.lts) combines ordinary
+[015-retained-tokens.lts](../../language/examples/parsing/scanning/retained-tokens.lts) combines ordinary
 functions, the approved helpers and approved named-tuple list storage. It returns
 a complete token list, then explicitly traverses/reports its fields. It preserves
 digit text including leading zeroes, skips spaces/tabs, and recognizes the same

@@ -1,0 +1,24 @@
+{
+  "id": "sample.finance.pricing.tax-and-tip",
+  "kind": "sample",
+  "source": {
+    "file": "../../../../../samples/finance/pricing/tax-and-tip.lts",
+    "hash": "sha256:a97183ca4d2e263a9996fa62d32cb4d67ceb6956fec77cd6308f565c7e13ad77"
+  },
+  "features": [
+    "feature.numeric.integers.signed-arithmetic",
+    "feature.bindings.mutability.lexical-shadowing"
+  ],
+  "description": "Tax and tip rounded to cents.",
+  "append": "io.outputLine(tax_cents); io.outputLine(tip_cents); io.outputLine(total_cents);",
+  "cases": [
+    {
+      "name": "observed-values",
+      "stdout": {
+        "text": "160\n300\n2459\n",
+        "hash": "sha256:38f8b297456b440bdc2f7c9f5ef19140abd4b5b97792c353be914de06bc9be0e"
+      },
+      "exitCode": 0
+    }
+  ]
+}

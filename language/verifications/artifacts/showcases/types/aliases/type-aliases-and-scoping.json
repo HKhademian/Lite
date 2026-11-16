@@ -1,0 +1,26 @@
+{
+  "id": "showcase.types.aliases.type-aliases-and-scoping",
+  "kind": "showcase",
+  "source": {
+    "file": "../../../../../showcases/types/aliases/type-aliases-and-scoping.lts",
+    "hash": "sha256:8c1e73447a747fbfa3e6babe83358510d2cf31ffe6dd3e777f6f87f516bebf12"
+  },
+  "features": [
+    "feature.types.aliases.transparent-aliases",
+    "feature.bindings.mutability.lexical-shadowing",
+    "feature.blocks.evaluation.value-blocks-and-dce",
+    "feature.io.reporting.tuple-display",
+    "feature.io.reporting.report-values"
+  ],
+  "description": "Root and inner-block transparent type aliases, forward alias chains, and outer scope preservation.",
+  "cases": [
+    {
+      "name": "type-aliases-and-scoping",
+      "stdout": {
+        "text": "origin: (x=3, y=4) nextPoint: (x=4, y=36)\n",
+        "hash": "sha256:8732c709845a5f3e951144a5098275396cbf60eab70e9279ef42e9e29cc4441f"
+      },
+      "exitCode": 0
+    }
+  ]
+}

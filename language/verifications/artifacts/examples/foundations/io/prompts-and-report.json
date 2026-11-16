@@ -1,0 +1,28 @@
+{
+  "id": "example.foundations.io.prompts-and-report",
+  "kind": "example",
+  "source": {
+    "file": "../../../../../examples/foundations/io/prompts-and-report.lts",
+    "hash": "sha256:b7242ad9f9304917d4fd6e38a7f00a6c183475b67f5ba5b50122775e0539da2a"
+  },
+  "features": [
+    "feature.io.streams.prompted-int-input",
+    "feature.numeric.integers.signed-arithmetic",
+    "feature.io.reporting.report-values"
+  ],
+  "description": "Two prompted integers with a multi-value report.",
+  "cases": [
+    {
+      "name": "sum-and-inputs",
+      "stdin": {
+        "text": "7\n5\n",
+        "hash": "sha256:a306945b3426c6e39e12df5545b639fced2532630eab11987ae2cf3a2f0ff2c1"
+      },
+      "stdout": {
+        "text": "First number: Second number: sum: 12\ninputs: 7 5 equal: false\n",
+        "hash": "sha256:821cf96c22028d81d3852315d0d3e3257c8c47c1e5944691e577127c0d460dea"
+      },
+      "exitCode": 0
+    }
+  ]
+}

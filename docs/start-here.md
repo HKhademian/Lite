@@ -23,7 +23,7 @@ Public compilation uses the checked-in generated compiler, without a T00 fallbac
 
 ## Run a first program
 
-The [double-sum example](../language/examples/001-double-sum.lts) reads two integers and
+The [double-sum example](../language/examples/foundations/io/double-sum.lts) reads two integers and
 prints twice their sum:
 
 ```text
@@ -39,7 +39,7 @@ io.outputLine(total);
 From the repository root:
 
 ```sh
-./bin/lite run language/examples/001-double-sum.lts
+./bin/lite run language/examples/foundations/io/double-sum.lts
 ```
 
 Enter `7` and `5`; the final value is `24`. Prompts are explicit program output.
@@ -52,13 +52,13 @@ status without leaving the artifact behind.
 Compile the artifact yourself, or check the source without executing it:
 
 ```sh
-./bin/lite compile language/examples/001-double-sum.lts > /tmp/lite-example.ts
+./bin/lite compile language/examples/foundations/io/double-sum.lts > /tmp/lite-example.ts
 node compiler/entry.ts /tmp/lite-example.ts
-./bin/lite check language/examples/001-double-sum.lts
+./bin/lite check language/examples/foundations/io/double-sum.lts
 ```
 
 `check` compiles and strictly checks without executing the program.
-The [verification case](../language/verifications/artifacts/examples/001-double-sum.json)
+The [verification case](../language/verifications/artifacts/examples/foundations/io/double-sum.json)
 records exact expected streams.
 
 ## Explore

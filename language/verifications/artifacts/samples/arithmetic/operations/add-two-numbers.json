@@ -1,0 +1,24 @@
+{
+  "id": "sample.arithmetic.operations.add-two-numbers",
+  "kind": "sample",
+  "source": {
+    "file": "../../../../../samples/arithmetic/operations/add-two-numbers.lts",
+    "hash": "sha256:6033cdc8296507af4aabd12318f4ca2b247855738810b9e16dbcb73e5ae3705e"
+  },
+  "features": [
+    "feature.numeric.integers.signed-arithmetic",
+    "feature.bindings.mutability.lexical-shadowing"
+  ],
+  "description": "Adds two supplied baskets; the verification appends outputLine(apples).",
+  "append": "io.outputLine(apples);",
+  "cases": [
+    {
+      "name": "apples",
+      "stdout": {
+        "text": "12\n",
+        "hash": "sha256:a1fb50e6c86fae1679ef3351296fd6713411a08cf8dd1790a4fd05fae8688164"
+      },
+      "exitCode": 0
+    }
+  ]
+}

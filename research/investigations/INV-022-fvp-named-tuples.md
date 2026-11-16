@@ -13,7 +13,7 @@ the current status. See [INV-016 approval](INV-016-igniter-text-operations.md#fo
 
 ## Question and consent boundary
 
-The current [006 example](../../language/examples/006-fixed-tuples.lts) carries a token as
+The current [006 example](../../language/examples/types/tuples/fixed-tuples.lts) carries a token as
 two String positions. Would implementing the already selected named-field forms
 make these values easier to read and maintain? token.kind and token.text expose
 the meaning currently carried by token.0 and token.1.
@@ -67,7 +67,7 @@ report(token.text);
 
 Expected output is number and 12 on separate lines. A compatible explicit
 function tuple type is (kind: String, text: String). The runnable
-[008-named-tuples.lts](../../language/examples/008-named-tuples.lts) demonstrates these forms;
+[008-named-tuples.lts](../../language/examples/types/tuples/named-tuples.lts) demonstrates these forms;
 the user's intervening prompt/report request uses example 007 first.
 
 Strict TypeScript no-emit checking and all 79 interpreter test groups pass on

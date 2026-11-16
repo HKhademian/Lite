@@ -1,0 +1,24 @@
+{
+  "id": "sample.finance.interest.simple-interest",
+  "kind": "sample",
+  "source": {
+    "file": "../../../../../samples/finance/interest/simple-interest.lts",
+    "hash": "sha256:f681b5f7ae351ef173c7793710ccc308fd05053cedffe02b4a7a7e8ab0f585e3"
+  },
+  "features": [
+    "feature.numeric.integers.signed-arithmetic",
+    "feature.bindings.mutability.lexical-shadowing"
+  ],
+  "description": "Simple interest over three years.",
+  "append": "io.outputLine(interest_cents); io.outputLine(balance_cents);",
+  "cases": [
+    {
+      "name": "observed-values",
+      "stdout": {
+        "text": "1500\n11500\n",
+        "hash": "sha256:a429635b4dfe44b40b62edbfc0a4665074aabd7bcbbb901b7784cc89d1b5009c"
+      },
+      "exitCode": 0
+    }
+  ]
+}

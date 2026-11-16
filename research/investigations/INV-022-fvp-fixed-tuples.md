@@ -83,7 +83,7 @@ singleton boundaries, repeated receiver names, tuple parameters/results and
 recursion, and static arity/type/position rejection before I/O. Tuple data
 captures remain rejected; whole-value aliases cannot become writable member views.
 
-The real CLI [006-fixed-tuples.lts](../../language/examples/006-fixed-tuples.lts) reports
+The real CLI [006-fixed-tuples.lts](../../language/examples/types/tuples/fixed-tuples.lts) reports
 number, 12, number: 12, and 42. It is stored in the user's root examples collection,
 not inside the igniter. The editor's sample discovery also scans this example.
 Nested tuple components/types/patterns, tuple equality, general typed declarations

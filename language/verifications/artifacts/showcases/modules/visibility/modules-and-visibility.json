@@ -1,0 +1,25 @@
+{
+  "id": "showcase.modules.visibility.modules-and-visibility",
+  "kind": "showcase",
+  "source": {
+    "file": "../../../../../showcases/modules/visibility/modules-and-visibility.lts",
+    "hash": "sha256:68d6abc53cff3063fd0972ebeded59259e62d9b4a55dfad5f0afcb27483dacbe"
+  },
+  "features": [
+    "feature.modules.visibility.namespace-imports",
+    "feature.types.aliases.transparent-aliases",
+    "feature.types.composites.flat-tuples",
+    "feature.io.reporting.report-values"
+  ],
+  "description": "Namespace imports of pub types, constants, and functions while keeping module helpers private.",
+  "cases": [
+    {
+      "name": "modules-and-visibility",
+      "stdout": {
+        "text": "module: stats-module/v1\nmin: 2 max: 15 sum: 37 span: 13\n",
+        "hash": "sha256:4c73df51de4a7363b0696a1dbdec8e847d05c3bcd229042f7fd1549c8126bbc7"
+      },
+      "exitCode": 0
+    }
+  ]
+}

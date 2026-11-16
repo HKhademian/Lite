@@ -1,0 +1,29 @@
+{
+  "id": "example.io.process.script-arguments",
+  "kind": "example",
+  "source": {
+    "file": "../../../../../examples/io/process/script-arguments.lts",
+    "hash": "sha256:a505ec43910c049b3ea2a7a95b325cadc77124cfc2533c55a43fc589b31c6f65"
+  },
+  "features": [
+    "feature.io.process.script-arguments",
+    "feature.control.loops.sequence-traversal",
+    "feature.io.reporting.report-values"
+  ],
+  "description": "Reports ordered script arguments after --.",
+  "cases": [
+    {
+      "name": "ordered-values",
+      "args": [
+        "a b",
+        "",
+        "--check"
+      ],
+      "stdout": {
+        "text": "a b\n\n--check\n",
+        "hash": "sha256:2c07d0ade10232b64b5e1cc4c72cd74be30b5488b1108393139bc32b7895ddda"
+      },
+      "exitCode": 0
+    }
+  ]
+}

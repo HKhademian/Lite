@@ -19,7 +19,7 @@ function command(name: string, args: string[]) {
 }
 
 test('lite compile routes through the compiler router to its TypeScript target', () => {
-  const sample = 'language/examples/001-double-sum.lts';
+  const sample = 'language/examples/foundations/io/double-sum.lts';
   const expected = command('lite-compile-ts', [sample]);
   assert.deepEqual(command('lite', ['compile', sample]), expected);
   assert.deepEqual(command('lite', ['--compile', sample]), expected);
@@ -70,10 +70,10 @@ test('component versions belong to their tool commands', () => {
 
 test('lite check routes through ./bin/lite to the standalone checker', () => {
   assert.deepEqual(
-    command('lite', ['check', 'language/examples/001-double-sum.lts']),
-    command('lite-check', ['language/examples/001-double-sum.lts']),
+    command('lite', ['check', 'language/examples/foundations/io/double-sum.lts']),
+    command('lite-check', ['language/examples/foundations/io/double-sum.lts']),
   );
-  assert.equal(command('lite-check', ['language/examples/001-double-sum.lts']).status, 0);
+  assert.equal(command('lite-check', ['language/examples/foundations/io/double-sum.lts']).status, 0);
 });
 
 test('generated cli, compile, checker, doctor, run, verify, test-runner, test, bench, ci, and release artifacts match their Lite sources and pass strict TS checking', () => {

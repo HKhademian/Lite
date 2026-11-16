@@ -169,7 +169,7 @@ before adding syntax/features, even for temporary scaffolding.
 The user-approved **2026-10-31** increment adds flat fixed tuples of existing
 scalars, literal positional reads, declaration destructuring and explicit tuple
 function inputs/results, using already selected syntax. The runnable example is
-[006-fixed-tuples.lts](../language/examples/006-fixed-tuples.lts). Strict checking and all
+[006-fixed-tuples.lts](../language/examples/types/tuples/fixed-tuples.lts). Strict checking and all
 62 interpreter test groups pass. Named/nested/rest tuples, mutation/access grants,
 tuple reporting and native layout remain unsupported. Text helpers were
 separately approved for their temporary FVP scope on 2026-10-31. See [INV-022](../research/investigations/INV-022-fvp-fixed-tuples.md)
@@ -177,7 +177,7 @@ and [implemented tuple coverage](../igniter/README.md#flat-fixed-tuples).
 
 The following named-field increment implements existing flat fully named tuple
 values, =name shorthand, field reads, named function tuple annotations and
-label-sensitive stored transfers. The [008 example](../language/examples/008-named-tuples.lts)
+label-sensitive stored transfers. The [008 example](../language/examples/types/tuples/named-tuples.lts)
 runs with ./bin/lite run; strict checking and all 79 interpreter test groups pass.
 Broader tuple routing, named patterns, nested tuples and mutation
 remain unimplemented. See [INV-022](../research/investigations/INV-022-fvp-named-tuples.md)
@@ -185,7 +185,7 @@ and [named-field coverage](../igniter/README.md#named-fixed-tuples).
 
 The user-approved fixed-array increment adds nonempty homogeneous arrays of
 scalars/flat tuples, indexed reads, exact [T; N] function inputs/results and
-action traversal with optional as item. The [009 example](../language/examples/009-fixed-arrays.lts)
+action traversal with optional as item. The [009 example](../language/examples/types/collections/fixed-arrays.lts)
 runs through ./bin/lite run. Strict checking and all 93 interpreter test groups pass.
 Empty construction, mixed-type inference, nested arrays, mutation/growth, views,
 count helpers and native layout remain unimplemented; see
@@ -230,7 +230,7 @@ execution of 013; editor checks include List highlighting. General generics,
 capacity, views, user-function mutation grants and recovery remain outside the
 increment. See [bounded evidence](../research/investigations/INV-055-fvp-list-slice.md).
 
-The next application-only increment, [016](../language/examples/016-integer-calculator.lts),
+The next application-only increment, [016](../language/examples/parsing/evaluators/integer-calculator.lts),
 implements a recursive integer arithmetic parser/evaluator in Lite, using retained
 token lists and value/position tuple results. It runs on the preserved alpha.15
 interpreter without host feature changes. Strict checking and 125 groups pass;
@@ -537,7 +537,7 @@ unreportable, and reportError keeps its single ordinary-value contract. This is
 temporary FVP scaffolding, not a general variadic function implementation or a
 permanent standard-library API.
 
-The [007 example](../language/examples/007-prompts-and-report.lts) runs through ./bin/lite run.
+The [007 example](../language/examples/foundations/io/prompts-and-report.lts) runs through ./bin/lite run.
 Strict checking and all 170 interpreter test groups pass, including effect order,
 prompt/output failure, invalid input, pre-effect rejection and real CLI output.
 See [INV-004 evidence](../research/investigations/INV-004-fvp-prompt-and-report-values.md).

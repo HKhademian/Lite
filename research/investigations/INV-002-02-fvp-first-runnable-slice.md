@@ -22,9 +22,9 @@ and [decision ledger](../../docs/decisions-and-open-questions.md#first-executabl
 The [FVP focus](../../docs/principles.md#immediate-focus-first-viable-product) defers
 module architecture and native compilation.
 
-[Lesson 001](../../language/samples/001_add_two_numbers.lts) needs fixed integer bindings and
-addition. [Lesson 002](../../language/samples/002_arithmetic_operations.lts) adds subtraction,
-multiplication, and division. [Lesson 020](../../language/samples/020_swap_values.lts) uses
+[Lesson 001](../../language/samples/arithmetic/operations/add-two-numbers.lts) needs fixed integer bindings and
+addition. [Lesson 002](../../language/samples/arithmetic/operations/four-operations.lts) adds subtraction,
+multiplication, and division. [Lesson 020](../../language/samples/bindings/mutation/swap-values.lts) uses
 var and replacement. The [initial 001–020 batch](../../language/samples/NOTES.md#initial-correctness-batch)
 is incremental, not a requirement to implement all 20 before the first run.
 

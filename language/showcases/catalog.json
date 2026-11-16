@@ -4,16 +4,16 @@
   "description": "Six-chapter, eighteen-topic verified curriculum teaching LiteLang capabilities and core modules from foundations to closures and module APIs.",
   "chapters": [
     {
-      "id": "01-foundations",
+      "id": "foundations",
       "title": "Foundations: Bindings, Numbers, and Unicode Text",
       "summary": "Immutable := defaults, zero/reserved initialization, var updates, checked numbers, and UTF-8 scalar text.",
       "topics": [
         {
-          "id": "bindings-and-mutability",
+          "id": "showcase.foundations.bindings.bindings-and-mutability",
           "title": "Bindings, Zero Defaults, Reserved Storage, and Mutability",
-          "file": "language/showcases/01-foundations/01-bindings-and-mutability.lts",
+          "file": "language/showcases/foundations/bindings/bindings-and-mutability.lts",
           "helperFiles": [],
-          "manifest": "language/verifications/artifacts/showcases/01-foundations-01-bindings-and-mutability.json",
+          "manifest": "language/verifications/artifacts/showcases/foundations/bindings/bindings-and-mutability.json",
           "summary": "Uses := bindings, omitted zero-value defaults, reserved ? first-initialization, and explicit var reassignment/compound updates.",
           "teaches": [
             "local.immutable",
@@ -35,14 +35,15 @@
             "docs/zero-initialization.md",
             "docs/reserved-storage.md",
             "docs/mutability.md"
-          ]
+          ],
+          "order": 1
         },
         {
-          "id": "numbers-and-division",
+          "id": "showcase.foundations.numeric.numbers-and-division",
           "title": "Integers, Floats, Division Families, Narrow Widths, and Power",
-          "file": "language/showcases/01-foundations/02-numbers-and-division.lts",
+          "file": "language/showcases/foundations/numeric/numbers-and-division.lts",
           "helperFiles": [],
-          "manifest": "language/verifications/artifacts/showcases/01-foundations-02-numbers-and-division.json",
+          "manifest": "language/verifications/artifacts/showcases/foundations/numeric/numbers-and-division.json",
           "summary": "Contrasts truncating / and % with floor :/ and :%, demonstrates exact Float contexts, Int8/Int16/Int32/Float32 widths, and right-associative **.",
           "teaches": [
             "Int",
@@ -68,14 +69,15 @@
             "docs/operators.md",
             "docs/power-and-negation.md",
             "docs/division.md"
-          ]
+          ],
+          "order": 2
         },
         {
-          "id": "strings-and-unicode",
+          "id": "showcase.foundations.strings.strings-and-unicode",
           "title": "Escapes, Code-Point Text Operations, and UTF-8 Conversion",
-          "file": "language/showcases/01-foundations/03-strings-and-unicode.lts",
+          "file": "language/showcases/foundations/strings/strings-and-unicode.lts",
           "helperFiles": [],
-          "manifest": "language/verifications/artifacts/showcases/01-foundations-03-strings-and-unicode.json",
+          "manifest": "language/verifications/artifacts/showcases/foundations/strings/strings-and-unicode.json",
           "summary": "Applies string escapes, core/text trimming and code-point indexing, and core/unicode scalar and strict UTF-8 round-trips.",
           "teaches": [
             "String",
@@ -92,21 +94,23 @@
           ],
           "docs": [
             "docs/strings.md"
-          ]
+          ],
+          "order": 3
         }
-      ]
+      ],
+      "order": 1
     },
     {
-      "id": "02-control-flow",
+      "id": "control",
       "title": "Control Flow, Loops, and Structured Cleanup",
       "summary": "Expression conditionals, comparison chains, subjectless match, loop accumulators, labeled @tag exits, and LIFO finally cleanup.",
       "topics": [
         {
-          "id": "conditionals-and-match",
+          "id": "showcase.control.branching.conditionals-and-match",
           "title": "Value Conditionals, Chained Comparisons, and Subjectless Match",
-          "file": "language/showcases/02-control-flow/01-conditionals-and-match.lts",
+          "file": "language/showcases/control/branching/conditionals-and-match.lts",
           "helperFiles": [],
-          "manifest": "language/verifications/artifacts/showcases/02-control-flow-01-conditionals-and-match.json",
+          "manifest": "language/verifications/artifacts/showcases/control/branching/conditionals-and-match.json",
           "summary": "Combines single-evaluation comparison chains with expression if/else, partial conditional statements, and ordered Boolean match arms.",
           "teaches": [
             "if/else",
@@ -125,14 +129,15 @@
             "docs/conditionals.md",
             "docs/comparison-chains.md",
             "docs/match.md"
-          ]
+          ],
+          "order": 1
         },
         {
-          "id": "loops-and-completion",
+          "id": "showcase.control.loops.loops-and-completion",
           "title": "Conditional & Sequence Loops, Metadata, Break Payloads, and Then",
-          "file": "language/showcases/02-control-flow/02-loops-and-completion.lts",
+          "file": "language/showcases/control/loops/loops-and-completion.lts",
           "helperFiles": [],
-          "manifest": "language/verifications/artifacts/showcases/02-control-flow-02-loops-and-completion.json",
+          "manifest": "language/verifications/artifacts/showcases/control/loops/loops-and-completion.json",
           "summary": "Demonstrates conditional action loops, sequence loop .value/.index/.count metadata, break value payloads, and then completion clauses.",
           "teaches": [
             "loop",
@@ -155,14 +160,15 @@
             "docs/loops.md",
             "docs/loop-value.md",
             "docs/loop-completion.md"
-          ]
+          ],
+          "order": 2
         },
         {
-          "id": "tagged-blocks-and-finally",
+          "id": "showcase.control.unwinding.tagged-blocks-and-finally",
           "title": "Labeled @tag Transfers and LIFO Finally Cleanup",
-          "file": "language/showcases/02-control-flow/03-tagged-blocks-and-finally.lts",
+          "file": "language/showcases/control/unwinding/tagged-blocks-and-finally.lts",
           "helperFiles": [],
-          "manifest": "language/verifications/artifacts/showcases/02-control-flow-03-tagged-blocks-and-finally.json",
+          "manifest": "language/verifications/artifacts/showcases/control/unwinding/tagged-blocks-and-finally.json",
           "summary": "Shows labeled @tag block returns, multi-loop continue/break targeting, @tag.value in then clauses, and guaranteed LIFO finally execution.",
           "teaches": [
             "@tag",
@@ -181,21 +187,23 @@
             "docs/tags-and-contexts.md",
             "docs/finally.md",
             "docs/control-flow.md"
-          ]
+          ],
+          "order": 3
         }
-      ]
+      ],
+      "order": 2
     },
     {
-      "id": "03-data-and-types",
+      "id": "types",
       "title": "Data Shapes, Collections, and Type Aliases",
       "summary": "Tuples, shorthand labels, fixed arrays vs mutable lists, transparent type aliases, and inner lexical type scopes.",
       "topics": [
         {
-          "id": "tuples-and-destructuring",
+          "id": "showcase.types.tuples.tuples-and-destructuring",
           "title": "Tuples, Shorthand Labels, Label Conversion, and Destructuring",
-          "file": "language/showcases/03-data-and-types/01-tuples-and-destructuring.lts",
+          "file": "language/showcases/types/tuples/tuples-and-destructuring.lts",
           "helperFiles": [],
-          "manifest": "language/verifications/artifacts/showcases/03-data-and-types-01-tuples-and-destructuring.json",
+          "manifest": "language/verifications/artifacts/showcases/types/tuples/tuples-and-destructuring.json",
           "summary": "Covers unnamed/named/singleton/mixed tuples, =name shorthand, explicit label relabeling, and var tuple destructuring.",
           "teaches": [
             "tuples",
@@ -211,14 +219,15 @@
           "docs": [
             "docs/tuples-and-patterns.md",
             "docs/tuple-label-conversions.md"
-          ]
+          ],
+          "order": 1
         },
         {
-          "id": "arrays-and-lists",
+          "id": "showcase.types.collections.arrays-and-lists",
           "title": "Fixed [T; N] Arrays vs Mutable List<T> Snapshots",
-          "file": "language/showcases/03-data-and-types/02-arrays-and-lists.lts",
+          "file": "language/showcases/types/collections/arrays-and-lists.lts",
           "helperFiles": [],
-          "manifest": "language/verifications/artifacts/showcases/03-data-and-types-02-arrays-and-lists.json",
+          "manifest": "language/verifications/artifacts/showcases/types/collections/arrays-and-lists.json",
           "summary": "Contrasts fixed-extent arrays with growable mut and var mut lists, push_front/push_back/pop_front/pop_back, and value snapshots.",
           "teaches": [
             "[T; N]",
@@ -240,14 +249,15 @@
             "docs/arrays.md",
             "docs/lists.md",
             "docs/mutability.md"
-          ]
+          ],
+          "order": 2
         },
         {
-          "id": "type-aliases-and-scoping",
+          "id": "showcase.types.aliases.type-aliases-and-scoping",
           "title": "Transparent Type Aliases Across Root and Inner Blocks",
-          "file": "language/showcases/03-data-and-types/03-type-aliases-and-scoping.lts",
+          "file": "language/showcases/types/aliases/type-aliases-and-scoping.lts",
           "helperFiles": [],
-          "manifest": "language/verifications/artifacts/showcases/03-data-and-types-03-type-aliases-and-scoping.json",
+          "manifest": "language/verifications/artifacts/showcases/types/aliases/type-aliases-and-scoping.json",
           "summary": "Defines transparent root and inner-block type aliases with forward inner alias resolution and outer alias preservation after shadowing.",
           "teaches": [
             "type",
@@ -264,21 +274,23 @@
           "docs": [
             "docs/type-aliases.md",
             "docs/blocks-and-results.md"
-          ]
+          ],
+          "order": 3
         }
-      ]
+      ],
+      "order": 3
     },
     {
-      "id": "04-blocks-and-execution",
+      "id": "blocks",
       "title": "The Unified Block Model and Execution Trace",
       "summary": "Value vs statement blocks, dead-code pruning, parallel symbol wiring, 4-level shadowing, and compile-time trace safety.",
       "topics": [
         {
-          "id": "value-blocks-and-dce",
+          "id": "showcase.blocks.evaluation.value-blocks-and-dce",
           "title": "Value Blocks, Final-Item Rule, Scopes, and Dead-Code Pruning",
-          "file": "language/showcases/04-blocks-and-execution/01-value-blocks-and-dce.lts",
+          "file": "language/showcases/blocks/evaluation/value-blocks-and-dce.lts",
           "helperFiles": [],
-          "manifest": "language/verifications/artifacts/showcases/04-blocks-and-execution-01-value-blocks-and-dce.json",
+          "manifest": "language/verifications/artifacts/showcases/blocks/evaluation/value-blocks-and-dce.json",
           "summary": "Demonstrates expression-yielding blocks vs Unit-tail statement blocks, pure dead-code elimination, and retention of side effects.",
           "teaches": [
             "{ ... }",
@@ -292,14 +304,15 @@
           ],
           "docs": [
             "docs/blocks-and-results.md"
-          ]
+          ],
+          "order": 1
         },
         {
-          "id": "parallel-symbol-wiring",
+          "id": "showcase.blocks.wiring.parallel-symbol-wiring",
           "title": "Parallel Compile-Time Symbol Wiring and Nearer-Forward Shadowing",
-          "file": "language/showcases/04-blocks-and-execution/02-parallel-symbol-wiring.lts",
+          "file": "language/showcases/blocks/wiring/parallel-symbol-wiring.lts",
           "helperFiles": [],
-          "manifest": "language/verifications/artifacts/showcases/04-blocks-and-execution-02-parallel-symbol-wiring.json",
+          "manifest": "language/verifications/artifacts/showcases/blocks/wiring/parallel-symbol-wiring.json",
           "summary": "Shows root and inner forward references, mutual recursion, direct own-name recursion, 4-level nearer-forward precedence, and eager outer reads.",
           "teaches": [
             "parallel wiring",
@@ -316,14 +329,15 @@
           "docs": [
             "docs/functions.md",
             "docs/blocks-and-results.md"
-          ]
+          ],
+          "order": 2
         },
         {
-          "id": "execution-trace-safety",
+          "id": "showcase.blocks.trace.execution-trace-safety",
           "title": "Compile-Time Wiring vs Runtime Execution Trace Safety",
-          "file": "language/showcases/04-blocks-and-execution/03-execution-trace-safety.lts",
+          "file": "language/showcases/blocks/trace/execution-trace-safety.lts",
           "helperFiles": [],
-          "manifest": "language/verifications/artifacts/showcases/04-blocks-and-execution-03-execution-trace-safety.json",
+          "manifest": "language/verifications/artifacts/showcases/blocks/trace/execution-trace-safety.json",
           "summary": "Explains valid runtime ordering past reserved ? variables, write-before-read inside closures, and list-queued deferred functions.",
           "teaches": [
             "execution trace",
@@ -342,21 +356,23 @@
             "docs/first-initialization.md",
             "docs/reserved-storage.md",
             "docs/functions.md"
-          ]
+          ],
+          "order": 3
         }
-      ]
+      ],
+      "order": 4
     },
     {
-      "id": "05-functions-and-closures",
+      "id": "functions",
       "title": "Functions, Higher-Order Pipelines, and Lexical Closures",
       "summary": "Named calls, self recursion, explicit io.exit termination, callable types, contextual inference, and capturing stateful closures.",
       "topics": [
         {
-          "id": "named-calls-and-recursion",
+          "id": "showcase.functions.calls.named-calls-and-recursion",
           "title": "Named/Shorthand Calls, Self Recursion, and Early Exit",
-          "file": "language/showcases/05-functions-and-closures/01-named-calls-and-recursion.lts",
+          "file": "language/showcases/functions/calls/named-calls-and-recursion.lts",
           "helperFiles": [],
-          "manifest": "language/verifications/artifacts/showcases/05-functions-and-closures-01-named-calls-and-recursion.json",
+          "manifest": "language/verifications/artifacts/showcases/functions/calls/named-calls-and-recursion.json",
           "summary": "Teaches positional/named/=name call syntax, positional and named self(...) recursion, script args, and explicit io.exit error helpers.",
           "teaches": [
             "named args",
@@ -374,14 +390,15 @@
           "docs": [
             "docs/functions.md",
             "docs/tooling-and-learning.md"
-          ]
+          ],
+          "order": 1
         },
         {
-          "id": "first-class-functions",
+          "id": "showcase.functions.callables.first-class-functions",
           "title": "Callable Types, Contextual Inference, and Function Dispatch",
-          "file": "language/showcases/05-functions-and-closures/02-first-class-functions.lts",
+          "file": "language/showcases/functions/callables/first-class-functions.lts",
           "helperFiles": [],
-          "manifest": "language/verifications/artifacts/showcases/05-functions-and-closures-02-first-class-functions.json",
+          "manifest": "language/verifications/artifacts/showcases/functions/callables/first-class-functions.json",
           "summary": "Builds map/filter/fold combinators using fn(...) type aliases, omitted-type lambda inference, and List<fn> dispatch pipelines.",
           "teaches": [
             "fn(...)",
@@ -399,14 +416,15 @@
           "docs": [
             "docs/functions.md",
             "docs/closures.md"
-          ]
+          ],
+          "order": 2
         },
         {
-          "id": "lexical-closures-and-state",
+          "id": "showcase.functions.closures.lexical-closures-and-state",
           "title": "Lexical Closures Capturing State, Lists, Loop Items, and Frames",
-          "file": "language/showcases/05-functions-and-closures/03-lexical-closures-and-state.lts",
+          "file": "language/showcases/functions/closures/lexical-closures-and-state.lts",
           "helperFiles": [],
-          "manifest": "language/verifications/artifacts/showcases/05-functions-and-closures-03-lexical-closures-and-state.json",
+          "manifest": "language/verifications/artifacts/showcases/functions/closures/lexical-closures-and-state.json",
           "summary": "Demonstrates escaping makeCounter frames, captured mut List mutations across scopes, and per-iteration loop item captures.",
           "teaches": [
             "closures",
@@ -424,23 +442,25 @@
           "docs": [
             "docs/closures.md",
             "docs/functions.md"
-          ]
+          ],
+          "order": 3
         }
-      ]
+      ],
+      "order": 5
     },
     {
-      "id": "06-modules-and-core",
+      "id": "modules",
       "title": "Modules and Core Standard Utilities",
       "summary": "Module visibility boundaries, path/file operations with finally cleanup, deterministic crypto, formatting, and host/time checks.",
       "topics": [
         {
-          "id": "modules-and-visibility",
+          "id": "showcase.modules.visibility.modules-and-visibility",
           "title": "Namespace Imports, pub Contracts, and Private Module Helpers",
-          "file": "language/showcases/06-modules-and-core/01-modules-and-visibility.lts",
+          "file": "language/showcases/modules/visibility/modules-and-visibility.lts",
           "helperFiles": [
-            "language/showcases/06-modules-and-core/helpers/math_stats.lts"
+            "language/showcases/modules/visibility/helpers/math-stats.lts"
           ],
-          "manifest": "language/verifications/artifacts/showcases/06-modules-and-core-01-modules-and-visibility.json",
+          "manifest": "language/verifications/artifacts/showcases/modules/visibility/modules-and-visibility.json",
           "summary": "Imports a sibling module exposing pub type aliases, pub constants, and pub functions while hiding private helpers.",
           "teaches": [
             "import",
@@ -456,14 +476,15 @@
           "docs": [
             "docs/visibility.md",
             "docs/blocks-and-results.md"
-          ]
+          ],
+          "order": 1
         },
         {
-          "id": "files-paths-and-cleanup",
+          "id": "showcase.modules.filesystem.files-paths-and-cleanup",
           "title": "Path Normalization, Temp Workspaces, File I/O, and Finally Cleanup",
-          "file": "language/showcases/06-modules-and-core/02-files-paths-and-cleanup.lts",
+          "file": "language/showcases/modules/filesystem/files-paths-and-cleanup.lts",
           "helperFiles": [],
-          "manifest": "language/verifications/artifacts/showcases/06-modules-and-core-02-files-paths-and-cleanup.json",
+          "manifest": "language/verifications/artifacts/showcases/modules/filesystem/files-paths-and-cleanup.json",
           "summary": "Uses core/path, core/file temp workspaces, aligned core/format output, and finally directory removal with deterministic output.",
           "teaches": [
             "core/path",
@@ -480,14 +501,15 @@
           "docs": [
             "docs/tooling-and-learning.md",
             "docs/finally.md"
-          ]
+          ],
+          "order": 2
         },
         {
-          "id": "crypto-time-and-env",
+          "id": "showcase.modules.system.crypto-time-and-env",
           "title": "Cryptographic Digests, Encodings, and Host/Clock Invariants",
-          "file": "language/showcases/06-modules-and-core/03-crypto-time-and-env.lts",
+          "file": "language/showcases/modules/system/crypto-time-and-env.lts",
           "helperFiles": [],
-          "manifest": "language/verifications/artifacts/showcases/06-modules-and-core-03-crypto-time-and-env.json",
+          "manifest": "language/verifications/artifacts/showcases/modules/system/crypto-time-and-env.json",
           "summary": "Computes SHA-256 and HMAC-SHA256 digests, round-trips Hex and Base64, and checks monotonic clock and process invariants.",
           "teaches": [
             "core/crypto",
@@ -502,9 +524,11 @@
           ],
           "docs": [
             "docs/tooling-and-learning.md"
-          ]
+          ],
+          "order": 3
         }
-      ]
+      ],
+      "order": 6
     }
   ]
 }

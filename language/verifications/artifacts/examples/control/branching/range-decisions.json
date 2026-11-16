@@ -1,0 +1,29 @@
+{
+  "id": "example.control.branching.range-decisions",
+  "kind": "example",
+  "source": {
+    "file": "../../../../../examples/control/branching/range-decisions.lts",
+    "hash": "sha256:2d7a3e448bcff69484e7ba2e18e71b197db1c4f28099613265a6046778b689dd"
+  },
+  "features": [
+    "feature.io.streams.prompted-int-input",
+    "feature.control.branching.boolean-if",
+    "feature.numeric.integers.signed-arithmetic",
+    "feature.io.reporting.report-values"
+  ],
+  "description": "Sign, range, and short-circuit decisions for a supplied integer.",
+  "cases": [
+    {
+      "name": "five",
+      "stdin": {
+        "text": "5\n",
+        "hash": "sha256:f0b5c2c2211c8d67ed15e75e656c7862d086e9245420892a7de62cd9ec582a06"
+      },
+      "stdout": {
+        "text": "Integer: positive\nbetween zero and nine\nquotient exceeds five\n",
+        "hash": "sha256:26eaa57d80946dc946e15d63b5e01baeb24d6294835bd84a92b68c283037c1c9"
+      },
+      "exitCode": 0
+    }
+  ]
+}

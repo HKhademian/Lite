@@ -41,7 +41,7 @@ function/array use of the converted value, and before-effect rejection of
 shape/type mismatches and later implicit relabeling. Contextual constructors are
 kept separate by an explicit unsupported diagnostic.
 
-The real launcher runs [011](../../language/examples/011-tuple-label-conversion.lts), reporting
+The real launcher runs [011](../../language/examples/types/tuples/tuple-label-conversion.lts), reporting
 640 480 three times; check-only mode emits nothing. The editor checks the example
 corpus. No ABI, native compiler, layout measurement or ownership result is claimed.
 

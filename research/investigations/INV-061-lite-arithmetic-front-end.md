@@ -17,7 +17,7 @@ code-generation target, native runtime or bootstrap-stage format.
 
 ## Delivery
 
-[016-integer-calculator.lts](../../language/examples/016-integer-calculator.lts) is a
+[016-integer-calculator.lts](../../language/examples/parsing/evaluators/integer-calculator.lts) is a
 self-contained integer arithmetic application. It reuses 015's small scanner
 as source because module/import infrastructure remains deferred for the FVP.
 Retain token kind/text tuples in a list. Count tokens with ordinary traversal;

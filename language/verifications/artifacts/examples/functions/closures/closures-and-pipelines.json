@@ -1,0 +1,25 @@
+{
+  "id": "example.functions.closures.closures-and-pipelines",
+  "kind": "example",
+  "source": {
+    "file": "../../../../../examples/functions/closures/closures-and-pipelines.lts",
+    "hash": "sha256:dcb8c870ca1a691865f5723319e133acd6c39509f2ee610113f621dded21e759"
+  },
+  "features": [
+    "feature.functions.closures.lexical-captures",
+    "feature.functions.callables.function-values",
+    "feature.types.collections.growable-lists",
+    "feature.io.reporting.report-values"
+  ],
+  "description": "Higher-order map/filter/fold list helpers combined with capturing closures and counter frames.",
+  "cases": [
+    {
+      "name": "closure-pipelines",
+      "stdout": {
+        "text": "scaled: 6, 15, 24, 33, 42\nlarge: 24, 33, 42 sum: 99\nticks: 105, 110, 115\n",
+        "hash": "sha256:63e40ea270d68cd8614200b71cd0d395e109edcba11f730ab7554b38eb0a4618"
+      },
+      "exitCode": 0
+    }
+  ]
+}

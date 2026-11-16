@@ -126,9 +126,9 @@ no npm package dependencies and executes the `.ts` sources directly.
 From the repository root:
 
 ```sh
-./bin/lite compile language/examples/001-double-sum.lts > /tmp/lite-example.ts
+./bin/lite compile language/examples/foundations/io/double-sum.lts > /tmp/lite-example.ts
 node compiler/entry.ts /tmp/lite-example.ts
-./bin/lite check language/examples/001-double-sum.lts
+./bin/lite check language/examples/foundations/io/double-sum.lts
 ```
 
 Enter `7` and `5` on separate lines; it prints `24` after the explicit prompts.
@@ -389,7 +389,7 @@ Select the callee first, evaluate every supplied expression once in written orde
 An exit/fault stops later preparation and the body. self uses the same routing.
 Temporary builtin helpers remain positional; their public labels are unselected.
 Defaults, spread, callable views and access-qualified inputs remain unsupported.
-See [012](../language/examples/012-named-arguments.lts) and
+See [012](../language/examples/functions/calls/named-arguments.lts) and
 [INV-031 evidence](../research/investigations/INV-031-fvp-named-calls.md).
 
 ### Flat fixed tuples
@@ -476,7 +476,7 @@ Named and unnamed scalar fields may interleave in written order, for example
 (7, tea = "green", 2) with type (:Int, tea: String, :Int). Numeric access covers
 every position; field access covers labeled positions. Copies, function contracts
 and homogeneous arrays preserve each position's label or absence of a label.
-See [010](../language/examples/010-mixed-tuples.lts) and
+See [010](../language/examples/types/tuples/mixed-tuples.lts) and
 [INV-022 evidence](../research/investigations/INV-022-fvp-mixed-tuples.md).
 
 ### Explicit tuple label conversion
@@ -489,7 +489,7 @@ receiving bindings work; later replacement still checks the destination labels.
 Fresh constructors with matching labels work, but contextual construction needing
 routing remains diagnosed as unimplemented. No numeric casts, callable label
 adaptation, aliases or uninitialized typed storage are implemented here. See
-[011](../language/examples/011-tuple-label-conversion.lts) and
+[011](../language/examples/types/tuples/tuple-label-conversion.lts) and
 [INV-022 evidence](../research/investigations/INV-022-fvp-label-conversion.md).
 
 ### Growable lists
@@ -538,7 +538,7 @@ exhaustion is not promised recoverable. No allocation Result, capacity helper,
 optimizer, view, indexed write, alias framework or attached recovery is added.
 Each host update builds a fresh immutable sequence, preserving previous values;
 this intentionally simple implementation has no amortized growth or native
-layout/performance claim. See [013](../language/examples/013-growable-lists.lts) and
+layout/performance claim. See [013](../language/examples/types/collections/growable-lists.lts) and
 [INV-055 evidence](../research/investigations/INV-055-fvp-list-slice.md).
 
 ### Fixed arrays and traversal
@@ -590,8 +590,8 @@ array values; it does not validate native header-free storage or performance.
 inputArgs() returns a readable List<String> containing only script arguments:
 
 ```sh
-./bin/lite run language/examples/020-script-arguments.lts -- "a b" "" "سلام🙂" --check
-./bin/lite compile language/examples/020-script-arguments.lts > /tmp/args.ts
+./bin/lite run language/examples/io/process/script-arguments.lts -- "a b" "" "سلام🙂" --check
+./bin/lite compile language/examples/io/process/script-arguments.lts > /tmp/args.ts
 node compiler/entry.ts /tmp/args.ts "a b" "" "سلام🙂" --check
 ```
 
@@ -624,7 +624,7 @@ remain unsupported; ordinary shadowing works. Invalid signatures fail before
 program effects, read failures stay terminal and the other input helpers retain
 their EOF-fault rules. It reads all remaining text and may use proportional memory;
 no file API, rewind, streaming guarantee or normalization is added. See
-[019](../language/examples/019-whole-input.lts) and
+[019](../language/examples/io/streams/whole-input.lts) and
 [INV-004 evidence](../research/investigations/INV-004-fvp-whole-input.md).
 
 ### Temporary text operations
@@ -667,7 +667,7 @@ unsupported or open. Helper parameter names above are explanatory; only
 positional arguments are supported. These helper names obey ordinary shadowing and are not
 first-class builtin values.
 
-The [arithmetic tokenizer](../language/examples/005-scan-arithmetic.lts) groups ASCII decimal
+The [arithmetic tokenizer](../language/examples/parsing/scanning/scan-arithmetic.lts) groups ASCII decimal
 digit runs, skips spaces/tabs, and reports individual `+ - * / ( )` symbols.
 It preserves digit text, including leading zeroes. An unsupported character
 explicitly reports an error and exits 2. An empty supplied line emits only the
@@ -868,10 +868,10 @@ References checked for the toolchain: [Node release/downloads](https://nodejs.or
 [TypeScript installation](https://www.typescriptlang.org/download/), and
 [compiler options](https://www.typescriptlang.org/tsconfig/).
 
-The [retained-token example 015](../language/examples/015-retained-tokens.lts) returns a
+The [retained-token example 015](../language/examples/parsing/scanning/retained-tokens.lts) returns a
 named-tuple list before traversal; invalid text exits without partial token output.
 
-The [integer calculator 016](../language/examples/016-integer-calculator.lts) parses the
+The [integer calculator 016](../language/examples/parsing/evaluators/integer-calculator.lts) parses the
 scanner's arithmetic input using ordinary Lite recursion and position/value
 pairs. It runs on the preserved alpha.15 interpreter too. This is application
 front-end evidence, not a Lite compiler, AST/IR choice, code generator or

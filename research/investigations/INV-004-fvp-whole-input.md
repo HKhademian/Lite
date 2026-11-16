@@ -76,7 +76,7 @@ order/single evaluation/empty prompts, pre-read prompt failures, terminal read
 failures, before-effects signature checks, shadowing, and the unchanged older
 helper EOF behavior.
 
-The real launcher runs [019-whole-input.lts](../../language/examples/019-whole-input.lts) on
+The real launcher runs [019-whole-input.lts](../../language/examples/io/streams/whole-input.lts) on
 empty and multi-line UTF-8 stdin. Output bytes preserve the original text in the
 explicit report (whose own final newline still applies), and --check reads/writes
 nothing. Invalid UTF-8 input produces the existing terminal InputFault path.

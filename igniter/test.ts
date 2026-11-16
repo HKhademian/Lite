@@ -570,13 +570,13 @@ test('lite verify uses generated TS, reports migration gaps and rejects the reti
     const verified = spawnSync(join(root, 'bin/lite'), ['verify', '--all', '--no-cache'], { env, encoding: 'utf8', timeout: 180000 });
     assert.equal(verified.error, undefined); assert.equal(verified.status, 0, verified.stderr);
     assert.match(verified.stdout, /PASS feature\.numeric\.integers\.signed-arithmetic\/precedence-and-division/);
-    assert.match(verified.stdout, /PASS example\.001-double-sum\/seven-and-five/);
+    assert.match(verified.stdout, /PASS example\.foundations\.io\.double-sum\/seven-and-five/);
     assert.match(verified.stdout, /\[ts\]/); assert.doesNotMatch(verified.stdout, /T00 reference|\[c\]/);
     assert.match(verified.stdout, /PASS feature\.control\.branching\.subjectless-match\/first-true-and-fallback \[ts\]/);
     assert.match(verified.stdout, /PASS feature\.numeric\.widths\.sized-promotion\/widths \[ts\]/);
     assert.match(verified.stdout, /PASS feature\.functions\.callables\.function-values\/double-five \[ts\]/);
     assert.match(verified.stdout, /PASS feature\.blocks\.wiring\.parallel-symbol-wiring\/even-four \[ts\]/);
-    assert.match(verified.stdout, /PASS showcase\.01-foundations\.01-bindings-and-mutability\/bindings-and-mutability \[ts\]/);
+    assert.match(verified.stdout, /PASS showcase\.foundations\.bindings\.bindings-and-mutability\/bindings-and-mutability \[ts\]/);
     assert.match(verified.stdout, /verification passed: 128 executed, 0 cached/);
     const covered = spawnSync(join(root, 'bin/lite'), ['verify', '--coverage'], { env, encoding: 'utf8', timeout: 30000 });
     assert.equal(covered.error, undefined); assert.equal(covered.status, 0, covered.stderr);
@@ -2313,7 +2313,7 @@ test('root launcher compiles artifacts and forwards their input, diagnostics and
   const executeArtifact = (input = '', args: readonly string[] = []) => spawnSync(process.execPath,
     [join(root, 'compiler/entry.ts'), artifact, ...args], { cwd: dir, env, input, encoding: 'utf8', timeout: 10000 });
   try {
-    build('language/examples/001-double-sum.lts', launcher, root);
+    build('language/examples/foundations/io/double-sum.lts', launcher, root);
     const example = executeArtifact('7\n5\n'); assert.equal(example.status, 0, example.stderr); assert.equal(example.stdout, 'First integer: Second integer: 24\n');
     writeFileSync(source, "io := import \"core/io\"; io.outputLine(io.inputInt()); io.errorLine(\"done\"); io.exit(7);"); build();
     const result = executeArtifact('19\n'); assert.equal(result.status, 7); assert.equal(result.stdout, '19\n'); assert.equal(result.stderr, 'done\n');

@@ -1,0 +1,24 @@
+{
+  "id": "sample.finance.exchange.currency-conversion",
+  "kind": "sample",
+  "source": {
+    "file": "../../../../../samples/finance/exchange/currency-conversion.lts",
+    "hash": "sha256:497cfd0ef6a7603481a80288bb35070b6c9a9820a412d10e78072323fe5e4f6f"
+  },
+  "features": [
+    "feature.numeric.integers.signed-arithmetic",
+    "feature.bindings.mutability.lexical-shadowing"
+  ],
+  "description": "Currency conversion rounded to target cents.",
+  "append": "io.outputLine(target_cents);",
+  "cases": [
+    {
+      "name": "observed-values",
+      "stdout": {
+        "text": "118\n",
+        "hash": "sha256:f10f7170eeb4986f69d764a4cb97c3f8e9337963222188a647fc4c0ac289d0e4"
+      },
+      "exitCode": 0
+    }
+  ]
+}

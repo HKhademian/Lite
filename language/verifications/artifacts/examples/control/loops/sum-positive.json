@@ -1,0 +1,30 @@
+{
+  "id": "example.control.loops.sum-positive",
+  "kind": "example",
+  "source": {
+    "file": "../../../../../examples/control/loops/sum-positive.lts",
+    "hash": "sha256:237f1d5ad1df74f75441010dd43ad98cddd1d7ea2df115a1f77a20f80cf18e45"
+  },
+  "features": [
+    "feature.io.streams.prompted-int-input",
+    "feature.control.loops.conditional-loop",
+    "feature.control.branching.boolean-if",
+    "feature.bindings.mutability.var-replacement",
+    "feature.io.reporting.report-values"
+  ],
+  "description": "Reads integers until zero, skipping negatives, and reports the positive sum.",
+  "cases": [
+    {
+      "name": "positive-sum",
+      "stdin": {
+        "text": "3\n-2\n4\n0\n",
+        "hash": "sha256:17743008220257086f0aeda926ae09d1eaf328f3f04a91bf64322328859ea61b"
+      },
+      "stdout": {
+        "text": "Integer (0 to finish): Integer (0 to finish): Integer (0 to finish): Integer (0 to finish): 7\n",
+        "hash": "sha256:831f5b9b2f0665e304d338dc3cb1801afea63e128f0b6784f422e511dd046384"
+      },
+      "exitCode": 0
+    }
+  ]
+}

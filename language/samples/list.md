@@ -45,26 +45,26 @@ Needs: numeric values, bindings, expressions. Design pressure: inferred numeric 
 
 Status: **implemented; all 20 files have verification manifests**. Each is a short worked example with a plain-language problem and expected answers. See the [reading guide](README.md) for a first introduction and [contributor notes](NOTES.md) for verification limits and design gaps.
 
-1. `language/samples/001_add_two_numbers.lts` — **Add two numbers:** Compute the sum of two supplied integers and check positive, negative, and zero inputs.
-2. `language/samples/002_arithmetic_operations.lts` — **Four arithmetic operations:** Compute sum, difference, product, and truncating integer quotient for two whole numbers with a nonzero divisor.
-3. `language/samples/003_rectangle_measurements.lts` — **Rectangle measurements:** Calculate area and perimeter from positive width and height.
-4. `language/samples/004_triangle_area.lts` — **Triangle area:** Calculate a triangle's area from its base and perpendicular height, including a fractional result.
-5. `language/samples/005_circle_measurements.lts` — **Circle measurements:** Use a supplied approximation of pi to calculate circumference and area from a radius.
-6. `language/samples/006_temperature_conversion.lts` — **Temperature conversion:** Convert Celsius to Fahrenheit and back, checking freezing and boiling examples.
-7. `language/samples/007_distance_conversion.lts` — **Distance conversion:** Convert a distance between meters, kilometers, and centimeters using explicit scale factors.
-8. `language/samples/008_duration_parts.lts` — **Duration parts:** Break a nonnegative whole-second duration into hours, minutes, and remaining seconds.
-9. `language/samples/009_average_three_values.lts` — **Average three values:** Calculate the arithmetic mean of three numbers without accidentally truncating a fractional answer.
-10. `language/samples/010_percentage_of_total.lts` — **Percentage of a total:** Calculate a part's percentage of a positive total and the amount represented by a percentage.
-11. `language/samples/011_discounted_price.lts` — **Discounted price:** Apply an integer percentage discount to a price in cents using an explicitly stated rounding rule.
-12. `language/samples/012_tax_and_tip.lts` — **Tax and tip:** Calculate a bill total from subtotal, tax rate, and tip rate, stating which amount the tip uses.
-13. `language/samples/013_simple_interest.lts` — **Simple interest:** Compute interest and final balance from principal, annual rate, and whole-year duration.
-14. `language/samples/014_speed_distance_time.lts` — **Speed, distance, time:** Derive each quantity from the other two using consistent units and positive denominators.
-15. `language/samples/015_weighted_average.lts` — **Weighted average:** Combine three assessment scores with supplied weights whose sum is positive.
-16. `language/samples/016_midpoint_coordinates.lts` — **Midpoint coordinates:** Find the midpoint of two two-dimensional points from their coordinate values.
-17. `language/samples/017_linear_interpolation.lts` — **Linear interpolation:** Calculate a value between two endpoints for a supplied fraction between zero and one.
-18. `language/samples/018_split_bill.lts` — **Split a bill:** Divide a total in cents among a positive number of people and report leftover cents.
-19. `language/samples/019_currency_conversion.lts` — **Fixed-rate currency conversion:** Apply a supplied rational exchange rate to integer minor units with explicit rounding.
-20. `language/samples/020_swap_values.lts` — **Swap two values:** Exchange two integer bindings using a temporary value and verify both final values.
+1. `language/samples/arithmetic/operations/add-two-numbers.lts` — **Add two numbers:** Compute the sum of two supplied integers and check positive, negative, and zero inputs.
+2. `language/samples/arithmetic/operations/four-operations.lts` — **Four arithmetic operations:** Compute sum, difference, product, and truncating integer quotient for two whole numbers with a nonzero divisor.
+3. `language/samples/geometry/shapes/rectangle-measurements.lts` — **Rectangle measurements:** Calculate area and perimeter from positive width and height.
+4. `language/samples/geometry/shapes/triangle-area.lts` — **Triangle area:** Calculate a triangle's area from its base and perpendicular height, including a fractional result.
+5. `language/samples/geometry/shapes/circle-measurements.lts` — **Circle measurements:** Use a supplied approximation of pi to calculate circumference and area from a radius.
+6. `language/samples/units/conversions/temperature-conversion.lts` — **Temperature conversion:** Convert Celsius to Fahrenheit and back, checking freezing and boiling examples.
+7. `language/samples/units/conversions/distance-conversion.lts` — **Distance conversion:** Convert a distance between meters, kilometers, and centimeters using explicit scale factors.
+8. `language/samples/units/time/duration-parts.lts` — **Duration parts:** Break a nonnegative whole-second duration into hours, minutes, and remaining seconds.
+9. `language/samples/arithmetic/averages/average-three-values.lts` — **Average three values:** Calculate the arithmetic mean of three numbers without accidentally truncating a fractional answer.
+10. `language/samples/finance/percentages/percentage-of-total.lts` — **Percentage of a total:** Calculate a part's percentage of a positive total and the amount represented by a percentage.
+11. `language/samples/finance/pricing/discounted-price.lts` — **Discounted price:** Apply an integer percentage discount to a price in cents using an explicitly stated rounding rule.
+12. `language/samples/finance/pricing/tax-and-tip.lts` — **Tax and tip:** Calculate a bill total from subtotal, tax rate, and tip rate, stating which amount the tip uses.
+13. `language/samples/finance/interest/simple-interest.lts` — **Simple interest:** Compute interest and final balance from principal, annual rate, and whole-year duration.
+14. `language/samples/units/rates/speed-distance-time.lts` — **Speed, distance, time:** Derive each quantity from the other two using consistent units and positive denominators.
+15. `language/samples/arithmetic/averages/weighted-average.lts` — **Weighted average:** Combine three assessment scores with supplied weights whose sum is positive.
+16. `language/samples/geometry/coordinates/midpoint-coordinates.lts` — **Midpoint coordinates:** Find the midpoint of two two-dimensional points from their coordinate values.
+17. `language/samples/geometry/coordinates/linear-interpolation.lts` — **Linear interpolation:** Calculate a value between two endpoints for a supplied fraction between zero and one.
+18. `language/samples/finance/splitting/split-bill.lts` — **Split a bill:** Divide a total in cents among a positive number of people and report leftover cents.
+19. `language/samples/finance/exchange/currency-conversion.lts` — **Fixed-rate currency conversion:** Apply a supplied rational exchange rate to integer minor units with explicit rounding.
+20. `language/samples/bindings/mutation/swap-values.lts` — **Swap two values:** Exchange two integer bindings using a temporary value and verify both final values.
 
 ## 02 — Conditions and small decisions (021–040)
 

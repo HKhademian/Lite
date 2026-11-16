@@ -1,0 +1,26 @@
+{
+  "id": "showcase.blocks.trace.execution-trace-safety",
+  "kind": "showcase",
+  "source": {
+    "file": "../../../../../showcases/blocks/trace/execution-trace-safety.lts",
+    "hash": "sha256:35084470ce78ede9be3b8d7d86ea197f9f6912865cf2e537e460234b7979b874"
+  },
+  "features": [
+    "feature.blocks.trace.execution-trace-order",
+    "feature.bindings.storage.reserved-uninit",
+    "feature.types.collections.growable-lists",
+    "feature.functions.closures.lexical-captures",
+    "feature.io.reporting.report-values"
+  ],
+  "description": "Valid runtime execution-trace ordering, write-before-read reserved storage, and list-queued closures.",
+  "cases": [
+    {
+      "name": "execution-trace-safety",
+      "stdout": {
+        "text": "rootAns: 125 blockAns: 50\n",
+        "hash": "sha256:cfb67e9d8a50382ce9f94fe94b35c02ace54a40cd905c1912b836a94d61d09bf"
+      },
+      "exitCode": 0
+    }
+  ]
+}

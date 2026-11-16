@@ -1,0 +1,24 @@
+{
+  "id": "sample.bindings.mutation.swap-values",
+  "kind": "sample",
+  "source": {
+    "file": "../../../../../samples/bindings/mutation/swap-values.lts",
+    "hash": "sha256:ec8191c7d3f7e29160a36d82a4ab49d783986909d8495aaddb6ac8079349b2b7"
+  },
+  "features": [
+    "feature.bindings.mutability.var-replacement",
+    "feature.bindings.mutability.lexical-shadowing"
+  ],
+  "description": "Swaps two var bindings through a temporary; verification reports both.",
+  "append": "io.outputLine(first_box); io.outputLine(second_box);",
+  "cases": [
+    {
+      "name": "swapped",
+      "stdout": {
+        "text": "3\n7\n",
+        "hash": "sha256:2d65ba73dd83363826d117438319b05674f16d55faef1e57f780964edae7bba1"
+      },
+      "exitCode": 0
+    }
+  ]
+}

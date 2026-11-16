@@ -1,0 +1,28 @@
+{
+  "id": "sample.geometry.shapes.circle-measurements",
+  "kind": "sample",
+  "source": {
+    "file": "../../../../../samples/geometry/shapes/circle-measurements.lts",
+    "hash": "sha256:7989582df4d34a8d523c6946311b6a9a4547aaca8597b5025364a7071c68133b"
+  },
+  "features": [
+    "feature.numeric.floats.mixed-arithmetic",
+    "feature.bindings.mutability.lexical-shadowing"
+  ],
+  "description": "Approximate circumference and area of a circle.",
+  "append": "io.outputLine(circumference); io.outputLine(area);",
+  "targets": [
+    "ts",
+    "c"
+  ],
+  "cases": [
+    {
+      "name": "observed-values",
+      "stdout": {
+        "text": "25.13272\n50.26544\n",
+        "hash": "sha256:830f87ea92758ad7da80ac1b0bd37c1a1133c7bceee815d81b0008896da44c77"
+      },
+      "exitCode": 0
+    }
+  ]
+}

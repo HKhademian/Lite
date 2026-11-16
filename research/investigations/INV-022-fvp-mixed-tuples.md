@@ -33,7 +33,7 @@ Strict TypeScript checking and all 97 interpreter test groups pass on the pinned
 Node 26.13.0/TypeScript 7.0.2. Checks include observable entry evaluation order,
 mixed function contracts and array traversal, independent copies and before-effect
 rejection of moved/duplicate labels and unknown fields. The real launcher runs
-[010-mixed-tuples.lts](../../language/examples/010-mixed-tuples.lts), reporting
+[010-mixed-tuples.lts](../../language/examples/types/tuples/mixed-tuples.lts), reporting
 7 green 2 true twice; check-only mode emits nothing. The editor grammar also
 checks the expanded example corpus. These are interpreter results, not native
 layout, ABI or performance measurements.

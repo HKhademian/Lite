@@ -1,0 +1,24 @@
+{
+  "id": "sample.arithmetic.operations.four-operations",
+  "kind": "sample",
+  "source": {
+    "file": "../../../../../samples/arithmetic/operations/four-operations.lts",
+    "hash": "sha256:a8d19e64a84a4f82a89d90aca1b39d29592662a180885e6d1d81b0bfcc21275b"
+  },
+  "features": [
+    "feature.numeric.integers.signed-arithmetic",
+    "feature.bindings.mutability.lexical-shadowing"
+  ],
+  "description": "Four integer operations; the verification appends reports for each result.",
+  "append": "io.outputLine(sum); io.outputLine(difference); io.outputLine(product); io.outputLine(quotient);",
+  "cases": [
+    {
+      "name": "four-operations",
+      "stdout": {
+        "text": "9\n5\n14\n3\n",
+        "hash": "sha256:e706dd533b4eff346e692db490c906536acac123637b7cc6eff43cb958b6b2b2"
+      },
+      "exitCode": 0
+    }
+  ]
+}

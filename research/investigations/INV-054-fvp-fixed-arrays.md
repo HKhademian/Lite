@@ -84,7 +84,7 @@ scoped receivers, nearest-loop continue/break, function/program exits and reject
 unsupported forms before effects. A constructor completes all its entry effects
 before traversal; break does not undo those effects or restart the source.
 
-The real [009-fixed-arrays.lts](../../language/examples/009-fixed-arrays.lts) runs through
+The real [009-fixed-arrays.lts](../../language/examples/types/collections/fixed-arrays.lts) runs through
 ./bin/lite run, visits three token tuples, reads a supplied index and reports sum: 60
 through a fixed-array function. Input 1 reports the + token; input -1 exits 1
 with a located BoundPanic after the explicit prompt. Check-only mode neither

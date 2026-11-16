@@ -625,7 +625,7 @@ terminal BoundPanic on invalid bounds. Combining marks count separately; no
 normalization, grapheme grouping, String indexing syntax or full Unicode profile
 is selected. The earlier alpha.5 implementation did not supply consent.
 
-The [015 scanner](../language/examples/015-retained-tokens.lts) now returns a list of named
+The [015 scanner](../language/examples/parsing/scanning/retained-tokens.lts) now returns a list of named
 token tuples before traversal/output, using the already approved list/function
 features. Unsupported input reports an error and exits 2 before partial tokens
 are printed. Strict checking, 122 interpreter groups and 9 editor groups pass,
@@ -651,7 +651,7 @@ capacity APIs, indexed writes, user-function mut parameters, complex/overlapping
 reentrant grants and recovery remain unimplemented.
 
 Strict no-emit checking, all 120 interpreter groups and 9 editor groups pass,
-including the real [013 example](../language/examples/013-growable-lists.lts), check-only
+including the real [013 example](../language/examples/types/collections/growable-lists.lts), check-only
 mode and located empty-pop diagnostics. Preserve as igniter-v0.1.0-alpha.14;
 see [INV-055 evidence](../research/investigations/INV-055-fvp-list-slice.md).
 
@@ -735,7 +735,7 @@ retain their existing targets. Runtime bounds use the temporary BoundPanic
 diagnostic; static dot positions fail before execution.
 
 Strict checking and all 93 interpreter test groups pass, including the real
-[009 example](../language/examples/009-fixed-arrays.lts) through ./bin/lite run. Empty array
+[009 example](../language/examples/types/collections/fixed-arrays.lts) through ./bin/lite run. Empty array
 construction/default element typing, union-element inference, nested arrays,
 element mutation, growth, access grants, slices, metadata and native layout remain
 unimplemented. No length/count helper or public panic API is invented. Preserve
@@ -755,7 +755,7 @@ Valid fresh constructors needing contextual routing are diagnosed as unsupported
 not silently relabeled/reordered or treated as evidence of a new order rule.
 Mixed/nested tuples, named patterns, spread/rest, declaration-site conversion and
 field mutation remain unimplemented. Strict checking and all 79 interpreter test
-groups pass, including the root-command [008 example](../language/examples/008-named-tuples.lts).
+groups pass, including the root-command [008 example](../language/examples/types/tuples/named-tuples.lts).
 Preserve prior tags and add igniter-v0.1.0-alpha.9. Experimental text-helper
 consent, full ownership/layout and self-hosting remain separate.
 See [INV-022 evidence](../research/investigations/INV-022-fvp-named-tuples.md).
@@ -772,7 +772,7 @@ remain. reportError/other input signatures, empty report calls and aggregate
 reporting are outside this change.
 
 Strict checking and 69 interpreter test groups pass, including the root-command
-[007 example](../language/examples/007-prompts-and-report.lts). Preserve alpha.1–alpha.7
+[007 example](../language/examples/foundations/io/prompts-and-report.lts). Preserve alpha.1–alpha.7
 and tag this source as igniter-v0.1.0-alpha.8. Named tuples remain pending approval;
 experimental text-helper consent is unchanged. See
 [INV-004 evidence](../research/investigations/INV-004-fvp-prompt-and-report-values.md).
@@ -797,7 +797,7 @@ arity/types, singleton/grouping/Unit distinctions, source-once destructuring,
 ordered receiver shadowing, value copies and compatible whole-value replacement.
 
 Strict no-emit checking and all 62 interpreter test groups pass, including the
-real [006 example](../language/examples/006-fixed-tuples.lts). Preserve alpha.1–alpha.5
+real [006 example](../language/examples/types/tuples/fixed-tuples.lts). Preserve alpha.1–alpha.5
 and add igniter-v0.1.0-alpha.6. Named/mixed/nested/rest tuples, member mutation,
 access grants, tuple reporting/equality, native layout and self-hosting remain
 unimplemented at this increment. The text helpers later receive separate

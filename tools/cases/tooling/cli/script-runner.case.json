@@ -9,7 +9,7 @@
     {
       "name": "interactive-input",
       "args": [
-        "language/examples/001-double-sum.lts"
+        "language/examples/foundations/io/double-sum.lts"
       ],
       "stdin": {
         "text": "7\n5\n"
@@ -25,7 +25,7 @@
     {
       "name": "forwarded-arguments",
       "args": [
-        "language/examples/020-script-arguments.lts",
+        "language/examples/io/process/script-arguments.lts",
         "--",
         "a b",
         "",
@@ -45,7 +45,7 @@
     {
       "name": "propagated-status",
       "args": [
-        "language/examples/004-factorial.lts"
+        "language/examples/functions/recursion/factorial.lts"
       ],
       "stdin": {
         "text": "-1\n"
@@ -110,7 +110,7 @@
       "name": "check-hint",
       "args": [
         "--check",
-        "language/examples/001-double-sum.lts"
+        "language/examples/foundations/io/double-sum.lts"
       ],
       "stdin": {
         "text": ""

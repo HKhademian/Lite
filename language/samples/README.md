@@ -1,6 +1,6 @@
 # Small problems, a few lines at a time
 
-Start with [adding two numbers](001_add_two_numbers.lts), then follow exercises 001–020 in the [full list](list.md). Each file tells a small story, supplies the numbers, and calculates an answer. Comments beside the answers show what to expect.
+Start with [adding two numbers](arithmetic/operations/add-two-numbers.lts), then follow exercises 001–020 in the [full list](list.md). Each file tells a small story, supplies the numbers, and calculates an answer. Comments beside the answers show what to expect.
 
 For short programs you can run with the current interpreter, use the
 [indexed FVP examples](../examples/README.md) in the sibling examples directory.

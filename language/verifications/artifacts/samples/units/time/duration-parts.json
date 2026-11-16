@@ -1,0 +1,26 @@
+{
+  "id": "sample.units.time.duration-parts",
+  "kind": "sample",
+  "source": {
+    "file": "../../../../../samples/units/time/duration-parts.lts",
+    "hash": "sha256:a36b6b72d79dc179effea2d7b94fcb112cea2e4edc72bc3d0cbd95dcb0ca5f83"
+  },
+  "features": [
+    "feature.numeric.integers.signed-arithmetic",
+    "feature.numeric.integers.truncating-remainder",
+    "feature.numeric.widths.sized-promotion",
+    "feature.bindings.mutability.lexical-shadowing"
+  ],
+  "description": "Split seconds into hours, minutes and seconds.",
+  "append": "io.outputLine(hours); io.outputLine(minutes); io.outputLine(seconds);",
+  "cases": [
+    {
+      "name": "observed-values",
+      "stdout": {
+        "text": "1\n1\n1\n",
+        "hash": "sha256:ccce065269620747ca153e9a430d44b175cdc1f7e0958741b567250a1d6b1d95"
+      },
+      "exitCode": 0
+    }
+  ]
+}

@@ -1,0 +1,25 @@
+{
+  "id": "showcase.control.unwinding.tagged-blocks-and-finally",
+  "kind": "showcase",
+  "source": {
+    "file": "../../../../../showcases/control/unwinding/tagged-blocks-and-finally.lts",
+    "hash": "sha256:7d2d82f927ae5333a3634222e3753f19a724a0b46e20fdca7be4ee9aec6d80ca"
+  },
+  "features": [
+    "feature.control.unwinding.tagged-transfers",
+    "feature.control.unwinding.finally-cleanup",
+    "feature.control.loops.loop-metadata",
+    "feature.io.reporting.report-values"
+  ],
+  "description": "Labeled block exits, multi-loop transfers, conditional then forwarding, and LIFO finally cleanup.",
+  "cases": [
+    {
+      "name": "tagged-blocks-and-finally",
+      "stdout": {
+        "text": "selected: 12 summary: exact-12-checked\ntrace: open-outer\ntrace: open-inner\ntrace: close-inner\ntrace: close-outer\n",
+        "hash": "sha256:08ff99ca4a9033915932b56bd34e05a749e3bab407f9b4b34bc4a9f98efdf246"
+      },
+      "exitCode": 0
+    }
+  ]
+}

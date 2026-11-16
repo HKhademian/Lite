@@ -91,7 +91,7 @@ copies and permissions, lack of stream effects, host snapshot stability under
 external mutation, before-effects signatures, shadowing, real launcher/direct CLI,
 empty/spaced/Unicode/dash/wildcard-looking/newline values, literal later --/--check,
 invalid suffixes, check-only, caller-relative paths and filenames with spaces.
-The [020 example](../../language/examples/020-script-arguments.lts) reports supplied values;
+The [020 example](../../language/examples/io/process/script-arguments.lts) reports supplied values;
 no arguments or an empty suffix produces no output. All 9 editor groups pass.
 
 Commit helper, CLI, example, checks and references atomically as

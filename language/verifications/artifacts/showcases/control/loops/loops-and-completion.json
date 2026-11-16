@@ -1,0 +1,27 @@
+{
+  "id": "showcase.control.loops.loops-and-completion",
+  "kind": "showcase",
+  "source": {
+    "file": "../../../../../showcases/control/loops/loops-and-completion.lts",
+    "hash": "sha256:be5374c180ff2cb8bb34a988aa47da72159faa76dccb540658a691fef2a0bd2b"
+  },
+  "features": [
+    "feature.control.loops.conditional-loop",
+    "feature.control.loops.sequence-traversal",
+    "feature.control.loops.value-accumulation",
+    "feature.control.loops.loop-metadata",
+    "feature.bindings.mutability.compound-updates",
+    "feature.io.reporting.report-values"
+  ],
+  "description": "Conditional and sequence loops, .index/.count/.value accumulators, break payloads, and then.",
+  "cases": [
+    {
+      "name": "loops-and-completion",
+      "stdout": {
+        "text": "5! = 120 weighted: 304 firstOver50: 58\n",
+        "hash": "sha256:a2bd2d5a4a85acb1620bb8aa6f6fd781d4d2efecef7dc16419b56a2647ee1d7e"
+      },
+      "exitCode": 0
+    }
+  ]
+}

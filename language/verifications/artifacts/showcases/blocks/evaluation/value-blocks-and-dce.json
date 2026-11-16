@@ -1,0 +1,24 @@
+{
+  "id": "showcase.blocks.evaluation.value-blocks-and-dce",
+  "kind": "showcase",
+  "source": {
+    "file": "../../../../../showcases/blocks/evaluation/value-blocks-and-dce.lts",
+    "hash": "sha256:551a82f7c29f6af3a70920b843a2fc559c6d35a21168a606d56a3998fc589e13"
+  },
+  "features": [
+    "feature.blocks.evaluation.value-blocks-and-dce",
+    "feature.bindings.mutability.lexical-shadowing",
+    "feature.io.reporting.report-values"
+  ],
+  "description": "Value vs statement blocks, pure dead-code elimination, and observable-effect preservation.",
+  "cases": [
+    {
+      "name": "value-blocks-and-dce",
+      "stdout": {
+        "text": "computed: 17 withEffect: 32 acc: 18\n",
+        "hash": "sha256:de632e9f5bb5063ae4147c752ef06944c24c57381ef2e3607629c43092cf9e05"
+      },
+      "exitCode": 0
+    }
+  ]
+}

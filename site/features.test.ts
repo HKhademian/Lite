@@ -127,8 +127,8 @@ test('all site showcase and play sample sources live outside site/ and match sam
       );
     } else {
       assert(
-        sample.file.startsWith('language/examples/') && !sample.file.slice('language/examples/'.length).includes('/'),
-        `${sample.id} should reference a top-level language/examples/ file`,
+        sample.file.startsWith('language/examples/') && sample.file.slice('language/examples/'.length).includes('/'),
+        `${sample.id} should reference a domain-grouped language/examples/ file`,
       );
     }
   }

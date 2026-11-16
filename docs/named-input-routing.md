@@ -14,7 +14,7 @@ In the current self-hosted compiler (TS and C targets), fixed-parameter call
 routing is also supported—covering interleaved positional and named arguments,
 `=name` shorthand, named replacement of an earlier positional contribution with
 source-order once-only evaluation, module-qualified calls, and named `self(...)`
-calls—verified in [example 012](../language/examples/012-named-arguments.lts) and
+calls—verified in [example 012](../language/examples/functions/calls/named-arguments.lts) and
 compiler parity cases. Defaults, spread, and full contextual tuple destination
 routing remain open.
 

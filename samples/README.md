@@ -4,14 +4,14 @@ Folder-grouped project samples showcasing algorithms, high-resolution RGBA canva
 
 For core language-specification examples (`001`–`024`), see [language/examples](../language/examples/README.md).
 
-## Programs (`programs/`)
+## Programs (`programs/{math,search,text,parsing}/`)
 
-- [fibonacci](programs/fibonacci.lts) — Iterative Fibonacci sequence and explicit formatting.
-- [primes-sieve](programs/primes-sieve.lts) — Prime generation up to 50 with `mut List<Int>`.
-- [binary-search](programs/binary-search.lts) — Binary search returning a named tuple result.
-- [caesar-cipher](programs/caesar-cipher.lts) — ASCII Caesar cipher round-trip over `core/text`.
-- [word-frequency](programs/word-frequency.lts) — Word frequency counter via `core/list`.
-- [rpn-evaluator](programs/rpn-evaluator.lts) — Stack-based Reverse Polish Notation evaluator.
+- [fibonacci](programs/math/fibonacci.lts) — Iterative Fibonacci sequence and explicit formatting.
+- [primes-sieve](programs/math/primes-sieve.lts) — Prime generation up to 50 with `mut List<Int>`.
+- [binary-search](programs/search/binary-search.lts) — Binary search returning a named tuple result.
+- [caesar-cipher](programs/text/caesar-cipher.lts) — ASCII Caesar cipher round-trip over `core/text`.
+- [word-frequency](programs/text/word-frequency.lts) — Word frequency counter via `core/list`.
+- [rpn-evaluator](programs/parsing/rpn-evaluator.lts) — Stack-based Reverse Polish Notation evaluator.
 
 ## Canvas Art (`graphics/art/`)
 
@@ -41,8 +41,8 @@ For core language-specification examples (`001`–`024`), see [language/examples
 - [step-sequencer](graphics/audio/step-sequencer.lts) — `320x200` toggleable 4×4 grid step sequencer.
 - [tone-keyboard](graphics/audio/tone-keyboard.lts) — `320x180` clickable C-major octave keyboard (`1`–`8`).
 
-## Games (`games/`)
+## Games (`games/arcade/`)
 
-- [paddle-pong](games/paddle-pong.lts) — `320x200` two-paddle Pong with AI tracking and audio cues.
-- [brick-breaker](games/brick-breaker.lts) — `320x200` RGBA brick breaker with paddle controls and chimes.
-- [grid-snake](games/grid-snake.lts) — `320x192` snake game using `List<Cell>` queue ops.
+- [paddle-pong](games/arcade/paddle-pong.lts) — `320x200` two-paddle Pong with AI tracking and audio cues.
+- [brick-breaker](games/arcade/brick-breaker.lts) — `320x200` RGBA brick breaker with paddle controls and chimes.
+- [grid-snake](games/arcade/grid-snake.lts) — `320x192` snake game using `List<Cell>` queue ops.

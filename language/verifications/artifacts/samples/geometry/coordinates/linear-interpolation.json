@@ -1,0 +1,28 @@
+{
+  "id": "sample.geometry.coordinates.linear-interpolation",
+  "kind": "sample",
+  "source": {
+    "file": "../../../../../samples/geometry/coordinates/linear-interpolation.lts",
+    "hash": "sha256:652331eb3504e35f2ba1f4bcc34faa7fde3025e65841f478672bc918b3dcd0e6"
+  },
+  "features": [
+    "feature.numeric.floats.mixed-arithmetic",
+    "feature.bindings.mutability.lexical-shadowing"
+  ],
+  "description": "Linear interpolation at a fraction.",
+  "append": "io.outputLine(value);",
+  "targets": [
+    "ts",
+    "c"
+  ],
+  "cases": [
+    {
+      "name": "observed-values",
+      "stdout": {
+        "text": "15\n",
+        "hash": "sha256:238903180cc104ec2c5d8b3f20c5bc61b389ec0a967df8cc208cdc7cd454174f"
+      },
+      "exitCode": 0
+    }
+  ]
+}

@@ -117,7 +117,7 @@ nearest-loop exits. Negative cases check wrong element contracts, missing grants
 readonly copies, captured data, bounds/empty pops, complex targets, overlapping
 reads/replacement and simultaneous/reentrant mutations before effects.
 
-The real launcher runs [013](../../language/examples/013-growable-lists.lts), reporting
+The real launcher runs [013](../../language/examples/types/collections/growable-lists.lts), reporting
 0 3, then 1, then 2; --check emits nothing. The real CLI reports a located
 BoundPanic and status 1 for an empty pop. Existing CLI resource-limit handling is
 retained; these checks do not simulate host heap exhaustion or promise recovery
@@ -140,7 +140,7 @@ select new permanent language restrictions. Text-helper consent is unchanged.
 
 Commit implementation, tests, example, editor changes and owning documentation
 atomically as igniter-v0.1.0-alpha.14, preserving all earlier tags. Continue with
-already selected scope automatically. The follow-up [014 input-history example](../../language/examples/014-input-history.lts)
+already selected scope automatically. The follow-up [014 input-history example](../../language/examples/io/streams/input-history.lts)
 uses only this supported list/I/O subset: collect entered integers until zero,
 then traverse/report and sum them. Real-launcher checks cover mixed-sign inputs,
 immediate zero, and check-only mode without input or output. No new feature or

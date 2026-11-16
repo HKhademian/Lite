@@ -1,0 +1,29 @@
+{
+  "id": "showcase.foundations.numeric.numbers-and-division",
+  "kind": "showcase",
+  "source": {
+    "file": "../../../../../showcases/foundations/numeric/numbers-and-division.lts",
+    "hash": "sha256:d016d5a67e56c7d5817449e8c2bc2e4c8b6c70f32bd598775e55dc17c11aa0d3"
+  },
+  "features": [
+    "feature.numeric.integers.signed-arithmetic",
+    "feature.numeric.integers.truncating-remainder",
+    "feature.numeric.integers.floor-division",
+    "feature.numeric.floats.mixed-arithmetic",
+    "feature.numeric.floats.literal-context",
+    "feature.numeric.widths.sized-promotion",
+    "feature.numeric.floats.power-operator",
+    "feature.io.reporting.report-values"
+  ],
+  "description": "Truncating vs floor division, Float-default power, narrow numeric widths, and binary32 widening.",
+  "cases": [
+    {
+      "name": "numbers-and-division",
+      "stdout": {
+        "text": "trunc: -3 -1 floor: -4 1\nratio: 3.5 powers: 512 -8\nwidths: 340 f32+1: 1.25\n",
+        "hash": "sha256:3f988331eba5c0d9ad58207a6e28086c247f3e78c61f6c6e381219849b905ab0"
+      },
+      "exitCode": 0
+    }
+  ]
+}

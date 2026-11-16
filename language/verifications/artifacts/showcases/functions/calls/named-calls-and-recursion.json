@@ -1,0 +1,37 @@
+{
+  "id": "showcase.functions.calls.named-calls-and-recursion",
+  "kind": "showcase",
+  "source": {
+    "file": "../../../../../showcases/functions/calls/named-calls-and-recursion.lts",
+    "hash": "sha256:3aad3cd2d6b2eba6c6a9ce1942cb5fc972a3dc9211082bd4b60beb6179938504"
+  },
+  "features": [
+    "feature.functions.calls.typed-recursion",
+    "feature.io.process.script-arguments",
+    "feature.io.process.explicit-exit",
+    "feature.io.reporting.report-values"
+  ],
+  "description": "Named/shorthand arguments, recursive self calls, and explicit termination via io.exit.",
+  "cases": [
+    {
+      "name": "default-divisor",
+      "args": [],
+      "stdout": {
+        "text": "weighted: 42 gcd: 6 sumDown/d: 3\n",
+        "hash": "sha256:911b731bd7e6c76710bf81afd84ec9db3b899249d3e42bc5786aea9cc2a9b8b4"
+      },
+      "exitCode": 0
+    },
+    {
+      "name": "zero-divisor-exit",
+      "args": [
+        "0"
+      ],
+      "stderr": {
+        "text": "divisor must be non-zero\n",
+        "hash": "sha256:2000be60966b8a5ac9159c99ce347aecff57ced8ea3f6b4a8101302f3bfef0d0"
+      },
+      "exitCode": 2
+    }
+  ]
+}

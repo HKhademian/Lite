@@ -60,7 +60,7 @@ argument effects, empty/multiline prompts, invalid input/EOF, writer failure,
 space/newline/literal formatting, left-to-right report evaluation, failed report
 arguments, static rejection before effects and unchanged helper boundaries.
 
-The real root-command [007 example](../../language/examples/007-prompts-and-report.lts)
+The real root-command [007 example](../../language/examples/foundations/io/prompts-and-report.lts)
 reads 7 and 5. With redirected input, stdout is exactly First number: Second
 number: sum: 12 followed by inputs: 7 5 equal: false, each report line ending in
 a newline. Input text is not echoed by the program; a terminal may echo typed

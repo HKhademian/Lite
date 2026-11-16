@@ -1,0 +1,25 @@
+{
+  "id": "showcase.modules.system.crypto-time-and-env",
+  "kind": "showcase",
+  "source": {
+    "file": "../../../../../showcases/modules/system/crypto-time-and-env.lts",
+    "hash": "sha256:30ef0b1f8de7c196c401b0da712f86e1931276400303592783b668f3fdfc9b33"
+  },
+  "features": [
+    "feature.core.crypto.digests-and-encodings",
+    "feature.core.system.time-and-process",
+    "feature.core.text.unicode-and-format",
+    "feature.io.reporting.report-values"
+  ],
+  "description": "SHA-256/HMAC-SHA256 digests, Hex/Base64 round-trips, and deterministic clock/host invariant checks.",
+  "cases": [
+    {
+      "name": "crypto-time-and-env",
+      "stdout": {
+        "text": "sha256: fd6a42133c59825d2d479b3ed2d93d4f57e5c1d2bdc037757262b91b223f6f6e\nhmac: 34bc17ee86492c6aeadb4d5fc50b17394177d80d8883ca4b6a37259ab43bec0c\nhex: 6c6974652d7374756479 b64: bGl0ZS1zdHVkeQ== decoded: lite-study\nclockOk: true hostOk: true\n",
+        "hash": "sha256:c2c2599294918d2033e0474e957f90c55b3994abfe49d5968273b71ceeee7291"
+      },
+      "exitCode": 0
+    }
+  ]
+}

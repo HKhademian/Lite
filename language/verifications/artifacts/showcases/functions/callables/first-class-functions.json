@@ -1,0 +1,26 @@
+{
+  "id": "showcase.functions.callables.first-class-functions",
+  "kind": "showcase",
+  "source": {
+    "file": "../../../../../showcases/functions/callables/first-class-functions.lts",
+    "hash": "sha256:9323a799f507a988be6a9119126bc130a58a924c83abfb59c6348708363cfa74"
+  },
+  "features": [
+    "feature.functions.callables.function-values",
+    "feature.types.aliases.transparent-aliases",
+    "feature.types.collections.growable-lists",
+    "feature.core.text.unicode-and-format",
+    "feature.io.reporting.report-values"
+  ],
+  "description": "Callable type aliases, contextual parameter inference, higher-order list helpers, and fn dispatch lists.",
+  "cases": [
+    {
+      "name": "first-class-functions",
+      "stdout": {
+        "text": "direct: 17 piped: 9\nevens*2: 4,8,12 sum: 24\n",
+        "hash": "sha256:68341c2471c2b649d39b6578649e2b18c6f2ba292c33cce8306d91c5073773de"
+      },
+      "exitCode": 0
+    }
+  ]
+}

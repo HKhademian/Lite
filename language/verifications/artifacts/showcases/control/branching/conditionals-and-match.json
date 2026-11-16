@@ -1,0 +1,26 @@
+{
+  "id": "showcase.control.branching.conditionals-and-match",
+  "kind": "showcase",
+  "source": {
+    "file": "../../../../../showcases/control/branching/conditionals-and-match.lts",
+    "hash": "sha256:01b2eed7d975961d38c255351f580b4d5cf67e626b1c691780c2e20b76cb7597"
+  },
+  "features": [
+    "feature.control.branching.boolean-if",
+    "feature.control.branching.comparison-chains",
+    "feature.control.branching.partial-conditionals",
+    "feature.control.branching.subjectless-match",
+    "feature.io.reporting.report-values"
+  ],
+  "description": "Chained range comparisons, expression if/else, partial statements, and subjectless Boolean match.",
+  "cases": [
+    {
+      "name": "conditionals-and-match",
+      "stdout": {
+        "text": "verified-band: B\nstatus: passing bonus: merit grade: B\n",
+        "hash": "sha256:20331cafc5d95f3ce404884af5a810831beb4b1b2b9cbd3abb63cb8032daa4bb"
+      },
+      "exitCode": 0
+    }
+  ]
+}
