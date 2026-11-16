@@ -2283,11 +2283,24 @@ a.is-completed .learn-done-dot {
   gap: 0.35rem;
   padding: 0.38rem 0.56rem;
 }
-.pg-icon-btn[hidden] { display: none; }
+.pg-icon-btn[hidden],
+#pg-reset[hidden] { display: none; }
+.pg-active-title {
+  font-size: 0.9rem;
+  font-weight: 600;
+  color: var(--ink);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: 240px;
+}
 .pg-save-btn {
   color: var(--accent);
   border-color: var(--accent);
   background: var(--accent-soft);
+}
+.snips-modal-tools .pg-select {
+  max-width: 220px;
 }
 .snips-cat-tabs {
   display: flex;

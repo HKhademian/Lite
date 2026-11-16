@@ -1049,14 +1049,18 @@ test('playground inline module initializes without TDZ or ReferenceError', async
   await new Promise(resolve => setTimeout(resolve, 25));
   assert.equal(els.get('pg-pause')?.getAttribute('aria-pressed'), 'false');
   const saveBtn = els.get('pg-save-snip');
+  const resetBtnEl = els.get('pg-reset');
   const editor = els.get('pg-editor');
-  assert(saveBtn && editor);
+  assert(saveBtn && resetBtnEl && editor);
   assert.equal(saveBtn.hidden, true, 'Save button should stay hidden when editor matches loaded sample');
+  assert.equal(resetBtnEl.hidden, true, 'Reset button should stay hidden when editor matches loaded sample');
   editor.value += '\n/* edited */\n';
   editor.trigger('input');
   assert.equal(saveBtn.hidden, false, 'Save button should appear once code is modified');
+  assert.equal(resetBtnEl.hidden, false, 'Reset button should appear once code is modified');
   saveBtn.trigger('click');
   assert.equal(saveBtn.hidden, true, 'Save button should hide again right after saving');
+  assert.equal(resetBtnEl.hidden, true, 'Reset button should hide again right after saving');
   assert.equal(storedSnips.length, 1);
   assert(
     replacedUrls.at(-1)?.includes('?snip=019335a1-0000-7000-8000-000000000001'),

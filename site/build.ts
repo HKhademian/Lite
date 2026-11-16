@@ -471,8 +471,13 @@ function renderPlaygroundPage(
   <section class="pane" aria-label="Source editor">
     <div class="pane-head">
       <div class="sample-picker">
-        <select id="pg-samples" class="pg-select" aria-label="Choose a sample">${optionsHtml}</select>
-        <button id="pg-reset" class="btn" type="button">Reset</button>
+        <button id="pg-sketches-btn" class="btn pg-icon-btn" type="button" title="Open stored codes, samples, examples, cases, and pieces" aria-label="Open stored codes, samples, examples, cases, or pieces">
+          <svg viewBox="0 0 16 16" width="15" height="15" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+            <path d="M2 4.5A1.5 1.5 0 0 1 3.5 3h3l1.5 1.5h4.5A1.5 1.5 0 0 1 14 6v6a1.5 1.5 0 0 1-1.5 1.5h-9A1.5 1.5 0 0 1 2 12V4.5Z"/>
+          </svg>
+          <span id="pg-sketches-count" class="badge">0</span>
+        </button>
+        <span id="pg-current-title" class="pg-active-title">${escapeHtml(playgroundDefaultSample.title)}</span>
       </div>
       <div class="pg-actions">
         <button id="pg-save-snip" class="btn pg-icon-btn pg-save-btn" type="button" hidden title="Save changes to localStorage (UUIDv7) and update URL" aria-label="Save changes">
@@ -481,12 +486,7 @@ function renderPlaygroundPage(
             <path d="M10.5 14v-4h-5v4M5.5 2v3h4"/>
           </svg>
         </button>
-        <button id="pg-sketches-btn" class="btn pg-icon-btn" type="button" title="Load stored codes, samples, examples, cases, and pieces" aria-label="Load code from stored sketches, samples, examples, cases, or pieces">
-          <svg viewBox="0 0 16 16" width="15" height="15" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
-            <path d="M2 4.5A1.5 1.5 0 0 1 3.5 3h3l1.5 1.5h4.5A1.5 1.5 0 0 1 14 6v6a1.5 1.5 0 0 1-1.5 1.5h-9A1.5 1.5 0 0 1 2 12V4.5Z"/>
-          </svg>
-          <span id="pg-sketches-count" class="badge">0</span>
-        </button>
+        <button id="pg-reset" class="btn" type="button" hidden title="Discard unsaved changes and reset">Reset</button>
         <button id="pg-compile" class="btn" type="button">Compile</button>
         <button id="pg-play" class="btn btn-primary" type="button" title="Run (Ctrl/Cmd + Enter)">&#9654; Play</button>
       </div>
@@ -589,6 +589,7 @@ function renderPlaygroundPage(
       <button class="snips-cat-tab" type="button" data-cat="piece" aria-pressed="false">Pieces</button>
     </div>
     <div class="snips-modal-tools">
+      <select id="pg-samples" class="pg-select" aria-label="Quick sample selector">${optionsHtml}</select>
       <input id="pg-sketches-filter" type="search" placeholder="Filter stored sketches, samples, examples, cases, and pieces..." aria-label="Filter code entries">
       <span id="pg-sketches-summary" class="code-card-meta">0 items</span>
     </div>
@@ -664,6 +665,7 @@ function renderPlaygroundPage(
   const pending = new Map();
   const snipsApi = typeof window !== "undefined" && window.LiteSnips ? window.LiteSnips : null;
   const saveSnipBtn = document.getElementById("pg-save-snip");
+  const titleEl = document.getElementById("pg-current-title");
   let activeSnipId = null;
   let activeLibraryItem = null;
   let libraryItems = null;
@@ -678,12 +680,14 @@ function renderPlaygroundPage(
   function updateDirtyState() {
     const dirty = editorEl.value !== baseline.code || stdinEl.value !== baseline.stdin || argsEl.value !== baseline.args;
     if (saveSnipBtn) saveSnipBtn.hidden = !dirty;
+    if (resetBtn) resetBtn.hidden = !dirty;
     return dirty;
   }
 
   function setBaseline() {
     baseline = { code: editorEl.value, stdin: stdinEl.value, args: argsEl.value };
     if (saveSnipBtn) saveSnipBtn.hidden = true;
+    if (resetBtn) resetBtn.hidden = true;
   }
 
   function loadLibraryCatalog() {
@@ -849,7 +853,8 @@ function renderPlaygroundPage(
     activeSnipId = null;
     activeLibraryItem = null;
     stopPlay(true);
-    select.value = meta.id;
+    if (select) select.value = meta.id;
+    if (titleEl) titleEl.textContent = meta.title;
     fileEl.textContent = meta.file;
     statusEl.textContent = "Loading " + meta.file + "...";
 
@@ -1049,12 +1054,18 @@ function renderPlaygroundPage(
     }
   }
 
-  select.addEventListener("change", () => { unlockAudio(); void loadSample(select.value, "load"); });
+  if (select) {
+    select.addEventListener("change", () => {
+      unlockAudio();
+      void loadSample(select.value, "load");
+      if (sketchesModal) sketchesModal.hidden = true;
+    });
+  }
   resetBtn.addEventListener("click", () => {
     unlockAudio();
     if (activeSnipId && loadSnip(activeSnipId)) return;
     if (activeLibraryItem) { loadLibraryItem(activeLibraryItem); return; }
-    void loadSample(select.value, "load");
+    void loadSample((currentSample && currentSample.id) || (select && select.value) || "${escapeHtml(playgroundDefaultSample.id)}", "load");
   });
   compileBtn.addEventListener("click", () => { void runAction("compile"); });
   playBtn.addEventListener("click", () => { unlockAudio(); void runAction("play"); });
@@ -1429,6 +1440,7 @@ function renderPlaygroundPage(
     editorEl.scrollLeft = 0;
     stdinEl.value = String(snip.stdin || "").replaceAll("\\n", "\\\\n");
     argsEl.value = String(snip.args || "");
+    if (titleEl) titleEl.textContent = snip.title;
     fileEl.textContent = snip.title + " · " + snip.id.slice(0, 8);
     rawTs = "";
     rawC = "";
@@ -1464,6 +1476,7 @@ function renderPlaygroundPage(
     editorEl.scrollLeft = 0;
     stdinEl.value = String(item.stdin || "").replaceAll("\\n", "\\\\n");
     argsEl.value = Array.isArray(item.args) ? item.args.join(" ") : "";
+    if (titleEl) titleEl.textContent = item.title;
     fileEl.textContent = item.file || item.title;
     rawTs = "";
     rawC = "";
@@ -1560,6 +1573,7 @@ function renderPlaygroundPage(
         if (nextTitle) {
           snipsApi.update(item.id, { title: nextTitle });
           if (item.id === activeSnipId) {
+            if (titleEl) titleEl.textContent = nextTitle;
             fileEl.textContent = nextTitle + " · " + item.id.slice(0, 8);
           }
         }
@@ -1726,6 +1740,7 @@ function renderPlaygroundPage(
         });
         if (updated) {
           setBaseline();
+          if (titleEl) titleEl.textContent = updated.title;
           fileEl.textContent = updated.title + " · " + updated.id.slice(0, 8);
           statusEl.textContent = "Saved sketch (" + updated.id.slice(0, 8) + ")";
           const nextUrl = new URL(window.location.href);
@@ -1760,6 +1775,7 @@ function renderPlaygroundPage(
         activeLibraryItem = null;
         currentSample = null;
         setBaseline();
+        if (titleEl) titleEl.textContent = created.title;
         fileEl.textContent = created.title + " · " + created.id.slice(0, 8);
         statusEl.textContent = "Saved new sketch (" + created.id.slice(0, 8) + ")";
         const nextUrl = new URL(window.location.href);
