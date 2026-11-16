@@ -45,6 +45,30 @@ also treats `Float` and `Double` as aliases of the same `Float64` type. These
 names do not create additional type identities; narrower numeric types remain
 separate from these aliases. Use the explicit-width names in review examples.
 
+### Unsigned integers: explicit, portable capability
+
+The user favors signed integers for ordinary Lite code and wants unsigned
+integers available as an explicit, niche capability across emission targets.
+Ordinary language semantics and core implementation should not require Lite
+programmers to use unsigned types. Longer, conspicuous type symbols are desired
+for code that deliberately needs them; `UnsignedInt64` is an illustrative name,
+not a finalized spelling or alias rule.
+
+Unsigned values can be useful at low-level boundaries such as C FFI and in
+binary representations. Supporting the same Lite-level capability across
+targets may require different lowering strategies: a target without a directly
+matching type can need generated operations and may be slower. Backend use of
+host unsigned operations or storage for an explicitly required representation
+is not, by itself, a requirement that ordinary Lite programs use unsigned
+types. Portability is the intended direction, not current implementation or a
+promise of identical target performance or ABI.
+
+The exact widths and names, overflow and conversion behavior, literal rules,
+FFI layout and ABI, unsupported-target diagnostics, and generated costs remain
+to be reviewed. No particular feature or program acquires a new implicit
+unsigned dependency through this direction. The current numeric documentation
+reports unsigned widths as unimplemented; see [numbers](../../../docs/numbers.md).
+
 **Baseline:** A literal such as `raw := "user-42"` is used as String in current inference examples. Literal grammar and context-sensitive typing are not a complete contract.
 
 **Initial assessment and probes:** Compare a direct literal in a `UserID` destination with an already bound String; do not assume they must be treated identically. Check numeric bounds and contextual inference too.
