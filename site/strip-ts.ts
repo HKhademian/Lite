@@ -145,6 +145,11 @@ function stripParamList(params: string): string {
   return out.join('');
 }
 
+const JS_EXPR_PREFIX_KEYWORDS = new Set([
+  'return', 'throw', 'case', 'typeof', 'void', 'delete',
+  'new', 'await', 'yield', 'else', 'do', 'in', 'of', 'instanceof',
+]);
+
 /** Strip TypeScript-only syntax from Lite's emitted TypeScript into browser-runnable JS. */
 export function stripLiteTs(source: string): string {
   const out: string[] = [];
@@ -292,6 +297,33 @@ export function stripLiteTs(source: string): string {
     if (i > 0 && !/[a-zA-Z0-9_$]/.test(source[i - 1]!) && /^as\s+[a-zA-Z_$({[]/.test(source.slice(i))) {
       i = skipTypeAnnotation(source, i + 2, new Set([';', ',', ')', ']']));
       continue;
+    }
+
+    // Postfix TypeScript non-null assertion `expr!` (must not strip prefix logical `!expr` or `!==`/`!=`).
+    if (ch === '!' && source[i + 1] !== '=' && i > 0) {
+      const prev = source[i - 1]!;
+      if (prev === ']') {
+        i += 1;
+        continue;
+      }
+      if (/[a-zA-Z0-9_$]/.test(prev)) {
+        let wordStart = i - 1;
+        while (wordStart > 0 && /[a-zA-Z0-9_$]/.test(source[wordStart - 1]!)) {
+          wordStart -= 1;
+        }
+        if (!JS_EXPR_PREFIX_KEYWORDS.has(source.slice(wordStart, i))) {
+          i += 1;
+          continue;
+        }
+      } else if (prev === ')') {
+        let next = i + 1;
+        while (next < n && /\s/.test(source[next]!)) next += 1;
+        const nextCh = source[next] ?? '';
+        if (nextCh !== '' && '.[(;,)]:?=*/%&|<>^'.includes(nextCh)) {
+          i += 1;
+          continue;
+        }
+      }
     }
 
     out.push(ch);

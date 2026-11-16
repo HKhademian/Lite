@@ -11,6 +11,7 @@ import { sourceModuleIdentity } from '../compiler/source.ts';
 import { heroSample, playgroundDefaultSample, sampleGroups, showcaseSamples, type ShowcaseSample } from './groups.ts';
 import { escapeHtml, highlightLite, highlightTs } from './highlight.ts';
 import { playGroups, playSamples, type PlaySample } from './play-samples.ts';
+import { appendPlayKeepalive, stripPlayKeepaliveTs } from './play-keepalive.ts';
 import { playgroundWorkerJs } from './playground-worker.ts';
 import { stripLiteTs } from './strip-ts.ts';
 import { siteCss } from './styles.ts';
@@ -142,11 +143,24 @@ function captureCanvasPreview(generatedTs: string, title: string, badge?: string
 function compileAndRunSample(sample: AnySample, tsCompiler: CompilerBuild, badge?: string): RenderedSample {
   const fullPath = resolve(root, sample.file);
   const source = readFileSync(fullPath, 'utf8');
-  const compiled = compileBuiltCompiler(tsCompiler, { text: source, name: sample.file, cwd: root });
-  if (compiled.status !== 0) {
-    throw new Error(`failed to compile ${sample.file}:\n${compiled.stderr.toString('utf8')}`);
+  const keepaliveSource = appendPlayKeepalive(source);
+  let compiled = compileBuiltCompiler(tsCompiler, {
+    text: keepaliveSource ?? source,
+    name: sample.file,
+    cwd: root,
+  });
+  let generatedTs: string;
+  if (keepaliveSource !== null && compiled.status === 0) {
+    generatedTs = stripPlayKeepaliveTs(compiled.stdout.toString('utf8'));
+  } else {
+    if (keepaliveSource !== null) {
+      compiled = compileBuiltCompiler(tsCompiler, { text: source, name: sample.file, cwd: root });
+    }
+    if (compiled.status !== 0) {
+      throw new Error(`failed to compile ${sample.file}:\n${compiled.stderr.toString('utf8')}`);
+    }
+    generatedTs = compiled.stdout.toString('utf8');
   }
-  const generatedTs = compiled.stdout.toString('utf8');
 
   const scratch = mkdtempSync(join(tmpdir(), 'lite-site-sample-'));
   try {
@@ -1594,6 +1608,8 @@ export function buildSite(options?: BuildSiteOptions): void {
   writeFileSync(join(outputDir, 'playground', 'compiler-c.js'), stripTypeScriptTypes(compilerCTs, { mode: 'strip' }));
   const stripTs = readFileSync(join(root, 'site', 'strip-ts.ts'), 'utf8');
   writeFileSync(join(outputDir, 'playground', 'strip-ts.js'), stripTypeScriptTypes(stripTs, { mode: 'strip' }));
+  const playKeepaliveSrc = readFileSync(join(root, 'site', 'play-keepalive.ts'), 'utf8');
+  writeFileSync(join(outputDir, 'playground', 'play-keepalive.js'), stripTypeScriptTypes(playKeepaliveSrc, { mode: 'strip' }));
   const codeViewTs = readFileSync(join(root, 'site', 'code-view.ts'), 'utf8');
   writeFileSync(join(outputDir, 'playground', 'code-view.js'), stripTypeScriptTypes(codeViewTs, { mode: 'strip' }));
   const highlightTsSrc = readFileSync(join(root, 'site', 'highlight.ts'), 'utf8');

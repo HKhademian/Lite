@@ -23,29 +23,37 @@ function listSampleFiles(dir: string): string[] {
 
 test('stripLiteTs strips definite assignments, generic helpers, and as casts for runnable JS', () => {
   const routedSource = [
+    'const points = ["a", "b", "c"];',
+    'const pair = [10n, 20n];',
+    'const idx = 1;',
     'const lite_res = (() => {',
     '  let lite$slot_0!: bigint;',
     '  let lite$slot_1!: bigint;',
     '  lite$slot_1 = 20n;',
     '  lite$slot_0 = 10n;',
-    '  return lite$slot_0 - lite$slot_1;',
+    '  return (pair)[0]! - lite$slot_1 + (lite$slot_0 - 10n);',
     '})();',
     'function lite$listPopFront<T>(items: T[], at: number): T {',
     '  if (items.length === 0) throw new Error(String(at));',
     '  return items.shift() as T;',
     '}',
-    'return { res: lite_res, first: lite$listPopFront<string>(["first", "second"], 0) };',
+    'function pickPoint(): string {',
+    '  return points[idx]!;',
+    '}',
+    'return { res: lite_res, first: lite$listPopFront<string>(["first", "second"], 0), point: pickPoint() };',
   ].join('\n');
 
   const stripped = stripLiteTs(routedSource);
   assert(!stripped.includes('!:'));
+  assert(!stripped.includes(']!'));
   assert(!stripped.includes('<T>'));
   assert(!stripped.includes('<string>'));
   assert(!stripped.includes(' as T'));
 
-  const result = (new Function(stripped) as () => { res: bigint; first: string })();
+  const result = (new Function(stripped) as () => { res: bigint; first: string; point: string })();
   assert.equal(result.res, -10n);
   assert.equal(result.first, 'first');
+  assert.equal(result.point, 'b');
 });
 
 test('highlightLite highlights newer built-in types and operators', () => {

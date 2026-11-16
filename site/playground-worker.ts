@@ -1,6 +1,7 @@
 /** Browser Web Worker script for compiling (TS & C) and running Lite programs in Playground. */
 
 export const playgroundWorkerJs = `import { stripLiteTs } from './strip-ts.js';
+import { appendPlayKeepalive, stripPlayKeepaliveTs } from './play-keepalive.js';
 
 class ExitSignal {
   constructor(code) {
@@ -107,6 +108,20 @@ function compileWith(compilerSource, readSource, source) {
       return compileMain(write, readSource);
     },
   );
+}
+
+function compileTsForPlayground(compilerSource, readSource, source) {
+  const withKeepalive = appendPlayKeepalive(source ?? '');
+  if (withKeepalive !== null) {
+    const keepaliveResult = compileWith(compilerSource, readSource, withKeepalive);
+    if (keepaliveResult.ok && keepaliveResult.stdout) {
+      return {
+        ...keepaliveResult,
+        stdout: stripPlayKeepaliveTs(keepaliveResult.stdout),
+      };
+    }
+  }
+  return compileWith(compilerSource, readSource, source);
 }
 
 function attachPlayBridge(js) {
@@ -243,7 +258,7 @@ self.onmessage = async (event) => {
     }
 
     const tsCompilerSource = await loadCompilerSource('compiler.js');
-    const compileResult = compileWith(tsCompilerSource, readSource, source);
+    const compileResult = compileTsForPlayground(tsCompilerSource, readSource, source);
 
     if (!compileResult.ok || !compileResult.stdout) {
       self.postMessage({

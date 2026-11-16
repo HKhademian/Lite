@@ -372,6 +372,12 @@ function simplifyTsProgramNames(source: string): string {
       primary.set(name, localMatch[1]!);
       continue;
     }
+    const tempMatch = /^lite\$((?:val|cnt|lidx|litem|iter)\d+)$/.exec(name);
+    if (tempMatch) {
+      seen.push(name);
+      primary.set(name, tempMatch[1]!);
+      continue;
+    }
     const shadowMatch = /^lite_([A-Za-z0-9_]+)\$(\d+)$/.exec(name);
     if (shadowMatch) {
       shadowed.push({ raw: name, base: shadowMatch[1]!, suffix: Math.max(2, Number(shadowMatch[2]!)) });
