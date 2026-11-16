@@ -89,6 +89,14 @@ Sharing a layout does not by itself authorize implicit conversion or unchecked
 memory reinterpretation. This is a type-design direction, not evidence that
 the current compiler implements general distinct types.
 
+**Parked for future discussion:** The user is considering making alias and
+distinct type definitions explicit parts of the language syntax. Review how
+the two concepts should be expressed and distinguished, including their effect
+on readability and grammar. `Alias := type TypeExpression` is the currently
+selected transparent-alias spelling; the illustrated `distinct` form has not
+settled the full syntax. This question does not select new keywords or replace
+the existing alias rule.
+
 **Initial assessment and probes:** Keep separate UserID and OrderID even with String underneath. Compare nominal wrappers with transparent aliases and ask which operations, invariants and representation each preserves.
 
 ## 1.3 Tuples, records, and arrays
