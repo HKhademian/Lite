@@ -1,0 +1,29 @@
+/* Showcase 06.03 — Deterministic cryptography, Hex/Base64 encoding, and time/process host checks. */
+
+io := import "core/io";
+crypto := import "core/crypto";
+unicode := import "core/unicode";
+time := import "core/time";
+proc := import "core/process";
+path := import "core/path";
+text := import "core/text";
+
+payload := "lite-study";
+bytes := unicode.utf8Encode(payload);
+sha := crypto.sha256Text(payload);
+mac := crypto.hmacSha256Bytes(unicode.utf8Encode("study-key"), bytes);
+hexed := crypto.hexEncode(bytes);
+b64 := crypto.base64Encode(bytes);
+roundtrip := unicode.utf8DecodeStrict(crypto.base64Decode(b64));
+
+t0 := time.monotonicNs();
+time.sleepMs(1);
+t1 := time.monotonicNs();
+isoOk := text.endsWith(time.utcIsoNow(), "Z");
+dateOk := text.length(time.localDate()) == 10;
+hostOk := path.isDirectory(proc.cwd()) and text.length(proc.platform()) > 0 and text.length(proc.arch()) > 0;
+
+io.outputLine("sha256:", sha);
+io.outputLine("hmac:", mac);
+io.outputLine("hex:", hexed, "b64:", b64, "decoded:", roundtrip.text);
+io.outputLine("clockOk:", t0 >= 0 and t1 >= t0 and dateOk and isoOk, "hostOk:", hostOk);

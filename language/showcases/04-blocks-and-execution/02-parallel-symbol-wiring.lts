@@ -1,0 +1,49 @@
+/* Showcase 04.02 — Parallel compile-time symbol wiring, mutual recursion, and nearer shadowing. */
+
+io := import "core/io";
+
+/* Root declarations wire in parallel; functions may refer to later root bindings. */
+readLate := fn(): Int { lateRoot * 2 };
+lateRoot := 15;
+
+/* Inner blocks share the exact same compile-time wiring model: mutual & own-name recursion, forward reads. */
+wired := {
+    isEven := fn(n: Int): Bool {
+        if n == 0 { true } else { isOdd(n - 1) }
+    };
+    isOdd := fn(n: Int): Bool {
+        if n == 0 { false } else { isEven(n - 1) }
+    };
+    stepSum := fn(n: Int): Int {
+        if n <= 0 { 0 } else { n + stepSum(n - 1) }
+    };
+    readInner := fn(): Int { innerTarget };
+    innerTarget := if isEven(6) { stepSum(4) } else { 0 };
+    readInner()
+};
+
+/* Nearer-forward shadowing in deferred fn bodies vs eager outer-shadow reads. */
+depth := 1;
+precedence := {
+    d1 := fn(): Int { depth };
+    d2 := {
+        d2Fn := fn(): Int { depth };
+        d3 := {
+            d3Fn := fn(): Int { depth };
+            depth := 3;
+            d3Fn()
+        };
+        depth := 2;
+        d2Fn() * 10 + d3
+    };
+    depth := 9;
+    d1() * 100 + d2
+};
+
+/* Eager initialization reads the outer binding on the RHS before introducing the inner shadow. */
+shadowRead := {
+    depth := depth + 40;
+    depth
+};
+
+io.outputLine("lateRoot*2:", readLate(), "wired:", wired, "precedence:", precedence, "shadowRead:", shadowRead);

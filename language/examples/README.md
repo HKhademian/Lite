@@ -119,6 +119,7 @@ examples. They live under [compiler/](../../compiler/README.md) and are run with
   SHA-256 hashing.
 
 For project showcases, graphics, audio, and mini-game demos, see [samples](../../samples/README.md).
+For the progressive chapter-by-chapter learning curriculum, see the [ability and feature showcase](../showcases/README.md).
 
 When a language feature lands, revisit these examples for obsolete workarounds. Keep an example that explicitly demonstrates the replaced construct; otherwise prefer the simpler current form. See the [artifact-refresh checklist](../../docs/tooling-and-learning.md#refreshing-artifacts-after-a-language-change).
 

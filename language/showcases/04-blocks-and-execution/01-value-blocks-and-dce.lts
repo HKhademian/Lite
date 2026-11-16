@@ -1,0 +1,38 @@
+/* Showcase 04.01 — Value-producing blocks, final-item rule, statement scopes, and dead-code pruning. */
+
+io := import "core/io";
+
+base := 5;
+var acc := 0;
+
+/* An inner `{ ... }` block evaluates to its final expression while enclosing its own bindings. */
+computed := {
+    doubled := base * 2;
+    offset := 7;
+    doubled + offset
+};
+
+/* A block ending in a statement or assignment yields Unit and runs only for its effects. */
+{
+    step := computed - 2;
+    acc += step;
+}
+
+/* Unused pure declarations and uninvoked local functions inside blocks are eliminated safely. */
+simplified := {
+    unusedValue := 1000;
+    unusedClosure := fn(k: Int): Int { k + unusedValue };
+    computed + acc
+};
+
+/* Calls with observable effects are always retained even when their bound name is unused. */
+bump := fn(delta: Int): Int {
+    acc += delta;
+    acc
+};
+withEffect := {
+    ignoredResult := bump(3);
+    simplified
+};
+
+io.outputLine("computed:", computed, "withEffect:", withEffect, "acc:", acc);

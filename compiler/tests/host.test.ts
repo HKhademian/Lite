@@ -754,7 +754,9 @@ test('default verification and expectation updates use TS artifacts without T00'
   try {
     symlinkSync(join(root, 'igniter/node_modules'), join(directory, 'igniter/node_modules'));
     copyFileSync(join(root, 'igniter/package-lock.json'), join(directory, 'igniter/package-lock.json'));
-    for (const folder of ['language/verifications', 'language/examples', 'language/samples']) cpSync(join(root, folder), join(directory, folder), { recursive: true });
+    for (const folder of ['language/verifications', 'language/examples', 'language/samples', 'language/showcases']) {
+      if (existsSync(join(root, folder))) cpSync(join(root, folder), join(directory, folder), { recursive: true });
+    }
     const registry = JSON.parse(readFileSync(join(root, 'language/verifications/features.json'), 'utf8')) as { features: { docs: string[] }[] };
     for (const item of registry.features) for (const path of item.docs) {
       mkdirSync(dirname(join(directory, path)), { recursive: true }); copyFileSync(join(root, path), join(directory, path));

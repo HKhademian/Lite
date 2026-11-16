@@ -1,0 +1,27 @@
+/* Showcase 01.01 — Bindings, zero defaults, reserved (?) storage, and mutability. */
+
+io := import "core/io";
+
+/* `:=` creates an immutable binding with an inferred type. */
+course := "LiteLang";
+lessonNumber := 1;
+
+/* Explicit type annotations can omit an initial value to take the type's zero value. */
+var zeroCount: Int;
+flagDefault: Bool;
+
+/* `= ?` reserves storage; first initialization happens explicitly later. */
+var greeting: String = ?;
+if lessonNumber == 1 {
+    greeting = "Welcome";
+} else {
+    greeting = "Review";
+}
+
+/* Only `var` bindings allow reassignment (`=`) or compound updates (`+=`, `-=`). */
+var score := 10;
+score = score + 5;
+score += 20;
+
+io.outputLine("course:", course, "greeting:", greeting);
+io.outputLine("defaults:", zeroCount, flagDefault, "score:", score);

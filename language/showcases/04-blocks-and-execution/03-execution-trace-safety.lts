@@ -1,0 +1,27 @@
+/* Showcase 04.03 — Compile-time wiring vs sequential runtime execution-trace initialization. */
+
+io := import "core/io";
+
+/* 1. A root function referencing a later reserved `var` waits until runtime init before being called. */
+var rootSlot: Int = ?;
+readSlot := fn(): Int { rootSlot + 100 };
+rootSlot = 25;
+rootAns := readSlot();
+
+/* 2. Inside blocks, closures may perform write-before-read on reserved `var` storage, or be called after late decls initialize. */
+blockAns := {
+    var innerSlot: Int = ?;
+    initAndRead := fn(): Int {
+        innerSlot = 18;
+        innerSlot * 2
+    };
+    written := initAndRead();
+
+    /* Deferred closures pushed into a List before `lateItem` is declared are safe once `lateItem` runs first. */
+    tasks: mut List<fn(): Int> = [];
+    push_back(mut tasks, fn(): Int { lateItem + written });
+    lateItem := 14;
+    tasks[0]()
+};
+
+io.outputLine("rootAns:", rootAns, "blockAns:", blockAns);

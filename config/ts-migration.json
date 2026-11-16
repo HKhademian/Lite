@@ -2,7 +2,7 @@
   "schemaVersion": 1,
   "recorded": "2026-11-16",
   "compilerSourceChanged": false,
-  "scenarios": 109,
+  "scenarios": 128,
   "failures": [],
-  "note": "Baseline gate detects scenario inventory changes or regressions against the reviewed TS verification suite; zero failures currently remain across the 109 verified scenarios."
+  "note": "Baseline gate detects scenario inventory changes or regressions against the reviewed TS verification suite; zero failures currently remain across the 128 verified scenarios."
 }

@@ -1,0 +1,43 @@
+/* Showcase 05.01 — Named/positional arguments, =name shorthand, self recursion, and io.exit termination. */
+
+io := import "core/io";
+list := import "core/list";
+text := import "core/text";
+
+/* Positional, named, and `=name` shorthand call arguments compose freely. */
+weighted := fn(a: Int, b: Int, weight: Int): Int {
+    (a + b) * weight
+};
+
+/* `self(...)` supports positional or named recursive calls on anonymous/bound functions. */
+gcd := fn(a: Int, b: Int): Int {
+    if b == 0 { a } else { self(b, a % b) }
+};
+
+sumDown := fn(n: Int, acc: Int): Int {
+    if n <= 0 { acc } else { self(n = n - 1, acc = acc + n) }
+};
+
+/* Explicit error termination helper using `io.errorLine` and non-zero `io.exit`. */
+failZeroDivisor := fn(msg: String): Unit {
+    io.errorLine(msg);
+    io.exit(2);
+};
+
+args := io.inputArgs();
+var divisor := 4;
+if list.listCountText(args) > 0 {
+    parsed := text.textToInt(args[0]);
+    if parsed.ok {
+        divisor = parsed.value;
+    }
+}
+if divisor == 0 {
+    failZeroDivisor("divisor must be non-zero");
+}
+
+a := 6;
+b := 8;
+score := weighted(a, =b, weight = 3);
+quot := sumDown(5, 0) / divisor;
+io.outputLine("weighted:", score, "gcd:", gcd(48, 18), "sumDown/d:", quot);

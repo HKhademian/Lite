@@ -1,0 +1,24 @@
+/* Showcase 03.01 — Positional, named, and mixed tuples, shorthand, label conversion, and destructuring. */
+
+io := import "core/io";
+
+/* Positional, singleton, named, and `=name` shorthand tuples. */
+pair := (14, "ok");
+single := (99,);
+x := 640;
+y := 480;
+rect := (=x, =y, label = "canvas");
+
+/* Mixed tuple fields combine unnamed positions and labeled fields. */
+mix: (:Int, active: Bool) = (7, active = true);
+
+/* Explicit receiving types relabel tuple positions in stored order. */
+renamed: (w: Int, h: Int, title: String) = rect;
+
+/* Positional destructuring unpacks fields into fresh bindings. */
+(width, height, title) := renamed;
+var (p0, p1) := (3, 4);
+p0 += p1;
+
+io.outputLine("pair:", pair, "single:", single.0);
+io.outputLine("renamed:", width, height, title, "mixed:", mix.0, mix.active, "sum:", p0);

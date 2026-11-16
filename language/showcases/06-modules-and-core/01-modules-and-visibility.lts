@@ -1,0 +1,9 @@
+/* Showcase 06.01 — Namespace imports and pub types, values, and functions. */
+
+io := import "core/io";
+stats := import "./helpers/math_stats.lts";
+
+report: stats.RangeStats = stats.summarize([4, 9, 2, 15, 7], 0);
+
+io.outputLine("module:", stats.VERSION);
+io.outputLine("min:", report.min, "max:", report.max, "sum:", report.sum, "span:", stats.span(report));

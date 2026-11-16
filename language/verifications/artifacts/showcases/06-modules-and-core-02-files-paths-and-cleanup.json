@@ -1,0 +1,25 @@
+{
+  "id": "showcase.06-modules-and-core.02-files-paths-and-cleanup",
+  "kind": "showcase",
+  "source": {
+    "file": "../../../showcases/06-modules-and-core/02-files-paths-and-cleanup.lts",
+    "hash": "sha256:839ecd2f7b9a5019bd9a6c42380c15527cec256c5b4e582bc7621203768cb03a"
+  },
+  "features": [
+    "core.fs-path",
+    "core.unicode-format",
+    "finally.cleanup",
+    "io.report"
+  ],
+  "description": "Path transformations, temp directory read/write/append with finally cleanup, and formatted output.",
+  "cases": [
+    {
+      "name": "files-paths-and-cleanup",
+      "stdout": {
+        "text": "stem=lesson ext=.lts -> ../06/lesson.ts\nfsOk: true dir: notes text: alpha|beta\n",
+        "hash": "sha256:56949043783fd4c4ea6243edbf13273d89263c3ff1fa28dc51672f8b93bdfdcd"
+      },
+      "exitCode": 0
+    }
+  ]
+}

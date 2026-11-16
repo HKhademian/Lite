@@ -1,0 +1,41 @@
+/* Showcase 05.03 — Lexical closures capturing var storage, mut Lists, loop items, and escaping frames. */
+
+io := import "core/io";
+fmt := import "core/format";
+
+/* Each invocation of `makeCounter` allocates an independent mutable `current` state. */
+makeCounter := fn(start: Int, step: Int): fn(): Int {
+    var current := start;
+    fn(): Int {
+        current = current + step;
+        current
+    }
+};
+
+cFast := makeCounter(0, 5);
+cOffset := makeCounter(100, 1);
+
+/* Closures can capture and update a surrounding `mut List` across inner scopes. */
+events: mut List<Int> = [];
+{
+    threshold := 10;
+    pushScaled := fn(raw: Int): Unit {
+        if raw >= threshold {
+            push_back(mut events, raw * 2);
+        }
+    };
+    pushScaled(7);
+    pushScaled(12);
+    pushScaled(20);
+}
+
+/* Loop-body closures capture each iteration's own `item` value independently. */
+getters: mut List<fn(): Int> = [];
+scale := 10;
+loop [1, 2, 3] as item {
+    push_back(mut getters, fn(): Int { item * scale });
+}
+
+io.outputLine("counters:", cFast(), cFast(), cOffset(), cFast());
+io.outputLine("events:", fmt.joinIntTexts(events, ","));
+io.outputLine("loopClosures:", getters[0](), getters[1](), getters[2]());

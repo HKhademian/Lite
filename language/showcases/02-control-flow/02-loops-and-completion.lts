@@ -1,0 +1,31 @@
+/* Showcase 02.02 — Conditional loops, sequence traversal, .index/.value, break payloads, and then. */
+
+io := import "core/io";
+
+/* 1. Conditional action loop updating mutable state. */
+var n := 1;
+var factorial := 1;
+loop n <= 5 {
+    factorial *= n;
+    n += 1;
+}
+
+/* 2. Value-producing sequence loop using `.value` and `.index`, completed by `then`. */
+weights: List<Int> = [10, 20, 30, 40];
+weightedSum := loop weights as w {
+    .value + w * (.index + 1)
+} then {
+    .value + .count
+};
+
+/* 3. Early payload exit with `break value`. */
+firstOverFifty := loop [12, 27, 58, 91] as item {
+    if item > 50 {
+        break item;
+    }
+    0
+} then {
+    .value
+};
+
+io.outputLine("5! =", factorial, "weighted:", weightedSum, "firstOver50:", firstOverFifty);

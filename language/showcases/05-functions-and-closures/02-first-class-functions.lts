@@ -1,0 +1,57 @@
+/* Showcase 05.02 — First-class callable types, contextual inference, higher-order lists, and dispatch tables. */
+
+io := import "core/io";
+fmt := import "core/format";
+
+IntOp := type fn(Int): Int;
+IntCheck := type fn(Int): Bool;
+
+applyOp := fn(op: IntOp, value: Int): Int {
+    op(value)
+};
+
+mapList := fn(items: List<Int>, f: IntOp): List<Int> {
+    out: mut List<Int> = [];
+    loop items as item {
+        push_back(mut out, f(item));
+    }
+    out
+};
+
+filterList := fn(items: List<Int>, pred: IntCheck): List<Int> {
+    out: mut List<Int> = [];
+    loop items as item {
+        if pred(item) {
+            push_back(mut out, item);
+        }
+    }
+    out
+};
+
+foldList := fn(items: List<Int>, seed: Int, combine: fn(Int, Int): Int): Int {
+    var acc := seed;
+    loop items as item {
+        acc = combine(acc, item);
+    }
+    acc
+};
+
+/* Parameter and return types infer cleanly from the expected `IntOp` / `fn` contract. */
+direct := applyOp(fn(k) { k * k + 1 }, 4);
+ops: List<IntOp> = [
+fn(x) { x + 1 },
+fn(x) { x * 2 },
+fn(x) { x - 3 },
+];
+
+var piped := 5;
+loop ops as step {
+    piped = step(piped);
+}
+
+source: List<Int> = [1, 2, 3, 4, 5, 6];
+evensDoubled := mapList(filterList(source, fn(n) { n % 2 == 0 }), fn(n) { n * 2 });
+sumVal := foldList(evensDoubled, 0, fn(a, b) { a + b });
+
+io.outputLine("direct:", direct, "piped:", piped);
+io.outputLine("evens*2:", fmt.joinIntTexts(evensDoubled, ","), "sum:", sumVal);

@@ -1,0 +1,24 @@
+/* Showcase 03.03 — Transparent type aliases at root and inside blocks with forward alias wiring. */
+
+io := import "core/io";
+
+Point := type (x: Int, y: Int);
+ScoreList := type List<Int>;
+
+origin: Point = (x = 3, y = 4);
+scores: ScoreList = [10, 20, 30];
+
+/* Inner blocks support their own `type` aliases, including forward references and shadowed names. */
+blockSum := {
+    Alias := type RawPair;
+    RawPair := type (left: Int, right: Int);
+    Point := type String;
+
+    label: Point = "inner";
+    pair: Alias = (left = origin.x * 2, right = scores[2]);
+    if label == "inner" { pair.left + pair.right } else { 0 }
+};
+
+/* The outer `Point` alias remains intact after the inner block ends. */
+nextPoint: Point = (x = origin.x + 1, y = blockSum);
+io.outputLine("origin:", origin, "nextPoint:", nextPoint);

@@ -1,0 +1,24 @@
+{
+  "id": "showcase.03-data-and-types.01-tuples-and-destructuring",
+  "kind": "showcase",
+  "source": {
+    "file": "../../../showcases/03-data-and-types/01-tuples-and-destructuring.lts",
+    "hash": "sha256:a9ad1967401f797f6ded89ca308c6ebe4f2fd748f701fc48e271e4b237e93eb5"
+  },
+  "features": [
+    "tuple.shape",
+    "report.tuple",
+    "io.report"
+  ],
+  "description": "Positional/named/mixed tuples, =name shorthand, label conversions, and var destructuring.",
+  "cases": [
+    {
+      "name": "tuples-and-destructuring",
+      "stdout": {
+        "text": "pair: (14, ok) single: 99\nrenamed: 640 480 canvas mixed: 7 true sum: 7\n",
+        "hash": "sha256:eabcdeee123c4b9af86de04e5d1b993eb39d7b4ddc2886b5fac0d48bb2f04cc8"
+      },
+      "exitCode": 0
+    }
+  ]
+}

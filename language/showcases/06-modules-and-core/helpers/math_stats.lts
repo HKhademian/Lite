@@ -1,0 +1,31 @@
+/* Module imported by showcase 06.01 — exposes pub types, constants, and functions. */
+
+pub RangeStats := type (min: Int, max: Int, sum: Int);
+pub VERSION := "stats-module/v1";
+
+minOf := fn(a: Int, b: Int): Int {
+    if a < b { a } else { b }
+};
+
+maxOf := fn(a: Int, b: Int): Int {
+    if a > b { a } else { b }
+};
+
+pub summarize := fn(values: List<Int>, fallback: Int): RangeStats {
+    var lo := values[0];
+    var hi := values[0];
+    var total := 0;
+    loop values as v {
+        lo = minOf(lo, v);
+        hi = maxOf(hi, v);
+        total += v;
+    }
+    if total == 0 {
+        return (min = fallback, max = fallback, sum = fallback);
+    }
+    (min = lo, max = hi, sum = total)
+};
+
+pub span := fn(s: RangeStats): Int {
+    s.max - s.min
+};

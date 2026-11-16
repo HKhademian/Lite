@@ -1,0 +1,25 @@
+/* Showcase 01.02 — Signed integers, binary64 floats, division families, narrow widths, and power. */
+
+io := import "core/io";
+
+/* `/` and `%` truncate toward zero; `:/` and `:%` use floor division toward negative infinity. */
+truncQ := -7 / 2;
+truncR := -7 % 2;
+floorQ := -7 :/ 2;
+floorR := -7 :% 2;
+
+/* Mixing a Float operand preserves fractional results; `**` binds tighter and right-associates. */
+exactRatio := 7.0 / 2;
+powerTower := 2 ** 3 ** 2;
+negBase := (-2) ** 3;
+
+/* Fixed-width integers (`Int8`, `Int16`, `Int32`) and binary32 (`Float32`) widen cleanly when promoted. */
+small: Int8 = 40;
+medium: Int16 = 300;
+wideSum: Int32 = small + medium;
+halfF32: Float32 = 0.25;
+exactCtx: Float = 1 + halfF32;
+
+io.outputLine("trunc:", truncQ, truncR, "floor:", floorQ, floorR);
+io.outputLine("ratio:", exactRatio, "powers:", powerTower, negBase);
+io.outputLine("widths:", wideSum, "f32+1:", exactCtx);

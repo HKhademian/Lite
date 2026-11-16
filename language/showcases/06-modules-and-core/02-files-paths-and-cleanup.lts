@@ -1,0 +1,32 @@
+/* Showcase 06.02 — Pure path manipulation, temp file I/O with finally cleanup, and core/format tables. */
+
+io := import "core/io";
+fs := import "core/file";
+path := import "core/path";
+fmt := import "core/format";
+
+/* Deterministic path operations never touch the host filesystem. */
+cleanPath := path.normalize("curriculum/modules/../06/./lesson.lts");
+relPath := path.relative("curriculum/05", "curriculum/06/lesson.lts");
+header := fmt.padRightText("stem=" + path.stem(cleanPath), 12) + "ext=" + path.extName(cleanPath) + " -> " + path.withExt(relPath, ".ts");
+io.outputLine(header);
+
+/* Isolate temporary filesystem writes and clean them up deterministically via `finally`. */
+tmp := fs.makeTempDir("lite-showcase-");
+if not tmp.ok {
+    io.errorLine(tmp.error);
+    io.exit(2);
+}
+
+{
+    docsDir := path.join(tmp.path, "notes");
+    mk := fs.makeDir(docsDir);
+    noteFile := path.join(docsDir, "lesson.txt");
+    w := fs.writeText(noteFile, "alpha");
+    a := fs.appendText(noteFile, "|beta");
+    r := fs.readText(noteFile);
+    dirNames := fs.listDir(tmp.path);
+    io.outputLine("fsOk:", mk.ok and w.ok and a.ok and r.ok, "dir:", dirNames[0], "text:", r.text);
+} finally {
+    _ := fs.remove(tmp.path);
+};

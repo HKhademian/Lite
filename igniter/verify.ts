@@ -505,9 +505,19 @@ function verifyFeatures() {
 function coverage(features: ReadonlyMap<string, RegistryEntry>, items: readonly Manifest[]): void {
   const counts = (kind: Kind): number => items.filter(item => item.kind === kind).length;
   const sourceCount = (dir: string): number => {
-    const path = resolve(root, dir);
-    if (!existsSync(path)) return 0;
-    return readdirSync(path).filter(name => name.endsWith('.lts')).length;
+    const walk = (current: string): number => {
+      if (!existsSync(current)) return 0;
+      let total = 0;
+      for (const entry of readdirSync(current, { withFileTypes: true })) {
+        if (entry.isDirectory()) {
+          if (entry.name !== 'helpers') total += walk(resolve(current, entry.name));
+        } else if (entry.isFile() && entry.name.endsWith('.lts')) {
+          total += 1;
+        }
+      }
+      return total;
+    };
+    return walk(resolve(root, dir));
   };
   const examples = sourceCount('language/examples');
   const samples = sourceCount('language/samples');

@@ -25,7 +25,7 @@ language/verifications/
   artifacts/
     language/examples/001-double-sum.json
     language/samples/001-add-two-numbers.json
-    showcases/                  # reserved; transcript manifests later
+    showcases/                  # curriculum manifests for language/showcases/
 ```
 
 Each manifest has a `source` object with exactly one of `file`, `text` or `bytes`.

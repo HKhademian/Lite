@@ -1,0 +1,32 @@
+/* Showcase 02.01 — Value conditionals, comparison chains, partial branches, and match. */
+
+io := import "core/io";
+
+score := 84;
+
+/* Chained comparisons evaluate middle operands once and short-circuit cleanly. */
+inPassBand := 60 <= score < 90;
+
+/* Expression `if` requires exhaustive branches with compatible types. */
+status := if score >= 90 { "honors" } else if inPassBand { "passing" } else { "retry" };
+
+/* Partial `if` works safely as a statement when initializing or skipping side effects. */
+var bonusNote := "none";
+if score >= 80 {
+    bonusNote = "merit";
+}
+
+/* Subjectless Boolean `match` evaluates ordered conditions down to the mandatory `_` fallback. */
+band := match {
+    score >= 90 { "A" }
+    score >= 80 { "B" }
+    score >= 70 { "C" }
+    _ { "D" }
+};
+
+match {
+    inPassBand { io.outputLine("verified-band:", band); }
+    _ { io.outputLine("outside-band"); }
+}
+
+io.outputLine("status:", status, "bonus:", bonusNote, "grade:", band);

@@ -1,0 +1,31 @@
+/* Showcase 03.02 — Fixed arrays [T; N], growable List<T>, mut grants, and value snapshots. */
+
+io := import "core/io";
+list := import "core/list";
+fmt := import "core/format";
+
+/* Inferred array literal has a fixed length `[Int; 3]`. */
+fixed: [Int; 3] = [10, 20, 30];
+var fixedTotal := 0;
+loop fixed as item {
+    fixedTotal += item;
+}
+
+/* `mut` allows in-place list operations; `var mut` with `List<T>` also allows replacing the list variable itself. */
+queue: mut List<Int> = [2, 3];
+push_front(mut queue, 1);
+push_back(mut queue, 4);
+saved: List<Int> = queue;
+head := pop_front(mut queue);
+tail := pop_back(mut queue);
+
+seed: List<Int> = [5];
+replacement: List<Int> = [7, 8, 9];
+var mut bag := seed;
+list.pushBack(mut bag, 6);
+bagAfterPush := fmt.joinIntTexts(bag, ",");
+bag = replacement;
+
+io.outputLine("fixedSum:", fixedTotal, "at[1]:", fixed[1]);
+io.outputLine("popped:", head, tail, "queue:", fmt.joinIntTexts(queue, ","));
+io.outputLine("saved:", fmt.joinIntTexts(saved, ","), "seed:", fmt.joinIntTexts(seed, ","), "pushed:", bagAfterPush, "bag:", fmt.joinIntTexts(bag, ","));

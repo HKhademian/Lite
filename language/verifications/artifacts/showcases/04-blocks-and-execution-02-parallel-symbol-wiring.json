@@ -1,0 +1,25 @@
+{
+  "id": "showcase.04-blocks-and-execution.02-parallel-symbol-wiring",
+  "kind": "showcase",
+  "source": {
+    "file": "../../../showcases/04-blocks-and-execution/02-parallel-symbol-wiring.lts",
+    "hash": "sha256:e97419ec1a5929e768d3135eefbc6ac91278fd9e52c89ecd7a8727d5adfe6d76"
+  },
+  "features": [
+    "block.wiring",
+    "function.closures",
+    "scope.locals",
+    "io.report"
+  ],
+  "description": "Parallel forward wiring, mutual and own-name recursion, nearer-forward shadowing, and eager outer reads.",
+  "cases": [
+    {
+      "name": "parallel-symbol-wiring",
+      "stdout": {
+        "text": "lateRoot*2: 30 wired: 10 precedence: 923 shadowRead: 41\n",
+        "hash": "sha256:349b75b576868a27a7bf0bfc22c794f362af376b9d8f6c0e95dc3ecfb18379a2"
+      },
+      "exitCode": 0
+    }
+  ]
+}
