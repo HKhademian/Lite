@@ -53,6 +53,18 @@ separate from these aliases. Use the explicit-width names in review examples.
 
 **Baseline:** Transparent aliases retain identity; record declarations are nominal. The user likes `UserID := distinct String` and `UserData := distinct (name: String, age: Int)` and favors distinctness in both directions; general distinct syntax and semantics need review.
 
+**User clarification:** A type alias gives the same type concept another
+symbol: `Int` and `Int64` name the same type. A distinct type has its own type
+identity while sharing its underlying type's memory layout or storage. Thus
+`UserID` and `String` are different types even though UserID is based on
+String. A second distinct type based on String has its own identity too.
+
+The exact definition of shared layout/storage, ABI, conversion eligibility,
+validation, and whether a conversion needs any work remain to be specified.
+Sharing a layout does not by itself authorize implicit conversion or unchecked
+memory reinterpretation. This is a type-design direction, not evidence that
+the current compiler implements general distinct types.
+
 **Initial assessment and probes:** Keep separate UserID and OrderID even with String underneath. Compare nominal wrappers with transparent aliases and ask which operations, invariants and representation each preserves.
 
 ## 1.3 Tuples, records, and arrays
@@ -133,7 +145,7 @@ The generated TS verifier passes `num.widths`, `num.aliases`, `tuple.shape`, `ar
 ### Benefits and cost model
 
 - **1.1 Literals and primitives:** default inference keeps simple programs short; statically known constants can eliminate runtime work. Checked integer overflow and precise string encoding can add checks or conversion work. Constant folding must preserve overflow and fault timing on untaken paths. Exact widths, signedness, overflow, and Unicode behavior matter to native interoperability and vectorization.
-- **1.2 Type identity:** a distinct UserID can prevent mixing identifiers at compile time, plausibly with identical native representation and no runtime discriminator. This is an implementation opportunity, not a selected ABI or a demonstrated zero-cost guarantee. A domain with validation creates a harder question: can every underlying String become an ID, and can all-zero storage be valid? If invalid values exist, unrestricted conversion and universal zero may conflict.
+- **1.2 Type identity:** a distinct UserID can prevent mixing identifiers at compile time while sharing the underlying type's layout or storage, as the user clarified. A per-value runtime discriminator is not needed merely to identify a statically known type. Exact ABI, conversion behavior, and performance remain open. A domain with validation creates a harder question: can every underlying String become an ID, and can all-zero storage be valid? If invalid values exist, unrestricted conversion and universal zero may conflict.
 - **1.3 Aggregates:** tuple labels are static information in principle; ordered tuple positions, named record fields, and runtime array indexing expose different operations. Header-free fixed arrays have a selected inline layout, but union elements may still need per-element discrimination. Separate models cost language and compiler complexity; over-unification can make positional record access or runtime indexing semantically awkward.
 - **1.4 Conversion:** The user rejects a typed declaration as sufficient to cross between an established String and UserID in either direction, or between UserID and another distinct type; an explicit conversion operation is needed. Fresh string-like literals may instead take the typed destination's shape. Compare arguments, return, generic contexts, eligibility, and validation failure; the precise explicit-conversion mechanism remains open.
 - **1.5 Unions and values:** tagged inline payloads permit heterogeneous values without mandatory boxing, at the cost of tag storage, branch selection and layout; optimizations may remove a tag only when its observation is preserved. Order-independent union identity conflicts with simply picking the first written member for zero. Equality, copying and resource cleanup must use the active payload.
