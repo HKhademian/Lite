@@ -110,6 +110,19 @@ reports unsigned widths as unimplemented; see [numbers](../../../docs/numbers.md
 
 **Baseline:** A literal such as `raw := "user-42"` is used as String in current inference examples. Literal grammar and context-sensitive typing are not a complete contract.
 
+**Fresh numeric literals:** The user describes a fresh integer-spelled literal
+such as `42` as integer-like rather than inherently an already-established
+`Int64` value. It can be supplied directly to functions expecting `Int8`,
+`Int16`, `Int32`, or the proposed `UnsignedInt8`; contextual admission and
+range boundaries require further specification. This is not automatic
+conversion of a previously bound `Int64` value. The current compiler's default
+inference and bounded numeric literal admission are described in
+[numbers](../../../docs/numbers.md); the proposed unsigned spelling is not
+implemented. The user included `3.5` in the examples; whether fractional
+literals may feed integer parameters remains explicitly unresolved. The
+string-like literal direction below has its own explicit-use-site requirement;
+do not silently generalize it to numeric literals or vice versa.
+
 **Initial assessment and probes:** Compare a direct literal in a `UserID` destination with an already bound String; do not assume they must be treated identically. Check numeric bounds and contextual inference too.
 
 ## 1.2 Identity and distinct types
