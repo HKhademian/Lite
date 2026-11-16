@@ -49,22 +49,6 @@ validateBytes := fn(bytes: List<Int>): (ok: Bool, error: String) {
     (ok = true, error = "")
 }
 
-/** Writes `bytes` to `writer` and closes the stream, returning any write or close error. */
-writeWithHandle := fn(writer: io.Writer, bytes: List<Int>): (ok: Bool, error: String) {
-    if not io.writerOk(writer) {
-        return (ok = false, error = io.writerError(writer));
-    }
-    wrote := io.write(writer, bytes);
-    closed := io.closeWriter(writer);
-    if not wrote.ok {
-        return (ok = false, error = wrote.error);
-    }
-    if not closed.ok {
-        return (ok = false, error = closed.error);
-    }
-    (ok = true, error = "")
-}
-
 /** Reads raw `0..255` byte values from `path`, faulting when `path` cannot be read. */
 pub readBytes := fn(path: String): List<Int> {
     reader := openReader(path);
@@ -108,7 +92,7 @@ pub readText := fn(path: String): (ok: Bool, text: String, error: String) {
 pub writeBytes := fn(path: String, bytes: List<Int>): (ok: Bool, error: String) {
     checked := validateBytes(bytes);
     if not checked.ok { return checked; }
-    writeWithHandle(openWriter(path), bytes)
+    io.writeAndClose(openWriter(path), bytes)
 }
 
 /** Writes UTF-8 `text` to `path`, creating or truncating the file. */
@@ -120,15 +104,10 @@ pub writeText := fn(path: String, text: String): (ok: Bool, error: String) {
 pub appendBytes := fn(path: String, bytes: List<Int>): (ok: Bool, error: String) {
     checked := validateBytes(bytes);
     if not checked.ok { return checked; }
-    writeWithHandle(openAppender(path), bytes)
+    io.writeAndClose(openAppender(path), bytes)
 }
 
 /** Appends UTF-8 `text` to `path`, creating the file when absent. */
 pub appendText := fn(path: String, text: String): (ok: Bool, error: String) {
     appendBytes(path, unicode.utf8Encode(text))
-}
-
-/** Streams all remaining bytes synchronously from `reader` into `writer`. */
-pub copyStream := fn(reader: io.Reader, writer: io.Writer): (ok: Bool, copied: Int, error: String) {
-    io.copyStream(reader, writer)
 }

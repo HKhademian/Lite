@@ -170,6 +170,22 @@ pub flush := fn(writer: Writer): (ok: Bool, error: String);
 /** Closes `writer` when backed by an owned resource. */
 pub closeWriter := fn(writer: Writer): (ok: Bool, error: String);
 
+/** Writes `bytes` to `writer` and closes the stream, returning any write or close error. */
+pub writeAndClose := fn(writer: Writer, bytes: List<Int>): (ok: Bool, error: String) {
+    if not writerOk(writer) {
+        return (ok = false, error = writerError(writer));
+    }
+    wrote := write(writer, bytes);
+    closed := closeWriter(writer);
+    if not wrote.ok {
+        return (ok = false, error = wrote.error);
+    }
+    if not closed.ok {
+        return (ok = false, error = closed.error);
+    }
+    (ok = true, error = "")
+}
+
 /** Streams all remaining bytes synchronously from `reader` into `writer`. */
 pub copyStream := fn(reader: Reader, writer: Writer): (ok: Bool, copied: Int, error: String) {
     if not readerOk(reader) {

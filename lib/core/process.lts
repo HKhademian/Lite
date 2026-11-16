@@ -59,7 +59,7 @@ stderrWriter: io.Writer
     res := runBytes(command, args, workDir, envOverrides, timeoutMs, stdinBytes, outPath, errPath);
     outReader := file.openReader(outPath);
     if io.readerOk(outReader) {
-        outCopy := file.copyStream(outReader, stdoutWriter);
+        outCopy := io.copyStream(outReader, stdoutWriter);
         _closeOut := io.closeReader(outReader);
         if not outCopy.ok {
             _rm := file.remove(tmp.path);
@@ -70,7 +70,7 @@ stderrWriter: io.Writer
     }
     errReader := file.openReader(errPath);
     if io.readerOk(errReader) {
-        errCopy := file.copyStream(errReader, stderrWriter);
+        errCopy := io.copyStream(errReader, stderrWriter);
         _closeErr := io.closeReader(errReader);
         if not errCopy.ok {
             _rm := file.remove(tmp.path);

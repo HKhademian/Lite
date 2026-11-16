@@ -4326,7 +4326,11 @@ test('core os/fs/process/crypto/time host bindings, standalone CLI execution, an
         'ioW := io.bufferWriter();',
         'ioCopied := io.copyStream(io.textReader("via-io"), ioW);',
         'ioWTxt := io.writerText(ioW);',
-        'io.outputLine(res.status, res.error == "", outBytes, errTxt.ok, errTxt.text == "warn\\n", hStreamFile.ok, hStreamFile.hex == hFastFile.hex, hStream.ok, hStream.hex == crypto.sha256Text("hello"), h512 == crypto.sha512Text("abc"), ioCopied.ok, ioCopied.copied, ioWTxt.ok, ioWTxt.text);',
+        'wcWriter := io.bufferWriter();',
+        'wcRes := io.writeAndClose(wcWriter, [120, 121]);',
+        'wcBytes := io.writerBytes(wcWriter);',
+        'wcClosed := io.writerOk(wcWriter);',
+        'io.outputLine(res.status, res.error == "", outBytes, errTxt.ok, errTxt.text == "warn\\n", hStreamFile.ok, hStreamFile.hex == hFastFile.hex, hStream.ok, hStream.hex == crypto.sha256Text("hello"), h512 == crypto.sha512Text("abc"), ioCopied.ok, ioCopied.copied, ioWTxt.ok, ioWTxt.text, wcRes.ok, wcBytes, wcClosed);',
       ].join('\n'),
       name: fixtureName,
     });
@@ -4335,8 +4339,14 @@ test('core os/fs/process/crypto/time host bindings, standalone CLI execution, an
     withTsArtifact(parentCompiled.stdout.toString(), run => {
       const actual = run();
       assert.equal(actual.status, 0, actual.stderr.toString());
-      assert.equal(actual.stdout.toString(), '0 true [65, 0, 66, 124, 100, 111, 110, 101] true true true true true true true true 6 true via-io\n');
+      assert.equal(actual.stdout.toString(), '0 true [65, 0, 66, 124, 100, 111, 110, 101] true true true true true true true true 6 true via-io true [120, 121] false\n');
     });
+    const removedFileCopy = compileTs({
+      text: 'file := import "core/file"; io := import "core/io"; _ := file.copyStream(io.textReader("a"), io.bufferWriter());',
+      name: fixtureName,
+    });
+    assert.equal(removedFileCopy.status, 2);
+    assert.match(removedFileCopy.stderr.toString(), /unknown module member file\.copyStream/);
   } finally { rmSync(streamDir, { recursive: true, force: true }); }
 
   const directory = mkdtempSync(join(tmpdir(), 'lite-core-os-unbound-'));
