@@ -38,6 +38,13 @@ questions for a later layer without choosing an active member or an extra value.
 
 ## 1.1 Primitives and literals
 
+**Review naming:** The user asks that this review use `Int64`, `Float64`,
+`Bool`, and `String` when naming the basic types. `Int` is a transparent alias
+for `Int64`, not a distinct type. The existing [numeric-width contract](../../../docs/numbers.md)
+also treats `Float` and `Double` as aliases of the same `Float64` type. These
+names do not create additional type identities; narrower numeric types remain
+separate from these aliases. Use the explicit-width names in review examples.
+
 **Baseline:** A literal such as `raw := "user-42"` is used as String in current inference examples. Literal grammar and context-sensitive typing are not a complete contract.
 
 **Initial assessment and probes:** Compare a direct literal in a `UserID` destination with an already bound String; do not assume they must be treated identically. Check numeric bounds and contextual inference too.
