@@ -12,7 +12,7 @@ Run from the repository root with Node 26.13.0:
 node compiler/entry.ts /tmp/lite-example.ts
 ```
 
-`run` compiles to a temporary artifact and executes it. All twenty-two examples compile and run through the generated TS compiler; broader parity items live in [compiler gaps](../../compiler/gaps.md) and the [archived inventory](../../compiler/reports/current-t00-t11-inventory.md). Unsupported source fails without a T00 fallback. C output is deferred.
+`run` compiles to a temporary artifact and executes it. All twenty-six examples compile and run through the generated TS compiler; broader parity items live in [compiler gaps](../../compiler/gaps.md) and the [archived inventory](../../compiler/reports/current-t00-t11-inventory.md). Unsupported source fails without a T00 fallback. C output is deferred.
 
 The interactive examples display explicit prompts. Integer prompts leave the
 cursor on the same line; the scanner prints a heading before reading its line.
@@ -103,6 +103,20 @@ examples. They live under [compiler/](../../compiler/README.md) and are run with
 - [024 — Numeric widths](024-numeric-widths.lts): demonstrates explicit
   `Int8`, `Int16`, `Int32`, and `Float32` widths, same-family and mixed
   promotion, lossless widening, contextual `List<Int8>`, and binary32 rounding.
+- [025 — Tagged control and cleanup](025-tagged-control-and-cleanup.lts):
+  demonstrates `@tag` labeled block returns, conditional `then` `.value`
+  forwarding, tagged multi-loop `continue`/`break`, and LIFO `finally` cleanup.
+- [026 — Closures and pipelines](026-closures-and-pipelines.lts): demonstrates
+  callable type aliases, higher-order `map`/`filter`/`fold` list helpers, and
+  stateful lexical closures across independent counter frames.
+- [027 — Unified blocks and wiring](027-unified-blocks-and-wiring.lts):
+  demonstrates value blocks, inner transparent type aliases, forward mutual
+  recursion (`even`/`odd`), nearer-forward shadowing vs eager outer reads, and
+  `?` execution-trace ordering.
+- [028 — Modules and hashing](028-modules-and-hashing.lts): imports a helper
+  module ([stats_module](helpers/stats_module.lts)) exporting `pub` types,
+  constants, and functions alongside `core/format` alignment and `core/crypto`
+  SHA-256 hashing.
 
 For project showcases, graphics, audio, and mini-game demos, see [samples](../../samples/README.md).
 

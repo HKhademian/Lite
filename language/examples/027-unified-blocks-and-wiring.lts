@@ -1,0 +1,34 @@
+/* Example 027: Unified value blocks, inner type aliases, forward wiring, and trace safety. */
+
+io := import "core/io";
+
+outer := 10;
+
+summary := {
+    Count := type Whole;
+    Whole := type Int;
+
+    even := fn(n: Whole): Bool {
+        if n == 0 { true } else { odd(n - 1) }
+    };
+    odd := fn(n: Whole): Bool {
+        if n == 0 { false } else { even(n - 1) }
+    };
+
+    outer := outer + 5;
+
+    var slot: Count = ?;
+    fillSlot := fn(): Count {
+        slot = outer * 2;
+        slot
+    };
+
+    getLater := fn(): Count {
+        baseOffset + (if even(4) { fillSlot() } else { 0 })
+    };
+    baseOffset := 12;
+
+    getLater()
+};
+
+io.outputLine("outer:", outer, "summary:", summary);

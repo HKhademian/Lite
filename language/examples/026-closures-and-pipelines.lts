@@ -1,0 +1,56 @@
+/* Example 026: Higher-order list pipelines and stateful lexical closures. */
+
+io := import "core/io";
+fmt := import "core/format";
+
+IntMap := type fn(Int): Int;
+IntPred := type fn(Int): Bool;
+
+mapInts := fn(items: List<Int>, mapper: IntMap): List<Int> {
+    out: mut List<Int> = [];
+    loop items as item {
+        push_back(mut out, mapper(item));
+    }
+    out
+};
+
+filterInts := fn(items: List<Int>, keep: IntPred): List<Int> {
+    out: mut List<Int> = [];
+    loop items as item {
+        if keep(item) {
+            push_back(mut out, item);
+        }
+    }
+    out
+};
+
+foldInts := fn(items: List<Int>, seed: Int, combine: fn(Int, Int): Int): Int {
+    var acc := seed;
+    loop items as item {
+        acc = combine(acc, item);
+    }
+    acc
+};
+
+makeCounter := fn(start: Int, step: Int): fn(): Int {
+    var cur := start;
+    fn(): Int {
+        cur = cur + step;
+        cur
+    }
+};
+
+raw: List<Int> = [2, 5, 8, 11, 14];
+factor := 3;
+minVal := 20;
+
+scaled := mapInts(raw, fn(x: Int): Int { x * factor });
+large := filterInts(scaled, fn(x: Int): Bool { x >= minVal });
+total := foldInts(large, 0, fn(a: Int, b: Int): Int { a + b });
+
+seq := makeCounter(100, 5);
+ticks: List<Int> = [seq(), seq(), seq()];
+
+io.outputLine("scaled:", fmt.joinIntTexts(scaled, ", "));
+io.outputLine("large:", fmt.joinIntTexts(large, ", "), "sum:", total);
+io.outputLine("ticks:", fmt.joinIntTexts(ticks, ", "));

@@ -1,0 +1,22 @@
+/* Shared helper module imported by 028-modules-and-hashing.lts. */
+
+pub Bucket := type (name: String, total: Int, count: Int);
+pub LABEL := "stats-v1";
+
+clampPositive := fn(n: Int): Int {
+    if n < 0 { 0 } else { n }
+};
+
+pub makeBucket := fn(name: String, values: List<Int>): Bucket {
+    var sum := 0;
+    var count := 0;
+    loop values as v {
+        sum += clampPositive(v);
+        count += 1;
+    }
+    (name = name, total = sum, count = count)
+};
+
+pub meanInt := fn(bucket: Bucket): Int {
+    if bucket.count == 0 { 0 } else { bucket.total / bucket.count }
+};

@@ -1,0 +1,41 @@
+{
+  "id": "core.crypto",
+  "kind": "feature",
+  "source": {
+    "file": "core-crypto.lts",
+    "hash": "sha256:bdfafe020bea69f0944fbabee54d7f2f57333d30ecff3fd845c6eb8f591db4b6"
+  },
+  "features": [
+    "core.crypto"
+  ],
+  "guideline": "Checks SHA-256, SHA-512, HMAC-SHA256, Hex, and Base64 round-trips and validators via core/crypto.",
+  "targets": [
+    "ts"
+  ],
+  "cases": [
+    {
+      "name": "lite-message",
+      "stdin": {
+        "text": "lite\n",
+        "hash": "sha256:4bf67c54d9055aaf189034113fd50d6c7f1c845a05256f526e66ffb781c35529"
+      },
+      "stdout": {
+        "text": "msg: c5df50f999eb649abc0cd48c40907fe29c5ba71e4534a5cc63ae6e3d26234f1d\ne819cd60a73ffe2cd30b6a4bb614288b354101b46bc9c6f24bdfeb2ba04351cfac0b7b38e846114ba1ff989d7c45d487edf02b08d46bd6f2cfc788fdc45bb746\n79a6dfb8a2e26f15fe5f0c1b38d79f01c205acc536d017c8658fcb809caecf57\n6c697465 bGl0ZQ== true true\ntrue false true false\n",
+        "hash": "sha256:ccca3f607c2058b8377b092d381d908c3fee4faac4029b5025fd0155b389beda"
+      },
+      "exitCode": 0
+    },
+    {
+      "name": "empty-message",
+      "stdin": {
+        "text": "\n",
+        "hash": "sha256:01ba4719c80b6fe911b091a7c05124b64eeece964e09c058ef8f9805daca546b"
+      },
+      "stdout": {
+        "text": "msg: e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855\ncf83e1357eefb8bdf1542850d66d8007d620e4050b5715dc83f4a921d36ce9ce47d0d13c5d85f2b0ff8318d2877eec2f63b931bd47417a81a538327af927da3e\nf0bec204f8636f9cd3f7036e2e9be20b3b9153bd111c6936384f5c8d1b1fc27a\n  true true\ntrue false true false\n",
+        "hash": "sha256:afb90393643d2a86e43d17d1075a596015ce2137b33d59c344a67f1790f6f88e"
+      },
+      "exitCode": 0
+    }
+  ]
+}

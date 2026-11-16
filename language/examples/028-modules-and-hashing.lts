@@ -1,0 +1,18 @@
+/* Example 028: Sibling module imports, pub symbols, table formatting, and SHA-256 digests. */
+
+io := import "core/io";
+fmt := import "core/format";
+crypto := import "core/crypto";
+stats := import "./helpers/stats_module.lts";
+
+alpha: stats.Bucket = stats.makeBucket("alpha", [12, 18, 24]);
+beta: stats.Bucket = stats.makeBucket("beta", [7, -5, 19, 14]);
+
+rowA := fmt.padRightText(alpha.name, 7) + " sum=" + fmt.padLeftInt(alpha.total, 3) + " avg=" + fmt.padLeftInt(stats.meanInt(alpha), 2);
+rowB := fmt.padRightText(beta.name, 7) + " sum=" + fmt.padLeftInt(beta.total, 3) + " avg=" + fmt.padLeftInt(stats.meanInt(beta), 2);
+payload := stats.LABEL + "|" + rowA + "|" + rowB;
+
+io.outputLine(stats.LABEL);
+io.outputLine(rowA);
+io.outputLine(rowB);
+io.outputLine("sha256:", crypto.sha256Text(payload));

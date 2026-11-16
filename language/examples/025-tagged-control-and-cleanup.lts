@@ -1,0 +1,42 @@
+/* Example 025: Tagged control flow, conditional then clauses, and LIFO finally cleanup. */
+
+io := import "core/io";
+
+trace: mut List<String> = [];
+
+findFirstMultiple := fn(rows: List<Int>, cols: List<Int>, target: Int): Int {
+    @search {
+        {
+            push_back(mut trace, "enter-rows");
+            @rows loop rows as r {
+                @cols loop cols as c {
+                    product := r * c;
+                    if product == target {
+                        return @search product;
+                    }
+                    if product > target {
+                        continue @rows;
+                    }
+                }
+            }
+            0 - 1
+        } finally {
+            push_back(mut trace, "clean-inner");
+        }
+    } finally {
+        push_back(mut trace, "clean-outer");
+    }
+};
+
+found := @matchCheck if findFirstMultiple([2, 3, 5], [3, 4, 6], 18) > 0 {
+    "hit"
+} else {
+    "miss"
+} then {
+    @matchCheck.value + ":verified"
+};
+
+io.outputLine(found);
+loop trace as step {
+    io.outputLine(step);
+}

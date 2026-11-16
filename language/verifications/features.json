@@ -430,6 +430,61 @@
         "docs/reserved-storage.md",
         "docs/functions.md"
       ]
+    },
+    {
+      "id": "control.tags",
+      "summary": "Labeled blocks, conditional then .value forwarding, and tagged loop exits.",
+      "case": "features/control-tags.json",
+      "status": "verified",
+      "docs": [
+        "docs/tags-and-contexts.md",
+        "docs/control-flow.md"
+      ]
+    },
+    {
+      "id": "module.imports",
+      "summary": "Sibling module imports exposing pub functions, immutable values, and type aliases.",
+      "case": "features/module-imports.json",
+      "status": "verified",
+      "docs": [
+        "docs/visibility.md"
+      ]
+    },
+    {
+      "id": "core.unicode-format",
+      "summary": "Unicode code-point/UTF-8 helpers and core/format text/integer padding.",
+      "case": "features/core-unicode-format.json",
+      "status": "verified",
+      "docs": [
+        "docs/strings.md"
+      ]
+    },
+    {
+      "id": "core.crypto",
+      "summary": "SHA-256, SHA-512, HMAC-SHA256, Hex, and Base64 utilities via core/crypto.",
+      "case": "features/core-crypto.json",
+      "status": "verified",
+      "docs": [
+        "docs/tooling-and-learning.md"
+      ]
+    },
+    {
+      "id": "core.fs-path",
+      "summary": "Deterministic path transforms and temporary workspace filesystem I/O via core/path and core/file.",
+      "case": "features/core-fs-path.json",
+      "status": "verified",
+      "docs": [
+        "docs/tooling-and-learning.md"
+      ]
+    },
+    {
+      "id": "core.time-process",
+      "summary": "Clock, date, and host process metadata invariants via core/time and core/process.",
+      "case": "features/core-time-process.json",
+      "status": "verified",
+      "docs": [
+        "docs/tooling-and-learning.md"
+      ]
     }
   ]
 }

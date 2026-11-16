@@ -1,0 +1,26 @@
+io := import "core/io";
+
+x := io.inputInt("x: ");
+
+absDoubled := @blk {
+    if x < 0 { return @blk 0 - x; }
+    x * 2
+};
+
+scaled := @cond if x > 5 { x + 1 } else { x - 1 } then {
+    @cond.value * 10
+};
+
+var sum := 0;
+outerVal := @outer loop [1, 2, 3] as a {
+    @inner loop [10, 20] as b {
+        if a == 2 and b == 10 { continue @outer; }
+        if a == 3 and b == 20 { break @outer sum + a; }
+        sum += a * b;
+    }
+    sum
+} then {
+    .value
+};
+
+io.outputLine(absDoubled, scaled, sum, outerVal);

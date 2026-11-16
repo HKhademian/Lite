@@ -1,0 +1,28 @@
+io := import "core/io";
+fs := import "core/file";
+path := import "core/path";
+
+norm := path.normalize("a/b/../c/./demo.lts");
+joined := path.join("src", "app.lts");
+rel := path.relative("a/b", "a/c/file.lts");
+stemVal := path.stem("demo.tar.lts");
+extVal := path.extName("demo.tar.lts");
+swapped := path.withExt("demo.lts", ".ts");
+
+io.outputLine(norm, joined, rel, stemVal, extVal, swapped);
+
+tmp := fs.makeTempDir("lite-verify-fs-");
+if not tmp.ok { io.exit(2); }
+
+{
+    subDir := path.join(tmp.path, "sub");
+    mk := fs.makeDir(subDir);
+    dataFile := path.join(subDir, "note.txt");
+    wr := fs.writeText(dataFile, "hello");
+    ap := fs.appendText(dataFile, "\nworld");
+    rd := fs.readText(dataFile);
+    entries := fs.listDir(tmp.path);
+    io.outputLine(mk.ok, wr.ok, ap.ok, rd.ok, rd.text, path.exists(dataFile), path.isFile(dataFile), path.isDirectory(subDir), entries[0]);
+} finally {
+    _ := fs.remove(tmp.path);
+};

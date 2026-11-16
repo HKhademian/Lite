@@ -1,0 +1,10 @@
+pub Metric := type (label: String, total: Int);
+pub OFFSET := 100;
+
+privateScale := fn(n: Int): Int {
+    n * 3
+};
+
+pub summarize := fn(tag: String, value: Int): Metric {
+    (label = tag, total = privateScale(value) + OFFSET)
+};

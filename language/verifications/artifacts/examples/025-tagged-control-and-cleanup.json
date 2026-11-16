@@ -1,0 +1,25 @@
+{
+  "id": "example.025-tagged-control-and-cleanup",
+  "kind": "example",
+  "source": {
+    "file": "../../../examples/025-tagged-control-and-cleanup.lts",
+    "hash": "sha256:161eb383262e7a183e060492bc570f22882f15f7a4a31e78fc1fd87e6408edc1"
+  },
+  "features": [
+    "control.tags",
+    "finally.cleanup",
+    "loop.metadata",
+    "io.report"
+  ],
+  "description": "Labeled block exits, conditional then transforms, tagged nested loops, and LIFO finally cleanup.",
+  "cases": [
+    {
+      "name": "tagged-search-and-lifo-cleanup",
+      "stdout": {
+        "text": "hit:verified\nenter-rows\nclean-inner\nclean-outer\n",
+        "hash": "sha256:1f2b8b561a0d433272a0cdd28cbbdeab14f2f531ffd37fb53ce2100ba539de62"
+      },
+      "exitCode": 0
+    }
+  ]
+}

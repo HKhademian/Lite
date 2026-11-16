@@ -1,0 +1,26 @@
+{
+  "id": "example.027-unified-blocks-and-wiring",
+  "kind": "example",
+  "source": {
+    "file": "../../../examples/027-unified-blocks-and-wiring.lts",
+    "hash": "sha256:025513332aaeffc98334cb4d28424190baafbf39a353a7c2ad8dd864b15dabc2"
+  },
+  "features": [
+    "block.values",
+    "block.wiring",
+    "block.trace",
+    "alias.transparent",
+    "io.report"
+  ],
+  "description": "Inner-block type aliases, forward mutual recursion, eager outer-shadow reads, and trace-safe ? storage.",
+  "cases": [
+    {
+      "name": "unified-block-summary",
+      "stdout": {
+        "text": "outer: 10 summary: 42\n",
+        "hash": "sha256:7fe70082ee3424ecac3038b53269c121c1b7b40acdd1400818f35eb38d505244"
+      },
+      "exitCode": 0
+    }
+  ]
+}
