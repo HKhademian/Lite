@@ -15,6 +15,7 @@ import { escapeHtml, highlightLite } from './highlight.ts';
 import { appendPlayKeepalive, stripPlayKeepaliveTs } from './play-keepalive.ts';
 import type { PlaySample } from './play-samples.ts';
 import type { SearchEntry } from './search.ts';
+import { renderCodeEditorBlock, renderCodeModeBar } from './ui-blocks.ts';
 
 export type LearnHelperModule = Readonly<{
   spec: string;
@@ -370,10 +371,14 @@ function renderLessonPage(
         <button id="ln-run" class="btn btn-primary" type="button" title="Ctrl/Cmd + Enter">${isCli ? 'Compile TS' : 'Run'}</button>
       </div>
     </div>
-    <div class="pg-editor-wrap" style="min-height: 290px;">
-      <pre id="ln-editor-pre" class="pg-editor-pre" aria-hidden="true"><code>${item.sourceHtml}</code></pre>
-      <textarea id="ln-editor" class="pg-editor-input" spellcheck="false" autocomplete="off" autocapitalize="off" aria-label="Lite lesson source editor">${escapeHtml(item.source)}</textarea>
-    </div>
+    ${renderCodeEditorBlock({
+      textareaId: 'ln-editor',
+      ariaLabel: 'Lite lesson source editor',
+      preId: 'ln-editor-pre',
+      minHeight: '290px',
+      initialSource: item.source,
+      initialHtml: item.sourceHtml,
+    })}
     <div class="pg-io-strip">
       <label class="pg-io-field">Stdin <input id="ln-stdin" type="text" value="${escapeHtml(lesson.stdin.replace(/\n/g, '\\n'))}" placeholder="line1\\nline2"></label>
       <label class="pg-io-field">Args <input id="ln-args" type="text" value="${escapeHtml(lesson.args.join(' '))}" placeholder="arg1 arg2"></label>
@@ -393,11 +398,7 @@ function renderLessonPage(
         </button>
       </div>
     </div>
-    <div id="ln-code-modes" class="code-modes" hidden>
-      <button id="ln-mode-program" class="code-mode-btn" type="button" data-mode="program" aria-pressed="true">Program</button>
-      <button id="ln-mode-portable" class="code-mode-btn" type="button" data-mode="portable" aria-pressed="false">Portable</button>
-      <button id="ln-mode-full" class="code-mode-btn" type="button" data-mode="full" aria-pressed="false">Full</button>
-    </div>
+    ${renderCodeModeBar({ id: 'ln-code-modes', buttonIdPrefix: 'ln-mode-' })}
     <pre id="ln-output" class="code-block pg-panel"${isPlay ? ' hidden' : ''}>${escapeHtml(item.output || '(no stdout output)')}</pre>
     <div id="ln-canvas-wrap" class="pg-panel pg-canvas-wrap"${isPlay ? '' : ' hidden'}>
       <div class="pg-canvas-bar">
@@ -425,6 +426,7 @@ function renderLessonPage(
 </div>
 <script type="module">
   import { formatCodeView } from "../../runtime/code-view.js";
+  import { bindCodeModeButtons, bindLiteEditor } from "../../runtime/editor-client.js";
   import { highlightC, highlightLite, highlightTs } from "../../runtime/highlight.js";
 
   const lessonId = ${JSON.stringify(lesson.id)};
@@ -509,30 +511,12 @@ function renderLessonPage(
   });
   syncProgressUi();
 
-  function syncEditorHighlight() {
-    editorPreEl.innerHTML = highlightLite(editorEl.value) + "\\n";
-    const wrap = editorEl.parentElement;
-    if (wrap) {
-      editorPreEl.parentElement.scrollTop = editorEl.scrollTop;
-      editorPreEl.parentElement.scrollLeft = editorEl.scrollLeft;
-    }
-  }
-  editorEl.addEventListener("input", syncEditorHighlight);
-  editorEl.addEventListener("scroll", () => {
-    editorPreEl.parentElement.scrollTop = editorEl.scrollTop;
-    editorPreEl.parentElement.scrollLeft = editorEl.scrollLeft;
-  });
-  editorEl.addEventListener("keydown", (event) => {
-    if (event.key === "Tab") {
-      event.preventDefault();
-      const s = editorEl.selectionStart;
-      const e = editorEl.selectionEnd;
-      editorEl.setRangeText("    ", s, e, "end");
-      syncEditorHighlight();
-    } else if ((event.metaKey || event.ctrlKey) && event.key === "Enter") {
-      event.preventDefault();
-      void executeCurrent();
-    }
+  const editorCtrl = bindLiteEditor({
+    editor: editorEl,
+    preCode: editorPreEl,
+    highlight: highlightLite,
+    indent: "    ",
+    onRun: () => void executeCurrent(),
   });
 
   function renderCodeTabs() {
@@ -561,15 +545,13 @@ function renderLessonPage(
     if (!lastRawC && worker) void requestCompileC();
   });
 
-  for (const btn of document.querySelectorAll("#ln-code-modes .code-mode-btn")) {
-    btn.addEventListener("click", () => {
-      codeMode = btn.dataset.mode || "program";
-      for (const b of document.querySelectorAll("#ln-code-modes .code-mode-btn")) {
-        b.setAttribute("aria-pressed", b === btn ? "true" : "false");
-      }
+  bindCodeModeButtons({
+    buttons: document.querySelectorAll("#ln-code-modes .code-mode-btn"),
+    onChange: (mode) => {
+      codeMode = mode;
       renderCodeTabs();
-    });
-  }
+    },
+  });
 
   function getWorker() {
     if (!worker) {
@@ -788,13 +770,12 @@ function renderLessonPage(
   runBtn.addEventListener("click", () => void executeCurrent());
   resetBtn.addEventListener("click", () => {
     if (!payloadData) return;
-    editorEl.value = payloadData.source;
     stdinEl.value = (payloadData.stdin || "").replace(/\\n/g, "\\\\n");
     argsEl.value = (payloadData.args || []).join(" ");
     outputEl.textContent = payloadData.output || "(no stdout output)";
     lastRawTs = payloadData.ts || "";
     lastRawC = "";
-    syncEditorHighlight();
+    editorCtrl.setValue(payloadData.source);
     renderCodeTabs();
     statusEl.textContent = "Reset to lesson source";
   });

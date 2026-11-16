@@ -28,6 +28,7 @@ import { playGroups, playSamples, type PlaySample } from './play-samples.ts';
 import { appendPlayKeepalive, stripPlayKeepaliveTs } from './play-keepalive.ts';
 import { collectPlaygroundLibrary } from './playground-library.ts';
 import { playgroundWorkerJs } from './playground-worker.ts';
+import { renderCodeEditorBlock, renderCodeModeBar } from './ui-blocks.ts';
 import { searchClientJs, type SearchEntry } from './search.ts';
 import { snipsClientJs } from './snips.ts';
 import { siteCss } from './styles.ts';
@@ -479,10 +480,11 @@ function renderPlaygroundPage(
         <button id="pg-play" class="btn btn-primary" type="button" title="Run (Ctrl/Cmd + Enter)">&#9654; Play</button>
       </div>
     </div>
-    <div class="pg-editor-wrap">
-      <pre class="pg-editor-pre" aria-hidden="true"><code id="pg-source"></code></pre>
-      <textarea id="pg-editor" class="pg-editor-input" spellcheck="false" autocomplete="off" autocapitalize="off" aria-label="Lite source editor"></textarea>
-    </div>
+    ${renderCodeEditorBlock({
+      textareaId: 'pg-editor',
+      ariaLabel: 'Lite source editor',
+      preCodeId: 'pg-source',
+    })}
     <div class="pg-io-strip">
       <label class="pg-io-field">args <input id="pg-args" type="text" placeholder="optional args"></label>
       <label class="pg-io-field">stdin <input id="pg-stdin" type="text" placeholder="optional stdin"></label>
@@ -513,11 +515,11 @@ function renderPlaygroundPage(
       </div>
     </div>
 
-    <div id="pg-code-modes" class="code-modes" role="group" aria-label="Generated code view" hidden>
-      <button id="mode-program" class="code-mode-btn" type="button" data-mode="program" aria-pressed="true">Program</button>
-      <button id="mode-portable" class="code-mode-btn" type="button" data-mode="portable" aria-pressed="false">Portable</button>
-      <button id="mode-full" class="code-mode-btn" type="button" data-mode="full" aria-pressed="false">Full</button>
-    </div>
+    ${renderCodeModeBar({
+      id: 'pg-code-modes',
+      buttonIdPrefix: 'mode-',
+      ariaLabel: 'Generated code view',
+    })}
 
     <div id="panel-output" class="pg-panel" role="tabpanel">
       <pre class="code-block"><code id="pg-output"></code></pre>
@@ -586,6 +588,7 @@ function renderPlaygroundPage(
 
 <script type="module">
   import { formatCodeView } from "./code-view.js";
+  import { bindCodeModeButtons, bindLiteEditor } from "./editor-client.js";
   import { highlightLite, highlightTs, highlightC } from "./highlight.js";
   const samples = ${serialized};
   const byId = new Map(samples.map(s => [s.id, s]));
@@ -755,15 +758,13 @@ function renderPlaygroundPage(
     cEl.innerHTML = rawC ? highlightC(formatCodeView(rawC, "c", codeMode)) : highlightC(cMessage);
   }
 
-  for (const btn of modeButtons) {
-    btn.addEventListener("click", () => {
-      codeMode = btn.dataset.mode || "program";
-      for (const b of modeButtons) {
-        b.setAttribute("aria-pressed", b.dataset.mode === codeMode ? "true" : "false");
-      }
+  bindCodeModeButtons({
+    buttons: modeButtons,
+    onChange: (mode) => {
+      codeMode = mode;
       renderCodeViews();
-    });
-  }
+    },
+  });
 
   function showTab(name) {
     activeTab = name;
@@ -790,41 +791,24 @@ function renderPlaygroundPage(
     });
   }
 
-  editorEl.addEventListener("input", () => {
-    pauseCanvasLoop();
-    sourceEl.innerHTML = highlightLite(editorEl.value) + "\\n";
-    const dirty = updateDirtyState();
-    statusEl.textContent = dirty ? "Modified — click Save" : "Ready";
-    statusEl.hidden = false;
+  bindLiteEditor({
+    editor: editorEl,
+    preCode: sourceEl,
+    highlight: highlightLite,
+    indent: "  ",
+    onInput: (_src, fromTab) => {
+      if (!fromTab) pauseCanvasLoop();
+      const dirty = updateDirtyState();
+      statusEl.textContent = dirty ? "Modified — click Save" : (fromTab ? "Modified" : "Ready");
+      statusEl.hidden = false;
+    },
+    onRun: () => {
+      unlockAudio();
+      void runAction("play");
+    },
   });
   stdinEl.addEventListener("input", updateDirtyState);
   argsEl.addEventListener("input", updateDirtyState);
-
-  editorEl.addEventListener("keydown", (event) => {
-    if ((event.metaKey || event.ctrlKey) && event.key === "Enter") {
-      event.preventDefault();
-      unlockAudio();
-      void runAction("play");
-      return;
-    }
-    if (event.key === "Tab" && !event.metaKey && !event.ctrlKey && !event.altKey) {
-      event.preventDefault();
-      const start = editorEl.selectionStart;
-      const end = editorEl.selectionEnd;
-      editorEl.setRangeText("  ", start, end, "end");
-      sourceEl.innerHTML = highlightLite(editorEl.value) + "\\n";
-      const dirty = updateDirtyState();
-      statusEl.textContent = dirty ? "Modified — click Save" : "Modified";
-    }
-  });
-
-  editorEl.addEventListener("scroll", () => {
-    const pre = sourceEl.parentElement;
-    if (pre) {
-      pre.scrollTop = editorEl.scrollTop;
-      pre.scrollLeft = editorEl.scrollLeft;
-    }
-  });
 
   async function fetchSample(id) {
     if (cache.has(id)) return cache.get(id);
@@ -1961,6 +1945,7 @@ export function buildSite(options?: BuildSiteOptions): void {
   const stripTsJs = stripTypeScriptTypes(readFileSync(join(root, 'site', 'strip-ts.ts'), 'utf8'), { mode: 'strip' });
   const playKeepaliveJs = stripTypeScriptTypes(readFileSync(join(root, 'site', 'play-keepalive.ts'), 'utf8'), { mode: 'strip' });
   const codeViewJs = stripTypeScriptTypes(readFileSync(join(root, 'site', 'code-view.ts'), 'utf8'), { mode: 'strip' });
+  const editorClientJs = stripTypeScriptTypes(readFileSync(join(root, 'site', 'editor-client.ts'), 'utf8'), { mode: 'strip' });
   const highlightJs = stripTypeScriptTypes(readFileSync(join(root, 'site', 'highlight.ts'), 'utf8'), { mode: 'strip' });
 
   const stdlib: Record<string, Readonly<{ path: string; display: string; identity: string; text: string }>> = {};
@@ -1981,6 +1966,7 @@ export function buildSite(options?: BuildSiteOptions): void {
     writeFileSync(join(targetDir, 'strip-ts.js'), stripTsJs);
     writeFileSync(join(targetDir, 'play-keepalive.js'), playKeepaliveJs);
     writeFileSync(join(targetDir, 'code-view.js'), codeViewJs);
+    writeFileSync(join(targetDir, 'editor-client.js'), editorClientJs);
     writeFileSync(join(targetDir, 'highlight.js'), highlightJs);
     writeFileSync(join(targetDir, 'worker.js'), playgroundWorkerJs);
     writeFileSync(join(targetDir, 'stdlib.json'), stdlibJson);

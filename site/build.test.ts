@@ -7,10 +7,12 @@ import { runInNewContext } from 'node:vm';
 import { buildTsCompiler, compileBuiltCompiler, type CompilerBuild } from '../compiler/host.ts';
 import { buildSite, parseBuildArgs } from './build.ts';
 import { formatCodeView } from './code-view.ts';
+import { bindCodeModeButtons, bindLiteEditor } from './editor-client.ts';
 import { heroSample, sampleGroups, showcaseSamples } from './groups.ts';
 import { escapeHtml, highlightC, highlightLite, highlightTs } from './highlight.ts';
 import { playGroups, playSamples } from './play-samples.ts';
 import { stripLiteTs } from './strip-ts.ts';
+import { renderCodeEditorBlock, renderCodeModeBar } from './ui-blocks.ts';
 
 const root = dirname(import.meta.dirname);
 let cachedTsCompiler: CompilerBuild | undefined;
@@ -292,7 +294,8 @@ test('buildSite generates static pages and metadata in dist/site', () => {
   assert(playground.includes('playground-page'));
   assert(playground.includes('id="pg-workbench"'));
   assert(playground.includes('id="pg-split"'));
-  assert(playground.includes('highlightLite(editorEl.value)'));
+  assert(playground.includes('bindLiteEditor('));
+  assert(playground.includes('bindCodeModeButtons('));
   assert(playground.includes('Generated TS'));
   assert(playground.includes('id="pg-compile"'));
   assert(playground.includes('id="pg-play"'));
@@ -313,13 +316,17 @@ test('buildSite generates static pages and metadata in dist/site', () => {
     assert.match(item.slug, /^[a-z0-9._-]+$/, `invalid slug for ${item.id}: ${item.slug}`);
   }
   assert(lib.some(item => item.category === 'piece' && item.slug === 'hello-lite'));
-  assert(playground.includes('event.key === "Tab"'));
+  const editorClientJs = readFileSync(join(out, 'playground', 'editor-client.js'), 'utf8');
+  assert(editorClientJs.includes('highlight(editor.value)'));
+  assert(editorClientJs.includes("event.key === 'Tab'"));
   assert(playground.includes('id="pg-c"'));
   assert(playground.includes('id="mode-program"'));
   assert(playground.includes('id="mode-portable"'));
   assert(playground.includes('id="mode-full"'));
   assert(playground.includes('new Worker("./worker.js"'));
   assert(existsSync(join(out, 'playground', 'code-view.js')));
+  assert(existsSync(join(out, 'playground', 'editor-client.js')));
+  assert(existsSync(join(out, 'runtime', 'editor-client.js')));
   assert(existsSync(join(out, 'playground', 'highlight.js')));
   assert(playground.includes('id="tab-canvas"'));
   assert(playground.includes('id="pg-pause"'));
@@ -899,6 +906,7 @@ test('playground inline module initializes without TDZ or ReferenceError', async
   assert(scriptMatch, 'missing playground inline module script');
   const scriptBody = (scriptMatch[1] ?? '')
     .replace(/^\s*import\s+\{[^}]+\}\s+from\s+"\.\/code-view\.js";\s*/m, '')
+    .replace(/^\s*import\s+\{[^}]+\}\s+from\s+"\.\/editor-client\.js";\s*/m, '')
     .replace(/^\s*import\s+\{[^}]+\}\s+from\s+"\.\/highlight\.js";\s*/m, '');
 
   const makeEl = (id = '') => {
@@ -1020,6 +1028,8 @@ test('playground inline module initializes without TDZ or ReferenceError', async
   };
 
   const sandbox = {
+    bindCodeModeButtons,
+    bindLiteEditor,
     formatCodeView,
     highlightLite,
     highlightTs,
@@ -1078,6 +1088,105 @@ test('playground inline module initializes without TDZ or ReferenceError', async
     replacedUrls.at(-1)?.includes('?snip=019335a1-0000-7000-8000-000000000001'),
     `expected URL to switch to saved UUIDv7 snip, got ${replacedUrls.at(-1)}`,
   );
+});
+
+test('shared UI blocks and editor client bind highlighting, scroll sync, Tab indentation, and mode buttons', () => {
+  const blockHtml = renderCodeEditorBlock({
+    textareaId: 'demo-editor',
+    ariaLabel: 'Demo editor',
+    preId: 'demo-pre',
+    preCodeId: 'demo-code',
+    minHeight: '290px',
+    initialSource: 'x := 1 < 2',
+    initialHtml: highlightLite('x := 1 < 2'),
+  });
+  assert(blockHtml.includes('class="pg-editor-wrap" style="min-height: 290px;"'));
+  assert(blockHtml.includes('<pre id="demo-pre" class="pg-editor-pre" aria-hidden="true"><code id="demo-code">'));
+  assert(blockHtml.includes('<textarea id="demo-editor" class="pg-editor-input" spellcheck="false" autocomplete="off" autocapitalize="off" aria-label="Demo editor">x := 1 &lt; 2</textarea>'));
+
+  const modesHtml = renderCodeModeBar({ id: 'demo-modes', buttonIdPrefix: 'demo-' });
+  assert(modesHtml.includes('id="demo-modes" class="code-modes" hidden'));
+  assert(modesHtml.includes('id="demo-program"'));
+  assert(modesHtml.includes('data-mode="portable" aria-pressed="false"'));
+  assert(modesHtml.includes('id="demo-full"'));
+
+  const listeners = new Map<string, Array<(ev: unknown) => void>>();
+  const preParent = { scrollTop: 0, scrollLeft: 0 };
+  const preCode = { innerHTML: '', parentElement: preParent };
+  const editor = {
+    value: 'x := 1',
+    scrollTop: 0,
+    scrollLeft: 0,
+    selectionStart: 6,
+    selectionEnd: 6,
+    setRangeText(rep: string, s: number, e: number) {
+      this.value = this.value.slice(0, s) + rep + this.value.slice(e);
+      this.selectionStart = s + rep.length;
+      this.selectionEnd = this.selectionStart;
+    },
+    addEventListener(type: string, fn: (ev: unknown) => void) {
+      const list = listeners.get(type) ?? [];
+      list.push(fn);
+      listeners.set(type, list);
+    },
+  };
+  const emit = (type: string, ev: unknown = {}) => {
+    for (const fn of listeners.get(type) ?? []) fn(ev);
+  };
+
+  let runs = 0;
+  let shiftRuns = 0;
+  let inputs: Array<[string, boolean]> = [];
+  const ctrl = bindLiteEditor({
+    editor,
+    preCode,
+    highlight: highlightLite,
+    indent: '    ',
+    onInput: (src, fromTab) => { inputs.push([src, fromTab]); },
+    onRun: () => { runs += 1; },
+    onShiftRun: () => { shiftRuns += 1; },
+  });
+
+  ctrl.setValue('a := 10');
+  assert(preCode.innerHTML.includes('10'));
+  editor.scrollTop = 42;
+  editor.scrollLeft = 12;
+  emit('scroll');
+  assert.equal(preParent.scrollTop, 42);
+  assert.equal(preParent.scrollLeft, 12);
+
+  editor.selectionStart = 7;
+  editor.selectionEnd = 7;
+  let prevented = false;
+  emit('keydown', { key: 'Tab', preventDefault: () => { prevented = true; } });
+  assert.equal(prevented, true);
+  assert.equal(editor.value, 'a := 10    ');
+  assert.deepEqual(inputs, [['a := 10    ', true]]);
+
+  emit('keydown', { key: 'Enter', metaKey: true, preventDefault() {} });
+  emit('keydown', { key: 'Enter', ctrlKey: true, shiftKey: true, preventDefault() {} });
+  assert.equal(runs, 1);
+  assert.equal(shiftRuns, 1);
+
+  const modeClicks = new Map<string, () => void>();
+  const modeAttrs = new Map<string, Record<string, string>>();
+  const buttons = ['program', 'portable', 'full'].map(mode => ({
+    dataset: { mode },
+    setAttribute(k: string, v: string) {
+      const rec = modeAttrs.get(mode) ?? {};
+      rec[k] = v;
+      modeAttrs.set(mode, rec);
+    },
+    addEventListener(type: string, fn: () => void) {
+      if (type === 'click') modeClicks.set(mode, fn);
+    },
+  }));
+  let selectedMode = 'program';
+  bindCodeModeButtons({ buttons, onChange: (m) => { selectedMode = m; } });
+  modeClicks.get('portable')?.();
+  assert.equal(selectedMode, 'portable');
+  assert.equal(modeAttrs.get('portable')?.['aria-pressed'], 'true');
+  assert.equal(modeAttrs.get('program')?.['aria-pressed'], 'false');
 });
 
 test('runtime/snips.js manages UUIDv7 localStorage sketches and enhances doc code blocks', () => {

@@ -11,6 +11,7 @@ import { escapeHtml, highlightLite } from './highlight.ts';
 import type { LearnCatalog } from './learn-pages.ts';
 import type { PlaySample } from './play-samples.ts';
 import type { SearchEntry } from './search.ts';
+import { renderCodeEditorBlock, renderCodeModeBar } from './ui-blocks.ts';
 
 export type GymBuildOutput = Readonly<{
   files: ReadonlyMap<string, string>;
@@ -510,10 +511,14 @@ function renderGymExercisePage(
           <a id="gym-open-play" class="pg-copy-btn" href="../../playground/?draft=gym">Open in Play &rarr;</a>
         </div>
       </div>
-      <div class="pg-editor-wrap" style="min-height: 290px;">
-        <pre id="gym-editor-pre" class="pg-editor-pre" aria-hidden="true"><code>${highlightLite(starterClean)}</code></pre>
-        <textarea id="gym-editor" class="pg-editor-input" spellcheck="false" autocomplete="off" autocapitalize="off" aria-label="Lite solution code editor">${escapeHtml(starterClean)}</textarea>
-      </div>
+      ${renderCodeEditorBlock({
+        textareaId: 'gym-editor',
+        ariaLabel: 'Lite solution code editor',
+        preId: 'gym-editor-pre',
+        minHeight: '290px',
+        initialSource: starterClean,
+        initialHtml: highlightLite(starterClean),
+      })}
       <div class="pg-actions" style="flex-wrap: wrap; border-top: 1px solid var(--border); padding: 0.55rem 0.85rem; background: var(--surface);">
         <button id="gym-submit" class="btn btn-primary" type="button">Submit &amp; Grade (${String(totalCases)})</button>
         <button id="gym-run-visible" class="btn" type="button">Run Visible (${String(ex.visibleCases.length)})</button>
@@ -529,11 +534,7 @@ function renderGymExercisePage(
           <button id="gym-tab-c" class="pg-tab" type="button" role="tab" aria-selected="false">Generated C</button>
         </div>
       </div>
-      <div id="gym-code-modes" class="code-modes" hidden>
-        <button class="code-mode-btn" type="button" data-mode="program" aria-pressed="true">Program</button>
-        <button class="code-mode-btn" type="button" data-mode="portable" aria-pressed="false">Portable</button>
-        <button class="code-mode-btn" type="button" data-mode="full" aria-pressed="false">Full</button>
-      </div>
+      ${renderCodeModeBar({ id: 'gym-code-modes' })}
       <div id="gym-results" class="pg-panel gym-results-panel" style="min-height: 240px; max-height: 360px;">
         <div class="gym-result-empty">Run visible tests or submit all ${String(totalCases)} tests to grade your solution in the browser.</div>
       </div>
@@ -545,6 +546,7 @@ function renderGymExercisePage(
 
 <script type="module">
   import { formatCodeView } from "../../runtime/code-view.js";
+  import { bindCodeModeButtons, bindLiteEditor } from "../../runtime/editor-client.js";
   import { highlightC, highlightLite, highlightTs } from "../../runtime/highlight.js";
 
   const STORAGE_KEY = "lite-gym-progress-v1";
@@ -613,12 +615,6 @@ function renderGymExercisePage(
   }
   syncSolvedPill();
 
-  function syncEditorHighlight() {
-    editorPreEl.innerHTML = highlightLite(editorEl.value) + "\\n";
-    editorPreEl.parentElement.scrollTop = editorEl.scrollTop;
-    editorPreEl.parentElement.scrollLeft = editorEl.scrollLeft;
-  }
-
   function saveDraft() {
     const state = loadState();
     if (payloadData && editorEl.value === payloadData.starterSource.trimEnd()) {
@@ -629,29 +625,17 @@ function renderGymExercisePage(
     saveState(state);
   }
 
-  editorEl.addEventListener("input", () => {
-    lastRawC = "";
-    syncEditorHighlight();
-    saveDraft();
-  });
-  editorEl.addEventListener("scroll", () => {
-    editorPreEl.parentElement.scrollTop = editorEl.scrollTop;
-    editorPreEl.parentElement.scrollLeft = editorEl.scrollLeft;
-  });
-  editorEl.addEventListener("keydown", (event) => {
-    if (event.key === "Tab" && !event.metaKey && !event.ctrlKey && !event.altKey) {
-      event.preventDefault();
-      const s = editorEl.selectionStart;
-      const e = editorEl.selectionEnd;
-      editorEl.setRangeText("    ", s, e, "end");
+  const editorCtrl = bindLiteEditor({
+    editor: editorEl,
+    preCode: editorPreEl,
+    highlight: highlightLite,
+    indent: "    ",
+    onInput: () => {
       lastRawC = "";
-      syncEditorHighlight();
       saveDraft();
-    } else if ((event.metaKey || event.ctrlKey) && event.key === "Enter") {
-      event.preventDefault();
-      if (event.shiftKey) void runJudge(true);
-      else void runJudge(false);
-    }
+    },
+    onRun: () => void runJudge(false),
+    onShiftRun: () => void runJudge(true),
   });
 
   openPlayLink.addEventListener("click", (event) => {
@@ -715,9 +699,8 @@ function renderGymExercisePage(
 
   loadSolBtn.addEventListener("click", () => {
     if (!payloadData) return;
-    editorEl.value = payloadData.solutionSource.trimEnd();
     lastRawC = "";
-    syncEditorHighlight();
+    editorCtrl.setValue(payloadData.solutionSource.trimEnd());
     saveDraft();
     statusEl.textContent = "Loaded reference solution into editor";
   });
@@ -744,15 +727,13 @@ function renderGymExercisePage(
     if (!lastRawC) void requestCompileC();
   });
 
-  for (const btn of document.querySelectorAll("#gym-code-modes .code-mode-btn")) {
-    btn.addEventListener("click", () => {
-      codeMode = btn.dataset.mode || "program";
-      for (const b of document.querySelectorAll("#gym-code-modes .code-mode-btn")) {
-        b.setAttribute("aria-pressed", b === btn ? "true" : "false");
-      }
+  bindCodeModeButtons({
+    buttons: document.querySelectorAll("#gym-code-modes .code-mode-btn"),
+    onChange: (mode) => {
+      codeMode = mode;
       renderCodeTabs();
-    });
-  }
+    },
+  });
 
   function getWorker() {
     if (!worker) {
@@ -883,9 +864,8 @@ function renderGymExercisePage(
 
   resetBtn.addEventListener("click", () => {
     if (!payloadData) return;
-    editorEl.value = payloadData.starterSource.trimEnd();
     lastRawC = "";
-    syncEditorHighlight();
+    editorCtrl.setValue(payloadData.starterSource.trimEnd());
     const state = loadState();
     delete state.drafts[exerciseId];
     saveState(state);
@@ -898,8 +878,7 @@ function renderGymExercisePage(
       payloadData = data;
       const state = loadState();
       if (typeof state.drafts[exerciseId] === "string" && state.drafts[exerciseId].length > 0) {
-        editorEl.value = state.drafts[exerciseId];
-        syncEditorHighlight();
+        editorCtrl.setValue(state.drafts[exerciseId]);
         statusEl.textContent = "Restored saved draft";
       }
     })
