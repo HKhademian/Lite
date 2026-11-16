@@ -2276,4 +2276,45 @@ a.is-completed .learn-done-dot {
   gap: 0.4rem;
   flex-wrap: wrap;
 }
+.pg-icon-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.35rem;
+  padding: 0.38rem 0.56rem;
+}
+.pg-icon-btn[hidden] { display: none; }
+.pg-save-btn {
+  color: var(--accent);
+  border-color: var(--accent);
+  background: var(--accent-soft);
+}
+.snips-cat-tabs {
+  display: flex;
+  align-items: center;
+  gap: 0.35rem;
+  flex-wrap: wrap;
+  padding: 0.55rem 1rem 0;
+}
+.snips-cat-tab {
+  appearance: none;
+  border: 1px solid var(--border);
+  background: var(--bg);
+  color: var(--ink-muted);
+  font-family: inherit;
+  font-size: 0.78rem;
+  font-weight: 600;
+  padding: 0.28rem 0.62rem;
+  border-radius: 999px;
+  cursor: pointer;
+}
+.snips-cat-tab:hover {
+  color: var(--ink);
+  border-color: var(--accent);
+}
+.snips-cat-tab[aria-pressed="true"] {
+  background: var(--accent-soft);
+  color: var(--ink);
+  border-color: var(--accent);
+}
 `;

@@ -292,8 +292,16 @@ test('buildSite generates static pages and metadata in dist/site', () => {
   assert(playground.includes('id="pg-save-snip"'));
   assert(playground.includes('id="pg-sketches-btn"'));
   assert(playground.includes('id="pg-sketches-modal"'));
+  assert(playground.includes('id="pg-sketches-cat-tabs"'));
+  assert(playground.includes('data-cat="piece"'));
   assert(playground.includes('id="pg-copy"'));
   assert(index.includes('runtime/snips.js'));
+  assert(existsSync(join(out, 'playground', 'library.json')));
+  const lib = JSON.parse(readFileSync(join(out, 'playground', 'library.json'), 'utf8')) as Array<{ category: string }>;
+  const libCats = new Set(lib.map(item => item.category));
+  for (const cat of ['sample', 'example', 'case', 'piece']) {
+    assert(libCats.has(cat), `missing library.json category: ${cat}`);
+  }
   assert(playground.includes('event.key === "Tab"'));
   assert(playground.includes('id="pg-c"'));
   assert(playground.includes('id="mode-program"'));
@@ -911,6 +919,9 @@ test('playground inline module initializes without TDZ or ReferenceError', async
         list.push(fn);
         listeners.set(type, list);
       },
+      trigger(type: string, ev: unknown = {}) {
+        for (const fn of listeners.get(type) ?? []) fn(ev);
+      },
       focus() {},
       getBoundingClientRect() { return { left: 0, top: 0, width: 640, height: 400 }; },
       getContext() {
@@ -952,10 +963,43 @@ test('playground inline module initializes without TDZ or ReferenceError', async
 
   const sampleJsonPath = join(root, 'dist', 'site', 'playground', 'samples');
   const firstSampleId = showcaseSamples[0]!.id;
+  const replacedUrls: string[] = [];
+  const storedSnips: Array<{ id: string; title: string; code: string; stdin: string; args: string; origin: string }> = [];
   const mockWin = {
     location: { href: `https://example.test/playground/?sample=${firstSampleId}`, search: `?sample=${firstSampleId}` },
-    history: { replaceState() {} },
+    history: {
+      replaceState(_state: unknown, _title: string, url: URL | string) {
+        replacedUrls.push(String(url));
+      },
+    },
     localStorage: { getItem: () => null, setItem() {} },
+    LiteSnips: {
+      list: () => storedSnips,
+      get: (id: string) => storedSnips.find(s => s.id === id) ?? null,
+      saveNew: (d: { title: string; code: string; stdin?: string; args?: string; origin?: string }) => {
+        const entry = {
+          id: '019335a1-0000-7000-8000-000000000001',
+          title: d.title,
+          code: d.code,
+          stdin: d.stdin ?? '',
+          args: d.args ?? '',
+          origin: d.origin ?? 'playground',
+        };
+        storedSnips.unshift(entry);
+        return entry;
+      },
+      update: (id: string, p: { title?: string; code?: string; stdin?: string; args?: string }) => {
+        const hit = storedSnips.find(s => s.id === id);
+        if (!hit) return null;
+        if (p.title !== undefined) hit.title = p.title;
+        if (p.code !== undefined) hit.code = p.code;
+        if (p.stdin !== undefined) hit.stdin = p.stdin;
+        if (p.args !== undefined) hit.args = p.args;
+        return hit;
+      },
+      remove: () => false,
+      clear: () => { storedSnips.length = 0; },
+    },
     navigator: {},
     requestAnimationFrame: () => 1,
     cancelAnimationFrame() {},
@@ -1004,6 +1048,20 @@ test('playground inline module initializes without TDZ or ReferenceError', async
   runInNewContext(`(async () => {\n${scriptBody}\n})()`, sandbox);
   await new Promise(resolve => setTimeout(resolve, 25));
   assert.equal(els.get('pg-pause')?.getAttribute('aria-pressed'), 'false');
+  const saveBtn = els.get('pg-save-snip');
+  const editor = els.get('pg-editor');
+  assert(saveBtn && editor);
+  assert.equal(saveBtn.hidden, true, 'Save button should stay hidden when editor matches loaded sample');
+  editor.value += '\n/* edited */\n';
+  editor.trigger('input');
+  assert.equal(saveBtn.hidden, false, 'Save button should appear once code is modified');
+  saveBtn.trigger('click');
+  assert.equal(saveBtn.hidden, true, 'Save button should hide again right after saving');
+  assert.equal(storedSnips.length, 1);
+  assert(
+    replacedUrls.at(-1)?.includes('?snip=019335a1-0000-7000-8000-000000000001'),
+    `expected URL to switch to saved UUIDv7 snip, got ${replacedUrls.at(-1)}`,
+  );
 });
 
 test('runtime/snips.js manages UUIDv7 localStorage sketches and enhances doc code blocks', () => {

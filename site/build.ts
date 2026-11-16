@@ -26,6 +26,7 @@ import { buildLearnSection } from './learn-pages.ts';
 import { buildModulesSection } from './modules-pages.ts';
 import { playGroups, playSamples, type PlaySample } from './play-samples.ts';
 import { appendPlayKeepalive, stripPlayKeepaliveTs } from './play-keepalive.ts';
+import { collectPlaygroundLibrary } from './playground-library.ts';
 import { playgroundWorkerJs } from './playground-worker.ts';
 import { searchClientJs, type SearchEntry } from './search.ts';
 import { snipsClientJs } from './snips.ts';
@@ -474,8 +475,18 @@ function renderPlaygroundPage(
         <button id="pg-reset" class="btn" type="button">Reset</button>
       </div>
       <div class="pg-actions">
-        <button id="pg-save-snip" class="btn" type="button" title="Save current code as a UUIDv7 sketch in localStorage">Save</button>
-        <button id="pg-sketches-btn" class="btn" type="button" title="Explore, rename, or clear saved localStorage sketches">Sketches <span id="pg-sketches-count" class="badge">0</span></button>
+        <button id="pg-save-snip" class="btn pg-icon-btn pg-save-btn" type="button" hidden title="Save changes to localStorage (UUIDv7) and update URL" aria-label="Save changes">
+          <svg viewBox="0 0 16 16" width="15" height="15" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+            <path d="M12.5 14H3.5A1.5 1.5 0 0 1 2 12.5v-9A1.5 1.5 0 0 1 3.5 2h7l3.5 3.5v7A1.5 1.5 0 0 1 12.5 14Z"/>
+            <path d="M10.5 14v-4h-5v4M5.5 2v3h4"/>
+          </svg>
+        </button>
+        <button id="pg-sketches-btn" class="btn pg-icon-btn" type="button" title="Load stored codes, samples, examples, cases, and pieces" aria-label="Load code from stored sketches, samples, examples, cases, or pieces">
+          <svg viewBox="0 0 16 16" width="15" height="15" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+            <path d="M2 4.5A1.5 1.5 0 0 1 3.5 3h3l1.5 1.5h4.5A1.5 1.5 0 0 1 14 6v6a1.5 1.5 0 0 1-1.5 1.5h-9A1.5 1.5 0 0 1 2 12V4.5Z"/>
+          </svg>
+          <span id="pg-sketches-count" class="badge">0</span>
+        </button>
         <button id="pg-compile" class="btn" type="button">Compile</button>
         <button id="pg-play" class="btn btn-primary" type="button" title="Run (Ctrl/Cmd + Enter)">&#9654; Play</button>
       </div>
@@ -562,16 +573,24 @@ function renderPlaygroundPage(
 <div id="pg-sketches-modal" class="snips-modal-backdrop" role="dialog" aria-modal="true" aria-labelledby="pg-sketches-title" hidden>
   <div class="snips-modal">
     <div class="snips-modal-head">
-      <h2 id="pg-sketches-title">Saved Sketches (localStorage · UUIDv7)</h2>
+      <h2 id="pg-sketches-title">Load &amp; Stored Sketches</h2>
       <div class="pg-actions">
         <button id="pg-sketches-new" class="btn btn-primary" type="button">+ New Sketch</button>
-        <button id="pg-sketches-clear" class="btn" type="button">Clear All</button>
-        <button id="pg-sketches-close" class="btn" type="button" aria-label="Close sketches explorer">Close</button>
+        <button id="pg-sketches-clear" class="btn" type="button">Clear Saved</button>
+        <button id="pg-sketches-close" class="btn" type="button" aria-label="Close load explorer">Close</button>
       </div>
     </div>
+    <div id="pg-sketches-cat-tabs" class="snips-cat-tabs" role="group" aria-label="Code categories">
+      <button class="snips-cat-tab" type="button" data-cat="all" aria-pressed="true">All</button>
+      <button class="snips-cat-tab" type="button" data-cat="saved" aria-pressed="false">Saved</button>
+      <button class="snips-cat-tab" type="button" data-cat="sample" aria-pressed="false">Samples</button>
+      <button class="snips-cat-tab" type="button" data-cat="example" aria-pressed="false">Examples</button>
+      <button class="snips-cat-tab" type="button" data-cat="case" aria-pressed="false">Cases</button>
+      <button class="snips-cat-tab" type="button" data-cat="piece" aria-pressed="false">Pieces</button>
+    </div>
     <div class="snips-modal-tools">
-      <input id="pg-sketches-filter" type="search" placeholder="Filter saved sketches by title, origin, or UUIDv7..." aria-label="Filter saved sketches">
-      <span id="pg-sketches-summary" class="code-card-meta">0 saved</span>
+      <input id="pg-sketches-filter" type="search" placeholder="Filter stored sketches, samples, examples, cases, and pieces..." aria-label="Filter code entries">
+      <span id="pg-sketches-summary" class="code-card-meta">0 items</span>
     </div>
     <div id="pg-sketches-list" class="snips-list"></div>
   </div>
@@ -644,26 +663,44 @@ function renderPlaygroundPage(
   let nextReqId = 1;
   const pending = new Map();
   const snipsApi = typeof window !== "undefined" && window.LiteSnips ? window.LiteSnips : null;
+  const saveSnipBtn = document.getElementById("pg-save-snip");
   let activeSnipId = null;
-  let snipSaveTimer = 0;
+  let activeLibraryItem = null;
+  let libraryItems = null;
+  let libraryPromise = null;
+  let baseline = { code: "", stdin: "", args: "" };
 
   function syncSnipsBadge() {
     const badge = document.getElementById("pg-sketches-count");
     if (badge && snipsApi) badge.textContent = String(snipsApi.list().length);
   }
 
-  function scheduleSnipAutosave() {
-    if (!snipsApi || !activeSnipId) return;
-    if (snipSaveTimer) window.clearTimeout(snipSaveTimer);
-    snipSaveTimer = window.setTimeout(() => {
-      snipSaveTimer = 0;
-      if (!activeSnipId) return;
-      snipsApi.update(activeSnipId, {
-        code: editorEl.value,
-        stdin: stdinEl.value.replaceAll("\\\\n", "\\n"),
-        args: argsEl.value,
-      });
-    }, 250);
+  function updateDirtyState() {
+    const dirty = editorEl.value !== baseline.code || stdinEl.value !== baseline.stdin || argsEl.value !== baseline.args;
+    if (saveSnipBtn) saveSnipBtn.hidden = !dirty;
+    return dirty;
+  }
+
+  function setBaseline() {
+    baseline = { code: editorEl.value, stdin: stdinEl.value, args: argsEl.value };
+    if (saveSnipBtn) saveSnipBtn.hidden = true;
+  }
+
+  function loadLibraryCatalog() {
+    if (libraryItems) return Promise.resolve(libraryItems);
+    if (!libraryPromise) {
+      libraryPromise = fetch("./library.json")
+        .then((res) => (res.ok ? res.json() : []))
+        .then((data) => {
+          libraryItems = Array.isArray(data) ? data : [];
+          return libraryItems;
+        })
+        .catch(() => {
+          libraryItems = [];
+          return libraryItems;
+        });
+    }
+    return libraryPromise;
   }
 
   const SPLIT_KEY = "lite.pg.split";
@@ -764,12 +801,12 @@ function renderPlaygroundPage(
   editorEl.addEventListener("input", () => {
     pauseCanvasLoop();
     sourceEl.innerHTML = highlightLite(editorEl.value) + "\\n";
-    statusEl.textContent = activeSnipId ? "Modified (autosaving sketch)" : "Modified";
+    const dirty = updateDirtyState();
+    statusEl.textContent = dirty ? "Modified — click Save" : "Ready";
     statusEl.hidden = false;
-    scheduleSnipAutosave();
   });
-  stdinEl.addEventListener("input", scheduleSnipAutosave);
-  argsEl.addEventListener("input", scheduleSnipAutosave);
+  stdinEl.addEventListener("input", updateDirtyState);
+  argsEl.addEventListener("input", updateDirtyState);
 
   editorEl.addEventListener("keydown", (event) => {
     if ((event.metaKey || event.ctrlKey) && event.key === "Enter") {
@@ -784,7 +821,8 @@ function renderPlaygroundPage(
       const end = editorEl.selectionEnd;
       editorEl.setRangeText("  ", start, end, "end");
       sourceEl.innerHTML = highlightLite(editorEl.value) + "\\n";
-      statusEl.textContent = "Modified";
+      const dirty = updateDirtyState();
+      statusEl.textContent = dirty ? "Modified — click Save" : "Modified";
     }
   });
 
@@ -809,6 +847,7 @@ function renderPlaygroundPage(
     const meta = byId.get(id) ?? samples[0];
     if (!meta) return;
     activeSnipId = null;
+    activeLibraryItem = null;
     stopPlay(true);
     select.value = meta.id;
     fileEl.textContent = meta.file;
@@ -817,6 +856,7 @@ function renderPlaygroundPage(
     const url = new URL(window.location.href);
     url.searchParams.delete("snip");
     url.searchParams.delete("draft");
+    url.searchParams.delete("item");
     url.searchParams.set("sample", meta.id);
     window.history.replaceState({}, "", url);
 
@@ -838,6 +878,7 @@ function renderPlaygroundPage(
     if (activeTab === "c") void compileCForEditor();
     argsEl.value = sample.args.join(" ");
     stdinEl.value = sample.stdin.replaceAll("\\n", "\\\\n");
+    setBaseline();
 
     if (mode === "compile") {
       showTab("ts");
@@ -1009,7 +1050,12 @@ function renderPlaygroundPage(
   }
 
   select.addEventListener("change", () => { unlockAudio(); void loadSample(select.value, "load"); });
-  resetBtn.addEventListener("click", () => { unlockAudio(); void loadSample(select.value, "load"); });
+  resetBtn.addEventListener("click", () => {
+    unlockAudio();
+    if (activeSnipId && loadSnip(activeSnipId)) return;
+    if (activeLibraryItem) { loadLibraryItem(activeLibraryItem); return; }
+    void loadSample(select.value, "load");
+  });
   compileBtn.addEventListener("click", () => { void runAction("compile"); });
   playBtn.addEventListener("click", () => { unlockAudio(); void runAction("play"); });
 
@@ -1375,6 +1421,7 @@ function renderPlaygroundPage(
     if (!snip) return false;
     stopPlay(true);
     activeSnipId = snip.id;
+    activeLibraryItem = null;
     currentSample = null;
     editorEl.value = snip.code;
     sourceEl.innerHTML = highlightLite(snip.code) + "\\n";
@@ -1388,18 +1435,52 @@ function renderPlaygroundPage(
     cMessage = "/* Press Compile or open Generated C to emit C. */";
     lastCSource = null;
     renderCodeViews();
+    setBaseline();
     outputEl.textContent = "(Press Play to run)";
     statusEl.textContent = "Loaded sketch: " + snip.title;
     const nextUrl = new URL(window.location.href);
     nextUrl.searchParams.delete("sample");
     nextUrl.searchParams.delete("draft");
+    nextUrl.searchParams.delete("item");
     nextUrl.searchParams.set("snip", snip.id);
     window.history.replaceState({}, "", nextUrl);
     syncSnipsBadge();
     return true;
   }
 
-  const saveSnipBtn = document.getElementById("pg-save-snip");
+  function loadLibraryItem(item) {
+    if (!item) return;
+    if (item.sampleId && byId.has(item.sampleId)) {
+      void loadSample(item.sampleId, "load");
+      return;
+    }
+    stopPlay(true);
+    activeSnipId = null;
+    activeLibraryItem = item;
+    currentSample = null;
+    editorEl.value = item.source;
+    sourceEl.innerHTML = highlightLite(item.source) + "\\n";
+    editorEl.scrollTop = 0;
+    editorEl.scrollLeft = 0;
+    stdinEl.value = String(item.stdin || "").replaceAll("\\n", "\\\\n");
+    argsEl.value = Array.isArray(item.args) ? item.args.join(" ") : "";
+    fileEl.textContent = item.file || item.title;
+    rawTs = "";
+    rawC = "";
+    cMessage = "/* Press Compile or open Generated C to emit C. */";
+    lastCSource = null;
+    renderCodeViews();
+    setBaseline();
+    outputEl.textContent = "(Press Play to run)";
+    statusEl.textContent = "Loaded " + item.badge + ": " + item.title;
+    const nextUrl = new URL(window.location.href);
+    nextUrl.searchParams.delete("sample");
+    nextUrl.searchParams.delete("draft");
+    nextUrl.searchParams.delete("snip");
+    nextUrl.searchParams.set("item", item.id);
+    window.history.replaceState({}, "", nextUrl);
+  }
+
   const sketchesBtn = document.getElementById("pg-sketches-btn");
   const sketchesModal = document.getElementById("pg-sketches-modal");
   const sketchesClose = document.getElementById("pg-sketches-close");
@@ -1408,150 +1489,229 @@ function renderPlaygroundPage(
   const sketchesFilter = document.getElementById("pg-sketches-filter");
   const sketchesSummary = document.getElementById("pg-sketches-summary");
   const sketchesList = document.getElementById("pg-sketches-list");
+  const catTabs = Array.from(document.querySelectorAll("#pg-sketches-cat-tabs .snips-cat-tab"));
+  let activeCat = "all";
   let clearArmed = false;
 
+  function renderSavedRow(item) {
+    const row = document.createElement("article");
+    row.className = "snips-item" + (item.id === activeSnipId ? " active" : "");
+
+    const head = document.createElement("div");
+    head.className = "snips-item-head";
+
+    const titleSpan = document.createElement("span");
+    titleSpan.className = "snips-item-title";
+    titleSpan.textContent = item.title;
+    head.appendChild(titleSpan);
+
+    const meta = document.createElement("div");
+    meta.className = "snips-item-meta";
+    const idCode = document.createElement("code");
+    idCode.textContent = item.id;
+    const originSpan = document.createElement("span");
+    originSpan.className = "badge";
+    originSpan.textContent = "Saved · " + (item.origin || "custom");
+    const dateSpan = document.createElement("span");
+    dateSpan.textContent = String(item.updatedAt || "").slice(0, 16).replace("T", " ");
+    meta.appendChild(idCode);
+    meta.appendChild(originSpan);
+    meta.appendChild(dateSpan);
+
+    const preview = document.createElement("pre");
+    preview.className = "snips-preview";
+    preview.textContent = (item.code.split("\\n").find((l) => l.trim() !== "") || "(empty)").trim();
+
+    const actions = document.createElement("div");
+    actions.className = "snips-item-actions";
+
+    const openBtn = document.createElement("button");
+    openBtn.type = "button";
+    openBtn.className = "btn btn-primary";
+    openBtn.textContent = item.id === activeSnipId ? "Loaded" : "Open";
+    openBtn.addEventListener("click", () => {
+      loadSnip(item.id);
+      if (sketchesModal) sketchesModal.hidden = true;
+    });
+
+    const renameBtn = document.createElement("button");
+    renameBtn.type = "button";
+    renameBtn.className = "btn";
+    renameBtn.textContent = "Rename";
+    renameBtn.addEventListener("click", () => {
+      const input = document.createElement("input");
+      input.type = "text";
+      input.className = "snips-rename-input";
+      input.value = item.title;
+      input.setAttribute("aria-label", "New title for sketch");
+      const saveTitleBtn = document.createElement("button");
+      saveTitleBtn.type = "button";
+      saveTitleBtn.className = "btn btn-primary";
+      saveTitleBtn.textContent = "Save Title";
+      const wrap = document.createElement("div");
+      wrap.className = "snips-rename-row";
+      wrap.appendChild(input);
+      wrap.appendChild(saveTitleBtn);
+      head.replaceChild(wrap, titleSpan);
+      input.focus();
+      input.select();
+      const commitRename = () => {
+        const nextTitle = input.value.trim();
+        if (nextTitle) {
+          snipsApi.update(item.id, { title: nextTitle });
+          if (item.id === activeSnipId) {
+            fileEl.textContent = nextTitle + " · " + item.id.slice(0, 8);
+          }
+        }
+        renderSketchesList();
+      };
+      saveTitleBtn.addEventListener("click", commitRename);
+      input.addEventListener("keydown", (ev) => {
+        if (ev.key === "Enter") { ev.preventDefault(); commitRename(); }
+        else if (ev.key === "Escape") { ev.preventDefault(); renderSketchesList(); }
+      });
+    });
+
+    const dupBtn = document.createElement("button");
+    dupBtn.type = "button";
+    dupBtn.className = "btn";
+    dupBtn.textContent = "Duplicate";
+    dupBtn.addEventListener("click", () => {
+      snipsApi.saveNew({
+        title: item.title + " (copy)",
+        code: item.code,
+        stdin: item.stdin,
+        args: item.args,
+        origin: item.origin,
+      });
+      syncSnipsBadge();
+      renderSketchesList();
+    });
+
+    const delBtn = document.createElement("button");
+    delBtn.type = "button";
+    delBtn.className = "btn";
+    delBtn.textContent = "Delete";
+    delBtn.addEventListener("click", () => {
+      snipsApi.remove(item.id);
+      if (item.id === activeSnipId) activeSnipId = null;
+      syncSnipsBadge();
+      renderSketchesList();
+    });
+
+    actions.appendChild(openBtn);
+    actions.appendChild(renameBtn);
+    actions.appendChild(dupBtn);
+    actions.appendChild(delBtn);
+
+    row.appendChild(head);
+    row.appendChild(meta);
+    row.appendChild(preview);
+    row.appendChild(actions);
+    return row;
+  }
+
+  function renderLibraryRow(item) {
+    const isLoaded = Boolean(
+      (item.sampleId && currentSample && currentSample.id === item.sampleId && !activeSnipId) ||
+      (activeLibraryItem && activeLibraryItem.id === item.id),
+    );
+    const row = document.createElement("article");
+    row.className = "snips-item" + (isLoaded ? " active" : "");
+
+    const head = document.createElement("div");
+    head.className = "snips-item-head";
+    const titleSpan = document.createElement("span");
+    titleSpan.className = "snips-item-title";
+    titleSpan.textContent = item.title;
+    const catBadge = document.createElement("span");
+    catBadge.className = "badge";
+    catBadge.textContent = item.badge || item.category;
+    head.appendChild(titleSpan);
+    head.appendChild(catBadge);
+
+    const meta = document.createElement("div");
+    meta.className = "snips-item-meta";
+    const fileCode = document.createElement("code");
+    fileCode.textContent = item.file;
+    meta.appendChild(fileCode);
+
+    const preview = document.createElement("pre");
+    preview.className = "snips-preview";
+    preview.textContent = (String(item.source || "").split("\\n").find((l) => l.trim() !== "") || "(empty)").trim();
+
+    const actions = document.createElement("div");
+    actions.className = "snips-item-actions";
+    const openBtn = document.createElement("button");
+    openBtn.type = "button";
+    openBtn.className = "btn btn-primary";
+    openBtn.textContent = isLoaded ? "Loaded" : "Load";
+    openBtn.addEventListener("click", () => {
+      loadLibraryItem(item);
+      if (sketchesModal) sketchesModal.hidden = true;
+    });
+    actions.appendChild(openBtn);
+
+    row.appendChild(head);
+    row.appendChild(meta);
+    row.appendChild(preview);
+    row.appendChild(actions);
+    return row;
+  }
+
   function renderSketchesList() {
-    if (!snipsApi || !sketchesList) return;
-    const all = snipsApi.list();
+    if (!sketchesList) return;
+    const savedAll = snipsApi ? snipsApi.list() : [];
+    const libAll = Array.isArray(libraryItems) ? libraryItems : [];
     const q = sketchesFilter ? sketchesFilter.value.trim().toLowerCase() : "";
-    const filtered = q
-      ? all.filter((item) =>
-          item.title.toLowerCase().includes(q) ||
-          item.id.toLowerCase().includes(q) ||
-          item.origin.toLowerCase().includes(q) ||
-          item.code.toLowerCase().includes(q),
-        )
-      : all;
+
+    const showSaved = activeCat === "all" || activeCat === "saved";
+    const filteredSaved = showSaved
+      ? (q
+          ? savedAll.filter((item) =>
+              item.title.toLowerCase().includes(q) ||
+              item.id.toLowerCase().includes(q) ||
+              item.origin.toLowerCase().includes(q) ||
+              item.code.toLowerCase().includes(q),
+            )
+          : savedAll)
+      : [];
+
+    const filteredLib = activeCat === "saved"
+      ? []
+      : libAll.filter((item) => {
+          if (activeCat !== "all" && item.category !== activeCat) return false;
+          if (!q) return true;
+          return (
+            item.title.toLowerCase().includes(q) ||
+            item.file.toLowerCase().includes(q) ||
+            item.badge.toLowerCase().includes(q) ||
+            item.source.toLowerCase().includes(q)
+          );
+        });
+
+    const totalShown = filteredSaved.length + filteredLib.length;
     if (sketchesSummary) {
-      sketchesSummary.textContent = filtered.length + " of " + all.length + " saved";
+      sketchesSummary.textContent = totalShown + " items" + (!libraryItems && activeCat !== "saved" ? " (loading library...)" : "");
     }
+
     sketchesList.innerHTML = "";
-    if (filtered.length === 0) {
+    if (totalShown === 0) {
       const empty = document.createElement("div");
       empty.className = "gym-result-empty";
-      empty.textContent = all.length === 0
-        ? "No saved sketches yet. Click Save on any program or Open in Play from Docs, Learn, or Gym."
-        : "No saved sketches match your filter.";
+      empty.textContent = activeCat === "saved" && savedAll.length === 0
+        ? "No saved sketches in localStorage yet. Modify any code and click the Save icon or + New Sketch."
+        : "No matching code entries.";
       sketchesList.appendChild(empty);
       return;
     }
 
-    for (const item of filtered) {
-      const row = document.createElement("article");
-      row.className = "snips-item" + (item.id === activeSnipId ? " active" : "");
-
-      const head = document.createElement("div");
-      head.className = "snips-item-head";
-
-      const titleSpan = document.createElement("span");
-      titleSpan.className = "snips-item-title";
-      titleSpan.textContent = item.title;
-      head.appendChild(titleSpan);
-
-      const meta = document.createElement("div");
-      meta.className = "snips-item-meta";
-      const idCode = document.createElement("code");
-      idCode.textContent = item.id;
-      const originSpan = document.createElement("span");
-      originSpan.className = "badge";
-      originSpan.textContent = item.origin || "custom";
-      const dateSpan = document.createElement("span");
-      dateSpan.textContent = String(item.updatedAt || "").slice(0, 16).replace("T", " ");
-      meta.appendChild(idCode);
-      meta.appendChild(originSpan);
-      meta.appendChild(dateSpan);
-
-      const preview = document.createElement("pre");
-      preview.className = "snips-preview";
-      preview.textContent = (item.code.split("\\n").find((l) => l.trim() !== "") || "(empty)").trim();
-
-      const actions = document.createElement("div");
-      actions.className = "snips-item-actions";
-
-      const openBtn = document.createElement("button");
-      openBtn.type = "button";
-      openBtn.className = "btn btn-primary";
-      openBtn.textContent = item.id === activeSnipId ? "Loaded" : "Open";
-      openBtn.addEventListener("click", () => {
-        loadSnip(item.id);
-        if (sketchesModal) sketchesModal.hidden = true;
-      });
-
-      const renameBtn = document.createElement("button");
-      renameBtn.type = "button";
-      renameBtn.className = "btn";
-      renameBtn.textContent = "Rename";
-      renameBtn.addEventListener("click", () => {
-        const input = document.createElement("input");
-        input.type = "text";
-        input.className = "snips-rename-input";
-        input.value = item.title;
-        input.setAttribute("aria-label", "New title for sketch");
-        const saveTitleBtn = document.createElement("button");
-        saveTitleBtn.type = "button";
-        saveTitleBtn.className = "btn btn-primary";
-        saveTitleBtn.textContent = "Save Title";
-        const wrap = document.createElement("div");
-        wrap.className = "snips-rename-row";
-        wrap.appendChild(input);
-        wrap.appendChild(saveTitleBtn);
-        head.replaceChild(wrap, titleSpan);
-        input.focus();
-        input.select();
-        const commitRename = () => {
-          const nextTitle = input.value.trim();
-          if (nextTitle) {
-            snipsApi.update(item.id, { title: nextTitle });
-            if (item.id === activeSnipId) {
-              fileEl.textContent = nextTitle + " · " + item.id.slice(0, 8);
-            }
-          }
-          renderSketchesList();
-        };
-        saveTitleBtn.addEventListener("click", commitRename);
-        input.addEventListener("keydown", (ev) => {
-          if (ev.key === "Enter") { ev.preventDefault(); commitRename(); }
-          else if (ev.key === "Escape") { ev.preventDefault(); renderSketchesList(); }
-        });
-      });
-
-      const dupBtn = document.createElement("button");
-      dupBtn.type = "button";
-      dupBtn.className = "btn";
-      dupBtn.textContent = "Duplicate";
-      dupBtn.addEventListener("click", () => {
-        snipsApi.saveNew({
-          title: item.title + " (copy)",
-          code: item.code,
-          stdin: item.stdin,
-          args: item.args,
-          origin: item.origin,
-        });
-        syncSnipsBadge();
-        renderSketchesList();
-      });
-
-      const delBtn = document.createElement("button");
-      delBtn.type = "button";
-      delBtn.className = "btn";
-      delBtn.textContent = "Delete";
-      delBtn.addEventListener("click", () => {
-        snipsApi.remove(item.id);
-        if (item.id === activeSnipId) activeSnipId = null;
-        syncSnipsBadge();
-        renderSketchesList();
-      });
-
-      actions.appendChild(openBtn);
-      actions.appendChild(renameBtn);
-      actions.appendChild(dupBtn);
-      actions.appendChild(delBtn);
-
-      row.appendChild(head);
-      row.appendChild(meta);
-      row.appendChild(preview);
-      row.appendChild(actions);
-      sketchesList.appendChild(row);
+    for (const item of filteredSaved) {
+      sketchesList.appendChild(renderSavedRow(item));
+    }
+    const libCap = activeCat === "all" && !q ? 80 : 250;
+    for (const item of filteredLib.slice(0, libCap)) {
+      sketchesList.appendChild(renderLibraryRow(item));
     }
   }
 
@@ -1565,27 +1725,47 @@ function renderPlaygroundPage(
           args: argsEl.value,
         });
         if (updated) {
+          setBaseline();
+          fileEl.textContent = updated.title + " · " + updated.id.slice(0, 8);
           statusEl.textContent = "Saved sketch (" + updated.id.slice(0, 8) + ")";
+          const nextUrl = new URL(window.location.href);
+          nextUrl.searchParams.delete("sample");
+          nextUrl.searchParams.delete("draft");
+          nextUrl.searchParams.delete("item");
+          nextUrl.searchParams.set("snip", updated.id);
+          window.history.replaceState({}, "", nextUrl);
           syncSnipsBadge();
           return;
         }
       }
-      const defaultTitle = currentSample && currentSample.id
-        ? (byId.get(currentSample.id)?.title ?? currentSample.id)
-        : "Custom Sketch";
+      const defaultTitle = activeLibraryItem
+        ? activeLibraryItem.title
+        : currentSample && currentSample.id
+          ? (byId.get(currentSample.id)?.title ?? currentSample.id)
+          : "Custom Sketch";
+      const defaultOrigin = activeLibraryItem
+        ? activeLibraryItem.id
+        : currentSample
+          ? "sample:" + currentSample.id
+          : "playground";
       const created = snipsApi.saveNew({
         title: defaultTitle,
         code: editorEl.value,
         stdin: cleanStdin,
         args: argsEl.value,
-        origin: currentSample ? "sample:" + currentSample.id : "playground",
+        origin: defaultOrigin,
       });
       if (created) {
         activeSnipId = created.id;
+        activeLibraryItem = null;
+        currentSample = null;
+        setBaseline();
         fileEl.textContent = created.title + " · " + created.id.slice(0, 8);
         statusEl.textContent = "Saved new sketch (" + created.id.slice(0, 8) + ")";
         const nextUrl = new URL(window.location.href);
         nextUrl.searchParams.delete("sample");
+        nextUrl.searchParams.delete("draft");
+        nextUrl.searchParams.delete("item");
         nextUrl.searchParams.set("snip", created.id);
         window.history.replaceState({}, "", nextUrl);
         syncSnipsBadge();
@@ -1593,13 +1773,24 @@ function renderPlaygroundPage(
     });
   }
 
+  for (const tab of catTabs) {
+    tab.addEventListener("click", () => {
+      activeCat = tab.dataset.cat || "all";
+      for (const t of catTabs) t.setAttribute("aria-pressed", t === tab ? "true" : "false");
+      renderSketchesList();
+    });
+  }
+
   if (sketchesBtn && sketchesModal) {
     sketchesBtn.addEventListener("click", () => {
       clearArmed = false;
-      if (sketchesClear) sketchesClear.textContent = "Clear All";
+      if (sketchesClear) sketchesClear.textContent = "Clear Saved";
       renderSketchesList();
       sketchesModal.hidden = false;
       if (sketchesFilter) sketchesFilter.focus();
+      if (!libraryItems) {
+        void loadLibraryCatalog().then(() => renderSketchesList());
+      }
     });
     if (sketchesClose) {
       sketchesClose.addEventListener("click", () => { sketchesModal.hidden = true; });
@@ -1629,15 +1820,16 @@ function renderPlaygroundPage(
       sketchesClear.addEventListener("click", () => {
         if (!clearArmed) {
           clearArmed = true;
-          sketchesClear.textContent = "Confirm Clear All";
+          sketchesClear.textContent = "Confirm Clear Saved";
           return;
         }
         clearArmed = false;
-        sketchesClear.textContent = "Clear All";
+        sketchesClear.textContent = "Clear Saved";
         snipsApi.clear();
         activeSnipId = null;
         syncSnipsBadge();
         renderSketchesList();
+        updateDirtyState();
         statusEl.textContent = "Cleared saved sketches";
       });
     }
@@ -1650,7 +1842,16 @@ function renderPlaygroundPage(
   const urlParams = new URLSearchParams(window.location.search);
   const initial = urlParams.get("sample") ?? "${escapeHtml(playgroundDefaultSample.id)}";
   const snipIdParam = urlParams.get("snip");
+  const itemParam = urlParams.get("item");
   let loadedDraft = Boolean(snipIdParam && loadSnip(snipIdParam));
+  if (!loadedDraft && itemParam) {
+    loadedDraft = true;
+    void loadLibraryCatalog().then((items) => {
+      const found = items.find((entry) => entry.id === itemParam);
+      if (found) loadLibraryItem(found);
+      else void loadSample(initial, "load");
+    });
+  }
   if (!loadedDraft && urlParams.get("draft") === "gym" && typeof sessionStorage !== "undefined") {
     try {
       const rawDraft = sessionStorage.getItem("lite-playground-draft-v1");
@@ -1667,6 +1868,7 @@ function renderPlaygroundPage(
           cMessage = "/* Press Compile or open Generated C to emit C. */";
           lastCSource = null;
           renderCodeViews();
+          setBaseline();
           outputEl.textContent = "(Press Play to run)";
           statusEl.textContent = "Loaded from Lite Gym — press Play";
           loadedDraft = true;
@@ -1867,6 +2069,12 @@ export function buildSite(options?: BuildSiteOptions): void {
       }),
     );
   }
+  const playgroundLibrary = collectPlaygroundLibrary({
+    rootDir: root,
+    samples: [...showcaseSamples, ...playSamples],
+  });
+  writeFileSync(join(outputDir, 'playground', 'library.json'), JSON.stringify(playgroundLibrary));
+
   writeFileSync(
     join(outputDir, 'index.html'),
     renderHomePage(rendered, repoUrl, rev, lightSwitchShine, {
