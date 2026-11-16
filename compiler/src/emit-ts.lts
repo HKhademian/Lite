@@ -1835,7 +1835,7 @@ applySoftBuiltins := fn(rawItems: frontend.Items, prefix: String): frontend.Item
 
 /** Emits the TS module from the flat item stream. Report arguments evaluate once, left to right, before reading and appending to `lite$out`, preserving reports made by argument calls. */
 pub emitProgram := fn(items: frontend.Items, source: String, prefix: String): Unit {
-    effectiveItems := frontend.filterReachableItems(applySoftBuiltins(items, prefix));
+    effectiveItems := frontend.filterReachableItemsForTarget(applySoftBuiltins(items, prefix), "ts");
     calls := frontend.targetHelperCalls(effectiveItems);
     abruptFault := usesAbruptFault(calls);
     abruptUnwind := usesAbruptUnwind(calls);

@@ -1,8 +1,8 @@
 {
-  "note": "Unified Block Model Slice 2a (inner-block type aliases on TS and C, parallel root fn and value wiring, and compile-time execution-trace initialization safety). All 69 TS and C corpus artifact hashes and 25 rejection cases verified.",
-  "recorded": "2026-11-15",
-  "sourceSha256": "3d3819de5b47c966254f26be520a544a59a9e015357be1820dfe4463d3c148d0",
-  "compilerSha256": "88e9a919e71000f460975bbf6a02a1bb39d4b81520d51e210ef73b727c90e7c6",
+  "note": "Unified Block Model Slice 2b (side-effect-free dead-code elimination inside { ... } blocks and across root/function/statement blocks on TS and C; C hashes for local-unused and local-missing-semicolon refreshed as C scalar DCE now omits dead pure INT64_C declarations matching TS). All 69 TS and C corpus artifact hashes and 25 rejection cases verified.",
+  "recorded": "2026-11-16",
+  "sourceSha256": "330921ce118094a2ce68516bb89342639f50a7d056bddab26a68b665beea65ea",
+  "compilerSha256": "3fc2f2354eb3bcc11d58659c7cda3c3bc56c1435bdc7a97290da2fc6a2530f5f",
   "programCases": 69,
   "rejectedCases": 25,
   "artifacts": [
@@ -190,7 +190,7 @@
       "name": "local-unused",
       "source": "001-004-local-unused.lts",
       "ts": "sha256:3ba83f077fce49021da8e8591261319bbe1429a3ecd44ef2a3ac41c3fe4017d9",
-      "c": "sha256:5a8b322f2cafa7410547e03441fdb33f6156d9b4cc6630b872c56a019a686622"
+      "c": "sha256:7b245669f9a1bc4a1d81c797e3a4a16268270bffcc67014cf13d18d5b452f101"
     },
     {
       "name": "report-two-strings",
@@ -250,7 +250,7 @@
       "name": "local-missing-semicolon",
       "source": "001-005-local-missing-semicolon.lts",
       "ts": "sha256:18f6dbad387d6a7cc519b1590c763280315ccd0dd2b993e26a648a4679c53a8a",
-      "c": "sha256:e2ba9c60b354fe083f0ed5469a4d90e7e078f79a96d57587c52df7f7b02ea62a"
+      "c": "sha256:628413d3225feae4e38811b5dc738a2622882467da84984558cbfda10484e83d"
     },
     {
       "name": "output-values",

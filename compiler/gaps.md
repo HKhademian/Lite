@@ -143,6 +143,13 @@ Keep dependencies explicit; split a topic further when its contracts warrant it.
   compile-time execution-trace analysis rejects early eager calls/reads before
   targets initialize and preserves root `?` uninit states across uninvoked
   `fn` definitions.
+- [x] **Side-effect-free dead-code elimination in blocks (2026-11-15, Unified Block Model Slice 2b):**
+  unused pure declarations, uninvoked local `fn` bindings, pure discarded
+  expressions, and resulting empty statement blocks are eliminated across
+  root, function, and braced `{ ... }` blocks (collapsing pure value blocks
+  without IIFE wrappers on TS and pruning dead scalar items on C) after full
+  type, duplicate-symbol, execution-trace, and target-subset validation, while
+  preserving all calls, outer mutations, and runtime arithmetic/bounds faults.
 - [x] **Script expressions:** discard ordinary expression values while retaining
   evaluation, effects and faults; accept empty item separators.
 - [x] **Function completion:** keep completion facts per block, join all conditional

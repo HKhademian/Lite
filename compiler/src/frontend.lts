@@ -2168,32 +2168,6 @@ pub codeReachableTokensSet := fn(code: String, existing: TokenBuckets): TokenBuc
     tokens
 }
 
-/** True when `code` contains no function or runtime calls other than pure constant wrappers. */
-codeHasNoCalls := fn(code: String): Bool {
-    if textLib.indexOfText(code, "(", 0) < 0 { return true; }
-    size := textLib.length(code);
-    var cursor := 0;
-    loop cursor < size {
-        ch := textLib.at(code, cursor);
-        if ch == "\"" {
-            cursor = skipAliasString(code, cursor);
-        } else if textLib.isNameStart(ch) {
-            start := cursor;
-            cursor = textLib.skipName(code, cursor);
-            loop cursor < size and textLib.at(code, cursor) == "$" {
-                cursor = textLib.skipName(code, cursor + 1);
-            }
-            if cursor < size and textLib.at(code, cursor) == "(" {
-                name := textLib.slice(code, start, cursor);
-                if name =!= "Boolean" and name =!= "lt_float_literal" and name =!= "lt_float32_literal" {
-                    return false;
-                }
-            }
-        } else { cursor = cursor + 1; }
-    }
-    true
-}
-
 /** True when `kind` represents a top-level value or mutable variable declaration item. */
 isTopDeclKind := fn(kind: String): Bool {
     kind == "LocalInt" or kind == "LocalString" or kind == "LocalBool" or kind == "LocalFloat" or
@@ -2202,15 +2176,16 @@ isTopDeclKind := fn(kind: String): Bool {
     kind == "VarTuple" or kind == "VarList" or kind == "VarFn" or kind == "VarUnit"
 }
 
-/** Removes unreachable top-level function bodies and side-effect-free declarations without dropping side effects. */
-pub filterReachableItems := fn(items: Items): Items {
+/** Removes unreachable top-level function bodies and side-effect-free code across root and inner blocks for `target`. */
+pub filterReachableItemsForTarget := fn(items: Items, target: String): Items {
+    pruned := pruneBlockScopedItems(items, target);
     var hasPrunable := false;
     var seedTokens := emptyTokenBuckets();
     var fnDepth := 0;
     var blockDepth := 0;
     var nextIsPure := false;
     pureDecls: mut List<String> = [];
-    loop items as item {
+    loop pruned as item {
         if item.kind == "PureGlobal" {
             nextIsPure = true;
             continue;
@@ -2231,7 +2206,7 @@ pub filterReachableItems := fn(items: Items): Items {
             continue;
         }
         isTopDecl := blockDepth == 0 and isTopDeclKind(item.kind);
-        isPureDecl := isTopDecl and (nextIsPure or codeHasNoCalls(item.code));
+        isPureDecl := isTopDecl and (nextIsPure or ((target == "ts" or not isCUnsupportedItem(item)) and isSideEffectFreeCode(target, item.code)));
         nextIsPure = false;
         if item.kind == "Scope" or item.kind == "If" or item.kind == "Loop" or item.kind == "LoopSeq" {
             blockDepth = blockDepth + 1;
@@ -2249,7 +2224,7 @@ pub filterReachableItems := fn(items: Items): Items {
             }
         }
     }
-    if not hasPrunable { return items; }
+    if not hasPrunable { return pruned; }
 
     var reachable := seedTokens;
     var scanned := emptyTokenBuckets();
@@ -2258,7 +2233,7 @@ pub filterReachableItems := fn(items: Items): Items {
         var scanFnDepth := 0;
         var scanBlockDepth := 0;
         var scanBody := false;
-        loop items as item {
+        loop pruned as item {
             if item.kind == "PureGlobal" {
                 continue;
             } else if item.kind == "FunctionStart" {
@@ -2301,7 +2276,7 @@ pub filterReachableItems := fn(items: Items): Items {
     var keepBlockDepth := 0;
     var keepFn := false;
     var nextDeclPure := false;
-    loop items as item {
+    loop pruned as item {
         if item.kind == "PureGlobal" {
             nextDeclPure = true;
             continue;
@@ -2322,7 +2297,8 @@ pub filterReachableItems := fn(items: Items): Items {
             if keepFn { listLib.pushBack(mut filtered, item); }
         } else {
             dropDecl := keepBlockDepth == 0 and isTopDeclKind(item.kind) and
-            (nextDeclPure or codeHasNoCalls(item.code)) and not tokenBucketHas(reachable, item.runtime);
+            (nextDeclPure or ((target == "ts" or not isCUnsupportedItem(item)) and isSideEffectFreeCode(target, item.code))) and
+            not tokenBucketHas(reachable, item.runtime);
             nextDeclPure = false;
             if item.kind == "Scope" or item.kind == "If" or item.kind == "Loop" or item.kind == "LoopSeq" {
                 keepBlockDepth = keepBlockDepth + 1;
@@ -2333,6 +2309,11 @@ pub filterReachableItems := fn(items: Items): Items {
         }
     }
     filtered
+}
+
+/** Removes unreachable top-level function bodies and side-effect-free declarations for TS emission. */
+pub filterReachableItems := fn(items: Items): Items {
+    filterReachableItemsForTarget(items, "ts")
 }
 
 /** Reads one raw alias target type from `position`, capturing a parenthesized tuple type or a generic `List<...>` application through its matching close, or a single name. */
@@ -5057,6 +5038,426 @@ hasUserOrLocalCall := fn(eagerCode: String): Bool {
     false
 }
 
+/** True when `kind` and `code` only use scalar/unit features valid for scalar C dead-code pruning, preserving unsupported-type checks. */
+isCSupportedKindAndCode := fn(kind: String, code: String): Bool {
+    not isTupleKind(kind) and not isListKind(kind) and not isArrayKind(kind) and not containsFnKind(kind) and
+    not codeUsesValueIf(code) and not codeUsesListCopy(code) and not codeUsesListIndex(code) and not codeUsesListPop(code)
+}
+
+/** True when `item` uses a C-unsupported construct that must stay visible to `emitProgram` diagnostics. */
+isCUnsupportedItem := fn(item: Item): Bool {
+    item.kind == "LocalTuple" or item.kind == "VarTuple" or item.kind == "AssignTuple" or
+    item.kind == "LocalList" or item.kind == "VarList" or item.kind == "AssignList" or
+    item.kind == "LocalFn" or item.kind == "VarFn" or item.kind == "AssignFn" or
+    (item.kind == "Discard" and (isTupleKind(item.name) or isListKind(item.name) or
+    isArrayKind(item.name) or containsFnKind(item.name))) or
+    codeUsesValueIf(item.code) or codeUsesListCopy(item.code) or codeUsesListIndex(item.code) or codeUsesListPop(item.code)
+}
+
+/** True when `=` at `eqPos` in `stripped` is a comparison/arrow or an assignment to a local declared inside `stripped` itself. */
+isInnerLocalAssignAt := fn(stripped: String, eqPos: Int): Bool {
+    len := textLib.length(stripped);
+    if eqPos < 0 or eqPos >= len or textLib.at(stripped, eqPos) =!= "=" { return false; }
+    if eqPos + 1 < len {
+        nx := textLib.at(stripped, eqPos + 1);
+        if nx == "=" or nx == ">" { return true; }
+    }
+    if eqPos > 0 {
+        pv := textLib.at(stripped, eqPos - 1);
+        if pv == "=" or pv == "!" or pv == "<" or pv == ">" { return true; }
+        if pv == "+" or pv == "-" or pv == "*" or pv == "/" or pv == "%" { return false; }
+    }
+    var scanBack := eqPos - 1;
+    var bDepth := 0;
+    loop scanBack >= 0 {
+        sc := textLib.at(stripped, scanBack);
+        if sc == ")" or sc == "]" or sc == "}" {
+            bDepth = bDepth + 1;
+        } else if sc == "(" or sc == "[" or sc == "{" {
+            if bDepth == 0 {
+                scanBack = scanBack + 1;
+                break;
+            }
+            bDepth = bDepth - 1;
+        } else if sc == ";" and bDepth == 0 {
+            scanBack = scanBack + 1;
+            break;
+        }
+        scanBack = scanBack - 1;
+    }
+    if scanBack < 0 { scanBack = 0; }
+    stmtPos := skipCodeSpaces(stripped, scanBack);
+    if textLib.wordAt(stripped, stmtPos, "const") or textLib.wordAt(stripped, stmtPos, "let") {
+        return true;
+    }
+    if stmtPos >= eqPos or not (textLib.isNameStart(textLib.at(stripped, stmtPos)) or textLib.at(stripped, stmtPos) == "$") {
+        return false;
+    }
+    var lhsEnd := stmtPos;
+    loop lhsEnd < eqPos and isTraceIdentChar(textLib.at(stripped, lhsEnd)) { lhsEnd = lhsEnd + 1; }
+    if skipCodeSpaces(stripped, lhsEnd) =!= eqPos { return false; }
+    lhs := textLib.slice(stripped, stmtPos, lhsEnd);
+    textLib.indexOfText(stripped, "let " + lhs + " ", 0) >= 0 or
+    textLib.indexOfText(stripped, "let " + lhs + ":", 0) >= 0 or
+    textLib.indexOfText(stripped, "let " + lhs + ";", 0) >= 0
+}
+
+/** True when `code` has no function calls, runtime panic helpers, loops, throws, or outer mutations after stripping uninvoked `fn` literals. */
+isSideEffectFreeCode := fn(target: String, code: String): Bool {
+    if code == "" { return true; }
+    stripped := stripDeferredFnBodies(code).code;
+    size := textLib.length(stripped);
+    var cursor := 0;
+    loop cursor < size {
+        ch := textLib.at(stripped, cursor);
+        if ch == "\"" {
+            cursor = skipCodeString(stripped, cursor);
+            continue;
+        }
+        if ch == "(" {
+            if textLib.startsWithAt(stripped, cursor, "(function ") { return false; }
+            closeEnd := scanBalancedParenEnd(stripped, cursor);
+            if isIndirectUserCallParens(stripped, cursor, closeEnd) { return false; }
+            if target == "ts" and closeEnd >= 0 {
+                afterClose := skipCodeSpaces(stripped, closeEnd);
+                if afterClose < size and textLib.at(stripped, afterClose) == "(" and
+                not isCompilerArrowIife(stripped, cursor, closeEnd) {
+                    return false;
+                }
+            }
+            cursor = cursor + 1;
+            continue;
+        }
+        if ch == "]" {
+            afterBr := skipCodeSpaces(stripped, cursor + 1);
+            if afterBr < size and textLib.at(stripped, afterBr) == "(" { return false; }
+            cursor = cursor + 1;
+            continue;
+        }
+        if ch == "=" {
+            if not isInnerLocalAssignAt(stripped, cursor) { return false; }
+            cursor = cursor + 1;
+            continue;
+        }
+        if textLib.isNameStart(ch) or ch == "$" {
+            var endPos := cursor;
+            loop endPos < size and isTraceIdentChar(textLib.at(stripped, endPos)) { endPos = endPos + 1; }
+            name := textLib.slice(stripped, cursor, endPos);
+            prevIsDot := cursor > 0 and textLib.at(stripped, cursor - 1) == ".";
+            if not prevIsDot and (name == "throw" or name == "while" or name == "for" or name == "try") {
+                return false;
+            }
+            afterName := skipCodeSpaces(stripped, endPos);
+            if afterName < size and textLib.at(stripped, afterName) == "(" {
+                isKeywordParen := not prevIsDot and (name == "if" or name == "return" or name == "void");
+                isMathPrefix := cursor >= 5 and textLib.slice(stripped, cursor - 5, cursor) == "Math." and
+                (cursor == 5 or not isTraceIdentChar(textLib.at(stripped, cursor - 6)));
+                isMathFround := name == "fround" and isMathPrefix;
+                isPureWrapper := not prevIsDot and (
+                name == "Boolean" or name == "Number" or name == "INT64_C" or
+                name == "lt_float_literal" or name == "lt_float32_literal" or name == "strcmp"
+                );
+                if not isKeywordParen and not isMathFround and not isPureWrapper {
+                    return false;
+                }
+            }
+            cursor = endPos;
+            continue;
+        }
+        cursor = cursor + 1;
+    }
+    true
+}
+
+/** True when a declaration or discarded expression of `kind` and `code` can be omitted on `target` without altering observable behavior or diagnostics. */
+isPrunableExprForTarget := fn(target: String, kind: String, code: String): Bool {
+    if target =!= "ts" and not isCSupportedKindAndCode(kind, code) { return false; }
+    isSideEffectFreeCode(target, code)
+}
+
+/** True when `runtime` appears in `locals[0 .. limit)` (declared outside the current block). */
+localsRangeUsesRuntime := fn(locals: List<Local>, limit: Int, runtime: String): Bool {
+    var i := 0;
+    loop i < limit {
+        if locals[i].runtime == runtime { return true; }
+        i = i + 1;
+    }
+    false
+}
+
+/** Eliminates unreachable pure statements and local bindings inside one `{ ... }` block after its statements and tail are parsed. */
+pruneBlockStatements := fn(stmts: List<String>, owners: List<String>, deps: List<String>, hasTail: Bool, tailCode: String): List<String> {
+    var total := 0;
+    var hasPrunable := false;
+    loop stmts { total = total + 1; }
+    if total == 0 {
+        emptyOut: mut List<String> = [];
+        return emptyOut;
+    }
+    var checkIdx := 0;
+    loop checkIdx < total {
+        if owners[checkIdx] =!= "" {
+            hasPrunable = true;
+            break;
+        }
+        checkIdx = checkIdx + 1;
+    }
+    if not hasPrunable { return stmts; }
+
+    var reachable := emptyTokenBuckets();
+    if hasTail {
+        reachable = codeReachableTokensSet(tailCode, reachable);
+    }
+    var seedIdx := 0;
+    loop seedIdx < total {
+        if owners[seedIdx] == "" {
+            reachable = codeReachableTokensSet(deps[seedIdx], reachable);
+        }
+        seedIdx = seedIdx + 1;
+    }
+
+    var scannedBag := "";
+    loop true {
+        beforeCount := reachable.count;
+        var scanIdx := 0;
+        loop scanIdx < total {
+            ow := owners[scanIdx];
+            if ow =!= "" and ow =!= "#discard" and tokenBucketHas(reachable, ow) {
+                key := integer.intText(scanIdx);
+                if not tokenInPipeBag(scannedBag, key) {
+                    scannedBag = appendPipeBag(scannedBag, key);
+                    reachable = codeReachableTokensSet(deps[scanIdx], reachable);
+                }
+            }
+            scanIdx = scanIdx + 1;
+        }
+        if reachable.count == beforeCount { break; }
+    }
+
+    kept: mut List<String> = [];
+    var outIdx := 0;
+    loop outIdx < total {
+        ow := owners[outIdx];
+        if ow == "" or (ow =!= "#discard" and tokenBucketHas(reachable, ow)) {
+            listLib.pushBack(mut kept, stmts[outIdx]);
+        }
+        outIdx = outIdx + 1;
+    }
+    kept
+}
+
+/** Maps runtime identifier references in `code` to matching declaration item indices on the active lexical stack. */
+resolveLexicalDeps := fn(code: String, lexRuntimes: List<String>, lexDeclIdxs: List<Int>, lexCount: Int): String {
+    if lexCount <= 0 or code == "" { return ""; }
+    var nextLite := textLib.indexOfText(code, "lite", 0);
+    var nextLt := textLib.indexOfText(code, "lt_", 0);
+    if nextLite < 0 and nextLt < 0 { return ""; }
+    var nextQuote := textLib.indexOfText(code, "\"", 0);
+    size := textLib.length(code);
+    var bag := "";
+    var cursor := 0;
+    loop cursor < size {
+        if nextLite >= 0 and nextLite < cursor { nextLite = textLib.indexOfText(code, "lite", cursor); }
+        if nextLt >= 0 and nextLt < cursor { nextLt = textLib.indexOfText(code, "lt_", cursor); }
+        var hit := -1;
+        if nextLite >= 0 and (nextLt < 0 or nextLite < nextLt) {
+            hit = nextLite;
+        } else if nextLt >= 0 {
+            hit = nextLt;
+        }
+        if hit < 0 { return bag; }
+        if nextQuote >= 0 and nextQuote < hit {
+            if nextQuote < cursor { nextQuote = textLib.indexOfText(code, "\"", cursor); }
+            if nextQuote >= 0 and nextQuote < hit {
+                cursor = skipAliasString(code, nextQuote);
+                continue;
+            }
+        }
+        if hit > 0 {
+            prev := textLib.at(code, hit - 1);
+            if prev == "$" or textLib.isNameContinue(prev) {
+                cursor = textLib.skipName(code, hit + 3);
+                loop cursor < size and textLib.at(code, cursor) == "$" {
+                    cursor = textLib.skipName(code, cursor + 1);
+                }
+                continue;
+            }
+        }
+        var endPos := textLib.skipName(code, hit);
+        loop endPos < size and textLib.at(code, endPos) == "$" {
+            endPos = textLib.skipName(code, endPos + 1);
+        }
+        tok := textLib.slice(code, hit, endPos);
+        var k := lexCount - 1;
+        loop k >= 0 {
+            if lexRuntimes[k] == tok {
+                bag = appendPipeBag(bag, integer.intText(lexDeclIdxs[k]));
+                break;
+            }
+            k = k - 1;
+        }
+        cursor = endPos;
+    }
+    bag
+}
+
+/** Merges every index token in pipe-delimited `links` into `bag` without duplicates. */
+mergeIndexPipeBag := fn(bag: String, links: String): String {
+    if links == "" { return bag; }
+    var out := bag;
+    len := textLib.length(links);
+    var pos := 0;
+    loop pos < len {
+        if textLib.at(links, pos) == "|" {
+            pos = pos + 1;
+            continue;
+        }
+        nextBar := textLib.indexOfText(links, "|", pos);
+        endPos := if nextBar < 0 { len } else { nextBar };
+        if endPos > pos {
+            out = appendPipeBag(out, textLib.slice(links, pos, endPos));
+        }
+        pos = endPos + 1;
+    }
+    out
+}
+
+/** Eliminates dead pure locals, pure discarded expressions, and resulting empty scopes per lexical block. */
+pruneBlockScopedItems := fn(items: Items, target: String): Items {
+    var total := 0;
+    loop items { total = total + 1; }
+    if total == 0 { return items; }
+    var hasPrunable := false;
+    var depth := 0;
+    lexRuntimes: mut List<String> = [];
+    lexDeclIdxs: mut List<Int> = [];
+    lexDepths: mut List<Int> = [];
+    lexPrunable: mut List<Bool> = [];
+    var lexCount := 0;
+    itemOwners: mut List<Int> = [];
+    itemDeps: mut List<String> = [];
+    var idx := 0;
+    loop idx < total {
+        item := items[idx];
+        var owner := -1;
+        var deps := "";
+        if item.kind == "ElseIf" or item.kind == "Else" {
+            loop lexCount > 0 and lexDepths[lexCount - 1] == depth {
+                _rt := listLib.popBack(mut lexRuntimes);
+                _di := listLib.popBack(mut lexDeclIdxs);
+                _dp := listLib.popBack(mut lexDepths);
+                _pr := listLib.popBack(mut lexPrunable);
+                lexCount = lexCount - 1;
+            }
+            if item.kind == "ElseIf" {
+                deps = resolveLexicalDeps(item.code, lexRuntimes, lexDeclIdxs, lexCount);
+            }
+        } else if item.kind == "EndScope" or item.kind == "EndIf" or item.kind == "EndLoop" or item.kind == "FunctionEnd" {
+            loop lexCount > 0 and lexDepths[lexCount - 1] == depth {
+                _rt := listLib.popBack(mut lexRuntimes);
+                _di := listLib.popBack(mut lexDeclIdxs);
+                _dp := listLib.popBack(mut lexDepths);
+                _pr := listLib.popBack(mut lexPrunable);
+                lexCount = lexCount - 1;
+            }
+            if depth > 0 { depth = depth - 1; }
+        } else if item.kind == "Scope" or item.kind == "FunctionStart" {
+            depth = depth + 1;
+        } else if item.kind == "If" or item.kind == "Loop" or item.kind == "LoopSeq" {
+            deps = resolveLexicalDeps(item.code, lexRuntimes, lexDeclIdxs, lexCount);
+            depth = depth + 1;
+        } else if item.kind == "Discard" {
+            if (target == "ts" or not isCUnsupportedItem(item)) and isSideEffectFreeCode(target, item.code) {
+                owner = -2;
+                hasPrunable = true;
+            } else {
+                deps = resolveLexicalDeps(item.code, lexRuntimes, lexDeclIdxs, lexCount);
+            }
+        } else if depth >= 1 and isTopDeclKind(item.kind) {
+            deps = resolveLexicalDeps(item.code, lexRuntimes, lexDeclIdxs, lexCount);
+            canPruneDecl := (target == "ts" or not isCUnsupportedItem(item)) and isSideEffectFreeCode(target, item.code);
+            if canPruneDecl {
+                owner = idx;
+                hasPrunable = true;
+            }
+            listLib.pushBack(mut lexRuntimes, item.runtime);
+            listLib.pushBack(mut lexDeclIdxs, idx);
+            listLib.pushBack(mut lexDepths, depth);
+            listLib.pushBack(mut lexPrunable, canPruneDecl);
+            lexCount = lexCount + 1;
+        } else if depth >= 1 and textLib.startsWithAt(item.kind, 0, "Assign") and item.runtime =!= "" {
+            var matchIdx := lexCount - 1;
+            var foundLex := -1;
+            loop matchIdx >= 0 {
+                if lexRuntimes[matchIdx] == item.runtime {
+                    foundLex = matchIdx;
+                    break;
+                }
+                matchIdx = matchIdx - 1;
+            }
+            if foundLex >= 0 and lexPrunable[foundLex] and (target == "ts" or not isCUnsupportedItem(item)) and
+            isSideEffectFreeCode(target, item.code) {
+                owner = lexDeclIdxs[foundLex];
+                deps = resolveLexicalDeps(item.code, lexRuntimes, lexDeclIdxs, lexCount);
+            } else {
+                deps = resolveLexicalDeps(item.runtime + " " + item.code, lexRuntimes, lexDeclIdxs, lexCount);
+            }
+        } else {
+            deps = resolveLexicalDeps(item.code, lexRuntimes, lexDeclIdxs, lexCount);
+        }
+        listLib.pushBack(mut itemOwners, owner);
+        listLib.pushBack(mut itemDeps, deps);
+        idx = idx + 1;
+    }
+    if not hasPrunable { return items; }
+
+    var liveDeclBag := "";
+    var seedIdx := 0;
+    loop seedIdx < total {
+        if itemOwners[seedIdx] == -1 {
+            liveDeclBag = mergeIndexPipeBag(liveDeclBag, itemDeps[seedIdx]);
+        }
+        seedIdx = seedIdx + 1;
+    }
+    var scannedItemBag := "";
+    loop true {
+        beforeLen := textLib.length(liveDeclBag);
+        var j := 0;
+        loop j < total {
+            own := itemOwners[j];
+            if own >= 0 and tokenInPipeBag(liveDeclBag, integer.intText(own)) {
+                key := integer.intText(j);
+                if not tokenInPipeBag(scannedItemBag, key) {
+                    scannedItemBag = appendPipeBag(scannedItemBag, key);
+                    liveDeclBag = mergeIndexPipeBag(liveDeclBag, itemDeps[j]);
+                }
+            }
+            j = j + 1;
+        }
+        if textLib.length(liveDeclBag) == beforeLen { break; }
+    }
+
+    peeled: mut Items = [];
+    var peeledLen := 0;
+    var k := 0;
+    loop k < total {
+        ownk := itemOwners[k];
+        keepItem := ownk == -1 or (ownk >= 0 and tokenInPipeBag(liveDeclBag, integer.intText(ownk)));
+        if keepItem {
+            cur := items[k];
+            if cur.kind == "EndScope" and peeledLen > 0 and peeled[peeledLen - 1].kind == "Scope" {
+                _dropScope := listLib.popBack(mut peeled);
+                peeledLen = peeledLen - 1;
+            } else {
+                listLib.pushBack(mut peeled, cur);
+                peeledLen = peeledLen + 1;
+            }
+        }
+        k = k + 1;
+    }
+    peeled
+}
+
 /** True when any root-level variable binding currently in `locals` is not yet initialized. */
 hasRootUninitLocal := fn(locals: List<Local>): Bool {
     loop locals as entry {
@@ -5780,11 +6181,15 @@ parseBinaryCtx := fn(target: String, source: String, position: Int, prefix: Stri
         stmtReturnPrefix := if isTaggedBody or isLoopBody or isStmtBody or isFinallyBody or isFnBody { "" } else { "return " };
         blockLocals: mut List<Local> = [];
         loop locals as entry { listLib.pushBack(mut blockLocals, entry); }
+        outerLocalsLen := localsCount(blockLocals);
         nextAliasDepth := maxAliasDepth(aliases) + 1;
         blockAliases := collectBlockTypeAliases(source, start, prefix, nextAliasDepth, aliases);
         declaredInBlock: mut List<String> = [];
         loop seedBlockDeclaredNames(bodySink) as seededName { listLib.pushBack(mut declaredInBlock, seededName); }
         statements: mut List<String> = [];
+        stmtOwners: mut List<String> = [];
+        stmtDeps: mut List<String> = [];
+        var trackedStmtCount := 0;
         var statementCount := 0;
         var blockMarkers := "";
         var cursor := skipItemSeparators(source, start + 1, prefix);
@@ -5798,6 +6203,13 @@ parseBinaryCtx := fn(target: String, source: String, position: Int, prefix: Stri
         var lastPartialIfDiverges := false;
         blockSourceSize := textLib.length(source);
         loop true {
+            var syncLen := 0;
+            loop statements { syncLen = syncLen + 1; }
+            loop trackedStmtCount < syncLen {
+                listLib.pushBack(mut stmtOwners, "");
+                listLib.pushBack(mut stmtDeps, statements[trackedStmtCount]);
+                trackedStmtCount = trackedStmtCount + 1;
+            }
             cursor = skipItemSeparators(source, cursor, prefix);
             if cursor >= blockSourceSize {
                 failAt(source, start, prefix, "expected }");
@@ -5851,6 +6263,14 @@ parseBinaryCtx := fn(target: String, source: String, position: Int, prefix: Stri
                             blockExits = true;
                         } else {
                             listLib.pushBack(mut statements, "void (" + rhs.code + ");");
+                            if isPrunableExprForTarget(target, "Unit", rhs.code) {
+                                listLib.pushBack(mut stmtOwners, "#discard");
+                                listLib.pushBack(mut stmtDeps, "");
+                            } else {
+                                listLib.pushBack(mut stmtOwners, "");
+                                listLib.pushBack(mut stmtDeps, rhs.code);
+                            }
+                            trackedStmtCount = trackedStmtCount + 1;
                         }
                         statementCount = statementCount + 1;
                     }
@@ -5869,7 +6289,11 @@ parseBinaryCtx := fn(target: String, source: String, position: Int, prefix: Stri
                     intValue = rhs.intValue, textValue = rhs.textValue, initState = "init"));
                     if not blockExits {
                         declKw := if destructureMutable { "let " } else { "const " };
-                        listLib.pushBack(mut statements, declKw + bindRuntime + " = " + copiedValueCode(target, rhs.kind, rhs.code) + "; void " + bindRuntime + ";");
+                        groupedCode := copiedValueCode(target, rhs.kind, rhs.code);
+                        listLib.pushBack(mut statements, declKw + bindRuntime + " = " + groupedCode + "; void " + bindRuntime + ";");
+                        listLib.pushBack(mut stmtOwners, if isPrunableExprForTarget(target, rhs.kind, groupedCode) { bindRuntime } else { "" });
+                        listLib.pushBack(mut stmtDeps, groupedCode);
+                        trackedStmtCount = trackedStmtCount + 1;
                         statementCount = statementCount + 1;
                     }
                     blockConstant = false;
@@ -5890,6 +6314,9 @@ parseBinaryCtx := fn(target: String, source: String, position: Int, prefix: Stri
                     intValue = 0, textValue = "", initState = "init"));
                     if not blockExits {
                         listLib.pushBack(mut statements, "const " + tempRuntime + " = " + rhs.code + "; void " + tempRuntime + ";");
+                        listLib.pushBack(mut stmtOwners, if isPrunableExprForTarget(target, rhs.kind, rhs.code) { tempRuntime } else { "" });
+                        listLib.pushBack(mut stmtDeps, rhs.code);
+                        trackedStmtCount = trackedStmtCount + 1;
                     }
                     pendingTupleNames: mut List<String> = [];
                     var bindCursor := 0;
@@ -5915,6 +6342,9 @@ parseBinaryCtx := fn(target: String, source: String, position: Int, prefix: Stri
                         if not blockExits {
                             declKw := if destructureMutable { "let " } else { "const " };
                             listLib.pushBack(mut statements, declKw + bindRuntime + " = " + fieldCode + "; void " + bindRuntime + ";");
+                            listLib.pushBack(mut stmtOwners, if isPrunableExprForTarget(target, comp.kind, fieldCode) { bindRuntime } else { "" });
+                            listLib.pushBack(mut stmtDeps, fieldCode);
+                            trackedStmtCount = trackedStmtCount + 1;
                         }
                         bindIndex = bindIndex + 1;
                     }
@@ -6733,7 +7163,11 @@ parseBinaryCtx := fn(target: String, source: String, position: Int, prefix: Stri
                             listLib.pushBack(mut statements, stmtReturnPrefix + "(" + declParsed.code + ");");
                             blockExits = true;
                         } else {
-                            listLib.pushBack(mut statements, "let " + runtime + " = " + assignValueCode(target, declParsed.kind, declParsed.kind, declParsed.code) + "; void " + runtime + ";");
+                            varInitCode := assignValueCode(target, declParsed.kind, declParsed.kind, declParsed.code);
+                            listLib.pushBack(mut statements, "let " + runtime + " = " + varInitCode + "; void " + runtime + ";");
+                            listLib.pushBack(mut stmtOwners, if isPrunableExprForTarget(target, declParsed.kind, varInitCode) { runtime } else { "" });
+                            listLib.pushBack(mut stmtDeps, varInitCode);
+                            trackedStmtCount = trackedStmtCount + 1;
                         }
                         statementCount = statementCount + 1;
                     }
@@ -6766,7 +7200,11 @@ parseBinaryCtx := fn(target: String, source: String, position: Int, prefix: Stri
                     mutable = false, writable = true, depth = 1, constant = false, code = declParsed.code,
                     intValue = declParsed.intValue, textValue = declParsed.textValue, initState = "init"));
                     if not blockExits {
-                        listLib.pushBack(mut statements, "const " + runtime + " = " + copiedValueCode(target, declParsed.kind, declParsed.code) + "; void " + runtime + ";");
+                        mutInitCode := copiedValueCode(target, declParsed.kind, declParsed.code);
+                        listLib.pushBack(mut statements, "const " + runtime + " = " + mutInitCode + "; void " + runtime + ";");
+                        listLib.pushBack(mut stmtOwners, if isPrunableExprForTarget(target, declParsed.kind, mutInitCode) { runtime } else { "" });
+                        listLib.pushBack(mut stmtDeps, mutInitCode);
+                        trackedStmtCount = trackedStmtCount + 1;
                         statementCount = statementCount + 1;
                     }
                     blockConstant = false;
@@ -6788,7 +7226,11 @@ parseBinaryCtx := fn(target: String, source: String, position: Int, prefix: Stri
                     mutable = false, writable = false, depth = 1, constant = declParsed.constant, code = declParsed.code,
                     intValue = declParsed.intValue, textValue = declParsed.textValue, initState = "init"));
                     if not blockExits {
-                        listLib.pushBack(mut statements, "const " + runtime + " = " + copiedValueCode(target, declParsed.kind, declParsed.code) + "; void " + runtime + ";");
+                        valInitCode := copiedValueCode(target, declParsed.kind, declParsed.code);
+                        listLib.pushBack(mut statements, "const " + runtime + " = " + valInitCode + "; void " + runtime + ";");
+                        listLib.pushBack(mut stmtOwners, if isPrunableExprForTarget(target, declParsed.kind, valInitCode) { runtime } else { "" });
+                        listLib.pushBack(mut stmtDeps, valInitCode);
+                        trackedStmtCount = trackedStmtCount + 1;
                         statementCount = statementCount + 1;
                     }
                     blockConstant = false;
@@ -6834,6 +7276,9 @@ parseBinaryCtx := fn(target: String, source: String, position: Int, prefix: Stri
                         } else {
                             declKw := if declInitState == "init" { "const " } else { "let " };
                             listLib.pushBack(mut statements, declKw + runtime + " = " + declCode + "; void " + runtime + ";");
+                            listLib.pushBack(mut stmtOwners, if isPrunableExprForTarget(target, typed.kind, declCode) { runtime } else { "" });
+                            listLib.pushBack(mut stmtDeps, declCode);
+                            trackedStmtCount = trackedStmtCount + 1;
                         }
                         statementCount = statementCount + 1;
                     }
@@ -6864,6 +7309,12 @@ parseBinaryCtx := fn(target: String, source: String, position: Int, prefix: Stri
                             blockExits = true;
                         } else {
                             listLib.pushBack(mut statements, entry.runtime + " = " + rhsCode + ";");
+                            isLocalOwner := not localsRangeUsesRuntime(blockLocals, outerLocalsLen, entry.runtime);
+                            assignOwner := if isLocalOwner and isPrunableExprForTarget(target, entry.kind, rhsCode) { entry.runtime } else { "" };
+                            assignDeps := if assignOwner =!= "" { rhsCode } else { entry.runtime + " " + rhsCode };
+                            listLib.pushBack(mut stmtOwners, assignOwner);
+                            listLib.pushBack(mut stmtDeps, assignDeps);
+                            trackedStmtCount = trackedStmtCount + 1;
                         }
                         statementCount = statementCount + 1;
                     }
@@ -6888,6 +7339,12 @@ parseBinaryCtx := fn(target: String, source: String, position: Int, prefix: Stri
                     intValue = 0, textValue = "", initState = "init"));
                     if not blockExits {
                         listLib.pushBack(mut statements, entry.runtime + " = " + rhsCode + ";");
+                        isCompoundLocalOwner := not localsRangeUsesRuntime(blockLocals, outerLocalsLen, entry.runtime);
+                        compoundOwner := if isCompoundLocalOwner and isPrunableExprForTarget(target, entry.kind, rhsCode) { entry.runtime } else { "" };
+                        compoundDeps := if compoundOwner =!= "" { rhsCode } else { entry.runtime + " " + rhsCode };
+                        listLib.pushBack(mut stmtOwners, compoundOwner);
+                        listLib.pushBack(mut stmtDeps, compoundDeps);
+                        trackedStmtCount = trackedStmtCount + 1;
                         statementCount = statementCount + 1;
                     }
                     blockConstant = false;
@@ -6927,6 +7384,14 @@ parseBinaryCtx := fn(target: String, source: String, position: Int, prefix: Stri
                         blockExits = true;
                     } else {
                         listLib.pushBack(mut statements, "void (" + expr.code + ");");
+                        if isPrunableExprForTarget(target, expr.kind, expr.code) {
+                            listLib.pushBack(mut stmtOwners, "#discard");
+                            listLib.pushBack(mut stmtDeps, "");
+                        } else {
+                            listLib.pushBack(mut stmtOwners, "");
+                            listLib.pushBack(mut stmtDeps, expr.code);
+                        }
+                        trackedStmtCount = trackedStmtCount + 1;
                     }
                     statementCount = statementCount + 1;
                 }
@@ -6936,6 +7401,29 @@ parseBinaryCtx := fn(target: String, source: String, position: Int, prefix: Stri
                     break;
                 }
                 cursor = statementNext;
+            }
+        }
+        var endSyncLen := 0;
+        loop statements { endSyncLen = endSyncLen + 1; }
+        loop trackedStmtCount < endSyncLen {
+            listLib.pushBack(mut stmtOwners, "");
+            listLib.pushBack(mut stmtDeps, statements[trackedStmtCount]);
+            trackedStmtCount = trackedStmtCount + 1;
+        }
+        if target == "ts" or isStmtBody {
+            prunedStmts := pruneBlockStatements(statements, stmtOwners, stmtDeps, sawTailExpr and not blockExits, blockCode);
+            loop trackedStmtCount > 0 {
+                _ := listLib.popBack(mut statements);
+                trackedStmtCount = trackedStmtCount - 1;
+            }
+            var prunedCount := 0;
+            loop prunedStmts as keptStmt {
+                listLib.pushBack(mut statements, keptStmt);
+                prunedCount = prunedCount + 1;
+            }
+            statementCount = prunedCount;
+            if statementCount == 0 and not blockExits and not sawTailExpr {
+                blockConstant = true;
             }
         }
         if isStmtBody {

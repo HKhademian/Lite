@@ -391,7 +391,7 @@ outputWriteCode := fn(kind: String, code: String, indent: String): String {
 /** Emits the C program from the flat item stream. Multi-value output evaluates its arguments before any write; every printf keeps the shared write-failure status. */
 pub emitProgram := fn(items: frontend.Items, source: String, prefix: String): Unit {
     _modes := frontend.parseBuiltinModes(prefix);
-    reachable := frontend.filterReachableItems(items);
+    reachable := frontend.filterReachableItemsForTarget(items, "c");
     calls := frontend.targetHelperCalls(reachable);
     var floatOutput := false;
     floatLiterals := usesIntHelper(calls, "lt_float_literal(");

@@ -5506,3 +5506,149 @@ test('unified block Slice 2a supports inner-block type aliases, parallel root wi
     assert.match(rejected.stderr.toString(), expectedRe, `ts stderr mismatch for:\n${source}`);
   }
 });
+
+test('unified block Slice 2b eliminates side-effect-free dead code in blocks while preserving effects, faults, and diagnostics', () => {
+  // Exact emitted TS DCE assertions
+  {
+    const src = 'io := import "core/io"; x := { y := 1; z := fn(): Int { io.outputLine("dead"); 99 }; 5 }; io.outputLine(x);';
+    const compiled = compileTs({ text: src });
+    assert.equal(compiled.status, 0, compiled.stderr.toString());
+    const artifact = compiled.stdout.toString();
+    assert.equal(checkTsArtifact(artifact).status, 0);
+    assert.doesNotMatch(artifact, /lite_y|lite_z|"dead"|\(\(\) =>/);
+    const run = runTsArtifact(artifact);
+    assert.equal(run.status, 0, run.stderr.toString());
+    assert.equal(run.stdout.toString(), '5\n');
+  }
+
+  {
+    const src = 'io := import "core/io"; x := { a := 1; b := a; c := (a, b); (d, e) := c; var m := 10; m = 20; 99; "quiet"; 5 }; io.outputLine(x);';
+    const compiled = compileTs({ text: src });
+    assert.equal(compiled.status, 0, compiled.stderr.toString());
+    const artifact = compiled.stdout.toString();
+    assert.equal(checkTsArtifact(artifact).status, 0);
+    assert.doesNotMatch(artifact, /lite_a|lite_b|lite_c|lite_d|lite_e|lite_m|lite\$tuple|"quiet"|\(\(\) =>/);
+    const run = runTsArtifact(artifact);
+    assert.equal(run.status, 0, run.stderr.toString());
+    assert.equal(run.stdout.toString(), '5\n');
+  }
+
+  {
+    const src = 'io := import "core/io"; x := { (used, unused) := (7, 8); used }; io.outputLine(x);';
+    const compiled = compileTs({ text: src });
+    assert.equal(compiled.status, 0, compiled.stderr.toString());
+    const artifact = compiled.stdout.toString();
+    assert.equal(checkTsArtifact(artifact).status, 0);
+    assert.match(artifact, /lite_used/);
+    assert.match(artifact, /lite\$tuple/);
+    assert.doesNotMatch(artifact, /lite_unused/);
+    const run = runTsArtifact(artifact);
+    assert.equal(run.status, 0, run.stderr.toString());
+    assert.equal(run.stdout.toString(), '7\n');
+  }
+
+  {
+    const src = 'io := import "core/io"; { { y := 1; z := fn(): Int { 2 }; 99; } }; x := { { y := 1; } 5 }; io.outputLine(x);';
+    const compiled = compileTs({ text: src });
+    assert.equal(compiled.status, 0, compiled.stderr.toString());
+    const artifact = compiled.stdout.toString();
+    assert.equal(checkTsArtifact(artifact).status, 0);
+    assert.doesNotMatch(artifact, /lite_y|lite_z|\(\(\) =>/);
+    const run = runTsArtifact(artifact);
+    assert.equal(run.status, 0, run.stderr.toString());
+    assert.equal(run.stdout.toString(), '5\n');
+  }
+
+  {
+    const src = 'io := import "core/io"; f := fn(): Int { y := 111; 5 }; g := fn(): Int { y := 222; y }; { y := 333; } { y := 444; io.outputLine(y); } io.outputLine(f(), g());';
+    const compiled = compileTs({ text: src });
+    assert.equal(compiled.status, 0, compiled.stderr.toString());
+    const artifact = compiled.stdout.toString();
+    assert.equal(checkTsArtifact(artifact).status, 0);
+    assert.doesNotMatch(artifact, /111n|333n/);
+    const run = runTsArtifact(artifact);
+    assert.equal(run.status, 0, run.stderr.toString());
+    assert.equal(run.stdout.toString(), '444\n5 222\n');
+  }
+
+  {
+    const src = 'io := import "core/io"; deadTop := fn(): Int { io.outputLine("never"); 777 }; liveFn := fn(): Int { z := fn(): Int { deadTop() }; 5 }; io.outputLine(liveFn());';
+    const compiled = compileTs({ text: src });
+    assert.equal(compiled.status, 0, compiled.stderr.toString());
+    const artifact = compiled.stdout.toString();
+    assert.equal(checkTsArtifact(artifact).status, 0);
+    assert.doesNotMatch(artifact, /liteFn_deadTop|"never"|777n/);
+    const run = runTsArtifact(artifact);
+    assert.equal(run.status, 0, run.stderr.toString());
+    assert.equal(run.stdout.toString(), '5\n');
+  }
+
+  // C backend DCE and subset-boundary preservation
+  {
+    const src = 'io := import "core/io"; deadRoot := 4242; { deadInner := 3131; 99; "quiet_c"; } io.outputLine(5);';
+    const cCompiled = compileTarget('c', { text: src });
+    assert.equal(cCompiled.status, 0, cCompiled.stderr.toString());
+    const cArtifact = cCompiled.stdout.toString();
+    assert.doesNotMatch(cArtifact, /lite_deadRoot|lite_deadInner|quiet_c|4242|3131/);
+    if (process.env['LITE_SKIP_NATIVE'] !== '1') {
+      const cRun = runCArtifact(cArtifact);
+      assert.equal(cRun.phase, 'run');
+      assert.equal(cRun.status, 0, cRun.stderr.toString());
+      assert.equal(cRun.stdout.toString(), '5\n');
+    }
+  }
+
+  for (const badC of [
+    'values: List<Int> = [1];',
+    'p := (a = 1);',
+    'var f: fn(Int): Int;',
+    '[1, 2];',
+    '{ f := fn(): Int { 1 }; 5 }',
+    'x := { y := 1; 5 };',
+  ]) {
+    const cRejected = compileTarget('c', { text: badC });
+    assert.equal(cRejected.status, 2, `C should reject: ${badC}`);
+    assert.equal(cRejected.stdout.length, 0, `C rejected stdout should be empty: ${badC}`);
+  }
+
+  // Side-effect preservation
+  for (const [src, expectedOut] of [
+    ['io := import "core/io"; var out := 1; dead := { out = 9; 5 }; io.outputLine(out);', '9\n'],
+    ['list := import "core/list"; io := import "core/io"; xs: mut List<Int> = [1]; dead := { list.pushBack(mut xs, 2); 5 }; io.outputLine(xs);', '[1, 2]\n'],
+    ['io := import "core/io"; bump := fn(): Int { io.outputLine("ran"); 1 }; x := { y := bump(); f := bump; z := f(); w := (fn(): Int { io.outputLine("iife"); 2 })(); 5 }; io.outputLine(x);', 'ran\nran\niife\n5\n'],
+  ] as const) {
+    const compiled = compileTs({ text: src });
+    assert.equal(compiled.status, 0, `${src}\n${compiled.stderr.toString()}`);
+    assert.equal(checkTsArtifact(compiled.stdout.toString()).status, 0);
+    const run = runTsArtifact(compiled.stdout.toString());
+    assert.equal(run.status, 0, `${src}\n${run.stderr.toString()}`);
+    assert.equal(run.stdout.toString(), expectedOut, src);
+  }
+
+  // Runtime panics preserved in dead bindings
+  for (const panicSrc of [
+    'x := { var z := 0; y := 1 / z; 5 };',
+    'x := { var big := 9223372036854775807; y := big + 1; 5 };',
+  ]) {
+    const compiled = compileTs({ text: panicSrc });
+    assert.equal(compiled.status, 0, `${panicSrc}\n${compiled.stderr.toString()}`);
+    assert.equal(checkTsArtifact(compiled.stdout.toString()).status, 0);
+    const run = runTsArtifact(compiled.stdout.toString());
+    assert.equal(run.status, 1, panicSrc);
+    assert.match(run.stderr.toString(), /ArithmeticPanic/, panicSrc);
+  }
+
+  // Compile-time errors in dead code still reject
+  for (const [badSrc, expectedRe] of [
+    ['x := { y: Int = "bad"; 5 };', /cannot initialize Int with String/],
+    ['x := { y := 1; y := 2; 5 };', /duplicate declaration y in block/],
+    ['x := { q: Int = ?; y := q; 5 };', /cannot read uninitialized local q/],
+    ['x := { z := fn(): Int { "bad" }; 5 };', /cannot return String from function/],
+    ['x := { outerX := 1; z := fn(): Int { outerX }; 5 };', /local functions cannot capture surrounding variable outerX yet/],
+  ] as const) {
+    const rejected = compileTs({ text: badSrc });
+    assert.equal(rejected.status, 2, `should reject: ${badSrc}\n${rejected.stdout.toString()}`);
+    assert.equal(rejected.stdout.toString(), '', `rejected stdout should be empty: ${badSrc}`);
+    assert.match(rejected.stderr.toString(), expectedRe, `stderr mismatch for: ${badSrc}`);
+  }
+});
