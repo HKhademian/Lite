@@ -227,6 +227,12 @@ test('buildSite generates static pages and metadata in dist/site', () => {
   assert(astDojo.includes('Submit &amp; Grade'));
   assert(astDojo.includes('../../runtime/worker.js'));
   assert(astDojo.includes('Reveal Reference Solution'));
+  const drillDojo = readFileSync(join(out, 'gym/drills/immutable-vs-var.html'), 'utf8');
+  assert(drillDojo.includes('<textarea id="gym-editor" class="pg-editor-input"'));
+  assert(drillDojo.includes('<pre id="gym-editor-pre" class="pg-editor-pre"'));
+  assert(!drillDojo.includes('class="pg-editor"'));
+  assert(!drillDojo.includes('class="pg-pane"'));
+  assert(!drillDojo.includes('class="pg-pane-head"'));
   const gallery = readFileSync(join(out, 'gallery/index.html'), 'utf8');
   assert(gallery.includes('<title>Gallery — Lite</title>'));
   assert(gallery.includes('class="gallery-jumps"'));

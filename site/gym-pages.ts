@@ -500,27 +500,29 @@ function renderGymExercisePage(
   </article>
 
   <section class="gym-editor-col learn-runner" aria-label="Gym code editor and automated test judge">
-    <div class="pg-pane">
-      <div class="pg-pane-head">
-        <span class="pg-pane-title">${escapeHtml(ex.slug)}.lts</span>
-        <div class="pg-pane-actions" style="display: flex; gap: 0.4rem; flex-wrap: wrap;">
+    <div class="pane">
+      <div class="pane-head">
+        <div class="sample-picker">
+          <span class="code-card-title">${escapeHtml(ex.slug)}.lts</span>
+        </div>
+        <div class="pg-actions">
           <button id="gym-reset" class="pg-copy-btn" type="button">Reset Starter</button>
           <a id="gym-open-play" class="pg-copy-btn" href="../../playground/?draft=gym">Open in Play &rarr;</a>
         </div>
       </div>
       <div class="pg-editor-wrap" style="min-height: 290px;">
-        <pre id="gym-editor-pre" class="code-block pg-editor-pre" aria-hidden="true"><code>${highlightLite(starterClean)}</code></pre>
-        <textarea id="gym-editor" class="pg-editor" spellcheck="false" aria-label="Lite solution code editor">${escapeHtml(starterClean)}</textarea>
+        <pre id="gym-editor-pre" class="pg-editor-pre" aria-hidden="true"><code>${highlightLite(starterClean)}</code></pre>
+        <textarea id="gym-editor" class="pg-editor-input" spellcheck="false" autocomplete="off" autocapitalize="off" aria-label="Lite solution code editor">${escapeHtml(starterClean)}</textarea>
       </div>
-      <div class="pg-actions" style="flex-wrap: wrap;">
+      <div class="pg-actions" style="flex-wrap: wrap; border-top: 1px solid var(--border); padding: 0.55rem 0.85rem; background: var(--surface);">
         <button id="gym-submit" class="btn btn-primary" type="button">Submit &amp; Grade (${String(totalCases)})</button>
         <button id="gym-run-visible" class="btn" type="button">Run Visible (${String(ex.visibleCases.length)})</button>
         <span id="gym-status" class="pg-status" role="status" aria-live="polite">Ready (Cmd/Ctrl+Enter run visible · Cmd/Ctrl+Shift+Enter submit)</span>
       </div>
     </div>
 
-    <div class="pg-pane" style="margin-top: 0.9rem;">
-      <div class="pg-pane-head">
+    <div class="pane" style="margin-top: 0.9rem;">
+      <div class="pane-head">
         <div class="pg-tabs" role="tablist" aria-label="Judge and compiler output">
           <button id="gym-tab-results" class="pg-tab" type="button" role="tab" aria-selected="true">Test Results</button>
           <button id="gym-tab-ts" class="pg-tab" type="button" role="tab" aria-selected="false">Generated TS</button>

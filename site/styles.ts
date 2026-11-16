@@ -906,6 +906,7 @@ body.pg-resizing {
   white-space: inherit;
 }
 .pg-editor-input {
+  z-index: 1;
   outline: none;
   resize: none;
   overflow: auto;
@@ -1965,9 +1966,18 @@ a.is-completed .learn-done-dot {
   gap: 1.5rem;
   align-items: start;
 }
+.gym-editor-col {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  max-height: none;
+}
 @media (max-width: 960px) {
   .gym-dojo {
     grid-template-columns: 1fr;
+  }
+  .gym-editor-col {
+    position: static;
   }
 }
 .gym-prompt-col {
