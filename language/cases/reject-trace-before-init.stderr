@@ -1,0 +1,1 @@
+language/cases/reject-trace-before-init.lts:5:5: cannot call before later is initialized

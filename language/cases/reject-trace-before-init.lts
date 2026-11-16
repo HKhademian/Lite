@@ -1,0 +1,7 @@
+io := import "core/io";
+
+{
+    f := fn(): Int { later };
+    io.outputLine("must not run", f());
+    later := 7;
+}

@@ -1,0 +1,46 @@
+io := import "core/io";
+
+base := io.inputInt("base: ");
+step := io.inputInt("step: ");
+
+addBase := fn(x: Int): Int { x + base };
+
+makeScale := fn(factor: Int): fn(Int): Int {
+    fn(v: Int): Int { v * factor }
+};
+
+var total := base;
+addStep := fn(mult: Int): Int {
+    total = total + step * mult;
+    total
+};
+
+hist: mut List<Int> = [base];
+appendHist := fn(v: Int): Int {
+    push_back(mut hist, v);
+    hist[0] + v
+};
+
+closures: mut List<fn(): Int> = [];
+loop [10, 20, 30] as item {
+    push_back(mut closures, fn(): Int { item + step });
+}
+
+helper := fn(n: Int): Int { n + 1 };
+useHelper := fn(n: Int): Int { helper(n) * 2 };
+
+makeCounter := fn(start: Int): fn(): Int {
+    var count := start;
+    fn(): Int {
+        count = count + step;
+        count
+    }
+};
+
+c1 := makeCounter(0);
+c2 := makeCounter(100);
+scale3 := makeScale(3);
+
+io.outputLine(addBase(4), scale3(5), addStep(2), total, appendHist(7));
+io.outputLine(closures[0](), closures[1](), closures[2](), useHelper(9));
+io.outputLine(c1(), c1(), c2(), c1());

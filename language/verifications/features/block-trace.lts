@@ -1,0 +1,28 @@
+io := import "core/io";
+
+k := io.inputInt("k: ");
+
+var rootReserved: Int = ?;
+readRootReserved := fn(): Int { rootReserved + k };
+rootReserved = 20;
+
+innerTrace := {
+    var innerY: Int = ?;
+    writeAndRead := fn(): Int {
+        innerY = k + 9;
+        innerY
+    };
+    initResult := writeAndRead();
+
+    var serialZ: Int = ?;
+    readSerialZ := fn(): Int { serialZ * 2 };
+    serialZ = k + 4;
+
+    ops: mut List<fn(): Int> = [];
+    push_back(mut ops, fn(): Int { k + lateListVal });
+    lateListVal := 100;
+
+    initResult + readSerialZ() + ops[0]()
+};
+
+io.outputLine(readRootReserved(), innerTrace);

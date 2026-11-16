@@ -1,6 +1,6 @@
 # Closures
 
-Status: **callable context and capture design postponed at the user's request on 2026-10-21**. The capture proposals, earlier favored directions, probes, and reference comparisons below are retained as deferred review history, not active language feature commitments. See the [pinned context ideas](deferred-contexts.md), including environment context such as allocators.
+Status: **Generated TS lexical closures active as of 2026-11-16 (Unified Block Model Slice 3); explicit capture-header syntax and native C closure representation remain deferred design history.** On the TS target, local `fn(...) { ... }` expressions capture surrounding immutable values, mutable `var` storage, `mut List` values, parameters, `loop` item bindings, and sibling functions across nested and escaping frames, enforced by compile-time execution-trace and escaping-closure checks (see [deferred-body lookup](functions.md#deferred-body-lookup)); the C target continues rejecting `fn` values explicitly. The `[...]` capture-list proposals, environment-context notes, and reference comparisons below are retained as deferred design history (`LiteLang` / [pinned context ideas](deferred-contexts.md)), not active syntax commitments.
 
 ## Purpose and template
 

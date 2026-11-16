@@ -1,0 +1,49 @@
+io := import "core/io";
+
+seed := io.inputInt("seed: ");
+OuterBox := type Int;
+var outerVar: OuterBox = seed;
+
+valResult := {
+    Box := type Inner;
+    Inner := type Int;
+    OuterBox := type String;
+    tag: OuterBox = "ok";
+    base: Box = seed + 1;
+    scaled: Inner = base * 2;
+    base + scaled
+};
+
+{
+    outerVar += 10;
+    unusedInScope := 999;
+}
+
+runUnitBlock := fn(): Unit {
+    var tmp := seed;
+    tmp += 1;
+};
+runUnitBlock();
+{
+    var tmp2 := seed;
+    tmp2 += 2;
+}
+
+prunedVal := {
+    unused := 123;
+    deadClosure := fn(): Int { unused };
+    seed + 5
+};
+
+var effectAcc := 0;
+bump := fn(delta: Int): Int {
+    effectAcc += delta;
+    effectAcc
+};
+keptEffectVal := {
+    unused2 := bump(4);
+    seed + 1
+};
+
+outerTyped: OuterBox = outerVar;
+io.outputLine(valResult, outerTyped, prunedVal, keptEffectVal, effectAcc);

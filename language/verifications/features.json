@@ -389,6 +389,47 @@
       "docs": [
         "docs/tooling-and-learning.md"
       ]
+    },
+    {
+      "id": "function.closures",
+      "summary": "Lexical closures capturing immutable, var, mut List, parameter, loop-item, and escaping frames on TS.",
+      "case": "features/function-closures.json",
+      "status": "verified",
+      "docs": [
+        "docs/functions.md",
+        "docs/closures.md"
+      ]
+    },
+    {
+      "id": "block.values",
+      "summary": "Value-producing blocks, nested scopes, inner type aliases, and side-effect-free dead-code elimination.",
+      "case": "features/block-values.json",
+      "status": "verified",
+      "docs": [
+        "docs/blocks-and-results.md",
+        "docs/declarations-and-assignment.md"
+      ]
+    },
+    {
+      "id": "block.wiring",
+      "summary": "Parallel compile-time symbol wiring, mutual recursion, nearer-forward shadowing, and eager outer-shadow reads.",
+      "case": "features/block-wiring.json",
+      "status": "verified",
+      "docs": [
+        "docs/functions.md",
+        "docs/blocks-and-results.md"
+      ]
+    },
+    {
+      "id": "block.trace",
+      "summary": "Execution-trace initialization ordering across root/inner blocks and write-before-read reserved locals.",
+      "case": "features/block-trace.json",
+      "status": "verified",
+      "docs": [
+        "docs/first-initialization.md",
+        "docs/reserved-storage.md",
+        "docs/functions.md"
+      ]
     }
   ]
 }

@@ -1,0 +1,9 @@
+io := import "core/io";
+
+x := {
+    unused := 1;
+    deadFn := fn(): Int { unused };
+    5
+};
+
+io.outputLine(x);

@@ -1,0 +1,94 @@
+io := import "core/io";
+
+n := io.inputInt("n: ");
+
+add := fn(x: Int): Int { x * 10 };
+
+rootForward := fn(): Int { lateRoot + n };
+lateRoot := 100;
+
+blockWire := {
+    even := fn(k: Int): Bool {
+        if k == 0 { true } else { odd(k - 1) }
+    };
+    odd := fn(k: Int): Bool {
+        if k == 0 { false } else { even(k - 1) }
+    };
+    countdown := fn(k: Int): Int {
+        if k <= 0 { 0 } else { k + countdown(k - 1) }
+    };
+    sumSelf := fn(k: Int): Int {
+        if k <= 0 { 0 } else { k + self(k - 1) }
+    };
+    callAdd := fn(): Int { add(n) };
+    add := fn(k: Int): Int { k + 1 };
+    if even(n) { countdown(n) + callAdd() } else { sumSelf(n) + callAdd() }
+};
+
+levelVal := {
+    get1 := fn(): Int { level };
+    inner2 := {
+        get2 := fn(): Int { level };
+        inner3 := {
+            get3 := fn(): Int { level };
+            inner4 := {
+                get4 := fn(): Int { level };
+                level := 4;
+                get4()
+            };
+            level := 3;
+            get3() * 10 + inner4
+        };
+        level := 2;
+        get2() * 100 + inner3
+    };
+    level := 9;
+    get1() * 1000 + inner2
+};
+level := 1;
+
+eagerShadow := {
+    n := n + 10;
+    n
+};
+
+var outerMut := 1;
+mixedOrder := {
+    outerMut = 2;
+    get := fn(): Int { outerMut };
+    outerMut := 4;
+    get()
+};
+
+ifWire := if true {
+    getIf := fn(): Int { ifTarget };
+    ifTarget := n + 7;
+    getIf()
+} else { 0 };
+
+matchWire := match {
+    false { 0 }
+    _ {
+        getM := fn(): Int { mTarget };
+        mTarget := n * 2;
+        getM()
+    }
+};
+
+var finOut := 0;
+loopWire := @lp loop [1] as step {
+    getL := fn(): Int { step + lTarget };
+    lTarget := n;
+    break getL();
+} then {
+    loopVal := .value;
+    getT := fn(): Int { loopVal + tTarget };
+    tTarget := 5;
+    getT()
+} finally {
+    addFin := fn(): Unit { finOut = finOut + finStep; };
+    finStep := 3;
+    addFin();
+};
+
+io.outputLine(rootForward(), blockWire, levelVal, eagerShadow, outerMut, mixedOrder, ifWire, matchWire, loopWire, finOut);

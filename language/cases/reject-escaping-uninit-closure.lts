@@ -1,0 +1,8 @@
+make := fn(): fn(): Int {
+    r := fn(): Int { y };
+    return r;
+    y := 5;
+    fn(): Int { 0 }
+};
+
+_ := make();

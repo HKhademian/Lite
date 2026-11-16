@@ -4,11 +4,13 @@ Status: **established direction; source-file body selected 2026-10-28**.
 
 ## Purpose and template
 
-Generated compiler coverage, 2026-11-02: TS/C support statement scopes over
-their admitted values, retaining outer updates and fresh shadowed bindings.
-Generated TS also covers List/named-tuple values and scalar-function scopes.
-Value-producing block expressions and broader callable/type namespace
-behavior remain in the [transition queue](../compiler/gaps.md).
+Generated compiler coverage, 2026-11-16: TS supports full value-producing and
+statement `{ ... }` blocks, lexical closures, inner-block `type` aliases,
+parallel forward symbol wiring across root and inner blocks, compile-time
+execution-trace safety, and side-effect-free dead-code elimination. Generated C
+supports statement scopes, inner `type` aliases, parallel non-`fn` type wiring,
+and scalar DCE while explicitly rejecting `fn` values. See the
+[transition queue](../compiler/gaps.md).
 
 An executable block groups items, introduces lexical scope, and produces its final item's result when execution reaches the end.
 
@@ -199,6 +201,24 @@ now select normal completion as status 0, rejected programs/unhandled fatal
 execution failures as nonzero, and exit(errCode?) for explicit program end.
 These do not change this block's Unit value or make top-level return valid;
 exit's omitted-code default and cleanup behavior remain open.
+
+## Unified block model
+
+In LiteLang, a source file (`.lts` script or `.lt` module) acts as the root block
+with invisible braces and no parent block; every inner `{ ... }` block has a
+parent block and shares the same core block rules:
+
+- Same-block redeclaration across values, `var`/`mut`, `fn`, `type` aliases,
+  and imports is rejected in both root and inner blocks.
+- Symbol visibility within a block is wired in parallel at compile time for
+  types, functions, and inner declarations; deferred `fn` bodies resolve
+  nearer same-block declarations (including forward ones) before outer blocks
+  (see [deferred-body lookup](functions.md#deferred-body-lookup)).
+- Runtime values and initialization follow sequential execution-trace order,
+  preventing early eager reads/calls before later declarations or `?`
+  reserved locals initialize (see [first initialization](first-initialization.md)).
+- Only the parentless file root admits `pub` exports and module `import`
+  bindings.
 
 ## Dead-code elimination in blocks
 
