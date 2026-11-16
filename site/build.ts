@@ -133,7 +133,22 @@ function renderSampleCard(sample: RenderedSample, basePath: string, includeNote 
 </article>`;
 }
 
-function renderHomePage(rendered: ReadonlyMap<string, RenderedSample>, repoUrl: string, rev: SourceRevision, lightSwitchShine: boolean): string {
+type EcosystemCounts = Readonly<{
+  lessons: number;
+  tutorials: number;
+  drills: number;
+  workouts: number;
+  docsPages: number;
+  modules: number;
+}>;
+
+function renderHomePage(
+  rendered: ReadonlyMap<string, RenderedSample>,
+  repoUrl: string,
+  rev: SourceRevision,
+  lightSwitchShine: boolean,
+  counts: EcosystemCounts,
+): string {
   const hero = rendered.get(heroSample.id);
   if (hero === undefined) throw new Error('missing rendered hero sample');
   const featuredIds = ['double-sum', 'factorial', 'decisions', 'script-arguments'];
@@ -145,7 +160,6 @@ function renderHomePage(rendered: ReadonlyMap<string, RenderedSample>, repoUrl: 
 
   const cloneUrl = repoUrl ? `${repoUrl}.git` : '<repository-url>';
   const cloneDir = repoUrl ? (repoUrl.split('/').pop() || 'Lite') : 'Lite';
-  const docsStart = repoUrl ? `${repoUrl}/blob/main/docs/start-here.md` : 'gallery/';
 
   const body = `<section class="hero">
   <div>
@@ -159,7 +173,7 @@ function renderHomePage(rendered: ReadonlyMap<string, RenderedSample>, repoUrl: 
     </p>
     <div class="hero-actions">
       <a class="btn btn-primary" href="playground/">Play online</a>
-      <a class="btn" href="${escapeHtml(docsStart)}">Get started</a>
+      <a class="btn" href="learn/">Start Learning</a>
     </div>
     <div class="quickstart" role="region" aria-label="Quickstart shell commands">
       <div class="quickstart-head">
@@ -211,6 +225,55 @@ function renderHomePage(rendered: ReadonlyMap<string, RenderedSample>, repoUrl: 
     </script>
   </div>
   ${renderSampleCard(hero, '', false)}
+</section>
+
+<section class="section">
+  <div class="section-head">
+    <h2>Explore the Ecosystem</h2>
+  </div>
+  <div class="portal-grid">
+    <article class="portal-card">
+      <div class="portal-card-head">
+        <h3><a href="learn/">Learn Lite</a></h3>
+        <span class="badge">${String(counts.lessons)} lessons &middot; ${String(counts.tutorials)} tutorials</span>
+      </div>
+      <p>Guided curriculum across 7 domain tracks plus runnable browser &amp; Play tutorials.</p>
+      <div class="portal-card-foot">
+        <a href="learn/">Start Learning &rarr;</a>
+      </div>
+    </article>
+    <article class="portal-card">
+      <div class="portal-card-head">
+        <h3><a href="gym/">Lite Gym</a></h3>
+        <span class="badge">${String(counts.drills)} drills &middot; ${String(counts.workouts)} workouts</span>
+      </div>
+      <p>Litelings diagnostic drills and belt-ranked multi-test katas graded in-browser.</p>
+      <div class="portal-card-foot">
+        <a href="gym/">Enter Gym &rarr;</a>
+      </div>
+    </article>
+    <article class="portal-card">
+      <div class="portal-card-head">
+        <h3><a href="docs/">Handbook &amp; Spec</a></h3>
+        <span class="badge">${String(counts.docsPages)} pages</span>
+      </div>
+      <p>7-chapter runnable Shipped Handbook alongside status-badged design &amp; compiler docs.</p>
+      <div class="portal-card-foot">
+        <a href="docs/">Read Docs &rarr;</a>
+      </div>
+    </article>
+    <article class="portal-card">
+      <div class="portal-card-head">
+        <h3><a href="modules/">Modules &amp; Tools</a></h3>
+        <span class="badge">${String(counts.modules)} modules</span>
+      </div>
+      <p>Auto-generated <code>core/*</code> &amp; <code>extra/*</code> API reference, CLI guide, VS Code extension, and self-hosting ladder.</p>
+      <div class="portal-card-foot">
+        <a href="modules/">Modules &rarr;</a>
+        <a href="tools/">Tools &rarr;</a>
+      </div>
+    </article>
+  </div>
 </section>
 
 <section class="section">
@@ -1337,7 +1400,6 @@ export function buildSite(options?: BuildSiteOptions): void {
 
   writeFileSync(join(outputDir, 'style.css'), siteCss);
   cpSync(join(root, 'brand', 'lite-favicon.svg'), join(outputDir, 'favicon.svg'));
-  writeFileSync(join(outputDir, 'index.html'), renderHomePage(rendered, repoUrl, rev, lightSwitchShine));
   writeFileSync(join(outputDir, 'gallery', 'index.html'), renderGalleryPage(rendered, renderedPlay, repoUrl, rev, lightSwitchShine));
   writeFileSync(join(outputDir, 'playground', 'index.html'), renderPlaygroundPage(rendered, renderedPlay, repoUrl, rev, lightSwitchShine));
 
@@ -1477,8 +1539,34 @@ export function buildSite(options?: BuildSiteOptions): void {
     );
   }
   writeFileSync(
+    join(outputDir, 'index.html'),
+    renderHomePage(rendered, repoUrl, rev, lightSwitchShine, {
+      lessons: learnOut.lessonCount,
+      tutorials: learnOut.tutorialCount,
+      drills: gymOut.drillCount,
+      workouts: gymOut.kataCount,
+      docsPages: docsOut.files.size,
+      modules: extractedModules.length,
+    }),
+  );
+  writeFileSync(
     join(outputDir, 'build.json'),
-    JSON.stringify({ commit: rev.commit, shortCommit: rev.commit.slice(0, 12), timestamp: rev.timestamp, samples: rendered.size, lightSwitchShine }, null, 2) + '\n',
+    JSON.stringify(
+      {
+        commit: rev.commit,
+        shortCommit: rev.commit.slice(0, 12),
+        timestamp: rev.timestamp,
+        samples: rendered.size,
+        lessons: learnOut.lessonCount,
+        tutorials: learnOut.tutorialCount,
+        gymExercises: gymOut.exerciseCount,
+        docsPages: docsOut.files.size,
+        modules: extractedModules.length,
+        lightSwitchShine,
+      },
+      null,
+      2,
+    ) + '\n',
   );
 
   console.log(`Built Lite site (${String(rendered.size)} verified samples) -> dist/site/`);

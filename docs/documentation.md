@@ -11,6 +11,7 @@ the owning rule, inspect its cases and discover related topics.
 - Use [start here](start-here.md) for installation and the first working program.
 - Use [the language tour](tour.md) for short examples and links into the reference.
 - Use [the documentation index](README.md) for topic browsing and reading paths.
+- Use [the site architecture guide](site-architecture.md) for the static site pipeline, browser worker protocol, and portable Learn/Gym schemas.
 - Use [the normative map](normative-pages.md) to locate the owner of each rule.
 - Use [the current compiler guide](../compiler/README.md) and
   [transition](../compiler/transition-plan.md) for implementation status.
@@ -46,8 +47,9 @@ logical heading hierarchy, descriptive links, text alternatives for meaningful
 images and fenced code with a stated purpose. Convey status with words, not
 color alone. Keep source Markdown useful offline and readable on narrow screens.
 Avoid requiring JavaScript, hover, animation or a diagram to understand a rule.
-Future web presentation must retain keyboard navigation, visible focus, readable
-contrast and a usable mobile layout; this guide does not claim a site exists.
+The generated static website retains keyboard navigation, visible focus, readable
+contrast, and a responsive layout across `/learn/`, `/gym/`, `/docs/`, `/modules/`,
+`/tools/`, `/gallery/`, and `/playground/`; see [site architecture](site-architecture.md).
 
 ## Checks
 

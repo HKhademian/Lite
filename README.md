@@ -37,11 +37,13 @@ Check or compile a script with `./bin/lite`:
 
 ## Learn & Explore
 
+- [Handbook](language/learn/handbook/getting-started/overview-and-setup.md) — 7-chapter shipped Lite language guide.
 - [Start here](docs/start-here.md) — run your first program and set up local tools.
 - [Language tour](docs/tour.md) — example-led introduction to LiteLang.
 - [Examples](language/examples/README.md) — runnable `.lts` programs.
 - [White paper](docs/white-paper.md) — philosophy and design criteria.
 - [Documentation index](docs/README.md) — full language design, spec, and proposals.
+- [Site architecture](docs/site-architecture.md) — static site pipeline, worker protocol, and portable Learn/Gym schemas.
 - [VS Code support](editors/vscode/README.md) — syntax highlighting for `.lt` and `.lts`.
 
 ## Internals & Contributing

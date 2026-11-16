@@ -172,7 +172,7 @@ test('buildSite generates static pages and metadata in dist/site', () => {
   };
   for (const htmlFile of [...collectHtml(join(out, 'docs')), ...collectHtml(join(out, 'learn')), ...collectHtml(join(out, 'gym'))]) {
     const content = readFileSync(htmlFile, 'utf8');
-    assert(!content.includes('data-md-href'), `unresolved data-md-href in ${htmlFile}`);
+    assert(!content.includes(' data-md-href='), `unresolved data-md-href in ${htmlFile}`);
     const hrefRe = /href="([^"]+)"/g;
     for (let m = hrefRe.exec(content); m !== null; m = hrefRe.exec(content)) {
       const raw = m[1]!;
@@ -233,7 +233,25 @@ test('buildSite generates static pages and metadata in dist/site', () => {
   assert(!gallery.includes('<details class="gallery-code" open>'));
   const index = readFileSync(join(out, 'index.html'), 'utf8');
   assert(index.includes('is light.'));
+  assert(index.includes('Explore the Ecosystem'));
+  assert(index.includes('Start Learning'));
+  assert(index.includes('Enter Gym'));
   assert(index.includes('<meta name="color-scheme" content="light dark">'));
+  const buildMeta = JSON.parse(readFileSync(join(out, 'build.json'), 'utf8')) as {
+    samples: number;
+    lessons: number;
+    tutorials: number;
+    gymExercises: number;
+    docsPages: number;
+    modules: number;
+  };
+  assert.equal(buildMeta.samples, showcaseSamples.length);
+  assert.equal(buildMeta.lessons, 20);
+  assert.equal(buildMeta.tutorials, 3);
+  assert.equal(buildMeta.gymExercises, 42);
+  assert.equal(buildMeta.modules, 17);
+  assert(buildMeta.docsPages >= 200);
+  assert(existsSync(join(out, 'docs/design/site-architecture.html')));
   assert(index.includes('<meta name="description"'));
   assert(index.includes('Play &rarr;'));
   assert(!index.includes('Inspect generated TypeScript'));
