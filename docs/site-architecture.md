@@ -4,6 +4,8 @@ Status: current site architecture reference, 2026-11-16.
 
 The Lite static site (`dist/site/`) is generated deterministically in build-time TypeScript (`node ./site/build.ts`) without external website dependencies, frontend frameworks, or checked-in build outputs. All UI, syntax highlighting, browser compilation, and grading run locally from static HTML, CSS, and stripped ES modules emitted at build time.
 
+There are no separate school, study, or university academic tracks; all guided learning lives under **Lite Academy**, unifying **Docs** (Handbook & Spec), **References** (`core/*` & `extra/*` Modules and Tools), **Gym**, and **Play**.
+
 See [documentation maintenance](documentation.md) and [the documentation index](README.md) for authoring and link-checking policy.
 
 ## Static Site Route Map

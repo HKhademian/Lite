@@ -57,13 +57,37 @@ export const snipsClientJs = `(function () {
     return (document.body && document.body.dataset && document.body.dataset.basePath) || "";
   }
 
+  function normalizeExtraModules(raw) {
+    if (!raw || typeof raw !== "object" || Array.isArray(raw)) return null;
+    var out = {};
+    var count = 0;
+    var keys = Object.keys(raw);
+    for (var i = 0; i < keys.length; i += 1) {
+      var spec = keys[i];
+      var entry = raw[spec];
+      if (!entry || typeof entry !== "object" || typeof entry.text !== "string") continue;
+      out[spec] = {
+        path: typeof entry.path === "string" ? entry.path : spec,
+        display: typeof entry.display === "string" ? entry.display : spec,
+        identity: typeof entry.identity === "string" ? entry.identity : "",
+        text: entry.text
+      };
+      count += 1;
+    }
+    return count > 0 ? out : null;
+  }
+
+  function normalizeEnv(raw) {
+    return raw === "play" || raw === "cli" ? raw : "universal";
+  }
+
   function normalizeItem(raw) {
     if (!raw || typeof raw !== "object") return null;
     var id = typeof raw.id === "string" && raw.id.trim() ? raw.id.trim() : "";
     var code = typeof raw.code === "string" ? raw.code : "";
     if (!id) return null;
     var nowIso = new Date().toISOString();
-    return {
+    var item = {
       id: id,
       title: typeof raw.title === "string" && raw.title.trim() ? raw.title.trim() : "Untitled Sketch",
       code: code,
@@ -73,6 +97,11 @@ export const snipsClientJs = `(function () {
       createdAt: typeof raw.createdAt === "string" ? raw.createdAt : nowIso,
       updatedAt: typeof raw.updatedAt === "string" ? raw.updatedAt : nowIso
     };
+    var extraModules = normalizeExtraModules(raw.extraModules);
+    if (extraModules) item.extraModules = extraModules;
+    var env = normalizeEnv(raw.environment);
+    if (env !== "universal") item.environment = env;
+    return item;
   }
 
   function readAll() {
@@ -127,6 +156,8 @@ export const snipsClientJs = `(function () {
         stdin: draft && typeof draft.stdin === "string" ? draft.stdin : "",
         args: draft && typeof draft.args === "string" ? draft.args : "",
         origin: draft && typeof draft.origin === "string" ? draft.origin : "custom",
+        extraModules: draft ? draft.extraModules : null,
+        environment: draft ? draft.environment : "universal",
         createdAt: nowIso,
         updatedAt: nowIso
       });
@@ -141,16 +172,18 @@ export const snipsClientJs = `(function () {
       var nowIso = new Date().toISOString();
       for (var i = 0; i < items.length; i += 1) {
         if (items[i].id === id) {
-          var next = {
+          var next = normalizeItem({
             id: items[i].id,
             title: typeof patch.title === "string" && patch.title.trim() ? patch.title.trim() : items[i].title,
             code: typeof patch.code === "string" ? patch.code : items[i].code,
             stdin: typeof patch.stdin === "string" ? patch.stdin : items[i].stdin,
             args: typeof patch.args === "string" ? patch.args : items[i].args,
             origin: items[i].origin,
+            extraModules: patch && Object.prototype.hasOwnProperty.call(patch, "extraModules") ? patch.extraModules : items[i].extraModules,
+            environment: patch && Object.prototype.hasOwnProperty.call(patch, "environment") ? patch.environment : items[i].environment,
             createdAt: items[i].createdAt,
             updatedAt: nowIso
-          };
+          });
           items[i] = next;
           updated = next;
           break;

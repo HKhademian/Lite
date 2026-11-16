@@ -1,12 +1,20 @@
 /** Collects Samples, Examples, Cases, and Pieces into `dist/site/playground/library.json`. */
 import { existsSync, readdirSync, readFileSync } from 'node:fs';
 import { join, posix } from 'node:path';
+import { sourceModuleIdentity } from '../compiler/source.ts';
 import type { ShowcaseSample } from './groups.ts';
 import type { GymCatalog } from './gym-verify.ts';
 import type { LearnCatalog } from './learn-pages.ts';
 import type { PlaySample } from './play-samples.ts';
 
 export type LibraryCategory = 'sample' | 'example' | 'case' | 'piece';
+
+export type PlaygroundExtraModule = Readonly<{
+  path: string;
+  display: string;
+  identity: string;
+  text: string;
+}>;
 
 export type PlaygroundLibraryItem = Readonly<{
   id: string;
@@ -18,8 +26,52 @@ export type PlaygroundLibraryItem = Readonly<{
   source: string;
   stdin: string;
   args: readonly string[];
+  environment?: 'universal' | 'play' | 'cli';
+  extraModules?: Readonly<Record<string, PlaygroundExtraModule>>;
   sampleId?: string;
 }>;
+
+function detectSourceEnvironment(source: string): 'universal' | 'play' | 'cli' {
+  if (/import\s+"core\/(file|path|process|time)"/.test(source)) return 'cli';
+  if (/import\s+"extra\/(canvas|audio|board)"/.test(source)) return 'play';
+  return 'universal';
+}
+
+function collectRelativeModules(
+  rootDir: string,
+  entryRelFile: string,
+  entrySource: string,
+): Record<string, PlaygroundExtraModule> | undefined {
+  const modules: Record<string, PlaygroundExtraModule> = {};
+  const queue: Array<{ fromFile: string; text: string }> = [{ fromFile: entryRelFile, text: entrySource }];
+  const seenFiles = new Set<string>([entryRelFile]);
+  const importRe = /import\s+"(\.[^"]+)"/g;
+
+  while (queue.length > 0) {
+    const current = queue.shift()!;
+    const currentDir = posix.dirname(current.fromFile);
+    importRe.lastIndex = 0;
+    for (let m = importRe.exec(current.text); m !== null; m = importRe.exec(current.text)) {
+      const spec = m[1]!;
+      const resolvedRel = posix.normalize(posix.join(currentDir, spec));
+      const fullPath = join(rootDir, resolvedRel);
+      if (!existsSync(fullPath)) continue;
+      const modText = readFileSync(fullPath, 'utf8');
+      modules[spec] = {
+        path: resolvedRel,
+        display: resolvedRel,
+        identity: sourceModuleIdentity(modText),
+        text: modText,
+      };
+      if (!seenFiles.has(resolvedRel)) {
+        seenFiles.add(resolvedRel);
+        queue.push({ fromFile: resolvedRel, text: modText });
+      }
+    }
+  }
+
+  return Object.keys(modules).length > 0 ? modules : undefined;
+}
 
 function walkLtsFiles(dir: string, relBase: string): string[] {
   if (!existsSync(dir)) return [];
@@ -148,6 +200,9 @@ export function collectPlaygroundLibrary(options: Readonly<{
     const base = posix.basename(relPath, '.lts');
     const preferred = relPath.startsWith('language/showcases/') ? `showcase-${base}` : base;
     const slug = allocateSlug(usedByCat.example, preferred);
+    const src = readFileSync(join(rootDir, relPath), 'utf8');
+    const extraModules = collectRelativeModules(rootDir, relPath, src);
+    const environment = detectSourceEnvironment(src);
     items.push({
       id: `example/${slug}`,
       slug,
@@ -155,14 +210,17 @@ export function collectPlaygroundLibrary(options: Readonly<{
       badge: relPath.startsWith('language/showcases/') ? 'Showcase' : 'Example',
       title: slugToTitle(relPath),
       file: relPath,
-      source: readFileSync(join(rootDir, relPath), 'utf8'),
+      source: src,
       stdin: '',
       args: [],
+      ...(environment !== 'universal' ? { environment } : {}),
+      ...(extraModules !== undefined ? { extraModules } : {}),
     });
   }
 
   for (const relPath of walkLtsFiles(join(rootDir, 'language', 'cases'), 'language/cases')) {
     const slug = allocateSlug(usedByCat.case, posix.basename(relPath, '.lts'));
+    const src = readFileSync(join(rootDir, relPath), 'utf8');
     items.push({
       id: `case/${slug}`,
       slug,
@@ -170,7 +228,7 @@ export function collectPlaygroundLibrary(options: Readonly<{
       badge: posix.basename(relPath).startsWith('reject-') ? 'Reject Case' : 'Case',
       title: slugToTitle(relPath),
       file: relPath,
-      source: readFileSync(join(rootDir, relPath), 'utf8'),
+      source: src,
       stdin: '',
       args: [],
     });
@@ -182,6 +240,8 @@ export function collectPlaygroundLibrary(options: Readonly<{
     for (const track of [...learnCatalog.tracks].sort((a, b) => a.order - b.order)) {
       for (const lesson of track.lessons) {
         const slug = allocateSlug(usedByCat.piece, lesson.slug);
+        const src = readFileSync(join(rootDir, lesson.sourceFile), 'utf8');
+        const extraModules = collectRelativeModules(rootDir, lesson.sourceFile, src);
         items.push({
           id: `piece/${slug}`,
           slug,
@@ -189,9 +249,11 @@ export function collectPlaygroundLibrary(options: Readonly<{
           badge: lesson.kind === 'tutorial' ? 'Tutorial' : 'Lesson',
           title: lesson.title,
           file: lesson.sourceFile,
-          source: readFileSync(join(rootDir, lesson.sourceFile), 'utf8'),
+          source: src,
           stdin: lesson.stdin,
           args: lesson.args,
+          ...(lesson.environment !== 'universal' ? { environment: lesson.environment } : {}),
+          ...(extraModules !== undefined ? { extraModules } : {}),
         });
       }
     }

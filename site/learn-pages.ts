@@ -215,8 +215,9 @@ function renderLearnIndexPage(
   const body = `<section class="page-hero">
   <h1>Learn Lite</h1>
   <p class="hero-lead">
-    Structured interactive course from your first interactive I/O script through parallel wiring, trace safety, closures,
-    modules, and complete browser-runnable projects.
+    <strong>Lite Academy</strong> brings together Docs, References, Gym, and Play &mdash; start from your first
+    interactive I/O script and progress through parallel wiring, trace safety, closures, modules, and complete
+    browser-runnable projects.
   </p>
   <div class="learn-progress-banner">
     <div class="learn-progress-stats">
@@ -430,6 +431,8 @@ function renderLessonPage(
   const lessonSlug = ${JSON.stringify(lesson.slug)};
   const isCliLesson = ${JSON.stringify(isCli)};
   const isPlayLesson = ${JSON.stringify(isPlay)};
+  const lessonEnvironment = ${JSON.stringify(lesson.environment)};
+  const initialExtraModules = ${JSON.stringify(item.extraModules).replaceAll('<', '\\u003c')};
 
   const editorEl = document.getElementById("ln-editor");
   const editorPreEl = document.getElementById("ln-editor-pre").querySelector("code");
@@ -768,12 +771,15 @@ function renderLessonPage(
   if (openPlayBtn) {
     openPlayBtn.addEventListener("click", () => {
       if (window.LiteSnips && typeof window.LiteSnips.openInPlayground === "function") {
+        const bundledModules = payloadData && payloadData.extraModules ? payloadData.extraModules : initialExtraModules;
         window.LiteSnips.openInPlayground({
           title: ${JSON.stringify(lesson.title)},
           code: editorEl.value,
           stdin: stdinEl.value.replaceAll("\\\\n", "\\n"),
           args: argsEl.value,
           origin: "learn:" + lessonId,
+          extraModules: bundledModules && Object.keys(bundledModules).length > 0 ? bundledModules : null,
+          environment: lessonEnvironment,
         });
       }
     });

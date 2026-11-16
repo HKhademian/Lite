@@ -231,15 +231,17 @@ function renderHomePage(
 
 <section class="section">
   <div class="section-head">
-    <h2>Explore the Ecosystem</h2>
+    <h2>Lite Academy</h2>
+    <span class="code-card-meta">Docs &middot; References &middot; Gym &middot; Play</span>
   </div>
+  <p class="section-note">One unified learning space bringing together Docs, References, Gym, and Play &mdash; no separate academic tracks.</p>
   <div class="portal-grid">
     <article class="portal-card">
       <div class="portal-card-head">
-        <h3><a href="learn/">Learn Lite</a></h3>
+        <h3><a href="learn/">Learn &amp; Academy</a></h3>
         <span class="badge">${String(counts.lessons)} lessons &middot; ${String(counts.tutorials)} tutorials</span>
       </div>
-      <p>Guided curriculum across 7 domain tracks plus runnable browser &amp; Play tutorials.</p>
+      <p>Guided curriculum across core language abilities plus runnable browser &amp; Play tutorials.</p>
       <div class="portal-card-foot">
         <a href="learn/">Start Learning &rarr;</a>
       </div>
@@ -256,7 +258,7 @@ function renderHomePage(
     </article>
     <article class="portal-card">
       <div class="portal-card-head">
-        <h3><a href="docs/">Handbook &amp; Spec</a></h3>
+        <h3><a href="docs/">Docs &amp; Spec</a></h3>
         <span class="badge">${String(counts.docsPages)} pages</span>
       </div>
       <p>7-chapter runnable Shipped Handbook alongside status-badged design &amp; compiler docs.</p>
@@ -266,12 +268,12 @@ function renderHomePage(
     </article>
     <article class="portal-card">
       <div class="portal-card-head">
-        <h3><a href="modules/">Modules &amp; Tools</a></h3>
+        <h3><a href="modules/">References &amp; Tools</a></h3>
         <span class="badge">${String(counts.modules)} modules</span>
       </div>
       <p>Auto-generated <code>core/*</code> &amp; <code>extra/*</code> API reference, CLI guide, VS Code extension, and self-hosting ladder.</p>
       <div class="portal-card-foot">
-        <a href="modules/">Modules &rarr;</a>
+        <a href="modules/">References &rarr;</a>
         <a href="tools/">Tools &rarr;</a>
       </div>
     </article>
@@ -652,6 +654,8 @@ function renderPlaygroundPage(
   const titleEl = document.getElementById("pg-current-title");
   let activeSnipId = null;
   let activeLibraryItem = null;
+  let currentExtraModules = null;
+  let currentEnvironment = "universal";
   let libraryItems = null;
   let libraryPromise = null;
   let baseline = { code: "", stdin: "", args: "" };
@@ -845,6 +849,8 @@ function renderPlaygroundPage(
     if (!meta) return;
     activeSnipId = null;
     activeLibraryItem = null;
+    currentExtraModules = null;
+    currentEnvironment = "universal";
     stopPlay(true);
     if (titleEl) titleEl.textContent = meta.title;
     fileEl.textContent = meta.file;
@@ -928,7 +934,15 @@ function renderPlaygroundPage(
     return new Promise((resolve, reject) => {
       const id = nextReqId++;
       pending.set(id, { resolve, reject });
-      getWorker().postMessage({ id, action, source, stdin, args, ...(extra || {}) });
+      getWorker().postMessage({
+        id,
+        action,
+        source,
+        stdin,
+        args,
+        ...(currentExtraModules ? { extraModules: currentExtraModules } : {}),
+        ...(extra || {}),
+      });
     });
   }
 
@@ -990,8 +1004,14 @@ function renderPlaygroundPage(
       if (!res.ok) {
         tabCanvas.hidden = true;
         showTab("output");
-        outputEl.textContent = (res.stdout ? res.stdout + "\\n" : "") + (res.stderr || "Execution failed.");
-        statusEl.textContent = res.ts ? "Runtime error" : "Compile error";
+        const isCliFailure =
+          currentEnvironment === "cli" ||
+          /import\\s+"core\\/(file|path|process|time)"/.test(source);
+        const cliHint = isCliFailure && action === "play"
+          ? "\\n[host note] This source targets the CLI / Host OS environment; browser mode supports Compile TS/C, while local execution uses ./bin/lite run."
+          : "";
+        outputEl.textContent = (res.stdout ? res.stdout + "\\n" : "") + (res.stderr || "Execution failed.") + cliHint;
+        statusEl.textContent = res.ts ? (isCliFailure ? "CLI / Host OS runtime required" : "Runtime error") : "Compile error";
         return;
       }
       if (action === "compile") {
@@ -1414,6 +1434,8 @@ function renderPlaygroundPage(
     activeSnipId = snip.id;
     activeLibraryItem = null;
     currentSample = null;
+    currentExtraModules = snip.extraModules || null;
+    currentEnvironment = snip.environment || "universal";
     editorEl.value = snip.code;
     sourceEl.innerHTML = highlightLite(snip.code) + "\\n";
     editorEl.scrollTop = 0;
@@ -1428,8 +1450,13 @@ function renderPlaygroundPage(
     lastCSource = null;
     renderCodeViews();
     setBaseline();
-    outputEl.textContent = "(Press Play to run)";
-    statusEl.textContent = "Loaded sketch: " + snip.title;
+    if (currentEnvironment === "cli") {
+      outputEl.textContent = "(CLI / Host OS sketch — press Compile for TS/C, or run locally with ./bin/lite run)";
+      statusEl.textContent = "Loaded CLI sketch: " + snip.title;
+    } else {
+      outputEl.textContent = "(Press Play to run)";
+      statusEl.textContent = "Loaded sketch: " + snip.title;
+    }
     setPlaygroundQuery("snip", snip.id);
     syncSnipsBadge();
     return true;
@@ -1445,6 +1472,8 @@ function renderPlaygroundPage(
     activeSnipId = null;
     activeLibraryItem = item;
     currentSample = null;
+    currentExtraModules = item.extraModules || null;
+    currentEnvironment = item.environment || "universal";
     editorEl.value = item.source;
     sourceEl.innerHTML = highlightLite(item.source) + "\\n";
     editorEl.scrollTop = 0;
@@ -1459,8 +1488,13 @@ function renderPlaygroundPage(
     lastCSource = null;
     renderCodeViews();
     setBaseline();
-    outputEl.textContent = "(Press Play to run)";
-    statusEl.textContent = "Loaded " + item.badge + ": " + item.title;
+    if (currentEnvironment === "cli") {
+      outputEl.textContent = "(CLI / Host OS source — press Compile for TS/C, or run locally with ./bin/lite run " + (item.file || "file.lts") + ")";
+      statusEl.textContent = "Loaded CLI " + item.badge + ": " + item.title;
+    } else {
+      outputEl.textContent = "(Press Play to run)";
+      statusEl.textContent = "Loaded " + item.badge + ": " + item.title;
+    }
     setPlaygroundQuery(item.category || "piece", item.slug || item.id);
   }
 
@@ -1567,6 +1601,8 @@ function renderPlaygroundPage(
         stdin: item.stdin,
         args: item.args,
         origin: item.origin,
+        extraModules: item.extraModules || null,
+        environment: item.environment || "universal",
       });
       syncSnipsBadge();
       renderSketchesList();
@@ -1707,6 +1743,8 @@ function renderPlaygroundPage(
           code: editorEl.value,
           stdin: cleanStdin,
           args: argsEl.value,
+          extraModules: currentExtraModules,
+          environment: currentEnvironment,
         });
         if (updated) {
           setBaseline();
@@ -1734,6 +1772,8 @@ function renderPlaygroundPage(
         stdin: cleanStdin,
         args: argsEl.value,
         origin: defaultOrigin,
+        extraModules: currentExtraModules,
+        environment: currentEnvironment,
       });
       if (created) {
         activeSnipId = created.id;

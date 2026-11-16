@@ -235,9 +235,10 @@ test('buildSite generates static pages and metadata in dist/site', () => {
   assert(!gallery.includes('<details class="gallery-code" open>'));
   const index = readFileSync(join(out, 'index.html'), 'utf8');
   assert(index.includes('is light.'));
-  assert(index.includes('Explore the Ecosystem'));
+  assert(index.includes('Lite Academy'));
   assert(index.includes('Start Learning'));
   assert(index.includes('Enter Gym'));
+  assert(index.includes('References &rarr;'));
   assert(index.includes('<meta name="color-scheme" content="light dark">'));
   const buildMeta = JSON.parse(readFileSync(join(out, 'build.json'), 'utf8')) as {
     samples: number;
@@ -1104,10 +1105,10 @@ test('runtime/snips.js manages UUIDv7 localStorage sketches and enhances doc cod
     LiteSnips: undefined as unknown as {
       STORAGE_KEY: string;
       uuidv7: () => string;
-      list: () => Array<{ id: string; title: string; code: string; origin: string }>;
-      get: (id: string) => { id: string; title: string; code: string; origin: string } | null;
-      saveNew: (d: { title: string; code: string; origin?: string }) => { id: string; title: string };
-      update: (id: string, p: { title?: string; code?: string }) => { id: string; title: string; code: string } | null;
+      list: () => Array<{ id: string; title: string; code: string; origin: string; environment?: string; extraModules?: Record<string, { text: string }> }>;
+      get: (id: string) => { id: string; title: string; code: string; origin: string; environment?: string; extraModules?: Record<string, { text: string }> } | null;
+      saveNew: (d: { title: string; code: string; origin?: string; environment?: string; extraModules?: Record<string, unknown> | null }) => { id: string; title: string; environment?: string; extraModules?: Record<string, { text: string }> };
+      update: (id: string, p: { title?: string; code?: string; environment?: string; extraModules?: Record<string, unknown> | null }) => { id: string; title: string; code: string; environment?: string; extraModules?: Record<string, { text: string }> } | null;
       remove: (id: string) => boolean;
       clear: () => void;
     },
@@ -1172,11 +1173,31 @@ test('runtime/snips.js manages UUIDv7 localStorage sketches and enhances doc cod
   const id = api.uuidv7();
   assert.match(id, /^[0-9a-f]{8}-[0-9a-f]{4}-7[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/);
 
-  const saved = api.saveNew({ title: 'First', code: 'io := import "core/io";', origin: 'custom' });
+  const saved = api.saveNew({
+    title: 'First',
+    code: 'h := import "./helpers/math-stats.lts";',
+    origin: 'learn:learn.modules.visibility.modules-and-visibility',
+    environment: 'cli',
+    extraModules: { './helpers/math-stats.lts': { path: 'helpers/math-stats.lts', display: 'helpers/math-stats.lts', identity: 'id1', text: 'pub X := 1;\n' } },
+  });
   assert.match(saved.id, /^[0-9a-f]{8}-[0-9a-f]{4}-7[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/);
+  assert.equal(api.get(saved.id)?.environment, 'cli');
+  assert.equal(api.get(saved.id)?.extraModules?.['./helpers/math-stats.lts']?.text, 'pub X := 1;\n');
   api.update(saved.id, { title: 'Renamed First', code: 'io.outputLine(1);' });
   assert.equal(api.get(saved.id)?.title, 'Renamed First');
   assert.equal(api.get(saved.id)?.code, 'io.outputLine(1);');
+  assert.equal(api.get(saved.id)?.extraModules?.['./helpers/math-stats.lts']?.text, 'pub X := 1;\n');
+
+  const libJson = JSON.parse(readFileSync(join(root, 'dist', 'site', 'playground', 'library.json'), 'utf8')) as Array<{
+    slug: string;
+    file: string;
+    environment?: string;
+    extraModules?: Record<string, unknown>;
+  }>;
+  const modEx = libJson.find(entry => entry.file === 'language/examples/modules/core/modules-and-hashing.lts');
+  assert(modEx?.extraModules && './helpers/stats-module.lts' in modEx.extraModules, 'expected modules-and-hashing helper extraModules in library.json');
+  const cliLesson = libJson.find(entry => entry.file === 'language/showcases/modules/filesystem/files-paths-and-cleanup.lts');
+  assert.equal(cliLesson?.environment, 'cli', 'expected files-paths-and-cleanup to carry environment=cli in library.json');
 
   assert.equal(createdBars.length, 1);
   const playBtn = createdBars[0]!.buttons.find(b => b.textContent.includes('Open in Play'));
