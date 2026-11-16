@@ -200,6 +200,7 @@ export function renderPage(options: Readonly<{
     })();
   </script>
   <link rel="stylesheet" href="${options.basePath}style.css">
+  <script defer src="${options.basePath}runtime/snips.js"></script>
 </head>
 <body${classAttr}${baseAttr}>
 ${renderHeader(options.basePath, options.active, options.repoUrl, lightSwitchShine)}

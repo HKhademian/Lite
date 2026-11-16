@@ -28,6 +28,7 @@ import { playGroups, playSamples, type PlaySample } from './play-samples.ts';
 import { appendPlayKeepalive, stripPlayKeepaliveTs } from './play-keepalive.ts';
 import { playgroundWorkerJs } from './playground-worker.ts';
 import { searchClientJs, type SearchEntry } from './search.ts';
+import { snipsClientJs } from './snips.ts';
 import { siteCss } from './styles.ts';
 import { buildToolsSection } from './tools-page.ts';
 
@@ -473,6 +474,8 @@ function renderPlaygroundPage(
         <button id="pg-reset" class="btn" type="button">Reset</button>
       </div>
       <div class="pg-actions">
+        <button id="pg-save-snip" class="btn" type="button" title="Save current code as a UUIDv7 sketch in localStorage">Save</button>
+        <button id="pg-sketches-btn" class="btn" type="button" title="Explore, rename, or clear saved localStorage sketches">Sketches <span id="pg-sketches-count" class="badge">0</span></button>
         <button id="pg-compile" class="btn" type="button">Compile</button>
         <button id="pg-play" class="btn btn-primary" type="button" title="Run (Ctrl/Cmd + Enter)">&#9654; Play</button>
       </div>
@@ -556,6 +559,24 @@ function renderPlaygroundPage(
   </section>
 </div>
 
+<div id="pg-sketches-modal" class="snips-modal-backdrop" role="dialog" aria-modal="true" aria-labelledby="pg-sketches-title" hidden>
+  <div class="snips-modal">
+    <div class="snips-modal-head">
+      <h2 id="pg-sketches-title">Saved Sketches (localStorage · UUIDv7)</h2>
+      <div class="pg-actions">
+        <button id="pg-sketches-new" class="btn btn-primary" type="button">+ New Sketch</button>
+        <button id="pg-sketches-clear" class="btn" type="button">Clear All</button>
+        <button id="pg-sketches-close" class="btn" type="button" aria-label="Close sketches explorer">Close</button>
+      </div>
+    </div>
+    <div class="snips-modal-tools">
+      <input id="pg-sketches-filter" type="search" placeholder="Filter saved sketches by title, origin, or UUIDv7..." aria-label="Filter saved sketches">
+      <span id="pg-sketches-summary" class="code-card-meta">0 saved</span>
+    </div>
+    <div id="pg-sketches-list" class="snips-list"></div>
+  </div>
+</div>
+
 <script type="module">
   import { formatCodeView } from "./code-view.js";
   import { highlightLite, highlightTs, highlightC } from "./highlight.js";
@@ -622,6 +643,28 @@ function renderPlaygroundPage(
   let worker = null;
   let nextReqId = 1;
   const pending = new Map();
+  const snipsApi = typeof window !== "undefined" && window.LiteSnips ? window.LiteSnips : null;
+  let activeSnipId = null;
+  let snipSaveTimer = 0;
+
+  function syncSnipsBadge() {
+    const badge = document.getElementById("pg-sketches-count");
+    if (badge && snipsApi) badge.textContent = String(snipsApi.list().length);
+  }
+
+  function scheduleSnipAutosave() {
+    if (!snipsApi || !activeSnipId) return;
+    if (snipSaveTimer) window.clearTimeout(snipSaveTimer);
+    snipSaveTimer = window.setTimeout(() => {
+      snipSaveTimer = 0;
+      if (!activeSnipId) return;
+      snipsApi.update(activeSnipId, {
+        code: editorEl.value,
+        stdin: stdinEl.value.replaceAll("\\\\n", "\\n"),
+        args: argsEl.value,
+      });
+    }, 250);
+  }
 
   const SPLIT_KEY = "lite.pg.split";
   let splitPct = 50;
@@ -721,9 +764,12 @@ function renderPlaygroundPage(
   editorEl.addEventListener("input", () => {
     pauseCanvasLoop();
     sourceEl.innerHTML = highlightLite(editorEl.value) + "\\n";
-    statusEl.textContent = "Modified";
+    statusEl.textContent = activeSnipId ? "Modified (autosaving sketch)" : "Modified";
     statusEl.hidden = false;
+    scheduleSnipAutosave();
   });
+  stdinEl.addEventListener("input", scheduleSnipAutosave);
+  argsEl.addEventListener("input", scheduleSnipAutosave);
 
   editorEl.addEventListener("keydown", (event) => {
     if ((event.metaKey || event.ctrlKey) && event.key === "Enter") {
@@ -762,12 +808,15 @@ function renderPlaygroundPage(
   async function loadSample(id, mode) {
     const meta = byId.get(id) ?? samples[0];
     if (!meta) return;
+    activeSnipId = null;
     stopPlay(true);
     select.value = meta.id;
     fileEl.textContent = meta.file;
     statusEl.textContent = "Loading " + meta.file + "...";
 
     const url = new URL(window.location.href);
+    url.searchParams.delete("snip");
+    url.searchParams.delete("draft");
     url.searchParams.set("sample", meta.id);
     window.history.replaceState({}, "", url);
 
@@ -1320,10 +1369,289 @@ function renderPlaygroundPage(
     void sendPlayInteraction("pointerup", { ...cell, button: event.button });
   });
 
+  function loadSnip(id) {
+    if (!snipsApi) return false;
+    const snip = snipsApi.get(id);
+    if (!snip) return false;
+    stopPlay(true);
+    activeSnipId = snip.id;
+    currentSample = null;
+    editorEl.value = snip.code;
+    sourceEl.innerHTML = highlightLite(snip.code) + "\\n";
+    editorEl.scrollTop = 0;
+    editorEl.scrollLeft = 0;
+    stdinEl.value = String(snip.stdin || "").replaceAll("\\n", "\\\\n");
+    argsEl.value = String(snip.args || "");
+    fileEl.textContent = snip.title + " · " + snip.id.slice(0, 8);
+    rawTs = "";
+    rawC = "";
+    cMessage = "/* Press Compile or open Generated C to emit C. */";
+    lastCSource = null;
+    renderCodeViews();
+    outputEl.textContent = "(Press Play to run)";
+    statusEl.textContent = "Loaded sketch: " + snip.title;
+    const nextUrl = new URL(window.location.href);
+    nextUrl.searchParams.delete("sample");
+    nextUrl.searchParams.delete("draft");
+    nextUrl.searchParams.set("snip", snip.id);
+    window.history.replaceState({}, "", nextUrl);
+    syncSnipsBadge();
+    return true;
+  }
+
+  const saveSnipBtn = document.getElementById("pg-save-snip");
+  const sketchesBtn = document.getElementById("pg-sketches-btn");
+  const sketchesModal = document.getElementById("pg-sketches-modal");
+  const sketchesClose = document.getElementById("pg-sketches-close");
+  const sketchesNew = document.getElementById("pg-sketches-new");
+  const sketchesClear = document.getElementById("pg-sketches-clear");
+  const sketchesFilter = document.getElementById("pg-sketches-filter");
+  const sketchesSummary = document.getElementById("pg-sketches-summary");
+  const sketchesList = document.getElementById("pg-sketches-list");
+  let clearArmed = false;
+
+  function renderSketchesList() {
+    if (!snipsApi || !sketchesList) return;
+    const all = snipsApi.list();
+    const q = sketchesFilter ? sketchesFilter.value.trim().toLowerCase() : "";
+    const filtered = q
+      ? all.filter((item) =>
+          item.title.toLowerCase().includes(q) ||
+          item.id.toLowerCase().includes(q) ||
+          item.origin.toLowerCase().includes(q) ||
+          item.code.toLowerCase().includes(q),
+        )
+      : all;
+    if (sketchesSummary) {
+      sketchesSummary.textContent = filtered.length + " of " + all.length + " saved";
+    }
+    sketchesList.innerHTML = "";
+    if (filtered.length === 0) {
+      const empty = document.createElement("div");
+      empty.className = "gym-result-empty";
+      empty.textContent = all.length === 0
+        ? "No saved sketches yet. Click Save on any program or Open in Play from Docs, Learn, or Gym."
+        : "No saved sketches match your filter.";
+      sketchesList.appendChild(empty);
+      return;
+    }
+
+    for (const item of filtered) {
+      const row = document.createElement("article");
+      row.className = "snips-item" + (item.id === activeSnipId ? " active" : "");
+
+      const head = document.createElement("div");
+      head.className = "snips-item-head";
+
+      const titleSpan = document.createElement("span");
+      titleSpan.className = "snips-item-title";
+      titleSpan.textContent = item.title;
+      head.appendChild(titleSpan);
+
+      const meta = document.createElement("div");
+      meta.className = "snips-item-meta";
+      const idCode = document.createElement("code");
+      idCode.textContent = item.id;
+      const originSpan = document.createElement("span");
+      originSpan.className = "badge";
+      originSpan.textContent = item.origin || "custom";
+      const dateSpan = document.createElement("span");
+      dateSpan.textContent = String(item.updatedAt || "").slice(0, 16).replace("T", " ");
+      meta.appendChild(idCode);
+      meta.appendChild(originSpan);
+      meta.appendChild(dateSpan);
+
+      const preview = document.createElement("pre");
+      preview.className = "snips-preview";
+      preview.textContent = (item.code.split("\\n").find((l) => l.trim() !== "") || "(empty)").trim();
+
+      const actions = document.createElement("div");
+      actions.className = "snips-item-actions";
+
+      const openBtn = document.createElement("button");
+      openBtn.type = "button";
+      openBtn.className = "btn btn-primary";
+      openBtn.textContent = item.id === activeSnipId ? "Loaded" : "Open";
+      openBtn.addEventListener("click", () => {
+        loadSnip(item.id);
+        if (sketchesModal) sketchesModal.hidden = true;
+      });
+
+      const renameBtn = document.createElement("button");
+      renameBtn.type = "button";
+      renameBtn.className = "btn";
+      renameBtn.textContent = "Rename";
+      renameBtn.addEventListener("click", () => {
+        const input = document.createElement("input");
+        input.type = "text";
+        input.className = "snips-rename-input";
+        input.value = item.title;
+        input.setAttribute("aria-label", "New title for sketch");
+        const saveTitleBtn = document.createElement("button");
+        saveTitleBtn.type = "button";
+        saveTitleBtn.className = "btn btn-primary";
+        saveTitleBtn.textContent = "Save Title";
+        const wrap = document.createElement("div");
+        wrap.className = "snips-rename-row";
+        wrap.appendChild(input);
+        wrap.appendChild(saveTitleBtn);
+        head.replaceChild(wrap, titleSpan);
+        input.focus();
+        input.select();
+        const commitRename = () => {
+          const nextTitle = input.value.trim();
+          if (nextTitle) {
+            snipsApi.update(item.id, { title: nextTitle });
+            if (item.id === activeSnipId) {
+              fileEl.textContent = nextTitle + " · " + item.id.slice(0, 8);
+            }
+          }
+          renderSketchesList();
+        };
+        saveTitleBtn.addEventListener("click", commitRename);
+        input.addEventListener("keydown", (ev) => {
+          if (ev.key === "Enter") { ev.preventDefault(); commitRename(); }
+          else if (ev.key === "Escape") { ev.preventDefault(); renderSketchesList(); }
+        });
+      });
+
+      const dupBtn = document.createElement("button");
+      dupBtn.type = "button";
+      dupBtn.className = "btn";
+      dupBtn.textContent = "Duplicate";
+      dupBtn.addEventListener("click", () => {
+        snipsApi.saveNew({
+          title: item.title + " (copy)",
+          code: item.code,
+          stdin: item.stdin,
+          args: item.args,
+          origin: item.origin,
+        });
+        syncSnipsBadge();
+        renderSketchesList();
+      });
+
+      const delBtn = document.createElement("button");
+      delBtn.type = "button";
+      delBtn.className = "btn";
+      delBtn.textContent = "Delete";
+      delBtn.addEventListener("click", () => {
+        snipsApi.remove(item.id);
+        if (item.id === activeSnipId) activeSnipId = null;
+        syncSnipsBadge();
+        renderSketchesList();
+      });
+
+      actions.appendChild(openBtn);
+      actions.appendChild(renameBtn);
+      actions.appendChild(dupBtn);
+      actions.appendChild(delBtn);
+
+      row.appendChild(head);
+      row.appendChild(meta);
+      row.appendChild(preview);
+      row.appendChild(actions);
+      sketchesList.appendChild(row);
+    }
+  }
+
+  if (saveSnipBtn && snipsApi) {
+    saveSnipBtn.addEventListener("click", () => {
+      const cleanStdin = stdinEl.value.replaceAll("\\\\n", "\\n");
+      if (activeSnipId) {
+        const updated = snipsApi.update(activeSnipId, {
+          code: editorEl.value,
+          stdin: cleanStdin,
+          args: argsEl.value,
+        });
+        if (updated) {
+          statusEl.textContent = "Saved sketch (" + updated.id.slice(0, 8) + ")";
+          syncSnipsBadge();
+          return;
+        }
+      }
+      const defaultTitle = currentSample && currentSample.id
+        ? (byId.get(currentSample.id)?.title ?? currentSample.id)
+        : "Custom Sketch";
+      const created = snipsApi.saveNew({
+        title: defaultTitle,
+        code: editorEl.value,
+        stdin: cleanStdin,
+        args: argsEl.value,
+        origin: currentSample ? "sample:" + currentSample.id : "playground",
+      });
+      if (created) {
+        activeSnipId = created.id;
+        fileEl.textContent = created.title + " · " + created.id.slice(0, 8);
+        statusEl.textContent = "Saved new sketch (" + created.id.slice(0, 8) + ")";
+        const nextUrl = new URL(window.location.href);
+        nextUrl.searchParams.delete("sample");
+        nextUrl.searchParams.set("snip", created.id);
+        window.history.replaceState({}, "", nextUrl);
+        syncSnipsBadge();
+      }
+    });
+  }
+
+  if (sketchesBtn && sketchesModal) {
+    sketchesBtn.addEventListener("click", () => {
+      clearArmed = false;
+      if (sketchesClear) sketchesClear.textContent = "Clear All";
+      renderSketchesList();
+      sketchesModal.hidden = false;
+      if (sketchesFilter) sketchesFilter.focus();
+    });
+    if (sketchesClose) {
+      sketchesClose.addEventListener("click", () => { sketchesModal.hidden = true; });
+    }
+    sketchesModal.addEventListener("click", (ev) => {
+      if (ev.target === sketchesModal) sketchesModal.hidden = true;
+    });
+    if (sketchesFilter) {
+      sketchesFilter.addEventListener("input", renderSketchesList);
+    }
+    if (sketchesNew && snipsApi) {
+      sketchesNew.addEventListener("click", () => {
+        const created = snipsApi.saveNew({
+          title: "Custom Sketch",
+          code: 'io := import "core/io";\\n\\nio.outputLine("Hello from Lite!");\\n',
+          stdin: "",
+          args: "",
+          origin: "custom",
+        });
+        if (created) {
+          loadSnip(created.id);
+          sketchesModal.hidden = true;
+        }
+      });
+    }
+    if (sketchesClear && snipsApi) {
+      sketchesClear.addEventListener("click", () => {
+        if (!clearArmed) {
+          clearArmed = true;
+          sketchesClear.textContent = "Confirm Clear All";
+          return;
+        }
+        clearArmed = false;
+        sketchesClear.textContent = "Clear All";
+        snipsApi.clear();
+        activeSnipId = null;
+        syncSnipsBadge();
+        renderSketchesList();
+        statusEl.textContent = "Cleared saved sketches";
+      });
+    }
+  }
+  if (typeof window !== "undefined" && typeof window.addEventListener === "function") {
+    window.addEventListener("lite:snips-changed", syncSnipsBadge);
+  }
+  syncSnipsBadge();
+
   const urlParams = new URLSearchParams(window.location.search);
   const initial = urlParams.get("sample") ?? "${escapeHtml(playgroundDefaultSample.id)}";
-  let loadedDraft = false;
-  if (urlParams.get("draft") === "gym" && typeof sessionStorage !== "undefined") {
+  const snipIdParam = urlParams.get("snip");
+  let loadedDraft = Boolean(snipIdParam && loadSnip(snipIdParam));
+  if (!loadedDraft && urlParams.get("draft") === "gym" && typeof sessionStorage !== "undefined") {
     try {
       const rawDraft = sessionStorage.getItem("lite-playground-draft-v1");
       if (rawDraft) {
@@ -1433,6 +1761,7 @@ export function buildSite(options?: BuildSiteOptions): void {
     writeFileSync(join(targetDir, 'stdlib.json'), stdlibJson);
   }
   writeFileSync(join(outputDir, 'runtime', 'search.js'), searchClientJs);
+  writeFileSync(join(outputDir, 'runtime', 'snips.js'), snipsClientJs);
 
   const extractedModules = extractModules(root);
   const modulesOut = buildModulesSection({

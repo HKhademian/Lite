@@ -344,7 +344,8 @@ export function postprocessMarkdownHtml(options: Readonly<{
         codeHtml = escapeHtml(rawCode);
       }
 
-      const preBlock = `<pre class="code-block" data-lang="${escapeHtml(lang || 'text')}" data-fence="${fenceStr}"><code>${codeHtml}</code></pre>`;
+      const effectiveLang = lang || (highlightUnmarkedAsLite ? 'lite' : 'text');
+      const preBlock = `<pre class="code-block" data-lang="${escapeHtml(effectiveLang)}" data-fence="${fenceStr}"><code>${codeHtml}</code></pre>`;
       if (snippet !== undefined) {
         if (snippet.sampleId !== undefined) {
           const playHref = `${relativeHref(outPath, 'playground/')}?sample=${encodeURIComponent(snippet.sampleId)}`;

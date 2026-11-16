@@ -652,10 +652,21 @@ function renderGymExercisePage(
     }
   });
 
-  openPlayLink.addEventListener("click", () => {
+  openPlayLink.addEventListener("click", (event) => {
     const firstStdin = payloadData && payloadData.visibleCases && payloadData.visibleCases[0]
       ? String(payloadData.visibleCases[0].stdin || "")
       : "";
+    if (window.LiteSnips && typeof window.LiteSnips.openInPlayground === "function") {
+      event.preventDefault();
+      window.LiteSnips.openInPlayground({
+        title: exerciseTitle,
+        code: editorEl.value,
+        stdin: firstStdin,
+        args: "",
+        origin: "gym:" + exerciseId
+      });
+      return;
+    }
     try {
       sessionStorage.setItem("lite-playground-draft-v1", JSON.stringify({
         title: exerciseTitle,

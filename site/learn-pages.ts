@@ -365,6 +365,7 @@ function renderLessonPage(
       </div>
       <div class="pg-actions">
         <button id="ln-reset" class="btn" type="button">Reset</button>
+        <button id="ln-open-play" class="btn" type="button" title="Save sketch and open in Playground">Open in Play &rarr;</button>
         <button id="ln-run" class="btn btn-primary" type="button" title="Ctrl/Cmd + Enter">${isCli ? 'Compile TS' : 'Run'}</button>
       </div>
     </div>
@@ -761,6 +762,21 @@ function renderLessonPage(
     if (res.stderr && res.stdout) outputEl.textContent += "\\n[stderr]\\n" + res.stderr;
     statusEl.textContent = "Ran in browser";
     showTab("output");
+  }
+
+  const openPlayBtn = document.getElementById("ln-open-play");
+  if (openPlayBtn) {
+    openPlayBtn.addEventListener("click", () => {
+      if (window.LiteSnips && typeof window.LiteSnips.openInPlayground === "function") {
+        window.LiteSnips.openInPlayground({
+          title: ${JSON.stringify(lesson.title)},
+          code: editorEl.value,
+          stdin: stdinEl.value.replaceAll("\\\\n", "\\n"),
+          args: argsEl.value,
+          origin: "learn:" + lessonId,
+        });
+      }
+    });
   }
 
   runBtn.addEventListener("click", () => void executeCurrent());

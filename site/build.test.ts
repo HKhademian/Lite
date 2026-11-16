@@ -67,6 +67,7 @@ test('buildSite generates static pages and metadata in dist/site', () => {
     'runtime/worker.js',
     'runtime/stdlib.json',
     'runtime/search.js',
+    'runtime/snips.js',
     'runtime/highlight.js',
     'runtime/code-view.js',
     'runtime/strip-ts.js',
@@ -287,7 +288,11 @@ test('buildSite generates static pages and metadata in dist/site', () => {
   assert(playground.includes('Generated TS'));
   assert(playground.includes('id="pg-compile"'));
   assert(playground.includes('id="pg-play"'));
+  assert(playground.includes('id="pg-save-snip"'));
+  assert(playground.includes('id="pg-sketches-btn"'));
+  assert(playground.includes('id="pg-sketches-modal"'));
   assert(playground.includes('id="pg-copy"'));
+  assert(index.includes('runtime/snips.js'));
   assert(playground.includes('event.key === "Tab"'));
   assert(playground.includes('id="pg-c"'));
   assert(playground.includes('id="mode-program"'));
@@ -998,6 +1003,126 @@ test('playground inline module initializes without TDZ or ReferenceError', async
   runInNewContext(`(async () => {\n${scriptBody}\n})()`, sandbox);
   await new Promise(resolve => setTimeout(resolve, 25));
   assert.equal(els.get('pg-pause')?.getAttribute('aria-pressed'), 'false');
+});
+
+test('runtime/snips.js manages UUIDv7 localStorage sketches and enhances doc code blocks', () => {
+  const snipsPath = join(root, 'dist', 'site', 'runtime', 'snips.js');
+  const snipsJs = readFileSync(snipsPath, 'utf8');
+  const storage = new Map<string, string>();
+  const createdBars: Array<{ className: string; buttons: Array<{ textContent: string; className: string; click: () => void }> }> = [];
+
+  const mockPre = {
+    tagName: 'PRE',
+    textContent: 'io := import "core/io";\nio.outputLine("Hi!");\n',
+    dataset: {} as Record<string, string>,
+    previousElementSibling: { tagName: 'H2', textContent: 'Your First Program' },
+    parentElement: { tagName: 'DIV', previousElementSibling: null, querySelector: () => null, parentElement: { tagName: 'MAIN' } },
+    getAttribute: (name: string) => (name === 'data-lang' ? 'lite' : null),
+    closest: (sel: string) => (sel.includes('.doc-prose') ? { tagName: 'DIV' } : null),
+    insertAdjacentElement: (_pos: string, bar: { className: string; buttons: Array<{ textContent: string; className: string; click: () => void }> }) => {
+      createdBars.push(bar);
+    },
+  };
+
+  const mockWin = {
+    location: { href: 'https://example.test/docs/handbook/overview-and-setup.html', pathname: '/docs/handbook/overview-and-setup.html' },
+    localStorage: {
+      getItem: (k: string) => storage.get(k) ?? null,
+      setItem: (k: string, v: string) => { storage.set(k, v); },
+      removeItem: (k: string) => { storage.delete(k); },
+    },
+    dispatchEvent() {},
+    setTimeout,
+    LiteSnips: undefined as unknown as {
+      STORAGE_KEY: string;
+      uuidv7: () => string;
+      list: () => Array<{ id: string; title: string; code: string; origin: string }>;
+      get: (id: string) => { id: string; title: string; code: string; origin: string } | null;
+      saveNew: (d: { title: string; code: string; origin?: string }) => { id: string; title: string };
+      update: (id: string, p: { title?: string; code?: string }) => { id: string; title: string; code: string } | null;
+      remove: (id: string) => boolean;
+      clear: () => void;
+    },
+  };
+
+  const makeMockNode = (tag: string) => {
+    const children: unknown[] = [];
+    const listeners: Record<string, Array<() => void>> = {};
+    const node = {
+      tagName: tag.toUpperCase(),
+      type: '',
+      className: '',
+      textContent: '',
+      dataset: {} as Record<string, string>,
+      buttons: children,
+      classList: { add() {}, remove() {} },
+      appendChild(ch: unknown) { children.push(ch); },
+      addEventListener(ev: string, fn: () => void) {
+        (listeners[ev] ??= []).push(fn);
+      },
+      click() {
+        for (const fn of listeners['click'] ?? []) fn();
+      },
+    };
+    return node;
+  };
+
+  const sandbox = {
+    window: mockWin,
+    document: {
+      readyState: 'complete',
+      title: 'Overview & Setup — Docs — Lite',
+      body: { dataset: { basePath: '../../' } },
+      querySelector: () => ({ textContent: 'Overview & Setup' }),
+      querySelectorAll: (sel: string) => (sel === 'pre.code-block' ? [mockPre] : []),
+      createElement: (tag: string) => makeMockNode(tag),
+      addEventListener() {},
+    },
+    navigator: {},
+    crypto: globalThis.crypto,
+    CustomEvent: class {
+      type: string;
+      init: unknown;
+      constructor(type: string, init?: unknown) {
+        this.type = type;
+        this.init = init;
+      }
+    },
+    URLSearchParams,
+    Uint8Array,
+    Date,
+    Math,
+    Array,
+    String,
+    JSON,
+    setTimeout,
+  };
+
+  runInNewContext(snipsJs, sandbox);
+  const api = mockWin.LiteSnips;
+  assert(api, 'window.LiteSnips should be initialized');
+  const id = api.uuidv7();
+  assert.match(id, /^[0-9a-f]{8}-[0-9a-f]{4}-7[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/);
+
+  const saved = api.saveNew({ title: 'First', code: 'io := import "core/io";', origin: 'custom' });
+  assert.match(saved.id, /^[0-9a-f]{8}-[0-9a-f]{4}-7[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/);
+  api.update(saved.id, { title: 'Renamed First', code: 'io.outputLine(1);' });
+  assert.equal(api.get(saved.id)?.title, 'Renamed First');
+  assert.equal(api.get(saved.id)?.code, 'io.outputLine(1);');
+
+  assert.equal(createdBars.length, 1);
+  const playBtn = createdBars[0]!.buttons.find(b => b.textContent.includes('Open in Play'));
+  assert(playBtn, 'expected Open in Play button on Lite code block');
+  playBtn.click();
+  assert(mockWin.location.href.startsWith('../../playground/?snip='), mockWin.location.href);
+  const loadedId = decodeURIComponent(mockWin.location.href.split('?snip=')[1]!);
+  assert.equal(api.get(loadedId)?.title, 'Your First Program');
+  assert(api.get(loadedId)?.code.includes('io.outputLine("Hi!");'));
+
+  assert.equal(api.remove(saved.id), true);
+  assert.equal(api.list().length, 1);
+  api.clear();
+  assert.equal(api.list().length, 0);
 });
 
 test('stripLiteTs and formatCodeView handle construct-level finally and abrupt unwinding', () => {
