@@ -47,8 +47,10 @@ separate from these aliases. Use the explicit-width names in review examples.
 
 ### Unsigned integers: explicit, portable capability
 
-The user favors signed integers for ordinary Lite code and wants unsigned
-integers available as an explicit, niche capability across emission targets.
+The user favors signed integers for ordinary Lite code and sees unsigned
+integers as an explicit, niche capability that may eventually be supported
+across emission targets. Support need not be a priority on every platform and
+can arrive later; no common delivery date or initial target matrix is selected.
 Ordinary language semantics and core implementation should not require Lite
 programmers to use unsigned types. Longer, conspicuous type symbols are desired
 for code that deliberately needs them; `UnsignedInt64` is an illustrative name,
@@ -60,8 +62,11 @@ targets may require different lowering strategies: a target without a directly
 matching type can need generated operations and may be slower. Backend use of
 host unsigned operations or storage for an explicitly required representation
 is not, by itself, a requirement that ordinary Lite programs use unsigned
-types. Portability is the intended direction, not current implementation or a
-promise of identical target performance or ABI.
+types. Cross-target portability is a possible longer-term direction, not a
+requirement that all targets implement the feature immediately, a claim of
+current implementation, or a promise of identical target performance or ABI.
+Keep unsupported targets and their diagnostics visible rather than implying
+support or silently changing unsigned behavior.
 
 The exact widths and names, overflow and conversion behavior, literal rules,
 FFI layout and ABI, unsupported-target diagnostics, and generated costs remain
