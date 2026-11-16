@@ -72,13 +72,13 @@ the others still lack their current layer.
 
 ## Current position and parked work
 
-- **Active pass:** second layer, connections and boundaries.
-- **Next topic:** 1. Core types and values; review its connections at the same
-  depth that will later be applied to the other nine areas.
-- **Joint layer completion:** the ten first-layer outlines were discussed through
-  topic 10. This records a breadth pass over purpose and basic shape, not detailed
-  design acceptance, complete investigation, or implementation support. The
-  preliminary assessments remain starting material for the deeper passes.
+- **Active pass:** third layer, main rules and tradeoffs.
+- **Next topic:** 1. Core types and values; review its main rules and tradeoffs
+  at the same depth that will later be applied to the other nine areas.
+- **Joint layer completion:** the ten first-layer outlines and second-layer
+  connection summaries were discussed through topic 10. These breadth passes do
+  not imply detailed design acceptance, complete investigation, or implementation
+  support. The preliminary assessments remain starting material for deeper passes.
 - **Recent direction to preserve:** the user sees UserID as equally distinct
   from String and from another distinct type such as TeacherID. Fresh
   string-like literals and established typed values have different treatment;
