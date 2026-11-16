@@ -6,4 +6,6 @@ export const generatedTestFiles = [
   '../tools/cases.test.ts',
   '../tools/run.test.ts',
   '../tools/release.test.ts',
+  '../site/features.test.ts',
+  '../site/build.test.ts',
 ] as const;

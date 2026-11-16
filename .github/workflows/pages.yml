@@ -31,7 +31,7 @@ jobs:
       - name: Build and verify the public showcase site
         run: ./site/build.ts
       - name: Run site checks
-        run: node --test site/build.test.ts
+        run: node --test site/features.test.ts site/build.test.ts
       - uses: actions/configure-pages@v5
       - uses: actions/upload-pages-artifact@v3
         with:

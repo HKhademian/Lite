@@ -1,5 +1,5 @@
 import assert from 'node:assert/strict';
-import { existsSync, readdirSync } from 'node:fs';
+import { existsSync, readdirSync, readFileSync } from 'node:fs';
 import { join, relative, sep } from 'node:path';
 import { test } from 'node:test';
 import { fileURLToPath } from 'node:url';
@@ -158,4 +158,240 @@ test('verifyGymCorpus compiles and executes all 42 Gym starters and solutions', 
   assert.equal(result.drillCount, 18);
   assert.equal(result.kataCount, 24);
   assert(result.caseCount >= 168, `expected at least 168 test cases, got ${String(result.caseCount)}`);
+});
+
+interface LearnHelperModule {
+  spec: string;
+  file: string;
+}
+
+interface LearnLesson {
+  id: string;
+  slug: string;
+  title: string;
+  kind: string;
+  domain: string;
+  subGroup: string;
+  environment: string;
+  guideFile: string;
+  sourceFile: string;
+  helperModules: LearnHelperModule[];
+  stdin: string;
+  args: string[];
+  teaches: string[];
+  docs: string[];
+}
+
+interface LearnTrack {
+  id: string;
+  order: number;
+  title: string;
+  summary: string;
+  lessons: LearnLesson[];
+}
+
+interface LearnCatalog {
+  schemaVersion: number;
+  title: string;
+  description: string;
+  tracks: LearnTrack[];
+}
+
+interface GymCase {
+  name: string;
+  stdin: string;
+  args: string[];
+  expectedStdout: string;
+}
+
+interface GymExercise {
+  id: string;
+  slug: string;
+  title: string;
+  mode: string;
+  belt: string;
+  domain: string;
+  subGroup: string;
+  promptFile: string;
+  starterFile: string;
+  solutionFile: string;
+  brokenStarterSyntax: boolean;
+  expectedStarterFailure: string;
+  hints: string[];
+  relatedDocs: string[];
+  relatedLessons: string[];
+  visibleCases: GymCase[];
+  hiddenCases: GymCase[];
+}
+
+interface GymCatalog {
+  schemaVersion: number;
+  title: string;
+  description: string;
+  exercises: GymExercise[];
+}
+
+function assertRecordKeys<T extends object>(obj: unknown, required: readonly string[], label: string): T {
+  assert(obj !== null && typeof obj === 'object' && !Array.isArray(obj), `${label} must be an object`);
+  const record = obj as Record<string, unknown>;
+  const keys = Object.keys(record).sort();
+  assert.deepEqual(keys, [...required].sort(), `${label} keys mismatch`);
+  return obj as T;
+}
+
+function assertNonEmptyString(val: unknown, label: string, pattern?: RegExp): string {
+  assert.equal(typeof val, 'string', `${label} must be a string`);
+  const text = val as string;
+  assert(text.length > 0, `${label} must be non-empty`);
+  if (pattern) assert(pattern.test(text), `${label} (${text}) must match ${pattern.source}`);
+  return text;
+}
+
+function assertStringArray(val: unknown, label: string, minItems = 0, nonEmptyItems = false): string[] {
+  assert(Array.isArray(val), `${label} must be an array`);
+  const arr = val as unknown[];
+  assert(arr.length >= minItems, `${label} must have at least ${String(minItems)} item(s)`);
+  for (let i = 0; i < arr.length; i++) {
+    assert.equal(typeof arr[i], 'string', `${label}[${String(i)}] must be a string`);
+    if (nonEmptyItems) assert((arr[i] as string).length > 0, `${label}[${String(i)}] must be non-empty`);
+  }
+  return arr as string[];
+}
+
+function assertRepoFileExists(relPath: string, label: string): void {
+  const full = join(root, relPath);
+  assert(existsSync(full), `${label} missing on disk: ${relPath}`);
+}
+
+test('language/learn/catalog.json and language/gym/catalog.json satisfy their schemas and cross-links', () => {
+  const learnSchema = JSON.parse(readFileSync(join(root, 'config/learn.schema.json'), 'utf8')) as {
+    required: string[];
+    properties: {
+      tracks: { items: { required: string[]; properties: { lessons: { items: { required: string[] } } } } };
+    };
+  };
+  const gymSchema = JSON.parse(readFileSync(join(root, 'config/gym.schema.json'), 'utf8')) as {
+    required: string[];
+    properties: { exercises: { items: { required: string[] } } };
+    $defs: { testCase: { required: string[] } };
+  };
+
+  const learnCatalog = assertRecordKeys<LearnCatalog>(
+    JSON.parse(readFileSync(join(root, 'language/learn/catalog.json'), 'utf8')),
+    learnSchema.required,
+    'learn catalog',
+  );
+  assert.equal(learnCatalog.schemaVersion, 1);
+  assertNonEmptyString(learnCatalog.title, 'learn.title');
+  assertNonEmptyString(learnCatalog.description, 'learn.description');
+  assert(Array.isArray(learnCatalog.tracks) && learnCatalog.tracks.length >= 1, 'learn.tracks must be non-empty');
+
+  const trackRequired = learnSchema.properties.tracks.items.required;
+  const lessonRequired = learnSchema.properties.tracks.items.properties.lessons.items.required;
+  const trackIds = new Set<string>();
+  const trackOrders = new Set<number>();
+  const lessonIds = new Set<string>();
+  const lessonSlugs = new Set<string>();
+
+  for (const rawTrack of learnCatalog.tracks) {
+    const track = assertRecordKeys<LearnTrack>(rawTrack, trackRequired, 'learn track');
+    const trackId = assertNonEmptyString(track.id, 'track.id', /^[a-z0-9-]+$/);
+    assert(!trackIds.has(trackId), `duplicate track id: ${trackId}`);
+    trackIds.add(trackId);
+    assert(Number.isInteger(track.order) && track.order >= 0, `invalid track order on ${trackId}`);
+    assert(!trackOrders.has(track.order), `duplicate track order: ${String(track.order)}`);
+    trackOrders.add(track.order);
+    assertNonEmptyString(track.title, `track(${trackId}).title`);
+    assertNonEmptyString(track.summary, `track(${trackId}).summary`);
+    assert(Array.isArray(track.lessons) && track.lessons.length >= 1, `track(${trackId}).lessons must be non-empty`);
+
+    for (const rawLesson of track.lessons) {
+      const lesson = assertRecordKeys<LearnLesson>(rawLesson, lessonRequired, `lesson in ${trackId}`);
+      const id = assertNonEmptyString(lesson.id, 'lesson.id', /^[a-z0-9.-]+$/);
+      const slug = assertNonEmptyString(lesson.slug, `lesson(${id}).slug`, /^[a-z0-9-]+$/);
+      assert(!lessonIds.has(id), `duplicate lesson id: ${id}`);
+      assert(!lessonSlugs.has(slug), `duplicate lesson slug: ${slug}`);
+      lessonIds.add(id);
+      lessonSlugs.add(slug);
+
+      assertNonEmptyString(lesson.title, `lesson(${id}).title`);
+      assert(['lesson', 'tutorial'].includes(lesson.kind), `invalid lesson.kind on ${id}`);
+      assertNonEmptyString(lesson.domain, `lesson(${id}).domain`);
+      assertNonEmptyString(lesson.subGroup, `lesson(${id}).subGroup`);
+      assert(['universal', 'play', 'cli'].includes(lesson.environment), `invalid lesson.environment on ${id}`);
+
+      assertRepoFileExists(assertNonEmptyString(lesson.guideFile, `lesson(${id}).guideFile`), `lesson(${id}).guideFile`);
+      assertRepoFileExists(assertNonEmptyString(lesson.sourceFile, `lesson(${id}).sourceFile`), `lesson(${id}).sourceFile`);
+
+      assert(Array.isArray(lesson.helperModules), `lesson(${id}).helperModules must be an array`);
+      for (const rawHelper of lesson.helperModules) {
+        const helper = assertRecordKeys<LearnHelperModule>(rawHelper, ['spec', 'file'], `lesson(${id}).helper`);
+        assertNonEmptyString(helper.spec, `lesson(${id}).helper.spec`);
+        assertRepoFileExists(assertNonEmptyString(helper.file, `lesson(${id}).helper.file`), `lesson(${id}).helper.file`);
+      }
+
+      assert.equal(typeof lesson.stdin, 'string', `lesson(${id}).stdin must be a string`);
+      assertStringArray(lesson.args, `lesson(${id}).args`);
+      assertStringArray(lesson.teaches, `lesson(${id}).teaches`);
+      for (const docPath of assertStringArray(lesson.docs, `lesson(${id}).docs`, 0, true)) {
+        assertRepoFileExists(docPath, `lesson(${id}).docs`);
+      }
+    }
+  }
+
+  const gymCatalog = assertRecordKeys<GymCatalog>(
+    JSON.parse(readFileSync(join(root, 'language/gym/catalog.json'), 'utf8')),
+    gymSchema.required,
+    'gym catalog',
+  );
+  assert.equal(gymCatalog.schemaVersion, 1);
+  assertNonEmptyString(gymCatalog.title, 'gym.title');
+  assertNonEmptyString(gymCatalog.description, 'gym.description');
+  assert(Array.isArray(gymCatalog.exercises) && gymCatalog.exercises.length >= 1, 'gym.exercises must be non-empty');
+
+  const exerciseRequired = gymSchema.properties.exercises.items.required;
+  const caseRequired = gymSchema.$defs.testCase.required;
+  const exerciseIds = new Set<string>();
+  const exerciseSlugs = new Set<string>();
+
+  for (const rawEx of gymCatalog.exercises) {
+    const ex = assertRecordKeys<GymExercise>(rawEx, exerciseRequired, 'gym exercise');
+    const id = assertNonEmptyString(ex.id, 'exercise.id', /^[a-z0-9.-]+$/);
+    const slug = assertNonEmptyString(ex.slug, `exercise(${id}).slug`, /^[a-z0-9-]+$/);
+    assert(!exerciseIds.has(id), `duplicate exercise id: ${id}`);
+    assert(!exerciseSlugs.has(slug), `duplicate exercise slug: ${slug}`);
+    exerciseIds.add(id);
+    exerciseSlugs.add(slug);
+
+    assertNonEmptyString(ex.title, `exercise(${id}).title`);
+    assert(['drill', 'kata'].includes(ex.mode), `invalid exercise.mode on ${id}`);
+    assert(['white', 'amber', 'emerald', 'obsidian'].includes(ex.belt), `invalid exercise.belt on ${id}`);
+    assertNonEmptyString(ex.domain, `exercise(${id}).domain`);
+    assertNonEmptyString(ex.subGroup, `exercise(${id}).subGroup`);
+    assertRepoFileExists(assertNonEmptyString(ex.promptFile, `exercise(${id}).promptFile`), `exercise(${id}).promptFile`);
+    assertRepoFileExists(assertNonEmptyString(ex.starterFile, `exercise(${id}).starterFile`), `exercise(${id}).starterFile`);
+    assertRepoFileExists(assertNonEmptyString(ex.solutionFile, `exercise(${id}).solutionFile`), `exercise(${id}).solutionFile`);
+    assert.equal(typeof ex.brokenStarterSyntax, 'boolean', `exercise(${id}).brokenStarterSyntax must be boolean`);
+    assert(['compile-error', 'wrong-output'].includes(ex.expectedStarterFailure), `invalid expectedStarterFailure on ${id}`);
+
+    assertStringArray(ex.hints, `exercise(${id}).hints`, 1, true);
+    for (const docPath of assertStringArray(ex.relatedDocs, `exercise(${id}).relatedDocs`, 0, true)) {
+      assertRepoFileExists(docPath, `exercise(${id}).relatedDocs`);
+    }
+    for (const relatedLesson of assertStringArray(ex.relatedLessons, `exercise(${id}).relatedLessons`, 0, true)) {
+      assert(lessonIds.has(relatedLesson), `exercise(${id}) references unknown relatedLesson: ${relatedLesson}`);
+    }
+
+    for (const field of ['visibleCases', 'hiddenCases'] as const) {
+      const cases = ex[field];
+      assert(Array.isArray(cases) && cases.length >= 1, `exercise(${id}).${field} must have at least 1 case`);
+      for (let i = 0; i < cases.length; i++) {
+        const tc = assertRecordKeys<GymCase>(cases[i], caseRequired, `exercise(${id}).${field}[${String(i)}]`);
+        assertNonEmptyString(tc.name, `exercise(${id}).${field}[${String(i)}].name`);
+        assert.equal(typeof tc.stdin, 'string');
+        assertStringArray(tc.args, `exercise(${id}).${field}[${String(i)}].args`);
+        assert.equal(typeof tc.expectedStdout, 'string');
+      }
+    }
+  }
 });

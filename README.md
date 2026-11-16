@@ -37,7 +37,8 @@ Check or compile a script with `./bin/lite`:
 
 ## Learn & Explore
 
-- [Handbook](language/learn/handbook/getting-started/overview-and-setup.md) — 7-chapter shipped Lite language guide.
+- [Learn curriculum](language/learn/README.md) — 20 interactive track lessons, 3 project tutorials, and the [Handbook](language/learn/handbook/getting-started/overview-and-setup.md).
+- [Gym dojo](language/gym/README.md) — 42 verified drills and belt-ranked katas (white to obsidian).
 - [Start here](docs/start-here.md) — run your first program and set up local tools.
 - [Language tour](docs/tour.md) — example-led introduction to LiteLang.
 - [Examples](language/examples/README.md) — runnable `.lts` programs.

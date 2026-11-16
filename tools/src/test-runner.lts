@@ -16,6 +16,7 @@ smokeTestFiles := fn(): List<String> {
     "../tools/docs.test.ts",
     "../tools/release.test.ts",
     "../compiler/scripts/release-streams.test.ts",
+    "../site/features.test.ts",
     "../site/build.test.ts",
     "source-files.test.ts"
     ];

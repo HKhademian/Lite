@@ -256,7 +256,7 @@ function lite$listPopBack<T>(items: T[], at: number): T {
     return items.pop() as T;
 }
 
-const lite$intLines: readonly number[] = [0, 101, 102, 126, 152, 183, 211, 239, 267, 293, 327, 328, 367, 395, 423, 451, 480, 512, 563, 592, 619, 626, 636, 639, 640, 699, 733, 807, 831, 868, 888, 894, 922, 975, 1043, 1088, 1169, 1189, 1195, 1227, 1257, 1307, 1358, 1411, 1462, 1528, 1550, 1556, 1566, 1569, 1570, 1608, 1663, 1704, 1779, 1785, 1786, 1849, 1919, 1973, 2028, 2114, 2191, 2292, 2312, 2318, 2319, 2392, 2424, 2496, 2562, 2563, 2624, 2674, 2730, 2793, 2799, 2847, 2924, 2986, 2992, 2993, 3029, 3124, 3200, 3227, 3271, 3277, 3363, 3448, 3474, 3514, 3551, 3561, 3581, 3587, 3619, 3648, 3692, 3709, 3744, 3787, 3797, 3803, 3828, 3831, 3832, 3853];
+const lite$intLines: readonly number[] = [0, 101, 102, 126, 152, 183, 211, 239, 267, 293, 327, 328, 367, 395, 423, 451, 480, 512, 563, 595, 624, 651, 658, 668, 671, 672, 731, 765, 839, 863, 900, 920, 926, 954, 1007, 1075, 1120, 1201, 1221, 1227, 1259, 1289, 1339, 1390, 1443, 1494, 1560, 1582, 1588, 1598, 1601, 1602, 1640, 1695, 1736, 1811, 1817, 1818, 1881, 1951, 2005, 2060, 2146, 2223, 2324, 2344, 2350, 2351, 2424, 2456, 2528, 2594, 2595, 2656, 2706, 2762, 2825, 2831, 2879, 2956, 3018, 3024, 3025, 3061, 3156, 3232, 3259, 3303, 3309, 3395, 3480, 3506, 3546, 3583, 3593, 3613, 3619, 3651, 3680, 3724, 3741, 3776, 3819, 3829, 3835, 3860, 3863, 3864, 3885];
 const lite$intSource = "tools/src/test-runner.lts:";
 const lite$intMin = -(1n << 63n), lite$intMax = (1n << 63n) - 1n;
 function lite$fault(category: string, at: number, message: string): never {
@@ -1113,7 +1113,7 @@ export function main(lite$write?: (text: string) => void): string {
     }
     void liteFn$lib$util$project$forwardNode;
     function liteFn_smokeTestFiles(): string[] {
-        const lite_files: string[] = [...(["../tools/cli.test.ts", "../tools/run.test.ts", "../tools/docs.test.ts", "../tools/release.test.ts", "../compiler/scripts/release-streams.test.ts", "../site/build.test.ts", "source-files.test.ts"])];
+        const lite_files: string[] = [...(["../tools/cli.test.ts", "../tools/run.test.ts", "../tools/docs.test.ts", "../tools/release.test.ts", "../compiler/scripts/release-streams.test.ts", "../site/features.test.ts", "../site/build.test.ts", "source-files.test.ts"])];
         void lite_files;
         return [...(lite_files)];
     }
@@ -1132,13 +1132,13 @@ export function main(lite$write?: (text: string) => void): string {
         void lite_source;
         const lite_openBracket = liteFn$lib$core$text$indexOfText(lite_source, "[", 0n);
         void lite_openBracket;
-        const lite_closeBracket = liteFn$lib$core$text$indexOfText(lite_source, "]", lite$addInt(lite_openBracket, 1n, 1037));
+        const lite_closeBracket = liteFn$lib$core$text$indexOfText(lite_source, "]", lite$addInt(lite_openBracket, 1n, 1069));
         void lite_closeBracket;
         if (((((lite_openBracket) < (0n))) || (((lite_closeBracket) < (0n))))) {
             lite$reportError("igniter/test-suites.ts: missing generatedTestFiles list");
             return lite$exit(1n);
         }
-        let lite_pos = lite$addInt(lite_openBracket, 1n, 1222);
+        let lite_pos = lite$addInt(lite_openBracket, 1n, 1254);
         void lite_pos;
         while (((lite_pos) < (lite_closeBracket))) {
             const lite_q1 = liteFn$lib$core$text$indexOfText(lite_source, "'", lite_pos);
@@ -1146,13 +1146,13 @@ export function main(lite$write?: (text: string) => void): string {
             if (((((lite_q1) < (0n))) || (((lite_q1) >= (lite_closeBracket))))) {
                 break;
             }
-            const lite_q2 = liteFn$lib$core$text$indexOfText(lite_source, "'", lite$addInt(lite_q1, 1n, 1405));
+            const lite_q2 = liteFn$lib$core$text$indexOfText(lite_source, "'", lite$addInt(lite_q1, 1n, 1437));
             void lite_q2;
             if (((((lite_q2) < (0n))) || (((lite_q2) >= (lite_closeBracket))))) {
                 break;
             }
-            lite_files.push(lite$textSlice(lite_source, lite$addInt(lite_q1, 1n, 1517), lite_q2, 1495));
-            lite_pos = lite$addInt(lite_q2, 1n, 1545);
+            lite_files.push(lite$textSlice(lite_source, lite$addInt(lite_q1, 1n, 1549), lite_q2, 1527));
+            lite_pos = lite$addInt(lite_q2, 1n, 1577);
         }
         return [...(lite_files)];
     }
