@@ -45,6 +45,14 @@ also treats `Float` and `Double` as aliases of the same `Float64` type. These
 names do not create additional type identities; narrower numeric types remain
 separate from these aliases. Use the explicit-width names in review examples.
 
+**Signed aliases:** The user directs that `SignedInt*` names are transparent
+aliases of the corresponding `Int*` types for naming symmetry. For example,
+`SignedInt8` and `Int8` name the same type, as do `SignedInt64` and `Int64`;
+`SignedInt` likewise names the same type as `Int`. These aliases do not create
+new identities or conversions. Their complete spelling/availability and
+compiler support still need verification; this note does not claim they are
+implemented.
+
 ### Special types to review
 
 The user identifies these alongside the numeric types. This list records the
