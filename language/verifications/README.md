@@ -19,13 +19,13 @@ language/verifications/
   schema/verification.schema.json
   features.json                 # feature registry: IDs, summaries, case paths, docs
   features/
-    int-arithmetic.lts
-    int-arithmetic.json
+    <domain>/<subDomain>/<topic>.lts
+    <domain>/<subDomain>/<topic>.json
     ...
   artifacts/
-    language/examples/001-double-sum.json
-    language/samples/001-add-two-numbers.json
-    showcases/                  # curriculum manifests for language/showcases/
+    examples/<domain>/<subDomain>/<topic>.json
+    samples/<domain>/<subDomain>/<topic>.json
+    showcases/<domain>/<subDomain>/<topic>.json
 ```
 
 Each manifest has a `source` object with exactly one of `file`, `text` or `bytes`.
@@ -37,14 +37,14 @@ compiler fixtures.
 
 ```json
 {
-  "id": "int.arithmetic",
+  "id": "feature.numeric.integers.signed-arithmetic",
   "kind": "feature",
   "source": {
-    "file": "int-arithmetic.lts",
+    "file": "signed-arithmetic.lts",
     "hash": "sha256:<64 lowercase hex>"
   },
-  "features": ["int.arithmetic"],
-  "targets": ["igniter", "ts", "c"],
+  "features": ["feature.numeric.integers.signed-arithmetic"],
+  "targets": ["ts", "c"],
   "guideline": "Checks precedence, left associativity and truncating division.",
   "cases": [
     {
@@ -56,8 +56,10 @@ compiler fixtures.
 }
 ```
 
-- `id` — unique manifest ID. Feature IDs use dotted names (`int.arithmetic`);
-  artifact IDs use a kind prefix (`example.001-double-sum`).
+- `id` — unique dotted manifest ID mirroring the domain subfolder path
+  (`<suite>.<domain>.<subDomain>.<topic>`, e.g. `feature.numeric.integers.signed-arithmetic`,
+  `example.foundations.io.double-sum`, `sample.arithmetic.operations.add-two-numbers`,
+  `showcase.foundations.bindings.bindings-and-mutability`).
 - `kind` — `feature`, `example`, `sample` or `showcase`; must match the directory.
 - `source` — exactly one of `file` (relative path), `text` (inline source) or `bytes` (inline raw source), plus an optional `hash`. Inline source cannot resolve `importFlatAll`; use a file for imports.
 - `features` — feature IDs from `features.json`. A feature case includes its own ID.
@@ -100,7 +102,8 @@ changed-case, cache, shard and explicit-reference modes remain available below.
 ./bin/lite verify --all              # all TS artifact cases; cached; remaining ports fail
 ./bin/lite verify --all --update     # regenerate expected streams and hashes
 ./bin/lite verify --coverage         # coverage report without executing
-./bin/lite verify --all --filter int.arithmetic
+./bin/lite verify --all --filter feature.numeric.integers.signed-arithmetic
+./bin/lite verify --all --filter 'feature.numeric.*'
 ./bin/lite verify --all --shard 1/4  # one CI shard
 ```
 
@@ -111,9 +114,10 @@ Only manifests whose selected scenarios all succeed are rewritten. Unsupported
 source never obtains expectations from an implicit fallback. Use `--all` to
 refresh the complete selection.
 
-`--filter` matches IDs, paths and feature IDs, so selecting `int.arithmetic`
-also selects consumers tagged with that feature. Use `features/int-arithmetic.json`
-for only that canonical manifest. Shards partition scenarios before execution.
+`--filter` matches IDs, paths and feature IDs by substring or `*` glob, so
+selecting `feature.numeric.*` also selects consumers tagged with those features.
+Use `features/numeric/integers/signed-arithmetic.json` for only that canonical manifest.
+Shards partition scenarios before execution.
 
 The former T00 comparison recorded 81 scenarios: 60 passed and 21 failed
 (13 feature contracts and eight examples still needed TS ports). That audit is

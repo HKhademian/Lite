@@ -6,12 +6,12 @@
     "hash": "sha256:ae304d311951c3180e96a767431b801ba7e27820533798a9933e35839d0943de"
   },
   "features": [
-    "list.mutation",
-    "io.input",
-    "loop.conditional",
-    "loop.sequence",
-    "scope.assignment",
-    "io.report"
+    "feature.types.collections.growable-lists",
+    "feature.io.streams.prompted-int-input",
+    "feature.control.loops.conditional-loop",
+    "feature.control.loops.sequence-traversal",
+    "feature.bindings.mutability.var-replacement",
+    "feature.io.reporting.report-values"
   ],
   "description": "Collects integers until zero, then reports the retained history and sum.",
   "cases": [

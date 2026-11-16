@@ -6,9 +6,9 @@
     "hash": "sha256:a505ec43910c049b3ea2a7a95b325cadc77124cfc2533c55a43fc589b31c6f65"
   },
   "features": [
-    "io.arguments",
-    "loop.sequence",
-    "io.report"
+    "feature.io.process.script-arguments",
+    "feature.control.loops.sequence-traversal",
+    "feature.io.reporting.report-values"
   ],
   "description": "Reports ordered script arguments after --.",
   "cases": [

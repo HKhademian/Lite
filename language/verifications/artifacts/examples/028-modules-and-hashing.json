@@ -6,10 +6,10 @@
     "hash": "sha256:e59598f00161b4bba2e8a16a6b3ca37b726815a0efdbc6bac09e7044a87093c9"
   },
   "features": [
-    "module.imports",
-    "core.unicode-format",
-    "core.crypto",
-    "io.report"
+    "feature.modules.visibility.namespace-imports",
+    "feature.core.text.unicode-and-format",
+    "feature.core.crypto.digests-and-encodings",
+    "feature.io.reporting.report-values"
   ],
   "description": "Importing a sibling module's pub types, values, and functions with aligned formatting and SHA-256 hashing.",
   "cases": [

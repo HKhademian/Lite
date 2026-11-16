@@ -782,7 +782,7 @@ test('stripLiteTs and formatCodeView handle construct-level finally and abrupt u
     }
   };
 
-  const cleanupSource = readFileSync(join(root, 'language/verifications/features/finally-cleanup.lts'), 'utf8');
+  const cleanupSource = readFileSync(join(root, 'language/verifications/features/control/unwinding/finally-cleanup.lts'), 'utf8');
   const cleanupTs = compileBuiltCompiler(compiler, { name: 'finally-cleanup.lts', text: cleanupSource });
   assert.equal(cleanupTs.status, 0, cleanupTs.stderr.toString());
   const cleanupRes = runStripped(cleanupTs.stdout.toString());

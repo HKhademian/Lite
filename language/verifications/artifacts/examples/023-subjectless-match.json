@@ -6,8 +6,8 @@
     "hash": "sha256:303cd66255c19b172b1ae6e19df95c3c4583e5d1e5cdecb7c200f113a25a60ea"
   },
   "features": [
-    "match.subjectless",
-    "loop.sequence"
+    "feature.control.branching.subjectless-match",
+    "feature.control.loops.sequence-traversal"
   ],
   "description": "Ordered subjectless Boolean match for both value selection and action branches.",
   "cases": [

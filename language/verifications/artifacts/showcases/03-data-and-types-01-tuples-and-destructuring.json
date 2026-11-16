@@ -6,9 +6,9 @@
     "hash": "sha256:a9ad1967401f797f6ded89ca308c6ebe4f2fd748f701fc48e271e4b237e93eb5"
   },
   "features": [
-    "tuple.shape",
-    "report.tuple",
-    "io.report"
+    "feature.types.composites.flat-tuples",
+    "feature.io.reporting.tuple-display",
+    "feature.io.reporting.report-values"
   ],
   "description": "Positional/named/mixed tuples, =name shorthand, label conversions, and var destructuring.",
   "cases": [

@@ -1,0 +1,24 @@
+{
+  "id": "case.blocks.trace.reject-escaping-uninit-closure",
+  "kind": "reject",
+  "source": "reject-escaping-uninit-closure.lts",
+  "features": [
+    "feature.blocks.trace.execution-trace-order",
+    "feature.functions.closures.lexical-captures"
+  ],
+  "cases": [
+    {
+      "name": "rejects-closure-skipping-uninitialized-local",
+      "stdin": {
+        "text": ""
+      },
+      "stdout": {
+        "text": ""
+      },
+      "stderr": {
+        "file": "reject-escaping-uninit-closure.stderr"
+      },
+      "exitCode": 2
+    }
+  ]
+}

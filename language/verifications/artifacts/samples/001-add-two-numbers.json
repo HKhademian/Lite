@@ -6,8 +6,8 @@
     "hash": "sha256:6033cdc8296507af4aabd12318f4ca2b247855738810b9e16dbcb73e5ae3705e"
   },
   "features": [
-    "int.arithmetic",
-    "scope.locals"
+    "feature.numeric.integers.signed-arithmetic",
+    "feature.bindings.mutability.lexical-shadowing"
   ],
   "description": "Adds two supplied baskets; the verification appends outputLine(apples).",
   "append": "io.outputLine(apples);",

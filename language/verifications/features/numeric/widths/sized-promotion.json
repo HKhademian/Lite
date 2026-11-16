@@ -1,0 +1,22 @@
+{
+  "id": "feature.numeric.widths.sized-promotion",
+  "kind": "feature",
+  "source": {
+    "file": "sized-promotion.lts",
+    "hash": "sha256:a54cc7a7758354c35efb5bd6e6808804fee3460bca9aadc470c487974dea705a"
+  },
+  "features": [
+    "feature.numeric.widths.sized-promotion"
+  ],
+  "guideline": "Checks Int8/Int16/Int32/Int64 and Float32/Float64 storage, width promotion, Float32 rounding, lossless widening and mixed Int/Float arithmetic.",
+  "cases": [
+    {
+      "name": "widths",
+      "stdout": {
+        "text": "300\n0.10000000149011612\n2\n3\n6.2\ntrue\n",
+        "hash": "sha256:b651e690d8582a8c746aad8c5c8bf0cc21ee1112eca74a6d04336b03c75fa7ca"
+      },
+      "exitCode": 0
+    }
+  ]
+}

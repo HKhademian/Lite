@@ -1,9 +1,9 @@
 {
   "features": [
     {
-      "id": "int.arithmetic",
+      "id": "feature.numeric.integers.signed-arithmetic",
       "summary": "Signed Int arithmetic and precedence.",
-      "case": "features/int-arithmetic.json",
+      "case": "features/numeric/integers/signed-arithmetic.json",
       "status": "verified",
       "docs": [
         "docs/numbers.md",
@@ -11,9 +11,9 @@
       ]
     },
     {
-      "id": "num.float",
+      "id": "feature.numeric.floats.mixed-arithmetic",
       "summary": "Finite Float arithmetic and mixed Int/Float comparisons with checked runtime faults.",
-      "case": "features/num-float.json",
+      "case": "features/numeric/floats/mixed-arithmetic.json",
       "status": "verified",
       "docs": [
         "docs/numbers.md",
@@ -21,45 +21,45 @@
       ]
     },
     {
-      "id": "num.aliases",
+      "id": "feature.numeric.widths.canonical-aliases",
       "summary": "Int64, Float64 and Double as synonyms of the existing 64-bit numeric types.",
-      "case": "features/num-aliases.json",
+      "case": "features/numeric/widths/canonical-aliases.json",
       "status": "verified",
       "docs": [
         "docs/numbers.md"
       ]
     },
     {
-      "id": "num.float-context",
+      "id": "feature.numeric.floats.literal-context",
       "summary": "Exactly representable integer literals in admitted Float storage, call and result contexts.",
-      "case": "features/num-float-context.json",
+      "case": "features/numeric/floats/literal-context.json",
       "status": "verified",
       "docs": [
         "docs/numbers.md"
       ]
     },
     {
-      "id": "num.widths",
+      "id": "feature.numeric.widths.sized-promotion",
       "summary": "Sized integer and floating widths with promotion and lossless widening.",
-      "case": "features/num-widths.json",
+      "case": "features/numeric/widths/sized-promotion.json",
       "status": "verified",
       "docs": [
         "docs/numbers.md"
       ]
     },
     {
-      "id": "bool.conditions",
+      "id": "feature.control.branching.boolean-if",
       "summary": "Bool comparisons and conditional selection.",
-      "case": "features/bool-conditions.json",
+      "case": "features/control/branching/boolean-if.json",
       "status": "verified",
       "docs": [
         "docs/conditionals.md"
       ]
     },
     {
-      "id": "comparison.chains",
+      "id": "feature.control.branching.comparison-chains",
       "summary": "Adjacent comparison chains with single-evaluation middle values and lazy later operands.",
-      "case": "features/comparison-chains.json",
+      "case": "features/control/branching/comparison-chains.json",
       "status": "verified",
       "docs": [
         "docs/comparison-chains.md",
@@ -67,36 +67,36 @@
       ]
     },
     {
-      "id": "cond.partial",
+      "id": "feature.control.branching.partial-conditionals",
       "summary": "Partial conditional declaration defaults and no-write assignments.",
-      "case": "features/cond-partial.json",
+      "case": "features/control/branching/partial-conditionals.json",
       "status": "verified",
       "docs": [
         "docs/conditionals.md"
       ]
     },
     {
-      "id": "loop.conditional",
+      "id": "feature.control.loops.conditional-loop",
       "summary": "Conditional action loops with mutable state.",
-      "case": "features/loop-conditional.json",
+      "case": "features/control/loops/conditional-loop.json",
       "status": "verified",
       "docs": [
         "docs/loops.md"
       ]
     },
     {
-      "id": "loop.sequence",
+      "id": "feature.control.loops.sequence-traversal",
       "summary": "Ordered sequence traversal loops.",
-      "case": "features/loop-sequence.json",
+      "case": "features/control/loops/sequence-traversal.json",
       "status": "verified",
       "docs": [
         "docs/loops.md"
       ]
     },
     {
-      "id": "loop.value",
+      "id": "feature.control.loops.value-accumulation",
       "summary": "Typed loop .value accumulation and then completion.",
-      "case": "features/loop-value.json",
+      "case": "features/control/loops/value-accumulation.json",
       "status": "verified",
       "docs": [
         "docs/loop-value.md",
@@ -104,9 +104,9 @@
       ]
     },
     {
-      "id": "loop.metadata",
+      "id": "feature.control.loops.loop-metadata",
       "summary": "Loop metadata and payload/targeted exits.",
-      "case": "features/loop-metadata.json",
+      "case": "features/control/loops/loop-metadata.json",
       "status": "verified",
       "docs": [
         "docs/loop-value.md",
@@ -115,144 +115,144 @@
       ]
     },
     {
-      "id": "finally.cleanup",
+      "id": "feature.control.unwinding.finally-cleanup",
       "summary": "Construct-level finally cleanup ordering.",
-      "case": "features/finally-cleanup.json",
+      "case": "features/control/unwinding/finally-cleanup.json",
       "status": "verified",
       "docs": [
         "docs/finally.md"
       ]
     },
     {
-      "id": "function.recursion",
+      "id": "feature.functions.calls.typed-recursion",
       "summary": "Typed functions and own-name recursion.",
-      "case": "features/function-recursion.json",
+      "case": "features/functions/calls/typed-recursion.json",
       "status": "verified",
       "docs": [
         "docs/functions.md"
       ]
     },
     {
-      "id": "function.values",
+      "id": "feature.functions.callables.function-values",
       "summary": "Callable types and non-capturing function values on generated TS.",
-      "case": "features/function-values.json",
+      "case": "features/functions/callables/function-values.json",
       "status": "verified",
       "docs": [
         "docs/functions.md"
       ]
     },
     {
-      "id": "tuple.shape",
+      "id": "feature.types.composites.flat-tuples",
       "summary": "Flat tuple values and fields.",
-      "case": "features/tuple-shape.json",
+      "case": "features/types/composites/flat-tuples.json",
       "status": "verified",
       "docs": [
         "docs/tuples-and-patterns.md"
       ]
     },
     {
-      "id": "array.fixed",
+      "id": "feature.types.collections.fixed-arrays",
       "summary": "Fixed arrays and indexed reads.",
-      "case": "features/array-fixed.json",
+      "case": "features/types/collections/fixed-arrays.json",
       "status": "verified",
       "docs": [
         "docs/arrays.md"
       ]
     },
     {
-      "id": "list.mutation",
+      "id": "feature.types.collections.growable-lists",
       "summary": "Growable lists and end operations.",
-      "case": "features/list-mutation.json",
+      "case": "features/types/collections/growable-lists.json",
       "status": "verified",
       "docs": [
         "docs/lists.md"
       ]
     },
     {
-      "id": "text.helpers",
+      "id": "feature.text.strings.codepoint-helpers",
       "summary": "Temporary code-point text helpers.",
-      "case": "features/text-helpers.json",
+      "case": "features/text/strings/codepoint-helpers.json",
       "status": "verified",
       "docs": [
         "docs/strings.md"
       ]
     },
     {
-      "id": "alias.transparent",
+      "id": "feature.types.aliases.transparent-aliases",
       "summary": "Transparent type aliases.",
-      "case": "features/alias-transparent.json",
+      "case": "features/types/aliases/transparent-aliases.json",
       "status": "verified",
       "docs": [
         "docs/type-aliases.md"
       ]
     },
     {
-      "id": "scope.locals",
+      "id": "feature.bindings.mutability.lexical-shadowing",
       "summary": "Lexical local scope and shadowing.",
-      "case": "features/scope-locals.json",
+      "case": "features/bindings/mutability/lexical-shadowing.json",
       "status": "verified",
       "docs": [
         "docs/declarations-and-assignment.md"
       ]
     },
     {
-      "id": "scope.assignment",
+      "id": "feature.bindings.mutability.var-replacement",
       "summary": "Mutable var replacement.",
-      "case": "features/scope-assignment.json",
+      "case": "features/bindings/mutability/var-replacement.json",
       "status": "verified",
       "docs": [
         "docs/mutability.md"
       ]
     },
     {
-      "id": "io.input",
+      "id": "feature.io.streams.prompted-int-input",
       "summary": "Prompted integer input.",
-      "case": "features/io-input.json",
+      "case": "features/io/streams/prompted-int-input.json",
       "status": "verified",
       "docs": [
         "docs/tooling-and-learning.md"
       ]
     },
     {
-      "id": "io.arguments",
+      "id": "feature.io.process.script-arguments",
       "summary": "Ordered script arguments.",
-      "case": "features/io-arguments.json",
+      "case": "features/io/process/script-arguments.json",
       "status": "verified",
       "docs": [
         "docs/tooling-and-learning.md"
       ]
     },
     {
-      "id": "io.whole-input",
+      "id": "feature.io.streams.whole-stdin",
       "summary": "Whole remaining input through EOF.",
-      "case": "features/io-whole-input.json",
+      "case": "features/io/streams/whole-stdin.json",
       "status": "verified",
       "docs": [
         "docs/tooling-and-learning.md"
       ]
     },
     {
-      "id": "io.exit",
+      "id": "feature.io.process.explicit-exit",
       "summary": "Explicit process exit.",
-      "case": "features/io-exit.json",
+      "case": "features/io/process/explicit-exit.json",
       "status": "verified",
       "docs": [
         "docs/tooling-and-learning.md"
       ]
     },
     {
-      "id": "io.report",
+      "id": "feature.io.reporting.report-values",
       "summary": "Multiple report values.",
-      "case": "features/io-report.json",
+      "case": "features/io/reporting/report-values.json",
       "status": "verified",
       "docs": [
         "docs/tooling-and-learning.md"
       ]
     },
     {
-      "id": "int.remainder",
+      "id": "feature.numeric.integers.truncating-remainder",
       "summary": "Truncating Int remainder.",
-      "case": "features/int-remainder.json",
+      "case": "features/numeric/integers/truncating-remainder.json",
       "status": "verified",
       "docs": [
         "docs/numbers.md",
@@ -260,63 +260,63 @@
       ]
     },
     {
-      "id": "text.concat",
+      "id": "feature.text.strings.concatenation",
       "summary": "String concatenation.",
-      "case": "features/text-concat.json",
+      "case": "features/text/strings/concatenation.json",
       "status": "verified",
       "docs": [
         "docs/strings.md"
       ]
     },
     {
-      "id": "local.immutable",
+      "id": "feature.bindings.storage.immutable-locals",
       "summary": "Immutable local bindings.",
-      "case": "features/local-immutable.json",
+      "case": "features/bindings/storage/immutable-locals.json",
       "status": "verified",
       "docs": [
         "docs/declarations-and-assignment.md"
       ]
     },
     {
-      "id": "string.escape",
+      "id": "feature.text.strings.escape-sequences",
       "summary": "String escape sequences.",
-      "case": "features/string-escape.json",
+      "case": "features/text/strings/escape-sequences.json",
       "status": "verified",
       "docs": [
         "docs/strings.md"
       ]
     },
     {
-      "id": "report.multi",
+      "id": "feature.io.reporting.multi-value-output",
       "summary": "Multi-value reports.",
-      "case": "features/report-multi.json",
+      "case": "features/io/reporting/multi-value-output.json",
       "status": "verified",
       "docs": [
         "docs/tooling-and-learning.md"
       ]
     },
     {
-      "id": "report.tuple",
+      "id": "feature.io.reporting.tuple-display",
       "summary": "Source-like report display of flat tuple values.",
-      "case": "features/report-tuple.json",
+      "case": "features/io/reporting/tuple-display.json",
       "status": "verified",
       "docs": [
         "docs/tooling-and-learning.md"
       ]
     },
     {
-      "id": "int.limits",
+      "id": "feature.numeric.integers.int64-boundaries",
       "summary": "Signed 64-bit Int boundaries.",
-      "case": "features/int-limits.json",
+      "case": "features/numeric/integers/int64-boundaries.json",
       "status": "verified",
       "docs": [
         "docs/numbers.md"
       ]
     },
     {
-      "id": "int.floor",
+      "id": "feature.numeric.integers.floor-division",
       "summary": "Floor division and floor modulo.",
-      "case": "features/int-floor.json",
+      "case": "features/numeric/integers/floor-division.json",
       "status": "verified",
       "docs": [
         "docs/numbers.md",
@@ -324,9 +324,9 @@
       ]
     },
     {
-      "id": "scope.compound",
+      "id": "feature.bindings.mutability.compound-updates",
       "summary": "Compound arithmetic updates.",
-      "case": "features/scope-compound.json",
+      "case": "features/bindings/mutability/compound-updates.json",
       "status": "verified",
       "docs": [
         "docs/mutability.md",
@@ -334,18 +334,18 @@
       ]
     },
     {
-      "id": "mut.inferred",
+      "id": "feature.bindings.mutability.inferred-mut",
       "summary": "Inferred mut and var mut declarations.",
-      "case": "features/mut-inferred.json",
+      "case": "features/bindings/mutability/inferred-mut.json",
       "status": "verified",
       "docs": [
         "docs/mutability.md"
       ]
     },
     {
-      "id": "num.power",
+      "id": "feature.numeric.floats.power-operator",
       "summary": "Right-associative Float-default power.",
-      "case": "features/num-power.json",
+      "case": "features/numeric/floats/power-operator.json",
       "status": "verified",
       "docs": [
         "docs/power-and-negation.md",
@@ -353,18 +353,18 @@
       ]
     },
     {
-      "id": "match.subjectless",
+      "id": "feature.control.branching.subjectless-match",
       "summary": "Subjectless Boolean match selection.",
-      "case": "features/match-subjectless.json",
+      "case": "features/control/branching/subjectless-match.json",
       "status": "verified",
       "docs": [
         "docs/match.md"
       ]
     },
     {
-      "id": "init.zero",
+      "id": "feature.bindings.storage.zero-defaults",
       "summary": "Zero initialization for omitted typed locals.",
-      "case": "features/init-zero.json",
+      "case": "features/bindings/storage/zero-defaults.json",
       "status": "verified",
       "docs": [
         "docs/zero-initialization.md",
@@ -372,9 +372,9 @@
       ]
     },
     {
-      "id": "init.reserved",
+      "id": "feature.bindings.storage.reserved-uninit",
       "summary": "Reserved storage and first whole-value initialization.",
-      "case": "features/init-reserved.json",
+      "case": "features/bindings/storage/reserved-uninit.json",
       "status": "verified",
       "docs": [
         "docs/reserved-storage.md",
@@ -382,18 +382,18 @@
       ]
     },
     {
-      "id": "io.temporary",
+      "id": "feature.io.reporting.prompt-and-output-helpers",
       "summary": "Temporary input prompts and variadic output/outputLine helpers.",
-      "case": "features/io-temporary.json",
+      "case": "features/io/reporting/prompt-and-output-helpers.json",
       "status": "verified",
       "docs": [
         "docs/tooling-and-learning.md"
       ]
     },
     {
-      "id": "function.closures",
+      "id": "feature.functions.closures.lexical-captures",
       "summary": "Lexical closures capturing immutable, var, mut List, parameter, loop-item, and escaping frames on TS.",
-      "case": "features/function-closures.json",
+      "case": "features/functions/closures/lexical-captures.json",
       "status": "verified",
       "docs": [
         "docs/functions.md",
@@ -401,9 +401,9 @@
       ]
     },
     {
-      "id": "block.values",
+      "id": "feature.blocks.evaluation.value-blocks-and-dce",
       "summary": "Value-producing blocks, nested scopes, inner type aliases, and side-effect-free dead-code elimination.",
-      "case": "features/block-values.json",
+      "case": "features/blocks/evaluation/value-blocks-and-dce.json",
       "status": "verified",
       "docs": [
         "docs/blocks-and-results.md",
@@ -411,9 +411,9 @@
       ]
     },
     {
-      "id": "block.wiring",
+      "id": "feature.blocks.wiring.parallel-symbol-wiring",
       "summary": "Parallel compile-time symbol wiring, mutual recursion, nearer-forward shadowing, and eager outer-shadow reads.",
-      "case": "features/block-wiring.json",
+      "case": "features/blocks/wiring/parallel-symbol-wiring.json",
       "status": "verified",
       "docs": [
         "docs/functions.md",
@@ -421,9 +421,9 @@
       ]
     },
     {
-      "id": "block.trace",
+      "id": "feature.blocks.trace.execution-trace-order",
       "summary": "Execution-trace initialization ordering across root/inner blocks and write-before-read reserved locals.",
-      "case": "features/block-trace.json",
+      "case": "features/blocks/trace/execution-trace-order.json",
       "status": "verified",
       "docs": [
         "docs/first-initialization.md",
@@ -432,9 +432,9 @@
       ]
     },
     {
-      "id": "control.tags",
+      "id": "feature.control.unwinding.tagged-transfers",
       "summary": "Labeled blocks, conditional then .value forwarding, and tagged loop exits.",
-      "case": "features/control-tags.json",
+      "case": "features/control/unwinding/tagged-transfers.json",
       "status": "verified",
       "docs": [
         "docs/tags-and-contexts.md",
@@ -442,45 +442,45 @@
       ]
     },
     {
-      "id": "module.imports",
+      "id": "feature.modules.visibility.namespace-imports",
       "summary": "Sibling module imports exposing pub functions, immutable values, and type aliases.",
-      "case": "features/module-imports.json",
+      "case": "features/modules/visibility/namespace-imports.json",
       "status": "verified",
       "docs": [
         "docs/visibility.md"
       ]
     },
     {
-      "id": "core.unicode-format",
+      "id": "feature.core.text.unicode-and-format",
       "summary": "Unicode code-point/UTF-8 helpers and core/format text/integer padding.",
-      "case": "features/core-unicode-format.json",
+      "case": "features/core/text/unicode-and-format.json",
       "status": "verified",
       "docs": [
         "docs/strings.md"
       ]
     },
     {
-      "id": "core.crypto",
+      "id": "feature.core.crypto.digests-and-encodings",
       "summary": "SHA-256, SHA-512, HMAC-SHA256, Hex, and Base64 utilities via core/crypto.",
-      "case": "features/core-crypto.json",
+      "case": "features/core/crypto/digests-and-encodings.json",
       "status": "verified",
       "docs": [
         "docs/tooling-and-learning.md"
       ]
     },
     {
-      "id": "core.fs-path",
+      "id": "feature.core.filesystem.paths-and-temp-io",
       "summary": "Deterministic path transforms and temporary workspace filesystem I/O via core/path and core/file.",
-      "case": "features/core-fs-path.json",
+      "case": "features/core/filesystem/paths-and-temp-io.json",
       "status": "verified",
       "docs": [
         "docs/tooling-and-learning.md"
       ]
     },
     {
-      "id": "core.time-process",
+      "id": "feature.core.system.time-and-process",
       "summary": "Clock, date, and host process metadata invariants via core/time and core/process.",
-      "case": "features/core-time-process.json",
+      "case": "features/core/system/time-and-process.json",
       "status": "verified",
       "docs": [
         "docs/tooling-and-learning.md"

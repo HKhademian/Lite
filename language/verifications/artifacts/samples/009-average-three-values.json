@@ -6,8 +6,8 @@
     "hash": "sha256:0f6fd8b7e63535083d31a53ce3728561011b3fdc8616c3d340127beddcbce7e8"
   },
   "features": [
-    "num.float",
-    "scope.locals"
+    "feature.numeric.floats.mixed-arithmetic",
+    "feature.bindings.mutability.lexical-shadowing"
   ],
   "description": "Average of three daily values.",
   "append": "io.outputLine(average_hours);",

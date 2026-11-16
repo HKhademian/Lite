@@ -1,0 +1,29 @@
+{
+  "id": "feature.numeric.floats.mixed-arithmetic",
+  "kind": "feature",
+  "source": {
+    "file": "mixed-arithmetic.lts",
+    "hash": "sha256:362209871f48fb23eea0ba35cb3edb07720fbf6ccfdbb6117eb33d7d299675ea"
+  },
+  "features": [
+    "feature.numeric.floats.mixed-arithmetic",
+    "feature.control.branching.comparison-chains",
+    "feature.control.loops.conditional-loop"
+  ],
+  "guideline": "Checks finite binary64 arithmetic and pairwise mixed Int/Float promotion; later comparison operands stay lazy and integer pairs retain exact values.",
+  "description": "Mixed binary64 arithmetic, pairwise comparison conversion and skipped arithmetic faults.",
+  "targets": [
+    "ts",
+    "c"
+  ],
+  "cases": [
+    {
+      "name": "mixed-values-and-lazy-fault",
+      "stdout": {
+        "text": "2.5 2.5 0.30000000000000004\ntrue\nfalse\n1.5\n",
+        "hash": "sha256:74ef26d998301a63cdc6fb15d182932aedce397fcfaa578e79ec1fab17afe7e5"
+      },
+      "exitCode": 0
+    }
+  ]
+}

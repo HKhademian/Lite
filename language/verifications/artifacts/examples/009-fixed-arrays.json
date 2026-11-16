@@ -6,11 +6,11 @@
     "hash": "sha256:272c9d1c19c5c3034bb31a3db11d9ed6e7f356a8458f471a7ff5d54503edb8ba"
   },
   "features": [
-    "array.fixed",
-    "loop.sequence",
-    "tuple.shape",
-    "io.input",
-    "io.report"
+    "feature.types.collections.fixed-arrays",
+    "feature.control.loops.sequence-traversal",
+    "feature.types.composites.flat-tuples",
+    "feature.io.streams.prompted-int-input",
+    "feature.io.reporting.report-values"
   ],
   "description": "Traverses token tuples, reads one index, and sums a fixed array.",
   "cases": [

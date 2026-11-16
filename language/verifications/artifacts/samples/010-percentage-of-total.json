@@ -6,8 +6,8 @@
     "hash": "sha256:e44cd03a1558e0c80f03a9d914cac6c67984877421f1fa9e46a2e173c0564ca0"
   },
   "features": [
-    "num.float",
-    "scope.locals"
+    "feature.numeric.floats.mixed-arithmetic",
+    "feature.bindings.mutability.lexical-shadowing"
   ],
   "description": "Completed percentage and a percentage of the total.",
   "append": "io.outputLine(percent_done); io.outputLine(tasks);",

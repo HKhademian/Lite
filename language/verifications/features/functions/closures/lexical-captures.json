@@ -1,0 +1,41 @@
+{
+  "id": "feature.functions.closures.lexical-captures",
+  "kind": "feature",
+  "source": {
+    "file": "lexical-captures.lts",
+    "hash": "sha256:38d216bfe7c9a1b16915fbf20bb6423aee425fd2da7d2cc4023b72549c2fc5a1"
+  },
+  "features": [
+    "feature.functions.closures.lexical-captures"
+  ],
+  "guideline": "Checks lexical captures of immutable, var, mut List, parameter, loop-item, and escaping counter frames on generated TS.",
+  "targets": [
+    "ts"
+  ],
+  "cases": [
+    {
+      "name": "base-five-step-three",
+      "stdin": {
+        "text": "5\n3\n",
+        "hash": "sha256:3ef1b6be09ecb8bbaad2702387ce5c1ce9e2f23f09608e69970aa2c1d2ebdc9f"
+      },
+      "stdout": {
+        "text": "base: step: 9 15 11 11 12\n13 23 33 20\n3 6 103 9\n",
+        "hash": "sha256:06d7c9ceb6ba9d435333585232af7d22443d479c75b6d1e3a4c5dd3cd095a2b2"
+      },
+      "exitCode": 0
+    },
+    {
+      "name": "base-ten-step-neg-two",
+      "stdin": {
+        "text": "10\n-2\n",
+        "hash": "sha256:874ebe0cee2eb0ad688af7614286590f04d229beff7bbf5ec7d25f479e74510d"
+      },
+      "stdout": {
+        "text": "base: step: 14 15 6 6 17\n8 18 28 20\n-2 -4 98 -6\n",
+        "hash": "sha256:89d5c1868d28a99b29516a6506151ffb2f1827bca3801970dbb2bca5fec8372b"
+      },
+      "exitCode": 0
+    }
+  ]
+}

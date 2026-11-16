@@ -1,0 +1,22 @@
+{
+  "id": "feature.io.reporting.report-values",
+  "kind": "feature",
+  "source": {
+    "text": "io := import \"core/io\";\nio.outputLine(1, \"two\", true);\n",
+    "hash": "sha256:821665391c21e2a55bb48214e1a93037bafa5141dbac4efa8575fb3ed33d2abb"
+  },
+  "features": [
+    "feature.io.reporting.report-values"
+  ],
+  "guideline": "Checks space-separated display of Int, String, and Bool values.",
+  "cases": [
+    {
+      "name": "mixed-values",
+      "stdout": {
+        "text": "1 two true\n",
+        "hash": "sha256:79fa2317b4e99c054b5c5ca7e99564907b29475973cac7178fb6d9b25abdfe9b"
+      },
+      "exitCode": 0
+    }
+  ]
+}

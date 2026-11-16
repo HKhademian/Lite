@@ -1,0 +1,25 @@
+{
+  "id": "case.bindings.tour.run-mutable-accumulator",
+  "kind": "feature",
+  "source": "mutable-accumulator.lts",
+  "features": [
+    "feature.numeric.integers.signed-arithmetic",
+    "feature.bindings.mutability.var-replacement",
+    "feature.io.reporting.report-values"
+  ],
+  "cases": [
+    {
+      "name": "twenty-four",
+      "stdin": {
+        "text": ""
+      },
+      "stdout": {
+        "text": "24\n"
+      },
+      "stderr": {
+        "text": ""
+      },
+      "exitCode": 0
+    }
+  ]
+}

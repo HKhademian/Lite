@@ -6,10 +6,10 @@
     "hash": "sha256:3aad3cd2d6b2eba6c6a9ce1942cb5fc972a3dc9211082bd4b60beb6179938504"
   },
   "features": [
-    "function.recursion",
-    "io.arguments",
-    "io.exit",
-    "io.report"
+    "feature.functions.calls.typed-recursion",
+    "feature.io.process.script-arguments",
+    "feature.io.process.explicit-exit",
+    "feature.io.reporting.report-values"
   ],
   "description": "Named/shorthand arguments, recursive self calls, and explicit termination via io.exit.",
   "cases": [

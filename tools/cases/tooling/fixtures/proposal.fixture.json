@@ -1,0 +1,22 @@
+{
+  "id": "fixture.cases.pending.proposal",
+  "kind": "compile",
+  "source": "../../../../language/cases/execution/workspace/silent-file-io.lts",
+  "features": [],
+  "pending": "runner fixture for a future proposal",
+  "cases": [
+    {
+      "name": "default",
+      "stdin": {
+        "text": ""
+      },
+      "stdout": {
+        "text": ""
+      },
+      "stderr": {
+        "text": ""
+      },
+      "exitCode": 0
+    }
+  ]
+}

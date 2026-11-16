@@ -1,0 +1,26 @@
+{
+  "id": "case.bindings.tour.compile-mutable-accumulator",
+  "kind": "compile",
+  "source": "mutable-accumulator.lts",
+  "features": [
+    "feature.tooling.compile"
+  ],
+  "cases": [
+    {
+      "name": "emitted-artifact",
+      "stdin": {
+        "text": ""
+      },
+      "stdout": {
+        "text": ""
+      },
+      "stderr": {
+        "text": ""
+      },
+      "exitCode": 0,
+      "artifact": {
+        "file": "mutable-accumulator.expected.ts"
+      }
+    }
+  ]
+}

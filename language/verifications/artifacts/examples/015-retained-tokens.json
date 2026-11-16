@@ -6,11 +6,11 @@
     "hash": "sha256:f5ff6f0fda19502f2dec20de9d7675c91cca1a77a5727d8cd99b8ca0ae45012e"
   },
   "features": [
-    "list.mutation",
-    "loop.sequence",
-    "text.helpers",
-    "io.input",
-    "io.report"
+    "feature.types.collections.growable-lists",
+    "feature.control.loops.sequence-traversal",
+    "feature.text.strings.codepoint-helpers",
+    "feature.io.streams.prompted-int-input",
+    "feature.io.reporting.report-values"
   ],
   "description": "Tokenizes a line into a retained list before reporting it.",
   "cases": [

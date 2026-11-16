@@ -6,12 +6,12 @@
     "hash": "sha256:e07e89218df5d7506c8ad90d598c6213c559285e3daaed93b9abf58b6b91783e"
   },
   "features": [
-    "array.fixed",
-    "list.mutation",
-    "mut.inferred",
-    "loop.sequence",
-    "core.unicode-format",
-    "io.report"
+    "feature.types.collections.fixed-arrays",
+    "feature.types.collections.growable-lists",
+    "feature.bindings.mutability.inferred-mut",
+    "feature.control.loops.sequence-traversal",
+    "feature.core.text.unicode-and-format",
+    "feature.io.reporting.report-values"
   ],
   "description": "Fixed [T; N] arrays, mut / var mut List<T> front/back operations, and independent snapshots.",
   "cases": [

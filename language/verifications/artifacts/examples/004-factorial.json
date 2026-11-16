@@ -6,12 +6,12 @@
     "hash": "sha256:a847d8036e984c99436539e7dd0a6cc5baff41bbd74e39e217c9c58ebd336981"
   },
   "features": [
-    "io.input",
-    "function.recursion",
-    "bool.conditions",
-    "io.exit",
-    "int.arithmetic",
-    "io.report"
+    "feature.io.streams.prompted-int-input",
+    "feature.functions.calls.typed-recursion",
+    "feature.control.branching.boolean-if",
+    "feature.io.process.explicit-exit",
+    "feature.numeric.integers.signed-arithmetic",
+    "feature.io.reporting.report-values"
   ],
   "description": "Prompts for an integer and reports its recursive factorial.",
   "cases": [

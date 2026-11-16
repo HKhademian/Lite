@@ -6,8 +6,8 @@
     "hash": "sha256:6beb8d28c6bdf2f60cb9d981acf785fd80093d4142642197694a8800ef244b5e"
   },
   "features": [
-    "int.arithmetic",
-    "scope.locals"
+    "feature.numeric.integers.signed-arithmetic",
+    "feature.bindings.mutability.lexical-shadowing"
   ],
   "description": "Weighted average of three scores.",
   "append": "io.outputLine(final_grade);",

@@ -6,7 +6,7 @@
     "hash": "sha256:9a06d58568991e9ba99c84b20a2bcb5b4c3398164853bb05959b91caa9719e28"
   },
   "features": [
-    "num.widths"
+    "feature.numeric.widths.sized-promotion"
   ],
   "description": "Fixed-width integer and binary32 float promotion, lossless widening, and rounding.",
   "cases": [

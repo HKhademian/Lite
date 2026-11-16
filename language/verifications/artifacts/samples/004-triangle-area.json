@@ -6,8 +6,8 @@
     "hash": "sha256:02c54644c22dba89018a6fee6503e8909cee73a8a0fd788063312f688cb46dab"
   },
   "features": [
-    "num.float",
-    "scope.locals"
+    "feature.numeric.floats.mixed-arithmetic",
+    "feature.bindings.mutability.lexical-shadowing"
   ],
   "description": "Triangle area from base and height.",
   "append": "io.outputLine(area);",

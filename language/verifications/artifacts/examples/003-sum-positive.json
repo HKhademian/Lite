@@ -6,11 +6,11 @@
     "hash": "sha256:237f1d5ad1df74f75441010dd43ad98cddd1d7ea2df115a1f77a20f80cf18e45"
   },
   "features": [
-    "io.input",
-    "loop.conditional",
-    "bool.conditions",
-    "scope.assignment",
-    "io.report"
+    "feature.io.streams.prompted-int-input",
+    "feature.control.loops.conditional-loop",
+    "feature.control.branching.boolean-if",
+    "feature.bindings.mutability.var-replacement",
+    "feature.io.reporting.report-values"
   ],
   "description": "Reads integers until zero, skipping negatives, and reports the positive sum.",
   "cases": [

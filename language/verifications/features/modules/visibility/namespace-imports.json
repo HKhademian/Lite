@@ -1,0 +1,41 @@
+{
+  "id": "feature.modules.visibility.namespace-imports",
+  "kind": "feature",
+  "source": {
+    "file": "namespace-imports.lts",
+    "hash": "sha256:9a77a46a214387e29e76cbd6df832be69e58365ecd1e722c7262fcc1fbc1995e"
+  },
+  "features": [
+    "feature.modules.visibility.namespace-imports"
+  ],
+  "guideline": "Checks sibling module imports exposing pub types, pub values, and pub functions while keeping private helpers encapsulated.",
+  "targets": [
+    "ts"
+  ],
+  "cases": [
+    {
+      "name": "five",
+      "stdin": {
+        "text": "5\n",
+        "hash": "sha256:f0b5c2c2211c8d67ed15e75e656c7862d086e9245420892a7de62cd9ec582a06"
+      },
+      "stdout": {
+        "text": "n: score 115 100\n",
+        "hash": "sha256:200c56c077bb80ac68e292562bcaf635d8861b2e6c4866d486b571fb3abbeb58"
+      },
+      "exitCode": 0
+    },
+    {
+      "name": "negative-two",
+      "stdin": {
+        "text": "-2\n",
+        "hash": "sha256:4b883e04ed1a2af32c21811a12f2ccc766a1d73040b533ae4bcdfad8aca74293"
+      },
+      "stdout": {
+        "text": "n: score 94 100\n",
+        "hash": "sha256:e7bfb32751bb142cf8fff91aebcea354aa6be58bb1ada7493ba26426f2baf25a"
+      },
+      "exitCode": 0
+    }
+  ]
+}

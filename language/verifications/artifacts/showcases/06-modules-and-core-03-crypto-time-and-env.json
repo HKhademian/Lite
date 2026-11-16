@@ -6,10 +6,10 @@
     "hash": "sha256:30ef0b1f8de7c196c401b0da712f86e1931276400303592783b668f3fdfc9b33"
   },
   "features": [
-    "core.crypto",
-    "core.time-process",
-    "core.unicode-format",
-    "io.report"
+    "feature.core.crypto.digests-and-encodings",
+    "feature.core.system.time-and-process",
+    "feature.core.text.unicode-and-format",
+    "feature.io.reporting.report-values"
   ],
   "description": "SHA-256/HMAC-SHA256 digests, Hex/Base64 round-trips, and deterministic clock/host invariant checks.",
   "cases": [

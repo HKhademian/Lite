@@ -6,8 +6,8 @@
     "hash": "sha256:ec8191c7d3f7e29160a36d82a4ab49d783986909d8495aaddb6ac8079349b2b7"
   },
   "features": [
-    "scope.assignment",
-    "scope.locals"
+    "feature.bindings.mutability.var-replacement",
+    "feature.bindings.mutability.lexical-shadowing"
   ],
   "description": "Swaps two var bindings through a temporary; verification reports both.",
   "append": "io.outputLine(first_box); io.outputLine(second_box);",

@@ -6,8 +6,8 @@
     "hash": "sha256:652331eb3504e35f2ba1f4bcc34faa7fde3025e65841f478672bc918b3dcd0e6"
   },
   "features": [
-    "num.float",
-    "scope.locals"
+    "feature.numeric.floats.mixed-arithmetic",
+    "feature.bindings.mutability.lexical-shadowing"
   ],
   "description": "Linear interpolation at a fraction.",
   "append": "io.outputLine(value);",

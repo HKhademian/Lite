@@ -6,10 +6,10 @@
     "hash": "sha256:7d2d82f927ae5333a3634222e3753f19a724a0b46e20fdca7be4ee9aec6d80ca"
   },
   "features": [
-    "control.tags",
-    "finally.cleanup",
-    "loop.metadata",
-    "io.report"
+    "feature.control.unwinding.tagged-transfers",
+    "feature.control.unwinding.finally-cleanup",
+    "feature.control.loops.loop-metadata",
+    "feature.io.reporting.report-values"
   ],
   "description": "Labeled block exits, multi-loop transfers, conditional then forwarding, and LIFO finally cleanup.",
   "cases": [

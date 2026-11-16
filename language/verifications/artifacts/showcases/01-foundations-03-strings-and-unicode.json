@@ -6,18 +6,18 @@
     "hash": "sha256:0d2884477b9468e5dc70acb524210dd0c2fe817e03064f8f4f5e648b01fc3503"
   },
   "features": [
-    "text.concat",
-    "text.helpers",
-    "string.escape",
-    "core.unicode-format",
-    "io.report"
+    "feature.text.strings.concatenation",
+    "feature.text.strings.codepoint-helpers",
+    "feature.text.strings.escape-sequences",
+    "feature.core.text.unicode-and-format",
+    "feature.io.reporting.report-values"
   ],
   "description": "Code-point indexing, trimming, escape sequences, scalar code points, and strict UTF-8 round-trips.",
   "cases": [
     {
       "name": "strings-and-unicode",
       "stdout": {
-        "text": "cleaned: Hello\t\"Lite\" 🚀! edges: H 🚀 len: 14\nscalars: 65,233,128640\nutf8-bytes: 65 195 169 240 159 154 128 roundtrip: true Aé🚀\n",
+        "text": "cleaned: Hello\t\"Lite\" \ud83d\ude80! edges: H \ud83d\ude80 len: 14\nscalars: 65,233,128640\nutf8-bytes: 65 195 169 240 159 154 128 roundtrip: true A\u00e9\ud83d\ude80\n",
         "hash": "sha256:fea9ad9c45f5810fbe70bda789ec8ef534d861f4860ce0e468951bc2b4215abe"
       },
       "exitCode": 0

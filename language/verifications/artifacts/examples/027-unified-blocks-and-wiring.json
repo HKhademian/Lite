@@ -6,11 +6,11 @@
     "hash": "sha256:025513332aaeffc98334cb4d28424190baafbf39a353a7c2ad8dd864b15dabc2"
   },
   "features": [
-    "block.values",
-    "block.wiring",
-    "block.trace",
-    "alias.transparent",
-    "io.report"
+    "feature.blocks.evaluation.value-blocks-and-dce",
+    "feature.blocks.wiring.parallel-symbol-wiring",
+    "feature.blocks.trace.execution-trace-order",
+    "feature.types.aliases.transparent-aliases",
+    "feature.io.reporting.report-values"
   ],
   "description": "Inner-block type aliases, forward mutual recursion, eager outer-shadow reads, and trace-safe ? storage.",
   "cases": [

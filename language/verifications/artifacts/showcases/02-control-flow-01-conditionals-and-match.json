@@ -6,11 +6,11 @@
     "hash": "sha256:01b2eed7d975961d38c255351f580b4d5cf67e626b1c691780c2e20b76cb7597"
   },
   "features": [
-    "bool.conditions",
-    "comparison.chains",
-    "cond.partial",
-    "match.subjectless",
-    "io.report"
+    "feature.control.branching.boolean-if",
+    "feature.control.branching.comparison-chains",
+    "feature.control.branching.partial-conditionals",
+    "feature.control.branching.subjectless-match",
+    "feature.io.reporting.report-values"
   ],
   "description": "Chained range comparisons, expression if/else, partial statements, and subjectless Boolean match.",
   "cases": [

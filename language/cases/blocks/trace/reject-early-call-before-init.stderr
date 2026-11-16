@@ -1,0 +1,1 @@
+language/cases/blocks/trace/reject-early-call-before-init.lts:5:5: cannot call before later is initialized

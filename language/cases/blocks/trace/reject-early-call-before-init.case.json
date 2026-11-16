@@ -1,0 +1,23 @@
+{
+  "id": "case.blocks.trace.reject-early-call-before-init",
+  "kind": "reject",
+  "source": "reject-early-call-before-init.lts",
+  "features": [
+    "feature.blocks.trace.execution-trace-order"
+  ],
+  "cases": [
+    {
+      "name": "rejects-early-call-before-later-binding",
+      "stdin": {
+        "text": ""
+      },
+      "stdout": {
+        "text": ""
+      },
+      "stderr": {
+        "file": "reject-early-call-before-init.stderr"
+      },
+      "exitCode": 2
+    }
+  ]
+}

@@ -6,11 +6,11 @@
     "hash": "sha256:8c1e73447a747fbfa3e6babe83358510d2cf31ffe6dd3e777f6f87f516bebf12"
   },
   "features": [
-    "alias.transparent",
-    "scope.locals",
-    "block.values",
-    "report.tuple",
-    "io.report"
+    "feature.types.aliases.transparent-aliases",
+    "feature.bindings.mutability.lexical-shadowing",
+    "feature.blocks.evaluation.value-blocks-and-dce",
+    "feature.io.reporting.tuple-display",
+    "feature.io.reporting.report-values"
   ],
   "description": "Root and inner-block transparent type aliases, forward alias chains, and outer scope preservation.",
   "cases": [

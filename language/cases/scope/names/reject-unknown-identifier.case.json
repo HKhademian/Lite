@@ -1,0 +1,23 @@
+{
+  "id": "case.scope.names.reject-unknown-identifier",
+  "kind": "reject",
+  "source": "reject-unknown-identifier.lts",
+  "features": [
+    "feature.bindings.names.lookup"
+  ],
+  "cases": [
+    {
+      "name": "no-effects-or-artifact",
+      "stdin": {
+        "text": ""
+      },
+      "stdout": {
+        "text": ""
+      },
+      "stderr": {
+        "file": "reject-unknown-identifier.stderr"
+      },
+      "exitCode": 2
+    }
+  ]
+}

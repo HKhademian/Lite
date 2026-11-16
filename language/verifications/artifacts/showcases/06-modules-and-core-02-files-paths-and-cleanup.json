@@ -6,10 +6,10 @@
     "hash": "sha256:839ecd2f7b9a5019bd9a6c42380c15527cec256c5b4e582bc7621203768cb03a"
   },
   "features": [
-    "core.fs-path",
-    "core.unicode-format",
-    "finally.cleanup",
-    "io.report"
+    "feature.core.filesystem.paths-and-temp-io",
+    "feature.core.text.unicode-and-format",
+    "feature.control.unwinding.finally-cleanup",
+    "feature.io.reporting.report-values"
   ],
   "description": "Path transformations, temp directory read/write/append with finally cleanup, and formatted output.",
   "cases": [

@@ -6,10 +6,10 @@
     "hash": "sha256:a36b6b72d79dc179effea2d7b94fcb112cea2e4edc72bc3d0cbd95dcb0ca5f83"
   },
   "features": [
-    "int.arithmetic",
-    "int.remainder",
-    "num.widths",
-    "scope.locals"
+    "feature.numeric.integers.signed-arithmetic",
+    "feature.numeric.integers.truncating-remainder",
+    "feature.numeric.widths.sized-promotion",
+    "feature.bindings.mutability.lexical-shadowing"
   ],
   "description": "Split seconds into hours, minutes and seconds.",
   "append": "io.outputLine(hours); io.outputLine(minutes); io.outputLine(seconds);",

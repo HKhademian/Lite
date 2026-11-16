@@ -6,8 +6,8 @@
     "hash": "sha256:699331ffc396981cc815ee623d8a9f1c3713d50c86d5dc05a5a236391d8be8f4"
   },
   "features": [
-    "num.float",
-    "scope.locals"
+    "feature.numeric.floats.mixed-arithmetic",
+    "feature.bindings.mutability.lexical-shadowing"
   ],
   "description": "Meters converted to kilometers and centimeters.",
   "append": "io.outputLine(kilometers); io.outputLine(centimeters);",

@@ -6,10 +6,10 @@
     "hash": "sha256:1beab49784e5b6bdb3eecb7054d9896e7ee7f6eef9743512f0388d58ef02cc0a"
   },
   "features": [
-    "bool.conditions",
-    "int.arithmetic",
-    "io.report",
-    "scope.locals"
+    "feature.control.branching.boolean-if",
+    "feature.numeric.integers.signed-arithmetic",
+    "feature.io.reporting.report-values",
+    "feature.bindings.mutability.lexical-shadowing"
   ],
   "description": "Sums integers from 1 to 5 using a loop and branch.",
   "cases": [

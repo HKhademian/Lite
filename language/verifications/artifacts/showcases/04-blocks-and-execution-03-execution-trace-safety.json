@@ -6,11 +6,11 @@
     "hash": "sha256:35084470ce78ede9be3b8d7d86ea197f9f6912865cf2e537e460234b7979b874"
   },
   "features": [
-    "block.trace",
-    "init.reserved",
-    "list.mutation",
-    "function.closures",
-    "io.report"
+    "feature.blocks.trace.execution-trace-order",
+    "feature.bindings.storage.reserved-uninit",
+    "feature.types.collections.growable-lists",
+    "feature.functions.closures.lexical-captures",
+    "feature.io.reporting.report-values"
   ],
   "description": "Valid runtime execution-trace ordering, write-before-read reserved storage, and list-queued closures.",
   "cases": [

@@ -6,14 +6,14 @@
     "hash": "sha256:d00660384440216a6d457a2d142795387b189f5416139dc91868d5d88e2195db"
   },
   "features": [
-    "int.arithmetic",
-    "list.mutation",
-    "loop.conditional",
-    "loop.sequence",
-    "function.recursion",
-    "text.helpers",
-    "io.input",
-    "io.report"
+    "feature.numeric.integers.signed-arithmetic",
+    "feature.types.collections.growable-lists",
+    "feature.control.loops.conditional-loop",
+    "feature.control.loops.sequence-traversal",
+    "feature.functions.calls.typed-recursion",
+    "feature.text.strings.codepoint-helpers",
+    "feature.io.streams.prompted-int-input",
+    "feature.io.reporting.report-values"
   ],
   "description": "Tokenized integer calculator with precedence and nesting.",
   "cases": [

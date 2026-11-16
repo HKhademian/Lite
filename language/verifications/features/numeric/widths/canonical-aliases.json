@@ -1,0 +1,28 @@
+{
+  "id": "feature.numeric.widths.canonical-aliases",
+  "kind": "feature",
+  "source": {
+    "file": "canonical-aliases.lts",
+    "hash": "sha256:9fc4504be778366a2997af58a09b9a98bd4dc25b4fbfb6fd03ba3d6b8ddc1ef0"
+  },
+  "features": [
+    "feature.numeric.widths.canonical-aliases",
+    "feature.numeric.floats.mixed-arithmetic",
+    "feature.types.aliases.transparent-aliases"
+  ],
+  "guideline": "Checks Int64=Int and Float64=Double=Float across declarations, mutation, zero values and user aliases without introducing storage conversions.",
+  "targets": [
+    "ts",
+    "c"
+  ],
+  "cases": [
+    {
+      "name": "canonical-numeric-names",
+      "stdout": {
+        "text": "2 0.5 1 0\n3 0.5\n",
+        "hash": "sha256:eb77c5e32bfaf80de8f7ea4544f61ce918845585c95b1e63f948000cdead0f51"
+      },
+      "exitCode": 0
+    }
+  ]
+}

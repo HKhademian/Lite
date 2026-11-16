@@ -6,9 +6,9 @@
     "hash": "sha256:b243d3799e6762f8f55d4281410afbfd7a3fa7d35997d848b47914d23dd2febf"
   },
   "features": [
-    "io.whole-input",
-    "text.helpers",
-    "io.report"
+    "feature.io.streams.whole-stdin",
+    "feature.text.strings.codepoint-helpers",
+    "feature.io.reporting.report-values"
   ],
   "description": "Reads remaining text through EOF and reports its code-point length.",
   "cases": [

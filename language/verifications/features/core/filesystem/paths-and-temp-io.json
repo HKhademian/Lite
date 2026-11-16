@@ -1,0 +1,25 @@
+{
+  "id": "feature.core.filesystem.paths-and-temp-io",
+  "kind": "feature",
+  "source": {
+    "file": "paths-and-temp-io.lts",
+    "hash": "sha256:5423237141319eae465814c716d2036daaaa0567a42b1539e521005631434d78"
+  },
+  "features": [
+    "feature.core.filesystem.paths-and-temp-io"
+  ],
+  "guideline": "Checks deterministic core/path transforms and temp workspace directory, text read/write/append, and finally cleanup via core/file.",
+  "targets": [
+    "ts"
+  ],
+  "cases": [
+    {
+      "name": "paths-and-temp-file",
+      "stdout": {
+        "text": "a/c/demo.lts src/app.lts ../c/file.lts demo.tar .lts demo.ts\ntrue true true true hello\nworld true true true sub\n",
+        "hash": "sha256:aa10ab92b061c473459e9e762b00b096b6cd3de549f920bb134352d7e1d4db65"
+      },
+      "exitCode": 0
+    }
+  ]
+}

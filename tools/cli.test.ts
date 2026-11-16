@@ -41,15 +41,15 @@ test('lite compile routes through the compiler router to its TypeScript target',
 
 test('lite verify routes case manifests to the verifier command', () => {
   assert.deepEqual(
-    command('lite', ['verify', 'tools/cases/tooling/proposal.fixture.json']),
-    command('lite-verify', ['tools/cases/tooling/proposal.fixture.json']),
+    command('lite', ['verify', 'tools/cases/tooling/fixtures/proposal.fixture.json']),
+    command('lite-verify', ['tools/cases/tooling/fixtures/proposal.fixture.json']),
   );
 });
 
 test('lite test routes case mode to the tester command', () => {
   assert.deepEqual(
-    command('lite', ['test', '--cases', 'tools/cases/tooling/proposal.fixture.json']),
-    command('lite-test', ['--cases', 'tools/cases/tooling/proposal.fixture.json']),
+    command('lite', ['test', '--cases', 'tools/cases/tooling/fixtures/proposal.fixture.json']),
+    command('lite-test', ['--cases', 'tools/cases/tooling/fixtures/proposal.fixture.json']),
   );
 });
 

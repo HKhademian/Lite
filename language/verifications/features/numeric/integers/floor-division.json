@@ -1,0 +1,26 @@
+{
+  "id": "feature.numeric.integers.floor-division",
+  "kind": "feature",
+  "source": {
+    "file": "floor-division.lts",
+    "hash": "sha256:6c9957e164e4760da9d77605115cb6275bf6b10295b98778efbc39568265a4c8"
+  },
+  "features": [
+    "feature.numeric.integers.floor-division"
+  ],
+  "guideline": "Checks floor division and floor modulo across all sign combinations.",
+  "targets": [
+    "ts",
+    "c"
+  ],
+  "cases": [
+    {
+      "name": "all-signs",
+      "stdout": {
+        "text": "2\n-3\n-3\n2\n1\n2\n-2\n-1\n0\n",
+        "hash": "sha256:01a4db9f11c07b55b709b8b474e2f6e3328b0ae826aec439d9f2db7e5a2695a3"
+      },
+      "exitCode": 0
+    }
+  ]
+}

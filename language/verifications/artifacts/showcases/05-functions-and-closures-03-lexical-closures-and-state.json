@@ -6,11 +6,11 @@
     "hash": "sha256:7316535dc14f5caea1d07d65c3aa9d0fec1724f61954ec300763ae4fea91e640"
   },
   "features": [
-    "function.closures",
-    "scope.assignment",
-    "list.mutation",
-    "loop.sequence",
-    "io.report"
+    "feature.functions.closures.lexical-captures",
+    "feature.bindings.mutability.var-replacement",
+    "feature.types.collections.growable-lists",
+    "feature.control.loops.sequence-traversal",
+    "feature.io.reporting.report-values"
   ],
   "description": "Escaping stateful counters, mut List closure mutations, and per-iteration loop closures.",
   "cases": [

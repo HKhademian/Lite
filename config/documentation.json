@@ -32,7 +32,7 @@
   "snippets": [
     {
       "document": "docs/tour.md",
-      "source": "language/cases/tour-bindings.lts",
+      "source": "language/cases/bindings/tour/mutable-accumulator.lts",
       "fence": 0
     },
     {

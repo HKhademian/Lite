@@ -1,0 +1,22 @@
+{
+  "id": "feature.io.process.explicit-exit",
+  "kind": "feature",
+  "source": {
+    "file": "explicit-exit.lts",
+    "hash": "sha256:3ef7248cbd0b7d7901a23a5d4898523fc290db59353521588e95dd71c7401e7f"
+  },
+  "features": [
+    "feature.io.process.explicit-exit"
+  ],
+  "guideline": "Checks explicit exit status and that later reports are skipped.",
+  "cases": [
+    {
+      "name": "exit-three",
+      "stdout": {
+        "text": "before\n",
+        "hash": "sha256:9160d4be34c8695bd172a76c7c7966587ea5a4d991ad22c87b2b91af54aa9ebb"
+      },
+      "exitCode": 3
+    }
+  ]
+}

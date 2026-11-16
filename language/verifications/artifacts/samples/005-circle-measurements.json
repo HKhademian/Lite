@@ -6,8 +6,8 @@
     "hash": "sha256:7989582df4d34a8d523c6946311b6a9a4547aaca8597b5025364a7071c68133b"
   },
   "features": [
-    "num.float",
-    "scope.locals"
+    "feature.numeric.floats.mixed-arithmetic",
+    "feature.bindings.mutability.lexical-shadowing"
   ],
   "description": "Approximate circumference and area of a circle.",
   "append": "io.outputLine(circumference); io.outputLine(area);",

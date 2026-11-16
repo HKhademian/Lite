@@ -1,0 +1,26 @@
+{
+  "id": "case.blocks.dce.pure-value-collapse",
+  "kind": "compile",
+  "source": "pure-value-collapse.lts",
+  "features": [
+    "feature.blocks.evaluation.value-blocks-and-dce"
+  ],
+  "cases": [
+    {
+      "name": "collapses-pure-value-block-dce",
+      "stdin": {
+        "text": ""
+      },
+      "stdout": {
+        "text": ""
+      },
+      "stderr": {
+        "text": ""
+      },
+      "exitCode": 0,
+      "artifact": {
+        "file": "pure-value-collapse.expected.ts"
+      }
+    }
+  ]
+}

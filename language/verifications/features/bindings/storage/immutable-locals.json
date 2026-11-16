@@ -1,0 +1,26 @@
+{
+  "id": "feature.bindings.storage.immutable-locals",
+  "kind": "feature",
+  "source": {
+    "file": "immutable-locals.lts",
+    "hash": "sha256:1eb4073c0f82935edb88ab1cd3e6ac56c36a842a90dfad69aaf7a6886bfdbfaf"
+  },
+  "features": [
+    "feature.bindings.storage.immutable-locals"
+  ],
+  "guideline": "Checks an immutable local through the reference interpreter and both restricted compiler targets.",
+  "targets": [
+    "ts",
+    "c"
+  ],
+  "cases": [
+    {
+      "name": "local-add",
+      "stdout": {
+        "text": "6\n",
+        "hash": "sha256:06e9d52c1720fca412803e3b07c4b228ff113e303f4c7ab94665319d832bbfb7"
+      },
+      "exitCode": 0
+    }
+  ]
+}

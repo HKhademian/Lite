@@ -6,9 +6,9 @@
     "hash": "sha256:d0f929cf059b10a5da3530ac10d32c9fead8e3f717d4f2de1c1d3341e02e6bb1"
   },
   "features": [
-    "num.float",
-    "io.report",
-    "function.recursion"
+    "feature.numeric.floats.mixed-arithmetic",
+    "feature.io.reporting.report-values",
+    "feature.functions.calls.typed-recursion"
   ],
   "description": "EML complex library, stack machine, and expression converter module.",
   "cases": [

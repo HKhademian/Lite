@@ -1,0 +1,26 @@
+{
+  "id": "feature.bindings.mutability.lexical-shadowing",
+  "kind": "feature",
+  "source": {
+    "file": "lexical-shadowing.lts",
+    "hash": "sha256:6fb461d617c3b2c6904c6930ddb9f26b66b05ca0fb468d91003024bf7b23edcc"
+  },
+  "features": [
+    "feature.bindings.mutability.lexical-shadowing"
+  ],
+  "guideline": "Checks that a block-local binding shadows and restores the outer binding.",
+  "targets": [
+    "ts",
+    "c"
+  ],
+  "cases": [
+    {
+      "name": "block-shadowing",
+      "stdout": {
+        "text": "20\n10\n",
+        "hash": "sha256:07810d98aa996457c2f89c4ab8125fe8e367b137eb3d0fe81d3eb4062d42c2c6"
+      },
+      "exitCode": 0
+    }
+  ]
+}

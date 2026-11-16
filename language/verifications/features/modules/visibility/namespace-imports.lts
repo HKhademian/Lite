@@ -1,0 +1,6 @@
+io := import "core/io";
+helper := import "./helpers/stats-helper.lts";
+
+n := io.inputInt("n: ");
+item: helper.Metric = helper.summarize("score", n);
+io.outputLine(item.label, item.total, helper.OFFSET);

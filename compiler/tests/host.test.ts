@@ -763,21 +763,21 @@ test('default verification and expectation updates use TS artifacts without T00'
     }
     const invoke = (...args: string[]) => spawnSync(join(directory, 'bin/lite'), ['verify', '--all', '--no-cache', ...args],
       { env, encoding: 'utf8', timeout: 30000 });
-    const io = invoke('--filter', 'io.temporary');
+    const io = invoke('--filter', 'feature.io.reporting.prompt-and-output-helpers');
     assert.equal(io.status, 0, io.stdout + io.stderr); assert.match(io.stdout, /all-helpers \[ts\]/);
     assert.match(io.stdout, /empty-line-and-remainder \[ts\]/); assert.doesNotMatch(io.stdout, /T00 reference|\[c\]/);
     const covered = invoke('--coverage'); assert.equal(covered.status, 0, covered.stderr);
-    const manifest = join(directory, 'language/verifications/features/int-arithmetic.json');
+    const manifest = join(directory, 'language/verifications/features/numeric/integers/signed-arithmetic.json');
     const expected = readFileSync(manifest);
-    const updated = invoke('--filter', 'features/int-arithmetic.json', '--update');
+    const updated = invoke('--filter', 'features/numeric/integers/signed-arithmetic.json', '--update');
     assert.equal(updated.status, 0, updated.stdout + updated.stderr); assert.match(updated.stdout, /updated/);
     assert.deepEqual(JSON.parse(readFileSync(manifest, 'utf8')), JSON.parse(expected.toString()));
-    writeFileSync(join(directory, 'language/verifications/features/int-arithmetic.lts'), 'x := record { };\n', 'utf8');
+    writeFileSync(join(directory, 'language/verifications/features/numeric/integers/signed-arithmetic.lts'), 'x := record { };\n', 'utf8');
     const before = readFileSync(manifest);
-    const failed = invoke('--filter', 'features/int-arithmetic.json', '--update');
+    const failed = invoke('--filter', 'features/numeric/integers/signed-arithmetic.json', '--update');
     assert.equal(failed.status, 1); assert.match(failed.stdout, /unsupported feature "record"/);
     assert.deepEqual(readFileSync(manifest), before, 'unsupported source must not rewrite expectations');
-    const legacy = invoke('--reference', '--filter', 'int.arithmetic');
+    const legacy = invoke('--reference', '--filter', 'feature.numeric.integers.signed-arithmetic');
     assert.equal(legacy.status, 2); assert.match(legacy.stderr, /unknown argument --reference/);
   } finally { rmSync(directory, { recursive: true, force: true }); }
 });
@@ -1110,14 +1110,14 @@ test('default verifier selects consumers after compiler changes and ignores inve
       'compiler/manifests/c.json', 'lib/core/int.lts']) {
       writeFileSync(git, `#!/bin/sh\nprintf '%s\\n' ' M ${path}'\n`);
       chmodSync(git, 0o755);
-      const result = spawnSync(join(root, 'bin/lite'), ['verify', '--no-cache', '--filter', 'features/int-arithmetic.json'], {
+      const result = spawnSync(join(root, 'bin/lite'), ['verify', '--no-cache', '--filter', 'features/numeric/integers/signed-arithmetic.json'], {
         env: changedEnv, encoding: 'utf8', timeout: 30000,
       });
       assert.equal(result.error, undefined); assert.equal(result.status, 0, result.stderr);
       assert.match(result.stdout, /verification passed: 1 executed, 0 cached/, path);
     }
     writeFileSync(git, "#!/bin/sh\nprintf '%s\\n' ' M compiler/reports/2026-11-02-t00-t11-inventory.md'\n");
-    const documentation = spawnSync(join(root, 'bin/lite'), ['verify', '--no-cache', '--filter', 'features/int-arithmetic.json'], {
+    const documentation = spawnSync(join(root, 'bin/lite'), ['verify', '--no-cache', '--filter', 'features/numeric/integers/signed-arithmetic.json'], {
       env: changedEnv, encoding: 'utf8', timeout: 30000,
     });
     assert.equal(documentation.status, 0, documentation.stderr);
@@ -2420,7 +2420,7 @@ test('default test startup and generated baseline run in a source archive withou
 });
 
 test('partial conditionals default declarations to zero and skip false assignments', () => {
-  const condPartial = readFileSync(join(root, 'language/verifications/features/cond-partial.lts'), 'utf8');
+  const condPartial = readFileSync(join(root, 'language/verifications/features/control/branching/partial-conditionals.lts'), 'utf8');
   const tsCond = compileTs({ text: condPartial });
   assert.equal(tsCond.status, 0, tsCond.stderr.toString());
   const runCond = runTsArtifact(tsCond.stdout.toString());
@@ -3802,7 +3802,7 @@ test('loop values, metadata, then clauses, barriers, and payload exits', () => {
 });
 
 test('construct-level finally cleanup, LIFO unwinding, barriers, and failure precedence', () => {
-  const cleanupFeature = readFileSync(join(root, 'language/verifications/features/finally-cleanup.lts'), 'utf8');
+  const cleanupFeature = readFileSync(join(root, 'language/verifications/features/control/unwinding/finally-cleanup.lts'), 'utf8');
   const compiledFeature = compileTs({ text: cleanupFeature });
   assert.equal(compiledFeature.status, 0, compiledFeature.stderr.toString());
   const featureTs = compiledFeature.stdout.toString();

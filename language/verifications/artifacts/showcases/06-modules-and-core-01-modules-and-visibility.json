@@ -6,10 +6,10 @@
     "hash": "sha256:51f5c76d3bbb42ab479f25ca2fe92e76d14c213f8f4e0e85efb1d611dbff48a3"
   },
   "features": [
-    "module.imports",
-    "alias.transparent",
-    "tuple.shape",
-    "io.report"
+    "feature.modules.visibility.namespace-imports",
+    "feature.types.aliases.transparent-aliases",
+    "feature.types.composites.flat-tuples",
+    "feature.io.reporting.report-values"
   ],
   "description": "Namespace imports of pub types, constants, and functions while keeping module helpers private.",
   "cases": [

@@ -1,0 +1,26 @@
+{
+  "id": "feature.numeric.integers.int64-boundaries",
+  "kind": "feature",
+  "source": {
+    "file": "int64-boundaries.lts",
+    "hash": "sha256:f6fd2f8c1a21e8a2a8951c3cf89eaff4a6d37d44f9e3f8458155e4ccb9660b0a"
+  },
+  "features": [
+    "feature.numeric.integers.int64-boundaries"
+  ],
+  "guideline": "Checks signed Int64 literals and valid dynamic addition, subtraction, multiplication and negation at the bounds.",
+  "targets": [
+    "ts",
+    "c"
+  ],
+  "cases": [
+    {
+      "name": "signed-boundaries",
+      "stdout": {
+        "text": "9223372036854775807\n-9223372036854775808\n9223372036854775807 -9223372036854775808\n-9223372036854775807 9223372036854775806\n-9223372036854775808 9223372036854775807 0\n-9223372036854775807 -1\n",
+        "hash": "sha256:ed58825f9c69c14978d59ee71d9158679ec405c3e1d29719248629cfd1dbd733"
+      },
+      "exitCode": 0
+    }
+  ]
+}

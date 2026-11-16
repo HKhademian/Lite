@@ -48,7 +48,7 @@ and typed fixed arrays remain on the existing-feature parity track. C implements
 the admitted scalar output forms and clearly rejects unsupported input/aggregate
 forms; native C self-hosting remains pending.
 
-The [canonical I/O case](../language/verifications/features/io-temporary.lts) runs through
+The [canonical I/O case](../language/verifications/features/io/reporting/prompt-and-output-helpers.lts) runs through
 both T00 and generated TS. Focused host tests cover EOF, numeric range/grammar,
 prompt order, mixed reads, zero arguments, aggregate display, Unicode buffer
 boundaries, exact real-CLI UTF-8 diagnostics and removal of the old builtin.

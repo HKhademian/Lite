@@ -1,15 +1,20 @@
 # Declarative cases
 
 Run `./bin/lite test --cases [FILTER]` or `./bin/lite verify PATH.case.json`.
+Filters match case IDs or repository-relative paths by substring or `*` glob
+(for example `./bin/lite test --cases 'case.blocks.*'` or `'tooling.cli.*'`).
 Definitions use [the case schema](../../config/case.schema.json); streams use
 [one shared schema](../../config/stream.schema.json) and byte resolver, also used
 by the existing compiler fixtures and semantic verifier.
 
-Each `.case.json` has an ID, kind, feature IDs and named scenarios. Language
-source stays in a separate `.lts`. Tool cases name a real command under `bin/`;
-there are no per-case executable wrappers. Each scenario states stdin, stdout,
-stderr and exitCode. Streams contain exactly one of `text`, `bytes` or `file`,
-with optional `sha256:` hash. Substantial payloads belong in external raw files.
+Each `.case.json` lives in a domain subfolder (`<domain>/<subDomain>/<topic>.case.json`
+under `language/cases/` or `tools/cases/tooling/`) with a matching dotted hierarchical ID
+(`case.<domain>.<subDomain>.<topic>` or `tooling.<subDomain>.<topic>`), `kind`, feature IDs
+and named scenarios. Language source and expected files stay as siblings in the same
+folder. Tool cases name a real command under `bin/`; there are no per-case executable
+wrappers. Each scenario states stdin, stdout, stderr and exitCode. Streams contain
+exactly one of `text`, `bytes` or `file`, with optional `sha256:` hash. Substantial
+payloads belong in external raw files.
 Processes default to 30 seconds; a scenario can declare `timeoutMs` from 1 to
 600000 for a larger workload. Timeouts always fail verification and benchmarking.
 

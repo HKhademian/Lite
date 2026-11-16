@@ -6,10 +6,10 @@
     "hash": "sha256:a3d27803f0dbe29a73bbad9ed2866b3a2850313810adfb09201e8a0fa71b9db0"
   },
   "features": [
-    "alias.transparent",
-    "list.mutation",
-    "loop.sequence",
-    "io.report"
+    "feature.types.aliases.transparent-aliases",
+    "feature.types.collections.growable-lists",
+    "feature.control.loops.sequence-traversal",
+    "feature.io.reporting.report-values"
   ],
   "description": "Transparent tuple/list aliases with list traversal.",
   "cases": [

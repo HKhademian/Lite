@@ -6,8 +6,8 @@
     "hash": "sha256:3624bfb860b7c5e0916501e0e742e0d0e4fb1e32d694beccf0743d6101d68eac"
   },
   "features": [
-    "num.float",
-    "scope.locals"
+    "feature.numeric.floats.mixed-arithmetic",
+    "feature.bindings.mutability.lexical-shadowing"
   ],
   "description": "Midpoint of two coordinate pairs.",
   "append": "io.outputLine(midpoint_x); io.outputLine(midpoint_y);",

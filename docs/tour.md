@@ -19,7 +19,7 @@ io.outputLine(total);
 ```
 
 `:=` introduces a binding. `var` permits replacement. This fragment prints
-`24` and has its own [runnable case](../language/cases/tour-bindings.case.json).
+`24` and has its own [runnable case](../language/cases/bindings/tour/run-mutable-accumulator.case.json).
 The [double-sum case](../language/verifications/artifacts/examples/001-double-sum.json)
 checks the corresponding interactive program.
 Read [declarations](declarations-and-assignment.md), [mutability](mutability.md)

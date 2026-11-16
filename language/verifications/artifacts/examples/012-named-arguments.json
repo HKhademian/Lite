@@ -6,8 +6,8 @@
     "hash": "sha256:95af992dcc45013aad99701f97d6189cad38f7a402bc1fc5ac3af37fb268b836"
   },
   "features": [
-    "tuple.shape",
-    "io.report"
+    "feature.types.composites.flat-tuples",
+    "feature.io.reporting.report-values"
   ],
   "description": "Interleaves named and positional arguments and uses named self calls.",
   "cases": [

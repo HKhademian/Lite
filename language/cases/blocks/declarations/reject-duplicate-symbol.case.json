@@ -1,0 +1,23 @@
+{
+  "id": "case.blocks.declarations.reject-duplicate-symbol",
+  "kind": "reject",
+  "source": "reject-duplicate-symbol.lts",
+  "features": [
+    "feature.bindings.mutability.lexical-shadowing"
+  ],
+  "cases": [
+    {
+      "name": "rejects-cross-kind-redeclaration",
+      "stdin": {
+        "text": ""
+      },
+      "stdout": {
+        "text": ""
+      },
+      "stderr": {
+        "file": "reject-duplicate-symbol.stderr"
+      },
+      "exitCode": 2
+    }
+  ]
+}

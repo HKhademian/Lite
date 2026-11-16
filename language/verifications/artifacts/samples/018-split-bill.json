@@ -6,9 +6,9 @@
     "hash": "sha256:2b41eec4d84e219672f5ccba7966c44c4f3410d9f787847224be5269f6d01870"
   },
   "features": [
-    "int.arithmetic",
-    "int.remainder",
-    "scope.locals"
+    "feature.numeric.integers.signed-arithmetic",
+    "feature.numeric.integers.truncating-remainder",
+    "feature.bindings.mutability.lexical-shadowing"
   ],
   "description": "Whole-cent bill split with remainder.",
   "append": "io.outputLine(share_cents); io.outputLine(leftover_cents);",

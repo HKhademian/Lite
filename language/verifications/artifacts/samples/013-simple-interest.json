@@ -6,8 +6,8 @@
     "hash": "sha256:f681b5f7ae351ef173c7793710ccc308fd05053cedffe02b4a7a7e8ab0f585e3"
   },
   "features": [
-    "int.arithmetic",
-    "scope.locals"
+    "feature.numeric.integers.signed-arithmetic",
+    "feature.bindings.mutability.lexical-shadowing"
   ],
   "description": "Simple interest over three years.",
   "append": "io.outputLine(interest_cents); io.outputLine(balance_cents);",

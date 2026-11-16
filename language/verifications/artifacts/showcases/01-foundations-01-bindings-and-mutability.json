@@ -6,12 +6,12 @@
     "hash": "sha256:7a9fa68747c2c4392f8118807c2b88adacce38b869f8f3e66e334aee99f37657"
   },
   "features": [
-    "local.immutable",
-    "init.zero",
-    "init.reserved",
-    "scope.assignment",
-    "scope.compound",
-    "io.report"
+    "feature.bindings.storage.immutable-locals",
+    "feature.bindings.storage.zero-defaults",
+    "feature.bindings.storage.reserved-uninit",
+    "feature.bindings.mutability.var-replacement",
+    "feature.bindings.mutability.compound-updates",
+    "feature.io.reporting.report-values"
   ],
   "description": "Immutable := bindings, zero defaults, reserved ? first initialization, and var updates.",
   "cases": [

@@ -1,0 +1,43 @@
+{
+  "id": "case.execution.workspace.silent-file-io",
+  "kind": "sample",
+  "source": "silent-file-io.lts",
+  "features": [
+    "feature.bindings.mutability.lexical-shadowing"
+  ],
+  "cases": [
+    {
+      "name": "no-output",
+      "stdin": {
+        "text": ""
+      },
+      "stdout": {
+        "text": ""
+      },
+      "stderr": {
+        "text": ""
+      },
+      "exitCode": 0,
+      "inputFiles": {
+        "input.bin": {
+          "bytes": [
+            0,
+            255,
+            13,
+            10
+          ]
+        }
+      },
+      "outputFiles": {
+        "input.bin": {
+          "bytes": [
+            0,
+            255,
+            13,
+            10
+          ]
+        }
+      }
+    }
+  ]
+}

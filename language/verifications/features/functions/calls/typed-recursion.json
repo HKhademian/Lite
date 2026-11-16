@@ -1,0 +1,22 @@
+{
+  "id": "feature.functions.calls.typed-recursion",
+  "kind": "feature",
+  "source": {
+    "file": "typed-recursion.lts",
+    "hash": "sha256:31d05bcc67689e1c0a3c835331cc0962c62ed06c87ec8d80ea3c02db91a85c3e"
+  },
+  "features": [
+    "feature.functions.calls.typed-recursion"
+  ],
+  "guideline": "Checks a typed parameter, return, base case, and self recursion.",
+  "cases": [
+    {
+      "name": "factorial-five",
+      "stdout": {
+        "text": "120\n",
+        "hash": "sha256:97b912eb4a61df5f806ca6239dde3e1a4f51ad20aced1642cbb83dc510a5fa6b"
+      },
+      "exitCode": 0
+    }
+  ]
+}

@@ -6,10 +6,10 @@
     "hash": "sha256:2d7a3e448bcff69484e7ba2e18e71b197db1c4f28099613265a6046778b689dd"
   },
   "features": [
-    "io.input",
-    "bool.conditions",
-    "int.arithmetic",
-    "io.report"
+    "feature.io.streams.prompted-int-input",
+    "feature.control.branching.boolean-if",
+    "feature.numeric.integers.signed-arithmetic",
+    "feature.io.reporting.report-values"
   ],
   "description": "Sign, range, and short-circuit decisions for a supplied integer.",
   "cases": [

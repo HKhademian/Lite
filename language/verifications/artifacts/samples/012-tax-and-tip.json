@@ -6,8 +6,8 @@
     "hash": "sha256:a97183ca4d2e263a9996fa62d32cb4d67ceb6956fec77cd6308f565c7e13ad77"
   },
   "features": [
-    "int.arithmetic",
-    "scope.locals"
+    "feature.numeric.integers.signed-arithmetic",
+    "feature.bindings.mutability.lexical-shadowing"
   ],
   "description": "Tax and tip rounded to cents.",
   "append": "io.outputLine(tax_cents); io.outputLine(tip_cents); io.outputLine(total_cents);",

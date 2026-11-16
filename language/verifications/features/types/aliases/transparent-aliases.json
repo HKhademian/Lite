@@ -1,0 +1,22 @@
+{
+  "id": "feature.types.aliases.transparent-aliases",
+  "kind": "feature",
+  "source": {
+    "file": "transparent-aliases.lts",
+    "hash": "sha256:213f12e307a3228fcf7e4aa2335c3d991d121003406d313324543352bcbc83f9"
+  },
+  "features": [
+    "feature.types.aliases.transparent-aliases"
+  ],
+  "guideline": "Checks a tuple alias, a list alias, and zero-wrapper field access.",
+  "cases": [
+    {
+      "name": "tuple-and-list-alias",
+      "stdout": {
+        "text": "42\n",
+        "hash": "sha256:084c799cd551dd1d8d5c5f9a5d593b2e931f5e36122ee5c793c1d08a19839cc0"
+      },
+      "exitCode": 0
+    }
+  ]
+}

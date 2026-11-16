@@ -1,0 +1,22 @@
+{
+  "id": "feature.bindings.mutability.var-replacement",
+  "kind": "feature",
+  "source": {
+    "file": "var-replacement.lts",
+    "hash": "sha256:cc7ac7ae0cf1649a814c92e4f58159e634cfc5f2f81fe477691129f7831975ec"
+  },
+  "features": [
+    "feature.bindings.mutability.var-replacement"
+  ],
+  "guideline": "Checks replacement of a var binding while preserving its checked type.",
+  "cases": [
+    {
+      "name": "replacement",
+      "stdout": {
+        "text": "3\n",
+        "hash": "sha256:1121cfccd5913f0a63fec40a6ffd44ea64f9dc135c66634ba001d10bcf4302a2"
+      },
+      "exitCode": 0
+    }
+  ]
+}

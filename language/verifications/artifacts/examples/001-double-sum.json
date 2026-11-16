@@ -6,10 +6,10 @@
     "hash": "sha256:ef38efbd50017596956f32b59ee0b87f1759d310806099d295fa7b7355323371"
   },
   "features": [
-    "io.input",
-    "int.arithmetic",
-    "scope.assignment",
-    "io.report"
+    "feature.io.streams.prompted-int-input",
+    "feature.numeric.integers.signed-arithmetic",
+    "feature.bindings.mutability.var-replacement",
+    "feature.io.reporting.report-values"
   ],
   "description": "Prompted integer addition doubled and reported.",
   "cases": [

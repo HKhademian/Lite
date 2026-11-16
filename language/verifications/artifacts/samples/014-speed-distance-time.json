@@ -6,8 +6,8 @@
     "hash": "sha256:ab7c1eaa91d987df43f1943c19d16718a42a5309758ceeda75d83a4c9d4cfc26"
   },
   "features": [
-    "num.float",
-    "scope.locals"
+    "feature.numeric.floats.mixed-arithmetic",
+    "feature.bindings.mutability.lexical-shadowing"
   ],
   "description": "Speed, distance and time relations.",
   "append": "io.outputLine(speed); io.outputLine(distance); io.outputLine(time);",

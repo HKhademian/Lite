@@ -6,8 +6,8 @@
     "hash": "sha256:c6ca178f5373835ad3ba5e9563e97d9fd6e4ac0409acc22901a0ebf63f0c89b6"
   },
   "features": [
-    "tuple.shape",
-    "io.report"
+    "feature.types.composites.flat-tuples",
+    "feature.io.reporting.report-values"
   ],
   "description": "Interleaves named and unnamed tuple fields and destructures stored order.",
   "cases": [

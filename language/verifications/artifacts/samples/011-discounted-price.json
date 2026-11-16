@@ -6,8 +6,8 @@
     "hash": "sha256:c227371db6795213ea5eb913f7194e6988551cccdd52529f5f4b491d32bdd0ca"
   },
   "features": [
-    "int.arithmetic",
-    "scope.locals"
+    "feature.numeric.integers.signed-arithmetic",
+    "feature.bindings.mutability.lexical-shadowing"
   ],
   "description": "Percentage discount rounded to cents.",
   "append": "io.outputLine(discount_cents); io.outputLine(pay_cents);",

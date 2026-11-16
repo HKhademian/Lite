@@ -1194,7 +1194,7 @@ above 2^53. TS expression scopes and typed C comma-expression temporaries evalua
 operands once, left to right, and retain lazy later chain operands. Float
 arithmetic reuses the existing source-position table and fault reporting.
 
-The canonical [num.float case](../language/verifications/features/num-float.json) runs on
+The canonical [num.float case](../language/verifications/features/numeric/floats/mixed-arithmetic.json) runs on
 T00 and both generated targets. Nine previously rejected lesson manifests now
 also select TS/C explicitly. Focused host coverage includes eleven TS/C programs,
 four TS function/aggregate programs, eleven fault sources on both targets, nine
@@ -1287,7 +1287,7 @@ names. This adds no storage conversion, arithmetic width or runtime wrapper.
 A focused scalar program emits identical TS/C bytes using synonyms or canonical
 names; all earlier corpus artifacts likewise remain unchanged.
 
-The canonical [num.aliases case](../language/verifications/features/num-aliases.json)
+The canonical [num.aliases case](../language/verifications/features/numeric/widths/canonical-aliases.json)
 selects T00, TS and C. Focused coverage includes eight TS/C programs, five TS
 function/tuple/List programs, twelve type/range rejections, four exact positioned
 fault executions and a prompted input scenario. Parser/checker drivers each
@@ -1349,7 +1349,7 @@ function/aggregate/conditional programs, twenty rejected sources, six exact
 positioned fault executions and an explicit dead-statement completion case.
 The scalar checker compares five admitted/six rejected sources between reference
 and generated drivers. The canonical
-[num.float-context case](../language/verifications/features/num-float-context.json) and
+[num.float-context case](../language/verifications/features/numeric/floats/literal-context.json) and
 two retained boundary probes supplement the previously failing literal probe.
 The [ladder](reports/2026-11-02-float-contexts-ladder.json) records pre-fix evidence,
 three matching generated self-builds and the exact validation scope.

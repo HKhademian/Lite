@@ -1,0 +1,41 @@
+{
+  "id": "feature.blocks.wiring.parallel-symbol-wiring",
+  "kind": "feature",
+  "source": {
+    "file": "parallel-symbol-wiring.lts",
+    "hash": "sha256:afe8b5a124b3ac55fc157d5bf837a3d7dfcfcd1632d1df71eddee6de91b673ea"
+  },
+  "features": [
+    "feature.blocks.wiring.parallel-symbol-wiring"
+  ],
+  "guideline": "Checks parallel compile-time symbol wiring across root and inner blocks, mutual/own-name recursion, 4-level shadowing, and eager outer-shadow reads.",
+  "targets": [
+    "ts"
+  ],
+  "cases": [
+    {
+      "name": "even-four",
+      "stdin": {
+        "text": "4\n",
+        "hash": "sha256:7de1555df0c2700329e815b93b32c571c3ea54dc967b89e81ab73b9972b72d1d"
+      },
+      "stdout": {
+        "text": "n: 104 15 9234 14 2 4 11 8 10 3\n",
+        "hash": "sha256:21b34fd742b703ff11e5b288220d9205ef490c3223564ce73408b03bce48a51e"
+      },
+      "exitCode": 0
+    },
+    {
+      "name": "odd-three",
+      "stdin": {
+        "text": "3\n",
+        "hash": "sha256:1121cfccd5913f0a63fec40a6ffd44ea64f9dc135c66634ba001d10bcf4302a2"
+      },
+      "stdout": {
+        "text": "n: 103 10 9234 13 2 4 10 6 9 3\n",
+        "hash": "sha256:6f98ebcf65db6597864a66fd7fb98f47e2d8977528b82c189bc9d0a6f202d785"
+      },
+      "exitCode": 0
+    }
+  ]
+}

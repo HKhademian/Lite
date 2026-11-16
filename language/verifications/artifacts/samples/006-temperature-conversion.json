@@ -6,9 +6,9 @@
     "hash": "sha256:521fee6faad8f11b3c82bf85143da6b5ffa1e9fa7fca218985976d6d9e966785"
   },
   "features": [
-    "num.float",
-    "num.widths",
-    "scope.locals"
+    "feature.numeric.floats.mixed-arithmetic",
+    "feature.numeric.widths.sized-promotion",
+    "feature.bindings.mutability.lexical-shadowing"
   ],
   "description": "Celsius to Fahrenheit and back.",
   "append": "io.outputLine(fahrenheit); io.outputLine(celsius_again);",

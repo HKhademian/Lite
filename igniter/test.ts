@@ -569,13 +569,13 @@ test('lite verify uses generated TS, reports migration gaps and rejects the reti
     // This controller runs 81 isolated scenarios; each artifact retains its own timeout.
     const verified = spawnSync(join(root, 'bin/lite'), ['verify', '--all', '--no-cache'], { env, encoding: 'utf8', timeout: 180000 });
     assert.equal(verified.error, undefined); assert.equal(verified.status, 0, verified.stderr);
-    assert.match(verified.stdout, /PASS int\.arithmetic\/precedence-and-division/);
+    assert.match(verified.stdout, /PASS feature\.numeric\.integers\.signed-arithmetic\/precedence-and-division/);
     assert.match(verified.stdout, /PASS example\.001-double-sum\/seven-and-five/);
     assert.match(verified.stdout, /\[ts\]/); assert.doesNotMatch(verified.stdout, /T00 reference|\[c\]/);
-    assert.match(verified.stdout, /PASS match\.subjectless\/first-true-and-fallback \[ts\]/);
-    assert.match(verified.stdout, /PASS num\.widths\/widths \[ts\]/);
-    assert.match(verified.stdout, /PASS function\.values\/double-five \[ts\]/);
-    assert.match(verified.stdout, /PASS block\.wiring\/even-four \[ts\]/);
+    assert.match(verified.stdout, /PASS feature\.control\.branching\.subjectless-match\/first-true-and-fallback \[ts\]/);
+    assert.match(verified.stdout, /PASS feature\.numeric\.widths\.sized-promotion\/widths \[ts\]/);
+    assert.match(verified.stdout, /PASS feature\.functions\.callables\.function-values\/double-five \[ts\]/);
+    assert.match(verified.stdout, /PASS feature\.blocks\.wiring\.parallel-symbol-wiring\/even-four \[ts\]/);
     assert.match(verified.stdout, /PASS showcase\.01-foundations\.01-bindings-and-mutability\/bindings-and-mutability \[ts\]/);
     assert.match(verified.stdout, /verification passed: 128 executed, 0 cached/);
     const covered = spawnSync(join(root, 'bin/lite'), ['verify', '--coverage'], { env, encoding: 'utf8', timeout: 30000 });
@@ -584,16 +584,16 @@ test('lite verify uses generated TS, reports migration gaps and rejects the reti
     assert.match(covered.stdout, /examples: 26\/26 manifests/);
     assert.match(covered.stdout, /samples: 22\/22 manifests/);
     assert.match(covered.stdout, /showcases: 18\/18 manifests/);
-    const first = spawnSync(join(root, 'bin/lite'), ['verify', '--all', '--filter', 'features/int-arithmetic.json'],
+    const first = spawnSync(join(root, 'bin/lite'), ['verify', '--all', '--filter', 'features/numeric/integers/signed-arithmetic.json'],
       { env, encoding: 'utf8', timeout: 30000 });
     assert.equal(first.error, undefined); assert.equal(first.status, 0, first.stderr);
     assert.match(first.stdout, /verification passed: \d+ executed, 0 cached/);
-    const second = spawnSync(join(root, 'bin/lite'), ['verify', '--all', '--filter', 'features/int-arithmetic.json'],
+    const second = spawnSync(join(root, 'bin/lite'), ['verify', '--all', '--filter', 'features/numeric/integers/signed-arithmetic.json'],
       { env, encoding: 'utf8', timeout: 30000 });
     assert.equal(second.error, undefined); assert.equal(second.status, 0, second.stderr);
     assert.match(second.stdout, /verification passed: 0 executed, \d+ cached/);
     assert.match(second.stdout, /\(cached\)/);
-    const sharded = spawnSync(join(root, 'bin/lite'), ['verify', '--all', '--filter', 'features/int-arithmetic.json', '--shard', '2/2', '--no-cache'],
+    const sharded = spawnSync(join(root, 'bin/lite'), ['verify', '--all', '--filter', 'features/numeric/integers/signed-arithmetic.json', '--shard', '2/2', '--no-cache'],
       { env, encoding: 'utf8', timeout: 30000 });
     assert.equal(sharded.error, undefined); assert.equal(sharded.status, 0, sharded.stderr);
     assert.match(sharded.stdout, /verification passed: \d+ executed, 0 cached/);

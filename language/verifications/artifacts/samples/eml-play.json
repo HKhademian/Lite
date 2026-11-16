@@ -6,9 +6,9 @@
     "hash": "sha256:fb374e807885b2ed58c6ad610981d0cab58c6ff9e5d960373c5c5d7530e1196f"
   },
   "features": [
-    "num.float",
-    "io.report",
-    "function.recursion"
+    "feature.numeric.floats.mixed-arithmetic",
+    "feature.io.reporting.report-values",
+    "feature.functions.calls.typed-recursion"
   ],
   "description": "Runs the EML stack machine and expression converter demo.",
   "cases": [

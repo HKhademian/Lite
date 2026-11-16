@@ -6,10 +6,10 @@
     "hash": "sha256:fdf1a087b84dd5d61ae74cbf81d9688cd237dc4a1ec5eff140c849cb4e50b802"
   },
   "features": [
-    "io.input",
-    "loop.conditional",
-    "text.helpers",
-    "io.report"
+    "feature.io.streams.prompted-int-input",
+    "feature.control.loops.conditional-loop",
+    "feature.text.strings.codepoint-helpers",
+    "feature.io.reporting.report-values"
   ],
   "description": "Scans an arithmetic line into number and symbol tokens.",
   "cases": [

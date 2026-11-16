@@ -6,9 +6,9 @@
     "hash": "sha256:98fa669b55b6b8b31151221e1a6681f4d9854f6eb374fcd9c00a0271a55c3807"
   },
   "features": [
-    "list.mutation",
-    "loop.sequence",
-    "io.report"
+    "feature.types.collections.growable-lists",
+    "feature.control.loops.sequence-traversal",
+    "feature.io.reporting.report-values"
   ],
   "description": "Exercises all four explicit mut list end operations.",
   "cases": [

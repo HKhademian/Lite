@@ -6,10 +6,10 @@
     "hash": "sha256:dcb8c870ca1a691865f5723319e133acd6c39509f2ee610113f621dded21e759"
   },
   "features": [
-    "function.closures",
-    "function.values",
-    "list.mutation",
-    "io.report"
+    "feature.functions.closures.lexical-captures",
+    "feature.functions.callables.function-values",
+    "feature.types.collections.growable-lists",
+    "feature.io.reporting.report-values"
   ],
   "description": "Higher-order map/filter/fold list helpers combined with capturing closures and counter frames.",
   "cases": [

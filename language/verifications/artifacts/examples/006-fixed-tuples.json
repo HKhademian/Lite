@@ -6,9 +6,9 @@
     "hash": "sha256:d20bddb2fd44078921e75a421432ba2eac67aad597d7097034bdea0571ebe433"
   },
   "features": [
-    "tuple.shape",
-    "scope.locals",
-    "io.report"
+    "feature.types.composites.flat-tuples",
+    "feature.bindings.mutability.lexical-shadowing",
+    "feature.io.reporting.report-values"
   ],
   "description": "Tuple construction, fields, destructuring, and singleton grouping.",
   "cases": [

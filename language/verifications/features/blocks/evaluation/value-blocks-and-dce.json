@@ -1,0 +1,41 @@
+{
+  "id": "feature.blocks.evaluation.value-blocks-and-dce",
+  "kind": "feature",
+  "source": {
+    "file": "value-blocks-and-dce.lts",
+    "hash": "sha256:05acfb0fd1a56f6ab5f0cbf371c577bf644b2a735c44d664bf07359817006f10"
+  },
+  "features": [
+    "feature.blocks.evaluation.value-blocks-and-dce"
+  ],
+  "guideline": "Checks value-producing blocks, nested scopes, inner-block transparent type aliases, and pure dead-code elimination.",
+  "targets": [
+    "ts"
+  ],
+  "cases": [
+    {
+      "name": "seed-four",
+      "stdin": {
+        "text": "4\n",
+        "hash": "sha256:7de1555df0c2700329e815b93b32c571c3ea54dc967b89e81ab73b9972b72d1d"
+      },
+      "stdout": {
+        "text": "seed: 15 14 9 5 4\n",
+        "hash": "sha256:6941b2120b24fe44c54eeabca75b2083c44c5ecd96e1d469ed201ca3b821730e"
+      },
+      "exitCode": 0
+    },
+    {
+      "name": "seed-negative-three",
+      "stdin": {
+        "text": "-3\n",
+        "hash": "sha256:0f90e0b3538d04df294950dcec75952d7e07f1bb044e73e795c410d677b3c268"
+      },
+      "stdout": {
+        "text": "seed: -6 7 2 -2 4\n",
+        "hash": "sha256:ead77cf51f4eec254ad6c1bd43a4693cf37c671019a2daf6b8656cc40dffa2f3"
+      },
+      "exitCode": 0
+    }
+  ]
+}

@@ -6,10 +6,10 @@
     "hash": "sha256:e97419ec1a5929e768d3135eefbc6ac91278fd9e52c89ecd7a8727d5adfe6d76"
   },
   "features": [
-    "block.wiring",
-    "function.closures",
-    "scope.locals",
-    "io.report"
+    "feature.blocks.wiring.parallel-symbol-wiring",
+    "feature.functions.closures.lexical-captures",
+    "feature.bindings.mutability.lexical-shadowing",
+    "feature.io.reporting.report-values"
   ],
   "description": "Parallel forward wiring, mutual and own-name recursion, nearer-forward shadowing, and eager outer reads.",
   "cases": [

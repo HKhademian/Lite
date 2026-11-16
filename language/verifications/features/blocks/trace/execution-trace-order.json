@@ -1,0 +1,41 @@
+{
+  "id": "feature.blocks.trace.execution-trace-order",
+  "kind": "feature",
+  "source": {
+    "file": "execution-trace-order.lts",
+    "hash": "sha256:8810c775df8aad1cf82f10b515fdb00a20516f2929530fec1ef39a6dc24ddc34"
+  },
+  "features": [
+    "feature.blocks.trace.execution-trace-order"
+  ],
+  "guideline": "Checks execution-trace initialization safety across root and inner blocks, write-before-read reserved locals, and list-pushed forward closures.",
+  "targets": [
+    "ts"
+  ],
+  "cases": [
+    {
+      "name": "input-five",
+      "stdin": {
+        "text": "5\n",
+        "hash": "sha256:f0b5c2c2211c8d67ed15e75e656c7862d086e9245420892a7de62cd9ec582a06"
+      },
+      "stdout": {
+        "text": "k: 25 137\n",
+        "hash": "sha256:da6a3ec5de41736d19798eba4f69a3409add9e4ee825c04ecf69dfeab7069e6f"
+      },
+      "exitCode": 0
+    },
+    {
+      "name": "input-negative-two",
+      "stdin": {
+        "text": "-2\n",
+        "hash": "sha256:4b883e04ed1a2af32c21811a12f2ccc766a1d73040b533ae4bcdfad8aca74293"
+      },
+      "stdout": {
+        "text": "k: 18 109\n",
+        "hash": "sha256:6a0917c66008877b82c587ee183ad3049daab604402920c56f334c1b17fbb8a9"
+      },
+      "exitCode": 0
+    }
+  ]
+}

@@ -1,0 +1,26 @@
+{
+  "id": "feature.numeric.integers.truncating-remainder",
+  "kind": "feature",
+  "source": {
+    "file": "truncating-remainder.lts",
+    "hash": "sha256:e2c9c1302edb3bcadaf4dc625fcb79d1c1f80e5f685a01c7cc81e0b5ad372ec5"
+  },
+  "features": [
+    "feature.numeric.integers.truncating-remainder"
+  ],
+  "guideline": "Checks truncating Int remainder, signed dividends/divisors, exact division, and remainder-by-zero failure.",
+  "targets": [
+    "ts",
+    "c"
+  ],
+  "cases": [
+    {
+      "name": "signed-remainders",
+      "stdout": {
+        "text": "1\n-1\n1\n0\n0\n",
+        "hash": "sha256:c1416ef366cf3d4e3dff32f72c0abca1aad37f4eb8fc37f79aa74515bc409219"
+      },
+      "exitCode": 0
+    }
+  ]
+}

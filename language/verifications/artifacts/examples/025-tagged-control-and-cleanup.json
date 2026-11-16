@@ -6,10 +6,10 @@
     "hash": "sha256:161eb383262e7a183e060492bc570f22882f15f7a4a31e78fc1fd87e6408edc1"
   },
   "features": [
-    "control.tags",
-    "finally.cleanup",
-    "loop.metadata",
-    "io.report"
+    "feature.control.unwinding.tagged-transfers",
+    "feature.control.unwinding.finally-cleanup",
+    "feature.control.loops.loop-metadata",
+    "feature.io.reporting.report-values"
   ],
   "description": "Labeled block exits, conditional then transforms, tagged nested loops, and LIFO finally cleanup.",
   "cases": [

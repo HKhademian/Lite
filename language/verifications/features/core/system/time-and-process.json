@@ -1,0 +1,25 @@
+{
+  "id": "feature.core.system.time-and-process",
+  "kind": "feature",
+  "source": {
+    "file": "time-and-process.lts",
+    "hash": "sha256:87c06d653059ac6cf84765a63df810804887d61be2b85a6bf993ca3beb33d1a6"
+  },
+  "features": [
+    "feature.core.system.time-and-process"
+  ],
+  "guideline": "Checks monotonic clock progression, epoch/ISO/local date formatting invariants, and process runtime/cwd checks via core/time and core/process.",
+  "targets": [
+    "ts"
+  ],
+  "cases": [
+    {
+      "name": "deterministic-clock-and-host-invariants",
+      "stdout": {
+        "text": "true true true true true true true\ntrue true true true\n",
+        "hash": "sha256:d93db6660c0c5562a8408e51ba71c8a13eb9c440436a904effb0000fc11fcdc7"
+      },
+      "exitCode": 0
+    }
+  ]
+}
