@@ -174,6 +174,7 @@ test('buildSite generates static pages and metadata in dist/site', () => {
   for (const htmlFile of [...collectHtml(join(out, 'docs')), ...collectHtml(join(out, 'learn')), ...collectHtml(join(out, 'gym'))]) {
     const content = readFileSync(htmlFile, 'utf8');
     assert(!content.includes(' data-md-href='), `unresolved data-md-href in ${htmlFile}`);
+    assert(!content.includes('playground?'), `missing trailing slash before ? in playground href in ${htmlFile}`);
     const hrefRe = /href="([^"]+)"/g;
     for (let m = hrefRe.exec(content); m !== null; m = hrefRe.exec(content)) {
       const raw = m[1]!;

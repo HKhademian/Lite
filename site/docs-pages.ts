@@ -302,7 +302,8 @@ function loadSnippetMap(
 
 function relativeHref(fromOutPath: string, toOutPath: string): string {
   const rel = posix.relative(posix.dirname(fromOutPath), toOutPath);
-  return rel === '' ? posix.basename(toOutPath) : rel;
+  const base = rel === '' ? posix.basename(toOutPath) : rel;
+  return toOutPath.endsWith('/') && !base.endsWith('/') ? `${base}/` : base;
 }
 
 export function postprocessMarkdownHtml(options: Readonly<{

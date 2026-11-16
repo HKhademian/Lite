@@ -53,6 +53,13 @@ const server = createServer((req, res) => {
   const safePath = normalize(urlPath).replace(/^(\.\.(\/|\\|$))+/, '');
   let target = join(siteDir, safePath);
   if (existsSync(target) && statSync(target).isDirectory()) {
+    if (!urlPath.endsWith('/')) {
+      const qIdx = (req.url ?? '').indexOf('?');
+      const query = qIdx >= 0 ? (req.url ?? '').slice(qIdx) : '';
+      res.writeHead(301, { Location: `${urlPath}/${query}`, 'Cache-Control': 'no-store' });
+      res.end();
+      return;
+    }
     target = join(target, 'index.html');
   }
   if (!existsSync(target) || !statSync(target).isFile()) {
