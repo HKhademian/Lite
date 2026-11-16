@@ -8,11 +8,20 @@ import { dirname, join, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { buildCCompiler, buildTsCompiler, compileBuiltCompiler, type CompilerBuild } from '../compiler/host.ts';
 import { sourceModuleIdentity } from '../compiler/source.ts';
+import {
+  brandWordmark,
+  proseLite,
+  readRepositoryUrl,
+  readSourceRevision,
+  renderPage,
+  type SourceRevision,
+} from './chrome.ts';
 import { heroSample, playgroundDefaultSample, sampleGroups, showcaseSamples, type ShowcaseSample } from './groups.ts';
 import { escapeHtml, highlightLite, highlightTs } from './highlight.ts';
 import { playGroups, playSamples, type PlaySample } from './play-samples.ts';
 import { appendPlayKeepalive, stripPlayKeepaliveTs } from './play-keepalive.ts';
 import { playgroundWorkerJs } from './playground-worker.ts';
+import { searchClientJs, type SearchEntry } from './search.ts';
 import { stripLiteTs } from './strip-ts.ts';
 import { siteCss } from './styles.ts';
 
@@ -33,40 +42,9 @@ export type BuildSiteOptions = Readonly<{
   tsCompiler?: CompilerBuild;
 }>;
 
-type SourceRevision = Readonly<{
-  commit: string;
-  timestamp: string;
-}>;
-
 const root = dirname(import.meta.dirname);
 const outputDir = join(root, 'dist', 'site');
 const entryPath = fileURLToPath(new URL('../compiler/entry.ts', import.meta.url));
-const brandWordmark = readFileSync(join(root, 'brand', 'lite-wordmark.svg'), 'utf8').trim();
-const proseLite = '<span class="prose-lite"><span class="brand-l">l</span>ite</span>';
-
-function readRepositoryUrl(): string {
-  const configured = process.env['GITHUB_REPOSITORY']?.trim();
-  if (configured !== undefined && configured !== '') {
-    return `https://github.com/${configured}`;
-  }
-  const result = spawnSync('git', ['remote', 'get-url', 'github'], { cwd: root, encoding: 'utf8' });
-  if (result.status !== 0) return '';
-  const match = result.stdout.trim().match(/(?:github\.com[:/])([^/]+\/[^/]+?)(?:\.git)?$/);
-  return match === null ? '' : `https://github.com/${match[1]}`;
-}
-
-function readSourceRevision(): SourceRevision {
-  const commitResult = spawnSync('git', ['rev-parse', 'HEAD'], { cwd: root, encoding: 'utf8' });
-  if (commitResult.error !== undefined) throw commitResult.error;
-  if (commitResult.status !== 0) throw new Error('could not read the source commit');
-  const timeResult = spawnSync('git', ['show', '-s', '--format=%cI', 'HEAD'], { cwd: root, encoding: 'utf8' });
-  if (timeResult.error !== undefined) throw timeResult.error;
-  if (timeResult.status !== 0) throw new Error('could not read the commit timestamp');
-  return {
-    commit: commitResult.stdout.trim(),
-    timestamp: timeResult.stdout.trim(),
-  };
-}
 
 function decodeArgb(packed: bigint): Readonly<{ fill: string; alphaAttr: string }> {
   const value = Number(packed & 0xffffffffn);
@@ -192,103 +170,6 @@ function compileAndRunSample(sample: AnySample, tsCompiler: CompilerBuild, badge
   }
 }
 
-function renderHeader(basePath: string, active: 'home' | 'playground' | 'gallery', repoUrl: string, lightSwitchShine: boolean): string {
-  const docsHref = repoUrl ? `${repoUrl}/blob/main/docs/README.md` : '#';
-  const repoHref = repoUrl || '#';
-  const toggleClass = lightSwitchShine ? 'theme-toggle theme-toggle-shine' : 'theme-toggle';
-  return `<header class="site-header">
-  <div class="container header-inner">
-    <a class="brand-link" href="${basePath}index.html" aria-label="Lite home">
-      ${brandWordmark}
-      <span class="brand-badge">Alpha</span>
-    </a>
-    <nav class="site-nav" aria-label="Main navigation">
-      <a href="${basePath}index.html"${active === 'home' ? ' class="active"' : ''}>Overview</a>
-      <a href="${basePath}playground/"${active === 'playground' ? ' class="active"' : ''}>Play</a>
-      <a href="${basePath}gallery/"${active === 'gallery' ? ' class="active"' : ''}>Gallery</a>
-      <a href="${escapeHtml(docsHref)}">Docs</a>
-      <a href="${escapeHtml(repoHref)}">GitHub</a>
-      <button id="theme-toggle" class="${toggleClass}" type="button" aria-label="Auto mode — switch to moon mode" title="Auto mode — switch to moon mode">
-        <svg class="theme-icon icon-auto" viewBox="0 0 32 32" width="26" height="26" fill="none" aria-hidden="true">
-          <defs>
-            <radialGradient id="lite-auto-sun" cx="32%" cy="28%" r="72%">
-              <stop offset="0%" stop-color="#FFFDF0"/>
-              <stop offset="35%" stop-color="#FEF08A"/>
-              <stop offset="75%" stop-color="#FBBF24"/>
-              <stop offset="100%" stop-color="#D97706"/>
-            </radialGradient>
-            <radialGradient id="lite-auto-moon" cx="62%" cy="62%" r="72%">
-              <stop offset="0%" stop-color="#E2E8F0"/>
-              <stop offset="58%" stop-color="#94A3B8"/>
-              <stop offset="100%" stop-color="#475569"/>
-            </radialGradient>
-            <clipPath id="lite-auto-clip">
-              <circle cx="16" cy="16" r="15.5"/>
-            </clipPath>
-          </defs>
-          <g clip-path="url(#lite-auto-clip)">
-            <path d="M0 0H32L0 32Z" fill="url(#lite-auto-sun)"/>
-            <path d="M32 0V32H0Z" fill="url(#lite-auto-moon)"/>
-            <circle cx="10.5" cy="9.5" r="3.6" fill="#FFFFFF" fill-opacity="0.28"/>
-            <circle cx="21.5" cy="19.5" r="2.7" fill="#334155" fill-opacity="0.26"/>
-            <circle cx="15.5" cy="24.5" r="1.8" fill="#1E293B" fill-opacity="0.24"/>
-            <circle cx="25.2" cy="13.5" r="1.4" fill="#334155" fill-opacity="0.22"/>
-            <line x1="30" y1="2" x2="2" y2="30" stroke="#FFFFFF" stroke-opacity="0.32" stroke-width="0.9"/>
-          </g>
-        </svg>
-        <svg class="theme-icon icon-sun" viewBox="0 0 32 32" width="26" height="26" fill="none" aria-hidden="true">
-          <defs>
-            <radialGradient id="lite-sun-grad" cx="36%" cy="32%" r="70%">
-              <stop offset="0%" stop-color="#FFFDF0"/>
-              <stop offset="32%" stop-color="#FEF08A"/>
-              <stop offset="72%" stop-color="#FBBF24"/>
-              <stop offset="100%" stop-color="#D97706"/>
-            </radialGradient>
-          </defs>
-          <circle cx="16" cy="16" r="15.5" fill="url(#lite-sun-grad)"/>
-          <circle cx="11.8" cy="11.2" r="4.6" fill="#FFFFFF" fill-opacity="0.28"/>
-        </svg>
-        <svg class="theme-icon icon-moon" viewBox="0 0 32 32" width="26" height="26" fill="none" aria-hidden="true">
-          <defs>
-            <radialGradient id="lite-moon-grad" cx="34%" cy="30%" r="72%">
-              <stop offset="0%" stop-color="#F8FAFC"/>
-              <stop offset="55%" stop-color="#CBD5E1"/>
-              <stop offset="100%" stop-color="#64748B"/>
-            </radialGradient>
-            <clipPath id="lite-moon-clip">
-              <circle cx="16" cy="16" r="15.5"/>
-            </clipPath>
-          </defs>
-          <g clip-path="url(#lite-moon-clip)">
-            <circle cx="16" cy="16" r="15.5" fill="url(#lite-moon-grad)"/>
-            <path d="M23.1 0.1A16.2 16.2 0 0 1 8.9 31.9 16.2 16.2 0 0 0 23.1 0.1Z" fill="#1E293B" fill-opacity="0.28"/>
-            <circle cx="10.4" cy="9.4" r="3.1" fill="#64748B" fill-opacity="0.26"/>
-            <circle cx="19.2" cy="13.8" r="2" fill="#475569" fill-opacity="0.24"/>
-            <circle cx="11.8" cy="21.2" r="3.5" fill="#64748B" fill-opacity="0.22"/>
-            <circle cx="20.2" cy="22.4" r="1.5" fill="#475569" fill-opacity="0.22"/>
-          </g>
-        </svg>
-      </button>
-    </nav>
-  </div>
-</header>`;
-}
-
-function renderFooter(rev: SourceRevision, repoUrl: string): string {
-  const short = rev.commit.slice(0, 12);
-  const rest = rev.commit.slice(12);
-  const hashInner = `<code><strong>${escapeHtml(short)}</strong>${escapeHtml(rest)}</code>`;
-  const commitHtml = repoUrl
-    ? `<a class="commit-hash" href="${escapeHtml(`${repoUrl}/commit/${rev.commit}`)}" title="Committed ${escapeHtml(rev.timestamp)}">${hashInner}</a>`
-    : `<span class="commit-hash" title="Committed ${escapeHtml(rev.timestamp)}">${hashInner}</span>`;
-  return `<footer class="site-footer">
-  <div class="container footer-inner">
-    <span>${proseLite} is licensed under Apache-2.0.</span>
-    <span>Revision ${commitHtml}</span>
-  </div>
-</footer>`;
-}
-
 function renderSampleCard(sample: RenderedSample, basePath: string, includeNote = true): string {
   const inputParts: string[] = [];
   if (sample.args.length > 0) inputParts.push(`args: ${sample.args.join(' ')}`);
@@ -316,109 +197,6 @@ function renderSampleCard(sample: RenderedSample, basePath: string, includeNote 
     <a href="${basePath}playground/?sample=${escapeHtml(sample.id)}">Play &rarr;</a>
   </footer>
 </article>`;
-}
-
-function renderPage(options: Readonly<{
-  title: string;
-  description?: string;
-  basePath: string;
-  active: 'home' | 'playground' | 'gallery';
-  repoUrl: string;
-  rev: SourceRevision;
-  body: string;
-  bodyClass?: string;
-  mainClass?: string;
-  lightSwitchShine?: boolean;
-}>): string {
-  const bodyAttr = options.bodyClass ? ` class="${escapeHtml(options.bodyClass)}"` : '';
-  const mainAttr = ` class="${escapeHtml(options.mainClass ?? 'container')}"`;
-  const lightSwitchShine = options.lightSwitchShine ?? true;
-  const description = options.description ?? 'Lite is a small, explicit language and self-hosted compiler designed for low runtime weight, clear consequences, and readable code.';
-  return `<!doctype html>
-<html lang="en">
-<head>
-  <meta charset="utf-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1">
-  <meta name="color-scheme" content="light dark">
-  <meta name="description" content="${escapeHtml(description)}">
-  <title>${escapeHtml(options.title)}</title>
-  <link rel="icon" type="image/svg+xml" href="${options.basePath}favicon.svg">
-  <script>
-    (function () {
-      try {
-        var t = localStorage.getItem("lite-theme");
-        if (t === "light" || t === "dark") {
-          document.documentElement.dataset.theme = t;
-          document.documentElement.style.colorScheme = t;
-        }
-      } catch (e) {}
-    })();
-  </script>
-  <link rel="stylesheet" href="${options.basePath}style.css">
-</head>
-<body${bodyAttr}>
-${renderHeader(options.basePath, options.active, options.repoUrl, lightSwitchShine)}
-<main${mainAttr}>
-${options.body}
-</main>
-${renderFooter(options.rev, options.repoUrl)}
-<script>
-  (function () {
-    var btn = document.getElementById("theme-toggle");
-    if (!btn) return;
-    function currentMode() {
-      var explicit = document.documentElement.dataset.theme;
-      if (explicit === "light" || explicit === "dark") return explicit;
-      return "system";
-    }
-    function resolvedTheme() {
-      var mode = currentMode();
-      if (mode === "light" || mode === "dark") return mode;
-      return window.matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "light";
-    }
-    function nextModeFor(mode) {
-      if (mode === "light") return "system";
-      if (mode === "system") return "dark";
-      return "light";
-    }
-    function syncIcon() {
-      var mode = currentMode();
-      var title = mode === "system"
-        ? "Auto mode (system: " + resolvedTheme() + ") — switch to moon mode"
-        : mode === "light"
-          ? "Sun mode (sunshine) — switch to auto mode"
-          : "Moon mode (moonshine) — switch to sun mode";
-      btn.title = title;
-      btn.setAttribute("aria-label", title);
-      btn.dataset.mode = mode;
-      document.documentElement.style.colorScheme = mode === "system" ? "" : mode;
-    }
-    btn.addEventListener("click", function () {
-      var root = document.documentElement;
-      var next = nextModeFor(currentMode());
-      root.dataset.themeSwitching = "true";
-      if (next === "system") {
-        delete root.dataset.theme;
-        try { localStorage.removeItem("lite-theme"); } catch (e) {}
-      } else {
-        root.dataset.theme = next;
-        try { localStorage.setItem("lite-theme", next); } catch (e) {}
-      }
-      syncIcon();
-      window.setTimeout(function () {
-        delete root.dataset.themeSwitching;
-      }, 360);
-    });
-    var media = window.matchMedia("(prefers-color-scheme: dark)");
-    if (media.addEventListener) {
-      media.addEventListener("change", syncIcon);
-    }
-    syncIcon();
-  })();
-</script>
-</body>
-</html>
-`;
 }
 
 function renderHomePage(rendered: ReadonlyMap<string, RenderedSample>, repoUrl: string, rev: SourceRevision, lightSwitchShine: boolean): string {
@@ -1594,6 +1372,7 @@ export function buildSite(options?: BuildSiteOptions): void {
   }
 
   rmSync(outputDir, { recursive: true, force: true });
+  mkdirSync(join(outputDir, 'runtime'), { recursive: true });
   mkdirSync(join(outputDir, 'gallery'), { recursive: true });
   mkdirSync(join(outputDir, 'playground', 'samples'), { recursive: true });
 
@@ -1602,19 +1381,14 @@ export function buildSite(options?: BuildSiteOptions): void {
   writeFileSync(join(outputDir, 'index.html'), renderHomePage(rendered, repoUrl, rev, lightSwitchShine));
   writeFileSync(join(outputDir, 'gallery', 'index.html'), renderGalleryPage(rendered, renderedPlay, repoUrl, rev, lightSwitchShine));
   writeFileSync(join(outputDir, 'playground', 'index.html'), renderPlaygroundPage(rendered, renderedPlay, repoUrl, rev, lightSwitchShine));
-  const compilerTs = readFileSync(join(root, 'compiler', 'bootstrap', 'compiler.ts'), 'utf8');
-  writeFileSync(join(outputDir, 'playground', 'compiler.js'), stripTypeScriptTypes(compilerTs, { mode: 'strip' }));
-  const compilerCTs = readFileSync(buildCCompiler().path, 'utf8');
-  writeFileSync(join(outputDir, 'playground', 'compiler-c.js'), stripTypeScriptTypes(compilerCTs, { mode: 'strip' }));
-  const stripTs = readFileSync(join(root, 'site', 'strip-ts.ts'), 'utf8');
-  writeFileSync(join(outputDir, 'playground', 'strip-ts.js'), stripTypeScriptTypes(stripTs, { mode: 'strip' }));
-  const playKeepaliveSrc = readFileSync(join(root, 'site', 'play-keepalive.ts'), 'utf8');
-  writeFileSync(join(outputDir, 'playground', 'play-keepalive.js'), stripTypeScriptTypes(playKeepaliveSrc, { mode: 'strip' }));
-  const codeViewTs = readFileSync(join(root, 'site', 'code-view.ts'), 'utf8');
-  writeFileSync(join(outputDir, 'playground', 'code-view.js'), stripTypeScriptTypes(codeViewTs, { mode: 'strip' }));
-  const highlightTsSrc = readFileSync(join(root, 'site', 'highlight.ts'), 'utf8');
-  writeFileSync(join(outputDir, 'playground', 'highlight.js'), stripTypeScriptTypes(highlightTsSrc, { mode: 'strip' }));
-  writeFileSync(join(outputDir, 'playground', 'worker.js'), playgroundWorkerJs);
+
+  const compilerJs = stripTypeScriptTypes(readFileSync(join(root, 'compiler', 'bootstrap', 'compiler.ts'), 'utf8'), { mode: 'strip' });
+  const compilerCJs = stripTypeScriptTypes(readFileSync(buildCCompiler().path, 'utf8'), { mode: 'strip' });
+  const stripTsJs = stripTypeScriptTypes(readFileSync(join(root, 'site', 'strip-ts.ts'), 'utf8'), { mode: 'strip' });
+  const playKeepaliveJs = stripTypeScriptTypes(readFileSync(join(root, 'site', 'play-keepalive.ts'), 'utf8'), { mode: 'strip' });
+  const codeViewJs = stripTypeScriptTypes(readFileSync(join(root, 'site', 'code-view.ts'), 'utf8'), { mode: 'strip' });
+  const highlightJs = stripTypeScriptTypes(readFileSync(join(root, 'site', 'highlight.ts'), 'utf8'), { mode: 'strip' });
+
   const stdlib: Record<string, Readonly<{ path: string; display: string; identity: string; text: string }>> = {};
   for (const ns of ['core', 'extra'] as const) {
     const libDir = join(root, 'lib', ns);
@@ -1625,7 +1399,65 @@ export function buildSite(options?: BuildSiteOptions): void {
       stdlib[modName] = { path: relPath, display: relPath, identity: sourceModuleIdentity(text), text };
     }
   }
-  writeFileSync(join(outputDir, 'playground', 'stdlib.json'), JSON.stringify(stdlib));
+  const stdlibJson = JSON.stringify(stdlib);
+
+  for (const targetDir of [join(outputDir, 'runtime'), join(outputDir, 'playground')]) {
+    writeFileSync(join(targetDir, 'compiler.js'), compilerJs);
+    writeFileSync(join(targetDir, 'compiler-c.js'), compilerCJs);
+    writeFileSync(join(targetDir, 'strip-ts.js'), stripTsJs);
+    writeFileSync(join(targetDir, 'play-keepalive.js'), playKeepaliveJs);
+    writeFileSync(join(targetDir, 'code-view.js'), codeViewJs);
+    writeFileSync(join(targetDir, 'highlight.js'), highlightJs);
+    writeFileSync(join(targetDir, 'worker.js'), playgroundWorkerJs);
+    writeFileSync(join(targetDir, 'stdlib.json'), stdlibJson);
+  }
+  writeFileSync(join(outputDir, 'runtime', 'search.js'), searchClientJs);
+
+  const searchEntries: SearchEntry[] = [
+    { kind: 'learn', title: 'Learn Lite', subtitle: 'Guided ability course, Quickstart, and project tutorials', href: 'learn/', keywords: 'learn course tour tutorials' },
+    { kind: 'gym', title: 'Lite Gym', subtitle: 'Interactive drills and multi-test coding katas', href: 'gym/', keywords: 'gym exercises katas practice' },
+    { kind: 'handbook', title: 'Lite Handbook & Docs', subtitle: 'Shipped language handbook, specification, and design reference', href: 'docs/', keywords: 'docs handbook reference spec' },
+    { kind: 'module', title: 'Standard & Play Modules', subtitle: 'Core utilities and Play Canvas/Audio libraries', href: 'modules/', keywords: 'modules stdlib core extra api' },
+    { kind: 'tool', title: 'Lite Tools & CLI', subtitle: 'CLI commands, formatter, VS Code extension, and self-hosting', href: 'tools/', keywords: 'tools cli fmt verify doctor vscode' },
+    { kind: 'gallery', title: 'Sample & Play Gallery', subtitle: 'Verified language programs, canvas art, audio, and games', href: 'gallery/', keywords: 'gallery examples samples canvas audio games' },
+    { kind: 'tool', title: 'Browser Playground', subtitle: 'Write, compile to TypeScript or C, and run Lite in your browser', href: 'playground/', keywords: 'playground sandbox compile run' },
+  ];
+  for (const sample of [...rendered.values(), ...renderedPlay.values()]) {
+    searchEntries.push({
+      kind: 'gallery',
+      title: sample.title,
+      subtitle: `${sample.note} (${sample.file})`,
+      href: `playground/?sample=${encodeURIComponent(sample.id)}`,
+      keywords: `${sample.id} ${sample.group} ${sample.file}`,
+      badge: sample.badge ?? 'sample',
+    });
+  }
+  writeFileSync(join(outputDir, 'search-index.json'), JSON.stringify(searchEntries));
+
+  const sectionStubs: readonly { dir: string; active: 'learn' | 'gym' | 'docs' | 'modules' | 'tools'; title: string; lead: string }[] = [
+    { dir: 'learn', active: 'learn', title: 'Learn Lite', lead: 'Guided lessons and project tutorials are coming in this section.' },
+    { dir: 'gym', active: 'gym', title: 'Lite Gym', lead: 'Interactive concept drills and coding workouts are coming in this section.' },
+    { dir: 'docs', active: 'docs', title: 'Documentation', lead: 'Shipped Handbook and LiteLang design documentation.' },
+    { dir: 'modules', active: 'modules', title: 'Modules', lead: 'Core and Play module API documentation.' },
+    { dir: 'tools', active: 'tools', title: 'Tools', lead: 'CLI commands, formatter, editor support, and bootstrap guides.' },
+  ];
+  for (const stub of sectionStubs) {
+    mkdirSync(join(outputDir, stub.dir), { recursive: true });
+    writeFileSync(
+      join(outputDir, stub.dir, 'index.html'),
+      renderPage({
+        title: `${stub.title} — Lite`,
+        description: stub.lead,
+        basePath: '../',
+        active: stub.active,
+        repoUrl,
+        rev,
+        body: `<section class="page-hero"><h1>${escapeHtml(stub.title)}</h1><p class="hero-lead">${escapeHtml(stub.lead)}</p></section>`,
+        lightSwitchShine,
+      }),
+    );
+  }
+
   for (const sample of [...rendered.values(), ...renderedPlay.values()]) {
     writeFileSync(
       join(outputDir, 'playground', 'samples', `${sample.id}.json`),

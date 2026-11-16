@@ -56,9 +56,34 @@ test('syntax highlighter escapes HTML and marks keywords, strings, and comments'
 test('buildSite generates static pages and metadata in dist/site', () => {
   buildSite({ tsCompiler: sharedTsCompiler() });
   const out = join(root, 'dist', 'site');
-  for (const rel of ['index.html', 'style.css', 'favicon.svg', 'build.json', 'gallery/index.html', 'playground/index.html']) {
+  for (const rel of [
+    'index.html',
+    'style.css',
+    'favicon.svg',
+    'build.json',
+    'search-index.json',
+    'runtime/compiler.js',
+    'runtime/compiler-c.js',
+    'runtime/worker.js',
+    'runtime/stdlib.json',
+    'runtime/search.js',
+    'runtime/highlight.js',
+    'runtime/code-view.js',
+    'runtime/strip-ts.js',
+    'runtime/play-keepalive.js',
+    'playground/play-keepalive.js',
+    'learn/index.html',
+    'gym/index.html',
+    'docs/index.html',
+    'modules/index.html',
+    'tools/index.html',
+    'gallery/index.html',
+    'playground/index.html',
+  ]) {
     assert(existsSync(join(out, rel)), `missing generated site file: ${rel}`);
   }
+  const searchIndex = JSON.parse(readFileSync(join(out, 'search-index.json'), 'utf8')) as Array<{ title: string; href: string }>;
+  assert(searchIndex.length > showcaseSamples.length);
   const gallery = readFileSync(join(out, 'gallery/index.html'), 'utf8');
   assert(gallery.includes('<title>Gallery — Lite</title>'));
   assert(gallery.includes('class="gallery-jumps"'));
@@ -82,6 +107,11 @@ test('buildSite generates static pages and metadata in dist/site', () => {
   assert(index.includes('class="shell-line"'));
   assert(index.includes('id="quickstart-copy"'));
   assert(!index.includes('cd</span> LiteScript'));
+  for (const navLabel of ['Overview', 'Learn', 'Gym', 'Docs', 'Modules', 'Tools', 'Gallery', 'Play']) {
+    assert(index.includes(`>${navLabel}</a>`), `missing nav link ${navLabel}`);
+  }
+  assert(index.includes('id="site-search-btn"'));
+  assert(index.includes('runtime/search.js'));
   const styleCss = readFileSync(join(out, 'style.css'), 'utf8');
   assert(styleCss.includes('.theme-toggle.theme-toggle-shine'));
   assert(styleCss.includes('.shell-line::before'));
