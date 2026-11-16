@@ -45,6 +45,32 @@ also treats `Float` and `Double` as aliases of the same `Float64` type. These
 names do not create additional type identities; narrower numeric types remain
 separate from these aliases. Use the explicit-width names in review examples.
 
+### Special types to review
+
+The user identifies these alongside the numeric types. This list records the
+discussion, not a completed primitive-type contract or compiler support:
+
+- `Bool`: Boolean values, already part of the language draft.
+- `Bit`: a future discussion, including its meaning, operations and storage.
+- `Nibble`: a future discussion, including its relationship to four bits,
+  operations and storage.
+- `Byte`: the user associates it with `UnsignedInt8`; whether that means a
+  transparent alias or a distinct type, its final spelling, operations and
+  target support need review.
+- `Char`: a Unicode character. The user leaves open whether its representation
+  relates to UTF-8, UTF-16, UTF-32, a union, an enum or another model. Define
+  what one character means (code point, scalar value or user-perceived grapheme)
+  separately from its encoding and storage, and compare their costs and zero
+  behavior before selecting a representation.
+- `Ref64`: a possible future facility for C FFI. Its meaning, ownership and
+  access rules, width, portability and relationship to target pointer/ABI
+  representations remain open; do not assume a 64-bit pointer on every target.
+
+Except for `Bool`, these entries do not establish selected language syntax or
+prove generated compiler support. The list does not resolve their relationships
+to `String`, collections, references, numeric conversions, or the universal
+zero rule.
+
 ### Unsigned integers: explicit, portable capability
 
 The user favors signed integers for ordinary Lite code and sees unsigned
