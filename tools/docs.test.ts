@@ -7,7 +7,7 @@ import { test } from 'node:test';
 import { fileURLToPath } from 'node:url';
 import { compileTs } from '../compiler/host.ts';
 import { checkTsArtifact } from '../igniter/artifacts.ts';
-import { checkDocuments, documents } from './docs.ts';
+import { checkDocuments, documents, extractModules, renderDocuments } from './docs.ts';
 
 const root = fileURLToPath(new URL('../', import.meta.url));
 
@@ -50,4 +50,29 @@ test('generated docs artifact matches tools/src/docs.lts and passes strict TS ch
   assert.equal(compiled.stdout.toString('utf8'), generated);
   const checked = checkTsArtifact(generated);
   assert.equal(checked.status, 0, `${checked.stdout}\n${checked.stderr}`);
+});
+
+test('renderDocuments and extractModules return valid structured metadata via generated Lite docs tool', () => {
+  const rendered = renderDocuments(['docs/start-here.md', 'docs/tour.md']);
+  assert.equal(rendered.length, 2);
+  assert.equal(rendered[0]?.path, 'docs/start-here.md');
+  assert.equal(rendered[0]?.title, 'Start with LiteLang');
+  assert.equal(rendered[0]?.status, 'guide');
+  assert(rendered[0]!.toc.length >= 3);
+  assert(rendered[0]!.html.includes('<h1 id="start-with-litelang">Start with LiteLang</h1>'));
+  assert(rendered[1]!.html.includes('data-fence="0"'));
+
+  const modules = extractModules();
+  assert.equal(modules.length, 17);
+  const ioMod = modules.find(m => m.id === 'core/io');
+  assert(ioMod !== undefined);
+  assert.equal(ioMod.environment, 'universal');
+  assert(ioMod.symbols.some(s => s.name === 'outputLine' && s.isHostDeclaration));
+  const canvasMod = modules.find(m => m.id === 'extra/canvas');
+  assert(canvasMod !== undefined);
+  assert.equal(canvasMod.environment, 'play');
+  assert(canvasMod.symbols.some(s => s.kind === 'type' && s.name === 'Color'));
+  const fileMod = modules.find(m => m.id === 'core/file');
+  assert(fileMod !== undefined);
+  assert.equal(fileMod.environment, 'cli');
 });

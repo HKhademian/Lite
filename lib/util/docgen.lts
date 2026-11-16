@@ -1,0 +1,317 @@
+/** Provisional `.lts` module API extractor for `lib/core` and `lib/extra` documentation. */
+
+fs := import "core/file";
+integer := import "core/int";
+text := import "core/text";
+list := import "core/list";
+path := import "core/path";
+json := import "util/json";
+
+/** Strips leading block-comment delimiters, trailing close markers, and per-line `*` prefixes from a block comment body. */
+cleanDocComment := fn(rawComment: String): String {
+    size := text.length(rawComment);
+    var start := 2;
+    if start < size and text.at(rawComment, start) == "*" {
+        start += 1;
+    }
+    var end := size;
+    if end - 2 >= start and text.startsWithAt(rawComment, end - 2, "*/") {
+        end -= 2;
+    }
+    inner := text.slice(rawComment, start, end);
+    innerLen := text.length(inner);
+    cleanedLines: mut List<String> = [];
+    var pos := 0;
+    loop pos <= innerLen {
+        nl := text.indexOfText(inner, "\n", pos);
+        lineEnd := if nl < 0 { innerLen } else { nl };
+        var cleanEnd := lineEnd;
+        if cleanEnd > pos and text.at(inner, cleanEnd - 1) == "\r" {
+            cleanEnd -= 1;
+        }
+        trimmed := text.trim(text.slice(inner, pos, cleanEnd));
+        var lineBody := trimmed;
+        if text.startsWithAt(trimmed, 0, "*") {
+            afterStar := text.slice(trimmed, 1, text.length(trimmed));
+            lineBody = if text.startsWithAt(afterStar, 0, " ") {
+                text.slice(afterStar, 1, text.length(afterStar))
+            } else {
+                text.trimStart(afterStar)
+            };
+        }
+        list.pushBack(mut cleanedLines, lineBody);
+        if nl < 0 { break; }
+        pos = nl + 1;
+    }
+    text.trim(text.joinTexts(cleanedLines, "\n"))
+};
+
+/** Normalizes internal line breaks and repeated whitespace in a extracted signature string. */
+normalizeSignature := fn(raw: String): String {
+    size := text.length(raw);
+    var out := "";
+    var i := 0;
+    var pendingSpace := false;
+    loop i < size {
+        ch := text.at(raw, i);
+        if text.isWhitespace(ch) {
+            if out =!= "" {
+                pendingSpace = true;
+            }
+        } else {
+            if pendingSpace {
+                lastOut := text.at(out, text.length(out) - 1);
+                if lastOut =!= "(" and ch =!= ")" and ch =!= "," {
+                    out = out + " ";
+                }
+                pendingSpace = false;
+            }
+            out = out + ch;
+        }
+        i += 1;
+    }
+    text.trim(out)
+};
+
+skipBlockComment := fn(source: String, start: Int, startLine: Int): (next: Int, nextLine: Int, raw: String) {
+    size := text.length(source);
+    var pos := start + 2;
+    var line := startLine;
+    var depth := 1;
+    loop pos < size and depth > 0 {
+        if pos + 1 < size and text.at(source, pos) == "/" and text.at(source, pos + 1) == "*" {
+            depth += 1;
+            pos += 2;
+        } else if pos + 1 < size and text.at(source, pos) == "*" and text.at(source, pos + 1) == "/" {
+            depth -= 1;
+            pos += 2;
+        } else {
+            if text.at(source, pos) == "\n" { line += 1; }
+            pos += 1;
+        }
+    }
+    (next = pos, nextLine = line, raw = text.slice(source, start, pos))
+};
+
+skipStringLiteral := fn(source: String, start: Int, startLine: Int): (next: Int, nextLine: Int) {
+    size := text.length(source);
+    var pos := start + 1;
+    var line := startLine;
+    loop pos < size {
+        ch := text.at(source, pos);
+        if ch == "\\" and pos + 1 < size {
+            if text.at(source, pos + 1) == "\n" { line += 1; }
+            pos += 2;
+        } else if ch == "\"" {
+            return (next = pos + 1, nextLine = line);
+        } else {
+            if ch == "\n" { line += 1; }
+            pos += 1;
+        }
+    }
+    (next = pos, nextLine = line)
+};
+
+skipLineComment := fn(source: String, start: Int): Int {
+    nl := text.indexOfText(source, "\n", start);
+    if nl < 0 { text.length(source) } else { nl }
+};
+
+skipInlineTrivia := fn(source: String, start: Int, startLine: Int): (next: Int, nextLine: Int) {
+    size := text.length(source);
+    var pos := start;
+    var line := startLine;
+    loop pos < size {
+        ch := text.at(source, pos);
+        if text.isWhitespace(ch) {
+            if ch == "\n" { line += 1; }
+            pos += 1;
+        } else if pos + 1 < size and ch == "/" and text.at(source, pos + 1) == "/" {
+            pos = skipLineComment(source, pos);
+        } else if pos + 1 < size and ch == "/" and text.at(source, pos + 1) == "*" {
+            skipped := skipBlockComment(source, pos, line);
+            pos = skipped.next;
+            line = skipped.nextLine;
+        } else {
+            break;
+        }
+    }
+    (next = pos, nextLine = line)
+};
+
+/** Classifies a module namespace and name into `"universal"`, `"play"`, or `"cli"`. */
+classifyEnvironment := fn(namespace: String, name: String): String {
+    if namespace == "extra" { return "play"; }
+    if name == "file" or name == "path" or name == "process" or name == "time" {
+        return "cli";
+    }
+    "universal"
+};
+
+/** Extracts module summary and public `type`/`fn`/`const` symbol records from one `.lts` source string as JSON. */
+pub extractModuleJson := fn(source: String, namespace: String, name: String, fileRel: String): String {
+    size := text.length(source);
+    var pos := 0;
+    var line := 1;
+    var braceDepth := 0;
+    var parenDepth := 0;
+    var sawCode := false;
+    var moduleSummary := "";
+    var pendingDoc := "";
+    symbolsJson: mut List<String> = [];
+
+    loop pos < size {
+        ch := text.at(source, pos);
+        if text.isWhitespace(ch) {
+            if ch == "\n" { line += 1; }
+            pos += 1;
+        } else if ch == "\"" {
+            sawCode = true;
+            lit := skipStringLiteral(source, pos, line);
+            pos = lit.next;
+            line = lit.nextLine;
+        } else if pos + 1 < size and ch == "/" and text.at(source, pos + 1) == "/" {
+            pos = skipLineComment(source, pos);
+        } else if pos + 1 < size and ch == "/" and text.at(source, pos + 1) == "*" {
+            isDoc := pos + 2 < size and text.at(source, pos + 2) == "*" and (pos + 3 >= size or text.at(source, pos + 3) =!= "/");
+            blk := skipBlockComment(source, pos, line);
+            if braceDepth == 0 and parenDepth == 0 {
+                cleaned := cleanDocComment(blk.raw);
+                if not sawCode and moduleSummary == "" and not isDoc {
+                    moduleSummary = cleaned;
+                } else if not sawCode and moduleSummary == "" and isDoc {
+                    afterComment := skipInlineTrivia(source, blk.next, blk.nextLine);
+                    if afterComment.next < size and not text.wordAt(source, afterComment.next, "pub") {
+                        moduleSummary = cleaned;
+                    } else {
+                        pendingDoc = cleaned;
+                    }
+                } else if isDoc {
+                    pendingDoc = cleaned;
+                }
+            }
+            pos = blk.next;
+            line = blk.nextLine;
+        } else if braceDepth == 0 and parenDepth == 0 and text.wordAt(source, pos, "pub") {
+            sawCode = true;
+            declLine := line;
+            afterPub := skipInlineTrivia(source, pos + 3, line);
+            nameStart := afterPub.next;
+            nameEnd := text.skipName(source, nameStart);
+            declName := text.slice(source, nameStart, nameEnd);
+            afterName := skipInlineTrivia(source, nameEnd, afterPub.nextLine);
+            if declName =!= "" and text.startsWithAt(source, afterName.next, ":=") {
+                rhsProbe := skipInlineTrivia(source, afterName.next + 2, afterName.nextLine);
+                rhsStart := rhsProbe.next;
+                var scanPos := rhsStart;
+                var scanLine := rhsProbe.nextLine;
+                var scanParen := 0;
+                var stoppedAt := "";
+                loop scanPos < size {
+                    sc := text.at(source, scanPos);
+                    if sc == "\"" {
+                        sLit := skipStringLiteral(source, scanPos, scanLine);
+                        scanPos = sLit.next;
+                        scanLine = sLit.nextLine;
+                    } else if scanPos + 1 < size and sc == "/" and text.at(source, scanPos + 1) == "/" {
+                        scanPos = skipLineComment(source, scanPos);
+                    } else if scanPos + 1 < size and sc == "/" and text.at(source, scanPos + 1) == "*" {
+                        sBlk := skipBlockComment(source, scanPos, scanLine);
+                        scanPos = sBlk.next;
+                        scanLine = sBlk.nextLine;
+                    } else if sc == "(" {
+                        scanParen += 1;
+                        scanPos += 1;
+                    } else if sc == ")" {
+                        if scanParen > 0 { scanParen -= 1; }
+                        scanPos += 1;
+                    } else if scanParen == 0 and (sc == "{" or sc == ";") {
+                        stoppedAt = sc;
+                        break;
+                    } else {
+                        if sc == "\n" { scanLine += 1; }
+                        scanPos += 1;
+                    }
+                }
+                rawRhs := text.slice(source, rhsStart, scanPos);
+                normRhs := normalizeSignature(rawRhs);
+                var kind := "const";
+                if text.wordAt(normRhs, 0, "type") {
+                    kind = "type";
+                } else if text.wordAt(normRhs, 0, "fn") or text.startsWithAt(normRhs, 0, "fn<") or text.startsWithAt(normRhs, 0, "fn(") {
+                    kind = "fn";
+                }
+                isHost := kind == "fn" and stoppedAt == ";";
+                sig := "pub " + declName + " := " + normRhs + (if stoppedAt == ";" { ";" } else { "" });
+                symJson := "{\"kind\":" + json.quoteString(kind) +
+                ",\"name\":" + json.quoteString(declName) +
+                ",\"signature\":" + json.quoteString(sig) +
+                ",\"isHostDeclaration\":" + (if isHost { "true" } else { "false" }) +
+                ",\"doc\":" + json.quoteString(pendingDoc) +
+                ",\"line\":" + integer.intText(declLine) + "}";
+                list.pushBack(mut symbolsJson, symJson);
+                pendingDoc = "";
+                pos = scanPos;
+                line = scanLine;
+            } else {
+                pendingDoc = "";
+                pos = nameEnd;
+                line = afterName.nextLine;
+            }
+        } else {
+            sawCode = true;
+            if ch == "{" {
+                braceDepth += 1;
+            } else if ch == "}" {
+                if braceDepth > 0 { braceDepth -= 1; }
+                if braceDepth == 0 and parenDepth == 0 {
+                    pendingDoc = "";
+                }
+            } else if ch == "(" {
+                parenDepth += 1;
+            } else if ch == ")" {
+                if parenDepth > 0 { parenDepth -= 1; }
+            } else if ch == ";" and braceDepth == 0 and parenDepth == 0 {
+                pendingDoc = "";
+            }
+            if ch == "\n" { line += 1; }
+            pos += 1;
+        }
+    }
+
+    modId := namespace + "/" + name;
+    env := classifyEnvironment(namespace, name);
+    "{\"id\":" + json.quoteString(modId) +
+    ",\"namespace\":" + json.quoteString(namespace) +
+    ",\"name\":" + json.quoteString(name) +
+    ",\"file\":" + json.quoteString(fileRel) +
+    ",\"environment\":" + json.quoteString(env) +
+    ",\"summary\":" + json.quoteString(moduleSummary) +
+    ",\"symbols\":[" + text.joinTexts(symbolsJson, ",") + "]}"
+};
+
+/** Extracts sorted module API documentation records across `lib/core` and `lib/extra` `.lts` files under `rootDir`. */
+pub extractAllModulesJson := fn(rootDir: String): String {
+    namespaces: List<String> = ["core", "extra"];
+    modJsonEntries: mut List<String> = [];
+    loop namespaces as ns {
+        nsDir := path.join(rootDir, "lib/" + ns);
+        if fs.kind(nsDir) == "dir" {
+            entries := fs.listDir(nsDir);
+            loop entries as entryName {
+                if text.endsWith(entryName, ".lts") {
+                    fullPath := path.join(nsDir, entryName);
+                    if fs.kind(fullPath) == "file" {
+                        readRes := fs.readText(fullPath);
+                        if readRes.ok {
+                            modName := path.stem(entryName);
+                            relFile := "lib/" + ns + "/" + entryName;
+                            list.pushBack(mut modJsonEntries, extractModuleJson(readRes.text, ns, modName, relFile));
+                        }
+                    }
+                }
+            }
+        }
+    }
+    "[" + text.joinTexts(modJsonEntries, ",") + "]"
+};

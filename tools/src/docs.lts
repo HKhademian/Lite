@@ -1,12 +1,49 @@
-/** Offline documentation discovery and local Markdown integrity checks. */
+/** Offline documentation discovery, rendering, module API extraction, and local Markdown integrity checks. */
 
+fs := import "core/file";
 io := import "core/io";
+path := import "core/path";
 proc := import "core/process";
 text := import "core/text";
 list := import "core/list";
 cli := import "util/cli";
+docgen := import "util/docgen";
 docsUtil := import "util/docs";
+mdHtml := import "util/markdown-html";
 project := import "util/project";
+
+splitNonEmptyLines := fn(raw: String): List<String> {
+    lines: mut List<String> = [];
+    size := text.length(raw);
+    var pos := 0;
+    loop pos <= size {
+        nl := text.indexOfText(raw, "\n", pos);
+        end := if nl < 0 { size } else { nl };
+        trimmed := text.trim(text.slice(raw, pos, end));
+        if trimmed =!= "" {
+            list.pushBack(mut lines, trimmed);
+        }
+        if nl < 0 { break; }
+        pos = nl + 1;
+    }
+    lines
+};
+
+renderSelectedJson := fn(rootDir: String, targets: List<String>): String {
+    entries: mut List<String> = [];
+    loop targets as rel {
+        fullFile := path.resolve(rootDir, rel);
+        readRes := fs.readText(fullFile);
+        if not readRes.ok {
+            io.errorLine(rel + ": " + readRes.error);
+            io.exit(1);
+        }
+        relPath := path.relative(rootDir, fullFile);
+        list.pushBack(mut entries, mdHtml.renderMarkdownJson(readRes.text, relPath));
+    }
+    if list.listCountText(entries) == 0 { return "[]"; }
+    "[\n  " + text.joinTexts(entries, ",\n  ") + "\n]"
+};
 
 run := fn(args: List<String>): Unit {
     project.handleVersionFlag(args, "docs", "docs");
@@ -21,6 +58,31 @@ run := fn(args: List<String>): Unit {
             io.exit(1);
         }
         io.outputLine("Documentation links, fragments and fences passed.");
+        io.exit(0);
+    }
+
+    if list.listCountText(args) == 1 and cli.startsWith(args, "--modules-json") {
+        io.outputLine(docgen.extractAllModulesJson(rootDir));
+        io.exit(0);
+    }
+
+    if cli.startsWith(args, "--render-json") {
+        restTargets := cli.rest(args, 1);
+        if list.listCountText(restTargets) > 0 {
+            io.outputLine(renderSelectedJson(rootDir, restTargets));
+            io.exit(0);
+        }
+        stdinPaths := splitNonEmptyLines(io.inputAll(""));
+        if list.listCountText(stdinPaths) > 0 {
+            io.outputLine(renderSelectedJson(rootDir, stdinPaths));
+            io.exit(0);
+        }
+        allDocFiles := docsUtil.listDocFiles(rootDir);
+        relDocFiles: mut List<String> = [];
+        loop allDocFiles as fullDoc {
+            list.pushBack(mut relDocFiles, path.relative(rootDir, fullDoc));
+        }
+        io.outputLine(renderSelectedJson(rootDir, relDocFiles));
         io.exit(0);
     }
 

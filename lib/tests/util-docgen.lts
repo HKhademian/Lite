@@ -1,0 +1,32 @@
+fs := import "core/file";
+test := import "core/test";
+text := import "core/text";
+path := import "core/path";
+json := import "util/json";
+docgen := import "util/docgen";
+project := import "util/project";
+
+sampleModule := "/* Example universal module. */\n\n/** Hidden private constant doc. */\npriv := 1;\n\n/** Public alias type. */\npub Pair := type (a: Int, b: Int);\n\n/** Host signature with multiline params. */\npub probe := fn(\n    first: String,\n    second: Int\n): Bool;\n\n/** Normal implemented fn. */\npub add := fn(x: Int, y: Int): Int {\n    x + y\n}\n";
+
+modJson := docgen.extractModuleJson(sampleModule, "core", "sample", "lib/core/sample.lts");
+validMod := json.validate(modJson);
+test.checkBool("sample module json valid", true, validMod.ok);
+test.checkText("module id", "core/sample", json.readObjectString(modJson, 0, "id").value);
+test.checkText("module env", "universal", json.readObjectString(modJson, 0, "environment").value);
+test.checkText("module summary", "Example universal module.", json.readObjectString(modJson, 0, "summary").value);
+test.checkBool("type symbol present", true, text.containsText(modJson, "\"kind\":\"type\",\"name\":\"Pair\""));
+test.checkBool("host decl normalized", true, text.containsText(modJson, "\"signature\":\"pub probe := fn(first: String, second: Int): Bool;\",\"isHostDeclaration\":true"));
+test.checkBool("impl fn not host", true, text.containsText(modJson, "\"signature\":\"pub add := fn(x: Int, y: Int): Int\",\"isHostDeclaration\":false"));
+test.checkBool("private omitted", false, text.containsText(modJson, "\"priv\""));
+
+rootDir := project.findRepoRoot();
+test.checkBool("repo root found", true, rootDir =!= "");
+allJson := docgen.extractAllModulesJson(rootDir);
+validAll := json.validate(allJson);
+test.checkBool("all modules json valid", true, validAll.ok);
+test.checkBool("includes core/io", true, text.containsText(allJson, "\"id\":\"core/io\""));
+test.checkBool("includes core/text", true, text.containsText(allJson, "\"id\":\"core/text\""));
+test.checkBool("includes extra/canvas", true, text.containsText(allJson, "\"id\":\"extra/canvas\",\"namespace\":\"extra\",\"name\":\"canvas\",\"file\":\"lib/extra/canvas.lts\",\"environment\":\"play\""));
+test.checkBool("core/file is cli", true, text.containsText(allJson, "\"id\":\"core/file\",\"namespace\":\"core\",\"name\":\"file\",\"file\":\"lib/core/file.lts\",\"environment\":\"cli\""));
+
+test.done("util-docgen");

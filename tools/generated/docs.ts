@@ -33,6 +33,58 @@ function lite$inputArgs(): string[] {
     return process.argv.slice(2);
 }
 
+let lite$decoder = new TextDecoder("utf-8", { fatal: true });
+const lite$bytes = new Uint8Array(4096);
+let lite$byteAt = 0, lite$byteEnd = 0;
+let lite$ended = false;
+let lite$pending: string | null | undefined;
+function lite$resetInput(): void {
+    lite$decoder = new TextDecoder("utf-8", { fatal: true });
+    lite$byteAt = 0;
+    lite$byteEnd = 0;
+    lite$ended = false;
+    lite$pending = undefined;
+}
+function lite$inputFault(at: string, message: string): never {
+    process.getBuiltinModule("node:fs").writeSync(2, at + message + "\n");
+    process.exit(1);
+}
+function lite$prompt(text: string | undefined): void {
+    if (text === undefined) return;
+    process.getBuiltinModule("node:fs").writeSync(1, lite$out + text);
+    lite$out = "";
+}
+function lite$peek(at: string): string | null {
+    if (lite$pending !== undefined) return lite$pending;
+    if (lite$ended) return null;
+    try {
+        while (true) {
+            if (lite$byteAt === lite$byteEnd) {
+                lite$byteEnd = process.getBuiltinModule("node:fs").readSync(0, lite$bytes, 0, lite$bytes.length, null);
+                lite$byteAt = 0;
+                if (lite$byteEnd === 0) {
+                    lite$ended = true;
+                    lite$pending = lite$decoder.decode() || null;
+                    return lite$pending;
+                }
+            }
+            const text = lite$decoder.decode(lite$bytes.subarray(lite$byteAt, ++lite$byteAt), { stream: true });
+            if (text !== "") { lite$pending = text; return text; }
+        }
+    } catch (error) {
+        return lite$inputFault(at, "cannot read input: " + (error instanceof Error ? error.message : String(error)));
+    }
+}
+function lite$take(at: string): string | null {
+    const text = lite$peek(at); lite$pending = undefined; return text;
+}
+function lite$inputAll(prompt: string | undefined, at: string): string {
+    lite$prompt(prompt);
+    let text = "";
+    for (let ch = lite$take(at); ch !== null; ch = lite$take(at)) text += ch;
+    return text;
+}
+
 function lite$reportError(text: string): void {
     process.getBuiltinModule("node:fs").writeSync(2, text + "\n");
 }
@@ -181,6 +233,40 @@ function lite$textIndexOf(source: string, needle: string, start: bigint): bigint
     return -1n;
 }
 
+function lite$textSkipWhile(source: string, start: bigint, spaces: boolean): bigint {
+    if (start < 0n) lite$fault("BoundPanic", 0, "textAt index outside text");
+    let pos = Number(start);
+    if (lite$isBmp(source)) {
+        const len = source.length;
+        if (pos >= len) return start;
+        if (spaces) {
+            while (pos < len) {
+                const c = source.charCodeAt(pos);
+                if (c === 32 || c === 9 || c === 13 || c === 10) pos += 1;
+                else break;
+            }
+        } else {
+            while (pos < len) {
+                const c = source.charCodeAt(pos);
+                if ((c >= 97 && c <= 122) || (c >= 65 && c <= 90) || (c >= 48 && c <= 57) || c === 95) pos += 1;
+                else break;
+            }
+        }
+        return BigInt(pos);
+    }
+    const points = lite$textPoints(source);
+    const len = points.length;
+    if (pos >= len) return start;
+    while (pos < len) {
+        const p = points[pos]!;
+        if (p.length !== 1) break;
+        const c = p.charCodeAt(0);
+        if (spaces ? (c === 32 || c === 9 || c === 13 || c === 10) : ((c >= 97 && c <= 122) || (c >= 65 && c <= 90) || (c >= 48 && c <= 57) || c === 95)) pos += 1;
+        else break;
+    }
+    return BigInt(pos);
+}
+
 function lite$textStartsWithAt(source: string, position: bigint, text: string): boolean {
     const pos = Number(position);
     if (pos < 0 || pos > source.length) return false;
@@ -205,11 +291,53 @@ function lite$textStartsWithAt(source: string, position: bigint, text: string): 
     return true;
 }
 
+function lite$textWordAt(source: string, position: bigint, word: string): boolean {
+    const pos = Number(position);
+    if (pos < 0) return false;
+    if (lite$isBmp(source)) {
+        if (pos > source.length) return false;
+        if (!source.startsWith(word, pos)) return false;
+        const after = pos + word.length;
+        if (after >= source.length) return true;
+        const cc = source.charCodeAt(after);
+        return !((cc >= 65 && cc <= 90) || (cc >= 97 && cc <= 122) || (cc >= 48 && cc <= 57) || cc === 95);
+    }
+    if (!lite$textStartsWithAt(source, position, word)) return false;
+    const points = lite$textPoints(source);
+    const wLen = lite$isBmp(word) ? word.length : lite$textPoints(word).length;
+    const after = pos + wLen;
+    if (after >= points.length) return true;
+    const next = points[after];
+    if (next === undefined || next.length !== 1) return true;
+    const cc = next.charCodeAt(0);
+    return !((cc >= 65 && cc <= 90) || (cc >= 97 && cc <= 122) || (cc >= 48 && cc <= 57) || cc === 95);
+}
+
 function lite$textToInt(text: string): { value: bigint; ok: boolean } {
     if (!/^[+-]?[0-9]+$/.test(text)) return { value: 0n, ok: false };
     const value = BigInt(text);
     if (value < -9223372036854775808n || value > 9223372036854775807n) return { value: 0n, ok: false };
     return { value, ok: true };
+}
+
+function lite$textTrim(source: string, trimLeft: boolean, trimRight: boolean): string {
+    let start = 0;
+    let end = source.length;
+    if (trimLeft) {
+        while (start < end) {
+            const c = source.charCodeAt(start);
+            if (c !== 32 && c !== 9 && c !== 13 && c !== 10) break;
+            start += 1;
+        }
+    }
+    if (trimRight) {
+        while (end > start) {
+            const c = source.charCodeAt(end - 1);
+            if (c !== 32 && c !== 9 && c !== 13 && c !== 10) break;
+            end -= 1;
+        }
+    }
+    return start === 0 && end === source.length ? source : source.slice(start, end);
 }
 
 function lite$textToLowerAscii(source: string): string {
@@ -238,7 +366,7 @@ function lite$listPopBack<T>(items: T[], at: number): T {
     return items.pop() as T;
 }
 
-const lite$intLines: readonly number[] = [0, 76, 77, 101, 132, 160, 188, 214, 246, 280, 281, 319, 372, 373, 419, 527, 528, 603, 657, 703, 761, 785, 795, 871, 891, 897, 898, 944, 1006, 1007, 1023, 1081, 1101, 1107, 1108, 1129, 1181, 1205, 1242, 1266, 1276, 1309, 1329, 1335, 1336, 1393, 1422, 1501, 1521, 1527, 1561, 1564, 1565, 1586];
+const lite$intLines: readonly number[] = [0, 111, 112, 138, 162, 190, 221, 249, 277, 303, 335, 367, 406, 440, 441, 495, 529, 559, 577, 600, 648, 695, 752, 780, 827, 837, 866, 888, 894, 904, 907, 908, 983, 1019, 1045, 1093, 1135, 1163, 1217, 1241, 1251, 1304, 1390, 1396, 1453, 1508, 1511, 1512, 1550, 1603, 1604, 1650, 1758, 1759, 1834, 1888, 1934, 1992, 2016, 2026, 2102, 2122, 2128, 2129, 2211, 2273, 2293, 2299, 2300, 2347, 2389, 2438, 2507, 2531, 2541, 2600, 2648, 2716, 2740, 2750, 2805, 2849, 2887, 2964, 2974, 3039, 3059, 3065, 3066, 3112, 3174, 3175, 3191, 3249, 3269, 3275, 3276, 3297, 3349, 3373, 3410, 3434, 3444, 3477, 3497, 3503, 3504, 3561, 3590, 3669, 3689, 3695, 3729, 3732, 3733, 3754];
 const lite$intSource = "tools/src/docs.lts:";
 const lite$intMin = -(1n << 63n), lite$intMax = (1n << 63n) - 1n;
 function lite$fault(category: string, at: number, message: string): never {
@@ -259,6 +387,7 @@ function lite$multiplyInt(left: bigint, right: bigint, at: number): bigint { ret
 
 export function main(lite$write?: (text: string) => void): string {
     lite$out = "";
+    lite$resetInput();
     function lite$emit(text: string): void {
         if (lite$write === undefined) lite$out += text;
         else lite$write(text);
@@ -348,6 +477,12 @@ export function main(lite$write?: (text: string) => void): string {
         return (lite_ch === "_" || (lite_ch.length === 1 && ((lite_ch >= "a" && lite_ch <= "z") || (lite_ch >= "A" && lite_ch <= "Z") || (lite_ch >= "0" && lite_ch <= "9"))));
     }
     void liteFn$lib$core$text$isNameContinue;
+    function liteFn$lib$core$text$skipName(lite_source: string, lite_start: bigint): bigint {
+        void lite_source;
+        void lite_start;
+        return lite$textSkipWhile(lite_source, lite_start, false);
+    }
+    void liteFn$lib$core$text$skipName;
     function liteFn$lib$core$text$startsWithAt(lite_source: string, lite_position: bigint, lite_text: string): boolean {
         void lite_source;
         void lite_position;
@@ -355,6 +490,13 @@ export function main(lite$write?: (text: string) => void): string {
         return lite$textStartsWithAt(lite_source, lite_position, lite_text);
     }
     void liteFn$lib$core$text$startsWithAt;
+    function liteFn$lib$core$text$wordAt(lite_source: string, lite_position: bigint, lite_word: string): boolean {
+        void lite_source;
+        void lite_position;
+        void lite_word;
+        return lite$textWordAt(lite_source, lite_position, lite_word);
+    }
+    void liteFn$lib$core$text$wordAt;
     function liteFn$lib$core$text$indexOfText(lite_source: string, lite_needle: string, lite_start: bigint): bigint {
         void lite_source;
         void lite_needle;
@@ -378,6 +520,16 @@ export function main(lite$write?: (text: string) => void): string {
         return (lite_ch === " " || lite_ch === "\t" || lite_ch === "\r" || lite_ch === "\n");
     }
     void liteFn$lib$core$text$isWhitespace;
+    function liteFn$lib$core$text$trimStart(lite_source: string): string {
+        void lite_source;
+        return lite$textTrim(lite_source, true, false);
+    }
+    void liteFn$lib$core$text$trimStart;
+    function liteFn$lib$core$text$trim(lite_source: string): string {
+        void lite_source;
+        return lite$textTrim(lite_source, true, true);
+    }
+    void liteFn$lib$core$text$trim;
     function liteFn$lib$core$text$endsWith(lite_source: string, lite_suffix: string): boolean {
         void lite_source;
         void lite_suffix;
@@ -1486,6 +1638,1118 @@ export function main(lite$write?: (text: string) => void): string {
         return [...(lite_bodies)];
     }
     void liteFn$lib$util$markdown$extractBacktickFenceBodies;
+    function liteFn$lib$util$markdown__html$escapeHtml(lite_raw: string): string {
+        void lite_raw;
+        const lite_size = lite$textLength(lite_raw);
+        void lite_size;
+        let lite_out = "";
+        void lite_out;
+        let lite_runStart = 0n;
+        void lite_runStart;
+        let lite_i = 0n;
+        void lite_i;
+        while (((lite_i) < (lite_size))) {
+            const lite_ch = lite$textAt(lite_raw, lite_i, 470);
+            void lite_ch;
+            let lite_esc = "";
+            void lite_esc;
+            if (((lite_ch) === ("&"))) {
+                lite_esc = "&amp;";
+            } else if (((lite_ch) === ("<"))) {
+                lite_esc = "&lt;";
+            } else if (((lite_ch) === (">"))) {
+                lite_esc = "&gt;";
+            } else if (((lite_ch) === ("\""))) {
+                lite_esc = "&quot;";
+            }
+            if (((lite_esc) !== (""))) {
+                if (((lite_i) > (lite_runStart))) {
+                    lite_out = ((lite_out) + (lite$textSlice(lite_raw, lite_runStart, lite_i, 751)));
+                }
+                lite_out = ((lite_out) + (lite_esc));
+                lite_runStart = lite$addInt(lite_i, 1n, 837);
+            }
+            lite_i = lite$addInt(lite_i, 1n, 862);
+        }
+        if (((lite_runStart) === (0n))) {
+            return lite_raw;
+        }
+        if (((lite_runStart) < (lite_size))) {
+            lite_out = ((lite_out) + (lite$textSlice(lite_raw, lite_runStart, lite_size, 948)));
+        }
+        return lite_out;
+    }
+    void liteFn$lib$util$markdown__html$escapeHtml;
+    function liteFn$lib$util$markdown__html$countCharAt(lite_source: string, lite_start: bigint, lite_limit: bigint, lite_ch: string): bigint {
+        void lite_source;
+        void lite_start;
+        void lite_limit;
+        void lite_ch;
+        let lite_count = 0n;
+        void lite_count;
+        while (((((lite$addInt(lite_start, lite_count, 1107)) < (lite_limit))) && (((lite$textAt(lite_source, lite$addInt(lite_start, lite_count, 1149), 1127)) === (lite_ch))))) {
+            lite_count = lite$addInt(lite_count, 1n, 1180);
+        }
+        return lite_count;
+    }
+    void liteFn$lib$util$markdown__html$countCharAt;
+    function liteFn$lib$util$markdown__html$findLineEnd(lite_source: string, lite_start: bigint, lite_size: bigint): bigint {
+        void lite_source;
+        void lite_start;
+        void lite_size;
+        const lite_idx = liteFn$lib$core$text$indexOfText(lite_source, "\n", lite_start);
+        void lite_idx;
+        return (Boolean(((lite_idx) < (0n))) ? lite_size : lite_idx);
+    }
+    void liteFn$lib$util$markdown__html$findLineEnd;
+    function liteFn$lib$util$markdown__html$splitLines(lite_source: string): string[] {
+        void lite_source;
+        const lite_lines: string[] = [...([])];
+        void lite_lines;
+        const lite_size = lite$textLength(lite_source);
+        void lite_size;
+        let lite_pos = 0n;
+        void lite_pos;
+        while (((lite_pos) <= (lite_size))) {
+            const lite_lineEnd = liteFn$lib$util$markdown__html$findLineEnd(lite_source, lite_pos, lite_size);
+            void lite_lineEnd;
+            let lite_cleanEnd = lite_lineEnd;
+            void lite_cleanEnd;
+            if (((((lite_cleanEnd) > (lite_pos))) && (((lite$textAt(lite_source, lite$subtractInt(lite_cleanEnd, 1n, 1657), 1632)) === ("\r"))))) {
+                lite_cleanEnd = lite$subtractInt(lite_cleanEnd, 1n, 1693);
+            }
+            lite_lines.push(lite$textSlice(lite_source, lite_pos, lite_cleanEnd, 1742));
+            if (((lite_lineEnd) >= (lite_size))) {
+                break;
+            }
+            lite_pos = lite$addInt(lite_lineEnd, 1n, 1838);
+        }
+        return [...(lite_lines)];
+    }
+    void liteFn$lib$util$markdown__html$splitLines;
+    function liteFn$lib$util$markdown__html$isSchemeChar(lite_ch: string): boolean {
+        void lite_ch;
+        return ((((((((liteFn$lib$core$text$isAsciiLetter(lite_ch)) || (liteFn$lib$core$text$isDigit(lite_ch)))) || (((lite_ch) === ("+"))))) || (((lite_ch) === ("."))))) || (((lite_ch) === ("-"))));
+    }
+    void liteFn$lib$util$markdown__html$isSchemeChar;
+    function liteFn$lib$util$markdown__html$isExternalHref(lite_target: string): boolean {
+        void lite_target;
+        if (liteFn$lib$core$text$startsWithAt(lite_target, 0n, "//")) {
+            return true;
+        }
+        const lite_size = lite$textLength(lite_target);
+        void lite_size;
+        if (((((lite_size) < (2n))) || ((!(liteFn$lib$core$text$isAsciiLetter(lite$textAt(lite_target, 0n, 2171))))))) {
+            return false;
+        }
+        let lite_i = 1n;
+        void lite_i;
+        while (((lite_i) < (lite_size))) {
+            const lite_ch = lite$textAt(lite_target, lite_i, 2259);
+            void lite_ch;
+            if (((lite_ch) === (":"))) {
+                return true;
+            }
+            if ((!(liteFn$lib$util$markdown__html$isSchemeChar(lite_ch)))) {
+                return false;
+            }
+            lite_i = lite$addInt(lite_i, 1n, 2377);
+        }
+        return false;
+    }
+    void liteFn$lib$util$markdown__html$isExternalHref;
+    function liteFn$lib$util$markdown__html$isEscapablePunct(lite_ch: string): boolean {
+        void lite_ch;
+        return liteFn$lib$core$text$containsText("\\`*_{}[]()#+-.!|<>\"'~", lite_ch);
+    }
+    void liteFn$lib$util$markdown__html$isEscapablePunct;
+    function liteFn$lib$util$markdown__html$findClosingCodeTicks(lite_line: string, lite_start: bigint, lite_tickCount: bigint): bigint {
+        void lite_line;
+        void lite_start;
+        void lite_tickCount;
+        const lite_size = lite$textLength(lite_line);
+        void lite_size;
+        let lite_pos = lite_start;
+        void lite_pos;
+        while (((lite_pos) < (lite_size))) {
+            if (((lite$textAt(lite_line, lite_pos, 2665)) === ("`"))) {
+                const lite_cnt = liteFn$lib$util$markdown__html$countCharAt(lite_line, lite_pos, lite_size, "`");
+                void lite_cnt;
+                if (((lite_cnt) === (lite_tickCount))) {
+                    return lite_pos;
+                }
+                lite_pos = lite$addInt(lite_pos, lite_cnt, 2811);
+            } else {
+                lite_pos = lite$addInt(lite_pos, 1n, 2852);
+            }
+        }
+        return (-1n);
+    }
+    void liteFn$lib$util$markdown__html$findClosingCodeTicks;
+    function liteFn$lib$util$markdown__html$findMatchingBracketEnd(lite_line: string, lite_openPos: bigint): bigint {
+        void lite_line;
+        void lite_openPos;
+        const lite_size = lite$textLength(lite_line);
+        void lite_size;
+        let lite_pos = lite$addInt(lite_openPos, 1n, 3003);
+        void lite_pos;
+        let lite_depth = 1n;
+        void lite_depth;
+        while (((lite_pos) < (lite_size))) {
+            const lite_ch = lite$textAt(lite_line, lite_pos, 3064);
+            void lite_ch;
+            if (((((lite_ch) === ("\\"))) && (((lite$addInt(lite_pos, 1n, 3114)) < (lite_size))))) {
+                lite_pos = lite$addInt(lite_pos, 2n, 3143);
+            } else if (((lite_ch) === ("`"))) {
+                const lite_ticks = liteFn$lib$util$markdown__html$countCharAt(lite_line, lite_pos, lite_size, "`");
+                void lite_ticks;
+                const lite_closeTicks = liteFn$lib$util$markdown__html$findClosingCodeTicks(lite_line, lite$addInt(lite_pos, lite_ticks, 3292), lite_ticks);
+                void lite_closeTicks;
+                if (((lite_closeTicks) >= (0n))) {
+                    lite_pos = lite$addInt(lite_closeTicks, lite_ticks, 3375);
+                } else {
+                    lite_pos = lite$addInt(lite_pos, lite_ticks, 3425);
+                }
+            } else if (((lite_ch) === ("["))) {
+                lite_depth = lite$addInt(lite_depth, 1n, 3497);
+                lite_pos = lite$addInt(lite_pos, 1n, 3519);
+            } else if (((lite_ch) === ("]"))) {
+                lite_depth = lite$subtractInt(lite_depth, 1n, 3573);
+                if (((lite_depth) === (0n))) {
+                    return lite_pos;
+                }
+                lite_pos = lite$addInt(lite_pos, 1n, 3637);
+            } else {
+                lite_pos = lite$addInt(lite_pos, 1n, 3676);
+            }
+        }
+        return (-1n);
+    }
+    void liteFn$lib$util$markdown__html$findMatchingBracketEnd;
+    function liteFn$lib$util$markdown__html$parseLinkDestination(lite_line: string, lite_openParen: bigint): { ok: boolean; href: string; title: string; closeParen: bigint } {
+        void lite_line;
+        void lite_openParen;
+        const lite_size = lite$textLength(lite_line);
+        void lite_size;
+        let lite_pos = lite$addInt(lite_openParen, 1n, 3882);
+        void lite_pos;
+        while (((((lite_pos) < (lite_size))) && (liteFn$lib$core$text$isWhitespace(lite$textAt(lite_line, lite_pos, 3929))))) {
+            lite_pos = lite$addInt(lite_pos, 1n, 3963);
+        }
+        if (((lite_pos) >= (lite_size))) {
+            return { ok: false, href: "", title: "", closeParen: (-1n) };
+        }
+        let lite_href = "";
+        void lite_href;
+        if (((lite$textAt(lite_line, lite_pos, 4098)) === ("<"))) {
+            const lite_gtPos = liteFn$lib$core$text$indexOfText(lite_line, ">", lite$addInt(lite_pos, 1n, 4175));
+            void lite_gtPos;
+            if (((lite_gtPos) < (0n))) {
+                return { ok: false, href: "", title: "", closeParen: (-1n) };
+            }
+            lite_href = lite$textSlice(lite_line, lite$addInt(lite_pos, 1n, 4323), lite_gtPos, 4302);
+            lite_pos = lite$addInt(lite_gtPos, 1n, 4356);
+        } else {
+            const lite_destStart = lite_pos;
+            void lite_destStart;
+            let lite_parenDepth = 0n;
+            void lite_parenDepth;
+            while (((lite_pos) < (lite_size))) {
+                const lite_ch = lite$textAt(lite_line, lite_pos, 4473);
+                void lite_ch;
+                if (((((lite_ch) === (")"))) && (((lite_parenDepth) === (0n))))) {
+                    break;
+                }
+                if (((liteFn$lib$core$text$isWhitespace(lite_ch)) && (((lite_parenDepth) === (0n))))) {
+                    break;
+                }
+                if (((lite_ch) === ("("))) {
+                    lite_parenDepth = lite$addInt(lite_parenDepth, 1n, 4655);
+                } else if (((lite_ch) === (")"))) {
+                    lite_parenDepth = lite$subtractInt(lite_parenDepth, 1n, 4706);
+                }
+                lite_pos = lite$addInt(lite_pos, 1n, 4730);
+            }
+            if (((lite_pos) === (lite_destStart))) {
+                return { ok: false, href: "", title: "", closeParen: (-1n) };
+            }
+            lite_href = lite$textSlice(lite_line, lite_destStart, lite_pos, 4874);
+        }
+        while (((((lite_pos) < (lite_size))) && (liteFn$lib$core$text$isWhitespace(lite$textAt(lite_line, lite_pos, 4956))))) {
+            lite_pos = lite$addInt(lite_pos, 1n, 4990);
+        }
+        let lite_title = "";
+        void lite_title;
+        if (((((lite_pos) < (lite_size))) && ((((((lite$textAt(lite_line, lite_pos, 5046)) === ("\""))) || (((lite$textAt(lite_line, lite_pos, 5076)) === ("'")))))))) {
+            const lite_q = lite$textAt(lite_line, lite_pos, 5118);
+            void lite_q;
+            const lite_qEnd = liteFn$lib$core$text$indexOfText(lite_line, lite_q, lite$addInt(lite_pos, 1n, 5184));
+            void lite_qEnd;
+            if (((lite_qEnd) < (0n))) {
+                return { ok: false, href: "", title: "", closeParen: (-1n) };
+            }
+            lite_title = lite$textSlice(lite_line, lite$addInt(lite_pos, 1n, 5332), lite_qEnd, 5311);
+            lite_pos = lite$addInt(lite_qEnd, 1n, 5363);
+            while (((((lite_pos) < (lite_size))) && (liteFn$lib$core$text$isWhitespace(lite$textAt(lite_line, lite_pos, 5414))))) {
+                lite_pos = lite$addInt(lite_pos, 1n, 5452);
+            }
+        }
+        if (((((lite_pos) >= (lite_size))) || (((lite$textAt(lite_line, lite_pos, 5496)) !== (")"))))) {
+            return { ok: false, href: "", title: "", closeParen: (-1n) };
+        }
+        return { ok: true, href: lite_href, title: lite_title, closeParen: lite_pos };
+    }
+    void liteFn$lib$util$markdown__html$parseLinkDestination;
+    function liteFn$lib$util$markdown__html$findClosingEmph(lite_line: string, lite_start: bigint, lite_doubleStar: boolean): bigint {
+        void lite_line;
+        void lite_start;
+        void lite_doubleStar;
+        const lite_size = lite$textLength(lite_line);
+        void lite_size;
+        let lite_pos = lite_start;
+        void lite_pos;
+        while (((lite_pos) < (lite_size))) {
+            const lite_ch = lite$textAt(lite_line, lite_pos, 5815);
+            void lite_ch;
+            if (((((lite_ch) === ("\\"))) && (((lite$addInt(lite_pos, 1n, 5865)) < (lite_size))))) {
+                lite_pos = lite$addInt(lite_pos, 2n, 5894);
+            } else if (((lite_ch) === ("`"))) {
+                const lite_ticks = liteFn$lib$util$markdown__html$countCharAt(lite_line, lite_pos, lite_size, "`");
+                void lite_ticks;
+                const lite_closeTicks = liteFn$lib$util$markdown__html$findClosingCodeTicks(lite_line, lite$addInt(lite_pos, lite_ticks, 6043), lite_ticks);
+                void lite_closeTicks;
+                if (((lite_closeTicks) >= (0n))) {
+                    lite_pos = lite$addInt(lite_closeTicks, lite_ticks, 6126);
+                } else {
+                    lite_pos = lite$addInt(lite_pos, lite_ticks, 6176);
+                }
+            } else if (((lite_ch) === ("*"))) {
+                if (lite_doubleStar) {
+                    const lite_starRun = liteFn$lib$util$markdown__html$countCharAt(lite_line, lite_pos, lite_size, "*");
+                    void lite_starRun;
+                    if (((((((lite_starRun) >= (2n))) && (((lite_pos) > (lite_start))))) && ((!(liteFn$lib$core$text$isWhitespace(lite$textAt(lite_line, lite$subtractInt(lite_pos, 1n, 6412), 6394))))))) {
+                        return lite$subtractInt(lite$addInt(lite_pos, lite_starRun, 6451), 2n, 6461);
+                    }
+                    lite_pos = lite$addInt(lite_pos, lite_starRun, 6504);
+                } else {
+                    if (((((lite$addInt(lite_pos, 1n, 6560)) < (lite_size))) && (((lite$textAt(lite_line, lite$addInt(lite_pos, 1n, 6593), 6575)) === ("*"))))) {
+                        lite_pos = lite$addInt(lite_pos, 2n, 6631);
+                    } else if (((((lite_pos) > (lite_start))) && ((!(liteFn$lib$core$text$isWhitespace(lite$textAt(lite_line, lite$subtractInt(lite_pos, 1n, 6719), 6701))))))) {
+                        return lite_pos;
+                    } else {
+                        lite_pos = lite$addInt(lite_pos, 1n, 6808);
+                    }
+                }
+            } else {
+                lite_pos = lite$addInt(lite_pos, 1n, 6879);
+            }
+        }
+        return (-1n);
+    }
+    void liteFn$lib$util$markdown__html$findClosingEmph;
+    function liteFn$lib$util$markdown__html$renderInline(lite_line: string): string {
+        void lite_line;
+        const lite_size = lite$textLength(lite_line);
+        void lite_size;
+        let lite_out = "";
+        void lite_out;
+        let lite_pos = 0n;
+        void lite_pos;
+        while (((lite_pos) < (lite_size))) {
+            const lite_ch = lite$textAt(lite_line, lite_pos, 7154);
+            void lite_ch;
+            if (((((((lite_ch) === ("\\"))) && (((lite$addInt(lite_pos, 1n, 7204)) < (lite_size))))) && (liteFn$lib$util$markdown__html$isEscapablePunct(lite$textAt(lite_line, lite$addInt(lite_pos, 1n, 7254), 7236))))) {
+                lite_out = ((lite_out) + (liteFn$lib$util$markdown__html$escapeHtml(lite$textAt(lite_line, lite$addInt(lite_pos, 1n, 7315), 7297))));
+                lite_pos = lite$addInt(lite_pos, 2n, 7338);
+            } else if (((lite_ch) === ("`"))) {
+                const lite_ticks = liteFn$lib$util$markdown__html$countCharAt(lite_line, lite_pos, lite_size, "`");
+                void lite_ticks;
+                const lite_closeTicks = liteFn$lib$util$markdown__html$findClosingCodeTicks(lite_line, lite$addInt(lite_pos, lite_ticks, 7487), lite_ticks);
+                void lite_closeTicks;
+                if (((lite_closeTicks) >= (0n))) {
+                    let lite_body = lite$textSlice(lite_line, lite$addInt(lite_pos, lite_ticks, 7586), lite_closeTicks, 7565);
+                    void lite_body;
+                    const lite_bodyLen = lite$textLength(lite_body);
+                    void lite_bodyLen;
+                    if (((((((((lite_bodyLen) >= (2n))) && (((lite$textAt(lite_body, 0n, 7690)) === (" "))))) && (((lite$textAt(lite_body, lite$subtractInt(lite_bodyLen, 1n, 7740), 7718)) === (" "))))) && (((liteFn$lib$core$text$trim(lite_body)) !== (""))))) {
+                        lite_body = lite$textSlice(lite_body, 1n, lite$subtractInt(lite_bodyLen, 1n, 7836), 7808);
+                    }
+                    lite_out = ((((((lite_out) + ("<code>"))) + (liteFn$lib$util$markdown__html$escapeHtml(lite_body)))) + ("</code>"));
+                    lite_pos = lite$addInt(lite_closeTicks, lite_ticks, 7962);
+                } else {
+                    lite_out = ((lite_out) + (liteFn$lib$core$text$repeatText("`", lite_ticks)));
+                    lite_pos = lite$addInt(lite_pos, lite_ticks, 8069);
+                }
+            } else if (((((((lite_ch) === ("!"))) && (((lite$addInt(lite_pos, 1n, 8129)) < (lite_size))))) && (((lite$textAt(lite_line, lite$addInt(lite_pos, 1n, 8162), 8144)) === ("["))))) {
+                const lite_altEnd = liteFn$lib$util$markdown__html$findMatchingBracketEnd(lite_line, lite$addInt(lite_pos, 1n, 8231));
+                void lite_altEnd;
+                if (((((((lite_altEnd) >= (0n))) && (((lite$addInt(lite_altEnd, 1n, 8275)) < (lite_size))))) && (((lite$textAt(lite_line, lite$addInt(lite_altEnd, 1n, 8311), 8290)) === ("("))))) {
+                    const lite_dest = liteFn$lib$util$markdown__html$parseLinkDestination(lite_line, lite$addInt(lite_altEnd, 1n, 8383));
+                    void lite_dest;
+                    if ((lite_dest).ok) {
+                        const lite_altText = lite$textSlice(lite_line, lite$addInt(lite_pos, 2n, 8470), lite_altEnd, 8449);
+                        void lite_altText;
+                        const lite_srcAttr = liteFn$lib$util$markdown__html$escapeHtml((lite_dest).href);
+                        void lite_srcAttr;
+                        const lite_dataAttr = (Boolean(liteFn$lib$util$markdown__html$isExternalHref((lite_dest).href)) ? "" : ((((" data-md-src=\"") + (lite_srcAttr))) + ("\"")));
+                        void lite_dataAttr;
+                        const lite_titleAttr = (Boolean((((lite_dest).title) === (""))) ? "" : ((((" title=\"") + (liteFn$lib$util$markdown__html$escapeHtml((lite_dest).title)))) + ("\"")));
+                        void lite_titleAttr;
+                        lite_out = ((((((((((((((((((lite_out) + ("<img src=\""))) + (lite_srcAttr))) + ("\""))) + (lite_dataAttr))) + (" alt=\""))) + (liteFn$lib$util$markdown__html$escapeHtml(lite_altText)))) + ("\""))) + (lite_titleAttr))) + (" loading=\"lazy\">"));
+                        lite_pos = lite$addInt((lite_dest).closeParen, 1n, 8958);
+                    } else {
+                        lite_out = ((lite_out) + ("!"));
+                        lite_pos = lite$addInt(lite_pos, 1n, 9049);
+                    }
+                } else {
+                    lite_out = ((lite_out) + ("!"));
+                    lite_pos = lite$addInt(lite_pos, 1n, 9147);
+                }
+            } else if (((lite_ch) === ("["))) {
+                const lite_labelEnd = liteFn$lib$util$markdown__html$findMatchingBracketEnd(lite_line, lite_pos);
+                void lite_labelEnd;
+                if (((((((lite_labelEnd) >= (0n))) && (((lite$addInt(lite_labelEnd, 1n, 9298)) < (lite_size))))) && (((lite$textAt(lite_line, lite$addInt(lite_labelEnd, 1n, 9336), 9313)) === ("("))))) {
+                    const lite_dest = liteFn$lib$util$markdown__html$parseLinkDestination(lite_line, lite$addInt(lite_labelEnd, 1n, 9410));
+                    void lite_dest;
+                    if ((lite_dest).ok) {
+                        const lite_labelRaw = lite$textSlice(lite_line, lite$addInt(lite_pos, 1n, 9498), lite_labelEnd, 9477);
+                        void lite_labelRaw;
+                        const lite_hrefAttr = liteFn$lib$util$markdown__html$escapeHtml((lite_dest).href);
+                        void lite_hrefAttr;
+                        const lite_isExt = liteFn$lib$util$markdown__html$isExternalHref((lite_dest).href);
+                        void lite_isExt;
+                        const lite_isHashOnly = liteFn$lib$core$text$startsWithAt((lite_dest).href, 0n, "#");
+                        void lite_isHashOnly;
+                        const lite_relAttr = (Boolean(((lite_isExt) && ((((liteFn$lib$core$text$startsWithAt((lite_dest).href, 0n, "http://")) || (liteFn$lib$core$text$startsWithAt((lite_dest).href, 0n, "https://"))))))) ? " target=\"_blank\" rel=\"noopener\"" : "");
+                        void lite_relAttr;
+                        const lite_dataAttr = (Boolean((((!(lite_isExt))) && ((!(lite_isHashOnly))))) ? ((((" data-md-href=\"") + (lite_hrefAttr))) + ("\"")) : "");
+                        void lite_dataAttr;
+                        const lite_titleAttr = (Boolean((((lite_dest).title) === (""))) ? "" : ((((" title=\"") + (liteFn$lib$util$markdown__html$escapeHtml((lite_dest).title)))) + ("\"")));
+                        void lite_titleAttr;
+                        lite_out = ((((((((((((((((((lite_out) + ("<a href=\""))) + (lite_hrefAttr))) + ("\""))) + (lite_dataAttr))) + (lite_relAttr))) + (lite_titleAttr))) + (">"))) + (liteFn$lib$util$markdown__html$renderInline(lite_labelRaw)))) + ("</a>"));
+                        lite_pos = lite$addInt((lite_dest).closeParen, 1n, 10379);
+                    } else {
+                        lite_out = ((lite_out) + ("["));
+                        lite_pos = lite$addInt(lite_pos, 1n, 10470);
+                    }
+                } else {
+                    lite_out = ((lite_out) + ("["));
+                    lite_pos = lite$addInt(lite_pos, 1n, 10568);
+                }
+            } else if (((lite_ch) === ("*"))) {
+                if (((((lite$addInt(lite_pos, 1n, 10637)) < (lite_size))) && (((lite$textAt(lite_line, lite$addInt(lite_pos, 1n, 10670), 10652)) === ("*"))))) {
+                    if (((((lite$addInt(lite_pos, 2n, 10707)) < (lite_size))) && ((!(liteFn$lib$core$text$isWhitespace(lite$textAt(lite_line, lite$addInt(lite_pos, 2n, 10762), 10744))))))) {
+                        const lite_closeStrong = liteFn$lib$util$markdown__html$findClosingEmph(lite_line, lite$addInt(lite_pos, 2n, 10831), true);
+                        void lite_closeStrong;
+                        if (((lite_closeStrong) > (lite$addInt(lite_pos, 2n, 10884)))) {
+                            const lite_innerStrong = lite$textSlice(lite_line, lite$addInt(lite_pos, 2n, 10950), lite_closeStrong, 10929);
+                            void lite_innerStrong;
+                            lite_out = ((((((lite_out) + ("<strong>"))) + (liteFn$lib$util$markdown__html$renderInline(lite_innerStrong)))) + ("</strong>"));
+                            lite_pos = lite$addInt(lite_closeStrong, 2n, 11093);
+                        } else {
+                            lite_out = ((lite_out) + ("**"));
+                            lite_pos = lite$addInt(lite_pos, 2n, 11197);
+                        }
+                    } else {
+                        lite_out = ((lite_out) + ("**"));
+                        lite_pos = lite$addInt(lite_pos, 2n, 11312);
+                    }
+                } else if (((((lite$addInt(lite_pos, 1n, 11362)) < (lite_size))) && ((!(liteFn$lib$core$text$isWhitespace(lite$textAt(lite_line, lite$addInt(lite_pos, 1n, 11417), 11399))))))) {
+                    const lite_closeEm = liteFn$lib$util$markdown__html$findClosingEmph(lite_line, lite$addInt(lite_pos, 1n, 11478), false);
+                    void lite_closeEm;
+                    if (((lite_closeEm) > (lite$addInt(lite_pos, 1n, 11524)))) {
+                        const lite_innerEm = lite$textSlice(lite_line, lite$addInt(lite_pos, 1n, 11582), lite_closeEm, 11561);
+                        void lite_innerEm;
+                        lite_out = ((((((lite_out) + ("<em>"))) + (liteFn$lib$util$markdown__html$renderInline(lite_innerEm)))) + ("</em>"));
+                        lite_pos = lite$addInt(lite_closeEm, 1n, 11697);
+                    } else {
+                        lite_out = ((lite_out) + ("*"));
+                        lite_pos = lite$addInt(lite_pos, 1n, 11788);
+                    }
+                } else {
+                    lite_out = ((lite_out) + ("*"));
+                    lite_pos = lite$addInt(lite_pos, 1n, 11886);
+                }
+            } else {
+                if (((lite_ch) === ("&"))) {
+                    lite_out = ((lite_out) + ("&amp;"));
+                } else if (((lite_ch) === ("<"))) {
+                    lite_out = ((lite_out) + ("&lt;"));
+                } else if (((lite_ch) === (">"))) {
+                    lite_out = ((lite_out) + ("&gt;"));
+                } else if (((lite_ch) === ("\""))) {
+                    lite_out = ((lite_out) + ("&quot;"));
+                } else {
+                    lite_out = ((lite_out) + (lite_ch));
+                }
+                lite_pos = lite$addInt(lite_pos, 1n, 12191);
+            }
+        }
+        return lite_out;
+    }
+    void liteFn$lib$util$markdown__html$renderInline;
+    function liteFn$lib$util$markdown__html$detectDocStatus(lite_docText: string): string {
+        void lite_docText;
+        const lite_lines: string[] = [...(liteFn$lib$util$markdown__html$splitLines(lite_docText))];
+        void lite_lines;
+        const lite_total = liteFn$lib$core$list$listCountText([...(lite_lines)]);
+        void lite_total;
+        let lite_i = 0n;
+        void lite_i;
+        let lite_headerBlock = "";
+        void lite_headerBlock;
+        while (((((lite_i) < (lite_total))) && (((lite_i) < (20n))))) {
+            lite_headerBlock = ((((lite_headerBlock) + ("\n"))) + (liteFn$lib$core$text$toLowerAscii(lite$listAt((lite_lines), lite_i, 12583))));
+            lite_i = lite$addInt(lite_i, 1n, 12598);
+        }
+        const lite_hasMarker = ((liteFn$lib$core$text$containsText(lite_headerBlock, "status:")) || (liteFn$lib$core$text$containsText(lite_headerBlock, "stage:")));
+        void lite_hasMarker;
+        if ((!(lite_hasMarker))) {
+            return "guide";
+        }
+        if (((((liteFn$lib$core$text$containsText(lite_headerBlock, "historical")) || (liteFn$lib$core$text$containsText(lite_headerBlock, "superseded")))) || (liteFn$lib$core$text$containsText(lite_headerBlock, "retired")))) {
+            return "historical";
+        }
+        if (((((((liteFn$lib$core$text$containsText(lite_headerBlock, "working proposal")) || (liteFn$lib$core$text$containsText(lite_headerBlock, "status: proposal")))) || (liteFn$lib$core$text$containsText(lite_headerBlock, "status: **proposal")))) || (liteFn$lib$core$text$containsText(lite_headerBlock, "draft")))) {
+            return "proposal";
+        }
+        if (((liteFn$lib$core$text$containsText(lite_headerBlock, "selected")) || (liteFn$lib$core$text$containsText(lite_headerBlock, "established")))) {
+            return "selected";
+        }
+        if (liteFn$lib$core$text$containsText(lite_headerBlock, "open")) {
+            return "open";
+        }
+        return "guide";
+    }
+    void liteFn$lib$util$markdown__html$detectDocStatus;
+    function liteFn$lib$util$markdown__html$parseHeadingLine(lite_line: string): { ok: boolean; level: bigint; headingText: string } {
+        void lite_line;
+        const lite_size = lite$textLength(lite_line);
+        void lite_size;
+        let lite_lead = 0n;
+        void lite_lead;
+        while (((((((lite_lead) < (lite_size))) && (((lite_lead) < (3n))))) && (((lite$textAt(lite_line, lite_lead, 13582)) === (" "))))) {
+            lite_lead = lite$addInt(lite_lead, 1n, 13624);
+        }
+        const lite_hashes = liteFn$lib$util$markdown__html$countCharAt(lite_line, lite_lead, lite_size, "#");
+        void lite_hashes;
+        if (((((((lite_hashes) < (1n))) || (((lite_hashes) > (6n))))) || (((lite$addInt(lite_lead, lite_hashes, 13726)) >= (lite_size))))) {
+            return { ok: false, level: 0n, headingText: "" };
+        }
+        const lite_afterHash = lite$textAt(lite_line, lite$addInt(lite_lead, lite_hashes, 13845), 13826);
+        void lite_afterHash;
+        if (((((lite_afterHash) !== (" "))) && (((lite_afterHash) !== ("\t"))))) {
+            return { ok: false, level: 0n, headingText: "" };
+        }
+        let lite_bodyStart = lite$addInt(lite$addInt(lite_lead, lite_hashes, 13996), 1n, 14005);
+        void lite_bodyStart;
+        while (((((lite_bodyStart) < (lite_size))) && (liteFn$lib$core$text$isWhitespace(lite$textAt(lite_line, lite_bodyStart, 14058))))) {
+            lite_bodyStart = lite$addInt(lite_bodyStart, 1n, 14104);
+        }
+        let lite_bodyEnd = lite_size;
+        void lite_bodyEnd;
+        while (((((lite_bodyEnd) > (lite_bodyStart))) && (liteFn$lib$core$text$isWhitespace(lite$textAt(lite_line, lite$subtractInt(lite_bodyEnd, 1n, 14214), 14192))))) {
+            lite_bodyEnd = lite$subtractInt(lite_bodyEnd, 1n, 14238);
+        }
+        while (((((lite_bodyEnd) > (lite_bodyStart))) && (((lite$textAt(lite_line, lite$subtractInt(lite_bodyEnd, 1n, 14305), 14283)) === ("#"))))) {
+            lite_bodyEnd = lite$subtractInt(lite_bodyEnd, 1n, 14335);
+        }
+        while (((((lite_bodyEnd) > (lite_bodyStart))) && (liteFn$lib$core$text$isWhitespace(lite$textAt(lite_line, lite$subtractInt(lite_bodyEnd, 1n, 14420), 14398))))) {
+            lite_bodyEnd = lite$subtractInt(lite_bodyEnd, 1n, 14444);
+        }
+        if (((lite_bodyEnd) <= (lite_bodyStart))) {
+            return { ok: false, level: 0n, headingText: "" };
+        }
+        return { ok: true, level: lite_hashes, headingText: lite$textSlice(lite_line, lite_bodyStart, lite_bodyEnd, 14596) };
+    }
+    void liteFn$lib$util$markdown__html$parseHeadingLine;
+    function liteFn$lib$util$markdown__html$parseFenceOpen(lite_line: string): { ok: boolean; ch: string; count: bigint; lang: string } {
+        void lite_line;
+        const lite_size = lite$textLength(lite_line);
+        void lite_size;
+        let lite_lead = 0n;
+        void lite_lead;
+        while (((((((lite_lead) < (lite_size))) && (((lite_lead) < (3n))))) && (((lite$textAt(lite_line, lite_lead, 14813)) === (" "))))) {
+            lite_lead = lite$addInt(lite_lead, 1n, 14855);
+        }
+        if (((lite_lead) >= (lite_size))) {
+            return { ok: false, ch: "", count: 0n, lang: "" };
+        }
+        const lite_ch = lite$textAt(lite_line, lite_lead, 14953);
+        void lite_ch;
+        if (((((lite_ch) !== ("`"))) && (((lite_ch) !== ("~"))))) {
+            return { ok: false, ch: "", count: 0n, lang: "" };
+        }
+        const lite_cnt = liteFn$lib$util$markdown__html$countCharAt(lite_line, lite_lead, lite_size, lite_ch);
+        void lite_cnt;
+        if (((lite_cnt) < (3n))) {
+            return { ok: false, ch: "", count: 0n, lang: "" };
+        }
+        const lite_info = liteFn$lib$core$text$trim(lite$textSlice(lite_line, lite$addInt(lite_lead, lite_cnt, 15248), lite_size, 15226));
+        void lite_info;
+        if (((((lite_ch) === ("`"))) && (liteFn$lib$core$text$containsText(lite_info, "`")))) {
+            return { ok: false, ch: "", count: 0n, lang: "" };
+        }
+        let lite_langEnd = 0n;
+        void lite_langEnd;
+        const lite_infoLen = lite$textLength(lite_info);
+        void lite_infoLen;
+        while (((((lite_langEnd) < (lite_infoLen))) && ((!(liteFn$lib$core$text$isWhitespace(lite$textAt(lite_info, lite_langEnd, 15490))))))) {
+            lite_langEnd = lite$addInt(lite_langEnd, 1n, 15532);
+        }
+        const lite_lang = lite$textSlice(lite_info, 0n, lite_langEnd, 15556);
+        void lite_lang;
+        return { ok: true, ch: lite_ch, count: lite_cnt, lang: lite_lang };
+    }
+    void liteFn$lib$util$markdown__html$parseFenceOpen;
+    function liteFn$lib$util$markdown__html$isFenceClose(lite_line: string, lite_fenceChar: string, lite_fenceLen: bigint): boolean {
+        void lite_line;
+        void lite_fenceChar;
+        void lite_fenceLen;
+        const lite_size = lite$textLength(lite_line);
+        void lite_size;
+        let lite_lead = 0n;
+        void lite_lead;
+        while (((((((lite_lead) < (lite_size))) && (((lite_lead) < (3n))))) && (((lite$textAt(lite_line, lite_lead, 15804)) === (" "))))) {
+            lite_lead = lite$addInt(lite_lead, 1n, 15846);
+        }
+        const lite_cnt = liteFn$lib$util$markdown__html$countCharAt(lite_line, lite_lead, lite_size, lite_fenceChar);
+        void lite_cnt;
+        if (((lite_cnt) < (lite_fenceLen))) {
+            return false;
+        }
+        return ((liteFn$lib$core$text$trim(lite$textSlice(lite_line, lite$addInt(lite_lead, lite_cnt, 15987), lite_size, 15965))) === (""));
+    }
+    void liteFn$lib$util$markdown__html$isFenceClose;
+    function liteFn$lib$util$markdown__html$isHorizontalRule(lite_line: string): boolean {
+        void lite_line;
+        const lite_trimmed = liteFn$lib$core$text$trim(lite_line);
+        void lite_trimmed;
+        const lite_size = lite$textLength(lite_trimmed);
+        void lite_size;
+        if (((lite_size) < (3n))) {
+            return false;
+        }
+        const lite_first = lite$textAt(lite_trimmed, 0n, 16169);
+        void lite_first;
+        if (((((((lite_first) !== ("-"))) && (((lite_first) !== ("*"))))) && (((lite_first) !== ("_"))))) {
+            return false;
+        }
+        let lite_count = 0n;
+        void lite_count;
+        let lite_i = 0n;
+        void lite_i;
+        while (((lite_i) < (lite_size))) {
+            const lite_ch = lite$textAt(lite_trimmed, lite_i, 16335);
+            void lite_ch;
+            if (((lite_ch) === (lite_first))) {
+                lite_count = lite$addInt(lite_count, 1n, 16399);
+            } else if ((!(liteFn$lib$core$text$isWhitespace(lite_ch)))) {
+                return false;
+            }
+            lite_i = lite$addInt(lite_i, 1n, 16497);
+        }
+        return ((lite_count) >= (3n));
+    }
+    void liteFn$lib$util$markdown__html$isHorizontalRule;
+    function liteFn$lib$util$markdown__html$parseBulletItem(lite_line: string): { ok: boolean; indent: bigint; body: string } {
+        void lite_line;
+        const lite_size = lite$textLength(lite_line);
+        void lite_size;
+        let lite_indent = 0n;
+        void lite_indent;
+        while (((((lite_indent) < (lite_size))) && (((lite$textAt(lite_line, lite_indent, 16684)) === (" "))))) {
+            lite_indent = lite$addInt(lite_indent, 1n, 16730);
+        }
+        if (((lite$addInt(lite_indent, 1n, 16756)) >= (lite_size))) {
+            return { ok: false, indent: 0n, body: "" };
+        }
+        const lite_marker = lite$textAt(lite_line, lite_indent, 16842);
+        void lite_marker;
+        const lite_after = lite$textAt(lite_line, lite$addInt(lite_indent, 1n, 16899), 16878);
+        void lite_after;
+        if ((((((((((lite_marker) === ("-"))) || (((lite_marker) === ("*"))))) || (((lite_marker) === ("+")))))) && ((((((lite_after) === (" "))) || (((lite_after) === ("\t")))))))) {
+            return { ok: true, indent: lite_indent, body: liteFn$lib$core$text$trimStart(lite$textSlice(lite_line, lite$addInt(lite_indent, 2n, 17090), lite_size, 17066)) };
+        }
+        return { ok: false, indent: 0n, body: "" };
+    }
+    void liteFn$lib$util$markdown__html$parseBulletItem;
+    function liteFn$lib$util$markdown__html$parseOrderedItem(lite_line: string): { ok: boolean; indent: bigint; body: string } {
+        void lite_line;
+        const lite_size = lite$textLength(lite_line);
+        void lite_size;
+        let lite_indent = 0n;
+        void lite_indent;
+        while (((((lite_indent) < (lite_size))) && (((lite$textAt(lite_line, lite_indent, 17311)) === (" "))))) {
+            lite_indent = lite$addInt(lite_indent, 1n, 17357);
+        }
+        let lite_pos = lite_indent;
+        void lite_pos;
+        while (((((lite_pos) < (lite_size))) && (liteFn$lib$core$text$isDigit(lite$textAt(lite_line, lite_pos, 17429))))) {
+            lite_pos = lite$addInt(lite_pos, 1n, 17463);
+        }
+        if (((((lite_pos) === (lite_indent))) || (((lite$addInt(lite_pos, 1n, 17503)) >= (lite_size))))) {
+            return { ok: false, indent: 0n, body: "" };
+        }
+        const lite_delim = lite$textAt(lite_line, lite_pos, 17588);
+        void lite_delim;
+        const lite_after = lite$textAt(lite_line, lite$addInt(lite_pos, 1n, 17639), 17621);
+        void lite_after;
+        if ((((((((lite_delim) === ("."))) || (((lite_delim) === (")")))))) && ((((((lite_after) === (" "))) || (((lite_after) === ("\t")))))))) {
+            return { ok: true, indent: lite_indent, body: liteFn$lib$core$text$trimStart(lite$textSlice(lite_line, lite$addInt(lite_pos, 2n, 17808), lite_size, 17787)) };
+        }
+        return { ok: false, indent: 0n, body: "" };
+    }
+    void liteFn$lib$util$markdown__html$parseOrderedItem;
+    function liteFn$lib$util$markdown__html$parseTableRow(lite_line: string): string[] {
+        void lite_line;
+        const lite_cells: string[] = [...([])];
+        void lite_cells;
+        const lite_trimmed = liteFn$lib$core$text$trim(lite_line);
+        void lite_trimmed;
+        const lite_size = lite$textLength(lite_trimmed);
+        void lite_size;
+        if (((((lite_size) === (0n))) || ((!(liteFn$lib$core$text$containsText(lite_trimmed, "|")))))) {
+            return [...(lite_cells)];
+        }
+        let lite_start = 0n;
+        void lite_start;
+        let lite_end = lite_size;
+        void lite_end;
+        if (((lite$textAt(lite_trimmed, 0n, 18144)) === ("|"))) {
+            lite_start = 1n;
+        }
+        if (((((lite_end) > (lite_start))) && (((lite$textAt(lite_trimmed, lite$subtractInt(lite_end, 1n, 18230), 18209)) === ("|"))))) {
+            lite_end = lite$subtractInt(lite_end, 1n, 18248);
+        }
+        let lite_cellStart = lite_start;
+        void lite_cellStart;
+        let lite_i = lite_start;
+        void lite_i;
+        while (((lite_i) <= (lite_end))) {
+            if (((lite_i) === (lite_end))) {
+                lite_cells.push(liteFn$lib$core$text$trim(lite$textSlice(lite_trimmed, lite_cellStart, lite_i, 18393)));
+                break;
+            }
+            const lite_ch = lite$textAt(lite_trimmed, lite_i, 18473);
+            void lite_ch;
+            if (((((lite_ch) === ("\\"))) && (((lite$addInt(lite_i, 1n, 18522)) < (lite_end))))) {
+                lite_i = lite$addInt(lite_i, 2n, 18548);
+            } else if (((lite_ch) === ("`"))) {
+                const lite_ticks = liteFn$lib$util$markdown__html$countCharAt(lite_trimmed, lite_i, lite_end, "`");
+                void lite_ticks;
+                const lite_closePos = liteFn$lib$util$markdown__html$findClosingCodeTicks(lite_trimmed, lite$addInt(lite_i, lite_ticks, 18696), lite_ticks);
+                void lite_closePos;
+                if (((((lite_closePos) >= (0n))) && (((lite_closePos) < (lite_end))))) {
+                    lite_i = lite$addInt(lite_closePos, lite_ticks, 18792);
+                } else {
+                    lite_i = lite$addInt(lite_i, lite_ticks, 18840);
+                }
+            } else if (((lite_ch) === ("|"))) {
+                lite_cells.push(liteFn$lib$core$text$trim(lite$textSlice(lite_trimmed, lite_cellStart, lite_i, 18941)));
+                lite_cellStart = lite$addInt(lite_i, 1n, 19004);
+                lite_i = lite$addInt(lite_i, 1n, 19023);
+            } else {
+                lite_i = lite$addInt(lite_i, 1n, 19060);
+            }
+        }
+        return [...(lite_cells)];
+    }
+    void liteFn$lib$util$markdown__html$parseTableRow;
+    function liteFn$lib$util$markdown__html$isTableSeparatorCell(lite_cell: string): boolean {
+        void lite_cell;
+        const lite_trimmed = liteFn$lib$core$text$trim(lite_cell);
+        void lite_trimmed;
+        const lite_size = lite$textLength(lite_trimmed);
+        void lite_size;
+        if (((lite_size) === (0n))) {
+            return false;
+        }
+        let lite_i = 0n;
+        void lite_i;
+        if (((lite$textAt(lite_trimmed, lite_i, 19269)) === (":"))) {
+            lite_i = lite$addInt(lite_i, 1n, 19300);
+        }
+        let lite_dashes = 0n;
+        void lite_dashes;
+        while (((((lite_i) < (lite_size))) && (((lite$textAt(lite_trimmed, lite_i, 19351)) === ("-"))))) {
+            lite_dashes = lite$addInt(lite_dashes, 1n, 19395);
+            lite_i = lite$addInt(lite_i, 1n, 19411);
+        }
+        if (((((lite_i) < (lite_size))) && (((lite$textAt(lite_trimmed, lite_i, 19443)) === (":"))))) {
+            lite_i = lite$addInt(lite_i, 1n, 19474);
+        }
+        return ((((lite_dashes) >= (1n))) && (((lite_i) === (lite_size))));
+    }
+    void liteFn$lib$util$markdown__html$isTableSeparatorCell;
+    function liteFn$lib$util$markdown__html$alignCodeStyle(lite_code: string): string {
+        void lite_code;
+        if (((lite_code) === ("l"))) {
+            return " style=\"text-align:left\"";
+        }
+        if (((lite_code) === ("r"))) {
+            return " style=\"text-align:right\"";
+        }
+        if (((lite_code) === ("c"))) {
+            return " style=\"text-align:center\"";
+        }
+        return "";
+    }
+    void liteFn$lib$util$markdown__html$alignCodeStyle;
+    function liteFn$lib$util$markdown__html$parseTableAligns(lite_line: string, lite_expectedCols: bigint): { ok: boolean; packed: string } {
+        void lite_line;
+        void lite_expectedCols;
+        const lite_cells: string[] = [...(liteFn$lib$util$markdown__html$parseTableRow(lite_line))];
+        void lite_cells;
+        if (((((liteFn$lib$core$list$listCountText([...(lite_cells)])) !== (lite_expectedCols))) || (((lite_expectedCols) === (0n))))) {
+            return { ok: false, packed: "" };
+        }
+        let lite_packed = "";
+        void lite_packed;
+        for (const lite_cell of [...(lite_cells)]) {
+            void lite_cell;
+            if ((!(liteFn$lib$util$markdown__html$isTableSeparatorCell(lite_cell)))) {
+                return { ok: false, packed: "" };
+            }
+            const lite_trimmed = liteFn$lib$core$text$trim(lite_cell);
+            void lite_trimmed;
+            const lite_leftColon = liteFn$lib$core$text$startsWithAt(lite_trimmed, 0n, ":");
+            void lite_leftColon;
+            const lite_rightColon = liteFn$lib$core$text$endsWith(lite_trimmed, ":");
+            void lite_rightColon;
+            const lite_code = (Boolean(((lite_leftColon) && (lite_rightColon))) ? "c" : (Boolean(lite_rightColon) ? "r" : (Boolean(lite_leftColon) ? "l" : "-")));
+            void lite_code;
+            lite_packed = ((lite_packed) + (lite_code));
+        }
+        return { ok: true, packed: lite_packed };
+    }
+    void liteFn$lib$util$markdown__html$parseTableAligns;
+    function liteFn$lib$util$markdown__html$renderBodyLines(lite_lines: string[], lite_collectToc: boolean): { title: string; html: string; tocJson: string } {
+        void lite_lines;
+        void lite_collectToc;
+        const lite_total = liteFn$lib$core$list$listCountText([...(lite_lines)]);
+        void lite_total;
+        const lite_blocks: string[] = [...([])];
+        void lite_blocks;
+        const lite_seenSlugs: string[] = [...([])];
+        void lite_seenSlugs;
+        const lite_tocEntries: string[] = [...([])];
+        void lite_tocEntries;
+        let lite_docTitle = "";
+        void lite_docTitle;
+        let lite_fenceIndex = 0n;
+        void lite_fenceIndex;
+        let lite_i = 0n;
+        void lite_i;
+        while (((lite_i) < (lite_total))) {
+            const lite_line = lite$listAt((lite_lines), lite_i, 20925);
+            void lite_line;
+            const lite_trimmed = liteFn$lib$core$text$trim(lite_line);
+            void lite_trimmed;
+            if (((lite_trimmed) === (""))) {
+                lite_i = lite$addInt(lite_i, 1n, 21006);
+            } else {
+                const lite_fence = liteFn$lib$util$markdown__html$parseFenceOpen(lite_line);
+                void lite_fence;
+                if ((lite_fence).ok) {
+                    const lite_bodyLines: string[] = [...([])];
+                    void lite_bodyLines;
+                    lite_i = lite$addInt(lite_i, 1n, 21166);
+                    while (((lite_i) < (lite_total))) {
+                        if (liteFn$lib$util$markdown__html$isFenceClose(lite$listAt((lite_lines), lite_i, 21247), (lite_fence).ch, (lite_fence).count)) {
+                            lite_i = lite$addInt(lite_i, 1n, 21302);
+                            break;
+                        }
+                        lite_bodyLines.push(lite$listAt((lite_lines), lite_i, 21416));
+                        lite_i = lite$addInt(lite_i, 1n, 21443);
+                    }
+                    const lite_bodyRaw = (Boolean(((liteFn$lib$core$list$listCountText([...(lite_bodyLines)])) === (0n))) ? "" : ((liteFn$lib$core$text$joinTexts([...(lite_bodyLines)], "\n")) + ("\n")));
+                    void lite_bodyRaw;
+                    const lite_langAttr = liteFn$lib$util$markdown__html$escapeHtml((lite_fence).lang);
+                    void lite_langAttr;
+                    lite_blocks.push((((((((((((("<pre class=\"md-code\" data-lang=\"") + (lite_langAttr))) + ("\" data-fence=\""))) + (liteFn$lib$core$int$intText(lite_fenceIndex)))) + ("\"><code>"))) + (liteFn$lib$util$markdown__html$escapeHtml(lite_bodyRaw)))) + ("</code></pre>")));
+                    lite_fenceIndex = lite$addInt(lite_fenceIndex, 1n, 21916);
+                } else {
+                    const lite_heading = liteFn$lib$util$markdown__html$parseHeadingLine(lite_line);
+                    void lite_heading;
+                    if ((lite_heading).ok) {
+                        if (((((lite_docTitle) === (""))) && ((((lite_heading).level) === (1n))))) {
+                            lite_docTitle = (lite_heading).headingText;
+                        }
+                        const lite_baseSlug = liteFn$lib$util$markdown$headingAnchor((lite_heading).headingText);
+                        void lite_baseSlug;
+                        let lite_dupCount = 0n;
+                        void lite_dupCount;
+                        for (const lite_prevSlug of [...(lite_seenSlugs)]) {
+                            void lite_prevSlug;
+                            if (((lite_prevSlug) === (lite_baseSlug))) {
+                                lite_dupCount = lite$addInt(lite_dupCount, 1n, 22385);
+                            }
+                        }
+                        lite_seenSlugs.push(lite_baseSlug);
+                        const lite_slug = (Boolean(((lite_dupCount) === (0n))) ? lite_baseSlug : ((((lite_baseSlug) + ("-"))) + (liteFn$lib$core$int$intText(lite_dupCount))));
+                        void lite_slug;
+                        const lite_lvlStr = liteFn$lib$core$int$intText((lite_heading).level);
+                        void lite_lvlStr;
+                        lite_blocks.push((((((((((((((((("<h") + (lite_lvlStr))) + (" id=\""))) + (liteFn$lib$util$markdown__html$escapeHtml(lite_slug)))) + ("\">"))) + (liteFn$lib$util$markdown__html$renderInline((lite_heading).headingText)))) + ("</h"))) + (lite_lvlStr))) + (">")));
+                        if (((lite_collectToc) && (((((((lite_heading).level) === (2n))) || ((((lite_heading).level) === (3n)))))))) {
+                            const lite_tocEntry = (((((((((((("{\"level\":") + (lite_lvlStr))) + (",\"id\":"))) + (liteFn$lib$util$json$quoteString(lite_slug)))) + (",\"text\":"))) + (liteFn$lib$util$json$quoteString((lite_heading).headingText)))) + ("}"));
+                            void lite_tocEntry;
+                            lite_tocEntries.push(lite_tocEntry);
+                        }
+                        lite_i = lite$addInt(lite_i, 1n, 23221);
+                    } else if (liteFn$lib$util$markdown__html$isHorizontalRule(lite_line)) {
+                        lite_blocks.push("<hr>");
+                        lite_i = lite$addInt(lite_i, 1n, 23355);
+                    } else if (liteFn$lib$core$text$startsWithAt(liteFn$lib$core$text$trimStart(lite_line), 0n, ">")) {
+                        const lite_quoteLines: string[] = [...([])];
+                        void lite_quoteLines;
+                        while (((lite_i) < (lite_total))) {
+                            const lite_qlTrim = liteFn$lib$core$text$trimStart(lite$listAt((lite_lines), lite_i, 23584));
+                            void lite_qlTrim;
+                            if ((!(liteFn$lib$core$text$startsWithAt(lite_qlTrim, 0n, ">")))) {
+                                break;
+                            }
+                            const lite_afterGt = lite$textSlice(lite_qlTrim, 1n, lite$textLength(lite_qlTrim), 23700);
+                            void lite_afterGt;
+                            const lite_cleaned = (Boolean(liteFn$lib$core$text$startsWithAt(lite_afterGt, 0n, " ")) ? lite$textSlice(lite_afterGt, 1n, lite$textLength(lite_afterGt), 23819) : lite_afterGt);
+                            void lite_cleaned;
+                            lite_quoteLines.push(lite_cleaned);
+                            lite_i = lite$addInt(lite_i, 1n, 23974);
+                        }
+                        let lite_alertKind = "";
+                        void lite_alertKind;
+                        let lite_alertLabel = "";
+                        void lite_alertLabel;
+                        if (((liteFn$lib$core$list$listCountText([...(lite_quoteLines)])) > (0n))) {
+                            const lite_firstQ = liteFn$lib$core$text$trim(lite$listAt((lite_quoteLines), 0n, 24200));
+                            void lite_firstQ;
+                            if (((lite_firstQ) === ("[!NOTE]"))) {
+                                lite_alertKind = "note";
+                                lite_alertLabel = "Note";
+                            } else if (((lite_firstQ) === ("[!TIP]"))) {
+                                lite_alertKind = "tip";
+                                lite_alertLabel = "Tip";
+                            } else if (((lite_firstQ) === ("[!IMPORTANT]"))) {
+                                lite_alertKind = "important";
+                                lite_alertLabel = "Important";
+                            } else if (((lite_firstQ) === ("[!WARNING]"))) {
+                                lite_alertKind = "warning";
+                                lite_alertLabel = "Warning";
+                            } else if (((lite_firstQ) === ("[!CAUTION]"))) {
+                                lite_alertKind = "caution";
+                                lite_alertLabel = "Caution";
+                            }
+                        }
+                        if (((lite_alertKind) !== (""))) {
+                            const lite_innerAlertLines: string[] = [...([])];
+                            void lite_innerAlertLines;
+                            let lite_qi = 1n;
+                            void lite_qi;
+                            const lite_qTotal = liteFn$lib$core$list$listCountText([...(lite_quoteLines)]);
+                            void lite_qTotal;
+                            while (((lite_qi) < (lite_qTotal))) {
+                                lite_innerAlertLines.push(lite$listAt((lite_quoteLines), lite_qi, 25063));
+                                lite_qi = lite$addInt(lite_qi, 1n, 25100);
+                            }
+                            const lite_innerAlert = liteFn$lib$util$markdown__html$renderBodyLines([...(lite_innerAlertLines)], false);
+                            void lite_innerAlert;
+                            lite_blocks.push((((((((((((("<div class=\"md-alert md-alert-") + (lite_alertKind))) + ("\"><div class=\"md-alert-title\">"))) + (lite_alertLabel))) + ("</div>"))) + ((lite_innerAlert).html))) + ("</div>")));
+                        } else {
+                            const lite_innerQuote = liteFn$lib$util$markdown__html$renderBodyLines([...(lite_quoteLines)], false);
+                            void lite_innerQuote;
+                            lite_blocks.push((((("<blockquote>") + ((lite_innerQuote).html))) + ("</blockquote>")));
+                        }
+                    } else {
+                        const lite_hasTable = ((((lite$addInt(lite_i, 1n, 25740)) < (lite_total))) && (liteFn$lib$core$text$containsText(lite_line, "|")));
+                        void lite_hasTable;
+                        let lite_renderedTable = false;
+                        void lite_renderedTable;
+                        if (lite_hasTable) {
+                            const lite_headCells: string[] = [...(liteFn$lib$util$markdown__html$parseTableRow(lite_line))];
+                            void lite_headCells;
+                            const lite_colCount = liteFn$lib$core$list$listCountText([...(lite_headCells)]);
+                            void lite_colCount;
+                            const lite_sepRes = liteFn$lib$util$markdown__html$parseTableAligns(lite$listAt((lite_lines), lite$addInt(lite_i, 1n, 26052), 26050), lite_colCount);
+                            void lite_sepRes;
+                            if ((lite_sepRes).ok) {
+                                lite_renderedTable = true;
+                                const lite_thParts: string[] = [...([])];
+                                void lite_thParts;
+                                let lite_ci = 0n;
+                                void lite_ci;
+                                while (((lite_ci) < (lite_colCount))) {
+                                    const lite_styleAttr = liteFn$lib$util$markdown__html$alignCodeStyle(lite$textAt((lite_sepRes).packed, lite_ci, 26368));
+                                    void lite_styleAttr;
+                                    lite_thParts.push((((((((("<th") + (lite_styleAttr))) + (">"))) + (liteFn$lib$util$markdown__html$renderInline(lite$listAt((lite_headCells), lite_ci, 26505))))) + ("</th>")));
+                                    lite_ci = lite$addInt(lite_ci, 1n, 26557);
+                                }
+                                const lite_rowParts: string[] = [...([])];
+                                void lite_rowParts;
+                                lite_i = lite$addInt(lite_i, 2n, 26684);
+                                while (((lite_i) < (lite_total))) {
+                                    const lite_rowTrim = liteFn$lib$core$text$trim(lite$listAt((lite_lines), lite_i, 26794));
+                                    void lite_rowTrim;
+                                    if (((((lite_rowTrim) === (""))) || ((!(liteFn$lib$core$text$containsText(lite_rowTrim, "|")))))) {
+                                        break;
+                                    }
+                                    if ((((liteFn$lib$util$markdown__html$parseFenceOpen(lite$listAt((lite_lines), lite_i, 26954))).ok) || ((liteFn$lib$util$markdown__html$parseHeadingLine(lite$listAt((lite_lines), lite_i, 26987))).ok))) {
+                                        break;
+                                    }
+                                    const lite_rowCells: string[] = [...(liteFn$lib$util$markdown__html$parseTableRow(lite$listAt((lite_lines), lite_i, 27069)))];
+                                    void lite_rowCells;
+                                    const lite_tdParts: string[] = [...([])];
+                                    void lite_tdParts;
+                                    const lite_rowLen = liteFn$lib$core$list$listCountText([...(lite_rowCells)]);
+                                    void lite_rowLen;
+                                    let lite_rci = 0n;
+                                    void lite_rci;
+                                    while (((lite_rci) < (lite_colCount))) {
+                                        const lite_styleAttr = liteFn$lib$util$markdown__html$alignCodeStyle(lite$textAt((lite_sepRes).packed, lite_rci, 27374));
+                                        void lite_styleAttr;
+                                        const lite_cellVal = (Boolean(((lite_rci) < (lite_rowLen))) ? lite$listAt((lite_rowCells), lite_rci, 27478) : "");
+                                        void lite_cellVal;
+                                        lite_tdParts.push((((((((("<td") + (lite_styleAttr))) + (">"))) + (liteFn$lib$util$markdown__html$renderInline(lite_cellVal)))) + ("</td>")));
+                                        lite_rci = lite$addInt(lite_rci, 1n, 27661);
+                                    }
+                                    lite_rowParts.push((((("<tr>") + (liteFn$lib$core$text$joinTexts([...(lite_tdParts)], "")))) + ("</tr>")));
+                                    lite_i = lite$addInt(lite_i, 1n, 27844);
+                                }
+                                const lite_tbodyHtml = (Boolean(((liteFn$lib$core$list$listCountText([...(lite_rowParts)])) === (0n))) ? "" : (((("<tbody>") + (liteFn$lib$core$text$joinTexts([...(lite_rowParts)], "")))) + ("</tbody>")));
+                                void lite_tbodyHtml;
+                                lite_blocks.push((((((((("<div class=\"md-table-wrap\"><table><thead><tr>") + (liteFn$lib$core$text$joinTexts([...(lite_thParts)], "")))) + ("</tr></thead>"))) + (lite_tbodyHtml))) + ("</table></div>")));
+                            }
+                        }
+                        if ((!(lite_renderedTable))) {
+                            const lite_ulItem = liteFn$lib$util$markdown__html$parseBulletItem(lite_line);
+                            void lite_ulItem;
+                            if ((lite_ulItem).ok) {
+                                const lite_itemsHtml: string[] = [...([])];
+                                void lite_itemsHtml;
+                                while (((lite_i) < (lite_total))) {
+                                    const lite_curItem = liteFn$lib$util$markdown__html$parseBulletItem(lite$listAt((lite_lines), lite_i, 28660));
+                                    void lite_curItem;
+                                    if ((!((lite_curItem).ok))) {
+                                        break;
+                                    }
+                                    const lite_itemLines: string[] = [...([(lite_curItem).body])];
+                                    void lite_itemLines;
+                                    lite_i = lite$addInt(lite_i, 1n, 28838);
+                                    while (((lite_i) < (lite_total))) {
+                                        const lite_nextLine = lite$listAt((lite_lines), lite_i, 28947);
+                                        void lite_nextLine;
+                                        const lite_nextTrim = liteFn$lib$core$text$trim(lite_nextLine);
+                                        void lite_nextTrim;
+                                        if (((lite_nextTrim) === (""))) {
+                                            break;
+                                        }
+                                        if ((((((((((((liteFn$lib$util$markdown__html$parseBulletItem(lite_nextLine)).ok) || ((liteFn$lib$util$markdown__html$parseOrderedItem(lite_nextLine)).ok))) || ((liteFn$lib$util$markdown__html$parseHeadingLine(lite_nextLine)).ok))) || ((liteFn$lib$util$markdown__html$parseFenceOpen(lite_nextLine)).ok))) || (liteFn$lib$util$markdown__html$isHorizontalRule(lite_nextLine)))) || (liteFn$lib$core$text$startsWithAt(liteFn$lib$core$text$trimStart(lite_nextLine), 0n, ">")))) {
+                                            break;
+                                        }
+                                        lite_itemLines.push(liteFn$lib$core$text$trim(lite_nextLine));
+                                        lite_i = lite$addInt(lite_i, 1n, 29547);
+                                    }
+                                    lite_itemsHtml.push((((("<li>") + (liteFn$lib$util$markdown__html$renderInline(liteFn$lib$core$text$joinTexts([...(lite_itemLines)], " "))))) + ("</li>")));
+                                    if (((((((((lite_i) < (lite_total))) && (((liteFn$lib$core$text$trim(lite$listAt((lite_lines), lite_i, 29779))) === (""))))) && (((lite$addInt(lite_i, 1n, 29795)) < (lite_total))))) && ((liteFn$lib$util$markdown__html$parseBulletItem(lite$listAt((lite_lines), lite$addInt(lite_i, 1n, 29835), 29833))).ok))) {
+                                        lite_i = lite$addInt(lite_i, 1n, 29884);
+                                    }
+                                }
+                                lite_blocks.push((((("<ul>") + (liteFn$lib$core$text$joinTexts([...(lite_itemsHtml)], "")))) + ("</ul>")));
+                            } else {
+                                const lite_olItem = liteFn$lib$util$markdown__html$parseOrderedItem(lite_line);
+                                void lite_olItem;
+                                if ((lite_olItem).ok) {
+                                    const lite_olItemsHtml: string[] = [...([])];
+                                    void lite_olItemsHtml;
+                                    while (((lite_i) < (lite_total))) {
+                                        const lite_curOl = liteFn$lib$util$markdown__html$parseOrderedItem(lite$listAt((lite_lines), lite_i, 30382));
+                                        void lite_curOl;
+                                        if ((!((lite_curOl).ok))) {
+                                            break;
+                                        }
+                                        const lite_olItemLines: string[] = [...([(lite_curOl).body])];
+                                        void lite_olItemLines;
+                                        lite_i = lite$addInt(lite_i, 1n, 30570);
+                                        while (((lite_i) < (lite_total))) {
+                                            const lite_nextLine = lite$listAt((lite_lines), lite_i, 30687);
+                                            void lite_nextLine;
+                                            const lite_nextTrim = liteFn$lib$core$text$trim(lite_nextLine);
+                                            void lite_nextTrim;
+                                            if (((lite_nextTrim) === (""))) {
+                                                break;
+                                            }
+                                            if ((((((((((((liteFn$lib$util$markdown__html$parseBulletItem(lite_nextLine)).ok) || ((liteFn$lib$util$markdown__html$parseOrderedItem(lite_nextLine)).ok))) || ((liteFn$lib$util$markdown__html$parseHeadingLine(lite_nextLine)).ok))) || ((liteFn$lib$util$markdown__html$parseFenceOpen(lite_nextLine)).ok))) || (liteFn$lib$util$markdown__html$isHorizontalRule(lite_nextLine)))) || (liteFn$lib$core$text$startsWithAt(liteFn$lib$core$text$trimStart(lite_nextLine), 0n, ">")))) {
+                                                break;
+                                            }
+                                            lite_olItemLines.push(liteFn$lib$core$text$trim(lite_nextLine));
+                                            lite_i = lite$addInt(lite_i, 1n, 31317);
+                                        }
+                                        lite_olItemsHtml.push((((("<li>") + (liteFn$lib$util$markdown__html$renderInline(liteFn$lib$core$text$joinTexts([...(lite_olItemLines)], " "))))) + ("</li>")));
+                                        if (((((((((lite_i) < (lite_total))) && (((liteFn$lib$core$text$trim(lite$listAt((lite_lines), lite_i, 31565))) === (""))))) && (((lite$addInt(lite_i, 1n, 31581)) < (lite_total))))) && ((liteFn$lib$util$markdown__html$parseOrderedItem(lite$listAt((lite_lines), lite$addInt(lite_i, 1n, 31622), 31620))).ok))) {
+                                            lite_i = lite$addInt(lite_i, 1n, 31675);
+                                        }
+                                    }
+                                    lite_blocks.push((((("<ol>") + (liteFn$lib$core$text$joinTexts([...(lite_olItemsHtml)], "")))) + ("</ol>")));
+                                } else {
+                                    const lite_paraLines: string[] = [...([])];
+                                    void lite_paraLines;
+                                    while (((lite_i) < (lite_total))) {
+                                        const lite_pLine = lite$listAt((lite_lines), lite_i, 32067);
+                                        void lite_pLine;
+                                        const lite_pTrim = liteFn$lib$core$text$trim(lite_pLine);
+                                        void lite_pTrim;
+                                        if (((lite_pTrim) === (""))) {
+                                            break;
+                                        }
+                                        if (((liteFn$lib$core$list$listCountText([...(lite_paraLines)])) > (0n))) {
+                                            if ((((((((((((liteFn$lib$util$markdown__html$parseFenceOpen(lite_pLine)).ok) || ((liteFn$lib$util$markdown__html$parseHeadingLine(lite_pLine)).ok))) || (liteFn$lib$util$markdown__html$isHorizontalRule(lite_pLine)))) || (liteFn$lib$core$text$startsWithAt(liteFn$lib$core$text$trimStart(lite_pLine), 0n, ">")))) || ((liteFn$lib$util$markdown__html$parseBulletItem(lite_pLine)).ok))) || ((liteFn$lib$util$markdown__html$parseOrderedItem(lite_pLine)).ok))) {
+                                                break;
+                                            }
+                                            if (((((lite$addInt(lite_i, 1n, 32647)) < (lite_total))) && (liteFn$lib$core$text$containsText(lite_pLine, "|")))) {
+                                                const lite_pCells: string[] = [...(liteFn$lib$util$markdown__html$parseTableRow(lite_pLine))];
+                                                void lite_pCells;
+                                                if ((liteFn$lib$util$markdown__html$parseTableAligns(lite$listAt((lite_lines), lite$addInt(lite_i, 1n, 32843), 32841), liteFn$lib$core$list$listCountText([...(lite_pCells)]))).ok) {
+                                                    break;
+                                                }
+                                            }
+                                        }
+                                        lite_paraLines.push(lite_pTrim);
+                                        lite_i = lite$addInt(lite_i, 1n, 33082);
+                                    }
+                                    lite_blocks.push((((("<p>") + (liteFn$lib$util$markdown__html$renderInline(liteFn$lib$core$text$joinTexts([...(lite_paraLines)], " "))))) + ("</p>")));
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        }
+        const lite_tocJson = (((("[") + (liteFn$lib$core$text$joinTexts([...(lite_tocEntries)], ",")))) + ("]"));
+        void lite_tocJson;
+        return { title: lite_docTitle, html: liteFn$lib$core$text$joinTexts([...(lite_blocks)], "\n"), tocJson: lite_tocJson };
+    }
+    void liteFn$lib$util$markdown__html$renderBodyLines;
+    function liteFn$lib$util$markdown__html$renderMarkdown(lite_docText: string): { title: string; status: string; html: string; tocJson: string } {
+        void lite_docText;
+        const lite_lines: string[] = [...(liteFn$lib$util$markdown__html$splitLines(lite_docText))];
+        void lite_lines;
+        const lite_rendered = liteFn$lib$util$markdown__html$renderBodyLines([...(lite_lines)], true);
+        void lite_rendered;
+        const lite_status = liteFn$lib$util$markdown__html$detectDocStatus(lite_docText);
+        void lite_status;
+        return { title: (lite_rendered).title, status: lite_status, html: (lite_rendered).html, tocJson: (lite_rendered).tocJson };
+    }
+    void liteFn$lib$util$markdown__html$renderMarkdown;
+    function liteFn$lib$util$markdown__html$renderMarkdownJson(lite_docText: string, lite_docPath: string): string {
+        void lite_docText;
+        void lite_docPath;
+        const lite_rendered = liteFn$lib$util$markdown__html$renderMarkdown(lite_docText);
+        void lite_rendered;
+        const lite_title = (Boolean((((lite_rendered).title) === (""))) ? lite_docPath : (lite_rendered).title);
+        void lite_title;
+        return (((((((((((((((((((("{\"path\":") + (liteFn$lib$util$json$quoteString(lite_docPath)))) + (",\"title\":"))) + (liteFn$lib$util$json$quoteString(lite_title)))) + (",\"status\":"))) + (liteFn$lib$util$json$quoteString((lite_rendered).status)))) + (",\"toc\":"))) + ((lite_rendered).tocJson))) + (",\"html\":"))) + (liteFn$lib$util$json$quoteString((lite_rendered).html)))) + ("}"));
+    }
+    void liteFn$lib$util$markdown__html$renderMarkdownJson;
     function liteFn$lib$core$file$readText(lite_path: string): { ok: boolean; text: string; error: string } {
         void lite_path;
         return lite$fileReadText(lite_path);
@@ -1669,6 +2933,18 @@ export function main(lite$write?: (text: string) => void): string {
         return "";
     }
     void liteFn$lib$core$path$extName;
+    function liteFn$lib$core$path$stem(lite_target: string): string {
+        void lite_target;
+        const lite_base = liteFn$lib$core$path$baseName(lite_target);
+        void lite_base;
+        const lite_ext = liteFn$lib$core$path$extName(lite_target);
+        void lite_ext;
+        if (((lite_ext) === (""))) {
+            return lite_base;
+        }
+        return lite$textSlice(lite_base, 0n, lite$subtractInt(lite$textLength(lite_base), lite$textLength(lite_ext), 5297), 5259);
+    }
+    void liteFn$lib$core$path$stem;
     function liteFn$lib$core$path$splitSegments(lite_normalized: string): string[] {
         void lite_normalized;
         const lite_parts: string[] = [...([])];
@@ -1832,6 +3108,418 @@ export function main(lite$write?: (text: string) => void): string {
         return [...(liteFn$lib$util$cli$rest([...(lite_args)], 0n))];
     }
     void liteFn$lib$util$cli$dropIf;
+    function liteFn$lib$util$docgen$cleanDocComment(lite_rawComment: string): string {
+        void lite_rawComment;
+        const lite_size = lite$textLength(lite_rawComment);
+        void lite_size;
+        let lite_start = 2n;
+        void lite_start;
+        if (((((lite_start) < (lite_size))) && (((lite$textAt(lite_rawComment, lite_start, 521)) === ("*"))))) {
+            lite_start = lite$addInt(lite_start, 1n, 571);
+        }
+        let lite_end = lite_size;
+        void lite_end;
+        if (((((lite$subtractInt(lite_end, 2n, 615)) >= (lite_start))) && (liteFn$lib$core$text$startsWithAt(lite_rawComment, lite$subtractInt(lite_end, 2n, 666), "*/")))) {
+            lite_end = lite$subtractInt(lite_end, 2n, 691);
+        }
+        const lite_inner = lite$textSlice(lite_rawComment, lite_start, lite_end, 716);
+        void lite_inner;
+        const lite_innerLen = lite$textLength(lite_inner);
+        void lite_innerLen;
+        const lite_cleanedLines: string[] = [...([])];
+        void lite_cleanedLines;
+        let lite_pos = 0n;
+        void lite_pos;
+        while (((lite_pos) <= (lite_innerLen))) {
+            const lite_nl = liteFn$lib$core$text$indexOfText(lite_inner, "\n", lite_pos);
+            void lite_nl;
+            const lite_lineEnd = (Boolean(((lite_nl) < (0n))) ? lite_innerLen : lite_nl);
+            void lite_lineEnd;
+            let lite_cleanEnd = lite_lineEnd;
+            void lite_cleanEnd;
+            if (((((lite_cleanEnd) > (lite_pos))) && (((lite$textAt(lite_inner, lite$subtractInt(lite_cleanEnd, 1n, 1066), 1042)) === ("\r"))))) {
+                lite_cleanEnd = lite$subtractInt(lite_cleanEnd, 1n, 1102);
+            }
+            const lite_trimmed = liteFn$lib$core$text$trim(lite$textSlice(lite_inner, lite_pos, lite_cleanEnd, 1147));
+            void lite_trimmed;
+            let lite_lineBody = lite_trimmed;
+            void lite_lineBody;
+            if (liteFn$lib$core$text$startsWithAt(lite_trimmed, 0n, "*")) {
+                const lite_afterStar = lite$textSlice(lite_trimmed, 1n, lite$textLength(lite_trimmed), 1288);
+                void lite_afterStar;
+                lite_lineBody = (Boolean(liteFn$lib$core$text$startsWithAt(lite_afterStar, 0n, " ")) ? lite$textSlice(lite_afterStar, 1n, lite$textLength(lite_afterStar), 1415) : liteFn$lib$core$text$trimStart(lite_afterStar));
+            }
+            lite_cleanedLines.push(lite_lineBody);
+            if (((lite_nl) < (0n))) {
+                break;
+            }
+            lite_pos = lite$addInt(lite_nl, 1n, 1649);
+        }
+        return liteFn$lib$core$text$trim(liteFn$lib$core$text$joinTexts([...(lite_cleanedLines)], "\n"));
+    }
+    void liteFn$lib$util$docgen$cleanDocComment;
+    function liteFn$lib$util$docgen$normalizeSignature(lite_raw: string): string {
+        void lite_raw;
+        const lite_size = lite$textLength(lite_raw);
+        void lite_size;
+        let lite_out = "";
+        void lite_out;
+        let lite_i = 0n;
+        void lite_i;
+        let lite_pendingSpace = false;
+        void lite_pendingSpace;
+        while (((lite_i) < (lite_size))) {
+            const lite_ch = lite$textAt(lite_raw, lite_i, 1988);
+            void lite_ch;
+            if (liteFn$lib$core$text$isWhitespace(lite_ch)) {
+                if (((lite_out) !== (""))) {
+                    lite_pendingSpace = true;
+                }
+            } else {
+                if (lite_pendingSpace) {
+                    const lite_lastOut = lite$textAt(lite_out, lite$subtractInt(lite$textLength(lite_out), 1n, 2223), 2193);
+                    void lite_lastOut;
+                    if (((((((lite_lastOut) !== ("("))) && (((lite_ch) !== (")"))))) && (((lite_ch) !== (","))))) {
+                        lite_out = ((lite_out) + (" "));
+                    }
+                    lite_pendingSpace = false;
+                }
+                lite_out = ((lite_out) + (lite_ch));
+            }
+            lite_i = lite$addInt(lite_i, 1n, 2451);
+        }
+        return liteFn$lib$core$text$trim(lite_out);
+    }
+    void liteFn$lib$util$docgen$normalizeSignature;
+    function liteFn$lib$util$docgen$skipBlockComment(lite_source: string, lite_start: bigint, lite_startLine: bigint): { next: bigint; nextLine: bigint; raw: string } {
+        void lite_source;
+        void lite_start;
+        void lite_startLine;
+        const lite_size = lite$textLength(lite_source);
+        void lite_size;
+        let lite_pos = lite$addInt(lite_start, 2n, 2650);
+        void lite_pos;
+        let lite_line = lite_startLine;
+        void lite_line;
+        let lite_depth = 1n;
+        void lite_depth;
+        while (((((lite_pos) < (lite_size))) && (((lite_depth) > (0n))))) {
+            if (((((((lite$addInt(lite_pos, 1n, 2753)) < (lite_size))) && (((lite$textAt(lite_source, lite_pos, 2768)) === ("/"))))) && (((lite$textAt(lite_source, lite$addInt(lite_pos, 1n, 2820), 2800)) === ("*"))))) {
+                lite_depth = lite$addInt(lite_depth, 1n, 2852);
+                lite_pos = lite$addInt(lite_pos, 2n, 2874);
+            } else if (((((((lite$addInt(lite_pos, 1n, 2902)) < (lite_size))) && (((lite$textAt(lite_source, lite_pos, 2917)) === ("*"))))) && (((lite$textAt(lite_source, lite$addInt(lite_pos, 1n, 2969), 2949)) === ("/"))))) {
+                lite_depth = lite$subtractInt(lite_depth, 1n, 3001);
+                lite_pos = lite$addInt(lite_pos, 2n, 3023);
+            } else {
+                if (((lite$textAt(lite_source, lite_pos, 3061)) === ("\n"))) {
+                    lite_line = lite$addInt(lite_line, 1n, 3097);
+                }
+                lite_pos = lite$addInt(lite_pos, 1n, 3121);
+            }
+        }
+        return { next: lite_pos, nextLine: lite_line, raw: lite$textSlice(lite_source, lite_start, lite_pos, 3183) };
+    }
+    void liteFn$lib$util$docgen$skipBlockComment;
+    function liteFn$lib$util$docgen$skipStringLiteral(lite_source: string, lite_start: bigint, lite_startLine: bigint): { next: bigint; nextLine: bigint } {
+        void lite_source;
+        void lite_start;
+        void lite_startLine;
+        const lite_size = lite$textLength(lite_source);
+        void lite_size;
+        let lite_pos = lite$addInt(lite_start, 1n, 3371);
+        void lite_pos;
+        let lite_line = lite_startLine;
+        void lite_line;
+        while (((lite_pos) < (lite_size))) {
+            const lite_ch = lite$textAt(lite_source, lite_pos, 3439);
+            void lite_ch;
+            if (((((lite_ch) === ("\\"))) && (((lite$addInt(lite_pos, 1n, 3491)) < (lite_size))))) {
+                if (((lite$textAt(lite_source, lite$addInt(lite_pos, 1n, 3539), 3519)) === ("\n"))) {
+                    lite_line = lite$addInt(lite_line, 1n, 3559);
+                }
+                lite_pos = lite$addInt(lite_pos, 2n, 3583);
+            } else if (((lite_ch) === ("\""))) {
+                return { next: lite$addInt(lite_pos, 1n, 3651), nextLine: lite_line };
+            } else {
+                if (((lite_ch) === ("\n"))) {
+                    lite_line = lite$addInt(lite_line, 1n, 3724);
+                }
+                lite_pos = lite$addInt(lite_pos, 1n, 3748);
+            }
+        }
+        return { next: lite_pos, nextLine: lite_line };
+    }
+    void liteFn$lib$util$docgen$skipStringLiteral;
+    function liteFn$lib$util$docgen$skipLineComment(lite_source: string, lite_start: bigint): bigint {
+        void lite_source;
+        void lite_start;
+        const lite_nl = liteFn$lib$core$text$indexOfText(lite_source, "\n", lite_start);
+        void lite_nl;
+        return (Boolean(((lite_nl) < (0n))) ? lite$textLength(lite_source) : lite_nl);
+    }
+    void liteFn$lib$util$docgen$skipLineComment;
+    function liteFn$lib$util$docgen$skipInlineTrivia(lite_source: string, lite_start: bigint, lite_startLine: bigint): { next: bigint; nextLine: bigint } {
+        void lite_source;
+        void lite_start;
+        void lite_startLine;
+        const lite_size = lite$textLength(lite_source);
+        void lite_size;
+        let lite_pos = lite_start;
+        void lite_pos;
+        let lite_line = lite_startLine;
+        void lite_line;
+        while (((lite_pos) < (lite_size))) {
+            const lite_ch = lite$textAt(lite_source, lite_pos, 4183);
+            void lite_ch;
+            if (liteFn$lib$core$text$isWhitespace(lite_ch)) {
+                if (((lite_ch) === ("\n"))) {
+                    lite_line = lite$addInt(lite_line, 1n, 4273);
+                }
+                lite_pos = lite$addInt(lite_pos, 1n, 4297);
+            } else if (((((((lite$addInt(lite_pos, 1n, 4325)) < (lite_size))) && (((lite_ch) === ("/"))))) && (((lite$textAt(lite_source, lite$addInt(lite_pos, 1n, 4374), 4354)) === ("/"))))) {
+                lite_pos = liteFn$lib$util$docgen$skipLineComment(lite_source, lite_pos);
+            } else if (((((((lite$addInt(lite_pos, 1n, 4458)) < (lite_size))) && (((lite_ch) === ("/"))))) && (((lite$textAt(lite_source, lite$addInt(lite_pos, 1n, 4507), 4487)) === ("*"))))) {
+                const lite_skipped = liteFn$lib$util$docgen$skipBlockComment(lite_source, lite_pos, lite_line);
+                void lite_skipped;
+                lite_pos = (lite_skipped).next;
+                lite_line = (lite_skipped).nextLine;
+            } else {
+                break;
+            }
+        }
+        return { next: lite_pos, nextLine: lite_line };
+    }
+    void liteFn$lib$util$docgen$skipInlineTrivia;
+    function liteFn$lib$util$docgen$classifyEnvironment(lite_namespace: string, lite_name: string): string {
+        void lite_namespace;
+        void lite_name;
+        if (((lite_namespace) === ("extra"))) {
+            return "play";
+        }
+        if (((((((((lite_name) === ("file"))) || (((lite_name) === ("path"))))) || (((lite_name) === ("process"))))) || (((lite_name) === ("time"))))) {
+            return "cli";
+        }
+        return "universal";
+    }
+    void liteFn$lib$util$docgen$classifyEnvironment;
+    function liteFn$lib$util$docgen$extractModuleJson(lite_source: string, lite_namespace: string, lite_name: string, lite_fileRel: string): string {
+        void lite_source;
+        void lite_namespace;
+        void lite_name;
+        void lite_fileRel;
+        const lite_size = lite$textLength(lite_source);
+        void lite_size;
+        let lite_pos = 0n;
+        void lite_pos;
+        let lite_line = 1n;
+        void lite_line;
+        let lite_braceDepth = 0n;
+        void lite_braceDepth;
+        let lite_parenDepth = 0n;
+        void lite_parenDepth;
+        let lite_sawCode = false;
+        void lite_sawCode;
+        let lite_moduleSummary = "";
+        void lite_moduleSummary;
+        let lite_pendingDoc = "";
+        void lite_pendingDoc;
+        const lite_symbolsJson: string[] = [...([])];
+        void lite_symbolsJson;
+        while (((lite_pos) < (lite_size))) {
+            const lite_ch = lite$textAt(lite_source, lite_pos, 5571);
+            void lite_ch;
+            if (liteFn$lib$core$text$isWhitespace(lite_ch)) {
+                if (((lite_ch) === ("\n"))) {
+                    lite_line = lite$addInt(lite_line, 1n, 5661);
+                }
+                lite_pos = lite$addInt(lite_pos, 1n, 5685);
+            } else if (((lite_ch) === ("\""))) {
+                lite_sawCode = true;
+                const lite_lit = liteFn$lib$util$docgen$skipStringLiteral(lite_source, lite_pos, lite_line);
+                void lite_lit;
+                lite_pos = (lite_lit).next;
+                lite_line = (lite_lit).nextLine;
+            } else if (((((((lite$addInt(lite_pos, 1n, 5890)) < (lite_size))) && (((lite_ch) === ("/"))))) && (((lite$textAt(lite_source, lite$addInt(lite_pos, 1n, 5939), 5919)) === ("/"))))) {
+                lite_pos = liteFn$lib$util$docgen$skipLineComment(lite_source, lite_pos);
+            } else if (((((((lite$addInt(lite_pos, 1n, 6023)) < (lite_size))) && (((lite_ch) === ("/"))))) && (((lite$textAt(lite_source, lite$addInt(lite_pos, 1n, 6072), 6052)) === ("*"))))) {
+                const lite_isDoc = ((((((lite$addInt(lite_pos, 2n, 6111)) < (lite_size))) && (((lite$textAt(lite_source, lite$addInt(lite_pos, 2n, 6146), 6126)) === ("*"))))) && ((((((lite$addInt(lite_pos, 3n, 6167)) >= (lite_size))) || (((lite$textAt(lite_source, lite$addInt(lite_pos, 3n, 6202), 6182)) !== ("/")))))));
+                void lite_isDoc;
+                const lite_blk = liteFn$lib$util$docgen$skipBlockComment(lite_source, lite_pos, lite_line);
+                void lite_blk;
+                if (((((lite_braceDepth) === (0n))) && (((lite_parenDepth) === (0n))))) {
+                    const lite_cleaned = liteFn$lib$util$docgen$cleanDocComment((lite_blk).raw);
+                    void lite_cleaned;
+                    if ((((((!(lite_sawCode))) && (((lite_moduleSummary) === (""))))) && ((!(lite_isDoc))))) {
+                        lite_moduleSummary = lite_cleaned;
+                    } else if ((((((!(lite_sawCode))) && (((lite_moduleSummary) === (""))))) && (lite_isDoc))) {
+                        const lite_afterComment = liteFn$lib$util$docgen$skipInlineTrivia(lite_source, (lite_blk).next, (lite_blk).nextLine);
+                        void lite_afterComment;
+                        if ((((((lite_afterComment).next) < (lite_size))) && ((!(liteFn$lib$core$text$wordAt(lite_source, (lite_afterComment).next, "pub")))))) {
+                            lite_moduleSummary = lite_cleaned;
+                        } else {
+                            lite_pendingDoc = lite_cleaned;
+                        }
+                    } else if (lite_isDoc) {
+                        lite_pendingDoc = lite_cleaned;
+                    }
+                }
+                lite_pos = (lite_blk).next;
+                lite_line = (lite_blk).nextLine;
+            } else if (((((((lite_braceDepth) === (0n))) && (((lite_parenDepth) === (0n))))) && (liteFn$lib$core$text$wordAt(lite_source, lite_pos, "pub")))) {
+                lite_sawCode = true;
+                const lite_declLine = lite_line;
+                void lite_declLine;
+                const lite_afterPub = liteFn$lib$util$docgen$skipInlineTrivia(lite_source, lite$addInt(lite_pos, 3n, 7277), lite_line);
+                void lite_afterPub;
+                const lite_nameStart = (lite_afterPub).next;
+                void lite_nameStart;
+                const lite_nameEnd = liteFn$lib$core$text$skipName(lite_source, lite_nameStart);
+                void lite_nameEnd;
+                const lite_declName = lite$textSlice(lite_source, lite_nameStart, lite_nameEnd, 7410);
+                void lite_declName;
+                const lite_afterName = liteFn$lib$util$docgen$skipInlineTrivia(lite_source, lite_nameEnd, (lite_afterPub).nextLine);
+                void lite_afterName;
+                if (((((lite_declName) !== (""))) && (liteFn$lib$core$text$startsWithAt(lite_source, (lite_afterName).next, ":=")))) {
+                    const lite_rhsProbe = liteFn$lib$util$docgen$skipInlineTrivia(lite_source, lite$addInt((lite_afterName).next, 2n, 7682), (lite_afterName).nextLine);
+                    void lite_rhsProbe;
+                    const lite_rhsStart = (lite_rhsProbe).next;
+                    void lite_rhsStart;
+                    let lite_scanPos = lite_rhsStart;
+                    void lite_scanPos;
+                    let lite_scanLine = (lite_rhsProbe).nextLine;
+                    void lite_scanLine;
+                    let lite_scanParen = 0n;
+                    void lite_scanParen;
+                    let lite_stoppedAt = "";
+                    void lite_stoppedAt;
+                    while (((lite_scanPos) < (lite_size))) {
+                        const lite_sc = lite$textAt(lite_source, lite_scanPos, 7980);
+                        void lite_sc;
+                        if (((lite_sc) === ("\""))) {
+                            const lite_sLit = liteFn$lib$util$docgen$skipStringLiteral(lite_source, lite_scanPos, lite_scanLine);
+                            void lite_sLit;
+                            lite_scanPos = (lite_sLit).next;
+                            lite_scanLine = (lite_sLit).nextLine;
+                        } else if (((((((lite$addInt(lite_scanPos, 1n, 8253)) < (lite_size))) && (((lite_sc) === ("/"))))) && (((lite$textAt(lite_source, lite$addInt(lite_scanPos, 1n, 8306), 8282)) === ("/"))))) {
+                            lite_scanPos = liteFn$lib$util$docgen$skipLineComment(lite_source, lite_scanPos);
+                        } else if (((((((lite$addInt(lite_scanPos, 1n, 8426)) < (lite_size))) && (((lite_sc) === ("/"))))) && (((lite$textAt(lite_source, lite$addInt(lite_scanPos, 1n, 8479), 8455)) === ("*"))))) {
+                            const lite_sBlk = liteFn$lib$util$docgen$skipBlockComment(lite_source, lite_scanPos, lite_scanLine);
+                            void lite_sBlk;
+                            lite_scanPos = (lite_sBlk).next;
+                            lite_scanLine = (lite_sBlk).nextLine;
+                        } else if (((lite_sc) === ("("))) {
+                            lite_scanParen = lite$addInt(lite_scanParen, 1n, 8741);
+                            lite_scanPos = lite$addInt(lite_scanPos, 1n, 8779);
+                        } else if (((lite_sc) === (")"))) {
+                            if (((lite_scanParen) > (0n))) {
+                                lite_scanParen = lite$subtractInt(lite_scanParen, 1n, 8880);
+                            }
+                            lite_scanPos = lite$addInt(lite_scanPos, 1n, 8920);
+                        } else if (((((lite_scanParen) === (0n))) && ((((((lite_sc) === ("{"))) || (((lite_sc) === (";")))))))) {
+                            lite_stoppedAt = lite_sc;
+                            break;
+                        } else {
+                            if (((lite_sc) === ("\n"))) {
+                                lite_scanLine = lite$addInt(lite_scanLine, 1n, 9151);
+                            }
+                            lite_scanPos = lite$addInt(lite_scanPos, 1n, 9191);
+                        }
+                    }
+                    const lite_rawRhs = lite$textSlice(lite_source, lite_rhsStart, lite_scanPos, 9263);
+                    void lite_rawRhs;
+                    const lite_normRhs = liteFn$lib$util$docgen$normalizeSignature(lite_rawRhs);
+                    void lite_normRhs;
+                    let lite_kind = "const";
+                    void lite_kind;
+                    if (liteFn$lib$core$text$wordAt(lite_normRhs, 0n, "type")) {
+                        lite_kind = "type";
+                    } else if (((((liteFn$lib$core$text$wordAt(lite_normRhs, 0n, "fn")) || (liteFn$lib$core$text$startsWithAt(lite_normRhs, 0n, "fn<")))) || (liteFn$lib$core$text$startsWithAt(lite_normRhs, 0n, "fn(")))) {
+                        lite_kind = "fn";
+                    }
+                    const lite_isHost = ((((lite_kind) === ("fn"))) && (((lite_stoppedAt) === (";"))));
+                    void lite_isHost;
+                    const lite_sig = (((((((("pub ") + (lite_declName))) + (" := "))) + (lite_normRhs))) + (((Boolean(((lite_stoppedAt) === (";"))) ? ";" : ""))));
+                    void lite_sig;
+                    const lite_symJson = (((((((((((((((((((((((("{\"kind\":") + (liteFn$lib$util$json$quoteString(lite_kind)))) + (",\"name\":"))) + (liteFn$lib$util$json$quoteString(lite_declName)))) + (",\"signature\":"))) + (liteFn$lib$util$json$quoteString(lite_sig)))) + (",\"isHostDeclaration\":"))) + (((Boolean(lite_isHost) ? "true" : "false"))))) + (",\"doc\":"))) + (liteFn$lib$util$json$quoteString(lite_pendingDoc)))) + (",\"line\":"))) + (liteFn$lib$core$int$intText(lite_declLine)))) + ("}"));
+                    void lite_symJson;
+                    lite_symbolsJson.push(lite_symJson);
+                    lite_pendingDoc = "";
+                    lite_pos = lite_scanPos;
+                    lite_line = lite_scanLine;
+                } else {
+                    lite_pendingDoc = "";
+                    lite_pos = lite_nameEnd;
+                    lite_line = (lite_afterName).nextLine;
+                }
+            } else {
+                lite_sawCode = true;
+                if (((lite_ch) === ("{"))) {
+                    lite_braceDepth = lite$addInt(lite_braceDepth, 1n, 10630);
+                } else if (((lite_ch) === ("}"))) {
+                    if (((lite_braceDepth) > (0n))) {
+                        lite_braceDepth = lite$subtractInt(lite_braceDepth, 1n, 10717);
+                    }
+                    if (((((lite_braceDepth) === (0n))) && (((lite_parenDepth) === (0n))))) {
+                        lite_pendingDoc = "";
+                    }
+                } else if (((lite_ch) === ("("))) {
+                    lite_parenDepth = lite$addInt(lite_parenDepth, 1n, 10898);
+                } else if (((lite_ch) === (")"))) {
+                    if (((lite_parenDepth) > (0n))) {
+                        lite_parenDepth = lite$subtractInt(lite_parenDepth, 1n, 10985);
+                    }
+                } else if (((((((lite_ch) === (";"))) && (((lite_braceDepth) === (0n))))) && (((lite_parenDepth) === (0n))))) {
+                    lite_pendingDoc = "";
+                }
+                if (((lite_ch) === ("\n"))) {
+                    lite_line = lite$addInt(lite_line, 1n, 11147);
+                }
+                lite_pos = lite$addInt(lite_pos, 1n, 11171);
+            }
+        }
+        const lite_modId = ((((lite_namespace) + ("/"))) + (lite_name));
+        void lite_modId;
+        const lite_env = liteFn$lib$util$docgen$classifyEnvironment(lite_namespace, lite_name);
+        void lite_env;
+        return (((((((((((((((((((((((((((("{\"id\":") + (liteFn$lib$util$json$quoteString(lite_modId)))) + (",\"namespace\":"))) + (liteFn$lib$util$json$quoteString(lite_namespace)))) + (",\"name\":"))) + (liteFn$lib$util$json$quoteString(lite_name)))) + (",\"file\":"))) + (liteFn$lib$util$json$quoteString(lite_fileRel)))) + (",\"environment\":"))) + (liteFn$lib$util$json$quoteString(lite_env)))) + (",\"summary\":"))) + (liteFn$lib$util$json$quoteString(lite_moduleSummary)))) + (",\"symbols\":["))) + (liteFn$lib$core$text$joinTexts([...(lite_symbolsJson)], ",")))) + ("]}"));
+    }
+    void liteFn$lib$util$docgen$extractModuleJson;
+    function liteFn$lib$util$docgen$extractAllModulesJson(lite_rootDir: string): string {
+        void lite_rootDir;
+        const lite_namespaces: string[] = [...(["core", "extra"])];
+        void lite_namespaces;
+        const lite_modJsonEntries: string[] = [...([])];
+        void lite_modJsonEntries;
+        for (const lite_ns of [...(lite_namespaces)]) {
+            void lite_ns;
+            const lite_nsDir = liteFn$lib$core$path$join(lite_rootDir, (("lib/") + (lite_ns)));
+            void lite_nsDir;
+            if (((lite$fileKind(lite_nsDir)) === ("dir"))) {
+                const lite_entries: string[] = [...(lite$fileListDir(lite_nsDir))];
+                void lite_entries;
+                for (const lite_entryName of [...(lite_entries)]) {
+                    void lite_entryName;
+                    if (liteFn$lib$core$text$endsWith(lite_entryName, ".lts")) {
+                        const lite_fullPath = liteFn$lib$core$path$join(lite_nsDir, lite_entryName);
+                        void lite_fullPath;
+                        if (((lite$fileKind(lite_fullPath)) === ("file"))) {
+                            const lite_readRes = liteFn$lib$core$file$readText(lite_fullPath);
+                            void lite_readRes;
+                            if ((lite_readRes).ok) {
+                                const lite_modName = liteFn$lib$core$path$stem(lite_entryName);
+                                void lite_modName;
+                                const lite_relFile = (((((("lib/") + (lite_ns))) + ("/"))) + (lite_entryName));
+                                void lite_relFile;
+                                lite_modJsonEntries.push(liteFn$lib$util$docgen$extractModuleJson((lite_readRes).text, lite_ns, lite_modName, lite_relFile));
+                            }
+                        }
+                    }
+                }
+            }
+        }
+        return (((("[") + (liteFn$lib$core$text$joinTexts([...(lite_modJsonEntries)], ",")))) + ("]"));
+    }
+    void liteFn$lib$util$docgen$extractAllModulesJson;
     function liteFn$lib$util$docs$defaultIgnoredDirs(): string[] {
         const lite_dirs: string[] = [...([".git", ".cache", "node_modules", "dist", ".agent"])];
         void lite_dirs;
@@ -2373,6 +4061,57 @@ export function main(lite$write?: (text: string) => void): string {
         }
     }
     void liteFn$lib$util$project$handleVersionFlag;
+    function liteFn_splitNonEmptyLines(lite_raw: string): string[] {
+        void lite_raw;
+        const lite_lines: string[] = [...([])];
+        void lite_lines;
+        const lite_size = lite$textLength(lite_raw);
+        void lite_size;
+        let lite_pos = 0n;
+        void lite_pos;
+        while (((lite_pos) <= (lite_size))) {
+            const lite_nl = liteFn$lib$core$text$indexOfText(lite_raw, "\n", lite_pos);
+            void lite_nl;
+            const lite_end = (Boolean(((lite_nl) < (0n))) ? lite_size : lite_nl);
+            void lite_end;
+            const lite_trimmed = liteFn$lib$core$text$trim(lite$textSlice(lite_raw, lite_pos, lite_end, 724));
+            void lite_trimmed;
+            if (((lite_trimmed) !== (""))) {
+                lite_lines.push(lite_trimmed);
+            }
+            if (((lite_nl) < (0n))) {
+                break;
+            }
+            lite_pos = lite$addInt(lite_nl, 1n, 883);
+        }
+        return [...(lite_lines)];
+    }
+    void liteFn_splitNonEmptyLines;
+    function liteFn_renderSelectedJson(lite_rootDir: string, lite_targets: string[]): string {
+        void lite_rootDir;
+        void lite_targets;
+        const lite_entries: string[] = [...([])];
+        void lite_entries;
+        for (const lite_rel of [...(lite_targets)]) {
+            void lite_rel;
+            const lite_fullFile = liteFn$lib$core$path$resolve(lite_rootDir, lite_rel);
+            void lite_fullFile;
+            const lite_readRes = liteFn$lib$core$file$readText(lite_fullFile);
+            void lite_readRes;
+            if ((!((lite_readRes).ok))) {
+                lite$reportError(((((lite_rel) + (": "))) + ((lite_readRes).error)));
+                return lite$exit(1n);
+            }
+            const lite_relPath = liteFn$lib$core$path$relative(lite_rootDir, lite_fullFile);
+            void lite_relPath;
+            lite_entries.push(liteFn$lib$util$markdown__html$renderMarkdownJson((lite_readRes).text, lite_relPath));
+        }
+        if (((liteFn$lib$core$list$listCountText([...(lite_entries)])) === (0n))) {
+            return "[]";
+        }
+        return (((("[\n  ") + (liteFn$lib$core$text$joinTexts([...(lite_entries)], ",\n  ")))) + ("\n]"));
+    }
+    void liteFn_renderSelectedJson;
     function liteFn_run(lite_args: string[]): void {
         void lite_args;
         liteFn$lib$util$project$handleVersionFlag([...(lite_args)], "docs", "docs");
@@ -2388,6 +4127,34 @@ export function main(lite$write?: (text: string) => void): string {
                 lite$exit(1n);
             }
             lite$emit("Documentation links, fragments and fences passed." + "\n");
+            lite$exit(0n);
+        }
+        if (((((liteFn$lib$core$list$listCountText([...(lite_args)])) === (1n))) && (liteFn$lib$util$cli$startsWith([...(lite_args)], "--modules-json")))) {
+            lite$emit(liteFn$lib$util$docgen$extractAllModulesJson(lite_rootDir) + "\n");
+            lite$exit(0n);
+        }
+        if (liteFn$lib$util$cli$startsWith([...(lite_args)], "--render-json")) {
+            const lite_restTargets: string[] = [...(liteFn$lib$util$cli$rest([...(lite_args)], 1n))];
+            void lite_restTargets;
+            if (((liteFn$lib$core$list$listCountText([...(lite_restTargets)])) > (0n))) {
+                lite$emit(liteFn_renderSelectedJson(lite_rootDir, [...(lite_restTargets)]) + "\n");
+                lite$exit(0n);
+            }
+            const lite_stdinPaths: string[] = [...(liteFn_splitNonEmptyLines(lite$inputAll("", "tools/src/docs.lts:75:42: InputFault: ")))];
+            void lite_stdinPaths;
+            if (((liteFn$lib$core$list$listCountText([...(lite_stdinPaths)])) > (0n))) {
+                lite$emit(liteFn_renderSelectedJson(lite_rootDir, [...(lite_stdinPaths)]) + "\n");
+                lite$exit(0n);
+            }
+            const lite_allDocFiles: string[] = [...(liteFn$lib$util$docs$listDocFiles(lite_rootDir))];
+            void lite_allDocFiles;
+            const lite_relDocFiles: string[] = [...([])];
+            void lite_relDocFiles;
+            for (const lite_fullDoc of [...(lite_allDocFiles)]) {
+                void lite_fullDoc;
+                lite_relDocFiles.push(liteFn$lib$core$path$relative(lite_rootDir, lite_fullDoc));
+            }
+            lite$emit(liteFn_renderSelectedJson(lite_rootDir, [...(lite_relDocFiles)]) + "\n");
             lite$exit(0n);
         }
         const lite_isJson = liteFn$lib$util$cli$startsWith([...(lite_args)], "--json");
