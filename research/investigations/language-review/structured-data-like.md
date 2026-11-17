@@ -186,6 +186,44 @@ zero, ownership and error rules. Runtime data may need a general representation
 and runtime parser instead. An inferred shape alone does not grant implicit
 conversion to a separately declared nominal record or select a map ABI.
 
+### User idea: anonymous data shaped by a destination
+
+The user asks for an anonymous Data-Like form that can be accepted as a
+left-hand destination type when its data matches, with a possible general
+map/list-style representation otherwise. This is a direction for investigation,
+not selected syntax, a universal conversion to any type, or compiler support.
+The relationship between this Data-Like form and JSON-like external input remains
+open.
+
+Review at least these cases separately:
+
+1. **Known compatible destination:** a fresh anonymous shape provides named
+   fields and values to a written destination such as a record type. The
+   destination's identity, visibility, defaults and field contracts still apply.
+   This can be construction of that destination, not a stored anonymous value
+   silently changing its nominal identity. Existing contextual record
+   construction is relevant but does not establish every proposed Data-Like form.
+2. **No explicit compatible destination:** consider an inferred fixed shape, a
+   general mapping/list representation, or another model. They differ in
+   arbitrary-key access, heterogeneous values, static checking, storage,
+   extensibility and runtime cost. An anonymous record is not automatically a
+   dynamic map, nor does a map require an `Any` type or heap allocation by
+   definition.
+3. **Written but incompatible destination:** clarify the user's intended
+   behavior. Falling back to a map/list cannot produce a value of the written
+   incompatible type without a separate conversion rule; compare a diagnostic
+   with an explicitly designed alternative. Do not silently change the type of
+   an explicitly typed binding.
+4. **Nested data:** an inner object or array can require its own destination,
+   inference and mismatch rules. Evaluate missing or extra fields, duplicate
+   keys, empty values, heterogeneous elements, null and initialization without
+   imposing unselected defaults.
+
+The exact data syntax, destination matching, anonymous identity, general data
+model and representation are all unresolved. Keep parser-stage work and runtime
+storage/cost separate: known static data might be materialized compactly, but
+the compiler must preserve the selected value and access behavior.
+
 ## Separate choices
 
 1. **Lite-native data expressions.** Existing or future Lite record, tuple,
