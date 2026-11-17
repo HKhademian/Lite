@@ -71,14 +71,15 @@ computeToolingHash := fn(rootDir: String): String {
     digestBytes: mut List<Int> = [];
     var first := true;
 
-    dirs: List<String> = ["", "generated/"];
+    dirs: List<String> = ["tools/", "tools/src/", "lib/util/", "dist/tools/"];
     loop dirs as prefix {
-        dirPath := if prefix == "" { path.join(rootDir, "tools") } else { path.join(rootDir, "tools/generated") };
+        dirPath := path.join(rootDir, prefix);
+        ext := if prefix == "tools/src/" or prefix == "lib/util/" { ".lts" } else { ".ts" };
         if fs.kind(dirPath) == fs.FILE_KIND_DIR {
             entries := fs.listDir(dirPath);
             loop entries as entry {
                 full := path.join(dirPath, entry);
-                if text.endsWith(entry, ".ts") and fs.kind(full) == fs.FILE_KIND_FILE {
+                if text.endsWith(entry, ext) and fs.kind(full) == fs.FILE_KIND_FILE {
                     if not first {
                         list.pushBack(mut digestBytes, 0);
                     }

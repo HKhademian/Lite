@@ -1,9 +1,9 @@
 #!/usr/bin/env node
-/** Host entrypoint and JS adapter for the Lite-implemented release packager (tools/src/release.lts -> tools/generated/release.ts). */
+/** Host entrypoint and JS adapter for the Lite-implemented release packager (`tools/src/release.lts` -> `dist/tools/release.ts`). */
 import { spawnSync } from 'node:child_process';
-import { readFileSync, writeSync } from 'node:fs';
+import { readFileSync } from 'node:fs';
 import { join } from 'node:path';
-import { fileURLToPath } from 'node:url';
+import { ensureTool, runIgnitedTool } from '../igniter/ignite.ts';
 import type { ComponentRelease } from '../compiler/release-streams.ts';
 
 /** Supported compiler/language readiness verification summary attached to compiler and language distributions. */
@@ -26,11 +26,8 @@ export type ReleaseNotesInput = Readonly<{
   bootstrap: ReleaseBootstrapSummary | null;
 }>;
 
-const generatedUrl = new URL('./generated/release.ts', import.meta.url);
-const generatedPath = fileURLToPath(generatedUrl);
-
 function runReleaseTool(args: string[], options: { directory?: string; input?: string } = {}): string {
-  const result = spawnSync(process.execPath, [generatedPath, ...args], {
+  const result = spawnSync(process.execPath, [ensureTool('release'), ...args], {
     cwd: options.directory ?? process.cwd(),
     env: {
       ...process.env,
@@ -76,8 +73,5 @@ export function prepareRelease(directory: string, output: string, tag?: string) 
 }
 
 if (import.meta.main) {
-  const mod = (await import(generatedUrl.href)) as { main: (write?: (text: string) => void) => string };
-  mod.main((text: string): void => {
-    writeSync(1, text);
-  });
+  await runIgnitedTool('release');
 }

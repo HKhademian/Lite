@@ -1,11 +1,5 @@
 #!/usr/bin/env node
-/** Host entrypoint for Lite-implemented declarative benchmark runner (`tools/src/bench.lts` -> `tools/generated/bench.ts`). */
-import { writeSync } from 'node:fs';
+/** Host entrypoint for Lite-implemented declarative benchmark runner (`tools/src/bench.lts` -> `dist/tools/bench.ts`). */
+import { runIgnitedTool } from '../igniter/ignite.ts';
 
-if (import.meta.main) {
-  const entry = new URL('./generated/bench.ts', import.meta.url).href;
-  const mod = (await import(entry)) as { main: (write?: (text: string) => void) => string };
-  mod.main((text: string): void => {
-    writeSync(1, text);
-  });
-}
+if (import.meta.main) await runIgnitedTool('bench');

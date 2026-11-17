@@ -7,6 +7,7 @@ import { test } from 'node:test';
 import { fileURLToPath } from 'node:url';
 import { compileTs } from '../compiler/host.ts';
 import { checkTsArtifact } from '../igniter/artifacts.ts';
+import { ensureTool } from '../igniter/ignite.ts';
 import { checkDocuments, documents, extractModules, renderDocuments } from './docs.ts';
 
 const root = fileURLToPath(new URL('../', import.meta.url));
@@ -42,11 +43,11 @@ test('registered documentation snippets must match their separately maintained s
   } finally { rmSync(directory, { recursive: true, force: true }); }
 });
 
-test('generated docs artifact matches tools/src/docs.lts and passes strict TS checking', () => {
+test('ignited docs artifact in dist/tools matches tools/src/docs.lts and passes strict TS checking', () => {
   const sourcePath = join(root, 'tools/src/docs.lts');
   const compiled = compileTs({ text: readFileSync(sourcePath, 'utf8'), name: 'tools/src/docs.lts', rootPath: sourcePath });
   assert.equal(compiled.status, 0, compiled.stderr.toString());
-  const generated = readFileSync(join(root, 'tools/generated/docs.ts'), 'utf8');
+  const generated = readFileSync(ensureTool('docs'), 'utf8');
   assert.equal(compiled.stdout.toString('utf8'), generated);
   const checked = checkTsArtifact(generated);
   assert.equal(checked.status, 0, `${checked.stdout}\n${checked.stderr}`);

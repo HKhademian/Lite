@@ -1,8 +1,7 @@
 #!/usr/bin/env node
-/** Host entrypoint for Lite-implemented documentation discovery and checks (tools/src/docs.lts -> tools/generated/docs.ts). */
+/** Host entrypoint for Lite-implemented documentation discovery and checks (`tools/src/docs.lts` -> `dist/tools/docs.ts`). */
 import { spawnSync } from 'node:child_process';
-import { writeSync } from 'node:fs';
-import { fileURLToPath } from 'node:url';
+import { ensureTool, runIgnitedTool } from '../igniter/ignite.ts';
 import { root } from './project.ts';
 
 export type Document = { path: string; title: string; headings: string[] };
@@ -40,11 +39,8 @@ export type ModuleApiDoc = Readonly<{
   symbols: readonly ModuleSymbolDoc[];
 }>;
 
-const generatedUrl = new URL('./generated/docs.ts', import.meta.url);
-const generatedPath = fileURLToPath(generatedUrl);
-
 function runDocs(args: readonly string[], directory: string, stdinInput?: string) {
-  const result = spawnSync(process.execPath, [generatedPath, ...args], {
+  const result = spawnSync(process.execPath, [ensureTool('docs'), ...args], {
     cwd: root,
     env: { ...process.env, LITE_DOCS_ROOT: directory },
     input: stdinInput ?? '',
@@ -92,9 +88,5 @@ export function checkDocuments(directory = root): string[] {
 }
 
 if (import.meta.main) {
-  const entry = generatedUrl.href;
-  const mod = (await import(entry)) as { main: (write?: (text: string) => void) => string };
-  mod.main((text: string): void => {
-    writeSync(1, text);
-  });
+  await runIgnitedTool('docs');
 }

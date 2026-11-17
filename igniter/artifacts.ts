@@ -94,6 +94,36 @@ function withPreparedTsArtifacts<Result>(sources: readonly string[], use: (runs:
   finally { prepared.dispose(); }
 }
 
+/** Runs strict TypeScript checking once across the provided TS file paths. */
+function runStrictTsc(files: readonly string[], directory: string): ArtifactRun {
+  const config = join(directory, 'tsconfig.json');
+  writeFileSync(config, JSON.stringify({
+    compilerOptions: { ...checkOptions(), types: [], typeRoots: [], lib: ['ESNext'] },
+    files,
+  }));
+  const nativeTsc = nativeTscPath();
+  const checked = nativeTsc !== undefined
+    ? spawnSync(nativeTsc, ['-p', config], { encoding: 'utf8', timeout: 30000 })
+    : spawnSync(process.execPath, [fileURLToPath(new URL('./node_modules/typescript/bin/tsc', import.meta.url)), '-p', config], { encoding: 'utf8', timeout: 30000 });
+  if (checked.error !== undefined) throw checked.error;
+  return {
+    phase: 'typecheck', status: checked.status, signal: checked.signal,
+    stdout: Buffer.from(checked.stdout), stderr: Buffer.from(checked.stderr),
+  };
+}
+
+/** Strict-checks existing TS artifact files in a single batch without copying or executing them. */
+export function checkTsArtifactFiles(files: readonly string[]): ArtifactRun {
+  if (files.length === 0) return { phase: 'typecheck', status: 0, signal: null, stdout: Buffer.alloc(0), stderr: Buffer.alloc(0) };
+  const directory = mkdtempSync(join(tmpdir(), 'lite-check-ts-'));
+  try {
+    writeFileSync(join(directory, 'package.json'), '{"type":"module"}\n');
+    return runStrictTsc(files, directory);
+  } finally {
+    rmSync(directory, { recursive: true, force: true });
+  }
+}
+
 /** Strict-checks a batch once and provides isolated runners with an explicit lifetime. */
 export function prepareTsArtifacts(sources: readonly string[], options: Readonly<{ timeoutMs?: number }> = {}): PreparedTsArtifacts {
   const timeout = options.timeoutMs ?? 10000;
@@ -107,7 +137,6 @@ export function prepareTsArtifacts(sources: readonly string[], options: Readonly
   };
   const active = (): void => { if (disposed) throw new Error('TS artifacts have been disposed'); };
   try {
-    const config = join(directory, 'tsconfig.json');
     writeFileSync(join(directory, 'package.json'), '{"type":"module"}\n');
     const artifacts: string[] = [];
     const runners = sources.map((source, index) => {
@@ -120,20 +149,8 @@ export function prepareTsArtifacts(sources: readonly string[], options: Readonly
       artifacts.push(artifact);
       return runner;
     });
-    writeFileSync(config, JSON.stringify({
-      compilerOptions: { ...checkOptions(), types: [], typeRoots: [], lib: ['ESNext'] },
-      files: artifacts,
-    }));
-    const nativeTsc = nativeTscPath();
-    const checked = nativeTsc !== undefined
-      ? spawnSync(nativeTsc, ['-p', config], { encoding: 'utf8', timeout: 30000 })
-      : spawnSync(process.execPath, [fileURLToPath(new URL('./node_modules/typescript/bin/tsc', import.meta.url)), '-p', config], { encoding: 'utf8', timeout: 30000 });
-    if (checked.error !== undefined) throw checked.error;
-    const check: ArtifactRun = {
-      phase: 'typecheck', status: checked.status, signal: checked.signal,
-      stdout: Buffer.from(checked.stdout), stderr: Buffer.from(checked.stderr),
-    };
-    if (checked.status !== 0 || checked.signal !== null) {
+    const check = runStrictTsc(artifacts, directory);
+    if (check.status !== 0 || check.signal !== null) {
       return { runs: sources.map(() => () => { active(); return check; }), checked: check, dispose };
     }
     return { runs: runners.map((runner): TsArtifactRunner => (options = {}) => {

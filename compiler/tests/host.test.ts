@@ -843,17 +843,20 @@ test('self-hosting kernel separates root symbols from runtime initialization and
 function isolatedCheckout(): string {
   const directory = mkdtempSync(join(tmpdir(), 'lite-t11-checkout-'));
   const dependencies = (['ts', 'c'] as const).flatMap(target => buildCompiler(target).dependencies);
+  const toolSources = readdirSync(join(root, 'tools/src')).filter(f => f.endsWith('.lts')).map(f => `tools/src/${f}`);
+  const coreLibs = readdirSync(join(root, 'lib/core')).filter(f => f.endsWith('.lts')).map(f => `lib/core/${f}`);
+  const utilLibs = readdirSync(join(root, 'lib/util')).filter(f => f.endsWith('.lts')).map(f => `lib/util/${f}`);
   const paths = new Set([
     'bin/lite', 'bin/lite-compile', 'bin/lite-compile-ts', 'bin/lite-compile-c', 'bin/lite-check', 'bin/lite-run', 'bin/lite-verify',
     'compiler/host.ts', 'compiler/source.ts', 'compiler/entry.ts', 'compiler/cli.ts', 'compiler/launcher.ts', 'compiler/compile-ts.ts', 'compiler/compile-c.ts', 'compiler/package.json',
-    'igniter/launcher.ts', 'igniter/test-suites.ts', 'igniter/artifacts.ts', 'igniter/package.json', 'igniter/verify.ts',
-    'tools/cli.ts', 'tools/generated/cli.ts', 'tools/generated/compile.ts', 'tools/generated/compile-c.ts', 'tools/generated/compile-ts.ts', 'tools/checker.ts', 'tools/generated/checker.ts', 'tools/verify.ts', 'tools/generated/verify.ts', 'tools/run.ts', 'tools/generated/run.ts', 'tools/project.ts',
+    'igniter/launcher.ts', 'igniter/ignite.ts', 'igniter/test-suites.ts', 'igniter/artifacts.ts', 'igniter/package.json', 'igniter/verify.ts',
+    'tools/cli.ts', 'tools/checker.ts', 'tools/verify.ts', 'tools/run.ts', 'tools/project.ts',
     'compiler/release-streams.ts', 'config/versions.json',
     'tools/streams.ts',
     'compiler/scripts/release-streams.test.ts',
     `compiler/bootstrap/${seed.artifact}`, 'compiler/bootstrap/seed.ts', 'compiler/bootstrap/tsconfig.json',
     'compiler/manifests/ts.json', 'compiler/manifests/c.json', 'igniter/loader.ts', 'igniter/tsconfig.json',
-    ...dependencies,
+    ...dependencies, ...toolSources, ...coreLibs, ...utilLibs,
   ]);
   for (const path of paths) {
     const destination = join(directory, path);

@@ -1,13 +1,10 @@
-/** Host entrypoint and library adapter for Lite-implemented declarative case runner (`tools/src/test.lts` -> `tools/generated/test.ts`). */
+/** Host entrypoint and library adapter for Lite-implemented declarative case runner (`tools/src/test.lts` -> `dist/tools/test.ts`). */
 import { spawnSync } from 'node:child_process';
-import { existsSync, mkdtempSync, readFileSync, rmSync, writeSync } from 'node:fs';
+import { existsSync, mkdtempSync, readFileSync, rmSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
-import { fileURLToPath } from 'node:url';
+import { ensureTool, runIgnitedTool } from '../igniter/ignite.ts';
 import { root } from './project.ts';
-
-const generatedUrl = new URL('./generated/test.ts', import.meta.url);
-const generatedPath = fileURLToPath(generatedUrl);
 
 /** Runs declarative language and tool cases matching `filter` or single manifest `file`, returning summary counts. */
 export function testCases(filter = '', file?: string): { count: number; failures: number; pending: number } {
@@ -15,7 +12,7 @@ export function testCases(filter = '', file?: string): { count: number; failures
   const summaryPath = join(work, 'summary.json');
   const args = file !== undefined ? [file] : filter !== '' ? [filter] : [];
   try {
-    const result = spawnSync(process.execPath, [generatedPath, ...args], {
+    const result = spawnSync(process.execPath, [ensureTool('test'), ...args], {
       cwd: root,
       env: { ...process.env, LITE_TEST_SUMMARY_FILE: summaryPath },
       stdio: ['ignore', 'inherit', 'inherit'],
@@ -34,8 +31,5 @@ export function testCases(filter = '', file?: string): { count: number; failures
 }
 
 if (import.meta.main) {
-  const mod = (await import(generatedUrl.href)) as { main: (write?: (text: string) => void) => string };
-  mod.main((text: string): void => {
-    writeSync(1, text);
-  });
+  await runIgnitedTool('test');
 }

@@ -42,9 +42,9 @@ val3 := cli.readOptionValue(valDup, "--target");
 test.checkBool("readOptionValue dup valid", false, val3.valid);
 
 test.checkText("entry bin/lite", "lite", cli.entryCommand("/repo/bin/lite"));
-test.checkText("entry generated cli", "lite", cli.entryCommand("/repo/tools/generated/cli.ts"));
+test.checkText("entry generated cli", "lite", cli.entryCommand("/repo/dist/tools/cli.ts"));
 test.checkText("entry bin/lite-fmt", "fmt", cli.entryCommand("/repo/bin/lite-fmt"));
-test.checkText("entry generated fmt", "fmt", cli.entryCommand("/repo/tools/generated/fmt.ts"));
+test.checkText("entry generated fmt", "fmt", cli.entryCommand("/repo/dist/tools/fmt.ts"));
 test.checkText("entry checker", "check", cli.entryCommand("tools/checker.ts"));
 test.checkText("entry doctor", "doctor", cli.entryCommand("tools/check.ts"));
 test.checkText("entry test-runner", "test", cli.entryCommand("tools/test-runner.ts"));

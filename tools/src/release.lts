@@ -350,6 +350,9 @@ prepareRelease := fn(directory: String, output: String, tag: String): Unit {
     wrRelJson := fs.writeText(releaseJsonPath, manifestJson);
     if not wrRelJson.ok { failRelease(work, wrRelJson.error); }
 
+    rmDist := fs.remove(path.join(source, "dist"));
+    if not rmDist.ok { failRelease(work, rmDist.error); }
+
     archive := "lite-" + label + ".tar.gz";
     archivePath := path.join(work, archive);
     tgzArgs: List<String> = ["-czf", archivePath, "-C", source, "."];

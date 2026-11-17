@@ -151,7 +151,7 @@ stripSuffix := fn(value: String, suffix: String): String {
     value
 };
 
-/** Normalizes an entrypoint path (`bin/lite`, `tools/generated/fmt.ts`, `bin/lite-fmt`) to a command name. */
+/** Normalizes an entrypoint path (`bin/lite`, `dist/tools/fmt.ts`, `bin/lite-fmt`) to a command name. */
 pub entryCommand := fn(entryPath: String): String {
     var name := path.baseName(entryPath);
     name = stripSuffix(name, ".ts");

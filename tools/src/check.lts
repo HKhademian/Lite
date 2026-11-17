@@ -33,6 +33,19 @@ runCheckedTsc := fn(rootDir: String, configPath: String): Unit {
     }
 }
 
+runIgniteCheck := fn(rootDir: String): Unit {
+    igniteScript := "igniter/ignite.ts";
+    igniteArgs: List<String> = [igniteScript, "--check"];
+    emptyEnv: List<String> = [];
+    res := proc.run(proc.execPath(), igniteArgs, rootDir, emptyEnv, true, "");
+    if res.error =!= "" {
+        failDoctor(res.error);
+    }
+    if res.status =!= 0 {
+        failDoctor("node " + igniteScript + " --check failed:\n" + res.stdout + res.stderr);
+    }
+}
+
 run := fn(args: List<String>): Unit {
     project.handleVersionFlag(args, "doctor", "doctor");
 
@@ -104,6 +117,7 @@ run := fn(args: List<String>): Unit {
     if not docsOnly {
         runCheckedTsc(rootDir, "igniter/tsconfig.json");
         runCheckedTsc(rootDir, "compiler/bootstrap/tsconfig.json");
+        runIgniteCheck(rootDir);
     }
 
     io.outputLine("Repository checks passed.");

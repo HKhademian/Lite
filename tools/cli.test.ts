@@ -1,12 +1,14 @@
 /** Routed aliases and direct operation commands must share behavior. */
 import assert from 'node:assert/strict';
 import { spawnSync } from 'node:child_process';
-import { readFileSync } from 'node:fs';
-import { join } from 'node:path';
+import { chmodSync, copyFileSync, existsSync, lstatSync, mkdirSync, mkdtempSync, readdirSync, readFileSync, readlinkSync, rmSync, symlinkSync, writeFileSync } from 'node:fs';
+import { tmpdir } from 'node:os';
+import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { test } from 'node:test';
 import { compileTs } from '../compiler/host.ts';
-import { checkTsArtifact } from '../igniter/artifacts.ts';
+import { seed } from '../compiler/bootstrap/seed.ts';
+import { ensureTool, igniteAllTools } from '../igniter/ignite.ts';
 
 const root = fileURLToPath(new URL('../', import.meta.url));
 
@@ -76,15 +78,15 @@ test('lite check routes through ./bin/lite to the standalone checker', () => {
   assert.equal(command('lite-check', ['language/examples/foundations/io/double-sum.lts']).status, 0);
 });
 
-test('generated cli, compile, checker, doctor, run, verify, test-runner, test, bench, ci, and release artifacts match their Lite sources and pass strict TS checking', () => {
+test('ignited cli, compile, checker, doctor, run, verify, test-runner, test, bench, ci, and release artifacts match their Lite sources and pass strict TS checking', () => {
+  const ignited = igniteAllTools({ check: true });
+  assert.equal(ignited.checked, true);
   for (const name of ['cli', 'compile', 'compile-c', 'compile-ts', 'checker', 'check', 'run', 'run-ts-artifact', 'verify', 'test-runner', 'test', 'bench', 'ci', 'release'] as const) {
     const sourcePath = join(root, `tools/src/${name}.lts`);
     const compiled = compileTs({ text: readFileSync(sourcePath, 'utf8'), name: `tools/src/${name}.lts`, rootPath: sourcePath });
     assert.equal(compiled.status, 0, compiled.stderr.toString());
-    const generated = readFileSync(join(root, `tools/generated/${name}.ts`), 'utf8');
+    const generated = readFileSync(ensureTool(name), 'utf8');
     assert.equal(compiled.stdout.toString('utf8'), generated, `${name} artifact out of date`);
-    const checked = checkTsArtifact(generated);
-    assert.equal(checked.status, 0, `${checked.stdout}\n${checked.stderr}`);
   }
 });
 
@@ -112,8 +114,76 @@ test('munching routers, flag aliases, and direct generated entrypoints converge 
   assert.deepEqual(command('lite', ['fmt', '--check', target]), expected);
   assert.deepEqual(command('lite', ['--fmt', '--check', target]), expected);
   assert.deepEqual(command('lite', ['--', 'fmt', '--check', target]), expected);
-  const direct = spawnSync(process.execPath, [join(root, 'tools/generated/fmt.ts'), '--check', target], {
+  const direct = spawnSync(process.execPath, [ensureTool('fmt'), '--check', target], {
     cwd: root, encoding: 'utf8', timeout: 60_000,
   });
   assert.deepEqual({ status: direct.status, stdout: direct.stdout, stderr: direct.stderr }, expected);
+});
+
+test('ignition rebuilds missing, tampered, and dependency-changed tools into dist/tools without checked-in generated files', () => {
+  assert.equal(existsSync(join(root, 'tools/generated')), false);
+  const directory = mkdtempSync(join(tmpdir(), 'lite-ignite-probe-'));
+  try {
+    const copyTree = (rel: string): void => {
+      const src = join(root, rel);
+      const dst = join(directory, rel);
+      const st = lstatSync(src);
+      if (st.isSymbolicLink()) {
+        mkdirSync(dirname(dst), { recursive: true });
+        symlinkSync(readlinkSync(src), dst);
+      } else if (st.isDirectory()) {
+        mkdirSync(dst, { recursive: true });
+        for (const entry of readdirSync(src)) copyTree(join(rel, entry));
+      } else {
+        mkdirSync(dirname(dst), { recursive: true });
+        copyFileSync(src, dst);
+      }
+    };
+    for (const rel of [
+      'package.json', 'config/versions.json', 'bin/lite', 'bin/lite-fmt',
+      'compiler/host.ts', 'compiler/source.ts', 'compiler/entry.ts', 'compiler/package.json',
+      `compiler/bootstrap/${seed.artifact}`, 'compiler/bootstrap/seed.ts',
+      'igniter/ignite.ts', 'igniter/artifacts.ts', 'igniter/loader.ts', 'igniter/package.json', 'igniter/tsconfig.json',
+      'tools/cli.ts', 'tools/fmt.ts', 'tools/src/cli.lts', 'tools/src/fmt.lts', 'lib/core', 'lib/util',
+    ]) {
+      copyTree(rel);
+    }
+    chmodSync(join(directory, 'bin/lite'), 0o755);
+    chmodSync(join(directory, 'bin/lite-fmt'), 0o755);
+
+    const first = spawnSync(process.execPath, [join(directory, 'igniter/ignite.ts'), '--json', 'cli', 'fmt'], {
+      cwd: directory, encoding: 'utf8', timeout: 60_000,
+    });
+    assert.equal(first.status, 0, first.stderr);
+    const firstJson = JSON.parse(first.stdout) as { tools: { name: string; rebuilt: boolean; sha256: string }[] };
+    assert.deepEqual(firstJson.tools.map(t => [t.name, t.rebuilt]), [['cli', true], ['fmt', true]]);
+    assert.ok(existsSync(join(directory, 'dist/tools/fmt.ts')));
+
+    const second = spawnSync(process.execPath, [join(directory, 'igniter/ignite.ts'), '--json', 'cli', 'fmt'], {
+      cwd: directory, encoding: 'utf8', timeout: 60_000,
+    });
+    assert.equal(second.status, 0, second.stderr);
+    const secondJson = JSON.parse(second.stdout) as { tools: { name: string; rebuilt: boolean }[] };
+    assert.deepEqual(secondJson.tools.map(t => [t.name, t.rebuilt]), [['cli', false], ['fmt', false]]);
+
+    // Tampering with the ignited output triggers clean regeneration.
+    writeFileSync(join(directory, 'dist/tools/fmt.ts'), '// tampered\n');
+    const repaired = spawnSync(process.execPath, [join(directory, 'bin/lite'), 'fmt', '--check', 'tools/src/fmt.lts'], {
+      cwd: directory, encoding: 'utf8', timeout: 60_000,
+    });
+    assert.equal(repaired.status, 0, repaired.stderr);
+    assert.equal(readFileSync(join(directory, 'dist/tools/fmt.ts'), 'utf8').includes('// tampered'), false);
+
+    // Editing a transitive Lite library dependency invalidates affected tools only.
+    const cliLib = join(directory, 'lib/util/cli.lts');
+    writeFileSync(cliLib, readFileSync(cliLib, 'utf8') + '\n');
+    const afterDep = spawnSync(process.execPath, [join(directory, 'igniter/ignite.ts'), '--json', 'cli', 'fmt'], {
+      cwd: directory, encoding: 'utf8', timeout: 60_000,
+    });
+    assert.equal(afterDep.status, 0, afterDep.stderr);
+    const afterDepJson = JSON.parse(afterDep.stdout) as { tools: { name: string; rebuilt: boolean }[] };
+    assert.deepEqual(afterDepJson.tools.map(t => [t.name, t.rebuilt]), [['cli', true], ['fmt', true]]);
+  } finally {
+    rmSync(directory, { recursive: true, force: true });
+  }
 });

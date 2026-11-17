@@ -10,7 +10,7 @@ run := fn(rawArgs: List<String>): Unit {
     project.handleVersionFlag(rawArgs, "verifier", "verify");
     args := cli.stripLeadingSeparator(rawArgs);
     if list.listCountText(args) == 1 and text.endsWith(cli.head(args), ".json") {
-        project.forwardNode("tools/generated/test.ts", args);
+        project.forwardNode("tools/test.ts", args);
     } else {
         project.forwardNode("igniter/verify.ts", args);
     }

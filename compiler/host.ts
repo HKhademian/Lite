@@ -21,13 +21,17 @@ export type CompilerResult = Readonly<{ status: number; stdout: Buffer; stderr: 
 export type CompilerInput = Readonly<{ text: string; name?: string; rootPath?: string; cwd?: string; options?: readonly string[] }>;
 /** Selected artifact and exact source/builder identities. */
 export type CompilerBuild = Readonly<{ target: CompilerTarget; path: string; sourceSha256: string; artifactSha256: string; builderSha256: string; dependencies: readonly string[]; cached: boolean }>;
-type DependencyIdentity = Readonly<{ path: string; sha256: string }>;
-type SourceEdge = Readonly<{ importer: string; spec: string; path: string }>;
+/** Dependency identity and import edge captured during source-graph compilation. */
+export type GraphDependencyIdentity = Readonly<{ path: string; sha256: string }>;
+export type GraphSourceEdge = Readonly<{ importer: string; spec: string; path: string }>;
+type DependencyIdentity = GraphDependencyIdentity;
+type SourceEdge = GraphSourceEdge;
 type SourceRecord = Readonly<{ path: string; display: string; identity: string; text: string }>;
 type CompilerMain = (write?: (text: string) => void, sourceProvider?: (importer: string, spec: string) => SourceRecord) => unknown;
 type LoadedCompiler = Readonly<{ stamp: string; main: CompilerMain }>;
 type StatStamp = Readonly<{ linkPath: string; targetPath: string; stamp: string }>;
 type MemoizedBuild = Readonly<{ build: CompilerBuild; checks: readonly StatStamp[] }>;
+type InvokeGraphResult = Readonly<{ result: CompilerResult; dependencies: readonly DependencyIdentity[]; edges: readonly SourceEdge[] }>;
 
 class CompilerExit extends Error {
   readonly status: number;
@@ -127,9 +131,11 @@ function invokeSubprocess(artifact: string, text: string, name?: string, cwd = p
 }
 
 /** Runs an already-loaded generated compiler in-process while isolating stdio, argv, exit, and cwd-relative imports. */
-function invokeInProcess(main: CompilerMain, resolvedArtifact: string, text: string, name: string | undefined, cwd: string, rootPath: string, options: readonly string[] = []): CompilerResult {
+function invokeInProcess(main: CompilerMain, resolvedArtifact: string, text: string, name: string | undefined, cwd: string, rootPath: string, options: readonly string[] = []): InvokeGraphResult {
   const unnamedRootPath = name === undefined || name === '' ? resolve(cwd, rootPath) : undefined;
   const sourceCache = new Map<string, SourceRecord>();
+  const sourceReads: DependencyIdentity[] = [];
+  const sourceEdges: SourceEdge[] = [];
   const sourceFailure = (path: string, message: string): SourceReadFailure => {
     const sourceName = path === unnamedRootPath ? '' : displaySourcePath(path);
     return new SourceReadFailure(`${sourceName === '' ? '' : `${sourceName}: `}${message}`);
@@ -150,6 +156,9 @@ function invokeInProcess(main: CompilerMain, resolvedArtifact: string, text: str
       const code = typeof error === 'object' && error !== null && 'code' in error && typeof error.code === 'string' ? error.code : 'resolve error';
       throw sourceFailure(importerPath, `cannot read imported source ${spec} (${code})`);
     }
+    if (!sourceEdges.some(item => item.importer === importerPath && item.spec === spec && item.path === path)) {
+      sourceEdges.push({ importer: importerPath, spec, path });
+    }
     const cached = sourceCache.get(path);
     if (cached !== undefined) return cached;
     let bytes: Buffer;
@@ -164,6 +173,9 @@ function invokeInProcess(main: CompilerMain, resolvedArtifact: string, text: str
       decoded = new TextDecoder('utf-8', { fatal: true }).decode(bytes);
     } catch {
       throw sourceFailure(importerPath, `imported source ${spec} is not valid UTF-8`);
+    }
+    if (!sourceReads.some(item => item.path === path)) {
+      sourceReads.push({ path, sha256: hash(bytes) });
     }
     const loadedRecord: SourceRecord = { path, display: displaySourcePath(path), identity: sourceModuleIdentity(bytes), text: decoded };
     sourceCache.set(path, loadedRecord);
@@ -277,42 +289,61 @@ function invokeInProcess(main: CompilerMain, resolvedArtifact: string, text: str
     process.getBuiltinModule = savedGetBuiltinModule;
     inProcessActive = false;
   }
-  return { status, stdout: Buffer.concat(stdoutChunks), stderr: Buffer.concat(stderrChunks) };
+  return {
+    result: { status, stdout: Buffer.concat(stdoutChunks), stderr: Buffer.concat(stderrChunks) },
+    dependencies: sourceReads,
+    edges: sourceEdges,
+  };
+}
+
+/** Loads and caches a generated compiler module for warm in-process reuse when safe. */
+function loadWarmCompiler(resolvedArtifact: string): LoadedCompiler | undefined {
+  const currentStamp = fileStamp(resolvedArtifact);
+  if (inProcessActive || currentStamp === undefined) return undefined;
+  let cached = loadedCompilers.get(resolvedArtifact);
+  if (cached !== undefined) {
+    return cached.stamp === currentStamp.stamp ? cached : undefined;
+  }
+  let loaded: unknown;
+  try {
+    loaded = hostRequire(resolvedArtifact);
+  } catch {
+    return undefined;
+  }
+  if (typeof loaded !== 'object' || loaded === null || !('main' in loaded) || typeof loaded.main !== 'function') {
+    return undefined;
+  }
+  cached = { stamp: currentStamp.stamp, main: loaded.main as CompilerMain };
+  loadedCompilers.set(resolvedArtifact, cached);
+  return cached;
 }
 
 /** Executes one generated compiler with warm in-process reuse when safe, falling back to a subprocess otherwise. */
 function invoke(artifact: string, text: string, name?: string, cwd = process.cwd(), explicitRootPath?: string, options: readonly string[] = []): CompilerResult {
   const rootPath = explicitRootPath ?? (name === undefined || name === '' ? resolve(cwd, '__lite_stdin__.lts') : resolve(cwd, name));
   const resolvedArtifact = resolve(artifact);
-  const currentStamp = fileStamp(resolvedArtifact);
-  if (inProcessActive || currentStamp === undefined) {
+  const cached = loadWarmCompiler(resolvedArtifact);
+  if (cached === undefined) {
     return invokeSubprocess(artifact, text, name, cwd, explicitRootPath, options);
   }
-  let cached = loadedCompilers.get(resolvedArtifact);
+  return invokeInProcess(cached.main, resolvedArtifact, text, name, cwd, rootPath, options).result;
+}
+
+/** Compiles a source root and captures the dependency paths actually read by the Lite graph visitor. */
+function invokeWithTrace(artifact: string, text: string, name: string, cwd = process.cwd(), explicitRootPath?: string, options: readonly string[] = []): InvokeGraphResult {
+  const rootPath = explicitRootPath ?? (name === '' ? resolve(cwd, '__lite_stdin__.lts') : resolve(cwd, name));
+  const resolvedArtifact = resolve(artifact);
+  const cached = loadWarmCompiler(resolvedArtifact);
   if (cached !== undefined) {
-    if (cached.stamp !== currentStamp.stamp) {
-      return invokeSubprocess(artifact, text, name, cwd, explicitRootPath, options);
-    }
-  } else {
-    let loaded: unknown;
-    try {
-      loaded = hostRequire(resolvedArtifact);
-    } catch {
-      return invokeSubprocess(artifact, text, name, cwd, explicitRootPath, options);
-    }
-    if (typeof loaded !== 'object' || loaded === null || !('main' in loaded) || typeof loaded.main !== 'function') {
-      return invokeSubprocess(artifact, text, name, cwd, explicitRootPath, options);
-    }
-    cached = { stamp: currentStamp.stamp, main: loaded.main as CompilerMain };
-    loadedCompilers.set(resolvedArtifact, cached);
+    return invokeInProcess(cached.main, resolvedArtifact, text, name, cwd, rootPath, options);
   }
-  return invokeInProcess(cached.main, resolvedArtifact, text, name, cwd, rootPath, options);
+  return invokeGraph(artifact, text, name, cwd, explicitRootPath, options);
 }
 
 /** Compiles a source root and captures the dependency paths actually read by the Lite graph visitor on fd 3. */
-function invokeGraph(artifact: string, text: string, name: string, cwd = process.cwd()): Readonly<{ result: CompilerResult; dependencies: readonly DependencyIdentity[]; edges: readonly SourceEdge[] }> {
-  const rootPath = name === '' ? resolve(cwd, '__lite_stdin__.lts') : resolve(cwd, name);
-  const processResult = spawnSync(process.execPath, [entryPath, artifact, name, sourceModuleIdentity(text), rootPath], {
+function invokeGraph(artifact: string, text: string, name: string, cwd = process.cwd(), explicitRootPath?: string, options: readonly string[] = []): InvokeGraphResult {
+  const rootPath = explicitRootPath ?? (name === '' ? resolve(cwd, '__lite_stdin__.lts') : resolve(cwd, name));
+  const processResult = spawnSync(process.execPath, [entryPath, artifact, name, sourceModuleIdentity(text), rootPath, ...options], {
     input: text, cwd, timeout: 0, maxBuffer: 128 * 1024 * 1024,
     env: { ...process.env, LITE_SOURCE_TRACE: '1' }, stdio: ['pipe', 'pipe', 'pipe', 'pipe'],
   });
@@ -536,3 +567,17 @@ export function compileTarget(target: CompilerTarget, input: CompilerInput): Com
 
 /** Compiles to TS through the current generated compiler. */
 export function compileTs(input: CompilerInput): CompilerResult { return compileTarget('ts', input); }
+
+/** Compiles one Lite source root to TS with the verified tracked Lite-generated seed and returns traced dependencies/edges. */
+export function compileSeedTsGraph(input: CompilerInput): Readonly<{
+  seedSha256: string;
+  result: CompilerResult;
+  dependencies: readonly GraphDependencyIdentity[];
+  edges: readonly GraphSourceEdge[];
+}> {
+  if (hash(readFileSync(seedPath)) !== seed.artifactSha256) {
+    throw new Error('selected TS bootstrap seed hash mismatch');
+  }
+  const traced = invokeWithTrace(seedPath, input.text, input.name ?? '', input.cwd ?? process.cwd(), input.rootPath, input.options ?? []);
+  return { seedSha256: seed.artifactSha256, result: traced.result, dependencies: traced.dependencies, edges: traced.edges };
+}

@@ -8,6 +8,7 @@ import { test } from 'node:test';
 import { fileURLToPath } from 'node:url';
 import { compileTs } from '../compiler/host.ts';
 import { checkTsArtifact } from '../igniter/artifacts.ts';
+import { ensureTool } from '../igniter/ignite.ts';
 import { formatLite } from './fmt.ts';
 
 const root = fileURLToPath(new URL('../', import.meta.url));
@@ -83,11 +84,11 @@ test('formatLite is idempotent across all language examples, samples, and librar
   }
 });
 
-test('generated fmt artifact matches tools/src/fmt.lts and passes strict TS checking', () => {
+test('ignited fmt artifact in dist/tools matches tools/src/fmt.lts and passes strict TS checking', () => {
   const sourcePath = join(root, 'tools/src/fmt.lts');
   const compiled = compileTs({ text: readFileSync(sourcePath, 'utf8'), name: 'tools/src/fmt.lts', rootPath: sourcePath });
   assert.equal(compiled.status, 0, compiled.stderr.toString());
-  const generated = readFileSync(join(root, 'tools/generated/fmt.ts'), 'utf8');
+  const generated = readFileSync(ensureTool('fmt'), 'utf8');
   assert.equal(compiled.stdout.toString('utf8'), generated);
   const checked = checkTsArtifact(generated);
   assert.equal(checked.status, 0, `${checked.stdout}\n${checked.stderr}`);
