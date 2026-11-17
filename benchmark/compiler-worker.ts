@@ -1,8 +1,7 @@
 /** One fresh-process compiler measurement. Metrics use fd 3, separate from program streams. */
-import { readFileSync, realpathSync, writeFileSync, writeSync } from 'node:fs';
-import { dirname, isAbsolute, resolve } from 'node:path';
+import { writeFileSync, writeSync } from 'node:fs';
+import { dirname, resolve } from 'node:path';
 import { fileURLToPath, pathToFileURL } from 'node:url';
-import { displaySourcePath, resolveImportPath, sourceModuleIdentity } from '../compiler/source.ts';
 
 const [engine, artifact, sourceName, sourceRoot] = process.argv.slice(2);
 if (artifact === undefined || sourceName === undefined) throw new Error('missing compiler artifact or source name');
@@ -35,29 +34,13 @@ if (engine === 'T11') {
   const module: unknown = await import(pathToFileURL(artifact).href);
   if (typeof module !== 'object' || module === null || !('main' in module) || typeof module.main !== 'function') throw new Error('missing main');
   const entry = module.main;
-  const sourceCache = new Map<string, Readonly<{ path: string; display: string; identity: string; text: string }>>();
-  const readSource = (importer: string, spec: string): Readonly<{ path: string; display: string; identity: string; text: string }> => {
-    const importerPath = isAbsolute(importer) ? importer : resolve(projectRoot, importer || '__lite_stdin__.lts');
-    const path = realpathSync(resolveImportPath(importerPath, spec, projectRoot));
-    const cached = sourceCache.get(path);
-    if (cached !== undefined) return cached;
-    const bytes = readFileSync(path);
-    const loaded = {
-      path,
-      display: displaySourcePath(path),
-      identity: sourceModuleIdentity(bytes),
-      text: new TextDecoder('utf-8', { fatal: true }).decode(bytes),
-    };
-    sourceCache.set(path, loaded);
-    return loaded;
-  };
   const main = (): string => {
-    const value: unknown = entry(undefined, readSource);
+    const value: unknown = entry(undefined);
     if (typeof value !== 'string') throw new Error('invalid main result');
     return value;
   };
   const rootPath = sourceRoot === undefined || sourceRoot === '' ? resolve(projectRoot, '__lite_stdin__.lts') : resolve(projectRoot, sourceRoot);
-  process.argv = [process.execPath, artifact, sourceName, '', rootPath];
+  process.argv = [process.execPath, artifact, '--stdin', '--name', sourceName, '--root', rootPath];
   loaded = performance.now();
   const exit = process.exit;
   process.exit = code => { writeMetrics(); return exit(code); };

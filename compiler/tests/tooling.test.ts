@@ -139,7 +139,7 @@ test('changed Lite emission can reach a new generated fixed point before seed se
     copyToolArchive(directory);
     const path = join(directory, 'compiler/src/emit-ts.lts');
     const source = readFileSync(path, 'utf8');
-    const anchor = '        io.outputLine("export function main(lite$write?: (text: string) => void, lite$sourceProviderInput?: (importer: string, spec: string) => { path: string; display: string; identity: string; text: string }): string {");';
+    const anchor = '    outLine("export function main(lite$write?: (text: string) => void): string {");';
     assert.ok(source.includes(anchor));
     writeFileSync(path, source.replace(anchor, '        io.outputLine("// generated refresh probe");\n' + anchor));
     const result = summary(invoke(directory, 'compiler/scripts/self-host.ts', ['--out', join(directory, '.cache/ladder')]));

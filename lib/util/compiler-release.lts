@@ -220,7 +220,6 @@ runPrepare := fn(rootDir: String, outDir: String): Int {
 
     tsMeta := corpus.readCompilerMeta(rootDir, "ts");
     if not tsMeta.ok { _rm := fs.remove(workDir); io.errorLine(tsMeta.error); return 1; }
-    entryPath := path.join(rootDir, "compiler/entry.ts");
 
     compJsonEntries: mut List<String> = [];
     targetsList: List<String> = ["ts", "c"];
@@ -238,7 +237,7 @@ runPrepare := fn(rootDir: String, outDir: String): Int {
         srcFilePath := path.resolve(path.parentDir(manPath), manFiles[0]);
         srcBytes := fs.readBytes(srcFilePath);
         regenPath := path.join(workDir, "regen-" + t + ".ts");
-        regRes := runCheckedBytesToFile(proc.execPath(), [entryPath, tsMeta.artifactPath, srcFilePath], rootDir, srcBytes, regenPath, workDir);
+        regRes := runCheckedBytesToFile(proc.execPath(), [tsMeta.artifactPath, "--stdin", "--name", "compiler/src/" + t + "-root.lts", "--root", srcFilePath], rootDir, srcBytes, regenPath, workDir);
         if not regRes.ok { _rm := fs.remove(workDir); io.errorLine(regRes.error); return 1; }
         regSha := crypto.sha256Bytes(fs.readBytes(regenPath));
         if regSha =!= built.artifactSha256 {
@@ -274,7 +273,7 @@ runPrepare := fn(rootDir: String, outDir: String): Int {
             if not srcChk.ok { _rm := fs.remove(workDir); io.errorLine(srcChk.error); return 1; }
             srcBytes := streams.readStreamBytes(fixJson, srcField.valuePos, fixturesDir);
             cOutPath := path.join(cDir, progName + ".c");
-            emRes := runCheckedBytesToFile(proc.execPath(), [entryPath, cCompiler], rootDir, srcBytes, cOutPath, workDir);
+            emRes := runCheckedBytesToFile(proc.execPath(), [cCompiler, "--stdin"], rootDir, srcBytes, cOutPath, workDir);
             if not emRes.ok { _rm := fs.remove(workDir); io.errorLine(emRes.error); return 1; }
             _wLts := fs.writeBytes(path.join(cDir, progName + ".lts"), srcBytes);
             cSha := crypto.sha256Bytes(fs.readBytes(cOutPath));

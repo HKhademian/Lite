@@ -1,17 +1,36 @@
 frontend := import "./frontend.lts";
 modules := import "./modules.lts";
 emitter := import "./emit-c.lts";
+hostFs := import "./host-fs.lts";
 io := import "core/io";
+proc := import "core/process";
 
-/** Runs the C emitter over the same source graph used by the TS compiler. */
-pub run := fn(): Unit {
-    prefix := frontend.sourcePrefix();
-    source := io.inputAll();
-    if frontend.sourceModulePath() =!= "" {
-        graph := modules.visitSourceModule(target = frontend.TARGET_C, path = frontend.sourceModulePath(), display = prefix,
-            identity = frontend.sourceModuleIdentity(), =source, initialGraph = []);
-        emitter.emitProgram(items = modules.moduleItems(graph), =source, =prefix);
-    } else {
-        emitter.emitProgram(items = frontend.parseProgram(target = frontend.TARGET_C, =source, =prefix), =source, =prefix);
+/** Runs the C emitter over one parsed CLI argument list (`--stdin`, file path, `--trace-json`, `--builtin-mode`). */
+pub run := fn(args: List<String>): Unit {
+    flags := hostFs.parseCompilerFlags(args);
+    if not flags.ok {
+        io.errorLine(flags.error);
+        io.exit(2);
+    }
+    if flags.hasOut {
+        io.errorLine("--out is not supported on C compiler yet");
+        io.exit(2);
+    }
+    builtinSpecs := hostFs.extractBuiltinSpecs(args);
+    cwd := proc.cwd();
+    stdinText := if flags.isStdin { io.inputAll() } else { "" };
+    loaded := hostFs.loadRootInput(
+    isStdin = flags.isStdin, hasName = flags.hasName, optName = flags.name, hasRoot = flags.hasRoot, optRoot = flags.rootPath,
+    filePath = flags.filePath, =cwd, entryPathHint = proc.entryPath(), =stdinText
+    );
+    emptyGraph: frontend.Items = [];
+    graph := modules.visitSourceModule(
+    target = frontend.TARGET_C, path = loaded.path, display = loaded.display,
+    identity = loaded.identity, source = loaded.text, initialGraph = emptyGraph,
+    projectRoot = loaded.projectRoot, =cwd, =builtinSpecs
+    );
+    emitter.emitProgramWithSpecs(items = modules.moduleItems(graph), source = loaded.text, prefix = loaded.display, =builtinSpecs);
+    if flags.hasTrace {
+        hostFs.writeTraceJson(flags.tracePath, graph);
     }
 }

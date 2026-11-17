@@ -3,9 +3,7 @@ import { spawnSync } from 'node:child_process';
 import { mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join, resolve } from 'node:path';
-import { fileURLToPath } from 'node:url';
 import { compileBuiltCompiler, type CompilerBuild } from '../compiler/host.ts';
-import { sourceModuleIdentity } from '../compiler/source.ts';
 import { renderDocuments, type ModuleApiDoc, type RenderedDocument } from '../tools/docs.ts';
 import { captureCanvasPreview } from './canvas-preview.ts';
 import { renderPage, rootDir, type SourceRevision } from './chrome.ts';
@@ -75,8 +73,6 @@ export type LearnBuildOutput = Readonly<{
   tutorialCount: number;
 }>;
 
-const entryPath = fileURLToPath(new URL('../compiler/entry.ts', import.meta.url));
-
 const ENV_LABELS: Readonly<Record<LearnLessonSpec['environment'], Readonly<{ label: string; pillClass: string }>>> = {
   universal: { label: 'Browser + CLI', pillClass: 'status-pill-universal' },
   play: { label: 'Lite Play', pillClass: 'status-pill-play' },
@@ -120,7 +116,7 @@ function compileAndRunLessonSource(
     const modRecord = {
       path: hm.file,
       display: hm.file,
-      identity: sourceModuleIdentity(helperText),
+      identity: '',
       text: helperText,
     };
     extraModules[hm.spec] = modRecord;
@@ -130,8 +126,16 @@ function compileAndRunLessonSource(
   let output = '';
   try {
     const artifact = join(scratch, 'lesson.ts');
+    const runner = join(scratch, 'runner.ts');
     writeFileSync(artifact, generatedTs);
-    const run = spawnSync(process.execPath, [entryPath, artifact, ...lesson.args], {
+    writeFileSync(runner, [
+      "import { writeSync } from 'node:fs';",
+      "import { main } from './lesson.ts';",
+      'process.argv = [process.execPath, process.argv[1]!, ...process.argv.slice(2)];',
+      "const out = main((text: string): void => { writeSync(1, text); });",
+      "if (typeof out === 'string' && out.length > 0) writeSync(1, out);",
+    ].join('\n') + '\n');
+    const run = spawnSync(process.execPath, [runner, ...lesson.args], {
       cwd: rootDir,
       input: lesson.stdin,
       encoding: 'utf8',

@@ -27,7 +27,7 @@ test('lite compile, check and run resolve top-level Lite source imports', () => 
     const main = join(directory, 'main.lts');
     writeFileSync(main, 'lib := import "./lib.lts";\nio := import "core/io";\nio.outputLine(lib.answer);\n');
     writeFileSync(join(directory, 'lib.lts'), 'pub answer := 42;\n');
-    const compile = spawnSync(process.execPath, [join(root, 'compiler/cli.ts'), 'ts', main], {
+    const compile = spawnSync(process.execPath, [join(root, 'bin/lite-compile-ts'), main], {
       cwd: root, encoding: 'utf8', timeout: 60_000,
     });
     assert.equal(compile.status, 0, compile.stderr);

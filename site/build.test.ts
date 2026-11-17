@@ -436,21 +436,57 @@ test('emitted playground compiler.js and stdlib.json compile and run Lite code',
   assert(existsSync(join(out, 'playground', 'compiler.js')));
   assert('core/io' in stdlib);
 
-  const imported = await import(compilerUrl) as { main: (w?: (t: string) => void, r?: (imp: string, spec: string) => unknown) => string };
+  const imported = await import(compilerUrl) as { main: (w?: (t: string) => void) => string };
   const sample = JSON.parse(readFileSync(join(out, 'playground', 'samples', 'double-sum.json'), 'utf8')) as { source: string; stdin: string; output: string };
   const stdinBytes = new TextEncoder().encode(sample.source);
+  const vfsFiles = new Map<string, Uint8Array>();
+  const vfsDirs = new Set<string>(['/project', '/project/lib', '/project/lib/core', '/project/lib/extra']);
+  for (const entry of Object.values(stdlib)) {
+    const p = `/project/${entry.path}`;
+    vfsFiles.set(p, new TextEncoder().encode(entry.text));
+  }
+  vfsFiles.set('/project/playground.lts', stdinBytes);
+  const normVfs = (p: string): string => {
+    const raw = String(p).startsWith('/') ? String(p) : `/project/${String(p)}`;
+    const segs: string[] = [];
+    for (const seg of raw.split('/')) {
+      if (!seg || seg === '.') continue;
+      if (seg === '..') segs.pop();
+      else segs.push(seg);
+    }
+    return `/${segs.join('/')}`;
+  };
   let offset = 0;
   let stdout = '';
   let stderr = '';
   const prevProcess = globalThis.process;
   const stubProcess = {
-    argv: ['node', 'compiler.js', 'playground.lts', 'playground', 'playground.lts'],
+    argv: ['node', '/project/compiler.js', '--stdin', '--name', 'playground.lts', '--root', '/project/playground.lts'],
+    platform: 'linux',
+    cwd(): string { return '/project'; },
     exit(code: number): never {
       throw new Error(`EXIT:${code}:${stderr}`);
     },
     getBuiltinModule(name: string) {
       assert.equal(name, 'node:fs');
       return {
+        statSync(p: string) {
+          const k = normVfs(p);
+          if (vfsFiles.has(k)) return { isFile: () => true, isDirectory: () => false };
+          if (vfsDirs.has(k)) return { isFile: () => false, isDirectory: () => true };
+          throw Object.assign(new Error(`ENOENT: ${p}`), { code: 'ENOENT' });
+        },
+        realpathSync(p: string): string {
+          const k = normVfs(p);
+          if (vfsFiles.has(k) || vfsDirs.has(k)) return k;
+          throw Object.assign(new Error(`ENOENT: ${p}`), { code: 'ENOENT' });
+        },
+        readFileSync(p: string): Uint8Array {
+          const k = normVfs(p);
+          const data = vfsFiles.get(k);
+          if (data !== undefined) return data;
+          throw Object.assign(new Error(`ENOENT: ${p}`), { code: 'ENOENT' });
+        },
         readSync(_fd: number, buf: Uint8Array, bufOffset: number, length: number): number {
           if (offset >= stdinBytes.length) return 0;
           const n = Math.min(length, stdinBytes.length - offset);
@@ -468,15 +504,7 @@ test('emitted playground compiler.js and stdlib.json compile and run Lite code',
   };
   (globalThis as unknown as { process: typeof stubProcess }).process = stubProcess;
   try {
-    const readSource = (importer: string, spec: string) => {
-      if (spec in stdlib) return stdlib[spec];
-      if (spec.startsWith('./') && importer.startsWith('lib/core/')) {
-        const name = `core/${spec.slice(2).replace(/\.lts$/, '')}`;
-        if (name in stdlib) return stdlib[name];
-      }
-      throw new Error(`cannot import ${spec} from ${importer}`);
-    };
-    const ret = imported.main((t) => { stdout += t; }, readSource);
+    const ret = imported.main((t) => { stdout += t; });
     const compiledTs = stdout + (ret ?? '');
     assert(compiledTs.includes('export function main'));
     assert.equal(stderr, '');

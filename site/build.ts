@@ -5,9 +5,7 @@ import { cpSync, mkdirSync, mkdtempSync, readdirSync, readFileSync, rmSync, writ
 import { stripTypeScriptTypes } from 'node:module';
 import { tmpdir } from 'node:os';
 import { dirname, join, resolve } from 'node:path';
-import { fileURLToPath } from 'node:url';
 import { buildCCompiler, buildTsCompiler, compileBuiltCompiler, type CompilerBuild } from '../compiler/host.ts';
-import { sourceModuleIdentity } from '../compiler/source.ts';
 import { extractModules } from '../tools/docs.ts';
 import {
   brandWordmark,
@@ -53,7 +51,21 @@ export type BuildSiteOptions = Readonly<{
 
 const root = dirname(import.meta.dirname);
 const outputDir = join(root, 'dist', 'site');
-const entryPath = fileURLToPath(new URL('../compiler/entry.ts', import.meta.url));
+
+function coreModuleIdentity(relPath: string): string {
+  switch (relPath) {
+    case 'lib/core/io.lts': return 'lite.core.io.v1';
+    case 'lib/core/int.lts': return 'lite.core.int.v1';
+    case 'lib/core/list.lts': return 'lite.core.list.v1';
+    case 'lib/core/text.lts': return 'lite.core.text.v1';
+    case 'lib/core/file.lts': return 'lite.core.file.v1';
+    case 'lib/core/process.lts': return 'lite.core.process.v1';
+    case 'lib/core/crypto.lts': return 'lite.core.crypto.v1';
+    case 'lib/core/time.lts': return 'lite.core.time.v1';
+    case 'lib/core/unicode.lts': return 'lite.core.unicode.v1';
+    default: return '';
+  }
+}
 
 function compileAndRunSample(sample: AnySample, tsCompiler: CompilerBuild, badge?: string): RenderedSample {
   const fullPath = resolve(root, sample.file);
@@ -80,8 +92,16 @@ function compileAndRunSample(sample: AnySample, tsCompiler: CompilerBuild, badge
   const scratch = mkdtempSync(join(tmpdir(), 'lite-site-sample-'));
   try {
     const artifact = join(scratch, 'sample.ts');
+    const runner = join(scratch, 'runner.ts');
     writeFileSync(artifact, generatedTs);
-    const run = spawnSync(process.execPath, [entryPath, artifact, ...sample.args], {
+    writeFileSync(runner, [
+      "import { writeSync } from 'node:fs';",
+      "import { main } from './sample.ts';",
+      'process.argv = [process.execPath, process.argv[1]!, ...process.argv.slice(2)];',
+      "const out = main((text: string): void => { writeSync(1, text); });",
+      "if (typeof out === 'string' && out.length > 0) writeSync(1, out);",
+    ].join('\n') + '\n');
+    const run = spawnSync(process.execPath, [runner, ...sample.args], {
       cwd: root,
       input: sample.stdin,
       encoding: 'utf8',
@@ -1955,7 +1975,7 @@ export function buildSite(options?: BuildSiteOptions): void {
       const relPath = `lib/${ns}/${name}`;
       const text = readFileSync(join(libDir, name), 'utf8');
       const modName = `${ns}/${name.slice(0, -4)}`;
-      stdlib[modName] = { path: relPath, display: relPath, identity: sourceModuleIdentity(text), text };
+      stdlib[modName] = { path: relPath, display: relPath, identity: coreModuleIdentity(relPath), text };
     }
   }
   const stdlibJson = JSON.stringify(stdlib);

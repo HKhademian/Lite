@@ -7,7 +7,6 @@ import { fileURLToPath } from 'node:url';
 import { test } from 'node:test';
 import { generatedTestFiles } from '../../igniter/test-suites.ts';
 import { buildCompiler, buildTsCompiler, compileTarget, compileTs, type CompilerTarget } from '../host.ts';
-import { resolveImportPath } from '../source.ts';
 import { seed } from '../bootstrap/seed.ts';
 import { expectedText } from './contracts.ts';
 import { prepareTsArtifacts, checkTsArtifact, runTsArtifact, runCArtifact, withTsArtifact, withTsArtifacts, type ArtifactOptions, type ArtifactRun } from '../../igniter/artifacts.ts';
@@ -52,55 +51,42 @@ test('TS artifact capture preserves large synchronous writes and the returned ta
   assert.ok(actual.stdout.equals(Buffer.from(chunk + chunk + 'tail\n')), 'complete raw output including returned tail');
 });
 
-test('compiler entry provides canonical strict-UTF-8 source reads to generated compilers', () => {
+test('standalone generated compiler CLI performs strict-UTF-8 source reads directly via core/file', () => {
   const directory = mkdtempSync(join(tmpdir(), 'lite-source-provider-'));
   try {
-    const artifact = join(directory, 'reader.ts');
+    const compilerArtifact = join(root, `compiler/bootstrap/${seed.artifact}`);
     const importer = join(directory, 'app.lts');
     const dependency = join(directory, 'dep.lts');
-    writeFileSync(importer, '');
-    writeFileSync(dependency, 'dependency source\n');
-    writeFileSync(artifact, `
-      declare const process: { argv: string[] };
-      type SourceReader = (importer: string, spec: string) => { path: string; text: string };
-      export function main(_write: ((text: string) => void) | undefined, readSource: SourceReader): string {
-        const source = readSource(process.argv[2] ?? "", "./dep.lts");
-        return source.path + "\\n" + source.text;
-      }
-    `);
-    const entry = join(root, 'compiler/entry.ts');
-    const read = spawnSync(process.execPath, [entry, artifact, importer], { cwd: directory, encoding: 'utf8', timeout: 10000 });
-    assert.equal(read.status, 0, read.stderr);
-    assert.equal(read.signal, null);
-    assert.equal(read.stderr, '');
-    assert.equal(read.stdout, `${realpathSync(dependency)}\ndependency source\n`);
+    writeFileSync(dependency, 'pub answer := 42;\n');
+    writeFileSync(importer, 'dep := import "./dep.lts"; io := import "core/io"; io.outputLine(dep.answer);\n');
+    const outFile = join(directory, 'out.ts');
+    const traceFile = join(directory, 'trace.json');
+    const compiled = spawnSync(process.execPath, [compilerArtifact, '--out', outFile, '--trace-json', traceFile, importer], {
+      cwd: directory, encoding: 'utf8', timeout: 10000,
+    });
+    assert.equal(compiled.status, 0, compiled.stderr);
+    assert.equal(compiled.signal, null);
+    assert.equal(compiled.stderr, '');
+    assert.equal(compiled.stdout, '');
+    const trace = JSON.parse(readFileSync(traceFile, 'utf8')) as { files: { path: string; sha256: string }[]; edges: { importer: string; spec: string; path: string }[] };
+    assert.ok(trace.files.some(f => f.path === realpathSync(dependency)));
+    assert.ok(trace.edges.some(e => e.spec === './dep.lts' && e.path === realpathSync(dependency)));
+    assert.equal(runTsArtifact(readFileSync(outFile, 'utf8')).stdout.toString(), '42\n');
 
     writeFileSync(dependency, Buffer.from([0xff]));
-    const invalidUtf8 = spawnSync(process.execPath, [entry, artifact, importer], { cwd: directory, encoding: 'utf8', timeout: 10000 });
+    const invalidUtf8 = spawnSync(process.execPath, [compilerArtifact, importer], { cwd: directory, encoding: 'utf8', timeout: 10000 });
     assert.equal(invalidUtf8.status, 2);
     assert.equal(invalidUtf8.signal, null);
     assert.match(invalidUtf8.stderr, /imported source \.\/dep\.lts is not valid UTF-8/);
 
-    writeFileSync(artifact, `
-      type SourceReader = (importer: string, spec: string) => { path: string; text: string };
-      export function main(_write: ((text: string) => void) | undefined, readSource: SourceReader): string {
-        readSource("app.lts", "");
-        return "unreachable";
-      }
-    `);
-    const rejected = spawnSync(process.execPath, [entry, artifact], { cwd: directory, encoding: 'utf8', timeout: 10000 });
+    writeFileSync(importer, 'dep := import "";\n');
+    const rejected = spawnSync(process.execPath, [compilerArtifact, importer], { cwd: directory, encoding: 'utf8', timeout: 10000 });
     assert.equal(rejected.status, 2);
     assert.equal(rejected.signal, null);
     assert.match(rejected.stderr, /import path must be nonempty and use "\/" separators/);
 
-    writeFileSync(artifact, `
-      type SourceReader = (importer: string, spec: string) => { path: string; text: string };
-      export function main(_write: ((text: string) => void) | undefined, readSource: SourceReader): string {
-        readSource("app.lts", "./missing.lts");
-        return "unreachable";
-      }
-    `);
-    const missing = spawnSync(process.execPath, [entry, artifact], { cwd: directory, encoding: 'utf8', timeout: 10000 });
+    writeFileSync(importer, 'dep := import "./missing.lts";\n');
+    const missing = spawnSync(process.execPath, [compilerArtifact, importer], { cwd: directory, encoding: 'utf8', timeout: 10000 });
     assert.equal(missing.status, 2);
     assert.equal(missing.signal, null);
     assert.equal(missing.stdout, '');
@@ -148,15 +134,21 @@ test('Lite import paths resolve relative, absolute and through the library root'
 
 test('Lite import path resolution is independent of the caller working directory', () => {
   const elsewhere = mkdtempSync(join(tmpdir(), 'lite-import-cwd-'));
+  const outsideCwd = mkdtempSync(join(tmpdir(), 'lite-outside-cwd-'));
   try {
-    const importer = join(elsewhere, 'nested', 'main.lts');
-    assert.equal(resolveImportPath(importer, './math'), join(elsewhere, 'nested', 'math.lts'));
-    assert.equal(resolveImportPath(importer, '../base.lts'), join(elsewhere, 'base.lts'));
-    assert.equal(resolveImportPath(importer, 'core/text', elsewhere), join(root, 'lib/core/text.lts'));
-    assert.equal(resolveImportPath(importer, 'core/text.lts', elsewhere), join(root, 'lib/core/text.lts'));
-    assert.equal(resolveImportPath(importer, '/opt/lite/modules/math'), '/opt/lite/modules/math.lts');
+    mkdirSync(join(elsewhere, 'nested'), { recursive: true });
+    writeFileSync(join(elsewhere, 'base.lts'), 'pub twice := fn(v: Int): Int { v * 2 };\n');
+    writeFileSync(join(elsewhere, 'nested', 'math.lts'), 'base := import "../base"; text := import "core/text.lts"; pub answer := fn(): Int { base.twice(text.length("hi")) };\n');
+    const mainFile = join(elsewhere, 'nested', 'main.lts');
+    writeFileSync(mainFile, 'math := import "./math"; io := import "core/io"; io.outputLine(math.answer());\n');
+    const compiled = spawnSync(process.execPath, [join(root, `compiler/bootstrap/${seed.artifact}`), mainFile], {
+      cwd: outsideCwd, encoding: 'utf8', timeout: 10000,
+    });
+    assert.equal(compiled.status, 0, compiled.stderr);
+    assert.equal(runTsArtifact(compiled.stdout).stdout.toString(), '4\n');
   } finally {
     rmSync(elsewhere, { recursive: true, force: true });
+    rmSync(outsideCwd, { recursive: true, force: true });
   }
 });
 
@@ -718,7 +710,8 @@ test('public commands compile, run and check TS artifacts without T00 and reject
     const compiled = spawnSync(join(directory, 'bin/lite'), ['compile', path], { env, timeout: 30000 });
     assert.equal(compiled.status, 0, compiled.stderr.toString()); assert.equal(compiled.stderr.length, 0);
     const artifact = join(directory, 'program.ts'); writeFileSync(artifact, compiled.stdout);
-    const executed = spawnSync(process.execPath, [join(directory, 'compiler/entry.ts'), artifact], { input: '7', env, timeout: 30000 });
+    const runnerScript = "import { writeSync } from 'node:fs'; import { pathToFileURL } from 'node:url'; const m = await import(pathToFileURL(process.argv[1]).href); const out = m.main((t) => writeSync(1, t)); if (typeof out === 'string' && out.length > 0) writeSync(1, out);";
+    const executed = spawnSync(process.execPath, ['--input-type=module', '-e', runnerScript, artifact], { input: '7', env, timeout: 30000 });
     assert.equal(executed.status, 0, executed.stderr.toString()); assert.equal(executed.stdout.toString(), 'n? 14\n');
     const ran = spawnSync(join(directory, 'bin/lite'), ['run', path], { input: '7', env, timeout: 30000 });
     assert.equal(ran.status, 0, ran.stderr.toString()); assert.equal(ran.stdout.toString(), 'n? 14\n'); assert.equal(ran.stderr.length, 0);
@@ -848,7 +841,7 @@ function isolatedCheckout(): string {
   const utilLibs = readdirSync(join(root, 'lib/util')).filter(f => f.endsWith('.lts')).map(f => `lib/util/${f}`);
   const paths = new Set([
     'bin/lite', 'bin/lite-compile', 'bin/lite-compile-ts', 'bin/lite-compile-c', 'bin/lite-check', 'bin/lite-run', 'bin/lite-verify',
-    'compiler/host.ts', 'compiler/source.ts', 'compiler/entry.ts', 'compiler/cli.ts', 'compiler/launcher.ts', 'compiler/compile-ts.ts', 'compiler/compile-c.ts', 'compiler/package.json',
+    'compiler/host.ts', 'compiler/launcher.ts', 'compiler/compile-ts.ts', 'compiler/compile-c.ts', 'compiler/package.json',
     'igniter/launcher.ts', 'igniter/ignite.ts', 'igniter/test-suites.ts', 'igniter/artifacts.ts', 'igniter/package.json',
     'tools/cli.ts', 'tools/checker.ts', 'tools/verify.ts', 'tools/run.ts', 'tools/project.ts',
     'compiler/release-streams.ts', 'config/versions.json',
@@ -872,8 +865,13 @@ function isolatedCheckout(): string {
 function invoke(directory: string, source: string | Buffer, target: CompilerTarget = 'ts') {
   const path = join(directory, 'source with spaces.lts');
   writeFileSync(path, source);
-  return target === 'ts' ? spawnSync(join(directory, 'bin/lite-compile-ts'), [path], { env, timeout: 30000 })
-    : spawnSync(process.execPath, [join(directory, 'compiler/cli.ts'), target, path], { env, timeout: 30000 });
+  return target === 'ts'
+    ? spawnSync(join(directory, 'bin/lite-compile-ts'), [path], { env, timeout: 30000 })
+    : spawnSync(process.execPath, [
+      '--input-type=module', '-e',
+      "import { buildCompiler } from './compiler/host.ts'; import { writeSync } from 'node:fs'; import { pathToFileURL } from 'node:url'; const c = buildCompiler('c').path; const m = await import(pathToFileURL(c).href); process.argv = [process.execPath, c, process.argv[1]]; const out = m.main((t) => writeSync(1, t)); if (out === undefined) process.exitCode = 2; else if (typeof out !== 'string') process.exitCode = 1; else if (out.length > 0) writeSync(1, out);",
+      path,
+    ], { cwd: directory, env, timeout: 30000 });
 }
 
 test('TS host rebuilds the Lite source graph and preserves output, diagnostics and source names', () => {
@@ -960,9 +958,11 @@ test('a modified bootstrap seed fails explicitly without executing T00', () => {
 
 test('selected compiler build exposes its imported source dependencies', () => {
   const selected = buildCompiler('ts');
-  assert.deepEqual(selected.dependencies.slice(0, 3), [
-    'compiler/src/ts-root.lts', 'compiler/src/driver-ts.lts', 'compiler/src/frontend.lts',
+  assert.deepEqual(selected.dependencies.slice(0, 2), [
+    'compiler/src/ts-root.lts', 'compiler/src/driver-ts.lts',
   ]);
+  assert.ok(selected.dependencies.includes('compiler/src/frontend.lts'));
+  assert.ok(selected.dependencies.includes('compiler/src/host-fs.lts'));
   assert.ok(selected.dependencies.includes('compiler/src/numeric-literals.lts'));
 });
 
@@ -4530,7 +4530,7 @@ test('soft-builtin emitter overrides and --builtin-mode flags work at function, 
       }
     }
 
-    const cliPure = spawnSync(process.execPath, [join(root, 'compiler/cli.ts'), 'ts', '--builtin-mode=pure', sourceFile], { env, encoding: 'utf8', timeout: 10000 });
+    const cliPure = spawnSync(join(root, 'bin/lite-compile-ts'), ['--builtin-mode=pure', sourceFile], { env, encoding: 'utf8', timeout: 10000 });
     assert.equal(cliPure.status, 0, cliPure.stderr);
     assert.doesNotMatch(cliPure.stdout, /function lite\$cryptoDigest/);
 

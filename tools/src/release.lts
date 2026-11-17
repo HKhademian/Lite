@@ -373,7 +373,17 @@ prepareRelease := fn(directory: String, output: String, tag: String): Unit {
     wrHello := fs.writeText(helloPath, emitted);
     if not wrHello.ok { failRelease(work, wrHello.error); }
 
-    entryArgs: List<String> = [path.join(extracted, "compiler/entry.ts"), helloPath];
+    helloRunner := path.join(work, "run-hello.ts");
+    wrHelloRunner := fs.writeText(
+    helloRunner,
+    "import { writeSync } from 'node:fs';\n" +
+    "import { main } from './hello.ts';\n" +
+    "const out = main((text: string): void => { writeSync(1, text); });\n" +
+    "if (typeof out === 'string' && out.length > 0) writeSync(1, out);\n"
+    );
+    if not wrHelloRunner.ok { failRelease(work, wrHelloRunner.error); }
+
+    entryArgs: List<String> = [helloRunner];
     helloOut := runChecked(work, proc.execPath(), entryArgs, extracted, "");
     if helloOut =!= "42\n" {
         failRelease(work, "extracted compiler roundtrip produced unexpected output: " + helloOut);

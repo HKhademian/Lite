@@ -30,7 +30,7 @@ function loadCompilerSource(file) {
           if (!res.ok) throw new Error('Failed to load ' + file + ' (' + res.status + ')');
           return res.text();
         })
-        .then((src) => src.replace(/export function main\\b/, 'function main') + '\\nreturn (w, r) => main(w, r);'),
+        .then((src) => src.replace(/\\nif\\s*\\(\\s*\\(?\\s*import\\.meta\\b[\\s\\S]*$/, '').replace(/export function main\\b/, 'function main') + '\\nreturn (w) => main(w);'),
     );
   }
   return compilerSourcePromises.get(file);
@@ -38,26 +38,107 @@ function loadCompilerSource(file) {
 
 const encoder = new TextEncoder();
 
-function runWithProcessStub(argv, stdinText, fn) {
+function buildPlaygroundVfs(stdlib, extraModules, sourceText) {
+  const files = new Map();
+  const dirs = new Set(['/project', '/project/lib', '/project/lib/core', '/project/lib/extra']);
+  const addFile = (virtPath, text) => {
+    const norm = virtPath.startsWith('/') ? virtPath : '/project/' + virtPath;
+    files.set(norm, encoder.encode(text));
+    const parts = norm.split('/').filter(Boolean);
+    for (let i = 1; i < parts.length; i += 1) {
+      dirs.add('/' + parts.slice(0, i).join('/'));
+    }
+  };
+  for (const entry of Object.values(stdlib ?? {})) {
+    if (entry && entry.path && typeof entry.text === 'string') addFile(entry.path, entry.text);
+  }
+  if (extraModules) {
+    for (const [spec, entry] of Object.entries(extraModules)) {
+      if (!entry || typeof entry.text !== 'string') continue;
+      if (entry.path) addFile(entry.path, entry.text);
+      if (spec.startsWith('./') || spec.startsWith('../')) {
+        addFile('/project/' + spec.replace(/^\\.+\\/+/, '').replace(/(?:\\.lts)?$/, '.lts'), entry.text);
+      } else if (!spec.startsWith('/')) {
+        addFile('/project/lib/' + spec.replace(/(?:\\.lts)?$/, '.lts'), entry.text);
+      }
+    }
+  }
+  addFile('/project/playground.lts', sourceText ?? '');
+  const normVirt = (p) => {
+    const raw = String(p ?? '').startsWith('/') ? String(p) : '/project/' + String(p ?? '');
+    const out = [];
+    for (const seg of raw.split('/')) {
+      if (!seg || seg === '.') continue;
+      if (seg === '..') out.pop();
+      else out.push(seg);
+    }
+    return '/' + out.join('/');
+  };
+  return { files, dirs, normVirt };
+}
+
+function runWithProcessStub(argv, stdinText, fn, vfs) {
   const stdinBytes = encoder.encode(stdinText ?? '');
   let offset = 0;
   let stdout = '';
   let stderr = '';
   let exitCode = 0;
+  const openFds = new Map();
+  let nextFd = 10;
 
   const stubProcess = {
     argv,
+    platform: 'linux',
+    cwd() { return '/project'; },
     exit(code) {
       throw new ExitSignal(code);
     },
     getBuiltinModule(name) {
       if (name !== 'node:fs') throw new Error('Unsupported module: ' + name);
       return {
-        readSync(_fd, buf, bufOffset, length) {
-          if (offset >= stdinBytes.length) return 0;
-          const n = Math.min(length, stdinBytes.length - offset);
-          buf.set(stdinBytes.subarray(offset, offset + n), bufOffset);
-          offset += n;
+        statSync(p) {
+          const k = vfs ? vfs.normVirt(p) : String(p);
+          if (vfs && vfs.files.has(k)) return { isFile: () => true, isDirectory: () => false };
+          if (vfs && vfs.dirs.has(k)) return { isFile: () => false, isDirectory: () => true };
+          throw Object.assign(new Error('ENOENT: no such file or directory, stat \\'' + p + '\\''), { code: 'ENOENT' });
+        },
+        realpathSync(p) {
+          const k = vfs ? vfs.normVirt(p) : String(p);
+          if (vfs && (vfs.files.has(k) || vfs.dirs.has(k))) return k;
+          throw Object.assign(new Error('ENOENT: no such file or directory, realpath \\'' + p + '\\''), { code: 'ENOENT' });
+        },
+        readFileSync(p) {
+          const k = vfs ? vfs.normVirt(p) : String(p);
+          if (vfs && vfs.files.has(k)) return vfs.files.get(k);
+          throw Object.assign(new Error('ENOENT: no such file or directory, open \\'' + p + '\\''), { code: 'ENOENT' });
+        },
+        openSync(p) {
+          const k = vfs ? vfs.normVirt(p) : String(p);
+          if (!vfs || !vfs.files.has(k)) throw Object.assign(new Error('ENOENT: no such file or directory, open \\'' + p + '\\''), { code: 'ENOENT' });
+          const fd = nextFd++;
+          openFds.set(fd, { bytes: vfs.files.get(k), pos: 0 });
+          return fd;
+        },
+        fstatSync(fd) {
+          if (!openFds.has(fd)) throw new Error('EBADF');
+          return { isFile: () => true, isDirectory: () => false };
+        },
+        closeSync(fd) {
+          openFds.delete(fd);
+        },
+        readSync(fd, buf, bufOffset, length) {
+          if (fd === 0) {
+            if (offset >= stdinBytes.length) return 0;
+            const n = Math.min(length, stdinBytes.length - offset);
+            buf.set(stdinBytes.subarray(offset, offset + n), bufOffset);
+            offset += n;
+            return n;
+          }
+          const st = openFds.get(fd);
+          if (!st || st.pos >= st.bytes.length) return 0;
+          const n = Math.min(length, st.bytes.length - st.pos);
+          buf.set(st.bytes.subarray(st.pos, st.pos + n), bufOffset);
+          st.pos += n;
           return n;
         },
         writeSync(fd, text) {
@@ -85,36 +166,23 @@ function runWithProcessStub(argv, stdinText, fn) {
   }
 }
 
-function makeReadSource(stdlib, extraModules) {
-  return (importer, spec) => {
-    if (extraModules && Object.prototype.hasOwnProperty.call(extraModules, spec)) return extraModules[spec];
-    if (Object.prototype.hasOwnProperty.call(stdlib, spec)) return stdlib[spec];
-    if (spec.startsWith('./')) {
-      const prefix = importer.startsWith('lib/extra/') ? 'extra/' : importer.startsWith('lib/core/') ? 'core/' : '';
-      if (prefix) {
-        const name = prefix + spec.slice(2).replace(/\\.lts$/, '');
-        if (Object.prototype.hasOwnProperty.call(stdlib, name)) return stdlib[name];
-      }
-    }
-    throw new Error('cannot import ' + spec + ' from ' + importer);
-  };
-}
-
-function compileWith(compilerSource, readSource, source) {
+function compileWith(compilerSource, vfs, source) {
   return runWithProcessStub(
-    ['node', 'compiler.js', 'playground.lts', 'playground', 'playground.lts'],
+    ['node', '/project/compiler.js', '--stdin', '--name', 'playground.lts', '--root', '/project/playground.lts'],
     source ?? '',
     (proc, write) => {
       const compileMain = new Function('process', compilerSource)(proc);
-      return compileMain(write, readSource);
+      return compileMain(write);
     },
+    vfs,
   );
 }
 
-function compileTsForPlayground(compilerSource, readSource, source) {
+function compileTsForPlayground(compilerSource, stdlib, extraModules, source) {
   const withKeepalive = appendPlayKeepalive(source ?? '');
   if (withKeepalive !== null) {
-    const keepaliveResult = compileWith(compilerSource, readSource, withKeepalive);
+    const keepaliveVfs = buildPlaygroundVfs(stdlib, extraModules, withKeepalive);
+    const keepaliveResult = compileWith(compilerSource, keepaliveVfs, withKeepalive);
     if (keepaliveResult.ok && keepaliveResult.stdout) {
       return {
         ...keepaliveResult,
@@ -122,7 +190,8 @@ function compileTsForPlayground(compilerSource, readSource, source) {
       };
     }
   }
-  return compileWith(compilerSource, readSource, source);
+  const baseVfs = buildPlaygroundVfs(stdlib, extraModules, source);
+  return compileWith(compilerSource, baseVfs, source);
 }
 
 function attachPlayBridge(js) {
@@ -244,11 +313,11 @@ self.onmessage = async (event) => {
     }
 
     const stdlib = await loadStdlib();
-    const readSource = makeReadSource(stdlib, extraModules ?? null);
 
     if (action === 'compile-c') {
       const cSource = await loadCompilerSource('compiler-c.js');
-      const cResult = compileWith(cSource, readSource, source);
+      const vfs = buildPlaygroundVfs(stdlib, extraModules ?? null, source);
+      const cResult = compileWith(cSource, vfs, source);
       self.postMessage({
         id,
         ok: cResult.ok && Boolean(cResult.stdout),
@@ -259,7 +328,7 @@ self.onmessage = async (event) => {
     }
 
     const tsCompilerSource = await loadCompilerSource('compiler.js');
-    const compileResult = compileTsForPlayground(tsCompilerSource, readSource, source);
+    const compileResult = compileTsForPlayground(tsCompilerSource, stdlib, extraModules ?? null, source);
 
     if (!compileResult.ok || !compileResult.stdout) {
       self.postMessage({
@@ -279,7 +348,8 @@ self.onmessage = async (event) => {
     const ts = compileResult.stdout;
     if (action === 'compile') {
       const cSource = await loadCompilerSource('compiler-c.js');
-      const cResult = compileWith(cSource, readSource, source);
+      const vfs = buildPlaygroundVfs(stdlib, extraModules ?? null, source);
+      const cResult = compileWith(cSource, vfs, source);
       self.postMessage({
         id,
         ok: true,

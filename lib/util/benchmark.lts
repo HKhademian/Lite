@@ -525,12 +525,13 @@ pub runCompilerPerformanceCommand := fn(rootDir: String, args: List<String>): In
         return 1;
     }
 
-    entryPath := path.join(rootDir, "compiler/entry.ts");
+    runnerPath := path.join(workDir, "syn-runner.ts");
+    _wSynRun := cases.writeTsRunner(runnerPath);
     emptyEnv: List<String> = [];
     emptyBytes: List<Int> = [];
     var ri := 0;
     loop ri < 3 {
-        runArgs: List<String> = [entryPath, syntheticEmittedFiles[ri]];
+        runArgs: List<String> = [runnerPath, syntheticEmittedFiles[ri]];
         rOut := path.join(workDir, "syn-run-" + integer.intText(ri) + ".out");
         rErr := path.join(workDir, "syn-run-" + integer.intText(ri) + ".err");
         rRes := proc.runBytes(proc.execPath(), runArgs, workDir, emptyEnv, 10000, emptyBytes, rOut, rErr);
@@ -552,7 +553,7 @@ pub runCompilerPerformanceCommand := fn(rootDir: String, args: List<String>): In
     loop rpass < samples {
         rOut := path.join(workDir, "rt-1000-" + integer.intText(rpass + warmups) + ".out");
         rErr := path.join(workDir, "rt-1000-" + integer.intText(rpass + warmups) + ".err");
-        runArgs: List<String> = [entryPath, syntheticEmittedFiles[2]];
+        runArgs: List<String> = [runnerPath, syntheticEmittedFiles[2]];
         rStartNs := time.monotonicNs();
         rRes := proc.runBytes(proc.execPath(), runArgs, workDir, emptyEnv, 10000, emptyBytes, rOut, rErr);
         rElapsedMicros := (time.monotonicNs() - rStartNs) / 1000;

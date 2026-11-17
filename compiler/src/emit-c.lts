@@ -30,7 +30,6 @@ usesIntHelper := fn(calls: String, name: String): Bool {
 /** Returns the C rejection message for one emitted expression that calls an unsupported I/O or text builtin, or empty text. */
 unsupportedBuiltinCode := fn(calls: String): String {
     match {
-        usesIntHelper(calls, "lite$readSource(") { "C backend does not support compiler source reads" }
         usesIntHelper(calls, "lite$inputArgs(") or usesIntHelper(calls, "lite$inputAll(") or
         usesIntHelper(calls, "lite$inputLine(") or usesIntHelper(calls, "lite$inputInt(") or
         usesIntHelper(calls, "lite$inputFloat(") { "C backend does not support input builtins yet" }
@@ -388,9 +387,9 @@ outputWriteCode := fn(kind: String, code: String, indent: String): String {
     indent + "if (" + cCall(kind, code) + " < 0) { status = 1; }\n"
 }
 
-/** Emits the C program from the flat item stream. Multi-value output evaluates its arguments before any write; every printf keeps the shared write-failure status. */
-pub emitProgram := fn(items: frontend.Items, source: String, prefix: String): Unit {
-    _modes := frontend.parseBuiltinModes(prefix);
+/** Emits the C program from the flat item stream with explicit `--builtin-mode` specifications. */
+pub emitProgramWithSpecs := fn(items: frontend.Items, source: String, prefix: String, builtinSpecs: List<String>): Unit {
+    _modes := frontend.parseBuiltinModeSpecs(prefix, builtinSpecs);
     reachable := frontend.filterReachableItemsForTarget(items, frontend.TARGET_C);
     calls := frontend.targetHelperCalls(reachable);
     var floatOutput := false;
@@ -535,4 +534,10 @@ pub emitProgram := fn(items: frontend.Items, source: String, prefix: String): Un
     }
     io.outputLine("    return status;");
     io.outputLine("}");
+}
+
+/** Emits the C program from the flat item stream using default builtin modes. */
+pub emitProgram := fn(items: frontend.Items, source: String, prefix: String): Unit {
+    emptySpecs: List<String> = [];
+    emitProgramWithSpecs(items, source, prefix, emptySpecs);
 }

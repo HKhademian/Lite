@@ -1,2 +1,3 @@
 driver := import "./driver-ts.lts";
-driver.run();
+io := import "core/io";
+driver.run(io.inputArgs());

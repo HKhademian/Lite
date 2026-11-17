@@ -141,7 +141,7 @@ test('ignition rebuilds missing, tampered, and dependency-changed tools into dis
     };
     for (const rel of [
       'package.json', 'config/versions.json', 'bin/lite', 'bin/lite-fmt',
-      'compiler/host.ts', 'compiler/source.ts', 'compiler/entry.ts', 'compiler/package.json',
+      'compiler/host.ts', 'compiler/package.json',
       `compiler/bootstrap/${seed.artifact}`, 'compiler/bootstrap/seed.ts',
       'igniter/ignite.ts', 'igniter/artifacts.ts', 'igniter/loader.ts', 'igniter/package.json', 'igniter/tsconfig.json',
       'tools/cli.ts', 'tools/fmt.ts', 'tools/src/cli.lts', 'tools/src/fmt.lts', 'lib/core', 'lib/util',

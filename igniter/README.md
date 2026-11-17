@@ -163,8 +163,8 @@ unsupported semantic contracts continue to fail visibly in `lite verify --all`.
 
 The root [lite launcher](../bin/lite) links to the executable TypeScript entry
 [`launcher.ts`](launcher.ts). Compile/check locate their adapters relative to
-the launcher while source paths remain relative to the caller. TS artifacts run
-through [`compiler/entry.ts`](../compiler/entry.ts), preserving program arguments,
+the launcher while source paths remain relative to the caller. Generated standalone
+TS programs execute directly via `node`, preserving program arguments,
 stdin, streamed output and exit status. No runtime npm dependencies are required;
 strict check-only requires the pinned checking toolchain installed above.
 
@@ -200,7 +200,7 @@ The manifests are [compiler/manifests/ts.json](../compiler/manifests/ts.json) an
 [c.json](../compiler/manifests/c.json). Each names one Lite root. Imports in
 `compiler/src/` and `lib/core/` use module aliases; the compiler visitor follows
 the graph and build provenance records the resolved dependency paths. The
-production route enters through [`compiler/cli.ts`](../compiler/cli.ts).
+production route enters through [`tools/src/compile-ts.lts`](../tools/src/compile-ts.lts).
 
 P3 adds the Lite-written lexer in [`../compiler/src/lexer.lts`](../compiler/src/lexer.lts)
 with a token-dump driver at

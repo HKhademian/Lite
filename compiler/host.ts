@@ -6,10 +6,10 @@ import {
   realpathSync, renameSync, rmSync, statSync, writeFileSync,
 } from 'node:fs';
 import { createRequire } from 'node:module';
+import { tmpdir } from 'node:os';
 import { dirname, isAbsolute, join, relative, resolve, sep } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { loadManifest } from '../igniter/loader.ts';
-import { displaySourcePath, readSourceInput, resolveImportPath, sourceModuleIdentity } from './source.ts';
 import { seed } from './bootstrap/seed.ts';
 
 /** Existing code-generation targets; this is host plumbing, not language syntax. */
@@ -26,8 +26,7 @@ export type GraphDependencyIdentity = Readonly<{ path: string; sha256: string }>
 export type GraphSourceEdge = Readonly<{ importer: string; spec: string; path: string }>;
 type DependencyIdentity = GraphDependencyIdentity;
 type SourceEdge = GraphSourceEdge;
-type SourceRecord = Readonly<{ path: string; display: string; identity: string; text: string }>;
-type CompilerMain = (write?: (text: string) => void, sourceProvider?: (importer: string, spec: string) => SourceRecord) => unknown;
+type CompilerMain = (write?: (text: string) => void) => unknown;
 type LoadedCompiler = Readonly<{ stamp: string; main: CompilerMain }>;
 type StatStamp = Readonly<{ linkPath: string; targetPath: string; stamp: string }>;
 type MemoizedBuild = Readonly<{ build: CompilerBuild; checks: readonly StatStamp[] }>;
@@ -41,15 +40,35 @@ class CompilerExit extends Error {
   }
 }
 
-class SourceReadFailure extends Error {}
-
 const root = fileURLToPath(new URL('../', import.meta.url));
 const seedPath = fileURLToPath(new URL(`./bootstrap/${seed.artifact}`, import.meta.url));
-const entryPath = fileURLToPath(new URL('./entry.ts', import.meta.url));
 const hostRequire = createRequire(import.meta.url);
 const loadedCompilers = new Map<string, LoadedCompiler>();
 const memoizedBuilds = new Map<CompilerTarget, MemoizedBuild>();
 let inProcessActive = false;
+
+/** Resolves an import spec for cache-edge freshness validation against the repo root. */
+function resolveEdgeImportPath(importerPath: string, spec: string): string {
+  const sourceSpec = spec.endsWith('.lts') ? spec : `${spec}.lts`;
+  if (isAbsolute(sourceSpec)) return resolve(sourceSpec);
+  if (sourceSpec.startsWith('./') || sourceSpec.startsWith('../')) {
+    return resolve(dirname(importerPath), sourceSpec);
+  }
+  return resolve(root, 'lib', sourceSpec);
+}
+
+/** Reads a canonical UTF-8 source root file for compiler build hash calculation. */
+function readRootSourceFile(path: string): Readonly<{ path: string; text: string; bytes: Buffer }> {
+  const canonical = realpathSync(resolve(path));
+  const bytes = readFileSync(canonical);
+  let text: string;
+  try {
+    text = new TextDecoder('utf-8', { fatal: true }).decode(bytes);
+  } catch {
+    throw new Error(`${canonical}: source is not valid UTF-8`);
+  }
+  return { path: canonical, text, bytes };
+}
 
 /** Computes a lowercase SHA-256 identity without normalizing source bytes. */
 function hash(bytes: string | Buffer): string { return createHash('sha256').update(bytes).digest('hex'); }
@@ -88,13 +107,11 @@ function recordBuildMemo(
 ): CompilerBuild {
   const paths = new Set<string>([
     seedPath,
-    entryPath,
-    resolve(root, 'compiler/source.ts'),
     manifestPath,
     sourcePath,
     indexPath,
     ...build.dependencies.map(dep => resolve(root, dep)),
-    ...edges.map(edge => resolveImportPath(resolve(root, edge.importer), edge.spec, root)),
+    ...edges.map(edge => resolveEdgeImportPath(resolve(root, edge.importer), edge.spec)),
   ]);
   if (build.path !== seedPath) {
     paths.add(build.path);
@@ -119,10 +136,10 @@ function selectBuild(indexPath: string, indexDirectory: string, target: Compiler
   renameSync(indexTemporary, indexPath);
 }
 
-/** Spawns compiler/entry.ts in a fresh subprocess when in-process execution cannot be reused. */
+/** Spawns a standalone generated compiler directly in a fresh subprocess when in-process reuse is unavailable. */
 function invokeSubprocess(artifact: string, text: string, name?: string, cwd = process.cwd(), explicitRootPath?: string, options: readonly string[] = []): CompilerResult {
   const rootPath = explicitRootPath ?? (name === undefined || name === '' ? resolve(cwd, '__lite_stdin__.lts') : resolve(cwd, name));
-  const result = spawnSync(process.execPath, [entryPath, artifact, name ?? '', sourceModuleIdentity(text), rootPath, ...options], {
+  const result = spawnSync(process.execPath, [artifact, '--stdin', '--name', name ?? '', '--root', rootPath, ...options], {
     input: text, cwd, timeout: 0, maxBuffer: 128 * 1024 * 1024,
   });
   if (result.error !== undefined) throw result.error;
@@ -130,64 +147,37 @@ function invokeSubprocess(artifact: string, text: string, name?: string, cwd = p
   return { status: result.status, stdout: result.stdout ?? Buffer.alloc(0), stderr: result.stderr ?? Buffer.alloc(0) };
 }
 
-/** Runs an already-loaded generated compiler in-process while isolating stdio, argv, exit, and cwd-relative imports. */
-function invokeInProcess(main: CompilerMain, resolvedArtifact: string, text: string, name: string | undefined, cwd: string, rootPath: string, options: readonly string[] = []): InvokeGraphResult {
-  const unnamedRootPath = name === undefined || name === '' ? resolve(cwd, rootPath) : undefined;
-  const sourceCache = new Map<string, SourceRecord>();
-  const sourceReads: DependencyIdentity[] = [];
-  const sourceEdges: SourceEdge[] = [];
-  const sourceFailure = (path: string, message: string): SourceReadFailure => {
-    const sourceName = path === unnamedRootPath ? '' : displaySourcePath(path);
-    return new SourceReadFailure(`${sourceName === '' ? '' : `${sourceName}: `}${message}`);
+/** Parses trace JSON emitted by `--trace-json` into validated dependency identities and import edges. */
+function readTraceJsonFile(tracePath: string): Readonly<{ dependencies: DependencyIdentity[]; edges: SourceEdge[] }> {
+  let traceData: unknown = { files: [], edges: [] };
+  if (existsSync(tracePath)) {
+    const raw = readFileSync(tracePath, 'utf8');
+    if (raw.length > 0) {
+      try { traceData = JSON.parse(raw); } catch { throw new Error('generated compiler returned invalid source dependency trace'); }
+    }
+  }
+  if (typeof traceData !== 'object' || traceData === null || Array.isArray(traceData) ||
+      !('files' in traceData) || !Array.isArray(traceData.files) || !traceData.files.every(item => typeof item === 'object' && item !== null &&
+        'path' in item && typeof item.path === 'string' && 'sha256' in item && typeof item.sha256 === 'string') ||
+      !('edges' in traceData) || !Array.isArray(traceData.edges) || !traceData.edges.every(item => typeof item === 'object' && item !== null &&
+        'importer' in item && typeof item.importer === 'string' && 'spec' in item && typeof item.spec === 'string' && 'path' in item && typeof item.path === 'string')) {
+    throw new Error('generated compiler returned invalid source dependency list');
+  }
+  return {
+    dependencies: traceData.files as DependencyIdentity[],
+    edges: traceData.edges as SourceEdge[],
   };
-  const readSource = (importer: string, spec: string): SourceRecord => {
-    const importerPath = isAbsolute(importer) ? importer : resolve(cwd, importer || '__lite_stdin__.lts');
-    let unresolved: string;
-    try {
-      unresolved = resolveImportPath(importerPath, spec, cwd);
-    } catch (error: unknown) {
-      const reason = error instanceof Error ? error.message : 'invalid import path';
-      throw sourceFailure(importerPath, reason);
-    }
-    let path: string;
-    try {
-      path = realpathSync(unresolved);
-    } catch (error: unknown) {
-      const code = typeof error === 'object' && error !== null && 'code' in error && typeof error.code === 'string' ? error.code : 'resolve error';
-      throw sourceFailure(importerPath, `cannot read imported source ${spec} (${code})`);
-    }
-    if (!sourceEdges.some(item => item.importer === importerPath && item.spec === spec && item.path === path)) {
-      sourceEdges.push({ importer: importerPath, spec, path });
-    }
-    const cached = sourceCache.get(path);
-    if (cached !== undefined) return cached;
-    let bytes: Buffer;
-    try {
-      bytes = readFileSync(path);
-    } catch (error: unknown) {
-      const code = typeof error === 'object' && error !== null && 'code' in error && typeof error.code === 'string' ? error.code : 'read error';
-      throw sourceFailure(importerPath, `cannot read imported source ${spec} (${code})`);
-    }
-    let decoded: string;
-    try {
-      decoded = new TextDecoder('utf-8', { fatal: true }).decode(bytes);
-    } catch {
-      throw sourceFailure(importerPath, `imported source ${spec} is not valid UTF-8`);
-    }
-    if (!sourceReads.some(item => item.path === path)) {
-      sourceReads.push({ path, sha256: hash(bytes) });
-    }
-    const loadedRecord: SourceRecord = { path, display: displaySourcePath(path), identity: sourceModuleIdentity(bytes), text: decoded };
-    sourceCache.set(path, loadedRecord);
-    return loadedRecord;
-  };
+}
 
+/** Runs an already-loaded generated compiler in-process while isolating stdio, argv, and exit. */
+function invokeInProcess(main: CompilerMain, resolvedArtifact: string, text: string, name: string | undefined, cwd: string, rootPath: string, options: readonly string[] = [], traceFile?: string): InvokeGraphResult {
   const stdinBytes = Buffer.from(text, 'utf8');
   let stdinOffset = 0;
   const stdoutChunks: Buffer[] = [];
   const stderrChunks: Buffer[] = [];
   const savedArgv = process.argv;
   const savedExit = process.exit;
+  const savedCwd = process.cwd;
   const savedGetBuiltinModule = process.getBuiltinModule;
   const rawGetBuiltinModule = savedGetBuiltinModule as (id: string) => unknown;
   const realFs = rawGetBuiltinModule.call(process, 'node:fs') as Record<string, unknown> | undefined;
@@ -254,7 +244,9 @@ function invokeInProcess(main: CompilerMain, resolvedArtifact: string, text: str
   inProcessActive = true;
   let status = 0;
   try {
-    process.argv = [process.execPath, resolvedArtifact, name ?? '', sourceModuleIdentity(text), rootPath, ...options];
+    const traceArgs = traceFile !== undefined ? ['--trace-json', traceFile] : [];
+    process.argv = [process.execPath, resolvedArtifact, '--stdin', '--name', name ?? '', '--root', rootPath, ...traceArgs, ...options];
+    process.cwd = () => cwd;
     process.exit = ((code?: number | string | null): never => {
       const numeric = code === undefined || code === null ? 0 : Number(code);
       throw new CompilerExit(Number.isFinite(numeric) ? numeric : 1);
@@ -265,7 +257,7 @@ function invokeInProcess(main: CompilerMain, resolvedArtifact: string, text: str
     try {
       const output = main((textChunk: string): void => {
         stdoutChunks.push(Buffer.from(textChunk, 'utf8'));
-      }, readSource);
+      });
       if (output === undefined) {
         status = 2;
       } else if (typeof output !== 'string') {
@@ -276,23 +268,22 @@ function invokeInProcess(main: CompilerMain, resolvedArtifact: string, text: str
     } catch (error: unknown) {
       if (error instanceof CompilerExit) {
         status = error.status;
-      } else if (error instanceof SourceReadFailure) {
-        stderrChunks.push(Buffer.from(`${error.message}\n`, 'utf8'));
-        status = 2;
       } else {
         throw error;
       }
     }
   } finally {
     process.argv = savedArgv;
+    process.cwd = savedCwd;
     process.exit = savedExit;
     process.getBuiltinModule = savedGetBuiltinModule;
     inProcessActive = false;
   }
+  const trace = traceFile !== undefined ? readTraceJsonFile(traceFile) : { dependencies: [], edges: [] };
   return {
     result: { status, stdout: Buffer.concat(stdoutChunks), stderr: Buffer.concat(stderrChunks) },
-    dependencies: sourceReads,
-    edges: sourceEdges,
+    dependencies: trace.dependencies,
+    edges: trace.edges,
   };
 }
 
@@ -335,36 +326,36 @@ function invokeWithTrace(artifact: string, text: string, name: string, cwd = pro
   const resolvedArtifact = resolve(artifact);
   const cached = loadWarmCompiler(resolvedArtifact);
   if (cached !== undefined) {
-    return invokeInProcess(cached.main, resolvedArtifact, text, name, cwd, rootPath, options);
+    const traceDir = mkdtempSync(join(tmpdir(), 'lite-trace-'));
+    try {
+      return invokeInProcess(cached.main, resolvedArtifact, text, name, cwd, rootPath, options, join(traceDir, 'trace.json'));
+    } finally {
+      rmSync(traceDir, { recursive: true, force: true });
+    }
   }
   return invokeGraph(artifact, text, name, cwd, explicitRootPath, options);
 }
 
-/** Compiles a source root and captures the dependency paths actually read by the Lite graph visitor on fd 3. */
+/** Compiles a source root via a standalone compiler subprocess and captures `--trace-json` dependencies and edges. */
 function invokeGraph(artifact: string, text: string, name: string, cwd = process.cwd(), explicitRootPath?: string, options: readonly string[] = []): InvokeGraphResult {
   const rootPath = explicitRootPath ?? (name === '' ? resolve(cwd, '__lite_stdin__.lts') : resolve(cwd, name));
-  const processResult = spawnSync(process.execPath, [entryPath, artifact, name, sourceModuleIdentity(text), rootPath, ...options], {
-    input: text, cwd, timeout: 0, maxBuffer: 128 * 1024 * 1024,
-    env: { ...process.env, LITE_SOURCE_TRACE: '1' }, stdio: ['pipe', 'pipe', 'pipe', 'pipe'],
-  });
-  if (processResult.error !== undefined) throw processResult.error;
-  if (processResult.signal !== null || processResult.status === null) throw new Error(`generated compiler terminated: ${processResult.signal ?? 'no exit status'}`);
-  let traceData: unknown = { files: [], edges: [] };
-  const trace = processResult.output[3];
-  if (trace !== null && trace !== undefined && trace.length > 0) {
-    try { traceData = JSON.parse(trace.toString('utf8')); } catch { throw new Error('generated compiler returned invalid source dependency trace'); }
+  const traceDir = mkdtempSync(join(tmpdir(), 'lite-trace-'));
+  try {
+    const tracePath = join(traceDir, 'trace.json');
+    const processResult = spawnSync(process.execPath, [artifact, '--stdin', '--name', name, '--root', rootPath, '--trace-json', tracePath, ...options], {
+      input: text, cwd, timeout: 0, maxBuffer: 128 * 1024 * 1024,
+    });
+    if (processResult.error !== undefined) throw processResult.error;
+    if (processResult.signal !== null || processResult.status === null) throw new Error(`generated compiler terminated: ${processResult.signal ?? 'no exit status'}`);
+    const traceData = readTraceJsonFile(tracePath);
+    return {
+      result: { status: processResult.status, stdout: processResult.stdout ?? Buffer.alloc(0), stderr: processResult.stderr ?? Buffer.alloc(0) },
+      dependencies: traceData.dependencies,
+      edges: traceData.edges,
+    };
+  } finally {
+    rmSync(traceDir, { recursive: true, force: true });
   }
-  if (typeof traceData !== 'object' || traceData === null || Array.isArray(traceData) ||
-      !('files' in traceData) || !Array.isArray(traceData.files) || !traceData.files.every(item => typeof item === 'object' && item !== null &&
-        'path' in item && typeof item.path === 'string' && 'sha256' in item && typeof item.sha256 === 'string') ||
-      !('edges' in traceData) || !Array.isArray(traceData.edges) || !traceData.edges.every(item => typeof item === 'object' && item !== null &&
-        'importer' in item && typeof item.importer === 'string' && 'spec' in item && typeof item.spec === 'string' && 'path' in item && typeof item.path === 'string')) {
-    throw new Error('generated compiler returned invalid source dependency list');
-  }
-  return {
-    result: { status: processResult.status, stdout: processResult.stdout ?? Buffer.alloc(0), stderr: processResult.stderr ?? Buffer.alloc(0) },
-    dependencies: traceData.files as DependencyIdentity[], edges: traceData.edges as SourceEdge[],
-  };
 }
 
 /** Strictly checks a rebuilt compiler using the same erasable-TS contract as the seed. */
@@ -404,7 +395,7 @@ function cachedBuild(directory: string, sourceSha256: string, target: CompilerTa
   for (const edge of edges) {
     const importer = resolve(root, edge.importer);
     const imported = resolve(root, edge.path);
-    if (realpathSync(resolveImportPath(importer, edge.spec, root)) !== realpathSync(imported)) {
+    if (realpathSync(resolveEdgeImportPath(importer, edge.spec)) !== realpathSync(imported)) {
       throw new Error(`compiler import edge changed during cache selection: ${edge.importer}: ${edge.spec}`);
     }
   }
@@ -424,13 +415,11 @@ export function buildCompiler(target: CompilerTarget): CompilerBuild {
   const manifest = loadManifest(manifestPath);
   if (manifest.target !== target || manifest.files.length !== 1) throw new Error(`${manifestPath}: compiler source graph requires one ${target} root`);
   const sourcePath = realpathSync(resolve(dirname(manifestPath), manifest.files[0]!));
-  const input = readSourceInput(sourcePath);
+  const input = readRootSourceFile(sourcePath);
   const cache = resolve(root, 'dist/compiler-cache');
   const sourceRootSha256 = hash(input.bytes);
   const sourceName = relative(root, sourcePath).split(sep).join('/');
-  const sourceBridgeSha256 = hash(JSON.stringify([
-    hash(readFileSync(entryPath)), hash(readFileSync(resolve(root, 'compiler/source.ts'))),
-  ]));
+  const sourceBridgeSha256 = hash('standalone-v1');
   const indexKey = hash(`trace-v5:${target}:${seed.artifactSha256}:${sourceName}:${sourceRootSha256}:${sourceBridgeSha256}`);
   const indexDirectory = join(cache, 'selection');
   const indexPath = join(indexDirectory, `${indexKey}.json`);
@@ -464,7 +453,7 @@ export function buildCompiler(target: CompilerTarget): CompilerBuild {
     const edgesValid = edges.every(edge => {
       try { return typeof edge.importer === 'string' && typeof edge.spec === 'string' && typeof edge.path === 'string' &&
         dependencyPaths.has(edge.importer) && dependencyPaths.has(edge.path) &&
-        realpathSync(resolveImportPath(resolve(root, edge.importer), edge.spec, root)) === realpathSync(resolve(root, edge.path)); }
+        realpathSync(resolveEdgeImportPath(resolve(root, edge.importer), edge.spec)) === realpathSync(resolve(root, edge.path)); }
       catch { return false; }
     });
     if (valid && edgesValid) {

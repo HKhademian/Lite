@@ -43,11 +43,14 @@ run := fn(rawArgs: List<String>): Unit {
     }
 
     root := project.findRepoRoot();
-    cliScript := if root == "" { "compiler/cli.ts" } else { path.resolve(root, "compiler/cli.ts") };
-    entryScript := if root == "" { "compiler/entry.ts" } else { path.resolve(root, "compiler/entry.ts") };
+    sel := project.selectCompilerPath(root, "ts");
+    if not sel.ok {
+        io.errorLine("lite run: " + sel.error);
+        io.exit(1);
+    }
     emptyEnv: List<String> = [];
 
-    compileArgs: mut List<String> = [cliScript, "ts"];
+    compileArgs: mut List<String> = [sel.path];
     loop cli.compilerOptions(rawArgs, true) as opt {
         list.pushBack(mut compileArgs, opt);
     }
@@ -78,7 +81,21 @@ run := fn(rawArgs: List<String>): Unit {
         io.exit(1);
     }
 
-    entryArgs: mut List<String> = [entryScript, artifact];
+    runnerPath := path.join(tempDir.path, "runner.ts");
+    runnerCode :=
+    "import { writeSync } from 'node:fs';\n" +
+    "import { main } from './" + baseNoExt + ".ts';\n" +
+    "process.argv = [process.execPath, process.argv[1]!, ...process.argv.slice(2)];\n" +
+    "const out = main((text: string): void => { writeSync(1, text); });\n" +
+    "if (typeof out === 'string' && out.length > 0) writeSync(1, out);\n";
+    runWr := fs.writeText(runnerPath, runnerCode);
+    if not runWr.ok {
+        fs.remove(tempDir.path);
+        io.errorLine("lite run: " + runWr.error);
+        io.exit(1);
+    }
+
+    entryArgs: mut List<String> = [runnerPath];
     loop programArgs as arg {
         list.pushBack(mut entryArgs, arg);
     }

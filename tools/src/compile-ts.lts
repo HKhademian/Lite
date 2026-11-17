@@ -1,4 +1,4 @@
-/** Standalone TS compiler command (`lite-compile-ts`); validates inputs and forwards to `compiler/cli.ts`. */
+/** Standalone TS compiler command (`lite-compile-ts`); selects the active compiler and invokes it directly. */
 
 io := import "core/io";
 fs := import "core/file";
@@ -42,12 +42,17 @@ run := fn(rawArgs: List<String>): Unit {
         io.exit(2);
     }
 
-    forwardArgs: mut List<String> = ["ts"];
+    sel := project.selectCompilerPath(project.findRepoRoot(), "ts");
+    if not sel.ok {
+        io.errorLine("lite-compile-ts: " + sel.error);
+        io.exit(1);
+    }
+    forwardArgs: mut List<String> = [];
     loop cli.compilerOptions(rawArgs, false) as opt {
         list.pushBack(mut forwardArgs, opt);
     }
     list.pushBack(mut forwardArgs, source);
-    project.forwardNode("compiler/cli.ts", forwardArgs);
+    io.exit(project.runCompilerArtifact(sel.path, forwardArgs));
 };
 
 run(io.inputArgs());

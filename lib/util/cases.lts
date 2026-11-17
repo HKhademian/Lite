@@ -502,6 +502,20 @@ pub checkTsArtifactFile := fn(rootDir: String, artifactPath: String, workDir: St
     (ok = checked.ok, error = checked.error)
 }
 
+/** Writes a minimal Node runner script that executes `argv[2]`'s `main()` with forwarded argv and stdout. */
+pub writeTsRunner := fn(runnerPath: String): (ok: Bool, error: String) {
+    code :=
+    "import { pathToFileURL } from 'node:url';\n" +
+    "import { writeSync } from 'node:fs';\n" +
+    "const mod = await import(pathToFileURL(process.argv[2]!).href);\n" +
+    "process.argv = [process.execPath, process.argv[2]!, ...process.argv.slice(3)];\n" +
+    "const out = mod.main((text: string): void => { writeSync(1, text); });\n" +
+    "if (out === undefined) { process.exitCode = 2; }\n" +
+    "else if (typeof out !== 'string') { process.stderr.write('artifact main did not return text\\n'); process.exitCode = 1; }\n" +
+    "else if (out.length > 0) { writeSync(1, out); }\n";
+    fs.writeText(runnerPath, code)
+}
+
 runCaseGit := fn(projDir: String, gitArgs: List<String>): (ok: Bool, error: String) {
     args: mut List<String> = [
     "-c", "user.name=Case fixture", "-c", "user.email=fixture@example.invalid",
@@ -696,7 +710,10 @@ verifyScenarioInWork := fn(rootDir: String, absFile: String, scenarioIdx: Int, w
                 }
             }
 
-            runArgs: mut List<String> = [path.join(rootDir, "compiler/entry.ts"), outputTsPath];
+            runnerPath := path.join(work, "runner.ts");
+            wRun := writeTsRunner(runnerPath);
+            if not wRun.ok { return (ok = false, artifactSha = "", error = wRun.error); }
+            runArgs: mut List<String> = [runnerPath, outputTsPath];
             loop scenarioArgs as arg {
                 list.pushBack(mut runArgs, arg);
             }

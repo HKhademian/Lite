@@ -98,10 +98,7 @@ status and the manifest schema are recorded in:
   current emitted-artifact hashes for all 69 program cases; the P0 hashes remain
   in `tests/references/generated/baseline-artifacts.json`.
 
-`lite-compile-ts` uses [`cli.ts`](cli.ts): target commands use the generated
-compiler host, and Lite reads imported source units through the compiler's
-`readSource` host callback. The handwritten interpreter and bundle CLI are
-retired. P2 adds the provisional
+`lite-compile-ts` selects the generated TS compiler via [`host.ts`](host.ts) and invokes it directly; Lite reads imported source units via `core/file` in [`src/host-fs.lts`](src/host-fs.lts). The handwritten interpreter, source bridge, and bundle CLI are retired. P2 adds the provisional
 L0 helpers under [`../lib/core/`](../lib/README.md): checked Int, text, source
 positions, diagnostics, formatting and list search. P3 adds the Lite lexer and
 P4 the parser under `src/`; `runtime/ts/` contains the P6 runtime support.

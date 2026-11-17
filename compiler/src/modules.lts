@@ -3,7 +3,7 @@ integer := import "core/int";
 listLib := import "core/list";
 textLib := import "core/text";
 frontend := import "./frontend.lts";
-sourceReader := import "./source-reader.lts";
+hostFs := import "./host-fs.lts";
 /* Initial source graph traversal for the generated TypeScript compiler. */
 
 /** True when the graph has entered one canonical source path. */
@@ -601,7 +601,7 @@ coreModuleExports := fn(graph: frontend.Items, modPath: String): frontend.Items 
 }
 
 /** Re-parses verified core modules incrementally until every needed callee function body is present. */
-resolveCoreModules := fn(target: String, initialGraph: frontend.Items): frontend.Items {
+resolveCoreModules := fn(target: String, initialGraph: frontend.Items, builtinSpecs: List<String>): frontend.Items {
     metaPaths: mut List<String> = [];
     metaKeys: mut List<String> = [];
     metaDisplays: mut List<String> = [];
@@ -639,10 +639,10 @@ resolveCoreModules := fn(target: String, initialGraph: frontend.Items): frontend
             if coreModuleNeedsReparse(target, modKey, reachable, compiledFns) {
                 importedExports := coreModuleExports(graph, modPath);
                 beforeCount := compiledFns.count;
-                reparsed := frontend.parseProgramWithModuleSelective(=target, source = metaSources[index],
+                reparsed := frontend.parseProgramWithModuleSelectiveSpecs(=target, source = metaSources[index],
                 prefix = metaDisplays[index], exports = importedExports, moduleKey = modKey,
                 moduleIdentity = metaIdentities[index], neededFns = reachable,
-                skipSoftBuiltins = target == frontend.TARGET_TS);
+                skipSoftBuiltins = target == frontend.TARGET_TS, =builtinSpecs);
                 graph = replaceModuleItems(graph, modPath, reparsed);
                 coreGraph = replaceModuleItems(coreGraph, modPath, reparsed);
                 compiledFns = addCompiledFnsSet(reparsed, compiledFns);
@@ -665,9 +665,27 @@ resolveCoreModules := fn(target: String, initialGraph: frontend.Items): frontend
     stripCoreMeta(graph)
 }
 
+/** True if `path` already has a `ModuleLoaded` trace record in `graph`. */
+moduleLoadRecorded := fn(graph: frontend.Items, path: String): Bool {
+    loop graph as item {
+        if item.kind == frontend.ITEM_KIND_MODULE_LOADED and item.name == path { return true; }
+    }
+    false
+}
+
+/** True if `(importer, spec, targetPath)` already has an `ImportEdge` trace record in `graph`. */
+importEdgeRecorded := fn(graph: frontend.Items, importer: String, spec: String, targetPath: String): Bool {
+    loop graph as item {
+        if item.kind == frontend.ITEM_KIND_IMPORT_EDGE and item.name == importer and item.code == spec and item.runtime == targetPath {
+            return true;
+        }
+    }
+    false
+}
+
 /** Reads and parses each canonical source once, recursing into dependencies in canonical `(logical, path)` order and recording topological levels. */
 pub visitSourceModule := fn(target: String, path: String, display: String, identity: String, source: String,
-initialGraph: frontend.Items): frontend.Items {
+initialGraph: frontend.Items, projectRoot: String, cwd: String, builtinSpecs: List<String>): frontend.Items {
     if moduleVisited(initialGraph, path) { return initialGraph; }
     var hasVisited := false;
     loop initialGraph as item {
@@ -694,9 +712,15 @@ initialGraph: frontend.Items): frontend.Items {
     depLogicals: mut List<String> = [];
     var depCount := 0;
     loop clauses as clause {
-        loaded := sourceReader.read(path, clause.textValue);
-        if loaded.identity == "lite.compiler.source-reader.v1" and identity =!= "lite.compiler.modules.v1" {
-            diagLib.fail(display, "the compiler source reader is private to module traversal");
+        loaded := hostFs.readImportedSource(importerPath = path, importerDisplay = display, spec = clause.textValue,
+        =projectRoot, =cwd);
+        if not importEdgeRecorded(graph, path, clause.textValue, loaded.path) {
+            listLib.pushBack(mut graph, (kind = frontend.ITEM_KIND_IMPORT_EDGE, name = path, runtime = loaded.path,
+            code = clause.textValue, intValue = 0, textValue = ""));
+        }
+        if not moduleLoadRecorded(graph, loaded.path) {
+            listLib.pushBack(mut graph, (kind = frontend.ITEM_KIND_MODULE_LOADED, name = loaded.path, runtime = "",
+            code = "", intValue = 0, textValue = ""));
         }
         listLib.pushBack(mut clausePaths, loaded.path);
         if not listLib.listContainsText(depPaths, loaded.path) {
@@ -714,7 +738,7 @@ initialGraph: frontend.Items): frontend.Items {
         depPath := depPaths[depIdx];
         if not moduleVisited(graph, depPath) {
             graph = self(=target, path = depPath, display = depDisplays[depIdx], identity = depIdentities[depIdx],
-            source = depTexts[depIdx], initialGraph = graph);
+            source = depTexts[depIdx], initialGraph = graph, =projectRoot, =cwd, =builtinSpecs);
         }
     }
 
@@ -740,8 +764,8 @@ initialGraph: frontend.Items): frontend.Items {
 
     isCoreMod := not isRoot and textLib.startsWithAt(identity, 0, "lite.core.");
     localItems := if isCoreMod {
-        frontend.parseProgramWithModuleSelective(=target, =source, prefix = display, exports = importedExports,
-        =moduleKey, moduleIdentity = identity, neededFns = "|", skipSoftBuiltins = target == frontend.TARGET_TS)
+        frontend.parseProgramWithModuleSelectiveSpecs(=target, =source, prefix = display, exports = importedExports,
+        =moduleKey, moduleIdentity = identity, neededFns = "|", skipSoftBuiltins = target == frontend.TARGET_TS, =builtinSpecs)
     } else {
         frontend.parseProgramWithModule(=target, =source, prefix = display, exports = importedExports,
         =moduleKey, moduleIdentity = identity)
@@ -765,7 +789,7 @@ initialGraph: frontend.Items): frontend.Items {
     }
     listLib.pushBack(mut graph, (kind = frontend.ITEM_KIND_MODULE_PROCESSED, name = path, runtime = moduleKey, code = logical,
     intValue = level, textValue = ""));
-    if isRoot { return resolveCoreModules(target, graph); }
+    if isRoot { return resolveCoreModules(target, graph, builtinSpecs); }
     graph
 }
 

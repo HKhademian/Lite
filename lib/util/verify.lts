@@ -631,7 +631,6 @@ computeRuntimeHash := fn(rootDir: String, seedArtifact: String, compilerDeps: Li
     "lib/util/streams.lts",
     "lib/util/json.lts",
     "compiler/host.ts",
-    "compiler/entry.ts",
     "compiler/bootstrap/seed.ts",
     "compiler/bootstrap/" + seedArtifact
     ];
@@ -782,8 +781,6 @@ invalidatesVerification := fn(relPath: String): Bool {
     "language/verifications/features.json",
     "language/verifications/schema/verification.schema.json",
     "compiler/host.ts",
-    "compiler/entry.ts",
-    "compiler/cli.ts",
     "tools/src/verify.lts",
     "lib/util/verify.lts",
     "lib/util/cases.lts",
@@ -977,13 +974,12 @@ compileManifestArtifact := fn(
 rootDir: String, compilerPath: String, workDir: String,
 sourceText: String, hasSourceFile: Bool, sourcePath: String
 ): (ok: Bool, artifactPath: String, error: String) {
-    entryPath := path.join(rootDir, "compiler/entry.ts");
     displayName := if hasSourceFile { path.relative(rootDir, sourcePath) } else { "" };
     absRootPath := if hasSourceFile { sourcePath } else { path.join(rootDir, "__lite_stdin__.lts") };
     outTsPath := path.join(workDir, "artifact.ts");
     errPath := path.join(workDir, "compile.stderr");
     emptyEnv: List<String> = [];
-    compArgs: List<String> = [entryPath, compilerPath, displayName, "", absRootPath];
+    compArgs: List<String> = [compilerPath, "--stdin", "--name", displayName, "--root", absRootPath];
     compiled := proc.runBytes(proc.execPath(), compArgs, rootDir, emptyEnv, 0, unicode.utf8Encode(sourceText), outTsPath, errPath);
     if compiled.error =!= "" {
         return (ok = false, artifactPath = "", error = compiled.error);
@@ -1008,8 +1004,9 @@ runArtifactScenario := fn(
 rootDir: String, artifactPath: String, workDir: String,
 stdinBytes: List<Int>, scenarioArgs: List<String>, idx: Int
 ): (ok: Bool, outPath: String, errPath: String, exitCode: Int, error: String) {
-    entryPath := path.join(rootDir, "compiler/entry.ts");
-    runArgs: mut List<String> = [entryPath, artifactPath];
+    runnerPath := path.join(workDir, "runner.ts");
+    _wRun := cases.writeTsRunner(runnerPath);
+    runArgs: mut List<String> = [runnerPath, artifactPath];
     loop scenarioArgs as arg {
         list.pushBack(mut runArgs, arg);
     }

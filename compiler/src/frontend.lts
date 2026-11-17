@@ -171,6 +171,8 @@ DECL_KIND_ROOT_ASSIGN := "RootAssign";
 pub ITEM_KIND_MODULE_START := "ModuleStart";
 pub ITEM_KIND_MODULE_END := "ModuleEnd";
 pub ITEM_KIND_MODULE_VISITED := "ModuleVisited";
+pub ITEM_KIND_MODULE_LOADED := "ModuleLoaded";
+pub ITEM_KIND_IMPORT_EDGE := "ImportEdge";
 pub ITEM_KIND_MODULE_PROCESSED := "ModuleProcessed";
 pub ITEM_KIND_MODULE_ALIAS := "ModuleAlias";
 pub ITEM_KIND_CORE_MODULE_META := "CoreModuleMeta";
@@ -1504,9 +1506,6 @@ coreHostFunction := fn(moduleIdentity: String, name: String, params: String, res
         if name == "toCodePoints" and params == "text=String" and result == "List<Int>" { "lite$unicodeToCodePoints" }
         else if name == "fromCodePoints" and params == "points=List<Int>" and result == "(ok:Bool,text:String,error:String)" { "lite$unicodeFromCodePoints" }
         else { "" }
-    } else if moduleIdentity == "lite.compiler.source-reader.v1" and name == "read" and
-    params == "importer=String|spec=String" and result == "(path:String,display:String,identity:String,text:String)" {
-        "lite$readSource"
     } else {
         ""
     }
@@ -11293,39 +11292,6 @@ parseExpression := fn(target: String, source: String, position: Int, prefix: Str
     parseBinary(target, source, position, prefix, locals, functions, params, currentName, "", 0)
 }
 
-/** Reads the logical diagnostic name supplied by the compiler host. */
-pub sourcePrefix := fn(): String {
-    var prefix := "";
-    var argumentIndex := 0;
-    loop io.inputArgs() as argument {
-        if argumentIndex == 0 { prefix = argument; }
-        argumentIndex = argumentIndex + 1;
-    }
-    prefix
-}
-
-/** Reads the compiler-host verified identity of the root source module. */
-pub sourceModuleIdentity := fn(): String {
-    var identity := "";
-    var argumentIndex := 0;
-    loop io.inputArgs() as argument {
-        if argumentIndex == 1 { identity = argument; }
-        argumentIndex = argumentIndex + 1;
-    }
-    identity
-}
-
-/** Reads the canonical root path used to resolve language-level imports. */
-pub sourceModulePath := fn(): String {
-    var path := "";
-    var argumentIndex := 0;
-    loop io.inputArgs() as argument {
-        if argumentIndex == 2 { path = argument; }
-        argumentIndex = argumentIndex + 1;
-    }
-    path
-}
-
 /** Normalizes and validates a canonical soft-builtin core module path (`core/<name>` or `lib/core/<name>[.lts]`), returning `""` outside stdlib bounds. */
 normalizeBuiltinModule := fn(raw: String): String {
     if raw == "" { return ""; }
@@ -11393,28 +11359,11 @@ parseBuiltinModeSpec := fn(prefix: String, spec: String): Item {
     (kind = BUILTIN_RULE_MODULE, name = normMod, runtime = mode, code = "", intValue = 0, textValue = "")
 }
 
-/** Parses compiler `--builtin-mode` flags from process arguments after host metadata. */
-pub parseBuiltinModes := fn(prefix: String): Items {
+/** Parses `--builtin-mode` specification strings passed down from the compiler entrypoint. */
+pub parseBuiltinModeSpecs := fn(prefix: String, specs: List<String>): Items {
     rules: mut Items = [];
-    var argumentIndex := 0;
-    var expectModeValue := false;
-    loop io.inputArgs() as argument {
-        if argumentIndex >= 3 {
-            if expectModeValue {
-                listLib.pushBack(mut rules, parseBuiltinModeSpec(prefix, argument));
-                expectModeValue = false;
-            } else if argument == "--builtin-mode" {
-                expectModeValue = true;
-            } else if textLib.startsWithAt(argument, 0, "--builtin-mode=") {
-                listLib.pushBack(mut rules, parseBuiltinModeSpec(prefix, textLib.slice(argument, 15, textLib.length(argument))));
-            } else {
-                diagLib.fail(prefix, "unknown compiler option " + argument);
-            }
-        }
-        argumentIndex = argumentIndex + 1;
-    }
-    if expectModeValue {
-        diagLib.fail(prefix, "missing value for --builtin-mode");
+    loop specs as spec {
+        listLib.pushBack(mut rules, parseBuiltinModeSpec(prefix, spec));
     }
     rules
 }
@@ -12027,16 +11976,16 @@ skipBraceBlock := fn(source: String, afterOpen: Int, prefix: String): Int {
     textLib.length(source)
 }
 
-/** Parses complete source with selective function-body compilation (`neededFns = "*"` compiles every function). */
-pub parseProgramWithModuleSelective := fn(target: String, source: String, prefix: String, exports: Items, moduleKey: String,
-moduleIdentity: String, neededFns: String, skipSoftBuiltins: Bool): Items {
+/** Parses complete source with selective function-body compilation and explicit `--builtin-mode` specs. */
+pub parseProgramWithModuleSelectiveSpecs := fn(target: String, source: String, prefix: String, exports: Items, moduleKey: String,
+moduleIdentity: String, neededFns: String, skipSoftBuiltins: Bool, builtinSpecs: List<String>): Items {
     size := textLib.length(source);
     var position := skipTrivia(source, 0, prefix);
     var items: mut Items = [];
     if position == size { return items; }
     var builtinRules: Items = [];
     if skipSoftBuiltins and target == TARGET_TS and textLib.startsWithAt(moduleIdentity, 0, "lite.core.") {
-        builtinRules = parseBuiltinModes(prefix);
+        builtinRules = parseBuiltinModeSpecs(prefix, builtinSpecs);
     }
     var aliases: mut List<AliasDecl> = [];
     loop exports as exported {
@@ -14219,6 +14168,13 @@ moduleIdentity: String, neededFns: String, skipSoftBuiltins: Bool): Items {
         listLib.pushBack(mut items, (kind = ITEM_KIND_MAIN_STOP, name = "", runtime = "", code = "", intValue = 0, textValue = ""));
     }
     items
+}
+
+/** Parses complete source with selective function-body compilation (`neededFns = "*"` compiles every function). */
+pub parseProgramWithModuleSelective := fn(target: String, source: String, prefix: String, exports: Items, moduleKey: String,
+moduleIdentity: String, neededFns: String, skipSoftBuiltins: Bool): Items {
+    emptySpecs: List<String> = [];
+    parseProgramWithModuleSelectiveSpecs(target, source, prefix, exports, moduleKey, moduleIdentity, neededFns, skipSoftBuiltins, emptySpecs)
 }
 
 /** Parses complete source with imported public function signatures available in its root symbol table. Exits 2 on unsupported, malformed or faulting source. */

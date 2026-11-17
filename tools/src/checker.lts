@@ -1,4 +1,4 @@
-/** Standalone source-check command (`lite check`); compiles via `compiler/cli.ts` and strict-typechecks emitted TS. */
+/** Standalone source-check command (`lite check`); compiles directly via generated TS compiler and strict-typechecks emitted TS. */
 
 io := import "core/io";
 fs := import "core/file";
@@ -36,8 +36,13 @@ run := fn(rawArgs: List<String>): Unit {
     }
     work := tmpRes.path;
 
-    cliScript := path.resolve(root, "compiler/cli.ts");
-    compArgs: mut List<String> = [cliScript, "ts"];
+    sel := project.selectCompilerPath(root, "ts");
+    if not sel.ok {
+        _rm := fs.remove(work);
+        io.errorLine("lite check: " + sel.error);
+        io.exit(1);
+    }
+    compArgs: mut List<String> = [sel.path];
     loop cli.compilerOptions(rawArgs, false) as opt {
         list.pushBack(mut compArgs, opt);
     }

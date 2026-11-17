@@ -497,7 +497,7 @@ test('compiler applications preserve optional logical source names in their own 
     assert.deepEqual(runCompiler(manifest, "io := import \"core/io\"; io.outputLine(1 +);"), { code: 2, output: '', errors: '1:42: expected an Int, Float, String or Bool expression\n' });
     const target = loadManifest(manifest).target;
     withTsArtifact(readFileSync(buildCompiler(target).path, 'utf8'), execute => {
-      const actual = execute({ args: ['first.lts', '', ''], stdin: 'x := 1 +;' });
+      const actual = execute({ args: ['--stdin', '--name', 'first.lts'], stdin: 'x := 1 +;' });
       assert.equal(actual.phase, 'run'); assert.equal(actual.signal, null);
       assert.equal(actual.status, 2); assert.equal(actual.stdout.length, 0);
       assert.equal(actual.stderr.toString(), 'first.lts:1:9: expected an Int, Float, String or Bool expression\n');
@@ -607,8 +607,8 @@ async function assertImportedFixture(path: string, fixture: CompilerFixture): Pr
     assert.equal(await importedMain(path), fixture.stdout.toString('utf8'), fixture.name);
     return;
   }
-  const entry = new URL('../compiler/entry.ts', import.meta.url).pathname;
-  const result = spawnSync(process.execPath, [entry, path], {
+  const runScript = "import { writeSync } from 'node:fs'; import { pathToFileURL } from 'node:url'; const m = await import(pathToFileURL(process.argv[1]).href); const out = m.main((t) => writeSync(1, t)); if (typeof out === 'string' && out.length > 0) writeSync(1, out);";
+  const result = spawnSync(process.execPath, ['--input-type=module', '-e', runScript, path], {
     input: fixture.stdin, timeout: 5000, maxBuffer: 8 * 1024 * 1024,
   });
   assert.equal(result.error, undefined, fixture.name); assert.equal(result.signal, null, fixture.name);
@@ -2310,8 +2310,9 @@ test('root launcher compiles artifacts and forwards their input, diagnostics and
   const build = (path = source, executable = launcher, cwd = dir) => {
     const result = invoke(['compile', path], executable, cwd); assert.equal(result.status, 0, result.stderr); assert.equal(result.stderr, ''); writeFileSync(artifact, result.stdout);
   };
+  const runnerScript = "import { writeSync } from 'node:fs'; import { pathToFileURL } from 'node:url'; const a = process.argv[1]; const m = await import(pathToFileURL(a).href); process.argv = [process.execPath, a, ...process.argv.slice(2)]; const out = m.main((t) => writeSync(1, t)); if (typeof out === 'string' && out.length > 0) writeSync(1, out);";
   const executeArtifact = (input = '', args: readonly string[] = []) => spawnSync(process.execPath,
-    [join(root, 'compiler/entry.ts'), artifact, ...args], { cwd: dir, env, input, encoding: 'utf8', timeout: 10000 });
+    ['--input-type=module', '-e', runnerScript, artifact, ...args], { cwd: dir, env, input, encoding: 'utf8', timeout: 10000 });
   try {
     build('language/examples/foundations/io/double-sum.lts', launcher, root);
     const example = executeArtifact('7\n5\n'); assert.equal(example.status, 0, example.stderr); assert.equal(example.stdout, 'First integer: Second integer: 24\n');
@@ -2433,15 +2434,16 @@ test('real compiler CLI forwards source-name context without changing emitted by
   const env = { ...process.env, PATH: dirname(process.execPath) + delimiter + (process.env['PATH'] ?? '') };
   const directory = mkdtempSync(join(tmpdir(), 'litec-label-'));
   try {
+    const cCompilerPath = buildCompiler('c').path;
     const sourcePath = join(directory, 'label with spaces.lts');
     for (const [target, reference] of [['ts', 'report-42.ts'], ['c', 'report-42.c']] as const) {
       writeFileSync(sourcePath, "io := import \"core/io\"; io.outputLine(42);");
-      const valid = spawnSync(target === 'ts' ? join(root, 'bin/lite-compile-ts') : process.execPath, target === 'ts' ? [sourcePath] : [join(root, 'compiler/cli.ts'), target, sourcePath], { env, timeout: 5000 });
+      const valid = spawnSync(target === 'ts' ? join(root, 'bin/lite-compile-ts') : process.execPath, target === 'ts' ? [sourcePath] : [cCompilerPath, sourcePath], { env, timeout: 5000 });
       assert.equal(valid.error, undefined); assert.equal(valid.status, 0);
       assert.deepEqual(valid.stdout, readFileSync(join(root, 'compiler/tests/references/generated', reference)));
       assert.equal(valid.stderr.length, 0);
       writeFileSync(sourcePath, "io := import \"core/io\"; io.outputLine(1 +);");
-      const invalid = spawnSync(target === 'ts' ? join(root, 'bin/lite-compile-ts') : process.execPath, target === 'ts' ? [sourcePath] : [join(root, 'compiler/cli.ts'), target, sourcePath], { env, timeout: 5000 });
+      const invalid = spawnSync(target === 'ts' ? join(root, 'bin/lite-compile-ts') : process.execPath, target === 'ts' ? [sourcePath] : [cCompilerPath, sourcePath], { env, timeout: 5000 });
       assert.equal(invalid.error, undefined); assert.equal(invalid.status, 2); assert.equal(invalid.stdout.length, 0);
       assert.deepEqual(invalid.stderr, Buffer.from(`${sourcePath}:1:42: expected an Int, Float, String or Bool expression\n`));
     }
@@ -2461,20 +2463,21 @@ test('whole-source TS and C compilers reject later statements and decoding failu
   const env = { ...process.env, PATH: dirname(process.execPath) + delimiter + (process.env['PATH'] ?? '') };
   const directory = mkdtempSync(join(tmpdir(), 'litec-reject-'));
   try {
+    const cCompilerPath = buildCompiler('c').path;
     const sourcePath = join(directory, 'source.lts');
     for (const target of ['ts', 'c'] as const) {
       writeFileSync(sourcePath, '');
-      const empty = spawnSync(target === 'ts' ? join(root, 'bin/lite-compile-ts') : process.execPath, target === 'ts' ? [sourcePath] : [join(root, 'compiler/cli.ts'), target, sourcePath], { env, timeout: 5000 });
+      const empty = spawnSync(target === 'ts' ? join(root, 'bin/lite-compile-ts') : process.execPath, target === 'ts' ? [sourcePath] : [cCompilerPath, sourcePath], { env, timeout: 5000 });
       assert.equal(empty.error, undefined); assert.equal(empty.status, 0, empty.stderr.toString());
       assert.ok(empty.stdout.length > 0); assert.equal(empty.stderr.length, 0);
       for (const input of [' \n}', "io := import \"core/io\"; io.outputLine(42);\nunsupported();\n", "io := import \"core/io\"; io.outputLine(42);\nprocess.io.exit(7);\n"]) {
         writeFileSync(sourcePath, input);
-        const rejected = spawnSync(target === 'ts' ? join(root, 'bin/lite-compile-ts') : process.execPath, target === 'ts' ? [sourcePath] : [join(root, 'compiler/cli.ts'), target, sourcePath], { env, timeout: 5000 });
+        const rejected = spawnSync(target === 'ts' ? join(root, 'bin/lite-compile-ts') : process.execPath, target === 'ts' ? [sourcePath] : [cCompilerPath, sourcePath], { env, timeout: 5000 });
         assert.equal(rejected.error, undefined); assert.equal(rejected.status, 2, rejected.stderr.toString());
         assert.equal(rejected.stdout.length, 0); assert.notEqual(rejected.stderr.length, 0);
       }
       writeFileSync(sourcePath, Buffer.concat([Buffer.from("io := import \"core/io\"; io.outputLine(42);\n"), Buffer.from([0xff])]));
-      const invalid = spawnSync(target === 'ts' ? join(root, 'bin/lite-compile-ts') : process.execPath, target === 'ts' ? [sourcePath] : [join(root, 'compiler/cli.ts'), target, sourcePath], { env, timeout: 5000 });
+      const invalid = spawnSync(target === 'ts' ? join(root, 'bin/lite-compile-ts') : process.execPath, target === 'ts' ? [sourcePath] : [cCompilerPath, sourcePath], { env, timeout: 5000 });
       assert.equal(invalid.error, undefined); assert.equal(invalid.status, 1);
       assert.equal(invalid.stdout.length, 0); assert.match(invalid.stderr.toString(), /InputFault: cannot read input/);
     }

@@ -1,17 +1,49 @@
 frontend := import "./frontend.lts";
 modules := import "./modules.lts";
 emitter := import "./emit-ts.lts";
+hostFs := import "./host-fs.lts";
+diagLib := import "core/diag";
+fs := import "core/file";
 io := import "core/io";
+proc := import "core/process";
 
-/** Runs the TypeScript compiler entry after its graph dependencies are loaded. */
-pub run := fn(): Unit {
-    prefix := frontend.sourcePrefix();
-    source := io.inputAll();
-    if frontend.sourceModulePath() =!= "" {
-        graph := modules.visitSourceModule(target = frontend.TARGET_TS, path = frontend.sourceModulePath(), display = prefix,
-            identity = frontend.sourceModuleIdentity(), =source, initialGraph = []);
-        emitter.emitProgram(items = modules.moduleItems(graph), =source, =prefix);
+/** Compiles one parsed CLI argument list (`--stdin`, file path, `--out`, `--trace-json`, `--builtin-mode`). */
+pub run := fn(args: List<String>): Unit {
+    flags := hostFs.parseCompilerFlags(args);
+    if not flags.ok {
+        io.errorLine(flags.error);
+        io.exit(2);
+    }
+    builtinSpecs := hostFs.extractBuiltinSpecs(args);
+    cwd := proc.cwd();
+    stdinText := if flags.isStdin { io.inputAll() } else { "" };
+    loaded := hostFs.loadRootInput(
+    isStdin = flags.isStdin, hasName = flags.hasName, optName = flags.name, hasRoot = flags.hasRoot, optRoot = flags.rootPath,
+    filePath = flags.filePath, =cwd, entryPathHint = proc.entryPath(), =stdinText
+    );
+    emptyGraph: frontend.Items = [];
+    graph := modules.visitSourceModule(
+    target = frontend.TARGET_TS, path = loaded.path, display = loaded.display,
+    identity = loaded.identity, source = loaded.text, initialGraph = emptyGraph,
+    projectRoot = loaded.projectRoot, =cwd, =builtinSpecs
+    );
+    items := modules.moduleItems(graph);
+    if flags.hasOut {
+        writer := io.bufferWriter();
+        emitter.emitProgramTo(=writer, =items, source = loaded.text, prefix = loaded.display, =builtinSpecs);
+        outRes := io.writerText(writer);
+        _cl := io.closeWriter(writer);
+        if not outRes.ok {
+            diagLib.fail(loaded.display, outRes.error);
+        }
+        wRes := fs.writeText(flags.outPath, outRes.text);
+        if not wRes.ok {
+            diagLib.fail(loaded.display, "cannot write output file " + flags.outPath + ": " + wRes.error);
+        }
     } else {
-        emitter.emitProgram(items = frontend.parseProgram(target = frontend.TARGET_TS, =source, =prefix), =source, =prefix);
+        emitter.emitProgramWithSpecs(=items, source = loaded.text, prefix = loaded.display, =builtinSpecs);
+    }
+    if flags.hasTrace {
+        hostFs.writeTraceJson(flags.tracePath, graph);
     }
 }

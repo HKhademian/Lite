@@ -5,12 +5,27 @@ import {
   existsSync, mkdirSync, readdirSync, readFileSync, realpathSync,
   renameSync, rmSync, writeFileSync, writeSync,
 } from 'node:fs';
-import { join, relative, resolve, sep } from 'node:path';
+import { dirname, isAbsolute, join, relative, resolve, sep } from 'node:path';
 import { fileURLToPath, pathToFileURL } from 'node:url';
 import { compileSeedTsGraph } from '../compiler/host.ts';
 import { seed } from '../compiler/bootstrap/seed.ts';
-import { readSourceInput, resolveImportPath } from '../compiler/source.ts';
 import { checkTsArtifactFiles } from './artifacts.ts';
+
+function resolveToolImportPath(importer: string, spec: string): string {
+  const sourceSpec = spec.endsWith('.lts') ? spec : `${spec}.lts`;
+  if (isAbsolute(sourceSpec)) return resolve(sourceSpec);
+  if (sourceSpec.startsWith('./') || sourceSpec.startsWith('../')) {
+    return resolve(dirname(importer), sourceSpec);
+  }
+  return resolve(repoRoot, 'lib', sourceSpec);
+}
+
+function readToolRootInput(path: string): Readonly<{ path: string; text: string; bytes: Buffer }> {
+  const canonical = realpathSync(resolve(path));
+  const bytes = readFileSync(canonical);
+  const text = new TextDecoder('utf-8', { fatal: true }).decode(bytes);
+  return { path: canonical, text, bytes };
+}
 
 type ToolDependency = Readonly<{ path: string; sha256: string }>;
 type ToolEdge = Readonly<{ importer: string; spec: string; path: string }>;
@@ -110,7 +125,7 @@ function readValidProvenance(name: string, compilerArtifactSha256: string): Tool
       if (sha256(readFileSync(resolve(repoRoot, dep.path))) !== dep.sha256) return undefined;
     }
     for (const edge of edges) {
-      const resolved = realpathSync(resolveImportPath(resolve(repoRoot, edge.importer), edge.spec, repoRoot));
+      const resolved = realpathSync(resolveToolImportPath(resolve(repoRoot, edge.importer), edge.spec));
       if (resolved !== realpathSync(resolve(repoRoot, edge.path))) return undefined;
     }
   } catch {
@@ -160,7 +175,7 @@ function igniteSingleTool(name: string, force = false): IgnitedToolSummary {
     }
   }
 
-  const input = readSourceInput(sourcePath);
+  const input = readToolRootInput(sourcePath);
   const relRoot = `tools/src/${name}.lts`;
   const traced = compileSeedTsGraph({ text: input.text, name: relRoot, rootPath: input.path, cwd: repoRoot });
   if (traced.result.status !== 0 || traced.result.stderr.length > 0) {
