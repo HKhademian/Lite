@@ -423,8 +423,10 @@ allocation lifetime, alignment, or concurrent external access is valid.
 
 **New direction to review:** The user proposes implicit allowed-type filters
 for match arms and a mandatory final failure guard when the subject Kind is
-unknown, including matches combining type and value patterns. See the
-[union match guard investigation](union-match-unknown-guard.md).
+unknown, including matches combining type and value patterns. The programmer's
+`_` arm is written for the remaining listed types, not a bad Kind. The user
+clarifies that this question concerns bad Kind values, not general bit flips or
+malformed payloads; see the [union match guard investigation](union-match-unknown-guard.md).
 
 **User's enum/match safety concern:** An `OrderStatus` enum with named cases
 such as created, failed, canceled, shipped and paid may be read from externally

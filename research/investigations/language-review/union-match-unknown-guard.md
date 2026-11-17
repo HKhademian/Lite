@@ -15,11 +15,17 @@ implicit guard for a Kind that does not select an allowed member. The user's
 `panic_unreachable()` spelling is illustrative: it expresses a defined failure
 path, not an existing built-in function or permission for undefined behavior.
 
+The user explains the programmer's intent: after testing Int, the `_` arm is
+written on the understanding that the value is String or Float, without caring
+which. Routing a Kind outside those allowed types into that arm would violate
+the assumptions under which its body was written. The discussion concerns
+**bad Kind values**, not general memory-bit corruption or malformed payloads.
+
 The user also asks about mixed reasoning in the same match: after an Int type
 arm, a string-content pattern such as `"hello {name}"` may select some String
 values, with `_` handling the remaining allowed values. Each pattern needs an
-implicit type selector where appropriate, so an unknown or corrupted Kind does
-not accidentally run an ordinary matching or fallback body.
+implicit type selector where appropriate, so a Kind outside the union's allowed
+members does not accidentally run an ordinary matching or fallback body.
 
 ## Conceptual trace
 
@@ -73,11 +79,12 @@ not remove that whole type merely because the type appeared earlier.
   happen. Its exact panic or error contract, and how an explicitly written
   unknown handler interacts with it, need user decisions. The current match
   documents do not select a synthesized panic for a missing arm.
-- **Payload validity:** a recognized tag alone does not establish that a
-  foreign String pointer or other payload is valid, nor can a tag check detect
-  corruption into another valid tag. Define external-memory validation,
-  synchronization and ownership separately. Do not read, copy or clean up an
-  unknown payload as a known member.
+- **Scope:** this investigation concerns invalid or unrecognized Kind values;
+  it assumes the selected known member's payload satisfies its contract. Actual
+  bit flips, malformed payloads, external-memory validation, synchronization and
+  ownership are separate questions and are not the issue the user is raising
+  here. Do not treat the payload associated with an unknown Kind as a known
+  union member.
 - **Optimization:** a compiler may eliminate checks only when its proof covers
   actual origins, aliasing and mutations and preserves the required observable
   failure behavior. The user is seeking a safe guard, not undefined behavior.
@@ -89,7 +96,6 @@ not remove that whole type merely because the type appeared earlier.
 
 Relevant cases for a future contract: each listed member; zero Kind; unknown
 nonzero Kind; globally known but unlisted member; matching and non-matching String
-patterns; a readable `_` binding; side effects in the subject and patterns;
-normal completion and early return; and a valid tag with invalid payload. The
-fault category, actual case syntax, diagnostics and relevant implementation
-targets need a later decision.
+patterns; a readable `_` binding; side effects in the subject and patterns; and
+normal completion and early return. The fault category, actual case syntax,
+diagnostics and relevant implementation targets need a later decision.
