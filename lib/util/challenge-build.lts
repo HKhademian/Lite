@@ -1,0 +1,1522 @@
+/** Normalizes cached challenge sources into `data/` and `schema/taxonomy.json` (`benchmark/challenges/tools/build.ts`). */
+
+io := import "core/io";
+fs := import "core/file";
+path := import "core/path";
+text := import "core/text";
+list := import "core/list";
+integer := import "core/int";
+time := import "core/time";
+unicode := import "core/unicode";
+json := import "util/json";
+challenges := import "util/challenges";
+
+/** Converts display text to a lowercase URL slug (`"A & B"` -> `"a-and-b"`). */
+pub slugifyText := fn(value: String): String {
+    lowered := challenges.asciiLower(text.trim(value));
+    out: mut List<String> = [];
+    var prevDash := true;
+    var i := 0;
+    size := text.length(lowered);
+    loop i < size {
+        ch := text.at(lowered, i);
+        if ch == "&" {
+            if not prevDash { list.pushBack(mut out, "-"); }
+            list.pushBack(mut out, "and-");
+            prevDash = true;
+        } else if text.indexOfText("abcdefghijklmnopqrstuvwxyz0123456789", ch, 0) >= 0 {
+            list.pushBack(mut out, ch);
+            prevDash = false;
+        } else if not prevDash {
+            list.pushBack(mut out, "-");
+            prevDash = true;
+        }
+        i = i + 1;
+    }
+    joined := text.joinTexts(out, "");
+    var s := 0;
+    var e := text.length(joined);
+    loop s < e and text.at(joined, s) == "-" { s = s + 1; }
+    loop e > s and text.at(joined, e - 1) == "-" { e = e - 1; }
+    text.slice(joined, s, e)
+};
+
+replaceSpacesCollapse := fn(raw: String): String {
+    out: mut List<String> = [];
+    var inSpace := true;
+    var i := 0;
+    size := text.length(raw);
+    loop i < size {
+        ch := text.at(raw, i);
+        isWs := ch == " " or ch == "\n" or ch == "\r" or ch == "\t" or ch == unicode.fromCodePoint(12).text or ch == unicode.fromCodePoint(11).text;
+        if isWs {
+            if not inSpace {
+                list.pushBack(mut out, " ");
+                inSpace = true;
+            }
+        } else {
+            list.pushBack(mut out, ch);
+            inSpace = false;
+        }
+        i = i + 1;
+    }
+    text.trim(text.joinTexts(out, ""))
+};
+
+cleanHtmlTitle := fn(entKeys: List<String>, entVals: List<String>, raw: String): String {
+    replaceSpacesCollapse(challenges.unescapeHtmlWithTable(entKeys, entVals, challenges.stripHtmlTags(raw)))
+};
+
+/** Ties-to-even integer rounding of `num / den` (`den > 0`). */
+pub roundDivTiesEven := fn(num: Int, den: Int): Int {
+    if den <= 0 { return 0; }
+    neg := (num < 0 and den > 0) or (num > 0 and den < 0);
+    a := if num < 0 { 0 - num } else { num };
+    b := if den < 0 { 0 - den } else { den };
+    var q := a / b;
+    rem := a % b;
+    twice := rem * 2;
+    if twice > b or (twice == b and (q % 2) == 1) {
+        q = q + 1;
+    }
+    if neg { 0 - q } else { q }
+};
+
+formatTenthsJson := fn(tenths: Int): String {
+    clamped := if tenths < 10 { 10 } else if tenths > 100 { 100 } else { tenths };
+    whole := clamped / 10;
+    rem := clamped % 10;
+    if rem == 0 { integer.intText(whole) } else { integer.intText(whole) + "." + integer.intText(rem) }
+};
+
+formatFourDecimalsJson := fn(tenThousandths: Int): String {
+    if tenThousandths <= 0 { return "0"; }
+    if tenThousandths >= 10000 { return "1"; }
+    whole := integer.intText(tenThousandths / 10000);
+    var frac := challenges.padLeftZero(tenThousandths % 10000, 4);
+    loop text.length(frac) > 1 and text.endsWith(frac, "0") {
+        frac = text.slice(frac, 0, text.length(frac) - 1);
+    }
+    whole + "." + frac
+};
+
+lookupStringFieldOrNull := fn(objJson: String, objPos: Int, key: String, fallback: String): String {
+    if objPos < 0 { return fallback; }
+    res := json.readObjectString(objJson, objPos, key);
+    if res.found and res.ok { res.value } else { fallback }
+};
+
+quoteStringList := fn(items: List<String>): String {
+    quoted: mut List<String> = [];
+    loop items as it {
+        list.pushBack(mut quoted, json.quoteString(it));
+    }
+    "[" + text.joinTexts(quoted, ",") + "]"
+};
+
+dedupTextsPreserveOrder := fn(items: List<String>): List<String> {
+    out: mut List<String> = [];
+    loop items as it {
+        if not list.listContainsText(out, it) {
+            list.pushBack(mut out, it);
+        }
+    }
+    out
+};
+
+titleCaseTopic := fn(slug: String): String {
+    parts: mut List<String> = [];
+    upper := "ABCDEFGHIJKLMNOPQRSTUVWXYZ";
+    lower := "abcdefghijklmnopqrstuvwxyz";
+    var capNext := true;
+    var i := 0;
+    loop i < text.length(slug) {
+        ch := text.at(slug, i);
+        if ch == "-" {
+            list.pushBack(mut parts, " ");
+            capNext = true;
+        } else {
+            if capNext {
+                pos := text.indexOfText(lower, ch, 0);
+                list.pushBack(mut parts, if pos >= 0 { text.at(upper, pos) } else { ch });
+            } else {
+                list.pushBack(mut parts, ch);
+            }
+            capNext = false;
+        }
+        i = i + 1;
+    }
+    text.joinTexts(parts, "")
+};
+
+isAllDigitsStr := fn(s: String): Bool {
+    if s == "" { return false; }
+    var i := 0;
+    loop i < text.length(s) {
+        if not text.isDigit(text.at(s, i)) { return false; }
+        i = i + 1;
+    }
+    true
+};
+
+buildChallengeRecordJson := fn(
+id: String, title: String, source: String, url: String, nativeId: String,
+hasSet: Bool, setVal: String, hasNum: Bool, numVal: Int,
+category: String, topics: List<String>, rawTopics: List<String>, tags: List<String>,
+diffScale: String, diffRawJson: String, diffNormJson: String, diffNormScaled: Int,
+formats: List<String>, languages: List<String>, topicsSource: String,
+popJson: String, premium: Bool, status: String
+): (jsonLine: String, id: String, source: String, setVal: String, hasNum: Bool, numVal: Int, cat: String, diffNormScaled: Int, primaryTopic: String, topicsJoined: String) {
+    uniqTopics := dedupTextsPreserveOrder(topics);
+    uniqTags := dedupTextsPreserveOrder(tags);
+    primJson := if list.listCountText(uniqTopics) > 0 { json.quoteString(uniqTopics[0]) } else { "null" };
+    fallbackLangs: List<String> = ["any"];
+    langs := if list.listCountText(languages) > 0 { languages } else { fallbackLangs };
+    line := "{\"id\":" + json.quoteString(id)
+    + ",\"title\":" + json.quoteString(title)
+    + ",\"source\":" + json.quoteString(source)
+    + ",\"url\":" + json.quoteString(url)
+    + ",\"native_id\":" + json.quoteString(nativeId)
+    + ",\"set\":" + (if hasSet { json.quoteString(setVal) } else { "null" })
+    + ",\"number\":" + (if hasNum { integer.intText(numVal) } else { "null" })
+    + ",\"category\":" + json.quoteString(category)
+    + ",\"primary_topic\":" + primJson
+    + ",\"topics\":" + quoteStringList(uniqTopics)
+    + ",\"raw_topics\":" + quoteStringList(rawTopics)
+    + ",\"tags\":" + quoteStringList(uniqTags)
+    + ",\"difficulty\":{\"scale\":" + json.quoteString(diffScale) + ",\"raw\":" + diffRawJson + ",\"normalized\":" + diffNormJson + "}"
+    + ",\"formats\":" + quoteStringList(formats)
+    + ",\"languages\":" + quoteStringList(langs)
+    + ",\"topics_source\":" + json.quoteString(topicsSource)
+    + ",\"popularity\":" + popJson
+    + ",\"premium\":" + (if premium { "true" } else { "false" })
+    + ",\"status\":" + json.quoteString(status) + "}";
+    _dummy := diffNormScaled;
+    (
+    jsonLine = line, id = id, source = source, setVal = if hasSet { setVal } else { "" },
+    hasNum = hasNum, numVal = numVal, cat = category, diffNormScaled = diffNormScaled,
+    primaryTopic = if list.listCountText(uniqTopics) > 0 { uniqTopics[0] } else { "" },
+    topicsJoined = text.joinTexts(uniqTopics, ";")
+    )
+};
+
+collectHtmlPagesSorted := fn(cacheDir: String, subDir: String, prefix: String): List<String> {
+    dir := path.join(cacheDir, subDir);
+    if fs.kind(dir) =!= fs.FILE_KIND_DIR {
+        empty: List<String> = [];
+        return empty;
+    }
+    matched: mut List<String> = [];
+    loop fs.listDir(dir) as name {
+        if text.startsWithAt(name, 0, prefix) and text.endsWith(name, ".html") {
+            list.pushBack(mut matched, path.join(dir, name));
+        }
+    }
+    challenges.sortTexts(matched)
+};
+
+findClosingDoubleDiv := fn(html: String, startPos: Int): Int {
+    var scan := startPos;
+    loop scan < text.length(html) {
+        c1 := text.indexOfText(html, "</div>", scan);
+        if c1 < 0 { return -1; }
+        var afterWs := c1 + 6;
+        loop afterWs < text.length(html) {
+            ch := text.at(html, afterWs);
+            if ch == " " or ch == "\n" or ch == "\r" or ch == "\t" {
+                afterWs = afterWs + 1;
+            } else { break; }
+        }
+        if text.startsWithAt(html, afterWs, "</div>") {
+            return c1;
+        }
+        scan = c1 + 6;
+    }
+    -1
+};
+
+trimTrailingColons := fn(s: String): String {
+    var end := text.length(s);
+    loop end > 0 and text.at(s, end - 1) == ":" { end = end - 1; }
+    text.slice(s, 0, end)
+};
+
+parseRoadmapListJson := fn(
+    tomlPath: String, listId: String, title: String, url: String, description: String, sortedKnownIds: List<String>
+): (ok: Bool, hasList: Bool, listJson: String, metaJson: String, error: String) {
+    if fs.kind(tomlPath) =!= fs.FILE_KIND_FILE {
+        return (ok = true, hasList = false, listJson = "", metaJson = "", error = "");
+    }
+    raw := challenges.readNormalizedText(tomlPath).text;
+    len := text.length(raw);
+    blockStarts: mut List<Int> = [];
+    var pos := 0;
+    loop pos < len {
+        atLineStart := pos == 0 or text.at(raw, pos - 1) == "\n";
+        if atLineStart and text.startsWithAt(raw, pos, "[[groups]]") {
+            var lineEnd := pos + 10;
+            loop lineEnd < len and text.at(raw, lineEnd) == " " or (lineEnd < len and text.at(raw, lineEnd) == "\t") { lineEnd = lineEnd + 1; }
+            if lineEnd == len or text.at(raw, lineEnd) == "\n" {
+                list.pushBack(mut blockStarts, if lineEnd < len { lineEnd + 1 } else { lineEnd });
+            }
+        }
+        nl := text.indexOfText(raw, "\n", pos);
+        if nl < 0 { break; }
+        pos = nl + 1;
+    }
+
+    flatIds: mut List<String> = [];
+    seenAcrossGroups: mut List<String> = [];
+    groupsJson: mut List<String> = [];
+    bCount := list.listCountInt(blockStarts);
+    var bi := 0;
+    loop bi < bCount {
+        bStart := blockStarts[bi];
+        bEnd := if bi + 1 < bCount { blockStarts[bi + 1] - 10 } else { len };
+        block := text.slice(raw, bStart, bEnd);
+        blen := text.length(block);
+        var gName := "";
+        var foundName := false;
+        var probsStart := -1;
+        var bp := 0;
+        loop bp < blen {
+            atStart := bp == 0 or text.at(block, bp - 1) == "\n";
+            if atStart and text.startsWithAt(block, bp, "name") {
+                eqPos := text.indexOfText(block, "=", bp + 4);
+                nlPos := text.indexOfText(block, "\n", bp);
+                if eqPos >= 0 and (nlPos < 0 or eqPos < nlPos) {
+                    qPos := challenges.skipJsonSpace(block, eqPos + 1);
+                    nParsed := json.readStringAt(block, qPos);
+                    if nParsed.ok { gName = nParsed.value; foundName = true; }
+                }
+            }
+            if atStart and text.startsWithAt(block, bp, "problems") {
+                eqPos := text.indexOfText(block, "=", bp + 8);
+                nlPos := text.indexOfText(block, "\n", bp);
+                if eqPos >= 0 and (nlPos < 0 or eqPos < nlPos) {
+                    probsStart = challenges.skipJsonSpace(block, eqPos + 1);
+                }
+            }
+            nl := text.indexOfText(block, "\n", bp);
+            if nl < 0 { break; }
+            bp = nl + 1;
+        }
+        if not foundName or probsStart < 0 or text.at(block, probsStart) =!= "[" {
+            return (ok = false, hasList = false, listJson = "", metaJson = "", error = "unsupported roadmap group in " + tomlPath);
+        }
+        arrEnd := text.indexOfText(block, "]", probsStart);
+        if arrEnd < 0 {
+            return (ok = false, hasList = false, listJson = "", metaJson = "", error = "unsupported roadmap group in " + tomlPath);
+        }
+        groupIds: mut List<String> = [];
+        var scan := probsStart + 1;
+        loop scan < arrEnd {
+            if text.at(block, scan) == "\"" {
+                strR := json.readStringAt(block, scan);
+                if strR.ok {
+                    pText := strR.value;
+                    usPos := text.indexOfText(pText, "_", 0);
+                    pfx := if usPos >= 0 { text.slice(pText, 0, usPos) } else { pText };
+                    if isAllDigitsStr(pfx) {
+                        cid := "leetcode-" + integer.intText(text.textToInt(pfx).value);
+                        if challenges.findSortedEntity(sortedKnownIds, cid) >= 0 and not list.listContainsText(seenAcrossGroups, cid) {
+                            list.pushBack(mut seenAcrossGroups, cid);
+                            list.pushBack(mut groupIds, cid);
+                            list.pushBack(mut flatIds, cid);
+                        }
+                    }
+                    scan = strR.next;
+                } else {
+                    scan = scan + 1;
+                }
+            } else {
+                scan = scan + 1;
+            }
+        }
+        if list.listCountText(groupIds) > 0 {
+            list.pushBack(mut groupsJson, "{\"name\":" + json.quoteString(gName) + ",\"challenge_ids\":" + quoteStringList(groupIds) + "}");
+        }
+        bi = bi + 1;
+    }
+
+    uniqFlat := dedupTextsPreserveOrder(flatIds);
+    cnt := list.listCountText(uniqFlat);
+    groupsField := if list.listCountText(groupsJson) > 0 { ",\"groups\":[" + text.joinTexts(groupsJson, ",") + "]" } else { "" };
+    lJson := "{\"id\":" + json.quoteString(listId) + ",\"title\":" + json.quoteString(title)
+        + ",\"kind\":\"roadmap\",\"source\":\"leetcode\",\"url\":" + json.quoteString(url)
+        + ",\"description\":" + json.quoteString(description) + ",\"count\":" + integer.intText(cnt)
+        + ",\"challenge_ids\":" + quoteStringList(uniqFlat) + groupsField + "}";
+    mJson := "{\"id\":" + json.quoteString(listId) + ",\"title\":" + json.quoteString(title) + ",\"count\":" + integer.intText(cnt) + "}";
+    (ok = true, hasList = true, listJson = lJson, metaJson = mJson, error = "")
+};
+
+/** Normalizes cached sources in `challengesRootDir/.cache/` into `data/` and `schema/taxonomy.json`. */
+pub buildChallengeCorpus := fn(challengesRootDir: String, catalogJsonText: String, entitiesJsonText: String): (ok: Bool, summaryText: String, error: String) {
+    cacheDir := path.join(challengesRootDir, ".cache");
+    if fs.kind(cacheDir) =!= fs.FILE_KIND_DIR {
+        return (ok = false, summaryText = "", error = "no cache; run tools/fetch_sources.ts first");
+    }
+
+    rawEntKeys: mut List<String> = [];
+    rawEntVals: mut List<String> = [];
+    var ep := challenges.skipJsonSpace(entitiesJsonText, 0);
+    if ep < text.length(entitiesJsonText) and text.at(entitiesJsonText, ep) == "{" {
+        ep = challenges.skipJsonSpace(entitiesJsonText, ep + 1);
+        loop ep < text.length(entitiesJsonText) and text.at(entitiesJsonText, ep) =!= "}" {
+            kR := json.readStringAt(entitiesJsonText, ep);
+            if not kR.ok { break; }
+            ep = challenges.skipJsonSpace(entitiesJsonText, kR.next);
+            if ep >= text.length(entitiesJsonText) or text.at(entitiesJsonText, ep) =!= ":" { break; }
+            ep = challenges.skipJsonSpace(entitiesJsonText, ep + 1);
+            vR := json.readStringAt(entitiesJsonText, ep);
+            if not vR.ok { break; }
+            list.pushBack(mut rawEntKeys, kR.value);
+            list.pushBack(mut rawEntVals, vR.value);
+            ep = challenges.skipJsonSpace(entitiesJsonText, vR.next);
+            if ep < text.length(entitiesJsonText) and text.at(entitiesJsonText, ep) == "," {
+                ep = challenges.skipJsonSpace(entitiesJsonText, ep + 1);
+            }
+        }
+    }
+    entOrd := challenges.sortIndexByKeys(rawEntKeys);
+    entKeys: mut List<String> = [];
+    entVals: mut List<String> = [];
+    loop entOrd as ei {
+        list.pushBack(mut entKeys, rawEntKeys[ei]);
+        list.pushBack(mut entVals, rawEntVals[ei]);
+    }
+
+    catField := json.findObjectField(catalogJsonText, 0, "CATEGORIES");
+    lcField := json.findObjectField(catalogJsonText, 0, "LC_TOPICS");
+    cfField := json.findObjectField(catalogJsonText, 0, "CF_TAGS");
+    csesField := json.findObjectField(catalogJsonText, 0, "CSES_SECTIONS");
+    cpField := json.findObjectField(catalogJsonText, 0, "CRYPTOPALS_SETS");
+    tgField := json.findObjectField(catalogJsonText, 0, "TOPIC_GROUPS");
+    tlField := json.findObjectField(catalogJsonText, 0, "TOPIC_LABELS");
+    dbField := json.findObjectField(catalogJsonText, 0, "DIFFICULTY_BANDS");
+    siField := json.findObjectField(catalogJsonText, 0, "SOURCE_INFO");
+    soField := json.findObjectField(catalogJsonText, 0, "SOURCE_ORDER");
+    sourceOrder := challenges.readStringArray(catalogJsonText, 0, "SOURCE_ORDER");
+    allowedCats := json.objectKeys(catalogJsonText, catField.valuePos);
+    _unusedSo := soField.found;
+
+    recJsons: mut List<String> = [];
+    recIds: mut List<String> = [];
+    recSources: mut List<String> = [];
+    recNums: mut List<Int> = [];
+    recSets: mut List<String> = [];
+    recCats: mut List<String> = [];
+    recDiffTiers: mut List<String> = [];
+    recTopSrcs: mut List<String> = [];
+    recStatuses: mut List<String> = [];
+    recTopicsAll: mut List<String> = [];
+    recCsvRows: mut List<String> = ["id,title,source,category,primary_topic,topics,raw_topics,tags,difficulty,difficulty_normalized,topics_source,formats,premium,url"];
+
+    var yr := 2015;
+    loop yr <= 2025 {
+        var day := 1;
+        loop day <= 25 {
+            pDay := challenges.padLeftZero(day, 2);
+            aocPath := path.join(cacheDir, "aoc/" + integer.intText(yr) + "/day" + pDay + ".html");
+            if fs.kind(aocPath) == fs.FILE_KIND_FILE {
+                html := challenges.readNormalizedText(aocPath).text;
+                marker := "<h2>--- Day " + integer.intText(day) + ": ";
+                ms := text.indexOfText(html, marker, 0);
+                if ms >= 0 {
+                    afterM := ms + text.length(marker);
+                    me := text.indexOfText(html, " ---</h2>", afterM);
+                    if me >= 0 {
+                        ttl := cleanHtmlTitle(entKeys, entVals, text.slice(html, afterM, me));
+                        cid := "aoc-" + integer.intText(yr) + "-" + pDay;
+                        curl := "https://adventofcode.com/" + integer.intText(yr) + "/day/" + integer.intText(day);
+                        tenths := 10 + roundDivTiesEven((day - 1) * 10, 3);
+                        normStr := formatTenthsJson(tenths);
+                        emptyStrs: List<String> = [];
+                        tagsList: List<String> = ["advent-of-code", integer.intText(yr), "day-" + integer.intText(day)];
+                        fmtsList: List<String> = ["stdin-stdout", "two-part"];
+                        langsList: List<String> = ["any"];
+                        rec := buildChallengeRecordJson(
+                        cid, ttl, "advent-of-code", curl, integer.intText(yr) + "/" + integer.intText(day),
+                        true, integer.intText(yr), true, day, "puzzles", emptyStrs, emptyStrs, tagsList,
+                        "aoc-day", json.quoteString("Day " + integer.intText(day)), normStr, tenths,
+                        fmtsList, langsList, "none", "null", false, "verified"
+                        );
+                        list.pushBack(mut recJsons, rec.jsonLine);
+                        list.pushBack(mut recIds, rec.id);
+                        list.pushBack(mut recSources, rec.source);
+                        list.pushBack(mut recNums, day);
+                        list.pushBack(mut recSets, integer.intText(yr));
+                        list.pushBack(mut recCats, rec.cat);
+                        list.pushBack(mut recDiffTiers, integer.intText(tenths / 10));
+                        list.pushBack(mut recTopSrcs, "none");
+                        list.pushBack(mut recStatuses, "verified");
+                        list.pushBack(mut recCsvRows,
+                        challenges.csvEscapeField(cid) + "," + challenges.csvEscapeField(ttl) + ",advent-of-code,puzzles,,,,"
+                        + challenges.csvEscapeField(text.joinTexts(tagsList, ";")) + ","
+                        + challenges.csvEscapeField("Day " + integer.intText(day)) + "," + normStr + ",none,"
+                        + challenges.csvEscapeField("stdin-stdout;two-part") + ",False," + challenges.csvEscapeField(curl));
+                    }
+                }
+            }
+            day = day + 1;
+        }
+        yr = yr + 1;
+    }
+
+    eulerNums: mut List<Int> = [];
+    eulerTitles: mut List<String> = [];
+    loop collectHtmlPagesSorted(cacheDir, "project-euler", "page") as ePath {
+        html := challenges.readNormalizedText(ePath).text;
+        var pos := 0;
+        loop pos < text.length(html) {
+            hrefPos := text.indexOfText(html, "href=\"problem=", pos);
+            if hrefPos < 0 { break; }
+            numStart := hrefPos + 14;
+            quoteEnd := text.indexOfText(html, "\"", numStart);
+            if quoteEnd < 0 { break; }
+            nParsed := text.textToInt(text.slice(html, numStart, quoteEnd));
+            tagGt := text.indexOfText(html, ">", quoteEnd);
+            closeA := if tagGt >= 0 { text.indexOfText(html, "</a>", tagGt + 1) } else { -1 };
+            if nParsed.ok and tagGt >= 0 and closeA >= 0 {
+                if list.listIndexOfInt(eulerNums, nParsed.value) < 0 {
+                    list.pushBack(mut eulerNums, nParsed.value);
+                    list.pushBack(mut eulerTitles, cleanHtmlTitle(entKeys, entVals, text.slice(html, tagGt + 1, closeA)));
+                }
+                pos = closeA + 4;
+            } else {
+                pos = numStart;
+            }
+        }
+    }
+    var remEulerIdx: mut List<Int> = [];
+    var ei := 0;
+    loop ei < list.listCountInt(eulerNums) { list.pushBack(mut remEulerIdx, ei); ei = ei + 1; }
+    var sortedEulerIdx: mut List<Int> = [];
+    loop list.listCountInt(remEulerIdx) > 0 {
+        var mi := 0;
+        var j := 1;
+        loop j < list.listCountInt(remEulerIdx) {
+            if eulerNums[remEulerIdx[j]] < eulerNums[remEulerIdx[mi]] { mi = j; }
+            j = j + 1;
+        }
+        list.pushBack(mut sortedEulerIdx, remEulerIdx[mi]);
+        nextR: mut List<Int> = [];
+        var k := 0;
+        loop k < list.listCountInt(remEulerIdx) { if k =!= mi { list.pushBack(mut nextR, remEulerIdx[k]); } k = k + 1; }
+        remEulerIdx = nextR;
+    }
+    loop sortedEulerIdx as idx {
+        n := eulerNums[idx];
+        ttl := eulerTitles[idx];
+        tenths := if n <= 25 { 15 } else if n <= 50 { 20 } else if n <= 100 { 30 } else if n <= 200 { 40 } else if n <= 350 { 50 } else if n <= 500 { 60 } else if n <= 700 { 70 } else { 80 };
+        normStr := formatTenthsJson(tenths);
+        pNum := challenges.padLeftZero(n, 3);
+        cid := "project-euler-" + pNum;
+        curl := "https://projecteuler.net/problem=" + integer.intText(n);
+        topicsList: List<String> = ["math"];
+        tagsList: List<String> = ["project-euler", "tier-" + integer.intText(tenths / 10)];
+        fmtsList: List<String> = ["stdin-stdout", "single-answer"];
+        langsList: List<String> = ["any"];
+        emptyStrs: List<String> = [];
+        rec := buildChallengeRecordJson(
+        cid, ttl, "project-euler", curl, integer.intText(n), true, "Project Euler", true, n,
+        "mathematics", topicsList, emptyStrs, tagsList, "project-euler-number", integer.intText(n),
+        normStr, tenths, fmtsList, langsList, "curated", "null", false, "verified"
+        );
+        list.pushBack(mut recJsons, rec.jsonLine);
+        list.pushBack(mut recIds, rec.id);
+        list.pushBack(mut recSources, rec.source);
+        list.pushBack(mut recNums, n);
+        list.pushBack(mut recSets, "Project Euler");
+        list.pushBack(mut recCats, rec.cat);
+        list.pushBack(mut recDiffTiers, integer.intText(tenths / 10));
+        list.pushBack(mut recTopSrcs, "curated");
+        list.pushBack(mut recStatuses, "verified");
+        list.pushBack(mut recTopicsAll, "math");
+        list.pushBack(mut recCsvRows,
+        challenges.csvEscapeField(cid) + "," + challenges.csvEscapeField(ttl) + ",project-euler,mathematics,math,math,,"
+        + challenges.csvEscapeField(text.joinTexts(tagsList, ";")) + "," + integer.intText(n) + "," + normStr
+        + ",curated," + challenges.csvEscapeField("stdin-stdout;single-answer") + ",False," + challenges.csvEscapeField(curl));
+    }
+
+    lcApiPath := path.join(cacheDir, "leetcode/api-all.json");
+    lcMergedPath := path.join(cacheDir, "leetcode/merged.json");
+    if fs.kind(lcApiPath) == fs.FILE_KIND_FILE and fs.kind(lcMergedPath) == fs.FILE_KIND_FILE {
+        apiText := fs.readText(lcApiPath).text;
+        mText := fs.readText(lcMergedPath).text;
+        qField := json.findObjectField(mText, 0, "questions");
+        qKeys: mut List<String> = [];
+        qPositions: mut List<Int> = [];
+        loop json.arrayElementOffsets(mText, qField.valuePos) as qp {
+            fidS := json.readObjectString(mText, qp, "frontend_id");
+            fidVal := if fidS.found and fidS.ok { fidS.value } else {
+                fidI := json.readObjectInt(mText, qp, "frontend_id");
+                if fidI.found and fidI.ok { integer.intText(fidI.value) } else { "" }
+            };
+            slugV := json.readObjectString(mText, qp, "problem_slug").value;
+            if fidVal =!= "" { list.pushBack(mut qKeys, fidVal); list.pushBack(mut qPositions, qp); }
+            if slugV =!= "" { list.pushBack(mut qKeys, slugV); list.pushBack(mut qPositions, qp); }
+        }
+        qOrd := challenges.sortIndexByKeys(qKeys);
+        qSortedK: mut List<String> = [];
+        qSortedP: mut List<Int> = [];
+        loop qOrd as qi { list.pushBack(mut qSortedK, qKeys[qi]); list.pushBack(mut qSortedP, qPositions[qi]); }
+
+        pairsField := json.findObjectField(apiText, 0, "stat_status_pairs");
+        loop json.arrayElementOffsets(apiText, pairsField.valuePos) as pPos {
+            statF := json.findObjectField(apiText, pPos, "stat");
+            diffF := json.findObjectField(apiText, pPos, "difficulty");
+            fqidR := json.readObjectInt(apiText, statF.valuePos, "frontend_question_id");
+            qidNum := if fqidR.found and fqidR.ok and fqidR.value > 0 { fqidR.value } else { json.readObjectInt(apiText, statF.valuePos, "question_id").value };
+            qidStr := integer.intText(qidNum);
+            slug := json.readObjectString(apiText, statF.valuePos, "question__title_slug").value;
+            ttlRaw := json.readObjectString(apiText, statF.valuePos, "question__title").value;
+            ttl := cleanHtmlTitle(entKeys, entVals, ttlRaw);
+            attemptsR := json.readObjectInt(apiText, statF.valuePos, "total_submitted");
+            solvedR := json.readObjectInt(apiText, statF.valuePos, "total_acs");
+            attempts := if attemptsR.found and attemptsR.ok { attemptsR.value } else { 0 };
+            solved := if solvedR.found and solvedR.ok { solvedR.value } else { 0 };
+            lvl := json.readObjectInt(apiText, diffF.valuePos, "level").value;
+            paid := json.readObjectBool(apiText, pPos, "paid_only").value;
+
+            diffLabel := if lvl == 1 { "Easy" } else if lvl == 3 { "Hard" } else { "Medium" };
+            normTenths := if lvl == 1 { 20 } else if lvl == 3 { 80 } else { 50 };
+            normStr := formatTenthsJson(normTenths);
+
+            var qHitPos := -1;
+            idxById := challenges.findSortedEntity(qSortedK, qidStr);
+            if idxById >= 0 { qHitPos = qSortedP[idxById]; }
+            else {
+                idxBySlug := challenges.findSortedEntity(qSortedK, slug);
+                if idxBySlug >= 0 { qHitPos = qSortedP[idxBySlug]; }
+            }
+            emptyRawTopics: List<String> = [];
+            rawTopics := if qHitPos >= 0 { challenges.readStringArray(mText, qHitPos, "topics") } else { emptyRawTopics };
+            mappedTopics: mut List<String> = [];
+            loop rawTopics as rt {
+                lk := json.readObjectString(catalogJsonText, lcField.valuePos, rt);
+                slugTp := if lk.found and lk.ok { lk.value } else { slugifyText(rt) };
+                if not list.listContainsText(mappedTopics, slugTp) {
+                    list.pushBack(mut mappedTopics, slugTp);
+                }
+            }
+            loop mappedTopics as mt { list.pushBack(mut recTopicsAll, mt); }
+
+            cat := if list.listContainsText(mappedTopics, "databases") { "databases" }
+            else if list.listContainsText(mappedTopics, "shell") { "shell" }
+            else if list.listContainsText(mappedTopics, "concurrency") { "concurrency" }
+            else if list.listContainsText(mappedTopics, "javascript") { "javascript" }
+            else if list.listContainsText(mappedTopics, "pandas") { "data-analysis" }
+            else { "algorithms" };
+
+            fmtStr := if list.listContainsText(mappedTopics, "databases") { "sql" } else if list.listContainsText(mappedTopics, "shell") { "shell" } else { "function" };
+            langStr := if list.listContainsText(mappedTopics, "databases") { "sql" } else if list.listContainsText(mappedTopics, "shell") { "bash" } else if list.listContainsText(mappedTopics, "pandas") { "python" } else { "any" };
+            tpSrc := if list.listCountText(mappedTopics) > 0 { "source" } else { "none" };
+            stVal := if list.listCountText(mappedTopics) > 0 { "verified" } else { "partial" };
+
+            tagsList: mut List<String> = ["leetcode", challenges.asciiLower(diffLabel)];
+            if paid { list.pushBack(mut tagsList, "premium"); }
+
+            accJson := if attempts > 0 { formatFourDecimalsJson(roundDivTiesEven(solved * 10000, attempts)) } else { "null" };
+            popJson := "{\"attempts\":" + integer.intText(attempts) + ",\"solved\":" + integer.intText(solved) + ",\"acceptance\":" + accJson + "}";
+            cid := "leetcode-" + qidStr;
+            curl := "https://leetcode.com/problems/" + slug + "/";
+            rec := buildChallengeRecordJson(
+            cid, ttl, "leetcode", curl, qidStr, false, "", isAllDigitsStr(qidStr), qidNum,
+            cat, mappedTopics, rawTopics, tagsList, "leetcode", json.quoteString(diffLabel),
+            integer.intText(normTenths / 10), normTenths, [fmtStr], [langStr], tpSrc, popJson, paid, stVal
+            );
+            list.pushBack(mut recJsons, rec.jsonLine);
+            list.pushBack(mut recIds, rec.id);
+            list.pushBack(mut recSources, rec.source);
+            list.pushBack(mut recNums, qidNum);
+            list.pushBack(mut recSets, "");
+            list.pushBack(mut recCats, rec.cat);
+            list.pushBack(mut recDiffTiers, integer.intText(normTenths / 10));
+            list.pushBack(mut recTopSrcs, tpSrc);
+            list.pushBack(mut recStatuses, stVal);
+            list.pushBack(mut recCsvRows,
+            challenges.csvEscapeField(cid) + "," + challenges.csvEscapeField(ttl) + ",leetcode," + challenges.csvEscapeField(cat) + ","
+            + challenges.csvEscapeField(rec.primaryTopic) + "," + challenges.csvEscapeField(rec.topicsJoined) + ","
+            + challenges.csvEscapeField(text.joinTexts(rawTopics, ";")) + "," + challenges.csvEscapeField(text.joinTexts(tagsList, ";")) + ","
+            + challenges.csvEscapeField(diffLabel) + "," + normStr + "," + tpSrc + "," + challenges.csvEscapeField(fmtStr) + ","
+            + (if paid { "True" } else { "False" }) + "," + challenges.csvEscapeField(curl));
+        }
+    }
+
+    cfPath := path.join(cacheDir, "codeforces/problemset.json");
+    if fs.kind(cfPath) == fs.FILE_KIND_FILE {
+        cfText := fs.readText(cfPath).text;
+        resField := json.findObjectField(cfText, 0, "result");
+        stArrField := json.findObjectField(cfText, resField.valuePos, "problemStatistics");
+        stKeys: mut List<String> = [];
+        stVals: mut List<Int> = [];
+        loop json.arrayElementOffsets(cfText, stArrField.valuePos) as sp {
+            cId := json.readObjectInt(cfText, sp, "contestId").value;
+            cIdx := json.readObjectString(cfText, sp, "index").value;
+            sc := json.readObjectInt(cfText, sp, "solvedCount").value;
+            list.pushBack(mut stKeys, integer.intText(cId) + "/" + cIdx);
+            list.pushBack(mut stVals, sc);
+        }
+        stOrd := challenges.sortIndexByKeys(stKeys);
+        stSK: mut List<String> = [];
+        stSV: mut List<Int> = [];
+        loop stOrd as si { list.pushBack(mut stSK, stKeys[si]); list.pushBack(mut stSV, stVals[si]); }
+
+        prArrField := json.findObjectField(cfText, resField.valuePos, "problems");
+        cContestIds: mut List<Int> = [];
+        cIndexes: mut List<String> = [];
+        cSolved: mut List<Int> = [];
+        cRatings: mut List<Int> = [];
+        cPosList: mut List<Int> = [];
+        loop json.arrayElementOffsets(cfText, prArrField.valuePos) as pp {
+            ratR := json.readObjectInt(cfText, pp, "rating");
+            tpR := json.readObjectString(cfText, pp, "type");
+            tpVal := if tpR.found and tpR.ok { tpR.value } else { "PROGRAMMING" };
+            if ratR.found and ratR.ok and ratR.value >= 800 and ratR.value <= 3000 and tpVal == "PROGRAMMING" {
+                cId := json.readObjectInt(cfText, pp, "contestId").value;
+                cIdx := json.readObjectString(cfText, pp, "index").value;
+                hit := challenges.findSortedEntity(stSK, integer.intText(cId) + "/" + cIdx);
+                sv := if hit >= 0 { stSV[hit] } else { 0 };
+                if sv > 0 {
+                    list.pushBack(mut cContestIds, cId);
+                    list.pushBack(mut cIndexes, cIdx);
+                    list.pushBack(mut cSolved, sv);
+                    list.pushBack(mut cRatings, ratR.value);
+                    list.pushBack(mut cPosList, pp);
+                }
+            }
+        }
+
+        cfN := list.listCountInt(cContestIds);
+        var cfOrd: mut List<Int> = [];
+        var cfi := 0;
+        loop cfi < cfN { list.pushBack(mut cfOrd, cfi); cfi = cfi + 1; }
+        if cfN > 1 {
+            var width := 1;
+            loop width < cfN {
+                next: mut List<Int> = [];
+                var st := 0;
+                loop st < cfN {
+                    mid := if st + width < cfN { st + width } else { cfN };
+                    re := if st + width * 2 < cfN { st + width * 2 } else { cfN };
+                    var li := st;
+                    var ri := mid;
+                    loop li < mid or ri < re {
+                        if li >= mid { list.pushBack(mut next, cfOrd[ri]); ri = ri + 1; }
+                        else if ri >= re { list.pushBack(mut next, cfOrd[li]); li = li + 1; }
+                        else {
+                            ia := cfOrd[li];
+                            ib := cfOrd[ri];
+                            var takeA := false;
+                            if cSolved[ia] > cSolved[ib] { takeA = true; }
+                            else if cSolved[ia] == cSolved[ib] {
+                                if cContestIds[ia] < cContestIds[ib] { takeA = true; }
+                                else if cContestIds[ia] == cContestIds[ib] and challenges.compareTextLex(cIndexes[ia], cIndexes[ib]) <= 0 { takeA = true; }
+                            }
+                            if takeA { list.pushBack(mut next, ia); li = li + 1; } else { list.pushBack(mut next, ib); ri = ri + 1; }
+                        }
+                    }
+                    st = st + width * 2;
+                }
+                cfOrd = next;
+                width = width * 2;
+            }
+        }
+
+        var cfSelected: mut List<Int> = [];
+        lows: List<Int> = [800, 1200, 1600, 2000];
+        highs: List<Int> = [1199, 1599, 1999, 3000];
+        var bi := 0;
+        loop bi < 4 {
+            var bucketCount := 0;
+            loop cfOrd as ci {
+                if cRatings[ci] >= lows[bi] and cRatings[ci] <= highs[bi] and not list.listContainsInt(cfSelected, ci) {
+                    list.pushBack(mut cfSelected, ci);
+                    bucketCount = bucketCount + 1;
+                    if bucketCount >= 200 { break; }
+                }
+            }
+            bi = bi + 1;
+        }
+        loop cfOrd as ci {
+            if list.listCountInt(cfSelected) >= 800 { break; }
+            if not list.listContainsInt(cfSelected, ci) {
+                list.pushBack(mut cfSelected, ci);
+            }
+        }
+
+        loop cfSelected as ci {
+            pp := cPosList[ci];
+            cId := cContestIds[ci];
+            cIdx := cIndexes[ci];
+            rating := cRatings[ci];
+            solved := cSolved[ci];
+            ttl := cleanHtmlTitle(entKeys, entVals, json.readObjectString(cfText, pp, "name").value);
+            rawTags := challenges.readStringArray(cfText, pp, "tags");
+            mappedTags: mut List<String> = [];
+            loop rawTags as rt {
+                lk := json.readObjectString(catalogJsonText, cfField.valuePos, rt);
+                slugTp := if lk.found and lk.ok { lk.value } else { slugifyText(rt) };
+                if not list.listContainsText(mappedTags, slugTp) { list.pushBack(mut mappedTags, slugTp); }
+            }
+            loop mappedTags as mt { list.pushBack(mut recTopicsAll, mt); }
+
+            tenths := 10 + roundDivTiesEven((rating - 800) * 10, 250);
+            normStr := formatTenthsJson(tenths);
+            cid := challenges.asciiLower("codeforces-" + integer.intText(cId) + cIdx);
+            curl := "https://codeforces.com/problemset/problem/" + integer.intText(cId) + "/" + cIdx;
+            tagsList: List<String> = ["codeforces", "rating-" + integer.intText(rating), "contest-" + integer.intText(cId), "index-" + challenges.asciiLower(cIdx)];
+            popJson := "{\"solved\":" + integer.intText(solved) + "}";
+            rec := buildChallengeRecordJson(
+            cid, ttl, "codeforces", curl, integer.intText(cId) + cIdx, true, "contest-" + integer.intText(cId),
+            false, 0, "algorithms", mappedTags, rawTags, tagsList, "codeforces-rating", integer.intText(rating),
+            normStr, tenths, ["stdin-stdout"], ["any"], "source", popJson, false, "verified"
+            );
+            list.pushBack(mut recJsons, rec.jsonLine);
+            list.pushBack(mut recIds, rec.id);
+            list.pushBack(mut recSources, rec.source);
+            list.pushBack(mut recNums, 0);
+            list.pushBack(mut recSets, rec.setVal);
+            list.pushBack(mut recCats, rec.cat);
+            list.pushBack(mut recDiffTiers, integer.intText(tenths / 10));
+            list.pushBack(mut recTopSrcs, "source");
+            list.pushBack(mut recStatuses, "verified");
+            list.pushBack(mut recCsvRows,
+            challenges.csvEscapeField(cid) + "," + challenges.csvEscapeField(ttl) + ",codeforces,algorithms,"
+            + challenges.csvEscapeField(rec.primaryTopic) + "," + challenges.csvEscapeField(rec.topicsJoined) + ","
+            + challenges.csvEscapeField(text.joinTexts(rawTags, ";")) + "," + challenges.csvEscapeField(text.joinTexts(tagsList, ";")) + ","
+            + integer.intText(rating) + "," + normStr + ",source,stdin-stdout,False," + challenges.csvEscapeField(curl));
+        }
+    }
+
+    csesPath := path.join(cacheDir, "cses/problemset.html");
+    if fs.kind(csesPath) == fs.FILE_KIND_FILE {
+        html := challenges.readNormalizedText(csesPath).text;
+        secNames: mut List<String> = [];
+        var secCounts: mut List<Int> = [];
+        var curSec := "";
+        var pos := 0;
+        loop pos < text.length(html) {
+            h2Pos := text.indexOfText(html, "<h2>", pos);
+            hrefPos := text.indexOfText(html, "href=\"/problemset/task/", pos);
+            if h2Pos < 0 and hrefPos < 0 { break; }
+            isH2Next := h2Pos >= 0 and (hrefPos < 0 or h2Pos < hrefPos);
+            if isH2Next {
+                h2End := text.indexOfText(html, "</h2>", h2Pos + 4);
+                if h2End < 0 { break; }
+                curSec = cleanHtmlTitle(entKeys, entVals, text.slice(html, h2Pos + 4, h2End));
+                pos = h2End + 5;
+            } else {
+                idStart := hrefPos + 23;
+                qEnd := text.indexOfText(html, "\">", idStart);
+                aEnd := if qEnd >= 0 { text.indexOfText(html, "</a>", qEnd + 2) } else { -1 };
+                if qEnd >= 0 and aEnd >= 0 and curSec =!= "" {
+                    taskId := text.slice(html, idStart, qEnd);
+                    ttl := cleanHtmlTitle(entKeys, entVals, text.slice(html, qEnd + 2, aEnd));
+                    secF := json.findObjectField(catalogJsonText, csesField.valuePos, curSec);
+                    var tpList: List<String> = ["mixed"];
+                    var baseVal := 50;
+                    if secF.found {
+                        offs := json.arrayElementOffsets(catalogJsonText, secF.valuePos);
+                        if list.listCountInt(offs) >= 2 {
+                            tps: mut List<String> = [];
+                            loop json.arrayElementOffsets(catalogJsonText, offs[0]) as tpPos {
+                                s := json.readStringAt(catalogJsonText, tpPos);
+                                if s.ok { list.pushBack(mut tps, s.value); }
+                            }
+                            tpList = tps;
+                            bR := challenges.parseScaledNumberText(text.slice(catalogJsonText, json.valueSpan(catalogJsonText, offs[1]).start, json.valueSpan(catalogJsonText, offs[1]).end));
+                            if bR.ok { baseVal = bR.scaled / 100; }
+                        }
+                    }
+                    loop tpList as mt { list.pushBack(mut recTopicsAll, mt); }
+                    sIdx := list.listIndexOfText(secNames, curSec);
+                    var n := 1;
+                    if sIdx < 0 {
+                        list.pushBack(mut secNames, curSec);
+                        list.pushBack(mut secCounts, 1);
+                    } else {
+                        n = secCounts[sIdx] + 1;
+                        nextSc: mut List<Int> = [];
+                        var si := 0;
+                        loop si < list.listCountInt(secCounts) {
+                            list.pushBack(mut nextSc, if si == sIdx { n } else { secCounts[si] });
+                            si = si + 1;
+                        }
+                        secCounts = nextSc;
+                    }
+                    cid := "cses-" + taskId;
+                    curl := "https://cses.fi/problemset/task/" + taskId;
+                    tagsList: List<String> = ["cses", slugifyText(curSec)];
+                    normStr := formatTenthsJson(baseVal);
+                    emptyStrsCses: List<String> = [];
+                    rec := buildChallengeRecordJson(
+                    cid, ttl, "cses", curl, taskId, true, curSec, true, n,
+                    "algorithms", tpList, emptyStrsCses, tagsList, "cses-section", json.quoteString(curSec),
+                    normStr, baseVal, ["stdin-stdout"], ["any"], "section", "null", false, "verified"
+                    );
+                    list.pushBack(mut recJsons, rec.jsonLine);
+                    list.pushBack(mut recIds, rec.id);
+                    list.pushBack(mut recSources, rec.source);
+                    list.pushBack(mut recNums, n);
+                    list.pushBack(mut recSets, curSec);
+                    list.pushBack(mut recCats, rec.cat);
+                    list.pushBack(mut recDiffTiers, integer.intText(baseVal / 10));
+                    list.pushBack(mut recTopSrcs, "section");
+                    list.pushBack(mut recStatuses, "verified");
+                    list.pushBack(mut recCsvRows,
+                    challenges.csvEscapeField(cid) + "," + challenges.csvEscapeField(ttl) + ",cses,algorithms,"
+                    + challenges.csvEscapeField(rec.primaryTopic) + "," + challenges.csvEscapeField(rec.topicsJoined) + ",,"
+                    + challenges.csvEscapeField(text.joinTexts(tagsList, ";")) + "," + challenges.csvEscapeField(curSec)
+                    + "," + normStr + ",section,stdin-stdout,False," + challenges.csvEscapeField(curl));
+                    pos = aEnd + 4;
+                } else {
+                    pos = hrefPos + 23;
+                }
+            }
+        }
+    }
+
+    atcProbPath := path.join(cacheDir, "atcoder/problems.json");
+    atcModPath := path.join(cacheDir, "atcoder/models.json");
+    if fs.kind(atcProbPath) == fs.FILE_KIND_FILE and fs.kind(atcModPath) == fs.FILE_KIND_FILE {
+        pText := fs.readText(atcProbPath).text;
+        mText := fs.readText(atcModPath).text;
+        cPPos: mut List<Int> = [];
+        cUsers: mut List<Int> = [];
+        cDiffRaw: mut List<String> = [];
+        cDiffTenths: mut List<Int> = [];
+        cPrefixes: mut List<String> = [];
+        loop json.arrayElementOffsets(mText, 0) as _unused { break; }
+        mKeys := json.objectKeys(mText, 0);
+        mOrd := challenges.sortIndexByKeys(mKeys);
+        sortedMKeys: mut List<String> = [];
+        loop mOrd as mi { list.pushBack(mut sortedMKeys, mKeys[mi]); }
+        _unusedMk := list.listCountText(sortedMKeys);
+
+        loop json.arrayElementOffsets(pText, 0) as pp {
+            pid := json.readObjectString(pText, pp, "id").value;
+            cId := json.readObjectString(pText, pp, "contest_id").value;
+            var pfx := "";
+            var pi := 0;
+            loop pi < text.length(cId) {
+                ch := text.at(cId, pi);
+                if text.indexOfText("abcdefghijklmnopqrstuvwxyz", ch, 0) >= 0 {
+                    pfx = pfx + ch;
+                    pi = pi + 1;
+                } else { break; }
+            }
+            if pfx == "abc" or pfx == "arc" or pfx == "agc" {
+                mf := json.findObjectField(mText, 0, pid);
+                if mf.found and challenges.isJsonObjectAt(mText, mf.valuePos) {
+                    expR := json.readObjectBool(mText, mf.valuePos, "is_experimental");
+                    isExp := expR.found and expR.ok and expR.value;
+                    dParsed := challenges.parseScaledDecimal1000(mText, mf.valuePos, "difficulty");
+                    if not isExp and dParsed.ok {
+                        uR := json.readObjectInt(mText, mf.valuePos, "irt_users");
+                        users := if uR.found and uR.ok { uR.value } else { 0 };
+                        val1000 := if dParsed.scaled > 400000 { dParsed.scaled } else { 400000 };
+                        tenths := 10 + roundDivTiesEven((val1000 - 400000) * 10, 320000);
+                        list.pushBack(mut cPPos, pp);
+                        list.pushBack(mut cUsers, users);
+                        list.pushBack(mut cDiffRaw, dParsed.raw);
+                        list.pushBack(mut cDiffTenths, tenths);
+                        list.pushBack(mut cPrefixes, pfx);
+                    }
+                }
+            }
+        }
+        aLen := list.listCountInt(cPPos);
+        var aOrd: mut List<Int> = [];
+        var ai := 0;
+        loop ai < aLen { list.pushBack(mut aOrd, ai); ai = ai + 1; }
+        if aLen > 1 {
+            var width := 1;
+            loop width < aLen {
+                next: mut List<Int> = [];
+                var st := 0;
+                loop st < aLen {
+                    mid := if st + width < aLen { st + width } else { aLen };
+                    re := if st + width * 2 < aLen { st + width * 2 } else { aLen };
+                    var li := st;
+                    var ri := mid;
+                    loop li < mid or ri < re {
+                        if li >= mid { list.pushBack(mut next, aOrd[ri]); ri = ri + 1; }
+                        else if ri >= re { list.pushBack(mut next, aOrd[li]); li = li + 1; }
+                        else if cUsers[aOrd[li]] >= cUsers[aOrd[ri]] { list.pushBack(mut next, aOrd[li]); li = li + 1; }
+                        else { list.pushBack(mut next, aOrd[ri]); ri = ri + 1; }
+                    }
+                    st = st + width * 2;
+                }
+                aOrd = next;
+                width = width * 2;
+            }
+        }
+        var taken := 0;
+        loop aOrd as idx {
+            if taken >= 350 { break; }
+            taken = taken + 1;
+            pp := cPPos[idx];
+            pid := json.readObjectString(pText, pp, "id").value;
+            cId := json.readObjectString(pText, pp, "contest_id").value;
+            ttl := cleanHtmlTitle(entKeys, entVals, json.readObjectString(pText, pp, "name").value);
+            normStr := formatTenthsJson(cDiffTenths[idx]);
+            var dashed := "";
+            var di := 0;
+            loop di < text.length(pid) {
+                ch := text.at(pid, di);
+                dashed = dashed + (if ch == "_" { "-" } else { ch });
+                di = di + 1;
+            }
+            cid := challenges.asciiLower("atcoder-" + dashed);
+            curl := "https://atcoder.jp/contests/" + cId + "/tasks/" + pid;
+            tagsList: List<String> = ["atcoder", cPrefixes[idx], "contest-" + cId];
+            popJson := "{\"users\":" + integer.intText(cUsers[idx]) + "}";
+            emptyStrs: List<String> = [];
+            rec := buildChallengeRecordJson(
+            cid, ttl, "atcoder", curl, pid, true, cId, false, 0,
+            "algorithms", emptyStrs, emptyStrs, tagsList, "atcoder-difficulty", cDiffRaw[idx],
+            normStr, cDiffTenths[idx], ["stdin-stdout"], ["any"], "none", popJson, false, "verified"
+            );
+            list.pushBack(mut recJsons, rec.jsonLine);
+            list.pushBack(mut recIds, rec.id);
+            list.pushBack(mut recSources, rec.source);
+            list.pushBack(mut recNums, 0);
+            list.pushBack(mut recSets, cId);
+            list.pushBack(mut recCats, rec.cat);
+            list.pushBack(mut recDiffTiers, integer.intText(cDiffTenths[idx] / 10));
+            list.pushBack(mut recTopSrcs, "none");
+            list.pushBack(mut recStatuses, "verified");
+            list.pushBack(mut recCsvRows,
+            challenges.csvEscapeField(cid) + "," + challenges.csvEscapeField(ttl) + ",atcoder,algorithms,,,,"
+            + challenges.csvEscapeField(text.joinTexts(tagsList, ";")) + "," + challenges.csvEscapeField(cDiffRaw[idx])
+            + "," + normStr + ",none,stdin-stdout,False," + challenges.csvEscapeField(curl));
+        }
+    }
+
+    loop json.objectKeys(catalogJsonText, cpField.valuePos) as setNo {
+        setHtmlPath := path.join(cacheDir, "cryptopals/set" + setNo + ".html");
+        if fs.kind(setHtmlPath) == fs.FILE_KIND_FILE {
+            html := challenges.readNormalizedText(setHtmlPath).text;
+            arrPos := json.findObjectField(catalogJsonText, cpField.valuePos, setNo).valuePos;
+            offs := json.arrayElementOffsets(catalogJsonText, arrPos);
+            setName := json.readStringAt(catalogJsonText, offs[0]).value;
+            setTopics := challenges.readStringArray(catalogJsonText, arrPos, "dummy");
+            _unusedStp := list.listCountText(setTopics);
+            var tpList: mut List<String> = [];
+            loop json.arrayElementOffsets(catalogJsonText, offs[1]) as tpPos {
+                s := json.readStringAt(catalogJsonText, tpPos);
+                if s.ok { list.pushBack(mut tpList, s.value); list.pushBack(mut recTopicsAll, s.value); }
+            }
+            var pos := 0;
+            needle := "/sets/" + setNo + "/challenges/";
+            loop pos < text.length(html) {
+                nPos := text.indexOfText(html, needle, pos);
+                if nPos < 0 { break; }
+                nStart := nPos + text.length(needle);
+                var nEnd := nStart;
+                loop nEnd < text.length(html) and text.isDigit(text.at(html, nEnd)) { nEnd = nEnd + 1; }
+                gtPos := text.indexOfText(html, ">", nEnd);
+                aEnd := if gtPos >= 0 { text.indexOfText(html, "</a>", gtPos + 1) } else { -1 };
+                if nEnd > nStart and gtPos >= 0 and aEnd >= 0 {
+                    cNoStr := text.slice(html, nStart, nEnd);
+                    hasTxt := text.startsWithAt(html, nEnd, ".txt");
+                    ttl := cleanHtmlTitle(entKeys, entVals, text.slice(html, gtPos + 1, aEnd));
+                    cNum := text.textToInt(cNoStr).value;
+                    setNum := text.textToInt(setNo).value;
+                    tenths := (1 + setNum) * 10;
+                    cid := "cryptopals-" + challenges.padLeftZero(cNum, 2);
+                    curl := "https://cryptopals.com/sets/" + setNo + "/challenges/" + cNoStr + (if hasTxt { ".txt" } else { "" });
+                    tagsList: List<String> = ["cryptopals", "set-" + setNo];
+                    emptyStrsCp: List<String> = [];
+                    rec := buildChallengeRecordJson(
+                    cid, ttl, "cryptopals", curl, cNoStr, true, "Set " + setNo + ": " + setName,
+                    true, cNum, "security", tpList, emptyStrsCp, tagsList, "cryptopals-set", json.quoteString("Set " + setNo),
+                    integer.intText(1 + setNum), tenths, ["programming"], ["any"], "curated", "null", false, "verified"
+                    );
+                    list.pushBack(mut recJsons, rec.jsonLine);
+                    list.pushBack(mut recIds, rec.id);
+                    list.pushBack(mut recSources, rec.source);
+                    list.pushBack(mut recNums, cNum);
+                    list.pushBack(mut recSets, "Set " + setNo + ": " + setName);
+                    list.pushBack(mut recCats, rec.cat);
+                    list.pushBack(mut recDiffTiers, integer.intText(1 + setNum));
+                    list.pushBack(mut recTopSrcs, "curated");
+                    list.pushBack(mut recStatuses, "verified");
+                    list.pushBack(mut recCsvRows,
+                    challenges.csvEscapeField(cid) + "," + challenges.csvEscapeField(ttl) + ",cryptopals,security,"
+                    + challenges.csvEscapeField(rec.primaryTopic) + "," + challenges.csvEscapeField(rec.topicsJoined) + ",,"
+                    + challenges.csvEscapeField(text.joinTexts(tagsList, ";")) + "," + challenges.csvEscapeField("Set " + setNo)
+                    + "," + integer.intText(1 + setNum) + ",curated,programming,False," + challenges.csvEscapeField(curl));
+                    pos = aEnd + 4;
+                } else {
+                    pos = nPos + text.length(needle);
+                }
+            }
+        }
+    }
+
+    rosPath := path.join(cacheDir, "rosalind/list.html");
+    if fs.kind(rosPath) == fs.FILE_KIND_FILE {
+        html := challenges.readNormalizedText(rosPath).text;
+        var pos := 0;
+        loop pos < text.length(html) {
+            trStart := text.indexOfText(html, "<tr>", pos);
+            if trStart < 0 { break; }
+            trEnd := text.indexOfText(html, "</tr>", trStart + 4);
+            if trEnd < 0 { break; }
+            row := text.slice(html, trStart + 4, trEnd);
+            pos = trEnd + 5;
+            pMark := "href=\"/problems/";
+            pPos := text.indexOfText(row, pMark, 0);
+            if pPos < 0 { continue; }
+            idStart := pPos + text.length(pMark);
+            var idEnd := idStart;
+            var validPid := true;
+            loop idEnd < text.length(row) {
+                ch := text.at(row, idEnd);
+                if ch == "/" { break; }
+                if ch == "\"" or ch == " " or ch == "\t" or ch == "\n" or ch == "\r" { validPid = false; break; }
+                idEnd = idEnd + 1;
+            }
+            if not validPid or idEnd == idStart or idEnd >= text.length(row) or not text.startsWithAt(row, idEnd, "/\"") {
+                continue;
+            }
+            pid := text.slice(row, idStart, idEnd);
+            gtPos := text.indexOfText(row, ">", idEnd + 2);
+            aEnd := if gtPos >= 0 { text.indexOfText(row, "</a>", gtPos + 1) } else { -1 };
+            if gtPos < 0 or aEnd < 0 { continue; }
+            rawTitle := text.slice(row, gtPos + 1, aEnd);
+            if text.indexOfText(rawTitle, "<", 0) >= 0 { continue; }
+            ttl := cleanHtmlTitle(entKeys, entVals, rawTitle);
+
+            var solved := 0;
+            recMark := "/recent/\">";
+            rPos := text.indexOfText(row, recMark, 0);
+            if rPos >= 0 {
+                dStart := rPos + text.length(recMark);
+                var dEnd := dStart;
+                loop dEnd < text.length(row) and text.isDigit(text.at(row, dEnd)) { dEnd = dEnd + 1; }
+                if dEnd > dStart and text.startsWithAt(row, dEnd, "</a>") {
+                    solved = text.textToInt(text.slice(row, dStart, dEnd)).value;
+                }
+            }
+
+            var hasRatio := false;
+            var ratioScaled1000 := 0;
+            pctPos := text.indexOfText(row, "% of all attempts", 0);
+            if pctPos > 0 {
+                var numStart := pctPos;
+                var sawDigit := false;
+                loop numStart > 0 {
+                    ch := text.at(row, numStart - 1);
+                    if text.isDigit(ch) or ch == "." {
+                        if text.isDigit(ch) { sawDigit = true; }
+                        numStart = numStart - 1;
+                    } else { break; }
+                }
+                if sawDigit {
+                    rParsed := challenges.parseScaledNumberText(text.slice(row, numStart, pctPos));
+                    if rParsed.ok {
+                        hasRatio = true;
+                        ratioScaled1000 = rParsed.scaled;
+                    }
+                }
+            }
+
+            diffRaw := if hasRatio {
+                p10 := roundDivTiesEven(ratioScaled1000, 100);
+                integer.intText(p10 / 10) + "." + integer.intText(p10 % 10) + "% correct"
+            } else { "unknown" };
+            tenths := if hasRatio {
+                rawT := roundDivTiesEven(900000 - 8 * ratioScaled1000, 10000);
+                if rawT < 10 { 10 } else if rawT > 100 { 100 } else { rawT }
+            } else { 40 };
+            normStr := formatTenthsJson(tenths);
+            accJson := if hasRatio { formatFourDecimalsJson(roundDivTiesEven(ratioScaled1000, 10)) } else { "null" };
+            popJson := "{\"solved\":" + integer.intText(solved) + ",\"acceptance\":" + accJson + "}";
+
+            cid := "rosalind-" + pid;
+            curl := "https://rosalind.info/problems/" + pid + "/";
+            topicsList: List<String> = ["bioinformatics"];
+            tagsList: List<String> = ["rosalind", pid];
+            emptyStrsRos: List<String> = [];
+            list.pushBack(mut recTopicsAll, "bioinformatics");
+            rec := buildChallengeRecordJson(
+            cid, ttl, "rosalind", curl, pid, true, "Bioinformatics Stronghold", false, 0,
+            "bioinformatics", topicsList, emptyStrsRos, tagsList, "acceptance-proxy", json.quoteString(diffRaw),
+            normStr, tenths, ["stdin-stdout"], ["any"], "curated", popJson, false, "verified"
+            );
+            list.pushBack(mut recJsons, rec.jsonLine);
+            list.pushBack(mut recIds, rec.id);
+            list.pushBack(mut recSources, rec.source);
+            list.pushBack(mut recNums, 0);
+            list.pushBack(mut recSets, "Bioinformatics Stronghold");
+            list.pushBack(mut recCats, rec.cat);
+            list.pushBack(mut recDiffTiers, integer.intText(tenths / 10));
+            list.pushBack(mut recTopSrcs, "curated");
+            list.pushBack(mut recStatuses, "verified");
+            list.pushBack(mut recCsvRows,
+            challenges.csvEscapeField(cid) + "," + challenges.csvEscapeField(ttl) + ",rosalind,bioinformatics,bioinformatics,bioinformatics,,"
+            + challenges.csvEscapeField(text.joinTexts(tagsList, ";")) + "," + challenges.csvEscapeField(diffRaw)
+            + "," + normStr + ",curated,stdin-stdout,False," + challenges.csvEscapeField(curl));
+        }
+    }
+
+    seenJsSlugs: mut List<String> = [];
+    loop collectHtmlPagesSorted(cacheDir, "jane-street", "archive") as jsPath {
+        html := challenges.readNormalizedText(jsPath).text;
+        var pos := 0;
+        cardOpen := "<div class=\"row puzzle-row archive-list\">";
+        loop pos < text.length(html) {
+            cStart := text.indexOfText(html, cardOpen, pos);
+            if cStart < 0 { break; }
+            bodyStart := cStart + text.length(cardOpen);
+            cEnd := findClosingDoubleDiv(html, bodyStart);
+            if cEnd < 0 { break; }
+            body := text.slice(html, bodyStart, cEnd);
+            pos = cEnd + 6;
+
+            nTag := "<span class=\"name\">";
+            nPos := text.indexOfText(body, nTag, 0);
+            nClose := if nPos >= 0 { text.indexOfText(body, "</span>", nPos + text.length(nTag)) } else { -1 };
+            rawName := if nClose >= 0 { text.slice(body, nPos + text.length(nTag), nClose) } else { "" };
+            lTag := "class=\"puzzle-link\" href=\"";
+            lPos := text.indexOfText(body, lTag, 0);
+            lEnd := if lPos >= 0 { text.indexOfText(body, "\"", lPos + text.length(lTag)) } else { -1 };
+            link := if lEnd >= 0 { text.slice(body, lPos + text.length(lTag), lEnd) } else { "" };
+            if rawName == "" or link == "" or text.indexOfText(rawName, "<", 0) >= 0 { continue; }
+
+            var trimmed := link;
+            loop text.startsWithAt(trimmed, 0, "/") { trimmed = text.slice(trimmed, 1, text.length(trimmed)); }
+            loop text.endsWith(trimmed, "/") { trimmed = text.slice(trimmed, 0, text.length(trimmed) - 1); }
+            var lastSlash := -1;
+            var si := 0;
+            loop si < text.length(trimmed) {
+                if text.at(trimmed, si) == "/" { lastSlash = si; }
+                si = si + 1;
+            }
+            var slug := if lastSlash >= 0 { text.slice(trimmed, lastSlash + 1, text.length(trimmed)) } else { trimmed };
+            if text.endsWith(slug, "-index") {
+                slug = text.slice(slug, 0, text.length(slug) - 6);
+            }
+            if slug == "" or list.listContainsText(seenJsSlugs, slug) { continue; }
+            list.pushBack(mut seenJsSlugs, slug);
+
+            dTag := "<span class=\"date\">";
+            dPos := text.indexOfText(body, dTag, 0);
+            dClose := if dPos >= 0 { text.indexOfText(body, "</span>", dPos + text.length(dTag)) } else { -1 };
+            month := if dClose >= 0 and text.indexOfText(text.slice(body, dPos + text.length(dTag), dClose), "<", 0) < 0 {
+                trimTrailingColons(cleanHtmlTitle(entKeys, entVals, text.slice(body, dPos + text.length(dTag), dClose)))
+            } else { "" };
+
+            ttl := cleanHtmlTitle(entKeys, entVals, rawName);
+            cid := "jane-street-" + slug;
+            curl := "https://www.janestreet.com" + link;
+            tagsList: mut List<String> = ["jane-street"];
+            if month =!= "" { list.pushBack(mut tagsList, slugifyText(month)); }
+            emptyStrsJs: List<String> = [];
+            rec := buildChallengeRecordJson(
+            cid, ttl, "jane-street", curl, slug, month =!= "", month, false, 0,
+            "puzzles", emptyStrsJs, emptyStrsJs, tagsList, "editorial", json.quoteString("Puzzle"),
+            "7", 70, ["puzzle"], ["any"], "none", "null", false, "verified"
+            );
+            list.pushBack(mut recJsons, rec.jsonLine);
+            list.pushBack(mut recIds, rec.id);
+            list.pushBack(mut recSources, rec.source);
+            list.pushBack(mut recNums, 0);
+            list.pushBack(mut recSets, month);
+            list.pushBack(mut recCats, rec.cat);
+            list.pushBack(mut recDiffTiers, "7");
+            list.pushBack(mut recTopSrcs, "none");
+            list.pushBack(mut recStatuses, "verified");
+            list.pushBack(mut recCsvRows,
+            challenges.csvEscapeField(cid) + "," + challenges.csvEscapeField(ttl) + ",jane-street,puzzles,,,,"
+            + challenges.csvEscapeField(text.joinTexts(tagsList, ";")) + ",Puzzle,7,none,puzzle,False," + challenges.csvEscapeField(curl));
+        }
+    }
+
+    sortedIdsForCheck := challenges.sortTexts(recIds);
+    var di := 1;
+    loop di < list.listCountText(sortedIdsForCheck) {
+        if sortedIdsForCheck[di] == sortedIdsForCheck[di - 1] {
+            return (ok = false, summaryText = "", error = "duplicate challenge ids");
+        }
+        di = di + 1;
+    }
+
+    allN := list.listCountText(recJsons);
+    var recOrd: mut List<Int> = [];
+    var ri := 0;
+    loop ri < allN { list.pushBack(mut recOrd, ri); ri = ri + 1; }
+    if allN > 1 {
+        var width := 1;
+        loop width < allN {
+            next: mut List<Int> = [];
+            var st := 0;
+            loop st < allN {
+                mid := if st + width < allN { st + width } else { allN };
+                re := if st + width * 2 < allN { st + width * 2 } else { allN };
+                var li := st;
+                var ri2 := mid;
+                loop li < mid or ri2 < re {
+                    if li >= mid { list.pushBack(mut next, recOrd[ri2]); ri2 = ri2 + 1; }
+                    else if ri2 >= re { list.pushBack(mut next, recOrd[li]); li = li + 1; }
+                    else {
+                        ia := recOrd[li];
+                        ib := recOrd[ri2];
+                        oa := list.listIndexOfText(sourceOrder, recSources[ia]);
+                        ob := list.listIndexOfText(sourceOrder, recSources[ib]);
+                        oaa := if oa < 0 { 99 } else { oa };
+                        obb := if ob < 0 { 99 } else { ob };
+                        var cmp := if oaa < obb { -1 } else if oaa > obb { 1 } else { 0 };
+                        if cmp == 0 {
+                            cmp = if recNums[ia] < recNums[ib] { -1 } else if recNums[ia] > recNums[ib] { 1 } else { 0 };
+                        }
+                        if cmp == 0 { cmp = challenges.compareTextLex(recIds[ia], recIds[ib]); }
+                        if cmp <= 0 { list.pushBack(mut next, ia); li = li + 1; } else { list.pushBack(mut next, ib); ri2 = ri2 + 1; }
+                    }
+                }
+                st = st + width * 2;
+            }
+            recOrd = next;
+            width = width * 2;
+        }
+    }
+
+    sortedJsons: mut List<String> = [];
+    sortedIds: mut List<String> = [];
+    sortedSources: mut List<String> = [];
+    sortedCats: mut List<String> = [];
+    sortedDiffs: mut List<String> = [];
+    sortedTopSrcs: mut List<String> = [];
+    sortedStatuses: mut List<String> = [];
+    sortedCsvRows: mut List<String> = ["id,title,source,category,primary_topic,topics,raw_topics,tags,difficulty,difficulty_normalized,topics_source,formats,premium,url"];
+    loop recOrd as idx {
+        list.pushBack(mut sortedJsons, recJsons[idx]);
+        list.pushBack(mut sortedIds, recIds[idx]);
+        list.pushBack(mut sortedSources, recSources[idx]);
+        list.pushBack(mut sortedCats, recCats[idx]);
+        list.pushBack(mut sortedDiffs, recDiffTiers[idx]);
+        list.pushBack(mut sortedTopSrcs, recTopSrcs[idx]);
+        list.pushBack(mut sortedStatuses, recStatuses[idx]);
+        list.pushBack(mut sortedCsvRows, recCsvRows[idx + 1]);
+    }
+    _unusedAllowedCats := list.listCountText(allowedCats);
+
+    listsJsonEntries: mut List<String> = [];
+    listsMetaEntries: mut List<String> = [];
+
+    rmIds: List<String> = ["blind-75", "neetcode-150"];
+    rmTitles: List<String> = ["Blind 75", "NeetCode 150"];
+    rmFiles: List<String> = ["blind_75.toml", "neetcode_150.toml"];
+    rmUrls: List<String> = [
+        "https://leetcode.com/discuss/general-discussion/460599/blind-75",
+        "https://neetcode.io/practice"
+    ];
+    rmDescs: List<String> = [
+        "The classic 75-question interview list, grouped by pattern.",
+        "NeetCode's curated 150-question roadmap, grouped by pattern."
+    ];
+    var rmi := 0;
+    loop rmi < 2 {
+        rmRes := parseRoadmapListJson(
+            path.join(cacheDir, "roadmaps/" + rmFiles[rmi]),
+            rmIds[rmi], rmTitles[rmi], rmUrls[rmi], rmDescs[rmi], sortedIdsForCheck
+        );
+        if not rmRes.ok { return (ok = false, summaryText = "", error = rmRes.error); }
+        if rmRes.hasList {
+            list.pushBack(mut listsJsonEntries, rmRes.listJson);
+            list.pushBack(mut listsMetaEntries, rmRes.metaJson);
+        }
+        rmi = rmi + 1;
+    }
+
+    var lyr := 2015;
+    loop lyr <= 2025 {
+        yStr := integer.intText(lyr);
+        yIds: mut List<String> = [];
+        loop recOrd as idx {
+            if recSources[idx] == "advent-of-code" and recSets[idx] == yStr {
+                list.pushBack(mut yIds, recIds[idx]);
+            }
+        }
+        uniqY := dedupTextsPreserveOrder(yIds);
+        if list.listCountText(uniqY) > 0 {
+            yTitle := "Advent of Code " + yStr;
+            list.pushBack(mut listsJsonEntries, "{\"id\":\"aoc-" + yStr + "\",\"title\":" + json.quoteString(yTitle) + ",\"kind\":\"event\",\"source\":\"advent-of-code\",\"url\":\"https://adventofcode.com/" + yStr + "\",\"description\":" + json.quoteString("All " + integer.intText(list.listCountText(uniqY)) + " puzzles from Advent of Code " + yStr + ".") + ",\"count\":" + integer.intText(list.listCountText(uniqY)) + ",\"challenge_ids\":" + quoteStringList(uniqY) + "}");
+            list.pushBack(mut listsMetaEntries, "{\"id\":\"aoc-" + yStr + "\",\"title\":" + json.quoteString(yTitle) + ",\"count\":" + integer.intText(list.listCountText(uniqY)) + "}");
+        }
+        lyr = lyr + 1;
+    }
+
+    csesListSecs: mut List<String> = [];
+    loop recOrd as idx {
+        if recSources[idx] == "cses" and not list.listContainsText(csesListSecs, recSets[idx]) {
+            list.pushBack(mut csesListSecs, recSets[idx]);
+        }
+    }
+    loop csesListSecs as secName {
+        secIds: mut List<String> = [];
+        loop recOrd as idx {
+            if recSources[idx] == "cses" and recSets[idx] == secName {
+                list.pushBack(mut secIds, recIds[idx]);
+            }
+        }
+        uniqSec := dedupTextsPreserveOrder(secIds);
+        if list.listCountText(uniqSec) > 0 {
+            sTitle := "CSES · " + secName;
+            sId := "cses-" + slugifyText(secName);
+            sDesc := "CSES “" + secName + "” section (" + integer.intText(list.listCountText(uniqSec)) + " tasks).";
+            list.pushBack(mut listsJsonEntries, "{\"id\":" + json.quoteString(sId) + ",\"title\":" + json.quoteString(sTitle) + ",\"kind\":\"section\",\"source\":\"cses\",\"url\":\"https://cses.fi/problemset/\",\"description\":" + json.quoteString(sDesc) + ",\"count\":" + integer.intText(list.listCountText(uniqSec)) + ",\"challenge_ids\":" + quoteStringList(uniqSec) + "}");
+            list.pushBack(mut listsMetaEntries, "{\"id\":" + json.quoteString(sId) + ",\"title\":" + json.quoteString(sTitle) + ",\"count\":" + integer.intText(list.listCountText(uniqSec)) + "}");
+        }
+    }
+
+    loop json.objectKeys(catalogJsonText, cpField.valuePos) as setNo {
+        arrPos := json.findObjectField(catalogJsonText, cpField.valuePos, setNo).valuePos;
+        offs := json.arrayElementOffsets(catalogJsonText, arrPos);
+        setName := json.readStringAt(catalogJsonText, offs[0]).value;
+        cpPrefix := "Set " + setNo + ":";
+        cpIds: mut List<String> = [];
+        loop recOrd as idx {
+            if recSources[idx] == "cryptopals" and text.startsWithAt(recSets[idx], 0, cpPrefix) {
+                list.pushBack(mut cpIds, recIds[idx]);
+            }
+        }
+        uniqCp := dedupTextsPreserveOrder(cpIds);
+        if list.listCountText(uniqCp) > 0 {
+            cTitle := "Cryptopals · Set " + setNo + ": " + setName;
+            cId := "cryptopals-set-" + setNo;
+            cDesc := integer.intText(list.listCountText(uniqCp)) + " crypto challenges from set " + setNo + ".";
+            list.pushBack(mut listsJsonEntries, "{\"id\":" + json.quoteString(cId) + ",\"title\":" + json.quoteString(cTitle) + ",\"kind\":\"set\",\"source\":\"cryptopals\",\"url\":\"https://cryptopals.com/sets/" + setNo + "\",\"description\":" + json.quoteString(cDesc) + ",\"count\":" + integer.intText(list.listCountText(uniqCp)) + ",\"challenge_ids\":" + quoteStringList(uniqCp) + "}");
+            list.pushBack(mut listsMetaEntries, "{\"id\":" + json.quoteString(cId) + ",\"title\":" + json.quoteString(cTitle) + ",\"count\":" + integer.intText(list.listCountText(uniqCp)) + "}");
+        }
+    }
+
+    peFirst100: mut List<String> = [];
+    loop recOrd as idx {
+        if recSources[idx] == "project-euler" and recNums[idx] > 0 and recNums[idx] <= 100 {
+            list.pushBack(mut peFirst100, recIds[idx]);
+        }
+    }
+    uniqPe := dedupTextsPreserveOrder(peFirst100);
+    list.pushBack(mut listsJsonEntries, "{\"id\":\"project-euler-first-100\",\"title\":\"Project Euler · First 100\",\"kind\":\"collection\",\"source\":\"project-euler\",\"url\":\"https://projecteuler.net/archives\",\"description\":\"The classic first hundred Project Euler problems; a common starting target.\",\"count\":" + integer.intText(list.listCountText(uniqPe)) + ",\"challenge_ids\":" + quoteStringList(uniqPe) + "}");
+    list.pushBack(mut listsMetaEntries, "{\"id\":\"project-euler-first-100\",\"title\":\"Project Euler · First 100\",\"count\":" + integer.intText(list.listCountText(uniqPe)) + "}");
+
+    lcCatIds: List<String> = ["databases", "concurrency", "shell"];
+    lcCatTitles: List<String> = ["LeetCode · Database", "LeetCode · Concurrency", "LeetCode · Shell"];
+    lcCatDescs: List<String> = [
+        "All SQL/database problems in the corpus; good for SQL interview prep.",
+        "Threads, locks and synchronization problems.",
+        "Unix shell and command-line problems."
+    ];
+    var lci := 0;
+    loop lci < 3 {
+        catId := lcCatIds[lci];
+        cIds: mut List<String> = [];
+        loop recOrd as idx {
+            if recSources[idx] == "leetcode" and recCats[idx] == catId {
+                list.pushBack(mut cIds, recIds[idx]);
+            }
+        }
+        uniqC := dedupTextsPreserveOrder(cIds);
+        if list.listCountText(uniqC) > 0 {
+            lId := "leetcode-" + catId;
+            list.pushBack(mut listsJsonEntries, "{\"id\":" + json.quoteString(lId) + ",\"title\":" + json.quoteString(lcCatTitles[lci]) + ",\"kind\":\"collection\",\"source\":\"leetcode\",\"url\":\"https://leetcode.com/problemset/\",\"description\":" + json.quoteString(lcCatDescs[lci]) + ",\"count\":" + integer.intText(list.listCountText(uniqC)) + ",\"challenge_ids\":" + quoteStringList(uniqC) + "}");
+            list.pushBack(mut listsMetaEntries, "{\"id\":" + json.quoteString(lId) + ",\"title\":" + json.quoteString(lcCatTitles[lci]) + ",\"count\":" + integer.intText(list.listCountText(uniqC)) + "}");
+        }
+        lci = lci + 1;
+    }
+
+    dataDir := path.join(challengesRootDir, "data");
+    schemaDir := path.join(challengesRootDir, "schema");
+    _md1 := fs.makeDir(dataDir);
+    _md2 := fs.makeDir(schemaDir);
+    _wj := fs.writeText(path.join(dataDir, "challenges.jsonl"), if allN == 0 { "" } else { text.joinTexts(sortedJsons, "\n") + "\n" });
+    _wl := fs.writeText(path.join(dataDir, "lists.jsonl"), if list.listCountText(listsJsonEntries) == 0 { "" } else { text.joinTexts(listsJsonEntries, "\n") + "\n" });
+    _wc := fs.writeText(path.join(dataDir, "challenges.csv"), text.joinTexts(sortedCsvRows, "\r\n") + "\r\n");
+
+    siEntries: mut List<String> = [];
+    taxSrcEntries: mut List<String> = [];
+    loop json.arrayElementOffsets(catalogJsonText, siField.valuePos) as sp {
+        offs := json.arrayElementOffsets(catalogJsonText, sp);
+        sid := json.readStringAt(catalogJsonText, offs[0]).value;
+        sname := json.readStringAt(catalogJsonText, offs[1]).value;
+        shome := json.readStringAt(catalogJsonText, offs[2]).value;
+        sdesc := json.readStringAt(catalogJsonText, offs[3]).value;
+        var sCount := 0;
+        loop sortedSources as rs { if rs == sid { sCount = sCount + 1; } }
+        list.pushBack(mut siEntries, "{\"id\":" + json.quoteString(sid) + ",\"name\":" + json.quoteString(sname) + ",\"homepage\":" + json.quoteString(shome) + ",\"description\":" + json.quoteString(sdesc) + ",\"count\":" + integer.intText(sCount) + "}");
+        list.pushBack(mut taxSrcEntries, "{\"id\":" + json.quoteString(sid) + ",\"name\":" + json.quoteString(sname) + ",\"homepage\":" + json.quoteString(shome) + ",\"description\":" + json.quoteString(sdesc) + "}");
+    }
+
+    uniqueSortedTopics := dedupTextsPreserveOrder(challenges.sortTexts(recTopicsAll));
+    taxTopicEntries: mut List<String> = [];
+    loop uniqueSortedTopics as tid {
+        lblR := json.readObjectString(catalogJsonText, tlField.valuePos, tid);
+        grpR := json.readObjectString(catalogJsonText, tgField.valuePos, tid);
+        lbl := if lblR.found and lblR.ok { lblR.value } else { titleCaseTopic(tid) };
+        grp := if grpR.found and grpR.ok { grpR.value } else { "other" };
+        list.pushBack(mut taxTopicEntries, "{\"id\":" + json.quoteString(tid) + ",\"label\":" + json.quoteString(lbl) + ",\"group\":" + json.quoteString(grp) + "}");
+    }
+
+    taxCatEntries: mut List<String> = [];
+    loop json.objectKeys(catalogJsonText, catField.valuePos) as cid {
+        cdesc := json.readObjectString(catalogJsonText, catField.valuePos, cid).value;
+        list.pushBack(mut taxCatEntries, "{\"id\":" + json.quoteString(cid) + ",\"description\":" + json.quoteString(cdesc) + "}");
+    }
+
+    dbSpan := json.valueSpan(catalogJsonText, dbField.valuePos);
+    dbJson := text.slice(catalogJsonText, dbSpan.start, dbSpan.end);
+
+    indexJson := "{\n"
+    + "  \"total\": " + integer.intText(allN) + ",\n"
+    + "  \"built\": " + json.quoteString(time.localDate()) + ",\n"
+    + "  \"sources\": [" + text.joinTexts(siEntries, ",") + "],\n"
+    + "  \"categories\": " + challenges.formatSortedCountsJson(sortedCats) + ",\n"
+    + "  \"difficulty\": " + challenges.formatSortedCountsJson(sortedDiffs) + ",\n"
+    + "  \"topics\": " + challenges.formatSortedCountsJson(recTopicsAll) + ",\n"
+    + "  \"topics_source\": " + challenges.formatSortedCountsJson(sortedTopSrcs) + ",\n"
+    + "  \"status\": " + challenges.formatSortedCountsJson(sortedStatuses) + ",\n"
+    + "  \"lists\": [" + text.joinTexts(listsMetaEntries, ",") + "]\n}\n";
+    _wi := fs.writeText(path.join(dataDir, "index.json"), indexJson);
+
+    taxJson := "{\n"
+    + "  \"version\": 1,\n"
+    + "  \"note\": \"Generated by tools/build.ts from the topics present in the corpus.\",\n"
+    + "  \"categories\": [" + text.joinTexts(taxCatEntries, ",") + "],\n"
+    + "  \"topics\": [" + text.joinTexts(taxTopicEntries, ",") + "],\n"
+    + "  \"difficulty\": { \"scale\": \"normalized 1-10\", \"bands\": " + dbJson + " },\n"
+    + "  \"sources\": [" + text.joinTexts(taxSrcEntries, ",") + "]\n}\n";
+    _wt := fs.writeText(path.join(schemaDir, "taxonomy.json"), taxJson);
+
+    sumLines: mut List<String> = [
+    "wrote " + integer.intText(allN) + " challenges, " + integer.intText(list.listCountText(listsJsonEntries)) + " lists"
+    ];
+    loop sourceOrder as sid {
+        var sc := 0;
+        loop sortedSources as rs { if rs == sid { sc = sc + 1; } }
+        list.pushBack(mut sumLines, "  " + challenges.padRight(sid, 16) + " " + challenges.padLeft(integer.intText(sc), 5));
+    }
+    list.pushBack(mut sumLines, "  " + challenges.padRight("TOTAL", 16) + " " + challenges.padLeft(integer.intText(allN), 5));
+    list.pushBack(mut sumLines, "  topics: " + integer.intText(list.listCountText(uniqueSortedTopics)) + "   categories: " + integer.intText(list.listCountText(dedupTextsPreserveOrder(sortedCats))));
+    (ok = true, summaryText = text.joinTexts(sumLines, "\n"), error = "")
+};
+
+/** CLI runner for `benchmark/challenges/tools/build.ts`. */
+pub runBuildCorpusCommand := fn(rootDir: String): Int {
+    chRoot := path.join(rootDir, "benchmark/challenges");
+    catRead := fs.readText(path.join(chRoot, "tools/catalog.json"));
+    if not catRead.ok { io.errorLine("FAIL: " + catRead.error); return 1; }
+    entRead := fs.readText(path.join(chRoot, "tools/html-entities.json"));
+    if not entRead.ok { io.errorLine("FAIL: " + entRead.error); return 1; }
+    res := buildChallengeCorpus(chRoot, catRead.text, entRead.text);
+    if not res.ok {
+        io.errorLine("FAIL: " + res.error);
+        return 1;
+    }
+    io.outputLine(res.summaryText);
+    0
+};

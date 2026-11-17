@@ -14,7 +14,7 @@ isJsonSpace := fn(ch: String): Bool {
     ch == " " or ch == "\n" or ch == "\r" or ch == "\t"
 };
 
-skipJsonSpace := fn(source: String, start: Int): Int {
+pub skipJsonSpace := fn(source: String, start: Int): Int {
     var pos := start;
     size := text.length(source);
     loop pos < size {
@@ -24,17 +24,17 @@ skipJsonSpace := fn(source: String, start: Int): Int {
     pos
 };
 
-isJsonObjectAt := fn(source: String, start: Int): Bool {
+pub isJsonObjectAt := fn(source: String, start: Int): Bool {
     pos := skipJsonSpace(source, start);
     pos < text.length(source) and text.at(source, pos) == "{"
 };
 
-isJsonArrayAt := fn(source: String, start: Int): Bool {
+pub isJsonArrayAt := fn(source: String, start: Int): Bool {
     pos := skipJsonSpace(source, start);
     pos < text.length(source) and text.at(source, pos) == "["
 };
 
-readNormalizedText := fn(filePath: String): (ok: Bool, text: String, error: String) {
+pub readNormalizedText := fn(filePath: String): (ok: Bool, text: String, error: String) {
     res := fs.readText(filePath);
     if not res.ok { return (ok = false, text = "", error = res.error); }
     raw := res.text;
@@ -58,7 +58,7 @@ readNormalizedText := fn(filePath: String): (ok: Bool, text: String, error: Stri
     (ok = true, text = text.joinTexts(parts, ""), error = "")
 };
 
-splitJsonLines := fn(raw: String): List<String> {
+pub splitJsonLines := fn(raw: String): List<String> {
     out: mut List<String> = [];
     size := text.length(raw);
     var pos := 0;
@@ -366,7 +366,7 @@ pub runValidateBenchmarkCommand := fn(rootDir: String): Int {
     0
 };
 
-compareTextLex := fn(a: String, b: String): Int {
+pub compareTextLex := fn(a: String, b: String): Int {
     if a == b { return 0; }
     la := text.length(a);
     lb := text.length(b);
@@ -498,19 +498,19 @@ formatFrequencyLines := fn(values: List<String>, indent: String, nameWidth: Int)
     text.joinTexts(lines, "\n")
 };
 
-padRight := fn(s: String, width: Int): String {
+pub padRight := fn(s: String, width: Int): String {
     len := text.length(s);
     if len >= width { return s; }
     s + text.repeatText(" ", width - len)
 };
 
-padLeft := fn(s: String, width: Int): String {
+pub padLeft := fn(s: String, width: Int): String {
     len := text.length(s);
     if len >= width { return s; }
     text.repeatText(" ", width - len) + s
 };
 
-isLowerSlugText := fn(s: String): Bool {
+pub isLowerSlugText := fn(s: String): Bool {
     size := text.length(s);
     if size == 0 { return false; }
     first := text.at(s, 0);
@@ -599,7 +599,7 @@ checkStrictStringArrayField := fn(source: String, objPos: Int, key: String): (ok
     (ok = true, itemsEmpty = list.listCountInt(offsets) == 0)
 };
 
-readStringArray := fn(source: String, objPos: Int, key: String): List<String> {
+pub readStringArray := fn(source: String, objPos: Int, key: String): List<String> {
     out: mut List<String> = [];
     f := json.findObjectField(source, objPos, key);
     if not f.found or not isJsonArrayAt(source, f.valuePos) { return out; }
@@ -926,7 +926,7 @@ pub formatDifficultyCsv := fn(source: String, scaled1000: Int, rawText: String, 
     rawText
 };
 
-asciiLower := fn(s: String): String {
+pub asciiLower := fn(s: String): String {
     out: mut List<String> = [];
     upper := "ABCDEFGHIJKLMNOPQRSTUVWXYZ";
     lower := "abcdefghijklmnopqrstuvwxyz";
@@ -1054,7 +1054,7 @@ readQueryRepeatTopics := fn(args: List<String>): List<String> {
     out
 };
 
-csvEscapeField := fn(val: String): String {
+pub csvEscapeField := fn(val: String): String {
     needsQuote := text.indexOfText(val, "\"", 0) >= 0 or text.indexOfText(val, ",", 0) >= 0 or text.indexOfText(val, "\r", 0) >= 0 or text.indexOfText(val, "\n", 0) >= 0;
     if not needsQuote { return val; }
     parts: mut List<String> = ["\""];
@@ -1436,7 +1436,7 @@ pub runQueryCommand := fn(rootDir: String, args: List<String>): Int {
     0
 };
 
-findSortedEntity := fn(keys: List<String>, target: String): Int {
+pub findSortedEntity := fn(keys: List<String>, target: String): Int {
     var lo := 0;
     var hi := list.listCountText(keys) - 1;
     loop lo <= hi {
@@ -1487,7 +1487,7 @@ decodeNumericHtmlEntity := fn(n: Int): String {
     if cp.ok { cp.text } else { unicode.fromCodePoint(65533).text }
 };
 
-sortIndexByKeys := fn(keys: List<String>): List<Int> {
+pub sortIndexByKeys := fn(keys: List<String>): List<Int> {
     var sortedIdx: mut List<Int> = [];
     var ki := 0;
     kCount := list.listCountText(keys);
@@ -1528,7 +1528,7 @@ sortIndexByKeys := fn(keys: List<String>): List<Int> {
     sortedIdx
 };
 
-unescapeHtmlWithTable := fn(sortedKeys: List<String>, sortedVals: List<String>, value: String): String {
+pub unescapeHtmlWithTable := fn(sortedKeys: List<String>, sortedVals: List<String>, value: String): String {
     if text.indexOfText(value, "&", 0) < 0 { return value; }
     out: mut List<String> = [];
     size := text.length(value);
@@ -1624,7 +1624,7 @@ pub unescapeChallengeHtml := fn(entitiesJsonText: String, value: String): String
     unescapeHtmlWithTable(sortedKeys, sortedVals, value)
 };
 
-stripHtmlTags := fn(raw: String): String {
+pub stripHtmlTags := fn(raw: String): String {
     out: mut List<String> = [];
     size := text.length(raw);
     var pos := 0;
@@ -1729,7 +1729,7 @@ encodeGithubPath := fn(relPath: String): String {
     text.joinTexts(parts, "/")
 };
 
-padLeftZero := fn(n: Int, width: Int): String {
+pub padLeftZero := fn(n: Int, width: Int): String {
     var out := integer.intText(n);
     loop text.length(out) < width {
         out = "0" + out;
@@ -2425,7 +2425,7 @@ parseLeetcodeExampleCase := fn(rawText: String): (ok: Bool, input: String, outpu
     (ok = true, input = inVal, output = outVal, hasExpl = false, expl = "")
 };
 
-collapseCrLf := fn(raw: String): String {
+pub collapseCrLf := fn(raw: String): String {
     parts: mut List<String> = [];
     var seg := 0;
     var i := 0;

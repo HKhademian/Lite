@@ -1,0 +1,61 @@
+chBuild := import "util/challenge-build";
+challenges := import "util/challenges";
+fs := import "core/file";
+path := import "core/path";
+project := import "util/project";
+test := import "core/test";
+
+test.checkText("slugify basic", "breadth-first-search", chBuild.slugifyText("Breadth-First Search"));
+test.checkText("slugify ampersand", "bit-and-math", chBuild.slugifyText(" Bit & Math! "));
+test.checkInt("ties-even 2.5", 2, chBuild.roundDivTiesEven(5, 2));
+test.checkInt("ties-even 3.5", 4, chBuild.roundDivTiesEven(7, 2));
+test.checkInt("ties-even 1.25", 12, chBuild.roundDivTiesEven(125, 10));
+test.checkInt("ties-even 1.35", 14, chBuild.roundDivTiesEven(135, 10));
+
+root := project.findRepoRoot();
+test.checkBool("repo root found", true, root =!= "");
+catJson := fs.readText(path.join(root, "benchmark/challenges/tools/catalog.json")).text;
+entJson := fs.readText(path.join(root, "benchmark/challenges/tools/html-entities.json")).text;
+
+tmpRes := fs.makeTempDir("lite-ch-build-test-");
+test.checkBool("temp dir ok", true, tmpRes.ok);
+
+noCache := chBuild.buildChallengeCorpus(tmpRes.path, catJson, entJson);
+test.checkBool("missing cache rejected", false, noCache.ok);
+
+syn := path.join(tmpRes.path, "syn");
+_m1 := fs.makeDir(path.join(syn, ".cache/project-euler"));
+_m2 := fs.makeDir(path.join(syn, ".cache/aoc/2020"));
+_m3 := fs.makeDir(path.join(syn, ".cache/leetcode"));
+_m4 := fs.makeDir(path.join(syn, ".cache/codeforces"));
+_m5 := fs.makeDir(path.join(syn, ".cache/cses"));
+_m6 := fs.makeDir(path.join(syn, ".cache/atcoder"));
+_m7 := fs.makeDir(path.join(syn, ".cache/rosalind"));
+_m8 := fs.makeDir(path.join(syn, ".cache/cryptopals"));
+_m9 := fs.makeDir(path.join(syn, ".cache/jane-street"));
+_m10 := fs.makeDir(path.join(syn, ".cache/roadmaps"));
+
+_wp := fs.writeText(path.join(syn, ".cache/project-euler/page01.html"), "<a href=\"problem=1\">Multiples &amp; Sums</a>");
+_wa := fs.writeText(path.join(syn, ".cache/aoc/2020/day01.html"), "<h2>--- Day 1: Report Repair ---</h2>");
+_wl1 := fs.writeText(path.join(syn, ".cache/leetcode/api-all.json"), "{\"stat_status_pairs\":[{\"stat\":{\"frontend_question_id\":1,\"question__title\":\"Two Sum\",\"question__title_slug\":\"two-sum\",\"total_acs\":1000,\"total_submitted\":2000},\"difficulty\":{\"level\":1},\"paid_only\":false}]}");
+_wl2 := fs.writeText(path.join(syn, ".cache/leetcode/merged.json"), "{\"questions\":[{\"frontend_id\":\"1\",\"problem_slug\":\"two-sum\",\"topics\":[\"Array\"]}]}");
+_wcf := fs.writeText(path.join(syn, ".cache/codeforces/problemset.json"), "{\"result\":{\"problems\":[{\"contestId\":1,\"index\":\"A\",\"name\":\"Theatre Square\",\"rating\":1000,\"tags\":[\"math\"],\"type\":\"PROGRAMMING\"}],\"problemStatistics\":[{\"contestId\":1,\"index\":\"A\",\"solvedCount\":999}]}}");
+_wcs := fs.writeText(path.join(syn, ".cache/cses/problemset.html"), "<h2>Introductory Problems</h2><a href=\"/problemset/task/1068\">Weird Algorithm</a>");
+_wa1 := fs.writeText(path.join(syn, ".cache/atcoder/problems.json"), "[{\"id\":\"abc100_a\",\"contest_id\":\"abc100\",\"name\":\"Happy Birthday!\"}]");
+_wa2 := fs.writeText(path.join(syn, ".cache/atcoder/models.json"), "{\"abc100_a\":{\"difficulty\":400,\"is_experimental\":false,\"irt_users\":500}}");
+_wr := fs.writeText(path.join(syn, ".cache/rosalind/list.html"), "<tr><td><a href=\"/problems/dna/\">Counting DNA Nucleotides</a></td><td><a href=\"/problems/dna/recent/\">12345</a></td><td>75.0% of all attempts</td></tr>");
+_wcp := fs.writeText(path.join(syn, ".cache/cryptopals/set1.html"), "<a href=\"/sets/1/challenges/1\">Convert hex to base64</a>");
+_wjs := fs.writeText(path.join(syn, ".cache/jane-street/archive.html"), "<div class=\"row puzzle-row archive-list\"><span class=\"name\">Hooks 10</span><span class=\"date\">March 2024:</span><a class=\"puzzle-link\" href=\"/puzzles/hooks-10-index/\">link</a></div></div>");
+_wrm := fs.writeText(path.join(syn, ".cache/roadmaps/blind_75.toml"), "[[groups]]\nname = \"Arrays & Hashing\"\nproblems = [\"1_two_sum\"]\n");
+
+built := chBuild.buildChallengeCorpus(syn, catJson, entJson);
+test.checkText("synthetic build err", "", built.error);
+test.checkBool("synthetic build ok", true, built.ok);
+test.checkBool("summary lists all 9", true, built.summaryText =!= "");
+
+validated := challenges.validateChallengeCorpus(syn);
+test.checkText("built corpus validates err", "", validated.error);
+test.checkBool("built corpus validates ok", true, validated.ok);
+
+_rm := fs.remove(tmpRes.path);
+test.done("util-challenge-build");

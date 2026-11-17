@@ -1,0 +1,16 @@
+/** Challenge corpus builder (`benchmark/challenges/tools/build.ts`). */
+
+io := import "core/io";
+project := import "util/project";
+chBuild := import "util/challenge-build";
+
+run := fn(): Int {
+    root := project.findRepoRoot();
+    if root == "" {
+        io.errorLine("could not locate LiteScript repository root");
+        return 1;
+    }
+    chBuild.runBuildCorpusCommand(root)
+};
+
+io.exit(run());
