@@ -1,0 +1,16 @@
+/** Challenge sample test extractor (`benchmark/challenges/tools/build_tests.ts`). */
+
+io := import "core/io";
+project := import "util/project";
+challenges := import "util/challenges";
+
+run := fn(): Int {
+    root := project.findRepoRoot();
+    if root == "" {
+        io.errorLine("could not locate LiteScript repository root");
+        return 1;
+    }
+    challenges.runBuildTestsCommand(root)
+};
+
+io.exit(run());

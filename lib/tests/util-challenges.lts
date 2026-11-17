@@ -83,5 +83,28 @@ bVal := challenges.validateChallengeBenchmark(path.join(synRoot, "benchmark"));
 test.checkText("built synthetic benchmark valid err", "", bVal.error);
 test.checkBool("built synthetic benchmark valid", true, bVal.ok);
 
+testsRoot := path.join(tmpRes.path, "tests-corpus");
+_tm1 := fs.makeDir(path.join(testsRoot, "data"));
+_tm2 := fs.makeDir(path.join(testsRoot, "schema"));
+_tm3 := fs.makeDir(path.join(testsRoot, ".cache/leetcode"));
+_tm4 := fs.makeDir(path.join(testsRoot, ".cache/tests/cses"));
+_tm5 := fs.makeDir(path.join(testsRoot, ".cache/tests/atcoder"));
+_wt2 := fs.writeText(path.join(testsRoot, "schema/taxonomy.json"), "{\"topics\":[{\"id\":\"math\"},{\"id\":\"arrays\"}]}\n");
+_wi2 := fs.writeText(path.join(testsRoot, "data/index.json"), "{\"total\":3,\"sources\":[{\"name\":\"project-euler\",\"count\":1},{\"name\":\"leetcode\",\"count\":1},{\"name\":\"cses\",\"count\":1}]}\n");
+_wc2 := fs.writeText(path.join(testsRoot, "data/challenges.jsonl"),
+"{\"id\":\"pe-1\",\"title\":\"One\",\"source\":\"project-euler\",\"url\":\"https://example.invalid/pe/1\",\"native_id\":\"1\",\"number\":1,\"category\":\"mathematics\",\"primary_topic\":\"math\",\"topics\":[\"math\"],\"raw_topics\":[],\"tags\":[],\"difficulty\":{\"scale\":\"pe\",\"raw\":1,\"normalized\":1.5},\"formats\":[\"single\"],\"languages\":[\"all\"],\"topics_source\":\"curated\",\"popularity\":null,\"premium\":false,\"status\":\"verified\"}\n"
++ "{\"id\":\"lc-1\",\"title\":\"Two Sum\",\"source\":\"leetcode\",\"url\":\"https://example.invalid/lc/1\",\"native_id\":\"1\",\"number\":1,\"category\":\"algorithms\",\"primary_topic\":\"arrays\",\"topics\":[\"arrays\"],\"raw_topics\":[],\"tags\":[],\"difficulty\":{\"scale\":\"lc\",\"raw\":\"Easy\",\"normalized\":2},\"formats\":[\"function\"],\"languages\":[\"all\"],\"topics_source\":\"source\",\"popularity\":{\"solved\":100},\"premium\":false,\"status\":\"verified\"}\n"
++ "{\"id\":\"cses-1\",\"title\":\"Weird\",\"source\":\"cses\",\"url\":\"https://example.invalid/cses/1\",\"native_id\":\"1\",\"number\":1,\"category\":\"algorithms\",\"primary_topic\":\"arrays\",\"topics\":[\"arrays\"],\"raw_topics\":[],\"tags\":[],\"difficulty\":{\"scale\":\"cses\",\"raw\":\"Intro\",\"normalized\":3},\"formats\":[\"stdio\"],\"languages\":[\"all\"],\"topics_source\":\"section\",\"popularity\":null,\"premium\":false,\"status\":\"verified\"}\n");
+_wl2 := fs.writeText(path.join(testsRoot, "data/lists.jsonl"), "{\"id\":\"all\",\"title\":\"All\",\"kind\":\"set\",\"source\":\"leetcode\",\"url\":\"https://example.invalid\",\"description\":\"all\",\"count\":1,\"challenge_ids\":[\"lc-1\"]}\n");
+_wm2 := fs.writeText(path.join(testsRoot, ".cache/leetcode/merged.json"), "{\"questions\":[{\"frontend_id\":1,\"problem_slug\":\"two-sum\",\"examples\":[{\"example_text\":\"Input: x = [1]\\nOutput: 1\\nExplanation: done\"},{\"example_text\":\"Input: x = [2]\\nOutput: 2\"}]}]}\n");
+_wcs := fs.writeText(path.join(testsRoot, ".cache/tests/cses/cses-1.html"), "<h1 id=\"example\">Example</h1><p>Input:</p><pre>3</pre><p>Output:</p><pre>3 10 5 16 8 4 2 1</pre>");
+
+btRes := challenges.buildChallengeTests(testsRoot, entJson);
+test.checkText("build tests err", "", btRes.error);
+test.checkBool("build tests ok", true, btRes.ok);
+btVal := challenges.validateChallengeCorpus(testsRoot);
+test.checkText("built tests validate err", "", btVal.error);
+test.checkBool("built tests validate ok", true, btVal.ok);
+
 _rm := fs.remove(tmpRes.path);
 test.done("util-challenges");
