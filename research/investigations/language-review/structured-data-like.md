@@ -57,6 +57,52 @@ The boundaries need explicit investigation:
 The user's goal is extensibility without bending Lite's syntax. The exact
 extension mechanism and supported formats remain decisions for a future layer.
 
+## Candidate: source region passed to a compile-time operation
+
+The user suggests combining directives or source regions with ordinary
+compile-time operations and gave this illustrative example:
+
+```text
+json.parse(### {
+  "name": "Ali",
+  "age": 10
+}###)
+```
+
+The intended direction is that a possibly multiline region of source can be
+supplied to an operation such as `json.parse`, and that compile-time processing
+could produce a type-safe result. This is an exploration: `###`, the exact
+delimiters, `json.parse`, compile-time triggering, parser API, output type and
+all conversion behavior are not selected syntax or implemented features.
+
+Separate the parts when evaluating the design:
+
+1. **Capture:** identify the exact source region and what value or compile-time
+   input the operation receives. Delimiters, embedded delimiters, source
+   location, encoding and multiline content remain open.
+2. **Stage:** determine whether this form explicitly requests compile-time
+   execution, inherits a surrounding compile-time context, or uses another
+   mechanism. Do not assume the example itself settles staging or that every
+   call to `json.parse` runs during compilation. The existing compile-time
+   direction permits ordinary functions, subject to its unfinished contract.
+3. **Interpretation:** the selected operation parses or transforms the input;
+   a JSON parser handles JSON, while other functions may interpret the same
+   region differently. How a function is resolved, loaded and versioned is open.
+4. **Result and type safety:** decide whether a statically known result can
+   infer a record-like shape, be checked against an explicit Lite type, produce
+   a general structured value, or offer several modes. Define errors and how
+   they refer to the original region. Type-safe parsing does not imply an
+   implicit conversion to a nominal record, an automatic runtime allocation,
+   or an `Any` type.
+
+An ordinary-function interface could allow new formats without adding a
+dedicated directive grammar for each one. The compiler may need only a general
+region boundary and compile-time function support, but input representation,
+editor tooling, compiler-provider trust, build dependencies and evaluation
+limits still require design. If the operation is fully evaluated during the
+build, its parser need not be included in the generated program; the materialized
+result and any required runtime operations still have costs.
+
 ## Initial language list and possible results
 
 The user initially proposes text (including multiline text), raw data, JSON,
