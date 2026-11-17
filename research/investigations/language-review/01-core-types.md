@@ -395,6 +395,31 @@ unknown payload and what matching, copying, equality and cleanup mean remain
 open. Validating a tag alone cannot prove a purported String payload, pointer,
 allocation lifetime, alignment, or concurrent external access is valid.
 
+**User's enum/match safety concern:** An `OrderStatus` enum with named cases
+such as created, failed, canceled, shipped and paid may be read from externally
+owned or corrupted memory. The user asks whether a match listing all known
+cases is truly exhaustive, whether an unknown tag must cause an implicit panic,
+and whether a catch-all must always be written. A catch-all that ships an order
+shows that directing unrecognized data to an ordinary business fallback could
+produce an unintended side effect.
+
+Separate these questions: whether an unknown representation can enter a typed
+value at all; whether it is a valid semantic `UNKNOWN` case; which match arms
+handle that case; and what happens if it is not handled. Compare validation at
+a raw/FFI boundary, a defined unknown state, and a defined fault. Requiring a
+catch-all cannot by itself ensure safe business behavior: its body may itself
+perform the wrong action. An unknown-tag handler must not read or destroy an
+unidentified payload as if it belonged to a known case. These alternatives and
+the scope of any runtime check are not selected by this investigation.
+
+No tag check can detect every corruption: a corrupted status can become a
+different valid tag, and a valid tag may accompany invalid payload bytes. Full
+assurance depends on ownership, synchronization and external data validation
+as well as application invariants. The proposed fail-closed default is a
+design option, not a guarantee against all memory corruption; the final match
+syntax, whether source `_` or another notation handles unknown tags, and the
+policy for untouched external memory remain open.
+
 **Reference comparison:** Rust's valid enum values have a valid discriminant
 and valid active-variant fields; producing an invalid enum is undefined
 behavior, not an implicit unknown case. Even its `repr(C)` field-bearing enum
