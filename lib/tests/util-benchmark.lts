@@ -1,0 +1,21 @@
+benchUtil := import "util/benchmark";
+test := import "core/test";
+
+p1 := benchUtil.parseMsToMicros("{\"loadMs\": 12.345}", 0, "loadMs");
+test.checkBool("parse fractional ms ok", true, p1.ok);
+test.checkInt("parse fractional ms micros", 12345, p1.micros);
+
+p2 := benchUtil.parseMsToMicros("{\"cpuMs\": 0.4}", 0, "cpuMs");
+test.checkBool("parse sub-ms ok", true, p2.ok);
+test.checkInt("parse sub-ms micros", 400, p2.micros);
+
+pBad := benchUtil.parseMsToMicros("{\"cpuMs\": -1.0}", 0, "cpuMs");
+test.checkBool("reject negative ms", false, pBad.ok);
+
+test.checkText("formatMicrosAsMs exact", "12.35", benchUtil.formatMicrosAsMs(12345));
+test.checkText("formatMicrosAsMs zero-padded", "0.05", benchUtil.formatMicrosAsMs(50));
+
+test.checkInt("median odd", 20, benchUtil.medianInt([30, 10, 20]));
+test.checkInt("median even", 25, benchUtil.medianInt([40, 10, 30, 20]));
+
+test.done("util-benchmark");

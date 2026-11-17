@@ -1,0 +1,657 @@
+/** Generated compiler, strict-check, and runtime performance benchmark (`benchmark/compiler-performance.ts`). */
+
+io := import "core/io";
+fs := import "core/file";
+path := import "core/path";
+proc := import "core/process";
+text := import "core/text";
+list := import "core/list";
+integer := import "core/int";
+crypto := import "core/crypto";
+time := import "core/time";
+unicode := import "core/unicode";
+json := import "util/json";
+streams := import "util/streams";
+cases := import "util/cases";
+corpus := import "util/corpus";
+
+/** Parses non-negative JSON decimal ms text (e.g. `12.345`) into rounded integer microseconds. */
+pub parseMsToMicros := fn(source: String, objPos: Int, key: String): (ok: Bool, micros: Int) {
+    field := json.findObjectField(source, objPos, key);
+    if not field.found { return (ok = false, micros = 0); }
+    span := json.valueSpan(source, field.valuePos);
+    if not span.ok { return (ok = false, micros = 0); }
+    raw := text.trim(text.slice(source, span.start, span.end));
+    size := text.length(raw);
+    if size == 0 { return (ok = false, micros = 0); }
+
+    var dot := -1;
+    var i := 0;
+    loop i < size {
+        ch := text.at(raw, i);
+        if ch == "." {
+            if dot >= 0 { return (ok = false, micros = 0); }
+            dot = i;
+        } else if not text.isDigit(ch) {
+            return (ok = false, micros = 0);
+        }
+        i = i + 1;
+    }
+    wholeStr := if dot < 0 { raw } else { text.slice(raw, 0, dot) };
+    if wholeStr == "" { return (ok = false, micros = 0); }
+    wholeParsed := text.textToInt(wholeStr);
+    if not wholeParsed.ok or wholeParsed.value < 0 { return (ok = false, micros = 0); }
+
+    var fracMicros := 0;
+    if dot >= 0 {
+        fracStr := text.slice(raw, dot + 1, size);
+        var place := 100;
+        var fi := 0;
+        loop fi < text.length(fracStr) {
+            d := text.textToInt(text.at(fracStr, fi));
+            if not d.ok { return (ok = false, micros = 0); }
+            if place >= 1 {
+                fracMicros = fracMicros + d.value * place;
+                place = place / 10;
+            } else if fi == 3 and d.value >= 5 {
+                fracMicros = fracMicros + 1;
+            }
+            fi = fi + 1;
+        }
+    }
+    (ok = true, micros = wholeParsed.value * 1000 + fracMicros)
+};
+
+/** Formats integer microseconds as decimal milliseconds with two fractional digits (`12.34`). */
+pub formatMicrosAsMs := fn(micros: Int): String {
+    safe := if micros < 0 { 0 } else { micros };
+    roundedCenti := (safe + 5) / 10;
+    whole := roundedCenti / 100;
+    frac := roundedCenti % 100;
+    fracStr := if frac < 10 { "0" + integer.intText(frac) } else { integer.intText(frac) };
+    integer.intText(whole) + "." + fracStr
+};
+
+/** Computes the integer median across a non-empty `List<Int>`. */
+pub medianInt := fn(values: List<Int>): Int {
+    n := list.listCountInt(values);
+    if n == 0 { return 0; }
+    var remaining: mut List<Int> = [];
+    loop values as v {
+        list.pushBack(mut remaining, v);
+    }
+    sorted: mut List<Int> = [];
+    loop list.listCountInt(remaining) > 0 {
+        remCount := list.listCountInt(remaining);
+        var minIdx := 0;
+        var minVal := remaining[0];
+        var ri := 1;
+        loop ri < remCount {
+            if remaining[ri] < minVal {
+                minVal = remaining[ri];
+                minIdx = ri;
+            }
+            ri = ri + 1;
+        }
+        list.pushBack(mut sorted, minVal);
+        nextRem: mut List<Int> = [];
+        var ni := 0;
+        loop ni < remCount {
+            if ni =!= minIdx {
+                list.pushBack(mut nextRem, remaining[ni]);
+            }
+            ni = ni + 1;
+        }
+        remaining = nextRem;
+    }
+    mid := n / 2;
+    if (n % 2) == 1 { return sorted[mid]; }
+    (sorted[mid - 1] + sorted[mid]) / 2
+};
+
+syntheticOutputSource := fn(lineCount: Int): String {
+    lines: mut List<String> = ["io := import \"core/io\";"];
+    var i := 0;
+    loop i < lineCount {
+        list.pushBack(mut lines, "io.outputLine(" + integer.intText(i) + ");");
+        i = i + 1;
+    }
+    text.joinTexts(lines, "\n") + "\n"
+};
+
+syntheticExpectedText := fn(lineCount: Int): String {
+    lines: mut List<String> = [];
+    var i := 0;
+    loop i < lineCount {
+        list.pushBack(mut lines, integer.intText(i));
+        i = i + 1;
+    }
+    text.joinTexts(lines, "\n") + "\n"
+};
+
+runWorkerOnce := fn(
+rootDir: String, workDir: String, workerSeq: Int, artifactPath: String,
+sourceBytes: List<Int>, timeoutMs: Int, hasSourceRoot: Bool, sourceName: String
+): (
+ok: Bool, status: Int, processMicros: Int, loadMicros: Int, compileMicros: Int, cpuMicros: Int,
+maxRssKiB: Int, outPath: String, errPath: String, error: String
+) {
+    metricsPath := path.join(workDir, "metrics-" + integer.intText(workerSeq) + ".json");
+    outPath := path.join(workDir, "worker-" + integer.intText(workerSeq) + ".out");
+    errPath := path.join(workDir, "worker-" + integer.intText(workerSeq) + ".err");
+    workerScript := path.join(rootDir, "benchmark/compiler-worker.ts");
+
+    args: mut List<String> = [workerScript, "T11", artifactPath, if hasSourceRoot { sourceName } else { "" }];
+    if hasSourceRoot {
+        list.pushBack(mut args, sourceName);
+    }
+    envOverrides: List<String> = ["LITE_WORKER_METRICS_FILE=" + metricsPath];
+
+    startNs := time.monotonicNs();
+    res := proc.runBytes(proc.execPath(), args, rootDir, envOverrides, timeoutMs, sourceBytes, outPath, errPath);
+    processMicros := (time.monotonicNs() - startNs) / 1000;
+    if res.error =!= "" {
+        return (ok = false, status = -1, processMicros = 0, loadMicros = 0, compileMicros = 0, cpuMicros = 0, maxRssKiB = 0, outPath = outPath, errPath = errPath, error = res.error);
+    }
+    metRead := fs.readText(metricsPath);
+    if not metRead.ok or not json.validate(metRead.text).ok {
+        return (ok = false, status = -1, processMicros = 0, loadMicros = 0, compileMicros = 0, cpuMicros = 0, maxRssKiB = 0, outPath = outPath, errPath = errPath, error = "worker did not return timing metrics");
+    }
+    lRes := parseMsToMicros(metRead.text, 0, "loadMs");
+    cRes := parseMsToMicros(metRead.text, 0, "compileMs");
+    cpuRes := parseMsToMicros(metRead.text, 0, "cpuMs");
+    rssRes := json.readObjectInt(metRead.text, 0, "maxRssKiB");
+    if not lRes.ok or not cRes.ok or not cpuRes.ok or not rssRes.found or not rssRes.ok or rssRes.value < 0 {
+        return (ok = false, status = -1, processMicros = 0, loadMicros = 0, compileMicros = 0, cpuMicros = 0, maxRssKiB = 0, outPath = outPath, errPath = errPath, error = "invalid worker metric");
+    }
+    (
+    ok = true, status = res.status, processMicros = processMicros, loadMicros = lRes.micros, compileMicros = cRes.micros,
+    cpuMicros = cpuRes.micros, maxRssKiB = rssRes.value, outPath = outPath, errPath = errPath, error = ""
+    )
+};
+
+/** Executes `benchmark/compiler-performance.ts` across synthetic, corpus, self-build, and runtime workloads. */
+pub runCompilerPerformanceCommand := fn(rootDir: String, args: List<String>): Int {
+    allowed: List<String> = ["artifact", "out", "samples", "warmups", "self-timeout-ms"];
+    optsOk := corpus.parseToolOptions(args, allowed);
+    if not optsOk.ok {
+        io.errorLine(optsOk.error);
+        return 1;
+    }
+    samplesOpt := corpus.positiveOptionValue(args, "samples", 7, 1);
+    if not samplesOpt.ok {
+        io.errorLine(samplesOpt.error);
+        return 1;
+    }
+    warmupsOpt := corpus.positiveOptionValue(args, "warmups", 1, 0);
+    if not warmupsOpt.ok {
+        io.errorLine(warmupsOpt.error);
+        return 1;
+    }
+    timeoutOpt := corpus.positiveOptionValue(args, "self-timeout-ms", 60000, 1);
+    if not timeoutOpt.ok {
+        io.errorLine(timeoutOpt.error);
+        return 1;
+    }
+    samples := samplesOpt.value;
+    warmups := warmupsOpt.value;
+    timeoutMs := timeoutOpt.value;
+
+    artOpt := corpus.readToolOption(args, "artifact");
+    outOpt := corpus.readToolOption(args, "out");
+    sel := corpus.checkSeedArtifact(rootDir, artOpt.found, artOpt.value);
+    if not sel.ok {
+        io.errorLine(sel.error);
+        return 1;
+    }
+
+    manifestPath := path.join(rootDir, "compiler/manifests/ts.json");
+    manRead := fs.readText(manifestPath);
+    if not manRead.ok {
+        io.errorLine(manRead.error);
+        return 1;
+    }
+    emptyStrs: List<String> = [];
+    filesField := json.findObjectField(manRead.text, 0, "files");
+    manFiles := if filesField.found { corpus.readStringListAt(manRead.text, filesField.valuePos) } else { emptyStrs };
+    if list.listCountText(manFiles) =!= 1 {
+        io.errorLine("compiler benchmark requires one TS source root");
+        return 1;
+    }
+    rootSourcePath := path.resolve(path.parentDir(manifestPath), manFiles[0]);
+    sourceBytes := fs.readBytes(rootSourcePath);
+    sourceSha := crypto.sha256Bytes(sourceBytes);
+    sourceLen := list.listCountInt(sourceBytes);
+    sourceName := path.relative(rootDir, rootSourcePath);
+
+    date := time.localDate();
+    prefix := path.resolve(proc.cwd(), if outOpt.found { outOpt.value } else { path.join(rootDir, "benchmark/reports/" + date + "-generated-compiler-performance") });
+
+    tmpWorkRes := fs.makeTempDir("lite-generated-benchmark-");
+    if not tmpWorkRes.ok {
+        io.errorLine(tmpWorkRes.error);
+        return 1;
+    }
+    workDir := tmpWorkRes.path;
+    _wPkg := fs.writeText(path.join(workDir, "package.json"), "{\"type\":\"module\"}\n");
+
+    candArtifactPath := path.join(workDir, "compiler.ts");
+    copyCand := fs.copy(sel.chosenPath, candArtifactPath);
+    if not copyCand.ok {
+        _rm := fs.remove(workDir);
+        io.errorLine(copyCand.error);
+        return 1;
+    }
+    candBytesLen := list.listCountInt(fs.readBytes(candArtifactPath));
+
+    strictCand := corpus.checkStrictSingle(rootDir, candArtifactPath);
+    if not strictCand.ok {
+        _rm := fs.remove(workDir);
+        io.errorLine("strict artifact check failed:\n" + strictCand.error);
+        return 1;
+    }
+    strictCompilerCheckMs := strictCand.elapsedMs * 1000;
+
+    validation := corpus.validateCorpusArtifact(rootDir, candArtifactPath, sel.sourceSha256);
+    if not validation.ok {
+        _rm := fs.remove(workDir);
+        io.errorLine(validation.error);
+        return 1;
+    }
+    if validation.mismatchCount > 0 {
+        _rm := fs.remove(workDir);
+        io.errorLine("compiler contract mismatch: " + validation.firstMismatch);
+        return 1;
+    }
+
+    var workerSeq := 0;
+    untimedSelf := runWorkerOnce(rootDir, workDir, workerSeq, candArtifactPath, sourceBytes, timeoutMs, true, sourceName);
+    workerSeq = workerSeq + 1;
+    if not untimedSelf.ok or untimedSelf.status =!= 0 or list.listCountInt(fs.readBytes(untimedSelf.errPath)) =!= 0 {
+        _rm := fs.remove(workDir);
+        io.errorLine(if untimedSelf.error =!= "" { untimedSelf.error } else { "untimed self-build failed" });
+        return 1;
+    }
+    selfBuildArtifactPath := path.join(workDir, "self-built.ts");
+    _cSelf := fs.copy(untimedSelf.outPath, selfBuildArtifactPath);
+    selfBuildArtifactSha := crypto.sha256Bytes(fs.readBytes(selfBuildArtifactPath));
+
+    selfBuildVal := corpus.validateCorpusArtifact(rootDir, selfBuildArtifactPath, sel.sourceSha256);
+    if not selfBuildVal.ok {
+        _rm := fs.remove(workDir);
+        io.errorLine(selfBuildVal.error);
+        return 1;
+    }
+    if selfBuildVal.mismatchCount > 0 {
+        _rm := fs.remove(workDir);
+        io.errorLine("self-built compiler failed recorded corpus contracts");
+        return 1;
+    }
+
+    refRead := fs.readText(path.join(rootDir, "compiler/tests/references/generated/current-artifacts.json"));
+    artField := json.findObjectField(refRead.text, 0, "artifacts");
+    artOffsets := json.arrayElementOffsets(refRead.text, artField.valuePos);
+    compDir := path.join(rootDir, "igniter/tests/compiler");
+    fixFiles := path.collectFiles(compDir, [compDir], ".json", [], false);
+
+    corpusInputNames: mut List<String> = [];
+    corpusInputSrcFiles: mut List<String> = [];
+    corpusInputCats: mut List<String> = [];
+    corpusInputExpExits: mut List<Int> = [];
+    corpusInputExpOutFiles: mut List<String> = [];
+    corpusInputExpErrFiles: mut List<String> = [];
+    corpusInputExpTsHashes: mut List<String> = [];
+    var corpusInSeq := 0;
+
+    loop fixFiles as absFix {
+        fileName := path.baseName(absFix);
+        parsedFn := corpus.parseFixtureFilename(fileName);
+        fixJson := fs.readText(absFix).text;
+        expectedTs := corpus.findRecordedTsHash(refRead.text, artOffsets, parsedFn.slug);
+        srcField := json.findObjectField(fixJson, 0, "source");
+        fixSrcBytes := streams.readStreamBytes(fixJson, srcField.valuePos, compDir);
+        fixSrcFile := path.join(workDir, "csrc-" + integer.intText(corpusInSeq) + ".lts");
+        _ws := fs.writeBytes(fixSrcFile, fixSrcBytes);
+
+        casesField := json.findObjectField(fixJson, 0, "cases");
+        loop json.arrayElementOffsets(fixJson, casesField.valuePos) as sPos {
+            caseName := json.readObjectString(fixJson, sPos, "name").value;
+            expExit := json.readObjectInt(fixJson, sPos, "exitCode").value;
+            emptyBytes: List<Int> = [];
+            outField := json.findObjectField(fixJson, sPos, "stdout");
+            errField := json.findObjectField(fixJson, sPos, "stderr");
+            expOutBytes := if outField.found { streams.readStreamBytes(fixJson, outField.valuePos, compDir) } else { emptyBytes };
+            expErrBytes := if errField.found { streams.readStreamBytes(fixJson, errField.valuePos, compDir) } else { emptyBytes };
+            eoFile := path.join(workDir, "ceo-" + integer.intText(corpusInSeq) + ".bin");
+            eeFile := path.join(workDir, "cee-" + integer.intText(corpusInSeq) + ".bin");
+            _wo := fs.writeBytes(eoFile, expOutBytes);
+            _we := fs.writeBytes(eeFile, expErrBytes);
+            corpusInSeq = corpusInSeq + 1;
+
+            list.pushBack(mut corpusInputNames, fileName + "/" + caseName);
+            list.pushBack(mut corpusInputSrcFiles, fixSrcFile);
+            list.pushBack(mut corpusInputCats, parsedFn.category);
+            list.pushBack(mut corpusInputExpExits, expExit);
+            list.pushBack(mut corpusInputExpOutFiles, eoFile);
+            list.pushBack(mut corpusInputExpErrFiles, eeFile);
+            list.pushBack(mut corpusInputExpTsHashes, expectedTs.tsHash);
+        }
+    }
+
+    outputCounts: List<Int> = [1, 100, 1000];
+    syntheticFiles: mut List<String> = [];
+    syntheticShas: mut List<String> = [];
+    syntheticByteLens: mut List<Int> = [];
+    loop outputCounts as cnt {
+        srcText := syntheticOutputSource(cnt);
+        srcBytes := unicode.utf8Encode(srcText);
+        sPath := path.join(workDir, "syn-" + integer.intText(cnt) + ".lts");
+        _wsyn := fs.writeBytes(sPath, srcBytes);
+        list.pushBack(mut syntheticFiles, sPath);
+        list.pushBack(mut syntheticShas, crypto.sha256Bytes(srcBytes));
+        list.pushBack(mut syntheticByteLens, list.listCountInt(srcBytes));
+    }
+
+    workloadNames: List<String> = ["output-1", "output-100", "output-1000", "compiler-corpus", "self-build"];
+    syntheticEmittedFiles: mut List<String> = [];
+    resultJsonEntries: mut List<String> = [];
+    mdResultLines: mut List<String> = [];
+
+    var wi := 0;
+    loop wi < 5 {
+        wName := workloadNames[wi];
+        rawJsonEntries: mut List<String> = [];
+        inputJsonEntries: mut List<String> = [];
+        medProcList: mut List<Int> = [];
+        medLoadList: mut List<Int> = [];
+        medCompList: mut List<Int> = [];
+        medCpuList: mut List<Int> = [];
+        medRssList: mut List<Int> = [];
+
+        if wi < 3 {
+            inBytes := fs.readBytes(syntheticFiles[wi]);
+            list.pushBack(mut inputJsonEntries, "{\n        \"name\": " + json.quoteString(wName) + ",\n        \"sourceSha256\": " + json.quoteString(syntheticShas[wi]) + ",\n        \"bytes\": " + integer.intText(syntheticByteLens[wi]) + "\n      }");
+            var expectedSha := "";
+            var pass := 0 - warmups;
+            loop pass < samples {
+                wRun := runWorkerOnce(rootDir, workDir, workerSeq, candArtifactPath, inBytes, timeoutMs, false, "");
+                workerSeq = workerSeq + 1;
+                if not wRun.ok {
+                    _rm := fs.remove(workDir);
+                    io.errorLine(wRun.error);
+                    return 1;
+                }
+                errB := fs.readBytes(wRun.errPath);
+                if wRun.status =!= 0 or list.listCountInt(errB) =!= 0 {
+                    _rm := fs.remove(workDir);
+                    io.errorLine("benchmark compilation failed: " + wName + ": " + unicode.utf8DecodeLossy(errB));
+                    return 1;
+                }
+                outSha := crypto.sha256Bytes(fs.readBytes(wRun.outPath));
+                errSha := crypto.sha256Bytes(errB);
+                if expectedSha == "" {
+                    expectedSha = outSha;
+                    synOutTs := path.join(workDir, "syn-emitted-" + integer.intText(wi) + ".ts");
+                    _cp := fs.copy(wRun.outPath, synOutTs);
+                    list.pushBack(mut syntheticEmittedFiles, synOutTs);
+                } else if outSha =!= expectedSha {
+                    _rm := fs.remove(workDir);
+                    io.errorLine("nondeterministic benchmark output: " + wName);
+                    return 1;
+                }
+                list.pushBack(mut rawJsonEntries, "{\n        \"pass\": " + integer.intText(pass) + ",\n        \"input\": " + json.quoteString(wName) + ",\n        \"processMs\": " + formatMicrosAsMs(wRun.processMicros) + ",\n        \"metrics\": { \"loadMs\": " + formatMicrosAsMs(wRun.loadMicros) + ", \"compileMs\": " + formatMicrosAsMs(wRun.compileMicros) + ", \"cpuMs\": " + formatMicrosAsMs(wRun.cpuMicros) + ", \"maxRssKiB\": " + integer.intText(wRun.maxRssKiB) + " },\n        \"status\": " + integer.intText(wRun.status) + ",\n        \"stdoutSha256\": " + json.quoteString(outSha) + ",\n        \"stderrSha256\": " + json.quoteString(errSha) + "\n      }");
+                if pass >= 0 {
+                    list.pushBack(mut medProcList, wRun.processMicros);
+                    list.pushBack(mut medLoadList, wRun.loadMicros);
+                    list.pushBack(mut medCompList, wRun.compileMicros);
+                    list.pushBack(mut medCpuList, wRun.cpuMicros);
+                    list.pushBack(mut medRssList, wRun.maxRssKiB);
+                }
+                pass = pass + 1;
+            }
+        } else if wi == 3 {
+            corpusCount := list.listCountText(corpusInputNames);
+            var ci := 0;
+            loop ci < corpusCount {
+                cBytes := fs.readBytes(corpusInputSrcFiles[ci]);
+                list.pushBack(mut inputJsonEntries, "{\n        \"name\": " + json.quoteString(corpusInputNames[ci]) + ",\n        \"sourceSha256\": " + json.quoteString(crypto.sha256Bytes(cBytes)) + ",\n        \"bytes\": " + integer.intText(list.listCountInt(cBytes)) + "\n      }");
+                ci = ci + 1;
+            }
+            var pass := 0 - warmups;
+            loop pass < samples {
+                var sumProc := 0;
+                var sumLoad := 0;
+                var sumComp := 0;
+                var sumCpu := 0;
+                var maxRss := 0;
+                var cii := 0;
+                loop cii < corpusCount {
+                    inBytes := fs.readBytes(corpusInputSrcFiles[cii]);
+                    wRun := runWorkerOnce(rootDir, workDir, workerSeq, candArtifactPath, inBytes, timeoutMs, false, "");
+                    workerSeq = workerSeq + 1;
+                    if not wRun.ok {
+                        _rm := fs.remove(workDir);
+                        io.errorLine(wRun.error);
+                        return 1;
+                    }
+                    outB := fs.readBytes(wRun.outPath);
+                    errB := fs.readBytes(wRun.errPath);
+                    expOutB := fs.readBytes(corpusInputExpOutFiles[cii]);
+                    expErrB := fs.readBytes(corpusInputExpErrFiles[cii]);
+                    if not corpus.contractMatchesBytes(corpusInputCats[cii], corpusInputExpExits[cii], expOutB, expErrB, corpusInputExpTsHashes[cii], wRun.status, outB, errB) {
+                        _rm := fs.remove(workDir);
+                        io.errorLine("timed compiler contract mismatch: " + corpusInputNames[cii]);
+                        return 1;
+                    }
+                    list.pushBack(mut rawJsonEntries, "{\n        \"pass\": " + integer.intText(pass) + ",\n        \"input\": " + json.quoteString(corpusInputNames[cii]) + ",\n        \"processMs\": " + formatMicrosAsMs(wRun.processMicros) + ",\n        \"metrics\": { \"loadMs\": " + formatMicrosAsMs(wRun.loadMicros) + ", \"compileMs\": " + formatMicrosAsMs(wRun.compileMicros) + ", \"cpuMs\": " + formatMicrosAsMs(wRun.cpuMicros) + ", \"maxRssKiB\": " + integer.intText(wRun.maxRssKiB) + " },\n        \"status\": " + integer.intText(wRun.status) + ",\n        \"stdoutSha256\": " + json.quoteString(crypto.sha256Bytes(outB)) + ",\n        \"stderrSha256\": " + json.quoteString(crypto.sha256Bytes(errB)) + "\n      }");
+                    sumProc = sumProc + wRun.processMicros;
+                    sumLoad = sumLoad + wRun.loadMicros;
+                    sumComp = sumComp + wRun.compileMicros;
+                    sumCpu = sumCpu + wRun.cpuMicros;
+                    if wRun.maxRssKiB > maxRss { maxRss = wRun.maxRssKiB; }
+                    cii = cii + 1;
+                }
+                if pass >= 0 {
+                    list.pushBack(mut medProcList, sumProc);
+                    list.pushBack(mut medLoadList, sumLoad);
+                    list.pushBack(mut medCompList, sumComp);
+                    list.pushBack(mut medCpuList, sumCpu);
+                    list.pushBack(mut medRssList, maxRss);
+                }
+                pass = pass + 1;
+            }
+        } else {
+            list.pushBack(mut inputJsonEntries, "{\n        \"name\": \"S\",\n        \"sourceSha256\": " + json.quoteString(sourceSha) + ",\n        \"bytes\": " + integer.intText(sourceLen) + "\n      }");
+            var pass := 0 - warmups;
+            loop pass < samples {
+                wRun := runWorkerOnce(rootDir, workDir, workerSeq, candArtifactPath, sourceBytes, timeoutMs, true, sourceName);
+                workerSeq = workerSeq + 1;
+                if not wRun.ok {
+                    _rm := fs.remove(workDir);
+                    io.errorLine(wRun.error);
+                    return 1;
+                }
+                errB := fs.readBytes(wRun.errPath);
+                if wRun.status =!= 0 or list.listCountInt(errB) =!= 0 {
+                    _rm := fs.remove(workDir);
+                    io.errorLine("benchmark compilation failed: S: " + unicode.utf8DecodeLossy(errB));
+                    return 1;
+                }
+                outSha := crypto.sha256Bytes(fs.readBytes(wRun.outPath));
+                if outSha =!= selfBuildArtifactSha {
+                    _rm := fs.remove(workDir);
+                    io.errorLine("timed self-build differs from its independently validated output");
+                    return 1;
+                }
+                list.pushBack(mut rawJsonEntries, "{\n        \"pass\": " + integer.intText(pass) + ",\n        \"input\": \"S\",\n        \"processMs\": " + formatMicrosAsMs(wRun.processMicros) + ",\n        \"metrics\": { \"loadMs\": " + formatMicrosAsMs(wRun.loadMicros) + ", \"compileMs\": " + formatMicrosAsMs(wRun.compileMicros) + ", \"cpuMs\": " + formatMicrosAsMs(wRun.cpuMicros) + ", \"maxRssKiB\": " + integer.intText(wRun.maxRssKiB) + " },\n        \"status\": " + integer.intText(wRun.status) + ",\n        \"stdoutSha256\": " + json.quoteString(outSha) + ",\n        \"stderrSha256\": " + json.quoteString(crypto.sha256Bytes(errB)) + "\n      }");
+                if pass >= 0 {
+                    list.pushBack(mut medProcList, wRun.processMicros);
+                    list.pushBack(mut medLoadList, wRun.loadMicros);
+                    list.pushBack(mut medCompList, wRun.compileMicros);
+                    list.pushBack(mut medCpuList, wRun.cpuMicros);
+                    list.pushBack(mut medRssList, wRun.maxRssKiB);
+                }
+                pass = pass + 1;
+            }
+        }
+
+        mProc := medianInt(medProcList);
+        mLoad := medianInt(medLoadList);
+        mComp := medianInt(medCompList);
+        mCpu := medianInt(medCpuList);
+        mRss := medianInt(medRssList);
+        list.pushBack(mut mdResultLines, "- " + wName + ": median process " + formatMicrosAsMs(mProc) + " ms; load " + formatMicrosAsMs(mLoad) + " ms; compile " + formatMicrosAsMs(mComp) + " ms.");
+        wEntry := "{\n"
+        + "      \"workload\": " + json.quoteString(wName) + ",\n"
+        + "      \"inputs\": [\n        " + text.joinTexts(inputJsonEntries, ",\n        ") + "\n      ],\n"
+        + "      \"raw\": [\n        " + text.joinTexts(rawJsonEntries, ",\n        ") + "\n      ],\n"
+        + "      \"medians\": {\n"
+        + "        \"processMs\": " + formatMicrosAsMs(mProc) + ",\n"
+        + "        \"loadMs\": " + formatMicrosAsMs(mLoad) + ",\n"
+        + "        \"compileMs\": " + formatMicrosAsMs(mComp) + ",\n"
+        + "        \"cpuMs\": " + formatMicrosAsMs(mCpu) + ",\n"
+        + "        \"peakRssKiB\": " + integer.intText(mRss) + "\n      }\n    }";
+        list.pushBack(mut resultJsonEntries, wEntry);
+        wi = wi + 1;
+    }
+
+    synCheckDir := path.join(workDir, "syn-tsc");
+    synStartNs := time.monotonicNs();
+    synChecked := cases.checkTsArtifactFilesWithStatus(rootDir, syntheticEmittedFiles, synCheckDir, 60000);
+    strictProgramCheckMs := (time.monotonicNs() - synStartNs) / 1000;
+    if not synChecked.ok {
+        _rm := fs.remove(workDir);
+        io.errorLine("benchmark runtime artifact failed strict checking:\n" + synChecked.error);
+        return 1;
+    }
+
+    entryPath := path.join(rootDir, "compiler/entry.ts");
+    emptyEnv: List<String> = [];
+    emptyBytes: List<Int> = [];
+    var ri := 0;
+    loop ri < 3 {
+        runArgs: List<String> = [entryPath, syntheticEmittedFiles[ri]];
+        rOut := path.join(workDir, "syn-run-" + integer.intText(ri) + ".out");
+        rErr := path.join(workDir, "syn-run-" + integer.intText(ri) + ".err");
+        rRes := proc.runBytes(proc.execPath(), runArgs, workDir, emptyEnv, 10000, emptyBytes, rOut, rErr);
+        expText := syntheticExpectedText(outputCounts[ri]);
+        okSynRun := rRes.error == "" and rRes.status == 0
+        and unicode.utf8DecodeLossy(fs.readBytes(rOut)) == expText
+        and list.listCountInt(fs.readBytes(rErr)) == 0;
+        if not okSynRun {
+            _rm := fs.remove(workDir);
+            io.errorLine("synthetic runtime contract mismatch: output-" + integer.intText(outputCounts[ri]));
+            return 1;
+        }
+        ri = ri + 1;
+    }
+
+    executionSampleMicros: mut List<Int> = [];
+    expected1000 := syntheticExpectedText(1000);
+    var rpass := 0 - warmups;
+    loop rpass < samples {
+        rOut := path.join(workDir, "rt-1000-" + integer.intText(rpass + warmups) + ".out");
+        rErr := path.join(workDir, "rt-1000-" + integer.intText(rpass + warmups) + ".err");
+        runArgs: List<String> = [entryPath, syntheticEmittedFiles[2]];
+        rStartNs := time.monotonicNs();
+        rRes := proc.runBytes(proc.execPath(), runArgs, workDir, emptyEnv, 10000, emptyBytes, rOut, rErr);
+        rElapsedMicros := (time.monotonicNs() - rStartNs) / 1000;
+        ok1000 := rRes.error == "" and rRes.status == 0
+        and unicode.utf8DecodeLossy(fs.readBytes(rOut)) == expected1000
+        and list.listCountInt(fs.readBytes(rErr)) == 0;
+        if not ok1000 {
+            _rm := fs.remove(workDir);
+            io.errorLine("benchmark runtime contract mismatch");
+            return 1;
+        }
+        if rpass >= 0 {
+            list.pushBack(mut executionSampleMicros, rElapsedMicros);
+        }
+        rpass = rpass + 1;
+    }
+
+    rtSourceSha := crypto.sha256Bytes(fs.readBytes(syntheticEmittedFiles[2]));
+    _rm := fs.remove(workDir);
+
+    medExecMicros := medianInt(executionSampleMicros);
+    execSamplesJson: mut List<String> = [];
+    loop executionSampleMicros as es {
+        list.pushBack(mut execSamplesJson, formatMicrosAsMs(es));
+    }
+
+    toolPaths: List<String> = [
+    "benchmark/compiler-performance.ts", "tools/src/compiler-performance.lts",
+    "lib/util/benchmark.lts", "lib/util/corpus.lts", "benchmark/compiler-worker.ts",
+    "compiler/host.ts", "igniter/artifacts.ts"
+    ];
+    toolsJsonRes := corpus.toolIdentitiesJson(rootDir, toolPaths);
+    if not toolsJsonRes.ok {
+        io.errorLine(toolsJsonRes.error);
+        return 1;
+    }
+
+    revRes := corpus.repoRevision(rootDir);
+    revJson := if revRes.found { json.quoteString(revRes.rev) } else { "null" };
+
+    summaryFields := ""
+    + "  \"schema\": 2,\n"
+    + "  \"mode\": \"generated-only\",\n"
+    + "  \"date\": " + json.quoteString(date) + ",\n"
+    + "  \"revision\": " + revJson + ",\n"
+    + "  \"source\": { \"sha256\": " + json.quoteString(sourceSha) + ", \"bytes\": " + integer.intText(sourceLen) + " },\n"
+    + "  \"toolSources\": " + toolsJsonRes.jsonText + ",\n"
+    + "  \"artifact\": {\n"
+    + "    \"sha256\": " + json.quoteString(sel.artifactSha256) + ",\n"
+    + "    \"selectedCompilerSha256\": " + json.quoteString(sel.selectedCompilerSha256) + ",\n"
+    + "    \"selectedCompilerBuilderSha256\": " + json.quoteString(sel.selectedBuilderSha256) + ",\n"
+    + "    \"bytes\": " + integer.intText(candBytesLen) + ",\n"
+    + "    \"supplied\": " + (if artOpt.found { "true" } else { "false" }) + "\n  },\n"
+    + "  \"method\": {\n"
+    + "    \"samples\": " + integer.intText(samples) + ",\n"
+    + "    \"warmups\": " + integer.intText(warmups) + ",\n"
+    + "    \"process\": \"sequential fresh Node workers; corpus totals are sums per pass\",\n"
+    + "    \"compilation\": \"worker compiler execution after module loading, includes stdin decoding; excludes strict checks and generated-program execution\",\n"
+    + "    \"baseline\": \"generated-only current baseline; no T00 ratio or speedup claim\"\n  },\n"
+    + "  \"validation\": " + validation.jsonBody + ",\n"
+    + "  \"selfBuildValidation\": " + selfBuildVal.jsonBody + ",\n"
+    + "  \"selfBuildArtifactSha256\": " + json.quoteString(selfBuildArtifactSha) + ",\n"
+    + "  \"strictCompilerCheckMs\": " + formatMicrosAsMs(strictCompilerCheckMs) + ",\n"
+    + "  \"strictProgramCheckMs\": " + formatMicrosAsMs(strictProgramCheckMs) + ",\n"
+    + "  \"runtime\": {\n"
+    + "    \"checkedSyntheticOutputCounts\": [1, 100, 1000],\n"
+    + "    \"workload\": \"output-1000\",\n"
+    + "    \"artifactSha256\": " + json.quoteString(rtSourceSha) + ",\n"
+    + "    \"samples\": [" + text.joinTexts(execSamplesJson, ", ") + "],\n"
+    + "    \"medianProcessMs\": " + formatMicrosAsMs(medExecMicros) + "\n  },\n"
+    + "  \"results\": [\n    " + text.joinTexts(resultJsonEntries, ",\n    ") + "\n  ]";
+
+    summaryJson := "{\n" + summaryFields + "\n}\n";
+    mdText := "# Generated compiler performance — " + date + "\n\n"
+    + "Source SHA-256 `" + sourceSha + "`; compiler SHA-256 `" + sel.artifactSha256 + "`.\n\n"
+    + "Sequential fresh-process samples: " + integer.intText(samples) + "; excluded warmups: " + integer.intText(warmups)
+    + ". Strict compiler check: " + formatMicrosAsMs(strictCompilerCheckMs) + " ms; strict program check: "
+    + formatMicrosAsMs(strictProgramCheckMs) + " ms.\n\n"
+    + text.joinTexts(mdResultLines, "\n") + "\n\n"
+    + "Generated program execution: " + formatMicrosAsMs(medExecMicros) + " ms median process time; exact output checked.\n\n"
+    + integer.intText(validation.cases) + " compiler contracts and " + integer.intText(validation.executions)
+    + " strictly checked program executions pass. These finite cases do not establish full language support.\n\n"
+    + "This is a generated-only baseline. No speedup is claimed; historical T00 reports are unchanged. Raw samples and all input/artifact identities are in the adjacent JSON.\n";
+
+    mkOut := fs.makeDir(path.parentDir(prefix));
+    if not mkOut.ok {
+        io.errorLine(mkOut.error);
+        return 1;
+    }
+    wJson := fs.writeText(prefix + ".json", summaryJson);
+    if not wJson.ok {
+        io.errorLine(wJson.error);
+        return 1;
+    }
+    wMd := fs.writeText(prefix + ".md", mdText);
+    if not wMd.ok {
+        io.errorLine(wMd.error);
+        return 1;
+    }
+    io.output("{\n  \"reports\": " + json.quoteString(prefix) + ",\n" + summaryFields + "\n}\n");
+    0
+};

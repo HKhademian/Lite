@@ -1,5 +1,5 @@
 /** One fresh-process compiler measurement. Metrics use fd 3, separate from program streams. */
-import { readFileSync, realpathSync, writeSync } from 'node:fs';
+import { readFileSync, realpathSync, writeFileSync, writeSync } from 'node:fs';
 import { dirname, isAbsolute, resolve } from 'node:path';
 import { fileURLToPath, pathToFileURL } from 'node:url';
 import { displaySourcePath, resolveImportPath, sourceModuleIdentity } from '../compiler/source.ts';
@@ -17,13 +17,19 @@ function writeMetrics() {
   metricsWritten = true;
   const ended = performance.now();
   const cpu = process.cpuUsage(cpuStarted);
-  writeSync(3, JSON.stringify({
+  const payload = JSON.stringify({
     loadMs: loaded - started,
     compileMs: ended - loaded,
     totalInsideMs: ended - started,
     cpuMs: (cpu.user + cpu.system) / 1000,
     maxRssKiB: process.resourceUsage().maxRSS,
-  }));
+  });
+  const metricsFile = process.env['LITE_WORKER_METRICS_FILE'];
+  if (metricsFile !== undefined && metricsFile !== '') {
+    writeFileSync(metricsFile, payload, 'utf8');
+  } else {
+    writeSync(3, payload);
+  }
 }
 if (engine === 'T11') {
   const module: unknown = await import(pathToFileURL(artifact).href);
