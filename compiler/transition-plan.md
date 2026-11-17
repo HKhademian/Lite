@@ -370,7 +370,7 @@ The source-expansion bridge and `importFlatAll` language fixtures are removed.
 - [Bootstrap plan](../docs/bootstrap-plan.md)
 - [Compiler launcher](../bin/lite-compile)
 - [Existing bundle CLI](https://github.com/repository owner/Lite/blob/d3bd6f7bcf06bbea6669c8d74bebe5e73f383114/igniter/bundle-cli.ts)
-- [Verifier](../igniter/verify.ts)
+- [Verifier](../lib/util/verify.lts)
 - [Artifact runner](../igniter/artifacts.ts)
 - [TS ladder](scripts/self-host.ts)
 - [Corpus parity](scripts/corpus-parity.ts)

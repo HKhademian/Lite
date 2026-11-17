@@ -1,5 +1,6 @@
 json := import "util/json";
 list := import "core/list";
+unicode := import "core/unicode";
 test := import "core/test";
 
 sample := "{\n  \"name\": \"lite\",\n  \"nested\": { \"name\": \"inner\", \"count\": 2 },\n  \"items\": [\"a\", \"b\\n\\\"c\\\"\", \"\\u003cok\\u003e\"],\n  \"flag\": true\n}";
@@ -35,5 +36,12 @@ test.checkInt("object keys count", 4, list.listCountText(keys));
 test.checkText("last key", "flag", keys[3]);
 
 test.checkText("quote string", "\"a\\n\\\"b\\\"\\\\c\"", json.quoteString("a\n\"b\"\\c"));
+
+uSample := "{\"u\":\"A\\u00e9\\ud83d\\ude42\\b\\f\"}";
+uRead := json.readObjectString(uSample, 0, "u");
+test.checkBool("unicode surrogate escape ok", true, uRead.ok);
+expectedU := "Aé🙂" + unicode.fromCodePoint(8).text + unicode.fromCodePoint(12).text;
+test.checkText("unicode surrogate escape val", expectedU, uRead.value);
+test.checkText("quote control chars", "\"a\\u0000\\b\\f\\n\"", json.quoteString(json.readObjectString("{\"s\":\"a\\u0000\\b\\f\\n\"}", 0, "s").value));
 
 test.done("util-json");

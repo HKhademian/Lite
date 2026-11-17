@@ -847,7 +847,7 @@ remain unchanged. This is not proof of the full
 20-lesson or larger-language contract.
 
 Project-level feature and artifact verification is `./bin/lite verify`, backed by
-[verify.ts](verify.ts) and [language/verifications/](../language/verifications/README.md). The
+[lib/util/verify.lts](../lib/util/verify.lts) and [language/verifications/](../language/verifications/README.md). The
 first slice has 36 feature cases and 39 artifact manifests (19 examples, 20 samples). Verification results
 and native C builds are cached under the gitignored `dist/` directory.
 The default smoke suite is intended for quick local feedback. `--fast` runs the broad

@@ -2,6 +2,7 @@
 
 text := import "core/text";
 list := import "core/list";
+unicode := import "core/unicode";
 
 isJsonSpace := fn(ch: String): Bool {
     ch == " " or ch == "\t" or ch == "\r" or ch == "\n"
@@ -33,16 +34,21 @@ hexDigitValue := fn(ch: String): Int {
     15
 }
 
-asciiFromCode := fn(code: Int): String {
-    if code == 9 { return "\t"; }
-    if code == 10 { return "\n"; }
-    if code == 13 { return "\r"; }
-    if code >= 32 and code <= 126 {
-        table := " !\"#$%&'()*+,-./0123456789:;<=>?@ABCDEFGHIJKLMNOPQRSTUVWXYZ[\\]^_`abcdefghijklmnopqrstuvwxyz{|}~";
-        return text.at(table, code - 32);
+hexCharLower := fn(nibble: Int): String {
+    text.at("0123456789abcdef", nibble)
+};
+
+parseHex4 := fn(source: String, start: Int): (ok: Bool, value: Int) {
+    h0 := text.at(source, start);
+    h1 := text.at(source, start + 1);
+    h2 := text.at(source, start + 2);
+    h3 := text.at(source, start + 3);
+    if not isHexDigit(h0) or not isHexDigit(h1) or not isHexDigit(h2) or not isHexDigit(h3) {
+        return (ok = false, value = 0);
     }
-    ""
-}
+    value := ((hexDigitValue(h0) * 16 + hexDigitValue(h1)) * 16 + hexDigitValue(h2)) * 16 + hexDigitValue(h3);
+    (ok = true, value = value)
+};
 
 scanStringToken := fn(source: String, start: Int, decode: Bool): (ok: Bool, value: String, next: Int, error: String) {
     size := text.length(source);
@@ -84,30 +90,51 @@ scanStringToken := fn(source: String, start: Int, decode: Bool): (ok: Bool, valu
                 if decode { out = out + "\t"; }
                 pos = pos + 2;
                 runStart = pos;
-            } else if esc == "b" or esc == "f" {
+            } else if esc == "b" {
+                if decode { out = out + unicode.fromCodePoint(8).text; }
+                pos = pos + 2;
+                runStart = pos;
+            } else if esc == "f" {
+                if decode { out = out + unicode.fromCodePoint(12).text; }
                 pos = pos + 2;
                 runStart = pos;
             } else if esc == "u" {
                 if pos + 5 >= size {
                     return (ok = false, value = "", next = pos, error = "incomplete unicode escape");
                 }
-                h0 := text.at(source, pos + 2);
-                h1 := text.at(source, pos + 3);
-                h2 := text.at(source, pos + 4);
-                h3 := text.at(source, pos + 5);
-                if not isHexDigit(h0) or not isHexDigit(h1) or not isHexDigit(h2) or not isHexDigit(h3) {
+                firstHex := parseHex4(source, pos + 2);
+                if not firstHex.ok {
                     return (ok = false, value = "", next = pos, error = "invalid unicode escape");
                 }
+                code := firstHex.value;
+                var consumed := 6;
                 if decode {
-                    code := ((hexDigitValue(h0) * 16 + hexDigitValue(h1)) * 16 + hexDigitValue(h2)) * 16 + hexDigitValue(h3);
-                    decoded := asciiFromCode(code);
-                    if decoded =!= "" {
-                        out = out + decoded;
-                    } else {
+                    if code >= 55296 and code <= 56319 and pos + 11 < size and text.at(source, pos + 6) == "\\" and text.at(source, pos + 7) == "u" {
+                        secondHex := parseHex4(source, pos + 8);
+                        if secondHex.ok and secondHex.value >= 56320 and secondHex.value <= 57343 {
+                            pair: List<Int> = [code, secondHex.value];
+                            pairRes := unicode.utf16DecodeStrict(pair);
+                            if pairRes.ok {
+                                out = out + pairRes.text;
+                                consumed = 12;
+                            } else {
+                                out = out + text.slice(source, pos, pos + 6);
+                            }
+                        } else {
+                            out = out + text.slice(source, pos, pos + 6);
+                        }
+                    } else if code >= 55296 and code <= 57343 {
                         out = out + text.slice(source, pos, pos + 6);
+                    } else {
+                        cpRes := unicode.fromCodePoint(code);
+                        if cpRes.ok {
+                            out = out + cpRes.text;
+                        } else {
+                            out = out + text.slice(source, pos, pos + 6);
+                        }
                     }
                 }
-                pos = pos + 6;
+                pos = pos + consumed;
                 runStart = pos;
             } else {
                 return (ok = false, value = "", next = pos, error = "invalid string escape");
@@ -444,18 +471,24 @@ pub objectKeys := fn(source: String, objectStart: Int): List<String> {
 
 /** Formats `value` as a quoted JSON string literal. */
 pub quoteString := fn(value: String): String {
-    size := text.length(value);
+    cps := unicode.toCodePoints(value);
+    size := list.listCountInt(cps);
     var out := "\"";
     var runStart := 0;
     var i := 0;
     loop i < size {
-        ch := text.at(value, i);
+        cp := cps[i];
         var esc := "";
-        if ch == "\"" { esc = "\\\""; }
-        else if ch == "\\" { esc = "\\\\"; }
-        else if ch == "\n" { esc = "\\n"; }
-        else if ch == "\r" { esc = "\\r"; }
-        else if ch == "\t" { esc = "\\t"; }
+        if cp == 34 { esc = "\\\""; }
+        else if cp == 92 { esc = "\\\\"; }
+        else if cp == 8 { esc = "\\b"; }
+        else if cp == 9 { esc = "\\t"; }
+        else if cp == 10 { esc = "\\n"; }
+        else if cp == 12 { esc = "\\f"; }
+        else if cp == 13 { esc = "\\r"; }
+        else if cp < 32 {
+            esc = "\\u00" + hexCharLower(cp / 16) + hexCharLower(cp % 16);
+        }
         if esc =!= "" {
             if i > runStart { out = out + text.slice(value, runStart, i); }
             out = out + esc;

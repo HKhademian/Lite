@@ -1,10 +1,11 @@
-/** Standalone verifier command (`lite-verify`); forwards compiler cases or declarative manifests. */
+/** Standalone verifier command (`lite-verify`); verifies declarative manifests or `language/verifications`. */
 
 io := import "core/io";
 list := import "core/list";
 text := import "core/text";
 cli := import "util/cli";
 project := import "util/project";
+verify := import "util/verify";
 
 run := fn(rawArgs: List<String>): Unit {
     project.handleVersionFlag(rawArgs, "verifier", "verify");
@@ -12,7 +13,12 @@ run := fn(rawArgs: List<String>): Unit {
     if list.listCountText(args) == 1 and text.endsWith(cli.head(args), ".json") {
         project.forwardNode("tools/test.ts", args);
     } else {
-        project.forwardNode("igniter/verify.ts", args);
+        root := project.findRepoRoot();
+        if root == "" {
+            io.errorLine("lite verify: could not locate repository root");
+            io.exit(1);
+        }
+        io.exit(verify.runVerification(root, args));
     }
 };
 

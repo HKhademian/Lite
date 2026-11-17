@@ -88,7 +88,7 @@ compiler fixtures.
 
 The JSON Schema is [schema/verification.schema.json](schema/verification.schema.json).
 The runner performs equivalent structural validation in
-[igniter/verify.ts](../../igniter/verify.ts).
+[lib/util/verify.lts](../../lib/util/verify.lts).
 
 ## Runner
 
