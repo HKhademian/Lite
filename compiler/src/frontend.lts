@@ -1666,7 +1666,7 @@ localsHasAnyUnready := fn(locals: List<Local>): Bool {
             if latestActiveLocalByRuntime(locals, entry.runtime) < 0 { return true; }
         } else if entry.depth >= 0 {
             actIdx := latestActiveLocalByRuntime(locals, entry.runtime);
-            if actIdx >= 0 and locals[actIdx].initState =!= "init" { return true; }
+            if actIdx >= 0 and locals[actIdx].initState =!= INIT_STATE_INIT { return true; }
         }
     }
     false
@@ -2791,17 +2791,17 @@ joinBranchLocals := fn(locals: List<Local>, preLen: Int, blockDepth: Int, hasEls
                 }
             }
             var joined := pre.initState;
-            if pre.initState =!= "init" {
-                joined = "maybe";
+            if pre.initState =!= INIT_STATE_INIT {
+                joined = INIT_STATE_MAYBE;
                 if hasElse {
                     var initCount := 0;
                     loop here as u {
-                        if u.runtime == rt and u.initState == "init" { initCount = initCount + 1; }
+                        if u.runtime == rt and u.initState == INIT_STATE_INIT { initCount = initCount + 1; }
                     }
-                    if initCount == liveBranchCount { joined = "init"; }
+                    if initCount == liveBranchCount { joined = INIT_STATE_INIT; }
                 }
-                if pre.mutable and pre.initState == "uninit_assigned" and joined == "maybe" {
-                    joined = "uninit_assigned";
+                if pre.mutable and pre.initState == INIT_STATE_UNINIT_ASSIGNED and joined == INIT_STATE_MAYBE {
+                    joined = INIT_STATE_UNINIT_ASSIGNED;
                 }
             }
             if joined =!= pre.initState or (trackFn and mergedCode =!= pre.code) {
@@ -2864,8 +2864,8 @@ joinLoopUpdates := fn(locals: List<Local>, preLen: Int, maxDepth: Int): List<Loc
                     li = li + 1;
                 }
             }
-            nextInit := if pre.initState == "uninit" or (pre.initState == "uninit_assigned" and not pre.mutable) {
-                "maybe"
+            nextInit := if pre.initState == INIT_STATE_UNINIT or (pre.initState == INIT_STATE_UNINIT_ASSIGNED and not pre.mutable) {
+                INIT_STATE_MAYBE
             } else {
                 pre.initState
             };
@@ -3314,8 +3314,8 @@ seedBlockDeclaredNames := fn(bodySink: String): List<String> {
 
 /** Joins a block's definite completion: scopes preserve it, loops require a true header, and conditionals require every arm plus a final else. */
 blockCompletion := fn(kind: String, completed: Bool, branchesComplete: Bool, hasElse: Bool, loopForever: Bool): Bool {
-    if kind == "scope" or kind == "matchsingle" or kind == "matchsingleval" { completed }
-    else if kind == "loop" { loopForever and completed }
+    if kind == BLOCK_KIND_SCOPE or kind == BLOCK_KIND_MATCH_SINGLE or kind == BLOCK_KIND_MATCH_SINGLE_VALUE { completed }
+    else if kind == BLOCK_KIND_LOOP { loopForever and completed }
     else { hasElse and branchesComplete and completed }
 }
 
@@ -6508,7 +6508,7 @@ locals: List<Local>, functions: List<FunctionInfo>, futureValues: List<FutureVal
         curTok := readQueue[rHead];
         rHead = rHead + 1;
         actIdx := latestActiveLocalByRuntime(locals, curTok);
-        if actIdx >= 0 and locals[actIdx].depth >= 0 and locals[actIdx].initState =!= "init" {
+        if actIdx >= 0 and locals[actIdx].depth >= 0 and locals[actIdx].initState =!= INIT_STATE_INIT {
             failAt(source, stmtAt, prefix, "cannot call before " + locals[actIdx].name + " is initialized");
         }
         pairRead := lookupPairsEntryBag(stripped.pairsText, curTok, true);
@@ -6782,7 +6782,7 @@ minExitedLexDepth: Int, locals: List<Local>): Unit {
         tok := readQ[rh];
         rh = rh + 1;
         actIdx := latestActiveLocalByRuntime(locals, tok);
-        if actIdx >= 0 and locals[actIdx].depth >= minExitedLexDepth and locals[actIdx].initState =!= "init" {
+        if actIdx >= 0 and locals[actIdx].depth >= minExitedLexDepth and locals[actIdx].initState =!= INIT_STATE_INIT {
             failAt(source, stmtAt, prefix, "cannot call before " + locals[actIdx].name + " is initialized");
         }
         pRead := lookupPairsEntryBag(stripped.pairsText, tok, true);
@@ -7157,13 +7157,13 @@ functionParams: List<String>, locals: List<Local>): List<Local> {
                             typed := parseLocalType(source, posVal, prefix, scopedAliases);
                             if not (declMutable and typed.writable) {
                                 afterType := skipTrivia(source, typed.next, prefix);
-                                var futInit := "init";
+                                var futInit := INIT_STATE_INIT;
                                 if isSingleEquals(source, afterType) {
                                     rhsStart := skipTrivia(source, afterType + 1, prefix);
                                     if isReservedInitMarker(source, rhsStart, prefix) >= 0 and not isListKind(typed.kind) {
-                                        futInit = if tokenInPipeBag(assignedBag, decl.name) { "init" }
-                                        else if declMutable { "uninit" }
-                                        else { "maybe" };
+                                        futInit = if tokenInPipeBag(assignedBag, decl.name) { INIT_STATE_INIT }
+                                        else if declMutable { INIT_STATE_UNINIT }
+                                        else { INIT_STATE_MAYBE };
                                     }
                                 }
                                 listLib.pushBack(mut futureValues, (name = decl.name, runtime = "", kind = typed.kind,
@@ -7178,7 +7178,7 @@ functionParams: List<String>, locals: List<Local>): List<Local> {
                         inferred := tryInferRootExprKind(source, posVal, prefix, scopedAliases, functions, functionParams, locals, futureValues, "", 0, 24);
                         if inferred.kind =!= "" and inferred.kind =!= "Unit" and (not declWritable or isListKind(inferred.kind)) {
                             listLib.pushBack(mut futureValues, (name = decl.name, runtime = "", kind = inferred.kind,
-                            at = decl.intValue, mutable = declMutable, writable = declWritable, initState = "init"));
+                            at = decl.intValue, mutable = declMutable, writable = declWritable, initState = INIT_STATE_INIT));
                             resolvedBag = appendPipeBag(resolvedBag, keyText);
                             progressed = true;
                         }
@@ -7194,7 +7194,7 @@ functionParams: List<String>, locals: List<Local>): List<Local> {
                             if inferred.kind =!= "" and inferred.kind =!= "Unit" {
                                 bindName := destr.namesText;
                                 listLib.pushBack(mut futureValues, (name = bindName, runtime = "",
-                                kind = inferred.kind, at = decl.intValue, mutable = destrMutable, writable = false, initState = "init"));
+                                kind = inferred.kind, at = decl.intValue, mutable = destrMutable, writable = false, initState = INIT_STATE_INIT));
                                 resolvedBag = appendPipeBag(resolvedBag, keyText);
                                 progressed = true;
                             }
@@ -7211,7 +7211,7 @@ functionParams: List<String>, locals: List<Local>): List<Local> {
                                 bindCursor = bindEnd + 1;
                                 comp := tupleComponent(inferred.kind, bindIndex);
                                 listLib.pushBack(mut futureValues, (name = bindName, runtime = "",
-                                kind = comp.kind, at = decl.intValue, mutable = destrMutable, writable = false, initState = "init"));
+                                kind = comp.kind, at = decl.intValue, mutable = destrMutable, writable = false, initState = INIT_STATE_INIT));
                                 bindIndex = bindIndex + 1;
                             }
                             resolvedBag = appendPipeBag(resolvedBag, keyText);
@@ -7764,7 +7764,7 @@ parseBinaryCtx := fn(target: String, source: String, position: Int, prefix: Stri
                     listLib.pushBack(mut declaredInBlock, bindName);
                     listLib.pushBack(mut blockLocals, (name = bindName, runtime = bindRuntime, kind = rhs.kind,
                     mutable = destructureMutable, writable = false, depth = blockLexDepth, constant = false, code = bindFnDeps,
-                    intValue = rhs.intValue, textValue = rhs.textValue, initState = "init"));
+                    intValue = rhs.intValue, textValue = rhs.textValue, initState = INIT_STATE_INIT));
                     if not blockExits {
                         declKw := if destructureMutable { "let " } else { "const " };
                         tsTypeAnn := if target == "ts" and (isListKind(rhs.kind) or isArrayKind(rhs.kind) or containsFnKind(rhs.kind)) { ": " + tsFunctionType(rhs.kind) } else { "" };
@@ -7794,7 +7794,7 @@ parseBinaryCtx := fn(target: String, source: String, position: Int, prefix: Stri
                     tupleFnDeps := if target == "ts" and not inferMode and containsFnKind(rhs.kind) { computeCallableRhsDeps(rhs.code) } else { "" };
                     listLib.pushBack(mut blockLocals, (name = "$tuple", runtime = tempRuntime, kind = "Unit",
                     mutable = false, writable = false, depth = blockLexDepth, constant = false, code = tupleFnDeps,
-                    intValue = 0, textValue = "", initState = "init"));
+                    intValue = 0, textValue = "", initState = INIT_STATE_INIT));
                     if not blockExits {
                         listLib.pushBack(mut statements, "const " + tempRuntime + " = " + rhs.code + "; void " + tempRuntime + ";");
                         listLib.pushBack(mut stmtOwners, if isPrunableExprForTarget(target, rhs.kind, rhs.code) { tempRuntime } else { "" });
@@ -7826,7 +7826,7 @@ parseBinaryCtx := fn(target: String, source: String, position: Int, prefix: Stri
                         };
                         listLib.pushBack(mut blockLocals, (name = bindName, runtime = bindRuntime, kind = comp.kind,
                         mutable = destructureMutable, writable = false, depth = blockLexDepth, constant = false, code = fieldFnDeps,
-                        intValue = 0, textValue = "", initState = "init"));
+                        intValue = 0, textValue = "", initState = INIT_STATE_INIT));
                         if not blockExits {
                             declKw := if destructureMutable { "let " } else { "const " };
                             tsTypeAnn := if target == "ts" and (isListKind(comp.kind) or isArrayKind(comp.kind) or containsFnKind(comp.kind)) { ": " + tsFunctionType(comp.kind) } else { "" };
@@ -8553,13 +8553,13 @@ parseBinaryCtx := fn(target: String, source: String, position: Int, prefix: Stri
                             loopItemCode := if target == "ts" and not inferMode and containsFnKind(loopItemKind) { computeCallableRhsDeps(loopSeqCode) } else { loopItemRuntime };
                             listLib.pushBack(mut loopLocals, (name = loopItemName, runtime = loopItemRuntime, kind = loopItemKind,
                             mutable = false, writable = false, depth = blockLexDepth, constant = false, code = loopItemCode,
-                            intValue = 0, textValue = "", initState = "init"));
+                            intValue = 0, textValue = "", initState = INIT_STATE_INIT));
                             loopHeadCode = "for (const " + loopItemRuntime + " of " + targetListCopyCode(target, loopSeqCode) + ") { void " + loopItemRuntime + "; ";
                         } else if loopSeqCode =!= "" {
                             tempItemRuntime := freshScopeTemp(loopLocals, "lite$item");
                             listLib.pushBack(mut loopLocals, (name = "$item", runtime = tempItemRuntime, kind = "Unit",
                             mutable = false, writable = false, depth = blockLexDepth, constant = false, code = "",
-                            intValue = 0, textValue = "", initState = "init"));
+                            intValue = 0, textValue = "", initState = INIT_STATE_INIT));
                             loopHeadCode = "for (const " + tempItemRuntime + " of " + targetListCopyCode(target, loopSeqCode) + ") { void " + tempItemRuntime + "; ";
                         } else {
                             condText := if loopCondCode == "" { "Boolean(true)" } else if loopCondCode == "false" { "Boolean(false)" } else { loopCondCode };
@@ -8652,7 +8652,7 @@ parseBinaryCtx := fn(target: String, source: String, position: Int, prefix: Stri
                     rejectDuplicateInBlockNames(source, localStart, prefix, declaredInBlock, localName);
                     var afterLocal := skipTrivia(source, localEnd, prefix);
                     var declParsed := intParsed("", 0, true, afterLocal);
-                    var declInitState := "init";
+                    var declInitState := INIT_STATE_INIT;
                     var varDiverged := false;
                     if textLib.startsWithAt(source, afterLocal, ":=") {
                         declParsed = self(target, source, skipTrivia(source, afterLocal + 2, prefix), prefix, blockLocals, functions, params, currentName, "", 0, ctxs, bodyDepth, inferMode, "", blockAliases);
@@ -8675,7 +8675,7 @@ parseBinaryCtx := fn(target: String, source: String, position: Int, prefix: Stri
                             zeroEnd := isZeroInitLiteral(source, rhsStart, prefix);
                             if reservedEnd >= 0 {
                                 if isListKind(typed.kind) { failAt(source, localStart, prefix, "reserved storage is not supported for List"); }
-                                declInitState = if tokenInPipeBag(blockAssignedBag, localName) { "uninit_assigned" } else { "uninit" };
+                                declInitState = if tokenInPipeBag(blockAssignedBag, localName) { INIT_STATE_UNINIT_ASSIGNED } else { INIT_STATE_UNINIT };
                                 declParsed = zeroParsed(target, typed.kind, reservedEnd);
                             } else if zeroEnd >= 0 and not numeric.isNumericKind(typed.kind) {
                                 declParsed = zeroParsed(target, typed.kind, zeroEnd);
@@ -8704,7 +8704,7 @@ parseBinaryCtx := fn(target: String, source: String, position: Int, prefix: Stri
                         blockLocals = mergeOuterCallableUpdatesFromCode(blockLocals, declParsed.code);
                     }
                     runtime := claimOrMakeLocalRuntime(target, blockLocals, localName, "", blockLexDepth);
-                    varFnDeps := if target == "ts" and not inferMode and declInitState == "init" and containsFnKind(declParsed.kind) { computeCallableRhsDeps(declParsed.code) } else { "" };
+                    varFnDeps := if target == "ts" and not inferMode and declInitState == INIT_STATE_INIT and containsFnKind(declParsed.kind) { computeCallableRhsDeps(declParsed.code) } else { "" };
                     listLib.pushBack(mut declaredInBlock, localName);
                     listLib.pushBack(mut blockLocals, (name = localName, runtime = runtime, kind = declParsed.kind,
                     mutable = true, writable = declWritable, depth = blockLexDepth, constant = false, code = varFnDeps,
@@ -8757,7 +8757,7 @@ parseBinaryCtx := fn(target: String, source: String, position: Int, prefix: Stri
                     listLib.pushBack(mut declaredInBlock, localName);
                     listLib.pushBack(mut blockLocals, (name = localName, runtime = runtime, kind = declParsed.kind,
                     mutable = false, writable = true, depth = blockLexDepth, constant = false, code = mutFnDeps,
-                    intValue = declParsed.intValue, textValue = declParsed.textValue, initState = "init"));
+                    intValue = declParsed.intValue, textValue = declParsed.textValue, initState = INIT_STATE_INIT));
                     if not blockExits {
                         mutInitCode := copiedValueCode(target, declParsed.kind, declParsed.code);
                         tsTypeAnn := if target == "ts" and (isListKind(declParsed.kind) or isArrayKind(declParsed.kind) or containsFnKind(declParsed.kind)) { ": " + tsFunctionType(declParsed.kind) } else { "" };
@@ -8791,7 +8791,7 @@ parseBinaryCtx := fn(target: String, source: String, position: Int, prefix: Stri
                     listLib.pushBack(mut declaredInBlock, itemName);
                     listLib.pushBack(mut blockLocals, (name = itemName, runtime = runtime, kind = declParsed.kind,
                     mutable = false, writable = false, depth = blockLexDepth, constant = declParsed.constant, code = valFnDeps,
-                    intValue = declParsed.intValue, textValue = declParsed.textValue, initState = "init"));
+                    intValue = declParsed.intValue, textValue = declParsed.textValue, initState = INIT_STATE_INIT));
                     if not blockExits {
                         valInitCode := copiedValueCode(target, declParsed.kind, declParsed.code);
                         tsTypeAnn := if target == "ts" and (isListKind(declParsed.kind) or isArrayKind(declParsed.kind) or containsFnKind(declParsed.kind)) { ": " + tsFunctionType(declParsed.kind) } else { "" };
@@ -8810,14 +8810,14 @@ parseBinaryCtx := fn(target: String, source: String, position: Int, prefix: Stri
                     typed := parseLocalType(source, afterItemName + 1, prefix, blockAliases);
                     afterType := skipTrivia(source, typed.next, prefix);
                     var declParsed := zeroParsed(target, typed.kind, afterType);
-                    var declInitState := "init";
+                    var declInitState := INIT_STATE_INIT;
                     if isSingleEquals(source, afterType) {
                         rhsStart := skipTrivia(source, afterType + 1, prefix);
                         reservedEnd := isReservedInitMarker(source, rhsStart, prefix);
                         zeroEnd := isZeroInitLiteral(source, rhsStart, prefix);
                         if reservedEnd >= 0 {
                             if isListKind(typed.kind) { failAt(source, itemStart, prefix, "reserved storage is not supported for List"); }
-                            declInitState = if tokenInPipeBag(blockAssignedBag, itemName) { "uninit_assigned" } else { "uninit" };
+                            declInitState = if tokenInPipeBag(blockAssignedBag, itemName) { INIT_STATE_UNINIT_ASSIGNED } else { INIT_STATE_UNINIT };
                             declParsed = zeroParsed(target, typed.kind, reservedEnd);
                         } else if zeroEnd >= 0 and not numeric.isNumericKind(typed.kind) {
                             declParsed = zeroParsed(target, typed.kind, zeroEnd);
@@ -8839,17 +8839,17 @@ parseBinaryCtx := fn(target: String, source: String, position: Int, prefix: Stri
                     }
                     runtime := claimOrMakeLocalRuntime(target, blockLocals, itemName, "", blockLexDepth);
                     declCode := assignValueCode(target, typed.kind, declParsed.kind, declParsed.code);
-                    annFnDeps := if target == "ts" and not inferMode and declInitState == "init" and containsFnKind(typed.kind) { computeCallableRhsDeps(declParsed.code) } else { "" };
+                    annFnDeps := if target == "ts" and not inferMode and declInitState == INIT_STATE_INIT and containsFnKind(typed.kind) { computeCallableRhsDeps(declParsed.code) } else { "" };
                     listLib.pushBack(mut declaredInBlock, itemName);
                     listLib.pushBack(mut blockLocals, (name = itemName, runtime = runtime, kind = typed.kind,
-                    mutable = false, writable = typed.writable, depth = blockLexDepth, constant = if declInitState == "init" and not numeric.isFloatKind(typed.kind) { declParsed.constant } else { false },
+                    mutable = false, writable = typed.writable, depth = blockLexDepth, constant = if declInitState == INIT_STATE_INIT and not numeric.isFloatKind(typed.kind) { declParsed.constant } else { false },
                     code = annFnDeps, intValue = declParsed.intValue, textValue = declParsed.textValue, initState = declInitState));
                     if not blockExits {
                         if declParsed.kind == "Never" {
                             listLib.pushBack(mut statements, stmtReturnPrefix + "(" + declCode + ");");
                             blockExits = true;
                         } else {
-                            declKw := if declInitState == "init" { "const " } else { "let " };
+                            declKw := if declInitState == INIT_STATE_INIT { "const " } else { "let " };
                             tsTypeAnn := if target == "ts" and (isListKind(typed.kind) or isArrayKind(typed.kind) or containsFnKind(typed.kind)) { ": " + tsFunctionType(typed.kind) } else { "" };
                             listLib.pushBack(mut statements, declKw + runtime + tsTypeAnn + " = " + declCode + "; void " + runtime + ";");
                             listLib.pushBack(mut stmtOwners, if isPrunableExprForTarget(target, typed.kind, declCode) { runtime } else { "" });
@@ -8865,8 +8865,8 @@ parseBinaryCtx := fn(target: String, source: String, position: Int, prefix: Stri
                     index := localIndex(blockLocals, itemName);
                     if index < 0 { failAt(source, itemStart, prefix, "unknown value " + itemName); }
                     entry := blockLocals[index];
-                    if entry.initState == "init" and not entry.mutable { failAt(source, itemStart, prefix, "cannot assign to immutable local " + itemName); }
-                    if entry.initState == "maybe" and not entry.mutable { failAt(source, itemStart, prefix, "cannot assign to possibly initialized immutable local " + itemName); }
+                    if entry.initState == INIT_STATE_INIT and not entry.mutable { failAt(source, itemStart, prefix, "cannot assign to immutable local " + itemName); }
+                    if entry.initState == INIT_STATE_MAYBE and not entry.mutable { failAt(source, itemStart, prefix, "cannot assign to possibly initialized immutable local " + itemName); }
                     rhs := self(target, source, skipTrivia(source, afterItemName + 1, prefix), prefix, blockLocals, functions, params, currentName, entry.kind, 0, ctxs, bodyDepth, inferMode, "", blockAliases);
                     if inferMode { blockMarkers = collectParsedMarkers(blockMarkers, rhs); }
                     if not isCompatibleKind(entry.kind, rhs.kind) {
@@ -8889,7 +8889,7 @@ parseBinaryCtx := fn(target: String, source: String, position: Int, prefix: Stri
                     };
                     listLib.pushBack(mut blockLocals, (name = entry.name, runtime = entry.runtime, kind = entry.kind,
                     mutable = entry.mutable, writable = entry.writable, depth = entry.depth, constant = false, code = nextFnDeps,
-                    intValue = rhs.intValue, textValue = rhs.textValue, initState = "init"));
+                    intValue = rhs.intValue, textValue = rhs.textValue, initState = INIT_STATE_INIT));
                     if not blockExits {
                         if rhs.kind == "Never" {
                             listLib.pushBack(mut statements, stmtReturnPrefix + "(" + rhsCode + ");");
@@ -8913,7 +8913,7 @@ parseBinaryCtx := fn(target: String, source: String, position: Int, prefix: Stri
                     index := localIndex(blockLocals, itemName);
                     if index < 0 { failAt(source, itemStart, prefix, "unknown value " + itemName); }
                     entry := blockLocals[index];
-                    if entry.initState =!= "init" { failAt(source, itemStart, prefix, "cannot read uninitialized local " + itemName); }
+                    if entry.initState =!= INIT_STATE_INIT { failAt(source, itemStart, prefix, "cannot read uninitialized local " + itemName); }
                     if not entry.mutable { failAt(source, itemStart, prefix, "cannot assign to immutable local " + itemName); }
                     rhs := self(target, source, skipTrivia(source, afterItemName + compound.width, prefix), prefix, blockLocals, functions, params, currentName, entry.kind, 0, ctxs, bodyDepth, inferMode, "", blockAliases);
                     if inferMode { blockMarkers = collectParsedMarkers(blockMarkers, rhs); }
@@ -8928,7 +8928,7 @@ parseBinaryCtx := fn(target: String, source: String, position: Int, prefix: Stri
                     }
                     listLib.pushBack(mut blockLocals, (name = entry.name, runtime = entry.runtime, kind = entry.kind,
                     mutable = entry.mutable, writable = entry.writable, depth = entry.depth, constant = false, code = entry.code,
-                    intValue = 0, textValue = "", initState = "init"));
+                    intValue = 0, textValue = "", initState = INIT_STATE_INIT));
                     if not blockExits {
                         listLib.pushBack(mut statements, entry.runtime + " = " + rhsCode + ";");
                         isCompoundLocalOwner := not localsRangeUsesRuntime(blockLocals, outerLocalsLen, entry.runtime);
@@ -9405,11 +9405,11 @@ parseBinaryCtx := fn(target: String, source: String, position: Int, prefix: Stri
             selfRuntime := freshScopeTemp(locals, "lite$self");
             listLib.pushBack(mut fnLocals, (name = "$self", runtime = selfRuntime, kind = fnKind,
             mutable = false, writable = false, depth = fnLexDepth, constant = false, code = "",
-            intValue = 0, textValue = "", initState = "init"));
+            intValue = 0, textValue = "", initState = INIT_STATE_INIT));
             loop locals as outerEntry {
                 if outerEntry.name =!= "$self" and outerEntry.depth >= -1 {
-                    capturedInit := if outerEntry.initState == "uninit_assigned" { "init" }
-                    else if outerEntry.initState == "uninit" and not outerEntry.mutable { "maybe" }
+                    capturedInit := if outerEntry.initState == INIT_STATE_UNINIT_ASSIGNED { INIT_STATE_INIT }
+                    else if outerEntry.initState == INIT_STATE_UNINIT and not outerEntry.mutable { INIT_STATE_MAYBE }
                     else { outerEntry.initState };
                     capturedConst := if outerEntry.mutable or outerEntry.writable { false } else { outerEntry.constant };
                     listLib.pushBack(mut fnLocals, (name = outerEntry.name, runtime = outerEntry.runtime, kind = outerEntry.kind,
@@ -9437,7 +9437,7 @@ parseBinaryCtx := fn(target: String, source: String, position: Int, prefix: Stri
                 pRuntime := localRuntimeName(target, fnLocals, pName, "", fnLexDepth);
                 listLib.pushBack(mut fnLocals, (name = pName, runtime = pRuntime, kind = pKind,
                 mutable = false, writable = false, depth = fnLexDepth, constant = false, code = "",
-                intValue = 0, textValue = "", initState = "init"));
+                intValue = 0, textValue = "", initState = INIT_STATE_INIT));
                 if pBindIdx > 0 { tsParamsCode = tsParamsCode + ", "; }
                 tsParamsCode = tsParamsCode + pRuntime + ": " + tsFunctionType(pKind);
                 paramVoidStmts = paramVoidStmts + "void " + pRuntime + "; ";
@@ -9492,7 +9492,7 @@ parseBinaryCtx := fn(target: String, source: String, position: Int, prefix: Stri
                 hasLocalShadow := index >= 0 and locals[index].depth >= -1;
                 if hasLocalShadow {
                     entry := locals[index];
-                    if entry.initState =!= "init" {
+                    if entry.initState =!= INIT_STATE_INIT {
                         failAt(source, nameStart, prefix, "cannot read uninitialized local " + name);
                     }
                     left = (kind = entry.kind, code = entry.runtime, intValue = entry.intValue, textValue = entry.textValue, constant = entry.constant, next = next);
@@ -9508,7 +9508,7 @@ parseBinaryCtx := fn(target: String, source: String, position: Int, prefix: Stri
                         left = (kind = "ListOp", code = name, intValue = 0, textValue = name, constant = false, next = afterName);
                     } else if index >= 0 {
                         entry := locals[index];
-                        if entry.initState =!= "init" {
+                        if entry.initState =!= INIT_STATE_INIT {
                             failAt(source, nameStart, prefix, "cannot read uninitialized local " + name);
                         }
                         left = (kind = entry.kind, code = entry.runtime, intValue = entry.intValue, textValue = entry.textValue, constant = entry.constant, next = next);
@@ -9665,12 +9665,12 @@ parseBinaryCtx := fn(target: String, source: String, position: Int, prefix: Stri
                 if seqItemKind == "Unit" {
                     listLib.pushBack(mut loopLocals, (name = seqItemName, runtime = targetUnitLiteralCode(target), kind = "Unit",
                     mutable = false, writable = false, depth = loopItemLexDepth, constant = true, code = targetUnitLiteralCode(target),
-                    intValue = 0, textValue = "", initState = "init"));
+                    intValue = 0, textValue = "", initState = INIT_STATE_INIT));
                 } else {
                     seqItemCode := if target == "ts" and not passInfer and containsFnKind(seqItemKind) { computeCallableRhsDeps(seqCode) } else { loopItemMetaVar };
                     listLib.pushBack(mut loopLocals, (name = seqItemName, runtime = loopItemMetaVar, kind = seqItemKind,
                     mutable = false, writable = false, depth = loopItemLexDepth, constant = false, code = seqItemCode,
-                    intValue = 0, textValue = "", initState = "init"));
+                    intValue = 0, textValue = "", initState = INIT_STATE_INIT));
                 }
             }
             loopBodyLexDepthStr := integer.intText(maxLocalLexDepth(loopLocals) + 1);
@@ -11433,13 +11433,13 @@ parseInitializerExpression := fn(target: String, source: String, position: Int, 
 atValueTail := fn(blocks: List<String>, blockCount: Int): Bool {
     if blockCount <= 0 { return false; }
     kind := blocks[blockCount - 1];
-    kind == "function" or kind == "ifvalue" or kind == "matchvalue" or kind == "matchelseval" or kind == "matchsingleval"
+    kind == BLOCK_KIND_FUNCTION or kind == BLOCK_KIND_IF_VALUE or kind == BLOCK_KIND_MATCH_VALUE or kind == BLOCK_KIND_MATCH_ELSE_VALUE or kind == BLOCK_KIND_MATCH_SINGLE_VALUE
 }
 
 /** True when `blocks` contains an enclosing loop body, so a bare break or continue has a nearest loop to target. */
 insideLoop := fn(blocks: List<String>): Bool {
     loop blocks as kind {
-        if kind == "loop" { return true; }
+        if kind == BLOCK_KIND_LOOP { return true; }
     }
     false
 }
@@ -11948,7 +11948,7 @@ moduleIdentity: String, neededFns: String, skipSoftBuiltins: Bool): Items {
             }
             listLib.pushBack(mut locals, (name = exported.name, runtime = "", kind = "Module", mutable = false,
             writable = false, depth = 0, constant = false, code = "", intValue = exported.intValue,
-            textValue = exported.name, initState = "init"));
+            textValue = exported.name, initState = INIT_STATE_INIT));
         } else if exported.kind == "PublicFunction" {
             if findFunction(functions, exported.name) >= 0 or localIndex(locals, exported.name) >= 0 {
                 diagLib.fail(prefix, "duplicate imported public name " + exported.name);
@@ -11976,7 +11976,7 @@ moduleIdentity: String, neededFns: String, skipSoftBuiltins: Bool): Items {
             }
             listLib.pushBack(mut locals, (name = exported.name, runtime = exported.runtime, kind = exported.code,
             mutable = false, writable = false, depth = 0, constant = false, code = exported.runtime,
-            intValue = 0, textValue = "", initState = "init"));
+            intValue = 0, textValue = "", initState = INIT_STATE_INIT));
             if textLib.indexOfText(exported.name, ".", 0) < 0 {
                 listLib.pushBack(mut blockDecls, (name = exported.name, depth = 0));
             }
@@ -12065,13 +12065,13 @@ moduleIdentity: String, neededFns: String, skipSoftBuiltins: Bool): Items {
                             typed := parseLocalType(source, posVal, prefix, aliases);
                             if not (declMutable and typed.writable) {
                                 afterType := skipTrivia(source, typed.next, prefix);
-                                var futInit := "init";
+                                var futInit := INIT_STATE_INIT;
                                 if isSingleEquals(source, afterType) {
                                     rhsStart := skipTrivia(source, afterType + 1, prefix);
                                     if isReservedInitMarker(source, rhsStart, prefix) >= 0 and not isListKind(typed.kind) {
-                                        futInit = if listLib.listContainsText(rootAssignedNames, decl.name) { "init" }
-                                        else if declMutable { "uninit" }
-                                        else { "maybe" };
+                                        futInit = if listLib.listContainsText(rootAssignedNames, decl.name) { INIT_STATE_INIT }
+                                        else if declMutable { INIT_STATE_UNINIT }
+                                        else { INIT_STATE_MAYBE };
                                     }
                                 }
                                 listLib.pushBack(mut futureValues, (name = decl.name, runtime = decl.runtime, kind = typed.kind,
@@ -12086,7 +12086,7 @@ moduleIdentity: String, neededFns: String, skipSoftBuiltins: Bool): Items {
                         inferred := tryInferRootExprKind(source, posVal, prefix, aliases, functions, functionParams, locals, futureValues, "", 0, 24);
                         if inferred.kind =!= "" and inferred.kind =!= "Unit" and (not declWritable or isListKind(inferred.kind)) {
                             listLib.pushBack(mut futureValues, (name = decl.name, runtime = decl.runtime, kind = inferred.kind,
-                            at = decl.intValue, mutable = declMutable, writable = declWritable, initState = "init"));
+                            at = decl.intValue, mutable = declMutable, writable = declWritable, initState = INIT_STATE_INIT));
                             resolvedDeclBag = appendPipeBag(resolvedDeclBag, keyText);
                             progressed = true;
                         }
@@ -12102,7 +12102,7 @@ moduleIdentity: String, neededFns: String, skipSoftBuiltins: Bool): Items {
                             if inferred.kind =!= "" and inferred.kind =!= "Unit" {
                                 bindName := destr.namesText;
                                 listLib.pushBack(mut futureValues, (name = bindName, runtime = moduleValueRuntime(target, moduleKey, bindName),
-                                kind = inferred.kind, at = decl.intValue, mutable = destrMutable, writable = false, initState = "init"));
+                                kind = inferred.kind, at = decl.intValue, mutable = destrMutable, writable = false, initState = INIT_STATE_INIT));
                                 resolvedDeclBag = appendPipeBag(resolvedDeclBag, keyText);
                                 progressed = true;
                             }
@@ -12119,7 +12119,7 @@ moduleIdentity: String, neededFns: String, skipSoftBuiltins: Bool): Items {
                                 bindCursor = bindEnd + 1;
                                 comp := tupleComponent(inferred.kind, bindIndex);
                                 listLib.pushBack(mut futureValues, (name = bindName, runtime = moduleValueRuntime(target, moduleKey, bindName),
-                                kind = comp.kind, at = decl.intValue, mutable = destrMutable, writable = false, initState = "init"));
+                                kind = comp.kind, at = decl.intValue, mutable = destrMutable, writable = false, initState = INIT_STATE_INIT));
                                 bindIndex = bindIndex + 1;
                             }
                             resolvedDeclBag = appendPipeBag(resolvedDeclBag, keyText);
@@ -12184,12 +12184,12 @@ moduleIdentity: String, neededFns: String, skipSoftBuiltins: Bool): Items {
                 failAt(source, position, prefix, "unexpected }");
             }
             blockKind := blocks[blockCount - 1];
-            if (blockKind == "ifvalue" or blockKind == "matchvalue" or blockKind == "matchelseval" or blockKind == "matchsingleval") and
+            if (blockKind == BLOCK_KIND_IF_VALUE or blockKind == BLOCK_KIND_MATCH_VALUE or blockKind == BLOCK_KIND_MATCH_ELSE_VALUE or blockKind == BLOCK_KIND_MATCH_SINGLE_VALUE) and
             currentResult =!= "Unit" and not currentReturned {
                 failAt(source, position, prefix, "branch of function " + currentName + " must return " + displayKind(currentResult));
             }
             after := skipTrivia(source, position + 1, prefix);
-            if (blockKind == "if" or blockKind == "ifvalue") and after < size and textLib.wordAt(source, after, "else") {
+            if (blockKind == BLOCK_KIND_IF or blockKind == BLOCK_KIND_IF_VALUE) and after < size and textLib.wordAt(source, after, "else") {
                 locals = visibleLocals(locals, depth);
                 keptDecls := popBlockDecls(blockDecls, depth);
                 blockDecls = [];
@@ -12252,7 +12252,7 @@ moduleIdentity: String, neededFns: String, skipSoftBuiltins: Bool): Items {
                     blockCount = blockCount + 1;
                 } else {
                     if currentLive { listLib.pushBack(mut items, (kind = "Else", name = "", runtime = "", code = "", intValue = 0, textValue = "")); }
-                    listLib.pushBack(mut blocks, if blockKind == "ifvalue" { "ifvalue" } else { "else" });
+                    listLib.pushBack(mut blocks, if blockKind == BLOCK_KIND_IF_VALUE { BLOCK_KIND_IF_VALUE } else { BLOCK_KIND_ELSE });
                     blockCount = blockCount + 1;
                     position = expectSymbol(source, afterElse, "{", prefix);
                     elseArmOpen = position - 1;
@@ -12264,7 +12264,7 @@ moduleIdentity: String, neededFns: String, skipSoftBuiltins: Bool): Items {
                 position = skipTrivia(source, position, prefix);
                 continue;
             }
-            if blockKind == "match" or blockKind == "matchvalue" {
+            if blockKind == BLOCK_KIND_MATCH or blockKind == BLOCK_KIND_MATCH_VALUE {
                 nextArmStart := skipItemSeparators(source, position + 1, prefix);
                 if nextArmStart >= size {
                     failAt(source, position + 1, prefix, "expected } to close match");
@@ -12309,7 +12309,7 @@ moduleIdentity: String, neededFns: String, skipSoftBuiltins: Bool): Items {
                     armOpen = afterUnderscore;
                     hasElse = true;
                     if currentLive { listLib.pushBack(mut items, (kind = "Else", name = "", runtime = "", code = "", intValue = 0, textValue = "")); }
-                    listLib.pushBack(mut blocks, if blockKind == "matchvalue" { "matchelseval" } else { "matchelse" });
+                    listLib.pushBack(mut blocks, if blockKind == BLOCK_KIND_MATCH_VALUE { BLOCK_KIND_MATCH_ELSE_VALUE } else { BLOCK_KIND_MATCH_ELSE });
                     blockCount = blockCount + 1;
                 } else {
                     armOpen = scanConditionOpen(source, nextArmStart, prefix);
@@ -12360,7 +12360,7 @@ moduleIdentity: String, neededFns: String, skipSoftBuiltins: Bool): Items {
                 continue;
             }
             var closeBracePos := position;
-            if blockKind == "matchelse" or blockKind == "matchelseval" or blockKind == "matchsingle" or blockKind == "matchsingleval" {
+            if blockKind == BLOCK_KIND_MATCH_ELSE or blockKind == BLOCK_KIND_MATCH_ELSE_VALUE or blockKind == BLOCK_KIND_MATCH_SINGLE or blockKind == BLOCK_KIND_MATCH_SINGLE_VALUE {
                 afterFallback := skipItemSeparators(source, position + 1, prefix);
                 if afterFallback >= size {
                     failAt(source, position + 1, prefix, "expected } to close match");
@@ -12379,7 +12379,7 @@ moduleIdentity: String, neededFns: String, skipSoftBuiltins: Bool): Items {
             loop keptAssigned as ad { listLib.pushBack(mut blockAssignedDecls, ad); }
             aliases = popBlockAliases(aliases, depth);
             depth = depth - 1;
-            if blockKind == "function" {
+            if blockKind == BLOCK_KIND_FUNCTION {
                 locals = withoutFutureValues(locals);
                 if currentResult =!= "Unit" and not currentReturned {
                     failAt(source, position, prefix, "function " + currentName + " must return " + currentResult);
@@ -12406,7 +12406,7 @@ moduleIdentity: String, neededFns: String, skipSoftBuiltins: Bool): Items {
                 currentName = "";
                 currentResult = "";
                 currentReturned = false;
-            } else if blockKind == "loop" {
+            } else if blockKind == BLOCK_KIND_LOOP {
                 loopId := listLib.popBack(mut loopIds);
                 loopTryKey := listLib.popBack(mut loopTryKeys);
                 loopStartTransfers := listLib.popBack(mut loopTransferStarts);
@@ -12436,9 +12436,9 @@ moduleIdentity: String, neededFns: String, skipSoftBuiltins: Bool): Items {
                     }
                 }
                 if currentLive { listLib.pushBack(mut items, (kind = "EndLoop", name = "", runtime = "", code = "", intValue = 0, textValue = "")); }
-            } else if blockKind == "scope" {
+            } else if blockKind == BLOCK_KIND_SCOPE {
                 if currentLive { listLib.pushBack(mut items, (kind = "EndScope", name = "", runtime = "", code = "", intValue = 0, textValue = "")); }
-            } else if blockKind == "matchsingle" or blockKind == "matchsingleval" {
+            } else if blockKind == BLOCK_KIND_MATCH_SINGLE or blockKind == BLOCK_KIND_MATCH_SINGLE_VALUE {
                 droppedCondCtx := listLib.popBack(mut stmtCtxs);
                 if currentLive { listLib.pushBack(mut items, (kind = "EndScope", name = "", runtime = "", code = "", intValue = 0, textValue = "")); }
             } else {
@@ -12446,13 +12446,13 @@ moduleIdentity: String, neededFns: String, skipSoftBuiltins: Bool): Items {
                 if currentLive { listLib.pushBack(mut items, (kind = "EndIf", name = "", runtime = "", code = "", intValue = 0, textValue = "")); }
             }
             completedReturn := blockCompletion(blockKind, currentReturned, branchesReturned, hasElse, loopForever);
-            completedStop := blockCompletion(blockKind, if blockKind == "loop" { currentReturned } else { currentStopped },
+            completedStop := blockCompletion(blockKind, if blockKind == BLOCK_KIND_LOOP { currentReturned } else { currentStopped },
             branchesStopped, hasElse, loopForever);
-            if blockKind == "loop" and completedReturn and currentLive {
+            if blockKind == BLOCK_KIND_LOOP and completedReturn and currentLive {
                 listLib.pushBack(mut items, (kind = "Unreachable", name = "", runtime = "", code = "", intValue = 0, textValue = ""));
             }
             parent := listLib.popBack(mut savedStates);
-            if blockKind == "if" or blockKind == "ifvalue" or blockKind == "else" or blockKind == "matchelse" or blockKind == "matchelseval" {
+            if blockKind == BLOCK_KIND_IF or blockKind == BLOCK_KIND_IF_VALUE or blockKind == BLOCK_KIND_ELSE or blockKind == BLOCK_KIND_MATCH_ELSE or blockKind == BLOCK_KIND_MATCH_ELSE_VALUE {
                 if currentLive and not currentStopped {
                     nextBranchUpdates := recordBranchUpdates(locals, parent.preLocalsLen, depth, blockCount, branchUpdates);
                     branchUpdates = [];
@@ -12460,24 +12460,24 @@ moduleIdentity: String, neededFns: String, skipSoftBuiltins: Bool): Items {
                     liveBranchCount = liveBranchCount + 1;
                 }
                 truncated := truncateLocals(locals, parent.preLocalsLen);
-                joinedLocals := joinBranchLocals(truncated, parent.preLocalsLen, blockCount, hasElse or blockKind == "else", liveBranchCount, branchUpdates);
+                joinedLocals := joinBranchLocals(truncated, parent.preLocalsLen, blockCount, hasElse or blockKind == BLOCK_KIND_ELSE, liveBranchCount, branchUpdates);
                 keptUpdates := popBranchUpdates(branchUpdates, blockCount);
                 locals = [];
                 loop joinedLocals as l { listLib.pushBack(mut locals, l); }
                 branchUpdates = [];
                 loop keptUpdates as u { listLib.pushBack(mut branchUpdates, u); }
-            } else if blockKind == "loop" {
+            } else if blockKind == BLOCK_KIND_LOOP {
                 loopJoined := joinLoopUpdates(locals, parent.preLocalsLen, depth);
                 locals = [];
                 loop loopJoined as l { listLib.pushBack(mut locals, l); }
-            } else if blockKind == "function" {
+            } else if blockKind == BLOCK_KIND_FUNCTION {
                 truncatedFn := truncateLocals(locals, parent.preLocalsLen);
                 locals = [];
                 loop truncatedFn as l { listLib.pushBack(mut locals, l); }
             }
             liveBranchCount = parent.liveBranchCount;
-            currentReturned = parent.returned or (not parent.stopped and completedReturn and blockKind =!= "function");
-            currentStopped = parent.stopped or (completedStop and blockKind =!= "function");
+            currentReturned = parent.returned or (not parent.stopped and completedReturn and blockKind =!= BLOCK_KIND_FUNCTION);
+            currentStopped = parent.stopped or (completedStop and blockKind =!= BLOCK_KIND_FUNCTION);
             branchesReturned = parent.branchesReturned;
             branchesStopped = parent.branchesStopped;
             hasElse = parent.hasElse;
@@ -12534,7 +12534,7 @@ moduleIdentity: String, neededFns: String, skipSoftBuiltins: Bool): Items {
             branchesStopped = true;
             hasElse = false;
             loopForever = false;
-            listLib.pushBack(mut blocks, "scope");
+            listLib.pushBack(mut blocks, BLOCK_KIND_SCOPE);
             blockCount = blockCount + 1;
             depth = depth + 1;
             if hasInnerAlias { aliases = collectBlockTypeAliases(source, position, prefix, depth, aliases); }
@@ -12605,7 +12605,7 @@ moduleIdentity: String, neededFns: String, skipSoftBuiltins: Bool): Items {
                 bindFnCode := if target == "ts" and containsFnKind(rhs.kind) { computeCallableRhsDeps(rhs.code) } else { rhs.code };
                 listLib.pushBack(mut locals, (name = bindName, runtime = bindRuntime, kind = rhs.kind,
                 mutable = destructureMutable, writable = false, depth = depth, constant = false, code = bindFnCode,
-                intValue = rhs.intValue, textValue = rhs.textValue, initState = "init"));
+                intValue = rhs.intValue, textValue = rhs.textValue, initState = INIT_STATE_INIT));
                 if currentLive and not currentStopped {
                     itemPrefix := if destructureMutable { "Var" } else { "Local" };
                     destrCode := copiedValueCode(target, rhs.kind, rhs.code);
@@ -12632,7 +12632,7 @@ moduleIdentity: String, neededFns: String, skipSoftBuiltins: Bool): Items {
             tupleCode := if target == "ts" and containsFnKind(rhs.kind) { computeCallableRhsDeps(rhs.code) } else { "" };
             listLib.pushBack(mut locals, (name = "$tuple", runtime = tempRuntime, kind = "Unit",
             mutable = false, writable = false, depth = depth, constant = false, code = tupleCode,
-            intValue = 0, textValue = "", initState = "init"));
+            intValue = 0, textValue = "", initState = INIT_STATE_INIT));
             if currentLive and not currentStopped {
                 listLib.pushBack(mut items, (kind = "LocalTuple", name = "", runtime = tempRuntime,
                 code = rhs.code, intValue = 0, textValue = ""));
@@ -12664,7 +12664,7 @@ moduleIdentity: String, neededFns: String, skipSoftBuiltins: Bool): Items {
                 fieldLocalCode := if target == "ts" and containsFnKind(comp.kind) { computeCallableRhsDeps(fieldCode) } else { fieldCode };
                 listLib.pushBack(mut locals, (name = bindName, runtime = bindRuntime, kind = comp.kind,
                 mutable = destructureMutable, writable = false, depth = depth, constant = false, code = fieldLocalCode,
-                intValue = 0, textValue = "", initState = "init"));
+                intValue = 0, textValue = "", initState = INIT_STATE_INIT));
                 if currentLive and not currentStopped {
                     itemPrefix := if destructureMutable { "Var" } else { "Local" };
                     listLib.pushBack(mut items, (kind = itemPrefix + storageKind(comp.kind), name = bindName, runtime = bindRuntime,
@@ -13112,7 +13112,7 @@ moduleIdentity: String, neededFns: String, skipSoftBuiltins: Bool): Items {
             hasElse = false;
             loopForever = false;
             listLib.pushBack(mut stmtCtxs, ifBarrierCtx);
-            listLib.pushBack(mut blocks, if valueTailBranch { "ifvalue" } else { "if" });
+            listLib.pushBack(mut blocks, if valueTailBranch { BLOCK_KIND_IF_VALUE } else { BLOCK_KIND_IF });
             blockCount = blockCount + 1;
             depth = depth + 1;
             if hasInnerAlias {
@@ -13268,9 +13268,9 @@ moduleIdentity: String, neededFns: String, skipSoftBuiltins: Bool): Items {
             hasElse = isFirstFallback;
             loopForever = false;
             firstBlockKind := if isFirstFallback {
-                if valueTailBranch { "matchsingleval" } else { "matchsingle" }
+                if valueTailBranch { BLOCK_KIND_MATCH_SINGLE_VALUE } else { BLOCK_KIND_MATCH_SINGLE }
             } else {
-                if valueTailBranch { "matchvalue" } else { "match" }
+                if valueTailBranch { BLOCK_KIND_MATCH_VALUE } else { BLOCK_KIND_MATCH }
             };
             listLib.pushBack(mut stmtCtxs, matchBarrierCtx);
             listLib.pushBack(mut blocks, firstBlockKind);
@@ -13384,7 +13384,7 @@ moduleIdentity: String, neededFns: String, skipSoftBuiltins: Bool): Items {
                 listLib.pushBack(mut blockDecls, (name = itemName, depth = depth + 1));
                 listLib.pushBack(mut locals, (name = itemName, runtime = runtime, kind = itemKind,
                 mutable = false, writable = false, depth = depth + 1, constant = false, code = itemLocalCode,
-                intValue = 0, textValue = "", initState = "init"));
+                intValue = 0, textValue = "", initState = INIT_STATE_INIT));
                 if currentLive and not currentStopped {
                     listLib.pushBack(mut items, (kind = "LoopSeq", name = itemName, runtime = runtime, code = sequenceCode,
                     intValue = 0, textValue = itemKind));
@@ -13397,7 +13397,7 @@ moduleIdentity: String, neededFns: String, skipSoftBuiltins: Bool): Items {
                 tempItemRuntime := freshScopeTemp(locals, "lite$item");
                 listLib.pushBack(mut locals, (name = "$item", runtime = tempItemRuntime, kind = "Unit",
                 mutable = false, writable = false, depth = depth + 1, constant = false, code = "",
-                intValue = 0, textValue = "", initState = "init"));
+                intValue = 0, textValue = "", initState = INIT_STATE_INIT));
                 if currentLive and not currentStopped {
                     listLib.pushBack(mut items, (kind = "LoopSeq", name = "", runtime = tempItemRuntime, code = sequenceCode,
                     intValue = 0, textValue = itemKind));
@@ -13442,7 +13442,7 @@ moduleIdentity: String, neededFns: String, skipSoftBuiltins: Bool): Items {
             branchesStopped = true;
             hasElse = false;
             loopForever = sequenceCode == "" and (conditionCode == "" or conditionCode == "true");
-            listLib.pushBack(mut blocks, "loop");
+            listLib.pushBack(mut blocks, BLOCK_KIND_LOOP);
             blockCount = blockCount + 1;
             depth = depth + 1;
             if hasInnerAlias {
@@ -13484,7 +13484,7 @@ moduleIdentity: String, neededFns: String, skipSoftBuiltins: Bool): Items {
             listLib.pushBack(mut blockDecls, (name = localName, depth = depth));
             listLib.pushBack(mut locals, (name = localName, runtime = runtime, kind = parsed.kind,
             mutable = false, writable = true, depth = depth, constant = false, code = mutLocalCode,
-            intValue = parsed.intValue, textValue = parsed.textValue, initState = "init"));
+            intValue = parsed.intValue, textValue = parsed.textValue, initState = INIT_STATE_INIT));
             if currentLive and not currentStopped {
                 itemCode := copiedValueCode(target, parsed.kind, parsed.code);
                 listLib.pushBack(mut items, (kind = "Local" + storageKind(parsed.kind), name = localName, runtime = runtime,
@@ -13513,7 +13513,7 @@ moduleIdentity: String, neededFns: String, skipSoftBuiltins: Bool): Items {
             rejectDuplicateBlockDecl(source, localStart, prefix, blockDecls, depth, localName);
             position = skipTrivia(source, position, prefix);
             var parsed := intParsed("", 0, true, position);
-            var declInitState := "init";
+            var declInitState := INIT_STATE_INIT;
             var rhsDiverged := false;
             var rawVarRhsCode := "";
             if textLib.startsWithAt(source, position, ":=") {
@@ -13539,7 +13539,7 @@ moduleIdentity: String, neededFns: String, skipSoftBuiltins: Bool): Items {
                     zeroEnd := isZeroInitLiteral(source, rhsStart, prefix);
                     if reservedEnd >= 0 {
                         if isListKind(typed.kind) { failAt(source, localStart, prefix, "reserved storage is not supported for List"); }
-                        declInitState = if hasBlockDecl(blockAssignedDecls, depth, localName) { "uninit_assigned" } else { "uninit" };
+                        declInitState = if hasBlockDecl(blockAssignedDecls, depth, localName) { INIT_STATE_UNINIT_ASSIGNED } else { INIT_STATE_UNINIT };
                         parsed = zeroParsed(target, typed.kind, reservedEnd);
                     } else if zeroEnd >= 0 and not numeric.isNumericKind(typed.kind) {
                         parsed = zeroParsed(target, typed.kind, zeroEnd);
@@ -13568,7 +13568,7 @@ moduleIdentity: String, neededFns: String, skipSoftBuiltins: Bool): Items {
             position = statementNext;
             runtime := claimOrMakeLocalRuntime(target, locals, localName, moduleKey, depth);
             varLocalCode := if target == "ts" and containsFnKind(parsed.kind) {
-                if declInitState == "init" { computeCallableRhsDeps(rawVarRhsCode) } else { "" }
+                if declInitState == INIT_STATE_INIT { computeCallableRhsDeps(rawVarRhsCode) } else { "" }
             } else { parsed.code };
             listLib.pushBack(mut blockDecls, (name = localName, depth = depth));
             listLib.pushBack(mut locals, (name = localName, runtime = runtime, kind = parsed.kind,
@@ -13752,20 +13752,20 @@ moduleIdentity: String, neededFns: String, skipSoftBuiltins: Bool): Items {
                 var rootIdx := 0;
                 loop rootIdx < fnPreLocalsLen {
                     rootEntry := locals[rootIdx];
-                    if rootEntry.depth == 0 and rootEntry.initState =!= "init" and
+                    if rootEntry.depth == 0 and rootEntry.initState =!= INIT_STATE_INIT and
                     not tokenInPipeBag(upgradedRootBag, rootEntry.name) {
                         newestIdx := localIndex(locals, rootEntry.name);
                         if newestIdx == rootIdx {
-                            if rootEntry.initState == "uninit_assigned" or listLib.listContainsText(rootAssignedNames, rootEntry.name) {
+                            if rootEntry.initState == INIT_STATE_UNINIT_ASSIGNED or listLib.listContainsText(rootAssignedNames, rootEntry.name) {
                                 upgradedRootBag = appendPipeBag(upgradedRootBag, rootEntry.name);
                                 listLib.pushBack(mut locals, (name = rootEntry.name, runtime = rootEntry.runtime, kind = rootEntry.kind,
                                 mutable = rootEntry.mutable, writable = rootEntry.writable, depth = -1, constant = false, code = rootEntry.code,
-                                intValue = 0, textValue = "", initState = "init"));
-                            } else if rootEntry.initState == "uninit" and not rootEntry.mutable {
+                                intValue = 0, textValue = "", initState = INIT_STATE_INIT));
+                            } else if rootEntry.initState == INIT_STATE_UNINIT and not rootEntry.mutable {
                                 upgradedRootBag = appendPipeBag(upgradedRootBag, rootEntry.name);
                                 listLib.pushBack(mut locals, (name = rootEntry.name, runtime = rootEntry.runtime, kind = rootEntry.kind,
                                 mutable = rootEntry.mutable, writable = rootEntry.writable, depth = -1, constant = false, code = rootEntry.code,
-                                intValue = 0, textValue = "", initState = "maybe"));
+                                intValue = 0, textValue = "", initState = INIT_STATE_MAYBE));
                             }
                         }
                     }
@@ -13801,7 +13801,7 @@ moduleIdentity: String, neededFns: String, skipSoftBuiltins: Bool): Items {
                     listLib.pushBack(mut blockDecls, (name = parameterName, depth = 1));
                     listLib.pushBack(mut locals, (name = parameterName, runtime = runtime, kind = parameterKind,
                     mutable = false, writable = false, depth = 1, constant = false, code = runtime,
-                    intValue = 0, textValue = "", initState = "init"));
+                    intValue = 0, textValue = "", initState = INIT_STATE_INIT));
                     if not wasPreRegistered {
                         listLib.pushBack(mut functionParams, entry);
                         parameterTotal = parameterTotal + 1;
@@ -13822,7 +13822,7 @@ moduleIdentity: String, neededFns: String, skipSoftBuiltins: Bool): Items {
                 branchesStopped = true;
                 hasElse = false;
                 loopForever = false;
-                listLib.pushBack(mut blocks, "function");
+                listLib.pushBack(mut blocks, BLOCK_KIND_FUNCTION);
                 blockCount = blockCount + 1;
                 depth = depth + 1;
                 if hasInnerAlias {
@@ -13850,7 +13850,7 @@ moduleIdentity: String, neededFns: String, skipSoftBuiltins: Bool): Items {
             listLib.pushBack(mut blockDecls, (name = name, depth = depth));
             listLib.pushBack(mut locals, (name = name, runtime = runtime, kind = parsed.kind,
             mutable = false, writable = false, depth = depth, constant = parsed.constant, code = valLocalCode,
-            intValue = parsed.intValue, textValue = parsed.textValue, initState = "init"));
+            intValue = parsed.intValue, textValue = parsed.textValue, initState = INIT_STATE_INIT));
             if depth == 0 and blockCount == 0 and listLib.listContainsText(publishedValues, name) {
                 listLib.pushBack(mut items, (kind = "PublicValue", name = name, runtime = runtime, code = parsed.kind,
                 intValue = 0, textValue = ""));
@@ -13874,14 +13874,14 @@ moduleIdentity: String, neededFns: String, skipSoftBuiltins: Bool): Items {
             typed := parseLocalType(source, position + 1, prefix, aliases);
             position = skipTrivia(source, typed.next, prefix);
             var parsed := zeroParsed(target, typed.kind, position);
-            var declInitState := "init";
+            var declInitState := INIT_STATE_INIT;
             if isSingleEquals(source, position) {
                 rhsStart := skipTrivia(source, position + 1, prefix);
                 reservedEnd := isReservedInitMarker(source, rhsStart, prefix);
                 zeroEnd := isZeroInitLiteral(source, rhsStart, prefix);
                 if reservedEnd >= 0 {
                     if isListKind(typed.kind) { failAt(source, nameStart, prefix, "reserved storage is not supported for List"); }
-                    declInitState = if hasBlockDecl(blockAssignedDecls, depth, name) { "uninit_assigned" } else { "uninit" };
+                    declInitState = if hasBlockDecl(blockAssignedDecls, depth, name) { INIT_STATE_UNINIT_ASSIGNED } else { INIT_STATE_UNINIT };
                     parsed = zeroParsed(target, typed.kind, reservedEnd);
                 } else if zeroEnd >= 0 and not numeric.isNumericKind(typed.kind) {
                     parsed = zeroParsed(target, typed.kind, zeroEnd);
@@ -13903,13 +13903,13 @@ moduleIdentity: String, neededFns: String, skipSoftBuiltins: Bool): Items {
             rhsDiverged := parsed.kind == "Never";
             assignedCode := assignValueCode(target, typed.kind, parsed.kind, parsed.code);
             annLocalCode := if target == "ts" and containsFnKind(typed.kind) {
-                if declInitState == "init" { computeCallableRhsDeps(parsed.code) } else { "" }
+                if declInitState == INIT_STATE_INIT { computeCallableRhsDeps(parsed.code) } else { "" }
             } else { assignedCode };
             listLib.pushBack(mut blockDecls, (name = name, depth = depth));
             listLib.pushBack(mut locals, (name = name, runtime = runtime, kind = typed.kind,
-            mutable = false, writable = typed.writable, depth = depth, constant = if declInitState == "init" and not numeric.isFloatKind(typed.kind) { parsed.constant } else { false },
+            mutable = false, writable = typed.writable, depth = depth, constant = if declInitState == INIT_STATE_INIT and not numeric.isFloatKind(typed.kind) { parsed.constant } else { false },
             code = annLocalCode, intValue = parsed.intValue, textValue = parsed.textValue, initState = declInitState));
-            declItemPrefix := if declInitState == "init" { "Local" } else { "Var" };
+            declItemPrefix := if declInitState == INIT_STATE_INIT { "Local" } else { "Var" };
             if currentLive and not currentStopped {
                 if rhsDiverged {
                     listLib.pushBack(mut items, (kind = expressionStatementKind("Never", false, "Call", currentResult), name = "", runtime = "",
@@ -13938,10 +13938,10 @@ moduleIdentity: String, neededFns: String, skipSoftBuiltins: Bool): Items {
                 failAt(source, nameStart, prefix, "unknown value " + name);
             }
             entry := locals[index];
-            if entry.initState == "init" and not entry.mutable {
+            if entry.initState == INIT_STATE_INIT and not entry.mutable {
                 failAt(source, nameStart, prefix, "cannot assign to immutable local " + name);
             }
-            if entry.initState == "maybe" and not entry.mutable {
+            if entry.initState == INIT_STATE_MAYBE and not entry.mutable {
                 failAt(source, nameStart, prefix, "cannot assign to possibly initialized immutable local " + name);
             }
             position = skipTrivia(source, position + 1, prefix);
@@ -13973,7 +13973,7 @@ moduleIdentity: String, neededFns: String, skipSoftBuiltins: Bool): Items {
                 partialLocalCode := if target == "ts" and containsFnKind(entry.kind) { partialFnDeps } else { entry.runtime };
                 listLib.pushBack(mut locals, (name = entry.name, runtime = entry.runtime, kind = entry.kind,
                 mutable = entry.mutable, writable = entry.writable, depth = entry.depth, constant = false, code = partialLocalCode,
-                intValue = 0, textValue = "", initState = "init"));
+                intValue = 0, textValue = "", initState = INIT_STATE_INIT));
                 continue;
             }
             parsed := parseExpressionAsCtx(target, source, position, prefix, locals, functions, functionParams, currentName, entry.kind, stmtCtxs, aliases);
@@ -13995,7 +13995,7 @@ moduleIdentity: String, neededFns: String, skipSoftBuiltins: Bool): Items {
             } else { assignedCode };
             listLib.pushBack(mut locals, (name = entry.name, runtime = entry.runtime, kind = entry.kind,
             mutable = entry.mutable, writable = entry.writable, depth = entry.depth, constant = false, code = assignLocalCode,
-            intValue = parsed.intValue, textValue = parsed.textValue, initState = "init"));
+            intValue = parsed.intValue, textValue = parsed.textValue, initState = INIT_STATE_INIT));
             if currentLive and not currentStopped {
                 if rhsDiverged {
                     listLib.pushBack(mut items, (kind = expressionStatementKind("Never", false, "Call", currentResult), name = "", runtime = "",
@@ -14022,7 +14022,7 @@ moduleIdentity: String, neededFns: String, skipSoftBuiltins: Bool): Items {
                 failAt(source, nameStart, prefix, "unknown value " + name);
             }
             entry := locals[index];
-            if entry.initState =!= "init" {
+            if entry.initState =!= INIT_STATE_INIT {
                 failAt(source, nameStart, prefix, "cannot read uninitialized local " + name);
             }
             if not entry.mutable {
@@ -14041,7 +14041,7 @@ moduleIdentity: String, neededFns: String, skipSoftBuiltins: Bool): Items {
             position = statementNext;
             listLib.pushBack(mut locals, (name = entry.name, runtime = entry.runtime, kind = entry.kind,
             mutable = entry.mutable, writable = entry.writable, depth = entry.depth, constant = false, code = assignedCode,
-            intValue = 0, textValue = "", initState = "init"));
+            intValue = 0, textValue = "", initState = INIT_STATE_INIT));
             if currentLive and not currentStopped {
                 listLib.pushBack(mut items, (kind = "Assign" + storageKind(entry.kind), name = name, runtime = entry.runtime,
                 code = assignedCode, intValue = 0, textValue = ""));
