@@ -122,6 +122,30 @@ collisions, renames, generated and generic types). A plain declaration counter
 can change when definitions are reordered. These are options for later review,
 not a selected identity algorithm.
 
+### User correction: clean compilation
+
+The user rejects relying on persisted build metadata as the basis for stable
+identities, because a clean compilation cannot depend on an earlier build's
+output. Independently built compatible libraries and consumers need to arrive
+at a consistent agreement using inputs available to a fresh build. Do not
+assume a previous compiler cache or generated precompiled artifact exists.
+
+Investigate deriving identity from reproducible inputs such as a documented
+library/package identity, file/module identity and declaration identity, with
+canonical rules for structural and generic types. These are possible inputs,
+not selected syntax, naming conventions, or an identity algorithm. They need
+to work independently of declaration discovery order and be available to each
+separate build. Finite encodings require a collision policy, and local numeric
+slots can still need the proposed link/load reconciliation.
+
+A source-controlled or published manifest could be an explicit input to a
+clean build, unlike a disposable build cache, but the user has not chosen such
+a mechanism. Rename and move stability cannot be assumed: deriving identity
+solely from a name or path ordinarily changes it when that input changes;
+preserving identity across renames needs another stable input or a deliberate
+compatibility mechanism. Whether such stability is required, and how library
+versions and forks relate, remain open.
+
 A future [precompiled Lite representation](precompiled-lite-representation.md)
 may help carry public identities and dependencies between builds, but its format,
 contents, and identity-assignment algorithm are not selected. The user also
