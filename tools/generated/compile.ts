@@ -251,7 +251,7 @@ function lite$listPopBack<T>(items: T[], at: number): T {
     return items.pop() as T;
 }
 
-const lite$intLines: readonly number[] = [0, 122, 123, 147, 175, 203, 229, 263, 264, 283, 300, 301, 327, 424, 440, 443, 444, 485, 564, 647, 667, 673, 674, 698, 727, 759, 798, 822, 863, 899, 944, 969, 979, 1008, 1049, 1106, 1165, 1206, 1212, 1213, 1257, 1278, 1284, 1349, 1352, 1353, 1374];
+const lite$intLines: readonly number[] = [0, 122, 123, 147, 175, 203, 229, 263, 264, 283, 300, 301, 327, 424, 440, 443, 444, 485, 564, 647, 667, 673, 674, 703, 732, 764, 813, 837, 878, 914, 959, 984, 994, 1023, 1064, 1121, 1180, 1221, 1227, 1228, 1282, 1303, 1309, 1374, 1377, 1378, 1399];
 const lite$intSource = "tools/src/compile.lts:";
 const lite$intMin = -(1n << 63n), lite$intMax = (1n << 63n) - 1n;
 function lite$fault(category: string, at: number, message: string): never {
@@ -1021,6 +1021,10 @@ export function main(lite$write?: (text: string) => void): string {
         lite$exit((lite_res).status);
     }
     void liteFn$lib$util$project$forwardNode;
+    const lite_TARGET_TS = "ts";
+    void lite_TARGET_TS;
+    const lite_TARGET_C = "c";
+    void lite_TARGET_C;
     function liteFn_usageExit(): void {
         lite$reportError("Usage: ./bin/lite-compile [--target ts|c] [--builtin-mode SPEC]... file.lts");
         lite$exit(2n);
@@ -1032,26 +1036,26 @@ export function main(lite$write?: (text: string) => void): string {
             lite$emit((("lite-compile ") + (liteFn$lib$util$project$readComponentVersion("compiler"))) + "\n");
             lite$exit(0n);
         }
-        let lite_target = "ts";
+        let lite_target = lite_TARGET_TS;
         void lite_target;
         let lite_restArgs: string[] = [...(lite_rawArgs)];
         void lite_restArgs;
         const lite_first = liteFn$lib$util$cli$head([...(lite_rawArgs)]);
         void lite_first;
-        if (((((lite_first) === ("ts"))) || (((lite_first) === ("c"))))) {
+        if (((((lite_first) === (lite_TARGET_TS))) || (((lite_first) === (lite_TARGET_C))))) {
             lite_target = lite_first;
             lite_restArgs = [...(liteFn$lib$util$cli$rest([...(lite_rawArgs)], 1n))];
         } else if (((lite_first) === ("--target"))) {
             if (((liteFn$lib$core$list$listCountText([...(lite_rawArgs)])) < (2n))) {
                 liteFn_usageExit();
             }
-            lite_target = lite$listAt((lite_rawArgs), 1n, 1004);
+            lite_target = lite$listAt((lite_rawArgs), 1n, 1019);
             lite_restArgs = [...(liteFn$lib$util$cli$rest([...(lite_rawArgs)], 2n))];
         } else if (liteFn$lib$core$text$startsWithAt(lite_first, 0n, "--target=")) {
-            lite_target = lite$textSlice(lite_first, 9n, lite$textLength(lite_first), 1123);
+            lite_target = lite$textSlice(lite_first, 9n, lite$textLength(lite_first), 1138);
             lite_restArgs = [...(liteFn$lib$util$cli$rest([...(lite_rawArgs)], 1n))];
         }
-        if (((((lite_target) !== ("ts"))) && (((lite_target) !== ("c"))))) {
+        if (((((lite_target) !== (lite_TARGET_TS))) && (((lite_target) !== (lite_TARGET_C))))) {
             liteFn_usageExit();
         }
         return (void (liteFn$lib$util$project$forwardNode((("bin/lite-compile-") + (lite_target)), [...(lite_restArgs)])));

@@ -1801,7 +1801,7 @@ localsHasAnyUnready := fn(locals: List<Local>): Bool {
     loop locals as entry {
         if entry.depth <= -2 {
             if latestActiveLocalByRuntime(locals, entry.runtime) < 0 { return true; }
-        } else if entry.depth >= 0 {
+        } else if entry.depth >= 0 and entry.initState =!= INIT_STATE_INIT {
             actIdx := latestActiveLocalByRuntime(locals, entry.runtime);
             if actIdx >= 0 and locals[actIdx].initState =!= INIT_STATE_INIT { return true; }
         }
@@ -2394,9 +2394,9 @@ pub codeReachableTokensSet := fn(code: String, existing: TokenBuckets): TokenBuc
 /** True when `kind` represents a top-level value or mutable variable declaration item. */
 isTopDeclKind := fn(kind: String): Bool {
     kind == ITEM_KIND_LOCAL_INT or kind == ITEM_KIND_LOCAL_STRING or kind == ITEM_KIND_LOCAL_BOOL or kind == ITEM_KIND_LOCAL_FLOAT or
-    kind == ITEM_KIND_LOCAL_TUPLE or kind == ITEM_KIND_LOCAL_LIST or kind == ITEM_KIND_LOCAL_FN or kind == "LocalUnit" or
+    kind == ITEM_KIND_LOCAL_TUPLE or kind == ITEM_KIND_LOCAL_LIST or kind == ITEM_KIND_LOCAL_FN or kind == ITEM_KIND_LOCAL_UNIT or
     kind == ITEM_KIND_VAR_INT or kind == ITEM_KIND_VAR_STRING or kind == ITEM_KIND_VAR_BOOL or kind == ITEM_KIND_VAR_FLOAT or
-    kind == ITEM_KIND_VAR_TUPLE or kind == ITEM_KIND_VAR_LIST or kind == ITEM_KIND_VAR_FN or kind == "VarUnit"
+    kind == ITEM_KIND_VAR_TUPLE or kind == ITEM_KIND_VAR_LIST or kind == ITEM_KIND_VAR_FN or kind == ITEM_KIND_VAR_UNIT
 }
 
 /** Removes unreachable top-level function bodies and side-effect-free code across root and inner blocks for `target`. */
@@ -3647,17 +3647,17 @@ scanBracedRange := fn(source: String, start: Int, depthStart: Int, prefix: Strin
         if nextQuote >= 0 and nextQuote < cursor { nextQuote = textLib.indexOfText(source, "\"", cursor); }
         if nextComment >= 0 and nextComment < cursor { nextComment = textLib.indexOfText(source, "/*", cursor); }
         var hit := size;
-        var kind := 0;
-        if nextQuote >= 0 and nextQuote < hit { hit = nextQuote; kind = 1; }
-        if nextComment >= 0 and nextComment < hit { hit = nextComment; kind = 2; }
-        if nextOpen >= 0 and nextOpen < hit { hit = nextOpen; kind = 3; }
-        if nextClose >= 0 and nextClose < hit { hit = nextClose; kind = 4; }
-        if kind == 0 { return -1; }
-        if kind == 1 {
+        var kind := SCAN_HIT_NONE;
+        if nextQuote >= 0 and nextQuote < hit { hit = nextQuote; kind = SCAN_HIT_QUOTE; }
+        if nextComment >= 0 and nextComment < hit { hit = nextComment; kind = SCAN_HIT_COMMENT; }
+        if nextOpen >= 0 and nextOpen < hit { hit = nextOpen; kind = SCAN_HIT_OPEN; }
+        if nextClose >= 0 and nextClose < hit { hit = nextClose; kind = SCAN_HIT_CLOSE; }
+        if kind == SCAN_HIT_NONE { return -1; }
+        if kind == SCAN_HIT_QUOTE {
             cursor = skipAliasString(source, hit);
-        } else if kind == 2 {
+        } else if kind == SCAN_HIT_COMMENT {
             cursor = skipComment(source, hit, prefix);
-        } else if kind == 3 {
+        } else if kind == SCAN_HIT_OPEN {
             depth = depth + 1;
             cursor = hit + 1;
         } else {
@@ -3723,7 +3723,7 @@ skipOptionalScanTag := fn(source: String, position: Int, prefix: String, keyword
 scanTrailingThenEnd := fn(source: String, position: Int, prefix: String, requireThenValue: Bool): Int {
     size := textLib.length(source);
     after := skipTrivia(source, position, prefix);
-    if after >= size or not textLib.wordAt(source, after, "then") { return -2; }
+    if after >= size or not textLib.wordAt(source, after, "then") { return SCAN_NO_THEN; }
     thenOpen := skipTrivia(source, after + 4, prefix);
     if thenOpen >= size or textLib.at(source, thenOpen) =!= "{" { return -1; }
     thenEnd := scanBraceEnd(source, thenOpen, prefix);
@@ -3799,7 +3799,7 @@ scanIfChainEnd := fn(source: String, position: Int, prefix: String, requireValue
             if requireValueBranches and not valueIfBranchAt(source, afterElse, finalEnd - 1, prefix) { allBranchesValue = false; }
             thenEnd := scanTrailingThenEnd(source, finalEnd, prefix, requireValueBranches);
             if thenEnd == -1 { return -1; }
-            baseEnd := if thenEnd == -2 {
+            baseEnd := if thenEnd == SCAN_NO_THEN {
                 if requireValueBranches and not allBranchesValue { -1 } else { finalEnd }
             } else {
                 thenEnd
@@ -3871,7 +3871,7 @@ scanValueMatchEnd := fn(source: String, position: Int, prefix: String, requireVa
             if afterArm < size and textLib.at(source, afterArm) == "}" {
                 thenEnd := scanTrailingThenEnd(source, afterArm + 1, prefix, requireValueBranches);
                 if thenEnd == -1 { return -1; }
-                baseEnd := if thenEnd == -2 {
+                baseEnd := if thenEnd == SCAN_NO_THEN {
                     if requireValueBranches and not allArmsValue { -1 } else { afterArm + 1 }
                 } else {
                     thenEnd
@@ -3891,13 +3891,13 @@ findLeadingDotLoopIdx := fn(ctxs: List<ConstructCtx>): Int {
     var index := ctxCount(ctxs) - 1;
     loop index >= 0 {
         kind := ctxs[index].kind;
-        if kind == "loop" { return index; }
-        if kind == "if" or kind == "match" { return -2; }
-        if kind == "finally" { return -3; }
-        if kind == "fn" { return -1; }
+        if kind == CTX_KIND_LOOP { return index; }
+        if kind == CTX_KIND_IF or kind == CTX_KIND_MATCH { return DOT_LOOP_IN_CONDITIONAL; }
+        if kind == CTX_KIND_FINALLY { return DOT_LOOP_IN_FINALLY; }
+        if kind == CTX_KIND_FN { return DOT_LOOP_OUTSIDE; }
         index = index - 1;
     }
-    -1
+    DOT_LOOP_OUTSIDE
 }
 
 /** Finds the innermost active enclosing loop context, skipping loops whose body already completed (`then` or `finally`) and stopping at `fn`. */
@@ -3905,8 +3905,8 @@ findActiveLoopCtxIndex := fn(ctxs: List<ConstructCtx>): Int {
     var index := ctxCount(ctxs) - 1;
     loop index >= 0 {
         entry := ctxs[index];
-        if entry.kind == "fn" { return -1; }
-        if entry.kind == "loop" and entry.phase =!= "then" and entry.phase =!= "finally" { return index; }
+        if entry.kind == CTX_KIND_FN { return -1; }
+        if entry.kind == CTX_KIND_LOOP and entry.phase =!= CTX_PHASE_THEN and entry.phase =!= CTX_PHASE_FINALLY { return index; }
         index = index - 1;
     }
     -1
@@ -3916,7 +3916,7 @@ findActiveLoopCtxIndex := fn(ctxs: List<ConstructCtx>): Int {
 hasFinallyAbove := fn(ctxs: List<ConstructCtx>, targetIdx: Int): Bool {
     var index := ctxCount(ctxs) - 1;
     loop index > targetIdx {
-        if ctxs[index].kind == "finally" { return true; }
+        if ctxs[index].kind == CTX_KIND_FINALLY { return true; }
         index = index - 1;
     }
     false
@@ -4001,16 +4001,16 @@ resolveLoopField := fn(target: String, ctx: ConstructCtx, fieldName: String, exp
         return intParsed(ctx.countVar, 0, false, fieldEnd);
     }
     if fieldName == "value" {
-        if ctx.valKind == "__infer__" {
+        if ctx.valKind == VAL_KIND_INFER {
             if expected =!= "" and expected =!= VALUE_KIND_UNIT and expected =!= VALUE_KIND_NEVER and
             not textLib.startsWithAt(expected, 0, "TailList<") and not textLib.startsWithAt(expected, 0, "__loopVal:") {
                 return withMarkers((kind = expected, code = ctx.valVar, intValue = 0, textValue = "", constant = false, next = fieldEnd),
                 integer.intText(ctx.id) + "=" + expected + "\n");
             }
             return withMarkers((kind = "__loopVal:" + integer.intText(ctx.id), code = ctx.valVar, intValue = 0, textValue = "", constant = false, next = fieldEnd),
-            if ctx.phase =!= "then" { integer.intText(ctx.id) + "=@read\n" } else { "" });
+            if ctx.phase =!= CTX_PHASE_THEN { integer.intText(ctx.id) + "=@read\n" } else { "" });
         }
-        if textLib.startsWithAt(ctx.valKind, 0, "__infer__:") {
+        if textLib.startsWithAt(ctx.valKind, 0, (VAL_KIND_INFER + ":")) {
             hint := textLib.slice(ctx.valKind, 10, textLib.length(ctx.valKind));
             return withMarkers((kind = hint, code = ctx.valVar, intValue = 0, textValue = "", constant = false, next = fieldEnd),
             integer.intText(ctx.id) + "=" + hint + "\n");
@@ -4021,7 +4021,7 @@ resolveLoopField := fn(target: String, ctx: ConstructCtx, fieldName: String, exp
         return (kind = ctx.valKind, code = ctx.valVar, intValue = 0, textValue = "", constant = false, next = fieldEnd);
     }
     if fieldName == "item" {
-        if ctx.phase == "header" {
+        if ctx.phase == CTX_PHASE_HEADER {
             failAt(source, fieldStart, prefix, ".item is not available in loop header");
         }
         if ctx.itemKind == "" or ctx.itemKind == VALUE_KIND_UNIT {
@@ -4030,7 +4030,7 @@ resolveLoopField := fn(target: String, ctx: ConstructCtx, fieldName: String, exp
         return (kind = ctx.itemKind, code = ctx.itemVar, intValue = 0, textValue = "", constant = false, next = fieldEnd);
     }
     if fieldName == "index" {
-        if ctx.phase == "header" {
+        if ctx.phase == CTX_PHASE_HEADER {
             failAt(source, fieldStart, prefix, ".index is not available in loop header");
         }
         if not ctx.hasIndex {
@@ -7642,9 +7642,9 @@ parseBinaryCtx := fn(target: String, source: String, position: Int, prefix: Stri
                 failAt(source, fieldStart, prefix, "metadata for @" + tagInfo.tag + " is not available in finally");
             }
             ctx := ctxs[ctxIdx];
-            if ctx.kind == "if" or ctx.kind == "match" {
+            if ctx.kind == CTX_KIND_IF or ctx.kind == CTX_KIND_MATCH {
                 if fieldName == "value" {
-                    if ctx.phase =!= "then" {
+                    if ctx.phase =!= CTX_PHASE_THEN {
                         failAt(source, fieldStart, prefix, "@" + tagInfo.tag + ".value is only available inside that conditional's then block");
                     }
                     if ctx.itemKind == VALUE_KIND_UNIT or ctx.itemKind == VALUE_KIND_NEVER or ctx.itemKind == "" {
@@ -7655,8 +7655,8 @@ parseBinaryCtx := fn(target: String, source: String, position: Int, prefix: Stri
                 } else {
                     failAt(source, fieldStart, prefix, "conditional tag @" + tagInfo.tag + " only exposes .value, not ." + fieldName);
                 }
-            } else if ctx.kind == "loop" {
-                if ctx.phase == "finally" {
+            } else if ctx.kind == CTX_KIND_LOOP {
+                if ctx.phase == CTX_PHASE_FINALLY {
                     failAt(source, fieldStart, prefix, "metadata for @" + tagInfo.tag + " is not available in finally");
                 }
                 if target =!= TARGET_TS {
@@ -7681,8 +7681,8 @@ parseBinaryCtx := fn(target: String, source: String, position: Int, prefix: Stri
             blockLabel := "lite$b" + integer.intText(blockId);
             blockValVar := "lite$val" + integer.intText(blockId);
             taggedLexDepthStr := integer.intText(maxLocalLexDepth(locals) + 1);
-            pass1ValKind := if hintExpected == "" { "__infer__" } else { "__infer__:" + hintExpected };
-            pass1Ctx := (id = blockId, tag = tagInfo.tag, kind = "block", phase = "body",
+            pass1ValKind := if hintExpected == "" { VAL_KIND_INFER } else { (VAL_KIND_INFER + ":") + hintExpected };
+            pass1Ctx := (id = blockId, tag = tagInfo.tag, kind = CTX_KIND_BLOCK, phase = CTX_PHASE_BODY,
             iifeDepth = iifeDepth + 1, valKind = pass1ValKind, valVar = blockValVar, label = blockLabel,
             iterLabel = taggedLexDepthStr, countVar = "", itemVar = "", itemKind = "", indexVar = "", hasIndex = false);
             pass1 := self(target, source, afterTag, prefix, locals, functions, params, currentName,
@@ -7692,7 +7692,7 @@ parseBinaryCtx := fn(target: String, source: String, position: Int, prefix: Stri
             } else {
                 inferredKind := pass1.kind;
                 pass2Expected := if inferredKind == VALUE_KIND_UNIT or inferredKind == VALUE_KIND_NEVER { "" } else { inferredKind };
-                pass2Ctx := (id = blockId, tag = tagInfo.tag, kind = "block", phase = "body",
+                pass2Ctx := (id = blockId, tag = tagInfo.tag, kind = CTX_KIND_BLOCK, phase = CTX_PHASE_BODY,
                 iifeDepth = iifeDepth + 1, valKind = inferredKind, valVar = blockValVar, label = blockLabel,
                 iterLabel = taggedLexDepthStr, countVar = "", itemVar = "", itemKind = "", indexVar = "", hasIndex = false);
                 left = self(target, source, afterTag, prefix, locals, functions, params, currentName,
@@ -7706,10 +7706,10 @@ parseBinaryCtx := fn(target: String, source: String, position: Int, prefix: Stri
                 afterFinKw := skipTrivia(source, afterTaggedClose + 7, prefix);
                 rejectMisplacedTag(source, afterFinKw, prefix, "block tag cannot appear after finally");
                 finOpen := expectSymbol(source, afterFinKw, "{", prefix);
-                taggedFinCtx := (id = blockId, tag = tagInfo.tag, kind = "block", phase = "finally",
+                taggedFinCtx := (id = blockId, tag = tagInfo.tag, kind = CTX_KIND_BLOCK, phase = CTX_PHASE_FINALLY,
                 iifeDepth = iifeDepth + 1, valKind = left.kind, valVar = blockValVar, label = blockLabel,
                 iterLabel = "", countVar = "", itemVar = "", itemKind = "", indexVar = "", hasIndex = false);
-                finBarrierCtx := (id = 0, tag = "", kind = "finally", phase = "finally",
+                finBarrierCtx := (id = 0, tag = "", kind = CTX_KIND_FINALLY, phase = CTX_PHASE_FINALLY,
                 iifeDepth = iifeDepth + 1, valKind = VALUE_KIND_UNIT, valVar = "", label = "",
                 iterLabel = "", countVar = "", itemVar = "", itemKind = "", indexVar = "", hasIndex = false);
                 finCtxs := appendCtx(appendCtx(ctxs, taggedFinCtx), finBarrierCtx);
@@ -7739,17 +7739,17 @@ parseBinaryCtx := fn(target: String, source: String, position: Int, prefix: Stri
                 }
             }
         } else if afterTag < tagSourceSize and textLib.wordAt(source, afterTag, "if") {
-            condParseKind = "if";
+            condParseKind = CTX_KIND_IF;
             condParseStart = afterTag;
             condParseTag = tagInfo.tag;
             condParseTagAt = start;
         } else if afterTag < tagSourceSize and textLib.wordAt(source, afterTag, "match") {
-            condParseKind = "match";
+            condParseKind = CTX_KIND_MATCH;
             condParseStart = afterTag;
             condParseTag = tagInfo.tag;
             condParseTagAt = start;
         } else if afterTag < tagSourceSize and textLib.wordAt(source, afterTag, "loop") {
-            condParseKind = "loop";
+            condParseKind = CTX_KIND_LOOP;
             condParseStart = afterTag;
             condParseTag = tagInfo.tag;
             condParseTagAt = start;
@@ -8002,7 +8002,7 @@ parseBinaryCtx := fn(target: String, source: String, position: Int, prefix: Stri
                         afterStmtFinKw := skipTrivia(source, afterStmtBlock + 7, prefix);
                         rejectMisplacedTag(source, afterStmtFinKw, prefix, "block tag cannot appear after finally");
                         stmtFinOpen := expectSymbol(source, afterStmtFinKw, "{", prefix);
-                        stmtFinCtx := (id = 0, tag = "", kind = "finally", phase = "finally",
+                        stmtFinCtx := (id = 0, tag = "", kind = CTX_KIND_FINALLY, phase = CTX_PHASE_FINALLY,
                         iifeDepth = bodyDepth, valKind = VALUE_KIND_UNIT, valVar = "", label = "",
                         iterLabel = "", countVar = "", itemVar = "", itemKind = "", indexVar = "", hasIndex = false);
                         stmtFin := self(target, source, stmtFinOpen - 1, prefix, blockLocals, functions, params, currentName,
@@ -8144,13 +8144,13 @@ parseBinaryCtx := fn(target: String, source: String, position: Int, prefix: Stri
                             failAt(source, targetTagPos, prefix, "unknown block tag @" + targetTagName);
                         }
                         targetCtx := ctxs[targetIdx];
-                        if targetCtx.phase == "then" {
+                        if targetCtx.phase == CTX_PHASE_THEN {
                             failAt(source, itemStart, prefix, "cannot return to @" + targetCtx.tag + " from inside its own then block");
                         }
                         if hasFinallyAbove(ctxs, targetIdx) {
                             failAt(source, itemStart, prefix, "cannot return out of finally block");
                         }
-                        isInferTarget := targetCtx.valKind == "__infer__" or textLib.startsWithAt(targetCtx.valKind, 0, "__infer__:");
+                        isInferTarget := targetCtx.valKind == VAL_KIND_INFER or textLib.startsWithAt(targetCtx.valKind, 0, (VAL_KIND_INFER + ":"));
                         if retValStart >= blockSourceSize or textLib.at(source, retValStart) == ";" or textLib.at(source, retValStart) == "}" {
                             if not isInferTarget and targetCtx.valKind =!= VALUE_KIND_UNIT {
                                 failAt(source, itemStart, prefix, "block @" + targetCtx.tag + " returns " +
@@ -8174,9 +8174,9 @@ parseBinaryCtx := fn(target: String, source: String, position: Int, prefix: Stri
                             blockConstant = false;
                             cursor = stmtNext;
                         } else {
-                            retExpected := if textLib.startsWithAt(targetCtx.valKind, 0, "__infer__:") {
+                            retExpected := if textLib.startsWithAt(targetCtx.valKind, 0, (VAL_KIND_INFER + ":")) {
                                 textLib.slice(targetCtx.valKind, 10, textLib.length(targetCtx.valKind))
-                            } else if targetCtx.valKind == "__infer__" or targetCtx.valKind == VALUE_KIND_UNIT or targetCtx.valKind == VALUE_KIND_NEVER {
+                            } else if targetCtx.valKind == VAL_KIND_INFER or targetCtx.valKind == VALUE_KIND_UNIT or targetCtx.valKind == VALUE_KIND_NEVER {
                                 ""
                             } else {
                                 targetCtx.valKind
@@ -8310,10 +8310,10 @@ parseBinaryCtx := fn(target: String, source: String, position: Int, prefix: Stri
                         if foundIdx < 0 {
                             failAt(source, afterItemName, prefix, "unknown block tag @" + exitTag.tag);
                         }
-                        if ctxs[foundIdx].kind =!= "loop" {
+                        if ctxs[foundIdx].kind =!= CTX_KIND_LOOP {
                             failAt(source, afterItemName, prefix, itemName + " @" + exitTag.tag + " requires an enclosing loop");
                         }
-                        if ctxs[foundIdx].phase == "then" {
+                        if ctxs[foundIdx].phase == CTX_PHASE_THEN {
                             failAt(source, itemStart, prefix, "cannot " + itemName + " @" + exitTag.tag + " from inside its own then block");
                         }
                         targetLoopIdx = foundIdx;
@@ -8331,7 +8331,7 @@ parseBinaryCtx := fn(target: String, source: String, position: Int, prefix: Stri
                         failAt(source, itemStart, prefix, "cannot " + itemName + " out of finally block");
                     }
                     loopCtx := ctxs[targetLoopIdx];
-                    if loopCtx.phase == "header" {
+                    if loopCtx.phase == CTX_PHASE_HEADER {
                         failAt(source, itemStart, prefix, "cannot " + itemName + " from loop header");
                     }
                     hasPayload := afterExit < blockSourceSize and textLib.at(source, afterExit) =!= ";" and textLib.at(source, afterExit) =!= "}";
@@ -8363,10 +8363,10 @@ parseBinaryCtx := fn(target: String, source: String, position: Int, prefix: Stri
                         }
                     } else {
                         if target =!= TARGET_TS { failAt(source, itemStart, prefix, "C backend does not support " + itemName + " payloads yet"); }
-                        isInferLoop := loopCtx.valKind == "__infer__" or textLib.startsWithAt(loopCtx.valKind, 0, "__infer__:");
-                        payExpected := if textLib.startsWithAt(loopCtx.valKind, 0, "__infer__:") {
+                        isInferLoop := loopCtx.valKind == VAL_KIND_INFER or textLib.startsWithAt(loopCtx.valKind, 0, (VAL_KIND_INFER + ":"));
+                        payExpected := if textLib.startsWithAt(loopCtx.valKind, 0, (VAL_KIND_INFER + ":")) {
                             textLib.slice(loopCtx.valKind, 10, textLib.length(loopCtx.valKind))
-                        } else if loopCtx.valKind == "__infer__" or loopCtx.valKind == VALUE_KIND_UNIT or loopCtx.valKind == VALUE_KIND_NEVER {
+                        } else if loopCtx.valKind == VAL_KIND_INFER or loopCtx.valKind == VALUE_KIND_UNIT or loopCtx.valKind == VALUE_KIND_NEVER {
                             ""
                         } else {
                             loopCtx.valKind
@@ -8448,7 +8448,7 @@ parseBinaryCtx := fn(target: String, source: String, position: Int, prefix: Stri
                         var hasElseBranch := false;
                         var ifCursor := afterItemName;
                         var isFirstIf := true;
-                        ifBarrierCtxs := appendCtx(ctxs, (id = 0, tag = "", kind = "if", phase = "body",
+                        ifBarrierCtxs := appendCtx(ctxs, (id = 0, tag = "", kind = CTX_KIND_IF, phase = CTX_PHASE_BODY,
                         iifeDepth = bodyDepth, valKind = VALUE_KIND_UNIT, valVar = "", label = "", iterLabel = "",
                         countVar = "", itemVar = "", itemKind = "", indexVar = "", hasIndex = false));
                         loop true {
@@ -8536,7 +8536,7 @@ parseBinaryCtx := fn(target: String, source: String, position: Int, prefix: Stri
                         var sawFallback := false;
                         var armCount := 0;
                         var allArmsExit := true;
-                        matchBarrierCtxs := appendCtx(ctxs, (id = 0, tag = "", kind = "match", phase = "body",
+                        matchBarrierCtxs := appendCtx(ctxs, (id = 0, tag = "", kind = CTX_KIND_MATCH, phase = CTX_PHASE_BODY,
                         iifeDepth = bodyDepth, valKind = VALUE_KIND_UNIT, valVar = "", label = "", iterLabel = "",
                         countVar = "", itemVar = "", itemKind = "", indexVar = "", hasIndex = false));
                         loop true {
@@ -8703,7 +8703,7 @@ parseBinaryCtx := fn(target: String, source: String, position: Int, prefix: Stri
                             loopHeadCode = "while (" + condText + ") { ";
                         }
                         stmtLoopLexDepthStr := integer.intText(maxLocalLexDepth(loopLocals) + 1);
-                        loopCtx := (id = loopId, tag = "", kind = "loop", phase = "body",
+                        loopCtx := (id = loopId, tag = "", kind = CTX_KIND_LOOP, phase = CTX_PHASE_BODY,
                         iifeDepth = bodyDepth, valKind = "", valVar = "", label = loopLabel,
                         iterLabel = stmtLoopLexDepthStr, countVar = "", itemVar = "", itemKind = "", indexVar = "", hasIndex = false);
                         loopStmtSink := if loopItemName =!= "" { "stmt:" + loopItemName } else { "stmt" };
@@ -9230,7 +9230,7 @@ parseBinaryCtx := fn(target: String, source: String, position: Int, prefix: Stri
             topLoopId := topLoopCtx.id;
             topLoopValKind := topLoopCtx.valKind;
             topLoopValVar := topLoopCtx.valVar;
-            if topLoopValKind == "__infer__" or textLib.startsWithAt(topLoopValKind, 0, "__infer__:") {
+            if topLoopValKind == VAL_KIND_INFER or textLib.startsWithAt(topLoopValKind, 0, (VAL_KIND_INFER + ":")) {
                 if not blockExits {
                     if sawTailExpr {
                         if blockKind =!= VALUE_KIND_NEVER and loopValMarkerId(blockKind) < 0 {
@@ -9291,7 +9291,7 @@ parseBinaryCtx := fn(target: String, source: String, position: Int, prefix: Stri
             topValKind := topCtx.valKind;
             topValVar := topCtx.valVar;
             topLabel := topCtx.label;
-            if topValKind == "__infer__" or textLib.startsWithAt(topValKind, 0, "__infer__:") {
+            if topValKind == VAL_KIND_INFER or textLib.startsWithAt(topValKind, 0, (VAL_KIND_INFER + ":")) {
                 if not blockExits {
                     if sawTailExpr {
                         if blockKind =!= VALUE_KIND_NEVER {
@@ -9373,7 +9373,7 @@ parseBinaryCtx := fn(target: String, source: String, position: Int, prefix: Stri
                     afterFinKw := skipTrivia(source, afterUntaggedClose + 7, prefix);
                     rejectMisplacedTag(source, afterFinKw, prefix, "block tag cannot appear after finally");
                     finOpen := expectSymbol(source, afterFinKw, "{", prefix);
-                    finBarrierCtx := (id = 0, tag = "", kind = "finally", phase = "finally",
+                    finBarrierCtx := (id = 0, tag = "", kind = CTX_KIND_FINALLY, phase = CTX_PHASE_FINALLY,
                     iifeDepth = bodyDepth, valKind = VALUE_KIND_UNIT, valVar = "", label = "",
                     iterLabel = "", countVar = "", itemVar = "", itemKind = "", indexVar = "", hasIndex = false);
                     finParsed := self(target, source, finOpen - 1, prefix, locals, functions, params, currentName,
@@ -9580,7 +9580,7 @@ parseBinaryCtx := fn(target: String, source: String, position: Int, prefix: Stri
                 paramVoidStmts = paramVoidStmts + "void " + pRuntime + "; ";
                 pBindIdx = pBindIdx + 1;
             }
-            fnCtx := (id = 0, tag = "", kind = "fn", phase = "body", iifeDepth = iifeDepth + 1,
+            fnCtx := (id = 0, tag = "", kind = CTX_KIND_FN, phase = CTX_PHASE_BODY, iifeDepth = iifeDepth + 1,
             valKind = retKind, valVar = "", label = "", iterLabel = integer.intText(fnLexDepth), countVar = "", itemVar = "",
             itemKind = "", indexVar = "", hasIndex = false);
             emptyFnCtxs: List<ConstructCtx> = [];
@@ -9664,9 +9664,9 @@ parseBinaryCtx := fn(target: String, source: String, position: Int, prefix: Stri
         fieldEnd := textLib.skipName(source, fieldStart);
         fieldName := textLib.slice(source, fieldStart, fieldEnd);
         loopIdx := findLeadingDotLoopIdx(ctxs);
-        if loopIdx == -2 {
+        if loopIdx == DOT_LOOP_IN_CONDITIONAL {
             failAt(source, start, prefix, "leading-dot ." + fieldName + " is not available inside a conditional; use an explicit loop @tag");
-        } else if loopIdx == -3 {
+        } else if loopIdx == DOT_LOOP_IN_FINALLY {
             failAt(source, start, prefix, "loop metadata is not available in finally");
         } else if loopIdx < 0 {
             failAt(source, start, prefix, "." + fieldName + " outside loop");
@@ -9679,7 +9679,7 @@ parseBinaryCtx := fn(target: String, source: String, position: Int, prefix: Stri
     } else {
         failAt(source, start, prefix, "expected an Int, Float, String or Bool expression");
     }
-    if condParseKind == "loop" {
+    if condParseKind == CTX_KIND_LOOP {
         rawLoopEnd := scanRawLoopEnd(source, condParseStart, prefix);
         afterRawLoop := if rawLoopEnd >= 0 { skipTrivia(source, rawLoopEnd, prefix) } else { -1 };
         hasActualThen := afterRawLoop >= 0 and textLib.wordAt(source, afterRawLoop, "then");
@@ -9725,7 +9725,7 @@ parseBinaryCtx := fn(target: String, source: String, position: Int, prefix: Stri
             isPass1 := pass == 1;
             passInfer := isPass1 or inferMode;
             passCtxValKind := if isPass1 {
-                if loopHintExpected == "" { "__infer__" } else { "__infer__:" + loopHintExpected }
+                if loopHintExpected == "" { VAL_KIND_INFER } else { (VAL_KIND_INFER + ":") + loopHintExpected }
             } else {
                 resolvedPreThenKind
             };
@@ -9736,7 +9736,7 @@ parseBinaryCtx := fn(target: String, source: String, position: Int, prefix: Stri
             } else {
                 resolvedPreThenKind
             };
-            headerCtx := (id = loopId, tag = condParseTag, kind = "loop", phase = "header",
+            headerCtx := (id = loopId, tag = condParseTag, kind = CTX_KIND_LOOP, phase = CTX_PHASE_HEADER,
             iifeDepth = loopDepth, valKind = passCtxValKind, valVar = loopValVar, label = loopLabel,
             iterLabel = loopLabel, countVar = loopCountVar, itemVar = "", itemKind = "", indexVar = "", hasIndex = false);
             headerCtxs := appendCtx(ctxs, headerCtx);
@@ -9811,7 +9811,7 @@ parseBinaryCtx := fn(target: String, source: String, position: Int, prefix: Stri
                 }
             }
             loopBodyLexDepthStr := integer.intText(maxLocalLexDepth(loopLocals) + 1);
-            bodyCtx := (id = loopId, tag = condParseTag, kind = "loop", phase = "body",
+            bodyCtx := (id = loopId, tag = condParseTag, kind = CTX_KIND_LOOP, phase = CTX_PHASE_BODY,
             iifeDepth = loopDepth, valKind = passCtxValKind, valVar = loopValVar, label = loopLabel,
             iterLabel = loopBodyLexDepthStr, countVar = loopCountVar, itemVar = loopItemMetaVar, itemKind = seqItemKind,
             indexVar = loopIdxVar, hasIndex = isSeqLoop);
@@ -9834,8 +9834,8 @@ parseBinaryCtx := fn(target: String, source: String, position: Int, prefix: Stri
                         probeAfterThen := skipTrivia(source, probeThenKw + 4, prefix);
                         rejectMisplacedTag(source, probeAfterThen, prefix, "block tag cannot appear after then");
                         probeThenOpen := expectSymbol(source, probeAfterThen, "{", prefix);
-                        thenProbeCtx := (id = loopId, tag = condParseTag, kind = "loop", phase = "then",
-                        iifeDepth = loopDepth, valKind = "__infer__", valVar = loopValVar, label = loopLabel,
+                        thenProbeCtx := (id = loopId, tag = condParseTag, kind = CTX_KIND_LOOP, phase = CTX_PHASE_THEN,
+                        iifeDepth = loopDepth, valKind = VAL_KIND_INFER, valVar = loopValVar, label = loopLabel,
                         iterLabel = "", countVar = loopCountVar, itemVar = loopItemMetaVar, itemKind = seqItemKind,
                         indexVar = loopIdxVar, hasIndex = isSeqLoop);
                         thenProbe := self(target, source, probeThenOpen - 1, prefix, locals, functions, params, currentName,
@@ -9939,7 +9939,7 @@ parseBinaryCtx := fn(target: String, source: String, position: Int, prefix: Stri
             afterThenKw := skipTrivia(source, thenKwPos + 4, prefix);
             rejectMisplacedTag(source, afterThenKw, prefix, "block tag cannot appear after then");
             thenOpen := expectSymbol(source, afterThenKw, "{", prefix);
-            loopThenCtx := (id = loopId, tag = condParseTag, kind = "loop", phase = "then",
+            loopThenCtx := (id = loopId, tag = condParseTag, kind = CTX_KIND_LOOP, phase = CTX_PHASE_THEN,
             iifeDepth = loopDepth, valKind = resolvedPreThenKind, valVar = loopValVar, label = loopLabel,
             iterLabel = "", countVar = loopCountVar, itemVar = loopItemMetaVar, itemKind = finalSeqItemKind,
             indexVar = loopIdxVar, hasIndex = finalIsSeqLoop);
@@ -9989,11 +9989,11 @@ parseBinaryCtx := fn(target: String, source: String, position: Int, prefix: Stri
             afterFinKw := skipTrivia(source, afterLoopConstruct + 7, prefix);
             rejectMisplacedTag(source, afterFinKw, prefix, "block tag cannot appear after finally");
             finOpen := expectSymbol(source, afterFinKw, "{", prefix);
-            loopFinCtx := (id = loopId, tag = condParseTag, kind = "loop", phase = "finally",
+            loopFinCtx := (id = loopId, tag = condParseTag, kind = CTX_KIND_LOOP, phase = CTX_PHASE_FINALLY,
             iifeDepth = loopDepth, valKind = resolvedPreThenKind, valVar = loopValVar, label = loopLabel,
             iterLabel = "", countVar = loopCountVar, itemVar = loopItemMetaVar, itemKind = finalSeqItemKind,
             indexVar = loopIdxVar, hasIndex = finalIsSeqLoop);
-            finBarrierCtx := (id = 0, tag = "", kind = "finally", phase = "finally",
+            finBarrierCtx := (id = 0, tag = "", kind = CTX_KIND_FINALLY, phase = CTX_PHASE_FINALLY,
             iifeDepth = loopDepth, valKind = VALUE_KIND_UNIT, valVar = "", label = "",
             iterLabel = "", countVar = "", itemVar = "", itemKind = "", indexVar = "", hasIndex = false);
             loopFinCtxs := appendCtx(appendCtx(ctxs, loopFinCtx), finBarrierCtx);
@@ -10016,7 +10016,7 @@ parseBinaryCtx := fn(target: String, source: String, position: Int, prefix: Stri
             }
         }
     } else if condParseKind =!= "" {
-        rawCondEnd := if condParseKind == "if" {
+        rawCondEnd := if condParseKind == CTX_KIND_IF {
             scanRawIfChainEnd(source, condParseStart, prefix, true)
         } else {
             openMatchCheck := skipTrivia(source, condParseStart + 5, prefix);
@@ -10034,11 +10034,11 @@ parseBinaryCtx := fn(target: String, source: String, position: Int, prefix: Stri
         if hasActualFinally and target =!= TARGET_TS {
             failAt(source, afterOptThenTrivia, prefix, "C backend does not support finally blocks yet");
         }
-        if condParseKind == "match" and target =!= TARGET_TS {
+        if condParseKind == CTX_KIND_MATCH and target =!= TARGET_TS {
             failAt(source, condParseStart, prefix, "C backend does not support value match expressions yet");
         }
         useIifeCond := condParseTag =!= "" or hasActualThen or hasActualFinally;
-        if useIifeCond and condParseKind == "if" and target =!= TARGET_TS {
+        if useIifeCond and condParseKind == CTX_KIND_IF and target =!= TARGET_TS {
             if condParseTag =!= "" {
                 failAt(source, condParseTagAt, prefix, "C backend does not support tagged conditionals yet");
             } else {
@@ -10046,10 +10046,10 @@ parseBinaryCtx := fn(target: String, source: String, position: Int, prefix: Stri
             }
         }
         if not useIifeCond {
-            condBarrierCtxs := appendCtx(ctxs, (id = 0, tag = "", kind = condParseKind, phase = "body",
+            condBarrierCtxs := appendCtx(ctxs, (id = 0, tag = "", kind = condParseKind, phase = CTX_PHASE_BODY,
             iifeDepth = iifeDepth, valKind = "", valVar = "", label = "", iterLabel = "",
             countVar = "", itemVar = "", itemKind = "", indexVar = "", hasIndex = false));
-            if condParseKind == "if" {
+            if condParseKind == CTX_KIND_IF {
                 var cursor := skipTrivia(source, condParseStart + 2, prefix);
                 var ifMarkers := "";
                 rejectHeaderBlockTag(source, cursor, prefix, "if");
@@ -10255,11 +10255,11 @@ parseBinaryCtx := fn(target: String, source: String, position: Int, prefix: Stri
                 isPass1 := pass == 1;
                 passInfer := isPass1 or inferMode;
                 passCtxValKind := if isPass1 {
-                    if condHintExpected == "" { "__infer__" } else { "__infer__:" + condHintExpected }
+                    if condHintExpected == "" { VAL_KIND_INFER } else { (VAL_KIND_INFER + ":") + condHintExpected }
                 } else {
                     resolvedPreThenKind
                 };
-                condCtx := (id = condId, tag = condParseTag, kind = condParseKind, phase = "body",
+                condCtx := (id = condId, tag = condParseTag, kind = condParseKind, phase = CTX_PHASE_BODY,
                 iifeDepth = condDepth, valKind = passCtxValKind, valVar = condValVar, label = condLabel,
                 iterLabel = integer.intText(maxLocalLexDepth(locals) + 1), countVar = "", itemVar = "", itemKind = "", indexVar = "", hasIndex = false);
                 condPassCtxs := appendCtx(ctxs, condCtx);
@@ -10279,7 +10279,7 @@ parseBinaryCtx := fn(target: String, source: String, position: Int, prefix: Stri
                 var passHasElse := false;
                 var passPartialNoElseAt := -1;
                 var cursor := 0;
-                if condParseKind == "if" {
+                if condParseKind == CTX_KIND_IF {
                     cursor = skipTrivia(source, condParseStart + 2, prefix);
                     rejectHeaderBlockTag(source, cursor, prefix, "if");
                     condStart0 := cursor;
@@ -10476,7 +10476,7 @@ parseBinaryCtx := fn(target: String, source: String, position: Int, prefix: Stri
                     condEndCursor = cursor;
                 } else {
                     var rawIfStmt := "";
-                    if condParseKind == "match" and passBranchCount == 1 and passHasElse {
+                    if condParseKind == CTX_KIND_MATCH and passBranchCount == 1 and passHasElse {
                         rawIfStmt = condBranchStmtCode(target, resolvedPreThenKind, condValVar, passBranchKinds[0], passBranchCodes[0]);
                     } else {
                         condCount := if passHasElse { passBranchCount - 1 } else { passBranchCount };
@@ -10513,8 +10513,8 @@ parseBinaryCtx := fn(target: String, source: String, position: Int, prefix: Stri
                 thenId := condId + 1;
                 thenValVar := "lite$val" + integer.intText(thenId);
                 thenLabel := "lite$b" + integer.intText(thenId);
-                thenPass1ValKind := if normExpected == "" { "__infer__" } else { "__infer__:" + normExpected };
-                thenPass1Ctx := (id = thenId, tag = condParseTag, kind = condParseKind, phase = "then",
+                thenPass1ValKind := if normExpected == "" { VAL_KIND_INFER } else { (VAL_KIND_INFER + ":") + normExpected };
+                thenPass1Ctx := (id = thenId, tag = condParseTag, kind = condParseKind, phase = CTX_PHASE_THEN,
                 iifeDepth = condDepth, valKind = thenPass1ValKind, valVar = thenValVar, label = thenLabel,
                 iterLabel = "", countVar = "", itemVar = condValVar, itemKind = resolvedPreThenKind, indexVar = "", hasIndex = false);
                 thenPass1 := self(target, source, thenOpen - 1, prefix, locals, functions, params, currentName,
@@ -10526,7 +10526,7 @@ parseBinaryCtx := fn(target: String, source: String, position: Int, prefix: Stri
                 } else {
                     thenValKind := thenPass1.kind;
                     thenPass2Expected := if thenValKind == VALUE_KIND_UNIT or thenValKind == VALUE_KIND_NEVER { "" } else { thenValKind };
-                    thenPass2Ctx := (id = thenId, tag = condParseTag, kind = condParseKind, phase = "then",
+                    thenPass2Ctx := (id = thenId, tag = condParseTag, kind = condParseKind, phase = CTX_PHASE_THEN,
                     iifeDepth = condDepth, valKind = thenValKind, valVar = thenValVar, label = thenLabel,
                     iterLabel = "", countVar = "", itemVar = condValVar, itemKind = resolvedPreThenKind, indexVar = "", hasIndex = false);
                     thenPass2 := self(target, source, thenOpen - 1, prefix, locals, functions, params, currentName,
@@ -10583,10 +10583,10 @@ parseBinaryCtx := fn(target: String, source: String, position: Int, prefix: Stri
                 afterFinKw := skipTrivia(source, afterCondConstruct + 7, prefix);
                 rejectMisplacedTag(source, afterFinKw, prefix, "block tag cannot appear after finally");
                 finOpen := expectSymbol(source, afterFinKw, "{", prefix);
-                condFinCtx := (id = condId, tag = condParseTag, kind = condParseKind, phase = "finally",
+                condFinCtx := (id = condId, tag = condParseTag, kind = condParseKind, phase = CTX_PHASE_FINALLY,
                 iifeDepth = condDepth, valKind = resolvedPreThenKind, valVar = condValVar, label = condLabel,
                 iterLabel = "", countVar = "", itemVar = "", itemKind = "", indexVar = "", hasIndex = false);
-                finBarrierCtx := (id = 0, tag = "", kind = "finally", phase = "finally",
+                finBarrierCtx := (id = 0, tag = "", kind = CTX_KIND_FINALLY, phase = CTX_PHASE_FINALLY,
                 iifeDepth = condDepth, valKind = VALUE_KIND_UNIT, valVar = "", label = "",
                 iterLabel = "", countVar = "", itemVar = "", itemKind = "", indexVar = "", hasIndex = false);
                 condFinCtxs := appendCtx(appendCtx(ctxs, condFinCtx), finBarrierCtx);
@@ -13208,7 +13208,7 @@ moduleIdentity: String, neededFns: String, skipSoftBuiltins: Bool): Items {
             }
             conditionStart := position;
             rejectHeaderBlockTag(source, conditionStart, prefix, "if");
-            ifBarrierCtx := (id = 0, tag = "", kind = "if", phase = "body", iifeDepth = 0,
+            ifBarrierCtx := (id = 0, tag = "", kind = CTX_KIND_IF, phase = CTX_PHASE_BODY, iifeDepth = 0,
             valKind = "", valVar = "", label = "", iterLabel = "", countVar = "",
             itemVar = "", itemKind = "", indexVar = "", hasIndex = false);
             condition := parseExpressionCtx(target, source, position, prefix, locals, functions, functionParams, currentName,
@@ -13345,7 +13345,7 @@ moduleIdentity: String, neededFns: String, skipSoftBuiltins: Bool): Items {
             }
             isFirstFallback := textLib.wordAt(source, firstArmStart, "_") and afterUnderscore < size and
             textLib.at(source, afterUnderscore) == "{";
-            matchBarrierCtx := (id = 0, tag = "", kind = "match", phase = "body", iifeDepth = 0,
+            matchBarrierCtx := (id = 0, tag = "", kind = CTX_KIND_MATCH, phase = CTX_PHASE_BODY, iifeDepth = 0,
             valKind = "", valVar = "", label = "", iterLabel = "", countVar = "",
             itemVar = "", itemKind = "", indexVar = "", hasIndex = false);
             var firstArmOpen := -1;
@@ -13565,7 +13565,7 @@ moduleIdentity: String, neededFns: String, skipSoftBuiltins: Bool): Items {
             listLib.pushBack(mut loopIds, stmtLoopId);
             listLib.pushBack(mut loopTryKeys, loopTryKey);
             listLib.pushBack(mut loopTransferStarts, loopStartTransfers);
-            listLib.pushBack(mut stmtCtxs, (id = stmtLoopId, tag = "", kind = "loop", phase = "body",
+            listLib.pushBack(mut stmtCtxs, (id = stmtLoopId, tag = "", kind = CTX_KIND_LOOP, phase = CTX_PHASE_BODY,
             iifeDepth = 0, valKind = "", valVar = "", label = "",
             iterLabel = integer.intText(depth + 1), countVar = "", itemVar = "", itemKind = "", indexVar = "", hasIndex = false));
             listLib.pushBack(mut savedStates, (returned = currentReturned, stopped = currentStopped,
@@ -13881,7 +13881,7 @@ moduleIdentity: String, neededFns: String, skipSoftBuiltins: Bool): Items {
                     fnTransferStart = transferCount;
                     listLib.pushBack(mut items, (kind = ITEM_KIND_TRANSFER_TRY, name = "", runtime = fnTryKey, code = "", intValue = 0, textValue = ""));
                 }
-                listLib.pushBack(mut stmtCtxs, (id = 0, tag = "", kind = "fn", phase = "body",
+                listLib.pushBack(mut stmtCtxs, (id = 0, tag = "", kind = CTX_KIND_FN, phase = CTX_PHASE_BODY,
                 iifeDepth = 0, valKind = header.result, valVar = "", label = "",
                 iterLabel = "1", countVar = "", itemVar = "", itemKind = "", indexVar = "", hasIndex = false));
                 fnPreLocalsLen := localsCount(locals);
