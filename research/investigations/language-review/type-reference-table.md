@@ -146,6 +146,29 @@ preserving identity across renames needs another stable input or a deliberate
 compatibility mechanism. Whether such stability is required, and how library
 versions and forks relate, remain open.
 
+### User idea: use the newly built library's table
+
+The user asks whether a changed library can be built with its new fields and
+table, and a consumer can then use that latest table, so both sides agree
+without relying on a previous build's output. This is an important candidate:
+the library artifact and its accompanying table are inputs to the consumer's
+clean build, not a disposable cache that the consumer must have retained.
+
+If the producer and a newly built consumer both use the same library artifact
+and contract, its table could supply their shared type/Kind meanings even if
+local numbering changed from an earlier build. The mechanism for importing,
+identifying and applying that agreement remains open; the idea does not require
+the compiler to reproduce an identical numeric table from source order.
+
+Evaluate separately: a second library already compiled against an older table;
+a consumer binary not rebuilt when the library changes; a union value persisted
+or shared using the old mapping; a changed record layout or function contract;
+and two library versions used together. Such cases need a defined compatibility,
+rebuild, relink, translation or rejection rule. Rebuilding a library and using
+its newest table in a *new* consumer establishes a possible agreement for that
+pair; it does not automatically rewrite an older artifact or stored bytes. The
+specific policy and binary/version guarantees are not selected.
+
 A future [precompiled Lite representation](precompiled-lite-representation.md)
 may help carry public identities and dependencies between builds, but its format,
 contents, and identity-assignment algorithm are not selected. The user also

@@ -77,6 +77,13 @@ still need rules. No runtime table, lookup on every access, user-visible
 reflection, allocation, or 64-bit reference format follows automatically from
 having compile-time metadata.
 
+The user suggests a new consumer could use the table produced by the latest
+library build. That published table can be an input to a clean consumer build,
+without requiring the consumer to possess an old generated cache. See [the
+latest-table discussion](type-reference-table.md#user-idea-use-the-newly-built-librarys-table)
+for the remaining questions about older binaries, independently built
+dependencies, previously stored values and version compatibility.
+
 ## Incremental and separate-build requirements
 
 A valid cache key may need compiler and artifact format versions, target and
