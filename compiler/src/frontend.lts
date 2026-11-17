@@ -228,6 +228,33 @@ pub ITEM_KIND_ASSIGN_INT := "AssignInt";
 pub ITEM_KIND_ASSIGN_STRING := "AssignString";
 pub ITEM_KIND_ASSIGN_BOOL := "AssignBool";
 pub ITEM_KIND_ASSIGN_FLOAT := "AssignFloat";
+ITEM_KIND_LOCAL_UNIT := "LocalUnit";
+ITEM_KIND_VAR_UNIT := "VarUnit";
+
+CTX_KIND_IF := "if";
+CTX_KIND_MATCH := "match";
+CTX_KIND_LOOP := "loop";
+CTX_KIND_FN := "fn";
+CTX_KIND_BLOCK := "block";
+CTX_KIND_FINALLY := "finally";
+
+CTX_PHASE_HEADER := "header";
+CTX_PHASE_BODY := "body";
+CTX_PHASE_THEN := "then";
+CTX_PHASE_FINALLY := "finally";
+
+VAL_KIND_INFER := "__infer__";
+
+SCAN_HIT_NONE := 0;
+SCAN_HIT_QUOTE := 1;
+SCAN_HIT_COMMENT := 2;
+SCAN_HIT_OPEN := 3;
+SCAN_HIT_CLOSE := 4;
+SCAN_NO_THEN := -2;
+
+DOT_LOOP_OUTSIDE := -1;
+DOT_LOOP_IN_CONDITIONAL := -2;
+DOT_LOOP_IN_FINALLY := -3;
 
 /** Reports one source-positioned diagnostic as `name:line:column: message`, or `line:column: message` when `prefix` is empty, then exits 2. */
 failAt := fn(source: String, position: Int, prefix: String, message: String): Unit {

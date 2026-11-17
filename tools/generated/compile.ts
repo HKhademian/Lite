@@ -251,7 +251,7 @@ function lite$listPopBack<T>(items: T[], at: number): T {
     return items.pop() as T;
 }
 
-const lite$intLines: readonly number[] = [0, 122, 123, 147, 175, 203, 229, 263, 264, 290, 387, 403, 406, 407, 448, 527, 610, 630, 636, 637, 661, 690, 722, 761, 785, 826, 862, 907, 932, 942, 971, 1012, 1069, 1128, 1169, 1175, 1176, 1220, 1241, 1247, 1312, 1315, 1316, 1337];
+const lite$intLines: readonly number[] = [0, 122, 123, 147, 175, 203, 229, 263, 264, 283, 300, 301, 327, 424, 440, 443, 444, 485, 564, 647, 667, 673, 674, 698, 727, 759, 798, 822, 863, 899, 944, 969, 979, 1008, 1049, 1106, 1165, 1206, 1212, 1213, 1257, 1278, 1284, 1349, 1352, 1353, 1374];
 const lite$intSource = "tools/src/compile.lts:";
 const lite$intMin = -(1n << 63n), lite$intMax = (1n << 63n) - 1n;
 function lite$fault(category: string, at: number, message: string): never {
@@ -1045,10 +1045,10 @@ export function main(lite$write?: (text: string) => void): string {
             if (((liteFn$lib$core$list$listCountText([...(lite_rawArgs)])) < (2n))) {
                 liteFn_usageExit();
             }
-            lite_target = lite$listAt((lite_rawArgs), 1n, 967);
+            lite_target = lite$listAt((lite_rawArgs), 1n, 1004);
             lite_restArgs = [...(liteFn$lib$util$cli$rest([...(lite_rawArgs)], 2n))];
         } else if (liteFn$lib$core$text$startsWithAt(lite_first, 0n, "--target=")) {
-            lite_target = lite$textSlice(lite_first, 9n, lite$textLength(lite_first), 1086);
+            lite_target = lite$textSlice(lite_first, 9n, lite$textLength(lite_first), 1123);
             lite_restArgs = [...(liteFn$lib$util$cli$rest([...(lite_rawArgs)], 1n))];
         }
         if (((((lite_target) !== ("ts"))) && (((lite_target) !== ("c"))))) {

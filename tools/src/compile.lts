@@ -6,6 +6,9 @@ text := import "core/text";
 cli := import "util/cli";
 project := import "util/project";
 
+TARGET_TS := "ts";
+TARGET_C := "c";
+
 usageExit := fn(): Unit {
     io.errorLine("Usage: ./bin/lite-compile [--target ts|c] [--builtin-mode SPEC]... file.lts");
     io.exit(2);
