@@ -9,7 +9,10 @@ original scope. Decisions do not establish compiler conformance; use
 The user requires separately compiled compatible Lite components to exchange
 runtime values consistently with their compile-time type/form agreement. A
 future library interface and its native outputs are illustrative; formats, ABI,
-linking, ownership, invalid external inputs and versioning remain open. See
+linking, ownership, invalid external inputs and versioning remain open. The
+user clarifies that independently built Lite libraries must be usable as Lite
+components without requiring implementation-source imports, one compilation
+unit, or a redesigned C FFI interface. See
 [separately compiled libraries](modules-and-packages.md#separately-compiled-libraries-and-runtime-agreement).
 
 ## Shared union Kind mapping, 2026-11-17

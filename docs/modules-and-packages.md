@@ -402,6 +402,14 @@ Kind mapping; other public types and calls need their own representation,
 transfer and lifetime contracts. Source-level compatibility alone cannot
 silently make mismatched runtime representations compatible.
 
+The intended future workflow supports independently compiled, linkable
+Lite-written libraries consumed as Lite components without requiring consumers
+to import implementation source, compile everything together, or redesign the
+public interface as a C FFI boundary. Internal use of a C backend is not ruled
+out. The binary compatibility scope across targets, compilers, versions and
+library revisions still needs an explicit contract; this is not a promise of
+unlimited compatibility.
+
 The user's possible `.c`, `.h`, `.so`, `.a`, and `.lth` outputs illustrate a
 future separately compiled library workflow; `.lth` and the import/link format
 are not selected or implemented by this direction. Handling external data and

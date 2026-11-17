@@ -22,6 +22,25 @@ approved format, requirement to generate every artifact, guaranteed C ABI, or
 claim that the current compiler supports the route. Static versus dynamic
 linking and the nature of the interface remain open.
 
+## First-class separately compiled Lite libraries
+
+The user clarifies the requirement: a Lite-written library and a Lite-written
+consumer must be able to be **compiled separately and linked as Lite
+components**, while preserving the Lite public type and runtime value contracts.
+The consumer should not have to import the implementation source, compile the
+entire program as one unit, or redesign its public interface as a C FFI API to
+get that interoperability. This is a future Lite-to-Lite library capability;
+it is separate from additionally supporting C interoperability.
+
+The chosen implementation may use C or another backend internally if it
+preserves the Lite-level contract. Do not infer a particular object format,
+linker, `.lth` syntax, mandatory C wrapper, public C ABI, or identical machine
+representation on all targets. The extent of binary compatibility across Lite
+compiler versions, independent implementations, targets and incompatible
+library revisions requires an explicit contract; the user has not selected
+unlimited compatibility across all of them. Incompatible combinations must not
+silently be represented as compatible.
+
 ## Required relationship
 
 When a separately compiled producer and consumer are treated as compatible,
@@ -44,7 +63,9 @@ open and should be reviewed against the user's fail-closed concerns.
 
 - A library produces an `Int64 | String` value and the application consumes it;
   repeat for both active members, with the consumer spelling the type in the
-  opposite order. Preserve value, active identity and the shared Kind mapping.
+  opposite order. Build producer and consumer independently, link via the
+  public Lite library interface without importing producer implementation
+  source, and preserve value, active identity and the shared Kind mapping.
 - A public record or fixed array crosses the boundary with the same public type
   contract. Check field/element layout, target alignment and permitted transfer.
 - A library and consumer disagree on their public representation contract.
@@ -56,6 +77,10 @@ open and should be reviewed against the user's fail-closed concerns.
 - Compare a producer/consumer using the same target and compatible interface
   with different targets, versions or toolchains. The intended compatibility
   guarantees and any versioning boundaries are not yet selected.
+- Exercise static and shared library forms if each is eventually supported;
+  separately compile consumers without replacing a Lite public value with a
+  manually redesigned C-only API. Generic instantiation, callable state,
+  errors and resources need their own boundary cases.
 
 These are design cases, not executable test passes. A complete contract needs
 type and member identity, sizes and alignment, Kind encodings and zero state,

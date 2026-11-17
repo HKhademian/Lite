@@ -216,10 +216,12 @@ Open: collection/iterator protocol names and syntax, empty/unresolved-element li
 
 Selected:
 
-- Separately compiled Lite components treated as compatible must exchange
+- Separately compiled Lite libraries and consumers must be able to interoperate
+  as Lite components, without requiring implementation-source imports, a single
+  compilation unit or a redesigned C FFI API. Compatible components exchange
   runtime values according to their shared contracts; source-level type
   agreement alone does not make incompatible representations safe. Library
-  artifacts, ABI, versioning, validation and linking remain open; see
+  artifacts, ABI scope, versioning, validation and linking remain open; see
   [separately compiled libraries](../modules-and-packages.md#separately-compiled-libraries-and-runtime-agreement).
 
 - The approved igniter fixed-array subset runs nonempty homogeneous literals of scalars/flat tuples, Int bracket/literal dot reads, explicit [T; N] function inputs/results and action traversal with optional as item. Exact extents/types, evaluated value copies, source-once traversal, scoped receivers and nearest-loop exits are preserved. Runtime bounds use the temporary BoundPanic diagnostic. Empty construction, unions, nested arrays, mutation/growth, views, metadata, general sequence contracts and native layout remain unimplemented. See [fixed-array coverage](../../igniter/README.md#fixed-arrays-and-traversal).
