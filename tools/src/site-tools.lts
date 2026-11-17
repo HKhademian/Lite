@@ -1,0 +1,14 @@
+/** CLI entrypoint emitting `/tools/` body HTML and search entries JSON (`site/tools-page.ts`). */
+
+cli := import "util/cli";
+io := import "core/io";
+list := import "core/list";
+siteTools := import "util/site-tools";
+
+run := fn(rawArgs: List<String>): Unit {
+    args := cli.stripLeadingSeparator(rawArgs);
+    repoUrl := if list.listCountText(args) > 0 { args[0] } else { "" };
+    io.output(siteTools.buildToolsPayloadJson(repoUrl));
+};
+
+run(io.inputArgs());

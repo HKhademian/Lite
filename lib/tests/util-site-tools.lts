@@ -1,0 +1,17 @@
+siteTools := import "util/site-tools";
+json := import "util/json";
+test := import "core/test";
+text := import "core/text";
+
+withRepo := siteTools.buildToolsPayloadJson("https://github.com/example/lite");
+test.checkBool("valid json with repo", true, json.validate(withRepo).ok);
+test.checkBool("contains cli ref", true, text.indexOfText(withRepo, "./bin/lite bench", 0) >= 0);
+test.checkBool("contains bench-release cmd id", true, text.indexOfText(withRepo, "id=\\\"cmd-bench-release\\\"", 0) >= 0);
+test.checkBool("uses repo vscode link", true, text.indexOfText(withRepo, "https://github.com/example/lite/tree/main/editors/vscode", 0) >= 0);
+test.checkBool("contains search entries", true, text.indexOfText(withRepo, "Self-Hosting 3-Generation Ladder", 0) >= 0);
+
+noRepo := siteTools.buildToolsPayloadJson("");
+test.checkBool("valid json without repo", true, json.validate(noRepo).ok);
+test.checkBool("fallback vscode href", true, text.indexOfText(noRepo, "href=\\\"../\\\"", 0) >= 0);
+
+test.done("util-site-tools");

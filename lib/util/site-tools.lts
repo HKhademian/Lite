@@ -1,0 +1,266 @@
+/** Generates `/tools/` toolchain hub body HTML and search entries (`site/tools-page.ts`). */
+
+list := import "core/list";
+text := import "core/text";
+json := import "util/json";
+
+escapeSiteHtml := fn(raw: String): String {
+    size := text.length(raw);
+    out: mut List<String> = [];
+    var i := 0;
+    loop i < size {
+        ch := text.at(raw, i);
+        if ch == "&" { list.pushBack(mut out, "&amp;"); }
+        else if ch == "<" { list.pushBack(mut out, "&lt;"); }
+        else if ch == ">" { list.pushBack(mut out, "&gt;"); }
+        else if ch == "\"" { list.pushBack(mut out, "&quot;"); }
+        else if ch == "'" { list.pushBack(mut out, "&#39;"); }
+        else { list.pushBack(mut out, ch); }
+        i = i + 1;
+    }
+    text.joinTexts(out, "")
+};
+
+slugifyCommandName := fn(name: String): String {
+    lowered := text.toLowerAscii(name);
+    out: mut List<String> = [];
+    var prevDash := false;
+    var i := 0;
+    loop i < text.length(lowered) {
+        ch := text.at(lowered, i);
+        isAlnum := text.indexOfText("abcdefghijklmnopqrstuvwxyz0123456789", ch, 0) >= 0;
+        if isAlnum {
+            list.pushBack(mut out, ch);
+            prevDash = false;
+        } else if not prevDash {
+            list.pushBack(mut out, "-");
+            prevDash = true;
+        }
+        i = i + 1;
+    }
+    text.joinTexts(out, "")
+};
+
+/** Builds JSON `{"body": "...", "searchEntries": [...]}` for the `/tools/` site section. */
+pub buildToolsPayloadJson := fn(repoUrl: String): String {
+    cmdNames: List<String> = [
+        "run", "compile", "check", "fmt", "test", "verify", "docs", "doctor", "bench & release"
+    ];
+    cmdSynopses: List<String> = [
+        "./bin/lite run [--builtin-mode SPEC] file.lts [-- arg ...]",
+        "./bin/lite compile [--target ts] [--builtin-mode SPEC] file.lts",
+        "./bin/lite check [--builtin-mode SPEC] file.lts",
+        "./bin/lite fmt [--check] [FILE_OR_DIR... | -]",
+        "./bin/lite test [--smoke|--fast|--full] | --cases [FILTER]",
+        "./bin/lite verify [--all|--update|--coverage|FILE.case.json]",
+        "./bin/lite docs [QUERY|--json|--render-json|--modules-json|--check]",
+        "./bin/lite doctor [--docs]",
+        "./bin/lite bench OUTPUT [FILTER] | ./bin/lite release OUTPUT [TAG]"
+    ];
+    cmdSummaries: List<String> = [
+        "Compiles a Lite source file to a temporary TypeScript artifact and executes it immediately through the Node entry runner, forwarding arguments and stdin.",
+        "Emits generated TypeScript to stdout cleanly without running the program. Direct compiler wrappers `./bin/lite-compile-ts` and `./bin/lite-compile-c` target TS or C directly.",
+        "Parses, typechecks, and validates execution-trace safety on a Lite file without executing it.",
+        "Formats Lite files idempotently with canonical indentation and brace spacing. Passes malformed files unchanged; `--check` verifies formatting without writing.",
+        "Runs repository verification suites (quiet smoke suite by default, `--fast`, `--full` release-grade sweep, or `--cases` declarative fixture runner).",
+        "Verifies TS compilation, strict typechecking, and runtime outputs across declarative `.case.json` and artifact manifests; `--coverage` checks documented feature/example parity.",
+        "Searches repository Markdown documentation, extracts clean HTML/TOC/module API JSON via `util/markdown-html` and `util/docgen`, or validates all local links with `--check`.",
+        "Checks repository health, compiler seed integrity, layout consistency, and documentation structure.",
+        "Benchmarks verified compiler workloads (`bench`) or packages a reproducible source snapshot (`release`)."
+    ];
+    cmdExamples: List<String> = [
+        "./bin/lite run language/examples/foundations/io/double-sum.lts",
+        "./bin/lite compile language/examples/foundations/io/double-sum.lts > out.ts",
+        "./bin/lite check language/showcases/blocks/trace/execution-trace-safety.lts",
+        "./bin/lite fmt --check language/examples lib/core tools/src",
+        "./bin/lite test --cases tooling.quality.docs-search",
+        "./bin/lite verify --coverage",
+        "./bin/lite docs --check",
+        "./bin/lite doctor",
+        "./bin/lite bench /tmp/lite-bench.json"
+    ];
+    cmdExits: List<String> = [
+        "Exit 0 on success; non-zero on compile/runtime fault or explicit io.exit(code).",
+        "Exit 0 with generated source on stdout; exit 1 or 2 on diagnostics.",
+        "Exit 0 when checks pass; non-zero with line/column diagnostics.",
+        "Exit 0 if formatted/clean; exit 1 under `--check` when changes are needed; exit 2 on invalid args.",
+        "Exit 0 when all selected tests and cases pass.",
+        "Exit 0 when verified manifests and coverage gates match.",
+        "Exit 0 when query/generation succeeds or all Markdown links and anchors resolve.",
+        "Exit 0 when all repository health checks pass.",
+        "Exit 0 on successful report or archive creation."
+    ];
+
+    cards: mut List<String> = [];
+    navItems: mut List<String> = [];
+    searchEntries: mut List<String> = [];
+    var i := 0;
+    n := list.listCountText(cmdNames);
+    loop i < n {
+        cName := cmdNames[i];
+        cSyn := cmdSynopses[i];
+        cSum := cmdSummaries[i];
+        cEx := cmdExamples[i];
+        cExit := cmdExits[i];
+        cSlug := slugifyCommandName(cName);
+        list.pushBack(mut cards,
+            "<article class=\"portal-card tools-cmd-card\" id=\"cmd-" + escapeSiteHtml(cSlug) + "\">\n"
+            + "  <div class=\"portal-card-head\">\n"
+            + "    <h3><code>./bin/lite " + escapeSiteHtml(cName) + "</code></h3>\n"
+            + "    <span class=\"status-pill status-pill-universal\">CLI</span>\n"
+            + "  </div>\n"
+            + "  <pre class=\"code-block\"><code>" + escapeSiteHtml(cSyn) + "</code></pre>\n"
+            + "  <p>" + escapeSiteHtml(cSum) + "</p>\n"
+            + "  <pre class=\"code-block\"><code>$ " + escapeSiteHtml(cEx) + "</code></pre>\n"
+            + "  <div class=\"portal-card-foot\">\n"
+            + "    <span class=\"code-card-meta\">" + escapeSiteHtml(cExit) + "</span>\n"
+            + "  </div>\n"
+            + "</article>");
+        list.pushBack(mut navItems,
+            "<li><a href=\"#cmd-" + escapeSiteHtml(cSlug) + "\">" + escapeSiteHtml(cName) + "</a></li>");
+        list.pushBack(mut searchEntries,
+            "{\"kind\":\"tool\",\"title\":" + json.quoteString("lite " + cName)
+            + ",\"subtitle\":" + json.quoteString(cSum)
+            + ",\"href\":" + json.quoteString("tools/#cmd-" + cSlug)
+            + ",\"keywords\":" + json.quoteString("cli bin lite " + cName + " " + cSyn + " " + cEx)
+            + ",\"badge\":\"CLI\"}");
+        i = i + 1;
+    }
+
+    list.pushBack(mut searchEntries,
+        "{\"kind\":\"tool\",\"title\":\"VS Code Lite Extension\",\"subtitle\":\"TextMate syntax highlighting extension in editors/vscode/\",\"href\":\"tools/#vscode\",\"keywords\":\"vscode editor syntax highlight vsix textmate\",\"badge\":\"Editor\"}");
+    list.pushBack(mut searchEntries,
+        "{\"kind\":\"tool\",\"title\":\"Self-Hosting 3-Generation Ladder\",\"subtitle\":\"Compile compiler/src/ through three fixed-point generations\",\"href\":\"tools/#bootstrap\",\"keywords\":\"self-host bootstrap fixed-point compiler\",\"badge\":\"Compiler\"}");
+
+    repoVscodeHref := if repoUrl =!= "" { repoUrl + "/tree/main/editors/vscode" } else { "../" };
+    repoSelfHostHref := if repoUrl =!= "" { repoUrl + "/blob/main/compiler/scripts/self-host.ts" } else { "../" };
+
+    body := "<div class=\"portal-layout\">\n"
+        + "  <aside class=\"portal-sidebar\" aria-label=\"Tools navigation\">\n"
+        + "    <p class=\"portal-sidebar-title\">Toolchain</p>\n"
+        + "    <details class=\"portal-nav-group\" open>\n"
+        + "      <summary>Local Workflow</summary>\n"
+        + "      <ul class=\"portal-nav-list\">\n"
+        + "        <li><a href=\"#cli\">CLI Reference</a></li>\n"
+        + "        <li><a href=\"#vscode\">VS Code Extension</a></li>\n"
+        + "        <li><a href=\"#playground-host\">Browser Play &amp; Worker</a></li>\n"
+        + "        <li><a href=\"#bootstrap\">Self-Hosting Ladder</a></li>\n"
+        + "      </ul>\n"
+        + "    </details>\n"
+        + "    <details class=\"portal-nav-group\" open>\n"
+        + "      <summary>CLI Commands</summary>\n"
+        + "      <ul class=\"portal-nav-list\">\n"
+        + "        " + text.joinTexts(navItems, "\n        ") + "\n"
+        + "      </ul>\n"
+        + "    </details>\n"
+        + "  </aside>\n\n"
+        + "  <article class=\"md-prose\">\n"
+        + "    <section id=\"overview\">\n"
+        + "      <h1>Lite Toolchain &amp; Developer Workflow</h1>\n"
+        + "      <p class=\"hero-lead\">\n"
+        + "        Zero-ceremony CLI runner, strict TS/C emitters, idempotent formatter, VS Code syntax highlighting,\n"
+        + "        in-browser Play host, and three-generation self-hosting verification.\n"
+        + "      </p>\n"
+        + "      <div class=\"portal-grid\">\n"
+        + "        <a class=\"portal-card\" href=\"#cli\">\n"
+        + "          <div class=\"portal-card-head\"><strong>CLI Router</strong><span class=\"status-pill status-pill-shipped\">bin/lite</span></div>\n"
+        + "          <p>Run, compile, check, format, test, verify, and check docs from one command.</p>\n"
+        + "        </a>\n"
+        + "        <a class=\"portal-card\" href=\"#vscode\">\n"
+        + "          <div class=\"portal-card-head\"><strong>VS Code Extension</strong><span class=\"status-pill status-pill-selected\">VSIX</span></div>\n"
+        + "          <p>Declarative TextMate highlighting for <code>.lt</code>, <code>.lts</code>, and <code>.lite</code> files.</p>\n"
+        + "        </a>\n"
+        + "        <a class=\"portal-card\" href=\"#playground-host\">\n"
+        + "          <div class=\"portal-card-head\"><strong>Playground &amp; Play</strong><span class=\"status-pill status-pill-play\">Web Worker</span></div>\n"
+        + "          <p>Client-side TS &amp; C compilation with <code>extra/canvas</code> pixels and <code>extra/audio</code> synthesis.</p>\n"
+        + "        </a>\n"
+        + "      </div>\n"
+        + "    </section>\n\n"
+        + "    <section class=\"section\" id=\"cli\">\n"
+        + "      <div class=\"section-head\">\n"
+        + "        <h2>CLI Reference (<code>./bin/lite</code>)</h2>\n"
+        + "        <span class=\"code-card-meta\">Requires Node.js 22+</span>\n"
+        + "      </div>\n"
+        + "      <p>\n"
+        + "        Run <code>./bin/lite &lt;command&gt;</code> from the repository root. Direct compiler wrappers are also available at\n"
+        + "        <code>./bin/lite-compile</code>, <code>./bin/lite-compile-ts</code>, and <code>./bin/lite-compile-c</code>.\n"
+        + "      </p>\n"
+        + "      <div class=\"portal-grid-2\">\n"
+        + "        " + text.joinTexts(cards, "\n") + "\n"
+        + "      </div>\n"
+        + "    </section>\n\n"
+        + "    <section class=\"section\" id=\"vscode\">\n"
+        + "      <div class=\"section-head\">\n"
+        + "        <h2>VS Code Extension (<code>editors/vscode</code>)</h2>\n"
+        + "        <span class=\"status-pill status-pill-selected\">TextMate Grammar</span>\n"
+        + "      </div>\n"
+        + "      <p>\n"
+        + "        The local Lite extension provides approximate lexical highlighting for <code>.lt</code>, <code>.lts</code>, and legacy <code>.lite</code>\n"
+        + "        files without spawning a language server. It handles nested block comments, raw fenced comments, multiline double-quoted strings,\n"
+        + "        colon-prefixed floor operators (<code>:/</code>, <code>:%</code>, <code>:/=</code>, <code>:%=</code>), and <code>@tag</code> loop markers.\n"
+        + "      </p>\n"
+        + "      <pre class=\"code-block\"><code>$ cd editors/vscode\n"
+        + "$ npm ci &amp;&amp; npm test &amp;&amp; npm run package\n"
+        + "# Install generated lite-0.1.1.vsix via VS Code: Extensions -&gt; Install from VSIX...</code></pre>\n"
+        + "      <p><a href=\"" + escapeSiteHtml(repoVscodeHref) + "\">Browse <code>editors/vscode</code> source &rarr;</a></p>\n"
+        + "    </section>\n\n"
+        + "    <section class=\"section\" id=\"playground-host\">\n"
+        + "      <div class=\"section-head\">\n"
+        + "        <h2>Browser Playground &amp; Lite Play Protocol</h2>\n"
+        + "        <span class=\"status-pill status-pill-play\">Worker</span>\n"
+        + "      </div>\n"
+        + "      <p>\n"
+        + "        The static site ships a stripped self-hosted compiler in <code>runtime/compiler.js</code>, C emitter in <code>runtime/compiler-c.js</code>,\n"
+        + "        stdlib snapshot in <code>runtime/stdlib.json</code>, and isolated Web Worker runner in <code>runtime/worker.js</code>.\n"
+        + "        TypeScript inspection supports <strong>Program</strong>, <strong>Portable</strong>, and <strong>Full</strong> code views.\n"
+        + "      </p>\n"
+        + "      <p>\n"
+        + "        Interactive graphics and audio programs import <a href=\"../modules/extra/canvas.html\"><code>extra/canvas</code></a>,\n"
+        + "        <a href=\"../modules/extra/board.html\"><code>extra/board</code></a>, and <a href=\"../modules/extra/audio.html\"><code>extra/audio</code></a>,\n"
+        + "        defining optional top-level hooks:\n"
+        + "      </p>\n"
+        + "      <div class=\"md-table-wrap\">\n"
+        + "        <table>\n"
+        + "          <thead><tr><th>Hook</th><th>Signature</th><th>Host Event</th></tr></thead>\n"
+        + "          <tbody>\n"
+        + "            <tr><td><code>onCanvasInit</code></td><td><code>fn(): Unit</code></td><td>Called once before the first rendered Play frame.</td></tr>\n"
+        + "            <tr><td><code>onCanvasUpdate</code></td><td><code>fn(dt: Float): Int</code></td><td>Called each animation frame with delta seconds; non-zero stops loop.</td></tr>\n"
+        + "            <tr><td><code>onCanvasKeyDown</code> / <code>Up</code></td><td><code>fn(key: String): Unit</code></td><td>Keyboard key event while canvas has focus.</td></tr>\n"
+        + "            <tr><td><code>onCanvasPointerMove</code></td><td><code>fn(col: Int, row: Int): Unit</code></td><td>Pointer position mapped onto canvas cell coordinates.</td></tr>\n"
+        + "            <tr><td><code>onCanvasPointerDown</code> / <code>Up</code></td><td><code>fn(col: Int, row: Int, button: Int): Unit</code></td><td>Pointer button press/release on canvas coordinates.</td></tr>\n"
+        + "          </tbody>\n"
+        + "        </table>\n"
+        + "      </div>\n"
+        + "      <p><a href=\"../playground/\">Launch the Browser Playground &rarr;</a></p>\n"
+        + "    </section>\n\n"
+        + "    <section class=\"section\" id=\"bootstrap\">\n"
+        + "      <div class=\"section-head\">\n"
+        + "        <h2>Self-Hosting &amp; Three-Generation Bootstrap</h2>\n"
+        + "        <span class=\"status-pill status-pill-shipped\">Fixed Point</span>\n"
+        + "      </div>\n"
+        + "      <p>\n"
+        + "        Lite&#39;s compiler sources live in <code>compiler/src/*.lts</code> and compile against the verified seed in\n"
+        + "        <code>compiler/bootstrap/compiler.ts</code>. To prove fixed-point self-hosting, the ladder script compiles\n"
+        + "        the compiler through three consecutive generations and verifies identical SHA-256 outputs across generations:\n"
+        + "      </p>\n"
+        + "      <pre class=\"code-block\"><code>$ node compiler/scripts/self-host.ts</code></pre>\n"
+        + "      <p>\n"
+        + "        Every generated TypeScript compiler generation is also validated against strict TypeScript checks in <code>igniter/tsconfig.json</code>.\n"
+        + "        <a href=\"" + escapeSiteHtml(repoSelfHostHref) + "\">Inspect <code>compiler/scripts/self-host.ts</code> &rarr;</a>\n"
+        + "      </p>\n"
+        + "    </section>\n"
+        + "  </article>\n\n"
+        + "  <aside class=\"portal-toc\" aria-label=\"On this page\">\n"
+        + "    <p class=\"portal-toc-title\">On This Page</p>\n"
+        + "    <ul>\n"
+        + "      <li><a href=\"#overview\">Overview</a></li>\n"
+        + "      <li><a href=\"#cli\">CLI Reference</a></li>\n"
+        + "      <li><a href=\"#vscode\">VS Code Extension</a></li>\n"
+        + "      <li><a href=\"#playground-host\">Browser Play &amp; Worker</a></li>\n"
+        + "      <li><a href=\"#bootstrap\">Self-Hosting Ladder</a></li>\n"
+        + "    </ul>\n"
+        + "  </aside>\n"
+        + "</div>";
+
+    "{\"body\":" + json.quoteString(body) + ",\"searchEntries\":[" + text.joinTexts(searchEntries, ",") + "]}"
+};
