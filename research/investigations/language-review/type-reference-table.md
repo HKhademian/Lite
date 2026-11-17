@@ -36,6 +36,35 @@ cannot uniquely identify an unlimited universe of independently created types.
 Whether 64 bits are practically adequate depends on the identity scope, lifetime,
 allocation method, collision policy, version policy and number of types.
 
+## Candidate: predefined references for built-in types
+
+The user suggests reserving a common library/file namespace for internal types,
+illustratively `library = 0`, `file = 0`, with a predefined type constant for
+each built-in. This could give `Int64`, `String` and other agreed built-ins
+reproducible references across compilations. The namespace, bit split, numerical
+constants, set of built-ins, stability across targets and versions, and
+implementation remain open. This is an idea for review, not a selected
+encoding.
+
+The user subsequently observes that this adds nothing to the system in the
+present discussion. Keep the suggestion as explored history, not a feature to
+adopt or a requirement for a special reserved built-in namespace. In
+particular, predefined numbers alone do not define a persistent data format.
+
+If aliases are transparent, `Int` and `Int64` resolve to the same identity and
+thus the same reference; a distinct type based on `Int64` has its own identity.
+If all-zero `Kind` is selected for `UNKNOWN`, a reserved `(0, 0, 0)` type
+reference could not also identify `Int64` or another known type in the same
+encoding. Whether zero is reserved and how other unknown tags behave remain
+under review.
+
+A stable built-in reference establishes identity, not the complete persistent
+encoding of its payload. A durable representation still needs defined width,
+byte order, string encoding and length, array shape, and version/format rules
+where applicable. Fixed references might be useful in an explicitly designed
+data format, but the user has separately proposed no general persistence
+guarantee for dynamic internal type references; see [persistence](#user-direction-persistence-is-a-separate-data-contract).
+
 ## Worked identity examples
 
 - A transparent `Int` alias and `Int64` resolve to the same type identity and
