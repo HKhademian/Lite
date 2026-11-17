@@ -98,7 +98,7 @@ Selected:
 - Where admitted, the initializer spelling selects the mechanism: omitted typed local → zero; `= 0` → zero; `= {}` → declared field defaults; `= ?` → reserved storage.
 - Where zero construction is admitted, `name: Type = 0` uses the language-defined zero. `name: Type = {}` uses declared field defaults.
 - Reserved `= ?` storage is not readable before initialization and adds no `Unit`, `None`, or unknown union member.
-- A bare local whose normalized type has multiple distinct union members requires an initialized expression or `= ?`; `= 0` cannot choose a member.
+- A bare typed declaration and `= 0` both initialize all-zero storage for every type, including multi-member unions; union Kind 0 identifies no known active member. Explicit `= ?` requests uninitialized storage.
 - A conditional initializer without `else` leaves the declaration default on no match. `else { ? }` leaves the binding reserved on that path, correlated with the condition.
 - A fixed binding's first whole-value write initializes it; later replacement requires `var`.
 - Record construction must satisfy required fields and the type's validity contract.

@@ -1,10 +1,12 @@
 # Union construction and omitted initialization
 
-Status: **revised 2026-11-17:** a bare typed declaration initializes the type's all-zero value, including for a normalized multi-member union. Its zero Kind denotes no known member (`UNKNOWN`), a valid initialized union value. The earlier rejection of bare union locals is superseded. The separate `= 0` source form remains rejected pending review of its meaning. This is a design contract, not a compiler support claim.
+Status: **revised 2026-11-17:** a bare typed declaration initializes the type's all-zero value, including for a normalized multi-member union. Its zero Kind denotes no known member (`UNKNOWN`), a valid initialized union value. The earlier rejection of bare union locals is superseded. The explicit `= 0` source form selects the same all-zero initialization for every type, including unions; the earlier rejection is superseded. This is a design contract, not a compiler support claim.
 
 ## Selected rejection and explicit member choice
 
-The previously selected source restriction still rejects `x: (A | B) = 0` for a multi-member union pending a separate decision: the literal might request union zero or construct a numeric member. This restriction does not affect bare declarations. An initialized compatible member expression supplies that member; `= ?` requests separate uninitialized storage. The proposed member-qualified `A{0}` spelling remains unselected.
+The heading is retained for existing links; the rejection is superseded.
+
+The earlier rejection is superseded: `x: (A | B) = 0` initializes the complete union slot to all-zero, just like `x: (A | B);`. Kind 0 identifies no known active member. An already typed compatible member expression supplies that member; `= ?` requests separate uninitialized storage. The proposed member-qualified `A{0}` spelling remains unselected.
 
 ## Bare local declarations
 
@@ -16,7 +18,9 @@ Specification cases (not executed compiler tests):
 - **array-bare-zero:** `items: [Int64; 2];` creates an array slot with two zero-initialized Int64 elements.
 - **string-bare-zero:** `name: String;` creates a zero-initialized String slot; its selected zero value is empty.
 - **union-explicit-reservation:** `x: (Int64 | String) = ?;` requests uninitialized storage under the separate reservation rules.
-- **union-literal-zero:** `x: (Int64 | String) = 0;` remains rejected under the previous source restriction until its separate meaning is decided.
+- **union-literal-zero:** `x: (Int64 | String) = 0;` creates the same all-zero, Kind 0, no-known-member state as the bare declaration.
+- **scalar-literal-zero:** `n: Int64 = 0;` creates an all-zero Int64 slot, interpreted as numeric zero.
+- **typed-member-zero:** `n: Int64 = 0; x: (Int64 | String) = n;` supplies the existing Int64 member value, rather than requesting an all-zero union slot.
 
 How matching, type tests and access handle this state, and how unrecognized nonzero Kinds are handled, remain under review. An earlier proposal for a guard is recorded in the [match investigation](../research/investigations/language-review/union-match-unknown-guard.md); it is not selected by this declaration decision.
 

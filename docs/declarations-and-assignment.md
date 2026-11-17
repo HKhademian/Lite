@@ -38,7 +38,7 @@ Assume the three inputs are Bool. This infers Bool and evaluates exactly like re
 
 ## Multi-member union initialization
 
-[x: A | B = 0 is rejected](union-initialization-policy.md#selected-rejection-and-explicit-member-choice): an undirected zero request must not choose among distinct normalized members. Use = ? for explicit reservation, or supply an initialized compatible expression. A{} names a record member and applies its defaults; the proposed A{0} spelling would name and zero that member. Bare typed declarations, including multi-member unions, create zero-initialized slots. For a union this yields Kind 0 and no known active member; the earlier bare-declaration exception is superseded. The separate `= 0` source restriction remains pending review.
+Both `x: X;` and `x: X = 0;` zero-initialize the slot for every type X, including a multi-member union. The union zero has Kind 0 and no known active member. `= ?` separately requests uninitialized storage; an initialized compatible expression supplies its existing member. Proposed member-qualified `A{0}` remains unselected. See [union initialization](union-initialization-policy.md#bare-local-declarations).
 
 ## Rules
 

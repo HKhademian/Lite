@@ -12,7 +12,7 @@ locals; List and function reservation remain unsupported.
 
 ## Plain-union construction restriction
 
-A bare typed declaration is zero-initialized for every type, including multi-member unions. Union zero has Kind 0 and no known active member; see [union initialization](union-initialization-policy.md#bare-local-declarations). The earlier rejection of bare union declarations is superseded. The separate explicit literal form [x: A | B = 0 remains rejected](union-initialization-policy.md#selected-rejection-and-explicit-member-choice) pending review of its meaning. Conditional fallback remains a separate source rule to review.
+A bare typed declaration and an explicit `= 0` initializer each zero-initialize every type, including multi-member unions. Union zero has Kind 0 and no known active member; see [union initialization](union-initialization-policy.md#bare-local-declarations). Earlier restrictions rejecting either declaration form are superseded. Conditional fallback remains a separate source rule to review.
 
 ## Core distinction
 
@@ -35,7 +35,7 @@ Selected forms:
 
 - value: Type; initializes the all-zero value of Type.
 - var value: Type; does the same and permits whole-binding replacement.
-- value: Type = 0 explicitly selects zero initialization, except for the existing multi-member union source restriction pending review.
+- value: Type = 0 explicitly selects the same zero initialization for every type.
 - value: Type = { ... } selects record construction with declared defaults for omitted fields.
 
 Zero initialization bypasses declared defaults at every depth. It creates a readable value immediately, not reserved/uninitialized storage awaiting a first assignment. No var/mut permission follows from initialization mode. Omitted initialization is selected for simple typed declarations, not source-free inferred declarations. Function argument omission requires public omission permission. Ordinary user implementations need an applicable declared default; the selected zero implementation needs no actual default definition or execution, as described below. Required inputs remain required; a type merely supporting zero does not grant omission to an ordinary user implementation. See [omitted value arguments](functions.md#omitted-value-arguments).

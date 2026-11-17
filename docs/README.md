@@ -127,7 +127,7 @@ Generic forms such as `Array<Float, 3>`, `List<Int>`, and `Option<User>` are tem
 - [Union field reads](union-field-reads.md): selected availability on every alternative, normalized union of field types, and rejection for missing or inaccessible fields.
 - [Union field writes](union-field-writes.md): selected compatibility with every possible target field, preserving each parent's storage type and mutation permissions.
 - [Union values and access contracts](union-values-and-access.md): a storage location containing a union versus a union of possible storage locations; historical access notation and proposed explicit read/write contracts.
-- [Union initialization policy](union-initialization-policy.md): selected rejection of `x: A | B = 0` for multiple distinct normalized members; explicit `?` and initialized member expressions remain; member-qualified zero markers are proposed.
+- [Union initialization policy](union-initialization-policy.md): bare typed and explicit `= 0` declarations initialize all-zero storage for every type, including unions; `= ?` requests uninitialized storage.
 - [Union zero](union-zero.md): selected universal zero requirement; active-member priority and mappings for unions, enums, references, and resources remain open.
 - [Empty union zero proposal](union-empty-zero-proposal.md): proposed empty state for unions; not selected; compared with Unit and member-priority alternatives.
 - [Conditional union fallback](conditional-union-fallback.md): declaration initializers with a multi-member union require an explicit `else` or `?`; assignment and loop no-match paths are noncontributing.

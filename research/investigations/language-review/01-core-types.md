@@ -334,13 +334,13 @@ pair of distinct types must admit conversion or that conversion is infallible.
 
 ## 1.5 Unions and value operations
 
-**Baseline (updated 2026-11-17):** Plain unions normalize order and duplicates. A bare typed declaration zero-initializes every type; a multi-member union zero is initialized with Kind 0 and no known active member. Explicit `= 0` remains a separate source question.
+**Baseline (updated 2026-11-17):** Plain unions normalize order and duplicates. A bare typed declaration zero-initializes every type; a multi-member union zero is initialized with Kind 0 and no known active member. Explicit `= 0` initializes the same all-zero storage for every type, including unions.
 
 **Initial assessment and probes:** Compare `Int | String` with `String | Int`; first-written-member zero would conflict with order-independent identity. Revisit equality, numeric operations, valid zero and distinct-type invariants together, without choosing a zero member now.
 
 ### User question: union Kind and zero
 
-**Update 2026-11-17:** The user confirmed universal zero-initialization for bare typed declarations, and the no-known-member union zero. The discussion below records earlier questions and alternatives; its statements that those two choices are unresolved are historical. Matching and other operations remain under review. See [current union initialization](../../../docs/union-initialization-policy.md#bare-local-declarations).
+**Update 2026-11-17:** The user confirmed universal zero-initialization for bare typed declarations, and the no-known-member union zero. The discussion below records earlier questions and alternatives; its statements that those choices and explicit `= 0` are unresolved are historical. Matching and other operations remain under review. See [current union initialization](../../../docs/union-initialization-policy.md#bare-local-declarations).
 
 The user asks whether the hidden `Kind` should number cases from zero or one,
 whether zero should always represent `UNKNOWN`, and whether changing written
