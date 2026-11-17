@@ -1605,21 +1605,50 @@ pub unescapeHtmlWithTable := fn(sortedKeys: List<String>, sortedVals: List<Strin
     text.joinTexts(out, "")
 };
 
+/** Parses a flat JSON object of string values in one linear pass, returning interleaved sorted `[key0, val0, ...]`. */
+pub parseSortedStringObjectPairs := fn(jsonText: String): List<String> {
+    rawKeys: mut List<String> = [];
+    rawVals: mut List<String> = [];
+    var pos := skipJsonSpace(jsonText, 0);
+    if pos < text.length(jsonText) and text.at(jsonText, pos) == "{" {
+        pos = skipJsonSpace(jsonText, pos + 1);
+        loop pos < text.length(jsonText) and text.at(jsonText, pos) =!= "}" {
+            kR := json.readStringAt(jsonText, pos);
+            if not kR.ok { break; }
+            pos = skipJsonSpace(jsonText, kR.next);
+            if pos >= text.length(jsonText) or text.at(jsonText, pos) =!= ":" { break; }
+            pos = skipJsonSpace(jsonText, pos + 1);
+            vR := json.readStringAt(jsonText, pos);
+            if not vR.ok { break; }
+            list.pushBack(mut rawKeys, kR.value);
+            list.pushBack(mut rawVals, vR.value);
+            pos = skipJsonSpace(jsonText, vR.next);
+            if pos < text.length(jsonText) and text.at(jsonText, pos) == "," {
+                pos = skipJsonSpace(jsonText, pos + 1);
+            }
+        }
+    }
+    sortedIdx := sortIndexByKeys(rawKeys);
+    out: mut List<String> = [];
+    loop sortedIdx as si {
+        list.pushBack(mut out, rawKeys[si]);
+        list.pushBack(mut out, rawVals[si]);
+    }
+    out
+};
+
 /** Decodes HTML5 named and numeric character references using `entitiesJsonPath` (`html-entities.json`). */
 pub unescapeChallengeHtml := fn(entitiesJsonText: String, value: String): String {
     if text.indexOfText(value, "&", 0) < 0 { return value; }
-    rawKeys: mut List<String> = [];
-    rawVals: mut List<String> = [];
-    loop json.objectKeys(entitiesJsonText, 0) as k {
-        list.pushBack(mut rawKeys, k);
-        list.pushBack(mut rawVals, json.readObjectString(entitiesJsonText, 0, k).value);
-    }
-    sortedIdx := sortIndexByKeys(rawKeys);
+    pairs := parseSortedStringObjectPairs(entitiesJsonText);
     sortedKeys: mut List<String> = [];
     sortedVals: mut List<String> = [];
-    loop sortedIdx as si {
-        list.pushBack(mut sortedKeys, rawKeys[si]);
-        list.pushBack(mut sortedVals, rawVals[si]);
+    var pi := 0;
+    pLen := list.listCountText(pairs);
+    loop pi + 1 < pLen {
+        list.pushBack(mut sortedKeys, pairs[pi]);
+        list.pushBack(mut sortedVals, pairs[pi + 1]);
+        pi = pi + 2;
     }
     unescapeHtmlWithTable(sortedKeys, sortedVals, value)
 };
@@ -1861,6 +1890,16 @@ pub buildBenchmarkEuler := fn(challengesRootDir: String, entitiesJsonText: Strin
     treeRead := fs.readText(path.join(cacheDir, "tree.json"));
     if not treeRead.ok { return (ok = false, writtenCount = 0, totalCount = 0, error = treeRead.error); }
 
+    entPairs := parseSortedStringObjectPairs(entitiesJsonText);
+    entKeys: mut List<String> = [];
+    entVals: mut List<String> = [];
+    var epi := 0;
+    loop epi + 1 < list.listCountText(entPairs) {
+        list.pushBack(mut entKeys, entPairs[epi]);
+        list.pushBack(mut entVals, entPairs[epi + 1]);
+        epi = epi + 2;
+    }
+
     eulerNums: mut List<Int> = [];
     eulerLines: mut List<String> = [];
     loop splitJsonLines(chRead.text) as ln {
@@ -1969,11 +2008,11 @@ pub buildBenchmarkEuler := fn(challengesRootDir: String, entitiesJsonText: Strin
                     if h2Start >= 0 {
                         h2End := text.indexOfText(page, "</h2>", h2Start + 4);
                         if h2End >= 0 {
-                            extractedTitle := text.trim(unescapeChallengeHtml(entitiesJsonText, stripHtmlTags(text.slice(page, h2Start + 4, h2End))));
+                            extractedTitle := text.trim(unescapeHtmlWithTable(entKeys, entVals, stripHtmlTags(text.slice(page, h2Start + 4, h2End))));
                             if extractedTitle =!= "" { title = extractedTitle; }
                         }
                     }
-                    statement := text.trim(collapseMultiNewlines(unescapeChallengeHtml(entitiesJsonText, replaceHtmlLineBreaksAndParagraphs(bodyHtml))));
+                    statement := text.trim(collapseMultiNewlines(unescapeHtmlWithTable(entKeys, entVals, replaceHtmlLineBreaksAndParagraphs(bodyHtml))));
                     if statement =!= "" {
                         cid := json.readObjectString(cLine, 0, "id").value;
                         curl := json.readObjectString(cLine, 0, "url").value;
@@ -2497,18 +2536,14 @@ pub buildChallengeTests := fn(challengesRootDir: String, entitiesJsonText: Strin
     mRead := fs.readText(path.join(cacheDir, "leetcode/merged.json"));
     if not mRead.ok { return (ok = false, summaryText = "", error = mRead.error); }
 
-    rawKeys: mut List<String> = [];
-    rawVals: mut List<String> = [];
-    loop json.objectKeys(entitiesJsonText, 0) as k {
-        list.pushBack(mut rawKeys, k);
-        list.pushBack(mut rawVals, json.readObjectString(entitiesJsonText, 0, k).value);
-    }
-    entOrder := sortIndexByKeys(rawKeys);
+    entPairs := parseSortedStringObjectPairs(entitiesJsonText);
     entKeys: mut List<String> = [];
     entVals: mut List<String> = [];
-    loop entOrder as ei {
-        list.pushBack(mut entKeys, rawKeys[ei]);
-        list.pushBack(mut entVals, rawVals[ei]);
+    var epi := 0;
+    loop epi + 1 < list.listCountText(entPairs) {
+        list.pushBack(mut entKeys, entPairs[epi]);
+        list.pushBack(mut entVals, entPairs[epi + 1]);
+        epi = epi + 2;
     }
 
     qField := json.findObjectField(mRead.text, 0, "questions");

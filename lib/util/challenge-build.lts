@@ -362,33 +362,14 @@ pub buildChallengeCorpus := fn(challengesRootDir: String, catalogJsonText: Strin
         return (ok = false, summaryText = "", error = "no cache; run tools/fetch_sources.ts first");
     }
 
-    rawEntKeys: mut List<String> = [];
-    rawEntVals: mut List<String> = [];
-    var ep := challenges.skipJsonSpace(entitiesJsonText, 0);
-    if ep < text.length(entitiesJsonText) and text.at(entitiesJsonText, ep) == "{" {
-        ep = challenges.skipJsonSpace(entitiesJsonText, ep + 1);
-        loop ep < text.length(entitiesJsonText) and text.at(entitiesJsonText, ep) =!= "}" {
-            kR := json.readStringAt(entitiesJsonText, ep);
-            if not kR.ok { break; }
-            ep = challenges.skipJsonSpace(entitiesJsonText, kR.next);
-            if ep >= text.length(entitiesJsonText) or text.at(entitiesJsonText, ep) =!= ":" { break; }
-            ep = challenges.skipJsonSpace(entitiesJsonText, ep + 1);
-            vR := json.readStringAt(entitiesJsonText, ep);
-            if not vR.ok { break; }
-            list.pushBack(mut rawEntKeys, kR.value);
-            list.pushBack(mut rawEntVals, vR.value);
-            ep = challenges.skipJsonSpace(entitiesJsonText, vR.next);
-            if ep < text.length(entitiesJsonText) and text.at(entitiesJsonText, ep) == "," {
-                ep = challenges.skipJsonSpace(entitiesJsonText, ep + 1);
-            }
-        }
-    }
-    entOrd := challenges.sortIndexByKeys(rawEntKeys);
+    entPairs := challenges.parseSortedStringObjectPairs(entitiesJsonText);
     entKeys: mut List<String> = [];
     entVals: mut List<String> = [];
-    loop entOrd as ei {
-        list.pushBack(mut entKeys, rawEntKeys[ei]);
-        list.pushBack(mut entVals, rawEntVals[ei]);
+    var epi := 0;
+    loop epi + 1 < list.listCountText(entPairs) {
+        list.pushBack(mut entKeys, entPairs[epi]);
+        list.pushBack(mut entVals, entPairs[epi + 1]);
+        epi = epi + 2;
     }
 
     catField := json.findObjectField(catalogJsonText, 0, "CATEGORIES");
