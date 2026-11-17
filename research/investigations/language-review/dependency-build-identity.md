@@ -23,8 +23,8 @@ artifact format.
 ### User clarification: one distributed build, one reference hash
 
 The user clarifies that the dependency is one particular distributed build. A
-separate person compiling the same source even milliseconds later creates a
-different build in this model. Distribution and consumers refer to the one hash
+separate person compiling the same source even milliseconds later normally
+creates a different build in this model. Distribution and consumers refer to the one hash
 of the selected build; the hash must be verified against that module's compiled
 artifact and compilation metadata. A mismatch indicates a broken or
 inconsistent artifact rather than another spelling of the same build.
@@ -42,10 +42,36 @@ establishes publisher identity.
 
 The same selected artifact can be consumed by many clean builds: the artifact
 and its table are inputs, not regenerated historical caches. A fresh independent
-build from the same source is a separate instance in this model; it is not a
-verification failure merely because its build metadata and hash differ. The
+build from the same source normally has different build metadata and hash; that
+is not a verification failure. The user now also proposes an intentional
+override for reproducing the same covered artifact/hash, discussed below. The
 developer's unresolved error, replacement, and side-by-side options apply when
 different dependency instances meet.
+
+### User idea: explicit build-metadata overrides
+
+The user suggests that a build system could deliberately override metadata
+constants such as build time or user, at its own risk, to try to reproduce the
+same reference hash. Another possible check is to verify that a rebuild produces
+the same module code. These are proposals, not selected commands, configuration
+names, artifact formats or a guarantee of reproducible builds.
+
+For an exact-hash reproduction, the complete hash-covered representation must
+match under the eventual canonical encoding: overriding metadata alone cannot
+make differing module code or other covered inputs produce the same hash by
+definition. Target, compiler, dependencies, flags, generated data, compile-time
+effects and other possible inputs also need a determinism contract. A check that
+only module code matches is a narrower claim if metadata or other covered fields
+differ; it should not be reported as exact artifact/hash reproduction.
+
+Two independent build executions remain separate historical events. If their
+covered artifacts and metadata are intentionally identical, the proposed
+hash-as-reference model gives them the same reference; distinguishing the
+executions would need separate provenance outside that covered identity or a
+different identity policy. Where real timestamps or builder information are
+overridden, distinguish the declared metadata from any separately retained
+actual provenance. No separate provenance format or mandatory signature is
+selected. Expected reference trust and exact byte coverage remain open.
 
 This build-identity model must still distinguish **a library build** from
 **the identity of every type referenced by that build**. For example, both
@@ -86,10 +112,11 @@ against `B#h1` and the app uses `B#h2`, the graph must apply an explicit
 resolution policy; simply using the newest table does not retroactively make
 A's dependency `B#h2`.
 
-Including build start/end timestamps in the identity hash means two clean builds
-from the same logical source may produce different build identities. That is
+Including actual build start/end timestamps in the identity hash means two clean
+builds from the same logical source may produce different build identities. That is
 consistent with the user's proposed exact-build model, but has consequences for
-reproducible artifacts, caching and reuse that need exploration. A separate
+reproducible artifacts, caching and reuse that need exploration. Explicit
+metadata overrides are an alternative to investigate above. A separate
 source, API, ABI or content-equivalence digest might be investigated for those
 purposes; it must not silently replace or collapse the user's distinct build
 identity. Hashes and dependency resolution are compile/link concerns and do not
@@ -105,6 +132,10 @@ contains runtime type references.
 - `h1` and `h2` are builds of identical source with different build metadata:
   they still have different build identities in the proposed model. Do not
   assume they are merged; compare optional explicit compatibility proofs.
+- With deliberately matched metadata and identical covered module artifacts,
+  compare the resulting hash to the reference; separately test identical module
+  code with different covered metadata. Do not count code-only equality as a
+  whole-artifact hash match.
 - Both instances use the same builtin or transparent alias: preserve its own
   type identity instead of duplicating it merely because the instances differ.
 - A declares a type from `h1` in a public function contract and the consumer
