@@ -1,8 +1,16 @@
 # Decisions and open questions
 
-Dated decision ledger, updated through **2026-11-15**. Older entries retain their
+Dated decision ledger, updated through **2026-11-17**. Older entries retain their
 original scope. Decisions do not establish compiler conformance; use
 [the transition](../compiler/transition-plan.md) for current execution evidence.
+
+## Equal array and tuple layout does not imply identity, 2026-11-17
+
+The user clarifies that `[Int64; 2]` and `(:Int64, :Int64)` are different
+types despite their selected equal inline layout; equal stored values likewise
+do not establish type identity. This bounded example selects no conversion,
+general identity rule for other tuple/array shapes, runtime type tag or ABI.
+See [fixed arrays](arrays.md#equal-layout-does-not-determine-type-identity).
 
 ## Invisible-brace file blocks, parallel symbol wiring, and postponed same-block redeclarations, 2026-11-15
 

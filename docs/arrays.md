@@ -4,6 +4,31 @@ Status: **fixed-array [T; N] source examples, known-size literal inference, and 
 
 ## Compile-time size
 
+### Equal layout does not determine type identity
+
+User clarification, 2026-11-17: the two-component fixed array `[Int64; 2]`
+and the unnamed tuple `(:Int64, :Int64)` are **not the same type**, even though
+their selected inline layouts agree. Equal size, layout or stored bits do not
+establish type identity. Likewise, the user's illustrative distinct `UserID`
+and its underlying `Int` may hold the same numeric value while remaining
+different types. The precise distinct-declaration syntax remains under review.
+
+This bounded decision settles the two-component identity example; it does not
+select general array-to-tuple conversion, arbitrary reinterpretation, ABI
+compatibility, runtime tag storage, or tail-only tuple normalization. The wider
+family, including empty and singleton shapes, remains to be reviewed.
+
+```text
+numbers: [Int64; 2] = [10, 20];
+pair: (:Int64, :Int64) = (10, 20);
+/* Their corresponding elements agree; their types remain distinct. */
+```
+
+These are specification illustrations, not new compiler-support claims. A
+transparent alias retains its target's identity; it does not change this
+array/tuple distinction. Type identity and conversion compatibility are
+separate questions.
+
 Approved implementation coverage, **2026-10-31**: the experimental
 [igniter](../igniter/README.md#fixed-arrays-and-traversal) now runs nonempty
 homogeneous fixed arrays of scalars or flat scalar tuples, dot/bracket reads,
@@ -16,7 +41,7 @@ growth, views and native layout remain unimplemented. See
 
 The angle brackets in examples such as `Array<Float, 3>` are [temporary generic notation](generic-notation.md). Float names the intended element type; 3 names the intended static extent. Their joint spelling does not select a generic parameter mechanism or const-generic syntax. The fixed-array surface used here is [T; N]; runtime-array spelling remains open.
 
-The selected representation of [T; N] has exactly N contiguous inline T positions and the same size, alignment, and corresponding offsets as an unnamed fixed tuple of N components of T. It adds no runtime length field, header, tag, wrapper, indirection, or allocation. N is part of the static type, so lengths 3 and 4 remain distinct array types. Ordinary nonzero-sized elements use their normal stride; zero-sized elements keep N semantic positions without element payload bytes. Element-owned metadata remains part of T. This layout contract does not select stack placement, universal copyability, array/tuple type identity, arbitrary reinterpretation, or an identical ABI. See [fixed-array storage](memory-and-performance.md#fixed-arrays-share-homogeneous-tuple-storage).
+The selected representation of [T; N] has exactly N contiguous inline T positions and the same size, alignment, and corresponding offsets as an unnamed fixed tuple of N components of T. It adds no runtime length field, header, tag, wrapper, indirection, or allocation. N is part of the static type, so lengths 3 and 4 remain distinct array types. Ordinary nonzero-sized elements use their normal stride; zero-sized elements keep N semantic positions without element payload bytes. Element-owned metadata remains part of T. This layout contract does not select stack placement, universal copyability, arbitrary reinterpretation, or an identical ABI; the [two-component identity clarification](#equal-layout-does-not-determine-type-identity) is separate. See [fixed-array storage](memory-and-performance.md#fixed-arrays-share-homogeneous-tuple-storage).
 
 ```text
 point: [Float; 3] = [1.0, 2.0, 3.0];

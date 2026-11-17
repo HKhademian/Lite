@@ -169,6 +169,14 @@ the existing alias rule.
 
 **Initial assessment and probes:** Compare `(1, 2)` with `[1, 2]`: runtime indexing, extent, homogeneous typing, zero and distinct empty shapes are decision tests. Avoid assuming record fields are tuple positions.
 
+**User clarification, 2026-11-17:** `[Int64; 2]` and
+`(:Int64, :Int64)` are not the same type. Their matching layout and even equal
+stored values do not establish type identity. The user illustrates the broader
+principle with a distinct `UserID` and an `Int` both holding 5; the exact
+distinct-declaration syntax and general conversions are separate questions.
+See [equal layout and type identity](../../../docs/arrays.md#equal-layout-does-not-determine-type-identity).
+The decision does not infer identity for every other array/tuple shape.
+
 ### Proposed tuple indexing by possible index values
 
 The user proposes that tuple indexing can yield different static types depending
