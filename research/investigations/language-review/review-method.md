@@ -57,6 +57,11 @@ the others still lack their current layer.
   open questions, and measured compiler behavior. State uncertainty explicitly.
   Illustrative `cast<UserID>(raw)` expresses conversion intent only; it is not
   selected syntax, a selected builtin, or evidence of compiler support.
+- **Intent first:** follow the user's direction to start with what a construct
+  is meant to represent and which distinctions matter, then examine layout,
+  size, performance and implementation. Equal bits or representation do not
+  determine type identity. Do not infer unstated intent instead of defining a
+  clear source/type contract; see [design goals](../../../docs/principles.md#design-goals).
 - Use the existing topic notes and [cross-feature assessment](cross-feature-assessment.md)
   as prior analysis, not as accepted answers. Recheck the owning source and
   current compiler evidence when a consequential claim may have changed.

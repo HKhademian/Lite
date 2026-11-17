@@ -10,6 +10,14 @@ Let people and programming agents focus on problem solving through concise, read
 
 ## Design goals
 
+- **Intent first:** begin a language-design decision with what a type, value,
+  operation, or construct is intended to represent and what distinctions the
+  programmer needs. Then design its representation, size, layout, performance,
+  and costs to serve that intent. These physical properties remain important;
+  equal layout or bits do not alone establish equal type identity or meaning.
+  Intent must be expressed through the language's defined source and type
+  contracts, not guessed from a programmer's unstated thoughts. User direction,
+  2026-11-17; see [type categories](type-categories.md).
 - Draw selective inspiration from the [project reference languages](references.md#project-reference-languages). Each has useful parts; evaluate individual ideas against LiteLang's goals without adopting all of a language's features or design decisions.
 - Keep ceremony low and make programs easy to read, write, and reason about.
 - Make the first programming concepts approachable for learners who do not yet read English. Investigate [multilingual source and learning](multilingual-source-and-learning.md), retaining simple English as the shared reference presentation and one set of language semantics. Localized source remains a proposal; exact vocabularies and tooling are open.

@@ -12,6 +12,14 @@ do not establish type identity. This bounded example selects no conversion,
 general identity rule for other tuple/array shapes, runtime type tag or ABI.
 See [fixed arrays](arrays.md#equal-layout-does-not-determine-type-identity).
 
+## Intent first, 2026-11-17
+
+The user directs the review to begin with intended meaning and distinctions;
+memory layout, size and performance remain important and should serve that
+intent. Do not infer equal type identity merely from equal layout or values.
+This guides design discussion; it does not authorize guessing unstated intent or
+select a representation. See [design goals](principles.md#design-goals).
+
 ## Invisible-brace file blocks, parallel symbol wiring, and postponed same-block redeclarations, 2026-11-15
 
 1. **File blocks as invisible-brace root code blocks (`pub` only):** every
