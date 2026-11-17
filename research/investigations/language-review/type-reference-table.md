@@ -122,6 +122,12 @@ collisions, renames, generated and generic types). A plain declaration counter
 can change when definitions are reordered. These are options for later review,
 not a selected identity algorithm.
 
+A future [precompiled Lite representation](precompiled-lite-representation.md)
+may help carry public identities and dependencies between builds, but its format,
+contents, and identity-assignment algorithm are not selected. The user also
+suggests a richer per-type-reference metadata table in that representation;
+whether it is present at runtime or exposed to programs remains open.
+
 ## Footprint and access
 
 A static compiler table can exist only during compilation; a runtime table is

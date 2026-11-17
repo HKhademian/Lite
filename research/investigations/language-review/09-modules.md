@@ -35,6 +35,8 @@ Status: **preliminary, 2026-11-15; awaiting joint review**. All recommendations 
 
 ## 9.5 Packages and projects
 
+The user also wants to explore a precompiled Lite-level representation for libraries, modules and files, supporting incremental builds and publication; see [precompiled Lite representation](precompiled-lite-representation.md).
+
 The user's separately compiled library direction requires compile-time type
 agreement to match runtime value behavior across compatible library boundaries;
 see [type agreements and values](separate-library-value-compatibility.md).
