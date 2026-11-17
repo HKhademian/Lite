@@ -14,6 +14,9 @@ user clarifies that independently built Lite libraries must be usable as Lite
 components without requiring implementation-source imports, one compilation
 unit, or a redesigned C FFI interface. See
 [separately compiled libraries](modules-and-packages.md#separately-compiled-libraries-and-runtime-agreement).
+The user further specifies that the relevant mappings and meanings must agree
+across independent library and consumer compiler invocations, not just within
+one source-import compilation; cross-target and version policy remain open.
 
 ## Shared union Kind mapping, 2026-11-17
 

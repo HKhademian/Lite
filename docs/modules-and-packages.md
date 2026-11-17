@@ -410,6 +410,12 @@ out. The binary compatibility scope across targets, compilers, versions and
 library revisions still needs an explicit contract; this is not a promise of
 unlimited compatibility.
 
+Independent library and consumer compilations must establish consistent
+meanings and mappings under their shared representation contract; correctness
+cannot depend on all library implementation sources participating in one
+compiler invocation. Cross-target representation and version policy remain
+separate design questions.
+
 The user's possible `.c`, `.h`, `.so`, `.a`, and `.lth` outputs illustrate a
 future separately compiled library workflow; `.lth` and the import/link format
 are not selected or implemented by this direction. Handling external data and

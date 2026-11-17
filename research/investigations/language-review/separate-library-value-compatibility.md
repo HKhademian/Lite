@@ -32,6 +32,13 @@ entire program as one unit, or redesign its public interface as a C FFI API to
 get that interoperability. This is a future Lite-to-Lite library capability;
 it is separate from additionally supporting C interoperability.
 
+The user emphasizes that the agreement is not limited to one compilation of
+imported source: independently compiled library builds and their consumers
+must produce consistent mappings and meanings without relying on a shared
+whole-program compiler invocation. Here “cross compiles” refers to those
+separate builds; whether and how binaries for different target architectures
+exchange representations is a separate question.
+
 The chosen implementation may use C or another backend internally if it
 preserves the Lite-level contract. Do not infer a particular object format,
 linker, `.lth` syntax, mandatory C wrapper, public C ABI, or identical machine

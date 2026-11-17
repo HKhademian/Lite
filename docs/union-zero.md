@@ -11,6 +11,15 @@ retain the active member and be interpreted consistently. This agreement must
 also hold between separately compiled applications or components that share the
 same union representation.
 
+The user further emphasizes that this agreement must survive independent
+compiler invocations and separately built libraries, not merely a single
+compilation that imports source. A library producer and a later consumer using
+the same union representation contract must independently obtain consistent
+member-to-Kind meanings; the mapping cannot depend on which definitions happen
+to be compiled together or on a whole-program assignment performed only when
+the library is built. The actual deterministic assignment and compatibility
+rules remain to be designed.
+
 Plain-union identity is order-independent: `A | B` and `B | A` denote the same
 normalized type. Their shared representation therefore has the same
 member-to-Kind mapping; source spelling, declaration location and compilation
@@ -37,6 +46,9 @@ Specification cases, not compiler-support claims:
 - Reordering a type's written alternatives must not reinterpret an already
   stored value as another member. Other type sets and incompatible ABIs do not
   gain an assumed shared mapping or conversion from this rule.
+- Independently build a library and consumer, then link them without importing
+  the library implementation source. Equivalent union spellings must agree on
+  the shared mapping and both listed active members must be recognized.
 
 ## Latest selected construction restriction
 
