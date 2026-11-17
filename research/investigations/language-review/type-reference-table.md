@@ -17,13 +17,19 @@ references are stored in every value or only in type metadata are not specified.
 
 ## Illustrative split
 
-A possible—not selected—64-bit representation could have 32 bits for a module
-identifier and 32 bits for a type identifier within that module. This offers
-at most 2^32 encodings per level before reserving any values, but only if an
-assignment policy provides uniqueness. The split is arbitrary; other splits,
-encodings and multilevel tables are possible. Reserving all-zero as `UNKNOWN`
-would use an encoding, not by itself define the semantics of other unrecognized
-values or replace the current selected union-zero rule.
+The user suggests a possible 64-bit split of **16 bits for a library, 32 bits
+for a file/module within that library, and 16 bits for a type within that file**.
+Before reservations, these fields encode at most 65,536 library slots,
+4,294,967,296 file slots per library, and 65,536 type slots per file. The user
+sees the library limit as a practical concern only for exceptionally large
+projects and also suggests that the file part might use 32 bits or more. More
+than 32 bits there would require changing another field, the total width, or
+the encoding; no alternative split or overflow policy is selected.
+
+An earlier 32/32 module/type split was only an illustration. Neither split is
+selected. Reserving all-zero as `UNKNOWN` would consume an encoding, but would
+not itself define the semantics of other unrecognized values or replace the
+current selected union-zero rule.
 
 The width provides a finite **encoding space**, not a uniqueness algorithm. It
 cannot uniquely identify an unlimited universe of independently created types.
@@ -75,6 +81,46 @@ identities survive rebuilds, renames and revisions, and which compatibility
 boundaries are promised is a central prerequisite. Never silently equate types on
 an undetected collision. Interface files or generated metadata might carry this
 agreement but their format is open.
+
+### User idea: reconcile library-local references at link time
+
+The user suggests that a library could assign a local reference to an imported
+library, with the relationship adjusted when independently built libraries are
+linked. The stable-identity problem remains: reordering declarations or building
+producer and consumer separately must not silently turn one public type into a
+different one.
+
+Conceptual example, not a selected encoding: library A calls an imported
+library's local slot `3`; the final program assigns that library slot `7`. The
+build/link mechanism needs an identity for the imported library that establishes
+that A's `3` and the program's `7` refer to the same contract. It must then
+ensure that all tags **actually exchanged at runtime** use the agreed meaning.
+Possible techniques include relocatable symbolic references resolved at link or
+load time, runtime indirection, and explicit translation at boundaries. Their
+availability and costs differ; no technique is selected.
+
+Changing a number in a compile-time table alone is insufficient if generated
+code or stored data still produces the old Kind. The design must cover code and
+static data containing references, values constructed after linking, dynamically
+loaded components, and the lifetime of already-created values. Static linking
+may resolve some symbolic references without a runtime lookup; separately loaded
+libraries or dynamic values may need other mechanisms. No mandatory registry,
+indirection or per-access conversion follows solely from this proposal.
+
+The scope of the reconciled reference matters: process-local slots agreed by
+linked components do not automatically have the same numeric meaning in a
+separately linked process or shared file/memory. Cross-process sharing therefore
+needs either a shared stable mapping or a defined translation boundary. This
+must be reconciled with the user's requirement that independently compiled
+compatible components agree; local numbering cannot be presented as universally
+stable merely because a linker can resolve it within one program.
+
+Declaration-order stability is also separate from link-time numbering. Compare
+persisted interface/manifest identifiers (including deletion, reuse and version
+policy) with identifiers derived from stable definition identities (including
+collisions, renames, generated and generic types). A plain declaration counter
+can change when definitions are reordered. These are options for later review,
+not a selected identity algorithm.
 
 ## Footprint and access
 
