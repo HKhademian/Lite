@@ -169,6 +169,33 @@ the existing alias rule.
 
 **Initial assessment and probes:** Compare `(1, 2)` with `[1, 2]`: runtime indexing, extent, homogeneous typing, zero and distinct empty shapes are decision tests. Avoid assuming record fields are tuple positions.
 
+### Proposed tuple indexing by possible index values
+
+The user proposes that tuple indexing can yield different static types depending
+on the compile-time-known index values or range, including a `Never` result or
+a compiler error when no value can be selected. A dynamic index requires a
+runtime range check. This would reconsider the current selected rule rejecting
+runtime-variable tuple indexing; see [tuple access](../../../docs/tuple-entries-and-access.md#runtime-indexing-rejected).
+It is a design discussion, not a claim that compiler support exists or that the
+existing rule has already been formally replaced.
+
+For a tuple whose zero-based components have types `(Int64, String)`, use
+these conceptual cases to review the direction:
+
+- A statically known index of 0 selects `Int64`; 1 selects `String`.
+- A dynamic index whose possible in-range positions are 0 and 1 could produce
+  `Int64 | String`; it must also satisfy the required runtime range check.
+- An index known to have no valid position raises the unresolved question of
+  static rejection versus a `Never`-typed or always-faulting expression.
+
+The exact interpretation of “index values must be known at compile time” needs
+clarification alongside the dynamic-index requirement: for example, whether the
+compiler must know the exact value, a finite set, a range, or can conservatively
+consider every tuple position. The static analysis, narrowing/proof language,
+bounds fault, union result representation, access grants, evaluation order,
+tuple tails and empty tuple cases remain open. Similar layout with a homogeneous
+array does not by itself settle tuple/array identity or conversion.
+
 ## 1.4 Inference and conversion
 
 **Baseline:** Typed receiving declarations already allow specific tuple label conversions; this does not establish a general distinct-type conversion rule. The user requires an explicit operation for established values crossing into a distinct type.
