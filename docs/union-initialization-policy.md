@@ -1,12 +1,12 @@
 # Union construction and omitted initialization
 
-Status: **revised 2026-11-17:** a bare typed declaration initializes the type's all-zero value, including for a normalized multi-member union. Its zero Kind denotes no known member (`UNKNOWN`), a valid initialized union value. The earlier rejection of bare union locals is superseded. The explicit `= 0` source form selects the same all-zero initialization for every type, including unions; the earlier rejection is superseded. This is a design contract, not a compiler support claim.
+Status: **revised 2026-11-17:** a bare typed declaration initializes all-zero storage for every type. A zero-initialized multi-member union has Kind 0 and no known member (`UNKNOWN`). Numeric literal `0` is not a general request to zero arbitrary storage; in `Int | String` it is intended to supply the active Int member. An explicit zero-value expression is under design; `mem.zeros` examples are illustrative only. Ambiguous inference must produce an error. This is a design direction, not a compiler support claim.
 
 ## Selected rejection and explicit member choice
 
 The heading is retained for existing links; the rejection is superseded.
 
-The earlier rejection is superseded: `x: (A | B) = 0` initializes the complete union slot to all-zero, just like `x: (A | B);`. Kind 0 identifies no known active member. An already typed compatible member expression supplies that member; `= ?` requests separate uninitialized storage. The proposed member-qualified `A{0}` spelling remains unselected.
+The previous rule making `= 0` an all-zero request for every type is superseded. A numeric `0` intended for a union supplies a numeric member when inference uniquely resolves one; it does not zero the union wrapper. An already typed compatible member expression likewise supplies that member. `= ?` requests separate uninitialized storage. The proposed member-qualified `A{0}` spelling remains unselected.
 
 ## Bare local declarations
 
@@ -18,7 +18,9 @@ Specification cases (not executed compiler tests):
 - **array-bare-zero:** `items: [Int64; 2];` creates an array slot with two zero-initialized Int64 elements.
 - **string-bare-zero:** `name: String;` creates a zero-initialized String slot; its selected zero value is empty.
 - **union-explicit-reservation:** `x: (Int64 | String) = ?;` requests uninitialized storage under the separate reservation rules.
-- **union-literal-zero:** `x: (Int64 | String) = 0;` creates the same all-zero, Kind 0, no-known-member state as the bare declaration.
+- **union-literal-zero:** `x: (Int64 | String) = 0;` is intended to supply the Int64 member containing zero, not the all-zero union state.
+- **union-ambiguous-numeric:** `x: (Int64 | Int32) = 0;` is an inference error when both distinct members remain viable; do not silently choose one.
+- **explicit-union-zero:** illustrative `x: (Int64 | String) = mem.zeros();` and `x := mem.zeros<Int64 | String>();` request the all-zero union value; syntax and inference of this operation are undecided.
 - **scalar-literal-zero:** `n: Int64 = 0;` creates an all-zero Int64 slot, interpreted as numeric zero.
 - **typed-member-zero:** `n: Int64 = 0; x: (Int64 | String) = n;` supplies the existing Int64 member value, rather than requesting an all-zero union slot.
 

@@ -51,7 +51,7 @@ Specification cases, not compiler-support claims:
 
 ## Historical construction and zero alternatives
 
-The following earlier descriptions and alternatives are historical where they contradict the 2026-11-17 status above. In particular, bare declarations are accepted and union zero has no known member; do not read the old member-selection requirement as current. The earlier `= 0` restriction is also superseded: it produces the same all-zero union state.
+The following earlier descriptions and alternatives are historical where they contradict the 2026-11-17 status above. In particular, bare declarations are accepted and union zero has no known member; do not read the old member-selection requirement as current. The later proposal treats numeric `0` as a numeric member value rather than a request to zero the whole union; an explicit zero-value expression remains under design.
 
 ### Earlier selected construction restriction
 

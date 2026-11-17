@@ -12,7 +12,7 @@ locals; List and function reservation remain unsupported.
 
 ## Plain-union construction restriction
 
-A bare typed declaration and an explicit `= 0` initializer each zero-initialize every type, including multi-member unions. Union zero has Kind 0 and no known active member; see [union initialization](union-initialization-policy.md#bare-local-declarations). Earlier restrictions rejecting either declaration form are superseded. Conditional fallback remains a separate source rule to review.
+A bare typed declaration zero-initializes every type, including multi-member unions. Union zero has Kind 0 and no known active member; see [union initialization](union-initialization-policy.md#bare-local-declarations). The previous general special treatment of `= 0` is superseded: `0` is numeric, and a future explicit expression for the all-zero value of any type is under design. Conditional fallback remains a separate source rule to review.
 
 ## Core distinction
 
@@ -25,7 +25,7 @@ Profile := record {
     }
 }
 
-zeroed: Profile = 0;
+zeroed: Profile; /* zero-initialized storage */
 configured: Profile = {}
 ```
 
@@ -35,7 +35,7 @@ Selected forms:
 
 - value: Type; initializes the all-zero value of Type.
 - var value: Type; does the same and permits whole-binding replacement.
-- value: Type = 0 explicitly selects the same zero initialization for every type.
+- A future explicit zero-value expression is intended for arbitrary types and expression contexts; `mem.zeros<Type>()` is illustrative, with syntax and inference still open.
 - value: Type = { ... } selects record construction with declared defaults for omitted fields.
 
 Zero initialization bypasses declared defaults at every depth. It creates a readable value immediately, not reserved/uninitialized storage awaiting a first assignment. No var/mut permission follows from initialization mode. Omitted initialization is selected for simple typed declarations, not source-free inferred declarations. Function argument omission requires public omission permission. Ordinary user implementations need an applicable declared default; the selected zero implementation needs no actual default definition or execution, as described below. Required inputs remain required; a type merely supporting zero does not grant omission to an ordinary user implementation. See [omitted value arguments](functions.md#omitted-value-arguments).
@@ -60,17 +60,7 @@ Until a category's mapping is defined, any loop `.value` initialization, conditi
 
 ## Meaning of 0
 
-Only literal 0 has the selected contextual zero-initializer meaning. Inferred 0 remains an Int. An integer variable or nonzero literal is not implicitly converted to a record:
-
-```text
-number := 0;
-zeroed: Profile = 0;
-source := 0;
-bad: Profile = source; /* rejected: Int is not Profile */
-badLiteral: Profile = 5; /* rejected: nonzero Int literal is not Profile */
-```
-
-All types supporting zero initialization does not make arbitrary numeric expressions universally assignable. Broader expected-type contexts for literal 0 still need complete inference rules. No numeric truthiness, automatic string conversion, or record arithmetic follows.
+Literal `0` is numeric, not a general zero-initialization request for arbitrary types. A bare typed declaration still initializes all-zero storage. A separately designed zero-value expression should work in declarations, arguments, returns, assignments and nested initializers; `mem.zeros<Type>()` is illustrative, not selected syntax. A union destination with multiple viable distinct numeric members produces an inference error if context does not disambiguate them. The exact literal inference and conversion rules remain open.
 
 ## Semantic zero values
 
@@ -106,11 +96,11 @@ The zero callable performs no updates through `mut` or `var` parameter grants. T
 
 ```text
 profile: Profile = {
-    stats = 0,
+    stats = mem.zeros(), /* illustrative explicit zero-value expression */
 }
 ```
 
-Name uses its declared default Guest; stats explicitly zeroes its fields and bypasses level's default 1. Stats = {} would apply its defaults. Default construction and universal zero remain distinct operations.
+Illustratively, name uses its declared default Guest; the proposed zero-value expression zeroes stats and bypasses level's default 1. Its syntax is not selected. Stats = {} would apply its defaults. Default construction and universal zero remain distinct operations.
 
 ## Separate explicit uninitialized storage
 
@@ -124,7 +114,7 @@ The selected zero value of a fallible outcome is success with a zero-initialized
 zero(T ! E) = .ok(zero(T))
 
 attempt: Int ! ReadError; /* .ok(0) */
-explicit_zero: Int ! ReadError = 0; /* .ok(0) */
+numeric_success: Int ! ReadError = 0; /* numeric success: .ok(0) */
 ```
 
 An ordinary success expression `0` in an `Int ! E` function likewise remains implicit success with numeric zero. A stored zero outcome has no error payload to handle. Recursive zero initialization preserves outcome boundaries: the zero of `(T ! E1) ! E2` is `.ok(.ok(zero(T)))`.

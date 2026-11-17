@@ -38,7 +38,7 @@ Assume the three inputs are Bool. This infers Bool and evaluates exactly like re
 
 ## Multi-member union initialization
 
-Both `x: X;` and `x: X = 0;` zero-initialize the slot for every type X, including a multi-member union. The union zero has Kind 0 and no known active member. `= ?` separately requests uninitialized storage; an initialized compatible expression supplies its existing member. Proposed member-qualified `A{0}` remains unselected. See [union initialization](union-initialization-policy.md#bare-local-declarations).
+A bare `x: X;` zero-initializes the slot for every type X, including a multi-member union. Union zero has Kind 0 and no known active member. Numeric `0` is not a generic zero-storage request: for `Int | String` it is intended to supply Int zero. A future explicit zero-value expression is under design; its spelling is unselected. `= ?` requests uninitialized storage. See [union initialization](union-initialization-policy.md#bare-local-declarations).
 
 ## Rules
 
@@ -68,7 +68,7 @@ For inferred declarations, the prefixes are `mut`, `var`, or `var mut`; `mut var
 ```text
 x: User;       /* implicit zero initialization; read-only User */
 var x: User;   /* implicit zero initialization; reassignable User storage */
-x: User = 0;   /* explicit zero initialization; bypass field defaults */
+x: User;       /* zero initialization; bypass field defaults */
 x: User = {}  /* default construction; apply declared field defaults */
 x: User = ?;   /* explicit reserved storage; payload not yet initialized */
 ```

@@ -334,7 +334,7 @@ pair of distinct types must admit conversion or that conversion is infallible.
 
 ## 1.5 Unions and value operations
 
-**Baseline (updated 2026-11-17):** Plain unions normalize order and duplicates. A bare typed declaration zero-initializes every type; a multi-member union zero is initialized with Kind 0 and no known active member. Explicit `= 0` initializes the same all-zero storage for every type, including unions.
+**Baseline (updated 2026-11-17):** Plain unions normalize order and duplicates. A bare typed declaration zero-initializes every type; a multi-member union zero is initialized with Kind 0 and no known active member. Numeric `0` is intended to supply a numeric value; a distinct explicit zero-value expression is under design. Ambiguous inference is an error.
 
 **Initial assessment and probes:** Compare `Int | String` with `String | Int`; first-written-member zero would conflict with order-independent identity. Revisit equality, numeric operations, valid zero and distinct-type invariants together, without choosing a zero member now.
 

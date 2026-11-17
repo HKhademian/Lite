@@ -1,6 +1,6 @@
 # Record creation: zero initialization and declared defaults
 
-Status: **overview updated 2026-10-19; omitted typed initializers and = 0 select zero initialization; = {} selects declared-default record construction; executable empty bodies still produce Unit**. Detailed field-default syntax, defaultability, and unnamed-type forms still need formalization. Named record declarations, contextual nested construction, and headless named-record patterns retain their selected contracts. This is design documentation, not implemented compiler behavior.
+Status: **overview updated 2026-10-19; omitted typed initializers select zero initialization; an explicit zero-value expression is under design; = {} selects declared-default record construction; executable empty bodies still produce Unit**. Detailed field-default syntax, defaultability, and unnamed-type forms still need formalization. Named record declarations, contextual nested construction, and headless named-record patterns retain their selected contracts. This is design documentation, not implemented compiler behavior.
 
 The user's later [union-construction review](union-initialization-policy.md#selected-rejection-and-explicit-member-choice) proposes A{0} as a compact expression that names a member and zeroes the entire A, bypassing defaults. The sole-zero marker remains proposed grammar; it is not a selected positional-field literal. Existing A{} and contextual = {} keep their declared-default meaning where record construction is valid.
 
@@ -28,7 +28,7 @@ There are two selected core initialization modes, with a semantic difference:
 
 ```text
 implicit: User;     /* implicit zero; ignore field defaults */
-zeroed: User = 0;   /* explicit contextual zero; ignore field defaults */
+zeroed: User;       /* zero initialization; ignore field defaults */
 configured: User = {} /* apply declared defaults, then zero-fill other fields */
 ```
 
@@ -38,7 +38,7 @@ For zeroed, name and address.city are empty Strings, age and address.postalCode 
 
 The empty contextual record initializer is selected: its established initializer position and expected record type give it record-construction meaning. Empty executable bodies still produce Unit. The full grammar must express these distinct roles without using trial type-checking to choose a parse.
 
-Omitting the initializer of a simple typed binding selects the same semantic zero as explicit = 0; neither uses declared field defaults. Every type has a valid all-zero value; this does not implicitly cast an arbitrary integer to a record. See [zero initialization](zero-initialization.md).
+Omitting the initializer of a simple typed binding selects all-zero storage and bypasses declared field defaults. Numeric literal 0 is not a general request to zero a record; an explicit zero-value expression remains under design. Every type has a valid all-zero value; this does not implicitly cast an arbitrary integer to a record. See [zero initialization](zero-initialization.md).
 
 ```text
 user := User {}
@@ -62,7 +62,7 @@ Default construction includes declared field defaults. It is not a request to ov
 
 Explicit false, 0, or an empty String overrides a declared nonzero/nonempty default. Duplicate field initializers should be rejected rather than silently taking the last value. Unknown and inaccessible fields must not be accepted. These diagnostic policies are recommendations alongside the proposed default contract.
 
-This resolution applies only to record-initializer construction, such as User {} or user: User = { ... }. Both user: User; and user: User = 0 instead recursively zero-initialize all fields, bypassing declared defaults at every depth.
+This resolution applies only to record-initializer construction, such as User {} or user: User = { ... }. A bare user: User; instead recursively zero-initializes all fields, bypassing declared defaults at every depth.
 
 ## 3. Override selected fields
 

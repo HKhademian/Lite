@@ -18,7 +18,7 @@ cleanup remain unimplemented.
 
 ```text
 x: User;       /* implicit zero initialization */
-x: User = 0;   /* explicit zero initialization */
+x: User;       /* zero initialization */
 x: User = {}  /* declared defaults */
 x: User = ?;   /* explicitly uninitialized storage */
 ```
