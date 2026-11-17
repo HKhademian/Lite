@@ -44,6 +44,8 @@ A typed declaration creates a slot sized and laid out for its type and initializ
 
 ## Universal type rule
 
+User clarification, 2026-11-17: zero initialization describes the storage: every byte in the slot, including any padding, is zero. The bytes themselves carry no inherent type-specific meaning; interpreting them as a value depends on the slot's type and its representation. For example, a String representation whose length is zero can interpret zero-filled storage as an empty String; its complete layout remains to be specified. A union's zero Kind identifies no known active member. Zero initialization does not invoke a type-specific constructor to choose these outcomes. A zero-sized type has no bytes to clear. The semantic requirement is compatible with the separately specified optimization of unobservable writes; storage placement remains open.
+
 Every type must have a meaningful zero value represented by all-zero storage. A compiler must not reject zero construction because a type lacks a valid zero. Designing a type includes defining this mapping; raw foreign representations cannot silently invalidate the language rule.
 
 Zero is neither a universal null expression nor automatically absence for every type. A zero function must be callable with defined behavior. A zero reference/access value, resource wrapper, enum, union, or constrained domain must have defined language meaning too. Their operations may have ordinary specified outcomes/faults, but zero state alone cannot be dismissed as an invalid value or unchecked memory access.
