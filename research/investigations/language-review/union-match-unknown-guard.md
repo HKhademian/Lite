@@ -1,10 +1,16 @@
 # Union match: known members and an implicit unknown guard
 
-Status: **user-proposed direction, 2026-11-17; under review**. The examples
-illustrate reasoning, not implemented syntax, a selected panic API, or a completed
-revision of match semantics. The current [match](../../../docs/match.md) and
-[union-pattern](../../../docs/union-patterns.md) contracts remain the baseline
-until reconciled explicitly.
+Status: **direction selected 2026-11-17:** a zero-initialized union has a valid no-known-member state that a program can check and explicitly handle in a match. A match that reaches this state without explicit handling implicitly panics; ordinary `_` handles remaining listed members, not this state. The name `UNKNOWN`, checker and pattern syntax are descriptive and remain under discussion. The exact panic contract, interaction details and handling of unrecognized nonzero Kinds remain open. This is a design decision, not a compiler-support claim.
+
+Selected cases for future verification (no syntax or compiler support implied):
+
+- **zero-check:** inspect a bare zero-initialized `Int | String` and determine that it has no known active member.
+- **known-check:** after supplying a known Int or String member, the corresponding check does not identify the no-known-member state.
+- **explicit-match:** an explicit handler for the zero state runs instead of the implicit panic; its spelling is undecided.
+- **unhandled-match:** matching that zero state without an explicit handler produces the implicit panic, even with an ordinary `_` arm.
+- **known-fallback:** for a known remaining member, the ordinary `_` arm remains available under its normal binding rules.
+
+The examples below record the evolution of the proposal; statements that selection of the zero state, its explicit handling, or the unhandled-zero panic are still open are historical. See [union patterns](../../../docs/union-patterns.md) for the selected direction.
 
 ## User's examples and intent
 

@@ -24,7 +24,7 @@ Specification cases (not executed compiler tests):
 - **scalar-literal-zero:** `n: Int64 = 0;` creates an all-zero Int64 slot, interpreted as numeric zero.
 - **typed-member-zero:** `n: Int64 = 0; x: (Int64 | String) = n;` supplies the existing Int64 member value, rather than requesting an all-zero union slot.
 
-How matching, type tests and access handle this state, and how unrecognized nonzero Kinds are handled, remain under review. An earlier proposal for a guard is recorded in the [match investigation](../research/investigations/language-review/union-match-unknown-guard.md); it is not selected by this declaration decision.
+The no-known-member state can be checked and explicitly handled in a match; an unhandled match implicitly panics, while ordinary `_` covers known members. State naming and checker/pattern syntax remain open, as do access and unrecognized nonzero Kinds. See [union patterns](union-patterns.md#zero-initialized-union-state-in-checks-and-matches).
 
 ## Historical declaration alternatives
 

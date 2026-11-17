@@ -42,6 +42,12 @@ For an existing union binding, use `if person: User { ... }` when no new name is
 
 For a stable initialized closed union value, an unguarded type arm removes its completely handled alternative from later match arms. After : String on String | Float | Int, the fallback _ binding and original stable subject name both have type Float | Int in that arm. No bindings from failed arms leak forward; the proof concerns which original subject values can reach the later arm. Guarded/partial tests may leave values of the same type and cannot remove it wholesale. Stable existing-binding refinement after early exits is selected separately in [type tests](type-tests-and-narrowing.md#narrowing-after-early-exits-selected); false-branch remainders through else/else if are selected in [false-branch narrowing](type-tests-and-narrowing.md#false-branches-and-else-if-chains-selected); broader predicate/overlap analysis remains open; see [remaining subject types](type-tests-and-narrowing.md#remaining-subject-types-across-match-arms-selected).
 
+## Zero-initialized union state in checks and matches
+
+Selected 2026-11-17: a union with all-zero storage has Kind 0 and no known active member. It is a valid initialized state, which a program can check and explicitly handle in a match. If a match reaches this state without an explicit handler, it implicitly panics. An ordinary `_` arm covers remaining listed members and does not handle this state. This preserves the programmer's ability to reason about listed-member fallback bodies.
+
+The name `UNKNOWN` is descriptive only: the state name, checker and pattern syntax are not selected. The precise panic contract, handling of unrecognized nonzero Kinds, coverage interactions and any implementation remain open. See the [match investigation](../research/investigations/language-review/union-match-unknown-guard.md) for cases and earlier reasoning.
+
 ## Narrowing a success union with explicit bindings
 
 Assume `lookup(id)` returns the outcome type above:
