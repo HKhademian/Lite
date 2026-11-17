@@ -1,0 +1,39 @@
+corpus := import "util/corpus";
+project := import "util/project";
+test := import "core/test";
+
+allowed: List<String> = ["out", "artifact"];
+
+ok1 := corpus.parseToolOptions(["--out", "dist/out", "--artifact", "dist/a.ts"], allowed);
+test.checkBool("valid tool options", true, ok1.ok);
+optOut := corpus.readToolOption(["--out", "dist/out", "--artifact", "dist/a.ts"], "out");
+test.checkBool("read out option found", true, optOut.found);
+test.checkText("read out option val", "dist/out", optOut.value);
+
+badUnknown := corpus.parseToolOptions(["--reference", "foo"], allowed);
+test.checkBool("reject unknown option", false, badUnknown.ok);
+test.checkText("unknown error text", "invalid or missing option: --reference", badUnknown.error);
+
+badMissing := corpus.parseToolOptions(["--artifact"], allowed);
+test.checkBool("reject missing value", false, badMissing.ok);
+
+badDup := corpus.parseToolOptions(["--out", "a", "--out", "b"], allowed);
+test.checkBool("reject duplicate option", false, badDup.ok);
+
+badFlagVal := corpus.parseToolOptions(["--out", "--artifact"], allowed);
+test.checkBool("reject flag-like value", false, badFlagVal.ok);
+
+posOk := corpus.positiveOptionValue(["--samples", "5"], "samples", 3, 1);
+test.checkBool("positive int ok", true, posOk.ok);
+test.checkInt("positive int val", 5, posOk.value);
+
+posBad := corpus.positiveOptionValue(["--samples", "0"], "samples", 3, 1);
+test.checkBool("positive int rejects < minimum", false, posBad.ok);
+
+root := project.findRepoRoot();
+test.checkBool("repo root found", true, root =!= "");
+meta := corpus.readCompilerMeta(root, "ts");
+test.checkBool("readCompilerMeta ts ok", true, meta.ok);
+test.checkBool("readCompilerMeta has artifactSha256", true, meta.artifactSha256 =!= "");
+
+test.done("util-corpus");

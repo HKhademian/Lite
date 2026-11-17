@@ -1,0 +1,18 @@
+/** Validates generated TS compiler output and execution against recorded corpus contracts (`compiler/scripts/corpus-parity.ts`). */
+
+io := import "core/io";
+cli := import "util/cli";
+project := import "util/project";
+corpus := import "util/corpus";
+
+run := fn(): Int {
+    root := project.findRepoRoot();
+    if root == "" {
+        io.errorLine("could not locate LiteScript repository root");
+        return 1;
+    }
+    args := cli.stripLeadingSeparator(io.inputArgs());
+    corpus.runCorpusParityCommand(root, args)
+};
+
+io.exit(run());

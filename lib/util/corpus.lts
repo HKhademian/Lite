@@ -1,0 +1,777 @@
+/** Shared Lite utilities for generated-compiler build, three-generation self-hosting, and corpus parity verification. */
+
+io := import "core/io";
+fs := import "core/file";
+path := import "core/path";
+proc := import "core/process";
+text := import "core/text";
+list := import "core/list";
+integer := import "core/int";
+crypto := import "core/crypto";
+time := import "core/time";
+unicode := import "core/unicode";
+json := import "util/json";
+streams := import "util/streams";
+cases := import "util/cases";
+
+isJsonSpace := fn(ch: String): Bool {
+    ch == " " or ch == "\n" or ch == "\r" or ch == "\t"
+};
+
+skipJsonSpace := fn(source: String, start: Int): Int {
+    var pos := start;
+    size := text.length(source);
+    loop pos < size {
+        if not isJsonSpace(text.at(source, pos)) { return pos; }
+        pos = pos + 1;
+    }
+    pos
+};
+
+isJsonObjectAt := fn(source: String, start: Int): Bool {
+    pos := skipJsonSpace(source, start);
+    pos < text.length(source) and text.at(source, pos) == "{"
+};
+
+isJsonArrayAt := fn(source: String, start: Int): Bool {
+    pos := skipJsonSpace(source, start);
+    pos < text.length(source) and text.at(source, pos) == "["
+};
+
+readStringListAt := fn(source: String, arrPos: Int): List<String> {
+    out: mut List<String> = [];
+    if not isJsonArrayAt(source, arrPos) { return out; }
+    loop json.arrayElementOffsets(source, arrPos) as elPos {
+        s := json.readStringAt(source, elPos);
+        if s.ok { list.pushBack(mut out, s.value); }
+    }
+    out
+};
+
+/** Validates `--key value` pairs against `allowedKeys`, rejecting unknown, missing, duplicate, or flag-like values. */
+pub parseToolOptions := fn(args: List<String>, allowedKeys: List<String>): (ok: Bool, error: String) {
+    seen: mut List<String> = [];
+    count := list.listCountText(args);
+    var i := 0;
+    loop i < count {
+        arg := args[i];
+        if not text.startsWithAt(arg, 0, "--") {
+            return (ok = false, error = "invalid or missing option: " + arg);
+        }
+        key := text.slice(arg, 2, text.length(arg));
+        if i + 1 >= count {
+            return (ok = false, error = "invalid or missing option: " + arg);
+        }
+        val := args[i + 1];
+        if not list.listContainsText(allowedKeys, key) or list.listContainsText(seen, key) or text.startsWithAt(val, 0, "--") {
+            return (ok = false, error = "invalid or missing option: " + arg);
+        }
+        list.pushBack(mut seen, key);
+        i = i + 2;
+    }
+    (ok = true, error = "")
+};
+
+/** Reads the string value for `--<key>` from validated option arguments. */
+pub readToolOption := fn(args: List<String>, key: String): (found: Bool, value: String) {
+    flag := "--" + key;
+    count := list.listCountText(args);
+    var i := 0;
+    loop i + 1 < count {
+        if args[i] == flag {
+            return (found = true, value = args[i + 1]);
+        }
+        i = i + 2;
+    }
+    (found = false, value = "")
+};
+
+/** Reads an integer `--<key>` option >= `minimum`, defaulting to `fallback` when absent. */
+pub positiveOptionValue := fn(args: List<String>, key: String, fallback: Int, minimum: Int): (ok: Bool, value: Int, error: String) {
+    opt := readToolOption(args, key);
+    if not opt.found { return (ok = true, value = fallback, error = ""); }
+    raw := opt.value;
+    if raw == "" { return (ok = false, value = 0, error = "invalid --" + key); }
+    var start := 0;
+    if text.startsWithAt(raw, 0, "-") {
+        if text.length(raw) == 1 { return (ok = false, value = 0, error = "invalid --" + key); }
+        start = 1;
+    }
+    var i := start;
+    loop i < text.length(raw) {
+        if not text.isDigit(text.at(raw, i)) { return (ok = false, value = 0, error = "invalid --" + key); }
+        i = i + 1;
+    }
+    parsed := text.textToInt(raw);
+    if not parsed.ok or parsed.value < minimum {
+        return (ok = false, value = 0, error = "invalid --" + key);
+    }
+    (ok = true, value = parsed.value, error = "")
+};
+
+/** Returns the Git HEAD hash when `rootDir` owns its repository, or `found = false` inside source archives. */
+pub repoRevision := fn(rootDir: String): (found: Bool, rev: String) {
+    emptyEnv: List<String> = [];
+    topArgs: List<String> = ["rev-parse", "--show-toplevel"];
+    topRes := proc.run("git", topArgs, rootDir, emptyEnv, true, "");
+    if topRes.error =!= "" or topRes.status =!= 0 {
+        return (found = false, rev = "");
+    }
+    if path.normalize(text.trim(topRes.stdout)) =!= path.normalize(rootDir) {
+        return (found = false, rev = "");
+    }
+    headArgs: List<String> = ["rev-parse", "HEAD"];
+    headRes := proc.run("git", headArgs, rootDir, emptyEnv, true, "");
+    if headRes.error =!= "" or headRes.status =!= 0 {
+        return (found = false, rev = "");
+    }
+    (found = true, rev = text.trim(headRes.stdout))
+};
+
+/** Invokes `compiler/host.ts` to build and return metadata for `target` (`"ts"` or `"c"`). */
+pub readCompilerMeta := fn(rootDir: String, target: String): (
+ok: Bool, artifactPath: String, sourceSha256: String, artifactSha256: String, builderSha256: String, rawJson: String, error: String
+) {
+    script := "import { buildCompiler } from './compiler/host.ts'; process.stdout.write(JSON.stringify(buildCompiler(" + json.quoteString(target) + "), null, 2));";
+    args: List<String> = ["--input-type=module", "-e", script];
+    emptyEnv: List<String> = [];
+    res := proc.run(proc.execPath(), args, rootDir, emptyEnv, true, "");
+    if res.error =!= "" or res.status =!= 0 {
+        err := if res.error =!= "" { res.error } else { text.trim(res.stderr + res.stdout) };
+        return (ok = false, artifactPath = "", sourceSha256 = "", artifactSha256 = "", builderSha256 = "", rawJson = "", error = err);
+    }
+    pRes := json.readObjectString(res.stdout, 0, "path");
+    srcRes := json.readObjectString(res.stdout, 0, "sourceSha256");
+    artRes := json.readObjectString(res.stdout, 0, "artifactSha256");
+    bldRes := json.readObjectString(res.stdout, 0, "builderSha256");
+    if not pRes.found or not srcRes.found or not artRes.found or not bldRes.found {
+        return (ok = false, artifactPath = "", sourceSha256 = "", artifactSha256 = "", builderSha256 = "", rawJson = "", error = "invalid buildCompiler metadata");
+    }
+    (ok = true, artifactPath = pRes.value, sourceSha256 = srcRes.value, artifactSha256 = artRes.value, builderSha256 = bldRes.value, rawJson = res.stdout, error = "")
+};
+
+toolIdentitiesJson := fn(rootDir: String, relPaths: List<String>): (ok: Bool, jsonText: String, error: String) {
+    entries: mut List<String> = [];
+    loop relPaths as rel {
+        hRes := crypto.sha256File(path.join(rootDir, rel));
+        if not hRes.ok { return (ok = false, jsonText = "", error = hRes.error); }
+        list.pushBack(mut entries, "{\n      \"path\": " + json.quoteString(rel) + ",\n      \"sha256\": " + json.quoteString(hRes.hex) + "\n    }");
+    }
+    (ok = true, jsonText = "[\n    " + text.joinTexts(entries, ",\n    ") + "\n  ]", error = "")
+};
+
+checkStrictSingle := fn(rootDir: String, artifactPath: String): (ok: Bool, elapsedMs: Int, error: String) {
+    tmpRes := fs.makeTempDir("lite-strict-check-");
+    if not tmpRes.ok { return (ok = false, elapsedMs = 0, error = tmpRes.error); }
+    startNs := time.monotonicNs();
+    chk := cases.checkTsArtifactFileWithStatus(rootDir, artifactPath, tmpRes.path, 60000);
+    elapsedMs := (time.monotonicNs() - startNs) / 1000000;
+    _rm := fs.remove(tmpRes.path);
+    if not chk.ok { return (ok = false, elapsedMs = elapsedMs, error = chk.error); }
+    (ok = true, elapsedMs = elapsedMs, error = "")
+};
+
+checkSeedArtifact := fn(rootDir: String, hasArtifact: Bool, optArtifact: String): (
+ok: Bool, chosenPath: String, artifactSha256: String, sourceSha256: String,
+selectedCompilerSha256: String, selectedBuilderSha256: String, totalDepBytes: Int, error: String
+) {
+    meta := readCompilerMeta(rootDir, "ts");
+    if not meta.ok {
+        return (ok = false, chosenPath = "", artifactSha256 = "", sourceSha256 = "", selectedCompilerSha256 = "", selectedBuilderSha256 = "", totalDepBytes = 0, error = meta.error);
+    }
+    chosen := if hasArtifact { path.resolve(proc.cwd(), optArtifact) } else { meta.artifactPath };
+    chosenHash := crypto.sha256File(chosen);
+    if not chosenHash.ok {
+        return (ok = false, chosenPath = "", artifactSha256 = "", sourceSha256 = "", selectedCompilerSha256 = "", selectedBuilderSha256 = "", totalDepBytes = 0, error = chosenHash.error);
+    }
+    var totalBytes := 0;
+    depsField := json.findObjectField(meta.rawJson, 0, "dependencies");
+    loop readStringListAt(meta.rawJson, depsField.valuePos) as depRel {
+        totalBytes = totalBytes + list.listCountInt(fs.readBytes(path.resolve(rootDir, depRel)));
+    }
+    (
+    ok = true, chosenPath = chosen, artifactSha256 = chosenHash.hex, sourceSha256 = meta.sourceSha256,
+    selectedCompilerSha256 = meta.artifactSha256, selectedBuilderSha256 = meta.builderSha256, totalDepBytes = totalBytes, error = ""
+    )
+};
+
+sourceModuleIdentity := fn(rootDir: String, sourceBytes: List<Int>): String {
+    paths: List<String> = [
+    "lib/core/io.lts", "lib/core/int.lts", "lib/core/list.lts", "lib/core/text.lts",
+    "lib/core/file.lts", "lib/core/process.lts", "lib/core/crypto.lts", "lib/core/time.lts",
+    "lib/core/unicode.lts", "compiler/src/modules.lts", "compiler/src/source-reader.lts"
+    ];
+    identities: List<String> = [
+    "lite.core.io.v1", "lite.core.int.v1", "lite.core.list.v1", "lite.core.text.v1",
+    "lite.core.file.v1", "lite.core.process.v1", "lite.core.crypto.v1", "lite.core.time.v1",
+    "lite.core.unicode.v1", "lite.compiler.modules.v1", "lite.compiler.source-reader.v1"
+    ];
+    var i := 0;
+    loop i < list.listCountText(paths) {
+        full := path.join(rootDir, paths[i]);
+        if fs.kind(full) == fs.FILE_KIND_FILE {
+            if streams.equalBytes(sourceBytes, fs.readBytes(full)) {
+                return identities[i];
+            }
+        }
+        i = i + 1;
+    }
+    ""
+};
+
+/** Executes `compiler/scripts/build.ts` cleanly and prints `{ ts, c }` JSON metadata. */
+pub runCompilerBuildCommand := fn(rootDir: String): Int {
+    script := "import { buildCompiler } from './compiler/host.ts'; process.stdout.write(JSON.stringify({ ts: buildCompiler('ts'), c: buildCompiler('c') }, null, 2) + '\\n');";
+    args: List<String> = ["--input-type=module", "-e", script];
+    emptyEnv: List<String> = [];
+    res := proc.run(proc.execPath(), args, rootDir, emptyEnv, true, "");
+    if res.error =!= "" {
+        io.errorLine("compiler build: " + res.error);
+        return 1;
+    }
+    if res.status =!= 0 {
+        msg := text.trim(res.stderr + res.stdout);
+        io.errorLine("compiler build: " + msg);
+        return 1;
+    }
+    io.output(res.stdout);
+    0
+};
+
+/** Rebuilds current TS compiler root `S` through three checked TS generations and prints/persists `ladder.json`. */
+pub runSelfHostCommand := fn(rootDir: String, args: List<String>): Int {
+    allowed: List<String> = ["out", "artifact"];
+    optsOk := parseToolOptions(args, allowed);
+    if not optsOk.ok {
+        io.errorLine(optsOk.error);
+        return 1;
+    }
+    outOpt := readToolOption(args, "out");
+    artOpt := readToolOption(args, "artifact");
+
+    sel := checkSeedArtifact(rootDir, artOpt.found, artOpt.value);
+    if not sel.ok {
+        io.errorLine(sel.error);
+        return 1;
+    }
+
+    manifestPath := path.join(rootDir, "compiler/manifests/ts.json");
+    manRes := fs.readText(manifestPath);
+    if not manRes.ok {
+        io.errorLine(manRes.error);
+        return 1;
+    }
+    filesField := json.findObjectField(manRes.text, 0, "files");
+    if not filesField.found {
+        io.errorLine("self-host ladder requires one TS source root");
+        return 1;
+    }
+    manFiles := readStringListAt(manRes.text, filesField.valuePos);
+    if list.listCountText(manFiles) =!= 1 {
+        io.errorLine("self-host ladder requires one TS source root");
+        return 1;
+    }
+    rootSourcePath := path.resolve(path.parentDir(manifestPath), manFiles[0]);
+    if fs.kind(rootSourcePath) =!= fs.FILE_KIND_FILE {
+        io.errorLine("missing compiler root source: " + rootSourcePath);
+        return 1;
+    }
+    sourceBytes := fs.readBytes(rootSourcePath);
+    decoded := unicode.utf8DecodeStrict(sourceBytes);
+    if not decoded.ok {
+        io.errorLine(rootSourcePath + ": source is not valid UTF-8");
+        return 1;
+    }
+    sourceName := path.relative(rootDir, rootSourcePath);
+    rootIdentity := sourceModuleIdentity(rootDir, sourceBytes);
+
+    var outDir := "";
+    if outOpt.found {
+        outDir = path.resolve(proc.cwd(), outOpt.value);
+        mkOut := fs.makeDir(outDir);
+        if not mkOut.ok {
+            io.errorLine(mkOut.error);
+            return 1;
+        }
+    } else {
+        tmpOut := fs.makeTempDir("lite-generated-ladder-");
+        if not tmpOut.ok {
+            io.errorLine(tmpOut.error);
+            return 1;
+        }
+        outDir = tmpOut.path;
+    }
+    _pkg := fs.writeText(path.join(outDir, "package.json"), "{\"type\":\"module\"}\n");
+    _src := fs.writeBytes(path.join(outDir, "S.lts"), sourceBytes);
+
+    genWorkRes := fs.makeTempDir("lite-ladder-work-");
+    if not genWorkRes.ok {
+        io.errorLine(genWorkRes.error);
+        return 1;
+    }
+    genWork := genWorkRes.path;
+
+    var builderSha := sel.artifactSha256;
+    var builderPath := sel.chosenPath;
+    var firstArtifactSha := "";
+    var fixedPoint := true;
+    var lastArtifactSha := sel.artifactSha256;
+    genJsonEntries: mut List<String> = [];
+    genPaths: mut List<String> = [];
+    genHashes: mut List<String> = [];
+    emptyEnv: List<String> = [];
+    entryPath := path.join(rootDir, "compiler/entry.ts");
+
+    var gen := 1;
+    loop gen <= 3 {
+        tmpOutTs := path.join(genWork, "gen-" + integer.intText(gen) + ".ts");
+        tmpErr := path.join(genWork, "gen-" + integer.intText(gen) + ".stderr");
+        compArgs: List<String> = [entryPath, builderPath, sourceName, rootIdentity, rootSourcePath];
+        startNs := time.monotonicNs();
+        compRes := proc.runBytes(proc.execPath(), compArgs, rootDir, emptyEnv, 0, sourceBytes, tmpOutTs, tmpErr);
+        compileMs := (time.monotonicNs() - startNs) / 1000000;
+        if compRes.error =!= "" {
+            _rm := fs.remove(genWork);
+            io.errorLine(compRes.error);
+            return 1;
+        }
+        errBytes := fs.readBytes(tmpErr);
+        if compRes.status =!= 0 or list.listCountInt(errBytes) =!= 0 {
+            _rm := fs.remove(genWork);
+            io.errorLine("generation " + integer.intText(gen) + " failed (" + integer.intText(compRes.status) + "):\n" + unicode.utf8DecodeLossy(errBytes));
+            return 1;
+        }
+        chk := checkStrictSingle(rootDir, tmpOutTs);
+        if not chk.ok {
+            _rm := fs.remove(genWork);
+            io.errorLine("strict artifact check failed:\n" + chk.error);
+            return 1;
+        }
+        outBytes := fs.readBytes(tmpOutTs);
+        artSha := crypto.sha256Bytes(outBytes);
+        genPath := path.join(outDir, "generation-" + integer.intText(gen) + ".ts");
+        wGen := fs.writeBytes(genPath, outBytes);
+        if not wGen.ok {
+            _rm := fs.remove(genWork);
+            io.errorLine(wGen.error);
+            return 1;
+        }
+        if gen == 1 {
+            firstArtifactSha = artSha;
+        } else if artSha =!= firstArtifactSha {
+            fixedPoint = false;
+        }
+        itemJson := "{\n"
+        + "      \"generation\": " + integer.intText(gen) + ",\n"
+        + "      \"sourceSha256\": " + json.quoteString(sel.sourceSha256) + ",\n"
+        + "      \"builderSha256\": " + json.quoteString(builderSha) + ",\n"
+        + "      \"artifactSha256\": " + json.quoteString(artSha) + ",\n"
+        + "      \"bytes\": " + integer.intText(list.listCountInt(outBytes)) + ",\n"
+        + "      \"compileProcessMs\": " + integer.intText(compileMs) + ",\n"
+        + "      \"strictCheckMs\": " + integer.intText(chk.elapsedMs) + ",\n"
+        + "      \"path\": " + json.quoteString(genPath) + "\n    }";
+        list.pushBack(mut genJsonEntries, itemJson);
+        list.pushBack(mut genPaths, genPath);
+        list.pushBack(mut genHashes, artSha);
+        builderSha = artSha;
+        lastArtifactSha = artSha;
+        builderPath = genPath;
+        gen = gen + 1;
+    }
+    _rmWork := fs.remove(genWork);
+
+    var vi := 0;
+    loop vi < list.listCountText(genPaths) {
+        persisted := crypto.sha256File(genPaths[vi]);
+        if not persisted.ok or persisted.hex =!= genHashes[vi] {
+            io.errorLine("persisted generation identity mismatch");
+            return 1;
+        }
+        vi = vi + 1;
+    }
+
+    toolPaths: List<String> = [
+    "compiler/scripts/self-host.ts", "tools/src/self-host.lts", "lib/util/corpus.lts", "compiler/host.ts", "igniter/artifacts.ts"
+    ];
+    toolsJsonRes := toolIdentitiesJson(rootDir, toolPaths);
+    if not toolsJsonRes.ok {
+        io.errorLine(toolsJsonRes.error);
+        return 1;
+    }
+    revRes := repoRevision(rootDir);
+    revJson := if revRes.found { json.quoteString(revRes.rev) } else { "null" };
+    matchesSelected := lastArtifactSha == sel.selectedCompilerSha256;
+    equalsBuilder := lastArtifactSha == sel.artifactSha256;
+
+    summary := "{\n"
+    + "  \"phase\": \"generated-fixed-point\",\n"
+    + "  \"revision\": " + revJson + ",\n"
+    + "  \"node\": " + json.quoteString(proc.runtimeVersion()) + ",\n"
+    + "  \"out\": " + json.quoteString(outDir) + ",\n"
+    + "  \"selected\": {\n"
+    + "    \"artifactSha256\": " + json.quoteString(sel.artifactSha256) + ",\n"
+    + "    \"currentSourceSha256\": " + json.quoteString(sel.sourceSha256) + ",\n"
+    + "    \"selectedCompilerSha256\": " + json.quoteString(sel.selectedCompilerSha256) + ",\n"
+    + "    \"selectedCompilerBuilderSha256\": " + json.quoteString(sel.selectedBuilderSha256) + ",\n"
+    + "    \"supplied\": " + (if artOpt.found { "true" } else { "false" }) + "\n  },\n"
+    + "  \"toolSources\": " + toolsJsonRes.jsonText + ",\n"
+    + "  \"source\": {\n"
+    + "    \"bytes\": " + integer.intText(sel.totalDepBytes) + ",\n"
+    + "    \"sha256\": " + json.quoteString(sel.sourceSha256) + "\n  },\n"
+    + "  \"generations\": [\n    " + text.joinTexts(genJsonEntries, ",\n    ") + "\n  ],\n"
+    + "  \"fixedPoint\": " + (if fixedPoint { "true" } else { "false" }) + ",\n"
+    + "  \"matchesSelectedCompiler\": " + (if matchesSelected { "true" } else { "false" }) + ",\n"
+    + "  \"equalsSelectedBuilder\": " + (if equalsBuilder { "true" } else { "false" }) + "\n}\n";
+
+    wLadder := fs.writeText(path.join(outDir, "ladder.json"), summary);
+    if not wLadder.ok {
+        io.errorLine(wLadder.error);
+        return 1;
+    }
+    io.output(summary);
+    if fixedPoint { 0 } else { 1 }
+};
+
+hasThreeDigits := fn(part: String): Bool {
+    text.length(part) == 3
+    and text.isDigit(text.at(part, 0))
+    and text.isDigit(text.at(part, 1))
+    and text.isDigit(text.at(part, 2))
+};
+
+isLowerSlug := fn(slug: String): Bool {
+    size := text.length(slug);
+    if size == 0 { return false; }
+    var prevDash := true;
+    var i := 0;
+    loop i < size {
+        ch := text.at(slug, i);
+        if ch == "-" {
+            if prevDash { return false; }
+            prevDash = true;
+        } else {
+            isAlnum := text.indexOfText("abcdefghijklmnopqrstuvwxyz0123456789", ch, 0) >= 0;
+            if not isAlnum { return false; }
+            prevDash = false;
+        }
+        i = i + 1;
+    }
+    not prevDash
+};
+
+parseFixtureFilename := fn(fileName: String): (ok: Bool, category: String, slug: String) {
+    if not text.endsWith(fileName, ".json") or text.length(fileName) < 14 {
+        return (ok = false, category = "", slug = "");
+    }
+    stem := text.slice(fileName, 0, text.length(fileName) - 5);
+    if text.at(stem, 3) =!= "-" or text.at(stem, 7) =!= "-" {
+        return (ok = false, category = "", slug = "");
+    }
+    catCode := text.slice(stem, 0, 3);
+    subCode := text.slice(stem, 4, 7);
+    slug := text.slice(stem, 8, text.length(stem));
+    if not hasThreeDigits(catCode) or not hasThreeDigits(subCode) or not isLowerSlug(slug) {
+        return (ok = false, category = "", slug = "");
+    }
+    if catCode =!= "001" and catCode =!= "002" {
+        return (ok = false, category = "", slug = "");
+    }
+    cat := if catCode == "001" { "program" } else { "rejected" };
+    (ok = true, category = cat, slug = slug)
+};
+
+findRecordedTsHash := fn(refJson: String, artOffsets: List<Int>, slug: String): (found: Bool, tsHash: String) {
+    loop artOffsets as pos {
+        nameRes := json.readObjectString(refJson, pos, "name");
+        if nameRes.found and nameRes.value == slug {
+            tsRes := json.readObjectString(refJson, pos, "ts");
+            if tsRes.found { return (found = true, tsHash = tsRes.value); }
+        }
+    }
+    (found = false, tsHash = "")
+};
+
+/** Validates all 94 recorded corpus contracts against the selected or `--artifact` TS compiler. */
+pub runCorpusParityCommand := fn(rootDir: String, args: List<String>): Int {
+    allowed: List<String> = ["artifact", "target"];
+    optsOk := parseToolOptions(args, allowed);
+    if not optsOk.ok {
+        io.errorLine(optsOk.error);
+        return 1;
+    }
+    targetOpt := readToolOption(args, "target");
+    target := if targetOpt.found { targetOpt.value } else { "ts" };
+    if target =!= "ts" and target =!= "c" {
+        io.errorLine("--target must be ts or c");
+        return 1;
+    }
+    if target =!= "ts" {
+        io.errorLine("C corpus execution is deferred");
+        return 1;
+    }
+
+    artOpt := readToolOption(args, "artifact");
+    sel := checkSeedArtifact(rootDir, artOpt.found, artOpt.value);
+    if not sel.ok {
+        io.errorLine(sel.error);
+        return 1;
+    }
+
+    refPath := path.join(rootDir, "compiler/tests/references/generated/current-artifacts.json");
+    refRead := fs.readText(refPath);
+    if not refRead.ok {
+        io.errorLine(refRead.error);
+        return 1;
+    }
+    refSrcHash := json.readObjectString(refRead.text, 0, "sourceSha256");
+    if not refSrcHash.found or refSrcHash.value =!= sel.sourceSha256 {
+        io.errorLine("recorded corpus artifacts do not match current Lite compiler source; review their contracts first");
+        return 1;
+    }
+    artField := json.findObjectField(refRead.text, 0, "artifacts");
+    artOffsets := json.arrayElementOffsets(refRead.text, artField.valuePos);
+
+    chkComp := checkStrictSingle(rootDir, sel.chosenPath);
+    if not chkComp.ok {
+        io.errorLine("strict compiler check failed:\n" + chkComp.error);
+        return 1;
+    }
+
+    compDir := path.join(rootDir, "igniter/tests/compiler");
+    fixFiles := path.collectFiles(compDir, [compDir], ".json", [], false);
+    if list.listCountText(fixFiles) == 0 {
+        io.errorLine("no compiler fixtures found");
+        return 1;
+    }
+
+    tmpWorkRes := fs.makeTempDir("lite-corpus-parity-");
+    if not tmpWorkRes.ok {
+        io.errorLine(tmpWorkRes.error);
+        return 1;
+    }
+    workDir := tmpWorkRes.path;
+    _wPkg := fs.writeText(path.join(workDir, "package.json"), "{\"type\":\"module\"}\n");
+    entryPath := path.join(rootDir, "compiler/entry.ts");
+    emptyEnv: List<String> = [];
+
+    compiledKeys: mut List<String> = [];
+    compiledStatus: mut List<Int> = [];
+    compiledOutFiles: mut List<String> = [];
+    compiledErrFiles: mut List<String> = [];
+
+    distinctProgTexts: mut List<String> = [];
+    distinctProgFiles: mut List<String> = [];
+
+    progFixtureFiles: mut List<String> = [];
+    progCaseNames: mut List<String> = [];
+    progStdinFiles: mut List<String> = [];
+    progExpOutFiles: mut List<String> = [];
+    progExpErrFiles: mut List<String> = [];
+    progExpExits: mut List<Int> = [];
+    progSourceIndices: mut List<Int> = [];
+
+    mismatches: mut List<String> = [];
+    var totalCases := 0;
+    var rejectionMatches := 0;
+    var compileSeq := 0;
+    var streamSeq := 0;
+
+    loop fixFiles as absFix {
+        fileName := path.baseName(absFix);
+        parsedFn := parseFixtureFilename(fileName);
+        if not parsedFn.ok {
+            _rm := fs.remove(workDir);
+            io.errorLine(fileName + ": invalid compiler fixture filename");
+            return 1;
+        }
+        fixRead := fs.readText(absFix);
+        if not fixRead.ok {
+            _rm := fs.remove(workDir);
+            io.errorLine(fixRead.error);
+            return 1;
+        }
+        fixJson := fixRead.text;
+        expectedTs := findRecordedTsHash(refRead.text, artOffsets, parsedFn.slug);
+        if parsedFn.category == "program" and not expectedTs.found {
+            _rm := fs.remove(workDir);
+            io.errorLine("missing artifact contract: " + parsedFn.slug);
+            return 1;
+        }
+
+        srcField := json.findObjectField(fixJson, 0, "source");
+        srcCheck := streams.validateStream(fixJson, srcField.valuePos, compDir, fileName + ".source", false, false, true);
+        if not srcCheck.ok {
+            _rm := fs.remove(workDir);
+            io.errorLine(srcCheck.error);
+            return 1;
+        }
+        srcFileField := json.readObjectString(fixJson, srcField.valuePos, "file");
+        sourceRel := if srcFileField.found { srcFileField.value } else { text.slice(fileName, 0, text.length(fileName) - 5) + ".lts" };
+        sourcePath := path.resolve(compDir, sourceRel);
+        fixSourceBytes := streams.readStreamBytes(fixJson, srcField.valuePos, compDir);
+        cacheKey := sourcePath + "\n" + crypto.sha256Bytes(fixSourceBytes);
+
+        var cIdx := -1;
+        var ki := 0;
+        loop ki < list.listCountText(compiledKeys) {
+            if compiledKeys[ki] == cacheKey {
+                cIdx = ki;
+                break;
+            }
+            ki = ki + 1;
+        }
+        if cIdx < 0 {
+            outFile := path.join(workDir, "comp-" + integer.intText(compileSeq) + ".out");
+            errFile := path.join(workDir, "comp-" + integer.intText(compileSeq) + ".err");
+            compArgs: List<String> = [entryPath, sel.chosenPath, "", sourceModuleIdentity(rootDir, fixSourceBytes), sourcePath];
+            cRes := proc.runBytes(proc.execPath(), compArgs, workDir, emptyEnv, 0, fixSourceBytes, outFile, errFile);
+            if cRes.error =!= "" {
+                _rm := fs.remove(workDir);
+                io.errorLine(cRes.error);
+                return 1;
+            }
+            cIdx = list.listCountText(compiledKeys);
+            list.pushBack(mut compiledKeys, cacheKey);
+            list.pushBack(mut compiledStatus, cRes.status);
+            list.pushBack(mut compiledOutFiles, outFile);
+            list.pushBack(mut compiledErrFiles, errFile);
+            compileSeq = compileSeq + 1;
+        }
+
+        actStatus := compiledStatus[cIdx];
+        actOutBytes := fs.readBytes(compiledOutFiles[cIdx]);
+        actErrBytes := fs.readBytes(compiledErrFiles[cIdx]);
+        actOutSha := crypto.sha256Bytes(actOutBytes);
+
+        casesField := json.findObjectField(fixJson, 0, "cases");
+        loop json.arrayElementOffsets(fixJson, casesField.valuePos) as sPos {
+            totalCases = totalCases + 1;
+            caseName := json.readObjectString(fixJson, sPos, "name").value;
+            expExit := json.readObjectInt(fixJson, sPos, "exitCode").value;
+
+            inField := json.findObjectField(fixJson, sPos, "stdin");
+            outField := json.findObjectField(fixJson, sPos, "stdout");
+            errField := json.findObjectField(fixJson, sPos, "stderr");
+            emptyBytes: List<Int> = [];
+            expInBytes := if inField.found { streams.readStreamBytes(fixJson, inField.valuePos, compDir) } else { emptyBytes };
+            expOutBytes := if outField.found { streams.readStreamBytes(fixJson, outField.valuePos, compDir) } else { emptyBytes };
+            expErrBytes := if errField.found { streams.readStreamBytes(fixJson, errField.valuePos, compDir) } else { emptyBytes };
+
+            if parsedFn.category == "rejected" {
+                okRej := actStatus == expExit and streams.equalBytes(actOutBytes, expOutBytes) and streams.equalBytes(actErrBytes, expErrBytes);
+                if okRej {
+                    rejectionMatches = rejectionMatches + 1;
+                } else {
+                    detail := "status " + integer.intText(actStatus) + ", stderr " + json.quoteString(unicode.utf8DecodeLossy(actErrBytes));
+                    list.pushBack(mut mismatches, fileName + "/" + caseName + ": compiler contract (" + detail + ")");
+                }
+            } else {
+                okProg := actStatus == 0 and list.listCountInt(actErrBytes) == 0 and ("sha256:" + actOutSha) == expectedTs.tsHash;
+                if not okProg {
+                    detail := "artifact " + actOutSha + ", expected " + expectedTs.tsHash;
+                    list.pushBack(mut mismatches, fileName + "/" + caseName + ": compiler contract (" + detail + ")");
+                } else {
+                    var pIdx := -1;
+                    var pi := 0;
+                    loop pi < list.listCountText(distinctProgTexts) {
+                        if distinctProgTexts[pi] == actOutSha {
+                            pIdx = pi;
+                            break;
+                        }
+                        pi = pi + 1;
+                    }
+                    if pIdx < 0 {
+                        pIdx = list.listCountText(distinctProgTexts);
+                        progTsPath := path.join(workDir, "prog-" + integer.intText(pIdx) + ".ts");
+                        _wp := fs.writeBytes(progTsPath, actOutBytes);
+                        list.pushBack(mut distinctProgTexts, actOutSha);
+                        list.pushBack(mut distinctProgFiles, progTsPath);
+                    }
+                    inFile := path.join(workDir, "s-" + integer.intText(streamSeq) + ".in");
+                    eOutFile := path.join(workDir, "s-" + integer.intText(streamSeq) + ".expout");
+                    eErrFile := path.join(workDir, "s-" + integer.intText(streamSeq) + ".experr");
+                    _w1 := fs.writeBytes(inFile, expInBytes);
+                    _w2 := fs.writeBytes(eOutFile, expOutBytes);
+                    _w3 := fs.writeBytes(eErrFile, expErrBytes);
+                    streamSeq = streamSeq + 1;
+
+                    list.pushBack(mut progFixtureFiles, fileName);
+                    list.pushBack(mut progCaseNames, caseName);
+                    list.pushBack(mut progStdinFiles, inFile);
+                    list.pushBack(mut progExpOutFiles, eOutFile);
+                    list.pushBack(mut progExpErrFiles, eErrFile);
+                    list.pushBack(mut progExpExits, expExit);
+                    list.pushBack(mut progSourceIndices, pIdx);
+                }
+            }
+        }
+    }
+
+    var executions := 0;
+    matchedPrograms := list.listCountText(progFixtureFiles);
+    if list.listCountText(distinctProgFiles) > 0 {
+        chkDir := path.join(workDir, "batch-tsc");
+        batchCheck := cases.checkTsArtifactFilesWithStatus(rootDir, distinctProgFiles, chkDir, 60000);
+        if not batchCheck.ok {
+            _rm := fs.remove(workDir);
+            io.errorLine("strict corpus artifact check failed:\n" + batchCheck.error);
+            return 1;
+        }
+        var si := 0;
+        loop si < matchedPrograms {
+            tsFile := distinctProgFiles[progSourceIndices[si]];
+            inBytes := fs.readBytes(progStdinFiles[si]);
+            rOut := path.join(workDir, "run-" + integer.intText(si) + ".out");
+            rErr := path.join(workDir, "run-" + integer.intText(si) + ".err");
+            runArgs: List<String> = [entryPath, tsFile];
+            ran := proc.runBytes(proc.execPath(), runArgs, workDir, emptyEnv, 10000, inBytes, rOut, rErr);
+            executions = executions + 1;
+            okRun := ran.error == "" and ran.status == progExpExits[si]
+            and streams.equalBytes(fs.readBytes(rOut), fs.readBytes(progExpOutFiles[si]))
+            and streams.equalBytes(fs.readBytes(rErr), fs.readBytes(progExpErrFiles[si]));
+            if not okRun {
+                list.pushBack(mut mismatches, progFixtureFiles[si] + "/" + progCaseNames[si] + ": runtime contract");
+            }
+            si = si + 1;
+        }
+    }
+
+    _rm := fs.remove(workDir);
+
+    toolPaths: List<String> = [
+    "compiler/scripts/corpus-parity.ts", "tools/src/corpus-parity.lts", "lib/util/corpus.lts", "compiler/host.ts", "igniter/artifacts.ts"
+    ];
+    toolsJsonRes := toolIdentitiesJson(rootDir, toolPaths);
+    if not toolsJsonRes.ok {
+        io.errorLine(toolsJsonRes.error);
+        return 1;
+    }
+
+    quotedMismatches: mut List<String> = [];
+    loop mismatches as mm {
+        list.pushBack(mut quotedMismatches, json.quoteString(mm));
+    }
+    mismatchJson := if list.listCountText(quotedMismatches) == 0 {
+        "[]"
+    } else {
+        "[\n    " + text.joinTexts(quotedMismatches, ",\n    ") + "\n  ]"
+    };
+
+    report := "{\n"
+    + "  \"phase\": \"recorded-contracts\",\n"
+    + "  \"target\": " + json.quoteString(target) + ",\n"
+    + "  \"artifactSha256\": " + json.quoteString(sel.artifactSha256) + ",\n"
+    + "  \"sourceSha256\": " + json.quoteString(sel.sourceSha256) + ",\n"
+    + "  \"selectedCompilerSha256\": " + json.quoteString(sel.selectedCompilerSha256) + ",\n"
+    + "  \"selectedCompilerBuilderSha256\": " + json.quoteString(sel.selectedBuilderSha256) + ",\n"
+    + "  \"supplied\": " + (if artOpt.found { "true" } else { "false" }) + ",\n"
+    + "  \"toolSources\": " + toolsJsonRes.jsonText + ",\n"
+    + "  \"cases\": " + integer.intText(totalCases) + ",\n"
+    + "  \"programs\": " + integer.intText(matchedPrograms) + ",\n"
+    + "  \"rejections\": " + integer.intText(rejectionMatches) + ",\n"
+    + "  \"executions\": " + integer.intText(executions) + ",\n"
+    + "  \"mismatches\": " + mismatchJson + "\n}\n";
+
+    io.output(report);
+    if list.listCountText(mismatches) == 0 { 0 } else { 1 }
+};

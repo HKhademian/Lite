@@ -408,7 +408,7 @@ readFileDiagnostic := fn(filePath: String, byteCount: Int): String {
     "(binary output, " + integer.intText(byteCount) + " bytes)"
 }
 
-buildTsConfigText := fn(rootDir: String, artifactPath: String): (ok: Bool, text: String, error: String) {
+buildTsConfigFilesText := fn(rootDir: String, files: List<String>): (ok: Bool, text: String, error: String) {
     cfgPath := path.join(rootDir, "igniter/tsconfig.json");
     cfgRes := fs.readText(cfgPath);
     if not cfgRes.ok { return (ok = false, text = "", error = cfgPath + ": " + cfgRes.error); }
@@ -428,21 +428,32 @@ buildTsConfigText := fn(rootDir: String, artifactPath: String): (ok: Bool, text:
     list.pushBack(mut parts, "\"typeRoots\":[]");
     list.pushBack(mut parts, "\"lib\":[\"ESNext\"]");
 
-    body := "{\"compilerOptions\":{" + text.joinTexts(parts, ",") + "},\"files\":[" + json.quoteString(artifactPath) + "]}\n";
+    quotedFiles: mut List<String> = [];
+    loop files as f {
+        list.pushBack(mut quotedFiles, json.quoteString(f));
+    }
+    body := "{\"compilerOptions\":{" + text.joinTexts(parts, ",") + "},\"files\":[" + text.joinTexts(quotedFiles, ",") + "]}\n";
     (ok = true, text = body, error = "")
 }
 
-/** Strict-typechecks emitted TypeScript `artifactPath` inside `workDir` with `timeoutMs` (`<= 0` disables timeout). */
-pub checkTsArtifactFileWithStatus := fn(rootDir: String, artifactPath: String, workDir: String, timeoutMs: Int): (ok: Bool, status: Int, error: String) {
+/** Strict-typechecks one or more emitted TypeScript files inside `workDir` with `timeoutMs` (`<= 0` disables timeout). */
+pub checkTsArtifactFilesWithStatus := fn(rootDir: String, files: List<String>, workDir: String, timeoutMs: Int): (ok: Bool, status: Int, error: String) {
     mkRes := fs.makeDir(workDir);
     if not mkRes.ok { return (ok = false, status = -1, error = mkRes.error); }
     pkgRes := fs.writeText(path.join(workDir, "package.json"), "{\"type\":\"module\"}\n");
     if not pkgRes.ok { return (ok = false, status = -1, error = pkgRes.error); }
-    localArtifact := path.join(workDir, "artifact.ts");
-    copyArt := fs.copy(artifactPath, localArtifact);
-    if not copyArt.ok { return (ok = false, status = -1, error = copyArt.error); }
 
-    cfgRes := buildTsConfigText(rootDir, localArtifact);
+    localFiles: mut List<String> = [];
+    var idx := 0;
+    loop files as srcFile {
+        localFile := path.join(workDir, "artifact-" + integer.intText(idx) + ".ts");
+        copyArt := fs.copy(srcFile, localFile);
+        if not copyArt.ok { return (ok = false, status = -1, error = copyArt.error); }
+        list.pushBack(mut localFiles, localFile);
+        idx = idx + 1;
+    }
+
+    cfgRes := buildTsConfigFilesText(rootDir, localFiles);
     if not cfgRes.ok { return (ok = false, status = -1, error = cfgRes.error); }
     tsconfigPath := path.join(workDir, "tsconfig.json");
     wCfg := fs.writeText(tsconfigPath, cfgRes.text);
@@ -477,6 +488,12 @@ pub checkTsArtifactFileWithStatus := fn(rootDir: String, artifactPath: String, w
         return (ok = false, status = status, error = msg);
     }
     (ok = true, status = 0, error = "")
+}
+
+/** Strict-typechecks emitted TypeScript `artifactPath` inside `workDir` with `timeoutMs` (`<= 0` disables timeout). */
+pub checkTsArtifactFileWithStatus := fn(rootDir: String, artifactPath: String, workDir: String, timeoutMs: Int): (ok: Bool, status: Int, error: String) {
+    files: List<String> = [artifactPath];
+    checkTsArtifactFilesWithStatus(rootDir, files, workDir, timeoutMs)
 }
 
 /** Strict-typechecks emitted TypeScript `artifactPath` inside `workDir` using native or JS `tsc`. */

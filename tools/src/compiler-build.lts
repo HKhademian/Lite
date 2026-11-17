@@ -1,0 +1,16 @@
+/** Selects and builds generated TS compiler and TS-hosted C emitter metadata (`compiler/scripts/build.ts`). */
+
+io := import "core/io";
+project := import "util/project";
+corpus := import "util/corpus";
+
+run := fn(): Int {
+    root := project.findRepoRoot();
+    if root == "" {
+        io.errorLine("could not locate LiteScript repository root");
+        return 1;
+    }
+    corpus.runCompilerBuildCommand(root)
+};
+
+io.exit(run());
