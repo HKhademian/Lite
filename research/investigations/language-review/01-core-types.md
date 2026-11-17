@@ -131,7 +131,9 @@ These labels do not yet select syntax, type identity, a common conversion rule,
 or whether they describe literals only, types, capabilities, or another concept.
 Preserve the already discussed distinctions until explicitly revised. The
 relationship to array and record construction belongs across topics 1, 3 and 7;
-record dependencies without leaving the current review layer.
+record dependencies without leaving the current review layer. The user also
+asks whether JSON-Like, YAML-Like and other direct data forms or static file
+imports are worthwhile; see [structured data and static imports](structured-data-like.md).
 
 **Initial assessment and probes:** Compare a direct literal in a `UserID` destination with an already bound String; do not assume they must be treated identically. Check numeric bounds and contextual inference too.
 
