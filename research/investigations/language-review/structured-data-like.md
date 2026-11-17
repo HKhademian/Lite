@@ -57,6 +57,50 @@ The boundaries need explicit investigation:
 The user's goal is extensibility without bending Lite's syntax. The exact
 extension mechanism and supported formats remain decisions for a future layer.
 
+## Initial language list and possible results
+
+The user initially proposes text (including multiline text), raw data, JSON,
+YAML, INI, XML, Markdown, HTML and potentially others. These names identify
+different inputs; their output contracts remain proposals for discussion:
+
+- **Text:** a `String` is a natural candidate. Define decoding, line endings,
+  escaping and whether the source region preserves its contents exactly.
+- **Raw:** an uninterpreted byte sequence is a candidate when arbitrary binary
+  data is needed. Whether it is a fixed array, owned storage, or a view, and
+  what `Byte` means, remain open. Raw bytes need not be valid text.
+- **JSON and YAML:** nested mappings, sequences and scalar values are possible
+  results. A known object could potentially become a record-shaped value, or
+  parsing could return a general structured data value. JSON null and YAML's
+  richer features require explicit mappings; do not silently equate them with
+  Lite zero or assume the two formats have identical semantics.
+- **INI:** sections and key/value pairs suggest a mapping, possibly nested,
+  but accepted dialects, repeated keys and whether values remain strings need
+  a specified contract.
+- **XML:** a document/tree preserving element names, attributes, order, text,
+  namespaces and mixed content is a candidate. Reducing it to a simple map may
+  lose information; the supported model and exact subset remain open.
+- **Markdown and HTML:** either can be embedded as `String` for later use;
+  optional parsing could instead produce a document structure. HTML can carry
+  nested elements, attributes, text and ordering; a plain map is not necessarily
+  a faithful representation. Markdown's dialect and parsing are separate choices.
+
+### Possible structured-result strategies
+
+The directive could produce a fresh Like value whose eventual Lite shape is
+established during compilation, a general structured data value used at
+runtime, or a value checked against an explicitly supplied Lite type. These are
+alternatives to investigate, not an assumption that they share one mechanism.
+For example, a known JSON object might become a record-shaped value or a map:
+one fixed field shape is different from dynamic string-key lookup. Nested and
+heterogeneous values also require a defined model. The term “unknown record” is
+an open question, not a selected type, implicit `Any`, or promise of reflection.
+
+Compile-time parsing can validate a static input and potentially specialize
+its representation without a runtime parser, subject to Lite's type, layout,
+zero, ownership and error rules. Runtime data may need a general representation
+and runtime parser instead. An inferred shape alone does not grant implicit
+conversion to a separately declared nominal record or select a map ABI.
+
 ## Separate choices
 
 1. **Lite-native data expressions.** Existing or future Lite record, tuple,
