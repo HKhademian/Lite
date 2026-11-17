@@ -400,29 +400,29 @@ pub emitProgram := fn(items: frontend.Items, source: String, prefix: String): Un
     var floatValues := floatLiterals or float32Values or usesFloatArithmetic(calls);
     loop reachable as item {
         if frontend.isFloatScalarKind(item.kind) { floatOutput = true; }
-        if frontend.isFloatScalarKind(item.kind) or item.kind == "LocalFloat" or item.kind == "VarFloat" or item.kind == "AssignFloat" or
-        (item.kind == "Discard" and frontend.isFloatScalarKind(item.name)) { floatValues = true; }
-        if item.kind == frontend.VALUE_KIND_FLOAT32 or (item.kind == "Discard" and item.name == frontend.VALUE_KIND_FLOAT32) { float32Values = true; }
-        if item.kind == "FunctionStart" {
+        if frontend.isFloatScalarKind(item.kind) or item.kind == frontend.ITEM_KIND_LOCAL_FLOAT or item.kind == frontend.ITEM_KIND_VAR_FLOAT or item.kind == frontend.ITEM_KIND_ASSIGN_FLOAT or
+        (item.kind == frontend.ITEM_KIND_DISCARD and frontend.isFloatScalarKind(item.name)) { floatValues = true; }
+        if item.kind == frontend.VALUE_KIND_FLOAT32 or (item.kind == frontend.ITEM_KIND_DISCARD and item.name == frontend.VALUE_KIND_FLOAT32) { float32Values = true; }
+        if item.kind == frontend.ITEM_KIND_FUNCTION_START {
             diagLib.fail("", "C backend does not support top-level functions yet");
         }
         unsupported := unsupportedBuiltinCode(frontend.targetCodeCalls(item.code, "|"));
         if unsupported =!= "" {
             diagLib.fail("", unsupported);
         }
-        if frontend.isTupleKind(item.kind) or (item.kind == "Discard" and frontend.isTupleKind(item.name)) or item.kind == "LocalTuple" or item.kind == "VarTuple" or item.kind == "AssignTuple" {
+        if frontend.isTupleKind(item.kind) or (item.kind == frontend.ITEM_KIND_DISCARD and frontend.isTupleKind(item.name)) or item.kind == frontend.ITEM_KIND_LOCAL_TUPLE or item.kind == frontend.ITEM_KIND_VAR_TUPLE or item.kind == frontend.ITEM_KIND_ASSIGN_TUPLE {
             diagLib.fail("", "C backend does not support tuple values yet");
         }
-        if frontend.isListKind(item.kind) or (item.kind == "Discard" and frontend.isListKind(item.name)) or item.kind == "LocalList" or item.kind == "VarList" or item.kind == "AssignList" {
+        if frontend.isListKind(item.kind) or (item.kind == frontend.ITEM_KIND_DISCARD and frontend.isListKind(item.name)) or item.kind == frontend.ITEM_KIND_LOCAL_LIST or item.kind == frontend.ITEM_KIND_VAR_LIST or item.kind == frontend.ITEM_KIND_ASSIGN_LIST {
             diagLib.fail("", "C backend does not support list values yet");
         }
-        if frontend.isArrayKind(item.kind) or (item.kind == "Discard" and frontend.isArrayKind(item.name)) {
+        if frontend.isArrayKind(item.kind) or (item.kind == frontend.ITEM_KIND_DISCARD and frontend.isArrayKind(item.name)) {
             diagLib.fail("", "C backend does not support array values yet");
         }
-        if frontend.containsFnKind(item.kind) or (item.kind == "Discard" and frontend.containsFnKind(item.name)) or item.kind == "LocalFn" or item.kind == "VarFn" or item.kind == "AssignFn" {
+        if frontend.containsFnKind(item.kind) or (item.kind == frontend.ITEM_KIND_DISCARD and frontend.containsFnKind(item.name)) or item.kind == frontend.ITEM_KIND_LOCAL_FN or item.kind == frontend.ITEM_KIND_VAR_FN or item.kind == frontend.ITEM_KIND_ASSIGN_FN {
             diagLib.fail("", "C backend does not support function values yet");
         }
-        if item.kind == "LoopSeq" {
+        if item.kind == frontend.ITEM_KIND_LOOP_SEQ {
             diagLib.fail("", "C backend does not support list traversal yet");
         }
         if frontend.codeUsesListIndex(item.code) or frontend.codeUsesListPop(item.code) or frontend.codeUsesListCopy(item.code) {
@@ -463,57 +463,57 @@ pub emitProgram := fn(items: frontend.Items, source: String, prefix: String): Un
     var firstTemp := "";
     var writes := "";
     loop reachable as item {
-        if item.kind == "LocalInt" or item.kind == "VarInt" {
+        if item.kind == frontend.ITEM_KIND_LOCAL_INT or item.kind == frontend.ITEM_KIND_VAR_INT {
             io.outputLine(indent + "int64_t " + item.runtime + " = " + item.code + ";");
             io.outputLine(indent + "(void)" + item.runtime + ";");
-        } else if item.kind == "LocalString" or item.kind == "VarString" {
+        } else if item.kind == frontend.ITEM_KIND_LOCAL_STRING or item.kind == frontend.ITEM_KIND_VAR_STRING {
             io.outputLine(indent + "const char *" + item.runtime + " = " + item.code + ";");
             io.outputLine(indent + "(void)" + item.runtime + ";");
-        } else if item.kind == "LocalFloat" or item.kind == "VarFloat" {
+        } else if item.kind == frontend.ITEM_KIND_LOCAL_FLOAT or item.kind == frontend.ITEM_KIND_VAR_FLOAT {
             io.outputLine(indent + "double " + item.runtime + " = " + item.code + ";");
             io.outputLine(indent + "(void)" + item.runtime + ";");
-        } else if item.kind == "LocalBool" or item.kind == "VarBool" {
+        } else if item.kind == frontend.ITEM_KIND_LOCAL_BOOL or item.kind == frontend.ITEM_KIND_VAR_BOOL {
             io.outputLine(indent + "bool " + item.runtime + " = " + item.code + ";");
             io.outputLine(indent + "(void)" + item.runtime + ";");
-        } else if item.kind == "AssignInt" or item.kind == "AssignString" or item.kind == "AssignBool" or item.kind == "AssignFloat" {
+        } else if item.kind == frontend.ITEM_KIND_ASSIGN_INT or item.kind == frontend.ITEM_KIND_ASSIGN_STRING or item.kind == frontend.ITEM_KIND_ASSIGN_BOOL or item.kind == frontend.ITEM_KIND_ASSIGN_FLOAT {
             io.outputLine(indent + item.runtime + " = " + item.code + ";");
-        } else if item.kind == "Discard" {
+        } else if item.kind == frontend.ITEM_KIND_DISCARD {
             io.outputLine(indent + "(void)(" + item.code + ");");
-        } else if item.kind == "Break" {
+        } else if item.kind == frontend.ITEM_KIND_BREAK {
             io.outputLine(indent + "break;");
-        } else if item.kind == "Continue" {
+        } else if item.kind == frontend.ITEM_KIND_CONTINUE {
             io.outputLine(indent + "continue;");
-        } else if item.kind == "Scope" {
+        } else if item.kind == frontend.ITEM_KIND_SCOPE {
             io.outputLine(indent + "{");
             indent = indent + "    ";
-        } else if item.kind == "If" {
+        } else if item.kind == frontend.ITEM_KIND_IF {
             io.outputLine(indent + "if (" + item.code + ") {");
             indent = indent + "    ";
-        } else if item.kind == "Else" {
+        } else if item.kind == frontend.ITEM_KIND_ELSE {
             indent = dedent(indent);
             io.outputLine(indent + "} else {");
             indent = indent + "    ";
-        } else if item.kind == "ElseIf" {
+        } else if item.kind == frontend.ITEM_KIND_ELSE_IF {
             indent = dedent(indent);
             io.outputLine(indent + "} else if (" + item.code + ") {");
             indent = indent + "    ";
-        } else if item.kind == "EndIf" or item.kind == "EndScope" {
+        } else if item.kind == frontend.ITEM_KIND_END_IF or item.kind == frontend.ITEM_KIND_END_SCOPE {
             indent = dedent(indent);
             io.outputLine(indent + "}");
-        } else if item.kind == "Loop" {
+        } else if item.kind == frontend.ITEM_KIND_LOOP {
             condition := if item.code == "" { "true" } else { item.code };
             io.outputLine(indent + "while (" + condition + ") {");
             indent = indent + "    ";
-        } else if item.kind == "EndLoop" {
+        } else if item.kind == frontend.ITEM_KIND_END_LOOP {
             indent = dedent(indent);
             io.outputLine(indent + "}");
-        } else if item.kind == "End" or item.kind == "EndOutput" {
+        } else if item.kind == frontend.ITEM_KIND_END or item.kind == frontend.ITEM_KIND_END_OUTPUT {
             if count == 1 { io.output(outputWriteCode(firstKind, firstCode, indent)); }
             else if count > 1 { io.output(writes); }
-            if item.kind == "End" { io.outputLine(indent + "if (printf(\"\\n\") < 0) { status = 1; }"); }
+            if item.kind == frontend.ITEM_KIND_END { io.outputLine(indent + "if (printf(\"\\n\") < 0) { status = 1; }"); }
             count = 0;
             writes = "";
-        } else if item.kind == "MainStop" or item.kind == "Import" or item.kind == "PublicFunction" or item.kind == "PublicValue" or item.kind == "PublicType" {
+        } else if item.kind == frontend.ITEM_KIND_MAIN_STOP or item.kind == frontend.ITEM_KIND_IMPORT or item.kind == frontend.ITEM_KIND_PUBLIC_FUNCTION or item.kind == frontend.ITEM_KIND_PUBLIC_VALUE or item.kind == frontend.ITEM_KIND_PUBLIC_TYPE {
         } else {
             if count == 0 {
                 firstKind = item.kind;

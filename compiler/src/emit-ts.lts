@@ -1796,9 +1796,9 @@ applySoftBuiltins := fn(rawItems: frontend.Items, prefix: String): frontend.Item
     var pendingSoftParams := "";
     loop rawItems as item {
         if skippingDepth > 0 {
-            if item.kind == "FunctionStart" {
+            if item.kind == frontend.ITEM_KIND_FUNCTION_START {
                 skippingDepth = skippingDepth + 1;
-            } else if item.kind == "FunctionEnd" {
+            } else if item.kind == frontend.ITEM_KIND_FUNCTION_END {
                 skippingDepth = skippingDepth - 1;
                 if skippingDepth == 0 {
                     listLib.pushBack(mut out, item);
@@ -1806,11 +1806,11 @@ applySoftBuiltins := fn(rawItems: frontend.Items, prefix: String): frontend.Item
             }
             continue;
         }
-        if item.kind == "SoftBuiltin" {
+        if item.kind == frontend.ITEM_KIND_SOFT_BUILTIN {
             if pendingSoftFn =!= "" and item.name == pendingSoftFn and item.runtime == pendingSoftRuntime and item.textValue == pendingSoftParams {
                 overrideCode := softBuiltinExpr(item.code, item.name, item.textValue);
                 if overrideCode =!= "" and frontend.resolveBuiltinMode(rules, item.code, item.name) == frontend.BUILTIN_MODE_BUILTIN {
-                    listLib.pushBack(mut out, (kind = "Return", name = "", runtime = "", code = overrideCode,
+                    listLib.pushBack(mut out, (kind = frontend.ITEM_KIND_RETURN, name = "", runtime = "", code = overrideCode,
                     intValue = 0, textValue = ""));
                     skippingDepth = 1;
                 }
@@ -1824,7 +1824,7 @@ applySoftBuiltins := fn(rawItems: frontend.Items, prefix: String): frontend.Item
         pendingSoftRuntime = "";
         pendingSoftParams = "";
         listLib.pushBack(mut out, item);
-        if item.kind == "FunctionStart" {
+        if item.kind == frontend.ITEM_KIND_FUNCTION_START {
             pendingSoftFn = item.name;
             pendingSoftRuntime = item.runtime;
             pendingSoftParams = item.textValue;
@@ -1881,26 +1881,26 @@ pub emitProgram := fn(items: frontend.Items, source: String, prefix: String): Un
     var mainStopped := false;
     var activeTries := "|";
     loop effectiveItems as tryItem {
-        if (tryItem.kind == "TransferCatch" or tryItem.kind == "LoopTransferCatch") and tryItem.runtime =!= "" {
+        if (tryItem.kind == frontend.ITEM_KIND_TRANSFER_CATCH or tryItem.kind == frontend.ITEM_KIND_LOOP_TRANSFER_CATCH) and tryItem.runtime =!= "" {
             activeTries = activeTries + tryItem.runtime + "|";
         }
     }
     loop effectiveItems as item {
-        if item.kind == "FunctionStart" {
+        if item.kind == frontend.ITEM_KIND_FUNCTION_START {
             io.outputLine(indent + "function " + item.runtime + "(" + tsParameterList(item.textValue) + "): " +
             tsFunctionType(item.code) + " {");
             indent = indent + "    ";
             reportParameterReads(item.textValue, indent);
-        } else if item.kind == "FunctionEnd" {
+        } else if item.kind == frontend.ITEM_KIND_FUNCTION_END {
             indent = dedent(indent);
             io.outputLine(indent + "}");
             io.outputLine(indent + "void " + item.runtime + ";");
-        } else if item.kind == "TransferTry" or item.kind == "LoopTransferTry" {
+        } else if item.kind == frontend.ITEM_KIND_TRANSFER_TRY or item.kind == frontend.ITEM_KIND_LOOP_TRANSFER_TRY {
             if item.runtime =!= "" and activeTries =!= "|" and textLib.indexOfText(activeTries, "|" + item.runtime + "|", 0) >= 0 {
                 io.outputLine(indent + "try {");
                 indent = indent + "    ";
             }
-        } else if item.kind == "TransferCatch" {
+        } else if item.kind == frontend.ITEM_KIND_TRANSFER_CATCH {
             indent = dedent(indent);
             io.outputLine(indent + "} catch (lite$err) {");
             if item.code == frontend.VALUE_KIND_UNIT {
@@ -1909,49 +1909,49 @@ pub emitProgram := fn(items: frontend.Items, source: String, prefix: String): Un
                 io.outputLine(indent + "    if (lite$hasTransfer(lite$err, 0)) { return lite$transferVal; } else { throw lite$err; }");
             }
             io.outputLine(indent + "}");
-        } else if item.kind == "LoopTransferCatch" {
+        } else if item.kind == frontend.ITEM_KIND_LOOP_TRANSFER_CATCH {
             indent = dedent(indent);
             io.outputLine(indent + "} catch (lite$err) {");
             io.outputLine(indent + "    if (lite$hasTransfer(lite$err, " + item.code + ")) { break; }");
             io.outputLine(indent + "    else if (lite$hasTransfer(lite$err, " + item.textValue + ")) { continue; }");
             io.outputLine(indent + "    else { throw lite$err; }");
             io.outputLine(indent + "}");
-        } else if item.kind == "Return" {
+        } else if item.kind == frontend.ITEM_KIND_RETURN {
             if item.code == "" {
                 io.outputLine(indent + "return;");
             } else {
                 io.outputLine(indent + "return " + item.code + ";");
             }
-        } else if item.kind == "Unreachable" {
+        } else if item.kind == frontend.ITEM_KIND_UNREACHABLE {
             io.outputLine(indent + "throw new Error(\"unreachable loop completion\");");
-        } else if item.kind == "Break" {
+        } else if item.kind == frontend.ITEM_KIND_BREAK {
             io.outputLine(indent + "break;");
-        } else if item.kind == "Continue" {
+        } else if item.kind == frontend.ITEM_KIND_CONTINUE {
             io.outputLine(indent + "continue;");
-        } else if item.kind == "Call" {
+        } else if item.kind == frontend.ITEM_KIND_CALL {
             io.outputLine(indent + item.code + ";");
-        } else if item.kind == "Discard" {
+        } else if item.kind == frontend.ITEM_KIND_DISCARD {
             io.outputLine(indent + "void (" + item.code + ");");
-        } else if item.kind == "LocalInt" or item.kind == "LocalString" or item.kind == "LocalBool" or item.kind == "LocalFloat" or item.kind == "LocalTuple" {
+        } else if item.kind == frontend.ITEM_KIND_LOCAL_INT or item.kind == frontend.ITEM_KIND_LOCAL_STRING or item.kind == frontend.ITEM_KIND_LOCAL_BOOL or item.kind == frontend.ITEM_KIND_LOCAL_FLOAT or item.kind == frontend.ITEM_KIND_LOCAL_TUPLE {
             io.outputLine(indent + "const " + item.runtime + " = " + item.code + ";");
             io.outputLine(indent + "void " + item.runtime + ";");
-        } else if item.kind == "LocalList" or item.kind == "LocalFn" {
+        } else if item.kind == frontend.ITEM_KIND_LOCAL_LIST or item.kind == frontend.ITEM_KIND_LOCAL_FN {
             io.outputLine(indent + "const " + item.runtime + ": " + tsFunctionType(item.textValue) + " = " + item.code + ";");
             io.outputLine(indent + "void " + item.runtime + ";");
-        } else if item.kind == "VarInt" or item.kind == "VarString" or item.kind == "VarBool" or item.kind == "VarFloat" or item.kind == "VarTuple" {
+        } else if item.kind == frontend.ITEM_KIND_VAR_INT or item.kind == frontend.ITEM_KIND_VAR_STRING or item.kind == frontend.ITEM_KIND_VAR_BOOL or item.kind == frontend.ITEM_KIND_VAR_FLOAT or item.kind == frontend.ITEM_KIND_VAR_TUPLE {
             io.outputLine(indent + "let " + item.runtime + " = " + item.code + ";");
             io.outputLine(indent + "void " + item.runtime + ";");
-        } else if item.kind == "VarList" or item.kind == "VarFn" {
+        } else if item.kind == frontend.ITEM_KIND_VAR_LIST or item.kind == frontend.ITEM_KIND_VAR_FN {
             io.outputLine(indent + "let " + item.runtime + ": " + tsFunctionType(item.textValue) + " = " + item.code + ";");
             io.outputLine(indent + "void " + item.runtime + ";");
-        } else if item.kind == "AssignInt" or item.kind == "AssignString" or item.kind == "AssignBool" or item.kind == "AssignFloat" or item.kind == "AssignTuple" {
+        } else if item.kind == frontend.ITEM_KIND_ASSIGN_INT or item.kind == frontend.ITEM_KIND_ASSIGN_STRING or item.kind == frontend.ITEM_KIND_ASSIGN_BOOL or item.kind == frontend.ITEM_KIND_ASSIGN_FLOAT or item.kind == frontend.ITEM_KIND_ASSIGN_TUPLE {
             io.outputLine(indent + item.runtime + " = " + item.code + ";");
-        } else if item.kind == "AssignList" or item.kind == "AssignFn" {
+        } else if item.kind == frontend.ITEM_KIND_ASSIGN_LIST or item.kind == frontend.ITEM_KIND_ASSIGN_FN {
             io.outputLine(indent + item.runtime + " = " + item.code + ";");
-        } else if item.kind == "Scope" {
+        } else if item.kind == frontend.ITEM_KIND_SCOPE {
             io.outputLine(indent + "{");
             indent = indent + "    ";
-        } else if item.kind == "If" {
+        } else if item.kind == frontend.ITEM_KIND_IF {
             condition := if item.code == "true" or item.code == "false" {
                 "Boolean(" + item.code + ")"
             } else {
@@ -1959,11 +1959,11 @@ pub emitProgram := fn(items: frontend.Items, source: String, prefix: String): Un
             };
             io.outputLine(indent + "if (" + condition + ") {");
             indent = indent + "    ";
-        } else if item.kind == "Else" {
+        } else if item.kind == frontend.ITEM_KIND_ELSE {
             indent = dedent(indent);
             io.outputLine(indent + "} else {");
             indent = indent + "    ";
-        } else if item.kind == "ElseIf" {
+        } else if item.kind == frontend.ITEM_KIND_ELSE_IF {
             indent = dedent(indent);
             condition := if item.code == "true" or item.code == "false" {
                 "Boolean(" + item.code + ")"
@@ -1972,28 +1972,28 @@ pub emitProgram := fn(items: frontend.Items, source: String, prefix: String): Un
             };
             io.outputLine(indent + "} else if (" + condition + ") {");
             indent = indent + "    ";
-        } else if item.kind == "EndIf" or item.kind == "EndScope" {
+        } else if item.kind == frontend.ITEM_KIND_END_IF or item.kind == frontend.ITEM_KIND_END_SCOPE {
             indent = dedent(indent);
             io.outputLine(indent + "}");
-        } else if item.kind == "LoopSeq" {
+        } else if item.kind == frontend.ITEM_KIND_LOOP_SEQ {
             io.outputLine(indent + "for (const " + item.runtime + " of " + tsLiteral.listCopyCode(item.code) + ") {");
             indent = indent + "    ";
             io.outputLine(indent + "void " + item.runtime + ";");
-        } else if item.kind == "Loop" {
+        } else if item.kind == frontend.ITEM_KIND_LOOP {
             condition := if item.code == "" { "Boolean(true)" }
             else if item.code == "false" { "Boolean(false)" }
             else { item.code };
             io.outputLine(indent + "while (" + condition + ") {");
             indent = indent + "    ";
-        } else if item.kind == "EndLoop" {
+        } else if item.kind == frontend.ITEM_KIND_END_LOOP {
             indent = dedent(indent);
             io.outputLine(indent + "}");
-        } else if item.kind == "End" or item.kind == "EndOutput" {
+        } else if item.kind == frontend.ITEM_KIND_END or item.kind == frontend.ITEM_KIND_END_OUTPUT {
             if count == 0 {
-                io.outputLine(indent + "lite$emit(" + tsLiteral.textLiteralCode(if item.kind == "End" { "\n" } else { "" }) + ");");
+                io.outputLine(indent + "lite$emit(" + tsLiteral.textLiteralCode(if item.kind == frontend.ITEM_KIND_END { "\n" } else { "" }) + ");");
             } else {
-                ending := if item.kind == "End" { " + \"\\n\"" } else { "" };
-                emitted := if count == 1 and item.kind == "End" and not textLib.startsWithAt(line, 0, "(") and textLib.indexOfText(line, "?", 0) >= 0 {
+                ending := if item.kind == frontend.ITEM_KIND_END { " + \"\\n\"" } else { "" };
+                emitted := if count == 1 and item.kind == frontend.ITEM_KIND_END and not textLib.startsWithAt(line, 0, "(") and textLib.indexOfText(line, "?", 0) >= 0 {
                     "(" + line + ")"
                 } else {
                     line
@@ -2002,9 +2002,9 @@ pub emitProgram := fn(items: frontend.Items, source: String, prefix: String): Un
             }
             line = "";
             count = 0;
-        } else if item.kind == "MainStop" {
+        } else if item.kind == frontend.ITEM_KIND_MAIN_STOP {
             mainStopped = true;
-        } else if item.kind == "Import" or item.kind == "PublicFunction" or item.kind == "PublicValue" or item.kind == "PublicType" or item.kind == "Noop" {
+        } else if item.kind == frontend.ITEM_KIND_IMPORT or item.kind == frontend.ITEM_KIND_PUBLIC_FUNCTION or item.kind == frontend.ITEM_KIND_PUBLIC_VALUE or item.kind == frontend.ITEM_KIND_PUBLIC_TYPE or item.kind == frontend.ITEM_KIND_NOOP {
         } else {
             if count > 0 { line = line + " + \" \" + "; }
             line = line + reportArgumentCode(item);

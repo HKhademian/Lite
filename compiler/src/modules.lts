@@ -9,7 +9,7 @@ sourceReader := import "./source-reader.lts";
 /** True when the graph has entered one canonical source path. */
 moduleVisited := fn(graph: frontend.Items, path: String): Bool {
     loop graph as item {
-        if item.kind == "ModuleVisited" and item.name == path { return true; }
+        if item.kind == frontend.ITEM_KIND_MODULE_VISITED and item.name == path { return true; }
     }
     false
 }
@@ -17,7 +17,7 @@ moduleVisited := fn(graph: frontend.Items, path: String): Bool {
 /** True when the graph completed parsing one canonical source path. */
 moduleProcessed := fn(graph: frontend.Items, path: String): Bool {
     loop graph as item {
-        if item.kind == "ModuleProcessed" and item.name == path { return true; }
+        if item.kind == frontend.ITEM_KIND_MODULE_PROCESSED and item.name == path { return true; }
     }
     false
 }
@@ -198,7 +198,7 @@ encodeModuleSlug := fn(target: String, logical: String): String {
 /** Returns true if any visited module already reserves `moduleKey`. */
 graphUsesModuleKey := fn(graph: frontend.Items, moduleKey: String): Bool {
     loop graph as item {
-        if item.kind == "ModuleVisited" and item.textValue == moduleKey { return true; }
+        if item.kind == frontend.ITEM_KIND_MODULE_VISITED and item.textValue == moduleKey { return true; }
     }
     false
 }
@@ -219,7 +219,7 @@ uniqueModuleKey := fn(graph: frontend.Items, target: String, baseSlug: String): 
 /** Returns the entry module's directory recorded on the root visit record. */
 rootDirForGraph := fn(graph: frontend.Items): String {
     loop graph as item {
-        if item.kind == "ModuleVisited" and item.intValue == 1 { return item.runtime; }
+        if item.kind == frontend.ITEM_KIND_MODULE_VISITED and item.intValue == 1 { return item.runtime; }
     }
     ""
 }
@@ -227,7 +227,7 @@ rootDirForGraph := fn(graph: frontend.Items): String {
 /** Returns the unique encoded module key assigned to `path`. */
 moduleKeyForPath := fn(graph: frontend.Items, path: String): String {
     loop graph as item {
-        if item.kind == "ModuleVisited" and item.name == path { return item.textValue; }
+        if item.kind == frontend.ITEM_KIND_MODULE_VISITED and item.name == path { return item.textValue; }
     }
     ""
 }
@@ -235,7 +235,7 @@ moduleKeyForPath := fn(graph: frontend.Items, path: String): String {
 /** Returns the computed topological DAG level of a processed module `path`. */
 moduleLevelForPath := fn(graph: frontend.Items, path: String): Int {
     loop graph as item {
-        if item.kind == "ModuleProcessed" and item.name == path { return item.intValue; }
+        if item.kind == frontend.ITEM_KIND_MODULE_PROCESSED and item.name == path { return item.intValue; }
     }
     0
 }
@@ -271,9 +271,9 @@ modulePublicDeclarations := fn(graph: frontend.Items, path: String): frontend.It
     result: mut frontend.Items = [];
     var inside := false;
     loop graph as item {
-        if item.kind == "ModuleStart" { inside = item.name == path; }
-        else if item.kind == "ModuleEnd" and inside { break; }
-        else if inside and (item.kind == "PublicFunction" or item.kind == "PublicValue" or item.kind == "PublicType") {
+        if item.kind == frontend.ITEM_KIND_MODULE_START { inside = item.name == path; }
+        else if item.kind == frontend.ITEM_KIND_MODULE_END and inside { break; }
+        else if inside and (item.kind == frontend.ITEM_KIND_PUBLIC_FUNCTION or item.kind == frontend.ITEM_KIND_PUBLIC_VALUE or item.kind == frontend.ITEM_KIND_PUBLIC_TYPE) {
             listLib.pushBack(mut result, item);
         }
     }
@@ -285,23 +285,23 @@ appendModuleExports := fn(existing: frontend.Items, incoming: frontend.Items, pr
     loop incoming as item {
         var duplicate := false;
         loop result as previous {
-            if item.kind == "ModuleAlias" {
-                if (previous.kind == "ModuleAlias" and previous.name == item.name) or
-                ((previous.kind == "PublicFunction" or previous.kind == "PublicValue") and previous.name == item.name) {
+            if item.kind == frontend.ITEM_KIND_MODULE_ALIAS {
+                if (previous.kind == frontend.ITEM_KIND_MODULE_ALIAS and previous.name == item.name) or
+                ((previous.kind == frontend.ITEM_KIND_PUBLIC_FUNCTION or previous.kind == frontend.ITEM_KIND_PUBLIC_VALUE) and previous.name == item.name) {
                     duplicate = true;
                 }
-            } else if item.kind == "PublicFunction" or item.kind == "PublicValue" {
-                if ((previous.kind == "PublicFunction" or previous.kind == "PublicValue") and previous.name == item.name) or
-                (previous.kind == "ModuleAlias" and previous.name == item.name) {
+            } else if item.kind == frontend.ITEM_KIND_PUBLIC_FUNCTION or item.kind == frontend.ITEM_KIND_PUBLIC_VALUE {
+                if ((previous.kind == frontend.ITEM_KIND_PUBLIC_FUNCTION or previous.kind == frontend.ITEM_KIND_PUBLIC_VALUE) and previous.name == item.name) or
+                (previous.kind == frontend.ITEM_KIND_MODULE_ALIAS and previous.name == item.name) {
                     duplicate = true;
                 }
-            } else if item.kind == "PublicType" and previous.kind == "PublicType" and previous.name == item.name {
+            } else if item.kind == frontend.ITEM_KIND_PUBLIC_TYPE and previous.kind == frontend.ITEM_KIND_PUBLIC_TYPE and previous.name == item.name {
                 duplicate = true;
             }
         }
         if duplicate {
-            if item.kind == "ModuleAlias" { diagLib.fail(prefix, "duplicate module alias " + item.name); }
-            if item.kind == "PublicType" { diagLib.fail(prefix, "duplicate imported public type " + item.name); }
+            if item.kind == frontend.ITEM_KIND_MODULE_ALIAS { diagLib.fail(prefix, "duplicate module alias " + item.name); }
+            if item.kind == frontend.ITEM_KIND_PUBLIC_TYPE { diagLib.fail(prefix, "duplicate imported public type " + item.name); }
             diagLib.fail(prefix, "duplicate imported public name " + item.name);
         }
         listLib.pushBack(mut result, item);
@@ -311,7 +311,7 @@ appendModuleExports := fn(existing: frontend.Items, incoming: frontend.Items, pr
 
 /** Builds one aliased module namespace from its source-declared public interface. */
 moduleAliasExports := fn(graph: frontend.Items, path: String, alias: String): frontend.Items {
-    result: mut frontend.Items = [(kind = "ModuleAlias", name = alias, runtime = moduleKeyForPath(graph, path), code = "",
+    result: mut frontend.Items = [(kind = frontend.ITEM_KIND_MODULE_ALIAS, name = alias, runtime = moduleKeyForPath(graph, path), code = "",
     intValue = 0, textValue = path)];
     loop modulePublicDeclarations(graph, path) as item {
         listLib.pushBack(mut result, (kind = item.kind, name = alias + "." + item.name, runtime = item.runtime,
@@ -362,7 +362,7 @@ coreModuleNeedsReparse := fn(target: String, moduleKey: String, reachable: Strin
 addCompiledFnsSet := fn(items: frontend.Items, existing: frontend.TokenBuckets): frontend.TokenBuckets {
     var compiled := existing;
     loop items as item {
-        if item.kind == "FunctionStart" and item.runtime =!= "" {
+        if item.kind == frontend.ITEM_KIND_FUNCTION_START and item.runtime =!= "" {
             compiled = frontend.tokenBucketAdd(compiled, item.runtime + "(");
         }
     }
@@ -385,27 +385,27 @@ scanTopLevelTokens := fn(items: frontend.Items, existing: frontend.TokenBuckets)
     var blockDepth := 0;
     var nextIsPure := false;
     loop items as item {
-        if item.kind == "ModuleStart" {
+        if item.kind == frontend.ITEM_KIND_MODULE_START {
             fnDepth = 0;
             blockDepth = 0;
             nextIsPure = false;
             continue;
         }
-        if item.kind == "ModuleEnd" or item.kind == "ModuleVisited" or item.kind == "ModuleProcessed" or
-        item.kind == "CoreModuleMeta" or item.kind == "CoreModuleSource" or item.kind == "CoreModuleImport" {
+        if item.kind == frontend.ITEM_KIND_MODULE_END or item.kind == frontend.ITEM_KIND_MODULE_VISITED or item.kind == frontend.ITEM_KIND_MODULE_PROCESSED or
+        item.kind == frontend.ITEM_KIND_CORE_MODULE_META or item.kind == frontend.ITEM_KIND_CORE_MODULE_SOURCE or item.kind == frontend.ITEM_KIND_CORE_MODULE_IMPORT {
             nextIsPure = false;
             continue;
         }
-        if item.kind == "PureGlobal" {
+        if item.kind == frontend.ITEM_KIND_PURE_GLOBAL {
             nextIsPure = true;
             continue;
         }
-        if item.kind == "FunctionStart" {
+        if item.kind == frontend.ITEM_KIND_FUNCTION_START {
             fnDepth = fnDepth + 1;
             nextIsPure = false;
             continue;
         }
-        if item.kind == "FunctionEnd" {
+        if item.kind == frontend.ITEM_KIND_FUNCTION_END {
             if fnDepth > 0 { fnDepth = fnDepth - 1; }
             nextIsPure = false;
             continue;
@@ -416,13 +416,13 @@ scanTopLevelTokens := fn(items: frontend.Items, existing: frontend.TokenBuckets)
         }
         isPureDecl := blockDepth == 0 and nextIsPure;
         nextIsPure = false;
-        if item.kind == "Scope" or item.kind == "If" or item.kind == "Loop" or item.kind == "LoopSeq" {
+        if item.kind == frontend.ITEM_KIND_SCOPE or item.kind == frontend.ITEM_KIND_IF or item.kind == frontend.ITEM_KIND_LOOP or item.kind == frontend.ITEM_KIND_LOOP_SEQ {
             blockDepth = blockDepth + 1;
             seed = frontend.codeReachableTokensSet(item.code, seed);
-        } else if item.kind == "EndScope" or item.kind == "EndIf" or item.kind == "EndLoop" {
+        } else if item.kind == frontend.ITEM_KIND_END_SCOPE or item.kind == frontend.ITEM_KIND_END_IF or item.kind == frontend.ITEM_KIND_END_LOOP {
             if blockDepth > 0 { blockDepth = blockDepth - 1; }
-        } else if not isPureDecl and item.kind =!= "Import" and item.kind =!= "PublicFunction" and
-        item.kind =!= "PublicValue" and item.kind =!= "PublicType" and item.kind =!= "Noop" {
+        } else if not isPureDecl and item.kind =!= frontend.ITEM_KIND_IMPORT and item.kind =!= frontend.ITEM_KIND_PUBLIC_FUNCTION and
+        item.kind =!= frontend.ITEM_KIND_PUBLIC_VALUE and item.kind =!= frontend.ITEM_KIND_PUBLIC_TYPE and item.kind =!= frontend.ITEM_KIND_NOOP {
             seed = scanItemTokens(item, seed);
         }
     }
@@ -442,7 +442,7 @@ initialScanned: frontend.TokenBuckets): List<frontend.TokenBuckets> {
         var activeFnWanted := false;
         var activeFnToken := "";
         loop graph as item {
-            if item.kind == "ModuleStart" {
+            if item.kind == frontend.ITEM_KIND_MODULE_START {
                 fnDepth = 0;
                 blockDepth = 0;
                 nextIsPure = false;
@@ -450,16 +450,16 @@ initialScanned: frontend.TokenBuckets): List<frontend.TokenBuckets> {
                 activeFnToken = "";
                 continue;
             }
-            if item.kind == "ModuleEnd" or item.kind == "ModuleVisited" or item.kind == "ModuleProcessed" or
-            item.kind == "CoreModuleMeta" or item.kind == "CoreModuleSource" or item.kind == "CoreModuleImport" {
+            if item.kind == frontend.ITEM_KIND_MODULE_END or item.kind == frontend.ITEM_KIND_MODULE_VISITED or item.kind == frontend.ITEM_KIND_MODULE_PROCESSED or
+            item.kind == frontend.ITEM_KIND_CORE_MODULE_META or item.kind == frontend.ITEM_KIND_CORE_MODULE_SOURCE or item.kind == frontend.ITEM_KIND_CORE_MODULE_IMPORT {
                 nextIsPure = false;
                 continue;
             }
-            if item.kind == "PureGlobal" {
+            if item.kind == frontend.ITEM_KIND_PURE_GLOBAL {
                 nextIsPure = true;
                 continue;
             }
-            if item.kind == "FunctionStart" {
+            if item.kind == frontend.ITEM_KIND_FUNCTION_START {
                 if fnDepth == 0 {
                     activeFnToken = item.runtime + "(";
                     activeFnWanted = frontend.tokenBucketHas(reachable, activeFnToken) and
@@ -470,7 +470,7 @@ initialScanned: frontend.TokenBuckets): List<frontend.TokenBuckets> {
                 nextIsPure = false;
                 continue;
             }
-            if item.kind == "FunctionEnd" {
+            if item.kind == frontend.ITEM_KIND_FUNCTION_END {
                 if fnDepth > 0 { fnDepth = fnDepth - 1; }
                 if fnDepth == 0 { activeFnWanted = false; activeFnToken = ""; }
                 nextIsPure = false;
@@ -483,9 +483,9 @@ initialScanned: frontend.TokenBuckets): List<frontend.TokenBuckets> {
             }
             isPureDecl := blockDepth == 0 and nextIsPure;
             nextIsPure = false;
-            if item.kind == "Scope" or item.kind == "If" or item.kind == "Loop" or item.kind == "LoopSeq" {
+            if item.kind == frontend.ITEM_KIND_SCOPE or item.kind == frontend.ITEM_KIND_IF or item.kind == frontend.ITEM_KIND_LOOP or item.kind == frontend.ITEM_KIND_LOOP_SEQ {
                 blockDepth = blockDepth + 1;
-            } else if item.kind == "EndScope" or item.kind == "EndIf" or item.kind == "EndLoop" {
+            } else if item.kind == frontend.ITEM_KIND_END_SCOPE or item.kind == frontend.ITEM_KIND_END_IF or item.kind == frontend.ITEM_KIND_END_LOOP {
                 if blockDepth > 0 { blockDepth = blockDepth - 1; }
             } else if isPureDecl and item.runtime =!= "" and frontend.tokenBucketHas(reachable, item.runtime) and
             not frontend.tokenBucketHas(scanned, item.runtime) {
@@ -504,12 +504,12 @@ collectCoreGraphSlice := fn(graph: frontend.Items, metaPaths: List<String>): fro
     slice: mut frontend.Items = [];
     var keep := false;
     loop graph as item {
-        if item.kind == "ModuleStart" {
+        if item.kind == frontend.ITEM_KIND_MODULE_START {
             keep = listLib.listContainsText(metaPaths, item.name);
         }
         if keep {
             listLib.pushBack(mut slice, item);
-            if item.kind == "ModuleEnd" { keep = false; }
+            if item.kind == frontend.ITEM_KIND_MODULE_END { keep = false; }
         }
     }
     slice
@@ -521,14 +521,14 @@ collectUnscannedNonCoreFns := fn(graph: frontend.Items, metaPaths: List<String>,
     var inCore := false;
     var fnDepth := 0;
     loop graph as item {
-        if item.kind == "ModuleStart" {
+        if item.kind == frontend.ITEM_KIND_MODULE_START {
             inCore = listLib.listContainsText(metaPaths, item.name);
             fnDepth = 0;
-        } else if item.kind == "ModuleEnd" {
+        } else if item.kind == frontend.ITEM_KIND_MODULE_END {
             inCore = false;
             fnDepth = 0;
         } else if not inCore {
-            if item.kind == "FunctionStart" {
+            if item.kind == frontend.ITEM_KIND_FUNCTION_START {
                 if fnDepth == 0 and item.runtime =!= "" {
                     tok := item.runtime + "(";
                     if not frontend.tokenBucketHas(scanned, tok) {
@@ -536,7 +536,7 @@ collectUnscannedNonCoreFns := fn(graph: frontend.Items, metaPaths: List<String>,
                     }
                 }
                 fnDepth = fnDepth + 1;
-            } else if item.kind == "FunctionEnd" and fnDepth > 0 {
+            } else if item.kind == frontend.ITEM_KIND_FUNCTION_END and fnDepth > 0 {
                 fnDepth = fnDepth - 1;
             }
         }
@@ -559,12 +559,12 @@ replaceModuleItems := fn(graph: frontend.Items, path: String, replacement: front
     updated: mut frontend.Items = [];
     var skipping := false;
     loop graph as item {
-        if item.kind == "ModuleStart" and item.name == path {
+        if item.kind == frontend.ITEM_KIND_MODULE_START and item.name == path {
             listLib.pushBack(mut updated, item);
             loop replacement as rep { listLib.pushBack(mut updated, rep); }
             skipping = true;
         } else if skipping {
-            if item.kind == "ModuleEnd" {
+            if item.kind == frontend.ITEM_KIND_MODULE_END {
                 listLib.pushBack(mut updated, item);
                 skipping = false;
             }
@@ -579,7 +579,7 @@ replaceModuleItems := fn(graph: frontend.Items, path: String, replacement: front
 stripCoreMeta := fn(graph: frontend.Items): frontend.Items {
     cleaned: mut frontend.Items = [];
     loop graph as item {
-        if item.kind =!= "CoreModuleMeta" and item.kind =!= "CoreModuleSource" and item.kind =!= "CoreModuleImport" {
+        if item.kind =!= frontend.ITEM_KIND_CORE_MODULE_META and item.kind =!= frontend.ITEM_KIND_CORE_MODULE_SOURCE and item.kind =!= frontend.ITEM_KIND_CORE_MODULE_IMPORT {
             listLib.pushBack(mut cleaned, item);
         }
     }
@@ -590,7 +590,7 @@ stripCoreMeta := fn(graph: frontend.Items): frontend.Items {
 coreModuleExports := fn(graph: frontend.Items, modPath: String): frontend.Items {
     var importedExports: mut frontend.Items = [];
     loop graph as item {
-        if item.kind == "CoreModuleImport" and item.name == modPath {
+        if item.kind == frontend.ITEM_KIND_CORE_MODULE_IMPORT and item.name == modPath {
             if moduleProcessed(graph, item.code) {
                 importedExports = appendModuleExports(importedExports,
                 moduleAliasExports(graph, item.code, item.runtime), modPath);
@@ -609,13 +609,13 @@ resolveCoreModules := fn(target: String, initialGraph: frontend.Items): frontend
     metaSources: mut List<String> = [];
     var metaCount := 0;
     loop initialGraph as item {
-        if item.kind == "CoreModuleMeta" {
+        if item.kind == frontend.ITEM_KIND_CORE_MODULE_META {
             listLib.pushBack(mut metaPaths, item.name);
             listLib.pushBack(mut metaKeys, item.runtime);
             listLib.pushBack(mut metaDisplays, item.code);
             listLib.pushBack(mut metaIdentities, item.textValue);
             metaCount = metaCount + 1;
-        } else if item.kind == "CoreModuleSource" {
+        } else if item.kind == frontend.ITEM_KIND_CORE_MODULE_SOURCE {
             listLib.pushBack(mut metaSources, item.code);
         }
     }
@@ -671,7 +671,7 @@ initialGraph: frontend.Items): frontend.Items {
     if moduleVisited(initialGraph, path) { return initialGraph; }
     var hasVisited := false;
     loop initialGraph as item {
-        if item.kind == "ModuleVisited" {
+        if item.kind == frontend.ITEM_KIND_MODULE_VISITED {
             hasVisited = true;
             break;
         }
@@ -682,7 +682,7 @@ initialGraph: frontend.Items): frontend.Items {
     logical := logicalModuleName(rootDir, path, display);
     moduleKey := if isRoot { "" } else { uniqueModuleKey(initialGraph, target, encodeModuleSlug(target, logical)) };
     var graph: mut frontend.Items = initialGraph;
-    listLib.pushBack(mut graph, (kind = "ModuleVisited", name = path, runtime = rootDir, code = logical,
+    listLib.pushBack(mut graph, (kind = frontend.ITEM_KIND_MODULE_VISITED, name = path, runtime = rootDir, code = logical,
     intValue = if isRoot { 1 } else { 0 }, textValue = moduleKey));
 
     clauses := frontend.collectImportClauses(target, source, path);
@@ -746,24 +746,24 @@ initialGraph: frontend.Items): frontend.Items {
         frontend.parseProgramWithModule(=target, =source, prefix = display, exports = importedExports,
         =moduleKey, moduleIdentity = identity)
     };
-    listLib.pushBack(mut graph, (kind = "ModuleStart", name = path, runtime = moduleKey, code = logical,
+    listLib.pushBack(mut graph, (kind = frontend.ITEM_KIND_MODULE_START, name = path, runtime = moduleKey, code = logical,
     intValue = level, textValue = display));
     loop localItems as item { listLib.pushBack(mut graph, item); }
-    listLib.pushBack(mut graph, (kind = "ModuleEnd", name = path, runtime = moduleKey, code = logical,
+    listLib.pushBack(mut graph, (kind = frontend.ITEM_KIND_MODULE_END, name = path, runtime = moduleKey, code = logical,
     intValue = level, textValue = ""));
     if isCoreMod {
-        listLib.pushBack(mut graph, (kind = "CoreModuleMeta", name = path, runtime = moduleKey, code = display,
+        listLib.pushBack(mut graph, (kind = frontend.ITEM_KIND_CORE_MODULE_META, name = path, runtime = moduleKey, code = display,
         intValue = 0, textValue = identity));
-        listLib.pushBack(mut graph, (kind = "CoreModuleSource", name = path, runtime = "", code = source,
+        listLib.pushBack(mut graph, (kind = frontend.ITEM_KIND_CORE_MODULE_SOURCE, name = path, runtime = "", code = source,
         intValue = 0, textValue = ""));
         var importIndex := 0;
         loop clauses as clause {
-            listLib.pushBack(mut graph, (kind = "CoreModuleImport", name = path, runtime = clause.name,
+            listLib.pushBack(mut graph, (kind = frontend.ITEM_KIND_CORE_MODULE_IMPORT, name = path, runtime = clause.name,
             code = clausePaths[importIndex], intValue = 0, textValue = ""));
             importIndex = importIndex + 1;
         }
     }
-    listLib.pushBack(mut graph, (kind = "ModuleProcessed", name = path, runtime = moduleKey, code = logical,
+    listLib.pushBack(mut graph, (kind = frontend.ITEM_KIND_MODULE_PROCESSED, name = path, runtime = moduleKey, code = logical,
     intValue = level, textValue = ""));
     if isRoot { return resolveCoreModules(target, graph); }
     graph
@@ -778,7 +778,7 @@ pub moduleItems := fn(graph: frontend.Items): frontend.Items {
     var moduleCount := 0;
     var index := 0;
     loop graph as item {
-        if item.kind == "ModuleStart" {
+        if item.kind == frontend.ITEM_KIND_MODULE_START {
             listLib.pushBack(mut startIndices, index + 1);
             listLib.pushBack(mut startLevels, item.intValue);
             listLib.pushBack(mut startLogicals, item.code);
@@ -812,7 +812,7 @@ pub moduleItems := fn(graph: frontend.Items): frontend.Items {
         var itemIndex := startIndices[best];
         loop true {
             entry := graph[itemIndex];
-            if entry.kind == "ModuleEnd" { break; }
+            if entry.kind == frontend.ITEM_KIND_MODULE_END { break; }
             listLib.pushBack(mut result, entry);
             itemIndex = itemIndex + 1;
         }

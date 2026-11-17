@@ -2366,10 +2366,10 @@ pub codeReachableTokensSet := fn(code: String, existing: TokenBuckets): TokenBuc
 
 /** True when `kind` represents a top-level value or mutable variable declaration item. */
 isTopDeclKind := fn(kind: String): Bool {
-    kind == "LocalInt" or kind == "LocalString" or kind == "LocalBool" or kind == "LocalFloat" or
-    kind == "LocalTuple" or kind == "LocalList" or kind == "LocalFn" or kind == "LocalUnit" or
-    kind == "VarInt" or kind == "VarString" or kind == "VarBool" or kind == "VarFloat" or
-    kind == "VarTuple" or kind == "VarList" or kind == "VarFn" or kind == "VarUnit"
+    kind == ITEM_KIND_LOCAL_INT or kind == ITEM_KIND_LOCAL_STRING or kind == ITEM_KIND_LOCAL_BOOL or kind == ITEM_KIND_LOCAL_FLOAT or
+    kind == ITEM_KIND_LOCAL_TUPLE or kind == ITEM_KIND_LOCAL_LIST or kind == ITEM_KIND_LOCAL_FN or kind == "LocalUnit" or
+    kind == ITEM_KIND_VAR_INT or kind == ITEM_KIND_VAR_STRING or kind == ITEM_KIND_VAR_BOOL or kind == ITEM_KIND_VAR_FLOAT or
+    kind == ITEM_KIND_VAR_TUPLE or kind == ITEM_KIND_VAR_LIST or kind == ITEM_KIND_VAR_FN or kind == "VarUnit"
 }
 
 /** Removes unreachable top-level function bodies and side-effect-free code across root and inner blocks for `target`. */
@@ -2382,17 +2382,17 @@ pub filterReachableItemsForTarget := fn(items: Items, target: String): Items {
     var nextIsPure := false;
     pureDecls: mut List<String> = [];
     loop pruned as item {
-        if item.kind == "PureGlobal" {
+        if item.kind == ITEM_KIND_PURE_GLOBAL {
             nextIsPure = true;
             continue;
         }
-        if item.kind == "FunctionStart" {
+        if item.kind == ITEM_KIND_FUNCTION_START {
             hasPrunable = true;
             fnDepth = fnDepth + 1;
             nextIsPure = false;
             continue;
         }
-        if item.kind == "FunctionEnd" {
+        if item.kind == ITEM_KIND_FUNCTION_END {
             if fnDepth > 0 { fnDepth = fnDepth - 1; }
             nextIsPure = false;
             continue;
@@ -2404,16 +2404,16 @@ pub filterReachableItemsForTarget := fn(items: Items, target: String): Items {
         isTopDecl := blockDepth == 0 and isTopDeclKind(item.kind);
         isPureDecl := isTopDecl and (nextIsPure or ((target == TARGET_TS or not isCUnsupportedItem(item)) and isSideEffectFreeCode(target, item.code)));
         nextIsPure = false;
-        if item.kind == "Scope" or item.kind == "If" or item.kind == "Loop" or item.kind == "LoopSeq" {
+        if item.kind == ITEM_KIND_SCOPE or item.kind == ITEM_KIND_IF or item.kind == ITEM_KIND_LOOP or item.kind == ITEM_KIND_LOOP_SEQ {
             blockDepth = blockDepth + 1;
             seedTokens = codeReachableTokensSet(item.code, seedTokens);
-        } else if item.kind == "EndScope" or item.kind == "EndIf" or item.kind == "EndLoop" {
+        } else if item.kind == ITEM_KIND_END_SCOPE or item.kind == ITEM_KIND_END_IF or item.kind == ITEM_KIND_END_LOOP {
             if blockDepth > 0 { blockDepth = blockDepth - 1; }
         } else if isPureDecl {
             hasPrunable = true;
             listLib.pushBack(mut pureDecls, item.runtime);
-        } else if item.kind =!= "Import" and item.kind =!= "PublicFunction" and item.kind =!= "PublicValue" and
-        item.kind =!= "PublicType" and item.kind =!= "Noop" {
+        } else if item.kind =!= ITEM_KIND_IMPORT and item.kind =!= ITEM_KIND_PUBLIC_FUNCTION and item.kind =!= ITEM_KIND_PUBLIC_VALUE and
+        item.kind =!= ITEM_KIND_PUBLIC_TYPE and item.kind =!= ITEM_KIND_NOOP {
             seedTokens = codeReachableTokensSet(item.code, seedTokens);
             if textLib.startsWithAt(item.kind, 0, "Assign") and item.runtime =!= "" {
                 seedTokens = tokenBucketAdd(seedTokens, item.runtime);
@@ -2430,16 +2430,16 @@ pub filterReachableItemsForTarget := fn(items: Items, target: String): Items {
         var scanBlockDepth := 0;
         var scanBody := false;
         loop pruned as item {
-            if item.kind == "PureGlobal" {
+            if item.kind == ITEM_KIND_PURE_GLOBAL {
                 continue;
-            } else if item.kind == "FunctionStart" {
+            } else if item.kind == ITEM_KIND_FUNCTION_START {
                 if scanFnDepth == 0 {
                     token := item.runtime + "(";
                     scanBody = tokenBucketHas(reachable, token) and not tokenBucketHas(scanned, token);
                     if scanBody { scanned = tokenBucketAdd(scanned, token); }
                 }
                 scanFnDepth = scanFnDepth + 1;
-            } else if item.kind == "FunctionEnd" {
+            } else if item.kind == ITEM_KIND_FUNCTION_END {
                 if scanFnDepth > 0 { scanFnDepth = scanFnDepth - 1; }
                 if scanFnDepth == 0 { scanBody = false; }
             } else if scanFnDepth > 0 {
@@ -2457,9 +2457,9 @@ pub filterReachableItemsForTarget := fn(items: Items, target: String): Items {
                         reachable = codeReachableTokensSet(item.code, reachable);
                     }
                 }
-                if item.kind == "Scope" or item.kind == "If" or item.kind == "Loop" or item.kind == "LoopSeq" {
+                if item.kind == ITEM_KIND_SCOPE or item.kind == ITEM_KIND_IF or item.kind == ITEM_KIND_LOOP or item.kind == ITEM_KIND_LOOP_SEQ {
                     scanBlockDepth = scanBlockDepth + 1;
-                } else if item.kind == "EndScope" or item.kind == "EndIf" or item.kind == "EndLoop" {
+                } else if item.kind == ITEM_KIND_END_SCOPE or item.kind == ITEM_KIND_END_IF or item.kind == ITEM_KIND_END_LOOP {
                     if scanBlockDepth > 0 { scanBlockDepth = scanBlockDepth - 1; }
                 }
             }
@@ -2473,16 +2473,16 @@ pub filterReachableItemsForTarget := fn(items: Items, target: String): Items {
     var keepFn := false;
     var nextDeclPure := false;
     loop pruned as item {
-        if item.kind == "PureGlobal" {
+        if item.kind == ITEM_KIND_PURE_GLOBAL {
             nextDeclPure = true;
             continue;
         }
-        if item.kind == "FunctionStart" {
+        if item.kind == ITEM_KIND_FUNCTION_START {
             nextDeclPure = false;
             if keepFnDepth == 0 { keepFn = tokenBucketHas(reachable, item.runtime + "("); }
             keepFnDepth = keepFnDepth + 1;
             if keepFn { listLib.pushBack(mut filtered, item); }
-        } else if item.kind == "FunctionEnd" {
+        } else if item.kind == ITEM_KIND_FUNCTION_END {
             nextDeclPure = false;
             wasKeeping := keepFn;
             if keepFnDepth > 0 { keepFnDepth = keepFnDepth - 1; }
@@ -2496,9 +2496,9 @@ pub filterReachableItemsForTarget := fn(items: Items, target: String): Items {
             (nextDeclPure or ((target == TARGET_TS or not isCUnsupportedItem(item)) and isSideEffectFreeCode(target, item.code))) and
             not tokenBucketHas(reachable, item.runtime);
             nextDeclPure = false;
-            if item.kind == "Scope" or item.kind == "If" or item.kind == "Loop" or item.kind == "LoopSeq" {
+            if item.kind == ITEM_KIND_SCOPE or item.kind == ITEM_KIND_IF or item.kind == ITEM_KIND_LOOP or item.kind == ITEM_KIND_LOOP_SEQ {
                 keepBlockDepth = keepBlockDepth + 1;
-            } else if item.kind == "EndScope" or item.kind == "EndIf" or item.kind == "EndLoop" {
+            } else if item.kind == ITEM_KIND_END_SCOPE or item.kind == ITEM_KIND_END_IF or item.kind == ITEM_KIND_END_LOOP {
                 if keepBlockDepth > 0 { keepBlockDepth = keepBlockDepth - 1; }
             }
             if not dropDecl { listLib.pushBack(mut filtered, item); }
@@ -2702,9 +2702,9 @@ rejectNonValueBinding := fn(source: String, at: Int, prefix: String, kind: Strin
 /** Chooses the emitted statement item kind, ensuring diverging items terminate non-Unit functions/main for strict TS control flow. */
 expressionStatementKind := fn(valueKind: String, returned: Bool, defaultKind: String, currentResult: String): String {
     if valueKind == VALUE_KIND_NEVER {
-        if currentResult =!= VALUE_KIND_UNIT { "Return" } else { "Call" }
+        if currentResult =!= VALUE_KIND_UNIT { ITEM_KIND_RETURN } else { ITEM_KIND_CALL }
     } else if returned {
-        "Return"
+        ITEM_KIND_RETURN
     } else {
         defaultKind
     }
@@ -5323,10 +5323,10 @@ isCSupportedKindAndCode := fn(kind: String, code: String): Bool {
 
 /** True when `item` uses a C-unsupported construct that must stay visible to `emitProgram` diagnostics. */
 isCUnsupportedItem := fn(item: Item): Bool {
-    item.kind == "LocalTuple" or item.kind == "VarTuple" or item.kind == "AssignTuple" or
-    item.kind == "LocalList" or item.kind == "VarList" or item.kind == "AssignList" or
-    item.kind == "LocalFn" or item.kind == "VarFn" or item.kind == "AssignFn" or
-    (item.kind == "Discard" and (isTupleKind(item.name) or isListKind(item.name) or
+    item.kind == ITEM_KIND_LOCAL_TUPLE or item.kind == ITEM_KIND_VAR_TUPLE or item.kind == ITEM_KIND_ASSIGN_TUPLE or
+    item.kind == ITEM_KIND_LOCAL_LIST or item.kind == ITEM_KIND_VAR_LIST or item.kind == ITEM_KIND_ASSIGN_LIST or
+    item.kind == ITEM_KIND_LOCAL_FN or item.kind == ITEM_KIND_VAR_FN or item.kind == ITEM_KIND_ASSIGN_FN or
+    (item.kind == ITEM_KIND_DISCARD and (isTupleKind(item.name) or isListKind(item.name) or
     isArrayKind(item.name) or containsFnKind(item.name))) or
     codeUsesValueIf(item.code) or codeUsesListCopy(item.code) or codeUsesListIndex(item.code) or codeUsesListPop(item.code)
 }
@@ -5636,7 +5636,7 @@ pruneBlockScopedItems := fn(items: Items, target: String): Items {
         curBlockId := blockStack[stackLen - 1];
         var evalBlockId := curBlockId;
         var owner := -1;
-        if item.kind == "ElseIf" or item.kind == "Else" {
+        if item.kind == ITEM_KIND_ELSE_IF or item.kind == ITEM_KIND_ELSE {
             if stackLen > 1 {
                 _popArm := listLib.popBack(mut blockStack);
                 stackLen = stackLen - 1;
@@ -5648,26 +5648,26 @@ pruneBlockScopedItems := fn(items: Items, target: String): Items {
             listLib.pushBack(mut parentBlockIds, parentId);
             listLib.pushBack(mut blockStack, newArmId);
             stackLen = stackLen + 1;
-        } else if item.kind == "EndScope" or item.kind == "EndIf" or item.kind == "EndLoop" or item.kind == "FunctionEnd" {
+        } else if item.kind == ITEM_KIND_END_SCOPE or item.kind == ITEM_KIND_END_IF or item.kind == ITEM_KIND_END_LOOP or item.kind == ITEM_KIND_FUNCTION_END {
             if stackLen > 1 {
                 _popEnd := listLib.popBack(mut blockStack);
                 stackLen = stackLen - 1;
             }
-        } else if item.kind == "Scope" or item.kind == "FunctionStart" or
-        item.kind == "If" or item.kind == "Loop" or item.kind == "LoopSeq" {
+        } else if item.kind == ITEM_KIND_SCOPE or item.kind == ITEM_KIND_FUNCTION_START or
+        item.kind == ITEM_KIND_IF or item.kind == ITEM_KIND_LOOP or item.kind == ITEM_KIND_LOOP_SEQ {
             newBlockId := nextBlockId;
             nextBlockId = nextBlockId + 1;
             listLib.pushBack(mut parentBlockIds, curBlockId);
             listLib.pushBack(mut blockStack, newBlockId);
             stackLen = stackLen + 1;
-            if item.kind == "LoopSeq" and item.runtime =!= "" {
+            if item.kind == ITEM_KIND_LOOP_SEQ and item.runtime =!= "" {
                 listLib.pushBack(mut declRuntimes, item.runtime);
                 listLib.pushBack(mut declBlockIds, newBlockId);
                 listLib.pushBack(mut declIdxs, idx);
                 listLib.pushBack(mut declPrunables, false);
                 declCount = declCount + 1;
             }
-        } else if item.kind == "Discard" {
+        } else if item.kind == ITEM_KIND_DISCARD {
             if (target == TARGET_TS or not isCUnsupportedItem(item)) and isSideEffectFreeCode(target, item.code) {
                 owner = -2;
                 hasPrunable = true;
@@ -5751,7 +5751,7 @@ pruneBlockScopedItems := fn(items: Items, target: String): Items {
         keepItem := ownk == -1 or (ownk >= 0 and tokenInPipeBag(liveDeclBag, integer.intText(ownk)));
         if keepItem {
             cur := items[k];
-            if cur.kind == "EndScope" and peeledLen > 0 and peeled[peeledLen - 1].kind == "Scope" {
+            if cur.kind == ITEM_KIND_END_SCOPE and peeledLen > 0 and peeled[peeledLen - 1].kind == ITEM_KIND_SCOPE {
                 _dropScope := listLib.popBack(mut peeled);
                 peeledLen = peeledLen - 1;
             } else {
@@ -6408,7 +6408,7 @@ parseParamRuntimesList := fn(paramsPayload: String): String {
 findFunctionStartItem := fn(items: Items, runtime: String): Int {
     var i := 0;
     loop items as item {
-        if item.kind == "FunctionStart" and item.runtime == runtime { return i; }
+        if item.kind == ITEM_KIND_FUNCTION_START and item.runtime == runtime { return i; }
         i = i + 1;
     }
     -1
@@ -6501,11 +6501,11 @@ locals: List<Local>, functions: List<FunctionInfo>, futureValues: List<FutureVal
                     var itIdx := startItem + 1;
                     loop itIdx < totalItems {
                         it := items[itIdx];
-                        if it.kind == "FunctionEnd" and it.runtime == curTok { break; }
-                        if it.kind == "If" or it.kind == "Loop" or it.kind == "LoopSeq" or it.kind == "Scope" {
+                        if it.kind == ITEM_KIND_FUNCTION_END and it.runtime == curTok { break; }
+                        if it.kind == ITEM_KIND_IF or it.kind == ITEM_KIND_LOOP or it.kind == ITEM_KIND_LOOP_SEQ or it.kind == ITEM_KIND_SCOPE {
                             scopeDepth = scopeDepth + 1;
-                        } else if it.kind == "Else" or it.kind == "ElseIf" or
-                        it.kind == "EndIf" or it.kind == "EndLoop" or it.kind == "EndScope" {
+                        } else if it.kind == ITEM_KIND_ELSE or it.kind == ITEM_KIND_ELSE_IF or
+                        it.kind == ITEM_KIND_END_IF or it.kind == ITEM_KIND_END_LOOP or it.kind == ITEM_KIND_END_SCOPE {
                             var keepCnt := 0;
                             loop localShadowDepths as sd {
                                 if sd < scopeDepth { keepCnt = keepCnt + 1; } else { break; }
@@ -6517,7 +6517,7 @@ locals: List<Local>, functions: List<FunctionInfo>, futureValues: List<FutureVal
                                 _d2 := listLib.popBack(mut localShadowDepths);
                                 curCnt = curCnt - 1;
                             }
-                            if (it.kind == "EndIf" or it.kind == "EndLoop" or it.kind == "EndScope") and scopeDepth > 0 {
+                            if (it.kind == ITEM_KIND_END_IF or it.kind == ITEM_KIND_END_LOOP or it.kind == ITEM_KIND_END_SCOPE) and scopeDepth > 0 {
                                 scopeDepth = scopeDepth - 1;
                             }
                         }
@@ -6656,13 +6656,13 @@ locals: List<Local>, functions: List<FunctionInfo>, futureValues: List<FutureVal
                     var itIdx := startItem + 1;
                     loop itIdx < totalItems {
                         it := items[itIdx];
-                        if it.kind == "FunctionEnd" and it.runtime == curTok { break; }
-                        if it.kind == "If" or it.kind == "Loop" or it.kind == "LoopSeq" {
+                        if it.kind == ITEM_KIND_FUNCTION_END and it.runtime == curTok { break; }
+                        if it.kind == ITEM_KIND_IF or it.kind == ITEM_KIND_LOOP or it.kind == ITEM_KIND_LOOP_SEQ {
                             bodyBranchDepth = bodyBranchDepth + 1;
                             scopeDepth = scopeDepth + 1;
-                        } else if it.kind == "Scope" {
+                        } else if it.kind == ITEM_KIND_SCOPE {
                             scopeDepth = scopeDepth + 1;
-                        } else if it.kind == "Else" or it.kind == "ElseIf" {
+                        } else if it.kind == ITEM_KIND_ELSE or it.kind == ITEM_KIND_ELSE_IF {
                             var keepCnt := 0;
                             loop localShadowDepths as sd {
                                 if sd < scopeDepth { keepCnt = keepCnt + 1; } else { break; }
@@ -6674,7 +6674,7 @@ locals: List<Local>, functions: List<FunctionInfo>, futureValues: List<FutureVal
                                 _d2 := listLib.popBack(mut localShadowDepths);
                                 curCnt = curCnt - 1;
                             }
-                        } else if it.kind == "EndIf" or it.kind == "EndLoop" {
+                        } else if it.kind == ITEM_KIND_END_IF or it.kind == ITEM_KIND_END_LOOP {
                             var keepCnt := 0;
                             loop localShadowDepths as sd {
                                 if sd < scopeDepth { keepCnt = keepCnt + 1; } else { break; }
@@ -6688,7 +6688,7 @@ locals: List<Local>, functions: List<FunctionInfo>, futureValues: List<FutureVal
                             }
                             if scopeDepth > 0 { scopeDepth = scopeDepth - 1; }
                             if bodyBranchDepth > 0 { bodyBranchDepth = bodyBranchDepth - 1; }
-                        } else if it.kind == "EndScope" {
+                        } else if it.kind == ITEM_KIND_END_SCOPE {
                             var keepCnt := 0;
                             loop localShadowDepths as sd {
                                 if sd < scopeDepth { keepCnt = keepCnt + 1; } else { break; }
@@ -11467,9 +11467,9 @@ parsePartialAssignIf := fn(target: String, source: String, position: Int, prefix
             failAt(source, targetAt, prefix, "cannot assign " + displayKind(branch.kind) + " to " + displayKind(targetKind) + " local " + targetName);
         }
         cursor = expectSymbol(source, skipTrivia(source, branch.next, prefix), "}", prefix);
-        listLib.pushBack(mut result, (kind = if isFirst { "If" } else { "ElseIf" }, name = "", runtime = "", code = conditionCode,
+        listLib.pushBack(mut result, (kind = if isFirst { ITEM_KIND_IF } else { ITEM_KIND_ELSE_IF }, name = "", runtime = "", code = conditionCode,
         intValue = 0, textValue = ""));
-        listLib.pushBack(mut result, (kind = "Assign" + storageKind(targetKind), name = targetName, runtime = targetRuntime,
+        listLib.pushBack(mut result, (kind = ITEM_PREFIX_ASSIGN + storageKind(targetKind), name = targetName, runtime = targetRuntime,
         code = assignValueCode(target, targetKind, branch.kind, branch.code), intValue = branch.intValue, textValue = storageTextPayload(targetKind, branch.textValue)));
         isFirst = false;
         afterBranch := skipTrivia(source, cursor, prefix);
@@ -11489,8 +11489,8 @@ parsePartialAssignIf := fn(target: String, source: String, position: Int, prefix
             if statementNext < 0 {
                 failAt(source, afterBranch, prefix, "value if requires a final else");
             }
-            listLib.pushBack(mut result, (kind = "EndIf", name = "", runtime = "", code = "", intValue = 0, textValue = ""));
-            listLib.pushBack(mut result, (kind = "End", name = "", runtime = "", code = "", intValue = statementNext, textValue = ""));
+            listLib.pushBack(mut result, (kind = ITEM_KIND_END_IF, name = "", runtime = "", code = "", intValue = 0, textValue = ""));
+            listLib.pushBack(mut result, (kind = ITEM_KIND_END, name = "", runtime = "", code = "", intValue = statementNext, textValue = ""));
             return result;
         }
         afterElse := skipTrivia(source, afterBranch + 4, prefix);
@@ -11845,7 +11845,7 @@ collectModuleDecls := fn(target: String, source: String, prefix: String, moduleK
                 continue;
             }
             if isSingleEquals(source, aliasPosition) {
-                listLib.pushBack(mut decls, (kind = "RootAssign", name = name, runtime = "", code = "", intValue = nameStart, textValue = ""));
+                listLib.pushBack(mut decls, (kind = DECL_KIND_ROOT_ASSIGN, name = name, runtime = "", code = "", intValue = nameStart, textValue = ""));
                 position = skipTrivia(source, aliasPosition + 1, prefix);
                 continue;
             }
@@ -11912,7 +11912,7 @@ parseImportClause := fn(target: String, source: String, position: Int, alias: St
     if statementNext < 0 {
         failAt(source, skipTrivia(source, path.next, prefix), prefix, "expected ; after import");
     }
-    (kind = "Import", name = alias, runtime = "", code = "", intValue = statementNext, textValue = path.textValue)
+    (kind = ITEM_KIND_IMPORT, name = alias, runtime = "", code = "", intValue = statementNext, textValue = path.textValue)
 }
 
 /** Collects top-level import clauses before parsing so imported declarations can seed the importing file's symbol table. */
@@ -11987,7 +11987,7 @@ live: Bool, ctxs: List<ConstructCtx>, aliases: List<AliasDecl>): Items {
     position = expectSymbol(source, position, ")", prefix);
     statementNext := consumeStatementEnd(source, position, prefix);
     if statementNext < 0 { failAt(source, skipTrivia(source, position, prefix), prefix, "expected ; after " + outputName); }
-    listLib.pushBack(mut result, (kind = if outputName == "outputLine" { "End" } else { "EndOutput" },
+    listLib.pushBack(mut result, (kind = if outputName == "outputLine" { ITEM_KIND_END } else { ITEM_KIND_END_OUTPUT },
     name = "", runtime = "", code = "", intValue = statementNext, textValue = ""));
     result
 }
@@ -12013,7 +12013,7 @@ moduleIdentity: String, neededFns: String, skipSoftBuiltins: Bool): Items {
     }
     var aliases: mut List<AliasDecl> = [];
     loop exports as exported {
-        if exported.kind == "PublicType" {
+        if exported.kind == ITEM_KIND_PUBLIC_TYPE {
             listLib.pushBack(mut aliases, (name = exported.name, target = exported.code, at = -1, end = 0, depth = 0));
         }
     }
@@ -12036,7 +12036,7 @@ moduleIdentity: String, neededFns: String, skipSoftBuiltins: Bool): Items {
             listLib.pushBack(mut publishedTypes, decl.name);
         } else if decl.kind == DECL_KIND_HAS_INNER_ALIAS {
             hasInnerAlias = true;
-        } else if decl.kind == "RootAssign" and not listLib.listContainsText(rootAssignedNames, decl.name) {
+        } else if decl.kind == DECL_KIND_ROOT_ASSIGN and not listLib.listContainsText(rootAssignedNames, decl.name) {
             listLib.pushBack(mut rootAssignedNames, decl.name);
         }
     }
@@ -12052,14 +12052,14 @@ moduleIdentity: String, neededFns: String, skipSoftBuiltins: Bool): Items {
     declaredImportAliases: mut List<String> = [];
     var parameterTotal := 0;
     loop exports as exported {
-        if exported.kind == "ModuleAlias" {
+        if exported.kind == ITEM_KIND_MODULE_ALIAS {
             if findFunction(functions, exported.name) >= 0 or localIndex(locals, exported.name) >= 0 {
                 diagLib.fail(prefix, "duplicate imported module name " + exported.name);
             }
             listLib.pushBack(mut locals, (name = exported.name, runtime = "", kind = VALUE_KIND_MODULE, mutable = false,
             writable = false, depth = 0, constant = false, code = "", intValue = exported.intValue,
             textValue = exported.name, initState = INIT_STATE_INIT));
-        } else if exported.kind == "PublicFunction" {
+        } else if exported.kind == ITEM_KIND_PUBLIC_FUNCTION {
             if findFunction(functions, exported.name) >= 0 or localIndex(locals, exported.name) >= 0 {
                 diagLib.fail(prefix, "duplicate imported public name " + exported.name);
             }
@@ -12080,7 +12080,7 @@ moduleIdentity: String, neededFns: String, skipSoftBuiltins: Bool): Items {
             if textLib.indexOfText(exported.name, ".", 0) < 0 {
                 listLib.pushBack(mut blockDecls, (name = exported.name, depth = 0));
             }
-        } else if exported.kind == "PublicValue" {
+        } else if exported.kind == ITEM_KIND_PUBLIC_VALUE {
             if findFunction(functions, exported.name) >= 0 or localIndex(locals, exported.name) >= 0 {
                 diagLib.fail(prefix, "duplicate imported public name " + exported.name);
             }
@@ -12090,7 +12090,7 @@ moduleIdentity: String, neededFns: String, skipSoftBuiltins: Bool): Items {
             if textLib.indexOfText(exported.name, ".", 0) < 0 {
                 listLib.pushBack(mut blockDecls, (name = exported.name, depth = 0));
             }
-        } else if exported.kind == "PublicType" {
+        } else if exported.kind == ITEM_KIND_PUBLIC_TYPE {
             if findAlias(aliases, exported.name) < 0 {
                 diagLib.fail(prefix, "unknown imported public type " + exported.name);
             }
@@ -12351,7 +12351,7 @@ moduleIdentity: String, neededFns: String, skipSoftBuiltins: Bool): Items {
                     position = expectSymbol(source, beforeOpen, "{", prefix);
                     elseArmOpen = position - 1;
                     if currentLive {
-                        listLib.pushBack(mut items, (kind = "ElseIf", name = "", runtime = "", code = conditionCode,
+                        listLib.pushBack(mut items, (kind = ITEM_KIND_ELSE_IF, name = "", runtime = "", code = conditionCode,
                         intValue = 0, textValue = ""));
                         if codeHasRawTransfer(conditionCode) {
                             listLib.pushBack(mut transferCodes, conditionCode);
@@ -12361,7 +12361,7 @@ moduleIdentity: String, neededFns: String, skipSoftBuiltins: Bool): Items {
                     listLib.pushBack(mut blocks, blockKind);
                     blockCount = blockCount + 1;
                 } else {
-                    if currentLive { listLib.pushBack(mut items, (kind = "Else", name = "", runtime = "", code = "", intValue = 0, textValue = "")); }
+                    if currentLive { listLib.pushBack(mut items, (kind = ITEM_KIND_ELSE, name = "", runtime = "", code = "", intValue = 0, textValue = "")); }
                     listLib.pushBack(mut blocks, if blockKind == BLOCK_KIND_IF_VALUE { BLOCK_KIND_IF_VALUE } else { BLOCK_KIND_ELSE });
                     blockCount = blockCount + 1;
                     position = expectSymbol(source, afterElse, "{", prefix);
@@ -12418,7 +12418,7 @@ moduleIdentity: String, neededFns: String, skipSoftBuiltins: Bool): Items {
                 if isFallback {
                     armOpen = afterUnderscore;
                     hasElse = true;
-                    if currentLive { listLib.pushBack(mut items, (kind = "Else", name = "", runtime = "", code = "", intValue = 0, textValue = "")); }
+                    if currentLive { listLib.pushBack(mut items, (kind = ITEM_KIND_ELSE, name = "", runtime = "", code = "", intValue = 0, textValue = "")); }
                     listLib.pushBack(mut blocks, if blockKind == BLOCK_KIND_MATCH_VALUE { BLOCK_KIND_MATCH_ELSE_VALUE } else { BLOCK_KIND_MATCH_ELSE });
                     blockCount = blockCount + 1;
                 } else {
@@ -12452,7 +12452,7 @@ moduleIdentity: String, neededFns: String, skipSoftBuiltins: Bool): Items {
                         condition.code
                     };
                     if currentLive {
-                        listLib.pushBack(mut items, (kind = "ElseIf", name = "", runtime = "", code = conditionCode,
+                        listLib.pushBack(mut items, (kind = ITEM_KIND_ELSE_IF, name = "", runtime = "", code = conditionCode,
                         intValue = 0, textValue = ""));
                         if codeHasRawTransfer(conditionCode) {
                             listLib.pushBack(mut transferCodes, conditionCode);
@@ -12506,12 +12506,12 @@ moduleIdentity: String, neededFns: String, skipSoftBuiltins: Bool): Items {
                         fnTi = fnTi + 1;
                     }
                     if hasFnTransfer and currentLive {
-                        listLib.pushBack(mut items, (kind = "TransferCatch", name = "", runtime = fnTryKey, code = currentResult, intValue = 0, textValue = ""));
+                        listLib.pushBack(mut items, (kind = ITEM_KIND_TRANSFER_CATCH, name = "", runtime = fnTryKey, code = currentResult, intValue = 0, textValue = ""));
                     }
                     fnTryKey = "";
                 }
                 functionRuntime := moduleFunctionRuntime(target, moduleKey, currentName);
-                if currentLive { listLib.pushBack(mut items, (kind = "FunctionEnd", name = "", runtime = functionRuntime,
+                if currentLive { listLib.pushBack(mut items, (kind = ITEM_KIND_FUNCTION_END, name = "", runtime = functionRuntime,
                     code = "", intValue = 0, textValue = "")); }
                 currentName = "";
                 currentResult = "";
@@ -12537,7 +12537,7 @@ moduleIdentity: String, neededFns: String, skipSoftBuiltins: Bool): Items {
                         }
                     }
                     if (hasLoopBreak or hasLoopCont) and currentLive {
-                        listLib.pushBack(mut items, (kind = "LoopTransferCatch", name = "", runtime = loopTryKey, code = integer.intText(loopId),
+                        listLib.pushBack(mut items, (kind = ITEM_KIND_LOOP_TRANSFER_CATCH, name = "", runtime = loopTryKey, code = integer.intText(loopId),
                         intValue = loopId, textValue = integer.intText(0 - loopId)));
                     }
                     if hasLoopBreak {
@@ -12545,21 +12545,21 @@ moduleIdentity: String, neededFns: String, skipSoftBuiltins: Bool): Items {
                         currentStopped = false;
                     }
                 }
-                if currentLive { listLib.pushBack(mut items, (kind = "EndLoop", name = "", runtime = "", code = "", intValue = 0, textValue = "")); }
+                if currentLive { listLib.pushBack(mut items, (kind = ITEM_KIND_END_LOOP, name = "", runtime = "", code = "", intValue = 0, textValue = "")); }
             } else if blockKind == BLOCK_KIND_SCOPE {
-                if currentLive { listLib.pushBack(mut items, (kind = "EndScope", name = "", runtime = "", code = "", intValue = 0, textValue = "")); }
+                if currentLive { listLib.pushBack(mut items, (kind = ITEM_KIND_END_SCOPE, name = "", runtime = "", code = "", intValue = 0, textValue = "")); }
             } else if blockKind == BLOCK_KIND_MATCH_SINGLE or blockKind == BLOCK_KIND_MATCH_SINGLE_VALUE {
                 droppedCondCtx := listLib.popBack(mut stmtCtxs);
-                if currentLive { listLib.pushBack(mut items, (kind = "EndScope", name = "", runtime = "", code = "", intValue = 0, textValue = "")); }
+                if currentLive { listLib.pushBack(mut items, (kind = ITEM_KIND_END_SCOPE, name = "", runtime = "", code = "", intValue = 0, textValue = "")); }
             } else {
                 droppedCondCtx := listLib.popBack(mut stmtCtxs);
-                if currentLive { listLib.pushBack(mut items, (kind = "EndIf", name = "", runtime = "", code = "", intValue = 0, textValue = "")); }
+                if currentLive { listLib.pushBack(mut items, (kind = ITEM_KIND_END_IF, name = "", runtime = "", code = "", intValue = 0, textValue = "")); }
             }
             completedReturn := blockCompletion(blockKind, currentReturned, branchesReturned, hasElse, loopForever);
             completedStop := blockCompletion(blockKind, if blockKind == BLOCK_KIND_LOOP { currentReturned } else { currentStopped },
             branchesStopped, hasElse, loopForever);
             if blockKind == BLOCK_KIND_LOOP and completedReturn and currentLive {
-                listLib.pushBack(mut items, (kind = "Unreachable", name = "", runtime = "", code = "", intValue = 0, textValue = ""));
+                listLib.pushBack(mut items, (kind = ITEM_KIND_UNREACHABLE, name = "", runtime = "", code = "", intValue = 0, textValue = ""));
             }
             parent := listLib.popBack(mut savedStates);
             if blockKind == BLOCK_KIND_IF or blockKind == BLOCK_KIND_IF_VALUE or blockKind == BLOCK_KIND_ELSE or blockKind == BLOCK_KIND_MATCH_ELSE or blockKind == BLOCK_KIND_MATCH_ELSE_VALUE {
@@ -12618,7 +12618,7 @@ moduleIdentity: String, neededFns: String, skipSoftBuiltins: Bool): Items {
                     locals = mergeOuterCallableUpdatesFromCode(locals, expression.code);
                 }
                 if currentLive and not currentStopped {
-                    listLib.pushBack(mut items, (kind = expressionStatementKind(expression.valueKind, expression.returned, "Discard", currentResult), name = expression.valueKind,
+                    listLib.pushBack(mut items, (kind = expressionStatementKind(expression.valueKind, expression.returned, ITEM_KIND_DISCARD, currentResult), name = expression.valueKind,
                     runtime = "", code = expression.code, intValue = 0, textValue = ""));
                     if codeHasRawTransfer(expression.code) {
                         listLib.pushBack(mut transferCodes, expression.code);
@@ -12632,7 +12632,7 @@ moduleIdentity: String, neededFns: String, skipSoftBuiltins: Bool): Items {
                 position = expression.next;
                 continue;
             }
-            if currentLive and not currentStopped { listLib.pushBack(mut items, (kind = "Scope", name = "", runtime = "", code = "", intValue = 0, textValue = "")); }
+            if currentLive and not currentStopped { listLib.pushBack(mut items, (kind = ITEM_KIND_SCOPE, name = "", runtime = "", code = "", intValue = 0, textValue = "")); }
             listLib.pushBack(mut savedStates, (returned = currentReturned, stopped = currentStopped,
             branchesReturned = branchesReturned, branchesStopped = branchesStopped, hasElse = hasElse, loopForever = loopForever, live = currentLive,
             preLocalsLen = localsCount(locals), liveBranchCount = liveBranchCount));
@@ -12694,7 +12694,7 @@ moduleIdentity: String, neededFns: String, skipSoftBuiltins: Bool): Items {
                 if statementNext < 0 { failAt(source, skipTrivia(source, rhs.next, prefix), prefix, "expected ; after tuple destructuring"); }
                 position = statementNext;
                 if currentLive and not currentStopped {
-                    listLib.pushBack(mut items, (kind = "Discard", name = VALUE_KIND_UNIT, runtime = "",
+                    listLib.pushBack(mut items, (kind = ITEM_KIND_DISCARD, name = VALUE_KIND_UNIT, runtime = "",
                     code = rhs.code, intValue = 0, textValue = ""));
                     if codeHasRawTransfer(rhs.code) {
                         listLib.pushBack(mut transferCodes, rhs.code);
@@ -12717,7 +12717,7 @@ moduleIdentity: String, neededFns: String, skipSoftBuiltins: Bool): Items {
                 mutable = destructureMutable, writable = false, depth = depth, constant = false, code = bindFnCode,
                 intValue = rhs.intValue, textValue = rhs.textValue, initState = INIT_STATE_INIT));
                 if currentLive and not currentStopped {
-                    itemPrefix := if destructureMutable { "Var" } else { "Local" };
+                    itemPrefix := if destructureMutable { ITEM_PREFIX_VAR } else { ITEM_PREFIX_LOCAL };
                     destrCode := copiedValueCode(target, rhs.kind, rhs.code);
                     listLib.pushBack(mut items, (kind = itemPrefix + storageKind(rhs.kind), name = bindName, runtime = bindRuntime,
                     code = destrCode, intValue = rhs.intValue, textValue = itemTextPayload(rhs)));
@@ -12744,7 +12744,7 @@ moduleIdentity: String, neededFns: String, skipSoftBuiltins: Bool): Items {
             mutable = false, writable = false, depth = depth, constant = false, code = tupleCode,
             intValue = 0, textValue = "", initState = INIT_STATE_INIT));
             if currentLive and not currentStopped {
-                listLib.pushBack(mut items, (kind = "LocalTuple", name = "", runtime = tempRuntime,
+                listLib.pushBack(mut items, (kind = ITEM_KIND_LOCAL_TUPLE, name = "", runtime = tempRuntime,
                 code = rhs.code, intValue = 0, textValue = ""));
                 if codeHasRawTransfer(rhs.code) {
                     listLib.pushBack(mut transferCodes, rhs.code);
@@ -12776,7 +12776,7 @@ moduleIdentity: String, neededFns: String, skipSoftBuiltins: Bool): Items {
                 mutable = destructureMutable, writable = false, depth = depth, constant = false, code = fieldLocalCode,
                 intValue = 0, textValue = "", initState = INIT_STATE_INIT));
                 if currentLive and not currentStopped {
-                    itemPrefix := if destructureMutable { "Var" } else { "Local" };
+                    itemPrefix := if destructureMutable { ITEM_PREFIX_VAR } else { ITEM_PREFIX_LOCAL };
                     listLib.pushBack(mut items, (kind = itemPrefix + storageKind(comp.kind), name = bindName, runtime = bindRuntime,
                     code = fieldCode, intValue = 0, textValue = storageTextPayload(comp.kind, "")));
                 }
@@ -12801,7 +12801,7 @@ moduleIdentity: String, neededFns: String, skipSoftBuiltins: Bool): Items {
                 locals = mergeOuterCallableUpdatesFromCode(locals, expression.code);
             }
             if currentLive and not currentStopped {
-                listLib.pushBack(mut items, (kind = expressionStatementKind(expression.valueKind, expression.returned, "Discard", currentResult), name = expression.valueKind,
+                listLib.pushBack(mut items, (kind = expressionStatementKind(expression.valueKind, expression.returned, ITEM_KIND_DISCARD, currentResult), name = expression.valueKind,
                 runtime = "", code = expression.code, intValue = 0, textValue = ""));
                 if codeHasRawTransfer(expression.code) {
                     listLib.pushBack(mut transferCodes, expression.code);
@@ -12833,7 +12833,7 @@ moduleIdentity: String, neededFns: String, skipSoftBuiltins: Bool): Items {
                 locals = mergeOuterCallableUpdatesFromCode(locals, expression.code);
             }
             if currentLive and not currentStopped {
-                listLib.pushBack(mut items, (kind = expressionStatementKind(expression.valueKind, expression.returned, "Discard", currentResult), name = expression.valueKind,
+                listLib.pushBack(mut items, (kind = expressionStatementKind(expression.valueKind, expression.returned, ITEM_KIND_DISCARD, currentResult), name = expression.valueKind,
                 runtime = "", code = expression.code, intValue = 0, textValue = ""));
                 if codeHasRawTransfer(expression.code) {
                     listLib.pushBack(mut transferCodes, expression.code);
@@ -12928,7 +12928,7 @@ moduleIdentity: String, neededFns: String, skipSoftBuiltins: Bool): Items {
                     failAt(source, nameStart, prefix, "function " + currentName + " must return " + currentResult);
                 }
                 position = consumeStatementEnd(source, valueStart, prefix);
-                if currentLive and not currentStopped { listLib.pushBack(mut items, (kind = "Return", name = "", runtime = "", code = "",
+                if currentLive and not currentStopped { listLib.pushBack(mut items, (kind = ITEM_KIND_RETURN, name = "", runtime = "", code = "",
                     intValue = 0, textValue = "")); }
                 if not currentStopped { currentReturned = true; }
                 currentStopped = true;
@@ -12954,7 +12954,7 @@ moduleIdentity: String, neededFns: String, skipSoftBuiltins: Bool): Items {
             position = statementNext;
             retCode := assignValueCode(target, currentResult, parsed.kind, parsed.code);
             if currentLive and not currentStopped {
-                listLib.pushBack(mut items, (kind = "Return", name = "", runtime = "", code = retCode,
+                listLib.pushBack(mut items, (kind = ITEM_KIND_RETURN, name = "", runtime = "", code = retCode,
                 intValue = 0, textValue = ""));
                 if codeHasRawTransfer(retCode) {
                     listLib.pushBack(mut transferCodes, retCode);
@@ -12990,7 +12990,7 @@ moduleIdentity: String, neededFns: String, skipSoftBuiltins: Bool): Items {
             statementNext := consumeStatementEnd(source, afterExit, prefix);
             if statementNext < 0 { failAt(source, afterExit, prefix, "expected ; after " + name); }
             position = statementNext;
-            if currentLive and not currentStopped { listLib.pushBack(mut items, (kind = if name == "break" { "Break" } else { "Continue" }, name = "", runtime = "",
+            if currentLive and not currentStopped { listLib.pushBack(mut items, (kind = if name == "break" { ITEM_KIND_BREAK } else { ITEM_KIND_CONTINUE }, name = "", runtime = "",
                 code = "", intValue = 0, textValue = "")); }
             currentStopped = true;
             continue;
@@ -13019,7 +13019,7 @@ moduleIdentity: String, neededFns: String, skipSoftBuiltins: Bool): Items {
             locals, functions, functionParams, currentName, currentLive and not currentStopped, stmtCtxs, aliases);
             var outputDiverged := false;
             loop parsedOutput as outputItem {
-                if outputItem.kind == "End" or outputItem.kind == "EndOutput" { position = outputItem.intValue; }
+                if outputItem.kind == ITEM_KIND_END or outputItem.kind == ITEM_KIND_END_OUTPUT { position = outputItem.intValue; }
                 else if target == TARGET_TS and currentLive and not currentStopped {
                     checkTraceSafety(source, nameStart, prefix, outputItem.code, currentName, maxFutureAt, locals, functions, futureValues, items);
                     locals = mergeOuterCallableUpdatesFromCode(locals, outputItem.code);
@@ -13035,7 +13035,7 @@ moduleIdentity: String, neededFns: String, skipSoftBuiltins: Bool): Items {
             }
             if outputDiverged {
                 if currentLive and not currentStopped and currentResult =!= VALUE_KIND_UNIT {
-                    listLib.pushBack(mut items, (kind = "Unreachable", name = "", runtime = "", code = "", intValue = 0, textValue = ""));
+                    listLib.pushBack(mut items, (kind = ITEM_KIND_UNREACHABLE, name = "", runtime = "", code = "", intValue = 0, textValue = ""));
                 }
                 if not currentStopped { currentReturned = true; }
                 currentStopped = true;
@@ -13053,7 +13053,7 @@ moduleIdentity: String, neededFns: String, skipSoftBuiltins: Bool): Items {
                 locals = mergeOuterCallableUpdatesFromCode(locals, expression.code);
             }
             if currentLive and not currentStopped {
-                listLib.pushBack(mut items, (kind = expressionStatementKind(expression.valueKind, expression.returned, "Call", currentResult),
+                listLib.pushBack(mut items, (kind = expressionStatementKind(expression.valueKind, expression.returned, ITEM_KIND_CALL, currentResult),
                 name = "", runtime = "", code = expression.code, intValue = 0, textValue = ""));
                 if codeHasRawTransfer(expression.code) {
                     listLib.pushBack(mut transferCodes, expression.code);
@@ -13099,7 +13099,7 @@ moduleIdentity: String, neededFns: String, skipSoftBuiltins: Bool): Items {
                     locals = mergeOuterCallableUpdatesFromCode(locals, expression.code);
                 }
                 if currentLive and not currentStopped {
-                    listLib.pushBack(mut items, (kind = expressionStatementKind(expression.valueKind, expression.returned, "Call", currentResult), name = callName, runtime = "",
+                    listLib.pushBack(mut items, (kind = expressionStatementKind(expression.valueKind, expression.returned, ITEM_KIND_CALL, currentResult), name = callName, runtime = "",
                     code = expression.code, intValue = 0, textValue = ""));
                     if codeHasRawTransfer(expression.code) {
                         listLib.pushBack(mut transferCodes, expression.code);
@@ -13128,7 +13128,7 @@ moduleIdentity: String, neededFns: String, skipSoftBuiltins: Bool): Items {
                     locals = mergeOuterCallableUpdatesFromCode(locals, expression.code);
                 }
                 if currentLive and not currentStopped {
-                    listLib.pushBack(mut items, (kind = expressionStatementKind(expression.valueKind, expression.returned, "Discard", currentResult), name = expression.valueKind,
+                    listLib.pushBack(mut items, (kind = expressionStatementKind(expression.valueKind, expression.returned, ITEM_KIND_DISCARD, currentResult), name = expression.valueKind,
                     runtime = "", code = expression.code, intValue = 0, textValue = ""));
                     if codeHasRawTransfer(expression.code) {
                         listLib.pushBack(mut transferCodes, expression.code);
@@ -13158,7 +13158,7 @@ moduleIdentity: String, neededFns: String, skipSoftBuiltins: Bool): Items {
                             locals = mergeOuterCallableUpdatesFromCode(locals, expression.code);
                         }
                         if currentLive and not currentStopped {
-                            listLib.pushBack(mut items, (kind = "Return", name = "", runtime = "", code = expression.code,
+                            listLib.pushBack(mut items, (kind = ITEM_KIND_RETURN, name = "", runtime = "", code = expression.code,
                             intValue = 0, textValue = ""));
                             if codeHasRawTransfer(expression.code) {
                                 listLib.pushBack(mut transferCodes, expression.code);
@@ -13203,7 +13203,7 @@ moduleIdentity: String, neededFns: String, skipSoftBuiltins: Bool): Items {
             position = expectSymbol(source, beforeIfOpen, "{", prefix);
             ifOpenBrace := position - 1;
             if currentLive and not currentStopped {
-                listLib.pushBack(mut items, (kind = "If", name = "", runtime = "", code = conditionCode,
+                listLib.pushBack(mut items, (kind = ITEM_KIND_IF, name = "", runtime = "", code = conditionCode,
                 intValue = 0, textValue = ""));
                 if codeHasRawTransfer(conditionCode) {
                     listLib.pushBack(mut transferCodes, conditionCode);
@@ -13252,7 +13252,7 @@ moduleIdentity: String, neededFns: String, skipSoftBuiltins: Bool): Items {
                     locals = mergeOuterCallableUpdatesFromCode(locals, expression.code);
                 }
                 if currentLive and not currentStopped {
-                    listLib.pushBack(mut items, (kind = expressionStatementKind(expression.valueKind, expression.returned, "Discard", currentResult), name = expression.valueKind,
+                    listLib.pushBack(mut items, (kind = expressionStatementKind(expression.valueKind, expression.returned, ITEM_KIND_DISCARD, currentResult), name = expression.valueKind,
                     runtime = "", code = expression.code, intValue = 0, textValue = ""));
                     if codeHasRawTransfer(expression.code) {
                         listLib.pushBack(mut transferCodes, expression.code);
@@ -13283,7 +13283,7 @@ moduleIdentity: String, neededFns: String, skipSoftBuiltins: Bool): Items {
                                 locals = mergeOuterCallableUpdatesFromCode(locals, expression.code);
                             }
                             if currentLive and not currentStopped {
-                                listLib.pushBack(mut items, (kind = "Return", name = "", runtime = "", code = expression.code,
+                                listLib.pushBack(mut items, (kind = ITEM_KIND_RETURN, name = "", runtime = "", code = expression.code,
                                 intValue = 0, textValue = ""));
                                 if codeHasRawTransfer(expression.code) {
                                     listLib.pushBack(mut transferCodes, expression.code);
@@ -13324,7 +13324,7 @@ moduleIdentity: String, neededFns: String, skipSoftBuiltins: Bool): Items {
             var firstArmOpen := -1;
             if isFirstFallback {
                 firstArmOpen = afterUnderscore;
-                if currentLive and not currentStopped { listLib.pushBack(mut items, (kind = "Scope", name = "", runtime = "", code = "",
+                if currentLive and not currentStopped { listLib.pushBack(mut items, (kind = ITEM_KIND_SCOPE, name = "", runtime = "", code = "",
                     intValue = 0, textValue = "")); }
             } else {
                 firstArmOpen = scanConditionOpen(source, firstArmStart, prefix);
@@ -13358,7 +13358,7 @@ moduleIdentity: String, neededFns: String, skipSoftBuiltins: Bool): Items {
                     condition.code
                 };
                 if currentLive and not currentStopped {
-                    listLib.pushBack(mut items, (kind = "If", name = "", runtime = "", code = conditionCode,
+                    listLib.pushBack(mut items, (kind = ITEM_KIND_IF, name = "", runtime = "", code = conditionCode,
                     intValue = 0, textValue = ""));
                     if codeHasRawTransfer(conditionCode) {
                         listLib.pushBack(mut transferCodes, conditionCode);
@@ -13426,7 +13426,7 @@ moduleIdentity: String, neededFns: String, skipSoftBuiltins: Bool): Items {
                         locals = mergeOuterCallableUpdatesFromCode(locals, expression.code);
                     }
                     if currentLive and not currentStopped {
-                        listLib.pushBack(mut items, (kind = expressionStatementKind(expression.valueKind, expression.returned, "Discard", currentResult), name = expression.valueKind,
+                        listLib.pushBack(mut items, (kind = expressionStatementKind(expression.valueKind, expression.returned, ITEM_KIND_DISCARD, currentResult), name = expression.valueKind,
                         runtime = "", code = expression.code, intValue = 0, textValue = ""));
                         if codeHasRawTransfer(expression.code) {
                             listLib.pushBack(mut transferCodes, expression.code);
@@ -13496,7 +13496,7 @@ moduleIdentity: String, neededFns: String, skipSoftBuiltins: Bool): Items {
                 mutable = false, writable = false, depth = depth + 1, constant = false, code = itemLocalCode,
                 intValue = 0, textValue = "", initState = INIT_STATE_INIT));
                 if currentLive and not currentStopped {
-                    listLib.pushBack(mut items, (kind = "LoopSeq", name = itemName, runtime = runtime, code = sequenceCode,
+                    listLib.pushBack(mut items, (kind = ITEM_KIND_LOOP_SEQ, name = itemName, runtime = runtime, code = sequenceCode,
                     intValue = 0, textValue = itemKind));
                     if codeHasRawTransfer(sequenceCode) {
                         listLib.pushBack(mut transferCodes, sequenceCode);
@@ -13509,7 +13509,7 @@ moduleIdentity: String, neededFns: String, skipSoftBuiltins: Bool): Items {
                 mutable = false, writable = false, depth = depth + 1, constant = false, code = "",
                 intValue = 0, textValue = "", initState = INIT_STATE_INIT));
                 if currentLive and not currentStopped {
-                    listLib.pushBack(mut items, (kind = "LoopSeq", name = "", runtime = tempItemRuntime, code = sequenceCode,
+                    listLib.pushBack(mut items, (kind = ITEM_KIND_LOOP_SEQ, name = "", runtime = tempItemRuntime, code = sequenceCode,
                     intValue = 0, textValue = itemKind));
                     if codeHasRawTransfer(sequenceCode) {
                         listLib.pushBack(mut transferCodes, sequenceCode);
@@ -13518,7 +13518,7 @@ moduleIdentity: String, neededFns: String, skipSoftBuiltins: Bool): Items {
                 }
             } else {
                 if currentLive and not currentStopped {
-                    listLib.pushBack(mut items, (kind = "Loop", name = "", runtime = "", code = conditionCode,
+                    listLib.pushBack(mut items, (kind = ITEM_KIND_LOOP, name = "", runtime = "", code = conditionCode,
                     intValue = 0, textValue = ""));
                     if codeHasRawTransfer(conditionCode) {
                         listLib.pushBack(mut transferCodes, conditionCode);
@@ -13532,7 +13532,7 @@ moduleIdentity: String, neededFns: String, skipSoftBuiltins: Bool): Items {
             loopStartTransfers := transferCount;
             if target == TARGET_TS and currentLive and not currentStopped {
                 loopTryKey = moduleKey + "#lp#" + integer.intText(stmtLoopId);
-                listLib.pushBack(mut items, (kind = "LoopTransferTry", name = "", runtime = loopTryKey, code = integer.intText(stmtLoopId),
+                listLib.pushBack(mut items, (kind = ITEM_KIND_LOOP_TRANSFER_TRY, name = "", runtime = loopTryKey, code = integer.intText(stmtLoopId),
                 intValue = stmtLoopId, textValue = integer.intText(0 - stmtLoopId)));
             }
             listLib.pushBack(mut loopIds, stmtLoopId);
@@ -13597,7 +13597,7 @@ moduleIdentity: String, neededFns: String, skipSoftBuiltins: Bool): Items {
             intValue = parsed.intValue, textValue = parsed.textValue, initState = INIT_STATE_INIT));
             if currentLive and not currentStopped {
                 itemCode := copiedValueCode(target, parsed.kind, parsed.code);
-                listLib.pushBack(mut items, (kind = "Local" + storageKind(parsed.kind), name = localName, runtime = runtime,
+                listLib.pushBack(mut items, (kind = ITEM_PREFIX_LOCAL + storageKind(parsed.kind), name = localName, runtime = runtime,
                 code = itemCode, intValue = parsed.intValue, textValue = itemTextPayload(parsed)));
                 if codeHasRawTransfer(itemCode) {
                     listLib.pushBack(mut transferCodes, itemCode);
@@ -13686,7 +13686,7 @@ moduleIdentity: String, neededFns: String, skipSoftBuiltins: Bool): Items {
             intValue = parsed.intValue, textValue = parsed.textValue, initState = declInitState));
             if currentLive and not currentStopped {
                 if rhsDiverged {
-                    listLib.pushBack(mut items, (kind = expressionStatementKind(VALUE_KIND_NEVER, false, "Call", currentResult), name = "", runtime = "",
+                    listLib.pushBack(mut items, (kind = expressionStatementKind(VALUE_KIND_NEVER, false, ITEM_KIND_CALL, currentResult), name = "", runtime = "",
                     code = parsed.code, intValue = 0, textValue = ""));
                     if codeHasRawTransfer(parsed.code) {
                         listLib.pushBack(mut transferCodes, parsed.code);
@@ -13694,7 +13694,7 @@ moduleIdentity: String, neededFns: String, skipSoftBuiltins: Bool): Items {
                     }
                 } else {
                     itemCode := copiedValueCode(target, parsed.kind, parsed.code);
-                    listLib.pushBack(mut items, (kind = "Var" + storageKind(parsed.kind), name = localName, runtime = runtime,
+                    listLib.pushBack(mut items, (kind = ITEM_PREFIX_VAR + storageKind(parsed.kind), name = localName, runtime = runtime,
                     code = itemCode, intValue = parsed.intValue, textValue = itemTextPayload(parsed)));
                     if codeHasRawTransfer(itemCode) {
                         listLib.pushBack(mut transferCodes, itemCode);
@@ -13737,7 +13737,7 @@ moduleIdentity: String, neededFns: String, skipSoftBuiltins: Bool): Items {
             seenAliases: mut List<String> = [];
             resolvedType := resolveTypeText(source, targetStart, prefix, aliasesUpToDepth(aliases, depth), aliasEntry.target, seenAliases);
             if depth == 0 and blockCount == 0 and listLib.listContainsText(publishedTypes, name) {
-                listLib.pushBack(mut items, (kind = "PublicType", name = name, runtime = "", code = resolvedType,
+                listLib.pushBack(mut items, (kind = ITEM_KIND_PUBLIC_TYPE, name = name, runtime = "", code = resolvedType,
                 intValue = 0, textValue = ""));
             }
             afterTarget := consumeStatementEnd(source, aliasEntry.end, prefix);
@@ -13782,7 +13782,7 @@ moduleIdentity: String, neededFns: String, skipSoftBuiltins: Bool): Items {
                         }
                     }
                     if currentLive {
-                        listLib.pushBack(mut items, (kind = "PublicFunction", name = name, runtime = hostRuntime, code = header.result,
+                        listLib.pushBack(mut items, (kind = ITEM_KIND_PUBLIC_FUNCTION, name = name, runtime = hostRuntime, code = header.result,
                         intValue = header.count, textValue = header.params));
                     }
                     continue;
@@ -13801,7 +13801,7 @@ moduleIdentity: String, neededFns: String, skipSoftBuiltins: Bool): Items {
                     first = parameterTotal, count = header.count, declAt = nameStart));
                 }
                 if listLib.listContainsText(publishedFunctions, name) {
-                    listLib.pushBack(mut items, (kind = "PublicFunction", name = name, runtime = functionRuntime, code = header.result,
+                    listLib.pushBack(mut items, (kind = ITEM_KIND_PUBLIC_FUNCTION, name = name, runtime = functionRuntime, code = header.result,
                     intValue = header.count, textValue = header.params));
                 }
                 softModule := if target == TARGET_TS and listLib.listContainsText(publishedFunctions, name) {
@@ -13828,21 +13828,21 @@ moduleIdentity: String, neededFns: String, skipSoftBuiltins: Bool): Items {
                     }
                     position = skipBraceBlock(source, position, prefix);
                     if skipAsSoft and currentLive and not currentStopped {
-                        listLib.pushBack(mut items, (kind = "FunctionStart", name = name, runtime = functionRuntime,
+                        listLib.pushBack(mut items, (kind = ITEM_KIND_FUNCTION_START, name = name, runtime = functionRuntime,
                         code = header.result, intValue = header.count, textValue = header.params));
-                        listLib.pushBack(mut items, (kind = "SoftBuiltin", name = name, runtime = functionRuntime,
+                        listLib.pushBack(mut items, (kind = ITEM_KIND_SOFT_BUILTIN, name = name, runtime = functionRuntime,
                         code = softModule, intValue = header.count, textValue = header.params));
-                        listLib.pushBack(mut items, (kind = "FunctionEnd", name = "", runtime = functionRuntime,
+                        listLib.pushBack(mut items, (kind = ITEM_KIND_FUNCTION_END, name = "", runtime = functionRuntime,
                         code = "", intValue = 0, textValue = ""));
                     }
                     position = skipTrivia(source, position, prefix);
                     continue;
                 }
                 if currentLive and not currentStopped {
-                    listLib.pushBack(mut items, (kind = "FunctionStart", name = name, runtime = functionRuntime,
+                    listLib.pushBack(mut items, (kind = ITEM_KIND_FUNCTION_START, name = name, runtime = functionRuntime,
                     code = header.result, intValue = header.count, textValue = header.params));
                     if softModule =!= "" {
-                        listLib.pushBack(mut items, (kind = "SoftBuiltin", name = name, runtime = functionRuntime,
+                        listLib.pushBack(mut items, (kind = ITEM_KIND_SOFT_BUILTIN, name = name, runtime = functionRuntime,
                         code = softModule, intValue = header.count, textValue = header.params));
                     }
                 }
@@ -13852,7 +13852,7 @@ moduleIdentity: String, neededFns: String, skipSoftBuiltins: Bool): Items {
                 if target == TARGET_TS and currentLive and not currentStopped {
                     fnTryKey = moduleKey + "#fn#" + integer.intText(fnTryId);
                     fnTransferStart = transferCount;
-                    listLib.pushBack(mut items, (kind = "TransferTry", name = "", runtime = fnTryKey, code = "", intValue = 0, textValue = ""));
+                    listLib.pushBack(mut items, (kind = ITEM_KIND_TRANSFER_TRY, name = "", runtime = fnTryKey, code = "", intValue = 0, textValue = ""));
                 }
                 listLib.pushBack(mut stmtCtxs, (id = 0, tag = "", kind = "fn", phase = "body",
                 iifeDepth = 0, valKind = header.result, valVar = "", label = "",
@@ -13962,15 +13962,15 @@ moduleIdentity: String, neededFns: String, skipSoftBuiltins: Bool): Items {
             mutable = false, writable = false, depth = depth, constant = parsed.constant, code = valLocalCode,
             intValue = parsed.intValue, textValue = parsed.textValue, initState = INIT_STATE_INIT));
             if depth == 0 and blockCount == 0 and listLib.listContainsText(publishedValues, name) {
-                listLib.pushBack(mut items, (kind = "PublicValue", name = name, runtime = runtime, code = parsed.kind,
+                listLib.pushBack(mut items, (kind = ITEM_KIND_PUBLIC_VALUE, name = name, runtime = runtime, code = parsed.kind,
                 intValue = 0, textValue = ""));
             }
             if currentLive and not currentStopped {
                 itemCode := copiedValueCode(target, parsed.kind, parsed.code);
                 if depth == 0 and blockCount == 0 and textLib.startsWithAt(moduleIdentity, 0, "lite.core.") {
-                    listLib.pushBack(mut items, (kind = "PureGlobal", name = runtime, runtime = runtime, code = "", intValue = 0, textValue = ""));
+                    listLib.pushBack(mut items, (kind = ITEM_KIND_PURE_GLOBAL, name = runtime, runtime = runtime, code = "", intValue = 0, textValue = ""));
                 }
-                listLib.pushBack(mut items, (kind = "Local" + storageKind(parsed.kind), name = name, runtime = runtime,
+                listLib.pushBack(mut items, (kind = ITEM_PREFIX_LOCAL + storageKind(parsed.kind), name = name, runtime = runtime,
                 code = itemCode, intValue = parsed.intValue, textValue = itemTextPayload(parsed)));
                 if codeHasRawTransfer(itemCode) {
                     listLib.pushBack(mut transferCodes, itemCode);
@@ -14019,14 +14019,14 @@ moduleIdentity: String, neededFns: String, skipSoftBuiltins: Bool): Items {
             listLib.pushBack(mut locals, (name = name, runtime = runtime, kind = typed.kind,
             mutable = false, writable = typed.writable, depth = depth, constant = if declInitState == INIT_STATE_INIT and not numeric.isFloatKind(typed.kind) { parsed.constant } else { false },
             code = annLocalCode, intValue = parsed.intValue, textValue = parsed.textValue, initState = declInitState));
-            declItemPrefix := if declInitState == INIT_STATE_INIT { "Local" } else { "Var" };
+            declItemPrefix := if declInitState == INIT_STATE_INIT { ITEM_PREFIX_LOCAL } else { ITEM_PREFIX_VAR };
             if currentLive and not currentStopped {
                 if rhsDiverged {
-                    listLib.pushBack(mut items, (kind = expressionStatementKind(VALUE_KIND_NEVER, false, "Call", currentResult), name = "", runtime = "",
+                    listLib.pushBack(mut items, (kind = expressionStatementKind(VALUE_KIND_NEVER, false, ITEM_KIND_CALL, currentResult), name = "", runtime = "",
                     code = assignedCode, intValue = 0, textValue = ""));
                 } else {
-                    if declItemPrefix == "Local" and depth == 0 and blockCount == 0 and textLib.startsWithAt(moduleIdentity, 0, "lite.core.") {
-                        listLib.pushBack(mut items, (kind = "PureGlobal", name = runtime, runtime = runtime, code = "", intValue = 0, textValue = ""));
+                    if declItemPrefix == ITEM_PREFIX_LOCAL and depth == 0 and blockCount == 0 and textLib.startsWithAt(moduleIdentity, 0, "lite.core.") {
+                        listLib.pushBack(mut items, (kind = ITEM_KIND_PURE_GLOBAL, name = runtime, runtime = runtime, code = "", intValue = 0, textValue = ""));
                     }
                     listLib.pushBack(mut items, (kind = declItemPrefix + storageKind(typed.kind), name = name, runtime = runtime,
                     code = assignedCode, intValue = parsed.intValue, textValue = itemTextPayload(parsed)));
@@ -14060,7 +14060,7 @@ moduleIdentity: String, neededFns: String, skipSoftBuiltins: Bool): Items {
             var partialFnDeps := entry.code;
             loop partialItems as partialItem {
                 partialCount = partialCount + 1;
-                if partialItem.kind == "End" {
+                if partialItem.kind == ITEM_KIND_END {
                     position = partialItem.intValue;
                 } else {
                     if target == TARGET_TS and currentLive and not currentStopped {
@@ -14108,10 +14108,10 @@ moduleIdentity: String, neededFns: String, skipSoftBuiltins: Bool): Items {
             intValue = parsed.intValue, textValue = parsed.textValue, initState = INIT_STATE_INIT));
             if currentLive and not currentStopped {
                 if rhsDiverged {
-                    listLib.pushBack(mut items, (kind = expressionStatementKind(VALUE_KIND_NEVER, false, "Call", currentResult), name = "", runtime = "",
+                    listLib.pushBack(mut items, (kind = expressionStatementKind(VALUE_KIND_NEVER, false, ITEM_KIND_CALL, currentResult), name = "", runtime = "",
                     code = assignedCode, intValue = 0, textValue = ""));
                 } else {
-                    listLib.pushBack(mut items, (kind = "Assign" + storageKind(entry.kind), name = name, runtime = entry.runtime,
+                    listLib.pushBack(mut items, (kind = ITEM_PREFIX_ASSIGN + storageKind(entry.kind), name = name, runtime = entry.runtime,
                     code = assignedCode, intValue = parsed.intValue, textValue = itemTextPayload(parsed)));
                 }
                 if codeHasRawTransfer(assignedCode) {
@@ -14153,7 +14153,7 @@ moduleIdentity: String, neededFns: String, skipSoftBuiltins: Bool): Items {
             mutable = entry.mutable, writable = entry.writable, depth = entry.depth, constant = false, code = assignedCode,
             intValue = 0, textValue = "", initState = INIT_STATE_INIT));
             if currentLive and not currentStopped {
-                listLib.pushBack(mut items, (kind = "Assign" + storageKind(entry.kind), name = name, runtime = entry.runtime,
+                listLib.pushBack(mut items, (kind = ITEM_PREFIX_ASSIGN + storageKind(entry.kind), name = name, runtime = entry.runtime,
                 code = assignedCode, intValue = 0, textValue = ""));
                 if codeHasRawTransfer(assignedCode) {
                     listLib.pushBack(mut transferCodes, assignedCode);
@@ -14172,7 +14172,7 @@ moduleIdentity: String, neededFns: String, skipSoftBuiltins: Bool): Items {
             locals = mergeOuterCallableUpdatesFromCode(locals, expression.code);
         }
         if currentLive and not currentStopped {
-            listLib.pushBack(mut items, (kind = expressionStatementKind(expression.valueKind, expression.returned, "Discard", currentResult), name = expression.valueKind,
+            listLib.pushBack(mut items, (kind = expressionStatementKind(expression.valueKind, expression.returned, ITEM_KIND_DISCARD, currentResult), name = expression.valueKind,
             runtime = "", code = expression.code, intValue = 0, textValue = ""));
             if codeHasRawTransfer(expression.code) {
                 listLib.pushBack(mut transferCodes, expression.code);
@@ -14189,7 +14189,7 @@ moduleIdentity: String, neededFns: String, skipSoftBuiltins: Bool): Items {
         failAt(source, size, prefix, "expected } before end of source");
     }
     if currentStopped {
-        listLib.pushBack(mut items, (kind = "MainStop", name = "", runtime = "", code = "", intValue = 0, textValue = ""));
+        listLib.pushBack(mut items, (kind = ITEM_KIND_MAIN_STOP, name = "", runtime = "", code = "", intValue = 0, textValue = ""));
     }
     items
 }
