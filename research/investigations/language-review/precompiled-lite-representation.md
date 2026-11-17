@@ -86,6 +86,11 @@ dependencies and version compatibility. The user separately proposes no
 stability guarantee for internal type references in persistent application
 data; see [the persistence boundary](type-reference-table.md#user-direction-persistence-is-a-separate-data-contract).
 
+The user further proposes treating different hashed library builds as distinct
+dependency instances, even when build metadata alone changes. See [dependency
+build identity](dependency-build-identity.md) for the competing resolution
+options and implications for reuse and reproducibility.
+
 ## Incremental and separate-build requirements
 
 A valid cache key may need compiler and artifact format versions, target and

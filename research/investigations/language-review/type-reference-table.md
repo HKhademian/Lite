@@ -204,6 +204,11 @@ contents, and identity-assignment algorithm are not selected. The user also
 suggests a richer per-type-reference metadata table in that representation;
 whether it is present at runtime or exposed to programs remains open.
 
+The user subsequently frames old and new builds as separate dependency
+instances identified by build hashes, with error, replacement, or side-by-side
+as possible resolutions. See [dependency build identity](dependency-build-identity.md);
+do not assume automatic reconciliation between distinct build identities.
+
 ### User direction: persistence is a separate data contract
 
 The user does not want a guarantee that dynamic type-reference/Kind mappings
