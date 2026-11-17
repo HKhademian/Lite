@@ -4,6 +4,15 @@ Dated decision ledger, updated through **2026-11-17**. Older entries retain thei
 original scope. Decisions do not establish compiler conformance; use
 [the transition](../compiler/transition-plan.md) for current execution evidence.
 
+## Shared union Kind mapping, 2026-11-17
+
+The user requires values and consumers of the same normalized union type to
+agree on their member-to-Kind mapping when they share a representation,
+including across compatible applications or components. `A | B` and `B | A`
+therefore use the same mapping; distinct instances may still hold different
+active members. Numeric assignments, ABI/version policy, and zero/unknown
+behavior remain open. See [the union mapping](union-zero.md#one-kind-mapping-for-the-same-union-type).
+
 ## Equal array and tuple layout does not imply identity, 2026-11-17
 
 The user clarifies that `[Int64; 2]` and `(:Int64, :Int64)` are different

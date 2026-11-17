@@ -358,13 +358,14 @@ zero state only when explicitly included as a member. Check type tests, matching
 copying, zero payloads, handling of `Unit`, and whether any extra state is
 observable. A 0- versus 1-based numbering alone does not select these semantics.
 
-Plain-union identity is currently normalized and order-independent. If the
-same type uses one stable shared tag layout, choosing tags from source order
-can make `A | B` and `B | A` disagree about the same bytes. A canonical mapping
-is one possibility; context-specific representations with conversion on
-transfer are another. Their layout, ABI, linking, copying and cost implications
-need analysis. Do not assume a public numeric Kind or select a numbering policy
-merely from type identity.
+Plain-union identity is normalized and order-independent. The user now requires
+the same member-to-Kind mapping for equivalent spellings and consumers sharing
+a representation, including compatible separately compiled applications. Source
+order or occurrence cannot independently assign conflicting meanings. Numeric
+assignments, canonicalization and ABI/version details remain open; see [the
+shared mapping rule](../../../docs/union-zero.md#one-kind-mapping-for-the-same-union-type).
+This mapping is a property of the shared type representation, not a claim that
+every value of the type has the same active Kind.
 
 **User's C interoperability question:** Given raw storage viewed through a
 C-style struct containing a `kind` field and overlapping union payloads, a

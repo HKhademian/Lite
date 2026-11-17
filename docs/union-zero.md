@@ -2,6 +2,42 @@
 
 Status: **metadata plus overlapping payload model clarified by the user, 2026-10-21; zero must be a listed member, exact member choice remains open**. The full value includes member-identification metadata alongside a C-style payload union. Max-member size describes payload capacity, not the total wrapper. Zero initialization clears metadata and payload; zero metadata must identify one listed member, but which member it selects remains unresolved. Exact metadata format, alignment, ABI, and optimizations are not selected.
 
+## One Kind mapping for the same union type
+
+User clarification, 2026-11-17: a union value and every consumer sharing its
+representation must agree on which Kind value identifies each member. A value
+created as `Int64 | String` and passed to a parameter of that same type must
+retain the active member and be interpreted consistently. This agreement must
+also hold between separately compiled applications or components that share the
+same union representation.
+
+Plain-union identity is order-independent: `A | B` and `B | A` denote the same
+normalized type. Their shared representation therefore has the same
+member-to-Kind mapping; source spelling, declaration location and compilation
+order cannot independently assign conflicting meanings. The rule compares the
+**mapping for a type**, not the Kind fields of two different values: one value
+can hold A while another holds B. Transparent aliases retain their type's
+identity; normalized equivalent spellings must agree.
+
+The numeric mapping, canonical type-identity/order algorithm, tag width,
+versioning and cross-target/foreign ABI remain open. Compatibility between
+components requires agreement on the relevant representation contract, not
+only on the source type name; this does not assert that arbitrary bytes or
+incompatible target layouts can be shared. Optimizations remain possible when
+they preserve observable behavior and all required shared boundaries. Whether
+Kind zero is an implicit `UNKNOWN` and how unrecognized tags are handled remain
+under review; this clarification does not decide them.
+
+Specification cases, not compiler-support claims:
+
+- A union holding `Int64` must still hold `Int64` when passed to a parameter
+  of the same union type; a String-valued instance stays String.
+- The type spellings `Int64 | String` and `String | Int64` use the same
+  member-to-Kind mapping at a shared representation boundary.
+- Reordering a type's written alternatives must not reinterpret an already
+  stored value as another member. Other type sets and incompatible ABIs do not
+  gain an assumed shared mapping or conversion from this rule.
+
 ## Latest selected construction restriction
 
 The user now requires [x: A | B = 0 to be rejected](union-initialization-policy.md#selected-rejection-and-explicit-member-choice) for a multi-member normalized union: it does not visibly choose a member. = ? reserves unreadable storage; = expr preserves an initialized source member. A{0}/B{0} are proposed compact member-zero constructors; A{}/B{} select declared-default record construction where valid. No canonical or leftmost member is silently selected. The older zero-member and empty-state discussions below are retained as history; bare multi-member union locals require an initializer or explicit = ?; implicit zero-result sites still need reconciliation with this source restriction.
