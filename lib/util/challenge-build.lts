@@ -89,6 +89,11 @@ formatTenthsJson := fn(tenths: Int): String {
     if rem == 0 { integer.intText(whole) } else { integer.intText(whole) + "." + integer.intText(rem) }
 };
 
+formatCsvTenths := fn(tenths: Int): String {
+    clamped := if tenths < 10 { 10 } else if tenths > 100 { 100 } else { tenths };
+    integer.intText(clamped / 10) + "." + integer.intText(clamped % 10)
+};
+
 formatFourDecimalsJson := fn(tenThousandths: Int): String {
     if tenThousandths <= 0 { return "0"; }
     if tenThousandths >= 10000 { return "1"; }
@@ -453,7 +458,7 @@ pub buildChallengeCorpus := fn(challengesRootDir: String, catalogJsonText: Strin
                         list.pushBack(mut recCsvRows,
                         challenges.csvEscapeField(cid) + "," + challenges.csvEscapeField(ttl) + ",advent-of-code,puzzles,,,,"
                         + challenges.csvEscapeField(text.joinTexts(tagsList, ";")) + ","
-                        + challenges.csvEscapeField("Day " + integer.intText(day)) + "," + normStr + ",none,"
+                        + challenges.csvEscapeField("Day " + integer.intText(day)) + "," + formatCsvTenths(tenths) + ",none,"
                         + challenges.csvEscapeField("stdin-stdout;two-part") + ",False," + challenges.csvEscapeField(curl));
                     }
                 }
@@ -535,7 +540,7 @@ pub buildChallengeCorpus := fn(challengesRootDir: String, catalogJsonText: Strin
         list.pushBack(mut recTopicsAll, "math");
         list.pushBack(mut recCsvRows,
         challenges.csvEscapeField(cid) + "," + challenges.csvEscapeField(ttl) + ",project-euler,mathematics,math,math,,"
-        + challenges.csvEscapeField(text.joinTexts(tagsList, ";")) + "," + integer.intText(n) + "," + normStr
+        + challenges.csvEscapeField(text.joinTexts(tagsList, ";")) + "," + integer.intText(n) + "," + formatCsvTenths(tenths)
         + ",curated," + challenges.csvEscapeField("stdin-stdout;single-answer") + ",False," + challenges.csvEscapeField(curl));
     }
 
@@ -639,7 +644,7 @@ pub buildChallengeCorpus := fn(challengesRootDir: String, catalogJsonText: Strin
             challenges.csvEscapeField(cid) + "," + challenges.csvEscapeField(ttl) + ",leetcode," + challenges.csvEscapeField(cat) + ","
             + challenges.csvEscapeField(rec.primaryTopic) + "," + challenges.csvEscapeField(rec.topicsJoined) + ","
             + challenges.csvEscapeField(text.joinTexts(rawTopics, ";")) + "," + challenges.csvEscapeField(text.joinTexts(tagsList, ";")) + ","
-            + challenges.csvEscapeField(diffLabel) + "," + normStr + "," + tpSrc + "," + challenges.csvEscapeField(fmtStr) + ","
+            + challenges.csvEscapeField(diffLabel) + "," + formatCsvTenths(normTenths) + "," + tpSrc + "," + challenges.csvEscapeField(fmtStr) + ","
             + (if paid { "True" } else { "False" }) + "," + challenges.csvEscapeField(curl));
         }
     }
@@ -786,7 +791,7 @@ pub buildChallengeCorpus := fn(challengesRootDir: String, catalogJsonText: Strin
             challenges.csvEscapeField(cid) + "," + challenges.csvEscapeField(ttl) + ",codeforces,algorithms,"
             + challenges.csvEscapeField(rec.primaryTopic) + "," + challenges.csvEscapeField(rec.topicsJoined) + ","
             + challenges.csvEscapeField(text.joinTexts(rawTags, ";")) + "," + challenges.csvEscapeField(text.joinTexts(tagsList, ";")) + ","
-            + integer.intText(rating) + "," + normStr + ",source,stdin-stdout,False," + challenges.csvEscapeField(curl));
+            + integer.intText(rating) + "," + formatCsvTenths(tenths) + ",source,stdin-stdout,False," + challenges.csvEscapeField(curl));
         }
     }
 
@@ -869,7 +874,7 @@ pub buildChallengeCorpus := fn(challengesRootDir: String, catalogJsonText: Strin
                     challenges.csvEscapeField(cid) + "," + challenges.csvEscapeField(ttl) + ",cses,algorithms,"
                     + challenges.csvEscapeField(rec.primaryTopic) + "," + challenges.csvEscapeField(rec.topicsJoined) + ",,"
                     + challenges.csvEscapeField(text.joinTexts(tagsList, ";")) + "," + challenges.csvEscapeField(curSec)
-                    + "," + normStr + ",section,stdin-stdout,False," + challenges.csvEscapeField(curl));
+                    + "," + formatCsvTenths(baseVal) + ",section,stdin-stdout,False," + challenges.csvEscapeField(curl));
                     pos = aEnd + 4;
                 } else {
                     pos = hrefPos + 23;
@@ -991,7 +996,7 @@ pub buildChallengeCorpus := fn(challengesRootDir: String, catalogJsonText: Strin
             list.pushBack(mut recCsvRows,
             challenges.csvEscapeField(cid) + "," + challenges.csvEscapeField(ttl) + ",atcoder,algorithms,,,,"
             + challenges.csvEscapeField(text.joinTexts(tagsList, ";")) + "," + challenges.csvEscapeField(cDiffRaw[idx])
-            + "," + normStr + ",none,stdin-stdout,False," + challenges.csvEscapeField(curl));
+            + "," + formatCsvTenths(cDiffTenths[idx]) + ",none,stdin-stdout,False," + challenges.csvEscapeField(curl));
         }
     }
 
@@ -1160,7 +1165,7 @@ pub buildChallengeCorpus := fn(challengesRootDir: String, catalogJsonText: Strin
             list.pushBack(mut recCsvRows,
             challenges.csvEscapeField(cid) + "," + challenges.csvEscapeField(ttl) + ",rosalind,bioinformatics,bioinformatics,bioinformatics,,"
             + challenges.csvEscapeField(text.joinTexts(tagsList, ";")) + "," + challenges.csvEscapeField(diffRaw)
-            + "," + normStr + ",curated,stdin-stdout,False," + challenges.csvEscapeField(curl));
+            + "," + formatCsvTenths(tenths) + ",curated,stdin-stdout,False," + challenges.csvEscapeField(curl));
         }
     }
 
@@ -1233,7 +1238,7 @@ pub buildChallengeCorpus := fn(challengesRootDir: String, catalogJsonText: Strin
             list.pushBack(mut recStatuses, "verified");
             list.pushBack(mut recCsvRows,
             challenges.csvEscapeField(cid) + "," + challenges.csvEscapeField(ttl) + ",jane-street,puzzles,,,,"
-            + challenges.csvEscapeField(text.joinTexts(tagsList, ";")) + ",Puzzle,7,none,puzzle,False," + challenges.csvEscapeField(curl));
+            + challenges.csvEscapeField(text.joinTexts(tagsList, ";")) + ",Puzzle,7.0,none,puzzle,False," + challenges.csvEscapeField(curl));
         }
     }
 

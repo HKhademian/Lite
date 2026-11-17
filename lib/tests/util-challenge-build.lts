@@ -4,6 +4,7 @@ fs := import "core/file";
 path := import "core/path";
 project := import "util/project";
 test := import "core/test";
+text := import "core/text";
 
 test.checkText("slugify basic", "breadth-first-search", chBuild.slugifyText("Breadth-First Search"));
 test.checkText("slugify ampersand", "bit-and-math", chBuild.slugifyText(" Bit & Math! "));
@@ -56,6 +57,10 @@ test.checkBool("summary lists all 9", true, built.summaryText =!= "");
 validated := challenges.validateChallengeCorpus(syn);
 test.checkText("built corpus validates err", "", validated.error);
 test.checkBool("built corpus validates ok", true, validated.ok);
+
+csvText := fs.readText(path.join(syn, "data/challenges.csv")).text;
+test.checkBool("csv uses 1.0 for non-cryptopals integer", true, text.indexOfText(csvText, ",Day 1,1.0,none,", 0) >= 0);
+test.checkBool("csv uses integer 2 for cryptopals", true, text.indexOfText(csvText, ",Set 1,2,curated,", 0) >= 0);
 
 _rm := fs.remove(tmpRes.path);
 test.done("util-challenge-build");
