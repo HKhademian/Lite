@@ -352,16 +352,22 @@ alternative already investigated, not the selected baseline. Adopting it would
 reconsider the membership and exhaustiveness contracts and must be reconciled
 with the selected universal all-zero value and reserved-storage rules.
 
-**User clarification:** `Kind = 0` means **no type**; zero initialization
-therefore starts with an invalid type reference, not a known `Int64` or `String`
-member. Do not automatically equate this with an unrecognized nonzero Kind or
-assert that every unknown tag has the same meaning. The user has not yet
-clarified whether the enclosing zeroed union remains a valid, readable value
-with no active type, or is an invalid value for which some or all operations
-must fail. That distinction matters because the earlier user direction requires
-all-zero storage to be a valid initialized value for every type. Resolve it
-explicitly before changing the selected union-zero contract. This clarification
-does not select match syntax, fault behavior, or the handling of Kind 99.
+**User clarification:** If stable Kind values are assigned to the known types,
+`Kind = 0` can be reserved for **no known type**. A zero-initialized union then
+starts with Kind 0 and an `UNKNOWN` active-type state, rather than arbitrarily
+selecting a known member. A reference that identifies no type is distinct from
+the question whether the containing union value is valid. The user's earlier
+universal-zero direction requires all-zero storage to be a valid initialized
+value for every type; treating UNKNOWN as a valid union state is a possible
+reconciliation, not a selection of match or access semantics.
+
+This direction conflicts with the older listed-member-only union-zero rule and
+must be reconciled through the decision process; see [the existing empty-zero
+review](../../../docs/union-empty-zero-proposal.md). Do not automatically equate
+zero with an unrecognized nonzero Kind or decide how Kind 99 is handled. The
+source-level rules for `= 0` and omitted union initializers, match exhaustiveness,
+type tests, fault behavior, and treatment of the payload remain open. No
+implementation is implied.
 
 Compare at least: (a) zero identifies one listed member; (b) zero identifies a
 valid extra unknown/empty state and listed members begin at one; and (c) a

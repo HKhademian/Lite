@@ -2,6 +2,14 @@
 
 Status: **new alternative proposed by the user, open review 2026-10-21**. This would revise the previously selected rule that union zero belongs to exactly one listed member. It is not yet adopted. Metadata-plus-overlapping-payload storage and universal valid bytewise zero remain selected.
 
+User clarification, 2026-11-17: if known types have stable Kind values, Kind 0
+can represent no known type, so a zero-initialized union has an `UNKNOWN`
+active-type state. This reinforces the alternative discussed here, but does not
+by itself settle readability, matching, source-level zero construction, or the
+handling of unrecognized nonzero tags. Reconcile the exact contract and the
+older listed-member-only rule before marking the full proposal selected; see
+[the current review](../research/investigations/language-review/01-core-types.md#user-question-union-kind-and-zero).
+
 The subsequent [initialization-policy review](union-initialization-policy.md) considers preserving member-only readable values while making union locals explicitly or implicitly uninitialized before a first write. That is a separate alternative: an uninitialized type test is rejected, whereas this page's readable empty value makes both tests return false. Neither revision is adopted yet.
 
 ## Proposed behavior

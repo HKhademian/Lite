@@ -62,6 +62,12 @@ The user now compares [leftmost-member construction, explicit initialization, an
 
 The user now proposes [empty union zero](union-empty-zero-proposal.md): tag zero means no active member, and both A/B type tests fail. This would replace the selected member-only zero boundary and remove the need to rank members for union zero. It remains an exploratory alternative; compare coverage, direct operations, Unit/Option/Result distinctions, and single-member normalization before adopting it. The selected rule below is retained pending that decision.
 
+On 2026-11-17, the user clarified the direction as Kind 0 identifying no known
+type, so zero-initialized union storage begins in an `UNKNOWN` active-type state.
+The status of the containing value and its operations, source-level zero forms,
+and unrecognized nonzero tags need explicit reconciliation with the existing
+contract; no full revision or compiler support follows from the clarification alone.
+
 ## Current storage model
 
 The user's latest sketch is conceptual C-style pseudocode:
