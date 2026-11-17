@@ -1,19 +1,18 @@
 # Empty zero state for plain unions
 
-Status: **new alternative proposed by the user, open review 2026-10-21**. This would revise the previously selected rule that union zero belongs to exactly one listed member. It is not yet adopted. Metadata-plus-overlapping-payload storage and universal valid bytewise zero remain selected.
+Status: **zero state and bare typed declaration selected 2026-11-17; other implications remain under review**. The selected zero state supersedes the previous rule that union zero belongs to exactly one listed member. Metadata-plus-overlapping-payload storage and universal valid bytewise zero remain selected.
 
 User clarification, 2026-11-17: if known types have stable Kind values, Kind 0
 can represent no known type, so a zero-initialized union has an `UNKNOWN`
 active-type state. This reinforces the alternative discussed here, but does not
 by itself settle readability, matching, source-level zero construction, or the
-handling of unrecognized nonzero tags. Reconcile the exact contract and the
-older listed-member-only rule before marking the full proposal selected; see
+handling of unrecognized nonzero tags. The remaining operations require review; see
 [the current review](../research/investigations/language-review/01-core-types.md#user-question-union-kind-and-zero).
 The user further clarifies that in the proposed library/file/type reference
 model type reference 0 cannot identify a type; it is not a separately reserved
 type entry. The three-section encoding itself remains under investigation.
 
-The subsequent [initialization-policy review](union-initialization-policy.md) considers preserving member-only readable values while making union locals explicitly or implicitly uninitialized before a first write. That is a separate alternative: an uninitialized type test is rejected, whereas this page's readable empty value makes both tests return false. Neither revision is adopted yet.
+The subsequent [initialization-policy review](union-initialization-policy.md) considers preserving member-only readable values while making union locals explicitly or implicitly uninitialized before a first write. That is a separate alternative: an uninitialized type test is rejected, whereas this page's readable empty value makes both tests return false. The zero state and bare declaration are selected; the separate default-uninitialized alternative was not selected.
 
 ## Proposed behavior
 
@@ -62,4 +61,4 @@ For a declaration default whose inferred T is a union admitting empty, `zero(T)`
 
 [Odin's ordinary unions](https://odin-lang.org/docs/overview/#unions) provide a relevant precedent: they are discriminated unions whose zero is nil, and their type-switch example handles nil in a default case. Odin separately offers no-nil unions. Checked 2026-10-21. This precedent does not decide LiteScript's syntax, normalization, field operations, or ownership rules.
 
-Evaluate this alternative against member-only zero before continuing canonical ordering or Unit priority. The user has not yet explicitly adopted the revision; current selected semantics must not be silently migrated. No new public None type, null pointer, unchecked cast, empty-pattern syntax, or full union ABI is selected by this review.
+The zero state and bare declaration have been selected; the consequences discussed above remain open unless separately selected. No new public None type, null pointer, unchecked cast, empty-pattern syntax, or full union ABI is selected by this review.

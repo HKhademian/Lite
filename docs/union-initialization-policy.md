@@ -1,90 +1,28 @@
 # Union construction and omitted initialization
 
-Status: **undirected multi-member union literal-zero initialization rejected, selected 2026-10-21; local multi-member union declarations require an initializer or = ?, selected 2026-10-21; member-qualified zero-constructor grammar remains under review**. The user requires a visible member choice rather than an implicit leftmost/canonical selection for x: A | B = 0. Existing explicit reservation and ordinary expression admission remain available. Earlier alternatives are retained below as review history.
+Status: **revised 2026-11-17:** a bare typed declaration initializes the type's all-zero value, including for a normalized multi-member union. Its zero Kind denotes no known member (`UNKNOWN`), a valid initialized union value. The earlier rejection of bare union locals is superseded. The separate `= 0` source form remains rejected pending review of its meaning. This is a design contract, not a compiler support claim.
 
 ## Selected rejection and explicit member choice
 
-```text
-x: (A | B) = 0 /* rejected: bare zero does not identify a member */
-```
-
-Apply this to a destination that remains a plain union of multiple distinct member identities after normalization, including through transparent aliases. Do not silently choose the leftmost/canonical member or insert a readable empty state. This is a source-construction rule, not permission to expose invalid or uninitialized values. A | A normalizes to A, so this particular multi-member ambiguity does not arise there; any other initialization constraints still apply.
-
-The user proposes the following declaration forms:
-
-```text
-x: (A | B) = ?
-x: (A | B) = expr
-x: (A | B) = A{0}
-x: (A | B) = B{0}
-x: (A | B) = A{}
-x: (A | B) = B{}
-```
-
-Their intended roles are distinct:
-
-- = ? reserves storage without a readable value; every path reaching a read must first initialize it. This reuses selected reservation and first-initialization rules.
-- = expr supplies an initialized value whose type is admitted by the union, including an existing compatible union value whose active identity is preserved.
-- A{0} and B{0} explicitly name the desired member and propose zero construction of that member, bypassing its declared defaults. This compact sole-zero constructor marker is new grammar under review, not already supported named-field record syntax or positional field initialization.
-- A{} and B{} explicitly name the member and, for record types with valid default construction, apply that member's declared-default policy. The name chooses the member before union admission. These forms do not imply that every possible non-record type admits brace construction.
-
-Every chosen member must itself be validly constructed; the destination union does not bypass visibility, nested-field initialization, ownership, or permission rules. Constructing zero of a chosen member does not require all union metadata bytes to be zero: the wrapper records the selected identity. No additional tag width, layout, ABI, or public constructor API is selected.
-
-A bare literal 0 in a multi-member union initializer is rejected even if Int is a member; it must not silently choose between contextual union zero and an Int payload. An already typed Int zero remains an ordinary admissible value:
-
-```text
-number := 0
-x: (Int | B) = number /* admits the existing Int value */
-```
-
-A local x: A | B without an initializer is rejected. Require an initialized compatible expression or explicit = ?; omission is neither implicit zero nor implicit reservation for a normalized multi-member union. Likewise, the source ban qualifies earlier universal source-level zero construction; recursively zeroed union fields and other implicit zero-result sites need explicit reconciliation, not hidden member selection. This page does not automatically choose a new policy for those sites.
+The previously selected source restriction still rejects `x: (A | B) = 0` for a multi-member union pending a separate decision: the literal might request union zero or construct a numeric member. This restriction does not affect bare declarations. An initialized compatible member expression supplies that member; `= ?` requests separate uninitialized storage. The proposed member-qualified `A{0}` spelling remains unselected.
 
 ## Bare local declarations
 
-Selected rule: reject a local declaration without an initializer when its normalized type has several distinct plain-union members:
+The general rule applies independently of whether `X` is a union, array, String, or another type: `x: X;` creates a slot of `X`'s size and layout, initialized to its all-zero value. Storage placement and physical implementation remain future design matters. For a multi-member union, all-zero storage has Kind 0 and no known active member (`UNKNOWN`). It is an initialized value of the union type, not an uninitialized slot and not a newly declared member type. In the discussed type-reference model, reference 0 cannot identify a type; no separate type entry is reserved for it.
 
-```text
-x: (A | B)
-```
+Specification cases (not executed compiler tests):
 
-Do not infer a zero member or reserve implicitly. The selected bare-zero rejection also rules out using implicit = 0 to conceal a member choice.
+- **union-bare-zero:** `x: (Int64 | String);` creates the zero-initialized union, Kind 0, with no known active member.
+- **array-bare-zero:** `items: [Int64; 2];` creates an array slot with two zero-initialized Int64 elements.
+- **string-bare-zero:** `name: String;` creates a zero-initialized String slot; its selected zero value is empty.
+- **union-explicit-reservation:** `x: (Int64 | String) = ?;` requests uninitialized storage under the separate reservation rules.
+- **union-literal-zero:** `x: (Int64 | String) = 0;` remains rejected under the previous source restriction until its separate meaning is decided.
 
-### Require an initializer or explicit reservation (selected)
+How matching, type tests and access handle this state, and how unrecognized nonzero Kinds are handled, remain under review. An earlier proposal for a guard is recorded in the [match investigation](../research/investigations/language-review/union-match-unknown-guard.md); it is not selected by this declaration decision.
 
-Reject the bare declaration. The author writes an initialized compatible expression or the existing = ? marker:
+## Historical declaration alternatives
 
-```text
-x: (A | B) = ?
-if choose_a {
-    x = make_a()
-} else {
-    x = make_b()
-}
-use(x)
-```
-
-This records deferred initialization visibly. The existing path-sensitive first-write rule permits exactly one initialization per reaching path without var; later replacement needs var. A path reaching use(x) without initializing x is rejected. The tradeoff is the required = ? marker when the author wants to supply the value later.
-
-### Reserve by default (not chosen)
-
-The alternative was to accept the bare declaration as an implicit = ? for union locals. It has the same no-read-before-initialization rules, not a readable empty state:
-
-```text
-x: (A | B)
-if x: A { use_a(x) } /* rejected: uninitialized read */
-x = make_a()
-use(x)               /* permitted after initialization */
-```
-
-This avoids the marker. Omitted initialization would then mean zero for ordinary eligible non-union locals but reserved storage for multi-member union locals. A reader must know the resolved type, including aliases, to know which applies. This is statically checkable; it does not imply a runtime initialization flag or permit reading unspecified bytes.
-
-### Shared boundaries
-
-The user selected the explicit initializer-or-reservation rule. The deferred state is visible through = ?. Ordinary value-passing and member-only exhaustive matching after initialization remain intact. This does not select A{0} grammar, give a default to a union, or settle implicit union-zero result sites.
-
-Apply the selected rule after transparent-alias resolution and normalization; a spelling alias cannot bypass it. A | A normalizes to A and follows that type's declaration policy. Var controls subsequent replacement, not whether a value has been initialized. This review is about local value declarations, not incoming parameter headers, record-field declarations, globals, or an output-construction API; those contexts need their own policies.
-
-Reference comparison checked 2026-10-21: [Rust permits declaration before initialization](https://doc.rust-lang.org/rust-by-example/variable_bindings/declare.html) and rejects use before a value is installed. [Zig requires an initializer](https://ziglang.org/documentation/master/#Assignment) and offers undefined for unspecified storage; that facility is not the same guarantee as LiteScript's selected definite-initialization checks. These provide contrasting declaration styles without selecting a LiteScript policy.
+The following discussion records older alternatives. Assertions based on the former member-only zero and rejection of bare declarations are superseded by the rule above. Other source policies, including conditional fallback, require separate review.
 
 ## Receiving an existing value
 

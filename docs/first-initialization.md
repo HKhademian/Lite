@@ -13,7 +13,7 @@ a possible replacement. Conditional `else { ? }` reservation and its branch
 correlation, field/element construction and initialization through callees
 remain unimplemented.
 
-The selected [union-local declaration rule](union-initialization-policy.md#bare-local-declarations) requires an initialized expression or explicit = ? when normalization leaves several distinct union members. Bare omission is rejected, not implicit reservation. Other ordinary typed locals retain their selected omitted-initializer policy. Explicitly reserved union storage reuses the no-read-before-initialization rules below.
+The selected [union-local declaration rule](union-initialization-policy.md#bare-local-declarations) zero-initializes bare typed declarations, including unions. Explicitly reserved union storage (`= ?`) remains uninitialized and reuses the no-read-before-initialization rules below.
 
 ## Reserved storage already exists
 

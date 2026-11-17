@@ -38,7 +38,7 @@ Assume the three inputs are Bool. This infers Bool and evaluates exactly like re
 
 ## Multi-member union initialization
 
-[x: A | B = 0 is rejected](union-initialization-policy.md#selected-rejection-and-explicit-member-choice): an undirected zero request must not choose among distinct normalized members. Use = ? for explicit reservation, or supply an initialized compatible expression. A{} names a record member and applies its defaults; the proposed A{0} spelling would name and zero that member. Bare local multi-member union declarations are rejected: require an initialized expression or explicit = ?. Apply after alias resolution/normalization; the general omitted-initializer rule below has this selected exception.
+[x: A | B = 0 is rejected](union-initialization-policy.md#selected-rejection-and-explicit-member-choice): an undirected zero request must not choose among distinct normalized members. Use = ? for explicit reservation, or supply an initialized compatible expression. A{} names a record member and applies its defaults; the proposed A{0} spelling would name and zero that member. Bare typed declarations, including multi-member unions, create zero-initialized slots. For a union this yields Kind 0 and no known active member; the earlier bare-declaration exception is superseded. The separate `= 0` source restriction remains pending review.
 
 ## Rules
 
@@ -108,7 +108,7 @@ Function values follow the same declaration and replacement rules. `var myfn: fn
 
 ## Read types after assignment
 
-Selected on **2026-10-24**: direct local writes check against the declared value/storage contract, while reads use the type justified at the current program point. With var x: String | Int = ? followed by x = 42, x reads as Int but still accepts a later String replacement. After x = "hello", reads are String; Bool still fails the declared union. This applies throughout ordinary code blocks, including outside if branches. The assignment expression itself still produces Unit. A bare local multi-member union declaration remains rejected; = ? is the explicit reservation and x must be initialized before use. See [assignment flow types](type-tests-and-narrowing.md#flow-types-after-direct-assignment-selected) for control-flow joins, shadowing, successful-write timing, and stability limits.
+Selected on **2026-10-24**: direct local writes check against the declared value/storage contract, while reads use the type justified at the current program point. With var x: String | Int = ? followed by x = 42, x reads as Int but still accepts a later String replacement. After x = "hello", reads are String; Bool still fails the declared union. This applies throughout ordinary code blocks, including outside if branches. The assignment expression itself still produces Unit. A bare local multi-member union declaration is zero-initialized; = ? is the separate explicit reservation and x must be initialized before use. See [assignment flow types](type-tests-and-narrowing.md#flow-types-after-direct-assignment-selected) for control-flow joins, shadowing, successful-write timing, and stability limits.
 
 ## Held-data updates versus binding updates
 

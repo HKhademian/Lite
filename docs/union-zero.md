@@ -1,6 +1,6 @@
 # Zero values of plain unions
 
-Status: **metadata plus overlapping payload model clarified by the user, 2026-10-21; zero must be a listed member, exact member choice remains open**. The full value includes member-identification metadata alongside a C-style payload union. Max-member size describes payload capacity, not the total wrapper. Zero initialization clears metadata and payload; zero metadata must identify one listed member, but which member it selects remains unresolved. Exact metadata format, alignment, ABI, and optimizations are not selected.
+Status: **revised 2026-11-17:** all-zero storage for a multi-member plain union is a valid initialized union value with Kind 0 and no known active member (`UNKNOWN`). A bare typed declaration initializes this value. The older listed-member-only rule is superseded. Exact metadata format, alignment, ABI, matching and operations remain open. See [union initialization](union-initialization-policy.md#bare-local-declarations).
 
 ## One Kind mapping for the same union type
 
@@ -34,8 +34,7 @@ components requires agreement on the relevant representation contract, not
 only on the source type name; this does not assert that arbitrary bytes or
 incompatible target layouts can be shared. Optimizations remain possible when
 they preserve observable behavior and all required shared boundaries. Whether
-Kind zero is an implicit `UNKNOWN` and how unrecognized tags are handled remain
-under review; this clarification does not decide them.
+unrecognized nonzero tags are handled remains under review. Kind 0 means no known type in the selected zero state.
 
 Specification cases, not compiler-support claims:
 
@@ -50,7 +49,11 @@ Specification cases, not compiler-support claims:
   the library implementation source. Equivalent union spellings must agree on
   the shared mapping and both listed active members must be recognized.
 
-## Latest selected construction restriction
+## Historical construction and zero alternatives
+
+The following earlier descriptions and alternatives are historical where they contradict the 2026-11-17 status above. In particular, bare declarations are accepted and union zero has no known member; do not read the old member-selection requirement as current. The separate `= 0` source restriction remains pending review.
+
+### Earlier selected construction restriction
 
 The user now requires [x: A | B = 0 to be rejected](union-initialization-policy.md#selected-rejection-and-explicit-member-choice) for a multi-member normalized union: it does not visibly choose a member. = ? reserves unreadable storage; = expr preserves an initialized source member. A{0}/B{0} are proposed compact member-zero constructors; A{}/B{} select declared-default record construction where valid. No canonical or leftmost member is silently selected. The older zero-member and empty-state discussions below are retained as history; bare multi-member union locals require an initializer or explicit = ?; implicit zero-result sites still need reconciliation with this source restriction.
 
@@ -86,7 +89,7 @@ struct AB {
 
 Metadata carries the information needed to identify the active member. The payload members overlap. Thus payload capacity is max(size(A), size(B)); total storage also accounts for metadata, alignment, and padding. This is compatible with selected active-member identity and checked narrowing. It does not require boxing or a separately allocated metadata table.
 
-All-zero initialization clears the complete value, including metadata. The metadata's zero pattern must identify one listed member; which member is not yet decided. Member numbering, metadata width/position, ownership/drop support, and union-zero selection remain open. This is a conceptual representation direction, not a fixed foreign ABI or a prohibition on equivalent optimized layouts.
+All-zero initialization clears the complete value, including metadata. Kind 0 identifies no known active member; the union value is initialized. Member numbering, metadata width/position, and ownership/drop support remain open. This is a conceptual representation direction, not a fixed foreign ABI or a prohibition on equivalent optimized layouts.
 
 ## Concrete case
 
@@ -128,6 +131,8 @@ The current direction is metadata plus overlapping payload. Earlier suggestions 
 Sources checked 2026-10-21: [Microsoft's C union storage documentation](https://learn.microsoft.com/en-us/cpp/c-language/storage-of-unions?view=msvc-170) describes shared addresses and overwritten storage. Its [x64 union layout specification](https://learn.microsoft.com/en-us/cpp/build/x64-software-conventions?view=msvc-170#x64-aggregate-and-union-layout) explicitly accounts for alignment padding. The [C working draft N3550](https://www.open-std.org/JTC1/SC22/WG14/www/docs/n3550.pdf), section 6.7.3.2, specifies storage sufficient for the largest member rather than a runtime discriminator.
 
 ## Selected membership of union zero
+
+**Historical and superseded:** the 2026-11-17 decision above replaces the member-only rule and the member-selection alternatives below.
 
 The user rules out a zero value outside the listed alternatives. For distinct normalized member types A and B:
 

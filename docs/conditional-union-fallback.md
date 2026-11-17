@@ -2,6 +2,8 @@
 
 Status: **selected 2026-10-21; narrowed 2026-10-25: a no-`else` conditional is noncontributing. A declaration initializer with a multi-member union still requires an explicit `else` or `?` branch because its default `zero(T)` cannot choose a member. Assignment and loop no-match paths do not require a union member.**
 
+The earlier rationale that union zero cannot choose a member is superseded by the selected no-known-member union zero. Whether this source restriction should change remains a separate review; the older rationale below is historical.
+
 ## Rejected union declaration initializer
 
 ```text

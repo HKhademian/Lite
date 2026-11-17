@@ -1,6 +1,6 @@
 # Universal zero initialization
 
-Status: **all-zero storage is a valid language-defined value for every type, explicitly selected by the user 2026-10-19; Result zero and zero-result callable behavior selected 2026-10-20**. Unit, Result, callable, record, tuple, and fixed-array mappings are selected; enum, plain-union member selection, reference/access, resource, and constrained-domain mappings remain open. Zero-dependent contracts are conditional until those mappings are defined. Result zero is `.ok(zero(T))` for `T ! E`. A zero-initialized callable returns zero of its declared result type after ordinary argument evaluation, with required cleanup preserved. This replaces the earlier valid-zero eligibility/zeroability restriction.
+Status: **all-zero storage is a valid language-defined value for every type, explicitly selected by the user 2026-10-19; Result zero and zero-result callable behavior selected 2026-10-20**. Unit, Result, callable, record, tuple, and fixed-array mappings are selected; enum, reference/access, resource, and constrained-domain mappings remain open; multi-member union zero has no known active member. Zero-dependent contracts are conditional until those mappings are defined. Result zero is `.ok(zero(T))` for `T ! E`. A zero-initialized callable returns zero of its declared result type after ordinary argument evaluation, with required cleanup preserved. This replaces the earlier valid-zero eligibility/zeroability restriction.
 
 Implementation checkpoint, 2026-11-01: the igniter supports omitted
 initializers on typed locals for Int, Float, String, Bool, Unit, flat tuples and
@@ -12,7 +12,7 @@ locals; List and function reservation remain unsupported.
 
 ## Plain-union construction restriction
 
-Latest selected rule, 2026-10-21: [x: A | B = 0 is rejected](union-initialization-policy.md#selected-rejection-and-explicit-member-choice) when normalization leaves multiple distinct union alternatives. Bare zero cannot select a member. Explicit reservation and an initialized member expression remain available; member-qualified A{0} is proposed syntax for zeroing A, while A{} already expresses declared-default record construction where valid. This restriction qualifies earlier universal source-level zero construction. Local multi-member union declarations require an initialized expression or explicit = ?. Implicit/recursive union-zero sites still need reconciliation; do not use the broad rule below to silently choose a member. Other type categories retain their selected zero contracts.
+A bare typed declaration is zero-initialized for every type, including multi-member unions. Union zero has Kind 0 and no known active member; see [union initialization](union-initialization-policy.md#bare-local-declarations). The earlier rejection of bare union declarations is superseded. The separate explicit literal form [x: A | B = 0 remains rejected](union-initialization-policy.md#selected-rejection-and-explicit-member-choice) pending review of its meaning. Conditional fallback remains a separate source rule to review.
 
 ## Core distinction
 
@@ -35,12 +35,12 @@ Selected forms:
 
 - value: Type; initializes the all-zero value of Type.
 - var value: Type; does the same and permits whole-binding replacement.
-- value: Type = 0 explicitly selects the same zero initialization.
+- value: Type = 0 explicitly selects zero initialization, except for the existing multi-member union source restriction pending review.
 - value: Type = { ... } selects record construction with declared defaults for omitted fields.
 
 Zero initialization bypasses declared defaults at every depth. It creates a readable value immediately, not reserved/uninitialized storage awaiting a first assignment. No var/mut permission follows from initialization mode. Omitted initialization is selected for simple typed declarations, not source-free inferred declarations. Function argument omission requires public omission permission. Ordinary user implementations need an applicable declared default; the selected zero implementation needs no actual default definition or execution, as described below. Required inputs remain required; a type merely supporting zero does not grant omission to an ordinary user implementation. See [omitted value arguments](functions.md#omitted-value-arguments).
 
-The selected [union-local declaration policy](union-initialization-policy.md#bare-local-declarations) requires an initialized expression or explicit = ? for normalized multi-member plain unions. Omission is rejected, not default-uninitialized. This does not supply the zero mapping needed for recursive aggregate zero or implicit zero-result sites.
+A typed declaration creates a slot sized and laid out for its type and initializes it to all-zero, regardless of type. Where and how storage is allocated remains to be discussed. A zero-initialized union is initialized even though it has no known active member; explicit `= ?` instead requests uninitialized storage.
 
 ## Universal type rule
 
@@ -52,7 +52,7 @@ There is no generic zeroability constraint excluding some types. Full type layou
 
 ## Mapping dependency and conformance
 
-Universal zero is a design requirement, not yet a completed mapping for every type category. Unit, Result, callable, record, tuple, and fixed-array mappings have selected rules. Enum case selection, plain-union member selection, reference/access values, resource wrappers, and constrained domains remain open.
+Universal zero is a design requirement, not yet a completed mapping for every type category. Unit, Result, callable, record, tuple, and fixed-array mappings have selected rules. Enum case selection, reference/access values, resource wrappers, and constrained domains remain open. Multi-member plain-union zero has no known active member.
 
 Until a category's mapping is defined, any loop `.value` initialization, conditional missing-`else` fallback, omitted typed initializer, or recursive aggregate zero that depends on zero of that category is conditional and not implementation-ready. Do not reject the type, invent a different default, or treat zero as an invalid state; complete the mapping before claiming conformance. The dependent contracts remain selected as requirements, not as evidence that every mapping is finished.
 
@@ -80,13 +80,13 @@ Option's zero is its explicit .None state. A loop value of type T starts as zero
 
 Some mappings require further decisions:
 
-- Enums and unions: choose a zero case/mapping consistent with exhaustive matching, backing values, nominal identity, and order-independent union normalization. Do not silently pick the first written union member or invent an unnamed enum case.
+- Enums: choose a zero case/mapping consistent with exhaustive matching, backing values and nominal identity. Union matching and operations on the no-known-member zero state remain under review.
 - References and writable access: provide meaningful zero behavior without dereferencing an invalid machine address or silently choosing an aliasing/ownership model.
 - Resources and constrained domains: specify the valid zero state, its allowed operations, cleanup, and relation to construction/validation invariants. Zero initialization does not conjure an external resource.
 
 These are representation/semantic design tasks, not exceptions permitting types with no zero. A zero value is not necessarily an identity for every operator: for example, zero initialization alone does not make a product fold start at 1.
 
-The [plain-union zero review](union-zero.md) records the clarified metadata-plus-overlapping-payload model. Zero initialization clears both metadata and payload; total wrapper storage includes metadata and alignment beyond max-member payload capacity. Zero metadata must identify one listed member and its zero payload; a hidden none/invalid state is rejected. Which listed member it identifies remains unresolved.
+The [plain-union zero review](union-zero.md) records the clarified metadata-plus-overlapping-payload model. Zero initialization clears both metadata and payload; total wrapper storage includes metadata and alignment beyond max-member payload capacity. Zero metadata identifies no known member; the zero-initialized union itself is a valid initialized value.
 
 ## Zero-initialized functions
 
