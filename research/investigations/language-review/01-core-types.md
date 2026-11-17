@@ -193,6 +193,23 @@ these conceptual cases to review the direction:
 - An index known to have no valid position raises the unresolved question of
   static rejection versus a `Never`-typed or always-faulting expression.
 
+The user proposes **conditional range narrowing** as a way to establish an
+index's possible values. For a two-component tuple, `if i >= 0 and i < 2`
+establishes the valid range inside the successful branch, provided the relevant
+facts remain valid. An early-exit guard can establish it after the conditional:
+`if i < 0 or i >= 2 { return ... }`. The user's `and` in the latter guard is
+not sufficient: no ordinary integer can be both below 0 and at least 2, so its
+false path would not prove the range. The return expression and enclosing
+function are schematic here.
+
+The runtime index may still be either 0 or 1 after either guard, so the
+heterogeneous tuple result can still be `Int64 | String`; knowing a range is
+not the same as knowing one compile-time value. Evaluate whether a proven
+range permits removing a separate access bounds check while retaining the
+executed guard. A prior [early-exit distinctness rule](../../../docs/call-replacement-flow.md#element-distinctness-after-an-early-exit-selected)
+does not itself establish this new bounds-narrowing contract. Invalidation
+after replacement, effects or aliasing and the supported proof forms remain open.
+
 The exact interpretation of “index values must be known at compile time” needs
 clarification alongside the dynamic-index requirement: for example, whether the
 compiler must know the exact value, a finite set, a range, or can conservatively
