@@ -367,6 +367,11 @@ shared mapping rule](../../../docs/union-zero.md#one-kind-mapping-for-the-same-u
 This mapping is a property of the shared type representation, not a claim that
 every value of the type has the same active Kind.
 
+**User idea:** A two-level type-reference table could distinguish modules and
+inner types, give distinct types separate references, and resolve aliases to
+the same reference. Whether a 64-bit reference is sufficient depends on identity
+scope and assignment; see the [type-reference investigation](type-reference-table.md).
+
 **User's C interoperability question:** Given raw storage viewed through a
 C-style struct containing a `kind` field and overlapping union payloads, a
 consumer needs a defined mapping between kind values and member types. Who
