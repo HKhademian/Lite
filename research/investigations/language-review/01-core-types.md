@@ -338,6 +338,34 @@ pair of distinct types must admit conversion or that conversion is infallible.
 
 **Initial assessment and probes:** Compare `Int | String` with `String | Int`; first-written-member zero would conflict with order-independent identity. Revisit equality, numeric operations, valid zero and distinct-type invariants together, without choosing a zero member now.
 
+### User question: union Kind and zero
+
+The user asks whether the hidden `Kind` should number cases from zero or one,
+whether zero should always represent `UNKNOWN`, and whether changing written
+member order should change Kind values. These are questions for review, not a
+newly selected tag encoding or union-zero rule.
+
+The current [union-zero decision](../../../docs/union-zero.md) requires all-zero
+union storage to represent a valid value with exactly one listed member active;
+the member choice is open. A zero `UNKNOWN` with no listed active member is an
+alternative already investigated, not the selected baseline. Adopting it would
+revise the membership and exhaustiveness contracts; it must not mean unreadable
+uninitialized storage, because all-zero storage is a valid initialized value.
+
+Compare at least: (a) zero identifies one listed member; (b) zero identifies a
+valid extra unknown/empty state and listed members begin at one; and (c) a
+zero state only when explicitly included as a member. Check type tests, matching,
+copying, zero payloads, handling of `Unit`, and whether any extra state is
+observable. A 0- versus 1-based numbering alone does not select these semantics.
+
+Plain-union identity is currently normalized and order-independent. If the
+same type uses one stable shared tag layout, choosing tags from source order
+can make `A | B` and `B | A` disagree about the same bytes. A canonical mapping
+is one possibility; context-specific representations with conversion on
+transfer are another. Their layout, ABI, linking, copying and cost implications
+need analysis. Do not assume a public numeric Kind or select a numbering policy
+merely from type identity.
+
 ## Working judgment
 
 Treat type identity, conversion, operations, and physical representation as separate decisions. The user's direction distinguishes contextual fresh literals from established typed values; a typed declaration does not itself authorize converting an established String or another distinct value into `UserID`.
