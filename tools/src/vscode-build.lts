@@ -1,0 +1,74 @@
+/** Builds the VS Code extension JS artifacts into `editors/vscode/dist/` (`editors/vscode/scripts/build.ts`). */
+
+io := import "core/io";
+fs := import "core/file";
+path := import "core/path";
+proc := import "core/process";
+text := import "core/text";
+list := import "core/list";
+project := import "util/project";
+
+replaceAll := fn(haystack: String, needle: String, replacement: String): String {
+    nLen := text.length(needle);
+    if nLen == 0 { return haystack; }
+    parts: mut List<String> = [];
+    var pos := 0;
+    size := text.length(haystack);
+    loop pos <= size {
+        found := text.indexOfText(haystack, needle, pos);
+        if found < 0 {
+            list.pushBack(mut parts, text.slice(haystack, pos, size));
+            break;
+        }
+        list.pushBack(mut parts, text.slice(haystack, pos, found));
+        list.pushBack(mut parts, replacement);
+        pos = found + nLen;
+    }
+    text.joinTexts(parts, "")
+};
+
+buildExtensionFile := fn(extRoot: String, distDir: String, name: String): (ok: Bool, error: String) {
+    srcPath := path.join(extRoot, "src/" + name + ".ts");
+    script := "import { readFileSync } from 'node:fs'; import { stripTypeScriptTypes } from 'node:module'; process.stdout.write(stripTypeScriptTypes(readFileSync(process.argv[1], 'utf8'), { mode: 'strip' }));";
+    args: List<String> = ["--input-type=module", "-e", script, srcPath];
+    emptyEnv: List<String> = [];
+    stripped := proc.run(proc.execPath(), args, extRoot, emptyEnv, true, "");
+    if stripped.error =!= "" { return (ok = false, error = stripped.error); }
+    if stripped.status =!= 0 {
+        return (ok = false, error = text.trim(stripped.stderr + stripped.stdout));
+    }
+    jsText := if name == "extension" {
+        replaceAll(stripped.stdout, "from './helpers.ts'", "from './helpers.js'")
+    } else {
+        stripped.stdout
+    };
+    wRes := fs.writeText(path.join(distDir, name + ".js"), jsText);
+    if not wRes.ok { return (ok = false, error = wRes.error); }
+    (ok = true, error = "")
+};
+
+run := fn(): Int {
+    root := project.findRepoRoot();
+    if root == "" {
+        io.errorLine("could not locate LiteScript repository root");
+        return 1;
+    }
+    extRoot := path.join(root, "editors/vscode");
+    distDir := path.join(extRoot, "dist");
+    mkRes := fs.makeDir(distDir);
+    if not mkRes.ok {
+        io.errorLine(mkRes.error);
+        return 1;
+    }
+    names: List<String> = ["helpers", "extension"];
+    loop names as name {
+        built := buildExtensionFile(extRoot, distDir, name);
+        if not built.ok {
+            io.errorLine("vscode-build: " + built.error);
+            return 1;
+        }
+    }
+    0
+};
+
+io.exit(run());

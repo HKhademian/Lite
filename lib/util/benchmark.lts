@@ -655,3 +655,256 @@ pub runCompilerPerformanceCommand := fn(rootDir: String, args: List<String>): In
     io.output("{\n  \"reports\": " + json.quoteString(prefix) + ",\n" + summaryFields + "\n}\n");
     0
 };
+
+minInt := fn(values: List<Int>): Int {
+    var m := values[0];
+    loop values as v {
+        if v < m { m = v; }
+    }
+    m
+};
+
+maxInt := fn(values: List<Int>): Int {
+    var m := values[0];
+    loop values as v {
+        if v > m { m = v; }
+    }
+    m
+};
+
+formatRatio := fn(numMicros: Int, denMicros: Int): String {
+    if denMicros <= 0 { return "0.00"; }
+    hundredths := (numMicros * 100 + (denMicros / 2)) / denMicros;
+    whole := hundredths / 100;
+    frac := hundredths % 100;
+    fracStr := if frac < 10 { "0" + integer.intText(frac) } else { integer.intText(frac) };
+    integer.intText(whole) + "." + fracStr
+};
+
+/** Executes fresh-process `before`/`after` compiler artifact comparison (`benchmark/text-cache.ts`). */
+pub runTextCacheCommand := fn(rootDir: String, args: List<String>): Int {
+    allowed: List<String> = ["before", "after", "out"];
+    optsOk := corpus.parseToolOptions(args, allowed);
+    if not optsOk.ok {
+        io.errorLine(optsOk.error);
+        return 1;
+    }
+    beforeOpt := corpus.readToolOption(args, "before");
+    if not beforeOpt.found {
+        io.errorLine("usage: node benchmark/text-cache.ts --before /path/T11.ts [--after /path/current.ts]");
+        return 1;
+    }
+    afterOpt := corpus.readToolOption(args, "after");
+    outOpt := corpus.readToolOption(args, "out");
+
+    meta := corpus.readCompilerMeta(rootDir, "ts");
+    if not meta.ok {
+        io.errorLine(meta.error);
+        return 1;
+    }
+    beforePath := path.resolve(proc.cwd(), beforeOpt.value);
+    afterPath := if afterOpt.found { path.resolve(proc.cwd(), afterOpt.value) } else { meta.artifactPath };
+
+    beforeBytes := fs.readBytes(beforePath);
+    afterBytes := fs.readBytes(afterPath);
+    if list.listCountInt(beforeBytes) == 0 or list.listCountInt(afterBytes) == 0 {
+        io.errorLine("missing or empty comparison artifact");
+        return 1;
+    }
+    beforeArtifactSha := crypto.sha256Bytes(beforeBytes);
+    afterArtifactSha := crypto.sha256Bytes(afterBytes);
+
+    date := time.localDate();
+    prefix := path.resolve(proc.cwd(), if outOpt.found { outOpt.value } else { path.join(rootDir, "benchmark/reports/" + date + "-text-cache") });
+    mkOut := fs.makeDir(path.parentDir(prefix));
+    if not mkOut.ok {
+        io.errorLine(mkOut.error);
+        return 1;
+    }
+
+    manifestPath := path.join(rootDir, "compiler/manifests/ts.json");
+    manFiles := corpus.readStringListAt(fs.readText(manifestPath).text, json.findObjectField(fs.readText(manifestPath).text, 0, "files").valuePos);
+    if list.listCountText(manFiles) =!= 1 {
+        io.errorLine("text-cache benchmark requires one TS source root");
+        return 1;
+    }
+    rootSourcePath := path.resolve(path.parentDir(manifestPath), manFiles[0]);
+    sourceBytes := fs.readBytes(rootSourcePath);
+    sourceSha := crypto.sha256Bytes(sourceBytes);
+    sourceLen := list.listCountInt(sourceBytes);
+
+    tmpWorkRes := fs.makeTempDir("lite-text-cache-");
+    if not tmpWorkRes.ok {
+        io.errorLine(tmpWorkRes.error);
+        return 1;
+    }
+    workDir := tmpWorkRes.path;
+
+    revRes := corpus.repoRevision(rootDir);
+    revText := if revRes.found { revRes.rev } else { "" };
+    emptyEnv: List<String> = [];
+    gitSt := proc.run("git", ["status", "--short"], rootDir, emptyEnv, true, "");
+    dirtyBefore := if gitSt.error == "" and gitSt.status == 0 { text.trim(gitSt.stdout) } else { "" };
+
+    var workerSeq := 0;
+    counts: List<Int> = [100, 1000];
+    rowEntries: mut List<String> = [];
+    compEntries: mut List<String> = [];
+    mdResults: mut List<String> = [];
+
+    loop counts as n {
+        srcText := syntheticOutputSource(n);
+        srcBytes := unicode.utf8Encode(srcText);
+        srcByteLen := list.listCountInt(srcBytes);
+        rName := "report-" + integer.intText(n);
+
+        beforeWalls: mut List<Int> = [];
+        beforeComps: mut List<Int> = [];
+        beforeRss: mut List<Int> = [];
+        afterWalls: mut List<Int> = [];
+        afterComps: mut List<Int> = [];
+        afterRss: mut List<Int> = [];
+
+        var pass := -1;
+        loop pass < 7 {
+            even := ((pass + 10) % 2) == 0;
+            orderVersions: List<String> = if even { ["before", "after"] } else { ["after", "before"] };
+            orderPaths: List<String> = if even { [beforePath, afterPath] } else { [afterPath, beforePath] };
+
+            var beforeOutSha := "";
+            var afterOutSha := "";
+            var oi := 0;
+            loop oi < 2 {
+                ver := orderVersions[oi];
+                wRes := runWorkerOnce(rootDir, workDir, workerSeq, orderPaths[oi], srcBytes, 30000, false, "");
+                workerSeq = workerSeq + 1;
+                if not wRes.ok or wRes.status =!= 0 or list.listCountInt(fs.readBytes(wRes.errPath)) =!= 0 {
+                    _rm := fs.remove(workDir);
+                    io.errorLine("failed " + ver + " " + integer.intText(n));
+                    return 1;
+                }
+                outB := fs.readBytes(wRes.outPath);
+                outSha := crypto.sha256Bytes(outB);
+                if ver == "before" { beforeOutSha = outSha; } else { afterOutSha = outSha; }
+
+                rowJson := "{"
+                + "\"version\":" + json.quoteString(ver) + ","
+                + "\"name\":" + json.quoteString(rName) + ","
+                + "\"wallMs\":" + formatMicrosAsMs(wRes.processMicros) + ","
+                + "\"compileMs\":" + formatMicrosAsMs(wRes.compileMicros) + ","
+                + "\"maxRssKiB\":" + integer.intText(wRes.maxRssKiB) + ","
+                + "\"status\":0,"
+                + "\"stdoutBytes\":" + integer.intText(list.listCountInt(outB)) + ","
+                + "\"stdoutSha256\":" + json.quoteString(outSha) + ","
+                + "\"pass\":" + integer.intText(pass) + "}";
+                list.pushBack(mut rowEntries, rowJson);
+
+                if pass >= 0 {
+                    if ver == "before" {
+                        list.pushBack(mut beforeWalls, wRes.processMicros);
+                        list.pushBack(mut beforeComps, wRes.compileMicros);
+                        list.pushBack(mut beforeRss, wRes.maxRssKiB);
+                    } else {
+                        list.pushBack(mut afterWalls, wRes.processMicros);
+                        list.pushBack(mut afterComps, wRes.compileMicros);
+                        list.pushBack(mut afterRss, wRes.maxRssKiB);
+                    }
+                }
+                oi = oi + 1;
+            }
+            if beforeOutSha =!= afterOutSha {
+                _rm := fs.remove(workDir);
+                io.errorLine("emitted TS bytes differ");
+                return 1;
+            }
+            pass = pass + 1;
+        }
+
+        bMedWall := medianInt(beforeWalls);
+        bMedComp := medianInt(beforeComps);
+        bMedRss := medianInt(beforeRss);
+        aMedWall := medianInt(afterWalls);
+        aMedComp := medianInt(afterComps);
+        aMedRss := medianInt(afterRss);
+        speedup := formatRatio(bMedWall, aMedWall);
+
+        compJson := "{\n"
+        + "      \"name\": " + json.quoteString(rName) + ",\n"
+        + "      \"sourceBytes\": " + integer.intText(srcByteLen) + ",\n"
+        + "      \"before\": { \"medianWallMs\": " + formatMicrosAsMs(bMedWall) + ", \"medianCompileMs\": " + formatMicrosAsMs(bMedComp) + ", \"medianPeakRssKiB\": " + integer.intText(bMedRss) + ", \"minWallMs\": " + formatMicrosAsMs(minInt(beforeWalls)) + ", \"maxWallMs\": " + formatMicrosAsMs(maxInt(beforeWalls)) + " },\n"
+        + "      \"after\": { \"medianWallMs\": " + formatMicrosAsMs(aMedWall) + ", \"medianCompileMs\": " + formatMicrosAsMs(aMedComp) + ", \"medianPeakRssKiB\": " + integer.intText(aMedRss) + ", \"minWallMs\": " + formatMicrosAsMs(minInt(afterWalls)) + ", \"maxWallMs\": " + formatMicrosAsMs(maxInt(afterWalls)) + " },\n"
+        + "      \"speedup\": " + speedup + "\n    }";
+        list.pushBack(mut compEntries, compJson);
+        list.pushBack(mut mdResults, "- **" + rName + ":** " + formatMicrosAsMs(bMedWall) + " ms -> " + formatMicrosAsMs(aMedWall) + " ms median process wall time; **" + speedup + "x** faster. Emitted TS bytes match exactly.");
+    }
+
+    oldSelf := runWorkerOnce(rootDir, workDir, workerSeq, beforePath, sourceBytes, 10000, true, path.relative(rootDir, rootSourcePath));
+    workerSeq = workerSeq + 1;
+    selfEntries: mut List<String> = [];
+    oldTimedOut := not oldSelf.ok;
+    if oldSelf.ok {
+        outSha := crypto.sha256Bytes(fs.readBytes(oldSelf.outPath));
+        if oldSelf.status =!= 0 or outSha =!= afterArtifactSha {
+            _rm := fs.remove(workDir);
+            io.errorLine("old self-build failed for a reason other than timeout or emitted different bytes");
+            return 1;
+        }
+        list.pushBack(mut selfEntries, "{\"version\":\"before\",\"name\":" + json.quoteString(rootSourcePath) + ",\"wallMs\":" + formatMicrosAsMs(oldSelf.processMicros) + ",\"status\":0,\"pass\":0}");
+    } else {
+        list.pushBack(mut selfEntries, "{\"version\":\"before\",\"name\":" + json.quoteString(rootSourcePath) + ",\"error\":\"ETIMEDOUT\",\"pass\":0}");
+    }
+
+    afterSelfWalls: mut List<Int> = [];
+    var sp := -1;
+    loop sp < 7 {
+        sRun := runWorkerOnce(rootDir, workDir, workerSeq, afterPath, sourceBytes, 30000, true, path.relative(rootDir, rootSourcePath));
+        workerSeq = workerSeq + 1;
+        if not sRun.ok or sRun.status =!= 0 or list.listCountInt(fs.readBytes(sRun.errPath)) =!= 0 or crypto.sha256Bytes(fs.readBytes(sRun.outPath)) =!= afterArtifactSha {
+            _rm := fs.remove(workDir);
+            io.errorLine("new self-build failed equality");
+            return 1;
+        }
+        list.pushBack(mut selfEntries, "{\"version\":\"after\",\"name\":" + json.quoteString(rootSourcePath) + ",\"wallMs\":" + formatMicrosAsMs(sRun.processMicros) + ",\"status\":0,\"pass\":" + integer.intText(sp) + "}");
+        if sp >= 0 {
+            list.pushBack(mut afterSelfWalls, sRun.processMicros);
+        }
+        sp = sp + 1;
+    }
+    _rm := fs.remove(workDir);
+
+    selfAfterMed := medianInt(afterSelfWalls);
+    fullJson := "{\n"
+    + "  \"date\": " + json.quoteString(date) + ",\n"
+    + "  \"revision\": " + json.quoteString(revText) + ",\n"
+    + "  \"dirtyBefore\": " + json.quoteString(dirtyBefore) + ",\n"
+    + "  \"sourceBytes\": " + integer.intText(sourceLen) + ",\n"
+    + "  \"sourceSha256\": " + json.quoteString(sourceSha) + ",\n"
+    + "  \"artifacts\": {\n"
+    + "    \"before\": { \"sha256\": " + json.quoteString(beforeArtifactSha) + ", \"bytes\": " + integer.intText(list.listCountInt(beforeBytes)) + " },\n"
+    + "    \"after\": { \"sha256\": " + json.quoteString(afterArtifactSha) + ", \"bytes\": " + integer.intText(list.listCountInt(afterBytes)) + " }\n  },\n"
+    + "  \"rows\": [" + text.joinTexts(rowEntries, ",") + "],\n"
+    + "  \"results\": [\n    " + text.joinTexts(compEntries, ",\n    ") + "\n  ],\n"
+    + "  \"self\": [" + text.joinTexts(selfEntries, ",") + "],\n"
+    + "  \"selfAfterMedianMs\": " + formatMicrosAsMs(selfAfterMed) + ",\n"
+    + "  \"completedAt\": " + json.quoteString(time.utcIsoNow()) + "\n}\n";
+
+    selfSummaryLine := if oldTimedOut {
+        "- **Full source (" + integer.intText(sourceLen) + " bytes):** old invocation did not finish within 10 seconds; new median **" + formatMicrosAsMs(selfAfterMed) + " ms**."
+    } else {
+        "- **Full source (" + integer.intText(sourceLen) + " bytes):** old invocation finished in " + formatMicrosAsMs(oldSelf.processMicros) + " ms; new median **" + formatMicrosAsMs(selfAfterMed) + " ms**."
+    };
+
+    mdText := "# TS compiler text-cache comparison\n\n"
+    + date + " · Seven measured fresh-process samples after one discarded warm-up.\n\n"
+    + text.joinTexts(mdResults, "\n") + "\n\n" + selfSummaryLine + "\n\n"
+    + "Before artifact: `" + beforeArtifactSha + "`. After artifact: `" + afterArtifactSha + "`.\n";
+
+    _wj := fs.writeText(prefix + ".json", fullJson);
+    _wm := fs.writeText(prefix + ".md", mdText);
+    outJson := "{\n"
+    + "  \"results\": [\n    " + text.joinTexts(compEntries, ",\n    ") + "\n  ],\n"
+    + "  \"selfAfterMedianMs\": " + formatMicrosAsMs(selfAfterMed) + ",\n"
+    + "  \"oldSelf\": " + selfEntries[0] + "\n}\n";
+    io.output(outJson);
+    0
+};
