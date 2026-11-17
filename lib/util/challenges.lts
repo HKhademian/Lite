@@ -1,0 +1,365 @@
+/** Shared helpers and validators for challenge corpus and benchmark tools (`benchmark/challenges/tools/`). */
+
+io := import "core/io";
+fs := import "core/file";
+path := import "core/path";
+text := import "core/text";
+list := import "core/list";
+integer := import "core/int";
+json := import "util/json";
+
+isJsonSpace := fn(ch: String): Bool {
+    ch == " " or ch == "\n" or ch == "\r" or ch == "\t"
+};
+
+skipJsonSpace := fn(source: String, start: Int): Int {
+    var pos := start;
+    size := text.length(source);
+    loop pos < size {
+        if not isJsonSpace(text.at(source, pos)) { return pos; }
+        pos = pos + 1;
+    }
+    pos
+};
+
+isJsonObjectAt := fn(source: String, start: Int): Bool {
+    pos := skipJsonSpace(source, start);
+    pos < text.length(source) and text.at(source, pos) == "{"
+};
+
+isJsonArrayAt := fn(source: String, start: Int): Bool {
+    pos := skipJsonSpace(source, start);
+    pos < text.length(source) and text.at(source, pos) == "["
+};
+
+readNormalizedText := fn(filePath: String): (ok: Bool, text: String, error: String) {
+    res := fs.readText(filePath);
+    if not res.ok { return (ok = false, text = "", error = res.error); }
+    raw := res.text;
+    parts: mut List<String> = [];
+    var segStart := 0;
+    var i := 0;
+    size := text.length(raw);
+    loop i < size {
+        if text.at(raw, i) == "\r" {
+            list.pushBack(mut parts, text.slice(raw, segStart, i));
+            list.pushBack(mut parts, "\n");
+            if i + 1 < size and text.at(raw, i + 1) == "\n" {
+                i = i + 1;
+            }
+            segStart = i + 1;
+        }
+        i = i + 1;
+    }
+    if segStart == 0 { return (ok = true, text = raw, error = ""); }
+    list.pushBack(mut parts, text.slice(raw, segStart, size));
+    (ok = true, text = text.joinTexts(parts, ""), error = "")
+};
+
+splitJsonLines := fn(raw: String): List<String> {
+    out: mut List<String> = [];
+    size := text.length(raw);
+    var pos := 0;
+    loop pos < size {
+        nl := text.indexOfText(raw, "\n", pos);
+        end := if nl < 0 { size } else { nl };
+        line := text.trim(text.slice(raw, pos, end));
+        if line =!= "" {
+            list.pushBack(mut out, line);
+        }
+        if nl < 0 { break; }
+        pos = nl + 1;
+    }
+    out
+};
+
+/** Formats unique values sorted descending by frequency as compact JSON object (`{"a":2,"b":1}`). */
+pub formatSortedCountsJson := fn(values: List<String>): String {
+    keys: mut List<String> = [];
+    var counts: mut List<Int> = [];
+    loop values as v {
+        idx := list.listIndexOfText(keys, v);
+        if idx < 0 {
+            list.pushBack(mut keys, v);
+            list.pushBack(mut counts, 1);
+        } else {
+            nextCounts: mut List<Int> = [];
+            var ci := 0;
+            n := list.listCountInt(counts);
+            loop ci < n {
+                val := if ci == idx { counts[ci] + 1 } else { counts[ci] };
+                list.pushBack(mut nextCounts, val);
+                ci = ci + 1;
+            }
+            counts = nextCounts;
+        }
+    }
+
+    totalKeys := list.listCountText(keys);
+    used: mut List<String> = [];
+    entries: mut List<String> = [];
+    loop list.listCountText(used) < totalKeys {
+        var bestIdx := -1;
+        var bestCount := -1;
+        var i := 0;
+        loop i < totalKeys {
+            if not list.listContainsText(used, keys[i]) {
+                if counts[i] > bestCount {
+                    bestCount = counts[i];
+                    bestIdx = i;
+                }
+            }
+            i = i + 1;
+        }
+        if bestIdx < 0 { break; }
+        k := keys[bestIdx];
+        list.pushBack(mut used, k);
+        list.pushBack(mut entries, json.quoteString(k) + ":" + integer.intText(bestCount));
+    }
+    "{" + text.joinTexts(entries, ",") + "}"
+};
+
+formatCompactIntObject := fn(source: String, objPos: Int): String {
+    entries: mut List<String> = [];
+    loop json.objectKeys(source, objPos) as k {
+        vRes := json.readObjectInt(source, objPos, k);
+        if vRes.found and vRes.ok {
+            list.pushBack(mut entries, json.quoteString(k) + ":" + integer.intText(vRes.value));
+        }
+    }
+    "{" + text.joinTexts(entries, ",") + "}"
+};
+
+checkScalarFieldNonEmpty := fn(source: String, objPos: Int, key: String): Bool {
+    f := json.findObjectField(source, objPos, key);
+    if not f.found { return false; }
+    sRes := json.readStringAt(source, f.valuePos);
+    if sRes.ok { return text.trim(sRes.value) =!= ""; }
+    span := json.valueSpan(source, f.valuePos);
+    if not span.ok { return false; }
+    raw := text.trim(text.slice(source, span.start, span.end));
+    raw =!= "" and raw =!= "null"
+};
+
+validateBenchmarkCasesArray := fn(itemId: String, caseFilePath: String, expectedCount: Int): (ok: Bool, actualCount: Int, error: String) {
+    rRes := fs.readText(caseFilePath);
+    if not rRes.ok { return (ok = false, actualCount = 0, error = rRes.error); }
+    src := rRes.text;
+    if not json.validate(src).ok or not isJsonArrayAt(src, 0) {
+        return (ok = false, actualCount = 0, error = caseFilePath + ": expected JSON array");
+    }
+    offsets := json.arrayElementOffsets(src, skipJsonSpace(src, 0));
+    actual := list.listCountInt(offsets);
+    if actual =!= expectedCount {
+        return (ok = false, actualCount = 0, error = itemId + ": case count mismatch");
+    }
+    requiredKeys: List<String> = ["name", "input", "output"];
+    loop offsets as cPos {
+        if not isJsonObjectAt(src, cPos) {
+            return (ok = false, actualCount = 0, error = itemId + ": test case is not an object");
+        }
+        loop requiredKeys as rk {
+            if not checkScalarFieldNonEmpty(src, cPos, rk) {
+                return (ok = false, actualCount = 0, error = itemId + ": empty " + rk + " in test case");
+            }
+        }
+    }
+    (ok = true, actualCount = actual, error = "")
+};
+
+/** Validates `benchmark/challenges/benchmark/` dataset and returns formatted summary text. */
+pub validateChallengeBenchmark := fn(benchDir: String): (ok: Bool, summaryText: String, error: String) {
+    indexPath := path.join(benchDir, "index.json");
+    idxRead := fs.readText(indexPath);
+    if not idxRead.ok { return (ok = false, summaryText = "", error = idxRead.error); }
+    idxJson := idxRead.text;
+    if not json.validate(idxJson).ok or not isJsonObjectAt(idxJson, 0) {
+        return (ok = false, summaryText = "", error = "benchmark/index.json: expected object");
+    }
+    totalRes := json.readObjectInt(idxJson, 0, "total");
+    sourcesField := json.findObjectField(idxJson, 0, "sources");
+    if not totalRes.found or not totalRes.ok or not sourcesField.found or not isJsonObjectAt(idxJson, sourcesField.valuePos) {
+        return (ok = false, summaryText = "", error = "benchmark/index.json: missing total or sources");
+    }
+
+    itemsRead := fs.readText(path.join(benchDir, "items.jsonl"));
+    if not itemsRead.ok { return (ok = false, summaryText = "", error = itemsRead.error); }
+    itemLines := splitJsonLines(itemsRead.text);
+    rowCount := list.listCountText(itemLines);
+
+    ids: mut List<String> = [];
+    sources: mut List<String> = [];
+    loop itemLines as line {
+        if not json.validate(line).ok or not isJsonObjectAt(line, 0) {
+            return (ok = false, summaryText = "", error = "items.jsonl: expected object line");
+        }
+        idRes := json.readObjectString(line, 0, "id");
+        srcRes := json.readObjectString(line, 0, "source");
+        if not idRes.found or not idRes.ok or not srcRes.found or not srcRes.ok {
+            return (ok = false, summaryText = "", error = "items.jsonl: missing id or source");
+        }
+        if list.listContainsText(ids, idRes.value) {
+            return (ok = false, summaryText = "", error = "duplicate benchmark ids");
+        }
+        list.pushBack(mut ids, idRes.value);
+        list.pushBack(mut sources, srcRes.value);
+    }
+
+    if totalRes.value =!= rowCount {
+        return (ok = false, summaryText = "", error = "benchmark/index.json total mismatch");
+    }
+    var srcSum := 0;
+    loop json.objectKeys(idxJson, sourcesField.valuePos) as sk {
+        sv := json.readObjectInt(idxJson, sourcesField.valuePos, sk);
+        if not sv.found or not sv.ok {
+            return (ok = false, summaryText = "", error = "benchmark/index.json invalid source count");
+        }
+        srcSum = srcSum + sv.value;
+    }
+    if srcSum =!= rowCount {
+        return (ok = false, summaryText = "", error = "benchmark source counts mismatch");
+    }
+
+    itemsDir := path.join(benchDir, "items");
+    dirNames := fs.listDir(itemsDir);
+    var dirCount := 0;
+    loop dirNames as dn {
+        if fs.kind(path.join(itemsDir, dn)) == fs.FILE_KIND_DIR {
+            dirCount = dirCount + 1;
+            if not list.listContainsText(ids, dn) {
+                return (ok = false, summaryText = "", error = "item directories differ from items.jsonl");
+            }
+        }
+    }
+    if dirCount =!= rowCount {
+        return (ok = false, summaryText = "", error = "item directories differ from items.jsonl");
+    }
+
+    var publicTotal := 0;
+    var hiddenTotal := 0;
+    formats: mut List<String> = [];
+    allowedHarness: List<String> = ["single-answer", "stdio", "function"];
+
+    var ri := 0;
+    loop ri < rowCount {
+        rowId := ids[ri];
+        rowSrc := sources[ri];
+        itemDir := path.join(itemsDir, rowId);
+        metaPath := path.join(itemDir, "meta.json");
+        if fs.kind(metaPath) =!= fs.FILE_KIND_FILE {
+            return (ok = false, summaryText = "", error = rowId + ": missing meta.json");
+        }
+        metaRead := fs.readText(metaPath);
+        if not metaRead.ok or not json.validate(metaRead.text).ok {
+            return (ok = false, summaryText = "", error = rowId + ": invalid meta.json");
+        }
+        meta := metaRead.text;
+
+        mId := json.readObjectString(meta, 0, "id");
+        mSrc := json.readObjectString(meta, 0, "source");
+        if not mId.found or mId.value =!= rowId or not mSrc.found or mSrc.value =!= rowSrc {
+            return (ok = false, summaryText = "", error = rowId + ": metadata identity mismatch");
+        }
+        mHar := json.readObjectString(meta, 0, "harness");
+        if not mHar.found or not list.listContainsText(allowedHarness, mHar.value) {
+            return (ok = false, summaryText = "", error = rowId + ": unsupported harness " + mHar.value);
+        }
+        harness := mHar.value;
+        list.pushBack(mut formats, harness);
+
+        mStmt := json.readObjectString(meta, 0, "statement");
+        if not mStmt.found or not mStmt.ok {
+            return (ok = false, summaryText = "", error = rowId + ": statement missing or too short");
+        }
+        stmtPath := path.join(itemDir, mStmt.value);
+        if fs.kind(stmtPath) =!= fs.FILE_KIND_FILE {
+            return (ok = false, summaryText = "", error = rowId + ": statement missing or too short");
+        }
+        stmtRead := readNormalizedText(stmtPath);
+        if not stmtRead.ok or text.length(text.trim(stmtRead.text)) < 50 {
+            return (ok = false, summaryText = "", error = rowId + ": statement missing or too short");
+        }
+
+        refField := json.findObjectField(meta, 0, "reference_solutions");
+        if not refField.found or not isJsonArrayAt(meta, refField.valuePos) {
+            return (ok = false, summaryText = "", error = rowId + ": missing reference solution metadata");
+        }
+        refOffsets := json.arrayElementOffsets(meta, refField.valuePos);
+        if list.listCountInt(refOffsets) == 0 {
+            return (ok = false, summaryText = "", error = rowId + ": missing reference solution metadata");
+        }
+        loop refOffsets as rPos {
+            rUrl := json.readObjectString(meta, rPos, "url");
+            if not rUrl.found or not text.startsWithAt(rUrl.value, 0, "https://") {
+                return (ok = false, summaryText = "", error = rowId + ": bad reference url");
+            }
+        }
+        mUrl := json.readObjectString(meta, 0, "url");
+        if not mUrl.found or not text.startsWithAt(mUrl.value, 0, "https://") {
+            return (ok = false, summaryText = "", error = rowId + ": bad source url");
+        }
+
+        testsField := json.findObjectField(meta, 0, "tests");
+        if not testsField.found or not isJsonObjectAt(meta, testsField.valuePos) {
+            return (ok = false, summaryText = "", error = rowId + ": missing tests object");
+        }
+        pubPathRes := json.readObjectString(meta, testsField.valuePos, "public_path");
+        if not pubPathRes.found or not pubPathRes.ok {
+            return (ok = false, summaryText = "", error = rowId + ": missing public_path");
+        }
+        if harness == "single-answer" {
+            ansPath := path.join(itemDir, pubPathRes.value);
+            if fs.kind(ansPath) =!= fs.FILE_KIND_FILE {
+                return (ok = false, summaryText = "", error = rowId + ": missing public answer");
+            }
+            ansRead := readNormalizedText(ansPath);
+            if not ansRead.ok or text.trim(ansRead.text) == "" {
+                return (ok = false, summaryText = "", error = rowId + ": missing public answer");
+            }
+            publicTotal = publicTotal + 1;
+        } else {
+            hidPathRes := json.readObjectString(meta, testsField.valuePos, "hidden_path");
+            if not hidPathRes.found or not hidPathRes.ok {
+                return (ok = false, summaryText = "", error = rowId + ": missing hidden_path");
+            }
+            expPub := json.readObjectInt(meta, testsField.valuePos, "public");
+            expHid := json.readObjectInt(meta, testsField.valuePos, "hidden");
+            pubChk := validateBenchmarkCasesArray(rowId, path.join(itemDir, pubPathRes.value), expPub.value);
+            if not pubChk.ok {
+                return (ok = false, summaryText = "", error = pubChk.error);
+            }
+            hiddenFullPath := path.join(itemDir, hidPathRes.value);
+            var hidCount := 0;
+            if fs.kind(hiddenFullPath) == fs.FILE_KIND_FILE {
+                hidChk := validateBenchmarkCasesArray(rowId, hiddenFullPath, expHid.value);
+                if not hidChk.ok {
+                    return (ok = false, summaryText = "", error = hidChk.error);
+                }
+                hidCount = hidChk.actualCount;
+            } else if expHid.value =!= 0 {
+                return (ok = false, summaryText = "", error = rowId + ": case count mismatch");
+            }
+            publicTotal = publicTotal + pubChk.actualCount;
+            hiddenTotal = hiddenTotal + hidCount;
+        }
+        ri = ri + 1;
+    }
+
+    summary := "OK: " + integer.intText(rowCount) + " benchmark items\n"
+    + "    formats: " + formatSortedCountsJson(formats) + "\n"
+    + "    public cases: " + integer.intText(publicTotal) + "  hidden cases: " + integer.intText(hiddenTotal) + "\n"
+    + "    sources: " + formatCompactIntObject(idxJson, sourcesField.valuePos);
+    (ok = true, summaryText = summary, error = "")
+};
+
+/** CLI runner for `benchmark/challenges/tools/validate_benchmark.ts`. */
+pub runValidateBenchmarkCommand := fn(rootDir: String): Int {
+    benchDir := path.join(rootDir, "benchmark/challenges/benchmark");
+    res := validateChallengeBenchmark(benchDir);
+    if not res.ok {
+        io.errorLine("FAIL: " + res.error);
+        return 1;
+    }
+    io.outputLine(res.summaryText);
+    0
+};

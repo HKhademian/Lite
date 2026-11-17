@@ -1,0 +1,13 @@
+challenges := import "util/challenges";
+fs := import "core/file";
+test := import "core/test";
+
+test.checkText("sorted counts json", "{\"a\":3,\"b\":2,\"c\":1}", challenges.formatSortedCountsJson(["b", "a", "c", "a", "b", "a"]));
+
+tmpRes := fs.makeTempDir("lite-challenge-bench-test-");
+test.checkBool("temp dir ok", true, tmpRes.ok);
+bad := challenges.validateChallengeBenchmark(tmpRes.path);
+test.checkBool("missing index fails", false, bad.ok);
+
+_rm := fs.remove(tmpRes.path);
+test.done("util-challenges");
