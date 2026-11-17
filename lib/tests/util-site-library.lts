@@ -1,0 +1,47 @@
+siteLib := import "util/site-library";
+fs := import "core/file";
+json := import "util/json";
+path := import "core/path";
+project := import "util/project";
+test := import "core/test";
+text := import "core/text";
+
+test.checkText("slug title", "Two Sum Sample", siteLib.slugToTitle("language/examples/two-sum_sample.lts"));
+test.checkText("env cli", "cli", siteLib.detectSourceEnvironment("fs := import \"core/file\";\nio := import \"core/io\";\n"));
+test.checkText("env play", "play", siteLib.detectSourceEnvironment("cv := import \"extra/canvas\";\n"));
+test.checkText("env universal", "universal", siteLib.detectSourceEnvironment("io := import \"core/io\";\n"));
+
+tmpRes := fs.makeTempDir("lite-site-lib-test-");
+test.checkBool("temp dir ok", true, tmpRes.ok);
+syn := tmpRes.path;
+_d1 := fs.makeDir(path.join(syn, "language/examples/helpers"));
+_d2 := fs.makeDir(path.join(syn, "language/cases"));
+_d3 := fs.makeDir(path.join(syn, "language/learn/handbook"));
+_d4 := fs.makeDir(path.join(syn, "samples"));
+_w1 := fs.writeText(path.join(syn, "samples/s1.lts"), "io := import \"core/io\";\nio.outputLine(1);\n");
+_w2 := fs.writeText(path.join(syn, "language/examples/helpers/h.lts"), "pub X := 1;\n");
+_w3 := fs.writeText(path.join(syn, "language/examples/mod-ex.lts"), "h := import \"./helpers/h.lts\";\nf := import \"core/file\";\n");
+_w4 := fs.writeText(path.join(syn, "language/cases/reject-bad.lts"), "bad\n");
+_w5 := fs.writeText(path.join(syn, "language/learn/handbook/intro.md"), "# Intro\n\n### Hello `Lite`!\n```lite\nio := import \"core/io\";\nio.outputLine(\"hi\");\n```\n");
+
+samplesJson := "[{\"id\":\"s-1\",\"title\":\"Sample One\",\"file\":\"samples/s1.lts\",\"stdin\":\"in\",\"args\":[\"a\"]}]";
+built := siteLib.collectPlaygroundLibraryJson(syn, samplesJson);
+test.checkText("synthetic err", "", built.error);
+test.checkBool("synthetic ok", true, built.ok);
+test.checkBool("valid json", true, json.validate(built.jsonText).ok);
+test.checkBool("contains sample", true, text.indexOfText(built.jsonText, "\"id\":\"sample/s-1\"", 0) >= 0);
+test.checkBool("skips helper example", false, text.indexOfText(built.jsonText, "\"file\":\"language/examples/helpers/h.lts\"", 0) >= 0);
+test.checkBool("collects extraModules", true, text.indexOfText(built.jsonText, "\"./helpers/h.lts\"", 0) >= 0);
+test.checkBool("detects cli env", true, text.indexOfText(built.jsonText, "\"environment\":\"cli\"", 0) >= 0);
+test.checkBool("marks reject case", true, text.indexOfText(built.jsonText, "\"badge\":\"Reject Case\"", 0) >= 0);
+test.checkBool("extracts handbook piece", true, text.indexOfText(built.jsonText, "\"title\":\"Hello Lite!\"", 0) >= 0);
+
+root := project.findRepoRoot();
+test.checkBool("repo root ok", true, root =!= "");
+realOut := siteLib.collectPlaygroundLibraryJson(root, "[]");
+test.checkText("real repo err", "", realOut.error);
+test.checkBool("real repo ok", true, realOut.ok);
+test.checkBool("real repo has handbook hello-lite", true, text.indexOfText(realOut.jsonText, "\"slug\":\"hello-lite\"", 0) >= 0);
+
+_rm := fs.remove(tmpRes.path);
+test.done("util-site-library");

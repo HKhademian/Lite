@@ -1,0 +1,29 @@
+/** CLI entrypoint collecting Playground library items JSON (`site/playground-library.ts`). */
+
+cli := import "util/cli";
+io := import "core/io";
+list := import "core/list";
+project := import "util/project";
+siteLib := import "util/site-library";
+
+run := fn(rawArgs: List<String>): Unit {
+    args := cli.stripLeadingSeparator(rawArgs);
+    root := if list.listCountText(args) > 0 { args[0] } else { project.findRepoRoot() };
+    if root == "" {
+        io.errorLine("lite site-library: could not locate repository root");
+        io.exit(1);
+    }
+    stdinRes := io.readAllText(io.stdinReader());
+    if not stdinRes.ok {
+        io.errorLine(stdinRes.error);
+        io.exit(1);
+    }
+    res := siteLib.collectPlaygroundLibraryJson(root, stdinRes.text);
+    if not res.ok {
+        io.errorLine(res.error);
+        io.exit(1);
+    }
+    io.output(res.jsonText);
+};
+
+run(io.inputArgs());

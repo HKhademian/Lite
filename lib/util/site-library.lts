@@ -1,0 +1,516 @@
+/** Collects Samples, Examples, Cases, and Pieces into Playground `library.json` (`site/playground-library.ts`). */
+
+fs := import "core/file";
+integer := import "core/int";
+list := import "core/list";
+path := import "core/path";
+text := import "core/text";
+challenges := import "util/challenges";
+json := import "util/json";
+
+hostModuleIdentity := fn(identities: List<String>, texts: List<String>, candidate: String): String {
+    var i := 0;
+    n := list.listCountText(identities);
+    loop i < n {
+        if candidate == texts[i] {
+            return identities[i];
+        }
+        i = i + 1;
+    }
+    ""
+};
+
+isWhitespaceChar := fn(ch: String): Bool {
+    ch == " " or ch == "\t" or ch == "\n" or ch == "\r"
+};
+
+/** Detects whether Lite source requires CLI or Play runtime features beyond universal stdlib. */
+pub detectSourceEnvironment := fn(source: String): String {
+    len := text.length(source);
+    var pos := 0;
+    loop pos < len {
+        impPos := text.indexOfText(source, "import", pos);
+        if impPos < 0 { break; }
+        var p := impPos + 6;
+        if p < len and isWhitespaceChar(text.at(source, p)) {
+            loop p < len and isWhitespaceChar(text.at(source, p)) { p = p + 1; }
+            if text.startsWithAt(source, p, "\"core/file\"")
+                or text.startsWithAt(source, p, "\"core/path\"")
+                or text.startsWithAt(source, p, "\"core/process\"")
+                or text.startsWithAt(source, p, "\"core/time\"") {
+                return "cli";
+            }
+            if text.startsWithAt(source, p, "\"extra/canvas\"")
+                or text.startsWithAt(source, p, "\"extra/audio\"")
+                or text.startsWithAt(source, p, "\"extra/board\"") {
+                return "play";
+            }
+        }
+        pos = impPos + 6;
+    }
+    "universal"
+};
+
+walkFilesWithSuffix := fn(absDir: String, relBase: String, suffix: String): List<String> {
+    out: mut List<String> = [];
+    if fs.kind(absDir) =!= fs.FILE_KIND_DIR { return out; }
+    names := challenges.sortTexts(fs.listDir(absDir));
+    loop names as name {
+        full := path.join(absDir, name);
+        rel := relBase + "/" + name;
+        if fs.kind(full) == fs.FILE_KIND_DIR {
+            loop walkFilesWithSuffix(full, rel, suffix) as sub {
+                list.pushBack(mut out, sub);
+            }
+        } else if text.endsWith(name, suffix) {
+            list.pushBack(mut out, rel);
+        }
+    }
+    out
+};
+
+posixDirname := fn(relPath: String): String {
+    var lastSlash := -1;
+    var i := 0;
+    loop i < text.length(relPath) {
+        if text.at(relPath, i) == "/" { lastSlash = i; }
+        i = i + 1;
+    }
+    if lastSlash < 0 { "." } else if lastSlash == 0 { "/" } else { text.slice(relPath, 0, lastSlash) }
+};
+
+posixBasename := fn(relPath: String, ext: String): String {
+    var lastSlash := -1;
+    var i := 0;
+    loop i < text.length(relPath) {
+        if text.at(relPath, i) == "/" { lastSlash = i; }
+        i = i + 1;
+    }
+    name := if lastSlash >= 0 { text.slice(relPath, lastSlash + 1, text.length(relPath)) } else { relPath };
+    if ext =!= "" and text.endsWith(name, ext) {
+        text.slice(name, 0, text.length(name) - text.length(ext))
+    } else {
+        name
+    }
+};
+
+splitByDelimiter := fn(value: String, sep: String): List<String> {
+    out: mut List<String> = [];
+    sepLen := text.length(sep);
+    var pos := 0;
+    loop {
+        hit := text.indexOfText(value, sep, pos);
+        if hit < 0 {
+            list.pushBack(mut out, text.slice(value, pos, text.length(value)));
+            break;
+        }
+        list.pushBack(mut out, text.slice(value, pos, hit));
+        pos = hit + sepLen;
+    }
+    out
+};
+
+posixJoinAndNormalize := fn(dir: String, spec: String): String {
+    joined := if dir == "." or dir == "" { spec } else { dir + "/" + spec };
+    parts := splitByDelimiter(joined, "/");
+    var stack: mut List<String> = [];
+    loop parts as part {
+        if part == "" or part == "." {
+            continue;
+        } else if part == ".." {
+            n := list.listCountText(stack);
+            if n > 0 and stack[n - 1] =!= ".." {
+                _popped := list.popBack(mut stack);
+            } else {
+                list.pushBack(mut stack, "..");
+            }
+        } else {
+            list.pushBack(mut stack, part);
+        }
+    }
+    if list.listCountText(stack) == 0 { "." } else { text.joinTexts(stack, "/") }
+};
+
+collectRelativeModulesJson := fn(
+    rootDir: String, hostIds: List<String>, hostTexts: List<String>, entryRelFile: String, entrySource: String
+): String {
+    var queueFiles: mut List<String> = [entryRelFile];
+    var queueTexts: mut List<String> = [entrySource];
+    var seenFiles: mut List<String> = [entryRelFile];
+    var modSpecs: mut List<String> = [];
+    var modJsonEntries: mut List<String> = [];
+    var qi := 0;
+    loop qi < list.listCountText(queueFiles) {
+        fromFile := queueFiles[qi];
+        curText := queueTexts[qi];
+        qi = qi + 1;
+        curDir := posixDirname(fromFile);
+        tLen := text.length(curText);
+        var pos := 0;
+        loop pos < tLen {
+            impPos := text.indexOfText(curText, "import", pos);
+            if impPos < 0 { break; }
+            var p := impPos + 6;
+            if p < tLen and isWhitespaceChar(text.at(curText, p)) {
+                loop p < tLen and isWhitespaceChar(text.at(curText, p)) { p = p + 1; }
+                if p + 1 < tLen and text.at(curText, p) == "\"" and text.at(curText, p + 1) == "." {
+                    qEnd := text.indexOfText(curText, "\"", p + 1);
+                    if qEnd > p + 1 {
+                        spec := text.slice(curText, p + 1, qEnd);
+                        resolvedRel := posixJoinAndNormalize(curDir, spec);
+                        fullPath := path.join(rootDir, resolvedRel);
+                        if fs.kind(fullPath) == fs.FILE_KIND_FILE {
+                            modText := fs.readText(fullPath).text;
+                            ident := hostModuleIdentity(hostIds, hostTexts, modText);
+                            entryJson := json.quoteString(spec) + ":{\"path\":" + json.quoteString(resolvedRel)
+                                + ",\"display\":" + json.quoteString(resolvedRel)
+                                + ",\"identity\":" + json.quoteString(ident)
+                                + ",\"text\":" + json.quoteString(modText) + "}";
+                            existingIdx := list.listIndexOfText(modSpecs, spec);
+                            if existingIdx < 0 {
+                                list.pushBack(mut modSpecs, spec);
+                                list.pushBack(mut modJsonEntries, entryJson);
+                            }
+                            if not list.listContainsText(seenFiles, resolvedRel) {
+                                list.pushBack(mut seenFiles, resolvedRel);
+                                list.pushBack(mut queueFiles, resolvedRel);
+                                list.pushBack(mut queueTexts, modText);
+                            }
+                        }
+                        pos = qEnd + 1;
+                        continue;
+                    }
+                }
+            }
+            pos = impPos + 6;
+        }
+    }
+    if list.listCountText(modJsonEntries) == 0 { "" } else { "{" + text.joinTexts(modJsonEntries, ",") + "}" }
+};
+
+capitalizeWord := fn(word: String): String {
+    if word == "" { return ""; }
+    upper := "ABCDEFGHIJKLMNOPQRSTUVWXYZ";
+    lower := "abcdefghijklmnopqrstuvwxyz";
+    first := text.at(word, 0);
+    idx := text.indexOfText(lower, first, 0);
+    lead := if idx >= 0 { text.at(upper, idx) } else { first };
+    lead + text.slice(word, 1, text.length(word))
+};
+
+/** Formats a source path's filename stem as a human-readable title. */
+pub slugToTitle := fn(relPath: String): String {
+    base := posixBasename(relPath, ".lts");
+    words: mut List<String> = [];
+    var cur := "";
+    var i := 0;
+    loop i < text.length(base) {
+        ch := text.at(base, i);
+        if ch == "-" or ch == "_" {
+            if cur =!= "" {
+                list.pushBack(mut words, capitalizeWord(cur));
+                cur = "";
+            }
+        } else {
+            cur = cur + ch;
+        }
+        i = i + 1;
+    }
+    if cur =!= "" { list.pushBack(mut words, capitalizeWord(cur)); }
+    text.joinTexts(words, " ")
+};
+
+cleanSlugBase := fn(preferred: String): String {
+    lowered := challenges.asciiLower(preferred);
+    out: mut List<String> = [];
+    var prevDash := true;
+    var i := 0;
+    loop i < text.length(lowered) {
+        ch := text.at(lowered, i);
+        isOk := text.indexOfText("abcdefghijklmnopqrstuvwxyz0123456789._-", ch, 0) >= 0;
+        if isOk {
+            list.pushBack(mut out, ch);
+            prevDash = false;
+        } else if not prevDash {
+            list.pushBack(mut out, "-");
+            prevDash = true;
+        }
+        i = i + 1;
+    }
+    joined := text.joinTexts(out, "");
+    var s := 0;
+    var e := text.length(joined);
+    loop s < e and text.at(joined, s) == "-" { s = s + 1; }
+    loop e > s and text.at(joined, e - 1) == "-" { e = e - 1; }
+    if e <= s { "item" } else { text.slice(joined, s, e) }
+};
+
+nextAvailableSlug := fn(used: List<String>, preferred: String): String {
+    base := cleanSlugBase(preferred);
+    if not list.listContainsText(used, base) { return base; }
+    var suffix := 2;
+    loop {
+        cand := base + "-" + integer.intText(suffix);
+        if not list.listContainsText(used, cand) { return cand; }
+        suffix = suffix + 1;
+    }
+    base
+};
+
+quoteStringList := fn(items: List<String>): String {
+    quoted: mut List<String> = [];
+    loop items as it { list.pushBack(mut quoted, json.quoteString(it)); }
+    "[" + text.joinTexts(quoted, ",") + "]"
+};
+
+stripBackticksAndTrim := fn(s: String): String {
+    out: mut List<String> = [];
+    var i := 0;
+    loop i < text.length(s) {
+        ch := text.at(s, i);
+        if ch =!= "`" { list.pushBack(mut out, ch); }
+        i = i + 1;
+    }
+    text.trim(text.joinTexts(out, ""))
+};
+
+extractHeadingForLine := fn(lines: List<String>, lineIdx: Int, fallback: String): String {
+    var i := if lineIdx < list.listCountText(lines) { lineIdx } else { list.listCountText(lines) - 1 };
+    loop i >= 0 {
+        line := lines[i];
+        var hashes := 0;
+        loop hashes < text.length(line) and hashes < 5 and text.at(line, hashes) == "#" {
+            hashes = hashes + 1;
+        }
+        if hashes >= 1 and hashes <= 4 and hashes < text.length(line) and (text.at(line, hashes) == " " or text.at(line, hashes) == "\t") {
+            rest := text.slice(line, hashes + 1, text.length(line));
+            if text.trim(rest) =!= "" {
+                return stripBackticksAndTrim(rest);
+            }
+        }
+        i = i - 1;
+    }
+    fallback
+};
+
+buildItemJson := fn(
+    id: String, slug: String, category: String, badge: String, title: String,
+    file: String, source: String, stdinVal: String, argsList: List<String>,
+    environment: String, extraModulesJson: String, sampleId: String
+): String {
+    envField := if environment =!= "" and environment =!= "universal" { ",\"environment\":" + json.quoteString(environment) } else { "" };
+    extraField := if extraModulesJson =!= "" { ",\"extraModules\":" + extraModulesJson } else { "" };
+    sampleField := if sampleId =!= "" { ",\"sampleId\":" + json.quoteString(sampleId) } else { "" };
+    "{\"id\":" + json.quoteString(id)
+        + ",\"slug\":" + json.quoteString(slug)
+        + ",\"category\":" + json.quoteString(category)
+        + ",\"badge\":" + json.quoteString(badge)
+        + ",\"title\":" + json.quoteString(title)
+        + ",\"file\":" + json.quoteString(file)
+        + ",\"source\":" + json.quoteString(source)
+        + ",\"stdin\":" + json.quoteString(stdinVal)
+        + ",\"args\":" + quoteStringList(argsList)
+        + envField + extraField + sampleField + "}"
+};
+
+/** Builds Playground library items JSON array for Samples, Examples, Cases, and Pieces. */
+pub collectPlaygroundLibraryJson := fn(rootDir: String, samplesJson: String): (ok: Bool, jsonText: String, error: String) {
+    hostSpecIds: List<String> = [
+        "lite.core.io.v1", "lite.core.int.v1", "lite.core.list.v1", "lite.core.text.v1",
+        "lite.core.file.v1", "lite.core.process.v1", "lite.core.crypto.v1", "lite.core.time.v1",
+        "lite.core.unicode.v1", "lite.compiler.modules.v1", "lite.compiler.source-reader.v1"
+    ];
+    hostSpecPaths: List<String> = [
+        "lib/core/io.lts", "lib/core/int.lts", "lib/core/list.lts", "lib/core/text.lts",
+        "lib/core/file.lts", "lib/core/process.lts", "lib/core/crypto.lts", "lib/core/time.lts",
+        "lib/core/unicode.lts", "compiler/src/modules.lts", "compiler/src/source-reader.lts"
+    ];
+    hostIds: mut List<String> = [];
+    hostTexts: mut List<String> = [];
+    var hi := 0;
+    loop hi < list.listCountText(hostSpecIds) {
+        hRead := fs.readText(path.join(rootDir, hostSpecPaths[hi]));
+        if hRead.ok {
+            list.pushBack(mut hostIds, hostSpecIds[hi]);
+            list.pushBack(mut hostTexts, hRead.text);
+        }
+        hi = hi + 1;
+    }
+
+    items: mut List<String> = [];
+    usedSamples: mut List<String> = [];
+    usedExamples: mut List<String> = [];
+    usedCases: mut List<String> = [];
+    usedPieces: mut List<String> = [];
+
+    trimmedSamples := text.trim(samplesJson);
+    if trimmedSamples =!= "" and challenges.isJsonArrayAt(trimmedSamples, 0) {
+        loop json.arrayElementOffsets(trimmedSamples, 0) as sp {
+            sid := json.readObjectString(trimmedSamples, sp, "id").value;
+            ttl := json.readObjectString(trimmedSamples, sp, "title").value;
+            relFile := json.readObjectString(trimmedSamples, sp, "file").value;
+            stdinR := json.readObjectString(trimmedSamples, sp, "stdin");
+            stdinVal := if stdinR.found and stdinR.ok { stdinR.value } else { "" };
+            argsList := challenges.readStringArray(trimmedSamples, sp, "args");
+            srcRead := fs.readText(path.join(rootDir, relFile));
+            if not srcRead.ok {
+                return (ok = false, jsonText = "", error = "missing sample file " + relFile + ": " + srcRead.error);
+            }
+            isPlay := text.startsWithAt(relFile, 0, "samples/graphics/") or text.startsWithAt(relFile, 0, "samples/games/");
+            slug := nextAvailableSlug(usedSamples, sid);
+            list.pushBack(mut usedSamples, slug);
+            list.pushBack(mut items, buildItemJson(
+                "sample/" + slug, slug, "sample", if isPlay { "Play" } else { "Sample" }, ttl,
+                relFile, srcRead.text, stdinVal, argsList, "", "", sid
+            ));
+        }
+    }
+
+    emptyArgs: List<String> = [];
+    exampleFiles: mut List<String> = [];
+    loop walkFilesWithSuffix(path.join(rootDir, "language/examples"), "language/examples", ".lts") as f {
+        list.pushBack(mut exampleFiles, f);
+    }
+    loop walkFilesWithSuffix(path.join(rootDir, "language/showcases"), "language/showcases", ".lts") as f {
+        list.pushBack(mut exampleFiles, f);
+    }
+    loop exampleFiles as relFile {
+        if text.indexOfText(relFile, "/helpers/", 0) >= 0 { continue; }
+        base := posixBasename(relFile, ".lts");
+        isShowcase := text.startsWithAt(relFile, 0, "language/showcases/");
+        preferred := if isShowcase { "showcase-" + base } else { base };
+        slug := nextAvailableSlug(usedExamples, preferred);
+        list.pushBack(mut usedExamples, slug);
+        src := fs.readText(path.join(rootDir, relFile)).text;
+        extraJson := collectRelativeModulesJson(rootDir, hostIds, hostTexts, relFile, src);
+        envVal := detectSourceEnvironment(src);
+        list.pushBack(mut items, buildItemJson(
+            "example/" + slug, slug, "example", if isShowcase { "Showcase" } else { "Example" },
+            slugToTitle(relFile), relFile, src, "", emptyArgs, envVal, extraJson, ""
+        ));
+    }
+
+    loop walkFilesWithSuffix(path.join(rootDir, "language/cases"), "language/cases", ".lts") as relFile {
+        base := posixBasename(relFile, ".lts");
+        slug := nextAvailableSlug(usedCases, base);
+        list.pushBack(mut usedCases, slug);
+        src := fs.readText(path.join(rootDir, relFile)).text;
+        badge := if text.startsWithAt(base, 0, "reject-") { "Reject Case" } else { "Case" };
+        list.pushBack(mut items, buildItemJson(
+            "case/" + slug, slug, "case", badge, slugToTitle(relFile), relFile, src, "", emptyArgs, "", "", ""
+        ));
+    }
+
+    learnPath := path.join(rootDir, "language/learn/catalog.json");
+    if fs.kind(learnPath) == fs.FILE_KIND_FILE {
+        lText := fs.readText(learnPath).text;
+        tracksF := json.findObjectField(lText, 0, "tracks");
+        tOffsets := json.arrayElementOffsets(lText, tracksF.valuePos);
+        tCount := list.listCountInt(tOffsets);
+        tSortKeys: mut List<String> = [];
+        var ti := 0;
+        loop ti < tCount {
+            ordR := json.readObjectInt(lText, tOffsets[ti], "order");
+            ordVal := if ordR.found and ordR.ok { ordR.value } else { 0 };
+            list.pushBack(mut tSortKeys, challenges.padLeftZero(ordVal + 1000000, 9) + ":" + challenges.padLeftZero(ti, 6));
+            ti = ti + 1;
+        }
+        sortedIdx := challenges.sortIndexByKeys(tSortKeys);
+        loop sortedIdx as sIdx {
+            tp := tOffsets[sIdx];
+            lessonsF := json.findObjectField(lText, tp, "lessons");
+            loop json.arrayElementOffsets(lText, lessonsF.valuePos) as lp {
+                lSlug := json.readObjectString(lText, lp, "slug").value;
+                kindV := json.readObjectString(lText, lp, "kind").value;
+                ttl := json.readObjectString(lText, lp, "title").value;
+                srcFile := json.readObjectString(lText, lp, "sourceFile").value;
+                stdinR := json.readObjectString(lText, lp, "stdin");
+                stdinVal := if stdinR.found and stdinR.ok { stdinR.value } else { "" };
+                envR := json.readObjectString(lText, lp, "environment");
+                envVal := if envR.found and envR.ok { envR.value } else { "universal" };
+                argsList := challenges.readStringArray(lText, lp, "args");
+                slug := nextAvailableSlug(usedPieces, lSlug);
+                list.pushBack(mut usedPieces, slug);
+                src := fs.readText(path.join(rootDir, srcFile)).text;
+                extraJson := collectRelativeModulesJson(rootDir, hostIds, hostTexts, srcFile, src);
+                list.pushBack(mut items, buildItemJson(
+                    "piece/" + slug, slug, "piece", if kindV == "tutorial" { "Tutorial" } else { "Lesson" },
+                    ttl, srcFile, src, stdinVal, argsList, envVal, extraJson, ""
+                ));
+            }
+        }
+    }
+
+    gymPath := path.join(rootDir, "language/gym/catalog.json");
+    if fs.kind(gymPath) == fs.FILE_KIND_FILE {
+        gText := fs.readText(gymPath).text;
+        exF := json.findObjectField(gText, 0, "exercises");
+        loop json.arrayElementOffsets(gText, exF.valuePos) as ep {
+            gSlug := json.readObjectString(gText, ep, "slug").value;
+            gMode := json.readObjectString(gText, ep, "mode").value;
+            gTitle := json.readObjectString(gText, ep, "title").value;
+            starterFile := json.readObjectString(gText, ep, "starterFile").value;
+            vcF := json.findObjectField(gText, ep, "visibleCases");
+            vcOffs := if vcF.found { json.arrayElementOffsets(gText, vcF.valuePos) } else {
+                emptyInts: List<Int> = [];
+                emptyInts
+            };
+            var firstStdin := "";
+            var firstArgs: List<String> = emptyArgs;
+            if list.listCountInt(vcOffs) > 0 {
+                fcPos := vcOffs[0];
+                fsR := json.readObjectString(gText, fcPos, "stdin");
+                if fsR.found and fsR.ok { firstStdin = fsR.value; }
+                firstArgs = challenges.readStringArray(gText, fcPos, "args");
+            }
+            slug := nextAvailableSlug(usedPieces, "gym-" + gSlug);
+            list.pushBack(mut usedPieces, slug);
+            src := fs.readText(path.join(rootDir, starterFile)).text;
+            list.pushBack(mut items, buildItemJson(
+                "piece/" + slug, slug, "piece", if gMode == "drill" { "Drill" } else { "Workout" },
+                gTitle + " (Starter)", starterFile, src, firstStdin, firstArgs, "", "", ""
+            ));
+        }
+    }
+
+    hbDir := path.join(rootDir, "language/learn/handbook");
+    loop walkFilesWithSuffix(hbDir, "language/learn/handbook", ".md") as relPath {
+        raw := fs.readText(path.join(rootDir, relPath)).text;
+        norm := challenges.collapseCrLf(raw);
+        lines := splitByDelimiter(norm, "\n");
+        chapterSlug := posixBasename(relPath, ".md");
+        fallbackHeading := slugToTitle(chapterSlug + ".lts");
+        var fenceIdx := 0;
+        var li := 0;
+        nLines := list.listCountText(lines);
+        loop li < nLines {
+            line := lines[li];
+            if line == "```lite" or line == "```lts" {
+                var endLi := li + 1;
+                codeLines: mut List<String> = [];
+                loop endLi < nLines and not text.startsWithAt(lines[endLi], 0, "```") {
+                    list.pushBack(mut codeLines, lines[endLi]);
+                    endLi = endLi + 1;
+                }
+                if endLi < nLines {
+                    code := text.joinTexts(codeLines, "\n");
+                    if text.trim(code) =!= "" {
+                        heading := extractHeadingForLine(lines, li, fallbackHeading);
+                        slug := nextAvailableSlug(usedPieces, chapterSlug + "-" + integer.intText(fenceIdx));
+                        list.pushBack(mut usedPieces, slug);
+                        list.pushBack(mut items, buildItemJson(
+                            "piece/" + slug, slug, "piece", "Handbook",
+                            heading, relPath, code, "", emptyArgs, "", "", ""
+                        ));
+                    }
+                    fenceIdx = fenceIdx + 1;
+                    li = endLi + 1;
+                    continue;
+                }
+            }
+            li = li + 1;
+        }
+    }
+
+    (ok = true, jsonText = "[" + text.joinTexts(items, ",") + "]", error = "")
+};
