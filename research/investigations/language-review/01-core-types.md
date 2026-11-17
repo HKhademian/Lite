@@ -421,6 +421,11 @@ unknown payload and what matching, copying, equality and cleanup mean remain
 open. Validating a tag alone cannot prove a purported String payload, pointer,
 allocation lifetime, alignment, or concurrent external access is valid.
 
+**New direction to review:** The user proposes implicit allowed-type filters
+for match arms and a mandatory final failure guard when the subject Kind is
+unknown, including matches combining type and value patterns. See the
+[union match guard investigation](union-match-unknown-guard.md).
+
 **User's enum/match safety concern:** An `OrderStatus` enum with named cases
 such as created, failed, canceled, shipped and paid may be read from externally
 owned or corrupted memory. The user asks whether a match listing all known
