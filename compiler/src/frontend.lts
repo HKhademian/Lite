@@ -119,6 +119,35 @@ BLOCK_KIND_MATCH_ELSE_VALUE := "matchelseval";
 BLOCK_KIND_MATCH_SINGLE := "matchsingle";
 BLOCK_KIND_MATCH_SINGLE_VALUE := "matchsingleval";
 
+pub TARGET_TS := "ts";
+pub TARGET_C := "c";
+
+pub BUILTIN_MODE_BUILTIN := "builtin";
+pub BUILTIN_MODE_PURE := "pure";
+
+BUILTIN_RULE_PROJECT := "project";
+BUILTIN_RULE_MODULE := "module";
+BUILTIN_RULE_FN := "fn";
+
+DECL_KIND_FUTURE_DECL := "FutureDecl";
+DECL_KIND_FUTURE_FN := "FutureFn";
+DECL_KIND_FUTURE_DESTR := "FutureDestr";
+DECL_KIND_ALIAS := "Alias";
+DECL_KIND_PUB_FN := "PubFn";
+DECL_KIND_PUB_TYPE := "PubType";
+DECL_KIND_PUB_VAL := "PubVal";
+DECL_KIND_HAS_INNER_ALIAS := "HasInnerAlias";
+
+DECL_BIND_VAL := "val";
+DECL_BIND_VAR := "var";
+
+DECL_TAG_ANN := "ann";
+DECL_TAG_VAR_ANN := "varann";
+DECL_TAG_VAL := "val";
+DECL_TAG_VAR_VAL := "varval";
+DECL_TAG_VAR_MUT := "varmut";
+DECL_TAG_MUT_VAL := "mutval";
+
 /** Reports one source-positioned diagnostic as `name:line:column: message`, or `line:column: message` when `prefix` is empty, then exits 2. */
 failAt := fn(source: String, position: Int, prefix: String, message: String): Unit {
     place := sourceLib.lineColumn(source, position);
