@@ -1,0 +1,565 @@
+/** Historical native compiler/C release packaging (`compiler/scripts/release.ts`). */
+
+io := import "core/io";
+fs := import "core/file";
+path := import "core/path";
+proc := import "core/process";
+text := import "core/text";
+list := import "core/list";
+integer := import "core/int";
+crypto := import "core/crypto";
+unicode := import "core/unicode";
+json := import "util/json";
+streams := import "util/streams";
+cases := import "util/cases";
+rel := import "util/release";
+corpus := import "util/corpus";
+
+usageLine := fn(): String {
+    "Usage: node compiler/scripts/release.ts prepare|finalize OUT | native OUT SOURCES"
+};
+
+isLowerHex := fn(s: String, expectedLen: Int): Bool {
+    if text.length(s) =!= expectedLen { return false; }
+    var i := 0;
+    loop i < expectedLen {
+        ch := text.at(s, i);
+        if text.indexOfText("0123456789abcdef", ch, 0) < 0 { return false; }
+        i = i + 1;
+    }
+    true
+};
+
+isSnapshotLabel := fn(label: String): Bool {
+    text.startsWithAt(label, 0, "snapshot-") and isLowerHex(text.slice(label, 9, text.length(label)), 12)
+};
+
+isValidProgramArchiveName := fn(name: String): Bool {
+    if not text.startsWithAt(name, 0, "001-") or text.length(name) <= 4 { return false; }
+    slug := text.slice(name, 4, text.length(name));
+    var i := 0;
+    loop i < text.length(slug) {
+        ch := text.at(slug, i);
+        okCh := ch == "-" or text.indexOfText("abcdefghijklmnopqrstuvwxyz0123456789", ch, 0) >= 0;
+        if not okCh { return false; }
+        i = i + 1;
+    }
+    true
+};
+
+supportedNativeTargets := fn(): List<String> {
+    items: List<String> = ["linux-x64", "linux-arm64", "darwin-x64", "darwin-arm64"];
+    items
+};
+
+runCheckedText := fn(command: String, args: List<String>, cwd: String): (ok: Bool, stdout: String, error: String) {
+    emptyEnv: List<String> = [];
+    res := proc.run(command, args, cwd, emptyEnv, true, "");
+    if res.error =!= "" {
+        return (ok = false, stdout = "", error = res.error);
+    }
+    if res.status =!= 0 {
+        return (ok = false, stdout = "", error = command + " " + text.joinTexts(args, " ") + " failed (" + integer.intText(res.status) + "):\n" + res.stdout + res.stderr);
+    }
+    (ok = true, stdout = res.stdout, error = "")
+};
+
+runCheckedBytesToFile := fn(command: String, args: List<String>, cwd: String, stdinBytes: List<Int>, outFile: String, workDir: String): (ok: Bool, error: String) {
+    errFile := path.join(workDir, "cmd-check.stderr");
+    emptyEnv: List<String> = [];
+    res := proc.runBytes(command, args, cwd, emptyEnv, 120000, stdinBytes, outFile, errFile);
+    if res.error =!= "" { return (ok = false, error = res.error); }
+    if res.status =!= 0 {
+        outText := unicode.utf8DecodeLossy(fs.readBytes(outFile));
+        errText := unicode.utf8DecodeLossy(fs.readBytes(errFile));
+        return (ok = false, error = command + " " + text.joinTexts(args, " ") + " failed (" + integer.intText(res.status) + "):\n" + outText + errText);
+    }
+    (ok = true, error = "")
+};
+
+ensureEmptyOutput := fn(outDir: String): (ok: Bool, error: String) {
+    mkRes := fs.makeDir(outDir);
+    if not mkRes.ok { return (ok = false, error = mkRes.error); }
+    entries := fs.listDir(outDir);
+    if list.listCountText(entries) =!= 0 {
+        return (ok = false, error = "output directory must be empty: " + outDir);
+    }
+    (ok = true, error = "")
+};
+
+/** Validates a generated `release.json` manifest (schema v2, label/component, commit, and programs array). */
+pub validateReleaseJsonText := fn(filePath: String, rootDir: String): (ok: Bool, text: String, label: String, commit: String, error: String) {
+    rRes := fs.readText(filePath);
+    if not rRes.ok { return (ok = false, text = "", label = "", commit = "", error = rRes.error); }
+    src := rRes.text;
+    if not json.validate(src).ok {
+        return (ok = false, text = "", label = "", commit = "", error = filePath + ": invalid JSON");
+    }
+    sv := json.readObjectInt(src, 0, "schemaVersion");
+    if not sv.found or not sv.ok or sv.value =!= 2 {
+        return (ok = false, text = "", label = "", commit = "", error = filePath + ": expected schemaVersion 2");
+    }
+    lbl := json.readObjectString(src, 0, "label");
+    if not lbl.found or not lbl.ok {
+        return (ok = false, text = "", label = "", commit = "", error = filePath + ": missing label");
+    }
+    compField := json.findObjectField(src, 0, "releasedComponent");
+    if not compField.found {
+        return (ok = false, text = "", label = "", commit = "", error = filePath + ": missing releasedComponent");
+    }
+    if not isSnapshotLabel(lbl.value) {
+        parsed := rel.parseComponentTag(lbl.value);
+        if not parsed.ok {
+            return (ok = false, text = "", label = "", commit = "", error = parsed.error);
+        }
+        rcComp := json.readObjectString(src, compField.valuePos, "component");
+        rcVer := json.readObjectString(src, compField.valuePos, "version");
+        if not rcComp.found or rcComp.value =!= parsed.component or not rcVer.found or rcVer.value =!= parsed.version {
+            return (ok = false, text = "", label = "", commit = "", error = filePath + ": releasedComponent mismatch");
+        }
+        _unused := rootDir;
+    } else if text.at(text.trim(text.slice(src, compField.valuePos, text.length(src))), 0) =!= "n" {
+        return (ok = false, text = "", label = "", commit = "", error = filePath + ": snapshot release must have null releasedComponent");
+    }
+    com := json.readObjectString(src, 0, "commit");
+    if not com.found or not com.ok or not isLowerHex(com.value, 40) {
+        return (ok = false, text = "", label = "", commit = "", error = filePath + ": invalid commit hash");
+    }
+    progs := json.findObjectField(src, 0, "programs");
+    if not progs.found {
+        return (ok = false, text = "", label = "", commit = "", error = filePath + ": missing programs array");
+    }
+    (ok = true, text = src, label = lbl.value, commit = com.value, error = "")
+};
+
+archiveTarGz := fn(outDir: String, name: String, sourceDir: String, entries: List<String>): (ok: Bool, error: String) {
+    args: mut List<String> = ["-czf", path.join(outDir, name), "-C", sourceDir];
+    loop entries as e {
+        list.pushBack(mut args, e);
+    }
+    res := runCheckedText("tar", args, outDir);
+    if not res.ok { return (ok = false, error = res.error); }
+    (ok = true, error = "")
+};
+
+runPrepare := fn(rootDir: String, outDir: String): Int {
+    emp := ensureEmptyOutput(outDir);
+    if not emp.ok {
+        io.errorLine(emp.error);
+        return 1;
+    }
+    st := runCheckedText("git", ["status", "--porcelain"], rootDir);
+    if not st.ok { io.errorLine(st.error); return 1; }
+    if text.trim(st.stdout) =!= "" {
+        io.errorLine("release preparation requires a clean checkout");
+        return 1;
+    }
+    headRes := runCheckedText("git", ["rev-parse", "HEAD"], rootDir);
+    if not headRes.ok { io.errorLine(headRes.error); return 1; }
+    commit := text.trim(headRes.stdout);
+
+    refType := proc.envGet("GITHUB_REF_TYPE");
+    refName := proc.envGet("GITHUB_REF_NAME");
+    var hasTag := false;
+    var tag := "";
+    if refType.found and refType.value == "tag" and refName.found {
+        hasTag = true;
+        tag = refName.value;
+        tParsed := rel.parseComponentTag(tag);
+        if not tParsed.ok { io.errorLine(tParsed.error); return 1; }
+        tType := runCheckedText("git", ["cat-file", "-t", "refs/tags/" + tag], rootDir);
+        if not tType.ok or text.trim(tType.stdout) =!= "tag" {
+            io.errorLine("release tags must be annotated");
+            return 1;
+        }
+        tCom := runCheckedText("git", ["rev-parse", "refs/tags/" + tag + "^{commit}"], rootDir);
+        if not tCom.ok or text.trim(tCom.stdout) =!= commit {
+            io.errorLine("release tag does not point to HEAD commit");
+            return 1;
+        }
+    }
+
+    label := if hasTag { tag } else { "snapshot-" + text.slice(commit, 0, 12) };
+    ignPkgRead := fs.readText(path.join(rootDir, "igniter/package.json"));
+    if not ignPkgRead.ok { io.errorLine(ignPkgRead.error); return 1; }
+    igniterVer := json.readObjectString(ignPkgRead.text, 0, "version").value;
+
+    var relCompJson := "null";
+    if hasTag {
+        selComp := rel.selectComponentRelease(rootDir, tag);
+        if not selComp.ok { io.errorLine(selComp.error); return 1; }
+        relCompJson = "{ \"component\": " + json.quoteString(selComp.component) + ", \"version\": " + json.quoteString(selComp.version) + ", \"tag\": " + json.quoteString(tag) + " }";
+    }
+    versObj := rel.formatComponentVersionsJson(rootDir, "  ");
+    if not versObj.ok { io.errorLine(versObj.error); return 1; }
+
+    tscRes := runCheckedText(proc.execPath(), [path.join(rootDir, "igniter/node_modules/typescript/bin/tsc"), "-p", path.join(rootDir, "compiler/bootstrap/tsconfig.json")], rootDir);
+    if not tscRes.ok { io.errorLine(tscRes.error); return 1; }
+
+    tmpWork := fs.makeTempDir("lite-release-");
+    if not tmpWork.ok { io.errorLine(tmpWork.error); return 1; }
+    workDir := tmpWork.path;
+    sourceDir := path.join(workDir, "source");
+    genDir := path.join(sourceDir, "release");
+    cDir := path.join(workDir, "c");
+    _m1 := fs.makeDir(sourceDir);
+    _m2 := fs.makeDir(cDir);
+
+    sourceTar := path.join(workDir, "source.tar");
+    emptyBytes: List<Int> = [];
+    arcRes := runCheckedBytesToFile("git", ["archive", "--format=tar", commit], rootDir, emptyBytes, sourceTar, workDir);
+    if not arcRes.ok { _rm := fs.remove(workDir); io.errorLine(arcRes.error); return 1; }
+    untRes := runCheckedText("tar", ["-xf", sourceTar, "-C", sourceDir], rootDir);
+    if not untRes.ok { _rm := fs.remove(workDir); io.errorLine(untRes.error); return 1; }
+    if fs.kind(genDir) =!= fs.FILE_KIND_MISSING {
+        _rm := fs.remove(workDir);
+        io.errorLine("release/ is reserved for generated release content");
+        return 1;
+    }
+    _mg := fs.makeDir(genDir);
+
+    tsMeta := corpus.readCompilerMeta(rootDir, "ts");
+    if not tsMeta.ok { _rm := fs.remove(workDir); io.errorLine(tsMeta.error); return 1; }
+    entryPath := path.join(rootDir, "compiler/entry.ts");
+
+    compJsonEntries: mut List<String> = [];
+    targetsList: List<String> = ["ts", "c"];
+    loop targetsList as t {
+        built := corpus.readCompilerMeta(rootDir, t);
+        if not built.ok { _rm := fs.remove(workDir); io.errorLine(built.error); return 1; }
+        manPath := path.join(rootDir, "compiler/manifests/" + t + ".json");
+        manText := fs.readText(manPath).text;
+        manFiles := corpus.readStringListAt(manText, json.findObjectField(manText, 0, "files").valuePos);
+        if list.listCountText(manFiles) =!= 1 {
+            _rm := fs.remove(workDir);
+            io.errorLine(t + " source graph has one root");
+            return 1;
+        }
+        srcFilePath := path.resolve(path.parentDir(manPath), manFiles[0]);
+        srcBytes := fs.readBytes(srcFilePath);
+        regenPath := path.join(workDir, "regen-" + t + ".ts");
+        regRes := runCheckedBytesToFile(proc.execPath(), [entryPath, tsMeta.artifactPath, srcFilePath], rootDir, srcBytes, regenPath, workDir);
+        if not regRes.ok { _rm := fs.remove(workDir); io.errorLine(regRes.error); return 1; }
+        regSha := crypto.sha256Bytes(fs.readBytes(regenPath));
+        if regSha =!= built.artifactSha256 {
+            _rm := fs.remove(workDir);
+            io.errorLine(t + " compiler rebuild must be byte-identical");
+            return 1;
+        }
+        _cpB := fs.copy(built.artifactPath, path.join(genDir, t + "-compiler.ts"));
+        _wS := fs.writeBytes(path.join(genDir, t + "-source.lts"), srcBytes);
+
+        depField := json.findObjectField(built.rawJson, 0, "dependencies");
+        depList := corpus.readStringListAt(built.rawJson, depField.valuePos);
+        depJsonRes := corpus.toolIdentitiesJson(rootDir, depList);
+        if not depJsonRes.ok { _rm := fs.remove(workDir); io.errorLine(depJsonRes.error); return 1; }
+        _wD := fs.writeText(path.join(genDir, t + "-dependencies.json"), depJsonRes.jsonText + "\n");
+
+        cEntry := "{\n      \"target\": " + json.quoteString(t) + ",\n      \"sourceSha256\": " + json.quoteString(built.sourceSha256) + ",\n      \"artifactSha256\": " + json.quoteString(built.artifactSha256) + ",\n      \"builderSha256\": " + json.quoteString(built.builderSha256) + "\n    }";
+        list.pushBack(mut compJsonEntries, cEntry);
+    }
+
+    fixturesDir := path.join(rootDir, "igniter/tests/compiler");
+    cCompiler := path.join(genDir, "c-compiler.ts");
+    fixFiles := path.collectFiles(fixturesDir, [fixturesDir], ".json", [], false);
+    progEntries: mut List<String> = [];
+
+    loop fixFiles as absFix {
+        fName := path.baseName(absFix);
+        if text.startsWithAt(fName, 0, "001-") {
+            progName := text.slice(fName, 0, text.length(fName) - 5);
+            fixJson := fs.readText(absFix).text;
+            srcField := json.findObjectField(fixJson, 0, "source");
+            srcChk := streams.validateStream(fixJson, srcField.valuePos, fixturesDir, fName + ".source", false, false, true);
+            if not srcChk.ok { _rm := fs.remove(workDir); io.errorLine(srcChk.error); return 1; }
+            srcBytes := streams.readStreamBytes(fixJson, srcField.valuePos, fixturesDir);
+            cOutPath := path.join(cDir, progName + ".c");
+            emRes := runCheckedBytesToFile(proc.execPath(), [entryPath, cCompiler], rootDir, srcBytes, cOutPath, workDir);
+            if not emRes.ok { _rm := fs.remove(workDir); io.errorLine(emRes.error); return 1; }
+            _wLts := fs.writeBytes(path.join(cDir, progName + ".lts"), srcBytes);
+            cSha := crypto.sha256Bytes(fs.readBytes(cOutPath));
+            srcSha := crypto.sha256Bytes(srcBytes);
+
+            caseEntries: mut List<String> = [];
+            casesField := json.findObjectField(fixJson, 0, "cases");
+            loop json.arrayElementOffsets(fixJson, casesField.valuePos) as sPos {
+                sName := json.readObjectString(fixJson, sPos, "name").value;
+                exitCode := json.readObjectInt(fixJson, sPos, "exitCode").value;
+                inF := json.findObjectField(fixJson, sPos, "stdin");
+                outF := json.findObjectField(fixJson, sPos, "stdout");
+                errF := json.findObjectField(fixJson, sPos, "stderr");
+                inB := if inF.found { streams.readStreamBytes(fixJson, inF.valuePos, fixturesDir) } else { emptyBytes };
+                outB := if outF.found { streams.readStreamBytes(fixJson, outF.valuePos, fixturesDir) } else { emptyBytes };
+                errB := if errF.found { streams.readStreamBytes(fixJson, errF.valuePos, fixturesDir) } else { emptyBytes };
+                scJson := "{\n          \"name\": " + json.quoteString(sName) + ",\n          \"stdin\": " + json.quoteString(crypto.base64Encode(inB)) + ",\n          \"stdout\": " + json.quoteString(crypto.base64Encode(outB)) + ",\n          \"stderr\": " + json.quoteString(crypto.base64Encode(errB)) + ",\n          \"exitCode\": " + integer.intText(exitCode) + "\n        }";
+                list.pushBack(mut caseEntries, scJson);
+            }
+            pEntry := "{\n      \"name\": " + json.quoteString(progName) + ",\n      \"cSha256\": " + json.quoteString(cSha) + ",\n      \"sourceSha256\": " + json.quoteString(srcSha) + ",\n      \"cases\": [\n        " + text.joinTexts(caseEntries, ",\n        ") + "\n      ]\n    }";
+            list.pushBack(mut progEntries, pEntry);
+        }
+    }
+
+    if list.listCountText(progEntries) == 0 {
+        _rm := fs.remove(workDir);
+        io.errorLine("no C programs packaged");
+        return 1;
+    }
+
+    tsPkgVer := json.readObjectString(fs.readText(path.join(rootDir, "igniter/node_modules/typescript/package.json")).text, 0, "version").value;
+    releaseJson := "{\n"
+    + "  \"schemaVersion\": 2,\n"
+    + "  \"label\": " + json.quoteString(label) + ",\n"
+    + "  \"tag\": " + (if hasTag { json.quoteString(tag) } else { "null" }) + ",\n"
+    + "  \"commit\": " + json.quoteString(commit) + ",\n"
+    + "  \"node\": " + json.quoteString(proc.runtimeVersion()) + ",\n"
+    + "  \"typescript\": " + json.quoteString(tsPkgVer) + ",\n"
+    + "  \"igniterVersion\": " + json.quoteString(igniterVer) + ",\n"
+    + "  \"libraries\": \"provisional lib/core; no stable stdlib version or ABI assigned\",\n"
+    + "  \"nativeCompiler\": false,\n"
+    + "  \"releasedComponent\": " + relCompJson + ",\n"
+    + "  \"componentVersions\": " + versObj.jsonText + ",\n"
+    + "  \"compilers\": [\n    " + text.joinTexts(compJsonEntries, ",\n    ") + "\n  ],\n"
+    + "  \"programs\": [\n    " + text.joinTexts(progEntries, ",\n    ") + "\n  ]\n}\n";
+
+    _wR1 := fs.writeText(path.join(outDir, "release.json"), releaseJson);
+    _wR2 := fs.writeText(path.join(genDir, "release.json"), releaseJson);
+    _wR3 := fs.writeText(path.join(cDir, "release.json"), releaseJson);
+    _cpDoc := fs.copy(path.join(rootDir, "docs/release-automation.md"), path.join(sourceDir, "IGNITER.md"));
+
+    a1 := archiveTarGz(outDir, "lite-" + label + "-igniter.tar.gz", sourceDir, ["."]);
+    if not a1.ok { _rm := fs.remove(workDir); io.errorLine(a1.error); return 1; }
+    a2 := archiveTarGz(outDir, "lite-" + label + "-libraries.tar.gz", sourceDir, ["lib", "release/release.json"]);
+    if not a2.ok { _rm := fs.remove(workDir); io.errorLine(a2.error); return 1; }
+    a3 := archiveTarGz(outDir, "lite-" + label + "-generated-c.tar.gz", cDir, ["."]);
+    if not a3.ok { _rm := fs.remove(workDir); io.errorLine(a3.error); return 1; }
+
+    _rm := fs.remove(workDir);
+    io.outputLine("Packaged " + label + " at " + commit + ": both compilers rebuilt; " + integer.intText(list.listCountText(progEntries)) + " C programs.");
+    0
+};
+
+runNative := fn(rootDir: String, outDir: String, inputDir: String): Int {
+    emp := ensureEmptyOutput(outDir);
+    if not emp.ok { io.errorLine(emp.error); return 1; }
+    inDir := path.resolve(proc.cwd(), inputDir);
+    relInfo := validateReleaseJsonText(path.join(inDir, "release.json"), rootDir);
+    if not relInfo.ok { io.errorLine(relInfo.error); return 1; }
+
+    target := proc.platform() + "-" + proc.arch();
+    if not list.listContainsText(supportedNativeTargets(), target) {
+        io.errorLine("unsupported native target: " + target);
+        return 1;
+    }
+    relTargetEnv := proc.envGet("RELEASE_TARGET");
+    if relTargetEnv.found and relTargetEnv.value =!= "" and relTargetEnv.value =!= target {
+        io.errorLine("RELEASE_TARGET mismatch: expected " + relTargetEnv.value + ", got " + target);
+        return 1;
+    }
+
+    tmpWork := fs.makeTempDir("lite-native-");
+    if not tmpWork.ok { io.errorLine(tmpWork.error); return 1; }
+    workDir := tmpWork.path;
+
+    tarPath := path.join(inDir, "lite-" + relInfo.label + "-generated-c.tar.gz");
+    unt := runCheckedText("tar", ["-xf", tarPath, "-C", workDir], rootDir);
+    if not unt.ok { _rm := fs.remove(workDir); io.errorLine(unt.error); return 1; }
+
+    binDir := path.join(workDir, "bin");
+    _mb := fs.makeDir(binDir);
+    ccEnv := proc.envGet("CC");
+    cc := if ccEnv.found and ccEnv.value =!= "" { ccEnv.value } else { "cc" };
+
+    progsField := json.findObjectField(relInfo.text, 0, "programs");
+    progReportEntries: mut List<String> = [];
+    emptyEnv: List<String> = [];
+
+    loop json.arrayElementOffsets(relInfo.text, progsField.valuePos) as pPos {
+        pName := json.readObjectString(relInfo.text, pPos, "name").value;
+        pCSha := json.readObjectString(relInfo.text, pPos, "cSha256").value;
+        if not isValidProgramArchiveName(pName) {
+            _rm := fs.remove(workDir);
+            io.errorLine("invalid program name: " + pName);
+            return 1;
+        }
+        cFile := path.join(workDir, pName + ".c");
+        cHash := crypto.sha256File(cFile);
+        if not cHash.ok or cHash.hex =!= pCSha {
+            _rm := fs.remove(workDir);
+            io.errorLine(pName + ": C source hash mismatch");
+            return 1;
+        }
+        exePath := path.join(binDir, pName);
+        ccArgs: List<String> = ["-std=c11", "-O2", "-Wall", "-Wextra", "-Werror", cFile, "-o", exePath, "-lm"];
+        compRes := runCheckedText(cc, ccArgs, workDir);
+        if not compRes.ok { _rm := fs.remove(workDir); io.errorLine(compRes.error); return 1; }
+
+        cField := json.findObjectField(relInfo.text, pPos, "cases");
+        caseOffsets := json.arrayElementOffsets(relInfo.text, cField.valuePos);
+        var si := 0;
+        loop caseOffsets as sPos {
+            sName := json.readObjectString(relInfo.text, sPos, "name").value;
+            inB64 := json.readObjectString(relInfo.text, sPos, "stdin").value;
+            outB64 := json.readObjectString(relInfo.text, sPos, "stdout").value;
+            errB64 := json.readObjectString(relInfo.text, sPos, "stderr").value;
+            expExit := json.readObjectInt(relInfo.text, sPos, "exitCode").value;
+
+            inBytes := crypto.base64Decode(inB64);
+            expOutBytes := crypto.base64Decode(outB64);
+            expErrBytes := crypto.base64Decode(errB64);
+
+            outF := path.join(workDir, pName + "-" + integer.intText(si) + ".out");
+            errF := path.join(workDir, pName + "-" + integer.intText(si) + ".err");
+            emptyArgs: List<String> = [];
+            ran := proc.runBytes(exePath, emptyArgs, workDir, emptyEnv, 10000, inBytes, outF, errF);
+            okRun := ran.error == "" and ran.status == expExit
+            and streams.equalBytes(fs.readBytes(outF), expOutBytes)
+            and streams.equalBytes(fs.readBytes(errF), expErrBytes);
+            if not okRun {
+                _rm := fs.remove(workDir);
+                io.errorLine(pName + "/" + sName + ": native runtime mismatch");
+                return 1;
+            }
+            si = si + 1;
+        }
+        binSha := crypto.sha256File(exePath);
+        if not binSha.ok { _rm := fs.remove(workDir); io.errorLine(binSha.error); return 1; }
+        pRep := "{\n      \"name\": " + json.quoteString(pName) + ",\n      \"cSha256\": " + json.quoteString(pCSha) + ",\n      \"binarySha256\": " + json.quoteString(binSha.hex) + ",\n      \"scenarios\": " + integer.intText(list.listCountInt(caseOffsets)) + "\n    }";
+        list.pushBack(mut progReportEntries, pRep);
+    }
+
+    ccVer := runCheckedText(cc, ["--version"], workDir);
+    if not ccVer.ok { _rm := fs.remove(workDir); io.errorLine(ccVer.error); return 1; }
+    imgEnv := proc.envGet("ImageVersion");
+    imgJson := if imgEnv.found and imgEnv.value =!= "" { json.quoteString(imgEnv.value) } else { "null" };
+
+    reportJson := "{\n"
+    + "  \"label\": " + json.quoteString(relInfo.label) + ",\n"
+    + "  \"commit\": " + json.quoteString(relInfo.commit) + ",\n"
+    + "  \"target\": " + json.quoteString(target) + ",\n"
+    + "  \"node\": " + json.quoteString(proc.runtimeVersion()) + ",\n"
+    + "  \"compiler\": " + json.quoteString(ccVer.stdout) + ",\n"
+    + "  \"flags\": [\"-std=c11\", \"-O2\", \"-Wall\", \"-Wextra\", \"-Werror\", \"-lm\"],\n"
+    + "  \"runnerImage\": " + imgJson + ",\n"
+    + "  \"programs\": [\n    " + text.joinTexts(progReportEntries, ",\n    ") + "\n  ]\n}\n";
+
+    _wN1 := fs.writeText(path.join(outDir, "native-" + target + ".json"), reportJson);
+    _wN2 := fs.writeText(path.join(workDir, "build.json"), reportJson);
+    arc := archiveTarGz(outDir, "lite-" + relInfo.label + "-" + target + ".tar.gz", workDir, ["bin", "build.json", "release.json"]);
+    _rm := fs.remove(workDir);
+    if not arc.ok { io.errorLine(arc.error); return 1; }
+
+    io.outputLine(target + ": built and verified " + integer.intText(list.listCountText(progReportEntries)) + " C programs.");
+    0
+};
+
+runFinalize := fn(rootDir: String, outDir: String): Int {
+    relInfo := validateReleaseJsonText(path.join(outDir, "release.json"), rootDir);
+    if not relInfo.ok { io.errorLine(relInfo.error); return 1; }
+
+    headRes := runCheckedText("git", ["rev-parse", "HEAD"], rootDir);
+    if not headRes.ok or text.trim(headRes.stdout) =!= relInfo.commit {
+        io.errorLine("release commit does not match git HEAD");
+        return 1;
+    }
+
+    natRepEntries: mut List<String> = [];
+    targets := supportedNativeTargets();
+    loop targets as t {
+        natPath := path.join(outDir, "native-" + t + ".json");
+        natRead := fs.readText(natPath);
+        if not natRead.ok { io.errorLine(natRead.error); return 1; }
+        if json.readObjectString(natRead.text, 0, "target").value =!= t
+        or json.readObjectString(natRead.text, 0, "commit").value =!= relInfo.commit
+        or json.readObjectString(natRead.text, 0, "label").value =!= relInfo.label {
+            io.errorLine("native report metadata mismatch for " + t);
+            return 1;
+        }
+        arcPath := path.join(outDir, "lite-" + relInfo.label + "-" + t + ".tar.gz");
+        if fs.kind(arcPath) =!= fs.FILE_KIND_FILE {
+            io.errorLine("missing native archive: " + arcPath);
+            return 1;
+        }
+        list.pushBack(mut natRepEntries, natRead.text);
+    }
+
+    archives := path.collectFiles(outDir, [outDir], ".tar.gz", [], false);
+    if list.listCountText(archives) =!= list.listCountText(targets) + 3 {
+        io.errorLine("unexpected archive count in " + outDir);
+        return 1;
+    }
+    assetEntries: mut List<String> = [];
+    loop archives as aPath {
+        h := crypto.sha256File(aPath);
+        if not h.ok { io.errorLine(h.error); return 1; }
+        list.pushBack(mut assetEntries, "{\n      \"file\": " + json.quoteString(path.baseName(aPath)) + ",\n      \"sha256\": " + json.quoteString(h.hex) + "\n    }");
+    }
+
+    runEnv := proc.envGet("GITHUB_RUN_ID");
+    runJson := if runEnv.found and runEnv.value =!= "" { json.quoteString(runEnv.value) } else { "null" };
+    trimmedRel := text.trim(relInfo.text);
+    manifestJson := text.slice(trimmedRel, 0, text.length(trimmedRel) - 1)
+    + ",\n  \"nativeReports\": [\n    " + text.joinTexts(natRepEntries, ",\n    ") + "\n  ],\n"
+    + "  \"assets\": [\n    " + text.joinTexts(assetEntries, ",\n    ") + "\n  ],\n"
+    + "  \"workflowRun\": " + runJson + "\n}\n";
+    _wm := fs.writeText(path.join(outDir, "manifest.json"), manifestJson);
+
+    ignVer := json.readObjectString(relInfo.text, 0, "igniterVersion").value;
+    progsField := json.findObjectField(relInfo.text, 0, "programs");
+    progCount := list.listCountInt(json.arrayElementOffsets(relInfo.text, progsField.valuePos));
+
+    notes := "Igniter snapshot " + relInfo.label + "\n\n"
+    + "Source commit: " + relInfo.commit + ". Igniter package: " + ignVer + ".\n\n"
+    + "The igniter archive contains the source tree, one selected TS igniter, provisional libraries and rebuild instructions. Compiler dependencies are ordinary Lite source imports and no generated C seed is required.\n\n"
+    + "Generated C and " + text.joinTexts(targets, ", ") + " executables cover " + integer.intText(progCount)
+    + " admitted compiler test programs. These executables are conformance programs; a native self-hosting C compiler is not available yet. Libraries remain provisional, without a stable stdlib API or ABI.\n\n"
+    + "See IGNITER.md in the igniter archive. manifest.json records source/builder hashes and native toolchains; SHA256SUMS covers every other release asset. Native binaries depend on their runner OS/libc and are not signed.\n";
+    _wn := fs.writeText(path.join(outDir, "RELEASE-NOTES.md"), notes);
+
+    entries := fs.listDir(outDir);
+    sumLines: mut List<String> = [];
+    loop entries as entry {
+        if entry =!= "SHA256SUMS" {
+            h := crypto.sha256File(path.join(outDir, entry));
+            if not h.ok { io.errorLine(h.error); return 1; }
+            list.pushBack(mut sumLines, h.hex + "  " + entry);
+        }
+    }
+    _ws := fs.writeText(path.join(outDir, "SHA256SUMS"), text.joinTexts(sumLines, "\n") + "\n");
+    io.outputLine("Verified " + integer.intText(list.listCountText(targets)) + " native targets and wrote the release manifest/checksums.");
+    0
+};
+
+/** Parses CLI arguments for `compiler/scripts/release.ts` without executing filesystem side-effects. */
+pub parseCompilerReleaseArgs := fn(args: List<String>): (ok: Bool, command: String, outDir: String, sourcesDir: String, error: String) {
+    if list.listCountText(args) < 2 {
+        return (ok = false, command = "", outDir = "", sourcesDir = "", error = usageLine());
+    }
+    cmd := args[0];
+    outDir := path.resolve(proc.cwd(), args[1]);
+    if cmd == "prepare" and list.listCountText(args) == 2 {
+        return (ok = true, command = cmd, outDir = outDir, sourcesDir = "", error = "");
+    }
+    if cmd == "native" and list.listCountText(args) == 3 {
+        return (ok = true, command = cmd, outDir = outDir, sourcesDir = args[2], error = "");
+    }
+    if cmd == "finalize" and list.listCountText(args) == 2 {
+        return (ok = true, command = cmd, outDir = outDir, sourcesDir = "", error = "");
+    }
+    (ok = false, command = "", outDir = "", sourcesDir = "", error = usageLine())
+};
+
+/** Dispatches `prepare`, `native`, or `finalize` subcommands for `compiler/scripts/release.ts`. */
+pub runCompilerReleaseCommand := fn(rootDir: String, args: List<String>): Int {
+    parsed := parseCompilerReleaseArgs(args);
+    if not parsed.ok {
+        io.errorLine(parsed.error);
+        return 1;
+    }
+    if parsed.command == "prepare" {
+        return runPrepare(rootDir, parsed.outDir);
+    }
+    if parsed.command == "native" {
+        return runNative(rootDir, parsed.outDir, parsed.sourcesDir);
+    }
+    runFinalize(rootDir, parsed.outDir)
+};

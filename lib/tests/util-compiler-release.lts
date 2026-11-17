@@ -1,0 +1,45 @@
+compRel := import "util/compiler-release";
+fs := import "core/file";
+path := import "core/path";
+project := import "util/project";
+test := import "core/test";
+
+root := project.findRepoRoot();
+test.checkBool("repo root found", true, root =!= "");
+
+prepOk := compRel.parseCompilerReleaseArgs(["prepare", "dist/out"]);
+test.checkBool("prepare args ok", true, prepOk.ok);
+test.checkText("prepare cmd", "prepare", prepOk.command);
+
+natOk := compRel.parseCompilerReleaseArgs(["native", "dist/out", "dist/src"]);
+test.checkBool("native args ok", true, natOk.ok);
+test.checkText("native sources", "dist/src", natOk.sourcesDir);
+
+finOk := compRel.parseCompilerReleaseArgs(["finalize", "dist/out"]);
+test.checkBool("finalize args ok", true, finOk.ok);
+
+badCmd := compRel.parseCompilerReleaseArgs(["unknown", "dist/unused"]);
+test.checkBool("reject unknown subcommand", false, badCmd.ok);
+
+missingOut := compRel.parseCompilerReleaseArgs(["prepare"]);
+test.checkBool("reject missing out dir", false, missingOut.ok);
+
+badNative := compRel.parseCompilerReleaseArgs(["native", "dist/unused"]);
+test.checkBool("reject native missing sources", false, badNative.ok);
+
+tmpRes := fs.makeTempDir("lite-comp-rel-test-");
+test.checkBool("temp dir ok", true, tmpRes.ok);
+relPath := path.join(tmpRes.path, "release.json");
+sampleRel := "{\"schemaVersion\":2,\"label\":\"snapshot-0123456789ab\",\"releasedComponent\":null,\"commit\":\"0123456789abcdef0123456789abcdef01234567\",\"programs\":[]}\n";
+_wr := fs.writeText(relPath, sampleRel);
+valOk := compRel.validateReleaseJsonText(relPath, root);
+test.checkBool("valid snapshot release.json ok", true, valOk.ok);
+test.checkText("valid snapshot label", "snapshot-0123456789ab", valOk.label);
+
+badRelPath := path.join(tmpRes.path, "bad-release.json");
+_wb := fs.writeText(badRelPath, "{\"schemaVersion\":1,\"label\":\"bad\",\"releasedComponent\":null,\"commit\":\"short\",\"programs\":[]}\n");
+valBad := compRel.validateReleaseJsonText(badRelPath, root);
+test.checkBool("reject v1 schema", false, valBad.ok);
+
+_rm := fs.remove(tmpRes.path);
+test.done("util-compiler-release");

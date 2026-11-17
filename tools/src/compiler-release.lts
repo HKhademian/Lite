@@ -1,0 +1,18 @@
+/** Host entrypoint target for compiler/C release packaging (`compiler/scripts/release.ts`). */
+
+io := import "core/io";
+cli := import "util/cli";
+project := import "util/project";
+compRel := import "util/compiler-release";
+
+run := fn(): Int {
+    root := project.findRepoRoot();
+    if root == "" {
+        io.errorLine("could not locate LiteScript repository root");
+        return 1;
+    }
+    args := cli.stripLeadingSeparator(io.inputArgs());
+    compRel.runCompilerReleaseCommand(root, args)
+};
+
+io.exit(run());
