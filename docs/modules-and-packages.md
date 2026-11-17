@@ -393,6 +393,21 @@ requiring a deliberate entry point with little ceremony. A built-in memory-modul
 import is an example, not a selected module, API, or import grammar. Availability
 through an import alone does not waive checks or change ordinary code's behavior.
 
+## Separately compiled libraries and runtime agreement
+
+User direction, 2026-11-17: compile-time type/form compatibility must agree with
+the runtime value contract when separately compiled Lite components exchange
+values through a compatible library boundary. This includes the shared union
+Kind mapping; other public types and calls need their own representation,
+transfer and lifetime contracts. Source-level compatibility alone cannot
+silently make mismatched runtime representations compatible.
+
+The user's possible `.c`, `.h`, `.so`, `.a`, and `.lth` outputs illustrate a
+future separately compiled library workflow; `.lth` and the import/link format
+are not selected or implemented by this direction. Handling external data and
+incompatible interfaces, target ABI, versioning, validation, ownership and
+calling conventions remain open. See the [library compatibility investigation](../research/investigations/language-review/separate-library-value-compatibility.md).
+
 ## Open decisions
 
 Module path resolution; cycles; declaration resolution across files; initialization order; optional/generated interface artifacts; binary versus source packages; target-specific dependencies; C interoperability; package authenticity; and the stable public API policy. Manually maintained header files or duplicate signatures are not required by the selected direction.

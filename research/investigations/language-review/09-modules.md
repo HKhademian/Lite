@@ -35,6 +35,10 @@ Status: **preliminary, 2026-11-15; awaiting joint review**. All recommendations 
 
 ## 9.5 Packages and projects
 
+The user's separately compiled library direction requires compile-time type
+agreement to match runtime value behavior across compatible library boundaries;
+see [type agreements and values](separate-library-value-compatibility.md).
+
 **Baseline:** Module access and package/dependency organization are related but separate design questions.
 
 **Initial assessment and probes:** Compare a local module, a reusable library, and two versions of a dependency. Decide identity, discovery, reproducibility, and replacement boundaries before choosing package syntax.

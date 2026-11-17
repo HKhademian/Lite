@@ -4,6 +4,14 @@ Dated decision ledger, updated through **2026-11-17**. Older entries retain thei
 original scope. Decisions do not establish compiler conformance; use
 [the transition](../compiler/transition-plan.md) for current execution evidence.
 
+## Compile-time agreement and runtime values, 2026-11-17
+
+The user requires separately compiled compatible Lite components to exchange
+runtime values consistently with their compile-time type/form agreement. A
+future library interface and its native outputs are illustrative; formats, ABI,
+linking, ownership, invalid external inputs and versioning remain open. See
+[separately compiled libraries](modules-and-packages.md#separately-compiled-libraries-and-runtime-agreement).
+
 ## Shared union Kind mapping, 2026-11-17
 
 The user requires values and consumers of the same normalized union type to

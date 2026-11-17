@@ -216,6 +216,12 @@ Open: collection/iterator protocol names and syntax, empty/unresolved-element li
 
 Selected:
 
+- Separately compiled Lite components treated as compatible must exchange
+  runtime values according to their shared contracts; source-level type
+  agreement alone does not make incompatible representations safe. Library
+  artifacts, ABI, versioning, validation and linking remain open; see
+  [separately compiled libraries](../modules-and-packages.md#separately-compiled-libraries-and-runtime-agreement).
+
 - The approved igniter fixed-array subset runs nonempty homogeneous literals of scalars/flat tuples, Int bracket/literal dot reads, explicit [T; N] function inputs/results and action traversal with optional as item. Exact extents/types, evaluated value copies, source-once traversal, scoped receivers and nearest-loop exits are preserved. Runtime bounds use the temporary BoundPanic diagnostic. Empty construction, unions, nested arrays, mutation/growth, views, metadata, general sequence contracts and native layout remain unimplemented. See [fixed-array coverage](../../igniter/README.md#fixed-arrays-and-traversal).
 - Named user-function calls implement fixed-slot interleaving, =name shorthand and named replacement of positional contributions, preserving written evaluation order and checking final slot types. Defaults/spread and builtin public labels remain unimplemented. See [INV-031 evidence](../../research/investigations/INV-031-fvp-named-calls.md).
 - Explicit typed receiving declarations now support positional label conversion of stored flat scalar tuples with exact ordered shape/types; ordinary transfers remain label-sensitive. See [conversion evidence](../../research/investigations/INV-022-fvp-label-conversion.md).
