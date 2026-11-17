@@ -6,6 +6,7 @@ path := import "core/path";
 text := import "core/text";
 list := import "core/list";
 integer := import "core/int";
+crypto := import "core/crypto";
 unicode := import "core/unicode";
 json := import "util/json";
 
@@ -1432,5 +1433,911 @@ pub runQueryCommand := fn(rootDir: String, args: List<String>): Int {
         si = si + 1;
     }
     io.outputLine("\n" + integer.intText(shownCount) + " shown of " + integer.intText(totalMatches) + " matching challenge(s)");
+    0
+};
+
+findSortedEntity := fn(keys: List<String>, target: String): Int {
+    var lo := 0;
+    var hi := list.listCountText(keys) - 1;
+    loop lo <= hi {
+        mid := lo + (hi - lo) / 2;
+        cmp := compareTextLex(keys[mid], target);
+        if cmp == 0 { return mid; }
+        if cmp < 0 { lo = mid + 1; } else { hi = mid - 1; }
+    }
+    -1
+};
+
+parseHexOrDecInt := fn(raw: String, isHex: Bool): (ok: Bool, value: Int) {
+    size := text.length(raw);
+    if size == 0 { return (ok = false, value = 0); }
+    var acc := 0;
+    var i := 0;
+    hexDigits := "0123456789abcdef";
+    hexUpper := "0123456789ABCDEF";
+    loop i < size {
+        ch := text.at(raw, i);
+        var d := text.indexOfText(hexDigits, ch, 0);
+        if d < 0 and isHex { d = text.indexOfText(hexUpper, ch, 0); }
+        if d < 0 or (not isHex and d >= 10) { return (ok = false, value = 0); }
+        if acc <= 1114111 {
+            acc = acc * (if isHex { 16 } else { 10 }) + d;
+        }
+        i = i + 1;
+    }
+    (ok = true, value = acc)
+};
+
+decodeNumericHtmlEntity := fn(n: Int): String {
+    legacy: List<Int> = [
+    8364, 129, 8218, 402, 8222, 8230, 8224, 8225, 710, 8240, 352, 8249, 338, 141, 381, 143,
+    144, 8216, 8217, 8220, 8221, 8226, 8211, 8212, 732, 8482, 353, 8250, 339, 157, 382, 376
+    ];
+    if n == 0 or n > 1114111 or (n >= 55296 and n <= 57343) {
+        return unicode.fromCodePoint(65533).text;
+    }
+    if n >= 128 and n <= 159 {
+        return unicode.fromCodePoint(legacy[n - 128]).text;
+    }
+    low16 := n % 65536;
+    if (n >= 1 and n <= 8) or n == 11 or (n >= 14 and n <= 31) or n == 127 or (n >= 64976 and n <= 65007) or low16 >= 65534 {
+        return "";
+    }
+    cp := unicode.fromCodePoint(n);
+    if cp.ok { cp.text } else { unicode.fromCodePoint(65533).text }
+};
+
+/** Decodes HTML5 named and numeric character references using `entitiesJsonPath` (`html-entities.json`). */
+pub unescapeChallengeHtml := fn(entitiesJsonText: String, value: String): String {
+    if text.indexOfText(value, "&", 0) < 0 { return value; }
+    rawKeys: mut List<String> = [];
+    rawVals: mut List<String> = [];
+    loop json.objectKeys(entitiesJsonText, 0) as k {
+        list.pushBack(mut rawKeys, k);
+        list.pushBack(mut rawVals, json.readObjectString(entitiesJsonText, 0, k).value);
+    }
+    sortedKeys := sortTexts(rawKeys);
+    var sortedIdx: mut List<Int> = [];
+    var ki := 0;
+    kCount := list.listCountText(rawKeys);
+    loop ki < kCount {
+        list.pushBack(mut sortedIdx, ki);
+        ki = ki + 1;
+    }
+    if kCount > 1 {
+        var width := 1;
+        loop width < kCount {
+            next: mut List<Int> = [];
+            var st := 0;
+            loop st < kCount {
+                mid := if st + width < kCount { st + width } else { kCount };
+                re := if st + width * 2 < kCount { st + width * 2 } else { kCount };
+                var li := st;
+                var ri := mid;
+                loop li < mid or ri < re {
+                    if li >= mid {
+                        list.pushBack(mut next, sortedIdx[ri]);
+                        ri = ri + 1;
+                    } else if ri >= re {
+                        list.pushBack(mut next, sortedIdx[li]);
+                        li = li + 1;
+                    } else if compareTextLex(rawKeys[sortedIdx[li]], rawKeys[sortedIdx[ri]]) <= 0 {
+                        list.pushBack(mut next, sortedIdx[li]);
+                        li = li + 1;
+                    } else {
+                        list.pushBack(mut next, sortedIdx[ri]);
+                        ri = ri + 1;
+                    }
+                }
+                st = st + width * 2;
+            }
+            sortedIdx = next;
+            width = width * 2;
+        }
+    }
+    sortedVals: mut List<String> = [];
+    loop sortedIdx as si {
+        list.pushBack(mut sortedVals, rawVals[si]);
+    }
+    _unused := list.listCountText(sortedKeys);
+
+    out: mut List<String> = [];
+    size := text.length(value);
+    var pos := 0;
+    loop pos < size {
+        amp := text.indexOfText(value, "&", pos);
+        if amp < 0 {
+            list.pushBack(mut out, text.slice(value, pos, size));
+            break;
+        }
+        if amp > pos {
+            list.pushBack(mut out, text.slice(value, pos, amp));
+        }
+        if amp + 1 >= size {
+            list.pushBack(mut out, "&");
+            break;
+        }
+        if text.at(value, amp + 1) == "#" {
+            var numStart := amp + 2;
+            var isHex := false;
+            if numStart < size and (text.at(value, numStart) == "x" or text.at(value, numStart) == "X") {
+                isHex = true;
+                numStart = numStart + 1;
+            }
+            var j := numStart;
+            loop j < size {
+                ch := text.at(value, j);
+                okCh := if isHex {
+                    text.indexOfText("0123456789abcdefABCDEF", ch, 0) >= 0
+                } else {
+                    text.isDigit(ch)
+                };
+                if not okCh { break; }
+                j = j + 1;
+            }
+            parsed := parseHexOrDecInt(text.slice(value, numStart, j), isHex);
+            if parsed.ok {
+                list.pushBack(mut out, decodeNumericHtmlEntity(parsed.value));
+                pos = if j < size and text.at(value, j) == ";" { j + 1 } else { j };
+            } else {
+                list.pushBack(mut out, "&");
+                pos = amp + 1;
+            }
+        } else {
+            var end := amp + 1;
+            maxEnd := if amp + 1 + 33 < size { amp + 1 + 33 } else { size };
+            entityStops := "\t\n <&#" + unicode.fromCodePoint(12).text;
+            loop end < maxEnd {
+                ch := text.at(value, end);
+                if text.indexOfText(entityStops, ch, 0) >= 0 { break; }
+                end = end + 1;
+                if ch == ";" { break; }
+            }
+            candMax := text.slice(value, amp + 1, end);
+            var matched := false;
+            var tryLen := text.length(candMax);
+            loop tryLen >= 2 {
+                cand := text.slice(candMax, 0, tryLen);
+                idx := findSortedEntity(sortedKeys, cand);
+                if idx >= 0 {
+                    list.pushBack(mut out, sortedVals[idx]);
+                    pos = amp + 1 + tryLen;
+                    matched = true;
+                    break;
+                }
+                tryLen = tryLen - 1;
+            }
+            if not matched {
+                list.pushBack(mut out, "&");
+                pos = amp + 1;
+            }
+        }
+    }
+    text.joinTexts(out, "")
+};
+
+stripHtmlTags := fn(raw: String): String {
+    out: mut List<String> = [];
+    size := text.length(raw);
+    var pos := 0;
+    loop pos < size {
+        lt := text.indexOfText(raw, "<", pos);
+        if lt < 0 {
+            list.pushBack(mut out, text.slice(raw, pos, size));
+            break;
+        }
+        gt := text.indexOfText(raw, ">", lt + 1);
+        if gt < 0 {
+            list.pushBack(mut out, text.slice(raw, pos, size));
+            break;
+        }
+        list.pushBack(mut out, text.slice(raw, pos, lt));
+        pos = gt + 1;
+    }
+    text.joinTexts(out, "")
+};
+
+replaceHtmlLineBreaksAndParagraphs := fn(raw: String): String {
+    out: mut List<String> = [];
+    size := text.length(raw);
+    var pos := 0;
+    loop pos < size {
+        lt := text.indexOfText(raw, "<", pos);
+        if lt < 0 {
+            list.pushBack(mut out, text.slice(raw, pos, size));
+            break;
+        }
+        gt := text.indexOfText(raw, ">", lt + 1);
+        if gt < 0 {
+            list.pushBack(mut out, text.slice(raw, pos, size));
+            break;
+        }
+        list.pushBack(mut out, text.slice(raw, pos, lt));
+        tag := asciiLower(text.trim(text.slice(raw, lt + 1, gt)));
+        if tag == "br" or tag == "br/" or tag == "br /" {
+            list.pushBack(mut out, "\n");
+        } else if tag == "/p" {
+            list.pushBack(mut out, "\n\n");
+        }
+        pos = gt + 1;
+    }
+    text.joinTexts(out, "")
+};
+
+collapseMultiNewlines := fn(raw: String): String {
+    out: mut List<String> = [];
+    var streak := 0;
+    var i := 0;
+    loop i < text.length(raw) {
+        ch := text.at(raw, i);
+        if ch == "\n" {
+            streak = streak + 1;
+            if streak <= 2 { list.pushBack(mut out, ch); }
+        } else {
+            streak = 0;
+            list.pushBack(mut out, ch);
+        }
+        i = i + 1;
+    }
+    text.joinTexts(out, "")
+};
+
+encodeUriComponentStrict := fn(seg: String): String {
+    unreserved := "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789-_.~";
+    hex := "0123456789ABCDEF";
+    out: mut List<String> = [];
+    bytes := unicode.utf8Encode(seg);
+    var i := 0;
+    loop i < list.listCountInt(bytes) {
+        b := bytes[i];
+        if b < 128 {
+            ch := unicode.fromCodePoint(b).text;
+            if text.indexOfText(unreserved, ch, 0) >= 0 {
+                list.pushBack(mut out, ch);
+            } else {
+                list.pushBack(mut out, "%" + text.at(hex, b / 16) + text.at(hex, b % 16));
+            }
+        } else {
+            list.pushBack(mut out, "%" + text.at(hex, b / 16) + text.at(hex, b % 16));
+        }
+        i = i + 1;
+    }
+    text.joinTexts(out, "")
+};
+
+encodeGithubPath := fn(relPath: String): String {
+    parts: mut List<String> = [];
+    size := text.length(relPath);
+    var start := 0;
+    var i := 0;
+    loop i <= size {
+        atEnd := i == size;
+        if atEnd or text.at(relPath, i) == "/" {
+            list.pushBack(mut parts, encodeUriComponentStrict(text.slice(relPath, start, i)));
+            start = i + 1;
+        }
+        i = i + 1;
+    }
+    text.joinTexts(parts, "/")
+};
+
+padLeftZero := fn(n: Int, width: Int): String {
+    var out := integer.intText(n);
+    loop text.length(out) < width {
+        out = "0" + out;
+    }
+    out
+};
+
+parseThreeDigitPythonNum := fn(treePath: String): (ok: Bool, num: Int) {
+    if not text.startsWithAt(treePath, 0, "python/p") or not text.endsWith(treePath, ".py") or text.length(treePath) =!= 14 {
+        return (ok = false, num = 0);
+    }
+    digits := text.slice(treePath, 8, 11);
+    if not text.isDigit(text.at(digits, 0)) or not text.isDigit(text.at(digits, 1)) or not text.isDigit(text.at(digits, 2)) {
+        return (ok = false, num = 0);
+    }
+    parsed := text.textToInt(digits);
+    (ok = parsed.ok, num = parsed.value)
+};
+
+parseLeetcodeSolutionNum := fn(treePath: String): (ok: Bool, num: Int) {
+    if not text.startsWithAt(treePath, 0, "solution/") or not text.endsWith(treePath, "/Solution.py") {
+        return (ok = false, num = 0);
+    }
+    dashPos := text.indexOfText(treePath, "-", 9);
+    if dashPos <= 9 { return (ok = false, num = 0); }
+    slashPos := text.indexOfText(treePath, "/", dashPos + 1);
+    if slashPos <= dashPos + 1 { return (ok = false, num = 0); }
+    dotPos := text.indexOfText(treePath, ".", slashPos + 1);
+    if dotPos <= slashPos + 1 { return (ok = false, num = 0); }
+    numStr := text.slice(treePath, slashPos + 1, dotPos);
+    var i := 0;
+    loop i < text.length(numStr) {
+        if not text.isDigit(text.at(numStr, i)) { return (ok = false, num = 0); }
+        i = i + 1;
+    }
+    parsed := text.textToInt(numStr);
+    (ok = parsed.ok, num = parsed.value)
+};
+
+mergeAndWriteBenchmarkManifest := fn(benchDir: String, replaceSource: String, writtenLines: List<String>): (ok: Bool, totalRows: Int, error: String) {
+    manifestPath := path.join(benchDir, "items.jsonl");
+    mergedLines: mut List<String> = [];
+    if fs.kind(manifestPath) == fs.FILE_KIND_FILE {
+        extRead := fs.readText(manifestPath);
+        if not extRead.ok { return (ok = false, totalRows = 0, error = extRead.error); }
+        loop splitJsonLines(extRead.text) as ln {
+            if json.readObjectString(ln, 0, "source").value =!= replaceSource {
+                list.pushBack(mut mergedLines, ln);
+            }
+        }
+    }
+    loop writtenLines as wl {
+        list.pushBack(mut mergedLines, wl);
+    }
+
+    n := list.listCountText(mergedLines);
+    sources: mut List<String> = [];
+    ids: mut List<String> = [];
+    var order: mut List<Int> = [];
+    var i := 0;
+    loop i < n {
+        ln := mergedLines[i];
+        list.pushBack(mut sources, json.readObjectString(ln, 0, "source").value);
+        list.pushBack(mut ids, json.readObjectString(ln, 0, "id").value);
+        list.pushBack(mut order, i);
+        i = i + 1;
+    }
+    if n > 1 {
+        var width := 1;
+        loop width < n {
+            next: mut List<Int> = [];
+            var st := 0;
+            loop st < n {
+                mid := if st + width < n { st + width } else { n };
+                re := if st + width * 2 < n { st + width * 2 } else { n };
+                var li := st;
+                var ri := mid;
+                loop li < mid or ri < re {
+                    if li >= mid {
+                        list.pushBack(mut next, order[ri]);
+                        ri = ri + 1;
+                    } else if ri >= re {
+                        list.pushBack(mut next, order[li]);
+                        li = li + 1;
+                    } else {
+                        ia := order[li];
+                        ib := order[ri];
+                        var cmp := compareTextLex(sources[ia], sources[ib]);
+                        if cmp == 0 { cmp = compareTextLex(ids[ia], ids[ib]); }
+                        if cmp <= 0 {
+                            list.pushBack(mut next, ia);
+                            li = li + 1;
+                        } else {
+                            list.pushBack(mut next, ib);
+                            ri = ri + 1;
+                        }
+                    }
+                }
+                st = st + width * 2;
+            }
+            order = next;
+            width = width * 2;
+        }
+    }
+
+    sortedLines: mut List<String> = [];
+    sortedSources: mut List<String> = [];
+    loop order as oi {
+        list.pushBack(mut sortedLines, mergedLines[oi]);
+        list.pushBack(mut sortedSources, sources[oi]);
+    }
+    _mb := fs.makeDir(benchDir);
+    wItems := fs.writeText(manifestPath, if n == 0 { "" } else { text.joinTexts(sortedLines, "\n") + "\n" });
+    if not wItems.ok { return (ok = false, totalRows = 0, error = wItems.error); }
+
+    idxJson := "{\n  \"total\": " + integer.intText(n) + ",\n  \"sources\": " + formatSortedCountsJson(sortedSources) + "\n}\n";
+    wIdx := fs.writeText(path.join(benchDir, "index.json"), idxJson);
+    if not wIdx.ok { return (ok = false, totalRows = 0, error = wIdx.error); }
+    (ok = true, totalRows = n, error = "")
+};
+
+/** Builds Project Euler benchmark items from `.cache/benchmark/euler` (`build_benchmark_euler.ts`). */
+pub buildBenchmarkEuler := fn(challengesRootDir: String, entitiesJsonText: String): (ok: Bool, writtenCount: Int, totalCount: Int, error: String) {
+    cacheDir := path.join(challengesRootDir, ".cache/benchmark/euler");
+    chRead := fs.readText(path.join(challengesRootDir, "data/challenges.jsonl"));
+    if not chRead.ok { return (ok = false, writtenCount = 0, totalCount = 0, error = chRead.error); }
+    ansRead := readNormalizedText(path.join(cacheDir, "Answers.txt"));
+    if not ansRead.ok { return (ok = false, writtenCount = 0, totalCount = 0, error = ansRead.error); }
+    treeRead := fs.readText(path.join(cacheDir, "tree.json"));
+    if not treeRead.ok { return (ok = false, writtenCount = 0, totalCount = 0, error = treeRead.error); }
+
+    eulerNums: mut List<Int> = [];
+    eulerLines: mut List<String> = [];
+    loop splitJsonLines(chRead.text) as ln {
+        if json.readObjectString(ln, 0, "source").value == "project-euler" {
+            numR := json.readObjectInt(ln, 0, "number");
+            if numR.found and numR.ok {
+                list.pushBack(mut eulerNums, numR.value);
+                list.pushBack(mut eulerLines, ln);
+            }
+        }
+    }
+
+    ansNums: mut List<Int> = [];
+    ansVals: mut List<String> = [];
+    loop splitJsonLines(ansRead.text) as aln {
+        if text.startsWithAt(aln, 0, "Problem ") {
+            colon := text.indexOfText(aln, ":", 8);
+            if colon > 8 {
+                pn := text.textToInt(text.slice(aln, 8, colon));
+                if pn.ok {
+                    rest := text.trim(text.slice(aln, colon + 1, text.length(aln)));
+                    var sp := 0;
+                    loop sp < text.length(rest) {
+                        ch := text.at(rest, sp);
+                        if ch == " " or ch == "\t" { break; }
+                        sp = sp + 1;
+                    }
+                    ansToken := text.slice(rest, 0, sp);
+                    if ansToken =!= "" {
+                        list.pushBack(mut ansNums, pn.value);
+                        list.pushBack(mut ansVals, ansToken);
+                    }
+                }
+            }
+        }
+    }
+
+    treeField := json.findObjectField(treeRead.text, 0, "tree");
+    var blobNums: mut List<Int> = [];
+    loop json.arrayElementOffsets(treeRead.text, treeField.valuePos) as tPos {
+        if json.readObjectString(treeRead.text, tPos, "type").value == "blob" {
+            tPath := json.readObjectString(treeRead.text, tPos, "path").value;
+            pn := parseThreeDigitPythonNum(tPath);
+            if pn.ok and not list.listContainsInt(blobNums, pn.num) {
+                list.pushBack(mut blobNums, pn.num);
+            }
+        }
+    }
+    bLen := list.listCountInt(blobNums);
+    var bi := 1;
+    loop bi < bLen {
+        var sortedList: mut List<Int> = [];
+        var minRemaining := blobNums;
+        loop list.listCountInt(minRemaining) > 0 {
+            var mi := 0;
+            var j := 1;
+            loop j < list.listCountInt(minRemaining) {
+                if minRemaining[j] < minRemaining[mi] { mi = j; }
+                j = j + 1;
+            }
+            list.pushBack(mut sortedList, minRemaining[mi]);
+            nextR: mut List<Int> = [];
+            var k := 0;
+            loop k < list.listCountInt(minRemaining) {
+                if k =!= mi { list.pushBack(mut nextR, minRemaining[k]); }
+                k = k + 1;
+            }
+            minRemaining = nextR;
+        }
+        blobNums = sortedList;
+        break;
+    }
+
+    benchDir := path.join(challengesRootDir, "benchmark");
+    writtenLines: mut List<String> = [];
+
+    loop blobNums as n {
+        chIdx := list.listIndexOfInt(eulerNums, n);
+        ansIdx := list.listIndexOfInt(ansNums, n);
+        padded := padLeftZero(n, 3);
+        stmtHtmlPath := path.join(cacheDir, "statements/problem-" + padded + ".html");
+        if chIdx >= 0 and ansIdx >= 0 and fs.kind(stmtHtmlPath) == fs.FILE_KIND_FILE {
+            cLine := eulerLines[chIdx];
+            ans := ansVals[ansIdx];
+            page := readNormalizedText(stmtHtmlPath).text;
+            bodyStartTag := "<div class=\"problem_content\" role=\"problem\">";
+            bStart := text.indexOfText(page, bodyStartTag, 0);
+            if bStart >= 0 {
+                afterOpen := bStart + text.length(bodyStartTag);
+                var bEnd := -1;
+                var searchPos := afterOpen;
+                loop true {
+                    closeDiv := text.indexOfText(page, "</div>", searchPos);
+                    if closeDiv < 0 { break; }
+                    afterClose := skipJsonSpace(page, closeDiv + 6);
+                    if text.startsWithAt(page, afterClose, "<br") {
+                        bEnd = closeDiv;
+                        break;
+                    }
+                    searchPos = closeDiv + 6;
+                }
+                if bEnd >= 0 {
+                    bodyHtml := text.slice(page, afterOpen, bEnd);
+                    var title := json.readObjectString(cLine, 0, "title").value;
+                    h2Start := text.indexOfText(page, "<h2>", 0);
+                    if h2Start >= 0 {
+                        h2End := text.indexOfText(page, "</h2>", h2Start + 4);
+                        if h2End >= 0 {
+                            extractedTitle := text.trim(unescapeChallengeHtml(entitiesJsonText, stripHtmlTags(text.slice(page, h2Start + 4, h2End))));
+                            if extractedTitle =!= "" { title = extractedTitle; }
+                        }
+                    }
+                    statement := text.trim(collapseMultiNewlines(unescapeChallengeHtml(entitiesJsonText, replaceHtmlLineBreaksAndParagraphs(bodyHtml))));
+                    if statement =!= "" {
+                        cid := json.readObjectString(cLine, 0, "id").value;
+                        curl := json.readObjectString(cLine, 0, "url").value;
+                        ccat := json.readObjectString(cLine, 0, "category").value;
+                        topicsSpan := json.valueSpan(cLine, json.findObjectField(cLine, 0, "topics").valuePos);
+                        topicsRawJson := text.slice(cLine, topicsSpan.start, topicsSpan.end);
+                        diffField := json.findObjectField(cLine, 0, "difficulty");
+                        diffSpan := json.valueSpan(cLine, diffField.valuePos);
+                        diffRawJson := text.slice(cLine, diffSpan.start, diffSpan.end);
+                        normRes := parseScaledDecimal1000(cLine, diffField.valuePos, "normalized");
+                        rawDiffField := json.findObjectField(cLine, diffField.valuePos, "raw");
+                        rawDiffStr := json.readStringAt(cLine, rawDiffField.valuePos);
+                        rawDiffDisp := if rawDiffStr.ok { rawDiffStr.value } else {
+                            sp := json.valueSpan(cLine, rawDiffField.valuePos);
+                            text.slice(cLine, sp.start, sp.end)
+                        };
+                        diffDisp := formatDifficultyCsv("project-euler", normRes.scaled, normRes.raw, normRes.isIntLiteral);
+
+                        itemDir := path.join(benchDir, "items/" + cid);
+                        _mp := fs.makeDir(path.join(itemDir, "tests/public"));
+                        probMd := "# " + title + "\n\n**Source:** [Project Euler #" + integer.intText(n) + "](" + curl + ")  \n"
+                        + "**Answer type:** one number  \n"
+                        + "**Difficulty:** " + diffDisp + "/10 (" + rawDiffDisp + ")\n\n"
+                        + "## Problem\n\n" + statement + "\n\n## Output\n\nPrint the single numeric answer.\n";
+                        _wp := fs.writeText(path.join(itemDir, "problem.md"), probMd);
+                        _wa := fs.writeText(path.join(itemDir, "tests/public/answer.txt"), ans + "\n");
+
+                        refUrl := "https://github.com/nayuki/Project-Euler-solutions/blob/master/python/p" + padded + ".py";
+                        ansSha := crypto.sha256Bytes(unicode.utf8Encode(ans));
+                        metaJson := "{\n"
+                        + "  \"id\": " + json.quoteString(cid) + ",\n"
+                        + "  \"source\": \"project-euler\",\n"
+                        + "  \"title\": " + json.quoteString(title) + ",\n"
+                        + "  \"url\": " + json.quoteString(curl) + ",\n"
+                        + "  \"category\": " + json.quoteString(ccat) + ",\n"
+                        + "  \"topics\": " + topicsRawJson + ",\n"
+                        + "  \"difficulty\": " + diffRawJson + ",\n"
+                        + "  \"harness\": \"single-answer\",\n"
+                        + "  \"statement\": \"problem.md\",\n"
+                        + "  \"tests\": {\n    \"public\": 1,\n    \"hidden\": 0,\n    \"public_path\": \"tests/public/answer.txt\",\n    \"hidden_kind\": \"none\"\n  },\n"
+                        + "  \"reference_solutions\": [\n    {\n      \"language\": \"python\",\n      \"url\": " + json.quoteString(refUrl) + ",\n      \"license\": \"All rights reserved; link only\",\n      \"verified_answer\": true\n    }\n  ],\n"
+                        + "  \"answer_sha256\": " + json.quoteString(ansSha) + ",\n"
+                        + "  \"license_note\": \"Statement remains Project Euler copyright; reference code remains Project Nayuki copyright.\"\n}\n";
+                        _wm := fs.writeText(path.join(itemDir, "meta.json"), metaJson);
+
+                        itemRow := "{\"id\":" + json.quoteString(cid) + ",\"source\":\"project-euler\",\"title\":" + json.quoteString(title)
+                        + ",\"url\":" + json.quoteString(curl) + ",\"harness\":\"single-answer\",\"tests\":{\"public\":1,\"hidden\":0},\"reference\":"
+                        + json.quoteString(refUrl) + "}";
+                        list.pushBack(mut writtenLines, itemRow);
+                    }
+                }
+            }
+        }
+    }
+
+    merged := mergeAndWriteBenchmarkManifest(benchDir, "project-euler", writtenLines);
+    if not merged.ok { return (ok = false, writtenCount = 0, totalCount = 0, error = merged.error); }
+    (ok = true, writtenCount = list.listCountText(writtenLines), totalCount = merged.totalRows, error = "")
+};
+
+splitBeforeExample1 := fn(desc: String): String {
+    lines: mut List<String> = [];
+    trimmed := text.trim(desc);
+    rawLines := splitJsonLines(trimmed);
+    loop rawLines as ln {
+        t := text.trim(ln);
+        if text.startsWithAt(t, 0, "Example 1:") or text.startsWithAt(t, 0, "Example 1 :") {
+            break;
+        }
+        list.pushBack(mut lines, ln);
+    }
+    var out := text.trim(text.joinTexts(lines, "\n"));
+    if text.endsWith(out, "Constraints:") {
+        out = text.trim(text.slice(out, 0, text.length(out) - 12));
+    }
+    out
+};
+
+/** Builds LeetCode benchmark items from `.cache/{leetcode,benchmark/leetcode}` (`build_benchmark_leetcode.ts`). */
+pub buildBenchmarkLeetcode := fn(challengesRootDir: String): (ok: Bool, writtenCount: Int, totalCount: Int, error: String) {
+    dataDir := path.join(challengesRootDir, "data");
+    cacheDir := path.join(challengesRootDir, ".cache");
+    chRead := fs.readText(path.join(dataDir, "challenges.jsonl"));
+    if not chRead.ok { return (ok = false, writtenCount = 0, totalCount = 0, error = chRead.error); }
+    tsRead := fs.readText(path.join(dataDir, "tests.jsonl"));
+    if not tsRead.ok { return (ok = false, writtenCount = 0, totalCount = 0, error = tsRead.error); }
+    mRead := fs.readText(path.join(cacheDir, "leetcode/merged.json"));
+    if not mRead.ok { return (ok = false, writtenCount = 0, totalCount = 0, error = mRead.error); }
+    lRead := fs.readText(path.join(dataDir, "lists.jsonl"));
+    if not lRead.ok { return (ok = false, writtenCount = 0, totalCount = 0, error = lRead.error); }
+    trRead := fs.readText(path.join(cacheDir, "benchmark/leetcode/tree.json"));
+    if not trRead.ok { return (ok = false, writtenCount = 0, totalCount = 0, error = trRead.error); }
+
+    chLines := splitJsonLines(chRead.text);
+    chIds: mut List<String> = [];
+    loop chLines as cl {
+        list.pushBack(mut chIds, json.readObjectString(cl, 0, "id").value);
+    }
+
+    tsLines := splitJsonLines(tsRead.text);
+    tsIds: mut List<String> = [];
+    loop tsLines as tl {
+        list.pushBack(mut tsIds, json.readObjectString(tl, 0, "challenge_id").value);
+    }
+
+    qField := json.findObjectField(mRead.text, 0, "questions");
+    qOffsets := json.arrayElementOffsets(mRead.text, qField.valuePos);
+    qIds: mut List<String> = [];
+    loop qOffsets as qp {
+        fidStr := json.readObjectString(mRead.text, qp, "frontend_id");
+        if fidStr.found and fidStr.ok {
+            list.pushBack(mut qIds, fidStr.value);
+        } else {
+            fidInt := json.readObjectInt(mRead.text, qp, "frontend_id");
+            list.pushBack(mut qIds, if fidInt.found and fidInt.ok { integer.intText(fidInt.value) } else { "" });
+        }
+    }
+
+    treeField := json.findObjectField(trRead.text, 0, "tree");
+    pathNums: mut List<Int> = [];
+    pathStrs: mut List<String> = [];
+    loop json.arrayElementOffsets(trRead.text, treeField.valuePos) as tPos {
+        if json.readObjectString(trRead.text, tPos, "type").value == "blob" {
+            tPath := json.readObjectString(trRead.text, tPos, "path").value;
+            pn := parseLeetcodeSolutionNum(tPath);
+            if pn.ok and list.listIndexOfInt(pathNums, pn.num) < 0 {
+                list.pushBack(mut pathNums, pn.num);
+                list.pushBack(mut pathStrs, tPath);
+            }
+        }
+    }
+
+    curated: mut List<String> = [];
+    loop splitJsonLines(lRead.text) as ll {
+        lid := json.readObjectString(ll, 0, "id").value;
+        if lid == "blind-75" or lid == "neetcode-150" {
+            loop readStringArray(ll, 0, "challenge_ids") as cid {
+                if not list.listContainsText(curated, cid) {
+                    list.pushBack(mut curated, cid);
+                }
+            }
+        }
+    }
+
+    selIds: mut List<String> = [];
+    selOrigins: mut List<String> = [];
+    loop curated as cid {
+        ci := list.listIndexOfText(chIds, cid);
+        if ci >= 0 {
+            cl := chLines[ci];
+            isPrem := json.readObjectBool(cl, 0, "premium").value;
+            cat := json.readObjectString(cl, 0, "category").value;
+            tps := readStringArray(cl, 0, "topics");
+            natId := json.readObjectString(cl, 0, "native_id").value;
+            natNum := text.textToInt(natId);
+            ti := list.listIndexOfText(tsIds, cid);
+            var hasPub := false;
+            if ti >= 0 {
+                pf := json.findObjectField(tsLines[ti], 0, "public");
+                if pf.found and isJsonArrayAt(tsLines[ti], pf.valuePos) {
+                    hasPub = list.listCountInt(json.arrayElementOffsets(tsLines[ti], pf.valuePos)) > 0;
+                }
+            }
+            if not isPrem and cat == "algorithms" and not list.listContainsText(tps, "design")
+            and list.listContainsText(qIds, natId) and natNum.ok and list.listIndexOfInt(pathNums, natNum.value) >= 0 and hasPub {
+                list.pushBack(mut selIds, cid);
+                list.pushBack(mut selOrigins, "curated");
+            }
+        }
+    }
+
+    var fillIndices: mut List<Int> = [];
+    var fillPops: mut List<Int> = [];
+    var ci := 0;
+    loop ci < list.listCountText(chIds) {
+        cl := chLines[ci];
+        cid := chIds[ci];
+        if json.readObjectString(cl, 0, "source").value == "leetcode"
+        and not list.listContainsText(selIds, cid) and not list.listContainsText(curated, cid) {
+            isPrem := json.readObjectBool(cl, 0, "premium").value;
+            cat := json.readObjectString(cl, 0, "category").value;
+            tps := readStringArray(cl, 0, "topics");
+            natId := json.readObjectString(cl, 0, "native_id").value;
+            natNum := text.textToInt(natId);
+            ti := list.listIndexOfText(tsIds, cid);
+            var hasPub := false;
+            if ti >= 0 {
+                pf := json.findObjectField(tsLines[ti], 0, "public");
+                if pf.found and isJsonArrayAt(tsLines[ti], pf.valuePos) {
+                    hasPub = list.listCountInt(json.arrayElementOffsets(tsLines[ti], pf.valuePos)) > 0;
+                }
+            }
+            if not isPrem and cat == "algorithms" and not list.listContainsText(tps, "design")
+            and list.listContainsText(qIds, natId) and natNum.ok and list.listIndexOfInt(pathNums, natNum.value) >= 0 and hasPub {
+                var solved := 0;
+                popF := json.findObjectField(cl, 0, "popularity");
+                if popF.found and isJsonObjectAt(cl, popF.valuePos) {
+                    sR := json.readObjectInt(cl, popF.valuePos, "solved");
+                    if sR.found and sR.ok { solved = sR.value; }
+                }
+                list.pushBack(mut fillIndices, ci);
+                list.pushBack(mut fillPops, solved);
+            }
+        }
+        ci = ci + 1;
+    }
+
+    fLen := list.listCountInt(fillIndices);
+    if fLen > 1 {
+        var width := 1;
+        loop width < fLen {
+            next: mut List<Int> = [];
+            var st := 0;
+            loop st < fLen {
+                mid := if st + width < fLen { st + width } else { fLen };
+                re := if st + width * 2 < fLen { st + width * 2 } else { fLen };
+                var li := st;
+                var ri := mid;
+                loop li < mid or ri < re {
+                    if li >= mid {
+                        list.pushBack(mut next, fillIndices[ri]);
+                        ri = ri + 1;
+                    } else if ri >= re {
+                        list.pushBack(mut next, fillIndices[li]);
+                        li = li + 1;
+                    } else {
+                        ia := fillIndices[li];
+                        ib := fillIndices[ri];
+                        pa := 0;
+                        popFA := json.findObjectField(chLines[ia], 0, "popularity");
+                        paVal := if popFA.found and isJsonObjectAt(chLines[ia], popFA.valuePos) { json.readObjectInt(chLines[ia], popFA.valuePos, "solved").value } else { 0 };
+                        pbVal := if json.findObjectField(chLines[ib], 0, "popularity").found and isJsonObjectAt(chLines[ib], json.findObjectField(chLines[ib], 0, "popularity").valuePos) { json.readObjectInt(chLines[ib], json.findObjectField(chLines[ib], 0, "popularity").valuePos, "solved").value } else { 0 };
+                        _unused := pa;
+                        if paVal >= pbVal {
+                            list.pushBack(mut next, ia);
+                            li = li + 1;
+                        } else {
+                            list.pushBack(mut next, ib);
+                            ri = ri + 1;
+                        }
+                    }
+                }
+                st = st + width * 2;
+            }
+            fillIndices = next;
+            width = width * 2;
+        }
+    }
+    _unusedPops := list.listCountInt(fillPops);
+    loop fillIndices as fi {
+        list.pushBack(mut selIds, chIds[fi]);
+        list.pushBack(mut selOrigins, "popular");
+    }
+
+    benchDir := path.join(challengesRootDir, "benchmark");
+    writtenLines: mut List<String> = [];
+    var candI := 0;
+    loop candI < list.listCountText(selIds) {
+        if list.listCountText(writtenLines) >= 298 { break; }
+        cid := selIds[candI];
+        origin := selOrigins[candI];
+        cLine := chLines[list.listIndexOfText(chIds, cid)];
+        tLine := tsLines[list.listIndexOfText(tsIds, cid)];
+        natId := json.readObjectString(cLine, 0, "native_id").value;
+        qPos := qOffsets[list.listIndexOfText(qIds, natId)];
+        descR := json.readObjectString(mRead.text, qPos, "description");
+        descText := splitBeforeExample1(if descR.found and descR.ok { descR.value } else { "" });
+        if text.length(descText) >= 40 {
+            n := text.textToInt(natId).value;
+            rawRel := pathStrs[list.listIndexOfInt(pathNums, n)];
+            refUrl := "https://github.com/doocs/leetcode/blob/main/" + encodeGithubPath(rawRel);
+
+            ctitle := json.readObjectString(cLine, 0, "title").value;
+            curl := json.readObjectString(cLine, 0, "url").value;
+            ccat := json.readObjectString(cLine, 0, "category").value;
+            topics := readStringArray(cLine, 0, "topics");
+            topicsSpan := json.valueSpan(cLine, json.findObjectField(cLine, 0, "topics").valuePos);
+            topicsRawJson := text.slice(cLine, topicsSpan.start, topicsSpan.end);
+            diffField := json.findObjectField(cLine, 0, "difficulty");
+            diffSpan := json.valueSpan(cLine, diffField.valuePos);
+            diffRawJson := text.slice(cLine, diffSpan.start, diffSpan.end);
+            normRes := parseScaledDecimal1000(cLine, diffField.valuePos, "normalized");
+            rawDiffF := json.findObjectField(cLine, diffField.valuePos, "raw");
+            rawDiffStr := json.readStringAt(cLine, rawDiffF.valuePos);
+            rawDiffDisp := if rawDiffStr.ok { rawDiffStr.value } else {
+                sp := json.valueSpan(cLine, rawDiffF.valuePos);
+                text.slice(cLine, sp.start, sp.end)
+            };
+            diffDisp := formatDifficultyCsv("leetcode", normRes.scaled, normRes.raw, normRes.isIntLiteral);
+
+            pubField := json.findObjectField(tLine, 0, "public");
+            hidField := json.findObjectField(tLine, 0, "hidden");
+            pubSpan := json.valueSpan(tLine, pubField.valuePos);
+            hidSpan := json.valueSpan(tLine, hidField.valuePos);
+            pubArrayJson := text.slice(tLine, pubSpan.start, pubSpan.end);
+            hidArrayJson := text.slice(tLine, hidSpan.start, hidSpan.end);
+            pubOffsets := json.arrayElementOffsets(tLine, pubField.valuePos);
+            hidOffsets := json.arrayElementOffsets(tLine, hidField.valuePos);
+            pubCount := list.listCountInt(pubOffsets);
+            hidCount := list.listCountInt(hidOffsets);
+
+            exBlocks: mut List<String> = [];
+            loop pubOffsets as pPos {
+                en := json.readObjectString(tLine, pPos, "name").value;
+                ein := json.readObjectString(tLine, pPos, "input").value;
+                eout := json.readObjectString(tLine, pPos, "output").value;
+                list.pushBack(mut exBlocks, "### " + en + "\n\n```text\nInput: " + ein + "\nOutput: " + eout + "\n```");
+            }
+
+            topicsJoined := if list.listCountText(topics) > 0 { text.joinTexts(topics, ", ") } else { "—" };
+            probMd := "# " + ctitle + "\n\n"
+            + "**Source:** [LeetCode #" + integer.intText(n) + "](" + curl + ")  \n"
+            + "**Difficulty:** " + diffDisp + "/10 (" + rawDiffDisp + ")  \n"
+            + "**Topics:** " + topicsJoined + "  \n"
+            + "**Harness:** function-style inputs (`name = value` pairs)\n\n"
+            + "## Problem\n\n" + descText + "\n\n"
+            + "## Public examples\n\n" + text.joinTexts(exBlocks, "\n\n") + "\n";
+
+            itemDir := path.join(benchDir, "items/" + cid);
+            _mt := fs.makeDir(path.join(itemDir, "tests"));
+            _wp := fs.writeText(path.join(itemDir, "problem.md"), probMd);
+            _wpub := fs.writeText(path.join(itemDir, "tests/public.json"), pubArrayJson + "\n");
+            _whid := fs.writeText(path.join(itemDir, "tests/hidden.json"), hidArrayJson + "\n");
+
+            testsMetaJson := "{\"public\":" + integer.intText(pubCount) + ",\"hidden\":" + integer.intText(hidCount)
+            + ",\"public_path\":\"tests/public.json\",\"hidden_path\":\"tests/hidden.json\",\"hidden_kind\":\"held-out-official-examples\"}";
+
+            metaJson := "{\n"
+            + "  \"id\": " + json.quoteString(cid) + ",\n"
+            + "  \"source\": \"leetcode\",\n"
+            + "  \"title\": " + json.quoteString(ctitle) + ",\n"
+            + "  \"url\": " + json.quoteString(curl) + ",\n"
+            + "  \"category\": " + json.quoteString(ccat) + ",\n"
+            + "  \"topics\": " + topicsRawJson + ",\n"
+            + "  \"difficulty\": " + diffRawJson + ",\n"
+            + "  \"harness\": \"function\",\n"
+            + "  \"input_format\": \"text\",\n"
+            + "  \"statement\": \"problem.md\",\n"
+            + "  \"selection\": " + json.quoteString(origin) + ",\n"
+            + "  \"tests\": " + testsMetaJson + ",\n"
+            + "  \"reference_solutions\": [\n    {\n      \"language\": \"python\",\n      \"url\": " + json.quoteString(refUrl) + ",\n      \"license\": \"CC-BY-SA-4.0\",\n      \"status\": \"linked-not-executed\"\n    }\n  ],\n"
+            + "  \"license_note\": \"Statement metadata from LeetCode; reference code remains doocs/leetcode CC-BY-SA-4.0.\"\n}\n";
+            _wm := fs.writeText(path.join(itemDir, "meta.json"), metaJson);
+
+            itemRow := "{\"id\":" + json.quoteString(cid) + ",\"source\":\"leetcode\",\"title\":" + json.quoteString(ctitle)
+            + ",\"url\":" + json.quoteString(curl) + ",\"harness\":\"function\",\"selection\":" + json.quoteString(origin)
+            + ",\"tests\":" + testsMetaJson + ",\"reference\":" + json.quoteString(refUrl) + "}";
+            list.pushBack(mut writtenLines, itemRow);
+        }
+        candI = candI + 1;
+    }
+
+    merged := mergeAndWriteBenchmarkManifest(benchDir, "leetcode", writtenLines);
+    if not merged.ok { return (ok = false, writtenCount = 0, totalCount = 0, error = merged.error); }
+    (ok = true, writtenCount = list.listCountText(writtenLines), totalCount = merged.totalRows, error = "")
+};
+
+/** CLI runner for `benchmark/challenges/tools/build_benchmark_euler.ts`. */
+pub runBuildBenchmarkEulerCommand := fn(rootDir: String): Int {
+    chRoot := path.join(rootDir, "benchmark/challenges");
+    entRead := fs.readText(path.join(chRoot, "tools/html-entities.json"));
+    if not entRead.ok { io.errorLine("FAIL: " + entRead.error); return 1; }
+    res := buildBenchmarkEuler(chRoot, entRead.text);
+    if not res.ok { io.errorLine("FAIL: " + res.error); return 1; }
+    io.outputLine("wrote " + integer.intText(res.writtenCount) + " Project Euler items; total " + integer.intText(res.totalCount));
+    0
+};
+
+/** CLI runner for `benchmark/challenges/tools/build_benchmark_leetcode.ts`. */
+pub runBuildBenchmarkLeetcodeCommand := fn(rootDir: String): Int {
+    res := buildBenchmarkLeetcode(path.join(rootDir, "benchmark/challenges"));
+    if not res.ok { io.errorLine("FAIL: " + res.error); return 1; }
+    io.outputLine("wrote " + integer.intText(res.writtenCount) + " LeetCode items; total " + integer.intText(res.totalCount));
     0
 };
