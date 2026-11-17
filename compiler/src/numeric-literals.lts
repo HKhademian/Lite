@@ -2,6 +2,17 @@
 
 textLib := import "core/text";
 
+pub KIND_INT8 := "Int8";
+pub KIND_INT16 := "Int16";
+pub KIND_INT32 := "Int32";
+pub KIND_INT := "Int";
+pub KIND_FLOAT32 := "Float32";
+pub KIND_FLOAT := "Float";
+pub KIND_STRING := "String";
+pub KIND_BOOL := "Bool";
+pub KIND_UNIT := "Unit";
+pub KIND_NEVER := "Never";
+
 pub numericAliasKind := fn(name: String): String {
     if name == "Int64" { "Int" }
     else if name == "Float64" or name == "Double" { "Float" }

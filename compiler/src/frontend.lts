@@ -148,6 +148,20 @@ DECL_TAG_VAR_VAL := "varval";
 DECL_TAG_VAR_MUT := "varmut";
 DECL_TAG_MUT_VAL := "mutval";
 
+pub VALUE_KIND_INT8 := numeric.KIND_INT8;
+pub VALUE_KIND_INT16 := numeric.KIND_INT16;
+pub VALUE_KIND_INT32 := numeric.KIND_INT32;
+pub VALUE_KIND_INT := numeric.KIND_INT;
+pub VALUE_KIND_FLOAT32 := numeric.KIND_FLOAT32;
+pub VALUE_KIND_FLOAT := numeric.KIND_FLOAT;
+pub VALUE_KIND_STRING := numeric.KIND_STRING;
+pub VALUE_KIND_BOOL := numeric.KIND_BOOL;
+pub VALUE_KIND_UNIT := numeric.KIND_UNIT;
+pub VALUE_KIND_NEVER := numeric.KIND_NEVER;
+VALUE_KIND_MODULE := "Module";
+VALUE_KIND_MODULE_FUNCTION := "ModuleFunction";
+VALUE_KIND_LIST_OP := "ListOp";
+
 /** Reports one source-positioned diagnostic as `name:line:column: message`, or `line:column: message` when `prefix` is empty, then exits 2. */
 failAt := fn(source: String, position: Int, prefix: String, message: String): Unit {
     place := sourceLib.lineColumn(source, position);
