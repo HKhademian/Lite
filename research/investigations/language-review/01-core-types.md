@@ -174,7 +174,8 @@ the existing alias rule.
 The user proposes that tuple indexing can yield different static types depending
 on the compile-time-known index values or range, including a `Never` result or
 a compiler error when no value can be selected. A dynamic index requires a
-runtime range check. This would reconsider the current selected rule rejecting
+runtime range check; an access whose index is known at compile time to be valid
+does not need one. This would reconsider the current selected rule rejecting
 runtime-variable tuple indexing; see [tuple access](../../../docs/tuple-entries-and-access.md#runtime-indexing-rejected).
 It is a design discussion, not a claim that compiler support exists or that the
 existing rule has already been formally replaced.
@@ -183,6 +184,10 @@ For a tuple whose zero-based components have types `(Int64, String)`, use
 these conceptual cases to review the direction:
 
 - A statically known index of 0 selects `Int64`; 1 selects `String`.
+- The user gives `pair := (10, "Ali"); i := 1; pair[i]`: `i` is a
+  compile-time-known value, so `pair[i]` has type `String` and needs no runtime
+  bounds check. Bracketed tuple indexing is under discussion, not implemented or
+  selected by the existing tuple-access rule.
 - A dynamic index whose possible in-range positions are 0 and 1 could produce
   `Int64 | String`; it must also satisfy the required runtime range check.
 - An index known to have no valid position raises the unresolved question of
