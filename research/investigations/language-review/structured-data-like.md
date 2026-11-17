@@ -15,6 +15,48 @@ something else. Do not assume that a structured-data form must behave like
 `Int-Like`, `String-Like`, `Array-Like`, or `Record-Like` before those concepts
 are reviewed together.
 
+The user suggests a Jai-inspired approach: a **directive changes the language
+or interpretation of a bounded source region** from Lite to another language,
+such as JSON. This could provide a reusable extension boundary instead of
+changing Lite's own grammar for each new format. This records the user's idea;
+it does not assert a particular Jai mechanism, select directive syntax, or
+claim that such a mechanism is implemented.
+
+## Candidate: a directive for another language
+
+Conceptually, Lite recognizes a directive and the boundaries of its region;
+the selected language's parser interprets that region; then the produced data
+must cross an explicitly defined boundary back into Lite. The directive's
+spelling, source delimiters, result type, conversion and integration are all
+open. No example spelling is selected by this note.
+
+Adding formats through a common boundary could keep the core grammar stable
+and make format handling modular. It does not automatically eliminate the cost
+of parsers, adapters, type checking, diagnostics, tooling or maintenance. An
+implementation might bundle handlers, load compiler extensions, or run
+compile-time providers; which models are permitted and how they are trusted,
+versioned and distributed remain open. A data parser used only during builds
+need not be linked into the resulting program, but materialized data still has
+size and storage costs.
+
+The boundaries need explicit investigation:
+
+- How to identify the embedded region without mistaking a delimiter inside
+  strings, comments, escaped content or nested structures for its end.
+- Whether the other language's entire grammar or a documented subset is
+  supported, and which parser/version supplies its meaning.
+- How the result becomes a Lite value, including type identity, missing values,
+  validation and the distinction between a fresh Like form and a stored value.
+- How compile-time diagnostics map to the embedded source, and how editors,
+  formatters, syntax highlighting and navigation handle both languages.
+- How static files relate to inline regions, and how their content and parser
+  versions become tracked build dependencies.
+- Whether a directive permits interpolation, effects or executable code, and
+  how such capabilities are bounded; none is implied by parsing JSON data.
+
+The user's goal is extensibility without bending Lite's syntax. The exact
+extension mechanism and supported formats remain decisions for a future layer.
+
 ## Separate choices
 
 1. **Lite-native data expressions.** Existing or future Lite record, tuple,
