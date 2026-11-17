@@ -1,6 +1,6 @@
 /** Generates `/modules/` index and detail pages via the ignited Lite tool (`tools/src/site-modules.lts`). */
 import { spawnSync } from 'node:child_process';
-import { ensureTool } from '../igniter/ignite.ts';
+import { ensureTool } from '../tools/project.ts';
 import type { ModuleApiDoc } from '../tools/docs.ts';
 import { renderPage, rootDir, type SourceRevision } from './chrome.ts';
 import type { ShowcaseSample } from './groups.ts';

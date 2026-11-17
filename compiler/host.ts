@@ -9,8 +9,49 @@ import { createRequire } from 'node:module';
 import { tmpdir } from 'node:os';
 import { dirname, isAbsolute, join, relative, resolve, sep } from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { loadManifest } from '../igniter/loader.ts';
 import { seed } from './bootstrap/seed.ts';
+
+/** Validated ordered compiler manifest: one target and its relative source paths. */
+export type Manifest = Readonly<{ target: CompilerTarget; files: readonly string[] }>;
+
+/** Loads and validates manifest metadata without opening or assembling source files. */
+export function loadManifest(path: string): Manifest {
+  const manifestPath = resolve(path);
+  const raw = readRootSourceFile(manifestPath).text;
+  let parsed: unknown;
+  try {
+    parsed = JSON.parse(raw);
+  } catch (error: unknown) {
+    throw new Error(`${manifestPath}: invalid manifest JSON: ${error instanceof Error ? error.message : String(error)}`);
+  }
+  if (typeof parsed !== 'object' || parsed === null || Array.isArray(parsed)) {
+    throw new Error(`${manifestPath}: manifest must be a JSON object`);
+  }
+  const record = parsed as Record<string, unknown>;
+  for (const key of Object.keys(record)) {
+    if (key !== 'target' && key !== 'files') throw new Error(`${manifestPath}: unexpected manifest key ${key}`);
+  }
+  const target = record['target'];
+  if (target !== 'ts' && target !== 'c') throw new Error(`${manifestPath}: target must be "ts" or "c"`);
+  const filesValue = record['files'];
+  if (!Array.isArray(filesValue) || filesValue.length === 0) {
+    throw new Error(`${manifestPath}: files must be a nonempty array`);
+  }
+  const files: string[] = [];
+  const seen = new Set<string>();
+  for (const [index, entry] of filesValue.entries()) {
+    const label = `${manifestPath}: files[${index}]`;
+    if (typeof entry !== 'string') throw new Error(`${label}: must be a string`);
+    if (entry.length === 0) throw new Error(`${label}: empty path`);
+    if (entry.startsWith('/')) throw new Error(`${label}: absolute path`);
+    if (/^[A-Za-z]:/.test(entry)) throw new Error(`${label}: drive-letter path`);
+    if (entry.includes('\\')) throw new Error(`${label}: path must use "/" separators`);
+    if (seen.has(entry)) throw new Error(`${label}: duplicate file ${entry}`);
+    seen.add(entry);
+    files.push(entry);
+  }
+  return { target, files };
+}
 
 /** Existing code-generation targets; this is host plumbing, not language syntax. */
 export type CompilerTarget = 'ts' | 'c';

@@ -59,7 +59,7 @@ importFlatAll "frontend.lts";
 
 This is a **temporary source-loader workaround**, not language syntax:
 
-- Implemented in [`igniter/loader.ts`](../../igniter/loader.ts), used by `./bin/lite
+- Originally implemented in `igniter/loader.ts` (later superseded by module imports and Lite igniter), used by `./bin/lite
   run`, `--check`, `litec` and test helpers before `compile`.
 - A top-level `importFlatAll "path";` line is replaced by the target file's
   UTF-8 source, resolved relative to the importing file.

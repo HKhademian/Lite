@@ -1,6 +1,6 @@
 /** Host adapter collecting Playground library items via the ignited Lite tool (`tools/src/site-library.lts`). */
 import { spawnSync } from 'node:child_process';
-import { ensureTool } from '../igniter/ignite.ts';
+import { ensureTool } from '../tools/project.ts';
 import type { ShowcaseSample } from './groups.ts';
 import type { PlaySample } from './play-samples.ts';
 

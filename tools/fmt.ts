@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 /** Host entrypoint for the Lite-implemented formatter (`tools/src/fmt.lts` -> `dist/tools/fmt.ts`). */
 import { spawnSync } from 'node:child_process';
-import { ensureTool, runIgnitedTool } from '../igniter/ignite.ts';
+import { ensureTool, runIgnitedTool } from './project.ts';
 
 /** Formats Lite source text cleanly and idempotently via the compiled Lite formatter. */
 export function formatLite(source: string): string {

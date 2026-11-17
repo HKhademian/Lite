@@ -2,7 +2,7 @@
 import { spawnSync } from 'node:child_process';
 import { existsSync, statSync } from 'node:fs';
 import { posix, resolve } from 'node:path';
-import { ensureTool } from '../igniter/ignite.ts';
+import { ensureTool } from '../tools/project.ts';
 import type { RenderedDocument } from '../tools/docs.ts';
 import { renderPage, rootDir, type SourceRevision } from './chrome.ts';
 import type { ShowcaseSample } from './groups.ts';

@@ -1797,13 +1797,49 @@ unreachedFutureLocalName := fn(locals: List<Local>, runtime: String): String {
 
 /** True when any unreached future placeholder (`depth <= -2`) or uninitialized reached binding (`depth >= 0`) exists in `locals`. */
 localsHasAnyUnready := fn(locals: List<Local>): Bool {
+    var count := 0;
+    var hasPotential := false;
     loop locals as entry {
-        if entry.depth <= -2 {
-            if latestActiveLocalByRuntime(locals, entry.runtime) < 0 { return true; }
-        } else if entry.depth >= 0 and entry.initState =!= INIT_STATE_INIT {
-            actIdx := latestActiveLocalByRuntime(locals, entry.runtime);
-            if actIdx >= 0 and locals[actIdx].initState =!= INIT_STATE_INIT { return true; }
+        count = count + 1;
+        if entry.depth <= -2 or (entry.depth >= 0 and entry.initState =!= INIT_STATE_INIT) {
+            hasPotential = true;
         }
+    }
+    if not hasPotential { return false; }
+    var activeBag := "|";
+    var futureBag := "|";
+    var i := count - 1;
+    loop i >= 0 {
+        entry := locals[i];
+        if entry.depth >= -1 {
+            marker := "|" + entry.runtime + "|";
+            if textLib.indexOfText(activeBag, marker, 0) < 0 {
+                if entry.depth >= 0 and entry.initState =!= INIT_STATE_INIT {
+                    return true;
+                }
+                activeBag = activeBag + entry.runtime + "|";
+            }
+        } else {
+            futureBag = futureBag + entry.runtime + "|";
+        }
+        i = i - 1;
+    }
+    if futureBag == "|" { return false; }
+    var pos := 0;
+    fLen := textLib.length(futureBag);
+    loop pos < fLen {
+        if textLib.at(futureBag, pos) == "|" {
+            next := textLib.indexOfText(futureBag, "|", pos + 1);
+            if next > pos + 1 {
+                rt := textLib.slice(futureBag, pos + 1, next);
+                if textLib.indexOfText(activeBag, "|" + rt + "|", 0) < 0 {
+                    return true;
+                }
+                pos = next;
+                continue;
+            }
+        }
+        pos = pos + 1;
     }
     false
 }
@@ -5549,21 +5585,36 @@ pruneBlockStatements := fn(stmts: List<String>, owners: List<String>, deps: List
     kept
 }
 
+/** Returns ancestor depth (`0` for `startBlockId`) of `targetBlockId` in `startBlockId`'s chain, or `-1`. */
+blockAncestorDistance := fn(targetBlockId: Int, startBlockId: Int, parentBlockIds: List<Int>): Int {
+    var b := startBlockId;
+    var dist := 0;
+    loop b > 0 {
+        if b == targetBlockId { return dist; }
+        b = parentBlockIds[b];
+        dist = dist + 1;
+    }
+    -1
+}
+
 /** Finds matching declaration index in `decl*` along the lexical parent chain from `startBlockId`, or -1. */
 findDeclInBlockChain := fn(runtime: String, startBlockId: Int, parentBlockIds: List<Int>,
 declRuntimes: List<String>, declBlockIds: List<Int>, declCount: Int): Int {
-    var b := startBlockId;
-    loop b > 0 {
-        var d := declCount - 1;
-        loop d >= 0 {
-            if declBlockIds[d] == b and declRuntimes[d] == runtime {
-                return d;
+    var bestIdx := -1;
+    var bestDist := -1;
+    var d := declCount - 1;
+    loop d >= 0 {
+        if declRuntimes[d] == runtime {
+            dist := blockAncestorDistance(declBlockIds[d], startBlockId, parentBlockIds);
+            if dist >= 0 and (bestDist < 0 or dist < bestDist) {
+                bestIdx = d;
+                bestDist = dist;
+                if dist == 0 { return d; }
             }
-            d = d - 1;
         }
-        b = parentBlockIds[b];
+        d = d - 1;
     }
-    -1
+    bestIdx
 }
 
 /** Maps runtime identifier references in `code` to matching declaration item indices along `startBlockId`'s lexical ancestor chain. */

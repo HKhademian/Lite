@@ -81,8 +81,8 @@ helper names are selected below; their detailed contracts remain open.
 
 Requested and implemented **2026-10-31**: use
 `./bin/lite run language/examples/006-fixed-tuples.lts` from the project root. The executable
-[lite](../bin/lite) command now links to the executable TypeScript
-[`igniter/launcher.ts`](../igniter/launcher.ts), which forwards to the igniter through
+[lite](../bin/lite) command now links to the Lite-generated
+[`compiler/bootstrap/igniter.ts`](../compiler/bootstrap/igniter.ts), which routes and runs tools through
 node from PATH. It resolves the implementation from its own location, preserves
 caller-relative source paths, arguments, stdin, output and exit status, and also
 forwards the existing run --check form. No language syntax, builtin, compilation

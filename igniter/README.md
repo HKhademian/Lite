@@ -161,8 +161,8 @@ across inputs. The generated compiler is required for all active paths. Native
 execution stays deferred. Known
 unsupported semantic contracts continue to fail visibly in `lite verify --all`.
 
-The root [lite launcher](../bin/lite) links to the executable TypeScript entry
-[`launcher.ts`](launcher.ts). Compile/check locate their adapters relative to
+The root [lite launcher](../bin/lite) links directly to the Lite-generated
+igniter [`compiler/bootstrap/igniter.ts`](../compiler/bootstrap/igniter.ts). Compile/check locate their adapters relative to
 the launcher while source paths remain relative to the caller. Generated standalone
 TS programs execute directly via `node`, preserving program arguments,
 stdin, streamed output and exit status. No runtime npm dependencies are required;

@@ -1,0 +1,467 @@
+/** Standalone Lite tool igniter and CLI dispatcher (`compiler/bootstrap/igniter.ts`). */
+
+crypto := import "core/crypto";
+fs := import "core/file";
+integer := import "core/int";
+io := import "core/io";
+list := import "core/list";
+path := import "core/path";
+proc := import "core/process";
+text := import "core/text";
+cases := import "util/cases";
+json := import "util/json";
+project := import "util/project";
+frontend := import "../../compiler/src/frontend.lts";
+modules := import "../../compiler/src/modules.lts";
+emitter := import "../../compiler/src/emit-ts.lts";
+hostFs := import "../../compiler/src/host-fs.lts";
+
+/** Maps a launcher symlink or alias script path to its canonical `tools/src/<name>.lts` tool name, or `""` for direct igniter CLI mode. */
+toolForEntry := fn(rawEntry: String): String {
+    if rawEntry == "" { return ""; }
+    base := path.baseName(rawEntry);
+    parentDir := path.parentDir(rawEntry);
+    parent := path.baseName(parentDir);
+    grandparent := path.baseName(path.parentDir(parentDir));
+    match {
+        base == "lite" { "cli" }
+        base == "lite-bench" { "bench" }
+        base == "lite-check" { "checker" }
+        base == "lite-compile" { "compile" }
+        base == "lite-compile-c" { "compile-c" }
+        base == "lite-compile-ts" { "compile-ts" }
+        base == "lite-docs" { "docs" }
+        base == "lite-doctor" { "check" }
+        base == "lite-fmt" { "fmt" }
+        base == "lite-release" { "release" }
+        base == "lite-run" { "run" }
+        base == "lite-test" { "test-runner" }
+        base == "lite-verify" { "verify" }
+        base == "ci.ts" { "ci" }
+        base == "self-host.ts" { "self-host" }
+        base == "corpus-parity.ts" { "corpus-parity" }
+        base == "run-ts-artifact.ts" { "run-ts-artifact" }
+        base == "compiler-performance.ts" { "compiler-performance" }
+        base == "text-cache.ts" { "text-cache" }
+        base == "build.ts" and parent == "scripts" and grandparent == "compiler" { "compiler-build" }
+        base == "build.ts" and parent == "scripts" and grandparent == "vscode" { "vscode-build" }
+        base == "build.ts" { "challenge-build" }
+        base == "build_benchmark_euler.ts" { "challenge-build-euler" }
+        base == "build_benchmark_leetcode.ts" { "challenge-build-leetcode" }
+        base == "build_tests.ts" { "challenge-build-tests" }
+        base == "query.ts" { "challenge-query" }
+        base == "validate.ts" { "challenge-validate" }
+        base == "validate_benchmark.ts" { "challenge-validate-benchmark" }
+        base == "release.ts" and parent == "scripts" { "compiler-release" }
+        _ { "" }
+    }
+}
+
+/** True when `relPath` is a valid normalized project-relative path with no leading slash or `..` segment. */
+validRelativePath := fn(relPath: String): Bool {
+    if relPath == "" or text.startsWithAt(relPath, 0, "/") or text.startsWithAt(relPath, 0, "../") {
+        return false;
+    }
+    not text.containsText(relPath, "/../") and not text.endsWith(relPath, "/..")
+}
+
+/** True when `hex` is a 64-character lowercase hexadecimal digest. */
+isSha256Hex := fn(hex: String): Bool {
+    if text.length(hex) =!= 64 { return false; }
+    var i := 0;
+    loop i < 64 {
+        ch := text.at(hex, i);
+        if not text.isDigit(ch) and ch =!= "a" and ch =!= "b" and ch =!= "c" and ch =!= "d" and ch =!= "e" and ch =!= "f" {
+            return false;
+        }
+        i = i + 1;
+    }
+    true
+}
+
+/** Reads `compiler/bootstrap/seed.ts` hashes and verifies the tracked compiler seed digest. */
+readSeedInfo := fn(rootDir: String): (ok: Bool, sourceSha256: String, artifactSha256: String, error: String) {
+    seedFile := path.join(rootDir, "compiler/bootstrap/seed.ts");
+    seedRead := fs.readText(seedFile);
+    if not seedRead.ok {
+        return (ok = false, sourceSha256 = "", artifactSha256 = "", error = "ignite: cannot read seed metadata: " + seedRead.error);
+    }
+    brace := text.indexOfText(seedRead.text, "{", 0);
+    if brace < 0 {
+        return (ok = false, sourceSha256 = "", artifactSha256 = "", error = "ignite: invalid seed.ts object");
+    }
+    srcField := json.readObjectString(seedRead.text, brace, "sourceSha256");
+    artField := json.readObjectString(seedRead.text, brace, "artifactSha256");
+    if not srcField.found or not srcField.ok or not artField.found or not artField.ok {
+        return (ok = false, sourceSha256 = "", artifactSha256 = "", error = "ignite: missing seed hash fields");
+    }
+    compHash := crypto.sha256File(path.join(rootDir, "compiler/bootstrap/compiler.ts"));
+    if not compHash.ok or compHash.hex =!= artField.value {
+        return (ok = false, sourceSha256 = "", artifactSha256 = "", error = "ignite: selected TS bootstrap seed hash mismatch");
+    }
+    (ok = true, sourceSha256 = srcField.value, artifactSha256 = artField.value, error = "")
+}
+
+/** Lists all `.lts` tool names under `tools/src/` sorted ASCII lexicographically. */
+listToolNames := fn(rootDir: String): List<String> {
+    toolsDir := path.join(rootDir, "tools/src");
+    entries := fs.listDir(toolsDir);
+    out: mut List<String> = [];
+    loop entries as entry {
+        if text.endsWith(entry, ".lts") {
+            list.pushBack(mut out, text.slice(entry, 0, text.length(entry) - 4));
+        }
+    }
+    out
+}
+
+/** Validates existing ignited tool artifact and provenance against current sources, dependencies, and seed hash. */
+readValidProvenance := fn(rootDir: String, name: String, compilerArtifactSha: String): (valid: Bool, sha256: String) {
+    distDir := path.join(rootDir, "dist/tools");
+    artifactPath := path.join(distDir, name + ".ts");
+    provPath := path.join(distDir, name + ".provenance.json");
+    if fs.kind(artifactPath) =!= fs.FILE_KIND_FILE or fs.kind(provPath) =!= fs.FILE_KIND_FILE {
+        return (valid = false, sha256 = "");
+    }
+    provRead := fs.readText(provPath);
+    if not provRead.ok or not json.validate(provRead.text).ok {
+        return (valid = false, sha256 = "");
+    }
+    provText := provRead.text;
+    ver := json.readObjectInt(provText, 0, "version");
+    toolField := json.readObjectString(provText, 0, "tool");
+    tgtField := json.readObjectString(provText, 0, "target");
+    cArtField := json.readObjectString(provText, 0, "compilerArtifactSha256");
+    cSrcField := json.readObjectString(provText, 0, "compilerSourceSha256");
+    artShaField := json.readObjectString(provText, 0, "artifactSha256");
+    if not ver.found or not ver.ok or ver.value =!= 1 { return (valid = false, sha256 = ""); }
+    if not toolField.found or toolField.value =!= name { return (valid = false, sha256 = ""); }
+    if not tgtField.found or tgtField.value =!= "ts" { return (valid = false, sha256 = ""); }
+    if not cArtField.found or cArtField.value =!= compilerArtifactSha { return (valid = false, sha256 = ""); }
+    if not cSrcField.found or not cSrcField.ok or not artShaField.found or not artShaField.ok { return (valid = false, sha256 = ""); }
+
+    artDisk := crypto.sha256File(artifactPath);
+    if not artDisk.ok or artDisk.hex =!= artShaField.value {
+        return (valid = false, sha256 = "");
+    }
+
+    depsField := json.findObjectField(provText, 0, "dependencies");
+    edgesField := json.findObjectField(provText, 0, "edges");
+    if not depsField.found or not edgesField.found { return (valid = false, sha256 = ""); }
+
+    depOffsets := json.arrayElementOffsets(provText, depsField.valuePos);
+    if list.listCountInt(depOffsets) == 0 { return (valid = false, sha256 = ""); }
+
+    depPaths: mut List<String> = [];
+    var idx := 0;
+    loop depOffsets as dPos {
+        dp := json.readObjectString(provText, dPos, "path");
+        dh := json.readObjectString(provText, dPos, "sha256");
+        if not dp.found or not dp.ok or not dh.found or not dh.ok { return (valid = false, sha256 = ""); }
+        if not validRelativePath(dp.value) or not isSha256Hex(dh.value) { return (valid = false, sha256 = ""); }
+        if idx == 0 and dp.value =!= "tools/src/" + name + ".lts" { return (valid = false, sha256 = ""); }
+        diskHash := crypto.sha256File(path.join(rootDir, dp.value));
+        if not diskHash.ok or diskHash.hex =!= dh.value {
+            return (valid = false, sha256 = "");
+        }
+        list.pushBack(mut depPaths, dp.value);
+        idx = idx + 1;
+    }
+
+    edgeOffsets := json.arrayElementOffsets(provText, edgesField.valuePos);
+    loop edgeOffsets as ePos {
+        ei := json.readObjectString(provText, ePos, "importer");
+        es := json.readObjectString(provText, ePos, "spec");
+        ep := json.readObjectString(provText, ePos, "path");
+        if not ei.found or not ei.ok or not es.found or not es.ok or not ep.found or not ep.ok {
+            return (valid = false, sha256 = "");
+        }
+        if not list.listContainsText(depPaths, ei.value) or not list.listContainsText(depPaths, ep.value) {
+            return (valid = false, sha256 = "");
+        }
+        resolved := hostFs.resolveImportPath(path.join(rootDir, ei.value), es.value, rootDir, rootDir);
+        if not resolved.ok { return (valid = false, sha256 = ""); }
+        rpRes := fs.realPath(resolved.path);
+        rpExp := fs.realPath(path.join(rootDir, ep.value));
+        if not rpRes.ok or not rpExp.ok or rpRes.path =!= rpExp.path {
+            return (valid = false, sha256 = "");
+        }
+    }
+    (valid = true, sha256 = artShaField.value)
+}
+
+/** Compiles `tools/src/<name>.lts` in-process and persists `dist/tools/<name>.ts` + provenance. */
+igniteSingleTool := fn(
+rootDir: String, name: String, compilerArtifactSha: String, compilerSourceSha: String, force: Bool
+): (ok: Bool, path: String, sha256: String, rebuilt: Bool, error: String) {
+    sourcePath := path.join(rootDir, "tools/src/" + name + ".lts");
+    if fs.kind(sourcePath) =!= fs.FILE_KIND_FILE {
+        return (ok = false, path = "", sha256 = "", rebuilt = false, error = "ignite: unknown tool \"" + name + "\" (missing " + sourcePath + ")");
+    }
+    distDir := path.join(rootDir, "dist/tools");
+    artifactPath := path.join(distDir, name + ".ts");
+    provPath := path.join(distDir, name + ".provenance.json");
+
+    if not force {
+        prev := readValidProvenance(rootDir, name, compilerArtifactSha);
+        if prev.valid {
+            return (ok = true, path = artifactPath, sha256 = prev.sha256, rebuilt = false, error = "");
+        }
+    }
+
+    rpSource := fs.realPath(sourcePath);
+    canonSource := if rpSource.ok { rpSource.path } else { sourcePath };
+    srcRead := fs.readText(canonSource);
+    if not srcRead.ok {
+        return (ok = false, path = "", sha256 = "", rebuilt = false, error = "ignite: failed to read " + canonSource + ": " + srcRead.error);
+    }
+
+    relRoot := "tools/src/" + name + ".lts";
+    emptyGraph: frontend.Items = [];
+    emptySpecs: List<String> = [];
+    graph := modules.visitSourceModule(
+    target = frontend.TARGET_TS, path = canonSource, display = relRoot,
+    identity = "", source = srcRead.text, initialGraph = emptyGraph,
+    projectRoot = rootDir, cwd = rootDir, builtinSpecs = emptySpecs
+    );
+
+    writer := io.bufferWriter();
+    emitter.emitProgramTo(=writer, items = modules.moduleItems(graph), source = srcRead.text, prefix = relRoot, builtinSpecs = emptySpecs);
+    outRes := io.writerText(writer);
+    _cl := io.closeWriter(writer);
+    if not outRes.ok {
+        return (ok = false, path = "", sha256 = "", rebuilt = false, error = "ignite: emit failed for " + relRoot + ": " + outRes.error);
+    }
+
+    mkRes := fs.makeDir(distDir);
+    if not mkRes.ok {
+        return (ok = false, path = "", sha256 = "", rebuilt = false, error = mkRes.error);
+    }
+
+    artSha := crypto.sha256Text(outRes.text);
+    wrArt := fs.writeText(artifactPath, outRes.text);
+    if not wrArt.ok {
+        return (ok = false, path = "", sha256 = "", rebuilt = false, error = wrArt.error);
+    }
+
+    seenPaths: mut List<String> = [canonSource];
+    depJson: mut List<String> = [];
+    edgeJson: mut List<String> = [];
+
+    rootSha := crypto.sha256File(canonSource);
+    if not rootSha.ok {
+        return (ok = false, path = "", sha256 = "", rebuilt = false, error = rootSha.error);
+    }
+    list.pushBack(mut depJson, "    {\n      \"path\": " + json.quoteString(hostFs.displaySourcePath(canonSource, rootDir)) + ",\n      \"sha256\": " + json.quoteString(rootSha.hex) + "\n    }");
+
+    loop graph as item {
+        if item.kind == frontend.ITEM_KIND_MODULE_LOADED {
+            rpDep := fs.realPath(item.name);
+            cDep := if rpDep.ok { rpDep.path } else { item.name };
+            if not list.listContainsText(seenPaths, cDep) {
+                list.pushBack(mut seenPaths, cDep);
+                hDep := crypto.sha256File(cDep);
+                if not hDep.ok {
+                    return (ok = false, path = "", sha256 = "", rebuilt = false, error = hDep.error);
+                }
+                relDep := hostFs.displaySourcePath(cDep, rootDir);
+                list.pushBack(mut depJson, "    {\n      \"path\": " + json.quoteString(relDep) + ",\n      \"sha256\": " + json.quoteString(hDep.hex) + "\n    }");
+            }
+        } else if item.kind == frontend.ITEM_KIND_IMPORT_EDGE {
+            rpImp := fs.realPath(item.name);
+            rpTgt := fs.realPath(item.runtime);
+            relImp := hostFs.displaySourcePath(if rpImp.ok { rpImp.path } else { item.name }, rootDir);
+            relTgt := hostFs.displaySourcePath(if rpTgt.ok { rpTgt.path } else { item.runtime }, rootDir);
+            eStr := "    {\n      \"importer\": " + json.quoteString(relImp)
+            + ",\n      \"spec\": " + json.quoteString(item.code)
+            + ",\n      \"path\": " + json.quoteString(relTgt) + "\n    }";
+            list.pushBack(mut edgeJson, eStr);
+        }
+    }
+
+    provBody := "{\n"
+    + "  \"version\": 1,\n"
+    + "  \"tool\": " + json.quoteString(name) + ",\n"
+    + "  \"target\": \"ts\",\n"
+    + "  \"compilerArtifactSha256\": " + json.quoteString(compilerArtifactSha) + ",\n"
+    + "  \"compilerSourceSha256\": " + json.quoteString(compilerSourceSha) + ",\n"
+    + "  \"artifactSha256\": " + json.quoteString(artSha) + ",\n"
+    + "  \"dependencies\": [\n" + text.joinTexts(depJson, ",\n") + "\n  ],\n"
+    + "  \"edges\": [\n" + text.joinTexts(edgeJson, ",\n") + "\n  ]\n}\n";
+    wrProv := fs.writeText(provPath, provBody);
+    if not wrProv.ok {
+        return (ok = false, path = "", sha256 = "", rebuilt = false, error = wrProv.error);
+    }
+
+    (ok = true, path = artifactPath, sha256 = artSha, rebuilt = true, error = "")
+}
+
+/** Runs an ignited tool artifact with forwarded arguments and exits with its status. */
+executeIgnitedTool := fn(artifactPath: String, forwardArgs: List<String>): Unit {
+    runArgs: mut List<String> = [artifactPath];
+    loop forwardArgs as a {
+        list.pushBack(mut runArgs, a);
+    }
+    emptyEnv: List<String> = [];
+    res := proc.run(proc.execPath(), runArgs, "", emptyEnv, false, "");
+    if res.error =!= "" {
+        io.errorLine("ignite: " + res.error);
+        io.exit(1);
+    }
+    io.exit(res.status);
+}
+
+/** Executes the unified Lite igniter entrypoint for symlinked tool commands or direct CLI management. */
+run := fn(args: List<String>): Unit {
+    rawRoot := project.findRepoRoot();
+    if rawRoot == "" {
+        io.errorLine("ignite: could not locate LiteScript repository root");
+        io.exit(1);
+    }
+    rpRoot := fs.realPath(rawRoot);
+    rootDir := if rpRoot.ok { rpRoot.path } else { rawRoot };
+
+    seedInfo := readSeedInfo(rootDir);
+    if not seedInfo.ok {
+        io.errorLine(seedInfo.error);
+        io.exit(1);
+    }
+
+    entryTool := toolForEntry(proc.entryPath());
+    if entryTool =!= "" {
+        ensured := igniteSingleTool(rootDir, entryTool, seedInfo.artifactSha256, seedInfo.sourceSha256, false);
+        if not ensured.ok {
+            io.errorLine(ensured.error);
+            io.exit(1);
+        }
+        executeIgnitedTool(ensured.path, args);
+    }
+
+    var check := false;
+    var force := false;
+    var clean := false;
+    var jsonOutput := false;
+    var ensureName := "";
+    var runToolName := "";
+    var runForwardStart := -1;
+    selected: mut List<String> = [];
+
+    count := list.listCountText(args);
+    var i := 0;
+    loop i < count {
+        arg := args[i];
+        if arg == "--check" {
+            check = true;
+            i = i + 1;
+        } else if arg == "--force" {
+            force = true;
+            i = i + 1;
+        } else if arg == "--clean" {
+            clean = true;
+            i = i + 1;
+        } else if arg == "--json" {
+            jsonOutput = true;
+            i = i + 1;
+        } else if arg == "--ensure" {
+            if i + 1 >= count {
+                io.errorLine("ignite: missing tool name for --ensure");
+                io.exit(2);
+            }
+            ensureName = args[i + 1];
+            i = i + 2;
+        } else if arg == "--run" {
+            if i + 1 >= count {
+                io.errorLine("ignite: missing tool name for --run");
+                io.exit(2);
+            }
+            runToolName = args[i + 1];
+            runForwardStart = i + 2;
+            break;
+        } else if arg == "--help" or arg == "-h" {
+            io.outputLine("Usage: node compiler/bootstrap/igniter.ts [--check] [--force] [--clean] [--json] [TOOL...]");
+            io.exit(0);
+        } else if text.startsWithAt(arg, 0, "-") {
+            io.errorLine("ignite: unknown option " + arg);
+            io.exit(2);
+        } else {
+            list.pushBack(mut selected, arg);
+            i = i + 1;
+        }
+    }
+
+    if runToolName =!= "" {
+        forwardArgs: mut List<String> = [];
+        var fi := runForwardStart;
+        if fi < count and args[fi] == "--" {
+            fi = fi + 1;
+        }
+        loop fi < count {
+            list.pushBack(mut forwardArgs, args[fi]);
+            fi = fi + 1;
+        }
+        ensured := igniteSingleTool(rootDir, runToolName, seedInfo.artifactSha256, seedInfo.sourceSha256, force);
+        if not ensured.ok {
+            io.errorLine(ensured.error);
+            io.exit(1);
+        }
+        executeIgnitedTool(ensured.path, forwardArgs);
+    }
+
+    if ensureName =!= "" {
+        ensured := igniteSingleTool(rootDir, ensureName, seedInfo.artifactSha256, seedInfo.sourceSha256, force);
+        if not ensured.ok {
+            io.errorLine(ensured.error);
+            io.exit(1);
+        }
+        io.outputLine(ensured.path);
+        io.exit(0);
+    }
+
+    if clean {
+        _rm := fs.remove(path.join(rootDir, "dist/tools"));
+    }
+
+    targetNames := if list.listCountText(selected) > 0 { selected } else { listToolNames(rootDir) };
+    artifactPaths: mut List<String> = [];
+    toolEntries: mut List<String> = [];
+    var rebuiltCount := 0;
+    loop targetNames as toolName {
+        res := igniteSingleTool(rootDir, toolName, seedInfo.artifactSha256, seedInfo.sourceSha256, force);
+        if not res.ok {
+            io.errorLine(res.error);
+            io.exit(1);
+        }
+        if res.rebuilt { rebuiltCount = rebuiltCount + 1; }
+        list.pushBack(mut artifactPaths, res.path);
+        entryStr := "    {\n      \"name\": " + json.quoteString(toolName)
+        + ",\n      \"path\": " + json.quoteString(res.path)
+        + ",\n      \"sha256\": " + json.quoteString(res.sha256)
+        + ",\n      \"rebuilt\": " + (if res.rebuilt { "true" } else { "false" }) + "\n    }";
+        list.pushBack(mut toolEntries, entryStr);
+    }
+
+    if check and list.listCountText(artifactPaths) > 0 {
+        tmpChk := fs.makeTempDir("lite-ignite-check-");
+        if not tmpChk.ok {
+            io.errorLine("ignite: " + tmpChk.error);
+            io.exit(1);
+        }
+        chk := cases.checkTsArtifactFilesWithStatus(rootDir, artifactPaths, tmpChk.path, 0);
+        _rm := fs.remove(tmpChk.path);
+        if not chk.ok {
+            io.errorLine("ignited tools failed strict TypeScript checking:\n" + chk.error);
+            io.exit(1);
+        }
+    }
+
+    if jsonOutput {
+        outJson := "{\n  \"tools\": [\n" + text.joinTexts(toolEntries, ",\n") + "\n  ],\n"
+        + "  \"checked\": " + (if check { "true" } else { "false" }) + "\n}";
+        io.outputLine(outJson);
+    } else {
+        suffix := if check { ", strict TS checked" } else { "" };
+        io.outputLine("Ignited " + integer.intText(list.listCountText(artifactPaths)) + " tool(s) into dist/tools (" + integer.intText(rebuiltCount) + " rebuilt" + suffix + ").");
+    }
+};
+
+run(io.inputArgs());

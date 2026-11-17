@@ -3,7 +3,7 @@
 import { spawnSync } from 'node:child_process';
 import { readFileSync } from 'node:fs';
 import { join } from 'node:path';
-import { ensureTool, runIgnitedTool } from '../igniter/ignite.ts';
+import { ensureTool, runIgnitedTool } from './project.ts';
 import type { ComponentRelease } from '../compiler/release-streams.ts';
 
 /** Supported compiler/language readiness verification summary attached to compiler and language distributions. */

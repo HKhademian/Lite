@@ -217,6 +217,10 @@ pub displaySourcePath := fn(filePath: String, projectRoot: String): String {
     rel
 }
 
+var cachedIdentityRoot := "";
+var cachedIdentityLoaded: mut List<Bool> = [];
+var cachedIdentityTexts: mut List<String> = [];
+
 /** Identifies source text matching a shipped core/compiler host module in `projectRoot`. */
 pub sourceModuleIdentity := fn(projectRoot: String, sourceText: String): String {
     if projectRoot == "" { return ""; }
@@ -230,14 +234,33 @@ pub sourceModuleIdentity := fn(projectRoot: String, sourceText: String): String 
     "lite.core.file.v1", "lite.core.process.v1", "lite.core.crypto.v1", "lite.core.time.v1",
     "lite.core.unicode.v1", "lite.compiler.modules.v1"
     ];
+    if cachedIdentityRoot =!= projectRoot {
+        cachedIdentityRoot = projectRoot;
+        cachedIdentityLoaded = [];
+        cachedIdentityTexts = [];
+        var loadIdx := 0;
+        loop loadIdx < listLib.listCountText(paths) {
+            full := path.join(projectRoot, paths[loadIdx]);
+            if fs.kind(full) == fs.FILE_KIND_FILE {
+                loaded := fs.readText(full);
+                if loaded.ok {
+                    listLib.pushBack(mut cachedIdentityLoaded, true);
+                    listLib.pushBack(mut cachedIdentityTexts, loaded.text);
+                } else {
+                    listLib.pushBack(mut cachedIdentityLoaded, false);
+                    listLib.pushBack(mut cachedIdentityTexts, "");
+                }
+            } else {
+                listLib.pushBack(mut cachedIdentityLoaded, false);
+                listLib.pushBack(mut cachedIdentityTexts, "");
+            }
+            loadIdx = loadIdx + 1;
+        }
+    }
     var i := 0;
     loop i < listLib.listCountText(paths) {
-        full := path.join(projectRoot, paths[i]);
-        if fs.kind(full) == fs.FILE_KIND_FILE {
-            loaded := fs.readText(full);
-            if loaded.ok and loaded.text == sourceText {
-                return identities[i];
-            }
+        if cachedIdentityLoaded[i] and cachedIdentityTexts[i] == sourceText {
+            return identities[i];
         }
         i = i + 1;
     }

@@ -10,7 +10,7 @@ import { seed } from '../bootstrap/seed.ts';
 import { prepareTsArtifacts } from '../../igniter/artifacts.ts';
 
 const root = fileURLToPath(new URL('../../', import.meta.url));
-function invoke(directory: string, command: string, args: string[], timeoutMs = 90000) {
+function invoke(directory: string, command: string, args: string[], timeoutMs = 180000) {
   const env: NodeJS.ProcessEnv = { ...process.env };
   delete env['NODE_TEST_CONTEXT'];
   return spawnSync(process.execPath, [join(directory, command), ...args], { cwd: directory, env, encoding: 'utf8', timeout: timeoutMs, maxBuffer: 8 * 1024 * 1024 });

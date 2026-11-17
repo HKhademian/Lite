@@ -1,1 +1,1 @@
-../compiler/compile-ts.ts
+../compiler/bootstrap/igniter.ts

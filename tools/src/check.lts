@@ -34,7 +34,7 @@ runCheckedTsc := fn(rootDir: String, configPath: String): Unit {
 }
 
 runIgniteCheck := fn(rootDir: String): Unit {
-    igniteScript := "igniter/ignite.ts";
+    igniteScript := "compiler/bootstrap/igniter.ts";
     igniteArgs: List<String> = [igniteScript, "--check"];
     emptyEnv: List<String> = [];
     res := proc.run(proc.execPath(), igniteArgs, rootDir, emptyEnv, true, "");

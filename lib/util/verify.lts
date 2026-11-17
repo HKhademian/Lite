@@ -623,14 +623,14 @@ computeRuntimeHash := fn(rootDir: String, seedArtifact: String, compilerDeps: Li
     "igniter/artifacts.ts",
     "igniter/tsconfig.json",
     "igniter/package-lock.json",
-    "igniter/loader.ts",
-    "igniter/ignite.ts",
+    "tools/src/ignite.lts",
     "tools/src/verify.lts",
     "lib/util/verify.lts",
     "lib/util/cases.lts",
     "lib/util/streams.lts",
     "lib/util/json.lts",
     "compiler/host.ts",
+    "compiler/bootstrap/igniter.ts",
     "compiler/bootstrap/seed.ts",
     "compiler/bootstrap/" + seedArtifact
     ];
@@ -773,14 +773,13 @@ parseGitStatusPaths := fn(stdout: String): List<String> {
 
 invalidatesVerification := fn(relPath: String): Bool {
     exact: List<String> = [
-    "igniter/loader.ts",
-    "igniter/ignite.ts",
     "igniter/artifacts.ts",
     "igniter/tsconfig.json",
     "igniter/package-lock.json",
     "language/verifications/features.json",
     "language/verifications/schema/verification.schema.json",
     "compiler/host.ts",
+    "tools/src/ignite.lts",
     "tools/src/verify.lts",
     "lib/util/verify.lts",
     "lib/util/cases.lts",

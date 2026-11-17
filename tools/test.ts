@@ -3,8 +3,7 @@ import { spawnSync } from 'node:child_process';
 import { existsSync, mkdtempSync, readFileSync, rmSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
-import { ensureTool, runIgnitedTool } from '../igniter/ignite.ts';
-import { root } from './project.ts';
+import { ensureTool, root, runIgnitedTool } from './project.ts';
 
 /** Runs declarative language and tool cases matching `filter` or single manifest `file`, returning summary counts. */
 export function testCases(filter = '', file?: string): { count: number; failures: number; pending: number } {

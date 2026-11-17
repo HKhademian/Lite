@@ -1,1 +1,1 @@
-../tools/test-runner.ts
+../compiler/bootstrap/igniter.ts

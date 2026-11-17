@@ -8,7 +8,7 @@ import { fileURLToPath } from 'node:url';
 import { test } from 'node:test';
 import { compileTs } from '../compiler/host.ts';
 import { seed } from '../compiler/bootstrap/seed.ts';
-import { ensureTool, igniteAllTools } from '../igniter/ignite.ts';
+import { ensureTool, igniteAllTools } from './project.ts';
 
 const root = fileURLToPath(new URL('../', import.meta.url));
 
@@ -78,16 +78,18 @@ test('lite check routes through ./bin/lite to the standalone checker', () => {
   assert.equal(command('lite-check', ['language/examples/foundations/io/double-sum.lts']).status, 0);
 });
 
-test('ignited cli, compile, checker, doctor, run, verify, test-runner, test, bench, ci, and release artifacts match their Lite sources and pass strict TS checking', () => {
+test('ignited cli, compile, checker, doctor, run, verify, test-runner, test, bench, ci, release, and ignite artifacts match their Lite sources and pass strict TS checking', () => {
   const ignited = igniteAllTools({ check: true });
   assert.equal(ignited.checked, true);
-  for (const name of ['cli', 'compile', 'compile-c', 'compile-ts', 'checker', 'check', 'run', 'run-ts-artifact', 'verify', 'test-runner', 'test', 'bench', 'ci', 'release'] as const) {
+  for (const name of ['cli', 'compile', 'compile-c', 'compile-ts', 'checker', 'check', 'run', 'run-ts-artifact', 'verify', 'test-runner', 'test', 'bench', 'ci', 'release', 'ignite'] as const) {
     const sourcePath = join(root, `tools/src/${name}.lts`);
     const compiled = compileTs({ text: readFileSync(sourcePath, 'utf8'), name: `tools/src/${name}.lts`, rootPath: sourcePath });
     assert.equal(compiled.status, 0, compiled.stderr.toString());
     const generated = readFileSync(ensureTool(name), 'utf8');
     assert.equal(compiled.stdout.toString('utf8'), generated, `${name} artifact out of date`);
   }
+  const trackedIgniter = readFileSync(join(root, 'compiler/bootstrap/igniter.ts'), 'utf8').replace(/^#![^\n]*\n/, '');
+  assert.equal(trackedIgniter, readFileSync(ensureTool('ignite'), 'utf8'), 'compiler/bootstrap/igniter.ts out of date');
 });
 
 test('lite router help, version, and unknown command handling match exit and output contracts', () => {
@@ -142,16 +144,16 @@ test('ignition rebuilds missing, tampered, and dependency-changed tools into dis
     for (const rel of [
       'package.json', 'config/versions.json', 'bin/lite', 'bin/lite-fmt',
       'compiler/host.ts', 'compiler/package.json',
-      `compiler/bootstrap/${seed.artifact}`, 'compiler/bootstrap/seed.ts',
-      'igniter/ignite.ts', 'igniter/artifacts.ts', 'igniter/loader.ts', 'igniter/package.json', 'igniter/tsconfig.json',
-      'tools/cli.ts', 'tools/fmt.ts', 'tools/src/cli.lts', 'tools/src/fmt.lts', 'lib/core', 'lib/util',
+      `compiler/bootstrap/${seed.artifact}`, 'compiler/bootstrap/igniter.ts', 'compiler/bootstrap/seed.ts',
+      'igniter/artifacts.ts', 'igniter/package.json', 'igniter/tsconfig.json',
+      'tools/src/cli.lts', 'tools/src/fmt.lts', 'lib/core', 'lib/util',
     ]) {
       copyTree(rel);
     }
     chmodSync(join(directory, 'bin/lite'), 0o755);
     chmodSync(join(directory, 'bin/lite-fmt'), 0o755);
 
-    const first = spawnSync(process.execPath, [join(directory, 'igniter/ignite.ts'), '--json', 'cli', 'fmt'], {
+    const first = spawnSync(process.execPath, [join(directory, 'compiler/bootstrap/igniter.ts'), '--json', 'cli', 'fmt'], {
       cwd: directory, encoding: 'utf8', timeout: 60_000,
     });
     assert.equal(first.status, 0, first.stderr);
@@ -159,7 +161,7 @@ test('ignition rebuilds missing, tampered, and dependency-changed tools into dis
     assert.deepEqual(firstJson.tools.map(t => [t.name, t.rebuilt]), [['cli', true], ['fmt', true]]);
     assert.ok(existsSync(join(directory, 'dist/tools/fmt.ts')));
 
-    const second = spawnSync(process.execPath, [join(directory, 'igniter/ignite.ts'), '--json', 'cli', 'fmt'], {
+    const second = spawnSync(process.execPath, [join(directory, 'compiler/bootstrap/igniter.ts'), '--json', 'cli', 'fmt'], {
       cwd: directory, encoding: 'utf8', timeout: 60_000,
     });
     assert.equal(second.status, 0, second.stderr);
@@ -177,7 +179,7 @@ test('ignition rebuilds missing, tampered, and dependency-changed tools into dis
     // Editing a transitive Lite library dependency invalidates affected tools only.
     const cliLib = join(directory, 'lib/util/cli.lts');
     writeFileSync(cliLib, readFileSync(cliLib, 'utf8') + '\n');
-    const afterDep = spawnSync(process.execPath, [join(directory, 'igniter/ignite.ts'), '--json', 'cli', 'fmt'], {
+    const afterDep = spawnSync(process.execPath, [join(directory, 'compiler/bootstrap/igniter.ts'), '--json', 'cli', 'fmt'], {
       cwd: directory, encoding: 'utf8', timeout: 60_000,
     });
     assert.equal(afterDep.status, 0, afterDep.stderr);

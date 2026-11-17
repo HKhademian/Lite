@@ -1,8 +1,7 @@
 #!/usr/bin/env node
 /** Host entrypoint for Lite-implemented documentation discovery and checks (`tools/src/docs.lts` -> `dist/tools/docs.ts`). */
 import { spawnSync } from 'node:child_process';
-import { ensureTool, runIgnitedTool } from '../igniter/ignite.ts';
-import { root } from './project.ts';
+import { ensureTool, root, runIgnitedTool } from './project.ts';
 
 export type Document = { path: string; title: string; headings: string[] };
 
