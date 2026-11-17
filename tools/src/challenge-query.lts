@@ -1,0 +1,18 @@
+/** Challenge corpus query tool (`benchmark/challenges/tools/query.ts`). */
+
+io := import "core/io";
+cli := import "util/cli";
+project := import "util/project";
+challenges := import "util/challenges";
+
+run := fn(): Int {
+    root := project.findRepoRoot();
+    if root == "" {
+        io.errorLine("could not locate LiteScript repository root");
+        return 1;
+    }
+    args := cli.stripLeadingSeparator(io.inputArgs());
+    challenges.runQueryCommand(root, args)
+};
+
+io.exit(run());

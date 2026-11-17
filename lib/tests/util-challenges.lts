@@ -1,13 +1,51 @@
 challenges := import "util/challenges";
 fs := import "core/file";
+path := import "core/path";
 test := import "core/test";
 
 test.checkText("sorted counts json", "{\"a\":3,\"b\":2,\"c\":1}", challenges.formatSortedCountsJson(["b", "a", "c", "a", "b", "a"]));
+test.checkText("difficulty band beginner", "beginner", challenges.difficultyBand(1500));
+test.checkText("difficulty band intermediate", "intermediate", challenges.difficultyBand(6000));
+test.checkText("difficulty band expert", "expert", challenges.difficultyBand(9500));
+
+pDec := challenges.parseScaledNumberText("1.5");
+test.checkBool("scaled decimal ok", true, pDec.ok);
+test.checkInt("scaled decimal val", 1500, pDec.scaled);
+test.checkBool("scaled decimal not int", false, pDec.isIntLiteral);
+test.checkText("format csv float", "4.0", challenges.formatDifficultyCsv("leetcode", 4000, "4", true));
+test.checkText("format csv cryptopals int", "4", challenges.formatDifficultyCsv("cryptopals", 4000, "4", true));
+
+sorted := challenges.sortTexts(["zeta", "alpha", "mu", "alpha"]);
+test.checkText("sort first", "alpha", sorted[0]);
+test.checkText("sort last", "zeta", sorted[3]);
+test.checkBool("binary search hit", true, challenges.sortedContainsText(sorted, "mu"));
+test.checkBool("binary search miss", false, challenges.sortedContainsText(sorted, "beta"));
+
+optOk := challenges.checkQueryOptions(["--topic=graphs", "--topic", "math", "--stats"]);
+test.checkBool("query options ok", true, optOk.ok);
+optBadFlag := challenges.checkQueryOptions(["--stats=1"]);
+test.checkBool("query flag value rejected", false, optBadFlag.ok);
+optBadUnk := challenges.checkQueryOptions(["--bogus"]);
+test.checkBool("query unknown option rejected", false, optBadUnk.ok);
 
 tmpRes := fs.makeTempDir("lite-challenge-bench-test-");
 test.checkBool("temp dir ok", true, tmpRes.ok);
 bad := challenges.validateChallengeBenchmark(tmpRes.path);
 test.checkBool("missing index fails", false, bad.ok);
+
+synRoot := path.join(tmpRes.path, "corpus");
+_m1 := fs.makeDir(path.join(synRoot, "data"));
+_m2 := fs.makeDir(path.join(synRoot, "schema"));
+_wt := fs.writeText(path.join(synRoot, "schema/taxonomy.json"), "{\"topics\":[{\"id\":\"math\"}]}\n");
+_wi := fs.writeText(path.join(synRoot, "data/index.json"), "{\"total\":1,\"sources\":[{\"name\":\"project-euler\",\"count\":1}]}\n");
+_wc := fs.writeText(path.join(synRoot, "data/challenges.jsonl"), "{\"id\":\"pe-1\",\"title\":\"One\",\"source\":\"project-euler\",\"url\":\"https://example.invalid/1\",\"native_id\":\"1\",\"category\":\"mathematics\",\"primary_topic\":\"math\",\"topics\":[\"math\"],\"raw_topics\":[],\"tags\":[],\"difficulty\":{\"scale\":\"pe\",\"raw\":1,\"normalized\":1.5},\"formats\":[\"single\"],\"languages\":[\"all\"],\"topics_source\":\"curated\",\"popularity\":null,\"premium\":false,\"status\":\"verified\"}\n");
+_wl := fs.writeText(path.join(synRoot, "data/lists.jsonl"), "{\"id\":\"all\",\"title\":\"All\",\"kind\":\"set\",\"source\":\"project-euler\",\"url\":\"https://example.invalid\",\"description\":\"all\",\"count\":1,\"challenge_ids\":[\"pe-1\"]}\n");
+_ws := fs.writeText(path.join(synRoot, "data/tests.jsonl"), "{\"challenge_id\":\"pe-1\",\"url\":\"https://example.invalid/1\",\"source\":\"project-euler\",\"format\":\"single\",\"status\":\"public-only\",\"public\":[{\"name\":\"s1\",\"kind\":\"sample\",\"input\":\"x\",\"output\":\"1\",\"explanation\":null}],\"hidden\":[],\"hidden_policy\":\"none\",\"note\":null}\n");
+
+valOk := challenges.validateChallengeCorpus(synRoot);
+test.checkText("synthetic corpus err", "", valOk.error);
+test.checkBool("synthetic corpus ok", true, valOk.ok);
+test.checkText("synthetic corpus summary", "OK: 1 challenges, 1 lists, 1 topics, 1 used\n    tests: 1 with public cases, 0 with held-out cases", valOk.summaryText);
 
 _rm := fs.remove(tmpRes.path);
 test.done("util-challenges");

@@ -6,6 +6,7 @@ path := import "core/path";
 text := import "core/text";
 list := import "core/list";
 integer := import "core/int";
+unicode := import "core/unicode";
 json := import "util/json";
 
 isJsonSpace := fn(ch: String): Bool {
@@ -361,5 +362,1075 @@ pub runValidateBenchmarkCommand := fn(rootDir: String): Int {
         return 1;
     }
     io.outputLine(res.summaryText);
+    0
+};
+
+compareTextLex := fn(a: String, b: String): Int {
+    if a == b { return 0; }
+    la := text.length(a);
+    lb := text.length(b);
+    n := if la < lb { la } else { lb };
+    var i := 0;
+    loop i < n {
+        ca := text.at(a, i);
+        cb := text.at(b, i);
+        if ca =!= cb {
+            pa := unicode.toCodePoints(ca)[0];
+            pb := unicode.toCodePoints(cb)[0];
+            return if pa < pb { -1 } else { 1 };
+        }
+        i = i + 1;
+    }
+    if la < lb { -1 } else if la > lb { 1 } else { 0 }
+};
+
+/** Sorts a `List<String>` lexicographically in O(N log N) via bottom-up merge sort. */
+pub sortTexts := fn(items: List<String>): List<String> {
+    n := list.listCountText(items);
+    if n <= 1 { return items; }
+    var cur: mut List<String> = [];
+    loop items as it {
+        list.pushBack(mut cur, it);
+    }
+    var width := 1;
+    loop width < n {
+        next: mut List<String> = [];
+        var start := 0;
+        loop start < n {
+            mid := if start + width < n { start + width } else { n };
+            rightEnd := if start + width * 2 < n { start + width * 2 } else { n };
+            var li := start;
+            var ri := mid;
+            loop li < mid or ri < rightEnd {
+                if li >= mid {
+                    list.pushBack(mut next, cur[ri]);
+                    ri = ri + 1;
+                } else if ri >= rightEnd {
+                    list.pushBack(mut next, cur[li]);
+                    li = li + 1;
+                } else if compareTextLex(cur[li], cur[ri]) <= 0 {
+                    list.pushBack(mut next, cur[li]);
+                    li = li + 1;
+                } else {
+                    list.pushBack(mut next, cur[ri]);
+                    ri = ri + 1;
+                }
+            }
+            start = start + width * 2;
+        }
+        cur = next;
+        width = width * 2;
+    }
+    cur
+};
+
+/** Returns true if `target` appears in pre-sorted `sortedItems` using binary search. */
+pub sortedContainsText := fn(sortedItems: List<String>, target: String): Bool {
+    var lo := 0;
+    var hi := list.listCountText(sortedItems) - 1;
+    loop lo <= hi {
+        mid := lo + (hi - lo) / 2;
+        cmp := compareTextLex(sortedItems[mid], target);
+        if cmp == 0 { return true; }
+        if cmp < 0 {
+            lo = mid + 1;
+        } else {
+            hi = mid - 1;
+        }
+    }
+    false
+};
+
+formatFrequencyLines := fn(values: List<String>, indent: String, nameWidth: Int): String {
+    sortedVals := sortTexts(values);
+    n := list.listCountText(sortedVals);
+    keys: mut List<String> = [];
+    counts: mut List<Int> = [];
+    var i := 0;
+    loop i < n {
+        curKey := sortedVals[i];
+        var cnt := 1;
+        loop i + cnt < n {
+            if sortedVals[i + cnt] =!= curKey { break; }
+            cnt = cnt + 1;
+        }
+        list.pushBack(mut keys, curKey);
+        list.pushBack(mut counts, cnt);
+        i = i + cnt;
+    }
+
+    totalKeys := list.listCountText(keys);
+    var used: mut List<Bool> = [];
+    var ui := 0;
+    loop ui < totalKeys {
+        list.pushBack(mut used, false);
+        ui = ui + 1;
+    }
+
+    lines: mut List<String> = [];
+    var picked := 0;
+    loop picked < totalKeys {
+        var bestIdx := -1;
+        var bestCount := -1;
+        var ki := 0;
+        loop ki < totalKeys {
+            if not used[ki] and counts[ki] > bestCount {
+                bestCount = counts[ki];
+                bestIdx = ki;
+            }
+            ki = ki + 1;
+        }
+        if bestIdx < 0 { break; }
+        nextUsed: mut List<Bool> = [];
+        var nu := 0;
+        loop nu < totalKeys {
+            list.pushBack(mut nextUsed, used[nu] or nu == bestIdx);
+            nu = nu + 1;
+        }
+        used = nextUsed;
+        picked = picked + 1;
+
+        kPad := padRight(keys[bestIdx], nameWidth);
+        cPad := padLeft(integer.intText(bestCount), 5);
+        list.pushBack(mut lines, indent + kPad + " " + cPad);
+    }
+    text.joinTexts(lines, "\n")
+};
+
+padRight := fn(s: String, width: Int): String {
+    len := text.length(s);
+    if len >= width { return s; }
+    s + text.repeatText(" ", width - len)
+};
+
+padLeft := fn(s: String, width: Int): String {
+    len := text.length(s);
+    if len >= width { return s; }
+    text.repeatText(" ", width - len) + s
+};
+
+isLowerSlugText := fn(s: String): Bool {
+    size := text.length(s);
+    if size == 0 { return false; }
+    first := text.at(s, 0);
+    if text.indexOfText("abcdefghijklmnopqrstuvwxyz0123456789", first, 0) < 0 { return false; }
+    var i := 1;
+    loop i < size {
+        ch := text.at(s, i);
+        if text.indexOfText("abcdefghijklmnopqrstuvwxyz0123456789-", ch, 0) < 0 { return false; }
+        i = i + 1;
+    }
+    true
+};
+
+/** Parses decimal text or number field in JSON object into fixed-point thousandths (`1.5 -> 1500`). */
+pub parseScaledDecimal1000 := fn(source: String, objPos: Int, key: String): (ok: Bool, scaled: Int, isIntLiteral: Bool, raw: String) {
+    f := json.findObjectField(source, objPos, key);
+    if not f.found { return (ok = false, scaled = 0, isIntLiteral = false, raw = ""); }
+    span := json.valueSpan(source, f.valuePos);
+    if not span.ok { return (ok = false, scaled = 0, isIntLiteral = false, raw = ""); }
+    raw := text.trim(text.slice(source, span.start, span.end));
+    res := parseScaledNumberText(raw);
+    (ok = res.ok, scaled = res.scaled, isIntLiteral = res.isIntLiteral, raw = raw)
+};
+
+/** Parses decimal text (e.g. `4`, `1.5`, `-2.5`) into thousandths (`Int`). */
+pub parseScaledNumberText := fn(raw: String): (ok: Bool, scaled: Int, isIntLiteral: Bool) {
+    size := text.length(raw);
+    if size == 0 { return (ok = false, scaled = 0, isIntLiteral = false); }
+    var neg := false;
+    var start := 0;
+    if text.at(raw, 0) == "-" {
+        neg = true;
+        start = 1;
+        if size == 1 { return (ok = false, scaled = 0, isIntLiteral = false); }
+    }
+    var dot := -1;
+    var i := start;
+    loop i < size {
+        ch := text.at(raw, i);
+        if ch == "." {
+            if dot >= 0 { return (ok = false, scaled = 0, isIntLiteral = false); }
+            dot = i;
+        } else if not text.isDigit(ch) {
+            return (ok = false, scaled = 0, isIntLiteral = false);
+        }
+        i = i + 1;
+    }
+    wholeStr := if dot < 0 { text.slice(raw, start, size) } else { text.slice(raw, start, dot) };
+    if wholeStr == "" { return (ok = false, scaled = 0, isIntLiteral = false); }
+    wholeParsed := text.textToInt(wholeStr);
+    if not wholeParsed.ok { return (ok = false, scaled = 0, isIntLiteral = false); }
+    var frac := 0;
+    var isInt := dot < 0;
+    if dot >= 0 {
+        fracStr := text.slice(raw, dot + 1, size);
+        if fracStr == "" { return (ok = false, scaled = 0, isIntLiteral = false); }
+        var place := 100;
+        var fi := 0;
+        var allZero := true;
+        loop fi < text.length(fracStr) {
+            d := text.textToInt(text.at(fracStr, fi));
+            if not d.ok { return (ok = false, scaled = 0, isIntLiteral = false); }
+            if d.value =!= 0 { allZero = false; }
+            if place >= 1 {
+                frac = frac + d.value * place;
+                place = place / 10;
+            }
+            fi = fi + 1;
+        }
+        isInt = allZero;
+    }
+    mag := wholeParsed.value * 1000 + frac;
+    (ok = true, scaled = if neg { 0 - mag } else { mag }, isIntLiteral = isInt)
+};
+
+checkStrictStringArrayField := fn(source: String, objPos: Int, key: String): (ok: Bool, itemsEmpty: Bool) {
+    f := json.findObjectField(source, objPos, key);
+    if not f.found or not isJsonArrayAt(source, f.valuePos) {
+        return (ok = false, itemsEmpty = true);
+    }
+    offsets := json.arrayElementOffsets(source, f.valuePos);
+    loop offsets as elPos {
+        s := json.readStringAt(source, elPos);
+        if not s.ok { return (ok = false, itemsEmpty = true); }
+    }
+    (ok = true, itemsEmpty = list.listCountInt(offsets) == 0)
+};
+
+readStringArray := fn(source: String, objPos: Int, key: String): List<String> {
+    out: mut List<String> = [];
+    f := json.findObjectField(source, objPos, key);
+    if not f.found or not isJsonArrayAt(source, f.valuePos) { return out; }
+    loop json.arrayElementOffsets(source, f.valuePos) as elPos {
+        s := json.readStringAt(source, elPos);
+        if s.ok { list.pushBack(mut out, s.value); }
+    }
+    out
+};
+
+isNullField := fn(source: String, objPos: Int, key: String): Bool {
+    f := json.findObjectField(source, objPos, key);
+    if not f.found { return false; }
+    span := json.valueSpan(source, f.valuePos);
+    if not span.ok { return false; }
+    text.trim(text.slice(source, span.start, span.end)) == "null"
+};
+
+/** Validates `benchmark/challenges/data/` and `schema/taxonomy.json` (`benchmark/challenges/tools/validate.ts`). */
+pub validateChallengeCorpus := fn(benchRootDir: String): (ok: Bool, summaryText: String, error: String) {
+    dataDir := path.join(benchRootDir, "data");
+    chRead := fs.readText(path.join(dataDir, "challenges.jsonl"));
+    if not chRead.ok { return (ok = false, summaryText = "", error = chRead.error); }
+    liRead := fs.readText(path.join(dataDir, "lists.jsonl"));
+    if not liRead.ok { return (ok = false, summaryText = "", error = liRead.error); }
+    idxRead := fs.readText(path.join(dataDir, "index.json"));
+    if not idxRead.ok { return (ok = false, summaryText = "", error = idxRead.error); }
+    taxRead := fs.readText(path.join(benchRootDir, "schema/taxonomy.json"));
+    if not taxRead.ok { return (ok = false, summaryText = "", error = taxRead.error); }
+
+    if not json.validate(idxRead.text).ok or not isJsonObjectAt(idxRead.text, 0) {
+        return (ok = false, summaryText = "", error = "data/index.json: expected object");
+    }
+    if not json.validate(taxRead.text).ok or not isJsonObjectAt(taxRead.text, 0) {
+        return (ok = false, summaryText = "", error = "schema/taxonomy.json: expected object");
+    }
+
+    taxTopicsField := json.findObjectField(taxRead.text, 0, "topics");
+    if not taxTopicsField.found or not isJsonArrayAt(taxRead.text, taxTopicsField.valuePos) {
+        return (ok = false, summaryText = "", error = "schema/taxonomy.json: missing topics array");
+    }
+    rawTopicIds: mut List<String> = [];
+    loop json.arrayElementOffsets(taxRead.text, taxTopicsField.valuePos) as tPos {
+        tid := json.readObjectString(taxRead.text, tPos, "id");
+        if tid.found and tid.ok { list.pushBack(mut rawTopicIds, tid.value); }
+    }
+    sortedTopics := sortTexts(rawTopicIds);
+
+    allowedSources: List<String> = ["advent-of-code", "project-euler", "leetcode", "codeforces", "cses", "atcoder", "rosalind", "cryptopals", "jane-street"];
+    allowedCats: List<String> = ["algorithms", "data-structures", "mathematics", "databases", "shell", "concurrency", "javascript", "data-analysis", "security", "bioinformatics", "puzzles", "frontend", "system-design"];
+    allowedTopicSrc: List<String> = ["source", "section", "curated", "none"];
+    allowedStatus: List<String> = ["verified", "partial"];
+    requiredKeys: List<String> = ["id", "title", "source", "url", "native_id", "category", "topics", "raw_topics", "tags", "difficulty", "formats", "languages", "topics_source", "premium", "status"];
+    strArrKeys: List<String> = ["formats", "languages", "raw_topics", "tags"];
+
+    lines := splitJsonLines(chRead.text);
+    recCount := list.listCountText(lines);
+    rawIds: mut List<String> = [];
+    usedTopics: mut List<String> = [];
+    var lineNo := 0;
+
+    loop lines as line {
+        lineNo = lineNo + 1;
+        if not json.validate(line).ok or not isJsonObjectAt(line, 0) {
+            return (ok = false, summaryText = "", error = "challenges.jsonl:" + integer.intText(lineNo) + ": invalid JSON");
+        }
+        idRes := json.readObjectString(line, 0, "id");
+        idLabel := if idRes.found and idRes.ok { idRes.value } else { "<missing id>" };
+
+        loop requiredKeys as rk {
+            rf := json.findObjectField(line, 0, rk);
+            if not rf.found {
+                return (ok = false, summaryText = "", error = idLabel + ": missing field " + rk);
+            }
+        }
+        if not idRes.found or not idRes.ok or not isLowerSlugText(idRes.value) {
+            return (ok = false, summaryText = "", error = idLabel + ": bad id");
+        }
+        cid := idRes.value;
+        list.pushBack(mut rawIds, cid);
+
+        titleRes := json.readObjectString(line, 0, "title");
+        if not titleRes.found or not titleRes.ok or text.trim(titleRes.value) == "" {
+            return (ok = false, summaryText = "", error = cid + ": empty title");
+        }
+        srcRes := json.readObjectString(line, 0, "source");
+        if not srcRes.found or not list.listContainsText(allowedSources, srcRes.value) {
+            return (ok = false, summaryText = "", error = cid + ": unknown source " + srcRes.value);
+        }
+        urlRes := json.readObjectString(line, 0, "url");
+        if not urlRes.found or not text.startsWithAt(urlRes.value, 0, "https://") {
+            return (ok = false, summaryText = "", error = cid + ": bad url " + urlRes.value);
+        }
+        catRes := json.readObjectString(line, 0, "category");
+        if not catRes.found or not list.listContainsText(allowedCats, catRes.value) {
+            return (ok = false, summaryText = "", error = cid + ": unknown category " + catRes.value);
+        }
+        tsRes := json.readObjectString(line, 0, "topics_source");
+        if not tsRes.found or not list.listContainsText(allowedTopicSrc, tsRes.value) {
+            return (ok = false, summaryText = "", error = cid + ": invalid topics_source");
+        }
+        stRes := json.readObjectString(line, 0, "status");
+        if not stRes.found or not list.listContainsText(allowedStatus, stRes.value) {
+            return (ok = false, summaryText = "", error = cid + ": invalid status");
+        }
+        premRes := json.readObjectBool(line, 0, "premium");
+        if not premRes.found or not premRes.ok {
+            return (ok = false, summaryText = "", error = cid + ": premium must be bool");
+        }
+        loop strArrKeys as sak {
+            saChk := checkStrictStringArrayField(line, 0, sak);
+            if not saChk.ok {
+                return (ok = false, summaryText = "", error = cid + ": " + sak + " must be a string array");
+            }
+        }
+        topChk := checkStrictStringArrayField(line, 0, "topics");
+        if not topChk.ok {
+            return (ok = false, summaryText = "", error = cid + ": topics must be an array of strings");
+        }
+        rTopics := readStringArray(line, 0, "topics");
+        loop rTopics as tp {
+            if not isLowerSlugText(tp) {
+                return (ok = false, summaryText = "", error = cid + ": bad topic " + tp);
+            }
+            if not sortedContainsText(sortedTopics, tp) {
+                return (ok = false, summaryText = "", error = cid + ": topic " + tp + " not in schema/taxonomy.json");
+            }
+            list.pushBack(mut usedTopics, tp);
+        }
+
+        diffField := json.findObjectField(line, 0, "difficulty");
+        if not diffField.found or not isJsonObjectAt(line, diffField.valuePos) {
+            return (ok = false, summaryText = "", error = cid + ": difficulty must be an object");
+        }
+        rawField := json.findObjectField(line, diffField.valuePos, "raw");
+        if isNullField(line, diffField.valuePos, "scale") or not json.findObjectField(line, diffField.valuePos, "scale").found or not rawField.found {
+            return (ok = false, summaryText = "", error = cid + ": difficulty needs scale and raw");
+        }
+        normRes := parseScaledDecimal1000(line, diffField.valuePos, "normalized");
+        if not normRes.ok or normRes.scaled < 1000 or normRes.scaled > 10000 {
+            return (ok = false, summaryText = "", error = cid + ": normalized difficulty out of range");
+        }
+        if list.listCountText(rTopics) == 0 {
+            if not isNullField(line, 0, "primary_topic") {
+                return (ok = false, summaryText = "", error = cid + ": primary_topic must be topics[0] or null for empty topics");
+            }
+        } else {
+            ptRes := json.readObjectString(line, 0, "primary_topic");
+            if not ptRes.found or not ptRes.ok or ptRes.value =!= rTopics[0] {
+                return (ok = false, summaryText = "", error = cid + ": primary_topic must be topics[0] or null for empty topics");
+            }
+        }
+    }
+
+    sortedIds := sortTexts(rawIds);
+    var di := 1;
+    loop di < recCount {
+        if sortedIds[di] == sortedIds[di - 1] {
+            return (ok = false, summaryText = "", error = "duplicate ids");
+        }
+        di = di + 1;
+    }
+
+    listLines := splitJsonLines(liRead.text);
+    loop listLines as lLine {
+        if not json.validate(lLine).ok or not isJsonObjectAt(lLine, 0) {
+            return (ok = false, summaryText = "", error = "lists.jsonl: expected object");
+        }
+        lId := json.readObjectString(lLine, 0, "id").value;
+        lCnt := json.readObjectInt(lLine, 0, "count").value;
+        cIds := readStringArray(lLine, 0, "challenge_ids");
+        if lCnt =!= list.listCountText(cIds) {
+            return (ok = false, summaryText = "", error = "list " + lId + ": count does not match challenge_ids");
+        }
+        loop cIds as cid {
+            if not sortedContainsText(sortedIds, cid) {
+                return (ok = false, summaryText = "", error = "list " + lId + ": unknown challenge " + cid);
+            }
+        }
+        gField := json.findObjectField(lLine, 0, "groups");
+        if gField.found and isJsonArrayAt(lLine, gField.valuePos) {
+            loop json.arrayElementOffsets(lLine, gField.valuePos) as gPos {
+                loop readStringArray(lLine, gPos, "challenge_ids") as gcid {
+                    if not sortedContainsText(sortedIds, gcid) {
+                        return (ok = false, summaryText = "", error = "list " + lId + ": unknown challenge " + gcid);
+                    }
+                }
+            }
+        }
+    }
+
+    testsPath := path.join(dataDir, "tests.jsonl");
+    var hasTests := false;
+    var testsCount := 0;
+    var withPub := 0;
+    var withHid := 0;
+    if fs.kind(testsPath) == fs.FILE_KIND_FILE {
+        hasTests = true;
+        tRead := fs.readText(testsPath);
+        if not tRead.ok { return (ok = false, summaryText = "", error = tRead.error); }
+        tLines := splitJsonLines(tRead.text);
+        testsCount = list.listCountText(tLines);
+        rawTestIds: mut List<String> = [];
+        var tLineNo := 0;
+        loop tLines as tLine {
+            tLineNo = tLineNo + 1;
+            if not json.validate(tLine).ok or not isJsonObjectAt(tLine, 0) {
+                return (ok = false, summaryText = "", error = "tests.jsonl:" + integer.intText(tLineNo) + ": invalid JSON");
+            }
+            tcId := json.readObjectString(tLine, 0, "challenge_id").value;
+            list.pushBack(mut rawTestIds, tcId);
+            pubF := json.findObjectField(tLine, 0, "public");
+            hidF := json.findObjectField(tLine, 0, "hidden");
+            emptyInts: List<Int> = [];
+            pubOff := if pubF.found and isJsonArrayAt(tLine, pubF.valuePos) { json.arrayElementOffsets(tLine, pubF.valuePos) } else { emptyInts };
+            hidOff := if hidF.found and isJsonArrayAt(tLine, hidF.valuePos) { json.arrayElementOffsets(tLine, hidF.valuePos) } else { emptyInts };
+            pubN := list.listCountInt(pubOff);
+            hidN := list.listCountInt(hidOff);
+            if pubN > 0 { withPub = withPub + 1; }
+            if hidN > 0 { withHid = withHid + 1; }
+
+            loop pubOff as cp {
+                if not checkScalarFieldNonEmpty(tLine, cp, "input") or not checkScalarFieldNonEmpty(tLine, cp, "output") or not checkScalarFieldNonEmpty(tLine, cp, "name") {
+                    return (ok = false, summaryText = "", error = tcId + ": empty or unnamed test case");
+                }
+            }
+            loop hidOff as hp {
+                if not checkScalarFieldNonEmpty(tLine, hp, "input") or not checkScalarFieldNonEmpty(tLine, hp, "output") or not checkScalarFieldNonEmpty(tLine, hp, "name") {
+                    return (ok = false, summaryText = "", error = tcId + ": empty or unnamed test case");
+                }
+            }
+            st := json.readObjectString(tLine, 0, "status").value;
+            if st == "public+hidden" and (pubN == 0 or hidN == 0) {
+                return (ok = false, summaryText = "", error = tcId + ": status says public+hidden but cases are missing");
+            }
+            if st == "public-only" and (pubN == 0 or hidN > 0) {
+                return (ok = false, summaryText = "", error = tcId + ": status says public-only but cases are wrong");
+            }
+            if (st == "none" or st == "not-applicable") and (pubN > 0 or hidN > 0) {
+                return (ok = false, summaryText = "", error = tcId + ": status " + st + " but cases exist");
+            }
+            if hidN > 0 {
+                pol := json.readObjectString(tLine, 0, "hidden_policy").value;
+                if pol =!= "held-out-official-samples" {
+                    return (ok = false, summaryText = "", error = tcId + ": hidden cases without held-out policy");
+                }
+            }
+        }
+        sortedTestIds := sortTexts(rawTestIds);
+        if testsCount =!= recCount {
+            return (ok = false, summaryText = "", error = "test records do not match challenges");
+        }
+        var ti := 0;
+        loop ti < testsCount {
+            if ti > 0 and sortedTestIds[ti] == sortedTestIds[ti - 1] {
+                return (ok = false, summaryText = "", error = "duplicate test records");
+            }
+            if sortedTestIds[ti] =!= sortedIds[ti] {
+                return (ok = false, summaryText = "", error = "test records do not match challenges");
+            }
+            ti = ti + 1;
+        }
+    }
+
+    idxTotal := json.readObjectInt(idxRead.text, 0, "total").value;
+    if idxTotal =!= recCount {
+        return (ok = false, summaryText = "", error = "index.total does not match challenges.jsonl");
+    }
+    srcArrField := json.findObjectField(idxRead.text, 0, "sources");
+    var idxSum := 0;
+    loop json.arrayElementOffsets(idxRead.text, srcArrField.valuePos) as sPos {
+        idxSum = idxSum + json.readObjectInt(idxRead.text, sPos, "count").value;
+    }
+    if idxSum =!= recCount {
+        return (ok = false, summaryText = "", error = "index source counts do not sum to total");
+    }
+
+    sortedUsed := sortTexts(usedTopics);
+    var usedUnique := 0;
+    var ui := 0;
+    loop ui < list.listCountText(sortedUsed) {
+        if ui == 0 or sortedUsed[ui] =!= sortedUsed[ui - 1] {
+            usedUnique = usedUnique + 1;
+        }
+        ui = ui + 1;
+    }
+
+    var summary := "OK: " + integer.intText(recCount) + " challenges, "
+    + integer.intText(list.listCountText(listLines)) + " lists, "
+    + integer.intText(list.listCountText(sortedTopics)) + " topics, "
+    + integer.intText(usedUnique) + " used";
+    if hasTests {
+        summary = summary + "\n    tests: " + integer.intText(withPub) + " with public cases, " + integer.intText(withHid) + " with held-out cases";
+    }
+    (ok = true, summaryText = summary, error = "")
+};
+
+/** CLI runner for `benchmark/challenges/tools/validate.ts`. */
+pub runValidateCorpusCommand := fn(rootDir: String): Int {
+    res := validateChallengeCorpus(path.join(rootDir, "benchmark/challenges"));
+    if not res.ok {
+        io.errorLine("FAIL: " + res.error);
+        return 1;
+    }
+    io.outputLine(res.summaryText);
+    0
+};
+
+/** Maps scaled thousandths difficulty (`1000..10000`) to named difficulty band. */
+pub difficultyBand := fn(scaled1000: Int): String {
+    if scaled1000 <= 2000 { return "beginner"; }
+    if scaled1000 <= 4000 { return "easy"; }
+    if scaled1000 <= 6000 { return "intermediate"; }
+    if scaled1000 <= 8000 { return "advanced"; }
+    "expert"
+};
+
+/** Formats CSV difficulty string matching `common.ts:normalizedText`. */
+pub formatDifficultyCsv := fn(source: String, scaled1000: Int, rawText: String, isIntLiteral: Bool): String {
+    if source =!= "cryptopals" and isIntLiteral {
+        whole := scaled1000 / 1000;
+        return integer.intText(whole) + ".0";
+    }
+    rawText
+};
+
+asciiLower := fn(s: String): String {
+    out: mut List<String> = [];
+    upper := "ABCDEFGHIJKLMNOPQRSTUVWXYZ";
+    lower := "abcdefghijklmnopqrstuvwxyz";
+    var i := 0;
+    loop i < text.length(s) {
+        ch := text.at(s, i);
+        pos := text.indexOfText(upper, ch, 0);
+        list.pushBack(mut out, if pos >= 0 { text.at(lower, pos) } else { ch });
+        i = i + 1;
+    }
+    text.joinTexts(out, "")
+};
+
+splitTrimmedCsv := fn(raw: String): List<String> {
+    out: mut List<String> = [];
+    size := text.length(raw);
+    var start := 0;
+    var i := 0;
+    loop i <= size {
+        atEnd := i == size;
+        if atEnd or text.at(raw, i) == "," {
+            part := text.trim(text.slice(raw, start, i));
+            if part =!= "" { list.pushBack(mut out, part); }
+            start = i + 1;
+        }
+        i = i + 1;
+    }
+    out
+};
+
+queryOptionKind := fn(name: String): String {
+    flags: List<String> = ["--desc", "--all", "--json", "--csv", "--stats", "--help", "-h"];
+    values: List<String> = ["--source", "--category", "--difficulty", "--topics-source", "--status", "--premium", "--list", "--search", "--sort", "--limit", "--group-by"];
+    if list.listContainsText(flags, name) { return "flag"; }
+    if list.listContainsText(values, name) { return "value"; }
+    if name == "--topic" { return "repeat"; }
+    ""
+};
+
+/** Validates query tool CLI arguments matching `common.ts:options` error semantics. */
+pub checkQueryOptions := fn(args: List<String>): (ok: Bool, error: String) {
+    count := list.listCountText(args);
+    var i := 0;
+    loop i < count {
+        arg := args[i];
+        eq := text.indexOfText(arg, "=", 0);
+        name := if eq < 0 { arg } else { text.slice(arg, 0, eq) };
+        kind := queryOptionKind(name);
+        if kind == "" {
+            return (ok = false, error = "unknown option " + name);
+        }
+        if kind == "flag" {
+            if eq >= 0 { return (ok = false, error = name + " does not accept a value"); }
+        } else {
+            val := if eq >= 0 { text.slice(arg, eq + 1, text.length(arg)) } else { if i + 1 < count { args[i + 1] } else { "__MISSING__" } };
+            if val == "__MISSING__" or text.startsWithAt(val, 0, "--") {
+                return (ok = false, error = "missing value for " + name);
+            }
+            if eq < 0 { i = i + 1; }
+        }
+        i = i + 1;
+    }
+    (ok = true, error = "")
+};
+
+hasQueryFlag := fn(args: List<String>, target: String): Bool {
+    count := list.listCountText(args);
+    var i := 0;
+    loop i < count {
+        arg := args[i];
+        eq := text.indexOfText(arg, "=", 0);
+        name := if eq < 0 { arg } else { text.slice(arg, 0, eq) };
+        if name == target { return true; }
+        if eq < 0 and queryOptionKind(name) =!= "flag" { i = i + 1; }
+        i = i + 1;
+    }
+    false
+};
+
+readQueryValue := fn(args: List<String>, target: String): (found: Bool, value: String) {
+    var found := false;
+    var out := "";
+    count := list.listCountText(args);
+    var i := 0;
+    loop i < count {
+        arg := args[i];
+        eq := text.indexOfText(arg, "=", 0);
+        name := if eq < 0 { arg } else { text.slice(arg, 0, eq) };
+        if eq >= 0 {
+            if name == target {
+                found = true;
+                out = text.slice(arg, eq + 1, text.length(arg));
+            }
+        } else if queryOptionKind(name) =!= "flag" {
+            if i + 1 < count {
+                if name == target {
+                    found = true;
+                    out = args[i + 1];
+                }
+                i = i + 1;
+            }
+        }
+        i = i + 1;
+    }
+    (found = found, value = out)
+};
+
+readQueryRepeatTopics := fn(args: List<String>): List<String> {
+    out: mut List<String> = [];
+    count := list.listCountText(args);
+    var i := 0;
+    loop i < count {
+        arg := args[i];
+        eq := text.indexOfText(arg, "=", 0);
+        name := if eq < 0 { arg } else { text.slice(arg, 0, eq) };
+        if name == "--topic" {
+            raw := if eq >= 0 { text.slice(arg, eq + 1, text.length(arg)) } else { args[i + 1] };
+            loop splitTrimmedCsv(raw) as tp {
+                list.pushBack(mut out, tp);
+            }
+        }
+        if eq < 0 and queryOptionKind(name) =!= "flag" { i = i + 1; }
+        i = i + 1;
+    }
+    out
+};
+
+csvEscapeField := fn(val: String): String {
+    needsQuote := text.indexOfText(val, "\"", 0) >= 0 or text.indexOfText(val, ",", 0) >= 0 or text.indexOfText(val, "\r", 0) >= 0 or text.indexOfText(val, "\n", 0) >= 0;
+    if not needsQuote { return val; }
+    parts: mut List<String> = ["\""];
+    var i := 0;
+    loop i < text.length(val) {
+        ch := text.at(val, i);
+        if ch == "\"" { list.pushBack(mut parts, "\"\""); } else { list.pushBack(mut parts, ch); }
+        i = i + 1;
+    }
+    list.pushBack(mut parts, "\"");
+    text.joinTexts(parts, "")
+};
+
+formatDiffTable := fn(scaled1000: Int): String {
+    safe := if scaled1000 < 0 { 0 } else { scaled1000 };
+    tenths := (safe + 50) / 100;
+    whole := tenths / 10;
+    rem := tenths % 10;
+    integer.intText(whole) + "." + integer.intText(rem)
+};
+
+queryCompareRecords := fn(
+sortMode: String, desc: Bool,
+sA: String, idA: String, titleA: String, diffA: Int, numA: Int, popA: Int,
+sB: String, idB: String, titleB: String, diffB: Int, numB: Int, popB: Int
+): Int {
+    var cmp := 0;
+    if sortMode == "difficulty" {
+        cmp = if diffA < diffB { -1 } else if diffA > diffB { 1 } else { 0 };
+    } else if sortMode == "title" {
+        cmp = compareTextLex(asciiLower(titleA), asciiLower(titleB));
+    } else if sortMode == "popularity" {
+        cmp = if popA < popB { -1 } else if popA > popB { 1 } else { 0 };
+    } else if sortMode == "id" {
+        cmp = compareTextLex(idA, idB);
+    } else {
+        cmp = compareTextLex(sA, sB);
+        if cmp == 0 {
+            cmp = if numA < numB { -1 } else if numA > numB { 1 } else { 0 };
+        }
+        if cmp == 0 {
+            cmp = compareTextLex(idA, idB);
+        }
+    }
+    if desc { 0 - cmp } else { cmp }
+};
+
+/** Executes `benchmark/challenges/tools/query.ts` over `benchmark/challenges/data/`. */
+pub runQueryCommand := fn(rootDir: String, args: List<String>): Int {
+    optChk := checkQueryOptions(args);
+    if not optChk.ok {
+        io.errorLine(optChk.error);
+        return 2;
+    }
+    if hasQueryFlag(args, "--help") or hasQueryFlag(args, "-h") {
+        io.outputLine("Usage: node tools/query.ts [--source ids] [--category ids] [--topic ids] [--difficulty 1-10|4-7] [--list ids] [--search text] [--sort source|id|title|difficulty|popularity] [--desc] [--limit N|--all] [--json|--csv] [--group-by source|category|topic|difficulty|topics_source|status] [--stats]");
+        return 0;
+    }
+
+    dataDir := path.join(rootDir, "benchmark/challenges/data");
+    chRead := fs.readText(path.join(dataDir, "challenges.jsonl"));
+    if not chRead.ok { io.errorLine("FAIL: " + chRead.error); return 1; }
+    liRead := fs.readText(path.join(dataDir, "lists.jsonl"));
+    if not liRead.ok { io.errorLine("FAIL: " + liRead.error); return 1; }
+
+    lines := splitJsonLines(chRead.text);
+    nAll := list.listCountText(lines);
+
+    allIds: mut List<String> = [];
+    allSources: mut List<String> = [];
+    allCats: mut List<String> = [];
+    allTitles: mut List<String> = [];
+    allTopSrc: mut List<String> = [];
+    allStatuses: mut List<String> = [];
+    allDiffs: mut List<Int> = [];
+    allDiffIntFlag: mut List<Bool> = [];
+    allDiffRaw: mut List<String> = [];
+    allNums: mut List<Int> = [];
+    allPops: mut List<Int> = [];
+
+    loop lines as ln {
+        idV := json.readObjectString(ln, 0, "id").value;
+        srcV := json.readObjectString(ln, 0, "source").value;
+        catV := json.readObjectString(ln, 0, "category").value;
+        ttlV := json.readObjectString(ln, 0, "title").value;
+        tsV := json.readObjectString(ln, 0, "topics_source").value;
+        stV := json.readObjectString(ln, 0, "status").value;
+
+        dField := json.findObjectField(ln, 0, "difficulty");
+        normD := parseScaledDecimal1000(ln, dField.valuePos, "normalized");
+        numF := json.readObjectInt(ln, 0, "number");
+        numV := if numF.found and numF.ok { numF.value } else { 0 };
+        var popV := 0;
+        popF := json.findObjectField(ln, 0, "popularity");
+        if popF.found and isJsonObjectAt(ln, popF.valuePos) {
+            solRes := json.readObjectInt(ln, popF.valuePos, "solved");
+            if solRes.found and solRes.ok { popV = solRes.value; }
+        }
+
+        list.pushBack(mut allIds, idV);
+        list.pushBack(mut allSources, srcV);
+        list.pushBack(mut allCats, catV);
+        list.pushBack(mut allTitles, ttlV);
+        list.pushBack(mut allTopSrc, tsV);
+        list.pushBack(mut allStatuses, stV);
+        list.pushBack(mut allDiffs, normD.scaled);
+        list.pushBack(mut allDiffIntFlag, normD.isIntLiteral);
+        list.pushBack(mut allDiffRaw, normD.raw);
+        list.pushBack(mut allNums, numV);
+        list.pushBack(mut allPops, popV);
+    }
+
+    if hasQueryFlag(args, "--stats") {
+        io.outputLine("total: " + integer.intText(nAll));
+        io.outputLine("\nsource:\n" + formatFrequencyLines(allSources, "  ", 22));
+        io.outputLine("\ncategory:\n" + formatFrequencyLines(allCats, "  ", 22));
+        bands: mut List<String> = [];
+        loop allDiffs as dScaled {
+            list.pushBack(mut bands, difficultyBand(dScaled));
+        }
+        io.outputLine("\ndifficulty:\n" + formatFrequencyLines(bands, "  ", 22));
+        io.outputLine("\ntopics_source:\n" + formatFrequencyLines(allTopSrc, "  ", 22));
+        io.outputLine("\nstatus:\n" + formatFrequencyLines(allStatuses, "  ", 22));
+        return 0;
+    }
+
+    listOpt := readQueryValue(args, "--list");
+    var hasSelectedOrder := false;
+    selectedOrderedIds: mut List<String> = [];
+    if listOpt.found and listOpt.value =!= "" {
+        hasSelectedOrder = true;
+        listLines := splitJsonLines(liRead.text);
+        seenListIds: mut List<String> = [];
+        loop splitTrimmedCsv(listOpt.value) as lid {
+            if not list.listContainsText(seenListIds, lid) {
+                list.pushBack(mut seenListIds, lid);
+                var matchedLine := "";
+                loop listLines as ll {
+                    if json.readObjectString(ll, 0, "id").value == lid {
+                        matchedLine = ll;
+                        break;
+                    }
+                }
+                if matchedLine == "" {
+                    io.errorLine("FAIL: unknown list(s): " + lid);
+                    return 1;
+                }
+                loop readStringArray(matchedLine, 0, "challenge_ids") as cid {
+                    list.pushBack(mut selectedOrderedIds, cid);
+                }
+            }
+        }
+    }
+
+    emptyStrs: List<String> = [];
+    srcFilter := readQueryValue(args, "--source");
+    srcFilterList := if srcFilter.found { splitTrimmedCsv(srcFilter.value) } else { emptyStrs };
+    catFilter := readQueryValue(args, "--category");
+    catFilterList := if catFilter.found { splitTrimmedCsv(catFilter.value) } else { emptyStrs };
+    topicsFilter := readQueryRepeatTopics(args);
+
+    diffFilter := readQueryValue(args, "--difficulty");
+    var hasDiffRange := false;
+    var diffLow := 0;
+    var diffHigh := 0;
+    if diffFilter.found and diffFilter.value =!= "" {
+        hasDiffRange = true;
+        dash := text.indexOfText(diffFilter.value, "-", 0);
+        if dash < 0 {
+            p := parseScaledNumberText(diffFilter.value);
+            if not p.ok { io.errorLine("FAIL: invalid difficulty range"); return 1; }
+            diffLow = p.scaled;
+            diffHigh = p.scaled;
+        } else {
+            pL := parseScaledNumberText(text.slice(diffFilter.value, 0, dash));
+            pR := parseScaledNumberText(text.slice(diffFilter.value, dash + 1, text.length(diffFilter.value)));
+            if not pL.ok or not pR.ok { io.errorLine("FAIL: invalid difficulty range"); return 1; }
+            diffLow = pL.scaled;
+            diffHigh = pR.scaled;
+        }
+    }
+
+    tsFilter := readQueryValue(args, "--topics-source");
+    stFilter := readQueryValue(args, "--status");
+    premOpt := readQueryValue(args, "--premium");
+    premium := if premOpt.found { premOpt.value } else { "include" };
+    if premium =!= "include" and premium =!= "exclude" and premium =!= "only" {
+        io.errorLine("FAIL: invalid --premium");
+        return 1;
+    }
+    searchOpt := readQueryValue(args, "--search");
+    searchNeedle := if searchOpt.found { asciiLower(searchOpt.value) } else { "" };
+
+    var filteredIdx: mut List<Int> = [];
+    var idx := 0;
+    loop idx < nAll {
+        var keep := true;
+        if list.listCountText(srcFilterList) > 0 and not list.listContainsText(srcFilterList, allSources[idx]) { keep = false; }
+        if keep and list.listCountText(catFilterList) > 0 and not list.listContainsText(catFilterList, allCats[idx]) { keep = false; }
+        if keep and hasDiffRange {
+            dv := allDiffs[idx];
+            if dv < diffLow or dv > diffHigh { keep = false; }
+        }
+        if keep and tsFilter.found and tsFilter.value =!= "" and allTopSrc[idx] =!= tsFilter.value { keep = false; }
+        if keep and stFilter.found and stFilter.value =!= "" and allStatuses[idx] =!= stFilter.value { keep = false; }
+        if keep and premium =!= "include" {
+            isPrem := json.readObjectBool(lines[idx], 0, "premium").value;
+            if (premium == "only" and not isPrem) or (premium == "exclude" and isPrem) { keep = false; }
+        }
+        if keep and searchNeedle =!= "" {
+            if text.indexOfText(asciiLower(allTitles[idx]), searchNeedle, 0) < 0 { keep = false; }
+        }
+        if keep and list.listCountText(topicsFilter) > 0 {
+            recTopics := readStringArray(lines[idx], 0, "topics");
+            loop topicsFilter as tf {
+                if not list.listContainsText(recTopics, tf) {
+                    keep = false;
+                    break;
+                }
+            }
+        }
+        if keep and hasSelectedOrder {
+            if not list.listContainsText(selectedOrderedIds, allIds[idx]) { keep = false; }
+        }
+        if keep { list.pushBack(mut filteredIdx, idx); }
+        idx = idx + 1;
+    }
+
+    if hasSelectedOrder {
+        orderedIdx: mut List<Int> = [];
+        loop selectedOrderedIds as targetId {
+            loop filteredIdx as fi {
+                if allIds[fi] == targetId {
+                    list.pushBack(mut orderedIdx, fi);
+                    break;
+                }
+            }
+        }
+        filteredIdx = orderedIdx;
+    }
+
+    groupOpt := readQueryValue(args, "--group-by");
+    if groupOpt.found {
+        gk := groupOpt.value;
+        allowedGroup: List<String> = ["source", "category", "topic", "difficulty", "topics_source", "status"];
+        if not list.listContainsText(allowedGroup, gk) {
+            io.errorLine("FAIL: unknown grouping " + gk);
+            return 1;
+        }
+        groupVals: mut List<String> = [];
+        loop filteredIdx as fi {
+            if gk == "topic" {
+                loop readStringArray(lines[fi], 0, "topics") as tp {
+                    list.pushBack(mut groupVals, tp);
+                }
+            } else if gk == "source" {
+                list.pushBack(mut groupVals, allSources[fi]);
+            } else if gk == "category" {
+                list.pushBack(mut groupVals, allCats[fi]);
+            } else if gk == "difficulty" {
+                list.pushBack(mut groupVals, difficultyBand(allDiffs[fi]));
+            } else if gk == "topics_source" {
+                list.pushBack(mut groupVals, allTopSrc[fi]);
+            } else {
+                list.pushBack(mut groupVals, allStatuses[fi]);
+            }
+        }
+        if list.listCountText(groupVals) > 0 {
+            io.outputLine(formatFrequencyLines(groupVals, "", 24));
+        }
+        io.outputLine(padRight("TOTAL", 24) + " " + padLeft(integer.intText(list.listCountInt(filteredIdx)), 5));
+        return 0;
+    }
+
+    sortOpt := readQueryValue(args, "--sort");
+    sortMode := if sortOpt.found { sortOpt.value } else { "source" };
+    allowedSort: List<String> = ["source", "id", "title", "difficulty", "popularity"];
+    if not list.listContainsText(allowedSort, sortMode) {
+        io.errorLine("FAIL: invalid --sort");
+        return 1;
+    }
+    desc := hasQueryFlag(args, "--desc");
+    if not hasSelectedOrder and list.listCountInt(filteredIdx) > 1 {
+        mCount := list.listCountInt(filteredIdx);
+        var cur: mut List<Int> = filteredIdx;
+        var width := 1;
+        loop width < mCount {
+            next: mut List<Int> = [];
+            var start := 0;
+            loop start < mCount {
+                mid := if start + width < mCount { start + width } else { mCount };
+                rightEnd := if start + width * 2 < mCount { start + width * 2 } else { mCount };
+                var li := start;
+                var ri := mid;
+                loop li < mid or ri < rightEnd {
+                    if li >= mid {
+                        list.pushBack(mut next, cur[ri]);
+                        ri = ri + 1;
+                    } else if ri >= rightEnd {
+                        list.pushBack(mut next, cur[li]);
+                        li = li + 1;
+                    } else {
+                        ia := cur[li];
+                        ib := cur[ri];
+                        cmp := queryCompareRecords(
+                        sortMode, desc,
+                        allSources[ia], allIds[ia], allTitles[ia], allDiffs[ia], allNums[ia], allPops[ia],
+                        allSources[ib], allIds[ib], allTitles[ib], allDiffs[ib], allNums[ib], allPops[ib]
+                        );
+                        if cmp <= 0 {
+                            list.pushBack(mut next, ia);
+                            li = li + 1;
+                        } else {
+                            list.pushBack(mut next, ib);
+                            ri = ri + 1;
+                        }
+                    }
+                }
+                start = start + width * 2;
+            }
+            cur = next;
+            width = width * 2;
+        }
+        filteredIdx = cur;
+    }
+
+    totalMatches := list.listCountInt(filteredIdx);
+    limitOpt := readQueryValue(args, "--limit");
+    var limit := 25;
+    if limitOpt.found {
+        lp := text.textToInt(limitOpt.value);
+        if not lp.ok { io.errorLine("FAIL: invalid --limit"); return 1; }
+        limit = lp.value;
+    }
+    shownCount := if hasQueryFlag(args, "--all") or totalMatches <= limit { totalMatches } else if limit <= 0 { 0 } else { limit };
+
+    if hasQueryFlag(args, "--json") {
+        var si := 0;
+        loop si < shownCount {
+            io.outputLine(lines[filteredIdx[si]]);
+            si = si + 1;
+        }
+        return 0;
+    }
+
+    if hasQueryFlag(args, "--csv") {
+        io.output("id,title,source,category,difficulty,topics,url\r\n");
+        var si := 0;
+        loop si < shownCount {
+            fi := filteredIdx[si];
+            ln := lines[fi];
+            diffStr := formatDifficultyCsv(allSources[fi], allDiffs[fi], allDiffRaw[fi], allDiffIntFlag[fi]);
+            topicsJoined := text.joinTexts(readStringArray(ln, 0, "topics"), ";");
+            urlV := json.readObjectString(ln, 0, "url").value;
+            row := csvEscapeField(allIds[fi]) + ","
+            + csvEscapeField(allTitles[fi]) + ","
+            + csvEscapeField(allSources[fi]) + ","
+            + csvEscapeField(allCats[fi]) + ","
+            + csvEscapeField(diffStr) + ","
+            + csvEscapeField(topicsJoined) + ","
+            + csvEscapeField(urlV) + "\r\n";
+            io.output(row);
+            si = si + 1;
+        }
+        return 0;
+    }
+
+    io.outputLine(padRight("ID", 28) + " " + padLeft("DIFF", 4) + "  " + padRight("SOURCE", 14) + " TITLE");
+    io.outputLine(text.repeatText("-", 110));
+    var si := 0;
+    loop si < shownCount {
+        fi := filteredIdx[si];
+        tVal := allTitles[fi];
+        tDisp := if text.length(tVal) <= 52 { tVal } else { text.slice(tVal, 0, 49) + "..." };
+        io.outputLine(padRight(allIds[fi], 28) + " " + padLeft(formatDiffTable(allDiffs[fi]), 4) + "  " + padRight(allSources[fi], 14) + " " + tDisp);
+        si = si + 1;
+    }
+    io.outputLine("\n" + integer.intText(shownCount) + " shown of " + integer.intText(totalMatches) + " matching challenge(s)");
     0
 };
