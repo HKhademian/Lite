@@ -164,6 +164,30 @@ record dependencies without leaving the current review layer. The user also
 asks whether JSON-Like, YAML-Like and other direct data forms or static file
 imports are worthwhile; see [structured data and static imports](structured-data-like.md).
 
+### User direction: Like-category defaults
+
+The user states the general principle: when a fresh `X-Like` value needs its
+default, its default is `X`. Examples include `64` as `Int-Like`, defaulting to
+`Int` (transparent alias of `Int64`), and `64.0` as `Float-Like`, defaulting
+to `Float` (an alias of `Float64`). The same intended pattern extends to
+String-Like, Array-Like, Record-Like and JSON-Like. These names are discussion
+labels; they do not by themselves select language syntax, compiler support or
+the complete type rules.
+
+This defaulting direction must be reconciled with the proposed compile-time
+inference from relevant uses above: an applicable unique inferred type may
+resolve the fresh value, while incompatible use constraints are an inference
+conflict, not a reason to silently choose the default. The exact conditions for
+defaulting and compatibility remain to be defined.
+
+For categories beyond the existing numeric and string defaults, the concrete
+meaning of `X` remains to be specified. In particular, do not invent a single
+universal Array, Record or JSON type, assume a map layout or compiler feature,
+or silently replace the existing known-size fixed-array inference and
+record-identity rules. Compare those contracts explicitly in the relevant
+category review. JSON-like external formats and their result types remain a
+separate [structured-data investigation](structured-data-like.md).
+
 **Initial assessment and probes:** Compare a direct literal in a `UserID` destination with an already bound String; do not assume they must be treated identically. Check numeric bounds and contextual inference too.
 
 ## 1.2 Identity and distinct types
