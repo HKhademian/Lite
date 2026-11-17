@@ -57,6 +57,45 @@ The boundaries need explicit investigation:
 The user's goal is extensibility without bending Lite's syntax. The exact
 extension mechanism and supported formats remain decisions for a future layer.
 
+## Question: use Lite's own data expressions?
+
+The user asks whether special parsing and source regions are necessary at all,
+or whether Lite itself should provide a JSON-like (not necessarily JSON-matching)
+data-definition operation. This is a candidate to compare, not a selected new
+grammar or a decision to remove embedded external-language support.
+
+The language draft already selects typed record construction using named fields,
+array expressions and named tuple values; standalone inferred record literals
+and their identities are still open. If Lite's ordinary expressions can express
+the intended structured data, a program may construct the values directly and
+may not need a JSON parser or a special source region for that case. How much
+additional data-definition syntax Lite needs is itself open. Existing record
+and tuple rules, including field names, identity, contextual construction and
+the difference between executable blocks and data braces, still apply until
+explicitly revised.
+
+Compare these needs independently:
+
+1. **Write data in Lite:** a Lite-like structured expression is parsed and
+   checked by Lite; its syntax need not match JSON, and it can use Lite's own
+   value and type rules.
+2. **Consume external format text or a file:** a JSON parser is still needed if
+   arbitrary JSON must be interpreted as JSON. It may be called at compile time
+   when supported, or at runtime; Lite-like syntax does not by itself parse it.
+3. **Put exact external text directly in source:** a multiline string or an
+   explicitly delimited region could pass that text to a parser. Compare those
+   mechanisms only if the use case needs preserving the other language's text;
+   neither one is selected or required for Lite-native data.
+
+Direct Lite data can reduce parsing and runtime support, make errors refer to
+normal Lite expressions and permit static layouts; inferred shapes, dynamic
+keys and exact conversion to nominal records still need contracts. External
+formats remain useful for interoperability and non-Lite producers, but their
+parsers and representation mapping carry costs. Compile-time work may keep a
+parser out of the final program; it does not remove the cost of stored data or
+guarantee any particular layout. Review whether each use case earns special
+syntax rather than assuming a format-specific mechanism is required.
+
 ## Candidate: source region passed to a compile-time operation
 
 The user suggests combining directives or source regions with ordinary
