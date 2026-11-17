@@ -161,19 +161,43 @@ identifying and applying that agreement remains open; the idea does not require
 the compiler to reproduce an identical numeric table from source order.
 
 Evaluate separately: a second library already compiled against an older table;
-a consumer binary not rebuilt when the library changes; a union value persisted
-or shared using the old mapping; a changed record layout or function contract;
-and two library versions used together. Such cases need a defined compatibility,
+a consumer binary not rebuilt when the library changes; a value shared using
+the old mapping; a changed record layout or function contract; and two library
+versions used together. Such runtime cases need a defined compatibility,
 rebuild, relink, translation or rejection rule. Rebuilding a library and using
 its newest table in a *new* consumer establishes a possible agreement for that
-pair; it does not automatically rewrite an older artifact or stored bytes. The
-specific policy and binary/version guarantees are not selected.
+pair; it does not automatically rewrite an older artifact. The specific policy
+and binary/version guarantees are not selected. Persistence is discussed below.
 
 A future [precompiled Lite representation](precompiled-lite-representation.md)
 may help carry public identities and dependencies between builds, but its format,
 contents, and identity-assignment algorithm are not selected. The user also
 suggests a richer per-type-reference metadata table in that representation;
 whether it is present at runtime or exposed to programs remains open.
+
+### User direction: persistence is a separate data contract
+
+The user does not want a guarantee that dynamic type-reference/Kind mappings
+remain stable for persistent application data across rebuilds or library
+changes. The user's direction is to persist raw data such as integers, strings
+and fixed arrays, or use descriptive data models such as JSON, YAML or BSON,
+rather than rely on a live program's internal type references. Exact supported
+formats, APIs and persistent encodings remain open.
+
+This does not remove the requirement that compatible, independently built Lite
+components agree on runtime values they exchange through their shared library
+or memory boundary. Persistence across builds and runtime interoperability among
+linked components are distinct contracts. A precompiled library's own metadata
+may still be saved as a versioned build artifact; it is not thereby a promise
+that arbitrary application values' in-memory bytes are a stable data format.
+
+Raw data also needs an explicit storage contract to be portable or durable:
+width, encoding, byte order, length, schema and versioning matter. In particular,
+the in-memory representation of a String, reference, or fixed array is not
+automatically a cross-platform or cross-version file format. An application may
+define an explicit stable format or schema, including a typed serialization;
+this direction does not select a format, require JSON, or establish that raw
+memory dumps are always safe.
 
 ## Footprint and access
 

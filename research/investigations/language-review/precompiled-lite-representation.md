@@ -82,7 +82,9 @@ library build. That published table can be an input to a clean consumer build,
 without requiring the consumer to possess an old generated cache. See [the
 latest-table discussion](type-reference-table.md#user-idea-use-the-newly-built-librarys-table)
 for the remaining questions about older binaries, independently built
-dependencies, previously stored values and version compatibility.
+dependencies and version compatibility. The user separately proposes no
+stability guarantee for internal type references in persistent application
+data; see [the persistence boundary](type-reference-table.md#user-direction-persistence-is-a-separate-data-contract).
 
 ## Incremental and separate-build requirements
 
