@@ -178,9 +178,9 @@ encodeModuleSlug := fn(target: String, logical: String): String {
         if textLib.isAsciiLetter(ch) or textLib.isDigit(ch) {
             result = result + ch;
         } else if ch == "/" {
-            result = result + if target == "ts" { "$" } else { "_s_" };
+            result = result + if target == frontend.TARGET_TS { "$" } else { "_s_" };
         } else if ch == "-" {
-            result = result + if target == "ts" { "__" } else { "_d_" };
+            result = result + if target == frontend.TARGET_TS { "__" } else { "_d_" };
         } else if ch == "_" {
             result = result + "_u_";
         } else if ch == "." {
@@ -208,7 +208,7 @@ uniqueModuleKey := fn(graph: frontend.Items, target: String, baseSlug: String): 
     if not graphUsesModuleKey(graph, baseSlug) { return baseSlug; }
     var suffix := 2;
     loop true {
-        candidate := if target == "ts" { baseSlug + "$" + integer.intText(suffix) }
+        candidate := if target == frontend.TARGET_TS { baseSlug + "$" + integer.intText(suffix) }
         else { baseSlug + "_k" + integer.intText(suffix) + "_" };
         if not graphUsesModuleKey(graph, candidate) { return candidate; }
         suffix = suffix + 1;
@@ -322,7 +322,7 @@ moduleAliasExports := fn(graph: frontend.Items, path: String, alias: String): fr
 
 /** Function runtime prefix used for `moduleKey` in `target` output. */
 coreFnPrefix := fn(target: String, moduleKey: String): String {
-    if target == "ts" { return "liteFn$" + moduleKey + "$"; }
+    if target == frontend.TARGET_TS { return "liteFn$" + moduleKey + "$"; }
     "lt_fn_" + moduleKey + "__"
 }
 
@@ -331,7 +331,7 @@ tokenBelongsToModuleFn := fn(target: String, moduleKey: String, prefix: String, 
     tokLen := textLib.length(token);
     if tokLen == 0 or textLib.at(token, tokLen - 1) =!= "(" { return false; }
     if not textLib.startsWithAt(token, 0, prefix) { return false; }
-    sep := if target == "ts" { "$" } else { "__" };
+    sep := if target == frontend.TARGET_TS { "$" } else { "__" };
     textLib.indexOfText(token, sep, textLib.length(prefix)) < 0
 }
 
@@ -642,7 +642,7 @@ resolveCoreModules := fn(target: String, initialGraph: frontend.Items): frontend
                 reparsed := frontend.parseProgramWithModuleSelective(=target, source = metaSources[index],
                 prefix = metaDisplays[index], exports = importedExports, moduleKey = modKey,
                 moduleIdentity = metaIdentities[index], neededFns = reachable,
-                skipSoftBuiltins = target == "ts");
+                skipSoftBuiltins = target == frontend.TARGET_TS);
                 graph = replaceModuleItems(graph, modPath, reparsed);
                 coreGraph = replaceModuleItems(coreGraph, modPath, reparsed);
                 compiledFns = addCompiledFnsSet(reparsed, compiledFns);
@@ -741,7 +741,7 @@ initialGraph: frontend.Items): frontend.Items {
     isCoreMod := not isRoot and textLib.startsWithAt(identity, 0, "lite.core.");
     localItems := if isCoreMod {
         frontend.parseProgramWithModuleSelective(=target, =source, prefix = display, exports = importedExports,
-        =moduleKey, moduleIdentity = identity, neededFns = "|", skipSoftBuiltins = target == "ts")
+        =moduleKey, moduleIdentity = identity, neededFns = "|", skipSoftBuiltins = target == frontend.TARGET_TS)
     } else {
         frontend.parseProgramWithModule(=target, =source, prefix = display, exports = importedExports,
         =moduleKey, moduleIdentity = identity)

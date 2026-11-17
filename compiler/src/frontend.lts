@@ -10,67 +10,67 @@ io := import "core/io";
 textLib := import "core/text";
 
 /** Selects the TS or C backend implementation for one emitted literal operation. */
-targetBoolLiteralCode := fn(target: String, value: Bool): String { if target == "ts" { tsLiteral.boolLiteralCode(value) } else { cLiteral.boolLiteralCode(value) } }
+targetBoolLiteralCode := fn(target: String, value: Bool): String { if target == TARGET_TS { tsLiteral.boolLiteralCode(value) } else { cLiteral.boolLiteralCode(value) } }
 /** Selects the TS or C backend implementation for one emitted literal operation. */
-targetComparisonChainCode := fn(target: String, codes: List<String>, kinds: List<String>, operators: List<String>, count: Int, position: Int): String { if target == "ts" { tsLiteral.comparisonChainCode(codes, kinds, operators, count, position) } else { cLiteral.comparisonChainCode(codes, kinds, operators, count, position) } }
+targetComparisonChainCode := fn(target: String, codes: List<String>, kinds: List<String>, operators: List<String>, count: Int, position: Int): String { if target == TARGET_TS { tsLiteral.comparisonChainCode(codes, kinds, operators, count, position) } else { cLiteral.comparisonChainCode(codes, kinds, operators, count, position) } }
 /** Selects the TS or C backend implementation for one emitted literal operation. */
-targetComparisonCode := fn(target: String, op: String, kind: String, left: String, right: String): String { if target == "ts" { tsLiteral.comparisonCode(op, kind, left, right) } else { cLiteral.comparisonCode(op, kind, left, right) } }
+targetComparisonCode := fn(target: String, op: String, kind: String, left: String, right: String): String { if target == TARGET_TS { tsLiteral.comparisonCode(op, kind, left, right) } else { cLiteral.comparisonCode(op, kind, left, right) } }
 /** Selects the TS or C backend implementation for one emitted literal operation. */
-targetConcatCode := fn(target: String, left: String, right: String): String { if target == "ts" { tsLiteral.concatCode(left, right) } else { cLiteral.concatCode(left, right) } }
+targetConcatCode := fn(target: String, left: String, right: String): String { if target == TARGET_TS { tsLiteral.concatCode(left, right) } else { cLiteral.concatCode(left, right) } }
 /** Selects the TS or C backend implementation for one emitted literal operation. */
-targetFloatBinaryCode := fn(target: String, op: String, left: String, right: String, position: Int): String { if target == "ts" { tsLiteral.floatBinaryCode(op, left, right, position) } else { cLiteral.floatBinaryCode(op, left, right, position) } }
+targetFloatBinaryCode := fn(target: String, op: String, left: String, right: String, position: Int): String { if target == TARGET_TS { tsLiteral.floatBinaryCode(op, left, right, position) } else { cLiteral.floatBinaryCode(op, left, right, position) } }
 /** Selects the TS or C backend implementation for one emitted literal operation. */
-targetFloat32BinaryCode := fn(target: String, op: String, left: String, right: String, position: Int): String { if target == "ts" { tsLiteral.float32BinaryCode(op, left, right, position) } else { cLiteral.float32BinaryCode(op, left, right, position) } }
+targetFloat32BinaryCode := fn(target: String, op: String, left: String, right: String, position: Int): String { if target == TARGET_TS { tsLiteral.float32BinaryCode(op, left, right, position) } else { cLiteral.float32BinaryCode(op, left, right, position) } }
 /** Selects the TS or C backend implementation for one emitted literal operation. */
-targetFloatLiteralCode := fn(target: String, digits: String, negative: Bool): String { if target == "ts" { tsLiteral.floatLiteralCode(digits, negative) } else { cLiteral.floatLiteralCode(digits, negative) } }
+targetFloatLiteralCode := fn(target: String, digits: String, negative: Bool): String { if target == TARGET_TS { tsLiteral.floatLiteralCode(digits, negative) } else { cLiteral.floatLiteralCode(digits, negative) } }
 /** Selects the TS or C backend implementation for one emitted literal operation. */
-targetFloat32LiteralCode := fn(target: String, digits: String, negative: Bool): String { if target == "ts" { tsLiteral.float32LiteralCode(digits, negative) } else { cLiteral.float32LiteralCode(digits, negative) } }
+targetFloat32LiteralCode := fn(target: String, digits: String, negative: Bool): String { if target == TARGET_TS { tsLiteral.float32LiteralCode(digits, negative) } else { cLiteral.float32LiteralCode(digits, negative) } }
 /** Selects the TS or C backend implementation for one emitted literal operation. */
-targetFloatOperandCode := fn(target: String, kind: String, code: String): String { if target == "ts" { tsLiteral.floatOperandCode(kind, code) } else { cLiteral.floatOperandCode(kind, code) } }
+targetFloatOperandCode := fn(target: String, kind: String, code: String): String { if target == TARGET_TS { tsLiteral.floatOperandCode(kind, code) } else { cLiteral.floatOperandCode(kind, code) } }
 /** Selects the TS or C backend implementation for one emitted literal operation. */
-targetFloat32OperandCode := fn(target: String, kind: String, code: String): String { if target == "ts" { tsLiteral.float32OperandCode(kind, code) } else { cLiteral.float32OperandCode(kind, code) } }
+targetFloat32OperandCode := fn(target: String, kind: String, code: String): String { if target == TARGET_TS { tsLiteral.float32OperandCode(kind, code) } else { cLiteral.float32OperandCode(kind, code) } }
 /** Selects the TS or C backend implementation for checked narrow integer arithmetic. */
-targetCheckedNarrowIntCode := fn(target: String, kind: String, value: String, position: Int): String { if target == "ts" { tsLiteral.checkedNarrowIntCode(kind, value, position) } else { cLiteral.checkedNarrowIntCode(kind, value, position) } }
+targetCheckedNarrowIntCode := fn(target: String, kind: String, value: String, position: Int): String { if target == TARGET_TS { tsLiteral.checkedNarrowIntCode(kind, value, position) } else { cLiteral.checkedNarrowIntCode(kind, value, position) } }
 /** True when `kind` is one of the signed integer scalar types (`Int8`, `Int16`, `Int32`, `Int`). */
 pub isIntScalarKind := fn(kind: String): Bool { numeric.isIntKind(kind) }
 /** True when `kind` is one of the binary float scalar types (`Float32`, `Float`). */
 pub isFloatScalarKind := fn(kind: String): Bool { numeric.isFloatKind(kind) }
 /** Selects the TS or C backend implementation for one emitted literal operation. */
-targetFloatPowerCode := fn(target: String, left: String, right: String, position: Int): String { if target == "ts" { tsLiteral.floatPowerCode(left, right, position) } else { cLiteral.floatPowerCode(left, right, position) } }
+targetFloatPowerCode := fn(target: String, left: String, right: String, position: Int): String { if target == TARGET_TS { tsLiteral.floatPowerCode(left, right, position) } else { cLiteral.floatPowerCode(left, right, position) } }
 /** Selects the TS or C backend implementation for one emitted literal operation. */
-targetFloorDivCode := fn(target: String, left: String, right: String): String { if target == "ts" { tsLiteral.floorDivCode(left, right) } else { cLiteral.floorDivCode(left, right) } }
+targetFloorDivCode := fn(target: String, left: String, right: String): String { if target == TARGET_TS { tsLiteral.floorDivCode(left, right) } else { cLiteral.floorDivCode(left, right) } }
 /** Selects the TS or C backend implementation for one emitted literal operation. */
-targetFloorModCode := fn(target: String, left: String, right: String): String { if target == "ts" { tsLiteral.floorModCode(left, right) } else { cLiteral.floorModCode(left, right) } }
+targetFloorModCode := fn(target: String, left: String, right: String): String { if target == TARGET_TS { tsLiteral.floorModCode(left, right) } else { cLiteral.floorModCode(left, right) } }
 /** Selects the TS or C backend implementation for one emitted literal operation. */
-targetIntAddCode := fn(target: String, left: String, right: String, position: Int): String { if target == "ts" { tsLiteral.intAddCode(left, right, position) } else { cLiteral.intAddCode(left, right, position) } }
+targetIntAddCode := fn(target: String, left: String, right: String, position: Int): String { if target == TARGET_TS { tsLiteral.intAddCode(left, right, position) } else { cLiteral.intAddCode(left, right, position) } }
 /** Selects the TS or C backend implementation for one emitted literal operation. */
-targetIntDivideCode := fn(target: String, left: String, right: String, position: Int): String { if target == "ts" { tsLiteral.intDivideCode(left, right, position) } else { cLiteral.intDivideCode(left, right, position) } }
+targetIntDivideCode := fn(target: String, left: String, right: String, position: Int): String { if target == TARGET_TS { tsLiteral.intDivideCode(left, right, position) } else { cLiteral.intDivideCode(left, right, position) } }
 /** Selects the TS or C backend implementation for one emitted literal operation. */
-targetIntFloorDivideCode := fn(target: String, left: String, right: String, position: Int): String { if target == "ts" { tsLiteral.intFloorDivideCode(left, right, position) } else { cLiteral.intFloorDivideCode(left, right, position) } }
+targetIntFloorDivideCode := fn(target: String, left: String, right: String, position: Int): String { if target == TARGET_TS { tsLiteral.intFloorDivideCode(left, right, position) } else { cLiteral.intFloorDivideCode(left, right, position) } }
 /** Selects the TS or C backend implementation for one emitted literal operation. */
-targetIntFloorModuloCode := fn(target: String, left: String, right: String, position: Int): String { if target == "ts" { tsLiteral.intFloorModuloCode(left, right, position) } else { cLiteral.intFloorModuloCode(left, right, position) } }
+targetIntFloorModuloCode := fn(target: String, left: String, right: String, position: Int): String { if target == TARGET_TS { tsLiteral.intFloorModuloCode(left, right, position) } else { cLiteral.intFloorModuloCode(left, right, position) } }
 /** Selects the TS or C backend implementation for one emitted literal operation. */
-targetIntLiteralCode := fn(target: String, value: Int, negative: Bool, digits: String): String { if target == "ts" { tsLiteral.intLiteralCode(value, negative, digits) } else { cLiteral.intLiteralCode(value, negative, digits) } }
+targetIntLiteralCode := fn(target: String, value: Int, negative: Bool, digits: String): String { if target == TARGET_TS { tsLiteral.intLiteralCode(value, negative, digits) } else { cLiteral.intLiteralCode(value, negative, digits) } }
 /** Selects the TS or C backend implementation for one emitted literal operation. */
-targetIntMultiplyCode := fn(target: String, left: String, right: String, position: Int): String { if target == "ts" { tsLiteral.intMultiplyCode(left, right, position) } else { cLiteral.intMultiplyCode(left, right, position) } }
+targetIntMultiplyCode := fn(target: String, left: String, right: String, position: Int): String { if target == TARGET_TS { tsLiteral.intMultiplyCode(left, right, position) } else { cLiteral.intMultiplyCode(left, right, position) } }
 /** Selects the TS or C backend implementation for one emitted literal operation. */
-targetIntNegateCode := fn(target: String, value: String, position: Int): String { if target == "ts" { tsLiteral.intNegateCode(value, position) } else { cLiteral.intNegateCode(value, position) } }
+targetIntNegateCode := fn(target: String, value: String, position: Int): String { if target == TARGET_TS { tsLiteral.intNegateCode(value, position) } else { cLiteral.intNegateCode(value, position) } }
 /** Selects the TS or C backend implementation for one emitted literal operation. */
-targetIntRemainderCode := fn(target: String, left: String, right: String, position: Int): String { if target == "ts" { tsLiteral.intRemainderCode(left, right, position) } else { cLiteral.intRemainderCode(left, right, position) } }
+targetIntRemainderCode := fn(target: String, left: String, right: String, position: Int): String { if target == TARGET_TS { tsLiteral.intRemainderCode(left, right, position) } else { cLiteral.intRemainderCode(left, right, position) } }
 /** Selects the TS or C backend implementation for one emitted literal operation. */
-targetIntSubtractCode := fn(target: String, left: String, right: String, position: Int): String { if target == "ts" { tsLiteral.intSubtractCode(left, right, position) } else { cLiteral.intSubtractCode(left, right, position) } }
+targetIntSubtractCode := fn(target: String, left: String, right: String, position: Int): String { if target == TARGET_TS { tsLiteral.intSubtractCode(left, right, position) } else { cLiteral.intSubtractCode(left, right, position) } }
 /** Selects the TS or C backend implementation for one emitted literal operation. */
-targetListCopyCode := fn(target: String, code: String): String { if target == "ts" { tsLiteral.listCopyCode(code) } else { cLiteral.listCopyCode(code) } }
+targetListCopyCode := fn(target: String, code: String): String { if target == TARGET_TS { tsLiteral.listCopyCode(code) } else { cLiteral.listCopyCode(code) } }
 /** Selects the TS or C backend implementation for one emitted literal operation. */
-targetLogicCode := fn(target: String, op: String, left: String, right: String): String { if target == "ts" { tsLiteral.logicCode(op, left, right) } else { cLiteral.logicCode(op, left, right) } }
+targetLogicCode := fn(target: String, op: String, left: String, right: String): String { if target == TARGET_TS { tsLiteral.logicCode(op, left, right) } else { cLiteral.logicCode(op, left, right) } }
 /** Selects the TS or C backend implementation for one emitted literal operation. */
-targetNotCode := fn(target: String, value: String): String { if target == "ts" { tsLiteral.notCode(value) } else { cLiteral.notCode(value) } }
+targetNotCode := fn(target: String, value: String): String { if target == TARGET_TS { tsLiteral.notCode(value) } else { cLiteral.notCode(value) } }
 /** Selects the TS or C backend implementation for one emitted literal operation. */
-targetTextLiteralCode := fn(target: String, value: String): String { if target == "ts" { tsLiteral.textLiteralCode(value) } else { cLiteral.textLiteralCode(value) } }
+targetTextLiteralCode := fn(target: String, value: String): String { if target == TARGET_TS { tsLiteral.textLiteralCode(value) } else { cLiteral.textLiteralCode(value) } }
 /** Selects the TS or C backend implementation for one emitted literal operation. */
-targetUnitEvaluationCode := fn(target: String, code: String): String { if target == "ts" { tsLiteral.unitEvaluationCode(code) } else { cLiteral.unitEvaluationCode(code) } }
+targetUnitEvaluationCode := fn(target: String, code: String): String { if target == TARGET_TS { tsLiteral.unitEvaluationCode(code) } else { cLiteral.unitEvaluationCode(code) } }
 /** Selects the TS or C backend implementation for one emitted literal operation. */
-targetUnitLiteralCode := fn(target: String): String { if target == "ts" { tsLiteral.unitLiteralCode } else { cLiteral.unitLiteralCode } }
+targetUnitLiteralCode := fn(target: String): String { if target == TARGET_TS { tsLiteral.unitLiteralCode } else { cLiteral.unitLiteralCode } }
 /* Shared restricted front-end. Not a standalone program: a target manifest
    places the target literal encoders before this file and the emitter/driver
    after it. */
@@ -1704,17 +1704,17 @@ localsHasAnyUnready := fn(locals: List<Local>): Bool {
 /** Target runtime identifier for an imported module's top-level value, or a root value. */
 moduleValueRuntime := fn(target: String, moduleKey: String, name: String): String {
     if moduleKey == "" { return "lite_" + name; }
-    if target == "ts" { return "lite$m$" + moduleKey + "$" + name; }
+    if target == TARGET_TS { return "lite$m$" + moduleKey + "$" + name; }
     "lt_m_" + moduleKey + "__" + name
 }
 
 /** Target runtime identifier for a user-defined top-level function. */
 moduleFunctionRuntime := fn(target: String, moduleKey: String, name: String): String {
     if moduleKey == "" {
-        if target == "ts" { return "liteFn_" + name; }
+        if target == TARGET_TS { return "liteFn_" + name; }
         return "lt_fn__" + name;
     }
-    if target == "ts" { return "liteFn$" + moduleKey + "$" + name; }
+    if target == TARGET_TS { return "liteFn$" + moduleKey + "$" + name; }
     "lt_fn_" + moduleKey + "__" + name
 }
 
@@ -1739,7 +1739,7 @@ localRuntimeName := fn(target: String, locals: List<Local>, name: String, module
     if not localsUseRuntime(locals, base) { return base; }
     var suffix := 2;
     loop true {
-        candidate := if target == "ts" { "lite_" + name + "$" + integer.intText(suffix) }
+        candidate := if target == TARGET_TS { "lite_" + name + "$" + integer.intText(suffix) }
         else { "lt_s" + integer.intText(suffix) + "_" + name };
         if not localsUseRuntime(locals, candidate) { return candidate; }
         suffix = suffix + 1;
@@ -2321,7 +2321,7 @@ pub filterReachableItemsForTarget := fn(items: Items, target: String): Items {
             continue;
         }
         isTopDecl := blockDepth == 0 and isTopDeclKind(item.kind);
-        isPureDecl := isTopDecl and (nextIsPure or ((target == "ts" or not isCUnsupportedItem(item)) and isSideEffectFreeCode(target, item.code)));
+        isPureDecl := isTopDecl and (nextIsPure or ((target == TARGET_TS or not isCUnsupportedItem(item)) and isSideEffectFreeCode(target, item.code)));
         nextIsPure = false;
         if item.kind == "Scope" or item.kind == "If" or item.kind == "Loop" or item.kind == "LoopSeq" {
             blockDepth = blockDepth + 1;
@@ -2412,7 +2412,7 @@ pub filterReachableItemsForTarget := fn(items: Items, target: String): Items {
             if keepFn { listLib.pushBack(mut filtered, item); }
         } else {
             dropDecl := keepBlockDepth == 0 and isTopDeclKind(item.kind) and
-            (nextDeclPure or ((target == "ts" or not isCUnsupportedItem(item)) and isSideEffectFreeCode(target, item.code))) and
+            (nextDeclPure or ((target == TARGET_TS or not isCUnsupportedItem(item)) and isSideEffectFreeCode(target, item.code))) and
             not tokenBucketHas(reachable, item.runtime);
             nextDeclPure = false;
             if item.kind == "Scope" or item.kind == "If" or item.kind == "Loop" or item.kind == "LoopSeq" {
@@ -2428,7 +2428,7 @@ pub filterReachableItemsForTarget := fn(items: Items, target: String): Items {
 
 /** Removes unreachable top-level function bodies and side-effect-free declarations for TS emission. */
 pub filterReachableItems := fn(items: Items): Items {
-    filterReachableItemsForTarget(items, "ts")
+    filterReachableItemsForTarget(items, TARGET_TS)
 }
 
 /** Reads one raw alias target type from `position`, capturing a parenthesized tuple type or a generic `List<...>` application through its matching close, or a single name. */
@@ -5314,7 +5314,7 @@ isSideEffectFreeCode := fn(target: String, code: String): Bool {
             if textLib.startsWithAt(stripped, cursor, "(function ") { return false; }
             closeEnd := scanBalancedParenEnd(stripped, cursor);
             if isIndirectUserCallParens(stripped, cursor, closeEnd) { return false; }
-            if target == "ts" and closeEnd >= 0 {
+            if target == TARGET_TS and closeEnd >= 0 {
                 afterClose := skipCodeSpaces(stripped, closeEnd);
                 if afterClose < size and textLib.at(stripped, afterClose) == "(" and
                 not isCompilerArrowIife(stripped, cursor, closeEnd) {
@@ -5367,7 +5367,7 @@ isSideEffectFreeCode := fn(target: String, code: String): Bool {
 
 /** True when a declaration or discarded expression of `kind` and `code` can be omitted on `target` without altering observable behavior or diagnostics. */
 isPrunableExprForTarget := fn(target: String, kind: String, code: String): Bool {
-    if target =!= "ts" and not isCSupportedKindAndCode(kind, code) { return false; }
+    if target =!= TARGET_TS and not isCSupportedKindAndCode(kind, code) { return false; }
     isSideEffectFreeCode(target, code)
 }
 
@@ -5587,12 +5587,12 @@ pruneBlockScopedItems := fn(items: Items, target: String): Items {
                 declCount = declCount + 1;
             }
         } else if item.kind == "Discard" {
-            if (target == "ts" or not isCUnsupportedItem(item)) and isSideEffectFreeCode(target, item.code) {
+            if (target == TARGET_TS or not isCUnsupportedItem(item)) and isSideEffectFreeCode(target, item.code) {
                 owner = -2;
                 hasPrunable = true;
             }
         } else if evalBlockId > 0 and isTopDeclKind(item.kind) and item.runtime =!= "" {
-            canPruneDecl := (target == "ts" or not isCUnsupportedItem(item)) and isSideEffectFreeCode(target, item.code);
+            canPruneDecl := (target == TARGET_TS or not isCUnsupportedItem(item)) and isSideEffectFreeCode(target, item.code);
             if canPruneDecl {
                 owner = idx;
                 hasPrunable = true;
@@ -5621,7 +5621,7 @@ pruneBlockScopedItems := fn(items: Items, target: String): Items {
             deps = "";
         } else if evalBlock > 0 and textLib.startsWithAt(item.kind, 0, "Assign") and item.runtime =!= "" {
             matchedDecl := findDeclInBlockChain(item.runtime, evalBlock, parentBlockIds, declRuntimes, declBlockIds, declCount);
-            if matchedDecl >= 0 and declPrunables[matchedDecl] and (target == "ts" or not isCUnsupportedItem(item)) and
+            if matchedDecl >= 0 and declPrunables[matchedDecl] and (target == TARGET_TS or not isCUnsupportedItem(item)) and
             isSideEffectFreeCode(target, item.code) {
                 owner2 = declIdxs[matchedDecl];
                 deps = resolveBlockLexicalDeps(item.code, evalBlock, parentBlockIds, declRuntimes, declBlockIds, declIdxs, declCount);
@@ -6873,7 +6873,7 @@ blockHasInnerFn := fn(source: String, openBracePos: Int, prefix: String): Int {
 
 /** Pre-scans direct top-level statements inside `{ ... }` (`openBracePos .. closeBracePos - 1`) for direct `name = ...` assignments (`"|a|b|"`). */
 scanInnerBlockAssignedBag := fn(target: String, source: String, openBracePos: Int, prefix: String, seedBag: String): String {
-    if target =!= "ts" { return ""; }
+    if target =!= TARGET_TS { return ""; }
     closeBracePos := blockHasInnerFn(source, openBracePos, prefix);
     if closeBracePos < 0 { return ""; }
     limit := closeBracePos - 1;
@@ -6967,7 +6967,7 @@ scanInnerBlockAssignedBag := fn(target: String, source: String, openBracePos: In
 appendBlockFutureLocals := fn(target: String, source: String, openBracePos: Int, prefix: String, blockLexDepth: Int,
 seedBag: String, assignedBag: String, aliases: List<AliasDecl>, functions: List<FunctionInfo>,
 functionParams: List<String>, locals: List<Local>): List<Local> {
-    if target =!= "ts" { return locals; }
+    if target =!= TARGET_TS { return locals; }
     closeBracePos := blockHasInnerFn(source, openBracePos, prefix);
     if closeBracePos < 0 { return locals; }
     limit := closeBracePos - 1;
@@ -6992,7 +6992,7 @@ functionParams: List<String>, locals: List<Local>): List<Local> {
                 afterParen := if parenEnd >= 0 { skipTrivia(source, parenEnd, prefix) } else { -1 };
                 if afterParen >= 0 and afterParen < limit and textLib.startsWithAt(source, afterParen, ":=") {
                     rhsPos := skipTrivia(source, afterParen + 2, prefix);
-                    listLib.pushBack(mut decls, (kind = "FutureDestr", name = "", runtime = "val", code = integer.intText(position),
+                    listLib.pushBack(mut decls, (kind = DECL_KIND_FUTURE_DESTR, name = "", runtime = DECL_BIND_VAL, code = integer.intText(position),
                     intValue = position, textValue = integer.intText(rhsPos)));
                     position = rhsPos;
                     continue;
@@ -7014,7 +7014,7 @@ functionParams: List<String>, locals: List<Local>): List<Local> {
                     afterParen := if parenEnd >= 0 { skipTrivia(source, parenEnd, prefix) } else { -1 };
                     if afterParen >= 0 and afterParen < limit and textLib.startsWithAt(source, afterParen, ":=") {
                         rhsPos := skipTrivia(source, afterParen + 2, prefix);
-                        listLib.pushBack(mut decls, (kind = "FutureDestr", name = "", runtime = "var", code = integer.intText(afterVar),
+                        listLib.pushBack(mut decls, (kind = DECL_KIND_FUTURE_DESTR, name = "", runtime = DECL_BIND_VAR, code = integer.intText(afterVar),
                         intValue = nameStart, textValue = integer.intText(rhsPos)));
                         position = rhsPos;
                         continue;
@@ -7036,8 +7036,8 @@ functionParams: List<String>, locals: List<Local>): List<Local> {
                             rhsPos := skipTrivia(source, afterLocal + 2, prefix);
                             if not tokenInPipeBag(seenDeclBag, localName) {
                                 seenDeclBag = appendPipeBag(seenDeclBag, localName);
-                                kindTag := if isVarMut { "varmut|" } else { "varval|" };
-                                listLib.pushBack(mut decls, (kind = "FutureDecl", name = localName, runtime = "",
+                                kindTag := if isVarMut { DECL_TAG_VAR_MUT + "|" } else { DECL_TAG_VAR_VAL + "|" };
+                                listLib.pushBack(mut decls, (kind = DECL_KIND_FUTURE_DECL, name = localName, runtime = "",
                                 code = "", intValue = localStart, textValue = kindTag + integer.intText(rhsPos)));
                             }
                             position = rhsPos;
@@ -7046,8 +7046,8 @@ functionParams: List<String>, locals: List<Local>): List<Local> {
                             annStart := afterLocal + 1;
                             if not tokenInPipeBag(seenDeclBag, localName) {
                                 seenDeclBag = appendPipeBag(seenDeclBag, localName);
-                                listLib.pushBack(mut decls, (kind = "FutureDecl", name = localName, runtime = "",
-                                code = "", intValue = localStart, textValue = "varann|" + integer.intText(annStart)));
+                                listLib.pushBack(mut decls, (kind = DECL_KIND_FUTURE_DECL, name = localName, runtime = "",
+                                code = "", intValue = localStart, textValue = DECL_TAG_VAR_ANN + "|" + integer.intText(annStart)));
                             }
                             var ts := annStart;
                             var tp := 0;
@@ -7081,8 +7081,8 @@ functionParams: List<String>, locals: List<Local>): List<Local> {
                         rhsPos := skipTrivia(source, afterLocal + 2, prefix);
                         if not tokenInPipeBag(seenDeclBag, localName) {
                             seenDeclBag = appendPipeBag(seenDeclBag, localName);
-                            listLib.pushBack(mut decls, (kind = "FutureDecl", name = localName, runtime = "",
-                            code = "", intValue = localStart, textValue = "mutval|" + integer.intText(rhsPos)));
+                            listLib.pushBack(mut decls, (kind = DECL_KIND_FUTURE_DECL, name = localName, runtime = "",
+                            code = "", intValue = localStart, textValue = DECL_TAG_MUT_VAL + "|" + integer.intText(rhsPos)));
                         }
                         position = rhsPos;
                         continue;
@@ -7106,8 +7106,8 @@ functionParams: List<String>, locals: List<Local>): List<Local> {
                 }
                 if not textLib.wordAt(source, valueStart, "import") and not tokenInPipeBag(seenDeclBag, name) {
                     seenDeclBag = appendPipeBag(seenDeclBag, name);
-                    listLib.pushBack(mut decls, (kind = "FutureDecl", name = name, runtime = "",
-                    code = "", intValue = nameStart, textValue = "val|" + integer.intText(valueStart)));
+                    listLib.pushBack(mut decls, (kind = DECL_KIND_FUTURE_DECL, name = name, runtime = "",
+                    code = "", intValue = nameStart, textValue = DECL_TAG_VAL + "|" + integer.intText(valueStart)));
                 }
                 if textLib.wordAt(source, valueStart, "fn") {
                     var fnCursor := skipTrivia(source, valueStart + 2, prefix);
@@ -7137,8 +7137,8 @@ functionParams: List<String>, locals: List<Local>): List<Local> {
                 annStart := aliasPos + 1;
                 if not tokenInPipeBag(seenDeclBag, name) {
                     seenDeclBag = appendPipeBag(seenDeclBag, name);
-                    listLib.pushBack(mut decls, (kind = "FutureDecl", name = name, runtime = "",
-                    code = "", intValue = nameStart, textValue = "ann|" + integer.intText(annStart)));
+                    listLib.pushBack(mut decls, (kind = DECL_KIND_FUTURE_DECL, name = name, runtime = "",
+                    code = "", intValue = nameStart, textValue = DECL_TAG_ANN + "|" + integer.intText(annStart)));
                 }
                 var ts := annStart;
                 var tp := 0;
@@ -7176,12 +7176,12 @@ functionParams: List<String>, locals: List<Local>): List<Local> {
         loop decls as decl {
             keyText := integer.intText(declIdx);
             if not tokenInPipeBag(resolvedBag, keyText) {
-                if decl.kind == "FutureDecl" {
+                if decl.kind == DECL_KIND_FUTURE_DECL {
                     sep := textLib.indexOfText(decl.textValue, "|", 0);
                     declTag := textLib.slice(decl.textValue, 0, sep);
                     posVal := parseDigits(decl.textValue, sep + 1, textLib.length(decl.textValue));
-                    if declTag == "ann" or declTag == "varann" {
-                        declMutable := declTag == "varann";
+                    if declTag == DECL_TAG_ANN or declTag == DECL_TAG_VAR_ANN {
+                        declMutable := declTag == DECL_TAG_VAR_ANN;
                         if canPreResolveLocalType(source, posVal, prefix, scopedAliases) {
                             typed := parseLocalType(source, posVal, prefix, scopedAliases);
                             if not (declMutable and typed.writable) {
@@ -7202,8 +7202,8 @@ functionParams: List<String>, locals: List<Local>): List<Local> {
                             }
                         }
                     } else {
-                        declMutable := declTag == "varval" or declTag == "varmut";
-                        declWritable := declTag == "varmut" or declTag == "mutval";
+                        declMutable := declTag == DECL_TAG_VAR_VAL or declTag == DECL_TAG_VAR_MUT;
+                        declWritable := declTag == DECL_TAG_VAR_MUT or declTag == DECL_TAG_MUT_VAL;
                         inferred := tryInferRootExprKind(source, posVal, prefix, scopedAliases, functions, functionParams, locals, futureValues, "", 0, 24);
                         if inferred.kind =!= "" and inferred.kind =!= "Unit" and (not declWritable or isListKind(inferred.kind)) {
                             listLib.pushBack(mut futureValues, (name = decl.name, runtime = "", kind = inferred.kind,
@@ -7212,12 +7212,12 @@ functionParams: List<String>, locals: List<Local>): List<Local> {
                             progressed = true;
                         }
                     }
-                } else if decl.kind == "FutureDestr" {
+                } else if decl.kind == DECL_KIND_FUTURE_DESTR {
                     openPos := parseDigits(decl.code, 0, textLib.length(decl.code));
                     rhsPos := parseDigits(decl.textValue, 0, textLib.length(decl.textValue));
                     destr := tryParseDestructureNames(source, openPos, prefix);
                     if destr.ok and destr.count > 0 {
-                        destrMutable := decl.runtime == "var";
+                        destrMutable := decl.runtime == DECL_BIND_VAR;
                         inferred := tryInferRootExprKind(source, rhsPos, prefix, scopedAliases, functions, functionParams, locals, futureValues, "", 0, 24);
                         if destr.grouped {
                             if inferred.kind =!= "" and inferred.kind =!= "Unit" {
@@ -7551,7 +7551,7 @@ parseBinaryCtx := fn(target: String, source: String, position: Int, prefix: Stri
                 if ctx.phase == "finally" {
                     failAt(source, fieldStart, prefix, "metadata for @" + tagInfo.tag + " is not available in finally");
                 }
-                if target =!= "ts" {
+                if target =!= TARGET_TS {
                     failAt(source, start, prefix, "C backend does not support loop metadata yet");
                 }
                 left = resolveLoopField(target, ctx, fieldName, expected, source, fieldStart, fieldEnd, prefix);
@@ -7559,7 +7559,7 @@ parseBinaryCtx := fn(target: String, source: String, position: Int, prefix: Stri
                 failAt(source, fieldStart, prefix, "block tag @" + tagInfo.tag + " does not expose ." + fieldName);
             }
         } else if afterTag < tagSourceSize and textLib.at(source, afterTag) == "{" {
-            if target =!= "ts" {
+            if target =!= TARGET_TS {
                 failAt(source, start, prefix, "C backend does not support tagged blocks yet");
             }
             hintExpected := if expected == "Unit" or expected == "Never" {
@@ -7673,12 +7673,12 @@ parseBinaryCtx := fn(target: String, source: String, position: Int, prefix: Stri
             listLib.pushBack(mut declaredInBlock, seededName);
             seedBag = appendPipeBag(seedBag, seededName);
         }
-        blockAssignedBag := if target == "ts" {
+        blockAssignedBag := if target == TARGET_TS {
             scanInnerBlockAssignedBag(target, source, start, prefix, seedBag)
         } else {
             ""
         };
-        if target == "ts" {
+        if target == TARGET_TS {
             preScannedLocals := appendBlockFutureLocals(target, source, start, prefix, blockLexDepth, seedBag, blockAssignedBag, blockAliases, functions, params, blockLocals);
             blockLocals = [];
             loop preScannedLocals as entry { listLib.pushBack(mut blockLocals, entry); }
@@ -7742,7 +7742,7 @@ parseBinaryCtx := fn(target: String, source: String, position: Int, prefix: Stri
                 }
                 rhs := self(target, source, skipTrivia(source, afterTarget + 2, prefix), prefix, blockLocals, functions, params, currentName, "", 0, ctxs, bodyDepth, inferMode, "", blockAliases);
                 if inferMode { blockMarkers = collectParsedMarkers(blockMarkers, rhs); }
-                if target == "ts" and not inferMode and not blockExits {
+                if target == TARGET_TS and not inferMode and not blockExits {
                     checkTraceSafety(source, destructureOpen, prefix, rhs.code, currentName, -1, blockLocals, functions, emptyFuturesHere, emptyItemsHere);
                 }
                 if destructure.count == 0 {
@@ -7774,7 +7774,7 @@ parseBinaryCtx := fn(target: String, source: String, position: Int, prefix: Stri
                         }
                         statementCount = statementCount + 1;
                     }
-                    if target == "ts" and not inferMode {
+                    if target == TARGET_TS and not inferMode {
                         blockLocals = mergeOuterCallableUpdatesFromCode(blockLocals, rhs.code);
                     }
                     blockConstant = false;
@@ -7785,18 +7785,18 @@ parseBinaryCtx := fn(target: String, source: String, position: Int, prefix: Stri
                     rejectDuplicateInBlockNames(source, destructureOpen, prefix, declaredInBlock, bindName);
                     statementNext := consumeStatementEnd(source, rhs.next, prefix);
                     if statementNext < 0 { failAt(source, skipTrivia(source, rhs.next, prefix), prefix, "expected ; after tuple destructuring"); }
-                    if target == "ts" and not inferMode and not blockExits {
+                    if target == TARGET_TS and not inferMode and not blockExits {
                         blockLocals = mergeOuterCallableUpdatesFromCode(blockLocals, rhs.code);
                     }
                     bindRuntime := claimOrMakeLocalRuntime(target, blockLocals, bindName, "", blockLexDepth);
-                    bindFnDeps := if target == "ts" and not inferMode and containsFnKind(rhs.kind) { computeCallableRhsDeps(rhs.code) } else { "" };
+                    bindFnDeps := if target == TARGET_TS and not inferMode and containsFnKind(rhs.kind) { computeCallableRhsDeps(rhs.code) } else { "" };
                     listLib.pushBack(mut declaredInBlock, bindName);
                     listLib.pushBack(mut blockLocals, (name = bindName, runtime = bindRuntime, kind = rhs.kind,
                     mutable = destructureMutable, writable = false, depth = blockLexDepth, constant = false, code = bindFnDeps,
                     intValue = rhs.intValue, textValue = rhs.textValue, initState = INIT_STATE_INIT));
                     if not blockExits {
                         declKw := if destructureMutable { "let " } else { "const " };
-                        tsTypeAnn := if target == "ts" and (isListKind(rhs.kind) or isArrayKind(rhs.kind) or containsFnKind(rhs.kind)) { ": " + tsFunctionType(rhs.kind) } else { "" };
+                        tsTypeAnn := if target == TARGET_TS and (isListKind(rhs.kind) or isArrayKind(rhs.kind) or containsFnKind(rhs.kind)) { ": " + tsFunctionType(rhs.kind) } else { "" };
                         groupedCode := copiedValueCode(target, rhs.kind, rhs.code);
                         listLib.pushBack(mut statements, declKw + bindRuntime + tsTypeAnn + " = " + groupedCode + "; void " + bindRuntime + ";");
                         listLib.pushBack(mut stmtOwners, if isPrunableExprForTarget(target, rhs.kind, groupedCode) { bindRuntime } else { "" });
@@ -7816,11 +7816,11 @@ parseBinaryCtx := fn(target: String, source: String, position: Int, prefix: Stri
                     }
                     statementNext := consumeStatementEnd(source, rhs.next, prefix);
                     if statementNext < 0 { failAt(source, skipTrivia(source, rhs.next, prefix), prefix, "expected ; after tuple destructuring"); }
-                    if target == "ts" and not inferMode and not blockExits {
+                    if target == TARGET_TS and not inferMode and not blockExits {
                         blockLocals = mergeOuterCallableUpdatesFromCode(blockLocals, rhs.code);
                     }
                     tempRuntime := freshScopeTemp(blockLocals, "lite$tuple");
-                    tupleFnDeps := if target == "ts" and not inferMode and containsFnKind(rhs.kind) { computeCallableRhsDeps(rhs.code) } else { "" };
+                    tupleFnDeps := if target == TARGET_TS and not inferMode and containsFnKind(rhs.kind) { computeCallableRhsDeps(rhs.code) } else { "" };
                     listLib.pushBack(mut blockLocals, (name = "$tuple", runtime = tempRuntime, kind = "Unit",
                     mutable = false, writable = false, depth = blockLexDepth, constant = false, code = tupleFnDeps,
                     intValue = 0, textValue = "", initState = INIT_STATE_INIT));
@@ -7848,7 +7848,7 @@ parseBinaryCtx := fn(target: String, source: String, position: Int, prefix: Stri
                         comp := tupleComponent(rhs.kind, bindIndex);
                         bindRuntime := claimOrMakeLocalRuntime(target, blockLocals, bindName, "", blockLexDepth);
                         fieldCode := tempRuntime + "." + comp.prop;
-                        fieldFnDeps := if target == "ts" and not inferMode and containsFnKind(comp.kind) {
+                        fieldFnDeps := if target == TARGET_TS and not inferMode and containsFnKind(comp.kind) {
                             "|" + tempRuntime + "|\n|" + tempRuntime + "|"
                         } else {
                             ""
@@ -7858,7 +7858,7 @@ parseBinaryCtx := fn(target: String, source: String, position: Int, prefix: Stri
                         intValue = 0, textValue = "", initState = INIT_STATE_INIT));
                         if not blockExits {
                             declKw := if destructureMutable { "let " } else { "const " };
-                            tsTypeAnn := if target == "ts" and (isListKind(comp.kind) or isArrayKind(comp.kind) or containsFnKind(comp.kind)) { ": " + tsFunctionType(comp.kind) } else { "" };
+                            tsTypeAnn := if target == TARGET_TS and (isListKind(comp.kind) or isArrayKind(comp.kind) or containsFnKind(comp.kind)) { ": " + tsFunctionType(comp.kind) } else { "" };
                             listLib.pushBack(mut statements, declKw + bindRuntime + tsTypeAnn + " = " + fieldCode + "; void " + bindRuntime + ";");
                             listLib.pushBack(mut stmtOwners, if isPrunableExprForTarget(target, comp.kind, fieldCode) { bindRuntime } else { "" });
                             listLib.pushBack(mut stmtDeps, fieldCode);
@@ -7888,7 +7888,7 @@ parseBinaryCtx := fn(target: String, source: String, position: Int, prefix: Stri
                     }
                     var stmtEndPos := stmtBlock.next;
                     if afterStmtBlock < blockSourceSize and textLib.wordAt(source, afterStmtBlock, "finally") {
-                        if target =!= "ts" {
+                        if target =!= TARGET_TS {
                             failAt(source, afterStmtBlock, prefix, "C backend does not support finally blocks yet");
                         }
                         afterStmtFinKw := skipTrivia(source, afterStmtBlock + 7, prefix);
@@ -7912,7 +7912,7 @@ parseBinaryCtx := fn(target: String, source: String, position: Int, prefix: Stri
                             if stmtBlock.kind == "Never" or stmtFin.kind == "Never" { blockExits = true; }
                             statementCount = statementCount + 1;
                         }
-                        if target == "ts" and not inferMode {
+                        if target == TARGET_TS and not inferMode {
                             blockLocals = mergeOuterCallableUpdatesFromCode(blockLocals, stmtBlock.code);
                             blockLocals = mergeOuterCallableUpdatesFromCode(blockLocals, stmtFin.code);
                         }
@@ -7923,7 +7923,7 @@ parseBinaryCtx := fn(target: String, source: String, position: Int, prefix: Stri
                         }
                         if stmtBlock.kind == "Never" { blockExits = true; }
                         statementCount = statementCount + 1;
-                        if target == "ts" and not inferMode {
+                        if target == TARGET_TS and not inferMode {
                             blockLocals = mergeOuterCallableUpdatesFromCode(blockLocals, stmtBlock.code);
                         }
                     }
@@ -7973,7 +7973,7 @@ parseBinaryCtx := fn(target: String, source: String, position: Int, prefix: Stri
                         outArgStart := outPos;
                         outArg := self(target, source, outPos, prefix, blockLocals, functions, params, currentName, "", 0, ctxs, bodyDepth, inferMode, "", blockAliases);
                         if inferMode { blockMarkers = collectParsedMarkers(blockMarkers, outArg); }
-                        if target == "ts" and not inferMode and not blockExits {
+                        if target == TARGET_TS and not inferMode and not blockExits {
                             checkTraceSafety(source, outArgStart, prefix, outArg.code, currentName, -1, blockLocals, functions, emptyFuturesHere, emptyItemsHere);
                             blockLocals = mergeOuterCallableUpdatesFromCode(blockLocals, outArg.code);
                         }
@@ -8057,7 +8057,7 @@ parseBinaryCtx := fn(target: String, source: String, position: Int, prefix: Stri
                                 if targetCtx.iifeDepth == bodyDepth {
                                     listLib.pushBack(mut statements, "break " + targetCtx.label + ";");
                                 } else {
-                                    if target =!= "ts" { failAt(source, itemStart, prefix, "C backend does not support non-local return yet"); }
+                                    if target =!= TARGET_TS { failAt(source, itemStart, prefix, "C backend does not support non-local return yet"); }
                                     listLib.pushBack(mut statements, stmtReturnPrefix + "lite$throwTransfer(" + integer.intText(targetCtx.id) + ", undefined);");
                                 }
                                 blockExits = true;
@@ -8075,7 +8075,7 @@ parseBinaryCtx := fn(target: String, source: String, position: Int, prefix: Stri
                             };
                             rhs := self(target, source, retValStart, prefix, blockLocals, functions, params, currentName, retExpected, 0, ctxs, bodyDepth, inferMode, "", blockAliases);
                             if inferMode { blockMarkers = collectParsedMarkers(blockMarkers, rhs); }
-                            if target == "ts" and not inferMode and not blockExits {
+                            if target == TARGET_TS and not inferMode and not blockExits {
                                 checkTraceSafety(source, retValStart, prefix, rhs.code, currentName, -1, blockLocals, functions, emptyFuturesHere, emptyItemsHere);
                                 if containsFnKind(rhs.kind) {
                                     tagExitDepth := parseLexDepthTag(targetCtx.iterLabel, blockLexDepth);
@@ -8111,7 +8111,7 @@ parseBinaryCtx := fn(target: String, source: String, position: Int, prefix: Stri
                                             listLib.pushBack(mut statements, targetCtx.valVar + " = " + retValCode + "; break " + targetCtx.label + ";");
                                         }
                                     } else {
-                                        if target =!= "ts" { failAt(source, itemStart, prefix, "C backend does not support non-local return yet"); }
+                                        if target =!= TARGET_TS { failAt(source, itemStart, prefix, "C backend does not support non-local return yet"); }
                                         listLib.pushBack(mut statements, stmtReturnPrefix + "lite$throwTransfer(" + integer.intText(targetCtx.id) + ", " + retValCode + ");");
                                     }
                                 }
@@ -8144,7 +8144,7 @@ parseBinaryCtx := fn(target: String, source: String, position: Int, prefix: Stri
                                 if fnCtx.iifeDepth == bodyDepth {
                                     listLib.pushBack(mut statements, "return;");
                                 } else {
-                                    if target =!= "ts" { failAt(source, itemStart, prefix, "C backend does not support non-local return yet"); }
+                                    if target =!= TARGET_TS { failAt(source, itemStart, prefix, "C backend does not support non-local return yet"); }
                                     listLib.pushBack(mut statements, stmtReturnPrefix + "lite$throwTransfer(0, undefined);");
                                 }
                                 blockExits = true;
@@ -8162,7 +8162,7 @@ parseBinaryCtx := fn(target: String, source: String, position: Int, prefix: Stri
                                 failAt(source, retValStart, prefix, "cannot return " + displayKind(rhs.kind) +
                                 " from function " + currentName + " returning " + displayKind(fnResult));
                             }
-                            if target == "ts" and not inferMode and not blockExits {
+                            if target == TARGET_TS and not inferMode and not blockExits {
                                 checkTraceSafety(source, retValStart, prefix, rhs.code, currentName, -1, blockLocals, functions, emptyFuturesHere, emptyItemsHere);
                                 if containsFnKind(rhs.kind) {
                                     fnExitDepth := parseLexDepthTag(fnCtx.iterLabel, 1);
@@ -8178,7 +8178,7 @@ parseBinaryCtx := fn(target: String, source: String, position: Int, prefix: Stri
                                 } else if fnCtx.iifeDepth == bodyDepth {
                                     listLib.pushBack(mut statements, "return " + retValCode + ";");
                                 } else {
-                                    if target =!= "ts" { failAt(source, itemStart, prefix, "C backend does not support non-local return yet"); }
+                                    if target =!= TARGET_TS { failAt(source, itemStart, prefix, "C backend does not support non-local return yet"); }
                                     listLib.pushBack(mut statements, stmtReturnPrefix + "lite$throwTransfer(0, " + retValCode + ");");
                                 }
                                 blockExits = true;
@@ -8243,7 +8243,7 @@ parseBinaryCtx := fn(target: String, source: String, position: Int, prefix: Stri
                                     listLib.pushBack(mut statements, itemName + ";");
                                 }
                             } else {
-                                if target =!= "ts" { failAt(source, itemStart, prefix, "C backend does not support non-local " + itemName + " yet"); }
+                                if target =!= TARGET_TS { failAt(source, itemStart, prefix, "C backend does not support non-local " + itemName + " yet"); }
                                 transferId := if loopCtx.valVar =!= "" {
                                     if itemName == "break" { 1000000 + loopCtx.id } else { 0 - 1000000 - loopCtx.id }
                                 } else {
@@ -8254,7 +8254,7 @@ parseBinaryCtx := fn(target: String, source: String, position: Int, prefix: Stri
                             blockExits = true;
                         }
                     } else {
-                        if target =!= "ts" { failAt(source, itemStart, prefix, "C backend does not support " + itemName + " payloads yet"); }
+                        if target =!= TARGET_TS { failAt(source, itemStart, prefix, "C backend does not support " + itemName + " payloads yet"); }
                         isInferLoop := loopCtx.valKind == "__infer__" or textLib.startsWithAt(loopCtx.valKind, 0, "__infer__:");
                         payExpected := if textLib.startsWithAt(loopCtx.valKind, 0, "__infer__:") {
                             textLib.slice(loopCtx.valKind, 10, textLib.length(loopCtx.valKind))
@@ -8265,7 +8265,7 @@ parseBinaryCtx := fn(target: String, source: String, position: Int, prefix: Stri
                         };
                         rhs := self(target, source, afterExit, prefix, blockLocals, functions, params, currentName, payExpected, 0, ctxs, bodyDepth, inferMode, "", blockAliases);
                         if inferMode { blockMarkers = collectParsedMarkers(blockMarkers, rhs); }
-                        if target == "ts" and not inferMode and not blockExits {
+                        if target == TARGET_TS and not inferMode and not blockExits {
                             checkTraceSafety(source, afterExit, prefix, rhs.code, currentName, -1, blockLocals, functions, emptyFuturesHere, emptyItemsHere);
                             if containsFnKind(rhs.kind) {
                                 loopExitDepth := parseLexDepthTag(loopCtx.iterLabel, blockLexDepth);
@@ -8350,7 +8350,7 @@ parseBinaryCtx := fn(target: String, source: String, position: Int, prefix: Stri
                             if condParsed.kind =!= "Bool" {
                                 failAt(source, ifCursor, prefix, if isFirstIf { "if condition must be Bool" } else { "else if condition must be Bool" });
                             }
-                            if target == "ts" and not inferMode and not blockExits {
+                            if target == TARGET_TS and not inferMode and not blockExits {
                                 checkTraceSafety(source, ifCursor, prefix, condParsed.code, currentName, -1, blockLocals, functions, emptyFuturesHere, emptyItemsHere);
                             }
                             condCode := if condParsed.constant {
@@ -8392,7 +8392,7 @@ parseBinaryCtx := fn(target: String, source: String, position: Int, prefix: Stri
                             listLib.pushBack(mut statements, ifParts);
                             if hasElseBranch and allBranchesExit { blockExits = true; }
                             statementCount = statementCount + 1;
-                            if target == "ts" and not inferMode {
+                            if target == TARGET_TS and not inferMode {
                                 blockLocals = mergeOuterCallableUpdatesFromCode(blockLocals, ifParts);
                             }
                         }
@@ -8412,7 +8412,7 @@ parseBinaryCtx := fn(target: String, source: String, position: Int, prefix: Stri
                     afterRawStmtMatch := if rawStmtMatchEnd >= 0 { skipTrivia(source, rawStmtMatchEnd, prefix) } else { -1 };
                     stmtMatchHasThen := afterRawStmtMatch >= 0 and (textLib.wordAt(source, afterRawStmtMatch, "then") or textLib.wordAt(source, afterRawStmtMatch, "finally"));
                     var useValueMatch := stmtMatchHasThen;
-                    if (not isStmtBody) and target == "ts" and not useValueMatch {
+                    if (not isStmtBody) and target == TARGET_TS and not useValueMatch {
                         valMatchEnd := scanValueMatchEnd(source, itemStart, prefix, false);
                         if valMatchEnd >= 0 {
                             afterValMatch := skipItemSeparators(source, valMatchEnd, prefix);
@@ -8486,7 +8486,7 @@ parseBinaryCtx := fn(target: String, source: String, position: Int, prefix: Stri
                                 if condParsed.kind =!= "Bool" {
                                     failAt(source, matchCursor, prefix, "match arm condition must be Bool");
                                 }
-                                if target == "ts" and not inferMode and not blockExits {
+                                if target == TARGET_TS and not inferMode and not blockExits {
                                     checkTraceSafety(source, matchCursor, prefix, condParsed.code, currentName, -1, blockLocals, functions, emptyFuturesHere, emptyItemsHere);
                                 }
                                 condCode := if condParsed.constant {
@@ -8507,7 +8507,7 @@ parseBinaryCtx := fn(target: String, source: String, position: Int, prefix: Stri
                             listLib.pushBack(mut statements, matchParts);
                             if allArmsExit { blockExits = true; }
                             statementCount = statementCount + 1;
-                            if target == "ts" and not inferMode {
+                            if target == TARGET_TS and not inferMode {
                                 blockLocals = mergeOuterCallableUpdatesFromCode(blockLocals, matchParts);
                             }
                         }
@@ -8522,7 +8522,7 @@ parseBinaryCtx := fn(target: String, source: String, position: Int, prefix: Stri
                         afterRawLoopStmt := skipItemSeparators(source, rawLoopStmtEnd, prefix);
                         atLoopTail = afterRawLoopStmt < blockSourceSize and textLib.at(source, afterRawLoopStmt) == "}";
                     }
-                    useExprLoop := loopNeedsExprLowering(source, itemStart, prefix) or (target == "ts" and atLoopTail);
+                    useExprLoop := loopNeedsExprLowering(source, itemStart, prefix) or (target == TARGET_TS and atLoopTail);
                     if not useExprLoop {
                         isStatement = true;
                         rejectHeaderBlockTag(source, afterItemName, prefix, "loop");
@@ -8534,7 +8534,7 @@ parseBinaryCtx := fn(target: String, source: String, position: Int, prefix: Stri
                         if loopHeaderPos < blockSourceSize and textLib.at(source, loopHeaderPos) =!= "{" {
                             hdrParsed := self(target, source, loopHeaderPos, prefix, blockLocals, functions, params, currentName, "", 0, ctxs, bodyDepth, inferMode, "", blockAliases);
                             if inferMode { blockMarkers = collectParsedMarkers(blockMarkers, hdrParsed); }
-                            if target == "ts" and not inferMode and not blockExits {
+                            if target == TARGET_TS and not inferMode and not blockExits {
                                 checkTraceSafety(source, loopHeaderPos, prefix, hdrParsed.code, currentName, -1, blockLocals, functions, emptyFuturesHere, emptyItemsHere);
                             }
                             afterHdr := skipTrivia(source, hdrParsed.next, prefix);
@@ -8579,7 +8579,7 @@ parseBinaryCtx := fn(target: String, source: String, position: Int, prefix: Stri
                         var loopHeadCode := "";
                         if loopItemName =!= "" {
                             loopItemRuntime := localRuntimeName(target, loopLocals, loopItemName, "", blockLexDepth);
-                            loopItemCode := if target == "ts" and not inferMode and containsFnKind(loopItemKind) { computeCallableRhsDeps(loopSeqCode) } else { loopItemRuntime };
+                            loopItemCode := if target == TARGET_TS and not inferMode and containsFnKind(loopItemKind) { computeCallableRhsDeps(loopSeqCode) } else { loopItemRuntime };
                             listLib.pushBack(mut loopLocals, (name = loopItemName, runtime = loopItemRuntime, kind = loopItemKind,
                             mutable = false, writable = false, depth = blockLexDepth, constant = false, code = loopItemCode,
                             intValue = 0, textValue = "", initState = INIT_STATE_INIT));
@@ -8619,7 +8619,7 @@ parseBinaryCtx := fn(target: String, source: String, position: Int, prefix: Stri
                                 blockExits = true;
                             }
                             statementCount = statementCount + 1;
-                            if target == "ts" and not inferMode {
+                            if target == TARGET_TS and not inferMode {
                                 blockLocals = mergeOuterCallableUpdatesFromCode(blockLocals, loopBody.code);
                             }
                         }
@@ -8686,7 +8686,7 @@ parseBinaryCtx := fn(target: String, source: String, position: Int, prefix: Stri
                     if textLib.startsWithAt(source, afterLocal, ":=") {
                         declParsed = self(target, source, skipTrivia(source, afterLocal + 2, prefix), prefix, blockLocals, functions, params, currentName, "", 0, ctxs, bodyDepth, inferMode, "", blockAliases);
                         if inferMode { blockMarkers = collectParsedMarkers(blockMarkers, declParsed); }
-                        if target == "ts" and not inferMode and not blockExits {
+                        if target == TARGET_TS and not inferMode and not blockExits {
                             checkTraceSafety(source, localStart, prefix, declParsed.code, currentName, -1, blockLocals, functions, emptyFuturesHere, emptyItemsHere);
                         }
                         rejectNonValueBinding(source, localStart, prefix, declParsed.kind, localName);
@@ -8714,7 +8714,7 @@ parseBinaryCtx := fn(target: String, source: String, position: Int, prefix: Stri
                                 if not isCompatibleKind(typed.kind, initParsed.kind) {
                                     failAt(source, localStart, prefix, "cannot initialize " + displayKind(typed.kind) + " with " + displayKind(initParsed.kind));
                                 }
-                                if target == "ts" and not inferMode and not blockExits {
+                                if target == TARGET_TS and not inferMode and not blockExits {
                                     checkTraceSafety(source, localStart, prefix, initParsed.code, currentName, -1, blockLocals, functions, emptyFuturesHere, emptyItemsHere);
                                 }
                                 varDiverged = initParsed.kind == "Never";
@@ -8729,11 +8729,11 @@ parseBinaryCtx := fn(target: String, source: String, position: Int, prefix: Stri
                     }
                     statementNext := consumeStatementEnd(source, declParsed.next, prefix);
                     if statementNext < 0 { failAt(source, skipTrivia(source, declParsed.next, prefix), prefix, "expected ; after local declaration " + localName); }
-                    if target == "ts" and not inferMode and not blockExits {
+                    if target == TARGET_TS and not inferMode and not blockExits {
                         blockLocals = mergeOuterCallableUpdatesFromCode(blockLocals, declParsed.code);
                     }
                     runtime := claimOrMakeLocalRuntime(target, blockLocals, localName, "", blockLexDepth);
-                    varFnDeps := if target == "ts" and not inferMode and declInitState == INIT_STATE_INIT and containsFnKind(declParsed.kind) { computeCallableRhsDeps(declParsed.code) } else { "" };
+                    varFnDeps := if target == TARGET_TS and not inferMode and declInitState == INIT_STATE_INIT and containsFnKind(declParsed.kind) { computeCallableRhsDeps(declParsed.code) } else { "" };
                     listLib.pushBack(mut declaredInBlock, localName);
                     listLib.pushBack(mut blockLocals, (name = localName, runtime = runtime, kind = declParsed.kind,
                     mutable = true, writable = declWritable, depth = blockLexDepth, constant = false, code = varFnDeps,
@@ -8744,7 +8744,7 @@ parseBinaryCtx := fn(target: String, source: String, position: Int, prefix: Stri
                             blockExits = true;
                         } else {
                             varInitCode := assignValueCode(target, declParsed.kind, declParsed.kind, declParsed.code);
-                            tsTypeAnn := if target == "ts" and (isListKind(declParsed.kind) or isArrayKind(declParsed.kind) or containsFnKind(declParsed.kind)) { ": " + tsFunctionType(declParsed.kind) } else { "" };
+                            tsTypeAnn := if target == TARGET_TS and (isListKind(declParsed.kind) or isArrayKind(declParsed.kind) or containsFnKind(declParsed.kind)) { ": " + tsFunctionType(declParsed.kind) } else { "" };
                             listLib.pushBack(mut statements, "let " + runtime + tsTypeAnn + " = " + varInitCode + "; void " + runtime + ";");
                             listLib.pushBack(mut stmtOwners, if isPrunableExprForTarget(target, declParsed.kind, varInitCode) { runtime } else { "" });
                             listLib.pushBack(mut stmtDeps, varInitCode);
@@ -8770,7 +8770,7 @@ parseBinaryCtx := fn(target: String, source: String, position: Int, prefix: Stri
                     }
                     declParsed := self(target, source, skipTrivia(source, afterLocal + 2, prefix), prefix, blockLocals, functions, params, currentName, "", 0, ctxs, bodyDepth, inferMode, "", blockAliases);
                     if inferMode { blockMarkers = collectParsedMarkers(blockMarkers, declParsed); }
-                    if target == "ts" and not inferMode and not blockExits {
+                    if target == TARGET_TS and not inferMode and not blockExits {
                         checkTraceSafety(source, localStart, prefix, declParsed.code, currentName, -1, blockLocals, functions, emptyFuturesHere, emptyItemsHere);
                     }
                     if not isListKind(declParsed.kind) {
@@ -8778,18 +8778,18 @@ parseBinaryCtx := fn(target: String, source: String, position: Int, prefix: Stri
                     }
                     statementNext := consumeStatementEnd(source, declParsed.next, prefix);
                     if statementNext < 0 { failAt(source, skipTrivia(source, declParsed.next, prefix), prefix, "expected ; after local declaration " + localName); }
-                    if target == "ts" and not inferMode and not blockExits {
+                    if target == TARGET_TS and not inferMode and not blockExits {
                         blockLocals = mergeOuterCallableUpdatesFromCode(blockLocals, declParsed.code);
                     }
                     runtime := claimOrMakeLocalRuntime(target, blockLocals, localName, "", blockLexDepth);
-                    mutFnDeps := if target == "ts" and not inferMode and containsFnKind(declParsed.kind) { computeCallableRhsDeps(declParsed.code) } else { "" };
+                    mutFnDeps := if target == TARGET_TS and not inferMode and containsFnKind(declParsed.kind) { computeCallableRhsDeps(declParsed.code) } else { "" };
                     listLib.pushBack(mut declaredInBlock, localName);
                     listLib.pushBack(mut blockLocals, (name = localName, runtime = runtime, kind = declParsed.kind,
                     mutable = false, writable = true, depth = blockLexDepth, constant = false, code = mutFnDeps,
                     intValue = declParsed.intValue, textValue = declParsed.textValue, initState = INIT_STATE_INIT));
                     if not blockExits {
                         mutInitCode := copiedValueCode(target, declParsed.kind, declParsed.code);
-                        tsTypeAnn := if target == "ts" and (isListKind(declParsed.kind) or isArrayKind(declParsed.kind) or containsFnKind(declParsed.kind)) { ": " + tsFunctionType(declParsed.kind) } else { "" };
+                        tsTypeAnn := if target == TARGET_TS and (isListKind(declParsed.kind) or isArrayKind(declParsed.kind) or containsFnKind(declParsed.kind)) { ": " + tsFunctionType(declParsed.kind) } else { "" };
                         listLib.pushBack(mut statements, "const " + runtime + tsTypeAnn + " = " + mutInitCode + "; void " + runtime + ";");
                         listLib.pushBack(mut stmtOwners, if isPrunableExprForTarget(target, declParsed.kind, mutInitCode) { runtime } else { "" });
                         listLib.pushBack(mut stmtDeps, mutInitCode);
@@ -8806,24 +8806,24 @@ parseBinaryCtx := fn(target: String, source: String, position: Int, prefix: Stri
                     rejectDuplicateInBlockNames(source, itemStart, prefix, declaredInBlock, itemName);
                     declParsed := self(target, source, skipTrivia(source, afterItemName + 2, prefix), prefix, blockLocals, functions, params, currentName, "", 0, ctxs, bodyDepth, inferMode, "", blockAliases);
                     if inferMode { blockMarkers = collectParsedMarkers(blockMarkers, declParsed); }
-                    if target == "ts" and not inferMode and not blockExits {
+                    if target == TARGET_TS and not inferMode and not blockExits {
                         checkTraceSafety(source, itemStart, prefix, declParsed.code, currentName, -1, blockLocals, functions, emptyFuturesHere, emptyItemsHere);
                     }
                     rejectNonValueBinding(source, itemStart, prefix, declParsed.kind, itemName);
                     statementNext := consumeStatementEnd(source, declParsed.next, prefix);
                     if statementNext < 0 { failAt(source, skipTrivia(source, declParsed.next, prefix), prefix, "expected ; after local declaration " + itemName); }
-                    if target == "ts" and not inferMode and not blockExits {
+                    if target == TARGET_TS and not inferMode and not blockExits {
                         blockLocals = mergeOuterCallableUpdatesFromCode(blockLocals, declParsed.code);
                     }
                     runtime := claimOrMakeLocalRuntime(target, blockLocals, itemName, "", blockLexDepth);
-                    valFnDeps := if target == "ts" and not inferMode and containsFnKind(declParsed.kind) { computeCallableRhsDeps(declParsed.code) } else { "" };
+                    valFnDeps := if target == TARGET_TS and not inferMode and containsFnKind(declParsed.kind) { computeCallableRhsDeps(declParsed.code) } else { "" };
                     listLib.pushBack(mut declaredInBlock, itemName);
                     listLib.pushBack(mut blockLocals, (name = itemName, runtime = runtime, kind = declParsed.kind,
                     mutable = false, writable = false, depth = blockLexDepth, constant = declParsed.constant, code = valFnDeps,
                     intValue = declParsed.intValue, textValue = declParsed.textValue, initState = INIT_STATE_INIT));
                     if not blockExits {
                         valInitCode := copiedValueCode(target, declParsed.kind, declParsed.code);
-                        tsTypeAnn := if target == "ts" and (isListKind(declParsed.kind) or isArrayKind(declParsed.kind) or containsFnKind(declParsed.kind)) { ": " + tsFunctionType(declParsed.kind) } else { "" };
+                        tsTypeAnn := if target == TARGET_TS and (isListKind(declParsed.kind) or isArrayKind(declParsed.kind) or containsFnKind(declParsed.kind)) { ": " + tsFunctionType(declParsed.kind) } else { "" };
                         listLib.pushBack(mut statements, "const " + runtime + tsTypeAnn + " = " + valInitCode + "; void " + runtime + ";");
                         listLib.pushBack(mut stmtOwners, if isPrunableExprForTarget(target, declParsed.kind, valInitCode) { runtime } else { "" });
                         listLib.pushBack(mut stmtDeps, valInitCode);
@@ -8856,19 +8856,19 @@ parseBinaryCtx := fn(target: String, source: String, position: Int, prefix: Stri
                             if not isCompatibleKind(typed.kind, declParsed.kind) {
                                 failAt(source, itemStart, prefix, "cannot initialize " + displayKind(typed.kind) + " with " + displayKind(declParsed.kind));
                             }
-                            if target == "ts" and not inferMode and not blockExits {
+                            if target == TARGET_TS and not inferMode and not blockExits {
                                 checkTraceSafety(source, itemStart, prefix, declParsed.code, currentName, -1, blockLocals, functions, emptyFuturesHere, emptyItemsHere);
                             }
                         }
                     }
                     statementNext := consumeStatementEnd(source, declParsed.next, prefix);
                     if statementNext < 0 { failAt(source, skipTrivia(source, declParsed.next, prefix), prefix, "expected ; after local declaration " + itemName); }
-                    if target == "ts" and not inferMode and not blockExits {
+                    if target == TARGET_TS and not inferMode and not blockExits {
                         blockLocals = mergeOuterCallableUpdatesFromCode(blockLocals, declParsed.code);
                     }
                     runtime := claimOrMakeLocalRuntime(target, blockLocals, itemName, "", blockLexDepth);
                     declCode := assignValueCode(target, typed.kind, declParsed.kind, declParsed.code);
-                    annFnDeps := if target == "ts" and not inferMode and declInitState == INIT_STATE_INIT and containsFnKind(typed.kind) { computeCallableRhsDeps(declParsed.code) } else { "" };
+                    annFnDeps := if target == TARGET_TS and not inferMode and declInitState == INIT_STATE_INIT and containsFnKind(typed.kind) { computeCallableRhsDeps(declParsed.code) } else { "" };
                     listLib.pushBack(mut declaredInBlock, itemName);
                     listLib.pushBack(mut blockLocals, (name = itemName, runtime = runtime, kind = typed.kind,
                     mutable = false, writable = typed.writable, depth = blockLexDepth, constant = if declInitState == INIT_STATE_INIT and not numeric.isFloatKind(typed.kind) { declParsed.constant } else { false },
@@ -8879,7 +8879,7 @@ parseBinaryCtx := fn(target: String, source: String, position: Int, prefix: Stri
                             blockExits = true;
                         } else {
                             declKw := if declInitState == INIT_STATE_INIT { "const " } else { "let " };
-                            tsTypeAnn := if target == "ts" and (isListKind(typed.kind) or isArrayKind(typed.kind) or containsFnKind(typed.kind)) { ": " + tsFunctionType(typed.kind) } else { "" };
+                            tsTypeAnn := if target == TARGET_TS and (isListKind(typed.kind) or isArrayKind(typed.kind) or containsFnKind(typed.kind)) { ": " + tsFunctionType(typed.kind) } else { "" };
                             listLib.pushBack(mut statements, declKw + runtime + tsTypeAnn + " = " + declCode + "; void " + runtime + ";");
                             listLib.pushBack(mut stmtOwners, if isPrunableExprForTarget(target, typed.kind, declCode) { runtime } else { "" });
                             listLib.pushBack(mut stmtDeps, declCode);
@@ -8901,16 +8901,16 @@ parseBinaryCtx := fn(target: String, source: String, position: Int, prefix: Stri
                     if not isCompatibleKind(entry.kind, rhs.kind) {
                         failAt(source, itemStart, prefix, "cannot assign " + displayKind(rhs.kind) + " to " + displayKind(entry.kind) + " local " + itemName);
                     }
-                    if target == "ts" and not inferMode and not blockExits {
+                    if target == TARGET_TS and not inferMode and not blockExits {
                         checkTraceSafety(source, itemStart, prefix, rhs.code, currentName, -1, blockLocals, functions, emptyFuturesHere, emptyItemsHere);
                     }
                     statementNext := consumeStatementEnd(source, rhs.next, prefix);
                     if statementNext < 0 { failAt(source, skipTrivia(source, rhs.next, prefix), prefix, "expected ; after assignment to " + itemName); }
-                    if target == "ts" and not inferMode and not blockExits {
+                    if target == TARGET_TS and not inferMode and not blockExits {
                         blockLocals = mergeOuterCallableUpdatesFromCode(blockLocals, rhs.code);
                     }
                     rhsCode := assignValueCode(target, entry.kind, rhs.kind, rhs.code);
-                    nextFnDeps := if target == "ts" and not inferMode and containsFnKind(entry.kind) {
+                    nextFnDeps := if target == TARGET_TS and not inferMode and containsFnKind(entry.kind) {
                         newDeps := computeCallableRhsDeps(rhs.code);
                         if entry.depth == blockLexDepth { newDeps } else { mergeCallableLocalDeps(entry.code, newDeps) }
                     } else {
@@ -8946,13 +8946,13 @@ parseBinaryCtx := fn(target: String, source: String, position: Int, prefix: Stri
                     if not entry.mutable { failAt(source, itemStart, prefix, "cannot assign to immutable local " + itemName); }
                     rhs := self(target, source, skipTrivia(source, afterItemName + compound.width, prefix), prefix, blockLocals, functions, params, currentName, entry.kind, 0, ctxs, bodyDepth, inferMode, "", blockAliases);
                     if inferMode { blockMarkers = collectParsedMarkers(blockMarkers, rhs); }
-                    if target == "ts" and not inferMode and not blockExits {
+                    if target == TARGET_TS and not inferMode and not blockExits {
                         checkTraceSafety(source, itemStart, prefix, rhs.code, currentName, -1, blockLocals, functions, emptyFuturesHere, emptyItemsHere);
                     }
                     rhsCode := compoundAssignCode(target, source, afterItemName, prefix, entry.kind, entry.runtime, compound.baseOp, rhs);
                     statementNext := consumeStatementEnd(source, rhs.next, prefix);
                     if statementNext < 0 { failAt(source, skipTrivia(source, rhs.next, prefix), prefix, "expected ; after assignment to " + itemName); }
-                    if target == "ts" and not inferMode and not blockExits {
+                    if target == TARGET_TS and not inferMode and not blockExits {
                         blockLocals = mergeOuterCallableUpdatesFromCode(blockLocals, rhs.code);
                     }
                     listLib.pushBack(mut blockLocals, (name = entry.name, runtime = entry.runtime, kind = entry.kind,
@@ -8986,7 +8986,7 @@ parseBinaryCtx := fn(target: String, source: String, position: Int, prefix: Stri
                 (isLoopBody and (expected == "" or expected == "Unit")) { -2 } else { 0 };
                 expr := self(target, source, cursor, prefix, blockLocals, functions, params, currentName, itemExpected, itemMinimum, ctxs, bodyDepth, inferMode, itemSink, blockAliases);
                 if inferMode { blockMarkers = collectParsedMarkers(blockMarkers, expr); }
-                if target == "ts" and not inferMode and not blockExits {
+                if target == TARGET_TS and not inferMode and not blockExits {
                     checkTraceSafety(source, cursor, prefix, expr.code, currentName, -1, blockLocals, functions, emptyFuturesHere, emptyItemsHere);
                     blockLocals = mergeOuterCallableUpdatesFromCode(blockLocals, expr.code);
                 }
@@ -8994,7 +8994,7 @@ parseBinaryCtx := fn(target: String, source: String, position: Int, prefix: Stri
                 if statementNext < 0 { failAt(source, skipTrivia(source, expr.next, prefix), prefix, "expected ; or }"); }
                 afterExpr := skipItemSeparators(source, statementNext, prefix);
                 if (not isStmtBody) and afterExpr < textLib.length(source) and textLib.at(source, afterExpr) == "}" {
-                    if target == "ts" and not inferMode and not blockExits and containsFnKind(expr.kind) {
+                    if target == TARGET_TS and not inferMode and not blockExits and containsFnKind(expr.kind) {
                         checkEscapingFnSafety(source, cursor, prefix, expr.code, blockLexDepth, blockLocals);
                     }
                     sawTailExpr = true;
@@ -9038,7 +9038,7 @@ parseBinaryCtx := fn(target: String, source: String, position: Int, prefix: Stri
             listLib.pushBack(mut stmtDeps, statements[trackedStmtCount]);
             trackedStmtCount = trackedStmtCount + 1;
         }
-        if target == "ts" or isStmtBody {
+        if target == TARGET_TS or isStmtBody {
             prunedStmts := pruneBlockStatements(statements, stmtOwners, stmtDeps, sawTailExpr and not blockExits, blockCode);
             loop trackedStmtCount > 0 {
                 _ := listLib.popBack(mut statements);
@@ -9258,7 +9258,7 @@ parseBinaryCtx := fn(target: String, source: String, position: Int, prefix: Stri
                     failAt(source, afterUntaggedClose, prefix, "then requires an if, match, or loop");
                 }
                 if afterUntaggedClose < blockSourceSize and textLib.wordAt(source, afterUntaggedClose, "finally") {
-                    if target =!= "ts" {
+                    if target =!= TARGET_TS {
                         failAt(source, afterUntaggedClose, prefix, "C backend does not support finally blocks yet");
                     }
                     hasStandaloneFinally = true;
@@ -9304,7 +9304,7 @@ parseBinaryCtx := fn(target: String, source: String, position: Int, prefix: Stri
             }
             if not hasStandaloneFinally {
                 if blockExits {
-                    if target =!= "ts" {
+                    if target =!= TARGET_TS {
                         failAt(source, start, prefix, "C backend does not support statement-bearing value blocks yet");
                     }
                     left = withMarkers((kind = "Never", code = "(() => { " + textLib.joinTexts(statements, " ") + " })()",
@@ -9314,7 +9314,7 @@ parseBinaryCtx := fn(target: String, source: String, position: Int, prefix: Stri
                     baseBlock := (kind = blockKind, code = blockCode, intValue = blockInt, textValue = blockText, constant = blockConstant, next = cursor);
                     left = if inferMode and blockMarkers =!= "" { withMarkers(baseBlock, blockMarkers) } else { baseBlock };
                 } else {
-                    if target =!= "ts" {
+                    if target =!= TARGET_TS {
                         failAt(source, start, prefix, "C backend does not support statement-bearing value blocks yet");
                     }
                     returnCode := if blockKind == "Unit" {
@@ -9365,7 +9365,7 @@ parseBinaryCtx := fn(target: String, source: String, position: Int, prefix: Stri
             condParseTag = "";
             condParseTagAt = nameStart;
         } else if name == "fn" {
-            if target =!= "ts" {
+            if target =!= TARGET_TS {
                 failAt(source, nameStart, prefix, "C backend does not support function values yet");
             }
             size := textLib.length(source);
@@ -9563,7 +9563,7 @@ parseBinaryCtx := fn(target: String, source: String, position: Int, prefix: Stri
         } else if loopIdx < 0 {
             failAt(source, start, prefix, "." + fieldName + " outside loop");
         } else {
-            if target =!= "ts" {
+            if target =!= TARGET_TS {
                 failAt(source, start, prefix, "C backend does not support loop metadata yet");
             }
             left = resolveLoopField(target, ctxs[loopIdx], fieldName, expected, source, fieldStart, fieldEnd, prefix);
@@ -9578,7 +9578,7 @@ parseBinaryCtx := fn(target: String, source: String, position: Int, prefix: Stri
         afterOptLoopThen := if hasActualThen { scanTrailingThenEnd(source, rawLoopEnd, prefix, false) } else { rawLoopEnd };
         afterOptLoopThenTrivia := if afterOptLoopThen >= 0 { skipTrivia(source, afterOptLoopThen, prefix) } else { -1 };
         hasLoopFinally := afterOptLoopThenTrivia >= 0 and textLib.wordAt(source, afterOptLoopThenTrivia, "finally");
-        if target =!= "ts" {
+        if target =!= TARGET_TS {
             if condParseTag =!= "" {
                 failAt(source, condParseTagAt, prefix, "C backend does not support tagged loops yet");
             }
@@ -9696,7 +9696,7 @@ parseBinaryCtx := fn(target: String, source: String, position: Int, prefix: Stri
                     mutable = false, writable = false, depth = loopItemLexDepth, constant = true, code = targetUnitLiteralCode(target),
                     intValue = 0, textValue = "", initState = INIT_STATE_INIT));
                 } else {
-                    seqItemCode := if target == "ts" and not passInfer and containsFnKind(seqItemKind) { computeCallableRhsDeps(seqCode) } else { loopItemMetaVar };
+                    seqItemCode := if target == TARGET_TS and not passInfer and containsFnKind(seqItemKind) { computeCallableRhsDeps(seqCode) } else { loopItemMetaVar };
                     listLib.pushBack(mut loopLocals, (name = seqItemName, runtime = loopItemMetaVar, kind = seqItemKind,
                     mutable = false, writable = false, depth = loopItemLexDepth, constant = false, code = seqItemCode,
                     intValue = 0, textValue = "", initState = INIT_STATE_INIT));
@@ -9923,14 +9923,14 @@ parseBinaryCtx := fn(target: String, source: String, position: Int, prefix: Stri
         afterOptThen := if hasActualThen { scanTrailingThenEnd(source, rawCondEnd, prefix, false) } else { rawCondEnd };
         afterOptThenTrivia := if afterOptThen >= 0 { skipTrivia(source, afterOptThen, prefix) } else { -1 };
         hasActualFinally := afterOptThenTrivia >= 0 and textLib.wordAt(source, afterOptThenTrivia, "finally");
-        if hasActualFinally and target =!= "ts" {
+        if hasActualFinally and target =!= TARGET_TS {
             failAt(source, afterOptThenTrivia, prefix, "C backend does not support finally blocks yet");
         }
-        if condParseKind == "match" and target =!= "ts" {
+        if condParseKind == "match" and target =!= TARGET_TS {
             failAt(source, condParseStart, prefix, "C backend does not support value match expressions yet");
         }
         useIifeCond := condParseTag =!= "" or hasActualThen or hasActualFinally;
-        if useIifeCond and condParseKind == "if" and target =!= "ts" {
+        if useIifeCond and condParseKind == "if" and target =!= TARGET_TS {
             if condParseTag =!= "" {
                 failAt(source, condParseTagAt, prefix, "C backend does not support tagged conditionals yet");
             } else {
@@ -10469,7 +10469,7 @@ parseBinaryCtx := fn(target: String, source: String, position: Int, prefix: Stri
                 failAt(source, afterCondConstruct, prefix, "duplicate then block");
             }
             if afterCondConstruct < textLib.length(source) and textLib.wordAt(source, afterCondConstruct, "finally") {
-                if target =!= "ts" {
+                if target =!= TARGET_TS {
                     failAt(source, afterCondConstruct, prefix, "C backend does not support finally blocks yet");
                 }
                 afterFinKw := skipTrivia(source, afterCondConstruct + 7, prefix);
@@ -10660,7 +10660,7 @@ parseBinaryCtx := fn(target: String, source: String, position: Int, prefix: Stri
                     if textLib.startsWithAt(info.runtime, 0, "lite$") {
                         failAt(source, errPos, prefix, "function " + calleeDisplay + " must be called");
                     }
-                    if target =!= "ts" {
+                    if target =!= TARGET_TS {
                         failAt(source, errPos, prefix, "function " + calleeDisplay + " must be called");
                     }
                     fnValKind := fnCanonicalKind(params, info.first, info.count, info.result);
@@ -10735,7 +10735,7 @@ parseBinaryCtx := fn(target: String, source: String, position: Int, prefix: Stri
                     callRuntime = info.runtime;
                 }
             } else {
-                if target =!= "ts" {
+                if target =!= TARGET_TS {
                     failAt(source, postPosition, prefix, "C backend does not support indirect function calls yet");
                 }
                 callParams = fnParamEntries(left.kind);
@@ -10746,7 +10746,7 @@ parseBinaryCtx := fn(target: String, source: String, position: Int, prefix: Stri
             if handleUserCall {
                 size := textLib.length(source);
                 explicitLabels := collectExplicitCallLabels(source, postPosition, prefix);
-                argIifeDepth := if target == "ts" and callReordersArgs(source, postPosition, prefix, callParams, callFirst, callCount) {
+                argIifeDepth := if target == TARGET_TS and callReordersArgs(source, postPosition, prefix, callParams, callFirst, callCount) {
                     iifeDepth + 1
                 } else {
                     iifeDepth
@@ -10905,7 +10905,7 @@ parseBinaryCtx := fn(target: String, source: String, position: Int, prefix: Stri
                     targetCallee := if isModuleFn { callRuntime } else { "(" + callRuntime + ")" };
                     emittedCode = targetCallee + "(" + textLib.joinTexts(finalArgs, ", ") + ")";
                 } else {
-                    if target =!= "ts" {
+                    if target =!= TARGET_TS {
                         failAt(source, errPos, prefix, "C backend does not support named or reordered call arguments yet");
                     }
                     evalStmts: mut List<String> = [];
@@ -11244,8 +11244,8 @@ normalizeBuiltinModule := fn(raw: String): String {
 
 /** Parses one `--builtin-mode` spec (`pure`, `builtin`, `module=mode`, `module.fn=mode`). */
 parseBuiltinModeSpec := fn(prefix: String, spec: String): Item {
-    if spec == "builtin" or spec == "pure" {
-        return (kind = "project", name = "", runtime = spec, code = "", intValue = 0, textValue = "");
+    if spec == BUILTIN_MODE_BUILTIN or spec == BUILTIN_MODE_PURE {
+        return (kind = BUILTIN_RULE_PROJECT, name = "", runtime = spec, code = "", intValue = 0, textValue = "");
     }
     eq := textLib.indexOfText(spec, "=", 0);
     if eq <= 0 {
@@ -11253,7 +11253,7 @@ parseBuiltinModeSpec := fn(prefix: String, spec: String): Item {
     }
     target := textLib.slice(spec, 0, eq);
     mode := textLib.slice(spec, eq + 1, textLib.length(spec));
-    if mode =!= "builtin" and mode =!= "pure" {
+    if mode =!= BUILTIN_MODE_BUILTIN and mode =!= BUILTIN_MODE_PURE {
         diagLib.fail(prefix, "invalid --builtin-mode value: " + mode);
     }
     tLen := textLib.length(target);
@@ -11272,7 +11272,7 @@ parseBuiltinModeSpec := fn(prefix: String, spec: String): Item {
         if textLib.indexOfText(modPart, ".", 0) < 0 and fnPart =!= "" {
             normMod := normalizeBuiltinModule(modPart);
             if normMod =!= "" and softBuiltinAbi(normMod, fnPart).result =!= "" {
-                return (kind = "fn", name = normMod + "." + fnPart, runtime = mode,
+                return (kind = BUILTIN_RULE_FN, name = normMod + "." + fnPart, runtime = mode,
                 code = "", intValue = 0, textValue = "");
             }
         }
@@ -11282,7 +11282,7 @@ parseBuiltinModeSpec := fn(prefix: String, spec: String): Item {
     if normMod == "" {
         diagLib.fail(prefix, "invalid --builtin-mode module target: " + target);
     }
-    (kind = "module", name = normMod, runtime = mode, code = "", intValue = 0, textValue = "")
+    (kind = BUILTIN_RULE_MODULE, name = normMod, runtime = mode, code = "", intValue = 0, textValue = "")
 }
 
 /** Parses compiler `--builtin-mode` flags from process arguments after host metadata. */
@@ -11313,17 +11313,17 @@ pub parseBuiltinModes := fn(prefix: String): Items {
 
 /** Resolves effective builtin mode (`builtin` or `pure`) by precedence: function > module > project > default builtin. */
 pub resolveBuiltinMode := fn(rules: Items, moduleName: String, fnName: String): String {
-    var mode := "builtin";
+    var mode := BUILTIN_MODE_BUILTIN;
     var precedence := 0;
     fnTarget := if moduleName == "" { "" } else { moduleName + "." + fnName };
     loop rules as rule {
-        if rule.kind == "project" and precedence <= 1 {
+        if rule.kind == BUILTIN_RULE_PROJECT and precedence <= 1 {
             mode = rule.runtime;
             precedence = 1;
-        } else if rule.kind == "module" and rule.name == moduleName and precedence <= 2 {
+        } else if rule.kind == BUILTIN_RULE_MODULE and rule.name == moduleName and precedence <= 2 {
             mode = rule.runtime;
             precedence = 2;
-        } else if rule.kind == "fn" and fnTarget =!= "" and rule.name == fnTarget and precedence <= 3 {
+        } else if rule.kind == BUILTIN_RULE_FN and fnTarget =!= "" and rule.name == fnTarget and precedence <= 3 {
             mode = rule.runtime;
             precedence = 3;
         }
@@ -11523,7 +11523,7 @@ collectModuleDecls := fn(target: String, source: String, prefix: String, moduleK
                         typeHit := textLib.indexOfText(source, "type", position + 1);
                         if typeHit >= 0 and typeHit < blockEnd {
                             hasInnerAlias = true;
-                            listLib.pushBack(mut decls, (kind = "HasInnerAlias", name = "", runtime = "", code = "", intValue = 0, textValue = ""));
+                            listLib.pushBack(mut decls, (kind = DECL_KIND_HAS_INNER_ALIAS, name = "", runtime = "", code = "", intValue = 0, textValue = ""));
                         }
                     }
                     position = blockEnd;
@@ -11541,7 +11541,7 @@ collectModuleDecls := fn(target: String, source: String, prefix: String, moduleK
                 afterParen := if parenEnd >= 0 { skipTrivia(source, parenEnd, prefix) } else { -1 };
                 if afterParen >= 0 and textLib.startsWithAt(source, afterParen, ":=") {
                     rhsPos := skipTrivia(source, afterParen + 2, prefix);
-                    listLib.pushBack(mut decls, (kind = "FutureDestr", name = "", runtime = "val", code = integer.intText(position),
+                    listLib.pushBack(mut decls, (kind = DECL_KIND_FUTURE_DESTR, name = "", runtime = DECL_BIND_VAL, code = integer.intText(position),
                     intValue = position, textValue = integer.intText(rhsPos)));
                     position = rhsPos;
                     continue;
@@ -11565,11 +11565,11 @@ collectModuleDecls := fn(target: String, source: String, prefix: String, moduleK
                         valStart := skipTrivia(source, operator + 2, prefix);
                         declName := textLib.slice(source, declStart, declEnd);
                         if textLib.wordAt(source, valStart, "fn") {
-                            listLib.pushBack(mut decls, (kind = "PubFn", name = declName, runtime = "", code = "", intValue = 0, textValue = ""));
+                            listLib.pushBack(mut decls, (kind = DECL_KIND_PUB_FN, name = declName, runtime = "", code = "", intValue = 0, textValue = ""));
                         } else if textLib.wordAt(source, valStart, "type") {
-                            listLib.pushBack(mut decls, (kind = "PubType", name = declName, runtime = "", code = "", intValue = 0, textValue = ""));
+                            listLib.pushBack(mut decls, (kind = DECL_KIND_PUB_TYPE, name = declName, runtime = "", code = "", intValue = 0, textValue = ""));
                         } else {
-                            listLib.pushBack(mut decls, (kind = "PubVal", name = declName, runtime = "", code = "", intValue = 0, textValue = ""));
+                            listLib.pushBack(mut decls, (kind = DECL_KIND_PUB_VAL, name = declName, runtime = "", code = "", intValue = 0, textValue = ""));
                         }
                     }
                 }
@@ -11583,7 +11583,7 @@ collectModuleDecls := fn(target: String, source: String, prefix: String, moduleK
                     afterParen := if parenEnd >= 0 { skipTrivia(source, parenEnd, prefix) } else { -1 };
                     if afterParen >= 0 and textLib.startsWithAt(source, afterParen, ":=") {
                         rhsPos := skipTrivia(source, afterParen + 2, prefix);
-                        listLib.pushBack(mut decls, (kind = "FutureDestr", name = "", runtime = "var", code = integer.intText(afterVar),
+                        listLib.pushBack(mut decls, (kind = DECL_KIND_FUTURE_DESTR, name = "", runtime = DECL_BIND_VAR, code = integer.intText(afterVar),
                         intValue = nameStart, textValue = integer.intText(rhsPos)));
                         position = rhsPos;
                         continue;
@@ -11603,15 +11603,15 @@ collectModuleDecls := fn(target: String, source: String, prefix: String, moduleK
                         afterLocal := skipTrivia(source, localEnd, prefix);
                         if textLib.startsWithAt(source, afterLocal, ":=") {
                             rhsPos := skipTrivia(source, afterLocal + 2, prefix);
-                            kindTag := if isVarMut { "varmut|" } else { "varval|" };
-                            listLib.pushBack(mut decls, (kind = "FutureDecl", name = localName, runtime = moduleValueRuntime(target, moduleKey, localName),
+                            kindTag := if isVarMut { DECL_TAG_VAR_MUT + "|" } else { DECL_TAG_VAR_VAL + "|" };
+                            listLib.pushBack(mut decls, (kind = DECL_KIND_FUTURE_DECL, name = localName, runtime = moduleValueRuntime(target, moduleKey, localName),
                             code = "", intValue = localStart, textValue = kindTag + integer.intText(rhsPos)));
                             position = rhsPos;
                             continue;
                         } else if not isVarMut and afterLocal < size and textLib.at(source, afterLocal) == ":" and compoundAssignOp(source, afterLocal).width == 0 {
                             annStart := afterLocal + 1;
-                            listLib.pushBack(mut decls, (kind = "FutureDecl", name = localName, runtime = moduleValueRuntime(target, moduleKey, localName),
-                            code = "", intValue = localStart, textValue = "varann|" + integer.intText(annStart)));
+                            listLib.pushBack(mut decls, (kind = DECL_KIND_FUTURE_DECL, name = localName, runtime = moduleValueRuntime(target, moduleKey, localName),
+                            code = "", intValue = localStart, textValue = DECL_TAG_VAR_ANN + "|" + integer.intText(annStart)));
                             var ts := annStart;
                             var tp := 0;
                             loop ts < size {
@@ -11654,8 +11654,8 @@ collectModuleDecls := fn(target: String, source: String, prefix: String, moduleK
                     afterLocal := skipTrivia(source, localEnd, prefix);
                     if not isReservedWord(localName) and textLib.startsWithAt(source, afterLocal, ":=") {
                         rhsPos := skipTrivia(source, afterLocal + 2, prefix);
-                        listLib.pushBack(mut decls, (kind = "FutureDecl", name = localName, runtime = moduleValueRuntime(target, moduleKey, localName),
-                        code = "", intValue = localStart, textValue = "mutval|" + integer.intText(rhsPos)));
+                        listLib.pushBack(mut decls, (kind = DECL_KIND_FUTURE_DECL, name = localName, runtime = moduleValueRuntime(target, moduleKey, localName),
+                        code = "", intValue = localStart, textValue = DECL_TAG_MUT_VAL + "|" + integer.intText(rhsPos)));
                         position = rhsPos;
                         continue;
                     }
@@ -11673,14 +11673,14 @@ collectModuleDecls := fn(target: String, source: String, prefix: String, moduleK
                 if textLib.wordAt(source, valueStart, "type") {
                     targetStart := skipTrivia(source, valueStart + 4, prefix);
                     aliasTarget := collectTypeTarget(source, targetStart, prefix);
-                    listLib.pushBack(mut decls, (kind = "Alias", name = name, runtime = "", code = aliasTarget.text,
+                    listLib.pushBack(mut decls, (kind = DECL_KIND_ALIAS, name = name, runtime = "", code = aliasTarget.text,
                     intValue = nameStart, textValue = integer.intText(aliasTarget.next)));
                     position = aliasTarget.next;
                     continue;
                 }
                 if textLib.wordAt(source, valueStart, "fn") {
                     headerPos := skipTrivia(source, valueStart + 2, prefix);
-                    listLib.pushBack(mut decls, (kind = "FutureFn", name = name, runtime = "", code = "",
+                    listLib.pushBack(mut decls, (kind = DECL_KIND_FUTURE_FN, name = name, runtime = "", code = "",
                     intValue = nameStart, textValue = integer.intText(headerPos)));
                     var fnCursor := headerPos;
                     var fnParen := 0;
@@ -11706,7 +11706,7 @@ collectModuleDecls := fn(target: String, source: String, prefix: String, moduleK
                                     fnTypeHit := textLib.indexOfText(source, "type", fnCursor + 1);
                                     if fnTypeHit >= 0 and fnTypeHit < fnBodyEnd {
                                         hasInnerAlias = true;
-                                        listLib.pushBack(mut decls, (kind = "HasInnerAlias", name = "", runtime = "", code = "", intValue = 0, textValue = ""));
+                                        listLib.pushBack(mut decls, (kind = DECL_KIND_HAS_INNER_ALIAS, name = "", runtime = "", code = "", intValue = 0, textValue = ""));
                                     }
                                 }
                                 fnCursor = fnBodyEnd;
@@ -11724,16 +11724,16 @@ collectModuleDecls := fn(target: String, source: String, prefix: String, moduleK
                     continue;
                 }
                 if not textLib.wordAt(source, valueStart, "import") {
-                    listLib.pushBack(mut decls, (kind = "FutureDecl", name = name, runtime = moduleValueRuntime(target, moduleKey, name),
-                    code = "", intValue = nameStart, textValue = "val|" + integer.intText(valueStart)));
+                    listLib.pushBack(mut decls, (kind = DECL_KIND_FUTURE_DECL, name = name, runtime = moduleValueRuntime(target, moduleKey, name),
+                    code = "", intValue = nameStart, textValue = DECL_TAG_VAL + "|" + integer.intText(valueStart)));
                 }
                 position = valueStart;
                 continue;
             }
             if aliasPosition < size and textLib.at(source, aliasPosition) == ":" and compoundAssignOp(source, aliasPosition).width == 0 {
                 annStart := aliasPosition + 1;
-                listLib.pushBack(mut decls, (kind = "FutureDecl", name = name, runtime = moduleValueRuntime(target, moduleKey, name),
-                code = "", intValue = nameStart, textValue = "ann|" + integer.intText(annStart)));
+                listLib.pushBack(mut decls, (kind = DECL_KIND_FUTURE_DECL, name = name, runtime = moduleValueRuntime(target, moduleKey, name),
+                code = "", intValue = nameStart, textValue = DECL_TAG_ANN + "|" + integer.intText(annStart)));
                 var ts := annStart;
                 var tp := 0;
                 loop ts < size {
@@ -11927,7 +11927,7 @@ moduleIdentity: String, neededFns: String, skipSoftBuiltins: Bool): Items {
     var items: mut Items = [];
     if position == size { return items; }
     var builtinRules: Items = [];
-    if skipSoftBuiltins and target == "ts" and textLib.startsWithAt(moduleIdentity, 0, "lite.core.") {
+    if skipSoftBuiltins and target == TARGET_TS and textLib.startsWithAt(moduleIdentity, 0, "lite.core.") {
         builtinRules = parseBuiltinModes(prefix);
     }
     var aliases: mut List<AliasDecl> = [];
@@ -11944,16 +11944,16 @@ moduleIdentity: String, neededFns: String, skipSoftBuiltins: Bool): Items {
     var hasInnerAlias := false;
     rootAssignedNames: mut List<String> = [];
     loop decls as decl {
-        if decl.kind == "Alias" {
+        if decl.kind == DECL_KIND_ALIAS {
             endPos := parseDigits(decl.textValue, 0, textLib.length(decl.textValue));
             listLib.pushBack(mut aliases, (name = decl.name, target = decl.code, at = decl.intValue, end = endPos, depth = 0));
-        } else if decl.kind == "PubFn" {
+        } else if decl.kind == DECL_KIND_PUB_FN {
             listLib.pushBack(mut publishedFunctions, decl.name);
-        } else if decl.kind == "PubVal" {
+        } else if decl.kind == DECL_KIND_PUB_VAL {
             listLib.pushBack(mut publishedValues, decl.name);
-        } else if decl.kind == "PubType" {
+        } else if decl.kind == DECL_KIND_PUB_TYPE {
             listLib.pushBack(mut publishedTypes, decl.name);
-        } else if decl.kind == "HasInnerAlias" {
+        } else if decl.kind == DECL_KIND_HAS_INNER_ALIAS {
             hasInnerAlias = true;
         } else if decl.kind == "RootAssign" and not listLib.listContainsText(rootAssignedNames, decl.name) {
             listLib.pushBack(mut rootAssignedNames, decl.name);
@@ -12019,14 +12019,14 @@ moduleIdentity: String, neededFns: String, skipSoftBuiltins: Bool): Items {
         }
     }
     loop decls as decl {
-        if decl.kind == "FutureFn" {
+        if decl.kind == DECL_KIND_FUTURE_FN {
             fnName := decl.name;
             fnAt := decl.intValue;
             if findFunction(functions, fnName) < 0 and localIndex(locals, fnName) < 0 {
                 var shadowedBefore := false;
                 loop decls as priorDecl {
                     if priorDecl.name == fnName and priorDecl.intValue < fnAt and
-                    (priorDecl.kind == "Alias" or priorDecl.kind == "FutureDecl") {
+                    (priorDecl.kind == DECL_KIND_ALIAS or priorDecl.kind == DECL_KIND_FUTURE_DECL) {
                         shadowedBefore = true;
                         break;
                     }
@@ -12084,12 +12084,12 @@ moduleIdentity: String, neededFns: String, skipSoftBuiltins: Bool): Items {
         loop decls as decl {
             keyText := integer.intText(declIdx);
             if not tokenInPipeBag(resolvedDeclBag, keyText) {
-                if decl.kind == "FutureDecl" {
+                if decl.kind == DECL_KIND_FUTURE_DECL {
                     sep := textLib.indexOfText(decl.textValue, "|", 0);
                     declTag := textLib.slice(decl.textValue, 0, sep);
                     posVal := parseDigits(decl.textValue, sep + 1, textLib.length(decl.textValue));
-                    if declTag == "ann" or declTag == "varann" {
-                        declMutable := declTag == "varann";
+                    if declTag == DECL_TAG_ANN or declTag == DECL_TAG_VAR_ANN {
+                        declMutable := declTag == DECL_TAG_VAR_ANN;
                         if canPreResolveLocalType(source, posVal, prefix, aliases) {
                             typed := parseLocalType(source, posVal, prefix, aliases);
                             if not (declMutable and typed.writable) {
@@ -12110,8 +12110,8 @@ moduleIdentity: String, neededFns: String, skipSoftBuiltins: Bool): Items {
                             }
                         }
                     } else {
-                        declMutable := declTag == "varval" or declTag == "varmut";
-                        declWritable := declTag == "varmut" or declTag == "mutval";
+                        declMutable := declTag == DECL_TAG_VAR_VAL or declTag == DECL_TAG_VAR_MUT;
+                        declWritable := declTag == DECL_TAG_VAR_MUT or declTag == DECL_TAG_MUT_VAL;
                         inferred := tryInferRootExprKind(source, posVal, prefix, aliases, functions, functionParams, locals, futureValues, "", 0, 24);
                         if inferred.kind =!= "" and inferred.kind =!= "Unit" and (not declWritable or isListKind(inferred.kind)) {
                             listLib.pushBack(mut futureValues, (name = decl.name, runtime = decl.runtime, kind = inferred.kind,
@@ -12120,12 +12120,12 @@ moduleIdentity: String, neededFns: String, skipSoftBuiltins: Bool): Items {
                             progressed = true;
                         }
                     }
-                } else if decl.kind == "FutureDestr" {
+                } else if decl.kind == DECL_KIND_FUTURE_DESTR {
                     openPos := parseDigits(decl.code, 0, textLib.length(decl.code));
                     rhsPos := parseDigits(decl.textValue, 0, textLib.length(decl.textValue));
                     destr := tryParseDestructureNames(source, openPos, prefix);
                     if destr.ok and destr.count > 0 {
-                        destrMutable := decl.runtime == "var";
+                        destrMutable := decl.runtime == DECL_BIND_VAR;
                         inferred := tryInferRootExprKind(source, rhsPos, prefix, aliases, functions, functionParams, locals, futureValues, "", 0, 24);
                         if destr.grouped {
                             if inferred.kind =!= "" and inferred.kind =!= "Unit" {
@@ -12256,7 +12256,7 @@ moduleIdentity: String, neededFns: String, skipSoftBuiltins: Bool): Items {
                     if condition.kind =!= "Bool" {
                         failAt(source, conditionStart, prefix, "else if condition must be Bool");
                     }
-                    if target == "ts" and currentLive {
+                    if target == TARGET_TS and currentLive {
                         checkTraceSafety(source, conditionStart, prefix, condition.code, currentName, maxFutureAt, locals, functions, futureValues, items);
                         locals = mergeOuterCallableUpdatesFromCode(locals, condition.code);
                     }
@@ -12361,7 +12361,7 @@ moduleIdentity: String, neededFns: String, skipSoftBuiltins: Bool): Items {
                     if condition.kind =!= "Bool" {
                         failAt(source, nextArmStart, prefix, "match arm condition must be Bool");
                     }
-                    if target == "ts" and currentLive {
+                    if target == TARGET_TS and currentLive {
                         checkTraceSafety(source, nextArmStart, prefix, condition.code, currentName, maxFutureAt, locals, functions, futureValues, items);
                         locals = mergeOuterCallableUpdatesFromCode(locals, condition.code);
                     }
@@ -12529,7 +12529,7 @@ moduleIdentity: String, neededFns: String, skipSoftBuiltins: Bool): Items {
             if afterRawBrace >= 0 and textLib.wordAt(source, afterRawBrace, "finally") {
                 expression := parseExpressionItem(target, source, position, prefix, locals, functions, functionParams, currentName,
                 currentResult, atValueTail(blocks, blockCount) and not currentStopped, stmtCtxs, aliases);
-                if target == "ts" and currentLive and not currentStopped {
+                if target == TARGET_TS and currentLive and not currentStopped {
                     checkTraceSafety(source, position, prefix, expression.code, currentName, maxFutureAt, locals, functions, futureValues, items);
                     if expression.returned and containsFnKind(currentResult) {
                         checkEscapingFnSafety(source, position, prefix, expression.code, 1, locals);
@@ -12595,7 +12595,7 @@ moduleIdentity: String, neededFns: String, skipSoftBuiltins: Bool): Items {
                 failAt(source, afterTarget, prefix, "expected := after tuple destructuring target");
             }
             rhs := parseInitializerExpression(target, source, skipTrivia(source, afterTarget + 2, prefix), prefix, locals, functions, functionParams, currentName, "", stmtCtxs, aliases);
-            if target == "ts" and currentLive and not currentStopped {
+            if target == TARGET_TS and currentLive and not currentStopped {
                 checkTraceSafety(source, destructureOpen, prefix, rhs.code, currentName, maxFutureAt, locals, functions, futureValues, items);
                 locals = mergeOuterCallableUpdatesFromCode(locals, rhs.code);
             }
@@ -12631,7 +12631,7 @@ moduleIdentity: String, neededFns: String, skipSoftBuiltins: Bool): Items {
                 rejectDuplicateBlockDecl(source, destructureOpen, prefix, blockDecls, depth, bindName);
                 listLib.pushBack(mut blockDecls, (name = bindName, depth = depth));
                 bindRuntime := claimOrMakeLocalRuntime(target, locals, bindName, moduleKey, depth);
-                bindFnCode := if target == "ts" and containsFnKind(rhs.kind) { computeCallableRhsDeps(rhs.code) } else { rhs.code };
+                bindFnCode := if target == TARGET_TS and containsFnKind(rhs.kind) { computeCallableRhsDeps(rhs.code) } else { rhs.code };
                 listLib.pushBack(mut locals, (name = bindName, runtime = bindRuntime, kind = rhs.kind,
                 mutable = destructureMutable, writable = false, depth = depth, constant = false, code = bindFnCode,
                 intValue = rhs.intValue, textValue = rhs.textValue, initState = INIT_STATE_INIT));
@@ -12658,7 +12658,7 @@ moduleIdentity: String, neededFns: String, skipSoftBuiltins: Bool): Items {
             if statementNext < 0 { failAt(source, skipTrivia(source, rhs.next, prefix), prefix, "expected ; after tuple destructuring"); }
             position = statementNext;
             tempRuntime := freshScopeTemp(locals, "lite$tuple");
-            tupleCode := if target == "ts" and containsFnKind(rhs.kind) { computeCallableRhsDeps(rhs.code) } else { "" };
+            tupleCode := if target == TARGET_TS and containsFnKind(rhs.kind) { computeCallableRhsDeps(rhs.code) } else { "" };
             listLib.pushBack(mut locals, (name = "$tuple", runtime = tempRuntime, kind = "Unit",
             mutable = false, writable = false, depth = depth, constant = false, code = tupleCode,
             intValue = 0, textValue = "", initState = INIT_STATE_INIT));
@@ -12690,7 +12690,7 @@ moduleIdentity: String, neededFns: String, skipSoftBuiltins: Bool): Items {
                 comp := tupleComponent(rhs.kind, bindIndex);
                 bindRuntime := claimOrMakeLocalRuntime(target, locals, bindName, moduleKey, depth);
                 fieldCode := tempRuntime + "." + comp.prop;
-                fieldLocalCode := if target == "ts" and containsFnKind(comp.kind) { computeCallableRhsDeps(fieldCode) } else { fieldCode };
+                fieldLocalCode := if target == TARGET_TS and containsFnKind(comp.kind) { computeCallableRhsDeps(fieldCode) } else { fieldCode };
                 listLib.pushBack(mut locals, (name = bindName, runtime = bindRuntime, kind = comp.kind,
                 mutable = destructureMutable, writable = false, depth = depth, constant = false, code = fieldLocalCode,
                 intValue = 0, textValue = "", initState = INIT_STATE_INIT));
@@ -12712,7 +12712,7 @@ moduleIdentity: String, neededFns: String, skipSoftBuiltins: Bool): Items {
         (ch == "f" and textLib.wordAt(source, position, "false")) {
             expression := parseExpressionItem(target, source, position, prefix, locals, functions, functionParams, currentName,
             currentResult, atValueTail(blocks, blockCount) and not currentStopped, stmtCtxs, aliases);
-            if target == "ts" and currentLive and not currentStopped {
+            if target == TARGET_TS and currentLive and not currentStopped {
                 checkTraceSafety(source, position, prefix, expression.code, currentName, maxFutureAt, locals, functions, futureValues, items);
                 if expression.returned and containsFnKind(currentResult) {
                     checkEscapingFnSafety(source, position, prefix, expression.code, 1, locals);
@@ -12744,7 +12744,7 @@ moduleIdentity: String, neededFns: String, skipSoftBuiltins: Bool): Items {
             }
             expression := parseExpressionItem(target, source, position, prefix, locals, functions, functionParams, currentName,
             currentResult, atValueTail(blocks, blockCount) and not currentStopped, stmtCtxs, aliases);
-            if target == "ts" and currentLive and not currentStopped {
+            if target == TARGET_TS and currentLive and not currentStopped {
                 checkTraceSafety(source, position, prefix, expression.code, currentName, maxFutureAt, locals, functions, futureValues, items);
                 if expression.returned and containsFnKind(currentResult) {
                     checkEscapingFnSafety(source, position, prefix, expression.code, 1, locals);
@@ -12861,7 +12861,7 @@ moduleIdentity: String, neededFns: String, skipSoftBuiltins: Bool): Items {
                 failAt(source, valueStart, prefix, "cannot return " + displayKind(parsed.kind) + " from function " +
                 currentName + " returning " + displayKind(currentResult));
             }
-            if target == "ts" and currentLive and not currentStopped {
+            if target == TARGET_TS and currentLive and not currentStopped {
                 checkTraceSafety(source, valueStart, prefix, parsed.code, currentName, maxFutureAt, locals, functions, futureValues, items);
                 if containsFnKind(currentResult) {
                     checkEscapingFnSafety(source, valueStart, prefix, parsed.code, 1, locals);
@@ -12903,7 +12903,7 @@ moduleIdentity: String, neededFns: String, skipSoftBuiltins: Bool): Items {
             } else if not insideLoop(blocks) {
                 failAt(source, nameStart, prefix, name + " outside loop");
             }
-            if target =!= "ts" and afterExit < size and textLib.at(source, afterExit) =!= ";" and textLib.at(source, afterExit) =!= "}" {
+            if target =!= TARGET_TS and afterExit < size and textLib.at(source, afterExit) =!= ";" and textLib.at(source, afterExit) =!= "}" {
                 failAt(source, nameStart, prefix, "C backend does not support " + name + " payloads yet");
             }
             statementNext := consumeStatementEnd(source, afterExit, prefix);
@@ -12939,7 +12939,7 @@ moduleIdentity: String, neededFns: String, skipSoftBuiltins: Bool): Items {
             var outputDiverged := false;
             loop parsedOutput as outputItem {
                 if outputItem.kind == "End" or outputItem.kind == "EndOutput" { position = outputItem.intValue; }
-                else if target == "ts" and currentLive and not currentStopped {
+                else if target == TARGET_TS and currentLive and not currentStopped {
                     checkTraceSafety(source, nameStart, prefix, outputItem.code, currentName, maxFutureAt, locals, functions, futureValues, items);
                     locals = mergeOuterCallableUpdatesFromCode(locals, outputItem.code);
                 }
@@ -12964,7 +12964,7 @@ moduleIdentity: String, neededFns: String, skipSoftBuiltins: Bool): Items {
         if moduleIndex >= 0 and locals[moduleIndex].kind == "Module" and not isDeclFollow {
             expression := parseExpressionItem(target, source, nameStart, prefix, locals, functions, functionParams, currentName,
             currentResult, atValueTail(blocks, blockCount) and not currentStopped, stmtCtxs, aliases);
-            if target == "ts" and currentLive and not currentStopped {
+            if target == TARGET_TS and currentLive and not currentStopped {
                 checkTraceSafety(source, nameStart, prefix, expression.code, currentName, maxFutureAt, locals, functions, futureValues, items);
                 if expression.returned and containsFnKind(currentResult) {
                     checkEscapingFnSafety(source, nameStart, prefix, expression.code, 1, locals);
@@ -13010,7 +13010,7 @@ moduleIdentity: String, neededFns: String, skipSoftBuiltins: Bool): Items {
             position < size and textLib.at(source, position) == "(" {
                 expression := parseExpressionItem(target, source, nameStart, prefix, locals, functions, functionParams, currentName,
                 currentResult, atValueTail(blocks, blockCount) and not currentStopped, stmtCtxs, aliases);
-                if target == "ts" and currentLive and not currentStopped {
+                if target == TARGET_TS and currentLive and not currentStopped {
                     checkTraceSafety(source, nameStart, prefix, expression.code, currentName, maxFutureAt, locals, functions, futureValues, items);
                     if expression.returned and containsFnKind(currentResult) {
                         checkEscapingFnSafety(source, nameStart, prefix, expression.code, 1, locals);
@@ -13039,7 +13039,7 @@ moduleIdentity: String, neededFns: String, skipSoftBuiltins: Bool): Items {
             if afterRawIf >= 0 and (textLib.wordAt(source, afterRawIf, "then") or textLib.wordAt(source, afterRawIf, "finally")) {
                 expression := parseExpressionItem(target, source, nameStart, prefix, locals, functions, functionParams, currentName,
                 currentResult, atValueTail(blocks, blockCount) and not currentStopped, stmtCtxs, aliases);
-                if target == "ts" and currentLive and not currentStopped {
+                if target == TARGET_TS and currentLive and not currentStopped {
                     checkTraceSafety(source, nameStart, prefix, expression.code, currentName, maxFutureAt, locals, functions, futureValues, items);
                     if expression.returned and containsFnKind(currentResult) {
                         checkEscapingFnSafety(source, nameStart, prefix, expression.code, 1, locals);
@@ -13069,7 +13069,7 @@ moduleIdentity: String, neededFns: String, skipSoftBuiltins: Bool): Items {
                     if afterChain < size and textLib.at(source, afterChain) == "}" {
                         expression := parseExpressionItem(target, source, nameStart, prefix, locals, functions, functionParams, currentName,
                         currentResult, true, stmtCtxs, aliases);
-                        if target == "ts" and currentLive and not currentStopped {
+                        if target == TARGET_TS and currentLive and not currentStopped {
                             checkTraceSafety(source, nameStart, prefix, expression.code, currentName, maxFutureAt, locals, functions, futureValues, items);
                             if containsFnKind(currentResult) {
                                 checkEscapingFnSafety(source, nameStart, prefix, expression.code, 1, locals);
@@ -13108,7 +13108,7 @@ moduleIdentity: String, neededFns: String, skipSoftBuiltins: Bool): Items {
             if condition.kind =!= "Bool" {
                 failAt(source, conditionStart, prefix, "if condition must be Bool");
             }
-            if target == "ts" and currentLive and not currentStopped {
+            if target == TARGET_TS and currentLive and not currentStopped {
                 checkTraceSafety(source, conditionStart, prefix, condition.code, currentName, maxFutureAt, locals, functions, futureValues, items);
                 locals = mergeOuterCallableUpdatesFromCode(locals, condition.code);
             }
@@ -13163,7 +13163,7 @@ moduleIdentity: String, neededFns: String, skipSoftBuiltins: Bool): Items {
             if afterRawMatch >= 0 and (textLib.wordAt(source, afterRawMatch, "then") or textLib.wordAt(source, afterRawMatch, "finally")) {
                 expression := parseExpressionItem(target, source, nameStart, prefix, locals, functions, functionParams, currentName,
                 currentResult, atValueTail(blocks, blockCount) and not currentStopped, stmtCtxs, aliases);
-                if target == "ts" and currentLive and not currentStopped {
+                if target == TARGET_TS and currentLive and not currentStopped {
                     checkTraceSafety(source, nameStart, prefix, expression.code, currentName, maxFutureAt, locals, functions, futureValues, items);
                     if expression.returned and containsFnKind(currentResult) {
                         checkEscapingFnSafety(source, nameStart, prefix, expression.code, 1, locals);
@@ -13187,14 +13187,14 @@ moduleIdentity: String, neededFns: String, skipSoftBuiltins: Bool): Items {
             }
             var valueTailBranch := false;
             if currentName =!= "" and currentResult =!= "Unit" and atValueTail(blocks, blockCount) and not currentStopped {
-                if target == "ts" {
+                if target == TARGET_TS {
                     valueEnd := scanValueMatchEnd(source, nameStart, prefix, true);
                     if valueEnd >= 0 {
                         afterMatch := skipItemSeparators(source, valueEnd, prefix);
                         if afterMatch < size and textLib.at(source, afterMatch) == "}" {
                             expression := parseExpressionItem(target, source, nameStart, prefix, locals, functions, functionParams, currentName,
                             currentResult, true, stmtCtxs, aliases);
-                            if target == "ts" and currentLive and not currentStopped {
+                            if target == TARGET_TS and currentLive and not currentStopped {
                                 checkTraceSafety(source, nameStart, prefix, expression.code, currentName, maxFutureAt, locals, functions, futureValues, items);
                                 if containsFnKind(currentResult) {
                                     checkEscapingFnSafety(source, nameStart, prefix, expression.code, 1, locals);
@@ -13267,7 +13267,7 @@ moduleIdentity: String, neededFns: String, skipSoftBuiltins: Bool): Items {
                 if condition.kind =!= "Bool" {
                     failAt(source, firstArmStart, prefix, "match arm condition must be Bool");
                 }
-                if target == "ts" and currentLive and not currentStopped {
+                if target == TARGET_TS and currentLive and not currentStopped {
                     checkTraceSafety(source, firstArmStart, prefix, condition.code, currentName, maxFutureAt, locals, functions, futureValues, items);
                     locals = mergeOuterCallableUpdatesFromCode(locals, condition.code);
                 }
@@ -13326,8 +13326,8 @@ moduleIdentity: String, neededFns: String, skipSoftBuiltins: Bool): Items {
                     atFnTailLoop = true;
                 }
             }
-            if hasStmtLoopThen or hasStmtLoopFin or loopNeedsExprLowering(source, nameStart, prefix) or (target == "ts" and atFnTailLoop) {
-                if target =!= "ts" {
+            if hasStmtLoopThen or hasStmtLoopFin or loopNeedsExprLowering(source, nameStart, prefix) or (target == TARGET_TS and atFnTailLoop) {
+                if target =!= TARGET_TS {
                     if hasStmtLoopFin {
                         failAt(source, afterRawStmtLoopTok, prefix, "C backend does not support finally blocks yet");
                     }
@@ -13337,7 +13337,7 @@ moduleIdentity: String, neededFns: String, skipSoftBuiltins: Bool): Items {
                 } else {
                     expression := parseExpressionItem(target, source, nameStart, prefix, locals, functions, functionParams, currentName,
                     currentResult, atValueTail(blocks, blockCount) and not currentStopped, stmtCtxs, aliases);
-                    if target == "ts" and currentLive and not currentStopped {
+                    if target == TARGET_TS and currentLive and not currentStopped {
                         checkTraceSafety(source, nameStart, prefix, expression.code, currentName, maxFutureAt, locals, functions, futureValues, items);
                         if expression.returned and containsFnKind(currentResult) {
                             checkEscapingFnSafety(source, nameStart, prefix, expression.code, 1, locals);
@@ -13368,7 +13368,7 @@ moduleIdentity: String, neededFns: String, skipSoftBuiltins: Bool): Items {
             if position < size and textLib.at(source, position) =!= "{" {
                 loopHdrPos := position;
                 parsed := parseExpressionCtx(target, source, position, prefix, locals, functions, functionParams, currentName, stmtCtxs, aliases);
-                if target == "ts" and currentLive and not currentStopped {
+                if target == TARGET_TS and currentLive and not currentStopped {
                     checkTraceSafety(source, loopHdrPos, prefix, parsed.code, currentName, maxFutureAt, locals, functions, futureValues, items);
                     locals = mergeOuterCallableUpdatesFromCode(locals, parsed.code);
                 }
@@ -13409,7 +13409,7 @@ moduleIdentity: String, neededFns: String, skipSoftBuiltins: Bool): Items {
             loopPreLocalsLen := localsCount(locals);
             if itemName =!= "" {
                 runtime := localRuntimeName(target, locals, itemName, moduleKey, depth + 1);
-                itemLocalCode := if target == "ts" and containsFnKind(itemKind) { computeCallableRhsDeps(sequenceCode) } else { runtime };
+                itemLocalCode := if target == TARGET_TS and containsFnKind(itemKind) { computeCallableRhsDeps(sequenceCode) } else { runtime };
                 listLib.pushBack(mut blockDecls, (name = itemName, depth = depth + 1));
                 listLib.pushBack(mut locals, (name = itemName, runtime = runtime, kind = itemKind,
                 mutable = false, writable = false, depth = depth + 1, constant = false, code = itemLocalCode,
@@ -13449,7 +13449,7 @@ moduleIdentity: String, neededFns: String, skipSoftBuiltins: Bool): Items {
             nextStmtCtxId = nextStmtCtxId + 1;
             var loopTryKey := "";
             loopStartTransfers := transferCount;
-            if target == "ts" and currentLive and not currentStopped {
+            if target == TARGET_TS and currentLive and not currentStopped {
                 loopTryKey = moduleKey + "#lp#" + integer.intText(stmtLoopId);
                 listLib.pushBack(mut items, (kind = "LoopTransferTry", name = "", runtime = loopTryKey, code = integer.intText(stmtLoopId),
                 intValue = stmtLoopId, textValue = integer.intText(0 - stmtLoopId)));
@@ -13498,7 +13498,7 @@ moduleIdentity: String, neededFns: String, skipSoftBuiltins: Bool): Items {
                 failAt(source, afterName, prefix, "expected := after mut local name " + localName);
             }
             parsed := parseInitializerExpression(target, source, skipTrivia(source, afterName + 2, prefix), prefix, locals, functions, functionParams, currentName, "", stmtCtxs, aliases);
-            if target == "ts" and currentLive and not currentStopped {
+            if target == TARGET_TS and currentLive and not currentStopped {
                 checkTraceSafety(source, localStart, prefix, parsed.code, currentName, maxFutureAt, locals, functions, futureValues, items);
                 locals = mergeOuterCallableUpdatesFromCode(locals, parsed.code);
             }
@@ -13509,7 +13509,7 @@ moduleIdentity: String, neededFns: String, skipSoftBuiltins: Bool): Items {
             if statementNext < 0 { failAt(source, skipTrivia(source, parsed.next, prefix), prefix, "expected ; after local declaration " + localName); }
             position = statementNext;
             runtime := claimOrMakeLocalRuntime(target, locals, localName, moduleKey, depth);
-            mutLocalCode := if target == "ts" and containsFnKind(parsed.kind) { computeCallableRhsDeps(parsed.code) } else { parsed.code };
+            mutLocalCode := if target == TARGET_TS and containsFnKind(parsed.kind) { computeCallableRhsDeps(parsed.code) } else { parsed.code };
             listLib.pushBack(mut blockDecls, (name = localName, depth = depth));
             listLib.pushBack(mut locals, (name = localName, runtime = runtime, kind = parsed.kind,
             mutable = false, writable = true, depth = depth, constant = false, code = mutLocalCode,
@@ -13549,7 +13549,7 @@ moduleIdentity: String, neededFns: String, skipSoftBuiltins: Bool): Items {
                 position = skipTrivia(source, position + 2, prefix);
                 parsed = parseInitializerExpression(target, source, position, prefix, locals, functions, functionParams, currentName, "", stmtCtxs, aliases);
                 rawVarRhsCode = parsed.code;
-                if target == "ts" and currentLive and not currentStopped {
+                if target == TARGET_TS and currentLive and not currentStopped {
                     checkTraceSafety(source, localStart, prefix, rawVarRhsCode, currentName, maxFutureAt, locals, functions, futureValues, items);
                     locals = mergeOuterCallableUpdatesFromCode(locals, rawVarRhsCode);
                 }
@@ -13578,7 +13578,7 @@ moduleIdentity: String, neededFns: String, skipSoftBuiltins: Bool): Items {
                             failAt(source, localStart, prefix, "cannot initialize " + displayKind(typed.kind) + " with " + displayKind(parsed.kind));
                         }
                         rawVarRhsCode = parsed.code;
-                        if target == "ts" and currentLive and not currentStopped {
+                        if target == TARGET_TS and currentLive and not currentStopped {
                             checkTraceSafety(source, localStart, prefix, rawVarRhsCode, currentName, maxFutureAt, locals, functions, futureValues, items);
                             locals = mergeOuterCallableUpdatesFromCode(locals, rawVarRhsCode);
                         }
@@ -13596,7 +13596,7 @@ moduleIdentity: String, neededFns: String, skipSoftBuiltins: Bool): Items {
             if statementNext < 0 { failAt(source, skipTrivia(source, parsed.next, prefix), prefix, "expected ; after local declaration " + localName); }
             position = statementNext;
             runtime := claimOrMakeLocalRuntime(target, locals, localName, moduleKey, depth);
-            varLocalCode := if target == "ts" and containsFnKind(parsed.kind) {
+            varLocalCode := if target == TARGET_TS and containsFnKind(parsed.kind) {
                 if declInitState == INIT_STATE_INIT { computeCallableRhsDeps(rawVarRhsCode) } else { "" }
             } else { parsed.code };
             listLib.pushBack(mut blockDecls, (name = localName, depth = depth));
@@ -13723,13 +13723,13 @@ moduleIdentity: String, neededFns: String, skipSoftBuiltins: Bool): Items {
                     listLib.pushBack(mut items, (kind = "PublicFunction", name = name, runtime = functionRuntime, code = header.result,
                     intValue = header.count, textValue = header.params));
                 }
-                softModule := if target == "ts" and listLib.listContainsText(publishedFunctions, name) {
+                softModule := if target == TARGET_TS and listLib.listContainsText(publishedFunctions, name) {
                     coreSoftBuiltin(moduleIdentity, name, header.params, header.result)
                 } else {
                     ""
                 };
                 skipAsSoft := neededFns =!= "*" and softModule =!= "" and skipSoftBuiltins and
-                resolveBuiltinMode(builtinRules, softModule, name) == "builtin";
+                resolveBuiltinMode(builtinRules, softModule, name) == BUILTIN_MODE_BUILTIN;
                 skipAsUnneeded := neededFns =!= "*" and not skipAsSoft and not hasHelperToken(neededFns, functionRuntime + "(");
                 if skipAsSoft or skipAsUnneeded {
                     if not wasPreRegistered {
@@ -13768,7 +13768,7 @@ moduleIdentity: String, neededFns: String, skipSoftBuiltins: Bool): Items {
                 fnTryId := nextStmtCtxId;
                 nextStmtCtxId = nextStmtCtxId + 1;
                 fnTryKey = "";
-                if target == "ts" and currentLive and not currentStopped {
+                if target == TARGET_TS and currentLive and not currentStopped {
                     fnTryKey = moduleKey + "#fn#" + integer.intText(fnTryId);
                     fnTransferStart = transferCount;
                     listLib.pushBack(mut items, (kind = "TransferTry", name = "", runtime = fnTryKey, code = "", intValue = 0, textValue = ""));
@@ -13866,7 +13866,7 @@ moduleIdentity: String, neededFns: String, skipSoftBuiltins: Bool): Items {
             rejectDuplicateBlockDecl(source, nameStart, prefix, blockDecls, depth, name);
             position = afterDeclare;
             parsed := parseInitializerExpression(target, source, position, prefix, locals, functions, functionParams, currentName, "", stmtCtxs, aliases);
-            if target == "ts" and currentLive and not currentStopped {
+            if target == TARGET_TS and currentLive and not currentStopped {
                 checkTraceSafety(source, nameStart, prefix, parsed.code, currentName, maxFutureAt, locals, functions, futureValues, items);
                 locals = mergeOuterCallableUpdatesFromCode(locals, parsed.code);
             }
@@ -13875,7 +13875,7 @@ moduleIdentity: String, neededFns: String, skipSoftBuiltins: Bool): Items {
             if statementNext < 0 { failAt(source, skipTrivia(source, parsed.next, prefix), prefix, "expected ; after local declaration " + name); }
             position = statementNext;
             runtime := claimOrMakeLocalRuntime(target, locals, name, moduleKey, depth);
-            valLocalCode := if target == "ts" and containsFnKind(parsed.kind) { computeCallableRhsDeps(parsed.code) } else { parsed.code };
+            valLocalCode := if target == TARGET_TS and containsFnKind(parsed.kind) { computeCallableRhsDeps(parsed.code) } else { parsed.code };
             listLib.pushBack(mut blockDecls, (name = name, depth = depth));
             listLib.pushBack(mut locals, (name = name, runtime = runtime, kind = parsed.kind,
             mutable = false, writable = false, depth = depth, constant = parsed.constant, code = valLocalCode,
@@ -13919,7 +13919,7 @@ moduleIdentity: String, neededFns: String, skipSoftBuiltins: Bool): Items {
                     if not isCompatibleKind(typed.kind, parsed.kind) {
                         failAt(source, nameStart, prefix, "cannot initialize " + displayKind(typed.kind) + " with " + displayKind(parsed.kind));
                     }
-                    if target == "ts" and currentLive and not currentStopped {
+                    if target == TARGET_TS and currentLive and not currentStopped {
                         checkTraceSafety(source, nameStart, prefix, parsed.code, currentName, maxFutureAt, locals, functions, futureValues, items);
                         locals = mergeOuterCallableUpdatesFromCode(locals, parsed.code);
                     }
@@ -13931,7 +13931,7 @@ moduleIdentity: String, neededFns: String, skipSoftBuiltins: Bool): Items {
             runtime := claimOrMakeLocalRuntime(target, locals, name, moduleKey, depth);
             rhsDiverged := parsed.kind == "Never";
             assignedCode := assignValueCode(target, typed.kind, parsed.kind, parsed.code);
-            annLocalCode := if target == "ts" and containsFnKind(typed.kind) {
+            annLocalCode := if target == TARGET_TS and containsFnKind(typed.kind) {
                 if declInitState == INIT_STATE_INIT { computeCallableRhsDeps(parsed.code) } else { "" }
             } else { assignedCode };
             listLib.pushBack(mut blockDecls, (name = name, depth = depth));
@@ -13982,11 +13982,11 @@ moduleIdentity: String, neededFns: String, skipSoftBuiltins: Bool): Items {
                 if partialItem.kind == "End" {
                     position = partialItem.intValue;
                 } else {
-                    if target == "ts" and currentLive and not currentStopped {
+                    if target == TARGET_TS and currentLive and not currentStopped {
                         checkTraceSafety(source, nameStart, prefix, partialItem.code, currentName, maxFutureAt, locals, functions, futureValues, items);
                         locals = mergeOuterCallableUpdatesFromCode(locals, partialItem.code);
                     }
-                    if target == "ts" and containsFnKind(entry.kind) and partialItem.code =!= "" {
+                    if target == TARGET_TS and containsFnKind(entry.kind) and partialItem.code =!= "" {
                         partialFnDeps = mergeCallableLocalDeps(partialFnDeps, computeCallableRhsDeps(partialItem.code));
                     }
                     if currentLive and not currentStopped {
@@ -13999,7 +13999,7 @@ moduleIdentity: String, neededFns: String, skipSoftBuiltins: Bool): Items {
                 }
             }
             if partialCount > 0 {
-                partialLocalCode := if target == "ts" and containsFnKind(entry.kind) { partialFnDeps } else { entry.runtime };
+                partialLocalCode := if target == TARGET_TS and containsFnKind(entry.kind) { partialFnDeps } else { entry.runtime };
                 listLib.pushBack(mut locals, (name = entry.name, runtime = entry.runtime, kind = entry.kind,
                 mutable = entry.mutable, writable = entry.writable, depth = entry.depth, constant = false, code = partialLocalCode,
                 intValue = 0, textValue = "", initState = INIT_STATE_INIT));
@@ -14009,7 +14009,7 @@ moduleIdentity: String, neededFns: String, skipSoftBuiltins: Bool): Items {
             if not isCompatibleKind(entry.kind, parsed.kind) {
                 failAt(source, nameStart, prefix, "cannot assign " + displayKind(parsed.kind) + " to " + displayKind(entry.kind) + " local " + name);
             }
-            if target == "ts" and currentLive and not currentStopped {
+            if target == TARGET_TS and currentLive and not currentStopped {
                 checkTraceSafety(source, nameStart, prefix, parsed.code, currentName, maxFutureAt, locals, functions, futureValues, items);
                 locals = mergeOuterCallableUpdatesFromCode(locals, parsed.code);
             }
@@ -14018,7 +14018,7 @@ moduleIdentity: String, neededFns: String, skipSoftBuiltins: Bool): Items {
             position = statementNext;
             rhsDiverged := parsed.kind == "Never";
             assignedCode := assignValueCode(target, entry.kind, parsed.kind, parsed.code);
-            assignLocalCode := if target == "ts" and containsFnKind(entry.kind) {
+            assignLocalCode := if target == TARGET_TS and containsFnKind(entry.kind) {
                 newDeps := computeCallableRhsDeps(parsed.code);
                 if entry.depth == depth { newDeps } else { mergeCallableLocalDeps(entry.code, newDeps) }
             } else { assignedCode };
@@ -14060,7 +14060,7 @@ moduleIdentity: String, neededFns: String, skipSoftBuiltins: Bool): Items {
             opPos := position;
             position = skipTrivia(source, position + compound.width, prefix);
             parsed := parseExpressionAsCtx(target, source, position, prefix, locals, functions, functionParams, currentName, entry.kind, stmtCtxs, aliases);
-            if target == "ts" and currentLive and not currentStopped {
+            if target == TARGET_TS and currentLive and not currentStopped {
                 checkTraceSafety(source, nameStart, prefix, parsed.code, currentName, maxFutureAt, locals, functions, futureValues, items);
                 locals = mergeOuterCallableUpdatesFromCode(locals, parsed.code);
             }
@@ -14083,7 +14083,7 @@ moduleIdentity: String, neededFns: String, skipSoftBuiltins: Bool): Items {
         }
         expression := parseExpressionItem(target, source, nameStart, prefix, locals, functions, functionParams, currentName,
         currentResult, atValueTail(blocks, blockCount) and not currentStopped, stmtCtxs, aliases);
-        if target == "ts" and currentLive and not currentStopped {
+        if target == TARGET_TS and currentLive and not currentStopped {
             checkTraceSafety(source, nameStart, prefix, expression.code, currentName, maxFutureAt, locals, functions, futureValues, items);
             if expression.returned and containsFnKind(currentResult) {
                 checkEscapingFnSafety(source, nameStart, prefix, expression.code, 1, locals);

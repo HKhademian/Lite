@@ -1809,7 +1809,7 @@ applySoftBuiltins := fn(rawItems: frontend.Items, prefix: String): frontend.Item
         if item.kind == "SoftBuiltin" {
             if pendingSoftFn =!= "" and item.name == pendingSoftFn and item.runtime == pendingSoftRuntime and item.textValue == pendingSoftParams {
                 overrideCode := softBuiltinExpr(item.code, item.name, item.textValue);
-                if overrideCode =!= "" and frontend.resolveBuiltinMode(rules, item.code, item.name) == "builtin" {
+                if overrideCode =!= "" and frontend.resolveBuiltinMode(rules, item.code, item.name) == frontend.BUILTIN_MODE_BUILTIN {
                     listLib.pushBack(mut out, (kind = "Return", name = "", runtime = "", code = overrideCode,
                     intValue = 0, textValue = ""));
                     skippingDepth = 1;
@@ -1835,7 +1835,7 @@ applySoftBuiltins := fn(rawItems: frontend.Items, prefix: String): frontend.Item
 
 /** Emits the TS module from the flat item stream. Report arguments evaluate once, left to right, before reading and appending to `lite$out`, preserving reports made by argument calls. */
 pub emitProgram := fn(items: frontend.Items, source: String, prefix: String): Unit {
-    effectiveItems := frontend.filterReachableItemsForTarget(applySoftBuiltins(items, prefix), "ts");
+    effectiveItems := frontend.filterReachableItemsForTarget(applySoftBuiltins(items, prefix), frontend.TARGET_TS);
     calls := frontend.targetHelperCalls(effectiveItems);
     abruptFault := usesAbruptFault(calls);
     abruptUnwind := usesAbruptUnwind(calls);
