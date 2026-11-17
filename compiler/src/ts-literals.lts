@@ -7,9 +7,9 @@ textLib := import "core/text";
 /** Maps a restricted Lite scalar kind to its TypeScript type. */
 pub tsScalarType := fn(kind: String): String {
     if numeric.isIntKind(kind) { "bigint" }
-    else if kind == "String" { "string" }
+    else if kind == numeric.KIND_STRING { "string" }
     else if numeric.isFloatKind(kind) { "number" }
-    else if kind == "Bool" { "boolean" }
+    else if kind == numeric.KIND_BOOL { "boolean" }
     else { "void" }
 }
 
@@ -94,7 +94,7 @@ pub comparisonCode := fn(op: String, kind: String, left: String, right: String):
         else if op == ">!" { "<=" }
         else if op == ">=" { ">=" }
         else { "<" };
-    if kind == "Bool" {
+    if kind == numeric.KIND_BOOL {
         "(Boolean(" + left + ") " + operator + " Boolean(" + right + "))"
     } else {
         "((" + left + ") " + operator + " (" + right + "))"
@@ -109,14 +109,14 @@ pub floatOperandCode := fn(kind: String, code: String): String {
 /** Converts an Int* or Float operand into a binary32 value when targeting Float32. */
 pub float32OperandCode := fn(kind: String, code: String): String {
     if numeric.isIntKind(kind) { "Math.fround(Number(" + code + "))" }
-    else if kind == "Float" { "Math.fround(" + code + ")" }
+    else if kind == numeric.KIND_FLOAT { "Math.fround(" + code + ")" }
     else { code }
 }
 
 /** Emits one numeric comparison using the pair's common family. */
 comparisonPairCode := fn(op: String, leftKind: String, rightKind: String, left: String, right: String): String {
     if numeric.isFloatKind(leftKind) or numeric.isFloatKind(rightKind) {
-        comparisonCode(op, "Float", floatOperandCode(leftKind, left), floatOperandCode(rightKind, right))
+        comparisonCode(op, numeric.KIND_FLOAT, floatOperandCode(leftKind, left), floatOperandCode(rightKind, right))
     } else { comparisonCode(op, leftKind, left, right) }
 }
 

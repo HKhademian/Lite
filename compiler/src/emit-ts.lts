@@ -1903,7 +1903,7 @@ pub emitProgram := fn(items: frontend.Items, source: String, prefix: String): Un
         } else if item.kind == "TransferCatch" {
             indent = dedent(indent);
             io.outputLine(indent + "} catch (lite$err) {");
-            if item.code == "Unit" {
+            if item.code == frontend.VALUE_KIND_UNIT {
                 io.outputLine(indent + "    if (lite$hasTransfer(lite$err, 0)) { return; } else { throw lite$err; }");
             } else {
                 io.outputLine(indent + "    if (lite$hasTransfer(lite$err, 0)) { return lite$transferVal; } else { throw lite$err; }");

@@ -33,7 +33,7 @@ SYMBOL_KIND_VALUE := "value";
 
 /** True for a built-in type name accepted by the bootstrap subset. */
 isBuiltinType := fn(name: String): Bool {
-    name == "Int" or name == "Float" or name == "String" or name == "Bool" or name == "Unit" or name == "List" or
+    name == numeric.KIND_INT or name == numeric.KIND_FLOAT or name == numeric.KIND_STRING or name == numeric.KIND_BOOL or name == numeric.KIND_UNIT or name == "List" or
     numeric.isNarrowNumericKind(name) or numeric.numericAliasKind(name) =!= ""
 }
 
@@ -68,7 +68,7 @@ findLocalAtDepth := fn(locals: Locals, name: String, depth: Int): Int {
 
 /** True for the admitted built-in scalar type names. */
 isScalarType := fn(typeText: String): Bool {
-    typeText == "Int" or typeText == "Float" or typeText == "String" or typeText == "Bool" or typeText == "Unit" or
+    typeText == numeric.KIND_INT or typeText == numeric.KIND_FLOAT or typeText == numeric.KIND_STRING or typeText == numeric.KIND_BOOL or typeText == numeric.KIND_UNIT or
     numeric.isNarrowNumericKind(typeText)
 }
 
@@ -175,10 +175,10 @@ firstOperandType := fn(symbols: Symbols, locals: Locals, text: String): String {
     var cursor := 0;
     loop cursor < count {
         token := parser.tokenAt(tokens, cursor);
-        if token.kind == lexer.TOKEN_KIND_STRING { return "String"; }
-        if token.kind == lexer.TOKEN_KIND_INT { return "Int"; }
-        if token.kind == lexer.TOKEN_KIND_FLOAT { return "Float"; }
-        if token.kind == lexer.TOKEN_KIND_BOOL { return "Bool"; }
+        if token.kind == lexer.TOKEN_KIND_STRING { return numeric.KIND_STRING; }
+        if token.kind == lexer.TOKEN_KIND_INT { return numeric.KIND_INT; }
+        if token.kind == lexer.TOKEN_KIND_FLOAT { return numeric.KIND_FLOAT; }
+        if token.kind == lexer.TOKEN_KIND_BOOL { return numeric.KIND_BOOL; }
         if token.kind == lexer.TOKEN_KIND_NAME {
             index := findLocal(locals, token.text);
             if index >= 0 { return locals[index].typeText; }
@@ -287,21 +287,21 @@ typesCompatible := fn(symbols: Symbols, expected: String, actual: String): Bool 
 simpleType := fn(symbols: Symbols, locals: Locals, text: String): String {
     size := textLib.length(text);
     if size == 0 { return ""; }
-    if text == "true" or text == "false" { return "Bool"; }
-    if textLib.startsWithAt(text, 0, "\"") { return "String"; }
+    if text == "true" or text == "false" { return numeric.KIND_BOOL; }
+    if textLib.startsWithAt(text, 0, "\"") { return numeric.KIND_STRING; }
     first := textLib.at(text, 0);
     if textLib.isDigit(first) {
         token := parser.tokenAt(lexer.tokenize(text, ""), 0);
-        if token.kind == lexer.TOKEN_KIND_FLOAT { return "Float"; }
-        return "Int";
+        if token.kind == lexer.TOKEN_KIND_FLOAT { return numeric.KIND_FLOAT; }
+        return numeric.KIND_INT;
     }
     if textLib.startsWithAt(text, 0, "(-") or textLib.startsWithAt(text, 0, "(+") {
         operand := self(symbols, locals, textLib.slice(text, 2, size - 1));
         resolvedOperand := resolveAliasName(symbols, operand, 0);
         if numeric.isNumericKind(resolvedOperand) { return resolvedOperand; }
-        return "Int";
+        return numeric.KIND_INT;
     }
-    if textLib.startsWithAt(text, 0, "not ") { return "Bool"; }
+    if textLib.startsWithAt(text, 0, "not ") { return numeric.KIND_BOOL; }
     if textLib.startsWithAt(text, 0, "match {") {
         tokens := lexer.tokenize(text, "");
         count := parser.tokenCount(tokens);
@@ -315,7 +315,7 @@ simpleType := fn(symbols: Symbols, locals: Locals, text: String): String {
             if depth == 1 and parens == 0 and brackets == 0 and
                 token.kind == lexer.TOKEN_KIND_NAME and token.text == "_" and
                 parser.isSymbol(parser.tokenAt(tokens, cursor + 1), "{") {
-                if parser.isSymbol(parser.tokenAt(tokens, cursor + 2), "}") { return "Unit"; }
+                if parser.isSymbol(parser.tokenAt(tokens, cursor + 2), "}") { return numeric.KIND_UNIT; }
                 startOffset := parser.tokenOffsetAt(tokens, cursor + 2);
                 var armCursor := cursor + 2;
                 var armDepth := 1;
@@ -337,9 +337,9 @@ simpleType := fn(symbols: Symbols, locals: Locals, text: String): String {
                 loop endOffset > startOffset and textLib.at(text, endOffset - 1) == " " {
                     endOffset = endOffset - 1;
                 }
-                if endOffset <= startOffset { return "Unit"; }
+                if endOffset <= startOffset { return numeric.KIND_UNIT; }
                 fallbackText := textLib.slice(text, startOffset, endOffset);
-                if fallbackText == "Unit" { return "Unit"; }
+                if fallbackText == numeric.KIND_UNIT { return numeric.KIND_UNIT; }
                 return self(symbols, locals, fallbackText);
             }
             if parser.isSymbol(token, "{") {
@@ -394,24 +394,24 @@ simpleType := fn(symbols: Symbols, locals: Locals, text: String): String {
             operator == "==" or operator == "=!=" or operator == "<" or operator == "<!" or
             operator == "<=" or operator == "<!=" or operator == ">" or operator == ">!" or
             operator == ">=" or operator == ">!=" {
-            return "Bool";
+            return numeric.KIND_BOOL;
         }
-        if operator == "**" { return "Float"; }
+        if operator == "**" { return numeric.KIND_FLOAT; }
         if operator == "+" or operator == "-" or operator == "*" or operator == "/" or
             operator == "%" or operator == ":/" or operator == ":%" {
             split := splitBinaryOperands(text);
             if split.op =!= "" {
                 leftType := resolveAliasName(symbols, simpleType(symbols, locals, split.left), 0);
                 rightType := resolveAliasName(symbols, simpleType(symbols, locals, split.right), 0);
-                if operator == "+" and (leftType == "String" or rightType == "String") { return "String"; }
+                if operator == "+" and (leftType == numeric.KIND_STRING or rightType == numeric.KIND_STRING) { return numeric.KIND_STRING; }
                 promoted := numeric.promoteNumericKind(leftType, rightType);
                 if promoted =!= "" { return promoted; }
                 if numeric.isFloatKind(leftType) { return leftType; }
                 if numeric.isFloatKind(rightType) { return rightType; }
-                return "Int";
+                return numeric.KIND_INT;
             }
-            if operator == "+" and firstOperandType(symbols, locals, text) == "String" { return "String"; }
-            return "Int";
+            if operator == "+" and firstOperandType(symbols, locals, text) == numeric.KIND_STRING { return numeric.KIND_STRING; }
+            return numeric.KIND_INT;
         }
         if textLib.indexOfText(text, ",", 0) >= 0 or textLib.indexOfText(text, " = ", 0) >= 0 { return ""; }
         if size >= 2 { return simpleType(symbols, locals, textLib.slice(text, 1, size - 1)); }
@@ -449,9 +449,9 @@ simpleType := fn(symbols: Symbols, locals: Locals, text: String): String {
             if functionIndex >= 0 and symbols[functionIndex].kind == SYMBOL_KIND_FUNCTION {
                 return functionResultType(symbols[functionIndex]);
             }
-            if name == "inputAll" or name == "textAt" or name == "textSlice" { return "String"; }
-            if name == "textLength" { return "Int"; }
-            if name == "inputFloat" { return "Float"; }
+            if name == "inputAll" or name == "textAt" or name == "textSlice" { return numeric.KIND_STRING; }
+            if name == "textLength" { return numeric.KIND_INT; }
+            if name == "inputFloat" { return numeric.KIND_FLOAT; }
         }
     }
     ""
@@ -484,9 +484,9 @@ contextualNumericLiteralType := fn(text: String, expectedType: String): String {
     literal := parser.tokenTextAt(tokens, first);
     scanned := numeric.scanNumericLiteral(literal, 0);
     if kind == lexer.TOKEN_KIND_FLOAT {
-        if expectedType == "Float32" {
+        if expectedType == numeric.KIND_FLOAT32 {
             digits := textLib.slice(literal, 0, scanned.integerEnd) + textLib.slice(literal, scanned.fractionStart, scanned.fractionEnd);
-            if numeric.finiteFloat32Digits(digits, scanned.fractionEnd - scanned.fractionStart, scanned.exponent) { return "Float32"; }
+            if numeric.finiteFloat32Digits(digits, scanned.fractionEnd - scanned.fractionStart, scanned.exponent) { return numeric.KIND_FLOAT32; }
             return "Float";
         }
         return "";
@@ -495,8 +495,8 @@ contextualNumericLiteralType := fn(text: String, expectedType: String): String {
     if scanned.outsideInt or (not negative and scanned.magnitude == -9223372036854775808) { return ""; }
     value := if negative { scanned.magnitude } else { 0 - scanned.magnitude };
     if numeric.isNarrowIntKind(expectedType) and numeric.intKindFits(expectedType, value) { return expectedType; }
-    if expectedType == "Float32" and numeric.intExactlyFloat32(value) { return "Float32"; }
-    if expectedType == "Float" and numeric.intExactlyFloat(value) { return "Float"; }
+    if expectedType == numeric.KIND_FLOAT32 and numeric.intExactlyFloat32(value) { return numeric.KIND_FLOAT32; }
+    if expectedType == numeric.KIND_FLOAT and numeric.intExactlyFloat(value) { return numeric.KIND_FLOAT; }
     ""
 }
 
@@ -743,7 +743,7 @@ checkEmbeddedMatches := fn(tokens: lexer.Tokens, start: Int, end: Int, symbols: 
                     armOpen = parser.expectSymbol(tokens, condition.next, "{", prefix) - 1;
                     self(tokens, armCursor, brace, symbols, locals, prefix);
                     conditionType := simpleType(symbols, locals, condition.text);
-                    if isScalarType(conditionType) and conditionType =!= "Bool" {
+                    if isScalarType(conditionType) and conditionType =!= numeric.KIND_BOOL {
                         checkFail(armToken, prefix, "match arm condition must be Bool");
                     }
                 }
@@ -817,7 +817,7 @@ checkLocals := fn(tokens: lexer.Tokens, prefix: String, symbols: Symbols): Unit 
                 armOpen := parser.expectSymbol(tokens, condition.next, "{", prefix) - 1;
                 checkEmbeddedMatches(tokens, cursor, brace, symbols, locals, prefix);
                 conditionType := simpleType(symbols, locals, condition.text);
-                if isScalarType(conditionType) and conditionType =!= "Bool" {
+                if isScalarType(conditionType) and conditionType =!= numeric.KIND_BOOL {
                     checkFail(token, prefix, "match arm condition must be Bool");
                 }
                 depth = depth + 1;
@@ -910,7 +910,7 @@ checkLocals := fn(tokens: lexer.Tokens, prefix: String, symbols: Symbols): Unit 
             afterReturn := cursor + 1;
             if parser.isSymbol(parser.tokenAt(tokens, afterReturn), ";") or parser.isSymbol(parser.tokenAt(tokens, afterReturn), "}") or
                 parser.tokenKindAt(tokens, afterReturn) == lexer.TOKEN_KIND_EOF {
-                if functionResult =!= "" and functionResult =!= "Unit" {
+                if functionResult =!= "" and functionResult =!= numeric.KIND_UNIT {
                     checkFail(token, prefix, "return requires a value");
                 }
                 cursor = afterReturn;
@@ -939,7 +939,7 @@ checkLocals := fn(tokens: lexer.Tokens, prefix: String, symbols: Symbols): Unit 
             condition := parser.parseExpression(tokens, cursor + 1, prefix, 0);
             checkEmbeddedMatches(tokens, cursor + 1, condition.next, symbols, locals, prefix);
             conditionType := simpleType(symbols, locals, condition.text);
-            if isScalarType(conditionType) and conditionType =!= "Bool" {
+            if isScalarType(conditionType) and conditionType =!= numeric.KIND_BOOL {
                 checkFail(token, prefix, "if condition must be Bool");
             }
             cursor = condition.next;
@@ -975,7 +975,7 @@ checkLocals := fn(tokens: lexer.Tokens, prefix: String, symbols: Symbols): Unit 
                 pendingLoop = true;
             } else {
                 conditionType := simpleType(symbols, locals, source.text);
-                if isScalarType(conditionType) and conditionType =!= "Bool" {
+                if isScalarType(conditionType) and conditionType =!= numeric.KIND_BOOL {
                     checkFail(token, prefix, "loop condition must be Bool");
                 }
                 cursor = source.next;

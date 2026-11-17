@@ -77,7 +77,7 @@ pub logicCode := fn(op: String, left: String, right: String): String {
 
 /** Emits a kind-aware C comparison; String equality uses `strcmp` and not-less/not-more spellings invert the ordering. */
 pub comparisonCode := fn(op: String, kind: String, left: String, right: String): String {
-    if kind == "String" {
+    if kind == numeric.KIND_STRING {
         if op == "==" { "strcmp(" + left + ", " + right + ") == 0" }
         else { "strcmp(" + left + ", " + right + ") != 0" }
     } else {
@@ -102,13 +102,13 @@ pub floatOperandCode := fn(kind: String, code: String): String {
 
 /** Converts an Int* or Float operand into a binary32 value (held as double) when targeting Float32. */
 pub float32OperandCode := fn(kind: String, code: String): String {
-    if numeric.isIntKind(kind) or kind == "Float" { "((double)((float)(" + code + ")))" } else { code }
+    if numeric.isIntKind(kind) or kind == numeric.KIND_FLOAT { "((double)((float)(" + code + ")))" } else { code }
 }
 
 /** Emits one numeric comparison using the pair's common family. */
 comparisonPairCode := fn(op: String, leftKind: String, rightKind: String, left: String, right: String): String {
     if numeric.isFloatKind(leftKind) or numeric.isFloatKind(rightKind) {
-        comparisonCode(op, "Float", floatOperandCode(leftKind, left), floatOperandCode(rightKind, right))
+        comparisonCode(op, numeric.KIND_FLOAT, floatOperandCode(leftKind, left), floatOperandCode(rightKind, right))
     } else { comparisonCode(op, leftKind, left, right) }
 }
 
@@ -202,13 +202,13 @@ pub checkedNarrowIntCode := fn(kind: String, value: String, position: Int): Stri
 
 /** Names a typed, source-position-hygienic C comparison operand temporary. */
 comparisonTemp := fn(kind: String, position: Int, index: Int): String {
-    tag := if kind == "String" { "s" } else if kind == "Bool" { "b" } else if numeric.isFloatKind(kind) { "f" } else { "i" };
+    tag := if kind == numeric.KIND_STRING { "s" } else if kind == numeric.KIND_BOOL { "b" } else if numeric.isFloatKind(kind) { "f" } else { "i" };
     "lt_cmp_" + tag + "_" + integer.intText(position) + "_" + integer.intText(index)
 }
 
 /** Represents Unit as zero, retaining unsupported/effectful code for C validation instead of dropping it. */
 comparisonValueCode := fn(kind: String, code: String): String {
-    if kind =!= "Unit" { return code; }
+    if kind =!= numeric.KIND_UNIT { return code; }
     var inner := code;
     loop textLib.length(inner) >= 2 and textLib.at(inner, 0) == "(" and textLib.at(inner, textLib.length(inner) - 1) == ")" {
         inner = textLib.slice(inner, 1, textLib.length(inner) - 1);

@@ -802,7 +802,7 @@ pub tupleShapeMatches := fn(expectedKind: String, actualKind: String): Bool {
 
 /** True when `actualKind` is directly `expectedKind`, `Never` into a known target, losslessly widens numerically, or matches a compatible tuple/callable shape. */
 pub isCompatibleKind := fn(expectedKind: String, actualKind: String): Bool {
-    (expectedKind =!= "" and actualKind == "Never") or expectedKind == actualKind or
+    (expectedKind =!= "" and actualKind == VALUE_KIND_NEVER) or expectedKind == actualKind or
     numeric.numericWidens(expectedKind, actualKind) or tupleShapeMatches(expectedKind, actualKind) or
     exactShapeMatches(expectedKind, actualKind)
 }
@@ -847,8 +847,8 @@ pub tsTupleType := fn(kind: String): String {
 /** Formats an admitted output value using its static kind; aggregates evaluate once and retain tuple labels. */
 pub tsDisplayValueCode := fn(kind: String, code: String): String {
     if isIntScalarKind(kind) or isFloatScalarKind(kind) { return "(" + code + ").toString()"; }
-    if kind == "Bool" { return "((" + code + ") ? \"true\" : \"false\")"; }
-    if kind == "Unit" { return "((value: unknown): string => { void value; return \"Unit\"; })(" + code + ")"; }
+    if kind == VALUE_KIND_BOOL { return "((" + code + ") ? \"true\" : \"false\")"; }
+    if kind == VALUE_KIND_UNIT { return "((value: unknown): string => { void value; return \"Unit\"; })(" + code + ")"; }
     if isListKind(kind) or isArrayKind(kind) {
         element := if isListKind(kind) { listElementKind(kind) } else { arrayElementKind(kind) };
         return "(\"[\" + (" + code + ").map((value: " + tsFunctionType(element) + ") => " + self(element, "value") + ").join(\", \") + \"]\")";
@@ -1057,7 +1057,7 @@ parseTypeWithSeen := fn(errSource: String, errPos: Int, useLocalErr: Bool, sourc
             if isListKind(componentKind) {
                 failAt(errSource, diagPos, prefix, "list types inside tuples are not supported");
             }
-            if componentKind == "Unit" {
+            if componentKind == VALUE_KIND_UNIT {
                 failAt(errSource, diagPos, prefix, "unsupported tuple component type Unit");
             }
             if count > 0 { kindText = kindText + ","; }
@@ -1084,7 +1084,7 @@ parseTypeWithSeen := fn(errSource: String, errPos: Int, useLocalErr: Bool, sourc
     if start < size and textLib.at(source, start) == "[" {
         elemStart := skipTrivia(source, start + 1, prefix);
         inner := self(errSource, errPos, useLocalErr, source, elemStart, prefix, aliases, context, genericType, seen);
-        if inner.kind == "Unit" {
+        if inner.kind == VALUE_KIND_UNIT {
             failAt(errSource, if useLocalErr { elemStart } else { errPos }, prefix, "unsupported array element type Unit");
         }
         afterElem := skipTrivia(source, inner.next, prefix);
@@ -1182,7 +1182,7 @@ parseTypeWithSeen := fn(errSource: String, errPos: Int, useLocalErr: Bool, sourc
         return (kind = "List<" + inner.kind + ">", next = close + 1);
     }
     if genericType =!= "" and name == genericType { return (kind = genericType, next = after); }
-    if name == "Int" or name == "Float" or name == "String" or name == "Bool" or name == "Unit" or numeric.isNarrowNumericKind(name) {
+    if name == VALUE_KIND_INT or name == VALUE_KIND_FLOAT or name == VALUE_KIND_STRING or name == VALUE_KIND_BOOL or name == VALUE_KIND_UNIT or numeric.isNarrowNumericKind(name) {
         return (kind = name, next = after);
     }
     numericKind := numeric.numericAliasKind(name);
@@ -1329,17 +1329,17 @@ parseFunctionHeader := fn(source: String, position: Int, prefix: String, aliases
 /** Resolves a bodyless public core declaration only when its module identity and complete ABI are registered. */
 coreHostFunction := fn(moduleIdentity: String, name: String, params: String, result: String): String {
     if moduleIdentity == "lite.core.io.v1" {
-        if params == "...values" and result == "Unit" {
+        if params == "...values" and result == VALUE_KIND_UNIT {
             if name == "output" { "lite$core$io$output:v1" }
             else if name == "outputLine" { "lite$core$io$outputLine:v1" }
             else { "" }
-        } else if name == "errorLine" and params == "text=String" and result == "Unit" { "lite$reportError" }
-        else if name == "exit" and params == "status=Int" and result == "Unit" { "lite$exit" }
+        } else if name == "errorLine" and params == "text=String" and result == VALUE_KIND_UNIT { "lite$reportError" }
+        else if name == "exit" and params == "status=Int" and result == VALUE_KIND_UNIT { "lite$exit" }
         else if name == "inputArgs" and params == "" and result == "List<String>" { "lite$inputArgs" }
-        else if params == "prompt=String" and result == "String" {
+        else if params == "prompt=String" and result == VALUE_KIND_STRING {
             if name == "inputAll" { "lite$inputAll" } else if name == "inputLine" { "lite$inputLine" } else { "" }
-        } else if params == "prompt=String" and result == "Int" and name == "inputInt" { "lite$inputInt" }
-        else if params == "prompt=String" and result == "Float" and name == "inputFloat" { "lite$inputFloat" }
+        } else if params == "prompt=String" and result == VALUE_KIND_INT and name == "inputInt" { "lite$inputInt" }
+        else if params == "prompt=String" and result == VALUE_KIND_FLOAT and name == "inputFloat" { "lite$inputFloat" }
         else if name == "stdinReader" and params == "" and result == "(kind:String,handle:Int)" { "lite$ioStdinReader" }
         else if name == "stdoutWriter" and params == "" and result == "(kind:String,handle:Int)" { "lite$ioStdoutWriter" }
         else if name == "stderrWriter" and params == "" and result == "(kind:String,handle:Int)" { "lite$ioStderrWriter" }
@@ -1347,31 +1347,31 @@ coreHostFunction := fn(moduleIdentity: String, name: String, params: String, res
         else if name == "bufferWriter" and params == "" and result == "(kind:String,handle:Int)" { "lite$ioBufferWriter" }
         else if name == "writerBytes" and params == "writer=(kind:String,handle:Int)" and result == "List<Int>" { "lite$ioWriterBytes" }
         else if name == "writerText" and params == "writer=(kind:String,handle:Int)" and result == "(ok:Bool,text:String,error:String)" { "lite$ioWriterText" }
-        else if name == "clearWriter" and params == "writer=(kind:String,handle:Int)" and result == "Unit" { "lite$ioClearWriter" }
-        else if name == "readerOk" and params == "reader=(kind:String,handle:Int)" and result == "Bool" { "lite$ioReaderOk" }
-        else if name == "readerAtEof" and params == "reader=(kind:String,handle:Int)" and result == "Bool" { "lite$ioReaderAtEof" }
-        else if name == "readerError" and params == "reader=(kind:String,handle:Int)" and result == "String" { "lite$ioReaderError" }
+        else if name == "clearWriter" and params == "writer=(kind:String,handle:Int)" and result == VALUE_KIND_UNIT { "lite$ioClearWriter" }
+        else if name == "readerOk" and params == "reader=(kind:String,handle:Int)" and result == VALUE_KIND_BOOL { "lite$ioReaderOk" }
+        else if name == "readerAtEof" and params == "reader=(kind:String,handle:Int)" and result == VALUE_KIND_BOOL { "lite$ioReaderAtEof" }
+        else if name == "readerError" and params == "reader=(kind:String,handle:Int)" and result == VALUE_KIND_STRING { "lite$ioReaderError" }
         else if name == "read" and params == "reader=(kind:String,handle:Int)|maxBytes=Int" and result == "List<Int>" { "lite$ioRead" }
         else if name == "closeReader" and params == "reader=(kind:String,handle:Int)" and result == "(ok:Bool,error:String)" { "lite$ioCloseReader" }
-        else if name == "writerOk" and params == "writer=(kind:String,handle:Int)" and result == "Bool" { "lite$ioWriterOk" }
-        else if name == "writerError" and params == "writer=(kind:String,handle:Int)" and result == "String" { "lite$ioWriterError" }
+        else if name == "writerOk" and params == "writer=(kind:String,handle:Int)" and result == VALUE_KIND_BOOL { "lite$ioWriterOk" }
+        else if name == "writerError" and params == "writer=(kind:String,handle:Int)" and result == VALUE_KIND_STRING { "lite$ioWriterError" }
         else if name == "write" and params == "writer=(kind:String,handle:Int)|bytes=List<Int>" and result == "(ok:Bool,written:Int,error:String)" { "lite$ioWrite" }
         else if name == "flush" and params == "writer=(kind:String,handle:Int)" and result == "(ok:Bool,error:String)" { "lite$ioFlush" }
         else if name == "closeWriter" and params == "writer=(kind:String,handle:Int)" and result == "(ok:Bool,error:String)" { "lite$ioCloseWriter" }
         else { "" }
     } else if moduleIdentity == "lite.core.text.v1" {
-        if name == "length" and params == "text=String" and result == "Int" { "lite$textLength" }
-        else if name == "at" and params == "text=String|position=Int" and result == "String" { "lite$textAt" }
-        else if name == "slice" and params == "text=String|start=Int|end=Int" and result == "String" { "lite$textSlice" }
+        if name == "length" and params == "text=String" and result == VALUE_KIND_INT { "lite$textLength" }
+        else if name == "at" and params == "text=String|position=Int" and result == VALUE_KIND_STRING { "lite$textAt" }
+        else if name == "slice" and params == "text=String|start=Int|end=Int" and result == VALUE_KIND_STRING { "lite$textSlice" }
         else { "" }
     } else if moduleIdentity == "lite.core.list.v1" {
-        if name == "pushBack" and params == "values=mut List<T>|value=T" and result == "Unit" { "lite$core$list$pushBack:v1" }
+        if name == "pushBack" and params == "values=mut List<T>|value=T" and result == VALUE_KIND_UNIT { "lite$core$list$pushBack:v1" }
         else if name == "popBack" and params == "values=mut List<T>" and result == "T" { "lite$core$list$popBack:v1" }
-        else if name == "pushFront" and params == "values=mut List<T>|value=T" and result == "Unit" { "lite$core$list$pushFront:v1" }
+        else if name == "pushFront" and params == "values=mut List<T>|value=T" and result == VALUE_KIND_UNIT { "lite$core$list$pushFront:v1" }
         else if name == "popFront" and params == "values=mut List<T>" and result == "T" { "lite$core$list$popFront:v1" }
         else { "" }
     } else if moduleIdentity == "lite.core.file.v1" {
-        if name == "kind" and params == "path=String" and result == "String" { "lite$fileKind" }
+        if name == "kind" and params == "path=String" and result == VALUE_KIND_STRING { "lite$fileKind" }
         else if name == "openReader" and params == "path=String" and result == "(kind:String,handle:Int)" { "lite$fileOpenReader" }
         else if name == "openWriter" and params == "path=String" and result == "(kind:String,handle:Int)" { "lite$fileOpenWriter" }
         else if name == "openAppender" and params == "path=String" and result == "(kind:String,handle:Int)" { "lite$fileOpenAppender" }
@@ -1384,12 +1384,12 @@ coreHostFunction := fn(moduleIdentity: String, name: String, params: String, res
         else if name == "makeTempDir" and params == "prefix=String" and result == "(ok:Bool,path:String,error:String)" { "lite$fileMakeTempDir" }
         else { "" }
     } else if moduleIdentity == "lite.core.process.v1" {
-        if name == "cwd" and params == "" and result == "String" { "lite$processCwd" }
-        else if name == "execPath" and params == "" and result == "String" { "lite$processExecPath" }
-        else if name == "entryPath" and params == "" and result == "String" { "lite$processEntryPath" }
-        else if name == "platform" and params == "" and result == "String" { "lite$processPlatform" }
-        else if name == "arch" and params == "" and result == "String" { "lite$processArch" }
-        else if name == "runtimeVersion" and params == "" and result == "String" { "lite$processRuntimeVersion" }
+        if name == "cwd" and params == "" and result == VALUE_KIND_STRING { "lite$processCwd" }
+        else if name == "execPath" and params == "" and result == VALUE_KIND_STRING { "lite$processExecPath" }
+        else if name == "entryPath" and params == "" and result == VALUE_KIND_STRING { "lite$processEntryPath" }
+        else if name == "platform" and params == "" and result == VALUE_KIND_STRING { "lite$processPlatform" }
+        else if name == "arch" and params == "" and result == VALUE_KIND_STRING { "lite$processArch" }
+        else if name == "runtimeVersion" and params == "" and result == VALUE_KIND_STRING { "lite$processRuntimeVersion" }
         else if name == "envGet" and params == "name=String" and result == "(found:Bool,value:String)" { "lite$processEnvGet" }
         else if name == "run" and params == "command=String|args=List<String>|cwd=String|envOverrides=List<String>|capture=Bool|stdinText=String" and
         result == "(status:Int,stdout:String,stderr:String,error:String)" { "lite$processRun" }
@@ -1401,10 +1401,10 @@ coreHostFunction := fn(moduleIdentity: String, name: String, params: String, res
         if name == "randomBytes" and params == "count=Int" and result == "List<Int>" { "lite$cryptoRandomBytes" }
         else { "" }
     } else if moduleIdentity == "lite.core.time.v1" {
-        if name == "monotonicNs" and params == "" and result == "Int" { "lite$timeMonotonicNs" }
-        else if name == "epochNs" and params == "" and result == "Int" { "lite$timeEpochNs" }
-        else if name == "sleepMs" and params == "ms=Int" and result == "Unit" { "lite$timeSleepMs" }
-        else if name == "localDate" and params == "" and result == "String" { "lite$timeLocalDate" }
+        if name == "monotonicNs" and params == "" and result == VALUE_KIND_INT { "lite$timeMonotonicNs" }
+        else if name == "epochNs" and params == "" and result == VALUE_KIND_INT { "lite$timeEpochNs" }
+        else if name == "sleepMs" and params == "ms=Int" and result == VALUE_KIND_UNIT { "lite$timeSleepMs" }
+        else if name == "localDate" and params == "" and result == VALUE_KIND_STRING { "lite$timeLocalDate" }
         else { "" }
     } else if moduleIdentity == "lite.core.unicode.v1" {
         if name == "toCodePoints" and params == "text=String" and result == "List<Int>" { "lite$unicodeToCodePoints" }
@@ -1441,22 +1441,22 @@ isSoftBuiltinModule := fn(moduleName: String): Bool {
 softBuiltinAbi := fn(moduleName: String, name: String): (params: String, result: String) {
     if moduleName == "lib/core/crypto" {
         if name == "sha256Bytes" or name == "sha512Bytes" {
-            return (params = "bytes=List<Int>", result = "String");
+            return (params = "bytes=List<Int>", result = VALUE_KIND_STRING);
         }
         if name == "sha256Text" or name == "sha512Text" {
-            return (params = "value=String", result = "String");
+            return (params = "value=String", result = VALUE_KIND_STRING);
         }
         if name == "sha256File" {
             return (params = "path=String", result = "(ok:Bool,hex:String,error:String)");
         }
         if name == "hmacSha256Bytes" {
-            return (params = "key=List<Int>|data=List<Int>", result = "String");
+            return (params = "key=List<Int>|data=List<Int>", result = VALUE_KIND_STRING);
         }
         if name == "isValidBase64" or name == "isValidHex" {
-            return (params = "encoded=String", result = "Bool");
+            return (params = "encoded=String", result = VALUE_KIND_BOOL);
         }
         if name == "base64Encode" or name == "hexEncode" {
-            return (params = "bytes=List<Int>", result = "String");
+            return (params = "bytes=List<Int>", result = VALUE_KIND_STRING);
         }
         if name == "base64Decode" or name == "hexDecode" {
             return (params = "encoded=String", result = "List<Int>");
@@ -1476,44 +1476,44 @@ softBuiltinAbi := fn(moduleName: String, name: String): (params: String, result:
         }
     } else if moduleName == "lib/core/int" {
         if name == "intText" {
-            return (params = "value=Int", result = "String");
+            return (params = "value=Int", result = VALUE_KIND_STRING);
         }
     } else if moduleName == "lib/core/text" {
         if name == "skipSpaces" or name == "skipName" {
-            return (params = "source=String|start=Int", result = "Int");
+            return (params = "source=String|start=Int", result = VALUE_KIND_INT);
         }
         if name == "indexOf" or name == "indexOfText" {
-            return (params = "source=String|needle=String|start=Int", result = "Int");
+            return (params = "source=String|needle=String|start=Int", result = VALUE_KIND_INT);
         }
         if name == "startsWithAt" {
-            return (params = "source=String|position=Int|text=String", result = "Bool");
+            return (params = "source=String|position=Int|text=String", result = VALUE_KIND_BOOL);
         }
         if name == "wordAt" {
-            return (params = "source=String|position=Int|word=String", result = "Bool");
+            return (params = "source=String|position=Int|word=String", result = VALUE_KIND_BOOL);
         }
         if name == "joinTexts" {
-            return (params = "values=List<String>|separator=String", result = "String");
+            return (params = "values=List<String>|separator=String", result = VALUE_KIND_STRING);
         }
         if name == "textToInt" {
             return (params = "text=String", result = "(value:Int,ok:Bool)");
         }
         if name == "trimStart" or name == "trimEnd" or name == "trim" or name == "toLowerAscii" {
-            return (params = "source=String", result = "String");
+            return (params = "source=String", result = VALUE_KIND_STRING);
         }
         if name == "endsWith" {
-            return (params = "source=String|suffix=String", result = "Bool");
+            return (params = "source=String|suffix=String", result = VALUE_KIND_BOOL);
         }
         if name == "repeatText" {
-            return (params = "value=String|count=Int", result = "String");
+            return (params = "value=String|count=Int", result = VALUE_KIND_STRING);
         }
         if name == "containsText" {
-            return (params = "source=String|needle=String", result = "Bool");
+            return (params = "source=String|needle=String", result = VALUE_KIND_BOOL);
         }
         if name == "isDigit" {
-            return (params = "text=String", result = "Bool");
+            return (params = "text=String", result = VALUE_KIND_BOOL);
         }
         if name == "isAsciiLetter" or name == "isNameStart" or name == "isNameContinue" or name == "isWhitespace" {
-            return (params = "ch=String", result = "Bool");
+            return (params = "ch=String", result = VALUE_KIND_BOOL);
         }
     } else if moduleName == "lib/core/io" {
         if name == "textReader" {
@@ -1539,7 +1539,7 @@ softBuiltinAbi := fn(moduleName: String, name: String): (params: String, result:
             return (params = "bytes=List<Int>", result = "(ok:Bool,text:String,error:String)");
         }
         if name == "utf8DecodeLossy" {
-            return (params = "bytes=List<Int>", result = "String");
+            return (params = "bytes=List<Int>", result = VALUE_KIND_STRING);
         }
     }
     (params = "", result = "")
@@ -1599,17 +1599,17 @@ typedIntParsed := fn(kind: String, code: String, value: Int, constant: Bool, nex
 
 /** Builds an Int parsed value; `textValue` is empty. */
 intParsed := fn(code: String, value: Int, constant: Bool, next: Int): Parsed {
-    typedIntParsed("Int", code, value, constant, next)
+    typedIntParsed(VALUE_KIND_INT, code, value, constant, next)
 }
 
 /** Builds a String parsed value; `intValue` is zero. */
 textParsed := fn(code: String, value: String, constant: Bool, next: Int): Parsed {
-    (kind = "String", code = code, intValue = 0, textValue = value, constant = constant, next = next)
+    (kind = VALUE_KIND_STRING, code = code, intValue = 0, textValue = value, constant = constant, next = next)
 }
 
 /** Builds a Bool parsed value; `intValue` is 1 for true and 0 for false. */
 boolParsed := fn(code: String, value: Bool, constant: Bool, next: Int): Parsed {
-    (kind = "Bool", code = code, intValue = if value { 1 } else { 0 }, textValue = "", constant = constant, next = next)
+    (kind = VALUE_KIND_BOOL, code = code, intValue = if value { 1 } else { 0 }, textValue = "", constant = constant, next = next)
 }
 
 /** Tries a constant integer operation without raising a compile-time runtime fault. */
@@ -1869,7 +1869,7 @@ compareParsed := fn(target: String, source: String, at: Int, operator: String, l
             value := compareIntegers(operator, left.intValue, right.intValue);
             return boolParsed(targetBoolLiteralCode(target, value), value, true, right.next);
         }
-        return boolParsed(targetComparisonCode(target, operator, "Int", left.code, right.code), false, false, right.next);
+        return boolParsed(targetComparisonCode(target, operator, VALUE_KIND_INT, left.code, right.code), false, false, right.next);
     }
     if numeric.isNumericKind(left.kind) and numeric.isNumericKind(right.kind) {
         codes: List<String> = [left.code, right.code];
@@ -1880,7 +1880,7 @@ compareParsed := fn(target: String, source: String, at: Int, operator: String, l
     if left.kind =!= right.kind {
         failAt(source, at, prefix, "cannot compare " + displayKind(left.kind) + " and " + displayKind(right.kind));
     }
-    if left.kind == "Never" {
+    if left.kind == VALUE_KIND_NEVER {
         failAt(source, at, prefix, "cannot compare Never values");
     }
     if isTupleKind(left.kind) {
@@ -1896,7 +1896,7 @@ compareParsed := fn(target: String, source: String, at: Int, operator: String, l
         failAt(source, at, prefix, "operator " + operator + " requires Int operands");
     }
     if left.constant and right.constant {
-        value := if left.kind == "String" {
+        value := if left.kind == VALUE_KIND_STRING {
             compareTexts(operator, left.textValue, right.textValue)
         } else {
             compareBools(operator, left.intValue =!= 0, right.intValue =!= 0)
@@ -1908,24 +1908,24 @@ compareParsed := fn(target: String, source: String, at: Int, operator: String, l
 
 /** Admits an integer literal into a narrow Int or exact Float/Float32 storage context only when not followed by a binary operator at `minimum`. */
 contextualIntegerParsed := fn(target: String, source: String, position: Int, prefix: String, expected: String, minimum: Int, value: Int, code: String, next: Int): Parsed {
-    if expected =!= "" and expected =!= "Int" and not binaryFollows(source, next, prefix, minimum) {
+    if expected =!= "" and expected =!= VALUE_KIND_INT and not binaryFollows(source, next, prefix, minimum) {
         if numeric.isNarrowIntKind(expected) {
             if not numeric.intKindFits(expected, value) {
                 failAt(source, position, prefix, "integer literal outside " + expected + " range");
             }
             return typedIntParsed(expected, code, value, true, next);
         }
-        if expected == "Float32" {
+        if expected == VALUE_KIND_FLOAT32 {
             if not numeric.intExactlyFloat32(value) {
                 failAt(source, position, prefix, "integer literal is not exactly representable in Float32");
             }
-            return (kind = "Float32", code = targetFloat32OperandCode(target, "Int", code), intValue = 0, textValue = "", constant = false, next = next);
+            return (kind = VALUE_KIND_FLOAT32, code = targetFloat32OperandCode(target, VALUE_KIND_INT, code), intValue = 0, textValue = "", constant = false, next = next);
         }
-        if expected == "Float" {
+        if expected == VALUE_KIND_FLOAT {
             if not numeric.intExactlyFloat(value) {
                 failAt(source, position, prefix, "integer literal is not exactly representable in Float");
             }
-            return (kind = "Float", code = targetFloatOperandCode(target, "Int", code), intValue = 0, textValue = "", constant = false, next = next);
+            return (kind = VALUE_KIND_FLOAT, code = targetFloatOperandCode(target, VALUE_KIND_INT, code), intValue = 0, textValue = "", constant = false, next = next);
         }
     }
     intParsed(code, value, true, next)
@@ -1961,17 +1961,17 @@ parseNumber := fn(target: String, source: String, position: Int, prefix: String,
         digits := textLib.slice(source, start, integerEnd) + textLib.slice(source, scanned.fractionStart, scanned.fractionEnd);
         fractionCount := scanned.fractionEnd - scanned.fractionStart;
         raw := textLib.slice(source, digitStart, cursor);
-        if expected == "Float32" and not binaryFollows(source, cursor, prefix, minimum) {
+        if expected == VALUE_KIND_FLOAT32 and not binaryFollows(source, cursor, prefix, minimum) {
             if not numeric.finiteFloat32Digits(digits, fractionCount, scanned.exponent) {
                 failAt(source, position, prefix, "floating literal outside Float32 range");
             }
-            return (kind = "Float32", code = targetFloat32LiteralCode(target, raw, negative), intValue = 0, textValue = "", constant = false, next = cursor);
+            return (kind = VALUE_KIND_FLOAT32, code = targetFloat32LiteralCode(target, raw, negative), intValue = 0, textValue = "", constant = false, next = cursor);
         }
         if not numeric.finiteFloatDigits(digits, fractionCount, scanned.exponent) {
             failAt(source, position, prefix, "floating literal is not finite");
         }
         code := targetFloatLiteralCode(target, raw, negative);
-        return (kind = "Float", code = code, intValue = 0, textValue = "", constant = false, next = cursor);
+        return (kind = VALUE_KIND_FLOAT, code = code, intValue = 0, textValue = "", constant = false, next = cursor);
     }
     if scanned.outsideInt or (not negative and scanned.magnitude == -9223372036854775808) {
         if numeric.isNarrowIntKind(expected) and not binaryFollows(source, cursor, prefix, minimum) {
@@ -2605,18 +2605,18 @@ looksLikeTupleEntry := fn(source: String, position: Int, prefix: String): Bool {
 
 /** Wraps target code in the backend's list-copy hook when `kind` is a List; `Never` and other kinds are unchanged. */
 copiedValueCode := fn(target: String, kind: String, code: String): String {
-    if kind == "Never" { code }
+    if kind == VALUE_KIND_NEVER { code }
     else if isListKind(kind) or isArrayKind(kind) { targetListCopyCode(target, code) }
     else { code }
 }
 
 /** Converts compatible tuples or widening integer-to-float values on assignment/call/return, or copies lists when needed; `Never` passes through unchanged. */
 assignValueCode := fn(target: String, expectedKind: String, actualKind: String, actualCode: String): String {
-    if actualKind == "Never" {
+    if actualKind == VALUE_KIND_NEVER {
         actualCode
-    } else if expectedKind == "Float32" and numeric.isIntKind(actualKind) {
+    } else if expectedKind == VALUE_KIND_FLOAT32 and numeric.isIntKind(actualKind) {
         targetFloat32OperandCode(target, actualKind, actualCode)
-    } else if expectedKind == "Float" and numeric.isIntKind(actualKind) {
+    } else if expectedKind == VALUE_KIND_FLOAT and numeric.isIntKind(actualKind) {
         targetFloatOperandCode(target, actualKind, actualCode)
     } else if expectedKind =!= actualKind and tupleShapeMatches(expectedKind, actualKind) {
         convertTupleValue(expectedKind, actualKind, actualCode)
@@ -2627,15 +2627,15 @@ assignValueCode := fn(target: String, expectedKind: String, actualKind: String, 
 
 /** Rejects declarations inferred as non-storable `Unit` or `Never`. */
 rejectNonValueBinding := fn(source: String, at: Int, prefix: String, kind: String, name: String): Unit {
-    if kind == "Unit" or kind == "Never" {
+    if kind == VALUE_KIND_UNIT or kind == VALUE_KIND_NEVER {
         failAt(source, at, prefix, "cannot declare a " + displayKind(kind) + " local " + name);
     }
 }
 
 /** Chooses the emitted statement item kind, ensuring diverging items terminate non-Unit functions/main for strict TS control flow. */
 expressionStatementKind := fn(valueKind: String, returned: Bool, defaultKind: String, currentResult: String): String {
-    if valueKind == "Never" {
-        if currentResult =!= "Unit" { "Return" } else { "Call" }
+    if valueKind == VALUE_KIND_NEVER {
+        if currentResult =!= VALUE_KIND_UNIT { "Return" } else { "Call" }
     } else if returned {
         "Return"
     } else {
@@ -2737,14 +2737,14 @@ compoundAssignCode := fn(target: String, source: String, opPos: Int, prefix: Str
     if numeric.isIntKind(entryKind) and numeric.isIntKind(rhs.kind) and numeric.numericWidens(entryKind, rhs.kind) {
         return runtimeTypedIntegerCode(target, entryKind, baseOp, lhsCode, rhs.code, opPos);
     }
-    if entryKind == "String" and rhs.kind == "String" and baseOp == "+" {
+    if entryKind == VALUE_KIND_STRING and rhs.kind == VALUE_KIND_STRING and baseOp == "+" {
         return targetConcatCode(target, lhsCode, rhs.code);
     }
-    if entryKind == "Float32" and (numeric.isIntKind(rhs.kind) or rhs.kind == "Float32") and
+    if entryKind == VALUE_KIND_FLOAT32 and (numeric.isIntKind(rhs.kind) or rhs.kind == VALUE_KIND_FLOAT32) and
     (baseOp == "+" or baseOp == "-" or baseOp == "*" or baseOp == "/") {
         return targetFloat32BinaryCode(target, baseOp, lhsCode, targetFloat32OperandCode(target, rhs.kind, rhs.code), opPos);
     }
-    if entryKind == "Float" and numeric.isNumericKind(rhs.kind) and
+    if entryKind == VALUE_KIND_FLOAT and numeric.isNumericKind(rhs.kind) and
     (baseOp == "+" or baseOp == "-" or baseOp == "*" or baseOp == "/") {
         return targetFloatBinaryCode(target, baseOp, lhsCode, targetFloatOperandCode(target, rhs.kind, rhs.code), opPos);
     }
@@ -2964,7 +2964,7 @@ zeroParsed := fn(target: String, kind: String, next: Int): Parsed {
         }
         retKind := fnResultKind(kind);
         retTs := tsFunctionType(retKind);
-        bodyCode := if retKind == "Unit" {
+        bodyCode := if retKind == VALUE_KIND_UNIT {
             "{ " + voidStmts + "}"
         } else {
             "{ " + voidStmts + "return " + self(target, retKind, next).code + "; }"
@@ -2973,8 +2973,8 @@ zeroParsed := fn(target: String, kind: String, next: Int): Parsed {
     }
     else if numeric.isIntKind(kind) { typedIntParsed(kind, targetIntLiteralCode(target, 0, false, "0"), 0, true, next) }
     else if numeric.isFloatKind(kind) { (kind = kind, code = "0", intValue = 0, textValue = "", constant = false, next = next) }
-    else if kind == "String" { textParsed(targetTextLiteralCode(target, ""), "", true, next) }
-    else if kind == "Unit" { (kind = "Unit", code = targetUnitLiteralCode(target), intValue = 0, textValue = "", constant = true, next = next) }
+    else if kind == VALUE_KIND_STRING { textParsed(targetTextLiteralCode(target, ""), "", true, next) }
+    else if kind == VALUE_KIND_UNIT { (kind = VALUE_KIND_UNIT, code = targetUnitLiteralCode(target), intValue = 0, textValue = "", constant = true, next = next) }
     else { boolParsed(targetBoolLiteralCode(target, false), false, true, next) }
 }
 
@@ -2988,7 +2988,7 @@ parseLocalType := fn(source: String, position: Int, prefix: String, aliases: Lis
         cursor = skipTrivia(source, cursor + 3, prefix);
     }
     typed := parseTypeAt(source, cursor, prefix, aliases, "local", "");
-    if typed.kind == "Unit" {
+    if typed.kind == VALUE_KIND_UNIT {
         name := textLib.slice(source, cursor, textLib.skipName(source, cursor));
         failAt(source, cursor, prefix, "unsupported local type " + name);
     }
@@ -3206,8 +3206,8 @@ loopValMarkerId := fn(kind: String): Int {
 
 /** Unifies two conditional branch kinds when one is `Never`, both match, one is a Pass 1 loop `.value` placeholder, or one losslessly widens to the other. */
 joinBranchKind := fn(current: String, nextKind: String): String {
-    if current == "" or current == "Never" { return nextKind; }
-    if nextKind == "Never" or nextKind == current { return current; }
+    if current == "" or current == VALUE_KIND_NEVER { return nextKind; }
+    if nextKind == VALUE_KIND_NEVER or nextKind == current { return current; }
     if loopValMarkerId(current) >= 0 { return nextKind; }
     if loopValMarkerId(nextKind) >= 0 { return current; }
     if numeric.numericWidens(current, nextKind) { return current; }
@@ -3230,11 +3230,11 @@ ternaryChainCode := fn(target: String, resultKind: String, conditionCodes: List<
 
 /** Formats one conditional branch statement for a lowered IIFE conditional (`if`, `else if`, `else`, or `match` arm). */
 condBranchStmtCode := fn(target: String, valKind: String, valVar: String, branchKind: String, branchCode: String): String {
-    if valKind == "Never" {
+    if valKind == VALUE_KIND_NEVER {
         "return (" + branchCode + ");"
-    } else if branchKind == "Never" {
+    } else if branchKind == VALUE_KIND_NEVER {
         "(" + branchCode + ");"
-    } else if valKind == "Unit" {
+    } else if valKind == VALUE_KIND_UNIT {
         if branchCode == targetUnitLiteralCode(target) { "" } else { "void (" + branchCode + ");" }
     } else {
         valVar + " = " + assignValueCode(target, valKind, branchKind, branchCode) + ";"
@@ -3476,7 +3476,7 @@ inferKindFromMarkers := fn(raw: String, targetId: Int, targetTag: String, source
         cursor = endPos + 1;
     }
     if result == "" {
-        if blockStopped { "Never" } else { "Unit" }
+        if blockStopped { VALUE_KIND_NEVER } else { VALUE_KIND_UNIT }
     } else {
         result
     }
@@ -3908,7 +3908,7 @@ resolveLoopField := fn(target: String, ctx: ConstructCtx, fieldName: String, exp
     }
     if fieldName == "value" {
         if ctx.valKind == "__infer__" {
-            if expected =!= "" and expected =!= "Unit" and expected =!= "Never" and
+            if expected =!= "" and expected =!= VALUE_KIND_UNIT and expected =!= VALUE_KIND_NEVER and
             not textLib.startsWithAt(expected, 0, "TailList<") and not textLib.startsWithAt(expected, 0, "__loopVal:") {
                 return withMarkers((kind = expected, code = ctx.valVar, intValue = 0, textValue = "", constant = false, next = fieldEnd),
                 integer.intText(ctx.id) + "=" + expected + "\n");
@@ -3921,8 +3921,8 @@ resolveLoopField := fn(target: String, ctx: ConstructCtx, fieldName: String, exp
             return withMarkers((kind = hint, code = ctx.valVar, intValue = 0, textValue = "", constant = false, next = fieldEnd),
             integer.intText(ctx.id) + "=" + hint + "\n");
         }
-        if ctx.valKind == "Unit" {
-            return (kind = "Unit", code = targetUnitLiteralCode(target), intValue = 0, textValue = "", constant = true, next = fieldEnd);
+        if ctx.valKind == VALUE_KIND_UNIT {
+            return (kind = VALUE_KIND_UNIT, code = targetUnitLiteralCode(target), intValue = 0, textValue = "", constant = true, next = fieldEnd);
         }
         return (kind = ctx.valKind, code = ctx.valVar, intValue = 0, textValue = "", constant = false, next = fieldEnd);
     }
@@ -3930,8 +3930,8 @@ resolveLoopField := fn(target: String, ctx: ConstructCtx, fieldName: String, exp
         if ctx.phase == "header" {
             failAt(source, fieldStart, prefix, ".item is not available in loop header");
         }
-        if ctx.itemKind == "" or ctx.itemKind == "Unit" {
-            return (kind = "Unit", code = targetUnitLiteralCode(target), intValue = 0, textValue = "", constant = true, next = fieldEnd);
+        if ctx.itemKind == "" or ctx.itemKind == VALUE_KIND_UNIT {
+            return (kind = VALUE_KIND_UNIT, code = targetUnitLiteralCode(target), intValue = 0, textValue = "", constant = true, next = fieldEnd);
         }
         return (kind = ctx.itemKind, code = ctx.itemVar, intValue = 0, textValue = "", constant = false, next = fieldEnd);
     }
@@ -4011,7 +4011,7 @@ inferLoopValueKind := fn(raw: String, loopId: Int, tagDisplay: String, source: S
     if sawRead {
         failAt(source, at, prefix, "cannot infer loop .value type; add a type annotation");
     }
-    "Unit"
+    VALUE_KIND_UNIT
 }
 
 /** Pre-collects shallow `Name := type Target` aliases inside the `{ ... }` block opening at `openBracePos`, skipping nested `{ ... }` blocks. */
@@ -4115,7 +4115,7 @@ canResolveTypeAt := fn(source: String, position: Int, prefix: String, aliases: L
             }
             parsedField := self(source, fieldStart, prefix, aliases, genericType, seen, depthLeft - 1);
             if not parsedField.ok { return (ok = false, kind = "", next = fieldStart); }
-            if isTupleKind(parsedField.kind) or isListKind(parsedField.kind) or parsedField.kind == "Unit" {
+            if isTupleKind(parsedField.kind) or isListKind(parsedField.kind) or parsedField.kind == VALUE_KIND_UNIT {
                 return (ok = false, kind = "", next = fieldStart);
             }
             listLib.pushBack(mut parts, label + ":" + parsedField.kind);
@@ -4139,7 +4139,7 @@ canResolveTypeAt := fn(source: String, position: Int, prefix: String, aliases: L
     }
     if ch == "[" {
         elem := self(source, start + 1, prefix, aliases, genericType, seen, depthLeft - 1);
-        if not elem.ok or elem.kind == "Unit" { return (ok = false, kind = "", next = start); }
+        if not elem.ok or elem.kind == VALUE_KIND_UNIT { return (ok = false, kind = "", next = start); }
         afterElem := skipTrivia(source, elem.next, prefix);
         if afterElem >= size or textLib.at(source, afterElem) =!= ";" {
             return (ok = false, kind = "", next = afterElem);
@@ -4212,7 +4212,7 @@ canResolveTypeAt := fn(source: String, position: Int, prefix: String, aliases: L
             return (ok = false, kind = "", next = afterList);
         }
         elem := self(source, afterList + 1, prefix, aliases, genericType, seen, depthLeft - 1);
-        if not elem.ok or isListKind(elem.kind) or elem.kind == "Unit" {
+        if not elem.ok or isListKind(elem.kind) or elem.kind == VALUE_KIND_UNIT {
             return (ok = false, kind = "", next = afterList + 1);
         }
         close := skipTrivia(source, elem.next, prefix);
@@ -4221,7 +4221,7 @@ canResolveTypeAt := fn(source: String, position: Int, prefix: String, aliases: L
         }
         return (ok = true, kind = "List<" + elem.kind + ">", next = close + 1);
     }
-    if name == "Int" or name == "Float" or name == "String" or name == "Bool" or name == "Unit" {
+    if name == VALUE_KIND_INT or name == VALUE_KIND_FLOAT or name == VALUE_KIND_STRING or name == VALUE_KIND_BOOL or name == VALUE_KIND_UNIT {
         return (ok = true, kind = name, next = afterName);
     }
     if numeric.numericAliasKind(name) =!= "" {
@@ -4422,31 +4422,31 @@ tryInferRootExprKind := fn(source: String, position: Int, prefix: String, aliase
         leftKind = operand.kind;
         leftNext = operand.next;
     } else if ch == "n" and textLib.wordAt(source, start, "not") {
-        operand := self(source, start + 3, prefix, aliases, functions, params, locals, futureValues, "Bool", 70, depthLeft - 1);
-        if operand.kind =!= "Bool" { return (kind = "", next = start); }
-        leftKind = "Bool";
+        operand := self(source, start + 3, prefix, aliases, functions, params, locals, futureValues, VALUE_KIND_BOOL, 70, depthLeft - 1);
+        if operand.kind =!= VALUE_KIND_BOOL { return (kind = "", next = start); }
+        leftKind = VALUE_KIND_BOOL;
         leftNext = operand.next;
     } else if textLib.isDigit(ch) {
         scanned := numeric.scanNumericLiteral(source, start);
         if scanned.exponentMissingAt >= 0 { return (kind = "", next = start); }
         if scanned.floating {
-            leftKind = if expected == "Float32" { "Float32" } else { "Float" };
+            leftKind = if expected == VALUE_KIND_FLOAT32 { VALUE_KIND_FLOAT32 } else { VALUE_KIND_FLOAT };
         } else {
-            leftKind = if numeric.isNarrowNumericKind(expected) or expected == "Float" or expected == "Float32" {
+            leftKind = if numeric.isNarrowNumericKind(expected) or expected == VALUE_KIND_FLOAT or expected == VALUE_KIND_FLOAT32 {
                 expected
             } else {
-                "Int"
+                VALUE_KIND_INT
             };
         }
         leftNext = scanned.next;
     } else if ch == "\"" {
-        leftKind = "String";
+        leftKind = VALUE_KIND_STRING;
         leftNext = skipAliasString(source, start);
     } else if ch == "t" and textLib.wordAt(source, start, "true") {
-        leftKind = "Bool";
+        leftKind = VALUE_KIND_BOOL;
         leftNext = start + 4;
     } else if ch == "f" and textLib.wordAt(source, start, "false") {
-        leftKind = "Bool";
+        leftKind = VALUE_KIND_BOOL;
         leftNext = start + 5;
     } else if ch == "[" {
         var cur := skipTrivia(source, start + 1, prefix);
@@ -4460,7 +4460,7 @@ tryInferRootExprKind := fn(source: String, position: Int, prefix: String, aliase
         } else {
             elemExp := if isListKind(expected) { listElementKind(expected) } else if isArrayKind(expected) { arrayElementKind(expected) } else { "" };
             firstEl := self(source, cur, prefix, aliases, functions, params, locals, futureValues, elemExp, 0, depthLeft - 1);
-            if firstEl.kind == "" or firstEl.kind == "Unit" { return (kind = "", next = start); }
+            if firstEl.kind == "" or firstEl.kind == VALUE_KIND_UNIT { return (kind = "", next = start); }
             var elemCount := 1;
             cur = skipTrivia(source, firstEl.next, prefix);
             loop cur < size and textLib.at(source, cur) == "," {
@@ -4484,7 +4484,7 @@ tryInferRootExprKind := fn(source: String, position: Int, prefix: String, aliase
         if parenClose < 0 { return (kind = "", next = start); }
         innerPos := skipTrivia(source, start + 1, prefix);
         if innerPos >= parenClose - 1 {
-            leftKind = "Unit";
+            leftKind = VALUE_KIND_UNIT;
             leftNext = parenClose;
         } else {
             if not looksLikeTupleEntry(source, innerPos, prefix) {
@@ -4534,7 +4534,7 @@ tryInferRootExprKind := fn(source: String, position: Int, prefix: String, aliase
                         }
                     }
                     fVal := self(source, valStart, prefix, aliases, functions, params, locals, futureValues, "", 0, depthLeft - 1);
-                    if fVal.kind == "" or isTupleKind(fVal.kind) or isListKind(fVal.kind) or fVal.kind == "Unit" {
+                    if fVal.kind == "" or isTupleKind(fVal.kind) or isListKind(fVal.kind) or fVal.kind == VALUE_KIND_UNIT {
                         return (kind = "", next = start);
                     }
                     listLib.pushBack(mut tParts, fLabel + ":" + fVal.kind);
@@ -4559,7 +4559,7 @@ tryInferRootExprKind := fn(source: String, position: Int, prefix: String, aliase
         if blockClose < 0 { return (kind = "", next = start); }
         tailPos := tryInferBlockTailStart(source, start, blockClose, prefix);
         if tailPos < 0 {
-            leftKind = "Unit";
+            leftKind = VALUE_KIND_UNIT;
         } else {
             tailParsed := self(source, tailPos, prefix, aliases, functions, params, locals, futureValues, expected, 0, depthLeft - 1);
             if tailParsed.kind == "" or skipTrivia(source, tailParsed.next, prefix) =!= blockClose - 1 {
@@ -4589,7 +4589,7 @@ tryInferRootExprKind := fn(source: String, position: Int, prefix: String, aliase
             closeBr := scanBraceEnd(source, openBr, prefix);
             if closeBr < 0 { return (kind = "", next = start); }
             tailPos := tryInferBlockTailStart(source, openBr, closeBr, prefix);
-            var brKind := "Unit";
+            var brKind := VALUE_KIND_UNIT;
             if tailPos >= 0 {
                 tailParsed := self(source, tailPos, prefix, aliases, functions, params, locals, futureValues, expected, 0, depthLeft - 1);
                 if tailParsed.kind == "" or skipTrivia(source, tailParsed.next, prefix) =!= closeBr - 1 {
@@ -4610,7 +4610,7 @@ tryInferRootExprKind := fn(source: String, position: Int, prefix: String, aliase
                     if elseClose < 0 { return (kind = "", next = start); }
                     hasElseBranch = true;
                     elseTail := tryInferBlockTailStart(source, afterElse, elseClose, prefix);
-                    var elseKind := "Unit";
+                    var elseKind := VALUE_KIND_UNIT;
                     if elseTail >= 0 {
                         elseParsed := self(source, elseTail, prefix, aliases, functions, params, locals, futureValues, expected, 0, depthLeft - 1);
                         if elseParsed.kind == "" or skipTrivia(source, elseParsed.next, prefix) =!= elseClose - 1 {
@@ -4632,7 +4632,7 @@ tryInferRootExprKind := fn(source: String, position: Int, prefix: String, aliase
         if afterIf < size and (textLib.wordAt(source, afterIf, "then") or textLib.wordAt(source, afterIf, "finally")) {
             return (kind = "", next = start);
         }
-        leftKind = if hasElseBranch { accKind } else { "Unit" };
+        leftKind = if hasElseBranch { accKind } else { VALUE_KIND_UNIT };
         leftNext = endPos;
     } else if ch == "f" and textLib.wordAt(source, start, "fn") {
         hdrPos := skipTrivia(source, start + 2, prefix);
@@ -4650,7 +4650,7 @@ tryInferRootExprKind := fn(source: String, position: Int, prefix: String, aliase
             pName := textLib.slice(source, pCur, pEnd);
             afterPColon := skipTrivia(source, pEnd, prefix);
             pTyped := canResolveTypeAt(source, afterPColon + 1, prefix, aliases, "", emptySeen, 32);
-            if not pTyped.ok or pTyped.kind == "Unit" { return (kind = "", next = start); }
+            if not pTyped.ok or pTyped.kind == VALUE_KIND_UNIT { return (kind = "", next = start); }
             listLib.pushBack(mut fnParamParts, pName + ":" + pTyped.kind);
             pCur = skipTrivia(source, pTyped.next, prefix);
             if pCur < size and textLib.at(source, pCur) == "," { pCur = skipTrivia(source, pCur + 1, prefix); }
@@ -4670,7 +4670,7 @@ tryInferRootExprKind := fn(source: String, position: Int, prefix: String, aliase
         name := textLib.slice(source, start, afterName);
         if isReservedWord(name) { return (kind = "", next = start); }
         locIdx := localIndex(locals, name);
-        if locIdx >= 0 and locals[locIdx].kind == "Module" {
+        if locIdx >= 0 and locals[locIdx].kind == VALUE_KIND_MODULE {
             afterDot := skipTrivia(source, afterName, prefix);
             if afterDot >= size or textLib.at(source, afterDot) =!= "." { return (kind = "", next = start); }
             memStart := skipTrivia(source, afterDot + 1, prefix);
@@ -4752,7 +4752,7 @@ tryInferRootExprKind := fn(source: String, position: Int, prefix: String, aliase
             leftNext = callClose;
         } else if postCh == "[" and (isListKind(leftKind) or isArrayKind(leftKind)) {
             brClose := skipTrivia(source, postPos + 1, prefix);
-            idxExpr := self(source, brClose, prefix, aliases, functions, params, locals, futureValues, "Int", 0, depthLeft - 1);
+            idxExpr := self(source, brClose, prefix, aliases, functions, params, locals, futureValues, VALUE_KIND_INT, 0, depthLeft - 1);
             afterIdx := skipTrivia(source, idxExpr.next, prefix);
             if afterIdx >= size or textLib.at(source, afterIdx) =!= "]" { return (kind = "", next = start); }
             leftKind = if isListKind(leftKind) { listElementKind(leftKind) } else { arrayElementKind(leftKind) };
@@ -4807,8 +4807,8 @@ tryInferRootExprKind := fn(source: String, position: Int, prefix: String, aliase
         right := self(source, opPos + operator.width, prefix, aliases, functions, params, locals, futureValues, "", nextMinimum, depthLeft - 1);
         if right.kind == "" { return (kind = "", next = start); }
         if operator.text == "and" or operator.text == "or" {
-            if leftKind =!= "Bool" or right.kind =!= "Bool" { return (kind = "", next = start); }
-            leftKind = "Bool";
+            if leftKind =!= VALUE_KIND_BOOL or right.kind =!= VALUE_KIND_BOOL { return (kind = "", next = start); }
+            leftKind = VALUE_KIND_BOOL;
             leftNext = right.next;
         } else if isComparison(operator.text) {
             var cmpNext := right.next;
@@ -4820,10 +4820,10 @@ tryInferRootExprKind := fn(source: String, position: Int, prefix: String, aliase
                 if chained.kind == "" { return (kind = "", next = start); }
                 cmpNext = chained.next;
             }
-            leftKind = "Bool";
+            leftKind = VALUE_KIND_BOOL;
             leftNext = cmpNext;
-        } else if operator.text == "+" and leftKind == "String" and right.kind == "String" {
-            leftKind = "String";
+        } else if operator.text == "+" and leftKind == VALUE_KIND_STRING and right.kind == VALUE_KIND_STRING {
+            leftKind = VALUE_KIND_STRING;
             leftNext = right.next;
         } else if numeric.isNumericKind(leftKind) and numeric.isNumericKind(right.kind) {
             leftKind = if leftKind == right.kind { leftKind } else { numeric.promoteNumericKind(leftKind, right.kind) };
@@ -7219,7 +7219,7 @@ functionParams: List<String>, locals: List<Local>): List<Local> {
                         declMutable := declTag == DECL_TAG_VAR_VAL or declTag == DECL_TAG_VAR_MUT;
                         declWritable := declTag == DECL_TAG_VAR_MUT or declTag == DECL_TAG_MUT_VAL;
                         inferred := tryInferRootExprKind(source, posVal, prefix, scopedAliases, functions, functionParams, locals, futureValues, "", 0, 24);
-                        if inferred.kind =!= "" and inferred.kind =!= "Unit" and (not declWritable or isListKind(inferred.kind)) {
+                        if inferred.kind =!= "" and inferred.kind =!= VALUE_KIND_UNIT and (not declWritable or isListKind(inferred.kind)) {
                             listLib.pushBack(mut futureValues, (name = decl.name, runtime = "", kind = inferred.kind,
                             at = decl.intValue, mutable = declMutable, writable = declWritable, initState = INIT_STATE_INIT));
                             resolvedBag = appendPipeBag(resolvedBag, keyText);
@@ -7234,7 +7234,7 @@ functionParams: List<String>, locals: List<Local>): List<Local> {
                         destrMutable := decl.runtime == DECL_BIND_VAR;
                         inferred := tryInferRootExprKind(source, rhsPos, prefix, scopedAliases, functions, functionParams, locals, futureValues, "", 0, 24);
                         if destr.grouped {
-                            if inferred.kind =!= "" and inferred.kind =!= "Unit" {
+                            if inferred.kind =!= "" and inferred.kind =!= VALUE_KIND_UNIT {
                                 bindName := destr.namesText;
                                 listLib.pushBack(mut futureValues, (name = bindName, runtime = "",
                                 kind = inferred.kind, at = decl.intValue, mutable = destrMutable, writable = false, initState = INIT_STATE_INIT));
@@ -7327,7 +7327,7 @@ parseBinaryCtx := fn(target: String, source: String, position: Int, prefix: Stri
     ch := textLib.at(source, start);
     if ch == "(" {
         if textLib.at(source, skipTrivia(source, start + 1, prefix)) == ")" {
-            left = (kind = "Unit", code = targetUnitLiteralCode(target), intValue = 0, textValue = "", constant = true, next = skipTrivia(source, start + 1, prefix) + 1);
+            left = (kind = VALUE_KIND_UNIT, code = targetUnitLiteralCode(target), intValue = 0, textValue = "", constant = true, next = skipTrivia(source, start + 1, prefix) + 1);
         } else if looksLikeTupleEntry(source, start + 1, prefix) {
             var cursor := skipTrivia(source, start + 1, prefix);
             labels: mut List<String> = [];
@@ -7380,7 +7380,7 @@ parseBinaryCtx := fn(target: String, source: String, position: Int, prefix: Stri
                 if isListKind(value.kind) {
                     failAt(source, valueStart, prefix, "list values inside tuples are not supported");
                 }
-                if value.kind == "Unit" or value.kind == "Never" {
+                if value.kind == VALUE_KIND_UNIT or value.kind == VALUE_KIND_NEVER {
                     failName := if label =!= "" { label } else { integer.intText(count) };
                     failAt(source, valueStart, prefix, "tuple field " + failName + " cannot be " + displayKind(value.kind));
                 }
@@ -7429,7 +7429,7 @@ parseBinaryCtx := fn(target: String, source: String, position: Int, prefix: Stri
             operand := self(target, source, start + 1, prefix, locals, functions, params, currentName, "", 30, ctxs, iifeDepth, inferMode, "", aliases);
             operandLoopId := loopValMarkerId(operand.kind);
             if inferMode and operandLoopId >= 0 {
-                if expected =!= "" and expected =!= "Unit" and expected =!= "Never" and numeric.isNumericKind(expected) {
+                if expected =!= "" and expected =!= VALUE_KIND_UNIT and expected =!= VALUE_KIND_NEVER and numeric.isNumericKind(expected) {
                     left = withMarkers((kind = expected, code = "", intValue = 0, textValue = "", constant = false, next = operand.next),
                     collectParsedMarkers("", operand) + integer.intText(operandLoopId) + "=" + expected + "\n");
                 } else {
@@ -7490,17 +7490,17 @@ parseBinaryCtx := fn(target: String, source: String, position: Int, prefix: Stri
             elementStart := cursor;
             element := self(target, source, cursor, prefix, locals, functions, params, currentName, elementKind, 0, ctxs, iifeDepth, inferMode, "", aliases);
             if inferMode { listMarkers = collectParsedMarkers(listMarkers, element); }
-            if element.kind == "Unit" and elementKind =!= "Unit" {
+            if element.kind == VALUE_KIND_UNIT and elementKind =!= VALUE_KIND_UNIT {
                 failAt(source, elementStart, prefix, "list element " + formatLib.decimalText(count + 1) + " cannot be Unit");
             }
             if isListKind(element.kind) {
                 failAt(source, elementStart, prefix, "nested list types are not supported");
             }
             if elementKind == "" {
-                if element.kind =!= "Never" { elementKind = element.kind; }
+                if element.kind =!= VALUE_KIND_NEVER { elementKind = element.kind; }
             } else {
                 compatible := if isListTarget { isCompatibleKind(elementKind, element.kind) }
-                else { element.kind == "Never" or element.kind == elementKind or fnShapeMatches(elementKind, element.kind) };
+                else { element.kind == VALUE_KIND_NEVER or element.kind == elementKind or fnShapeMatches(elementKind, element.kind) };
                 if not compatible {
                     failAt(source, elementStart, prefix, "list element " + formatLib.decimalText(count + 1) + " must be " +
                     displayKind(elementKind) + ", got " + displayKind(element.kind));
@@ -7553,9 +7553,9 @@ parseBinaryCtx := fn(target: String, source: String, position: Int, prefix: Stri
                     if ctx.phase =!= "then" {
                         failAt(source, fieldStart, prefix, "@" + tagInfo.tag + ".value is only available inside that conditional's then block");
                     }
-                    if ctx.itemKind == "Unit" or ctx.itemKind == "Never" or ctx.itemKind == "" {
+                    if ctx.itemKind == VALUE_KIND_UNIT or ctx.itemKind == VALUE_KIND_NEVER or ctx.itemKind == "" {
                         failAt(source, fieldStart, prefix, "block tag @" + tagInfo.tag + " does not expose .value for " +
-                        displayKind(if ctx.itemKind == "" { "Unit" } else { ctx.itemKind }) + " conditional");
+                        displayKind(if ctx.itemKind == "" { VALUE_KIND_UNIT } else { ctx.itemKind }) + " conditional");
                     }
                     left = (kind = ctx.itemKind, code = ctx.itemVar, intValue = 0, textValue = "", constant = false, next = fieldEnd);
                 } else {
@@ -7576,7 +7576,7 @@ parseBinaryCtx := fn(target: String, source: String, position: Int, prefix: Stri
             if target =!= TARGET_TS {
                 failAt(source, start, prefix, "C backend does not support tagged blocks yet");
             }
-            hintExpected := if expected == "Unit" or expected == "Never" {
+            hintExpected := if expected == VALUE_KIND_UNIT or expected == VALUE_KIND_NEVER {
                 ""
             } else if textLib.startsWithAt(expected, 0, "TailList<") {
                 "List<" + listElementKind(textLib.slice(expected, 4, textLib.length(expected))) + ">"
@@ -7597,7 +7597,7 @@ parseBinaryCtx := fn(target: String, source: String, position: Int, prefix: Stri
                 left = pass1;
             } else {
                 inferredKind := pass1.kind;
-                pass2Expected := if inferredKind == "Unit" or inferredKind == "Never" { "" } else { inferredKind };
+                pass2Expected := if inferredKind == VALUE_KIND_UNIT or inferredKind == VALUE_KIND_NEVER { "" } else { inferredKind };
                 pass2Ctx := (id = blockId, tag = tagInfo.tag, kind = "block", phase = "body",
                 iifeDepth = iifeDepth + 1, valKind = inferredKind, valVar = blockValVar, label = blockLabel,
                 iterLabel = taggedLexDepthStr, countVar = "", itemVar = "", itemKind = "", indexVar = "", hasIndex = false);
@@ -7616,7 +7616,7 @@ parseBinaryCtx := fn(target: String, source: String, position: Int, prefix: Stri
                 iifeDepth = iifeDepth + 1, valKind = left.kind, valVar = blockValVar, label = blockLabel,
                 iterLabel = "", countVar = "", itemVar = "", itemKind = "", indexVar = "", hasIndex = false);
                 finBarrierCtx := (id = 0, tag = "", kind = "finally", phase = "finally",
-                iifeDepth = iifeDepth + 1, valKind = "Unit", valVar = "", label = "",
+                iifeDepth = iifeDepth + 1, valKind = VALUE_KIND_UNIT, valVar = "", label = "",
                 iterLabel = "", countVar = "", itemVar = "", itemKind = "", indexVar = "", hasIndex = false);
                 finCtxs := appendCtx(appendCtx(ctxs, taggedFinCtx), finBarrierCtx);
                 finParsed := self(target, source, finOpen - 1, prefix, locals, functions, params, currentName,
@@ -7628,14 +7628,14 @@ parseBinaryCtx := fn(target: String, source: String, position: Int, prefix: Stri
                 if afterFinClose < tagSourceSize and textLib.wordAt(source, afterFinClose, "finally") {
                     failAt(source, afterFinClose, prefix, "duplicate finally block");
                 }
-                finalTaggedKind := if finParsed.kind == "Never" { "Never" } else { left.kind };
+                finalTaggedKind := if finParsed.kind == VALUE_KIND_NEVER { VALUE_KIND_NEVER } else { left.kind };
                 if inferMode {
                     mergedTaggedMarkers := collectParsedMarkers(collectParsedMarkers("", left), finParsed);
                     left = withMarkers((kind = finalTaggedKind, code = "", intValue = 0, textValue = "", constant = false, next = finParsed.next), mergedTaggedMarkers);
                 } else {
-                    taggedTryBody := if left.kind == "Unit" {
+                    taggedTryBody := if left.kind == VALUE_KIND_UNIT {
                         "void (" + left.code + "); return undefined;"
-                    } else if left.kind == "Never" {
+                    } else if left.kind == VALUE_KIND_NEVER {
                         "(" + left.code + ");"
                     } else {
                         "return " + left.code + ";"
@@ -7704,7 +7704,7 @@ parseBinaryCtx := fn(target: String, source: String, position: Int, prefix: Stri
         var statementCount := 0;
         var blockMarkers := "";
         var cursor := skipItemSeparators(source, start + 1, prefix);
-        var blockKind := "Unit";
+        var blockKind := VALUE_KIND_UNIT;
         var blockCode := targetUnitLiteralCode(target);
         var blockInt := 0;
         var blockText := "";
@@ -7766,18 +7766,18 @@ parseBinaryCtx := fn(target: String, source: String, position: Int, prefix: Stri
                     if isTupleKind(rhs.kind) {
                         failAt(source, destructureOpen, prefix, "tuple destructuring expected 0 fields, got " + integer.intText(tupleComponentCount(rhs.kind)));
                     }
-                    if rhs.kind =!= "Unit" and rhs.kind =!= "Never" {
+                    if rhs.kind =!= VALUE_KIND_UNIT and rhs.kind =!= VALUE_KIND_NEVER {
                         failAt(source, destructureOpen, prefix, "tuple destructuring requires Unit for (), got " + displayKind(rhs.kind));
                     }
                     statementNext := consumeStatementEnd(source, rhs.next, prefix);
                     if statementNext < 0 { failAt(source, skipTrivia(source, rhs.next, prefix), prefix, "expected ; after tuple destructuring"); }
                     if not blockExits {
-                        if rhs.kind == "Never" {
+                        if rhs.kind == VALUE_KIND_NEVER {
                             listLib.pushBack(mut statements, stmtReturnPrefix + "(" + rhs.code + ");");
                             blockExits = true;
                         } else {
                             listLib.pushBack(mut statements, "void (" + rhs.code + ");");
-                            if isPrunableExprForTarget(target, "Unit", rhs.code) {
+                            if isPrunableExprForTarget(target, VALUE_KIND_UNIT, rhs.code) {
                                 listLib.pushBack(mut stmtOwners, "#discard");
                                 listLib.pushBack(mut stmtDeps, "");
                             } else {
@@ -7835,7 +7835,7 @@ parseBinaryCtx := fn(target: String, source: String, position: Int, prefix: Stri
                     }
                     tempRuntime := freshScopeTemp(blockLocals, "lite$tuple");
                     tupleFnDeps := if target == TARGET_TS and not inferMode and containsFnKind(rhs.kind) { computeCallableRhsDeps(rhs.code) } else { "" };
-                    listLib.pushBack(mut blockLocals, (name = "$tuple", runtime = tempRuntime, kind = "Unit",
+                    listLib.pushBack(mut blockLocals, (name = "$tuple", runtime = tempRuntime, kind = VALUE_KIND_UNIT,
                     mutable = false, writable = false, depth = blockLexDepth, constant = false, code = tupleFnDeps,
                     intValue = 0, textValue = "", initState = INIT_STATE_INIT));
                     if not blockExits {
@@ -7909,7 +7909,7 @@ parseBinaryCtx := fn(target: String, source: String, position: Int, prefix: Stri
                         rejectMisplacedTag(source, afterStmtFinKw, prefix, "block tag cannot appear after finally");
                         stmtFinOpen := expectSymbol(source, afterStmtFinKw, "{", prefix);
                         stmtFinCtx := (id = 0, tag = "", kind = "finally", phase = "finally",
-                        iifeDepth = bodyDepth, valKind = "Unit", valVar = "", label = "",
+                        iifeDepth = bodyDepth, valKind = VALUE_KIND_UNIT, valVar = "", label = "",
                         iterLabel = "", countVar = "", itemVar = "", itemKind = "", indexVar = "", hasIndex = false);
                         stmtFin := self(target, source, stmtFinOpen - 1, prefix, blockLocals, functions, params, currentName,
                         "", 0, appendCtx(ctxs, stmtFinCtx), bodyDepth, inferMode, "finally", blockAliases);
@@ -7923,7 +7923,7 @@ parseBinaryCtx := fn(target: String, source: String, position: Int, prefix: Stri
                         if inferMode { blockMarkers = collectParsedMarkers(blockMarkers, stmtFin); }
                         if not blockExits {
                             listLib.pushBack(mut statements, "try { " + stmtBlock.code + " } finally { " + stmtFin.code + " }");
-                            if stmtBlock.kind == "Never" or stmtFin.kind == "Never" { blockExits = true; }
+                            if stmtBlock.kind == VALUE_KIND_NEVER or stmtFin.kind == VALUE_KIND_NEVER { blockExits = true; }
                             statementCount = statementCount + 1;
                         }
                         if target == TARGET_TS and not inferMode {
@@ -7935,7 +7935,7 @@ parseBinaryCtx := fn(target: String, source: String, position: Int, prefix: Stri
                         if stmtBlock.code =!= "" {
                             listLib.pushBack(mut statements, "{ " + stmtBlock.code + " }");
                         }
-                        if stmtBlock.kind == "Never" { blockExits = true; }
+                        if stmtBlock.kind == VALUE_KIND_NEVER { blockExits = true; }
                         statementCount = statementCount + 1;
                         if target == TARGET_TS and not inferMode {
                             blockLocals = mergeOuterCallableUpdatesFromCode(blockLocals, stmtBlock.code);
@@ -7961,7 +7961,7 @@ parseBinaryCtx := fn(target: String, source: String, position: Int, prefix: Stri
                 var blockOutputName := "";
                 var blockOutputOpen := afterItemName;
                 blockModIdx := localIndex(blockLocals, itemName);
-                if blockModIdx >= 0 and blockLocals[blockModIdx].kind == "Module" and
+                if blockModIdx >= 0 and blockLocals[blockModIdx].kind == VALUE_KIND_MODULE and
                 afterItemName < blockSourceSize and textLib.at(source, afterItemName) == "." {
                     memberStart := skipTrivia(source, afterItemName + 1, prefix);
                     memberEnd := textLib.skipName(source, memberStart);
@@ -7995,7 +7995,7 @@ parseBinaryCtx := fn(target: String, source: String, position: Int, prefix: Stri
                             failAt(source, outArgStart, prefix, "cannot output function value");
                         }
                         if not outDiverged {
-                            if outArg.kind == "Never" {
+                            if outArg.kind == VALUE_KIND_NEVER {
                                 if not blockExits {
                                     listLib.pushBack(mut statements, stmtReturnPrefix + "(" + outArg.code + ");");
                                     blockExits = true;
@@ -8058,7 +8058,7 @@ parseBinaryCtx := fn(target: String, source: String, position: Int, prefix: Stri
                         }
                         isInferTarget := targetCtx.valKind == "__infer__" or textLib.startsWithAt(targetCtx.valKind, 0, "__infer__:");
                         if retValStart >= blockSourceSize or textLib.at(source, retValStart) == ";" or textLib.at(source, retValStart) == "}" {
-                            if not isInferTarget and targetCtx.valKind =!= "Unit" {
+                            if not isInferTarget and targetCtx.valKind =!= VALUE_KIND_UNIT {
                                 failAt(source, itemStart, prefix, "block @" + targetCtx.tag + " returns " +
                                 displayKind(targetCtx.valKind) + " and cannot return Unit");
                             }
@@ -8082,7 +8082,7 @@ parseBinaryCtx := fn(target: String, source: String, position: Int, prefix: Stri
                         } else {
                             retExpected := if textLib.startsWithAt(targetCtx.valKind, 0, "__infer__:") {
                                 textLib.slice(targetCtx.valKind, 10, textLib.length(targetCtx.valKind))
-                            } else if targetCtx.valKind == "__infer__" or targetCtx.valKind == "Unit" or targetCtx.valKind == "Never" {
+                            } else if targetCtx.valKind == "__infer__" or targetCtx.valKind == VALUE_KIND_UNIT or targetCtx.valKind == VALUE_KIND_NEVER {
                                 ""
                             } else {
                                 targetCtx.valKind
@@ -8099,27 +8099,27 @@ parseBinaryCtx := fn(target: String, source: String, position: Int, prefix: Stri
                             stmtNext := consumeStatementEnd(source, rhs.next, prefix);
                             if stmtNext < 0 { failAt(source, skipTrivia(source, rhs.next, prefix), prefix, "expected ; after return"); }
                             if not isInferTarget {
-                                if targetCtx.valKind == "Unit" {
-                                    if rhs.kind =!= "Unit" and rhs.kind =!= "Never" {
+                                if targetCtx.valKind == VALUE_KIND_UNIT {
+                                    if rhs.kind =!= VALUE_KIND_UNIT and rhs.kind =!= VALUE_KIND_NEVER {
                                         failAt(source, itemStart, prefix, "block @" + targetCtx.tag + " returns Unit and cannot return a value");
                                     }
-                                } else if rhs.kind =!= "Never" and not isCompatibleKind(targetCtx.valKind, rhs.kind) {
+                                } else if rhs.kind =!= VALUE_KIND_NEVER and not isCompatibleKind(targetCtx.valKind, rhs.kind) {
                                     failAt(source, retValStart, prefix, "cannot return " + displayKind(rhs.kind) +
                                     " from block @" + targetCtx.tag + " returning " + displayKind(targetCtx.valKind));
                                 }
                             }
-                            if inferMode and rhs.kind =!= "Never" and loopValMarkerId(rhs.kind) < 0 {
+                            if inferMode and rhs.kind =!= VALUE_KIND_NEVER and loopValMarkerId(rhs.kind) < 0 {
                                 blockMarkers = blockMarkers + integer.intText(targetCtx.id) + "=" + rhs.kind + "\n";
                             }
                             if not blockExits {
-                                if rhs.kind == "Never" {
+                                if rhs.kind == VALUE_KIND_NEVER {
                                     listLib.pushBack(mut statements, stmtReturnPrefix + "(" + rhs.code + ");");
                                 } else {
                                     retValCode := if isInferTarget { rhs.code }
-                                    else if targetCtx.valKind == "Unit" { targetUnitEvaluationCode(target, rhs.code) }
+                                    else if targetCtx.valKind == VALUE_KIND_UNIT { targetUnitEvaluationCode(target, rhs.code) }
                                     else { assignValueCode(target, targetCtx.valKind, rhs.kind, rhs.code) };
                                     if targetCtx.iifeDepth == bodyDepth {
-                                        if targetCtx.valKind == "Unit" {
+                                        if targetCtx.valKind == VALUE_KIND_UNIT {
                                             listLib.pushBack(mut statements, "void (" + retValCode + "); break " + targetCtx.label + ";");
                                         } else {
                                             listLib.pushBack(mut statements, targetCtx.valVar + " = " + retValCode + "; break " + targetCtx.label + ";");
@@ -8149,7 +8149,7 @@ parseBinaryCtx := fn(target: String, source: String, position: Int, prefix: Stri
                         fnCtx := ctxs[fnIdx];
                         fnResult := fnCtx.valKind;
                         if retValStart >= blockSourceSize or textLib.at(source, retValStart) == ";" or textLib.at(source, retValStart) == "}" {
-                            if fnResult =!= "Unit" {
+                            if fnResult =!= VALUE_KIND_UNIT {
                                 failAt(source, itemStart, prefix, "function " + currentName + " must return " + fnResult);
                             }
                             stmtNext := consumeStatementEnd(source, retValStart, prefix);
@@ -8167,7 +8167,7 @@ parseBinaryCtx := fn(target: String, source: String, position: Int, prefix: Stri
                             blockConstant = false;
                             cursor = stmtNext;
                         } else {
-                            if fnResult == "Unit" {
+                            if fnResult == VALUE_KIND_UNIT {
                                 failAt(source, itemStart, prefix, "function " + currentName + " returns Unit and cannot return a value");
                             }
                             rhs := self(target, source, retValStart, prefix, blockLocals, functions, params, currentName, fnResult, 0, ctxs, bodyDepth, inferMode, "", blockAliases);
@@ -8187,7 +8187,7 @@ parseBinaryCtx := fn(target: String, source: String, position: Int, prefix: Stri
                             if stmtNext < 0 { failAt(source, skipTrivia(source, rhs.next, prefix), prefix, "expected ; after return"); }
                             if not blockExits {
                                 retValCode := assignValueCode(target, fnResult, rhs.kind, rhs.code);
-                                if rhs.kind == "Never" {
+                                if rhs.kind == VALUE_KIND_NEVER {
                                     listLib.pushBack(mut statements, stmtReturnPrefix + "(" + retValCode + ");");
                                 } else if fnCtx.iifeDepth == bodyDepth {
                                     listLib.pushBack(mut statements, "return " + retValCode + ";");
@@ -8272,7 +8272,7 @@ parseBinaryCtx := fn(target: String, source: String, position: Int, prefix: Stri
                         isInferLoop := loopCtx.valKind == "__infer__" or textLib.startsWithAt(loopCtx.valKind, 0, "__infer__:");
                         payExpected := if textLib.startsWithAt(loopCtx.valKind, 0, "__infer__:") {
                             textLib.slice(loopCtx.valKind, 10, textLib.length(loopCtx.valKind))
-                        } else if loopCtx.valKind == "__infer__" or loopCtx.valKind == "Unit" or loopCtx.valKind == "Never" {
+                        } else if loopCtx.valKind == "__infer__" or loopCtx.valKind == VALUE_KIND_UNIT or loopCtx.valKind == VALUE_KIND_NEVER {
                             ""
                         } else {
                             loopCtx.valKind
@@ -8290,24 +8290,24 @@ parseBinaryCtx := fn(target: String, source: String, position: Int, prefix: Stri
                         if stmtNext < 0 { failAt(source, skipTrivia(source, rhs.next, prefix), prefix, "expected ; after " + itemName); }
                         exitNext = stmtNext;
                         if not isInferLoop {
-                            if loopCtx.valKind == "Unit" {
-                                if rhs.kind =!= "Unit" and rhs.kind =!= "Never" {
+                            if loopCtx.valKind == VALUE_KIND_UNIT {
+                                if rhs.kind =!= VALUE_KIND_UNIT and rhs.kind =!= VALUE_KIND_NEVER {
                                     failAt(source, afterExit, prefix, "cannot commit " + displayKind(rhs.kind) + " to Unit loop .value");
                                 }
-                            } else if rhs.kind =!= "Never" and not isCompatibleKind(loopCtx.valKind, rhs.kind) {
+                            } else if rhs.kind =!= VALUE_KIND_NEVER and not isCompatibleKind(loopCtx.valKind, rhs.kind) {
                                 failAt(source, afterExit, prefix, "cannot commit " + displayKind(rhs.kind) +
                                 " to loop .value of kind " + displayKind(loopCtx.valKind));
                             }
                         }
-                        if inferMode and rhs.kind =!= "Never" and loopValMarkerId(rhs.kind) < 0 {
+                        if inferMode and rhs.kind =!= VALUE_KIND_NEVER and loopValMarkerId(rhs.kind) < 0 {
                             blockMarkers = blockMarkers + integer.intText(loopCtx.id) + "=" + rhs.kind + "\n";
                         }
                         if not blockExits {
-                            if rhs.kind == "Never" {
+                            if rhs.kind == VALUE_KIND_NEVER {
                                 listLib.pushBack(mut statements, stmtReturnPrefix + "(" + rhs.code + ");");
                             } else {
                                 payCode := if isInferLoop { rhs.code }
-                                else if loopCtx.valKind == "Unit" { targetUnitEvaluationCode(target, rhs.code) }
+                                else if loopCtx.valKind == VALUE_KIND_UNIT { targetUnitEvaluationCode(target, rhs.code) }
                                 else { assignValueCode(target, loopCtx.valKind, rhs.kind, rhs.code) };
                                 if loopCtx.iifeDepth == bodyDepth {
                                     jumpStmt := if loopCtx.label =!= "" and targetLoopIdx < findActiveLoopCtxIndex(ctxs) {
@@ -8315,7 +8315,7 @@ parseBinaryCtx := fn(target: String, source: String, position: Int, prefix: Stri
                                     } else {
                                         itemName + ";"
                                     };
-                                    if loopCtx.valKind == "Unit" {
+                                    if loopCtx.valKind == VALUE_KIND_UNIT {
                                         listLib.pushBack(mut statements, "void (" + payCode + "); " + jumpStmt);
                                     } else {
                                         listLib.pushBack(mut statements, loopCtx.valVar + " = " + payCode + "; " + jumpStmt);
@@ -8355,13 +8355,13 @@ parseBinaryCtx := fn(target: String, source: String, position: Int, prefix: Stri
                         var ifCursor := afterItemName;
                         var isFirstIf := true;
                         ifBarrierCtxs := appendCtx(ctxs, (id = 0, tag = "", kind = "if", phase = "body",
-                        iifeDepth = bodyDepth, valKind = "Unit", valVar = "", label = "", iterLabel = "",
+                        iifeDepth = bodyDepth, valKind = VALUE_KIND_UNIT, valVar = "", label = "", iterLabel = "",
                         countVar = "", itemVar = "", itemKind = "", indexVar = "", hasIndex = false));
                         loop true {
                             rejectHeaderBlockTag(source, ifCursor, prefix, if isFirstIf { "if" } else { "else if" });
                             condParsed := self(target, source, ifCursor, prefix, blockLocals, functions, params, currentName, "", 0, ifBarrierCtxs, bodyDepth, inferMode, "", blockAliases);
                             if inferMode { blockMarkers = collectParsedMarkers(blockMarkers, condParsed); }
-                            if condParsed.kind =!= "Bool" {
+                            if condParsed.kind =!= VALUE_KIND_BOOL {
                                 failAt(source, ifCursor, prefix, if isFirstIf { "if condition must be Bool" } else { "else if condition must be Bool" });
                             }
                             if target == TARGET_TS and not inferMode and not blockExits {
@@ -8377,7 +8377,7 @@ parseBinaryCtx := fn(target: String, source: String, position: Int, prefix: Stri
                             openPos := expectSymbol(source, beforeOpen, "{", prefix);
                             branch := self(target, source, openPos - 1, prefix, blockLocals, functions, params, currentName, "", 0, ifBarrierCtxs, bodyDepth, inferMode, "stmt", blockAliases);
                             if inferMode { blockMarkers = collectParsedMarkers(blockMarkers, branch); }
-                            if branch.kind =!= "Never" { allBranchesExit = false; }
+                            if branch.kind =!= VALUE_KIND_NEVER { allBranchesExit = false; }
                             prefixKw := if isFirstIf { "if (" } else { " else if (" };
                             ifParts = ifParts + prefixKw + condCode + ") { " + branch.code + " }";
                             ifCursor = branch.next;
@@ -8393,7 +8393,7 @@ parseBinaryCtx := fn(target: String, source: String, position: Int, prefix: Stri
                                     elseOpen := expectSymbol(source, afterElse, "{", prefix);
                                     elseBranch := self(target, source, elseOpen - 1, prefix, blockLocals, functions, params, currentName, "", 0, ifBarrierCtxs, bodyDepth, inferMode, "stmt", blockAliases);
                                     if inferMode { blockMarkers = collectParsedMarkers(blockMarkers, elseBranch); }
-                                    if elseBranch.kind =!= "Never" { allBranchesExit = false; }
+                                    if elseBranch.kind =!= VALUE_KIND_NEVER { allBranchesExit = false; }
                                     ifParts = ifParts + " else { " + elseBranch.code + " }";
                                     ifCursor = elseBranch.next;
                                     break;
@@ -8443,7 +8443,7 @@ parseBinaryCtx := fn(target: String, source: String, position: Int, prefix: Stri
                         var armCount := 0;
                         var allArmsExit := true;
                         matchBarrierCtxs := appendCtx(ctxs, (id = 0, tag = "", kind = "match", phase = "body",
-                        iifeDepth = bodyDepth, valKind = "Unit", valVar = "", label = "", iterLabel = "",
+                        iifeDepth = bodyDepth, valKind = VALUE_KIND_UNIT, valVar = "", label = "", iterLabel = "",
                         countVar = "", itemVar = "", itemKind = "", indexVar = "", hasIndex = false));
                         loop true {
                             matchCursor = skipItemSeparators(source, matchCursor, prefix);
@@ -8470,7 +8470,7 @@ parseBinaryCtx := fn(target: String, source: String, position: Int, prefix: Stri
                                 sawFallback = true;
                                 arm := self(target, source, afterUnder, prefix, blockLocals, functions, params, currentName, "", 0, matchBarrierCtxs, bodyDepth, inferMode, "stmt", blockAliases);
                                 if inferMode { blockMarkers = collectParsedMarkers(blockMarkers, arm); }
-                                if arm.kind =!= "Never" { allArmsExit = false; }
+                                if arm.kind =!= VALUE_KIND_NEVER { allArmsExit = false; }
                                 if armCount == 0 {
                                     matchParts = "{ " + arm.code + " }";
                                 } else {
@@ -8497,7 +8497,7 @@ parseBinaryCtx := fn(target: String, source: String, position: Int, prefix: Stri
                                 if afterCond =!= armOpen {
                                     _ := expectSymbol(source, afterCond, "{", prefix);
                                 }
-                                if condParsed.kind =!= "Bool" {
+                                if condParsed.kind =!= VALUE_KIND_BOOL {
                                     failAt(source, matchCursor, prefix, "match arm condition must be Bool");
                                 }
                                 if target == TARGET_TS and not inferMode and not blockExits {
@@ -8510,7 +8510,7 @@ parseBinaryCtx := fn(target: String, source: String, position: Int, prefix: Stri
                                 };
                                 arm := self(target, source, armOpen, prefix, blockLocals, functions, params, currentName, "", 0, matchBarrierCtxs, bodyDepth, inferMode, "stmt", blockAliases);
                                 if inferMode { blockMarkers = collectParsedMarkers(blockMarkers, arm); }
-                                if arm.kind =!= "Never" { allArmsExit = false; }
+                                if arm.kind =!= VALUE_KIND_NEVER { allArmsExit = false; }
                                 armKw := if armCount == 0 { "if (" } else { " else if (" };
                                 matchParts = matchParts + armKw + condCode + ") { " + arm.code + " }";
                                 armCount = armCount + 1;
@@ -8573,7 +8573,7 @@ parseBinaryCtx := fn(target: String, source: String, position: Int, prefix: Stri
                                 loopHeaderPos = afterHdr;
                                 rejectMisplacedTag(source, loopHeaderPos, prefix, "block tag cannot appear before { in loop");
                             } else {
-                                if hdrParsed.kind =!= "Bool" {
+                                if hdrParsed.kind =!= VALUE_KIND_BOOL {
                                     failAt(source, loopHeaderPos, prefix, "loop condition must be Bool");
                                 }
                                 if hdrParsed.constant {
@@ -8600,7 +8600,7 @@ parseBinaryCtx := fn(target: String, source: String, position: Int, prefix: Stri
                             loopHeadCode = "for (const " + loopItemRuntime + " of " + targetListCopyCode(target, loopSeqCode) + ") { void " + loopItemRuntime + "; ";
                         } else if loopSeqCode =!= "" {
                             tempItemRuntime := freshScopeTemp(loopLocals, "lite$item");
-                            listLib.pushBack(mut loopLocals, (name = "$item", runtime = tempItemRuntime, kind = "Unit",
+                            listLib.pushBack(mut loopLocals, (name = "$item", runtime = tempItemRuntime, kind = VALUE_KIND_UNIT,
                             mutable = false, writable = false, depth = blockLexDepth, constant = false, code = "",
                             intValue = 0, textValue = "", initState = INIT_STATE_INIT));
                             loopHeadCode = "for (const " + tempItemRuntime + " of " + targetListCopyCode(target, loopSeqCode) + ") { void " + tempItemRuntime + "; ";
@@ -8731,7 +8731,7 @@ parseBinaryCtx := fn(target: String, source: String, position: Int, prefix: Stri
                                 if target == TARGET_TS and not inferMode and not blockExits {
                                     checkTraceSafety(source, localStart, prefix, initParsed.code, currentName, -1, blockLocals, functions, emptyFuturesHere, emptyItemsHere);
                                 }
-                                varDiverged = initParsed.kind == "Never";
+                                varDiverged = initParsed.kind == VALUE_KIND_NEVER;
                                 converted := assignValueCode(target, typed.kind, initParsed.kind, initParsed.code);
                                 declParsed = (kind = typed.kind, code = converted, intValue = initParsed.intValue, textValue = initParsed.textValue, constant = initParsed.constant, next = initParsed.next);
                             }
@@ -8888,7 +8888,7 @@ parseBinaryCtx := fn(target: String, source: String, position: Int, prefix: Stri
                     mutable = false, writable = typed.writable, depth = blockLexDepth, constant = if declInitState == INIT_STATE_INIT and not numeric.isFloatKind(typed.kind) { declParsed.constant } else { false },
                     code = annFnDeps, intValue = declParsed.intValue, textValue = declParsed.textValue, initState = declInitState));
                     if not blockExits {
-                        if declParsed.kind == "Never" {
+                        if declParsed.kind == VALUE_KIND_NEVER {
                             listLib.pushBack(mut statements, stmtReturnPrefix + "(" + declCode + ");");
                             blockExits = true;
                         } else {
@@ -8934,7 +8934,7 @@ parseBinaryCtx := fn(target: String, source: String, position: Int, prefix: Stri
                     mutable = entry.mutable, writable = entry.writable, depth = entry.depth, constant = false, code = nextFnDeps,
                     intValue = rhs.intValue, textValue = rhs.textValue, initState = INIT_STATE_INIT));
                     if not blockExits {
-                        if rhs.kind == "Never" {
+                        if rhs.kind == VALUE_KIND_NEVER {
                             listLib.pushBack(mut statements, stmtReturnPrefix + "(" + rhsCode + ");");
                             blockExits = true;
                         } else {
@@ -8992,12 +8992,12 @@ parseBinaryCtx := fn(target: String, source: String, position: Int, prefix: Stri
                 itemAfter := skipItemSeparators(source, itemEnd, prefix);
                 itemAtClose := itemAfter < textLib.length(source) and textLib.at(source, itemAfter) == "}";
                 if not itemAtClose { itemExpected = ""; }
-                else if isTaggedBody and (expected == "Unit" or expected == "Never") { itemExpected = ""; }
-                else if isFnBody and (expected == "Unit" or expected == "Never") { itemExpected = ""; }
+                else if isTaggedBody and (expected == VALUE_KIND_UNIT or expected == VALUE_KIND_NEVER) { itemExpected = ""; }
+                else if isFnBody and (expected == VALUE_KIND_UNIT or expected == VALUE_KIND_NEVER) { itemExpected = ""; }
                 else if isFnBody and isListKind(expected) { itemExpected = "Tail" + expected; }
                 itemSink := if (not isStmtBody) and allowOutput and itemAtClose { "exprOut" } else { "" };
                 itemMinimum := if isStmtBody or (not itemAtClose) or minimum == -2 or
-                (isLoopBody and (expected == "" or expected == "Unit")) { -2 } else { 0 };
+                (isLoopBody and (expected == "" or expected == VALUE_KIND_UNIT)) { -2 } else { 0 };
                 expr := self(target, source, cursor, prefix, blockLocals, functions, params, currentName, itemExpected, itemMinimum, ctxs, bodyDepth, inferMode, itemSink, blockAliases);
                 if inferMode { blockMarkers = collectParsedMarkers(blockMarkers, expr); }
                 if target == TARGET_TS and not inferMode and not blockExits {
@@ -9021,7 +9021,7 @@ parseBinaryCtx := fn(target: String, source: String, position: Int, prefix: Stri
                     break;
                 }
                 if not blockExits {
-                    if expr.kind == "Never" {
+                    if expr.kind == VALUE_KIND_NEVER {
                         listLib.pushBack(mut statements, stmtReturnPrefix + "(" + expr.code + ");");
                         blockExits = true;
                     } else {
@@ -9070,15 +9070,15 @@ parseBinaryCtx := fn(target: String, source: String, position: Int, prefix: Stri
         }
         if isStmtBody {
             stmtCode := textLib.joinTexts(statements, " ");
-            stmtKind := if blockExits { "Never" } else { "Unit" };
+            stmtKind := if blockExits { VALUE_KIND_NEVER } else { VALUE_KIND_UNIT };
             left = withMarkers((kind = stmtKind, code = stmtCode, intValue = 0, textValue = "", constant = false, next = cursor),
             if inferMode { blockMarkers } else { "" });
         } else if isFinallyBody {
             if not blockExits and sawTailExpr {
-                if blockKind =!= "Unit" and blockKind =!= "Never" {
+                if blockKind =!= VALUE_KIND_UNIT and blockKind =!= VALUE_KIND_NEVER {
                     failAt(source, start, prefix, "finally block must produce Unit, got " + displayKind(blockKind));
                 }
-                if blockKind == "Never" {
+                if blockKind == VALUE_KIND_NEVER {
                     listLib.pushBack(mut statements, "(" + blockCode + ");");
                     blockExits = true;
                 } else if blockCode =!= targetUnitLiteralCode(target) {
@@ -9086,24 +9086,24 @@ parseBinaryCtx := fn(target: String, source: String, position: Int, prefix: Stri
                 }
             }
             finCode := textLib.joinTexts(statements, " ");
-            finKind := if blockExits { "Never" } else { "Unit" };
+            finKind := if blockExits { VALUE_KIND_NEVER } else { VALUE_KIND_UNIT };
             left = withMarkers((kind = finKind, code = finCode, intValue = 0, textValue = "", constant = false, next = cursor),
             if inferMode { blockMarkers } else { "" });
         } else if isFnBody {
             if not blockExits {
                 if sawTailExpr {
-                    if expected == "Unit" {
-                        if blockKind =!= "Unit" and blockKind =!= "Never" {
+                    if expected == VALUE_KIND_UNIT {
+                        if blockKind =!= VALUE_KIND_UNIT and blockKind =!= VALUE_KIND_NEVER {
                             failAt(source, start, prefix, "function " + currentName + " returns Unit and cannot return a value");
                         }
-                        if blockKind == "Never" {
+                        if blockKind == VALUE_KIND_NEVER {
                             listLib.pushBack(mut statements, "(" + blockCode + ");");
                             blockExits = true;
                         } else if blockCode =!= targetUnitLiteralCode(target) {
                             listLib.pushBack(mut statements, "void (" + blockCode + ");");
                         }
-                    } else if expected == "Never" {
-                        if blockKind =!= "Never" {
+                    } else if expected == VALUE_KIND_NEVER {
+                        if blockKind =!= VALUE_KIND_NEVER {
                             failAt(source, start, prefix, "cannot return " + displayKind(blockKind) + " from function " + currentName + " returning Never");
                         }
                         listLib.pushBack(mut statements, "(" + blockCode + ");");
@@ -9112,7 +9112,7 @@ parseBinaryCtx := fn(target: String, source: String, position: Int, prefix: Stri
                         if not isCompatibleKind(expected, blockKind) {
                             failAt(source, start, prefix, "cannot return " + displayKind(blockKind) + " from function " + currentName + " returning " + displayKind(expected));
                         }
-                        if blockKind == "Never" {
+                        if blockKind == VALUE_KIND_NEVER {
                             listLib.pushBack(mut statements, "(" + blockCode + ");");
                             blockExits = true;
                         } else {
@@ -9120,13 +9120,13 @@ parseBinaryCtx := fn(target: String, source: String, position: Int, prefix: Stri
                             blockExits = true;
                         }
                     }
-                } else if expected =!= "Unit" {
+                } else if expected =!= VALUE_KIND_UNIT {
                     failAt(source, start, prefix, "function " + currentName + " must return " + displayKind(expected));
                 }
             }
             var fnBodyJoined := textLib.joinTexts(statements, " ");
             if codeUsesTextCall(fnBodyJoined, "lite$throwTransfer(0,") {
-                catchRet := if expected == "Unit" { "return;" } else { "return lite$transferVal;" };
+                catchRet := if expected == VALUE_KIND_UNIT { "return;" } else { "return lite$transferVal;" };
                 fnBodyJoined = "try { " + fnBodyJoined + " } catch (lite$err) { if (lite$hasTransfer(lite$err, 0)) { " + catchRet + " } throw lite$err; }";
             }
             left = withMarkers((kind = expected, code = fnBodyJoined, intValue = 0, textValue = "", constant = false, next = cursor),
@@ -9139,7 +9139,7 @@ parseBinaryCtx := fn(target: String, source: String, position: Int, prefix: Stri
             if topLoopValKind == "__infer__" or textLib.startsWithAt(topLoopValKind, 0, "__infer__:") {
                 if not blockExits {
                     if sawTailExpr {
-                        if blockKind =!= "Never" and loopValMarkerId(blockKind) < 0 {
+                        if blockKind =!= VALUE_KIND_NEVER and loopValMarkerId(blockKind) < 0 {
                             blockMarkers = blockMarkers + integer.intText(topLoopId) + "=" + blockKind + "\n";
                         }
                     } else if not lastPartialIfDiverges {
@@ -9147,33 +9147,33 @@ parseBinaryCtx := fn(target: String, source: String, position: Int, prefix: Stri
                     }
                 }
                 tailPlaceholderKind := if blockExits {
-                    "Never"
+                    VALUE_KIND_NEVER
                 } else if sawTailExpr {
                     blockKind
                 } else {
-                    "Unit"
+                    VALUE_KIND_UNIT
                 };
                 left = withMarkers((kind = tailPlaceholderKind, code = "", intValue = if blockExits { 1 } else { 0 },
                 textValue = "", constant = false, next = cursor), blockMarkers);
             } else {
                 if not blockExits {
                     if sawTailExpr {
-                        if topLoopValKind == "Unit" {
-                            if blockKind =!= "Unit" and blockKind =!= "Never" {
+                        if topLoopValKind == VALUE_KIND_UNIT {
+                            if blockKind =!= VALUE_KIND_UNIT and blockKind =!= VALUE_KIND_NEVER {
                                 failAt(source, start, prefix, "loop produces Unit and cannot yield " + displayKind(blockKind));
                             }
-                        } else if topLoopValKind == "Never" {
-                            if blockKind =!= "Never" {
+                        } else if topLoopValKind == VALUE_KIND_NEVER {
+                            if blockKind =!= VALUE_KIND_NEVER {
                                 failAt(source, start, prefix, "cannot yield " + displayKind(blockKind) + " from diverging loop");
                             }
                         } else if not isCompatibleKind(topLoopValKind, blockKind) {
                             failAt(source, start, prefix, "cannot commit " + displayKind(blockKind) +
                             " to loop .value of kind " + displayKind(topLoopValKind));
                         }
-                        if blockKind == "Never" {
+                        if blockKind == VALUE_KIND_NEVER {
                             listLib.pushBack(mut statements, "(" + blockCode + ");");
                             blockExits = true;
-                        } else if topLoopValKind == "Unit" {
+                        } else if topLoopValKind == VALUE_KIND_UNIT {
                             if blockCode =!= targetUnitLiteralCode(target) {
                                 listLib.pushBack(mut statements, "void (" + blockCode + ");");
                             }
@@ -9181,12 +9181,12 @@ parseBinaryCtx := fn(target: String, source: String, position: Int, prefix: Stri
                             tailLoopCode := assignValueCode(target, topLoopValKind, blockKind, blockCode);
                             listLib.pushBack(mut statements, topLoopValVar + " = " + tailLoopCode + ";");
                         }
-                    } else if not lastPartialIfDiverges and topLoopValKind =!= "Unit" {
+                    } else if not lastPartialIfDiverges and topLoopValKind =!= VALUE_KIND_UNIT {
                         failAt(source, start, prefix, "loop body must produce " + displayKind(topLoopValKind));
                     }
                 }
                 loopBodyJoined := textLib.joinTexts(statements, " ");
-                left = withMarkers((kind = if blockExits { "Never" } else { topLoopValKind }, code = loopBodyJoined,
+                left = withMarkers((kind = if blockExits { VALUE_KIND_NEVER } else { topLoopValKind }, code = loopBodyJoined,
                 intValue = 0, textValue = "", constant = false, next = cursor),
                 if inferMode { filterOtherMarkers(blockMarkers, topLoopId) } else { "" });
             }
@@ -9200,7 +9200,7 @@ parseBinaryCtx := fn(target: String, source: String, position: Int, prefix: Stri
             if topValKind == "__infer__" or textLib.startsWithAt(topValKind, 0, "__infer__:") {
                 if not blockExits {
                     if sawTailExpr {
-                        if blockKind =!= "Never" {
+                        if blockKind =!= VALUE_KIND_NEVER {
                             blockMarkers = blockMarkers + integer.intText(topId) + "=" + blockKind + "\n";
                         }
                     } else {
@@ -9214,26 +9214,26 @@ parseBinaryCtx := fn(target: String, source: String, position: Int, prefix: Stri
             } else {
                 if not blockExits {
                     if sawTailExpr {
-                        if topValKind == "Unit" {
-                            if blockKind =!= "Unit" and blockKind =!= "Never" {
+                        if topValKind == VALUE_KIND_UNIT {
+                            if blockKind =!= VALUE_KIND_UNIT and blockKind =!= VALUE_KIND_NEVER {
                                 failAt(source, start, prefix, "block @" + topTag + " returns Unit and cannot return a value");
                             }
-                        } else if topValKind == "Never" {
-                            if blockKind =!= "Never" {
+                        } else if topValKind == VALUE_KIND_NEVER {
+                            if blockKind =!= VALUE_KIND_NEVER {
                                 failAt(source, start, prefix, "cannot return " + displayKind(blockKind) + " from block @" + topTag + " returning Never");
                             }
                         } else if not isCompatibleKind(topValKind, blockKind) {
                             failAt(source, start, prefix, "cannot return " + displayKind(blockKind) + " from block @" + topTag + " returning " + displayKind(topValKind));
                         }
-                    } else if topValKind =!= "Unit" {
+                    } else if topValKind =!= VALUE_KIND_UNIT {
                         failAt(source, start, prefix, "block @" + topTag + " must return " + displayKind(topValKind));
                     }
                 }
                 if not blockExits and sawTailExpr {
-                    if blockKind == "Never" {
+                    if blockKind == VALUE_KIND_NEVER {
                         listLib.pushBack(mut statements, "(" + blockCode + ");");
                         blockExits = true;
-                    } else if topValKind == "Unit" {
+                    } else if topValKind == VALUE_KIND_UNIT {
                         if blockCode =!= targetUnitLiteralCode(target) {
                             listLib.pushBack(mut statements, "void (" + blockCode + ");");
                         }
@@ -9247,15 +9247,15 @@ parseBinaryCtx := fn(target: String, source: String, position: Int, prefix: Stri
                 needsTry := codeUsesTextCall(bodyJoined, "lite$throwTransfer(" + integer.intText(topId) + ",");
                 labeledBody := if needsLabel { topLabel + ": { " + bodyJoined + " }" } else { bodyJoined };
                 wrappedBody := if needsTry {
-                    catchAssign := if topValKind == "Unit" or topValKind == "Never" { "" } else { topValVar + " = lite$transferVal;" };
+                    catchAssign := if topValKind == VALUE_KIND_UNIT or topValKind == VALUE_KIND_NEVER { "" } else { topValVar + " = lite$transferVal;" };
                     tryInner := if needsLabel { labeledBody } else { "{ " + labeledBody + " }" };
                     "try { " + tryInner + " } catch (lite$err) { if (lite$hasTransfer(lite$err, " + integer.intText(topId) + ")) { " + catchAssign + " } else { throw lite$err; } }"
                 } else {
                     labeledBody
                 };
-                finalIife := if topValKind == "Unit" {
+                finalIife := if topValKind == VALUE_KIND_UNIT {
                     "(() => { " + wrappedBody + (if wrappedBody =!= "" { " " } else { "" }) + "return undefined; })()"
-                } else if topValKind == "Never" {
+                } else if topValKind == VALUE_KIND_NEVER {
                     "(() => { " + wrappedBody + " })()"
                 } else {
                     "(() => { let " + topValVar + ": " + tsFunctionType(topValKind) + " = " + zeroParsed(target, topValKind, 0).code + "; " + wrappedBody + " return " + topValVar + "; })()"
@@ -9280,7 +9280,7 @@ parseBinaryCtx := fn(target: String, source: String, position: Int, prefix: Stri
                     rejectMisplacedTag(source, afterFinKw, prefix, "block tag cannot appear after finally");
                     finOpen := expectSymbol(source, afterFinKw, "{", prefix);
                     finBarrierCtx := (id = 0, tag = "", kind = "finally", phase = "finally",
-                    iifeDepth = bodyDepth, valKind = "Unit", valVar = "", label = "",
+                    iifeDepth = bodyDepth, valKind = VALUE_KIND_UNIT, valVar = "", label = "",
                     iterLabel = "", countVar = "", itemVar = "", itemKind = "", indexVar = "", hasIndex = false);
                     finParsed := self(target, source, finOpen - 1, prefix, locals, functions, params, currentName,
                     "", 0, appendCtx(ctxs, finBarrierCtx), bodyDepth, inferMode, "finally", aliases);
@@ -9295,20 +9295,20 @@ parseBinaryCtx := fn(target: String, source: String, position: Int, prefix: Stri
                     stmtsJoined := textLib.joinTexts(statements, " ");
                     standaloneTryBody := if blockExits {
                         stmtsJoined
-                    } else if blockKind == "Unit" {
+                    } else if blockKind == VALUE_KIND_UNIT {
                         unitRet := if blockCode == targetUnitLiteralCode(target) {
                             "return undefined;"
                         } else {
                             "void (" + blockCode + "); return undefined;"
                         };
                         if stmtsJoined == "" { unitRet } else { stmtsJoined + " " + unitRet }
-                    } else if blockKind == "Never" {
+                    } else if blockKind == VALUE_KIND_NEVER {
                         if stmtsJoined == "" { "return " + blockCode + ";" } else { stmtsJoined + " return " + blockCode + ";" }
                     } else {
                         valRet := "return " + copiedValueCode(target, blockKind, blockCode) + ";";
                         if stmtsJoined == "" { valRet } else { stmtsJoined + " " + valRet }
                     };
-                    finalStandaloneKind := if blockExits or finParsed.kind == "Never" { "Never" } else { blockKind };
+                    finalStandaloneKind := if blockExits or finParsed.kind == VALUE_KIND_NEVER { VALUE_KIND_NEVER } else { blockKind };
                     standaloneFinEnd = finParsed.next;
                     left = withMarkers((kind = finalStandaloneKind,
                     code = "(() => { try { " + standaloneTryBody + " } finally { " + finParsed.code + " } })()",
@@ -9321,7 +9321,7 @@ parseBinaryCtx := fn(target: String, source: String, position: Int, prefix: Stri
                     if target =!= TARGET_TS {
                         failAt(source, start, prefix, "C backend does not support statement-bearing value blocks yet");
                     }
-                    left = withMarkers((kind = "Never", code = "(() => { " + textLib.joinTexts(statements, " ") + " })()",
+                    left = withMarkers((kind = VALUE_KIND_NEVER, code = "(() => { " + textLib.joinTexts(statements, " ") + " })()",
                     intValue = 0, textValue = "", constant = false, next = cursor),
                     if inferMode { blockMarkers } else { "" });
                 } else if statementCount == 0 {
@@ -9331,10 +9331,10 @@ parseBinaryCtx := fn(target: String, source: String, position: Int, prefix: Stri
                     if target =!= TARGET_TS {
                         failAt(source, start, prefix, "C backend does not support statement-bearing value blocks yet");
                     }
-                    returnCode := if blockKind == "Unit" {
+                    returnCode := if blockKind == VALUE_KIND_UNIT {
                         if blockCode == targetUnitLiteralCode(target) { "return undefined;" }
                         else { "void (" + blockCode + "); return undefined;" }
-                    } else if blockKind == "Never" {
+                    } else if blockKind == VALUE_KIND_NEVER {
                         "return " + blockCode + ";"
                     } else {
                         "return " + copiedValueCode(target, blockKind, blockCode) + ";"
@@ -9350,7 +9350,7 @@ parseBinaryCtx := fn(target: String, source: String, position: Int, prefix: Stri
         next := textLib.skipName(source, start);
         name := textLib.slice(source, nameStart, next);
         if name == "Unit" {
-            left = (kind = "Unit", code = targetUnitLiteralCode(target), intValue = 0, textValue = "", constant = true, next = next);
+            left = (kind = VALUE_KIND_UNIT, code = targetUnitLiteralCode(target), intValue = 0, textValue = "", constant = true, next = next);
         } else if name == "true" {
             left = boolParsed(targetBoolLiteralCode(target, true), true, true, next);
         } else if name == "false" {
@@ -9362,7 +9362,7 @@ parseBinaryCtx := fn(target: String, source: String, position: Int, prefix: Stri
                 left = withMarkers(boolParsed("", false, false, operand.next),
                 collectParsedMarkers("", operand) + integer.intText(operandLoopId) + "=Bool\n");
             } else {
-                if operand.kind =!= "Bool" {
+                if operand.kind =!= VALUE_KIND_BOOL {
                     failAt(source, nameStart, prefix, "not requires a Bool operand");
                 }
                 if operand.constant {
@@ -9414,7 +9414,7 @@ parseBinaryCtx := fn(target: String, source: String, position: Int, prefix: Stri
                 } else {
                     failAt(source, pStart, prefix, "expected : Type for parameter " + pName);
                 }
-                if pKind == "Unit" {
+                if pKind == VALUE_KIND_UNIT {
                     failAt(source, pStart, prefix, "function parameter " + pName + " cannot have type Unit");
                 }
                 listLib.pushBack(mut paramKinds, pKind);
@@ -9524,7 +9524,7 @@ parseBinaryCtx := fn(target: String, source: String, position: Int, prefix: Stri
                     }
                     selfIndex := findFunction(functions, currentName);
                     if selfIndex >= 0 {
-                        left = (kind = "ModuleFunction", code = integer.intText(nameStart), intValue = selfIndex,
+                        left = (kind = VALUE_KIND_MODULE_FUNCTION, code = integer.intText(nameStart), intValue = selfIndex,
                         textValue = currentName, constant = false, next = next);
                     } else {
                         failAt(source, nameStart, prefix, "unknown value " + name);
@@ -9545,10 +9545,10 @@ parseBinaryCtx := fn(target: String, source: String, position: Int, prefix: Stri
                         if currentName == "" and functions[callableIndex].declAt > nameStart {
                             failAt(source, nameStart, prefix, "cannot access " + name + " before initialization");
                         }
-                        left = (kind = "ModuleFunction", code = integer.intText(nameStart), intValue = callableIndex,
+                        left = (kind = VALUE_KIND_MODULE_FUNCTION, code = integer.intText(nameStart), intValue = callableIndex,
                         textValue = name, constant = false, next = next);
                     } else if isCallSite and (name == "push_back" or name == "pop_back" or name == "push_front" or name == "pop_front") {
-                        left = (kind = "ListOp", code = name, intValue = 0, textValue = name, constant = false, next = afterName);
+                        left = (kind = VALUE_KIND_LIST_OP, code = name, intValue = 0, textValue = name, constant = false, next = afterName);
                     } else if index >= 0 {
                         entry := locals[index];
                         if entry.initState =!= INIT_STATE_INIT {
@@ -9610,7 +9610,7 @@ parseBinaryCtx := fn(target: String, source: String, position: Int, prefix: Stri
         loopIterVar := "lite$iter" + loopIdStr;
         loopLabel := "lite$l" + loopIdStr;
         loopDepth := iifeDepth + 1;
-        normExpected := if expected == "Unit" or expected == "Never" {
+        normExpected := if expected == VALUE_KIND_UNIT or expected == VALUE_KIND_NEVER {
             ""
         } else if textLib.startsWithAt(expected, 0, "TailList<") {
             "List<" + listElementKind(textLib.slice(expected, 4, textLib.length(expected))) + ">"
@@ -9637,7 +9637,7 @@ parseBinaryCtx := fn(target: String, source: String, position: Int, prefix: Stri
             };
             passBodyExpected := if isPass1 {
                 loopHintExpected
-            } else if resolvedPreThenKind == "Unit" or resolvedPreThenKind == "Never" {
+            } else if resolvedPreThenKind == VALUE_KIND_UNIT or resolvedPreThenKind == VALUE_KIND_NEVER {
                 ""
             } else {
                 resolvedPreThenKind
@@ -9683,7 +9683,7 @@ parseBinaryCtx := fn(target: String, source: String, position: Int, prefix: Stri
                     seqItemKind = if isListKind(hdr.kind) { listElementKind(hdr.kind) } else { arrayElementKind(hdr.kind) };
                     beforeLoopOpen = afterHdr;
                 } else {
-                    if hdr.kind =!= "Bool" {
+                    if hdr.kind =!= VALUE_KIND_BOOL {
                         failAt(source, hdrStart, prefix, "loop condition must be Bool");
                     }
                     if hdr.constant {
@@ -9705,8 +9705,8 @@ parseBinaryCtx := fn(target: String, source: String, position: Int, prefix: Stri
             loop locals as entry { listLib.pushBack(mut loopLocals, entry); }
             loopItemLexDepth := maxLocalLexDepth(loopLocals) + 1;
             if isSeqLoop and seqItemName =!= "" {
-                if seqItemKind == "Unit" {
-                    listLib.pushBack(mut loopLocals, (name = seqItemName, runtime = targetUnitLiteralCode(target), kind = "Unit",
+                if seqItemKind == VALUE_KIND_UNIT {
+                    listLib.pushBack(mut loopLocals, (name = seqItemName, runtime = targetUnitLiteralCode(target), kind = VALUE_KIND_UNIT,
                     mutable = false, writable = false, depth = loopItemLexDepth, constant = true, code = targetUnitLiteralCode(target),
                     intValue = 0, textValue = "", initState = INIT_STATE_INIT));
                 } else {
@@ -9732,8 +9732,8 @@ parseBinaryCtx := fn(target: String, source: String, position: Int, prefix: Stri
                 finalSeqItemKind = seqItemKind;
                 loopOuterMarkers = filterOtherMarkers(passMarkers, loopId);
                 markerScan := scanLoopMarkers(passMarkers, loopId);
-                if isUncond and bodyParsed.kind == "Never" and not markerScan.hasAny {
-                    resolvedPreThenKind = "Never";
+                if isUncond and bodyParsed.kind == VALUE_KIND_NEVER and not markerScan.hasAny {
+                    resolvedPreThenKind = VALUE_KIND_NEVER;
                 } else {
                     if hasActualThen and not markerScan.hasConcrete {
                         probeThenKw := skipTrivia(source, loopEndCursor, prefix);
@@ -9753,7 +9753,7 @@ parseBinaryCtx := fn(target: String, source: String, position: Int, prefix: Stri
             } else {
                 var metaStep := "";
                 if isSeqLoop {
-                    itemStep := if seqItemKind == "" or seqItemKind == "Unit" {
+                    itemStep := if seqItemKind == "" or seqItemKind == VALUE_KIND_UNIT {
                         "void " + loopIterVar + "; "
                     } else {
                         loopItemMetaVar + " = " + loopIterVar + "; "
@@ -9770,7 +9770,7 @@ parseBinaryCtx := fn(target: String, source: String, position: Int, prefix: Stri
                 hasBareCont := codeUsesTextCall(bodyParsed.code, "lite$throwTransfer(" + contBareId + ",");
                 hasPayBrk := codeUsesTextCall(bodyParsed.code, "lite$throwTransfer(" + brkPayId + ",");
                 hasBareBrk := codeUsesTextCall(bodyParsed.code, "lite$throwTransfer(" + brkBareId + ",");
-                valAssign := if resolvedPreThenKind == "Unit" or resolvedPreThenKind == "Never" { "" }
+                valAssign := if resolvedPreThenKind == VALUE_KIND_UNIT or resolvedPreThenKind == VALUE_KIND_NEVER { "" }
                 else { loopValVar + " = lite$transferVal; " };
                 var wrappedBody := bodyParsed.code;
                 if hasPayCont or hasBareCont or hasPayBrk or hasBareBrk {
@@ -9829,12 +9829,12 @@ parseBinaryCtx := fn(target: String, source: String, position: Int, prefix: Stri
             decls = "let " + loopCountVar + ": bigint = 0n; void " + loopCountVar + "; ";
             if finalIsSeqLoop {
                 decls = decls + "let " + loopIdxVar + ": bigint = 0n; void " + loopIdxVar + "; ";
-                if finalSeqItemKind =!= "" and finalSeqItemKind =!= "Unit" {
+                if finalSeqItemKind =!= "" and finalSeqItemKind =!= VALUE_KIND_UNIT {
                     decls = decls + "let " + loopItemMetaVar + ": " + tsFunctionType(finalSeqItemKind) + " = " +
                     zeroParsed(target, finalSeqItemKind, 0).code + "; void " + loopItemMetaVar + "; ";
                 }
             }
-            if resolvedPreThenKind =!= "Unit" and resolvedPreThenKind =!= "Never" {
+            if resolvedPreThenKind =!= VALUE_KIND_UNIT and resolvedPreThenKind =!= VALUE_KIND_NEVER {
                 decls = decls + "let " + loopValVar + ": " + tsFunctionType(resolvedPreThenKind) + " = " +
                 zeroParsed(target, resolvedPreThenKind, 0).code + "; void " + loopValVar + "; ";
             }
@@ -9853,16 +9853,16 @@ parseBinaryCtx := fn(target: String, source: String, position: Int, prefix: Stri
             normExpected, 0, appendCtx(ctxs, loopThenCtx), iifeDepth, inferMode, "branch", aliases);
             if inferMode {
                 thenMarkers := loopOuterMarkers + collectParsedMarkers("", thenParsed);
-                finalKind := if resolvedPreThenKind == "Never" { "Never" } else { thenParsed.kind };
+                finalKind := if resolvedPreThenKind == VALUE_KIND_NEVER { VALUE_KIND_NEVER } else { thenParsed.kind };
                 left = withMarkers((kind = finalKind, code = "", intValue = 0, textValue = "", constant = false, next = thenParsed.next), thenMarkers);
-            } else if resolvedPreThenKind == "Never" {
+            } else if resolvedPreThenKind == VALUE_KIND_NEVER {
                 loopIifeBody = decls + loopStmtCode + " throw new Error(\"unreachable\");";
-                left = (kind = "Never", code = "(() => { " + loopIifeBody + " })()",
+                left = (kind = VALUE_KIND_NEVER, code = "(() => { " + loopIifeBody + " })()",
                 intValue = 0, textValue = "", constant = false, next = thenParsed.next);
             } else {
-                thenRet := if thenParsed.kind == "Unit" {
+                thenRet := if thenParsed.kind == VALUE_KIND_UNIT {
                     "void (" + thenParsed.code + "); return undefined;"
-                } else if thenParsed.kind == "Never" {
+                } else if thenParsed.kind == VALUE_KIND_NEVER {
                     "(" + thenParsed.code + "); throw new Error(\"unreachable\");"
                 } else {
                     "return " + thenParsed.code + ";"
@@ -9875,9 +9875,9 @@ parseBinaryCtx := fn(target: String, source: String, position: Int, prefix: Stri
             if inferMode {
                 left = withMarkers((kind = resolvedPreThenKind, code = "", intValue = 0, textValue = "", constant = false, next = loopEndCursor), loopOuterMarkers);
             } else {
-                finalRet := if resolvedPreThenKind == "Unit" {
+                finalRet := if resolvedPreThenKind == VALUE_KIND_UNIT {
                     " return undefined;"
-                } else if resolvedPreThenKind == "Never" {
+                } else if resolvedPreThenKind == VALUE_KIND_NEVER {
                     " throw new Error(\"unreachable\");"
                 } else {
                     " return " + loopValVar + ";"
@@ -9900,7 +9900,7 @@ parseBinaryCtx := fn(target: String, source: String, position: Int, prefix: Stri
             iterLabel = "", countVar = loopCountVar, itemVar = loopItemMetaVar, itemKind = finalSeqItemKind,
             indexVar = loopIdxVar, hasIndex = finalIsSeqLoop);
             finBarrierCtx := (id = 0, tag = "", kind = "finally", phase = "finally",
-            iifeDepth = loopDepth, valKind = "Unit", valVar = "", label = "",
+            iifeDepth = loopDepth, valKind = VALUE_KIND_UNIT, valVar = "", label = "",
             iterLabel = "", countVar = "", itemVar = "", itemKind = "", indexVar = "", hasIndex = false);
             loopFinCtxs := appendCtx(appendCtx(ctxs, loopFinCtx), finBarrierCtx);
             finParsed := self(target, source, finOpen - 1, prefix, locals, functions, params, currentName,
@@ -9912,7 +9912,7 @@ parseBinaryCtx := fn(target: String, source: String, position: Int, prefix: Stri
             if textLib.wordAt(source, afterFinClose, "finally") {
                 failAt(source, afterFinClose, prefix, "duplicate finally block");
             }
-            finalLoopKind := if finParsed.kind == "Never" { "Never" } else { left.kind };
+            finalLoopKind := if finParsed.kind == VALUE_KIND_NEVER { VALUE_KIND_NEVER } else { left.kind };
             if inferMode {
                 mergedLoopMarkers := collectParsedMarkers(collectParsedMarkers("", left), finParsed);
                 left = withMarkers((kind = finalLoopKind, code = "", intValue = 0, textValue = "", constant = false, next = finParsed.next), mergedLoopMarkers);
@@ -9962,7 +9962,7 @@ parseBinaryCtx := fn(target: String, source: String, position: Int, prefix: Stri
                 conditionStart := cursor;
                 condition := self(target, source, cursor, prefix, locals, functions, params, currentName, "", 0, condBarrierCtxs, iifeDepth, inferMode, "", aliases);
                 if inferMode { ifMarkers = collectParsedMarkers(ifMarkers, condition); }
-                if condition.kind =!= "Bool" {
+                if condition.kind =!= VALUE_KIND_BOOL {
                     failAt(source, conditionStart, prefix, "if condition must be Bool");
                 }
                 conditionCode := if condition.constant {
@@ -9987,10 +9987,10 @@ parseBinaryCtx := fn(target: String, source: String, position: Int, prefix: Stri
                 loop true {
                     afterBranch := skipTrivia(source, cursor, prefix);
                     if not textLib.wordAt(source, afterBranch, "else") {
-                        if minimum >= 0 or (minimum == -2 and resultKind =!= "Unit") {
+                        if minimum >= 0 or (minimum == -2 and resultKind =!= VALUE_KIND_UNIT) {
                             failAt(source, afterBranch, prefix, "value if requires a final else");
                         }
-                        if resultKind == "Never" {
+                        if resultKind == VALUE_KIND_NEVER {
                             if expected == "" or textLib.startsWithAt(expected, 0, "TailList<") {
                                 failAt(source, condParseStart, prefix, "partial conditional declaration needs a normally completing value branch; add else");
                             }
@@ -10009,7 +10009,7 @@ parseBinaryCtx := fn(target: String, source: String, position: Int, prefix: Stri
                         rejectHeaderBlockTag(source, elseConditionStart, prefix, "else if");
                         elseCondition := self(target, source, elseConditionStart, prefix, locals, functions, params, currentName, "", 0, condBarrierCtxs, iifeDepth, inferMode, "", aliases);
                         if inferMode { ifMarkers = collectParsedMarkers(ifMarkers, elseCondition); }
-                        if elseCondition.kind =!= "Bool" {
+                        if elseCondition.kind =!= VALUE_KIND_BOOL {
                             failAt(source, elseConditionStart, prefix, "if condition must be Bool");
                         }
                         elseConditionCode := if elseCondition.constant {
@@ -10110,7 +10110,7 @@ parseBinaryCtx := fn(target: String, source: String, position: Int, prefix: Stri
                         if afterCond =!= armOpen {
                             _ := expectSymbol(source, afterCond, "{", prefix);
                         }
-                        if condition.kind =!= "Bool" {
+                        if condition.kind =!= VALUE_KIND_BOOL {
                             failAt(source, condStart, prefix, "match arm condition must be Bool");
                         }
                         conditionCode := if condition.constant {
@@ -10142,7 +10142,7 @@ parseBinaryCtx := fn(target: String, source: String, position: Int, prefix: Stri
             condValVar := "lite$val" + integer.intText(condId);
             condLabel := "lite$b" + integer.intText(condId);
             condDepth := iifeDepth + 1;
-            normExpected := if expected == "Unit" or expected == "Never" {
+            normExpected := if expected == VALUE_KIND_UNIT or expected == VALUE_KIND_NEVER {
                 ""
             } else if textLib.startsWithAt(expected, 0, "TailList<") {
                 "List<" + listElementKind(textLib.slice(expected, 4, textLib.length(expected))) + ">"
@@ -10171,7 +10171,7 @@ parseBinaryCtx := fn(target: String, source: String, position: Int, prefix: Stri
                 condPassCtxs := appendCtx(ctxs, condCtx);
                 passBranchExpected := if isPass1 {
                     condHintExpected
-                } else if resolvedPreThenKind == "Unit" or resolvedPreThenKind == "Never" {
+                } else if resolvedPreThenKind == VALUE_KIND_UNIT or resolvedPreThenKind == VALUE_KIND_NEVER {
                     ""
                 } else {
                     resolvedPreThenKind
@@ -10191,7 +10191,7 @@ parseBinaryCtx := fn(target: String, source: String, position: Int, prefix: Stri
                     condStart0 := cursor;
                     cond0 := self(target, source, condStart0, prefix, locals, functions, params, currentName, "", 0, condPassCtxs, condDepth, passInfer, "", aliases);
                     if passInfer { passMarkers = collectParsedMarkers(passMarkers, cond0); }
-                    if cond0.kind =!= "Bool" {
+                    if cond0.kind =!= VALUE_KIND_BOOL {
                         failAt(source, condStart0, prefix, "if condition must be Bool");
                     }
                     cond0Code := if cond0.constant {
@@ -10226,7 +10226,7 @@ parseBinaryCtx := fn(target: String, source: String, position: Int, prefix: Stri
                             rejectHeaderBlockTag(source, elseCondStart, prefix, "else if");
                             elseCond := self(target, source, elseCondStart, prefix, locals, functions, params, currentName, "", 0, condPassCtxs, condDepth, passInfer, "", aliases);
                             if passInfer { passMarkers = collectParsedMarkers(passMarkers, elseCond); }
-                            if elseCond.kind =!= "Bool" {
+                            if elseCond.kind =!= VALUE_KIND_BOOL {
                                 failAt(source, elseCondStart, prefix, "if condition must be Bool");
                             }
                             elseCondCode := if elseCond.constant {
@@ -10321,7 +10321,7 @@ parseBinaryCtx := fn(target: String, source: String, position: Int, prefix: Stri
                             if afterCond =!= armOpen {
                                 _ := expectSymbol(source, afterCond, "{", prefix);
                             }
-                            if condParsed.kind =!= "Bool" {
+                            if condParsed.kind =!= VALUE_KIND_BOOL {
                                 failAt(source, condStart, prefix, "match arm condition must be Bool");
                             }
                             condCode := if condParsed.constant {
@@ -10351,7 +10351,7 @@ parseBinaryCtx := fn(target: String, source: String, position: Int, prefix: Stri
                     var allBranchesNever := true;
                     loop bIdx < passBranchCount {
                         bKind := passBranchKinds[bIdx];
-                        if bKind =!= "Never" {
+                        if bKind =!= VALUE_KIND_NEVER {
                             allBranchesNever = false;
                             passMarkers = passMarkers + integer.intText(condId) + "=" + bKind + "\n";
                         }
@@ -10363,7 +10363,7 @@ parseBinaryCtx := fn(target: String, source: String, position: Int, prefix: Stri
                         partialStopped := if minimum == -1 { allBranchesNever } else { false };
                         prePartial := inferKindFromMarkers(passMarkers, condId, condTagDisplay, source, condParseTagAt, prefix, partialStopped);
                         if minimum == -1 {
-                            if prePartial == "Never" {
+                            if prePartial == VALUE_KIND_NEVER {
                                 if expected == "" or textLib.startsWithAt(expected, 0, "TailList<") {
                                     failAt(source, condParseStart, prefix, "partial conditional declaration needs a normally completing value branch; add else");
                                 }
@@ -10372,10 +10372,10 @@ parseBinaryCtx := fn(target: String, source: String, position: Int, prefix: Stri
                                 resolvedPreThenKind = prePartial;
                             }
                         } else {
-                            if prePartial =!= "Unit" {
+                            if prePartial =!= VALUE_KIND_UNIT {
                                 failAt(source, passPartialNoElseAt, prefix, "value if requires a final else");
                             }
-                            resolvedPreThenKind = "Unit";
+                            resolvedPreThenKind = VALUE_KIND_UNIT;
                         }
                     }
                     condOuterMarkers = filterOtherMarkers(passMarkers, condId);
@@ -10400,7 +10400,7 @@ parseBinaryCtx := fn(target: String, source: String, position: Int, prefix: Stri
                     }
                     needsCondTry := condParseTag =!= "" and codeUsesTextCall(rawIfStmt, "lite$throwTransfer(" + integer.intText(condId) + ",");
                     if needsCondTry {
-                        catchAssign := if resolvedPreThenKind == "Unit" or resolvedPreThenKind == "Never" { "" }
+                        catchAssign := if resolvedPreThenKind == VALUE_KIND_UNIT or resolvedPreThenKind == VALUE_KIND_NEVER { "" }
                         else { condValVar + " = lite$transferVal;" };
                         condStmtCode = "try { " + rawIfStmt + " } catch (lite$err) { if (lite$hasTransfer(lite$err, " +
                         integer.intText(condId) + ")) { " + catchAssign + " } else { throw lite$err; } }";
@@ -10427,27 +10427,27 @@ parseBinaryCtx := fn(target: String, source: String, position: Int, prefix: Stri
                 normExpected, 0, appendCtx(ctxs, thenPass1Ctx), condDepth, true, "tagged", aliases);
                 if inferMode {
                     thenMarkers := condOuterMarkers + collectParsedMarkers("", thenPass1);
-                    finalKind := if resolvedPreThenKind == "Never" { "Never" } else { thenPass1.kind };
+                    finalKind := if resolvedPreThenKind == VALUE_KIND_NEVER { VALUE_KIND_NEVER } else { thenPass1.kind };
                     left = withMarkers((kind = finalKind, code = "", intValue = 0, textValue = "", constant = false, next = thenPass1.next), thenMarkers);
                 } else {
                     thenValKind := thenPass1.kind;
-                    thenPass2Expected := if thenValKind == "Unit" or thenValKind == "Never" { "" } else { thenValKind };
+                    thenPass2Expected := if thenValKind == VALUE_KIND_UNIT or thenValKind == VALUE_KIND_NEVER { "" } else { thenValKind };
                     thenPass2Ctx := (id = thenId, tag = condParseTag, kind = condParseKind, phase = "then",
                     iifeDepth = condDepth, valKind = thenValKind, valVar = thenValVar, label = thenLabel,
                     iterLabel = "", countVar = "", itemVar = condValVar, itemKind = resolvedPreThenKind, indexVar = "", hasIndex = false);
                     thenPass2 := self(target, source, thenOpen - 1, prefix, locals, functions, params, currentName,
                     thenPass2Expected, 0, appendCtx(ctxs, thenPass2Ctx), condDepth, false, "tagged", aliases);
-                    if resolvedPreThenKind == "Never" {
+                    if resolvedPreThenKind == VALUE_KIND_NEVER {
                         condIifeBody = condStmtCode;
-                        left = (kind = "Never", code = "(() => { " + condIifeBody + " })()",
+                        left = (kind = VALUE_KIND_NEVER, code = "(() => { " + condIifeBody + " })()",
                         intValue = 0, textValue = "", constant = false, next = thenPass2.next);
                     } else {
-                        valDecl := if resolvedPreThenKind == "Unit" {
+                        valDecl := if resolvedPreThenKind == VALUE_KIND_UNIT {
                             ""
                         } else {
                             "let " + condValVar + ": " + tsFunctionType(resolvedPreThenKind) + " = " + zeroParsed(target, resolvedPreThenKind, 0).code + "; void " + condValVar + "; "
                         };
-                        thenRet := if thenValKind == "Unit" {
+                        thenRet := if thenValKind == VALUE_KIND_UNIT {
                             "void (" + thenPass2.code + "); return undefined;"
                         } else {
                             "return " + thenPass2.code + ";"
@@ -10461,14 +10461,14 @@ parseBinaryCtx := fn(target: String, source: String, position: Int, prefix: Stri
                 if inferMode {
                     left = withMarkers((kind = resolvedPreThenKind, code = "", intValue = 0, textValue = "", constant = false, next = condEndCursor), condOuterMarkers);
                 } else {
-                    valDecl := if resolvedPreThenKind == "Unit" or resolvedPreThenKind == "Never" {
+                    valDecl := if resolvedPreThenKind == VALUE_KIND_UNIT or resolvedPreThenKind == VALUE_KIND_NEVER {
                         ""
                     } else {
                         "let " + condValVar + ": " + tsFunctionType(resolvedPreThenKind) + " = " + zeroParsed(target, resolvedPreThenKind, 0).code + "; "
                     };
-                    finalRet := if resolvedPreThenKind == "Unit" {
+                    finalRet := if resolvedPreThenKind == VALUE_KIND_UNIT {
                         " return undefined;"
-                    } else if resolvedPreThenKind == "Never" {
+                    } else if resolvedPreThenKind == VALUE_KIND_NEVER {
                         ""
                     } else {
                         " return " + condValVar + ";"
@@ -10493,7 +10493,7 @@ parseBinaryCtx := fn(target: String, source: String, position: Int, prefix: Stri
                 iifeDepth = condDepth, valKind = resolvedPreThenKind, valVar = condValVar, label = condLabel,
                 iterLabel = "", countVar = "", itemVar = "", itemKind = "", indexVar = "", hasIndex = false);
                 finBarrierCtx := (id = 0, tag = "", kind = "finally", phase = "finally",
-                iifeDepth = condDepth, valKind = "Unit", valVar = "", label = "",
+                iifeDepth = condDepth, valKind = VALUE_KIND_UNIT, valVar = "", label = "",
                 iterLabel = "", countVar = "", itemVar = "", itemKind = "", indexVar = "", hasIndex = false);
                 condFinCtxs := appendCtx(appendCtx(ctxs, condFinCtx), finBarrierCtx);
                 finParsed := self(target, source, finOpen - 1, prefix, locals, functions, params, currentName,
@@ -10505,7 +10505,7 @@ parseBinaryCtx := fn(target: String, source: String, position: Int, prefix: Stri
                 if textLib.wordAt(source, afterFinClose, "finally") {
                     failAt(source, afterFinClose, prefix, "duplicate finally block");
                 }
-                finalCondKind := if finParsed.kind == "Never" { "Never" } else { left.kind };
+                finalCondKind := if finParsed.kind == VALUE_KIND_NEVER { VALUE_KIND_NEVER } else { left.kind };
                 if inferMode {
                     mergedCondMarkers := collectParsedMarkers(collectParsedMarkers("", left), finParsed);
                     left = withMarkers((kind = finalCondKind, code = "", intValue = 0, textValue = "", constant = false, next = finParsed.next), mergedCondMarkers);
@@ -10551,11 +10551,11 @@ parseBinaryCtx := fn(target: String, source: String, position: Int, prefix: Stri
             } else {
                 labelEnd := textLib.skipName(source, labelStart);
                 label := textLib.slice(source, labelStart, labelEnd);
-                if left.kind == "Module" {
+                if left.kind == VALUE_KIND_MODULE {
                     qualified := left.textValue + "." + label;
                     functionIndex := findFunction(functions, qualified);
                     if functionIndex >= 0 {
-                        left = (kind = "ModuleFunction", code = integer.intText(start), intValue = functionIndex, textValue = qualified,
+                        left = (kind = VALUE_KIND_MODULE_FUNCTION, code = integer.intText(start), intValue = functionIndex, textValue = qualified,
                         constant = false, next = labelEnd);
                     } else {
                         memberIndex := localIndex(locals, qualified);
@@ -10588,7 +10588,7 @@ parseBinaryCtx := fn(target: String, source: String, position: Int, prefix: Stri
             }
             indexStart := skipTrivia(source, postPosition + 1, prefix);
             index := self(target, source, indexStart, prefix, locals, functions, params, currentName, "", 0, ctxs, iifeDepth, inferMode, "", aliases);
-            if index.kind =!= "Int" {
+            if index.kind =!= VALUE_KIND_INT {
                 failAt(source, indexStart, prefix, "list index must be Int, got " + displayKind(index.kind));
             }
             close := skipTrivia(source, index.next, prefix);
@@ -10598,7 +10598,7 @@ parseBinaryCtx := fn(target: String, source: String, position: Int, prefix: Stri
             code = "lite$listAt((" + left.code + "), " + index.code + ", " + integer.intText(indexStart) + ")",
             intValue = 0, textValue = "", constant = false, next = next),
             if inferMode { collectParsedMarkers(collectParsedMarkers("", left), index) } else { "" });
-        } else if left.kind == "ListOp" {
+        } else if left.kind == VALUE_KIND_LIST_OP {
             grant := parseListGrant(source, left.next, prefix, locals, left.code);
             if left.textValue == "push_back" or left.textValue == "push_front" {
                 var cursor := skipTrivia(source, grant.next, prefix);
@@ -10614,7 +10614,7 @@ parseBinaryCtx := fn(target: String, source: String, position: Int, prefix: Stri
                 }
                 close := expectNonemptyCallClose(source, value.next, prefix);
                 method := if left.textValue == "push_back" { ".push(" } else { ".unshift(" };
-                left = withMarkers((kind = "Unit", code = grant.runtime + method + assignValueCode(target, elementKind, value.kind, value.code) + ")",
+                left = withMarkers((kind = VALUE_KIND_UNIT, code = grant.runtime + method + assignValueCode(target, elementKind, value.kind, value.code) + ")",
                 intValue = 0, textValue = "", constant = false, next = close),
                 if inferMode { collectParsedMarkers("", value) } else { "" });
             } else {
@@ -10623,8 +10623,8 @@ parseBinaryCtx := fn(target: String, source: String, position: Int, prefix: Stri
                 left = (kind = listElementKind(grant.kind), code = helper + grant.runtime + ", " + integer.intText(start) + ")",
                 intValue = 0, textValue = "", constant = false, next = close);
             }
-        } else if left.kind == "ModuleFunction" or (isFnKind(left.kind) and postPosition < textLib.length(source) and textLib.at(source, postPosition) == "(") {
-            isModuleFn := left.kind == "ModuleFunction";
+        } else if left.kind == VALUE_KIND_MODULE_FUNCTION or (isFnKind(left.kind) and postPosition < textLib.length(source) and textLib.at(source, postPosition) == "(") {
+            isModuleFn := left.kind == VALUE_KIND_MODULE_FUNCTION;
             var handleUserCall := not isModuleFn;
             var callParams: List<String> = params;
             var callFirst := 0;
@@ -10659,7 +10659,7 @@ parseBinaryCtx := fn(target: String, source: String, position: Int, prefix: Stri
                         }
                         close := expectNonemptyCallClose(source, value.next, prefix);
                         method := if listOpName == "push_back" { ".push(" } else { ".unshift(" };
-                        left = withMarkers((kind = "Unit", code = grant.runtime + method + assignValueCode(target, elementKind, value.kind, value.code) + ")",
+                        left = withMarkers((kind = VALUE_KIND_UNIT, code = grant.runtime + method + assignValueCode(target, elementKind, value.kind, value.code) + ")",
                         intValue = 0, textValue = "", constant = false, next = close),
                         if inferMode { collectParsedMarkers("", value) } else { "" });
                     } else {
@@ -10738,7 +10738,7 @@ parseBinaryCtx := fn(target: String, source: String, position: Int, prefix: Stri
                     if info.runtime == "lite$textAt" or info.runtime == "lite$textSlice" {
                         listLib.pushBack(mut argumentCodes, integer.intText(errPos));
                     }
-                    callResultKind := if optionalExit { "Never" } else { info.result };
+                    callResultKind := if optionalExit { VALUE_KIND_NEVER } else { info.result };
                     left = withMarkers((kind = callResultKind, code = info.runtime + "(" + textLib.joinTexts(argumentCodes, ", ") + ")",
                     intValue = 0, textValue = "", constant = false, next = cursor), callMarkers);
                 } else {
@@ -10931,7 +10931,7 @@ parseBinaryCtx := fn(target: String, source: String, position: Int, prefix: Stri
                     loop kIdx < entryCount {
                         if not callDiverged {
                             targetSlot := entrySlots[kIdx];
-                            if entryKinds[kIdx] == "Never" {
+                            if entryKinds[kIdx] == VALUE_KIND_NEVER {
                                 listLib.pushBack(mut evalStmts, "return " + entryCodes[kIdx] + ";");
                                 callDiverged = true;
                             } else if slotEntry[targetSlot] == kIdx {
@@ -10946,7 +10946,7 @@ parseBinaryCtx := fn(target: String, source: String, position: Int, prefix: Stri
                     }
                     if callDiverged {
                         emittedCode = "(() => { " + textLib.joinTexts(evalStmts, " ") + " })()";
-                        emittedResultKind = "Never";
+                        emittedResultKind = VALUE_KIND_NEVER;
                     } else {
                         slotTemps: mut List<String> = [];
                         var sIdx := 0;
@@ -10956,7 +10956,7 @@ parseBinaryCtx := fn(target: String, source: String, position: Int, prefix: Stri
                         }
                         targetCallee := if isModuleFn { callRuntime } else { "lite$fn" };
                         callExpr := targetCallee + "(" + textLib.joinTexts(slotTemps, ", ") + ")";
-                        retStmt := if callResult == "Unit" { "void (" + callExpr + "); return undefined;" } else { "return " + callExpr + ";" };
+                        retStmt := if callResult == VALUE_KIND_UNIT { "void (" + callExpr + "); return undefined;" } else { "return " + callExpr + ";" };
                         emittedCode = "(() => { " + textLib.joinTexts(evalStmts, " ") + " " + retStmt + " })()";
                     }
                 }
@@ -11008,7 +11008,7 @@ parseBinaryCtx := fn(target: String, source: String, position: Int, prefix: Stri
                     }
                     left = boolParsed("", false, false, chainEnd);
                 } else if operator.text == "**" {
-                    left = (kind = "Float", code = "", intValue = 0, textValue = "", constant = false, next = right.next);
+                    left = (kind = VALUE_KIND_FLOAT, code = "", intValue = 0, textValue = "", constant = false, next = right.next);
                 } else {
                     left = (kind = left.kind, code = "", intValue = 0, textValue = "", constant = false, next = right.next);
                 }
@@ -11016,13 +11016,13 @@ parseBinaryCtx := fn(target: String, source: String, position: Int, prefix: Stri
                 targetLoopId := if leftLoopId >= 0 { leftLoopId } else { rightLoopId };
                 peerKind := if leftLoopId >= 0 { right.kind } else { left.kind };
                 if operator.text == "and" or operator.text == "or" {
-                    if peerKind =!= "Bool" {
+                    if peerKind =!= VALUE_KIND_BOOL {
                         failAt(source, operatorPosition, prefix, "operator " + operator.text + " requires Bool operands");
                     }
                     opMarkers = opMarkers + integer.intText(targetLoopId) + "=Bool\n";
                     left = boolParsed("", false, false, right.next);
                 } else if isComparison(operator.text) {
-                    if peerKind == "Never" { failAt(source, operatorPosition, prefix, "cannot compare Never values"); }
+                    if peerKind == VALUE_KIND_NEVER { failAt(source, operatorPosition, prefix, "cannot compare Never values"); }
                     if isTupleKind(peerKind) { failAt(source, operatorPosition, prefix, "cannot compare tuple values"); }
                     if isListKind(peerKind) { failAt(source, operatorPosition, prefix, "cannot compare list values"); }
                     if isFnKind(peerKind) { failAt(source, operatorPosition, prefix, "cannot compare function values"); }
@@ -11046,8 +11046,8 @@ parseBinaryCtx := fn(target: String, source: String, position: Int, prefix: Stri
                         failAt(source, operatorPosition, prefix, "power requires Int or Float operands");
                     }
                     opMarkers = opMarkers + integer.intText(targetLoopId) + "=" + peerKind + "\n";
-                    left = (kind = "Float", code = "", intValue = 0, textValue = "", constant = false, next = right.next);
-                } else if operator.text == "+" and peerKind == "String" {
+                    left = (kind = VALUE_KIND_FLOAT, code = "", intValue = 0, textValue = "", constant = false, next = right.next);
+                } else if operator.text == "+" and peerKind == VALUE_KIND_STRING {
                     opMarkers = opMarkers + integer.intText(targetLoopId) + "=String\n";
                     left = textParsed("", "", false, right.next);
                 } else if numeric.isNumericKind(peerKind) {
@@ -11065,7 +11065,7 @@ parseBinaryCtx := fn(target: String, source: String, position: Int, prefix: Stri
                 }
             }
         } else if operator.text == "and" or operator.text == "or" {
-            if left.kind =!= "Bool" or right.kind =!= "Bool" {
+            if left.kind =!= VALUE_KIND_BOOL or right.kind =!= VALUE_KIND_BOOL {
                 failAt(source, operatorPosition, prefix, "operator " + operator.text + " requires Bool operands");
             }
             if left.constant and right.constant {
@@ -11116,7 +11116,7 @@ parseBinaryCtx := fn(target: String, source: String, position: Int, prefix: Stri
                 failAt(source, operatorPosition, prefix, "power requires Int or Float operands");
             }
             code := targetFloatPowerCode(target, targetFloatOperandCode(target, left.kind, left.code), targetFloatOperandCode(target, right.kind, right.code), operatorPosition);
-            left = (kind = "Float", code = code, intValue = 0, textValue = "", constant = false, next = right.next);
+            left = (kind = VALUE_KIND_FLOAT, code = code, intValue = 0, textValue = "", constant = false, next = right.next);
         } else if numeric.isIntKind(left.kind) and numeric.isIntKind(right.kind) {
             promoted := numeric.promoteNumericKind(left.kind, right.kind);
             if left.constant and right.constant {
@@ -11134,7 +11134,7 @@ parseBinaryCtx := fn(target: String, source: String, position: Int, prefix: Stri
             } else {
                 left = typedIntParsed(promoted, runtimeTypedIntegerCode(target, promoted, operator.text, left.code, right.code, operatorPosition), 0, false, right.next);
             }
-        } else if operator.text == "+" and left.kind == "String" and right.kind == "String" {
+        } else if operator.text == "+" and left.kind == VALUE_KIND_STRING and right.kind == VALUE_KIND_STRING {
             if left.constant and right.constant {
                 combined := left.textValue + right.textValue;
                 left = textParsed(targetTextLiteralCode(target, combined), combined, true, right.next);
@@ -11147,7 +11147,7 @@ parseBinaryCtx := fn(target: String, source: String, position: Int, prefix: Stri
             }
             promotedFloat := numeric.promoteNumericKind(left.kind, right.kind);
             floatKind := if promotedFloat =!= "" { promotedFloat } else if numeric.isFloatKind(left.kind) { left.kind } else { right.kind };
-            code := if floatKind == "Float32" {
+            code := if floatKind == VALUE_KIND_FLOAT32 {
                 targetFloat32BinaryCode(target, operator.text, targetFloat32OperandCode(target, left.kind, left.code), targetFloat32OperandCode(target, right.kind, right.code), operatorPosition)
             } else {
                 targetFloatBinaryCode(target, operator.text, targetFloatOperandCode(target, left.kind, left.code), targetFloatOperandCode(target, right.kind, right.code), operatorPosition)
@@ -11162,7 +11162,7 @@ parseBinaryCtx := fn(target: String, source: String, position: Int, prefix: Stri
         }
         if inferMode and opMarkers =!= "" { left = withMarkers(left, opMarkers); }
     }
-    if leaderStart >= 0 and left.kind =!= "Bool" {
+    if leaderStart >= 0 and left.kind =!= VALUE_KIND_BOOL {
         failAt(source, leaderStart, prefix, "leading " + leaderText + " requires a Bool expression");
     }
     left
@@ -11351,8 +11351,8 @@ storageKind := fn(kind: String): String {
         isListKind(kind) or isArrayKind(kind) { "List" }
         isTupleKind(kind) { "Tuple" }
         isFnKind(kind) { "Fn" }
-        numeric.isIntKind(kind) { "Int" }
-        numeric.isFloatKind(kind) { "Float" }
+        numeric.isIntKind(kind) { VALUE_KIND_INT }
+        numeric.isFloatKind(kind) { VALUE_KIND_FLOAT }
         _ { kind }
     }
 }
@@ -11383,7 +11383,7 @@ parsePartialAssignIf := fn(target: String, source: String, position: Int, prefix
         rejectHeaderBlockTag(source, cursor, prefix, if isFirst { "if" } else { "else if" });
         conditionStart := cursor;
         condition := parseExpressionCtx(target, source, conditionStart, prefix, locals, functions, params, currentName, ctxs, aliases);
-        if condition.kind =!= "Bool" {
+        if condition.kind =!= VALUE_KIND_BOOL {
             failAt(source, conditionStart, prefix, "if condition must be Bool");
         }
         conditionCode := if condition.constant {
@@ -11502,7 +11502,7 @@ parseExpressionItem := fn(target: String, source: String, position: Int, prefix:
     };
     trimmedStart := skipTrivia(source, position, prefix);
     stmtSink := if trimmedStart < textLib.length(source) and textLib.at(source, trimmedStart) == "{" { "exprOut" } else { "" };
-    stmtMin := if not isTailClose or currentResult == "Unit" { -2 } else { 0 };
+    stmtMin := if not isTailClose or currentResult == VALUE_KIND_UNIT { -2 } else { 0 };
     parsed := parseBinaryCtx(target, source, position, prefix, locals, functions, params, currentName, expected, stmtMin, ctxs, 0, false, stmtSink, aliases);
     ended := consumeStatementEnd(source, parsed.next, prefix);
     if ended < 0 { failAt(source, skipTrivia(source, parsed.next, prefix), prefix, "expected ; after expression statement"); }
@@ -11512,7 +11512,7 @@ parseExpressionItem := fn(target: String, source: String, position: Int, prefix:
         failAt(source, position, prefix, "cannot return " + displayKind(parsed.kind) + " from function " + currentName +
         " returning " + displayKind(currentResult));
     }
-    (next = next, returned = returned, code = if returned { if parsed.kind == "Unit" { targetUnitEvaluationCode(target, parsed.code) } else { assignValueCode(target, currentResult, parsed.kind, parsed.code) } } else { parsed.code }, valueKind = parsed.kind)
+    (next = next, returned = returned, code = if returned { if parsed.kind == VALUE_KIND_UNIT { targetUnitEvaluationCode(target, parsed.code) } else { assignValueCode(target, currentResult, parsed.kind, parsed.code) } } else { parsed.code }, valueKind = parsed.kind)
 }
 
 /** Collects aliases, `pub` declarations, inner-alias hints, root functions, root values, and root assignments in a single pass over module source. */
@@ -11989,7 +11989,7 @@ moduleIdentity: String, neededFns: String, skipSoftBuiltins: Bool): Items {
             if findFunction(functions, exported.name) >= 0 or localIndex(locals, exported.name) >= 0 {
                 diagLib.fail(prefix, "duplicate imported module name " + exported.name);
             }
-            listLib.pushBack(mut locals, (name = exported.name, runtime = "", kind = "Module", mutable = false,
+            listLib.pushBack(mut locals, (name = exported.name, runtime = "", kind = VALUE_KIND_MODULE, mutable = false,
             writable = false, depth = 0, constant = false, code = "", intValue = exported.intValue,
             textValue = exported.name, initState = INIT_STATE_INIT));
         } else if exported.kind == "PublicFunction" {
@@ -12127,7 +12127,7 @@ moduleIdentity: String, neededFns: String, skipSoftBuiltins: Bool): Items {
                         declMutable := declTag == DECL_TAG_VAR_VAL or declTag == DECL_TAG_VAR_MUT;
                         declWritable := declTag == DECL_TAG_VAR_MUT or declTag == DECL_TAG_MUT_VAL;
                         inferred := tryInferRootExprKind(source, posVal, prefix, aliases, functions, functionParams, locals, futureValues, "", 0, 24);
-                        if inferred.kind =!= "" and inferred.kind =!= "Unit" and (not declWritable or isListKind(inferred.kind)) {
+                        if inferred.kind =!= "" and inferred.kind =!= VALUE_KIND_UNIT and (not declWritable or isListKind(inferred.kind)) {
                             listLib.pushBack(mut futureValues, (name = decl.name, runtime = decl.runtime, kind = inferred.kind,
                             at = decl.intValue, mutable = declMutable, writable = declWritable, initState = INIT_STATE_INIT));
                             resolvedDeclBag = appendPipeBag(resolvedDeclBag, keyText);
@@ -12142,7 +12142,7 @@ moduleIdentity: String, neededFns: String, skipSoftBuiltins: Bool): Items {
                         destrMutable := decl.runtime == DECL_BIND_VAR;
                         inferred := tryInferRootExprKind(source, rhsPos, prefix, aliases, functions, functionParams, locals, futureValues, "", 0, 24);
                         if destr.grouped {
-                            if inferred.kind =!= "" and inferred.kind =!= "Unit" {
+                            if inferred.kind =!= "" and inferred.kind =!= VALUE_KIND_UNIT {
                                 bindName := destr.namesText;
                                 listLib.pushBack(mut futureValues, (name = bindName, runtime = moduleValueRuntime(target, moduleKey, bindName),
                                 kind = inferred.kind, at = decl.intValue, mutable = destrMutable, writable = false, initState = INIT_STATE_INIT));
@@ -12228,7 +12228,7 @@ moduleIdentity: String, neededFns: String, skipSoftBuiltins: Bool): Items {
             }
             blockKind := blocks[blockCount - 1];
             if (blockKind == BLOCK_KIND_IF_VALUE or blockKind == BLOCK_KIND_MATCH_VALUE or blockKind == BLOCK_KIND_MATCH_ELSE_VALUE or blockKind == BLOCK_KIND_MATCH_SINGLE_VALUE) and
-            currentResult =!= "Unit" and not currentReturned {
+            currentResult =!= VALUE_KIND_UNIT and not currentReturned {
                 failAt(source, position, prefix, "branch of function " + currentName + " must return " + displayKind(currentResult));
             }
             after := skipTrivia(source, position + 1, prefix);
@@ -12267,7 +12267,7 @@ moduleIdentity: String, neededFns: String, skipSoftBuiltins: Bool): Items {
                     conditionStart := skipTrivia(source, afterElse + 2, prefix);
                     rejectHeaderBlockTag(source, conditionStart, prefix, "else if");
                     condition := parseExpressionCtx(target, source, conditionStart, prefix, locals, functions, functionParams, currentName, stmtCtxs, aliases);
-                    if condition.kind =!= "Bool" {
+                    if condition.kind =!= VALUE_KIND_BOOL {
                         failAt(source, conditionStart, prefix, "else if condition must be Bool");
                     }
                     if target == TARGET_TS and currentLive {
@@ -12372,7 +12372,7 @@ moduleIdentity: String, neededFns: String, skipSoftBuiltins: Bool): Items {
                     if afterCond =!= armOpen {
                         _ := expectSymbol(source, afterCond, "{", prefix);
                     }
-                    if condition.kind =!= "Bool" {
+                    if condition.kind =!= VALUE_KIND_BOOL {
                         failAt(source, nextArmStart, prefix, "match arm condition must be Bool");
                     }
                     if target == TARGET_TS and currentLive {
@@ -12424,7 +12424,7 @@ moduleIdentity: String, neededFns: String, skipSoftBuiltins: Bool): Items {
             depth = depth - 1;
             if blockKind == BLOCK_KIND_FUNCTION {
                 locals = withoutFutureValues(locals);
-                if currentResult =!= "Unit" and not currentReturned {
+                if currentResult =!= VALUE_KIND_UNIT and not currentReturned {
                     failAt(source, position, prefix, "function " + currentName + " must return " + currentResult);
                 }
                 droppedFnCtx := listLib.popBack(mut stmtCtxs);
@@ -12558,7 +12558,7 @@ moduleIdentity: String, neededFns: String, skipSoftBuiltins: Bool): Items {
                         transferCount = transferCount + 1;
                     }
                 }
-                if expression.returned or expression.valueKind == "Never" {
+                if expression.returned or expression.valueKind == VALUE_KIND_NEVER {
                     if not currentStopped { currentReturned = true; }
                     currentStopped = true;
                 }
@@ -12620,14 +12620,14 @@ moduleIdentity: String, neededFns: String, skipSoftBuiltins: Bool): Items {
                 if isTupleKind(rhs.kind) {
                     failAt(source, destructureOpen, prefix, "tuple destructuring expected 0 fields, got " + integer.intText(tupleComponentCount(rhs.kind)));
                 }
-                if rhs.kind =!= "Unit" {
+                if rhs.kind =!= VALUE_KIND_UNIT {
                     failAt(source, destructureOpen, prefix, "tuple destructuring requires Unit for (), got " + displayKind(rhs.kind));
                 }
                 statementNext := consumeStatementEnd(source, rhs.next, prefix);
                 if statementNext < 0 { failAt(source, skipTrivia(source, rhs.next, prefix), prefix, "expected ; after tuple destructuring"); }
                 position = statementNext;
                 if currentLive and not currentStopped {
-                    listLib.pushBack(mut items, (kind = "Discard", name = "Unit", runtime = "",
+                    listLib.pushBack(mut items, (kind = "Discard", name = VALUE_KIND_UNIT, runtime = "",
                     code = rhs.code, intValue = 0, textValue = ""));
                     if codeHasRawTransfer(rhs.code) {
                         listLib.pushBack(mut transferCodes, rhs.code);
@@ -12673,7 +12673,7 @@ moduleIdentity: String, neededFns: String, skipSoftBuiltins: Bool): Items {
             position = statementNext;
             tempRuntime := freshScopeTemp(locals, "lite$tuple");
             tupleCode := if target == TARGET_TS and containsFnKind(rhs.kind) { computeCallableRhsDeps(rhs.code) } else { "" };
-            listLib.pushBack(mut locals, (name = "$tuple", runtime = tempRuntime, kind = "Unit",
+            listLib.pushBack(mut locals, (name = "$tuple", runtime = tempRuntime, kind = VALUE_KIND_UNIT,
             mutable = false, writable = false, depth = depth, constant = false, code = tupleCode,
             intValue = 0, textValue = "", initState = INIT_STATE_INIT));
             if currentLive and not currentStopped {
@@ -12741,7 +12741,7 @@ moduleIdentity: String, neededFns: String, skipSoftBuiltins: Bool): Items {
                     transferCount = transferCount + 1;
                 }
             }
-            if expression.returned or expression.valueKind == "Never" {
+            if expression.returned or expression.valueKind == VALUE_KIND_NEVER {
                 if not currentStopped { currentReturned = true; }
                 currentStopped = true;
             }
@@ -12773,7 +12773,7 @@ moduleIdentity: String, neededFns: String, skipSoftBuiltins: Bool): Items {
                     transferCount = transferCount + 1;
                 }
             }
-            if expression.returned or expression.valueKind == "Never" {
+            if expression.returned or expression.valueKind == VALUE_KIND_NEVER {
                 if not currentStopped { currentReturned = true; }
                 currentStopped = true;
             }
@@ -12857,7 +12857,7 @@ moduleIdentity: String, neededFns: String, skipSoftBuiltins: Bool): Items {
             }
             valueStart := position;
             if valueStart >= size or textLib.at(source, valueStart) == ";" or textLib.at(source, valueStart) == "}" {
-                if currentResult =!= "Unit" {
+                if currentResult =!= VALUE_KIND_UNIT {
                     failAt(source, nameStart, prefix, "function " + currentName + " must return " + currentResult);
                 }
                 position = consumeStatementEnd(source, valueStart, prefix);
@@ -12867,7 +12867,7 @@ moduleIdentity: String, neededFns: String, skipSoftBuiltins: Bool): Items {
                 currentStopped = true;
                 continue;
             }
-            if currentResult == "Unit" {
+            if currentResult == VALUE_KIND_UNIT {
                 failAt(source, nameStart, prefix, "function " + currentName + " returns Unit and cannot return a value");
             }
             parsed := parseExpressionAsCtx(target, source, position, prefix, locals, functions, functionParams, currentName, currentResult, stmtCtxs, aliases);
@@ -12933,7 +12933,7 @@ moduleIdentity: String, neededFns: String, skipSoftBuiltins: Bool): Items {
         moduleIndex := localIndex(locals, name);
         isDeclFollow := textLib.startsWithAt(source, position, ":=") or
         (position < size and textLib.at(source, position) == ":" and compoundAssignOp(source, position).width == 0);
-        if moduleIndex >= 0 and locals[moduleIndex].kind == "Module" and not isDeclFollow {
+        if moduleIndex >= 0 and locals[moduleIndex].kind == VALUE_KIND_MODULE and not isDeclFollow {
             if position >= size or textLib.at(source, position) =!= "." {
                 failAt(source, nameStart, prefix, "module namespace " + name + " requires a public member");
             }
@@ -12957,7 +12957,7 @@ moduleIdentity: String, neededFns: String, skipSoftBuiltins: Bool): Items {
                     checkTraceSafety(source, nameStart, prefix, outputItem.code, currentName, maxFutureAt, locals, functions, futureValues, items);
                     locals = mergeOuterCallableUpdatesFromCode(locals, outputItem.code);
                 }
-                if outputItem.kind == "Never" { outputDiverged = true; }
+                if outputItem.kind == VALUE_KIND_NEVER { outputDiverged = true; }
                 if currentLive and not currentStopped {
                     listLib.pushBack(mut items, outputItem);
                     if codeHasRawTransfer(outputItem.code) {
@@ -12967,7 +12967,7 @@ moduleIdentity: String, neededFns: String, skipSoftBuiltins: Bool): Items {
                 }
             }
             if outputDiverged {
-                if currentLive and not currentStopped and currentResult =!= "Unit" {
+                if currentLive and not currentStopped and currentResult =!= VALUE_KIND_UNIT {
                     listLib.pushBack(mut items, (kind = "Unreachable", name = "", runtime = "", code = "", intValue = 0, textValue = ""));
                 }
                 if not currentStopped { currentReturned = true; }
@@ -12975,7 +12975,7 @@ moduleIdentity: String, neededFns: String, skipSoftBuiltins: Bool): Items {
             }
             continue;
         }
-        if moduleIndex >= 0 and locals[moduleIndex].kind == "Module" and not isDeclFollow {
+        if moduleIndex >= 0 and locals[moduleIndex].kind == VALUE_KIND_MODULE and not isDeclFollow {
             expression := parseExpressionItem(target, source, nameStart, prefix, locals, functions, functionParams, currentName,
             currentResult, atValueTail(blocks, blockCount) and not currentStopped, stmtCtxs, aliases);
             if target == TARGET_TS and currentLive and not currentStopped {
@@ -12993,7 +12993,7 @@ moduleIdentity: String, neededFns: String, skipSoftBuiltins: Bool): Items {
                     transferCount = transferCount + 1;
                 }
             }
-            if expression.returned or expression.valueKind == "Never" {
+            if expression.returned or expression.valueKind == VALUE_KIND_NEVER {
                 if not currentStopped { currentReturned = true; }
                 currentStopped = true;
             }
@@ -13039,7 +13039,7 @@ moduleIdentity: String, neededFns: String, skipSoftBuiltins: Bool): Items {
                         transferCount = transferCount + 1;
                     }
                 }
-                if expression.returned or expression.valueKind == "Never" {
+                if expression.returned or expression.valueKind == VALUE_KIND_NEVER {
                     if not currentStopped { currentReturned = true; }
                     currentStopped = true;
                 }
@@ -13068,7 +13068,7 @@ moduleIdentity: String, neededFns: String, skipSoftBuiltins: Bool): Items {
                         transferCount = transferCount + 1;
                     }
                 }
-                if expression.returned or expression.valueKind == "Never" {
+                if expression.returned or expression.valueKind == VALUE_KIND_NEVER {
                     if not currentStopped { currentReturned = true; }
                     currentStopped = true;
                 }
@@ -13119,7 +13119,7 @@ moduleIdentity: String, neededFns: String, skipSoftBuiltins: Bool): Items {
             itemVar = "", itemKind = "", indexVar = "", hasIndex = false);
             condition := parseExpressionCtx(target, source, position, prefix, locals, functions, functionParams, currentName,
             appendCtx(stmtCtxs, ifBarrierCtx), aliases);
-            if condition.kind =!= "Bool" {
+            if condition.kind =!= VALUE_KIND_BOOL {
                 failAt(source, conditionStart, prefix, "if condition must be Bool");
             }
             if target == TARGET_TS and currentLive and not currentStopped {
@@ -13192,7 +13192,7 @@ moduleIdentity: String, neededFns: String, skipSoftBuiltins: Bool): Items {
                         transferCount = transferCount + 1;
                     }
                 }
-                if expression.returned or expression.valueKind == "Never" {
+                if expression.returned or expression.valueKind == VALUE_KIND_NEVER {
                     if not currentStopped { currentReturned = true; }
                     currentStopped = true;
                 }
@@ -13200,7 +13200,7 @@ moduleIdentity: String, neededFns: String, skipSoftBuiltins: Bool): Items {
                 continue;
             }
             var valueTailBranch := false;
-            if currentName =!= "" and currentResult =!= "Unit" and atValueTail(blocks, blockCount) and not currentStopped {
+            if currentName =!= "" and currentResult =!= VALUE_KIND_UNIT and atValueTail(blocks, blockCount) and not currentStopped {
                 if target == TARGET_TS {
                     valueEnd := scanValueMatchEnd(source, nameStart, prefix, true);
                     if valueEnd >= 0 {
@@ -13278,7 +13278,7 @@ moduleIdentity: String, neededFns: String, skipSoftBuiltins: Bool): Items {
                 if afterCond =!= firstArmOpen {
                     _ := expectSymbol(source, afterCond, "{", prefix);
                 }
-                if condition.kind =!= "Bool" {
+                if condition.kind =!= VALUE_KIND_BOOL {
                     failAt(source, firstArmStart, prefix, "match arm condition must be Bool");
                 }
                 if target == TARGET_TS and currentLive and not currentStopped {
@@ -13334,7 +13334,7 @@ moduleIdentity: String, neededFns: String, skipSoftBuiltins: Bool): Items {
             hasStmtLoopThen := afterRawStmtLoopTok >= 0 and textLib.wordAt(source, afterRawStmtLoopTok, "then");
             hasStmtLoopFin := afterRawStmtLoopTok >= 0 and textLib.wordAt(source, afterRawStmtLoopTok, "finally");
             var atFnTailLoop := false;
-            if currentName =!= "" and currentResult =!= "Unit" and atValueTail(blocks, blockCount) and not currentStopped and rawStmtLoopEnd >= 0 {
+            if currentName =!= "" and currentResult =!= VALUE_KIND_UNIT and atValueTail(blocks, blockCount) and not currentStopped and rawStmtLoopEnd >= 0 {
                 afterRawStmtLoop := skipItemSeparators(source, rawStmtLoopEnd, prefix);
                 if afterRawStmtLoop < size and textLib.at(source, afterRawStmtLoop) == "}" {
                     atFnTailLoop = true;
@@ -13366,7 +13366,7 @@ moduleIdentity: String, neededFns: String, skipSoftBuiltins: Bool): Items {
                             transferCount = transferCount + 1;
                         }
                     }
-                    if expression.returned or expression.valueKind == "Never" {
+                    if expression.returned or expression.valueKind == VALUE_KIND_NEVER {
                         if not currentStopped { currentReturned = true; }
                         currentStopped = true;
                     }
@@ -13406,7 +13406,7 @@ moduleIdentity: String, neededFns: String, skipSoftBuiltins: Bool): Items {
                     sequenceCode = parsed.code;
                     position = afterParsed;
                 } else {
-                    if parsed.kind =!= "Bool" {
+                    if parsed.kind =!= VALUE_KIND_BOOL {
                         failAt(source, position, prefix, "loop condition must be Bool");
                     }
                     if parsed.constant {
@@ -13438,7 +13438,7 @@ moduleIdentity: String, neededFns: String, skipSoftBuiltins: Bool): Items {
                 }
             } else if sequenceCode =!= "" {
                 tempItemRuntime := freshScopeTemp(locals, "lite$item");
-                listLib.pushBack(mut locals, (name = "$item", runtime = tempItemRuntime, kind = "Unit",
+                listLib.pushBack(mut locals, (name = "$item", runtime = tempItemRuntime, kind = VALUE_KIND_UNIT,
                 mutable = false, writable = false, depth = depth + 1, constant = false, code = "",
                 intValue = 0, textValue = "", initState = INIT_STATE_INIT));
                 if currentLive and not currentStopped {
@@ -13596,7 +13596,7 @@ moduleIdentity: String, neededFns: String, skipSoftBuiltins: Bool): Items {
                             checkTraceSafety(source, localStart, prefix, rawVarRhsCode, currentName, maxFutureAt, locals, functions, futureValues, items);
                             locals = mergeOuterCallableUpdatesFromCode(locals, rawVarRhsCode);
                         }
-                        rhsDiverged = parsed.kind == "Never";
+                        rhsDiverged = parsed.kind == VALUE_KIND_NEVER;
                         converted := assignValueCode(target, typed.kind, parsed.kind, parsed.code);
                         parsed = (kind = typed.kind, code = converted, intValue = parsed.intValue, textValue = parsed.textValue, constant = parsed.constant, next = parsed.next);
                     }
@@ -13619,7 +13619,7 @@ moduleIdentity: String, neededFns: String, skipSoftBuiltins: Bool): Items {
             intValue = parsed.intValue, textValue = parsed.textValue, initState = declInitState));
             if currentLive and not currentStopped {
                 if rhsDiverged {
-                    listLib.pushBack(mut items, (kind = expressionStatementKind("Never", false, "Call", currentResult), name = "", runtime = "",
+                    listLib.pushBack(mut items, (kind = expressionStatementKind(VALUE_KIND_NEVER, false, "Call", currentResult), name = "", runtime = "",
                     code = parsed.code, intValue = 0, textValue = ""));
                     if codeHasRawTransfer(parsed.code) {
                         listLib.pushBack(mut transferCodes, parsed.code);
@@ -13943,7 +13943,7 @@ moduleIdentity: String, neededFns: String, skipSoftBuiltins: Bool): Items {
             if statementNext < 0 { failAt(source, skipTrivia(source, parsed.next, prefix), prefix, "expected ; after local declaration " + name); }
             position = statementNext;
             runtime := claimOrMakeLocalRuntime(target, locals, name, moduleKey, depth);
-            rhsDiverged := parsed.kind == "Never";
+            rhsDiverged := parsed.kind == VALUE_KIND_NEVER;
             assignedCode := assignValueCode(target, typed.kind, parsed.kind, parsed.code);
             annLocalCode := if target == TARGET_TS and containsFnKind(typed.kind) {
                 if declInitState == INIT_STATE_INIT { computeCallableRhsDeps(parsed.code) } else { "" }
@@ -13955,7 +13955,7 @@ moduleIdentity: String, neededFns: String, skipSoftBuiltins: Bool): Items {
             declItemPrefix := if declInitState == INIT_STATE_INIT { "Local" } else { "Var" };
             if currentLive and not currentStopped {
                 if rhsDiverged {
-                    listLib.pushBack(mut items, (kind = expressionStatementKind("Never", false, "Call", currentResult), name = "", runtime = "",
+                    listLib.pushBack(mut items, (kind = expressionStatementKind(VALUE_KIND_NEVER, false, "Call", currentResult), name = "", runtime = "",
                     code = assignedCode, intValue = 0, textValue = ""));
                 } else {
                     if declItemPrefix == "Local" and depth == 0 and blockCount == 0 and textLib.startsWithAt(moduleIdentity, 0, "lite.core.") {
@@ -14030,7 +14030,7 @@ moduleIdentity: String, neededFns: String, skipSoftBuiltins: Bool): Items {
             statementNext := consumeStatementEnd(source, parsed.next, prefix);
             if statementNext < 0 { failAt(source, skipTrivia(source, parsed.next, prefix), prefix, "expected ; after assignment to " + name); }
             position = statementNext;
-            rhsDiverged := parsed.kind == "Never";
+            rhsDiverged := parsed.kind == VALUE_KIND_NEVER;
             assignedCode := assignValueCode(target, entry.kind, parsed.kind, parsed.code);
             assignLocalCode := if target == TARGET_TS and containsFnKind(entry.kind) {
                 newDeps := computeCallableRhsDeps(parsed.code);
@@ -14041,7 +14041,7 @@ moduleIdentity: String, neededFns: String, skipSoftBuiltins: Bool): Items {
             intValue = parsed.intValue, textValue = parsed.textValue, initState = INIT_STATE_INIT));
             if currentLive and not currentStopped {
                 if rhsDiverged {
-                    listLib.pushBack(mut items, (kind = expressionStatementKind("Never", false, "Call", currentResult), name = "", runtime = "",
+                    listLib.pushBack(mut items, (kind = expressionStatementKind(VALUE_KIND_NEVER, false, "Call", currentResult), name = "", runtime = "",
                     code = assignedCode, intValue = 0, textValue = ""));
                 } else {
                     listLib.pushBack(mut items, (kind = "Assign" + storageKind(entry.kind), name = name, runtime = entry.runtime,
@@ -14112,7 +14112,7 @@ moduleIdentity: String, neededFns: String, skipSoftBuiltins: Bool): Items {
                 transferCount = transferCount + 1;
             }
         }
-        if expression.returned or expression.valueKind == "Never" {
+        if expression.returned or expression.valueKind == VALUE_KIND_NEVER {
             if not currentStopped { currentReturned = true; }
             currentStopped = true;
         }

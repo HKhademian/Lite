@@ -13,10 +13,10 @@ dedent := fn(indent: String): String {
 /** Builds one checked printf call for an Int*, Float*, String or Bool report value without a trailing newline. */
 cCall := fn(kind: String, code: String): String {
     match {
-        kind == "Unit" { "printf(\"Unit\")" }
+        kind == frontend.VALUE_KIND_UNIT { "printf(\"Unit\")" }
         frontend.isFloatScalarKind(kind) { "lt_print_float((double)(" + code + "))" }
         frontend.isIntScalarKind(kind) { "printf(\"%\" PRId64, (int64_t)(" + code + "))" }
-        kind == "Bool" { "printf(\"%s\", ((" + code + ") ? \"true\" : \"false\"))" }
+        kind == frontend.VALUE_KIND_BOOL { "printf(\"%s\", ((" + code + ") ? \"true\" : \"false\"))" }
         _ { "printf(\"%s\", " + code + ")" }
     }
 }
@@ -375,9 +375,9 @@ emitStringConcatHelper := fn(): Unit {
 
 /** Evaluates one multi-value output argument into a hygienic scalar temporary. Unit has no stored payload or supported C-side effect. */
 emitOutputArgument := fn(kind: String, code: String, name: String, indent: String): Unit {
-    if kind == "Unit" { return; }
+    if kind == frontend.VALUE_KIND_UNIT { return; }
     typeCode := if frontend.isIntScalarKind(kind) { "int64_t " }
-    else if kind == "Bool" { "bool " }
+    else if kind == frontend.VALUE_KIND_BOOL { "bool " }
     else if frontend.isFloatScalarKind(kind) { "double " }
     else { "const char *" };
     io.outputLine(indent + typeCode + name + " = " + code + ";");
@@ -402,7 +402,7 @@ pub emitProgram := fn(items: frontend.Items, source: String, prefix: String): Un
         if frontend.isFloatScalarKind(item.kind) { floatOutput = true; }
         if frontend.isFloatScalarKind(item.kind) or item.kind == "LocalFloat" or item.kind == "VarFloat" or item.kind == "AssignFloat" or
         (item.kind == "Discard" and frontend.isFloatScalarKind(item.name)) { floatValues = true; }
-        if item.kind == "Float32" or (item.kind == "Discard" and item.name == "Float32") { float32Values = true; }
+        if item.kind == frontend.VALUE_KIND_FLOAT32 or (item.kind == "Discard" and item.name == frontend.VALUE_KIND_FLOAT32) { float32Values = true; }
         if item.kind == "FunctionStart" {
             diagLib.fail("", "C backend does not support top-level functions yet");
         }
