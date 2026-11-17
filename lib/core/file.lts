@@ -6,6 +6,24 @@ io := import "core/io";
 list := import "core/list";
 unicode := import "core/unicode";
 
+/** File kind returned by `kind` when no filesystem entry exists at `path`. */
+pub FILE_KIND_MISSING := "missing";
+
+/** File kind returned by `kind` for a regular file. */
+pub FILE_KIND_FILE := "file";
+
+/** File kind returned by `kind` for a directory. */
+pub FILE_KIND_DIR := "dir";
+
+/** File kind returned by `kind` for non-regular entries such as symlinks or sockets. */
+pub FILE_KIND_OTHER := "other";
+
+/** Minimum inclusive raw byte value. */
+BYTE_MIN := 0;
+
+/** Maximum inclusive raw byte value. */
+BYTE_MAX := 255;
+
 /** Returns `"missing"`, `"file"`, `"dir"`, or `"other"` for the resolved filesystem entry at `path`. */
 pub kind := fn(path: String): String;
 

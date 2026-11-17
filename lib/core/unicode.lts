@@ -4,6 +4,68 @@ integer := import "core/int";
 list := import "core/list";
 textLib := import "core/text";
 
+/** Maximum valid Unicode scalar code point (`U+10FFFF`). */
+pub UNICODE_MAX_SCALAR := 1114111;
+
+/** Unicode replacement character (`U+FFFD`) substituted in lossy decoding. */
+pub UNICODE_REPLACEMENT_CHAR := 65533;
+
+/** Maximum code point representable as a single UTF-16 code unit (`U+FFFF`). */
+UTF16_BMP_MAX := 65535;
+
+/** Base scalar offset above the Basic Multilingual Plane (`U+10000`). */
+UTF16_SUPPLEMENTARY_BASE := 65536;
+
+/** First UTF-16 high-surrogate code unit (`0xD800`). */
+UTF16_HIGH_SURROGATE_START := 55296;
+
+/** Last UTF-16 high-surrogate code unit (`0xDBFF`). */
+UTF16_HIGH_SURROGATE_END := 56319;
+
+/** First UTF-16 low-surrogate code unit (`0xDC00`). */
+UTF16_LOW_SURROGATE_START := 56320;
+
+/** Last UTF-16 low-surrogate code unit (`0xDFFF`). */
+UTF16_LOW_SURROGATE_END := 57343;
+
+/** Radix multiplier (`2^10`) splitting a 20-bit supplementary offset into surrogates. */
+UTF16_SURROGATE_SHIFT := 1024;
+
+/** Maximum single-byte ASCII scalar (`0x7F`). */
+UTF8_ASCII_MAX := 127;
+
+/** Minimum UTF-8 continuation byte (`0x80`). */
+UTF8_CONT_MIN := 128;
+
+/** Maximum UTF-8 continuation byte (`0xBF`). */
+UTF8_CONT_MAX := 191;
+
+/** UTF-8 two-byte lead byte prefix (`0xC0`) and minimum valid lead (`0xC2`). */
+UTF8_2BYTE_LEAD_BASE := 192;
+UTF8_2BYTE_LEAD_MIN := 194;
+
+/** Maximum scalar encodable in two UTF-8 bytes (`U+07FF`). */
+UTF8_2BYTE_MAX := 2047;
+
+/** UTF-8 three-byte lead byte range (`0xE0..0xEF`) and restricted continuation bounds. */
+UTF8_3BYTE_LEAD_BASE := 224;
+UTF8_3BYTE_LEAD_MAX := 239;
+UTF8_3BYTE_LOW_CONT := 160;
+UTF8_SURROGATE_LEAD := 237;
+UTF8_3BYTE_SURROGATE_MAX_CONT := 159;
+
+/** UTF-8 four-byte lead byte range (`0xF0..0xF4`) and restricted continuation bounds. */
+UTF8_4BYTE_LEAD_BASE := 240;
+UTF8_4BYTE_LEAD_MAX := 244;
+UTF8_4BYTE_LOW_CONT := 144;
+UTF8_4BYTE_HIGH_CONT := 143;
+
+/** Maximum valid raw byte value (`0xFF`). */
+BYTE_MAX := 255;
+
+/** Maximum valid UTF-16 code unit (`0xFFFF`). */
+UTF16_UNIT_MAX := 65535;
+
 /** Returns the UTF-32 Unicode scalar code point list of `text`. */
 pub toCodePoints := fn(text: String): List<Int>;
 

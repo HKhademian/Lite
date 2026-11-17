@@ -9,6 +9,18 @@ pub Reader := type (kind: String, handle: Int);
 /** Handle to a synchronous byte/text output sink (`"stdout"`, `"stderr"`, `"buffer"`, `"file"`, or `"error"`). */
 pub Writer := type (kind: String, handle: Int);
 
+/** ASCII line-feed byte (`\n`). */
+BYTE_LF := 10;
+
+/** ASCII carriage-return byte (`\r`). */
+BYTE_CR := 13;
+
+/** Synchronous read chunk size in bytes for whole-stream reads and copies. */
+READ_CHUNK_BYTES := 65536;
+
+/** Number of bytes read per step when scanning a single line. */
+READ_LINE_STEP_BYTES := 1;
+
 /** Writes display values to the host output stream without adding a newline. */
 pub output := fn(...values): Unit;
 
