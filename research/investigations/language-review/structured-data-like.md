@@ -224,6 +224,38 @@ model and representation are all unresolved. Keep parser-stage work and runtime
 storage/cost separate: known static data might be materialized compactly, but
 the compiler must preserve the selected value and access behavior.
 
+### User question: anonymous braces or a named tuple?
+
+The user distinguishes normal typed record construction and typed arrays from
+the ambiguous standalone form `data := { name = "Ali", grade = 10, }`, whose
+braces resemble an executable block. A named tuple such as
+`data := (name = "Ali", grade = 10)` is another existing surface, but the user
+asks whether a tuple is the desired concept for anonymous data.
+
+The [record literal boundary review](../../../docs/record-literal-boundaries.md#requested-inferred-inline-form)
+already records a requested inferred record form and its unselected parsing and
+identity choices. In particular, a single-field brace form can resemble an
+assignment inside a block, and empty `{}` already has an executable-block
+meaning outside record-initializer context. A comma-based distinction is one
+existing proposal, not a selected rule. Do not rely on whitespace,
+capitalization, lookup or whichever interpretation type-checks.
+
+The alternatives differ in semantics, not just punctuation: named tuples are
+ordered structural values with positional access under current rules; records
+are field-oriented, and record declaration identity is nominal. The type and
+identity of an inferred standalone record literal are open. A dynamic map has
+keyed lookup and potentially varying keys; it is not automatically either a
+tuple or record. Similar field syntax or a known layout does not make these
+concepts identical.
+
+Compare keeping anonymous fixed-shape data as named tuples, providing an
+unambiguously marked inferred record form, and providing a separate general
+data/map form. Some may coexist; none is selected by this comparison. Check
+empty, one-field and multiple-field forms, nesting, field order, positional
+access, computed keys, effects and compatibility with an explicit record
+destination. Any reinterpretation of selected tuple, record, or block rules
+requires explicit review.
+
 ## Separate choices
 
 1. **Lite-native data expressions.** Existing or future Lite record, tuple,
