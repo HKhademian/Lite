@@ -123,6 +123,35 @@ literals may feed integer parameters remains explicitly unresolved. The
 string-like literal direction below has its own explicit-use-site requirement;
 do not silently generalize it to numeric literals or vice versa.
 
+### User direction: inference from uses of a fresh value
+
+The user favors considering the relevant uses of an inferred fresh
+integer-like binding together at compile time, rather than letting the first
+use prematurely fix its type. In the discussed example, `value := 10` is used
+only where `UserID` is expected; the compiler could infer `UserID`. If another
+use instead requires incompatible `Int64`, the user's preferred outcome is an
+**inference conflict**, not accepting the first use as proof that the binding is
+already `UserID`. If no use determines its type, the proposed default is `Int`
+(the same type as `Int64`). This is static inference, not a runtime type change.
+
+```text
+value := 10;
+searchUserId(value);  /* illustrative parameter expectation: UserID */
+printCount(value);    /* illustrative incompatible expectation: Int64 */
+/* Direction: report an inference conflict; do not select first use. */
+```
+
+This direction is under investigation, not an implemented rule. Scope of
+“relevant uses,” compatible constraints, ambiguity, recursion, public APIs,
+diagnostics, unused bindings, and the precise commitment point remain to be
+specified. For a uniquely resolved binding, the type produced by inference
+must be established consistently; individual uses do not give it different
+runtime types. The interaction with distinct-type explicitness and the earlier
+string-like literal rule is unresolved; do not silently generalize or revise
+either contract. Some selected ordinary widening rules may produce compatible
+uses; do not treat every differently written expected type as a conflict without
+a compatibility analysis.
+
 **Parked for future discussion:** The user names five related concepts:
 `Float-Like`, `Int-Like`, `String-Like`, `Array-Like`, and `Record-Like`.
 Review them together, including their relationship to fresh expressions,
