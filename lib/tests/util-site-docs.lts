@@ -1,0 +1,36 @@
+siteDocs := import "util/site-docs";
+json := import "util/json";
+project := import "util/project";
+test := import "core/test";
+text := import "core/text";
+
+test.checkText("rel same dir", "../spec/index.html", siteDocs.relativeHref("docs/handbook/overview-and-setup.html", "docs/spec/index.html"));
+test.checkText("rel dir trailing slash", "../../playground/", siteDocs.relativeHref("docs/handbook/overview-and-setup.html", "playground/"));
+test.checkText("rel same file", "tour.html", siteDocs.relativeHref("docs/design/tour.html", "docs/design/tour.html"));
+
+root := project.findRepoRoot();
+test.checkBool("repo root ok", true, root =!= "");
+disc := siteDocs.discoverDocsPayloadJson(root, false);
+test.checkText("discover err", "", disc.error);
+test.checkBool("discover ok", true, disc.ok);
+test.checkBool("discover valid json", true, json.validate(disc.jsonText).ok);
+test.checkBool("has handbook outPath", true, text.indexOfText(disc.jsonText, "docs/handbook/overview-and-setup.html", 0) >= 0);
+test.checkBool("has spec overview", true, text.indexOfText(disc.jsonText, "docs/design/overview.html", 0) >= 0);
+
+sampleInput := "{"
+    + "\"repoUrl\":\"https://github.com/example/lite\""
+    + ",\"entries\":["
+    + "{\"meta\":{\"sourcePath\":\"language/learn/handbook/getting-started/overview-and-setup.md\",\"outPath\":\"docs/handbook/overview-and-setup.html\",\"layer\":\"handbook\",\"group\":\"handbook\",\"navLabel\":\"1. Overview\",\"summary\":\"Intro\",\"chapterSlug\":\"overview-and-setup\",\"verifiedInTs\":true},\"title\":\"Overview\",\"status\":\"shipped\",\"toc\":[{\"level\":2,\"id\":\"sec\",\"text\":\"Sec\"}],\"processedHtml\":\"<h2 id=\\\"sec\\\">Sec</h2><a href=\\\"#sec\\\">link</a>\"}"
+    + ",{\"meta\":{\"sourcePath\":\"docs/README.md\",\"outPath\":\"docs/design/overview.html\",\"layer\":\"spec\",\"group\":\"start\",\"navLabel\":\"README\",\"verifiedInTs\":true},\"title\":\"Design Docs\",\"status\":\"selected\",\"toc\":[],\"processedHtml\":\"<p>Spec</p>\"}"
+    + "]}";
+built := siteDocs.buildDocsPayloadJson(sampleInput);
+test.checkText("build err", "", built.error);
+test.checkBool("build ok", true, built.ok);
+test.checkBool("build valid json", true, json.validate(built.jsonText).ok);
+test.checkInt("handbookCount", 1, json.readObjectInt(built.jsonText, 0, "handbookCount").value);
+test.checkInt("specCount", 1, json.readObjectInt(built.jsonText, 0, "specCount").value);
+test.checkInt("docsPageCount", 5, json.readObjectInt(built.jsonText, 0, "docsPageCount").value);
+test.checkBool("single-page prefixes ids", true, text.indexOfText(built.jsonText, "h1-sec", 0) >= 0);
+test.checkBool("has docs/index.html", true, text.indexOfText(built.jsonText, "\"relPath\":\"docs/index.html\"", 0) >= 0);
+
+test.done("util-site-docs");

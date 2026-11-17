@@ -1,0 +1,41 @@
+/** CLI entrypoint for `/docs/` discovery, Markdown rendering, and portal page generation (`site/docs-pages.ts`). */
+
+cli := import "util/cli";
+io := import "core/io";
+list := import "core/list";
+project := import "util/project";
+siteDocs := import "util/site-docs";
+
+run := fn(rawArgs: List<String>): Unit {
+    args := cli.stripLeadingSeparator(rawArgs);
+    if cli.startsWith(args, "--out-map") or cli.startsWith(args, "--discover") {
+        includeRendered := cli.startsWith(args, "--discover");
+        rest := cli.rest(args, 1);
+        root := if list.listCountText(rest) > 0 { rest[0] } else { project.findRepoRoot() };
+        if root == "" {
+            io.errorLine("lite site-docs: could not locate repository root");
+            io.exit(1);
+        }
+        res := siteDocs.discoverDocsPayloadJson(root, includeRendered);
+        if not res.ok {
+            io.errorLine(res.error);
+            io.exit(1);
+        }
+        io.output(res.jsonText);
+        io.exit(0);
+    }
+
+    stdinRes := io.readAllText(io.stdinReader());
+    if not stdinRes.ok {
+        io.errorLine(stdinRes.error);
+        io.exit(1);
+    }
+    res := siteDocs.buildDocsPayloadJson(stdinRes.text);
+    if not res.ok {
+        io.errorLine(res.error);
+        io.exit(1);
+    }
+    io.output(res.jsonText);
+};
+
+run(io.inputArgs());

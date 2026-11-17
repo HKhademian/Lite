@@ -69,7 +69,8 @@ walkFilesWithSuffix := fn(absDir: String, relBase: String, suffix: String): List
     out
 };
 
-posixDirname := fn(relPath: String): String {
+/** Returns directory component of a POSIX path. */
+pub posixDirname := fn(relPath: String): String {
     var lastSlash := -1;
     var i := 0;
     loop i < text.length(relPath) {
@@ -79,7 +80,8 @@ posixDirname := fn(relPath: String): String {
     if lastSlash < 0 { "." } else if lastSlash == 0 { "/" } else { text.slice(relPath, 0, lastSlash) }
 };
 
-posixBasename := fn(relPath: String, ext: String): String {
+/** Extracts filename from a POSIX path, optionally stripping a trailing extension. */
+pub posixBasename := fn(relPath: String, ext: String): String {
     var lastSlash := -1;
     var i := 0;
     loop i < text.length(relPath) {
@@ -94,7 +96,8 @@ posixBasename := fn(relPath: String, ext: String): String {
     }
 };
 
-splitByDelimiter := fn(value: String, sep: String): List<String> {
+/** Splits `value` by non-empty separator `sep`, preserving empty segments. */
+pub splitByDelimiter := fn(value: String, sep: String): List<String> {
     out: mut List<String> = [];
     sepLen := text.length(sep);
     var pos := 0;
@@ -110,7 +113,8 @@ splitByDelimiter := fn(value: String, sep: String): List<String> {
     out
 };
 
-posixJoinAndNormalize := fn(dir: String, spec: String): String {
+/** Joins and normalizes a POSIX base directory and relative path. */
+pub posixJoinAndNormalize := fn(dir: String, spec: String): String {
     joined := if dir == "." or dir == "" { spec } else { dir + "/" + spec };
     parts := splitByDelimiter(joined, "/");
     var stack: mut List<String> = [];
