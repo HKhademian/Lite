@@ -352,10 +352,13 @@ alternative already investigated, not the selected baseline. Adopting it would
 reconsider the membership and exhaustiveness contracts and must be reconciled
 with the selected universal all-zero value and reserved-storage rules.
 
-**User clarification:** If stable Kind values are assigned to the known types,
-`Kind = 0` can be reserved for **no known type**. A zero-initialized union then
+**User clarification:** In the discussed three-section type-reference model,
+type reference `0` cannot identify a type. It therefore means **no known type**;
+this is not a separately reserved type entry. A zero-initialized union then
 starts with Kind 0 and an `UNKNOWN` active-type state, rather than arbitrarily
-selecting a known member. A reference that identifies no type is distinct from
+selecting a known member. The proposed library/file/type split is illustrative;
+exact field allocation and identity assignment remain open. A reference that
+identifies no type is distinct from
 the question whether the containing union value is valid. The user's earlier
 universal-zero direction requires all-zero storage to be a valid initialized
 value for every type; treating UNKNOWN as a valid union state is a possible

@@ -64,6 +64,8 @@ The user now proposes [empty union zero](union-empty-zero-proposal.md): tag zero
 
 On 2026-11-17, the user clarified the direction as Kind 0 identifying no known
 type, so zero-initialized union storage begins in an `UNKNOWN` active-type state.
+In the proposed three-section type-reference model, the user says type reference
+0 cannot identify a type; this is not a separately reserved type entry.
 The status of the containing value and its operations, source-level zero forms,
 and unrecognized nonzero tags need explicit reconciliation with the existing
 contract; no full revision or compiler support follows from the clarification alone.

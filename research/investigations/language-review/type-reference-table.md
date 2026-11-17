@@ -27,9 +27,10 @@ than 32 bits there would require changing another field, the total width, or
 the encoding; no alternative split or overflow policy is selected.
 
 An earlier 32/32 module/type split was only an illustration. Neither split is
-selected. Reserving all-zero as `UNKNOWN` would consume an encoding, but would
-not itself define the semantics of other unrecognized values or replace the
-current selected union-zero rule.
+selected. The user clarifies that, in the three-section reference idea, a
+zero type reference cannot identify a type; `UNKNOWN` follows from that rather
+than from reserving a separate type entry. This does not itself define the
+semantics of other unrecognized values or complete the union-zero revision.
 
 The width provides a finite **encoding space**, not a uniqueness algorithm. It
 cannot uniquely identify an unlimited universe of independently created types.
@@ -53,9 +54,9 @@ particular, predefined numbers alone do not define a persistent data format.
 
 If aliases are transparent, `Int` and `Int64` resolve to the same identity and
 thus the same reference; a distinct type based on `Int64` has its own identity.
-If all-zero `Kind` is selected for `UNKNOWN`, a reserved `(0, 0, 0)` type
-reference could not also identify `Int64` or another known type in the same
-encoding. Whether zero is reserved and how other unknown tags behave remain
+The user clarifies that an all-zero reference identifies no type under the
+proposed three-section model, not a specially reserved type entry. The detailed
+encoding, the separate fields' possible values and other unknown tags remain
 under review.
 
 A stable built-in reference establishes identity, not the complete persistent
