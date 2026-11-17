@@ -20,6 +20,33 @@ inputs, timestamp rules, identity/version policies and any self-referential
 hash field are open. The user has not selected a particular hash algorithm or
 artifact format.
 
+### User clarification: one distributed build, one reference hash
+
+The user clarifies that the dependency is one particular distributed build. A
+separate person compiling the same source even milliseconds later creates a
+different build in this model. Distribution and consumers refer to the one hash
+of the selected build; the hash must be verified against that module's compiled
+artifact and compilation metadata. A mismatch indicates a broken or
+inconsistent artifact rather than another spelling of the same build.
+
+The exact bytes covered, artifact boundaries, canonical encoding, hash
+algorithm, collision policy and verification procedure remain to be specified.
+In particular, a stored hash must be calculated without circularly including
+itself, or use another precisely defined convention. Dependencies and any
+metadata relied upon for identity or compatibility need a clear coverage rule;
+do not silently omit them or presume that every auxiliary file is included.
+Verification against a trusted expected hash checks that the covered data
+matches that reference. How the reference is authenticated or obtained is a
+separate distribution question, not a claim that a self-declared hash alone
+establishes publisher identity.
+
+The same selected artifact can be consumed by many clean builds: the artifact
+and its table are inputs, not regenerated historical caches. A fresh independent
+build from the same source is a separate instance in this model; it is not a
+verification failure merely because its build metadata and hash differ. The
+developer's unresolved error, replacement, and side-by-side options apply when
+different dependency instances meet.
+
 This build-identity model must still distinguish **a library build** from
 **the identity of every type referenced by that build**. For example, both
 libraries may refer to the same built-in `Int64`, or an exported transparent
