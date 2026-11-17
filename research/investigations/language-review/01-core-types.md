@@ -383,6 +383,30 @@ The selected requirement that all-zero Lite storage is a valid value remains;
 how that maps to a union member is unresolved. Separate a public C representation
 from the compiler's internal representation and possible optimized encodings.
 
+**User's external-memory concern, 2026-11-17:** Memory may be owned or supplied
+outside Lite and the Kind field may contain 0, a known member tag, or some other
+representable value. The user is considering an implicit `UNKNOWN`/other union
+state, with all-zero storage mapping to `UNKNOWN`; this is under investigation,
+not yet a replacement for the selected listed-member-only union-zero rule.
+Distinguish the zero case from the separate question of handling every other
+unrecognized tag: options include rejecting at an external-memory boundary,
+mapping unknown tags to a state, or preserving the raw tag. What to do with an
+unknown payload and what matching, copying, equality and cleanup mean remain
+open. Validating a tag alone cannot prove a purported String payload, pointer,
+allocation lifetime, alignment, or concurrent external access is valid.
+
+**Reference comparison:** Rust's valid enum values have a valid discriminant
+and valid active-variant fields; producing an invalid enum is undefined
+behavior, not an implicit unknown case. Even its `repr(C)` field-bearing enum
+uses the selected C-shaped tagged layout without accepting arbitrary tags. See
+the [Rust validity rules](https://doc.rust-lang.org/reference/behavior-considered-undefined.html#invalid-values)
+and [C representation](https://doc.rust-lang.org/reference/type-layout.html#reprc-enums-with-fields).
+Zig's [non-exhaustive enum](https://ziglang.org/documentation/master/#Non-exhaustive-enum)
+can accept unnamed tag values and requires handling them in a switch; this is a
+comparison for an integer-backed enum, not proof that arbitrary tagged-union
+payloads are valid or a selected Lite representation. Rust and Zig choices
+are comparative evidence and do not decide Lite's contract.
+
 ## Working judgment
 
 Treat type identity, conversion, operations, and physical representation as separate decisions. The user's direction distinguishes contextual fresh literals from established typed values; a typed declaration does not itself authorize converting an established String or another distinct value into `UserID`.
