@@ -4,7 +4,8 @@ list := import "core/list";
 text := import "core/text";
 json := import "util/json";
 
-escapeSiteHtml := fn(raw: String): String {
+/** Escapes HTML special characters (`&`, `<`, `>`, `"`, `'`). */
+pub escapeSiteHtml := fn(raw: String): String {
     size := text.length(raw);
     out: mut List<String> = [];
     var i := 0;

@@ -1,0 +1,20 @@
+/** CLI entrypoint generating `/modules/` section pages & search entries JSON (`site/modules-pages.ts`). */
+
+io := import "core/io";
+siteMods := import "util/site-modules";
+
+run := fn(): Unit {
+    stdinRes := io.readAllText(io.stdinReader());
+    if not stdinRes.ok {
+        io.errorLine(stdinRes.error);
+        io.exit(1);
+    }
+    res := siteMods.buildModulesPayloadJson(stdinRes.text);
+    if not res.ok {
+        io.errorLine(res.error);
+        io.exit(1);
+    }
+    io.output(res.jsonText);
+};
+
+run();

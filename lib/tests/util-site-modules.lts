@@ -1,0 +1,38 @@
+siteMods := import "util/site-modules";
+fs := import "core/file";
+json := import "util/json";
+path := import "core/path";
+test := import "core/test";
+text := import "core/text";
+
+tmpRes := fs.makeTempDir("lite-site-mods-test-");
+test.checkBool("temp dir ok", true, tmpRes.ok);
+syn := tmpRes.path;
+_d1 := fs.makeDir(path.join(syn, "samples"));
+_w1 := fs.writeText(path.join(syn, "samples/demo.lts"), "io := import \"core/io\";\nio.outputLine(1);\n");
+
+inputJson := "{"
+    + "\"rootDir\":" + json.quoteString(syn)
+    + ",\"repoUrl\":\"https://github.com/example/lite\""
+    + ",\"samples\":[{\"id\":\"demo\",\"title\":\"Demo\",\"file\":\"samples/demo.lts\",\"badge\":\"showcase\"}]"
+    + ",\"modules\":[{"
+    + "\"id\":\"core/io\",\"namespace\":\"core\",\"name\":\"io\",\"file\":\"lib/core/io.lts\",\"environment\":\"universal\",\"summary\":\"Input `and` output.\","
+    + "\"importHtml\":\"<span>import</span>\","
+    + "\"symbols\":[{\"kind\":\"fn\",\"name\":\"outputLine\",\"signature\":\"pub outputLine := fn(x: String): Unit\",\"signatureHtml\":\"<code>outputLine</code>\",\"isHostDeclaration\":true,\"doc\":\"Print `line`.\",\"line\":42}]"
+    + "}]"
+    + "}";
+
+res := siteMods.buildModulesPayloadJson(inputJson);
+test.checkText("modules build err", "", res.error);
+test.checkBool("modules build ok", true, res.ok);
+test.checkBool("valid json", true, json.validate(res.jsonText).ok);
+test.checkInt("moduleCount", 1, json.readObjectInt(res.jsonText, 0, "moduleCount").value);
+test.checkInt("symbolCount", 1, json.readObjectInt(res.jsonText, 0, "symbolCount").value);
+test.checkBool("has index page", true, text.indexOfText(res.jsonText, "\"relPath\":\"modules/index.html\"", 0) >= 0);
+test.checkBool("has detail page", true, text.indexOfText(res.jsonText, "\"relPath\":\"modules/core/io.html\"", 0) >= 0);
+test.checkBool("tracks sample usage", true, text.indexOfText(res.jsonText, "1 sample", 0) >= 0);
+test.checkBool("renders inline doc code", true, text.indexOfText(res.jsonText, "<code>and</code>", 0) >= 0);
+test.checkBool("renders host badge", true, text.indexOfText(res.jsonText, "Host-backed", 0) >= 0);
+
+_rm := fs.remove(tmpRes.path);
+test.done("util-site-modules");

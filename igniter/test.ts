@@ -139,7 +139,7 @@ test('L0 shared libraries have direct bootstrap tests', () => {
 
 test('shared utility libraries under lib/util pass direct Lite tests', () => {
   const root = new URL('../', import.meta.url).pathname;
-  for (const name of ['util-path', 'util-project', 'util-cli', 'util-release', 'util-json', 'util-markdown', 'util-markdown-html', 'util-docs', 'util-docgen', 'util-streams', 'util-cases', 'util-verify', 'util-corpus', 'util-benchmark', 'util-compiler-release', 'util-challenges', 'util-challenge-build', 'util-site-library', 'util-site-tools']) {
+  for (const name of ['util-path', 'util-project', 'util-cli', 'util-release', 'util-json', 'util-markdown', 'util-markdown-html', 'util-docs', 'util-docgen', 'util-streams', 'util-cases', 'util-verify', 'util-corpus', 'util-benchmark', 'util-compiler-release', 'util-challenges', 'util-challenge-build', 'util-site-library', 'util-site-tools', 'util-site-modules']) {
     assert.deepEqual(runFile(join(root, 'lib/tests', `${name}.lts`)), {
       code: 0, output: `${name}: ok\n`, errors: '',
     }, name);
