@@ -90,11 +90,11 @@ copyDst := copyTmp.path;
 copyRes := path.copyFiltered(walkRoot, copyDst, ["node_modules", "dist"], ["node_modules"]);
 test.checkText("copyFiltered error", "", copyRes.error);
 test.checkBool("copyFiltered ok", true, copyRes.ok);
-test.checkText("copied top file", "file", file.kind(path.join(copyDst, "a.lts")));
-test.checkText("copied nested file", "file", file.kind(path.join(copyDst, "sub/inner/b.lts")));
-test.checkText("copied symlink preserved", "file", file.kind(path.join(copyDst, "link.lts")));
-test.checkText("skipped top node_modules", "missing", file.kind(path.join(copyDst, "node_modules")));
-test.checkText("skipped nested node_modules", "missing", file.kind(path.join(copyDst, "sub/inner/node_modules")));
+test.checkText("copied top file", file.FILE_KIND_FILE, file.kind(path.join(copyDst, "a.lts")));
+test.checkText("copied nested file", file.FILE_KIND_FILE, file.kind(path.join(copyDst, "sub/inner/b.lts")));
+test.checkText("copied symlink preserved", file.FILE_KIND_FILE, file.kind(path.join(copyDst, "link.lts")));
+test.checkText("skipped top node_modules", file.FILE_KIND_MISSING, file.kind(path.join(copyDst, "node_modules")));
+test.checkText("skipped nested node_modules", file.FILE_KIND_MISSING, file.kind(path.join(copyDst, "sub/inner/node_modules")));
 _rmCopy := file.remove(copyDst);
 _rmWalk := file.remove(walkRoot);
 

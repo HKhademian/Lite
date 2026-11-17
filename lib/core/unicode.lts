@@ -74,7 +74,7 @@ pub fromCodePoints := fn(points: List<Int>): (ok: Bool, text: String, error: Str
 
 /** Returns true when `point` is a valid Unicode scalar value (`0..0x10FFFF` excluding surrogates `0xD800..0xDFFF`). */
 pub isValidScalar := fn(point: Int): Bool {
-    point >= 0 and point <= 1114111 and (point < 55296 or point > 57343)
+    point >= 0 and point <= UNICODE_MAX_SCALAR and (point < UTF16_HIGH_SURROGATE_START or point > UTF16_LOW_SURROGATE_END)
 }
 
 /** Encodes a single Unicode scalar code point into a one-character string when valid. */
@@ -94,7 +94,7 @@ pub codePointAt := fn(text: String, position: Int): Int {
 pub utf16Length := fn(text: String): Int {
     var total := 0;
     loop toCodePoints(text) as cp {
-        total += if cp <= 65535 { 1 } else { 2 };
+        total += if cp <= UTF16_BMP_MAX { 1 } else { 2 };
     }
     total
 }
@@ -103,12 +103,12 @@ pub utf16Length := fn(text: String): Int {
 pub utf16Encode := fn(text: String): List<Int> {
     var out: mut List<Int> = [];
     loop toCodePoints(text) as cp {
-        if cp <= 65535 {
+        if cp <= UTF16_BMP_MAX {
             list.pushBack(mut out, cp);
         } else {
-            adjusted := cp - 65536;
-            list.pushBack(mut out, 55296 + (adjusted / 1024));
-            list.pushBack(mut out, 56320 + (adjusted % 1024));
+            adjusted := cp - UTF16_SUPPLEMENTARY_BASE;
+            list.pushBack(mut out, UTF16_HIGH_SURROGATE_START + (adjusted / UTF16_SURROGATE_SHIFT));
+            list.pushBack(mut out, UTF16_LOW_SURROGATE_START + (adjusted % UTF16_SURROGATE_SHIFT));
         }
     }
     out
@@ -121,20 +121,20 @@ pub utf16DecodeStrict := fn(units: List<Int>): (ok: Bool, text: String, error: S
     var index := 0;
     loop index < count {
         code := units[index];
-        if code < 0 or code > 65535 {
+        if code < 0 or code > UTF16_UNIT_MAX {
             return (ok = false, text = "", error = "UTF-16 code unit outside 0..65535: " + integer.intText(code));
         }
-        if code >= 55296 and code <= 56319 {
+        if code >= UTF16_HIGH_SURROGATE_START and code <= UTF16_HIGH_SURROGATE_END {
             if index + 1 >= count {
                 return (ok = false, text = "", error = "unpaired UTF-16 high surrogate");
             }
             next := units[index + 1];
-            if next < 56320 or next > 57343 {
+            if next < UTF16_LOW_SURROGATE_START or next > UTF16_LOW_SURROGATE_END {
                 return (ok = false, text = "", error = "unpaired UTF-16 high surrogate");
             }
-            list.pushBack(mut points, 65536 + (code - 55296) * 1024 + (next - 56320));
+            list.pushBack(mut points, UTF16_SUPPLEMENTARY_BASE + (code - UTF16_HIGH_SURROGATE_START) * UTF16_SURROGATE_SHIFT + (next - UTF16_LOW_SURROGATE_START));
             index += 2;
-        } else if code >= 56320 and code <= 57343 {
+        } else if code >= UTF16_LOW_SURROGATE_START and code <= UTF16_LOW_SURROGATE_END {
             return (ok = false, text = "", error = "unpaired UTF-16 low surrogate");
         } else {
             list.pushBack(mut points, code);
@@ -148,20 +148,20 @@ pub utf16DecodeStrict := fn(units: List<Int>): (ok: Bool, text: String, error: S
 pub utf8Encode := fn(text: String): List<Int> {
     var out: mut List<Int> = [];
     loop toCodePoints(text) as cp {
-        if cp <= 127 {
+        if cp <= UTF8_ASCII_MAX {
             list.pushBack(mut out, cp);
-        } else if cp <= 2047 {
-            list.pushBack(mut out, 192 + (cp / 64));
-            list.pushBack(mut out, 128 + (cp % 64));
-        } else if cp <= 65535 {
-            list.pushBack(mut out, 224 + (cp / 4096));
-            list.pushBack(mut out, 128 + ((cp / 64) % 64));
-            list.pushBack(mut out, 128 + (cp % 64));
+        } else if cp <= UTF8_2BYTE_MAX {
+            list.pushBack(mut out, UTF8_2BYTE_LEAD_BASE + (cp / 64));
+            list.pushBack(mut out, UTF8_CONT_MIN + (cp % 64));
+        } else if cp <= UTF16_BMP_MAX {
+            list.pushBack(mut out, UTF8_3BYTE_LEAD_BASE + (cp / 4096));
+            list.pushBack(mut out, UTF8_CONT_MIN + ((cp / 64) % 64));
+            list.pushBack(mut out, UTF8_CONT_MIN + (cp % 64));
         } else {
-            list.pushBack(mut out, 240 + (cp / 262144));
-            list.pushBack(mut out, 128 + ((cp / 4096) % 64));
-            list.pushBack(mut out, 128 + ((cp / 64) % 64));
-            list.pushBack(mut out, 128 + (cp % 64));
+            list.pushBack(mut out, UTF8_4BYTE_LEAD_BASE + (cp / 262144));
+            list.pushBack(mut out, UTF8_CONT_MIN + ((cp / 4096) % 64));
+            list.pushBack(mut out, UTF8_CONT_MIN + ((cp / 64) % 64));
+            list.pushBack(mut out, UTF8_CONT_MIN + (cp % 64));
         }
     }
     out
@@ -174,43 +174,43 @@ utf8DecodeInternal := fn(bytes: List<Int>, strict: Bool): (ok: Bool, text: Strin
     var needed := 0;
     var seen := 0;
     var codePoint := 0;
-    var lowerBoundary := 128;
-    var upperBoundary := 191;
+    var lowerBoundary := UTF8_CONT_MIN;
+    var upperBoundary := UTF8_CONT_MAX;
     var index := 0;
     loop index < count {
         b := bytes[index];
-        if b < 0 or b > 255 {
+        if b < 0 or b > BYTE_MAX {
             if strict {
                 return (ok = false, text = "", error = "byte value outside 0..255: " + integer.intText(b));
             }
             codePoint = 0;
             needed = 0;
             seen = 0;
-            lowerBoundary = 128;
-            upperBoundary = 191;
-            list.pushBack(mut points, 65533);
+            lowerBoundary = UTF8_CONT_MIN;
+            upperBoundary = UTF8_CONT_MAX;
+            list.pushBack(mut points, UNICODE_REPLACEMENT_CHAR);
             index += 1;
         } else if needed == 0 {
-            if b <= 127 {
+            if b <= UTF8_ASCII_MAX {
                 list.pushBack(mut points, b);
-            } else if b >= 194 and b <= 223 {
+            } else if b >= UTF8_2BYTE_LEAD_MIN and b <= UTF8_3BYTE_LEAD_BASE - 1 {
                 needed = 1;
-                codePoint = b - 192;
-            } else if b >= 224 and b <= 239 {
-                if b == 224 { lowerBoundary = 160; }
-                if b == 237 { upperBoundary = 159; }
+                codePoint = b - UTF8_2BYTE_LEAD_BASE;
+            } else if b >= UTF8_3BYTE_LEAD_BASE and b <= UTF8_3BYTE_LEAD_MAX {
+                if b == UTF8_3BYTE_LEAD_BASE { lowerBoundary = UTF8_3BYTE_LOW_CONT; }
+                if b == UTF8_SURROGATE_LEAD { upperBoundary = UTF8_3BYTE_SURROGATE_MAX_CONT; }
                 needed = 2;
-                codePoint = b - 224;
-            } else if b >= 240 and b <= 244 {
-                if b == 240 { lowerBoundary = 144; }
-                if b == 244 { upperBoundary = 143; }
+                codePoint = b - UTF8_3BYTE_LEAD_BASE;
+            } else if b >= UTF8_4BYTE_LEAD_BASE and b <= UTF8_4BYTE_LEAD_MAX {
+                if b == UTF8_4BYTE_LEAD_BASE { lowerBoundary = UTF8_4BYTE_LOW_CONT; }
+                if b == UTF8_4BYTE_LEAD_MAX { upperBoundary = UTF8_4BYTE_HIGH_CONT; }
                 needed = 3;
-                codePoint = b - 240;
+                codePoint = b - UTF8_4BYTE_LEAD_BASE;
             } else {
                 if strict {
                     return (ok = false, text = "", error = "invalid UTF-8 lead byte");
                 }
-                list.pushBack(mut points, 65533);
+                list.pushBack(mut points, UNICODE_REPLACEMENT_CHAR);
             }
             index += 1;
         } else if b < lowerBoundary or b > upperBoundary {
@@ -220,13 +220,13 @@ utf8DecodeInternal := fn(bytes: List<Int>, strict: Bool): (ok: Bool, text: Strin
             codePoint = 0;
             needed = 0;
             seen = 0;
-            lowerBoundary = 128;
-            upperBoundary = 191;
-            list.pushBack(mut points, 65533);
+            lowerBoundary = UTF8_CONT_MIN;
+            upperBoundary = UTF8_CONT_MAX;
+            list.pushBack(mut points, UNICODE_REPLACEMENT_CHAR);
         } else {
-            lowerBoundary = 128;
-            upperBoundary = 191;
-            codePoint = codePoint * 64 + (b - 128);
+            lowerBoundary = UTF8_CONT_MIN;
+            upperBoundary = UTF8_CONT_MAX;
+            codePoint = codePoint * 64 + (b - UTF8_CONT_MIN);
             seen += 1;
             if seen == needed {
                 list.pushBack(mut points, codePoint);
@@ -241,7 +241,7 @@ utf8DecodeInternal := fn(bytes: List<Int>, strict: Bool): (ok: Bool, text: Strin
         if strict {
             return (ok = false, text = "", error = "truncated UTF-8 sequence");
         }
-        list.pushBack(mut points, 65533);
+        list.pushBack(mut points, UNICODE_REPLACEMENT_CHAR);
     }
     fromCodePoints(points)
 }

@@ -187,8 +187,8 @@ prepareRelease := fn(directory: String, output: String, tag: String): Unit {
     }
 
     outKind := fs.kind(output);
-    if outKind =!= "missing" {
-        if outKind =!= "dir" or list.listCountText(fs.listDir(output)) > 0 {
+    if outKind =!= fs.FILE_KIND_MISSING {
+        if outKind =!= fs.FILE_KIND_DIR or list.listCountText(fs.listDir(output)) > 0 {
             failRelease("", "release output directory must be empty");
         }
     }
@@ -225,7 +225,7 @@ prepareRelease := fn(directory: String, output: String, tag: String): Unit {
 
     if profile =!= "tools" {
         dependencies := path.join(directory, "igniter/node_modules");
-        if fs.kind(dependencies) == "missing" {
+        if fs.kind(dependencies) == fs.FILE_KIND_MISSING {
             failRelease(work, "install locked igniter development dependencies for compiler release verification");
         }
         srcDeps := path.join(source, "igniter/node_modules");
@@ -278,7 +278,7 @@ prepareRelease := fn(directory: String, output: String, tag: String): Unit {
         ",\n  \"support\": " + json.quoteString(bootSupport) + "\n}";
 
         releaseDir := path.join(source, "release");
-        if fs.kind(releaseDir) =!= "missing" {
+        if fs.kind(releaseDir) =!= fs.FILE_KIND_MISSING {
             failRelease(work, "release/ is reserved for generated distribution evidence");
         }
         mkRel := fs.makeDir(releaseDir);
@@ -301,7 +301,7 @@ prepareRelease := fn(directory: String, output: String, tag: String): Unit {
     var vsixSha := "";
     if selected.hasTag and selected.component == "vscode" {
         packager := path.join(directory, "editors/vscode/node_modules/@vscode/vsce/vsce");
-        if fs.kind(packager) == "missing" {
+        if fs.kind(packager) == fs.FILE_KIND_MISSING {
             failRelease(work, "install locked editor packaging dependencies");
         }
         vsixFile = "lite-" + selected.version + ".vsix";
@@ -344,7 +344,7 @@ prepareRelease := fn(directory: String, output: String, tag: String): Unit {
     "}\n";
 
     releaseJsonPath := path.join(source, "RELEASE.json");
-    if fs.kind(releaseJsonPath) =!= "missing" {
+    if fs.kind(releaseJsonPath) =!= fs.FILE_KIND_MISSING {
         failRelease(work, "RELEASE.json is reserved for packaged metadata");
     }
     wrRelJson := fs.writeText(releaseJsonPath, manifestJson);

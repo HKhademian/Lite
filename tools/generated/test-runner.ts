@@ -795,6 +795,10 @@ export function main(lite$write?: (text: string) => void): string {
         return { found: true, ok: (lite_str).ok, value: (lite_str).value };
     }
     void liteFn$lib$util$json$readObjectString;
+    const lite$m$lib$core$file$FILE_KIND_FILE = "file";
+    void lite$m$lib$core$file$FILE_KIND_FILE;
+    const lite$m$lib$core$file$FILE_KIND_DIR = "dir";
+    void lite$m$lib$core$file$FILE_KIND_DIR;
     function liteFn$lib$core$file$readText(lite_path: string): { ok: boolean; text: string; error: string } {
         void lite_path;
         return lite$fileReadText(lite_path);
@@ -1005,7 +1009,7 @@ export function main(lite$write?: (text: string) => void): string {
         }
         let lite_dir = liteFn$lib$core$path$normalize(lite_startPath);
         void lite_dir;
-        if (((lite$fileKind(lite_dir)) !== ("dir"))) {
+        if (((lite$fileKind(lite_dir)) !== (lite$m$lib$core$file$FILE_KIND_DIR))) {
             lite_dir = liteFn$lib$core$path$parentDir(lite_dir);
         }
         let lite_steps = 0n;
@@ -1013,7 +1017,7 @@ export function main(lite$write?: (text: string) => void): string {
         while (((lite_steps) < (16n))) {
             const lite_versionsPath = liteFn$lib$core$path$resolve(lite_dir, "config/versions.json");
             void lite_versionsPath;
-            if (((lite$fileKind(lite_versionsPath)) === ("file"))) {
+            if (((lite$fileKind(lite_versionsPath)) === (lite$m$lib$core$file$FILE_KIND_FILE))) {
                 return lite_dir;
             }
             const lite_next = liteFn$lib$core$path$parentDir(lite_dir);
@@ -1022,7 +1026,7 @@ export function main(lite$write?: (text: string) => void): string {
                 break;
             }
             lite_dir = lite_next;
-            lite_steps = lite$addInt(lite_steps, 1n, 754);
+            lite_steps = lite$addInt(lite_steps, 1n, 776);
         }
         return "";
     }
@@ -1064,7 +1068,7 @@ export function main(lite$write?: (text: string) => void): string {
         void lite_command;
         const lite_argCount = liteFn$lib$core$list$listCountText([...(lite_args)]);
         void lite_argCount;
-        if (((((lite_argCount) > (0n))) && (((lite$listAt((lite_args), 0n, 1866)) === ("--version"))))) {
+        if (((((lite_argCount) > (0n))) && (((lite$listAt((lite_args), 0n, 1888)) === ("--version"))))) {
             if (((lite_argCount) !== (1n))) {
                 lite$reportError((((("Usage: lite ") + (lite_command))) + (" --version")));
                 lite$exit(2n);
@@ -1081,8 +1085,8 @@ export function main(lite$write?: (text: string) => void): string {
         }
         const lite_len = lite$textLength(lite_chunk);
         void lite_len;
-        if (((lite$textAt(lite_chunk, lite$subtractInt(lite_len, 1n, 2348), 2329)) === ("\n"))) {
-            return (void (lite$reportError(lite$textSlice(lite_chunk, 0n, lite$subtractInt(lite_len, 1n, 2409), 2384))));
+        if (((lite$textAt(lite_chunk, lite$subtractInt(lite_len, 1n, 2370), 2351)) === ("\n"))) {
+            return (void (lite$reportError(lite$textSlice(lite_chunk, 0n, lite$subtractInt(lite_len, 1n, 2431), 2406))));
         } else {
             return (void (lite$reportError(lite_chunk)));
         }

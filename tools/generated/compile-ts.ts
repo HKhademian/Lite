@@ -251,7 +251,7 @@ function lite$listPopBack<T>(items: T[], at: number): T {
     return items.pop() as T;
 }
 
-const lite$intLines: readonly number[] = [0, 111, 112, 136, 162, 190, 218, 244, 278, 279, 305, 389, 405, 408, 409, 450, 529, 615, 635, 641, 642, 696, 717, 723, 724, 784, 869, 903, 951, 985, 991, 992, 1036, 1076, 1097, 1103, 1126, 1169, 1190, 1196, 1232, 1296, 1316, 1322, 1323, 1367, 1421, 1466, 1472, 1516, 1573, 1576, 1577, 1598];
+const lite$intLines: readonly number[] = [0, 111, 112, 136, 162, 190, 218, 244, 278, 279, 305, 389, 405, 408, 409, 450, 529, 615, 635, 641, 642, 696, 717, 723, 724, 784, 869, 903, 951, 985, 991, 992, 1036, 1076, 1097, 1103, 1126, 1169, 1190, 1196, 1243, 1307, 1327, 1333, 1334, 1378, 1432, 1477, 1483, 1527, 1584, 1587, 1588, 1609];
 const lite$intSource = "tools/src/compile-ts.lts:";
 const lite$intMin = -(1n << 63n), lite$intMax = (1n << 63n) - 1n;
 function lite$fault(category: string, at: number, message: string): never {
@@ -775,6 +775,10 @@ export function main(lite$write?: (text: string) => void): string {
         return { found: true, ok: (lite_str).ok, value: (lite_str).value };
     }
     void liteFn$lib$util$json$readObjectString;
+    const lite$m$lib$core$file$FILE_KIND_FILE = "file";
+    void lite$m$lib$core$file$FILE_KIND_FILE;
+    const lite$m$lib$core$file$FILE_KIND_DIR = "dir";
+    void lite$m$lib$core$file$FILE_KIND_DIR;
     function liteFn$lib$core$file$readText(lite_path: string): { ok: boolean; text: string; error: string } {
         void lite_path;
         return lite$fileReadText(lite_path);
@@ -1038,7 +1042,7 @@ export function main(lite$write?: (text: string) => void): string {
         }
         let lite_dir = liteFn$lib$core$path$normalize(lite_startPath);
         void lite_dir;
-        if (((lite$fileKind(lite_dir)) !== ("dir"))) {
+        if (((lite$fileKind(lite_dir)) !== (lite$m$lib$core$file$FILE_KIND_DIR))) {
             lite_dir = liteFn$lib$core$path$parentDir(lite_dir);
         }
         let lite_steps = 0n;
@@ -1046,7 +1050,7 @@ export function main(lite$write?: (text: string) => void): string {
         while (((lite_steps) < (16n))) {
             const lite_versionsPath = liteFn$lib$core$path$resolve(lite_dir, "config/versions.json");
             void lite_versionsPath;
-            if (((lite$fileKind(lite_versionsPath)) === ("file"))) {
+            if (((lite$fileKind(lite_versionsPath)) === (lite$m$lib$core$file$FILE_KIND_FILE))) {
                 return lite_dir;
             }
             const lite_next = liteFn$lib$core$path$parentDir(lite_dir);
@@ -1055,7 +1059,7 @@ export function main(lite$write?: (text: string) => void): string {
                 break;
             }
             lite_dir = lite_next;
-            lite_steps = lite$addInt(lite_steps, 1n, 754);
+            lite_steps = lite$addInt(lite_steps, 1n, 776);
         }
         return "";
     }
@@ -1145,7 +1149,7 @@ export function main(lite$write?: (text: string) => void): string {
         if ((!(liteFn$lib$core$text$endsWith(lite_source, ".lts")))) {
             liteFn_usageExit();
         }
-        if (((lite$fileKind(lite_source)) !== ("file"))) {
+        if (((lite$fileKind(lite_source)) !== (lite$m$lib$core$file$FILE_KIND_FILE))) {
             lite$reportError((("lite-compile-ts: cannot read ") + (lite_source)));
             lite$exit(2n);
         }

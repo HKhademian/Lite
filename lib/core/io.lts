@@ -103,7 +103,7 @@ pub readAll := fn(reader: Reader): List<Int> {
     if not readerOk(reader) { return []; }
     out: mut List<Int> = [];
     loop readerOk(reader) and not readerAtEof(reader) {
-        chunk := read(reader, 65536);
+        chunk := read(reader, READ_CHUNK_BYTES);
         if not readerOk(reader) { return []; }
         if list.listCountInt(chunk) == 0 { break; }
         loop chunk as byte {
@@ -132,15 +132,15 @@ pub readLine := fn(reader: Reader): (ok: Bool, line: String, eof: Bool, error: S
     }
     lineBytes: mut List<Int> = [];
     loop not readerAtEof(reader) {
-        chunk := read(reader, 1);
+        chunk := read(reader, READ_LINE_STEP_BYTES);
         if not readerOk(reader) {
             return (ok = false, line = "", eof = false, error = readerError(reader));
         }
         if list.listCountInt(chunk) == 0 { break; }
         nextByte := chunk[0];
-        if nextByte == 10 {
+        if nextByte == BYTE_LF {
             count := list.listCountInt(lineBytes);
-            if count > 0 and lineBytes[count - 1] == 13 {
+            if count > 0 and lineBytes[count - 1] == BYTE_CR {
                 list.popBack(mut lineBytes);
             }
             return decodeLineBytes(lineBytes);
@@ -208,7 +208,7 @@ pub copyStream := fn(reader: Reader, writer: Writer): (ok: Bool, copied: Int, er
     }
     var total := 0;
     loop readerOk(reader) and not readerAtEof(reader) {
-        chunk := read(reader, 65536);
+        chunk := read(reader, READ_CHUNK_BYTES);
         err := readerError(reader);
         if err =!= "" {
             return (ok = false, copied = total, error = err);

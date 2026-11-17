@@ -37,7 +37,7 @@ run := fn(rawArgs: List<String>): Unit {
     }
 
     programArgs := cli.stripLeadingSeparator(cli.rest(args, 1));
-    if fs.kind(scriptPath) =!= "file" {
+    if fs.kind(scriptPath) =!= fs.FILE_KIND_FILE {
         io.errorLine("lite run: cannot read " + scriptPath);
         io.exit(2);
     }

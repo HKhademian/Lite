@@ -917,6 +917,12 @@ export function main(lite$write?: (text: string) => void): string {
         return lite$ioReadAllText(lite_reader);
     }
     void liteFn$lib$core$io$readAllText;
+    const lite$m$lib$core$file$FILE_KIND_MISSING = "missing";
+    void lite$m$lib$core$file$FILE_KIND_MISSING;
+    const lite$m$lib$core$file$FILE_KIND_FILE = "file";
+    void lite$m$lib$core$file$FILE_KIND_FILE;
+    const lite$m$lib$core$file$FILE_KIND_DIR = "dir";
+    void lite$m$lib$core$file$FILE_KIND_DIR;
     function liteFn$lib$core$file$readText(lite_path: string): { ok: boolean; text: string; error: string } {
         void lite_path;
         return lite$fileReadText(lite_path);
@@ -1081,38 +1087,38 @@ export function main(lite$write?: (text: string) => void): string {
         void lite_stack;
         let lite_stackCount = 0n;
         void lite_stackCount;
-        let lite_targetIdx = lite$subtractInt(liteFn$lib$core$list$listCountText([...(lite_targets)]), 1n, 8951);
+        let lite_targetIdx = lite$subtractInt(liteFn$lib$core$list$listCountText([...(lite_targets)]), 1n, 8990);
         void lite_targetIdx;
         while (((lite_targetIdx) >= (0n))) {
-            lite_stack.push(liteFn$lib$core$path$resolve(lite_baseDir, lite$listAt((lite_targets), lite_targetIdx, 9040)));
-            lite_stackCount = lite$addInt(lite_stackCount, 1n, 9086);
-            lite_targetIdx = lite$subtractInt(lite_targetIdx, 1n, 9121);
+            lite_stack.push(liteFn$lib$core$path$resolve(lite_baseDir, lite$listAt((lite_targets), lite_targetIdx, 9079)));
+            lite_stackCount = lite$addInt(lite_stackCount, 1n, 9125);
+            lite_targetIdx = lite$subtractInt(lite_targetIdx, 1n, 9160);
         }
         while (((lite_stackCount) > (0n))) {
-            const lite_resolved = lite$listPopBack(lite_stack, 9179);
+            const lite_resolved = lite$listPopBack(lite_stack, 9218);
             void lite_resolved;
-            lite_stackCount = lite$subtractInt(lite_stackCount, 1n, 9236);
+            lite_stackCount = lite$subtractInt(lite_stackCount, 1n, 9275);
             const lite_entryKind = lite$fileKind(lite_resolved);
             void lite_entryKind;
-            if (((lite_entryKind) === ("missing"))) {
+            if (((lite_entryKind) === (lite$m$lib$core$file$FILE_KIND_MISSING))) {
                 lite$reportError((((("ENOENT: no such file or directory, stat '") + (lite_resolved))) + ("'")));
                 return lite$exit(1n);
             }
-            if (((lite_entryKind) === ("dir"))) {
+            if (((lite_entryKind) === (lite$m$lib$core$file$FILE_KIND_DIR))) {
                 const lite_entries: string[] = [...(lite$fileListDir(lite_resolved))];
                 void lite_entries;
-                let lite_entryIdx = lite$subtractInt(liteFn$lib$core$list$listCountText([...(lite_entries)]), 1n, 9576);
+                let lite_entryIdx = lite$subtractInt(liteFn$lib$core$list$listCountText([...(lite_entries)]), 1n, 9641);
                 void lite_entryIdx;
                 while (((lite_entryIdx) >= (0n))) {
-                    const lite_entry = lite$listAt((lite_entries), lite_entryIdx, 9647);
+                    const lite_entry = lite$listAt((lite_entries), lite_entryIdx, 9712);
                     void lite_entry;
                     const lite_isDot = ((lite_skipDotEntries) && (liteFn$lib$core$text$startsWithAt(lite_entry, 0n, ".")));
                     void lite_isDot;
                     if ((((!(lite_isDot))) && ((!(liteFn$lib$core$list$listContainsText([...(lite_ignoredNames)], lite_entry)))))) {
                         lite_stack.push(liteFn$lib$core$path$resolve(lite_resolved, lite_entry));
-                        lite_stackCount = lite$addInt(lite_stackCount, 1n, 9934);
+                        lite_stackCount = lite$addInt(lite_stackCount, 1n, 9999);
                     }
-                    lite_entryIdx = lite$subtractInt(lite_entryIdx, 1n, 9993);
+                    lite_entryIdx = lite$subtractInt(lite_entryIdx, 1n, 10058);
                 }
             } else if (((((lite_extension) === (""))) || (liteFn$lib$core$text$endsWith(lite_resolved, lite_extension)))) {
                 lite_files.push(lite_resolved);
@@ -1200,7 +1206,7 @@ export function main(lite$write?: (text: string) => void): string {
         }
         let lite_dir = liteFn$lib$core$path$normalize(lite_startPath);
         void lite_dir;
-        if (((lite$fileKind(lite_dir)) !== ("dir"))) {
+        if (((lite$fileKind(lite_dir)) !== (lite$m$lib$core$file$FILE_KIND_DIR))) {
             lite_dir = liteFn$lib$core$path$parentDir(lite_dir);
         }
         let lite_steps = 0n;
@@ -1208,7 +1214,7 @@ export function main(lite$write?: (text: string) => void): string {
         while (((lite_steps) < (16n))) {
             const lite_versionsPath = liteFn$lib$core$path$resolve(lite_dir, "config/versions.json");
             void lite_versionsPath;
-            if (((lite$fileKind(lite_versionsPath)) === ("file"))) {
+            if (((lite$fileKind(lite_versionsPath)) === (lite$m$lib$core$file$FILE_KIND_FILE))) {
                 return lite_dir;
             }
             const lite_next = liteFn$lib$core$path$parentDir(lite_dir);
@@ -1217,7 +1223,7 @@ export function main(lite$write?: (text: string) => void): string {
                 break;
             }
             lite_dir = lite_next;
-            lite_steps = lite$addInt(lite_steps, 1n, 754);
+            lite_steps = lite$addInt(lite_steps, 1n, 776);
         }
         return "";
     }
@@ -1259,7 +1265,7 @@ export function main(lite$write?: (text: string) => void): string {
         void lite_command;
         const lite_argCount = liteFn$lib$core$list$listCountText([...(lite_args)]);
         void lite_argCount;
-        if (((((lite_argCount) > (0n))) && (((lite$listAt((lite_args), 0n, 1866)) === ("--version"))))) {
+        if (((((lite_argCount) > (0n))) && (((lite$listAt((lite_args), 0n, 1888)) === ("--version"))))) {
             if (((lite_argCount) !== (1n))) {
                 lite$reportError((((("Usage: lite ") + (lite_command))) + (" --version")));
                 lite$exit(2n);

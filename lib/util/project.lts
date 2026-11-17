@@ -11,11 +11,11 @@ json := import "util/json";
 findRepoRootFrom := fn(startPath: String): String {
     if startPath == "" { return ""; }
     var dir := path.normalize(startPath);
-    if fs.kind(dir) =!= "dir" { dir = path.parentDir(dir); }
+    if fs.kind(dir) =!= fs.FILE_KIND_DIR { dir = path.parentDir(dir); }
     var steps := 0;
     loop steps < 16 {
         versionsPath := path.resolve(dir, "config/versions.json");
-        if fs.kind(versionsPath) == "file" { return dir; }
+        if fs.kind(versionsPath) == fs.FILE_KIND_FILE { return dir; }
         next := path.parentDir(dir);
         if next == dir { break; }
         dir = next;

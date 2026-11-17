@@ -73,7 +73,7 @@ pub validateCaseFile := fn(rootDir: String, caseFile: String): (ok: Bool, id: St
             return (ok = false, id = "", error = caseFile + ": tool cases name a tool, not a case executable");
         }
         toolRes := json.readObjectString(textSrc, 0, "tool");
-        if not toolRes.found or not toolRes.ok or text.containsText(toolRes.value, "/") or fs.kind(path.join(rootDir, "bin/" + toolRes.value)) == "missing" {
+        if not toolRes.found or not toolRes.ok or text.containsText(toolRes.value, "/") or fs.kind(path.join(rootDir, "bin/" + toolRes.value)) == fs.FILE_KIND_MISSING {
             return (ok = false, id = "", error = caseFile + ": unknown tool");
         }
     } else {
@@ -81,7 +81,7 @@ pub validateCaseFile := fn(rootDir: String, caseFile: String): (ok: Bool, id: St
         if not srcRes.found or not srcRes.ok or not text.endsWith(srcRes.value, ".lts") {
             return (ok = false, id = "", error = caseFile + ": Lite source must use .lts");
         }
-        if fs.kind(path.resolve(caseDir, srcRes.value)) =!= "file" {
+        if fs.kind(path.resolve(caseDir, srcRes.value)) =!= fs.FILE_KIND_FILE {
             return (ok = false, id = "", error = caseFile + ": missing case source " + srcRes.value);
         }
     }
@@ -438,7 +438,7 @@ pub checkTsArtifactFileWithStatus := fn(rootDir: String, artifactPath: String, w
 
     var status := -1;
     var procErr := "";
-    if fs.kind(nativeTsc) == "file" {
+    if fs.kind(nativeTsc) == fs.FILE_KIND_FILE {
         args: List<String> = ["-p", tsconfigPath];
         res := proc.runBytes(nativeTsc, args, workDir, emptyEnv, timeoutMs, emptyBytes, outPath, errPath);
         status = res.status;
@@ -617,7 +617,7 @@ verifyScenarioInWork := fn(rootDir: String, absFile: String, scenarioIdx: Int, w
         if kind == "compile" {
             artField := json.findObjectField(caseText, sPos, "artifact");
             if artField.found {
-                if fs.kind(outputTsPath) =!= "file" {
+                if fs.kind(outputTsPath) =!= fs.FILE_KIND_FILE {
                     return (ok = false, artifactSha = "", error = label + ": missing generated artifact");
                 }
                 expectedArt := streams.readStreamBytes(caseText, artField.valuePos, caseDir);
@@ -626,7 +626,7 @@ verifyScenarioInWork := fn(rootDir: String, absFile: String, scenarioIdx: Int, w
                 }
             }
         }
-        if kind == "reject" and fs.kind(outputTsPath) =!= "missing" {
+        if kind == "reject" and fs.kind(outputTsPath) =!= fs.FILE_KIND_MISSING {
             return (ok = false, artifactSha = "", error = "rejection created an output artifact");
         }
 
@@ -674,7 +674,7 @@ verifyScenarioInWork := fn(rootDir: String, absFile: String, scenarioIdx: Int, w
                 loop json.objectKeys(caseText, outFilesField.valuePos) as fname {
                     fv := json.findObjectField(caseText, outFilesField.valuePos, fname);
                     outFile := path.join(filesDir, fname);
-                    if fs.kind(outFile) =!= "file" {
+                    if fs.kind(outFile) =!= fs.FILE_KIND_FILE {
                         return (ok = false, artifactSha = "", error = label + ": file " + fname);
                     }
                     expectedFileBytes := streams.readStreamBytes(caseText, fv.valuePos, caseDir);
@@ -709,7 +709,7 @@ verifyScenarioInWork := fn(rootDir: String, absFile: String, scenarioIdx: Int, w
     filesField := json.findObjectField(caseText, sPos, "files");
     if filesField.found {
         loop readStringListAt(caseText, filesField.valuePos) as artifactRel {
-            if fs.kind(path.resolve(workspace, artifactRel)) == "missing" {
+            if fs.kind(path.resolve(workspace, artifactRel)) == fs.FILE_KIND_MISSING {
                 return (ok = false, artifactSha = "", error = "missing artifact: " + artifactRel);
             }
         }

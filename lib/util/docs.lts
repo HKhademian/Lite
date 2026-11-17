@@ -147,9 +147,9 @@ pub checkDocuments := fn(directory: String): List<String> {
                         fragment := if hashPos < 0 { "" } else { text.slice(target, hashPos + 1, text.length(target)) };
                         destination := if namePart == "" { fullFile } else { path.resolve(path.parentDir(fullFile), namePart) };
                         destKind := fs.kind(destination);
-                        if destKind == "missing" {
+                        if destKind == fs.FILE_KIND_MISSING {
                             list.pushBack(mut failures, relPath + ": missing link " + target);
-                        } else if fragment =!= "" and path.extName(destination) == ".md" and destKind == "file" {
+                        } else if fragment =!= "" and path.extName(destination) == ".md" and destKind == fs.FILE_KIND_FILE {
                             cacheIdx := list.listIndexOfText(cachePaths, destination);
                             var packed := "";
                             if cacheIdx >= 0 {
@@ -171,7 +171,7 @@ pub checkDocuments := fn(directory: String): List<String> {
     }
 
     configPath := path.join(directory, "config/documentation.json");
-    if fs.kind(configPath) == "file" {
+    if fs.kind(configPath) == fs.FILE_KIND_FILE {
         cfgRead := fs.readText(configPath);
         if not cfgRead.ok {
             list.pushBack(mut failures, "config/documentation.json: " + cfgRead.error);
@@ -191,7 +191,7 @@ pub checkDocuments := fn(directory: String): List<String> {
                 pathRes := json.readObjectString(cfgText, navPos, "path");
                 navPath := if pathRes.found and pathRes.ok { pathRes.value } else { "" };
                 navLabel := if labelRes.found and labelRes.ok { labelRes.value } else { "" };
-                if navLabel == "" or fs.kind(path.resolve(directory, navPath)) == "missing" {
+                if navLabel == "" or fs.kind(path.resolve(directory, navPath)) == fs.FILE_KIND_MISSING {
                     list.pushBack(mut failures, "config/documentation.json: missing navigation destination " + navPath);
                 }
             }
@@ -208,7 +208,7 @@ pub checkDocuments := fn(directory: String): List<String> {
                 docRel := if docRes.found and docRes.ok { docRes.value } else { "" };
                 srcFull := path.resolve(directory, srcRel);
                 docFull := path.resolve(directory, docRel);
-                if fs.kind(srcFull) == "missing" or fs.kind(docFull) == "missing" {
+                if fs.kind(srcFull) == fs.FILE_KIND_MISSING or fs.kind(docFull) == fs.FILE_KIND_MISSING {
                     list.pushBack(mut failures, "config/documentation.json: missing snippet source/document " + srcRel);
                 } else {
                     docRead := fs.readText(docFull);
@@ -234,7 +234,7 @@ pub checkDocuments := fn(directory: String): List<String> {
 /** Formats the curated navigation overview from `config/documentation.json`. */
 pub navigationSummary := fn(directory: String): (ok: Bool, text: String, error: String) {
     configPath := path.join(directory, "config/documentation.json");
-    if fs.kind(configPath) =!= "file" {
+    if fs.kind(configPath) =!= fs.FILE_KIND_FILE {
         return (ok = false, text = "", error = "documentation navigation configuration is missing");
     }
     cfgRead := fs.readText(configPath);

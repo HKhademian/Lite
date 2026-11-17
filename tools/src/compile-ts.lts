@@ -37,7 +37,7 @@ run := fn(rawArgs: List<String>): Unit {
     if not text.endsWith(source, ".lts") {
         usageExit();
     }
-    if fs.kind(source) =!= "file" {
+    if fs.kind(source) =!= fs.FILE_KIND_FILE {
         io.errorLine("lite-compile-ts: cannot read " + source);
         io.exit(2);
     }

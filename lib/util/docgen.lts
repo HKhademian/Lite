@@ -296,12 +296,12 @@ pub extractAllModulesJson := fn(rootDir: String): String {
     modJsonEntries: mut List<String> = [];
     loop namespaces as ns {
         nsDir := path.join(rootDir, "lib/" + ns);
-        if fs.kind(nsDir) == "dir" {
+        if fs.kind(nsDir) == fs.FILE_KIND_DIR {
             entries := fs.listDir(nsDir);
             loop entries as entryName {
                 if text.endsWith(entryName, ".lts") {
                     fullPath := path.join(nsDir, entryName);
-                    if fs.kind(fullPath) == "file" {
+                    if fs.kind(fullPath) == fs.FILE_KIND_FILE {
                         readRes := fs.readText(fullPath);
                         if readRes.ok {
                             modName := path.stem(entryName);

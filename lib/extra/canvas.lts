@@ -29,7 +29,7 @@ var canvasPixels: mut List<Int> = [];
 var canvasOps: mut List<Int> = [];
 
 clampByte := fn(value: Int): Int {
-    if value < 0 { 0 } else if value > 255 { 255 } else { value }
+    if value < 0 { 0 } else if value > COLOR_CHANNEL_MAX { COLOR_CHANNEL_MAX } else { value }
 }
 
 clampSize := fn(value: Int): Int {
@@ -47,7 +47,7 @@ pub rgba := fn(red: Int, green: Int, blue: Int, alpha: Int): Color {
 
 /** Packs opaque RGB color channels (each clamped to 0..255) into one Color integer. */
 pub rgb := fn(red: Int, green: Int, blue: Int): Color {
-    rgba(=red, =green, =blue, alpha = 255)
+    rgba(=red, =green, =blue, alpha = OPAQUE_ALPHA)
 }
 
 /** Configures a static canvas context using `width`, `height`, and `title`. */
@@ -92,14 +92,14 @@ pub context := fn(): Context {
 /** Clears the active canvas using its latest configured dimensions and `color`. */
 pub clear := fn(color: Color): Unit {
     canvasPixels = [];
-    canvasOps = [1, color];
+    canvasOps = [CANVAS_OP_CLEAR, color];
 }
 
 /** Draws a single pixel at `(x, y)` on the active canvas. */
 pub setPixel := fn(x: Int, y: Int, color: Color): Unit {
     if canvasWidth <= 0 or canvasHeight <= 0 { return; }
     if x < 0 or x >= canvasWidth or y < 0 or y >= canvasHeight { return; }
-    list.pushBack(mut canvasOps, 2);
+    list.pushBack(mut canvasOps, CANVAS_OP_FILL_RECT);
     list.pushBack(mut canvasOps, x);
     list.pushBack(mut canvasOps, y);
     list.pushBack(mut canvasOps, 1);
@@ -110,7 +110,7 @@ pub setPixel := fn(x: Int, y: Int, color: Color): Unit {
 /** Fills an axis-aligned rectangle `(x, y, width, height)` using alpha blending. */
 pub fillRect := fn(x: Int, y: Int, width: Int, height: Int, color: Color): Unit {
     if canvasWidth <= 0 or canvasHeight <= 0 or width <= 0 or height <= 0 { return; }
-    list.pushBack(mut canvasOps, 2);
+    list.pushBack(mut canvasOps, CANVAS_OP_FILL_RECT);
     list.pushBack(mut canvasOps, x);
     list.pushBack(mut canvasOps, y);
     list.pushBack(mut canvasOps, width);

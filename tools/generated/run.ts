@@ -252,7 +252,7 @@ function lite$listPopBack<T>(items: T[], at: number): T {
     return items.pop() as T;
 }
 
-const lite$intLines: readonly number[] = [0, 107, 108, 132, 158, 189, 217, 245, 273, 299, 333, 334, 360, 455, 471, 474, 475, 516, 569, 590, 596, 678, 712, 738, 759, 765, 798, 870, 890, 896, 943, 1007, 1028, 1034, 1081, 1143, 1163, 1169, 1170, 1235, 1275, 1336, 1356, 1362, 1363, 1399, 1500, 1607, 1640, 1641, 1696, 1749, 1794, 1800, 1848, 1928, 1959, 2012, 2032, 2038, 2069, 2113, 2147, 2153, 2154, 2198, 2222, 2274, 2294, 2300, 2301, 2340, 2401, 2461, 2518, 2543, 2576, 2629, 2649, 2655, 2656, 2715, 2745, 2788, 2794, 2872, 2901, 2902, 2932, 2984, 3004, 3010, 3039, 3042, 3043, 3064];
+const lite$intLines: readonly number[] = [0, 107, 108, 132, 158, 189, 217, 245, 273, 299, 333, 334, 360, 455, 471, 474, 475, 516, 569, 590, 596, 678, 712, 738, 759, 765, 798, 870, 890, 896, 943, 1007, 1028, 1034, 1081, 1143, 1163, 1169, 1170, 1235, 1286, 1347, 1367, 1373, 1374, 1410, 1511, 1618, 1651, 1652, 1707, 1760, 1805, 1811, 1859, 1939, 1970, 2023, 2043, 2049, 2080, 2124, 2158, 2164, 2165, 2209, 2233, 2285, 2305, 2311, 2312, 2351, 2412, 2472, 2529, 2554, 2587, 2640, 2660, 2666, 2667, 2726, 2756, 2799, 2805, 2883, 2912, 2913, 2943, 2995, 3015, 3021, 3050, 3053, 3054, 3075];
 const lite$intSource = "tools/src/run.lts:";
 const lite$intMin = -(1n << 63n), lite$intMax = (1n << 63n) - 1n;
 function lite$fault(category: string, at: number, message: string): never {
@@ -319,6 +319,10 @@ export function main(lite$write?: (text: string) => void): string {
         return lite_source.endsWith(lite_suffix);
     }
     void liteFn$lib$core$text$endsWith;
+    const lite$m$lib$core$file$FILE_KIND_FILE = "file";
+    void lite$m$lib$core$file$FILE_KIND_FILE;
+    const lite$m$lib$core$file$FILE_KIND_DIR = "dir";
+    void lite$m$lib$core$file$FILE_KIND_DIR;
     function liteFn$lib$core$file$writeText(lite_path: string, lite_text: string): { ok: boolean; error: string } {
         void lite_path;
         void lite_text;
@@ -606,7 +610,7 @@ export function main(lite$write?: (text: string) => void): string {
         }
         let lite_dir = liteFn$lib$core$path$normalize(lite_startPath);
         void lite_dir;
-        if (((lite$fileKind(lite_dir)) !== ("dir"))) {
+        if (((lite$fileKind(lite_dir)) !== (lite$m$lib$core$file$FILE_KIND_DIR))) {
             lite_dir = liteFn$lib$core$path$parentDir(lite_dir);
         }
         let lite_steps = 0n;
@@ -614,7 +618,7 @@ export function main(lite$write?: (text: string) => void): string {
         while (((lite_steps) < (16n))) {
             const lite_versionsPath = liteFn$lib$core$path$resolve(lite_dir, "config/versions.json");
             void lite_versionsPath;
-            if (((lite$fileKind(lite_versionsPath)) === ("file"))) {
+            if (((lite$fileKind(lite_versionsPath)) === (lite$m$lib$core$file$FILE_KIND_FILE))) {
                 return lite_dir;
             }
             const lite_next = liteFn$lib$core$path$parentDir(lite_dir);
@@ -623,7 +627,7 @@ export function main(lite$write?: (text: string) => void): string {
                 break;
             }
             lite_dir = lite_next;
-            lite_steps = lite$addInt(lite_steps, 1n, 754);
+            lite_steps = lite$addInt(lite_steps, 1n, 776);
         }
         return "";
     }
@@ -644,8 +648,8 @@ export function main(lite$write?: (text: string) => void): string {
         }
         const lite_len = lite$textLength(lite_chunk);
         void lite_len;
-        if (((lite$textAt(lite_chunk, lite$subtractInt(lite_len, 1n, 2348), 2329)) === ("\n"))) {
-            return (void (lite$reportError(lite$textSlice(lite_chunk, 0n, lite$subtractInt(lite_len, 1n, 2409), 2384))));
+        if (((lite$textAt(lite_chunk, lite$subtractInt(lite_len, 1n, 2370), 2351)) === ("\n"))) {
+            return (void (lite$reportError(lite$textSlice(lite_chunk, 0n, lite$subtractInt(lite_len, 1n, 2431), 2406))));
         } else {
             return (void (lite$reportError(lite_chunk)));
         }
@@ -682,7 +686,7 @@ export function main(lite$write?: (text: string) => void): string {
         }
         const lite_programArgs: string[] = [...(liteFn$lib$util$cli$stripLeadingSeparator([...(liteFn$lib$util$cli$rest([...(lite_args)], 1n))]))];
         void lite_programArgs;
-        if (((lite$fileKind(lite_scriptPath)) !== ("file"))) {
+        if (((lite$fileKind(lite_scriptPath)) !== (lite$m$lib$core$file$FILE_KIND_FILE))) {
             lite$reportError((("lite run: cannot read ") + (lite_scriptPath)));
             lite$exit(2n);
         }
@@ -719,7 +723,7 @@ export function main(lite$write?: (text: string) => void): string {
         }
         const lite_base = liteFn$lib$core$path$baseName(lite_scriptPath);
         void lite_base;
-        const lite_baseNoExt = lite$textSlice(lite_base, 0n, lite$subtractInt(lite$textLength(lite_base), 4n, 2395), 2357);
+        const lite_baseNoExt = lite$textSlice(lite_base, 0n, lite$subtractInt(lite$textLength(lite_base), 4n, 2406), 2368);
         void lite_baseNoExt;
         const lite_artifact = liteFn$lib$core$path$join((lite_tempDir).path, ((lite_baseNoExt) + (".ts")));
         void lite_artifact;

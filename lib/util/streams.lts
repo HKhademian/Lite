@@ -111,7 +111,7 @@ checkHash: Bool
             return (ok = false, sha256 = "", kind = "", error = label + ".file must be " + kindMsg);
         }
         fullFile := path.resolve(directory, fRes.value);
-        if fs.kind(fullFile) =!= "file" {
+        if fs.kind(fullFile) =!= fs.FILE_KIND_FILE {
             return (ok = false, sha256 = "", kind = "", error = label + ".file missing: " + fullFile);
         }
         fHash := crypto.sha256File(fullFile);

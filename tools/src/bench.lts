@@ -74,11 +74,11 @@ computeToolingHash := fn(rootDir: String): String {
     dirs: List<String> = ["", "generated/"];
     loop dirs as prefix {
         dirPath := if prefix == "" { path.join(rootDir, "tools") } else { path.join(rootDir, "tools/generated") };
-        if fs.kind(dirPath) == "dir" {
+        if fs.kind(dirPath) == fs.FILE_KIND_DIR {
             entries := fs.listDir(dirPath);
             loop entries as entry {
                 full := path.join(dirPath, entry);
-                if text.endsWith(entry, ".ts") and fs.kind(full) == "file" {
+                if text.endsWith(entry, ".ts") and fs.kind(full) == fs.FILE_KIND_FILE {
                     if not first {
                         list.pushBack(mut digestBytes, 0);
                     }
@@ -128,7 +128,7 @@ run := fn(args: List<String>): Unit {
 
     output := path.resolve(proc.cwd(), normalized[0]);
     filter := if argCount == 2 { normalized[1] } else { "" };
-    if fs.kind(output) =!= "missing" {
+    if fs.kind(output) =!= fs.FILE_KIND_MISSING {
         io.errorLine("benchmark output already exists; choose a new report path");
         io.exit(1);
     }
@@ -218,7 +218,7 @@ run := fn(args: List<String>): Unit {
     }
 
     emptyEnv: List<String> = [];
-    hasGit := fs.kind(path.join(root, ".git")) =!= "missing";
+    hasGit := fs.kind(path.join(root, ".git")) =!= fs.FILE_KIND_MISSING;
     var commitJson := "null";
     var dirtyJson := "null";
     if hasGit {
@@ -256,7 +256,7 @@ run := fn(args: List<String>): Unit {
         io.errorLine(mkOut.error);
         io.exit(1);
     }
-    if fs.kind(output) =!= "missing" {
+    if fs.kind(output) =!= fs.FILE_KIND_MISSING {
         io.errorLine("benchmark output already exists; choose a new report path");
         io.exit(1);
     }

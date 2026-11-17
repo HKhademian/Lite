@@ -240,17 +240,17 @@ pub relative := fn(fromDir: String, toPath: String): String {
 
 /** True when `target` resolves to an existing filesystem entry (file, directory, or other). */
 pub exists := fn(target: String): Bool {
-    file.kind(target) =!= "missing"
+    file.kind(target) =!= file.FILE_KIND_MISSING
 }
 
 /** True when `target` resolves to a regular file. */
 pub isFile := fn(target: String): Bool {
-    file.kind(target) == "file"
+    file.kind(target) == file.FILE_KIND_FILE
 }
 
 /** True when `target` resolves to a directory. */
 pub isDirectory := fn(target: String): Bool {
-    file.kind(target) == "dir"
+    file.kind(target) == file.FILE_KIND_DIR
 }
 
 /** Standard directory names skipped during repository path walks. */
@@ -275,11 +275,11 @@ pub collectFiles := fn(baseDir: String, targets: List<String>, extension: String
         resolved := list.popBack(mut stack);
         stackCount = stackCount - 1;
         entryKind := file.kind(resolved);
-        if entryKind == "missing" {
+        if entryKind == file.FILE_KIND_MISSING {
             io.errorLine("ENOENT: no such file or directory, stat '" + resolved + "'");
             io.exit(1);
         }
-        if entryKind == "dir" {
+        if entryKind == file.FILE_KIND_DIR {
             entries := file.listDir(resolved);
             var entryIdx := list.listCountText(entries) - 1;
             loop entryIdx >= 0 {
@@ -326,14 +326,14 @@ pub copyFiltered := fn(srcDir: String, dstDir: String, topSkipNames: List<String
                 nextSrc := join(curSrc, entry);
                 nextDst := join(curDst, entry);
                 entryKind := file.kind(nextSrc);
-                if entryKind == "dir" {
+                if entryKind == file.FILE_KIND_DIR {
                     mkSub := file.makeDir(nextDst);
                     if not mkSub.ok { return (ok = false, error = mkSub.error); }
                     list.pushBack(mut srcStack, nextSrc);
                     list.pushBack(mut dstStack, nextDst);
                     list.pushBack(mut depthStack, curDepth + 1);
                     stackCount = stackCount + 1;
-                } else if entryKind == "file" {
+                } else if entryKind == file.FILE_KIND_FILE {
                     copied := file.copy(nextSrc, nextDst);
                     if not copied.ok { return (ok = false, error = copied.error); }
                 }

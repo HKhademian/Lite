@@ -60,7 +60,7 @@ pub makeTempDir := fn(prefix: String): (ok: Bool, path: String, error: String);
 /** Validates that every integer in `bytes` fits in `0..255`. */
 validateBytes := fn(bytes: List<Int>): (ok: Bool, error: String) {
     loop bytes as byte {
-        if byte < 0 or byte > 255 {
+        if byte < BYTE_MIN or byte > BYTE_MAX {
             return (ok = false, error = "byte value outside 0..255: " + integer.intText(byte));
         }
     }

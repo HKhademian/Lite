@@ -424,7 +424,7 @@ function lite$listPopBack<T>(items: T[], at: number): T {
     return items.pop() as T;
 }
 
-const lite$intLines: readonly number[] = [0, 79, 80, 104, 130, 161, 193, 223, 251, 285, 313, 341, 369, 395, 429, 457, 487, 521, 522, 567, 612, 641, 688, 729, 750, 778, 807, 834, 840, 882, 885, 886, 932, 961, 990, 1013, 1038, 1076, 1109, 1115, 1139, 1165, 1185, 1213, 1252, 1281, 1295, 1318, 1328, 1374, 1408, 1428, 1456, 1487, 1536, 1550, 1573, 1583, 1611, 1658, 1695, 1705, 1733, 1775, 1812, 1822, 1828, 1836, 1839, 1840, 1892, 1929, 1952, 1953, 1998, 2024, 2139, 2178, 2222, 2258, 2309, 2386, 2421, 2480, 2502, 2537, 2604, 2663, 2685, 2740, 2791, 2850, 2872, 2890, 2904, 2914, 2920, 2956, 2959, 2960, 3047, 3080, 3156, 3231, 3318, 3421, 3481, 3586, 3672, 3760, 3847, 3916, 4010, 4016, 4077, 4134, 4197, 4242, 4245, 4246, 4284, 4343, 4394, 4442, 4480, 4539, 4559, 4565, 4566, 4621, 4683, 4722, 4805, 4825, 4831, 4832, 4868, 4888, 4957, 4977, 4983, 4984, 5039, 5066, 5106, 5126, 5132, 5186, 5187, 5227, 5260, 5312, 5337, 5375, 5399, 5409, 5440, 5473, 5543, 5571, 5585, 5646, 5676, 5719, 5747, 5761, 5788, 5833, 5898, 5926, 5966, 6042, 6079, 6129, 6165, 6187, 6218, 6236, 6283, 6311, 6351, 6397, 6473, 6519, 6556, 6606, 6642, 6664, 6723, 6754, 6772, 6819, 6886, 6887, 6936, 6981, 7058, 7076, 7077, 7106, 7162, 7223, 7284, 7336, 7402, 7480, 7554, 7577, 7632, 7665, 7679, 7689, 7695, 7696, 7748, 7774, 7827, 7847, 7853, 7854, 7887, 7949, 7979, 8008, 8024, 8079, 8149, 8205, 8309, 8333, 8343, 8408, 8409, 8469, 8541, 8599, 8698, 8722, 8732, 8816, 8822, 8823, 8865, 8888, 8924, 8944, 8950, 8989, 9013, 9050, 9070, 9076, 9121, 9122, 9171, 9193, 9228, 9248, 9254, 9293, 9376, 9396, 9402, 9403, 9518, 9538, 9582, 9624, 9675, 9727, 9791, 9851, 9935, 9948, 9949, 9992, 10014, 10049, 10069, 10075, 10171, 10174, 10175, 10196];
+const lite$intLines: readonly number[] = [0, 79, 80, 104, 130, 161, 193, 223, 251, 285, 313, 341, 369, 395, 429, 457, 487, 521, 522, 567, 612, 641, 688, 729, 750, 778, 807, 834, 840, 882, 885, 886, 932, 961, 990, 1013, 1038, 1076, 1109, 1115, 1139, 1165, 1185, 1213, 1252, 1281, 1295, 1318, 1328, 1374, 1408, 1428, 1456, 1487, 1536, 1550, 1573, 1583, 1611, 1658, 1695, 1705, 1733, 1775, 1812, 1822, 1828, 1836, 1839, 1840, 1892, 1929, 1952, 1953, 1998, 2024, 2139, 2189, 2233, 2269, 2320, 2408, 2443, 2502, 2524, 2559, 2626, 2685, 2707, 2762, 2813, 2872, 2894, 2912, 2926, 2936, 2942, 2978, 2981, 2982, 3069, 3102, 3178, 3253, 3340, 3443, 3503, 3608, 3694, 3782, 3869, 3938, 4032, 4038, 4099, 4156, 4219, 4264, 4267, 4268, 4306, 4365, 4416, 4464, 4502, 4561, 4581, 4587, 4588, 4643, 4705, 4755, 4838, 4858, 4864, 4865, 4901, 4921, 4990, 5010, 5016, 5017, 5072, 5099, 5139, 5159, 5165, 5219, 5220, 5260, 5293, 5345, 5370, 5408, 5432, 5442, 5473, 5506, 5576, 5604, 5618, 5679, 5709, 5752, 5780, 5794, 5821, 5866, 5931, 5959, 5999, 6075, 6112, 6162, 6198, 6220, 6251, 6269, 6316, 6344, 6384, 6430, 6506, 6552, 6589, 6639, 6675, 6697, 6756, 6787, 6805, 6852, 6919, 6920, 6969, 7014, 7091, 7109, 7110, 7139, 7195, 7256, 7317, 7369, 7435, 7513, 7587, 7610, 7665, 7698, 7712, 7722, 7728, 7729, 7781, 7807, 7860, 7880, 7886, 7887, 7920, 7993, 8023, 8052, 8068, 8123, 8193, 8249, 8353, 8377, 8387, 8452, 8453, 8513, 8585, 8643, 8742, 8766, 8776, 8860, 8866, 8867, 8909, 8932, 8968, 8988, 8994, 9033, 9057, 9094, 9114, 9120, 9165, 9166, 9215, 9237, 9272, 9292, 9298, 9348, 9431, 9451, 9457, 9458, 9573, 9593, 9637, 9679, 9730, 9782, 9846, 9906, 9990, 10003, 10004, 10047, 10069, 10104, 10124, 10130, 10226, 10229, 10230, 10251];
 const lite$intSource = "tools/src/bench.lts:";
 const lite$intMin = -(1n << 63n), lite$intMax = (1n << 63n) - 1n;
 function lite$fault(category: string, at: number, message: string): never {
@@ -1221,6 +1221,12 @@ export function main(lite$write?: (text: string) => void): string {
         return ((lite_out) + ("\""));
     }
     void liteFn$lib$util$json$quoteString;
+    const lite$m$lib$core$file$FILE_KIND_MISSING = "missing";
+    void lite$m$lib$core$file$FILE_KIND_MISSING;
+    const lite$m$lib$core$file$FILE_KIND_FILE = "file";
+    void lite$m$lib$core$file$FILE_KIND_FILE;
+    const lite$m$lib$core$file$FILE_KIND_DIR = "dir";
+    void lite$m$lib$core$file$FILE_KIND_DIR;
     function liteFn$lib$core$file$readBytes(lite_path: string): bigint[] {
         void lite_path;
         return lite$fileReadBytes(lite_path);
@@ -1490,38 +1496,38 @@ export function main(lite$write?: (text: string) => void): string {
         void lite_stack;
         let lite_stackCount = 0n;
         void lite_stackCount;
-        let lite_targetIdx = lite$subtractInt(liteFn$lib$core$list$listCountText([...(lite_targets)]), 1n, 8951);
+        let lite_targetIdx = lite$subtractInt(liteFn$lib$core$list$listCountText([...(lite_targets)]), 1n, 8990);
         void lite_targetIdx;
         while (((lite_targetIdx) >= (0n))) {
-            lite_stack.push(liteFn$lib$core$path$resolve(lite_baseDir, lite$listAt((lite_targets), lite_targetIdx, 9040)));
-            lite_stackCount = lite$addInt(lite_stackCount, 1n, 9086);
-            lite_targetIdx = lite$subtractInt(lite_targetIdx, 1n, 9121);
+            lite_stack.push(liteFn$lib$core$path$resolve(lite_baseDir, lite$listAt((lite_targets), lite_targetIdx, 9079)));
+            lite_stackCount = lite$addInt(lite_stackCount, 1n, 9125);
+            lite_targetIdx = lite$subtractInt(lite_targetIdx, 1n, 9160);
         }
         while (((lite_stackCount) > (0n))) {
-            const lite_resolved = lite$listPopBack(lite_stack, 9179);
+            const lite_resolved = lite$listPopBack(lite_stack, 9218);
             void lite_resolved;
-            lite_stackCount = lite$subtractInt(lite_stackCount, 1n, 9236);
+            lite_stackCount = lite$subtractInt(lite_stackCount, 1n, 9275);
             const lite_entryKind = lite$fileKind(lite_resolved);
             void lite_entryKind;
-            if (((lite_entryKind) === ("missing"))) {
+            if (((lite_entryKind) === (lite$m$lib$core$file$FILE_KIND_MISSING))) {
                 lite$reportError((((("ENOENT: no such file or directory, stat '") + (lite_resolved))) + ("'")));
                 return lite$exit(1n);
             }
-            if (((lite_entryKind) === ("dir"))) {
+            if (((lite_entryKind) === (lite$m$lib$core$file$FILE_KIND_DIR))) {
                 const lite_entries: string[] = [...(lite$fileListDir(lite_resolved))];
                 void lite_entries;
-                let lite_entryIdx = lite$subtractInt(liteFn$lib$core$list$listCountText([...(lite_entries)]), 1n, 9576);
+                let lite_entryIdx = lite$subtractInt(liteFn$lib$core$list$listCountText([...(lite_entries)]), 1n, 9641);
                 void lite_entryIdx;
                 while (((lite_entryIdx) >= (0n))) {
-                    const lite_entry = lite$listAt((lite_entries), lite_entryIdx, 9647);
+                    const lite_entry = lite$listAt((lite_entries), lite_entryIdx, 9712);
                     void lite_entry;
                     const lite_isDot = ((lite_skipDotEntries) && (liteFn$lib$core$text$startsWithAt(lite_entry, 0n, ".")));
                     void lite_isDot;
                     if ((((!(lite_isDot))) && ((!(liteFn$lib$core$list$listContainsText([...(lite_ignoredNames)], lite_entry)))))) {
                         lite_stack.push(liteFn$lib$core$path$resolve(lite_resolved, lite_entry));
-                        lite_stackCount = lite$addInt(lite_stackCount, 1n, 9934);
+                        lite_stackCount = lite$addInt(lite_stackCount, 1n, 9999);
                     }
-                    lite_entryIdx = lite$subtractInt(lite_entryIdx, 1n, 9993);
+                    lite_entryIdx = lite$subtractInt(lite_entryIdx, 1n, 10058);
                 }
             } else if (((((lite_extension) === (""))) || (liteFn$lib$core$text$endsWith(lite_resolved, lite_extension)))) {
                 lite_files.push(lite_resolved);
@@ -1553,13 +1559,13 @@ export function main(lite$write?: (text: string) => void): string {
         lite_depthStack.push(0n);
         lite_stackCount = 1n;
         while (((lite_stackCount) > (0n))) {
-            const lite_curSrc = lite$listPopBack(lite_srcStack, 10843);
+            const lite_curSrc = lite$listPopBack(lite_srcStack, 10908);
             void lite_curSrc;
-            const lite_curDst = lite$listPopBack(lite_dstStack, 10889);
+            const lite_curDst = lite$listPopBack(lite_dstStack, 10954);
             void lite_curDst;
-            const lite_curDepth = lite$listPopBack(lite_depthStack, 10937);
+            const lite_curDepth = lite$listPopBack(lite_depthStack, 11002);
             void lite_curDepth;
-            lite_stackCount = lite$subtractInt(lite_stackCount, 1n, 10999);
+            lite_stackCount = lite$subtractInt(lite_stackCount, 1n, 11064);
             const lite_entries: string[] = [...(lite$fileListDir(lite_curSrc))];
             void lite_entries;
             const lite_skipList: string[] = [...((Boolean(((lite_curDepth) === (0n))) ? [...(lite_topSkipNames)] : [...(lite_nestedSkipNames)]))];
@@ -1573,7 +1579,7 @@ export function main(lite$write?: (text: string) => void): string {
                     void lite_nextDst;
                     const lite_entryKind = lite$fileKind(lite_nextSrc);
                     void lite_entryKind;
-                    if (((lite_entryKind) === ("dir"))) {
+                    if (((lite_entryKind) === (lite$m$lib$core$file$FILE_KIND_DIR))) {
                         const lite_mkSub = lite$fileMakeDir(lite_nextDst);
                         void lite_mkSub;
                         if ((!((lite_mkSub).ok))) {
@@ -1581,9 +1587,9 @@ export function main(lite$write?: (text: string) => void): string {
                         }
                         lite_srcStack.push(lite_nextSrc);
                         lite_dstStack.push(lite_nextDst);
-                        lite_depthStack.push(lite$addInt(lite_curDepth, 1n, 11712));
-                        lite_stackCount = lite$addInt(lite_stackCount, 1n, 11762);
-                    } else if (((lite_entryKind) === ("file"))) {
+                        lite_depthStack.push(lite$addInt(lite_curDepth, 1n, 11790));
+                        lite_stackCount = lite$addInt(lite_stackCount, 1n, 11840);
+                    } else if (((lite_entryKind) === (lite$m$lib$core$file$FILE_KIND_FILE))) {
                         const lite_copied = lite$fileCopy(lite_nextSrc, lite_nextDst);
                         void lite_copied;
                         if ((!((lite_copied).ok))) {
@@ -1639,7 +1645,7 @@ export function main(lite$write?: (text: string) => void): string {
         }
         let lite_dir = liteFn$lib$core$path$normalize(lite_startPath);
         void lite_dir;
-        if (((lite$fileKind(lite_dir)) !== ("dir"))) {
+        if (((lite$fileKind(lite_dir)) !== (lite$m$lib$core$file$FILE_KIND_DIR))) {
             lite_dir = liteFn$lib$core$path$parentDir(lite_dir);
         }
         let lite_steps = 0n;
@@ -1647,7 +1653,7 @@ export function main(lite$write?: (text: string) => void): string {
         while (((lite_steps) < (16n))) {
             const lite_versionsPath = liteFn$lib$core$path$resolve(lite_dir, "config/versions.json");
             void lite_versionsPath;
-            if (((lite$fileKind(lite_versionsPath)) === ("file"))) {
+            if (((lite$fileKind(lite_versionsPath)) === (lite$m$lib$core$file$FILE_KIND_FILE))) {
                 return lite_dir;
             }
             const lite_next = liteFn$lib$core$path$parentDir(lite_dir);
@@ -1656,7 +1662,7 @@ export function main(lite$write?: (text: string) => void): string {
                 break;
             }
             lite_dir = lite_next;
-            lite_steps = lite$addInt(lite_steps, 1n, 754);
+            lite_steps = lite$addInt(lite_steps, 1n, 776);
         }
         return "";
     }
@@ -1698,7 +1704,7 @@ export function main(lite$write?: (text: string) => void): string {
         void lite_command;
         const lite_argCount = liteFn$lib$core$list$listCountText([...(lite_args)]);
         void lite_argCount;
-        if (((((lite_argCount) > (0n))) && (((lite$listAt((lite_args), 0n, 1866)) === ("--version"))))) {
+        if (((((lite_argCount) > (0n))) && (((lite$listAt((lite_args), 0n, 1888)) === ("--version"))))) {
             if (((lite_argCount) !== (1n))) {
                 lite$reportError((((("Usage: lite ") + (lite_command))) + (" --version")));
                 lite$exit(2n);
@@ -2213,7 +2219,7 @@ export function main(lite$write?: (text: string) => void): string {
             }
             const lite_fullFile = liteFn$lib$core$path$resolve(lite_directory, (lite_fRes).value);
             void lite_fullFile;
-            if (((lite$fileKind(lite_fullFile)) !== ("file"))) {
+            if (((lite$fileKind(lite_fullFile)) !== (lite$m$lib$core$file$FILE_KIND_FILE))) {
                 return { ok: false, sha256: "", kind: "", error: ((((lite_label) + (".file missing: "))) + (lite_fullFile)) };
             }
             const lite_fHash = liteFn$lib$core$crypto$sha256File(lite_fullFile);
@@ -2234,7 +2240,7 @@ export function main(lite$write?: (text: string) => void): string {
                 const lite_hStr = liteFn$lib$util$json$readStringAt(lite_source, (lite_hashField).valuePos);
                 void lite_hStr;
                 if ((((lite_hStr).ok) && (liteFn$lib$core$text$startsWithAt((lite_hStr).value, 0n, "sha256:")))) {
-                    const lite_hexPart = lite$textSlice((lite_hStr).value, 7n, lite$textLength((lite_hStr).value), 5037);
+                    const lite_hexPart = lite$textSlice((lite_hStr).value, 7n, lite$textLength((lite_hStr).value), 5048);
                     void lite_hexPart;
                     if (liteFn$lib$util$streams$isHex64(lite_hexPart)) {
                         lite_validHash = true;
@@ -2282,10 +2288,10 @@ export function main(lite$write?: (text: string) => void): string {
         let lite_i = 0n;
         void lite_i;
         while (((lite_i) < (lite_n))) {
-            if (((lite$listAt((lite_left), lite_i, 6546)) !== (lite$listAt((lite_right), lite_i, 6559)))) {
+            if (((lite$listAt((lite_left), lite_i, 6557)) !== (lite$listAt((lite_right), lite_i, 6570)))) {
                 return false;
             }
-            lite_i = lite$addInt(lite_i, 1n, 6594);
+            lite_i = lite$addInt(lite_i, 1n, 6605);
         }
         return true;
     }
@@ -2379,7 +2385,7 @@ export function main(lite$write?: (text: string) => void): string {
             }
             const lite_toolRes = liteFn$lib$util$json$readObjectString(lite_textSrc, 0n, "tool");
             void lite_toolRes;
-            if ((((((((!((lite_toolRes).found))) || ((!((lite_toolRes).ok))))) || (liteFn$lib$core$text$containsText((lite_toolRes).value, "/")))) || (((lite$fileKind(liteFn$lib$core$path$join(lite_rootDir, (("bin/") + ((lite_toolRes).value))))) === ("missing"))))) {
+            if ((((((((!((lite_toolRes).found))) || ((!((lite_toolRes).ok))))) || (liteFn$lib$core$text$containsText((lite_toolRes).value, "/")))) || (((lite$fileKind(liteFn$lib$core$path$join(lite_rootDir, (("bin/") + ((lite_toolRes).value))))) === (lite$m$lib$core$file$FILE_KIND_MISSING))))) {
                 return { ok: false, id: "", error: ((lite_caseFile) + (": unknown tool")) };
             }
         } else {
@@ -2388,7 +2394,7 @@ export function main(lite$write?: (text: string) => void): string {
             if ((((((!((lite_srcRes).found))) || ((!((lite_srcRes).ok))))) || ((!(liteFn$lib$core$text$endsWith((lite_srcRes).value, ".lts")))))) {
                 return { ok: false, id: "", error: ((lite_caseFile) + (": Lite source must use .lts")) };
             }
-            if (((lite$fileKind(liteFn$lib$core$path$resolve(lite_caseDir, (lite_srcRes).value))) !== ("file"))) {
+            if (((lite$fileKind(liteFn$lib$core$path$resolve(lite_caseDir, (lite_srcRes).value))) !== (lite$m$lib$core$file$FILE_KIND_FILE))) {
                 return { ok: false, id: "", error: ((((lite_caseFile) + (": missing case source "))) + ((lite_srcRes).value)) };
             }
         }
@@ -2611,9 +2617,9 @@ export function main(lite$write?: (text: string) => void): string {
         }
         const lite_filterLen = lite$textLength(lite_filter);
         void lite_filterLen;
-        const lite_startsWild = ((lite$textAt(lite_filter, 0n, 12498)) === ("*"));
+        const lite_startsWild = ((lite$textAt(lite_filter, 0n, 12520)) === ("*"));
         void lite_startsWild;
-        const lite_endsWild = ((lite$textAt(lite_filter, lite$subtractInt(lite_filterLen, 1n, 12567), 12541)) === ("*"));
+        const lite_endsWild = ((lite$textAt(lite_filter, lite$subtractInt(lite_filterLen, 1n, 12589), 12563)) === ("*"));
         void lite_endsWild;
         const lite_parts: string[] = [...([])];
         void lite_parts;
@@ -2624,13 +2630,13 @@ export function main(lite$write?: (text: string) => void): string {
         while (((lite_i) <= (lite_filterLen))) {
             const lite_atEnd = ((lite_i) === (lite_filterLen));
             void lite_atEnd;
-            if (((lite_atEnd) || (((lite$textAt(lite_filter, lite_i, 12732)) === ("*"))))) {
+            if (((lite_atEnd) || (((lite$textAt(lite_filter, lite_i, 12754)) === ("*"))))) {
                 if (((lite_i) > (lite_segStart))) {
-                    lite_parts.push(lite$textSlice(lite_filter, lite_segStart, lite_i, 12831));
+                    lite_parts.push(lite$textSlice(lite_filter, lite_segStart, lite_i, 12853));
                 }
-                lite_segStart = lite$addInt(lite_i, 1n, 12904);
+                lite_segStart = lite$addInt(lite_i, 1n, 12926);
             }
-            lite_i = lite$addInt(lite_i, 1n, 12933);
+            lite_i = lite$addInt(lite_i, 1n, 12955);
         }
         const lite_partCount = liteFn$lib$core$list$listCountText([...(lite_parts)]);
         void lite_partCount;
@@ -2644,7 +2650,7 @@ export function main(lite$write?: (text: string) => void): string {
         let lite_idx = 0n;
         void lite_idx;
         while (((lite_idx) < (lite_partCount))) {
-            const lite_part = lite$listAt((lite_parts), lite_idx, 13154);
+            const lite_part = lite$listAt((lite_parts), lite_idx, 13176);
             void lite_part;
             const lite_partLen = lite$textLength(lite_part);
             void lite_partLen;
@@ -2653,8 +2659,8 @@ export function main(lite$write?: (text: string) => void): string {
                     return false;
                 }
                 lite_cursor = lite_partLen;
-            } else if (((((lite_idx) === (lite$subtractInt(lite_partCount, 1n, 13379)))) && ((!(lite_endsWild))))) {
-                if (((((((lite_candLen) < (lite_partLen))) || (((lite_cursor) > (lite$subtractInt(lite_candLen, lite_partLen, 13455)))))) || ((!(liteFn$lib$core$text$endsWith(lite_candidate, lite_part)))))) {
+            } else if (((((lite_idx) === (lite$subtractInt(lite_partCount, 1n, 13401)))) && ((!(lite_endsWild))))) {
+                if (((((((lite_candLen) < (lite_partLen))) || (((lite_cursor) > (lite$subtractInt(lite_candLen, lite_partLen, 13477)))))) || ((!(liteFn$lib$core$text$endsWith(lite_candidate, lite_part)))))) {
                     return false;
                 }
                 lite_cursor = lite_candLen;
@@ -2664,9 +2670,9 @@ export function main(lite$write?: (text: string) => void): string {
                 if (((lite_found) < (0n))) {
                     return false;
                 }
-                lite_cursor = lite$addInt(lite_found, lite_partLen, 13730);
+                lite_cursor = lite$addInt(lite_found, lite_partLen, 13752);
             }
-            lite_idx = lite$addInt(lite_idx, 1n, 13769);
+            lite_idx = lite$addInt(lite_idx, 1n, 13791);
         }
         return true;
     }
@@ -2711,7 +2717,7 @@ export function main(lite$write?: (text: string) => void): string {
             }
             lite_seenIds.push((lite_checked).id);
             if (liteFn$lib$util$cases$matchesCaseEntry(lite_rootDir, (lite_checked).id, lite_caseFile, lite_filter)) {
-                lite_matches = lite$addInt(lite_matches, 1n, 14975);
+                lite_matches = lite$addInt(lite_matches, 1n, 14997);
             }
         }
         if (((lite_matches) === (0n))) {
@@ -2802,7 +2808,7 @@ export function main(lite$write?: (text: string) => void): string {
         if (((((lite_scenarioIdx) < (0n))) || (((lite_scenarioIdx) >= (liteFn$lib$core$list$listCountInt([...(lite_scenarios)])))))) {
             return "";
         }
-        return (liteFn$lib$util$json$readObjectString((lite_readRes).text, lite$listAt((lite_scenarios), lite_scenarioIdx, 18469), "name")).value;
+        return (liteFn$lib$util$json$readObjectString((lite_readRes).text, lite$listAt((lite_scenarios), lite_scenarioIdx, 18491), "name")).value;
     }
     void liteFn$lib$util$cases$readScenarioName;
     function liteFn$lib$util$cases$readFileDiagnostic(lite_filePath: string, lite_byteCount: bigint): string {
@@ -2843,7 +2849,7 @@ export function main(lite$write?: (text: string) => void): string {
                 if ((!((lite_span).ok))) {
                     return { ok: false, text: "", error: ((((lite_cfgPath) + (": invalid compilerOptions."))) + (lite_key)) };
                 }
-                lite_parts.push(((((liteFn$lib$util$json$quoteString(lite_key)) + (":"))) + (lite$textSlice((lite_cfgRes).text, (lite_span).start, (lite_span).end, 19696))));
+                lite_parts.push(((((liteFn$lib$util$json$quoteString(lite_key)) + (":"))) + (lite$textSlice((lite_cfgRes).text, (lite_span).start, (lite_span).end, 19718))));
             }
         }
         lite_parts.push("\"types\":[]");
@@ -2904,7 +2910,7 @@ export function main(lite$write?: (text: string) => void): string {
         void lite_status;
         let lite_procErr = "";
         void lite_procErr;
-        if (((lite$fileKind(lite_nativeTsc)) === ("file"))) {
+        if (((lite$fileKind(lite_nativeTsc)) === (lite$m$lib$core$file$FILE_KIND_FILE))) {
             const lite_args: string[] = [...(["-p", lite_tsconfigPath])];
             void lite_args;
             const lite_res = lite$processRunBytes(lite_nativeTsc, [...(lite_args)], lite_workDir, [...(lite_emptyEnv)], lite_timeoutMs, [...(lite_emptyBytes)], lite_outPath, lite_errPath);
@@ -3074,7 +3080,7 @@ export function main(lite$write?: (text: string) => void): string {
         if (((((lite_scenarioIdx) < (0n))) || (((lite_scenarioIdx) >= (liteFn$lib$core$list$listCountInt([...(lite_scenarios)])))))) {
             return { ok: false, artifactSha: "", error: ((lite_caseId) + (": invalid scenario index")) };
         }
-        const lite_sPos = lite$listAt((lite_scenarios), lite_scenarioIdx, 26677);
+        const lite_sPos = lite$listAt((lite_scenarios), lite_scenarioIdx, 26710);
         void lite_sPos;
         const lite_sName = (liteFn$lib$util$json$readObjectString(lite_caseText, lite_sPos, "name")).value;
         void lite_sName;
@@ -3196,7 +3202,7 @@ export function main(lite$write?: (text: string) => void): string {
                 const lite_artField = liteFn$lib$util$json$findObjectField(lite_caseText, lite_sPos, "artifact");
                 void lite_artField;
                 if ((lite_artField).found) {
-                    if (((lite$fileKind(lite_outputTsPath)) !== ("file"))) {
+                    if (((lite$fileKind(lite_outputTsPath)) !== (lite$m$lib$core$file$FILE_KIND_FILE))) {
                         return { ok: false, artifactSha: "", error: ((lite_label) + (": missing generated artifact")) };
                     }
                     const lite_expectedArt: bigint[] = [...(liteFn$lib$util$streams$readStreamBytes(lite_caseText, (lite_artField).valuePos, lite_caseDir))];
@@ -3206,7 +3212,7 @@ export function main(lite$write?: (text: string) => void): string {
                     }
                 }
             }
-            if (((((lite_kind) === ("reject"))) && (((lite$fileKind(lite_outputTsPath)) !== ("missing"))))) {
+            if (((((lite_kind) === ("reject"))) && (((lite$fileKind(lite_outputTsPath)) !== (lite$m$lib$core$file$FILE_KIND_MISSING))))) {
                 return { ok: false, artifactSha: "", error: "rejection created an output artifact" };
             }
             if (((((lite_kind) === ("reject"))) || (((lite_kind) === ("compile"))))) {
@@ -3278,7 +3284,7 @@ export function main(lite$write?: (text: string) => void): string {
                         void lite_fv;
                         const lite_outFile = liteFn$lib$core$path$join(lite_filesDir, lite_fname);
                         void lite_outFile;
-                        if (((lite$fileKind(lite_outFile)) !== ("file"))) {
+                        if (((lite$fileKind(lite_outFile)) !== (lite$m$lib$core$file$FILE_KIND_FILE))) {
                             return { ok: false, artifactSha: "", error: ((((lite_label) + (": file "))) + (lite_fname)) };
                         }
                         const lite_expectedFileBytes: bigint[] = [...(liteFn$lib$util$streams$readStreamBytes(lite_caseText, (lite_fv).valuePos, lite_caseDir))];
@@ -3315,7 +3321,7 @@ export function main(lite$write?: (text: string) => void): string {
         if ((lite_filesField).found) {
             for (const lite_artifactRel of [...(liteFn$lib$util$cases$readStringListAt(lite_caseText, (lite_filesField).valuePos))]) {
                 void lite_artifactRel;
-                if (((lite$fileKind(liteFn$lib$core$path$resolve(lite_workspace, lite_artifactRel))) === ("missing"))) {
+                if (((lite$fileKind(liteFn$lib$core$path$resolve(lite_workspace, lite_artifactRel))) === (lite$m$lib$core$file$FILE_KIND_MISSING))) {
                     return { ok: false, artifactSha: "", error: (("missing artifact: ") + (lite_artifactRel)) };
                 }
             }
@@ -3505,14 +3511,14 @@ export function main(lite$write?: (text: string) => void): string {
             void lite_prefix;
             const lite_dirPath = (Boolean(((lite_prefix) === (""))) ? liteFn$lib$core$path$join(lite_rootDir, "tools") : liteFn$lib$core$path$join(lite_rootDir, "tools/generated"));
             void lite_dirPath;
-            if (((lite$fileKind(lite_dirPath)) === ("dir"))) {
+            if (((lite$fileKind(lite_dirPath)) === (lite$m$lib$core$file$FILE_KIND_DIR))) {
                 const lite_entries: string[] = [...(lite$fileListDir(lite_dirPath))];
                 void lite_entries;
                 for (const lite_entry of [...(lite_entries)]) {
                     void lite_entry;
                     const lite_full = liteFn$lib$core$path$join(lite_dirPath, lite_entry);
                     void lite_full;
-                    if (((liteFn$lib$core$text$endsWith(lite_entry, ".ts")) && (((lite$fileKind(lite_full)) === ("file"))))) {
+                    if (((liteFn$lib$core$text$endsWith(lite_entry, ".ts")) && (((lite$fileKind(lite_full)) === (lite$m$lib$core$file$FILE_KIND_FILE))))) {
                         if ((!(lite_first))) {
                             lite_digestBytes.push(0n);
                         }
@@ -3577,11 +3583,11 @@ export function main(lite$write?: (text: string) => void): string {
             lite$reportError("usage: lite bench OUTPUT [FILTER]");
             lite$exit(1n);
         }
-        const lite_output = liteFn$lib$core$path$resolve(lite$processCwd(), lite$listAt((lite_normalized), 0n, 4616));
+        const lite_output = liteFn$lib$core$path$resolve(lite$processCwd(), lite$listAt((lite_normalized), 0n, 4638));
         void lite_output;
-        const lite_filter = (Boolean(((lite_argCount) === (2n))) ? lite$listAt((lite_normalized), 1n, 4665) : "");
+        const lite_filter = (Boolean(((lite_argCount) === (2n))) ? lite$listAt((lite_normalized), 1n, 4687) : "");
         void lite_filter;
-        if (((lite$fileKind(lite_output)) !== ("missing"))) {
+        if (((lite$fileKind(lite_output)) !== (lite$m$lib$core$file$FILE_KIND_MISSING))) {
             lite$reportError("benchmark output already exists; choose a new report path");
             lite$exit(1n);
         }
@@ -3634,7 +3640,7 @@ export function main(lite$write?: (text: string) => void): string {
                             lite$reportError((lite_wRes).error);
                             lite$exit(1n);
                         }
-                        lite_w = lite$addInt(lite_w, 1n, 6213);
+                        lite_w = lite$addInt(lite_w, 1n, 6246);
                     }
                     const lite_samplesNs: bigint[] = [...([])];
                     void lite_samplesNs;
@@ -3651,12 +3657,12 @@ export function main(lite$write?: (text: string) => void): string {
                             lite$reportError((lite_sRes).error);
                             lite$exit(1n);
                         }
-                        lite_samplesNs.push(lite$subtractInt(lite_t1, lite_t0, 6716));
-                        lite_s = lite$addInt(lite_s, 1n, 6749);
+                        lite_samplesNs.push(lite$subtractInt(lite_t1, lite_t0, 6749));
+                        lite_s = lite$addInt(lite_s, 1n, 6782);
                     }
                     const lite_sorted: bigint[] = [...(liteFn_sortInts([...(lite_samplesNs)]))];
                     void lite_sorted;
-                    const lite_medianNs = lite$listAt((lite_sorted), lite$divideInt(liteFn$lib$core$list$listCountInt([...(lite_sorted)]), 2n, 6880), 6854);
+                    const lite_medianNs = lite$listAt((lite_sorted), lite$divideInt(liteFn$lib$core$list$listCountInt([...(lite_sorted)]), 2n, 6913), 6887);
                     void lite_medianNs;
                     const lite_msFields: string[] = [...([])];
                     void lite_msFields;
@@ -3667,7 +3673,7 @@ export function main(lite$write?: (text: string) => void): string {
                     const lite_entry = (((((((((((((((((((((((((((((("{\"id\":") + (liteFn$lib$util$json$quoteString((lite_meta).id)))) + (",\"scenario\":"))) + (liteFn$lib$util$json$quoteString(lite_sName)))) + (",\"kind\":"))) + (liteFn$lib$util$json$quoteString((lite_meta).kind)))) + (",\"identity\":"))) + ((lite_ident).jsonText))) + (",\"warmups\":"))) + (liteFn$lib$core$int$intText((lite_meta).warmups)))) + (",\"milliseconds\":["))) + (liteFn$lib$core$text$joinTexts([...(lite_msFields)], ",")))) + ("]"))) + (",\"medianMilliseconds\":"))) + (liteFn_formatNsAsMsJson(lite_medianNs)))) + ("}"));
                     void lite_entry;
                     lite_resultsJson.push(lite_entry);
-                    lite_sIdx = lite$addInt(lite_sIdx, 1n, 7660);
+                    lite_sIdx = lite$addInt(lite_sIdx, 1n, 7693);
                 }
             }
         }
@@ -3679,7 +3685,7 @@ export function main(lite$write?: (text: string) => void): string {
         }
         const lite_emptyEnv: string[] = [...([])];
         void lite_emptyEnv;
-        const lite_hasGit = ((lite$fileKind(liteFn$lib$core$path$join(lite_root, ".git"))) !== ("missing"));
+        const lite_hasGit = ((lite$fileKind(liteFn$lib$core$path$join(lite_root, ".git"))) !== (lite$m$lib$core$file$FILE_KIND_MISSING));
         void lite_hasGit;
         let lite_commitJson = "null";
         void lite_commitJson;
@@ -3725,7 +3731,7 @@ export function main(lite$write?: (text: string) => void): string {
             lite$reportError((lite_mkOut).error);
             lite$exit(1n);
         }
-        if (((lite$fileKind(lite_output)) !== ("missing"))) {
+        if (((lite$fileKind(lite_output)) !== (lite$m$lib$core$file$FILE_KIND_MISSING))) {
             lite$reportError("benchmark output already exists; choose a new report path");
             lite$exit(1n);
         }
