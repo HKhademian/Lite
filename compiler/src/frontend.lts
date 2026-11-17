@@ -101,6 +101,24 @@ ConstructCtx := type (id: Int, tag: String, kind: String, phase: String, iifeDep
 /** 32-bucket hashed string set for O(1) reachable-token membership checks across large module graphs. */
 pub TokenBuckets := type (count: Int, b0: String, b1: String, b2: String, b3: String, b4: String, b5: String, b6: String, b7: String, b8: String, b9: String, b10: String, b11: String, b12: String, b13: String, b14: String, b15: String, b16: String, b17: String, b18: String, b19: String, b20: String, b21: String, b22: String, b23: String, b24: String, b25: String, b26: String, b27: String, b28: String, b29: String, b30: String, b31: String);
 
+INIT_STATE_INIT := "init";
+INIT_STATE_UNINIT := "uninit";
+INIT_STATE_UNINIT_ASSIGNED := "uninit_assigned";
+INIT_STATE_MAYBE := "maybe";
+
+BLOCK_KIND_FUNCTION := "function";
+BLOCK_KIND_SCOPE := "scope";
+BLOCK_KIND_IF := "if";
+BLOCK_KIND_IF_VALUE := "ifvalue";
+BLOCK_KIND_ELSE := "else";
+BLOCK_KIND_LOOP := "loop";
+BLOCK_KIND_MATCH := "match";
+BLOCK_KIND_MATCH_VALUE := "matchvalue";
+BLOCK_KIND_MATCH_ELSE := "matchelse";
+BLOCK_KIND_MATCH_ELSE_VALUE := "matchelseval";
+BLOCK_KIND_MATCH_SINGLE := "matchsingle";
+BLOCK_KIND_MATCH_SINGLE_VALUE := "matchsingleval";
+
 /** Reports one source-positioned diagnostic as `name:line:column: message`, or `line:column: message` when `prefix` is empty, then exits 2. */
 failAt := fn(source: String, position: Int, prefix: String, message: String): Unit {
     place := sourceLib.lineColumn(source, position);
