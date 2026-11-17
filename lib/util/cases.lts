@@ -63,7 +63,10 @@ pub validateCaseFile := fn(rootDir: String, caseFile: String): (ok: Bool, id: St
     caseId := idRes.value;
 
     kindRes := json.readObjectString(textSrc, 0, "kind");
-    validKinds: List<String> = ["tool", "feature", "reject", "compile", "sample", "example"];
+    validKinds: List<String> = [
+    CASE_KIND_TOOL, CASE_KIND_FEATURE, CASE_KIND_REJECT,
+    CASE_KIND_COMPILE, CASE_KIND_SAMPLE, CASE_KIND_EXAMPLE
+    ];
     if not kindRes.found or not kindRes.ok or not list.listContainsText(validKinds, kindRes.value) {
         return (ok = false, id = "", error = caseFile + ": invalid case kind");
     }
@@ -72,13 +75,13 @@ pub validateCaseFile := fn(rootDir: String, caseFile: String): (ok: Bool, id: St
     pendingField := json.findObjectField(textSrc, 0, "pending");
     if pendingField.found {
         pStr := json.readStringAt(textSrc, pendingField.valuePos);
-        if kind == "tool" or not pStr.ok or text.trim(pStr.value) == "" {
+        if kind == CASE_KIND_TOOL or not pStr.ok or text.trim(pStr.value) == "" {
             return (ok = false, id = "", error = caseFile + ": pending needs a language case and reason");
         }
     }
 
     caseDir := path.parentDir(caseFile);
-    if kind == "tool" {
+    if kind == CASE_KIND_TOOL {
         if json.findObjectField(textSrc, 0, "source").found {
             return (ok = false, id = "", error = caseFile + ": tool cases name a tool, not a case executable");
         }
@@ -160,7 +163,7 @@ pub validateCaseFile := fn(rootDir: String, caseFile: String): (ok: Bool, id: St
 
         inFilesField := json.findObjectField(textSrc, sPos, "inputFiles");
         if inFilesField.found {
-            if kind =!= "feature" and kind =!= "sample" and kind =!= "example" {
+            if kind =!= CASE_KIND_FEATURE and kind =!= CASE_KIND_SAMPLE and kind =!= CASE_KIND_EXAMPLE {
                 return (ok = false, id = "", error = caseFile + ": file fixtures need a runnable Lite case");
             }
             loop json.objectKeys(textSrc, inFilesField.valuePos) as fname {
@@ -174,7 +177,7 @@ pub validateCaseFile := fn(rootDir: String, caseFile: String): (ok: Bool, id: St
         }
         outFilesField := json.findObjectField(textSrc, sPos, "outputFiles");
         if outFilesField.found {
-            if kind =!= "feature" and kind =!= "sample" and kind =!= "example" {
+            if kind =!= CASE_KIND_FEATURE and kind =!= CASE_KIND_SAMPLE and kind =!= CASE_KIND_EXAMPLE {
                 return (ok = false, id = "", error = caseFile + ": file fixtures need a runnable Lite case");
             }
             loop json.objectKeys(textSrc, outFilesField.valuePos) as fname {
@@ -188,12 +191,12 @@ pub validateCaseFile := fn(rootDir: String, caseFile: String): (ok: Bool, id: St
         }
         artField := json.findObjectField(textSrc, sPos, "artifact");
         if artField.found {
-            if kind =!= "compile" { return (ok = false, id = "", error = caseFile + ": only compile cases compare generated artifacts"); }
+            if kind =!= CASE_KIND_COMPILE { return (ok = false, id = "", error = caseFile + ": only compile cases compare generated artifacts"); }
             vs := validateStream(textSrc, artField.valuePos, caseDir);
             if not vs.ok { return (ok = false, id = "", error = vs.error); }
         }
         wsRes := json.readObjectString(textSrc, sPos, "workspace");
-        if wsRes.found and (kind =!= "tool" or not wsRes.ok or (wsRes.value =!= "clean" and wsRes.value =!= "dirty")) {
+        if wsRes.found and (kind =!= CASE_KIND_TOOL or not wsRes.ok or (wsRes.value =!= WORKSPACE_CLEAN and wsRes.value =!= WORKSPACE_DIRTY)) {
             return (ok = false, id = "", error = caseFile + ": invalid workspace");
         }
         tagField := json.findObjectField(textSrc, sPos, "tag");
@@ -206,7 +209,7 @@ pub validateCaseFile := fn(rootDir: String, caseFile: String): (ok: Bool, id: St
         }
         filesField := json.findObjectField(textSrc, sPos, "files");
         if filesField.found {
-            if kind =!= "tool" { return (ok = false, id = "", error = caseFile + ": invalid artifact paths"); }
+            if kind =!= CASE_KIND_TOOL { return (ok = false, id = "", error = caseFile + ": invalid artifact paths"); }
             loop json.arrayElementOffsets(textSrc, filesField.valuePos) as fpPos {
                 fpStr := json.readStringAt(textSrc, fpPos);
                 if not fpStr.ok or fpStr.value == "" or path.isAbsolute(fpStr.value) or hasDotDotSegment(fpStr.value) {
@@ -521,7 +524,7 @@ prepareToolWorkspace := fn(rootDir: String, caseText: String, sPos: Int, workDir
             if not gt.ok { return (ok = false, workspace = "", error = gt.error); }
         }
     }
-    if wsRes.value == "dirty" {
+    if wsRes.value == WORKSPACE_DIRTY {
         wDirty := fs.writeText(path.join(projDir, "uncommitted.txt"), "dirty\n");
         if not wDirty.ok { return (ok = false, workspace = "", error = wDirty.error); }
     }
@@ -583,7 +586,7 @@ verifyScenarioInWork := fn(rootDir: String, absFile: String, scenarioIdx: Int, w
     var artifactSha := "";
     var workspace := rootDir;
 
-    if kind == "tool" {
+    if kind == CASE_KIND_TOOL {
         wsRes := prepareToolWorkspace(rootDir, caseText, sPos, work);
         if not wsRes.ok { return (ok = false, artifactSha = "", error = wsRes.error); }
         workspace = wsRes.workspace;
@@ -624,7 +627,7 @@ verifyScenarioInWork := fn(rootDir: String, absFile: String, scenarioIdx: Int, w
             artifactSha = hashRes.hex;
         }
 
-        if kind == "compile" {
+        if kind == CASE_KIND_COMPILE {
             artField := json.findObjectField(caseText, sPos, "artifact");
             if artField.found {
                 if fs.kind(outputTsPath) =!= fs.FILE_KIND_FILE {
@@ -636,11 +639,11 @@ verifyScenarioInWork := fn(rootDir: String, absFile: String, scenarioIdx: Int, w
                 }
             }
         }
-        if kind == "reject" and fs.kind(outputTsPath) =!= fs.FILE_KIND_MISSING {
+        if kind == CASE_KIND_REJECT and fs.kind(outputTsPath) =!= fs.FILE_KIND_MISSING {
             return (ok = false, artifactSha = "", error = "rejection created an output artifact");
         }
 
-        if kind == "reject" or kind == "compile" {
+        if kind == CASE_KIND_REJECT or kind == CASE_KIND_COMPILE {
             actualStatus = compiled.status;
             actualStdout = if compiled.status == 0 { emptyBytes } else { compOutBytes };
             actualStderr = compErrBytes;
@@ -711,7 +714,7 @@ verifyScenarioInWork := fn(rootDir: String, absFile: String, scenarioIdx: Int, w
     if not streams.equalBytes(actualStderr, expectedStderr) {
         return (ok = false, artifactSha = "", error = label + ": stderr");
     }
-    if kind == "reject" {
+    if kind == CASE_KIND_REJECT {
         if expectedExit == 0 or list.listCountInt(actualStdout) > 0 {
             return (ok = false, artifactSha = "", error = label + ": unexpected reject output");
         }
@@ -758,7 +761,7 @@ pub caseIdentityJson := fn(rootDir: String, caseFile: String): (ok: Bool, jsonTe
 
     manifestHash := crypto.sha256File(absFile);
     if not manifestHash.ok { return (ok = false, jsonText = "", error = manifestHash.error); }
-    sourceTarget := if kind == "tool" {
+    sourceTarget := if kind == CASE_KIND_TOOL {
         path.join(rootDir, "bin/" + json.readObjectString(caseText, 0, "tool").value)
     } else {
         path.resolve(caseDir, json.readObjectString(caseText, 0, "source").value)

@@ -223,7 +223,7 @@ prepareRelease := fn(directory: String, output: String, tag: String): Unit {
     var corpusMismatches := 0;
     var bootSupport := "";
 
-    if profile =!= "tools" {
+    if profile =!= rel.PROFILE_TOOLS {
         dependencies := path.join(directory, "igniter/node_modules");
         if fs.kind(dependencies) == fs.FILE_KIND_MISSING {
             failRelease(work, "install locked igniter development dependencies for compiler release verification");
@@ -264,7 +264,7 @@ prepareRelease := fn(directory: String, output: String, tag: String): Unit {
         corpusRejections = readOptionalJsonInt(corpusRaw, corpusSpan.start, "rejections", 0).value;
         corpusExecutions = readOptionalJsonInt(corpusRaw, corpusSpan.start, "executions", 0).value;
 
-        if profile == "language" {
+        if profile == rel.PROFILE_LANGUAGE {
             verifyArgs: List<String> = [path.join(source, "bin/lite"), "verify", "--all", "--no-cache"];
             runChecked(work, proc.execPath(), verifyArgs, source, "");
             bootSupport = "current canonical contracts passed";

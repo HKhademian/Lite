@@ -210,7 +210,7 @@ scanCompilerOptions := fn(args: List<String>, stopAtPositional: Bool, want: Stri
         } else if arg == "--builtin-mode" {
             if i + 1 >= count or args[i + 1] == "--" {
                 list.pushBack(mut errors, arg);
-                return if want == "check" { errors } else if want == "options" { options } else { restArgs };
+                return if want == SCAN_WANT_CHECK { errors } else if want == SCAN_WANT_OPTIONS { options } else { restArgs };
             }
             list.pushBack(mut options, arg);
             list.pushBack(mut options, args[i + 1]);
@@ -226,22 +226,22 @@ scanCompilerOptions := fn(args: List<String>, stopAtPositional: Bool, want: Stri
             i = i + 1;
         }
     }
-    if want == "check" { return errors; }
-    if want == "options" { return options; }
+    if want == SCAN_WANT_CHECK { return errors; }
+    if want == SCAN_WANT_OPTIONS { return options; }
     restArgs
 };
 
 /** True when all repeatable compiler options in `args` are well-formed. */
 pub validCompilerOptions := fn(args: List<String>, stopAtPositional: Bool): Bool {
-    list.listCountText(scanCompilerOptions(args, stopAtPositional, "check")) == 0
+    list.listCountText(scanCompilerOptions(args, stopAtPositional, SCAN_WANT_CHECK)) == 0
 };
 
 /** Extracts repeatable compiler flags (`--builtin-mode SPEC`, `--builtin-mode=SPEC`) before `--` (or first positional arg). */
 pub compilerOptions := fn(args: List<String>, stopAtPositional: Bool): List<String> {
-    scanCompilerOptions(args, stopAtPositional, "options")
+    scanCompilerOptions(args, stopAtPositional, SCAN_WANT_OPTIONS)
 };
 
 /** Returns `args` with repeatable compiler flags removed before `--` (or first positional arg). */
 pub withoutCompilerOptions := fn(args: List<String>, stopAtPositional: Bool): List<String> {
-    scanCompilerOptions(args, stopAtPositional, "rest")
+    scanCompilerOptions(args, stopAtPositional, SCAN_WANT_REST)
 };

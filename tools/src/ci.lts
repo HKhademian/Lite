@@ -148,7 +148,7 @@ releaseTag := fn(): String {
 releaseNeedsCompilerGates := fn(root: String): Bool {
     selected := rel.selectComponentRelease(root, releaseTag());
     if not selected.ok { failCi(selected.error); }
-    rel.releaseProfile(selected.hasTag, selected.component, selected.version) =!= "tools"
+    rel.releaseProfile(selected.hasTag, selected.component, selected.version) =!= rel.PROFILE_TOOLS
 };
 
 runSelfHost := fn(root: String): Unit {

@@ -302,7 +302,7 @@ function lite$listPopBack<T>(items: T[], at: number): T {
     return items.pop() as T;
 }
 
-const lite$intLines: readonly number[] = [0, 91, 92, 116, 142, 173, 201, 229, 259, 287, 315, 341, 375, 405, 406, 444, 471, 487, 490, 491, 588, 621, 683, 729, 793, 844, 924, 930, 933, 934, 1005, 1043, 1046, 1047, 1111, 1157, 1160, 1161, 1223, 1287, 1313, 1355, 1361, 1393, 1396, 1397, 1468, 1488, 1513, 1562, 1568, 1578, 1581, 1582, 1650, 1689, 1750, 1774, 1858, 1884, 1894, 1900, 1909, 1912, 1913, 1980, 2009, 2057, 2109, 2131, 2197, 2224, 2230, 2286, 2348, 2391, 2394, 2395, 2453, 2487, 2520, 2538, 2560, 2611, 2658, 2711, 2779, 2789, 2818, 2840, 2846, 2856, 2859, 2860, 2904, 2964, 3001, 3050, 3121, 3235, 3307, 3396, 3441, 3520, 3546, 3600, 3688, 3745, 3751, 3752, 3847, 3880, 3956, 4003, 4055, 4115, 4116, 4165, 4213, 4280, 4353, 4359, 4413, 4494, 4500, 4547, 4604, 4643, 4693, 4699, 4766, 4815, 4978, 4981, 4982, 5021, 5051, 5090, 5097, 5100, 5101, 5130, 5220, 5264, 5270, 5277, 5280, 5281, 5335, 5399, 5450, 5540, 5543, 5544, 5584, 5637, 5686, 5712, 5758, 5842, 5888, 5948, 5992, 6016, 6017, 6126, 6150, 6175, 6206, 6212, 6213, 6271, 6328, 6413, 6523, 6573, 6623, 6673, 6723, 6755, 6810, 6813, 6814, 6853, 6944, 6999, 7005, 7045, 7114, 7164, 7236, 7295, 7366, 7448, 7519, 7525, 7556, 7638, 7729, 7821, 7912, 7945, 7955, 7961, 7962, 8023, 8061, 8089, 8155, 8161, 8205, 8254, 8305, 8349, 8387, 8436, 8511, 8580, 8614, 8702, 8734, 8737, 8738, 8788, 8815, 8902, 8962, 9029, 9045, 9051, 9104, 9145, 9177, 9193, 9199, 9223, 9272, 9304, 9320, 9326, 9380, 9451, 9576, 9613, 9649, 9665, 9671, 9695, 9783, 9815, 9831, 9837, 9865, 9920, 9952, 9968, 9974, 10003, 10034, 10050, 10056, 10088, 10123, 10141, 10215, 10290, 10388, 10399, 10435, 10451, 10457, 10496, 10541, 10594, 10630, 10640, 10656, 10662, 10698, 10743, 10802, 10838, 10848, 10864, 10870, 10907, 10977, 10993, 10999, 11028, 11055, 11071, 11077, 11104, 11133, 11241, 11300, 11335, 11351, 11357, 11384, 11410, 11426, 11432, 11472, 11475, 11476, 11517, 11565, 11597, 11666, 11707, 11713, 11752, 11803, 11841, 11877, 11940, 11965, 11968, 11969, 11990];
+const lite$intLines: readonly number[] = [0, 91, 92, 116, 142, 173, 201, 229, 259, 287, 315, 341, 375, 405, 406, 444, 471, 487, 490, 491, 588, 621, 683, 729, 793, 844, 924, 930, 933, 934, 1005, 1043, 1046, 1047, 1111, 1157, 1160, 1161, 1223, 1287, 1313, 1355, 1361, 1393, 1396, 1397, 1468, 1488, 1513, 1562, 1568, 1578, 1581, 1582, 1650, 1689, 1750, 1774, 1858, 1884, 1894, 1900, 1909, 1912, 1913, 1980, 2009, 2057, 2109, 2131, 2197, 2224, 2230, 2286, 2348, 2391, 2394, 2395, 2453, 2487, 2520, 2538, 2560, 2611, 2658, 2711, 2779, 2789, 2818, 2840, 2846, 2856, 2859, 2860, 2904, 2964, 3001, 3050, 3121, 3235, 3307, 3396, 3441, 3520, 3546, 3600, 3688, 3745, 3751, 3752, 3847, 3880, 3956, 4003, 4055, 4115, 4116, 4165, 4213, 4280, 4353, 4359, 4413, 4494, 4500, 4547, 4604, 4643, 4693, 4699, 4766, 4815, 4978, 4981, 4982, 5021, 5051, 5090, 5097, 5100, 5101, 5130, 5220, 5264, 5270, 5277, 5280, 5281, 5335, 5399, 5450, 5550, 5553, 5554, 5594, 5647, 5696, 5722, 5768, 5852, 5898, 5958, 6002, 6026, 6027, 6136, 6160, 6185, 6216, 6222, 6223, 6281, 6338, 6423, 6533, 6583, 6633, 6683, 6733, 6765, 6820, 6823, 6824, 6863, 6954, 7009, 7015, 7055, 7124, 7174, 7246, 7305, 7376, 7458, 7529, 7535, 7566, 7648, 7739, 7831, 7922, 7955, 7965, 7971, 7972, 8033, 8071, 8099, 8165, 8171, 8215, 8264, 8315, 8359, 8397, 8446, 8521, 8590, 8624, 8712, 8744, 8747, 8748, 8798, 8825, 8912, 8972, 9039, 9055, 9061, 9114, 9155, 9187, 9203, 9209, 9233, 9282, 9314, 9330, 9336, 9390, 9461, 9586, 9623, 9659, 9675, 9681, 9705, 9793, 9825, 9841, 9847, 9875, 9930, 9962, 9978, 9984, 10013, 10044, 10060, 10066, 10098, 10133, 10151, 10225, 10300, 10398, 10409, 10445, 10461, 10467, 10506, 10551, 10604, 10640, 10650, 10666, 10672, 10708, 10753, 10812, 10848, 10858, 10874, 10880, 10917, 10987, 11003, 11009, 11038, 11065, 11081, 11087, 11114, 11143, 11251, 11310, 11345, 11361, 11367, 11394, 11420, 11436, 11442, 11482, 11485, 11486, 11527, 11575, 11607, 11676, 11717, 11723, 11762, 11813, 11851, 11887, 11950, 11975, 11978, 11979, 12000];
 const lite$intSource = "tools/src/ci.lts:";
 const lite$intMin = -(1n << 63n), lite$intMax = (1n << 63n) - 1n;
 function lite$fault(category: string, at: number, message: string): never {
@@ -1544,6 +1544,12 @@ export function main(lite$write?: (text: string) => void): string {
         return { ok: true, hasTag: true, component: lite_matchedComponent, version: lite_matchedVersion, error: "" };
     }
     void liteFn$lib$util$release$selectComponentRelease;
+    const lite$m$lib$util$release$PROFILE_TOOLS = "tools";
+    void lite$m$lib$util$release$PROFILE_TOOLS;
+    const lite$m$lib$util$release$PROFILE_COMPILER = "compiler";
+    void lite$m$lib$util$release$PROFILE_COMPILER;
+    const lite$m$lib$util$release$PROFILE_LANGUAGE = "language";
+    void lite$m$lib$util$release$PROFILE_LANGUAGE;
     function liteFn$lib$util$release$releaseProfile(lite_hasTag: boolean, lite_component: string, lite_version: string): string {
         void lite_hasTag;
         void lite_component;
@@ -1551,15 +1557,15 @@ export function main(lite$write?: (text: string) => void): string {
         const lite_toolComponents: string[] = [...(["cli", "checker", "tester", "verifier", "benchmark", "release", "docs", "vscode", "formatter", "linker", "doctor"])];
         void lite_toolComponents;
         if ((((!(lite_hasTag))) || (liteFn$lib$core$list$listContainsText([...(lite_toolComponents)], lite_component)))) {
-            return "tools";
+            return lite$m$lib$util$release$PROFILE_TOOLS;
         }
         if (((((((lite_component) === ("project"))) || (((lite_component) === ("language"))))) || (((lite_component) === ("scripting"))))) {
-            return "language";
+            return lite$m$lib$util$release$PROFILE_LANGUAGE;
         }
         if (((((lite_component) === ("compiler"))) && (((liteFn$lib$core$text$indexOfText(lite_version, "-", 0n)) < (0n))))) {
-            return "language";
+            return lite$m$lib$util$release$PROFILE_LANGUAGE;
         }
-        return "compiler";
+        return lite$m$lib$util$release$PROFILE_COMPILER;
     }
     void liteFn$lib$util$release$releaseProfile;
     function liteFn_failCi(lite_message: string): void {
@@ -1785,7 +1791,7 @@ export function main(lite$write?: (text: string) => void): string {
         if ((!((lite_selected).ok))) {
             liteFn_failCi((lite_selected).error);
         }
-        return ((liteFn$lib$util$release$releaseProfile((lite_selected).hasTag, (lite_selected).component, (lite_selected).version)) !== ("tools"));
+        return ((liteFn$lib$util$release$releaseProfile((lite_selected).hasTag, (lite_selected).component, (lite_selected).version)) !== (lite$m$lib$util$release$PROFILE_TOOLS));
     }
     void liteFn_releaseNeedsCompilerGates;
     function liteFn_runSelfHost(lite_root: string): void {

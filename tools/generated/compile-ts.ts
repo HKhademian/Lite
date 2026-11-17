@@ -963,6 +963,12 @@ export function main(lite$write?: (text: string) => void): string {
         return [...(liteFn$lib$util$cli$dropIf([...(lite_args)], "--"))];
     }
     void liteFn$lib$util$cli$stripLeadingSeparator;
+    const lite$m$lib$util$cli$SCAN_WANT_CHECK = "check";
+    void lite$m$lib$util$cli$SCAN_WANT_CHECK;
+    const lite$m$lib$util$cli$SCAN_WANT_OPTIONS = "options";
+    void lite$m$lib$util$cli$SCAN_WANT_OPTIONS;
+    const lite$m$lib$util$cli$SCAN_WANT_REST = "rest";
+    void lite$m$lib$util$cli$SCAN_WANT_REST;
     function liteFn$lib$util$cli$scanCompilerOptions(lite_args: string[], lite_stopAtPositional: boolean, lite_want: string): string[] {
         void lite_args;
         void lite_stopAtPositional;
@@ -992,26 +998,26 @@ export function main(lite$write?: (text: string) => void): string {
             } else if (((lite_arg) === ("--builtin-mode"))) {
                 if (((((lite$addInt(lite_i, 1n, 6870)) >= (lite_count))) || (((lite$listAt((lite_args), lite$addInt(lite_i, 1n, 6893), 6891)) === ("--"))))) {
                     lite_errors.push(lite_arg);
-                    return [...((Boolean(((lite_want) === ("check"))) ? [...(lite_errors)] : (Boolean(((lite_want) === ("options"))) ? [...(lite_options)] : [...(lite_restArgs)])))];
+                    return [...((Boolean(((lite_want) === (lite$m$lib$util$cli$SCAN_WANT_CHECK))) ? [...(lite_errors)] : (Boolean(((lite_want) === (lite$m$lib$util$cli$SCAN_WANT_OPTIONS))) ? [...(lite_options)] : [...(lite_restArgs)])))];
                 }
                 lite_options.push(lite_arg);
-                lite_options.push(lite$listAt((lite_args), lite$addInt(lite_i, 1n, 7171), 7169));
-                lite_i = lite$addInt(lite_i, 2n, 7196);
+                lite_options.push(lite$listAt((lite_args), lite$addInt(lite_i, 1n, 7187), 7185));
+                lite_i = lite$addInt(lite_i, 2n, 7212);
             } else if (liteFn$lib$core$text$startsWithAt(lite_arg, 0n, "--builtin-mode=")) {
                 lite_options.push(lite_arg);
-                lite_i = lite$addInt(lite_i, 1n, 7329);
+                lite_i = lite$addInt(lite_i, 1n, 7345);
             } else {
                 lite_restArgs.push(lite_arg);
                 if (((lite_stopAtPositional) && ((!(liteFn$lib$core$text$startsWithAt(lite_arg, 0n, "-")))))) {
                     lite_stop = true;
                 }
-                lite_i = lite$addInt(lite_i, 1n, 7531);
+                lite_i = lite$addInt(lite_i, 1n, 7547);
             }
         }
-        if (((lite_want) === ("check"))) {
+        if (((lite_want) === (lite$m$lib$util$cli$SCAN_WANT_CHECK))) {
             return [...(lite_errors)];
         }
-        if (((lite_want) === ("options"))) {
+        if (((lite_want) === (lite$m$lib$util$cli$SCAN_WANT_OPTIONS))) {
             return [...(lite_options)];
         }
         return [...(lite_restArgs)];
@@ -1020,19 +1026,19 @@ export function main(lite$write?: (text: string) => void): string {
     function liteFn$lib$util$cli$validCompilerOptions(lite_args: string[], lite_stopAtPositional: boolean): boolean {
         void lite_args;
         void lite_stopAtPositional;
-        return ((liteFn$lib$core$list$listCountText([...(liteFn$lib$util$cli$scanCompilerOptions([...(lite_args)], lite_stopAtPositional, "check"))])) === (0n));
+        return ((liteFn$lib$core$list$listCountText([...(liteFn$lib$util$cli$scanCompilerOptions([...(lite_args)], lite_stopAtPositional, lite$m$lib$util$cli$SCAN_WANT_CHECK))])) === (0n));
     }
     void liteFn$lib$util$cli$validCompilerOptions;
     function liteFn$lib$util$cli$compilerOptions(lite_args: string[], lite_stopAtPositional: boolean): string[] {
         void lite_args;
         void lite_stopAtPositional;
-        return [...(liteFn$lib$util$cli$scanCompilerOptions([...(lite_args)], lite_stopAtPositional, "options"))];
+        return [...(liteFn$lib$util$cli$scanCompilerOptions([...(lite_args)], lite_stopAtPositional, lite$m$lib$util$cli$SCAN_WANT_OPTIONS))];
     }
     void liteFn$lib$util$cli$compilerOptions;
     function liteFn$lib$util$cli$withoutCompilerOptions(lite_args: string[], lite_stopAtPositional: boolean): string[] {
         void lite_args;
         void lite_stopAtPositional;
-        return [...(liteFn$lib$util$cli$scanCompilerOptions([...(lite_args)], lite_stopAtPositional, "rest"))];
+        return [...(liteFn$lib$util$cli$scanCompilerOptions([...(lite_args)], lite_stopAtPositional, lite$m$lib$util$cli$SCAN_WANT_REST))];
     }
     void liteFn$lib$util$cli$withoutCompilerOptions;
     function liteFn$lib$util$project$findRepoRootFrom(lite_startPath: string): string {

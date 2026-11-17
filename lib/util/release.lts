@@ -260,22 +260,22 @@ pub releaseProfile := fn(hasTag: Bool, component: String, version: String): Stri
     "cli", "checker", "tester", "verifier", "benchmark", "release", "docs", "vscode", "formatter", "linker", "doctor"
     ];
     if not hasTag or list.listContainsText(toolComponents, component) {
-        return "tools";
+        return PROFILE_TOOLS;
     }
     if component == "project" or component == "language" or component == "scripting" {
-        return "language";
+        return PROFILE_LANGUAGE;
     }
     if component == "compiler" and text.indexOfText(version, "-", 0) < 0 {
-        return "language";
+        return PROFILE_LANGUAGE;
     }
-    "compiler"
+    PROFILE_COMPILER
 };
 
 profileSummary := fn(profile: String): String {
-    if profile == "compiler" {
+    if profile == PROFILE_COMPILER {
         return "Compiler preview verified across the three-generation fixed-point bootstrap ladder and recorded corpus contracts; native C remains deferred.";
     }
-    if profile == "language" {
+    if profile == PROFILE_LANGUAGE {
         return "Language release verified across the three-generation bootstrap ladder, recorded corpus contracts, and full `lite verify --all --no-cache` conformance.";
     }
     "Tool/source snapshot validated for CLI, docs, and extracted TS compilation; does not establish full language conformance."
@@ -318,7 +318,7 @@ bootstrapSupport: String
         };
         list.pushBack(mut lines, "- Self-hosting fixed-point ladder: " + ladderStatus + " (" + integer.intText(bootstrapGenerations) + " generations)");
         list.pushBack(mut lines, "- Generated corpus parity: " + corpusStats);
-        if profile == "language" {
+        if profile == PROFILE_LANGUAGE {
             list.pushBack(mut lines, "- Full repository verification: `./bin/lite verify --all --no-cache` passed");
         }
         list.pushBack(mut lines, "- Embedded archive evidence: `release/compiler.ts`, `release/compiler-source.lts`, `release/verification.json` (" + bootstrapSupport + ")");

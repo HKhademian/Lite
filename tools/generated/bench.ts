@@ -2296,6 +2296,22 @@ export function main(lite$write?: (text: string) => void): string {
         return true;
     }
     void liteFn$lib$util$streams$equalBytes;
+    const lite$m$lib$util$cases$CASE_KIND_TOOL = "tool";
+    void lite$m$lib$util$cases$CASE_KIND_TOOL;
+    const lite$m$lib$util$cases$CASE_KIND_FEATURE = "feature";
+    void lite$m$lib$util$cases$CASE_KIND_FEATURE;
+    const lite$m$lib$util$cases$CASE_KIND_REJECT = "reject";
+    void lite$m$lib$util$cases$CASE_KIND_REJECT;
+    const lite$m$lib$util$cases$CASE_KIND_COMPILE = "compile";
+    void lite$m$lib$util$cases$CASE_KIND_COMPILE;
+    const lite$m$lib$util$cases$CASE_KIND_SAMPLE = "sample";
+    void lite$m$lib$util$cases$CASE_KIND_SAMPLE;
+    const lite$m$lib$util$cases$CASE_KIND_EXAMPLE = "example";
+    void lite$m$lib$util$cases$CASE_KIND_EXAMPLE;
+    const lite$m$lib$util$cases$WORKSPACE_CLEAN = "clean";
+    void lite$m$lib$util$cases$WORKSPACE_CLEAN;
+    const lite$m$lib$util$cases$WORKSPACE_DIRTY = "dirty";
+    void lite$m$lib$util$cases$WORKSPACE_DIRTY;
     function liteFn$lib$util$cases$hasDotDotSegment(lite_relPath: string): boolean {
         void lite_relPath;
         const lite_size = lite$textLength(lite_relPath);
@@ -2361,7 +2377,7 @@ export function main(lite$write?: (text: string) => void): string {
         void lite_caseId;
         const lite_kindRes = liteFn$lib$util$json$readObjectString(lite_textSrc, 0n, "kind");
         void lite_kindRes;
-        const lite_validKinds: string[] = [...(["tool", "feature", "reject", "compile", "sample", "example"])];
+        const lite_validKinds: string[] = [...([lite$m$lib$util$cases$CASE_KIND_TOOL, lite$m$lib$util$cases$CASE_KIND_FEATURE, lite$m$lib$util$cases$CASE_KIND_REJECT, lite$m$lib$util$cases$CASE_KIND_COMPILE, lite$m$lib$util$cases$CASE_KIND_SAMPLE, lite$m$lib$util$cases$CASE_KIND_EXAMPLE])];
         void lite_validKinds;
         if ((((((!((lite_kindRes).found))) || ((!((lite_kindRes).ok))))) || ((!(liteFn$lib$core$list$listContainsText([...(lite_validKinds)], (lite_kindRes).value)))))) {
             return { ok: false, id: "", error: ((lite_caseFile) + (": invalid case kind")) };
@@ -2373,13 +2389,13 @@ export function main(lite$write?: (text: string) => void): string {
         if ((lite_pendingField).found) {
             const lite_pStr = liteFn$lib$util$json$readStringAt(lite_textSrc, (lite_pendingField).valuePos);
             void lite_pStr;
-            if (((((((lite_kind) === ("tool"))) || ((!((lite_pStr).ok))))) || (((liteFn$lib$core$text$trim((lite_pStr).value)) === (""))))) {
+            if (((((((lite_kind) === (lite$m$lib$util$cases$CASE_KIND_TOOL))) || ((!((lite_pStr).ok))))) || (((liteFn$lib$core$text$trim((lite_pStr).value)) === (""))))) {
                 return { ok: false, id: "", error: ((lite_caseFile) + (": pending needs a language case and reason")) };
             }
         }
         const lite_caseDir = liteFn$lib$core$path$parentDir(lite_caseFile);
         void lite_caseDir;
-        if (((lite_kind) === ("tool"))) {
+        if (((lite_kind) === (lite$m$lib$util$cases$CASE_KIND_TOOL))) {
             if ((liteFn$lib$util$json$findObjectField(lite_textSrc, 0n, "source")).found) {
                 return { ok: false, id: "", error: ((lite_caseFile) + (": tool cases name a tool, not a case executable")) };
             }
@@ -2494,7 +2510,7 @@ export function main(lite$write?: (text: string) => void): string {
             const lite_inFilesField = liteFn$lib$util$json$findObjectField(lite_textSrc, lite_sPos, "inputFiles");
             void lite_inFilesField;
             if ((lite_inFilesField).found) {
-                if (((((((lite_kind) !== ("feature"))) && (((lite_kind) !== ("sample"))))) && (((lite_kind) !== ("example"))))) {
+                if (((((((lite_kind) !== (lite$m$lib$util$cases$CASE_KIND_FEATURE))) && (((lite_kind) !== (lite$m$lib$util$cases$CASE_KIND_SAMPLE))))) && (((lite_kind) !== (lite$m$lib$util$cases$CASE_KIND_EXAMPLE))))) {
                     return { ok: false, id: "", error: ((lite_caseFile) + (": file fixtures need a runnable Lite case")) };
                 }
                 for (const lite_fname of [...(liteFn$lib$util$json$objectKeys(lite_textSrc, (lite_inFilesField).valuePos))]) {
@@ -2514,7 +2530,7 @@ export function main(lite$write?: (text: string) => void): string {
             const lite_outFilesField = liteFn$lib$util$json$findObjectField(lite_textSrc, lite_sPos, "outputFiles");
             void lite_outFilesField;
             if ((lite_outFilesField).found) {
-                if (((((((lite_kind) !== ("feature"))) && (((lite_kind) !== ("sample"))))) && (((lite_kind) !== ("example"))))) {
+                if (((((((lite_kind) !== (lite$m$lib$util$cases$CASE_KIND_FEATURE))) && (((lite_kind) !== (lite$m$lib$util$cases$CASE_KIND_SAMPLE))))) && (((lite_kind) !== (lite$m$lib$util$cases$CASE_KIND_EXAMPLE))))) {
                     return { ok: false, id: "", error: ((lite_caseFile) + (": file fixtures need a runnable Lite case")) };
                 }
                 for (const lite_fname of [...(liteFn$lib$util$json$objectKeys(lite_textSrc, (lite_outFilesField).valuePos))]) {
@@ -2534,7 +2550,7 @@ export function main(lite$write?: (text: string) => void): string {
             const lite_artField = liteFn$lib$util$json$findObjectField(lite_textSrc, lite_sPos, "artifact");
             void lite_artField;
             if ((lite_artField).found) {
-                if (((lite_kind) !== ("compile"))) {
+                if (((lite_kind) !== (lite$m$lib$util$cases$CASE_KIND_COMPILE))) {
                     return { ok: false, id: "", error: ((lite_caseFile) + (": only compile cases compare generated artifacts")) };
                 }
                 const lite_vs = liteFn$lib$util$cases$validateStream(lite_textSrc, (lite_artField).valuePos, lite_caseDir);
@@ -2545,7 +2561,7 @@ export function main(lite$write?: (text: string) => void): string {
             }
             const lite_wsRes = liteFn$lib$util$json$readObjectString(lite_textSrc, lite_sPos, "workspace");
             void lite_wsRes;
-            if ((((lite_wsRes).found) && ((((((((lite_kind) !== ("tool"))) || ((!((lite_wsRes).ok))))) || (((((((lite_wsRes).value) !== ("clean"))) && ((((lite_wsRes).value) !== ("dirty"))))))))))) {
+            if ((((lite_wsRes).found) && ((((((((lite_kind) !== (lite$m$lib$util$cases$CASE_KIND_TOOL))) || ((!((lite_wsRes).ok))))) || (((((((lite_wsRes).value) !== (lite$m$lib$util$cases$WORKSPACE_CLEAN))) && ((((lite_wsRes).value) !== (lite$m$lib$util$cases$WORKSPACE_DIRTY))))))))))) {
                 return { ok: false, id: "", error: ((lite_caseFile) + (": invalid workspace")) };
             }
             const lite_tagField = liteFn$lib$util$json$findObjectField(lite_textSrc, lite_sPos, "tag");
@@ -2562,7 +2578,7 @@ export function main(lite$write?: (text: string) => void): string {
             const lite_filesField = liteFn$lib$util$json$findObjectField(lite_textSrc, lite_sPos, "files");
             void lite_filesField;
             if ((lite_filesField).found) {
-                if (((lite_kind) !== ("tool"))) {
+                if (((lite_kind) !== (lite$m$lib$util$cases$CASE_KIND_TOOL))) {
                     return { ok: false, id: "", error: ((lite_caseFile) + (": invalid artifact paths")) };
                 }
                 for (const lite_fpPos of [...(liteFn$lib$util$json$arrayElementOffsets(lite_textSrc, (lite_filesField).valuePos))]) {
@@ -2617,9 +2633,9 @@ export function main(lite$write?: (text: string) => void): string {
         }
         const lite_filterLen = lite$textLength(lite_filter);
         void lite_filterLen;
-        const lite_startsWild = ((lite$textAt(lite_filter, 0n, 12760)) === ("*"));
+        const lite_startsWild = ((lite$textAt(lite_filter, 0n, 12926)) === ("*"));
         void lite_startsWild;
-        const lite_endsWild = ((lite$textAt(lite_filter, lite$subtractInt(lite_filterLen, 1n, 12829), 12803)) === ("*"));
+        const lite_endsWild = ((lite$textAt(lite_filter, lite$subtractInt(lite_filterLen, 1n, 12995), 12969)) === ("*"));
         void lite_endsWild;
         const lite_parts: string[] = [...([])];
         void lite_parts;
@@ -2630,13 +2646,13 @@ export function main(lite$write?: (text: string) => void): string {
         while (((lite_i) <= (lite_filterLen))) {
             const lite_atEnd = ((lite_i) === (lite_filterLen));
             void lite_atEnd;
-            if (((lite_atEnd) || (((lite$textAt(lite_filter, lite_i, 12994)) === ("*"))))) {
+            if (((lite_atEnd) || (((lite$textAt(lite_filter, lite_i, 13160)) === ("*"))))) {
                 if (((lite_i) > (lite_segStart))) {
-                    lite_parts.push(lite$textSlice(lite_filter, lite_segStart, lite_i, 13093));
+                    lite_parts.push(lite$textSlice(lite_filter, lite_segStart, lite_i, 13259));
                 }
-                lite_segStart = lite$addInt(lite_i, 1n, 13166);
+                lite_segStart = lite$addInt(lite_i, 1n, 13332);
             }
-            lite_i = lite$addInt(lite_i, 1n, 13195);
+            lite_i = lite$addInt(lite_i, 1n, 13361);
         }
         const lite_partCount = liteFn$lib$core$list$listCountText([...(lite_parts)]);
         void lite_partCount;
@@ -2650,7 +2666,7 @@ export function main(lite$write?: (text: string) => void): string {
         let lite_idx = 0n;
         void lite_idx;
         while (((lite_idx) < (lite_partCount))) {
-            const lite_part = lite$listAt((lite_parts), lite_idx, 13416);
+            const lite_part = lite$listAt((lite_parts), lite_idx, 13582);
             void lite_part;
             const lite_partLen = lite$textLength(lite_part);
             void lite_partLen;
@@ -2659,8 +2675,8 @@ export function main(lite$write?: (text: string) => void): string {
                     return false;
                 }
                 lite_cursor = lite_partLen;
-            } else if (((((lite_idx) === (lite$subtractInt(lite_partCount, 1n, 13641)))) && ((!(lite_endsWild))))) {
-                if (((((((lite_candLen) < (lite_partLen))) || (((lite_cursor) > (lite$subtractInt(lite_candLen, lite_partLen, 13717)))))) || ((!(liteFn$lib$core$text$endsWith(lite_candidate, lite_part)))))) {
+            } else if (((((lite_idx) === (lite$subtractInt(lite_partCount, 1n, 13807)))) && ((!(lite_endsWild))))) {
+                if (((((((lite_candLen) < (lite_partLen))) || (((lite_cursor) > (lite$subtractInt(lite_candLen, lite_partLen, 13883)))))) || ((!(liteFn$lib$core$text$endsWith(lite_candidate, lite_part)))))) {
                     return false;
                 }
                 lite_cursor = lite_candLen;
@@ -2670,9 +2686,9 @@ export function main(lite$write?: (text: string) => void): string {
                 if (((lite_found) < (0n))) {
                     return false;
                 }
-                lite_cursor = lite$addInt(lite_found, lite_partLen, 13992);
+                lite_cursor = lite$addInt(lite_found, lite_partLen, 14158);
             }
-            lite_idx = lite$addInt(lite_idx, 1n, 14031);
+            lite_idx = lite$addInt(lite_idx, 1n, 14197);
         }
         return true;
     }
@@ -2717,7 +2733,7 @@ export function main(lite$write?: (text: string) => void): string {
             }
             lite_seenIds.push((lite_checked).id);
             if (liteFn$lib$util$cases$matchesCaseEntry(lite_rootDir, (lite_checked).id, lite_caseFile, lite_filter)) {
-                lite_matches = lite$addInt(lite_matches, 1n, 15237);
+                lite_matches = lite$addInt(lite_matches, 1n, 15403);
             }
         }
         if (((lite_matches) === (0n))) {
@@ -2808,7 +2824,7 @@ export function main(lite$write?: (text: string) => void): string {
         if (((((lite_scenarioIdx) < (0n))) || (((lite_scenarioIdx) >= (liteFn$lib$core$list$listCountInt([...(lite_scenarios)])))))) {
             return "";
         }
-        return (liteFn$lib$util$json$readObjectString((lite_readRes).text, lite$listAt((lite_scenarios), lite_scenarioIdx, 18731), "name")).value;
+        return (liteFn$lib$util$json$readObjectString((lite_readRes).text, lite$listAt((lite_scenarios), lite_scenarioIdx, 18897), "name")).value;
     }
     void liteFn$lib$util$cases$readScenarioName;
     function liteFn$lib$util$cases$readFileDiagnostic(lite_filePath: string, lite_byteCount: bigint): string {
@@ -2849,7 +2865,7 @@ export function main(lite$write?: (text: string) => void): string {
                 if ((!((lite_span).ok))) {
                     return { ok: false, text: "", error: ((((lite_cfgPath) + (": invalid compilerOptions."))) + (lite_key)) };
                 }
-                lite_parts.push(((((liteFn$lib$util$json$quoteString(lite_key)) + (":"))) + (lite$textSlice((lite_cfgRes).text, (lite_span).start, (lite_span).end, 19958))));
+                lite_parts.push(((((liteFn$lib$util$json$quoteString(lite_key)) + (":"))) + (lite$textSlice((lite_cfgRes).text, (lite_span).start, (lite_span).end, 20124))));
             }
         }
         lite_parts.push("\"types\":[]");
@@ -3028,7 +3044,7 @@ export function main(lite$write?: (text: string) => void): string {
                 }
             }
         }
-        if ((((lite_wsRes).value) === ("dirty"))) {
+        if ((((lite_wsRes).value) === (lite$m$lib$util$cases$WORKSPACE_DIRTY))) {
             const lite_wDirty = liteFn$lib$core$file$writeText(liteFn$lib$core$path$join(lite_projDir, "uncommitted.txt"), "dirty\n");
             void lite_wDirty;
             if ((!((lite_wDirty).ok))) {
@@ -3080,7 +3096,7 @@ export function main(lite$write?: (text: string) => void): string {
         if (((((lite_scenarioIdx) < (0n))) || (((lite_scenarioIdx) >= (liteFn$lib$core$list$listCountInt([...(lite_scenarios)])))))) {
             return { ok: false, artifactSha: "", error: ((lite_caseId) + (": invalid scenario index")) };
         }
-        const lite_sPos = lite$listAt((lite_scenarios), lite_scenarioIdx, 26950);
+        const lite_sPos = lite$listAt((lite_scenarios), lite_scenarioIdx, 27124);
         void lite_sPos;
         const lite_sName = (liteFn$lib$util$json$readObjectString(lite_caseText, lite_sPos, "name")).value;
         void lite_sName;
@@ -3130,7 +3146,7 @@ export function main(lite$write?: (text: string) => void): string {
         void lite_artifactSha;
         let lite_workspace = lite_rootDir;
         void lite_workspace;
-        if (((lite_kind) === ("tool"))) {
+        if (((lite_kind) === (lite$m$lib$util$cases$CASE_KIND_TOOL))) {
             const lite_wsRes = liteFn$lib$util$cases$prepareToolWorkspace(lite_rootDir, lite_caseText, lite_sPos, lite_work);
             void lite_wsRes;
             if ((!((lite_wsRes).ok))) {
@@ -3198,7 +3214,7 @@ export function main(lite$write?: (text: string) => void): string {
                 }
                 lite_artifactSha = (lite_hashRes).hex;
             }
-            if (((lite_kind) === ("compile"))) {
+            if (((lite_kind) === (lite$m$lib$util$cases$CASE_KIND_COMPILE))) {
                 const lite_artField = liteFn$lib$util$json$findObjectField(lite_caseText, lite_sPos, "artifact");
                 void lite_artField;
                 if ((lite_artField).found) {
@@ -3212,10 +3228,10 @@ export function main(lite$write?: (text: string) => void): string {
                     }
                 }
             }
-            if (((((lite_kind) === ("reject"))) && (((lite$fileKind(lite_outputTsPath)) !== (lite$m$lib$core$file$FILE_KIND_MISSING))))) {
+            if (((((lite_kind) === (lite$m$lib$util$cases$CASE_KIND_REJECT))) && (((lite$fileKind(lite_outputTsPath)) !== (lite$m$lib$core$file$FILE_KIND_MISSING))))) {
                 return { ok: false, artifactSha: "", error: "rejection created an output artifact" };
             }
-            if (((((lite_kind) === ("reject"))) || (((lite_kind) === ("compile"))))) {
+            if (((((lite_kind) === (lite$m$lib$util$cases$CASE_KIND_REJECT))) || (((lite_kind) === (lite$m$lib$util$cases$CASE_KIND_COMPILE))))) {
                 lite_actualStatus = (lite_compiled).status;
                 lite_actualStdout = [...((Boolean((((lite_compiled).status) === (0n))) ? [...(lite_emptyBytes)] : [...(lite_compOutBytes)]))];
                 lite_actualStderr = [...(lite_compErrBytes)];
@@ -3311,7 +3327,7 @@ export function main(lite$write?: (text: string) => void): string {
         if ((!(liteFn$lib$util$streams$equalBytes([...(lite_actualStderr)], [...(lite_expectedStderr)])))) {
             return { ok: false, artifactSha: "", error: ((lite_label) + (": stderr")) };
         }
-        if (((lite_kind) === ("reject"))) {
+        if (((lite_kind) === (lite$m$lib$util$cases$CASE_KIND_REJECT))) {
             if (((((lite_expectedExit) === (0n))) || (((liteFn$lib$core$list$listCountInt([...(lite_actualStdout)])) > (0n))))) {
                 return { ok: false, artifactSha: "", error: ((lite_label) + (": unexpected reject output")) };
             }
@@ -3385,7 +3401,7 @@ export function main(lite$write?: (text: string) => void): string {
         if ((!((lite_manifestHash).ok))) {
             return { ok: false, jsonText: "", error: (lite_manifestHash).error };
         }
-        const lite_sourceTarget = (Boolean(((lite_kind) === ("tool"))) ? liteFn$lib$core$path$join(lite_rootDir, (("bin/") + ((liteFn$lib$util$json$readObjectString(lite_caseText, 0n, "tool")).value))) : liteFn$lib$core$path$resolve(lite_caseDir, (liteFn$lib$util$json$readObjectString(lite_caseText, 0n, "source")).value));
+        const lite_sourceTarget = (Boolean(((lite_kind) === (lite$m$lib$util$cases$CASE_KIND_TOOL))) ? liteFn$lib$core$path$join(lite_rootDir, (("bin/") + ((liteFn$lib$util$json$readObjectString(lite_caseText, 0n, "tool")).value))) : liteFn$lib$core$path$resolve(lite_caseDir, (liteFn$lib$util$json$readObjectString(lite_caseText, 0n, "source")).value));
         void lite_sourceTarget;
         const lite_sourceHash = liteFn$lib$core$crypto$sha256File(lite_sourceTarget);
         void lite_sourceHash;
