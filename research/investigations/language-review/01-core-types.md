@@ -349,8 +349,19 @@ The current [union-zero decision](../../../docs/union-zero.md) requires all-zero
 union storage to represent a valid value with exactly one listed member active;
 the member choice is open. A zero `UNKNOWN` with no listed active member is an
 alternative already investigated, not the selected baseline. Adopting it would
-revise the membership and exhaustiveness contracts; it must not mean unreadable
-uninitialized storage, because all-zero storage is a valid initialized value.
+reconsider the membership and exhaustiveness contracts and must be reconciled
+with the selected universal all-zero value and reserved-storage rules.
+
+**User clarification:** `Kind = 0` means **no type**; zero initialization
+therefore starts with an invalid type reference, not a known `Int64` or `String`
+member. Do not automatically equate this with an unrecognized nonzero Kind or
+assert that every unknown tag has the same meaning. The user has not yet
+clarified whether the enclosing zeroed union remains a valid, readable value
+with no active type, or is an invalid value for which some or all operations
+must fail. That distinction matters because the earlier user direction requires
+all-zero storage to be a valid initialized value for every type. Resolve it
+explicitly before changing the selected union-zero contract. This clarification
+does not select match syntax, fault behavior, or the handling of Kind 99.
 
 Compare at least: (a) zero identifies one listed member; (b) zero identifies a
 valid extra unknown/empty state and listed members begin at one; and (c) a
