@@ -250,6 +250,10 @@ pub versionsJson := fn(rootDir: String): (ok: Bool, jsonText: String, error: Str
     (ok = true, jsonText = "{" + text.joinTexts(entries, ",") + "}", error = "")
 };
 
+pub PROFILE_TOOLS := "tools";
+pub PROFILE_COMPILER := "compiler";
+pub PROFILE_LANGUAGE := "language";
+
 /** Classifies a release into `"tools"`, `"compiler"`, or `"language"` verification profiles. */
 pub releaseProfile := fn(hasTag: Bool, component: String, version: String): String {
     toolComponents: List<String> = [

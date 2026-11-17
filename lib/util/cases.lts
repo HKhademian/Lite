@@ -10,6 +10,16 @@ path := import "core/path";
 json := import "util/json";
 streams := import "util/streams";
 
+CASE_KIND_TOOL := "tool";
+CASE_KIND_FEATURE := "feature";
+CASE_KIND_REJECT := "reject";
+CASE_KIND_COMPILE := "compile";
+CASE_KIND_SAMPLE := "sample";
+CASE_KIND_EXAMPLE := "example";
+
+WORKSPACE_CLEAN := "clean";
+WORKSPACE_DIRTY := "dirty";
+
 hasDotDotSegment := fn(relPath: String): Bool {
     size := text.length(relPath);
     var segStart := 0;

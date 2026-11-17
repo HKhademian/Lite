@@ -186,6 +186,10 @@ pub normalizeSubcommand := fn(token: String, commands: List<String>): String {
     ""
 };
 
+SCAN_WANT_CHECK := "check";
+SCAN_WANT_OPTIONS := "options";
+SCAN_WANT_REST := "rest";
+
 /** Scans leading/non-trailing repeatable `--builtin-mode` flags (`want`: `"check"`, `"options"`, or `"rest"`). */
 scanCompilerOptions := fn(args: List<String>, stopAtPositional: Bool, want: String): List<String> {
     options: mut List<String> = [];

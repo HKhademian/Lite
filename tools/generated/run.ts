@@ -548,32 +548,32 @@ export function main(lite$write?: (text: string) => void): string {
         let lite_i = 0n;
         void lite_i;
         while (((lite_i) < (lite_count))) {
-            const lite_arg = lite$listAt((lite_args), lite_i, 6505);
+            const lite_arg = lite$listAt((lite_args), lite_i, 6592);
             void lite_arg;
             if (lite_stop) {
                 lite_restArgs.push(lite_arg);
-                lite_i = lite$addInt(lite_i, 1n, 6591);
+                lite_i = lite$addInt(lite_i, 1n, 6678);
             } else if (((lite_arg) === ("--"))) {
                 lite_stop = true;
                 lite_restArgs.push(lite_arg);
-                lite_i = lite$addInt(lite_i, 1n, 6717);
+                lite_i = lite$addInt(lite_i, 1n, 6804);
             } else if (((lite_arg) === ("--builtin-mode"))) {
-                if (((((lite$addInt(lite_i, 1n, 6783)) >= (lite_count))) || (((lite$listAt((lite_args), lite$addInt(lite_i, 1n, 6806), 6804)) === ("--"))))) {
+                if (((((lite$addInt(lite_i, 1n, 6870)) >= (lite_count))) || (((lite$listAt((lite_args), lite$addInt(lite_i, 1n, 6893), 6891)) === ("--"))))) {
                     lite_errors.push(lite_arg);
                     return [...((Boolean(((lite_want) === ("check"))) ? [...(lite_errors)] : (Boolean(((lite_want) === ("options"))) ? [...(lite_options)] : [...(lite_restArgs)])))];
                 }
                 lite_options.push(lite_arg);
-                lite_options.push(lite$listAt((lite_args), lite$addInt(lite_i, 1n, 7084), 7082));
-                lite_i = lite$addInt(lite_i, 2n, 7109);
+                lite_options.push(lite$listAt((lite_args), lite$addInt(lite_i, 1n, 7171), 7169));
+                lite_i = lite$addInt(lite_i, 2n, 7196);
             } else if (liteFn$lib$core$text$startsWithAt(lite_arg, 0n, "--builtin-mode=")) {
                 lite_options.push(lite_arg);
-                lite_i = lite$addInt(lite_i, 1n, 7242);
+                lite_i = lite$addInt(lite_i, 1n, 7329);
             } else {
                 lite_restArgs.push(lite_arg);
                 if (((lite_stopAtPositional) && ((!(liteFn$lib$core$text$startsWithAt(lite_arg, 0n, "-")))))) {
                     lite_stop = true;
                 }
-                lite_i = lite$addInt(lite_i, 1n, 7444);
+                lite_i = lite$addInt(lite_i, 1n, 7531);
             }
         }
         if (((lite_want) === ("check"))) {
