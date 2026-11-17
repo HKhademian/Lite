@@ -366,6 +366,23 @@ transfer are another. Their layout, ABI, linking, copying and cost implications
 need analysis. Do not assume a public numeric Kind or select a numbering policy
 merely from type identity.
 
+**User's C interoperability question:** Given raw storage viewed through a
+C-style struct containing a `kind` field and overlapping union payloads, a
+consumer needs a defined mapping between kind values and member types. Who
+defines it: a language-wide rule, a target/ABI contract or compiler-generated
+interface, or an explicit per-union declaration? Compare the scope and
+stability of each option rather than assuming a single public ABI or an encoding
+from source order. Illustrative tag numbers are not selections.
+
+An interoperable bytes-to-value contract also needs the target's size,
+alignment, padding, integer representation and endianness, payload and string
+representation, lifetime/ownership, and validation of invalid tags and payloads.
+Defining the kind mapping is necessary but not sufficient to make arbitrary raw
+bytes valid values or make one target's in-memory layout portable to another.
+The selected requirement that all-zero Lite storage is a valid value remains;
+how that maps to a union member is unresolved. Separate a public C representation
+from the compiler's internal representation and possible optimized encodings.
+
 ## Working judgment
 
 Treat type identity, conversion, operations, and physical representation as separate decisions. The user's direction distinguishes contextual fresh literals from established typed values; a typed declaration does not itself authorize converting an established String or another distinct value into `UserID`.
