@@ -15,30 +15,29 @@ pub Token := type (kind: String, text: String, offset: Int, line: Int, column: I
 /** Tokens in source order, ending with one EOF token. */
 pub Tokens := type List<Token>;
 
-/* Token-kind spellings. Lite has no enum and top-level values cannot be
-   captured by functions yet, so these are zero-argument accessors. */
+/* Token-kind spellings (Lite has no enum in this bootstrap subset yet). */
 /** Canonical token kind for ordinary names. */
-pub TOKEN_KIND_NAME := fn(): String { "Name" }
+pub TOKEN_KIND_NAME := "Name";
 
 /** Canonical token kind for keywords other than Bool literals. */
-pub TOKEN_KIND_KEYWORD := fn(): String { "Keyword" }
+pub TOKEN_KIND_KEYWORD := "Keyword";
 
 /** Canonical token kind for Int literals. */
-pub TOKEN_KIND_INT := fn(): String { "Int" }
+pub TOKEN_KIND_INT := "Int";
 
 /** Token kind for a finite decimal/exponent binary64 Float literal. */
-pub TOKEN_KIND_FLOAT := fn(): String { "Float" }
+pub TOKEN_KIND_FLOAT := "Float";
 /** Canonical token kind for String literals. */
-pub TOKEN_KIND_STRING := fn(): String { "String" }
+pub TOKEN_KIND_STRING := "String";
 
 /** Canonical token kind for Bool literals. */
-pub TOKEN_KIND_BOOL := fn(): String { "Bool" }
+pub TOKEN_KIND_BOOL := "Bool";
 
 /** Canonical token kind for symbols and operators. */
-pub TOKEN_KIND_SYMBOL := fn(): String { "Symbol" }
+pub TOKEN_KIND_SYMBOL := "Symbol";
 
 /** Canonical token kind for end of source. */
-pub TOKEN_KIND_EOF := fn(): String { "EOF" }
+pub TOKEN_KIND_EOF := "EOF";
 
 /** Reports one source-positioned lexer diagnostic and exits 2. */
 lexFail := fn(source: String, position: Int, prefix: String, message: String): Unit {
@@ -280,7 +279,7 @@ pub tokenize := fn(source: String, prefix: String): Tokens {
         line = trivia.line;
         lineStart = trivia.lineStart;
         if cursor >= size {
-            list.pushBack(mut tokens, (kind = TOKEN_KIND_EOF(), text = "", offset = cursor, line = line, column = cursor - lineStart + 1));
+            list.pushBack(mut tokens, (kind = TOKEN_KIND_EOF, text = "", offset = cursor, line = line, column = cursor - lineStart + 1));
             break;
         }
         start := cursor;
@@ -293,9 +292,9 @@ pub tokenize := fn(source: String, prefix: String): Tokens {
         if textLib.isNameStart(ch) {
             next = textLib.skipName(source, cursor);
             value = textLib.slice(source, cursor, next);
-            if value == "true" or value == "false" { kind = TOKEN_KIND_BOOL(); }
-            else if isKeyword(value) { kind = TOKEN_KIND_KEYWORD(); }
-            else { kind = TOKEN_KIND_NAME(); }
+            if value == "true" or value == "false" { kind = TOKEN_KIND_BOOL; }
+            else if isKeyword(value) { kind = TOKEN_KIND_KEYWORD; }
+            else { kind = TOKEN_KIND_NAME; }
         } else if textLib.isDigit(ch) {
             scanned := numeric.scanNumericLiteral(source, cursor);
             next = scanned.next;
@@ -306,14 +305,14 @@ pub tokenize := fn(source: String, prefix: String): Tokens {
                 if not numeric.finiteFloatDigits(digits, scanned.fractionEnd - scanned.fractionStart, scanned.exponent) {
                     lexFail(source, cursor, prefix, "floating literal is not finite");
                 }
-                kind = TOKEN_KIND_FLOAT();
+                kind = TOKEN_KIND_FLOAT;
             } else {
                 if scanned.outsideInt { lexFail(source, cursor, prefix, "integer literal outside signed 64-bit range"); }
-                kind = TOKEN_KIND_INT();
+                kind = TOKEN_KIND_INT;
             }
         } else if ch == "\"" {
             scanned := scanString(source, cursor, prefix);
-            kind = TOKEN_KIND_STRING();
+            kind = TOKEN_KIND_STRING;
             value = scanned.text;
             next = scanned.next;
         } else {
@@ -330,7 +329,7 @@ pub tokenize := fn(source: String, prefix: String): Tokens {
             if textLib.startsWithAt(source, cursor, "||") {
                 lexFail(source, cursor, prefix, "unsupported operator ||; use or");
             }
-            kind = TOKEN_KIND_SYMBOL();
+            kind = TOKEN_KIND_SYMBOL;
             value = symbol;
             next = cursor + textLib.length(symbol);
         }

@@ -1,22 +1,22 @@
 /* Provisional bootstrap checked-integer support. Not an official standard library. */
 
-/** Returns the smallest signed 64-bit value. */
-pub intMin := fn(): Int { -9223372036854775808 }
+/** Smallest signed 64-bit value. */
+pub intMin := -9223372036854775808;
 
-/** Returns the largest signed 64-bit value. */
-pub intMax := fn(): Int { 9223372036854775807 }
+/** Largest signed 64-bit value. */
+pub intMax := 9223372036854775807;
 
 /** Checked signed 64-bit addition; `ok` is false instead of evaluating an overflow. */
 pub intAdd := fn(left: Int, right: Int): (value: Int, ok: Bool) {
-    if right > 0 and left > intMax() - right { return (value = 0, ok = false); }
-    if right < 0 and left < intMin() - right { return (value = 0, ok = false); }
+    if right > 0 and left > intMax - right { return (value = 0, ok = false); }
+    if right < 0 and left < intMin - right { return (value = 0, ok = false); }
     (value = left + right, ok = true)
 }
 
 /** Checked signed 64-bit subtraction; `ok` is false instead of evaluating an overflow. */
 pub intSubtract := fn(left: Int, right: Int): (value: Int, ok: Bool) {
-    if right < 0 and left > intMax() + right { return (value = 0, ok = false); }
-    if right > 0 and left < intMin() + right { return (value = 0, ok = false); }
+    if right < 0 and left > intMax + right { return (value = 0, ok = false); }
+    if right > 0 and left < intMin + right { return (value = 0, ok = false); }
     (value = left - right, ok = true)
 }
 
@@ -25,13 +25,13 @@ pub intMultiply := fn(left: Int, right: Int): (value: Int, ok: Bool) {
     if left == 0 or right == 0 { return (value = 0, ok = true); }
     if left > 0 {
         if right > 0 {
-            if left > intMax() / right { return (value = 0, ok = false); }
-        } else if right < intMin() / left {
+            if left > intMax / right { return (value = 0, ok = false); }
+        } else if right < intMin / left {
             return (value = 0, ok = false);
         }
     } else if right > 0 {
-        if left < intMin() / right { return (value = 0, ok = false); }
-    } else if right < intMax() / left {
+        if left < intMin / right { return (value = 0, ok = false); }
+    } else if right < intMax / left {
         return (value = 0, ok = false);
     }
     (value = left * right, ok = true)
@@ -40,21 +40,21 @@ pub intMultiply := fn(left: Int, right: Int): (value: Int, ok: Bool) {
 /** Checked truncating signed division; `ok` is false on zero or the signed-minimum overflow. */
 pub intDivide := fn(left: Int, right: Int): (value: Int, ok: Bool) {
     if right == 0 { return (value = 0, ok = false); }
-    if left == intMin() and right == -1 { return (value = 0, ok = false); }
+    if left == intMin and right == -1 { return (value = 0, ok = false); }
     (value = left / right, ok = true)
 }
 
 /** Checked truncating signed remainder; the minimum/-1 result is zero, with no overflowing quotient evaluation. */
 pub intRemainder := fn(left: Int, right: Int): (value: Int, ok: Bool) {
     if right == 0 { return (value = 0, ok = false); }
-    if left == intMin() and right == -1 { return (value = 0, ok = true); }
+    if left == intMin and right == -1 { return (value = 0, ok = true); }
     (value = left % right, ok = true)
 }
 
 /** Checked floor division; `ok` is false on zero or the signed-minimum overflow. */
 pub intFloorDivide := fn(left: Int, right: Int): (value: Int, ok: Bool) {
     if right == 0 { return (value = 0, ok = false); }
-    if left == intMin() and right == -1 { return (value = 0, ok = false); }
+    if left == intMin and right == -1 { return (value = 0, ok = false); }
     quotient := left / right;
     if left % right =!= 0 and (left < 0) =!= (right < 0) {
         (value = quotient - 1, ok = true)
@@ -76,7 +76,7 @@ pub intFloorModulo := fn(left: Int, right: Int): (value: Int, ok: Bool) {
 
 /** Checked unary negation; `ok` is false for the signed minimum. */
 pub intNegate := fn(value: Int): (value: Int, ok: Bool) {
-    if value == intMin() { return (value = 0, ok = false); }
+    if value == intMin { return (value = 0, ok = false); }
     (value = 0 - value, ok = true)
 }
 
@@ -99,7 +99,7 @@ digitChar := fn(digit: Int): String {
 /** Formats one signed 64-bit Int as decimal text. */
 pub intText := fn(value: Int): String {
     if value == 0 { return "0"; }
-    if value == intMin() { return "-9223372036854775808"; }
+    if value == intMin { return "-9223372036854775808"; }
     if value < 0 { return "-" + intText(0 - value); }
     var remaining := value;
     var digits := "";

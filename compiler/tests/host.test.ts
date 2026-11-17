@@ -4896,7 +4896,7 @@ test('soft builtin overrides for core/int, core/text, and core/crypto match pure
     'uni := import "core/unicode";',
     'nbsp := uni.fromCodePoints([160]).text;',
     'vtab := uni.fromCodePoints([11]).text;',
-    'io.outputLine(integer.intText(0), integer.intText(-42), integer.intText(integer.intMax()), integer.intText(integer.intMin()));',
+    'io.outputLine(integer.intText(0), integer.intText(-42), integer.intText(integer.intMax), integer.intText(integer.intMin));',
     'io.outputLine(text.startsWithAt("A🙂B", 1, "🙂"), text.startsWithAt("A🙂B", 2, "B"), text.startsWithAt("A🙂B", -1, "A"), text.startsWithAt("A🙂B", 3, ""));',
     'io.outputLine(text.wordAt("if_x", 0, "if"), text.wordAt("if 🙂", 0, "if"), text.wordAt("a🙂b", 0, "a"), text.wordAt("if", 0, "if"));',
     'io.outputLine(text.joinTexts([], ","), text.joinTexts(["x"], ","), text.joinTexts(["a", "b", "c"], "-"));',

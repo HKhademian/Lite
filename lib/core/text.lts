@@ -164,10 +164,10 @@ pub textToInt := fn(text: String): (value: Int, ok: Bool) {
         if not isDigit(ch) { return (value = 0, ok = false); }
         digit := digitValue(ch);
         if negative {
-            if value < (integer.intMin() + digit) / 10 { return (value = 0, ok = false); }
+            if value < (integer.intMin + digit) / 10 { return (value = 0, ok = false); }
             value = value * 10 - digit;
         } else {
-            if value > (integer.intMax() - digit) / 10 { return (value = 0, ok = false); }
+            if value > (integer.intMax - digit) / 10 { return (value = 0, ok = false); }
             value = value * 10 + digit;
         }
         position = position + 1;

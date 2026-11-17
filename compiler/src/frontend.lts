@@ -70,7 +70,7 @@ targetTextLiteralCode := fn(target: String, value: String): String { if target =
 /** Selects the TS or C backend implementation for one emitted literal operation. */
 targetUnitEvaluationCode := fn(target: String, code: String): String { if target == "ts" { tsLiteral.unitEvaluationCode(code) } else { cLiteral.unitEvaluationCode(code) } }
 /** Selects the TS or C backend implementation for one emitted literal operation. */
-targetUnitLiteralCode := fn(target: String): String { if target == "ts" { tsLiteral.unitLiteralCode() } else { cLiteral.unitLiteralCode() } }
+targetUnitLiteralCode := fn(target: String): String { if target == "ts" { tsLiteral.unitLiteralCode } else { cLiteral.unitLiteralCode } }
 /* Shared restricted front-end. Not a standalone program: a target manifest
    places the target literal encoders before this file and the emitter/driver
    after it. */
@@ -11061,7 +11061,7 @@ parseBinaryCtx := fn(target: String, source: String, position: Int, prefix: Stri
             if left.constant and right.constant {
                 folded := tryFoldInteger(operator.text, left.intValue, right.intValue);
                 if folded.ok and numeric.intKindFits(promoted, folded.value) {
-                    code := if (operator.text == "%" or operator.text == ":%") and left.intValue == integer.intMin() and right.intValue == -1 {
+                    code := if (operator.text == "%" or operator.text == ":%") and left.intValue == integer.intMin and right.intValue == -1 {
                         targetIntLiteralCode(target, 0, false, "0")
                     } else if operator.text == ":/" { targetFloorDivCode(target, left.code, right.code) }
                     else if operator.text == ":%" { targetFloorModCode(target, left.code, right.code) }

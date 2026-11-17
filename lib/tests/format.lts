@@ -4,7 +4,7 @@ test := import "core/test";
 
 test.checkText("decimal zero", "0", format.decimalText(0));
 test.checkText("decimal negative", "-42", format.decimalText(-42));
-test.checkText("decimal minimum", "-9223372036854775808", format.decimalText(integer.intMin()));
+test.checkText("decimal minimum", "-9223372036854775808", format.decimalText(integer.intMin));
 test.checkText("pad left text", "  7", format.padLeftText("7", 3));
 test.checkText("pad right text", "7  ", format.padRightText("7", 3));
 test.checkText("pad left no-op", "long", format.padLeftText("long", 2));

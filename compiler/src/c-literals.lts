@@ -46,8 +46,8 @@ pub float32LiteralCode := fn(digits: String, negative: Bool): String {
 /** Evaluates a Unit expression's effects while suppressing any target builtin return payload. */
 pub unitEvaluationCode := fn(code: String): String { "((void)(" + code + "), 0)" }
 
-/** Encodes the inert Unit value for C expression evaluation. */
-pub unitLiteralCode := fn(): String { "0" }
+/** Inert Unit value for C expression evaluation. */
+pub unitLiteralCode := "0";
 
 /** Formats a checked Bool value as a C `stdbool.h` literal. */
 pub boolLiteralCode := fn(value: Bool): String {

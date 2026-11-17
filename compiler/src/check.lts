@@ -23,13 +23,13 @@ Local := type (name: String, typeText: String, mutable: Bool, writable: Bool, de
 Locals := type List<Local>;
 
 /** Canonical symbol kind for a type alias. */
-SYMBOL_KIND_TYPE := fn(): String { "type" }
+SYMBOL_KIND_TYPE := "type";
 
 /** Canonical symbol kind for a function. */
-SYMBOL_KIND_FUNCTION := fn(): String { "function" }
+SYMBOL_KIND_FUNCTION := "function";
 
 /** Canonical symbol kind for a value declaration. */
-SYMBOL_KIND_VALUE := fn(): String { "value" }
+SYMBOL_KIND_VALUE := "value";
 
 /** True for a built-in type name accepted by the bootstrap subset. */
 isBuiltinType := fn(name: String): Bool {
@@ -154,8 +154,8 @@ topLevelOperator := fn(text: String): String {
         } else if parser.isSymbol(token, ")") {
             depth = depth - 1;
         } else if depth == 1 {
-            if (token.kind == lexer.TOKEN_KIND_KEYWORD() and (token.text == "and" or token.text == "or" or token.text == "not")) or
-                (token.kind == lexer.TOKEN_KIND_SYMBOL() and (token.text == "+" or token.text == "-" or token.text == "*" or
+            if (token.kind == lexer.TOKEN_KIND_KEYWORD and (token.text == "and" or token.text == "or" or token.text == "not")) or
+                (token.kind == lexer.TOKEN_KIND_SYMBOL and (token.text == "+" or token.text == "-" or token.text == "*" or
                     token.text == "/" or token.text == "%" or token.text == ":/" or token.text == ":%" or
                     token.text == "**" or token.text == "==" or token.text == "=!=" or token.text == "<" or
                     token.text == "<!" or token.text == "<=" or token.text == "<!=" or token.text == ">" or
@@ -175,11 +175,11 @@ firstOperandType := fn(symbols: Symbols, locals: Locals, text: String): String {
     var cursor := 0;
     loop cursor < count {
         token := parser.tokenAt(tokens, cursor);
-        if token.kind == lexer.TOKEN_KIND_STRING() { return "String"; }
-        if token.kind == lexer.TOKEN_KIND_INT() { return "Int"; }
-        if token.kind == lexer.TOKEN_KIND_FLOAT() { return "Float"; }
-        if token.kind == lexer.TOKEN_KIND_BOOL() { return "Bool"; }
-        if token.kind == lexer.TOKEN_KIND_NAME() {
+        if token.kind == lexer.TOKEN_KIND_STRING { return "String"; }
+        if token.kind == lexer.TOKEN_KIND_INT { return "Int"; }
+        if token.kind == lexer.TOKEN_KIND_FLOAT { return "Float"; }
+        if token.kind == lexer.TOKEN_KIND_BOOL { return "Bool"; }
+        if token.kind == lexer.TOKEN_KIND_NAME {
             index := findLocal(locals, token.text);
             if index >= 0 { return locals[index].typeText; }
         }
@@ -192,7 +192,7 @@ firstOperandType := fn(symbols: Symbols, locals: Locals, text: String): String {
 resolveAliasName := fn(symbols: Symbols, typeText: String, depth: Int): String {
     if depth > 16 { return typeText; }
     index := findSymbol(symbols, typeText);
-    if index >= 0 and symbols[index].kind == SYMBOL_KIND_TYPE() {
+    if index >= 0 and symbols[index].kind == SYMBOL_KIND_TYPE {
         return resolveAliasName(symbols, symbols[index].detail, depth + 1);
     }
     numericKind := numeric.numericAliasKind(typeText);
@@ -213,7 +213,7 @@ tupleComponentType := fn(typeText: String, member: String): String {
     loop cursor < count {
         if parser.isSymbol(parser.tokenAt(tokens, cursor), ")") { break; }
         var label := "";
-        if parser.tokenKindAt(tokens, cursor) == lexer.TOKEN_KIND_NAME() and parser.isSymbol(parser.tokenAt(tokens, cursor + 1), ":") {
+        if parser.tokenKindAt(tokens, cursor) == lexer.TOKEN_KIND_NAME and parser.isSymbol(parser.tokenAt(tokens, cursor + 1), ":") {
             label = parser.tokenTextAt(tokens, cursor);
             cursor = cursor + 2;
         }
@@ -251,7 +251,7 @@ splitBinaryOperands := fn(text: String): (left: String, op: String, right: Strin
             depth = depth + 1;
         } else if parser.isSymbol(token, ")") or parser.isSymbol(token, "]") or parser.isSymbol(token, "}") {
             depth = depth - 1;
-        } else if depth == 1 and cursor > 1 and token.kind == lexer.TOKEN_KIND_SYMBOL() and
+        } else if depth == 1 and cursor > 1 and token.kind == lexer.TOKEN_KIND_SYMBOL and
             (token.text == "+" or token.text == "-" or token.text == "*" or token.text == "/" or
                 token.text == "%" or token.text == ":/" or token.text == ":%" or token.text == "**") {
             leftText := trimTrailingSpaces(textLib.slice(text, parser.tokenOffsetAt(tokens, 1), token.offset));
@@ -292,7 +292,7 @@ simpleType := fn(symbols: Symbols, locals: Locals, text: String): String {
     first := textLib.at(text, 0);
     if textLib.isDigit(first) {
         token := parser.tokenAt(lexer.tokenize(text, ""), 0);
-        if token.kind == lexer.TOKEN_KIND_FLOAT() { return "Float"; }
+        if token.kind == lexer.TOKEN_KIND_FLOAT { return "Float"; }
         return "Int";
     }
     if textLib.startsWithAt(text, 0, "(-") or textLib.startsWithAt(text, 0, "(+") {
@@ -311,9 +311,9 @@ simpleType := fn(symbols: Symbols, locals: Locals, text: String): String {
         var brackets := 0;
         loop cursor < count {
             token := parser.tokenAt(tokens, cursor);
-            if token.kind == lexer.TOKEN_KIND_EOF() { return ""; }
+            if token.kind == lexer.TOKEN_KIND_EOF { return ""; }
             if depth == 1 and parens == 0 and brackets == 0 and
-                token.kind == lexer.TOKEN_KIND_NAME() and token.text == "_" and
+                token.kind == lexer.TOKEN_KIND_NAME and token.text == "_" and
                 parser.isSymbol(parser.tokenAt(tokens, cursor + 1), "{") {
                 if parser.isSymbol(parser.tokenAt(tokens, cursor + 2), "}") { return "Unit"; }
                 startOffset := parser.tokenOffsetAt(tokens, cursor + 2);
@@ -322,7 +322,7 @@ simpleType := fn(symbols: Symbols, locals: Locals, text: String): String {
                 var endOffset := 0;
                 loop armCursor < count {
                     armToken := parser.tokenAt(tokens, armCursor);
-                    if armToken.kind == lexer.TOKEN_KIND_EOF() { return ""; }
+                    if armToken.kind == lexer.TOKEN_KIND_EOF { return ""; }
                     if parser.isSymbol(armToken, "{") {
                         armDepth = armDepth + 1;
                     } else if parser.isSymbol(armToken, "}") {
@@ -446,7 +446,7 @@ simpleType := fn(symbols: Symbols, locals: Locals, text: String): String {
         if call > 0 {
             name := textLib.slice(text, 0, call);
             functionIndex := findSymbol(symbols, name);
-            if functionIndex >= 0 and symbols[functionIndex].kind == SYMBOL_KIND_FUNCTION() {
+            if functionIndex >= 0 and symbols[functionIndex].kind == SYMBOL_KIND_FUNCTION {
                 return functionResultType(symbols[functionIndex]);
             }
             if name == "inputAll" or name == "textAt" or name == "textSlice" { return "String"; }
@@ -483,7 +483,7 @@ contextualNumericLiteralType := fn(text: String, expectedType: String): String {
     kind := parser.tokenKindAt(tokens, first);
     literal := parser.tokenTextAt(tokens, first);
     scanned := numeric.scanNumericLiteral(literal, 0);
-    if kind == lexer.TOKEN_KIND_FLOAT() {
+    if kind == lexer.TOKEN_KIND_FLOAT {
         if expectedType == "Float32" {
             digits := textLib.slice(literal, 0, scanned.integerEnd) + textLib.slice(literal, scanned.fractionStart, scanned.fractionEnd);
             if numeric.finiteFloat32Digits(digits, scanned.fractionEnd - scanned.fractionStart, scanned.exponent) { return "Float32"; }
@@ -491,7 +491,7 @@ contextualNumericLiteralType := fn(text: String, expectedType: String): String {
         }
         return "";
     }
-    if kind =!= lexer.TOKEN_KIND_INT() { return ""; }
+    if kind =!= lexer.TOKEN_KIND_INT { return ""; }
     if scanned.outsideInt or (not negative and scanned.magnitude == -9223372036854775808) { return ""; }
     value := if negative { scanned.magnitude } else { 0 - scanned.magnitude };
     if numeric.isNarrowIntKind(expectedType) and numeric.intKindFits(expectedType, value) { return expectedType; }
@@ -514,7 +514,7 @@ contextualSimpleType := fn(symbols: Symbols, locals: Locals, text: String, expec
         var allFit := true;
         loop cursor < count {
             token := parser.tokenAt(tokens, cursor);
-            if token.kind == lexer.TOKEN_KIND_EOF() { allFit = false; break; }
+            if token.kind == lexer.TOKEN_KIND_EOF { allFit = false; break; }
             if parser.isSymbol(token, "(") or parser.isSymbol(token, "[") or parser.isSymbol(token, "{") {
                 depth = depth + 1;
             } else if parser.isSymbol(token, ")") or parser.isSymbol(token, "]") or parser.isSymbol(token, "}") {
@@ -556,7 +556,7 @@ skipBraces := fn(tokens: lexer.Tokens, index: Int, prefix: String): Int {
     var depth := 1;
     loop true {
         token := parser.tokenAt(tokens, cursor);
-        if token.kind == lexer.TOKEN_KIND_EOF() {
+        if token.kind == lexer.TOKEN_KIND_EOF {
             checkFail(token, prefix, "unterminated block");
         }
         if parser.isSymbol(token, "{") {
@@ -573,7 +573,7 @@ skipBraces := fn(tokens: lexer.Tokens, index: Int, prefix: String): Int {
 /** Retains sequential value bindings in source order; other duplicate symbol kinds remain unsupported. */
 addSymbol := fn(symbols: Symbols, symbol: Symbol, prefix: String): Symbols {
     previous := findSymbol(symbols, symbol.name);
-    if previous >= 0 and (symbol.kind =!= SYMBOL_KIND_VALUE() or symbols[previous].kind =!= SYMBOL_KIND_VALUE()) {
+    if previous >= 0 and (symbol.kind =!= SYMBOL_KIND_VALUE or symbols[previous].kind =!= SYMBOL_KIND_VALUE) {
         checkFail((kind = symbol.kind, text = symbol.name, offset = symbol.offset,
             line = symbol.line, column = symbol.column), prefix, "duplicate top-level name " + symbol.name);
     }
@@ -588,7 +588,7 @@ parseFunctionSymbol := fn(tokens: lexer.Tokens, index: Int, prefix: String): (ne
     nameToken := parser.tokenAt(tokens, index);
     afterName := parser.expectSymbol(tokens, index + 1, ":=", prefix);
     functionWord := parser.tokenAt(tokens, afterName);
-    if functionWord.kind =!= lexer.TOKEN_KIND_KEYWORD() or functionWord.text =!= "fn" {
+    if functionWord.kind =!= lexer.TOKEN_KIND_KEYWORD or functionWord.text =!= "fn" {
         checkFail(functionWord, prefix, "expected fn after :=");
     }
     var cursor := parser.expectSymbol(tokens, afterName + 1, "(", prefix);
@@ -598,7 +598,7 @@ parseFunctionSymbol := fn(tokens: lexer.Tokens, index: Int, prefix: String): (ne
     loop true {
         if parser.isSymbol(parser.tokenAt(tokens, cursor), ")") { break; }
         parameter := parser.tokenAt(tokens, cursor);
-        if parameter.kind =!= lexer.TOKEN_KIND_NAME() {
+        if parameter.kind =!= lexer.TOKEN_KIND_NAME {
             checkFail(parameter, prefix, "expected a parameter name");
         }
         if hasText(parameterNames, parameter.text) {
@@ -635,49 +635,49 @@ collectSymbols := fn(tokens: lexer.Tokens, prefix: String): Symbols {
     loop cursor < count {
         token := parser.tokenAt(tokens, cursor);
         if parser.isSymbol(token, ";") { cursor = cursor + 1; continue; }
-        if token.kind == lexer.TOKEN_KIND_EOF() { break; }
-        if token.kind == lexer.TOKEN_KIND_NAME() and parser.isSymbol(parser.tokenAt(tokens, cursor + 1), ":=") and
-            parser.tokenKindAt(tokens, cursor + 2) == lexer.TOKEN_KIND_KEYWORD() and parser.tokenTextAt(tokens, cursor + 2) == "type" {
+        if token.kind == lexer.TOKEN_KIND_EOF { break; }
+        if token.kind == lexer.TOKEN_KIND_NAME and parser.isSymbol(parser.tokenAt(tokens, cursor + 1), ":=") and
+            parser.tokenKindAt(tokens, cursor + 2) == lexer.TOKEN_KIND_KEYWORD and parser.tokenTextAt(tokens, cursor + 2) == "type" {
             afterName := parser.expectSymbol(tokens, cursor + 1, ":=", prefix);
             parsedType := parser.parseType(tokens, afterName + 1, prefix);
             ended := parser.expectSymbol(tokens, parsedType.next, ";", prefix);
-            symbols = addSymbol(symbols, (kind = SYMBOL_KIND_TYPE(), name = token.text, detail = parsedType.text,
+            symbols = addSymbol(symbols, (kind = SYMBOL_KIND_TYPE, name = token.text, detail = parsedType.text,
                 offset = token.offset, line = token.line, column = token.column), prefix);
             cursor = ended;
-        } else if token.kind == lexer.TOKEN_KIND_NAME() and parser.isSymbol(parser.tokenAt(tokens, cursor + 1), ":=") and
-            parser.tokenKindAt(tokens, cursor + 2) == lexer.TOKEN_KIND_KEYWORD() and parser.tokenTextAt(tokens, cursor + 2) == "fn" {
+        } else if token.kind == lexer.TOKEN_KIND_NAME and parser.isSymbol(parser.tokenAt(tokens, cursor + 1), ":=") and
+            parser.tokenKindAt(tokens, cursor + 2) == lexer.TOKEN_KIND_KEYWORD and parser.tokenTextAt(tokens, cursor + 2) == "fn" {
             parsed := parseFunctionSymbol(tokens, cursor, prefix);
-            symbols = addSymbol(symbols, (kind = SYMBOL_KIND_FUNCTION(), name = parsed.name, detail = parsed.detail,
+            symbols = addSymbol(symbols, (kind = SYMBOL_KIND_FUNCTION, name = parsed.name, detail = parsed.detail,
                 offset = parsed.offset, line = parsed.line, column = parsed.column), prefix);
             cursor = parsed.next;
-        } else if (token.kind == lexer.TOKEN_KIND_KEYWORD() and token.text == "var") or
-            (token.kind == lexer.TOKEN_KIND_NAME() and (parser.isSymbol(parser.tokenAt(tokens, cursor + 1), ":=") or
+        } else if (token.kind == lexer.TOKEN_KIND_KEYWORD and token.text == "var") or
+            (token.kind == lexer.TOKEN_KIND_NAME and (parser.isSymbol(parser.tokenAt(tokens, cursor + 1), ":=") or
                 parser.isSymbol(parser.tokenAt(tokens, cursor + 1), ":"))) {
             declaration := parser.parseDeclaration(tokens, cursor, prefix);
-            nameToken := parser.tokenAt(tokens, cursor + (if token.kind == lexer.TOKEN_KIND_KEYWORD() { 1 } else { 0 }));
-            symbols = addSymbol(symbols, (kind = SYMBOL_KIND_VALUE(), name = declaration.name, detail = declaration.detail,
+            nameToken := parser.tokenAt(tokens, cursor + (if token.kind == lexer.TOKEN_KIND_KEYWORD { 1 } else { 0 }));
+            symbols = addSymbol(symbols, (kind = SYMBOL_KIND_VALUE, name = declaration.name, detail = declaration.detail,
                 offset = nameToken.offset, line = nameToken.line, column = nameToken.column), prefix);
             cursor = declaration.next;
-        } else if token.kind == lexer.TOKEN_KIND_KEYWORD() and token.text == "loop" {
+        } else if token.kind == lexer.TOKEN_KIND_KEYWORD and token.text == "loop" {
             var body := cursor + 1;
             if not parser.isSymbol(parser.tokenAt(tokens, body), "{") {
                 sequence := parser.parseExpression(tokens, body, prefix, 0);
                 body = sequence.next;
-                if parser.tokenKindAt(tokens, body) == lexer.TOKEN_KIND_NAME() and parser.tokenTextAt(tokens, body) == "as" {
+                if parser.tokenKindAt(tokens, body) == lexer.TOKEN_KIND_NAME and parser.tokenTextAt(tokens, body) == "as" {
                     receiver := parser.tokenAt(tokens, body + 1);
-                    if receiver.kind =!= lexer.TOKEN_KIND_NAME() { checkFail(receiver, prefix, "expected a loop item name after as"); }
+                    if receiver.kind =!= lexer.TOKEN_KIND_NAME { checkFail(receiver, prefix, "expected a loop item name after as"); }
                     body = body + 2;
                 }
             }
             cursor = skipBraces(tokens, body, prefix);
             if parser.isSymbol(parser.tokenAt(tokens, cursor), ";") { cursor = cursor + 1; }
-        } else if token.kind == lexer.TOKEN_KIND_KEYWORD() and token.text == "match" {
+        } else if token.kind == lexer.TOKEN_KIND_KEYWORD and token.text == "match" {
             if not parser.isSymbol(parser.tokenAt(tokens, cursor + 1), "{") {
                 checkFail(token, prefix, "unsupported feature \"match\"");
             }
             cursor = skipBraces(tokens, cursor + 1, prefix);
             if parser.isSymbol(parser.tokenAt(tokens, cursor), ";") { cursor = cursor + 1; }
-        } else if token.kind == lexer.TOKEN_KIND_NAME() and parser.isSymbol(parser.tokenAt(tokens, cursor + 1), "=") {
+        } else if token.kind == lexer.TOKEN_KIND_NAME and parser.isSymbol(parser.tokenAt(tokens, cursor + 1), "=") {
             value := parser.parseExpression(tokens, cursor + 2, prefix, 0);
             cursor = parser.consumeStatementEnd(tokens, value.next, prefix);
         } else {
@@ -694,8 +694,8 @@ checkEmbeddedMatches := fn(tokens: lexer.Tokens, start: Int, end: Int, symbols: 
     var cursor := start;
     loop cursor < end {
         token := parser.tokenAt(tokens, cursor);
-        if token.kind == lexer.TOKEN_KIND_EOF() { break; }
-        if token.kind == lexer.TOKEN_KIND_KEYWORD() and token.text == "match" {
+        if token.kind == lexer.TOKEN_KIND_EOF { break; }
+        if token.kind == lexer.TOKEN_KIND_KEYWORD and token.text == "match" {
             if not parser.isSymbol(parser.tokenAt(tokens, cursor + 1), "{") {
                 checkFail(token, prefix, "unsupported feature \"match\"");
             }
@@ -710,7 +710,7 @@ checkEmbeddedMatches := fn(tokens: lexer.Tokens, start: Int, end: Int, symbols: 
                     continue;
                 }
                 armToken := parser.tokenAt(tokens, armCursor);
-                if armToken.kind == lexer.TOKEN_KIND_EOF() {
+                if armToken.kind == lexer.TOKEN_KIND_EOF {
                     checkFail(armToken, prefix, "expected } to close match");
                 }
                 if parser.isSymbol(armToken, "}") {
@@ -724,7 +724,7 @@ checkEmbeddedMatches := fn(tokens: lexer.Tokens, start: Int, end: Int, symbols: 
                     checkFail(armToken, prefix, "match fallback _ must be the final arm");
                 }
                 var armOpen := -1;
-                if armToken.kind == lexer.TOKEN_KIND_NAME() and armToken.text == "_" and
+                if armToken.kind == lexer.TOKEN_KIND_NAME and armToken.text == "_" and
                     parser.isSymbol(parser.tokenAt(tokens, armCursor + 1), "{") {
                     sawFallback = true;
                     armOpen = armCursor + 1;
@@ -780,7 +780,7 @@ checkLocals := fn(tokens: lexer.Tokens, prefix: String, symbols: Symbols): Unit 
     matchFallbacks: mut List<Int> = [];
     loop cursor < count {
         token := parser.tokenAt(tokens, cursor);
-        if token.kind == lexer.TOKEN_KIND_EOF() { break; }
+        if token.kind == lexer.TOKEN_KIND_EOF { break; }
         if matchCount > 0 and depth == matchDepths[matchCount - 1] and
             parens == matchParens[matchCount - 1] and brackets == matchBrackets[matchCount - 1] {
             if parser.isSymbol(token, ";") { cursor = cursor + 1; continue; }
@@ -797,7 +797,7 @@ checkLocals := fn(tokens: lexer.Tokens, prefix: String, symbols: Symbols): Unit 
                 if matchFallbacks[matchCount - 1] =!= 0 {
                     checkFail(token, prefix, "match fallback _ must be the final arm");
                 }
-                if token.kind == lexer.TOKEN_KIND_NAME() and token.text == "_" and
+                if token.kind == lexer.TOKEN_KIND_NAME and token.text == "_" and
                     parser.isSymbol(parser.tokenAt(tokens, cursor + 1), "{") {
                     list.popBack(mut matchFallbacks);
                     list.pushBack(mut matchFallbacks, 1);
@@ -864,20 +864,20 @@ checkLocals := fn(tokens: lexer.Tokens, prefix: String, symbols: Symbols): Unit 
         if parser.isSymbol(token, ")") { parens = parens - 1; cursor = cursor + 1; continue; }
         if parser.isSymbol(token, "[") { brackets = brackets + 1; cursor = cursor + 1; continue; }
         if parser.isSymbol(token, "]") { brackets = brackets - 1; cursor = cursor + 1; continue; }
-        if token.kind == lexer.TOKEN_KIND_NAME() and parser.isSymbol(parser.tokenAt(tokens, cursor + 1), ":=") and
-            parser.tokenKindAt(tokens, cursor + 2) == lexer.TOKEN_KIND_KEYWORD() and parser.tokenTextAt(tokens, cursor + 2) == "type" {
+        if token.kind == lexer.TOKEN_KIND_NAME and parser.isSymbol(parser.tokenAt(tokens, cursor + 1), ":=") and
+            parser.tokenKindAt(tokens, cursor + 2) == lexer.TOKEN_KIND_KEYWORD and parser.tokenTextAt(tokens, cursor + 2) == "type" {
             afterName := parser.expectSymbol(tokens, cursor + 1, ":=", prefix);
             aliasType := parser.parseType(tokens, afterName + 1, prefix);
             cursor = parser.expectSymbol(tokens, aliasType.next, ";", prefix);
             continue;
         }
-        if token.kind == lexer.TOKEN_KIND_NAME() and parser.isSymbol(parser.tokenAt(tokens, cursor + 1), ":=") and
-            parser.tokenKindAt(tokens, cursor + 2) == lexer.TOKEN_KIND_KEYWORD() and parser.tokenTextAt(tokens, cursor + 2) == "fn" {
+        if token.kind == lexer.TOKEN_KIND_NAME and parser.isSymbol(parser.tokenAt(tokens, cursor + 1), ":=") and
+            parser.tokenKindAt(tokens, cursor + 2) == lexer.TOKEN_KIND_KEYWORD and parser.tokenTextAt(tokens, cursor + 2) == "fn" {
             var parameterCursor := parser.expectSymbol(tokens, cursor + 3, "(", prefix);
             loop true {
                 if parser.isSymbol(parser.tokenAt(tokens, parameterCursor), ")") { break; }
                 parameter := parser.tokenAt(tokens, parameterCursor);
-                if parameter.kind =!= lexer.TOKEN_KIND_NAME() {
+                if parameter.kind =!= lexer.TOKEN_KIND_NAME {
                     checkFail(parameter, prefix, "expected a parameter name");
                 }
                 if findLocalAtDepth(locals, parameter.text, depth + 1) >= 0 {
@@ -903,13 +903,13 @@ checkLocals := fn(tokens: lexer.Tokens, prefix: String, symbols: Symbols): Unit 
             cursor = resultType.next;
             continue;
         }
-        if token.kind == lexer.TOKEN_KIND_KEYWORD() and token.text == "return" {
+        if token.kind == lexer.TOKEN_KIND_KEYWORD and token.text == "return" {
             if functionBodyDepth < 0 {
                 checkFail(token, prefix, "return outside function");
             }
             afterReturn := cursor + 1;
             if parser.isSymbol(parser.tokenAt(tokens, afterReturn), ";") or parser.isSymbol(parser.tokenAt(tokens, afterReturn), "}") or
-                parser.tokenKindAt(tokens, afterReturn) == lexer.TOKEN_KIND_EOF() {
+                parser.tokenKindAt(tokens, afterReturn) == lexer.TOKEN_KIND_EOF {
                 if functionResult =!= "" and functionResult =!= "Unit" {
                     checkFail(token, prefix, "return requires a value");
                 }
@@ -926,7 +926,7 @@ checkLocals := fn(tokens: lexer.Tokens, prefix: String, symbols: Symbols): Unit 
             if parser.isSymbol(parser.tokenAt(tokens, cursor), ";") { cursor = cursor + 1; }
             continue;
         }
-        if token.kind == lexer.TOKEN_KIND_KEYWORD() and (token.text == "break" or token.text == "continue") {
+        if token.kind == lexer.TOKEN_KIND_KEYWORD and (token.text == "break" or token.text == "continue") {
             if loopDepth == 0 {
                 checkFail(token, prefix, token.text + " outside loop");
             }
@@ -935,7 +935,7 @@ checkLocals := fn(tokens: lexer.Tokens, prefix: String, symbols: Symbols): Unit 
             if parser.isSymbol(parser.tokenAt(tokens, cursor), ";") { cursor = cursor + 1; }
             continue;
         }
-        if token.kind == lexer.TOKEN_KIND_KEYWORD() and token.text == "if" {
+        if token.kind == lexer.TOKEN_KIND_KEYWORD and token.text == "if" {
             condition := parser.parseExpression(tokens, cursor + 1, prefix, 0);
             checkEmbeddedMatches(tokens, cursor + 1, condition.next, symbols, locals, prefix);
             conditionType := simpleType(symbols, locals, condition.text);
@@ -945,7 +945,7 @@ checkLocals := fn(tokens: lexer.Tokens, prefix: String, symbols: Symbols): Unit 
             cursor = condition.next;
             continue;
         }
-        if token.kind == lexer.TOKEN_KIND_KEYWORD() and token.text == "match" {
+        if token.kind == lexer.TOKEN_KIND_KEYWORD and token.text == "match" {
             if not parser.isSymbol(parser.tokenAt(tokens, cursor + 1), "{") {
                 checkFail(token, prefix, "unsupported feature \"match\"");
             }
@@ -953,7 +953,7 @@ checkLocals := fn(tokens: lexer.Tokens, prefix: String, symbols: Symbols): Unit 
             cursor = cursor + 1;
             continue;
         }
-        if token.kind == lexer.TOKEN_KIND_KEYWORD() and token.text == "loop" {
+        if token.kind == lexer.TOKEN_KIND_KEYWORD and token.text == "loop" {
             if parser.isSymbol(parser.tokenAt(tokens, cursor + 1), "{") {
                 pendingLoop = true;
                 cursor = cursor + 1;
@@ -961,9 +961,9 @@ checkLocals := fn(tokens: lexer.Tokens, prefix: String, symbols: Symbols): Unit 
             }
             source := parser.parseExpression(tokens, cursor + 1, prefix, 0);
             checkEmbeddedMatches(tokens, cursor + 1, source.next, symbols, locals, prefix);
-            if parser.tokenKindAt(tokens, source.next) == lexer.TOKEN_KIND_NAME() and parser.tokenTextAt(tokens, source.next) == "as" {
+            if parser.tokenKindAt(tokens, source.next) == lexer.TOKEN_KIND_NAME and parser.tokenTextAt(tokens, source.next) == "as" {
                 itemToken := parser.tokenAt(tokens, source.next + 1);
-                if itemToken.kind =!= lexer.TOKEN_KIND_NAME() {
+                if itemToken.kind =!= lexer.TOKEN_KIND_NAME {
                     checkFail(itemToken, prefix, "expected a loop item name after as");
                 }
                 sourceType := simpleType(symbols, locals, source.text);
@@ -983,11 +983,11 @@ checkLocals := fn(tokens: lexer.Tokens, prefix: String, symbols: Symbols): Unit 
             }
             continue;
         }
-        if (token.kind == lexer.TOKEN_KIND_KEYWORD() and token.text == "var") or
-            (token.kind == lexer.TOKEN_KIND_NAME() and (parser.isSymbol(parser.tokenAt(tokens, cursor + 1), ":=") or
+        if (token.kind == lexer.TOKEN_KIND_KEYWORD and token.text == "var") or
+            (token.kind == lexer.TOKEN_KIND_NAME and (parser.isSymbol(parser.tokenAt(tokens, cursor + 1), ":=") or
                 parser.isSymbol(parser.tokenAt(tokens, cursor + 1), ":"))) {
             declaration := parser.parseDeclaration(tokens, cursor, prefix);
-            nameToken := parser.tokenAt(tokens, cursor + (if token.kind == lexer.TOKEN_KIND_KEYWORD() { 1 } else { 0 }));
+            nameToken := parser.tokenAt(tokens, cursor + (if token.kind == lexer.TOKEN_KIND_KEYWORD { 1 } else { 0 }));
             mutable := textLib.startsWithAt(declaration.detail, 0, "var ");
             var writable := false;
             var work := declaration.detail;
@@ -1023,7 +1023,7 @@ checkLocals := fn(tokens: lexer.Tokens, prefix: String, symbols: Symbols): Unit 
             cursor = declaration.next;
             continue;
         }
-        if parens == 0 and brackets == 0 and token.kind == lexer.TOKEN_KIND_NAME() and
+        if parens == 0 and brackets == 0 and token.kind == lexer.TOKEN_KIND_NAME and
             parser.isSymbol(parser.tokenAt(tokens, cursor + 1), "=") {
             previous := parser.tokenAt(tokens, cursor - 1);
             if parser.isSymbol(previous, "(") or parser.isSymbol(previous, ",") {
@@ -1062,8 +1062,8 @@ validateTypeText := fn(symbols: Symbols, text: String, depth: Int, symbol: Symbo
     var cursor := 0;
     loop cursor < count {
         token := parser.tokenAt(tokens, cursor);
-        if token.kind == lexer.TOKEN_KIND_EOF() { break; }
-        if token.kind == lexer.TOKEN_KIND_NAME() {
+        if token.kind == lexer.TOKEN_KIND_EOF { break; }
+        if token.kind == lexer.TOKEN_KIND_NAME {
             next := parser.tokenAt(tokens, cursor + 1);
             if parser.isSymbol(next, ":") {
                 cursor = cursor + 1;
@@ -1073,7 +1073,7 @@ validateTypeText := fn(symbols: Symbols, text: String, depth: Int, symbol: Symbo
                     checkFail(symbolToken(symbol), prefix, "unknown type " + token.text);
                 }
                 alias := symbols[index];
-                if alias.kind =!= SYMBOL_KIND_TYPE() {
+                if alias.kind =!= SYMBOL_KIND_TYPE {
                     checkFail(symbolToken(symbol), prefix, "name " + token.text + " is not a type");
                 }
                 validateTypeText(symbols, alias.detail, depth + 1, alias, prefix);
@@ -1098,7 +1098,7 @@ validateValueSymbol := fn(symbols: Symbols, symbol: Symbol, prefix: String): Uni
 /** Validates collected symbols' type annotations and signatures. */
 validateSymbols := fn(symbols: Symbols, prefix: String): Unit {
     loop symbols as symbol {
-        if symbol.kind == SYMBOL_KIND_TYPE() or symbol.kind == SYMBOL_KIND_FUNCTION() {
+        if symbol.kind == SYMBOL_KIND_TYPE or symbol.kind == SYMBOL_KIND_FUNCTION {
             validateTypeText(symbols, symbol.detail, 0, symbol, prefix);
         } else {
             validateValueSymbol(symbols, symbol, prefix);
@@ -1144,7 +1144,7 @@ callArity := fn(tokens: lexer.Tokens, openIndex: Int, prefix: String): Int {
     var arguments := 1;
     loop cursor < count {
         token := parser.tokenAt(tokens, cursor);
-        if token.kind == lexer.TOKEN_KIND_EOF() {
+        if token.kind == lexer.TOKEN_KIND_EOF {
             checkFail(token, prefix, "unterminated call");
         }
         if parser.isSymbol(token, "(") or parser.isSymbol(token, "[") or parser.isSymbol(token, "{") {
@@ -1167,10 +1167,10 @@ checkCalls := fn(tokens: lexer.Tokens, symbols: Symbols, prefix: String): Unit {
     emptyLocals: List<Local> = [];
     loop cursor < count {
         token := parser.tokenAt(tokens, cursor);
-        if token.kind == lexer.TOKEN_KIND_EOF() { break; }
-        if token.kind == lexer.TOKEN_KIND_NAME() and parser.isSymbol(parser.tokenAt(tokens, cursor + 1), "(") {
+        if token.kind == lexer.TOKEN_KIND_EOF { break; }
+        if token.kind == lexer.TOKEN_KIND_NAME and parser.isSymbol(parser.tokenAt(tokens, cursor + 1), "(") {
             index := findSymbol(symbols, token.text);
-            if index >= 0 and symbols[index].kind == SYMBOL_KIND_FUNCTION() {
+            if index >= 0 and symbols[index].kind == SYMBOL_KIND_FUNCTION {
                 expected := functionArity(symbols[index]);
                 actual := callArity(tokens, cursor + 1, prefix);
                 if expected =!= actual {
@@ -1181,11 +1181,11 @@ checkCalls := fn(tokens: lexer.Tokens, symbols: Symbols, prefix: String): Unit {
                 var argumentCursor := cursor + 2;
                 var argumentIndex := 0;
                 loop argumentIndex < expected {
-                    if parser.tokenKindAt(tokens, argumentCursor) == lexer.TOKEN_KIND_KEYWORD() and
+                    if parser.tokenKindAt(tokens, argumentCursor) == lexer.TOKEN_KIND_KEYWORD and
                         parser.tokenTextAt(tokens, argumentCursor) == "mut" {
                         argumentCursor = argumentCursor + 1;
                     }
-                    if parser.tokenKindAt(tokens, argumentCursor) == lexer.TOKEN_KIND_NAME() and
+                    if parser.tokenKindAt(tokens, argumentCursor) == lexer.TOKEN_KIND_NAME and
                         parser.isSymbol(parser.tokenAt(tokens, argumentCursor + 1), "=") {
                         argumentCursor = argumentCursor + 2;
                     }

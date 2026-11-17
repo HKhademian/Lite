@@ -53,8 +53,8 @@ pub float32LiteralCode := fn(digits: String, negative: Bool): String {
 /** Evaluates a Unit expression's effects while suppressing any target builtin return payload. */
 pub unitEvaluationCode := fn(code: String): String { "(void (" + code + "))" }
 
-/** Encodes the inert Unit value for TypeScript expression evaluation. */
-pub unitLiteralCode := fn(): String { "undefined" }
+/** Inert Unit value for TypeScript expression evaluation. */
+pub unitLiteralCode := "undefined";
 
 /** Formats a checked Bool value as a TypeScript literal. */
 pub boolLiteralCode := fn(value: Bool): String {
