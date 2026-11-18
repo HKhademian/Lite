@@ -5,8 +5,11 @@ compiler seed. [seed.ts](seed.ts) records the igniter hash alongside the
 compiled compiler source, artifact, and revision identities. Running
 `./bin/lite-ignite` (or invoking any `bin/lite*` symlink) materializes the
 standalone compiler (`dist/bootstrap/compiler.ts`) and all tools
-(`dist/tools/*.ts`) inside untracked `dist/`. Numbered compiler generations are
-historical records, not parallel active compiler sources.
+(`dist/tools/*.ts`) inside untracked `dist/`. Running `./bin/lite-wipe` (or
+`./bin/lite-ignite --wipe`) wipes all untracked and ignored files via
+`git clean -ffdx`, reinstalls locked npm dependencies (`igniter/` and
+`editors/vscode/`), and re-ignites `dist/` cleanly from scratch. Numbered
+compiler generations are historical records, not parallel active compiler sources.
 
 The TypeScript compiler and retained C emitter are both compiled from their
 Lite source roots by that same igniter. The C backend is still TS-hosted; it is

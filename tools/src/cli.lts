@@ -19,6 +19,7 @@ usageText := fn(): String {
     "  verify FILE.case.json                     Verify one declarative manifest\n" +
     "  bench OUTPUT [FILTER]                     Benchmark verified cases\n" +
     "  release OUTPUT [TAG]                      Package a verified source snapshot\n" +
+    "  wipe [--no-install] [--no-check] [--verify]  Wipe untracked/ignored files and re-ignite\n" +
     "  help                                      Show this help\n\n" +
     "Compiler entry points: ./bin/lite-compile, ./bin/lite compile\n" +
     "Target commands: ./bin/lite-compile-ts, ./bin/lite-compile-c\n" +
@@ -28,7 +29,7 @@ usageText := fn(): String {
 
 supportedCommands := fn(): List<String> {
     commands: List<String> = [
-    "check", "fmt", "compile", "run", "verify", "test", "docs", "doctor", "bench", "release"
+    "check", "fmt", "compile", "run", "verify", "test", "docs", "doctor", "bench", "release", "wipe"
     ];
     commands
 };
@@ -44,6 +45,7 @@ routeTarget := fn(command: String): String {
     if command == "doctor" { return "lite-doctor"; }
     if command == "bench" { return "lite-bench"; }
     if command == "release" { return "lite-release"; }
+    if command == "wipe" { return "lite-wipe"; }
     ""
 };
 

@@ -121,25 +121,27 @@ test('munching routers, flag aliases, and direct generated entrypoints converge 
   assert.deepEqual({ status: direct.status, stdout: direct.stdout, stderr: direct.stderr }, expected);
 });
 
+/** Copies a repository file, symlink, or directory tree into an isolated temp directory. */
+function copyRepoTree(directory: string, rel: string): void {
+  const src = join(root, rel);
+  const dst = join(directory, rel);
+  const st = lstatSync(src);
+  if (st.isSymbolicLink()) {
+    mkdirSync(dirname(dst), { recursive: true });
+    symlinkSync(readlinkSync(src), dst);
+  } else if (st.isDirectory()) {
+    mkdirSync(dst, { recursive: true });
+    for (const entry of readdirSync(src)) copyRepoTree(directory, join(rel, entry));
+  } else {
+    mkdirSync(dirname(dst), { recursive: true });
+    copyFileSync(src, dst);
+  }
+}
+
 test('ignition rebuilds missing, tampered, and dependency-changed tools into dist/tools without checked-in generated files', () => {
   assert.equal(existsSync(join(root, 'tools/generated')), false);
   const directory = mkdtempSync(join(tmpdir(), 'lite-ignite-probe-'));
   try {
-    const copyTree = (rel: string): void => {
-      const src = join(root, rel);
-      const dst = join(directory, rel);
-      const st = lstatSync(src);
-      if (st.isSymbolicLink()) {
-        mkdirSync(dirname(dst), { recursive: true });
-        symlinkSync(readlinkSync(src), dst);
-      } else if (st.isDirectory()) {
-        mkdirSync(dst, { recursive: true });
-        for (const entry of readdirSync(src)) copyTree(join(rel, entry));
-      } else {
-        mkdirSync(dirname(dst), { recursive: true });
-        copyFileSync(src, dst);
-      }
-    };
     for (const rel of [
       'package.json', 'config/versions.json', 'bin/lite', 'bin/lite-fmt', 'bin/lite-ignite',
       'compiler/host.ts', 'compiler/package.json', 'compiler/src', 'compiler/manifests',
@@ -147,7 +149,7 @@ test('ignition rebuilds missing, tampered, and dependency-changed tools into dis
       'igniter/artifacts.ts', 'igniter/package.json', 'igniter/tsconfig.json',
       'tools/src/cli.lts', 'tools/src/fmt.lts', 'lib/core', 'lib/util',
     ]) {
-      copyTree(rel);
+      copyRepoTree(directory, rel);
     }
     chmodSync(join(directory, 'bin/lite'), 0o755);
     chmodSync(join(directory, 'bin/lite-fmt'), 0o755);
@@ -205,6 +207,69 @@ test('ignition rebuilds missing, tampered, and dependency-changed tools into dis
     assert.ok(existsSync(join(directory, 'dist/bootstrap/compiler.ts')));
     assert.ok(existsSync(join(directory, 'dist/tools/cli.ts')));
     assert.ok(existsSync(join(directory, 'dist/tools/fmt.ts')));
+  } finally {
+    rmSync(directory, { recursive: true, force: true });
+  }
+});
+
+test('lite-wipe removes untracked/ignored files in a Git checkout and re-ignites dist artifacts', () => {
+  const directory = mkdtempSync(join(tmpdir(), 'lite-wipe-probe-'));
+  try {
+    for (const rel of [
+      '.gitignore', 'config', 'compiler/manifests', 'compiler/bootstrap', 'compiler/src',
+      'lib', 'tools/src', 'bin/lite', 'bin/lite-ignite', 'bin/lite-wipe',
+    ]) {
+      copyRepoTree(directory, rel);
+    }
+
+    // Outside a Git checkout, --wipe must refuse without deleting files.
+    writeFileSync(join(directory, 'stray.txt'), 'keep');
+    const nonGit = spawnSync(process.execPath, [join(directory, 'bin/lite-wipe'), '--no-install'], {
+      cwd: directory, encoding: 'utf8', timeout: 60_000,
+    });
+    assert.notEqual(nonGit.status, 0);
+    assert.match(nonGit.stderr, /--wipe requires a Git checkout/);
+    assert.ok(existsSync(join(directory, 'stray.txt')));
+
+    // Initialize a Git repository matching a fresh clone plus stray untracked/ignored artifacts.
+    rmSync(join(directory, 'stray.txt'));
+    const git = (args: string[]) => {
+      const res = spawnSync('git', args, { cwd: directory, encoding: 'utf8', timeout: 30_000 });
+      assert.equal(res.status, 0, res.stderr);
+    };
+    git(['init']);
+    git(['config', 'user.email', 'test@example.com']);
+    git(['config', 'user.name', 'Test']);
+    git(['add', '-A']);
+    git(['commit', '-m', 'initial']);
+
+    writeFileSync(join(directory, 'stray.txt'), 'untracked');
+
+    mkdirSync(join(directory, '.cache'), { recursive: true });
+    writeFileSync(join(directory, '.cache/old.txt'), 'stale');
+    mkdirSync(join(directory, 'dist/stale'), { recursive: true });
+    writeFileSync(join(directory, 'dist/stale/old.txt'), 'stale');
+    mkdirSync(join(directory, 'tmp'), { recursive: true });
+    writeFileSync(join(directory, 'tmp/scratch.txt'), 'stale');
+    mkdirSync(join(directory, 'igniter/node_modules/pkg'), { recursive: true });
+    writeFileSync(join(directory, 'igniter/node_modules/pkg/index.js'), 'stale');
+
+    const wiped = spawnSync(process.execPath, [join(directory, 'bin/lite-wipe'), '--no-install', '--json'], {
+      cwd: directory, encoding: 'utf8', timeout: 120_000,
+    });
+    assert.equal(wiped.status, 0, wiped.stderr);
+    assert.equal(existsSync(join(directory, 'stray.txt')), false);
+    assert.equal(existsSync(join(directory, '.cache')), false);
+    assert.equal(existsSync(join(directory, 'dist/stale')), false);
+    assert.equal(existsSync(join(directory, 'tmp')), false);
+    assert.equal(existsSync(join(directory, 'igniter/node_modules')), false);
+    assert.ok(existsSync(join(directory, 'dist/bootstrap/compiler.ts')));
+    assert.ok(existsSync(join(directory, 'dist/tools/cli.ts')));
+    assert.ok(existsSync(join(directory, 'dist/tools/ignite.ts')));
+    const jsonSummary = JSON.parse(wiped.stdout) as { tools: { name: string; rebuilt: boolean }[]; checked: boolean };
+    assert.equal(jsonSummary.checked, false);
+    assert.ok(jsonSummary.tools.length > 0);
+    assert.ok(jsonSummary.tools.every(t => t.rebuilt));
   } finally {
     rmSync(directory, { recursive: true, force: true });
   }

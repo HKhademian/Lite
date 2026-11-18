@@ -25,7 +25,7 @@ toolForEntry := fn(rawEntry: String): String {
     parent := path.baseName(parentDir);
     grandparent := path.baseName(path.parentDir(parentDir));
     match {
-        base == "igniter.ts" or base == "lite-ignite" or base == "lite-bootstrap" { "" }
+        base == "igniter.ts" or base == "lite-ignite" or base == "lite-bootstrap" or base == "lite-wipe" { "" }
         base == "lite" { "cli" }
         base == "lite-bench" { "bench" }
         base == "lite-check" { "checker" }
@@ -356,6 +356,64 @@ ensureDistCompiler := fn(rootDir: String, expectedArtSha: String, force: Bool): 
     (ok = true, error = "")
 };
 
+/** Runs a subprocess step and reports non-zero exit details cleanly. */
+runStep := fn(label: String, command: String, args: List<String>, cwd: String, quiet: Bool): (ok: Bool, error: String) {
+    emptyEnv: List<String> = [];
+    res := proc.run(command, args, cwd, emptyEnv, quiet, "");
+    if res.error =!= "" or res.status =!= 0 {
+        detail := if res.error =!= "" { res.error } else if res.stderr =!= "" { res.stderr } else { res.stdout };
+        suffix := if detail =!= "" { ": " + text.trim(detail) } else { "" };
+        return (ok = false, error = "ignite: " + label + " failed" + suffix);
+    }
+    (ok = true, error = "")
+};
+
+/** Wipes all untracked/ignored files (`git clean -ffdx`) and optionally reinstalls locked npm dependencies. */
+runWipe := fn(rootDir: String, installDeps: Bool, quiet: Bool): (ok: Bool, error: String) {
+    emptyEnv: List<String> = [];
+    gitCheckArgs: List<String> = ["rev-parse", "--is-inside-work-tree"];
+    gitCheck := proc.run("git", gitCheckArgs, rootDir, emptyEnv, true, "");
+    if gitCheck.error =!= "" or gitCheck.status =!= 0 or text.trim(gitCheck.stdout) =!= "true" {
+        return (ok = false, error = "ignite: --wipe requires a Git checkout");
+    }
+    if not quiet {
+        io.outputLine("Wiping all untracked and ignored project files...");
+    }
+    cleanArgs: List<String> = ["clean", "-ffdx"];
+    cleanStep := runStep("git clean -ffdx", "git", cleanArgs, rootDir, quiet);
+    if not cleanStep.ok { return cleanStep; }
+    if installDeps {
+        npmArgs: List<String> = ["ci", "--ignore-scripts", "--no-audit", "--no-fund"];
+        if not quiet {
+            io.outputLine("Installing locked tool dependencies (igniter)...");
+        }
+        ignStep := runStep("npm ci (igniter)", "npm", npmArgs, path.join(rootDir, "igniter"), quiet);
+        if not ignStep.ok { return ignStep; }
+        if not quiet {
+            io.outputLine("Installing locked editor dependencies (editors/vscode)...");
+        }
+        edStep := runStep("npm ci (editors/vscode)", "npm", npmArgs, path.join(rootDir, "editors/vscode"), quiet);
+        if not edStep.ok { return edStep; }
+    }
+    (ok = true, error = "")
+};
+
+/** Runs post-ignition build and repository verification commands. */
+runPostIgniteVerify := fn(rootDir: String, quiet: Bool): (ok: Bool, error: String) {
+    vsArgs: List<String> = ["editors/vscode/scripts/build.ts"];
+    vsStep := runStep("vscode build", proc.execPath(), vsArgs, rootDir, quiet);
+    if not vsStep.ok { return vsStep; }
+    liteBin := path.join(rootDir, "bin/lite");
+    docArgs: List<String> = [liteBin, "doctor"];
+    docStep := runStep("lite doctor", proc.execPath(), docArgs, rootDir, quiet);
+    if not docStep.ok { return docStep; }
+    covArgs: List<String> = [liteBin, "verify", "--coverage"];
+    covStep := runStep("lite verify --coverage", proc.execPath(), covArgs, rootDir, quiet);
+    if not covStep.ok { return covStep; }
+    testArgs: List<String> = [liteBin, "test", "--full"];
+    runStep("lite test --full", proc.execPath(), testArgs, rootDir, quiet)
+};
+
 /** Executes the unified Lite igniter entrypoint for symlinked tool commands or direct CLI management. */
 run := fn(rawArgs: List<String>): Unit {
     rawRoot := project.findRepoRoot();
@@ -372,7 +430,8 @@ run := fn(rawArgs: List<String>): Unit {
         io.exit(1);
     }
 
-    entryTool := toolForEntry(proc.entryPath());
+    entryPath := proc.entryPath();
+    entryTool := toolForEntry(entryPath);
     if entryTool =!= "" {
         ensured := igniteSingleTool(rootDir, entryTool, seedInfo.artifactSha256, seedInfo.sourceSha256, false);
         if not ensured.ok {
@@ -389,9 +448,13 @@ run := fn(rawArgs: List<String>): Unit {
         return;
     }
 
-    var check := false;
+    var checkExplicit := false;
+    var noCheck := false;
     var force := false;
     var clean := false;
+    var wipe := path.baseName(entryPath) == "lite-wipe";
+    var installDeps := true;
+    var verifyAfter := false;
     var jsonOutput := false;
     var ensureName := "";
     var runToolName := "";
@@ -401,11 +464,19 @@ run := fn(rawArgs: List<String>): Unit {
     loop list.listCountText(args) > 0 {
         arg := list.popFront(mut args);
         if arg == "--check" {
-            check = true;
+            checkExplicit = true;
+        } else if arg == "--no-check" {
+            noCheck = true;
         } else if arg == "--force" {
             force = true;
         } else if arg == "--clean" {
             clean = true;
+        } else if arg == "--wipe" {
+            wipe = true;
+        } else if arg == "--no-install" {
+            installDeps = false;
+        } else if arg == "--verify" {
+            verifyAfter = true;
         } else if arg == "--json" {
             jsonOutput = true;
         } else if arg == "--ensure" {
@@ -425,7 +496,7 @@ run := fn(rawArgs: List<String>): Unit {
             }
             break;
         } else if arg == "--help" or arg == "-h" {
-            io.outputLine("Usage: node compiler/bootstrap/igniter.ts [--check] [--force] [--clean] [--json] [TOOL...]");
+            io.outputLine("Usage: ./bin/lite-ignite [--check] [--force] [--clean] [--wipe [--no-install] [--no-check] [--verify]] [--json] [TOOL...]");
             io.exit(0);
         } else if text.startsWithAt(arg, 0, "-") {
             io.errorLine("ignite: unknown option " + arg);
@@ -454,10 +525,19 @@ run := fn(rawArgs: List<String>): Unit {
         io.exit(0);
     }
 
-    if clean {
+    if wipe {
+        wipeRes := runWipe(rootDir, installDeps, jsonOutput);
+        if not wipeRes.ok {
+            io.errorLine(wipeRes.error);
+            io.exit(1);
+        }
+        force = true;
+    } else if clean {
         _rm := fs.remove(path.join(rootDir, "dist/tools"));
         _rmBoot := fs.remove(path.join(rootDir, "dist/bootstrap"));
     }
+
+    check := if noCheck { false } else if checkExplicit { true } else if wipe { fs.kind(path.join(rootDir, "igniter/node_modules/typescript/bin/tsc")) == fs.FILE_KIND_FILE } else { false };
 
     if list.listCountText(selected) == 0 {
         distComp := ensureDistCompiler(rootDir, seedInfo.artifactSha256, force);
@@ -496,6 +576,14 @@ run := fn(rawArgs: List<String>): Unit {
         _rm := fs.remove(tmpChk.path);
         if not chk.ok {
             io.errorLine("ignited tools failed strict TypeScript checking:\n" + chk.error);
+            io.exit(1);
+        }
+    }
+
+    if verifyAfter {
+        verRes := runPostIgniteVerify(rootDir, jsonOutput);
+        if not verRes.ok {
+            io.errorLine(verRes.error);
             io.exit(1);
         }
     }
