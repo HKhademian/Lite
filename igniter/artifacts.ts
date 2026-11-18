@@ -1,10 +1,64 @@
-/** Internal artifact runner for emitted bootstrap TS and C. */
+/** Internal artifact runner for emitted bootstrap TS and C, plus shared ignited-tool helpers. */
 
 import { spawnSync } from 'node:child_process';
+import { createHash } from 'node:crypto';
 import { closeSync, existsSync, mkdirSync, mkdtempSync, openSync, readFileSync, rmSync, statSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { fileURLToPath } from 'node:url';
+
+export const repoRoot = fileURLToPath(new URL('../', import.meta.url));
+const igniterScript = join(repoRoot, 'compiler/bootstrap/igniter.ts');
+const ensuredTools = new Map<string, string>();
+
+export const sha256 = (bytes: string | Buffer): string => createHash('sha256').update(bytes).digest('hex');
+
+/** Ensures `tools/src/<name>.lts` is compiled into `dist/tools/<name>.ts` via the Lite igniter. */
+export function ensureTool(name: string, options: Readonly<{ force?: boolean }> = {}): string {
+  if (!options.force) {
+    const cached = ensuredTools.get(name);
+    if (cached !== undefined) return cached;
+  }
+  const args = options.force ? [igniterScript, '--force', '--ensure', name] : [igniterScript, '--ensure', name];
+  const result = spawnSync(process.execPath, args, { cwd: repoRoot, encoding: 'utf8', timeout: 60_000 });
+  if (result.error) throw result.error;
+  if (result.status !== 0 || result.signal !== null) {
+    throw new Error(`ignite ${name} failed (${result.status ?? result.signal}):\n${result.stdout}${result.stderr}`);
+  }
+  const artifact = result.stdout.trim();
+  ensuredTools.set(name, artifact);
+  return artifact;
+}
+
+/** Runs the Lite igniter across selected or all tools under `tools/src/` and returns parsed JSON summary. */
+export function igniteAllTools(
+  options: Readonly<{ check?: boolean; force?: boolean; clean?: boolean; tools?: readonly string[] }> = {},
+): Readonly<{ tools: readonly { name: string; path: string; sha256: string; rebuilt: boolean }[]; checked: boolean }> {
+  const args: string[] = [igniterScript, '--json'];
+  if (options.clean) args.push('--clean');
+  if (options.force) args.push('--force');
+  if (options.check) args.push('--check');
+  if (options.tools !== undefined) args.push(...options.tools);
+  const result = spawnSync(process.execPath, args, { cwd: repoRoot, encoding: 'utf8', timeout: 120_000, maxBuffer: 16 * 1024 * 1024 });
+  if (result.error) throw result.error;
+  if (result.status !== 0 || result.signal !== null) {
+    throw new Error(`ignite failed (${result.status ?? result.signal}):\n${result.stdout}${result.stderr}`);
+  }
+  const parsed = JSON.parse(result.stdout) as { tools: { name: string; path: string; sha256: string; rebuilt: boolean }[]; checked: boolean };
+  if (options.clean) ensuredTools.clear();
+  for (const tool of parsed.tools) ensuredTools.set(tool.name, tool.path);
+  return parsed;
+}
+
+/** Runs a child command synchronously with captured stdout or throws on failure. */
+export function runCommand(command: string, args: string[], cwd = repoRoot, input?: Buffer): Buffer {
+  const result = spawnSync(command, args, { cwd, input, timeout: 120_000, maxBuffer: 64 * 1024 * 1024 });
+  if (result.error) throw result.error;
+  if (result.status !== 0 || result.signal !== null) {
+    throw new Error(`${command} ${args.join(' ')} failed:\n${result.stdout?.toString()}${result.stderr?.toString()}`);
+  }
+  return result.stdout;
+}
 
 /** Which artifact step produced the captured result. */
 export type ArtifactPhase = 'typecheck' | 'compile' | 'run';

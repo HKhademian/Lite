@@ -1,16 +1,49 @@
 /** Markdown integrity boundaries that ordinary command fixtures cannot isolate. */
 import assert from 'node:assert/strict';
+import { spawnSync } from 'node:child_process';
 import { mkdtempSync, mkdirSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { test } from 'node:test';
 import { fileURLToPath } from 'node:url';
 import { compileTs } from '../compiler/host.ts';
-import { checkTsArtifact } from '../igniter/artifacts.ts';
-import { checkDocuments, documents, extractModules, renderDocuments } from './docs.ts';
-import { ensureTool } from './project.ts';
+import { checkTsArtifact, ensureTool } from '../igniter/artifacts.ts';
 
 const root = fileURLToPath(new URL('../', import.meta.url));
+
+function runDocs(args: readonly string[], directory: string, stdinInput?: string) {
+  const result = spawnSync(process.execPath, [ensureTool('docs'), ...args], {
+    cwd: root,
+    env: { ...process.env, LITE_DOCS_ROOT: directory },
+    input: stdinInput ?? '',
+    encoding: 'utf8',
+    maxBuffer: 64 * 1024 * 1024,
+  });
+  if (result.error) throw result.error;
+  return result;
+}
+function documents(directory = root): { path: string; title: string; headings: string[] }[] {
+  const result = runDocs(['--json'], directory);
+  assert.equal(result.status, 0, result.stderr);
+  return JSON.parse(result.stdout) as { path: string; title: string; headings: string[] }[];
+}
+function renderDocuments(paths?: readonly string[], directory = root) {
+  const stdinInput = paths !== undefined && paths.length > 0 ? `${paths.join('\n')}\n` : undefined;
+  const result = runDocs(['--render-json'], directory, stdinInput);
+  assert.equal(result.status, 0, result.stderr);
+  return JSON.parse(result.stdout) as { path: string; title: string; status: string; toc: unknown[]; html: string }[];
+}
+function extractModules(directory = root) {
+  const result = runDocs(['--modules-json'], directory);
+  assert.equal(result.status, 0, result.stderr);
+  return JSON.parse(result.stdout) as { id: string; environment: string; symbols: { kind: string; name: string; isHostDeclaration: boolean }[] }[];
+}
+function checkDocuments(directory = root): string[] {
+  const result = runDocs(['--check'], directory);
+  if (result.status === 0 && result.signal === null) return [];
+  const text = result.stderr.trimEnd();
+  return text === '' ? [`lite docs --check failed (${result.status ?? result.signal})`] : text.split('\n');
+}
 
 test('documentation checks anchors, duplicates, code and ignored dependencies', () => {
   const directory = mkdtempSync(join(tmpdir(), 'lite-docs-'));

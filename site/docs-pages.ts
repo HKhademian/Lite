@@ -2,8 +2,8 @@
 import { spawnSync } from 'node:child_process';
 import { existsSync, statSync } from 'node:fs';
 import { posix, resolve } from 'node:path';
-import { ensureTool } from '../tools/project.ts';
-import type { RenderedDocument } from '../tools/docs.ts';
+import { ensureTool } from '../igniter/artifacts.ts';
+import type { RenderedDocument } from './docs-client.ts';
 import { renderPage, rootDir, type SourceRevision } from './chrome.ts';
 import type { ShowcaseSample } from './groups.ts';
 import { escapeHtml, highlightC, highlightLite, highlightTs } from './highlight.ts';

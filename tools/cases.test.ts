@@ -6,7 +6,7 @@ import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { test } from 'node:test';
 import { streamBytes } from '../igniter/test-fixtures.ts';
-import { ensureTool, root, sha256 } from './project.ts';
+import { ensureTool, repoRoot as root, sha256 } from '../igniter/artifacts.ts';
 
 /** Runs declarative language and tool cases matching `filter` or single manifest `file`, returning summary counts. */
 function testCases(filter = '', file?: string): { count: number; failures: number; pending: number } {

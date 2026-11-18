@@ -42,7 +42,7 @@ Markdown and `.lts` module docs are rendered without external JavaScript Markdow
 
 - [markdown-html.lts](../lib/util/markdown-html.lts) implements a Pure-Lite CommonMark/GFM-subset renderer (`renderMarkdown`) emitting semantic headings with stable fragment slugs, alerts, tables, fenced code blocks (`data-lang` + `data-fence`), and `data-md-href` placeholders for relative `.md`/`.lts` links.
 - [docgen.lts](../lib/util/docgen.lts) parses `pub` declarations and doc comments across `lib/core/*.lts` and `lib/extra/*.lts`, feeding `/modules/` pages and global search symbols.
-- [docs.ts](../tools/docs.ts) exposes compiled `renderDocuments(paths, root)` and `extractModules(root)` helpers to the Node site generator, while [docs-pages.ts](../site/docs-pages.ts) applies [status classification](documentation.md#truth-and-freshness) pills (`Verified in TS`, `Selected Design`, `Working Proposal`, `Historical`, `Open Question`), rewrites every `data-md-href` to its published HTML route, and enforces zero broken local `href`s at build time.
+- [docs.lts](../tools/src/docs.lts) (via [docs-client.ts](../site/docs-client.ts)) exposes compiled `renderDocuments(paths, root)` and `extractModules(root)` helpers to the Node site generator, while [docs-pages.ts](../site/docs-pages.ts) applies [status classification](documentation.md#truth-and-freshness) pills (`Verified in TS`, `Selected Design`, `Working Proposal`, `Historical`, `Open Question`), rewrites every `data-md-href` to its published HTML route, and enforces zero broken local `href`s at build time.
 
 ## Portable Curriculum & Gym Schemas (MiniLang Reuse Checklist)
 

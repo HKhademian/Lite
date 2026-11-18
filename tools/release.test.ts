@@ -5,8 +5,9 @@ import { cpSync, existsSync, mkdirSync, mkdtempSync, readFileSync, readdirSync, 
 import { tmpdir } from 'node:os';
 import { basename, join } from 'node:path';
 import { test } from 'node:test';
-import type { ComponentRelease } from '../compiler/release-streams.ts';
-import { ensureTool, root, run, sha256 } from './project.ts';
+import { ensureTool, repoRoot as root, runCommand as run, sha256 } from '../igniter/artifacts.ts';
+
+type ComponentRelease = Readonly<{ component: string; version: string }>;
 
 type ReleaseBootstrapSummary = Readonly<{
   ladder: Readonly<{ fixedPoint: boolean; generations: readonly unknown[] }>;

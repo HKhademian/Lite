@@ -2,7 +2,7 @@
 import { existsSync, readFileSync } from 'node:fs';
 import { join, posix } from 'node:path';
 import type { CompilerBuild } from '../compiler/host.ts';
-import { renderDocuments, type ModuleApiDoc, type RenderedDocument } from '../tools/docs.ts';
+import { renderDocuments, type ModuleApiDoc, type RenderedDocument } from './docs-client.ts';
 import { renderPage, rootDir, type SourceRevision } from './chrome.ts';
 import { buildDocOutMap, postprocessMarkdownHtml } from './docs-pages.ts';
 import type { ShowcaseSample } from './groups.ts';

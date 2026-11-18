@@ -7,8 +7,7 @@ import { dirname, join, relative } from 'node:path';
 import { test } from 'node:test';
 import { fileURLToPath } from 'node:url';
 import { compileTs } from '../compiler/host.ts';
-import { checkTsArtifact } from '../igniter/artifacts.ts';
-import { ensureTool } from './project.ts';
+import { checkTsArtifact, ensureTool } from '../igniter/artifacts.ts';
 
 const root = fileURLToPath(new URL('../', import.meta.url));
 
