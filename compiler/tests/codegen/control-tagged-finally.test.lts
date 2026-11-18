@@ -1,0 +1,719 @@
+/* Partial conditionals, value blocks, Never/io.exit, unnamed loops, Boolean match, tagged blocks/conditionals, loop metadata/then, and finally cleanup tests migrated from compiler/tests/host.test.ts. */
+
+fs := import "core/file";
+list := import "core/list";
+path := import "core/path";
+test := import "core/test";
+text := import "core/text";
+compilerBuild := import "util/compiler-build";
+compilerTest := import "util/compiler-test";
+project := import "util/project";
+
+root := project.findRepoRoot();
+test.check("repo root found", root =!= "");
+
+selTs := compilerBuild.selectCompilerPath(root, "ts");
+test.check("select TS compiler: " + selTs.error, selTs.ok);
+selC := compilerBuild.selectCompilerPath(root, "c");
+test.check("select C compiler: " + selC.error, selC.ok);
+tsComp := selTs.path;
+cComp := selC.path;
+
+ccProbe := compilerTest.probeCc();
+
+emptyArgs := fn(): List<String> {
+    res: List<String> = [];
+    res
+};
+
+assertRejectsTarget := fn(compilerPath: String, label: String, cases: List<(bad: String, m1: String, m2: String)>): Unit {
+    loop cases as item {
+        res := compilerTest.compileStdin(root, compilerPath, item.bad, "");
+        test.checkInt(label + " status (" + item.bad + ")", 2, res.status);
+        ok := text.containsText(res.stderr, item.m1) and (item.m2 == "" or text.containsText(res.stderr, item.m2));
+        test.check(label + " msg (" + item.bad + ") got: " + res.stderr, ok);
+    }
+};
+
+/* partial conditionals default declarations to zero and skip false assignments */
+partialFeatureRes := fs.readText(path.join(root, "language/verifications/features/control/branching/partial-conditionals.lts"));
+test.check("read partial-conditionals.lts", partialFeatureRes.ok);
+compilerTest.assertCompileRunTs(root, tsComp, "partial-cond feature", partialFeatureRes.text, "0\n[]\n10\n3\n");
+
+partialRich := text.joinTexts([
+    "io := import \"core/io\";",
+    "flag := false;",
+    "other := true;",
+    "a := (if flag { 5 } else if other { 9 });",
+    "b: Float = if flag { 1 };",
+    "c := if flag { \"x\" };",
+    "d := if flag { [1, 2] };",
+    "e := if flag { (x = 4, ok = true) };",
+    "var f := if flag { true };",
+    "f = ((if flag { false }));",
+    "var g := 10;",
+    "g = if flag { 1 } else if not other { 2 };",
+    "io.outputLine(a, b, \"[\" + c + \"]\", d, e.x, e.ok, f, g);",
+    "g = if flag { 1 } else if other { 42 };",
+    "io.outputLine(g);"
+], "\n");
+compilerTest.assertCompileRunTs(root, tsComp, "partial-cond rich", partialRich, "9 0 [] [0, 0] 0 false false 10\n42\n");
+
+if ccProbe.available {
+    partialC := text.joinTexts([
+        "io := import \"core/io\";",
+        "flag := false;",
+        "other := true;",
+        "var count := 10;",
+        "count = if flag { 7 };",
+        "io.outputLine(count);",
+        "count = (if flag { 1 } else if other { 3 });",
+        "io.outputLine(count);"
+    ], "\n");
+    cPartRun := compilerTest.compileCheckRunC(root, cComp, ccProbe.cc, partialC, "", "");
+    test.checkInt("partial-cond c status", 0, cPartRun.status);
+    test.checkText("partial-cond c stdout", "10\n3\n", cPartRun.stdout);
+}
+
+partialRej: List<(bad: String, m1: String, m2: String)> = [
+    (bad = "io := import \"core/io\"; flag := false; io.outputLine(if flag { 1 });", m1 = "value if requires a final else", m2 = ""),
+    (bad = "flag := false; x := (if flag { 1 }) + 2;", m1 = "value if requires a final else", m2 = ""),
+    (bad = "flag := false; var count := 0; count = (if flag { 1 }) + 2;", m1 = "value if requires a final else", m2 = ""),
+    (bad = "f := fn(flag: Bool): Int { return if flag { 1 }; }", m1 = "value if requires a final else", m2 = ""),
+    (bad = "flag := false; x := if flag { Unit };", m1 = "cannot declare a Unit local x", m2 = ""),
+    (bad = "flag := false; var count := 0; count = if flag { \"bad\" };", m1 = "cannot assign String to Int local count", m2 = "")
+];
+assertRejectsTarget(tsComp, "partial-cond", partialRej);
+
+/* statement-bearing value blocks and Unit tails preserve lexical scope and types */
+valBlkSrc := text.joinTexts([
+    "io := import \"core/io\";",
+    "y := 100;",
+    "x := { y := 2; y * 3;;;; };",
+    "a := if true { y := 2; y * 3 } else { 0 };",
+    "b := if false { 1 } else if true { var z: Int = 4; z = z + 5; z } else { 0 };",
+    "c: Float = { k := 2; 1 };",
+    "io.outputLine(y, x, a, b, c);",
+    "io.outputLine({ x := 3; });",
+    "io.outputLine({});"
+], "\n");
+compilerTest.assertCompileRunTs(root, tsComp, "value-blocks", valBlkSrc, "100 6 6 9 1\nUnit\nUnit\n");
+valBlkRej: List<(bad: String, m1: String, m2: String)> = [
+    (bad = "y := { x := 3; };", m1 = "cannot declare a Unit local y", m2 = ""),
+    (bad = "y := {};", m1 = "cannot declare a Unit local y", m2 = ""),
+    (bad = "io := import \"core/io\"; io.outputLine({ 1 2 });", m1 = "expected ; or }", m2 = "")
+];
+assertRejectsTarget(tsComp, "value-blocks", valBlkRej);
+compilerTest.assertCompileErrorContains(root, cComp, "value-blocks c", "io := import \"core/io\"; x := { y := 2; y * 3 }; io.outputLine(x);", "C backend does not support statement-bearing value blocks yet");
+
+/* Never-valued io.exit supports default status, value flow, control joins, dead-code checks, and rejections */
+compilerTest.assertCompileRunTs(root, tsComp, "io-exit default", "io := import \"core/io\"; io.output(\"ready\"); io.exit();", "ready");
+topExitComp := compilerTest.compileStdin(root, tsComp, "io := import \"core/io\"; io.exit(0);", "");
+test.checkInt("io-exit top compile", 0, topExitComp.status);
+test.check("io-exit top omits return lite$out", not text.containsText(topExitComp.stdout, "return lite$out;"));
+topExitRun := compilerTest.checkAndRunTs(root, topExitComp.stdout);
+test.checkInt("io-exit top status", 0, topExitRun.status);
+
+exitFlowSrc := text.joinTexts([
+    "io := import \"core/io\";",
+    "checkNonNeg := fn(n: Int): Int {",
+    "  if n < 0 { io.errorLine(\"neg\"); io.exit(3); }",
+    "  n * 2",
+    "};",
+    "pair := fn(a: Int, b: Int): Int { a + b };",
+    "logExit := fn(): Int { io.outputLine(io.exit(7)); };",
+    "choose := fn(flag: Bool): Int {",
+    "  if flag { 10 } else { io.exit(4) }",
+    "};",
+    "pickList := fn(flag: Bool): List<Int> {",
+    "  xs: List<Int> = if flag { [1] } else { [io.exit(6)] };",
+    "  xs",
+    "};",
+    "pickPairArray := fn(flag: Bool): [Int; 2] {",
+    "  if flag { [1, 42] } else { [io.exit(6), 42] }",
+    "};",
+    "blockBail := fn(flag: Bool): Int {",
+    "  if flag { 12 } else { code := 6; io.exit(code) }",
+    "};",
+    "deadAfterExit := fn(flag: Bool): Int {",
+    "  if flag { 15 } else { io.exit(6); 99 }",
+    "};",
+    "blockSemiExit := fn(flag: Bool): Int {",
+    "  if flag { 16 } else { io.exit(6); }",
+    "};",
+    "reorderedExit := fn(flag: Bool): Int {",
+    "  if flag { 5 } else { pair(b = io.exit(8), a = 2) }",
+    "};",
+    "mode := io.inputInt();",
+    "if mode == 1 {",
+    "  io.outputLine(checkNonNeg(4), choose(true), pickList(true), pickPairArray(true), blockBail(true), deadAfterExit(true), blockSemiExit(true), reorderedExit(true));",
+    "  p: Int = if false { io.exit(5) };",
+    "  ps: List<Int> = if false { io.exit(5) };",
+    "  d: Int = ?;",
+    "  if false { io.exit(2); } else { d = 33; }",
+    "  io.outputLine(p, ps, d);",
+    "} else if mode == 2 {",
+    "  io.outputLine(checkNonNeg(-1));",
+    "} else if mode == 3 {",
+    "  io.outputLine(choose(false));",
+    "} else if mode == 4 {",
+    "  io.outputLine(logExit());",
+    "} else {",
+    "  io.outputLine(reorderedExit(false));",
+    "}"
+], "\n");
+exitFlowComp := compilerTest.compileStdin(root, tsComp, exitFlowSrc, "");
+test.checkInt("io-exit flow compile", 0, exitFlowComp.status);
+prepExitFlow := compilerTest.prepareTs(root, exitFlowComp.stdout);
+r1 := compilerTest.runPreparedTsWithInput(prepExitFlow, "1\n", emptyArgs());
+test.checkInt("io-exit mode 1 status", 0, r1.status);
+test.checkText("io-exit mode 1 stdout", "8 10 [1] [1, 42] 12 15 16 5\n0 [] 33\n", r1.stdout);
+r2 := compilerTest.runPreparedTsWithInput(prepExitFlow, "2\n", emptyArgs());
+test.checkInt("io-exit mode 2 status", 3, r2.status);
+test.checkText("io-exit mode 2 stderr", "neg\n", r2.stderr);
+test.checkInt("io-exit mode 3 status", 4, compilerTest.runPreparedTsWithInput(prepExitFlow, "3\n", emptyArgs()).status);
+test.checkInt("io-exit mode 4 status", 7, compilerTest.runPreparedTsWithInput(prepExitFlow, "4\n", emptyArgs()).status);
+test.checkInt("io-exit mode 5 status", 8, compilerTest.runPreparedTsWithInput(prepExitFlow, "5\n", emptyArgs()).status);
+compilerTest.cleanupPreparedTs(prepExitFlow);
+
+exitRej: List<(bad: String, m1: String, m2: String)> = [
+    (bad = "io := import \"core/io\"; _ := Unit == io.exit(3);", m1 = "cannot compare", m2 = ""),
+    (bad = "io := import \"core/io\"; _ := io.exit(1) == io.exit(2);", m1 = "cannot compare Never values", m2 = ""),
+    (bad = "io := import \"core/io\"; x := io.exit(1);", m1 = "cannot declare a Never local x", m2 = ""),
+    (bad = "io := import \"core/io\"; var x := io.exit(1);", m1 = "cannot declare a Never local x", m2 = ""),
+    (bad = "io := import \"core/io\"; t := (io.exit(1), 2);", m1 = "cannot be Never", m2 = ""),
+    (bad = "io := import \"core/io\"; xs := [io.exit(1)];", m1 = "list element 1 cannot be Never", m2 = ""),
+    (bad = "io := import \"core/io\"; x := if true { io.exit(1) };", m1 = "partial conditional declaration needs a normally completing value branch", m2 = ""),
+    (bad = "io := import \"core/io\"; io.exit(1, 2);", m1 = "function io.exit expects 1 argument, got more", m2 = ""),
+    (bad = "io := import \"core/io\"; io.exit(1); bad: Int = \"str\";", m1 = "cannot initialize Int with String", m2 = "")
+];
+assertRejectsTarget(tsComp, "io-exit", exitRej);
+
+/* unnamed loop sequence traversal supports lists, fixed arrays, empty lists, snapshots, and scope checks */
+unnamedLoopSrc := text.joinTexts([
+    "io := import \"core/io\";",
+    "list := import \"core/list\";",
+    "xs: mut List<Int> = [10, 20, 30];",
+    "var listCount := 0;",
+    "loop xs { list.pushBack(mut xs, 99); listCount += 1; }",
+    "arr: [String; 3] = [\"a\", \"b\", \"c\"];",
+    "var arrCount := 0;",
+    "loop arr { arrCount += 1; }",
+    "empty: List<Int> = [];",
+    "var emptyCount := 0;",
+    "loop empty { emptyCount += 1; }",
+    "io.outputLine(listCount, xs, arrCount, emptyCount);"
+], "\n");
+compilerTest.assertCompileRunTs(root, tsComp, "unnamed-loop", unnamedLoopSrc, "3 [10, 20, 30, 99, 99, 99] 3 0\n");
+unnamedLoopRej: List<(bad: String, m1: String, m2: String)> = [
+    (bad = "io := import \"core/io\"; loop [1, 2] { io.outputLine(item); }", m1 = "unknown value item", m2 = ""),
+    (bad = "io := import \"core/io\"; x: Int = ?; loop [1, 2] as item { x = item; } io.outputLine(x);", m1 = "cannot read uninitialized local x", m2 = ""),
+    (bad = "loop 123 { }", m1 = "loop condition must be Bool", m2 = "")
+];
+assertRejectsTarget(tsComp, "unnamed-loop", unnamedLoopRej);
+
+/* subjectless Boolean match supports value and statement forms in TS and action match in C */
+matchTsSrc := text.joinTexts([
+    "io := import \"core/io\";",
+    "probe := fn(label: String, result: Bool): Bool { io.outputLine(\"probe:\" + label); result }",
+    "choose := fn(n: Int): String {",
+    "    match {",
+    "        probe(\"first\", n == 1) { \"one\" }",
+    "        probe(\"second\", n == 2) { \"two\" }",
+    "        _ { \"other\" }",
+    "    }",
+    "}",
+    "direct := match {",
+    "    false { io.exit(9) }",
+    "    _ { 1 + match { true { 4 } _ { 9 } } }",
+    "};",
+    "grouped := (match {",
+    "    (if true { false } else { true }) { (a = 10) }",
+    "    _ { (a = 20) }",
+    "}).a;",
+    "single := match { _ { 7 } };",
+    "nested := match {",
+    "    (match { false { false } _ { true } }) { \"nested\" }",
+    "    _ { io.exit(8) }",
+    "};",
+    "tailScore := fn(n: Int): Int {",
+    "    match {",
+    "        n < 0 { 10 }",
+    "        n == 0 { return 20; }",
+    "        _ { 30 }",
+    "    }",
+    "}",
+    "loopMatch := fn(limit: Int): Int {",
+    "    var total := 0;",
+    "    var i := 0;",
+    "    loop i < limit {",
+    "        match {",
+    "            i == 2 { break; }",
+    "            _ { total += 10; }",
+    "        }",
+    "        i += 1;",
+    "    }",
+    "    total",
+    "}",
+    "io.outputLine(choose(1), choose(2), choose(3), direct, grouped, single, nested, tailScore(-1), tailScore(0), tailScore(5), loopMatch(5));"
+], "\n");
+compilerTest.assertCompileRunTs(root, tsComp, "match-ts", matchTsSrc, "probe:first\nprobe:first\nprobe:second\nprobe:first\nprobe:second\none two other 5 20 7 nested 10 20 30 20\n");
+
+matchActionSrc := text.joinTexts([
+    "io := import \"core/io\";",
+    "var total := 0;",
+    "match {",
+    "    false { x := 100; total += x; }",
+    "    true { x := 5; total += x; }",
+    "    _ { total += 1; }",
+    "}",
+    "match { _ { total += 2; } }",
+    "out: Int = ?;",
+    "match {",
+    "    total > 10 { out = 99; }",
+    "    _ { out = 44; }",
+    "}",
+    "io.outputLine(total, out);"
+], "\n");
+compilerTest.assertCompileRunTs(root, tsComp, "match-action ts", matchActionSrc, "7 44\n");
+cMatchComp := compilerTest.compileStdin(root, cComp, matchActionSrc, "");
+test.checkInt("match-action c compile", 0, cMatchComp.status);
+if ccProbe.available {
+    cMatchRun := compilerTest.compileAndRunC(cMatchComp.stdout, ccProbe.cc, "");
+    test.checkInt("match-action c status", 0, cMatchRun.status);
+    test.checkText("match-action c stdout", "7 44\n", cMatchRun.stdout);
+}
+
+matchRej: List<(bad: String, m1: String, m2: String)> = [
+    (bad = "x := match { true { 1 } };", m1 = "subjectless match requires a final _ fallback arm", m2 = ""),
+    (bad = "x := match { _ { 1 } true { 2 } };", m1 = "match fallback _ must be the final arm", m2 = ""),
+    (bad = "x := match { 1 { 2 } _ { 3 } };", m1 = "match arm condition must be Bool", m2 = ""),
+    (bad = "x := match { true { 1 } _ { \"two\" } };", m1 = "value match arms must have the same kind", m2 = ""),
+    (bad = "x := match { { true } { 1 } _ { 2 } };", m1 = "match arm header requires grouping", m2 = ""),
+    (bad = "x := match { if true { true } else { false } { 1 } _ { 2 } };", m1 = "ungrouped { in match arm header", m2 = ""),
+    (bad = "match x { _ => 1 }", m1 = "unsupported feature \"match\"", m2 = "")
+];
+assertRejectsTarget(tsComp, "match", matchRej);
+compilerTest.assertCompileErrorContains(root, cComp, "match c value reject", "x := match { true { 1 } _ { 2 } };", "C backend does not support value match expressions yet");
+
+/* tagged blocks, targeted non-local transfers, and misplaced tag diagnostics */
+taggedBlkSrc := text.joinTexts([
+    "io := import \"core/io\";",
+    "pick := fn(first: String, second: String): String { first + \"-\" + second };",
+    "compute := fn(flag: Bool): Int {",
+    "  res := @blk {",
+    "    io.outputLine(\"inside\", flag);",
+    "    if flag { return @blk 10; }",
+    "    @inner {",
+    "      if false { return @inner 1; }",
+    "      0",
+    "    };",
+    "    @blk {",
+    "      return @blk 99;",
+    "    };",
+    "    25",
+    "  };",
+    "  res",
+    "};",
+    "earlyFn := fn(stop: Bool): Int {",
+    "  x := @outer {",
+    "    if stop { return 77; }",
+    "    innerVal := @inner {",
+    "      if not stop { return @outer 12; }",
+    "      5",
+    "    };",
+    "    innerVal + 1",
+    "  };",
+    "  x + 1",
+    "};",
+    "reorderedTransfer := fn(): String {",
+    "  pick(second = @arg { return @arg \"B\"; \"Z\" }, first = \"A\")",
+    "};",
+    "unitFlow := fn(bail: Bool): Unit {",
+    "  @u {",
+    "    if bail { return; }",
+    "    io.outputLine(\"after-fn-check\");",
+    "    return @u;",
+    "  }",
+    "  io.outputLine(\"after-u\");",
+    "};",
+    "loopTransfers := fn(): Int {",
+    "  var i := 0;",
+    "  var sum := 0;",
+    "  loop true {",
+    "    i = i + 1;",
+    "    @step {",
+    "      if i == 2 { continue; }",
+    "      if i == 4 { break; }",
+    "      sum = sum + i;",
+    "    }",
+    "  }",
+    "  sum",
+    "};",
+    "io.outputLine(compute(true), compute(false));",
+    "io.outputLine(earlyFn(true), earlyFn(false));",
+    "io.outputLine(reorderedTransfer());",
+    "unitFlow(false);",
+    "unitFlow(true);",
+    "io.outputLine(loopTransfers());",
+    "@stmtBlk {",
+    "  io.outputLine(\"stmt-before\");",
+    "  if true { return @stmtBlk; }",
+    "  io.outputLine(\"stmt-skipped\");",
+    "}",
+    "io.outputLine(\"stmt-after\");"
+], "\n");
+compilerTest.assertCompileRunTs(root, tsComp, "tagged-blocks", taggedBlkSrc, "inside true\ninside false\n10 25\n77 13\nA-B\nafter-fn-check\nafter-u\n4\nstmt-before\nstmt-after\n");
+
+taggedBlkRej: List<(bad: String, m1: String, m2: String)> = [
+    (bad = "f := fn(): Int { @blk { return @blk.value; }; 1 };", m1 = "block tag @blk does not expose .value", m2 = ""),
+    (bad = "io := import \"core/io\"; loop { @blk { break @blk; }; }", m1 = "break @blk requires an enclosing loop", m2 = ""),
+    (bad = "io := import \"core/io\"; loop { @blk { continue @blk; }; }", m1 = "continue @blk requires an enclosing loop", m2 = ""),
+    (bad = "@blk { return @nope 1; };", m1 = "unknown block tag @nope", m2 = ""),
+    (bad = "x := @blk { if true { return @blk 1; }; \"a\" };", m1 = "block @blk cannot return both", m2 = ""),
+    (bad = "@inner { if false { return @inner 1; } };", m1 = "block @inner cannot return both Int and Unit", m2 = ""),
+    (bad = "x := if @bad { 1 } else { 2 };", m1 = "unexpected block tag @bad in if header", m2 = ""),
+    (bad = "x := if true @bad { 1 } else { 2 };", m1 = "block tag cannot appear before { in if", m2 = ""),
+    (bad = "x := if true { 1 } else @bad { 2 };", m1 = "block tag cannot appear after else", m2 = ""),
+    (bad = "x := if true { 1 } else @bad if true { 2 } else { 3 };", m1 = "block tag cannot appear after else", m2 = ""),
+    (bad = "x := if false { 1 } else if @bad { 2 } else { 3 };", m1 = "unexpected block tag @bad in else if header", m2 = ""),
+    (bad = "x := if false { 1 } else if true @bad { 2 } else { 3 };", m1 = "block tag cannot appear before { in else if", m2 = ""),
+    (bad = "if @bad {}", m1 = "unexpected block tag @bad in if header", m2 = ""),
+    (bad = "if true @bad {}", m1 = "block tag cannot appear before { in if", m2 = ""),
+    (bad = "if true {} else @bad {}", m1 = "block tag cannot appear after else", m2 = ""),
+    (bad = "if false {} else if @bad {}", m1 = "unexpected block tag @bad in else if header", m2 = ""),
+    (bad = "if false {} else if true @bad {}", m1 = "block tag cannot appear before { in else if", m2 = ""),
+    (bad = "x := match @bad { _ { 1 } };", m1 = "block tag cannot appear before { in match", m2 = ""),
+    (bad = "x := match { true @bad { 1 } _ { 2 } };", m1 = "block tag cannot appear before { in match arm", m2 = ""),
+    (bad = "x := match { @bad { 1 } _ { 2 } };", m1 = "unexpected block tag @bad in match arm header", m2 = ""),
+    (bad = "x := match { _ @bad { 1 } };", m1 = "block tag cannot appear after _ in match arm", m2 = ""),
+    (bad = "match @bad { _ {} }", m1 = "block tag cannot appear before { in match", m2 = ""),
+    (bad = "match { true @bad {} _ {} }", m1 = "block tag cannot appear before { in match arm", m2 = ""),
+    (bad = "match { @bad {} _ {} }", m1 = "unexpected block tag @bad in match arm header", m2 = ""),
+    (bad = "match { _ @bad {} }", m1 = "block tag cannot appear after _ in match arm", m2 = ""),
+    (bad = "loop @bad {}", m1 = "unexpected block tag @bad in loop header", m2 = ""),
+    (bad = "loop false @bad {}", m1 = "block tag cannot appear before { in loop", m2 = ""),
+    (bad = "@bad f := fn(): Int { 1 };", m1 = "expected {, if, match, loop or . after block tag @bad", m2 = ""),
+    (bad = "f := @bad fn(): Int { 1 };", m1 = "expected {, if, match, loop or . after block tag @bad", m2 = ""),
+    (bad = "f := fn(): Int @bad { 1 };", m1 = "unexpected block tag in function header", m2 = "")
+];
+assertRejectsTarget(tsComp, "tagged-blocks", taggedBlkRej);
+compilerTest.assertCompileErrorContains(root, cComp, "tagged-blocks c", "io := import \"core/io\"; x := @blk { 1 }; io.outputLine(x);", "C backend does not support tagged blocks yet");
+
+/* tagged conditionals and conditional then blocks */
+taggedCondSrc := text.joinTexts([
+    "io := import \"core/io\";",
+    "textLib := import \"core/text\";",
+    "choose := fn(useChoice: Bool, earlyExit: Bool): Int {",
+    "  outcome: Int = @choose if useChoice {",
+    "    if earlyExit {",
+    "      return @choose \"early\";",
+    "    }",
+    "    \"normal\"",
+    "  } else {",
+    "    \"none\"",
+    "  } then {",
+    "    io.outputLine(\"choice\", @choose.value);",
+    "    textLib.length(@choose.value)",
+    "  };",
+    "  outcome",
+    "};",
+    "skipThen := fn(jumpOuter: Bool): String {",
+    "  @outer {",
+    "    inner := @choose if true {",
+    "      if jumpOuter { return @outer \"escaped\"; }",
+    "      \"kept\"",
+    "    } else {",
+    "      \"unused\"",
+    "    } then {",
+    "      io.outputLine(\"then-ran\", @choose.value);",
+    "      @choose.value + \"!\"",
+    "    };",
+    "    inner",
+    "  }",
+    "};",
+    "tailCond := fn(x: Int): Int {",
+    "  @t if x == 1 {",
+    "    return @t 10;",
+    "  } else if x == 2 {",
+    "    20",
+    "  } else {",
+    "    30",
+    "  } then {",
+    "    @t.value * 2",
+    "  }",
+    "};",
+    "tailMatch := fn(x: Int): String {",
+    "  @m match {",
+    "    x == 1 { return @m \"one\"; }",
+    "    x == 2 { \"two\" }",
+    "    _ { \"other\" }",
+    "  } then {",
+    "    \"m=\" + @m.value",
+    "  }",
+    "};",
+    "untaggedThen := fn(flag: Bool): Int {",
+    "  a := if flag { 1 } else { 2 } then { io.outputLine(\"untagged-if\"); 40 };",
+    "  b := match { flag { 3 } _ { 4 } } then { io.outputLine(\"untagged-match\"); 5 };",
+    "  a + b",
+    "};",
+    "io.outputLine(choose(true, true), choose(true, false), choose(false, false));",
+    "io.outputLine(skipThen(true), skipThen(false));",
+    "io.outputLine(tailCond(1), tailCond(2), tailCond(3));",
+    "io.outputLine(tailMatch(1), tailMatch(2), tailMatch(9));",
+    "io.outputLine(untaggedThen(true));",
+    "partZero: Int = @pz if false { 9 };",
+    "partJump: Int = @pj if true { return @pj 11; 0 };",
+    "io.outputLine(partZero, partJump);",
+    "@stmtIf if true {",
+    "  io.outputLine(\"stmt-if-1\");",
+    "  return @stmtIf;",
+    "  io.outputLine(\"stmt-if-skip\");",
+    "}",
+    "if true { 1 } else { 2 } then { io.outputLine(\"stmt-then\"); };",
+    "match { true { 1 } _ { 2 } } then { io.outputLine(\"stmt-match-then\"); };",
+    "io.outputLine(@cond if true { \"t\" } else { \"f\" });"
+], "\n");
+compilerTest.assertCompileRunTs(
+    root,
+    tsComp,
+    "tagged-cond",
+    taggedCondSrc,
+    "choice early\nchoice normal\nchoice none\n5 6 4\nthen-ran kept\nescaped kept!\n20 40 60\nm=one m=two m=other\nuntagged-if\nuntagged-match\n45\n0 11\nstmt-if-1\nstmt-then\nstmt-match-then\nt\n"
+);
+
+taggedCondRej: List<(bad: String, m1: String, m2: String)> = [
+    (bad = "x := @t if (@t.value == 1) { 1 } else { 2 } then { 3 };", m1 = "@t.value is only available inside that conditional's then block", m2 = ""),
+    (bad = "x := @t if true { @t.value } else { 2 } then { 3 };", m1 = "@t.value is only available inside that conditional's then block", m2 = ""),
+    (bad = "@t if true { 1 } else { 2 } then { 3 }; x := @t.value;", m1 = "unknown block tag @t", m2 = ""),
+    (bad = "io := import \"core/io\"; x := @t if true { io.outputLine(\"a\"); } else { io.outputLine(\"b\"); } then { @t.value };", m1 = "block tag @t does not expose .value for Unit conditional", m2 = ""),
+    (bad = "x := @outer { @t if true { return @outer 1; } else { return @outer 2; } then { @t.value } };", m1 = "block tag @t does not expose .value for Never conditional", m2 = ""),
+    (bad = "x := @t if true { 1 } else { 2 } then { @t.count };", m1 = "conditional tag @t only exposes .value, not .count", m2 = ""),
+    (bad = "x := @t if true { 1 } else { 2 } then { return @t 3; 4 };", m1 = "cannot return to @t from inside its own then block", m2 = ""),
+    (bad = "x := if true { 1 } then { 2 };", m1 = "value if requires a final else", m2 = ""),
+    (bad = "if true { 1 } then { 2 }", m1 = "value if requires a final else", m2 = ""),
+    (bad = "x := @t if true { 1 } else { 2 } then @bad { 3 };", m1 = "block tag cannot appear after then", m2 = ""),
+    (bad = "@bad; x := 1;", m1 = "expected {, if, match, loop or . after block tag @bad", m2 = "")
+];
+assertRejectsTarget(tsComp, "tagged-cond", taggedCondRej);
+
+taggedCondCRej: List<(bad: String, m1: String, m2: String)> = [
+    (bad = "x := @t if true { 1 } else { 2 };", m1 = "C backend does not support tagged conditionals yet", m2 = ""),
+    (bad = "x := if true { 1 } else { 2 } then { 3 };", m1 = "C backend does not support conditional then blocks yet", m2 = ""),
+    (bad = "x := @m match { _ { 1 } };", m1 = "C backend does not support value match expressions yet", m2 = "")
+];
+assertRejectsTarget(cComp, "tagged-cond c", taggedCondCRej);
+
+/* loop values, metadata, then clauses, barriers, and payload exits */
+loopMetaSrc := text.joinTexts([
+    "io := import \"core/io\";",
+    "integer := import \"core/int\";",
+    "emptySrc: List<Int> = [];",
+    "emptyInts := loop emptySrc as n { n };",
+    "emptyStrs: String = loop false { break \"never\"; };",
+    "emptyTuple: (a: Int, b: Bool) = loop emptySrc { break (a = 7, b = true); };",
+    "io.outputLine(emptyInts, emptyStrs, emptyTuple.0, emptyTuple.1);",
+    "pres := @pres loop [1, 2, 3, 4] as n {",
+    "  if n == 2 { continue (@pres.value + 10); }",
+    "  if n == 3 { break; }",
+    "  .value + n",
+    "};",
+    "io.outputLine(pres);",
+    "anonSeq := loop [4, 5] { .value + .item + .index + .count };",
+    "io.outputLine(anonSeq);",
+    "condCnt := loop .count < 3 { io.outputLine(\"c\", .count); .value + .count } then { io.outputLine(\"done\", .count); .value };",
+    "io.outputLine(condCnt);",
+    "thenInf := loop [10, 20] as n { .value + n } then { .value * 2 };",
+    "io.outputLine(thenInf);",
+    "unitThen := loop [1] { continue; } then { .value == Unit };",
+    "io.outputLine(unitThen);",
+    "emptyThenMeta := loop emptySrc as n { n } then { io.outputLine(\"empty-meta\", .item, .index, .count, .value); 7 };",
+    "io.outputLine(emptyThenMeta);",
+    "retLoop := fn(): String {",
+    "  @outer loop [1, 2, 3] as n {",
+    "    @inner if n == 2 {",
+    "      return @outer \"hit-\" + integer.intText(n);",
+    "    } else {",
+    "    } then {",
+    "      io.outputLine(\"inner-then\", n);",
+    "    };",
+    "    io.outputLine(\"outer-meta\", @outer.item, @outer.index, @outer.count, @outer.value);",
+    "    \"miss\"",
+    "  } then {",
+    "    \"then(\" + .value + \",\" + integer.intText(.item) + \")\"",
+    "  }",
+    "};",
+    "io.outputLine(retLoop());",
+    "nestedCont := @outer loop [1, 2, 3] as a {",
+    "  _inner := loop [10, 20] as b {",
+    "    if b == 20 { continue @outer (@outer.value + a); }",
+    "    b",
+    "  };",
+    "  .value + 100",
+    "};",
+    "io.outputLine(nestedCont);",
+    "tailVal := fn(xs: List<Int>): Int {",
+    "  loop xs as n {",
+    "    .value + n",
+    "  }",
+    "};",
+    "tailDiv := fn(): Int {",
+    "  loop {",
+    "    return 99;",
+    "  }",
+    "};",
+    "io.outputLine(tailVal([3, 4, 5]), tailDiv());",
+    "@u loop [1, 2] { if @u.count == 1 { return @u; } io.outputLine(\"skip\"); };",
+    "io.outputLine(\"unit-ok\");"
+], "\n");
+compilerTest.assertCompileRunTs(
+    root,
+    tsComp,
+    "loop-metadata",
+    loopMetaSrc,
+    "0  0 false\n11\n13\nc 1\nc 2\nc 3\ndone 3\n6\n60\ntrue\nempty-meta 0 0 0 0\n7\ninner-then 1\nouter-meta 1 0 1 \nthen(hit-2,2)\n6\n12 99\nunit-ok\n"
+);
+
+loopMetaRej: List<(bad: String, m1: String, m2: String)> = [
+    (bad = "x := loop [1] { if .item == 1 { 1 } else { 2 } };", m1 = "leading-dot .item is not available inside a conditional; use an explicit loop @tag", m2 = ""),
+    (bad = "x := loop [1] { if true { .count } else { 0 } };", m1 = "leading-dot .count is not available inside a conditional; use an explicit loop @tag", m2 = ""),
+    (bad = "x := loop [1] { match { (.item == 1) { 1 } _ { 2 } } };", m1 = "leading-dot .item is not available inside a conditional; use an explicit loop @tag", m2 = ""),
+    (bad = "loop [1] { if .count == 1 { } }", m1 = "leading-dot .count is not available inside a conditional; use an explicit loop @tag", m2 = ""),
+    (bad = "loop [1] { match { (.count == 1) { } _ { } } }", m1 = "leading-dot .count is not available inside a conditional; use an explicit loop @tag", m2 = ""),
+    (bad = "x := loop .item == 1 { 1 };", m1 = ".item is not available in loop header", m2 = ""),
+    (bad = "x := loop .index == 1 { 1 };", m1 = ".index is not available in loop header", m2 = ""),
+    (bad = "x := loop .count < 1 { .index };", m1 = "loop does not expose .index without a sequence source", m2 = ""),
+    (bad = "x := loop [1] { .value };", m1 = "cannot infer loop .value type; add a type annotation", m2 = ""),
+    (bad = "x := loop [1] { if true { break \"a\"; } 1 };", m1 = "loop cannot produce both String and Int", m2 = ""),
+    (bad = "x := @t loop [1] { break @t.value; 1 };", m1 = "break @t followed by . is ambiguous; wrap the payload in parentheses", m2 = ""),
+    (bad = "x := loop @t true { 1 };", m1 = "unexpected block tag @t in loop header", m2 = ""),
+    (bad = "x := loop (if true { break; true } else { false }) { 1 };", m1 = "cannot break from loop header", m2 = ""),
+    (bad = "x := @t loop [1] { break @t; } then { break @t; 1 };", m1 = "cannot break @t from inside its own then block", m2 = ""),
+    (bad = "x := @t loop [1] { 1 } then { return @t 2; };", m1 = "cannot return to @t from inside its own then block", m2 = "")
+];
+assertRejectsTarget(tsComp, "loop-metadata", loopMetaRej);
+
+loopMetaCRej: List<(bad: String, m1: String, m2: String)> = [
+    (bad = "x := @t loop [1] { 1 };", m1 = "C backend does not support tagged loops yet", m2 = ""),
+    (bad = "loop [1] { } then { }", m1 = "C backend does not support loop then blocks yet", m2 = ""),
+    (bad = "loop [1] { .item; }", m1 = "C backend does not support loop metadata yet", m2 = ""),
+    (bad = "loop true { break 1; }", m1 = "C backend does not support break payloads yet", m2 = "")
+];
+assertRejectsTarget(cComp, "loop-metadata c", loopMetaCRej);
+
+/* construct-level finally cleanup, LIFO unwinding, barriers, and failure precedence */
+finFeatureRes := fs.readText(path.join(root, "language/verifications/features/control/unwinding/finally-cleanup.lts"));
+test.check("read finally-cleanup.lts", finFeatureRes.ok);
+finFeatComp := compilerTest.compileStdin(root, tsComp, finFeatureRes.text, "");
+test.checkInt("finally-feature compile", 0, finFeatComp.status);
+test.check("finally-feature omits declare const process", not text.containsText(finFeatComp.stdout, "declare const process"));
+test.check("finally-feature omits abruptToken", not text.containsText(finFeatComp.stdout, "lite$abruptToken"));
+finFeatRun := compilerTest.checkAndRunTs(root, finFeatComp.stdout);
+test.checkInt("finally-feature run status", 0, finFeatRun.status);
+test.checkText("finally-feature run stdout", "1\n2\nthen\nfinally\ncond\n1\nreturn-cleanup\n5\n", finFeatRun.stdout);
+
+finComplexSrc := text.joinTexts([
+    "io := import \"core/io\";",
+    "{ io.outputLine(\"blk\"); } finally { io.outputLine(\"blk-stmt-fin\"); }",
+    "blkVal := { n := 9; n + 1 } finally { io.outputLine(\"blk-fin\"); };",
+    "tagVal := @b { return @b 20; } finally { io.outputLine(\"tagged-fin\"); };",
+    "ifVal := @c if true { 30 } else { 40 } then { @c.value + 1 } finally { io.outputLine(\"if-fin\"); };",
+    "if true { io.outputLine(\"partial-yes\"); } finally { io.outputLine(\"partial-fin\"); }",
+    "partialVal := (if false { 7 } finally { io.outputLine(\"partial-val-fin\"); });",
+    "matchVal := @m match { false { 1 } _ { 50 } } then { @m.value } finally { io.outputLine(\"match-fin\"); };",
+    "loopVal := @lp loop [1, 2] as n { .value + n } then { io.outputLine(\"loop-then\", .count); .value * 2 } finally { io.outputLine(\"loop-fin\"); };",
+    "io.outputLine(blkVal, tagVal, ifVal, partialVal, matchVal, loopVal);",
+    "fnRet := fn(): Int {",
+    "  @outer loop [1] {",
+    "    { io.outputLine(\"ret-blk\"); return 77; } finally { io.outputLine(\"ret-inner\"); }",
+    "  } finally { io.outputLine(\"ret-outer\"); }",
+    "};",
+    "io.outputLine(fnRet());",
+    "tagRet := @outer {",
+    "  @inner if true { return @outer 88; } else { 0 } then { io.outputLine(\"skip-inner-then\"); 0 } finally { io.outputLine(\"unwind-if\"); }",
+    "} finally { io.outputLine(\"unwind-outer\"); };",
+    "io.outputLine(tagRet);",
+    "loopCtrl := @outer loop [1, 2] as i {",
+    "  loop [10] {",
+    "    if i == 1 { continue @outer 100; }",
+    "    break @outer (@outer.value + 5);",
+    "  } then {",
+    "    io.outputLine(\"skip-inner-loop-then\");",
+    "  } finally {",
+    "    io.outputLine(\"unwind-loop\", i);",
+    "  }",
+    "  0",
+    "} then {",
+    "  io.outputLine(\"outer-then\", .count);",
+    "  .value",
+    "} finally {",
+    "  io.outputLine(\"outer-loop-fin\");",
+    "};",
+    "io.outputLine(loopCtrl);",
+    "loop [1] { io.outputLine(\"body\"); } finally {",
+    "  loop [8, 9] as k { if k == 8 { continue; } io.outputLine(\"in-fin\", k); }",
+    "}"
+], "\n");
+finExpectedOut := text.joinTexts([
+    "blk", "blk-stmt-fin", "blk-fin", "tagged-fin", "if-fin",
+    "partial-yes", "partial-fin", "partial-val-fin", "match-fin",
+    "loop-then 2", "loop-fin", "10 20 31 0 50 6",
+    "ret-blk", "ret-inner", "ret-outer", "77",
+    "unwind-if", "unwind-outer", "88",
+    "unwind-loop 1", "unwind-loop 2", "outer-then 2", "outer-loop-fin", "105",
+    "body", "in-fin 9"
+], "\n") + "\n";
+compilerTest.assertCompileRunTs(root, tsComp, "finally-complex", finComplexSrc, finExpectedOut);
+
+finExitSrc := "io := import \"core/io\";\nloop [1] {\n  if true { io.exit(3); } finally { io.outputLine(\"exit-if-fin\"); }\n} finally {\n  io.outputLine(\"exit-loop-fin\");\n}\n";
+finExitRun := compilerTest.compileCheckRunTs(root, tsComp, finExitSrc, "");
+test.checkInt("finally-exit status", 3, finExitRun.status);
+test.checkText("finally-exit stdout", "exit-if-fin\nexit-loop-fin\n", finExitRun.stdout);
+test.checkText("finally-exit stderr", "", finExitRun.stderr);
+
+finFaultSrc := "io := import \"core/io\";\nd := 0;\n{\n  io.outputLine(\"before-fault\");\n  _q := 10 / d;\n  io.outputLine(\"after-fault\");\n} finally {\n  io.outputLine(\"fault-fin\");\n}\n";
+finFaultRun := compilerTest.compileCheckRunTs(root, tsComp, finFaultSrc, "");
+test.checkInt("finally-fault status", 1, finFaultRun.status);
+test.checkText("finally-fault stdout", "before-fault\nfault-fin\n", finFaultRun.stdout);
+test.check("finally-fault stderr", text.containsText(finFaultRun.stderr, "ArithmeticPanic: division by zero"));
+
+finDoubleFaultSrc := "io := import \"core/io\";\nd := 0;\nxs := [1, 2];\n{\n  _q := 10 / d;\n} finally {\n  io.outputLine(\"fin-before-sec\");\n  _bad := xs[5];\n}\n";
+finDfRun := compilerTest.compileCheckRunTs(root, tsComp, finDoubleFaultSrc, "");
+test.checkInt("finally-double-fault status", 1, finDfRun.status);
+test.checkText("finally-double-fault stdout", "fin-before-sec\n", finDfRun.stdout);
+arithPos := text.indexOfText(finDfRun.stderr, "ArithmeticPanic: division by zero", 0);
+boundPos := text.indexOfText(finDfRun.stderr, "BoundPanic", 0);
+test.check("finally-double-fault arithPos >= 0: " + finDfRun.stderr, arithPos >= 0);
+test.check("finally-double-fault boundPos > arithPos: " + finDfRun.stderr, boundPos > arithPos);
+
+finCancelSrc := "io := import \"core/io\";\nxs := [1, 2];\nx := { 42 } finally { io.outputLine(\"cleanup-fail\"); _bad := xs[5]; };\nio.outputLine(\"unreachable\", x);\n";
+finCancelRun := compilerTest.compileCheckRunTs(root, tsComp, finCancelSrc, "");
+test.checkInt("finally-cancel-normal status", 1, finCancelRun.status);
+test.checkText("finally-cancel-normal stdout", "cleanup-fail\n", finCancelRun.stdout);
+test.check("finally-cancel-normal stderr", text.containsText(finCancelRun.stderr, "BoundPanic"));
+
+finRej: List<(bad: String, m1: String, m2: String)> = [
+    (bad = "{ 1 } finally { 123 }", m1 = "finally block must produce Unit", m2 = ""),
+    (bad = "f := fn(): Int { { 1 } finally { return 2; } 3 };", m1 = "cannot return out of finally block", m2 = ""),
+    (bad = "x := @t { 1 } finally { return @t 2; };", m1 = "cannot return out of finally block", m2 = ""),
+    (bad = "loop [1] { 1 } finally { break; }", m1 = "cannot break out of finally block", m2 = ""),
+    (bad = "loop [1] { 1 } finally { continue; }", m1 = "cannot continue out of finally block", m2 = ""),
+    (bad = "x := @t loop [1] { 1 } finally { break @t; };", m1 = "cannot break out of finally block", m2 = ""),
+    (bad = "x := loop [1] { 1 } finally { .count; };", m1 = "not available in finally", m2 = ""),
+    (bad = "x := @t loop [1] { 1 } finally { @t.count; };", m1 = "not available in finally", m2 = ""),
+    (bad = "x := @t if true { 1 } else { 2 } finally { @t.value; };", m1 = "not available in finally", m2 = ""),
+    (bad = "loop [1] { } finally { } then { }", m1 = "then must appear before finally", m2 = ""),
+    (bad = "loop [1] { } finally { } finally { }", m1 = "duplicate finally block", m2 = ""),
+    (bad = "x := { 1 } finally { } finally { };", m1 = "duplicate finally block", m2 = "")
+];
+assertRejectsTarget(tsComp, "finally", finRej);
+
+finCRej: List<(bad: String, m1: String, m2: String)> = [
+    (bad = "{ 1 } finally { }", m1 = "C backend does not support finally blocks yet", m2 = ""),
+    (bad = "if true { } finally { }", m1 = "C backend does not support finally blocks yet", m2 = ""),
+    (bad = "loop [1] { } finally { }", m1 = "C backend does not support finally blocks yet", m2 = ""),
+    (bad = "x := match { _ { 1 } } finally { };", m1 = "C backend does not support finally blocks yet", m2 = "")
+];
+assertRejectsTarget(cComp, "finally c", finCRej);
+
+test.done("control-tagged-finally");

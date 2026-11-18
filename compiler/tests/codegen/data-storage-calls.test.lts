@@ -1,0 +1,342 @@
+/* Tuple shapes, fixed arrays, mutability/lists, storage updates, call routing, out hygiene, tuple destructuring, and scope-local counter tests migrated from compiler/tests/host.test.ts. */
+
+fs := import "core/file";
+integer := import "core/int";
+list := import "core/list";
+path := import "core/path";
+test := import "core/test";
+text := import "core/text";
+compilerBuild := import "util/compiler-build";
+compilerTest := import "util/compiler-test";
+project := import "util/project";
+
+root := project.findRepoRoot();
+test.check("repo root found", root =!= "");
+
+selTs := compilerBuild.selectCompilerPath(root, "ts");
+test.check("select TS compiler: " + selTs.error, selTs.ok);
+selC := compilerBuild.selectCompilerPath(root, "c");
+test.check("select C compiler: " + selC.error, selC.ok);
+tsComp := selTs.path;
+cComp := selC.path;
+
+ccProbe := compilerTest.probeCc();
+
+assertRejectsAny := fn(label: String, cases: List<(bad: String, m1: String, m2: String)>): Unit {
+    loop cases as item {
+        res := compilerTest.compileStdin(root, tsComp, item.bad, "");
+        test.checkInt(label + " status (" + item.bad + ")", 2, res.status);
+        ok := text.containsText(res.stderr, item.m1) and (item.m2 == "" or text.containsText(res.stderr, item.m2));
+        test.check(label + " msg (" + item.bad + ") got: " + res.stderr, ok);
+    }
+};
+
+/* tuple shapes support unnamed/mixed/singleton, shorthand, positional reads, destructuring, receiving labels, and __proto__ */
+tupleSrc := text.joinTexts([
+    "io := import \"core/io\";",
+    "kind := \"number\";",
+    "token := (=kind, value = 12);",
+    "io.outputLine(token.kind, token.value);",
+    "mixed := (1, name = \"first\", false);",
+    "io.outputLine(mixed.0, mixed.name, mixed.2);",
+    "stored := (r = 20, l = 10);",
+    "renamed: (l: Int, r: Int) = stored;",
+    "io.outputLine(renamed.l, renamed.r);",
+    "pos := (x = 1, y = 2);",
+    "io.outputLine(pos.0);",
+    "(a, b) := (1, 2);",
+    "var (c, d) := (10, 20);",
+    "c = c + 1;",
+    "io.outputLine(a + b, c, d);",
+    "io.outputLine(Unit, (), (1,), (1, 2), (1, left = 2, right = 3, 4));",
+    "p := (__proto__ = 7);",
+    "io.outputLine(p.__proto__, p);"
+], "\n");
+compilerTest.assertCompileRunTs(
+    root,
+    tsComp,
+    "tuple-shapes",
+    tupleSrc,
+    "number 12\n1 first false\n20 10\n1\n3 11 20\nUnit Unit (1,) (1, 2) (1, left=2, right=3, 4)\n7 (__proto__=7,)\n"
+);
+tupleRej: List<(bad: String, m1: String, m2: String)> = [
+    (bad = "A := type ();", m1 = "tuple type needs at least one field", m2 = ""),
+    (bad = "x: (Int, String) = (1, 2);", m1 = "cannot initialize (Int, String) with (Int, Int)", m2 = ""),
+    (bad = "(a, b) := 1;", m1 = "tuple destructuring requires a tuple value", m2 = ""),
+    (bad = "(a, b) := (1, 2, 3);", m1 = "tuple destructuring expected 2 fields, got 3", m2 = ""),
+    (bad = "io := import \"core/io\"; p := (1, 2); io.outputLine(p.2);", m1 = "tuple has no field 2", m2 = "")
+];
+assertRejectsAny("tuple-shapes", tupleRej);
+
+/* fixed arrays support inferred/explicit extents, aliases, functions, zero values, dot/bracket/loop access, and List tail distinction */
+arraySrc := text.joinTexts([
+    "io := import \"core/io\";",
+    "Pair := type [Int; 2];",
+    "make := fn(): [Int; 2] { [1, 2] }",
+    "sum := fn(a: Pair): Int { a[0] + a.1 }",
+    "inferred := [10, 20, 30];",
+    "explicit: [Int; 2] = [4, 5];",
+    "aliased: Pair = make();",
+    "zeroed: [Int; 3];",
+    "emptyArr: [Int; 0] = [];",
+    "emptyZero: [Int; 0];",
+    "var total := 0;",
+    "loop inferred as item { total = total + item; }",
+    "io.outputLine(inferred[0], inferred.2, sum(explicit), aliased, zeroed, emptyArr, emptyZero, total);"
+], "\n");
+compilerTest.assertCompileRunTs(root, tsComp, "fixed-arrays", arraySrc, "10 30 9 [1, 2] [0, 0, 0] [] [] 60\n");
+arrayRej: List<(bad: String, m1: String, m2: String)> = [
+    (bad = "f := fn(): List<Int> { [1, 2] }", m1 = "cannot return [Int; 2] from function f returning List<Int>", m2 = ""),
+    (bad = "x: [Int; 3] = [1, 2];", m1 = "cannot initialize [Int; 3] with [Int; 2]", m2 = ""),
+    (bad = "x: [Int; 2] = [];", m1 = "cannot initialize [Int; 2] with [Int; 0]", m2 = ""),
+    (bad = "io := import \"core/io\"; a := [1, 2]; io.outputLine(a.2);", m1 = "array index 2 out of bounds", m2 = "")
+];
+assertRejectsAny("fixed-arrays", arrayRej);
+
+/* mutability and lists support inferred mut/var mut, front/back ops, List<Unit>, tuple copies, and rejections */
+mutListSrc := text.joinTexts([
+    "io := import \"core/io\";",
+    "list := import \"core/list\";",
+    "values: mut List<Int> = [1, 2];",
+    "push_front(mut values, 0);",
+    "list.pushBack(mut values, 3);",
+    "front := pop_front(mut values);",
+    "back := list.popBack(mut values);",
+    "list.pushFront(mut values, 9);",
+    "front2 := list.popFront(mut values);",
+    "io.outputLine(front, back, front2, values);",
+    "mut args := io.inputArgs();",
+    "push_back(mut args, \"z\");",
+    "var mut other := io.inputArgs();",
+    "other = io.inputArgs();",
+    "push_front(mut other, \"a\");",
+    "io.outputLine(args, other);",
+    "units: mut List<Unit> = [Unit];",
+    "push_back(mut units, Unit);",
+    "io.outputLine(pop_front(mut units), pop_back(mut units), units);",
+    "tuples: mut List<(name: String, n: Int)> = [(name = \"a\", n = 1)];",
+    "item := pop_back(mut tuples);",
+    "io.outputLine(item.name, item.n, tuples);"
+], "\n");
+compilerTest.assertCompileRunTs(root, tsComp, "mut-lists", mutListSrc, "0 3 9 [1, 2]\n[z] [a]\nUnit Unit []\na 1 []\n");
+emptyOps: List<String> = ["pop_front", "pop_back"];
+loop emptyOps as op {
+    pSrc := "io := import \"core/io\";\nempty: mut List<Unit> = [];\nio.outputLine(" + op + "(mut empty));";
+    pRun := compilerTest.compileCheckRunTs(root, tsComp, pSrc, "");
+    test.checkInt("mut-lists empty " + op + " status", 1, pRun.status);
+    test.check("mut-lists empty " + op + " panic: " + pRun.stderr, text.containsText(pRun.stderr, "BoundPanic") and text.containsText(pRun.stderr, op + " on an empty list"));
+}
+mutListRej: List<(bad: String, m1: String, m2: String)> = [
+    (bad = "mut x := 1;", m1 = "mut requires a List value, got Int", m2 = ""),
+    (bad = "var mut x: List<Int> = [];", m1 = "var mut cannot be combined with explicit type annotation", m2 = ""),
+    (bad = "values: mut List<Int> = [1]; pop_front(values);", m1 = "pop_front requires mut list argument", m2 = ""),
+    (bad = "values: mut List<Int> = [1]; push_front(values, 2);", m1 = "push_front requires mut list argument", m2 = "")
+];
+assertRejectsAny("mut-lists", mutListRej);
+
+/* storage and updates support compound assignments, zero init, reserved storage, control-flow joins, and rejections */
+storageSrc := text.joinTexts([
+    "io := import \"core/io\";",
+    "var n := 10;",
+    "n += 5; n -= 3; n *= 2; n /= 4; n %= 3;",
+    "var f := -7;",
+    "f :/= 2; f :%= 3;",
+    "var s := \"a\";",
+    "s += \"b\";",
+    "var fl := 1.5;",
+    "fl += 2;",
+    "z0: (:Int, :String) = 0;",
+    "z1: [Int; 2] = 0;",
+    "r: Int = ?;",
+    "r = 42;",
+    "c: Int = ?;",
+    "if n == 0 { c = 10; } else { c = 20; }",
+    "io.outputLine(n, f, s, fl, z0.0, z0.1, z1, r, c);"
+], "\n");
+compilerTest.assertCompileRunTs(root, tsComp, "storage-updates", storageSrc, "0 2 ab 3.5 0  [0, 0] 42 10\n");
+storageRej: List<(bad: String, m1: String, m2: String)> = [
+    (bad = "io := import \"core/io\"; a: Int = ?; io.outputLine(a);", m1 = "cannot read uninitialized local a", m2 = ""),
+    (bad = "a: Int = ?; a = 1; a = 2;", m1 = "cannot assign to immutable local a", m2 = ""),
+    (bad = "a: Int = ?; if true { a = 1; } a = 2;", m1 = "cannot assign to possibly initialized immutable local a", m2 = ""),
+    (bad = "io := import \"core/io\"; a: Int = ?; if true { a = 1; } io.outputLine(a);", m1 = "cannot read uninitialized local a", m2 = ""),
+    (bad = "io := import \"core/io\"; a: Int = ?; loop false { a = 1; } io.outputLine(a);", m1 = "cannot read uninitialized local a", m2 = ""),
+    (bad = "x := 1; x += 2;", m1 = "cannot assign to immutable local x", m2 = ""),
+    (bad = "x: (:Int);", m1 = "unnamed singleton tuple type needs trailing comma", m2 = "")
+];
+assertRejectsAny("storage-updates", storageRej);
+
+/* call routing supports named, positional, shorthand, replacement, recursion, trailing commas, module functions, and rejections */
+callRoutingSrc := text.joinTexts([
+    "io := import \"core/io\";",
+    "step := fn(label: String, n: Int): Int { io.outputLine(label, n); n };",
+    "tag := fn(label: String): String { io.outputLine(label); label };",
+    "digits := fn(a: Int, b: Int, c: Int): Int { a * 100 + b * 10 + c };",
+    "a := 5; b := 2; c := 6;",
+    "r1 := digits(c = 3, 1, =b);",
+    "r2 := digits(9, a = 1, 2, 3,);",
+    "r3 := digits(tag(\"skip\"), 2, a = step(\"keep\", 1), c = step(\"tail\", 3));",
+    "r4 := digits(tag(\"over\"), 2, =a, =c,);",
+    "logUnit := fn(x: Int, y: String): Unit { io.outputLine(x, y); };",
+    "logUnit(y = \"done\", 7,);",
+    "sumDown := fn(n: Int, total: Int): Int {",
+    "  if n == 0 { total } else { self(total = total + n, n = n - 1) }",
+    "};",
+    "length := fn(text: String): Int { 4 };",
+    "io.outputLine(r1, r2, r3, r4, sumDown(4, 0), length(text = \"abcd\"));"
+], "\n");
+compilerTest.assertCompileRunTs(root, tsComp, "call-routing", callRoutingSrc, "skip\nkeep 1\ntail 3\nover\n7 done\n123 123 123 526 10 4\n");
+
+tmpCallDir := fs.makeTempDir("lite-call-routing-");
+test.check("call-routing makeTempDir", tmpCallDir.ok);
+callDir := tmpCallDir.path;
+appCallPath := path.join(callDir, "app.lts");
+_wCallMod := fs.writeText(path.join(callDir, "mod.lts"), "pub pick := fn(a: Int, b: Int, c: Int): Int { a * 100 + b * 10 + c }\n");
+appCallSrc := "io := import \"core/io\"; m := import \"./mod.lts\"; b := 2; io.outputLine(m.pick(\"x\", 9, a = 1, =b, 3,));\n";
+_wCallApp := fs.writeText(appCallPath, appCallSrc);
+realCallApp := fs.realPath(appCallPath);
+test.check("call-routing realPath", realCallApp.ok);
+compilerTest.assertCompileRunTsNamed(root, tsComp, "call-routing mod", appCallSrc, realCallApp.path, "123\n");
+_rmCall := fs.remove(callDir);
+
+callRej: List<(bad: String, m1: String, m2: String)> = [
+    (bad = "f := fn(a: Int, b: Int): Int { a + b }; f(a = 1, a = 2, b = 3);", m1 = "duplicate named argument a", m2 = ""),
+    (bad = "f := fn(a: Int, b: Int): Int { a + b }; a := 1; f(a = 1, =a, b = 3);", m1 = "duplicate named argument a", m2 = ""),
+    (bad = "f := fn(a: Int, b: Int): Int { a + b }; f(1, z = 2);", m1 = "unknown parameter z", m2 = ""),
+    (bad = "f := fn(a: Int, b: Int, c: Int): Int { a + b + c }; f(c = 3, 1);", m1 = "function f expects 3 arguments, got 2", m2 = ""),
+    (bad = "f := fn(a: Int, b: Int): Int { a + b }; f(1, 2, 3);", m1 = "function f expects 2 arguments, got more", m2 = ""),
+    (bad = "f := fn(a: Int, b: Int): Int { a + b }; f(a = 1, 2, 3);", m1 = "function f expects 2 arguments, got more", m2 = ""),
+    (bad = "f := fn(a: Int, b: Int): Int { a + b }; b := 2; f(1, =b + 1);", m1 = "shorthand argument requires a bare identifier", m2 = ""),
+    (bad = "f := fn(a: Int, b: Int): Int { a + b }; f(1, b = \"two\");", m1 = "must be Int, got String", m2 = ""),
+    (bad = "f := fn(a: Int, b: Int): Int { a + b }; f(\"superseded\", a = \"bad\", 2);", m1 = "must be Int, got String", m2 = ""),
+    (bad = "io := import \"core/io\"; io.inputInt(prompt = \"n: \");", m1 = "named arguments are not supported for host function io.inputInt", m2 = ""),
+    (bad = "io := import \"core/io\"; text := \"hi\"; io.errorLine(=text);", m1 = "named arguments are not supported for host function io.errorLine", m2 = ""),
+    (bad = "text := import \"core/text\"; text.length(s = \"hi\");", m1 = "named arguments are not supported for host function text.length", m2 = ""),
+    (bad = "text := import \"core/text\"; text.trim(s = \"hi\");", m1 = "unknown parameter s in call to text.trim", m2 = ""),
+    (bad = "io := import \"core/io\"; var x := 0; io.outputLine(x = 1);", m1 = "expected )", m2 = "")
+];
+assertRejectsAny("call-routing", callRej);
+
+/* out local hygiene avoids main accumulator collisions at root, nested, and imported module scopes */
+outSrc := text.joinTexts([
+    "io := import \"core/io\";",
+    "out := \"ok\";",
+    "io.outputLine(out);",
+    "{ var out := \"a\"; out += \"b\"; io.outputLine(out); }",
+    "laterOut := fn(): Int { deferredOut };",
+    "deferredOut := 7;",
+    "f := fn(): Int { out2 };",
+    "out2 := 9;",
+    "io.outputLine(laterOut(), f());"
+], "\n");
+outComp := compilerTest.compileStdin(root, tsComp, outSrc, "");
+test.checkInt("out-hygiene compile", 0, outComp.status);
+test.check("out-hygiene const lite_out", text.containsText(outComp.stdout, "const lite_out = \"ok\";"));
+test.check("out-hygiene let lite_out$2", text.containsText(outComp.stdout, "let lite_out$2 = \"a\";"));
+test.check("out-hygiene return lite$out", text.containsText(outComp.stdout, "return lite$out;"));
+outRun := compilerTest.checkAndRunTs(root, outComp.stdout);
+test.checkInt("out-hygiene run status", 0, outRun.status);
+test.checkText("out-hygiene run stdout", "ok\nab\n7 9\n", outRun.stdout);
+
+deferredOutSrc := "io := import \"core/io\";\nreadOut := fn(): Int { out };\nout := 17;\nio.outputLine(readOut());";
+compilerTest.assertCompileRunTs(root, tsComp, "out-hygiene deferred", deferredOutSrc, "17\n");
+
+tmpOutDir := fs.makeTempDir("lite-out-hygiene-");
+test.check("out-hygiene makeTempDir", tmpOutDir.ok);
+outDir := tmpOutDir.path;
+appOutPath := path.join(outDir, "app.lts");
+_wOutMod := fs.writeText(path.join(outDir, "mod.lts"), "pub readK := fn(): Int { K }\npub K := 9;\npub out := \"mod-out\";\n");
+appOutSrc := "io := import \"core/io\"; m := import \"./mod.lts\"; out := \"root-out\"; io.outputLine(m.readK(), m.out, out);\n";
+_wOutApp := fs.writeText(appOutPath, appOutSrc);
+realOutApp := fs.realPath(appOutPath);
+test.check("out-hygiene realPath", realOutApp.ok);
+compilerTest.assertCompileRunTsNamed(root, tsComp, "out-hygiene mod", appOutSrc, realOutApp.path, "9 mod-out root-out\n");
+_rmOut := fs.remove(outDir);
+
+/* tuple destructuring supports empty (), grouped (x), var (x), singleton (x,), nested shadowing, value blocks, and rejections */
+destrSrc := text.joinTexts([
+    "io := import \"core/io\";",
+    "var ticks := 0;",
+    "bump := fn(): Unit { ticks += 1; };",
+    "() := ();",
+    "() := Unit;",
+    "() := bump();",
+    "(x) := 42;",
+    "var (y) := 10;",
+    "y += 5;",
+    "(z,) := (99,);",
+    "{ (a, a) := (1, 2); (_, _) := (3, 4); io.outputLine(a); }",
+    "v := { () := bump(); (p) := 3; var (q) := 4; q += 1; (r, s) := (q, p * 2); r + s };",
+    "io.outputLine(ticks, x, y, z, v);"
+], "\n");
+compilerTest.assertCompileRunTs(root, tsComp, "tuple-destructuring", destrSrc, "2\n2 42 15 99 11\n");
+destrRej: List<(bad: String, m1: String, m2: String)> = [
+    (bad = "() := 42;", m1 = "tuple destructuring requires Unit for (), got Int", m2 = ""),
+    (bad = "() := (1, 2);", m1 = "tuple destructuring expected 0 fields, got 2", m2 = ""),
+    (bad = "io := import \"core/io\"; () := io.exit(1);", m1 = "tuple destructuring requires Unit for (), got Never", m2 = ""),
+    (bad = "var () := ();", m1 = "var tuple destructuring needs at least one binding", m2 = ""),
+    (bad = "(x,) := 42;", m1 = "tuple destructuring requires a tuple value, got Int", m2 = ""),
+    (bad = "(x) := ();", m1 = "cannot declare a Unit local x", m2 = ""),
+    (bad = "io := import \"core/io\"; (x) := io.exit(1);", m1 = "cannot declare a Never local x", m2 = ""),
+    (bad = "(dup, dup) := (1, 2);", m1 = "duplicate top-level value dup", m2 = ""),
+    (bad = "{ var x := { () := 1; x }; }", m1 = "tuple destructuring requires Unit for (), got Int", m2 = "")
+];
+assertRejectsAny("tuple-destructuring", destrRej);
+
+/* scope-local counters avoid source-offset churn in functions, destructuring, loops, and C shadows */
+workBody := text.joinTexts([
+    "io := import \"core/io\";",
+    "pick := fn(first: String, second: String): String { first + \"-\" + second };",
+    "work := fn(x: String): String {",
+    "  var acc := x;",
+    "  {",
+    "    x := pick(second = \"2\", first = \"1\");",
+    "    { x := \"3\"; acc = acc + \":\" + x; }",
+    "    acc = acc + \":\" + x;",
+    "  }",
+    "  (p, q) := (\"a\", \"b\");",
+    "  loop [\"u\", \"v\"] { acc = acc + \".\"; }",
+    "  acc + \":\" + p + q",
+    "};",
+    "io.outputLine(work(\"0\"));"
+], "\n");
+shiftedHeader := "/* extra top comment line 1\n   extra top comment line 2\n   extra top comment line 3 */\nunusedBanner := \"header\";\n\n";
+baseComp := compilerTest.compileStdin(root, tsComp, workBody, "");
+shiftedComp := compilerTest.compileStdin(root, tsComp, shiftedHeader + workBody, "");
+test.checkInt("counters base compile", 0, baseComp.status);
+test.checkInt("counters shifted compile", 0, shiftedComp.status);
+extractWork := fn(srcText: String): String {
+    sPos := text.indexOfText(srcText, "function liteFn_work(", 0);
+    ePos := text.indexOfText(srcText, "void liteFn_work;", sPos);
+    test.check("extractWork bounds", sPos >= 0 and ePos >= 0);
+    text.slice(srcText, sPos, ePos)
+};
+workTs := extractWork(baseComp.stdout);
+test.checkText("counters offset-invariant workTs", workTs, extractWork(shiftedComp.stdout));
+test.check("counters lite_x$2", text.containsText(workTs, "const lite_x$2 ="));
+test.check("counters lite_x$3", text.containsText(workTs, "const lite_x$3 ="));
+test.check("counters lite$tuple", text.containsText(workTs, "const lite$tuple ="));
+test.check("counters for lite$item", text.containsText(workTs, "for (const lite$item of"));
+test.check("counters lite$arg0", text.containsText(workTs, "const lite$arg0 ="));
+legacyTokens: List<String> = ["lt_local_", "lite$tuple_", "lite$item_", "lite$arg_", "lite$report"];
+loop legacyTokens as tok {
+    test.check("counters omits legacy " + tok, not text.containsText(baseComp.stdout, tok));
+}
+workRun := compilerTest.checkAndRunTs(root, baseComp.stdout);
+test.checkInt("counters work run status", 0, workRun.status);
+test.checkText("counters work run stdout", "0:3:1-2..:ab\n", workRun.stdout);
+
+cShadowBase := "io := import \"core/io\";\n{ x := \"one\"; { x := \"two\"; io.outputLine(x); } io.outputLine(x); }\n";
+cBase := compilerTest.compileStdin(root, cComp, cShadowBase, "");
+cShifted := compilerTest.compileStdin(root, cComp, "/* shift */\n/* shift */\n" + cShadowBase, "");
+test.checkInt("counters c base compile", 0, cBase.status);
+test.checkInt("counters c shifted compile", 0, cShifted.status);
+test.checkText("counters c offset-invariant", cBase.stdout, cShifted.stdout);
+test.check("counters c lite_x", text.containsText(cBase.stdout, "const char *lite_x ="));
+test.check("counters c lt_s2_x", text.containsText(cBase.stdout, "const char *lt_s2_x ="));
+if ccProbe.available {
+    cShadowRun := compilerTest.compileAndRunC(cBase.stdout, ccProbe.cc, "");
+    test.checkInt("counters c shadow status", 0, cShadowRun.status);
+    test.checkText("counters c shadow stdout", "two\none\n", cShadowRun.stdout);
+}
+
+test.done("data-storage-calls");
