@@ -9,14 +9,7 @@ import { delimiter, dirname, join, resolve } from 'node:path';
 import { after, test } from 'node:test';
 import { fileURLToPath, pathToFileURL } from 'node:url';
 import { buildCompiler, compileBuiltCompiler, compileTs, loadManifest, type CompilerInput, type CompilerResult } from '../compiler/host.ts';
-import {
-  INT_MAX, INT_MIN, LiteRuntimeFault,
-  checkedAdd, checkedDivide, checkedFloorDivide, checkedFloorModulo,
-  checkedMultiply, checkedNegate, checkedRemainder, checkedSubtract, intText, listCopy,
-  runMain, textAt, textLength, textSlice,
-} from '../compiler/runtime/ts/runtime.ts';
-import { prepareTsArtifacts, runCArtifact, runTsArtifact, withTsArtifact, withTsArtifacts, type PreparedTsArtifacts } from './artifacts.ts';
-import { benchmark, hashBytes, nondeterminismReasons } from './measure.ts';
+import { prepareTsArtifacts, runCArtifact, runTsArtifact, sha256, withTsArtifact, withTsArtifacts, type PreparedTsArtifacts } from './artifacts.ts';
 
 const tsManifestPath = new URL('../compiler/manifests/ts.json', import.meta.url).pathname;
 const cManifestPath = new URL('../compiler/manifests/c.json', import.meta.url).pathname;
@@ -672,7 +665,7 @@ test('bundle compilers reproduce every compiler case with exact artifacts and di
         assert.equal(actual.status, 0, `${target}: ${fixture.name}/${fixture.caseName}`);
         assert.deepEqual(actual.stderr, Buffer.alloc(0), `${target}: ${fixture.name}/${fixture.caseName}`);
         const baseline = hashes.get(fixture.name)?.[target];
-        assert.equal(baseline, `sha256:${hashBytes(actual.stdout)}`,
+        assert.equal(baseline, `sha256:${sha256(actual.stdout)}`,
           `${target}: ${fixture.name}/${fixture.caseName}`);
       }
     }
@@ -791,42 +784,39 @@ test('prepared TS artifacts run in fresh processes and retain typecheck failures
 });
 
 test('TS runtime helpers preserve checked Int64, text and list semantics', () => {
-  assert.equal(checkedAdd(2n, 3n), 5n);
-  assert.equal(checkedSubtract(2n, 3n), -1n);
-  assert.equal(checkedMultiply(-6n, 7n), -42n);
-  assert.equal(checkedDivide(-7n, 2n), -3n);
-  assert.equal(checkedRemainder(-7n, 2n), -1n);
-  assert.equal(checkedFloorDivide(-7n, 2n), -4n);
-  assert.equal(checkedFloorModulo(-7n, 2n), 1n);
-  assert.equal(checkedNegate(42n), -42n);
-  assert.equal(intText(INT_MIN), '-9223372036854775808');
-  assert.throws(() => checkedAdd(INT_MAX, 1n), (error: unknown) =>
-    error instanceof LiteRuntimeFault && error.category === 'ArithmeticPanic');
-  assert.throws(() => checkedDivide(1n, 0n), (error: unknown) =>
-    error instanceof LiteRuntimeFault && error.category === 'ArithmeticPanic');
-  assert.throws(() => checkedNegate(INT_MIN), (error: unknown) =>
-    error instanceof LiteRuntimeFault && error.category === 'ArithmeticPanic');
+  const runCase = (text: string) => {
+    const compiled = compileTs({ text, name: 'runtime-contract.lts' });
+    assert.equal(compiled.status, 0, compiled.stderr.toString('utf8'));
+    return runTsArtifact(compiled.stdout.toString('utf8'));
+  };
+  const ok = runCase(`
+    io := import "core/io";
+    list := import "core/list";
+    text := import "core/text";
+    integer := import "core/int";
+    negSeven := -7;
+    two := 2;
+    fortyTwo := 42;
+    io.outputLine(2 + 3, 2 - 3, -6 * 7, negSeven / two, negSeven % two, -fortyTwo, integer.intMin);
+    io.outputLine(text.length("a🙂"), text.at("a🙂", 1), text.slice("a🙂b", 1, 2));
+    src: mut List<Int> = [1, 2];
+    copy: mut List<Int> = src;
+    list.pushBack(mut copy, 3);
+    io.outputLine(list.listCountInt(src), list.listCountInt(copy));
+  `);
+  assert.equal(ok.status, 0, ok.stderr.toString('utf8'));
+  assert.equal(ok.stdout.toString('utf8'), '5 -1 -42 -3 -1 -42 -9223372036854775808\n2 🙂 🙂\n2 3\n');
 
-  assert.equal(textLength('a🙂'), 2n);
-  assert.equal(textAt('a🙂', 1n), '🙂');
-  assert.equal(textSlice('a🙂b', 1n, 2n), '🙂');
-  assert.throws(() => textAt('a', 9n), (error: unknown) =>
-    error instanceof LiteRuntimeFault && error.category === 'BoundPanic');
-
-  const source = [1, 2];
-  const copy = listCopy(source);
-  copy.push(3);
-  assert.deepEqual(source, [1, 2]);
-  assert.deepEqual(copy, [1, 2, 3]);
-
-  let output = '';
-  let errors = '';
-  assert.equal(runMain(() => 'ok\n', { report: text => { output += text; }, reportError: text => { errors += text; } }), 0);
-  assert.equal(output, 'ok\n');
-  assert.equal(errors, '');
-  assert.equal(runMain(() => { throw new LiteRuntimeFault('BoundPanic', 'bad'); },
-    { report: text => { output += text; }, reportError: text => { errors += text; } }), 1);
-  assert.equal(errors, 'BoundPanic: bad\n');
+  for (const [faultSource, pattern] of [
+    ['integer := import "core/int"; io := import "core/io"; x := integer.intMax; io.outputLine(x + 1);', /ArithmeticPanic:/],
+    ['x := 0; io := import "core/io"; io.outputLine(1 / x);', /ArithmeticPanic:/],
+    ['integer := import "core/int"; io := import "core/io"; x := integer.intMin; io.outputLine(-x);', /ArithmeticPanic:/],
+    ['text := import "core/text"; io := import "core/io"; io.outputLine(text.at("a", 9));', /BoundPanic:/],
+  ] as const) {
+    const res = runCase(faultSource);
+    assert.equal(res.status, 1);
+    assert.match(res.stderr.toString('utf8'), pattern);
+  }
 });
 
 test('restricted compiler accepts typed scalar locals without changing existing cases', async context => {
@@ -2509,13 +2499,22 @@ test('source graph artifacts are deterministic and leak no timestamps or host pa
   const first = compiler.compile({ text: source });
   const second = compiler.compile({ text: source });
   assert.equal(first.status, 0);
-  assert.equal(hashBytes(first.stdout), hashBytes(second.stdout));
-  assert.equal(hashBytes(first.stderr), hashBytes(second.stderr));
-  assert.deepEqual(nondeterminismReasons(first.stdout.toString('utf8'), [root, tmpdir(), process.cwd()]), []);
-  const measured = benchmark(() => {
-    return buildCompiler('ts');
-  }, 2);
-  context.diagnostic(`generated compiler selection best: ${measured.bestMs.toFixed(1)} ms`);
-  assert.ok(measured.bestMs < 10000, `generated compiler selection took ${measured.bestMs.toFixed(1)} ms`);
-  for (const value of measured.values) assert.ok(value.dependencies.length > 1);
+  assert.equal(sha256(first.stdout), sha256(second.stdout));
+  assert.equal(sha256(first.stderr), sha256(second.stderr));
+  const emitted = first.stdout.toString('utf8');
+  assert.equal(/\b\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(?:\.\d+)?(?:Z|[+-]\d{2}:\d{2})?\b/.test(emitted), false);
+  for (const forbidden of [root, tmpdir(), process.cwd()]) {
+    if (forbidden.length > 0) assert.equal(emitted.includes(forbidden), false, `leaked host path: ${forbidden}`);
+  }
+  const values: ReturnType<typeof buildCompiler>[] = [];
+  let bestMs = Number.POSITIVE_INFINITY;
+  for (let i = 0; i < 2; i += 1) {
+    const started = performance.now();
+    values.push(buildCompiler('ts'));
+    const elapsed = performance.now() - started;
+    if (elapsed < bestMs) bestMs = elapsed;
+  }
+  context.diagnostic(`generated compiler selection best: ${bestMs.toFixed(1)} ms`);
+  assert.ok(bestMs < 10000, `generated compiler selection took ${bestMs.toFixed(1)} ms`);
+  for (const value of values) assert.ok(value.dependencies.length > 1);
 });

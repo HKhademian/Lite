@@ -190,7 +190,7 @@ enabled. See the [completion assessment and evidence](parity.md#function-complet
 | [`tests/lexer/`](tests/lexer/) | Focused lexer fixtures, dump driver and expected tokens |
 | [`tests/parser/`](tests/parser/) | Focused parser fixtures, dump drivers and expected nodes |
 | [`tests/checker/`](tests/checker/) | Checker fixtures, dump driver and expected symbols |
-| [`runtime/ts/runtime.ts`](runtime/ts/runtime.ts) | P6 TS runtime: checked Int64, code-point text, list copies, faults and exit |
+| [`src/emit-ts.lts`](src/emit-ts.lts) | Self-contained TS emitter and inline Int64/text/list/host runtime helpers |
 | [`tests/references/generated/report-42.ts`](tests/references/generated/report-42.ts) | Checked-in TS reference for `outputLine(42);` |
 | [`tests/references/generated/report-42.c`](tests/references/generated/report-42.c) | Checked-in C reference for `outputLine(42);` |
 | [`tests/references/generated/run-report.ts`](tests/references/generated/run-report.ts) | Visible Node adapter for the TS reference |

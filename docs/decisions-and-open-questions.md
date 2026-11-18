@@ -632,7 +632,7 @@ persisted artifact or a prerequisite.
 
 ## TS runtime groundwork, 2026-11-01
 
-P6 starts with [`compiler/runtime/ts/runtime.ts`](../compiler/runtime/ts/runtime.ts):
+P6 started with standalone TS runtime helpers (since folded directly into inline helpers emitted by `compiler/src/emit-ts.lts`):
 checked signed 64-bit arithmetic, code-point text length/index/slice, list value
 copies, runtime faults and a `runMain` exit adapter. Direct tests cover overflow,
 zero division, floor division/modulo, Int64 minimum text, Unicode positions,
