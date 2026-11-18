@@ -1,0 +1,454 @@
+/* Core os/fs/process/crypto/time/unicode/external host bindings, standalone CLI execution, and C backend rejections migrated from compiler/tests/host.test.ts. */
+
+fs := import "core/file";
+integer := import "core/int";
+list := import "core/list";
+path := import "core/path";
+proc := import "core/process";
+test := import "core/test";
+text := import "core/text";
+unicode := import "core/unicode";
+compilerBuild := import "util/compiler-build";
+compilerTest := import "util/compiler-test";
+json := import "util/json";
+project := import "util/project";
+
+root := project.findRepoRoot();
+test.check("repo root found", root =!= "");
+
+selTs := compilerBuild.selectCompilerPath(root, "ts");
+test.check("select TS compiler: " + selTs.error, selTs.ok);
+selC := compilerBuild.selectCompilerPath(root, "c");
+test.check("select C compiler: " + selC.error, selC.ok);
+tsComp := selTs.path;
+cComp := selC.path;
+
+fixtureName := path.join(root, "compiler/tests/fixtures/core-host-os.lts");
+
+emptyArgs := fn(): List<String> {
+    res: List<String> = [];
+    res
+};
+
+/* core os/fs/process/crypto/time host bindings */
+coreHostSrc := text.joinTexts([
+    "fs := import \"core/file\";",
+    "pathLib := import \"core/path\";",
+    "proc := import \"core/process\";",
+    "crypto := import \"core/crypto\";",
+    "time := import \"core/time\";",
+    "uni := import \"core/unicode\";",
+    "io := import \"core/io\";",
+    "writeTwoLines := fn(w: io.Writer, a: String, b: String): Bool {",
+    "    r1 := io.writeLine(w, a);",
+    "    r2 := io.writeLine(w, b);",
+    "    r1.ok and r2.ok",
+    "};",
+    "collectAllLines := fn(r: io.Reader): String {",
+    "    var out := \"\";",
+    "    loop true {",
+    "        res := io.readLine(r);",
+    "        if not res.ok or res.eof { break; }",
+    "        if out =!= \"\" { out = out + \"|\"; }",
+    "        out = out + res.line;",
+    "    }",
+    "    out",
+    "};",
+    "bw := io.bufferWriter();",
+    "bwOk := writeTwoLines(bw, \"alpha\", \"beta\");",
+    "bwTxt := io.writerText(bw);",
+    "trLines := collectAllLines(io.textReader(\"alpha\\r\\nbeta\\ngamma\"));",
+    "tmp := fs.makeTempDir(\"lite-os-host-\");",
+    "if not tmp.ok { io.outputLine(\"mkdir-temp-fail\", tmp.error); io.exit(1); }",
+    "dir := tmp.path;",
+    "sub := dir + \"/sub\";",
+    "made := fs.makeDir(sub);",
+    "file := sub + \"/target.txt\";",
+    "wrote := fs.writeText(file, \"hello world\\n\");",
+    "readOk := fs.readText(file);",
+    "appFile := sub + \"/append.txt\";",
+    "fw := fs.openWriter(appFile);",
+    "fwOk := writeTwoLines(fw, \"first\", \"second\");",
+    "_fwFlush := io.flush(fw);",
+    "_fwClose := io.closeWriter(fw);",
+    "appRes := fs.appendText(appFile, \"third\\n\");",
+    "fr := fs.openReader(appFile);",
+    "frLines := collectAllLines(fr);",
+    "_frClose := io.closeReader(fr);",
+    "badOpen := fs.openReader(dir + \"/absent.txt\");",
+    "rawFile := sub + \"/raw.bin\";",
+    "rawBytes: List<Int> = [0, 65, 255, 13, 10];",
+    "wroteRaw := fs.writeBytes(rawFile, rawBytes);",
+    "readRaw := fs.readBytes(rawFile);",
+    "emptyFile := sub + \"/empty.bin\";",
+    "wroteEmpty := fs.writeBytes(emptyFile, []);",
+    "readEmpty := fs.readBytes(emptyFile);",
+    "badByteHigh := fs.writeBytes(dir + \"/bad-high.bin\", [256]);",
+    "badByteNeg := fs.writeBytes(dir + \"/bad-neg.bin\", [-1]);",
+    "badRead := fs.readText(dir + \"/missing.txt\");",
+    "subCopy := dir + \"/sub-copy\";",
+    "copied := fs.copy(sub, subCopy);",
+    "entries := fs.listDir(dir);",
+    "linkPath := dir + \"/link.txt\";",
+    "linked := fs.symlink(\"sub/target.txt\", linkPath);",
+    "real := fs.realPath(linkPath);",
+    "removed := fs.remove(subCopy);",
+    "removedMissing := fs.remove(subCopy);",
+    "unsetEnv := proc.envGet(\"LITE_DEFINITELY_UNSET_XYZ\");",
+    "homeEnv := proc.envGet(\"PATH\");",
+    "childOk := proc.run(proc.execPath(), [\"-e\", \"process.stdout.write(process.env.LITE_ENV_CHILD + ':' + process.getBuiltinModule('node:fs').readFileSync(0,'utf8'))\"], dir, [\"LITE_ENV_CHILD=ok\"], true, \"ping\");",
+    "childFail := proc.run(\"/no/such/binary-lite-xyz\", [], \"\", [], true, \"\");",
+    "bytesOutPath := dir + \"/child-out.bin\";",
+    "bytesErrPath := dir + \"/child-err.bin\";",
+    "childBytes := proc.runBytes(proc.execPath(), [\"-e\", \"const b = process.getBuiltinModule('node:fs').readFileSync(0); process.stdout.write(b); process.stderr.write(Buffer.from([b.length, 42])); process.exit(3);\"], dir, [], 5000, rawBytes, bytesOutPath, bytesErrPath);",
+    "childTimeout := proc.runBytes(proc.execPath(), [\"-e\", \"setTimeout(() => {}, 2000)\"], dir, [], 50, [], dir + \"/t-out.bin\", dir + \"/t-err.bin\");",
+    "utfBytes := uni.utf8Encode(\"A€\");",
+    "hashText := crypto.sha256Text(\"hello\");",
+    "hashBytes := crypto.sha256Bytes(rawBytes);",
+    "hashEmptyBytes := crypto.sha256Bytes([]);",
+    "hashRawFile := crypto.sha256File(rawFile);",
+    "hashFile := crypto.sha256File(file);",
+    "hashMissing := crypto.sha256File(dir + \"/missing.txt\");",
+    "t0 := time.monotonicNs();",
+    "t1 := time.monotonicNs();",
+    "iso := time.utcIsoNow();",
+    "io.outputLine(fs.kind(dir), fs.kind(file), fs.kind(linkPath), fs.kind(dir + \"/missing.txt\"), pathLib.isDirectory(dir), pathLib.isFile(file), not pathLib.exists(dir + \"/missing.txt\"), pathLib.stem(file), pathLib.withExt(file, \"md\") == sub + \"/target.md\");",
+    "io.outputLine(bwOk, bwTxt.ok, bwTxt.text == \"alpha\\nbeta\\n\", trLines, fwOk, appRes.ok, frLines, not io.readerOk(badOpen), io.readerError(badOpen) =!= \"\");",
+    "io.outputLine(made.ok, wrote.ok, readOk.ok, readOk.text == \"hello world\\n\", not badRead.ok, copied.ok);",
+    "io.outputLine(wroteRaw.ok, readRaw, wroteEmpty.ok, readEmpty, not badByteHigh.ok, fs.kind(dir + \"/bad-high.bin\"), not badByteNeg.ok);",
+    "io.outputLine(entries, linked.ok, real.ok, real.path == fs.realPath(file).path, removed.ok, removedMissing.ok);",
+    "io.outputLine(proc.cwd() =!= \"\", proc.execPath() =!= \"\", proc.platform() =!= \"\", proc.arch() =!= \"\", proc.runtimeVersion() =!= \"\", not unsetEnv.found, unsetEnv.value == \"\", homeEnv.found);",
+    "io.outputLine(childOk.status, childOk.stdout, childOk.stderr == \"\", childOk.error == \"\", childFail.status, childFail.error =!= \"\");",
+    "io.outputLine(childBytes.status, childBytes.error == \"\", fs.readBytes(bytesOutPath), fs.readBytes(bytesErrPath), childTimeout.status, childTimeout.error =!= \"\", utfBytes, uni.utf8Encode(\"\"));",
+    "io.outputLine(hashText == \"2cf24dba5fb0a30e26e83b2ac5b9e29e1b161e5c1fa7425e73043362938b9824\", hashBytes == hashRawFile.hex, hashEmptyBytes == crypto.sha256Text(\"\"), hashFile.ok, hashFile.hex == crypto.sha256Text(\"hello world\\n\"), not hashMissing.ok);",
+    "io.outputLine(t1 >= t0, iso =!= \"\");",
+    "clean := fs.remove(dir);",
+    "io.outputLine(clean.ok, fs.kind(dir));"
+], "\n");
+coreHostExpected := text.joinTexts([
+    "dir file file missing true true true target true",
+    "true true true alpha|beta|gamma true true first|second|third true true",
+    "true true true true true true",
+    "true [0, 65, 255, 13, 10] true [] true missing true",
+    "[sub, sub-copy] true true true true true",
+    "true true true true true true true true",
+    "0 ok:ping true true -1 true",
+    "3 true [0, 65, 255, 13, 10] [5, 42] -1 true [65, 226, 130, 172] []",
+    "true true true true true true",
+    "true true",
+    "true missing"
+], "\n") + "\n";
+compilerTest.assertCompileRunTsNamed(root, tsComp, "core-host-os", coreHostSrc, fixtureName, coreHostExpected);
+
+/* core/text unicode scalar length/at */
+compilerTest.assertCompileRunTsNamed(
+    root,
+    tsComp,
+    "core-text-scalar",
+    "textLib := import \"core/text\"; io := import \"core/io\"; io.outputLine(textLib.length(\"A🙂\"), textLib.at(\"A🙂\", 1));",
+    fixtureName,
+    "2 🙂\n"
+);
+
+/* extended core crypto, time, and unicode */
+extCoreSrc := text.joinTexts([
+    "crypto := import \"core/crypto\";",
+    "list := import \"core/list\";",
+    "time := import \"core/time\";",
+    "uni := import \"core/unicode\";",
+    "io := import \"core/io\";",
+    "raw: List<Int> = [0, 65, 255];",
+    "b64 := crypto.base64Encode(raw);",
+    "b64Ok := crypto.isValidBase64(b64);",
+    "b64Dec := crypto.base64Decode(b64);",
+    "b64Bad1 := crypto.isValidBase64(\"not-base64!\");",
+    "b64Bad2 := crypto.isValidBase64(\"YWJj=\");",
+    "hex := crypto.hexEncode(raw);",
+    "hexOk := crypto.isValidHex(\"0041FF\");",
+    "hexDec := crypto.hexDecode(\"0041FF\");",
+    "hexBadOdd := crypto.isValidHex(\"abc\");",
+    "hexBadChar := crypto.isValidHex(\"zz\");",
+    "sha512 := crypto.sha512Text(\"abc\");",
+    "sha512b := crypto.sha512Bytes([97, 98, 99]);",
+    "hmac := crypto.hmacSha256Bytes([107, 101, 121], [97, 98, 99]);",
+    "var longKey: mut List<Int> = [];",
+    "loop list.listCountInt(longKey) < 80 { list.pushBack(mut longKey, 170); }",
+    "hmacLong := crypto.hmacSha256Bytes(longKey, [84, 101, 115, 116]);",
+    "rand0 := crypto.randomBytes(0);",
+    "rand16 := crypto.randomBytes(16);",
+    "ms0 := time.epochMs();",
+    "ns0 := time.epochNs();",
+    "isoNow := time.utcIsoNow();",
+    "mono0 := time.monotonicNs();",
+    "time.sleepMs(15);",
+    "mono1 := time.monotonicNs();",
+    "ldate := time.localDate();",
+    "u8 := uni.utf8Encode(\"A€🙂\");",
+    "u8Ok := uni.utf8DecodeStrict(u8);",
+    "u8Bad := uni.utf8DecodeStrict([255]);",
+    "u8Overlong := uni.utf8DecodeStrict([192, 175]);",
+    "u8Surrogate := uni.utf8DecodeStrict([237, 160, 128]);",
+    "u8BadVal := uni.utf8DecodeStrict([256]);",
+    "u8Lossy := uni.utf8DecodeLossy([65, 255, 66]);",
+    "u8LossyEdge := uni.utf8DecodeLossy([65, 224, 128, 66, 226, 130]);",
+    "u16 := uni.utf16Encode(\"A🙂\");",
+    "u16Ok := uni.utf16DecodeStrict(u16);",
+    "u16BadHigh := uni.utf16DecodeStrict([55357]);",
+    "u16BadLow := uni.utf16DecodeStrict([56898]);",
+    "u16BadRange := uni.utf16DecodeStrict([65536]);",
+    "cps := uni.toCodePoints(\"A€🙂\");",
+    "cpOk := uni.fromCodePoints(cps);",
+    "cpBadSur := uni.fromCodePoints([55296]);",
+    "cpBadHi := uni.fromCodePoints([1114112]);",
+    "oneCp := uni.fromCodePoint(128578);",
+    "io.outputLine(b64, b64Ok, b64Dec, not b64Bad1, not b64Bad2);",
+    "io.outputLine(hex, hexOk, hexDec, not hexBadOdd, not hexBadChar);",
+    "io.outputLine(sha512 == \"ddaf35a193617abacc417349ae20413112e6fa4e89a97ea20a9eeee64b55d39a2192992a274fc1a836ba3c23a3feebbd454d4423643ce80e2a9ac94fa54ca49f\", sha512 == sha512b);",
+    "io.outputLine(hmac, hmacLong, list.listCountInt(rand0), list.listCountInt(rand16));",
+    "io.outputLine(ms0 > 1700000000000, ns0 >= ms0 * 1000000, mono1 > mono0, ldate, isoNow);",
+    "io.outputLine(u8, u8Ok.ok, u8Ok.text == \"A€🙂\", not u8Bad.ok, not u8Overlong.ok, not u8Surrogate.ok, not u8BadVal.ok, u8Lossy, u8LossyEdge);",
+    "io.outputLine(uni.isValidUtf8(u8), not uni.isValidUtf8([255]), uni.utf16Length(\"A🙂\"), u16, u16Ok.ok, u16Ok.text == \"A🙂\");",
+    "io.outputLine(not u16BadHigh.ok, not u16BadLow.ok, not u16BadRange.ok);",
+    "io.outputLine(cps, cpOk.ok, cpOk.text == \"A€🙂\", not cpBadSur.ok, not cpBadHi.ok);",
+    "io.outputLine(oneCp.ok, oneCp.text == \"🙂\", uni.codePointAt(\"A€🙂\", 2), uni.isValidScalar(65), not uni.isValidScalar(55296), not uni.isValidScalar(1114112));"
+], "\n");
+extRun := compilerTest.compileCheckRunTs(root, tsComp, extCoreSrc, fixtureName);
+test.checkInt("ext-core status", 0, extRun.status);
+extLines: mut List<String> = [];
+var lineStart := 0;
+var extPos := 0;
+extLen := text.length(extRun.stdout);
+loop extPos < extLen {
+    if text.at(extRun.stdout, extPos) == "\n" {
+        list.pushBack(mut extLines, text.slice(extRun.stdout, lineStart, extPos));
+        lineStart = extPos + 1;
+    }
+    extPos = extPos + 1;
+}
+var extLineCount := 0;
+loop extLines as _l { extLineCount = extLineCount + 1; }
+test.checkInt("ext-core line count", 10, extLineCount);
+test.checkText("ext-core line 0", "AEH/ true [0, 65, 255] true true", extLines[0]);
+test.checkText("ext-core line 1", "0041ff true [0, 65, 255] true true", extLines[1]);
+test.checkText("ext-core line 2", "true true", extLines[2]);
+test.checkText("ext-core line 3", "9c196e32dc0175f86f4b1cb89289d6619de6bee699e4c378e68309ed97a1a6ab 1afc6ca6c0ce1afa0ffeebf214fd763101957961e5f70cfac3b5d005e8fd5625 0 16", extLines[3]);
+test.check("ext-core line 4 time markers: " + extLines[4], text.startsWithAt(extLines[4], 0, "true true true ") and text.endsWith(extLines[4], "Z") and text.containsText(extLines[4], "T"));
+fffd := unicode.fromCodePoint(65533).text;
+test.checkText("ext-core line 5", "[65, 226, 130, 172, 240, 159, 153, 130] true true true true true true A" + fffd + "B A" + fffd + fffd + "B" + fffd, extLines[5]);
+test.checkText("ext-core line 6", "true true 3 [65, 55357, 56898] true true", extLines[6]);
+test.checkText("ext-core line 7", "true true true", extLines[7]);
+test.checkText("ext-core line 8", "[65, 8364, 128578] true true true true", extLines[8]);
+test.checkText("ext-core line 9", "true true 128578 true true true", extLines[9]);
+
+/* unicode-only builtin vs pure emitter */
+uniOnlySrc := "uni := import \"core/unicode\"; io := import \"core/io\"; io.outputLine(uni.utf8DecodeStrict(uni.utf8Encode(\"hi\")).text, uni.toCodePoints(\"🙂\"));";
+uniDefaultComp := compilerTest.compileStdin(root, tsComp, uniOnlySrc, fixtureName);
+test.checkInt("uni-only default compile", 0, uniDefaultComp.status);
+test.check("uni-only default check", compilerTest.checkTsCode(root, uniDefaultComp.stdout).ok);
+test.check("uni-only default utf8Encode", text.containsText(uniDefaultComp.stdout, "lite$unicodeUtf8Encode("));
+test.check("uni-only default utf8DecodeStrict", text.containsText(uniDefaultComp.stdout, "lite$unicodeUtf8DecodeStrict("));
+test.check("uni-only default no node", not text.containsText(uniDefaultComp.stdout, "node:buffer") and not text.containsText(uniDefaultComp.stdout, "node:crypto"));
+uniDefaultRun := compilerTest.checkAndRunTs(root, uniDefaultComp.stdout);
+test.checkInt("uni-only default run", 0, uniDefaultRun.status);
+test.checkText("uni-only default out", "hi [128578]\n", uniDefaultRun.stdout);
+
+pureOpts: List<String> = ["--builtin-mode", "pure"];
+uniPureComp := compilerTest.compileStdinWithOpts(root, tsComp, root, uniOnlySrc, fixtureName, "", pureOpts);
+test.checkInt("uni-only pure compile", 0, uniPureComp.status);
+test.check("uni-only pure check", compilerTest.checkTsCode(root, uniPureComp.stdout).ok);
+test.check("uni-only pure no host decoder", not text.containsText(uniPureComp.stdout, "TextEncoder") and not text.containsText(uniPureComp.stdout, "TextDecoder") and not text.containsText(uniPureComp.stdout, "node:buffer") and not text.containsText(uniPureComp.stdout, "node:crypto"));
+uniPureRun := compilerTest.checkAndRunTs(root, uniPureComp.stdout);
+test.checkInt("uni-only pure run", 0, uniPureRun.status);
+test.checkText("uni-only pure out", "hi [128578]\n", uniPureRun.stdout);
+
+/* crypto invalid decode runtime exit status 2 */
+badDecode1 := compilerTest.compileCheckRunTs(root, tsComp, "c := import \"core/crypto\"; _ := c.base64Decode(\"abc\");", fixtureName);
+test.checkInt("bad base64 status", 2, badDecode1.status);
+test.check("bad base64 stderr", text.containsText(badDecode1.stderr, "invalid base64 input"));
+badDecode2 := compilerTest.compileCheckRunTs(root, tsComp, "c := import \"core/crypto\"; _ := c.hexDecode(\"abc\");", fixtureName);
+test.checkInt("bad hex status", 2, badDecode2.status);
+test.check("bad hex stderr", text.containsText(badDecode2.stderr, "invalid hex input"));
+
+/* standalone generated TS script execution */
+standaloneSrc := text.joinTexts([
+    "fs := import \"core/file\";",
+    "proc := import \"core/process\";",
+    "io := import \"core/io\";",
+    "if proc.entryPath() == \"\" { _in := io.inputAll(\"\"); _txt := fs.readText(\".\"); }",
+    "io.outputLine(proc.entryPath() =!= \"\", io.inputArgs());"
+], "\n");
+standaloneComp := compilerTest.compileStdin(root, tsComp, standaloneSrc, fixtureName);
+test.checkInt("standalone compile", 0, standaloneComp.status);
+test.check("standalone tsc", compilerTest.checkTsCode(root, standaloneComp.stdout).ok);
+tmpStandalone := fs.makeTempDir("lite-standalone-cli-");
+test.check("standalone makeTempDir", tmpStandalone.ok);
+toolScript := path.join(tmpStandalone.path, "tool.ts");
+_wtTool := fs.writeText(toolScript, standaloneComp.stdout);
+standaloneRun := proc.run(proc.execPath(), [toolScript, "alpha", "beta"], tmpStandalone.path, emptyArgs(), true, "");
+test.checkInt("standalone run status", 0, standaloneRun.status);
+test.checkText("standalone run stdout", "true [alpha, beta]\n", standaloneRun.stdout);
+_rmStandalone := fs.remove(tmpStandalone.path);
+
+/* proc.runStreams + crypto.sha256Reader + io.copyStream + io.writeAndClose */
+streamChildSrc := text.joinTexts([
+    "io := import \"core/io\";",
+    "bytes := io.readAll(io.stdinReader());",
+    "out := io.stdoutWriter();",
+    "err := io.stderrWriter();",
+    "_w1 := io.write(out, bytes);",
+    "_w2 := io.writeText(out, \"|done\");",
+    "_f1 := io.flush(out);",
+    "_w3 := io.writeLine(err, \"warn\");",
+    "_f2 := io.flush(err);"
+], "\n");
+streamChildComp := compilerTest.compileStdin(root, tsComp, streamChildSrc, fixtureName);
+test.checkInt("stream-child compile", 0, streamChildComp.status);
+test.check("stream-child tsc", compilerTest.checkTsCode(root, streamChildComp.stdout).ok);
+tmpStream := fs.makeTempDir("lite-proc-streams-test-");
+test.check("stream makeTempDir", tmpStream.ok);
+childScript := path.join(tmpStream.path, "echo-stream.ts");
+multiBin := path.join(tmpStream.path, "multi-chunk.bin");
+_wtChild := fs.writeText(childScript, streamChildComp.stdout);
+parentSrc := text.joinTexts([
+    "crypto := import \"core/crypto\";",
+    "file := import \"core/file\";",
+    "io := import \"core/io\";",
+    "list := import \"core/list\";",
+    "proc := import \"core/process\";",
+    "outW := io.bufferWriter();",
+    "errW := io.bufferWriter();",
+    "res := proc.runStreams(proc.execPath(), [" + json.quoteString(childScript) + "], \"\", [], 10000, io.bufferReader([65, 0, 66]), outW, errW);",
+    "outBytes := io.writerBytes(outW);",
+    "errTxt := io.writerText(errW);",
+    "bigFile := " + json.quoteString(multiBin) + ";",
+    "var big: mut List<Int> = [];",
+    "loop list.listCountInt(big) < 20000 { list.pushBack(mut big, (list.listCountInt(big) * 13) % 256); }",
+    "_wb := file.writeBytes(bigFile, big);",
+    "rBig := file.openReader(bigFile);",
+    "hStreamFile := crypto.sha256Reader(rBig);",
+    "_rc := io.closeReader(rBig);",
+    "hFastFile := crypto.sha256File(bigFile);",
+    "hStream := crypto.sha256Reader(io.textReader(\"hello\"));",
+    "h512 := crypto.sha512Text(\"abc\");",
+    "ioW := io.bufferWriter();",
+    "ioCopied := io.copyStream(io.textReader(\"via-io\"), ioW);",
+    "ioWTxt := io.writerText(ioW);",
+    "wcWriter := io.bufferWriter();",
+    "wcRes := io.writeAndClose(wcWriter, [120, 121]);",
+    "wcBytes := io.writerBytes(wcWriter);",
+    "wcClosed := io.writerOk(wcWriter);",
+    "io.outputLine(res.status, res.error == \"\", outBytes, errTxt.ok, errTxt.text == \"warn\\n\", hStreamFile.ok, hStreamFile.hex == hFastFile.hex, hStream.ok, hStream.hex == crypto.sha256Text(\"hello\"), h512 == crypto.sha512Text(\"abc\"), ioCopied.ok, ioCopied.copied, ioWTxt.ok, ioWTxt.text, wcRes.ok, wcBytes, wcClosed);"
+], "\n");
+compilerTest.assertCompileRunTsNamed(
+    root,
+    tsComp,
+    "proc-streams-parent",
+    parentSrc,
+    fixtureName,
+    "0 true [65, 0, 66, 124, 100, 111, 110, 101] true true true true true true true true 6 true via-io true [120, 121] false\n"
+);
+_rmStream := fs.remove(tmpStream.path);
+
+compilerTest.assertCompileErrorContainsNamed(
+    root,
+    tsComp,
+    "removed file.copyStream",
+    "file := import \"core/file\"; io := import \"core/io\"; _ := file.copyStream(io.textReader(\"a\"), io.bufferWriter());",
+    fixtureName,
+    "unknown module member file.copyStream"
+);
+
+/* unbound host declaration rejections */
+tmpUnbound := fs.makeTempDir("lite-core-os-unbound-");
+test.check("unbound makeTempDir", tmpUnbound.ok);
+_wu1 := fs.writeText(path.join(tmpUnbound.path, "file.lts"), "pub kind := fn(path: String): String;\n");
+appUnbPath := path.join(tmpUnbound.path, "app.lts");
+appUnbSrc := "file := import \"./file.lts\"; x := file.kind(\".\");\n";
+_wu2 := fs.writeText(appUnbPath, appUnbSrc);
+realUnbApp := fs.realPath(appUnbPath);
+test.check("unbound realPath", realUnbApp.ok);
+compilerTest.assertCompileErrorContainsNamed(root, tsComp, "unbound relative", appUnbSrc, realUnbApp.path, "bodyless function declaration has no matching core host binding");
+_rmUnbound := fs.remove(tmpUnbound.path);
+
+compilerTest.assertCompileErrorContainsNamed(root, tsComp, "bad file abi", "pub kind := fn(path: String): Int;", "lib/core/file.lts", "bodyless function declaration has no matching core host binding");
+compilerTest.assertCompileErrorContainsNamed(root, tsComp, "bad ext-ts abi", "pub stripTypes := fn(source: String): String;", "lib/external/ts.lts", "bodyless function declaration has no matching core host binding");
+compilerTest.assertCompileErrorContainsNamed(root, tsComp, "bad ext-pool abi", "pub cpuCount := fn(): String;", "lib/external/pool.lts", "bodyless function declaration has no matching core host binding");
+
+/* external/ts, external/pool, external/http, external/bench */
+extTsRun := compilerTest.compileCheckRunTs(
+    root,
+    tsComp,
+    "io := import \"core/io\"; extTs := import \"external/ts\"; good := extTs.stripTypes(\"const x: number = 42;\"); io.outputLine(good.ok, good.code);",
+    fixtureName
+);
+test.checkInt("external-ts status", 0, extTsRun.status);
+test.checkText("external-ts stdout", "true const x         = 42;\n", extTsRun.stdout);
+
+extPoolSrc := "io := import \"core/io\"; pool := import \"external/pool\"; procs := pool.cpuCount(); empty := pool.runPoolJson([], [], \"\", 2); out := pool.runPoolJson([\"node\", \"node\"], [\"[\\\"-e\\\",\\\"process.stdout.write('one')\\\"]\", \"[\\\"-e\\\",\\\"process.stdout.write('two');process.exit(3)\\\"]\"], \"\", 2); io.outputLine(procs >= 1, empty, out);";
+extPoolRun := compilerTest.compileCheckRunTs(root, tsComp, extPoolSrc, fixtureName);
+test.checkInt("ext-pool status", 0, extPoolRun.status);
+test.check("ext-pool prefix", text.startsWithAt(extPoolRun.stdout, 0, "true [] ["));
+poolJsonText := text.slice(extPoolRun.stdout, text.length("true [] "), text.length(extPoolRun.stdout) - 1);
+test.check("ext-pool json valid", json.validate(poolJsonText).ok);
+poolElems := json.arrayElementOffsets(poolJsonText, 0);
+test.checkInt("ext-pool len", 2, list.listCountInt(poolElems));
+test.checkInt("ext-pool 0 status", 0, json.readObjectInt(poolJsonText, poolElems[0], "status").value);
+test.checkText("ext-pool 0 stdout", "one", json.readObjectString(poolJsonText, poolElems[0], "stdout").value);
+test.checkText("ext-pool 0 stderr", "", json.readObjectString(poolJsonText, poolElems[0], "stderr").value);
+test.checkText("ext-pool 0 error", "", json.readObjectString(poolJsonText, poolElems[0], "error").value);
+test.checkInt("ext-pool 1 status", 3, json.readObjectInt(poolJsonText, poolElems[1], "status").value);
+test.checkText("ext-pool 1 stdout", "two", json.readObjectString(poolJsonText, poolElems[1], "stdout").value);
+test.checkText("ext-pool 1 stderr", "", json.readObjectString(poolJsonText, poolElems[1], "stderr").value);
+test.checkText("ext-pool 1 error", "", json.readObjectString(poolJsonText, poolElems[1], "error").value);
+
+extProbes: List<String> = [
+    "extHttp := import \"external/http\"; res := extHttp.fetchToFile(\"http://127.0.0.1:1/\", \"\", 50, []); if res.ok { _ := res.status; }",
+    "extHttp := import \"external/http\"; if false { _ := extHttp.serveStatic(\".\", \"\", \"127.0.0.1\", 0); }",
+    "extBench := import \"external/bench\"; if false { _ := extBench.measureCompilerArtifact(\"T11\", \"a\", \"b\", \"c\", \"d\"); }",
+    "pool := import \"external/pool\"; if false { _a := pool.cpuCount(); _b := pool.runPoolJson([], [], \"\", 0); }"
+];
+loop extProbes as probe {
+    pComp := compilerTest.compileStdin(root, tsComp, probe, fixtureName);
+    test.checkInt("ext-probe compile", 0, pComp.status);
+    test.check("ext-probe tsc", compilerTest.checkTsCode(root, pComp.stdout).ok);
+}
+
+/* C backend dead-fn DCE and target rejections */
+reachableCComp := compilerTest.compileStdin(root, cComp, "unused := fn(): List<Int> { xs: List<Int> = [1, 2]; xs }; io := import \"core/io\"; io.outputLine(42);", fixtureName);
+test.checkInt("reachable-c status", 0, reachableCComp.status);
+test.check("reachable-c emits 42", text.containsText(reachableCComp.stdout, "42"));
+
+cRejCases: List<(src: String, sub: String)> = [
+    (src = "unused := fn(): Int { 1 }; used := fn(): Int { 2 }; io := import \"core/io\"; io.outputLine(used());", sub = "C backend does not support top-level functions yet"),
+    (src = "fs := import \"core/file\"; x := fs.kind(\".\");", sub = "C backend does not support filesystem builtins yet"),
+    (src = "fs := import \"core/file\"; x := fs.readBytes(\".\");", sub = "filesystem builtins"),
+    (src = "fs := import \"core/file\"; x := fs.writeBytes(\".\", []);", sub = "filesystem builtins"),
+    (src = "io := import \"core/io\"; x := io.bufferWriter();", sub = "stream builtins"),
+    (src = "io := import \"core/io\"; x := io.stdinReader();", sub = "stream builtins"),
+    (src = "proc := import \"core/process\"; x := proc.cwd();", sub = "C backend does not support process builtins yet"),
+    (src = "proc := import \"core/process\"; x := proc.runBytes(\"true\", [], \"\", [], 0, [], \"\", \"\");", sub = "process builtins"),
+    (src = "c := import \"core/crypto\"; x := c.sha256Text(\"a\");", sub = "crypto builtins"),
+    (src = "c := import \"core/crypto\"; x := c.sha256Bytes([]);", sub = "crypto builtins"),
+    (src = "c := import \"core/crypto\"; x := c.sha512Text(\"a\");", sub = "crypto builtins"),
+    (src = "c := import \"core/crypto\"; x := c.base64Decode(\"YQ==\");", sub = "crypto builtins"),
+    (src = "c := import \"core/crypto\"; x := c.randomBytes(4);", sub = "crypto builtins"),
+    (src = "t := import \"core/time\"; x := t.monotonicNs();", sub = "time builtins"),
+    (src = "t := import \"core/time\"; t.sleepMs(1);", sub = "time builtins"),
+    (src = "t := import \"core/time\"; x := t.localDate();", sub = "time builtins"),
+    (src = "extTs := import \"external/ts\"; x := extTs.stripTypes(\"const a: number = 1;\");", sub = "external host builtins"),
+    (src = "extHttp := import \"external/http\"; x := extHttp.serveStatic(\".\", \"\", \"127.0.0.1\", 0);", sub = "external host builtins"),
+    (src = "extBench := import \"external/bench\"; x := extBench.measureCompilerArtifact(\"T11\", \"a\", \"b\", \"c\", \"d\");", sub = "external host builtins"),
+    (src = "pool := import \"external/pool\"; x := pool.cpuCount();", sub = "external host builtins"),
+    (src = "pool := import \"external/pool\"; x := pool.runPoolJson([], [], \"\", 0);", sub = "external host builtins"),
+    (src = "textLib := import \"core/text\"; x := textLib.indexOf(\"ab\", \"b\", 0);", sub = "text builtins"),
+    (src = "u := import \"core/unicode\"; x := u.utf8Encode(\"ab\");", sub = "unicode builtins"),
+    (src = "u := import \"core/unicode\"; x := u.utf16Length(\"ab\");", sub = "unicode builtins"),
+    (src = "u := import \"core/unicode\"; x := u.codePointAt(\"ab\", 0);", sub = "unicode builtins")
+];
+loop cRejCases as cr {
+    cR := compilerTest.compileStdin(root, cComp, cr.src, fixtureName);
+    test.checkInt("c-reject status: " + cr.src, 2, cR.status);
+    test.check("c-reject msg: " + cr.src + " -> " + cR.stderr, text.containsText(cR.stderr, cr.sub) or text.containsText(cR.stderr, "list values") or text.containsText(cR.stderr, "tuple values") or text.containsText(cR.stderr, "top-level functions"));
+}
+
+test.done("core-host-bindings");
