@@ -23,10 +23,10 @@ test('resolveLiteExecutable prefers explicit config, then workspace ./bin/lite, 
   assert.equal(resolveLiteExecutable('/tmp', ''), 'lite');
 });
 
-test('built dist/extension.js exists and has valid JavaScript syntax', () => {
-  const builtPath = join(extRoot, 'dist', 'extension.js');
-  assert.equal(existsSync(builtPath), true, 'dist/extension.js must be built');
-  assert.equal(existsSync(join(extRoot, 'dist', 'helpers.js')), true, 'dist/helpers.js must be built');
+test('built dist/vscode/extension.js exists and has valid JavaScript syntax', () => {
+  const builtPath = join(repoRoot, 'dist', 'vscode', 'extension.js');
+  assert.equal(existsSync(builtPath), true, 'dist/vscode/extension.js must be built');
+  assert.equal(existsSync(join(repoRoot, 'dist', 'vscode', 'helpers.js')), true, 'dist/vscode/helpers.js must be built');
   execFileSync(process.execPath, ['--check', builtPath]);
   const src = readFileSync(builtPath, 'utf8');
   assert(src.includes('registerDocumentFormattingEditProvider'));

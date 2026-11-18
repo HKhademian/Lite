@@ -15,7 +15,7 @@
   "activationEvents": [
     "onLanguage:lite"
   ],
-  "main": "./dist/extension.js",
+  "main": "../../dist/vscode/extension.js",
   "contributes": {
     "languages": [
       {
@@ -73,7 +73,7 @@
     "build": "node scripts/build.ts",
     "test": "npm run build && node --test test/grammar.test.ts test/extension.test.ts",
     "vscode:prepublish": "npm run build",
-    "package": "npm run build && vsce package --no-dependencies --allow-missing-repository --out lite-0.1.1.vsix"
+    "package": "npm run build && vsce package --no-dependencies --allow-missing-repository --out ../../dist/vscode/lite-0.1.1.vsix"
   },
   "devDependencies": {
     "@vscode/vsce": "4.1.0",

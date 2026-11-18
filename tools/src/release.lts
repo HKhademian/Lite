@@ -304,9 +304,24 @@ prepareRelease := fn(directory: String, output: String, tag: String): Unit {
         if fs.kind(packager) == fs.FILE_KIND_MISSING {
             failRelease(work, "install locked editor packaging dependencies");
         }
+        buildArgs: List<String> = [path.join(source, "editors/vscode/scripts/build.ts")];
+        runChecked(work, proc.execPath(), buildArgs, source, "");
+        stageDir := path.join(work, "vsix-stage");
+        cpExt := fs.copy(path.join(source, "editors/vscode"), stageDir);
+        if not cpExt.ok { failRelease(work, cpExt.error); }
+        cpJs := fs.copy(path.join(source, "dist/vscode"), path.join(stageDir, "dist"));
+        if not cpJs.ok { failRelease(work, cpJs.error); }
+        pkgStage := path.join(stageDir, "package.json");
+        pkgRead := fs.readText(pkgStage);
+        if not pkgRead.ok { failRelease(work, pkgRead.error); }
+        stagePkg := text.slice(pkgRead.text, 0, text.indexOfText(pkgRead.text, "\"../../dist/vscode/extension.js\"", 0))
+        + "\"./dist/extension.js\""
+        + text.slice(pkgRead.text, text.indexOfText(pkgRead.text, "\"../../dist/vscode/extension.js\"", 0) + 32, text.length(pkgRead.text));
+        wPkg := fs.writeText(pkgStage, stagePkg);
+        if not wPkg.ok { failRelease(work, wPkg.error); }
         vsixFile = "lite-" + selected.version + ".vsix";
         vsixArgs: List<String> = [packager, "package", "--no-dependencies", "--allow-missing-repository", "--skip-license", "--out", path.join(work, vsixFile)];
-        runChecked(work, proc.execPath(), vsixArgs, path.join(source, "editors/vscode"), "");
+        runChecked(work, proc.execPath(), vsixArgs, stageDir, "");
         vsixDigest := crypto.sha256File(path.join(work, vsixFile));
         if not vsixDigest.ok { failRelease(work, vsixDigest.error); }
         hasVsix = true;
