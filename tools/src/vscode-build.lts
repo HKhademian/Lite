@@ -3,9 +3,9 @@
 io := import "core/io";
 fs := import "core/file";
 path := import "core/path";
-proc := import "core/process";
 text := import "core/text";
 list := import "core/list";
+extTs := import "external/ts";
 project := import "util/project";
 
 replaceAll := fn(haystack: String, needle: String, replacement: String): String {
@@ -29,18 +29,14 @@ replaceAll := fn(haystack: String, needle: String, replacement: String): String 
 
 buildExtensionFile := fn(extRoot: String, distDir: String, name: String): (ok: Bool, error: String) {
     srcPath := path.join(extRoot, "src/" + name + ".ts");
-    script := "import { readFileSync } from 'node:fs'; import { stripTypeScriptTypes } from 'node:module'; process.stdout.write(stripTypeScriptTypes(readFileSync(process.argv[1], 'utf8'), { mode: 'strip' }));";
-    args: List<String> = ["--input-type=module", "-e", script, srcPath];
-    emptyEnv: List<String> = [];
-    stripped := proc.run(proc.execPath(), args, extRoot, emptyEnv, true, "");
-    if stripped.error =!= "" { return (ok = false, error = stripped.error); }
-    if stripped.status =!= 0 {
-        return (ok = false, error = text.trim(stripped.stderr + stripped.stdout));
-    }
+    srcRead := fs.readText(srcPath);
+    if not srcRead.ok { return (ok = false, error = srcRead.error); }
+    stripped := extTs.stripTypes(srcRead.text);
+    if not stripped.ok { return (ok = false, error = stripped.error); }
     jsText := if name == "extension" {
-        replaceAll(stripped.stdout, "from './helpers.ts'", "from './helpers.js'")
+        replaceAll(stripped.code, "from './helpers.ts'", "from './helpers.js'")
     } else {
-        stripped.stdout
+        stripped.code
     };
     wRes := fs.writeText(path.join(distDir, name + ".js"), jsText);
     if not wRes.ok { return (ok = false, error = wRes.error); }

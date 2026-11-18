@@ -166,6 +166,7 @@ usesHostErrorResult := fn(calls: String): Bool {
     usesBuiltin(calls, "ioWriteText") or usesBuiltin(calls, "ioWriteLine") or usesBuiltin(calls, "ioFlush") or
     usesBuiltin(calls, "ioCloseWriter") or usesBuiltin(calls, "ioWriterText") or usesBuiltin(calls, "processRunBytes") or
     usesBuiltin(calls, "cryptoDigestFile") or usesBuiltin(calls, "unicodeUtf8DecodeStrict") or
+    usesBuiltin(calls, "extTsStripTypes") or usesBuiltin(calls, "extHttpFetchToFile") or
     usesToBytesDiag(calls)
 }
 
@@ -202,9 +203,15 @@ usesUnicode := fn(calls: String): Bool {
     usesBuiltin(calls, "unicodeUtf8DecodeLossy")
 }
 
+/** True when any emitted item calls an external host binding declared under `lib/external/`. */
+usesExternal := fn(calls: String): Bool {
+    usesBuiltin(calls, "extTsStripTypes") or usesBuiltin(calls, "extHttpFetchToFile") or
+    usesBuiltin(calls, "extHttpServeStatic") or usesBuiltin(calls, "extBenchMeasureCompiler")
+}
+
 /** True when any emitted item calls any OS/host tool builtin beyond basic I/O and text. */
 usesHostOs := fn(calls: String): Bool {
-    usesFile(calls) or usesStreamRuntime(calls) or usesProcess(calls) or usesCrypto(calls) or usesCryptoBuffer(calls) or usesTime(calls)
+    usesFile(calls) or usesStreamRuntime(calls) or usesProcess(calls) or usesCrypto(calls) or usesCryptoBuffer(calls) or usesTime(calls) or usesExternal(calls)
 }
 
 /** True when a program needs checked dynamic Int* arithmetic or narrow range guards. */
@@ -447,6 +454,15 @@ emitProcessDecl := fn(calls: String): Unit {
             outLine("    arch: string;");
             outLine("    version: string;");
             outLine("    env: Record<string, string | undefined>;");
+        } else if usesBuiltin(calls, "extHttpFetchToFile") or usesBuiltin(calls, "extBenchMeasureCompiler") {
+            outLine("    execPath: string;");
+        }
+        if usesBuiltin(calls, "extBenchMeasureCompiler") {
+            outLine("    exitCode?: number;");
+            outLine("    stdout: { write(chunk: string): boolean };");
+            outLine("    stderr: { write(chunk: string): boolean };");
+            outLine("    cpuUsage(previousValue?: { user: number; system: number }): { user: number; system: number };");
+            outLine("    resourceUsage(): { maxRSS: number };");
         }
         if usesBuiltin(calls, "timeMonotonicNs") {
             outLine("    hrtime: { bigint(): bigint };");
@@ -462,7 +478,8 @@ emitProcessDecl := fn(calls: String): Unit {
                 outLine("        fstatSync(fd: number): { isFile(): boolean; isDirectory(): boolean };");
                 outLine("        fsyncSync(fd: number): void;");
             }
-            if usesFile(calls) or usesBuiltin(calls, "processRunBytes") or usesBuiltin(calls, "cryptoDigestFile") {
+            if usesFile(calls) or usesBuiltin(calls, "processRunBytes") or usesBuiltin(calls, "cryptoDigestFile") or
+            usesBuiltin(calls, "extHttpServeStatic") or usesBuiltin(calls, "extBenchMeasureCompiler") {
                 outLine("        statSync(path: string): { isFile(): boolean; isDirectory(): boolean };");
                 outLine("        readFileSync(path: string): Uint8Array;");
                 outLine("        writeFileSync(path: string, data: string, encoding: \"utf8\"): void;");
@@ -479,14 +496,34 @@ emitProcessDecl := fn(calls: String): Unit {
             }
             outLine("    };");
         }
+        if usesBuiltin(calls, "fileMakeTempDir") or usesBuiltin(calls, "extHttpServeStatic") {
+            outLine("    getBuiltinModule(name: \"node:path\"): {");
+            outLine("        join(...paths: string[]): string;");
+            if usesBuiltin(calls, "extHttpServeStatic") {
+                outLine("        extname(path: string): string;");
+                outLine("        normalize(path: string): string;");
+                outLine("        resolve(...paths: string[]): string;");
+            }
+            outLine("    };");
+        }
         if usesBuiltin(calls, "fileMakeTempDir") {
-            outLine("    getBuiltinModule(name: \"node:path\"): { join(...paths: string[]): string };");
             outLine("    getBuiltinModule(name: \"node:os\"): { tmpdir(): string };");
         }
-        if usesBuiltin(calls, "processRun") or usesBuiltin(calls, "processRunBytes") {
+        if usesBuiltin(calls, "extHttpServeStatic") {
+            outLine("    getBuiltinModule(name: \"node:http\"): {");
+            outLine("        createServer(handler: (req: { url?: string }, res: { writeHead(status: number, headers: Record<string, string>): void; end(body?: string | Uint8Array): void }) => void): { listen(port: number, host: string, cb: () => void): void };");
+            outLine("    };");
+        }
+        if usesBuiltin(calls, "extTsStripTypes") {
+            outLine("    getBuiltinModule(name: \"node:module\"): { stripTypeScriptTypes(code: string, options: { mode: \"strip\" }): string };");
+        }
+        if usesBuiltin(calls, "extBenchMeasureCompiler") {
+            outLine("    getBuiltinModule(name: \"node:url\"): { pathToFileURL(path: string): { href: string } };");
+        }
+        if usesBuiltin(calls, "processRun") or usesBuiltin(calls, "processRunBytes") or usesBuiltin(calls, "extHttpFetchToFile") {
             outLine("    getBuiltinModule(name: \"node:child_process\"): {");
-            if usesBuiltin(calls, "processRun") {
-                outLine("        spawnSync(command: string, args: readonly string[], options: { cwd?: string; env: Record<string, string | undefined>; encoding?: \"utf8\"; input?: string; stdio: \"inherit\" | readonly [\"pipe\", \"pipe\", \"pipe\"]; maxBuffer: number }): { status: number | null; signal: string | null; stdout: string | null; stderr: string | null; error?: Error };");
+            if usesBuiltin(calls, "processRun") or usesBuiltin(calls, "extHttpFetchToFile") {
+                outLine("        spawnSync(command: string, args: readonly string[], options: { cwd?: string; env?: Record<string, string | undefined>; encoding?: \"utf8\"; input?: string; stdio: \"inherit\" | readonly [\"pipe\", \"pipe\", \"pipe\"]; timeout?: number; maxBuffer: number }): { status: number | null; signal: string | null; stdout: string | null; stderr: string | null; error?: Error };");
             }
             if usesBuiltin(calls, "processRunBytes") {
                 outLine("        spawnSync(command: string, args: readonly string[], options: { cwd?: string; env: Record<string, string | undefined>; input: Uint8Array; stdio: readonly [\"pipe\", \"pipe\", \"pipe\"]; timeout?: number; maxBuffer: number }): { status: number | null; signal: string | null; stdout: Uint8Array | null; stderr: Uint8Array | null; error?: Error };");
@@ -509,6 +546,12 @@ emitProcessDecl := fn(calls: String): Unit {
             outLine("    };");
         }
         outLine("};");
+    }
+    if usesBuiltin(calls, "extBenchMeasureCompiler") {
+        outLine("declare const performance: { now(): number };");
+    }
+    if usesBuiltin(calls, "extHttpServeStatic") {
+        outLine("declare const console: { log(message: string): void };");
     }
     if needTextDecoder {
         outLine("declare const TextDecoder: { new (label: string, options?: { fatal?: boolean }): { decode(input?: Uint8Array, options?: { stream?: boolean }): string } };");
@@ -1285,6 +1328,142 @@ emitUnicodeHelpers := fn(calls: String): Unit {
     outLine("");
 }
 
+/** Emits external host helpers for `lib/external/` bindings used by the program. */
+emitExternalHelpers := fn(calls: String): Unit {
+    if not usesExternal(calls) { return; }
+    if usesBuiltin(calls, "extTsStripTypes") {
+        outLine("function lite$extTsStripTypes(source: string): { ok: boolean; code: string; error: string } {");
+        outLine("    try {");
+        outLine("        return { ok: true, code: process.getBuiltinModule(\"node:module\").stripTypeScriptTypes(source, { mode: \"strip\" }), error: \"\" };");
+        outLine("    } catch (error) {");
+        outLine("        return { ok: false, code: \"\", error: lite$errMsg(error) };");
+        outLine("    }");
+        outLine("}");
+    }
+    if usesBuiltin(calls, "extHttpFetchToFile") {
+        outLine("function lite$extHttpFetchToFile(url: string, outPath: string, timeoutMs: bigint, headers: readonly string[]): { ok: boolean; status: bigint; byteCount: bigint; retryAfter: string; error: string } {");
+        outLine("    const reqHeaders: Record<string, string> = {};");
+        outLine("    for (const h of headers) {");
+        outLine("        const idx = h.indexOf(\":\");");
+        outLine("        if (idx > 0) reqHeaders[h.slice(0, idx).trim()] = h.slice(idx + 1).trim();");
+        outLine("    }");
+        outLine("    const worker = [");
+        outLine("        \"const fs = process.getBuiltinModule('node:fs');\",");
+        outLine("        \"const req = JSON.parse(fs.readFileSync(0, 'utf8'));\",");
+        outLine("        \"const ctrl = req.timeoutMs > 0 ? AbortSignal.timeout(req.timeoutMs) : undefined;\",");
+        outLine("        \"try {\",");
+        outLine("        \"  const res = await fetch(req.url, { headers: req.headers, signal: ctrl });\",");
+        outLine("        \"  const retryAfter = res.headers.get('Retry-After') ?? '';\",");
+        outLine("        \"  const buf = new Uint8Array(await res.arrayBuffer());\",");
+        outLine("        \"  if (res.ok && buf.length > 0 && req.outPath !== '') { fs.writeFileSync(req.outPath, buf); }\",");
+        outLine("        \"  process.stdout.write(JSON.stringify({ ok: res.ok, status: res.status, byteCount: buf.length, retryAfter, error: '' }));\",");
+        outLine("        \"} catch (e) {\",");
+        outLine("        \"  process.stdout.write(JSON.stringify({ ok: false, status: 0, byteCount: 0, retryAfter: '', error: e instanceof Error ? e.message : String(e) }));\",");
+        outLine("        \"}\",");
+        outLine("    ].join(\"\\n\");");
+        outLine("    const res = process.getBuiltinModule(\"node:child_process\").spawnSync(process.execPath, [\"--input-type=module\", \"-e\", worker], {");
+        outLine("        encoding: \"utf8\",");
+        outLine("        input: JSON.stringify({ url, outPath, timeoutMs: Number(timeoutMs), headers: reqHeaders }),");
+        outLine("        stdio: [\"pipe\", \"pipe\", \"pipe\"],");
+        outLine("        maxBuffer: 16 * 1024 * 1024,");
+        outLine("    });");
+        outLine("    if (res.error !== undefined) return { ok: false, status: 0n, byteCount: 0n, retryAfter: \"\", error: lite$errMsg(res.error) };");
+        outLine("    if (res.signal !== null) return { ok: false, status: 0n, byteCount: 0n, retryAfter: \"\", error: \"terminated by signal \" + res.signal };");
+        outLine("    try {");
+        outLine("        const parsed = JSON.parse(res.stdout ?? \"\") as { ok: boolean; status: number; byteCount: number; retryAfter: string; error: string };");
+        outLine("        return { ok: parsed.ok, status: BigInt(parsed.status), byteCount: BigInt(parsed.byteCount), retryAfter: parsed.retryAfter, error: parsed.error };");
+        outLine("    } catch (error) {");
+        outLine("        return { ok: false, status: 0n, byteCount: 0n, retryAfter: \"\", error: lite$errMsg(error) };");
+        outLine("    }");
+        outLine("}");
+    }
+    if usesBuiltin(calls, "extHttpServeStatic") {
+        outLine("function lite$extHttpServeStatic(siteDir: string, brandDir: string, host: string, port: bigint): bigint {");
+        outLine("    const fs = process.getBuiltinModule(\"node:fs\");");
+        outLine("    const path = process.getBuiltinModule(\"node:path\");");
+        outLine("    const http = process.getBuiltinModule(\"node:http\");");
+        outLine("    const mimes: Record<string, string> = { \".html\": \"text/html; charset=utf-8\", \".css\": \"text/css; charset=utf-8\", \".js\": \"application/javascript; charset=utf-8\", \".json\": \"application/json; charset=utf-8\", \".svg\": \"image/svg+xml\", \".png\": \"image/png\" };");
+        outLine("    const existsFile = (p: string): boolean => { try { return fs.statSync(p).isFile(); } catch { return false; } };");
+        outLine("    const existsDir = (p: string): boolean => { try { return fs.statSync(p).isDirectory(); } catch { return false; } };");
+        outLine("    const serveFile = (res: { writeHead(status: number, headers: Record<string, string>): void; end(body?: string | Uint8Array): void }, p: string): void => {");
+        outLine("        const mime = mimes[path.extname(p)] ?? \"application/octet-stream\";");
+        outLine("        res.writeHead(200, { \"Content-Type\": mime, \"Cache-Control\": \"no-store\" });");
+        outLine("        res.end(fs.readFileSync(p));");
+        outLine("    };");
+        outLine("    const server = http.createServer((req, res) => {");
+        outLine("        const rawUrl = req.url ?? \"/\";");
+        outLine("        const urlPath = rawUrl.split(\"?\")[0] ?? \"/\";");
+        outLine("        if (brandDir !== \"\" && (urlPath === \"/studio\" || urlPath === \"/studio/\" || urlPath === \"/brand\" || urlPath === \"/brand/\")) {");
+        outLine("            if (existsFile(path.join(brandDir, \"investigation\", \"studio.html\"))) {");
+        outLine("                res.writeHead(302, { Location: \"/brand/investigation/studio.html\", \"Cache-Control\": \"no-store\" });");
+        outLine("                res.end(); return;");
+        outLine("            }");
+        outLine("        }");
+        outLine("        if (brandDir !== \"\" && urlPath.startsWith(\"/brand/\")) {");
+        outLine("            const rel = path.normalize(urlPath.slice(\"/brand/\".length)).replace(/^(\\.\\.(\\/|\\\\|$))+/, \"\");");
+        outLine("            const resolved = path.resolve(brandDir, rel);");
+        outLine("            if (resolved.startsWith(brandDir) && existsFile(resolved)) { serveFile(res, resolved); return; }");
+        outLine("        }");
+        outLine("        const safe = path.normalize(urlPath).replace(/^(\\.\\.(\\/|\\\\|$))+/, \"\");");
+        outLine("        let target = path.join(siteDir, safe);");
+        outLine("        if (existsDir(target)) {");
+        outLine("            if (!urlPath.endsWith(\"/\")) {");
+        outLine("                const q = rawUrl.indexOf(\"?\");");
+        outLine("                res.writeHead(301, { Location: urlPath + \"/\" + (q >= 0 ? rawUrl.slice(q) : \"\"), \"Cache-Control\": \"no-store\" });");
+        outLine("                res.end(); return;");
+        outLine("            }");
+        outLine("            target = path.join(target, \"index.html\");");
+        outLine("        }");
+        outLine("        if (!existsFile(target)) { res.writeHead(404, { \"Content-Type\": \"text/plain; charset=utf-8\", \"Cache-Control\": \"no-store\" }); res.end(\"Not Found\\n\"); return; }");
+        outLine("        serveFile(res, target);");
+        outLine("    });");
+        outLine("    server.listen(Number(port), host, () => {");
+        outLine("        console.log(\"Serving Lite site at http://\" + host + \":\" + String(port) + \"/\");");
+        outLine("        if (brandDir !== \"\" && existsFile(path.join(brandDir, \"investigation\", \"studio.html\"))) console.log(\"Brand studio (local): http://\" + host + \":\" + String(port) + \"/brand/\");");
+        outLine("    });");
+        outLine("    return 0n;");
+        outLine("}");
+    }
+    if usesBuiltin(calls, "extBenchMeasureCompiler") {
+        outLine("function lite$extBenchMeasureCompiler(engine: string, artifactPath: string, sourceName: string, rootPath: string, metricsFile: string): bigint {");
+        outLine("    if (engine !== \"T11\") throw new Error(\"unknown measurement engine: \" + engine);");
+        outLine("    const started = performance.now();");
+        outLine("    const cpuStarted = process.cpuUsage();");
+        outLine("    let loaded = started;");
+        outLine("    let metricsWritten = false;");
+        outLine("    const writeMetrics = (): void => {");
+        outLine("        if (metricsWritten) return;");
+        outLine("        metricsWritten = true;");
+        outLine("        const ended = performance.now();");
+        outLine("        const cpu = process.cpuUsage(cpuStarted);");
+        outLine("        const payload = JSON.stringify({ loadMs: loaded - started, compileMs: ended - loaded, totalInsideMs: ended - started, cpuMs: (cpu.user + cpu.system) / 1000, maxRssKiB: process.resourceUsage().maxRSS });");
+        outLine("        if (metricsFile !== \"\") process.getBuiltinModule(\"node:fs\").writeFileSync(metricsFile, payload, \"utf8\");");
+        outLine("        else process.getBuiltinModule(\"node:fs\").writeSync(3, payload);");
+        outLine("    };");
+        outLine("    const url = process.getBuiltinModule(\"node:url\").pathToFileURL(artifactPath).href;");
+        outLine("    void import(url).then((mod: unknown) => {");
+        outLine("        if (typeof mod !== \"object\" || mod === null || !(\"main\" in mod) || typeof (mod as { main?: unknown }).main !== \"function\") throw new Error(\"missing main\");");
+        outLine("        const entry = (mod as { main: (w?: unknown) => unknown }).main;");
+        outLine("        process.argv = [process.execPath, artifactPath, \"--stdin\", \"--name\", sourceName, \"--root\", rootPath];");
+        outLine("        loaded = performance.now();");
+        outLine("        const origExit = process.exit;");
+        outLine("        (process as { exit: (code: number) => never }).exit = (code: number): never => { writeMetrics(); return origExit(code); };");
+        outLine("        const value = entry(undefined);");
+        outLine("        if (typeof value !== \"string\") throw new Error(\"invalid main result\");");
+        outLine("        writeMetrics();");
+        outLine("        process.stdout.write(value);");
+        outLine("        process.exitCode = 0;");
+        outLine("    }).catch((error: unknown) => {");
+        outLine("        writeMetrics();");
+        outLine("        process.stderr.write((error instanceof Error ? error.stack ?? error.message : String(error)) + \"\\n\");");
+        outLine("        process.exitCode = 1;");
+        outLine("    });");
+        outLine("    return 0n;");
+        outLine("}");
+    }
+    outLine("");
+}
+
 /** Emits the self-contained declarations and helpers for the I/O and text builtins a program uses. */
 emitBuiltinHelpers := fn(calls: String): Unit {
     abruptFault := usesAbruptFault(calls);
@@ -1353,6 +1532,7 @@ emitBuiltinHelpers := fn(calls: String): Unit {
     emitProcessHelpers(calls);
     emitCryptoAndTimeHelpers(calls);
     emitUnicodeHelpers(calls);
+    emitExternalHelpers(calls);
     if usesBuiltin(calls, "textLength") or usesBuiltin(calls, "textAt") or usesBuiltin(calls, "textSlice") or
     usesBuiltin(calls, "textIndexOf") or usesBuiltin(calls, "textStartsWithAt") or usesBuiltin(calls, "textWordAt") or
     usesBuiltin(calls, "textSkipWhile") {

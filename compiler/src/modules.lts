@@ -762,7 +762,7 @@ initialGraph: frontend.Items, projectRoot: String, cwd: String, builtinSpecs: Li
         clauseIndex = clauseIndex + 1;
     }
 
-    isCoreMod := not isRoot and textLib.startsWithAt(identity, 0, "lite.core.");
+    isCoreMod := not isRoot and frontend.isHostModuleIdentity(identity);
     localItems := if isCoreMod {
         frontend.parseProgramWithModuleSelectiveSpecs(=target, =source, prefix = display, exports = importedExports,
         =moduleKey, moduleIdentity = identity, neededFns = "|", skipSoftBuiltins = target == frontend.TARGET_TS, =builtinSpecs)

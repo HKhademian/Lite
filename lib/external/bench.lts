@@ -1,0 +1,4 @@
+/* Provisional external compiler-worker measurement host bindings. */
+
+/** Dynamically loads and times compiled TS compiler artifact `artifactPath`, writing JSON metrics to `metricsFile` or fd 3. */
+pub measureCompilerArtifact := fn(engine: String, artifactPath: String, sourceName: String, rootPath: String, metricsFile: String): Int;

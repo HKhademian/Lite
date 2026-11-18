@@ -1422,8 +1422,41 @@ parseFunctionHeader := fn(source: String, position: Int, prefix: String, aliases
     (next = resultType.next, result = resultType.kind, params = encoded, count = count, genericType = genericType)
 }
 
-/** Resolves a bodyless public core declaration only when its module identity and complete ABI are registered. */
+/** True when `moduleIdentity` is a verified `lite.core.*` or `lite.external.*` host module identity. */
+pub isHostModuleIdentity := fn(moduleIdentity: String): Bool {
+    textLib.startsWithAt(moduleIdentity, 0, "lite.core.") or textLib.startsWithAt(moduleIdentity, 0, "lite.external.")
+};
+
+/** Resolves a bodyless external host declaration only when its `lib/external/` module identity and ABI match. */
+externalHostFunction := fn(moduleIdentity: String, name: String, params: String, result: String): String {
+    if moduleIdentity == "lite.external.ts.v1" {
+        if name == "stripTypes" and params == "source=String" and result == "(ok:Bool,code:String,error:String)" {
+            "lite$extTsStripTypes"
+        } else { "" }
+    } else if moduleIdentity == "lite.external.http.v1" {
+        if name == "fetchToFile" and params == "url=String|outPath=String|timeoutMs=Int|headers=List<String>" and
+        result == "(ok:Bool,status:Int,byteCount:Int,retryAfter:String,error:String)" {
+            "lite$extHttpFetchToFile"
+        } else if name == "serveStatic" and params == "siteDir=String|brandDir=String|host=String|port=Int" and
+        result == VALUE_KIND_INT {
+            "lite$extHttpServeStatic"
+        } else { "" }
+    } else if moduleIdentity == "lite.external.bench.v1" {
+        if name == "measureCompilerArtifact" and
+        params == "engine=String|artifactPath=String|sourceName=String|rootPath=String|metricsFile=String" and
+        result == VALUE_KIND_INT {
+            "lite$extBenchMeasureCompiler"
+        } else { "" }
+    } else {
+        ""
+    }
+};
+
+/** Resolves a bodyless public core or external declaration only when its module identity and complete ABI are registered. */
 coreHostFunction := fn(moduleIdentity: String, name: String, params: String, result: String): String {
+    if textLib.startsWithAt(moduleIdentity, 0, "lite.external.") {
+        return externalHostFunction(moduleIdentity, name, params, result);
+    }
     if moduleIdentity == "lite.core.io.v1" {
         if params == "...values" and result == VALUE_KIND_UNIT {
             if name == "output" { "lite$core$io$output:v1" }
@@ -13994,7 +14027,7 @@ moduleIdentity: String, neededFns: String, skipSoftBuiltins: Bool, builtinSpecs:
             }
             if currentLive and not currentStopped {
                 itemCode := copiedValueCode(target, parsed.kind, parsed.code);
-                if depth == 0 and blockCount == 0 and textLib.startsWithAt(moduleIdentity, 0, "lite.core.") {
+                if depth == 0 and blockCount == 0 and isHostModuleIdentity(moduleIdentity) {
                     listLib.pushBack(mut items, (kind = ITEM_KIND_PURE_GLOBAL, name = runtime, runtime = runtime, code = "", intValue = 0, textValue = ""));
                 }
                 listLib.pushBack(mut items, (kind = ITEM_PREFIX_LOCAL + storageKind(parsed.kind), name = name, runtime = runtime,
@@ -14052,7 +14085,7 @@ moduleIdentity: String, neededFns: String, skipSoftBuiltins: Bool, builtinSpecs:
                     listLib.pushBack(mut items, (kind = expressionStatementKind(VALUE_KIND_NEVER, false, ITEM_KIND_CALL, currentResult), name = "", runtime = "",
                     code = assignedCode, intValue = 0, textValue = ""));
                 } else {
-                    if declItemPrefix == ITEM_PREFIX_LOCAL and depth == 0 and blockCount == 0 and textLib.startsWithAt(moduleIdentity, 0, "lite.core.") {
+                    if declItemPrefix == ITEM_PREFIX_LOCAL and depth == 0 and blockCount == 0 and isHostModuleIdentity(moduleIdentity) {
                         listLib.pushBack(mut items, (kind = ITEM_KIND_PURE_GLOBAL, name = runtime, runtime = runtime, code = "", intValue = 0, textValue = ""));
                     }
                     listLib.pushBack(mut items, (kind = declItemPrefix + storageKind(typed.kind), name = name, runtime = runtime,

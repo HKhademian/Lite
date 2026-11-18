@@ -77,6 +77,10 @@ unsupportedBuiltinCode := fn(calls: String): String {
         usesIntHelper(calls, "lite$unicodeToCodePoints(") or usesIntHelper(calls, "lite$unicodeFromCodePoints(") {
             "C backend does not support unicode builtins yet"
         }
+        usesIntHelper(calls, "lite$extTsStripTypes(") or usesIntHelper(calls, "lite$extHttpFetchToFile(") or
+        usesIntHelper(calls, "lite$extHttpServeStatic(") or usesIntHelper(calls, "lite$extBenchMeasureCompiler(") {
+            "C backend does not support external host builtins yet"
+        }
         _ { "" }
     }
 }

@@ -838,6 +838,7 @@ function isolatedCheckout(): string {
   const dependencies = (['ts', 'c'] as const).flatMap(target => buildCompiler(target).dependencies);
   const toolSources = readdirSync(join(root, 'tools/src')).filter(f => f.endsWith('.lts')).map(f => `tools/src/${f}`);
   const coreLibs = readdirSync(join(root, 'lib/core')).filter(f => f.endsWith('.lts')).map(f => `lib/core/${f}`);
+  const externalLibs = readdirSync(join(root, 'lib/external')).filter(f => f.endsWith('.lts')).map(f => `lib/external/${f}`);
   const utilLibs = readdirSync(join(root, 'lib/util')).filter(f => f.endsWith('.lts')).map(f => `lib/util/${f}`);
   const paths = new Set([
     'bin/lite', 'bin/lite-compile', 'bin/lite-compile-ts', 'bin/lite-compile-c', 'bin/lite-check', 'bin/lite-run', 'bin/lite-verify',
@@ -848,7 +849,7 @@ function isolatedCheckout(): string {
     'compiler/scripts/release-streams.test.ts',
     'compiler/bootstrap/igniter.ts', 'compiler/bootstrap/seed.ts', 'compiler/bootstrap/tsconfig.json',
     'compiler/manifests/ts.json', 'compiler/manifests/c.json', 'igniter/tsconfig.json',
-    ...dependencies, ...toolSources, ...coreLibs, ...utilLibs,
+    ...dependencies, ...toolSources, ...coreLibs, ...externalLibs, ...utilLibs,
   ]);
   for (const path of paths) {
     const destination = join(directory, path);
@@ -4362,7 +4363,31 @@ test('core os/fs/process/crypto/time host bindings, standalone CLI execution, an
     const badAbi = compileTs({ text: 'pub kind := fn(path: String): Int;', name: 'lib/core/file.lts' });
     assert.equal(badAbi.status, 2);
     assert.match(badAbi.stderr.toString(), /bodyless function declaration has no matching core host binding/);
+
+    const badExtAbi = compileTs({ text: 'pub stripTypes := fn(source: String): String;', name: 'lib/external/ts.lts' });
+    assert.equal(badExtAbi.status, 2);
+    assert.match(badExtAbi.stderr.toString(), /bodyless function declaration has no matching core host binding/);
   } finally { rmSync(directory, { recursive: true, force: true }); }
+
+  const extTsCompile = compileTs({
+    text: 'io := import "core/io"; extTs := import "external/ts"; good := extTs.stripTypes("const x: number = 42;"); io.outputLine(good.ok, good.code);',
+    name: fixtureName,
+  });
+  assert.equal(extTsCompile.status, 0, extTsCompile.stderr.toString());
+  const extTsRun = runTsArtifact(extTsCompile.stdout.toString('utf8'));
+  assert.equal(extTsRun.status, 0, extTsRun.stderr.toString());
+  assert.equal(extTsRun.stdout.toString('utf8'), 'true const x         = 42;\n');
+
+  for (const probe of [
+    'extHttp := import "external/http"; res := extHttp.fetchToFile("http://127.0.0.1:1/", "", 50, []); if res.ok { _ := res.status; }',
+    'extHttp := import "external/http"; if false { _ := extHttp.serveStatic(".", "", "127.0.0.1", 0); }',
+    'extBench := import "external/bench"; if false { _ := extBench.measureCompilerArtifact("T11", "a", "b", "c", "d"); }',
+  ]) {
+    const builtProbe = compileTs({ text: probe, name: fixtureName });
+    assert.equal(builtProbe.status, 0, builtProbe.stderr.toString());
+    const checkedProbe = checkTsArtifact(builtProbe.stdout.toString('utf8'));
+    assert.equal(checkedProbe.status, 0, `${checkedProbe.stdout}\n${checkedProbe.stderr}`);
+  }
 
   const reachableC = compileTarget('c', {
     text: 'unused := fn(): List<Int> { xs: List<Int> = [1, 2]; xs }; io := import "core/io"; io.outputLine(42);',
@@ -4388,6 +4413,9 @@ test('core os/fs/process/crypto/time host bindings, standalone CLI execution, an
     ['t := import "core/time"; x := t.monotonicNs();', /C backend does not support (time builtins|top-level functions) yet/],
     ['t := import "core/time"; t.sleepMs(1);', /C backend does not support (time builtins|top-level functions) yet/],
     ['t := import "core/time"; x := t.localDate();', /C backend does not support (time builtins|top-level functions) yet/],
+    ['extTs := import "external/ts"; x := extTs.stripTypes("const a: number = 1;");', /C backend does not support (external host builtins|tuple values) yet/],
+    ['extHttp := import "external/http"; x := extHttp.serveStatic(".", "", "127.0.0.1", 0);', /C backend does not support (external host builtins|top-level functions) yet/],
+    ['extBench := import "external/bench"; x := extBench.measureCompilerArtifact("T11", "a", "b", "c", "d");', /C backend does not support (external host builtins|top-level functions) yet/],
     ['textLib := import "core/text"; x := textLib.indexOf("ab", "b", 0);', /C backend does not support (text builtins|top-level functions) yet/],
     ['u := import "core/unicode"; x := u.utf8Encode("ab");', /C backend does not support (unicode builtins|list values|top-level functions) yet/],
     ['u := import "core/unicode"; x := u.utf16Length("ab");', /C backend does not support (unicode builtins|list values|top-level functions) yet/],
