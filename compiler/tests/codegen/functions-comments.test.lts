@@ -1,0 +1,221 @@
+/* Comments, functions, and value-if codegen/diagnostic tests migrated from igniter/test.ts. */
+
+path := import "core/path";
+test := import "core/test";
+compilerBuild := import "util/compiler-build";
+compilerTest := import "util/compiler-test";
+project := import "util/project";
+
+root := project.findRepoRoot();
+test.check("repo root found", root =!= "");
+
+selTs := compilerBuild.selectCompilerPath(root, "ts");
+test.check("select TS compiler: " + selTs.error, selTs.ok);
+selC := compilerBuild.selectCompilerPath(root, "c");
+test.check("select C compiler: " + selC.error, selC.ok);
+tsComp := selTs.path;
+cComp := selC.path;
+ccInfo := compilerTest.probeCc();
+
+/* restricted compiler treats nested, doc and raw comments as separating trivia */
+commentSrc :=
+"io := import \"core/io\";\n" +
+"/* ordinary leading comment\n" +
+"    /* nested existing comment: io.outputLine(999); */\n" +
+"   /*# embedded raw: /* not a nested opener \" ( { #*/\n" +
+"   \"unterminated string and unmatched ( {\n" +
+"*/\n" +
+"/** documentation comment: io.outputLine(888); */\n" +
+"x := 10/* separator */+ 2;\n" +
+"y := x /* between tokens */\n" +
+"    * 3;\n" +
+"/*# raw: /* never closed\n" +
+"    */ stray ordinary closer\n" +
+"    \"unfinished string and unmatched ( {\n" +
+"#*/\n" +
+"z := y + 1;\n" +
+"/*## longer fence: the text may contain #*/ without ending the comment. ##*/\n" +
+"io.outputLine(x, y, z);";
+withoutComments := "io := import \"core/io\"; x := 10 + 2;\ny := x * 3;\nz := y + 1;\nio.outputLine(x, y, z);\n";
+commentTs := compilerTest.compileStdin(root, tsComp, commentSrc, "");
+commentTsBase := compilerTest.compileStdin(root, tsComp, withoutComments, "");
+test.checkInt("comments TS compile", 0, commentTs.status);
+test.checkText("comments TS identical", commentTsBase.stdout, commentTs.stdout);
+compilerTest.assertCompileRunTs(root, tsComp, "comments TS run", commentSrc, "12 36 37\n");
+
+stdinDiag := path.join(root, "__lite_stdin__.lts");
+commentBadSrc: List<String> = [
+"io := import \"core/io\"; io.outputLine(1/*x*/2);",
+"io := import \"core/io\"; io.outputLine(1);\n/* outer /* inner */\n",
+"io := import \"core/io\"; io.outputLine(1);\n/*# raw */\n",
+"/*## raw #*/",
+];
+commentBadErr: List<String> = [
+"1:45: expected )\n",
+stdinDiag + ":2:1: unterminated comment\n",
+stdinDiag + ":2:1: unterminated raw comment\n",
+stdinDiag + ":1:1: unterminated raw comment\n",
+];
+var cbi := 0;
+loop cbi < 4 {
+    compilerTest.assertCompileError(root, tsComp, "comments bad TS", commentBadSrc[cbi], commentBadErr[cbi]);
+    compilerTest.assertCompileError(root, cComp, "comments bad C", commentBadSrc[cbi], commentBadErr[cbi]);
+    cbi = cbi + 1;
+}
+if ccInfo.available {
+    commentC := compilerTest.compileStdin(root, cComp, commentSrc, "");
+    commentCBase := compilerTest.compileStdin(root, cComp, withoutComments, "");
+    test.checkInt("comments C compile", 0, commentC.status);
+    test.checkText("comments C identical", commentCBase.stdout, commentC.stdout);
+    cRun := compilerTest.compileCheckRunC(root, cComp, ccInfo.cc, commentSrc, "", "");
+    test.checkInt("comments C run", 0, cRun.status);
+    test.checkText("comments C stdout", "12 36 37\n", cRun.stdout);
+}
+
+/* restricted compiler compiles scalar functions, calls and returns to runnable TS */
+fnSrc :=
+"double := fn (x: Int): Int { return x * 2; }\n" +
+"add := fn (a: Int, b: Int): Int { return a + b; }\n" +
+"echo := fn (s: String): String { return s; }\n" +
+"positive := fn (x: Int): Bool { return x > 0; }\n" +
+"noop := fn (): Unit { return; }\n" +
+"value := fn (u: Unit): Int { return 7; }\n" +
+"io := import \"core/io\"; io.outputLine(double(21), add(2, 3), echo(\"ok\"), positive(1), positive(-1), value(noop()));\n" +
+"noop();";
+compilerTest.assertCompileRunTs(root, tsComp, "scalar functions", fnSrc, "42 5 ok true false 7\n");
+
+recSrc :=
+"factorial := fn (n: Int): Int { if n <= 1 { return 1; } return n * self(n - 1); }\n" +
+"countdown := fn (n: Int): Int { if n == 0 { return 0; } return 1 + countdown(n - 1); }\n" +
+"io := import \"core/io\"; io.outputLine(factorial(5), countdown(3));";
+recCompiled := compilerTest.compileStdin(root, tsComp, recSrc, "");
+recCompiled2 := compilerTest.compileStdin(root, tsComp, recSrc, "");
+test.checkText("recursive deterministic", recCompiled2.stdout, recCompiled.stdout);
+compilerTest.assertCompileRunTs(root, tsComp, "recursive functions", recSrc, "120 3\n");
+
+/* restricted compiler completes scalar functions from tail expressions */
+tailSrc :=
+"double := fn (x: Int): Int { x * 2 }\n" +
+"greeting := fn (): String { \"hi\" }\n" +
+"pick := fn (flag: Bool): Int { if flag { return 1; } 2 }\n" +
+"io := import \"core/io\"; io.outputLine(double(21), greeting(), pick(true), pick(false));";
+compilerTest.assertCompileRunTs(root, tsComp, "function tails", tailSrc, "42 hi 1 2\n");
+
+/* restricted compiler completes function tails from Bool literals and calls */
+boolTailSrc :=
+"isZero := fn (x: Int): Bool { if x == 0 { return true; } false }\n" +
+"flag := fn (x: Int): Bool { isZero(x) }\n" +
+"io := import \"core/io\"; io.outputLine(flag(0), flag(1));";
+compilerTest.assertCompileRunTs(root, tsComp, "bool tail", boolTailSrc, "true false\n");
+compilerTest.assertCompileError(root, tsComp, "bool tail bad", "bad := fn (): Bool { \"text\" }\n", "1:22: cannot return String from function bad returning Bool\n");
+
+/* restricted compiler allows top-level declarations between functions */
+betweenSrc :=
+"one := fn (): Int { 1 }\n" +
+"label := \"n\";\n" +
+"two := fn (): String { label + label }\n" +
+"io := import \"core/io\"; io.outputLine(one(), two());";
+compilerTest.assertCompileRunTs(root, tsComp, "between decls", betweenSrc, "1 nn\n");
+
+/* restricted compiler diagnoses scalar function arity, argument and return mismatches */
+prefix := "f := fn (x: Int): Int { return x; }\n";
+fnBadSrc: List<String> = [
+prefix + "io := import \"core/io\"; io.outputLine(f());\n",
+prefix + "io := import \"core/io\"; io.outputLine(f(\"x\"));\n",
+"f := fn (x: Int): Int { return \"x\"; }\n",
+"f := fn (): Int { return; }\n",
+];
+fnBadErr: List<String> = [
+"2:39: function f expects 1 argument, got 0\n",
+"2:41: argument 1 of f must be Int, got String\n",
+"1:32: cannot return String from function f returning Int\n",
+"1:19: function f must return Int\n",
+];
+var fbi := 0;
+loop fbi < 4 {
+    compilerTest.assertCompileError(root, tsComp, "fn bad " + fnBadSrc[fbi], fnBadSrc[fbi], fnBadErr[fbi]);
+    fbi = fbi + 1;
+}
+
+/* restricted compiler compiles value if expressions in every value position */
+valIfSrc :=
+"io := import \"core/io\";\n" +
+"pickInt := fn (flag: Bool): Int { if flag { 10 } else { 20 } }\n" +
+"pickText := fn (flag: Bool): String { if flag { \"yes\" } else { \"no\" } }\n" +
+"pickBool := fn (flag: Bool): Bool { if flag { true } else { false } }\n" +
+"classify := fn (n: Int): String { if n < 0 { \"negative\" } else if n == 0 { \"zero\" } else { \"positive\" } }\n" +
+"nested := fn (a: Bool, b: Bool): Int { if a { if b { 1 } else { 2 } } else { 3 } }\n" +
+"early := fn (flag: Bool): Int { return if flag { 1 } else { 2 }; }\n" +
+"x := if 1 < 2 { 41 } else { 0 };\n" +
+"y: Int = if false { 1 } else { 2 };\n" +
+"var z := 0;\n" +
+"z = if true { 7 } else { 8 };\n" +
+"io.outputLine(x, y, z, pickInt(true), pickInt(false));\n" +
+"io.outputLine(pickText(true), pickText(false), pickBool(true), pickBool(false));\n" +
+"io.outputLine(classify(-1), classify(0), classify(5));\n" +
+"io.outputLine(nested(true, true), nested(true, false), nested(false, false));\n" +
+"io.outputLine(early(true), early(false), pickBool(if true { true } else { false }));";
+valIf1 := compilerTest.compileStdin(root, tsComp, valIfSrc, "");
+valIf2 := compilerTest.compileStdin(root, tsComp, valIfSrc, "");
+test.checkText("value if deterministic", valIf2.stdout, valIf1.stdout);
+compilerTest.assertCompileRunTs(root, tsComp, "value if", valIfSrc, "41 2 7 10 20\nyes no true false\nnegative zero positive\n1 2 3\n1 2 true\n");
+
+/* restricted compiler completes statement-shaped if branches as function results */
+stmtIfSrc :=
+"io := import \"core/io\";\n" +
+"pick := fn (x: Int): (text: String, next: Int) {\n" +
+"    if x < 0 {\n" +
+"        var y := 0 - x;\n" +
+"        (text = \"neg\", next = y)\n" +
+"    } else {\n" +
+"        if x == 0 { (text = \"zero\", next = 0) } else {\n" +
+"            y := x * 2;\n" +
+"            (text = \"pos\", next = y)\n" +
+"        }\n" +
+"    }\n" +
+"}\n" +
+"bump := fn (x: Int): Int { if x > 0 { y := x; y + 1 } else { 0 } }\n" +
+"grade := fn (n: Int): String { if n > 90 { \"a\" } else if n > 80 { \"b\" } else { \"c\" } }\n" +
+"negate := fn (x: Bool): Bool { not x }\n" +
+"guard := fn (a: Bool, b: Bool): Bool { if a { not b } else { false } }\n" +
+"io.outputLine(pick(-2).text, pick(0).next, pick(5).next, bump(-3), bump(4), grade(95), grade(85), grade(10));\n" +
+"io.outputLine(negate(true), negate(false), guard(true, false), guard(false, false));";
+compilerTest.assertCompileRunTs(root, tsComp, "stmt if branches", stmtIfSrc, "neg 0 10 0 5 a b c\nfalse true true false\n");
+
+incSrc :=
+"io := import \"core/io\";\n" +
+"g := fn (x: Bool): Int { if x { io.errorLine(\"a\"); } else { 2 } }\n" +
+"io.outputLine(g(true));\n";
+compilerTest.assertCompileError(root, tsComp, "incomplete if branch", incSrc, "2:33: cannot return Unit from function g returning Int\n");
+
+/* restricted compiler diagnoses invalid value if expressions and rejects them in C */
+valIfBadSrc: List<String> = [
+"x := if 1 { 2 } else { 3 };\n",
+"x := (if true { 2 }) + 1;\n",
+"x := if true { 2 } else { \"a\" };\n",
+"x := if true { 1 } else if 1 { 2 } else { 3 };\n",
+];
+valIfBadErr: List<String> = [
+"1:9: if condition must be Bool\n",
+"1:20: value if requires a final else\n",
+"1:27: value if branches must have the same kind, got Int and String\n",
+"1:28: if condition must be Bool\n",
+];
+var vi := 0;
+loop vi < 4 {
+    compilerTest.assertCompileError(root, tsComp, "value if bad " + valIfBadSrc[vi], valIfBadSrc[vi], valIfBadErr[vi]);
+    vi = vi + 1;
+}
+compilerTest.assertCompileError(root, cComp, "value if C reject", "io := import \"core/io\"; x := if true { 1 } else { 2 };\nio.outputLine(x);\n", "C backend does not support value if expressions yet\n");
+actionIfC := compilerTest.compileStdin(root, cComp, "io := import \"core/io\"; if true { io.outputLine(1); } else { io.outputLine(2); }\n", "");
+test.checkInt("action if C status", 0, actionIfC.status);
+expectedActionIfC :=
+"#include <stdio.h>\n#include <inttypes.h>\n#include <stdbool.h>\n#include <string.h>\n" +
+"int main(void) {\n    int status = 0;\n    if (true) {\n" +
+"        if (printf(\"%\" PRId64, (int64_t)(INT64_C(1))) < 0) { status = 1; }\n" +
+"        if (printf(\"\\n\") < 0) { status = 1; }\n" +
+"    } else {\n" +
+"        if (printf(\"%\" PRId64, (int64_t)(INT64_C(2))) < 0) { status = 1; }\n" +
+"        if (printf(\"\\n\") < 0) { status = 1; }\n" +
+"    }\n    return status;\n}\n";
+test.checkText("action if C exact", expectedActionIfC, actionIfC.stdout);

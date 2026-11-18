@@ -421,7 +421,7 @@
     },
     {
       "title": "restricted compiler accepts typed scalar locals without changing existing cases",
-      "destination": "igniter/test.ts",
+      "destination": "compiler/tests/codegen/types-collections.test.lts",
       "originalLine": 1129,
       "dependencies": [
         "runCompiler",
@@ -432,7 +432,7 @@
     },
     {
       "title": "restricted compiler resolves transparent scalar aliases",
-      "destination": "igniter/test.ts",
+      "destination": "compiler/tests/codegen/types-collections.test.lts",
       "originalLine": 1158,
       "dependencies": [
         "runCompiler",
@@ -443,7 +443,7 @@
     },
     {
       "title": "restricted compiler compiles flat named tuples and tuple functions to runnable TS",
-      "destination": "igniter/test.ts",
+      "destination": "compiler/tests/codegen/types-collections.test.lts",
       "originalLine": 1232,
       "dependencies": [
         "runCompiler"
@@ -453,7 +453,7 @@
     },
     {
       "title": "restricted compiler diagnoses invalid flat named tuples clearly",
-      "destination": "igniter/test.ts",
+      "destination": "compiler/tests/codegen/types-collections.test.lts",
       "originalLine": 1256,
       "dependencies": [
         "runCompiler"
@@ -463,7 +463,7 @@
     },
     {
       "title": "restricted compiler compiles growable lists, literals and indexing to runnable TS",
-      "destination": "igniter/test.ts",
+      "destination": "compiler/tests/codegen/types-collections.test.lts",
       "originalLine": 1276,
       "dependencies": [
         "runCompiler"
@@ -473,7 +473,7 @@
     },
     {
       "title": "restricted compiler diagnoses invalid list types, literals and indexes clearly",
-      "destination": "igniter/test.ts",
+      "destination": "compiler/tests/codegen/types-collections.test.lts",
       "originalLine": 1316,
       "dependencies": [
         "runCompiler"
@@ -483,7 +483,7 @@
     },
     {
       "title": "restricted compiler compiles list traversal to runnable TS",
-      "destination": "igniter/test.ts",
+      "destination": "compiler/tests/codegen/types-collections.test.lts",
       "originalLine": 1334,
       "dependencies": [
         "runCompiler"
@@ -493,7 +493,7 @@
     },
     {
       "title": "restricted compiler diagnoses invalid list traversal clearly",
-      "destination": "igniter/test.ts",
+      "destination": "compiler/tests/codegen/types-collections.test.lts",
       "originalLine": 1379,
       "dependencies": [
         "runCompiler"
@@ -503,7 +503,7 @@
     },
     {
       "title": "restricted compiler lowers bare break and continue to runnable TS",
-      "destination": "igniter/test.ts",
+      "destination": "compiler/tests/codegen/control-flow.test.lts",
       "originalLine": 1443,
       "dependencies": [
         "runCompiler"
@@ -513,7 +513,7 @@
     },
     {
       "title": "restricted compiler lowers bare break and continue to runnable C",
-      "destination": "igniter/test.ts",
+      "destination": "compiler/tests/codegen/control-flow.test.lts",
       "originalLine": 1454,
       "dependencies": [
         "spawnSync",
@@ -524,7 +524,7 @@
     },
     {
       "title": "restricted compiler diagnoses break and continue outside loops",
-      "destination": "igniter/test.ts",
+      "destination": "compiler/tests/codegen/control-flow.test.lts",
       "originalLine": 1473,
       "dependencies": [
         "runCompiler"
@@ -534,7 +534,7 @@
     },
     {
       "title": "restricted compiler accepts one optional leading and/or in Bool expressions for TS",
-      "destination": "igniter/test.ts",
+      "destination": "compiler/tests/codegen/control-flow.test.lts",
       "originalLine": 1529,
       "dependencies": [
         "runCompiler"
@@ -544,7 +544,7 @@
     },
     {
       "title": "restricted compiler accepts one optional leading and/or in Bool expressions for C",
-      "destination": "igniter/test.ts",
+      "destination": "compiler/tests/codegen/control-flow.test.lts",
       "originalLine": 1538,
       "dependencies": [
         "spawnSync",
@@ -555,7 +555,7 @@
     },
     {
       "title": "restricted compiler diagnoses invalid leading and/or forms",
-      "destination": "igniter/test.ts",
+      "destination": "compiler/tests/codegen/control-flow.test.lts",
       "originalLine": 1555,
       "dependencies": [
         "runCompiler"
@@ -565,7 +565,7 @@
     },
     {
       "title": "restricted compiler compiles list mutation grants, push and pop to runnable TS",
-      "destination": "igniter/test.ts",
+      "destination": "compiler/tests/codegen/types-collections.test.lts",
       "originalLine": 1577,
       "dependencies": [
         "runCompiler"
@@ -575,7 +575,7 @@
     },
     {
       "title": "restricted compiler treats nested, doc and raw comments as separating trivia",
-      "destination": "igniter/test.ts",
+      "destination": "compiler/tests/codegen/functions-comments.test.lts",
       "originalLine": 1677,
       "dependencies": [
         "run",
@@ -595,7 +595,7 @@
     },
     {
       "title": "restricted compiler compiles scalar functions, calls and returns to runnable TS",
-      "destination": "igniter/test.ts",
+      "destination": "compiler/tests/codegen/functions-comments.test.lts",
       "originalLine": 1739,
       "dependencies": [
         "runCompiler"
@@ -605,7 +605,7 @@
     },
     {
       "title": "restricted compiler completes scalar functions from tail expressions",
-      "destination": "igniter/test.ts",
+      "destination": "compiler/tests/codegen/functions-comments.test.lts",
       "originalLine": 1771,
       "dependencies": [
         "runCompiler"
@@ -615,7 +615,7 @@
     },
     {
       "title": "restricted compiler completes function tails from Bool literals and calls",
-      "destination": "igniter/test.ts",
+      "destination": "compiler/tests/codegen/functions-comments.test.lts",
       "originalLine": 1786,
       "dependencies": [
         "runCompiler"
@@ -625,7 +625,7 @@
     },
     {
       "title": "restricted compiler allows top-level declarations between functions",
-      "destination": "igniter/test.ts",
+      "destination": "compiler/tests/codegen/functions-comments.test.lts",
       "originalLine": 1803,
       "dependencies": [
         "runCompiler"
@@ -635,7 +635,7 @@
     },
     {
       "title": "restricted compiler diagnoses scalar function arity, argument and return mismatches",
-      "destination": "igniter/test.ts",
+      "destination": "compiler/tests/codegen/functions-comments.test.lts",
       "originalLine": 1818,
       "dependencies": [
         "runCompiler"
@@ -645,7 +645,7 @@
     },
     {
       "title": "restricted compiler compiles value if expressions in every value position",
-      "destination": "igniter/test.ts",
+      "destination": "compiler/tests/codegen/functions-comments.test.lts",
       "originalLine": 1830,
       "dependencies": [
         "runCompiler"
@@ -655,7 +655,7 @@
     },
     {
       "title": "restricted compiler completes statement-shaped if branches as function results",
-      "destination": "igniter/test.ts",
+      "destination": "compiler/tests/codegen/functions-comments.test.lts",
       "originalLine": 1858,
       "dependencies": [
         "runCompiler",
@@ -666,7 +666,7 @@
     },
     {
       "title": "restricted compiler diagnoses invalid value if expressions and rejects them in C",
-      "destination": "igniter/test.ts",
+      "destination": "compiler/tests/codegen/functions-comments.test.lts",
       "originalLine": 1897,
       "dependencies": [
         "runCompiler"
@@ -676,7 +676,7 @@
     },
     {
       "title": "restricted compiler compiles action else-if chains to runnable TS",
-      "destination": "igniter/test.ts",
+      "destination": "compiler/tests/codegen/control-flow.test.lts",
       "originalLine": 1922,
       "dependencies": [
         "runCompiler"
@@ -686,7 +686,7 @@
     },
     {
       "title": "restricted compiler compiles action else-if chains to runnable C",
-      "destination": "igniter/test.ts",
+      "destination": "compiler/tests/codegen/control-flow.test.lts",
       "originalLine": 1997,
       "dependencies": [
         "runCompiler",
@@ -697,7 +697,7 @@
     },
     {
       "title": "restricted compiler diagnoses invalid action else-if chains",
-      "destination": "igniter/test.ts",
+      "destination": "compiler/tests/codegen/control-flow.test.lts",
       "originalLine": 2040,
       "dependencies": [
         "runCompiler"

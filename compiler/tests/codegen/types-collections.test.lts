@@ -1,0 +1,352 @@
+/* Types, aliases, tuples, and collections codegen/diagnostic tests migrated from igniter/test.ts. */
+
+test := import "core/test";
+text := import "core/text";
+compilerBuild := import "util/compiler-build";
+compilerTest := import "util/compiler-test";
+project := import "util/project";
+
+root := project.findRepoRoot();
+test.check("repo root found", root =!= "");
+
+selTs := compilerBuild.selectCompilerPath(root, "ts");
+test.check("select TS compiler: " + selTs.error, selTs.ok);
+selC := compilerBuild.selectCompilerPath(root, "c");
+test.check("select C compiler: " + selC.error, selC.ok);
+tsComp := selTs.path;
+cComp := selC.path;
+ccInfo := compilerTest.probeCc();
+
+/* restricted compiler accepts typed scalar locals without changing existing cases */
+typedScalarSrc := "io := import \"core/io\"; x: Int = 1;\ns: String = \"a\";\nb: Bool = true;\ny: Int;\nio.outputLine(x, s, b, y);\nvar z: Int = 2;\nz = 3;\nio.outputLine(z);\n";
+compilerTest.assertCompileRunTs(root, tsComp, "typed scalar locals TS", typedScalarSrc, "1 a true 0\n3\n");
+if ccInfo.available {
+    cRes := compilerTest.compileCheckRunC(root, cComp, ccInfo.cc, typedScalarSrc, "", "");
+    test.checkInt("typed scalar locals C status", 0, cRes.status);
+    test.checkText("typed scalar locals C stdout", "1 a true 0\n3\n", cRes.stdout);
+    test.checkText("typed scalar locals C stderr", "", cRes.stderr);
+}
+badScalarSrc: List<String> = [
+"x: Int = \"a\";\n",
+"x: Int = 1; x = \"a\";\n",
+"x: Missing = 1;\n",
+"var x: Bool = 1;\n",
+];
+badScalarErr: List<String> = [
+"1:1: cannot initialize Int with String\n",
+"1:13: cannot assign to immutable local x\n",
+"1:4: unsupported local type Missing\n",
+"1:5: cannot initialize Bool with Int\n",
+];
+var si := 0;
+loop si < 4 {
+    compilerTest.assertCompileError(root, tsComp, "bad scalar " + badScalarSrc[si], badScalarSrc[si], badScalarErr[si]);
+    si = si + 1;
+}
+
+/* restricted compiler resolves transparent scalar aliases */
+aliasSrc :=
+"Count := type Int;\n" +
+"Alias := type Count;\n" +
+"Forward := type Later;\n" +
+"Later := type Int;\n" +
+"Word := type String;\n" +
+"Flag := type Bool;\n" +
+"Nothing := type Unit;\n" +
+"add := fn (a: Alias, b: Count): Alias { a + b }\n" +
+"echo := fn (text: Word): Word { text }\n" +
+"noop := fn (): Nothing { return; }\n" +
+"x: Alias = 2;\n" +
+"var y: Count = 40;\n" +
+"y = y + 1;\n" +
+"s: Word = \"ok\";\n" +
+"b: Flag = true;\n" +
+"z: Forward = 3;\n" +
+"io := import \"core/io\"; io.outputLine(x, y, s, b, add(x, y), echo(s), z);\n" +
+"noop();\n";
+compilerTest.assertCompileRunTs(root, tsComp, "scalar aliases TS", aliasSrc, "2 41 ok true 43 ok 3\n");
+
+aliasCSrc :=
+"Count := type Int;\n" +
+"Alias := type Count;\n" +
+"Forward := type Later;\n" +
+"Later := type Int;\n" +
+"Word := type String;\n" +
+"Flag := type Bool;\n" +
+"x: Alias = 2;\n" +
+"var y: Count = 40;\n" +
+"y = y + 1;\n" +
+"s: Word = \"ok\";\n" +
+"b: Flag = true;\n" +
+"z: Forward = 3;\n" +
+"io := import \"core/io\"; io.outputLine(x, y, s, b, z);\n";
+if ccInfo.available {
+    cAlias := compilerTest.compileCheckRunC(root, cComp, ccInfo.cc, aliasCSrc, "", "");
+    test.checkInt("scalar aliases C status", 0, cAlias.status);
+    test.checkText("scalar aliases C stdout", "2 41 ok true 3\n", cAlias.stdout);
+    test.checkText("scalar aliases C stderr", "", cAlias.stderr);
+}
+badAliasSrc: List<String> = [
+"A := type Int;\nA := type String;\n",
+"A := type Missing;\n",
+"A := type B;\nB := type A;\n",
+"A := type A;\n",
+"A := type List<>;\n",
+"A := type ();\n",
+"A := type Float16;\n",
+];
+badAliasErr: List<String> = [
+"2:1: duplicate type alias A\n",
+"1:11: unknown type alias Missing\n",
+"2:1: recursive type alias B\n",
+"1:1: recursive type alias A\n",
+"1:11: expected a list element type\n",
+"1:11: tuple type needs at least one field\n",
+"1:11: unknown type alias Float16\n",
+];
+var ai := 0;
+loop ai < 7 {
+    compilerTest.assertCompileError(root, tsComp, "bad alias TS " + badAliasSrc[ai], badAliasSrc[ai], badAliasErr[ai]);
+    compilerTest.assertCompileError(root, cComp, "bad alias C " + badAliasSrc[ai], badAliasSrc[ai], badAliasErr[ai]);
+    ai = ai + 1;
+}
+
+/* restricted compiler compiles flat named tuples and tuple functions to runnable TS */
+tupleSrc :=
+"io := import \"core/io\";\n" +
+"Pair := type (kind: String, code: String);\n" +
+"Pair2 := type Pair;\n" +
+"rewrap := fn (value: Pair2): Pair { (kind = value.kind, code = value.code) }\n" +
+"label := fn (value: (kind: String, code: String)): String { value.kind }\n" +
+"p: Pair2 = (kind = \"number\", code = \"12\");\n" +
+"q := p;\n" +
+"var current := p;\n" +
+"current = (kind = \"symbol\", code = \"+\");\n" +
+"blank: Pair2;\n" +
+"io.outputLine(p.kind, p.code, q.kind, current.kind, current.code);\n" +
+"io.outputLine(blank.kind);\n" +
+"io.outputLine(blank.code);\n" +
+"io.outputLine(rewrap(p).kind, rewrap(p).code, label((kind = \"call\", code = \"1\")));\n";
+compilerTest.assertCompileRunTs(root, tsComp, "flat named tuples", tupleSrc, "number 12 number symbol +\n\n\nnumber 12 call\n");
+
+/* restricted compiler diagnoses invalid flat named tuples clearly */
+badTupleSrc: List<String> = [
+"io := import \"core/io\"; p: (kind: String) = (kind = \"a\");\nio.outputLine(p.nope);\n",
+"p: (kind: String) = (kind = 1);\n",
+"p := (kind = 1, kind = 2);\n",
+"p: (kind: String, kind: Int) = (kind = \"a\", kind = 2);\n",
+"io := import \"core/io\"; f := fn (x: (kind: String)): String { return x.kind; }\nio.outputLine(f((kind = 1)));\n",
+"f := fn (): (kind: String) { return (kind = 1); }\n",
+"p := (kind = (a = 1));\n",
+];
+badTupleErr: List<String> = [
+"2:17: tuple has no field nope\n",
+"1:1: cannot initialize (kind: String) with (kind: Int)\n",
+"1:17: duplicate tuple field kind\n",
+"1:19: duplicate tuple field kind\n",
+"2:17: argument 1 of f must be (kind: String), got (kind: Int)\n",
+"1:37: cannot return (kind: Int) from function f returning (kind: String)\n",
+"1:14: nested tuple values are not supported\n",
+];
+var ti := 0;
+loop ti < 7 {
+    compilerTest.assertCompileError(root, tsComp, "bad tuple " + badTupleSrc[ti], badTupleSrc[ti], badTupleErr[ti]);
+    ti = ti + 1;
+}
+compilerTest.assertCompileError(root, cComp, "tuple rejected in C", "io := import \"core/io\"; p: (kind: String) = (kind = \"a\");\nio.outputLine(p.kind);\n", "C backend does not support tuple values yet\n");
+
+/* restricted compiler compiles growable lists, literals and indexing to runnable TS */
+listSrc :=
+"io := import \"core/io\";\n" +
+"Ints := type List<Int>;\n" +
+"Chain := type Ints;\n" +
+"Count := type Int;\n" +
+"Counts := type List<Count>;\n" +
+"Words := type List<String>;\n" +
+"Pair := type (kind: String, code: String);\n" +
+"Pairs := type List<Pair>;\n" +
+"first := fn (values: Ints): Int { values[0] }\n" +
+"make := fn (): Chain { res: Chain = [6, 7]; res }\n" +
+"none := fn (): List<Int> { [] }\n" +
+"copy := fn (words: Words): Words { words }\n" +
+"count := fn (values: List<Int>): Int { 0 }\n" +
+"values: List<Int> = [10, 20, 30];\n" +
+"names: List<String> = [\"alpha\", \"beta\"];\n" +
+"empty: List<Int> = [];\n" +
+"pairs: Pairs = [(kind = \"number\", code = \"12\"), (kind = \"symbol\", code = \"+\")];\n" +
+"more: Chain = [7];\n" +
+"counts: Counts = [8, 9];\n" +
+"var editable: List<Int> = [1];\n" +
+"editable = [];\n" +
+"io.outputLine(values[1], names[0], first(more), pairs[1].kind, pairs[0].code, make()[1], copy(names)[1], count([]));\n" +
+"io.outputLine([4, 5][1], count(empty), count(none()), counts[1]);\n";
+compilerTest.assertCompileRunTs(root, tsComp, "growable lists", listSrc, "20 alpha 7 symbol 12 7 beta 0\n5 0 0 9\n");
+
+boundsRes := compilerTest.compileCheckRunTs(root, tsComp, "io := import \"core/io\"; values: List<Int> = [1];\nio.outputLine(values[1]);\n", "");
+test.check("list bounds nonzero", boundsRes.status =!= 0);
+test.check("list bounds panic", text.containsText(boundsRes.stderr, "BoundPanic: list index outside its extent"));
+
+/* restricted compiler diagnoses invalid list types, literals and indexes clearly */
+badListSrc: List<String> = [
+"values: List<Int> = [\"bad\"];\n",
+"io := import \"core/io\"; x := 1;\nio.outputLine(x[0]);\n",
+"io := import \"core/io\"; values: List<Int> = [1];\nio.outputLine(values[\"x\"]);\n",
+"values: List<Int> = [1];\nother: List<String> = values;\n",
+"values := [];\n",
+"values: List<List<Int>> = [];\n",
+];
+badListErr: List<String> = [
+"1:22: list element 1 must be Int, got String\n",
+"2:16: indexing requires a list value\n",
+"2:22: list index must be Int, got String\n",
+"2:1: cannot initialize List<String> with List<Int>\n",
+"1:11: empty list literal requires a List element type\n",
+"1:14: nested list types are not supported\n",
+];
+var li := 0;
+loop li < 6 {
+    compilerTest.assertCompileError(root, tsComp, "bad list " + badListSrc[li], badListSrc[li], badListErr[li]);
+    li = li + 1;
+}
+compilerTest.assertCompileError(root, cComp, "list C reject 1", "io := import \"core/io\"; values: List<Int> = [1];\nio.outputLine(1);\n", "C backend does not support list values yet\n");
+compilerTest.assertCompileError(root, cComp, "list C reject 2", "io := import \"core/io\"; io.outputLine([1][0]);\n", "C backend does not support list values yet\n");
+
+/* restricted compiler compiles list traversal to runnable TS */
+travSrc :=
+"io := import \"core/io\";\n" +
+"Ints := type List<Int>;\n" +
+"Chain := type Ints;\n" +
+"Pair := type (kind: String, code: Int);\n" +
+"Pairs := type List<Pair>;\n" +
+"make := fn (): Chain { res: Chain = [6, 7]; res }\n" +
+"pairs := fn (): Pairs { res: Pairs = [(kind = \"number\", code = 12), (kind = \"symbol\", code = 3)]; res }\n" +
+"values: Ints = [10, 20];\n" +
+"names: List<String> = [\"alpha\", \"beta\"];\n" +
+"loop values as value {\n    io.outputLine(value);\n}\n" +
+"loop names as name {\n    io.outputLine(name);\n}\n" +
+"loop pairs() as pair {\n    io.outputLine(pair.kind, pair.code);\n}\n" +
+"loop make() as value {\n    io.outputLine(value);\n}\n" +
+"item: String = \"outer\";\n" +
+"loop values as item {\n" +
+"    io.outputLine(item);\n" +
+"    if item == 10 {\n        item: String = \"inner\";\n        io.outputLine(item);\n    }\n" +
+"    io.outputLine(item);\n" +
+"}\n" +
+"io.outputLine(item);\n" +
+"loop values as ignored {\n    io.outputLine(\"tick\");\n}\n";
+compilerTest.assertCompileRunTs(root, tsComp, "list traversal", travSrc, "10\n20\nalpha\nbeta\nnumber 12\nsymbol 3\n6\n7\n10\ninner\n10\n20\n20\nouter\ntick\ntick\n");
+
+/* restricted compiler diagnoses invalid list traversal clearly */
+badTravSrc: List<String> = [
+"io := import \"core/io\"; loop 1 as item { io.outputLine(item); }\n",
+"io := import \"core/io\"; loop true as item { io.outputLine(item); }\n",
+"values: List<Int> = [1];\nloop values as {\n}\n",
+"values: List<Int> = [1];\nloop values as item {\n    item = 2;\n}\n",
+"io := import \"core/io\"; values: List<Int> = [1];\nloop values as item {\n    io.outputLine(item);\n}\nio.outputLine(item);\n",
+];
+badTravErr: List<String> = [
+"1:30: loop sequence must be a List or Array, got Int\n",
+"1:30: loop sequence must be a List or Array, got Bool\n",
+"2:16: expected an item name after as\n",
+"3:5: cannot assign to immutable local item\n",
+"5:15: unknown value item\n",
+];
+var lti := 0;
+loop lti < 5 {
+    compilerTest.assertCompileError(root, tsComp, "bad traversal " + badTravSrc[lti], badTravSrc[lti], badTravErr[lti]);
+    lti = lti + 1;
+}
+compilerTest.assertCompileError(root, cComp, "list traversal C reject", "io := import \"core/io\"; loop [1, 2] as item { io.outputLine(item); }\n", "C backend does not support list traversal yet\n");
+
+/* restricted compiler compiles list mutation grants, push and pop to runnable TS */
+mutSrc :=
+"io := import \"core/io\";\n" +
+"list := import \"core/list\";\n" +
+"Ints := type List<Int>;\n" +
+"Values := type Ints;\n" +
+"Pair := type (kind: String, code: Int);\n" +
+"pass := fn (items: List<Int>): List<Int> { items }\n" +
+"values: mut Values = [1, 2];\n" +
+"list.pushBack(mut values, 3);\n" +
+"io.outputLine(values[0], values[2]);\n" +
+"io.outputLine(list.popBack(mut values));\n" +
+"io.outputLine(values[1]);\n" +
+"source: List<Int> = [10, 20];\n" +
+"copy: mut List<Int> = source;\n" +
+"list.pushBack(mut copy, 9);\n" +
+"io.outputLine(source[0], source[1], copy[2]);\n" +
+"var replaced: mut List<Int> = [4];\n" +
+"replaced = [7];\n" +
+"list.pushBack(mut replaced, 8);\n" +
+"io.outputLine(replaced[0], replaced[1]);\n" +
+"origin: mut List<Int> = [5];\n" +
+"detached: mut List<Int> = pass(origin);\n" +
+"list.pushBack(mut detached, 6);\n" +
+"io.outputLine(origin[0], detached[1]);\n" +
+"var first: mut List<Int> = [1];\n" +
+"second: mut List<Int> = [2, 4];\n" +
+"first = second;\n" +
+"list.pushBack(mut first, 3);\n" +
+"io.outputLine(list.popBack(mut second), first[2]);\n" +
+"stack: mut List<Int> = [1, 2, 3];\n" +
+"io.outputLine(list.popBack(mut stack), list.popBack(mut stack), list.popBack(mut stack));\n" +
+"growing: mut List<Int> = [1];\n" +
+"loop growing as value {\n" +
+"    if value == 1 {\n        list.pushBack(mut growing, 2);\n    }\n" +
+"    io.outputLine(value);\n" +
+"}\n" +
+"io.outputLine(growing[1]);\n" +
+"pairs: mut List<Pair> = [(kind = \"a\", code = 1)];\n" +
+"list.pushBack(mut pairs, (kind = \"b\", code = 2));\n" +
+"pair := list.popBack(mut pairs);\n" +
+"io.outputLine(pair.kind, pair.code, pairs[0].kind);\n" +
+"blank: mut List<String>;\n" +
+"list.pushBack(mut blank, \"ok\");\n" +
+"list.pushBack(mut blank, \"later\");\n" +
+"io.outputLine(list.popBack(mut blank));\n" +
+"list.popBack(mut blank);\n" +
+"list.pushBack(mut blank, \"again\");\n" +
+"io.outputLine(blank[0]);\n";
+compilerTest.assertCompileRunTs(root, tsComp, "list mutation grants", mutSrc, "1 3\n3\n2\n10 20 9\n7 8\n5 6\n4 3\n3 2 1\n1\n2\nb 2 a\nlater\nagain\n");
+
+emptyPopRes := compilerTest.compileCheckRunTs(root, tsComp, "list := import \"core/list\"; io := import \"core/io\"; empty: mut List<Int> = [];\nio.outputLine(list.popBack(mut empty));\n", "");
+test.check("empty pop nonzero", emptyPopRes.status =!= 0);
+test.check("empty pop panic", text.containsText(emptyPopRes.stderr, "BoundPanic: pop_back on an empty list"));
+
+badMutSrc: List<String> = [
+"list := import \"core/list\"; values: mut List<Int> = [];\nlist.pushBack(mut values, \"x\");\n",
+"list := import \"core/list\"; values: List<Int> = [];\nlist.pushBack(mut values, 1);\n",
+"list := import \"core/list\"; var values: List<Int> = [];\nlist.pushBack(mut values, 1);\n",
+"list := import \"core/list\"; values: List<Int> = [];\nlist.pushBack(values, 1);\n",
+"list := import \"core/list\"; x := 1;\nlist.pushBack(mut x, 2);\n",
+"list := import \"core/list\"; list.pushBack(mut missing, 1);\n",
+"list := import \"core/list\"; values: mut List<Int> = [];\nlist.pushBack(mut values);\n",
+"list := import \"core/list\"; io := import \"core/io\"; values: mut List<Int> = [];\nio.outputLine(list.popBack(values));\n",
+"values: mut Int = 1;\n",
+"list := import \"core/list\"; values: mut List<Int> = [];\nx := list.pushBack(mut values, 1);\n",
+];
+badMutErr: List<String> = [
+"2:27: pushBack element must be Int, got String\n",
+"2:19: cannot mutate list values without mut\n",
+"2:19: cannot mutate list values without mut\n",
+"2:15: pushBack requires mut list argument\n",
+"2:19: pushBack requires a List value, got Int\n",
+"1:47: unknown value missing\n",
+"2:25: pushBack expects a value after the mut list\n",
+"2:28: popBack requires mut list argument\n",
+"1:9: mut requires a List type, got Int\n",
+"2:1: cannot declare a Unit local x\n",
+];
+var mi := 0;
+loop mi < 10 {
+    compilerTest.assertCompileError(root, tsComp, "bad mut " + badMutSrc[mi], badMutSrc[mi], badMutErr[mi]);
+    mi = mi + 1;
+}
+badMutC: List<String> = [
+"list := import \"core/list\"; values: mut List<Int> = [1];\nlist.pushBack(mut values, 2);\n",
+"list := import \"core/list\"; io := import \"core/io\"; values: mut List<Int> = [1];\nio.outputLine(list.popBack(mut values));\n",
+"list := import \"core/list\"; values: mut List<Int>;\nlist.pushBack(mut values, 2);\n",
+];
+loop badMutC as src {
+    compilerTest.assertCompileError(root, cComp, "bad mut C", src, "C backend does not support list values yet\n");
+}

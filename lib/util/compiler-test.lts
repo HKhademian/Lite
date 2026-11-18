@@ -133,6 +133,76 @@ pub compileCheckRunTs := fn(rootDir: String, compilerPath: String, source: Strin
     (status = ran.status, stdout = outText, stderr = errText)
 };
 
+/** Probes for a local C11 compiler (`$CC` or `cc`), returning `(available = false)` when unavailable or skipped via `LITE_SKIP_NATIVE=1`. */
+pub probeCc := fn(): (available: Bool, cc: String) {
+    skipVar := proc.envGet("LITE_SKIP_NATIVE");
+    if skipVar.found and skipVar.value == "1" {
+        return (available = false, cc = "");
+    }
+    ccEnv := proc.envGet("CC");
+    cc := if ccEnv.found and ccEnv.value =!= "" { ccEnv.value } else { "cc" };
+    tmpRes := fs.makeTempDir("lite-cc-probe-");
+    if not tmpRes.ok { return (available = false, cc = ""); }
+    outP := path.join(tmpRes.path, "out");
+    errP := path.join(tmpRes.path, "err");
+    res := proc.runBytes(cc, ["--version"], tmpRes.path, emptyEnv(), 10000, emptyBytes(), outP, errP);
+    _rm := fs.remove(tmpRes.path);
+    if res.error =!= "" or res.status =!= 0 {
+        return (available = false, cc = "");
+    }
+    (available = true, cc = cc)
+};
+
+/** Compiles inline `source` with C compiler `cCompilerPath`, builds with `-std=c11 -Wall -Wextra -Werror`, and runs the binary. */
+pub compileCheckRunC := fn(rootDir: String, cCompilerPath: String, cc: String, source: String, logicalName: String, stdinText: String): RunOutput {
+    compiled := compileStdin(rootDir, cCompilerPath, source, logicalName);
+    test.check("compileCheckRunC compile: " + compiled.stderr, compiled.status == 0 and compiled.stderr == "");
+
+    tmpRes := fs.makeTempDir("lite-run-c-");
+    test.check("compileCheckRunC makeTempDir: " + tmpRes.error, tmpRes.ok);
+    workDir := tmpRes.path;
+
+    cPath := path.join(workDir, "artifact.c");
+    exePath := path.join(workDir, "artifact");
+    wC := fs.writeText(cPath, compiled.stdout);
+    test.check("compileCheckRunC write artifact.c", wC.ok);
+
+    ccOut := path.join(workDir, "cc.stdout");
+    ccErr := path.join(workDir, "cc.stderr");
+    ccRes := proc.runBytes(cc, ["-std=c11", "-Wall", "-Wextra", "-Werror", cPath, "-o", exePath, "-lm"], workDir, emptyEnv(), 30000, emptyBytes(), ccOut, ccErr);
+    test.check("compileCheckRunC cc error: " + ccRes.error, ccRes.error == "");
+    if ccRes.status =!= 0 {
+        msg := fs.readText(ccErr).text;
+        _rmCc := fs.remove(workDir);
+        test.check("compileCheckRunC cc failed: " + msg, false);
+    }
+
+    runOut := path.join(workDir, "run.stdout");
+    runErr := path.join(workDir, "run.stderr");
+    ran := proc.runBytes(exePath, emptyEnv(), workDir, emptyEnv(), 10000, unicode.utf8Encode(stdinText), runOut, runErr);
+    test.check("compileCheckRunC run error: " + ran.error, ran.error == "");
+    outText := fs.readText(runOut).text;
+    errText := fs.readText(runErr).text;
+    _rm := fs.remove(workDir);
+    (status = ran.status, stdout = outText, stderr = errText)
+};
+
+/** Compiles `source` with `compilerPath` expecting exit status 2, empty stdout, and exact stderr. */
+pub assertCompileError := fn(rootDir: String, compilerPath: String, label: String, source: String, expectedErr: String): Unit {
+    res := compileStdin(rootDir, compilerPath, source, "");
+    test.checkInt(label + " status", 2, res.status);
+    test.checkText(label + " stdout", "", res.stdout);
+    test.checkText(label + " stderr", expectedErr, res.stderr);
+};
+
+/** Compiles, strict-checks, and executes `source` on TS expecting exit 0 and `expectedOut`. */
+pub assertCompileRunTs := fn(rootDir: String, compilerPath: String, label: String, source: String, expectedOut: String): Unit {
+    res := compileCheckRunTs(rootDir, compilerPath, source, "");
+    test.checkInt(label + " status", 0, res.status);
+    test.checkText(label + " stdout", expectedOut, res.stdout);
+    test.checkText(label + " stderr", "", res.stderr);
+};
+
 /** Reads `compiler/tests/contracts/process.json` for recorded phase-driver expectations. */
 pub readProcessContracts := fn(rootDir: String): String {
     readRes := fs.readText(path.join(rootDir, "compiler/tests/contracts/process.json"));
