@@ -128,7 +128,7 @@ Generic forms such as `Array<Float, 3>`, `List<Int>`, and `Option<User>` are tem
 - [Union field writes](union-field-writes.md): selected compatibility with every possible target field, preserving each parent's storage type and mutation permissions.
 - [Union values and access contracts](union-values-and-access.md): a storage location containing a union versus a union of possible storage locations; historical access notation and proposed explicit read/write contracts.
 - [Unambiguous meaning](unambiguous-meaning.md): reject unresolved distinct meanings with a diagnostic instead of silently choosing.
-- [Union initialization policy](union-initialization-policy.md): bare typed declarations initialize all-zero storage; numeric zero and an explicit all-zero value expression have distinct intended roles. `= ?` requests uninitialized storage.
+- [Union initialization policy](union-initialization-policy.md): bare typed declarations initialize all-zero storage; contextual zero is accepted when its possible meanings yield one distinct result. `= ?` requests uninitialized storage.
 - [Union zero](union-zero.md): selected universal zero requirement; active-member priority and mappings for unions, enums, references, and resources remain open.
 - [Empty union zero proposal](union-empty-zero-proposal.md): proposed empty state for unions; not selected; compared with Unit and member-priority alternatives.
 - [Conditional union fallback](conditional-union-fallback.md): declaration initializers with a multi-member union require an explicit `else` or `?`; assignment and loop no-match paths are noncontributing.

@@ -12,7 +12,7 @@ locals; List and function reservation remain unsupported.
 
 ## Plain-union construction restriction
 
-A bare typed declaration zero-initializes every type, including multi-member unions. Union zero has Kind 0 and no known active member; see [union initialization](union-initialization-policy.md#bare-local-declarations). The previous general special treatment of `= 0` is superseded: `0` is numeric, and a future explicit expression for the all-zero value of any type is under design. Conditional fallback remains a separate source rule to review.
+A bare typed declaration zero-initializes every type, including multi-member unions. Contextual `0` can also request all-zero storage, but it is rejected if another distinct interpretation remains viable, such as an active numeric member of a union. Union zero has Kind 0 and no known active member; see [union initialization](union-initialization-policy.md#bare-local-declarations). Conditional fallback remains a separate source rule to review.
 
 ## Core distinction
 
@@ -60,7 +60,7 @@ Until a category's mapping is defined, any loop `.value` initialization, conditi
 
 ## Meaning of 0
 
-Literal `0` is numeric, not a general zero-initialization request for arbitrary types. A bare typed declaration still initializes all-zero storage. A separately designed zero-value expression should work in declarations, arguments, returns, assignments and nested initializers; `mem.zeros<Type>()` is illustrative, not selected syntax. A union destination with multiple viable distinct numeric members produces an inference error if context does not disambiguate them. The exact literal inference and conversion rules remain open.
+Literal `0` can denote a numeric value or the destination type's all-zero value. Accept it when viable interpretations determine one distinct result; reject differing results rather than guessing. Numeric Int zero and zero-initialized Int coincide, while union zero and an active Int zero differ. Literal `1` has no general all-zero interpretation. Exact numeric compatibility and inference are open. An explicitly typed member or a future explicit zero-value expression can express intent; `cast<Int>(0)` and `mem.zeros<Type>()` are illustrative, not selected syntax.
 
 ## Semantic zero values
 

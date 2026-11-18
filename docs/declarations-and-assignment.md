@@ -38,7 +38,7 @@ Assume the three inputs are Bool. This infers Bool and evaluates exactly like re
 
 ## Multi-member union initialization
 
-A bare `x: X;` zero-initializes the slot for every type X, including a multi-member union. Union zero has Kind 0 and no known active member. Numeric `0` is not a generic zero-storage request: for `Int | String` it is intended to supply Int zero. A future explicit zero-value expression is under design; its spelling is unselected. `= ?` requests uninitialized storage. See [union initialization](union-initialization-policy.md#bare-local-declarations).
+A bare `x: X;` zero-initializes storage. Contextual `0` can select all-zero storage or a compatible numeric value; distinct viable results are an inference error. Union zero has Kind 0 and no known active member. `= ?` requests uninitialized storage. See [union initialization](union-initialization-policy.md#bare-local-declarations).
 
 ## Rules
 

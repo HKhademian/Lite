@@ -38,7 +38,7 @@ For zeroed, name and address.city are empty Strings, age and address.postalCode 
 
 The empty contextual record initializer is selected: its established initializer position and expected record type give it record-construction meaning. Empty executable bodies still produce Unit. The full grammar must express these distinct roles without using trial type-checking to choose a parse.
 
-Omitting the initializer of a simple typed binding selects all-zero storage and bypasses declared field defaults. Numeric literal 0 is not a general request to zero a record; an explicit zero-value expression remains under design. Every type has a valid all-zero value; this does not implicitly cast an arbitrary integer to a record. See [zero initialization](zero-initialization.md).
+Omitting the initializer of a simple typed binding selects all-zero storage and bypasses declared field defaults. A contextual literal 0 can request a zeroed record when there is no distinct viable interpretation; an explicit zero-value expression also remains under design. Every type has a valid all-zero value; this does not implicitly cast an arbitrary integer to a record. See [zero initialization](zero-initialization.md).
 
 ```text
 user := User {}

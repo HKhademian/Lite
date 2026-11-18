@@ -2,7 +2,7 @@
 
 Status: **descriptive outline, deliberately incomplete and not implementation-ready**.
 
-Bare typed declarations initialize all-zero storage for every type, including multi-member unions; Kind 0 identifies no known member. Numeric literal zero has a separate role. An explicit zero-value expression for arbitrary types is under design, with syntax unselected. Explicit `= ?` requests uninitialized storage. See [union initialization](union-initialization-policy.md#bare-local-declarations).
+Bare typed declarations initialize all-zero storage for every type, including multi-member unions; Kind 0 identifies no known member. Contextual `0` can denote zeroed storage or a numeric value; multiple distinct viable results are an error. An explicit zero-value expression is under design. Explicit `= ?` requests uninitialized storage. See [union initialization](union-initialization-policy.md#bare-local-declarations).
 
 ## Purpose
 
@@ -345,7 +345,7 @@ The [initialization overview](record-initialization.md) proposes field defaults 
 
 The proposed nested field type `stats: { points: Int; level: Int = 1; }` uses braces in an explicit type position and omits record there. Distinct identity per record type declaration is selected for inline types too; the shorthand's full type production remains open. This does not remove record from a top-level binding such as Profile := record { ... }.
 
-The selected [zero rule](zero-initialization.md) zero-initializes bare typed declarations for every type. Numeric `0` no longer denotes generic zero initialization. The spelling of an explicit zero-value expression and complete literal/inference contracts remain open.
+The [zero rule](zero-initialization.md) zero-initializes bare typed declarations. Contextual literal `0` may denote zero initialization when the result is unambiguous. Explicit zero-value expression syntax and complete literal/inference contracts remain open.
 
 Selected record forms and field-list fragments:
 
