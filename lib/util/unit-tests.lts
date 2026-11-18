@@ -38,7 +38,7 @@ readWorkerFailureText := fn(errPath: String, outPath: String, fallback: String):
     fallback
 };
 
-/** Executes a single `--_worker <taskJson>` unit test compilation, strict TS check, and run. */
+/** Executes a single `--unit-worker <taskJson>` unit test compilation, strict TS check, and run. */
 pub runUnitWorker := fn(taskJson: String): Int {
     valid := json.validate(taskJson);
     if not valid.ok {
@@ -161,7 +161,7 @@ pub runUnitTests := fn(rootDir: String, filter: String, maxJobs: Int, outputMode
         taskJson := "{\"root\":" + json.quoteString(rootDir)
         + ",\"compiler\":" + json.quoteString(sel.path)
         + ",\"file\":" + json.quoteString(relFile) + "}";
-        argJson := "[" + json.quoteString(runnerScript) + ",\"--_worker\"," + json.quoteString(taskJson) + "]";
+        argJson := "[" + json.quoteString(runnerScript) + ",\"--unit-worker\"," + json.quoteString(taskJson) + "]";
         list.pushBack(mut commands, proc.execPath());
         list.pushBack(mut argListsJson, argJson);
     }

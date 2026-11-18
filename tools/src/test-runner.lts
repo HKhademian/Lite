@@ -53,10 +53,10 @@ readGeneratedTestFiles := fn(root: String): List<String> {
 run := fn(rawArgs: List<String>): Unit {
     project.handleVersionFlag(rawArgs, "tester", "test");
     args: mut List<String> = rawArgs;
-    if list.listCountText(args) > 0 and args[0] == "--_worker" {
+    if list.listCountText(args) > 0 and args[0] == "--unit-worker" {
         _flag := list.popFront(mut args);
         if list.listCountText(args) =!= 1 {
-            io.errorLine("Usage: ./bin/lite test --_worker TASK_JSON");
+            io.errorLine("Usage: ./bin/lite test --unit-worker TASK_JSON");
             io.exit(2);
         }
         io.exit(unitTests.runUnitWorker(args[0]));
