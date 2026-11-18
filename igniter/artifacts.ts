@@ -4,7 +4,7 @@ import { spawnSync } from 'node:child_process';
 import { createHash } from 'node:crypto';
 import { closeSync, existsSync, mkdirSync, mkdtempSync, openSync, readFileSync, rmSync, statSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
-import { join } from 'node:path';
+import { dirname, join, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
 export const repoRoot = fileURLToPath(new URL('../', import.meta.url));
@@ -284,3 +284,86 @@ export function runCArtifact(source: string, options: ArtifactOptions = {}): Art
     rmSync(directory, { recursive: true, force: true });
   }
 }
+
+/** Validated ordered compiler manifest: one target and its relative source paths. */
+export type Manifest = Readonly<{ target: CompilerTarget; files: readonly string[] }>;
+/** Existing code-generation targets; this is host plumbing, not language syntax. */
+export type CompilerTarget = 'ts' | 'c';
+/** Raw streams and process-style status from a compiler invocation. */
+export type CompilerResult = Readonly<{ status: number; stdout: Buffer; stderr: Buffer }>;
+/** Complete source plus an optional diagnostic name and canonical filesystem path. */
+export type CompilerInput = Readonly<{ text: string; name?: string; rootPath?: string; cwd?: string; options?: readonly string[] }>;
+/** Selected artifact and exact source/builder identities. */
+export type CompilerBuild = Readonly<{
+  target: CompilerTarget;
+  path: string;
+  sourceSha256: string;
+  artifactSha256: string;
+  builderSha256: string;
+  dependencies: readonly string[];
+  cached: boolean;
+}>;
+
+const cachedBuilds = new Map<CompilerTarget, CompilerBuild>();
+
+/** Validates one compiler manifest JSON file through the Lite `compiler-build` tool. */
+export function loadManifest(path: string): Manifest {
+  const tool = ensureTool('compiler-build');
+  const resolved = resolve(path);
+  const result = spawnSync(process.execPath, [tool, '--manifest', resolved], {
+    cwd: dirname(resolved), encoding: 'utf8', timeout: 30_000,
+  });
+  if (result.error !== undefined) throw result.error;
+  if (result.status !== 0 || result.signal !== null) {
+    throw new Error((result.stderr || result.stdout || `manifest validation failed (${result.status ?? result.signal})`).trim());
+  }
+  return JSON.parse(result.stdout) as Manifest;
+}
+
+/** Selects and builds the current generated compiler artifact via `tools/src/compiler-build.lts`. */
+export function buildCompiler(target: CompilerTarget): CompilerBuild {
+  const memo = cachedBuilds.get(target);
+  if (memo !== undefined && existsSync(memo.path)) return memo;
+  const tool = ensureTool('compiler-build');
+  const result = spawnSync(process.execPath, [tool, '--root', repoRoot, '--target', target], {
+    cwd: repoRoot, encoding: 'utf8', timeout: 120_000, maxBuffer: 16 * 1024 * 1024,
+  });
+  if (result.error !== undefined) throw result.error;
+  if (result.status !== 0 || result.signal !== null) {
+    throw new Error((result.stderr || result.stdout || `compiler build failed (${result.status ?? result.signal})`).trim());
+  }
+  const built = JSON.parse(result.stdout) as CompilerBuild;
+  cachedBuilds.set(target, built);
+  return built;
+}
+
+/** Selects the current TS compiler via `tools/src/compiler-build.lts`. */
+export function buildTsCompiler(): CompilerBuild { return buildCompiler('ts'); }
+
+/** Selects the current C compiler; builds and caches it from compiler sources if needed. */
+export function buildCCompiler(): CompilerBuild { return buildCompiler('c'); }
+
+/** Compiles one whole Lite source through a generated compiler artifact path. */
+export function invokeCompilerArtifact(artifact: string, input: CompilerInput): CompilerResult {
+  const cwd = input.cwd ?? process.cwd();
+  const rootPath = input.rootPath ?? (input.name === undefined || input.name === '' ? resolve(cwd, '__lite_stdin__.lts') : resolve(cwd, input.name));
+  const result = spawnSync(process.execPath, [artifact, '--stdin', '--name', input.name ?? '', '--root', rootPath, ...(input.options ?? [])], {
+    input: input.text, cwd, timeout: 0, maxBuffer: 128 * 1024 * 1024,
+  });
+  if (result.error !== undefined) throw result.error;
+  if (result.signal !== null || result.status === null) throw new Error(`generated compiler terminated: ${result.signal ?? 'no exit status'}`);
+  return { status: result.status, stdout: result.stdout ?? Buffer.alloc(0), stderr: result.stderr ?? Buffer.alloc(0) };
+}
+
+/** Compiles one whole Lite source with a current Lite-written target compiler. */
+export function compileBuiltCompiler(build: CompilerBuild, input: CompilerInput): CompilerResult {
+  return invokeCompilerArtifact(build.path, input);
+}
+
+/** Selects the current graph then compiles one whole Lite source. */
+export function compileTarget(target: CompilerTarget, input: CompilerInput): CompilerResult {
+  return compileBuiltCompiler(buildCompiler(target), input);
+}
+
+/** Compiles to TS through the current generated compiler. */
+export function compileTs(input: CompilerInput): CompilerResult { return compileTarget('ts', input); }

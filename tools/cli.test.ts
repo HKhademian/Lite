@@ -6,8 +6,7 @@ import { tmpdir } from 'node:os';
 import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { test } from 'node:test';
-import { compileTs } from '../compiler/host.ts';
-import { ensureTool, igniteAllTools } from '../igniter/artifacts.ts';
+import { compileTs, ensureTool, igniteAllTools } from '../igniter/artifacts.ts';
 
 const root = fileURLToPath(new URL('../', import.meta.url));
 
@@ -175,7 +174,7 @@ test('ignition rebuilds missing, tampered, and dependency-changed tools into dis
   try {
     for (const rel of [
       'package.json', 'config/versions.json', 'bin/lite', 'bin/lite-fmt', 'bin/lite-ignite',
-      'compiler/host.ts', 'compiler/package.json', 'compiler/src', 'compiler/manifests',
+      'compiler/package.json', 'compiler/src', 'compiler/manifests',
       'compiler/bootstrap/igniter.ts', 'compiler/bootstrap/seed.ts',
       'igniter/artifacts.ts', 'igniter/package.json', 'igniter/tsconfig.json',
       'tools/src/cli.lts', 'tools/src/fmt.lts', 'lib/core', 'lib/util',

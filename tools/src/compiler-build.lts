@@ -1,16 +1,72 @@
 /** Selects and builds generated TS compiler and TS-hosted C emitter metadata (`compiler/scripts/build.ts`). */
 
 io := import "core/io";
+list := import "core/list";
 project := import "util/project";
+compilerBuild := import "util/compiler-build";
 corpus := import "util/corpus";
 
-run := fn(): Int {
-    root := project.findRepoRoot();
-    if root == "" {
+run := fn(rawArgs: List<String>): Int {
+    args: mut List<String> = rawArgs;
+    var root := "";
+    var target := "";
+    var manifestPath := "";
+    var hasTarget := false;
+    var hasManifest := false;
+
+    loop list.listCountText(args) > 0 {
+        arg := list.popFront(mut args);
+        if arg == "--root" {
+            if list.listCountText(args) == 0 {
+                io.errorLine("Usage: compiler-build [--root DIR] [--target ts|c | --manifest FILE]");
+                return 2;
+            }
+            root = list.popFront(mut args);
+        } else if arg == "--target" {
+            if list.listCountText(args) == 0 or hasManifest {
+                io.errorLine("Usage: compiler-build [--root DIR] [--target ts|c | --manifest FILE]");
+                return 2;
+            }
+            target = list.popFront(mut args);
+            hasTarget = true;
+        } else if arg == "--manifest" {
+            if list.listCountText(args) == 0 or hasTarget {
+                io.errorLine("Usage: compiler-build [--root DIR] [--target ts|c | --manifest FILE]");
+                return 2;
+            }
+            manifestPath = list.popFront(mut args);
+            hasManifest = true;
+        } else {
+            io.errorLine("Usage: compiler-build [--root DIR] [--target ts|c | --manifest FILE]");
+            return 2;
+        }
+    }
+
+    if hasManifest {
+        man := compilerBuild.validateManifestFile(manifestPath);
+        if not man.ok {
+            io.errorLine(man.error);
+            return 1;
+        }
+        io.outputLine(man.jsonText);
+        return 0;
+    }
+
+    resolvedRoot := if root =!= "" { root } else { project.findRepoRoot() };
+    if resolvedRoot == "" {
         io.errorLine("could not locate LiteScript repository root");
         return 1;
     }
-    corpus.runCompilerBuildCommand(root)
+    if hasTarget {
+        built := compilerBuild.buildCompiler(resolvedRoot, target);
+        if not built.ok {
+            io.errorLine(built.error);
+            return 1;
+        }
+        io.outputLine(built.jsonText);
+        return 0;
+    }
+    corpus.runCompilerBuildCommand(resolvedRoot)
 };
 
-io.exit(run());
+io.exit(run(io.inputArgs()));

@@ -626,7 +626,7 @@ computeRuntimeHash := fn(rootDir: String, compilerDeps: List<String>): (ok: Bool
     "lib/util/streams.lts",
     "lib/util/json.lts",
     "lib/util/compiler-build.lts",
-    "compiler/host.ts",
+    "tools/src/compiler-build.lts",
     "compiler/bootstrap/igniter.ts",
     "compiler/bootstrap/seed.ts"
     ];
@@ -775,7 +775,7 @@ invalidatesVerification := fn(relPath: String): Bool {
     "language/verifications/features.json",
     "language/verifications/schema/verification.schema.json",
     "lib/util/compiler-build.lts",
-    "compiler/host.ts",
+    "tools/src/compiler-build.lts",
     "tools/src/ignite.lts",
     "tools/src/verify.lts",
     "lib/util/verify.lts",
@@ -788,8 +788,8 @@ invalidatesVerification := fn(relPath: String): Bool {
     "compiler/src/",
     "compiler/bootstrap/",
     "compiler/manifests/",
-    "compiler/runtime/",
-    "lib/core/"
+    "lib/core/",
+    "lib/external/"
     ];
     loop prefixes as prefix {
         if text.startsWithAt(relPath, 0, prefix) { return true; }

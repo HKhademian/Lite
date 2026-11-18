@@ -5,10 +5,9 @@ import { tmpdir } from 'node:os';
 import { delimiter, dirname, join, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { test } from 'node:test';
-import { buildCompiler, buildTsCompiler, compileTarget, compileTs, loadManifest, type CompilerTarget } from '../host.ts';
 import { seed } from '../bootstrap/seed.ts';
 import { expectedText } from './contracts.ts';
-import { prepareTsArtifacts, checkTsArtifact, runTsArtifact, runCArtifact, withTsArtifact, withTsArtifacts, type ArtifactOptions, type ArtifactRun } from '../../igniter/artifacts.ts';
+import { buildCompiler, buildTsCompiler, compileTarget, compileTs, loadManifest, prepareTsArtifacts, checkTsArtifact, runTsArtifact, runCArtifact, withTsArtifact, withTsArtifacts, type ArtifactOptions, type ArtifactRun, type CompilerTarget } from '../../igniter/artifacts.ts';
 
 const root = fileURLToPath(new URL('../../', import.meta.url));
 const env = { ...process.env, PATH: dirname(process.execPath) + delimiter + (process.env['PATH'] ?? '') };
@@ -841,7 +840,7 @@ function isolatedCheckout(): string {
   const utilLibs = readdirSync(join(root, 'lib/util')).filter(f => f.endsWith('.lts')).map(f => `lib/util/${f}`);
   const paths = new Set([
     'bin/lite', 'bin/lite-compile', 'bin/lite-compile-ts', 'bin/lite-compile-c', 'bin/lite-check', 'bin/lite-run', 'bin/lite-verify',
-    'compiler/host.ts', 'compiler/package.json',
+    'compiler/package.json',
     'igniter/test-suites.ts', 'igniter/artifacts.ts', 'igniter/package.json',
     'config/versions.json',
     'compiler/scripts/release-streams.test.ts',
@@ -867,7 +866,7 @@ function invoke(directory: string, source: string | Buffer, target: CompilerTarg
     ? spawnSync(join(directory, 'bin/lite-compile-ts'), [path], { env, timeout: 120000 })
     : spawnSync(process.execPath, [
       '--input-type=module', '-e',
-      "import { buildCompiler } from './compiler/host.ts'; import { writeSync } from 'node:fs'; import { pathToFileURL } from 'node:url'; const c = buildCompiler('c').path; const m = await import(pathToFileURL(c).href); process.argv = [process.execPath, c, process.argv[1]]; const out = m.main((t) => writeSync(1, t)); if (out === undefined) process.exitCode = 2; else if (typeof out !== 'string') process.exitCode = 1; else if (out.length > 0) writeSync(1, out);",
+      "import { buildCompiler } from './igniter/artifacts.ts'; import { writeSync } from 'node:fs'; import { pathToFileURL } from 'node:url'; const c = buildCompiler('c').path; const m = await import(pathToFileURL(c).href); process.argv = [process.execPath, c, process.argv[1]]; const out = m.main((t) => writeSync(1, t)); if (out === undefined) process.exitCode = 2; else if (typeof out !== 'string') process.exitCode = 1; else if (out.length > 0) writeSync(1, out);",
       path,
     ], { cwd: directory, env, timeout: 120000 });
 }
@@ -924,7 +923,7 @@ test('a changed Lite compiler rebuilds with the selected seed, caches by source 
     assert.equal(second.status, 0); assert.deepEqual(second.stdout, first.stdout);
     // Ask the real build selector for its exact cache path inside the copied checkout.
     const selected = spawnSync(process.execPath, ['--input-type=module', '-e',
-      'import {buildTsCompiler} from "./compiler/host.ts"; process.stdout.write(JSON.stringify(buildTsCompiler()));'],
+      'import {buildTsCompiler} from "./igniter/artifacts.ts"; process.stdout.write(JSON.stringify(buildTsCompiler()));'],
     { cwd: directory, env, encoding: 'utf8', timeout: 120000 });
     assert.equal(selected.status, 0, selected.stderr);
     const record: unknown = JSON.parse(selected.stdout);
@@ -969,7 +968,7 @@ test('the unchanged selected TS source graph uses its verified seed without a lo
   try {
     assert.equal(existsSync(join(directory, 'igniter/node_modules/typescript/bin/tsc')), false);
     const selected = spawnSync(process.execPath, ['--input-type=module', '-e',
-      'import {buildTsCompiler} from "./compiler/host.ts"; const first = buildTsCompiler(); const t0 = performance.now(); const second = buildTsCompiler(); process.stdout.write(JSON.stringify({ first, second, secondMs: performance.now() - t0 }));'],
+      'import {buildTsCompiler} from "./igniter/artifacts.ts"; const first = buildTsCompiler(); const t0 = performance.now(); const second = buildTsCompiler(); process.stdout.write(JSON.stringify({ first, second, secondMs: performance.now() - t0 }));'],
     { cwd: directory, env, encoding: 'utf8', timeout: 60000 });
     assert.equal(selected.error, undefined);
     assert.equal(selected.status, 0, selected.stderr);
@@ -1016,7 +1015,7 @@ test('the graph-built TS-hosted C emitter preserves source names and subset reje
   try {
     symlinkSync(join(root, 'igniter/node_modules'), join(directory, 'igniter/node_modules'));
     const built = spawnSync(process.execPath, ['--input-type=module', '-e',
-      'import {buildCompiler} from "./compiler/host.ts"; process.stdout.write(JSON.stringify(buildCompiler("c")));'],
+      'import {buildCompiler} from "./igniter/artifacts.ts"; process.stdout.write(JSON.stringify(buildCompiler("c")));'],
     { cwd: directory, env, encoding: 'utf8', timeout: 120000 });
     assert.equal(built.status, 0, built.stderr);
     const artifactPath = (JSON.parse(built.stdout) as { path: string }).path;
@@ -1107,7 +1106,7 @@ test('default verifier selects consumers after compiler changes and ignores inve
     const git = join(directory, 'git');
     const changedEnv = { ...env, PATH: directory + delimiter + env.PATH };
     // Supply a changed-file listing without editing compiler source or the real Git index.
-    for (const path of ['compiler/host.ts', 'compiler/src/c-literals.lts', 'compiler/src/frontend.lts',
+    for (const path of ['lib/util/compiler-build.lts', 'compiler/src/c-literals.lts', 'compiler/src/frontend.lts',
       'compiler/manifests/c.json', 'lib/core/int.lts']) {
       writeFileSync(git, `#!/bin/sh\nprintf '%s\\n' ' M ${path}'\n`);
       chmodSync(git, 0o755);

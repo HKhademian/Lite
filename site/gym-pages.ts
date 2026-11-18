@@ -1,7 +1,7 @@
 /** Generates `/gym/` interactive coding dojo index, 42 drill/workout pages, and grading payloads. */
 import { existsSync, readFileSync } from 'node:fs';
 import { join, posix } from 'node:path';
-import type { CompilerBuild } from '../compiler/host.ts';
+import type { CompilerBuild } from '../igniter/artifacts.ts';
 import { renderDocuments, type ModuleApiDoc, type RenderedDocument } from './docs-client.ts';
 import { renderPage, rootDir, type SourceRevision } from './chrome.ts';
 import { buildDocOutMap, postprocessMarkdownHtml } from './docs-pages.ts';

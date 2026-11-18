@@ -597,7 +597,7 @@ pub runCompilerPerformanceCommand := fn(rootDir: String, args: List<String>): In
     toolPaths: List<String> = [
     "benchmark/compiler-performance.ts", "tools/src/compiler-performance.lts",
     "lib/util/benchmark.lts", "lib/util/corpus.lts", "tools/src/compiler-worker.lts",
-    "lib/external/bench.lts", "compiler/host.ts", "igniter/artifacts.ts"
+    "lib/external/bench.lts", "lib/util/compiler-build.lts", "igniter/artifacts.ts"
     ];
     toolsJsonRes := corpus.toolIdentitiesJson(rootDir, toolPaths);
     if not toolsJsonRes.ok {

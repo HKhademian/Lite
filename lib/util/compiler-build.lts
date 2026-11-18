@@ -1,6 +1,7 @@
-/** Native Lite compiler selector and cache builder sharing `dist/compiler-cache/` with `compiler/host.ts`. */
+/** Native Lite compiler selector and cache builder under `dist/compiler-cache/`. */
 
 fs := import "core/file";
+integer := import "core/int";
 proc := import "core/process";
 crypto := import "core/crypto";
 text := import "core/text";
@@ -200,6 +201,79 @@ error: String
         return (ok = false, sourcePath = "", sourceName = "", error = rp.error);
     }
     (ok = true, sourcePath = rp.path, sourceName = path.relative(rootDir, rp.path), error = "")
+};
+
+isAsciiAlpha := fn(ch: String): Bool {
+    text.indexOfText("ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz", ch, 0) >= 0
+};
+
+/** Validates a compiler manifest JSON file strictly without assembling or reading its source files. */
+pub validateManifestFile := fn(manifestPathRaw: String): (ok: Bool, target: String, jsonText: String, error: String) {
+    manifestPath := path.resolve(proc.cwd(), manifestPathRaw);
+    mRead := fs.readText(manifestPath);
+    if not mRead.ok {
+        return (ok = false, target = "", jsonText = "", error = manifestPath + ": ENOENT: " + mRead.error);
+    }
+    raw := mRead.text;
+    v := json.validate(raw);
+    if not v.ok {
+        return (ok = false, target = "", jsonText = "", error = manifestPath + ": invalid manifest JSON: " + v.error);
+    }
+    span := json.valueSpan(raw, 0);
+    if not span.ok or not text.startsWithAt(raw, span.start, "{") {
+        return (ok = false, target = "", jsonText = "", error = manifestPath + ": manifest must be a JSON object");
+    }
+    keys := json.objectKeys(raw, span.start);
+    loop keys as k {
+        if k =!= "target" and k =!= "files" {
+            return (ok = false, target = "", jsonText = "", error = manifestPath + ": unexpected manifest key " + k);
+        }
+    }
+    tField := json.findObjectField(raw, span.start, "target");
+    tRes := if tField.found { json.readStringAt(raw, tField.valuePos) } else { (ok = false, value = "", next = 0, error = "") };
+    if not tRes.ok or (tRes.value =!= "ts" and tRes.value =!= "c") {
+        return (ok = false, target = "", jsonText = "", error = manifestPath + ": target must be \"ts\" or \"c\"");
+    }
+    filesField := json.findObjectField(raw, span.start, "files");
+    if not filesField.found or not text.startsWithAt(raw, filesField.valuePos, "[") {
+        return (ok = false, target = "", jsonText = "", error = manifestPath + ": files must be a nonempty array");
+    }
+    offsets := json.arrayElementOffsets(raw, filesField.valuePos);
+    count := list.listCountInt(offsets);
+    if count == 0 {
+        return (ok = false, target = "", jsonText = "", error = manifestPath + ": files must be a nonempty array");
+    }
+    files: mut List<String> = [];
+    filesQuoted: mut List<String> = [];
+    var idx := 0;
+    loop idx < count {
+        pos := offsets[idx];
+        sRes := json.readStringAt(raw, pos);
+        if not sRes.ok {
+            return (ok = false, target = "", jsonText = "", error = manifestPath + ": files[" + integer.intText(idx) + "]: must be a string");
+        }
+        entry := sRes.value;
+        if text.length(entry) == 0 {
+            return (ok = false, target = "", jsonText = "", error = manifestPath + ": files[" + integer.intText(idx) + "]: empty path");
+        }
+        if text.startsWithAt(entry, 0, "/") {
+            return (ok = false, target = "", jsonText = "", error = manifestPath + ": files[" + integer.intText(idx) + "]: absolute path");
+        }
+        if text.length(entry) >= 2 and isAsciiAlpha(text.at(entry, 0)) and text.at(entry, 1) == ":" {
+            return (ok = false, target = "", jsonText = "", error = manifestPath + ": files[" + integer.intText(idx) + "]: drive-letter path");
+        }
+        if text.containsText(entry, "\\") {
+            return (ok = false, target = "", jsonText = "", error = manifestPath + ": files[" + integer.intText(idx) + "]: path must use \"/\" separators");
+        }
+        if list.listContainsText(files, entry) {
+            return (ok = false, target = "", jsonText = "", error = manifestPath + ": files[" + integer.intText(idx) + "]: duplicate file " + entry);
+        }
+        list.pushBack(mut files, entry);
+        list.pushBack(mut filesQuoted, json.quoteString(entry));
+        idx = idx + 1;
+    }
+    body := "{\"target\":" + json.quoteString(tRes.value) + ",\"files\":[" + text.joinTexts(filesQuoted, ",") + "]}";
+    (ok = true, target = tRes.value, jsonText = body, error = "")
 };
 
 normalizeCachedArtifact := fn(

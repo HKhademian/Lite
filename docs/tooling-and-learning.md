@@ -322,7 +322,7 @@ The compiler implementation now lives in
 [`compiler/`](../compiler/README.md), not in runnable examples. Its source is
 split under `compiler/src/` and assembled by ordered manifests: L0 libraries,
 target literal encoders, shared front-end, target emitter and target driver.
-`lite-compile-ts` selects the standalone compiler artifact via [`compiler/host.ts`](../compiler/host.ts) and invokes it directly: TS uses the
+`lite-compile-ts` selects the standalone compiler artifact via [`lib/util/compiler-build.lts`](../lib/util/compiler-build.lts) and invokes it directly: TS uses the
 verified T13 seed/current Lite compiler, and C uses its Lite emitter compiled by
 T13 into a TS-hosted compiler. Top-level relative `.lts` imports define compiler
 source dependencies; package and namespace semantics remain unimplemented.

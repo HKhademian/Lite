@@ -880,8 +880,8 @@ self-hosted build. See [INV-061 evidence](../research/investigations/INV-061-lit
 The Lite-written compiler now lives in [compiler/](../compiler/README.md), not
 in the runnable example list. It has one shared front-end and separate TS/C
 emitters connected with Lite namespace imports. Each manifest selects one root;
-the Lite import visitor traverses its graph and the [generated host](../compiler/host.ts)
-supplies source reads and records the exact dependencies. Module namespaces are
+the Lite import visitor traverses its graph and [compiler-build.lts](../lib/util/compiler-build.lts)
+supplies selection and records the exact dependencies. Module namespaces are
 available to compiler source; package resolution remains open.
 
 Run the compiler with:

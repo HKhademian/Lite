@@ -2,7 +2,7 @@
 /** Verifies every Gym exercise's canonical solution and expected starter failure across all visible & hidden cases. */
 import { existsSync, readFileSync } from 'node:fs';
 import { join, resolve } from 'node:path';
-import { buildTsCompiler, compileBuiltCompiler, type CompilerBuild } from '../compiler/host.ts';
+import { buildTsCompiler, compileBuiltCompiler, type CompilerBuild } from '../igniter/artifacts.ts';
 import { rootDir } from './chrome.ts';
 import { stripLiteTs } from './strip-ts.ts';
 
