@@ -5,7 +5,6 @@ import { tmpdir } from 'node:os';
 import { delimiter, dirname, join, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { test } from 'node:test';
-import { generatedTestFiles } from '../../igniter/test-suites.ts';
 import { buildCompiler, buildTsCompiler, compileTarget, compileTs, type CompilerTarget } from '../host.ts';
 import { seed } from '../bootstrap/seed.ts';
 import { expectedText } from './contracts.ts';
@@ -2395,23 +2394,26 @@ test('default test startup and generated baseline run in a source archive withou
   if (process.env['LITE_SKIP_HEAVY'] === '1') { context.skip('LITE_SKIP_HEAVY=1'); return; }
   const directory = isolatedCheckout();
   try {
-    for (const path of ['igniter', 'tools', 'bin', 'config', 'compiler/tests', 'compiler/tests/references/generated', 'lib',
-      'language/verifications', 'language/examples', 'language/samples', 'language/cases', 'docs', 'benchmark/challenges/tools', '.agents/rules']) {
+    for (const path of ['igniter', 'tools', 'bin', 'config', 'compiler/bootstrap', 'compiler/manifests', 'compiler/src',
+      'compiler/tests', 'compiler/tests/references/generated', 'lib',
+      'language/verifications', 'language/examples', 'language/samples', 'language/cases', 'language/learn', 'docs', 'site', 'benchmark/challenges/tools', '.agents/rules']) {
       cpSync(join(root, path), join(directory, path), { recursive: true, verbatimSymlinks: true,
         filter: candidate => !/(?:\/node_modules|\/lite\.ts|\/bootstrap\.ts|\/bundle-cli\.ts|\/cli\.ts)$/.test(candidate) });
     }
     symlinkSync(join(root, 'igniter/node_modules'), join(directory, 'igniter/node_modules'));
     for (const path of ['igniter/lite.ts', 'igniter/bootstrap.ts', 'igniter/cli.ts', '.git']) assert.equal(existsSync(join(directory, path)), false);
-    const childEnv: NodeJS.ProcessEnv = { ...env, LITE_SKIP_NATIVE: '1' };
+    const childEnv: NodeJS.ProcessEnv = { ...env, LITE_SKIP_NATIVE: '1', LITE_SKIP_HEAVY: '1' };
     delete childEnv['NODE_TEST_CONTEXT'];
-    const pattern = '^L0 shared libraries|^bundle compilers reproduce|^compiler verification cases';
-    const result = spawnSync(process.execPath, ['--test', '--test-reporter=tap', '--test-name-pattern=' + pattern, ...generatedTestFiles],
-      { cwd: join(directory, 'igniter'), encoding: 'utf8', env: childEnv, timeout: 120000 });
-    assert.equal(result.error, undefined); assert.equal(result.status, 0, result.stdout + result.stderr);
-    assert.match(result.stdout, /L0 shared libraries have direct bootstrap tests/);
-    assert.match(result.stdout, /bundle compilers reproduce every compiler case/);
-    assert.match(result.stdout, /compiler verification cases are well-formed/);
-    assert.match(result.stdout, /# fail 0/); assert.doesNotMatch(result.stdout, /ERR_MODULE_NOT_FOUND|T00 reference/);
+    const libs = spawnSync(join(directory, 'bin/lite'), ['test', '--unit', '--verbose', 'libraries.test.lts'],
+      { cwd: directory, encoding: 'utf8', env: childEnv, timeout: 120000 });
+    assert.equal(libs.error, undefined); assert.equal(libs.status, 0, libs.stdout + libs.stderr);
+    assert.match(libs.stdout, /PASS lib\/tests\/libraries\.test\.lts/);
+    assert.doesNotMatch(libs.stdout + libs.stderr, /ERR_MODULE_NOT_FOUND|T00 reference/);
+    const corpusRun = spawnSync(join(directory, 'bin/lite'), ['test', '--unit', '--verbose', 'corpus-parity.test.lts'],
+      { cwd: directory, encoding: 'utf8', env: childEnv, timeout: 120000 });
+    assert.equal(corpusRun.error, undefined); assert.equal(corpusRun.status, 0, corpusRun.stdout + corpusRun.stderr);
+    assert.match(corpusRun.stdout, /PASS compiler\/tests\/corpus-parity\.test\.lts/);
+    assert.doesNotMatch(corpusRun.stdout + corpusRun.stderr, /ERR_MODULE_NOT_FOUND|T00 reference/);
     for (const args of [['--fast', '--full'], ['--reference'], ['--unknown']]) {
       const rejected = spawnSync(join(directory, 'bin/lite'), ['test', ...args], { encoding: 'utf8', env, timeout: 5000 });
       assert.equal(rejected.status, 2); assert.match(rejected.stderr, /Usage:/); assert.equal(rejected.stdout, '');

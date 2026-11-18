@@ -62,7 +62,7 @@
     },
     {
       "title": "L0 shared libraries have direct bootstrap tests",
-      "destination": "igniter/test.ts",
+      "destination": "lib/tests/libraries.test.lts",
       "originalLine": 194,
       "dependencies": [
         "runFile"
@@ -112,7 +112,7 @@
     },
     {
       "title": "Lite parser parses L0 libraries and original program cases",
-      "destination": "igniter/test.ts",
+      "destination": "compiler/tests/phase-sweeps.test.lts",
       "originalLine": 252,
       "dependencies": [
         "compile",
@@ -123,7 +123,7 @@
     },
     {
       "title": "Lite parser coverage follows the compiler source graph",
-      "destination": "igniter/test.ts",
+      "destination": "compiler/tests/phase-sweeps.test.lts",
       "originalLine": 302,
       "dependencies": [
         "runFile"
@@ -153,7 +153,7 @@
     },
     {
       "title": "Lite checker collects symbols from the assembled S",
-      "destination": "igniter/test.ts",
+      "destination": "compiler/tests/phase-sweeps.test.lts",
       "originalLine": 414,
       "dependencies": [
         "runFile"
@@ -367,7 +367,7 @@
     },
     {
       "title": "compiler verification cases are well-formed and cover both categories",
-      "destination": "igniter/test.ts",
+      "destination": "compiler/tests/corpus-parity.test.lts",
       "originalLine": 920,
       "dependencies": [],
       "originalAssertions": 3,
@@ -375,7 +375,7 @@
     },
     {
       "title": "compiler manifests name graph roots and no flattened source bundle",
-      "destination": "igniter/test.ts",
+      "destination": "compiler/tests/corpus-parity.test.lts",
       "originalLine": 926,
       "dependencies": [],
       "originalAssertions": 2,
@@ -383,7 +383,7 @@
     },
     {
       "title": "bundle compilers reproduce every compiler case with exact artifacts and diagnostics",
-      "destination": "igniter/test.ts",
+      "destination": "compiler/tests/corpus-parity.test.lts",
       "originalLine": 933,
       "dependencies": [
         "compile"
@@ -393,7 +393,7 @@
     },
     {
       "title": "Lite lexer tokenizes all bootstrap S and compiler cases",
-      "destination": "igniter/test.ts",
+      "destination": "compiler/tests/phase-sweeps.test.lts",
       "originalLine": 983,
       "dependencies": [
         "runFile"
@@ -587,7 +587,7 @@
     },
     {
       "title": "restricted compiler corpus keeps 69 program and 25 rejection cases",
-      "destination": "igniter/test.ts",
+      "destination": "compiler/tests/corpus-parity.test.lts",
       "originalLine": 1734,
       "dependencies": [],
       "originalAssertions": 2,
@@ -811,7 +811,7 @@
     },
     {
       "title": "Lite-generated native C, TS and igniter programs have identical output bytes and status",
-      "destination": "igniter/test.ts",
+      "destination": "compiler/tests/corpus-parity.test.lts",
       "originalLine": 2268,
       "dependencies": [
         "spawnSync",
@@ -926,7 +926,7 @@
     },
     {
       "title": "compiler applications reject fixture sources with exact diagnostics, positions and docs before artifact output",
-      "destination": "igniter/test.ts",
+      "destination": "compiler/tests/corpus-parity.test.lts",
       "originalLine": 2565,
       "dependencies": [
         "runCompiler"
@@ -946,7 +946,7 @@
     },
     {
       "title": "emitted TS and igniter outputs match byte for byte across the admitted compiler corpus",
-      "destination": "igniter/test.ts",
+      "destination": "compiler/tests/corpus-parity.test.lts",
       "originalLine": 2592,
       "dependencies": [
         "runCompiler",

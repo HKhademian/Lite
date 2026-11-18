@@ -1,0 +1,177 @@
+/* Lexer, parser, and checker source-graph sweeps migrated from igniter/test.ts. */
+
+fs := import "core/file";
+list := import "core/list";
+path := import "core/path";
+proc := import "core/process";
+test := import "core/test";
+text := import "core/text";
+unicode := import "core/unicode";
+pool := import "external/pool";
+compilerBuild := import "util/compiler-build";
+compilerTest := import "util/compiler-test";
+corpus := import "util/corpus";
+json := import "util/json";
+project := import "util/project";
+streams := import "util/streams";
+
+root := project.findRepoRoot();
+test.check("repo root found", root =!= "");
+
+heavyEnv := proc.envGet("LITE_SKIP_HEAVY");
+skipHeavy := heavyEnv.found and heavyEnv.value == "1";
+if not skipHeavy {
+    builtTs := compilerBuild.buildCompiler(root, "ts");
+    test.check("build TS compiler: " + builtTs.error, builtTs.ok);
+    builtC := compilerBuild.buildCompiler(root, "c");
+    test.check("build C compiler: " + builtC.error, builtC.ok);
+    tsComp := builtTs.path;
+
+    tsDeps := corpus.readStringListAt(builtTs.jsonText, json.findObjectField(builtTs.jsonText, 0, "dependencies").valuePos);
+    cDeps := corpus.readStringListAt(builtC.jsonText, json.findObjectField(builtC.jsonText, 0, "dependencies").valuePos);
+    loop tsDeps as dep {
+        test.check("ts dep no importFlatAll: " + dep, not text.containsText(fs.readText(path.join(root, dep)).text, "importFlatAll"));
+    }
+    loop cDeps as dep {
+        test.check("c dep no importFlatAll: " + dep, not text.containsText(fs.readText(path.join(root, dep)).text, "importFlatAll"));
+    }
+
+    contracts := compilerTest.readProcessContracts(root);
+    lexerRel := "compiler/tests/lexer/lexer-dump.lts";
+    progRel := "compiler/tests/parser/parser-program-dump.lts";
+    chkRel := "compiler/tests/checker/checker-dump.lts";
+
+    /* Compile all L0 core libs and compiler source deps in parallel via external/pool */
+    compileTargets: mut List<String> = [
+    "lib/core/int.lts", "lib/core/text.lts", "lib/core/source.lts",
+    "lib/core/format.lts", "lib/core/diag.lts", "lib/core/list.lts", "lib/core/test.lts",
+    ];
+    loop tsDeps as d { list.pushBack(mut compileTargets, d); }
+    loop cDeps as d {
+        if not list.listContainsText(compileTargets, d) {
+            list.pushBack(mut compileTargets, d);
+        }
+    }
+    compCmds: mut List<String> = [];
+    compArgs: mut List<String> = [];
+    loop compileTargets as target {
+        list.pushBack(mut compCmds, proc.execPath());
+        list.pushBack(mut compArgs, "[" + json.quoteString(tsComp) + "," + json.quoteString(target) + "]");
+    }
+    jobs := pool.cpuCount();
+    compRaw := pool.runPoolJson(compCmds, compArgs, root, jobs);
+    compOffs := json.arrayElementOffsets(compRaw, 0);
+    test.checkInt("dep pool count", list.listCountText(compileTargets), list.listCountInt(compOffs));
+    var di := 0;
+    loop di < list.listCountText(compileTargets) {
+        st := json.readObjectInt(compRaw, compOffs[di], "status").value;
+        err := json.readObjectString(compRaw, compOffs[di], "stderr").value;
+        test.checkInt("compile " + compileTargets[di] + ": " + err, 0, st);
+        di = di + 1;
+    }
+
+    /* Lite lexer tokenizes all bootstrap S and compiler cases */
+    lexDrv := compilerTest.prepareDriver(root, tsComp, lexerRel);
+    lexFix: List<String> = ["tokens", "symbols", "comments", "strings", "int"];
+    loop lexFix as nm {
+        src := fs.readText(path.join(root, "compiler/tests/lexer/" + nm + ".lts")).text;
+        compilerTest.assertDriverMatchesContract(root, contracts, lexerRel, lexDrv, "lex sweep " + nm, src, 0);
+    }
+    lexSrcs: List<String> = [
+    "compiler/src/c-literals.lts", "compiler/src/emit-c.lts", "compiler/src/driver-c.lts",
+    "compiler/src/lexer.lts", "compiler/tests/lexer/lexer-dump.lts",
+    "compiler/src/parser.lts", "compiler/src/check.lts",
+    "compiler/tests/parser/parser-dump.lts", "compiler/tests/parser/parser-decl-dump.lts",
+    "compiler/tests/parser/parser-program-dump.lts", "compiler/tests/checker/checker-dump.lts",
+    ];
+    loop lexSrcs as relP {
+        lr := compilerTest.runDriver(lexDrv, fs.readText(path.join(root, relP)).text);
+        test.checkInt("lex sweep " + relP, 0, lr.status);
+        test.check("lex EOF " + relP, text.containsText(lr.stdout, "EOF@"));
+    }
+    compDir := path.join(root, "igniter/tests/compiler");
+    fixFiles := path.collectFiles(compDir, [compDir], ".json", [], false);
+    lexFailSlugs: List<String> = ["injected-source", "literal-below-min", "literal-too-large", "bad-string-escape", "unterminated-string"];
+    lexFailPats: List<String> = [
+    "unterminated string literal",
+    "integer literal outside signed 64-bit range",
+    "integer literal outside signed 64-bit range",
+    "unsupported string escape",
+    "unterminated string literal",
+    ];
+    loop fixFiles as absFix {
+        fileName := path.baseName(absFix);
+        slug := corpus.parseFixtureFilename(fileName).slug;
+        fixJson := fs.readText(absFix).text;
+        srcText := unicode.utf8DecodeStrict(streams.readStreamBytes(fixJson, json.findObjectField(fixJson, 0, "source").valuePos, compDir)).text;
+        rLex := compilerTest.runDriver(lexDrv, srcText);
+        var matchPat := "";
+        var pi := 0;
+        loop pi < 5 {
+            if lexFailSlugs[pi] == slug {
+                matchPat = lexFailPats[pi];
+                break;
+            }
+            pi = pi + 1;
+        }
+        if matchPat == "" {
+            test.checkInt("lex fixture " + slug, 0, rLex.status);
+            test.check("lex fixture EOF " + slug, text.containsText(rLex.stdout, "EOF@"));
+        } else {
+            test.checkInt("lex fail " + slug, 2, rLex.status);
+            test.check("lex fail msg " + slug, text.containsText(rLex.stderr, matchPat));
+        }
+    }
+    compilerTest.disposeDriver(lexDrv);
+
+    /* Lite parser parses L0 libraries and original program cases */
+    /* Lite parser coverage follows the compiler source graph */
+    progDrv := compilerTest.prepareDriver(root, tsComp, progRel);
+    parserInputsJson := fs.readText(path.join(root, "igniter/tests/parser-inputs.json")).text;
+    pKeys := json.objectKeys(parserInputsJson, 0);
+    test.checkInt("parser-inputs count", 69, list.listCountText(pKeys));
+    loop pKeys as pk {
+        inp := json.readObjectString(parserInputsJson, 0, pk).value;
+        pr := compilerTest.runDriver(progDrv, inp);
+        test.checkInt("parser-input " + pk, 0, pr.status);
+        test.checkText("parser-input err " + pk, "", pr.stderr);
+    }
+    boundGood: List<String> = [
+    "x := 1", "x: Int", "Number := type Int",
+    "if true { x := 1 } outputLine(2)", "if true { outputLine(1) }; outputLine(2)",
+    "f := fn(): Int { return 7 } outputLine(f())",
+    "x := if true { 1 } else { 2 } outputLine(x)",
+    "var x := 1; x = 2", "{ outputLine(1) }; outputLine(2)",
+    "outputLine(\"a\" /* nested /* comment */ */ \"b\")", "word := \"a\" \"b\"; outputLine(word)",
+    "outputLine(1,)", "f := fn(n: Int): Int { n } outputLine(f(1,),)",
+    "; ; /* empty */ ;", "1; Unit; true;;", "x := 1; x + 2;;",
+    "f := fn(): Int { ;; 1; 2;; } outputLine(f());",
+    ];
+    loop boundGood as bg {
+        pr := compilerTest.runDriver(progDrv, bg);
+        test.checkInt("bound good status " + bg + ": " + pr.stderr, 0, pr.status);
+        test.checkText("bound good err " + bg, "", pr.stderr);
+    }
+    boundBad: List<String> = [
+    "outputLine(1) outputLine(2)", "x := 1 outputLine(x)",
+    "x := (if true { 1 } else { 2 }) outputLine(x)", "x := 1 /* } */ outputLine(x)",
+    "f := fn(): Int { return 7 outputLine(9); }", "outputLine((\"a\") \"b\")", "outputLine(1,,)",
+    ];
+    loop boundBad as bb {
+        pr := compilerTest.runDriver(progDrv, bb);
+        test.checkInt("bound bad status " + bb, 2, pr.status);
+        test.checkText("bound bad out " + bb, "", pr.stdout);
+    }
+    pFixSrc := fs.readText(path.join(root, "compiler/tests/parser/program.lts")).text;
+    pFixExp := fs.readText(path.join(root, "compiler/tests/parser/program.nodes")).text;
+    compilerTest.assertDriver(progDrv, "program.nodes", pFixSrc, 0, pFixExp, "");
+    compilerTest.assertDriver(progDrv, "match unsupported", "match x { _ => 1 }", 2, "", "1:1: unsupported feature \"match\"\n");
+    compilerTest.disposeDriver(progDrv);
+
+    /* Lite checker collects symbols from the assembled S */
+    chkDrv := compilerTest.prepareDriver(root, tsComp, chkRel);
+    symSrc := fs.readText(path.join(root, "compiler/tests/checker/symbols.lts")).text;
+    compilerTest.assertDriverMatchesContract(root, contracts, chkRel, chkDrv, "symbols contract", symSrc, 0);
+    compilerTest.assertDriverMatchesContract(root, contracts, chkRel, chkDrv, "duplicate contract", "x := 1; x := 2;", 0);
+    compilerTest.disposeDriver(chkDrv);
+}

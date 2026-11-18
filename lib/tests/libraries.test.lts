@@ -1,0 +1,112 @@
+/* Bootstrap L0 core and lib/util test runner migrated from igniter/test.ts. */
+
+fs := import "core/file";
+integer := import "core/int";
+list := import "core/list";
+path := import "core/path";
+proc := import "core/process";
+test := import "core/test";
+pool := import "external/pool";
+cases := import "util/cases";
+compilerBuild := import "util/compiler-build";
+json := import "util/json";
+project := import "util/project";
+
+root := project.findRepoRoot();
+test.check("repo root found", root =!= "");
+
+sel := compilerBuild.selectCompilerPath(root, "ts");
+test.check("select TS compiler: " + sel.error, sel.ok);
+
+/* L0 shared libraries have direct bootstrap tests */
+/* shared utility libraries under lib/util pass direct Lite tests */
+libNames: List<String> = [
+"int", "text", "source", "format", "diag", "list",
+"diag-fail", "test-fail",
+"util-path", "util-project", "util-cli", "util-release", "util-json",
+"util-markdown", "util-markdown-html", "util-docs", "util-docgen",
+"util-streams", "util-cases", "util-verify", "util-corpus",
+"util-benchmark", "util-compiler-release", "util-challenges",
+"util-challenge-build", "util-site-library", "util-site-tools",
+"util-site-modules", "util-site-docs",
+];
+
+tmpRes := fs.makeTempDir("lite-libs-");
+test.check("makeTempDir: " + tmpRes.error, tmpRes.ok);
+workDir := tmpRes.path;
+_wPkg := fs.writeText(path.join(workDir, "package.json"), "{\"type\":\"module\"}\n");
+
+runnerPath := path.join(workDir, "runner.ts");
+wr := cases.writeTsRunner(runnerPath);
+test.check("write runner: " + wr.error, wr.ok);
+
+compCmds: mut List<String> = [];
+compArgs: mut List<String> = [];
+loop libNames as name {
+    list.pushBack(mut compCmds, proc.execPath());
+    argJson := "[" + json.quoteString(sel.path) + "," + json.quoteString("lib/tests/" + name + ".lts") + "]";
+    list.pushBack(mut compArgs, argJson);
+}
+
+jobs := pool.cpuCount();
+compRaw := pool.runPoolJson(compCmds, compArgs, root, jobs);
+compOffsets := json.arrayElementOffsets(compRaw, 0);
+count := list.listCountText(libNames);
+test.checkInt("compile pool result count", count, list.listCountInt(compOffsets));
+
+tsFiles: mut List<String> = [];
+runCmds: mut List<String> = [];
+runArgs: mut List<String> = [];
+var ci := 0;
+loop ci < count {
+    name := libNames[ci];
+    elemPos := compOffsets[ci];
+    status := json.readObjectInt(compRaw, elemPos, "status").value;
+    stdout := json.readObjectString(compRaw, elemPos, "stdout").value;
+    stderr := json.readObjectString(compRaw, elemPos, "stderr").value;
+    err := json.readObjectString(compRaw, elemPos, "error").value;
+    test.check(name + " compile failed: " + err + stderr, status == 0 and err == "" and stderr == "");
+
+    tsPath := path.join(workDir, name + ".ts");
+    wTs := fs.writeText(tsPath, stdout);
+    test.check("write " + name + ".ts", wTs.ok);
+    list.pushBack(mut tsFiles, tsPath);
+
+    list.pushBack(mut runCmds, proc.execPath());
+    list.pushBack(mut runArgs, "[" + json.quoteString(runnerPath) + "," + json.quoteString(tsPath) + "]");
+    ci = ci + 1;
+}
+
+chk := cases.checkTsArtifactFilesWithStatus(root, tsFiles, path.join(workDir, "tsc"), 60000);
+test.check("strict check lib/tests TS: " + chk.error, chk.ok);
+
+runRaw := pool.runPoolJson(runCmds, runArgs, root, jobs);
+runOffsets := json.arrayElementOffsets(runRaw, 0);
+test.checkInt("run pool result count", count, list.listCountInt(runOffsets));
+
+var ri := 0;
+loop ri < count {
+    name := libNames[ri];
+    elemPos := runOffsets[ri];
+    status := json.readObjectInt(runRaw, elemPos, "status").value;
+    stdout := json.readObjectString(runRaw, elemPos, "stdout").value;
+    stderr := json.readObjectString(runRaw, elemPos, "stderr").value;
+    err := json.readObjectString(runRaw, elemPos, "error").value;
+    test.check(name + " process error: " + err, err == "");
+    if name == "diag-fail" {
+        test.checkInt(name + " status", 2, status);
+        test.checkText(name + " stdout", "", stdout);
+        test.checkText(name + " stderr", "name:message\n", stderr);
+    } else if name == "test-fail" {
+        test.checkInt(name + " status", 2, status);
+        test.checkText(name + " stdout", "", stdout);
+        test.checkText(name + " stderr", "FAIL bad\n", stderr);
+    } else {
+        test.checkInt(name + " status", 0, status);
+        test.checkText(name + " stdout", name + ": ok\n", stdout);
+        test.checkText(name + " stderr", "", stderr);
+    }
+    ri = ri + 1;
+}
+
+_rm := fs.remove(workDir);

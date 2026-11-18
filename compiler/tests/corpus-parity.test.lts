@@ -1,0 +1,245 @@
+/* Compiler corpus, manifest graph, and TS/C/native parity suite migrated from igniter/test.ts. */
+
+crypto := import "core/crypto";
+fs := import "core/file";
+integer := import "core/int";
+list := import "core/list";
+path := import "core/path";
+proc := import "core/process";
+test := import "core/test";
+unicode := import "core/unicode";
+pool := import "external/pool";
+compilerBuild := import "util/compiler-build";
+compilerTest := import "util/compiler-test";
+corpus := import "util/corpus";
+json := import "util/json";
+project := import "util/project";
+streams := import "util/streams";
+
+root := project.findRepoRoot();
+test.check("repo root found", root =!= "");
+
+heavyEnv := proc.envGet("LITE_SKIP_HEAVY");
+skipHeavy := heavyEnv.found and heavyEnv.value == "1";
+
+builtTs := compilerBuild.buildCompiler(root, "ts");
+test.check("build TS compiler: " + builtTs.error, builtTs.ok);
+builtC := compilerBuild.buildCompiler(root, "c");
+test.check("build C compiler: " + builtC.error, builtC.ok);
+tsComp := builtTs.path;
+cComp := builtC.path;
+
+tsDepsField := json.findObjectField(builtTs.jsonText, 0, "dependencies");
+test.check("ts deps present", tsDepsField.found);
+tsDeps := corpus.readStringListAt(builtTs.jsonText, tsDepsField.valuePos);
+cDepsField := json.findObjectField(builtC.jsonText, 0, "dependencies");
+test.check("c deps present", cDepsField.found);
+cDeps := corpus.readStringListAt(builtC.jsonText, cDepsField.valuePos);
+
+/* compiler manifests name graph roots and no flattened source bundle */
+tsManifestSrc := fs.readText(path.join(root, "compiler/manifests/ts.json")).text;
+cManifestSrc := fs.readText(path.join(root, "compiler/manifests/c.json")).text;
+test.checkText("ts manifest target", "ts", json.readObjectString(tsManifestSrc, 0, "target").value);
+test.checkText("c manifest target", "c", json.readObjectString(cManifestSrc, 0, "target").value);
+test.checkInt("ts manifest 1 file", 1, list.listCountText(corpus.readStringListAt(tsManifestSrc, json.findObjectField(tsManifestSrc, 0, "files").valuePos)));
+test.checkInt("c manifest 1 file", 1, list.listCountText(corpus.readStringListAt(cManifestSrc, json.findObjectField(cManifestSrc, 0, "files").valuePos)));
+test.check("ts deps > 1", list.listCountText(tsDeps) > 1);
+test.check("c deps > 1", list.listCountText(cDeps) > 1);
+test.checkText("ts root dep", "compiler/src/ts-root.lts", tsDeps[0]);
+test.checkText("c root dep", "compiler/src/c-root.lts", cDeps[0]);
+test.check("ts deps include frontend", list.listContainsText(tsDeps, "compiler/src/frontend.lts"));
+test.check("c deps include frontend", list.listContainsText(cDeps, "compiler/src/frontend.lts"));
+
+/* compiler verification cases are well-formed and cover both categories */
+/* restricted compiler corpus keeps 69 program and 25 rejection cases */
+compDir := path.join(root, "igniter/tests/compiler");
+fixFiles := path.collectFiles(compDir, [compDir], ".json", [], false);
+fixCount := list.listCountText(fixFiles);
+test.checkInt("corpus fixture count", 94, fixCount);
+
+refJson := fs.readText(path.join(root, "compiler/tests/references/generated/current-artifacts.json")).text;
+refArtField := json.findObjectField(refJson, 0, "artifacts");
+refArtOffsets := json.arrayElementOffsets(refJson, refArtField.valuePos);
+
+fixNames: mut List<String> = [];
+fixCats: mut List<String> = [];
+fixSlugs: mut List<String> = [];
+fixCaseKeys: mut List<String> = [];
+var progCount := 0;
+var rejCount := 0;
+
+tmpWorkRes := fs.makeTempDir("lite-corpus-test-");
+test.check("makeTempDir", tmpWorkRes.ok);
+workDir := tmpWorkRes.path;
+
+progStdinFiles: mut List<String> = [];
+progExpOuts: mut List<String> = [];
+progExpErrs: mut List<String> = [];
+progExpExits: mut List<Int> = [];
+emptyBytes: List<Int> = [];
+
+var fi := 0;
+loop fi < fixCount {
+    absFix := fixFiles[fi];
+    fileName := path.baseName(absFix);
+    pFn := corpus.parseFixtureFilename(fileName);
+    test.check("valid fixture filename: " + fileName, pFn.ok);
+    fixJson := fs.readText(absFix).text;
+    srcField := json.findObjectField(fixJson, 0, "source");
+    srcText := unicode.utf8DecodeStrict(streams.readStreamBytes(fixJson, srcField.valuePos, compDir));
+    test.check("fixture UTF-8 source: " + fileName, srcText.ok);
+
+    list.pushBack(mut fixNames, fileName);
+    list.pushBack(mut fixCats, pFn.category);
+    list.pushBack(mut fixSlugs, pFn.slug);
+
+    cField := json.findObjectField(fixJson, 0, "cases");
+    cOffs := json.arrayElementOffsets(fixJson, cField.valuePos);
+    test.check("cases array non-empty: " + fileName, list.listCountInt(cOffs) > 0);
+    c0 := cOffs[0];
+    cName := json.readObjectString(fixJson, c0, "name").value;
+    caseKey := fileName + "/" + cName;
+    test.check("unique case key: " + caseKey, not list.listContainsText(fixCaseKeys, caseKey));
+    list.pushBack(mut fixCaseKeys, caseKey);
+
+    srcTmp := path.join(workDir, "src-" + integer.intText(fi) + ".lts");
+    _ws := fs.writeText(srcTmp, srcText.text);
+
+    inField := json.findObjectField(fixJson, c0, "input");
+    outField := json.findObjectField(fixJson, c0, "stdout");
+    errField := json.findObjectField(fixJson, c0, "stderr");
+    expExit := json.readObjectInt(fixJson, c0, "exitCode").value;
+    expOut := if outField.found { unicode.utf8DecodeStrict(streams.readStreamBytes(fixJson, outField.valuePos, compDir)).text } else { "" };
+    expErr := if errField.found { unicode.utf8DecodeStrict(streams.readStreamBytes(fixJson, errField.valuePos, compDir)).text } else { "" };
+    inPath := path.join(workDir, "in-" + integer.intText(fi) + ".bin");
+    inBytes := if inField.found { streams.readStreamBytes(fixJson, inField.valuePos, compDir) } else { emptyBytes };
+    _wi := fs.writeBytes(inPath, inBytes);
+
+    if pFn.category == "program" {
+        progCount = progCount + 1;
+        list.pushBack(mut progStdinFiles, inPath);
+        list.pushBack(mut progExpOuts, expOut);
+        list.pushBack(mut progExpErrs, expErr);
+        list.pushBack(mut progExpExits, expExit);
+    } else {
+        rejCount = rejCount + 1;
+    }
+    fi = fi + 1;
+}
+test.checkInt("program fixtures count", 69, progCount);
+test.checkInt("rejection fixtures count", 25, rejCount);
+
+/* bundle compilers reproduce every compiler case with exact artifacts and diagnostics */
+/* emitted TS and igniter outputs match byte for byte across the admitted compiler corpus */
+valTs := corpus.validateCorpusArtifact(root, tsComp, builtTs.sourceSha256);
+test.check("validateCorpusArtifact TS failed: " + valTs.error + " " + valTs.firstMismatch, valTs.ok);
+test.checkInt("corpus cases count", 94, valTs.cases);
+test.checkInt("corpus programs count", 69, valTs.programs);
+test.checkInt("corpus rejections count", 25, valTs.rejections);
+
+cCmds: mut List<String> = [];
+cArgs: mut List<String> = [];
+var ciAll := 0;
+loop ciAll < fixCount {
+    list.pushBack(mut cCmds, proc.execPath());
+    list.pushBack(mut cArgs, "[" + json.quoteString(cComp) + ",\"--name\",\"\"," + json.quoteString(path.join(workDir, "src-" + integer.intText(ciAll) + ".lts")) + "]");
+    ciAll = ciAll + 1;
+}
+jobs := pool.cpuCount();
+cRaw := pool.runPoolJson(cCmds, cArgs, root, jobs);
+cOffs := json.arrayElementOffsets(cRaw, 0);
+test.checkInt("c corpus compile count", fixCount, list.listCountInt(cOffs));
+
+ccInfo := compilerTest.probeCc();
+ccCmds: mut List<String> = [];
+ccArgs: mut List<String> = [];
+exePaths: mut List<String> = [];
+
+var ri := 0;
+var pSeq := 0;
+loop ri < fixCount {
+    pos := cOffs[ri];
+    st := json.readObjectInt(cRaw, pos, "status").value;
+    out := json.readObjectString(cRaw, pos, "stdout").value;
+    err := json.readObjectString(cRaw, pos, "stderr").value;
+    if fixCats[ri] == "rejected" {
+        fixJson := fs.readText(fixFiles[ri]).text;
+        cOff0 := json.arrayElementOffsets(fixJson, json.findObjectField(fixJson, 0, "cases").valuePos)[0];
+        outF := json.findObjectField(fixJson, cOff0, "stdout");
+        errF := json.findObjectField(fixJson, cOff0, "stderr");
+        expEx := json.readObjectInt(fixJson, cOff0, "exitCode").value;
+        expOut := if outF.found { unicode.utf8DecodeStrict(streams.readStreamBytes(fixJson, outF.valuePos, compDir)).text } else { "" };
+        expErr := if errF.found { unicode.utf8DecodeStrict(streams.readStreamBytes(fixJson, errF.valuePos, compDir)).text } else { "" };
+        test.checkInt("c reject exit " + fixNames[ri], expEx, st);
+        test.checkText("c reject out " + fixNames[ri], expOut, out);
+        test.checkText("c reject err " + fixNames[ri], expErr, err);
+    } else {
+        test.checkInt("c program status " + fixNames[ri], 0, st);
+        test.checkText("c program err " + fixNames[ri], "", err);
+        slug := fixSlugs[ri];
+        var expCHash := "";
+        loop refArtOffsets as aPos {
+            if json.readObjectString(refJson, aPos, "name").value == slug {
+                expCHash = json.readObjectString(refJson, aPos, "c").value;
+                break;
+            }
+        }
+        test.checkText("c baseline hash " + slug, expCHash, "sha256:" + crypto.sha256Text(out));
+        if ccInfo.available and not skipHeavy {
+            cFile := path.join(workDir, "prog-" + integer.intText(pSeq) + ".c");
+            exeFile := path.join(workDir, "prog-" + integer.intText(pSeq));
+            _wc := fs.writeText(cFile, out);
+            list.pushBack(mut exePaths, exeFile);
+            list.pushBack(mut ccCmds, ccInfo.cc);
+            list.pushBack(mut ccArgs, "[\"-std=c11\",\"-Wall\",\"-Wextra\",\"-Werror\"," + json.quoteString(cFile) + ",\"-o\"," + json.quoteString(exeFile) + ",\"-lm\"]");
+        }
+        pSeq = pSeq + 1;
+    }
+    ri = ri + 1;
+}
+
+/* Lite-generated native C, TS and igniter programs have identical output bytes and status */
+if ccInfo.available and not skipHeavy {
+    ccRaw := pool.runPoolJson(ccCmds, ccArgs, workDir, jobs);
+    ccOffs := json.arrayElementOffsets(ccRaw, 0);
+    test.checkInt("cc pool count", progCount, list.listCountInt(ccOffs));
+    var cci := 0;
+    loop cci < progCount {
+        ccSt := json.readObjectInt(ccRaw, ccOffs[cci], "status").value;
+        ccErr := json.readObjectString(ccRaw, ccOffs[cci], "stderr").value;
+        test.checkInt("cc compile " + integer.intText(cci) + ": " + ccErr, 0, ccSt);
+
+        inBytes := fs.readBytes(progStdinFiles[cci]);
+        outFile := path.join(workDir, "native-" + integer.intText(cci) + ".out");
+        errFile := path.join(workDir, "native-" + integer.intText(cci) + ".err");
+        emptyEnv: List<String> = [];
+        nRun := proc.runBytes(exePaths[cci], emptyEnv, workDir, emptyEnv, 5000, inBytes, outFile, errFile);
+        test.check("native run err: " + nRun.error, nRun.error == "");
+        test.checkInt("native status " + integer.intText(cci), progExpExits[cci], nRun.status);
+        test.checkText("native stdout " + integer.intText(cci), progExpOuts[cci], fs.readText(outFile).text);
+        test.checkText("native stderr " + integer.intText(cci), progExpErrs[cci], fs.readText(errFile).text);
+        cci = cci + 1;
+    }
+}
+
+/* compiler applications reject fixture sources with exact diagnostics, positions and docs before artifact output */
+recErr := "1:6: unsupported feature \"record\": see docs/types-and-inference.md; the restricted compiler accepts Int/Float/String/Bool expressions, locals, output/outputLine, if/else and loop only\n";
+compilerTest.assertCompileError(root, tsComp, "record TS", "x := record { };", recErr);
+compilerTest.assertCompileError(root, cComp, "record C", "x := record { };", recErr);
+missErr := "2:6: expected an Int, Float, String or Bool expression\n";
+compilerTest.assertCompileError(root, tsComp, "missing TS", "x := 1;\ny := ;\n", missErr);
+compilerTest.assertCompileError(root, cComp, "missing C", "x := 1;\ny := ;\n", missErr);
+loopErr := "1:6: unsupported feature \"loop\": see docs/loops.md; the restricted compiler accepts Int/Float/String/Bool expressions, locals, output/outputLine, if/else and loop only\n";
+compilerTest.assertCompileError(root, cComp, "loop C", "x := loop { 1 };", loopErr);
+
+namedOk := compilerTest.compileStdin(root, tsComp, "io := import \"core/io\"; io.outputLine(42);", "named source.lts");
+ref42 := fs.readText(path.join(root, "compiler/tests/references/generated/report-42.ts")).text;
+test.checkInt("named valid status", 0, namedOk.status);
+test.checkText("named valid out", ref42, namedOk.stdout);
+test.checkText("named valid err", "", namedOk.stderr);
+namedBad := compilerTest.compileStdin(root, tsComp, "io := import \"core/io\"; io.outputLine(1 +);", "named source.lts");
+test.checkInt("named err status", 2, namedBad.status);
+test.checkText("named err out", "", namedBad.stdout);
+test.checkText("named err stderr", "named source.lts:1:42: expected an Int, Float, String or Bool expression\n", namedBad.stderr);
+
+_rm := fs.remove(workDir);
