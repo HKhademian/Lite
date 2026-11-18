@@ -1,0 +1,631 @@
+/* Unified block model Slices 1, 2a, 2b, and 3 tests (uniqueness, inner aliases, DCE, lexical captures, trace safety) migrated from compiler/tests/host.test.ts. */
+
+test := import "core/test";
+text := import "core/text";
+compilerBuild := import "util/compiler-build";
+compilerTest := import "util/compiler-test";
+project := import "util/project";
+
+root := project.findRepoRoot();
+test.check("repo root found", root =!= "");
+
+selTs := compilerBuild.selectCompilerPath(root, "ts");
+test.check("select TS compiler: " + selTs.error, selTs.ok);
+selC := compilerBuild.selectCompilerPath(root, "c");
+test.check("select C compiler: " + selC.error, selC.ok);
+tsComp := selTs.path;
+cComp := selC.path;
+
+ccProbe := compilerTest.probeCc();
+
+hasAnySub := fn(hay: String, subs: List<String>): Bool {
+    loop subs as s {
+        if text.containsText(hay, s) { return true; }
+    }
+    false
+};
+
+assertRejectsBothWithAny := fn(label: String, sources: List<String>, checkC: Bool, subs: List<String>): Unit {
+    loop sources as src {
+        rTs := compilerTest.compileStdin(root, tsComp, src, "");
+        test.checkInt(label + " ts status: " + src, 2, rTs.status);
+        test.checkText(label + " ts stdout empty: " + src, "", rTs.stdout);
+        test.check(label + " ts stderr (" + src + "): " + rTs.stderr, hasAnySub(rTs.stderr, subs));
+        if checkC {
+            rC := compilerTest.compileStdin(root, cComp, src, "");
+            test.checkInt(label + " c status: " + src, 2, rC.status);
+            test.checkText(label + " c stdout empty: " + src, "", rC.stdout);
+            test.check(label + " c stderr (" + src + "): " + rC.stderr, hasAnySub(rC.stderr, subs));
+        }
+    }
+};
+
+/* Slice 1: same-block uniqueness across root and inner blocks on TS and C */
+dupSubs: List<String> = [
+    "duplicate declaration ",
+    "duplicate top-level value ",
+    "duplicate module alias ",
+    "duplicate function ",
+    "duplicate type alias "
+];
+topOnlySubs: List<String> = [
+    "pub is only allowed on top-level declarations",
+    "import is only allowed at top level"
+];
+
+slice1SharedDup: List<String> = [
+    "x := 1; x := fn(): Int { 2 };",
+    "x := fn(): Int { 2 }; x := 1;",
+    "var x := 1; x := fn(): Int { 2 };",
+    "x := fn(): Int { 2 }; x: Int = 1;",
+    "x := 1; x := type Int;",
+    "x := type Int; x := 1;",
+    "x := fn(): Int { 2 }; x := type Int;",
+    "x := type Int; x := fn(): Int { 2 };",
+    "io := import \"core/io\"; io := 1;",
+    "io := 1; io := import \"core/io\";",
+    "io := import \"core/io\"; io := fn(): Int { 1 };",
+    "io := fn(): Int { 1 }; io := import \"core/io\";",
+    "io := import \"core/io\"; io := type Int;",
+    "io := type Int; io := import \"core/io\";",
+    "(dup, dup) := (1, 2);",
+    "(a, b) := (1, 2); a := 3;",
+    "a := 1; (a, b) := (2, 3);",
+    "a := 1; a: Int = 2;",
+    "_ := 1; _ := 2;",
+    "{ x := 1; x := 2; }",
+    "{ x := 1; var x := 2; }",
+    "{ var x := 1; x: Int = 2; }",
+    "seed: List<Int> = [1]; { mut xs := seed; xs := [2]; }",
+    "{ (a, b) := (1, 2); a := 3; }",
+    "{ (a, a) := (1, 2); a := 3; }",
+    "{ a := 1; (a, b) := (2, 3); }",
+    "{ _ := 1; _ := 2; }",
+    "if true { x := 1; x := 2; }",
+    "if false { x := 1; } else { x := 2; x := 3; }",
+    "match { true { x := 1; x := 2; } _ { } }",
+    "match { false { x := 1; } _ { x := 2; x := 3; } }",
+    "loop [1] as item { item := 2; }",
+    "loop [1] as item { y := 1; y := 2; }",
+    "f := fn(x: Int): Int { x := 2; x };",
+    "f := fn(x: Int): Int { y := 1; var y := 2; x + y };",
+    "v := { x := 1; x := 2; x };",
+    "v := { y := { x := 1; x := 2; x }; y };",
+    "{ T := type Int; T := type String; }",
+    "{ T := type Int; T := 1; }",
+    "{ T := 1; T := type Int; }",
+    "v := { T := type Int; T := 1; 0 };"
+];
+slice1SharedTopOnly: List<String> = [
+    "{ pub x := 1; }",
+    "{ import \"core/io\"; }",
+    "{ io := import \"core/io\"; }",
+    "v := { pub x := 1; 0 };",
+    "v := { import \"core/io\"; 0 };",
+    "v := { io := import \"core/io\"; 0 };"
+];
+assertRejectsBothWithAny("slice1-dup", slice1SharedDup, true, dupSubs);
+assertRejectsBothWithAny("slice1-top-only", slice1SharedTopOnly, true, topOnlySubs);
+
+slice1TsOnlyRej: List<String> = [
+    "{ f := fn(): Int { 1 }; f := 2; 0 }",
+    "{ f := fn(): Int { 1 }; f := fn(): Int { 2 }; 0 }",
+    "v := { f := fn(x: Int): Int { x := 2; x }; f(1) };",
+    "v := @blk { x := 1; x := 2; x };",
+    "v := if true { 1 } else { 2 } then { x := 1; x := 2; x };",
+    "v := { 1 } finally { y := 1; y := 2; };",
+    "v := loop [1] as item { item := 2; item };"
+];
+assertRejectsBothWithAny("slice1-ts-only-dup", slice1TsOnlyRej, false, dupSubs);
+
+slice1CombinedShared := text.joinTexts([
+    "io := import \"core/io\";",
+    "Box := type Int;",
+    "x: Box = 10;",
+    "var sum: Int = 0;",
+    "if true {",
+    "  x := 20;",
+    "  {",
+    "    x := 30;",
+    "    sum += x;",
+    "  }",
+    "  sum += x;",
+    "} else {",
+    "  x := 40;",
+    "  sum += x;",
+    "}",
+    "match {",
+    "  false { y := 1; sum += y; }",
+    "  _ {",
+    "    y := 2;",
+    "    sum += y;",
+    "  }",
+    "}",
+    "var step := 0;",
+    "loop step < 2 {",
+    "  out := 5 + step;",
+    "  { out := 100; sum += out; }",
+    "  sum += out;",
+    "  step += 1;",
+    "}",
+    "if true { io := 99; sum += io; }",
+    "io.outputLine(x, sum);"
+], "\n");
+compilerTest.assertCompileRunTs(root, tsComp, "slice1-shared ts", slice1CombinedShared, "10 362\n");
+cS1Comp := compilerTest.compileStdin(root, cComp, slice1CombinedShared, "");
+test.checkInt("slice1-shared c compile: " + cS1Comp.stderr, 0, cS1Comp.status);
+if ccProbe.available {
+    cS1Run := compilerTest.compileAndRunC(cS1Comp.stdout, ccProbe.cc, "");
+    test.checkInt("slice1-shared c status", 0, cS1Run.status);
+    test.checkText("slice1-shared c stdout", "10 362\n", cS1Run.stdout);
+}
+
+slice1TsCombined := text.joinTexts([
+    "io := import \"core/io\";",
+    "helper := fn(a: Int): Int { var r := 0; { a := a + 10; r = a; } return r; };",
+    "outerVal := helper(5);",
+    "var acc := 0;",
+    "loop [5, 6] as n {",
+    "  var out := n;",
+    "  { n := 100; out += n; }",
+    "  acc += out;",
+    "}",
+    "tagVal := @t { tmp := 7; tmp } finally { tmp := 1; acc += tmp; };",
+    "v := {",
+    "  helper := 3;",
+    "  (p, p) := (4, 5);",
+    "  (_, _) := (6, 7);",
+    "  shadowed := { helper := fn(k: Int): Int { k * 2 }; helper(p) };",
+    "  helper + shadowed",
+    "};",
+    "io.outputLine(outerVal, v + acc, tagVal, helper(1));"
+], "\n");
+compilerTest.assertCompileRunTs(root, tsComp, "slice1-ts-combined", slice1TsCombined, "15 225 7 11\n");
+
+/* Slice 2a: inner-block type aliases, parallel root wiring, and execution-trace safety on TS and C */
+slice2aSharedPos := text.joinTexts([
+    "io := import \"core/io\";",
+    "Item := type Int;",
+    "Saved := type Item;",
+    "var acc: Item = 0;",
+    "{",
+    "  x: Box = 7;",
+    "  Box := type A;",
+    "  A := type Int;",
+    "  Item := type String;",
+    "  s: Item = \"ok\";",
+    "  n: Saved = 42;",
+    "  acc += x + n;",
+    "  io.outputLine(s);",
+    "}",
+    "if true {",
+    "  Tag := type Int;",
+    "  delta: Tag = 3;",
+    "  acc += delta;",
+    "} else {",
+    "  Tag := type String;",
+    "  unused: Tag = \"no\";",
+    "}",
+    "match {",
+    "  false {",
+    "    ArmT := type String;",
+    "    s2: ArmT = \"unused\";",
+    "  }",
+    "  _ {",
+    "    ArmT := type Int;",
+    "    v2: ArmT = 4;",
+    "    acc += v2;",
+    "  }",
+    "}",
+    "var step := 0;",
+    "loop step < 2 {",
+    "  IterT := type Int;",
+    "  inc: IterT = 5;",
+    "  acc += inc;",
+    "  step += 1;",
+    "}",
+    "pureVal := { ValT := type Int; 5 };",
+    "vOuter: Item = pureVal;",
+    "io.outputLine(acc, vOuter);"
+], "\n");
+compilerTest.assertCompileRunTs(root, tsComp, "slice2a-shared ts", slice2aSharedPos, "ok\n66 5\n");
+cS2aComp := compilerTest.compileStdin(root, cComp, slice2aSharedPos, "");
+test.checkInt("slice2a-shared c compile: " + cS2aComp.stderr, 0, cS2aComp.status);
+if ccProbe.available {
+    cS2aRun := compilerTest.compileAndRunC(cS2aComp.stdout, ccProbe.cc, "");
+    test.checkInt("slice2a-shared c status", 0, cS2aRun.status);
+    test.checkText("slice2a-shared c stdout", "ok\n66 5\n", cS2aRun.stdout);
+}
+
+slice2aSharedRej: List<(src: String, m1: String, m2: String)> = [
+    (src = "{ A := type A; }", m1 = "recursive type alias A", m2 = ""),
+    (src = "{ A := type B; B := type A; }", m1 = "recursive type alias B", m2 = ""),
+    (src = "T := type Int; { T := type T; }", m1 = "recursive type alias T", m2 = ""),
+    (src = "{ A := type Missing; }", m1 = "unknown type alias Missing", m2 = "type Missing"),
+    (src = "{ Inner := type Int; } x: Inner = 1;", m1 = "unknown type alias Inner", m2 = "type Inner"),
+    (src = "x := g(); g := fn(): Int { 7 };", m1 = "cannot access g before initialization", m2 = "cannot call before g is initialized")
+];
+loop slice2aSharedRej as r {
+    rTs := compilerTest.compileStdin(root, tsComp, r.src, "");
+    test.checkInt("slice2a-rej ts status: " + r.src, 2, rTs.status);
+    test.check("slice2a-rej ts msg: " + rTs.stderr, text.containsText(rTs.stderr, r.m1) or (r.m2 =!= "" and text.containsText(rTs.stderr, r.m2)));
+    rC := compilerTest.compileStdin(root, cComp, r.src, "");
+    test.checkInt("slice2a-rej c status: " + r.src, 2, rC.status);
+    test.check("slice2a-rej c msg: " + rC.stderr, text.containsText(rC.stderr, r.m1) or (r.m2 =!= "" and text.containsText(rC.stderr, r.m2)));
+}
+
+slice2aTsPos := text.joinTexts([
+    "io := import \"core/io\";",
+    "list := import \"core/list\";",
+    "f := fn(): Int { g() };",
+    "g := fn(): Int { 7 };",
+    "even := fn(n: Int): Bool { if n == 0 { true } else { odd(n - 1) } };",
+    "odd := fn(n: Int): Bool { if n == 0 { false } else { even(n - 1) } };",
+    "apply := fn(cb: fn(): Int): Int { cb() };",
+    "useForward := fn(): Int {",
+    "  LocalInt := type Int;",
+    "  fromBase: LocalInt = base;",
+    "  p := pair;",
+    "  count = count + 1;",
+    "  list.pushBack(mut xs, 3);",
+    "  fromBase + p.a + p.b + left + right + xs[2]",
+    "};",
+    "read := fn(): Int { x };",
+    "before := fn(): Int { y = 9; y };",
+    "var saved: fn(): Int = fn(): Int { tmp2 };",
+    "blk := { saved2 := fn(): Int { tmp2 }; 5 };",
+    "blkFn := { saved3 := fn(): Int { tmp2 }; saved3 };",
+    "valBlk := { T := type Int; xVal: T = 3; xVal + 1 };",
+    "fnWithAlias := fn(): Int { FT := type Int; r: FT = 8; r };",
+    "thenResult := @t if true { 2 } else { 0 } then { TT := type Int; bonus: TT = 3; @t.value + bonus };",
+    "var finAcc := 0;",
+    "finVal := { 1 } finally { FT := type Int; fv: FT = 4; finAcc += fv; };",
+    "base := 3 + 4;",
+    "pair := (a = 2, b = 5);",
+    "(left, right) := (10, 20);",
+    "var count := 0;",
+    "seed: List<Int> = [1, 2];",
+    "mut xs := seed;",
+    "var x: Int = ?;",
+    "x = 5;",
+    "var y: Int = ?;",
+    "tmp2 := 11;",
+    "io.outputLine(f(), if even(4) { 1 } else { 0 }, apply(g), useForward(), count);",
+    "io.outputLine(read(), before(), saved(), blkFn(), blk, valBlk, fnWithAlias(), thenResult, finAcc, finVal);"
+], "\n");
+compilerTest.assertCompileRunTs(root, tsComp, "slice2a-ts-pos", slice2aTsPos, "7 1 7 47 1\n5 9 11 11 5 4 8 5 4 1\n");
+
+slice2aTsRej: List<(src: String, msg: String)> = [
+    (src = "fp := g; g := fn(): Int { 7 };", msg = "cannot access g before initialization"),
+    (src = "op := fn(): Int { tmp2 }; tmp1 := op(); tmp2 := 1;", msg = "cannot call before tmp2 is initialized"),
+    (src = "a := fn(): Int { b() }; b := fn(): Int { tmp2 }; early := a(); tmp2 := 1;", msg = "cannot call before tmp2 is initialized"),
+    (src = "a := fn(): Int { b() }; early := a(); b := fn(): Int { 1 };", msg = "cannot call before b is initialized"),
+    (src = "read := fn(): Int { x }; var x: Int = ?; early := read(); x = 5;", msg = "cannot call before x is initialized"),
+    (src = "var x: Int = ?; read := fn(): Int { x }; early := read(); x = 5;", msg = "cannot call before x is initialized"),
+    (src = "io := import \"core/io\"; var x: Int = ?; init := fn(): Unit { x = 2; }; io.outputLine(x);", msg = "cannot read uninitialized local x"),
+    (src = "before := fn(): Unit { x = 2; }; before(); var x: Int = ?;", msg = "cannot call before x is initialized"),
+    (src = "var saved: fn(): Int = fn(): Int { tmp2 }; early := saved(); tmp2 := 11;", msg = "cannot call before tmp2 is initialized"),
+    (src = "apply := fn(cb: fn(): Int): Int { cb() }; op := fn(): Int { tmp2 }; early := apply(op); tmp2 := 1;", msg = "cannot call before tmp2 is initialized"),
+    (src = "apply := fn(cb: fn(): Int): Int { cb() }; early := apply(fn(): Int { tmp2 }); tmp2 := 1;", msg = "cannot call before tmp2 is initialized"),
+    (src = "var applyVar: fn(fn(): Int): Int = fn(cb: fn(): Int): Int { cb() }; early := applyVar(fn(): Int { tmp2 }); tmp2 := 1;", msg = "cannot call before tmp2 is initialized"),
+    (src = "early := (fn(): Int { tmp2 })(); tmp2 := 1;", msg = "cannot call before tmp2 is initialized"),
+    (src = "x := { saved := fn(): Int { tmp2 }; saved() }; tmp2 := 1;", msg = "cannot call before tmp2 is initialized"),
+    (src = "early := ({ fn(): Int { tmp2 } })(); tmp2 := 1;", msg = "cannot call before tmp2 is initialized")
+];
+loop slice2aTsRej as r {
+    compilerTest.assertCompileErrorContains(root, tsComp, "slice2a-ts-rej", r.src, r.msg);
+}
+
+/* Slice 2b: side-effect-free dead code elimination in blocks while preserving effects, faults, and diagnostics */
+checkTsDceCase := fn(label: String, src: String, expectedOut: String, mustContain: List<String>, mustOmit: List<String>): Unit {
+    comp := compilerTest.compileStdin(root, tsComp, src, "");
+    test.checkInt(label + " compile: " + comp.stderr, 0, comp.status);
+    test.check(label + " tsc", compilerTest.checkTsCode(root, comp.stdout).ok);
+    loop mustContain as s { test.check(label + " contains " + s, text.containsText(comp.stdout, s)); }
+    loop mustOmit as s { test.check(label + " omits " + s, not text.containsText(comp.stdout, s)); }
+    run := compilerTest.checkAndRunTs(root, comp.stdout);
+    test.checkInt(label + " run status: " + run.stderr, 0, run.status);
+    test.checkText(label + " run stdout", expectedOut, run.stdout);
+};
+
+emptySubs: List<String> = [];
+checkTsDceCase(
+    "slice2b dce1",
+    "io := import \"core/io\"; x := { y := 1; z := fn(): Int { io.outputLine(\"dead\"); 99 }; 5 }; io.outputLine(x);",
+    "5\n",
+    emptySubs,
+    ["lite_y", "lite_z", "\"dead\"", "() =>"]
+);
+checkTsDceCase(
+    "slice2b dce2",
+    "io := import \"core/io\"; x := { a := 1; b := a; c := (a, b); (d, e) := c; var m := 10; m = 20; 99; \"quiet\"; 5 }; io.outputLine(x);",
+    "5\n",
+    emptySubs,
+    ["lite_a", "lite_b", "lite_c", "lite_d", "lite_e", "lite_m", "lite$tuple", "\"quiet\"", "() =>"]
+);
+checkTsDceCase(
+    "slice2b dce-tuple-partial",
+    "io := import \"core/io\"; x := { (used, unused) := (7, 8); used }; io.outputLine(x);",
+    "7\n",
+    ["lite_used", "lite$tuple"],
+    ["lite_unused"]
+);
+checkTsDceCase(
+    "slice2b dce-nested",
+    "io := import \"core/io\"; { { y := 1; z := fn(): Int { 2 }; 99; } }; x := { { y := 1; } 5 }; io.outputLine(x);",
+    "5\n",
+    emptySubs,
+    ["lite_y", "lite_z", "() =>"]
+);
+checkTsDceCase(
+    "slice2b dce-shadow",
+    "io := import \"core/io\"; f := fn(): Int { y := 111; 5 }; g := fn(): Int { y := 222; y }; { y := 333; } { y := 444; io.outputLine(y); } io.outputLine(f(), g());",
+    "444\n5 222\n",
+    emptySubs,
+    ["111n", "333n"]
+);
+checkTsDceCase(
+    "slice2b dce-dead-top",
+    "io := import \"core/io\"; deadTop := fn(): Int { io.outputLine(\"never\"); 777 }; liveFn := fn(): Int { z := fn(): Int { deadTop() }; 5 }; io.outputLine(liveFn());",
+    "5\n",
+    emptySubs,
+    ["liteFn_deadTop", "\"never\"", "777n"]
+);
+
+cDceSrc := "io := import \"core/io\"; deadRoot := 4242; { deadInner := 3131; 99; \"quiet_c\"; } io.outputLine(5);";
+cDceComp := compilerTest.compileStdin(root, cComp, cDceSrc, "");
+test.checkInt("slice2b c-dce compile", 0, cDceComp.status);
+cDceOmit: List<String> = ["lite_deadRoot", "lite_deadInner", "quiet_c", "4242", "3131"];
+loop cDceOmit as tok { test.check("slice2b c-dce omits " + tok, not text.containsText(cDceComp.stdout, tok)); }
+if ccProbe.available {
+    cDceRun := compilerTest.compileAndRunC(cDceComp.stdout, ccProbe.cc, "");
+    test.checkInt("slice2b c-dce status", 0, cDceRun.status);
+    test.checkText("slice2b c-dce stdout", "5\n", cDceRun.stdout);
+}
+
+slice2bBadC: List<String> = [
+    "values: List<Int> = [1];",
+    "p := (a = 1);",
+    "var f: fn(Int): Int;",
+    "[1, 2];",
+    "{ f := fn(): Int { 1 }; 5 }",
+    "x := { y := 1; 5 };"
+];
+loop slice2bBadC as badSrc {
+    rC := compilerTest.compileStdin(root, cComp, badSrc, "");
+    test.checkInt("slice2b bad-c status: " + badSrc, 2, rC.status);
+    test.checkText("slice2b bad-c stdout empty", "", rC.stdout);
+}
+
+compilerTest.assertCompileRunTs(root, tsComp, "slice2b eff1", "io := import \"core/io\"; var out := 1; dead := { out = 9; 5 }; io.outputLine(out);", "9\n");
+compilerTest.assertCompileRunTs(root, tsComp, "slice2b eff2", "list := import \"core/list\"; io := import \"core/io\"; xs: mut List<Int> = [1]; dead := { list.pushBack(mut xs, 2); 5 }; io.outputLine(xs);", "[1, 2]\n");
+compilerTest.assertCompileRunTs(root, tsComp, "slice2b eff3", "io := import \"core/io\"; bump := fn(): Int { io.outputLine(\"ran\"); 1 }; x := { y := bump(); f := bump; z := f(); w := (fn(): Int { io.outputLine(\"iife\"); 2 })(); 5 }; io.outputLine(x);", "ran\nran\niife\n5\n");
+
+slice2bPanics: List<String> = [
+    "x := { var z := 0; y := 1 / z; 5 };",
+    "x := { var big := 9223372036854775807; y := big + 1; 5 };"
+];
+loop slice2bPanics as pSrc {
+    pRun := compilerTest.compileCheckRunTs(root, tsComp, pSrc, "");
+    test.checkInt("slice2b panic status: " + pSrc, 1, pRun.status);
+    test.check("slice2b panic stderr: " + pRun.stderr, text.containsText(pRun.stderr, "ArithmeticPanic"));
+}
+
+slice2bBadRej: List<(src: String, msg: String)> = [
+    (src = "x := { y: Int = \"bad\"; 5 };", msg = "cannot initialize Int with String"),
+    (src = "x := { y := 1; y := 2; 5 };", msg = "duplicate declaration y in block"),
+    (src = "x := { q: Int = ?; y := q; 5 };", msg = "cannot read uninitialized local q"),
+    (src = "x := { z := fn(): Int { \"bad\" }; 5 };", msg = "cannot return String from function"),
+    (src = "x := { outerX := 1; z := fn(): Unit { outerX = 2; }; 5 };", msg = "cannot assign to immutable local outerX")
+];
+loop slice2bBadRej as r {
+    compilerTest.assertCompileErrorContains(root, tsComp, "slice2b bad", r.src, r.msg);
+}
+
+/* Slice 3: lexical captures, inner-block symbol wiring, trace safety, and escaping checks on TS */
+slice3Caps := text.joinTexts([
+    "io := import \"core/io\";",
+    "a := { x := 1; f := fn(): Int { x }; f() };",
+    "var gx := 1;",
+    "b := { f := fn(): Int { gx }; f() };",
+    "var gx2 := 2;",
+    "c := { reader := fn(): Int { return gx2; }; reader() };",
+    "d := { var x := 3; f := fn(): Int { x }; f() };",
+    "var wx := 1;",
+    "{ f := fn(): Unit { wx = 9; }; f(); }",
+    "outerParam := fn(p: Int): Int { inner := fn(): Int { p }; inner() };",
+    "outerCall := fn(): Int { aFn := fn(): Int { 4 }; bFn := fn(): Int { aFn() }; bFn() };",
+    "xs: mut List<Int> = [5];",
+    "g := { f := fn(): Int { push_back(mut xs, 6); xs[0] + xs[1] }; f() };",
+    "closures: mut List<fn(): Int> = [];",
+    "loop [10, 20, 30] as item {",
+    "  f := fn(): Int { item };",
+    "  push_back(mut closures, f);",
+    "}",
+    "deadCap := { outerX := 1; z := fn(): Int { outerX }; 5 };",
+    "io.outputLine(a, b, c, d, wx, outerParam(7), outerCall(), g, closures[0](), closures[1](), closures[2](), deadCap);"
+], "\n");
+checkTsDceCase("slice3 captures", slice3Caps, "1 1 2 3 9 7 4 11 10 20 30 5\n", ["const lite_deadCap = 5n;"], ["outerX"]);
+
+slice3Escape := text.joinTexts([
+    "io := import \"core/io\";",
+    "makeReader := fn(x: Int): fn(): Int {",
+    "  fn(): Int { x }",
+    "};",
+    "makeCounter := fn(start: Int): fn(): Int {",
+    "  var count := start;",
+    "  fn(): Int {",
+    "    count = count + 1;",
+    "    count",
+    "  }",
+    "};",
+    "r1 := makeReader(41);",
+    "r2 := makeReader(99);",
+    "c1 := makeCounter(0);",
+    "c2 := makeCounter(10);",
+    "io.outputLine(r1(), r2(), c1(), c1(), c2(), c1());"
+], "\n");
+compilerTest.assertCompileRunTs(root, tsComp, "slice3 escape", slice3Escape, "41 99 1 2 11 3\n");
+
+slice3Wiring := text.joinTexts([
+    "io := import \"core/io\";",
+    "valRes := {",
+    "  countdown := fn(n: Int): Int {",
+    "    if n <= 0 { 0 } else { n + countdown(n - 1) }",
+    "  };",
+    "  even := fn(n: Int): Bool {",
+    "    if n == 0 { true } else { odd(n - 1) }",
+    "  };",
+    "  odd := fn(n: Int): Bool {",
+    "    if n == 0 { false } else { even(n - 1) }",
+    "  };",
+    "  readLater := fn(): Int { laterVal + laterMut };",
+    "  laterVal := 12;",
+    "  var laterMut := 8;",
+    "  incLater := fn(): Unit { laterMut = laterMut + 5; };",
+    "  incLater();",
+    "  if even(4) { countdown(3) + readLater() } else { 0 }",
+    "};",
+    "ifRes := if true {",
+    "  isZero := fn(n: Int): Bool { if n == 0 { true } else { isPos(n) and false } };",
+    "  isPos := fn(n: Int): Bool { n > 0 };",
+    "  readTarget := fn(): Int { target };",
+    "  target := 7;",
+    "  if isZero(0) and isPos(1) { readTarget() } else { 0 }",
+    "} else { 0 };",
+    "matchRes := match {",
+    "  false { 0 }",
+    "  _ {",
+    "    getM := fn(): Int { mVal };",
+    "    mVal := 9;",
+    "    getM()",
+    "  }",
+    "};",
+    "loopRes := @lp loop [1] as step {",
+    "  getAfter := fn(): Int { step + afterDecl };",
+    "  afterDecl := 4;",
+    "  break getAfter();",
+    "} then { .value };",
+    "thenRes := loop [1, 2] as _ {",
+    "} then {",
+    "  getT := fn(): Int { tVal };",
+    "  tVal := 8;",
+    "  getT()",
+    "};",
+    "var finAcc := 0;",
+    "finallyRes := {",
+    "  getF := fn(): Int { fVal };",
+    "  fVal := 15;",
+    "  getF()",
+    "} finally {",
+    "  incFin := fn(): Unit { finAcc = finAcc + finStep; };",
+    "  finStep := 3;",
+    "  incFin();",
+    "};",
+    "topFnRes := (fn(): Int {",
+    "  ping := fn(n: Int): Int { if n <= 0 { pong(0) } else { n + ping(n - 1) } };",
+    "  pong := fn(z: Int): Int { z + base };",
+    "  base := 100;",
+    "  ping(2)",
+    "})();",
+    "topNamedFn := fn(k: Int): Int {",
+    "  ping := fn(n: Int): Int { if n <= 0 { pong(0) } else { n + ping(n - 1) } };",
+    "  pong := fn(z: Int): Int { z + base };",
+    "  base := 100;",
+    "  ping(k)",
+    "};",
+    "dupBindRes := {",
+    "  getP := fn(): Int { p };",
+    "  (p, p) := (4, 5);",
+    "  getP()",
+    "};",
+    "io.outputLine(valRes, ifRes, matchRes, loopRes, thenRes, finallyRes, finAcc, topFnRes, topNamedFn(2), dupBindRes);"
+], "\n");
+compilerTest.assertCompileRunTs(root, tsComp, "slice3 wiring", slice3Wiring, "31 7 9 5 8 15 3 103 103 5\n");
+
+slice3Precedence := text.joinTexts([
+    "io := import \"core/io\";",
+    "add := fn(x: Int): Int { x * 10 };",
+    "s := 1;",
+    "levelResult := {",
+    "  get1 := fn(): Int { s };",
+    "  r2 := {",
+    "    get2 := fn(): Int { s };",
+    "    r3 := {",
+    "      get3 := fn(): Int { s };",
+    "      r4 := {",
+    "        get4 := fn(): Int { s };",
+    "        s := 4;",
+    "        get4()",
+    "      };",
+    "      s := 3;",
+    "      get3() * 10 + r4",
+    "    };",
+    "    s := 2;",
+    "    get2() * 100 + r3",
+    "  };",
+    "  s := 9;",
+    "  get1() * 1000 + r2",
+    "};",
+    "outerShadow := 10;",
+    "eagerShadow := {",
+    "  outerShadow := outerShadow + 5;",
+    "  outerShadow",
+    "};",
+    "var outerMut := 1;",
+    "mixedOrder := {",
+    "  outerMut = 2;",
+    "  get := fn(): Int { outerMut };",
+    "  outerMut := 4;",
+    "  get()",
+    "};",
+    "fnShadowRes := {",
+    "  callAdd := fn(): Int { add(3) };",
+    "  add := fn(n: Int): Int { n + 1 };",
+    "  callAdd()",
+    "};",
+    "aliasDceRes := {",
+    "  Box := type Int;",
+    "  dead := 999;",
+    "  used: Box = 21;",
+    "  reader := fn(): Box { used };",
+    "  reader()",
+    "};",
+    "writeBeforeReadRes := {",
+    "  var y: Int = ?;",
+    "  before := fn(): Int { y = 9; y };",
+    "  before()",
+    "};",
+    "listPushRes := {",
+    "  ops: mut List<fn(): Int> = [];",
+    "  push_back(mut ops, fn(): Int { lateNum });",
+    "  lateNum := 77;",
+    "  ops[0]()",
+    "};",
+    "io.outputLine(levelResult, eagerShadow, outerMut, mixedOrder, fnShadowRes, aliasDceRes, writeBeforeReadRes, listPushRes);"
+], "\n");
+checkTsDceCase("slice3 precedence", slice3Precedence, "9234 15 2 4 4 21 9 77\n", emptySubs, ["999n"]);
+
+compilerTest.assertCompileErrorContains(root, cComp, "slice3 c rej 1", "{ x := 1; f := fn(): Int { x }; _ := f(); }", "C backend does not support");
+compilerTest.assertCompileErrorContains(root, cComp, "slice3 c rej 2", "make := fn(x: Int): fn(): Int { fn(): Int { x } };", "C backend does not support");
+
+slice3BadRej: List<(src: String, msg: String)> = [
+    (src = "{ f := fn(): Int { x }; _ := f(); x := 1; }", msg = "cannot call before x is initialized"),
+    (src = "{ a := fn(): Int { b() }; b := fn(): Int { x }; _ := a(); x := 1; }", msg = "cannot call before x is initialized"),
+    (src = "{ f := fn(): Int { x }; if f() > 0 { }; x := 1; }", msg = "cannot call before x is initialized"),
+    (src = "{ f := fn(): Int { x }; loop f() < 1 { break; }; x := 1; }", msg = "cannot call before x is initialized"),
+    (src = "{ var y: Int = ?; f := fn(): Int { y }; _ := f(); y = 2; }", msg = "cannot call before y is initialized"),
+    (src = "{ var y: Int = ?; f := fn(): Int { y }; _ := f(); }", msg = "cannot read uninitialized local y"),
+    (src = "{ var y: Int = ?; before := fn(): Int { y = 9; y }; _ := y; }", msg = "cannot read uninitialized local y"),
+    (src = "{ y: Int = ?; f := fn(): Unit { y = 2; }; f(); }", msg = "cannot assign to possibly initialized immutable local y"),
+    (src = "{ ops: mut List<fn(): Int> = []; push_back(mut ops, fn(): Int { late }); _ := ops[0](); late := 7; }", msg = "cannot call before late is initialized"),
+    (src = "make := fn(): fn(): Int { r := fn(): Int { y }; return r; y := 5; fn(): Int { 0 } }; _ := make();", msg = "cannot call before y is initialized"),
+    (src = "v := @b { r := fn(): Int { y }; return @b r; y := 5; fn(): Int { 0 } };", msg = "cannot call before y is initialized"),
+    (src = "v := loop true { var y: Int = ?; r := fn(): Int { y }; break r; y = 1; } then { fn(): Int { 0 } };", msg = "cannot call before y is initialized"),
+    (src = "f := { var y: Int = ?; fn(): Int { y } };", msg = "cannot read uninitialized local y")
+];
+loop slice3BadRej as r {
+    compilerTest.assertCompileErrorContains(root, tsComp, "slice3 bad", r.src, r.msg);
+}
+
+test.done("unified-blocks");
