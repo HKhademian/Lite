@@ -1,0 +1,1681 @@
+/** Execution-trace initialization safety, callable dependency extraction, deferred body stripping, and outer update propagation. */
+
+integer := import "core/int";
+listLib := import "core/list";
+textLib := import "core/text";
+ir := import "./frontend-ir.lts";
+syntax := import "./frontend-syntax.lts";
+types := import "./frontend-types.lts";
+
+/** One local visible to later statements matching `frontend-ir.Local`. */
+Local := type (name: String, runtime: String, kind: String, mutable: Bool, writable: Bool, depth: Int, constant: Bool, code: String, intValue: Int, textValue: String, initState: String);
+
+/** One parsed item entry matching `frontend-ir.Item`. */
+Item := type (kind: String, name: String, runtime: String, code: String, intValue: Int, textValue: String);
+
+/** Collection of items matching `frontend-ir.Items`. */
+Items := type List<Item>;
+
+/** One previously declared top-level function matching `frontend-ir.FunctionInfo`. */
+FunctionInfo := type (name: String, runtime: String, result: String, first: Int, count: Int, declAt: Int);
+
+/** A later top-level scalar definition matching `frontend-ir.FutureValue`. */
+FutureValue := type (name: String, runtime: String, kind: String, at: Int, mutable: Bool, writable: Bool, initState: String);
+
+/** Returns the index of the latest reached or deferred local (`depth >= -1`) with runtime `runtime`, or -1 when unreached. */
+pub latestActiveLocalByRuntime := fn(locals: List<Local>, runtime: String): Int {
+    var i := 0;
+    var found := -1;
+    loop locals as local {
+        if local.depth >= -1 and local.runtime == runtime { found = i; }
+        i = i + 1;
+    }
+    found
+};
+
+/** Returns the source name if `runtime` is a pre-scanned same/enclosing block placeholder not yet reached sequentially, or `""`. */
+pub unreachedFutureLocalName := fn(locals: List<Local>, runtime: String): String {
+    if runtime == "" or latestActiveLocalByRuntime(locals, runtime) >= 0 { return ""; }
+    loop locals as entry {
+        if entry.depth <= -2 and entry.runtime == runtime { return entry.name; }
+    }
+    ""
+};
+
+/** True when any unreached future placeholder (`depth <= -2`) or uninitialized reached binding (`depth >= 0`) exists in `locals`. */
+pub localsHasAnyUnready := fn(locals: List<Local>): Bool {
+    var count := 0;
+    var hasPotential := false;
+    loop locals as entry {
+        count = count + 1;
+        if entry.depth <= -2 or (entry.depth >= 0 and entry.initState =!= ir.INIT_STATE_INIT) {
+            hasPotential = true;
+        }
+    }
+    if not hasPotential { return false; }
+    var activeBag := "|";
+    var futureBag := "|";
+    var i := count - 1;
+    loop i >= 0 {
+        entry := locals[i];
+        if entry.depth >= -1 {
+            marker := "|" + entry.runtime + "|";
+            if textLib.indexOfText(activeBag, marker, 0) < 0 {
+                if entry.depth >= 0 and entry.initState =!= ir.INIT_STATE_INIT {
+                    return true;
+                }
+                activeBag = activeBag + entry.runtime + "|";
+            }
+        } else {
+            futureBag = futureBag + entry.runtime + "|";
+        }
+        i = i - 1;
+    }
+    if futureBag == "|" { return false; }
+    var pos := 0;
+    fLen := textLib.length(futureBag);
+    loop pos < fLen {
+        if textLib.at(futureBag, pos) == "|" {
+            next := textLib.indexOfText(futureBag, "|", pos + 1);
+            if next > pos + 1 {
+                rt := textLib.slice(futureBag, pos + 1, next);
+                if textLib.indexOfText(activeBag, "|" + rt + "|", 0) < 0 {
+                    return true;
+                }
+                pos = next;
+                continue;
+            }
+        }
+        pos = pos + 1;
+    }
+    false
+};
+
+/** True for characters allowed in compiler-generated runtime identifiers. */
+pub isTraceIdentChar := fn(ch: String): Bool {
+    textLib.isNameContinue(ch) or ch == "$"
+};
+
+/** True when `tok` names a user function, module function, or local/root variable runtime. */
+pub tokenStartsWithRuntimePrefix := fn(tok: String): Bool {
+    textLib.startsWithAt(tok, 0, "liteFn") or textLib.startsWithAt(tok, 0, "lt_fn_") or
+    textLib.startsWithAt(tok, 0, "lite_") or textLib.startsWithAt(tok, 0, "lite$m$") or
+    textLib.startsWithAt(tok, 0, "lt_m_")
+};
+
+/** True when `bag` contains `tok` in `"|a|b|"` form. */
+pub tokenInPipeBag := fn(bag: String, tok: String): Bool {
+    tok =!= "" and textLib.indexOfText(bag, "|" + tok + "|", 0) >= 0
+};
+
+/** Appends `tok` to a pipe-delimited token set `"|a|b|"` when absent. */
+pub appendPipeBag := fn(bag: String, tok: String): String {
+    if tok == "" or textLib.indexOfText(bag, "|" + tok + "|", 0) >= 0 { return bag; }
+    if bag == "" { "|" + tok + "|" } else { bag + tok + "|" }
+};
+
+/** Merges every token in pipe bag `extra` into `base` without duplicates. */
+pub mergePipeBags := fn(base: String, extra: String): String {
+    if extra == "" { return base; }
+    if base == "" { return extra; }
+    var out := base;
+    len := textLib.length(extra);
+    var pos := 0;
+    loop pos < len {
+        if textLib.at(extra, pos) == "|" {
+            pos = pos + 1;
+            continue;
+        }
+        nextBar := textLib.indexOfText(extra, "|", pos);
+        endPos := if nextBar < 0 { len } else { nextBar };
+        if endPos > pos {
+            out = appendPipeBag(out, textLib.slice(extra, pos, endPos));
+        }
+        pos = endPos + 1;
+    }
+    out
+};
+
+/** Extracts the `allBag` portion (`allBag + "\n" + readBag`) from encoded callable dependency metadata. */
+pub fnDepsAll := fn(encoded: String): String {
+    if encoded == "" { return ""; }
+    nl := textLib.indexOfText(encoded, "\n", 0);
+    if nl < 0 { encoded } else { textLib.slice(encoded, 0, nl) }
+};
+
+/** Extracts the `readBag` portion (`allBag + "\n" + readBag`) from encoded callable dependency metadata. */
+pub fnDepsRead := fn(encoded: String): String {
+    if encoded == "" { return ""; }
+    nl := textLib.indexOfText(encoded, "\n", 0);
+    if nl < 0 { encoded } else { textLib.slice(encoded, nl + 1, textLib.length(encoded)) }
+};
+
+/** Unions two `"allBag\nreadBag"` encoded dependency pairs. */
+pub mergeCallableLocalDeps := fn(existingCode: String, newDeps: String): String {
+    if existingCode == "" { return newDeps; }
+    if newDeps == "" { return existingCode; }
+    mergedAll := mergePipeBags(fnDepsAll(existingCode), fnDepsAll(newDeps));
+    mergedRead := mergePipeBags(fnDepsRead(existingCode), fnDepsRead(newDeps));
+    mergedAll + "\n" + mergedRead
+};
+
+/** Advances past ASCII spaces/newlines in emitted code strings. */
+pub skipCodeSpaces := fn(code: String, pos: Int): Int {
+    len := textLib.length(code);
+    var p := pos;
+    loop p < len {
+        ch := textLib.at(code, p);
+        if ch == " " or ch == "\t" or ch == "\n" or ch == "\r" { p = p + 1; } else { break; }
+    }
+    p
+};
+
+/** Advances past a quoted string literal starting at `quotePos` inside emitted code. */
+pub skipCodeString := fn(code: String, quotePos: Int): Int {
+    len := textLib.length(code);
+    var p := quotePos + 1;
+    loop p < len {
+        ch := textLib.at(code, p);
+        if ch == "\\" {
+            p = p + 2;
+        } else if ch == "\"" {
+            return p + 1;
+        } else {
+            p = p + 1;
+        }
+    }
+    len
+};
+
+/** Collects referenced user/module/value runtime identifiers from emitted TS code, optionally skipping LHS declaration headers. */
+extractCodeRuntimeTokens := fn(code: String, skipLhsDecls: Bool): String {
+    var bag := "";
+    len := textLib.length(code);
+    var i := 0;
+    loop i < len {
+        ch := textLib.at(code, i);
+        if ch == "\"" {
+            i = skipCodeString(code, i);
+            continue;
+        }
+        if skipLhsDecls and ch == "v" and textLib.wordAt(code, i, "void") {
+            afterVoid := skipCodeSpaces(code, i + 4);
+            if afterVoid < len and isTraceIdentChar(textLib.at(code, afterVoid)) {
+                var vEnd := afterVoid;
+                loop vEnd < len and isTraceIdentChar(textLib.at(code, vEnd)) { vEnd = vEnd + 1; }
+                afterId := skipCodeSpaces(code, vEnd);
+                if afterId < len and textLib.at(code, afterId) == ";" {
+                    i = afterId + 1;
+                    continue;
+                }
+            }
+        }
+        if skipLhsDecls and ((ch == "c" and textLib.wordAt(code, i, "const")) or (ch == "l" and textLib.wordAt(code, i, "let"))) {
+            kwLen := if ch == "c" { 5 } else { 3 };
+            afterKw := skipCodeSpaces(code, i + kwLen);
+            if afterKw < len and isTraceIdentChar(textLib.at(code, afterKw)) {
+                var idEnd := afterKw;
+                loop idEnd < len and isTraceIdentChar(textLib.at(code, idEnd)) { idEnd = idEnd + 1; }
+                var eqScan := idEnd;
+                var foundEq := -1;
+                var tDepth := 0;
+                loop eqScan < len {
+                    ec := textLib.at(code, eqScan);
+                    if ec == "\"" {
+                        eqScan = skipCodeString(code, eqScan);
+                        continue;
+                    }
+                    if ec == "(" or ec == "[" or ec == "{" or ec == "<" {
+                        tDepth = tDepth + 1;
+                    } else if ec == ")" or ec == "]" or ec == "}" or ec == ">" {
+                        if tDepth > 0 and not textLib.startsWithAt(code, eqScan - 1, "=>") { tDepth = tDepth - 1; }
+                    } else if tDepth == 0 and ec == ";" {
+                        break;
+                    } else if ec == "=" and not textLib.startsWithAt(code, eqScan, "=>") and
+                    not textLib.startsWithAt(code, eqScan, "==") and
+                    (eqScan == 0 or (textLib.at(code, eqScan - 1) =!= "=" and textLib.at(code, eqScan - 1) =!= "!" and
+                    textLib.at(code, eqScan - 1) =!= "<" and textLib.at(code, eqScan - 1) =!= ">")) {
+                        foundEq = eqScan;
+                        break;
+                    }
+                    eqScan = eqScan + 1;
+                }
+                if foundEq >= 0 {
+                    i = foundEq + 1;
+                    continue;
+                }
+            }
+        }
+        if textLib.isNameStart(ch) or ch == "$" {
+            var tokEnd := i;
+            loop tokEnd < len and isTraceIdentChar(textLib.at(code, tokEnd)) { tokEnd = tokEnd + 1; }
+            tok := textLib.slice(code, i, tokEnd);
+            if tokenStartsWithRuntimePrefix(tok) { bag = appendPipeBag(bag, tok); }
+            i = tokEnd;
+        } else {
+            i = i + 1;
+        }
+    }
+    bag
+};
+
+/** Returns the `lite_*` local runtime being bound immediately before `= (function ...)` at `fnPos`, or `""` when not a local binding. */
+precedingAssignedLocalRuntime := fn(code: String, fnPos: Int): String {
+    var k := fnPos - 1;
+    loop k >= 0 {
+        kc := textLib.at(code, k);
+        if kc == " " or kc == "\t" or kc == "\n" or kc == "\r" { k = k - 1; } else { break; }
+    }
+    if k < 0 or textLib.at(code, k) =!= "=" { return ""; }
+    if k > 0 {
+        prev := textLib.at(code, k - 1);
+        if prev == "=" or prev == "<" or prev == ">" or prev == "!" { return ""; }
+    }
+    var scanBack := k - 1;
+    var depth := 0;
+    loop scanBack >= 0 {
+        sc := textLib.at(code, scanBack);
+        if sc == ")" or sc == "]" or sc == "}" {
+            depth = depth + 1;
+        } else if sc == "(" or sc == "[" or sc == "{" {
+            if depth == 0 {
+                scanBack = scanBack + 1;
+                break;
+            }
+            depth = depth - 1;
+        } else if sc == ";" and depth == 0 {
+            scanBack = scanBack + 1;
+            break;
+        }
+        scanBack = scanBack - 1;
+    }
+    if scanBack < 0 { scanBack = 0; }
+    stmtPos := skipCodeSpaces(code, scanBack);
+    var lhsPos := stmtPos;
+    if textLib.wordAt(code, lhsPos, "const") { lhsPos = skipCodeSpaces(code, lhsPos + 5); }
+    else if textLib.wordAt(code, lhsPos, "let") { lhsPos = skipCodeSpaces(code, lhsPos + 3); }
+    if lhsPos >= k or not (textLib.isNameStart(textLib.at(code, lhsPos)) or textLib.at(code, lhsPos) == "$") {
+        return "";
+    }
+    var lhsEnd := lhsPos;
+    loop lhsEnd < k and isTraceIdentChar(textLib.at(code, lhsEnd)) { lhsEnd = lhsEnd + 1; }
+    lhs := textLib.slice(code, lhsPos, lhsEnd);
+    if textLib.startsWithAt(lhs, 0, "lite_") or textLib.startsWithAt(lhs, 0, "lite$arg") or lhs == "lite$fn" { lhs } else { "" }
+};
+
+/** Finds the position just after the closing `)` matching the `(` at `openPos` in emitted code, or -1 if unclosed. */
+pub scanBalancedParenEnd := fn(code: String, openPos: Int): Int {
+    len := textLib.length(code);
+    if openPos < 0 or openPos >= len or textLib.at(code, openPos) =!= "(" { return -1; }
+    var p := openPos + 1;
+    var depth := 1;
+    loop p < len {
+        ch := textLib.at(code, p);
+        if ch == "\"" {
+            p = skipCodeString(code, p);
+        } else if ch == "(" {
+            depth = depth + 1;
+            p = p + 1;
+        } else if ch == ")" {
+            depth = depth - 1;
+            p = p + 1;
+            if depth == 0 { return p; }
+        } else {
+            p = p + 1;
+        }
+    }
+    -1
+};
+
+/** True when `code[openPos..closeEnd]` is a compiler-synthesized arrow function `((params)[: Ret] => body)`. */
+pub isCompilerArrowIife := fn(code: String, openPos: Int, closeEnd: Int): Bool {
+    if closeEnd <= openPos + 2 { return false; }
+    innerPos := skipCodeSpaces(code, openPos + 1);
+    if innerPos >= closeEnd - 1 or textLib.at(code, innerPos) =!= "(" { return false; }
+    paramsEnd := scanBalancedParenEnd(code, innerPos);
+    if paramsEnd < 0 or paramsEnd >= closeEnd - 1 { return false; }
+    afterParams := skipCodeSpaces(code, paramsEnd);
+    if textLib.startsWithAt(code, afterParams, "=>") { return true; }
+    afterParams < closeEnd - 1 and textLib.at(code, afterParams) == ":"
+};
+
+/** True when `code[openPos..closeEnd]` is a parenthesized user/local callable `<callee>` immediately followed by `(<args>)`. */
+pub isIndirectUserCallParens := fn(code: String, openPos: Int, closeEnd: Int): Bool {
+    len := textLib.length(code);
+    if closeEnd < 0 or closeEnd > len { return false; }
+    afterClose := skipCodeSpaces(code, closeEnd);
+    if afterClose >= len or textLib.at(code, afterClose) =!= "(" { return false; }
+    if isCompilerArrowIife(code, openPos, closeEnd) { return false; }
+    calleeText := textLib.slice(code, openPos + 1, closeEnd - 1);
+    textLib.indexOfText(calleeText, "lite", 0) >= 0 or
+    textLib.indexOfText(calleeText, "(function ", 0) >= 0 or
+    textLib.indexOfText(calleeText, "=>", 0) >= 0
+};
+
+/** Strips uninvoked `(function ...)` bodies into `"0"` while keeping immediately-invoked `fn` literals and call arguments intact. */
+pub stripDeferredFnBodies := fn(exprCode: String): (code: String, pairsText: String) {
+    len := textLib.length(exprCode);
+    outParts: mut List<String> = [];
+    pairParts: mut List<String> = [];
+    parenIsUserCall: mut List<Int> = [];
+    var stackCount := 0;
+    var indirectArgOpenBag := "";
+    var callDepth := 0;
+    var sliceStart := 0;
+    var pos := 0;
+    loop pos < len {
+        ch := textLib.at(exprCode, pos);
+        if ch == "\"" {
+            pos = skipCodeString(exprCode, pos);
+            continue;
+        }
+        if ch == "(" {
+            if textLib.startsWithAt(exprCode, pos, "(function ") {
+                fnEnd := scanBalancedParenEnd(exprCode, pos);
+                if fnEnd >= 0 {
+                    var la := fnEnd;
+                    loop true {
+                        la = skipCodeSpaces(exprCode, la);
+                        if la < len and textLib.at(exprCode, la) == ")" { la = la + 1; } else { break; }
+                    }
+                    la = skipCodeSpaces(exprCode, la);
+                    isDirectCall := la < len and textLib.at(exprCode, la) == "(";
+                    if callDepth == 0 and not isDirectCall {
+                        lhsName := precedingAssignedLocalRuntime(exprCode, pos);
+                        if lhsName =!= "lite$fn" and not textLib.startsWithAt(lhsName, 0, "lite$arg") {
+                            if lhsName =!= "" {
+                                fnDeps := extractFnLiteralDeps(textLib.slice(exprCode, pos, fnEnd));
+                                listLib.pushBack(mut pairParts, lhsName + ":" + fnDeps.allBag + "\t" + fnDeps.readBag + "\n");
+                            }
+                            listLib.pushBack(mut outParts, textLib.slice(exprCode, sliceStart, pos));
+                            listLib.pushBack(mut outParts, "0");
+                            sliceStart = fnEnd;
+                            pos = fnEnd;
+                            continue;
+                        }
+                    }
+                }
+            }
+            var prev := pos - 1;
+            loop prev >= 0 {
+                pc := textLib.at(exprCode, prev);
+                if pc == " " or pc == "\t" or pc == "\n" or pc == "\r" { prev = prev - 1; } else { break; }
+            }
+            var isCall := 0;
+            if prev >= 0 and isTraceIdentChar(textLib.at(exprCode, prev)) {
+                var idStart := prev;
+                loop idStart > 0 and isTraceIdentChar(textLib.at(exprCode, idStart - 1)) { idStart = idStart - 1; }
+                ident := textLib.slice(exprCode, idStart, prev + 1);
+                if tokenStartsWithRuntimePrefix(ident) or ident == "lite$fn" { isCall = 1; }
+            }
+            if isCall == 0 and tokenInPipeBag(indirectArgOpenBag, integer.intText(pos)) {
+                isCall = 1;
+            }
+            if isCall == 0 {
+                closeParenEnd := scanBalancedParenEnd(exprCode, pos);
+                if isIndirectUserCallParens(exprCode, pos, closeParenEnd) {
+                    isCall = 1;
+                    indirectArgOpenBag = appendPipeBag(indirectArgOpenBag, integer.intText(skipCodeSpaces(exprCode, closeParenEnd)));
+                }
+            }
+            listLib.pushBack(mut parenIsUserCall, isCall);
+            stackCount = stackCount + 1;
+            callDepth = callDepth + isCall;
+            pos = pos + 1;
+            continue;
+        }
+        if ch == ")" {
+            if stackCount > 0 {
+                popped := listLib.popBack(mut parenIsUserCall);
+                stackCount = stackCount - 1;
+                callDepth = callDepth - popped;
+            }
+            pos = pos + 1;
+            continue;
+        }
+        pos = pos + 1;
+    }
+    listLib.pushBack(mut outParts, textLib.slice(exprCode, sliceStart, len));
+    pairsBody := textLib.joinTexts(pairParts, "");
+    pairsText := if pairsBody == "" { "" } else { "\n" + pairsBody };
+    (code = textLib.joinTexts(outParts, ""), pairsText = pairsText)
+};
+
+/** True when stripped eager code invokes a user/local/module callable or still contains an active `(function ` literal. */
+hasUserOrLocalCall := fn(eagerCode: String): Bool {
+    len := textLib.length(eagerCode);
+    var i := 0;
+    loop i < len {
+        ch := textLib.at(eagerCode, i);
+        if ch == "\"" {
+            i = skipCodeString(eagerCode, i);
+            continue;
+        }
+        if ch == "(" {
+            if textLib.startsWithAt(eagerCode, i, "(function ") {
+                return true;
+            }
+            closeParenEnd := scanBalancedParenEnd(eagerCode, i);
+            if isIndirectUserCallParens(eagerCode, i, closeParenEnd) {
+                return true;
+            }
+        }
+        if textLib.isNameStart(ch) or ch == "$" {
+            var tokEnd := i;
+            loop tokEnd < len and isTraceIdentChar(textLib.at(eagerCode, tokEnd)) { tokEnd = tokEnd + 1; }
+            tok := textLib.slice(eagerCode, i, tokEnd);
+            if tokenStartsWithRuntimePrefix(tok) or tok == "lite$fn" {
+                var after := skipCodeSpaces(eagerCode, tokEnd);
+                loop after < len and (textLib.at(eagerCode, after) == "." or textLib.at(eagerCode, after) == "[") {
+                    if textLib.at(eagerCode, after) == "." {
+                        var memEnd := skipCodeSpaces(eagerCode, after + 1);
+                        loop memEnd < len and isTraceIdentChar(textLib.at(eagerCode, memEnd)) { memEnd = memEnd + 1; }
+                        after = skipCodeSpaces(eagerCode, memEnd);
+                    } else {
+                        var bDepth := 1;
+                        var bScan := after + 1;
+                        loop bScan < len and bDepth > 0 {
+                            bc := textLib.at(eagerCode, bScan);
+                            if bc == "\"" { bScan = skipCodeString(eagerCode, bScan); continue; }
+                            if bc == "[" { bDepth = bDepth + 1; }
+                            else if bc == "]" { bDepth = bDepth - 1; }
+                            bScan = bScan + 1;
+                        }
+                        after = skipCodeSpaces(eagerCode, bScan);
+                    }
+                }
+                if after < len and textLib.at(eagerCode, after) == "(" { return true; }
+            }
+            if tok == "lite$listIndex" {
+                openPos := skipCodeSpaces(eagerCode, tokEnd);
+                if openPos < len and textLib.at(eagerCode, openPos) == "(" {
+                    endIdxCall := scanBalancedParenEnd(eagerCode, openPos);
+                    if endIdxCall >= 0 {
+                        afterIdxCall := skipCodeSpaces(eagerCode, endIdxCall);
+                        if afterIdxCall < len and textLib.at(eagerCode, afterIdxCall) == "(" { return true; }
+                    }
+                }
+            }
+            i = tokEnd;
+        } else {
+            i = i + 1;
+        }
+    }
+    false
+};
+
+/** Finds the index of the function matching `runtime` in `functions`, or -1. */
+findFunctionByRuntime := fn(functions: List<FunctionInfo>, runtime: String): Int {
+    var i := 0;
+    loop functions as info {
+        if info.runtime == runtime { return i; }
+        i = i + 1;
+    }
+    -1
+};
+
+/** Finds the latest `FutureValue` matching `runtime`, or -1. */
+findFutureByRuntime := fn(futureValues: List<FutureValue>, runtime: String): Int {
+    var i := 0;
+    var found := -1;
+    loop futureValues as fut {
+        if fut.runtime == runtime { found = i; }
+        i = i + 1;
+    }
+    found
+};
+
+/** Finds the position just after the closing `}` matching `{` at `openPos` in emitted TS code, or -1 if unclosed. */
+scanCodeBraceEnd := fn(code: String, openPos: Int): Int {
+    len := textLib.length(code);
+    if openPos < 0 or openPos >= len or textLib.at(code, openPos) =!= "{" { return -1; }
+    var p := openPos + 1;
+    var depth := 1;
+    loop p < len {
+        ch := textLib.at(code, p);
+        if ch == "\"" {
+            p = skipCodeString(code, p);
+        } else if ch == "{" {
+            depth = depth + 1;
+            p = p + 1;
+        } else if ch == "}" {
+            depth = depth - 1;
+            p = p + 1;
+            if depth == 0 { return p; }
+        } else {
+            p = p + 1;
+        }
+    }
+    -1
+};
+
+/** Looks up all recorded `allBag` or `readBag` segments (`wantRead = true`) for `key` in `pairsText`. */
+lookupPairsEntryBag := fn(pairsText: String, key: String, wantRead: Bool): String {
+    if pairsText == "" or key == "" { return ""; }
+    needle := "\n" + key + ":";
+    pairsLen := textLib.length(pairsText);
+    var result := "";
+    var scanPos := 0;
+    loop scanPos < pairsLen {
+        hit := textLib.indexOfText(pairsText, needle, scanPos);
+        if hit < 0 { break; }
+        valStart := hit + textLib.length(needle);
+        lineEnd := textLib.indexOfText(pairsText, "\n", valStart);
+        nextEnd := if lineEnd >= 0 { lineEnd } else { pairsLen };
+        tabPos := textLib.indexOfText(pairsText, "\t", valStart);
+        var sliceStart := valStart;
+        var sliceEnd := nextEnd;
+        if tabPos >= 0 and tabPos < nextEnd {
+            if wantRead { sliceStart = tabPos + 1; } else { sliceEnd = tabPos; }
+        }
+        if sliceEnd > sliceStart {
+            result = mergePipeBags(result, textLib.slice(pairsText, sliceStart, sliceEnd));
+        }
+        scanPos = nextEnd;
+    }
+    result
+};
+
+/** True when `code` invokes runtime identifier `tok` via `tok(` or `(tok)(`. */
+isTokenInvokedInCode := fn(code: String, tok: String): Bool {
+    if code == "" or tok == "" { return false; }
+    if textLib.indexOfText(code, tok, 0) < 0 { return false; }
+    len := textLib.length(code);
+    tokLen := textLib.length(tok);
+    var pos := 0;
+    loop pos < len {
+        ch := textLib.at(code, pos);
+        if ch == "\"" {
+            pos = skipCodeString(code, pos);
+            continue;
+        }
+        if textLib.startsWithAt(code, pos, tok) {
+            beforeOk := pos == 0 or not isTraceIdentChar(textLib.at(code, pos - 1));
+            afterTok := pos + tokLen;
+            afterOk := afterTok >= len or not isTraceIdentChar(textLib.at(code, afterTok));
+            if beforeOk and afterOk {
+                var after := skipCodeSpaces(code, afterTok);
+                if after < len and textLib.at(code, after) == "(" { return true; }
+                loop after < len and textLib.at(code, after) == ")" {
+                    after = skipCodeSpaces(code, after + 1);
+                    if after < len and textLib.at(code, after) == "(" { return true; }
+                }
+            }
+            pos = afterTok;
+            continue;
+        }
+        pos = pos + 1;
+    }
+    false
+};
+
+/** Expands inner deferred `fn` calls from `rawBag` through `pairsText`, returning tokens minus `localDeclBag` and `writtenOuterBag`. */
+expandInnerFnReadTokens := fn(rawBag: String, codeForInvoke: String, pairsText: String,
+localDeclBag: String, writtenOuterBag: String): String {
+    var outBag := "";
+    if rawBag == "" { return outBag; }
+    var seenPairs := "";
+    innerQueue: mut List<String> = [];
+    var qCount := 0;
+    var pos := 0;
+    len := textLib.length(rawBag);
+    loop pos < len {
+        if textLib.at(rawBag, pos) == "|" {
+            sep := textLib.indexOfText(rawBag, "|", pos + 1);
+            if sep > pos + 1 {
+                tok := textLib.slice(rawBag, pos + 1, sep);
+                if not tokenInPipeBag(localDeclBag, tok) and not tokenInPipeBag(writtenOuterBag, tok) {
+                    outBag = appendPipeBag(outBag, tok);
+                }
+                if pairsText =!= "" and isTokenInvokedInCode(codeForInvoke, tok) and
+                not tokenInPipeBag(seenPairs, tok) {
+                    pairDeps := lookupPairsEntryBag(pairsText, tok, true);
+                    if pairDeps =!= "" {
+                        seenPairs = appendPipeBag(seenPairs, tok);
+                        listLib.pushBack(mut innerQueue, tok);
+                        qCount = qCount + 1;
+                    }
+                }
+                pos = sep;
+                continue;
+            }
+        }
+        pos = pos + 1;
+    }
+    var qHead := 0;
+    loop qHead < qCount {
+        curFn := innerQueue[qHead];
+        qHead = qHead + 1;
+        deps := lookupPairsEntryBag(pairsText, curFn, true);
+        var dp := 0;
+        dLen := textLib.length(deps);
+        loop dp < dLen {
+            if textLib.at(deps, dp) == "|" {
+                sep := textLib.indexOfText(deps, "|", dp + 1);
+                if sep > dp + 1 {
+                    dTok := textLib.slice(deps, dp + 1, sep);
+                    if not tokenInPipeBag(localDeclBag, dTok) and not tokenInPipeBag(writtenOuterBag, dTok) {
+                        outBag = appendPipeBag(outBag, dTok);
+                    }
+                    if pairsText =!= "" and not tokenInPipeBag(seenPairs, dTok) {
+                        subDeps := lookupPairsEntryBag(pairsText, dTok, true);
+                        if subDeps =!= "" {
+                            seenPairs = appendPipeBag(seenPairs, dTok);
+                            listLib.pushBack(mut innerQueue, dTok);
+                            qCount = qCount + 1;
+                        }
+                    }
+                    dp = sep;
+                    continue;
+                }
+            }
+            dp = dp + 1;
+        }
+    }
+    outBag
+};
+
+/** Splits an emitted TS `(function ...)` literal into outer `allBag` references and `readBag` (outer tokens read before top-level unconditional write). */
+extractFnLiteralDeps := fn(fnCode: String): (allBag: String, readBag: String) {
+    len := textLib.length(fnCode);
+    if not textLib.startsWithAt(fnCode, 0, "(function ") {
+        toks := extractCodeRuntimeTokens(fnCode, false);
+        return (allBag = toks, readBag = toks);
+    }
+    paramOpen := textLib.indexOfText(fnCode, "(", 1);
+    if paramOpen < 0 {
+        toks := extractCodeRuntimeTokens(fnCode, false);
+        return (allBag = toks, readBag = toks);
+    }
+    paramClose := scanBalancedParenEnd(fnCode, paramOpen);
+    if paramClose < 0 {
+        toks := extractCodeRuntimeTokens(fnCode, false);
+        return (allBag = toks, readBag = toks);
+    }
+    var localDeclBag := "";
+    selfHeader := textLib.slice(fnCode, 10, paramOpen);
+    if tokenStartsWithRuntimePrefix(selfHeader) {
+        localDeclBag = appendPipeBag(localDeclBag, selfHeader);
+    }
+    var pCur := paramOpen + 1;
+    var pDepth := 0;
+    var expectParam := true;
+    loop pCur < paramClose - 1 {
+        pc := textLib.at(fnCode, pCur);
+        if pc == "\"" {
+            pCur = skipCodeString(fnCode, pCur);
+            continue;
+        }
+        if pDepth == 0 and expectParam {
+            pCur = skipCodeSpaces(fnCode, pCur);
+            if pCur >= paramClose - 1 { break; }
+            if textLib.isNameStart(textLib.at(fnCode, pCur)) or textLib.at(fnCode, pCur) == "$" {
+                var pEnd := pCur;
+                loop pEnd < paramClose - 1 and isTraceIdentChar(textLib.at(fnCode, pEnd)) { pEnd = pEnd + 1; }
+                pTok := textLib.slice(fnCode, pCur, pEnd);
+                if tokenStartsWithRuntimePrefix(pTok) { localDeclBag = appendPipeBag(localDeclBag, pTok); }
+                expectParam = false;
+                pCur = pEnd;
+                continue;
+            }
+        }
+        if pc == "(" or pc == "[" or pc == "{" {
+            pDepth = pDepth + 1;
+        } else if pc == ")" or pc == "]" or pc == "}" {
+            if pDepth > 0 { pDepth = pDepth - 1; }
+        } else if pc == "," and pDepth == 0 {
+            expectParam = true;
+        }
+        pCur = pCur + 1;
+    }
+    var scan := paramClose;
+    var rDepth := 0;
+    var bodyOpen := -1;
+    var bodyClose := -1;
+    loop scan < len {
+        sc := textLib.at(fnCode, scan);
+        if sc == "\"" {
+            scan = skipCodeString(fnCode, scan);
+            continue;
+        }
+        if sc == "(" or sc == "[" { rDepth = rDepth + 1; }
+        else if sc == ")" or sc == "]" { if rDepth > 0 { rDepth = rDepth - 1; } }
+        else if sc == "{" and rDepth == 0 {
+            candClose := scanCodeBraceEnd(fnCode, scan);
+            if candClose < 0 { break; }
+            afterCand := skipCodeSpaces(fnCode, candClose);
+            if afterCand < len and textLib.at(fnCode, afterCand) == ")" and skipCodeSpaces(fnCode, afterCand + 1) >= len {
+                bodyOpen = scan;
+                bodyClose = candClose;
+                break;
+            }
+            scan = candClose;
+            continue;
+        }
+        scan = scan + 1;
+    }
+    if bodyOpen < 0 or bodyClose <= bodyOpen + 1 {
+        toks := extractCodeRuntimeTokens(fnCode, false);
+        return (allBag = toks, readBag = toks);
+    }
+    body := textLib.slice(fnCode, bodyOpen + 1, bodyClose - 1);
+    bLen := textLib.length(body);
+    var dPos := 0;
+    loop dPos < bLen {
+        dc := textLib.at(body, dPos);
+        if dc == "\"" {
+            dPos = skipCodeString(body, dPos);
+            continue;
+        }
+        isDeclKw := ((dc == "c" and textLib.wordAt(body, dPos, "const")) or (dc == "l" and textLib.wordAt(body, dPos, "let"))) and
+        (dPos == 0 or textLib.at(body, dPos - 1) =!= "$");
+        if isDeclKw {
+            kwLen := if dc == "c" { 5 } else { 3 };
+            afterKw := skipCodeSpaces(body, dPos + kwLen);
+            if afterKw < bLen and (textLib.isNameStart(textLib.at(body, afterKw)) or textLib.at(body, afterKw) == "$") {
+                var idEnd := afterKw;
+                loop idEnd < bLen and isTraceIdentChar(textLib.at(body, idEnd)) { idEnd = idEnd + 1; }
+                idTok := textLib.slice(body, afterKw, idEnd);
+                if tokenStartsWithRuntimePrefix(idTok) { localDeclBag = appendPipeBag(localDeclBag, idTok); }
+                dPos = idEnd;
+                continue;
+            }
+        }
+        dPos = dPos + 1;
+    }
+    var allBag := "";
+    rawAll := extractCodeRuntimeTokens(body, false);
+    var aPos := 0;
+    aLen := textLib.length(rawAll);
+    loop aPos < aLen {
+        if textLib.at(rawAll, aPos) == "|" {
+            sep := textLib.indexOfText(rawAll, "|", aPos + 1);
+            if sep > aPos + 1 {
+                tok := textLib.slice(rawAll, aPos + 1, sep);
+                if not tokenInPipeBag(localDeclBag, tok) {
+                    allBag = appendPipeBag(allBag, tok);
+                }
+                aPos = sep;
+                continue;
+            }
+        }
+        aPos = aPos + 1;
+    }
+    var readBag := "";
+    var writtenOuterBag := "";
+    var innerPairs := "";
+    var sPos := 0;
+    loop sPos < bLen {
+        sPos = skipCodeSpaces(body, sPos);
+        if sPos >= bLen { break; }
+        stmtStart := sPos;
+        var isCompoundStmt := false;
+        firstCh := textLib.at(body, stmtStart);
+        if firstCh == "{" or
+        ((firstCh == "i" and textLib.wordAt(body, stmtStart, "if")) or
+        (firstCh == "w" and textLib.wordAt(body, stmtStart, "while")) or
+        (firstCh == "f" and textLib.wordAt(body, stmtStart, "for")) or
+        (firstCh == "t" and textLib.wordAt(body, stmtStart, "try"))) {
+            isCompoundStmt = true;
+        } else if textLib.startsWithAt(body, stmtStart, "lite$l") {
+            var lblEnd := stmtStart;
+            loop lblEnd < bLen and isTraceIdentChar(textLib.at(body, lblEnd)) { lblEnd = lblEnd + 1; }
+            afterLbl := skipCodeSpaces(body, lblEnd);
+            if afterLbl < bLen and textLib.at(body, afterLbl) == ":" { isCompoundStmt = true; }
+        }
+        var stmtEnd := sPos;
+        var bDepth := 0;
+        if isCompoundStmt {
+            loop stmtEnd < bLen {
+                bc := textLib.at(body, stmtEnd);
+                if bc == "\"" {
+                    stmtEnd = skipCodeString(body, stmtEnd);
+                    continue;
+                }
+                if bc == "(" or bc == "[" or bc == "{" {
+                    bDepth = bDepth + 1;
+                    stmtEnd = stmtEnd + 1;
+                } else if bc == ")" or bc == "]" {
+                    if bDepth > 0 { bDepth = bDepth - 1; }
+                    stmtEnd = stmtEnd + 1;
+                } else if bc == "}" {
+                    if bDepth > 0 { bDepth = bDepth - 1; }
+                    stmtEnd = stmtEnd + 1;
+                    if bDepth == 0 {
+                        afterBlk := skipCodeSpaces(body, stmtEnd);
+                        if not (textLib.wordAt(body, afterBlk, "else") or
+                        textLib.wordAt(body, afterBlk, "catch") or
+                        textLib.wordAt(body, afterBlk, "finally")) {
+                            break;
+                        }
+                    }
+                } else {
+                    stmtEnd = stmtEnd + 1;
+                }
+            }
+        } else {
+            loop stmtEnd < bLen {
+                bc := textLib.at(body, stmtEnd);
+                if bc == "\"" {
+                    stmtEnd = skipCodeString(body, stmtEnd);
+                    continue;
+                }
+                if bc == "(" or bc == "[" or bc == "{" {
+                    bDepth = bDepth + 1;
+                } else if bc == ")" or bc == "]" or bc == "}" {
+                    if bDepth > 0 { bDepth = bDepth - 1; }
+                } else if bc == ";" and bDepth == 0 {
+                    stmtEnd = stmtEnd + 1;
+                    break;
+                }
+                stmtEnd = stmtEnd + 1;
+            }
+        }
+        stmt := textLib.slice(body, stmtStart, stmtEnd);
+        sPos = stmtEnd;
+        if firstCh == "v" and textLib.wordAt(stmt, 0, "void") {
+            afterVoid := skipCodeSpaces(stmt, 4);
+            if afterVoid < textLib.length(stmt) and isTraceIdentChar(textLib.at(stmt, afterVoid)) {
+                var vEnd := afterVoid;
+                loop vEnd < textLib.length(stmt) and isTraceIdentChar(textLib.at(stmt, vEnd)) { vEnd = vEnd + 1; }
+                afterVId := skipCodeSpaces(stmt, vEnd);
+                if afterVId < textLib.length(stmt) and textLib.at(stmt, afterVId) == ";" {
+                    continue;
+                }
+            }
+        }
+        stStripped := stripDeferredFnBodies(stmt);
+        if stStripped.pairsText =!= "" {
+            innerPairs = if innerPairs == "" { stStripped.pairsText }
+            else { innerPairs + textLib.slice(stStripped.pairsText, 1, textLib.length(stStripped.pairsText)) };
+        }
+        var assignedOuter := "";
+        var assignRhs := "";
+        if not isCompoundStmt and (textLib.isNameStart(firstCh) or firstCh == "$") {
+            stLen := textLib.length(stmt);
+            var idEnd := 0;
+            loop idEnd < stLen and isTraceIdentChar(textLib.at(stmt, idEnd)) { idEnd = idEnd + 1; }
+            candLhs := textLib.slice(stmt, 0, idEnd);
+            if tokenStartsWithRuntimePrefix(candLhs) and not tokenInPipeBag(localDeclBag, candLhs) {
+                eqPos := skipCodeSpaces(stmt, idEnd);
+                if eqPos < stLen and textLib.at(stmt, eqPos) == "=" and
+                not textLib.startsWithAt(stmt, eqPos, "==") and not textLib.startsWithAt(stmt, eqPos, "=>") {
+                    assignedOuter = candLhs;
+                    strippedLen := textLib.length(stStripped.code);
+                    var sEq := skipCodeSpaces(stStripped.code, idEnd);
+                    if sEq < strippedLen and textLib.at(stStripped.code, sEq) == "=" {
+                        assignRhs = textLib.slice(stStripped.code, sEq + 1, strippedLen);
+                    }
+                }
+            }
+        }
+        if assignedOuter =!= "" {
+            rhsToks := extractCodeRuntimeTokens(assignRhs, false);
+            expanded := expandInnerFnReadTokens(rhsToks, assignRhs, innerPairs, localDeclBag, writtenOuterBag);
+            readBag = mergePipeBags(readBag, expanded);
+            writtenOuterBag = appendPipeBag(writtenOuterBag, assignedOuter);
+        } else {
+            stmtToks := extractCodeRuntimeTokens(stStripped.code, true);
+            expanded := expandInnerFnReadTokens(stmtToks, stStripped.code, innerPairs, localDeclBag, writtenOuterBag);
+            readBag = mergePipeBags(readBag, expanded);
+        }
+    }
+    (allBag = allBag, readBag = readBag)
+};
+
+/** Extracts `allBag` and `readBag` from an arbitrary TS expression, decomposing `(function ...)` literals into exact `readBag`s. */
+extractExprDepsPair := fn(exprCode: String, skipLhsDecls: Bool): (allBag: String, readBag: String) {
+    if exprCode == "" { return (allBag = "", readBag = ""); }
+    allBag := extractCodeRuntimeTokens(exprCode, skipLhsDecls);
+    var readBag := "";
+    outerParts: mut List<String> = [];
+    len := textLib.length(exprCode);
+    var sliceStart := 0;
+    var pos := 0;
+    loop pos < len {
+        ch := textLib.at(exprCode, pos);
+        if ch == "\"" {
+            pos = skipCodeString(exprCode, pos);
+            continue;
+        }
+        if ch == "(" and textLib.startsWithAt(exprCode, pos, "(function ") {
+            fnEnd := scanBalancedParenEnd(exprCode, pos);
+            if fnEnd >= 0 {
+                fnDeps := extractFnLiteralDeps(textLib.slice(exprCode, pos, fnEnd));
+                readBag = mergePipeBags(readBag, fnDeps.readBag);
+                listLib.pushBack(mut outerParts, textLib.slice(exprCode, sliceStart, pos));
+                listLib.pushBack(mut outerParts, "0");
+                sliceStart = fnEnd;
+                pos = fnEnd;
+                continue;
+            }
+        }
+        pos = pos + 1;
+    }
+    listLib.pushBack(mut outerParts, textLib.slice(exprCode, sliceStart, len));
+    outerTokens := extractCodeRuntimeTokens(textLib.joinTexts(outerParts, ""), skipLhsDecls);
+    readBag = mergePipeBags(readBag, outerTokens);
+    (allBag = allBag, readBag = readBag)
+};
+
+/** Encodes `"allBag\nreadBag"` for storing on a `containsFnKind` local binding's `code` field. */
+pub computeCallableRhsDeps := fn(rhsCode: String): String {
+    if rhsCode == "" { return ""; }
+    trimmedStart := skipCodeSpaces(rhsCode, 0);
+    len := textLib.length(rhsCode);
+    if trimmedStart < len and textLib.startsWithAt(rhsCode, trimmedStart, "(function ") {
+        fnEnd := scanBalancedParenEnd(rhsCode, trimmedStart);
+        if fnEnd >= 0 and skipCodeSpaces(rhsCode, fnEnd) >= len {
+            d := extractFnLiteralDeps(textLib.slice(rhsCode, trimmedStart, fnEnd));
+            return d.allBag + "\n" + d.readBag;
+        }
+    }
+    p := extractExprDepsPair(rhsCode, false);
+    p.allBag + "\n" + p.readBag
+};
+
+/** Propagates outer `equals` and `List.push`/`unshift` updates from emitted block/branch/loop JS `code` onto active `locals`. */
+pub mergeOuterCallableUpdatesFromCode := fn(locals: List<Local>, code: String): List<Local> {
+    if code == "" { return locals; }
+    var hasCallable := false;
+    loop locals as l {
+        if l.depth >= -1 and (types.containsFnKind(l.kind) or l.name == "$tuple") {
+            hasCallable = true;
+            break;
+        }
+    }
+    if not hasCallable { return locals; }
+    nextLocals: mut List<Local> = [];
+    loop locals as l { listLib.pushBack(mut nextLocals, l); }
+    stripped := stripDeferredFnBodies(code);
+    if stripped.pairsText =!= "" {
+        pairsLen := textLib.length(stripped.pairsText);
+        var pCur := 0;
+        loop pCur < pairsLen {
+            if textLib.at(stripped.pairsText, pCur) == "\n" {
+                pCur = pCur + 1;
+                continue;
+            }
+            colonPos := textLib.indexOfText(stripped.pairsText, ":", pCur);
+            if colonPos < 0 { break; }
+            nlPos := textLib.indexOfText(stripped.pairsText, "\n", colonPos + 1);
+            lineEnd := if nlPos < 0 { pairsLen } else { nlPos };
+            lhsRt := textLib.slice(stripped.pairsText, pCur, colonPos);
+            actIdx := latestActiveLocalByRuntime(nextLocals, lhsRt);
+            if actIdx >= 0 and (types.containsFnKind(nextLocals[actIdx].kind) or nextLocals[actIdx].name == "$tuple") {
+                tabPos := textLib.indexOfText(stripped.pairsText, "\t", colonPos + 1);
+                var depEncoded := "";
+                if tabPos >= 0 and tabPos < lineEnd {
+                    depEncoded = textLib.slice(stripped.pairsText, colonPos + 1, tabPos) + "\n" +
+                    textLib.slice(stripped.pairsText, tabPos + 1, lineEnd);
+                } else {
+                    rawToks := textLib.slice(stripped.pairsText, colonPos + 1, lineEnd);
+                    depEncoded = rawToks + "\n" + rawToks;
+                }
+                entry := nextLocals[actIdx];
+                merged := mergeCallableLocalDeps(entry.code, depEncoded);
+                if merged =!= entry.code {
+                    listLib.pushBack(mut nextLocals, (name = entry.name, runtime = entry.runtime, kind = entry.kind,
+                    mutable = entry.mutable, writable = entry.writable, depth = entry.depth, constant = false,
+                    code = merged, intValue = 0, textValue = "", initState = entry.initState));
+                }
+            }
+            pCur = lineEnd + 1;
+        }
+    }
+    codeLen := textLib.length(code);
+    if textLib.indexOfText(code, ".push(", 0) >= 0 or textLib.indexOfText(code, ".unshift(", 0) >= 0 {
+        var pos := 0;
+        loop pos < codeLen {
+            ch := textLib.at(code, pos);
+            if ch == "\"" { pos = skipCodeString(code, pos); continue; }
+            if textLib.startsWithAt(code, pos, "lite_") {
+                var tokEnd := pos;
+                loop tokEnd < codeLen and isTraceIdentChar(textLib.at(code, tokEnd)) { tokEnd = tokEnd + 1; }
+                tok := textLib.slice(code, pos, tokEnd);
+                afterTok := skipCodeSpaces(code, tokEnd);
+                if afterTok < codeLen and textLib.at(code, afterTok) == "." {
+                    mStart := skipCodeSpaces(code, afterTok + 1);
+                    isPush := textLib.wordAt(code, mStart, "push") or textLib.wordAt(code, mStart, "unshift");
+                    if isPush {
+                        mLen := if textLib.wordAt(code, mStart, "push") { 4 } else { 7 };
+                        openP := skipCodeSpaces(code, mStart + mLen);
+                        if openP < codeLen and textLib.at(code, openP) == "(" {
+                            closeP := scanBalancedParenEnd(code, openP);
+                            if closeP >= 0 {
+                                actIdx := latestActiveLocalByRuntime(nextLocals, tok);
+                                if actIdx >= 0 and types.isListKind(nextLocals[actIdx].kind) and types.containsFnKind(nextLocals[actIdx].kind) {
+                                    argsSlice := textLib.slice(code, openP + 1, closeP - 1);
+                                    entry := nextLocals[actIdx];
+                                    merged := mergeCallableLocalDeps(entry.code, computeCallableRhsDeps(argsSlice));
+                                    if merged =!= entry.code {
+                                        listLib.pushBack(mut nextLocals, (name = entry.name, runtime = entry.runtime, kind = entry.kind,
+                                        mutable = entry.mutable, writable = entry.writable, depth = entry.depth, constant = false,
+                                        code = merged, intValue = 0, textValue = "", initState = entry.initState));
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+                pos = tokEnd;
+                continue;
+            }
+            pos = pos + 1;
+        }
+    }
+    sCode := stripped.code;
+    sLen := textLib.length(sCode);
+    var sp := 0;
+    loop sp < sLen {
+        sc := textLib.at(sCode, sp);
+        if sc == "\"" { sp = skipCodeString(sCode, sp); continue; }
+        if textLib.startsWithAt(sCode, sp, "lite_") {
+            beforeOk := sp == 0 or not (isTraceIdentChar(textLib.at(sCode, sp - 1)) or textLib.at(sCode, sp - 1) == ".");
+            var tokEnd := sp;
+            loop tokEnd < sLen and isTraceIdentChar(textLib.at(sCode, tokEnd)) { tokEnd = tokEnd + 1; }
+            if beforeOk {
+                tok := textLib.slice(sCode, sp, tokEnd);
+                afterTok := skipCodeSpaces(sCode, tokEnd);
+                if afterTok < sLen and textLib.at(sCode, afterTok) == "=" and
+                not textLib.startsWithAt(sCode, afterTok, "==") and not textLib.startsWithAt(sCode, afterTok, "=>") {
+                    var preEnd := sp - 1;
+                    loop preEnd >= 0 {
+                        pc := textLib.at(sCode, preEnd);
+                        if pc == " " or pc == "\t" or pc == "\n" or pc == "\r" { preEnd = preEnd - 1; } else { break; }
+                    }
+                    isDeclAssign := (preEnd >= 4 and textLib.slice(sCode, preEnd - 4, preEnd + 1) == "const" and
+                    (preEnd == 4 or not isTraceIdentChar(textLib.at(sCode, preEnd - 5)))) or
+                    (preEnd >= 2 and textLib.slice(sCode, preEnd - 2, preEnd + 1) == "let" and
+                    (preEnd == 2 or not isTraceIdentChar(textLib.at(sCode, preEnd - 3))));
+                    if not isDeclAssign {
+                        actIdx := latestActiveLocalByRuntime(nextLocals, tok);
+                        if actIdx >= 0 and types.containsFnKind(nextLocals[actIdx].kind) {
+                            var rhsEnd := afterTok + 1;
+                            var bDepth := 0;
+                            loop rhsEnd < sLen {
+                                rc := textLib.at(sCode, rhsEnd);
+                                if rc == "\"" { rhsEnd = skipCodeString(sCode, rhsEnd); continue; }
+                                if rc == "(" or rc == "[" or rc == "{" { bDepth = bDepth + 1; }
+                                else if rc == ")" or rc == "]" or rc == "}" {
+                                    if bDepth == 0 { break; }
+                                    bDepth = bDepth - 1;
+                                } else if rc == ";" and bDepth == 0 {
+                                    break;
+                                }
+                                rhsEnd = rhsEnd + 1;
+                            }
+                            rhsSlice := textLib.slice(sCode, afterTok + 1, rhsEnd);
+                            entry := nextLocals[actIdx];
+                            merged := mergeCallableLocalDeps(entry.code, computeCallableRhsDeps(rhsSlice));
+                            if merged =!= entry.code {
+                                listLib.pushBack(mut nextLocals, (name = entry.name, runtime = entry.runtime, kind = entry.kind,
+                                mutable = entry.mutable, writable = entry.writable, depth = entry.depth, constant = false,
+                                code = merged, intValue = 0, textValue = "", initState = entry.initState));
+                            }
+                        }
+                    }
+                }
+            }
+            sp = tokEnd;
+            continue;
+        }
+        sp = sp + 1;
+    }
+    nextLocals
+};
+
+/** Extracts `"|lite_p1|lite_p2|"` parameter runtimes from a `FunctionStart` `textValue` payload. */
+parseParamRuntimesList := fn(paramsPayload: String): String {
+    var bag := "";
+    if paramsPayload == "" { return bag; }
+    len := textLib.length(paramsPayload);
+    var start := 0;
+    loop start < len {
+        sep := textLib.indexOfText(paramsPayload, "|", start);
+        end := if sep >= 0 { sep } else { len };
+        entry := textLib.slice(paramsPayload, start, end);
+        eqPos := textLib.indexOfText(entry, "=", 0);
+        if eqPos > 0 {
+            bag = appendPipeBag(bag, "lite_" + textLib.slice(entry, 0, eqPos));
+        }
+        start = end + 1;
+    }
+    bag
+};
+
+/** Finds the `FunctionStart` item index matching `runtime`, or -1 when absent. */
+findFunctionStartItem := fn(items: Items, runtime: String): Int {
+    var i := 0;
+    loop items as item {
+        if item.kind == ir.ITEM_KIND_FUNCTION_START and item.runtime == runtime { return i; }
+        i = i + 1;
+    }
+    -1
+};
+
+/** Enforces execution-trace ordering and initialization safety across root and inner blocks before referenced bindings initialize. */
+pub checkTraceSafety := fn(source: String, stmtAt: Int, prefix: String, exprCode: String, currentName: String, maxFutureAt: Int,
+locals: List<Local>, functions: List<FunctionInfo>, futureValues: List<FutureValue>, items: Items): Unit {
+    if exprCode == "" { return; }
+    if (currentName =!= "" or stmtAt >= maxFutureAt) and not localsHasAnyUnready(locals) { return; }
+    stripped := stripDeferredFnBodies(exprCode);
+    eagerCode := stripped.code;
+    if not hasUserOrLocalCall(eagerCode) { return; }
+    seedPair := extractExprDepsPair(eagerCode, true);
+    if seedPair.allBag == "" and seedPair.readBag == "" { return; }
+
+    var totalItems := 0;
+    loop items { totalItems = totalItems + 1; }
+
+    allQueue: mut List<String> = [];
+    var allVisitedBag := "";
+    var allCount := 0;
+    var aSeedPos := 0;
+    aSeedLen := textLib.length(seedPair.allBag);
+    loop aSeedPos < aSeedLen {
+        if textLib.at(seedPair.allBag, aSeedPos) == "|" {
+            sep := textLib.indexOfText(seedPair.allBag, "|", aSeedPos + 1);
+            if sep > aSeedPos + 1 {
+                tok := textLib.slice(seedPair.allBag, aSeedPos + 1, sep);
+                if not tokenInPipeBag(allVisitedBag, tok) {
+                    allVisitedBag = appendPipeBag(allVisitedBag, tok);
+                    listLib.pushBack(mut allQueue, tok);
+                    allCount = allCount + 1;
+                }
+                aSeedPos = sep;
+                continue;
+            }
+        }
+        aSeedPos = aSeedPos + 1;
+    }
+
+    var allHead := 0;
+    loop allHead < allCount {
+        curTok := allQueue[allHead];
+        allHead = allHead + 1;
+        unreachedName := unreachedFutureLocalName(locals, curTok);
+        if unreachedName =!= "" {
+            syntax.failAt(source, stmtAt, prefix, "cannot call before " + unreachedName + " is initialized");
+        }
+        if currentName == "" {
+            futIdx := findFutureByRuntime(futureValues, curTok);
+            if futIdx >= 0 and futureValues[futIdx].at > stmtAt {
+                syntax.failAt(source, stmtAt, prefix, "cannot call before " + futureValues[futIdx].name + " is initialized");
+            }
+        }
+        pairAll := lookupPairsEntryBag(stripped.pairsText, curTok, false);
+        if pairAll =!= "" {
+            var k := 0;
+            pLen := textLib.length(pairAll);
+            loop k < pLen {
+                if textLib.at(pairAll, k) == "|" {
+                    sep := textLib.indexOfText(pairAll, "|", k + 1);
+                    if sep > k + 1 {
+                        depTok := textLib.slice(pairAll, k + 1, sep);
+                        if not tokenInPipeBag(allVisitedBag, depTok) {
+                            allVisitedBag = appendPipeBag(allVisitedBag, depTok);
+                            listLib.pushBack(mut allQueue, depTok);
+                            allCount = allCount + 1;
+                        }
+                        k = sep;
+                        continue;
+                    }
+                }
+                k = k + 1;
+            }
+        }
+        fnIdx := findFunctionByRuntime(functions, curTok);
+        if fnIdx >= 0 {
+            fnInfo := functions[fnIdx];
+            if currentName == "" and fnInfo.declAt > stmtAt {
+                syntax.failAt(source, stmtAt, prefix, "cannot call before " + fnInfo.name + " is initialized");
+            }
+            if currentName == "" {
+                startItem := findFunctionStartItem(items, curTok);
+                if startItem >= 0 {
+                    paramBag := parseParamRuntimesList(items[startItem].textValue);
+                    var scopeDepth := 0;
+                    localShadowRuntimes: mut List<String> = [];
+                    localShadowDepths: mut List<Int> = [];
+                    var itIdx := startItem + 1;
+                    loop itIdx < totalItems {
+                        it := items[itIdx];
+                        if it.kind == ir.ITEM_KIND_FUNCTION_END and it.runtime == curTok { break; }
+                        if it.kind == ir.ITEM_KIND_IF or it.kind == ir.ITEM_KIND_LOOP or it.kind == ir.ITEM_KIND_LOOP_SEQ or it.kind == ir.ITEM_KIND_SCOPE {
+                            scopeDepth = scopeDepth + 1;
+                        } else if it.kind == ir.ITEM_KIND_ELSE or it.kind == ir.ITEM_KIND_ELSE_IF or
+                        it.kind == ir.ITEM_KIND_END_IF or it.kind == ir.ITEM_KIND_END_LOOP or it.kind == ir.ITEM_KIND_END_SCOPE {
+                            var keepCnt := 0;
+                            loop localShadowDepths as sd {
+                                if sd < scopeDepth { keepCnt = keepCnt + 1; } else { break; }
+                            }
+                            var curCnt := 0;
+                            loop localShadowRuntimes { curCnt = curCnt + 1; }
+                            loop curCnt > keepCnt {
+                                _d1 := listLib.popBack(mut localShadowRuntimes);
+                                _d2 := listLib.popBack(mut localShadowDepths);
+                                curCnt = curCnt - 1;
+                            }
+                            if (it.kind == ir.ITEM_KIND_END_IF or it.kind == ir.ITEM_KIND_END_LOOP or it.kind == ir.ITEM_KIND_END_SCOPE) and scopeDepth > 0 {
+                                scopeDepth = scopeDepth - 1;
+                            }
+                        }
+                        if it.code =!= "" {
+                            itTokens := extractCodeRuntimeTokens(it.code, true);
+                            var ik := 0;
+                            itLen := textLib.length(itTokens);
+                            loop ik < itLen {
+                                if textLib.at(itTokens, ik) == "|" {
+                                    sep := textLib.indexOfText(itTokens, "|", ik + 1);
+                                    if sep > ik + 1 {
+                                        depTok := textLib.slice(itTokens, ik + 1, sep);
+                                        if not tokenInPipeBag(paramBag, depTok) and
+                                        not listLib.listContainsText(localShadowRuntimes, depTok) {
+                                            if not tokenInPipeBag(allVisitedBag, depTok) {
+                                                allVisitedBag = appendPipeBag(allVisitedBag, depTok);
+                                                listLib.pushBack(mut allQueue, depTok);
+                                                allCount = allCount + 1;
+                                            }
+                                        }
+                                        ik = sep;
+                                        continue;
+                                    }
+                                }
+                                ik = ik + 1;
+                            }
+                        }
+                        if (textLib.startsWithAt(it.kind, 0, "Local") or textLib.startsWithAt(it.kind, 0, "Var")) and it.runtime =!= "" {
+                            if not listLib.listContainsText(localShadowRuntimes, it.runtime) {
+                                listLib.pushBack(mut localShadowRuntimes, it.runtime);
+                                listLib.pushBack(mut localShadowDepths, scopeDepth);
+                            }
+                        } else if textLib.startsWithAt(it.kind, 0, "Assign") and it.runtime =!= "" {
+                            if not tokenInPipeBag(paramBag, it.runtime) and not listLib.listContainsText(localShadowRuntimes, it.runtime) {
+                                assignUnreached := unreachedFutureLocalName(locals, it.runtime);
+                                if assignUnreached =!= "" {
+                                    syntax.failAt(source, stmtAt, prefix, "cannot call before " + assignUnreached + " is initialized");
+                                }
+                                assignFutIdx := findFutureByRuntime(futureValues, it.runtime);
+                                if assignFutIdx >= 0 and futureValues[assignFutIdx].at > stmtAt {
+                                    syntax.failAt(source, stmtAt, prefix, "cannot call before " + futureValues[assignFutIdx].name + " is initialized");
+                                }
+                            }
+                        }
+                        itIdx = itIdx + 1;
+                    }
+                }
+            }
+        }
+        actIdx := latestActiveLocalByRuntime(locals, curTok);
+        if actIdx >= 0 and (types.containsFnKind(locals[actIdx].kind) or locals[actIdx].name == "$tuple") and locals[actIdx].code =!= "" {
+            varDepsAll := fnDepsAll(locals[actIdx].code);
+            var dk := 0;
+            dLen := textLib.length(varDepsAll);
+            loop dk < dLen {
+                if textLib.at(varDepsAll, dk) == "|" {
+                    sep := textLib.indexOfText(varDepsAll, "|", dk + 1);
+                    if sep > dk + 1 {
+                        depTok := textLib.slice(varDepsAll, dk + 1, sep);
+                        if not tokenInPipeBag(allVisitedBag, depTok) {
+                            allVisitedBag = appendPipeBag(allVisitedBag, depTok);
+                            listLib.pushBack(mut allQueue, depTok);
+                            allCount = allCount + 1;
+                        }
+                        dk = sep;
+                        continue;
+                    }
+                }
+                dk = dk + 1;
+            }
+        }
+    }
+
+    readQueue: mut List<String> = [];
+    var readVisitedBag := "";
+    var readCount := 0;
+    var rSeedPos := 0;
+    rSeedLen := textLib.length(seedPair.readBag);
+    loop rSeedPos < rSeedLen {
+        if textLib.at(seedPair.readBag, rSeedPos) == "|" {
+            sep := textLib.indexOfText(seedPair.readBag, "|", rSeedPos + 1);
+            if sep > rSeedPos + 1 {
+                tok := textLib.slice(seedPair.readBag, rSeedPos + 1, sep);
+                if not tokenInPipeBag(readVisitedBag, tok) {
+                    readVisitedBag = appendPipeBag(readVisitedBag, tok);
+                    listLib.pushBack(mut readQueue, tok);
+                    readCount = readCount + 1;
+                }
+                rSeedPos = sep;
+                continue;
+            }
+        }
+        rSeedPos = rSeedPos + 1;
+    }
+
+    var rHead := 0;
+    loop rHead < readCount {
+        curTok := readQueue[rHead];
+        rHead = rHead + 1;
+        actIdx := latestActiveLocalByRuntime(locals, curTok);
+        if actIdx >= 0 and locals[actIdx].depth >= 0 and locals[actIdx].initState =!= ir.INIT_STATE_INIT {
+            syntax.failAt(source, stmtAt, prefix, "cannot call before " + locals[actIdx].name + " is initialized");
+        }
+        pairRead := lookupPairsEntryBag(stripped.pairsText, curTok, true);
+        if pairRead =!= "" {
+            var rk := 0;
+            prLen := textLib.length(pairRead);
+            loop rk < prLen {
+                if textLib.at(pairRead, rk) == "|" {
+                    sep := textLib.indexOfText(pairRead, "|", rk + 1);
+                    if sep > rk + 1 {
+                        depTok := textLib.slice(pairRead, rk + 1, sep);
+                        if not tokenInPipeBag(readVisitedBag, depTok) {
+                            readVisitedBag = appendPipeBag(readVisitedBag, depTok);
+                            listLib.pushBack(mut readQueue, depTok);
+                            readCount = readCount + 1;
+                        }
+                        rk = sep;
+                        continue;
+                    }
+                }
+                rk = rk + 1;
+            }
+        }
+        if currentName == "" {
+            fnIdx := findFunctionByRuntime(functions, curTok);
+            if fnIdx >= 0 {
+                startItem := findFunctionStartItem(items, curTok);
+                if startItem >= 0 {
+                    paramBag := parseParamRuntimesList(items[startItem].textValue);
+                    var bodyBranchDepth := 0;
+                    var scopeDepth := 0;
+                    localShadowRuntimes: mut List<String> = [];
+                    localShadowDepths: mut List<Int> = [];
+                    var defWrittenBag := "";
+                    var itIdx := startItem + 1;
+                    loop itIdx < totalItems {
+                        it := items[itIdx];
+                        if it.kind == ir.ITEM_KIND_FUNCTION_END and it.runtime == curTok { break; }
+                        if it.kind == ir.ITEM_KIND_IF or it.kind == ir.ITEM_KIND_LOOP or it.kind == ir.ITEM_KIND_LOOP_SEQ {
+                            bodyBranchDepth = bodyBranchDepth + 1;
+                            scopeDepth = scopeDepth + 1;
+                        } else if it.kind == ir.ITEM_KIND_SCOPE {
+                            scopeDepth = scopeDepth + 1;
+                        } else if it.kind == ir.ITEM_KIND_ELSE or it.kind == ir.ITEM_KIND_ELSE_IF {
+                            var keepCnt := 0;
+                            loop localShadowDepths as sd {
+                                if sd < scopeDepth { keepCnt = keepCnt + 1; } else { break; }
+                            }
+                            var curCnt := 0;
+                            loop localShadowRuntimes { curCnt = curCnt + 1; }
+                            loop curCnt > keepCnt {
+                                _d1 := listLib.popBack(mut localShadowRuntimes);
+                                _d2 := listLib.popBack(mut localShadowDepths);
+                                curCnt = curCnt - 1;
+                            }
+                        } else if it.kind == ir.ITEM_KIND_END_IF or it.kind == ir.ITEM_KIND_END_LOOP {
+                            var keepCnt := 0;
+                            loop localShadowDepths as sd {
+                                if sd < scopeDepth { keepCnt = keepCnt + 1; } else { break; }
+                            }
+                            var curCnt := 0;
+                            loop localShadowRuntimes { curCnt = curCnt + 1; }
+                            loop curCnt > keepCnt {
+                                _d1 := listLib.popBack(mut localShadowRuntimes);
+                                _d2 := listLib.popBack(mut localShadowDepths);
+                                curCnt = curCnt - 1;
+                            }
+                            if scopeDepth > 0 { scopeDepth = scopeDepth - 1; }
+                            if bodyBranchDepth > 0 { bodyBranchDepth = bodyBranchDepth - 1; }
+                        } else if it.kind == ir.ITEM_KIND_END_SCOPE {
+                            var keepCnt := 0;
+                            loop localShadowDepths as sd {
+                                if sd < scopeDepth { keepCnt = keepCnt + 1; } else { break; }
+                            }
+                            var curCnt := 0;
+                            loop localShadowRuntimes { curCnt = curCnt + 1; }
+                            loop curCnt > keepCnt {
+                                _d1 := listLib.popBack(mut localShadowRuntimes);
+                                _d2 := listLib.popBack(mut localShadowDepths);
+                                curCnt = curCnt - 1;
+                            }
+                            if scopeDepth > 0 { scopeDepth = scopeDepth - 1; }
+                        }
+                        if it.code =!= "" {
+                            itStripped := stripDeferredFnBodies(it.code);
+                            itReadPair := extractExprDepsPair(itStripped.code, true);
+                            itReadToks := itReadPair.readBag;
+                            var ik := 0;
+                            itLen := textLib.length(itReadToks);
+                            loop ik < itLen {
+                                if textLib.at(itReadToks, ik) == "|" {
+                                    sep := textLib.indexOfText(itReadToks, "|", ik + 1);
+                                    if sep > ik + 1 {
+                                        depTok := textLib.slice(itReadToks, ik + 1, sep);
+                                        if not tokenInPipeBag(paramBag, depTok) and
+                                        not listLib.listContainsText(localShadowRuntimes, depTok) and
+                                        not tokenInPipeBag(defWrittenBag, depTok) {
+                                            if not tokenInPipeBag(readVisitedBag, depTok) {
+                                                readVisitedBag = appendPipeBag(readVisitedBag, depTok);
+                                                listLib.pushBack(mut readQueue, depTok);
+                                                readCount = readCount + 1;
+                                            }
+                                        }
+                                        ik = sep;
+                                        continue;
+                                    }
+                                }
+                                ik = ik + 1;
+                            }
+                        }
+                        if (textLib.startsWithAt(it.kind, 0, "Local") or textLib.startsWithAt(it.kind, 0, "Var")) and it.runtime =!= "" {
+                            if not listLib.listContainsText(localShadowRuntimes, it.runtime) {
+                                listLib.pushBack(mut localShadowRuntimes, it.runtime);
+                                listLib.pushBack(mut localShadowDepths, scopeDepth);
+                            }
+                        } else if bodyBranchDepth == 0 and textLib.startsWithAt(it.kind, 0, "Assign") and it.runtime =!= "" {
+                            if not tokenInPipeBag(paramBag, it.runtime) and not listLib.listContainsText(localShadowRuntimes, it.runtime) {
+                                defWrittenBag = appendPipeBag(defWrittenBag, it.runtime);
+                            }
+                        }
+                        itIdx = itIdx + 1;
+                    }
+                }
+            }
+        }
+        if actIdx >= 0 and (types.containsFnKind(locals[actIdx].kind) or locals[actIdx].name == "$tuple") and locals[actIdx].code =!= "" {
+            varDepsRead := fnDepsRead(locals[actIdx].code);
+            var dk := 0;
+            dLen := textLib.length(varDepsRead);
+            loop dk < dLen {
+                if textLib.at(varDepsRead, dk) == "|" {
+                    sep := textLib.indexOfText(varDepsRead, "|", dk + 1);
+                    if sep > dk + 1 {
+                        depTok := textLib.slice(varDepsRead, dk + 1, sep);
+                        if not tokenInPipeBag(readVisitedBag, depTok) {
+                            readVisitedBag = appendPipeBag(readVisitedBag, depTok);
+                            listLib.pushBack(mut readQueue, depTok);
+                            readCount = readCount + 1;
+                        }
+                        dk = sep;
+                        continue;
+                    }
+                }
+                dk = dk + 1;
+            }
+        }
+    }
+};
+
+/** Parses numeric lexical depth encoded in `ConstructCtx.iterLabel`, or returns `fallback`. */
+pub parseLexDepthTag := fn(tag: String, fallback: Int): Int {
+    len := textLib.length(tag);
+    if len == 0 { return fallback; }
+    var i := 0;
+    loop i < len {
+        if not textLib.isDigit(textLib.at(tag, i)) { return fallback; }
+        i = i + 1;
+    }
+    syntax.parseDigits(tag, 0, len)
+};
+
+/** Rejects returning/breaking/continuing a function value that references uninitialized or skipped same-block symbols at `>= minExitedLexDepth`. */
+pub checkEscapingFnSafety := fn(source: String, stmtAt: Int, prefix: String, rhsCode: String,
+minExitedLexDepth: Int, locals: List<Local>): Unit {
+    if rhsCode == "" or not localsHasAnyUnready(locals) { return; }
+    deps := computeCallableRhsDeps(rhsCode);
+    stripped := stripDeferredFnBodies(rhsCode);
+    allBag := fnDepsAll(deps);
+    readBag := fnDepsRead(deps);
+
+    allQ: mut List<String> = [];
+    var allVisited := "";
+    var allCount := 0;
+    var aPos := 0;
+    aLen := textLib.length(allBag);
+    loop aPos < aLen {
+        if textLib.at(allBag, aPos) == "|" {
+            sep := textLib.indexOfText(allBag, "|", aPos + 1);
+            if sep > aPos + 1 {
+                t := textLib.slice(allBag, aPos + 1, sep);
+                if not tokenInPipeBag(allVisited, t) {
+                    allVisited = appendPipeBag(allVisited, t);
+                    listLib.pushBack(mut allQ, t);
+                    allCount = allCount + 1;
+                }
+                aPos = sep;
+                continue;
+            }
+        }
+        aPos = aPos + 1;
+    }
+    var ah := 0;
+    loop ah < allCount {
+        tok := allQ[ah];
+        ah = ah + 1;
+        if latestActiveLocalByRuntime(locals, tok) < 0 {
+            loop locals as entry {
+                if entry.depth <= -2 and entry.runtime == tok and (0 - 2 - entry.depth) >= minExitedLexDepth {
+                    syntax.failAt(source, stmtAt, prefix, "cannot call before " + entry.name + " is initialized");
+                }
+            }
+        }
+        pAll := lookupPairsEntryBag(stripped.pairsText, tok, false);
+        if pAll =!= "" {
+            var k := 0;
+            pLen := textLib.length(pAll);
+            loop k < pLen {
+                if textLib.at(pAll, k) == "|" {
+                    sep := textLib.indexOfText(pAll, "|", k + 1);
+                    if sep > k + 1 {
+                        d := textLib.slice(pAll, k + 1, sep);
+                        if not tokenInPipeBag(allVisited, d) {
+                            allVisited = appendPipeBag(allVisited, d);
+                            listLib.pushBack(mut allQ, d);
+                            allCount = allCount + 1;
+                        }
+                        k = sep;
+                        continue;
+                    }
+                }
+                k = k + 1;
+            }
+        }
+        actIdx := latestActiveLocalByRuntime(locals, tok);
+        if actIdx >= 0 and (types.containsFnKind(locals[actIdx].kind) or locals[actIdx].name == "$tuple") and locals[actIdx].code =!= "" {
+            vAll := fnDepsAll(locals[actIdx].code);
+            var vk := 0;
+            vLen := textLib.length(vAll);
+            loop vk < vLen {
+                if textLib.at(vAll, vk) == "|" {
+                    sep := textLib.indexOfText(vAll, "|", vk + 1);
+                    if sep > vk + 1 {
+                        d := textLib.slice(vAll, vk + 1, sep);
+                        if not tokenInPipeBag(allVisited, d) {
+                            allVisited = appendPipeBag(allVisited, d);
+                            listLib.pushBack(mut allQ, d);
+                            allCount = allCount + 1;
+                        }
+                        vk = sep;
+                        continue;
+                    }
+                }
+                vk = vk + 1;
+            }
+        }
+    }
+
+    readQ: mut List<String> = [];
+    var readVisited := "";
+    var readCount := 0;
+    var rPos := 0;
+    rLen := textLib.length(readBag);
+    loop rPos < rLen {
+        if textLib.at(readBag, rPos) == "|" {
+            sep := textLib.indexOfText(readBag, "|", rPos + 1);
+            if sep > rPos + 1 {
+                t := textLib.slice(readBag, rPos + 1, sep);
+                if not tokenInPipeBag(readVisited, t) {
+                    readVisited = appendPipeBag(readVisited, t);
+                    listLib.pushBack(mut readQ, t);
+                    readCount = readCount + 1;
+                }
+                rPos = sep;
+                continue;
+            }
+        }
+        rPos = rPos + 1;
+    }
+    var rh := 0;
+    loop rh < readCount {
+        tok := readQ[rh];
+        rh = rh + 1;
+        actIdx := latestActiveLocalByRuntime(locals, tok);
+        if actIdx >= 0 and locals[actIdx].depth >= minExitedLexDepth and locals[actIdx].initState =!= ir.INIT_STATE_INIT {
+            syntax.failAt(source, stmtAt, prefix, "cannot call before " + locals[actIdx].name + " is initialized");
+        }
+        pRead := lookupPairsEntryBag(stripped.pairsText, tok, true);
+        if pRead =!= "" {
+            var k := 0;
+            pLen := textLib.length(pRead);
+            loop k < pLen {
+                if textLib.at(pRead, k) == "|" {
+                    sep := textLib.indexOfText(pRead, "|", k + 1);
+                    if sep > k + 1 {
+                        d := textLib.slice(pRead, k + 1, sep);
+                        if not tokenInPipeBag(readVisited, d) {
+                            readVisited = appendPipeBag(readVisited, d);
+                            listLib.pushBack(mut readQ, d);
+                            readCount = readCount + 1;
+                        }
+                        k = sep;
+                        continue;
+                    }
+                }
+                k = k + 1;
+            }
+        }
+        if actIdx >= 0 and (types.containsFnKind(locals[actIdx].kind) or locals[actIdx].name == "$tuple") and locals[actIdx].code =!= "" {
+            vRead := fnDepsRead(locals[actIdx].code);
+            var vk := 0;
+            vLen := textLib.length(vRead);
+            loop vk < vLen {
+                if textLib.at(vRead, vk) == "|" {
+                    sep := textLib.indexOfText(vRead, "|", vk + 1);
+                    if sep > vk + 1 {
+                        d := textLib.slice(vRead, vk + 1, sep);
+                        if not tokenInPipeBag(readVisited, d) {
+                            readVisited = appendPipeBag(readVisited, d);
+                            listLib.pushBack(mut readQ, d);
+                            readCount = readCount + 1;
+                        }
+                        vk = sep;
+                        continue;
+                    }
+                }
+                vk = vk + 1;
+            }
+        }
+    }
+};
