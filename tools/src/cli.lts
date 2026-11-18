@@ -16,6 +16,7 @@ usageText := fn(): String {
     "  docs [QUERY|--json|--check]               Browse and search documentation\n" +
     "  doctor [--docs]                           Check repository consistency\n" +
     "  test --cases [FILTER|FILE.case.json]      Run declarative cases\n" +
+    "  test --unit [--jobs N] [FILTER]           Run parallel .test.lts unit tests\n" +
     "  verify FILE.case.json                     Verify one declarative manifest\n" +
     "  bench OUTPUT [FILTER]                     Benchmark verified cases\n" +
     "  release OUTPUT [TAG]                      Package a verified source snapshot\n" +

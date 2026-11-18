@@ -54,6 +54,20 @@ test('lite test routes case mode to the tester command', () => {
   );
 });
 
+test('lite test --unit runs parallel .test.lts unit tests and validates flags', () => {
+  const unit = command('lite', ['test', '--unit', '--jobs', '2', '--verbose', 'compiler-smoke']);
+  assert.equal(unit.status, 0, unit.stderr);
+  assert.match(unit.stdout, /PASS compiler\/tests\/compiler-smoke\.test\.lts/);
+  assert.match(unit.stdout, /Unit tests: 1 passed, 0 failed\./);
+  assert.deepEqual(
+    command('lite', ['test', '--unit', '--mute', 'compiler-smoke']),
+    command('lite-test', ['--unit', '--mute', 'compiler-smoke']),
+  );
+  const badJobs = command('lite', ['test', '--unit', '--jobs', '0']);
+  assert.equal(badJobs.status, 2);
+  assert.match(badJobs.stderr, /^Usage: \.\/bin\/lite test --unit/);
+});
+
 test('lite doctor routes to the standalone repository checker', () => {
   assert.deepEqual(
     command('lite', ['doctor', '--docs']),

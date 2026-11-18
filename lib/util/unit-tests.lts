@@ -1,0 +1,285 @@
+/** Parallel unit test discovery and execution utilities for `.test.lts` files. */
+
+io := import "core/io";
+fs := import "core/file";
+proc := import "core/process";
+integer := import "core/int";
+text := import "core/text";
+list := import "core/list";
+path := import "core/path";
+pool := import "external/pool";
+cases := import "util/cases";
+compilerBuild := import "util/compiler-build";
+json := import "util/json";
+
+unitTestUsage := fn(): String {
+    "Usage: ./bin/lite test --unit [--jobs N] [--verbose|--mute|--silence] [FILTER]"
+};
+
+isPositiveIntText := fn(raw: String): (ok: Bool, value: Int) {
+    size := text.length(raw);
+    if size == 0 { return (ok = false, value = 0); }
+    var i := 0;
+    loop i < size {
+        ch := text.at(raw, i);
+        if text.indexOfText("0123456789", ch, 0) < 0 { return (ok = false, value = 0); }
+        i = i + 1;
+    }
+    parsed := json.readIntAt(raw, 0);
+    if not parsed.ok or parsed.value < 1 { return (ok = false, value = 0); }
+    (ok = true, value = parsed.value)
+};
+
+readWorkerFailureText := fn(errPath: String, outPath: String, fallback: String): String {
+    errRes := fs.readText(errPath);
+    if errRes.ok and text.trim(errRes.text) =!= "" { return errRes.text; }
+    outRes := fs.readText(outPath);
+    if outRes.ok and text.trim(outRes.text) =!= "" { return outRes.text; }
+    fallback
+};
+
+/** Executes a single `--_worker <taskJson>` unit test compilation, strict TS check, and run. */
+pub runUnitWorker := fn(taskJson: String): Int {
+    valid := json.validate(taskJson);
+    if not valid.ok {
+        io.errorLine("unit worker: invalid task JSON: " + valid.error);
+        return 1;
+    }
+    rootRes := json.readObjectString(taskJson, 0, "root");
+    compRes := json.readObjectString(taskJson, 0, "compiler");
+    fileRes := json.readObjectString(taskJson, 0, "file");
+    if not rootRes.found or not rootRes.ok or not compRes.found or not compRes.ok or not fileRes.found or not fileRes.ok {
+        io.errorLine("unit worker: task JSON requires root, compiler, and file");
+        return 1;
+    }
+
+    rootDir := rootRes.value;
+    compilerPath := compRes.value;
+    relFile := fileRes.value;
+
+    tmpRes := fs.makeTempDir("lite-unit-");
+    if not tmpRes.ok {
+        io.errorLine("unit worker: " + tmpRes.error);
+        return 1;
+    }
+    workDir := tmpRes.path;
+
+    pkgRes := fs.writeText(path.join(workDir, "package.json"), "{\"type\":\"module\"}\n");
+    if not pkgRes.ok {
+        _rmPkg := fs.remove(workDir);
+        io.errorLine(pkgRes.error);
+        return 1;
+    }
+
+    outTsPath := path.join(workDir, "unit.ts");
+    compErrPath := path.join(workDir, "compile.stderr");
+    emptyEnv: List<String> = [];
+    emptyBytes: List<Int> = [];
+    compArgs: List<String> = [compilerPath, relFile];
+    comp := proc.runBytes(proc.execPath(), compArgs, rootDir, emptyEnv, 60000, emptyBytes, outTsPath, compErrPath);
+    if comp.error =!= "" or comp.status =!= 0 {
+        msg := if comp.error =!= "" { comp.error } else { readWorkerFailureText(compErrPath, outTsPath, "compilation failed") };
+        _rmComp := fs.remove(workDir);
+        io.errorLine(text.trimEnd(msg));
+        return if comp.status > 0 { comp.status } else { 1 };
+    }
+
+    checked := cases.checkTsArtifactFileWithStatus(rootDir, outTsPath, path.join(workDir, "tsc"), 60000);
+    if not checked.ok {
+        _rmChk := fs.remove(workDir);
+        io.errorLine(text.trimEnd(checked.error));
+        return 1;
+    }
+
+    runnerPath := path.join(workDir, "runner.ts");
+    wRunner := cases.writeTsRunner(runnerPath);
+    if not wRunner.ok {
+        _rmWr := fs.remove(workDir);
+        io.errorLine(wRunner.error);
+        return 1;
+    }
+
+    runOutPath := path.join(workDir, "run.stdout");
+    runErrPath := path.join(workDir, "run.stderr");
+    runArgs: List<String> = [runnerPath, outTsPath];
+    ran := proc.runBytes(proc.execPath(), runArgs, rootDir, emptyEnv, 60000, emptyBytes, runOutPath, runErrPath);
+    if ran.error =!= "" or ran.status =!= 0 {
+        msg := if ran.error =!= "" { ran.error } else { readWorkerFailureText(runErrPath, runOutPath, "unit test failed") };
+        _rmRun := fs.remove(workDir);
+        if text.trim(msg) =!= "" {
+            io.errorLine(text.trimEnd(msg));
+        }
+        return if ran.status > 0 { ran.status } else { 1 };
+    }
+
+    _rmOk := fs.remove(workDir);
+    0
+};
+
+/** Discovers `.test.lts` files matching `filter` and runs them in parallel using `external/pool`. */
+pub runUnitTests := fn(rootDir: String, filter: String, maxJobs: Int, outputMode: String): Int {
+    ignored: List<String> = ["node_modules", "dist", "tmp", "build"];
+    targets: List<String> = [rootDir];
+    absFiles := path.collectFiles(rootDir, targets, ".test.lts", ignored, true);
+
+    selectedRel: mut List<String> = [];
+    loop absFiles as absFile {
+        rel := path.relative(rootDir, absFile);
+        if cases.matchesCaseFilter(rel, filter) {
+            list.pushBack(mut selectedRel, rel);
+        }
+    }
+
+    count := list.listCountText(selectedRel);
+    if count == 0 {
+        if filter =!= "" {
+            if outputMode =!= "--silence" {
+                io.errorLine("No unit test files matched \"" + filter + "\".");
+            }
+            return 1;
+        }
+        if outputMode =!= "--silence" and outputMode =!= "--mute" {
+            io.outputLine("Unit tests: 0 passed, 0 failed.");
+        }
+        return 0;
+    }
+
+    sel := compilerBuild.selectCompilerPath(rootDir, "ts");
+    if not sel.ok {
+        if outputMode =!= "--silence" {
+            io.errorLine(sel.error);
+        }
+        return 1;
+    }
+
+    ignitedRunner := path.join(rootDir, "dist/tools/test-runner.ts");
+    runnerScript := if fs.kind(ignitedRunner) == fs.FILE_KIND_FILE { ignitedRunner } else { path.join(rootDir, "bin/lite-test") };
+
+    commands: mut List<String> = [];
+    argListsJson: mut List<String> = [];
+    loop selectedRel as relFile {
+        taskJson := "{\"root\":" + json.quoteString(rootDir)
+        + ",\"compiler\":" + json.quoteString(sel.path)
+        + ",\"file\":" + json.quoteString(relFile) + "}";
+        argJson := "[" + json.quoteString(runnerScript) + ",\"--_worker\"," + json.quoteString(taskJson) + "]";
+        list.pushBack(mut commands, proc.execPath());
+        list.pushBack(mut argListsJson, argJson);
+    }
+
+    jobs := if maxJobs > 0 { maxJobs } else { pool.cpuCount() };
+    rawResults := pool.runPoolJson(commands, argListsJson, rootDir, jobs);
+    offsets := json.arrayElementOffsets(rawResults, 0);
+    if list.listCountInt(offsets) =!= count {
+        if outputMode =!= "--silence" {
+            io.errorLine("unit test pool returned malformed result count");
+        }
+        return 1;
+    }
+
+    var passed := 0;
+    var failed := 0;
+    var idx := 0;
+    loop idx < count {
+        elemPos := offsets[idx];
+        statusRes := json.readObjectInt(rawResults, elemPos, "status");
+        outRes := json.readObjectString(rawResults, elemPos, "stdout");
+        errRes := json.readObjectString(rawResults, elemPos, "stderr");
+        errorRes := json.readObjectString(rawResults, elemPos, "error");
+        status := if statusRes.found and statusRes.ok { statusRes.value } else { -1 };
+        errText := if errorRes.found and errorRes.ok { errorRes.value } else { "" };
+        if status == 0 and errText == "" {
+            passed = passed + 1;
+            if outputMode == "--verbose" {
+                io.outputLine("PASS " + selectedRel[idx]);
+            }
+        } else {
+            failed = failed + 1;
+            if outputMode =!= "--silence" {
+                io.errorLine("FAIL " + selectedRel[idx] + " (exit " + integer.intText(status) + ")");
+                if errText =!= "" { io.errorLine(text.trimEnd(errText)); }
+                if outRes.found and outRes.ok and text.trim(outRes.value) =!= "" {
+                    io.errorLine(text.trimEnd(outRes.value));
+                }
+                if errRes.found and errRes.ok and text.trim(errRes.value) =!= "" {
+                    io.errorLine(text.trimEnd(errRes.value));
+                }
+            }
+        }
+        idx = idx + 1;
+    }
+
+    if failed > 0 {
+        if outputMode =!= "--silence" {
+            io.errorLine("Unit tests: " + integer.intText(passed) + " passed, " + integer.intText(failed) + " failed.");
+        }
+        return 1;
+    }
+    if outputMode =!= "--silence" {
+        if outputMode == "--mute" {
+            io.outputLine("Unit tests passed (" + integer.intText(passed) + ").");
+        } else {
+            io.outputLine("Unit tests: " + integer.intText(passed) + " passed, 0 failed.");
+        }
+    }
+    0
+};
+
+/** Parses CLI flags for `lite test --unit` and dispatches execution. */
+pub runUnitCli := fn(rootDir: String, rawArgs: List<String>): Int {
+    if rootDir == "" {
+        io.errorLine("could not locate LiteScript repository root");
+        return 1;
+    }
+    args: mut List<String> = rawArgs;
+    var jobs := 0;
+    var outputMode := "";
+    var filter := "";
+    var hasFilter := false;
+
+    loop list.listCountText(args) > 0 {
+        arg := list.popFront(mut args);
+        if arg == "--" {
+            if list.listCountText(args) > 1 or hasFilter {
+                io.errorLine(unitTestUsage());
+                return 2;
+            }
+            if list.listCountText(args) == 1 {
+                filter = list.popFront(mut args);
+                hasFilter = true;
+            }
+            break;
+        } else if arg == "--jobs" or arg == "-j" {
+            if list.listCountText(args) == 0 {
+                io.errorLine(unitTestUsage());
+                return 2;
+            }
+            parsed := isPositiveIntText(list.popFront(mut args));
+            if not parsed.ok {
+                io.errorLine(unitTestUsage());
+                return 2;
+            }
+            jobs = parsed.value;
+        } else if text.startsWithAt(arg, 0, "--jobs=") {
+            parsed := isPositiveIntText(text.slice(arg, 7, text.length(arg)));
+            if not parsed.ok {
+                io.errorLine(unitTestUsage());
+                return 2;
+            }
+            jobs = parsed.value;
+        } else if arg == "--verbose" or arg == "--mute" or arg == "--silence" {
+            if outputMode =!= "" {
+                io.errorLine(unitTestUsage());
+                return 2;
+            }
+            outputMode = arg;
+        } else if text.startsWithAt(arg, 0, "-") or hasFilter {
+            io.errorLine(unitTestUsage());
+            return 2;
+        } else {
+            filter = arg;
+            hasFilter = true;
+        }
+    }
+
+    runUnitTests(rootDir, filter, jobs, outputMode)
+};

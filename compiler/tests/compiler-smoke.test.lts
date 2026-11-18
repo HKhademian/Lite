@@ -1,0 +1,60 @@
+/** Smoke unit test for the selected TS compiler artifact using `core/test`. */
+
+fs := import "core/file";
+path := import "core/path";
+proc := import "core/process";
+test := import "core/test";
+text := import "core/text";
+cases := import "util/cases";
+compilerBuild := import "util/compiler-build";
+project := import "util/project";
+
+root := project.findRepoRoot();
+test.check("repo root found", root =!= "");
+
+sel := compilerBuild.selectCompilerPath(root, "ts");
+test.check("select TS compiler: " + sel.error, sel.ok);
+test.check("compiler path is non-empty", sel.path =!= "");
+
+tmpRes := fs.makeTempDir("lite-compiler-smoke-");
+test.check("makeTempDir: " + tmpRes.error, tmpRes.ok);
+work := tmpRes.path;
+
+pkgRes := fs.writeText(path.join(work, "package.json"), "{\"type\":\"module\"}\n");
+test.check("write package.json", pkgRes.ok);
+
+goodSrc := "io := import \"core/io\";\nadd := fn(a: Int, b: Int): Int { a + b };\nio.outputLine(add(19, 23));\n";
+goodPath := path.join(work, "good.lts");
+wGood := fs.writeText(goodPath, goodSrc);
+test.check("write good.lts", wGood.ok);
+
+emptyEnv: List<String> = [];
+emptyBytes: List<Int> = [];
+goodOut := path.join(work, "good.ts");
+goodErr := path.join(work, "good.err");
+compGood := proc.runBytes(proc.execPath(), [sel.path, goodPath], root, emptyEnv, 30000, emptyBytes, goodOut, goodErr);
+test.checkInt("compile good.lts exit", 0, compGood.status);
+
+checked := cases.checkTsArtifactFileWithStatus(root, goodOut, path.join(work, "tsc"), 30000);
+test.check("strict check good.ts: " + checked.error, checked.ok);
+
+runnerPath := path.join(work, "runner.ts");
+wRunner := cases.writeTsRunner(runnerPath);
+test.check("write runner.ts", wRunner.ok);
+
+runOut := path.join(work, "run.stdout");
+runErr := path.join(work, "run.stderr");
+ranGood := proc.runBytes(proc.execPath(), [runnerPath, goodOut], work, emptyEnv, 30000, emptyBytes, runOut, runErr);
+test.checkInt("run good.ts exit", 0, ranGood.status);
+test.checkText("run good.ts stdout", "42\n", fs.readText(runOut).text);
+
+badPath := path.join(work, "bad.lts");
+wBad := fs.writeText(badPath, "x: Int = \"oops\";\n");
+test.check("write bad.lts", wBad.ok);
+badOut := path.join(work, "bad.ts");
+badErr := path.join(work, "bad.err");
+compBad := proc.runBytes(proc.execPath(), [sel.path, badPath], root, emptyEnv, 30000, emptyBytes, badOut, badErr);
+test.checkInt("reject bad.lts exit", 2, compBad.status);
+test.check("reject bad.lts mentions error", text.trim(fs.readText(badErr).text) =!= "");
+
+_rm := fs.remove(work);

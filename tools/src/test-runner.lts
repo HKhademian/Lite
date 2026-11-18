@@ -8,6 +8,7 @@ list := import "core/list";
 path := import "core/path";
 cases := import "util/cases";
 project := import "util/project";
+unitTests := import "util/unit-tests";
 
 smokeTestFiles := fn(): List<String> {
     files: List<String> = [
@@ -52,9 +53,21 @@ readGeneratedTestFiles := fn(root: String): List<String> {
 run := fn(rawArgs: List<String>): Unit {
     project.handleVersionFlag(rawArgs, "tester", "test");
     args: mut List<String> = rawArgs;
+    if list.listCountText(args) > 0 and args[0] == "--_worker" {
+        _flag := list.popFront(mut args);
+        if list.listCountText(args) =!= 1 {
+            io.errorLine("Usage: ./bin/lite test --_worker TASK_JSON");
+            io.exit(2);
+        }
+        io.exit(unitTests.runUnitWorker(args[0]));
+    }
     if list.listCountText(args) > 0 and args[0] == "--cases" {
         _flag := list.popFront(mut args);
         io.exit(cases.runCaseCli(project.findRepoRoot(), args));
+    }
+    if list.listCountText(args) > 0 and args[0] == "--unit" {
+        _flag := list.popFront(mut args);
+        io.exit(unitTests.runUnitCli(project.findRepoRoot(), args));
     }
 
     var mode := "";
@@ -113,6 +126,15 @@ run := fn(rawArgs: List<String>): Unit {
         } else {
             io.output(res.stdout);
             project.errorText(res.stderr);
+        }
+    }
+    if res.status =!= 0 {
+        io.exit(res.status);
+    }
+    if mode =!= "--smoke" {
+        unitExit := unitTests.runUnitTests(root, "", 0, outputMode);
+        if unitExit =!= 0 {
+            io.exit(unitExit);
         }
     }
     io.exit(res.status);
