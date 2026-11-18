@@ -1,0 +1,99 @@
+/* Core host alias contracts, forged declaration rejection, evaluation order, and immutable module value tests migrated from compiler/tests/host.test.ts. */
+
+fs := import "core/file";
+path := import "core/path";
+test := import "core/test";
+text := import "core/text";
+compilerBuild := import "util/compiler-build";
+compilerTest := import "util/compiler-test";
+project := import "util/project";
+
+root := project.findRepoRoot();
+test.check("repo root found", root =!= "");
+
+selTs := compilerBuild.selectCompilerPath(root, "ts");
+test.check("select TS compiler: " + selTs.error, selTs.ok);
+selC := compilerBuild.selectCompilerPath(root, "c");
+test.check("select C compiler: " + selC.error, selC.ok);
+tsComp := selTs.path;
+cComp := selC.path;
+
+/* core integer operations are available through a module alias */
+coreIntName := path.join(root, "compiler/tests/fixtures/core-int-alias.lts");
+coreIntSrc :=
+"io := import \"core/io\"; integer := import \"core/int\";\n" +
+"sum := integer.intAdd(40, 2);\n" +
+"io.outputLine(integer.intText(sum.value), sum.ok);";
+compilerTest.assertCompileRunTsNamed(root, tsComp, "core/int alias", coreIntSrc, coreIntName, "42 true\n");
+
+/* imported output aliases preserve the heterogeneous host-output contract */
+fixtureName := path.join(root, "compiler/tests/fixtures/core-host-io.lts");
+hostIoSrc :=
+"io := import \"core/io\";\n" +
+"outputLine := fn(text: String): Int { 99 };\n" +
+"local := outputLine(\"ordinary function\");\n" +
+"effect := fn(value: String): String { io.outputLine(\"arg\", value); value };\n" +
+"invoke := fn(): Int {\n" +
+"    io.output(); io.output(); io.outputLine();\n" +
+"    io.output(\"legacy\", 1, true);\n" +
+"    io.output(\"qualified\", effect(\"a\"), 7, true);\n" +
+"    io.outputLine(effect(\"b\"), false);\n" +
+"    io.outputLine([1, 2], (left = \"tuple\", right = 3));\n" +
+"    io.errorLine(\"host error\");\n" +
+"    42\n" +
+"};\n" +
+"io.outputLine(local);\n" +
+"io.outputLine(invoke());";
+hostIoRun := compilerTest.compileCheckRunTs(root, tsComp, hostIoSrc, fixtureName);
+test.checkInt("host io alias status", 0, hostIoRun.status);
+test.checkText("host io alias stdout", "99\n\nlegacy 1 truearg a\nqualified a 7 truearg b\nb false\n[1, 2] (left=tuple, right=3)\n42\n", hostIoRun.stdout);
+test.checkText("host io alias stderr", "host error\n", hostIoRun.stderr);
+
+/* core host identities reject forged declarations and retain target boundaries */
+tmpForgeRes := fs.makeTempDir("lite-core-host-unbound-");
+test.check("makeTempDir forge", tmpForgeRes.ok);
+forgeDir := fs.realPath(tmpForgeRes.path).path;
+unboundSource := path.join(forgeDir, "io.lts");
+unboundApp := path.join(forgeDir, "app.lts");
+_wf1 := fs.writeText(unboundSource, "pub output := fn(...values): Unit;\n");
+_wf2 := fs.writeText(unboundApp, "io := import \"./io.lts\"; io.output(1, \"x\");\n");
+compilerTest.assertCompileErrorContainsNamed(root, tsComp, "unbound host decl", fs.readText(unboundApp).text, unboundApp, "bodyless function declaration has no matching core host binding");
+_rmForge := fs.remove(forgeDir);
+
+compilerTest.assertCompileErrorContainsNamed(root, tsComp, "mismatched host abi", "pub output := fn(...values): String;", "lib/core/io.lts", "bodyless function declaration has no matching core host binding");
+compilerTest.assertCompileErrorContainsNamed(root, tsComp, "ordinary variadic rejected", "values := fn(...values): Unit { };", fixtureName, "variadic parameters are reserved for registered core host declarations");
+compilerTest.assertCompileErrorContainsNamed(root, tsComp, "output as value rejected", "io := import \"core/io\"; value := io.output(1);", fixtureName, "host output functions are standalone statements");
+compilerTest.assertCompileErrorContainsNamed(root, tsComp, "errorLine type rejected", "io := import \"core/io\"; io.errorLine(1);", fixtureName, "argument 1 of io.errorLine must be String, got Int");
+compilerTest.assertCompileErrorContainsNamed(root, cComp, "errorLine C rejected", "io := import \"core/io\"; io.errorLine(\"x\");", fixtureName, "C backend does not support reportError or exit yet");
+compilerTest.assertCompileErrorContainsNamed(root, cComp, "list output C rejected", "io := import \"core/io\"; io.outputLine([1, 2]);", fixtureName, "C backend does not support");
+
+supportedC := compilerTest.compileStdin(root, cComp, "io := import \"core/io\"; io.outputLine(1, \"x\", true);", fixtureName);
+test.checkInt("supported C io.outputLine status", 0, supportedC.status);
+test.check("supported C io.outputLine stdout", text.containsText(supportedC.stdout, "1"));
+
+/* qualified output preserves evaluation order and delays its write until all values evaluate */
+evalOrderSrc :=
+"io := import \"core/io\";\n" +
+"effect := fn(): String { io.outputLine(\"argument evaluated\"); \"value\" };\n" +
+"fail := fn(value: Int): Int { value / (value - value) };\n" +
+"io.outputLine(effect(), 9, fail(5));";
+evalOrderRun := compilerTest.compileCheckRunTs(root, tsComp, evalOrderSrc, fixtureName);
+test.checkInt("qualified output order status", 1, evalOrderRun.status);
+test.checkText("qualified output order stdout", "argument evaluated\n", evalOrderRun.stdout);
+test.check("qualified output order stderr", text.containsText(evalOrderRun.stderr, "ArithmeticPanic: division by zero"));
+test.check("qualified output order no partial line", not text.containsText(evalOrderRun.stdout, "value 9"));
+
+/* namespace imports expose immutable public values but keep private values local */
+tmpValRes := fs.makeTempDir("lite-import-values-");
+test.check("makeTempDir import-values", tmpValRes.ok);
+valDir := fs.realPath(tmpValRes.path).path;
+valRoot := path.join(valDir, "app.lts");
+valMath := path.join(valDir, "math.lts");
+_wv1 := fs.writeText(valRoot, "io := import \"core/io\"; math := import \"./math.lts\"; io.outputLine(math.answer);\n");
+_wv2 := fs.writeText(valMath, "privateBase := 21; pub answer := privateBase * 2;\n");
+compilerTest.assertCompileRunTsNamed(root, tsComp, "import public value", fs.readText(valRoot).text, valRoot, "42\n");
+compilerTest.assertCompileErrorContainsNamed(root, tsComp, "import private value rejected", "io := import \"core/io\"; math := import \"./math.lts\"; io.outputLine(math.privateBase);", valRoot, "unknown module member math.privateBase");
+compilerTest.assertCompileErrorContainsNamed(root, tsComp, "import value reassignment rejected", "math := import \"./math.lts\"; math.answer = 43;", valRoot, "module members are immutable");
+_rmVal := fs.remove(valDir);
+
+test.done("modules/core-host-aliases");

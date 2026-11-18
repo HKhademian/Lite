@@ -1,0 +1,139 @@
+/* Canonical module ordering and path-based module slug collision tests migrated from compiler/tests/host.test.ts. */
+
+fs := import "core/file";
+path := import "core/path";
+test := import "core/test";
+text := import "core/text";
+compilerBuild := import "util/compiler-build";
+compilerTest := import "util/compiler-test";
+project := import "util/project";
+
+root := project.findRepoRoot();
+test.check("repo root found", root =!= "");
+
+selTs := compilerBuild.selectCompilerPath(root, "ts");
+test.check("select TS compiler: " + selTs.error, selTs.ok);
+selC := compilerBuild.selectCompilerPath(root, "c");
+test.check("select C compiler: " + selC.error, selC.ok);
+tsComp := selTs.path;
+cComp := selC.path;
+ccInfo := compilerTest.probeCc();
+
+fnBlock := fn(code: String, name: String): String {
+    sig := "function " + name + "(";
+    start := text.indexOfText(code, sig, 0);
+    test.check("missing " + name, start >= 0);
+    endMarker := "void " + name + ";";
+    endPos := text.indexOfText(code, endMarker, start);
+    test.check("missing " + endMarker, endPos >= 0);
+    text.slice(code, start, endPos + text.length(endMarker))
+};
+
+/* import order invariance and module-addition locality avoid module-index churn */
+tmpOrdRes := fs.makeTempDir("lite-vcs-import-order-");
+test.check("makeTempDir import-order", tmpOrdRes.ok);
+realDir := fs.realPath(tmpOrdRes.path).path;
+aPath := path.join(realDir, "a.lts");
+bPath := path.join(realDir, "b.lts");
+cPath := path.join(realDir, "c.lts");
+rootPath := path.join(realDir, "root.lts");
+
+_wo1 := fs.writeText(aPath, "pub factor := 3;\npub apply := fn(n: Int): Int { localMul := n * factor; localMul + 1 }\n");
+_wo2 := fs.writeText(bPath, "pub offset := 10;\npub bump := fn(n: Int): Int { adjusted := n + offset; adjusted }\n");
+
+rootAB := "io := import \"core/io\";\na := import \"./a.lts\";\nb := import \"./b.lts\";\nio.outputLine(b.bump(a.apply(2)));\n";
+rootBA := "io := import \"core/io\";\nb := import \"./b.lts\";\na := import \"./a.lts\";\nio.outputLine(b.bump(a.apply(2)));\n";
+
+compAB := compilerTest.compileStdin(root, tsComp, rootAB, rootPath);
+compBA := compilerTest.compileStdin(root, tsComp, rootBA, rootPath);
+test.checkInt("compAB status", 0, compAB.status);
+test.checkInt("compBA status", 0, compBA.status);
+test.checkText("import order invariant TS", compAB.stdout, compBA.stdout);
+
+tsText := compAB.stdout;
+test.check("slug liteFn$a$apply", text.containsText(tsText, "function liteFn$a$apply("));
+test.check("slug liteFn$b$bump", text.containsText(tsText, "function liteFn$b$bump("));
+test.check("slug lite$m$a$factor", text.containsText(tsText, "const lite$m$a$factor ="));
+test.check("slug lite$m$b$offset", text.containsText(tsText, "const lite$m$b$offset ="));
+test.check("local lite_localMul", text.containsText(tsText, "const lite_localMul ="));
+test.check("local lite_adjusted", text.containsText(tsText, "const lite_adjusted ="));
+test.check("no legacy m0_ m1_ index churn", not text.containsText(tsText, "liteFn_m0_") and not text.containsText(tsText, "liteFn_m1_") and not text.containsText(tsText, "lite_m0_") and not text.containsText(tsText, "lite_m1_"));
+
+runAB := compilerTest.checkAndRunTs(root, tsText);
+test.checkInt("runAB status", 0, runAB.status);
+test.checkText("runAB stdout", "17\n", runAB.stdout);
+
+_wo3 := fs.writeText(cPath, "pub bonus := 5;\npub addBonus := fn(n: Int): Int { res := n + bonus; res }\n");
+rootABC := "io := import \"core/io\";\nc := import \"./c.lts\";\na := import \"./a.lts\";\nb := import \"./b.lts\";\nio.outputLine(c.addBonus(b.bump(a.apply(2))));\n";
+compABC := compilerTest.compileStdin(root, tsComp, rootABC, rootPath);
+test.checkInt("compABC status", 0, compABC.status);
+tsABC := compABC.stdout;
+test.checkText("a.apply unchanged on adding c", fnBlock(tsText, "liteFn$a$apply"), fnBlock(tsABC, "liteFn$a$apply"));
+test.checkText("b.bump unchanged on adding c", fnBlock(tsText, "liteFn$b$bump"), fnBlock(tsABC, "liteFn$b$bump"));
+test.check("slug liteFn$c$addBonus", text.containsText(tsABC, "function liteFn$c$addBonus("));
+test.check("local lite_res", text.containsText(tsABC, "const lite_res ="));
+
+_wo4 := fs.writeText(aPath, "pub factor := 3;\n");
+_wo5 := fs.writeText(bPath, "pub offset := 10;\n");
+cOrder1 := compilerTest.compileStdin(root, cComp, "io := import \"core/io\";\na := import \"./a.lts\";\nb := import \"./b.lts\";\nio.outputLine(a.factor, b.offset);\n", rootPath);
+cOrder2 := compilerTest.compileStdin(root, cComp, "io := import \"core/io\";\nb := import \"./b.lts\";\na := import \"./a.lts\";\nio.outputLine(a.factor, b.offset);\n", rootPath);
+test.checkInt("cOrder1 status", 0, cOrder1.status);
+test.checkInt("cOrder2 status", 0, cOrder2.status);
+test.checkText("import order invariant C", cOrder1.stdout, cOrder2.stdout);
+test.check("C slug lt_m_a__factor", text.containsText(cOrder1.stdout, "lt_m_a__factor"));
+test.check("C slug lt_m_b__offset", text.containsText(cOrder1.stdout, "lt_m_b__offset"));
+_rmOrd := fs.remove(realDir);
+
+/* path-based module slugs prevent collisions between underscore, hyphen, and slash paths on TS and C */
+tmpSlugRes := fs.makeTempDir("lite-slug-collision-");
+test.check("makeTempDir slug-collision", tmpSlugRes.ok);
+slugDir := fs.realPath(tmpSlugRes.path).path;
+_mkSub := fs.makeDir(path.join(slugDir, "a"));
+_ws1 := fs.writeText(path.join(slugDir, "a_b.lts"), "pub val := 1;\npub tag := fn(): Int { val }\n");
+_ws2 := fs.writeText(path.join(slugDir, "a-b.lts"), "pub val := 2;\npub tag := fn(): Int { val }\n");
+_ws3 := fs.writeText(path.join(slugDir, "a/b.lts"), "pub val := 3;\npub tag := fn(): Int { val }\n");
+
+rootTsPath := path.join(slugDir, "root-ts.lts");
+rootTsSource :=
+"io := import \"core/io\";\n" +
+"m1 := import \"./a_b.lts\";\n" +
+"m2 := import \"./a-b.lts\";\n" +
+"m3 := import \"./a/b.lts\";\n" +
+"io.outputLine(m1.tag(), m2.tag(), m3.tag());";
+tsSlugComp := compilerTest.compileStdin(root, tsComp, rootTsSource, rootTsPath);
+test.checkInt("tsSlugComp status", 0, tsSlugComp.status);
+tsOut := tsSlugComp.stdout;
+test.check("TS slug a_u_b fn", text.containsText(tsOut, "function liteFn$a_u_b$tag("));
+test.check("TS slug a__b fn", text.containsText(tsOut, "function liteFn$a__b$tag("));
+test.check("TS slug a$b fn", text.containsText(tsOut, "function liteFn$a$b$tag("));
+test.check("TS slug a_u_b val", text.containsText(tsOut, "lite$m$a_u_b$val"));
+test.check("TS slug a__b val", text.containsText(tsOut, "lite$m$a__b$val"));
+test.check("TS slug a$b val", text.containsText(tsOut, "lite$m$a$b$val"));
+tsSlugRun := compilerTest.checkAndRunTs(root, tsOut);
+test.checkInt("tsSlugRun status", 0, tsSlugRun.status);
+test.checkText("tsSlugRun stdout", "1 2 3\n", tsSlugRun.stdout);
+
+_ws4 := fs.writeText(path.join(slugDir, "a_b.lts"), "pub val := 1;\n");
+_ws5 := fs.writeText(path.join(slugDir, "a-b.lts"), "pub val := 2;\n");
+_ws6 := fs.writeText(path.join(slugDir, "a/b.lts"), "pub val := 3;\n");
+rootCPath := path.join(slugDir, "root-c.lts");
+rootCSource :=
+"io := import \"core/io\";\n" +
+"m1 := import \"./a_b.lts\";\n" +
+"m2 := import \"./a-b.lts\";\n" +
+"m3 := import \"./a/b.lts\";\n" +
+"io.outputLine(m1.val, m2.val, m3.val);";
+cSlugComp := compilerTest.compileStdin(root, cComp, rootCSource, rootCPath);
+test.checkInt("cSlugComp status", 0, cSlugComp.status);
+cOut := cSlugComp.stdout;
+test.check("C slug a_u_b", text.containsText(cOut, "lt_m_a_u_b__val"));
+test.check("C slug a_d_b", text.containsText(cOut, "lt_m_a_d_b__val"));
+test.check("C slug a_s_b", text.containsText(cOut, "lt_m_a_s_b__val"));
+if ccInfo.available {
+    cSlugRun := compilerTest.compileAndRunC(cOut, ccInfo.cc, "");
+    test.checkInt("cSlugRun status", 0, cSlugRun.status);
+    test.checkText("cSlugRun stdout", "1 2 3\n", cSlugRun.stdout);
+}
+_rmSlug := fs.remove(slugDir);
+
+test.done("modules/canonical-slugs");

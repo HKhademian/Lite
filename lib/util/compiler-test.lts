@@ -82,22 +82,115 @@ pub assertDriver := fn(driver: TestDriver, label: String, stdinText: String, exp
     test.checkText(label + " stderr", expectedStderr, res.stderr);
 };
 
-/** Compiles inline `source` using `compilerPath` via `--stdin`, capturing exit status, stdout, and stderr. */
-pub compileStdin := fn(rootDir: String, compilerPath: String, source: String, logicalName: String): RunOutput {
+/** Compiles inline `source` using `compilerPath` via `--stdin`, with custom `cwdDir`, `--root` override, and extra flags. */
+pub compileStdinWithOpts := fn(
+rootDir: String,
+compilerPath: String,
+cwdDir: String,
+source: String,
+logicalName: String,
+rootTargetOverride: String,
+extraCompilerArgs: List<String>
+): RunOutput {
     tmpRes := fs.makeTempDir("lite-comp-");
     test.check("compileStdin makeTempDir: " + tmpRes.error, tmpRes.ok);
     workDir := tmpRes.path;
 
-    rootTarget := if logicalName == "" { path.join(rootDir, "__lite_stdin__.lts") } else { path.join(rootDir, logicalName) };
-    args: List<String> = [compilerPath, "--stdin", "--name", logicalName, "--root", rootTarget];
+    rootTarget := if rootTargetOverride =!= "" {
+        rootTargetOverride
+    } else if logicalName == "" {
+        path.join(rootDir, "__lite_stdin__.lts")
+    } else if text.startsWithAt(logicalName, 0, "/") {
+        logicalName
+    } else {
+        path.join(rootDir, logicalName)
+    };
+    args: mut List<String> = [compilerPath, "--stdin", "--name", logicalName, "--root", rootTarget];
+    loop extraCompilerArgs as extra {
+        list.pushBack(mut args, extra);
+    }
     outPath := path.join(workDir, "out");
     errPath := path.join(workDir, "err");
-    res := proc.runBytes(proc.execPath(), args, rootDir, emptyEnv(), 60000, unicode.utf8Encode(source), outPath, errPath);
+    res := proc.runBytes(proc.execPath(), args, cwdDir, emptyEnv(), 60000, unicode.utf8Encode(source), outPath, errPath);
     test.check("compileStdin error: " + res.error, res.error == "");
     outText := fs.readText(outPath).text;
     errText := fs.readText(errPath).text;
     _rm := fs.remove(workDir);
     (status = res.status, stdout = outText, stderr = errText)
+};
+
+/** Compiles inline `source` using `compilerPath` via `--stdin`, capturing exit status, stdout, and stderr. */
+pub compileStdin := fn(rootDir: String, compilerPath: String, source: String, logicalName: String): RunOutput {
+    compileStdinWithOpts(rootDir, compilerPath, rootDir, source, logicalName, "", emptyEnv())
+};
+
+/** Invokes `compilerPath` directly with `args` inside `cwdDir`, capturing exit status, stdout, and stderr. */
+pub compileFile := fn(compilerPath: String, cwdDir: String, args: List<String>): RunOutput {
+    tmpRes := fs.makeTempDir("lite-comp-file-");
+    test.check("compileFile makeTempDir: " + tmpRes.error, tmpRes.ok);
+    workDir := tmpRes.path;
+
+    cmdArgs: mut List<String> = [compilerPath];
+    loop args as arg {
+        list.pushBack(mut cmdArgs, arg);
+    }
+    outPath := path.join(workDir, "out");
+    errPath := path.join(workDir, "err");
+    res := proc.runBytes(proc.execPath(), cmdArgs, cwdDir, emptyEnv(), 60000, emptyBytes(), outPath, errPath);
+    test.check("compileFile error: " + res.error, res.error == "");
+    outText := fs.readText(outPath).text;
+    errText := fs.readText(errPath).text;
+    _rm := fs.remove(workDir);
+    (status = res.status, stdout = outText, stderr = errText)
+};
+
+/** Strict-typechecks `tsCode` and runs it in a fresh Node process with raw `stdinBytes` and `extraArgs`. */
+pub checkAndRunTsWithBytes := fn(
+rootDir: String,
+tsCode: String,
+stdinBytes: List<Int>,
+extraArgs: List<String>
+): RunOutput {
+    tmpRes := fs.makeTempDir("lite-run-ts-");
+    test.check("checkAndRunTs makeTempDir: " + tmpRes.error, tmpRes.ok);
+    workDir := tmpRes.path;
+
+    pkgRes := fs.writeText(path.join(workDir, "package.json"), "{\"type\":\"module\"}\n");
+    test.check("checkAndRunTs package.json", pkgRes.ok);
+
+    tsPath := path.join(workDir, "artifact.ts");
+    wTs := fs.writeText(tsPath, tsCode);
+    test.check("checkAndRunTs write artifact", wTs.ok);
+
+    chk := cases.checkTsArtifactFileWithStatus(rootDir, tsPath, path.join(workDir, "tsc"), 60000);
+    test.check("checkAndRunTs tsc: " + chk.error, chk.ok);
+
+    runnerPath := path.join(workDir, "runner.ts");
+    wr := cases.writeTsRunner(runnerPath);
+    test.check("checkAndRunTs runner.ts", wr.ok);
+
+    runArgs: mut List<String> = [runnerPath, tsPath];
+    loop extraArgs as extra {
+        list.pushBack(mut runArgs, extra);
+    }
+    outPath := path.join(workDir, "run.stdout");
+    errPath := path.join(workDir, "run.stderr");
+    ran := proc.runBytes(proc.execPath(), runArgs, workDir, emptyEnv(), 30000, stdinBytes, outPath, errPath);
+    test.check("checkAndRunTs run error: " + ran.error, ran.error == "");
+    outText := fs.readText(outPath).text;
+    errText := fs.readText(errPath).text;
+    _rm := fs.remove(workDir);
+    (status = ran.status, stdout = outText, stderr = errText)
+};
+
+/** Strict-typechecks `tsCode` and runs it in a fresh Node process with `stdinText` and `extraArgs`. */
+pub checkAndRunTsWithInput := fn(rootDir: String, tsCode: String, stdinText: String, extraArgs: List<String>): RunOutput {
+    checkAndRunTsWithBytes(rootDir, tsCode, unicode.utf8Encode(stdinText), extraArgs)
+};
+
+/** Strict-typechecks `tsCode` and runs it in a fresh Node process with empty stdin/args. */
+pub checkAndRunTs := fn(rootDir: String, tsCode: String): RunOutput {
+    checkAndRunTsWithBytes(rootDir, tsCode, emptyBytes(), emptyEnv())
 };
 
 /** Compiles inline `source` to TS, strict-typechecks it, executes it with `stdinText` and `args`, and returns `(status, stdout, stderr)`. */
@@ -111,37 +204,7 @@ extraArgs: List<String>
 ): RunOutput {
     compiled := compileStdin(rootDir, compilerPath, source, logicalName);
     test.check("compileCheckRunTs compile: " + compiled.stderr, compiled.status == 0 and compiled.stderr == "");
-
-    tmpRes := fs.makeTempDir("lite-run-ts-");
-    test.check("compileCheckRunTs makeTempDir: " + tmpRes.error, tmpRes.ok);
-    workDir := tmpRes.path;
-
-    pkgRes := fs.writeText(path.join(workDir, "package.json"), "{\"type\":\"module\"}\n");
-    test.check("compileCheckRunTs package.json", pkgRes.ok);
-
-    tsPath := path.join(workDir, "artifact.ts");
-    wTs := fs.writeText(tsPath, compiled.stdout);
-    test.check("compileCheckRunTs write artifact", wTs.ok);
-
-    chk := cases.checkTsArtifactFileWithStatus(rootDir, tsPath, path.join(workDir, "tsc"), 60000);
-    test.check("compileCheckRunTs tsc: " + chk.error, chk.ok);
-
-    runnerPath := path.join(workDir, "runner.ts");
-    wr := cases.writeTsRunner(runnerPath);
-    test.check("compileCheckRunTs runner.ts", wr.ok);
-
-    runArgs: mut List<String> = [runnerPath, tsPath];
-    loop extraArgs as extra {
-        list.pushBack(mut runArgs, extra);
-    }
-    outPath := path.join(workDir, "run.stdout");
-    errPath := path.join(workDir, "run.stderr");
-    ran := proc.runBytes(proc.execPath(), runArgs, workDir, emptyEnv(), 30000, unicode.utf8Encode(stdinText), outPath, errPath);
-    test.check("compileCheckRunTs run error: " + ran.error, ran.error == "");
-    outText := fs.readText(outPath).text;
-    errText := fs.readText(errPath).text;
-    _rm := fs.remove(workDir);
-    (status = ran.status, stdout = outText, stderr = errText)
+    checkAndRunTsWithInput(rootDir, compiled.stdout, stdinText, extraArgs)
 };
 
 /** Compiles inline `source` to TS, strict-typechecks it, executes it, and returns `(status, stdout, stderr)`. */
@@ -194,54 +257,81 @@ pub probeCc := fn(): (available: Bool, cc: String) {
     (available = true, cc = cc)
 };
 
-/** Compiles inline `source` with C compiler `cCompilerPath`, builds with `-std=c11 -Wall -Wextra -Werror`, and runs the binary. */
-pub compileCheckRunC := fn(rootDir: String, cCompilerPath: String, cc: String, source: String, logicalName: String, stdinText: String): RunOutput {
-    compiled := compileStdin(rootDir, cCompilerPath, source, logicalName);
-    test.check("compileCheckRunC compile: " + compiled.stderr, compiled.status == 0 and compiled.stderr == "");
-
+/** Compiles C source `cCode` with `cc -std=c11 -Wall -Wextra -Werror -lm` and runs the binary with `stdinText`. */
+pub compileAndRunC := fn(cCode: String, cc: String, stdinText: String): RunOutput {
     tmpRes := fs.makeTempDir("lite-run-c-");
-    test.check("compileCheckRunC makeTempDir: " + tmpRes.error, tmpRes.ok);
+    test.check("compileAndRunC makeTempDir: " + tmpRes.error, tmpRes.ok);
     workDir := tmpRes.path;
 
     cPath := path.join(workDir, "artifact.c");
     exePath := path.join(workDir, "artifact");
-    wC := fs.writeText(cPath, compiled.stdout);
-    test.check("compileCheckRunC write artifact.c", wC.ok);
+    wC := fs.writeText(cPath, cCode);
+    test.check("compileAndRunC write artifact.c", wC.ok);
 
     ccOut := path.join(workDir, "cc.stdout");
     ccErr := path.join(workDir, "cc.stderr");
     ccRes := proc.runBytes(cc, ["-std=c11", "-Wall", "-Wextra", "-Werror", cPath, "-o", exePath, "-lm"], workDir, emptyEnv(), 30000, emptyBytes(), ccOut, ccErr);
-    test.check("compileCheckRunC cc error: " + ccRes.error, ccRes.error == "");
+    test.check("compileAndRunC cc error: " + ccRes.error, ccRes.error == "");
     if ccRes.status =!= 0 {
         msg := fs.readText(ccErr).text;
         _rmCc := fs.remove(workDir);
-        test.check("compileCheckRunC cc failed: " + msg, false);
+        test.check("compileAndRunC cc failed: " + msg, false);
     }
 
     runOut := path.join(workDir, "run.stdout");
     runErr := path.join(workDir, "run.stderr");
     ran := proc.runBytes(exePath, emptyEnv(), workDir, emptyEnv(), 10000, unicode.utf8Encode(stdinText), runOut, runErr);
-    test.check("compileCheckRunC run error: " + ran.error, ran.error == "");
+    test.check("compileAndRunC run error: " + ran.error, ran.error == "");
     outText := fs.readText(runOut).text;
     errText := fs.readText(runErr).text;
     _rm := fs.remove(workDir);
     (status = ran.status, stdout = outText, stderr = errText)
 };
 
+/** Compiles inline `source` with C compiler `cCompilerPath`, builds with `-std=c11 -Wall -Wextra -Werror`, and runs the binary. */
+pub compileCheckRunC := fn(rootDir: String, cCompilerPath: String, cc: String, source: String, logicalName: String, stdinText: String): RunOutput {
+    compiled := compileStdin(rootDir, cCompilerPath, source, logicalName);
+    test.check("compileCheckRunC compile: " + compiled.stderr, compiled.status == 0 and compiled.stderr == "");
+    compileAndRunC(compiled.stdout, cc, stdinText)
+};
+
 /** Compiles `source` with `compilerPath` expecting exit status 2, empty stdout, and exact stderr. */
-pub assertCompileError := fn(rootDir: String, compilerPath: String, label: String, source: String, expectedErr: String): Unit {
-    res := compileStdin(rootDir, compilerPath, source, "");
+pub assertCompileErrorNamed := fn(rootDir: String, compilerPath: String, label: String, source: String, logicalName: String, expectedErr: String): Unit {
+    res := compileStdin(rootDir, compilerPath, source, logicalName);
     test.checkInt(label + " status", 2, res.status);
     test.checkText(label + " stdout", "", res.stdout);
     test.checkText(label + " stderr", expectedErr, res.stderr);
 };
 
+/** Compiles `source` with `compilerPath` expecting exit status 2, empty stdout, and exact stderr. */
+pub assertCompileError := fn(rootDir: String, compilerPath: String, label: String, source: String, expectedErr: String): Unit {
+    assertCompileErrorNamed(rootDir, compilerPath, label, source, "", expectedErr);
+};
+
+/** Compiles `source` with `compilerPath` expecting exit status 2, empty stdout, and `expectedSub` inside stderr. */
+pub assertCompileErrorContainsNamed := fn(rootDir: String, compilerPath: String, label: String, source: String, logicalName: String, expectedSub: String): Unit {
+    res := compileStdin(rootDir, compilerPath, source, logicalName);
+    test.checkInt(label + " status", 2, res.status);
+    test.checkText(label + " stdout", "", res.stdout);
+    test.check(label + " stderr contains \"" + expectedSub + "\" (got: " + res.stderr + ")", text.containsText(res.stderr, expectedSub));
+};
+
+/** Compiles `source` with `compilerPath` expecting exit status 2, empty stdout, and `expectedSub` inside stderr. */
+pub assertCompileErrorContains := fn(rootDir: String, compilerPath: String, label: String, source: String, expectedSub: String): Unit {
+    assertCompileErrorContainsNamed(rootDir, compilerPath, label, source, "", expectedSub);
+};
+
 /** Compiles, strict-checks, and executes `source` on TS expecting exit 0 and `expectedOut`. */
-pub assertCompileRunTs := fn(rootDir: String, compilerPath: String, label: String, source: String, expectedOut: String): Unit {
-    res := compileCheckRunTs(rootDir, compilerPath, source, "");
+pub assertCompileRunTsNamed := fn(rootDir: String, compilerPath: String, label: String, source: String, logicalName: String, expectedOut: String): Unit {
+    res := compileCheckRunTs(rootDir, compilerPath, source, logicalName);
     test.checkInt(label + " status", 0, res.status);
     test.checkText(label + " stdout", expectedOut, res.stdout);
     test.checkText(label + " stderr", "", res.stderr);
+};
+
+/** Compiles, strict-checks, and executes `source` on TS expecting exit 0 and `expectedOut`. */
+pub assertCompileRunTs := fn(rootDir: String, compilerPath: String, label: String, source: String, expectedOut: String): Unit {
+    assertCompileRunTsNamed(rootDir, compilerPath, label, source, "", expectedOut);
 };
 
 /** Reads `compiler/tests/contracts/process.json` for recorded phase-driver expectations. */
