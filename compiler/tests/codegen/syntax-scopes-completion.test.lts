@@ -1,0 +1,478 @@
+/* Empty/comment scripts, statement separators, adjacent string joins, trailing commas, statement scopes, shadows, expression items, and function completion tests migrated from compiler/tests/host.test.ts. */
+
+list := import "core/list";
+proc := import "core/process";
+test := import "core/test";
+text := import "core/text";
+compilerBuild := import "util/compiler-build";
+compilerTest := import "util/compiler-test";
+project := import "util/project";
+
+root := project.findRepoRoot();
+test.check("repo root found", root =!= "");
+
+selTs := compilerBuild.selectCompilerPath(root, "ts");
+test.check("select TS compiler: " + selTs.error, selTs.ok);
+selC := compilerBuild.selectCompilerPath(root, "c");
+test.check("select C compiler: " + selC.error, selC.ok);
+tsComp := selTs.path;
+cComp := selC.path;
+
+ccProbe := compilerTest.probeCc();
+heavyEnv := proc.envGet("LITE_SKIP_HEAVY");
+skipHeavy := heavyEnv.found and heavyEnv.value == "1";
+
+contractsJson := compilerTest.readProcessContracts(root);
+
+emptyArgs := fn(): List<String> {
+    res: List<String> = [];
+    res
+};
+
+checkTsAndC := fn(label: String, source: String, logicalName: String, stdinText: String, expectedStatus: Int): Unit {
+    resTs := compilerTest.compileCheckRunTsWithInput(root, tsComp, source, logicalName, stdinText, emptyArgs());
+    compilerTest.assertRunMatchesNamedContract(contractsJson, label + " ts", source, logicalName, stdinText, expectedStatus, resTs);
+
+    compiledC := compilerTest.compileStdin(root, cComp, source, logicalName);
+    test.checkInt(label + " c compile: " + compiledC.stderr, 0, compiledC.status);
+    if ccProbe.available {
+        resC := compilerTest.compileAndRunC(compiledC.stdout, ccProbe.cc, "");
+        compilerTest.assertRunMatchesNamedContract(contractsJson, label + " c", source, logicalName, stdinText, expectedStatus, resC);
+    }
+};
+
+checkTsOnly := fn(label: String, source: String, logicalName: String, stdinText: String, expectedStatus: Int, requireCReject: Bool): Unit {
+    resTs := compilerTest.compileCheckRunTsWithInput(root, tsComp, source, logicalName, stdinText, emptyArgs());
+    compilerTest.assertRunMatchesNamedContract(contractsJson, label + " ts", source, logicalName, stdinText, expectedStatus, resTs);
+    if requireCReject {
+        cRej := compilerTest.compileStdin(root, cComp, source, logicalName);
+        test.checkInt(label + " c reject status", 2, cRej.status);
+        test.checkText(label + " c reject stdout", "", cRej.stdout);
+    }
+};
+
+checkInvalidBoth := fn(label: String, source: String, logicalName: String, requireContractZeroOut: Bool): Unit {
+    rec := compilerTest.assertContractStatus(contractsJson, label, source, logicalName, "", 1);
+    if requireContractZeroOut {
+        test.checkText(label + " contract stdout empty", "", rec.stdout);
+    }
+    cTs := compilerTest.compileStdin(root, tsComp, source, logicalName);
+    test.checkInt(label + " ts reject", 2, cTs.status);
+    test.checkText(label + " ts reject stdout", "", cTs.stdout);
+    cC := compilerTest.compileStdin(root, cComp, source, logicalName);
+    test.checkInt(label + " c reject", 2, cC.status);
+    test.checkText(label + " c reject stdout", "", cC.stdout);
+};
+
+/* nested value declarations shadow while root declarations remain unique (always runs) */
+nestedShadowSrc := "io := import \"core/io\"; x := 1; if true { x := 2; io.outputLine(x); } io.outputLine(x);";
+compilerTest.assertCompileRunTs(root, tsComp, "nested-shadow-ts", nestedShadowSrc, "2\n1\n");
+cNested := compilerTest.compileStdin(root, cComp, nestedShadowSrc, "");
+test.checkInt("nested-shadow-c compile", 0, cNested.status);
+if ccProbe.available {
+    cNestedRun := compilerTest.compileAndRunC(cNested.stdout, ccProbe.cc, "");
+    test.checkInt("nested-shadow-c run status", 0, cNestedRun.status);
+    test.checkText("nested-shadow-c run stdout", "2\n1\n", cNestedRun.stdout);
+}
+dupRootErrs: List<String> = ["x := 1; x := 2;", "var x := 1; x: Int = 2;"];
+loop dupRootErrs as badSrc {
+    compilerTest.assertCompileErrorContains(root, tsComp, "dup-root-ts", badSrc, "duplicate top-level value x");
+    compilerTest.assertCompileErrorContains(root, cComp, "dup-root-c", badSrc, "duplicate top-level value x");
+}
+
+if not skipHeavy {
+    /* empty and comment-only scripts compile silently without hiding malformed source */
+    emptySources: List<String> = [
+        "",
+        " ",
+        "\n",
+        "\r\n\t ",
+        "/**/",
+        "/* words */",
+        "/* outer /* nested */ end */",
+        " \n/* سلام🙂 */\r\n",
+        "io := import \"core/io\"; /* ; {} () io.outputLine(1 / 0); */",
+        "/* \"quoted\" */ /* another */",
+        "/*# arbitrary /* nested-looking */ text #*/",
+        "/* outer /*# raw */ body #*/ end */"
+    ];
+    loop emptySources as src {
+        rec := compilerTest.assertContractStatus(contractsJson, "empty-comment", src, "", "", 0);
+        test.checkText("empty-comment stdout", "", rec.stdout);
+        test.checkText("empty-comment stderr", "", rec.stderr);
+        checkTsAndC("empty-comment", src, "", "", 0);
+    }
+    badComments: List<String> = [
+        "/*",
+        "/* outer /* nested */",
+        "/*# unterminated",
+        "/* ok */ }",
+        "io := import \"core/io\"; /* ok */ io.outputLine(1); /* unterminated"
+    ];
+    loop badComments as src {
+        checkInvalidBoth("bad-comment", src, "", false);
+    }
+    commentedPrograms: List<String> = [
+        "io := import \"core/io\"; /* before */ io.outputLine(7); /* after */",
+        "io := import \"core/io\"; /* nested /* inner */ */ var n := 1; io.outputLine(0 <= n < 2);"
+    ];
+    loop commentedPrograms as src {
+        checkTsAndC("commented-program", src, "", "", 0);
+    }
+
+    /* statement separators follow EOF, closing scope and directly closed block boundaries */
+    sepBoth: List<String> = [
+        "io := import \"core/io\"; io.outputLine(7)",
+        "io := import \"core/io\"; io.output(\"x\") /* tail */",
+        "x := 1",
+        "var x := 1",
+        "x: Int = 1",
+        "x: Int",
+        "var x := 1; x = 2",
+        "Number := type Int",
+        "io := import \"core/io\"; if true { io.outputLine(7) }",
+        "io := import \"core/io\"; if true { x := 7 } io.outputLine(8)",
+        "io := import \"core/io\"; var n := 0; loop n < 3 { n = n + 1; continue } io.outputLine(n)",
+        "io := import \"core/io\"; loop { io.outputLine(7); break }",
+        "io := import \"core/io\"; /* before */ io.outputLine(0 < 1 < 2) /* after */"
+    ];
+    sepTsOnly: List<String> = [
+        "noop := fn(): Unit { return } noop()",
+        "io := import \"core/io\"; f := fn(): Int { return 7 } io.outputLine(f())",
+        "io := import \"core/io\"; x := if true { 7 } else { 9 } /* boundary */ io.outputLine(x)",
+        "io := import \"core/io\"; var x := 0; x = if true { 7 } else { 9 } io.outputLine(x)",
+        "io := import \"core/io\"; f := fn(): Int { return if true { 7 } else { 9 } } io.outputLine(f())",
+        "list := import \"core/list\"; values: mut List<Int> = [1]; list.popBack(mut values)",
+        "io := import \"core/io\"; io.inputLine(\"Prompt: \")",
+        "io := import \"core/io\"; f := fn(): Unit { io.outputLine(7) } f()"
+    ];
+    loop sepBoth as src { checkTsAndC("sep-both", src, "", "line\n", 0); }
+    loop sepTsOnly as src { checkTsOnly("sep-ts", src, "", "line\n", 0, false); }
+    sepInvalid: List<String> = [
+        "io := import \"core/io\"; io.outputLine(1) io.outputLine(2);",
+        "io := import \"core/io\"; io.outputLine(1)\nio.outputLine(2)",
+        "io := import \"core/io\"; io.output(\"x\") io.outputLine(\"y\")",
+        "io := import \"core/io\"; x := 1 io.outputLine(x);",
+        "var x := 1\nx = 2",
+        "io := import \"core/io\"; x := 1 /* } */ io.outputLine(x);",
+        "io := import \"core/io\"; x := (if true { 1 } else { 2 }) io.outputLine(x);",
+        "io := import \"core/io\"; Number := type Int io.outputLine(1);",
+        "io := import \"core/io\"; if true { io.outputLine(1)",
+        "noop := fn(): Unit { return",
+        "f := fn(): Int { return }"
+    ];
+    loop sepInvalid as src { checkInvalidBoth("sep-bad", src, "", false); }
+    sepFaultSrc := "io := import \"core/io\"; io.outputLine(\"before\");\r\nvar zero := 0; io.outputLine(1 / zero) /* tail */";
+    checkTsAndC("sep-fault", sepFaultSrc, "boundary سلام.lts", "", 1);
+
+    /* adjacent String literals join across trivia before expressions and encode once */
+    repX: mut List<String> = [];
+    var rx := 0;
+    loop rx < 1024 {
+        list.pushBack(mut repX, "\"x\"");
+        rx = rx + 1;
+    }
+    adjBoth: List<String> = [
+        "io := import \"core/io\"; io.outputLine(\"a\"\"b\");",
+        "io := import \"core/io\"; io.outputLine(\"\" \"\" \"x\" \"\");",
+        "io := import \"core/io\"; io.outputLine(\"a\"\n\"b\");",
+        "io := import \"core/io\"; io.outputLine(\"a\" /* outer /* inner */ end */ \"b\");",
+        "io := import \"core/io\"; io.outputLine(\"a\" /*# raw /* */ #*/ \"b\");",
+        "io := import \"core/io\"; io.outputLine(\"a\\n\" \"\\t\" \"\\r\" \"\\\"\" \"\\\\\");",
+        "io := import \"core/io\"; io.outputLine(\"سلام\" \"🙂\");",
+        "io := import \"core/io\"; var x := \"a\" \"b\"; io.outputLine(x + \"c\" \"d\");",
+        "io := import \"core/io\"; var x := \"ab\"; io.outputLine(x == \"a\" \"b\" =!= \"z\");",
+        "io := import \"core/io\"; if \"a\" \"b\" == \"ab\" { io.outputLine(\"y\" \"es\"); } else { io.outputLine(\"no\"); }",
+        "io := import \"core/io\"; io.output(\"x\" \"y\"); io.outputLine(\"z\");",
+        "io := import \"core/io\"; io.outputLine(\"a\", \"b\"); io.outputLine(\"a\"); io.outputLine(\"b\");",
+        "io := import \"core/io\"; io.outputLine(" + text.joinTexts(repX, " ") + ");"
+    ];
+    adjTsOnly: List<String> = [
+        "io := import \"core/io\"; echo := fn(s: String): String { s } io.outputLine(echo(\"a\" \"b\"));",
+        "io := import \"core/io\"; f := fn(): String { \"a\" \"b\" } io.outputLine(f());",
+        "io := import \"core/io\"; values: List<String> = [\"a\" \"b\", \"c\" \"d\"]; io.outputLine(values[0], values[1]);",
+        "io := import \"core/io\"; pair := (label = \"a\" \"b\", value = 3); io.outputLine(pair.label);",
+        "io := import \"core/io\"; io.outputLine(io.inputLine(\"Prom\" \"pt: \"));",
+        "io := import \"core/io\"; text := import \"core/text\"; io.outputLine(text.length(\"ab\" \"cd\"), text.at(\"ab\" \"cd\", 2), text.slice(\"ab\" \"cd\", 1, 3));",
+        "io := import \"core/io\"; value := if true { \"a\" \"b\" } else { \"c\" \"d\" } io.outputLine(value);"
+    ];
+    loop adjBoth as src { checkTsAndC("adj-str-both", src, "", "line\n", 0); }
+    loop adjTsOnly as src { checkTsOnly("adj-str-ts", src, "", "line\n", 0, false); }
+    adjInvalid: List<String> = [
+        "io := import \"core/io\"; io.outputLine(\"ok\");\nio.outputLine(\"a\" \"\\q\");",
+        "io := import \"core/io\"; io.outputLine(\"a\" \"unterminated",
+        "io := import \"core/io\"; io.outputLine(\"a\" /* unterminated",
+        "io := import \"core/io\"; io.outputLine(\"a\" /*# unterminated",
+        "io := import \"core/io\"; value := \"a\"; io.outputLine(value \"b\");",
+        "io := import \"core/io\"; io.outputLine((\"a\") \"b\");",
+        "io := import \"core/io\"; io.outputLine(\"a\"; \"b\");",
+        "io := import \"core/io\"; io.outputLine(\"a\" 7);"
+    ];
+    loop adjInvalid as src { checkInvalidBoth("adj-str-bad", src, "", false); }
+    adjUnterm := "io := import \"core/io\"; io.outputLine(\"ok\");\nio.outputLine(\"a\" \"unterminated";
+    compilerTest.assertCompileErrorNamed(root, tsComp, "adj-str-unterm ts", adjUnterm, "later.lts", "later.lts:2:19: unterminated string literal\n");
+    compilerTest.assertCompileErrorNamed(root, cComp, "adj-str-unterm c", adjUnterm, "later.lts", "later.lts:2:19: unterminated string literal\n");
+    adjFaultSrc := "io := import \"core/io\"; value := \"a\" \"b\"; io.outputLine(value);\nvar zero := 0; io.outputLine(1 / zero);";
+    checkTsAndC("adj-str-fault", adjFaultSrc, "joined سلام.lts", "", 1);
+
+    /* nonempty calls admit one trailing comma without adding a value or weakening arity */
+    commaBoth: List<String> = [
+        "io := import \"core/io\"; io.outputLine(1,);",
+        "io := import \"core/io\"; io.output(1,); io.outputLine(\"x\",);",
+        "io := import \"core/io\"; io.outputLine(1, \"x\", true,);",
+        "io := import \"core/io\"; io.outputLine(Unit,);",
+        "io := import \"core/io\"; io.outputLine(\"a\" \"b\", /* nested /* comment */ */);",
+        "io := import \"core/io\"; io.outputLine(0 < 1 < 2,);",
+        "io := import \"core/io\"; var x := 7; io.outputLine(x + 1,);",
+        "io := import \"core/io\"; if true { io.outputLine(\"yes\",) }",
+        "io := import \"core/io\"; io.output(); io.outputLine();"
+    ];
+    commaTsOnly: List<String> = [
+        "io := import \"core/io\"; identity := fn(n: Int): Int { n } io.outputLine(identity(7,),);",
+        "io := import \"core/io\"; sum := fn(a: Int, b: Int): Int { a + b } io.outputLine(sum(2, 3,),);",
+        "io := import \"core/io\"; touch := fn(n: Int): Int { io.outputLine(n,); n } add := fn(a: Int, b: Int): Int { a + b } io.outputLine(add(touch(1,), touch(2,),),);",
+        "io := import \"core/io\"; io.outputLine(io.inputAll(\"All: \",),);",
+        "io := import \"core/io\"; io.outputLine(io.inputLine(\"Line: \",),);",
+        "io := import \"core/io\"; io.outputLine(io.inputInt(\"Int: \",),);",
+        "io := import \"core/io\"; io.outputLine(io.inputFloat(\"Float: \",),);",
+        "io := import \"core/io\"; text := import \"core/text\"; io.outputLine(text.length(\"ab\",), text.at(\"ab\", 1,), text.slice(\"abcd\", 1, 3,),);",
+        "list := import \"core/list\"; io := import \"core/io\"; values: mut List<Int> = [1]; list.pushBack(mut values, 2,); io.outputLine(list.popBack(mut values,), list.popBack(mut values,),);",
+        "io := import \"core/io\"; values: List<Int> = [1, 2]; pair := (label = \"x\", n = 7); io.outputLine(values, pair,);",
+        "io := import \"core/io\"; io.errorLine(\"err\",); io.outputLine(\"after\",);",
+        "io := import \"core/io\"; io.outputLine(\"before\",); io.exit(3,);"
+    ];
+    loop commaBoth as src { checkTsAndC("comma-both", src, "", "1.5\n", 0); }
+    loop commaTsOnly as src {
+        inStr := if text.containsText(src, "io.inputInt(") { "7\n" } else { "1.5\n" };
+        st := if text.containsText(src, "io.exit(3,") { 3 } else { 0 };
+        checkTsOnly("comma-ts", src, "", inStr, st, false);
+    }
+    commaInvalid: List<String> = [
+        "io := import \"core/io\"; io.outputLine(,);",
+        "io := import \"core/io\"; io.outputLine(1,,);",
+        "io := import \"core/io\"; io.outputLine(,1);",
+        "io := import \"core/io\"; io.outputLine(1,",
+        "io := import \"core/io\"; io.inputArgs(,);",
+        "io := import \"core/io\"; io.inputLine(,);",
+        "io := import \"core/io\"; io.inputInt(\"Prompt\", 1,);",
+        "text := import \"core/text\"; text.at(\"x\",);",
+        "io := import \"core/io\"; f := fn(n: Int): Int { n } io.outputLine(f(,));",
+        "io := import \"core/io\"; f := fn(n: Int): Int { n } io.outputLine(f(1,,));",
+        "io := import \"core/io\"; f := fn(a: Int, b: Int): Int { a + b } io.outputLine(f(1,));",
+        "list := import \"core/list\"; values: mut List<Int> = [1]; list.pushBack(mut values,);",
+        "list := import \"core/list\"; values: mut List<Int> = [1]; list.popBack(mut values,,);"
+    ];
+    loop commaInvalid as src { checkInvalidBoth("comma-bad", src, "", false); }
+    commaFaults: List<String> = [
+        "io := import \"core/io\"; io.outputLine(\"before\");\nvar zero := 0; io.outputLine(\"prefix\", 1 / zero,);",
+        "io := import \"core/io\"; io.outputLine(io.inputInt(\"Int: \",),);",
+        "list := import \"core/list\"; io := import \"core/io\"; values: mut List<Int> = []; io.outputLine(list.popBack(mut values,),);"
+    ];
+    loop commaFaults as src {
+        if text.containsText(src, "zero") {
+            checkTsAndC("comma-fault", src, "comma سلام.lts", "bad", 1);
+        } else {
+            checkTsOnly("comma-fault", src, "comma سلام.lts", "bad", 1, false);
+        }
+    }
+
+    /* statement scopes isolate locals and preserve outer values while shadow initializers run */
+    scopeBoth: List<String> = [
+        "{}",
+        "io := import \"core/io\"; {}; { io.outputLine(1,); }",
+        "io := import \"core/io\"; { x := 3; io.outputLine(x); } io.outputLine(4);",
+        "io := import \"core/io\"; x := 10; { x := 20; io.outputLine(x); } io.outputLine(x);",
+        "io := import \"core/io\"; var x := 7; if true { x := x; io.outputLine(x); } io.outputLine(x);",
+        "io := import \"core/io\"; var x := 7; { x := x + 1; io.outputLine(x); } io.outputLine(x);",
+        "io := import \"core/io\"; var x := 7; { var x := x + 1; x = x + 2; io.outputLine(x); } io.outputLine(x);",
+        "io := import \"core/io\"; var x := 0; { x = 3; y := 1; } { x = 4; } io.outputLine(x);",
+        "io := import \"core/io\"; var x := 0; { var x := x + 1; { x := x + 1; io.outputLine(x); } io.outputLine(x); } io.outputLine(x);",
+        "io := import \"core/io\"; var value := \"outer\"; { value := value + \"!\"; io.outputLine(value); } io.outputLine(value);",
+        "io := import \"core/io\"; var flag := true; { flag := not flag; io.outputLine(flag); } io.outputLine(flag);",
+        "io := import \"core/io\"; var maximum := 9223372036854775807; { value := maximum - 1; io.outputLine(value); }",
+        "io := import \"core/io\"; var n := 0; loop { { n = n + 1; break } } io.outputLine(n);",
+        "io := import \"core/io\"; var n := 0; loop n < 3 { { n = n + 1; continue } } io.outputLine(n);",
+        "io := import \"core/io\"; var flag := false; var x := 7; if flag { { x := x + 1; io.outputLine(x); } } else { { x := x + 2; io.outputLine(x); } } io.outputLine(x);",
+        "io := import \"core/io\"; lt_local_0 := 17; var value := 1; { value := value + lt_local_0; io.outputLine(value); } io.outputLine(lt_local_0);",
+        "io := import \"core/io\"; var x: Int = 3; { x: Int = x; io.outputLine(x); } io.outputLine(x);",
+        "io := import \"core/io\"; { x := 1; io.outputLine(x); } { x := 2; io.outputLine(x); }",
+        "io := import \"core/io\"; inputInt := 7; { inputInt := inputInt + 1; io.outputLine(inputInt); } io.outputLine(inputInt);",
+        "io := import \"core/io\"; var x := 7; { x: Bool = true; io.outputLine(x); } io.outputLine(x);"
+    ];
+    scopeTsOnly: List<String> = [
+        "io := import \"core/io\"; f := fn(n: Int): Int { { n := n + 1; io.outputLine(n); } return n; } io.outputLine(f(3));",
+        "io := import \"core/io\"; f := fn(): Int { { return 7; } } io.outputLine(f());",
+        "io := import \"core/io\"; values: List<Int> = [1, 2]; loop values as values { io.outputLine(values); } io.outputLine(values);",
+        "list := import \"core/list\"; io := import \"core/io\"; values: mut List<Int> = [1, 2]; { values := list.popBack(mut values); io.outputLine(values); } io.outputLine(values);",
+        "io := import \"core/io\"; pair := (n = 1, label = \"x\"); { pair := (n = pair.n + 1, label = pair.label); io.outputLine(pair.n, pair.label); } io.outputLine(pair.n);",
+        "io := import \"core/io\"; first := fn(values: List<Int>): Int { { values := values[0]; io.outputLine(values); } values[1] } items: List<Int> = [1, 2]; io.outputLine(first(items));"
+    ];
+    loop scopeBoth as src { checkTsAndC("scope-both", src, "", "", 0); }
+    loop scopeTsOnly as src { checkTsOnly("scope-ts", src, "", "", 0, false); }
+    scopeInvalid: List<String> = [
+        "io := import \"core/io\"; io.outputLine(\"before\"); { x := 1; } io.outputLine(x);",
+        "io := import \"core/io\"; var x := 1; { y := x; { io.outputLine(y); } } io.outputLine(y);",
+        "{",
+        "}",
+        "{} else {}",
+        "{ break; }",
+        "{ continue; }",
+        "x := 1; { x = 2; }",
+        "var x := 7; { x: Bool = x; }"
+    ];
+    loop scopeInvalid as src { checkInvalidBoth("scope-bad", src, "", false); }
+    scopeFaults: List<String> = [
+        "io := import \"core/io\"; var zero := 0; io.outputLine(\"before\");\r\n{ io.outputLine(\"prefix\", 1 / zero); }",
+        "io := import \"core/io\"; var value := 9223372036854775807; io.outputLine(\"before\");\r\n{ value := value + 1; io.outputLine(value); }",
+        "io := import \"core/io\"; values: List<Int> = [1]; io.outputLine(\"before\");\r\n{ values := values[2]; io.outputLine(values); }"
+    ];
+    loop scopeFaults as src {
+        if text.containsText(src, "values: List<Int>") {
+            checkTsOnly("scope-fault", src, "scope سلام.lts", "", 1, false);
+        } else {
+            checkTsAndC("scope-fault", src, "scope سلام.lts", "", 1);
+        }
+    }
+
+    /* ordinary expression items evaluate silently and trailing separators retain function results */
+    exprBoth: List<String> = [
+        "1;",
+        "; ; /* empty */ ;",
+        "true; false; Unit;",
+        "1; \"quiet\"; not false; (2 + 3); +4; -5;",
+        "x := 1; x + 2;",
+        "io := import \"core/io\"; var x := 2; x * 3; x = 4; x; io.outputLine(x);",
+        "io := import \"core/io\"; ;; { ;; 1;; \"quiet\";; };; io.outputLine(\"after\");;",
+        "io := import \"core/io\"; if true { 1; } else { 2; } io.outputLine(\"after\");",
+        "io := import \"core/io\"; var x := 0; loop x < 3 { x + 1; x = x + 1;; } io.outputLine(x);",
+        "io := import \"core/io\"; var zero := 0; if false { 1 / zero; } io.outputLine(\"alive\");",
+        "false and (1 / 0 > 0); true or (9223372036854775807 + 1 > 0);",
+        "io := import \"core/io\"; var x := 2; x < 3 < 4; \"a\" + \"b\"; io.outputLine(\"done\");",
+        "io := import \"core/io\"; io.outputLine(\"before\"); 9223372036854775807 - 1;",
+        "io := import \"core/io\"; Unit;; io.outputLine(\"after\");",
+        "and true and false; or false or true;"
+    ];
+    exprTsOnly: List<String> = [
+        "[1, 2]; (n = 1, label = \"quiet\");",
+        "io := import \"core/io\"; f := fn(): Int { io.outputLine(\"effect\"); 7; } f() + 1; io.outputLine(\"after\");",
+        "io := import \"core/io\"; f := fn(): Int { 1; 2;; } io.outputLine(f());",
+        "io := import \"core/io\"; f := fn(): Bool { false; true;; } io.outputLine(f());",
+        "io := import \"core/io\"; f := fn(): String { \"first\"; \"last\";; } io.outputLine(f());",
+        "io := import \"core/io\"; f := fn(n: Int): Int { n + 1; n + 2;; } io.outputLine(f(3));",
+        "f := fn(): Unit { ;; Unit;; } f();",
+        "io := import \"core/io\"; effect := fn(): Unit { io.outputLine(\"effect\"); } f := fn(): Unit { effect();; } f();",
+        "io := import \"core/io\"; f := fn(): Int { if true { 1;; } else { 2;; };; } io.outputLine(f());",
+        "io := import \"core/io\"; f := fn(flag: Bool): Int { if flag { io.outputLine(\"yes\"); 1;; } else { io.outputLine(\"no\"); 2;; };; } io.outputLine(f(false), f(true));",
+        "io := import \"core/io\"; f := fn(): List<Int> { values: List<Int> = [1, 2]; values;; } io.outputLine(f());",
+        "io := import \"core/io\"; f := fn(): List<Int> { values: List<Int> = []; values;; } io.outputLine(f());",
+        "io := import \"core/io\"; f := fn(): (n: Int) { (n = 2);; } io.outputLine(f());",
+        "list := import \"core/list\"; io := import \"core/io\"; var values: mut List<Int> = [1, 2]; list.popBack(mut values); io.outputLine(values);",
+        "list := import \"core/list\"; io := import \"core/io\"; f := fn(): Int { values: mut List<Int> = [1, 2]; list.popBack(mut values);; } io.outputLine(f());",
+        "f := fn(): Unit { if true { Unit } else { Unit };; } f();",
+        "list := import \"core/list\"; f := fn(): Unit { values: mut List<Int> = [1]; list.pushBack(mut values, 2);; } f();",
+        "io := import \"core/io\"; f := fn(): Unit { if true { io.outputLine(\"yes\"); Unit;; } else { io.outputLine(\"no\"); Unit;; };; } f();"
+    ];
+    loop exprBoth as src { checkTsAndC("expr-both", src, "", "", 0); }
+    loop exprTsOnly as src { checkTsOnly("expr-ts", src, "", "", 0, true); }
+    checkTsOnly("expr-in-int", "io := import \"core/io\"; io.inputInt(\"n? \") + io.inputInt(\"m? \"); io.outputLine(io.inputInt());", "", "1 2 3", 0, false);
+    checkTsOnly("expr-in-line", "io := import \"core/io\"; io.inputLine(\"line? \"); io.outputLine(io.inputLine());", "", "first\nlast\n", 0, false);
+    checkTsOnly("expr-in-all", "io := import \"core/io\"; io.inputAll(\"all? \"); io.outputLine(io.inputAll());", "", "all\n🙂", 0, false);
+
+    exprInvalid: List<String> = [
+        "io := import \"core/io\"; io.outputLine(\"before\"); 1 2;",
+        "true false;",
+        "Unit Unit;",
+        "io := import \"core/io\"; x := 1; x + 2 io.outputLine(x);",
+        "unknown;",
+        "io := import \"core/io\"; io.outputLine(\"before\"); 1 + true;",
+        "f := fn(): Int { \"wrong\";; } f();",
+        "f := fn(): Int { ;; } f();",
+        "f := fn(): Unit { 1;; } f();",
+        "io := import \"core/io\"; g := fn(): Int { io.outputLine(\"effect\"); 1 } f := fn(): Unit { g();; } f();",
+        "io := import \"core/io\"; g := fn(): String { io.outputLine(\"effect\"); \"value\" } f := fn(): Unit { (g());; } f();",
+        "f := fn(): Unit { if true { 1 } else { 2 };; } f();",
+        "io := import \"core/io\"; f := fn(): Unit { if true { io.outputLine(\"effect\"); 1;; } else { 2;; };; } f();"
+    ];
+    loop exprInvalid as src { checkInvalidBoth("expr-bad", src, "", true); }
+    exprFaults: List<String> = [
+        "io := import \"core/io\"; io.outputLine(\"before\");\r\nvar zero := 0; 1 / zero;",
+        "io := import \"core/io\"; io.outputLine(\"before\");\r\n9223372036854775807 + 1;",
+        "var x := 9223372036854775807; if true { x + 1; }"
+    ];
+    loop exprFaults as src { checkTsAndC("expr-fault", src, "items سلام.lts", "", 1); }
+
+    /* function completion joins every conditional arm and preserves earlier definite returns */
+    fnCompSources: List<String> = [
+        "io := import \"core/io\"; f := fn(flag: Bool): Int { if flag { return 1; } else { return 2; } } io.outputLine(f(true), f(false));",
+        "io := import \"core/io\"; f := fn(flag: Bool): Int { if flag { return 1; } 2; } io.outputLine(f(true), f(false));",
+        "io := import \"core/io\"; f := fn(a: Bool, b: Bool): Int { if a { if b { return 1; } else { return 2; } } else { return 3; } } io.outputLine(f(true, true), f(true, false), f(false, true));",
+        "io := import \"core/io\"; f := fn(n: Int): Int { if n < 0 { x := n; -x; } else if n == 0 { return 10; } else { n + 1; } } io.outputLine(f(-2), f(0), f(2));",
+        "io := import \"core/io\"; f := fn(): Int { return 1; x := \"dead\"; x;; } io.outputLine(f());",
+        "io := import \"core/io\"; f := fn(): Unit { return; 1;; } f(); io.outputLine(\"after\");",
+        "io := import \"core/io\"; f := fn(flag: Bool): Int { if flag { return 1; } else { return 2; } \"dead\";; } io.outputLine(f(false));",
+        "io := import \"core/io\"; f := fn(): Int { { return 1; } \"dead\";; } io.outputLine(f());",
+        "io := import \"core/io\"; f := fn(flag: Bool): Int { loop flag { return 1; } 0; } io.outputLine(f(false), f(true));",
+        "io := import \"core/io\"; f := fn(): Int { loop { return 1; } } io.outputLine(f());",
+        "io := import \"core/io\"; f := fn(flag: Bool): Int { loop { if flag { return 1; } else { return 2; } } } io.outputLine(f(false));",
+        "io := import \"core/io\"; f := fn(): Int { loop { break; return 1; } 2; } io.outputLine(f());",
+        "io := import \"core/io\"; f := fn(flag: Bool): Unit { if flag { return; } io.outputLine(\"body\"); } f(true); f(false);",
+        "io := import \"core/io\"; f := fn(flag: Bool): String { if flag { return \"a\"; } else { return \"b\"; } Unit; } io.outputLine(f(false));",
+        "io := import \"core/io\"; f := fn(flag: Bool): Bool { if flag { x := true; x; } else { x := false; x; } } io.outputLine(f(true), f(false));",
+        "io := import \"core/io\"; f := fn(flag: Bool): (n: Int) { if flag { p := (n = 1); p; } else { return (n = 2); } } io.outputLine(f(true), f(false));",
+        "io := import \"core/io\"; f := fn(flag: Bool): List<Int> { if flag { values: List<Int> = [1]; values; } else { values: List<Int> = [2]; return values; } } io.outputLine(f(true), f(false));",
+        "io := import \"core/io\"; f := fn(flag: Bool): Int { if flag { return 1; } else { { return 2; } } } io.outputLine(f(false));",
+        "io := import \"core/io\"; f := fn(flag: Bool): Int { if flag { return 1; } else { return 2; } if false { \"ignored\"; } Unit; } io.outputLine(f(true));",
+        "io := import \"core/io\"; f := fn(flag: Bool): Unit { if flag { return; } else { return; } 1; } f(false); io.outputLine(\"after\");"
+    ];
+    loop fnCompSources as src { checkTsOnly("fn-comp-ts", src, "", "", 0, true); }
+
+    scalarControl: List<String> = [
+        "io := import \"core/io\"; loop { io.outputLine(\"live\"); break; 1 / 0; } io.outputLine(\"after\");",
+        "io := import \"core/io\"; var n := 0; loop n < 2 { n = n + 1; continue; io.outputLine(\"dead\"); } io.outputLine(n);",
+        "io := import \"core/io\"; loop { if true { break; } else { break; } io.outputLine(\"dead\"); } io.outputLine(\"after\");",
+        "io := import \"core/io\"; loop { { break; } io.outputLine(\"dead\"); } io.outputLine(\"after\");",
+        "io := import \"core/io\"; var n := 0; loop { n = n + 1; if n > 1 { break; } else { continue; } io.outputLine(\"dead\"); } io.outputLine(n);",
+        "io := import \"core/io\"; loop { loop { break; } io.outputLine(\"outer\"); break; } io.outputLine(\"after\");"
+    ];
+    loop scalarControl as src { checkTsAndC("fn-comp-scalar", src, "", "", 0); }
+
+    fnCompInvalidTails: List<String> = [
+        "loop { break; 1 + true; }",
+        "loop { break; unknown; }",
+        "f := fn(flag: Bool): Int { if flag { 1; } else { x := 2; } } io.outputLine(f(false));",
+        "f := fn(flag: Bool): Int { if flag { x := 1; } else { 2; } } io.outputLine(f(true));",
+        "f := fn(flag: Bool): Int { if flag { return 1; } } io.outputLine(f(false));",
+        "f := fn(): Int { if true { return 1; } } io.outputLine(f());",
+        "f := fn(flag: Bool): Int { if flag { return 1; } x := 3; } io.outputLine(f(false));",
+        "f := fn(a: Bool, b: Bool): Int { if a { if b { return 1; } } else { return 2; } } io.outputLine(f(true, false));",
+        "f := fn(n: Int): Int { if n < 0 { return 1; } else if n == 0 { x := 2; } else { return 3; } } io.outputLine(f(0));",
+        "f := fn(flag: Bool): Int { if flag { return 1; } else { } } io.outputLine(f(false));",
+        "f := fn(flag: Bool): Int { if flag { return 1; } else { io.outputLine(\"effect\"); } } io.outputLine(f(false));",
+        "f := fn(flag: Bool): Int { if flag { return 1; } else { var x := 2; x = 3; } } io.outputLine(f(false));",
+        "f := fn(flag: Bool): Int { if flag { return 1; } \"wrong\"; } io.outputLine(f(false));",
+        "f := fn(): Int { return 1; return \"wrong\"; } io.outputLine(f());",
+        "f := fn(): Unit { return; return 1; } f();"
+    ];
+    loop fnCompInvalidTails as tail {
+        badSrc := "io := import \"core/io\"; io.outputLine(\"before\");\r\n" + tail;
+        _rec := compilerTest.assertContractStatus(contractsJson, "fn-comp-bad", badSrc, "", "", 1);
+        test.checkText("fn-comp-bad contract stdout empty", "", _rec.stdout);
+        cTs := compilerTest.compileStdin(root, tsComp, badSrc, "branch سلام.lts");
+        test.checkInt("fn-comp-bad ts", 2, cTs.status);
+        test.checkText("fn-comp-bad ts stdout", "", cTs.stdout);
+        test.check("fn-comp-bad ts loc: " + cTs.stderr, text.startsWithAt(cTs.stderr, 0, "branch سلام.lts:2:"));
+        cC := compilerTest.compileStdin(root, cComp, badSrc, "branch سلام.lts");
+        test.checkInt("fn-comp-bad c", 2, cC.status);
+        test.checkText("fn-comp-bad c stdout", "", cC.stdout);
+        test.check("fn-comp-bad c loc: " + cC.stderr, text.startsWithAt(cC.stderr, 0, "branch سلام.lts:2:"));
+    }
+    fnCompFaults: List<String> = [
+        "io := import \"core/io\"; io.outputLine(\"before\"); f := fn(flag: Bool): Int { if flag { var zero := 0; return 1 / zero; } else { return 2; } } io.outputLine(f(true));",
+        "io := import \"core/io\"; f := fn(flag: Bool): Int { if flag { return 1; } else { var max := 9223372036854775807; max + 1; } } io.outputLine(f(false));"
+    ];
+    loop fnCompFaults as src {
+        checkTsOnly("fn-comp-fault", src, "branch سلام.lts", "", 1, false);
+    }
+}
+
+test.done("syntax-scopes-completion");
