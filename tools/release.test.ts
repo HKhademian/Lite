@@ -1,11 +1,73 @@
 /** Release requirements distinguish usable tools, compiler previews and language conformance. */
 import assert from 'node:assert/strict';
+import { spawnSync } from 'node:child_process';
 import { cpSync, existsSync, mkdirSync, mkdtempSync, readFileSync, readdirSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { basename, join } from 'node:path';
 import { test } from 'node:test';
-import { root, run, sha256 } from './project.ts';
-import { formatReleaseNotes, prepareRelease, releaseProfile } from './release.ts';
+import type { ComponentRelease } from '../compiler/release-streams.ts';
+import { ensureTool, root, run, sha256 } from './project.ts';
+
+type ReleaseBootstrapSummary = Readonly<{
+  ladder: Readonly<{ fixedPoint: boolean; generations: readonly unknown[] }>;
+  corpus: Readonly<{ cases?: number; programs?: number; rejections?: number; executions?: number; mismatches: readonly unknown[] }>;
+  support: string;
+}>;
+
+type ReleaseNotesInput = Readonly<{
+  label: string;
+  commit: string;
+  profile: 'tools' | 'compiler' | 'language';
+  releasedComponent: ComponentRelease | null;
+  archive: string;
+  archiveSha256: string;
+  manifestSha256: string;
+  vsix: Readonly<{ file: string; sha256: string }> | null;
+  bootstrap: ReleaseBootstrapSummary | null;
+}>;
+
+function runReleaseTool(args: string[], options: { directory?: string; input?: string } = {}): string {
+  const result = spawnSync(process.execPath, [ensureTool('release'), ...args], {
+    cwd: options.directory ?? process.cwd(),
+    env: {
+      ...process.env,
+      LITE_RELEASE_INTERNAL: '1',
+      ...(options.directory === undefined ? {} : { LITE_RELEASE_ROOT: options.directory }),
+    },
+    input: options.input,
+    encoding: 'utf8',
+    maxBuffer: 64 * 1024 * 1024,
+  });
+  if (result.error) throw result.error;
+  if (result.status !== 0 || result.signal !== null) {
+    throw new Error(result.stderr.trim() || `lite release failed (${result.status ?? result.signal})`);
+  }
+  return result.stdout;
+}
+
+function releaseProfile(release: ComponentRelease | null): 'tools' | 'compiler' | 'language' {
+  const args = release === null ? ['--profile'] : ['--profile', release.component, release.version];
+  return runReleaseTool(args).trim() as 'tools' | 'compiler' | 'language';
+}
+
+function formatReleaseNotes(input: ReleaseNotesInput): string {
+  return runReleaseTool(['--format-notes'], { input: JSON.stringify(input) });
+}
+
+function prepareRelease(directory: string, output: string, tag?: string) {
+  runReleaseTool(tag === undefined ? [output] : [output, tag], { directory });
+  return JSON.parse(readFileSync(join(output, 'manifest.json'), 'utf8')) as {
+    schemaVersion: number;
+    tag: string | null;
+    commit: string;
+    releasedComponent: ComponentRelease | null;
+    componentVersions: Record<string, string | null>;
+    profile: 'tools' | 'compiler' | 'language';
+    bootstrap: ReleaseBootstrapSummary | null;
+    nativeCompiler: boolean;
+    vsix: Readonly<{ file: string; sha256: string }> | null;
+  };
+}
 
 test('component readiness does not couple tooling to deferred native or language ports', () => {
   for (const component of ['cli', 'checker', 'tester', 'verifier', 'benchmark', 'release', 'doctor', 'docs', 'vscode'] as const) assert.equal(releaseProfile({ component, version: '0.1.0' }), 'tools');

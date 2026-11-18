@@ -8,10 +8,23 @@ import { test } from 'node:test';
 import { fileURLToPath } from 'node:url';
 import { compileTs } from '../compiler/host.ts';
 import { checkTsArtifact } from '../igniter/artifacts.ts';
-import { formatLite } from './fmt.ts';
 import { ensureTool } from './project.ts';
 
 const root = fileURLToPath(new URL('../', import.meta.url));
+
+/** Formats Lite source text via the ignited `fmt` tool in `dist/tools/fmt.ts`. */
+function formatLite(source: string): string {
+  const result = spawnSync(process.execPath, [ensureTool('fmt'), '-'], {
+    input: source,
+    encoding: 'utf8',
+    maxBuffer: 64 * 1024 * 1024,
+  });
+  if (result.error) throw result.error;
+  if (result.status !== 0 || result.signal !== null) {
+    throw new Error(`lite fmt failed (${result.status ?? result.signal}): ${result.stderr}`);
+  }
+  return result.stdout;
+}
 
 test('formatLite normalizes indentation, brace spacing, blank lines, and EOF newline idempotently', () => {
   const input = [
