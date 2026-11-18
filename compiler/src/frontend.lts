@@ -7,6 +7,7 @@ integer := import "core/int";
 tsLiteral := import "./ts-literals.lts";
 ir := import "./frontend-ir.lts";
 builtinsAbi := import "./builtins-abi.lts";
+syntax := import "./frontend-syntax.lts";
 io := import "core/io";
 textLib := import "core/text";
 
@@ -203,137 +204,25 @@ DOT_LOOP_IN_CONDITIONAL := ir.DOT_LOOP_IN_CONDITIONAL;
 DOT_LOOP_IN_FINALLY := ir.DOT_LOOP_IN_FINALLY;
 
 /** Reports one source-positioned diagnostic as `name:line:column: message`, or `line:column: message` when `prefix` is empty, then exits 2. */
-failAt := fn(source: String, position: Int, prefix: String, message: String): Unit {
-    place := sourceLib.lineColumn(source, position);
-    diagLib.fail(prefix, formatLib.decimalText(place.line) + ":" + formatLib.decimalText(place.column) + ": " + message);
-}
+failAt := fn(source: String, position: Int, prefix: String, message: String): Unit { syntax.failAt(source, position, prefix, message); };
 
 /** Consumes the exact `symbol` at `position`, or reports a source-positioned diagnostic and exits 2. */
-expectSymbol := fn(source: String, position: Int, symbol: String, prefix: String): Int {
-    if position >= textLib.length(source) or textLib.at(source, position) =!= symbol {
-        failAt(source, position, prefix, "expected " + symbol);
-    }
-    position + 1
-}
-
-/** Number of consecutive `#` characters after a comment opener; zero means an ordinary comment. */
-rawFenceLength := fn(source: String, position: Int): Int {
-    if not textLib.startsWithAt(source, position, "/*") { return 0; }
-    var index := position + 2;
-    var count := 0;
-    loop index < textLib.length(source) and textLib.at(source, index) == "#" {
-        count = count + 1;
-        index = index + 1;
-    }
-    count
-}
-
-/** Returns the position after one raw comment whose opener starts at `position`; fails at the opener when its fence never closes. */
-skipRawComment := fn(source: String, position: Int, fence: Int, prefix: String): Int {
-    size := textLib.length(source);
-    var cursor := position + 2 + fence;
-    loop cursor < size {
-        if textLib.at(source, cursor) == "#" {
-            runStart := cursor;
-            var runEnd := cursor;
-            loop runEnd < size and textLib.at(source, runEnd) == "#" { runEnd = runEnd + 1; }
-            if runEnd - runStart == fence and textLib.startsWithAt(source, runEnd, "*/") {
-                return runEnd + 2;
-            }
-            cursor = runEnd;
-        } else {
-            cursor = cursor + 1;
-        }
-    }
-    failAt(source, position, prefix, "unterminated raw comment");
-    size
-}
+expectSymbol := fn(source: String, position: Int, symbol: String, prefix: String): Int { syntax.expectSymbol(source, position, symbol, prefix) };
 
 /** Returns the position after one ordinary comment, including nested comments and embedded raw comments. */
-skipComment := fn(source: String, position: Int, prefix: String): Int {
-    fence := rawFenceLength(source, position);
-    if fence > 0 { return skipRawComment(source, position, fence, prefix); }
-    var cursor := position + 2;
-    var depth := 1;
-    loop depth > 0 {
-        closeAt := textLib.indexOfText(source, "*/", cursor);
-        if closeAt < 0 {
-            failAt(source, position, prefix, "unterminated comment");
-        }
-        openAt := textLib.indexOfText(source, "/*", cursor);
-        if openAt >= 0 and openAt < closeAt {
-            innerFence := rawFenceLength(source, openAt);
-            if innerFence > 0 {
-                cursor = skipRawComment(source, openAt, innerFence, prefix);
-            } else {
-                depth = depth + 1;
-                cursor = openAt + 2;
-            }
-        } else {
-            depth = depth - 1;
-            cursor = closeAt + 2;
-        }
-    }
-    cursor
-}
+skipComment := fn(source: String, position: Int, prefix: String): Int { syntax.skipComment(source, position, prefix) };
 
 /** Returns the first position at or after `start` that is neither whitespace nor a comment; comments separate tokens as whitespace does. */
-skipTrivia := fn(source: String, start: Int, prefix: String): Int {
-    size := textLib.length(source);
-    var position := start;
-    loop position < size {
-        ch := textLib.at(source, position);
-        if ch == " " or ch == "\t" or ch == "\r" or ch == "\n" {
-            position = position + 1;
-        } else if ch == "/" and textLib.startsWithAt(source, position, "/*") {
-            position = skipComment(source, position, prefix);
-        } else {
-            break;
-        }
-    }
-    position
-}
+skipTrivia := fn(source: String, start: Int, prefix: String): Int { syntax.skipTrivia(source, start, prefix) };
 
 /** Consumes an explicit separator or an implicit boundary at EOF, a closing scope or a directly closed block expression. Returns -1 when a simple item still needs a separator. */
-consumeStatementEnd := fn(source: String, position: Int, prefix: String): Int {
-    next := skipTrivia(source, position, prefix);
-    if next < textLib.length(source) and textLib.at(source, next) == ";" { return skipTrivia(source, next + 1, prefix); }
-    if next == textLib.length(source) or textLib.at(source, next) == "}" or
-    (position > 0 and textLib.at(source, position - 1) == "}") { return next; }
-    -1
-}
+consumeStatementEnd := fn(source: String, position: Int, prefix: String): Int { syntax.consumeStatementEnd(source, position, prefix) };
 
 /** True for a Lite keyword that this restricted compiler does not implement. */
-isReservedWord := fn(name: String): Bool {
-    name == "pub" or name == "var" or name == "mut" or name == "fn" or name == "loop" or
-    name == "break" or name == "continue" or name == "return" or name == "if" or
-    name == "else" or name == "then" or name == "finally" or name == "match" or
-    name == "import" or name == "using" or name == "record" or name == "type" or
-    name == "and" or name == "or" or name == "not" or name == "true" or name == "false"
-}
-
-/** Returns the documentation path for one reserved Lite feature. */
-featureDoc := fn(name: String): String {
-    match {
-        name == "loop" { "docs/loops.md" }
-        name == "if" or name == "else" or name == "and" or name == "or" or name == "not" or
-        name == "true" or name == "false" { "docs/conditionals.md" }
-        name == "var" or name == "mut" { "docs/declarations-and-assignment.md" }
-        name == "fn" or name == "return" { "docs/functions.md" }
-        name == "match" { "docs/match.md" }
-        name == "pub" or name == "import" or name == "using" { "docs/modules-and-packages.md" }
-        name == "record" or name == "type" { "docs/types-and-inference.md" }
-        name == "break" or name == "continue" { "docs/control-flow.md" }
-        name == "then" or name == "finally" { "docs/finally.md" }
-        _ { "docs/grammar-sketch.md" }
-    }
-}
+isReservedWord := fn(name: String): Bool { syntax.isReservedWord(name) };
 
 /** Reports a reserved Lite feature this compiler checkpoint cannot translate, with its documentation reference, then exits 2. */
-unsupportedFeature := fn(source: String, position: Int, name: String, prefix: String): Unit {
-    failAt(source, position, prefix, "unsupported feature \"" + name + "\": see " + featureDoc(name) +
-    "; the restricted compiler accepts Int/Float/String/Bool expressions, locals, output/outputLine, if/else and loop only");
-}
+unsupportedFeature := fn(source: String, position: Int, name: String, prefix: String): Unit { syntax.unsupportedFeature(source, position, name, prefix); };
 
 /** Returns the index of the previously declared function named `name`, or -1. */
 findFunction := fn(functions: List<FunctionInfo>, name: String): Int {
@@ -718,32 +607,8 @@ pub arrayElementKind := fn(kind: String): String {
     textLib.slice(kind, 1, semi)
 }
 
-/** Maps one ASCII decimal digit character to its integer value 0..9. */
-decimalDigit := fn(ch: String): Int {
-    match {
-        ch == "0" { 0 }
-        ch == "1" { 1 }
-        ch == "2" { 2 }
-        ch == "3" { 3 }
-        ch == "4" { 4 }
-        ch == "5" { 5 }
-        ch == "6" { 6 }
-        ch == "7" { 7 }
-        ch == "8" { 8 }
-        _ { 9 }
-    }
-}
-
 /** Parses non-negative decimal digits in `text` from `start` to `end`. */
-parseDigits := fn(text: String, start: Int, end: Int): Int {
-    var result := 0;
-    var cursor := start;
-    loop cursor < end {
-        result = result * 10 + decimalDigit(textLib.at(text, cursor));
-        cursor = cursor + 1;
-    }
-    result
-}
+parseDigits := fn(text: String, start: Int, end: Int): Int { syntax.parseDigits(text, start, end) };
 
 /** Returns the integer extent from `[ElementKind;Extent]`. */
 pub arrayExtent := fn(kind: String): Int {
@@ -1617,66 +1482,19 @@ claimOrMakeLocalRuntime := fn(target: String, locals: List<Local>, name: String,
 }
 
 /** True for the ten comparison spellings accepted by this checkpoint. */
-isComparison := fn(operator: String): Bool {
-    operator == "==" or operator == "=!=" or operator == "<" or operator == "<!" or
-    operator == "<=" or operator == "<!=" or operator == ">" or operator == ">!" or
-    operator == ">=" or operator == ">!="
-}
+isComparison := fn(operator: String): Bool { syntax.isComparison(operator) };
 
 /** Precedence level of a recognized binary operator; comparisons bind below arithmetic and logic binds below comparisons. */
-operatorLevel := fn(operator: String): Int {
-    if operator == "or" { 2 }
-    else if operator == "and" { 3 }
-    else if isComparison(operator) { 5 }
-    else if operator == "+" or operator == "-" { 10 }
-    else if operator == "*" or operator == "/" or operator == "%" or operator == ":/" or operator == ":%" { 20 }
-    else if operator == "**" { 25 }
-    else { 0 }
-}
+operatorLevel := fn(operator: String): Int { syntax.operatorLevel(operator) };
 
 /** Reads an operator at `position`, preferring the longest spelling; returns empty text when none starts there. */
-readOperator := fn(source: String, position: Int): Operator {
-    ch := textLib.at(source, position);
-    if ch == "*" {
-        if textLib.startsWithAt(source, position, "**") { return (text = "**", width = 2); }
-        return (text = "*", width = 1);
-    }
-    if textLib.startsWithAt(source, position, "=!=") { return (text = "=!=", width = 3); }
-    if textLib.startsWithAt(source, position, "<!=") { return (text = "<!=", width = 3); }
-    if textLib.startsWithAt(source, position, ">!=") { return (text = ">!=", width = 3); }
-    if textLib.startsWithAt(source, position, "==") { return (text = "==", width = 2); }
-    if textLib.startsWithAt(source, position, "<=") { return (text = "<=", width = 2); }
-    if textLib.startsWithAt(source, position, ">=") { return (text = ">=", width = 2); }
-    if textLib.startsWithAt(source, position, "<!") { return (text = "<!", width = 2); }
-    if textLib.startsWithAt(source, position, ">!") { return (text = ">!", width = 2); }
-    if ch == "<" { return (text = "<", width = 1); }
-    if ch == ">" { return (text = ">", width = 1); }
-    if ch == "+" or ch == "-" or ch == "/" or ch == "%" { return (text = ch, width = 1); }
-    if textLib.startsWithAt(source, position, ":/") { return (text = ":/", width = 2); }
-    if textLib.startsWithAt(source, position, ":%") { return (text = ":%", width = 2); }
-    if textLib.isNameStart(ch) {
-        after := textLib.skipName(source, position);
-        word := textLib.slice(source, position, after);
-        if word == "and" or word == "or" { return (text = word, width = after - position); }
-    }
-    (text = "", width = 0)
-}
+readOperator := fn(source: String, position: Int): Operator { syntax.readOperator(source, position) };
 
 /** True when a parsed atom is followed by a binary operator belonging to this precedence-climbing invocation. */
-binaryFollows := fn(source: String, next: Int, prefix: String, minimum: Int): Bool {
-    cursor := skipTrivia(source, next, prefix);
-    if cursor >= textLib.length(source) { return false; }
-    operator := readOperator(source, cursor);
-    operator.text =!= "" and operatorLevel(operator.text) >= minimum
-}
+binaryFollows := fn(source: String, next: Int, prefix: String, minimum: Int): Bool { syntax.binaryFollows(source, next, prefix, minimum) };
 
 /** Peeks only for a following comparison; the one-character filter avoids a full operator scan for ordinary delimiters and logic. */
-comparisonOperatorAt := fn(source: String, position: Int): Operator {
-    if position >= textLib.length(source) { return (text = "", width = 0); }
-    ch := textLib.at(source, position);
-    if ch == "=" or ch == "<" or ch == ">" { return readOperator(source, position); }
-    (text = "", width = 0)
-}
+comparisonOperatorAt := fn(source: String, position: Int): Operator { syntax.comparisonOperatorAt(source, position) };
 
 /** Folds one of the ten Int comparisons to a Bool. */
 compareIntegers := fn(operator: String, left: Int, right: Int): Bool {
@@ -1747,144 +1565,14 @@ compareParsed := fn(target: String, source: String, at: Int, operator: String, l
 }
 
 /** Admits an integer literal into a narrow Int or exact Float/Float32 storage context only when not followed by a binary operator at `minimum`. */
-contextualIntegerParsed := fn(target: String, source: String, position: Int, prefix: String, expected: String, minimum: Int, value: Int, code: String, next: Int): Parsed {
-    if expected =!= "" and expected =!= VALUE_KIND_INT and not binaryFollows(source, next, prefix, minimum) {
-        if numeric.isNarrowIntKind(expected) {
-            if not numeric.intKindFits(expected, value) {
-                failAt(source, position, prefix, "integer literal outside " + expected + " range");
-            }
-            return typedIntParsed(expected, code, value, true, next);
-        }
-        if expected == VALUE_KIND_FLOAT32 {
-            if not numeric.intExactlyFloat32(value) {
-                failAt(source, position, prefix, "integer literal is not exactly representable in Float32");
-            }
-            return (kind = VALUE_KIND_FLOAT32, code = ir.targetFloat32OperandCode(target, VALUE_KIND_INT, code), intValue = 0, textValue = "", constant = false, next = next);
-        }
-        if expected == VALUE_KIND_FLOAT {
-            if not numeric.intExactlyFloat(value) {
-                failAt(source, position, prefix, "integer literal is not exactly representable in Float");
-            }
-            return (kind = VALUE_KIND_FLOAT, code = ir.targetFloatOperandCode(target, VALUE_KIND_INT, code), intValue = 0, textValue = "", constant = false, next = next);
-        }
-    }
-    intParsed(code, value, true, next)
-}
-
 /** Parses signed decimal numeric literals in one scan, applying contextual narrow/Float width checks when the atom completes the expression. */
-parseNumber := fn(target: String, source: String, position: Int, prefix: String, expected: String, minimum: Int): Parsed {
-    var cursor := position;
-    var negative := false;
-    ch := textLib.at(source, cursor);
-    if ch == "+" or ch == "-" {
-        negative = ch == "-";
-        cursor = skipTrivia(source, cursor + 1, prefix);
-    }
-    start := cursor;
-    afterDigit := cursor + 1;
-    following := if afterDigit < textLib.length(source) { textLib.at(source, afterDigit) } else { "" };
-    if textLib.isDigit(textLib.at(source, cursor)) and not textLib.isDigit(following) and following =!= "." and following =!= "e" and following =!= "E" {
-        /* A lone decimal digit is always small: skip the general scanner record on this hot path. */
-        digit := textLib.digitValue(textLib.at(source, cursor));
-        value := if negative { -digit } else { digit };
-        code := ir.targetIntLiteralCode(target, value, negative, textLib.slice(source, cursor, afterDigit));
-        return contextualIntegerParsed(target, source, position, prefix, expected, minimum, value, code, afterDigit);
-    }
-    scanned := numeric.scanNumericLiteral(source, cursor);
-    cursor = scanned.next;
-    integerEnd := scanned.integerEnd;
-    if start == integerEnd { failAt(source, position, prefix, "expected a decimal numeric literal"); }
-    if scanned.exponentMissingAt >= 0 { failAt(source, scanned.exponentMissingAt, prefix, "expected exponent digits"); }
-    var digitStart := start;
-    loop digitStart + 1 < integerEnd and textLib.at(source, digitStart) == "0" { digitStart = digitStart + 1; }
-    if scanned.floating {
-        digits := textLib.slice(source, start, integerEnd) + textLib.slice(source, scanned.fractionStart, scanned.fractionEnd);
-        fractionCount := scanned.fractionEnd - scanned.fractionStart;
-        raw := textLib.slice(source, digitStart, cursor);
-        if expected == VALUE_KIND_FLOAT32 and not binaryFollows(source, cursor, prefix, minimum) {
-            if not numeric.finiteFloat32Digits(digits, fractionCount, scanned.exponent) {
-                failAt(source, position, prefix, "floating literal outside Float32 range");
-            }
-            return (kind = VALUE_KIND_FLOAT32, code = ir.targetFloat32LiteralCode(target, raw, negative), intValue = 0, textValue = "", constant = false, next = cursor);
-        }
-        if not numeric.finiteFloatDigits(digits, fractionCount, scanned.exponent) {
-            failAt(source, position, prefix, "floating literal is not finite");
-        }
-        code := ir.targetFloatLiteralCode(target, raw, negative);
-        return (kind = VALUE_KIND_FLOAT, code = code, intValue = 0, textValue = "", constant = false, next = cursor);
-    }
-    if scanned.outsideInt or (not negative and scanned.magnitude == -9223372036854775808) {
-        if numeric.isNarrowIntKind(expected) and not binaryFollows(source, cursor, prefix, minimum) {
-            failAt(source, position, prefix, "integer literal outside " + expected + " range");
-        }
-        failAt(source, position, prefix, "integer literal outside signed 64-bit range");
-    }
-    value := if negative { scanned.magnitude } else { 0 - scanned.magnitude };
-    code := ir.targetIntLiteralCode(target, value, negative, textLib.slice(source, digitStart, cursor));
-    contextualIntegerParsed(target, source, position, prefix, expected, minimum, value, code, cursor)
-}
+parseNumber := fn(target: String, source: String, position: Int, prefix: String, expected: String, minimum: Int): Parsed { syntax.parseNumber(target, source, position, prefix, expected, minimum) };
 
 /** Joins adjacent double-quoted literal tokens across trivia in one scan and encodes the complete value once. Escapes and malformed later tokens retain their own source positions. */
-parseText := fn(target: String, source: String, position: Int, prefix: String): Parsed {
-    var literalStart := position;
-    var cursor := position + 1;
-    var value := "";
-    loop true {
-        if cursor >= textLib.length(source) {
-            failAt(source, literalStart, prefix, "unterminated string literal");
-        }
-        ch := textLib.at(source, cursor);
-        if ch == "\"" {
-            cursor = cursor + 1;
-            next := skipTrivia(source, cursor, prefix);
-            if next < textLib.length(source) and textLib.at(source, next) == "\"" {
-                literalStart = next;
-                cursor = next + 1;
-                continue;
-            }
-            break;
-        }
-        if ch == "\\" {
-            escapeStart := cursor;
-            cursor = cursor + 1;
-            if cursor >= textLib.length(source) {
-                failAt(source, escapeStart, prefix, "unterminated string escape");
-            }
-            escaped := textLib.at(source, cursor);
-            if escaped == "n" { value = value + "\n"; }
-            else if escaped == "t" { value = value + "\t"; }
-            else if escaped == "r" { value = value + "\r"; }
-            else if escaped == "\"" { value = value + "\""; }
-            else if escaped == "\\" { value = value + "\\"; }
-            else {
-                failAt(source, escapeStart, prefix, "unsupported string escape \\" + escaped);
-            }
-            cursor = cursor + 1;
-        } else {
-            value = value + ch;
-            cursor = cursor + 1;
-        }
-    }
-    textParsed(ir.targetTextLiteralCode(target, value), value, true, cursor)
-}
+parseText := fn(target: String, source: String, position: Int, prefix: String): Parsed { syntax.parseText(target, source, position, prefix) };
 
 /** Returns the position after one string literal, or the source end when it does not close; alias collection leaves lexical diagnostics to the main pass. */
-pub skipAliasString := fn(source: String, position: Int): Int {
-    var cursor := position + 1;
-    loop true {
-        quoteAt := textLib.indexOfText(source, "\"", cursor);
-        if quoteAt < 0 { return textLib.length(source); }
-        var unescaped := true;
-        var check := quoteAt - 1;
-        loop check >= cursor and textLib.at(source, check) == "\\" {
-            unescaped = not unescaped;
-            check = check - 1;
-        }
-        if unescaped { return quoteAt + 1; }
-        cursor = quoteAt + 1;
-    }
-    textLib.length(source)
-}
+pub skipAliasString := fn(source: String, position: Int): Int { syntax.skipAliasString(source, position) };
 
 /** Collects distinct target or user-function call tokens, skipping quoted text and consuming whole identifiers. */
 scanCodeCalls := fn(code: String, existing: String, userFnsOnly: Bool): String {
@@ -2405,43 +2093,10 @@ collectTypeTarget := fn(source: String, position: Int, prefix: String): (text: S
 }
 
 /** True for the single assignment/field equals token, excluding both equality and inequality operators. */
-isSingleEquals := fn(source: String, position: Int): Bool {
-    textLib.startsWithAt(source, position, "=") and not textLib.startsWithAt(source, position, "==") and not textLib.startsWithAt(source, position, "=!=")
-}
+isSingleEquals := fn(source: String, position: Int): Bool { syntax.isSingleEquals(source, position) };
 
 /** True when the text after an opening `(` is a tuple literal (`label = ...`, `=name`, or contains a top-level `,`), rather than grouping. */
-looksLikeTupleEntry := fn(source: String, position: Int, prefix: String): Bool {
-    size := textLib.length(source);
-    start := skipTrivia(source, position, prefix);
-    if start >= size { return false; }
-    if isSingleEquals(source, start) { return true; }
-    if textLib.isNameStart(textLib.at(source, start)) {
-        afterName := skipTrivia(source, textLib.skipName(source, start), prefix);
-        if isSingleEquals(source, afterName) { return true; }
-    }
-    var cursor := start;
-    var depth := 0;
-    loop cursor < size {
-        ch := textLib.at(source, cursor);
-        if ch == "\"" {
-            cursor = skipAliasString(source, cursor);
-        } else if ch == "/" and textLib.startsWithAt(source, cursor, "/*") {
-            cursor = skipComment(source, cursor, prefix);
-        } else if ch == "(" or ch == "[" or ch == "{" {
-            depth = depth + 1;
-            cursor = cursor + 1;
-        } else if ch == ")" or ch == "]" or ch == "}" {
-            if depth == 0 { return false; }
-            depth = depth - 1;
-            cursor = cursor + 1;
-        } else if depth == 0 and ch == "," {
-            return true;
-        } else {
-            cursor = cursor + 1;
-        }
-    }
-    false
-}
+looksLikeTupleEntry := fn(source: String, position: Int, prefix: String): Bool { syntax.looksLikeTupleEntry(source, position, prefix) };
 
 /** Wraps target code in the backend's list-copy hook when `kind` is a List; `Never` and other kinds are unchanged. */
 copiedValueCode := fn(target: String, kind: String, code: String): String {
@@ -2518,59 +2173,16 @@ parseListGrant := fn(source: String, open: Int, prefix: String, locals: List<Loc
 }
 
 /** Finds the end of a grouped atom without interpreting its values; strings and comments cannot close the group. */
-scanParenEnd := fn(source: String, open: Int, prefix: String): Int {
-    var cursor := open;
-    var depth := 0;
-    size := textLib.length(source);
-    loop cursor < size {
-        ch := textLib.at(source, cursor);
-        if ch == "\"" { cursor = skipAliasString(source, cursor); }
-        else if ch == "/" and textLib.startsWithAt(source, cursor, "/*") { cursor = skipComment(source, cursor, prefix); }
-        else if ch == "(" { depth = depth + 1; cursor = cursor + 1; }
-        else if ch == ")" {
-            depth = depth - 1;
-            cursor = cursor + 1;
-            if depth == 0 { return cursor; }
-        } else { cursor = cursor + 1; }
-    }
-    -1
-}
+scanParenEnd := fn(source: String, open: Int, prefix: String): Int { syntax.scanParenEnd(source, open, prefix) };
 
 /** Returns the end position of a standalone `0` initializer literal (followed by `;`, `}`, or EOF), or -1 otherwise. */
-isZeroInitLiteral := fn(source: String, position: Int, prefix: String): Int {
-    start := skipTrivia(source, position, prefix);
-    size := textLib.length(source);
-    if start >= size or textLib.at(source, start) =!= "0" { return -1; }
-    if start + 1 < size and (textLib.isDigit(textLib.at(source, start + 1)) or textLib.isNameStart(textLib.at(source, start + 1)) or textLib.at(source, start + 1) == ".") {
-        return -1;
-    }
-    after := skipTrivia(source, start + 1, prefix);
-    if after >= size or textLib.at(source, after) == ";" or textLib.at(source, after) == "}" {
-        return start + 1;
-    }
-    -1
-}
+isZeroInitLiteral := fn(source: String, position: Int, prefix: String): Int { syntax.isZeroInitLiteral(source, position, prefix) };
 
 /** Returns the position after `?` when `position` starts a reserved-storage marker, or -1 otherwise. */
-isReservedInitMarker := fn(source: String, position: Int, prefix: String): Int {
-    start := skipTrivia(source, position, prefix);
-    if start < textLib.length(source) and textLib.at(source, start) == "?" {
-        return start + 1;
-    }
-    -1
-}
+isReservedInitMarker := fn(source: String, position: Int, prefix: String): Int { syntax.isReservedInitMarker(source, position, prefix) };
 
 /** Recognizes one compound assignment operator at `position`, returning empty fields when absent. */
-compoundAssignOp := fn(source: String, position: Int): (op: String, baseOp: String, width: Int) {
-    if textLib.startsWithAt(source, position, ":/=") { return (op = ":/=", baseOp = ":/", width = 3); }
-    if textLib.startsWithAt(source, position, ":%=") { return (op = ":%=", baseOp = ":%", width = 3); }
-    if textLib.startsWithAt(source, position, "+=") { return (op = "+=", baseOp = "+", width = 2); }
-    if textLib.startsWithAt(source, position, "-=") { return (op = "-=", baseOp = "-", width = 2); }
-    if textLib.startsWithAt(source, position, "*=") { return (op = "*=", baseOp = "*", width = 2); }
-    if textLib.startsWithAt(source, position, "/=") { return (op = "/=", baseOp = "/", width = 2); }
-    if textLib.startsWithAt(source, position, "%=") { return (op = "%=", baseOp = "%", width = 2); }
-    (op = "", baseOp = "", width = 0)
-}
+compoundAssignOp := fn(source: String, position: Int): (op: String, baseOp: String, width: Int) { syntax.compoundAssignOp(source, position) };
 
 /** Lowers a compound assignment RHS computation for Int*, Float*, or String (`+=`). */
 compoundAssignCode := fn(target: String, source: String, opPos: Int, prefix: String, entryKind: String, lhsCode: String, baseOp: String, rhs: Parsed): String {
@@ -2839,13 +2451,7 @@ parseLocalType := fn(source: String, position: Int, prefix: String, aliases: Lis
 }
 
 /** Skips empty item separators without changing the final ordinary item's result. */
-skipItemSeparators := fn(source: String, position: Int, prefix: String): Int {
-    var next := skipTrivia(source, position, prefix);
-    loop next < textLib.length(source) and textLib.at(source, next) == ";" {
-        next = skipTrivia(source, next + 1, prefix);
-    }
-    next
-}
+skipItemSeparators := fn(source: String, position: Int, prefix: String): Int { syntax.skipItemSeparators(source, position, prefix) };
 
 /** Returns a copy of `values` with element `index` replaced by `value`. */
 setIntAt := fn(values: List<Int>, index: Int, value: Int): List<Int> {
@@ -2880,153 +2486,19 @@ findParamSlot := fn(params: List<String>, first: Int, count: Int, label: String)
 }
 
 /** Scans from `position` to the next top-level `,` or `)` at paren/bracket/brace depth 0. */
-skipBalancedArgument := fn(source: String, position: Int, prefix: String): Int {
-    size := textLib.length(source);
-    var cursor := position;
-    var depth := 0;
-    loop cursor < size {
-        ch := textLib.at(source, cursor);
-        if ch == "\"" {
-            cursor = skipAliasString(source, cursor);
-        } else if ch == "/" and textLib.startsWithAt(source, cursor, "/*") {
-            cursor = skipComment(source, cursor, prefix);
-        } else if ch == "(" or ch == "[" or ch == "{" {
-            depth = depth + 1;
-            cursor = cursor + 1;
-        } else if ch == ")" {
-            if depth == 0 { return cursor; }
-            depth = depth - 1;
-            cursor = cursor + 1;
-        } else if ch == "]" or ch == "}" {
-            if depth > 0 { depth = depth - 1; }
-            cursor = cursor + 1;
-        } else if ch == "," and depth == 0 {
-            return cursor;
-        } else {
-            cursor = cursor + 1;
-        }
-    }
-    cursor
-}
+skipBalancedArgument := fn(source: String, position: Int, prefix: String): Int { syntax.skipBalancedArgument(source, position, prefix) };
 
 /** Collects explicit `name = ...` and `=name` parameter labels present in a call argument list starting at `openParen`. */
-collectExplicitCallLabels := fn(source: String, openParen: Int, prefix: String): List<String> {
-    labels: mut List<String> = [];
-    size := textLib.length(source);
-    var cursor := skipTrivia(source, openParen + 1, prefix);
-    loop cursor < size and textLib.at(source, cursor) =!= ")" {
-        if isSingleEquals(source, cursor) {
-            nameStart := skipTrivia(source, cursor + 1, prefix);
-            if nameStart < size and textLib.isNameStart(textLib.at(source, nameStart)) {
-                nameEnd := textLib.skipName(source, nameStart);
-                listLib.pushBack(mut labels, textLib.slice(source, nameStart, nameEnd));
-            }
-        } else if textLib.isNameStart(textLib.at(source, cursor)) {
-            nameEnd := textLib.skipName(source, cursor);
-            afterName := skipTrivia(source, nameEnd, prefix);
-            if isSingleEquals(source, afterName) {
-                listLib.pushBack(mut labels, textLib.slice(source, cursor, nameEnd));
-            }
-        }
-        cursor = skipBalancedArgument(source, cursor, prefix);
-        if cursor < size and textLib.at(source, cursor) == "," {
-            cursor = skipTrivia(source, cursor + 1, prefix);
-            if cursor < size and textLib.at(source, cursor) == ")" { break; }
-        } else {
-            break;
-        }
-    }
-    labels
-}
+collectExplicitCallLabels := fn(source: String, openParen: Int, prefix: String): List<String> { syntax.collectExplicitCallLabels(source, openParen, prefix) };
 
 /** Parses `()`, `(name)` or `(name1, name2, ...)` for tuple destructuring declarations, allowing empty or nested-scope rebinding. */
-parseTupleDestructureTarget := fn(source: String, open: Int, prefix: String): (namesText: String, count: Int, grouped: Bool, next: Int) {
-    size := textLib.length(source);
-    var cursor := skipTrivia(source, open + 1, prefix);
-    names: mut List<String> = [];
-    var count := 0;
-    var hadComma := false;
-    loop cursor < size and textLib.at(source, cursor) =!= ")" {
-        if not textLib.isNameStart(textLib.at(source, cursor)) {
-            failAt(source, cursor, prefix, "expected a binding name in tuple destructuring");
-        }
-        nameStart := cursor;
-        cursor = textLib.skipName(source, cursor);
-        bindName := textLib.slice(source, nameStart, cursor);
-        if isReservedWord(bindName) { unsupportedFeature(source, nameStart, bindName, prefix); }
-        listLib.pushBack(mut names, bindName);
-        count = count + 1;
-        cursor = skipTrivia(source, cursor, prefix);
-        if cursor < size and textLib.at(source, cursor) == "," {
-            hadComma = true;
-            cursor = skipTrivia(source, cursor + 1, prefix);
-        } else {
-            break;
-        }
-    }
-    next := expectSymbol(source, cursor, ")", prefix);
-    (namesText = textLib.joinTexts(names, ","), count = count, grouped = count == 1 and not hadComma, next = next)
-}
+parseTupleDestructureTarget := fn(source: String, open: Int, prefix: String): (namesText: String, count: Int, grouped: Bool, next: Int) { syntax.parseTupleDestructureTarget(source, open, prefix) };
 
 /** Returns the position of the `{` that opens the branch after the condition starting at `start`, or -1 when absent. */
-scanConditionOpen := fn(source: String, start: Int, prefix: String): Int {
-    size := textLib.length(source);
-    var cursor := start;
-    var depth := 0;
-    loop cursor < size {
-        ch := textLib.at(source, cursor);
-        if ch == "\"" {
-            cursor = skipAliasString(source, cursor);
-        } else if ch == "/" and textLib.startsWithAt(source, cursor, "/*") {
-            cursor = skipComment(source, cursor, prefix);
-        } else if ch == "(" or ch == "[" {
-            depth = depth + 1;
-            cursor = cursor + 1;
-        } else if ch == ")" or ch == "]" {
-            if depth > 0 { depth = depth - 1; }
-            cursor = cursor + 1;
-        } else if ch == "{" and depth == 0 {
-            return cursor;
-        } else {
-            cursor = cursor + 1;
-        }
-    }
-    -1
-}
+scanConditionOpen := fn(source: String, start: Int, prefix: String): Int { syntax.scanConditionOpen(source, start, prefix) };
 
 /** Locates an ordinary item's separator or enclosing close for contextual tail typing, without interpreting values. */
-scanExpressionItemEnd := fn(source: String, start: Int, prefix: String): Int {
-    var cursor := start;
-    var depth := 0;
-    size := textLib.length(source);
-    loop cursor < size {
-        ch := textLib.at(source, cursor);
-        if ch == "\"" { cursor = skipAliasString(source, cursor); }
-        else if ch == "/" and textLib.startsWithAt(source, cursor, "/*") { cursor = skipComment(source, cursor, prefix); }
-        else if depth == 0 and (ch == ";" or ch == "}") { return cursor; }
-        else {
-            if ch == "(" or ch == "[" or ch == "{" {
-                depth = depth + 1;
-                cursor = cursor + 1;
-            } else if ch == "}" and depth == 1 {
-                depth = 0;
-                cursor = cursor + 1;
-                afterClose := skipTrivia(source, cursor, prefix);
-                if afterClose >= size or (not textLib.wordAt(source, afterClose, "else") and
-                not textLib.wordAt(source, afterClose, "then") and
-                not textLib.wordAt(source, afterClose, "finally")) {
-                    return cursor;
-                }
-            } else if ch == ")" or ch == "]" or ch == "}" {
-                if depth > 0 { depth = depth - 1; }
-                cursor = cursor + 1;
-            } else {
-                cursor = cursor + 1;
-            }
-        }
-    }
-    cursor
-}
+scanExpressionItemEnd := fn(source: String, start: Int, prefix: String): Int { syntax.scanExpressionItemEnd(source, start, prefix) };
 
 /** Extracts the loop context id encoded in a Pass 1 `"__loopVal:<id>"` placeholder kind, or returns -1. */
 loopValMarkerId := fn(kind: String): Int {
@@ -3038,7 +2510,7 @@ loopValMarkerId := fn(kind: String): Int {
     loop index < textLib.length(suffix) {
         ch := textLib.at(suffix, index);
         if not textLib.isDigit(ch) { return -1; }
-        value = value * 10 + decimalDigit(ch);
+        value = value * 10 + syntax.decimalDigit(ch);
         index = index + 1;
     }
     value
@@ -3208,40 +2680,13 @@ codeHasRawTransfer := fn(code: String): Bool {
 }
 
 /** Parses one `@tag` token starting at `atPos`. */
-parseTagAt := fn(source: String, atPos: Int, prefix: String): (tag: String, next: Int, at: Int) {
-    size := textLib.length(source);
-    nameStart := atPos + 1;
-    if nameStart >= size or not textLib.isNameStart(textLib.at(source, nameStart)) {
-        failAt(source, atPos, prefix, "expected tag name after @");
-    }
-    nameEnd := textLib.skipName(source, nameStart);
-    tag := textLib.slice(source, nameStart, nameEnd);
-    if isReservedWord(tag) {
-        failAt(source, nameStart, prefix, "tag name cannot be reserved word " + tag);
-    }
-    (tag = tag, next = nameEnd, at = atPos)
-}
+parseTagAt := fn(source: String, atPos: Int, prefix: String): (tag: String, next: Int, at: Int) { syntax.parseTagAt(source, atPos, prefix) };
 
 /** Rejects a block `@tag` where a construct header, else/then/finally clause or opening brace cannot accept one. */
-rejectMisplacedTag := fn(source: String, position: Int, prefix: String, message: String): Unit {
-    pos := skipTrivia(source, position, prefix);
-    if pos < textLib.length(source) and textLib.at(source, pos) == "@" {
-        failAt(source, pos, prefix, message);
-    }
-}
+rejectMisplacedTag := fn(source: String, position: Int, prefix: String, message: String): Unit { syntax.rejectMisplacedTag(source, position, prefix, message); };
 
 /** Rejects an unparenthesized `@tag { ... }` at the start of a header condition while preserving `@tag.field` metadata reads. */
-rejectHeaderBlockTag := fn(source: String, position: Int, prefix: String, constructName: String): Unit {
-    pos := skipTrivia(source, position, prefix);
-    size := textLib.length(source);
-    if pos < size and textLib.at(source, pos) == "@" {
-        parsed := parseTagAt(source, pos, prefix);
-        afterTag := skipTrivia(source, parsed.next, prefix);
-        if afterTag >= size or textLib.at(source, afterTag) =!= "." {
-            failAt(source, pos, prefix, "unexpected block tag @" + parsed.tag + " in " + constructName + " header");
-        }
-    }
-}
+rejectHeaderBlockTag := fn(source: String, position: Int, prefix: String, constructName: String): Unit { syntax.rejectHeaderBlockTag(source, position, prefix, constructName); };
 
 /** True when `parsed` encodes Pass 1 exit markers in `textValue`. */
 hasMarkerPrefix := fn(parsed: Parsed): Bool {
@@ -3379,258 +2824,28 @@ callReordersArgs := fn(source: String, openParen: Int, prefix: String, params: L
 }
 
 /** Scans from `start` with initial brace `depthStart`, skipping strings and comments; returns the end position or -1 when unclosed. */
-scanBracedRange := fn(source: String, start: Int, depthStart: Int, prefix: String): Int {
-    size := textLib.length(source);
-    var cursor := start;
-    var depth := depthStart;
-    var nextOpen := textLib.indexOfText(source, "{", start);
-    var nextClose := textLib.indexOfText(source, "}", start);
-    var nextQuote := textLib.indexOfText(source, "\"", start);
-    var nextComment := textLib.indexOfText(source, "/*", start);
-    loop cursor < size {
-        if nextOpen >= 0 and nextOpen < cursor { nextOpen = textLib.indexOfText(source, "{", cursor); }
-        if nextClose >= 0 and nextClose < cursor { nextClose = textLib.indexOfText(source, "}", cursor); }
-        if nextQuote >= 0 and nextQuote < cursor { nextQuote = textLib.indexOfText(source, "\"", cursor); }
-        if nextComment >= 0 and nextComment < cursor { nextComment = textLib.indexOfText(source, "/*", cursor); }
-        var hit := size;
-        var kind := SCAN_HIT_NONE;
-        if nextQuote >= 0 and nextQuote < hit { hit = nextQuote; kind = SCAN_HIT_QUOTE; }
-        if nextComment >= 0 and nextComment < hit { hit = nextComment; kind = SCAN_HIT_COMMENT; }
-        if nextOpen >= 0 and nextOpen < hit { hit = nextOpen; kind = SCAN_HIT_OPEN; }
-        if nextClose >= 0 and nextClose < hit { hit = nextClose; kind = SCAN_HIT_CLOSE; }
-        if kind == SCAN_HIT_NONE { return -1; }
-        if kind == SCAN_HIT_QUOTE {
-            cursor = skipAliasString(source, hit);
-        } else if kind == SCAN_HIT_COMMENT {
-            cursor = skipComment(source, hit, prefix);
-        } else if kind == SCAN_HIT_OPEN {
-            depth = depth + 1;
-            cursor = hit + 1;
-        } else {
-            depth = depth - 1;
-            cursor = hit + 1;
-            if depth == 0 { return cursor; }
-        }
-    }
-    -1
-}
+scanBracedRange := fn(source: String, start: Int, depthStart: Int, prefix: String): Int { syntax.scanBracedRange(source, start, depthStart, prefix) };
 
 /** Returns the position after the braced block starting at `open`, or -1 when it never closes. Strings and comments are skipped. */
-scanBraceEnd := fn(source: String, open: Int, prefix: String): Int {
-    scanBracedRange(source, open, 0, prefix)
-}
+scanBraceEnd := fn(source: String, open: Int, prefix: String): Int { syntax.scanBraceEnd(source, open, prefix) };
 
 /** True when the braced body from `open` to `close` is a nonempty single expression: no semicolon and no statement keyword first. */
-valueIfBranchAt := fn(source: String, open: Int, close: Int, prefix: String): Bool {
-    var cursor := skipTrivia(source, open + 1, prefix);
-    if cursor >= close { return false; }
-    if textLib.isNameStart(textLib.at(source, cursor)) {
-        word := textLib.slice(source, cursor, textLib.skipName(source, cursor));
-        if word == "return" or word == "outputLine" or word == "output" or word == "var" or word == "loop" or
-        word == "break" or word == "continue" or word == "else" {
-            return false;
-        }
-    }
-    var scan := cursor;
-    var braceDepth := 0;
-    loop scan < close {
-        ch := textLib.at(source, scan);
-        if ch == "\"" {
-            scan = skipAliasString(source, scan);
-        } else if ch == "/" and textLib.startsWithAt(source, scan, "/*") {
-            scan = skipComment(source, scan, prefix);
-        } else if ch == "{" {
-            braceDepth = braceDepth + 1;
-            scan = scan + 1;
-        } else if ch == "}" {
-            if braceDepth > 0 { braceDepth = braceDepth - 1; }
-            scan = scan + 1;
-        } else if braceDepth == 0 and (ch == ";" or (ch == "." and textLib.startsWithAt(source, scan, ".output"))) {
-            return false;
-        } else {
-            scan = scan + 1;
-        }
-    }
-    true
-}
-
-/** Skips an optional `@tag` prefix before `keyword` during speculative scanning, returning the keyword start or `position` when untagged (or -1 on non-matching `@`). */
-skipOptionalScanTag := fn(source: String, position: Int, prefix: String, keyword: String): Int {
-    cursor := skipTrivia(source, position, prefix);
-    size := textLib.length(source);
-    if cursor >= size or textLib.at(source, cursor) =!= "@" { return cursor; }
-    nameStart := cursor + 1;
-    if nameStart >= size or not textLib.isNameStart(textLib.at(source, nameStart)) { return -1; }
-    afterTag := skipTrivia(source, textLib.skipName(source, nameStart), prefix);
-    if afterTag < size and textLib.wordAt(source, afterTag, keyword) { afterTag } else { -1 }
-}
-
-/** Scans an optional trailing `then { ... }` clause; returns `position` if absent, `-1` if malformed or failing `requireThenValue`. */
-scanTrailingThenEnd := fn(source: String, position: Int, prefix: String, requireThenValue: Bool): Int {
-    size := textLib.length(source);
-    after := skipTrivia(source, position, prefix);
-    if after >= size or not textLib.wordAt(source, after, "then") { return SCAN_NO_THEN; }
-    thenOpen := skipTrivia(source, after + 4, prefix);
-    if thenOpen >= size or textLib.at(source, thenOpen) =!= "{" { return -1; }
-    thenEnd := scanBraceEnd(source, thenOpen, prefix);
-    if thenEnd < 0 { return -1; }
-    if requireThenValue and not valueIfBranchAt(source, thenOpen, thenEnd - 1, prefix) { return -1; }
-    thenEnd
-}
-
-/** Scans an optional trailing `finally { ... }` clause; returns `position` if absent, or `-1` if malformed. */
-scanTrailingFinallyEnd := fn(source: String, position: Int, prefix: String): Int {
-    size := textLib.length(source);
-    after := skipTrivia(source, position, prefix);
-    if after >= size or not textLib.wordAt(source, after, "finally") { return position; }
-    finOpen := skipTrivia(source, after + 7, prefix);
-    if finOpen >= size or textLib.at(source, finOpen) =!= "{" { return -1; }
-    scanBraceEnd(source, finOpen, prefix)
-}
+valueIfBranchAt := fn(source: String, open: Int, close: Int, prefix: String): Bool { syntax.valueIfBranchAt(source, open, close, prefix) };
 
 /** Scans the raw `[@tag] if ... [else ...]` header+branches ending before any `then` clause; returns -1 on mismatch. */
-scanRawIfChainEnd := fn(source: String, position: Int, prefix: String, allowPartial: Bool): Int {
-    size := textLib.length(source);
-    var cursor := skipOptionalScanTag(source, position, prefix, "if");
-    if cursor < 0 or not textLib.wordAt(source, cursor, "if") { return -1; }
-    cursor = skipTrivia(source, cursor + 2, prefix);
-    loop true {
-        open := scanConditionOpen(source, cursor, prefix);
-        if open < 0 { return -1; }
-        end := scanBraceEnd(source, open, prefix);
-        if end < 0 { return -1; }
-        after := skipTrivia(source, end, prefix);
-        if not textLib.wordAt(source, after, "else") {
-            return if allowPartial { end } else { -1 };
-        }
-        afterElse := skipTrivia(source, after + 4, prefix);
-        if textLib.wordAt(source, afterElse, "if") {
-            cursor = skipTrivia(source, afterElse + 2, prefix);
-        } else {
-            if afterElse >= size or textLib.at(source, afterElse) =!= "{" { return -1; }
-            finalEnd := scanBraceEnd(source, afterElse, prefix);
-            return finalEnd;
-        }
-    }
-    -1
-}
+scanRawIfChainEnd := fn(source: String, position: Int, prefix: String, allowPartial: Bool): Int { syntax.scanRawIfChainEnd(source, position, prefix, allowPartial) };
 
 /** Scans a `[@tag] if` chain, optionally allowing a partial chain without a final `else` and an optional trailing `then { ... }`. */
-scanIfChainEnd := fn(source: String, position: Int, prefix: String, requireValueBranches: Bool, allowPartial: Bool): Int {
-    size := textLib.length(source);
-    var cursor := skipOptionalScanTag(source, position, prefix, "if");
-    if cursor < 0 or not textLib.wordAt(source, cursor, "if") { return -1; }
-    cursor = skipTrivia(source, cursor + 2, prefix);
-    var allBranchesValue := true;
-    loop true {
-        open := scanConditionOpen(source, cursor, prefix);
-        if open < 0 { return -1; }
-        end := scanBraceEnd(source, open, prefix);
-        if end < 0 { return -1; }
-        if requireValueBranches and not valueIfBranchAt(source, open, end - 1, prefix) { allBranchesValue = false; }
-        after := skipTrivia(source, end, prefix);
-        if not textLib.wordAt(source, after, "else") {
-            if not allowPartial { return -1; }
-            if textLib.wordAt(source, after, "then") { return -1; }
-            if requireValueBranches and not allBranchesValue { return -1; }
-            return scanTrailingFinallyEnd(source, end, prefix);
-        }
-        afterElse := skipTrivia(source, after + 4, prefix);
-        if textLib.wordAt(source, afterElse, "if") {
-            cursor = skipTrivia(source, afterElse + 2, prefix);
-        } else {
-            if afterElse >= size or textLib.at(source, afterElse) =!= "{" { return -1; }
-            finalEnd := scanBraceEnd(source, afterElse, prefix);
-            if finalEnd < 0 { return -1; }
-            if requireValueBranches and not valueIfBranchAt(source, afterElse, finalEnd - 1, prefix) { allBranchesValue = false; }
-            thenEnd := scanTrailingThenEnd(source, finalEnd, prefix, requireValueBranches);
-            if thenEnd == -1 { return -1; }
-            baseEnd := if thenEnd == SCAN_NO_THEN {
-                if requireValueBranches and not allBranchesValue { -1 } else { finalEnd }
-            } else {
-                thenEnd
-            };
-            if baseEnd < 0 { return -1; }
-            return scanTrailingFinallyEnd(source, baseEnd, prefix);
-        }
-    }
-    -1
-}
+scanIfChainEnd := fn(source: String, position: Int, prefix: String, requireValueBranches: Bool, allowPartial: Bool): Int { syntax.scanIfChainEnd(source, position, prefix, requireValueBranches, allowPartial) };
 
 /** Scans a total `[@tag] if` chain ending with a final else block and optional `then { ... }`. */
-scanValueIfEnd := fn(source: String, position: Int, prefix: String, requireValueBranches: Bool): Int {
-    scanIfChainEnd(source, position, prefix, requireValueBranches, false)
-}
+scanValueIfEnd := fn(source: String, position: Int, prefix: String, requireValueBranches: Bool): Int { syntax.scanValueIfEnd(source, position, prefix, requireValueBranches) };
 
 /** Scans the raw `[@tag] match { ... }` ending before any `then` clause; returns -1 on mismatch. */
-scanRawMatchEnd := fn(source: String, position: Int, prefix: String): Int {
-    size := textLib.length(source);
-    var cursor := skipOptionalScanTag(source, position, prefix, "match");
-    if cursor < 0 or not textLib.wordAt(source, cursor, "match") { return -1; }
-    openMatch := skipTrivia(source, cursor + 5, prefix);
-    if openMatch >= size or textLib.at(source, openMatch) =!= "{" { return -1; }
-    var armCursor := skipItemSeparators(source, openMatch + 1, prefix);
-    loop armCursor < size {
-        if textLib.at(source, armCursor) == "}" { return -1; }
-        afterUnderscore := skipTrivia(source, armCursor + 1, prefix);
-        isFallback := textLib.wordAt(source, armCursor, "_") and afterUnderscore < size and
-        textLib.at(source, afterUnderscore) == "{";
-        armOpen := if isFallback { afterUnderscore }
-        else { scanConditionOpen(source, armCursor, prefix) };
-        if armOpen < 0 or (not isFallback and armOpen == armCursor) { return -1; }
-        armEnd := scanBraceEnd(source, armOpen, prefix);
-        if armEnd < 0 { return -1; }
-        afterArm := skipItemSeparators(source, armEnd, prefix);
-        if isFallback {
-            if afterArm < size and textLib.at(source, afterArm) == "}" {
-                return afterArm + 1;
-            }
-            return -1;
-        }
-        armCursor = afterArm;
-    }
-    -1
-}
+scanRawMatchEnd := fn(source: String, position: Int, prefix: String): Int { syntax.scanRawMatchEnd(source, position, prefix) };
 
 /** Scans a subjectless Boolean `[@tag] match` ending with a final `_` fallback arm and optional `then { ... }`. */
-scanValueMatchEnd := fn(source: String, position: Int, prefix: String, requireValueBranches: Bool): Int {
-    size := textLib.length(source);
-    var cursor := skipOptionalScanTag(source, position, prefix, "match");
-    if cursor < 0 or not textLib.wordAt(source, cursor, "match") { return -1; }
-    openMatch := skipTrivia(source, cursor + 5, prefix);
-    if openMatch >= size or textLib.at(source, openMatch) =!= "{" { return -1; }
-    var allArmsValue := true;
-    var armCursor := skipItemSeparators(source, openMatch + 1, prefix);
-    loop armCursor < size {
-        if textLib.at(source, armCursor) == "}" { return -1; }
-        afterUnderscore := skipTrivia(source, armCursor + 1, prefix);
-        isFallback := textLib.wordAt(source, armCursor, "_") and afterUnderscore < size and
-        textLib.at(source, afterUnderscore) == "{";
-        armOpen := if isFallback { afterUnderscore }
-        else { scanConditionOpen(source, armCursor, prefix) };
-        if armOpen < 0 or (not isFallback and armOpen == armCursor) { return -1; }
-        armEnd := scanBraceEnd(source, armOpen, prefix);
-        if armEnd < 0 { return -1; }
-        if requireValueBranches and not valueIfBranchAt(source, armOpen, armEnd - 1, prefix) { allArmsValue = false; }
-        afterArm := skipItemSeparators(source, armEnd, prefix);
-        if isFallback {
-            if afterArm < size and textLib.at(source, afterArm) == "}" {
-                thenEnd := scanTrailingThenEnd(source, afterArm + 1, prefix, requireValueBranches);
-                if thenEnd == -1 { return -1; }
-                baseEnd := if thenEnd == SCAN_NO_THEN {
-                    if requireValueBranches and not allArmsValue { -1 } else { afterArm + 1 }
-                } else {
-                    thenEnd
-                };
-                if baseEnd < 0 { return -1; }
-                return scanTrailingFinallyEnd(source, baseEnd, prefix);
-            }
-            return -1;
-        }
-        armCursor = afterArm;
-    }
-    -1
-}
+scanValueMatchEnd := fn(source: String, position: Int, prefix: String, requireValueBranches: Bool): Int { syntax.scanValueMatchEnd(source, position, prefix, requireValueBranches) };
 
 /** Finds the innermost loop context for leading-dot metadata, stopping on conditional, cleanup, or function barriers (-2 conditional, -3 finally, -1 outside). */
 findLeadingDotLoopIdx := fn(ctxs: List<ConstructCtx>): Int {
@@ -3669,77 +2884,10 @@ hasFinallyAbove := fn(ctxs: List<ConstructCtx>, targetIdx: Int): Bool {
 }
 
 /** Scans a raw `[@tag] loop [header] { body }` up to the end of its body `}`, before any `then` or `finally`; returns -1 on mismatch. */
-scanRawLoopEnd := fn(source: String, position: Int, prefix: String): Int {
-    size := textLib.length(source);
-    cursor := skipOptionalScanTag(source, position, prefix, "loop");
-    if cursor < 0 or not textLib.wordAt(source, cursor, "loop") { return -1; }
-    afterLoop := skipTrivia(source, cursor + 4, prefix);
-    if afterLoop >= size { return -1; }
-    open := if textLib.at(source, afterLoop) == "{" {
-        afterLoop
-    } else {
-        scanConditionOpen(source, afterLoop, prefix)
-    };
-    if open < 0 or open >= size or textLib.at(source, open) =!= "{" { return -1; }
-    scanBraceEnd(source, open, prefix)
-}
+scanRawLoopEnd := fn(source: String, position: Int, prefix: String): Int { syntax.scanRawLoopEnd(source, position, prefix) };
 
 /** True when a statement-position loop uses tags, metadata, payload exits, `then`, or `finally` and must lower as an enhanced loop expression. */
-loopNeedsExprLowering := fn(source: String, position: Int, prefix: String): Bool {
-    size := textLib.length(source);
-    trimmed := skipTrivia(source, position, prefix);
-    if trimmed >= size { return false; }
-    if textLib.at(source, trimmed) == "@" { return true; }
-    rawEnd := scanRawLoopEnd(source, trimmed, prefix);
-    if rawEnd < 0 { return false; }
-    afterRaw := skipTrivia(source, rawEnd, prefix);
-    if afterRaw < size and (textLib.wordAt(source, afterRaw, "then") or textLib.wordAt(source, afterRaw, "finally")) {
-        return true;
-    }
-    var cursor := trimmed;
-    var prevExpr := false;
-    loop cursor < rawEnd {
-        ch := textLib.at(source, cursor);
-        if ch == "\"" {
-            cursor = skipAliasString(source, cursor);
-            prevExpr = true;
-        } else if ch == "/" and textLib.startsWithAt(source, cursor, "/*") {
-            cursor = skipComment(source, cursor, prefix);
-        } else if ch == " " or ch == "\t" or ch == "\r" or ch == "\n" {
-            cursor = cursor + 1;
-        } else if ch == "@" {
-            return true;
-        } else if ch == ")" or ch == "]" or ch == "}" {
-            cursor = cursor + 1;
-            prevExpr = true;
-        } else if ch == "." {
-            if not prevExpr { return true; }
-            cursor = cursor + 1;
-            prevExpr = false;
-        } else if textLib.isDigit(ch) {
-            cursor = textLib.skipName(source, cursor);
-            prevExpr = true;
-        } else if textLib.isNameStart(ch) {
-            end := textLib.skipName(source, cursor);
-            word := textLib.slice(source, cursor, end);
-            if word == "break" or word == "continue" {
-                afterWord := skipTrivia(source, end, prefix);
-                if afterWord < rawEnd and textLib.at(source, afterWord) =!= ";" and textLib.at(source, afterWord) =!= "}" {
-                    return true;
-                }
-            }
-            prevExpr = word =!= "and" and word =!= "or" and word =!= "not" and word =!= "if" and
-            word =!= "else" and word =!= "match" and word =!= "loop" and word =!= "then" and
-            word =!= "finally" and word =!= "return" and word =!= "break" and word =!= "continue" and
-            word =!= "as" and word =!= "var" and word =!= "mut";
-            cursor = end;
-        } else {
-            cursor = cursor + 1;
-            prevExpr = false;
-        }
-    }
-    false
-}
+loopNeedsExprLowering := fn(source: String, position: Int, prefix: String): Bool { syntax.loopNeedsExprLowering(source, position, prefix) };
 
 /** Resolves `.count`, `.value`, `.item`, or `.index` against one active loop context, handling Pass 1 inference markers cleanly. */
 resolveLoopField := fn(target: String, ctx: ConstructCtx, fieldName: String, expected: String, source: String, fieldStart: Int, fieldEnd: Int, prefix: String): Parsed {
@@ -4604,7 +3752,7 @@ tryInferRootExprKind := fn(source: String, position: Int, prefix: String, aliase
                 var dEnd := fStart;
                 var fIdx := 0;
                 loop dEnd < size and textLib.isDigit(textLib.at(source, dEnd)) {
-                    fIdx = fIdx * 10 + decimalDigit(textLib.at(source, dEnd));
+                    fIdx = fIdx * 10 + syntax.decimalDigit(textLib.at(source, dEnd));
                     dEnd = dEnd + 1;
                 }
                 if isArrayKind(leftKind) {
@@ -7744,7 +6892,7 @@ parseBinaryCtx := fn(target: String, source: String, position: Int, prefix: Stri
                 }
             } else if chAtCursor == "{" {
                 braceEnd := scanBraceEnd(source, cursor, prefix);
-                fullBraceEnd := if braceEnd >= 0 { scanTrailingFinallyEnd(source, braceEnd, prefix) } else { -1 };
+                fullBraceEnd := if braceEnd >= 0 { syntax.scanTrailingFinallyEnd(source, braceEnd, prefix) } else { -1 };
                 afterBrace := if fullBraceEnd >= 0 { skipItemSeparators(source, fullBraceEnd, prefix) } else { -1 };
                 atTailBrace := (not isStmtBody) and afterBrace >= 0 and afterBrace < blockSourceSize and textLib.at(source, afterBrace) == "}";
                 if not atTailBrace {
@@ -9444,7 +8592,7 @@ parseBinaryCtx := fn(target: String, source: String, position: Int, prefix: Stri
         rawLoopEnd := scanRawLoopEnd(source, condParseStart, prefix);
         afterRawLoop := if rawLoopEnd >= 0 { skipTrivia(source, rawLoopEnd, prefix) } else { -1 };
         hasActualThen := afterRawLoop >= 0 and textLib.wordAt(source, afterRawLoop, "then");
-        afterOptLoopThen := if hasActualThen { scanTrailingThenEnd(source, rawLoopEnd, prefix, false) } else { rawLoopEnd };
+        afterOptLoopThen := if hasActualThen { syntax.scanTrailingThenEnd(source, rawLoopEnd, prefix, false) } else { rawLoopEnd };
         afterOptLoopThenTrivia := if afterOptLoopThen >= 0 { skipTrivia(source, afterOptLoopThen, prefix) } else { -1 };
         hasLoopFinally := afterOptLoopThenTrivia >= 0 and textLib.wordAt(source, afterOptLoopThenTrivia, "finally");
         if target =!= TARGET_TS {
@@ -9789,7 +8937,7 @@ parseBinaryCtx := fn(target: String, source: String, position: Int, prefix: Stri
         };
         afterRawCond := if rawCondEnd >= 0 { skipTrivia(source, rawCondEnd, prefix) } else { -1 };
         hasActualThen := afterRawCond >= 0 and textLib.wordAt(source, afterRawCond, "then");
-        afterOptThen := if hasActualThen { scanTrailingThenEnd(source, rawCondEnd, prefix, false) } else { rawCondEnd };
+        afterOptThen := if hasActualThen { syntax.scanTrailingThenEnd(source, rawCondEnd, prefix, false) } else { rawCondEnd };
         afterOptThenTrivia := if afterOptThen >= 0 { skipTrivia(source, afterOptThen, prefix) } else { -1 };
         hasActualFinally := afterOptThenTrivia >= 0 and textLib.wordAt(source, afterOptThenTrivia, "finally");
         if hasActualFinally and target =!= TARGET_TS {
@@ -10380,7 +9528,7 @@ parseBinaryCtx := fn(target: String, source: String, position: Int, prefix: Stri
                 var end := labelStart;
                 var fieldIndex := 0;
                 loop end < textLib.length(source) and textLib.isDigit(textLib.at(source, end)) {
-                    fieldIndex = fieldIndex * 10 + decimalDigit(textLib.at(source, end));
+                    fieldIndex = fieldIndex * 10 + syntax.decimalDigit(textLib.at(source, end));
                     end = end + 1;
                 }
                 if isArrayKind(left.kind) {
@@ -11159,7 +10307,7 @@ parseInitializerExpression := fn(target: String, source: String, position: Int, 
         parenCount = parenCount + 1;
         inner = skipTrivia(source, inner + 1, prefix);
     }
-    ifKwPos := skipOptionalScanTag(source, inner, prefix, "if");
+    ifKwPos := syntax.skipOptionalScanTag(source, inner, prefix, "if");
     if ifKwPos >= 0 and textLib.wordAt(source, ifKwPos, "if") {
         scannedEnd := scanIfChainEnd(source, inner, prefix, false, true);
         if scannedEnd >= 0 {
@@ -11641,12 +10789,7 @@ live: Bool, ctxs: List<ConstructCtx>, aliases: List<AliasDecl>): Items {
 }
 
 /** Advances past one `{ ... }` function body while respecting strings and comments. */
-skipBraceBlock := fn(source: String, afterOpen: Int, prefix: String): Int {
-    end := scanBracedRange(source, afterOpen, 1, prefix);
-    if end >= 0 { return end; }
-    failAt(source, afterOpen, prefix, "expected } before end of source");
-    textLib.length(source)
-}
+skipBraceBlock := fn(source: String, afterOpen: Int, prefix: String): Int { syntax.skipBraceBlock(source, afterOpen, prefix) };
 
 /** Parses complete source with selective function-body compilation and explicit `--builtin-mode` specs. */
 pub parseProgramWithModuleSelectiveSpecs := fn(target: String, source: String, prefix: String, exports: Items, moduleKey: String,
@@ -13873,12 +13016,4 @@ pub parseProgram := fn(target: String, source: String, prefix: String): Items {
 }
 
 /** Encodes all line-start character offsets once for positioned runtime arithmetic faults. */
-pub lineStartCodes := fn(source: String): String {
-    var code := "0";
-    var position := 0;
-    loop position < textLib.length(source) {
-        if textLib.at(source, position) == "\n" { code = code + ", " + integer.intText(position + 1); }
-        position = position + 1;
-    }
-    code
-}
+pub lineStartCodes := fn(source: String): String { syntax.lineStartCodes(source) };
