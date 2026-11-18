@@ -44,13 +44,19 @@ toolForEntry := fn(rawEntry: String): String {
         base == "corpus-parity.ts" { "corpus-parity" }
         base == "run-ts-artifact.ts" { "run-ts-artifact" }
         base == "compiler-performance.ts" { "compiler-performance" }
+        base == "compiler-worker.ts" { "compiler-worker" }
         base == "text-cache.ts" { "text-cache" }
+        base == "serve.ts" and parent == "site" { "site-serve" }
         base == "build.ts" and parent == "scripts" and grandparent == "compiler" { "compiler-build" }
         base == "build.ts" and parent == "scripts" and grandparent == "vscode" { "vscode-build" }
         base == "build.ts" { "challenge-build" }
         base == "build_benchmark_euler.ts" { "challenge-build-euler" }
         base == "build_benchmark_leetcode.ts" { "challenge-build-leetcode" }
         base == "build_tests.ts" { "challenge-build-tests" }
+        base == "fetch_sources.ts" { "challenge-fetch-sources" }
+        base == "fetch_tests.ts" { "challenge-fetch-tests" }
+        base == "fetch_benchmark_euler.ts" { "challenge-fetch-euler" }
+        base == "fetch_benchmark_leetcode.ts" { "challenge-fetch-leetcode" }
         base == "query.ts" { "challenge-query" }
         base == "validate.ts" { "challenge-validate" }
         base == "validate_benchmark.ts" { "challenge-validate-benchmark" }

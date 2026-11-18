@@ -1,0 +1,110 @@
+/** Shared cached HTTP downloads for challenge source-fetching commands. */
+
+fs := import "core/file";
+http := import "external/http";
+integer := import "core/int";
+io := import "core/io";
+list := import "core/list";
+path := import "core/path";
+text := import "core/text";
+time := import "core/time";
+
+USER_AGENT := "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0 Safari/537.36";
+
+/** Parses non-negative integer seconds from `Retry-After`, defaulting to `5`. */
+parseRetrySeconds := fn(raw: String): Int {
+    trimmed := text.trim(raw);
+    if trimmed == "" { return 5; }
+    parsed := text.textToInt(trimmed);
+    if not parsed.ok or parsed.value < 0 { return 5; }
+    parsed.value
+};
+
+/** Downloads `url` into `destPath` with retries, rate-limit backoff, and atomic placement. */
+pub downloadFile := fn(
+url: String, destPath: String, force: Bool, retries: Int, timeoutMs: Int, delayMs: Int, allowMissing: Bool, rateLimit: Bool
+): (ok: Bool, skipped: Bool, error: String) {
+    mkRes := fs.makeDir(path.parentDir(destPath));
+    if not mkRes.ok {
+        return (ok = false, skipped = false, error = "failed to fetch " + url + ": " + mkRes.error);
+    }
+    if not force and fs.kind(destPath) == fs.FILE_KIND_FILE {
+        existing := fs.readBytes(destPath);
+        if list.listCountInt(existing) > 0 {
+            return (ok = true, skipped = false, error = "");
+        }
+    }
+
+    maxAttempts := if retries > 0 { retries } else { 1 };
+    headers: List<String> = ["User-Agent: " + USER_AGENT];
+    tmpPath := destPath + ".tmp";
+    var lastError := "download failed";
+    var attempt := 0;
+    loop attempt < maxAttempts {
+        if delayMs > 0 {
+            time.sleepMs(delayMs);
+        }
+        _rmOld := fs.remove(tmpPath);
+        res := http.fetchToFile(url, tmpPath, timeoutMs, headers);
+        if allowMissing and (res.status == 404 or res.status == 405) {
+            _rm := fs.remove(tmpPath);
+            return (ok = true, skipped = true, error = "");
+        }
+        if res.status == 429 and rateLimit {
+            _rm := fs.remove(tmpPath);
+            waitSec := parseRetrySeconds(res.retryAfter);
+            io.errorLine("  .. rate limited, sleeping " + integer.intText(waitSec) + "s");
+            if waitSec > 0 { time.sleepMs(waitSec * 1000); }
+            lastError = "HTTP 429";
+            attempt = attempt + 1;
+            continue;
+        }
+        if res.ok and res.byteCount > 0 {
+            cp := fs.copy(tmpPath, destPath);
+            _rm := fs.remove(tmpPath);
+            if cp.ok {
+                return (ok = true, skipped = false, error = "");
+            }
+            lastError = cp.error;
+        } else {
+            _rm := fs.remove(tmpPath);
+            if res.error =!= "" {
+                lastError = res.error;
+            } else if not res.ok {
+                lastError = "HTTP " + integer.intText(res.status);
+            } else {
+                lastError = "empty response";
+            }
+        }
+        if attempt + 1 < maxAttempts {
+            time.sleepMs(1200 * (attempt + 1));
+        }
+        attempt = attempt + 1;
+    }
+    (ok = false, skipped = false, error = "failed to fetch " + url + ": " + lastError)
+};
+
+/** Downloads a batch of `(urls, paths)` sequentially with progress reporting. */
+pub downloadBatch := fn(
+urls: List<String>, paths: List<String>, force: Bool, retries: Int, timeoutMs: Int, delayMs: Int,
+allowMissing: Bool, rateLimit: Bool, progressEvery: Int
+): (failures: Int, skipped: Int) {
+    total := list.listCountText(urls);
+    var failures := 0;
+    var skipped := 0;
+    var done := 0;
+    loop done < total {
+        res := downloadFile(urls[done], paths[done], force, retries, timeoutMs, delayMs, allowMissing, rateLimit);
+        if not res.ok {
+            failures = failures + 1;
+            io.errorLine("  !! " + res.error);
+        } else if res.skipped {
+            skipped = skipped + 1;
+        }
+        done = done + 1;
+        if done % progressEvery == 0 or done == total {
+            io.outputLine("  " + integer.intText(done) + "/" + integer.intText(total));
+        }
+    }
+    (failures = failures, skipped = skipped)
+};

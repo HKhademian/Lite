@@ -1,0 +1,37 @@
+/** Local HTTP static site preview server (`site/serve.ts`). */
+
+fs := import "core/file";
+http := import "external/http";
+io := import "core/io";
+path := import "core/path";
+proc := import "core/process";
+text := import "core/text";
+project := import "util/project";
+
+run := fn(): Int {
+    root := project.findRepoRoot();
+    if root == "" {
+        io.errorLine("could not locate LiteScript repository root");
+        return 1;
+    }
+    siteDir := path.join(root, "dist/site");
+    if fs.kind(siteDir) =!= fs.FILE_KIND_DIR {
+        io.errorLine("dist/site/ does not exist. Run `./site/build.ts` first.");
+        return 1;
+    }
+    brandDir := path.join(root, "brand");
+    var port := 8080;
+    envPort := proc.envGet("PORT");
+    if envPort.found and envPort.value =!= "" {
+        parsed := text.textToInt(envPort.value);
+        if not parsed.ok or parsed.value < 0 or parsed.value > 65535 {
+            io.errorLine("invalid PORT: " + envPort.value);
+            return 1;
+        }
+        port = parsed.value;
+    }
+    http.serveStatic(siteDir, brandDir, "127.0.0.1", port)
+};
+
+status := run();
+if status =!= 0 { io.exit(status); }

@@ -129,6 +129,20 @@ syntheticExpectedText := fn(lineCount: Int): String {
     text.joinTexts(lines, "\n") + "\n"
 };
 
+ensureWorkerArtifact := fn(rootDir: String): String {
+    distWorker := path.join(rootDir, "dist/tools/compiler-worker.ts");
+    if fs.kind(distWorker) == fs.FILE_KIND_FILE {
+        return distWorker;
+    }
+    ensArgs: List<String> = [path.join(rootDir, "compiler/bootstrap/igniter.ts"), "--ensure", "compiler-worker"];
+    emptyEnv: List<String> = [];
+    _ens := proc.run(proc.execPath(), ensArgs, rootDir, emptyEnv, true, "");
+    if fs.kind(distWorker) == fs.FILE_KIND_FILE {
+        return distWorker;
+    }
+    path.join(rootDir, "benchmark/compiler-worker.ts")
+};
+
 runWorkerOnce := fn(
 rootDir: String, workDir: String, workerSeq: Int, artifactPath: String,
 sourceBytes: List<Int>, timeoutMs: Int, hasSourceRoot: Bool, sourceName: String
@@ -139,7 +153,7 @@ maxRssKiB: Int, outPath: String, errPath: String, error: String
     metricsPath := path.join(workDir, "metrics-" + integer.intText(workerSeq) + ".json");
     outPath := path.join(workDir, "worker-" + integer.intText(workerSeq) + ".out");
     errPath := path.join(workDir, "worker-" + integer.intText(workerSeq) + ".err");
-    workerScript := path.join(rootDir, "benchmark/compiler-worker.ts");
+    workerScript := ensureWorkerArtifact(rootDir);
 
     args: mut List<String> = [workerScript, "T11", artifactPath, if hasSourceRoot { sourceName } else { "" }];
     if hasSourceRoot {
@@ -582,8 +596,8 @@ pub runCompilerPerformanceCommand := fn(rootDir: String, args: List<String>): In
 
     toolPaths: List<String> = [
     "benchmark/compiler-performance.ts", "tools/src/compiler-performance.lts",
-    "lib/util/benchmark.lts", "lib/util/corpus.lts", "benchmark/compiler-worker.ts",
-    "compiler/host.ts", "igniter/artifacts.ts"
+    "lib/util/benchmark.lts", "lib/util/corpus.lts", "tools/src/compiler-worker.lts",
+    "lib/external/bench.lts", "compiler/host.ts", "igniter/artifacts.ts"
     ];
     toolsJsonRes := corpus.toolIdentitiesJson(rootDir, toolPaths);
     if not toolsJsonRes.ok {

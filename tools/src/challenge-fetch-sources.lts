@@ -1,0 +1,194 @@
+/** Caches upstream challenge metadata into `benchmark/challenges/.cache/`. */
+
+fs := import "core/file";
+integer := import "core/int";
+io := import "core/io";
+list := import "core/list";
+path := import "core/path";
+text := import "core/text";
+cfetch := import "util/challenge-fetch";
+project := import "util/project";
+
+failFetch := fn(message: String): Int {
+    io.errorLine("FAIL: " + message);
+    1
+};
+
+padTwo := fn(n: Int): String {
+    if n < 10 { "0" + integer.intText(n) } else { integer.intText(n) }
+};
+
+fetchOne := fn(cacheDir: String, url: String, relPath: String, force: Bool): Bool {
+    res := cfetch.downloadFile(url, path.join(cacheDir, relPath), force, 4, 90000, 0, false, false);
+    if not res.ok {
+        io.errorLine("FAIL: " + res.error);
+        return false;
+    }
+    true
+};
+
+fetchSourceGroup := fn(cacheDir: String, name: String, force: Bool): Bool {
+    if name == "leetcode" {
+        if not fetchOne(cacheDir, "https://leetcode.com/api/problems/all/", "leetcode/api-all.json", force) { return false; }
+        return fetchOne(cacheDir, "https://raw.githubusercontent.com/neenza/leetcode-problems/master/merged_problems.json", "leetcode/merged.json", force);
+    }
+    if name == "codeforces" {
+        return fetchOne(cacheDir, "https://codeforces.com/api/problemset.problems", "codeforces/problemset.json", force);
+    }
+    if name == "cses" {
+        return fetchOne(cacheDir, "https://cses.fi/problemset/", "cses/problemset.html", force);
+    }
+    if name == "aoc" {
+        urls: mut List<String> = [];
+        paths: mut List<String> = [];
+        var year := 2015;
+        loop year <= 2025 {
+            yearText := integer.intText(year);
+            list.pushBack(mut urls, "https://adventofcode.com/" + yearText);
+            list.pushBack(mut paths, path.join(cacheDir, "aoc/" + yearText + "/index.html"));
+            var day := 1;
+            loop day <= 25 {
+                dayText := integer.intText(day);
+                list.pushBack(mut urls, "https://adventofcode.com/" + yearText + "/day/" + dayText);
+                list.pushBack(mut paths, path.join(cacheDir, "aoc/" + yearText + "/day" + padTwo(day) + ".html"));
+                day = day + 1;
+            }
+            year = year + 1;
+        }
+        batch := cfetch.downloadBatch(urls, paths, force, 4, 90000, 0, true, false, 25);
+        if batch.skipped > 0 {
+            io.outputLine("  skipped " + integer.intText(batch.skipped) + " unavailable page(s)");
+        }
+        if batch.failures > 0 {
+            io.errorLine("FAIL: " + integer.intText(batch.failures) + " downloads failed");
+            return false;
+        }
+        return true;
+    }
+    if name == "pe" {
+        var n := 1;
+        loop n <= 24 {
+            relPath := "project-euler/page" + padTwo(n) + ".html";
+            if not fetchOne(cacheDir, "https://projecteuler.net/archives;page=" + integer.intText(n), relPath, force) { return false; }
+            pageRead := fs.readText(path.join(cacheDir, relPath));
+            if not pageRead.ok or not text.containsText(pageRead.text, "problem=") { break; }
+            n = n + 1;
+        }
+        return true;
+    }
+    if name == "rosalind" {
+        return fetchOne(cacheDir, "https://rosalind.info/problems/list-view/", "rosalind/list.html", force);
+    }
+    if name == "cryptopals" {
+        var n := 1;
+        loop n <= 8 {
+            nText := integer.intText(n);
+            if not fetchOne(cacheDir, "https://cryptopals.com/sets/" + nText, "cryptopals/set" + nText + ".html", force) { return false; }
+            n = n + 1;
+        }
+        return true;
+    }
+    if name == "jane-street" {
+        var n := 1;
+        loop n <= 5 {
+            nText := integer.intText(n);
+            relPath := "jane-street/archive" + nText + ".html";
+            if not fetchOne(cacheDir, "https://www.janestreet.com/puzzles/archive/?page=" + nText, relPath, force) { return false; }
+            rawBytes := fs.readBytes(path.join(cacheDir, relPath));
+            if list.listCountInt(rawBytes) < 5000 { break; }
+            n = n + 1;
+        }
+        return true;
+    }
+    if name == "atcoder" {
+        if not fetchOne(cacheDir, "https://kenkoooo.com/atcoder/resources/problems.json", "atcoder/problems.json", force) { return false; }
+        return fetchOne(cacheDir, "https://kenkoooo.com/atcoder/resources/problem-models.json", "atcoder/models.json", force);
+    }
+    if name == "roadmaps" {
+        if not fetchOne(cacheDir, "https://raw.githubusercontent.com/lufftw/neetcode/main/roadmaps/blind_75.toml", "roadmaps/blind_75.toml", force) { return false; }
+        return fetchOne(cacheDir, "https://raw.githubusercontent.com/lufftw/neetcode/main/roadmaps/neetcode_150.toml", "roadmaps/neetcode_150.toml", force);
+    }
+    io.errorLine("FAIL: unknown sources: " + name);
+    false
+};
+
+run := fn(rawArgs: List<String>): Int {
+    allNames: List<String> = ["leetcode", "codeforces", "cses", "aoc", "pe", "rosalind", "cryptopals", "jane-street", "atcoder", "roadmaps"];
+    var force := false;
+    var onlyRaw := "";
+    args: mut List<String> = rawArgs;
+    loop list.listCountText(args) > 0 {
+        arg := list.popFront(mut args);
+        if arg == "--help" or arg == "-h" {
+            io.outputLine("Usage: node tools/fetch_sources.ts [--force] [--only leetcode,codeforces,cses,aoc,pe,rosalind,cryptopals,jane-street,atcoder,roadmaps]");
+            return 0;
+        }
+        if arg == "--force" {
+            force = true;
+        } else if text.startsWithAt(arg, 0, "--force=") {
+            io.errorLine("--force does not accept a value");
+            return 2;
+        } else if arg == "--only" {
+            if list.listCountText(args) == 0 or text.startsWithAt(args[0], 0, "--") {
+                io.errorLine("missing value for --only");
+                return 2;
+            }
+            onlyRaw = list.popFront(mut args);
+        } else if text.startsWithAt(arg, 0, "--only=") {
+            onlyRaw = text.slice(arg, 7, text.length(arg));
+            if onlyRaw == "" or text.startsWithAt(onlyRaw, 0, "--") {
+                io.errorLine("missing value for --only");
+                return 2;
+            }
+        } else {
+            eq := text.indexOfText(arg, "=", 0);
+            optName := if eq < 0 { arg } else { text.slice(arg, 0, eq) };
+            io.errorLine("unknown option " + optName);
+            return 2;
+        }
+    }
+
+    root := project.findRepoRoot();
+    if root == "" { return failFetch("could not locate LiteScript repository root"); }
+    cacheDir := path.join(root, "benchmark/challenges/.cache");
+
+    selected: mut List<String> = [];
+    if onlyRaw == "" {
+        loop allNames as item { list.pushBack(mut selected, item); }
+    } else {
+        var pos := 0;
+        size := text.length(onlyRaw);
+        loop pos <= size {
+            comma := text.indexOfText(onlyRaw, ",", pos);
+            endPos := if comma < 0 { size } else { comma };
+            part := text.trim(text.slice(onlyRaw, pos, endPos));
+            if part =!= "" {
+                if not list.listContainsText(allNames, part) {
+                    return failFetch("unknown sources: " + part);
+                }
+                list.pushBack(mut selected, part);
+            }
+            if comma < 0 { break; }
+            pos = comma + 1;
+        }
+    }
+
+    loop selected as name {
+        label := match {
+            name == "aoc" { "advent of code" }
+            name == "pe" { "project euler" }
+            name == "jane-street" { "jane street" }
+            name == "roadmaps" { "interview roadmaps" }
+            _ { name }
+        };
+        io.outputLine(label);
+        if not fetchSourceGroup(cacheDir, name, force) {
+            return 1;
+        }
+    }
+    io.outputLine("\ncache: " + cacheDir);
+    0
+};
+
+status := run(io.inputArgs());
+if status =!= 0 { io.exit(status); }

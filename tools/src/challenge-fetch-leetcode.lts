@@ -1,0 +1,32 @@
+/** Caches public reference-tree metadata needed by the LeetCode benchmark builder. */
+
+io := import "core/io";
+list := import "core/list";
+path := import "core/path";
+cfetch := import "util/challenge-fetch";
+project := import "util/project";
+
+run := fn(rawArgs: List<String>): Int {
+    loop rawArgs as arg {
+        if arg == "--help" or arg == "-h" {
+            io.outputLine("Usage: node tools/fetch_benchmark_leetcode.ts");
+            return 0;
+        }
+    }
+    root := project.findRepoRoot();
+    if root == "" {
+        io.errorLine("FAIL: could not locate LiteScript repository root");
+        return 1;
+    }
+    destPath := path.join(root, "benchmark/challenges/.cache/benchmark/leetcode/tree.json");
+    res := cfetch.downloadFile("https://api.github.com/repos/doocs/leetcode/git/trees/main?recursive=1", destPath, false, 1, 60000, 0, false, false);
+    if not res.ok {
+        io.errorLine("FAIL: " + res.error);
+        return 1;
+    }
+    io.outputLine("cached " + destPath);
+    0
+};
+
+status := run(io.inputArgs());
+if status =!= 0 { io.exit(status); }

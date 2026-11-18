@@ -1,0 +1,124 @@
+/** Caches Project Euler statements and published answers (`fetch_benchmark_euler.ts`). */
+
+fs := import "core/file";
+integer := import "core/int";
+io := import "core/io";
+list := import "core/list";
+path := import "core/path";
+text := import "core/text";
+cfetch := import "util/challenge-fetch";
+challenges := import "util/challenges";
+json := import "util/json";
+project := import "util/project";
+
+extractEulerNumber := fn(entryPath: String): (ok: Bool, num: Int) {
+    if not text.startsWithAt(entryPath, 0, "python/p") or not text.endsWith(entryPath, ".py") or text.length(entryPath) =!= 14 {
+        return (ok = false, num = 0);
+    }
+    digits := text.slice(entryPath, 8, 11);
+    parsed := text.textToInt(digits);
+    if not parsed.ok { return (ok = false, num = 0); }
+    (ok = true, num = parsed.value)
+};
+
+sortNumbersAsc := fn(nums: List<Int>): List<Int> {
+    count := list.listCountInt(nums);
+    var used: mut List<Bool> = [];
+    var k := 0;
+    loop k < count {
+        list.pushBack(mut used, false);
+        k = k + 1;
+    }
+    out: mut List<Int> = [];
+    var picked := 0;
+    loop picked < count {
+        var bestIdx := -1;
+        var i := 0;
+        loop i < count {
+            if not used[i] and (bestIdx < 0 or nums[i] < nums[bestIdx]) {
+                bestIdx = i;
+            }
+            i = i + 1;
+        }
+        if bestIdx < 0 { break; }
+        /* Track visited indices in a parallel list to append in ascending order. */
+        nextUsed: mut List<Bool> = [];
+        var u := 0;
+        loop u < count {
+            list.pushBack(mut nextUsed, used[u] or u == bestIdx);
+            u = u + 1;
+        }
+        used = nextUsed;
+        list.pushBack(mut out, nums[bestIdx]);
+        picked = picked + 1;
+    }
+    out
+};
+
+run := fn(rawArgs: List<String>): Int {
+    loop rawArgs as arg {
+        if arg == "--help" or arg == "-h" {
+            io.outputLine("Usage: node tools/fetch_benchmark_euler.ts");
+            return 0;
+        }
+    }
+    root := project.findRepoRoot();
+    if root == "" {
+        io.errorLine("FAIL: could not locate LiteScript repository root");
+        return 1;
+    }
+    cacheDir := path.join(root, "benchmark/challenges/.cache/benchmark/euler");
+    treePath := path.join(cacheDir, "tree.json");
+    rTree := cfetch.downloadFile("https://api.github.com/repos/nayuki/Project-Euler-solutions/git/trees/master?recursive=1", treePath, false, 4, 45000, 0, false, false);
+    if not rTree.ok {
+        io.errorLine("FAIL: " + rTree.error);
+        return 1;
+    }
+    ansPath := path.join(cacheDir, "Answers.txt");
+    rAns := cfetch.downloadFile("https://raw.githubusercontent.com/nayuki/Project-Euler-solutions/master/Answers.txt", ansPath, false, 4, 45000, 0, false, false);
+    if not rAns.ok {
+        io.errorLine("FAIL: " + rAns.error);
+        return 1;
+    }
+    treeRead := fs.readText(treePath);
+    if not treeRead.ok or not json.validate(treeRead.text).ok {
+        io.errorLine("FAIL: invalid tree.json");
+        return 1;
+    }
+    treeField := json.findObjectField(treeRead.text, 0, "tree");
+    if not treeField.found {
+        io.errorLine("FAIL: missing tree array");
+        return 1;
+    }
+    offsets := json.arrayElementOffsets(treeRead.text, treeField.valuePos);
+    rawNums: mut List<Int> = [];
+    loop offsets as off {
+        typeF := json.readObjectString(treeRead.text, off, "type");
+        pathF := json.readObjectString(treeRead.text, off, "path");
+        if typeF.found and typeF.value == "blob" and pathF.found and pathF.ok {
+            numRes := extractEulerNumber(pathF.value);
+            if numRes.ok {
+                list.pushBack(mut rawNums, numRes.num);
+            }
+        }
+    }
+    numbers := sortNumbersAsc(rawNums);
+    io.outputLine("public Python solutions: " + integer.intText(list.listCountInt(numbers)));
+
+    urls: mut List<String> = [];
+    paths: mut List<String> = [];
+    loop numbers as n {
+        list.pushBack(mut urls, "https://projecteuler.net/problem=" + integer.intText(n));
+        list.pushBack(mut paths, path.join(cacheDir, "statements/problem-" + challenges.padLeftZero(n, 3) + ".html"));
+    }
+    batch := cfetch.downloadBatch(urls, paths, false, 4, 45000, 150, false, false, 25);
+    io.outputLine("cached " + cacheDir);
+    if batch.failures > 0 {
+        io.errorLine("FAIL: " + integer.intText(batch.failures) + " statement page(s) failed");
+        return 1;
+    }
+    0
+};
+
+status := run(io.inputArgs());
+if status =!= 0 { io.exit(status); }

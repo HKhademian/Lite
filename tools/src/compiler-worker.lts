@@ -1,0 +1,33 @@
+/** Isolated process measurement worker (`benchmark/compiler-worker.ts`). */
+
+bench := import "external/bench";
+io := import "core/io";
+list := import "core/list";
+path := import "core/path";
+proc := import "core/process";
+project := import "util/project";
+
+run := fn(rawArgs: List<String>): Int {
+    args: mut List<String> = rawArgs;
+    if list.listCountText(args) < 2 {
+        io.errorLine("missing compiler artifact or source name");
+        return 1;
+    }
+    engine := list.popFront(mut args);
+    artifact := list.popFront(mut args);
+    sourceName := list.popFront(mut args);
+    sourceRoot := if list.listCountText(args) > 0 { list.popFront(mut args) } else { "" };
+
+    root := project.findRepoRoot();
+    rootPath := if sourceRoot == "" {
+        if root == "" { "__lite_stdin__.lts" } else { path.resolve(root, "__lite_stdin__.lts") }
+    } else {
+        if root == "" { sourceRoot } else { path.resolve(root, sourceRoot) }
+    };
+    envRes := proc.envGet("LITE_WORKER_METRICS_FILE");
+    metricsFile := if envRes.found { envRes.value } else { "" };
+    bench.measureCompilerArtifact(engine, artifact, sourceName, rootPath, metricsFile)
+};
+
+status := run(io.inputArgs());
+if status =!= 0 { io.exit(status); }
