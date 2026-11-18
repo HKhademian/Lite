@@ -1,0 +1,191 @@
+/* Report evaluation order, self-hosting kernel scoping, and temporary I/O helper tests migrated from compiler/tests/host.test.ts. */
+
+integer := import "core/int";
+list := import "core/list";
+test := import "core/test";
+text := import "core/text";
+compilerBuild := import "util/compiler-build";
+compilerTest := import "util/compiler-test";
+project := import "util/project";
+
+root := project.findRepoRoot();
+test.check("repo root found", root =!= "");
+
+selTs := compilerBuild.selectCompilerPath(root, "ts");
+test.check("select TS compiler: " + selTs.error, selTs.ok);
+tsComp := selTs.path;
+
+contractsJson := compilerTest.readProcessContracts(root);
+
+emptyArgs := fn(): List<String> {
+    res: List<String> = [];
+    res
+};
+
+assertTsContract := fn(label: String, source: String, stdinText: String, expectedStatus: Int): Unit {
+    actual := compilerTest.compileCheckRunTsWithInput(root, tsComp, source, "", stdinText, emptyArgs());
+    compilerTest.assertRunMatchesContract(contractsJson, label, source, stdinText, expectedStatus, actual);
+};
+
+/* generated reports evaluate arguments once in order and preserve nested output */
+reportCases: List<(source: String, stdout: String, status: Int)> = [
+    (
+        source = "io := import \"core/io\"; f := fn(): Int { io.outputLine(\"inner\"); 7 } io.outputLine(\"before\"); io.outputLine(f()); io.outputLine(\"after\");",
+        stdout = "before\ninner\n7\nafter\n",
+        status = 0
+    ),
+    (
+        source = "io := import \"core/io\"; echo := fn(n: Int): Int { io.outputLine(\"arg\", n); n } io.outputLine(echo(1), echo(2), echo(3));",
+        stdout = "arg 1\narg 2\narg 3\n1 2 3\n",
+        status = 0
+    ),
+    (
+        source = "io := import \"core/io\"; f := fn(n: Int): Int { if n > 0 { io.outputLine(n, self(n - 1)); } n } io.outputLine(f(2));",
+        stdout = "1 0\n2 1\n2\n",
+        status = 0
+    ),
+    (
+        source = "io := import \"core/io\"; text := fn(): String { io.outputLine(\"text\"); \"🙂\" } flag := fn(): Bool { io.outputLine(\"flag\"); true } loop [1, 2] as n { io.outputLine(n, text(), flag()); }",
+        stdout = "text\nflag\n1 🙂 true\ntext\nflag\n2 🙂 true\n",
+        status = 0
+    ),
+    (
+        source = "io := import \"core/io\"; f := fn(): Int { io.outputLine(\"inner\"); 7 } io.outputLine(f()); io.exit(3);",
+        stdout = "inner\n7\n",
+        status = 3
+    ),
+    (
+        source = "io := import \"core/io\"; stop := fn(): Int { io.outputLine(\"stopped\"); io.exit(4); 9 } io.outputLine(\"before\"); io.outputLine(\"outer\", stop());",
+        stdout = "before\nstopped\n",
+        status = 4
+    )
+];
+loop reportCases as rc {
+    rec := compilerTest.assertContractStatus(contractsJson, "report-order", rc.source, "", "", rc.status);
+    test.checkText("report-order contract stdout", rc.stdout, rec.stdout);
+    test.checkText("report-order contract stderr", "", rec.stderr);
+    assertTsContract("report-order", rc.source, "", rc.status);
+}
+
+/* self-hosting kernel separates root symbols from runtime initialization and nested bindings */
+compilerTest.assertCompileErrorContainsNamed(
+    root,
+    tsComp,
+    "duplicate-root",
+    "io := import \"core/io\"; x := 1; x := 1; io.outputLine(x);",
+    "duplicate-root.lts",
+    "duplicate-root.lts:1:33: duplicate top-level value x"
+);
+compilerTest.assertCompileRunTsNamed(
+    root,
+    tsComp,
+    "nested-shadow",
+    "io := import \"core/io\"; x := 1; if true { x := 2; io.outputLine(x); } io.outputLine(x);",
+    "nested-shadow.lts",
+    "2\n1\n"
+);
+compilerTest.assertCompileRunTsNamed(
+    root,
+    tsComp,
+    "deferred-root",
+    "io := import \"core/io\"; y := fn (): Int { x * 2 }; x := 1; io.outputLine(y());",
+    "deferred-root.lts",
+    "2\n"
+);
+compilerTest.assertCompileRunTsNamed(
+    root,
+    tsComp,
+    "parameter-shadows-root",
+    "io := import \"core/io\"; y := fn (x: Int): Int { x * 2 }; x := 1; io.outputLine(y(3));",
+    "parameter-shadows-root.lts",
+    "6\n"
+);
+compilerTest.assertCompileErrorContainsNamed(
+    root,
+    tsComp,
+    "eager-root",
+    "io := import \"core/io\"; y := x * 2; x := 1; io.outputLine(y);",
+    "eager-root.lts",
+    "eager-root.lts:1:30: unknown value x"
+);
+
+/* generated temporary I/O helpers preserve prompts, value display, input state and failures */
+ioCases: List<(source: String, stdin: String, status: Int)> = [
+    (source = "io := import \"core/io\"; io.output(); io.outputLine(); io.output(\"a\", 1); io.outputLine(true);", stdin = "", status = 0),
+    (source = "io := import \"core/io\"; io.outputLine([1, 2], (left = 3, right = \"x\"), Unit, ());", stdin = "", status = 0),
+    (source = "io := import \"core/io\"; inner := fn(): Unit { io.outputLine(\"inner\"); } outer := fn(): Unit { inner() } io.outputLine(outer());", stdin = "", status = 0),
+    (source = "io := import \"core/io\"; io.outputLine([(n = 1), (n = 2)]);", stdin = "", status = 0),
+    (source = "io := import \"core/io\"; f := fn(n: Int): Int { io.outputLine(\"effect\", n); n } io.output(f(1), f(2)); io.outputLine();", stdin = "", status = 0),
+    (source = "io := import \"core/io\"; io.outputLine(io.inputInt(\"N: \"), io.inputFloat(\"F: \"));", stdin = "7 -2.5e2", status = 0),
+    (source = "io := import \"core/io\"; value: Float = io.inputFloat(); io.outputLine(value);", stdin = "-0", status = 0),
+    (source = "io := import \"core/io\"; io.outputLine(io.inputInt(), io.inputInt());", stdin = "-9223372036854775808 9223372036854775807", status = 0),
+    (source = "io := import \"core/io\"; io.outputLine(io.inputLine(\"Line: \")); io.outputLine(io.inputAll(\"Rest: \"));", stdin = "hello\r\n🙂\n", status = 0),
+    (source = "io := import \"core/io\"; io.outputLine(io.inputLine(), io.inputLine());", stdin = "\nlast", status = 0),
+    (source = "io := import \"core/io\"; n := io.inputInt(); line := io.inputLine(); rest := io.inputAll(); io.outputLine(n, line, rest);", stdin = "7\nremaining", status = 0),
+    (source = "io := import \"core/io\"; io.outputLine(io.inputAll(\"All: \"));", stdin = "", status = 0),
+    (source = "io := import \"core/io\"; io.outputLine(io.inputAll(\"All: \"));", stdin = text.repeatText("a", 4095) + "🙂tail", status = 0),
+    (source = "io := import \"core/io\"; empty: List<Int> = []; io.outputLine(empty);", stdin = "", status = 0),
+    (source = "list := import \"core/list\"; io := import \"core/io\"; values: mut List<Int> = []; io.outputLine(list.pushBack(mut values, 1), values);", stdin = "", status = 0),
+    (source = "io := import \"core/io\"; zero: (value: Float); io.outputLine(zero, zero.value);", stdin = "", status = 0),
+    (source = "io := import \"core/io\"; io.outputLine(\"before\"); io.inputInt(\"N: \");", stdin = "bad", status = 1),
+    (source = "io := import \"core/io\"; io.inputInt(\"N: \");", stdin = "9223372036854775808", status = 1),
+    (source = "io := import \"core/io\"; io.inputInt(\"N: \");", stdin = "", status = 1),
+    (source = "io := import \"core/io\"; io.inputFloat(\"F: \");", stdin = "NaN", status = 1),
+    (source = "io := import \"core/io\"; io.inputFloat(\"F: \");", stdin = "1e999", status = 1),
+    (source = "io := import \"core/io\"; io.inputFloat(\"F: \");", stdin = "", status = 1),
+    (source = "io := import \"core/io\"; io.inputLine(\"L: \");", stdin = "", status = 1)
+];
+loop ioCases as ic {
+    assertTsContract("io-helper", ic.source, ic.stdin, ic.status);
+}
+
+faultSource := "io := import \"core/io\"; io.outputLine(\"before fault\"); values: List<Int> = [1]; io.outputLine(values[2]);";
+recFault := compilerTest.assertContractStatus(contractsJson, "io-bound-fault", faultSource, "", "", 1);
+actualFault := compilerTest.compileCheckRunTs(root, tsComp, faultSource, "");
+test.checkInt("io-bound-fault status", recFault.status, actualFault.status);
+test.checkText("io-bound-fault stdout", recFault.stdout, actualFault.stdout);
+test.check("io-bound-fault stderr mentions BoundPanic", text.containsText(actualFault.stderr, "BoundPanic"));
+
+/* generated input rejects malformed UTF-8 at the first reached read */
+badUtf8Src := "io := import \"core/io\"; io.output(\"before:\"); io.outputLine(io.inputInt(\"N: \")); io.inputAll(\"Rest: \");";
+compiledBadUtf8 := compilerTest.compileStdin(root, tsComp, badUtf8Src, "input.lts");
+test.checkInt("bad-utf8 compile status", 0, compiledBadUtf8.status);
+test.checkText("bad-utf8 compile stderr", "", compiledBadUtf8.stderr);
+prepBadUtf8 := compilerTest.prepareTs(root, compiledBadUtf8.stdout);
+checkBadUtf8 := fn(prep: compilerTest.PreparedTs, badBytes: List<Int>, expectedStdout: String, column: Int): Unit {
+    runRes := compilerTest.runPreparedTsWithBytes(prep, badBytes, emptyArgs());
+    test.checkInt("bad-utf8 status", 1, runRes.status);
+    test.checkText("bad-utf8 stdout", expectedStdout, runRes.stdout);
+    expectedPrefix := "input.lts:1:" + integer.intText(column) + ": InputFault: cannot read input: ";
+    test.check("bad-utf8 stderr prefix: " + runRes.stderr, text.startsWithAt(runRes.stderr, 0, expectedPrefix));
+    test.check("bad-utf8 stderr newline", text.endsWith(runRes.stderr, "\n"));
+    test.check("bad-utf8 stderr non-empty reason", text.length(runRes.stderr) > text.length(expectedPrefix) + 1);
+};
+
+bad0: List<Int> = [255];
+bad1: List<Int> = [240, 159];
+bad2: List<Int> = [55, 32, 255];
+checkBadUtf8(prepBadUtf8, bad0, "before:N: ", 61);
+checkBadUtf8(prepBadUtf8, bad1, "before:N: ", 61);
+checkBadUtf8(prepBadUtf8, bad2, "before:N: 7\nRest: ", 82);
+compilerTest.cleanupPreparedTs(prepBadUtf8);
+
+/* report is no longer a builtin and temporary I/O rejects invalid signatures before effects */
+badIoSigs: List<String> = [
+    "report(1);",
+    "io := import \"core/io\"; io.inputLine(7);",
+    "io := import \"core/io\"; io.inputFloat(7);",
+    "io := import \"core/io\"; io.inputInt(\"a\", \"b\");",
+    "io := import \"core/io\"; io.inputAll(1);",
+    "io := import \"core/io\"; io.outputLine(prompt = \"label\", 1);",
+    "io := import \"core/io\"; io.output(fn(): Int { 1 });",
+    "io := import \"core/io\"; inputInt := 3; io.outputLine(inputInt());",
+    "outputLine := 3; outputLine(1);"
+];
+loop badIoSigs as badSrc {
+    _recBad := compilerTest.assertContractStatus(contractsJson, "bad-io-sig", badSrc, "", "", 1);
+    compBad := compilerTest.compileStdin(root, tsComp, badSrc, "");
+    test.check("bad-io-sig compile fails: " + badSrc, compBad.status =!= 0);
+}
+
+test.done("io-reports-kernel");

@@ -144,6 +144,57 @@ pub compileFile := fn(compilerPath: String, cwdDir: String, args: List<String>):
     (status = res.status, stdout = outText, stderr = errText)
 };
 
+/** Strict-typechecked TS artifact and isolated runner inside `workDir`. */
+pub PreparedTs := type (workDir: String, artifactPath: String, runnerPath: String);
+
+/** Strict-typechecks `tsCode` once in a temporary directory and prepares an isolated runner for repeated executions. */
+pub prepareTs := fn(rootDir: String, tsCode: String): PreparedTs {
+    tmpRes := fs.makeTempDir("lite-run-ts-");
+    test.check("prepareTs makeTempDir: " + tmpRes.error, tmpRes.ok);
+    workDir := tmpRes.path;
+
+    pkgRes := fs.writeText(path.join(workDir, "package.json"), "{\"type\":\"module\"}\n");
+    test.check("prepareTs package.json", pkgRes.ok);
+
+    tsPath := path.join(workDir, "artifact.ts");
+    wTs := fs.writeText(tsPath, tsCode);
+    test.check("prepareTs write artifact", wTs.ok);
+
+    chk := cases.checkTsArtifactFileWithStatus(rootDir, tsPath, path.join(workDir, "tsc"), 60000);
+    test.check("prepareTs tsc: " + chk.error, chk.ok);
+
+    runnerPath := path.join(workDir, "runner.ts");
+    wr := cases.writeTsRunner(runnerPath);
+    test.check("prepareTs runner.ts", wr.ok);
+
+    (workDir = workDir, artifactPath = tsPath, runnerPath = runnerPath)
+};
+
+/** Executes a prepared TS artifact with raw `stdinBytes` and `extraArgs`. */
+pub runPreparedTsWithBytes := fn(prepared: PreparedTs, stdinBytes: List<Int>, extraArgs: List<String>): RunOutput {
+    runArgs: mut List<String> = [prepared.runnerPath, prepared.artifactPath];
+    loop extraArgs as extra {
+        list.pushBack(mut runArgs, extra);
+    }
+    outPath := path.join(prepared.workDir, "run.stdout");
+    errPath := path.join(prepared.workDir, "run.stderr");
+    ran := proc.runBytes(proc.execPath(), runArgs, prepared.workDir, emptyEnv(), 30000, stdinBytes, outPath, errPath);
+    test.check("runPreparedTs error: " + ran.error, ran.error == "");
+    outText := fs.readText(outPath).text;
+    errText := fs.readText(errPath).text;
+    (status = ran.status, stdout = outText, stderr = errText)
+};
+
+/** Executes a prepared TS artifact with `stdinText` and `extraArgs`. */
+pub runPreparedTsWithInput := fn(prepared: PreparedTs, stdinText: String, extraArgs: List<String>): RunOutput {
+    runPreparedTsWithBytes(prepared, unicode.utf8Encode(stdinText), extraArgs)
+};
+
+/** Removes the temporary directory created by `prepareTs`. */
+pub cleanupPreparedTs := fn(prepared: PreparedTs): Unit {
+    _rm := fs.remove(prepared.workDir);
+};
+
 /** Strict-typechecks `tsCode` and runs it in a fresh Node process with raw `stdinBytes` and `extraArgs`. */
 pub checkAndRunTsWithBytes := fn(
 rootDir: String,
@@ -151,36 +202,10 @@ tsCode: String,
 stdinBytes: List<Int>,
 extraArgs: List<String>
 ): RunOutput {
-    tmpRes := fs.makeTempDir("lite-run-ts-");
-    test.check("checkAndRunTs makeTempDir: " + tmpRes.error, tmpRes.ok);
-    workDir := tmpRes.path;
-
-    pkgRes := fs.writeText(path.join(workDir, "package.json"), "{\"type\":\"module\"}\n");
-    test.check("checkAndRunTs package.json", pkgRes.ok);
-
-    tsPath := path.join(workDir, "artifact.ts");
-    wTs := fs.writeText(tsPath, tsCode);
-    test.check("checkAndRunTs write artifact", wTs.ok);
-
-    chk := cases.checkTsArtifactFileWithStatus(rootDir, tsPath, path.join(workDir, "tsc"), 60000);
-    test.check("checkAndRunTs tsc: " + chk.error, chk.ok);
-
-    runnerPath := path.join(workDir, "runner.ts");
-    wr := cases.writeTsRunner(runnerPath);
-    test.check("checkAndRunTs runner.ts", wr.ok);
-
-    runArgs: mut List<String> = [runnerPath, tsPath];
-    loop extraArgs as extra {
-        list.pushBack(mut runArgs, extra);
-    }
-    outPath := path.join(workDir, "run.stdout");
-    errPath := path.join(workDir, "run.stderr");
-    ran := proc.runBytes(proc.execPath(), runArgs, workDir, emptyEnv(), 30000, stdinBytes, outPath, errPath);
-    test.check("checkAndRunTs run error: " + ran.error, ran.error == "");
-    outText := fs.readText(outPath).text;
-    errText := fs.readText(errPath).text;
-    _rm := fs.remove(workDir);
-    (status = ran.status, stdout = outText, stderr = errText)
+    prepared := prepareTs(rootDir, tsCode);
+    res := runPreparedTsWithBytes(prepared, stdinBytes, extraArgs);
+    cleanupPreparedTs(prepared);
+    res
 };
 
 /** Strict-typechecks `tsCode` and runs it in a fresh Node process with `stdinText` and `extraArgs`. */
@@ -212,29 +237,80 @@ pub compileCheckRunTs := fn(rootDir: String, compilerPath: String, source: Strin
     compileCheckRunTsWithInput(rootDir, compilerPath, source, logicalName, "", emptyEnv())
 };
 
-findProcessContract := fn(contractsJson: String, sourceText: String, stdinText: String): (found: Bool, status: Int, stdout: String, stderr: String) {
+/** Looks up a recorded `(status, stdout, stderr)` case in `process.json` matching `sourceText`, `logicalName` (`""` means null), empty args, and `stdinText`. */
+pub lookupProcessContract := fn(
+contractsJson: String,
+sourceText: String,
+logicalName: String,
+stdinText: String
+): (found: Bool, status: Int, stdout: String, stderr: String) {
     srcHash := crypto.sha256Text(sourceText);
+    quotedHash := json.quoteString(srcHash);
+    needleLen := text.length(quotedHash);
     stdinB64 := crypto.base64Encode(unicode.utf8Encode(stdinText));
 
     casesField := json.findObjectField(contractsJson, 0, "cases");
     test.check("process.json cases field", casesField.found);
-    loop json.arrayElementOffsets(contractsJson, casesField.valuePos) as cPos {
-        sVal := json.readObjectString(contractsJson, cPos, "source");
-        if sVal.found and sVal.ok and sVal.value == srcHash {
-            inVal := json.readObjectString(contractsJson, cPos, "stdin");
-            nameField := json.findObjectField(contractsJson, cPos, "name");
-            argsField := json.findObjectField(contractsJson, cPos, "args");
-            isNullName := nameField.found and text.at(contractsJson, nameField.valuePos) == "n";
-            isEmptyArgs := argsField.found and list.listCountInt(json.arrayElementOffsets(contractsJson, argsField.valuePos)) == 0;
-            if inVal.found and inVal.ok and inVal.value == stdinB64 and isNullName and isEmptyArgs {
-                stVal := json.readObjectInt(contractsJson, cPos, "status");
-                outVal := json.readObjectString(contractsJson, cPos, "stdout");
-                errVal := json.readObjectString(contractsJson, cPos, "stderr");
-                return (found = true, status = stVal.value, stdout = outVal.value, stderr = errVal.value);
+    var searchPos := casesField.valuePos;
+    loop true {
+        hitPos := text.indexOfText(contractsJson, quotedHash, searchPos);
+        if hitPos < 0 { break; }
+        searchPos = hitPos + needleLen;
+
+        var back := hitPos - 1;
+        loop back >= casesField.valuePos {
+            if text.at(contractsJson, back) == "{" {
+                sVal := json.readObjectString(contractsJson, back, "source");
+                if sVal.found {
+                    if sVal.ok and sVal.value == srcHash {
+                        inVal := json.readObjectString(contractsJson, back, "stdin");
+                        argsField := json.findObjectField(contractsJson, back, "args");
+                        isEmptyArgs := argsField.found and list.listCountInt(json.arrayElementOffsets(contractsJson, argsField.valuePos)) == 0;
+                        var nameMatched := false;
+                        if logicalName == "" {
+                            nameField := json.findObjectField(contractsJson, back, "name");
+                            nameMatched = nameField.found and text.at(contractsJson, nameField.valuePos) == "n";
+                        } else {
+                            nameVal := json.readObjectString(contractsJson, back, "name");
+                            nameMatched = nameVal.found and nameVal.ok and nameVal.value == logicalName;
+                        }
+                        if inVal.found and inVal.ok and inVal.value == stdinB64 and nameMatched and isEmptyArgs {
+                            stVal := json.readObjectInt(contractsJson, back, "status");
+                            outVal := json.readObjectString(contractsJson, back, "stdout");
+                            errVal := json.readObjectString(contractsJson, back, "stderr");
+                            return (found = true, status = stVal.value, stdout = outVal.value, stderr = errVal.value);
+                        }
+                    }
+                    break;
+                }
             }
+            back = back - 1;
         }
     }
     (found = false, status = -1, stdout = "", stderr = "")
+};
+
+/** Looks up a recorded `(status, stdout, stderr)` case in `process.json` matching `sourceText`, `stdinText`, null name, and empty args. */
+pub findProcessContract := fn(contractsJson: String, sourceText: String, stdinText: String): (found: Bool, status: Int, stdout: String, stderr: String) {
+    lookupProcessContract(contractsJson, sourceText, "", stdinText)
+};
+
+/** Strict-typechecks generated `tsCode` via `cases.checkTsArtifactFileWithStatus` without executing it. */
+pub checkTsCode := fn(rootDir: String, tsCode: String): (ok: Bool, error: String) {
+    tmpRes := fs.makeTempDir("lite-check-ts-");
+    test.check("checkTsCode makeTempDir: " + tmpRes.error, tmpRes.ok);
+    workDir := tmpRes.path;
+
+    pkgRes := fs.writeText(path.join(workDir, "package.json"), "{\"type\":\"module\"}\n");
+    test.check("checkTsCode package.json", pkgRes.ok);
+
+    tsPath := path.join(workDir, "artifact.ts");
+    wTs := fs.writeText(tsPath, tsCode);
+    test.check("checkTsCode write artifact", wTs.ok);
+
+    chk := cases.checkTsArtifactFileWithStatus(rootDir, tsPath, path.join(workDir, "tsc"), 60000);
+    _rm := fs.remove(workDir);
+    (ok = chk.ok, error = chk.error)
 };
 
 /** Probes for a local C11 compiler (`$CC` or `cc`), returning `(available = false)` when unavailable or skipped via `LITE_SKIP_NATIVE=1`. */
@@ -365,6 +441,37 @@ checkStreams: Bool
     (status = rec.status, stdout = rec.stdout, stderr = rec.stderr)
 };
 
+/** Looks up the recorded contract in `process.json` for `sourceText`, `logicalName`, and `stdinText`, asserting `expectedStatus`. */
+pub assertContractStatus := fn(
+contractsJson: String,
+label: String,
+sourceText: String,
+logicalName: String,
+stdinText: String,
+expectedStatus: Int
+): (status: Int, stdout: String, stderr: String) {
+    rec := lookupProcessContract(contractsJson, sourceText, logicalName, stdinText);
+    test.check("recorded contract found for " + label, rec.found);
+    test.checkInt(label + " contract status", expectedStatus, rec.status);
+    (status = rec.status, stdout = rec.stdout, stderr = rec.stderr)
+};
+
+/** Checks that `actual` matches the recorded `(status, stdout, stderr)` contract in `process.json` for `sourceText` and `logicalName`. */
+pub assertRunMatchesNamedContract := fn(
+contractsJson: String,
+label: String,
+sourceText: String,
+logicalName: String,
+stdinText: String,
+expectedStatus: Int,
+actual: RunOutput
+): Unit {
+    rec := assertContractStatus(contractsJson, label, sourceText, logicalName, stdinText, expectedStatus);
+    test.checkInt(label + " run status", rec.status, actual.status);
+    test.checkText(label + " run stdout", rec.stdout, actual.stdout);
+    test.checkText(label + " run stderr", rec.stderr, actual.stderr);
+};
+
 /** Checks that `actual` matches the recorded `(status, stdout, stderr)` contract in `process.json` for `sourceText`. */
 pub assertRunMatchesContract := fn(
 contractsJson: String,
@@ -374,12 +481,7 @@ stdinText: String,
 expectedStatus: Int,
 actual: RunOutput
 ): Unit {
-    rec := findProcessContract(contractsJson, sourceText, stdinText);
-    test.check("recorded contract found for " + label, rec.found);
-    test.checkInt(label + " contract status", expectedStatus, rec.status);
-    test.checkInt(label + " run status", rec.status, actual.status);
-    test.checkText(label + " run stdout", rec.stdout, actual.stdout);
-    test.checkText(label + " run stderr", rec.stderr, actual.stderr);
+    assertRunMatchesNamedContract(contractsJson, label, sourceText, "", stdinText, expectedStatus, actual);
 };
 
 /** Looks up the recorded `(status, stdout, stderr)` contract for `driverRelPath` + `stdinText` (with empty args, null name) and asserts `driver` matches it. */
