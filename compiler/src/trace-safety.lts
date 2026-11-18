@@ -1679,3 +1679,18 @@ minExitedLexDepth: Int, locals: List<Local>): Unit {
         }
     }
 };
+
+/** Claims the pre-reserved runtime for `(lexDepth, name)` if pre-scanned, or allocates a collision-free runtime. */
+pub claimOrMakeLocalRuntime := fn(target: String, locals: List<Local>, name: String, moduleKey: String, lexDepth: Int): String {
+    if lexDepth == 0 and moduleKey =!= "" {
+        return ir.moduleValueRuntime(target, moduleKey, name);
+    }
+    placeholderDepth := 0 - 2 - lexDepth;
+    loop locals as entry {
+        if entry.depth == placeholderDepth and entry.name == name and entry.runtime =!= "" and
+        latestActiveLocalByRuntime(locals, entry.runtime) < 0 {
+            return entry.runtime;
+        }
+    }
+    ir.localRuntimeName(target, locals, name, moduleKey, lexDepth)
+};

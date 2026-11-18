@@ -1434,3 +1434,31 @@ pub canPreParseFunctionHeader := fn(source: String, position: Int, prefix: Strin
     if afterHeader < size and textLib.at(source, afterHeader) == "@" { return false; }
     true
 };
+
+/** Extracts the loop context id encoded in a Pass 1 `"__loopVal:<id>"` placeholder kind, or returns -1. */
+pub loopValMarkerId := fn(kind: String): Int {
+    if not textLib.startsWithAt(kind, 0, "__loopVal:") { return -1; }
+    suffix := textLib.slice(kind, 10, textLib.length(kind));
+    if suffix == "" { return -1; }
+    var value := 0;
+    var index := 0;
+    loop index < textLib.length(suffix) {
+        ch := textLib.at(suffix, index);
+        if not textLib.isDigit(ch) { return -1; }
+        value = value * 10 + syntax.decimalDigit(ch);
+        index = index + 1;
+    }
+    value
+};
+
+/** Unifies two conditional branch kinds when one is `Never`, both match, one is a Pass 1 loop `.value` placeholder, or one losslessly widens to the other. */
+pub joinBranchKind := fn(current: String, nextKind: String): String {
+    if current == "" or current == ir.VALUE_KIND_NEVER { return nextKind; }
+    if nextKind == ir.VALUE_KIND_NEVER or nextKind == current { return current; }
+    if loopValMarkerId(current) >= 0 { return nextKind; }
+    if loopValMarkerId(nextKind) >= 0 { return current; }
+    if numeric.numericWidens(current, nextKind) { return current; }
+    if numeric.numericWidens(nextKind, current) { return nextKind; }
+    if fnShapeMatches(current, nextKind) { return fnStripLabels(current); }
+    ""
+};

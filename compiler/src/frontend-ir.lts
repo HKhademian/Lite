@@ -1,5 +1,7 @@
-/** Shared frontend IR types, constants, scalar predicates, and TS/C literal backend dispatch helpers. */
+/** Shared frontend IR types, constants, scalar predicates, symbol-table helpers, and TS/C literal backend dispatch helpers. */
 
+integer := import "core/int";
+textLib := import "core/text";
 numeric := import "./numeric-literals.lts";
 tsLiteral := import "./ts-literals.lts";
 cLiteral := import "./c-literals.lts";
@@ -292,3 +294,116 @@ pub targetUnitEvaluationCode := fn(target: String, code: String): String { if ta
 
 /** Selects the TS or C backend implementation for the Unit literal. */
 pub targetUnitLiteralCode := fn(target: String): String { if target == TARGET_TS { tsLiteral.unitLiteralCode } else { cLiteral.unitLiteralCode } }
+
+/** Returns the index of the previously declared function named `name`, or -1. */
+pub findFunction := fn(functions: List<FunctionInfo>, name: String): Int {
+    var index := 0;
+    loop functions as entry {
+        if entry.name == name { return index; }
+        index = index + 1;
+    }
+    -1
+};
+
+/** Returns the index of the newest visible `name` in `locals`, or -1 when it is not visible. */
+pub localIndex := fn(locals: List<Local>, name: String): Int {
+    var index := 0;
+    var found := -1;
+    loop locals as local {
+        if local.depth >= -1 and local.name == name { found = index; }
+        index = index + 1;
+    }
+    found
+};
+
+/** True when `locals` already binds runtime identifier `runtime` in scope or as a pre-scanned future placeholder. */
+pub localsUseRuntime := fn(locals: List<Local>, runtime: String): Bool {
+    loop locals as local {
+        if local.runtime == runtime { return true; }
+    }
+    false
+};
+
+/** Returns the highest lexical block depth represented in `locals` (`depth <= -2` maps to `0 - 2 - depth`; `-1` maps to `0`). */
+pub maxLocalLexDepth := fn(locals: List<Local>): Int {
+    var best := 0;
+    loop locals as entry {
+        lexDepth := if entry.depth >= 0 { entry.depth }
+        else if entry.depth <= -2 { 0 - 2 - entry.depth }
+        else { 0 };
+        if lexDepth > best { best = lexDepth; }
+    }
+    best
+};
+
+/** True when `locals` already contains a reached declaration (`depth >= 0`) of `name` strictly deeper than `minExclusiveDepth`. */
+pub localsHasDeeperReachedName := fn(locals: List<Local>, name: String, minExclusiveDepth: Int): Bool {
+    loop locals as entry {
+        if entry.depth > minExclusiveDepth and entry.name == name { return true; }
+    }
+    false
+};
+
+/** True when `runtime` appears in `locals[0 .. limit)` (declared outside the current block). */
+pub localsRangeUsesRuntime := fn(locals: List<Local>, limit: Int, runtime: String): Bool {
+    var i := 0;
+    loop i < limit {
+        if locals[i].runtime == runtime { return true; }
+        i = i + 1;
+    }
+    false
+};
+
+/** True when `name` is already declared directly inside the block at `depth`. */
+pub hasBlockDecl := fn(decls: List<BlockDecl>, depth: Int, name: String): Bool {
+    loop decls as entry {
+        if entry.depth == depth and entry.name == name { return true; }
+    }
+    false
+};
+
+/** Target runtime identifier for an imported module's top-level value, or a root value. */
+pub moduleValueRuntime := fn(target: String, moduleKey: String, name: String): String {
+    if moduleKey == "" { return "lite_" + name; }
+    if target == TARGET_TS { return "lite$m$" + moduleKey + "$" + name; }
+    "lt_m_" + moduleKey + "__" + name
+};
+
+/** Target runtime identifier for a user-defined top-level function. */
+pub moduleFunctionRuntime := fn(target: String, moduleKey: String, name: String): String {
+    if moduleKey == "" {
+        if target == TARGET_TS { return "liteFn_" + name; }
+        return "lt_fn__" + name;
+    }
+    if target == TARGET_TS { return "liteFn$" + moduleKey + "$" + name; }
+    "lt_fn_" + moduleKey + "__" + name
+};
+
+/** Allocates a collision-free compiler-internal temporary name scoped to `locals`. */
+pub freshScopeTemp := fn(locals: List<Local>, prefix: String): String {
+    if not localsUseRuntime(locals, prefix) { return prefix; }
+    var suffix := 2;
+    loop true {
+        candidate := prefix + "$" + integer.intText(suffix);
+        if not localsUseRuntime(locals, candidate) { return candidate; }
+        suffix = suffix + 1;
+    }
+    prefix
+};
+
+/** Selects a target-safe runtime name for a binding, using `lite_<name>` when unshadowed and a scope-local shadow suffix when shadowed. */
+pub localRuntimeName := fn(target: String, locals: List<Local>, name: String, moduleKey: String, depth: Int): String {
+    if depth == 0 and moduleKey =!= "" {
+        return moduleValueRuntime(target, moduleKey, name);
+    }
+    base := "lite_" + name;
+    if not localsUseRuntime(locals, base) { return base; }
+    var suffix := 2;
+    loop true {
+        candidate := if target == TARGET_TS { "lite_" + name + "$" + integer.intText(suffix) }
+        else { "lt_s" + integer.intText(suffix) + "_" + name };
+        if not localsUseRuntime(locals, candidate) { return candidate; }
+        suffix = suffix + 1;
+    }
+    base
+};
