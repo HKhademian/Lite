@@ -1,0 +1,294 @@
+/** Shared frontend IR types, constants, scalar predicates, and TS/C literal backend dispatch helpers. */
+
+numeric := import "./numeric-literals.lts";
+tsLiteral := import "./ts-literals.lts";
+cLiteral := import "./c-literals.lts";
+
+/** One parsed expression: target `code`, checked compile-time value, whether that value is a constant, and the next source position. */
+pub Parsed := type (kind: String, code: String, intValue: Int, textValue: String, constant: Bool, next: Int);
+
+/** One local visible to later statements: source name, hygienic runtime name, value kind, binding reassignment permission, held-data write grant, declaration block depth, constant value, target code, and definite-initialization state. */
+pub Local := type (name: String, runtime: String, kind: String, mutable: Bool, writable: Bool, depth: Int, constant: Bool, code: String, intValue: Int, textValue: String, initState: String);
+
+/** One program or module-graph item: a report stream entry, declaration, control-flow marker, import edge, public function signature or module visit boundary. */
+pub Item := type (kind: String, name: String, runtime: String, code: String, intValue: Int, textValue: String);
+
+/** Parsed module/compiler items returned by parseProgram and consumed by the module collector and backend emitters. */
+pub Items := type List<Item>;
+
+/** Completion facts saved while an inner block is parsed; earlier conditional arms are joined only after a final else. */
+pub BlockState := type (returned: Bool, stopped: Bool, branchesReturned: Bool, branchesStopped: Bool, hasElse: Bool, loopForever: Bool, live: Bool, preLocalsLen: Int, liveBranchCount: Int);
+
+/** Symbol declaration name owned directly by the block at `depth` for same-block uniqueness checks. */
+pub BlockDecl := type (name: String, depth: Int);
+
+/** One outer local initialization and callable-dependency update recorded at the end of a conditional branch. */
+pub BranchUpdate := type (depth: Int, runtime: String, initState: String, code: String);
+
+/** One recognized binary operator spelling and the number of source bytes it occupies. */
+pub Operator := type (text: String, width: Int);
+
+/** One previously declared top-level function: source name, result kind, first parameter entry and parameter count. */
+pub FunctionInfo := type (name: String, runtime: String, result: String, first: Int, count: Int, declAt: Int);
+
+/** A later top-level scalar definition visible only while checking a deferred function body. */
+pub FutureValue := type (name: String, runtime: String, kind: String, at: Int, mutable: Bool, writable: Bool, initState: String);
+
+/** One transparent type alias: source name, raw target type text, declaration position, end position and enclosing block depth. */
+pub AliasDecl := type (name: String, target: String, at: Int, end: Int, depth: Int);
+
+/** Lexical control-flow and metadata context for an enclosing function, block, conditional, match, loop or finally scope. */
+pub ConstructCtx := type (id: Int, tag: String, kind: String, phase: String, iifeDepth: Int, valKind: String, valVar: String, label: String, iterLabel: String, countVar: String, itemVar: String, itemKind: String, indexVar: String, hasIndex: Bool);
+
+/** 32-bucket hashed string set for O(1) reachable-token membership checks across large module graphs. */
+pub TokenBuckets := type (count: Int, b0: String, b1: String, b2: String, b3: String, b4: String, b5: String, b6: String, b7: String, b8: String, b9: String, b10: String, b11: String, b12: String, b13: String, b14: String, b15: String, b16: String, b17: String, b18: String, b19: String, b20: String, b21: String, b22: String, b23: String, b24: String, b25: String, b26: String, b27: String, b28: String, b29: String, b30: String, b31: String);
+
+pub INIT_STATE_INIT := "init";
+pub INIT_STATE_UNINIT := "uninit";
+pub INIT_STATE_UNINIT_ASSIGNED := "uninit_assigned";
+pub INIT_STATE_MAYBE := "maybe";
+
+pub BLOCK_KIND_FUNCTION := "function";
+pub BLOCK_KIND_SCOPE := "scope";
+pub BLOCK_KIND_IF := "if";
+pub BLOCK_KIND_IF_VALUE := "ifvalue";
+pub BLOCK_KIND_ELSE := "else";
+pub BLOCK_KIND_LOOP := "loop";
+pub BLOCK_KIND_MATCH := "match";
+pub BLOCK_KIND_MATCH_VALUE := "matchvalue";
+pub BLOCK_KIND_MATCH_ELSE := "matchelse";
+pub BLOCK_KIND_MATCH_ELSE_VALUE := "matchelseval";
+pub BLOCK_KIND_MATCH_SINGLE := "matchsingle";
+pub BLOCK_KIND_MATCH_SINGLE_VALUE := "matchsingleval";
+
+pub TARGET_TS := "ts";
+pub TARGET_C := "c";
+
+pub BUILTIN_MODE_BUILTIN := "builtin";
+pub BUILTIN_MODE_PURE := "pure";
+
+pub BUILTIN_RULE_PROJECT := "project";
+pub BUILTIN_RULE_MODULE := "module";
+pub BUILTIN_RULE_FN := "fn";
+
+pub DECL_KIND_FUTURE_DECL := "FutureDecl";
+pub DECL_KIND_FUTURE_FN := "FutureFn";
+pub DECL_KIND_FUTURE_DESTR := "FutureDestr";
+pub DECL_KIND_ALIAS := "Alias";
+pub DECL_KIND_PUB_FN := "PubFn";
+pub DECL_KIND_PUB_TYPE := "PubType";
+pub DECL_KIND_PUB_VAL := "PubVal";
+pub DECL_KIND_HAS_INNER_ALIAS := "HasInnerAlias";
+
+pub DECL_BIND_VAL := "val";
+pub DECL_BIND_VAR := "var";
+
+pub DECL_TAG_ANN := "ann";
+pub DECL_TAG_VAR_ANN := "varann";
+pub DECL_TAG_VAL := "val";
+pub DECL_TAG_VAR_VAL := "varval";
+pub DECL_TAG_VAR_MUT := "varmut";
+pub DECL_TAG_MUT_VAL := "mutval";
+
+pub VALUE_KIND_INT8 := numeric.KIND_INT8;
+pub VALUE_KIND_INT16 := numeric.KIND_INT16;
+pub VALUE_KIND_INT32 := numeric.KIND_INT32;
+pub VALUE_KIND_INT := numeric.KIND_INT;
+pub VALUE_KIND_FLOAT32 := numeric.KIND_FLOAT32;
+pub VALUE_KIND_FLOAT := numeric.KIND_FLOAT;
+pub VALUE_KIND_STRING := numeric.KIND_STRING;
+pub VALUE_KIND_BOOL := numeric.KIND_BOOL;
+pub VALUE_KIND_UNIT := numeric.KIND_UNIT;
+pub VALUE_KIND_NEVER := numeric.KIND_NEVER;
+pub VALUE_KIND_MODULE := "Module";
+pub VALUE_KIND_MODULE_FUNCTION := "ModuleFunction";
+pub VALUE_KIND_LIST_OP := "ListOp";
+
+pub ITEM_PREFIX_LOCAL := "Local";
+pub ITEM_PREFIX_VAR := "Var";
+pub ITEM_PREFIX_ASSIGN := "Assign";
+
+pub DECL_KIND_ROOT_ASSIGN := "RootAssign";
+
+pub ITEM_KIND_MODULE_START := "ModuleStart";
+pub ITEM_KIND_MODULE_END := "ModuleEnd";
+pub ITEM_KIND_MODULE_VISITED := "ModuleVisited";
+pub ITEM_KIND_MODULE_LOADED := "ModuleLoaded";
+pub ITEM_KIND_IMPORT_EDGE := "ImportEdge";
+pub ITEM_KIND_MODULE_PROCESSED := "ModuleProcessed";
+pub ITEM_KIND_MODULE_ALIAS := "ModuleAlias";
+pub ITEM_KIND_CORE_MODULE_META := "CoreModuleMeta";
+pub ITEM_KIND_CORE_MODULE_SOURCE := "CoreModuleSource";
+pub ITEM_KIND_CORE_MODULE_IMPORT := "CoreModuleImport";
+pub ITEM_KIND_PUBLIC_FUNCTION := "PublicFunction";
+pub ITEM_KIND_PUBLIC_VALUE := "PublicValue";
+pub ITEM_KIND_PUBLIC_TYPE := "PublicType";
+pub ITEM_KIND_PURE_GLOBAL := "PureGlobal";
+pub ITEM_KIND_FUNCTION_START := "FunctionStart";
+pub ITEM_KIND_FUNCTION_END := "FunctionEnd";
+pub ITEM_KIND_SOFT_BUILTIN := "SoftBuiltin";
+pub ITEM_KIND_TRANSFER_TRY := "TransferTry";
+pub ITEM_KIND_TRANSFER_CATCH := "TransferCatch";
+pub ITEM_KIND_LOOP_TRANSFER_TRY := "LoopTransferTry";
+pub ITEM_KIND_LOOP_TRANSFER_CATCH := "LoopTransferCatch";
+pub ITEM_KIND_RETURN := "Return";
+pub ITEM_KIND_UNREACHABLE := "Unreachable";
+pub ITEM_KIND_BREAK := "Break";
+pub ITEM_KIND_CONTINUE := "Continue";
+pub ITEM_KIND_CALL := "Call";
+pub ITEM_KIND_DISCARD := "Discard";
+pub ITEM_KIND_SCOPE := "Scope";
+pub ITEM_KIND_END_SCOPE := "EndScope";
+pub ITEM_KIND_IF := "If";
+pub ITEM_KIND_ELSE_IF := "ElseIf";
+pub ITEM_KIND_ELSE := "Else";
+pub ITEM_KIND_END_IF := "EndIf";
+pub ITEM_KIND_LOOP := "Loop";
+pub ITEM_KIND_LOOP_SEQ := "LoopSeq";
+pub ITEM_KIND_END_LOOP := "EndLoop";
+pub ITEM_KIND_END := "End";
+pub ITEM_KIND_END_OUTPUT := "EndOutput";
+pub ITEM_KIND_MAIN_STOP := "MainStop";
+pub ITEM_KIND_IMPORT := "Import";
+pub ITEM_KIND_NOOP := "Noop";
+pub ITEM_KIND_LOCAL_TUPLE := "LocalTuple";
+pub ITEM_KIND_LOCAL_LIST := "LocalList";
+pub ITEM_KIND_LOCAL_FN := "LocalFn";
+pub ITEM_KIND_LOCAL_INT := "LocalInt";
+pub ITEM_KIND_LOCAL_STRING := "LocalString";
+pub ITEM_KIND_LOCAL_BOOL := "LocalBool";
+pub ITEM_KIND_LOCAL_FLOAT := "LocalFloat";
+pub ITEM_KIND_VAR_TUPLE := "VarTuple";
+pub ITEM_KIND_VAR_LIST := "VarList";
+pub ITEM_KIND_VAR_FN := "VarFn";
+pub ITEM_KIND_VAR_INT := "VarInt";
+pub ITEM_KIND_VAR_STRING := "VarString";
+pub ITEM_KIND_VAR_BOOL := "VarBool";
+pub ITEM_KIND_VAR_FLOAT := "VarFloat";
+pub ITEM_KIND_ASSIGN_TUPLE := "AssignTuple";
+pub ITEM_KIND_ASSIGN_LIST := "AssignList";
+pub ITEM_KIND_ASSIGN_FN := "AssignFn";
+pub ITEM_KIND_ASSIGN_INT := "AssignInt";
+pub ITEM_KIND_ASSIGN_STRING := "AssignString";
+pub ITEM_KIND_ASSIGN_BOOL := "AssignBool";
+pub ITEM_KIND_ASSIGN_FLOAT := "AssignFloat";
+pub ITEM_KIND_LOCAL_UNIT := "LocalUnit";
+pub ITEM_KIND_VAR_UNIT := "VarUnit";
+
+pub CTX_KIND_IF := "if";
+pub CTX_KIND_MATCH := "match";
+pub CTX_KIND_LOOP := "loop";
+pub CTX_KIND_FN := "fn";
+pub CTX_KIND_BLOCK := "block";
+pub CTX_KIND_FINALLY := "finally";
+
+pub CTX_PHASE_HEADER := "header";
+pub CTX_PHASE_BODY := "body";
+pub CTX_PHASE_THEN := "then";
+pub CTX_PHASE_FINALLY := "finally";
+
+pub VAL_KIND_INFER := "__infer__";
+
+pub SCAN_HIT_NONE := 0;
+pub SCAN_HIT_QUOTE := 1;
+pub SCAN_HIT_COMMENT := 2;
+pub SCAN_HIT_OPEN := 3;
+pub SCAN_HIT_CLOSE := 4;
+pub SCAN_NO_THEN := -2;
+
+pub DOT_LOOP_OUTSIDE := -1;
+pub DOT_LOOP_IN_CONDITIONAL := -2;
+pub DOT_LOOP_IN_FINALLY := -3;
+
+/** True when `kind` is one of the signed integer scalar types (`Int8`, `Int16`, `Int32`, `Int`). */
+pub isIntScalarKind := fn(kind: String): Bool { numeric.isIntKind(kind) }
+
+/** True when `kind` is one of the binary float scalar types (`Float32`, `Float`). */
+pub isFloatScalarKind := fn(kind: String): Bool { numeric.isFloatKind(kind) }
+
+/** Selects the TS or C backend implementation for one boolean literal. */
+pub targetBoolLiteralCode := fn(target: String, value: Bool): String { if target == TARGET_TS { tsLiteral.boolLiteralCode(value) } else { cLiteral.boolLiteralCode(value) } }
+
+/** Selects the TS or C backend implementation for one chained comparison. */
+pub targetComparisonChainCode := fn(target: String, codes: List<String>, kinds: List<String>, operators: List<String>, count: Int, position: Int): String { if target == TARGET_TS { tsLiteral.comparisonChainCode(codes, kinds, operators, count, position) } else { cLiteral.comparisonChainCode(codes, kinds, operators, count, position) } }
+
+/** Selects the TS or C backend implementation for one comparison operation. */
+pub targetComparisonCode := fn(target: String, op: String, kind: String, left: String, right: String): String { if target == TARGET_TS { tsLiteral.comparisonCode(op, kind, left, right) } else { cLiteral.comparisonCode(op, kind, left, right) } }
+
+/** Selects the TS or C backend implementation for string concatenation. */
+pub targetConcatCode := fn(target: String, left: String, right: String): String { if target == TARGET_TS { tsLiteral.concatCode(left, right) } else { cLiteral.concatCode(left, right) } }
+
+/** Selects the TS or C backend implementation for one Float64 binary operation. */
+pub targetFloatBinaryCode := fn(target: String, op: String, left: String, right: String, position: Int): String { if target == TARGET_TS { tsLiteral.floatBinaryCode(op, left, right, position) } else { cLiteral.floatBinaryCode(op, left, right, position) } }
+
+/** Selects the TS or C backend implementation for one Float32 binary operation. */
+pub targetFloat32BinaryCode := fn(target: String, op: String, left: String, right: String, position: Int): String { if target == TARGET_TS { tsLiteral.float32BinaryCode(op, left, right, position) } else { cLiteral.float32BinaryCode(op, left, right, position) } }
+
+/** Selects the TS or C backend implementation for one Float64 literal. */
+pub targetFloatLiteralCode := fn(target: String, digits: String, negative: Bool): String { if target == TARGET_TS { tsLiteral.floatLiteralCode(digits, negative) } else { cLiteral.floatLiteralCode(digits, negative) } }
+
+/** Selects the TS or C backend implementation for one Float32 literal. */
+pub targetFloat32LiteralCode := fn(target: String, digits: String, negative: Bool): String { if target == TARGET_TS { tsLiteral.float32LiteralCode(digits, negative) } else { cLiteral.float32LiteralCode(digits, negative) } }
+
+/** Selects the TS or C backend implementation for promoting an operand to Float64. */
+pub targetFloatOperandCode := fn(target: String, kind: String, code: String): String { if target == TARGET_TS { tsLiteral.floatOperandCode(kind, code) } else { cLiteral.floatOperandCode(kind, code) } }
+
+/** Selects the TS or C backend implementation for promoting an operand to Float32. */
+pub targetFloat32OperandCode := fn(target: String, kind: String, code: String): String { if target == TARGET_TS { tsLiteral.float32OperandCode(kind, code) } else { cLiteral.float32OperandCode(kind, code) } }
+
+/** Selects the TS or C backend implementation for checked narrow integer arithmetic. */
+pub targetCheckedNarrowIntCode := fn(target: String, kind: String, value: String, position: Int): String { if target == TARGET_TS { tsLiteral.checkedNarrowIntCode(kind, value, position) } else { cLiteral.checkedNarrowIntCode(kind, value, position) } }
+
+/** Selects the TS or C backend implementation for exponentiation. */
+pub targetFloatPowerCode := fn(target: String, left: String, right: String, position: Int): String { if target == TARGET_TS { tsLiteral.floatPowerCode(left, right, position) } else { cLiteral.floatPowerCode(left, right, position) } }
+
+/** Selects the TS or C backend implementation for unchecked floor division. */
+pub targetFloorDivCode := fn(target: String, left: String, right: String): String { if target == TARGET_TS { tsLiteral.floorDivCode(left, right) } else { cLiteral.floorDivCode(left, right) } }
+
+/** Selects the TS or C backend implementation for unchecked floor modulo. */
+pub targetFloorModCode := fn(target: String, left: String, right: String): String { if target == TARGET_TS { tsLiteral.floorModCode(left, right) } else { cLiteral.floorModCode(left, right) } }
+
+/** Selects the TS or C backend implementation for checked integer addition. */
+pub targetIntAddCode := fn(target: String, left: String, right: String, position: Int): String { if target == TARGET_TS { tsLiteral.intAddCode(left, right, position) } else { cLiteral.intAddCode(left, right, position) } }
+
+/** Selects the TS or C backend implementation for checked truncating integer division. */
+pub targetIntDivideCode := fn(target: String, left: String, right: String, position: Int): String { if target == TARGET_TS { tsLiteral.intDivideCode(left, right, position) } else { cLiteral.intDivideCode(left, right, position) } }
+
+/** Selects the TS or C backend implementation for checked floor integer division. */
+pub targetIntFloorDivideCode := fn(target: String, left: String, right: String, position: Int): String { if target == TARGET_TS { tsLiteral.intFloorDivideCode(left, right, position) } else { cLiteral.intFloorDivideCode(left, right, position) } }
+
+/** Selects the TS or C backend implementation for checked floor integer modulo. */
+pub targetIntFloorModuloCode := fn(target: String, left: String, right: String, position: Int): String { if target == TARGET_TS { tsLiteral.intFloorModuloCode(left, right, position) } else { cLiteral.intFloorModuloCode(left, right, position) } }
+
+/** Selects the TS or C backend implementation for one integer literal. */
+pub targetIntLiteralCode := fn(target: String, value: Int, negative: Bool, digits: String): String { if target == TARGET_TS { tsLiteral.intLiteralCode(value, negative, digits) } else { cLiteral.intLiteralCode(value, negative, digits) } }
+
+/** Selects the TS or C backend implementation for checked integer multiplication. */
+pub targetIntMultiplyCode := fn(target: String, left: String, right: String, position: Int): String { if target == TARGET_TS { tsLiteral.intMultiplyCode(left, right, position) } else { cLiteral.intMultiplyCode(left, right, position) } }
+
+/** Selects the TS or C backend implementation for checked integer negation. */
+pub targetIntNegateCode := fn(target: String, value: String, position: Int): String { if target == TARGET_TS { tsLiteral.intNegateCode(value, position) } else { cLiteral.intNegateCode(value, position) } }
+
+/** Selects the TS or C backend implementation for checked truncating integer remainder. */
+pub targetIntRemainderCode := fn(target: String, left: String, right: String, position: Int): String { if target == TARGET_TS { tsLiteral.intRemainderCode(left, right, position) } else { cLiteral.intRemainderCode(left, right, position) } }
+
+/** Selects the TS or C backend implementation for checked integer subtraction. */
+pub targetIntSubtractCode := fn(target: String, left: String, right: String, position: Int): String { if target == TARGET_TS { tsLiteral.intSubtractCode(left, right, position) } else { cLiteral.intSubtractCode(left, right, position) } }
+
+/** Selects the TS or C backend implementation for shallow list cloning. */
+pub targetListCopyCode := fn(target: String, code: String): String { if target == TARGET_TS { tsLiteral.listCopyCode(code) } else { cLiteral.listCopyCode(code) } }
+
+/** Selects the TS or C backend implementation for logical conjunction/disjunction. */
+pub targetLogicCode := fn(target: String, op: String, left: String, right: String): String { if target == TARGET_TS { tsLiteral.logicCode(op, left, right) } else { cLiteral.logicCode(op, left, right) } }
+
+/** Selects the TS or C backend implementation for boolean negation. */
+pub targetNotCode := fn(target: String, value: String): String { if target == TARGET_TS { tsLiteral.notCode(value) } else { cLiteral.notCode(value) } }
+
+/** Selects the TS or C backend implementation for one text literal. */
+pub targetTextLiteralCode := fn(target: String, value: String): String { if target == TARGET_TS { tsLiteral.textLiteralCode(value) } else { cLiteral.textLiteralCode(value) } }
+
+/** Selects the TS or C backend implementation for evaluating an expression to Unit. */
+pub targetUnitEvaluationCode := fn(target: String, code: String): String { if target == TARGET_TS { tsLiteral.unitEvaluationCode(code) } else { cLiteral.unitEvaluationCode(code) } }
+
+/** Selects the TS or C backend implementation for the Unit literal. */
+pub targetUnitLiteralCode := fn(target: String): String { if target == TARGET_TS { tsLiteral.unitLiteralCode } else { cLiteral.unitLiteralCode } }

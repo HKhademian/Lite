@@ -5,84 +5,27 @@ diagLib := import "core/diag";
 numeric := import "./numeric-literals.lts";
 integer := import "core/int";
 tsLiteral := import "./ts-literals.lts";
-cLiteral := import "./c-literals.lts";
+ir := import "./frontend-ir.lts";
 io := import "core/io";
 textLib := import "core/text";
 
-/** Selects the TS or C backend implementation for one emitted literal operation. */
-targetBoolLiteralCode := fn(target: String, value: Bool): String { if target == TARGET_TS { tsLiteral.boolLiteralCode(value) } else { cLiteral.boolLiteralCode(value) } }
-/** Selects the TS or C backend implementation for one emitted literal operation. */
-targetComparisonChainCode := fn(target: String, codes: List<String>, kinds: List<String>, operators: List<String>, count: Int, position: Int): String { if target == TARGET_TS { tsLiteral.comparisonChainCode(codes, kinds, operators, count, position) } else { cLiteral.comparisonChainCode(codes, kinds, operators, count, position) } }
-/** Selects the TS or C backend implementation for one emitted literal operation. */
-targetComparisonCode := fn(target: String, op: String, kind: String, left: String, right: String): String { if target == TARGET_TS { tsLiteral.comparisonCode(op, kind, left, right) } else { cLiteral.comparisonCode(op, kind, left, right) } }
-/** Selects the TS or C backend implementation for one emitted literal operation. */
-targetConcatCode := fn(target: String, left: String, right: String): String { if target == TARGET_TS { tsLiteral.concatCode(left, right) } else { cLiteral.concatCode(left, right) } }
-/** Selects the TS or C backend implementation for one emitted literal operation. */
-targetFloatBinaryCode := fn(target: String, op: String, left: String, right: String, position: Int): String { if target == TARGET_TS { tsLiteral.floatBinaryCode(op, left, right, position) } else { cLiteral.floatBinaryCode(op, left, right, position) } }
-/** Selects the TS or C backend implementation for one emitted literal operation. */
-targetFloat32BinaryCode := fn(target: String, op: String, left: String, right: String, position: Int): String { if target == TARGET_TS { tsLiteral.float32BinaryCode(op, left, right, position) } else { cLiteral.float32BinaryCode(op, left, right, position) } }
-/** Selects the TS or C backend implementation for one emitted literal operation. */
-targetFloatLiteralCode := fn(target: String, digits: String, negative: Bool): String { if target == TARGET_TS { tsLiteral.floatLiteralCode(digits, negative) } else { cLiteral.floatLiteralCode(digits, negative) } }
-/** Selects the TS or C backend implementation for one emitted literal operation. */
-targetFloat32LiteralCode := fn(target: String, digits: String, negative: Bool): String { if target == TARGET_TS { tsLiteral.float32LiteralCode(digits, negative) } else { cLiteral.float32LiteralCode(digits, negative) } }
-/** Selects the TS or C backend implementation for one emitted literal operation. */
-targetFloatOperandCode := fn(target: String, kind: String, code: String): String { if target == TARGET_TS { tsLiteral.floatOperandCode(kind, code) } else { cLiteral.floatOperandCode(kind, code) } }
-/** Selects the TS or C backend implementation for one emitted literal operation. */
-targetFloat32OperandCode := fn(target: String, kind: String, code: String): String { if target == TARGET_TS { tsLiteral.float32OperandCode(kind, code) } else { cLiteral.float32OperandCode(kind, code) } }
-/** Selects the TS or C backend implementation for checked narrow integer arithmetic. */
-targetCheckedNarrowIntCode := fn(target: String, kind: String, value: String, position: Int): String { if target == TARGET_TS { tsLiteral.checkedNarrowIntCode(kind, value, position) } else { cLiteral.checkedNarrowIntCode(kind, value, position) } }
+/** Shared restricted front-end. */
+
 /** True when `kind` is one of the signed integer scalar types (`Int8`, `Int16`, `Int32`, `Int`). */
-pub isIntScalarKind := fn(kind: String): Bool { numeric.isIntKind(kind) }
+pub isIntScalarKind := fn(kind: String): Bool { ir.isIntScalarKind(kind) }
+
 /** True when `kind` is one of the binary float scalar types (`Float32`, `Float`). */
-pub isFloatScalarKind := fn(kind: String): Bool { numeric.isFloatKind(kind) }
-/** Selects the TS or C backend implementation for one emitted literal operation. */
-targetFloatPowerCode := fn(target: String, left: String, right: String, position: Int): String { if target == TARGET_TS { tsLiteral.floatPowerCode(left, right, position) } else { cLiteral.floatPowerCode(left, right, position) } }
-/** Selects the TS or C backend implementation for one emitted literal operation. */
-targetFloorDivCode := fn(target: String, left: String, right: String): String { if target == TARGET_TS { tsLiteral.floorDivCode(left, right) } else { cLiteral.floorDivCode(left, right) } }
-/** Selects the TS or C backend implementation for one emitted literal operation. */
-targetFloorModCode := fn(target: String, left: String, right: String): String { if target == TARGET_TS { tsLiteral.floorModCode(left, right) } else { cLiteral.floorModCode(left, right) } }
-/** Selects the TS or C backend implementation for one emitted literal operation. */
-targetIntAddCode := fn(target: String, left: String, right: String, position: Int): String { if target == TARGET_TS { tsLiteral.intAddCode(left, right, position) } else { cLiteral.intAddCode(left, right, position) } }
-/** Selects the TS or C backend implementation for one emitted literal operation. */
-targetIntDivideCode := fn(target: String, left: String, right: String, position: Int): String { if target == TARGET_TS { tsLiteral.intDivideCode(left, right, position) } else { cLiteral.intDivideCode(left, right, position) } }
-/** Selects the TS or C backend implementation for one emitted literal operation. */
-targetIntFloorDivideCode := fn(target: String, left: String, right: String, position: Int): String { if target == TARGET_TS { tsLiteral.intFloorDivideCode(left, right, position) } else { cLiteral.intFloorDivideCode(left, right, position) } }
-/** Selects the TS or C backend implementation for one emitted literal operation. */
-targetIntFloorModuloCode := fn(target: String, left: String, right: String, position: Int): String { if target == TARGET_TS { tsLiteral.intFloorModuloCode(left, right, position) } else { cLiteral.intFloorModuloCode(left, right, position) } }
-/** Selects the TS or C backend implementation for one emitted literal operation. */
-targetIntLiteralCode := fn(target: String, value: Int, negative: Bool, digits: String): String { if target == TARGET_TS { tsLiteral.intLiteralCode(value, negative, digits) } else { cLiteral.intLiteralCode(value, negative, digits) } }
-/** Selects the TS or C backend implementation for one emitted literal operation. */
-targetIntMultiplyCode := fn(target: String, left: String, right: String, position: Int): String { if target == TARGET_TS { tsLiteral.intMultiplyCode(left, right, position) } else { cLiteral.intMultiplyCode(left, right, position) } }
-/** Selects the TS or C backend implementation for one emitted literal operation. */
-targetIntNegateCode := fn(target: String, value: String, position: Int): String { if target == TARGET_TS { tsLiteral.intNegateCode(value, position) } else { cLiteral.intNegateCode(value, position) } }
-/** Selects the TS or C backend implementation for one emitted literal operation. */
-targetIntRemainderCode := fn(target: String, left: String, right: String, position: Int): String { if target == TARGET_TS { tsLiteral.intRemainderCode(left, right, position) } else { cLiteral.intRemainderCode(left, right, position) } }
-/** Selects the TS or C backend implementation for one emitted literal operation. */
-targetIntSubtractCode := fn(target: String, left: String, right: String, position: Int): String { if target == TARGET_TS { tsLiteral.intSubtractCode(left, right, position) } else { cLiteral.intSubtractCode(left, right, position) } }
-/** Selects the TS or C backend implementation for one emitted literal operation. */
-targetListCopyCode := fn(target: String, code: String): String { if target == TARGET_TS { tsLiteral.listCopyCode(code) } else { cLiteral.listCopyCode(code) } }
-/** Selects the TS or C backend implementation for one emitted literal operation. */
-targetLogicCode := fn(target: String, op: String, left: String, right: String): String { if target == TARGET_TS { tsLiteral.logicCode(op, left, right) } else { cLiteral.logicCode(op, left, right) } }
-/** Selects the TS or C backend implementation for one emitted literal operation. */
-targetNotCode := fn(target: String, value: String): String { if target == TARGET_TS { tsLiteral.notCode(value) } else { cLiteral.notCode(value) } }
-/** Selects the TS or C backend implementation for one emitted literal operation. */
-targetTextLiteralCode := fn(target: String, value: String): String { if target == TARGET_TS { tsLiteral.textLiteralCode(value) } else { cLiteral.textLiteralCode(value) } }
-/** Selects the TS or C backend implementation for one emitted literal operation. */
-targetUnitEvaluationCode := fn(target: String, code: String): String { if target == TARGET_TS { tsLiteral.unitEvaluationCode(code) } else { cLiteral.unitEvaluationCode(code) } }
-/** Selects the TS or C backend implementation for one emitted literal operation. */
-targetUnitLiteralCode := fn(target: String): String { if target == TARGET_TS { tsLiteral.unitLiteralCode } else { cLiteral.unitLiteralCode } }
-/* Shared restricted front-end. Not a standalone program: a target manifest
-   places the target literal encoders before this file and the emitter/driver
-   after it. */
+pub isFloatScalarKind := fn(kind: String): Bool { ir.isFloatScalarKind(kind) }
+
 /** One parsed expression: target `code`, checked compile-time value, whether that value is a constant, and the next source position. */
 Parsed := type (kind: String, code: String, intValue: Int, textValue: String, constant: Bool, next: Int);
-/** One local visible to later statements: source name, hygienic runtime name, value kind, binding reassignment permission, held-data write grant, declaration block depth, constant value, target code, and definite-initialization state ("init", "uninit", or "maybe"). */
+/** One local visible to later statements. */
 Local := type (name: String, runtime: String, kind: String, mutable: Bool, writable: Bool, depth: Int, constant: Bool, code: String, intValue: Int, textValue: String, initState: String);
-/** One program or module-graph item: a report stream entry, declaration, control-flow marker, import edge, public function signature or module visit boundary. */
+/** One program or module-graph item. */
 pub Item := type (kind: String, name: String, runtime: String, code: String, intValue: Int, textValue: String);
 /** Parsed module/compiler items returned by parseProgram and consumed by the module collector and backend emitters. */
 pub Items := type List<Item>;
-/** Completion facts saved while an inner block is parsed; earlier conditional arms are joined only after a final else. */
+/** Completion facts saved while an inner block is parsed. */
 BlockState := type (returned: Bool, stopped: Bool, branchesReturned: Bool, branchesStopped: Bool, hasElse: Bool, loopForever: Bool, live: Bool, preLocalsLen: Int, liveBranchCount: Int);
 /** Symbol declaration name owned directly by the block at `depth` for same-block uniqueness checks. */
 BlockDecl := type (name: String, depth: Int);
@@ -90,173 +33,173 @@ BlockDecl := type (name: String, depth: Int);
 BranchUpdate := type (depth: Int, runtime: String, initState: String, code: String);
 /** One recognized binary operator spelling and the number of source bytes it occupies. */
 Operator := type (text: String, width: Int);
-/** One previously declared top-level function: source name, result kind, first parameter entry and parameter count. */
+/** One previously declared top-level function. */
 FunctionInfo := type (name: String, runtime: String, result: String, first: Int, count: Int, declAt: Int);
 /** A later top-level scalar definition visible only while checking a deferred function body. */
 FutureValue := type (name: String, runtime: String, kind: String, at: Int, mutable: Bool, writable: Bool, initState: String);
-/** One transparent type alias: source name, raw target type text, declaration position, end position and enclosing block depth. */
+/** One transparent type alias. */
 AliasDecl := type (name: String, target: String, at: Int, end: Int, depth: Int);
-/** Lexical control-flow and metadata context for an enclosing function, block, conditional, match, loop or finally scope. */
+/** Lexical control-flow and metadata context for an enclosing construct. */
 ConstructCtx := type (id: Int, tag: String, kind: String, phase: String, iifeDepth: Int, valKind: String, valVar: String, label: String, iterLabel: String, countVar: String, itemVar: String, itemKind: String, indexVar: String, hasIndex: Bool);
 /** 32-bucket hashed string set for O(1) reachable-token membership checks across large module graphs. */
 pub TokenBuckets := type (count: Int, b0: String, b1: String, b2: String, b3: String, b4: String, b5: String, b6: String, b7: String, b8: String, b9: String, b10: String, b11: String, b12: String, b13: String, b14: String, b15: String, b16: String, b17: String, b18: String, b19: String, b20: String, b21: String, b22: String, b23: String, b24: String, b25: String, b26: String, b27: String, b28: String, b29: String, b30: String, b31: String);
 
-INIT_STATE_INIT := "init";
-INIT_STATE_UNINIT := "uninit";
-INIT_STATE_UNINIT_ASSIGNED := "uninit_assigned";
-INIT_STATE_MAYBE := "maybe";
+INIT_STATE_INIT := ir.INIT_STATE_INIT;
+INIT_STATE_UNINIT := ir.INIT_STATE_UNINIT;
+INIT_STATE_UNINIT_ASSIGNED := ir.INIT_STATE_UNINIT_ASSIGNED;
+INIT_STATE_MAYBE := ir.INIT_STATE_MAYBE;
 
-BLOCK_KIND_FUNCTION := "function";
-BLOCK_KIND_SCOPE := "scope";
-BLOCK_KIND_IF := "if";
-BLOCK_KIND_IF_VALUE := "ifvalue";
-BLOCK_KIND_ELSE := "else";
-BLOCK_KIND_LOOP := "loop";
-BLOCK_KIND_MATCH := "match";
-BLOCK_KIND_MATCH_VALUE := "matchvalue";
-BLOCK_KIND_MATCH_ELSE := "matchelse";
-BLOCK_KIND_MATCH_ELSE_VALUE := "matchelseval";
-BLOCK_KIND_MATCH_SINGLE := "matchsingle";
-BLOCK_KIND_MATCH_SINGLE_VALUE := "matchsingleval";
+BLOCK_KIND_FUNCTION := ir.BLOCK_KIND_FUNCTION;
+BLOCK_KIND_SCOPE := ir.BLOCK_KIND_SCOPE;
+BLOCK_KIND_IF := ir.BLOCK_KIND_IF;
+BLOCK_KIND_IF_VALUE := ir.BLOCK_KIND_IF_VALUE;
+BLOCK_KIND_ELSE := ir.BLOCK_KIND_ELSE;
+BLOCK_KIND_LOOP := ir.BLOCK_KIND_LOOP;
+BLOCK_KIND_MATCH := ir.BLOCK_KIND_MATCH;
+BLOCK_KIND_MATCH_VALUE := ir.BLOCK_KIND_MATCH_VALUE;
+BLOCK_KIND_MATCH_ELSE := ir.BLOCK_KIND_MATCH_ELSE;
+BLOCK_KIND_MATCH_ELSE_VALUE := ir.BLOCK_KIND_MATCH_ELSE_VALUE;
+BLOCK_KIND_MATCH_SINGLE := ir.BLOCK_KIND_MATCH_SINGLE;
+BLOCK_KIND_MATCH_SINGLE_VALUE := ir.BLOCK_KIND_MATCH_SINGLE_VALUE;
 
-pub TARGET_TS := "ts";
-pub TARGET_C := "c";
+pub TARGET_TS := ir.TARGET_TS;
+pub TARGET_C := ir.TARGET_C;
 
-pub BUILTIN_MODE_BUILTIN := "builtin";
-pub BUILTIN_MODE_PURE := "pure";
+pub BUILTIN_MODE_BUILTIN := ir.BUILTIN_MODE_BUILTIN;
+pub BUILTIN_MODE_PURE := ir.BUILTIN_MODE_PURE;
 
-BUILTIN_RULE_PROJECT := "project";
-BUILTIN_RULE_MODULE := "module";
-BUILTIN_RULE_FN := "fn";
+BUILTIN_RULE_PROJECT := ir.BUILTIN_RULE_PROJECT;
+BUILTIN_RULE_MODULE := ir.BUILTIN_RULE_MODULE;
+BUILTIN_RULE_FN := ir.BUILTIN_RULE_FN;
 
-DECL_KIND_FUTURE_DECL := "FutureDecl";
-DECL_KIND_FUTURE_FN := "FutureFn";
-DECL_KIND_FUTURE_DESTR := "FutureDestr";
-DECL_KIND_ALIAS := "Alias";
-DECL_KIND_PUB_FN := "PubFn";
-DECL_KIND_PUB_TYPE := "PubType";
-DECL_KIND_PUB_VAL := "PubVal";
-DECL_KIND_HAS_INNER_ALIAS := "HasInnerAlias";
+DECL_KIND_FUTURE_DECL := ir.DECL_KIND_FUTURE_DECL;
+DECL_KIND_FUTURE_FN := ir.DECL_KIND_FUTURE_FN;
+DECL_KIND_FUTURE_DESTR := ir.DECL_KIND_FUTURE_DESTR;
+DECL_KIND_ALIAS := ir.DECL_KIND_ALIAS;
+DECL_KIND_PUB_FN := ir.DECL_KIND_PUB_FN;
+DECL_KIND_PUB_TYPE := ir.DECL_KIND_PUB_TYPE;
+DECL_KIND_PUB_VAL := ir.DECL_KIND_PUB_VAL;
+DECL_KIND_HAS_INNER_ALIAS := ir.DECL_KIND_HAS_INNER_ALIAS;
 
-DECL_BIND_VAL := "val";
-DECL_BIND_VAR := "var";
+DECL_BIND_VAL := ir.DECL_BIND_VAL;
+DECL_BIND_VAR := ir.DECL_BIND_VAR;
 
-DECL_TAG_ANN := "ann";
-DECL_TAG_VAR_ANN := "varann";
-DECL_TAG_VAL := "val";
-DECL_TAG_VAR_VAL := "varval";
-DECL_TAG_VAR_MUT := "varmut";
-DECL_TAG_MUT_VAL := "mutval";
+DECL_TAG_ANN := ir.DECL_TAG_ANN;
+DECL_TAG_VAR_ANN := ir.DECL_TAG_VAR_ANN;
+DECL_TAG_VAL := ir.DECL_TAG_VAL;
+DECL_TAG_VAR_VAL := ir.DECL_TAG_VAR_VAL;
+DECL_TAG_VAR_MUT := ir.DECL_TAG_VAR_MUT;
+DECL_TAG_MUT_VAL := ir.DECL_TAG_MUT_VAL;
 
-pub VALUE_KIND_INT8 := numeric.KIND_INT8;
-pub VALUE_KIND_INT16 := numeric.KIND_INT16;
-pub VALUE_KIND_INT32 := numeric.KIND_INT32;
-pub VALUE_KIND_INT := numeric.KIND_INT;
-pub VALUE_KIND_FLOAT32 := numeric.KIND_FLOAT32;
-pub VALUE_KIND_FLOAT := numeric.KIND_FLOAT;
-pub VALUE_KIND_STRING := numeric.KIND_STRING;
-pub VALUE_KIND_BOOL := numeric.KIND_BOOL;
-pub VALUE_KIND_UNIT := numeric.KIND_UNIT;
-pub VALUE_KIND_NEVER := numeric.KIND_NEVER;
-VALUE_KIND_MODULE := "Module";
-VALUE_KIND_MODULE_FUNCTION := "ModuleFunction";
-VALUE_KIND_LIST_OP := "ListOp";
+pub VALUE_KIND_INT8 := ir.VALUE_KIND_INT8;
+pub VALUE_KIND_INT16 := ir.VALUE_KIND_INT16;
+pub VALUE_KIND_INT32 := ir.VALUE_KIND_INT32;
+pub VALUE_KIND_INT := ir.VALUE_KIND_INT;
+pub VALUE_KIND_FLOAT32 := ir.VALUE_KIND_FLOAT32;
+pub VALUE_KIND_FLOAT := ir.VALUE_KIND_FLOAT;
+pub VALUE_KIND_STRING := ir.VALUE_KIND_STRING;
+pub VALUE_KIND_BOOL := ir.VALUE_KIND_BOOL;
+pub VALUE_KIND_UNIT := ir.VALUE_KIND_UNIT;
+pub VALUE_KIND_NEVER := ir.VALUE_KIND_NEVER;
+VALUE_KIND_MODULE := ir.VALUE_KIND_MODULE;
+VALUE_KIND_MODULE_FUNCTION := ir.VALUE_KIND_MODULE_FUNCTION;
+VALUE_KIND_LIST_OP := ir.VALUE_KIND_LIST_OP;
 
-ITEM_PREFIX_LOCAL := "Local";
-ITEM_PREFIX_VAR := "Var";
-ITEM_PREFIX_ASSIGN := "Assign";
+ITEM_PREFIX_LOCAL := ir.ITEM_PREFIX_LOCAL;
+ITEM_PREFIX_VAR := ir.ITEM_PREFIX_VAR;
+ITEM_PREFIX_ASSIGN := ir.ITEM_PREFIX_ASSIGN;
 
-DECL_KIND_ROOT_ASSIGN := "RootAssign";
+DECL_KIND_ROOT_ASSIGN := ir.DECL_KIND_ROOT_ASSIGN;
 
-pub ITEM_KIND_MODULE_START := "ModuleStart";
-pub ITEM_KIND_MODULE_END := "ModuleEnd";
-pub ITEM_KIND_MODULE_VISITED := "ModuleVisited";
-pub ITEM_KIND_MODULE_LOADED := "ModuleLoaded";
-pub ITEM_KIND_IMPORT_EDGE := "ImportEdge";
-pub ITEM_KIND_MODULE_PROCESSED := "ModuleProcessed";
-pub ITEM_KIND_MODULE_ALIAS := "ModuleAlias";
-pub ITEM_KIND_CORE_MODULE_META := "CoreModuleMeta";
-pub ITEM_KIND_CORE_MODULE_SOURCE := "CoreModuleSource";
-pub ITEM_KIND_CORE_MODULE_IMPORT := "CoreModuleImport";
-pub ITEM_KIND_PUBLIC_FUNCTION := "PublicFunction";
-pub ITEM_KIND_PUBLIC_VALUE := "PublicValue";
-pub ITEM_KIND_PUBLIC_TYPE := "PublicType";
-pub ITEM_KIND_PURE_GLOBAL := "PureGlobal";
-pub ITEM_KIND_FUNCTION_START := "FunctionStart";
-pub ITEM_KIND_FUNCTION_END := "FunctionEnd";
-pub ITEM_KIND_SOFT_BUILTIN := "SoftBuiltin";
-pub ITEM_KIND_TRANSFER_TRY := "TransferTry";
-pub ITEM_KIND_TRANSFER_CATCH := "TransferCatch";
-pub ITEM_KIND_LOOP_TRANSFER_TRY := "LoopTransferTry";
-pub ITEM_KIND_LOOP_TRANSFER_CATCH := "LoopTransferCatch";
-pub ITEM_KIND_RETURN := "Return";
-pub ITEM_KIND_UNREACHABLE := "Unreachable";
-pub ITEM_KIND_BREAK := "Break";
-pub ITEM_KIND_CONTINUE := "Continue";
-pub ITEM_KIND_CALL := "Call";
-pub ITEM_KIND_DISCARD := "Discard";
-pub ITEM_KIND_SCOPE := "Scope";
-pub ITEM_KIND_END_SCOPE := "EndScope";
-pub ITEM_KIND_IF := "If";
-pub ITEM_KIND_ELSE_IF := "ElseIf";
-pub ITEM_KIND_ELSE := "Else";
-pub ITEM_KIND_END_IF := "EndIf";
-pub ITEM_KIND_LOOP := "Loop";
-pub ITEM_KIND_LOOP_SEQ := "LoopSeq";
-pub ITEM_KIND_END_LOOP := "EndLoop";
-pub ITEM_KIND_END := "End";
-pub ITEM_KIND_END_OUTPUT := "EndOutput";
-pub ITEM_KIND_MAIN_STOP := "MainStop";
-pub ITEM_KIND_IMPORT := "Import";
-pub ITEM_KIND_NOOP := "Noop";
-pub ITEM_KIND_LOCAL_TUPLE := "LocalTuple";
-pub ITEM_KIND_LOCAL_LIST := "LocalList";
-pub ITEM_KIND_LOCAL_FN := "LocalFn";
-pub ITEM_KIND_LOCAL_INT := "LocalInt";
-pub ITEM_KIND_LOCAL_STRING := "LocalString";
-pub ITEM_KIND_LOCAL_BOOL := "LocalBool";
-pub ITEM_KIND_LOCAL_FLOAT := "LocalFloat";
-pub ITEM_KIND_VAR_TUPLE := "VarTuple";
-pub ITEM_KIND_VAR_LIST := "VarList";
-pub ITEM_KIND_VAR_FN := "VarFn";
-pub ITEM_KIND_VAR_INT := "VarInt";
-pub ITEM_KIND_VAR_STRING := "VarString";
-pub ITEM_KIND_VAR_BOOL := "VarBool";
-pub ITEM_KIND_VAR_FLOAT := "VarFloat";
-pub ITEM_KIND_ASSIGN_TUPLE := "AssignTuple";
-pub ITEM_KIND_ASSIGN_LIST := "AssignList";
-pub ITEM_KIND_ASSIGN_FN := "AssignFn";
-pub ITEM_KIND_ASSIGN_INT := "AssignInt";
-pub ITEM_KIND_ASSIGN_STRING := "AssignString";
-pub ITEM_KIND_ASSIGN_BOOL := "AssignBool";
-pub ITEM_KIND_ASSIGN_FLOAT := "AssignFloat";
-ITEM_KIND_LOCAL_UNIT := "LocalUnit";
-ITEM_KIND_VAR_UNIT := "VarUnit";
+pub ITEM_KIND_MODULE_START := ir.ITEM_KIND_MODULE_START;
+pub ITEM_KIND_MODULE_END := ir.ITEM_KIND_MODULE_END;
+pub ITEM_KIND_MODULE_VISITED := ir.ITEM_KIND_MODULE_VISITED;
+pub ITEM_KIND_MODULE_LOADED := ir.ITEM_KIND_MODULE_LOADED;
+pub ITEM_KIND_IMPORT_EDGE := ir.ITEM_KIND_IMPORT_EDGE;
+pub ITEM_KIND_MODULE_PROCESSED := ir.ITEM_KIND_MODULE_PROCESSED;
+pub ITEM_KIND_MODULE_ALIAS := ir.ITEM_KIND_MODULE_ALIAS;
+pub ITEM_KIND_CORE_MODULE_META := ir.ITEM_KIND_CORE_MODULE_META;
+pub ITEM_KIND_CORE_MODULE_SOURCE := ir.ITEM_KIND_CORE_MODULE_SOURCE;
+pub ITEM_KIND_CORE_MODULE_IMPORT := ir.ITEM_KIND_CORE_MODULE_IMPORT;
+pub ITEM_KIND_PUBLIC_FUNCTION := ir.ITEM_KIND_PUBLIC_FUNCTION;
+pub ITEM_KIND_PUBLIC_VALUE := ir.ITEM_KIND_PUBLIC_VALUE;
+pub ITEM_KIND_PUBLIC_TYPE := ir.ITEM_KIND_PUBLIC_TYPE;
+pub ITEM_KIND_PURE_GLOBAL := ir.ITEM_KIND_PURE_GLOBAL;
+pub ITEM_KIND_FUNCTION_START := ir.ITEM_KIND_FUNCTION_START;
+pub ITEM_KIND_FUNCTION_END := ir.ITEM_KIND_FUNCTION_END;
+pub ITEM_KIND_SOFT_BUILTIN := ir.ITEM_KIND_SOFT_BUILTIN;
+pub ITEM_KIND_TRANSFER_TRY := ir.ITEM_KIND_TRANSFER_TRY;
+pub ITEM_KIND_TRANSFER_CATCH := ir.ITEM_KIND_TRANSFER_CATCH;
+pub ITEM_KIND_LOOP_TRANSFER_TRY := ir.ITEM_KIND_LOOP_TRANSFER_TRY;
+pub ITEM_KIND_LOOP_TRANSFER_CATCH := ir.ITEM_KIND_LOOP_TRANSFER_CATCH;
+pub ITEM_KIND_RETURN := ir.ITEM_KIND_RETURN;
+pub ITEM_KIND_UNREACHABLE := ir.ITEM_KIND_UNREACHABLE;
+pub ITEM_KIND_BREAK := ir.ITEM_KIND_BREAK;
+pub ITEM_KIND_CONTINUE := ir.ITEM_KIND_CONTINUE;
+pub ITEM_KIND_CALL := ir.ITEM_KIND_CALL;
+pub ITEM_KIND_DISCARD := ir.ITEM_KIND_DISCARD;
+pub ITEM_KIND_SCOPE := ir.ITEM_KIND_SCOPE;
+pub ITEM_KIND_END_SCOPE := ir.ITEM_KIND_END_SCOPE;
+pub ITEM_KIND_IF := ir.ITEM_KIND_IF;
+pub ITEM_KIND_ELSE_IF := ir.ITEM_KIND_ELSE_IF;
+pub ITEM_KIND_ELSE := ir.ITEM_KIND_ELSE;
+pub ITEM_KIND_END_IF := ir.ITEM_KIND_END_IF;
+pub ITEM_KIND_LOOP := ir.ITEM_KIND_LOOP;
+pub ITEM_KIND_LOOP_SEQ := ir.ITEM_KIND_LOOP_SEQ;
+pub ITEM_KIND_END_LOOP := ir.ITEM_KIND_END_LOOP;
+pub ITEM_KIND_END := ir.ITEM_KIND_END;
+pub ITEM_KIND_END_OUTPUT := ir.ITEM_KIND_END_OUTPUT;
+pub ITEM_KIND_MAIN_STOP := ir.ITEM_KIND_MAIN_STOP;
+pub ITEM_KIND_IMPORT := ir.ITEM_KIND_IMPORT;
+pub ITEM_KIND_NOOP := ir.ITEM_KIND_NOOP;
+pub ITEM_KIND_LOCAL_TUPLE := ir.ITEM_KIND_LOCAL_TUPLE;
+pub ITEM_KIND_LOCAL_LIST := ir.ITEM_KIND_LOCAL_LIST;
+pub ITEM_KIND_LOCAL_FN := ir.ITEM_KIND_LOCAL_FN;
+pub ITEM_KIND_LOCAL_INT := ir.ITEM_KIND_LOCAL_INT;
+pub ITEM_KIND_LOCAL_STRING := ir.ITEM_KIND_LOCAL_STRING;
+pub ITEM_KIND_LOCAL_BOOL := ir.ITEM_KIND_LOCAL_BOOL;
+pub ITEM_KIND_LOCAL_FLOAT := ir.ITEM_KIND_LOCAL_FLOAT;
+pub ITEM_KIND_VAR_TUPLE := ir.ITEM_KIND_VAR_TUPLE;
+pub ITEM_KIND_VAR_LIST := ir.ITEM_KIND_VAR_LIST;
+pub ITEM_KIND_VAR_FN := ir.ITEM_KIND_VAR_FN;
+pub ITEM_KIND_VAR_INT := ir.ITEM_KIND_VAR_INT;
+pub ITEM_KIND_VAR_STRING := ir.ITEM_KIND_VAR_STRING;
+pub ITEM_KIND_VAR_BOOL := ir.ITEM_KIND_VAR_BOOL;
+pub ITEM_KIND_VAR_FLOAT := ir.ITEM_KIND_VAR_FLOAT;
+pub ITEM_KIND_ASSIGN_TUPLE := ir.ITEM_KIND_ASSIGN_TUPLE;
+pub ITEM_KIND_ASSIGN_LIST := ir.ITEM_KIND_ASSIGN_LIST;
+pub ITEM_KIND_ASSIGN_FN := ir.ITEM_KIND_ASSIGN_FN;
+pub ITEM_KIND_ASSIGN_INT := ir.ITEM_KIND_ASSIGN_INT;
+pub ITEM_KIND_ASSIGN_STRING := ir.ITEM_KIND_ASSIGN_STRING;
+pub ITEM_KIND_ASSIGN_BOOL := ir.ITEM_KIND_ASSIGN_BOOL;
+pub ITEM_KIND_ASSIGN_FLOAT := ir.ITEM_KIND_ASSIGN_FLOAT;
+ITEM_KIND_LOCAL_UNIT := ir.ITEM_KIND_LOCAL_UNIT;
+ITEM_KIND_VAR_UNIT := ir.ITEM_KIND_VAR_UNIT;
 
-CTX_KIND_IF := "if";
-CTX_KIND_MATCH := "match";
-CTX_KIND_LOOP := "loop";
-CTX_KIND_FN := "fn";
-CTX_KIND_BLOCK := "block";
-CTX_KIND_FINALLY := "finally";
+CTX_KIND_IF := ir.CTX_KIND_IF;
+CTX_KIND_MATCH := ir.CTX_KIND_MATCH;
+CTX_KIND_LOOP := ir.CTX_KIND_LOOP;
+CTX_KIND_FN := ir.CTX_KIND_FN;
+CTX_KIND_BLOCK := ir.CTX_KIND_BLOCK;
+CTX_KIND_FINALLY := ir.CTX_KIND_FINALLY;
 
-CTX_PHASE_HEADER := "header";
-CTX_PHASE_BODY := "body";
-CTX_PHASE_THEN := "then";
-CTX_PHASE_FINALLY := "finally";
+CTX_PHASE_HEADER := ir.CTX_PHASE_HEADER;
+CTX_PHASE_BODY := ir.CTX_PHASE_BODY;
+CTX_PHASE_THEN := ir.CTX_PHASE_THEN;
+CTX_PHASE_FINALLY := ir.CTX_PHASE_FINALLY;
 
-VAL_KIND_INFER := "__infer__";
+VAL_KIND_INFER := ir.VAL_KIND_INFER;
 
-SCAN_HIT_NONE := 0;
-SCAN_HIT_QUOTE := 1;
-SCAN_HIT_COMMENT := 2;
-SCAN_HIT_OPEN := 3;
-SCAN_HIT_CLOSE := 4;
-SCAN_NO_THEN := -2;
+SCAN_HIT_NONE := ir.SCAN_HIT_NONE;
+SCAN_HIT_QUOTE := ir.SCAN_HIT_QUOTE;
+SCAN_HIT_COMMENT := ir.SCAN_HIT_COMMENT;
+SCAN_HIT_OPEN := ir.SCAN_HIT_OPEN;
+SCAN_HIT_CLOSE := ir.SCAN_HIT_CLOSE;
+SCAN_NO_THEN := ir.SCAN_NO_THEN;
 
-DOT_LOOP_OUTSIDE := -1;
-DOT_LOOP_IN_CONDITIONAL := -2;
-DOT_LOOP_IN_FINALLY := -3;
+DOT_LOOP_OUTSIDE := ir.DOT_LOOP_OUTSIDE;
+DOT_LOOP_IN_CONDITIONAL := ir.DOT_LOOP_IN_CONDITIONAL;
+DOT_LOOP_IN_FINALLY := ir.DOT_LOOP_IN_FINALLY;
 
 /** Reports one source-positioned diagnostic as `name:line:column: message`, or `line:column: message` when `prefix` is empty, then exits 2. */
 failAt := fn(source: String, position: Int, prefix: String, message: String): Unit {
@@ -1759,20 +1702,20 @@ tryFoldInteger := fn(operator: String, left: Int, right: Int): (value: Int, ok: 
 
 /** Lowers a checked integer operation whose result is not a safe constant, preserving evaluation and fault timing. */
 runtimeIntegerCode := fn(target: String, operator: String, left: String, right: String, position: Int): String {
-    if operator == "+" { return targetIntAddCode(target, left, right, position); }
-    if operator == "-" { return targetIntSubtractCode(target, left, right, position); }
-    if operator == "*" { return targetIntMultiplyCode(target, left, right, position); }
-    if operator == "/" { return targetIntDivideCode(target, left, right, position); }
-    if operator == "%" { return targetIntRemainderCode(target, left, right, position); }
-    if operator == ":/" { return targetIntFloorDivideCode(target, left, right, position); }
-    targetIntFloorModuloCode(target, left, right, position)
+    if operator == "+" { return ir.targetIntAddCode(target, left, right, position); }
+    if operator == "-" { return ir.targetIntSubtractCode(target, left, right, position); }
+    if operator == "*" { return ir.targetIntMultiplyCode(target, left, right, position); }
+    if operator == "/" { return ir.targetIntDivideCode(target, left, right, position); }
+    if operator == "%" { return ir.targetIntRemainderCode(target, left, right, position); }
+    if operator == ":/" { return ir.targetIntFloorDivideCode(target, left, right, position); }
+    ir.targetIntFloorModuloCode(target, left, right, position)
 }
 
 /** Lowers a checked integer operation at `kind`, adding a runtime range guard for narrow integer widths outside remainders. */
 runtimeTypedIntegerCode := fn(target: String, kind: String, operator: String, left: String, right: String, position: Int): String {
     raw := runtimeIntegerCode(target, operator, left, right, position);
     if numeric.isNarrowIntKind(kind) and operator =!= "%" and operator =!= ":%" {
-        return targetCheckedNarrowIntCode(target, kind, raw, position);
+        return ir.targetCheckedNarrowIntCode(target, kind, raw, position);
     }
     raw
 }
@@ -2037,15 +1980,15 @@ compareParsed := fn(target: String, source: String, at: Int, operator: String, l
     if numeric.isIntKind(left.kind) and numeric.isIntKind(right.kind) {
         if left.constant and right.constant {
             value := compareIntegers(operator, left.intValue, right.intValue);
-            return boolParsed(targetBoolLiteralCode(target, value), value, true, right.next);
+            return boolParsed(ir.targetBoolLiteralCode(target, value), value, true, right.next);
         }
-        return boolParsed(targetComparisonCode(target, operator, VALUE_KIND_INT, left.code, right.code), false, false, right.next);
+        return boolParsed(ir.targetComparisonCode(target, operator, VALUE_KIND_INT, left.code, right.code), false, false, right.next);
     }
     if numeric.isNumericKind(left.kind) and numeric.isNumericKind(right.kind) {
         codes: List<String> = [left.code, right.code];
         kinds: List<String> = [left.kind, right.kind];
         operators: List<String> = [operator];
-        return boolParsed(targetComparisonChainCode(target, codes, kinds, operators, 1, at), false, false, right.next);
+        return boolParsed(ir.targetComparisonChainCode(target, codes, kinds, operators, 1, at), false, false, right.next);
     }
     if left.kind =!= right.kind {
         failAt(source, at, prefix, "cannot compare " + displayKind(left.kind) + " and " + displayKind(right.kind));
@@ -2071,9 +2014,9 @@ compareParsed := fn(target: String, source: String, at: Int, operator: String, l
         } else {
             compareBools(operator, left.intValue =!= 0, right.intValue =!= 0)
         };
-        return boolParsed(targetBoolLiteralCode(target, value), value, true, right.next);
+        return boolParsed(ir.targetBoolLiteralCode(target, value), value, true, right.next);
     }
-    boolParsed(targetComparisonCode(target, operator, left.kind, left.code, right.code), false, false, right.next)
+    boolParsed(ir.targetComparisonCode(target, operator, left.kind, left.code, right.code), false, false, right.next)
 }
 
 /** Admits an integer literal into a narrow Int or exact Float/Float32 storage context only when not followed by a binary operator at `minimum`. */
@@ -2089,13 +2032,13 @@ contextualIntegerParsed := fn(target: String, source: String, position: Int, pre
             if not numeric.intExactlyFloat32(value) {
                 failAt(source, position, prefix, "integer literal is not exactly representable in Float32");
             }
-            return (kind = VALUE_KIND_FLOAT32, code = targetFloat32OperandCode(target, VALUE_KIND_INT, code), intValue = 0, textValue = "", constant = false, next = next);
+            return (kind = VALUE_KIND_FLOAT32, code = ir.targetFloat32OperandCode(target, VALUE_KIND_INT, code), intValue = 0, textValue = "", constant = false, next = next);
         }
         if expected == VALUE_KIND_FLOAT {
             if not numeric.intExactlyFloat(value) {
                 failAt(source, position, prefix, "integer literal is not exactly representable in Float");
             }
-            return (kind = VALUE_KIND_FLOAT, code = targetFloatOperandCode(target, VALUE_KIND_INT, code), intValue = 0, textValue = "", constant = false, next = next);
+            return (kind = VALUE_KIND_FLOAT, code = ir.targetFloatOperandCode(target, VALUE_KIND_INT, code), intValue = 0, textValue = "", constant = false, next = next);
         }
     }
     intParsed(code, value, true, next)
@@ -2117,7 +2060,7 @@ parseNumber := fn(target: String, source: String, position: Int, prefix: String,
         /* A lone decimal digit is always small: skip the general scanner record on this hot path. */
         digit := textLib.digitValue(textLib.at(source, cursor));
         value := if negative { -digit } else { digit };
-        code := targetIntLiteralCode(target, value, negative, textLib.slice(source, cursor, afterDigit));
+        code := ir.targetIntLiteralCode(target, value, negative, textLib.slice(source, cursor, afterDigit));
         return contextualIntegerParsed(target, source, position, prefix, expected, minimum, value, code, afterDigit);
     }
     scanned := numeric.scanNumericLiteral(source, cursor);
@@ -2135,12 +2078,12 @@ parseNumber := fn(target: String, source: String, position: Int, prefix: String,
             if not numeric.finiteFloat32Digits(digits, fractionCount, scanned.exponent) {
                 failAt(source, position, prefix, "floating literal outside Float32 range");
             }
-            return (kind = VALUE_KIND_FLOAT32, code = targetFloat32LiteralCode(target, raw, negative), intValue = 0, textValue = "", constant = false, next = cursor);
+            return (kind = VALUE_KIND_FLOAT32, code = ir.targetFloat32LiteralCode(target, raw, negative), intValue = 0, textValue = "", constant = false, next = cursor);
         }
         if not numeric.finiteFloatDigits(digits, fractionCount, scanned.exponent) {
             failAt(source, position, prefix, "floating literal is not finite");
         }
-        code := targetFloatLiteralCode(target, raw, negative);
+        code := ir.targetFloatLiteralCode(target, raw, negative);
         return (kind = VALUE_KIND_FLOAT, code = code, intValue = 0, textValue = "", constant = false, next = cursor);
     }
     if scanned.outsideInt or (not negative and scanned.magnitude == -9223372036854775808) {
@@ -2150,7 +2093,7 @@ parseNumber := fn(target: String, source: String, position: Int, prefix: String,
         failAt(source, position, prefix, "integer literal outside signed 64-bit range");
     }
     value := if negative { scanned.magnitude } else { 0 - scanned.magnitude };
-    code := targetIntLiteralCode(target, value, negative, textLib.slice(source, digitStart, cursor));
+    code := ir.targetIntLiteralCode(target, value, negative, textLib.slice(source, digitStart, cursor));
     contextualIntegerParsed(target, source, position, prefix, expected, minimum, value, code, cursor)
 }
 
@@ -2195,7 +2138,7 @@ parseText := fn(target: String, source: String, position: Int, prefix: String): 
             cursor = cursor + 1;
         }
     }
-    textParsed(targetTextLiteralCode(target, value), value, true, cursor)
+    textParsed(ir.targetTextLiteralCode(target, value), value, true, cursor)
 }
 
 /** Returns the position after one string literal, or the source end when it does not close; alias collection leaves lexical diagnostics to the main pass. */
@@ -2776,7 +2719,7 @@ looksLikeTupleEntry := fn(source: String, position: Int, prefix: String): Bool {
 /** Wraps target code in the backend's list-copy hook when `kind` is a List; `Never` and other kinds are unchanged. */
 copiedValueCode := fn(target: String, kind: String, code: String): String {
     if kind == VALUE_KIND_NEVER { code }
-    else if isListKind(kind) or isArrayKind(kind) { targetListCopyCode(target, code) }
+    else if isListKind(kind) or isArrayKind(kind) { ir.targetListCopyCode(target, code) }
     else { code }
 }
 
@@ -2785,9 +2728,9 @@ assignValueCode := fn(target: String, expectedKind: String, actualKind: String, 
     if actualKind == VALUE_KIND_NEVER {
         actualCode
     } else if expectedKind == VALUE_KIND_FLOAT32 and numeric.isIntKind(actualKind) {
-        targetFloat32OperandCode(target, actualKind, actualCode)
+        ir.targetFloat32OperandCode(target, actualKind, actualCode)
     } else if expectedKind == VALUE_KIND_FLOAT and numeric.isIntKind(actualKind) {
-        targetFloatOperandCode(target, actualKind, actualCode)
+        ir.targetFloatOperandCode(target, actualKind, actualCode)
     } else if expectedKind =!= actualKind and tupleShapeMatches(expectedKind, actualKind) {
         convertTupleValue(expectedKind, actualKind, actualCode)
     } else {
@@ -2908,15 +2851,15 @@ compoundAssignCode := fn(target: String, source: String, opPos: Int, prefix: Str
         return runtimeTypedIntegerCode(target, entryKind, baseOp, lhsCode, rhs.code, opPos);
     }
     if entryKind == VALUE_KIND_STRING and rhs.kind == VALUE_KIND_STRING and baseOp == "+" {
-        return targetConcatCode(target, lhsCode, rhs.code);
+        return ir.targetConcatCode(target, lhsCode, rhs.code);
     }
     if entryKind == VALUE_KIND_FLOAT32 and (numeric.isIntKind(rhs.kind) or rhs.kind == VALUE_KIND_FLOAT32) and
     (baseOp == "+" or baseOp == "-" or baseOp == "*" or baseOp == "/") {
-        return targetFloat32BinaryCode(target, baseOp, lhsCode, targetFloat32OperandCode(target, rhs.kind, rhs.code), opPos);
+        return ir.targetFloat32BinaryCode(target, baseOp, lhsCode, ir.targetFloat32OperandCode(target, rhs.kind, rhs.code), opPos);
     }
     if entryKind == VALUE_KIND_FLOAT and numeric.isNumericKind(rhs.kind) and
     (baseOp == "+" or baseOp == "-" or baseOp == "*" or baseOp == "/") {
-        return targetFloatBinaryCode(target, baseOp, lhsCode, targetFloatOperandCode(target, rhs.kind, rhs.code), opPos);
+        return ir.targetFloatBinaryCode(target, baseOp, lhsCode, ir.targetFloatOperandCode(target, rhs.kind, rhs.code), opPos);
     }
     failAt(source, opPos, prefix, "cannot apply " + baseOp + "= to " + displayKind(entryKind) + " and " + displayKind(rhs.kind));
     ""
@@ -3141,11 +3084,11 @@ zeroParsed := fn(target: String, kind: String, next: Int): Parsed {
         };
         (kind = kind, code = "((" + paramsCode + "): " + retTs + " => " + bodyCode + ")", intValue = 0, textValue = kind, constant = false, next = next)
     }
-    else if numeric.isIntKind(kind) { typedIntParsed(kind, targetIntLiteralCode(target, 0, false, "0"), 0, true, next) }
+    else if numeric.isIntKind(kind) { typedIntParsed(kind, ir.targetIntLiteralCode(target, 0, false, "0"), 0, true, next) }
     else if numeric.isFloatKind(kind) { (kind = kind, code = "0", intValue = 0, textValue = "", constant = false, next = next) }
-    else if kind == VALUE_KIND_STRING { textParsed(targetTextLiteralCode(target, ""), "", true, next) }
-    else if kind == VALUE_KIND_UNIT { (kind = VALUE_KIND_UNIT, code = targetUnitLiteralCode(target), intValue = 0, textValue = "", constant = true, next = next) }
-    else { boolParsed(targetBoolLiteralCode(target, false), false, true, next) }
+    else if kind == VALUE_KIND_STRING { textParsed(ir.targetTextLiteralCode(target, ""), "", true, next) }
+    else if kind == VALUE_KIND_UNIT { (kind = VALUE_KIND_UNIT, code = ir.targetUnitLiteralCode(target), intValue = 0, textValue = "", constant = true, next = next) }
+    else { boolParsed(ir.targetBoolLiteralCode(target, false), false, true, next) }
 }
 
 /** Parses one local type annotation: an optional `mut` list grant, then a scalar, a transparent alias or a flat named tuple; Unit has no local zero value. */
@@ -3405,7 +3348,7 @@ condBranchStmtCode := fn(target: String, valKind: String, valVar: String, branch
     } else if branchKind == VALUE_KIND_NEVER {
         "(" + branchCode + ");"
     } else if valKind == VALUE_KIND_UNIT {
-        if branchCode == targetUnitLiteralCode(target) { "" } else { "void (" + branchCode + ");" }
+        if branchCode == ir.targetUnitLiteralCode(target) { "" } else { "void (" + branchCode + ");" }
     } else {
         valVar + " = " + assignValueCode(target, valKind, branchKind, branchCode) + ";"
     }
@@ -4092,7 +4035,7 @@ resolveLoopField := fn(target: String, ctx: ConstructCtx, fieldName: String, exp
             integer.intText(ctx.id) + "=" + hint + "\n");
         }
         if ctx.valKind == VALUE_KIND_UNIT {
-            return (kind = VALUE_KIND_UNIT, code = targetUnitLiteralCode(target), intValue = 0, textValue = "", constant = true, next = fieldEnd);
+            return (kind = VALUE_KIND_UNIT, code = ir.targetUnitLiteralCode(target), intValue = 0, textValue = "", constant = true, next = fieldEnd);
         }
         return (kind = ctx.valKind, code = ctx.valVar, intValue = 0, textValue = "", constant = false, next = fieldEnd);
     }
@@ -4101,7 +4044,7 @@ resolveLoopField := fn(target: String, ctx: ConstructCtx, fieldName: String, exp
             failAt(source, fieldStart, prefix, ".item is not available in loop header");
         }
         if ctx.itemKind == "" or ctx.itemKind == VALUE_KIND_UNIT {
-            return (kind = VALUE_KIND_UNIT, code = targetUnitLiteralCode(target), intValue = 0, textValue = "", constant = true, next = fieldEnd);
+            return (kind = VALUE_KIND_UNIT, code = ir.targetUnitLiteralCode(target), intValue = 0, textValue = "", constant = true, next = fieldEnd);
         }
         return (kind = ctx.itemKind, code = ctx.itemVar, intValue = 0, textValue = "", constant = false, next = fieldEnd);
     }
@@ -7512,7 +7455,7 @@ parseBinaryCtx := fn(target: String, source: String, position: Int, prefix: Stri
     ch := textLib.at(source, start);
     if ch == "(" {
         if textLib.at(source, skipTrivia(source, start + 1, prefix)) == ")" {
-            left = (kind = VALUE_KIND_UNIT, code = targetUnitLiteralCode(target), intValue = 0, textValue = "", constant = true, next = skipTrivia(source, start + 1, prefix) + 1);
+            left = (kind = VALUE_KIND_UNIT, code = ir.targetUnitLiteralCode(target), intValue = 0, textValue = "", constant = true, next = skipTrivia(source, start + 1, prefix) + 1);
         } else if looksLikeTupleEntry(source, start + 1, prefix) {
             var cursor := skipTrivia(source, start + 1, prefix);
             labels: mut List<String> = [];
@@ -7634,17 +7577,17 @@ parseBinaryCtx := fn(target: String, source: String, position: Int, prefix: Stri
                     if folded.ok and numeric.intKindFits(operand.kind, folded.value) {
                         left = typedIntParsed(operand.kind, code, folded.value, true, operand.next);
                     } else {
-                        rawNeg := targetIntNegateCode(target, operand.code, start);
+                        rawNeg := ir.targetIntNegateCode(target, operand.code, start);
                         checkedNeg := if numeric.isNarrowIntKind(operand.kind) {
-                            targetCheckedNarrowIntCode(target, operand.kind, rawNeg, start)
+                            ir.targetCheckedNarrowIntCode(target, operand.kind, rawNeg, start)
                         } else { rawNeg };
                         left = typedIntParsed(operand.kind, checkedNeg, 0, false, operand.next);
                     }
                 } else {
                     runtimeCode := if ch == "-" {
-                        rawNeg := targetIntNegateCode(target, operand.code, start);
+                        rawNeg := ir.targetIntNegateCode(target, operand.code, start);
                         if numeric.isNarrowIntKind(operand.kind) {
-                            targetCheckedNarrowIntCode(target, operand.kind, rawNeg, start)
+                            ir.targetCheckedNarrowIntCode(target, operand.kind, rawNeg, start)
                         } else { rawNeg }
                     } else { code };
                     left = withMarkers(typedIntParsed(operand.kind, runtimeCode, 0, false, operand.next),
@@ -7890,7 +7833,7 @@ parseBinaryCtx := fn(target: String, source: String, position: Int, prefix: Stri
         var blockMarkers := "";
         var cursor := skipItemSeparators(source, start + 1, prefix);
         var blockKind := VALUE_KIND_UNIT;
-        var blockCode := targetUnitLiteralCode(target);
+        var blockCode := ir.targetUnitLiteralCode(target);
         var blockInt := 0;
         var blockText := "";
         var blockConstant := true;
@@ -8301,7 +8244,7 @@ parseBinaryCtx := fn(target: String, source: String, position: Int, prefix: Stri
                                     listLib.pushBack(mut statements, stmtReturnPrefix + "(" + rhs.code + ");");
                                 } else {
                                     retValCode := if isInferTarget { rhs.code }
-                                    else if targetCtx.valKind == VALUE_KIND_UNIT { targetUnitEvaluationCode(target, rhs.code) }
+                                    else if targetCtx.valKind == VALUE_KIND_UNIT { ir.targetUnitEvaluationCode(target, rhs.code) }
                                     else { assignValueCode(target, targetCtx.valKind, rhs.kind, rhs.code) };
                                     if targetCtx.iifeDepth == bodyDepth {
                                         if targetCtx.valKind == VALUE_KIND_UNIT {
@@ -8492,7 +8435,7 @@ parseBinaryCtx := fn(target: String, source: String, position: Int, prefix: Stri
                                 listLib.pushBack(mut statements, stmtReturnPrefix + "(" + rhs.code + ");");
                             } else {
                                 payCode := if isInferLoop { rhs.code }
-                                else if loopCtx.valKind == VALUE_KIND_UNIT { targetUnitEvaluationCode(target, rhs.code) }
+                                else if loopCtx.valKind == VALUE_KIND_UNIT { ir.targetUnitEvaluationCode(target, rhs.code) }
                                 else { assignValueCode(target, loopCtx.valKind, rhs.kind, rhs.code) };
                                 if loopCtx.iifeDepth == bodyDepth {
                                     jumpStmt := if loopCtx.label =!= "" and targetLoopIdx < findActiveLoopCtxIndex(ctxs) {
@@ -8553,7 +8496,7 @@ parseBinaryCtx := fn(target: String, source: String, position: Int, prefix: Stri
                                 checkTraceSafety(source, ifCursor, prefix, condParsed.code, currentName, -1, blockLocals, functions, emptyFuturesHere, emptyItemsHere);
                             }
                             condCode := if condParsed.constant {
-                                "Boolean(" + targetBoolLiteralCode(target, condParsed.intValue =!= 0) + ")"
+                                "Boolean(" + ir.targetBoolLiteralCode(target, condParsed.intValue =!= 0) + ")"
                             } else {
                                 condParsed.code
                             };
@@ -8689,7 +8632,7 @@ parseBinaryCtx := fn(target: String, source: String, position: Int, prefix: Stri
                                     checkTraceSafety(source, matchCursor, prefix, condParsed.code, currentName, -1, blockLocals, functions, emptyFuturesHere, emptyItemsHere);
                                 }
                                 condCode := if condParsed.constant {
-                                    "Boolean(" + targetBoolLiteralCode(target, condParsed.intValue =!= 0) + ")"
+                                    "Boolean(" + ir.targetBoolLiteralCode(target, condParsed.intValue =!= 0) + ")"
                                 } else {
                                     condParsed.code
                                 };
@@ -8782,13 +8725,13 @@ parseBinaryCtx := fn(target: String, source: String, position: Int, prefix: Stri
                             listLib.pushBack(mut loopLocals, (name = loopItemName, runtime = loopItemRuntime, kind = loopItemKind,
                             mutable = false, writable = false, depth = blockLexDepth, constant = false, code = loopItemCode,
                             intValue = 0, textValue = "", initState = INIT_STATE_INIT));
-                            loopHeadCode = "for (const " + loopItemRuntime + " of " + targetListCopyCode(target, loopSeqCode) + ") { void " + loopItemRuntime + "; ";
+                            loopHeadCode = "for (const " + loopItemRuntime + " of " + ir.targetListCopyCode(target, loopSeqCode) + ") { void " + loopItemRuntime + "; ";
                         } else if loopSeqCode =!= "" {
                             tempItemRuntime := freshScopeTemp(loopLocals, "lite$item");
                             listLib.pushBack(mut loopLocals, (name = "$item", runtime = tempItemRuntime, kind = VALUE_KIND_UNIT,
                             mutable = false, writable = false, depth = blockLexDepth, constant = false, code = "",
                             intValue = 0, textValue = "", initState = INIT_STATE_INIT));
-                            loopHeadCode = "for (const " + tempItemRuntime + " of " + targetListCopyCode(target, loopSeqCode) + ") { void " + tempItemRuntime + "; ";
+                            loopHeadCode = "for (const " + tempItemRuntime + " of " + ir.targetListCopyCode(target, loopSeqCode) + ") { void " + tempItemRuntime + "; ";
                         } else {
                             condText := if loopCondCode == "" { "Boolean(true)" } else if loopCondCode == "false" { "Boolean(false)" } else { loopCondCode };
                             loopHeadCode = "while (" + condText + ") { ";
@@ -9266,7 +9209,7 @@ parseBinaryCtx := fn(target: String, source: String, position: Int, prefix: Stri
                 if blockKind == VALUE_KIND_NEVER {
                     listLib.pushBack(mut statements, "(" + blockCode + ");");
                     blockExits = true;
-                } else if blockCode =!= targetUnitLiteralCode(target) {
+                } else if blockCode =!= ir.targetUnitLiteralCode(target) {
                     listLib.pushBack(mut statements, "void (" + blockCode + ");");
                 }
             }
@@ -9284,7 +9227,7 @@ parseBinaryCtx := fn(target: String, source: String, position: Int, prefix: Stri
                         if blockKind == VALUE_KIND_NEVER {
                             listLib.pushBack(mut statements, "(" + blockCode + ");");
                             blockExits = true;
-                        } else if blockCode =!= targetUnitLiteralCode(target) {
+                        } else if blockCode =!= ir.targetUnitLiteralCode(target) {
                             listLib.pushBack(mut statements, "void (" + blockCode + ");");
                         }
                     } else if expected == VALUE_KIND_NEVER {
@@ -9359,7 +9302,7 @@ parseBinaryCtx := fn(target: String, source: String, position: Int, prefix: Stri
                             listLib.pushBack(mut statements, "(" + blockCode + ");");
                             blockExits = true;
                         } else if topLoopValKind == VALUE_KIND_UNIT {
-                            if blockCode =!= targetUnitLiteralCode(target) {
+                            if blockCode =!= ir.targetUnitLiteralCode(target) {
                                 listLib.pushBack(mut statements, "void (" + blockCode + ");");
                             }
                         } else {
@@ -9419,7 +9362,7 @@ parseBinaryCtx := fn(target: String, source: String, position: Int, prefix: Stri
                         listLib.pushBack(mut statements, "(" + blockCode + ");");
                         blockExits = true;
                     } else if topValKind == VALUE_KIND_UNIT {
-                        if blockCode =!= targetUnitLiteralCode(target) {
+                        if blockCode =!= ir.targetUnitLiteralCode(target) {
                             listLib.pushBack(mut statements, "void (" + blockCode + ");");
                         }
                     } else {
@@ -9481,7 +9424,7 @@ parseBinaryCtx := fn(target: String, source: String, position: Int, prefix: Stri
                     standaloneTryBody := if blockExits {
                         stmtsJoined
                     } else if blockKind == VALUE_KIND_UNIT {
-                        unitRet := if blockCode == targetUnitLiteralCode(target) {
+                        unitRet := if blockCode == ir.targetUnitLiteralCode(target) {
                             "return undefined;"
                         } else {
                             "void (" + blockCode + "); return undefined;"
@@ -9517,7 +9460,7 @@ parseBinaryCtx := fn(target: String, source: String, position: Int, prefix: Stri
                         failAt(source, start, prefix, "C backend does not support statement-bearing value blocks yet");
                     }
                     returnCode := if blockKind == VALUE_KIND_UNIT {
-                        if blockCode == targetUnitLiteralCode(target) { "return undefined;" }
+                        if blockCode == ir.targetUnitLiteralCode(target) { "return undefined;" }
                         else { "void (" + blockCode + "); return undefined;" }
                     } else if blockKind == VALUE_KIND_NEVER {
                         "return " + blockCode + ";"
@@ -9535,11 +9478,11 @@ parseBinaryCtx := fn(target: String, source: String, position: Int, prefix: Stri
         next := textLib.skipName(source, start);
         name := textLib.slice(source, nameStart, next);
         if name == "Unit" {
-            left = (kind = VALUE_KIND_UNIT, code = targetUnitLiteralCode(target), intValue = 0, textValue = "", constant = true, next = next);
+            left = (kind = VALUE_KIND_UNIT, code = ir.targetUnitLiteralCode(target), intValue = 0, textValue = "", constant = true, next = next);
         } else if name == "true" {
-            left = boolParsed(targetBoolLiteralCode(target, true), true, true, next);
+            left = boolParsed(ir.targetBoolLiteralCode(target, true), true, true, next);
         } else if name == "false" {
-            left = boolParsed(targetBoolLiteralCode(target, false), false, true, next);
+            left = boolParsed(ir.targetBoolLiteralCode(target, false), false, true, next);
         } else if name == "not" {
             operand := self(target, source, next, prefix, locals, functions, params, currentName, "", 5, ctxs, iifeDepth, inferMode, "", aliases);
             operandLoopId := loopValMarkerId(operand.kind);
@@ -9552,9 +9495,9 @@ parseBinaryCtx := fn(target: String, source: String, position: Int, prefix: Stri
                 }
                 if operand.constant {
                     value := operand.intValue == 0;
-                    left = boolParsed(targetBoolLiteralCode(target, value), value, true, operand.next);
+                    left = boolParsed(ir.targetBoolLiteralCode(target, value), value, true, operand.next);
                 } else {
-                    left = withMarkers(boolParsed(targetNotCode(target, operand.code), false, false, operand.next),
+                    left = withMarkers(boolParsed(ir.targetNotCode(target, operand.code), false, false, operand.next),
                     if inferMode { collectParsedMarkers("", operand) } else { "" });
                 }
             }
@@ -9891,8 +9834,8 @@ parseBinaryCtx := fn(target: String, source: String, position: Int, prefix: Stri
             loopItemLexDepth := maxLocalLexDepth(loopLocals) + 1;
             if isSeqLoop and seqItemName =!= "" {
                 if seqItemKind == VALUE_KIND_UNIT {
-                    listLib.pushBack(mut loopLocals, (name = seqItemName, runtime = targetUnitLiteralCode(target), kind = VALUE_KIND_UNIT,
-                    mutable = false, writable = false, depth = loopItemLexDepth, constant = true, code = targetUnitLiteralCode(target),
+                    listLib.pushBack(mut loopLocals, (name = seqItemName, runtime = ir.targetUnitLiteralCode(target), kind = VALUE_KIND_UNIT,
+                    mutable = false, writable = false, depth = loopItemLexDepth, constant = true, code = ir.targetUnitLiteralCode(target),
                     intValue = 0, textValue = "", initState = INIT_STATE_INIT));
                 } else {
                     seqItemCode := if target == TARGET_TS and not passInfer and containsFnKind(seqItemKind) { computeCallableRhsDeps(seqCode) } else { loopItemMetaVar };
@@ -9976,7 +9919,7 @@ parseBinaryCtx := fn(target: String, source: String, position: Int, prefix: Stri
                     textLib.joinTexts(catchClauses, " else ") + " else { throw lite$err; } }";
                 }
                 rawLoopStmt := if isSeqLoop {
-                    "for (const " + loopIterVar + " of " + targetListCopyCode(target, seqCode) + ") { " + metaStep + wrappedBody + " }"
+                    "for (const " + loopIterVar + " of " + ir.targetListCopyCode(target, seqCode) + ") { " + metaStep + wrappedBody + " }"
                 } else {
                     whileCond := if condCode == "true" {
                         "Boolean(true)"
@@ -10151,7 +10094,7 @@ parseBinaryCtx := fn(target: String, source: String, position: Int, prefix: Stri
                     failAt(source, conditionStart, prefix, "if condition must be Bool");
                 }
                 conditionCode := if condition.constant {
-                    targetBoolLiteralCode(target, condition.intValue =!= 0)
+                    ir.targetBoolLiteralCode(target, condition.intValue =!= 0)
                 } else {
                     condition.code
                 };
@@ -10198,7 +10141,7 @@ parseBinaryCtx := fn(target: String, source: String, position: Int, prefix: Stri
                             failAt(source, elseConditionStart, prefix, "if condition must be Bool");
                         }
                         elseConditionCode := if elseCondition.constant {
-                            targetBoolLiteralCode(target, elseCondition.intValue =!= 0)
+                            ir.targetBoolLiteralCode(target, elseCondition.intValue =!= 0)
                         } else {
                             elseCondition.code
                         };
@@ -10299,7 +10242,7 @@ parseBinaryCtx := fn(target: String, source: String, position: Int, prefix: Stri
                             failAt(source, condStart, prefix, "match arm condition must be Bool");
                         }
                         conditionCode := if condition.constant {
-                            targetBoolLiteralCode(target, condition.intValue =!= 0)
+                            ir.targetBoolLiteralCode(target, condition.intValue =!= 0)
                         } else {
                             condition.code
                         };
@@ -10380,7 +10323,7 @@ parseBinaryCtx := fn(target: String, source: String, position: Int, prefix: Stri
                         failAt(source, condStart0, prefix, "if condition must be Bool");
                     }
                     cond0Code := if cond0.constant {
-                        targetBoolLiteralCode(target, cond0.intValue =!= 0)
+                        ir.targetBoolLiteralCode(target, cond0.intValue =!= 0)
                     } else {
                         cond0.code
                     };
@@ -10415,7 +10358,7 @@ parseBinaryCtx := fn(target: String, source: String, position: Int, prefix: Stri
                                 failAt(source, elseCondStart, prefix, "if condition must be Bool");
                             }
                             elseCondCode := if elseCond.constant {
-                                targetBoolLiteralCode(target, elseCond.intValue =!= 0)
+                                ir.targetBoolLiteralCode(target, elseCond.intValue =!= 0)
                             } else {
                                 elseCond.code
                             };
@@ -10510,7 +10453,7 @@ parseBinaryCtx := fn(target: String, source: String, position: Int, prefix: Stri
                                 failAt(source, condStart, prefix, "match arm condition must be Bool");
                             }
                             condCode := if condParsed.constant {
-                                targetBoolLiteralCode(target, condParsed.intValue =!= 0)
+                                ir.targetBoolLiteralCode(target, condParsed.intValue =!= 0)
                             } else {
                                 condParsed.code
                             };
@@ -10911,14 +10854,14 @@ parseBinaryCtx := fn(target: String, source: String, position: Int, prefix: Stri
                         suffix + ", got " + formatLib.decimalText(argumentCount));
                     }
                     if optionalExit and argumentCount == 0 {
-                        listLib.pushBack(mut argumentCodes, targetIntLiteralCode(target, 0, false, "0"));
+                        listLib.pushBack(mut argumentCodes, ir.targetIntLiteralCode(target, 0, false, "0"));
                     }
                     if optionalPrompt {
                         if argumentCount == 0 { listLib.pushBack(mut argumentCodes, "undefined"); }
                         place := sourceLib.lineColumn(source, errPos);
                         location := (if prefix == "" { "" } else { prefix + ":" }) + formatLib.decimalText(place.line) + ":" +
                         formatLib.decimalText(place.column) + ": InputFault: ";
-                        listLib.pushBack(mut argumentCodes, targetTextLiteralCode(target, location));
+                        listLib.pushBack(mut argumentCodes, ir.targetTextLiteralCode(target, location));
                     }
                     if info.runtime == "lite$textAt" or info.runtime == "lite$textSlice" {
                         listLib.pushBack(mut argumentCodes, integer.intText(errPos));
@@ -11259,9 +11202,9 @@ parseBinaryCtx := fn(target: String, source: String, position: Int, prefix: Stri
                 } else {
                     left.intValue =!= 0 or right.intValue =!= 0
                 };
-                left = boolParsed(targetBoolLiteralCode(target, value), value, true, right.next);
+                left = boolParsed(ir.targetBoolLiteralCode(target, value), value, true, right.next);
             } else {
-                left = boolParsed(targetLogicCode(target, operator.text, left.code, right.code), false, false, right.next);
+                left = boolParsed(ir.targetLogicCode(target, operator.text, left.code, right.code), false, false, right.next);
             }
         } else if isComparison(operator.text) {
             firstPair := compareParsed(target, source, operatorPosition, operator.text, left, right, prefix);
@@ -11293,14 +11236,14 @@ parseBinaryCtx := fn(target: String, source: String, position: Int, prefix: Stri
                     nextPosition = skipTrivia(source, end, prefix);
                     nextOperator = comparisonOperatorAt(source, nextPosition);
                 }
-                if constant { left = boolParsed(targetBoolLiteralCode(target, value), value, true, end); }
-                else { left = boolParsed(targetComparisonChainCode(target, codes, kinds, operators, count, operatorPosition), false, false, end); }
+                if constant { left = boolParsed(ir.targetBoolLiteralCode(target, value), value, true, end); }
+                else { left = boolParsed(ir.targetComparisonChainCode(target, codes, kinds, operators, count, operatorPosition), false, false, end); }
             }
         } else if operator.text == "**" {
             if not numeric.isNumericKind(left.kind) or not numeric.isNumericKind(right.kind) {
                 failAt(source, operatorPosition, prefix, "power requires Int or Float operands");
             }
-            code := targetFloatPowerCode(target, targetFloatOperandCode(target, left.kind, left.code), targetFloatOperandCode(target, right.kind, right.code), operatorPosition);
+            code := ir.targetFloatPowerCode(target, ir.targetFloatOperandCode(target, left.kind, left.code), ir.targetFloatOperandCode(target, right.kind, right.code), operatorPosition);
             left = (kind = VALUE_KIND_FLOAT, code = code, intValue = 0, textValue = "", constant = false, next = right.next);
         } else if numeric.isIntKind(left.kind) and numeric.isIntKind(right.kind) {
             promoted := numeric.promoteNumericKind(left.kind, right.kind);
@@ -11308,9 +11251,9 @@ parseBinaryCtx := fn(target: String, source: String, position: Int, prefix: Stri
                 folded := tryFoldInteger(operator.text, left.intValue, right.intValue);
                 if folded.ok and numeric.intKindFits(promoted, folded.value) {
                     code := if (operator.text == "%" or operator.text == ":%") and left.intValue == integer.intMin and right.intValue == -1 {
-                        targetIntLiteralCode(target, 0, false, "0")
-                    } else if operator.text == ":/" { targetFloorDivCode(target, left.code, right.code) }
-                    else if operator.text == ":%" { targetFloorModCode(target, left.code, right.code) }
+                        ir.targetIntLiteralCode(target, 0, false, "0")
+                    } else if operator.text == ":/" { ir.targetFloorDivCode(target, left.code, right.code) }
+                    else if operator.text == ":%" { ir.targetFloorModCode(target, left.code, right.code) }
                     else { "(" + left.code + " " + operator.text + " " + right.code + ")" };
                     left = typedIntParsed(promoted, code, folded.value, true, right.next);
                 } else {
@@ -11322,9 +11265,9 @@ parseBinaryCtx := fn(target: String, source: String, position: Int, prefix: Stri
         } else if operator.text == "+" and left.kind == VALUE_KIND_STRING and right.kind == VALUE_KIND_STRING {
             if left.constant and right.constant {
                 combined := left.textValue + right.textValue;
-                left = textParsed(targetTextLiteralCode(target, combined), combined, true, right.next);
+                left = textParsed(ir.targetTextLiteralCode(target, combined), combined, true, right.next);
             } else {
-                left = textParsed(targetConcatCode(target, left.code, right.code), "", false, right.next);
+                left = textParsed(ir.targetConcatCode(target, left.code, right.code), "", false, right.next);
             }
         } else if numeric.isNumericKind(left.kind) and numeric.isNumericKind(right.kind) {
             if operator.text =!= "+" and operator.text =!= "-" and operator.text =!= "*" and operator.text =!= "/" {
@@ -11333,9 +11276,9 @@ parseBinaryCtx := fn(target: String, source: String, position: Int, prefix: Stri
             promotedFloat := numeric.promoteNumericKind(left.kind, right.kind);
             floatKind := if promotedFloat =!= "" { promotedFloat } else if numeric.isFloatKind(left.kind) { left.kind } else { right.kind };
             code := if floatKind == VALUE_KIND_FLOAT32 {
-                targetFloat32BinaryCode(target, operator.text, targetFloat32OperandCode(target, left.kind, left.code), targetFloat32OperandCode(target, right.kind, right.code), operatorPosition)
+                ir.targetFloat32BinaryCode(target, operator.text, ir.targetFloat32OperandCode(target, left.kind, left.code), ir.targetFloat32OperandCode(target, right.kind, right.code), operatorPosition)
             } else {
-                targetFloatBinaryCode(target, operator.text, targetFloatOperandCode(target, left.kind, left.code), targetFloatOperandCode(target, right.kind, right.code), operatorPosition)
+                ir.targetFloatBinaryCode(target, operator.text, ir.targetFloatOperandCode(target, left.kind, left.code), ir.targetFloatOperandCode(target, right.kind, right.code), operatorPosition)
             };
             left = (kind = floatKind, code = code, intValue = 0, textValue = "", constant = false, next = right.next);
         } else if isListKind(left.kind) or isListKind(right.kind) {
@@ -11522,7 +11465,7 @@ parsePartialAssignIf := fn(target: String, source: String, position: Int, prefix
             failAt(source, conditionStart, prefix, "if condition must be Bool");
         }
         conditionCode := if condition.constant {
-            targetBoolLiteralCode(target, condition.intValue =!= 0)
+            ir.targetBoolLiteralCode(target, condition.intValue =!= 0)
         } else {
             condition.code
         };
@@ -11647,7 +11590,7 @@ parseExpressionItem := fn(target: String, source: String, position: Int, prefix:
         failAt(source, position, prefix, "cannot return " + displayKind(parsed.kind) + " from function " + currentName +
         " returning " + displayKind(currentResult));
     }
-    (next = next, returned = returned, code = if returned { if parsed.kind == VALUE_KIND_UNIT { targetUnitEvaluationCode(target, parsed.code) } else { assignValueCode(target, currentResult, parsed.kind, parsed.code) } } else { parsed.code }, valueKind = parsed.kind)
+    (next = next, returned = returned, code = if returned { if parsed.kind == VALUE_KIND_UNIT { ir.targetUnitEvaluationCode(target, parsed.code) } else { assignValueCode(target, currentResult, parsed.kind, parsed.code) } } else { parsed.code }, valueKind = parsed.kind)
 }
 
 /** Collects aliases, `pub` declarations, inner-alias hints, root functions, root values, and root assignments in a single pass over module source. */
@@ -12410,7 +12353,7 @@ moduleIdentity: String, neededFns: String, skipSoftBuiltins: Bool, builtinSpecs:
                         locals = mergeOuterCallableUpdatesFromCode(locals, condition.code);
                     }
                     conditionCode := if condition.constant {
-                        targetBoolLiteralCode(target, condition.intValue =!= 0)
+                        ir.targetBoolLiteralCode(target, condition.intValue =!= 0)
                     } else {
                         condition.code
                     };
@@ -12515,7 +12458,7 @@ moduleIdentity: String, neededFns: String, skipSoftBuiltins: Bool, builtinSpecs:
                         locals = mergeOuterCallableUpdatesFromCode(locals, condition.code);
                     }
                     conditionCode := if condition.constant {
-                        targetBoolLiteralCode(target, condition.intValue =!= 0)
+                        ir.targetBoolLiteralCode(target, condition.intValue =!= 0)
                     } else {
                         condition.code
                     };
@@ -13262,7 +13205,7 @@ moduleIdentity: String, neededFns: String, skipSoftBuiltins: Bool, builtinSpecs:
                 locals = mergeOuterCallableUpdatesFromCode(locals, condition.code);
             }
             conditionCode := if condition.constant {
-                targetBoolLiteralCode(target, condition.intValue =!= 0)
+                ir.targetBoolLiteralCode(target, condition.intValue =!= 0)
             } else {
                 condition.code
             };
@@ -13421,7 +13364,7 @@ moduleIdentity: String, neededFns: String, skipSoftBuiltins: Bool, builtinSpecs:
                     locals = mergeOuterCallableUpdatesFromCode(locals, condition.code);
                 }
                 conditionCode := if condition.constant {
-                    targetBoolLiteralCode(target, condition.intValue =!= 0)
+                    ir.targetBoolLiteralCode(target, condition.intValue =!= 0)
                 } else {
                     condition.code
                 };
