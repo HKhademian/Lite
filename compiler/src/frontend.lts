@@ -6,6 +6,7 @@ numeric := import "./numeric-literals.lts";
 integer := import "core/int";
 tsLiteral := import "./ts-literals.lts";
 ir := import "./frontend-ir.lts";
+builtinsAbi := import "./builtins-abi.lts";
 io := import "core/io";
 textLib := import "core/text";
 
@@ -1366,281 +1367,7 @@ parseFunctionHeader := fn(source: String, position: Int, prefix: String, aliases
 }
 
 /** True when `moduleIdentity` is a verified `lite.core.*` or `lite.external.*` host module identity. */
-pub isHostModuleIdentity := fn(moduleIdentity: String): Bool {
-    textLib.startsWithAt(moduleIdentity, 0, "lite.core.") or textLib.startsWithAt(moduleIdentity, 0, "lite.external.")
-};
-
-/** Resolves a bodyless external host declaration only when its `lib/external/` module identity and ABI match. */
-externalHostFunction := fn(moduleIdentity: String, name: String, params: String, result: String): String {
-    if moduleIdentity == "lite.external.ts.v1" {
-        if name == "stripTypes" and params == "source=String" and result == "(ok:Bool,code:String,error:String)" {
-            "lite$extTsStripTypes"
-        } else { "" }
-    } else if moduleIdentity == "lite.external.http.v1" {
-        if name == "fetchToFile" and params == "url=String|outPath=String|timeoutMs=Int|headers=List<String>" and
-        result == "(ok:Bool,status:Int,byteCount:Int,retryAfter:String,error:String)" {
-            "lite$extHttpFetchToFile"
-        } else if name == "serveStatic" and params == "siteDir=String|brandDir=String|host=String|port=Int" and
-        result == VALUE_KIND_INT {
-            "lite$extHttpServeStatic"
-        } else { "" }
-    } else if moduleIdentity == "lite.external.bench.v1" {
-        if name == "measureCompilerArtifact" and
-        params == "engine=String|artifactPath=String|sourceName=String|rootPath=String|metricsFile=String" and
-        result == VALUE_KIND_INT {
-            "lite$extBenchMeasureCompiler"
-        } else { "" }
-    } else if moduleIdentity == "lite.external.pool.v1" {
-        if name == "cpuCount" and params == "" and result == VALUE_KIND_INT {
-            "lite$extPoolCpuCount"
-        } else if name == "runPoolJson" and
-        params == "commands=List<String>|argListsJson=List<String>|cwd=String|maxJobs=Int" and
-        result == VALUE_KIND_STRING {
-            "lite$extPoolRunJson"
-        } else { "" }
-    } else {
-        ""
-    }
-};
-
-/** Resolves a bodyless public core or external declaration only when its module identity and complete ABI are registered. */
-coreHostFunction := fn(moduleIdentity: String, name: String, params: String, result: String): String {
-    if textLib.startsWithAt(moduleIdentity, 0, "lite.external.") {
-        return externalHostFunction(moduleIdentity, name, params, result);
-    }
-    if moduleIdentity == "lite.core.io.v1" {
-        if params == "...values" and result == VALUE_KIND_UNIT {
-            if name == "output" { "lite$core$io$output:v1" }
-            else if name == "outputLine" { "lite$core$io$outputLine:v1" }
-            else { "" }
-        } else if name == "errorLine" and params == "text=String" and result == VALUE_KIND_UNIT { "lite$reportError" }
-        else if name == "exit" and params == "status=Int" and result == VALUE_KIND_UNIT { "lite$exit" }
-        else if name == "inputArgs" and params == "" and result == "List<String>" { "lite$inputArgs" }
-        else if params == "prompt=String" and result == VALUE_KIND_STRING {
-            if name == "inputAll" { "lite$inputAll" } else if name == "inputLine" { "lite$inputLine" } else { "" }
-        } else if params == "prompt=String" and result == VALUE_KIND_INT and name == "inputInt" { "lite$inputInt" }
-        else if params == "prompt=String" and result == VALUE_KIND_FLOAT and name == "inputFloat" { "lite$inputFloat" }
-        else if name == "stdinReader" and params == "" and result == "(kind:String,handle:Int)" { "lite$ioStdinReader" }
-        else if name == "stdoutWriter" and params == "" and result == "(kind:String,handle:Int)" { "lite$ioStdoutWriter" }
-        else if name == "stderrWriter" and params == "" and result == "(kind:String,handle:Int)" { "lite$ioStderrWriter" }
-        else if name == "bufferReader" and params == "bytes=List<Int>" and result == "(kind:String,handle:Int)" { "lite$ioBufferReader" }
-        else if name == "bufferWriter" and params == "" and result == "(kind:String,handle:Int)" { "lite$ioBufferWriter" }
-        else if name == "writerBytes" and params == "writer=(kind:String,handle:Int)" and result == "List<Int>" { "lite$ioWriterBytes" }
-        else if name == "writerText" and params == "writer=(kind:String,handle:Int)" and result == "(ok:Bool,text:String,error:String)" { "lite$ioWriterText" }
-        else if name == "clearWriter" and params == "writer=(kind:String,handle:Int)" and result == VALUE_KIND_UNIT { "lite$ioClearWriter" }
-        else if name == "readerOk" and params == "reader=(kind:String,handle:Int)" and result == VALUE_KIND_BOOL { "lite$ioReaderOk" }
-        else if name == "readerAtEof" and params == "reader=(kind:String,handle:Int)" and result == VALUE_KIND_BOOL { "lite$ioReaderAtEof" }
-        else if name == "readerError" and params == "reader=(kind:String,handle:Int)" and result == VALUE_KIND_STRING { "lite$ioReaderError" }
-        else if name == "read" and params == "reader=(kind:String,handle:Int)|maxBytes=Int" and result == "List<Int>" { "lite$ioRead" }
-        else if name == "closeReader" and params == "reader=(kind:String,handle:Int)" and result == "(ok:Bool,error:String)" { "lite$ioCloseReader" }
-        else if name == "writerOk" and params == "writer=(kind:String,handle:Int)" and result == VALUE_KIND_BOOL { "lite$ioWriterOk" }
-        else if name == "writerError" and params == "writer=(kind:String,handle:Int)" and result == VALUE_KIND_STRING { "lite$ioWriterError" }
-        else if name == "write" and params == "writer=(kind:String,handle:Int)|bytes=List<Int>" and result == "(ok:Bool,written:Int,error:String)" { "lite$ioWrite" }
-        else if name == "flush" and params == "writer=(kind:String,handle:Int)" and result == "(ok:Bool,error:String)" { "lite$ioFlush" }
-        else if name == "closeWriter" and params == "writer=(kind:String,handle:Int)" and result == "(ok:Bool,error:String)" { "lite$ioCloseWriter" }
-        else { "" }
-    } else if moduleIdentity == "lite.core.text.v1" {
-        if name == "length" and params == "text=String" and result == VALUE_KIND_INT { "lite$textLength" }
-        else if name == "at" and params == "text=String|position=Int" and result == VALUE_KIND_STRING { "lite$textAt" }
-        else if name == "slice" and params == "text=String|start=Int|end=Int" and result == VALUE_KIND_STRING { "lite$textSlice" }
-        else { "" }
-    } else if moduleIdentity == "lite.core.list.v1" {
-        if name == "pushBack" and params == "values=mut List<T>|value=T" and result == VALUE_KIND_UNIT { "lite$core$list$pushBack:v1" }
-        else if name == "popBack" and params == "values=mut List<T>" and result == "T" { "lite$core$list$popBack:v1" }
-        else if name == "pushFront" and params == "values=mut List<T>|value=T" and result == VALUE_KIND_UNIT { "lite$core$list$pushFront:v1" }
-        else if name == "popFront" and params == "values=mut List<T>" and result == "T" { "lite$core$list$popFront:v1" }
-        else { "" }
-    } else if moduleIdentity == "lite.core.file.v1" {
-        if name == "kind" and params == "path=String" and result == VALUE_KIND_STRING { "lite$fileKind" }
-        else if name == "openReader" and params == "path=String" and result == "(kind:String,handle:Int)" { "lite$fileOpenReader" }
-        else if name == "openWriter" and params == "path=String" and result == "(kind:String,handle:Int)" { "lite$fileOpenWriter" }
-        else if name == "openAppender" and params == "path=String" and result == "(kind:String,handle:Int)" { "lite$fileOpenAppender" }
-        else if name == "listDir" and params == "path=String" and result == "List<String>" { "lite$fileListDir" }
-        else if name == "makeDir" and params == "path=String" and result == "(ok:Bool,error:String)" { "lite$fileMakeDir" }
-        else if name == "remove" and params == "path=String" and result == "(ok:Bool,error:String)" { "lite$fileRemove" }
-        else if name == "copy" and params == "fromPath=String|toPath=String" and result == "(ok:Bool,error:String)" { "lite$fileCopy" }
-        else if name == "symlink" and params == "targetPath=String|linkPath=String" and result == "(ok:Bool,error:String)" { "lite$fileSymlink" }
-        else if name == "realPath" and params == "path=String" and result == "(ok:Bool,path:String,error:String)" { "lite$fileRealPath" }
-        else if name == "makeTempDir" and params == "prefix=String" and result == "(ok:Bool,path:String,error:String)" { "lite$fileMakeTempDir" }
-        else { "" }
-    } else if moduleIdentity == "lite.core.process.v1" {
-        if name == "cwd" and params == "" and result == VALUE_KIND_STRING { "lite$processCwd" }
-        else if name == "execPath" and params == "" and result == VALUE_KIND_STRING { "lite$processExecPath" }
-        else if name == "entryPath" and params == "" and result == VALUE_KIND_STRING { "lite$processEntryPath" }
-        else if name == "platform" and params == "" and result == VALUE_KIND_STRING { "lite$processPlatform" }
-        else if name == "arch" and params == "" and result == VALUE_KIND_STRING { "lite$processArch" }
-        else if name == "runtimeVersion" and params == "" and result == VALUE_KIND_STRING { "lite$processRuntimeVersion" }
-        else if name == "envGet" and params == "name=String" and result == "(found:Bool,value:String)" { "lite$processEnvGet" }
-        else if name == "run" and params == "command=String|args=List<String>|cwd=String|envOverrides=List<String>|capture=Bool|stdinText=String" and
-        result == "(status:Int,stdout:String,stderr:String,error:String)" { "lite$processRun" }
-        else if name == "runBytes" and
-        params == "command=String|args=List<String>|cwd=String|envOverrides=List<String>|timeoutMs=Int|stdinBytes=List<Int>|stdoutPath=String|stderrPath=String" and
-        result == "(status:Int,error:String)" { "lite$processRunBytes" }
-        else { "" }
-    } else if moduleIdentity == "lite.core.crypto.v1" {
-        if name == "randomBytes" and params == "count=Int" and result == "List<Int>" { "lite$cryptoRandomBytes" }
-        else { "" }
-    } else if moduleIdentity == "lite.core.time.v1" {
-        if name == "monotonicNs" and params == "" and result == VALUE_KIND_INT { "lite$timeMonotonicNs" }
-        else if name == "epochNs" and params == "" and result == VALUE_KIND_INT { "lite$timeEpochNs" }
-        else if name == "sleepMs" and params == "ms=Int" and result == VALUE_KIND_UNIT { "lite$timeSleepMs" }
-        else if name == "localDate" and params == "" and result == VALUE_KIND_STRING { "lite$timeLocalDate" }
-        else { "" }
-    } else if moduleIdentity == "lite.core.unicode.v1" {
-        if name == "toCodePoints" and params == "text=String" and result == "List<Int>" { "lite$unicodeToCodePoints" }
-        else if name == "fromCodePoints" and params == "points=List<Int>" and result == "(ok:Bool,text:String,error:String)" { "lite$unicodeFromCodePoints" }
-        else { "" }
-    } else {
-        ""
-    }
-}
-
-/** Maps a verified host core module identity to its soft-builtin logical path, or `""` outside soft-builtin stdlib modules. */
-softBuiltinModuleForIdentity := fn(moduleIdentity: String): String {
-    match {
-        moduleIdentity == "lite.core.crypto.v1" { "lib/core/crypto" }
-        moduleIdentity == "lite.core.file.v1" { "lib/core/file" }
-        moduleIdentity == "lite.core.int.v1" { "lib/core/int" }
-        moduleIdentity == "lite.core.text.v1" { "lib/core/text" }
-        moduleIdentity == "lite.core.io.v1" { "lib/core/io" }
-        moduleIdentity == "lite.core.unicode.v1" { "lib/core/unicode" }
-        _ { "" }
-    }
-}
-
-/** True when `moduleName` is a canonical core stdlib path with soft-builtin support. */
-isSoftBuiltinModule := fn(moduleName: String): Bool {
-    moduleName == "lib/core/crypto" or moduleName == "lib/core/file" or moduleName == "lib/core/int" or
-    moduleName == "lib/core/text" or moduleName == "lib/core/io" or moduleName == "lib/core/unicode"
-}
-
-/** Returns the expected `(params, result)` ABI for a registered soft-builtin function, or empty fields when absent. */
-softBuiltinAbi := fn(moduleName: String, name: String): (params: String, result: String) {
-    if moduleName == "lib/core/crypto" {
-        if name == "sha256Bytes" or name == "sha512Bytes" {
-            return (params = "bytes=List<Int>", result = VALUE_KIND_STRING);
-        }
-        if name == "sha256Text" or name == "sha512Text" {
-            return (params = "value=String", result = VALUE_KIND_STRING);
-        }
-        if name == "sha256File" {
-            return (params = "path=String", result = "(ok:Bool,hex:String,error:String)");
-        }
-        if name == "hmacSha256Bytes" {
-            return (params = "key=List<Int>|data=List<Int>", result = VALUE_KIND_STRING);
-        }
-        if name == "isValidBase64" or name == "isValidHex" {
-            return (params = "encoded=String", result = VALUE_KIND_BOOL);
-        }
-        if name == "base64Encode" or name == "hexEncode" {
-            return (params = "bytes=List<Int>", result = VALUE_KIND_STRING);
-        }
-        if name == "base64Decode" or name == "hexDecode" {
-            return (params = "encoded=String", result = "List<Int>");
-        }
-    } else if moduleName == "lib/core/file" {
-        if name == "readBytes" {
-            return (params = "path=String", result = "List<Int>");
-        }
-        if name == "readText" {
-            return (params = "path=String", result = "(ok:Bool,text:String,error:String)");
-        }
-        if name == "writeBytes" or name == "appendBytes" {
-            return (params = "path=String|bytes=List<Int>", result = "(ok:Bool,error:String)");
-        }
-        if name == "writeText" or name == "appendText" {
-            return (params = "path=String|text=String", result = "(ok:Bool,error:String)");
-        }
-    } else if moduleName == "lib/core/int" {
-        if name == "intText" {
-            return (params = "value=Int", result = VALUE_KIND_STRING);
-        }
-    } else if moduleName == "lib/core/text" {
-        if name == "skipSpaces" or name == "skipName" {
-            return (params = "source=String|start=Int", result = VALUE_KIND_INT);
-        }
-        if name == "indexOf" or name == "indexOfText" {
-            return (params = "source=String|needle=String|start=Int", result = VALUE_KIND_INT);
-        }
-        if name == "startsWithAt" {
-            return (params = "source=String|position=Int|text=String", result = VALUE_KIND_BOOL);
-        }
-        if name == "wordAt" {
-            return (params = "source=String|position=Int|word=String", result = VALUE_KIND_BOOL);
-        }
-        if name == "joinTexts" {
-            return (params = "values=List<String>|separator=String", result = VALUE_KIND_STRING);
-        }
-        if name == "textToInt" {
-            return (params = "text=String", result = "(value:Int,ok:Bool)");
-        }
-        if name == "trimStart" or name == "trimEnd" or name == "trim" or name == "toLowerAscii" {
-            return (params = "source=String", result = VALUE_KIND_STRING);
-        }
-        if name == "endsWith" {
-            return (params = "source=String|suffix=String", result = VALUE_KIND_BOOL);
-        }
-        if name == "repeatText" {
-            return (params = "value=String|count=Int", result = VALUE_KIND_STRING);
-        }
-        if name == "containsText" {
-            return (params = "source=String|needle=String", result = VALUE_KIND_BOOL);
-        }
-        if name == "isDigit" {
-            return (params = "text=String", result = VALUE_KIND_BOOL);
-        }
-        if name == "isAsciiLetter" or name == "isNameStart" or name == "isNameContinue" or name == "isWhitespace" {
-            return (params = "ch=String", result = VALUE_KIND_BOOL);
-        }
-    } else if moduleName == "lib/core/io" {
-        if name == "textReader" {
-            return (params = "text=String", result = "(kind:String,handle:Int)");
-        }
-        if name == "readAll" {
-            return (params = "reader=(kind:String,handle:Int)", result = "List<Int>");
-        }
-        if name == "readAllText" {
-            return (params = "reader=(kind:String,handle:Int)", result = "(ok:Bool,text:String,error:String)");
-        }
-        if name == "readLine" {
-            return (params = "reader=(kind:String,handle:Int)", result = "(ok:Bool,line:String,eof:Bool,error:String)");
-        }
-        if name == "writeText" or name == "writeLine" {
-            return (params = "writer=(kind:String,handle:Int)|text=String", result = "(ok:Bool,error:String)");
-        }
-    } else if moduleName == "lib/core/unicode" {
-        if name == "utf8Encode" {
-            return (params = "text=String", result = "List<Int>");
-        }
-        if name == "utf8DecodeStrict" {
-            return (params = "bytes=List<Int>", result = "(ok:Bool,text:String,error:String)");
-        }
-        if name == "utf8DecodeLossy" {
-            return (params = "bytes=List<Int>", result = VALUE_KIND_STRING);
-        }
-    }
-    (params = "", result = "")
-}
-
-/** Returns the verified soft-builtin module path when `moduleIdentity`, `name`, `params`, and `result` match, else `""`. */
-coreSoftBuiltin := fn(moduleIdentity: String, name: String, params: String, result: String): String {
-    modName := softBuiltinModuleForIdentity(moduleIdentity);
-    if modName == "" { return ""; }
-    abi := softBuiltinAbi(modName, name);
-    if abi.result =!= "" and abi.params == params and abi.result == result {
-        return modName;
-    }
-    ""
-}
-
-/** Maps one registered output intrinsic identity to its source special-statement name. */
-coreOutputName := fn(runtime: String): String {
-    match {
-        runtime == "lite$core$io$output:v1" { "output" }
-        runtime == "lite$core$io$outputLine:v1" { "outputLine" }
-        _ { "" }
-    }
-}
+pub isHostModuleIdentity := fn(moduleIdentity: String): Bool { builtinsAbi.isHostModuleIdentity(moduleIdentity) };
 
 /** Returns the source name from one encoded `name=kind` function parameter entry. */
 paramNameOf := fn(entry: String): String {
@@ -8096,7 +7823,7 @@ parseBinaryCtx := fn(target: String, source: String, position: Int, prefix: Stri
                     if memberEnd > memberStart {
                         fnIdx := findFunction(functions, itemName + "." + textLib.slice(source, memberStart, memberEnd));
                         if fnIdx >= 0 {
-                            blockOutputName = coreOutputName(functions[fnIdx].runtime);
+                            blockOutputName = builtinsAbi.coreOutputName(functions[fnIdx].runtime);
                             blockOutputOpen = skipTrivia(source, memberEnd, prefix);
                         }
                     }
@@ -11327,101 +11054,11 @@ parseExpression := fn(target: String, source: String, position: Int, prefix: Str
     parseBinary(target, source, position, prefix, locals, functions, params, currentName, "", 0)
 }
 
-/** Normalizes and validates a canonical soft-builtin core module path (`core/<name>` or `lib/core/<name>[.lts]`), returning `""` outside stdlib bounds. */
-normalizeBuiltinModule := fn(raw: String): String {
-    if raw == "" { return ""; }
-    if textLib.indexOfText(raw, "\\", 0) >= 0 or textLib.indexOfText(raw, ":", 0) >= 0 {
-        return "";
-    }
-    if textLib.startsWithAt(raw, 0, "/") or textLib.indexOfText(raw, "//", 0) >= 0 {
-        return "";
-    }
-    rawLen := textLib.length(raw);
-    if textLib.at(raw, rawLen - 1) == "/" { return ""; }
-    var out := raw;
-    if rawLen > 4 and textLib.startsWithAt(raw, rawLen - 4, ".lts") {
-        out = textLib.slice(raw, 0, rawLen - 4);
-    }
-    if textLib.indexOfText(out, ".", 0) >= 0 { return ""; }
-    if textLib.startsWithAt(out, 0, "core/") {
-        out = "lib/" + out;
-    }
-    if not textLib.startsWithAt(out, 0, "lib/core/") { return ""; }
-    if not isSoftBuiltinModule(out) { return ""; }
-    out
-}
-
-/** Parses one `--builtin-mode` spec (`pure`, `builtin`, `module=mode`, `module.fn=mode`). */
-parseBuiltinModeSpec := fn(prefix: String, spec: String): Item {
-    if spec == BUILTIN_MODE_BUILTIN or spec == BUILTIN_MODE_PURE {
-        return (kind = BUILTIN_RULE_PROJECT, name = "", runtime = spec, code = "", intValue = 0, textValue = "");
-    }
-    eq := textLib.indexOfText(spec, "=", 0);
-    if eq <= 0 {
-        diagLib.fail(prefix, "invalid --builtin-mode specification: " + spec);
-    }
-    target := textLib.slice(spec, 0, eq);
-    mode := textLib.slice(spec, eq + 1, textLib.length(spec));
-    if mode =!= BUILTIN_MODE_BUILTIN and mode =!= BUILTIN_MODE_PURE {
-        diagLib.fail(prefix, "invalid --builtin-mode value: " + mode);
-    }
-    tLen := textLib.length(target);
-    isLtsFile := tLen > 4 and textLib.startsWithAt(target, tLen - 4, ".lts");
-    var lastDot := -1;
-    var scan := 0;
-    loop true {
-        found := textLib.indexOfText(target, ".", scan);
-        if found < 0 { break; }
-        lastDot = found;
-        scan = found + 1;
-    }
-    if not isLtsFile and lastDot > 0 and textLib.indexOfText(target, "/", lastDot + 1) < 0 {
-        modPart := textLib.slice(target, 0, lastDot);
-        fnPart := textLib.slice(target, lastDot + 1, tLen);
-        if textLib.indexOfText(modPart, ".", 0) < 0 and fnPart =!= "" {
-            normMod := normalizeBuiltinModule(modPart);
-            if normMod =!= "" and softBuiltinAbi(normMod, fnPart).result =!= "" {
-                return (kind = BUILTIN_RULE_FN, name = normMod + "." + fnPart, runtime = mode,
-                code = "", intValue = 0, textValue = "");
-            }
-        }
-        diagLib.fail(prefix, "invalid --builtin-mode function target: " + target);
-    }
-    normMod := normalizeBuiltinModule(target);
-    if normMod == "" {
-        diagLib.fail(prefix, "invalid --builtin-mode module target: " + target);
-    }
-    (kind = BUILTIN_RULE_MODULE, name = normMod, runtime = mode, code = "", intValue = 0, textValue = "")
-}
-
 /** Parses `--builtin-mode` specification strings passed down from the compiler entrypoint. */
-pub parseBuiltinModeSpecs := fn(prefix: String, specs: List<String>): Items {
-    rules: mut Items = [];
-    loop specs as spec {
-        listLib.pushBack(mut rules, parseBuiltinModeSpec(prefix, spec));
-    }
-    rules
-}
+pub parseBuiltinModeSpecs := fn(prefix: String, specs: List<String>): Items { builtinsAbi.parseBuiltinModeSpecs(prefix, specs) };
 
 /** Resolves effective builtin mode (`builtin` or `pure`) by precedence: function > module > project > default builtin. */
-pub resolveBuiltinMode := fn(rules: Items, moduleName: String, fnName: String): String {
-    var mode := BUILTIN_MODE_BUILTIN;
-    var precedence := 0;
-    fnTarget := if moduleName == "" { "" } else { moduleName + "." + fnName };
-    loop rules as rule {
-        if rule.kind == BUILTIN_RULE_PROJECT and precedence <= 1 {
-            mode = rule.runtime;
-            precedence = 1;
-        } else if rule.kind == BUILTIN_RULE_MODULE and rule.name == moduleName and precedence <= 2 {
-            mode = rule.runtime;
-            precedence = 2;
-        } else if rule.kind == BUILTIN_RULE_FN and fnTarget =!= "" and rule.name == fnTarget and precedence <= 3 {
-            mode = rule.runtime;
-            precedence = 3;
-        }
-    }
-    mode
-}
+pub resolveBuiltinMode := fn(rules: Items, moduleName: String, fnName: String): String { builtinsAbi.resolveBuiltinMode(rules, moduleName, fnName) };
 
 /** Collapses a numeric scalar, tuple or list kind to its canonical item suffix (`Int`, `Float`, `Tuple`, `List`) while leaving other scalar kinds unchanged. */
 storageKind := fn(kind: String): String {
@@ -12131,7 +11768,7 @@ moduleIdentity: String, neededFns: String, skipSoftBuiltins: Bool, builtinSpecs:
                         header := parseFunctionHeader(source, headerPos, prefix, aliases, fnListIntrinsic);
                         afterHdr := skipTrivia(source, header.next, prefix);
                         if afterHdr < size and textLib.at(source, afterHdr) == ";" {
-                            hostRuntime := coreHostFunction(moduleIdentity, fnName, header.params, header.result);
+                            hostRuntime := builtinsAbi.coreHostFunction(moduleIdentity, fnName, header.params, header.result);
                             if listLib.listContainsText(publishedFunctions, fnName) and hostRuntime =!= "" {
                                 listLib.pushBack(mut functions, (name = fnName, runtime = hostRuntime, result = header.result,
                                 first = parameterTotal, count = header.count, declAt = fnAt));
@@ -13020,7 +12657,7 @@ moduleIdentity: String, neededFns: String, skipSoftBuiltins: Bool, builtinSpecs:
             if memberEnd > memberStart {
                 functionIndex := findFunction(functions, name + "." + textLib.slice(source, memberStart, memberEnd));
                 if functionIndex >= 0 {
-                    importedOutputName = coreOutputName(functions[functionIndex].runtime);
+                    importedOutputName = builtinsAbi.coreOutputName(functions[functionIndex].runtime);
                     importedOutputOpen = skipTrivia(source, memberEnd, prefix);
                 }
             }
@@ -13772,7 +13409,7 @@ moduleIdentity: String, neededFns: String, skipSoftBuiltins: Bool, builtinSpecs:
                 rejectMisplacedTag(source, position, prefix, "unexpected block tag in function header");
                 listLib.pushBack(mut blockDecls, (name = name, depth = 0));
                 if position < size and textLib.at(source, position) == ";" {
-                    hostRuntime := coreHostFunction(moduleIdentity, name, header.params, header.result);
+                    hostRuntime := builtinsAbi.coreHostFunction(moduleIdentity, name, header.params, header.result);
                     if not listLib.listContainsText(publishedFunctions, name) or hostRuntime == "" {
                         failAt(source, nameStart, prefix, "bodyless function declaration has no matching core host binding");
                     }
@@ -13816,7 +13453,7 @@ moduleIdentity: String, neededFns: String, skipSoftBuiltins: Bool, builtinSpecs:
                     intValue = header.count, textValue = header.params));
                 }
                 softModule := if target == TARGET_TS and listLib.listContainsText(publishedFunctions, name) {
-                    coreSoftBuiltin(moduleIdentity, name, header.params, header.result)
+                    builtinsAbi.coreSoftBuiltin(moduleIdentity, name, header.params, header.result)
                 } else {
                     ""
                 };
