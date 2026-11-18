@@ -1,0 +1,1436 @@
+/** Frontend canonical type-kind algebra, type/alias parsing, compatibility checks, TypeScript type formatting, and non-failing header pre-resolution. */
+
+integer := import "core/int";
+listLib := import "core/list";
+textLib := import "core/text";
+numeric := import "./numeric-literals.lts";
+tsLiteral := import "./ts-literals.lts";
+ir := import "./frontend-ir.lts";
+syntax := import "./frontend-syntax.lts";
+
+/** One transparent type alias matching `frontend-ir.AliasDecl`. */
+AliasDecl := type (name: String, target: String, at: Int, end: Int, depth: Int);
+
+/** True for type-constructor names that later slices will admit, not scalar, flat named-tuple or List aliases yet. */
+pub isUnsupportedAliasTarget := fn(name: String): Bool {
+    name == "List" or name == "Float" or name == "Double" or name == "Array" or
+    name == "Option" or name == "Result" or name == "record" or name == "fn"
+};
+
+/** Reports one unsupported transparent-alias target, naming a known type constructor when possible. */
+pub unsupportedAliasTarget := fn(source: String, position: Int, prefix: String, target: String): Unit {
+    syntax.failAt(source, position, prefix, "unsupported type alias " + target +
+    "; only Int, Float, String, Bool, Unit, List<T>, flat named tuples and aliases are supported");
+};
+
+/** Returns the index of the first visible alias named `name` at the innermost active block depth, or -1 when absent. */
+pub findAlias := fn(aliases: List<AliasDecl>, name: String): Int {
+    var index := 0;
+    var found := -1;
+    var foundDepth := -1;
+    loop aliases as alias {
+        if alias.name == name and alias.depth > foundDepth {
+            found = index;
+            foundDepth = alias.depth;
+        }
+        index = index + 1;
+    }
+    found
+};
+
+/** Reads one local or module-qualified type name. */
+pub typeNameAt := fn(source: String, position: Int, prefix: String): (name: String, next: Int) {
+    firstEnd := textLib.skipName(source, position);
+    first := textLib.slice(source, position, firstEnd);
+    afterFirst := syntax.skipTrivia(source, firstEnd, prefix);
+    if afterFirst < textLib.length(source) and textLib.at(source, afterFirst) == "." {
+        memberStart := syntax.skipTrivia(source, afterFirst + 1, prefix);
+        if memberStart >= textLib.length(source) or not textLib.isNameStart(textLib.at(source, memberStart)) {
+            syntax.failAt(source, memberStart, prefix, "expected a type name after .");
+        }
+        memberEnd := textLib.skipName(source, memberStart);
+        member := textLib.slice(source, memberStart, memberEnd);
+        return (name = first + "." + member, next = memberEnd);
+    }
+    (name = first, next = firstEnd)
+};
+
+/** Returns the index of the alias declared at `position`, or -1 when absent. */
+pub aliasIndexAt := fn(aliases: List<AliasDecl>, position: Int): Int {
+    var index := 0;
+    loop aliases as alias {
+        if alias.at == position { return index; }
+        index = index + 1;
+    }
+    -1
+};
+
+/** Returns the highest block depth present in `aliases`, or 0 when `aliases` is empty. */
+pub maxAliasDepth := fn(aliases: List<AliasDecl>): Int {
+    var highest := 0;
+    loop aliases as alias {
+        if alias.depth > highest { highest = alias.depth; }
+    }
+    highest
+};
+
+/** Drops aliases declared at block depth `depth` or deeper when exiting a block. */
+pub popBlockAliases := fn(aliases: List<AliasDecl>, depth: Int): List<AliasDecl> {
+    var hasDeeper := false;
+    loop aliases as alias {
+        if alias.depth >= depth {
+            hasDeeper = true;
+            break;
+        }
+    }
+    if not hasDeeper { return aliases; }
+    kept: mut List<AliasDecl> = [];
+    loop aliases as alias {
+        if alias.depth < depth { listLib.pushBack(mut kept, alias); }
+    }
+    kept
+};
+
+/** Filters `aliases` to declarations at or above `maxDepth` for lexical outer-alias expansion. */
+pub aliasesUpToDepth := fn(aliases: List<AliasDecl>, maxDepth: Int): List<AliasDecl> {
+    var hasDeeper := false;
+    loop aliases as alias {
+        if alias.depth > maxDepth {
+            hasDeeper = true;
+            break;
+        }
+    }
+    if not hasDeeper { return aliases; }
+    kept: mut List<AliasDecl> = [];
+    loop aliases as alias {
+        if alias.depth <= maxDepth { listLib.pushBack(mut kept, alias); }
+    }
+    kept
+};
+
+/** True when `kind` is this compiler's canonical flat tuple kind, written `(label:Kind,:Kind)`. */
+pub isTupleKind := fn(kind: String): Bool {
+    textLib.length(kind) > 0 and textLib.at(kind, 0) == "("
+};
+
+/** Returns the runtime JS property name for a tuple field (`_0` when unnamed, otherwise the field label). */
+pub tupleRuntimeProp := fn(label: String, index: Int): String {
+    if label == "" { "_" + integer.intText(index) } else { label }
+};
+
+/** Returns the JS/TS object-literal property key for a tuple field, quoting `__proto__` to avoid prototype mutation. */
+pub tupleObjectKey := fn(label: String, index: Int): String {
+    if label == "" { "_" + integer.intText(index) }
+    else if label == "__proto__" { "[\"__proto__\"]" }
+    else { label }
+};
+
+/** Advances past one canonical type-kind token starting at `start` (scalar, `List<...>`, `[T;N]`, tuple, or `fn(...)`). */
+pub skipKindToken := fn(kind: String, start: Int): Int {
+    size := textLib.length(kind);
+    if start >= size { return start; }
+    if textLib.startsWithAt(kind, start, "fn(") {
+        var cursor := start + 2;
+        var depth := 0;
+        loop cursor < size {
+            ch := textLib.at(kind, cursor);
+            if ch == "(" or ch == "[" or ch == "<" { depth = depth + 1; }
+            else if ch == ")" or ch == "]" or ch == ">" {
+                depth = depth - 1;
+                if depth == 0 { cursor = cursor + 1; break; }
+            }
+            cursor = cursor + 1;
+        }
+        if cursor < size and textLib.at(kind, cursor) == ":" {
+            return self(kind, cursor + 1);
+        }
+        return cursor;
+    }
+    first := textLib.at(kind, start);
+    if first == "(" or first == "[" {
+        var cursor := start;
+        var depth := 0;
+        loop cursor < size {
+            ch := textLib.at(kind, cursor);
+            if ch == "(" or ch == "[" or ch == "<" { depth = depth + 1; }
+            else if ch == ")" or ch == "]" or ch == ">" {
+                depth = depth - 1;
+                if depth == 0 { return cursor + 1; }
+            }
+            cursor = cursor + 1;
+        }
+        return cursor;
+    }
+    var cursor := textLib.skipName(kind, start);
+    if cursor < size and textLib.at(kind, cursor) == "<" {
+        var depth := 0;
+        loop cursor < size {
+            ch := textLib.at(kind, cursor);
+            if ch == "<" or ch == "(" or ch == "[" { depth = depth + 1; }
+            else if ch == ">" or ch == ")" or ch == "]" {
+                depth = depth - 1;
+                if depth == 0 { return cursor + 1; }
+            }
+            cursor = cursor + 1;
+        }
+    }
+    cursor
+};
+
+/** Returns the index of the closing `)` matching the parameter tuple in `fn(...)`, or -1 when `kind` is not canonical. */
+fnCloseParenIndex := fn(kind: String): Int {
+    if not textLib.startsWithAt(kind, 0, "fn(") { return -1; }
+    size := textLib.length(kind);
+    var cursor := 2;
+    var depth := 0;
+    loop cursor < size {
+        ch := textLib.at(kind, cursor);
+        if ch == "(" or ch == "[" or ch == "<" { depth = depth + 1; }
+        else if ch == ")" or ch == "]" or ch == ">" {
+            depth = depth - 1;
+            if depth == 0 {
+                if cursor + 1 < size and textLib.at(kind, cursor + 1) == ":" { return cursor; }
+                return -1;
+            }
+        }
+        cursor = cursor + 1;
+    }
+    -1
+};
+
+/** True when `kind` is a canonical callable kind `fn(...):ResultKind`. */
+pub isFnKind := fn(kind: String): Bool {
+    fnCloseParenIndex(kind) >= 2
+};
+
+/** Returns the canonical return kind from `fn(...):ResultKind`. */
+pub fnResultKind := fn(kind: String): String {
+    close := fnCloseParenIndex(kind);
+    if close < 2 { return ""; }
+    textLib.slice(kind, close + 2, textLib.length(kind))
+};
+
+/** Parses `label:Kind` components inside a parameter list `fn(...)`; returns parameter count. */
+pub fnParamCount := fn(kind: String): Int {
+    close := fnCloseParenIndex(kind);
+    if close <= 3 { return 0; }
+    var cursor := 3;
+    var count := 0;
+    loop cursor < close {
+        if textLib.at(kind, cursor) =!= ":" { cursor = textLib.skipName(kind, cursor); }
+        if cursor < close and textLib.at(kind, cursor) == ":" { cursor = cursor + 1; }
+        cursor = skipKindToken(kind, cursor);
+        count = count + 1;
+        if cursor < close and textLib.at(kind, cursor) == "," { cursor = cursor + 1; }
+    }
+    count
+};
+
+/** Returns `(label, kind)` for parameter `targetIndex` of a canonical `fn(...):Ret` kind. */
+pub fnParamComponent := fn(kind: String, targetIndex: Int): (label: String, kind: String) {
+    close := fnCloseParenIndex(kind);
+    if close <= 3 { return (label = "", kind = ""); }
+    var cursor := 3;
+    var index := 0;
+    loop cursor < close {
+        var label := "";
+        if textLib.at(kind, cursor) =!= ":" {
+            nameStart := cursor;
+            cursor = textLib.skipName(kind, cursor);
+            label = textLib.slice(kind, nameStart, cursor);
+        }
+        if cursor < close and textLib.at(kind, cursor) == ":" { cursor = cursor + 1; }
+        typeStart := cursor;
+        cursor = skipKindToken(kind, cursor);
+        if index == targetIndex {
+            return (label = label, kind = textLib.slice(kind, typeStart, cursor));
+        }
+        index = index + 1;
+        if cursor < close and textLib.at(kind, cursor) == "," { cursor = cursor + 1; }
+    }
+    (label = "", kind = "")
+};
+
+/** Converts a canonical `fn(...):Ret` kind into `name=kind` parameter entries compatible with call routing. */
+pub fnParamEntries := fn(kind: String): List<String> {
+    entries: mut List<String> = [];
+    close := fnCloseParenIndex(kind);
+    if close <= 3 { return entries; }
+    var cursor := 3;
+    loop cursor < close {
+        var label := "";
+        if textLib.at(kind, cursor) =!= ":" {
+            nameStart := cursor;
+            cursor = textLib.skipName(kind, cursor);
+            label = textLib.slice(kind, nameStart, cursor);
+        }
+        if cursor < close and textLib.at(kind, cursor) == ":" { cursor = cursor + 1; }
+        typeStart := cursor;
+        cursor = skipKindToken(kind, cursor);
+        listLib.pushBack(mut entries, label + "=" + textLib.slice(kind, typeStart, cursor));
+        if cursor < close and textLib.at(kind, cursor) == "," { cursor = cursor + 1; }
+    }
+    entries
+};
+
+/** Removes parameter labels from a canonical `fn` kind when joining differently labeled callable branches. */
+pub fnStripLabels := fn(kind: String): String {
+    if not isFnKind(kind) { return kind; }
+    count := fnParamCount(kind);
+    var out := "fn(";
+    var idx := 0;
+    loop idx < count {
+        if idx > 0 { out = out + ","; }
+        comp := fnParamComponent(kind, idx);
+        out = out + ":" + (if isFnKind(comp.kind) { self(comp.kind) } else { comp.kind });
+        idx = idx + 1;
+    }
+    res := fnResultKind(kind);
+    out + "):" + (if isFnKind(res) { self(res) } else { res })
+};
+
+/** Returns the number of components in one canonical flat tuple kind. */
+pub tupleComponentCount := fn(kind: String): Int {
+    if not isTupleKind(kind) { return 0; }
+    size := textLib.length(kind);
+    var cursor := 1;
+    var count := 0;
+    loop cursor < size and textLib.at(kind, cursor) =!= ")" {
+        if textLib.at(kind, cursor) =!= ":" { cursor = textLib.skipName(kind, cursor); }
+        if cursor < size and textLib.at(kind, cursor) == ":" { cursor = cursor + 1; }
+        cursor = skipKindToken(kind, cursor);
+        count = count + 1;
+        if cursor < size and textLib.at(kind, cursor) == "," { cursor = cursor + 1; }
+    }
+    count
+};
+
+/** Returns the label, scalar kind and runtime property name of component `targetIndex` in a canonical tuple kind. */
+pub tupleComponent := fn(kind: String, targetIndex: Int): (label: String, kind: String, prop: String) {
+    size := textLib.length(kind);
+    var cursor := 1;
+    var index := 0;
+    loop cursor < size and textLib.at(kind, cursor) =!= ")" {
+        var label := "";
+        if textLib.at(kind, cursor) =!= ":" {
+            nameStart := cursor;
+            cursor = textLib.skipName(kind, cursor);
+            label = textLib.slice(kind, nameStart, cursor);
+        }
+        if cursor < size and textLib.at(kind, cursor) == ":" { cursor = cursor + 1; }
+        typeStart := cursor;
+        cursor = skipKindToken(kind, cursor);
+        fieldKind := textLib.slice(kind, typeStart, cursor);
+        if index == targetIndex {
+            return (label = label, kind = fieldKind, prop = tupleRuntimeProp(label, index));
+        }
+        index = index + 1;
+        if cursor < size and textLib.at(kind, cursor) == "," { cursor = cursor + 1; }
+    }
+    (label = "", kind = "", prop = "")
+};
+
+/** Converts one tuple expression to `expectedKind` by copying positional components into the receiving labels. */
+pub convertTupleValue := fn(expectedKind: String, actualKind: String, actualCode: String): String {
+    count := tupleComponentCount(expectedKind);
+    var fields := "";
+    var index := 0;
+    loop index < count {
+        expectedComp := tupleComponent(expectedKind, index);
+        actualComp := tupleComponent(actualKind, index);
+        if index > 0 { fields = fields + ", "; }
+        fields = fields + tupleObjectKey(expectedComp.label, index) + ": lite$t." + actualComp.prop;
+        index = index + 1;
+    }
+    "(() => { const lite$t = " + actualCode + "; return { " + fields + " }; })()"
+};
+
+/** True when `kind` is this compiler's canonical one-argument list kind, written `List<ElementKind>`. */
+pub isListKind := fn(kind: String): Bool {
+    textLib.length(kind) > 5 and textLib.startsWithAt(kind, 0, "List<") and textLib.at(kind, textLib.length(kind) - 1) == ">"
+};
+
+/** Returns the canonical element kind from `List<ElementKind>`. */
+pub listElementKind := fn(kind: String): String {
+    if not isListKind(kind) { return ""; }
+    textLib.slice(kind, 5, textLib.length(kind) - 1)
+};
+
+/** Finds the top-level `;` inside `[ElementKind;Extent]`, or -1 when `kind` is not a canonical fixed-array kind. */
+arraySemiIndex := fn(kind: String): Int {
+    size := textLib.length(kind);
+    if size < 5 or textLib.at(kind, 0) =!= "[" or textLib.at(kind, size - 1) =!= "]" { return -1; }
+    var cursor := 1;
+    var depth := 0;
+    loop cursor < size - 1 {
+        ch := textLib.at(kind, cursor);
+        if ch == "(" or ch == "[" or ch == "<" { depth = depth + 1; }
+        else if ch == ")" or ch == "]" or ch == ">" { depth = depth - 1; }
+        else if ch == ";" and depth == 0 { return cursor; }
+        cursor = cursor + 1;
+    }
+    -1
+};
+
+/** True when `kind` is this compiler's canonical fixed-array kind, written `[ElementKind;Extent]`. */
+pub isArrayKind := fn(kind: String): Bool {
+    arraySemiIndex(kind) > 1
+};
+
+/** Returns the canonical element kind from `[ElementKind;Extent]`. */
+pub arrayElementKind := fn(kind: String): String {
+    semi := arraySemiIndex(kind);
+    if semi <= 1 { return ""; }
+    textLib.slice(kind, 1, semi)
+};
+
+/** Returns the integer extent from `[ElementKind;Extent]`. */
+pub arrayExtent := fn(kind: String): Int {
+    semi := arraySemiIndex(kind);
+    if semi <= 1 { return 0; }
+    syntax.parseDigits(kind, semi + 1, textLib.length(kind) - 1)
+};
+
+/** True when `expectedKind` and `actualKind` represent structurally identical kinds modulo callable/tuple parameter labels. */
+exactShapeMatches := fn(expectedKind: String, actualKind: String): Bool {
+    if expectedKind == actualKind { return true; }
+    if isFnKind(expectedKind) and isFnKind(actualKind) {
+        count := fnParamCount(expectedKind);
+        if count =!= fnParamCount(actualKind) { return false; }
+        var idx := 0;
+        loop idx < count {
+            eComp := fnParamComponent(expectedKind, idx);
+            aComp := fnParamComponent(actualKind, idx);
+            if not self(eComp.kind, aComp.kind) { return false; }
+            idx = idx + 1;
+        }
+        return self(fnResultKind(expectedKind), fnResultKind(actualKind));
+    }
+    if isListKind(expectedKind) and isListKind(actualKind) {
+        return self(listElementKind(expectedKind), listElementKind(actualKind));
+    }
+    if isArrayKind(expectedKind) and isArrayKind(actualKind) {
+        return arrayExtent(expectedKind) == arrayExtent(actualKind) and
+        self(arrayElementKind(expectedKind), arrayElementKind(actualKind));
+    }
+    if isTupleKind(expectedKind) and isTupleKind(actualKind) {
+        count := tupleComponentCount(expectedKind);
+        if count =!= tupleComponentCount(actualKind) { return false; }
+        var idx := 0;
+        loop idx < count {
+            if not self(tupleComponent(expectedKind, idx).kind, tupleComponent(actualKind, idx).kind) { return false; }
+            idx = idx + 1;
+        }
+        return true;
+    }
+    false
+};
+
+/** True when `expectedKind` and `actualKind` are callable kinds with matching parameter and return shapes. */
+pub fnShapeMatches := fn(expectedKind: String, actualKind: String): Bool {
+    isFnKind(expectedKind) and isFnKind(actualKind) and exactShapeMatches(expectedKind, actualKind)
+};
+
+/** True when `kind` is or contains a callable function kind (for display and backend checks). */
+pub containsFnKind := fn(kind: String): Bool {
+    if isFnKind(kind) { return true; }
+    if isListKind(kind) { return self(listElementKind(kind)); }
+    if isArrayKind(kind) { return self(arrayElementKind(kind)); }
+    if isTupleKind(kind) {
+        count := tupleComponentCount(kind);
+        var idx := 0;
+        loop idx < count {
+            if self(tupleComponent(kind, idx).kind) { return true; }
+            idx = idx + 1;
+        }
+    }
+    false
+};
+
+/** True when `expectedKind` and `actualKind` are tuples with identical component counts and positional component types. */
+pub tupleShapeMatches := fn(expectedKind: String, actualKind: String): Bool {
+    if not isTupleKind(expectedKind) or not isTupleKind(actualKind) { return false; }
+    expectedSize := textLib.length(expectedKind);
+    actualSize := textLib.length(actualKind);
+    var eCursor := 1;
+    var aCursor := 1;
+    loop eCursor < expectedSize and aCursor < actualSize {
+        eChar := textLib.at(expectedKind, eCursor);
+        aChar := textLib.at(actualKind, aCursor);
+        if eChar == ")" or aChar == ")" {
+            return eChar == ")" and aChar == ")";
+        }
+        if eChar =!= ":" { eCursor = textLib.skipName(expectedKind, eCursor); }
+        if eCursor < expectedSize and textLib.at(expectedKind, eCursor) == ":" { eCursor = eCursor + 1; }
+        eTypeStart := eCursor;
+        eCursor = skipKindToken(expectedKind, eCursor);
+        if aChar =!= ":" { aCursor = textLib.skipName(actualKind, aCursor); }
+        if aCursor < actualSize and textLib.at(actualKind, aCursor) == ":" { aCursor = aCursor + 1; }
+        aTypeStart := aCursor;
+        aCursor = skipKindToken(actualKind, aCursor);
+        eComp := textLib.slice(expectedKind, eTypeStart, eCursor);
+        aComp := textLib.slice(actualKind, aTypeStart, aCursor);
+        if eComp =!= aComp and not fnShapeMatches(eComp, aComp) {
+            return false;
+        }
+        if eCursor < expectedSize and textLib.at(expectedKind, eCursor) == "," { eCursor = eCursor + 1; }
+        if aCursor < actualSize and textLib.at(actualKind, aCursor) == "," { aCursor = aCursor + 1; }
+    }
+    eCursor >= expectedSize and aCursor >= actualSize
+};
+
+/** True when `actualKind` is directly `expectedKind`, `Never` into a known target, losslessly widens numerically, or matches a compatible tuple/callable shape. */
+pub isCompatibleKind := fn(expectedKind: String, actualKind: String): Bool {
+    (expectedKind =!= "" and actualKind == ir.VALUE_KIND_NEVER) or expectedKind == actualKind or
+    numeric.numericWidens(expectedKind, actualKind) or tupleShapeMatches(expectedKind, actualKind) or
+    exactShapeMatches(expectedKind, actualKind)
+};
+
+/** Maps a restricted Lite scalar, flat named-tuple, fixed-array, List or callable kind to its TypeScript type. */
+pub tsFunctionType := fn(kind: String): String {
+    if isListKind(kind) { self(listElementKind(kind)) + "[]" }
+    else if isArrayKind(kind) { self(arrayElementKind(kind)) + "[]" }
+    else if isTupleKind(kind) {
+        count := tupleComponentCount(kind);
+        var result := "{ ";
+        var index := 0;
+        loop index < count {
+            comp := tupleComponent(kind, index);
+            if index > 0 { result = result + "; "; }
+            result = result + tupleObjectKey(comp.label, index) + ": " + self(comp.kind);
+            index = index + 1;
+        }
+        result + " }"
+    }
+    else if isFnKind(kind) {
+        count := fnParamCount(kind);
+        var paramsText := "";
+        var index := 0;
+        loop index < count {
+            comp := fnParamComponent(kind, index);
+            if index > 0 { paramsText = paramsText + ", "; }
+            paramLabel := if comp.label =!= "" { "lite_" + comp.label } else { "lite_arg" + integer.intText(index) };
+            paramsText = paramsText + paramLabel + ": " + self(comp.kind);
+            index = index + 1;
+        }
+        "((" + paramsText + ") => " + self(fnResultKind(kind)) + ")"
+    }
+    else { tsLiteral.tsScalarType(kind) }
+};
+
+/** Formats one canonical flat tuple kind as a TypeScript object type. */
+pub tsTupleType := fn(kind: String): String {
+    tsFunctionType(kind)
+};
+
+/** Formats an admitted output value using its static kind; aggregates evaluate once and retain tuple labels. */
+pub tsDisplayValueCode := fn(kind: String, code: String): String {
+    if ir.isIntScalarKind(kind) or ir.isFloatScalarKind(kind) { return "(" + code + ").toString()"; }
+    if kind == ir.VALUE_KIND_BOOL { return "((" + code + ") ? \"true\" : \"false\")"; }
+    if kind == ir.VALUE_KIND_UNIT { return "((value: unknown): string => { void value; return \"Unit\"; })(" + code + ")"; }
+    if isListKind(kind) or isArrayKind(kind) {
+        element := if isListKind(kind) { listElementKind(kind) } else { arrayElementKind(kind) };
+        return "(\"[\" + (" + code + ").map((value: " + tsFunctionType(element) + ") => " + self(element, "value") + ").join(\", \") + \"]\")";
+    }
+    if isTupleKind(kind) {
+        var result := tsLiteral.textLiteralCode("(");
+        count := tupleComponentCount(kind);
+        var index := 0;
+        loop index < count {
+            comp := tupleComponent(kind, index);
+            separator := if index == 0 { "" } else { ", " };
+            prefixText := if comp.label == "" { separator } else { separator + comp.label + "=" };
+            result = result + " + " + tsLiteral.textLiteralCode(prefixText) + " + " + self(comp.kind, "value." + comp.prop);
+            index = index + 1;
+        }
+        ending := if count == 1 { ",)" } else { ")" };
+        return "((value: " + tsFunctionType(kind) + "): string => " + result + " + " + tsLiteral.textLiteralCode(ending) + ")(" + code + ")";
+    }
+    code
+};
+
+/** Returns the canonical field type for `label` inside flat tuple `kind`, or `""` when absent. */
+pub tupleFieldKind := fn(kind: String, label: String): String {
+    if label == "" or textLib.indexOfText(kind, label + ":", 0) < 0 { return ""; }
+    size := textLib.length(kind);
+    var cursor := 1;
+    loop cursor < size and textLib.at(kind, cursor) =!= ")" {
+        var fieldLabel := "";
+        if textLib.at(kind, cursor) =!= ":" {
+            nameStart := cursor;
+            cursor = textLib.skipName(kind, cursor);
+            fieldLabel = textLib.slice(kind, nameStart, cursor);
+        }
+        if cursor < size and textLib.at(kind, cursor) == ":" { cursor = cursor + 1; }
+        typeStart := cursor;
+        cursor = skipKindToken(kind, cursor);
+        if fieldLabel =!= "" and fieldLabel == label {
+            return textLib.slice(kind, typeStart, cursor);
+        }
+        if cursor < size and textLib.at(kind, cursor) == "," { cursor = cursor + 1; }
+    }
+    ""
+};
+
+/** Renders one canonical kind for diagnostics, adding spaces inside flat tuples, lists, and callable signatures. */
+pub displayKind := fn(kind: String): String {
+    if isListKind(kind) { return "List<" + self(listElementKind(kind)) + ">"; }
+    if isArrayKind(kind) { return "[" + self(arrayElementKind(kind)) + "; " + integer.intText(arrayExtent(kind)) + "]"; }
+    if isFnKind(kind) {
+        count := fnParamCount(kind);
+        var result := "fn(";
+        var index := 0;
+        loop index < count {
+            comp := fnParamComponent(kind, index);
+            if index > 0 { result = result + ", "; }
+            if comp.label == "" {
+                result = result + self(comp.kind);
+            } else {
+                result = result + comp.label + ": " + self(comp.kind);
+            }
+            index = index + 1;
+        }
+        return result + "): " + self(fnResultKind(kind));
+    }
+    if not isTupleKind(kind) { return kind; }
+    count := tupleComponentCount(kind);
+    var result := "(";
+    var index := 0;
+    loop index < count {
+        comp := tupleComponent(kind, index);
+        if index > 0 { result = result + ", "; }
+        if comp.label == "" {
+            result = result + self(comp.kind);
+        } else {
+            result = result + comp.label + ": " + self(comp.kind);
+        }
+        index = index + 1;
+    }
+    if count == 1 and tupleComponent(kind, 0).label == "" { result = result + ","; }
+    result + ")"
+};
+
+/** Parses one source or alias type with cycle tracking `seen`, shared across annotations, aliases, tuple fields, lists, arrays, and callable types. */
+pub parseTypeWithSeen := fn(errSource: String, errPos: Int, useLocalErr: Bool, source: String, position: Int, prefix: String, aliases: List<AliasDecl>, context: String, genericType: String, seen: List<String>): (kind: String, next: Int) {
+    size := textLib.length(source);
+    start := syntax.skipTrivia(source, position, prefix);
+    if start < size and textLib.at(source, start) == "(" {
+        var cursor := syntax.skipTrivia(source, start + 1, prefix);
+        labels: mut List<String> = [];
+        var kindText := "(";
+        var count := 0;
+        var hadComma := false;
+        var singleLabel := "";
+        var singleKind := "";
+        var hadColon := false;
+        loop true {
+            if cursor >= size {
+                syntax.failAt(errSource, if useLocalErr { cursor } else { errPos }, prefix, "expected ) in tuple type");
+            }
+            if textLib.at(source, cursor) == ")" {
+                cursor = cursor + 1;
+                break;
+            }
+            if textLib.at(source, cursor) == "(" {
+                syntax.failAt(errSource, if useLocalErr { cursor } else { errPos }, prefix, "nested tuple types are not supported");
+            }
+            var label := "";
+            var componentStart := cursor;
+            if textLib.at(source, cursor) == ":" {
+                hadColon = true;
+                cursor = syntax.skipTrivia(source, cursor + 1, prefix);
+                if cursor < size and textLib.at(source, cursor) == "(" {
+                    syntax.failAt(errSource, if useLocalErr { cursor } else { errPos }, prefix, "nested tuple types are not supported");
+                }
+                if cursor >= size or not textLib.isNameStart(textLib.at(source, cursor)) {
+                    syntax.failAt(errSource, if useLocalErr { cursor } else { errPos }, prefix, "expected a tuple field type");
+                }
+                componentStart = cursor;
+            } else {
+                if not textLib.isNameStart(textLib.at(source, cursor)) {
+                    syntax.failAt(errSource, if useLocalErr { cursor } else { errPos }, prefix, "expected a tuple field name");
+                }
+                firstStart := cursor;
+                firstEnd := textLib.skipName(source, cursor);
+                firstName := textLib.slice(source, firstStart, firstEnd);
+                afterFirst := syntax.skipTrivia(source, firstEnd, prefix);
+                if afterFirst < size and textLib.at(source, afterFirst) == ":" {
+                    label = firstName;
+                    if syntax.isReservedWord(label) {
+                        syntax.unsupportedFeature(errSource, if useLocalErr { firstStart } else { errPos }, label, prefix);
+                    }
+                    if listLib.listContainsText(labels, label) {
+                        syntax.failAt(errSource, if useLocalErr { firstStart } else { errPos }, prefix, "duplicate tuple field " + label);
+                    }
+                    listLib.pushBack(mut labels, label);
+                    cursor = syntax.skipTrivia(source, afterFirst + 1, prefix);
+                    if cursor < size and textLib.at(source, cursor) == "(" {
+                        syntax.failAt(errSource, if useLocalErr { cursor } else { errPos }, prefix, "nested tuple types are not supported");
+                    }
+                    if cursor >= size or not textLib.isNameStart(textLib.at(source, cursor)) {
+                        syntax.failAt(errSource, if useLocalErr { cursor } else { errPos }, prefix, "expected a tuple field type");
+                    }
+                    componentStart = cursor;
+                }
+            }
+            parsedComponent := self(errSource, errPos, useLocalErr, source, componentStart, prefix, aliases, "tuple field", genericType, seen);
+            componentKind := parsedComponent.kind;
+            cursor = parsedComponent.next;
+            diagPos := if useLocalErr { componentStart } else { errPos };
+            if isTupleKind(componentKind) {
+                syntax.failAt(errSource, diagPos, prefix, "nested tuple types are not supported");
+            }
+            if isListKind(componentKind) {
+                syntax.failAt(errSource, diagPos, prefix, "list types inside tuples are not supported");
+            }
+            if componentKind == ir.VALUE_KIND_UNIT {
+                syntax.failAt(errSource, diagPos, prefix, "unsupported tuple component type Unit");
+            }
+            if count > 0 { kindText = kindText + ","; }
+            kindText = kindText + label + ":" + componentKind;
+            if count == 0 { singleLabel = label; singleKind = componentKind; }
+            count = count + 1;
+            cursor = syntax.skipTrivia(source, cursor, prefix);
+            if cursor < size and textLib.at(source, cursor) == "," {
+                hadComma = true;
+                cursor = syntax.skipTrivia(source, cursor + 1, prefix);
+            }
+        }
+        if count == 0 {
+            syntax.failAt(errSource, if useLocalErr { start } else { errPos }, prefix, "tuple type needs at least one field");
+        }
+        if count == 1 and singleLabel == "" and not hadComma {
+            if hadColon {
+                syntax.failAt(errSource, if useLocalErr { start } else { errPos }, prefix, "unnamed singleton tuple type needs trailing comma");
+            }
+            return (kind = singleKind, next = cursor);
+        }
+        return (kind = kindText + ")", next = cursor);
+    }
+    if start < size and textLib.at(source, start) == "[" {
+        elemStart := syntax.skipTrivia(source, start + 1, prefix);
+        inner := self(errSource, errPos, useLocalErr, source, elemStart, prefix, aliases, context, genericType, seen);
+        if inner.kind == ir.VALUE_KIND_UNIT {
+            syntax.failAt(errSource, if useLocalErr { elemStart } else { errPos }, prefix, "unsupported array element type Unit");
+        }
+        afterElem := syntax.skipTrivia(source, inner.next, prefix);
+        if afterElem >= size or textLib.at(source, afterElem) =!= ";" {
+            syntax.failAt(errSource, if useLocalErr { afterElem } else { errPos }, prefix, if useLocalErr { "expected ;" } else { "expected [Type; Extent] in array type" });
+        }
+        extentStart := syntax.skipTrivia(source, afterElem + 1, prefix);
+        var extentEnd := extentStart;
+        loop extentEnd < size and textLib.isDigit(textLib.at(source, extentEnd)) {
+            extentEnd = extentEnd + 1;
+        }
+        if extentEnd == extentStart {
+            syntax.failAt(errSource, if useLocalErr { extentStart } else { errPos }, prefix, "expected positive integer extent in array type");
+        }
+        extent := syntax.parseDigits(source, extentStart, extentEnd);
+        afterExtent := syntax.skipTrivia(source, extentEnd, prefix);
+        if afterExtent >= size or textLib.at(source, afterExtent) =!= "]" {
+            syntax.failAt(errSource, if useLocalErr { afterExtent } else { errPos }, prefix, if useLocalErr { "expected ]" } else { "expected [Type; Extent] in array type" });
+        }
+        return (kind = "[" + inner.kind + ";" + integer.intText(extent) + "]", next = afterExtent + 1);
+    }
+    if textLib.wordAt(source, start, "fn") {
+        afterFn := syntax.skipTrivia(source, start + 2, prefix);
+        if afterFn < size and textLib.at(source, afterFn) == "(" {
+            var cursor := syntax.skipTrivia(source, afterFn + 1, prefix);
+            paramLabels: mut List<String> = [];
+            var encoded := "fn(";
+            var count := 0;
+            loop true {
+                if cursor >= size {
+                    syntax.failAt(errSource, if useLocalErr { cursor } else { errPos }, prefix, "expected ) in function type");
+                }
+                if textLib.at(source, cursor) == ")" {
+                    cursor = cursor + 1;
+                    break;
+                }
+                var label := "";
+                var paramStart := cursor;
+                if textLib.isNameStart(textLib.at(source, cursor)) {
+                    nameEnd := textLib.skipName(source, cursor);
+                    firstName := textLib.slice(source, cursor, nameEnd);
+                    afterName := syntax.skipTrivia(source, nameEnd, prefix);
+                    if afterName < size and textLib.at(source, afterName) == ":" {
+                        label = firstName;
+                        if syntax.isReservedWord(label) {
+                            syntax.unsupportedFeature(errSource, if useLocalErr { cursor } else { errPos }, label, prefix);
+                        }
+                        if listLib.listContainsText(paramLabels, label) {
+                            syntax.failAt(errSource, if useLocalErr { cursor } else { errPos }, prefix, "duplicate parameter " + label);
+                        }
+                        listLib.pushBack(mut paramLabels, label);
+                        paramStart = syntax.skipTrivia(source, afterName + 1, prefix);
+                    }
+                }
+                paramType := self(errSource, errPos, useLocalErr, source, paramStart, prefix, aliases, "function", genericType, seen);
+                if count > 0 { encoded = encoded + ","; }
+                encoded = encoded + label + ":" + paramType.kind;
+                count = count + 1;
+                cursor = syntax.skipTrivia(source, paramType.next, prefix);
+                if cursor < size and textLib.at(source, cursor) == "," {
+                    cursor = syntax.skipTrivia(source, cursor + 1, prefix);
+                } else if cursor < size and textLib.at(source, cursor) == ")" {
+                    cursor = cursor + 1;
+                    break;
+                } else {
+                    syntax.failAt(errSource, if useLocalErr { cursor } else { errPos }, prefix, "expected , or ) in function type");
+                }
+            }
+            afterClose := syntax.skipTrivia(source, cursor, prefix);
+            if afterClose >= size or textLib.at(source, afterClose) =!= ":" {
+                syntax.failAt(errSource, if useLocalErr { afterClose } else { errPos }, prefix, "expected : after function parameter types");
+            }
+            retType := self(errSource, errPos, useLocalErr, source, afterClose + 1, prefix, aliases, "function", genericType, seen);
+            return (kind = encoded + "):" + retType.kind, next = retType.next);
+        }
+    }
+    nameStart := if useLocalErr { start } else { errPos };
+    parsedName := typeNameAt(source, start, prefix);
+    after := parsedName.next;
+    name := parsedName.name;
+    afterName := syntax.skipTrivia(source, after, prefix);
+    if name == "List" and afterName < size and textLib.at(source, afterName) == "<" {
+        innerStart := syntax.skipTrivia(source, afterName + 1, prefix);
+        if innerStart >= size or textLib.at(source, innerStart) == ">" {
+            syntax.failAt(errSource, if useLocalErr { innerStart } else { errPos }, prefix, "expected a list element type");
+        }
+        inner := self(errSource, errPos, useLocalErr, source, innerStart, prefix, aliases, context, genericType, seen);
+        if isListKind(inner.kind) {
+            syntax.failAt(errSource, if useLocalErr { innerStart } else { errPos }, prefix, "nested list types are not supported");
+        }
+        close := syntax.skipTrivia(source, inner.next, prefix);
+        if close >= size or textLib.at(source, close) =!= ">" {
+            syntax.failAt(errSource, if useLocalErr { close } else { errPos }, prefix, if useLocalErr { "expected >" } else { "expected > in list type" });
+        }
+        return (kind = "List<" + inner.kind + ">", next = close + 1);
+    }
+    if genericType =!= "" and name == genericType { return (kind = genericType, next = after); }
+    if name == ir.VALUE_KIND_INT or name == ir.VALUE_KIND_FLOAT or name == ir.VALUE_KIND_STRING or name == ir.VALUE_KIND_BOOL or name == ir.VALUE_KIND_UNIT or numeric.isNarrowNumericKind(name) {
+        return (kind = name, next = after);
+    }
+    numericKind := numeric.numericAliasKind(name);
+    if numericKind =!= "" { return (kind = numericKind, next = after); }
+    if not useLocalErr and isUnsupportedAliasTarget(name) {
+        unsupportedAliasTarget(errSource, errPos, prefix, name);
+        return (kind = "", next = after);
+    }
+    index := findAlias(aliases, name);
+    if index >= 0 {
+        alias := aliases[index];
+        seenKey := integer.intText(alias.depth) + ":" + name;
+        if listLib.listContainsText(seen, seenKey) {
+            syntax.failAt(errSource, alias.at, prefix, "recursive type alias " + name);
+            return (kind = "", next = after);
+        }
+        if alias.target == "" {
+            unsupportedAliasTarget(errSource, alias.at, prefix, "target");
+            return (kind = "", next = after);
+        }
+        nextSeen: mut List<String> = seen;
+        listLib.pushBack(mut nextSeen, seenKey);
+        scopedAliases := aliasesUpToDepth(aliases, alias.depth);
+        resolved := self(errSource, alias.at, false, alias.target, 0, prefix, scopedAliases, "alias", "", nextSeen);
+        trailing := syntax.skipTrivia(alias.target, resolved.next, prefix);
+        if trailing < textLib.length(alias.target) {
+            syntax.failAt(errSource, alias.at, prefix, "unexpected text after type");
+        }
+        return (kind = resolved.kind, next = after);
+    }
+    if textLib.indexOfText(name, ".", 0) >= 0 or not useLocalErr {
+        syntax.failAt(errSource, nameStart, prefix, "unknown type alias " + name);
+    } else {
+        syntax.failAt(errSource, nameStart, prefix, "unsupported " + context + " type " + name);
+    }
+    (kind = "", next = after)
+};
+
+/** Resolves one scalar, flat named-tuple, array, list, or callable type text, following transparent aliases and rejecting unknown names, nested tuples, unsupported targets and cycles. */
+pub resolveTypeText := fn(source: String, position: Int, prefix: String, aliases: List<AliasDecl>, text: String, seen: List<String>): String {
+    parsed := parseTypeWithSeen(source, position, false, text, 0, prefix, aliases, "alias", "", seen);
+    after := syntax.skipTrivia(text, parsed.next, prefix);
+    if after < textLib.length(text) {
+        syntax.failAt(source, position, prefix, "unexpected text after type");
+    }
+    parsed.kind
+};
+
+/** Resolves one transparent alias name to its scalar or flat named-tuple kind. */
+pub resolveAliasKind := fn(source: String, position: Int, prefix: String, aliases: List<AliasDecl>, name: String, seen: List<String>): String {
+    resolveTypeText(source, position, prefix, aliases, name, seen)
+};
+
+/** Parses one source-level flat named-tuple type `(label: Type, ...)`. */
+pub parseTupleTypeAt := fn(source: String, position: Int, prefix: String, aliases: List<AliasDecl>): (kind: String, next: Int) {
+    emptySeen: List<String> = [];
+    parseTypeWithSeen(source, position, true, source, position, prefix, aliases, "tuple field", "", emptySeen)
+};
+
+/** Parses one source-level type: a scalar name, a transparent alias, a flat named tuple, an array, a `List<T>`, or `fn(...): Return`. */
+pub parseTypeAt := fn(source: String, position: Int, prefix: String, aliases: List<AliasDecl>, context: String, genericType: String): (kind: String, next: Int) {
+    emptySeen: List<String> = [];
+    parseTypeWithSeen(source, position, true, source, position, prefix, aliases, context, genericType, emptySeen)
+};
+
+/** Parses one function parameter or result type, including flat named tuples and transparent aliases. */
+pub parseFunctionType := fn(source: String, position: Int, prefix: String, aliases: List<AliasDecl>, genericType: String): (kind: String, next: Int) {
+    parseTypeAt(source, position, prefix, aliases, "function", genericType)
+};
+
+/** Parses a function signature. The optional `T` binder is only enabled for the registered core list declarations. */
+pub parseFunctionHeader := fn(source: String, position: Int, prefix: String, aliases: List<AliasDecl>, listIntrinsic: Bool): (next: Int, result: String, params: String, count: Int, genericType: String) {
+    size := textLib.length(source);
+    var cursor := syntax.skipTrivia(source, position, prefix);
+    var genericType := "";
+    if listIntrinsic {
+        cursor = syntax.expectSymbol(source, cursor, "<", prefix);
+        binderStart := syntax.skipTrivia(source, cursor, prefix);
+        binder := typeNameAt(source, binderStart, prefix);
+        if binder.name =!= "T" { syntax.failAt(source, binderStart, prefix, "core list intrinsic type parameter must be T"); }
+        genericType = binder.name;
+        cursor = syntax.expectSymbol(source, binder.next, ">", prefix);
+        cursor = syntax.skipTrivia(source, cursor, prefix);
+    }
+    cursor = syntax.expectSymbol(source, cursor, "(", prefix);
+    cursor = syntax.skipTrivia(source, cursor, prefix);
+    names: mut List<String> = [];
+    var encoded := "";
+    var count := 0;
+    if textLib.startsWithAt(source, cursor, "...") {
+        cursor = syntax.skipTrivia(source, cursor + 3, prefix);
+        if cursor >= size or not textLib.isNameStart(textLib.at(source, cursor)) {
+            syntax.failAt(source, cursor, prefix, "expected a name after ... in host value-pack declaration");
+        }
+        nameStart := cursor;
+        cursor = textLib.skipName(source, cursor);
+        encoded = "..." + textLib.slice(source, nameStart, cursor);
+        count = -1;
+        cursor = syntax.skipTrivia(source, cursor, prefix);
+        if cursor < size and textLib.at(source, cursor) == "," {
+            syntax.failAt(source, cursor, prefix, "host value-pack declaration must be its only parameter");
+        }
+    } else if cursor < size and textLib.at(source, cursor) =!= ")" {
+        loop true {
+            if cursor >= size or not textLib.isNameStart(textLib.at(source, cursor)) {
+                syntax.failAt(source, cursor, prefix, "expected a parameter name");
+            }
+            nameStart := cursor;
+            cursor = textLib.skipName(source, cursor);
+            parameterName := textLib.slice(source, nameStart, cursor);
+            if syntax.isReservedWord(parameterName) { syntax.unsupportedFeature(source, nameStart, parameterName, prefix); }
+            if listLib.listContainsText(names, parameterName) {
+                syntax.failAt(source, nameStart, prefix, "duplicate parameter " + parameterName);
+            }
+            listLib.pushBack(mut names, parameterName);
+            cursor = syntax.skipTrivia(source, cursor, prefix);
+            cursor = syntax.expectSymbol(source, cursor, ":", prefix);
+            cursor = syntax.skipTrivia(source, cursor, prefix);
+            var access := "";
+            if textLib.wordAt(source, cursor, "mut") {
+                if not listIntrinsic { syntax.failAt(source, cursor, prefix, "mut parameter signatures are reserved for registered core declarations"); }
+                access = "mut ";
+                cursor = syntax.skipTrivia(source, cursor + 3, prefix);
+            }
+            typed := parseFunctionType(source, cursor, prefix, aliases, genericType);
+            cursor = syntax.skipTrivia(source, typed.next, prefix);
+            if count > 0 { encoded = encoded + "|"; }
+            encoded = encoded + parameterName + "=" + access + typed.kind;
+            count = count + 1;
+            if cursor < size and textLib.at(source, cursor) == "," {
+                cursor = syntax.skipTrivia(source, cursor + 1, prefix);
+            } else {
+                break;
+            }
+        }
+    }
+    cursor = syntax.expectSymbol(source, cursor, ")", prefix);
+    cursor = syntax.skipTrivia(source, cursor, prefix);
+    cursor = syntax.expectSymbol(source, cursor, ":", prefix);
+    resultType := parseFunctionType(source, cursor, prefix, aliases, genericType);
+    (next = resultType.next, result = resultType.kind, params = encoded, count = count, genericType = genericType)
+};
+
+/** Parses one local type annotation: an optional `mut` list grant, then a scalar, a transparent alias or a flat named tuple; Unit has no local zero value. */
+pub parseLocalType := fn(source: String, position: Int, prefix: String, aliases: List<AliasDecl>): (kind: String, writable: Bool, next: Int) {
+    start := syntax.skipTrivia(source, position, prefix);
+    var cursor := start;
+    var writable := false;
+    if textLib.wordAt(source, cursor, "mut") {
+        writable = true;
+        cursor = syntax.skipTrivia(source, cursor + 3, prefix);
+    }
+    typed := parseTypeAt(source, cursor, prefix, aliases, "local", "");
+    if typed.kind == ir.VALUE_KIND_UNIT {
+        name := textLib.slice(source, cursor, textLib.skipName(source, cursor));
+        syntax.failAt(source, cursor, prefix, "unsupported local type " + name);
+    }
+    if writable and not isListKind(typed.kind) {
+        syntax.failAt(source, start, prefix, "mut requires a List type, got " + displayKind(typed.kind));
+    }
+    (kind = typed.kind, writable = writable, next = typed.next)
+};
+
+/** Returns the source name from one encoded `name=kind` function parameter entry. */
+pub paramNameOf := fn(entry: String): String {
+    separator := textLib.indexOfText(entry, "=", 0);
+    if separator < 0 { return entry; }
+    textLib.slice(entry, 0, separator)
+};
+
+/** Returns the kind from one encoded `name=kind` function parameter entry. */
+pub paramKindOf := fn(entry: String): String {
+    separator := textLib.indexOfText(entry, "=", 0);
+    if separator < 0 { return ""; }
+    textLib.slice(entry, separator + 1, textLib.length(entry))
+};
+
+/** Builds a canonical `fn(label:Kind,...):ResultKind` string from encoded parameter entries and a return kind. */
+pub fnCanonicalKind := fn(params: List<String>, first: Int, count: Int, resultKind: String): String {
+    var out := "fn(";
+    var idx := 0;
+    loop idx < count {
+        if idx > 0 { out = out + ","; }
+        entry := params[first + idx];
+        out = out + paramNameOf(entry) + ":" + paramKindOf(entry);
+        idx = idx + 1;
+    }
+    out + "):" + resultKind
+};
+
+/** Reads one raw alias target type from `position`, capturing a parenthesized tuple type or a generic `List<...>` application through its matching close, or a single name. */
+pub collectTypeTarget := fn(source: String, position: Int, prefix: String): (text: String, next: Int) {
+    size := textLib.length(source);
+    start := syntax.skipTrivia(source, position, prefix);
+    if start < size and textLib.at(source, start) == "(" {
+        var cursor := start;
+        var depth := 0;
+        loop cursor < size {
+            ch := textLib.at(source, cursor);
+            if ch == "\"" {
+                cursor = syntax.skipAliasString(source, cursor);
+            } else if ch == "/" and textLib.startsWithAt(source, cursor, "/*") {
+                cursor = syntax.skipComment(source, cursor, prefix);
+            } else if ch == "(" {
+                depth = depth + 1;
+                cursor = cursor + 1;
+            } else if ch == ")" {
+                depth = depth - 1;
+                cursor = cursor + 1;
+                if depth == 0 {
+                    return (text = textLib.slice(source, start, cursor), next = cursor);
+                }
+            } else {
+                cursor = cursor + 1;
+            }
+        }
+        (text = textLib.slice(source, start, size), next = size)
+    } else if start < size and textLib.at(source, start) == "[" {
+        var cursor := start;
+        var depth := 0;
+        loop cursor < size {
+            ch := textLib.at(source, cursor);
+            if ch == "\"" {
+                cursor = syntax.skipAliasString(source, cursor);
+            } else if ch == "/" and textLib.startsWithAt(source, cursor, "/*") {
+                cursor = syntax.skipComment(source, cursor, prefix);
+            } else if ch == "[" {
+                depth = depth + 1;
+                cursor = cursor + 1;
+            } else if ch == "]" {
+                depth = depth - 1;
+                cursor = cursor + 1;
+                if depth == 0 {
+                    return (text = textLib.slice(source, start, cursor), next = cursor);
+                }
+            } else {
+                cursor = cursor + 1;
+            }
+        }
+        (text = textLib.slice(source, start, size), next = size)
+    } else if textLib.wordAt(source, start, "fn") {
+        afterFn := syntax.skipTrivia(source, start + 2, prefix);
+        if afterFn < size and textLib.at(source, afterFn) == "(" {
+            var cursor := afterFn;
+            var depth := 0;
+            var afterParen := -1;
+            loop cursor < size {
+                ch := textLib.at(source, cursor);
+                if ch == "\"" {
+                    cursor = syntax.skipAliasString(source, cursor);
+                } else if ch == "/" and textLib.startsWithAt(source, cursor, "/*") {
+                    cursor = syntax.skipComment(source, cursor, prefix);
+                } else if ch == "(" {
+                    depth = depth + 1;
+                    cursor = cursor + 1;
+                } else if ch == ")" {
+                    depth = depth - 1;
+                    cursor = cursor + 1;
+                    if depth == 0 {
+                        afterParen = cursor;
+                        break;
+                    }
+                } else {
+                    cursor = cursor + 1;
+                }
+            }
+            if afterParen < 0 {
+                return (text = textLib.slice(source, start, size), next = size);
+            }
+            afterClose := syntax.skipTrivia(source, afterParen, prefix);
+            if afterClose < size and textLib.at(source, afterClose) == ":" {
+                retTarget := self(source, afterClose + 1, prefix);
+                return (text = textLib.slice(source, start, retTarget.next), next = retTarget.next);
+            }
+            return (text = textLib.slice(source, start, afterClose), next = afterClose);
+        }
+        parsedName := typeNameAt(source, start, prefix);
+        (text = textLib.slice(source, start, parsedName.next), next = parsedName.next)
+    } else {
+        parsedName := typeNameAt(source, start, prefix);
+        after := parsedName.next;
+        afterName := syntax.skipTrivia(source, after, prefix);
+        if afterName < size and textLib.at(source, afterName) == "<" {
+            var cursor := afterName;
+            var depth := 0;
+            loop cursor < size {
+                ch := textLib.at(source, cursor);
+                if ch == "/" and textLib.startsWithAt(source, cursor, "/*") {
+                    cursor = syntax.skipComment(source, cursor, prefix);
+                } else if ch == "<" {
+                    depth = depth + 1;
+                    cursor = cursor + 1;
+                } else if ch == ">" {
+                    depth = depth - 1;
+                    cursor = cursor + 1;
+                    if depth == 0 {
+                        return (text = textLib.slice(source, start, cursor), next = cursor);
+                    }
+                } else {
+                    cursor = cursor + 1;
+                }
+            }
+            (text = textLib.slice(source, start, size), next = size)
+        } else {
+            (text = textLib.slice(source, start, after), next = after)
+        }
+    }
+};
+
+/** Pre-collects shallow `Name := type Target` aliases inside the `{ ... }` block opening at `openBracePos`, skipping nested `{ ... }` blocks. */
+pub collectBlockTypeAliases := fn(source: String, openBracePos: Int, prefix: String, blockDepth: Int, baseAliases: List<AliasDecl>): List<AliasDecl> {
+    size := textLib.length(source);
+    if openBracePos < 0 or openBracePos >= size or textLib.at(source, openBracePos) =!= "{" {
+        return baseAliases;
+    }
+    var nextTypeHit := textLib.indexOfText(source, "type", openBracePos + 1);
+    if nextTypeHit < 0 { return baseAliases; }
+    found: mut List<AliasDecl> = [];
+    var hasFound := false;
+    var cursor := openBracePos + 1;
+    var parenDepth := 0;
+    loop cursor < size {
+        cursor = syntax.skipTrivia(source, cursor, prefix);
+        if cursor >= size { break; }
+        if cursor > nextTypeHit {
+            nextTypeHit = textLib.indexOfText(source, "type", cursor);
+            if nextTypeHit < 0 { break; }
+        }
+        ch := textLib.at(source, cursor);
+        if ch == "\"" {
+            cursor = syntax.skipAliasString(source, cursor);
+        } else if ch == "{" {
+            closed := syntax.scanBraceEnd(source, cursor, prefix);
+            if closed < 0 { break; }
+            cursor = closed;
+        } else if ch == "}" {
+            if parenDepth == 0 { break; }
+            parenDepth = parenDepth - 1;
+            cursor = cursor + 1;
+        } else if ch == "(" or ch == "[" {
+            parenDepth = parenDepth + 1;
+            cursor = cursor + 1;
+        } else if ch == ")" or ch == "]" {
+            if parenDepth > 0 { parenDepth = parenDepth - 1; }
+            cursor = cursor + 1;
+        } else if parenDepth == 0 and textLib.isNameStart(ch) {
+            nameStart := cursor;
+            afterName := textLib.skipName(source, cursor);
+            name := textLib.slice(source, nameStart, afterName);
+            opPos := syntax.skipTrivia(source, afterName, prefix);
+            if name =!= "pub" and not syntax.isReservedWord(name) and textLib.startsWithAt(source, opPos, ":=") {
+                typePos := syntax.skipTrivia(source, opPos + 2, prefix);
+                if textLib.wordAt(source, typePos, "type") {
+                    targetStart := syntax.skipTrivia(source, typePos + 4, prefix);
+                    aliasTarget := collectTypeTarget(source, targetStart, prefix);
+                    listLib.pushBack(mut found, (name = name, target = aliasTarget.text, at = nameStart, end = aliasTarget.next, depth = blockDepth));
+                    hasFound = true;
+                    cursor = if aliasTarget.next > typePos + 4 { aliasTarget.next } else { typePos + 4 };
+                    continue;
+                }
+            }
+            cursor = opPos;
+        } else {
+            cursor = cursor + 1;
+        }
+    }
+    if not hasFound { return baseAliases; }
+    out: mut List<AliasDecl> = [];
+    loop baseAliases as entry { listLib.pushBack(mut out, entry); }
+    loop found as entry { listLib.pushBack(mut out, entry); }
+    out
+};
+
+/** Non-failing counterpart to `parseTypeWithSeen` used by root pre-registration and expression kind inference. */
+pub canResolveTypeAt := fn(source: String, position: Int, prefix: String, aliases: List<AliasDecl>, genericType: String, seen: List<String>, depthLeft: Int): (ok: Bool, kind: String, next: Int) {
+    if depthLeft <= 0 { return (ok = false, kind = "", next = position); }
+    size := textLib.length(source);
+    start := syntax.skipTrivia(source, position, prefix);
+    if start >= size { return (ok = false, kind = "", next = start); }
+    ch := textLib.at(source, start);
+    if ch == "(" {
+        var cursor := syntax.skipTrivia(source, start + 1, prefix);
+        labels: mut List<String> = [];
+        parts: mut List<String> = [];
+        var count := 0;
+        var hasNamed := false;
+        var hadComma := false;
+        loop cursor < size and textLib.at(source, cursor) =!= ")" {
+            if textLib.at(source, cursor) == "(" { return (ok = false, kind = "", next = cursor); }
+            var label := "";
+            var fieldStart := cursor;
+            if textLib.isNameStart(textLib.at(source, cursor)) {
+                afterName := textLib.skipName(source, cursor);
+                colonPos := syntax.skipTrivia(source, afterName, prefix);
+                if colonPos < size and textLib.at(source, colonPos) == ":" {
+                    candidate := textLib.slice(source, cursor, afterName);
+                    if syntax.isReservedWord(candidate) or listLib.listContainsText(labels, candidate) {
+                        return (ok = false, kind = "", next = cursor);
+                    }
+                    label = candidate;
+                    hasNamed = true;
+                    listLib.pushBack(mut labels, label);
+                    fieldStart = syntax.skipTrivia(source, colonPos + 1, prefix);
+                    if fieldStart >= size or textLib.at(source, fieldStart) == "(" {
+                        return (ok = false, kind = "", next = fieldStart);
+                    }
+                }
+            }
+            parsedField := self(source, fieldStart, prefix, aliases, genericType, seen, depthLeft - 1);
+            if not parsedField.ok { return (ok = false, kind = "", next = fieldStart); }
+            if isTupleKind(parsedField.kind) or isListKind(parsedField.kind) or parsedField.kind == ir.VALUE_KIND_UNIT {
+                return (ok = false, kind = "", next = fieldStart);
+            }
+            listLib.pushBack(mut parts, label + ":" + parsedField.kind);
+            count = count + 1;
+            cursor = syntax.skipTrivia(source, parsedField.next, prefix);
+            if cursor < size and textLib.at(source, cursor) == "," {
+                hadComma = true;
+                cursor = syntax.skipTrivia(source, cursor + 1, prefix);
+            } else {
+                hadComma = false;
+                break;
+            }
+        }
+        if cursor >= size or textLib.at(source, cursor) =!= ")" {
+            return (ok = false, kind = "", next = cursor);
+        }
+        if count == 0 or (count == 1 and not hasNamed and not hadComma) {
+            return (ok = false, kind = "", next = start);
+        }
+        return (ok = true, kind = "(" + textLib.joinTexts(parts, ",") + ")", next = cursor + 1);
+    }
+    if ch == "[" {
+        elem := self(source, start + 1, prefix, aliases, genericType, seen, depthLeft - 1);
+        if not elem.ok or elem.kind == ir.VALUE_KIND_UNIT { return (ok = false, kind = "", next = start); }
+        afterElem := syntax.skipTrivia(source, elem.next, prefix);
+        if afterElem >= size or textLib.at(source, afterElem) =!= ";" {
+            return (ok = false, kind = "", next = afterElem);
+        }
+        extentStart := syntax.skipTrivia(source, afterElem + 1, prefix);
+        var extentEnd := extentStart;
+        loop extentEnd < size and textLib.isDigit(textLib.at(source, extentEnd)) {
+            extentEnd = extentEnd + 1;
+        }
+        if extentEnd == extentStart { return (ok = false, kind = "", next = extentStart); }
+        extent := syntax.parseDigits(source, extentStart, extentEnd);
+        if extent <= 0 { return (ok = false, kind = "", next = extentStart); }
+        afterExtent := syntax.skipTrivia(source, extentEnd, prefix);
+        if afterExtent >= size or textLib.at(source, afterExtent) =!= "]" {
+            return (ok = false, kind = "", next = afterExtent);
+        }
+        return (ok = true, kind = "[" + elem.kind + ";" + integer.intText(extent) + "]", next = afterExtent + 1);
+    }
+    if textLib.wordAt(source, start, "fn") {
+        afterFn := syntax.skipTrivia(source, start + 2, prefix);
+        if afterFn >= size or textLib.at(source, afterFn) =!= "(" {
+            return (ok = false, kind = "", next = afterFn);
+        }
+        var pCursor := syntax.skipTrivia(source, afterFn + 1, prefix);
+        paramLabels: mut List<String> = [];
+        paramParts: mut List<String> = [];
+        loop pCursor < size and textLib.at(source, pCursor) =!= ")" {
+            var pLabel := "";
+            var pTypeStart := pCursor;
+            if textLib.isNameStart(textLib.at(source, pCursor)) {
+                afterPLabel := textLib.skipName(source, pCursor);
+                pColon := syntax.skipTrivia(source, afterPLabel, prefix);
+                if pColon < size and textLib.at(source, pColon) == ":" {
+                    candidate := textLib.slice(source, pCursor, afterPLabel);
+                    if syntax.isReservedWord(candidate) or listLib.listContainsText(paramLabels, candidate) {
+                        return (ok = false, kind = "", next = pCursor);
+                    }
+                    pLabel = candidate;
+                    listLib.pushBack(mut paramLabels, pLabel);
+                    pTypeStart = syntax.skipTrivia(source, pColon + 1, prefix);
+                }
+            }
+            parsedParam := self(source, pTypeStart, prefix, aliases, genericType, seen, depthLeft - 1);
+            if not parsedParam.ok { return (ok = false, kind = "", next = pTypeStart); }
+            listLib.pushBack(mut paramParts, pLabel + ":" + parsedParam.kind);
+            pCursor = syntax.skipTrivia(source, parsedParam.next, prefix);
+            if pCursor < size and textLib.at(source, pCursor) == "," {
+                pCursor = syntax.skipTrivia(source, pCursor + 1, prefix);
+            } else {
+                break;
+            }
+        }
+        if pCursor >= size or textLib.at(source, pCursor) =!= ")" {
+            return (ok = false, kind = "", next = pCursor);
+        }
+        afterClose := syntax.skipTrivia(source, pCursor + 1, prefix);
+        if afterClose >= size or textLib.at(source, afterClose) =!= ":" {
+            return (ok = false, kind = "", next = afterClose);
+        }
+        retType := self(source, afterClose + 1, prefix, aliases, genericType, seen, depthLeft - 1);
+        if not retType.ok { return (ok = false, kind = "", next = afterClose + 1); }
+        return (ok = true, kind = "fn(" + textLib.joinTexts(paramParts, ",") + "):" + retType.kind, next = retType.next);
+    }
+    if not textLib.isNameStart(ch) { return (ok = false, kind = "", next = start); }
+    afterName := textLib.skipName(source, start);
+    name := textLib.slice(source, start, afterName);
+    if name == "List" {
+        afterList := syntax.skipTrivia(source, afterName, prefix);
+        if afterList >= size or textLib.at(source, afterList) =!= "<" {
+            return (ok = false, kind = "", next = afterList);
+        }
+        elem := self(source, afterList + 1, prefix, aliases, genericType, seen, depthLeft - 1);
+        if not elem.ok or isListKind(elem.kind) or elem.kind == ir.VALUE_KIND_UNIT {
+            return (ok = false, kind = "", next = afterList + 1);
+        }
+        close := syntax.skipTrivia(source, elem.next, prefix);
+        if close >= size or textLib.at(source, close) =!= ">" {
+            return (ok = false, kind = "", next = close);
+        }
+        return (ok = true, kind = "List<" + elem.kind + ">", next = close + 1);
+    }
+    if name == ir.VALUE_KIND_INT or name == ir.VALUE_KIND_FLOAT or name == ir.VALUE_KIND_STRING or name == ir.VALUE_KIND_BOOL or name == ir.VALUE_KIND_UNIT {
+        return (ok = true, kind = name, next = afterName);
+    }
+    if numeric.numericAliasKind(name) =!= "" {
+        return (ok = true, kind = numeric.numericAliasKind(name), next = afterName);
+    }
+    if numeric.isNarrowNumericKind(name) {
+        return (ok = true, kind = name, next = afterName);
+    }
+    if genericType =!= "" and name == genericType {
+        return (ok = true, kind = genericType, next = afterName);
+    }
+    aliasIdx := findAlias(aliases, name);
+    if aliasIdx < 0 { return (ok = false, kind = "", next = afterName); }
+    alias := aliases[aliasIdx];
+    seenKey := integer.intText(alias.depth) + ":" + name;
+    if listLib.listContainsText(seen, seenKey) or alias.target == "" {
+        return (ok = false, kind = "", next = afterName);
+    }
+    nextSeen: mut List<String> = [];
+    loop seen as entry { listLib.pushBack(mut nextSeen, entry); }
+    listLib.pushBack(mut nextSeen, seenKey);
+    scopedAliases := aliasesUpToDepth(aliases, alias.depth);
+    resolved := self(alias.target, 0, prefix, scopedAliases, "", nextSeen, depthLeft - 1);
+    if not resolved.ok { return (ok = false, kind = "", next = afterName); }
+    if syntax.skipTrivia(alias.target, resolved.next, prefix) < textLib.length(alias.target) {
+        return (ok = false, kind = "", next = afterName);
+    }
+    (ok = true, kind = resolved.kind, next = afterName)
+};
+
+/** Non-failing guard checking whether `parseLocalType` can succeed at `position`. */
+pub canPreResolveLocalType := fn(source: String, position: Int, prefix: String, aliases: List<AliasDecl>): Bool {
+    var cursor := syntax.skipTrivia(source, position, prefix);
+    if textLib.wordAt(source, cursor, "mut") {
+        cursor = syntax.skipTrivia(source, cursor + 3, prefix);
+    }
+    emptySeen: List<String> = [];
+    canResolveTypeAt(source, cursor, prefix, aliases, "", emptySeen, 32).ok
+};
+
+/** Non-failing guard checking whether `parseFunctionHeader` can succeed at `position` without triggering diagnostics. */
+pub canPreParseFunctionHeader := fn(source: String, position: Int, prefix: String, aliases: List<AliasDecl>, listIntrinsic: Bool): Bool {
+    size := textLib.length(source);
+    var cursor := syntax.skipTrivia(source, position, prefix);
+    var genericType := "";
+    if cursor < size and textLib.at(source, cursor) == "<" {
+        if not listIntrinsic { return false; }
+        binderStart := syntax.skipTrivia(source, cursor + 1, prefix);
+        if binderStart >= size or not textLib.isNameStart(textLib.at(source, binderStart)) { return false; }
+        binderEnd := textLib.skipName(source, binderStart);
+        binder := textLib.slice(source, binderStart, binderEnd);
+        if binder =!= "T" { return false; }
+        afterBinder := syntax.skipTrivia(source, binderEnd, prefix);
+        if afterBinder >= size or textLib.at(source, afterBinder) =!= ">" { return false; }
+        genericType = "T";
+        cursor = syntax.skipTrivia(source, afterBinder + 1, prefix);
+    }
+    if cursor >= size or textLib.at(source, cursor) =!= "(" { return false; }
+    cursor = syntax.skipTrivia(source, cursor + 1, prefix);
+    names: mut List<String> = [];
+    emptySeen: List<String> = [];
+    var paramCount := 0;
+    loop cursor < size and textLib.at(source, cursor) =!= ")" {
+        if textLib.startsWithAt(source, cursor, "...") {
+            if not listIntrinsic or paramCount > 0 { return false; }
+            packStart := syntax.skipTrivia(source, cursor + 3, prefix);
+            if packStart >= size or not textLib.isNameStart(textLib.at(source, packStart)) { return false; }
+            packEnd := textLib.skipName(source, packStart);
+            if syntax.isReservedWord(textLib.slice(source, packStart, packEnd)) { return false; }
+            afterPack := syntax.skipTrivia(source, packEnd, prefix);
+            if afterPack >= size or textLib.at(source, afterPack) =!= ":" { return false; }
+            packType := canResolveTypeAt(source, afterPack + 1, prefix, aliases, genericType, emptySeen, 32);
+            if not packType.ok { return false; }
+            cursor = syntax.skipTrivia(source, packType.next, prefix);
+            break;
+        }
+        if not textLib.isNameStart(textLib.at(source, cursor)) { return false; }
+        nameStart := cursor;
+        nameEnd := textLib.skipName(source, nameStart);
+        pName := textLib.slice(source, nameStart, nameEnd);
+        if syntax.isReservedWord(pName) or listLib.listContainsText(names, pName) { return false; }
+        listLib.pushBack(mut names, pName);
+        afterPName := syntax.skipTrivia(source, nameEnd, prefix);
+        if afterPName >= size or textLib.at(source, afterPName) =!= ":" { return false; }
+        cursor = syntax.skipTrivia(source, afterPName + 1, prefix);
+        if textLib.wordAt(source, cursor, "mut") {
+            if not listIntrinsic { return false; }
+            cursor = syntax.skipTrivia(source, cursor + 3, prefix);
+        }
+        pType := canResolveTypeAt(source, cursor, prefix, aliases, genericType, emptySeen, 32);
+        if not pType.ok { return false; }
+        paramCount = paramCount + 1;
+        cursor = syntax.skipTrivia(source, pType.next, prefix);
+        if cursor < size and textLib.at(source, cursor) == "," {
+            cursor = syntax.skipTrivia(source, cursor + 1, prefix);
+        } else {
+            break;
+        }
+    }
+    if cursor >= size or textLib.at(source, cursor) =!= ")" { return false; }
+    afterParen := syntax.skipTrivia(source, cursor + 1, prefix);
+    if afterParen >= size or textLib.at(source, afterParen) =!= ":" { return false; }
+    retType := canResolveTypeAt(source, afterParen + 1, prefix, aliases, genericType, emptySeen, 32);
+    if not retType.ok { return false; }
+    afterHeader := syntax.skipTrivia(source, retType.next, prefix);
+    if afterHeader < size and textLib.at(source, afterHeader) == "@" { return false; }
+    true
+};
