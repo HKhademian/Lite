@@ -1960,7 +1960,7 @@ export function buildSite(options?: BuildSiteOptions): void {
   writeFileSync(join(outputDir, 'gallery', 'index.html'), renderGalleryPage(rendered, renderedPlay, repoUrl, rev, lightSwitchShine));
   writeFileSync(join(outputDir, 'playground', 'index.html'), renderPlaygroundPage(rendered, renderedPlay, repoUrl, rev, lightSwitchShine));
 
-  const compilerJs = stripTypeScriptTypes(readFileSync(join(root, 'compiler', 'bootstrap', 'compiler.ts'), 'utf8'), { mode: 'strip' });
+  const compilerJs = stripTypeScriptTypes(readFileSync(tsCompiler.path, 'utf8'), { mode: 'strip' });
   const compilerCJs = stripTypeScriptTypes(readFileSync(buildCCompiler().path, 'utf8'), { mode: 'strip' });
   const stripTsJs = stripTypeScriptTypes(readFileSync(join(root, 'site', 'strip-ts.ts'), 'utf8'), { mode: 'strip' });
   const playKeepaliveJs = stripTypeScriptTypes(readFileSync(join(root, 'site', 'play-keepalive.ts'), 'utf8'), { mode: 'strip' });

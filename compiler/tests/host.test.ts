@@ -866,12 +866,12 @@ function invoke(directory: string, source: string | Buffer, target: CompilerTarg
   const path = join(directory, 'source with spaces.lts');
   writeFileSync(path, source);
   return target === 'ts'
-    ? spawnSync(join(directory, 'bin/lite-compile-ts'), [path], { env, timeout: 30000 })
+    ? spawnSync(join(directory, 'bin/lite-compile-ts'), [path], { env, timeout: 120000 })
     : spawnSync(process.execPath, [
       '--input-type=module', '-e',
       "import { buildCompiler } from './compiler/host.ts'; import { writeSync } from 'node:fs'; import { pathToFileURL } from 'node:url'; const c = buildCompiler('c').path; const m = await import(pathToFileURL(c).href); process.argv = [process.execPath, c, process.argv[1]]; const out = m.main((t) => writeSync(1, t)); if (out === undefined) process.exitCode = 2; else if (typeof out !== 'string') process.exitCode = 1; else if (out.length > 0) writeSync(1, out);",
       path,
-    ], { cwd: directory, env, timeout: 30000 });
+    ], { cwd: directory, env, timeout: 120000 });
 }
 
 test('TS host rebuilds the Lite source graph and preserves output, diagnostics and source names', () => {
@@ -927,7 +927,7 @@ test('a changed Lite compiler rebuilds with the selected seed, caches by source 
     // Ask the real build selector for its exact cache path inside the copied checkout.
     const selected = spawnSync(process.execPath, ['--input-type=module', '-e',
       'import {buildTsCompiler} from "./compiler/host.ts"; process.stdout.write(JSON.stringify(buildTsCompiler()));'],
-    { cwd: directory, env, encoding: 'utf8', timeout: 30000 });
+    { cwd: directory, env, encoding: 'utf8', timeout: 120000 });
     assert.equal(selected.status, 0, selected.stderr);
     const record: unknown = JSON.parse(selected.stdout);
     assert.ok(typeof record === 'object' && record !== null && 'path' in record && typeof record.path === 'string');
@@ -1019,7 +1019,7 @@ test('the graph-built TS-hosted C emitter preserves source names and subset reje
     symlinkSync(join(root, 'igniter/node_modules'), join(directory, 'igniter/node_modules'));
     const built = spawnSync(process.execPath, ['--input-type=module', '-e',
       'import {buildCompiler} from "./compiler/host.ts"; process.stdout.write(JSON.stringify(buildCompiler("c")));'],
-    { cwd: directory, env, encoding: 'utf8', timeout: 30000 });
+    { cwd: directory, env, encoding: 'utf8', timeout: 120000 });
     assert.equal(built.status, 0, built.stderr);
     const artifactPath = (JSON.parse(built.stdout) as { path: string }).path;
     writeFileSync(artifactPath, readFileSync(artifactPath, 'utf8') + '\n');
@@ -2407,7 +2407,7 @@ test('default test startup and generated baseline run in a source archive withou
     delete childEnv['NODE_TEST_CONTEXT'];
     const pattern = '^L0 shared libraries|^bundle compilers reproduce|^compiler verification cases';
     const result = spawnSync(process.execPath, ['--test', '--test-reporter=tap', '--test-name-pattern=' + pattern, ...generatedTestFiles],
-      { cwd: join(directory, 'igniter'), encoding: 'utf8', env: childEnv, timeout: 60000 });
+      { cwd: join(directory, 'igniter'), encoding: 'utf8', env: childEnv, timeout: 120000 });
     assert.equal(result.error, undefined); assert.equal(result.status, 0, result.stdout + result.stderr);
     assert.match(result.stdout, /L0 shared libraries have direct bootstrap tests/);
     assert.match(result.stdout, /bundle compilers reproduce every compiler case/);

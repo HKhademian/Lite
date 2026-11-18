@@ -184,7 +184,17 @@ test('ignition rebuilds missing, tampered, and dependency-changed tools into dis
     });
     assert.equal(afterDep.status, 0, afterDep.stderr);
     const afterDepJson = JSON.parse(afterDep.stdout) as { tools: { name: string; rebuilt: boolean }[] };
-    assert.deepEqual(afterDepJson.tools.map(t => [t.name, t.rebuilt]), [['cli', true], ['fmt', true]]);
+    assert.deepEqual(afterDepJson.tools.map(t => [t.name, t.rebuilt]), [['cli', true], ['fmt', false]]);
+
+    // Editing a shared dependency invalidates both tools.
+    const projectLib = join(directory, 'lib/util/project.lts');
+    writeFileSync(projectLib, readFileSync(projectLib, 'utf8') + '\n');
+    const afterShared = spawnSync(process.execPath, [join(directory, 'compiler/bootstrap/igniter.ts'), '--json', 'cli', 'fmt'], {
+      cwd: directory, encoding: 'utf8', timeout: 60_000,
+    });
+    assert.equal(afterShared.status, 0, afterShared.stderr);
+    const afterSharedJson = JSON.parse(afterShared.stdout) as { tools: { name: string; rebuilt: boolean }[] };
+    assert.deepEqual(afterSharedJson.tools.map(t => [t.name, t.rebuilt]), [['cli', true], ['fmt', true]]);
 
     // Calling bin/lite-ignite ignites both dist/bootstrap/compiler.ts and all tools in dist/tools/.
     rmSync(join(directory, 'dist'), { recursive: true, force: true });
