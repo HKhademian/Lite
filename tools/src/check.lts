@@ -6,7 +6,6 @@ proc := import "core/process";
 text := import "core/text";
 list := import "core/list";
 path := import "core/path";
-cli := import "util/cli";
 json := import "util/json";
 docsUtil := import "util/docs";
 casesUtil := import "util/cases";
@@ -46,12 +45,16 @@ runIgniteCheck := fn(rootDir: String): Unit {
     }
 }
 
-run := fn(args: List<String>): Unit {
-    project.handleVersionFlag(args, "doctor", "doctor");
+run := fn(rawArgs: List<String>): Unit {
+    project.handleVersionFlag(rawArgs, "doctor", "doctor");
 
-    docsOnly := cli.startsWith(args, "--docs");
-    remaining := cli.dropIf(args, "--docs");
-    if list.listCountText(remaining) > 0 {
+    args: mut List<String> = rawArgs;
+    var docsOnly := false;
+    if list.listCountText(args) > 0 and args[0] == "--docs" {
+        _flag := list.popFront(mut args);
+        docsOnly = true;
+    }
+    if list.listCountText(args) > 0 {
         failDoctor("usage: lite doctor [--docs]");
     }
 

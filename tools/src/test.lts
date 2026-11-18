@@ -7,7 +7,6 @@ text := import "core/text";
 list := import "core/list";
 integer := import "core/int";
 path := import "core/path";
-cli := import "util/cli";
 project := import "util/project";
 cases := import "util/cases";
 
@@ -24,21 +23,26 @@ writeSummary := fn(count: Int, failures: Int, pending: Int): Unit {
     }
 };
 
-run := fn(args: List<String>): Unit {
+run := fn(rawArgs: List<String>): Unit {
     root := project.findRepoRoot();
     if root == "" {
         io.errorLine("could not locate LiteScript repository root");
         io.exit(1);
     }
 
-    normalized := cli.stripLeadingSeparator(cli.dropIf(args, "--cases"));
-    argCount := list.listCountText(normalized);
-    if argCount > 1 {
+    args: mut List<String> = rawArgs;
+    if list.listCountText(args) > 0 and args[0] == "--cases" {
+        _flag := list.popFront(mut args);
+    }
+    if list.listCountText(args) > 0 and args[0] == "--" {
+        _sep := list.popFront(mut args);
+    }
+    if list.listCountText(args) > 1 {
         io.errorLine("usage: lite test --cases [FILTER|FILE.case.json]");
         io.exit(1);
     }
 
-    selection := if argCount == 1 { normalized[0] } else { "" };
+    selection := if list.listCountText(args) == 1 { args[0] } else { "" };
     fileMode := selection =!= "" and text.endsWith(selection, ".json");
 
     var caseFiles: mut List<String> = [];

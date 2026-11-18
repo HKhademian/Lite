@@ -9,7 +9,6 @@ integer := import "core/int";
 crypto := import "core/crypto";
 path := import "core/path";
 json := import "util/json";
-cli := import "util/cli";
 project := import "util/project";
 rel := import "util/release";
 
@@ -57,24 +56,25 @@ readOptionalJsonInt := fn(source: String, objPos: Int, key: String, fallback: In
     (present = true, value = num.value)
 };
 
-handleInternalMode := fn(args: List<String>): Bool {
+handleInternalMode := fn(rawArgs: List<String>): Bool {
     internalEnv := proc.envGet("LITE_RELEASE_INTERNAL");
     if not internalEnv.found or internalEnv.value =!= "1" { return false; }
 
-    if cli.startsWith(args, "--profile") {
-        rest := cli.rest(args, 1);
-        if list.listCountText(rest) == 0 {
+    args: mut List<String> = rawArgs;
+    if list.listCountText(args) > 0 and args[0] == "--profile" {
+        _flag := list.popFront(mut args);
+        if list.listCountText(args) == 0 {
             io.outputLine(rel.releaseProfile(false, "", ""));
             return true;
         }
-        if list.listCountText(rest) == 2 {
-            io.outputLine(rel.releaseProfile(true, rest[0], rest[1]));
+        if list.listCountText(args) == 2 {
+            io.outputLine(rel.releaseProfile(true, list.popFront(mut args), list.popFront(mut args)));
             return true;
         }
         failRelease("", "usage: lite release --profile [COMPONENT VERSION]");
     }
 
-    if cli.startsWith(args, "--format-notes") {
+    if list.listCountText(args) > 0 and args[0] == "--format-notes" {
         payload := io.inputAll("");
         valid := json.validate(payload);
         if not valid.ok { failRelease("", valid.error); }
@@ -432,16 +432,18 @@ prepareRelease := fn(directory: String, output: String, tag: String): Unit {
 };
 
 run := fn(rawArgs: List<String>): Unit {
-    args := cli.stripLeadingSeparator(rawArgs);
+    args: mut List<String> = rawArgs;
+    if list.listCountText(args) > 0 and args[0] == "--" {
+        _sep := list.popFront(mut args);
+    }
     if handleInternalMode(args) { return; }
     project.handleVersionFlag(args, "release", "release");
 
-    outputArg := cli.head(args);
-    afterOutput := cli.rest(args, 1);
-    tag := cli.head(afterOutput);
-    if outputArg == "" or list.listCountText(cli.rest(afterOutput, 1)) > 0 {
+    if list.listCountText(args) < 1 or list.listCountText(args) > 2 {
         failRelease("", "usage: lite release OUTPUT [TAG]");
     }
+    outputArg := list.popFront(mut args);
+    tag := if list.listCountText(args) > 0 { list.popFront(mut args) } else { "" };
 
     envRoot := proc.envGet("LITE_RELEASE_ROOT");
     directory := if envRoot.found and envRoot.value =!= "" { envRoot.value } else { project.findRepoRoot() };

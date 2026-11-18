@@ -6,7 +6,6 @@ proc := import "core/process";
 text := import "core/text";
 list := import "core/list";
 path := import "core/path";
-cli := import "util/cli";
 project := import "util/project";
 
 smokeTestFiles := fn(): List<String> {
@@ -49,24 +48,37 @@ readGeneratedTestFiles := fn(root: String): List<String> {
     files
 };
 
-run := fn(args: List<String>): Unit {
-    project.handleVersionFlag(args, "tester", "test");
-    if cli.startsWith(args, "--cases") {
-        project.forwardNode("tools/test.ts", cli.rest(args, 1));
+run := fn(rawArgs: List<String>): Unit {
+    project.handleVersionFlag(rawArgs, "tester", "test");
+    args: mut List<String> = rawArgs;
+    if list.listCountText(args) > 0 and args[0] == "--cases" {
+        _flag := list.popFront(mut args);
+        project.forwardNode("tools/test.ts", args);
     }
 
-    modeFlags: List<String> = ["--smoke", "--fast", "--full"];
-    outputFlags: List<String> = ["--verbose", "--mute", "--silence"];
-    modeOpt := cli.pickSingleOption(args, modeFlags);
-    outOpt := cli.pickSingleOption(args, outputFlags);
-    leftover := cli.withoutOptions(cli.withoutOptions(args, modeFlags), outputFlags);
-    if not modeOpt.ok or not outOpt.ok or list.listCountText(leftover) > 0 {
-        io.errorLine("Usage: ./bin/lite test [--smoke|--fast|--full] [--verbose|--mute|--silence]");
-        io.exit(2);
+    var mode := "";
+    var outputMode := "";
+    loop list.listCountText(args) > 0 {
+        arg := list.popFront(mut args);
+        if arg == "--smoke" or arg == "--fast" or arg == "--full" {
+            if mode =!= "" {
+                io.errorLine("Usage: ./bin/lite test [--smoke|--fast|--full] [--verbose|--mute|--silence]");
+                io.exit(2);
+            }
+            mode = arg;
+        } else if arg == "--verbose" or arg == "--mute" or arg == "--silence" {
+            if outputMode =!= "" {
+                io.errorLine("Usage: ./bin/lite test [--smoke|--fast|--full] [--verbose|--mute|--silence]");
+                io.exit(2);
+            }
+            outputMode = arg;
+        } else {
+            io.errorLine("Usage: ./bin/lite test [--smoke|--fast|--full] [--verbose|--mute|--silence]");
+            io.exit(2);
+        }
     }
 
-    mode := if modeOpt.value == "" { "--smoke" } else { modeOpt.value };
-    outputMode := outOpt.value;
+    if mode == "" { mode = "--smoke"; }
     reporter := if outputMode == "--verbose" { "spec" } else { "dot" };
     quiet := outputMode == "--mute" or outputMode == "--silence";
 

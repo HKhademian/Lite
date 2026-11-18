@@ -4,6 +4,6 @@ export const seed = {
   "artifact": "compiler.ts",
   "recorded": "2026-11-17",
   "note": "Standalone Lite-generated compiler removing source-reader/entry/cli bridge and reading io.inputArgs() once at root entry.",
-  "sourceSha256": "619dce37088e22018609cbfafbf0158446200eef80464ff6df61722f2825bc4b",
-  "artifactSha256": "46b45e7cf41ec996abb4525bb7c6ec131c2e30c92e0d9e986119f81a5e90eeb1",
+  "sourceSha256": "90590282efd961daaa4ca8b05f0ded7a41e77995805efc74fb579cf510aace84",
+  "artifactSha256": "73af7571cc84f89154de77840de98d68e15c21472a69d499ae11236070ae4fff",
 } as const;

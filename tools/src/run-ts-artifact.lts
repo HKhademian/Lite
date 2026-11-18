@@ -7,7 +7,6 @@ integer := import "core/int";
 text := import "core/text";
 list := import "core/list";
 path := import "core/path";
-cli := import "util/cli";
 json := import "util/json";
 project := import "util/project";
 cases := import "util/cases";
@@ -38,43 +37,82 @@ run := fn(rawArgs: List<String>): Unit {
         io.exit(1);
     }
 
-    args := cli.stripLeadingSeparator(rawArgs);
-    artOpt := cli.readOptionValue(args, "--artifact");
-    outOpt := cli.readOptionValue(args, "--out");
-    srcOpt := cli.readOptionValue(args, "--source");
-    errOpt := cli.readOptionValue(args, "--err");
-    argOpt := cli.readOptionValue(args, "--args");
-    noCheck := cli.hasOption(args, "--no-check");
-
-    if not artOpt.valid or not outOpt.valid or not srcOpt.valid or not errOpt.valid or not argOpt.valid {
-        io.errorLine("invalid option value");
-        io.exit(64);
+    args: mut List<String> = rawArgs;
+    if list.listCountText(args) > 0 and args[0] == "--" {
+        _sep := list.popFront(mut args);
     }
-    if not artOpt.found {
+
+    var hasArt := false;
+    var artVal := "";
+    var hasOut := false;
+    var outVal := "";
+    var hasSrc := false;
+    var srcVal := "";
+    var hasErr := false;
+    var errVal := "";
+    var hasArgs := false;
+    var argsVal := "";
+    var noCheck := false;
+
+    loop list.listCountText(args) > 0 {
+        arg := list.popFront(mut args);
+        if arg == "--no-check" {
+            noCheck = true;
+        } else if arg == "--artifact" {
+            if hasArt or list.listCountText(args) == 0 or args[0] == "--" {
+                io.errorLine("invalid option value");
+                io.exit(64);
+            }
+            hasArt = true;
+            artVal = list.popFront(mut args);
+        } else if arg == "--out" {
+            if hasOut or list.listCountText(args) == 0 or args[0] == "--" {
+                io.errorLine("invalid option value");
+                io.exit(64);
+            }
+            hasOut = true;
+            outVal = list.popFront(mut args);
+        } else if arg == "--source" {
+            if hasSrc or list.listCountText(args) == 0 or args[0] == "--" {
+                io.errorLine("invalid option value");
+                io.exit(64);
+            }
+            hasSrc = true;
+            srcVal = list.popFront(mut args);
+        } else if arg == "--err" {
+            if hasErr or list.listCountText(args) == 0 or args[0] == "--" {
+                io.errorLine("invalid option value");
+                io.exit(64);
+            }
+            hasErr = true;
+            errVal = list.popFront(mut args);
+        } else if arg == "--args" {
+            if hasArgs or list.listCountText(args) == 0 or args[0] == "--" {
+                io.errorLine("invalid option value");
+                io.exit(64);
+            }
+            hasArgs = true;
+            argsVal = list.popFront(mut args);
+        } else {
+            io.errorLine("unexpected argument: " + arg);
+            io.exit(64);
+        }
+    }
+
+    if not hasArt {
         io.errorLine("missing --artifact");
         io.exit(64);
     }
-    if not outOpt.found {
+    if not hasOut {
         io.errorLine("missing --out");
         io.exit(64);
     }
 
-    var leftover := cli.withoutOption(args, "--no-check");
-    leftover = cli.withoutOptionValue(leftover, "--artifact");
-    leftover = cli.withoutOptionValue(leftover, "--out");
-    leftover = cli.withoutOptionValue(leftover, "--source");
-    leftover = cli.withoutOptionValue(leftover, "--err");
-    leftover = cli.withoutOptionValue(leftover, "--args");
-    if list.listCountText(leftover) > 0 {
-        io.errorLine("unexpected argument: " + leftover[0]);
-        io.exit(64);
-    }
-
     cwd := proc.cwd();
-    artifact := path.resolve(cwd, artOpt.value);
-    outPath := path.resolve(cwd, outOpt.value);
-    errPath := if errOpt.found { path.resolve(cwd, errOpt.value) } else { outPath + ".err" };
-    extraArgs := if argOpt.found { splitNonEmptyCsv(argOpt.value) } else { leftover };
+    artifact := path.resolve(cwd, artVal);
+    outPath := path.resolve(cwd, outVal);
+    errPath := if hasErr { path.resolve(cwd, errVal) } else { outPath + ".err" };
+    extraArgs := if hasArgs { splitNonEmptyCsv(argsVal) } else { args };
 
     tmpRes := fs.makeTempDir("lite-self-host-");
     if not tmpRes.ok {
@@ -117,7 +155,7 @@ run := fn(rawArgs: List<String>): Unit {
     }
 
     emptyBytes: List<Int> = [];
-    stdinBytes := if srcOpt.found { fs.readBytes(path.resolve(cwd, srcOpt.value)) } else { emptyBytes };
+    stdinBytes := if hasSrc { fs.readBytes(path.resolve(cwd, srcVal)) } else { emptyBytes };
     cmdArgs: mut List<String> = [runnerPath];
     loop extraArgs as a {
         list.pushBack(mut cmdArgs, a);

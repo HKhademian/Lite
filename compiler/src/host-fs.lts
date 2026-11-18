@@ -12,7 +12,7 @@ unicode := import "core/unicode";
 frontend := import "./frontend.lts";
 
 /** Parses scalar CLI flags and positional file target for TS and C compiler drivers without reading `io.inputArgs()`. */
-pub parseCompilerFlags := fn(args: List<String>): (
+pub parseCompilerFlags := fn(rawArgs: List<String>): (
 ok: Bool, isStdin: Bool, hasName: Bool, name: String, hasRoot: Bool, rootPath: String,
 hasOut: Bool, outPath: String, hasTrace: Bool, tracePath: String, filePath: String, error: String
 ) {
@@ -27,71 +27,60 @@ hasOut: Bool, outPath: String, hasTrace: Bool, tracePath: String, filePath: Stri
     var tracePath := "";
     var filePath := "";
 
-    count := listLib.listCountText(args);
-    var i := 0;
-    loop i < count {
-        arg := args[i];
+    args: mut List<String> = rawArgs;
+    loop listLib.listCountText(args) > 0 {
+        arg := listLib.popFront(mut args);
         if arg == "--stdin" {
             isStdin = true;
-            i = i + 1;
         } else if arg == "--builtin-mode" {
-            if i + 1 >= count {
+            if listLib.listCountText(args) == 0 {
                 return (ok = false, =isStdin, =hasName, =name, =hasRoot, =rootPath, =hasOut, =outPath, =hasTrace, =tracePath, =filePath, error = "missing value for --builtin-mode");
             }
-            i = i + 2;
+            _ignoredSpec := listLib.popFront(mut args);
         } else if textLib.startsWithAt(arg, 0, "--builtin-mode=") {
-            i = i + 1;
+            _ignoredInlineSpec := true;
         } else if arg == "--name" {
-            if i + 1 >= count {
+            if listLib.listCountText(args) == 0 {
                 return (ok = false, =isStdin, =hasName, =name, =hasRoot, =rootPath, =hasOut, =outPath, =hasTrace, =tracePath, =filePath, error = "missing value for --name");
             }
             hasName = true;
-            name = args[i + 1];
-            i = i + 2;
+            name = listLib.popFront(mut args);
         } else if textLib.startsWithAt(arg, 0, "--name=") {
             hasName = true;
             name = textLib.slice(arg, 7, textLib.length(arg));
-            i = i + 1;
         } else if arg == "--root" {
-            if i + 1 >= count {
+            if listLib.listCountText(args) == 0 {
                 return (ok = false, =isStdin, =hasName, =name, =hasRoot, =rootPath, =hasOut, =outPath, =hasTrace, =tracePath, =filePath, error = "missing value for --root");
             }
             hasRoot = true;
-            rootPath = args[i + 1];
-            i = i + 2;
+            rootPath = listLib.popFront(mut args);
         } else if textLib.startsWithAt(arg, 0, "--root=") {
             hasRoot = true;
             rootPath = textLib.slice(arg, 7, textLib.length(arg));
-            i = i + 1;
         } else if arg == "--out" {
-            if i + 1 >= count {
+            if listLib.listCountText(args) == 0 {
                 return (ok = false, =isStdin, =hasName, =name, =hasRoot, =rootPath, =hasOut, =outPath, =hasTrace, =tracePath, =filePath, error = "missing value for --out");
             }
             hasOut = true;
-            outPath = args[i + 1];
-            i = i + 2;
+            outPath = listLib.popFront(mut args);
         } else if textLib.startsWithAt(arg, 0, "--out=") {
             hasOut = true;
             outPath = textLib.slice(arg, 6, textLib.length(arg));
-            i = i + 1;
         } else if arg == "--trace-json" {
-            if i + 1 >= count {
+            if listLib.listCountText(args) == 0 {
                 return (ok = false, =isStdin, =hasName, =name, =hasRoot, =rootPath, =hasOut, =outPath, =hasTrace, =tracePath, =filePath, error = "missing value for --trace-json");
             }
             hasTrace = true;
-            tracePath = args[i + 1];
-            i = i + 2;
+            tracePath = listLib.popFront(mut args);
         } else if textLib.startsWithAt(arg, 0, "--trace-json=") {
             hasTrace = true;
             tracePath = textLib.slice(arg, 13, textLib.length(arg));
-            i = i + 1;
         } else if textLib.startsWithAt(arg, 0, "-") {
             return (ok = false, =isStdin, =hasName, =name, =hasRoot, =rootPath, =hasOut, =outPath, =hasTrace, =tracePath, =filePath, error = "unknown compiler option " + arg);
         } else if filePath =!= "" {
             return (ok = false, =isStdin, =hasName, =name, =hasRoot, =rootPath, =hasOut, =outPath, =hasTrace, =tracePath, =filePath, error = "unexpected argument " + arg);
         } else {
             filePath = arg;
-            i = i + 1;
         }
     }
 
@@ -104,21 +93,16 @@ hasOut: Bool, outPath: String, hasTrace: Bool, tracePath: String, filePath: Stri
     (ok = true, =isStdin, =hasName, =name, =hasRoot, =rootPath, =hasOut, =outPath, =hasTrace, =tracePath, =filePath, error = "")
 }
 
-/** Extracts repeatable `--builtin-mode` specification values from `args`. */
-pub extractBuiltinSpecs := fn(args: List<String>): List<String> {
+/** Extracts repeatable `--builtin-mode` specification values from `rawArgs`. */
+pub extractBuiltinSpecs := fn(rawArgs: List<String>): List<String> {
     out: mut List<String> = [];
-    count := listLib.listCountText(args);
-    var i := 0;
-    loop i < count {
-        arg := args[i];
-        if arg == "--builtin-mode" and i + 1 < count {
-            listLib.pushBack(mut out, args[i + 1]);
-            i = i + 2;
+    args: mut List<String> = rawArgs;
+    loop listLib.listCountText(args) > 0 {
+        arg := listLib.popFront(mut args);
+        if arg == "--builtin-mode" and listLib.listCountText(args) > 0 {
+            listLib.pushBack(mut out, listLib.popFront(mut args));
         } else if textLib.startsWithAt(arg, 0, "--builtin-mode=") {
             listLib.pushBack(mut out, textLib.slice(arg, 15, textLib.length(arg)));
-            i = i + 1;
-        } else {
-            i = i + 1;
         }
     }
     out

@@ -465,6 +465,13 @@ function lite$listPopBack<T>(items: T[], at: number): T {
     return items.pop() as T;
 }
 
+function lite$listPopFront<T>(items: T[], at: number): T {
+    if (items.length === 0) {
+        lite$fault("BoundPanic", at, "pop_front on an empty list");
+    }
+    return items.shift() as T;
+}
+
 const lite$intLines: readonly number[] = [0, 36, 60, 88];
 const lite$intSource = "compiler/src/ts-root.lts:";
 const lite$intMin = -(1n << 63n), lite$intMax = (1n << 63n) - 1n;
@@ -22908,8 +22915,8 @@ export function main(lite$write?: (text: string) => void): string {
         return liteFn$lib$core$text$joinTexts([...(lite_out)], liteFn$lib$core$path$sep());
     }
     void liteFn$lib$core$path$relative;
-    function liteFn$host__fs$parseCompilerFlags(lite_args: string[]): { ok: boolean; isStdin: boolean; hasName: boolean; name: string; hasRoot: boolean; rootPath: string; hasOut: boolean; outPath: string; hasTrace: boolean; tracePath: string; filePath: string; error: string } {
-        void lite_args;
+    function liteFn$host__fs$parseCompilerFlags(lite_rawArgs: string[]): { ok: boolean; isStdin: boolean; hasName: boolean; name: string; hasRoot: boolean; rootPath: string; hasOut: boolean; outPath: string; hasTrace: boolean; tracePath: string; filePath: string; error: string } {
+        void lite_rawArgs;
         let lite_isStdin = false;
         void lite_isStdin;
         let lite_hasName = false;
@@ -22930,74 +22937,62 @@ export function main(lite$write?: (text: string) => void): string {
         void lite_tracePath;
         let lite_filePath = "";
         void lite_filePath;
-        const lite_count = liteFn$lib$core$list$listCountText([...(lite_args)]);
-        void lite_count;
-        let lite_i = 0n;
-        void lite_i;
-        while (((lite_i) < (lite_count))) {
-            const lite_arg = lite$listAt((lite_args), lite_i, 1129);
+        const lite_args: string[] = [...(lite_rawArgs)];
+        void lite_args;
+        while (((liteFn$lib$core$list$listCountText([...(lite_args)])) > (0n))) {
+            const lite_arg = lite$listPopFront(lite_args, 1129);
             void lite_arg;
             if (((lite_arg) === ("--stdin"))) {
                 lite_isStdin = true;
-                lite_i = lite$addInt(lite_i, 1n, 1209);
             } else if (((lite_arg) === ("--builtin-mode"))) {
-                if (((lite$addInt(lite_i, 1n, 1275)) >= (lite_count))) {
+                if (((liteFn$lib$core$list$listCountText([...(lite_args)])) === (0n))) {
                     return { ok: false, isStdin: lite_isStdin, hasName: lite_hasName, name: lite_name, hasRoot: lite_hasRoot, rootPath: lite_rootPath, hasOut: lite_hasOut, outPath: lite_outPath, hasTrace: lite_hasTrace, tracePath: lite_tracePath, filePath: lite_filePath, error: "missing value for --builtin-mode" };
                 }
-                lite_i = lite$addInt(lite_i, 2n, 1504);
+                const lite__ignoredSpec = lite$listPopFront(lite_args, 1533);
+                void lite__ignoredSpec;
             } else if (liteFn$lib$core$text$startsWithAt(lite_arg, 0n, "--builtin-mode=")) {
-                lite_i = lite$addInt(lite_i, 1n, 1595);
             } else if (((lite_arg) === ("--name"))) {
-                if (((lite$addInt(lite_i, 1n, 1653)) >= (lite_count))) {
+                if (((liteFn$lib$core$list$listCountText([...(lite_args)])) === (0n))) {
                     return { ok: false, isStdin: lite_isStdin, hasName: lite_hasName, name: lite_name, hasRoot: lite_hasRoot, rootPath: lite_rootPath, hasOut: lite_hasOut, outPath: lite_outPath, hasTrace: lite_hasTrace, tracePath: lite_tracePath, filePath: lite_filePath, error: "missing value for --name" };
                 }
                 lite_hasName = true;
-                lite_name = lite$listAt((lite_args), lite$addInt(lite_i, 1n, 1910), 1908);
-                lite_i = lite$addInt(lite_i, 2n, 1934);
+                lite_name = lite$listPopFront(lite_args, 1990);
             } else if (liteFn$lib$core$text$startsWithAt(lite_arg, 0n, "--name=")) {
                 lite_hasName = true;
-                lite_name = lite$textSlice(lite_arg, 7n, lite$textLength(lite_arg), 2046);
-                lite_i = lite$addInt(lite_i, 1n, 2108);
+                lite_name = lite$textSlice(lite_arg, 7n, lite$textLength(lite_arg), 2125);
             } else if (((lite_arg) === ("--root"))) {
-                if (((lite$addInt(lite_i, 1n, 2166)) >= (lite_count))) {
+                if (((liteFn$lib$core$list$listCountText([...(lite_args)])) === (0n))) {
                     return { ok: false, isStdin: lite_isStdin, hasName: lite_hasName, name: lite_name, hasRoot: lite_hasRoot, rootPath: lite_rootPath, hasOut: lite_hasOut, outPath: lite_outPath, hasTrace: lite_hasTrace, tracePath: lite_tracePath, filePath: lite_filePath, error: "missing value for --root" };
                 }
                 lite_hasRoot = true;
-                lite_rootPath = lite$listAt((lite_args), lite$addInt(lite_i, 1n, 2427), 2425);
-                lite_i = lite$addInt(lite_i, 2n, 2451);
+                lite_rootPath = lite$listPopFront(lite_args, 2494);
             } else if (liteFn$lib$core$text$startsWithAt(lite_arg, 0n, "--root=")) {
                 lite_hasRoot = true;
-                lite_rootPath = lite$textSlice(lite_arg, 7n, lite$textLength(lite_arg), 2567);
-                lite_i = lite$addInt(lite_i, 1n, 2629);
+                lite_rootPath = lite$textSlice(lite_arg, 7n, lite$textLength(lite_arg), 2633);
             } else if (((lite_arg) === ("--out"))) {
-                if (((lite$addInt(lite_i, 1n, 2686)) >= (lite_count))) {
+                if (((liteFn$lib$core$list$listCountText([...(lite_args)])) === (0n))) {
                     return { ok: false, isStdin: lite_isStdin, hasName: lite_hasName, name: lite_name, hasRoot: lite_hasRoot, rootPath: lite_rootPath, hasOut: lite_hasOut, outPath: lite_outPath, hasTrace: lite_hasTrace, tracePath: lite_tracePath, filePath: lite_filePath, error: "missing value for --out" };
                 }
                 lite_hasOut = true;
-                lite_outPath = lite$listAt((lite_args), lite$addInt(lite_i, 1n, 2944), 2942);
-                lite_i = lite$addInt(lite_i, 2n, 2968);
+                lite_outPath = lite$listPopFront(lite_args, 2998);
             } else if (liteFn$lib$core$text$startsWithAt(lite_arg, 0n, "--out=")) {
                 lite_hasOut = true;
-                lite_outPath = lite$textSlice(lite_arg, 6n, lite$textLength(lite_arg), 3081);
-                lite_i = lite$addInt(lite_i, 1n, 3143);
+                lite_outPath = lite$textSlice(lite_arg, 6n, lite$textLength(lite_arg), 3134);
             } else if (((lite_arg) === ("--trace-json"))) {
-                if (((lite$addInt(lite_i, 1n, 3207)) >= (lite_count))) {
+                if (((liteFn$lib$core$list$listCountText([...(lite_args)])) === (0n))) {
                     return { ok: false, isStdin: lite_isStdin, hasName: lite_hasName, name: lite_name, hasRoot: lite_hasRoot, rootPath: lite_rootPath, hasOut: lite_hasOut, outPath: lite_outPath, hasTrace: lite_hasTrace, tracePath: lite_tracePath, filePath: lite_filePath, error: "missing value for --trace-json" };
                 }
                 lite_hasTrace = true;
-                lite_tracePath = lite$listAt((lite_args), lite$addInt(lite_i, 1n, 3476), 3474);
-                lite_i = lite$addInt(lite_i, 2n, 3500);
+                lite_tracePath = lite$listPopFront(lite_args, 3517);
             } else if (liteFn$lib$core$text$startsWithAt(lite_arg, 0n, "--trace-json=")) {
                 lite_hasTrace = true;
-                lite_tracePath = lite$textSlice(lite_arg, 13n, lite$textLength(lite_arg), 3624);
-                lite_i = lite$addInt(lite_i, 1n, 3687);
+                lite_tracePath = lite$textSlice(lite_arg, 13n, lite$textLength(lite_arg), 3664);
             } else if (liteFn$lib$core$text$startsWithAt(lite_arg, 0n, "-")) {
                 return { ok: false, isStdin: lite_isStdin, hasName: lite_hasName, name: lite_name, hasRoot: lite_hasRoot, rootPath: lite_rootPath, hasOut: lite_hasOut, outPath: lite_outPath, hasTrace: lite_hasTrace, tracePath: lite_tracePath, filePath: lite_filePath, error: (("unknown compiler option ") + (lite_arg)) };
             } else if (((lite_filePath) !== (""))) {
                 return { ok: false, isStdin: lite_isStdin, hasName: lite_hasName, name: lite_name, hasRoot: lite_hasRoot, rootPath: lite_rootPath, hasOut: lite_hasOut, outPath: lite_outPath, hasTrace: lite_hasTrace, tracePath: lite_tracePath, filePath: lite_filePath, error: (("unexpected argument ") + (lite_arg)) };
             } else {
                 lite_filePath = lite_arg;
-                lite_i = lite$addInt(lite_i, 1n, 4193);
             }
         }
         if (((lite_isStdin) && (((lite_filePath) !== (""))))) {
@@ -23009,25 +23004,19 @@ export function main(lite$write?: (text: string) => void): string {
         return { ok: true, isStdin: lite_isStdin, hasName: lite_hasName, name: lite_name, hasRoot: lite_hasRoot, rootPath: lite_rootPath, hasOut: lite_hasOut, outPath: lite_outPath, hasTrace: lite_hasTrace, tracePath: lite_tracePath, filePath: lite_filePath, error: "" };
     }
     void liteFn$host__fs$parseCompilerFlags;
-    function liteFn$host__fs$extractBuiltinSpecs(lite_args: string[]): string[] {
-        void lite_args;
+    function liteFn$host__fs$extractBuiltinSpecs(lite_rawArgs: string[]): string[] {
+        void lite_rawArgs;
         const lite_out: string[] = [...([])];
         void lite_out;
-        const lite_count = liteFn$lib$core$list$listCountText([...(lite_args)]);
-        void lite_count;
-        let lite_i = 0n;
-        void lite_i;
-        while (((lite_i) < (lite_count))) {
-            const lite_arg = lite$listAt((lite_args), lite_i, 5069);
+        const lite_args: string[] = [...(lite_rawArgs)];
+        void lite_args;
+        while (((liteFn$lib$core$list$listCountText([...(lite_args)])) > (0n))) {
+            const lite_arg = lite$listPopFront(lite_args, 5066);
             void lite_arg;
-            if (((((lite_arg) === ("--builtin-mode"))) && (((lite$addInt(lite_i, 1n, 5114)) < (lite_count))))) {
-                lite_out.push(lite$listAt((lite_args), lite$addInt(lite_i, 1n, 5173), 5171));
-                lite_i = lite$addInt(lite_i, 2n, 5198);
+            if (((((lite_arg) === ("--builtin-mode"))) && (((liteFn$lib$core$list$listCountText([...(lite_args)])) > (0n))))) {
+                lite_out.push(lite$listPopFront(lite_args, 5205));
             } else if (liteFn$lib$core$text$startsWithAt(lite_arg, 0n, "--builtin-mode=")) {
-                lite_out.push(lite$textSlice(lite_arg, 15n, lite$textLength(lite_arg), 5309));
-                lite_i = lite$addInt(lite_i, 1n, 5373);
-            } else {
-                lite_i = lite$addInt(lite_i, 1n, 5413);
+                lite_out.push(lite$textSlice(lite_arg, 15n, lite$textLength(lite_arg), 5340));
             }
         }
         return [...(lite_out)];
@@ -23115,7 +23104,7 @@ export function main(lite$write?: (text: string) => void): string {
         if (((lite$textLength(lite_spec)) < (2n))) {
             return false;
         }
-        return ((liteFn$lib$core$text$isAsciiLetter(lite$textAt(lite_spec, 0n, 7762))) && (((lite$textAt(lite_spec, 1n, 7787)) === (":"))));
+        return ((liteFn$lib$core$text$isAsciiLetter(lite$textAt(lite_spec, 0n, 7730))) && (((lite$textAt(lite_spec, 1n, 7755)) === (":"))));
     }
     void liteFn$host__fs$hasDrivePrefix;
     function liteFn$host__fs$resolveImportPath(lite_importerPath: string, lite_spec: string, lite_projectRoot: string, lite_cwd: string): { ok: boolean; path: string; error: string } {
@@ -23182,7 +23171,7 @@ export function main(lite$write?: (text: string) => void): string {
             let lite_loadIdx = 0n;
             void lite_loadIdx;
             while (((lite_loadIdx) < (liteFn$lib$core$list$listCountText([...(lite_paths)])))) {
-                const lite_full = liteFn$lib$core$path$join(lite_projectRoot, lite$listAt((lite_paths), lite_loadIdx, 10749));
+                const lite_full = liteFn$lib$core$path$join(lite_projectRoot, lite$listAt((lite_paths), lite_loadIdx, 10717));
                 void lite_full;
                 if (((lite$fileKind(lite_full)) === (lite$m$lib$core$file$FILE_KIND_FILE))) {
                     const lite_loaded = liteFn$lib$core$file$readText(lite_full);
@@ -23198,16 +23187,16 @@ export function main(lite$write?: (text: string) => void): string {
                     lite$m$host__fs$cachedIdentityLoaded.push(false);
                     lite$m$host__fs$cachedIdentityTexts.push("");
                 }
-                lite_loadIdx = lite$addInt(lite_loadIdx, 1n, 11410);
+                lite_loadIdx = lite$addInt(lite_loadIdx, 1n, 11378);
             }
         }
         let lite_i = 0n;
         void lite_i;
         while (((lite_i) < (liteFn$lib$core$list$listCountText([...(lite_paths)])))) {
-            if (((lite$listAt((lite$m$host__fs$cachedIdentityLoaded), lite_i, 11523)) && (((lite$listAt((lite$m$host__fs$cachedIdentityTexts), lite_i, 11550)) === (lite_sourceText))))) {
-                return lite$listAt((lite_identities), lite_i, 11599);
+            if (((lite$listAt((lite$m$host__fs$cachedIdentityLoaded), lite_i, 11491)) && (((lite$listAt((lite$m$host__fs$cachedIdentityTexts), lite_i, 11518)) === (lite_sourceText))))) {
+                return lite$listAt((lite_identities), lite_i, 11567);
             }
-            lite_i = lite$addInt(lite_i, 1n, 11627);
+            lite_i = lite$addInt(lite_i, 1n, 11595);
         }
         return "";
     }
@@ -23223,7 +23212,7 @@ export function main(lite$write?: (text: string) => void): string {
         const lite_colon = liteFn$lib$core$text$indexOfText(lite_errMsg, ":", 0n);
         void lite_colon;
         if (((((lite_colon) > (0n))) && (((lite_colon) <= (16n))))) {
-            const lite_code = lite$textSlice(lite_errMsg, 0n, lite_colon, 12227);
+            const lite_code = lite$textSlice(lite_errMsg, 0n, lite_colon, 12195);
             void lite_code;
             if (liteFn$lib$core$text$startsWithAt(lite_code, 0n, "E")) {
                 return lite_code;
@@ -23351,7 +23340,7 @@ export function main(lite$write?: (text: string) => void): string {
             } else if (((lite_cp) === (9n))) {
                 lite_out = ((lite_out) + ("\\t"));
             } else if (((lite_cp) < (32n))) {
-                lite_out = ((((((lite_out) + ("\\u00"))) + (liteFn$host__fs$hexDigit(lite$divideInt(lite_cp, 16n, 16377))))) + (liteFn$host__fs$hexDigit(lite$remainderInt(lite_cp, 16n, 16397))));
+                lite_out = ((((((lite_out) + ("\\u00"))) + (liteFn$host__fs$hexDigit(lite$divideInt(lite_cp, 16n, 16345))))) + (liteFn$host__fs$hexDigit(lite$remainderInt(lite_cp, 16n, 16365))));
             } else {
                 const lite_one: bigint[] = [...([lite_cp])];
                 void lite_one;

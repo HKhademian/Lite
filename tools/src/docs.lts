@@ -6,7 +6,6 @@ path := import "core/path";
 proc := import "core/process";
 text := import "core/text";
 list := import "core/list";
-cli := import "util/cli";
 docgen := import "util/docgen";
 docsUtil := import "util/docs";
 mdHtml := import "util/markdown-html";
@@ -45,13 +44,14 @@ renderSelectedJson := fn(rootDir: String, targets: List<String>): String {
     "[\n  " + text.joinTexts(entries, ",\n  ") + "\n]"
 };
 
-run := fn(args: List<String>): Unit {
-    project.handleVersionFlag(args, "docs", "docs");
+run := fn(rawArgs: List<String>): Unit {
+    project.handleVersionFlag(rawArgs, "docs", "docs");
+    args: mut List<String> = rawArgs;
 
     envRoot := proc.envGet("LITE_DOCS_ROOT");
     rootDir := if envRoot.found and envRoot.value =!= "" { envRoot.value } else { project.findRepoRoot() };
 
-    if list.listCountText(args) == 1 and cli.startsWith(args, "--check") {
+    if list.listCountText(args) == 1 and args[0] == "--check" {
         failures := docsUtil.checkDocuments(rootDir);
         if list.listCountText(failures) > 0 {
             io.errorLine(text.joinTexts(failures, "\n"));
@@ -61,15 +61,15 @@ run := fn(args: List<String>): Unit {
         io.exit(0);
     }
 
-    if list.listCountText(args) == 1 and cli.startsWith(args, "--modules-json") {
+    if list.listCountText(args) == 1 and args[0] == "--modules-json" {
         io.outputLine(docgen.extractAllModulesJson(rootDir));
         io.exit(0);
     }
 
-    if cli.startsWith(args, "--render-json") {
-        restTargets := cli.rest(args, 1);
-        if list.listCountText(restTargets) > 0 {
-            io.outputLine(renderSelectedJson(rootDir, restTargets));
+    if list.listCountText(args) > 0 and args[0] == "--render-json" {
+        _flag := list.popFront(mut args);
+        if list.listCountText(args) > 0 {
+            io.outputLine(renderSelectedJson(rootDir, args));
             io.exit(0);
         }
         stdinPaths := splitNonEmptyLines(io.inputAll(""));
@@ -86,8 +86,12 @@ run := fn(args: List<String>): Unit {
         io.exit(0);
     }
 
-    isJson := cli.startsWith(args, "--json");
-    query := text.joinTexts(cli.dropIf(args, "--json"), " ");
+    var isJson := false;
+    if list.listCountText(args) > 0 and args[0] == "--json" {
+        _flag := list.popFront(mut args);
+        isJson = true;
+    }
+    query := text.joinTexts(args, " ");
 
     if isJson {
         io.outputLine(docsUtil.docsJson(rootDir, query));

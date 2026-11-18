@@ -529,7 +529,14 @@ function lite$listPopBack<T>(items: T[], at: number): T {
     return items.pop() as T;
 }
 
-const lite$intLines: readonly number[] = [0, 90, 91, 123, 149, 179, 203, 231, 259, 290, 318, 348, 376, 410, 464, 516, 568, 619, 620, 760, 807, 844, 881, 924, 964, 1025, 1037, 1070, 1111, 1154, 1199, 1248, 1299, 1338, 1380, 1417, 1462, 1499, 1545, 1588, 1621, 1668, 1723, 1782, 1851, 1900, 2002, 2100, 2149, 2220, 2297, 2358, 2407, 2462, 2537, 2613, 2630, 2636, 2638, 2639, 2749, 2798, 2899, 2921, 2927, 3008, 3010, 3011, 3082, 3121, 3170, 3186, 3204, 3235, 3359, 3385, 3395, 3414, 3420, 3429, 3431, 3432, 3528, 3639, 3705, 3744, 3769, 3902, 3908, 3962, 3981, 4092, 4098, 4175, 4254, 4342, 4455, 4461, 4550, 4610, 4739, 4745, 4837, 4839, 4840, 4926, 4979, 5028, 5065, 5097, 5125, 5167, 5249, 5259, 5265, 5273, 5275, 5276, 5393, 5512, 5561, 5615, 5678, 5774, 5819, 5825, 5864, 5928, 5973, 5979, 6010, 6065, 6126, 6188, 6267, 6344, 6417, 6512, 6608, 6702, 6813, 6948, 6949, 6997, 7058, 7103, 7109, 7110, 7178, 7240, 7332, 7333, 7407, 7490, 7491, 7528, 7546, 7576, 7637, 7700, 7807, 7920, 8027, 8096, 8154, 8203, 8213, 8260, 8283, 8289, 8290, 8366, 8397, 8462, 8523, 8584, 8681, 8730, 8740, 8848, 8897, 8907, 9011, 9079, 9124, 9184, 9255, 9304, 9314, 9320, 9367, 9369, 9370, 9470, 9494, 9593, 9669, 9737, 9788, 9936, 9942, 9991, 10045, 10108, 10109, 10128, 10201, 10225, 10329, 10339, 10345, 10346, 10387, 10460, 10501, 10525, 10667, 10673, 10674, 10719, 10756, 10791, 10831, 10903, 10972, 11040, 11047, 11048, 11081, 11221, 11258, 11293, 11316, 11454, 11460, 11461, 11495, 11517, 11608, 11614, 11615, 11661, 11715, 11737, 11828, 11834, 11835, 11884, 11920, 11957, 11958, 12005, 12029, 12122, 12128, 12324, 12325, 12350, 12409, 12454, 12521, 12581, 12633, 12682, 12715, 12817, 12835, 12902, 13067, 13081, 13145, 13190, 13238, 13342, 13449, 13526, 13592, 13668, 13715, 13725, 13731, 13732, 13754, 13782, 13836, 13868, 13955, 14038, 14104, 14182, 14257, 14305, 14328, 14420, 14426, 14427, 14509, 14511, 14512, 14601, 14683, 14731, 14759, 14798, 14804, 14837, 14909, 14935, 14981, 15001, 15007, 15032, 15034, 15035, 15141, 15179, 15218, 15241, 15318, 15338, 15344, 15380, 15442, 15443, 15482, 15507, 15545, 15565, 15571, 15572, 15621, 15647, 15759, 15787, 15828, 15852, 15862, 15910, 15916, 15917, 15941, 15965, 15989, 16018, 16044, 16071, 16102, 16139, 16140, 16179, 16195, 16216, 16240, 16270, 16296, 16319, 16356, 16382, 16405, 16442, 16468, 16491, 16527, 16558, 16581, 16619, 16651, 16723, 16751, 16765, 16803, 16826, 16861, 16893, 16962, 16990, 17004, 17043, 17080, 17099, 17150, 17271, 17295, 17346, 17405, 17429, 17446, 17492, 17515, 17525, 17531, 17532, 17560, 17604, 17639, 17684, 17709, 17719, 17745, 17799, 17824, 17834, 17948, 17976, 18017, 18041, 18051, 18106, 18112, 18113, 18140, 18253, 18281, 18322, 18346, 18356, 18393, 18413, 18419, 18420, 18435, 18495, 18501, 18502, 18603, 18645, 18685, 18712, 18747, 18854, 18878, 18915, 18939, 18949, 19009, 19061, 19136, 19197, 19262, 19357, 19407, 19413, 19414, 19471, 19527, 19554, 19607, 19631, 19641, 19734, 19773, 19797, 19889, 19913, 19923, 19929, 19930, 19950, 20041, 20119, 20151, 20164, 20230, 20410, 20416, 20419, 20420, 20441];
+function lite$listPopFront<T>(items: T[], at: number): T {
+    if (items.length === 0) {
+        lite$fault("BoundPanic", at, "pop_front on an empty list");
+    }
+    return items.shift() as T;
+}
+
+const lite$intLines: readonly number[] = [0, 90, 91, 123, 149, 179, 203, 231, 259, 290, 318, 348, 376, 410, 464, 516, 568, 619, 620, 760, 807, 844, 881, 924, 964, 1025, 1037, 1070, 1111, 1154, 1199, 1248, 1299, 1338, 1380, 1417, 1462, 1499, 1545, 1588, 1621, 1668, 1723, 1782, 1851, 1900, 2002, 2100, 2149, 2220, 2297, 2358, 2407, 2462, 2537, 2613, 2630, 2636, 2638, 2639, 2749, 2798, 2899, 2921, 2927, 3008, 3010, 3011, 3082, 3121, 3170, 3186, 3204, 3235, 3359, 3385, 3395, 3414, 3420, 3429, 3431, 3432, 3528, 3639, 3705, 3744, 3769, 3902, 3908, 3962, 3981, 4092, 4098, 4175, 4254, 4342, 4455, 4461, 4550, 4610, 4739, 4745, 4837, 4839, 4840, 4926, 4979, 5028, 5065, 5097, 5125, 5167, 5249, 5259, 5265, 5273, 5275, 5276, 5393, 5512, 5561, 5615, 5678, 5774, 5819, 5825, 5864, 5928, 5973, 5979, 6010, 6065, 6126, 6188, 6267, 6344, 6417, 6512, 6608, 6702, 6813, 6948, 6949, 6997, 7058, 7103, 7109, 7110, 7178, 7240, 7332, 7333, 7407, 7490, 7491, 7528, 7546, 7576, 7637, 7700, 7807, 7920, 8027, 8096, 8154, 8203, 8213, 8260, 8283, 8289, 8290, 8366, 8397, 8462, 8523, 8584, 8681, 8730, 8740, 8848, 8897, 8907, 9011, 9079, 9124, 9184, 9255, 9304, 9314, 9320, 9367, 9369, 9370, 9470, 9494, 9593, 9669, 9737, 9788, 9936, 9942, 9991, 10045, 10108, 10109, 10128, 10201, 10225, 10329, 10339, 10345, 10346, 10387, 10460, 10501, 10525, 10667, 10673, 10674, 10719, 10756, 10791, 10831, 10903, 10972, 11040, 11047, 11048, 11081, 11221, 11258, 11293, 11316, 11454, 11460, 11461, 11495, 11517, 11608, 11614, 11615, 11661, 11715, 11737, 11828, 11834, 11835, 11884, 11920, 11957, 11958, 12005, 12029, 12122, 12128, 12324, 12325, 12350, 12409, 12454, 12521, 12581, 12633, 12682, 12715, 12817, 12835, 12902, 13067, 13081, 13145, 13190, 13238, 13342, 13449, 13526, 13592, 13668, 13715, 13725, 13731, 13732, 13754, 13782, 13836, 13868, 13955, 14038, 14104, 14182, 14257, 14305, 14328, 14420, 14426, 14427, 14509, 14511, 14512, 14601, 14683, 14731, 14759, 14798, 14804, 14837, 14909, 14935, 14981, 15001, 15007, 15032, 15034, 15035, 15141, 15182, 15221, 15244, 15321, 15341, 15347, 15383, 15445, 15446, 15485, 15510, 15548, 15568, 15574, 15575, 15624, 15650, 15762, 15790, 15831, 15855, 15865, 15916, 15922, 15923, 15947, 15971, 15995, 16024, 16050, 16077, 16114, 16115, 16153, 16193, 16233, 16263, 16289, 16326, 16352, 16389, 16415, 16451, 16482, 16520, 16567, 16639, 16667, 16681, 16731, 16766, 16813, 16882, 16910, 16924, 16975, 17041, 17090, 17104, 17123, 17174, 17295, 17319, 17370, 17429, 17453, 17470, 17516, 17526, 17532, 17533, 17561, 17675, 17703, 17744, 17768, 17778, 17826, 17832, 17833, 17860, 17973, 18001, 18042, 18066, 18076, 18113, 18133, 18139, 18140, 18155, 18215, 18221, 18222, 18323, 18365, 18405, 18432, 18467, 18574, 18598, 18635, 18659, 18669, 18729, 18781, 18856, 18917, 18982, 19077, 19127, 19133, 19134, 19191, 19247, 19274, 19327, 19351, 19361, 19454, 19493, 19517, 19609, 19633, 19643, 19649, 19650, 19670, 19761, 19839, 19871, 19884, 19950, 20130, 20136, 20139, 20140, 20161];
 const lite$intSource = "tools/src/ignite.lts:";
 const lite$intMin = -(1n << 63n), lite$intMax = (1n << 63n) - 1n;
 function lite$fault(category: string, at: number, message: string): never {
@@ -23720,7 +23727,7 @@ export function main(lite$write?: (text: string) => void): string {
         if (((lite$textLength(lite_spec)) < (2n))) {
             return false;
         }
-        return ((liteFn$lib$core$text$isAsciiLetter(lite$textAt(lite_spec, 0n, 7762))) && (((lite$textAt(lite_spec, 1n, 7787)) === (":"))));
+        return ((liteFn$lib$core$text$isAsciiLetter(lite$textAt(lite_spec, 0n, 7730))) && (((lite$textAt(lite_spec, 1n, 7755)) === (":"))));
     }
     void liteFn$_p__p_$_p__p_$compiler$src$host__fs$hasDrivePrefix;
     function liteFn$_p__p_$_p__p_$compiler$src$host__fs$resolveImportPath(lite_importerPath: string, lite_spec: string, lite_projectRoot: string, lite_cwd: string): { ok: boolean; path: string; error: string } {
@@ -23787,7 +23794,7 @@ export function main(lite$write?: (text: string) => void): string {
             let lite_loadIdx = 0n;
             void lite_loadIdx;
             while (((lite_loadIdx) < (liteFn$lib$core$list$listCountText([...(lite_paths)])))) {
-                const lite_full = liteFn$lib$core$path$join(lite_projectRoot, lite$listAt((lite_paths), lite_loadIdx, 10749));
+                const lite_full = liteFn$lib$core$path$join(lite_projectRoot, lite$listAt((lite_paths), lite_loadIdx, 10717));
                 void lite_full;
                 if (((lite$fileKind(lite_full)) === (lite$m$lib$core$file$FILE_KIND_FILE))) {
                     const lite_loaded = liteFn$lib$core$file$readText(lite_full);
@@ -23803,16 +23810,16 @@ export function main(lite$write?: (text: string) => void): string {
                     lite$m$_p__p_$_p__p_$compiler$src$host__fs$cachedIdentityLoaded.push(false);
                     lite$m$_p__p_$_p__p_$compiler$src$host__fs$cachedIdentityTexts.push("");
                 }
-                lite_loadIdx = lite$addInt(lite_loadIdx, 1n, 11410);
+                lite_loadIdx = lite$addInt(lite_loadIdx, 1n, 11378);
             }
         }
         let lite_i = 0n;
         void lite_i;
         while (((lite_i) < (liteFn$lib$core$list$listCountText([...(lite_paths)])))) {
-            if (((lite$listAt((lite$m$_p__p_$_p__p_$compiler$src$host__fs$cachedIdentityLoaded), lite_i, 11523)) && (((lite$listAt((lite$m$_p__p_$_p__p_$compiler$src$host__fs$cachedIdentityTexts), lite_i, 11550)) === (lite_sourceText))))) {
-                return lite$listAt((lite_identities), lite_i, 11599);
+            if (((lite$listAt((lite$m$_p__p_$_p__p_$compiler$src$host__fs$cachedIdentityLoaded), lite_i, 11491)) && (((lite$listAt((lite$m$_p__p_$_p__p_$compiler$src$host__fs$cachedIdentityTexts), lite_i, 11518)) === (lite_sourceText))))) {
+                return lite$listAt((lite_identities), lite_i, 11567);
             }
-            lite_i = lite$addInt(lite_i, 1n, 11627);
+            lite_i = lite$addInt(lite_i, 1n, 11595);
         }
         return "";
     }
@@ -23828,7 +23835,7 @@ export function main(lite$write?: (text: string) => void): string {
         const lite_colon = liteFn$lib$core$text$indexOfText(lite_errMsg, ":", 0n);
         void lite_colon;
         if (((((lite_colon) > (0n))) && (((lite_colon) <= (16n))))) {
-            const lite_code = lite$textSlice(lite_errMsg, 0n, lite_colon, 12227);
+            const lite_code = lite$textSlice(lite_errMsg, 0n, lite_colon, 12195);
             void lite_code;
             if (liteFn$lib$core$text$startsWithAt(lite_code, 0n, "E")) {
                 return lite_code;
@@ -25555,8 +25562,8 @@ export function main(lite$write?: (text: string) => void): string {
         lite$exit((lite_res).status);
     }
     void liteFn_executeIgnitedTool;
-    function liteFn_run(lite_args: string[]): void {
-        void lite_args;
+    function liteFn_run(lite_rawArgs: string[]): void {
+        void lite_rawArgs;
         const lite_rawRoot = liteFn$lib$util$project$findRepoRoot();
         void lite_rawRoot;
         if (((lite_rawRoot) === (""))) {
@@ -25582,7 +25589,7 @@ export function main(lite$write?: (text: string) => void): string {
                 lite$reportError((lite_ensured).error);
                 lite$exit(1n);
             }
-            liteFn_executeIgnitedTool((lite_ensured).path, [...(lite_args)]);
+            liteFn_executeIgnitedTool((lite_ensured).path, [...(lite_rawArgs)]);
         }
         let lite_check = false;
         void lite_check;
@@ -25596,43 +25603,37 @@ export function main(lite$write?: (text: string) => void): string {
         void lite_ensureName;
         let lite_runToolName = "";
         void lite_runToolName;
-        let lite_runForwardStart = (-1n);
-        void lite_runForwardStart;
         const lite_selected: string[] = [...([])];
         void lite_selected;
-        const lite_count = liteFn$lib$core$list$listCountText([...(lite_args)]);
-        void lite_count;
-        let lite_i = 0n;
-        void lite_i;
-        while (((lite_i) < (lite_count))) {
-            const lite_arg = lite$listAt((lite_args), lite_i, 16236);
+        const lite_args: string[] = [...(lite_rawArgs)];
+        void lite_args;
+        while (((liteFn$lib$core$list$listCountText([...(lite_args)])) > (0n))) {
+            const lite_arg = lite$listPopFront(lite_args, 16208);
             void lite_arg;
             if (((lite_arg) === ("--check"))) {
                 lite_check = true;
-                lite_i = lite$addInt(lite_i, 1n, 16314);
             } else if (((lite_arg) === ("--force"))) {
                 lite_force = true;
-                lite_i = lite$addInt(lite_i, 1n, 16400);
             } else if (((lite_arg) === ("--clean"))) {
                 lite_clean = true;
-                lite_i = lite$addInt(lite_i, 1n, 16486);
             } else if (((lite_arg) === ("--json"))) {
                 lite_jsonOutput = true;
-                lite_i = lite$addInt(lite_i, 1n, 16576);
             } else if (((lite_arg) === ("--ensure"))) {
-                if (((lite$addInt(lite_i, 1n, 16636)) >= (lite_count))) {
+                if (((liteFn$lib$core$list$listCountText([...(lite_args)])) === (0n))) {
                     lite$reportError("ignite: missing tool name for --ensure");
                     lite$exit(2n);
                 }
-                lite_ensureName = lite$listAt((lite_args), lite$addInt(lite_i, 1n, 16797), 16795);
-                lite_i = lite$addInt(lite_i, 2n, 16821);
+                lite_ensureName = lite$listPopFront(lite_args, 16706);
             } else if (((lite_arg) === ("--run"))) {
-                if (((lite$addInt(lite_i, 1n, 16878)) >= (lite_count))) {
+                if (((liteFn$lib$core$list$listCountText([...(lite_args)])) === (0n))) {
                     lite$reportError("ignite: missing tool name for --run");
                     lite$exit(2n);
                 }
-                lite_runToolName = lite$listAt((lite_args), lite$addInt(lite_i, 1n, 17037), 17035);
-                lite_runForwardStart = lite$addInt(lite_i, 2n, 17075);
+                lite_runToolName = lite$listPopFront(lite_args, 16950);
+                if (((((liteFn$lib$core$list$listCountText([...(lite_args)])) > (0n))) && (((lite$listAt((lite_args), 0n, 17028)) === ("--"))))) {
+                    const lite__sep = lite$listPopFront(lite_args, 17065);
+                    void lite__sep;
+                }
                 break;
             } else if (((((lite_arg) === ("--help"))) || (((lite_arg) === ("-h"))))) {
                 lite$emit("Usage: node compiler/bootstrap/igniter.ts [--check] [--force] [--clean] [--json] [TOOL...]" + "\n");
@@ -25642,28 +25643,16 @@ export function main(lite$write?: (text: string) => void): string {
                 lite$exit(2n);
             } else {
                 lite_selected.push(lite_arg);
-                lite_i = lite$addInt(lite_i, 1n, 17510);
             }
         }
         if (((lite_runToolName) !== (""))) {
-            const lite_forwardArgs: string[] = [...([])];
-            void lite_forwardArgs;
-            let lite_fi = lite_runForwardStart;
-            void lite_fi;
-            if (((((lite_fi) < (lite_count))) && (((lite$listAt((lite_args), lite_fi, 17670)) === ("--"))))) {
-                lite_fi = lite$addInt(lite_fi, 1n, 17704);
-            }
-            while (((lite_fi) < (lite_count))) {
-                lite_forwardArgs.push(lite$listAt((lite_args), lite_fi, 17793));
-                lite_fi = lite$addInt(lite_fi, 1n, 17819);
-            }
             const lite_ensured = liteFn_igniteSingleTool(lite_rootDir, lite_runToolName, (lite_seedInfo).artifactSha256, (lite_seedInfo).sourceSha256, lite_force);
             void lite_ensured;
             if ((!((lite_ensured).ok))) {
                 lite$reportError((lite_ensured).error);
                 lite$exit(1n);
             }
-            liteFn_executeIgnitedTool((lite_ensured).path, [...(lite_forwardArgs)]);
+            liteFn_executeIgnitedTool((lite_ensured).path, [...(lite_args)]);
         }
         if (((lite_ensureName) !== (""))) {
             const lite_ensured = liteFn_igniteSingleTool(lite_rootDir, lite_ensureName, (lite_seedInfo).artifactSha256, (lite_seedInfo).sourceSha256, lite_force);
@@ -25696,7 +25685,7 @@ export function main(lite$write?: (text: string) => void): string {
                 lite$exit(1n);
             }
             if ((lite_res).rebuilt) {
-                lite_rebuiltCount = lite$addInt(lite_rebuiltCount, 1n, 19002);
+                lite_rebuiltCount = lite$addInt(lite_rebuiltCount, 1n, 18722);
             }
             lite_artifactPaths.push((lite_res).path);
             const lite_entryStr = (((((((((((((((("    {\n      \"name\": ") + (liteFn$lib$util$json$quoteString(lite_toolName)))) + (",\n      \"path\": "))) + (liteFn$lib$util$json$quoteString((lite_res).path)))) + (",\n      \"sha256\": "))) + (liteFn$lib$util$json$quoteString((lite_res).sha256)))) + (",\n      \"rebuilt\": "))) + (((Boolean((lite_res).rebuilt) ? "true" : "false"))))) + ("\n    }"));

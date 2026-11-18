@@ -3,7 +3,6 @@
 io := import "core/io";
 list := import "core/list";
 text := import "core/text";
-cli := import "util/cli";
 project := import "util/project";
 
 TARGET_TS := "ts";
@@ -15,32 +14,33 @@ usageExit := fn(): Unit {
 };
 
 run := fn(rawArgs: List<String>): Unit {
-    if list.listCountText(rawArgs) == 1 and cli.head(rawArgs) == "--version" {
+    if list.listCountText(rawArgs) == 1 and rawArgs[0] == "--version" {
         io.outputLine("lite-compile " + project.readComponentVersion("compiler"));
         io.exit(0);
     }
 
     var target := TARGET_TS;
-    var restArgs := rawArgs;
-    first := cli.head(rawArgs);
-    if first == TARGET_TS or first == TARGET_C {
-        target = first;
-        restArgs = cli.rest(rawArgs, 1);
-    } else if first == "--target" {
-        if list.listCountText(rawArgs) < 2 {
-            usageExit();
+    args: mut List<String> = rawArgs;
+    if list.listCountText(args) > 0 {
+        first := args[0];
+        if first == TARGET_TS or first == TARGET_C {
+            target = list.popFront(mut args);
+        } else if first == "--target" {
+            _flag := list.popFront(mut args);
+            if list.listCountText(args) == 0 {
+                usageExit();
+            }
+            target = list.popFront(mut args);
+        } else if text.startsWithAt(first, 0, "--target=") {
+            _flag := list.popFront(mut args);
+            target = text.slice(first, 9, text.length(first));
         }
-        target = rawArgs[1];
-        restArgs = cli.rest(rawArgs, 2);
-    } else if text.startsWithAt(first, 0, "--target=") {
-        target = text.slice(first, 9, text.length(first));
-        restArgs = cli.rest(rawArgs, 1);
     }
 
     if target =!= TARGET_TS and target =!= TARGET_C {
         usageExit();
     }
-    project.forwardNode("bin/lite-compile-" + target, restArgs);
+    project.forwardNode("bin/lite-compile-" + target, args);
 };
 
 run(io.inputArgs());

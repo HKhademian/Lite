@@ -4,25 +4,43 @@ io := import "core/io";
 fs := import "core/file";
 proc := import "core/process";
 integer := import "core/int";
+text := import "core/text";
 list := import "core/list";
 path := import "core/path";
-cli := import "util/cli";
 project := import "util/project";
 cases := import "util/cases";
 
 run := fn(rawArgs: List<String>): Unit {
     project.handleVersionFlag(rawArgs, "checker", "check");
-    if not cli.validCompilerOptions(rawArgs, false) {
-        io.errorLine("Usage: ./bin/lite check [--builtin-mode SPEC]... file.lts");
-        io.exit(2);
+    args: mut List<String> = rawArgs;
+    builtinOpts: mut List<String> = [];
+    positional: mut List<String> = [];
+    loop list.listCountText(args) > 0 {
+        arg := list.popFront(mut args);
+        if arg == "--" {
+            loop list.listCountText(args) > 0 {
+                list.pushBack(mut positional, list.popFront(mut args));
+            }
+            break;
+        } else if arg == "--builtin-mode" {
+            if list.listCountText(args) == 0 or args[0] == "--" {
+                io.errorLine("Usage: ./bin/lite check [--builtin-mode SPEC]... file.lts");
+                io.exit(2);
+            }
+            list.pushBack(mut builtinOpts, arg);
+            list.pushBack(mut builtinOpts, list.popFront(mut args));
+        } else if text.startsWithAt(arg, 0, "--builtin-mode=") {
+            list.pushBack(mut builtinOpts, arg);
+        } else {
+            list.pushBack(mut positional, arg);
+        }
     }
-    args := cli.stripLeadingSeparator(cli.withoutCompilerOptions(rawArgs, false));
-    if list.listCountText(args) =!= 1 {
+    if list.listCountText(positional) =!= 1 {
         io.errorLine("Usage: ./bin/lite check [--builtin-mode SPEC]... file.lts");
         io.exit(2);
     }
 
-    target := args[0];
+    target := positional[0];
     root := project.findRepoRoot();
     if root == "" {
         io.errorLine("lite check: could not locate LiteScript repository root");
@@ -43,7 +61,7 @@ run := fn(rawArgs: List<String>): Unit {
         io.exit(1);
     }
     compArgs: mut List<String> = [sel.path];
-    loop cli.compilerOptions(rawArgs, false) as opt {
+    loop builtinOpts as opt {
         list.pushBack(mut compArgs, opt);
     }
     list.pushBack(mut compArgs, target);

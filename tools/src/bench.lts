@@ -10,7 +10,6 @@ unicode := import "core/unicode";
 list := import "core/list";
 time := import "core/time";
 path := import "core/path";
-cli := import "util/cli";
 project := import "util/project";
 json := import "util/json";
 cases := import "util/cases";
@@ -118,17 +117,19 @@ readCompilerJson := fn(rootDir: String): (ok: Bool, jsonText: String, error: Str
     (ok = true, jsonText = body, error = "")
 };
 
-run := fn(args: List<String>): Unit {
-    project.handleVersionFlag(args, "benchmark", "bench");
-    normalized := cli.stripLeadingSeparator(args);
-    argCount := list.listCountText(normalized);
-    if argCount < 1 or argCount > 2 {
+run := fn(rawArgs: List<String>): Unit {
+    project.handleVersionFlag(rawArgs, "benchmark", "bench");
+    args: mut List<String> = rawArgs;
+    if list.listCountText(args) > 0 and args[0] == "--" {
+        _sep := list.popFront(mut args);
+    }
+    if list.listCountText(args) < 1 or list.listCountText(args) > 2 {
         io.errorLine("usage: lite bench OUTPUT [FILTER]");
         io.exit(1);
     }
 
-    output := path.resolve(proc.cwd(), normalized[0]);
-    filter := if argCount == 2 { normalized[1] } else { "" };
+    output := path.resolve(proc.cwd(), list.popFront(mut args));
+    filter := if list.listCountText(args) > 0 { list.popFront(mut args) } else { "" };
     if fs.kind(output) =!= fs.FILE_KIND_MISSING {
         io.errorLine("benchmark output already exists; choose a new report path");
         io.exit(1);

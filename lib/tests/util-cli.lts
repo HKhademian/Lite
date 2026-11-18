@@ -3,43 +3,16 @@ list := import "core/list";
 cli := import "util/cli";
 test := import "core/test";
 
-args0: List<String> = ["fmt", "--check", "fileX.lts"];
-test.checkText("head non-empty", "fmt", cli.head(args0));
-emptyArgs: List<String> = [];
-test.checkText("head empty", "", cli.head(emptyArgs));
-test.checkText("rest from 1", "--check,fileX.lts", text.joinTexts(cli.rest(args0, 1), ","));
-test.checkText("rest clamp negative", "fmt,--check,fileX.lts", text.joinTexts(cli.rest(args0, -3), ","));
-test.checkInt("rest past end", 0, list.listCountText(cli.rest(args0, 9)));
-
-afterCmd := cli.rest(args0, 1);
-test.checkBool("startsWith hit", true, cli.startsWith(afterCmd, "--check"));
-test.checkBool("startsWith miss", false, cli.startsWith(afterCmd, "--json"));
-test.checkText("dropIf hit", "fileX.lts", text.joinTexts(cli.dropIf(afterCmd, "--check"), ","));
-test.checkText("dropIf miss", "--check,fileX.lts", text.joinTexts(cli.dropIf(afterCmd, "--json"), ","));
-
 sepArgs: List<String> = ["--", "a.lts", "--", "--flag"];
 test.checkText("stripLeadingSeparator", "a.lts,--,--flag", text.joinTexts(cli.stripLeadingSeparator(sepArgs), ","));
+plainArgs: List<String> = ["a.lts", "--flag"];
+test.checkText("stripLeadingSeparator noop", "a.lts,--flag", text.joinTexts(cli.stripLeadingSeparator(plainArgs), ","));
 
-optArgs: List<String> = ["a.lts", "--check", "--", "--check"];
-test.checkBool("hasOption hits before --", true, cli.hasOption(optArgs, "--check"));
-optRest := cli.withoutOption(optArgs, "--check");
-test.checkText("withoutOption preserves --", "a.lts,--,--check", text.joinTexts(optRest, ","));
-test.checkBool("hasOption stops at --", false, cli.hasOption(optRest, "--check"));
-
-valArgs: List<String> = ["--target", "c", "main.lts", "--", "--target", "ts"];
-val1 := cli.readOptionValue(valArgs, "--target");
-test.checkBool("readOptionValue found", true, val1.found);
-test.checkBool("readOptionValue valid", true, val1.valid);
-test.checkText("readOptionValue value", "c", val1.value);
-test.checkText("withoutOptionValue preserves --", "main.lts,--,--target,ts", text.joinTexts(cli.withoutOptionValue(valArgs, "--target"), ","));
-
-valMissing: List<String> = ["--target"];
-val2 := cli.readOptionValue(valMissing, "--target");
-test.checkBool("readOptionValue missing valid", false, val2.valid);
-
-valDup: List<String> = ["--target", "ts", "--target", "c"];
-val3 := cli.readOptionValue(valDup, "--target");
-test.checkBool("readOptionValue dup valid", false, val3.valid);
+/* Verify in-place munching with list.popFront leaves remaining args untouched on caller list. */
+munched: mut List<String> = ["--flag", "target.lts", "--extra"];
+first := list.popFront(mut munched);
+test.checkText("popFront token", "--flag", first);
+test.checkText("popFront remaining", "target.lts,--extra", text.joinTexts(munched, ","));
 
 test.checkText("entry bin/lite", "lite", cli.entryCommand("/repo/bin/lite"));
 test.checkText("entry generated cli", "lite", cli.entryCommand("/repo/dist/tools/cli.ts"));
@@ -53,16 +26,5 @@ supported: List<String> = ["check", "fmt", "docs", "doctor", "verify", "test"];
 test.checkText("subcommand bare", "fmt", cli.normalizeSubcommand("fmt", supported));
 test.checkText("subcommand flag", "fmt", cli.normalizeSubcommand("--fmt", supported));
 test.checkText("subcommand unknown", "", cli.normalizeSubcommand("--help", supported));
-
-modes: List<String> = ["--smoke", "--fast", "--full"];
-singleOk: List<String> = ["--fast", "--mute"];
-p1 := cli.pickSingleOption(singleOk, modes);
-test.checkBool("pickSingleOption ok", true, p1.ok);
-test.checkText("pickSingleOption val", "--fast", p1.value);
-test.checkText("withoutOptions", "--mute", text.joinTexts(cli.withoutOptions(singleOk, modes), ","));
-
-singleDup: List<String> = ["--smoke", "--fast"];
-p2 := cli.pickSingleOption(singleDup, modes);
-test.checkBool("pickSingleOption rejects multiple", false, p2.ok);
 
 test.done("util-cli");

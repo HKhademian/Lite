@@ -10,7 +10,7 @@ verify := import "util/verify";
 run := fn(rawArgs: List<String>): Unit {
     project.handleVersionFlag(rawArgs, "verifier", "verify");
     args := cli.stripLeadingSeparator(rawArgs);
-    if list.listCountText(args) == 1 and text.endsWith(cli.head(args), ".json") {
+    if list.listCountText(args) == 1 and text.endsWith(args[0], ".json") {
         project.forwardNode("tools/test.ts", args);
     } else {
         root := project.findRepoRoot();

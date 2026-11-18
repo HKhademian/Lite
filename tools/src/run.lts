@@ -6,7 +6,6 @@ proc := import "core/process";
 text := import "core/text";
 list := import "core/list";
 path := import "core/path";
-cli := import "util/cli";
 project := import "util/project";
 
 usageExit := fn(): Unit {
@@ -15,11 +14,27 @@ usageExit := fn(): Unit {
 };
 
 run := fn(rawArgs: List<String>): Unit {
-    if not cli.validCompilerOptions(rawArgs, true) {
-        usageExit();
+    args: mut List<String> = rawArgs;
+    builtinOpts: mut List<String> = [];
+    var scriptPath := "";
+    loop list.listCountText(args) > 0 {
+        arg := list.popFront(mut args);
+        if arg == "--" {
+            if list.listCountText(args) == 0 { usageExit(); }
+            scriptPath = list.popFront(mut args);
+            break;
+        } else if arg == "--builtin-mode" {
+            if list.listCountText(args) == 0 or args[0] == "--" { usageExit(); }
+            list.pushBack(mut builtinOpts, arg);
+            list.pushBack(mut builtinOpts, list.popFront(mut args));
+        } else if text.startsWithAt(arg, 0, "--builtin-mode=") {
+            list.pushBack(mut builtinOpts, arg);
+        } else {
+            scriptPath = arg;
+            break;
+        }
     }
-    args := cli.stripLeadingSeparator(cli.withoutCompilerOptions(rawArgs, true));
-    scriptPath := cli.head(args);
+
     if scriptPath == "" {
         usageExit();
     }
@@ -36,7 +51,9 @@ run := fn(rawArgs: List<String>): Unit {
         io.exit(2);
     }
 
-    programArgs := cli.stripLeadingSeparator(cli.rest(args, 1));
+    if list.listCountText(args) > 0 and args[0] == "--" {
+        _sep := list.popFront(mut args);
+    }
     if fs.kind(scriptPath) =!= fs.FILE_KIND_FILE {
         io.errorLine("lite run: cannot read " + scriptPath);
         io.exit(2);
@@ -51,7 +68,7 @@ run := fn(rawArgs: List<String>): Unit {
     emptyEnv: List<String> = [];
 
     compileArgs: mut List<String> = [sel.path];
-    loop cli.compilerOptions(rawArgs, true) as opt {
+    loop builtinOpts as opt {
         list.pushBack(mut compileArgs, opt);
     }
     list.pushBack(mut compileArgs, scriptPath);
@@ -96,7 +113,7 @@ run := fn(rawArgs: List<String>): Unit {
     }
 
     entryArgs: mut List<String> = [runnerPath];
-    loop programArgs as arg {
+    loop args as arg {
         list.pushBack(mut entryArgs, arg);
     }
     execRes := proc.run(proc.execPath(), entryArgs, "", emptyEnv, false, "");

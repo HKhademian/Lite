@@ -312,7 +312,7 @@ executeIgnitedTool := fn(artifactPath: String, forwardArgs: List<String>): Unit 
 }
 
 /** Executes the unified Lite igniter entrypoint for symlinked tool commands or direct CLI management. */
-run := fn(args: List<String>): Unit {
+run := fn(rawArgs: List<String>): Unit {
     rawRoot := project.findRepoRoot();
     if rawRoot == "" {
         io.errorLine("ignite: could not locate LiteScript repository root");
@@ -334,7 +334,7 @@ run := fn(args: List<String>): Unit {
             io.errorLine(ensured.error);
             io.exit(1);
         }
-        executeIgnitedTool(ensured.path, args);
+        executeIgnitedTool(ensured.path, rawArgs);
     }
 
     var check := false;
@@ -343,39 +343,34 @@ run := fn(args: List<String>): Unit {
     var jsonOutput := false;
     var ensureName := "";
     var runToolName := "";
-    var runForwardStart := -1;
     selected: mut List<String> = [];
 
-    count := list.listCountText(args);
-    var i := 0;
-    loop i < count {
-        arg := args[i];
+    args: mut List<String> = rawArgs;
+    loop list.listCountText(args) > 0 {
+        arg := list.popFront(mut args);
         if arg == "--check" {
             check = true;
-            i = i + 1;
         } else if arg == "--force" {
             force = true;
-            i = i + 1;
         } else if arg == "--clean" {
             clean = true;
-            i = i + 1;
         } else if arg == "--json" {
             jsonOutput = true;
-            i = i + 1;
         } else if arg == "--ensure" {
-            if i + 1 >= count {
+            if list.listCountText(args) == 0 {
                 io.errorLine("ignite: missing tool name for --ensure");
                 io.exit(2);
             }
-            ensureName = args[i + 1];
-            i = i + 2;
+            ensureName = list.popFront(mut args);
         } else if arg == "--run" {
-            if i + 1 >= count {
+            if list.listCountText(args) == 0 {
                 io.errorLine("ignite: missing tool name for --run");
                 io.exit(2);
             }
-            runToolName = args[i + 1];
-            runForwardStart = i + 2;
+            runToolName = list.popFront(mut args);
+            if list.listCountText(args) > 0 and args[0] == "--" {
+                _sep := list.popFront(mut args);
+            }
             break;
         } else if arg == "--help" or arg == "-h" {
             io.outputLine("Usage: node compiler/bootstrap/igniter.ts [--check] [--force] [--clean] [--json] [TOOL...]");
@@ -385,26 +380,16 @@ run := fn(args: List<String>): Unit {
             io.exit(2);
         } else {
             list.pushBack(mut selected, arg);
-            i = i + 1;
         }
     }
 
     if runToolName =!= "" {
-        forwardArgs: mut List<String> = [];
-        var fi := runForwardStart;
-        if fi < count and args[fi] == "--" {
-            fi = fi + 1;
-        }
-        loop fi < count {
-            list.pushBack(mut forwardArgs, args[fi]);
-            fi = fi + 1;
-        }
         ensured := igniteSingleTool(rootDir, runToolName, seedInfo.artifactSha256, seedInfo.sourceSha256, force);
         if not ensured.ok {
             io.errorLine(ensured.error);
             io.exit(1);
         }
-        executeIgnitedTool(ensured.path, forwardArgs);
+        executeIgnitedTool(ensured.path, args);
     }
 
     if ensureName =!= "" {
