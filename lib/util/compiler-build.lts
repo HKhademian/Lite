@@ -8,7 +8,6 @@ list := import "core/list";
 path := import "core/path";
 unicode := import "core/unicode";
 json := import "util/json";
-cases := import "util/cases";
 
 /** Result returned by `buildCompiler`. */
 pub CompilerBuildResult := type (
@@ -395,6 +394,39 @@ seedPath: String
     (hit = true, ok = cached.ok, path = cached.path, sourceSha256 = cached.sourceSha256, artifactSha256 = cached.artifactSha256, builderSha256 = cached.builderSha256, cached = cached.cached, jsonText = cached.jsonText, error = cached.error)
 };
 
+strictCheckArtifact := fn(rootDir: String, artifactPath: String, tscWorkDir: String): (ok: Bool, error: String) {
+    mk := fs.makeDir(tscWorkDir);
+    if not mk.ok { return (ok = false, error = mk.error); }
+    artPkg := fs.writeText(path.join(path.parentDir(artifactPath), "package.json"), "{\"type\":\"module\"}\n");
+    if not artPkg.ok { return (ok = false, error = artPkg.error); }
+    pkg := fs.writeText(path.join(tscWorkDir, "package.json"), "{\"type\":\"module\"}\n");
+    if not pkg.ok { return (ok = false, error = pkg.error); }
+    baseCfg := path.join(rootDir, "compiler/bootstrap/tsconfig.json");
+    cfgPath := path.join(tscWorkDir, "tsconfig.json");
+    cfgBody := "{\"extends\":" + json.quoteString(baseCfg) + ",\"include\":[],\"files\":[" + json.quoteString(artifactPath) + "]}\n";
+    wCfg := fs.writeText(cfgPath, cfgBody);
+    if not wCfg.ok { return (ok = false, error = wCfg.error); }
+
+    exeName := if proc.platform() == "win32" { "tsc.exe" } else { "tsc" };
+    nativeTsc := path.join(rootDir, "igniter/node_modules/@typescript/typescript-" + proc.platform() + "-" + proc.arch() + "/lib/" + exeName);
+    emptyEnv: List<String> = [];
+    tscArgs: mut List<String> = [];
+    cmd := if fs.kind(nativeTsc) == fs.FILE_KIND_FILE {
+        list.pushBack(mut tscArgs, "-p");
+        list.pushBack(mut tscArgs, cfgPath);
+        nativeTsc
+    } else {
+        list.pushBack(mut tscArgs, path.join(rootDir, "igniter/node_modules/typescript/bin/tsc"));
+        list.pushBack(mut tscArgs, "-p");
+        list.pushBack(mut tscArgs, cfgPath);
+        proc.execPath()
+    };
+    res := proc.run(cmd, tscArgs, rootDir, emptyEnv, true, "");
+    if res.error =!= "" { return (ok = false, error = res.error); }
+    if res.status =!= 0 { return (ok = false, error = res.stdout + res.stderr); }
+    (ok = true, error = "")
+};
+
 writeSelectionIndex := fn(
 indexPath: String,
 target: String,
@@ -586,7 +618,7 @@ pub buildCompiler := fn(rootDirRaw: String, target: String): CompilerBuildResult
     key := sha256Text(target + ":" + seedInfo.artifactSha256 + ":" + sourceSha256 + ":" + expectedDepsCompact);
     destDir := path.join(cacheRoot, key);
     if fs.kind(path.join(destDir, "provenance.json")) == fs.FILE_KIND_MISSING {
-        chk := cases.checkTsArtifactFileWithStatus(rootDir, outPath, path.join(work, "tsc"), 0);
+        chk := strictCheckArtifact(rootDir, outPath, path.join(work, "tsc"));
         if not chk.ok {
             _rm := fs.remove(work);
             return failBuild("rebuilt compiler failed strict TypeScript checking:\n" + chk.error);
@@ -626,4 +658,16 @@ pub buildCompiler := fn(rootDirRaw: String, target: String): CompilerBuildResult
     wrIdx := writeSelectionIndex(indexPath, target, sourceName, sourceRootSha256, key, depsQuoted, dhPretty, edgesPretty);
     if not wrIdx.ok { return failBuild(wrIdx.error); }
     cached
+};
+
+/** Resolves the verified compiler artifact path for `target` (`"ts"` or `"c"`) under `rootDir`. */
+pub selectCompilerPath := fn(rootDir: String, target: String): (ok: Bool, path: String, error: String) {
+    if rootDir == "" {
+        return (ok = true, path = "compiler/bootstrap/compiler.ts", error = "");
+    }
+    built := buildCompiler(rootDir, target);
+    if not built.ok {
+        return (ok = false, path = "", error = built.error);
+    }
+    (ok = true, path = built.path, error = "")
 };

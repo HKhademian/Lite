@@ -5,6 +5,7 @@ fs := import "core/file";
 list := import "core/list";
 text := import "core/text";
 project := import "util/project";
+compilerBuild := import "util/compiler-build";
 
 usageExit := fn(): Unit {
     io.errorLine("Usage: ./bin/lite-compile-ts [--builtin-mode SPEC]... file.lts");
@@ -60,7 +61,7 @@ run := fn(rawArgs: List<String>): Unit {
         io.exit(2);
     }
 
-    sel := project.selectCompilerPath(project.findRepoRoot(), "ts");
+    sel := compilerBuild.selectCompilerPath(project.findRepoRoot(), "ts");
     if not sel.ok {
         io.errorLine("lite-compile-ts: " + sel.error);
         io.exit(1);

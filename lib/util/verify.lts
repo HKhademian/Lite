@@ -626,6 +626,7 @@ computeRuntimeHash := fn(rootDir: String, seedArtifact: String, compilerDeps: Li
     "lib/util/streams.lts",
     "lib/util/json.lts",
     "lib/util/compiler-build.lts",
+    "compiler/host.ts",
     "compiler/bootstrap/igniter.ts",
     "compiler/bootstrap/seed.ts",
     "compiler/bootstrap/" + seedArtifact
@@ -775,6 +776,7 @@ invalidatesVerification := fn(relPath: String): Bool {
     "language/verifications/features.json",
     "language/verifications/schema/verification.schema.json",
     "lib/util/compiler-build.lts",
+    "compiler/host.ts",
     "tools/src/ignite.lts",
     "tools/src/verify.lts",
     "lib/util/verify.lts",

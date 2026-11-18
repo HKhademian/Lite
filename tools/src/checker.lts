@@ -8,6 +8,7 @@ text := import "core/text";
 list := import "core/list";
 path := import "core/path";
 project := import "util/project";
+compilerBuild := import "util/compiler-build";
 cases := import "util/cases";
 
 run := fn(rawArgs: List<String>): Unit {
@@ -54,7 +55,7 @@ run := fn(rawArgs: List<String>): Unit {
     }
     work := tmpRes.path;
 
-    sel := project.selectCompilerPath(root, "ts");
+    sel := compilerBuild.selectCompilerPath(root, "ts");
     if not sel.ok {
         _rm := fs.remove(work);
         io.errorLine("lite check: " + sel.error);
